@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ourus · CM6 demo</title>
+    <style>
+      :root {
+        --bg: #fbfbfa;
+        --fg: #1f2328;
+        --muted: #6e7781;
+        --line: #e4e4e0;
+        --accent: #3b6fd8;
+        --head: #e9f0fd;
+        --sub: #f4f7fd;
+        --bad: #b42318;
+        --good: #1a7f37;
+        color-scheme: light;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; font: 14px/1.45 system-ui, sans-serif; color: var(--fg); background: var(--bg); }
+      header { padding: 12px 20px; border-bottom: 1px solid var(--line); display: flex; gap: 24px; align-items: baseline; flex-wrap: wrap; }
+      header h1 { font-size: 16px; margin: 0; }
+      header .keys { color: var(--muted); font-size: 13px; }
+      kbd { font: 12px ui-monospace, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; background: #fff; }
+      main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 380px); height: calc(100vh - 92px); }
+      #editor { overflow: auto; border-right: 1px solid var(--line); background: #fff; }
+      #editor .cm-editor { height: 100%; }
+      #editor .cm-scroller { font: 14px/1.6 ui-monospace, 'SF Mono', Menlo, monospace; }
+      .ourus-head { background: var(--head); }
+      .ourus-subtree { background: var(--sub); }
+      aside { overflow: auto; padding: 8px 12px; }
+      aside h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 4px 0 8px; }
+      #outline ul { list-style: none; margin: 0; padding-left: 16px; border-left: 1px solid var(--line); }
+      #outline > ul { padding-left: 0; border-left: 0; }
+      #outline .node { display: flex; gap: 6px; align-items: baseline; padding: 1px 6px; border-radius: 4px; cursor: pointer; }
+      #outline .node:hover { background: var(--sub); }
+      #outline .node.current { background: var(--head); outline: 1px solid #c5d6f6; }
+      #outline .kind { font: 11px ui-monospace, monospace; color: var(--accent); min-width: 2.2em; }
+      #outline .kind-atom { color: var(--muted); }
+      #outline .text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      #outline .id { font: 11px ui-monospace, monospace; color: var(--muted); }
+      #outline .provisional .text { color: var(--muted); }
+      #outline .provisional .text::after { content: ' ◌ provisional'; font-size: 11px; }
+      footer { height: 36px; padding: 8px 20px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; font-size: 13px; }
+      #status { color: var(--muted); }
+      #status.applied { color: var(--good); }
+      #status.rejected { color: var(--bad); }
+      #stats { color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>ourus · CodeMirror 6</h1>
+      <span class="keys">
+        <kbd>Tab</kbd>/<kbd>Shift-Tab</kbd> indent · <kbd>Alt-↑</kbd>/<kbd>Alt-↓</kbd> move ·
+        <kbd>Enter</kbd> split · <kbd>Shift-Enter</kbd> line break · <kbd>Backspace</kbd> at start joins · <kbd>Home</kbd> text start, again line start
+      </span>
+    </header>
+    <main>
+      <div id="editor"></div>
+      <aside>
+        <h2>Outline</h2>
+        <div id="outline"></div>
+      </aside>
+    </main>
+    <footer>
+      <span id="status">Ready.</span>
+      <span id="stats"></span>
+    </footer>
+    <script type="module" src="./dist/main.js"></script>
+  </body>
+</html>
