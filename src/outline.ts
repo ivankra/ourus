@@ -49,7 +49,7 @@ export interface Projection {
   readonly nodes: readonly OutlineNode[];
 }
 
-/** Builds the outline. Ids are assigned in document order starting at `firstId`; the root gets 0. */
+/** Builds the outline. Ids are assigned in document order starting at 1; the root gets 0. */
 export function project(tree: SyntaxTree): Projection {
   let nextId = 1;
   const nodes: MNode[] = [];

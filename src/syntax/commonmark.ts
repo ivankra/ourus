@@ -570,7 +570,7 @@ class Parser {
     if ((m = rest.match(reBulletListMarker))) {
       type = 'bullet';
       bulletChar = m[0][0]!;
-    } else if ((m = rest.match(reOrderedListMarker)) && (container.type !== 'paragraph' || m[1] === '1')) {
+    } else if ((m = rest.match(reOrderedListMarker)) && (container.type !== 'paragraph' || parseInt(m[1]!, 10) === 1)) {
       type = 'ordered';
       start = parseInt(m[1]!, 10);
       delimiter = m[2]!;
@@ -783,6 +783,22 @@ export interface ParseOptions {
    * an empty last line.
    */
   readonly provisional?: readonly number[];
+}
+
+/**
+ * Whether `text`, written where a line's content starts, opens a block instead of being paragraph
+ * text: an ATX heading, a fence, a quote, a thematic break or an HTML block. With `inParagraph`
+ * the line would otherwise continue an open paragraph: a setext underline also ends it, and so
+ * does a list item with text (an ordered one only from 1), while the seventh kind of HTML block
+ * can't. Without it, list markers are left to the caller.
+ */
+export function startsBlock(text: string, inParagraph: boolean): boolean {
+  if (reATXHeadingMarker.test(text) || reCodeFence.test(text) || text.charCodeAt(0) === 62 || reThematicBreak.test(text)) return true;
+  for (let t = 1; t <= (inParagraph ? 6 : 7); t++) if (reHtmlBlockOpen[t]!.test(text)) return true;
+  if (!inParagraph) return false;
+  if (reSetextHeadingLine.test(text)) return true;
+  const m = /^(?:[*+-]|(\d{1,9})[.)])(?=[ \t])/.exec(text);
+  return m !== null && (m[1] === undefined || parseInt(m[1], 10) === 1) && reNonSpace.test(text.slice(m[0].length));
 }
 
 /** Parses CommonMark block structure. Never fails: every string is a document. */

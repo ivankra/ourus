@@ -1,411 +1,196 @@
 # Scenarios
 
-Key sequences played the way an editor plays them: each key runs its ourus command, and the
-host's own default runs where the command doesn't apply (`notApplicable`). Provisional places
-the caret leaves are settled after every key. Keys: ⏎ Enter, ⇧⏎ Shift-Enter, ⇥ Tab, ⇧⇥
-Shift-Tab, ⌥↑ ⌥↓ move, ⌫ Backspace, ⇱ Home, ↑ ↓ caret, `"text"` typing. `␍` is a carriage
-return.
-
-Cases marked *TO* come from obsidian-true-outliner's measured cases and catalogues
-(`../repos/obsidian-true-outliner`, `e2e-tests/cases/` and
-`docs/research/enter-and-shift-enter-catalogue.md`), with their issue or catalogue numbers.
+Longer sequences of actions, as a user would perform them, with the states along the way. The
+format is in [README.md](README.md); obsidian-true-outliner's cases have a file of their own,
+[obsidian-true-outliner.md](obsidian-true-outliner.md).
 
 ## Outliner flows
 
 New child, typed.
 
-```````````````````````````````` example
+### Typing a new child
+
+```buffer
 - a┃
-.
-⏎ ⇥ "x"
-.
+```
+
+> insertParagraph formatIndent "x"
+
+```buffer
 - a
   - x┃
-````````````````````````````````
+```
+
+### Enter outdents the empty child
 
 Enter on the empty child outdents it; Backspace removes it; walking away settles it.
 
-```````````````````````````````` example
+```buffer
 - a┃
-.
-⏎ ⇥ ⏎
-.
+```
+
+> insertParagraph formatIndent insertParagraph
+
+```buffer
 - a
 - ┃
-````````````````````````````````
+```
 
-```````````````````````````````` example
-- a┃
-.
-⏎ ⇥ ⌫
-.
-- a┃
-````````````````````````````````
+### Backspace removes the empty child
 
-```````````````````````````````` example
+```buffer
 - a┃
-.
-⏎ ⇥ ↑
-.
+```
+
+> insertParagraph formatIndent deleteContentBackward
+
+```buffer
 - a┃
-````````````````````````````````
+```
+
+### Walking away settles the empty child
+
+```buffer
+- a┃
+```
+
+> insertParagraph formatIndent cursorLineUp
+
+```buffer
+- a┃
+```
+
+### Repeated Enter walks out of the list
 
 Enter repeatedly walks out of a nested list and then out of the list.
 
-```````````````````````````````` example
+```buffer
 - a
   - b┃
-.
-⏎ ⏎ ⏎ "p"
-.
+```
+
+> insertParagraph insertParagraph insertParagraph "p"
+
+```buffer
 - a
   - b
 
 p┃
-````````````````````````````````
+```
+
+### Leaving a loose list in the middle
 
 In a loose list, leaving it in the middle needs no extra blank lines.
 
-```````````````````````````````` example
+```buffer
 - a
 
 - ┃
 
 - b
-.
-⏎
-.
+```
+
+> insertParagraph
+
+```buffer
 - a
 
 ┃◌
 
 - b
-````````````````````````````````
+```
+
+### Two paragraphs in one item
 
 Two paragraphs in one item.
 
-```````````````````````````````` example
+```buffer
 - one┃
-.
-⇧⏎ ⇧⏎ "p"
-.
+```
+
+> insertLineBreak insertLineBreak "p"
+
+```buffer
 - one
 
   p┃
-````````````````````````````````
+```
+
+### Lazy line goes with the second half
 
 A lazy continuation line is part of the item's text, so it goes with the second half.
 
-```````````````````````````````` example
+```buffer
 - a┃
 lazy
-.
-⏎
-.
+```
+
+> insertParagraph
+
+```buffer
 - a
 - ┃lazy
-````````````````````````````````
+```
+
+### Selected parent moves with its subtree
 
 A selection over a parent and its child moves the parent with its subtree.
 
-```````````````````````````````` example
+```buffer
 - «a
   - b»
 - c
-.
-⌥↓
-.
+```
+
+> moveDown
+
+```buffer
 - c
 - «a
   - b»
-````````````````````````````````
+```
 
-## Enter (TO catalogue)
-
-*TO E3*: an ordered list renumbers across the split.
-
-```````````````````````````````` example
-1. one┃
-2. two
-.
-⏎
-.
-1. one
-2. ┃
-3. two
-````````````````````````````````
-
-*TO #228*: and leaves the next list, with the other delimiter, alone.
-
-```````````````````````````````` example
-1. a┃
-1) b
-2) c
-.
-⏎
-.
-1. a
-2. ┃
-1) b
-2) c
-````````````````````````````````
-
-*TO E4*: on a continuation line of a multi-line item.
-
-```````````````````````````````` example
-- first
-  second┃ line
-.
-⏎
-.
-- first
-  second
-- ┃line
-````````````````````````````````
-
-*TO E7, E8*: an item with tab-indented children gets the new item as its first child.
-
-```````````````````````````````` example
-- alpha┃ beta
-→- child
-.
-⏎
-.
-- alpha
-→- ┃beta
-→- child
-````````````````````````````````
-
-```````````````````````````````` example
-- alpha┃
-→- child
-.
-⏎
-.
-- alpha
-→- ┃◌
-→- child
-````````````````````````````````
-
-*TO E26* (a defect there): at the start of an item with children, the new item goes above and
-the text stays where it is.
-
-```````````````````````````````` example
-- ┃alpha
-→- child
-.
-⏎
-.
-- 
-- ┃alpha
-→- child
-````````````````````````````````
-
-*TO E32*: a task's checkbox carries over, unchecked.
-
-```````````````````````````````` example
-- [ ] alpha┃ beta
-.
-⏎
-.
-- [ ] alpha
-- [ ] ┃beta
-````````````````````````````````
-
-```````````````````````````````` example
-- [x] done┃
-.
-⏎
-.
-- [x] done
-- [ ] ┃
-````````````````````````````````
-
-*TO E33* (a defect there): a selection inside the text is replaced, then the item splits.
-
-```````````````````````````````` example
-- al«pha be»ta
-.
-⏎
-.
-- al
-- ┃ta
-````````````````````````````````
-
-*TO #267, E5*: in a paragraph, Enter makes two paragraphs.
-
-```````````````````````````````` example
-# H
-para┃ text
-> q
-.
-⏎
-.
-# H
-para
-
-┃text
-> q
-````````````````````````````````
-
-*TO E13, E16*: in a heading, the rest of the title becomes the section's first paragraph.
-
-```````````````````````````````` example
-# Hello┃ world
-.
-⏎
-.
-# Hello
-┃world
-````````````````````````````````
-
-```````````````````````````````` example
-# He┃ad
-## Sub
-.
-⏎
-.
-# He
-┃ad
-## Sub
-````````````````````````````````
-
-*TO E14, E20*: a paragraph under the heading stays its own paragraph.
-
-```````````````````````````````` example
-# Head┃line
-Body.
-.
-⏎
-.
-# Head
-┃line
-
-Body.
-````````````````````````````````
-
-```````````````````````````````` example
-# Head┃
-Body.
-.
-⏎
-.
-# Head
-┃◌
-
-Body.
-````````````````````````````````
-
-*TO E27, E29* (E27 a defect there): at the start of a heading or paragraph, a blank line goes
-above and the text stays put.
-
-```````````````````````````````` example
-# ┃Hello
-.
-⏎
-.
-
-# ┃Hello
-````````````````````````````````
-
-```````````````````````````````` example
-┃thought
-.
-⏎
-.
-
-┃thought
-````````````````````````````````
-
-## Backspace (TO cases)
-
-*TO #269*: on an emptied first item, with nothing above to join, nothing happens.
-
-```````````````````````````````` example
-1. ┃
-2. b
-3. c
-.
-⌫
-.
-1. ┃
-2. b
-3. c
-````````````````````````````````
-
-*TO #269*: twice on an emptied middle item: the text goes, then the item, and the list
-renumbers.
-
-```````````````````````````````` example
-1. p
-2. a┃
-3. q
-.
-⌫ ⌫
-.
-1. p┃
-2. q
-````````````````````````````````
-
-*TO #153*: right after Shift-Enter, Backspace takes the new line back.
-
-```````````````````````````````` example
-- one
-  - kid
-- foo┃
-.
-⇧⏎ ⌫
-.
-- one
-  - kid
-- foo┃
-````````````````````````````````
+## Backspace
 
 Joining into a paragraph above a list, or a heading, works; into a code block it can't.
 
-```````````````````````````````` example
+### Joining into a paragraph above a list
+
+```buffer
 para
 
 - ┃a
-.
-⌫
-.
-para┃a
-````````````````````````````````
+```
 
-```````````````````````````````` example
+> deleteContentBackward
+
+```buffer
+para┃a
+```
+
+### No joining into a code block
+
+````buffer
 ```
 x
 ```
 - ┃a
-.
-⌫
-.
+````
+
+> deleteContentBackward
+
+```result
 rejected: not-expressible
-````````````````````````````````
+```
 
-## Indentation (TO cases and others)
-
-*TO #255*: outdenting a later child leaves the quote above it alone.
-
-```````````````````````````````` example
-- item
-  > quote
-
-  - boo┃
-.
-⇧⇥
-.
-- item
-  > quote
-
-- boo┃
-````````````````````````````````
+## Indentation
 
 A fenced code block moves and reindents with its item; its own relative indentation and
 blank lines are payload.
 
-```````````````````````````````` example
+### Fenced code reindents with its item
+
+````buffer
 - a
 - b┃
   ```
@@ -413,9 +198,11 @@ blank lines are payload.
 
     y
   ```
-.
-⇥
-.
+````
+
+> formatIndent
+
+````buffer
 - a
   - b┃
     ```
@@ -423,9 +210,11 @@ blank lines are payload.
 
       y
     ```
-````````````````````````````````
+````
 
-```````````````````````````````` example
+### Fenced code with a blank line moves
+
+````buffer
 - a
 - b┃
   ```
@@ -433,9 +222,11 @@ blank lines are payload.
 
   y
   ```
-.
-⌥↑
-.
+````
+
+> moveUp
+
+````buffer
 - b┃
   ```
   x
@@ -443,24 +234,30 @@ blank lines are payload.
   y
   ```
 - a
-````````````````````````````````
+````
+
+### Tab after the marker
 
 A tab after the marker: shifting the line changes how far the tab reaches, not where the text
 starts.
 
-```````````````````````````````` example
+```buffer
 - a
 -→b┃
-.
-⇥
-.
+```
+
+> formatIndent
+
+```buffer
 - a
   -→b┃
-````````````````````````````````
+```
+
+### Outdent in a loose list stays loose
 
 Outdenting from the middle of a loose list keeps it loose.
 
-```````````````````````````````` example
+```buffer
 - a
 
   - b┃
@@ -468,9 +265,11 @@ Outdenting from the middle of a loose list keeps it loose.
   - c
 
 - d
-.
-⇧⇥
-.
+```
+
+> formatOutdent
+
+```buffer
 - a
 
   - c
@@ -478,108 +277,162 @@ Outdenting from the middle of a loose list keeps it loose.
 - b┃
 
 - d
-````````````````````````````````
+```
 
 ## Ordered lists
 
-```````````````````````````````` example
+### Moving renumbers the items
+
+```buffer
 1. a
 2. b┃
-.
-⌥↑
-.
+```
+
+> moveUp
+
+```buffer
 1. b┃
 2. a
-````````````````````````````````
+```
+
+### Untouched list keeps its numbers
+
+A list whose items a command leaves alone keeps its numbers, however they run.
+
+```buffer
+1. a
+   - x
+   - y┃
+5. b
+9. c
+```
+
+> formatIndent
+
+```buffer
+1. a
+   - x
+     - y┃
+5. b
+9. c
+```
+
+### Renumbering past 9 widens the marker
 
 Renumbering past 9 widens the marker; children have to follow the content column.
 
-```````````````````````````````` example pending
+```buffer
 9. a
    - x
 10. b┃
-.
-⌥↑
-.
+```
+
+> moveUp
+
+```buffer
 9. b┃
 10. a
     - x
-````````````````````````````````
+```
 
 ## Headings
 
-```````````````````````````````` example
+### Setext heading demoted with its subheading
+
+```buffer
 Title┃
 =====
 
 ## Sub
-.
-⇥
-.
+```
+
+> formatIndent
+
+```buffer
 Title┃
 -----
 
 ### Sub
-````````````````````````````````
+```
 
-```````````````````````````````` example
+### Heading moves with its subheadings
+
+```buffer
 # A
 ## a1
 # B┃
 ## b1
-.
-⌥↑
-.
+```
+
+> moveUp
+
+```buffer
 # B┃
 ## b1
 # A
 ## a1
-````````````````````````````````
+```
 
 ## Line endings
 
 New lines take the ending of the line they split.
 
-```````````````````````````````` example
+### Indent keeps CRLF endings
+
+```buffer
 - a␍
 - b┃␍
-.
-⇥
-.
+```
+
+> formatIndent
+
+```buffer
 - a␍
   - b┃␍
-````````````````````````````````
+```
 
-```````````````````````````````` example
+### Enter copies the CRLF of the split line
+
+```buffer
 - a┃␍
 - b␍
-.
-⏎
-.
+```
+
+> insertParagraph
+
+```buffer
 - a␍
 - ┃␍
 - b␍
-````````````````````````````````
+```
 
-```````````````````````````````` example
+### CRLF line in an LF document
+
+```buffer
 - a
 - b┃␍
 - c
-.
-⏎
-.
+```
+
+> insertParagraph
+
+```buffer
 - a
 - b␍
 - ┃␍
 - c
-````````````````````````````````
+```
 
-```````````````````````````````` example
+### Paragraph break in a CRLF item
+
+```buffer
 - a┃␍
-.
-⇧⏎ ⇧⏎ "p"
-.
+```
+
+> insertLineBreak insertLineBreak "p"
+
+```buffer
 - a␍
 ␍
   p┃␍
-````````````````````````````````
+```

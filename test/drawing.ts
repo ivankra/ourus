@@ -49,3 +49,6 @@ export function drawState(text: string, sel: Selection, provisional: readonly nu
   return out.replace(/\t/g, '→').replace(/\r/g, '␍');
 }
 
+/** Plain text drawn with the buffer glyphs for invisible characters (a clipboard's): `→` tab, `␍` CR. */
+export const readText = (drawn: string): string => drawn.replace(/→/g, '\t').replace(/␍/g, '\r');
+export const drawText = (text: string): string => text.replace(/\t/g, '→').replace(/\r/g, '␍');

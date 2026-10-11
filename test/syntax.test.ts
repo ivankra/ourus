@@ -70,6 +70,13 @@ test('block structure agrees with commonmark.js on tidy documents', () => {
   );
 });
 
+test('an ordered list interrupts a paragraph when it starts at 1, however the 1 is written', () => {
+  for (const md of ['a\n1. b\n', 'a\n01. b\n', 'a\n2. b\n', 'a\n1) b\n']) {
+    const tree = parseCommonMark(md);
+    assert.equal(ourusSkeleton(tree.root), referenceSkeleton(md, refdefLines(tree.root)), md);
+  }
+});
+
 test('line table and tree invariants hold on wild documents', () => {
   fc.assert(
     fc.property(arbDoc(WILD, { endings: ['\n', '\r\n', '\r'] }), (md) => checkInvariants(parseCommonMark(md))),

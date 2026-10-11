@@ -49,6 +49,28 @@ function command(type: Command['type']) {
   };
 }
 
+/** Paste: Markdown placed as nodes where ourus applies; elsewhere CodeMirror pastes the text. */
+const pasteHandler = EditorView.domEventHandlers({
+  paste(event, view) {
+    const text = event.clipboardData?.getData('text/plain');
+    if (!text) return false;
+    const { anchor, head } = view.state.selection.main;
+    const result = execute(view.state.field(ourusDoc), { type: 'insertFromPaste', text }, { anchor, head });
+    onResult('insertFromPaste', result);
+    if (result.status === 'notApplicable') return false;
+    event.preventDefault();
+    if (result.status === 'applied') {
+      view.dispatch({
+        changes: [...result.changes],
+        selection: result.selection,
+        annotations: [planned.of(result.doc), Transaction.userEvent.of('ourus.insertFromPaste')],
+        scrollIntoView: true,
+      });
+    }
+    return true;
+  },
+});
+
 /** Home: the start of the node's text, then the start of the line. Wrapped rows keep CodeMirror's Home. */
 function home(extend: boolean) {
   return (view: EditorView): boolean => {
@@ -76,6 +98,8 @@ const outlinerKeymap = Prec.highest(
     { key: 'Shift-Enter', run: command('insertLineBreak') },
     { key: 'Home', run: home(false), shift: home(true) },
     { key: 'Backspace', run: command('deleteContentBackward') },
+    { key: 'Delete', run: command('deleteContentForward') },
+    { key: 'Mod-Backspace', run: command('deleteSoftLineBackward') },
   ]),
 );
 
@@ -146,7 +170,7 @@ A paragraph at the top level. Paragraphs are leaves; list items and headings hol
   - like this child
   - and this one
     - a grandchild
-- Enter splits an item; Backspace at its start joins it to the item above
+- Enter splits an item; Backspace at its start joins it to the node above, Delete at its end joins the node below
 - Shift-Enter breaks a line inside an item,
   which stays one item
 - Enter on an empty item outdents it, or leaves the list (Enter twice ends a list)
@@ -199,6 +223,7 @@ function main(): void {
       doc: SAMPLE,
       extensions: [
         outlinerKeymap,
+        pasteHandler,
         basicSetup,
         markdown(),
         ourusDoc,

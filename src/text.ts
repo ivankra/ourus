@@ -181,6 +181,25 @@ export function composeChanges(text: string, a: readonly Change[], b: readonly C
   return normalizeChanges([...first, ...out]);
 }
 
+/**
+ * The change turning `before` into `after` that replaces whole lines, between the lines they
+ * start and end with in common: a line added between two others is an insertion at a line
+ * start, not one that seems to begin inside the line below it. Empty when the texts are equal.
+ */
+export function diffLines(before: string, after: string): Change[] {
+  if (before === after) return [];
+  const isBreak = (c: number): boolean => c === 10 || c === 13;
+  let start = 0;
+  const shorter = Math.min(before.length, after.length);
+  while (start < shorter && before.charCodeAt(start) === after.charCodeAt(start)) start++;
+  while (start > 0 && !isBreak(before.charCodeAt(start - 1))) start--;
+  // the length of the common ending, then back to where a line starts
+  let end = 0;
+  while (end < shorter - start && before.charCodeAt(before.length - 1 - end) === after.charCodeAt(after.length - 1 - end)) end++;
+  while (end > 0 && before.length - end > start && !isBreak(before.charCodeAt(before.length - end - 1))) end--;
+  return [{ from: start, to: before.length - end, insert: after.slice(start, after.length - end) }];
+}
+
 /** One change turning `before` into `after`, trimmed to the span that differs. */
 function wholeDiff(before: string, after: string): Change {
   let start = 0;

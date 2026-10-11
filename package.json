@@ -13,7 +13,9 @@
     "typecheck": "tsc -p . && tsc -p demo/cm6",
     "demo:build": "node demo/cm6/build.ts",
     "demo:serve": "node demo/cm6/build.ts --serve",
-    "demo:smoke": "node demo/cm6/smoke.ts"
+    "demo:smoke": "node demo/cm6/smoke.ts",
+    "test:model": "node test/model/run.ts",
+    "test:logseq": "node test/logseq/run.ts"
   },
   "devDependencies": {
     "@codemirror/commands": "^6.11.1",

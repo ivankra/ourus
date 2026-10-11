@@ -1,0 +1,194 @@
+outline    commands.md › Outdent #2
+  line 241
+  expected:
+    - a
+      - c
+    - b┃
+      - b1
+    - d
+      logseq:
+    - a
+    - b┃
+      - b1
+      - c
+    - d
+    
+outline    commands.md › Enter #8
+  line 549
+  expected:
+    - abc
+    - ┃def
+      logseq:
+    - abc
+    - ┃- def
+    
+whitespace commands.md › Shift-Enter #1
+  line 642
+  expected:
+    - one two
+      ┃three
+      logseq:
+    - one two
+      ┃ three
+    
+whitespace commands.md › Shift-Enter #3
+  line 671
+  expected:
+    - x
+      - a
+        ┃b
+      logseq:
+    - x
+      - a
+        ┃ b
+    
+whitespace commands.md › Shift-Enter #5
+  line 705
+  expected:
+    - abc
+      ┃\- def
+      logseq:
+    - abc 
+      ┃\- def
+    
+whitespace commands.md › Shift-Enter #6
+  line 718
+  expected:
+    - abc
+      ┃1\. def
+      logseq:
+    - abc 
+      ┃1\. def
+    
+whitespace commands.md › Shift-Enter #9
+  line 757
+  expected:
+    - one
+      ┃<div>
+      logseq:
+    - one 
+      ┃<div>
+    
+caret      commands.md › Shift-Enter #10
+  line 774
+  expected:
+    - a
+      ┃
+      bc
+      logseq:
+    - a
+      
+      ┃bc
+    
+outline    commands.md › Delete #5
+  line 1102
+  expected:
+    - ┃a
+      - b
+      logseq:
+    - ┃
+      - a
+        - b
+    
+caret      obsidian-true-outliner.md › Enter › E26
+  line 291
+  expected:
+    - 
+    - ┃alpha
+      - child
+      logseq:
+    - ┃
+    - alpha
+      - child
+    
+whitespace obsidian-true-outliner.md › Shift-Enter › S13
+  line 606
+  expected:
+    - a
+      ┃beta
+      logseq:
+    - a
+      ┃ beta
+    
+outline    obsidian-true-outliner.md › Backspace › Joining an item with children #1
+  line 751
+  expected:
+    - a┃b
+      - c
+      logseq:
+    - a
+      - ┃b
+        - c
+    
+outline    obsidian-true-outliner.md › Backspace › Joining an item with children #2
+  line 766
+  expected:
+    - a┃b
+      - c
+      logseq:
+    - a┃
+      - b
+        - c
+    
+outline    obsidian-true-outliner.md › Abandoning an empty place › Shift-Enter, Tab, then leave #3
+  line 1198
+  expected:
+    - one
+      - kid
+      - foo┃
+      logseq:
+    - one
+      - kid
+      - fo┃
+    
+outline    obsidian-true-outliner.md › Abandoning an empty place › Shift-Enter, Tab, then leave #4
+  line 1214
+  expected:
+    - a
+    - b┃
+    - c
+      logseq:
+    - a
+    - ┃
+    - c
+    
+outline    postimpl1c-findings.md › Empty tasks and empty items › B2: Enter on an empty item with children (pending in ourus)
+  line 55
+  expected:
+    - 
+    - ┃
+      - a
+      logseq:
+    - 
+      - ┃
+      - a
+    
+whitespace postimpl1c-findings.md › Empty tasks and empty items › B9: emptying a child's text keeps the child #2 (pending in ourus)
+  line 127
+  expected:
+    - ┃c
+      - a
+      logseq:
+    - ┃ c
+      - a
+    
+whitespace postimpl1c-findings.md › Empty tasks and empty items › B9: emptying a child's text keeps the child #3 (pending in ourus)
+  line 144
+  expected:
+    - ┃b
+      - c
+      logseq:
+    - ┃ b
+      - c
+    
+outline    scenarios.md › Outliner flows #4
+  line 55
+  expected:
+    - a┃
+      logseq:
+    - ┃a
+      - 
+    
+
+logseq.md: agree 221, ourus spec: agree 55, ourus spec: caret 2, ourus spec: outline 9, ourus spec: skipped 185, ourus spec: whitespace 8
+skipped, by reason: text outside an item 104, a numbered marker 22, a blank line 19, a task checkbox 9, a quote inside an item 7, a caret in a marker 6, no buffer to compare 5, action cursorDocStart 4, CR line endings 4, a "*" marker 2, a selection across blocks 2, action deleteSoftLineBackward 1

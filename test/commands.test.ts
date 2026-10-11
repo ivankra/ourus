@@ -36,7 +36,10 @@ const arbTidyOutline = fc
   })
   .chain((items) => fc.constantFrom('  ', '\t').map((unit) => items.map(([d, m, t]) => unit.repeat(d) + m + t).join('\n') + '\n'));
 
-const COMMANDS: Command['type'][] = ['formatIndent', 'formatOutdent', 'moveUp', 'moveDown', 'insertParagraph', 'insertLineBreak', 'deleteContentBackward'];
+const COMMANDS: Command['type'][] = ['formatIndent', 'formatOutdent', 'moveUp', 'moveDown', 'insertParagraph', 'insertLineBreak', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward'];
+
+/** Commands that act at a caret; the others take a selection. */
+const CARET_COMMANDS = new Set<Command['type']>(['insertParagraph', 'insertLineBreak', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward']);
 
 test('commands keep text, changes and selection consistent', () => {
   const tally = new Map<string, number>();
@@ -44,7 +47,7 @@ test('commands keep text, changes and selection consistent', () => {
     fc.property(arbOutlineDoc, fc.nat(), fc.nat(), fc.constantFrom(...COMMANDS), (text, a, b, type) => {
       const doc = Doc.parse(text);
       const anchor = a % (text.length + 1);
-      const head = type === 'insertParagraph' || type === 'insertLineBreak' || type === 'deleteContentBackward' ? anchor : b % (text.length + 1);
+      const head = CARET_COMMANDS.has(type) ? anchor : b % (text.length + 1);
       const r = execute(doc, { type } as Command, { anchor, head });
       const key = `${type} ${r.status}${r.status === 'rejected' ? ' ' + r.reason : ''}`;
       tally.set(key, (tally.get(key) ?? 0) + 1);
@@ -84,7 +87,7 @@ test('on tidy outlines every command plans correctly (verification never has to 
   fc.assert(
     fc.property(arbTidyOutline, fc.nat(), fc.nat(), fc.constantFrom(...COMMANDS), (text, a, b, type) => {
       const anchor = a % (text.length + 1);
-      const head = type === 'insertParagraph' || type === 'insertLineBreak' || type === 'deleteContentBackward' ? anchor : b % (text.length + 1);
+      const head = CARET_COMMANDS.has(type) ? anchor : b % (text.length + 1);
       const r = execute(Doc.parse(text), { type } as Command, { anchor, head });
       if (r.status === 'rejected') assert.notEqual(r.reason, 'encoding-failed', r.detail ?? '');
     }),
@@ -102,4 +105,32 @@ test('ids follow nodes through structural commands', () => {
   if (r.status !== 'applied') return;
   assert.equal(r.doc.text, '- a\n- d\n- b\n  - c\n');
   assert.deepEqual(['a', 'b', 'c', 'd'].map((t) => idOf(r.doc, t)), before);
+});
+
+test('ids stay with nodes that a command indents or opens a line above', () => {
+  const ids = (d: Doc) => d.nodes.slice(1).map((n) => `${n.id}:${d.headLines(n).join('').trim()}`);
+  const run = (text: string, type: Command['type'], pos: number) => {
+    const doc = Doc.parse(text);
+    const r = execute(doc, { type } as Command, { anchor: pos, head: pos });
+    assert.equal(r.status, 'applied');
+    return r.status === 'applied' ? [ids(doc), ids(r.doc)] : [];
+  };
+  const [a, b] = run('- a\n- b\n  - c\n', 'formatIndent', 7);
+  assert.deepEqual(b, a);
+  const [c, d] = run('# H\n\npara\n', 'insertParagraph', 5);
+  assert.deepEqual(d, c);
+});
+
+test('typing at the start of a node keeps its id', () => {
+  const doc = Doc.parse('para\n\n- item\n');
+  const typed = doc.apply([{ from: 0, to: 0, insert: 'x' }]).apply([{ from: 7, to: 7, insert: ' ' }]);
+  assert.deepEqual(typed.nodes.map((n) => n.id), doc.nodes.map((n) => n.id));
+});
+
+test('replacing the text keeps the ids of nodes outside the lines that differ', () => {
+  const doc = Doc.parse('# A\n\n- x\n- z\n');
+  const next = doc.replace('# A\n\n- x\n- y\n- z\n');
+  const idOf = (d: Doc, text: string) => d.nodes.find((n) => d.headLines(n).join('').trim() === text)?.id;
+  for (const t of ['A', 'x', 'z']) assert.equal(idOf(next, t), idOf(doc, t), t);
+  assert.ok(!doc.nodes.some((n) => n.id === idOf(next, 'y')), 'the new item gets a new id');
 });

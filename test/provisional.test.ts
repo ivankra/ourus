@@ -53,6 +53,14 @@ test('leaving a place the text can hold just drops it', () => {
   assert.equal(shape(r2.doc), 'item:a');
 });
 
+test('places left on adjacent lines at the top are removed together', () => {
+  const doc = Doc.parse('\n\n- a\n', { provisional: [0, 1] });
+  assert.equal(shape(doc), 'paragraph:|\nitem:a');
+  const r = settle(doc, 4)!;
+  assert.equal(r.doc.text, '- a\n');
+  assert.equal(shape(r.doc), 'item:a');
+});
+
 test('Enter twice leaves a list, and typing makes the paragraph', () => {
   let doc = Doc.parse('- a');
   let sel = { anchor: 3, head: 3 };

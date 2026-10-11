@@ -29,3 +29,8 @@ src/syntax/refdef.ts.
 test/fixtures/commonmark-spec-0.31.2.json holds the examples of the CommonMark
 Spec 0.31.2 (https://spec.commonmark.org/0.31.2/), by John MacFarlane, licensed
 under CC BY-SA 4.0. It is test data and is not part of the library.
+
+spec/obsidian-true-outliner.md is derived from the test cases and research notes of
+obsidian-true-outliner (https://github.com/laughedelic/obsidian-true-outliner) and, like it, is
+under the Mozilla Public License 2.0 (https://mozilla.org/MPL/2.0/). It is test data and is not
+part of the library; the rest of ourus is under the MIT license.
