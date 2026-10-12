@@ -6,7 +6,8 @@ Delete at the end of a node's text joins the node below to it: Backspace at that
 from the other side. The node below can be a child. On an empty item, the node below moves up into
 it (Delete5–6), where Backspace sends the empty item's children to the node above instead. Before a
 heading, the heading's whole line joins, `#`s included (Delete13). Where the join can't be written
-(a quote, indented code), it is refused. In the middle of the text, Delete is the host's; deleting
+(a quote, indented code), it is refused. Before a blank line, `deleteAtGap` decides: the node below
+joins (`join`, the default), or the blank line goes (`gap`, Delete17b). In the middle of the text, Delete is the host's; deleting
 the space after a marker is the host's edit too (Delete16).
 
 ## Delete1
@@ -369,6 +370,49 @@ a┃
 a┃H1
 ```
 
+## Delete13c
+
+Before a heading with text right under it, the joined line is set off from that text by a blank
+line: right under it, the text would continue the joined paragraph.
+
+```buffer
+a┃
+
+# H1
+text
+```
+
+> deleteContentForward
+
+```buffer
+a┃# H1
+
+text
+```
+
+## Delete13d
+
+With `headingEditing: block` too, the heading's text right under it is set off by a blank line.
+
+```config
+headingEditing: block
+```
+
+```buffer
+a┃
+
+# H1
+text
+```
+
+> deleteContentForward
+
+```buffer
+a┃H1
+
+text
+```
+
 ## Delete14
 
 The heading's section stays where it was.
@@ -424,4 +468,60 @@ host's; nested, the same edit would merge the item into its parent, which the gu
 ```buffer
 -┃a
   - b
+```
+
+## Delete17
+
+Delete at the end of a paragraph, a blank line before its list: the first item joins, the blank line
+going too (`deleteAtGap: join`, the default).
+
+As Delete joins any node below; with `deleteAtGap: gap` only the blank line goes
+([Delete17b](#delete17b)).
+
+```buffer
+Shopping:┃
+
+- milk
+- eggs
+```
+
+> deleteContentForward
+
+```buffer
+Shopping:┃milk
+- eggs
+```
+
+## Delete17b
+
+With `deleteAtGap: gap`, Delete before a blank line deletes it, the nodes staying as they are; Delete
+again joins.
+
+As in Obsidian, where Delete deletes one line break. Between two paragraphs Delete is the host's
+either way, which deletes one line break too, making them one paragraph.
+
+```config
+deleteAtGap: gap
+```
+
+```buffer
+Shopping:┃
+
+- milk
+- eggs
+```
+
+> deleteContentForward
+
+```buffer
+Shopping:┃
+- milk
+- eggs
+```
+
+> deleteContentForward
+
+```buffer
+Shopping:┃milk
+- eggs
 ```

@@ -6,7 +6,8 @@ Backspace at the start of a node's text joins it to the end of the node above: a
 item, of a continuation line, or of a paragraph after a blank line. On an empty item, the item goes
 (Backspace7, Backspace17–17e); its children go to the node above, as in any join (Backspace8). At a
 heading's text start, the heading's marks go (Backspace18). Where the join can't be written (into a
-code block), it is refused. In the middle of the text, Backspace is the host's.
+code block), it is refused. After a blank line, `deleteAtGap` decides: the node joins the one above
+(`join`, the default), or the blank line goes (`gap`, Backspace21b). In the middle of the text, Backspace is the host's.
 
 ## Backspace1
 
@@ -524,4 +525,74 @@ line ([ShiftEnter10](shift-enter.md#shiftenter10)). A second Backspace joins the
 ```buffer
 - a
   ┃bc
+```
+
+## Backspace20
+
+Backspace on the empty paragraph left by Enter in the middle of a list goes back to the end of the
+node above; the items the paragraph owned stay.
+
+The empty paragraph owns the list after it; removing it keeps that list, which joins the list above.
+
+```buffer
+- a
+
+┃◌
+
+- b
+```
+
+> deleteContentBackward
+
+```buffer
+- a┃
+
+- b
+```
+
+## Backspace21
+
+Backspace at the start of an item after a blank line joins it to the node above, the blank line
+going too (`deleteAtGap: join`, the default).
+
+With `deleteAtGap: gap` only the blank line goes ([Backspace21b](#backspace21b)).
+
+```buffer
+- a
+
+- ┃b
+```
+
+> deleteContentBackward
+
+```buffer
+- a┃b
+```
+
+## Backspace21b
+
+With `deleteAtGap: gap`, Backspace after a blank line deletes it, the nodes staying as they are;
+Backspace again joins.
+
+```config
+deleteAtGap: gap
+```
+
+```buffer
+- a
+
+- ┃b
+```
+
+> deleteContentBackward
+
+```buffer
+- a
+- ┃b
+```
+
+> deleteContentBackward
+
+```buffer
+- a┃b
 ```

@@ -1,5 +1,5 @@
 // Reads the behaviour spec (spec/*.md, format in spec/README.md) with ourus's own parser: fenced
-// `buffer`, `clipboard` and `result` blocks are editor states, quotes the actions between them, and
+// `buffer`, `clipboard` (or `clipboard-no-newline`) and `result` blocks are editor states, quotes the actions between them, and
 // a `config` block before them sets a test's options over the file's frontmatter.
 
 import { readConfig, readSettings, type Config } from '../src/config.ts';
@@ -101,7 +101,7 @@ export function readSpec(file: string, source: string): SpecTest[] {
     }
     if (block.type !== 'code_block' || !block.fenced) continue;
     const [kind, ...words] = (block.info ?? '').trim().split(/\s+/);
-    if (kind !== 'buffer' && kind !== 'clipboard' && kind !== 'result' && kind !== 'config') continue;
+    if (kind !== 'buffer' && kind !== 'clipboard' && kind !== 'clipboard-no-newline' && kind !== 'result' && kind !== 'config') continue;
     if (block.fenceOffset) fail(block.startLine, 'an indented fence would change its content');
     if (words.length > 0) fail(block.startLine, `"${words.join(' ')}" after "${kind}": options go in a config block before the test's first block`);
     if (kind === 'config') {
@@ -123,9 +123,11 @@ export function readSpec(file: string, source: string): SpecTest[] {
       group = test.initial;
     }
     if (kind === 'result' && group === test.initial) fail(block.startLine, 'a result before any action');
-    if (group![kind] !== undefined) fail(block.startLine, `a second ${kind} block for one state (each test needs a heading of its own)`);
+    // a clipboard whose text doesn't end with a line break
+    const field = kind === 'clipboard-no-newline' ? 'clipboard' : kind;
+    if (group![field] !== undefined) fail(block.startLine, `a second ${field} block for one state (each test needs a heading of its own)`);
     const content = fenceContent(tree, block);
-    group![kind] = kind === 'result' ? content.trim() : content;
+    group![field] = kind === 'result' ? content.trim() : kind === 'clipboard-no-newline' ? content.replace(/\n$/, '') : content;
   }
 
   if (config) fail(config.line, 'a config block with no test after it');

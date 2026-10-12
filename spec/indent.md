@@ -4,7 +4,8 @@ Command: `indent` (Tab)
 
 Makes a list item the last child of its previous sibling, carrying its subtree along.
 New children nest at the parent's content column. A paragraph indented under a paragraph or an
-item becomes an item there. A heading goes one level deeper, with the headings in its section.
+item becomes an item there; with nothing above to hold it, it becomes an item in place. A heading
+goes one level deeper, with the headings in its section.
 
 ## Indent1
 
@@ -431,4 +432,25 @@ para a
 para a
 
 para b┃
+```
+
+## Indent22
+
+A paragraph with nothing above to hold it becomes an item in place; outdented, it is a paragraph
+again.
+
+```buffer
+Para┃
+```
+
+> indent
+
+```buffer
+- Para┃
+```
+
+> outdent
+
+```buffer
+Para┃
 ```

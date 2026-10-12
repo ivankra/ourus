@@ -422,7 +422,8 @@ A quote moves past an item.
 
 ## A quote and a heading don't swap
 
-A heading owns what follows it: a quote moved below one would join its section.
+A heading owns what follows it: a heading doesn't move above a quote, and a quote moved down past a
+heading joins its section, as any node does ([BlockDown20](block-down.md#blockdown20)).
 
 ### A heading doesn't move above a quote
 
@@ -437,7 +438,7 @@ A heading owns what follows it: a quote moved below one would join its section.
 rejected: not-expressible
 ```
 
-### A quote doesn't move below a heading
+### A quote moved down past a heading joins its section
 
 ```buffer
 ┃> q
@@ -446,8 +447,9 @@ rejected: not-expressible
 
 > moveBlockDown
 
-```result
-rejected: not-expressible
+```buffer
+## S
+┃> q
 ```
 
 ## Enter in a quote
@@ -501,19 +503,100 @@ b
 > - ┃
 ```
 
-### Empty item leaves the quote
+### Empty item leaves the list, then the quote
 
-On an empty item whose parent is a quote, Enter outdents it out of the quote, as it outdents a nested item.
+Enter on an empty item in a quote leaves the list, as at the top level: the item becomes an empty
+paragraph in the quote, a quoted blank line above it. Enter again leaves the quote: the empty
+paragraph follows it.
+
+Obsidian does the same; ourus used to take the item out of the quote at once, as Shift-Tab does.
 
 ```buffer
-> - a┃
+> Quote:
+> - one┃
+```
+
+> enter
+
+```buffer
+> Quote:
+> - one
+> - ┃
+```
+
+> enter
+
+```buffer
+> Quote:
+> - one
+>
+> ┃◌
+```
+
+> enter
+
+```buffer
+> Quote:
+> - one
+
+┃◌
+```
+
+> "Back to text."
+
+```buffer
+> Quote:
+> - one
+
+Back to text.┃
+```
+
+### Empty item leaves a quote inside an item
+
+In a quote inside an item: the empty paragraph that leaves the quote is the item's.
+
+```buffer
+- x
+  > - a┃
 ```
 
 > enter enter
 
 ```buffer
-> - a
-- ┃
+- x
+  > - a
+  >
+  > ┃◌
+```
+
+> enter
+
+```buffer
+- x
+  > - a
+
+  ┃◌
+```
+
+### Empty paragraph that is all of its quote
+
+A quote holding only the empty paragraph goes, the paragraph in its place. With nothing above the
+item, no blank line sets it off.
+
+```buffer
+> - ┃
+```
+
+> enter
+
+```buffer
+> ┃◌
+```
+
+> enter
+
+```buffer
+┃◌
 ```
 
 ### Splitting a quoted paragraph

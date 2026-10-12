@@ -620,3 +620,45 @@ A backslash before a digit escapes nothing, so the escape goes before the `.` (o
 1. abc
 2. ┃2\. def
 ```
+
+## Enter36
+
+In a loose list (blank lines between its items), Enter sets the new item off as the others are.
+
+```buffer
+- a
+
+- b┃
+```
+
+> enter
+
+```buffer
+- a
+
+- b
+
+- ┃
+```
+
+## Enter37
+
+Enter on an empty line at the end of an item's content, the caret at its content column: the line
+becomes the item's next sibling, numbered on.
+
+As Enter on an empty nested item outdents it. With more of the item below the line, Enter there is
+the host's.
+
+```buffer
+1. a
+   text
+   ┃
+```
+
+> enter
+
+```buffer
+1. a
+   text
+2. ┃
+```

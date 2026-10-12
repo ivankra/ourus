@@ -417,3 +417,70 @@ Refused on purpose: headings move among siblings of the same level.
 ```result
 rejected: not-expressible
 ```
+
+## BlockDown18
+
+The last item of a heading's section moves down into the next section, as its first item.
+
+```buffer
+# Work
+- email
+- ┃review
+
+# Home
+- water
+```
+
+> moveBlockDown
+
+```buffer
+# Work
+- email
+
+# Home
+- ┃review
+- water
+```
+
+## BlockDown19
+
+A heading doesn't cross into the next section: as its first child, it would take in that section's
+other nodes.
+
+```buffer
+# A
+## s┃
+
+# B
+- x
+```
+
+> moveBlockDown
+
+```result
+rejected: no-next-sibling
+```
+
+## BlockDown20
+
+An item moved down past a sub-heading goes into that sub-heading's section, as its first item.
+
+```buffer
+# Todo
+- one
+- two┃
+
+## Later
+- three
+```
+
+> moveBlockDown
+
+```buffer
+# Todo
+- one
+
+## Later
+- two┃
+- three
+```

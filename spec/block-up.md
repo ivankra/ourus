@@ -469,3 +469,78 @@ para
 para
 - b
 ```
+
+## BlockUp22
+
+The first item of a heading's section moves up into the section above, as its last item.
+
+```buffer
+# Work
+- email
+
+# Home
+- ┃review
+- water
+```
+
+> moveBlockUp
+
+```buffer
+# Work
+- email
+- ┃review
+
+# Home
+- water
+```
+
+## BlockUp23
+
+Moving up into a section that ends with a sub-heading, the node lands at the end of that sub-heading's
+section, where the text above it ends.
+
+```buffer
+# A
+## sub
+- s1
+
+# B
+┃para
+```
+
+> moveBlockUp
+
+```buffer
+# A
+## sub
+- s1
+
+┃para
+
+# B
+```
+
+## BlockUp24
+
+The first item of a sub-heading's section moves up into the enclosing section, before the
+sub-heading: not under the item above it, as in a list.
+
+```buffer
+# Todo
+- one
+
+## Later
+- ┃two
+- three
+```
+
+> moveBlockUp
+
+```buffer
+# Todo
+- one
+- ┃two
+
+## Later
+- three
+```

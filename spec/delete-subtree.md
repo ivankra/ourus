@@ -2,8 +2,8 @@
 
 Current command: `deleteSubtree`.
 
-Deletes the selected nodes with their subtrees. The caret goes to the preceding text, or to
-what follows when the first node is deleted. Changed ordered lists renumber.
+Deletes the selected nodes with their subtrees. The caret goes to the end of the preceding text,
+or, when the first node is deleted, to the start of the text that follows. Changed ordered lists renumber.
 
 ## BlockDelete1
 
@@ -57,6 +57,22 @@ para┃
 > deleteSubtree
 
 ```buffer
-┃# H
+# ┃H
 ```
 
+
+## BlockDelete4
+
+The first item: the caret goes to the next item's text, after its marker, where typing extends it.
+
+```buffer
+- a┃
+  - a1
+- [ ] b
+```
+
+> deleteSubtree
+
+```buffer
+- [ ] ┃b
+```

@@ -84,7 +84,25 @@ export function execute(doc: OutlineDoc, command: Command, selection: Selection)
   if (result.status === 'rejected' && result.reason === 'encoding-failed' && emptyAwayFromCaret(doc, plan.expected, doc.nodeAt(selection.head))) {
     return reject('not-expressible', 'an empty node away from the caret') as Result;
   }
+  // indented code right after an item would be more of the item: refused, not a writer's failure
+  if (result.status === 'rejected' && result.reason === 'encoding-failed' && indentedCodeAfterItem(plan.expected)) {
+    return reject('not-expressible', 'indented code after an item would join it') as Result;
+  }
   return result;
+}
+
+/** Whether `expected` has indented code right after an item it isn't in, where it would read as the item's. */
+function indentedCodeAfterItem(expected: OutlineNode | EditedOutlineNode): boolean {
+  // the node above in document order, with the nodes holding it
+  let above: (OutlineNode | EditedOutlineNode)[] = [];
+  const visit = (node: OutlineNode | EditedOutlineNode, holders: (OutlineNode | EditedOutlineNode)[]): boolean => {
+    const old = isEdited(node) ? node.from : node;
+    if (node.kind === 'atom' && old?.block.type === 'code_block' && !old.block.fenced && above.some((n) => n.kind === 'item' && !holders.includes(n))) return true;
+    const here = [...holders, node];
+    above = here;
+    return node.children.some((child) => visit(child, here));
+  };
+  return expected.children.some((child) => visit(child, [expected]));
 }
 
 /** Verifies a plan (renumbered where it needs it), then its fallback if it doesn't read as intended. */
@@ -467,6 +485,8 @@ function planCommand(doc: OutlineDoc, command: Command, selection: Selection): O
     case 'outdent':
     case 'moveBlockUp':
     case 'moveBlockDown': {
+      // Tab and Shift-Tab in code are the host's: they indent the code (Logseq, Obsidian)
+      if ((command.type === 'indent' || command.type === 'outdent') && isCodeLine(doc, doc.lineAt(selection.anchor)) && isCodeLine(doc, doc.lineAt(selection.head))) return notApplicable;
       const run = operands(doc, selection);
       if (run === null) return notApplicable;
       if ('status' in run) return run;
@@ -630,12 +650,18 @@ function convertedSelection(doc: OutlineDoc, sel: Selection, nodes: readonly Out
 function indentParagraphs(doc: OutlineDoc, run: OutlineNode[], sel: Selection): Outcome {
   const parent = run[0]!.parent!;
   const prev = parent.children[parent.children.indexOf(run[0]!) - 1];
-  if (!prev) return reject('no-previous-sibling');
   // into a quote, a paragraph stays a paragraph
-  if (prev.kind === 'quote') return written(doc, append(remove(doc.outline, parent.id, run), prev.id, 'last', run), sel);
-  if (prev.kind !== 'paragraph' && prev.kind !== 'item') return reject('not-expressible', 'only a paragraph or an item can hold list items');
+  if (prev?.kind === 'quote') return written(doc, append(remove(doc.outline, parent.id, run), prev.id, 'last', run), sel);
+  const holds = prev?.kind === 'paragraph' || prev?.kind === 'item';
+  // in a section, with nothing above to hold them, the paragraphs become items in place: outdent's inverse
+  if (!holds && parent.kind !== 'root' && parent.kind !== 'heading') return prev ? reject('not-expressible', 'only a paragraph or an item can hold list items') : reject('no-previous-sibling');
   const items = run.map((node) => converted(doc, node, 'item'));
-  const expected = append(remove(doc.outline, parent.id, run), prev.id, 'last', items);
+  const expected = holds
+    ? append(remove(doc.outline, parent.id, run), prev.id, 'last', items)
+    : editNode(doc.outline, parent.id, (p) => {
+        const i = p.children.indexOf(run[0]!);
+        return { ...p, children: [...p.children.slice(0, i), ...items, ...p.children.slice(i + run.length)] };
+      });
   return written(doc, expected, sel, {}, convertedSelection(doc, sel, run, items));
 }
 
@@ -737,12 +763,24 @@ function move(doc: OutlineDoc, run: OutlineNode[], dir: -1 | 1, sel: Selection):
     // out of a paragraph's list, upward: above the paragraph
     if (dir < 0 && items && parent.kind === 'paragraph') return written(doc, place(remove(doc.outline, parent.id, run), parent.parent!.id, parent.id, 'before', run), sel);
     const grand = parent.parent;
-    const into = grand && (dir < 0 ? grand.children[grand.children.indexOf(parent) - 1] : grand.children[grand.children.indexOf(parent) + 1]);
+    let into = grand && (dir < 0 ? grand.children[grand.children.indexOf(parent) - 1] : grand.children[grand.children.indexOf(parent) + 1]);
+    // up out of a sub-heading's section into the enclosing section's own nodes: before the sub-heading,
+    // at the section's level, not under the node above it
+    if (dir < 0 && parent.kind === 'heading' && first.kind !== 'heading' && into && into.kind !== 'heading') {
+      return written(doc, place(remove(doc.outline, parent.id, run), grand!.id, parent.id, 'before', run), sel);
+    }
+    // up into a section that ends with a sub-heading: the end of that sub-heading's section is where the
+    // text above ends
+    if (dir < 0 && into?.kind === 'heading' && first.kind !== 'heading') {
+      while (into.children[into.children.length - 1]?.kind === 'heading') into = into.children[into.children.length - 1]!;
+    }
     if (!into || !canHold(into, first)) return reject(dir < 0 ? 'no-previous-sibling' : 'no-next-sibling');
     return written(doc, append(remove(doc.outline, parent.id, run), into.id, dir < 0 ? 'last' : 'first', run), sel);
   }
   // an item below a paragraph becomes its first list item
   if (dir > 0 && items && other.kind === 'paragraph') return written(doc, append(remove(doc.outline, parent.id, run), other.id, 'first', run), sel);
+  // down past a sub-heading: into its section, as its first node
+  if (dir > 0 && other.kind === 'heading' && first.kind !== 'heading') return written(doc, append(remove(doc.outline, parent.id, run), other.id, 'first', run), sel);
   // a quote swaps with any node but a heading (which owns what follows it); blocks swap with
   // blocks, items with items
   const group = (k: string) => (k === 'paragraph' || k === 'atom' ? 'leaf' : k);
@@ -758,8 +796,11 @@ function move(doc: OutlineDoc, run: OutlineNode[], dir: -1 | 1, sel: Selection):
   return written(doc, expected, sel);
 }
 
-/** Whether a moved run starting with `node` can cross into `into` as its children. */
+/** Whether a moved run starting with `node` can cross into `into` as its children: an item into an item or a paragraph's list, anything into a heading's section. */
 function canHold(into: OutlineNode, node: OutlineNode): boolean {
+  // a heading's section takes anything but a heading (as its first child, a heading would take in the
+  // section's other nodes)
+  if (into.kind === 'heading') return node.kind !== 'heading';
   if (node.kind === 'item') return into.kind === 'item' || into.kind === 'paragraph';
   return false;
 }
@@ -784,7 +825,7 @@ function deleteSubtree(doc: OutlineDoc, sel: Selection): Outcome {
       above && above.kind !== 'root'
         ? writtenOutline.map(doc.headRange(above)?.to ?? doc.lines[above.headEndLine]!.to, -1)
         : after
-          ? writtenOutline.map(doc.lines[after.startLine]!.from, 1)
+          ? writtenOutline.map(textStart(doc, doc.lines[after.startLine]!.from), 1)
           : 0;
     return { anchor: caret, head: caret };
   });
@@ -898,14 +939,18 @@ function split(doc: OutlineDoc, sel: Selection): Outcome {
   const selFrom = Math.min(sel.anchor, sel.head);
   const selTo = Math.max(sel.anchor, sel.head);
   const node = doc.nodeAt(selFrom);
-  if (!node) return notApplicable;
+  if (!node) return selFrom === selTo ? (leaveItem(doc, selFrom) ?? notApplicable) : notApplicable;
   const line = doc.lineAt(selFrom);
   if (doc.lineAt(selTo).index !== line.index) return notApplicable; // a selection across lines is the host's
-  if (node.kind === 'paragraph') return splitParagraph(doc, node, line, selFrom, selTo);
+  if (node.kind === 'paragraph') {
+    const quote = node.parent!;
+    if (quote.kind === 'quote' && quote.children[quote.children.length - 1] === node && isEmptyText(doc.headLines(node).join('\n'))) return leaveQuoteEmpty(doc, node);
+    return splitParagraph(doc, node, line, selFrom, selTo);
+  }
   if (node.kind === 'heading') return splitHeading(doc, node, line, selFrom, selTo);
   // a callout's title and body are one paragraph: Enter in the title starts the body with the rest
   if (node.kind === 'quote' && node.head) return lineBreak(doc, sel);
-  if (line.leaf?.type === 'code_block' && line.leaf.fenced) return fenceNewline(doc, node, line, selFrom, selTo);
+  if (line.leaf?.type === 'code_block' && line.leaf.fenced) return enterAfterFence(doc, node, line, selFrom, selTo) ?? fenceNewline(doc, node, line, selFrom, selTo);
   if (node.kind !== 'item') return notApplicable;
   const pos = selFrom;
   if (pos < line.contentFrom && line.index !== node.startLine) return notApplicable;
@@ -929,8 +974,9 @@ function split(doc: OutlineDoc, sel: Selection): Outcome {
     if (pos < node.block.markerTo!) return notApplicable;
     // Enter on an empty item: a nested one outdents as the last child. First or in the middle of its
     // list, it gets a new empty sibling, the caret going into it (Workflowy, Logseq), or with
-    // `enterOnEmptyItem: outdent` it outdents there too (Roam). A top-level one leaves the list,
-    // becoming an empty paragraph held by a placeholder, set off from the items around it by blank lines.
+    // `enterOnEmptyItem: outdent` it outdents there too (Roam). A top-level one, or one in a quote,
+    // leaves the list, becoming an empty paragraph held by a placeholder, set off from the items around
+    // it by blank lines; in a quote, it stays in the quote (Obsidian).
     if (node.parent!.kind === 'item') {
       const siblings = node.parent!.children;
       if (siblings[siblings.length - 1] === node || doc.config.enterOnEmptyItem === 'outdent') return outdent(doc, [node], { anchor: pos, head: pos });
@@ -942,14 +988,15 @@ function split(doc: OutlineDoc, sel: Selection): Outcome {
       const expected = place(doc.outline, node.parent!.id, node.id, 'after', [created('item', '')]);
       return { changes: [{ from: markerLine.to, to: markerLine.to, insert }], selection: { anchor: caret, head: caret }, expected, compare: 'tree' };
     }
-    if (node.parent!.kind === 'quote') return leaveQuote(doc, [node], { anchor: pos, head: pos });
     const markerLine = doc.lines[node.startLine]!;
+    // the containers the item is in (a quote's `>`) stay on its line and on the blank lines around it
+    const outer = markerLine.prefix.slice(0, markerLine.prefix.findIndex((p) => p.block === node.block)).map((p) => continuationText(doc, p)).join('');
     const prev = doc.lines[node.startLine - 1];
     const next = doc.lines[node.startLine + 1];
-    const before = prev && !prev.blank ? eol : '';
-    const after = next && !next.blank ? eol : '';
-    const changes = [{ from: markerLine.from, to: markerLine.to, insert: before + after }];
-    const caret = markerLine.from + before.length;
+    const before = prev && !blankInQuote(doc, prev) ? outer.trimEnd() + eol : '';
+    const after = next && !blankInQuote(doc, next) ? eol + outer.trimEnd() : '';
+    const changes = [{ from: markerLine.from, to: markerLine.to, insert: before + outer + after }];
+    const caret = markerLine.from + before.length + outer.length;
     const parent = node.parent!;
     const empty = created('paragraph', '');
     // leaving a paragraph's list, the new paragraph follows the paragraph, and the items after it
@@ -992,7 +1039,10 @@ function split(doc: OutlineDoc, sel: Selection): Outcome {
     marker = markerText(doc, node, true);
   }
   const rest = encodeRest(cut.rest, cut.after.slice(1));
-  let insert = eol + prefix + marker + ' ' + box;
+  // in a loose list (blank lines between its items), the new item is set off as the others are
+  const list = firstChild?.kind === 'item' ? firstChild.block.parent : firstChild ? null : node.block.parent;
+  const gap = list && list.tight === false ? eol : '';
+  let insert = eol + gap + prefix + marker + ' ' + box;
   let caret = cut.from + insert.length;
   let first = cut.after[0]!.trimStart();
   if (box) {
@@ -1015,6 +1065,75 @@ function split(doc: OutlineDoc, sel: Selection): Outcome {
   const fresh = created('item', normText([first, ...cut.after.slice(1)]));
   const expected = firstChild ? append(split, node.id, 'first', [fresh]) : place(split, node.parent!.id, node.id, 'after', [fresh]);
   return { changes, selection: { anchor: caret, head: caret }, expected, compare: 'tree' };
+}
+
+/** Whether `text`, on the line after paragraph text, starts a block of its own rather than continuing it. */
+function interruptsParagraph(text: string): boolean {
+  if (startsBlock(text, true)) return true;
+  // a list item with text interrupts a paragraph; an ordered one only from 1
+  const m = reListMarker.exec(text);
+  return !!m && text.slice(m[0].length).trim() !== '' && (!/^\d/.test(text) || /^0*1[.)]/.test(text));
+}
+
+/** Whether a line is blank, or only quote markers (`>`). */
+function blankInQuote(doc: OutlineDoc, line: LineInfo): boolean {
+  return /^[\s>]*$/.test(doc.text.slice(line.from, line.to));
+}
+
+/**
+ * Enter on an empty paragraph ending a quote: it leaves the quote, to follow it (Obsidian), the quoted
+ * blank line above it going too. A quote it was all of goes, the paragraph in its place.
+ */
+function leaveQuoteEmpty(doc: OutlineDoc, node: OutlineNode): Outcome {
+  const quote = node.parent!;
+  const line = doc.lines[node.startLine]!;
+  const eol = line.ending || dominantEnding(doc.text);
+  const quoteLine = doc.lines[quote.startLine]!;
+  const outer = quoteLine.prefix.slice(0, quoteLine.prefix.findIndex((p) => p.block === quote.block)).map((p) => continuationText(doc, p)).join('');
+  const empty = created('paragraph', '');
+  const next = doc.lines[node.startLine + 1];
+  const after = next && !next.blank ? eol + outer.trimEnd() : '';
+  let from: number;
+  let insert: string;
+  let expected: EditedOutlineNode;
+  if (quote.children.length === 1) {
+    from = quoteLine.from;
+    insert = outer;
+    expected = place(doc.outline, quote.parent!.id, quote.id, 'instead', [empty]);
+  } else {
+    let above = node.startLine - 1;
+    while (above > quote.startLine && blankInQuote(doc, doc.lines[above]!)) above--;
+    from = doc.lines[above]!.to;
+    insert = eol + outer.trimEnd() + eol + outer;
+    expected = place(remove(doc.outline, quote.id, [node]), quote.parent!.id, quote.id, 'after', [empty]);
+  }
+  const caret = from + insert.length;
+  return { changes: [{ from, to: line.to, insert: insert + after }], selection: { anchor: caret, head: caret }, expected, compare: 'tree', placeholders: [caret] };
+}
+
+/**
+ * Enter on an empty line at the end of an item's content, the caret at its content column (Enter
+ * after a closing fence left it there, Fence7): the line becomes the item's next sibling, as Enter on
+ * an empty nested item outdents it. Null where that doesn't apply.
+ */
+function leaveItem(doc: OutlineDoc, pos: number): Outcome | null {
+  const line = doc.lineAt(pos);
+  const text = doc.text;
+  if (pos !== line.to || !/^[ \t]+$/.test(text.slice(line.from, line.to))) return null;
+  const col = advanceColumns(text, line.from, pos, 0);
+  // the node above, and the item it is the content of that the caret's column is in
+  let lineNo = line.index - 1;
+  while (lineNo >= 0 && doc.lines[lineNo]!.blank) lineNo--;
+  if (lineNo < 0) return null;
+  let item: OutlineNode | null = doc.nodeAt(doc.lines[lineNo]!.to) ?? null;
+  while (item && !(item.kind === 'item' && item.block.contentColumn === col)) item = item.parent;
+  if (!item) return null;
+  // nothing of the item comes below the line
+  for (let k = line.index + 1; k <= item.endLine; k++) if (!doc.lines[k]!.blank) return null;
+  const insert = siblingPrefix(doc, item) + markerText(doc, item, true) + ' ';
+  const caret = line.from + insert.length;
+  const expected = place(doc.outline, item.parent!.id, item.id, 'after', [created('item', '')]);
+  return { changes: [{ from: line.from, to: line.to, insert }], selection: { anchor: caret, head: caret }, expected, compare: 'tree' };
 }
 
 /** Whether `node`'s first line comes right after its parent's own text (a paragraph). */
@@ -1076,6 +1195,72 @@ function fenceNewline(doc: OutlineDoc, node: OutlineNode, line: LineInfo, selFro
   const caret = changes[0]!.from + changes[0]!.insert.length;
   const next = doc.apply(changes);
   return { changes, selection: { anchor: caret, head: caret }, expected: withText(doc.outline, node.id, nodeText(next, next.nodeAt(caret) ?? node)), compare: 'tree' };
+}
+
+/** Whether `line` is the closing fence of the fenced block it is in. */
+function isClosingFence(doc: OutlineDoc, line: LineInfo): boolean {
+  const block = line.leaf;
+  if (!block || block.type !== 'code_block' || !block.fenced || line.index === block.startLine || line.index !== block.endLine) return false;
+  const rest = doc.text.slice(line.contentFrom, line.to).trim();
+  return rest.length >= block.fenceLength! && /^(.)\1*$/.test(rest) && rest[0] === block.fenceChar;
+}
+
+/** Whether `line` is a code line of a fenced block: inside it, neither fence. */
+function isCodeLine(doc: OutlineDoc, line: LineInfo | undefined): line is LineInfo {
+  const block = line?.leaf;
+  return !!line && block?.type === 'code_block' && !!block.fenced && line.index !== block.startLine && !isClosingFence(doc, line);
+}
+
+/** An edit of a fenced block's code lines: the outline stays, the block's text changing. */
+function codeEdit(doc: OutlineDoc, node: OutlineNode, changes: TextChange[], caret: number): Plan {
+  const next = doc.apply(changes);
+  return { changes, selection: { anchor: caret, head: caret }, expected: withText(doc.outline, node.id, nodeText(next, next.nodeAt(caret) ?? node)), compare: 'tree' };
+}
+
+/**
+ * Backspace at the start of a code line joins it to the code line above, and Delete at the end of
+ * one joins the code line below: the line break goes with the containers' prefix on the next line
+ * (an item's indentation, a quote's `>`), which isn't code. Against a fence line it is refused: the
+ * code would join the fence. Null where that doesn't apply.
+ */
+function joinCodeLines(doc: OutlineDoc, node: OutlineNode, pos: number, dir: -1 | 1): Outcome | null {
+  const line = doc.lineAt(pos);
+  if (!isCodeLine(doc, line)) return null;
+  if (dir < 0) {
+    if (pos !== line.contentFrom) return null;
+    const prev = doc.lines[line.index - 1]!;
+    if (!isCodeLine(doc, prev)) return reject('not-expressible', 'the code would join the opening fence');
+    return codeEdit(doc, node, [{ from: prev.to, to: line.contentFrom, insert: '' }], prev.to);
+  }
+  if (pos !== line.to) return null;
+  const next = doc.lines[line.index + 1];
+  if (!next) return null;
+  if (!isCodeLine(doc, next)) return reject('not-expressible', 'the closing fence would join the code');
+  return codeEdit(doc, node, [{ from: line.to, to: next.contentFrom, insert: '' }], pos);
+}
+
+/**
+ * Enter at the end of a closing fence that ends an item's content: a new item, as at the end of the
+ * item's text: its first child when it has child items, else its next sibling (Logseq). Shift-Enter
+ * there makes a new line in the item instead (Fence7). Null where that doesn't apply.
+ */
+function enterAfterFence(doc: OutlineDoc, node: OutlineNode, line: LineInfo, selFrom: number, selTo: number): Outcome | null {
+  if (selFrom !== selTo || selFrom !== line.to || !isClosingFence(doc, line)) return null;
+  const item = node.kind === 'item' ? node : node.parent;
+  if (item?.kind !== 'item') return null;
+  // the fence is the item's text, or its last child before any child items
+  const at = node === item ? -1 : item.children.indexOf(node);
+  const after = item.children.slice(at + 1);
+  if (after.some((child) => child.kind !== 'item')) return null;
+  const eol = line.ending || dominantEnding(doc.text);
+  const firstChild = after[0];
+  const list = firstChild ? firstChild.block.parent : item.block.parent;
+  const gap = list && list.tight === false ? eol : '';
+  const insert = eol + gap + (firstChild ? siblingPrefix(doc, firstChild) + markerText(doc, firstChild, false) : siblingPrefix(doc, item) + markerText(doc, item, true)) + ' ';
+  const caret = line.to + insert.length;
+  const fresh = created('item', '');
+  const expected = firstChild ? place(doc.outline, item.id, firstChild.id, 'before', [fresh]) : place(doc.outline, item.parent!.id, item.id, 'after', [fresh]);
+  return { changes: [{ from: line.to, to: line.to, insert }], selection: { anchor: caret, head: caret }, expected, compare: 'tree' };
 }
 
 /** Enter at the start of a paragraph or heading: a blank line above it, the text staying put. */
@@ -1239,6 +1424,16 @@ function pastePlain(doc: OutlineDoc, sel: Selection, payload: string): Outcome {
   const line = doc.lineAt(from);
   if (doc.lineAt(to).index !== line.index || from < line.contentFrom) return notApplicable;
   const node = doc.nodeAt(from);
+  // on a code line, the lines are code as they are, each in the containers the block is in
+  if (node && isCodeLine(doc, line)) {
+    // a pasted line that is a fence would close the block
+    const block = line.leaf!;
+    if (lines.some((text) => new RegExp(`^ {0,3}\\${block.fenceChar}{${block.fenceLength},}\\s*$`).test(text))) return reject('not-expressible', 'a pasted fence would close the code block');
+    const prefix = line.prefix.map((p) => continuationText(doc, p)).join('');
+    const eol = line.ending || dominantEnding(doc.text);
+    const insert = lines.join(eol + prefix);
+    return codeEdit(doc, node, [{ from, to, insert }], from + insert.length);
+  }
   if (node?.kind === 'heading') return reject('not-expressible', 'a heading is a single line');
   // on an empty item, the text is its text: its first line escaped where it would start a block
   if (node && isEmptyItem(doc, node) && from >= node.block.markerTo! && from === to) {
@@ -1322,6 +1517,8 @@ function paste(doc: OutlineDoc, sel: Selection, payload: string): Outcome {
   const pos = sel.head;
   const node = doc.nodeAt(pos);
   if (!node) return notApplicable;
+  // in code, what is pasted is code
+  if (isCodeLine(doc, doc.lineAt(pos))) return pastePlain(doc, sel, payload);
   const empty = isEmptyItem(doc, node) && pos >= node.block.markerTo!;
   if (!empty) {
     if (!node.head || (node.kind !== 'item' && node.kind !== 'heading' && node.kind !== 'paragraph')) return notApplicable;
@@ -1342,7 +1539,10 @@ function paste(doc: OutlineDoc, sel: Selection, payload: string): Outcome {
   const fragment = OutlineDoc.parse(lines.map((text) => (text.trim() === '' ? '' : dropColumns(text, common))).join('\n'), { config: doc.config });
   // the nodes go in an empty item's place, else as the first children of a heading or of an item with
   // children, else right after the node
-  const asChildren = !empty && (node.kind === 'heading' || (node.kind === 'item' && node.children.length > 0));
+  // a list pasted at the end of a paragraph that owns one goes first in it, as Enter there puts a new
+  // node right after the paragraph's text
+  const ownsList = node.kind === 'paragraph' && node.children[0]?.kind === 'item' && fragment.outline.children.every((root) => root.kind === 'item');
+  const asChildren = !empty && (node.kind === 'heading' || (node.kind === 'item' && node.children.length > 0) || ownsList);
   const fitted = fitPaste(doc, node, fragment, empty, asChildren);
   // what can't be a node where it lands is pasted as text
   if (!fitted) return pastePlain(doc, sel, payload);
@@ -1358,7 +1558,11 @@ function paste(doc: OutlineDoc, sel: Selection, payload: string): Outcome {
   let last = fitted.nodes[fitted.nodes.length - 1]!;
   while (last.children.length) last = last.children[last.children.length - 1] as EditedOutlineNode;
   const lastLine = last.lines!.length - 1;
-  const plan = written(doc, expected, sel, empty ? {} : { separate: 'around' }, (writtenOutline) => {
+  // pasted nodes are set off from what they land between; items going first in a paragraph's list
+  // keep the paragraph's spacing from its list (a blank line between them, or none)
+  const listApart = ownsList && doc.lines.slice(node.headEndLine + 1, node.children[0]!.startLine).some((line) => line.blank);
+  const separate = empty || (ownsList && !listApart) ? {} : { separate: 'around' as const };
+  const plan = written(doc, expected, sel, separate, (writtenOutline) => {
     const caret = writtenOutline.at(last, lastLine, last.lines![lastLine]!.length);
     return { anchor: caret, head: caret };
   });
@@ -1379,7 +1583,8 @@ function fitPaste(doc: OutlineDoc, node: OutlineNode, fragment: OutlineDoc, empt
   const roots = fragment.outline.children;
   if (fragment.nodes.some((n) => n.kind === 'heading')) return null;
   const copy = (root: OutlineNode): EditedOutlineNode => asNewNode(root, (n) => nodeText(fragment, n), (n) => contentOf(fragment, n));
-  if (node.kind !== 'item') return { nodes: roots.map(copy), restyle: [] };
+  // outside a list (a paragraph's own list aside), the nodes go in as they are
+  if (node.kind !== 'item' && !(node.kind === 'paragraph' && asChildren)) return { nodes: roots.map(copy), restyle: [] };
   const markerOf = (item: OutlineNode, text: OutlineDoc): string => text.text.slice(item.block.markerFrom!, item.block.markerTo!);
   // the list the paste lands in, and the item whose marker gives its form
   const first = node.children[0];
@@ -1661,6 +1866,10 @@ function join(doc: OutlineDoc, sel: Selection): Outcome {
   const node = doc.nodeAt(pos);
   if (!node) return notApplicable;
   const line = doc.lineAt(pos);
+  const code = joinCodeLines(doc, node, pos, -1);
+  if (code) return code;
+  const gap = deleteGap(doc, node, pos, -1);
+  if (gap) return gap;
 
   // at the start of a continuation line of a node's text: join it to the line above
   if (node.head?.type === 'paragraph' && line.index > node.head.startLine && line.index <= node.head.endLine) {
@@ -1965,8 +2174,22 @@ function joinHeading(doc: OutlineDoc, node: OutlineNode, line: LineInfo, pos: nu
   const unwrapped = place(doc.outline, node.parent!.id, node.id, 'instead', node.children);
   const expected = withText(unwrapped, prev.id, normText([...prevLines.slice(0, -1), prevLines[prevLines.length - 1]! + title]));
   const changes = joinChanges(doc, prev, prevRange, range.from, range.to);
-  if (range.to < line.to) changes.push({ from: range.to, to: line.to, insert: '' });
+  const gap = gapBelowHeading(doc, line, prev);
+  if (range.to < line.to || gap) changes.push({ from: range.to, to: line.to, insert: gap });
   return { changes, selection: { anchor: prevRange.to, head: prevRange.to }, expected, compare: 'flat' };
+}
+
+/**
+ * A heading line joined into the paragraph text of `into`: a blank line to set off the line below it, where that
+ * line would otherwise continue the joined text (the heading's section text, right under it); else
+ * ''. The line below is read after the containers the heading is in, so its own markers count.
+ */
+function gapBelowHeading(doc: OutlineDoc, headingLine: LineInfo, into: OutlineNode): string {
+  const below = doc.lines[headingLine.index + 1];
+  // joined into a heading, the text is one line: nothing continues it
+  if (!below || blankInQuote(doc, below) || into.head?.type === 'heading') return '';
+  if (interruptsParagraph(doc.text.slice(below.from + headingLine.contentFrom - headingLine.from, below.to).trimStart())) return '';
+  return (headingLine.ending || dominantEnding(doc.text)) + headingLine.prefix.map((p) => continuationText(doc, p)).join('').trimEnd();
 }
 
 /**
@@ -1974,12 +2197,44 @@ function joinHeading(doc: OutlineDoc, node: OutlineNode, line: LineInfo, pos: nu
  * from the other side. At the end of a line inside the text, it joins the next line; on an empty
  * item, it removes the item, and the caret moves on to the node below.
  */
+/**
+ * With `deleteAtGap: gap`, Delete at the end of a node's text before a blank line, or Backspace at the
+ * start of its text after one, deletes that blank line, the outline staying as it is. Null where that
+ * doesn't apply, or where the outline would change (two paragraphs merging): the command goes on.
+ */
+function deleteGap(doc: OutlineDoc, node: OutlineNode, pos: number, dir: -1 | 1): Outcome | null {
+  if (doc.config.deleteAtGap !== 'gap' || !node.head) return null;
+  const range = doc.headRange(node);
+  if (!range) return null;
+  const line = doc.lineAt(pos);
+  let change: TextChange;
+  if (dir > 0) {
+    const next = doc.lines[line.index + 1];
+    if (pos !== range.to || pos !== line.to || !next || !blankInQuote(doc, next)) return null;
+    change = { from: line.to, to: next.to, insert: '' };
+  } else {
+    // a heading's `#`s are text Backspace edits (`headingEditing: text`), before its blank line
+    if (node.kind === 'heading' && doc.config.headingEditing === 'text') return null;
+    const prev = doc.lines[line.index - 1];
+    if (line.index !== node.head.startLine || pos !== textStart(doc, pos) || !prev || !blankInQuote(doc, prev)) return null;
+    change = { from: prev.from, to: prev.to + prev.ending.length, insert: '' };
+  }
+  const shape = (d: OutlineDoc): string => d.nodes.map((n) => `${n.depth}:${n.kind}`).join(',');
+  if (shape(doc.apply([change])) !== shape(doc)) return null;
+  const caret = mapPos([change], pos, dir > 0 ? -1 : 1);
+  return { changes: [change], selection: { anchor: caret, head: caret }, expected: doc.outline, compare: 'tree' };
+}
+
 function joinForward(doc: OutlineDoc, sel: Selection): Outcome {
   if (sel.anchor !== sel.head) return notApplicable;
   const pos = sel.head;
   const node = doc.nodeAt(pos);
   if (!node) return notApplicable;
   const line = doc.lineAt(pos);
+  const code = joinCodeLines(doc, node, pos, 1);
+  if (code) return code;
+  const gap = deleteGap(doc, node, pos, 1);
+  if (gap) return gap;
   const at = (p: number): Selection => ({ anchor: p, head: p });
   const head = node.head;
   if (head?.type === 'paragraph' && line.index >= head.startLine && line.index < head.endLine) {
@@ -2028,7 +2283,10 @@ function joinForward(doc: OutlineDoc, sel: Selection): Outcome {
     if (head.type === 'heading') joinedText = joinedText.replace(/[ \t]+#+[ \t]*$/, '');
     const unwrapped = place(doc.outline, next.parent!.id, next.id, 'instead', next.children);
     const expected = withText(unwrapped, node.id, normText([...lines.slice(0, -1), lines[lines.length - 1]! + joinedText]));
-    return { changes: joinChanges(doc, node, range, from, headingLine.to), selection: at(range.to), expected, compare: 'flat' };
+    const changes = joinChanges(doc, node, range, from, headingLine.to);
+    const gap = gapBelowHeading(doc, headingLine, node);
+    if (gap) changes.push({ from: headingLine.to, to: headingLine.to, insert: gap });
+    return { changes, selection: at(range.to), expected, compare: 'flat' };
   }
   // the host would join the block below into the text: Backspace from its side is refused too
   if (next.kind === 'atom' || next.kind === 'quote') return reject('not-expressible', `can't take in the ${next.block.type} below`);

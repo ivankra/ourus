@@ -28,7 +28,8 @@ Structured paste follows a few rules:
 7. **Numbers are never renumbered**, pasted or existing: Markdown numbers an ordered list from its
    first number.
 
-One line is inline text, the host's.
+One line is inline text, the host's. On a code line, what is pasted is code: plain text, each line in
+the containers the block is in ([Paste22](#paste22), [Paste23](#paste23)).
 
 ## Paste1
 
@@ -491,3 +492,108 @@ text
   text
   ┃◌
 ```
+
+## Paste20
+
+A list pasted at the end of a paragraph that owns a list goes first in that list.
+
+As Enter there puts a new node right after the paragraph's text (rule 5); the pasted items take the
+list's form (rule 2).
+
+```clipboard
+- p
+- q
+```
+
+```buffer
+Notes┃
+
+- x
+- z
+```
+
+> pasteStructured
+
+```buffer
+Notes
+
+- p
+- q┃
+- x
+- z
+```
+
+## Paste21
+
+The same with no blank line between the paragraph and its list: none is added (rule 2: the
+destination decides spacing).
+
+```clipboard
+- p
+- q
+```
+
+```buffer
+Notes┃
+- x
+```
+
+> pasteStructured
+
+```buffer
+Notes
+- p
+- q┃
+- x
+```
+
+## Paste22
+
+Plain paste on a code line: the lines are code as they are, each taking the containers the block is
+in (here the item's indentation).
+
+```clipboard-no-newline
+a = 1
+  b = 2
+```
+
+````buffer
+- code
+  ```
+  ┃
+  ```
+````
+
+> pastePlain
+
+````buffer
+- code
+  ```
+  a = 1
+    b = 2┃
+  ```
+````
+
+## Paste23
+
+Structured paste on a code line pastes as plain text: in code, what is pasted is code.
+
+```clipboard-no-newline
+- a
+- b
+```
+
+````buffer
+> ```
+> x┃
+> ```
+````
+
+> pasteStructured
+
+````buffer
+> ```
+> x- a
+> - b┃
+> ```
+````

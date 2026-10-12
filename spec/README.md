@@ -19,8 +19,8 @@ actions use current command names, so the same files can drive editors with diff
 - [`cursor.md`](cursor.md): caret motions, for moving the caret between actions in tests.
 - [`undo.md`](undo.md): undo and redo, placeholders included.
 - [`gaps.md`](gaps.md): blank lines as the trailing gap of the node above, and the preamble.
-- [Delete block](block-delete.md): `deleteSubtree`.
-- [Duplicate block](block-duplicate.md): `duplicateNode`.
+- [Delete block](delete-subtree.md): `deleteSubtree`.
+- [Duplicate block](duplicate-block.md): `duplicateNode`.
 - [Tasks](tasks.md): Enter and Backspace on tasks.
 - [`placeholders.md`](placeholders.md): empty nodes the text can't hold, kept at the caret: when they come and go.
 - [`obsidian-true-outliner.md`](obsidian-true-outliner.md): obsidian-true-outliner's measured
@@ -82,7 +82,7 @@ The item becomes the last child of the item above.
 - **A quote lists actions**, applied in order to the current state.
 - **The blocks after a quote are what must hold then**, and they become the current state:
   - `buffer`: the drawn editor state;
-  - `clipboard`: the clipboard's text;
+  - `clipboard`: the clipboard's text, ending with a line break; `clipboard-no-newline`: without it;
   - `result`: what ourus made of the last action, which must be one of its commands:
     `applied`, `notApplicable` (the host's default ran instead) or `rejected: <reason>`. Other
     editors check buffers only.
@@ -106,7 +106,8 @@ The item becomes the last child of the item above.
 | `→` | a tab |
 | `␍` | a carriage return |
 
-A `clipboard` block uses `→` and `␍` too. A buffer's last line always ends with a line ending. A buffer that contains a code fence needs a
+A `clipboard` block uses `→` and `␍` too, and like a buffer its text ends with a line ending; a
+`clipboard-no-newline` block is a clipboard whose text doesn't. A buffer's last line always ends with a line ending. A buffer that contains a code fence needs a
 longer fence of its own (` ````buffer `).
 
 ## Actions
@@ -177,7 +178,8 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
     `logical`), `bullet` (`-`, the default, `*` or `+`), `enterOnEmptyItem` (`sibling`, the
     default, or `outdent`), `handleFenceContents` (`true`, the default, or `false`),
     `headingEditing` (`text`, the default, or `block`), `taskEditing` (`text`, the default,
-    `checkbox` or `block`), and `pasteMidText` (`after`, the default, or `split`);
+    `checkbox` or `block`), `pasteMidText` (`after`, the default, or `split`), and `deleteAtGap`
+    (`join`, the default, or `gap`);
   - `editor`: whose behaviour the examples draw: `ourus` (the default, run by `npm test`) or
     `logseq` (recorded from and checked against Logseq by `npm run test:logseq`; not ourus's
     contract).

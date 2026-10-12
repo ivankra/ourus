@@ -9,6 +9,14 @@ The code lines are ourus's with `handleFenceContents: true` (the default). A hos
 itself (language-aware indentation, embedded code editors) sets it to `false`, and Enter on a code
 line is the host's ([Fence10](#fence10)). The fence lines are ourus's either way.
 
+After a closing fence that ends an item's content, Enter makes the next item and Shift-Enter a new
+line in the item (Fence7–7d).
+
+Backspace at a code line's start and Delete at its end join code lines, the containers' prefix on
+the joined line (an item's indentation, a quote's `>`) going with the line break; against a fence
+line they are refused (Fence16–20). Tab and Shift-Tab in code are the host's (Fence21). Pasted text
+on a code line is code ([Paste22](paste.md#paste22)).
+
 ## Fence1
 
 Enter in a fenced block inside an item keeps the item's indentation.
@@ -148,8 +156,9 @@ After the opening fence's info string, the new line is the block's first line.
 
 ## Fence7
 
-After the closing fence, the new line stays in the item: what is typed there is the item's next
-paragraph.
+After the closing fence that ends an item's content, Enter makes the next item, as at the end of the
+item's text (as Logseq does); Shift-Enter makes a new line in the item instead
+([Fence7b](#fence7b)).
 
 ````buffer
 - a
@@ -158,7 +167,29 @@ paragraph.
   ```┃
 ````
 
-> enter "x"
+> enter "b"
+
+````buffer
+- a
+  ```
+  code
+  ```
+- b┃
+````
+
+## Fence7b
+
+After the closing fence, Shift-Enter makes a new line in the item: what is typed there is the item's
+next paragraph.
+
+````buffer
+- a
+  ```
+  code
+  ```┃
+````
+
+> shiftEnter "x"
 
 ````buffer
 - a
@@ -166,6 +197,56 @@ paragraph.
   code
   ```
   x┃
+````
+
+## Fence7c
+
+With child items after the fence, Enter after it makes the first child, as at the end of the text of
+an item with children.
+
+````buffer
+- a
+  ```
+  code
+  ```┃
+  - c
+````
+
+> enter
+
+````buffer
+- a
+  ```
+  code
+  ```
+  - ┃
+  - c
+````
+
+## Fence7d
+
+With a paragraph after the fence in the item, Enter after the fence makes a new line in the item, as
+Shift-Enter does: a new item there would come before the paragraph.
+
+````buffer
+- a
+  ```
+  code
+  ```┃
+
+  para
+````
+
+> enter
+
+````buffer
+- a
+  ```
+  code
+  ```
+  ┃
+
+  para
 ````
 
 ## Fence8
@@ -333,4 +414,151 @@ above, the caret going into it.
 - ```
   code
   ```
+````
+
+## Fence16
+
+Backspace at the start of a code line joins it to the line above; in an item, the item's indentation
+on the joined line goes too.
+
+The indentation is the item's, not code: deleting one space of it would end the item and the block.
+
+````buffer
+- a
+  ```
+  one
+  ┃two
+  ```
+````
+
+> deleteContentBackward
+
+````buffer
+- a
+  ```
+  one┃two
+  ```
+````
+
+## Fence17
+
+Backspace at the start of the first code line is refused: the code would join the opening fence, as
+its info string.
+
+````buffer
+- a
+  ```
+  ┃one
+  ```
+````
+
+> deleteContentBackward
+
+```result
+rejected: not-expressible
+```
+
+## Fence18
+
+Delete at the end of a code line joins the next line, without the item's indentation.
+
+````buffer
+- a
+  ```
+  one┃
+  two
+  ```
+````
+
+> deleteContentForward
+
+````buffer
+- a
+  ```
+  one┃two
+  ```
+````
+
+## Fence19
+
+Delete at the end of the last code line is refused: the closing fence would join the code.
+
+````buffer
+- a
+  ```
+  one┃
+  ```
+````
+
+> deleteContentForward
+
+```result
+rejected: not-expressible
+```
+
+## Fence20
+
+In a quote, a joined code line's `>` goes with its line break.
+
+````buffer
+> ```
+> one
+> ┃two
+> ```
+````
+
+> deleteContentBackward
+
+````buffer
+> ```
+> one┃two
+> ```
+````
+
+## Fence21
+
+Tab and Shift-Tab on a code line are the host's: they indent the code, as in Logseq and Obsidian.
+
+````buffer
+- a
+- b
+  ```
+  x┃
+  ```
+````
+
+> indent
+
+```result
+notApplicable
+```
+
+> outdent
+
+```result
+notApplicable
+```
+
+## Fence22
+
+After Shift-Enter past a closing fence, Enter on the empty line leaves the item: the line becomes
+the item's next sibling ([Enter37](enter.md#enter37)).
+
+````buffer
+- a
+  - b
+    ```
+    x
+    ```┃
+````
+
+> shiftEnter enter
+
+````buffer
+- a
+  - b
+    ```
+    x
+    ```
+  - ┃
 ````

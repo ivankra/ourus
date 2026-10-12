@@ -52,6 +52,14 @@ export interface Config {
    * break, else the end of the last line.
    */
   readonly pasteMidText: 'after' | 'split';
+  /**
+   * Delete at the end of a node's text before a blank line, and Backspace at the start of a node's text
+   * after one. `join` (the default, as outliners join nodes): the node below joins the node above,
+   * the blank lines between going too. `gap` (as in Obsidian, a text editor here): one blank line goes,
+   * the nodes staying as they are; a second press joins them. Where deleting the blank line would
+   * merge two nodes anyway (two paragraphs), the press is the host's either way.
+   */
+  readonly deleteAtGap: 'join' | 'gap';
 
   // Not built yet: options considered, kept here for later. ourus2 (`src/commands/policy.ts`,
   // `01-redesign.md` "Feel is a policy") had most of them.
@@ -77,7 +85,7 @@ export interface Config {
   //   misreads lists in a tab-indented quote. A host's objects, not a value a file can set.
 }
 
-export const defaultConfig: Config = { outdent: 'direct', bullet: '-', enterOnEmptyItem: 'sibling', handleFenceContents: true, headingEditing: 'text', taskEditing: 'text', pasteMidText: 'after' };
+export const defaultConfig: Config = { outdent: 'direct', bullet: '-', enterOnEmptyItem: 'sibling', handleFenceContents: true, headingEditing: 'text', taskEditing: 'text', pasteMidText: 'after', deleteAtGap: 'join' };
 
 /** The values each option takes, for readers of string settings (spec files, frontmatter). */
 export const configValues: { readonly [K in keyof Config]: readonly Config[K][] } = {
@@ -88,6 +96,7 @@ export const configValues: { readonly [K in keyof Config]: readonly Config[K][] 
   headingEditing: ['text', 'block'],
   taskEditing: ['text', 'checkbox', 'block'],
   pasteMidText: ['after', 'split'],
+  deleteAtGap: ['join', 'gap'],
 };
 
 /** `partial` over the defaults. */
