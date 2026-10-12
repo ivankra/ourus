@@ -6,7 +6,7 @@
 
 import { performance } from 'node:perf_hooks';
 import { execute, type Command } from '../src/commands.ts';
-import { Doc } from '../src/doc.ts';
+import { OutlineDoc } from '../src/doc.ts';
 
 const target = Number(process.env.BENCH_LINES ?? 10_000);
 const runs = Number(process.env.BENCH_RUNS ?? 30);
@@ -38,7 +38,7 @@ function measure(name: string, run: () => void): void {
 }
 
 const text = outline(target);
-const doc = Doc.parse(text);
+const doc = OutlineDoc.parse(text);
 const middle = doc.lines[Math.floor(doc.lines.length / 2)]!;
 // an item near the middle, with children and a sibling above: its text start, and the end of its text
 const item = doc.nodes.find((node) => node.kind === 'item' && node.startLine >= middle.index && node.children.length > 0 && node.parent!.children.indexOf(node) > 0)!;
@@ -53,14 +53,14 @@ const command = (name: string, type: Command, pos: number): void =>
 
 console.log(`${doc.lines.length} lines, ${doc.nodes.length} nodes, ${(text.length / 1024).toFixed(0)} KB; ${runs} runs each`);
 console.log(`${''.padEnd(28)} ${'median'.padStart(8)} ${'p95'.padStart(8)}`);
-measure('full parse', () => Doc.parse(text));
-measure('keystroke (Doc.apply)', () => doc.apply([{ from: end, to: end, insert: 'x' }], { caret: end + 1 }));
-command('moveDown', { type: 'moveDown' }, end);
-command('formatIndent', { type: 'formatIndent' }, end);
-command('formatOutdent (child)', { type: 'formatOutdent' }, doc.headRange(item.children[0]!)!.to);
-command('insertParagraph (split)', { type: 'insertParagraph' }, start + 2);
-command('insertLineBreak', { type: 'insertLineBreak' }, start + 2);
+measure('full parse', () => OutlineDoc.parse(text));
+measure('keystroke (OutlineDoc.apply)', () => doc.apply([{ from: end, to: end, insert: 'x' }], { caret: end + 1 }));
+command('moveBlockDown', { type: 'moveBlockDown' }, end);
+command('indent', { type: 'indent' }, end);
+command('outdent (child)', { type: 'outdent' }, doc.headRange(item.children[0]!)!.to);
+command('enter (split)', { type: 'enter' }, start + 2);
+command('shiftEnter', { type: 'shiftEnter' }, start + 2);
 command('deleteContentBackward', { type: 'deleteContentBackward' }, start);
-command('insertFromPaste (list)', { type: 'insertFromPaste', text: '- pasted\n  - nested' }, end);
+command('pasteStructured (list)', { type: 'pasteStructured', text: '- pasted\n  - nested' }, end);
 command('duplicateNode', { type: 'duplicateNode' }, end);
 command('deleteSubtree', { type: 'deleteSubtree' }, end);

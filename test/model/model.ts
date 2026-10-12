@@ -27,7 +27,7 @@ export interface Caret {
   offset: number;
 }
 
-export type Cmd = 'formatIndent' | 'formatOutdent' | 'moveUp' | 'moveDown' | 'insertParagraph' | 'deleteContentBackward' | 'deleteContentForward';
+export type Cmd = 'indent' | 'outdent' | 'moveBlockUp' | 'moveBlockDown' | 'enter' | 'deleteContentBackward' | 'deleteContentForward';
 
 export type Outcome = { status: 'applied'; root: MNode; caret: Caret } | { status: 'rejected'; reason: string };
 
@@ -108,7 +108,7 @@ const isEmpty = (n: MNode) => n.text === '' && !n.block;
 type Command = (ctx: Ctx, n: MNode, offset: number) => Outcome;
 
 const COMMANDS: Record<Cmd, Command> = {
-  formatIndent(ctx, n, offset) {
+  indent(ctx, n, offset) {
     if (n.kind === 'heading') return headingLevel(ctx, n, 1, offset);
     const parent = ctx.parent(n)!;
     const prev = parent.children[parent.children.indexOf(n) - 1];
@@ -121,7 +121,7 @@ const COMMANDS: Record<Cmd, Command> = {
     return ctx.ok({ node: n, offset });
   },
 
-  formatOutdent(ctx, n, offset) {
+  outdent(ctx, n, offset) {
     if (n.kind === 'heading') return headingLevel(ctx, n, -1, offset);
     const parent = ctx.parent(n)!;
     if (parent === ctx.root) return reject('at-top-level');
@@ -134,15 +134,15 @@ const COMMANDS: Record<Cmd, Command> = {
     return ctx.ok({ node: n, offset });
   },
 
-  moveUp: (ctx, n, offset) => move(ctx, n, -1, offset),
-  moveDown: (ctx, n, offset) => move(ctx, n, 1, offset),
+  moveBlockUp: (ctx, n, offset) => move(ctx, n, -1, offset),
+  moveBlockDown: (ctx, n, offset) => move(ctx, n, 1, offset),
 
-  insertParagraph(ctx, n, offset) {
+  enter(ctx, n, offset) {
     const parent = ctx.parent(n)!;
     if (n.kind === 'atom' || n.block) return reject('not-applicable');
     if (n.kind === 'item' && isEmpty(n)) {
       // Enter on an empty item: a nested one outdents, a top-level one leaves the list
-      if (parent.kind === 'item') return COMMANDS.formatOutdent(ctx, n, 0);
+      if (parent.kind === 'item') return COMMANDS.outdent(ctx, n, 0);
       // ourus's choice (postimpl1a §2.7): leave the list, as an empty paragraph
       const para: MNode = { kind: 'paragraph', text: '', children: [] };
       parent.children[parent.children.indexOf(n)] = para;

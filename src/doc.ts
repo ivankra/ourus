@@ -1,11 +1,12 @@
 // The immutable document snapshot: text plus its derived block tree, line table and outline.
 
+import { configOf, type Config } from './config.ts';
 import { buildOutline, headOwners, outlineNodes, type OutlineNode } from './outline.ts';
 import { parseCommonMark } from './syntax/commonmark.ts';
 import type { Block, LineInfo } from './block.ts';
-import { applyChanges, diffLines, invertChanges, lineIndexAt, mapPos, normalizeChanges, type Change } from './text.ts';
+import { applyChanges, diffLines, invertChanges, lineIndexAt, mapPos, normalizeChanges, type TextChange } from './text.ts';
 
-export interface ApplyOptions {
+export interface OutlineDocApplyParams {
   /**
    * Identity for nodes the changes moved, which position mapping can't follow: new head-start
    * offset (in the new text) → id of the node that now starts there.
@@ -46,7 +47,7 @@ function validPlaces(text: string, marks: readonly number[]): number[] {
   return [...new Set(marks.filter((p) => isPlace(text, p)))].sort((a, b) => a - b);
 }
 
-export class Doc {
+export class OutlineDoc {
   readonly text: string;
   /** The block tree's root: the document. */
   readonly blocks: Block;
@@ -60,6 +61,8 @@ export class Doc {
    * can't hold; a place goes away when its line gets text.
    */
   readonly placeholders: readonly number[];
+  /** How commands behave on this document; snapshots after it carry it. */
+  readonly config: Config;
   private readonly owners: readonly (OutlineNode | null)[];
   private readonly byId: ReadonlyMap<number, OutlineNode>;
   private readonly lineStarts: readonly number[];
@@ -69,10 +72,12 @@ export class Doc {
   private constructor(
     text: string,
     placeholders: readonly number[],
+    config: Config,
     ids?: (node: OutlineNode, lines: readonly LineInfo[]) => number | undefined,
     nextId = 1,
   ) {
     this.text = text;
+    this.config = config;
     this.placeholders = validPlaces(text, placeholders);
     const { root: blocks, lines } = parseCommonMark(text, { placeholders: this.placeholders });
     this.blocks = blocks;
@@ -99,33 +104,34 @@ export class Doc {
     this.byId = new Map(nodes.map((n) => [n.id, n]));
   }
 
-  static parse(text: string, options: { placeholders?: readonly number[] } = {}): Doc {
-    return new Doc(text, options.placeholders ?? []);
+  static parse(text: string, params: { placeholders?: readonly number[]; config?: Partial<Config> } = {}): OutlineDoc {
+    return new OutlineDoc(text, params.placeholders ?? [], configOf(params.config));
   }
 
   /**
    * The snapshot after `changes` (in this document's coordinates). A node keeps its id when
-   * `options.identity` names it, or else when its first line maps onto the first line of a node
+   * `params.identity` names it, or else when its first line maps onto the first line of a node
    * of the same kind (the same one of them, when nested items share a line). A line's start maps
    * past text inserted at it, so typing, indenting or opening a line above keeps a node's id;
    * a node whose first line was deleted is gone.
    */
-  apply(changes: readonly Change[], options: ApplyOptions = {}): Doc {
+  apply(changes: readonly TextChange[], params: OutlineDocApplyParams = {}): OutlineDoc {
     const text = applyChanges(this.text, changes);
     // explicitly placed nodes don't also claim the line their old start maps to
-    const claimed = new Set(options.identity?.values());
+    const claimed = new Set(params.identity?.values());
     const sorted = normalizeChanges(changes);
     let carried: Map<string, number> | null = null;
     const ranks = new Map<string, number>();
-    const dropped = new Set(options.drop);
+    const dropped = new Set(params.drop);
     // a place follows typing that keeps its line empty (a space), so map it past insertions
     const places = this.placeholders.filter((p) => !dropped.has(p)).map((p) => mapPos(changes, p, 1));
-    if (options.caret !== undefined && this.keptAt(changes, text, options.caret)) places.push(options.caret);
-    return new Doc(
+    if (params.caret !== undefined && this.keptAt(changes, text, params.caret)) places.push(params.caret);
+    return new OutlineDoc(
       text,
-      [...places, ...(options.placeholders ?? [])],
+      [...places, ...(params.placeholders ?? [])],
+      this.config,
       (n, lines) => {
-        const explicit = options.identity?.get(headStartIn(n, lines));
+        const explicit = params.identity?.get(headStartIn(n, lines));
         if (explicit !== undefined) return explicit;
         carried ??= this.carriedIds(sorted, lines, claimed);
         return carried.get(rankedKey(ranks, `${n.kind}@${n.startLine}`));
@@ -140,15 +146,16 @@ export class Doc {
    * (the caret on the space now after its marker), and read with a placeholder there the outline has
    * the shape it had. Typing never makes one: what is typed is text.
    */
-  private keptAt(changes: readonly Change[], text: string, caret: number): boolean {
+  private keptAt(changes: readonly TextChange[], text: string, caret: number): boolean {
     if (!changes.some((change) => change.to > change.from) || !isPlace(text, caret)) return false;
-    const shape = (doc: Doc): string => doc.nodes.map((node) => `${node.depth}:${node.kind}`).join(',');
+    const shape = (doc: OutlineDoc): string => doc.nodes.map((node) => `${node.depth}:${node.kind}`).join(',');
     const before = shape(this);
-    return shape(Doc.parse(text)) !== before && shape(Doc.parse(text, { placeholders: [caret] })) === before;
+    const config = this.config;
+    return shape(OutlineDoc.parse(text, { config })) !== before && shape(OutlineDoc.parse(text, { placeholders: [caret], config })) === before;
   }
 
   /** Ids of this snapshot's nodes by the key they will have in the new lines, after `changes`. */
-  private carriedIds(changes: readonly Change[], lines: readonly LineInfo[], claimed: ReadonlySet<number>): Map<string, number> {
+  private carriedIds(changes: readonly TextChange[], lines: readonly LineInfo[], claimed: ReadonlySet<number>): Map<string, number> {
     const starts = { starts: lines.map((line) => line.from), ends: [] };
     const ranks = new Map<string, number>();
     const out = new Map<string, number>();
@@ -164,8 +171,8 @@ export class Doc {
   }
 
   /** Replaces the whole text (e.g. after an external change), keeping ids outside the lines that differ. */
-  replace(text: string, options: ApplyOptions = {}): Doc {
-    return this.apply(diffLines(this.text, text), options);
+  replace(text: string, params: OutlineDocApplyParams = {}): OutlineDoc {
+    return this.apply(diffLines(this.text, text), params);
   }
 
   node(id: number): OutlineNode | undefined {

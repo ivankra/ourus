@@ -23,14 +23,28 @@
       header h1 { font-size: 16px; margin: 0; }
       header .keys { color: var(--muted); font-size: 13px; }
       kbd { font: 12px ui-monospace, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; background: #fff; }
-      main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 380px); height: calc(100vh - 92px); }
+      main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(240px, 340px); height: calc(100vh - 92px); }
+      @media (max-width: 900px) { main { grid-template-columns: 1fr; height: auto; } #editor { height: 60vh; } }
       #editor { overflow: auto; border-right: 1px solid var(--line); background: #fff; }
       #editor .cm-editor { height: 100%; }
       #editor .cm-scroller { font: 14px/1.6 ui-monospace, 'SF Mono', Menlo, monospace; }
       .ourus-head { background: var(--head); }
       .ourus-subtree { background: var(--sub); }
       aside { overflow: auto; padding: 8px 12px; }
-      aside h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 4px 0 8px; }
+      #preview-pane { overflow: auto; padding: 8px 16px; border-right: 1px solid var(--line); background: #fff; }
+      #preview { line-height: 1.55; }
+      #preview > :first-child { margin-top: 0; }
+      #preview h1, #preview h2, #preview h3, #preview h4, #preview h5, #preview h6 { line-height: 1.25; margin: 1em 0 0.4em; }
+      #preview h1 { font-size: 1.6em; } #preview h2 { font-size: 1.35em; } #preview h3 { font-size: 1.15em; }
+      #preview p { margin: 0.4em 0; }
+      #preview ul, #preview ol { margin: 0.3em 0; padding-left: 1.4em; }
+      #preview li > p { margin: 0.2em 0; }
+      #preview blockquote { margin: 0.5em 0; padding: 0 0.9em; color: var(--muted); border-left: 3px solid var(--line); }
+      #preview pre { background: var(--sub); padding: 8px 10px; border-radius: 4px; overflow: auto; }
+      #preview code { font: 13px ui-monospace, 'SF Mono', Menlo, monospace; }
+      #preview :not(pre) > code { background: var(--sub); padding: 0 3px; border-radius: 3px; }
+      #preview hr { border: 0; border-top: 1px solid var(--line); margin: 1em 0; }
+      aside h2, #preview-pane > h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 4px 0 8px; }
       #outline ul { list-style: none; margin: 0; padding-left: 16px; border-left: 1px solid var(--line); }
       #outline > ul { padding-left: 0; border-left: 0; }
       #outline .node { display: flex; gap: 6px; align-items: baseline; padding: 1px 6px; border-radius: 4px; cursor: pointer; }
@@ -54,11 +68,16 @@
       <h1>ourus · CodeMirror 6</h1>
       <span class="keys">
         <kbd>Tab</kbd>/<kbd>Shift-Tab</kbd> indent · <kbd>Alt-↑</kbd>/<kbd>Alt-↓</kbd> move ·
-        <kbd>Enter</kbd> split · <kbd>Shift-Enter</kbd> line break · <kbd>Backspace</kbd> at start joins · <kbd>Home</kbd> text start, again line start
+        <kbd>Enter</kbd> split · <kbd>Shift-Enter</kbd> line break · <kbd>Backspace</kbd> at start joins · <kbd>Home</kbd> text start, again line start ·
+        <kbd>Ctrl-V</kbd> paste as nodes · <kbd>Ctrl-Shift-V</kbd> paste as text
       </span>
     </header>
     <main>
       <div id="editor"></div>
+      <section id="preview-pane">
+        <h2>Rendered · CommonMark</h2>
+        <div id="preview"></div>
+      </section>
       <aside>
         <h2>Outline</h2>
         <div id="outline"></div>

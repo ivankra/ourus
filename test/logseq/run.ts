@@ -6,9 +6,9 @@
 //
 // - By default: replays every spec example Logseq can hold. ourus's examples (spec/*.md) report
 //   whether Logseq agrees with ourus; Logseq's own examples (files with `editor: logseq`,
-//   spec/logseq.md) must agree, or Logseq's behaviour changed.
+//   spec/zzz-logseq.md) must agree, or Logseq's behaviour changed.
 // - With --record: adapts every ourus example to what Logseq can hold (test/logseq/adapt.ts), runs
-//   it, and writes spec/logseq.md with Logseq's results as the expected buffers.
+//   it, and writes spec/zzz-logseq.md with Logseq's results as the expected buffers.
 //
 // Outlines are compared, not Logseq's file format: (depth, text) per block, plus the caret's or
 // selection's block and offsets.
@@ -16,7 +16,8 @@
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { chromium, type Page } from 'playwright-core';
 import { drawText, readText } from '../drawing.ts';
-import { readSpec, type SpecTest } from '../specfile.ts';
+import { readSpec, specConfig, type SpecTest } from '../specfile.ts';
+import type { Config } from '../../src/config.ts';
 import { actionSupported, adapt, draw, KEYS, readOutline, unescape, Unsupported, type Adapted, type Block, type Outline, type Sel } from './adapt.ts';
 
 const args = process.argv.slice(2);
@@ -25,7 +26,7 @@ const url = args.find((a) => a.startsWith('--url='))?.slice(6) ?? 'https://demo.
 const verbose = args.includes('-v');
 const record = args.includes('--record');
 const specDir = new URL('../../spec/', import.meta.url);
-const OUTPUT = 'logseq.md';
+const OUTPUT = 'zzz-logseq.md';
 
 // ------------------------------------------------------------------ reading drawn outlines
 
@@ -88,7 +89,7 @@ async function read(page: Page, name: string): Promise<Outline> {
 
 async function act(page: Page, action: string, clipboard: string): Promise<void> {
   if (action.startsWith('"')) await page.keyboard.type(action.slice(1, -1), { delay: 20 });
-  else if (action === 'insertFromPaste') {
+  else if (action === 'pasteStructured') {
     await page.evaluate((t) => navigator.clipboard.writeText(t), clipboard);
     await page.keyboard.press('Control+V');
   } else await page.keyboard.press(KEYS[action]!);
@@ -113,11 +114,18 @@ async function check(page: Page, tests: SpecTest[]): Promise<void> {
   const skipped = new Map<string, number>();
   for (const t of tests) {
     const name = `${t.file} › ${t.name}`;
-    const group = (t.options.editor ?? 'ourus') === 'logseq' ? 'logseq.md' : 'ourus spec';
+    const group = (t.options.editor ?? 'ourus') === 'logseq' ? 'zzz-logseq.md' : 'ourus spec';
     let start: Outline;
     const wants: (Outline | null)[] = [];
     try {
-      const exact = group === 'logseq.md';
+      const exact = group === 'zzz-logseq.md';
+      // the Logseq demo runs with its default settings: direct outdent, a new block on Enter in a list
+      const config = specConfig(t.options);
+      const logseq: Partial<Config> = { outdent: 'direct', enterOnEmptyItem: 'sibling' };
+      for (const [key, value] of Object.entries(logseq)) {
+        const set = config[key as keyof Config];
+        if (set !== undefined && set !== value) throw new Unsupported(`${key}: ${set}`);
+      }
       start = unescape(readOutline(t.initial.buffer, exact));
       for (const s of t.steps) {
         for (const a of s.actions) if (!actionSupported(a)) throw new Unsupported(`action ${a}`);
@@ -153,7 +161,7 @@ async function check(page: Page, tests: SpecTest[]): Promise<void> {
   if (skipped.size) console.log('skipped, by reason: ' + [...skipped].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', '));
 }
 
-/** Adapts ourus's examples, replays them, and writes spec/logseq.md from Logseq's results. */
+/** Adapts ourus's examples, replays them, and writes spec/zzz-logseq.md from Logseq's results. */
 async function recordLogseq(page: Page, tests: SpecTest[]): Promise<void> {
   const seen = new Set<string>();
   const adapted: Adapted[] = [];
@@ -223,7 +231,7 @@ await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
 await page.waitForFunction(() => (window as any).logseq?.api?.create_page, null, { timeout: 90000 });
 await page.waitForTimeout(3000);
 // warm-up: the first edit after the app loads is unreliable, so make one and throw it away
-await replay(page, { blocks: [{ depth: 0, text: 'warm' }, { depth: 0, text: '' }], sel: { block: 1, anchor: 0, head: 0 } }, [['moveUp']], '');
+await replay(page, { blocks: [{ depth: 0, text: 'warm' }, { depth: 0, text: '' }], sel: { block: 1, anchor: 0, head: 0 } }, [['moveBlockUp']], '');
 await page.waitForTimeout(1000);
 
 const files = readdirSync(specDir).filter((f) => f.endsWith('.md') && f !== 'README.md');

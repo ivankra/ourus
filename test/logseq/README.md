@@ -7,8 +7,8 @@ Logseq's Linux keys, and outlines compared: (depth, text) per block plus the car
 block and offsets. Logseq's own file format is not compared.
 
 ```
-npm run test:logseq                    # check: ourus's spec against Logseq, and spec/logseq.md
-npm run test:logseq -- --record        # adapt ourus's spec and record spec/logseq.md from Logseq
+npm run test:logseq                    # check: ourus's spec against Logseq, and spec/zzz-logseq.md
+npm run test:logseq -- --record        # adapt ourus's spec and record spec/zzz-logseq.md from Logseq
 npm run test:logseq -- 'Indent' -v     # a subset, every verdict printed
 ```
 
@@ -22,7 +22,7 @@ another editor, through a live site.
   reason. Markdown escapes (`\#`, `1\.`) are encoding, not behaviour, and are removed before
   comparing; `whitespace` marks results that differ only in spaces next to a line break.
 - **Logseq's behaviour as a spec of its own.** `--record` adapts every ourus example to what Logseq
-  can hold (`adapt.ts`), replays it, and writes [`spec/logseq.md`](../../spec/logseq.md), whose
+  can hold (`adapt.ts`), replays it, and writes [`spec/zzz-logseq.md`](../../spec/zzz-logseq.md), whose
   expected buffers are what Logseq did. The file declares `editor: logseq`, so `npm test` skips it;
   a check run replays it and should agree everywhere, unless Logseq's behaviour changed.
 

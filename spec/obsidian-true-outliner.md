@@ -28,7 +28,7 @@ Enter in the middle of an item splits it; the space at the split goes with neith
 - alpha┃ beta
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - alpha
@@ -44,7 +44,7 @@ Enter in an ordered list renumbers the items after the split.
 2. two
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 1. one
@@ -65,7 +65,7 @@ its numbers.
 2) c
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 1. a
@@ -83,7 +83,7 @@ Enter on a continuation line of a multi-line item splits the item there.
   second┃ line
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - first
@@ -102,7 +102,7 @@ An item with tab-indented children gets the new item as its first child.
 →- child
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - alpha
@@ -117,7 +117,7 @@ An item with tab-indented children gets the new item as its first child.
 →- child
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - alpha
@@ -136,7 +136,7 @@ one┃ two
 - child
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 one
@@ -144,7 +144,6 @@ one
 ┃two
 - child
 ```
-
 
 ### E10
 
@@ -158,7 +157,7 @@ node as the first child too.
   para
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - item
@@ -166,7 +165,6 @@ node as the first child too.
 
   para
 ```
-
 
 ### E11
 
@@ -181,7 +179,7 @@ grandchild).
 →```
 ````
 
-> insertParagraph
+> enter
 
 ````buffer
 - item
@@ -190,7 +188,6 @@ grandchild).
 →code
 →```
 ````
-
 
 ### E15
 
@@ -202,7 +199,7 @@ Enter in a heading followed by a list: the rest of the title becomes a paragraph
 - item
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 # Head
@@ -210,7 +207,6 @@ Enter in a heading followed by a list: the rest of the title becomes a paragraph
 
 - item
 ```
-
 
 ### E17
 
@@ -222,14 +218,13 @@ Hello┃ world
 ====
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 Hello
 ====
 ┃world
 ```
-
 
 ### E18
 
@@ -241,14 +236,13 @@ Hello world
 ==┃==
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 Hello world
 ====
 ┃◌
 ```
-
 
 ### E19, E21
 
@@ -261,7 +255,7 @@ section begins with a list (TO made an empty item there).
 # Head┃
 ```
 
-> insertParagraph "x"
+> enter "x"
 
 ```buffer
 # Head
@@ -275,46 +269,13 @@ x┃
 - item
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 # Head
 ┃◌
 
 - item
-```
-
-### E26
-
-Enter at the start of an item with children puts the new item above; the text stays where it is,
-with its children. A defect in true-outliner.
-
-```buffer
-- ┃alpha
-→- child
-```
-
-> insertParagraph
-
-```buffer
-- 
-- ┃alpha
-→- child
-```
-
-### E30
-
-Enter with the caret in a list marker acts at the item's text start: an empty item above.
-
-```buffer
--┃ alpha
-```
-
-> insertParagraph
-
-```buffer
-- 
-- ┃alpha
 ```
 
 ### E32
@@ -327,7 +288,7 @@ Enter on a task: the checkbox carries over to the new item, unchecked.
 - [ ] alpha┃ beta
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - [ ] alpha
@@ -340,7 +301,7 @@ Enter on a task: the checkbox carries over to the new item, unchecked.
 - [x] done┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - [x] done
@@ -355,7 +316,7 @@ Enter replaces a selection inside the text, then splits the item. A defect in tr
 - al«pha be»ta
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - al
@@ -373,7 +334,7 @@ para┃ text
 > q
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 # H
@@ -393,7 +354,7 @@ In a heading, the rest of the title becomes the section's first paragraph.
 # Hello┃ world
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 # Hello
@@ -407,7 +368,7 @@ In a heading, the rest of the title becomes the section's first paragraph.
 ## Sub
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 # He
@@ -426,7 +387,7 @@ Enter in a heading: a paragraph right under the heading stays a paragraph of its
 Body.
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 # Head
@@ -442,7 +403,7 @@ Body.
 Body.
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 # Head
@@ -451,23 +412,10 @@ Body.
 Body.
 ```
 
-### E27, E29
+### E29
 
-Enter at the start of a heading or paragraph opens a blank line above; the text stays put. E27
-is a defect in true-outliner.
-
-#### Start of heading opens line above
-
-```buffer
-# ┃Hello
-```
-
-> insertParagraph
-
-```buffer
-
-# ┃Hello
-```
+Enter at the start of a paragraph opens a blank line above; the text stays put. (E27, the heading's
+start, is ourus's [Enter32](enter.md#enter32): ourus follows Obsidian there, not true-outliner.)
 
 #### Start of paragraph opens line above
 
@@ -475,7 +423,7 @@ is a defect in true-outliner.
 ┃thought
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 
@@ -492,13 +440,12 @@ Shift-Enter in a paragraph continues it on a new line: still one paragraph.
 one┃ two
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 one
 ┃two
 ```
-
 
 ### S5
 
@@ -509,12 +456,11 @@ to break (TO split the marker).
 -┃ alpha
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```result
 rejected: not-expressible
 ```
-
 
 ### S7, S8
 
@@ -528,7 +474,7 @@ Hello┃ world
 ====
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```result
 rejected: not-expressible
@@ -541,12 +487,11 @@ Hello world
 ==┃==
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```result
 rejected: not-expressible
 ```
-
 
 ### S9
 
@@ -559,7 +504,7 @@ stayed in the paragraph only by lazy continuation).
   para┃ text
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - item
@@ -567,7 +512,6 @@ stayed in the paragraph only by lazy continuation).
   para
   ┃text
 ```
-
 
 ### S11
 
@@ -582,7 +526,7 @@ two).
   bar
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - foo
@@ -605,13 +549,12 @@ foo┃
 bar
 ```
 
-> insertLineBreak cursorDocStart
+> shiftEnter cursorDocStart
 
 ```buffer
 ┃foo
 bar
 ```
-
 
 ### S13
 
@@ -621,35 +564,19 @@ Shift-Enter over a selection replaces it, then breaks the line, as typing would.
 - a«lpha» beta
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - a
   ┃beta
 ```
 
-
 ## Backspace
 
 ### #269
 
-Backspace on an emptied first item, with nothing above to join, does nothing.
-
-#### Emptied first item stays put
-
-```buffer
-1. ┃
-2. b
-3. c
-```
-
-> deleteContentBackward
-
-```buffer
-1. ┃
-2. b
-3. c
-```
+Backspace on an emptied item. (An emptied first item, with nothing above, is removed:
+[Backspace17](backspace.md#backspace17); true-outliner leaves it.)
 
 #### Emptied middle item removed and renumbered
 
@@ -680,37 +607,13 @@ Right after Shift-Enter, Backspace takes the new line back.
 - foo┃
 ```
 
-> insertLineBreak deleteContentBackward
+> shiftEnter deleteContentBackward
 
 ```buffer
 - one
   - kid
 - foo┃
 ```
-
-### heading-content-start-backspace
-
-Backspace at a heading's text start joins the heading into the node above, as at an item's,
-and as Logseq and Workflowy merge any block into the one above; its section then continues the
-section above. (TO refuses; Typora and Notion turn the heading into a paragraph instead. Either
-is better than deleting the space after `#`, which leaves `#Hello` as text.)
-
-```buffer
-para
-
-# ┃Hello
-
-body
-```
-
-> deleteContentBackward
-
-```buffer
-para┃Hello
-
-body
-```
-
 
 ### delete-to-content-start
 
@@ -726,25 +629,12 @@ Cmd-Backspace on an item deletes back to the start of its text, never into its m
 - ┃
 ```
 
-
 ### Joining a task
 
-A task's checkbox is chrome, like its marker (Home stops after it): Backspace at the text start,
-or anywhere before it, joins the task into the node above, and the checkbox goes with the marker
-(TO strips both). The host's Backspace would leave `- [ ]b`, which is no task.
-
-#### Backspace at task text start
-
-```buffer
-- a
-- [ ] ┃b
-```
-
-> deleteContentBackward
-
-```buffer
-- a┃b
-```
+A task's checkbox is chrome, like its marker (Home stops after it): Backspace before it joins the
+task into the node above, and the checkbox goes with the marker (TO strips both). The host's
+Backspace would leave `- [ ]b`, which is no task. (Right after the checkbox, Backspace is plain text
+by default: [TaskBackspace5](tasks.md#taskbackspace5).)
 
 #### Backspace before the checkbox
 
@@ -758,7 +648,6 @@ or anywhere before it, joins the task into the node above, and the checkbox goes
 ```buffer
 - a┃b
 ```
-
 
 ### Joining an item with children
 
@@ -796,7 +685,6 @@ grandchildren re-parent").
   - c
 ```
 
-
 ### Joining across ordered runs
 
 A bullet between two runs of an ordered list joins away, and the runs become one list again.
@@ -815,7 +703,6 @@ A bullet between two runs of an ordered list joins away, and the runs become one
 2. b┃x
 3. c
 ```
-
 
 ### Joining away the head of a list
 
@@ -853,7 +740,6 @@ list that started elsewhere keeps its start.
 4. c
 ```
 
-
 ## Indentation
 
 ### #255
@@ -869,7 +755,7 @@ Outdenting a later child leaves the quote above it alone.
   - boo┃
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - item
@@ -887,13 +773,12 @@ A child nests at its parent's content column, which a wider gap after the marker
 -  kid┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 -  parent
    -  kid┃
 ```
-
 
 ### indent-unit-on-every-line
 
@@ -907,7 +792,7 @@ lines included (TO wrote a tab on the first line and spaces below it).
   cont
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
@@ -915,7 +800,6 @@ lines included (TO wrote a tab on the first line and spaces below it).
 →- b┃
 →  cont
 ```
-
 
 ### seams-across-a-re-indent
 
@@ -931,7 +815,7 @@ pushed past column 3 of its container became a paragraph or a list item).
   > q
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
@@ -947,7 +831,7 @@ pushed past column 3 of its container became a paragraph or a list item).
     > q
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - a
@@ -964,7 +848,7 @@ pushed past column 3 of its container became a paragraph or a list item).
   ---
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
@@ -982,7 +866,7 @@ pushed past column 3 of its container became a paragraph or a list item).
         code
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - a
@@ -990,7 +874,6 @@ pushed past column 3 of its container became a paragraph or a list item).
 
       code
 ```
-
 
 ### destination-list-style
 
@@ -1002,7 +885,7 @@ An item joining a list takes the list's bullet: a different bullet would start a
 - b┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 * a
@@ -1024,7 +907,7 @@ A block id on its own line is the node's last line, and moves with it.
   ^id
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - b┃
@@ -1041,7 +924,7 @@ para one
 para┃ two
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 para┃ two
@@ -1062,7 +945,7 @@ para┃
 > q
 ```
 
-> moveDown
+> moveBlockDown
 
 ```buffer
 > q
@@ -1079,7 +962,7 @@ code
 ```
 ````
 
-> moveDown
+> moveBlockDown
 
 ````buffer
 ```
@@ -1097,7 +980,7 @@ code┃
 para
 ````
 
-> moveDown
+> moveBlockDown
 
 ````buffer
 para
@@ -1106,30 +989,12 @@ code┃
 ```
 ````
 
-
 ## Ordered lists
 
 ### #159 (ordered-run-split-numbering)
 
 A list split in two by an item of another kind leaves the lower part's numbers alone; renumbering
 never reaches past the part the split touched.
-
-#### Bullet split leaves lower numbers alone
-
-```buffer
-1. a
-2. b ┃- x
-3. c
-```
-
-> insertParagraph
-
-```buffer
-1. a
-2. b
-- ┃x
-3. c
-```
 
 #### Renumbering only the touched part
 
@@ -1139,7 +1004,7 @@ never reaches past the part the split touched.
 10. ten
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 8. eight
@@ -1151,7 +1016,12 @@ never reaches past the part the split touched.
 ### Outdenting the head of a nested list
 
 The item outdents after its parent, and the items it leaves behind renumber from the list's start,
-so `2. c` becomes `1. c` and stays a list under `a`'s text.
+so `2. c` becomes `1. c` and stays a list under `a`'s text. (obsidian-true-outliner outdents
+logically.)
+
+```config
+outdent: logical
+```
 
 ```buffer
 1. a
@@ -1160,7 +1030,7 @@ so `2. c` becomes `1. c` and stays a list under `a`'s text.
 2. d
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 1. a
@@ -1168,7 +1038,6 @@ so `2. c` becomes `1. c` and stays a list under `a`'s text.
 2. b┃
 3. d
 ```
-
 
 ## Abandoning an empty place
 
@@ -1192,7 +1061,7 @@ Shift-Enter started.
 - foo┃
 ```
 
-> insertLineBreak formatIndent
+> shiftEnter indent
 
 ```buffer
 - one
@@ -1218,7 +1087,7 @@ Shift-Enter started.
 - foo┃
 ```
 
-> insertLineBreak formatIndent formatIndent cursorDocStart
+> shiftEnter indent indent cursorDocStart
 
 ```buffer
 ┃- one
@@ -1235,7 +1104,7 @@ Shift-Enter started.
 - foo┃
 ```
 
-> insertLineBreak formatIndent deleteContentBackward
+> shiftEnter indent deleteContentBackward
 
 ```buffer
 - one
@@ -1251,14 +1120,13 @@ Shift-Enter started.
 - c
 ```
 
-> insertLineBreak formatOutdent deleteContentBackward
+> shiftEnter outdent deleteContentBackward
 
 ```buffer
 - a
 - b┃
 - c
 ```
-
 
 ### Shift-Enter, Tab, then Enter
 
@@ -1272,7 +1140,7 @@ to the next item).
 - bar
 ```
 
-> insertLineBreak formatIndent insertParagraph
+> shiftEnter indent enter
 
 ```buffer
 - one
@@ -1281,7 +1149,6 @@ to the next item).
   - ┃
 - bar
 ```
-
 
 ### Enter, then Shift-Enter and Backspace
 
@@ -1292,13 +1159,12 @@ item stays.
 - foo┃
 ```
 
-> insertParagraph insertLineBreak deleteContentBackward
+> enter shiftEnter deleteContentBackward
 
 ```buffer
 - foo
 - ┃
 ```
-
 
 ### Enter, Tab, then leave
 
@@ -1313,7 +1179,7 @@ line after the list stays too).
 - foo┃
 ```
 
-> insertParagraph formatIndent
+> enter indent
 
 ```buffer
 - one
@@ -1337,7 +1203,7 @@ line after the list stays too).
 2. b
 ```
 
-> insertParagraph formatIndent
+> enter indent
 
 ```buffer
 1. a
@@ -1362,7 +1228,7 @@ line after the list stays too).
 para
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - foo
@@ -1371,7 +1237,7 @@ para
 para
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - foo
@@ -1390,7 +1256,6 @@ para
 para
 ```
 
-
 ### Enter, Shift-Tab, then leave
 
 An empty item after another item can be written, so it stays, like an empty bullet in Logseq.
@@ -1403,7 +1268,7 @@ An empty item after another item can be written, so it stays, like an empty bull
 2. q
 ```
 
-> insertParagraph formatOutdent cursorDocStart
+> enter outdent cursorDocStart
 
 ```buffer
 ┃1. p
@@ -1419,14 +1284,13 @@ An empty item after another item can be written, so it stays, like an empty bull
   - b┃
 ```
 
-> insertParagraph insertParagraph cursorDocStart
+> enter enter cursorDocStart
 
 ```buffer
 ┃- a
   - b
 - 
 ```
-
 
 ### Enter twice, then leave
 
@@ -1440,7 +1304,7 @@ it together with the blank lines that set it off, and the list is as tight as be
 - b
 ```
 
-> insertParagraph insertParagraph cursorDocStart
+> enter enter cursorDocStart
 
 ```buffer
 ┃- a
@@ -1455,7 +1319,7 @@ para
   - b
 ```
 
-> insertParagraph insertParagraph cursorDocStart
+> enter enter cursorDocStart
 
 ```buffer
 ┃para
@@ -1487,7 +1351,7 @@ A pasted list takes the destination's indent unit, tabs or spaces, on every leve
 →→- c
 ```
 
-> insertFromPaste
+> pasteStructured
 
 ```buffer
 - top
@@ -1510,7 +1374,7 @@ A pasted list takes the destination's indent unit, tabs or spaces, on every leve
     - c
 ```
 
-> insertFromPaste
+> pasteStructured
 
 ```buffer
 - top
@@ -1519,7 +1383,6 @@ A pasted list takes the destination's indent unit, tabs or spaces, on every leve
 →→- b
 →→→- c┃
 ```
-
 
 ### #264
 
@@ -1538,7 +1401,7 @@ below
     > quote
 ```
 
-> insertFromPaste
+> pasteStructured
 
 ```buffer
 ## H
@@ -1549,7 +1412,6 @@ first
 
 below
 ```
-
 
 ### #197
 
@@ -1569,7 +1431,7 @@ stay apart from each other and from the children below.
 > note
 ```
 
-> insertFromPaste
+> pasteStructured
 
 ```buffer
 - top

@@ -71,7 +71,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - 
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - a
@@ -87,7 +87,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - b
 ```
 
-> moveDown
+> moveBlockDown
 
 ```buffer
 - a
@@ -103,7 +103,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   c┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
@@ -121,7 +121,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
     ```
 ````
 
-> formatIndent
+> indent
 
 ````buffer
 - a
@@ -138,7 +138,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - b┃
 ```
 
-> formatIndent undo
+> indent undo
 
 ```buffer
 - a
@@ -161,7 +161,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - y
 ```
 
-> moveDown
+> moveBlockDown
 
 ```buffer
 - # B
@@ -178,7 +178,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - x
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - ---
@@ -187,21 +187,21 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - x
 ```
 
-## commands.md › formatIndent (Tab) › Becomes last child of previous sibling
+## commands.md › indent (Tab) › Becomes last child of previous sibling
 
 ```buffer
 - a
 - b┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
   - b┃
 ```
 
-## commands.md › formatIndent (Tab) › Subtree shifts with the item
+## commands.md › indent (Tab) › Subtree shifts with the item
 
 ```buffer
 - a
@@ -210,7 +210,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
     more c
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
@@ -219,7 +219,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
       more c
 ```
 
-## commands.md › formatIndent (Tab) › Adopts existing children's bullet
+## commands.md › indent (Tab) › Adopts existing children's bullet
 
 ```buffer
 - a
@@ -227,7 +227,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - b┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
@@ -235,7 +235,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - b┃
 ```
 
-## commands.md › formatIndent (Tab) › Ordered item renumbered from 1
+## commands.md › indent (Tab) › Ordered item renumbered from 1
 
 ```buffer
 - a
@@ -243,7 +243,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - c
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
@@ -251,7 +251,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - c
 ```
 
-## commands.md › formatIndent (Tab) › Tab-indented list keeps tabs
+## commands.md › indent (Tab) › Tab-indented list keeps tabs
 
 ```buffer
 - a
@@ -259,7 +259,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - c┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
@@ -267,7 +267,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - c┃
 ```
 
-## commands.md › formatIndent (Tab) › Tab nesting elsewhere sets the indent
+## commands.md › indent (Tab) › Tab nesting elsewhere sets the indent
 
 ```buffer
 - a
@@ -276,7 +276,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - d
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
@@ -285,63 +285,63 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - d
 ```
 
-## commands.md › formatIndent (Tab) › Empty new item becomes provisional
+## commands.md › indent (Tab) › Empty new item becomes provisional
 
 ```buffer
 - a
 - ┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
   - ┃
 ```
 
-## commands.md › formatIndent (Tab) › First item cannot indent
+## commands.md › indent (Tab) › First item cannot indent
 
 ```buffer
 - a┃
 - b
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a┃
 - b
 ```
 
-## commands.md › formatIndent (Tab) › No nesting under a paragraph
+## commands.md › indent (Tab) › No nesting under a paragraph
 
 ```buffer
 - Intro
 - a┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - Intro
   - a┃
 ```
 
-## commands.md › formatOutdent (Shift-Tab) › Becomes next sibling of its parent
+## commands.md › outdent (Shift-Tab) › Becomes next sibling of its parent
 
 ```buffer
 - a
   - b┃
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - a
 - b┃
 ```
 
-## commands.md › formatOutdent (Shift-Tab) › Later siblings stay with the parent
+## commands.md › outdent (Shift-Tab) › Later siblings stay with the parent
 
 ```buffer
 - a
@@ -351,7 +351,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - d
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - a
@@ -361,19 +361,19 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - d
 ```
 
-## commands.md › formatOutdent (Shift-Tab) › Rejected at the top level
+## commands.md › outdent (Shift-Tab) › Rejected at the top level
 
 ```buffer
 - a┃
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - a┃
 ```
 
-## commands.md › moveUp, moveDown (Alt-Shift-Up, Alt-Shift-Down) › Moving up carries the subtree
+## commands.md › moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down) › Moving up carries the subtree
 
 ```buffer
 - a
@@ -382,7 +382,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - c
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - b┃
@@ -391,7 +391,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - c
 ```
 
-## commands.md › moveUp, moveDown (Alt-Shift-Up, Alt-Shift-Down) › Moving down keeps blank lines in place
+## commands.md › moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down) › Moving down keeps blank lines in place
 
 ```buffer
 - a┃
@@ -399,7 +399,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - b
 ```
 
-> moveDown
+> moveBlockDown
 
 ```buffer
 - b
@@ -407,21 +407,21 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - a1
 ```
 
-## commands.md › moveUp, moveDown (Alt-Shift-Up, Alt-Shift-Down) › First item cannot move up
+## commands.md › moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down) › First item cannot move up
 
 ```buffer
 - a┃
 - b
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - a┃
 - b
 ```
 
-## commands.md › moveUp, moveDown (Alt-Shift-Up, Alt-Shift-Down) › Heading moves with its section
+## commands.md › moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down) › Heading moves with its section
 
 ```buffer
 - # A
@@ -430,7 +430,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - text b
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - # B┃
@@ -439,35 +439,35 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - text a
 ```
 
-## commands.md › moveUp, moveDown (Alt-Shift-Up, Alt-Shift-Down) › Paragraphs swap places
+## commands.md › moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down) › Paragraphs swap places
 
 ```buffer
 - one
 - two┃
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - two┃
 - one
 ```
 
-## commands.md › moveUp, moveDown (Alt-Shift-Up, Alt-Shift-Down) › Paragraph cannot pass a list item
+## commands.md › moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down) › Paragraph cannot pass a list item
 
 ```buffer
 - para
 - a┃
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - a┃
 - para
 ```
 
-## commands.md › formatIndent, formatOutdent on a heading (Tab, Shift-Tab) › Subheadings shift with the heading
+## commands.md › indent, outdent on a heading (Tab, Shift-Tab) › Subheadings shift with the heading
 
 ```buffer
 - # A
@@ -475,7 +475,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
     - ### C
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - # A
@@ -483,26 +483,26 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
     - ### C
 ```
 
-## commands.md › formatIndent, formatOutdent on a heading (Tab, Shift-Tab) › H1 cannot outdent further
+## commands.md › indent, outdent on a heading (Tab, Shift-Tab) › H1 cannot outdent further
 
 ```buffer
 - # A┃
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - # A┃
 ```
 
-## commands.md › insertParagraph (Enter) › Splits item at the caret
+## commands.md › enter (Enter) › Splits item at the caret
 
 ```buffer
 - one two┃ three
 - next
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - one two
@@ -510,27 +510,27 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - next
 ```
 
-## commands.md › insertParagraph (Enter) › Ordered item counts on at end
+## commands.md › enter (Enter) › Ordered item counts on at end
 
 ```buffer
 - one┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - one
 - ┃
 ```
 
-## commands.md › insertParagraph (Enter) › Becomes first child of parent item
+## commands.md › enter (Enter) › Becomes first child of parent item
 
 ```buffer
 - a┃ b
   - c
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
@@ -538,14 +538,14 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - c
 ```
 
-## commands.md › insertParagraph (Enter) › Empty first child is provisional
+## commands.md › enter (Enter) › Empty first child is provisional
 
 ```buffer
 - a┃
   - b
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
@@ -553,7 +553,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - b
 ```
 
-## commands.md › insertParagraph (Enter) › Empty nested item outdents
+## commands.md › enter (Enter) › Empty nested item outdents
 
 ```buffer
 - a
@@ -561,7 +561,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - ┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
@@ -569,14 +569,14 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - ┃
 ```
 
-## commands.md › insertParagraph (Enter) › Empty top-level item leaves the list
+## commands.md › enter (Enter) › Empty top-level item leaves the list
 
 ```buffer
 - a
 - ┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
@@ -584,7 +584,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - ┃
 ```
 
-## commands.md › insertParagraph (Enter) › Leaving mid-list splits the list
+## commands.md › enter (Enter) › Leaving mid-list splits the list
 
 ```buffer
 - a
@@ -592,7 +592,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - b
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
@@ -601,72 +601,72 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - b
 ```
 
-## commands.md › insertParagraph (Enter) › Trailing list marker kept as marker
+## commands.md › enter (Enter) › Trailing list marker kept as marker
 
 ```buffer
 - abc ┃- def
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - abc
 - ┃- def
 ```
 
-## commands.md › insertParagraph (Enter) › Trailing heading marker escaped
+## commands.md › enter (Enter) › Trailing heading marker escaped
 
 ```buffer
 - abc ┃# def
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - abc
 - ┃# def
 ```
 
-## commands.md › insertParagraph (Enter) › HTML block tag escaped
+## commands.md › enter (Enter) › HTML block tag escaped
 
 ```buffer
 - abc ┃<div>
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - abc
 - ┃<div>
 ```
 
-## commands.md › insertParagraph (Enter) › Link reference definition escaped
+## commands.md › enter (Enter) › Link reference definition escaped
 
 ```buffer
 - see ┃[a]: /url
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - see
 - ┃[a]: /url
 ```
 
-## commands.md › insertParagraph (Enter) › Paragraph splits in two
+## commands.md › enter (Enter) › Paragraph splits in two
 
 ```buffer
 - some┃ text
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - some
 - ┃text
 ```
 
-## commands.md › insertParagraph (Enter) › Code block left to the host
+## commands.md › enter (Enter) › Code block left to the host
 
 ````buffer
 - ```
@@ -674,7 +674,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   ```
 ````
 
-> insertParagraph
+> enter
 
 ````buffer
 - ```
@@ -683,27 +683,27 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   ```
 ````
 
-## commands.md › insertLineBreak (Shift-Enter) › Continues at the content column
+## commands.md › shiftEnter (Shift-Enter) › Continues at the content column
 
 ```buffer
 - one two┃ three
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - one two
   ┃ three
 ```
 
-## commands.md › insertLineBreak (Shift-Enter) › Nested item under ordered parent
+## commands.md › shiftEnter (Shift-Enter) › Nested item under ordered parent
 
 ```buffer
 - a
   - b┃ c
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - a
@@ -711,14 +711,14 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
     ┃ c
 ```
 
-## commands.md › insertLineBreak (Shift-Enter) › Tab-nested item breaks with tab
+## commands.md › shiftEnter (Shift-Enter) › Tab-nested item breaks with tab
 
 ```buffer
 - x
   - a┃ b
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - x
@@ -726,14 +726,14 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
     ┃ b
 ```
 
-## commands.md › insertLineBreak (Shift-Enter) › Empty new line is provisional
+## commands.md › shiftEnter (Shift-Enter) › Empty new line is provisional
 
 ```buffer
 - one┃
 - two
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - one
@@ -741,79 +741,79 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - two
 ```
 
-## commands.md › insertLineBreak (Shift-Enter) › Leading bullet escaped
+## commands.md › shiftEnter (Shift-Enter) › Leading bullet escaped
 
 ```buffer
 - abc ┃- def
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - abc 
   ┃\- def
 ```
 
-## commands.md › insertLineBreak (Shift-Enter) › Ordered marker escaped
+## commands.md › shiftEnter (Shift-Enter) › Ordered marker escaped
 
 ```buffer
 - abc ┃1. def
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - abc 
   ┃1\. def
 ```
 
-## commands.md › insertLineBreak (Shift-Enter) › Setext equals underline escaped
+## commands.md › shiftEnter (Shift-Enter) › Setext equals underline escaped
 
 ```buffer
 - Title ┃===
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - Title 
   ┃===
 ```
 
-## commands.md › insertLineBreak (Shift-Enter) › Setext dash underline escaped
+## commands.md › shiftEnter (Shift-Enter) › Setext dash underline escaped
 
 ```buffer
 - Title ┃--
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - Title 
   ┃--
 ```
 
-## commands.md › insertLineBreak (Shift-Enter) › HTML tag escaped on new line
+## commands.md › shiftEnter (Shift-Enter) › HTML tag escaped on new line
 
 ```buffer
 - one ┃<div>
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - one 
   ┃<div>
 ```
 
-## commands.md › insertLineBreak (Shift-Enter) › Start of a continuation line
+## commands.md › shiftEnter (Shift-Enter) › Start of a continuation line
 
 ```buffer
 - a
   ┃bc
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - a
@@ -829,7 +829,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   x┃bc
 ```
 
-## commands.md › insertLineBreak (Shift-Enter) › Second Shift-Enter starts a paragraph
+## commands.md › shiftEnter (Shift-Enter) › Second Shift-Enter starts a paragraph
 
 ```buffer
 - one
@@ -837,7 +837,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - two
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - one
@@ -845,40 +845,40 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - two
 ```
 
-## commands.md › insertLineBreak (Shift-Enter) › After a plain paragraph
+## commands.md › shiftEnter (Shift-Enter) › After a plain paragraph
 
 ```buffer
 - para
   ┃
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - para
   ┃
 ```
 
-## commands.md › insertLineBreak (Shift-Enter) › Rejected at the start of text
+## commands.md › shiftEnter (Shift-Enter) › Rejected at the start of text
 
 ```buffer
 - ┃one
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - 
   ┃one
 ```
 
-## commands.md › insertLineBreak (Shift-Enter) › Rejected in a heading
+## commands.md › shiftEnter (Shift-Enter) › Rejected in a heading
 
 ```buffer
 - # Title┃ more
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - # Title
@@ -1139,7 +1139,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - alpha┃ beta
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - alpha
@@ -1153,7 +1153,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - two
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - one
@@ -1169,7 +1169,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - c
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
@@ -1185,7 +1185,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   second┃ line
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - first
@@ -1200,7 +1200,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - child
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - alpha
@@ -1215,7 +1215,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - child
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - alpha
@@ -1230,7 +1230,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - child
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - one
@@ -1245,7 +1245,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - para
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - item
@@ -1262,7 +1262,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
     →```
 ````
 
-> insertParagraph
+> enter
 
 ````buffer
 - item
@@ -1279,7 +1279,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - item
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - # Head
@@ -1293,7 +1293,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - # Hello┃ world
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - # Hello
@@ -1306,7 +1306,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - # Head┃
 ```
 
-> insertParagraph "x"
+> enter "x"
 
 ```buffer
 - # Head
@@ -1320,7 +1320,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - item
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - # Head
@@ -1335,7 +1335,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - child
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - ┃
@@ -1349,7 +1349,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - ┃alpha
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - ┃
@@ -1362,7 +1362,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - TODO alpha┃ beta
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - TODO alpha
@@ -1375,7 +1375,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - DONE done┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - DONE done
@@ -1388,7 +1388,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - al«pha be»ta
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - al
@@ -1403,7 +1403,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - q
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - # H
@@ -1419,7 +1419,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - ## Sub
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - # He
@@ -1434,7 +1434,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - Body.
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - # Head
@@ -1449,7 +1449,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - Body.
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - # Head
@@ -1463,7 +1463,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - # ┃Hello
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - #
@@ -1476,7 +1476,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - ┃thought
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - ┃
@@ -1489,7 +1489,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - one┃ two
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - one
@@ -1502,7 +1502,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - ┃alpha
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - 
@@ -1515,7 +1515,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - # Hello┃ world
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - # Hello
@@ -1529,7 +1529,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - para┃ text
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - item
@@ -1544,7 +1544,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   bar
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - foo
@@ -1566,7 +1566,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - a«lpha» beta
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - a
@@ -1611,7 +1611,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - foo┃
 ```
 
-> insertLineBreak deleteContentBackward
+> shiftEnter deleteContentBackward
 
 ```buffer
 - one
@@ -1736,7 +1736,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - boo┃
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - item
@@ -1751,7 +1751,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - kid┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - parent
@@ -1767,7 +1767,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   cont
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
@@ -1784,7 +1784,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - q
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
@@ -1800,7 +1800,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
     - q
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - a
@@ -1816,7 +1816,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - ---
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
@@ -1832,7 +1832,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
     -     code
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - a
@@ -1848,7 +1848,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   ^id
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - b┃
@@ -1864,7 +1864,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - para┃ two
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - para┃ two
@@ -1879,7 +1879,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - q
 ```
 
-> moveDown
+> moveBlockDown
 
 ```buffer
 - q
@@ -1895,7 +1895,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   ```
 ````
 
-> moveDown
+> moveBlockDown
 
 ````buffer
 - ```
@@ -1913,7 +1913,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - para
 ````
 
-> moveDown
+> moveBlockDown
 
 ````buffer
 - para
@@ -1930,7 +1930,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - c
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
@@ -1947,7 +1947,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - ten
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - eight
@@ -1965,7 +1965,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - d
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - a
@@ -1982,7 +1982,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - foo┃
 ```
 
-> insertLineBreak formatIndent deleteContentBackward
+> shiftEnter indent deleteContentBackward
 
 ```buffer
 - one
@@ -1998,7 +1998,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - c
 ```
 
-> insertLineBreak formatOutdent deleteContentBackward
+> shiftEnter outdent deleteContentBackward
 
 ```buffer
 - a
@@ -2015,7 +2015,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - bar
 ```
 
-> insertLineBreak formatIndent insertParagraph
+> shiftEnter indent enter
 
 ```buffer
 - one
@@ -2031,7 +2031,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - foo┃
 ```
 
-> insertParagraph insertLineBreak deleteContentBackward
+> enter shiftEnter deleteContentBackward
 
 ```buffer
 - foo
@@ -2051,7 +2051,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - sib┃
 ```
 
-> insertFromPaste
+> pasteStructured
 
 ```buffer
 - top
@@ -2074,7 +2074,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - sib┃
 ```
 
-> insertFromPaste
+> pasteStructured
 
 ```buffer
 - top
@@ -2097,7 +2097,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - below
 ```
 
-> insertFromPaste
+> pasteStructured
 
 ```buffer
 - ## H
@@ -2119,7 +2119,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - see
 ```
 
-> insertFromPaste
+> pasteStructured
 
 ```buffer
 - top
@@ -2136,7 +2136,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - TODO ┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
@@ -2151,7 +2151,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - TODO ┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
@@ -2166,7 +2166,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - a
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - 
@@ -2181,7 +2181,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - ┃b
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
@@ -2253,7 +2253,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - a
 ```
 
-> moveDown
+> moveBlockDown
 
 ```buffer
 - # H
@@ -2268,7 +2268,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   -     - a
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - ### H
@@ -2283,7 +2283,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - ┃para
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - ┃para
@@ -2297,7 +2297,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - para┃
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - para┃
@@ -2311,7 +2311,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - para┃
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - para┃
@@ -2325,7 +2325,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - ┃code
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - ┃code
@@ -2364,7 +2364,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - TODO abc ┃# x
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - TODO abc
@@ -2377,7 +2377,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - abc ┃2. x
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - abc 
@@ -2390,7 +2390,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - a | b ┃|---|---|
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - a | b 
@@ -2409,7 +2409,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - b
 ```
 
-> insertFromPaste
+> pasteStructured
 
 ```buffer
 - a
@@ -2444,7 +2444,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - b
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - z
@@ -2463,7 +2463,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
     ```
 ````
 
-> insertParagraph "x"
+> enter "x"
 
 ````buffer
 - a
@@ -2484,7 +2484,7 @@ y
 - a┃b
 ```
 
-> insertFromPaste
+> pasteStructured
 
 ```buffer
 - ax
@@ -2511,7 +2511,7 @@ y
   b┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
@@ -2526,7 +2526,7 @@ y
     b┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - x
@@ -2542,7 +2542,7 @@ y
   b┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - [!note] Title
@@ -2558,7 +2558,7 @@ y
   c
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
@@ -2573,7 +2573,7 @@ y
   b┃
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - a
@@ -2588,7 +2588,7 @@ y
   b
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - a┃
@@ -2604,7 +2604,7 @@ y
   c
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - a
@@ -2620,7 +2620,7 @@ y
     b┃
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - x
@@ -2637,7 +2637,7 @@ y
   c
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - a
@@ -2655,7 +2655,7 @@ y
   - d
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
@@ -2671,7 +2671,7 @@ y
 - b┃
 ```
 
-> formatIndent formatOutdent
+> indent outdent
 
 ```buffer
 - a
@@ -2686,7 +2686,7 @@ y
 - b
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - a┃
@@ -2694,7 +2694,7 @@ y
 - b
 ```
 
-> moveDown
+> moveBlockDown
 
 ```buffer
 - b
@@ -2702,7 +2702,7 @@ y
   x
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - b
@@ -2718,7 +2718,7 @@ y
 - b
 ```
 
-> moveDown
+> moveBlockDown
 
 ```buffer
 - x
@@ -2733,7 +2733,7 @@ y
   b┃
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - a
@@ -2748,7 +2748,7 @@ y
   b┃
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - a
@@ -2763,7 +2763,7 @@ y
 - q┃
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - q┃
@@ -2776,7 +2776,7 @@ y
 - a┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
@@ -2790,7 +2790,7 @@ y
   - a┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - x
@@ -2805,7 +2805,7 @@ y
   b┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
@@ -2819,7 +2819,7 @@ y
 - a┃
 ```
 
-> insertParagraph insertParagraph
+> enter enter
 
 ```buffer
 - a
@@ -2833,7 +2833,7 @@ y
 - ab┃cd
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - ab
@@ -2847,7 +2847,7 @@ y
   body
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - [!note] Ti
@@ -2861,7 +2861,7 @@ y
 - [!tip] Title┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - [!tip] Title
@@ -2881,7 +2881,7 @@ y
 - ab┃cd
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - ab
@@ -2894,7 +2894,7 @@ y
 - ab┃
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 - ab
@@ -2971,7 +2971,7 @@ y
 - a┃
 ```
 
-> insertFromPaste
+> pasteStructured
 
 ```buffer
 - a
@@ -2987,7 +2987,7 @@ y
   b┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - # H
@@ -3002,7 +3002,7 @@ y
 - para┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - q
@@ -3017,7 +3017,7 @@ y
   para┃
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - q
@@ -3032,7 +3032,7 @@ y
   a┃
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - code
@@ -3047,7 +3047,7 @@ y
 - q┃
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - q┃
@@ -3062,7 +3062,7 @@ y
   q┃
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - a
@@ -3076,7 +3076,7 @@ y
   a
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - q┃
@@ -3089,7 +3089,7 @@ y
 - a┃
 ```
 
-> insertParagraph formatIndent "x"
+> enter indent "x"
 
 ```buffer
 - a
@@ -3102,7 +3102,7 @@ y
 - a┃
 ```
 
-> insertParagraph formatIndent insertParagraph
+> enter indent enter
 
 ```buffer
 - a
@@ -3115,7 +3115,7 @@ y
 - a┃
 ```
 
-> insertParagraph formatIndent deleteContentBackward
+> enter indent deleteContentBackward
 
 ```buffer
 - a┃
@@ -3127,7 +3127,7 @@ y
 - a┃
 ```
 
-> insertParagraph formatIndent cursorLineUp
+> enter indent cursorLineUp
 
 ```buffer
 - ┃a
@@ -3141,7 +3141,7 @@ y
   - b┃
 ```
 
-> insertParagraph insertParagraph insertParagraph "p"
+> enter enter enter "p"
 
 ```buffer
 - a
@@ -3156,7 +3156,7 @@ y
 - one┃
 ```
 
-> insertLineBreak insertLineBreak "p"
+> shiftEnter shiftEnter "p"
 
 ```buffer
 - one
@@ -3171,7 +3171,7 @@ y
   lazy
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
@@ -3220,7 +3220,7 @@ y
     ```
 ````
 
-> formatIndent
+> indent
 
 ````buffer
 - a
@@ -3244,7 +3244,7 @@ y
     ```
 ````
 
-> moveUp
+> moveBlockUp
 
 ````buffer
 - b┃
@@ -3263,7 +3263,7 @@ y
 - b┃
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - b┃
@@ -3280,7 +3280,7 @@ y
 - c
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
@@ -3298,7 +3298,7 @@ y
 - b┃
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - b┃
@@ -3313,7 +3313,7 @@ y
   - ## Sub
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - # Title┃
@@ -3329,7 +3329,7 @@ y
   - ## b1
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - # B┃
@@ -3345,7 +3345,7 @@ y
 - b
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
@@ -3361,7 +3361,7 @@ y
 - c
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
@@ -3376,7 +3376,7 @@ y
 - a┃
 ```
 
-> insertLineBreak insertLineBreak "p"
+> shiftEnter shiftEnter "p"
 
 ```buffer
 - a

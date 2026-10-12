@@ -19,10 +19,10 @@
 // The changes leave every line that keeps its order where it is (the heaviest run of them), so a
 // move is written as a move.
 
-import type { Doc } from './doc.ts';
+import type { OutlineDoc } from './doc.ts';
 import type { OutlineKind, OutlineNode } from './outline.ts';
 import type { Block, LineInfo } from './block.ts';
-import { advanceColumns, dominantEnding, mapPos, type Change } from './text.ts';
+import { advanceColumns, dominantEnding, mapPos, type TextChange } from './text.ts';
 
 // ------------------------------------------------------------------ edited outlines
 
@@ -46,6 +46,8 @@ export interface EditedOutlineNode {
   readonly lines?: readonly string[];
   /** A new item's own marker (`-`, `1.`); the writer adopts its list's where it joins one. */
   readonly marker?: string;
+  /** Write `marker` as given, on a new item or an old one, instead of adopting the list's (a paste keeps the numbers it brings). */
+  readonly exactMarker?: boolean;
   /** Blank lines after the node's own lines: a new node's, or a rewritten one's in place of its old gap. */
   readonly gap?: number;
   readonly children: readonly (OutlineNode | EditedOutlineNode)[];
@@ -55,7 +57,7 @@ export interface EditedOutlineNode {
 export const isEdited = (node: OutlineNode | EditedOutlineNode): node is EditedOutlineNode => !('block' in node);
 
 /** A copy of `node` to edit: the same node, its children still the old outline's. */
-const editable = (node: OutlineNode | EditedOutlineNode): EditedOutlineNode =>
+export const editable = (node: OutlineNode | EditedOutlineNode): EditedOutlineNode =>
   isEdited(node) ? node : { id: node.id, kind: node.kind, from: node, children: node.children };
 
 /**
@@ -191,12 +193,12 @@ function describe(node: OutlineNode, text: (node: OutlineNode) => string): Descr
 // ------------------------------------------------------------------ writing
 
 export interface WrittenOutline {
-  readonly changes: Change[];
+  readonly changes: TextChange[];
   /** A position of the old text in the new one: text the writer kept follows its line. */
   map(pos: number, assoc?: -1 | 1): number;
   /** Where offset `offset` of own line `line` of `node` (an edited node with `lines`) now is. */
   at(node: EditedOutlineNode, line: number, offset: number): number;
-  /** Every old node's id, by where it now starts (see `Doc.apply`'s `identity`). */
+  /** Every old node's id, by where it now starts (see `OutlineDoc.apply`'s `identity`). */
   readonly identity: Map<number, number>;
   /** How many seams the edit made could take a blank line they don't have (see `pad`). */
   readonly candidates: number;
@@ -251,13 +253,13 @@ interface OutputLine {
   readonly text: string;
   ending: string;
   /** Changes to the old line, relative to its start. */
-  readonly local: readonly Change[];
+  readonly local: readonly TextChange[];
   /** How much keeping the line in place is worth: less for a node arriving from elsewhere, which moves. */
   readonly weight: number;
 }
 
 /** Writes `edited`, an edited outline of `doc`. A string says why it can't be written. */
-export function writeOutline(doc: Doc, edited: OutlineNode | EditedOutlineNode, options: OutlineWriteOptions = {}): WrittenOutline | string {
+export function writeOutline(doc: OutlineDoc, edited: OutlineNode | EditedOutlineNode, options: OutlineWriteOptions = {}): WrittenOutline | string {
   const root = place(doc, edited, null);
   if (typeof root === 'string') return root;
   const tabs = usesTabs(doc);
@@ -312,7 +314,7 @@ export function writeOutline(doc: Doc, edited: OutlineNode | EditedOutlineNode, 
     } else if (own) {
       for (let lineNo = own.first; lineNo <= own.last; lineNo++) {
         const line = lines[lineNo]!;
-        const local: Change[] = [];
+        const local: TextChange[] = [];
         const change = reindent(doc, lineNo, placed.base, placed.owner, placed.delta, tabs);
         if (change === 'fail') return `the lines of ${placed.kind} ${placed.node!.id} can't move ${placed.delta} columns`;
         if (change) local.push({ from: change.from - line.from, to: change.to - line.from, insert: change.insert });
@@ -375,7 +377,7 @@ export function writeOutline(doc: Doc, edited: OutlineNode | EditedOutlineNode, 
 }
 
 /** The edited outline as placed nodes. */
-function place(doc: Doc, tree: OutlineNode | EditedOutlineNode, parent: Placed | null): Placed | string {
+function place(doc: OutlineDoc, tree: OutlineNode | EditedOutlineNode, parent: Placed | null): Placed | string {
   const edited = isEdited(tree) ? tree : null;
   const node = edited ? (edited.from ?? null) : (tree as OutlineNode);
   if (edited?.level !== undefined && !edited.lines) return 'a heading level change without lines: not written yet';
@@ -451,7 +453,7 @@ function landingColumn(placed: Placed, sibling: Placed | null, tabs: boolean): n
  * column unless that would change its nesting, past its new previous sibling's content column or
  * short of its parent's.
  */
-function shift(doc: Doc, placed: Placed, tabs: boolean): string | null {
+function shift(doc: OutlineDoc, placed: Placed, tabs: boolean): string | null {
   const parent = placed.parent;
   const node = placed.node;
   const sibling = placed.prev?.kind === 'item' ? placed.prev : null;
@@ -459,7 +461,7 @@ function shift(doc: Doc, placed: Placed, tabs: boolean): string | null {
     // a new node
     if (placed.kind === 'item') {
       placed.markerColumn = landingColumn(placed, sibling, tabs);
-      placed.marker = markerOf(doc, placed, sibling);
+      placed.marker = placed.edited?.exactMarker && placed.edited.marker ? placed.edited.marker : markerOf(doc, placed, sibling);
       placed.contentColumn = placed.markerColumn + placed.marker.length + 1;
     } else {
       placed.markerColumn = placed.contentColumn = parent.kind === 'item' || parent.kind === 'quote' ? parent.contentColumn : 0;
@@ -499,8 +501,9 @@ function shift(doc: Doc, placed: Placed, tabs: boolean): string | null {
         placed.base = placed.delta < 0 && node.parent?.kind === 'item' ? node.parent.block : node.block;
         placed.owner = node.block;
       }
-      if (arrived) {
-        const marker = markerOf(doc, placed, sibling);
+      const exact = placed.edited?.exactMarker ? placed.edited.marker : undefined;
+      if (exact || arrived) {
+        const marker = exact ?? markerOf(doc, placed, sibling);
         if (marker !== doc.text.slice(node.block.markerFrom!, node.block.markerTo!)) placed.marker = marker;
       }
       placed.markerColumn = node.block.markerColumn! + placed.delta;
@@ -516,16 +519,16 @@ function shift(doc: Doc, placed: Placed, tabs: boolean): string | null {
 }
 
 /** Where an old container's content starts: an item's content column, after a quote's `>`; 0 elsewhere. */
-function oldContentColumn(doc: Doc, node: OutlineNode): number {
+function oldContentColumn(doc: OutlineDoc, node: OutlineNode): number {
   if (node.kind === 'item') return node.block.contentColumn!;
   if (node.kind !== 'quote') return 0;
   return doc.lines[node.startLine]!.prefix.find((piece) => piece.block === node.block)?.toColumn ?? 0;
 }
 
 /** The marker an item takes in its place: always a new item's, an old one's only when it changes. */
-function markerOf(doc: Doc, placed: Placed, sibling: Placed | null): string {
-  const markerText = (item: Placed): string => item.marker ?? (item.node ? doc.text.slice(item.node.block.markerFrom!, item.node.block.markerTo!) : '-');
-  const own = placed.node ? doc.text.slice(placed.node.block.markerFrom!, placed.node.block.markerTo!) : (placed.edited!.marker ?? '-');
+function markerOf(doc: OutlineDoc, placed: Placed, sibling: Placed | null): string {
+  const markerText = (item: Placed): string => item.marker ?? (item.node ? doc.text.slice(item.node.block.markerFrom!, item.node.block.markerTo!) : doc.config.bullet);
+  const own = placed.node ? doc.text.slice(placed.node.block.markerFrom!, placed.node.block.markerTo!) : (placed.edited!.marker ?? doc.config.bullet);
   const theirs = sibling ? markerText(sibling) : null;
   const ordered = (marker: string): boolean => /^\d/.test(marker);
   // a new item joins its list whatever its own kind; an old one keeps its kind
@@ -548,12 +551,12 @@ interface ContentLine {
   readonly origin: number | null;
   readonly text: string;
   readonly ending: string;
-  readonly local: readonly Change[];
+  readonly local: readonly TextChange[];
   readonly prefix: number;
 }
 
 /** A node's lines written from its `lines`, with the prefix of where it is. */
-function writeLines(doc: Doc, placed: Placed, own: { first: number; last: number } | null, tabs: boolean): ContentLine[] {
+function writeLines(doc: OutlineDoc, placed: Placed, own: { first: number; last: number } | null, tabs: boolean): ContentLine[] {
   const content = placed.lines!;
   let first: string;
   let rest: string;
@@ -586,7 +589,7 @@ function writeLines(doc: Doc, placed: Placed, own: { first: number; last: number
 }
 
 /** Line `lineNo` of `placed` (an old node), its prefix rendered from where it now is, its content kept. */
-function rerendered(doc: Doc, placed: Placed, lineNo: number, tabs: boolean): string {
+function rerendered(doc: OutlineDoc, placed: Placed, lineNo: number, tabs: boolean): string {
   const line = doc.lines[lineNo]!;
   const content = doc.text.slice(contentStart(line), line.to);
   // a lazy continuation stays lazy, as it was written
@@ -647,7 +650,7 @@ function blankBetween(before: Placed, after: Placed | null, tabs: boolean): stri
 }
 
 /** The one change that turns `before` into `after`: what lies between their common start and end. */
-function difference(before: string, after: string): Change[] {
+function difference(before: string, after: string): TextChange[] {
   if (before === after) return [];
   let start = 0;
   while (start < before.length && start < after.length && before[start] === after[start]) start++;
@@ -657,7 +660,7 @@ function difference(before: string, after: string): Change[] {
 }
 
 /** What `node` of `doc` is written as when it's copied as a new node: its lines, marker and gap. */
-export function contentOf(doc: Doc, node: OutlineNode): NewContent {
+export function contentOf(doc: OutlineDoc, node: OutlineNode): NewContent {
   const lines: string[] = [];
   let gap = 0;
   let after = false;
@@ -689,7 +692,7 @@ interface Units {
   readonly last: OutlineNode | null;
 }
 
-function unitsOf(doc: Doc): Units {
+function unitsOf(doc: OutlineDoc): Units {
   const preamble: number[] = [];
   const own = new Map<OutlineNode, { first: number; last: number }>();
   const gap = new Map<OutlineNode, number[]>();
@@ -768,13 +771,22 @@ function seam(units: Units, unit: Placed, next: Placed | null, nextUnit: Placed 
   // a first child follows its parent's own lines and their gap; new first children come right after
   // the parent's lines, its gap staying after them, unless they keep an old node's id (a node
   // converted to another kind is still where it was)
-  if (!prev) return fresh === 'before' && next.edited?.id == null ? made([]) : fresh ? made(own) : kept(own);
   const arrived = (placed: Placed): boolean => !old(placed) || old(placed)!.parent !== placed.parent!.node;
+  // an item moved down below a paragraph, into its list, swaps with it around the blank lines between them
+  const owner = next.parent?.node;
+  if (!prev && owner?.kind === 'paragraph' && next.kind === 'item' && old(next) && old(next)!.parent === owner.parent && arrived(next) && old(next)!.startLine < owner.startLine) {
+    return made(gapAfter(old(next)!));
+  }
+  if (!prev) return fresh === 'before' && next.edited?.id == null ? made([]) : fresh ? made(own) : kept(own);
   if (arrived(next) !== arrived(prev)) {
     // a run arriving from elsewhere takes the separation of the place it lands in, on both sides:
     // the gap after the last node before it that was already there, or its parent's own gap
     let landing: Placed | null = prev;
     while (landing && arrived(landing)) landing = landing.prev;
+    // items arriving at the head of a paragraph's list are set apart from its items as the list sets them apart
+    if (!landing && owner?.kind === 'paragraph' && next.kind === 'item' && old(next)) {
+      return { lines: [], blanks: old(next)!.block.parent!.tight ? 0 : 1, separable: false, fresh: null };
+    }
     if (!landing) return made(next.parent?.node ? (units.gap.get(next.parent.node) ?? []) : []);
     const node = old(landing)!;
     // items joining a list after its last item are separated as the list separates its items; the
@@ -817,10 +829,10 @@ const siblingAfter = (node: OutlineNode): OutlineNode | undefined => {
  * increasing run of their old indexes) stay, edited in place; the others are deleted where they
  * were and written where they now are.
  */
-function changesOf(doc: Doc, out: readonly OutputLine[]): Change[] {
+function changesOf(doc: OutlineDoc, out: readonly OutputLine[]): TextChange[] {
   const lines = doc.lines;
   const kept = heaviestIncreasing(out, lines.length);
-  const changes: Change[] = [];
+  const changes: TextChange[] = [];
   let cursor = 0;
   let pending = '';
   const lineStart = (lineNo: number): number => (lineNo < lines.length ? lines[lineNo]!.from : doc.text.length);
@@ -865,7 +877,7 @@ function heaviestIncreasing(out: readonly OutputLine[], size: number): Set<numbe
   return kept;
 }
 
-function applyLocal(s: string, changes: readonly Change[]): string {
+function applyLocal(s: string, changes: readonly TextChange[]): string {
   let out = '';
   let pos = 0;
   for (const change of [...changes].sort((first, second) => first.from - second.from)) {
@@ -877,16 +889,16 @@ function applyLocal(s: string, changes: readonly Change[]): string {
 
 // ------------------------------------------------------------------ indentation
 
-const tabbed = new WeakMap<Doc, boolean>();
+const tabbed = new WeakMap<OutlineDoc, boolean>();
 
 /** Whether list nesting in this document is written with tabs (remembered per document). */
-export function usesTabs(doc: Doc): boolean {
+export function usesTabs(doc: OutlineDoc): boolean {
   let tabs = tabbed.get(doc);
   if (tabs === undefined) tabbed.set(doc, (tabs = scanTabs(doc)));
   return tabs;
 }
 
-function scanTabs(doc: Doc): boolean {
+function scanTabs(doc: OutlineDoc): boolean {
   for (const line of doc.lines) {
     if (line.blank) continue;
     for (const prefix of line.prefix) {
@@ -918,7 +930,7 @@ export function whitespace(fromCol: number, toCol: number, tabs: boolean): strin
  * out of (outdent). Returns the change (null when the line is left alone: blank lines and lazy
  * continuations), or 'fail' when the line can't move that far.
  */
-export function reindent(doc: Doc, lineNo: number, base: Block | null, owner: Block | null, delta: number, tabs: boolean): Change | null | 'fail' {
+export function reindent(doc: OutlineDoc, lineNo: number, base: Block | null, owner: Block | null, delta: number, tabs: boolean): TextChange | null | 'fail' {
   if (delta === 0 || !base || !owner) return null;
   const line = doc.lines[lineNo]!;
   const text = doc.text;

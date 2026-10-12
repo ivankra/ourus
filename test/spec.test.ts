@@ -3,10 +3,10 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { test, type TestContext } from 'node:test';
-import { Doc } from '../src/doc.ts';
+import { OutlineDoc } from '../src/doc.ts';
 import { drawState, drawText, readDrawing, readText } from './drawing.ts';
 import { isAction, play, type Played } from './player.ts';
-import { readSpec, type SpecTest } from './specfile.ts';
+import { readSpec, specConfig, type SpecTest } from './specfile.ts';
 
 const specDir = new URL('../spec/', import.meta.url);
 
@@ -23,7 +23,7 @@ const normalize = (drawn: string): string => drawn.replace(/»┃/g, '»');
 function run(t: SpecTest): void {
   const start = readDrawing(t.initial.buffer);
   let state: Played = {
-    doc: Doc.parse(start.text, { placeholders: start.placeholders }),
+    doc: OutlineDoc.parse(start.text, { placeholders: start.placeholders, config: specConfig(t.options) }),
     selection: start.selection,
     clipboard: readText(t.initial.clipboard ?? ''),
   };

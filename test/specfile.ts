@@ -1,6 +1,8 @@
 // Reads the behaviour spec (spec/*.md, format in spec/README.md) with ourus's own parser: fenced
-// `buffer`, `clipboard` and `result` blocks are editor states, quotes the actions between them.
+// `buffer`, `clipboard` and `result` blocks are editor states, quotes the actions between them, and
+// a `config` block before them sets a test's options over the file's frontmatter.
 
+import { readConfig, readSettings, type Config } from '../src/config.ts';
 import { parseCommonMark } from '../src/syntax/commonmark.ts';
 import type { Block, LineInfo } from '../src/block.ts';
 
@@ -28,16 +30,27 @@ export interface SpecTest {
   readonly line: number;
   /** The headings above it, below the file's title (`Enter › At the start of an item`). */
   readonly name: string;
-  /** Agreed behaviour not implemented yet. */
+  /** Agreed behaviour not implemented yet: `status: pending`. */
   readonly pending: boolean;
-  /** Frontmatter, then `key=value` words on the first buffer's info string. */
+  /** Frontmatter, then the test's `config` block, which wins. */
   readonly options: Readonly<Record<string, string>>;
   readonly initial: State & { buffer: string };
   readonly steps: Step[];
 }
 
-/** Known options, so an unknown one is an error, not silently ignored. `editor`: whose behaviour a file draws (`ourus`, the default, or `logseq`). */
-const OPTIONS = new Set<string>(['editor']);
+/**
+ * Known options, so an unknown one is an error, not silently ignored: `status` (`pending` for
+ * behaviour agreed on but not built, or `ready`, the default), `editor`, whose behaviour a file draws
+ * (`ourus`, the default, or `logseq`), and the keys of ourus's config (`src/config.ts`).
+ */
+const SPEC_OPTIONS: Readonly<Record<string, readonly string[]>> = { status: ['ready', 'pending'], editor: ['ourus', 'logseq'] };
+
+/** The ourus config a test's options set: every option but the spec's own, as values. */
+export function specConfig(options: Readonly<Record<string, string>>): Partial<Config> {
+  const set = readSettings(Object.fromEntries(Object.entries(options).filter(([key]) => !(key in SPEC_OPTIONS))));
+  if (typeof set === 'string') throw new SpecError(set);
+  return set;
+}
 
 export class SpecError extends Error {}
 
@@ -49,6 +62,8 @@ export function readSpec(file: string, source: string): SpecTest[] {
   };
 
   const tests: SpecTest[] = [];
+  /** A `config` block read, waiting for the test it starts. */
+  let config: { line: number; options: Record<string, string> } | null = null;
   const headings: string[] = [];
   /** Every heading's anchor, so none is repeated: a heading names a test and links to it. */
   const anchors = new Map<string, number>();
@@ -69,6 +84,7 @@ export function readSpec(file: string, source: string): SpecTest[] {
       anchors.set(anchor, block.startLine);
       headings.length = block.level! - 1;
       headings[block.level! - 1] = text;
+      if (config) fail(config.line, 'a config block with no test after it');
       test = null;
       group = null;
       sectionHasTest = false;
@@ -85,30 +101,34 @@ export function readSpec(file: string, source: string): SpecTest[] {
     }
     if (block.type !== 'code_block' || !block.fenced) continue;
     const [kind, ...words] = (block.info ?? '').trim().split(/\s+/);
-    if (kind !== 'buffer' && kind !== 'clipboard' && kind !== 'result') continue;
+    if (kind !== 'buffer' && kind !== 'clipboard' && kind !== 'result' && kind !== 'config') continue;
     if (block.fenceOffset) fail(block.startLine, 'an indented fence would change its content');
+    if (words.length > 0) fail(block.startLine, `"${words.join(' ')}" after "${kind}": options go in a config block before the test's first block`);
+    if (kind === 'config') {
+      if (test) fail(block.startLine, "a config block goes before a test's first block");
+      if (config) fail(block.startLine, 'a second config block for one test');
+      config = { line: block.startLine, options: readOptions(fenceContent(tree, block), block.startLine + 1, (line, m) => fail(line, m)) };
+      continue;
+    }
     if (!test) {
       if (sectionHasTest) fail(block.startLine, 'a second test under one heading: give each test a heading of its own');
       const name = headings.slice(1).filter(Boolean).join(' › ');
       if (!name) fail(block.startLine, "a test needs a heading of its own, below the file's title");
       sectionHasTest = true;
-      test = { file, line: block.startLine + 1, name, pending: false, options: { ...fileOptions }, initial: { buffer: '' }, steps: [] };
+      const options = { ...fileOptions, ...config?.options };
+      test = { file, line: (config?.line ?? block.startLine) + 1, name, pending: options.status === 'pending', options, initial: { buffer: '' }, steps: [] };
+      config = null;
       delete (test.initial as State).buffer;
       tests.push(test);
       group = test.initial;
     }
     if (kind === 'result' && group === test.initial) fail(block.startLine, 'a result before any action');
     if (group![kind] !== undefined) fail(block.startLine, `a second ${kind} block for one state (each test needs a heading of its own)`);
-    if (words.length > 0 && (kind !== 'buffer' || group !== test.initial)) fail(block.startLine, "flags belong on a test's first buffer");
-    for (const w of words) {
-      if (w === 'pending') test.pending = true;
-      else if (/^[\w-]+=/.test(w)) setOption(test.options, w.slice(0, w.indexOf('=')), w.slice(w.indexOf('=') + 1), (m) => fail(block.startLine, m));
-      else fail(block.startLine, `unknown buffer flag "${w}"`);
-    }
     const content = fenceContent(tree, block);
     group![kind] = kind === 'result' ? content.trim() : content;
   }
 
+  if (config) fail(config.line, 'a config block with no test after it');
   for (const t of tests) if (t.initial.buffer === undefined) fail(t.line - 1, 'a test with no buffer to start from');
   for (const t of tests) if (t.steps.length === 0) fail(t.line - 1, 'a test with no actions');
   return tests;
@@ -126,24 +146,37 @@ export const slug = (text: string): string =>
 export const tokenize = (s: string): string[] => s.match(/"[^"]*"|\S+/g) ?? [];
 
 function frontmatter(file: string, source: string): { body: string; options: Record<string, string> } {
-  const options: Record<string, string> = {};
   const m = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(source);
-  if (!m) return { body: source, options };
-  m[1]!.split(/\r?\n/).forEach((line, i) => {
-    if (line.trim() === '' || line.trimStart().startsWith('#')) return;
-    const kv = /^([\w-]+):\s*(.*)$/.exec(line);
-    if (!kv) throw new SpecError(`${file}:${i + 2}: frontmatter lines are "key: value"`);
-    setOption(options, kv[1]!, kv[2]!.trim(), (msg) => {
-      throw new SpecError(`${file}:${i + 2}: ${msg}`);
-    });
+  if (!m) return { body: source, options: {} };
+  const options = readOptions(m[1]!, 1, (line, msg) => {
+    throw new SpecError(`${file}:${line + 1}: ${msg}`);
   });
   // blank lines in its place keep line numbers right
   return { body: m[0].replace(/[^\r\n]/g, '') + source.slice(m[0].length), options };
 }
 
-function setOption(options: Record<string, string>, key: string, value: string, fail: (m: string) => void): void {
-  if (!OPTIONS.has(key)) fail(`unknown option "${key}"`);
-  options[key] = value;
+/**
+ * Options from `key: value` lines (frontmatter, a config block), checked: an unknown key or a value
+ * the option doesn't take is an error. `first` is the 0-based line of the first one.
+ */
+function readOptions(text: string, first: number, fail: (line: number, message: string) => never): Record<string, string> {
+  const options: Record<string, string> = {};
+  text.split(/\r?\n/).forEach((line, i) => {
+    if (line.trim() === '' || line.trimStart().startsWith('#')) return;
+    const kv = /^([\w-]+):\s*(.*)$/.exec(line);
+    if (!kv) fail(first + i, 'options are "key: value" lines');
+    const [, key, raw] = kv!;
+    const value = raw!.trim();
+    const values = SPEC_OPTIONS[key!];
+    if (values) {
+      if (!values.includes(value)) fail(first + i, `option "${key}" takes ${values.join(', ')}, not "${value}"`);
+    } else {
+      const config = readConfig({ [key!]: value });
+      if (typeof config === 'string') fail(first + i, config);
+    }
+    options[key!] = value;
+  });
+  return options;
 }
 
 function lineText(tree: Parsed, l: number): string {

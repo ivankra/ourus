@@ -14,7 +14,7 @@ Two consequences, drawn below:
   node, and the blank lines are left as they are. In the preamble there is no node above, and the
   keys do nothing.
 
-## moveUp, moveDown (Alt-Shift-Up, Alt-Shift-Down)
+## moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down)
 
 ### Gaps travel with their nodes
 
@@ -30,7 +30,7 @@ b┃
 c
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 b┃
@@ -54,7 +54,7 @@ b
 c
 ```
 
-> moveDown
+> moveBlockDown
 
 ```buffer
 b
@@ -79,7 +79,7 @@ more
 # C
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 # B┃
@@ -101,7 +101,7 @@ text
 - c
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - b┃
@@ -121,7 +121,7 @@ text
 - c
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - b┃
@@ -144,7 +144,7 @@ b
 ## C
 ```
 
-> moveDown
+> moveBlockDown
 
 ```buffer
 ## B
@@ -167,7 +167,7 @@ code
 q
 ````
 
-> moveDown
+> moveBlockDown
 
 ````buffer
 ```
@@ -191,7 +191,7 @@ loosen and `para` would continue `a` lazily.
 para
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - b┃
@@ -212,7 +212,7 @@ para
 - q
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 - p
@@ -234,7 +234,7 @@ b┃
 
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 b┃
@@ -257,7 +257,7 @@ b
 c
 ```
 
-> moveDown
+> moveBlockDown
 
 ```buffer
 
@@ -280,7 +280,7 @@ c
 p
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 ## S
@@ -302,7 +302,7 @@ p
 para
 ```
 
-> insertFromPaste
+> pasteStructured
 
 ```buffer
 - t
@@ -324,7 +324,7 @@ para
     - g
 ```
 
-> insertFromPaste
+> pasteStructured
 
 ```buffer
 - [ ] t
@@ -348,7 +348,7 @@ b
 c
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 b
@@ -368,7 +368,7 @@ c
 - c
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
@@ -386,7 +386,7 @@ c
 - c
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - a
@@ -404,7 +404,7 @@ c
 - c
 ```
 
-> moveDown
+> moveBlockDown
 
 ```buffer
 - c
@@ -421,7 +421,7 @@ c
 a
 ```
 
-> moveDown
+> moveBlockDown
 
 ```result
 notApplicable
@@ -433,7 +433,7 @@ notApplicable
 a
 ```
 
-> formatIndent
+> indent
 
 ```result
 notApplicable

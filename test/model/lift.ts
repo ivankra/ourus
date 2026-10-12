@@ -1,7 +1,7 @@
-// Reads an ourus Doc as a model tree, and maps carets between document positions and
+// Reads an ourus OutlineDoc as a model tree, and maps carets between document positions and
 // (node, offset in the node's model text).
 
-import type { Doc } from '../../src/doc.ts';
+import type { OutlineDoc } from '../../src/doc.ts';
 import type { OutlineNode } from '../../src/outline.ts';
 import type { Caret, MNode } from './model.ts';
 
@@ -22,7 +22,7 @@ export interface Lifted {
   toPos(caret: Caret): number;
 }
 
-export function lift(doc: Doc): Lifted {
+export function lift(doc: OutlineDoc): Lifted {
   const segs = new Map<MNode, Seg[]>();
   const byOutline = new Map<OutlineNode, MNode>();
   const editable: MNode[] = [];
@@ -97,7 +97,7 @@ export function lift(doc: Doc): Lifted {
 }
 
 /** The ranges holding a node's own text, line by line, trimmed; a heading's title only. */
-function segments(doc: Doc, n: OutlineNode): Seg[] {
+function segments(doc: OutlineDoc, n: OutlineNode): Seg[] {
   if (!n.head) {
     // an empty item: its text would go at the end of the marker line
     const line = doc.lines[n.startLine]!;

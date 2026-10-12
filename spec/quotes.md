@@ -17,7 +17,7 @@ the outline; found by an independent review.)
   > - b┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - > - a
@@ -35,7 +35,7 @@ The item nests under its sibling, after the quote's `>`.
 > - b┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 > - a
@@ -51,7 +51,7 @@ Without a space after `>`: columns count from where the quote's content starts o
 >- b┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 >- a
@@ -67,7 +67,7 @@ With tabs: the quote's `>` takes part of the tab.
 >→- b┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 >→- a
@@ -84,7 +84,7 @@ A quote inside an item.
   > - b┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - x
@@ -101,7 +101,7 @@ Nested quotes.
 > > - b┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 > > - a
@@ -118,7 +118,7 @@ In a callout.
 > - b┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 > [!note] Title
@@ -136,7 +136,7 @@ A lazy continuation line stays as it is: it still continues the paragraph.
 c
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 > - a
@@ -151,7 +151,7 @@ c
 >   - b┃
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 > - a
@@ -169,7 +169,7 @@ A quote is a container: outdenting its child makes it the quote's next sibling, 
 > - b┃
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 > - a
@@ -184,7 +184,7 @@ A quote is a container: outdenting its child makes it the quote's next sibling, 
 > - b
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 > - b
@@ -202,7 +202,7 @@ A lazy continuation line goes along unchanged.
 c
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 > - a
@@ -220,7 +220,7 @@ Out of a quote inside an item: the item's own child.
   > - b┃
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - x
@@ -239,7 +239,7 @@ A quote's blank lines lose their `>` with it.
 >   c
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 > - a
@@ -259,7 +259,7 @@ Indent makes the item the last child of the quote above, written in the quote.
 - b┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 > - a
@@ -279,7 +279,7 @@ Its children and blank lines come along, and the blank line before it joins the 
   d
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 > - a
@@ -299,7 +299,7 @@ Then back out: outdent undoes it.
 - b┃
 ```
 
-> formatIndent formatOutdent
+> indent outdent
 
 ```buffer
 > - a
@@ -319,7 +319,7 @@ Out of one quote, past another, into it. Outdent copies the separator its new ne
 > - b
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 > - x
@@ -329,7 +329,7 @@ Out of one quote, past another, into it. Outdent copies the separator its new ne
 > - b
 ```
 
-> moveDown
+> moveBlockDown
 
 ```buffer
 > - x
@@ -339,7 +339,7 @@ Out of one quote, past another, into it. Outdent copies the separator its new ne
 - a┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 > - x
@@ -360,7 +360,7 @@ Two quotes moved together get a blank line between them: without one they would 
 > - b
 ```
 
-> moveDown
+> moveBlockDown
 
 ```buffer
 > - x
@@ -379,7 +379,7 @@ Two quotes moved together get a blank line between them: without one they would 
 > - b┃
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 > - b┃
@@ -396,7 +396,7 @@ In a loose list, the `>` blank line stays between them.
 > - b┃
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 > - b┃
@@ -413,7 +413,7 @@ A quote moves past an item.
 > q┃
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 > q┃
@@ -431,7 +431,7 @@ A heading owns what follows it: a quote moved below one would join its section.
 # H┃
 ```
 
-> moveUp
+> moveBlockUp
 
 ```result
 rejected: not-expressible
@@ -444,7 +444,7 @@ rejected: not-expressible
 ## S
 ```
 
-> moveDown
+> moveBlockDown
 
 ```result
 rejected: not-expressible
@@ -460,7 +460,7 @@ A new item gets the quote's `>`.
 > - a┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 > - a
@@ -476,7 +476,7 @@ In a quote inside an item.
   > - a┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - x
@@ -493,7 +493,7 @@ At the end of a lazy continuation line.
 b┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 > - a
@@ -509,7 +509,7 @@ On an empty item whose parent is a quote, Enter outdents it out of the quote, as
 > - a┃
 ```
 
-> insertParagraph insertParagraph
+> enter enter
 
 ```buffer
 > - a
@@ -524,7 +524,7 @@ In a quoted paragraph: two paragraphs in the quote, the blank line between them 
 > ab┃cd
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 > ab
@@ -541,7 +541,7 @@ In a callout's title: the rest starts the callout's body.
 > body
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 > [!note] Ti
@@ -557,7 +557,7 @@ At the end of a lone title: an empty body line to type into.
 > [!tip] Title┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 > [!tip] Title
@@ -579,7 +579,7 @@ At the end of a lone title: an empty body line to type into.
 > ab┃cd
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 > ab
@@ -594,7 +594,7 @@ At the end: an empty line in the quote, held open until typed into.
 > ab┃
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 > ab
@@ -616,7 +616,7 @@ In a quoted item.
 > - ab┃cd
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 > - ab
@@ -732,7 +732,7 @@ Pasted items get the quote's `>`.
 > - a┃
 ```
 
-> insertFromPaste
+> pasteStructured
 
 ```buffer
 > - a
@@ -750,7 +750,7 @@ A heading in a quote owns its section there.
 > - b┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 > # H
@@ -770,7 +770,7 @@ A quote holds paragraphs as an item holds lines: the paragraph becomes the quote
 para┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 > q
@@ -789,7 +789,7 @@ continue the quote's paragraph lazily.
 > para┃
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 > q
@@ -804,7 +804,7 @@ para┃
 > a┃
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 > a┃
@@ -822,7 +822,7 @@ The caret is on the quote's only paragraph: the quote is what moves.
 > q┃
 ```
 
-> moveUp
+> moveBlockUp
 
 ```buffer
 > q┃
@@ -843,7 +843,7 @@ empty, is gone. Right below `- a`, the paragraph would continue it lazily: a bla
 > > q┃
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 > - a
@@ -858,7 +858,7 @@ empty, is gone. Right below `- a`, the paragraph would continue it lazily: a bla
 > - a
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 > q┃

@@ -31,13 +31,16 @@ async function scenario(name: string, before: string, keys: string[], after: str
   await page.focus('.cm-content');
   for (const k of keys) {
     if (k.startsWith('type:')) await page.keyboard.type(k.slice(5));
-    else if (k.startsWith('paste:')) {
-      // a real paste event, as the browser fires it, carrying the text
-      await page.evaluate((text) => {
+    else if (k.startsWith('paste:') || k.startsWith('pastePlain:')) {
+      // a real paste event, as the browser fires it, carrying the text; Ctrl-Shift-V's keydown first
+      const plain = k.startsWith('pastePlain:');
+      await page.evaluate(([text, plain]) => {
+        const content = document.querySelector('.cm-content')!;
+        if (plain) content.dispatchEvent(new KeyboardEvent('keydown', { key: 'V', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
         const data = new DataTransfer();
-        data.setData('text/plain', text);
-        document.querySelector('.cm-content')!.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
-      }, k.slice(6));
+        data.setData('text/plain', text as string);
+        content.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+      }, [k.slice(k.indexOf(':') + 1), plain] as const);
     }
     else await page.keyboard.press(k);
   }
@@ -73,7 +76,7 @@ const results = [
   await scenario('Delete at an item\'s text start, then leave: the surplus space goes', '- ┃a b\n  - c\n', ['Delete', 'ArrowDown'], '- b\n  - c\n'),
   await scenario('Enter twice ends the list', '- a┃\n', ['Enter', 'Enter', 'type:text'], '- a\n\ntext\n'),
   await scenario('Enter twice mid-list splits it', '- a┃\n- b\n', ['Enter', 'Enter', 'type:p'], '- a\n\np\n\n- b\n'),
-  await scenario('Enter before a typed marker makes two items', '- abc ┃- def\n', ['Enter'], '- abc\n- def\n'),
+  await scenario('Enter before a typed marker keeps it as text', '- abc ┃- def\n', ['Enter'], '- abc\n- \\- def\n'),
   await scenario('Shift-Enter breaks a line inside the item', '- one┃ two\n', ['Shift+Enter', 'type:x'], '- one\n  xtwo\n'),
   await scenario('Shift-Enter at the end, then type: same item, two lines', '- one┃\n- b\n', ['Shift+Enter', 'type:two', 'Tab'], '- one\n  two\n- b\n'),
   await scenario('Shift-Enter then leave: the empty line goes away', '- one┃\n- b\n', ['Shift+Enter', 'ArrowDown'], '- one\n- b\n'),
@@ -81,12 +84,17 @@ const results = [
   await scenario('Backspace after Enter twice returns to the list', '- a┃\n', ['Enter', 'Enter', 'Backspace', 'type:b'], '- ab\n'),
   await scenario('Shift-Enter twice: a second paragraph in the item', '- one┃\n- two\n', ['Shift+Enter', 'Shift+Enter', 'type:para'], '- one\n\n  para\n- two\n'),
   await scenario('Home goes to the text start, again to the line start', '- [ ] task┃\n', ['Home', 'type:X', 'Home', 'Home', 'type:Y'], 'Y- [ ] Xtask\n'),
+  await scenario('Down from a text start lands at the nested item\'s text', '- ┃a\n  - b\n', ['ArrowDown', 'type:X'], '- a\n  - Xb\n'),
+  await scenario('Up into deeper indentation lands at the item\'s text', '- a\n    - b\n- c┃\n', ['ArrowUp', 'type:X'], '- a\n    - Xb\n- c\n'),
   await scenario('Shift-Home selects to the text start', '- abc┃\n', ['Shift+Home', 'type:Z'], '- Z\n'),
   await scenario('Enter at the end of a parent makes a first child', '- a┃\n  - b\n', ['Enter', 'type:new'], '- a\n  - new\n  - b\n'),
   await scenario('Paste places a tab list as nodes in a two-space list', '- top\n  - sib┃\n', ['paste:- a\n\t- b\n'], '- top\n  - sib\n  - a\n    - b\n'),
+  await scenario('Ctrl-Shift-V pastes lines into the item', '- a┃b\n', ['pastePlain:x\ny\n'], '- ax\n  y\n  b\n'),
+  await scenario('Paste of a code block into an empty item fills it', '- a\n- ┃\n', ['paste:```\ncode\n```\n'], '- a\n- ```\n  code\n  ```\n'),
+  await scenario('Paste of an ordered list into a bullet list keeps its numbers as text', '- a┃\n  - kid\n', ['paste:1. x\n2. y\n'], '- a\n  - 1\\. x\n  - 2\\. y\n  - kid\n'),
   await scenario('Paste of one line is plain text', '- a┃\n', ['paste: and more'], '- a and more\n'),
   await scenario('Backspace joins text into an empty item above', '- \n- ┃b\n', ['Backspace', 'type:X'], '- Xb\n'),
-  await scenario('Delete on an empty item pulls its child up', '- ┃\n  - a\n', ['Delete', 'type:X'], '- Xa\n'),
+  await scenario('Delete on an empty item with children pulls its first child up', '- x\n- ┃\n  - a\n', ['Delete', 'type:X'], '- x\n- Xa\n'),
   await scenario('Mod-Backspace stops at the text start', '- alpha beta┃\n', ['Control+Backspace', 'type:x'], '- x\n'),
 ];
 

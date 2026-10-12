@@ -1,5 +1,5 @@
 // Adapts spec examples to what Logseq can hold, so they can be replayed there and Logseq's own
-// results recorded (`spec/logseq.md`).
+// results recorded (`spec/zzz-logseq.md`).
 //
 // Each outline node becomes a block, read with ourus's parser: items, paragraphs, headings (as
 // `## title`, their sections nested under them), and atoms (code, quotes, HTML, breaks) as raw
@@ -7,7 +7,7 @@
 // any other; blank lines and CR endings go. A caret maps to its block and an offset in the block's
 // content (in a marker: the text start); a selection must stay inside one block.
 
-import { Doc } from '../../src/doc.ts';
+import { OutlineDoc } from '../../src/doc.ts';
 import type { OutlineNode } from '../../src/outline.ts';
 import { readDrawing, readText } from '../drawing.ts';
 import type { SpecTest } from '../specfile.ts';
@@ -42,23 +42,23 @@ const MOTIONS: Record<string, string> = {
   LineBoundaryBackward: 'Home',
 };
 export const KEYS: Record<string, string> = {
-  insertParagraph: 'Enter',
-  insertLineBreak: 'Shift+Enter',
-  formatIndent: 'Tab',
-  formatOutdent: 'Shift+Tab',
+  enter: 'Enter',
+  shiftEnter: 'Shift+Enter',
+  indent: 'Tab',
+  outdent: 'Shift+Tab',
   deleteContentBackward: 'Backspace',
   deleteContentForward: 'Delete',
-  moveUp: 'Alt+Shift+ArrowUp',
-  moveDown: 'Alt+Shift+ArrowDown',
+  moveBlockUp: 'Alt+Shift+ArrowUp',
+  moveBlockDown: 'Alt+Shift+ArrowDown',
   undo: 'Control+z',
   redo: 'Control+Shift+z',
   ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
 };
 
-export const actionSupported = (a: string): boolean => /^"[^"]*"$/.test(a) || a in KEYS || a === 'insertFromPaste';
+export const actionSupported = (a: string): boolean => /^"[^"]*"$/.test(a) || a in KEYS || a === 'pasteStructured';
 
 /** A node's content as a Logseq block holds it, with where each kept line started in the source. */
-function contentOf(doc: Doc, n: OutlineNode): { text: string; lines: { from: number; to: number; at: number }[]; prefix: number } {
+function contentOf(doc: OutlineDoc, n: OutlineNode): { text: string; lines: { from: number; to: number; at: number }[]; prefix: number } {
   const head = n.head;
   if (!head) {
     const line = doc.lines[n.startLine]!;
@@ -110,7 +110,7 @@ export function adapt(t: SpecTest): Adapted | string {
   // CR line endings: dropped, positions shifted with them
   const shiftCR = (p: number) => p - (drawn.text.slice(0, p).match(/\r/g)?.length ?? 0);
   const text = drawn.text.replace(/\r/g, '');
-  const doc = Doc.parse(text, { placeholders: drawn.placeholders.map(shiftCR) });
+  const doc = OutlineDoc.parse(text, { placeholders: drawn.placeholders.map(shiftCR) });
   const nodes = doc.nodes.filter((n) => n.kind !== 'root');
   if (!nodes.length) return 'no nodes';
   const contents = nodes.map((n) => contentOf(doc, n));

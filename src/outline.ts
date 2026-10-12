@@ -12,7 +12,7 @@ import type { Block, LineInfo } from './block.ts';
 export type OutlineKind = 'root' | 'heading' | 'item' | 'paragraph' | 'quote' | 'atom';
 
 export interface OutlineNode {
-  /** Opaque, stable across edits within one document lineage (see `Doc.apply`). */
+  /** Opaque, stable across edits within one document lineage (see `OutlineDoc.apply`). */
   readonly id: number;
   readonly kind: OutlineKind;
   /** root: the document; item: the list item; otherwise the block itself. */

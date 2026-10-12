@@ -7,36 +7,29 @@
 // with other keymaps: the ourus commands (W3C `inputType` names where one exists), `"text"`
 // typed, and caret motions named as CodeMirror's commands are.
 
-import { execute, homePosition, settle, type Command, type Result, type Selection } from '../src/commands.ts';
-import { Doc } from '../src/doc.ts';
-import { advanceColumns, applyChanges, dominantEnding, type Change } from '../src/text.ts';
+import { execute, homePosition, settle, textStart, type Command, type Result, type Selection } from '../src/commands.ts';
+import { OutlineDoc } from '../src/doc.ts';
+import { advanceColumns, applyChanges, dominantEnding, type TextChange } from '../src/text.ts';
 
 const COMMANDS = new Set<string>([
-  'formatIndent',
-  'formatOutdent',
-  'moveUp',
-  'moveDown',
-  'insertParagraph',
-  'insertLineBreak',
+  'indent',
+  'outdent',
+  'moveBlockUp',
+  'moveBlockDown',
+  'enter',
+  'shiftEnter',
   'deleteContentBackward',
   'deleteContentForward',
   'deleteSoftLineBackward',
-  'insertFromPaste',
+  'pasteStructured',
+  'pastePlain',
   'deleteSubtree',
   'duplicateNode',
-  'toggleTask',
-  'convertToParagraph',
-  'convertToListItem',
-  ...[1, 2, 3, 4, 5, 6].map((level) => `convertToHeading${level}`),
 ]);
 
 /** The command an action names (the clipboard is what a paste pastes). */
 function commandOf(action: string, clipboard: string): Command {
-  if (action === 'insertFromPaste') return { type: action, text: clipboard };
-  if (action === 'convertToParagraph') return { type: 'convertKind', to: 'paragraph' };
-  if (action === 'convertToListItem') return { type: 'convertKind', to: 'item' };
-  const heading = /^convertToHeading([1-6])$/.exec(action);
-  if (heading) return { type: 'convertKind', to: 'heading', level: Number(heading[1]) };
+  if (action === 'pasteStructured' || action === 'pastePlain') return { type: action, text: clipboard };
   return { type: action } as Command;
 }
 
@@ -48,7 +41,7 @@ function commandOf(action: string, clipboard: string): Command {
  * monospace font's, with tab stops of 4. Returns the new head, or for a vertical motion the line
  * it reaches, placed at the goal column.
  */
-type Motion = (doc: Doc, sel: Selection) => number | { line: number };
+type Motion = (doc: OutlineDoc, sel: Selection) => number | { line: number };
 
 const MOTIONS: Record<string, Motion> = {
   // with a selection, left and right collapse it to its start or end
@@ -74,7 +67,7 @@ const HOST_ACTIONS = new Set<string>(['undo', 'redo']);
 export const isAction = (token: string): boolean => /^"[^"]*"$/.test(token) || COMMANDS.has(token) || HOST_ACTIONS.has(token) || isMotion(token);
 
 export interface Played {
-  doc: Doc;
+  doc: OutlineDoc;
   selection: Selection;
   clipboard: string;
   /** The column vertical motion aims for, kept while the caret moves up and down. */
@@ -147,8 +140,9 @@ function step(state: Played, action: string): Played {
       const line = doc.lineAt(selection.head);
       goal ??= column(doc.text, line.from, selection.head);
       const dest = doc.lines[target.line];
-      // past the first or last line, the caret goes to that end of the text
-      head = dest ? atColumn(doc.text, dest.from, dest.to, goal) : target.line < 0 ? 0 : doc.text.length;
+      // past the first or last line, the caret goes to that end of the text; a column in the line's
+      // markers or indentation lands at the start of its text
+      head = dest ? Math.max(atColumn(doc.text, dest.from, dest.to, goal), textStart(doc, dest.from)) : target.line < 0 ? 0 : doc.text.length;
     }
     return { ...state, goal, selection: { anchor: extend ? selection.anchor : head, head } };
   }
@@ -163,8 +157,8 @@ function step(state: Played, action: string): Played {
   if (last.status === 'rejected') return { ...state, last };
   // not ours: the host's default
   switch (type) {
-    case 'insertParagraph':
-    case 'insertLineBreak':
+    case 'enter':
+    case 'shiftEnter':
       return { ...edit(state, { from, to, insert: dominantEnding(doc.text) }), last };
     case 'deleteContentBackward': {
       if (from !== to) return { ...edit(state, { from, to, insert: '' }), last };
@@ -172,7 +166,8 @@ function step(state: Played, action: string): Played {
       const back = doc.text.slice(from - 2, from) === '\r\n' ? 2 : 1;
       return { ...edit(state, { from: from - back, to: from, insert: '' }), last };
     }
-    case 'insertFromPaste':
+    case 'pasteStructured':
+    case 'pastePlain':
       return { ...edit(state, { from, to, insert: state.clipboard }), last };
     // to the start of the line, as a line that doesn't wrap has it
     case 'deleteSoftLineBackward':
@@ -188,7 +183,7 @@ function step(state: Played, action: string): Played {
   }
 }
 
-function edit(state: Played, change: Change): Played {
+function edit(state: Played, change: TextChange): Played {
   const caret = change.from + change.insert.length;
   // the host tells where the caret lands, so an emptied node stays as a placeholder
   const doc = state.doc.apply([change], { caret });
@@ -224,7 +219,7 @@ function charAfter(text: string, pos: number): number {
   return c >= 0xd800 && c < 0xdc00 && pos + 1 < text.length && text.charCodeAt(pos + 1) >= 0xdc00 && text.charCodeAt(pos + 1) < 0xe000 ? pos + 2 : pos + 1;
 }
 
-function mapSel(changes: readonly Change[], sel: Selection): Selection {
+function mapSel(changes: readonly TextChange[], sel: Selection): Selection {
   let { anchor, head } = sel;
   for (const c of [...changes].sort((a, b) => b.from - a.from)) {
     const shift = c.insert.length - (c.to - c.from);

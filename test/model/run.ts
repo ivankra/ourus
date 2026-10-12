@@ -8,7 +8,7 @@
 
 import fc from 'fast-check';
 import { settle, type Command } from '../../src/commands.ts';
-import { Doc } from '../../src/doc.ts';
+import { OutlineDoc } from '../../src/doc.ts';
 import { mapPos } from '../../src/text.ts';
 import { drawState } from '../drawing.ts';
 import { play } from '../player.ts';
@@ -19,7 +19,7 @@ const RUNS = Number(process.argv[2] ?? 3000);
 const MODE = (process.argv[3] ?? 'md') as Mode;
 const GEN = process.argv[4] ?? 'all';
 
-const CMDS: Cmd[] = ['formatIndent', 'formatOutdent', 'moveUp', 'moveDown', 'insertParagraph', 'deleteContentBackward', 'deleteContentForward'];
+const CMDS: Cmd[] = ['indent', 'outdent', 'moveBlockUp', 'moveBlockDown', 'enter', 'deleteContentBackward', 'deleteContentForward'];
 const TEXTS = ['a', 'b c', 'x', 'long text', ''];
 const MARKERS = ['- ', '- ', '* ', '1. ', '- [ ] ', '- [x] '];
 const OTHER = ['', '', '# H', '## H2', '### H3', 'para', 'p q', '> q'];
@@ -84,7 +84,7 @@ interface Disagreement {
 
 /** Runs one case; returns the first disagreement, or null. Tallies into `stats`. */
 function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: Map<string, [number, number]>): Disagreement | null {
-  let doc = Doc.parse(text);
+  let doc = OutlineDoc.parse(text);
   let pos = -1;
   for (let i = 0; i < steps.length; i++) {
     const [cmd, move] = steps[i]!;

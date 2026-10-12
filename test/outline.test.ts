@@ -3,22 +3,22 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { Doc } from '../src/doc.ts';
+import { OutlineDoc } from '../src/doc.ts';
 import type { OutlineNode } from '../src/outline.ts';
 import { editNode, isEdited, outlineDifference, type EditedOutlineNode } from '../src/outline-editor.ts';
 
-const textOf = (doc: Doc) => (n: OutlineNode): string => doc.headLines(n).map((l) => l.trim()).join('\n');
-const idOf = (doc: Doc, text: string): number => doc.nodes.find((n) => textOf(doc)(n) === text)!.id;
-const texts = (old: Doc, now: Doc) => ({ old: textOf(old), new: textOf(now) });
+const textOf = (doc: OutlineDoc) => (n: OutlineNode): string => doc.headLines(n).map((l) => l.trim()).join('\n');
+const idOf = (doc: OutlineDoc, text: string): number => doc.nodes.find((n) => textOf(doc)(n) === text)!.id;
+const texts = (old: OutlineDoc, now: OutlineDoc) => ({ old: textOf(old), new: textOf(now) });
 
 /** The edited outline drawn as indented lines: `kind text`, with `*` on copied or new nodes. */
-function draw(doc: Doc, n: OutlineNode | EditedOutlineNode, depth = 0): string[] {
+function draw(doc: OutlineDoc, n: OutlineNode | EditedOutlineNode, depth = 0): string[] {
   const own = isEdited(n) ? (n.text ?? (n.from ? textOf(doc)(n.from) : '')) : textOf(doc)(n);
   const line = `${'  '.repeat(depth)}${n.kind}${isEdited(n) ? '*' : ''} ${own}`;
   return [line, ...n.children.flatMap((c) => draw(doc, c, depth + 1))];
 }
 
-const doc = Doc.parse('# A\n\n- a\n  - a1\n- b\n\n# B\n\npara\n');
+const doc = OutlineDoc.parse('# A\n\n- a\n  - a1\n- b\n\n# B\n\npara\n');
 
 test('the outline is built from the root alone, and its nodes listed in document order', () => {
   assert.deepEqual(
@@ -73,9 +73,9 @@ test('children are replaced through the parent: removed, inserted and reordered'
 test('an outline is compared with the edited outline it was meant to be', () => {
   // `- b` moved above `- a`, written by hand: the comparison doesn't need a writer
   const moved = editNode(doc.outline, idOf(doc, 'A'), (n) => ({ ...n, children: [...n.children].reverse() }));
-  const right = Doc.parse('# A\n\n- b\n- a\n  - a1\n\n# B\n\npara\n');
+  const right = OutlineDoc.parse('# A\n\n- b\n- a\n  - a1\n\n# B\n\npara\n');
   assert.equal(outlineDifference(moved, right.outline, texts(doc, right)), null);
-  const wrong = Doc.parse('# A\n\n- b\n  - a\n  - a1\n\n# B\n\npara\n');
+  const wrong = OutlineDoc.parse('# A\n\n- b\n  - a\n  - a1\n\n# B\n\npara\n');
   assert.equal(outlineDifference(moved, wrong.outline, texts(doc, wrong)), 'root › 0 › 0: 0 children, got 2');
   const level = editNode(doc.outline, idOf(doc, 'B'), (n) => ({ ...n, level: 2 }));
   assert.equal(outlineDifference(level, doc.outline, texts(doc, doc)), 'root › 1: level 2, got 1');

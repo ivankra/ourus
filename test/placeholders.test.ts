@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { execute, settle } from '../src/commands.ts';
-import { Doc } from '../src/doc.ts';
+import { OutlineDoc } from '../src/doc.ts';
 
-const shape = (d: Doc) => d.nodes.slice(1).map((n) => `${'  '.repeat(n.depth - 1)}${n.kind}:${d.headLines(n).join('|').trim()}`).join('\n');
+const shape = (d: OutlineDoc) => d.nodes.slice(1).map((n) => `${'  '.repeat(n.depth - 1)}${n.kind}:${d.headLines(n).join('|').trim()}`).join('\n');
 
-function indentNewItem(): Doc {
-  const doc = Doc.parse('- a\n- ');
-  const r = execute(doc, { type: 'formatIndent' }, { anchor: 6, head: 6 });
+function indentNewItem(): OutlineDoc {
+  const doc = OutlineDoc.parse('- a\n- ');
+  const r = execute(doc, { type: 'indent' }, { anchor: 6, head: 6 });
   assert.equal(r.status, 'applied');
   return (r as Extract<typeof r, { status: 'applied' }>).doc;
 }
@@ -18,7 +18,7 @@ test('an indented empty item is a placeholder under its parent', () => {
   assert.deepEqual(doc.placeholders, [8]);
   assert.equal(shape(doc), 'item:a\n  item:');
   // without the place, CommonMark reads the line as a setext underline
-  assert.equal(shape(Doc.parse(doc.text)), 'item:a');
+  assert.equal(shape(OutlineDoc.parse(doc.text)), 'item:a');
 });
 
 test('typing into a place fills it; typing a space keeps it open', () => {
@@ -41,12 +41,12 @@ test('leaving an empty child keeps it, set off by a blank line', () => {
 });
 
 test('leaving a place the text can hold just drops it', () => {
-  const item = Doc.parse('- a\n- ', { placeholders: [6] });
+  const item = OutlineDoc.parse('- a\n- ', { placeholders: [6] });
   const r1 = settle(item, 0)!;
   assert.deepEqual(r1.changes, []);
   assert.equal(r1.doc.text, '- a\n- ');
   assert.deepEqual(r1.doc.placeholders, []);
-  const para = Doc.parse('- a\n\n', { placeholders: [5] });
+  const para = OutlineDoc.parse('- a\n\n', { placeholders: [5] });
   assert.equal(shape(para), 'item:a\nparagraph:');
   const r2 = settle(para, 0)!;
   assert.equal(r2.doc.text, '- a\n\n');
@@ -54,7 +54,7 @@ test('leaving a place the text can hold just drops it', () => {
 });
 
 test('places left on adjacent lines at the top are removed together', () => {
-  const doc = Doc.parse('\n\n- a\n', { placeholders: [0, 1] });
+  const doc = OutlineDoc.parse('\n\n- a\n', { placeholders: [0, 1] });
   // the empty paragraph owns the list right after it
   assert.equal(shape(doc), 'paragraph:|\n  item:a');
   const r = settle(doc, 4)!;
@@ -63,10 +63,10 @@ test('places left on adjacent lines at the top are removed together', () => {
 });
 
 test('Enter twice leaves a list, and typing makes the paragraph', () => {
-  let doc = Doc.parse('- a');
+  let doc = OutlineDoc.parse('- a');
   let sel = { anchor: 3, head: 3 };
   for (const _ of [1, 2]) {
-    const r = execute(doc, { type: 'insertParagraph' }, sel);
+    const r = execute(doc, { type: 'enter' }, sel);
     assert.equal(r.status, 'applied');
     if (r.status !== 'applied') return;
     doc = r.doc;

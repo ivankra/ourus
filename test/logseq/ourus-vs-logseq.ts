@@ -1,21 +1,21 @@
-// Offline: replays spec/logseq.md (Logseq's recorded behaviour) with ourus, through the core player,
+// Offline: replays spec/zzz-logseq.md (Logseq's recorded behaviour) with ourus, through the core player,
 // and reports where ourus and Logseq agree. Outlines are compared as the Logseq runner compares them.
 //   node test/logseq/ourus-vs-logseq.ts [-v]
 import { readFileSync } from 'node:fs';
-import { Doc } from '../../src/doc.ts';
+import { OutlineDoc } from '../../src/doc.ts';
 import { drawState, readDrawing, readText } from '../drawing.ts';
 import { play, type Played } from '../player.ts';
-import { readSpec } from '../specfile.ts';
+import { readSpec, specConfig } from '../specfile.ts';
 import { draw, readOutline, unescape, type Outline } from './adapt.ts';
 
 const verbose = process.argv.includes('-v');
-const tests = readSpec('logseq.md', readFileSync(new URL('../../spec/logseq.md', import.meta.url), 'utf8'));
+const tests = readSpec('zzz-logseq.md', readFileSync(new URL('../../spec/zzz-logseq.md', import.meta.url), 'utf8'));
 const tally = new Map<string, number>();
 const bySource = new Map<string, Map<string, number>>();
 const loose = (o: Outline) => o.blocks.map((b) => `${b.depth}:${b.text.replace(/ *\n */g, '\n').trim()}`).join('|');
 for (const t of tests) {
   const start = readDrawing(t.initial.buffer);
-  let state: Played = { doc: Doc.parse(start.text, { placeholders: start.placeholders }), selection: start.selection, clipboard: readText(t.initial.clipboard ?? '') };
+  let state: Played = { doc: OutlineDoc.parse(start.text, { placeholders: start.placeholders, config: specConfig(t.options) }), selection: start.selection, clipboard: readText(t.initial.clipboard ?? '') };
   let verdict = 'agree';
   let detail = '';
   try {

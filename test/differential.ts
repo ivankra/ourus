@@ -26,10 +26,11 @@ function headSource(): string {
 const oldRoot = oldArg ? resolve(oldArg) : headSource();
 const newRoot = newArg ? resolve(newArg) : here;
 
-const load = async (root: string) => ({
-  Doc: (await import(join(root, 'src/doc.ts'))).Doc,
-  execute: (await import(join(root, 'src/commands.ts'))).execute,
-});
+// a copy from before the rename calls the snapshot `Doc`
+const load = async (root: string) => {
+  const doc = await import(join(root, 'src/doc.ts'));
+  return { OutlineDoc: doc.OutlineDoc ?? doc.Doc, execute: (await import(join(root, 'src/commands.ts'))).execute };
+};
 const before = await load(oldRoot);
 const after = await load(newRoot);
 
@@ -40,7 +41,7 @@ const random = (n: number): number => {
   return (seed >>> 8) % n;
 };
 const blocks = ['p', 'p', 'two\nlines', '- i', '- i', '  - c', '    - g', '- [ ] t', '# H', '## S', 'S\n---', '```\nx\n```', '> q', '> - q', '1. n', '2. m', '- '];
-const commands = ['formatIndent', 'formatOutdent', 'moveUp', 'moveDown', 'insertParagraph', 'insertLineBreak', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward', 'insertFromPaste'];
+const commands = ['indent', 'outdent', 'moveBlockUp', 'moveBlockDown', 'enter', 'shiftEnter', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward', 'pasteStructured'];
 const pastes = ['x', '- a\n- b', '> q', '```\nc\n```'];
 const documents = Number(process.env.DIFF_DOCS ?? 1500);
 const examples = Number(process.env.DIFF_EXAMPLES ?? 3);
@@ -58,15 +59,23 @@ for (let d = 0; d < documents; d++) {
   for (let k = 0; k < count; k++) {
     text += blocks[random(blocks.length)]!.replace(/(p|i|c|g|t|H|S|q|n|m)$/m, (x) => x + k) + '\n' + '\n'.repeat(random(3) === 0 ? 1 + random(2) : 0);
   }
-  const oldDoc = before.Doc.parse(text);
-  const newDoc = after.Doc.parse(text);
+  const oldDoc = before.OutlineDoc.parse(text);
+  const newDoc = after.OutlineDoc.parse(text);
   for (const line of oldDoc.lines) {
     if (line.blank) continue;
     for (const pos of new Set([line.from, line.to, line.contentFrom, Math.min(line.to, line.contentFrom + 1)])) {
       for (const type of commands) {
-        const command = type === 'insertFromPaste' ? { type, text: pastes[random(pastes.length)] } : { type };
+        const command = type === 'pasteStructured' ? { type, text: pastes[random(pastes.length)] } : { type };
         const selection = { anchor: pos, head: pos };
-        const a = before.execute(oldDoc, command, selection);
+        // a copy from before the renames knows some commands by their old names
+        let a;
+        try {
+          a = before.execute(oldDoc, command, selection);
+          if (!a) throw new Error('unknown command');
+        } catch {
+          const legacy: Record<string, string> = { pasteStructured: 'insertFromPaste', indent: 'formatIndent', outdent: 'formatOutdent', moveBlockUp: 'moveUp', moveBlockDown: 'moveDown', enter: 'insertParagraph', shiftEnter: 'insertLineBreak' };
+          a = before.execute(oldDoc, legacy[command.type] ? { ...command, type: legacy[command.type] } : command, selection);
+        }
         const b = after.execute(newDoc, command, selection);
         runs++;
         if (outcome(a) === outcome(b)) continue;

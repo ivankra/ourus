@@ -2,14 +2,14 @@
 // Positions are UTF-16 code-unit offsets into a JS string.
 
 /** One replacement, in the coordinates of the text it applies to (CM6 ChangeSpec semantics). */
-export interface Change {
+export interface TextChange {
   readonly from: number;
   readonly to: number;
   readonly insert: string;
 }
 
 /** Sorts changes and checks that they don't overlap. Adjacent insertions at one point keep their order. */
-export function normalizeChanges(changes: readonly Change[]): Change[] {
+export function normalizeChanges(changes: readonly TextChange[]): TextChange[] {
   const sorted = changes
     .map((c, i) => ({ c, i }))
     .sort((a, b) => a.c.from - b.c.from || a.c.to - b.c.to || a.i - b.i)
@@ -20,7 +20,7 @@ export function normalizeChanges(changes: readonly Change[]): Change[] {
   return sorted.filter((c) => c.from !== c.to || c.insert !== '');
 }
 
-export function applyChanges(text: string, changes: readonly Change[]): string {
+export function applyChanges(text: string, changes: readonly TextChange[]): string {
   let out = '';
   let pos = 0;
   for (const c of normalizeChanges(changes)) {
@@ -32,8 +32,8 @@ export function applyChanges(text: string, changes: readonly Change[]): string {
 }
 
 /** The changes that undo `changes` when applied to the text they produced from `text`. */
-export function invertChanges(text: string, changes: readonly Change[]): Change[] {
-  const inverse: Change[] = [];
+export function invertChanges(text: string, changes: readonly TextChange[]): TextChange[] {
+  const inverse: TextChange[] = [];
   let shift = 0;
   for (const c of normalizeChanges(changes)) {
     const from = c.from + shift;
@@ -48,7 +48,7 @@ export function invertChanges(text: string, changes: readonly Change[]): Change[
  * insertion point before the inserted text, > 0 moves it after. A position inside a
  * replaced range goes to the replacement's start (assoc < 0) or end (assoc > 0).
  */
-export function mapPos(changes: readonly Change[], pos: number, assoc: -1 | 1 = -1): number {
+export function mapPos(changes: readonly TextChange[], pos: number, assoc: -1 | 1 = -1): number {
   let shift = 0;
   for (const c of normalizeChanges(changes)) {
     if (c.from > pos) break;
@@ -154,7 +154,7 @@ export function dominantEnding(text: string): '\n' | '\r\n' | '\r' {
  * Each change of `b` either falls in text `a` left alone, or inside text `a` inserted; one that
  * straddles the two makes the result a single replacement of the span that differs.
  */
-export function composeChanges(text: string, a: readonly Change[], b: readonly Change[]): Change[] {
+export function composeChanges(text: string, a: readonly TextChange[], b: readonly TextChange[]): TextChange[] {
   const first = normalizeChanges(a).map((c) => ({ ...c }));
   // where each change of `a` sits in a's result
   const placed: { change: { from: number; to: number; insert: string }; from: number; to: number }[] = [];
@@ -163,7 +163,7 @@ export function composeChanges(text: string, a: readonly Change[], b: readonly C
     placed.push({ change: c, from: c.from + shift, to: c.from + shift + c.insert.length });
     shift += c.insert.length - (c.to - c.from);
   }
-  const out: Change[] = [];
+  const out: TextChange[] = [];
   for (const c of normalizeChanges(b).sort((x, y) => y.from - x.from)) {
     const inside = placed.find((p) => c.from >= p.from && c.to <= p.to);
     if (inside) {
@@ -186,7 +186,7 @@ export function composeChanges(text: string, a: readonly Change[], b: readonly C
  * start and end with in common: a line added between two others is an insertion at a line
  * start, not one that seems to begin inside the line below it. Empty when the texts are equal.
  */
-export function diffLines(before: string, after: string): Change[] {
+export function diffLines(before: string, after: string): TextChange[] {
   if (before === after) return [];
   const isBreak = (c: number): boolean => c === 10 || c === 13;
   let start = 0;
@@ -201,7 +201,7 @@ export function diffLines(before: string, after: string): Change[] {
 }
 
 /** One change turning `before` into `after`, trimmed to the span that differs. */
-function wholeDiff(before: string, after: string): Change {
+function wholeDiff(before: string, after: string): TextChange {
   let start = 0;
   while (start < before.length && start < after.length && before[start] === after[start]) start++;
   let end = 0;

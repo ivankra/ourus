@@ -22,7 +22,7 @@ Only the editor makes a placeholder, and the document keeps it (each editor view
   (`- b`). A node no text can hold, an empty paragraph or an empty line inside a node's text, goes.
   Either way it is one edit, verified, one undo step.
 - **Undo and redo** bring it back with the rest: the host keeps the document, placeholders included,
-  in its history.
+  in its history ([undo.md](undo.md)).
 
 A file never has placeholders: `- a` / `  - ` reads as a heading with an empty underline until
 someone edits there. Leaving never changes what the rest of the text reads as.
@@ -44,15 +44,17 @@ someone edits there. Leaving never changes what the rest of the text reads as.
 | an edit from elsewhere (another plugin, sync) | mapped through the edit; ends if its line gets text | |
 | the selection is not collapsed | kept | |
 
-## A command makes one
+## Placeholder1
 
-### Enter, then Tab: an empty child under text
+Enter, then Tab: an empty child under text.
+
+A command makes one.
 
 ```buffer
 - a┃
 ```
 
-> insertParagraph
+> enter
 
 The text holds an empty item between items: no placeholder.
 
@@ -61,7 +63,7 @@ The text holds an empty item between items: no placeholder.
 - ┃
 ```
 
-> formatIndent
+> indent
 
 Under `a`'s text, it would be a setext underline: a placeholder holds it.
 
@@ -70,7 +72,7 @@ Under `a`'s text, it would be a setext underline: a placeholder holds it.
   - ┃◌
 ```
 
-> cursorLineUp
+> cursorDocStart cursorLineBoundaryForward
 
 Left, it stays, with a blank line above it.
 
@@ -80,20 +82,22 @@ Left, it stays, with a blank line above it.
   - 
 ```
 
-### Enter twice leaves a list for an empty paragraph
+## Placeholder2
+
+Enter twice leaves a list for an empty paragraph.
 
 ```buffer
 - a┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
 - ┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
@@ -109,13 +113,15 @@ No text holds an empty paragraph: it goes.
 ┃- a
 ```
 
-### Enter at the end of a paragraph
+## Placeholder3
+
+Enter at the end of a paragraph.
 
 ```buffer
 para┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 para
@@ -129,20 +135,22 @@ para
 ┃para
 ```
 
-### Shift-Enter at the end of a paragraph opens an empty line in it
+## Placeholder4
+
+Shift-Enter at the end of a paragraph opens an empty line in it.
 
 ```buffer
 para┃
 ```
 
-> insertLineBreak
+> shiftEnter
 
 ```buffer
 para
 ┃◌
 ```
 
-> cursorLineUp
+> cursorDocStart
 
 An empty line inside a paragraph has no Markdown: it goes.
 
@@ -150,43 +158,45 @@ An empty line inside a paragraph has no Markdown: it goes.
 ┃para
 ```
 
-## A command carries it
+## Placeholder5
 
-### Tab, Shift-Tab, Tab: the node is still the one written
+Tab, Shift-Tab, Tab: the node is still the one written.
+
+A command carries it.
 
 ```buffer
 - a┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
 - ┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
   - ┃◌
 ```
 
-> formatOutdent
+> outdent
 
 ```buffer
 - a
 - ┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
   - ┃◌
 ```
 
-> cursorLineUp
+> cursorDocStart cursorLineBoundaryForward
 
 ```buffer
 - a┃
@@ -194,22 +204,24 @@ An empty line inside a paragraph has no Markdown: it goes.
   - 
 ```
 
-## Typing ends it
+## Placeholder6
 
-### The node has text: leaving changes nothing
+The node has text: leaving changes nothing.
+
+Typing ends it.
 
 ```buffer
 - a┃
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
 - ┃
 ```
 
-> formatIndent
+> indent
 
 ```buffer
 - a
@@ -223,16 +235,20 @@ An empty line inside a paragraph has no Markdown: it goes.
   - x┃
 ```
 
-> cursorLineUp
+> cursorDocStart cursorLineBoundaryForward
 
 ```buffer
 - a┃
   - x
 ```
 
-## An edit empties a node
+## Placeholder7
 
-### Deleting a child's last character keeps the child
+Deleting a child's last character keeps the child.
+
+An edit empties a node. The deletion is the host's, but read as written the emptied line `  - `
+would be a setext underline: `a` would become a heading and the child would be gone. A placeholder
+at the caret keeps the empty child the user is in.
 
 ```buffer
 - a
@@ -246,7 +262,7 @@ An empty line inside a paragraph has no Markdown: it goes.
   - ┃◌
 ```
 
-> cursorLineUp
+> cursorDocStart cursorLineBoundaryForward
 
 ```buffer
 - a┃
@@ -254,14 +270,16 @@ An empty line inside a paragraph has no Markdown: it goes.
   - 
 ```
 
-## A deletion at the text start keeps the item's column
+## Placeholder8
+
+Delete at the text start.
+
+A deletion at the text start keeps the item's column.
 
 Deleting a text's first character can leave the space after it right after the marker (`-  b`):
 the wider padding moves the item's content column, and its child would stop being one. The space
 at the caret, in the deleted character's place, becomes the placeholder: read as text, it keeps the
 item's column. Typing fills the place; leaving, the surplus space goes.
-
-### Delete at the text start
 
 ```buffer
 - ┃a b
@@ -282,7 +300,9 @@ item's column. Typing fills the place; leaving, the surplus space goes.
   - c
 ```
 
-### Backspace after the first character
+## Placeholder9
+
+Backspace after the first character.
 
 ```buffer
 - a┃ b
@@ -296,18 +316,20 @@ item's column. Typing fills the place; leaving, the surplus space goes.
   - c
 ```
 
-> cursorLineDown
+> cursorDocEnd cursorCharLeft
 
 Leaving, the surplus space goes, and `c` is still a child.
 
 ```buffer
 - b
-  ┃- c
+  - c┃
 ```
 
-## Typing makes no placeholder
+## Placeholder10
 
-### An empty child typed out stays as typed
+An empty child typed out stays as typed.
+
+Typing makes no placeholder.
 
 Typing makes text, not a placeholder: the text reads as it reads.
 
@@ -325,23 +347,25 @@ No `◌`: the line is text, and `a` reads as a heading with an empty underline.
   - ┃
 ```
 
-> cursorLineUp
+> cursorDocStart cursorLineBoundaryForward
 
 ```buffer
 - a┃
   - 
 ```
 
-## Leaving where the text can hold the node
+## Placeholder11
 
-### An empty item between items stays as it is
+An empty item between items stays as it is.
+
+Leaving where the text can hold the node.
 
 ```buffer
 - a┃
 - b
 ```
 
-> insertParagraph
+> enter
 
 ```buffer
 - a
@@ -349,139 +373,121 @@ No `◌`: the line is text, and `a` reads as a heading with an empty underline.
 - b
 ```
 
-> cursorLineDown
+> cursorDocEnd cursorCharLeft
 
 ```buffer
 - a
 - 
-- ┃b
+- b┃
 ```
 
-## A file reads as written
+## Placeholder12
 
-### An empty child under text, never edited, is no placeholder
+An empty child under text, never edited, is no placeholder.
+
+A file reads as written.
 
 ```buffer
 - a
   - ┃
 ```
 
-> cursorLineUp
+> cursorDocStart cursorLineBoundaryForward
 
 ```buffer
 - a┃
   - 
 ```
 
-### An authored blank line survives typing, undo and leaving
+## Placeholder13
 
-Undo restores the document as it was: no placeholder, and the blank line stays.
+Delete on an empty paragraph's placeholder removes the paragraph.
+
+The empty paragraph goes with its blank line. The node below keeps its kind, and the caret goes to
+the start of its line: the heading isn't joined into the empty paragraph, which would make it a
+paragraph and drop its `##`.
 
 ```buffer
-a
-┃
-b
+# H1
+
+┃a
+
+## H2
 ```
 
-> "x"
+> deleteContentForward
 
 ```buffer
-a
-x┃
-b
+# H1
+
+┃◌
+
+## H2
 ```
 
-> undo
+> deleteContentForward
 
 ```buffer
-a
-┃
-b
+# H1
+
+┃## H2
 ```
 
-> cursorLineDown
+## Placeholder14
+
+The same before a paragraph: the empty paragraph goes, and the paragraph below stays as it was.
 
 ```buffer
-a
+para
 
-┃b
+┃x
+
+text
 ```
 
-## Undo and redo
-
-### Undo brings the placeholder back, and leaving keeps the item again
+> deleteContentForward
 
 ```buffer
+para
+
+┃◌
+
+text
+```
+
+> deleteContentForward
+
+```buffer
+para
+
+┃text
+```
+
+## Placeholder15
+
+Enter at the start of an item right after paragraph text: a placeholder holds the new empty item.
+
+Right after `para`, an empty item would be a setext underline, so it exists only while the caret
+is in it. Leaving, it stays, set off by a blank line.
+
+```buffer
+para
+- ┃a
+```
+
+> enter
+
+```buffer
+para
+- ┃◌
+- a
+```
+
+> cursorDocEnd cursorCharLeft
+
+```buffer
+para
+
+- 
 - a┃
-```
-
-> insertParagraph
-
-```buffer
-- a
-- ┃
-```
-
-> formatIndent
-
-```buffer
-- a
-  - ┃◌
-```
-
-> cursorLineUp
-
-```buffer
-- a┃
-
-  - 
-```
-
-> undo
-
-```buffer
-- a
-  - ┃◌
-```
-
-> cursorLineUp
-
-```buffer
-- a┃
-
-  - 
-```
-
-### Redo of the command brings it back too
-
-```buffer
-- a┃
-```
-
-> insertParagraph
-
-```buffer
-- a
-- ┃
-```
-
-> formatIndent
-
-```buffer
-- a
-  - ┃◌
-```
-
-> undo
-
-```buffer
-- a
-- ┃
-```
-
-> redo
-
-```buffer
-- a
-  - ┃◌
 ```
