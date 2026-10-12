@@ -196,9 +196,11 @@ The first item has no previous sibling to go under.
 rejected: no-previous-sibling
 ```
 
-### No nesting under a paragraph
+### First item of a paragraph's list cannot indent
 
-Paragraphs are leaves: nothing nests under them.
+A paragraph owns the list that follows it (09-redesign), so `a` is `Intro`'s first child and has no
+previous sibling to go under. (This example used to say paragraphs were leaves, refused as
+`not-expressible`; that decision is superseded.)
 
 ```buffer
 Intro
@@ -209,7 +211,7 @@ Intro
 > formatIndent
 
 ```result
-rejected: not-expressible
+rejected: no-previous-sibling
 ```
 
 Quotes are outline containers: items inside a quote indent as they do anywhere else. Those
@@ -378,7 +380,10 @@ two┃
 one
 ```
 
-### Paragraph cannot pass a list item
+### A paragraph's first item has no sibling above
+
+The list after a paragraph is its children, so the item can't move above it. (This example used to
+be refused as `not-expressible` when paragraphs were leaves.)
 
 ```buffer
 para
@@ -387,6 +392,23 @@ para
 ```
 
 > moveUp
+
+```result
+rejected: no-previous-sibling
+```
+
+### An item doesn't move past a paragraph
+
+An item moved right after a paragraph would become that paragraph's child: refused.
+
+```buffer
+# H
+- a┃
+
+para
+```
+
+> moveDown
 
 ```result
 rejected: not-expressible
@@ -1028,6 +1050,43 @@ node above.
 
 ```buffer
 - a┃
+```
+
+### After a blank line, a paragraph joins the item above
+
+As Backspace at an item's start joins it to the item above: the text joins the node above.
+
+```buffer
+- a
+
+┃b
+```
+
+> deleteContentBackward
+
+```buffer
+- a┃b
+```
+
+### After a blank line, a paragraph becomes a line of the paragraph above
+
+The host's Backspace: one line ending goes, and the two paragraphs are one, `b` its second line.
+
+```buffer
+a
+
+┃b
+```
+
+> deleteContentBackward
+
+```result
+notApplicable
+```
+
+```buffer
+a
+┃b
 ```
 
 ### Mid-text backspace left to the host

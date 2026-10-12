@@ -12,7 +12,7 @@ the item has no text of its own. Only a paragraph, a heading, a code block or an
 an item's head. (The quote experiment made the quote the item's head, and its items vanished from
 the outline; found by an independent review.)
 
-```buffer pending
+```buffer
 - > - a
   > - b┃
 ```
@@ -30,7 +30,7 @@ The item nests under its sibling, after the quote's `>`.
 
 ### Item nests after the quote marker
 
-```buffer pending
+```buffer
 > - a
 > - b┃
 ```
@@ -46,7 +46,7 @@ The item nests under its sibling, after the quote's `>`.
 
 Without a space after `>`: columns count from where the quote's content starts on each line, and a space written after `>` belongs to the quote, so the item needs three.
 
-```buffer pending
+```buffer
 >- a
 >- b┃
 ```
@@ -62,7 +62,7 @@ Without a space after `>`: columns count from where the quote's content starts o
 
 With tabs: the quote's `>` takes part of the tab.
 
-```buffer pending
+```buffer
 >→- a
 >→- b┃
 ```
@@ -78,7 +78,7 @@ With tabs: the quote's `>` takes part of the tab.
 
 A quote inside an item.
 
-```buffer pending
+```buffer
 - x
   > - a
   > - b┃
@@ -96,7 +96,7 @@ A quote inside an item.
 
 Nested quotes.
 
-```buffer pending
+```buffer
 > > - a
 > > - b┃
 ```
@@ -112,7 +112,7 @@ Nested quotes.
 
 In a callout.
 
-```buffer pending
+```buffer
 > [!note] Title
 > - a
 > - b┃
@@ -130,7 +130,7 @@ In a callout.
 
 A lazy continuation line stays as it is: it still continues the paragraph.
 
-```buffer pending
+```buffer
 > - a
 > - b┃
 c
@@ -146,7 +146,7 @@ c
 
 ## Outdent inside a quote
 
-```buffer pending
+```buffer
 > - a
 >   - b┃
 ```
@@ -164,7 +164,7 @@ A quote is a container: outdenting its child makes it the quote's next sibling, 
 
 ### Item becomes the quote's next sibling
 
-```buffer pending
+```buffer
 > - a
 > - b┃
 ```
@@ -178,7 +178,7 @@ A quote is a container: outdenting its child makes it the quote's next sibling, 
 
 ### Item with a child leaves below its siblings
 
-```buffer pending
+```buffer
 > - a┃
 >   - c
 > - b
@@ -196,7 +196,7 @@ A quote is a container: outdenting its child makes it the quote's next sibling, 
 
 A lazy continuation line goes along unchanged.
 
-```buffer pending
+```buffer
 > - a
 > - b┃
 c
@@ -214,7 +214,7 @@ c
 
 Out of a quote inside an item: the item's own child.
 
-```buffer pending
+```buffer
 - x
   > - a
   > - b┃
@@ -232,7 +232,7 @@ Out of a quote inside an item: the item's own child.
 
 A quote's blank lines lose their `>` with it.
 
-```buffer pending
+```buffer
 > - a
 > - b┃
 >
@@ -254,7 +254,7 @@ Indent makes the item the last child of the quote above, written in the quote.
 
 ### Item joins the quote above
 
-```buffer pending
+```buffer
 > - a
 - b┃
 ```
@@ -270,7 +270,7 @@ Indent makes the item the last child of the quote above, written in the quote.
 
 Its children and blank lines come along, and the blank line before it joins the quote (a bare one would end it).
 
-```buffer pending
+```buffer
 > - a
 
 - b┃
@@ -312,7 +312,7 @@ Out of one quote, past another, into it. Outdent copies the separator its new ne
 
 ### Out of one quote and into the next
 
-```buffer pending
+```buffer
 > - a┃
 > - x
 
@@ -353,7 +353,7 @@ Out of one quote, past another, into it. Outdent copies the separator its new ne
 
 Two quotes moved together get a blank line between them: without one they would be one quote.
 
-```buffer pending
+```buffer
 > - x
 - a┃
 
@@ -374,7 +374,7 @@ Two quotes moved together get a blank line between them: without one they would 
 
 ### Swapping two quoted items
 
-```buffer pending
+```buffer
 > - a
 > - b┃
 ```
@@ -390,7 +390,7 @@ Two quotes moved together get a blank line between them: without one they would 
 
 In a loose list, the `>` blank line stays between them.
 
-```buffer pending
+```buffer
 > - a
 >
 > - b┃
@@ -408,7 +408,7 @@ In a loose list, the `>` blank line stays between them.
 
 A quote moves past an item.
 
-```buffer pending
+```buffer
 - a
 > q┃
 ```
@@ -420,13 +420,43 @@ A quote moves past an item.
 - a
 ```
 
+## A quote and a heading don't swap
+
+A heading owns what follows it: a quote moved below one would join its section.
+
+### A heading doesn't move above a quote
+
+```buffer
+> q
+# H┃
+```
+
+> moveUp
+
+```result
+rejected: not-expressible
+```
+
+### A quote doesn't move below a heading
+
+```buffer
+┃> q
+## S
+```
+
+> moveDown
+
+```result
+rejected: not-expressible
+```
+
 ## Enter in a quote
 
 A new item gets the quote's `>`.
 
 ### New item gets the quote marker
 
-```buffer pending
+```buffer
 > - a┃
 ```
 
@@ -441,7 +471,7 @@ A new item gets the quote's `>`.
 
 In a quote inside an item.
 
-```buffer pending
+```buffer
 - x
   > - a┃
 ```
@@ -458,7 +488,7 @@ In a quote inside an item.
 
 At the end of a lazy continuation line.
 
-```buffer pending
+```buffer
 > - a
 b┃
 ```
@@ -475,7 +505,7 @@ b
 
 On an empty item whose parent is a quote, Enter outdents it out of the quote, as it outdents a nested item.
 
-```buffer pending
+```buffer
 > - a┃
 ```
 
@@ -490,7 +520,7 @@ On an empty item whose parent is a quote, Enter outdents it out of the quote, as
 
 In a quoted paragraph: two paragraphs in the quote, the blank line between them quoted.
 
-```buffer pending
+```buffer
 > ab┃cd
 ```
 
@@ -506,7 +536,7 @@ In a quoted paragraph: two paragraphs in the quote, the blank line between them 
 
 In a callout's title: the rest starts the callout's body.
 
-```buffer pending
+```buffer
 > [!note] Ti┃tle
 > body
 ```
@@ -523,7 +553,7 @@ In a callout's title: the rest starts the callout's body.
 
 At the end of a lone title: an empty body line to type into.
 
-```buffer pending
+```buffer
 > [!tip] Title┃
 ```
 
@@ -545,7 +575,7 @@ At the end of a lone title: an empty body line to type into.
 
 ### Line break in a quoted paragraph
 
-```buffer pending
+```buffer
 > ab┃cd
 ```
 
@@ -560,7 +590,7 @@ At the end of a lone title: an empty body line to type into.
 
 At the end: an empty line in the quote, held open until typed into.
 
-```buffer pending
+```buffer
 > ab┃
 ```
 
@@ -582,7 +612,7 @@ At the end: an empty line in the quote, held open until typed into.
 
 In a quoted item.
 
-```buffer pending
+```buffer
 > - ab┃cd
 ```
 
@@ -597,7 +627,7 @@ In a quoted item.
 
 ### Backspace joins two quoted items
 
-```buffer pending
+```buffer
 > - a
 > - ┃b
 ```
@@ -612,7 +642,7 @@ In a quoted item.
 
 An item joins the paragraph above it in the quote.
 
-```buffer pending
+```buffer
 > a
 > - ┃b
 ```
@@ -627,7 +657,7 @@ An item joins the paragraph above it in the quote.
 
 Delete at the end of a quoted paragraph joins the item below.
 
-```buffer pending
+```buffer
 > a┃
 > - b
 ```
@@ -644,7 +674,7 @@ An item below a quote joins the quoted node above; its children enter the quote 
 
 ### Item below joins the quoted node
 
-```buffer pending
+```buffer
 > - a
 - ┃b
   - c
@@ -678,7 +708,7 @@ notApplicable
 
 A quote's first item doesn't leave its quote either: there's nothing above it inside the quote.
 
-```buffer pending
+```buffer
 - a
 > - ┃b
 ```
@@ -698,7 +728,7 @@ Pasted items get the quote's `>`.
   - y
 ```
 
-```buffer pending
+```buffer
 > - a┃
 ```
 
@@ -714,7 +744,7 @@ Pasted items get the quote's `>`.
 
 A heading in a quote owns its section there.
 
-```buffer pending
+```buffer
 > # H
 > - a
 > - b┃
@@ -734,7 +764,7 @@ A quote holds paragraphs as an item holds lines: the paragraph becomes the quote
 
 ### Paragraph becomes the quote's last child
 
-```buffer pending
+```buffer
 > q
 
 para┃
@@ -753,7 +783,7 @@ para┃
 And back out: a blank line goes between the quote and the paragraph, which would otherwise
 continue the quote's paragraph lazily.
 
-```buffer pending
+```buffer
 > q
 >
 > para┃
@@ -769,7 +799,7 @@ para┃
 
 ## A paragraph moves inside a quote without becoming its text
 
-```buffer pending
+```buffer
 > >     code
 > a┃
 ```
@@ -808,7 +838,7 @@ empty, is gone. Right below `- a`, the paragraph would continue it lazily: a bla
 
 ### Inner quote emptied and removed
 
-```buffer pending
+```buffer
 > - a
 > > q┃
 ```
@@ -823,7 +853,7 @@ empty, is gone. Right below `- a`, the paragraph would continue it lazily: a bla
 
 ### Paragraph above a quoted item
 
-```buffer pending
+```buffer
 > > q┃
 > - a
 ```

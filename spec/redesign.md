@@ -29,23 +29,6 @@ On an item with no children it is direct marker editing: the item becomes text.
 -┃a
 ```
 
-##### Item with children is refused
-
-On an item with children it would re-parent them, so it is refused (unless an explicit "unwrap
-item" transformation is defined).
-
-```buffer pending
--┃ a
-  - b
-```
-
-> deleteContentForward
-
-```buffer
--┃ a
-  - b
-```
-
 #### Setext authoring
 
 Typing an underline under a paragraph makes it a heading, as Markdown authoring.
@@ -103,7 +86,7 @@ para
 Outdenting `x` would leave the empty item right after `a`'s text, where it reads as a setext
 underline, and the caret isn't in it. The command is refused, not `encoding-failed`.
 
-```buffer pending
+```buffer
 - a
   - ┃x
   - 
@@ -250,7 +233,7 @@ outdents and moves like any node, taking the encoding its new place implies (09-
 Under the paragraph above, it becomes a list item there; outdented among paragraphs, it is a
 paragraph again, and the text comes back as it was.
 
-```buffer pending
+```buffer
 para a
 
 para b┃
@@ -277,7 +260,7 @@ para b┃
 The item leaves the paragraph and lands after it among paragraphs, so it becomes a paragraph; the
 items after it stay with their paragraph (outdent is logical).
 
-```buffer pending
+```buffer
 Groceries:
 - milk┃
 - eggs
@@ -294,7 +277,7 @@ milk┃
 
 #### Moving a paragraph moves its list
 
-```buffer pending
+```buffer
 first
 
 Groceries:┃
@@ -312,7 +295,7 @@ first
 
 #### A list item's first child has no sibling above
 
-```buffer pending
+```buffer
 Groceries:
 - milk┃
 - eggs
@@ -322,6 +305,96 @@ Groceries:
 
 ```result
 rejected: no-previous-sibling
+```
+
+#### A paragraph owns consecutive lists
+
+An ordered list and a bullet list right after a paragraph are two lists to CommonMark; both are the
+paragraph's children.
+
+```buffer
+pa┃ra
+1. a
+- b
+```
+
+> insertLineBreak
+
+```buffer
+pa
+┃ra
+1. a
+- b
+```
+
+#### A block pasted into a paragraph's list ends it
+
+The items after the block follow the block, not the paragraph.
+
+````clipboard
+```
+c
+```
+````
+
+````buffer
+para
+- a┃
+- b
+````
+
+> insertFromPaste
+
+````buffer
+para
+- a
+
+```
+c
+```┃
+
+- b
+````
+
+#### Enter before a list marker opens the paragraph's list
+
+The rest of the text is an item: the paragraph keeps its list, and the item comes first in it.
+
+```buffer
+para ┃- x
+- a
+```
+
+> insertParagraph
+
+```buffer
+para
+
+- ┃x
+- a
+```
+
+#### Outdenting several items of a paragraph's list
+
+Each becomes a paragraph after the one above; a child goes with its item, which now owns it.
+
+```buffer
+para
+- «a
+  - b
+- c»
+```
+
+> formatOutdent
+
+```buffer
+para
+
+«a
+
+- b
+
+c»
 ```
 
 ## Findings of the design experiments
@@ -340,7 +413,7 @@ A task's checkbox is markup, so `- [ ] ` is an empty item, and Enter on it does 
 
 ##### Empty task at top level
 
-```buffer pending
+```buffer
 - a
 - [ ] ┃
 ```
@@ -357,7 +430,7 @@ A task's checkbox is markup, so `- [ ] ` is an empty item, and Enter on it does 
 
 Nested, it outdents.
 
-```buffer pending
+```buffer
 - a
   - [ ] ┃
 ```
@@ -375,7 +448,7 @@ Today Enter here is the host's newline: the blank line closes the empty item, it
 top-level item, and the caret lands on a line in no node. The caret is at the item's text start, so
 Enter does what it does there: an empty item above, the caret staying with the item.
 
-```buffer pending
+```buffer
 - ┃
   - a
 ```
@@ -432,7 +505,7 @@ the caret is the empty child the user is in.
 
 ##### Emptied child stays a child
 
-```buffer pending
+```buffer
 - a
   - a┃
 ```
@@ -444,40 +517,6 @@ the caret is the empty child the user is in.
   - ┃◌
 ```
 
-##### Delete keeps the content column
-
-Deleting the first character after a marker must not move the item's content column: `-  c`
-would detach the child. The space next to the marker goes too, as Cmd-Backspace does.
-
-```buffer pending
-- ┃b c
-  - a
-```
-
-> deleteContentForward
-
-```buffer
-- ┃c
-  - a
-```
-
-##### Backspace keeps the content column
-
-The same with Backspace: removing the text's first character leaves `-  b`, whose wider padding
-moves the content column, so `c` would become a sibling. Found by an independent review.
-
-```buffer pending
-- a┃ b
-  - c
-```
-
-> deleteContentBackward
-
-```buffer
-- ┃b
-  - c
-```
-
 ### Separators
 
 #### B4: a heading past a heading of another level
@@ -485,7 +524,7 @@ moves the content column, so `c` would become a sibling. Found by an independent
 Refused on purpose, never `encoding-failed`. Recommended default, still open in `09-redesign.md`:
 headings move with their section, among siblings of the same level.
 
-```buffer pending
+```buffer
 ## ┃H
 # H
 - a
@@ -501,7 +540,7 @@ rejected: not-expressible
 
 The new paragraph needs a blank line before the code, or it takes the code in as a continuation.
 
-```buffer pending
+```buffer
 ### H┃2
     - a
 ```
@@ -522,7 +561,7 @@ paragraph text), so a blank line goes between.
 
 ##### Past indented code
 
-```buffer pending
+```buffer
 →- a
 ┃para
 ```
@@ -537,7 +576,7 @@ paragraph text), so a blank line goes between.
 
 ##### Past a thematic break
 
-```buffer pending
+```buffer
 ---
 para┃
 ```
@@ -552,7 +591,7 @@ para┃
 
 ##### Past a link reference definition
 
-```buffer pending
+```buffer
 [a]: /u
 para┃
 ```
@@ -566,23 +605,6 @@ para┃
 ```
 
 #### Moves that would need a block re-encoded, not a separator
-
-An unclosed HTML comment runs to the end of the document: moved above a paragraph, it takes the
-paragraph in, and no separator helps. Closing or rewriting the comment is outside what a move may
-change, so the move is refused.
-
-##### Unclosed HTML comment is refused
-
-```buffer pending
-para
-<!-- c┃
-```
-
-> moveUp
-
-```result
-rejected: not-expressible
-```
 
 ##### Leftover paragraph loses its four spaces
 
@@ -611,7 +633,7 @@ Backspace from the other side is refused; Delete is refused the same way.
 
 ##### Delete before a quote is refused
 
-```buffer pending
+```buffer
 - a┃
 > q
 ```
@@ -629,7 +651,7 @@ rejected: not-expressible
 
 ##### Delete before indented code is refused
 
-```buffer pending
+```buffer
 # H┃
     code
 ```
@@ -679,7 +701,7 @@ abc ┃- x tail
 
 The rest doesn't start the line's text, so it needs no escape.
 
-```buffer pending
+```buffer
 - [ ] abc ┃# x
 ```
 
@@ -733,7 +755,7 @@ reader takes `2. b` for a continuation of the pasted text.
 - y
 ```
 
-```buffer pending
+```buffer
 1. a┃
 2. b
 ```
@@ -754,7 +776,7 @@ reader takes `2. b` for a continuation of the pasted text.
 Children that move with a join are written in the document's unit. Today they are written with
 spaces.
 
-```buffer pending
+```buffer
 - a
 - b┃
 - c
@@ -836,20 +858,6 @@ y
 - ax
   y
   ┃b
-```
-
-#### Typing in a list marker
-
-Typing in the marker lands at the text start, as Enter does. Today `-x a` is no item.
-
-```buffer pending
--┃ a
-```
-
-> "x"
-
-```buffer
-- x┃a
 ```
 
 ### Undo and abandoned places

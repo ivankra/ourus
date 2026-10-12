@@ -7,7 +7,7 @@
 
 import { lineEnding, lineIndexAt, splitLines } from '../text.ts';
 import { scanReference } from './refdef.ts';
-import type { Block, BlockType, LineInfo, ListData, PrefixPiece, SyntaxTree } from './types.ts';
+import type { Block, BlockType, LineInfo, ListData, PrefixPiece } from '../block.ts';
 
 const CODE_INDENT = 4;
 
@@ -149,13 +149,15 @@ class Parser {
   pieces: MPiece[] = [];
 
   readonly text: string;
-  readonly provisional: readonly number[];
-  /** Lines read as if text had been typed at their end (provisional places). */
+  readonly placeholders: readonly number[];
+  /** Lines read as if text had been typed at their end (placeholders). */
   virtual = new Set<number>();
+  /** Spaces inside lines read as text (placeholders after a list marker), by line: offsets in the line. */
+  standIns = new Map<number, number[]>();
 
-  constructor(text: string, provisional: readonly number[] = []) {
+  constructor(text: string, placeholders: readonly number[] = []) {
     this.text = text;
-    this.provisional = provisional;
+    this.placeholders = placeholders;
   }
 
   // ------------------------------------------------------------ position helpers
@@ -343,7 +345,7 @@ class Parser {
       def.label = ref.label;
       def.parent = parent;
       parent.children.splice(parent.children.indexOf(p), 0, def);
-      for (const l of lines) this.lineLeaf[l] = def;
+      for (const lineNo of lines) this.lineLeaf[lineNo] = def;
       p.content = p.content.slice(ref.length);
       p.contentLines = p.contentLines.slice(lineCount);
     }
@@ -521,7 +523,7 @@ class Parser {
     heading.parent = container.parent;
     const siblings = container.parent!.children;
     siblings[siblings.indexOf(container)] = heading;
-    for (const l of container.contentLines) this.lineLeaf[l] = heading;
+    for (const lineNo of container.contentLines) this.lineLeaf[lineNo] = heading;
     this.lineLeaf[this.lineIndex] = heading;
     this.tip = heading;
     this.advanceOffset(this.line.length - this.offset, false);
@@ -627,8 +629,10 @@ class Parser {
     this.lineTexts.push(ln);
     // NUL is replaced for interpretation only; offsets are unchanged
     if (ln.indexOf('\u0000') !== -1) ln = ln.replace(/\0/g, '\uFFFD');
-    // a provisional place reads as content after the line's real end
+    // a placeholder reads as content after the line's real end, or, inside the line, in place of
+    // the space it is on
     if (this.virtual.has(index)) ln += '\uFFFC';
+    for (const at of this.standIns.get(index) ?? []) if (ln[at] === ' ' || ln[at] === '\t') ln = ln.slice(0, at) + '\uFFFC' + ln.slice(at + 1);
     this.line = ln;
     this.offset = 0;
     this.column = 0;
@@ -700,11 +704,11 @@ class Parser {
     this.linePieces[this.lineIndex] = this.pieces;
   }
 
-  parse(): SyntaxTree {
+  parse(): { readonly root: Block; readonly lines: readonly LineInfo[] } {
     const bounds = splitLines(this.text);
     const starts = [...bounds.starts];
     const ends = [...bounds.ends];
-    for (const p of this.provisional) {
+    for (const p of this.placeholders) {
       const len = this.text.length;
       if (p === len && (len === 0 || this.text.charCodeAt(len - 1) === 10 || this.text.charCodeAt(len - 1) === 13)) {
         // a place after the final line ending is an empty last line
@@ -717,6 +721,7 @@ class Parser {
       }
       const i = lineIndexAt({ starts, ends }, p);
       if (ends[i] === p) this.virtual.add(i);
+      else if (p >= starts[i]! && p < ends[i]!) this.standIns.set(i, [...(this.standIns.get(i) ?? []), p - starts[i]!]);
     }
     const n = starts.length;
     for (let i = 0; i < n; i++) this.incorporateLine(i, starts[i]!, ends[i]!);
@@ -727,7 +732,7 @@ class Parser {
     return this.freeze(starts, ends);
   }
 
-  freeze(starts: readonly number[], ends: readonly number[]): SyntaxTree {
+  freeze(starts: readonly number[], ends: readonly number[]): { readonly root: Block; readonly lines: readonly LineInfo[] } {
     const map = new Map<MBlock, Block>();
     const convert = (m: MBlock, parent: Block | null): Block => {
       const b: { -readonly [K in keyof Block]: Block[K] } = {
@@ -768,7 +773,7 @@ class Parser {
         blank: !reNonSpace.test(this.text.slice(starts[i]!, ends[i]!)),
       });
     }
-    return { text: this.text, root, lines };
+    return { root, lines };
   }
 }
 
@@ -777,12 +782,12 @@ const listsMatch = (a: ListData, b: ListData): boolean =>
 
 export interface ParseOptions {
   /**
-   * Provisional places: offsets at the end of lines the parser reads as if text had been typed
+   * Placeholders: offsets at the end of lines the parser reads as if text had been typed
    * there. An empty item right after a paragraph (`- a` / `  - `) is otherwise a setext heading,
    * and an empty line is otherwise no paragraph. An offset after a final line ending stands for
    * an empty last line.
    */
-  readonly provisional?: readonly number[];
+  readonly placeholders?: readonly number[];
 }
 
 /**
@@ -801,7 +806,10 @@ export function startsBlock(text: string, inParagraph: boolean): boolean {
   return m !== null && (m[1] === undefined || parseInt(m[1], 10) === 1) && reNonSpace.test(text.slice(m[0].length));
 }
 
-/** Parses CommonMark block structure. Never fails: every string is a document. */
-export function parseCommonMark(text: string, options: ParseOptions = {}): SyntaxTree {
-  return new Parser(text, options.provisional).parse();
+/**
+ * Parses CommonMark block structure: the block tree (its root, the document) and the line table.
+ * Never fails: every string is a document.
+ */
+export function parseCommonMark(text: string, options: ParseOptions = {}): { readonly root: Block; readonly lines: readonly LineInfo[] } {
+  return new Parser(text, options.placeholders).parse();
 }

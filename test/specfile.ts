@@ -2,7 +2,10 @@
 // `buffer`, `clipboard` and `result` blocks are editor states, quotes the actions between them.
 
 import { parseCommonMark } from '../src/syntax/commonmark.ts';
-import type { Block, SyntaxTree } from '../src/syntax/types.ts';
+import type { Block, LineInfo } from '../src/block.ts';
+
+/** A parsed spec file: its text, block tree and line table. */
+type Parsed = { readonly text: string; readonly root: Block; readonly lines: readonly LineInfo[] };
 
 /** What a block says about the editor: drawn buffer, clipboard text, the last action's result. */
 export interface State {
@@ -40,7 +43,7 @@ export class SpecError extends Error {}
 
 export function readSpec(file: string, source: string): SpecTest[] {
   const { body, options: fileOptions } = frontmatter(file, source);
-  const tree = parseCommonMark(body);
+  const tree: Parsed = { text: body, ...parseCommonMark(body) };
   const fail = (line: number, message: string): never => {
     throw new SpecError(`${file}:${line + 1}: ${message}`);
   };
@@ -143,24 +146,24 @@ function setOption(options: Record<string, string>, key: string, value: string, 
   options[key] = value;
 }
 
-function lineText(tree: SyntaxTree, l: number): string {
+function lineText(tree: Parsed, l: number): string {
   const line = tree.lines[l]!;
   return tree.text.slice(line.contentFrom, line.to);
 }
 
-function headingText(tree: SyntaxTree, b: Block): string {
+function headingText(tree: Parsed, b: Block): string {
   if (b.setext) return lineText(tree, b.startLine).trim();
   return lineText(tree, b.startLine).replace(/^[ \t]*#+[ \t]*/, '').replace(/[ \t]+#+[ \t]*$/, '').trim();
 }
 
-function quoteText(tree: SyntaxTree, b: Block): string {
+function quoteText(tree: Parsed, b: Block): string {
   const out: string[] = [];
   for (let l = b.startLine; l <= b.endLine; l++) out.push(lineText(tree, l));
   return out.join(' ');
 }
 
 /** A fenced block's lines with their endings, verbatim. A buffer's last line always ends in a newline. */
-function fenceContent(tree: SyntaxTree, b: Block): string {
+function fenceContent(tree: Parsed, b: Block): string {
   const last = tree.lines[b.endLine]!;
   const closed =
     b.endLine > b.startLine && new RegExp(`^ {0,3}\\${b.fenceChar}{${b.fenceLength},}[ \\t]*$`).test(tree.text.slice(last.from, last.to));

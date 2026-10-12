@@ -15,7 +15,7 @@ const bySource = new Map<string, Map<string, number>>();
 const loose = (o: Outline) => o.blocks.map((b) => `${b.depth}:${b.text.replace(/ *\n */g, '\n').trim()}`).join('|');
 for (const t of tests) {
   const start = readDrawing(t.initial.buffer);
-  let state: Played = { doc: Doc.parse(start.text, { provisional: start.provisional }), selection: start.selection, clipboard: readText(t.initial.clipboard ?? '') };
+  let state: Played = { doc: Doc.parse(start.text, { placeholders: start.placeholders }), selection: start.selection, clipboard: readText(t.initial.clipboard ?? '') };
   let verdict = 'agree';
   let detail = '';
   try {

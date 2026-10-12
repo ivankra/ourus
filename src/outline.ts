@@ -1,13 +1,15 @@
-// The outline: a projection of the block tree into the nodes users fold, move and indent.
+// The outline: the nodes users fold, move and indent, built from the block tree.
 //
 // Defaults (the brief's): headings own their section within their container; list items are
 // nodes (lists are not), owning their first block as their head and every other block as a
-// child; paragraphs are leaves; quotes, code, HTML, thematic breaks and reference definitions
-// are atoms.
+// child; in a section (the root's or a heading's children), a paragraph owns the lists right after
+// it (with or without a blank line between), whose items are its children; a quote is a container
+// like an item, its blocks its children, with no text of its own but a callout's title (its first
+// paragraph, `[!type] Title`); code, HTML, thematic breaks and reference definitions are atoms.
 
-import type { Block, SyntaxTree } from './syntax/types.ts';
+import type { Block, LineInfo } from './block.ts';
 
-export type OutlineKind = 'root' | 'heading' | 'item' | 'paragraph' | 'atom';
+export type OutlineKind = 'root' | 'heading' | 'item' | 'paragraph' | 'quote' | 'atom';
 
 export interface OutlineNode {
   /** Opaque, stable across edits within one document lineage (see `Doc.apply`). */
@@ -28,36 +30,24 @@ export interface OutlineNode {
   readonly endLine: number;
 }
 
-interface MNode {
-  id: number;
-  kind: OutlineKind;
-  block: Block;
-  head: Block | null;
-  parent: MNode | null;
-  children: MNode[];
-  depth: number;
-  startLine: number;
-  headEndLine: number;
-  endLine: number;
-}
+/** An outline node while the outline is being built: the same fields, writable. */
+type MutableOutlineNode = { -readonly [K in keyof OutlineNode]: OutlineNode[K] } & {
+  parent: MutableOutlineNode | null;
+  children: MutableOutlineNode[];
+};
 
-const ATOMS = new Set(['blockquote', 'code_block', 'html_block', 'thematic_break', 'refdef']);
+const ATOMS = new Set(['code_block', 'html_block', 'thematic_break', 'refdef']);
+/** The blocks that can be an item's text: any other first block stays its child. */
+const HEADS = new Set(['paragraph', 'heading', 'code_block', 'html_block']);
 
-export interface Projection {
-  readonly root: OutlineNode;
-  /** All nodes in document order, root first. */
-  readonly nodes: readonly OutlineNode[];
-}
-
-/** Builds the outline. Ids are assigned in document order starting at 1; the root gets 0. */
-export function project(tree: SyntaxTree): Projection {
-  let nextId = 1;
-  const nodes: MNode[] = [];
-  const make = (kind: OutlineKind, block: Block, head: Block | null, parent: MNode | null): MNode => {
-    const startLine = block.startLine;
+/** Builds the outline and returns its root. Ids are assigned in document order starting at 1; the root gets 0. */
+export function buildOutline(document: Block, lines: readonly LineInfo[], text: string): OutlineNode {
+  let nextId = 0;
+  const add = (kind: OutlineKind, block: Block, head: Block | null, parent: MutableOutlineNode | null): MutableOutlineNode => {
+    const startLine = kind === 'root' ? 0 : block.startLine;
     const headEndLine = head ? head.endLine : startLine;
-    const n: MNode = {
-      id: kind === 'root' ? 0 : nextId++,
+    const node: MutableOutlineNode = {
+      id: nextId++,
       kind,
       block,
       head,
@@ -66,60 +56,82 @@ export function project(tree: SyntaxTree): Projection {
       depth: parent ? parent.depth + 1 : 0,
       startLine,
       headEndLine,
-      endLine: kind === 'item' ? block.endLine : headEndLine,
+      endLine: kind === 'item' || kind === 'quote' ? block.endLine : headEndLine,
     };
-    nodes.push(n);
-    if (parent) parent.children.push(n);
-    return n;
+    if (parent) parent.children.push(node);
+    // a section, and the root, end where their last descendant does
+    for (let p = parent; p && p.endLine < node.endLine; p = p.parent) p.endLine = node.endLine;
+    return node;
   };
 
-  /** Projects a container's child blocks under `owner`, forming heading sections. */
-  const projectBlocks = (blocks: readonly Block[], owner: MNode): void => {
-    const sections: MNode[] = [];
+  /** Adds a container's child blocks under `owner`, forming heading sections. */
+  const addBlocks = (blocks: readonly Block[], owner: MutableOutlineNode): void => {
+    const sections: MutableOutlineNode[] = [];
+    // the paragraph a list right after it would belong to, in a section
+    let paragraph: MutableOutlineNode | null = null;
     for (const b of blocks) {
       if (b.type === 'heading') {
         while (sections.length > 0 && sections[sections.length - 1]!.block.level! >= b.level!) sections.pop();
-        const heading = make('heading', b, b, sections[sections.length - 1] ?? owner);
+        const heading = add('heading', b, b, sections[sections.length - 1] ?? owner);
         sections.push(heading);
+        paragraph = null;
         continue;
       }
       const parent = sections[sections.length - 1] ?? owner;
       if (b.type === 'list') {
-        for (const item of b.children) projectItem(item, parent);
+        // every list right after the paragraph is its own, consecutive lists included
+        for (const item of b.children) addItem(item, paragraph ?? parent);
       } else if (b.type === 'paragraph') {
-        make('paragraph', b, b, parent);
+        const node = add('paragraph', b, b, parent);
+        paragraph = owner.kind === 'item' || owner.kind === 'quote' ? null : node;
+      } else if (b.type === 'blockquote') {
+        addQuote(b, parent);
+        paragraph = null;
       } else if (ATOMS.has(b.type)) {
-        make('atom', b, b, parent);
+        add('atom', b, b, parent);
+        paragraph = null;
       }
     }
   };
 
-  const projectItem = (item: Block, parent: MNode): void => {
-    const first = item.children[0];
-    const head = first && first.type !== 'list' ? first : null;
-    const node = make('item', item, head, parent);
-    projectBlocks(head ? item.children.slice(1) : item.children, node);
+  const addQuote = (quote: Block, parent: MutableOutlineNode): void => {
+    // a callout's title line is its text
+    const first = quote.children[0];
+    const title = first?.type === 'paragraph' && /^[ \t]*\[![^\]]*\]/.test(text.slice(lines[first.startLine]!.contentFrom, lines[first.startLine]!.to)) ? first : null;
+    const node = add('quote', quote, title, parent);
+    addBlocks(title ? quote.children.slice(1) : quote.children, node);
   };
 
-  const root = make('root', tree.root, null, null);
-  projectBlocks(tree.root.children, root);
+  const addItem = (item: Block, parent: MutableOutlineNode): void => {
+    const first = item.children[0];
+    const head = first && HEADS.has(first.type) ? first : null;
+    const node = add('item', item, head, parent);
+    addBlocks(head ? item.children.slice(1) : item.children, node);
+  };
 
-  // section and root extents come from their descendants
-  for (let i = nodes.length - 1; i >= 0; i--) {
-    const n = nodes[i]!;
-    for (const c of n.children) if (c.endLine > n.endLine) n.endLine = c.endLine;
-  }
-  root.startLine = 0;
-  return { root, nodes };
+  const root = add('root', document, null, null);
+  addBlocks(document.children, root);
+  return root;
+}
+
+/** The nodes of an outline in document order, root first. */
+export function outlineNodes(root: OutlineNode): OutlineNode[] {
+  const out: OutlineNode[] = [];
+  const visit = (node: OutlineNode): void => {
+    out.push(node);
+    node.children.forEach(visit);
+  };
+  visit(root);
+  return out;
 }
 
 /** The node whose own text (head) contains `line`, or null for lines outside any head. */
-export function headOwners(projection: Projection, lineCount: number): (OutlineNode | null)[] {
+export function headOwners(nodes: readonly OutlineNode[], lineCount: number): (OutlineNode | null)[] {
   const owners: (OutlineNode | null)[] = new Array(lineCount).fill(null);
   // document order, so deeper nodes sharing a line (`- - a`) overwrite their parents
-  for (const n of projection.nodes) {
-    if (n.kind === 'root') continue;
-    for (let l = n.startLine; l <= n.headEndLine; l++) owners[l] = n;
+  for (const node of nodes) {
+    if (node.kind === 'root') continue;
+    for (let lineNo = node.startLine; lineNo <= node.headEndLine; lineNo++) owners[lineNo] = node;
   }
   return owners;
 }

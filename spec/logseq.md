@@ -21,7 +21,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 - ┃
 ```
 
-## redesign.md › Decisions of the redesign › The guard's permitted transformations › Deleting the space after a marker › Item with children is refused
+## guard.md › Deleting the space after a marker › Item with children is refused
 
 ```buffer
 - ┃a
@@ -2217,7 +2217,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - ┃
 ```
 
-## redesign.md › Findings of the design experiments › Empty tasks and empty items › B9: emptying a child's text keeps the child › Delete keeps the content column
+## placeholders.md › A deletion at the text start keeps the item's column › Delete at the text start
 
 ```buffer
 - ┃b c
@@ -2231,7 +2231,7 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
   - a
 ```
 
-## redesign.md › Findings of the design experiments › Empty tasks and empty items › B9: emptying a child's text keeps the child › Backspace keeps the content column
+## placeholders.md › A deletion at the text start keeps the item's column › Backspace after the first character
 
 ```buffer
 - a┃ b
@@ -2316,20 +2316,6 @@ expected buffer is what Logseq did. Not ourus's contract (`npm test` skips this 
 ```buffer
 - para┃
 - [a]: /u
-```
-
-## redesign.md › Findings of the design experiments › Separators › Moves that would need a block re-encoded, not a separator › Unclosed HTML comment is refused
-
-```buffer
-- para
-- <!-- c┃
-```
-
-> moveUp
-
-```buffer
-- <!-- c┃
-- para
 ```
 
 ## redesign.md › Findings of the design experiments › Separators › Moves that would need a block re-encoded, not a separator › Leftover paragraph loses its four spaces
@@ -2506,7 +2492,7 @@ y
   ┃b
 ```
 
-## redesign.md › Findings of the design experiments › Host defaults that break structure › Typing in a list marker
+## guard.md › Typing in a list marker
 
 ```buffer
 - ┃a

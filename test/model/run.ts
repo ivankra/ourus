@@ -107,7 +107,7 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
       return null;
     }
     const firedBefore = [...fired.values()].reduce((a, b) => a + b, 0);
-    const before = drawState(doc.text, { anchor: pos, head: pos }, doc.provisional);
+    const before = drawState(doc.text, { anchor: pos, head: pos }, doc.placeholders);
     const model = apply(l.root, caret, cmd, MODE);
     const state = play({ doc, selection: { anchor: pos, head: pos }, clipboard: '' }, [cmd]);
     const r = state.last!;
@@ -145,7 +145,7 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
         `> ${cmd}   (step ${i + 1})`,
         'ourus:',
         '```buffer',
-        drawState(state.doc.text, state.selection, state.doc.provisional).replace(/\n$/, ''),
+        drawState(state.doc.text, state.selection, state.doc.placeholders).replace(/\n$/, ''),
         '```',
         ...(treeOk ? [] : ['ourus outline:', ...draw(after.root).map((x) => '    ' + x), 'model outline:', ...draw(model.status === 'applied' ? model.root : l.root).map((x) => '    ' + x)]),
         ...(caretOk ? [] : [`caret: ourus ${got.caret}, model ${want.caret}`]),

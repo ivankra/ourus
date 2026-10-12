@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import fc from 'fast-check';
 import { parseCommonMark } from '../src/syntax/commonmark.ts';
-import type { Block, SyntaxTree } from '../src/syntax/types.ts';
+import type { Block, LineInfo } from '../src/block.ts';
+
+/** A parse with its text. */
+type Parsed = { readonly text: string; readonly root: Block; readonly lines: readonly LineInfo[] };
+const parse = (text: string): Parsed => ({ text, ...parseCommonMark(text) });
 import { advanceColumns } from '../src/text.ts';
 import { arbDoc, TIDY, WILD } from './arbitraries.ts';
 import { ourusSkeleton, refdefLines, referenceSkeleton } from './oracle.ts';
@@ -10,7 +14,7 @@ import { ourusSkeleton, refdefLines, referenceSkeleton } from './oracle.ts';
 const RUNS = Number(process.env.OURUS_FUZZ_RUNS ?? 2000);
 
 /** Structural invariants of the line table and block tree. Throws on the first violation. */
-export function checkInvariants(tree: SyntaxTree): void {
+export function checkInvariants(tree: Parsed): void {
   const { text, lines, root } = tree;
   // lines cover the text exactly
   let rebuilt = '';
@@ -79,22 +83,22 @@ test('an ordered list interrupts a paragraph when it starts at 1, however the 1 
 
 test('line table and tree invariants hold on wild documents', () => {
   fc.assert(
-    fc.property(arbDoc(WILD, { endings: ['\n', '\r\n', '\r'] }), (md) => checkInvariants(parseCommonMark(md))),
+    fc.property(arbDoc(WILD, { endings: ['\n', '\r\n', '\r'] }), (md) => checkInvariants(parse(md))),
     { numRuns: RUNS },
   );
 });
 
 test('every string parses, including odd code units', () => {
   fc.assert(
-    fc.property(fc.string({ unit: 'binary', maxLength: 60 }), (s) => checkInvariants(parseCommonMark(s))),
+    fc.property(fc.string({ unit: 'binary', maxLength: 60 }), (s) => checkInvariants(parse(s))),
     { numRuns: RUNS },
   );
   for (const s of ['', '\n', '\r', '\r\n', '﻿# a', 'a\u0000b', '\uD800', '\t\t-\t\tfoo', '>\t\tfoo', '-\n\n  foo'])
-    checkInvariants(parseCommonMark(s));
+    checkInvariants(parse(s));
 });
 
 test('prefix pieces of a nested list inside a quote', () => {
-  const tree = parseCommonMark('> - a\n>   - b\n>\n>   c\n');
+  const tree = parse('> - a\n>   - b\n>\n>   c\n');
   const kinds = tree.lines.map((l) => l.prefix.map((p) => `${p.block.type}:${JSON.stringify(tree.text.slice(p.from, p.to))}`).join(' '));
   assert.deepEqual(kinds, [
     'blockquote:"> " item:"- "',

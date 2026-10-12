@@ -48,16 +48,32 @@ Enter on the empty child outdents it; Backspace removes it; walking away settles
 - a┃
 ```
 
-### Walking away settles the empty child
+### Walking away keeps the empty child, set off by a blank line
 
 ```buffer
 - a┃
 ```
 
-> insertParagraph formatIndent cursorLineUp
+> insertParagraph
+
+```buffer
+- a
+- ┃
+```
+
+> formatIndent
+
+```buffer
+- a
+  - ┃◌
+```
+
+> cursorLineUp
 
 ```buffer
 - a┃
+
+  - 
 ```
 
 ### Repeated Enter walks out of the list

@@ -5,7 +5,7 @@
 // commonmark.js are normalized here and listed in DEVIATIONS.
 
 import * as commonmark from 'commonmark';
-import type { Block } from '../src/syntax/types.ts';
+import type { Block } from '../src/block.ts';
 
 /**
  * - commonmark.js keeps an empty paragraph when a setext underline follows only link reference

@@ -110,7 +110,7 @@ export function adapt(t: SpecTest): Adapted | string {
   // CR line endings: dropped, positions shifted with them
   const shiftCR = (p: number) => p - (drawn.text.slice(0, p).match(/\r/g)?.length ?? 0);
   const text = drawn.text.replace(/\r/g, '');
-  const doc = Doc.parse(text, { provisional: drawn.provisional.map(shiftCR) });
+  const doc = Doc.parse(text, { placeholders: drawn.placeholders.map(shiftCR) });
   const nodes = doc.nodes.filter((n) => n.kind !== 'root');
   if (!nodes.length) return 'no nodes';
   const contents = nodes.map((n) => contentOf(doc, n));

@@ -1,6 +1,6 @@
 // Plays actions against the core the way an editor host does: an action that is an ourus command
 // runs it, and when the command doesn't apply the host's own default runs instead (a newline,
-// deleting a character). Provisional places the caret leaves are settled after every action, as
+// deleting a character). Placeholders the caret leaves are settled after every action, as
 // the CM6 demo does.
 //
 // Actions are named for what the user does, not for a key, so the same spec can drive editors
@@ -22,7 +22,23 @@ const COMMANDS = new Set<string>([
   'deleteContentForward',
   'deleteSoftLineBackward',
   'insertFromPaste',
-] satisfies Command['type'][]);
+  'deleteSubtree',
+  'duplicateNode',
+  'toggleTask',
+  'convertToParagraph',
+  'convertToListItem',
+  ...[1, 2, 3, 4, 5, 6].map((level) => `convertToHeading${level}`),
+]);
+
+/** The command an action names (the clipboard is what a paste pastes). */
+function commandOf(action: string, clipboard: string): Command {
+  if (action === 'insertFromPaste') return { type: action, text: clipboard };
+  if (action === 'convertToParagraph') return { type: 'convertKind', to: 'paragraph' };
+  if (action === 'convertToListItem') return { type: 'convertKind', to: 'item' };
+  const heading = /^convertToHeading([1-6])$/.exec(action);
+  if (heading) return { type: 'convertKind', to: 'heading', level: Number(heading[1]) };
+  return { type: action } as Command;
+}
 
 /**
  * Caret motions, named as CodeMirror's commands; each has a `select…` twin that keeps the anchor.
@@ -65,10 +81,19 @@ export interface Played {
   goal?: number;
   /** The result of the last action, when it was an ourus command. */
   last?: Result;
-  /** The host's history: text and selection before each step that changed the text. */
-  undone?: { text: string; selection: Selection }[];
-  redone?: { text: string; selection: Selection }[];
+  /** The host's history: the document (placeholders included) and selection before each step that changed the text. */
+  undone?: Snapshot[];
+  redone?: Snapshot[];
 }
+
+/** A state the host's history returns to: text, placeholders and selection. */
+interface Snapshot {
+  readonly text: string;
+  readonly placeholders: readonly number[];
+  readonly selection: Selection;
+}
+
+const snapshot = (state: Played, selection = state.selection): Snapshot => ({ text: state.doc.text, placeholders: state.doc.placeholders, selection });
 
 export function play(state: Played, actions: readonly string[]): Played {
   for (const action of actions) {
@@ -76,11 +101,15 @@ export function play(state: Played, actions: readonly string[]): Played {
       state = history(state, action);
       continue;
     }
-    const before = { text: state.doc.text, selection: state.selection };
+    const before = snapshot(state);
     state = step({ ...state, last: undefined, ...(/Line(?:Up|Down)$/.test(action) ? {} : { goal: undefined }) }, action);
     if (state.doc.text !== before.text) state = { ...state, undone: [...(state.undone ?? []), before], redone: [] };
     const settled = settle(state.doc, state.selection.head);
-    if (settled) state = { ...state, doc: settled.doc, selection: mapSel(settled.changes, state.selection) };
+    if (settled) {
+      // leaving a placeholder is an edit of its own: undo returns to it, the caret where it was
+      const left = snapshot(state, before.selection);
+      state = { ...state, doc: settled.doc, selection: mapSel(settled.changes, state.selection), undone: [...(state.undone ?? []), left], redone: [] };
+    }
   }
   return state;
 }
@@ -90,14 +119,14 @@ function history(state: Played, action: 'undo' | 'redo'): Played {
   const from = action === 'undo' ? (state.undone ?? []) : (state.redone ?? []);
   const entry = from[from.length - 1];
   if (!entry) return { ...state, last: undefined };
-  const current = { text: state.doc.text, selection: state.selection };
+  const current = snapshot(state);
   const rest = from.slice(0, -1);
   const other = [...((action === 'undo' ? state.redone : state.undone) ?? []), current];
   return {
     ...state,
     last: undefined,
     goal: undefined,
-    doc: state.doc.replace(entry.text),
+    doc: state.doc.replace(entry.text, { drop: [...state.doc.placeholders], placeholders: entry.placeholders }),
     selection: entry.selection,
     ...(action === 'undo' ? { undone: rest, redone: other } : { redone: rest, undone: other }),
   };
@@ -124,8 +153,9 @@ function step(state: Played, action: string): Played {
     return { ...state, goal, selection: { anchor: extend ? selection.anchor : head, head } };
   }
   if (!COMMANDS.has(action)) throw new Error(`unknown action "${action}"`);
-  const type = action as Command['type'];
-  const last = execute(doc, (type === 'insertFromPaste' ? { type, text: state.clipboard } : { type }) as Command, selection);
+  const command = commandOf(action, state.clipboard);
+  const type = command.type;
+  const last = execute(doc, command, selection);
   if (last.status === 'applied') {
     if (applyChanges(doc.text, last.changes) !== last.doc.text) throw new Error(`${type}: its changes don't produce its document`);
     return { ...state, doc: last.doc, selection: last.selection, last };
@@ -159,8 +189,9 @@ function step(state: Played, action: string): Played {
 }
 
 function edit(state: Played, change: Change): Played {
-  const doc = state.doc.apply([change]);
   const caret = change.from + change.insert.length;
+  // the host tells where the caret lands, so an emptied node stays as a placeholder
+  const doc = state.doc.apply([change], { caret });
   return { ...state, doc, selection: { anchor: caret, head: caret } };
 }
 

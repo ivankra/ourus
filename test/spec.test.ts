@@ -23,7 +23,7 @@ const normalize = (drawn: string): string => drawn.replace(/»┃/g, '»');
 function run(t: SpecTest): void {
   const start = readDrawing(t.initial.buffer);
   let state: Played = {
-    doc: Doc.parse(start.text, { provisional: start.provisional }),
+    doc: Doc.parse(start.text, { placeholders: start.placeholders }),
     selection: start.selection,
     clipboard: readText(t.initial.clipboard ?? ''),
   };
@@ -36,7 +36,7 @@ function run(t: SpecTest): void {
     const why = state.last?.status === 'rejected' && state.last.detail ? ` (${state.last.reason}: ${state.last.detail})` : '';
     if (result !== undefined) assert.equal(outcome(state), result, `${at}: result${why}`);
     if (buffer !== undefined) {
-      const got = drawState(state.doc.text, state.selection, state.doc.provisional);
+      const got = drawState(state.doc.text, state.selection, state.doc.placeholders);
       assert.equal(normalize(got), normalize(buffer), `${at}: buffer${why}`);
     }
     if (clipboard !== undefined) assert.equal(drawText(state.clipboard), clipboard, `${at}: clipboard`);

@@ -1302,10 +1302,11 @@ item stays.
 
 ### Enter, Tab, then leave
 
-An empty child right under its parent's text can't be written, so it goes; renumbering is
-undone with it, and a blank line after the list stays.
+An empty child right under its parent's text is a placeholder while the caret is in it. Leaving it,
+it stays, written with a blank line above it, so the text still reads as an empty child (a blank
+line after the list stays too).
 
-#### Empty child under parent text removed
+#### Empty child under parent text kept with a blank line
 
 ```buffer
 - one
@@ -1325,9 +1326,11 @@ undone with it, and a blank line after the list stays.
 ```buffer
 ┃- one
 - foo
+
+  - 
 ```
 
-#### Renumbering undone with the empty child
+#### An empty ordered child kept with a blank line
 
 ```buffer
 1. a┃
@@ -1346,6 +1349,8 @@ undone with it, and a blank line after the list stays.
 
 ```buffer
 ┃1. a
+
+   1. 
 2. b
 ```
 
@@ -1357,10 +1362,30 @@ undone with it, and a blank line after the list stays.
 para
 ```
 
-> insertParagraph formatIndent cursorDocStart
+> insertParagraph
+
+```buffer
+- foo
+- ┃
+
+para
+```
+
+> formatIndent
+
+```buffer
+- foo
+  - ┃◌
+
+para
+```
+
+> cursorDocStart
 
 ```buffer
 ┃- foo
+
+  - 
 
 para
 ```

@@ -1,6 +1,9 @@
-// The block syntax layer: a lossless line table plus a block tree over it.
+// The block layer: a lossless line table plus a block tree over it.
+//
+// The block tree corresponds directly to markdown parser's syntax tree;
+// items nest strictly lexically e.g. headings can't have children.
 
-import type { LineEnding } from '../text.ts';
+import type { LineEnding } from './text.ts';
 
 export type BlockType =
   | 'document'
@@ -100,10 +103,4 @@ export interface LineInfo {
   /** The line continued a paragraph lazily: some enclosing containers did not match. */
   readonly lazy: boolean;
   readonly blank: boolean;
-}
-
-export interface SyntaxTree {
-  readonly text: string;
-  readonly root: Block;
-  readonly lines: readonly LineInfo[];
 }

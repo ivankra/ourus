@@ -2,32 +2,44 @@
 //
 // The ourus snapshot lives in a StateField. Structural keys run ourus commands and dispatch
 // the changes they return, with the planned snapshot attached so it isn't parsed again.
-// Every other edit (typing, paste, undo) goes through Doc.apply.
+// Every other edit (typing, paste, undo) goes through Doc.apply, with the caret, so an edit that
+// empties a node keeps it as a placeholder. The history keeps each step's placeholders, so undo
+// and redo bring them back.
 
 import { markdown } from '@codemirror/lang-markdown';
+import { invertedEffects } from '@codemirror/commands';
 import { Annotation, EditorSelection, EditorState, Prec, RangeSetBuilder, StateEffect, StateField, Transaction } from '@codemirror/state';
 import { Decoration, EditorView, keymap, ViewPlugin, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
-import { Doc, execute, homePosition, settle, type Change, type Command, type OutlineNode, type Result } from '../../src/index.ts';
+import { Doc, execute, homePosition, mapPos, settle, type Change, type Command, type OutlineNode, type Result } from '../../src/index.ts';
 
 /** The snapshot an ourus command planned, attached to the transaction that applies it. */
 const planned = Annotation.define<Doc>();
-/** Replaces the snapshot outright (settling provisional places can change no text at all). */
+/** Replaces the snapshot outright (settling placeholders can change no text at all). */
 const setDoc = StateEffect.define<Doc>();
+/** The placeholders a step of history returns to (positions in the text after the step), mapped along later edits. */
+const setPlaceholders = StateEffect.define<readonly number[]>({ map: (value, mapping) => value.map((pos) => mapping.mapPos(pos, 1)) });
 
 const ourusDoc = StateField.define<Doc>({
   create: (state) => Doc.parse(state.doc.toString()),
   update(doc, tr) {
     for (const e of tr.effects) if (e.is(setDoc)) return e.value;
-    if (!tr.docChanged) return doc;
+    const restored = tr.effects.find((e) => e.is(setPlaceholders))?.value as readonly number[] | undefined;
+    if (!tr.docChanged) return restored ? doc.apply([], { drop: [...doc.placeholders], placeholders: restored }) : doc;
     const next = tr.annotation(planned);
     // another extension may have added changes to the transaction: then parse what committed
-    if (next && next.text.length === tr.newDoc.length && next.text === tr.newDoc.toString()) return next;
+    if (!restored && next && next.text.length === tr.newDoc.length && next.text === tr.newDoc.toString()) return next;
     const changes: Change[] = [];
     tr.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => changes.push({ from: fromA, to: toA, insert: inserted.toString() }));
-    return doc.apply(changes);
+    // undo and redo restore the placeholders of the state they return to
+    if (restored) return doc.apply(changes, { drop: [...doc.placeholders], placeholders: restored });
+    const caret = tr.newSelection.main;
+    return doc.apply(changes, caret.empty ? { caret: caret.head } : {});
   },
 });
+
+/** Each step of history keeps the placeholders it replaced, so undoing it brings them back. */
+const placeholderHistory = invertedEffects.of((tr) => (tr.docChanged ? [setPlaceholders.of(tr.startState.field(ourusDoc).placeholders)] : []));
 
 let onResult: (type: Command['type'], result: Result) => void = () => {};
 
@@ -150,8 +162,8 @@ function renderOutline(panel: HTMLElement, doc: Doc, current: OutlineNode | null
             const text = n.kind === 'atom' ? (lines.find((l) => l !== '' && !/^(`{3,}|~{3,})/.test(l)) ?? '').replace(/^>\s?/, '') : lines.join(' ');
             const range = doc.headRange(n);
             const pos = range ? range.from : doc.lines[n.startLine]!.to;
-            const provisional = doc.provisional.some((p) => p >= doc.lines[n.startLine]!.from && p <= doc.lines[n.headEndLine]!.to);
-            return `<li><div class="node${n === current ? ' current' : ''}${provisional ? ' provisional' : ''}" data-pos="${pos}"><span class="kind kind-${n.kind}">${escapeHtml(label(doc, n))}</span><span class="text">${escapeHtml(text) || '<i>empty</i>'}</span><span class="id">#${n.id}</span></div>${list(n.children)}</li>`;
+            const placeholders = doc.placeholders.some((p) => p >= doc.lines[n.startLine]!.from && p <= doc.lines[n.headEndLine]!.to);
+            return `<li><div class="node${n === current ? ' current' : ''}${placeholders ? ' placeholders' : ''}" data-pos="${pos}"><span class="kind kind-${n.kind}">${escapeHtml(label(doc, n))}</span><span class="text">${escapeHtml(text) || '<i>empty</i>'}</span><span class="id">#${n.id}</span></div>${list(n.children)}</li>`;
           })
           .join('')}</ul>`;
   panel.innerHTML = list(doc.outline.children);
@@ -227,22 +239,29 @@ function main(): void {
         basicSetup,
         markdown(),
         ourusDoc,
+        placeholderHistory,
         currentNode,
         EditorView.lineWrapping,
         EditorView.updateListener.of((u) => {
           if (u.docChanged || u.selectionSet) refresh(u.view);
-          // a provisional place the caret has left is settled: dropped, or removed when the
+          // a placeholder the caret has left is settled: dropped, or removed when the
           // text can't hold it (an empty item right after its parent's text)
           if (u.selectionSet && !u.view.composing) {
             const state = u.state;
+            const left = u.startState.selection.main;
             queueMicrotask(() => {
               if (u.view.state !== state) return;
               const r = settle(state.field(ourusDoc), state.selection.main.head);
               if (!r) return;
+              const to = state.selection.main;
+              // leaving is an undo step of its own; history keeps the selection before a step, so
+              // the caret goes back onto the placeholder first, outside history, and undo returns there
+              u.view.dispatch({ selection: left, annotations: Transaction.addToHistory.of(false) });
               u.view.dispatch({
                 changes: r.changes,
+                selection: EditorSelection.range(mapPos(r.changes, to.anchor), mapPos(r.changes, to.head)),
                 effects: setDoc.of(r.doc),
-                annotations: [Transaction.addToHistory.of(false), Transaction.userEvent.of('ourus.settle')],
+                annotations: Transaction.userEvent.of('ourus.settle'),
               });
             });
           }
@@ -273,3 +292,4 @@ function main(): void {
 }
 
 main();
+

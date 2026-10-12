@@ -5,7 +5,7 @@
 // moved or joined. `md` adds the rules Markdown forces, each named, so a run can count how often
 // each one decides an outcome (`fired`). The point of the experiment is how long that list gets.
 
-export type Kind = 'root' | 'heading' | 'item' | 'paragraph' | 'atom';
+export type Kind = 'root' | 'heading' | 'item' | 'paragraph' | 'quote' | 'atom';
 
 export interface MNode {
   kind: Kind;
@@ -284,7 +284,7 @@ function headingLevel(ctx: Ctx, n: MNode, delta: number, offset: number): Outcom
   return ctx.ok({ node: n, offset });
 }
 
-/** Re-derives heading sections in every container, as the outline projection does. */
+/** Re-derives heading sections in every container, as building the outline does. */
 export function normalizeSections(container: MNode): void {
   const flat: MNode[] = [];
   const flatten = (ns: MNode[]) => {

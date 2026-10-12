@@ -15,7 +15,9 @@
     "demo:serve": "node demo/cm6/build.ts --serve",
     "demo:smoke": "node demo/cm6/smoke.ts",
     "test:model": "node test/model/run.ts",
-    "test:logseq": "node test/logseq/run.ts"
+    "test:logseq": "node test/logseq/run.ts",
+    "test:diff": "node test/differential.ts",
+    "bench": "node test/bench.ts"
   },
   "devDependencies": {
     "@codemirror/commands": "^6.11.1",
