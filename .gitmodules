@@ -1,0 +1,3 @@
+[submodule ".sxs"]
+	path = .sxs
+	url = git@github.com:ivankra/ourus-sxs

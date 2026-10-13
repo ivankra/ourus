@@ -30,8 +30,6 @@ actions use current command names, so the same files can drive editors with diff
   what other outliners do; a settled one moves to its command's file.
 - [`zzz-redesign.md`](zzz-redesign.md): what the redesign specified and the experiments found that
   isn't settled yet: the guard's cases, escapes, frontmatter (9 of its 14 cases `pending`).
-- [`zzz-logseq.md`](zzz-logseq.md): Logseq's behaviour, recorded from Logseq by
-  `npm run test:logseq -- --record` (`editor: logseq`; not ourus's contract, and `npm test` skips it).
 
 Each command has its own spec, named for its key or editing behaviour. Case headings use short
 IDs; the prose explains each case. Current API names are noted in backticks in each file, and
@@ -181,7 +179,7 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
     default, or `outdent`), `handleFenceContents` (`true`, the default, or `false`),
     `headingEditing` (`text`, the default, or `block`), `taskEditing` (`text`, the default,
     `checkbox` or `block`), `pasteMidText` (`after`, the default, or `split`), and `deleteAtGap`
-    (`join`, the default, or `gap`);
-  - `editor`: whose behaviour the examples draw: `ourus` (the default, run by `npm test`) or
-    `logseq` (recorded from and checked against Logseq by `npm run test:logseq`; not ourus's
-    contract).
+    (`join`, the default, or `gap`).
+
+How other outliners do on the same files (Logseq, ...) is measured by replaying them there:
+[`sxs/`](../sxs/README.md).

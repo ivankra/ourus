@@ -40,10 +40,10 @@ export interface SpecTest {
 
 /**
  * Known options, so an unknown one is an error, not silently ignored: `status` (`pending` for
- * behaviour agreed on but not built, or `ready`, the default), `editor`, whose behaviour a file draws
- * (`ourus`, the default, or `logseq`), and the keys of ourus's config (`src/config.ts`).
+ * behaviour agreed on but not built, or `ready`, the default), and the keys of ourus's config
+ * (`src/config.ts`).
  */
-const SPEC_OPTIONS: Readonly<Record<string, readonly string[]>> = { status: ['ready', 'pending'], editor: ['ourus', 'logseq'] };
+const SPEC_OPTIONS: Readonly<Record<string, readonly string[]>> = { status: ['ready', 'pending'] };
 
 /** The ourus config a test's options set: every option but the spec's own, as values. */
 export function specConfig(options: Readonly<Record<string, string>>): Partial<Config> {

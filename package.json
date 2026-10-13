@@ -10,13 +10,13 @@
     "./extend": "./src/parser/extend.ts"
   },
   "scripts": {
-    "test": "node --test test/*.test.ts test/*/*.test.ts",
+    "test": "node --test test/*.test.ts test/*/*.test.ts sxs/*/*.test.ts",
     "typecheck": "tsc -p . && tsc -p demo/cm6",
     "demo:build": "node demo/cm6/build.ts",
     "demo:serve": "node demo/cm6/build.ts --serve",
     "demo:smoke": "node demo/cm6/smoke.ts",
     "test:model": "node test/model/run.ts",
-    "test:logseq": "node test/logseq/run.ts",
+    "sxs": "node sxs/run.ts",
     "test:diff": "node test/differential.ts",
     "bench": "node test/bench.ts"
   },
@@ -45,6 +45,7 @@
     "micromark": "^4.0.3",
     "micromark-extension-gfm": "^3.0.0",
     "micromark-extension-math": "^3.1.0",
+    "obsidian-launcher": "^3.2.1",
     "playwright-core": "^1.64.0",
     "rehype-stringify": "^10.0.1",
     "remark-gfm": "^4.0.1",

@@ -59,8 +59,6 @@ for (const file of readdirSync(specDir).filter((f) => f.endsWith('.md') && f !==
     continue;
   }
   for (const t of tests) {
-    // files drawing another editor's behaviour (`editor: logseq`) are that editor's runner's
-    if ((t.options.editor ?? 'ourus') !== 'ourus') continue;
     const runAll = (): void => {
       for (const flavor of flavorsOf(t)) run(t, flavor);
     };

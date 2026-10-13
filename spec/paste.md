@@ -178,7 +178,9 @@ rejected: not-expressible
 Structured paste in the middle of an item's text leaves the item as it is: each pasted line is an
 item after it.
 
-As at the end of the text. Logseq and Roam do this (`pasteMidText: after`, the default).
+As at the end of the text (`pasteMidText: after`, the default). Roam does this, and so does Logseq
+when the pasted lines are list items (`- x`); plain lines like these Logseq pastes into the item's
+text, line breaks and all.
 
 ```clipboard
 x
