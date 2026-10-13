@@ -4,8 +4,8 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { test, type TestContext } from 'node:test';
-import { configValues, type Config } from '../src/config.ts';
-import { OutlineDoc } from '../src/doc.ts';
+import { Config } from '../src/config.ts';
+import { OutlineState } from '../src/outline/index.ts';
 import { drawState, drawText, readDrawing, readText } from './drawing.ts';
 import { isAction, play, type Played } from './player.ts';
 import { readSpec, specConfig, type SpecTest } from './specfile.ts';
@@ -23,12 +23,12 @@ function outcome(state: Played): string {
 const normalize = (drawn: string): string => drawn.replace(/»┃/g, '»');
 
 /** The flavors an example runs in: the one it names, or all (most behaviour doesn't depend on it). */
-const flavorsOf = (t: SpecTest): readonly Config['flavor'][] => (t.options.flavor ? [t.options.flavor as Config['flavor']] : configValues.flavor);
+const flavorsOf = (t: SpecTest): readonly Config['flavor'][] => (t.options.flavor ? [t.options.flavor as Config['flavor']] : Config.values.flavor);
 
 function run(t: SpecTest, flavor: Config['flavor']): void {
   const start = readDrawing(t.initial.buffer);
   let state: Played = {
-    doc: OutlineDoc.parse(start.text, { placeholders: start.placeholders, config: { flavor, ...specConfig(t.options) } }),
+    doc: OutlineState.parse(start.text, { placeholders: start.placeholders, config: { flavor, ...specConfig(t.options) } }),
     selection: start.selection,
     clipboard: readText(t.initial.clipboard ?? ''),
   };

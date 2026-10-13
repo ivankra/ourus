@@ -1,7 +1,7 @@
 // Drawn editor states: `┃` caret, `«…»` selection (head where `┃` touches), `◌` placeholders
 // place, `→` tab, `␍` carriage return.
 
-import type { Selection } from '../src/commands.ts';
+import type { Selection } from '../src/commands/index.ts';
 
 /**
  * Reads a drawn state: text plus caret (`┃`) or selection (`«…»`), placeholders (`◌`),

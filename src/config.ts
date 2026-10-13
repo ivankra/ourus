@@ -1,4 +1,4 @@
-// Config: behaviour users disagree on, as options with documented defaults. An `OutlineDoc` holds its
+// Config: behaviour users disagree on, as options with documented defaults. An `OutlineState` holds its
 // config and every snapshot after it carries it. Spec files set options by the same keys
 // (`outdent: logical` in frontmatter, or in one test's `config` block).
 //
@@ -6,14 +6,10 @@
 // what "empty" means, which node keeps its id. An option is not a way to postpone a decision: its
 // default is what nearly everyone gets. Add one when a spec case needs it.
 
-import { commonmark, type Flavor } from './parsing/flavor.ts';
-import { gfm } from './parsing/gfm.ts';
-import { obsidian } from './parsing/obsidian.ts';
-
 export interface Config {
   /**
    * The Markdown dialect the document is read as: CommonMark 0.31.2 (the default), GitHub Flavored
-   * Markdown, or Obsidian's (GFM plus callouts, wikilinks, frontmatter, ...). See src/parsing/.
+   * Markdown, or Obsidian's (GFM plus callouts, wikilinks, frontmatter, ...). See src/parser/.
    */
   readonly flavor: 'commonmark' | 'gfm' | 'obsidian';
   /**
@@ -86,16 +82,16 @@ export interface Config {
   // - pastedNumbering: 'continue' | 'restart'. Whether a pasted ordered run takes the list's numbers.
   // - emptyNodeLeft: 'keep' | 'remove'. Leaving an empty node the text can't hold. Decided instead
   //   (spec/placeholders.md): an empty item stays, set off by a blank line; an empty paragraph goes.
-  //   It is tied into placeholders and `settle`, so it stays a decision, not an option.
+  //   It is tied into placeholders and `settlePlaceholders`, so it stays a decision, not an option.
   // - readers: host parsers (lezer in CodeMirror 6, Obsidian's Live Preview) that verification
   //   also checks a result against, so other tools read the text as ourus does. Opt-in: lezer
   //   misreads lists in a tab-indented quote. A host's objects, not a value a file can set.
 }
 
-export const defaultConfig: Config = { flavor: 'commonmark', outdent: 'direct', bullet: '-', enterOnEmptyItem: 'sibling', handleFenceContents: true, headingEditing: 'text', taskEditing: 'text', pasteMidText: 'after', deleteAtGap: 'join' };
+const defaults: Config = { flavor: 'commonmark', outdent: 'direct', bullet: '-', enterOnEmptyItem: 'sibling', handleFenceContents: true, headingEditing: 'text', taskEditing: 'text', pasteMidText: 'after', deleteAtGap: 'join' };
 
 /** The values each option takes, for readers of string settings (spec files, frontmatter). */
-export const configValues: { readonly [K in keyof Config]: readonly Config[K][] } = {
+const values: { readonly [K in keyof Config]: readonly Config[K][] } = {
   flavor: ['commonmark', 'gfm', 'obsidian'],
   outdent: ['direct', 'logical'],
   bullet: ['-', '*', '+'],
@@ -107,34 +103,30 @@ export const configValues: { readonly [K in keyof Config]: readonly Config[K][] 
   deleteAtGap: ['join', 'gap'],
 };
 
-/** `partial` over the defaults. */
-export function configOf(partial: Partial<Config> = {}): Config {
-  return { ...defaultConfig, ...partial };
-}
+export const Config = {
+  /** Every option's default: what nearly everyone gets. */
+  defaults,
+  /** The values each option takes. */
+  values,
 
-/**
- * The options string settings (`key: value`) set, as values (`true` for a flag's `true`), or the first
- * problem with them: an unknown key, or a value the option doesn't take.
- */
-export function readSettings(settings: Readonly<Record<string, string>>): Partial<Config> | string {
-  const config: Record<string, unknown> = {};
-  for (const [key, text] of Object.entries(settings)) {
-    const values = (configValues as Record<string, readonly unknown[]>)[key];
-    if (!values) return `unknown option "${key}"`;
-    const value = values.find((v) => String(v) === text);
-    if (value === undefined) return `option "${key}" takes ${values.join(', ')}, not "${text}"`;
-    config[key] = value;
-  }
-  return config as Partial<Config>;
-}
+  /** `partial` over the defaults. */
+  of(partial: Partial<Config> = {}): Config {
+    return { ...defaults, ...partial };
+  },
 
-/** A config from string settings over the defaults, or the first problem with them (see `readSettings`). */
-export function readConfig(settings: Readonly<Record<string, string>>): Config | string {
-  const set = readSettings(settings);
-  return typeof set === 'string' ? set : configOf(set);
-}
-
-/** The parser's flavor that `Config.flavor` names. */
-export function flavorOf(name: Config['flavor']): Flavor {
-  return name === 'gfm' ? gfm : name === 'obsidian' ? obsidian : commonmark;
-}
+  /**
+   * The options string settings (`key: value`) set, as values (`true` for a flag's `true`), or the
+   * first problem with them: an unknown key, or a value the option doesn't take.
+   */
+  read(settings: Readonly<Record<string, string>>): Partial<Config> | string {
+    const config: Record<string, unknown> = {};
+    for (const [key, text] of Object.entries(settings)) {
+      const allowed = (values as Record<string, readonly unknown[]>)[key];
+      if (!allowed) return `unknown option "${key}"`;
+      const value = allowed.find((v) => String(v) === text);
+      if (value === undefined) return `option "${key}" takes ${allowed.join(', ')}, not "${text}"`;
+      config[key] = value;
+    }
+    return config as Partial<Config>;
+  },
+} as const;

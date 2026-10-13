@@ -7,8 +7,7 @@
 // any other; blank lines and CR endings go. A caret maps to its block and an offset in the block's
 // content (in a marker: the text start); a selection must stay inside one block.
 
-import { OutlineDoc } from '../../src/doc.ts';
-import type { OutlineNode } from '../../src/outline.ts';
+import { OutlineState, type OutlineNode } from '../../src/outline/index.ts';
 import { readDrawing, readText } from '../drawing.ts';
 import type { SpecTest } from '../specfile.ts';
 
@@ -58,7 +57,7 @@ export const KEYS: Record<string, string> = {
 export const actionSupported = (a: string): boolean => /^"[^"]*"$/.test(a) || a in KEYS || a === 'pasteStructured';
 
 /** A node's content as a Logseq block holds it, with where each kept line started in the source. */
-function contentOf(doc: OutlineDoc, n: OutlineNode): { text: string; lines: { from: number; to: number; at: number }[]; prefix: number } {
+function contentOf(doc: OutlineState, n: OutlineNode): { text: string; lines: { from: number; to: number; at: number }[]; prefix: number } {
   const head = n.head;
   if (!head) {
     const line = doc.lines[n.startLine]!;
@@ -110,7 +109,7 @@ export function adapt(t: SpecTest): Adapted | string {
   // CR line endings: dropped, positions shifted with them
   const shiftCR = (p: number) => p - (drawn.text.slice(0, p).match(/\r/g)?.length ?? 0);
   const text = drawn.text.replace(/\r/g, '');
-  const doc = OutlineDoc.parse(text, { placeholders: drawn.placeholders.map(shiftCR) });
+  const doc = OutlineState.parse(text, { placeholders: drawn.placeholders.map(shiftCR) });
   const nodes = doc.nodes.filter((n) => n.kind !== 'root');
   if (!nodes.length) return 'no nodes';
   const contents = nodes.map((n) => contentOf(doc, n));

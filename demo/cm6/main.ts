@@ -2,7 +2,7 @@
 //
 // The ourus snapshot lives in a StateField. Structural keys run ourus commands and dispatch
 // the changes they return, with the planned snapshot attached so it isn't parsed again.
-// Every other edit (typing, paste, undo) goes through OutlineDoc.apply, with the caret, so an edit that
+// Every other edit (typing, paste, undo) goes through OutlineState.apply, with the caret, so an edit that
 // empties a node keeps it as a placeholder. The history keeps each step's placeholders, so undo
 // and redo bring them back.
 //
@@ -36,7 +36,7 @@ import showdown from 'showdown';
 import { unified, type PluggableList } from 'unified';
 import 'highlight.js/styles/github.css';
 import 'katex/dist/katex.min.css';
-import { OutlineDoc, execute, homePosition, mapPos, renderHtml, settle, textStart, type Config, type TextChange, type Command, type OutlineNode, type Result } from '../../src/index.ts';
+import { OutlineState, executeCommand, mapPos, renderHtml, settlePlaceholders, type Config, type ChangeSpec, type Command, type OutlineNode, type CommandResult } from '../../src/index.ts';
 
 type Flavor = Config['flavor'];
 
@@ -44,47 +44,47 @@ type Flavor = Config['flavor'];
 let initialFlavor: Flavor = 'obsidian';
 
 /** The snapshot an ourus command planned, attached to the transaction that applies it. */
-const planned = Annotation.define<OutlineDoc>();
+const planned = Annotation.define<OutlineState>();
 /** Replaces the snapshot outright (settling placeholders can change no text at all). */
-const setDoc = StateEffect.define<OutlineDoc>();
+const setDoc = StateEffect.define<OutlineState>();
 /** The placeholders a step of history returns to (positions in the text after the step), mapped along later edits. */
 const setPlaceholders = StateEffect.define<readonly number[]>({ map: (value, mapping) => value.map((pos) => mapping.mapPos(pos, 1)) });
 
-const ourusDoc = StateField.define<OutlineDoc>({
-  create: (state) => OutlineDoc.parse(state.doc.toString(), { config: { flavor: initialFlavor } }),
+const ourusDoc = StateField.define<OutlineState>({
+  create: (state) => OutlineState.parse(state.doc.toString(), { config: { flavor: initialFlavor } }),
   update(doc, tr) {
     for (const e of tr.effects) if (e.is(setDoc)) return e.value;
     const restored = tr.effects.find((e) => e.is(setPlaceholders))?.value as readonly number[] | undefined;
-    if (!tr.docChanged) return restored ? doc.apply([], { drop: [...doc.placeholders], placeholders: restored }) : doc;
+    if (!tr.docChanged) return restored ? doc.update([], { drop: [...doc.placeholders], placeholders: restored }) : doc;
     const next = tr.annotation(planned);
     // another extension may have added changes to the transaction: then parse what committed
     if (!restored && next && next.text.length === tr.newDoc.length && next.text === tr.newDoc.toString()) return next;
-    const changes: TextChange[] = [];
+    const changes: ChangeSpec[] = [];
     tr.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => changes.push({ from: fromA, to: toA, insert: inserted.toString() }));
     // undo and redo restore the placeholders of the state they return to
-    if (restored) return doc.apply(changes, { drop: [...doc.placeholders], placeholders: restored });
+    if (restored) return doc.update(changes, { drop: [...doc.placeholders], placeholders: restored });
     const caret = tr.newSelection.main;
-    return doc.apply(changes, caret.empty ? { caret: caret.head } : {});
+    return doc.update(changes, caret.empty ? { caret: caret.head } : {});
   },
 });
 
 /** Each step of history keeps the placeholders it replaced, so undoing it brings them back. */
 const placeholderHistory = invertedEffects.of((tr) => (tr.docChanged ? [setPlaceholders.of(tr.startState.field(ourusDoc).placeholders)] : []));
 
-let onResult: (type: Command['type'], result: Result) => void = () => {};
+let onResult: (type: Command['type'], result: CommandResult) => void = () => {};
 
 function command(type: Command['type']) {
   return (view: EditorView): boolean => {
     const doc = view.state.field(ourusDoc);
     const { anchor, head } = view.state.selection.main;
-    const result = execute(doc, { type } as Command, { anchor, head });
+    const result = executeCommand(doc, { type } as Command, { anchor, head });
     onResult(type, result);
     if (result.status === 'notApplicable') return false; // let CodeMirror do its default
     if (result.status === 'rejected') return true; // swallow the key; the status bar says why
     view.dispatch({
       changes: [...result.changes],
       selection: result.selection,
-      annotations: [planned.of(result.doc), Transaction.userEvent.of(`ourus.${type}`)],
+      annotations: [planned.of(result.state), Transaction.userEvent.of(`ourus.${type}`)],
       scrollIntoView: true,
     });
     return true;
@@ -109,7 +109,7 @@ const pasteHandler = EditorView.domEventHandlers({
     const text = event.clipboardData?.getData('text/plain');
     if (!text) return false;
     const { anchor, head } = view.state.selection.main;
-    const result = execute(view.state.field(ourusDoc), { type, text }, { anchor, head });
+    const result = executeCommand(view.state.field(ourusDoc), { type, text }, { anchor, head });
     onResult(type, result);
     if (result.status === 'notApplicable') return false;
     event.preventDefault();
@@ -117,7 +117,7 @@ const pasteHandler = EditorView.domEventHandlers({
       view.dispatch({
         changes: [...result.changes],
         selection: result.selection,
-        annotations: [planned.of(result.doc), Transaction.userEvent.of(`ourus.${type}`)],
+        annotations: [planned.of(result.state), Transaction.userEvent.of(`ourus.${type}`)],
         scrollIntoView: true,
       });
     }
@@ -130,7 +130,7 @@ function home(extend: boolean) {
   return (view: EditorView): boolean => {
     const range = view.state.selection.main;
     const line = view.state.doc.lineAt(range.head);
-    const target = homePosition(view.state.field(ourusDoc), range.head);
+    const target = view.state.field(ourusDoc).homePosition(range.head);
     const rowStart = view.moveToLineBoundary(range, false, true).head;
     if (rowStart > line.from && rowStart > target) return false;
     view.dispatch({
@@ -152,7 +152,7 @@ function vertical(motion: (view: EditorView) => boolean) {
     const { state } = view;
     const doc = state.field(ourusDoc);
     const ranges = state.selection.ranges.map((range) => {
-      const start = textStart(doc, state.doc.lineAt(range.head).from);
+      const start = doc.textStart(state.doc.lineAt(range.head).from);
       if (range.head >= start) return range;
       return range.empty ? EditorSelection.cursor(start, 0, undefined, range.goalColumn) : EditorSelection.range(range.anchor, start, range.goalColumn);
     });
@@ -220,7 +220,7 @@ function label(n: OutlineNode): string {
   return ATOM_LABELS[n.block.type] ?? n.block.type.replace('_block', '');
 }
 
-function renderOutline(panel: HTMLElement, doc: OutlineDoc, current: OutlineNode | null): void {
+function renderOutline(panel: HTMLElement, doc: OutlineState, current: OutlineNode | null): void {
   const list = (nodes: readonly OutlineNode[]): string =>
     nodes.length === 0
       ? ''
@@ -235,7 +235,7 @@ function renderOutline(panel: HTMLElement, doc: OutlineDoc, current: OutlineNode
             return `<li><div class="node${n === current ? ' current' : ''}${placeholders ? ' placeholders' : ''}" data-pos="${pos}"><span class="kind kind-${n.kind}">${escapeHtml(label(n))}</span><span class="text">${escapeHtml(text) || '<i>empty</i>'}</span><span class="id">#${n.id}</span></div>${list(n.children)}</li>`;
           })
           .join('')}</ul>`;
-  panel.innerHTML = list(doc.outline.children);
+  panel.innerHTML = list(doc.root.children);
 }
 
 // ------------------------------------------------------------------ page
@@ -304,7 +304,7 @@ $$
 interface Rendering {
   readonly reads: string;
   /** The document as HTML, raw HTML in it escaped, left out or sanitized. */
-  render(doc: OutlineDoc): string;
+  render(doc: OutlineState): string;
 }
 
 interface Renderer {
@@ -319,7 +319,7 @@ const pick = <T,>(flavor: Flavor, commonmark: T, gfm: T, obsidian: T): T => (fla
 
 const RENDERERS: Record<string, Renderer> = {
   // from the snapshot's own parse: the blocks are already read, incrementally, as the text changed
-  ourus: { name: 'ourus', setup: (flavor) => ({ reads: FLAVOR_NAMES[flavor], render: (doc) => renderHtml(doc.syntax, { escapeRawHtml: true }) }) },
+  ourus: { name: 'ourus', setup: (flavor) => ({ reads: FLAVOR_NAMES[flavor], render: (doc) => renderHtml(doc.syntaxTree, { escapeRawHtml: true }) }) },
   commonmark: {
     name: 'commonmark.js',
     setup: () => {
@@ -402,7 +402,7 @@ function main(): void {
   const rendererSelect = document.getElementById('renderer') as HTMLSelectElement;
   flavorSelect.value = initialFlavor;
   /** What the pane shows: the snapshot and renderer it was rendered from. */
-  let rendered: { doc: OutlineDoc; renderer: Rendering } | null = null;
+  let rendered: { doc: OutlineState; renderer: Rendering } | null = null;
   const status = document.getElementById('status')!;
   const stats = document.getElementById('stats')!;
 
@@ -422,7 +422,7 @@ function main(): void {
       renderOutline(panel, doc, doc.nodeAt(view.state.selection.main.head));
       const renderer = rendering(rendererSelect.value, doc.config.flavor);
       // an external renderer reads the text alone; ours, the snapshot's parse
-      if (!rendered || rendered.renderer !== renderer || rendered.doc.syntax !== doc.syntax) {
+      if (!rendered || rendered.renderer !== renderer || rendered.doc.syntaxTree !== doc.syntaxTree) {
         const t0 = performance.now();
         preview.innerHTML = renderer.render(doc);
         const ms = performance.now() - t0;
@@ -431,7 +431,7 @@ function main(): void {
         previewTitle.textContent = `Rendered · ${name} · ${renderer.reads} · ${ms < 10 ? ms.toFixed(1) : Math.round(ms)} ms`;
         rendered = { doc, renderer };
       }
-      stats.textContent = `${doc.syntax.lineCount} lines · ${doc.nodes.length - 1} nodes · ${FLAVOR_NAMES[doc.config.flavor]}`;
+      stats.textContent = `${doc.syntaxTree.lineCount} lines · ${doc.nodes.length - 1} nodes · ${FLAVOR_NAMES[doc.config.flavor]}`;
     });
   };
 
@@ -457,7 +457,7 @@ function main(): void {
             const left = u.startState.selection.main;
             queueMicrotask(() => {
               if (u.view.state !== state) return;
-              const r = settle(state.field(ourusDoc), state.selection.main.head);
+              const r = settlePlaceholders(state.field(ourusDoc), state.selection.main.head);
               if (!r) return;
               const to = state.selection.main;
               // leaving is an undo step of its own; history keeps the selection before a step, so
@@ -466,7 +466,7 @@ function main(): void {
               u.view.dispatch({
                 changes: r.changes,
                 selection: EditorSelection.range(mapPos(r.changes, to.anchor), mapPos(r.changes, to.head)),
-                effects: setDoc.of(r.doc),
+                effects: setDoc.of(r.state),
                 annotations: Transaction.userEvent.of('ourus.settle'),
               });
             });
@@ -481,7 +481,7 @@ function main(): void {
   flavorSelect.addEventListener('change', () => {
     initialFlavor = flavorSelect.value as Flavor;
     const doc = view.state.field(ourusDoc);
-    const next = OutlineDoc.parse(doc.text, { placeholders: doc.placeholders, config: { ...doc.config, flavor: initialFlavor } });
+    const next = OutlineState.parse(doc.text, { placeholders: doc.placeholders, config: { ...doc.config, flavor: initialFlavor } });
     view.dispatch({ effects: setDoc.of(next) });
     refresh(view);
     view.focus();

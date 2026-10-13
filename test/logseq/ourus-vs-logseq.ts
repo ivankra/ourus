@@ -2,7 +2,7 @@
 // and reports where ourus and Logseq agree. Outlines are compared as the Logseq runner compares them.
 //   node test/logseq/ourus-vs-logseq.ts [-v]
 import { readFileSync } from 'node:fs';
-import { OutlineDoc } from '../../src/doc.ts';
+import { OutlineState } from '../../src/outline/index.ts';
 import { drawState, readDrawing, readText } from '../drawing.ts';
 import { play, type Played } from '../player.ts';
 import { readSpec, specConfig } from '../specfile.ts';
@@ -15,7 +15,7 @@ const bySource = new Map<string, Map<string, number>>();
 const loose = (o: Outline) => o.blocks.map((b) => `${b.depth}:${b.text.replace(/ *\n */g, '\n').trim()}`).join('|');
 for (const t of tests) {
   const start = readDrawing(t.initial.buffer);
-  let state: Played = { doc: OutlineDoc.parse(start.text, { placeholders: start.placeholders, config: specConfig(t.options) }), selection: start.selection, clipboard: readText(t.initial.clipboard ?? '') };
+  let state: Played = { doc: OutlineState.parse(start.text, { placeholders: start.placeholders, config: specConfig(t.options) }), selection: start.selection, clipboard: readText(t.initial.clipboard ?? '') };
   let verdict = 'agree';
   let detail = '';
   try {

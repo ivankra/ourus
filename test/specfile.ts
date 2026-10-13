@@ -2,9 +2,9 @@
 // `buffer`, `clipboard` (or `clipboard-no-newline`) and `result` blocks are editor states, quotes the actions between them, and
 // a `config` block before them sets a test's options over the file's frontmatter.
 
-import { readConfig, readSettings, type Config } from '../src/config.ts';
-import { Syntax } from '../src/parsing/syntax.ts';
-import type { Block, LineInfo } from '../src/parsing/types.ts';
+import { Config } from '../src/config.ts';
+import { SyntaxTree } from '../src/parser/syntax.ts';
+import type { Block, LineInfo } from '../src/parser/types.ts';
 
 /** A parsed spec file: its text, block tree and line table. */
 type Parsed = { readonly text: string; readonly root: Block; readonly lines: readonly LineInfo[] };
@@ -47,7 +47,7 @@ const SPEC_OPTIONS: Readonly<Record<string, readonly string[]>> = { status: ['re
 
 /** The ourus config a test's options set: every option but the spec's own, as values. */
 export function specConfig(options: Readonly<Record<string, string>>): Partial<Config> {
-  const set = readSettings(Object.fromEntries(Object.entries(options).filter(([key]) => !(key in SPEC_OPTIONS))));
+  const set = Config.read(Object.fromEntries(Object.entries(options).filter(([key]) => !(key in SPEC_OPTIONS))));
   if (typeof set === 'string') throw new SpecError(set);
   return set;
 }
@@ -56,7 +56,7 @@ export class SpecError extends Error {}
 
 export function readSpec(file: string, source: string): SpecTest[] {
   const { body, options: fileOptions } = frontmatter(file, source);
-  const syntax = Syntax.parse(body);
+  const syntax = SyntaxTree.parse(body);
   const tree: Parsed = { text: body, root: syntax.root, lines: syntax.lines };
   const fail = (line: number, message: string): never => {
     throw new SpecError(`${file}:${line + 1}: ${message}`);
@@ -174,8 +174,8 @@ function readOptions(text: string, first: number, fail: (line: number, message: 
     if (values) {
       if (!values.includes(value)) fail(first + i, `option "${key}" takes ${values.join(', ')}, not "${value}"`);
     } else {
-      const config = readConfig({ [key!]: value });
-      if (typeof config === 'string') fail(first + i, config);
+      const set = Config.read({ [key!]: value });
+      if (typeof set === 'string') fail(first + i, set);
     }
     options[key!] = value;
   });

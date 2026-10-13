@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import fc from 'fast-check';
-import { applyChanges, composeChanges, invertChanges, mapPos, normalizeChanges, type TextChange } from '../src/text.ts';
+import { applyChanges, composeChanges, invertChanges, mapPos, normalizeChanges, type ChangeSpec } from '../src/text.ts';
 
 const RUNS = Number(process.env.OURUS_FUZZ_RUNS ?? 2000);
 
@@ -9,7 +9,7 @@ const RUNS = Number(process.env.OURUS_FUZZ_RUNS ?? 2000);
 const arbChanges = (len: number) =>
   fc.array(fc.tuple(fc.nat(len), fc.nat(len), fc.string({ maxLength: 4 })), { maxLength: 4 }).map((cs) => {
     const sorted = cs.map(([a, b, s]) => ({ from: Math.min(a, b), to: Math.max(a, b), insert: s })).sort((x, y) => x.from - y.from);
-    const out: TextChange[] = [];
+    const out: ChangeSpec[] = [];
     let end = 0;
     for (const c of sorted) if (c.from >= end) { out.push(c); end = Math.max(c.to, c.from + 1); }
     return out;

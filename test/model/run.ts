@@ -7,8 +7,8 @@
 // disagreement bucket.
 
 import fc from 'fast-check';
-import { settle, type Command } from '../../src/commands.ts';
-import { OutlineDoc } from '../../src/doc.ts';
+import { settlePlaceholders, type Command } from '../../src/commands/index.ts';
+import { OutlineState } from '../../src/outline/index.ts';
 import { mapPos } from '../../src/text.ts';
 import { drawState } from '../drawing.ts';
 import { play } from '../player.ts';
@@ -84,7 +84,7 @@ interface Disagreement {
 
 /** Runs one case; returns the first disagreement, or null. Tallies into `stats`. */
 function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: Map<string, [number, number]>): Disagreement | null {
-  let doc = OutlineDoc.parse(text);
+  let doc = OutlineState.parse(text);
   let pos = -1;
   for (let i = 0; i < steps.length; i++) {
     const [cmd, move] = steps[i]!;
@@ -94,10 +94,10 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
       if (l.editable.length === 0) return null;
       const node = l.editable[ni % l.editable.length]!;
       pos = l.toPos({ node, offset: off % (node.text.length + 1) });
-      const settled = settle(doc, pos);
+      const settled = settlePlaceholders(doc, pos);
       if (settled) {
         pos = mapPos(settled.changes, pos, 1);
-        doc = settled.doc;
+        doc = settled.state;
         l = lift(doc);
       }
     }

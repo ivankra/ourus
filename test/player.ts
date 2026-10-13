@@ -7,9 +7,9 @@
 // with other keymaps: the ourus commands (W3C `inputType` names where one exists), `"text"`
 // typed, and caret motions named as CodeMirror's commands are.
 
-import { execute, homePosition, settle, textStart, type Command, type Result, type Selection } from '../src/commands.ts';
-import { OutlineDoc } from '../src/doc.ts';
-import { advanceColumns, applyChanges, dominantEnding, type TextChange } from '../src/text.ts';
+import { executeCommand, settlePlaceholders, type Command, type CommandResult, type Selection } from '../src/commands/index.ts';
+import { OutlineState } from '../src/outline/index.ts';
+import { advanceColumns, applyChanges, dominantEnding, type ChangeSpec } from '../src/text.ts';
 
 const COMMANDS = new Set<string>([
   'indent',
@@ -41,7 +41,7 @@ function commandOf(action: string, clipboard: string): Command {
  * monospace font's, with tab stops of 4. Returns the new head, or for a vertical motion the line
  * it reaches, placed at the goal column.
  */
-type Motion = (doc: OutlineDoc, sel: Selection) => number | { line: number };
+type Motion = (doc: OutlineState, sel: Selection) => number | { line: number };
 
 const MOTIONS: Record<string, Motion> = {
   // with a selection, left and right collapse it to its start or end
@@ -49,7 +49,7 @@ const MOTIONS: Record<string, Motion> = {
   CharRight: (doc, s) => (s.anchor !== s.head ? Math.max(s.anchor, s.head) : charAfter(doc.text, s.head)),
   LineUp: (doc, s) => ({ line: doc.lineAt(s.head).index - 1 }),
   LineDown: (doc, s) => ({ line: doc.lineAt(s.head).index + 1 }),
-  LineBoundaryBackward: (doc, s) => homePosition(doc, s.head),
+  LineBoundaryBackward: (doc, s) => doc.homePosition(s.head),
   LineBoundaryForward: (doc, s) => Math.max(s.head, doc.lineAt(s.head).to),
   DocStart: () => 0,
   DocEnd: (doc) => doc.text.length,
@@ -67,13 +67,13 @@ const HOST_ACTIONS = new Set<string>(['undo', 'redo']);
 export const isAction = (token: string): boolean => /^"[^"]*"$/.test(token) || COMMANDS.has(token) || HOST_ACTIONS.has(token) || isMotion(token);
 
 export interface Played {
-  doc: OutlineDoc;
+  doc: OutlineState;
   selection: Selection;
   clipboard: string;
   /** The column vertical motion aims for, kept while the caret moves up and down. */
   goal?: number;
   /** The result of the last action, when it was an ourus command. */
-  last?: Result;
+  last?: CommandResult;
   /** The host's history: the document (placeholders included) and selection before each step that changed the text. */
   undone?: Snapshot[];
   redone?: Snapshot[];
@@ -97,11 +97,11 @@ export function play(state: Played, actions: readonly string[]): Played {
     const before = snapshot(state);
     state = step({ ...state, last: undefined, ...(/Line(?:Up|Down)$/.test(action) ? {} : { goal: undefined }) }, action);
     if (state.doc.text !== before.text) state = { ...state, undone: [...(state.undone ?? []), before], redone: [] };
-    const settled = settle(state.doc, state.selection.head);
+    const settled = settlePlaceholders(state.doc, state.selection.head);
     if (settled) {
       // leaving a placeholder is an edit of its own: undo returns to it, the caret where it was
       const left = snapshot(state, before.selection);
-      state = { ...state, doc: settled.doc, selection: mapSel(settled.changes, state.selection), undone: [...(state.undone ?? []), left], redone: [] };
+      state = { ...state, doc: settled.state, selection: mapSel(settled.changes, state.selection), undone: [...(state.undone ?? []), left], redone: [] };
     }
   }
   return state;
@@ -142,17 +142,17 @@ function step(state: Played, action: string): Played {
       const dest = doc.lines[target.line];
       // past the first or last line, the caret goes to that end of the text; a column in the line's
       // markers or indentation lands at the start of its text
-      head = dest ? Math.max(atColumn(doc.text, dest.from, dest.to, goal), textStart(doc, dest.from)) : target.line < 0 ? 0 : doc.text.length;
+      head = dest ? Math.max(atColumn(doc.text, dest.from, dest.to, goal), doc.textStart(dest.from)) : target.line < 0 ? 0 : doc.text.length;
     }
     return { ...state, goal, selection: { anchor: extend ? selection.anchor : head, head } };
   }
   if (!COMMANDS.has(action)) throw new Error(`unknown action "${action}"`);
   const command = commandOf(action, state.clipboard);
   const type = command.type;
-  const last = execute(doc, command, selection);
+  const last = executeCommand(doc, command, selection);
   if (last.status === 'applied') {
-    if (applyChanges(doc.text, last.changes) !== last.doc.text) throw new Error(`${type}: its changes don't produce its document`);
-    return { ...state, doc: last.doc, selection: last.selection, last };
+    if (applyChanges(doc.text, last.changes) !== last.state.text) throw new Error(`${type}: its changes don't produce its document`);
+    return { ...state, doc: last.state, selection: last.selection, last };
   }
   if (last.status === 'rejected') return { ...state, last };
   // not ours: the host's default
@@ -183,10 +183,10 @@ function step(state: Played, action: string): Played {
   }
 }
 
-function edit(state: Played, change: TextChange): Played {
+function edit(state: Played, change: ChangeSpec): Played {
   const caret = change.from + change.insert.length;
   // the host tells where the caret lands, so an emptied node stays as a placeholder
-  const doc = state.doc.apply([change], { caret });
+  const doc = state.doc.update([change], { caret });
   return { ...state, doc, selection: { anchor: caret, head: caret } };
 }
 
@@ -219,7 +219,7 @@ function charAfter(text: string, pos: number): number {
   return c >= 0xd800 && c < 0xdc00 && pos + 1 < text.length && text.charCodeAt(pos + 1) >= 0xdc00 && text.charCodeAt(pos + 1) < 0xe000 ? pos + 2 : pos + 1;
 }
 
-function mapSel(changes: readonly TextChange[], sel: Selection): Selection {
+function mapSel(changes: readonly ChangeSpec[], sel: Selection): Selection {
   let { anchor, head } = sel;
   for (const c of [...changes].sort((a, b) => b.from - a.from)) {
     const shift = c.insert.length - (c.to - c.from);

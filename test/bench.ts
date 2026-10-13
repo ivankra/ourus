@@ -5,8 +5,8 @@
 //   BENCH_LINES=50000 node test/bench.ts
 
 import { performance } from 'node:perf_hooks';
-import { execute, type Command } from '../src/commands.ts';
-import { OutlineDoc } from '../src/doc.ts';
+import { executeCommand, type Command } from '../src/commands/index.ts';
+import { OutlineState } from '../src/outline/index.ts';
 
 const target = Number(process.env.BENCH_LINES ?? 10_000);
 const runs = Number(process.env.BENCH_RUNS ?? 30);
@@ -38,7 +38,7 @@ function measure(name: string, run: () => void): void {
 }
 
 const text = outline(target);
-const doc = OutlineDoc.parse(text);
+const doc = OutlineState.parse(text);
 const middle = doc.lines[Math.floor(doc.lines.length / 2)]!;
 // an item near the middle, with children and a sibling above: its text start, and the end of its text
 const item = doc.nodes.find((node) => node.kind === 'item' && node.startLine >= middle.index && node.children.length > 0 && node.parent!.children.indexOf(node) > 0)!;
@@ -47,14 +47,14 @@ const end = doc.headRange(item)!.to;
 const at = (pos: number) => ({ anchor: pos, head: pos });
 const command = (name: string, type: Command, pos: number): void =>
   measure(name, () => {
-    const result = execute(doc, type, at(pos));
+    const result = executeCommand(doc, type, at(pos));
     if (result.status !== 'applied') throw new Error(`${name}: ${result.status} ${'reason' in result ? result.reason : ''}`);
   });
 
 console.log(`${doc.lines.length} lines, ${doc.nodes.length} nodes, ${(text.length / 1024).toFixed(0)} KB; ${runs} runs each`);
 console.log(`${''.padEnd(28)} ${'median'.padStart(8)} ${'p95'.padStart(8)}`);
-measure('full parse', () => OutlineDoc.parse(text));
-measure('keystroke (OutlineDoc.apply)', () => doc.apply([{ from: end, to: end, insert: 'x' }], { caret: end + 1 }));
+measure('full parse', () => OutlineState.parse(text));
+measure('keystroke (OutlineState.apply)', () => doc.update([{ from: end, to: end, insert: 'x' }], { caret: end + 1 }));
 command('moveBlockDown', { type: 'moveBlockDown' }, end);
 command('indent', { type: 'indent' }, end);
 command('outdent (child)', { type: 'outdent' }, doc.headRange(item.children[0]!)!.to);

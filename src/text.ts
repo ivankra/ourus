@@ -1,15 +1,20 @@
 // Text primitives: changes, position mapping, lines and columns.
 // Positions are UTF-16 code-unit offsets into a JS string.
 
-/** One replacement, in the coordinates of the text it applies to (CM6 ChangeSpec semantics). */
-export interface TextChange {
+/**
+ * One replacement: the text from `from` to `to` replaced by `insert`. The plain-object case of
+ * CodeMirror 6's `ChangeSpec`, with `to` and `insert` required, so it can be passed to CM6 as it is.
+ * Offsets are UTF-16 code units. In an array of changes, every change refers to the text before any
+ * of them is applied, and changes don't overlap; `mapPos` maps a position from before to after.
+ */
+export interface ChangeSpec {
   readonly from: number;
   readonly to: number;
   readonly insert: string;
 }
 
 /** Sorts changes and checks that they don't overlap. Adjacent insertions at one point keep their order. */
-export function normalizeChanges(changes: readonly TextChange[]): TextChange[] {
+export function normalizeChanges(changes: readonly ChangeSpec[]): ChangeSpec[] {
   const sorted = changes
     .map((c, i) => ({ c, i }))
     .sort((a, b) => a.c.from - b.c.from || a.c.to - b.c.to || a.i - b.i)
@@ -20,7 +25,7 @@ export function normalizeChanges(changes: readonly TextChange[]): TextChange[] {
   return sorted.filter((c) => c.from !== c.to || c.insert !== '');
 }
 
-export function applyChanges(text: string, changes: readonly TextChange[]): string {
+export function applyChanges(text: string, changes: readonly ChangeSpec[]): string {
   let out = '';
   let pos = 0;
   for (const c of normalizeChanges(changes)) {
@@ -32,8 +37,8 @@ export function applyChanges(text: string, changes: readonly TextChange[]): stri
 }
 
 /** The changes that undo `changes` when applied to the text they produced from `text`. */
-export function invertChanges(text: string, changes: readonly TextChange[]): TextChange[] {
-  const inverse: TextChange[] = [];
+export function invertChanges(text: string, changes: readonly ChangeSpec[]): ChangeSpec[] {
+  const inverse: ChangeSpec[] = [];
   let shift = 0;
   for (const c of normalizeChanges(changes)) {
     const from = c.from + shift;
@@ -48,7 +53,7 @@ export function invertChanges(text: string, changes: readonly TextChange[]): Tex
  * insertion point before the inserted text, > 0 moves it after. A position inside a
  * replaced range goes to the replacement's start (assoc < 0) or end (assoc > 0).
  */
-export function mapPos(changes: readonly TextChange[], pos: number, assoc: -1 | 1 = -1): number {
+export function mapPos(changes: readonly ChangeSpec[], pos: number, assoc: -1 | 1 = -1): number {
   let shift = 0;
   for (const c of normalizeChanges(changes)) {
     if (c.from > pos) break;
@@ -110,9 +115,8 @@ export function lineEnding(text: string, end: number): LineEnding {
   return '';
 }
 
-/** Index of the line containing `pos` (a position at a line's end belongs to that line). */
-export function lineIndexAt(bounds: LineBounds, pos: number): number {
-  const { starts } = bounds;
+/** Index of the line containing `pos`, given the lines' starts (a position at a line's end belongs to that line). */
+export function lineIndexAt(starts: readonly number[], pos: number): number {
   let lo = 0;
   let hi = starts.length - 1;
   if (hi < 0) return 0;
@@ -124,10 +128,43 @@ export function lineIndexAt(bounds: LineBounds, pos: number): number {
   return lo;
 }
 
+/** Start and end (before its line ending) of the line containing `pos`. */
+export function lineSpan(text: string, pos: number): [number, number] {
+  let start = pos;
+  while (start > 0 && text.charCodeAt(start - 1) !== 10 && text.charCodeAt(start - 1) !== 13) start--;
+  let end = pos;
+  while (end < text.length && text.charCodeAt(end) !== 10 && text.charCodeAt(end) !== 13) end++;
+  return [start, end];
+}
+
+/** A space or a tab: the whitespace of indentation and of the gaps around markers. */
+export const isSpaceOrTab = (c: number): boolean => c === 32 || c === 9;
+
+/**
+ * From `pos`, past the spaces and tabs in `text` towards `limit`: forward (`dir` 1, up to `limit`) or
+ * backward (`dir` -1, down to `limit`, looking at the character before each position).
+ */
+export function skipSpaces(text: string, pos: number, limit: number, dir: -1 | 1): number {
+  if (dir > 0) while (pos < limit && isSpaceOrTab(text.charCodeAt(pos))) pos++;
+  else while (pos > limit && isSpaceOrTab(text.charCodeAt(pos - 1))) pos--;
+  return pos;
+}
+
 /** The column reached after `text[from, to)` starting at column `col`, with tab stops of 4. */
 export function advanceColumns(text: string, from: number, to: number, col: number): number {
   for (let i = from; i < to; i++) col = text.charCodeAt(i) === 9 ? col + 4 - (col % 4) : col + 1;
   return col;
+}
+
+/** `line` without its first `cols` columns of indentation (a tab partly removed leaves spaces). */
+export function dropColumns(line: string, cols: number): string {
+  let col = 0;
+  let i = 0;
+  while (i < line.length && col < cols && (line[i] === ' ' || line[i] === '\t')) {
+    col = line[i] === '\t' ? col + 4 - (col % 4) : col + 1;
+    i++;
+  }
+  return ' '.repeat(Math.max(0, col - cols)) + line.slice(i);
 }
 
 /** The dominant line ending of a text, for writing new lines. */
@@ -154,7 +191,7 @@ export function dominantEnding(text: string): '\n' | '\r\n' | '\r' {
  * Each change of `b` either falls in text `a` left alone, or inside text `a` inserted; one that
  * straddles the two makes the result a single replacement of the span that differs.
  */
-export function composeChanges(text: string, a: readonly TextChange[], b: readonly TextChange[]): TextChange[] {
+export function composeChanges(text: string, a: readonly ChangeSpec[], b: readonly ChangeSpec[]): ChangeSpec[] {
   const first = normalizeChanges(a).map((c) => ({ ...c }));
   // where each change of `a` sits in a's result
   const placed: { change: { from: number; to: number; insert: string }; from: number; to: number }[] = [];
@@ -163,7 +200,7 @@ export function composeChanges(text: string, a: readonly TextChange[], b: readon
     placed.push({ change: c, from: c.from + shift, to: c.from + shift + c.insert.length });
     shift += c.insert.length - (c.to - c.from);
   }
-  const out: TextChange[] = [];
+  const out: ChangeSpec[] = [];
   for (const c of normalizeChanges(b).sort((x, y) => y.from - x.from)) {
     const inside = placed.find((p) => c.from >= p.from && c.to <= p.to);
     if (inside) {
@@ -172,7 +209,7 @@ export function composeChanges(text: string, a: readonly TextChange[], b: readon
       inside.to += c.insert.length - (c.to - c.from);
       continue;
     }
-    if (placed.some((p) => c.from < p.to && c.to > p.from)) return [wholeDiff(text, applyChanges(applyChanges(text, a), b))];
+    if (placed.some((p) => c.from < p.to && c.to > p.from)) return [spanDiff(text, applyChanges(applyChanges(text, a), b))];
     // in untouched text: back to the original coordinates
     let back = 0;
     for (const p of placed) if (p.to <= c.from) back += p.change.insert.length - (p.change.to - p.change.from);
@@ -186,7 +223,7 @@ export function composeChanges(text: string, a: readonly TextChange[], b: readon
  * start and end with in common: a line added between two others is an insertion at a line
  * start, not one that seems to begin inside the line below it. Empty when the texts are equal.
  */
-export function diffLines(before: string, after: string): TextChange[] {
+export function diffLines(before: string, after: string): ChangeSpec[] {
   if (before === after) return [];
   const isBreak = (c: number): boolean => c === 10 || c === 13;
   let start = 0;
@@ -200,8 +237,13 @@ export function diffLines(before: string, after: string): TextChange[] {
   return [{ from: start, to: before.length - end, insert: after.slice(start, after.length - end) }];
 }
 
-/** One change turning `before` into `after`, trimmed to the span that differs. */
-function wholeDiff(before: string, after: string): TextChange {
+/** The change turning `before` into `after`, trimmed to the span that differs; none when they are equal. */
+export function diffText(before: string, after: string): ChangeSpec[] {
+  return before === after ? [] : [spanDiff(before, after)];
+}
+
+/** One change turning `before` into `after`, trimmed to the span that differs (empty, at the end, when they are equal). */
+function spanDiff(before: string, after: string): ChangeSpec {
   let start = 0;
   while (start < before.length && start < after.length && before[start] === after[start]) start++;
   let end = 0;
