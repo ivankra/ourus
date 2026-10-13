@@ -5,14 +5,43 @@
 // Every other edit (typing, paste, undo) goes through OutlineDoc.apply, with the caret, so an edit that
 // empties a node keeps it as a placeholder. The history keeps each step's placeholders, so undo
 // and redo bring them back.
+//
+// The header picks the flavor ourus reads the text in, and the renderer of the middle pane: ourus's
+// own (from the snapshot's parse) or a popular external one, set up for the flavor as far as it goes.
+// Code blocks are highlighted (highlight.js) and math typeset (KaTeX) after any renderer.
 
-import { markdown } from '@codemirror/lang-markdown';
+import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { cursorLineDown, cursorLineUp, invertedEffects, selectLineDown, selectLineUp } from '@codemirror/commands';
 import { Annotation, EditorSelection, EditorState, Prec, RangeSetBuilder, StateEffect, StateField, Transaction } from '@codemirror/state';
 import { Decoration, EditorView, keymap, ViewPlugin, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
 import { HtmlRenderer, Parser } from 'commonmark';
-import { OutlineDoc, execute, homePosition, mapPos, settle, textStart, type TextChange, type Command, type OutlineNode, type Result } from '../../src/index.ts';
+import DOMPurify from 'dompurify';
+import hljs from 'highlight.js/lib/common';
+import katex from 'katex';
+import MarkdownIt from 'markdown-it';
+import footnote from 'markdown-it-footnote';
+import mark from 'markdown-it-mark';
+import taskLists from 'markdown-it-task-lists';
+import { Marked } from 'marked';
+import { micromark } from 'micromark';
+import { gfm, gfmHtml } from 'micromark-extension-gfm';
+import { math, mathHtml } from 'micromark-extension-math';
+import rehypeStringify from 'rehype-stringify';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import remarkParse from 'remark-parse';
+import remarkRehype from 'remark-rehype';
+import showdown from 'showdown';
+import { unified, type PluggableList } from 'unified';
+import 'highlight.js/styles/github.css';
+import 'katex/dist/katex.min.css';
+import { OutlineDoc, execute, homePosition, mapPos, renderHtml, settle, textStart, type Config, type TextChange, type Command, type OutlineNode, type Result } from '../../src/index.ts';
+
+type Flavor = Config['flavor'];
+
+/** The flavor a new editor reads its text in; the header's select changes it. */
+let initialFlavor: Flavor = 'obsidian';
 
 /** The snapshot an ourus command planned, attached to the transaction that applies it. */
 const planned = Annotation.define<OutlineDoc>();
@@ -22,7 +51,7 @@ const setDoc = StateEffect.define<OutlineDoc>();
 const setPlaceholders = StateEffect.define<readonly number[]>({ map: (value, mapping) => value.map((pos) => mapping.mapPos(pos, 1)) });
 
 const ourusDoc = StateField.define<OutlineDoc>({
-  create: (state) => OutlineDoc.parse(state.doc.toString()),
+  create: (state) => OutlineDoc.parse(state.doc.toString(), { config: { flavor: initialFlavor } }),
   update(doc, tr) {
     for (const e of tr.effects) if (e.is(setDoc)) return e.value;
     const restored = tr.effects.find((e) => e.is(setPlaceholders))?.value as readonly number[] | undefined;
@@ -159,7 +188,7 @@ const currentNode = ViewPlugin.fromClass(
       this.decorations = this.build(view);
     }
     update(u: ViewUpdate) {
-      if (u.docChanged || u.selectionSet) this.decorations = this.build(u.view);
+      if (u.docChanged || u.selectionSet || u.startState.field(ourusDoc) !== u.state.field(ourusDoc)) this.decorations = this.build(u.view);
     }
     build(view: EditorView): DecorationSet {
       const doc = view.state.field(ourusDoc);
@@ -167,7 +196,7 @@ const currentNode = ViewPlugin.fromClass(
       const builder = new RangeSetBuilder<Decoration>();
       if (!node) return builder.finish();
       for (let l = node.startLine; l <= node.endLine; l++) {
-        const line = doc.lines[l]!;
+        const line = doc.line(l);
         builder.add(line.from, line.from, Decoration.line({ class: l <= node.headEndLine ? 'ourus-head' : 'ourus-subtree' }));
       }
       return builder.finish();
@@ -180,11 +209,15 @@ const currentNode = ViewPlugin.fromClass(
 
 const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
-function label(doc: OutlineDoc, n: OutlineNode): string {
+const ATOM_LABELS: Record<string, string> = { thematic_break: 'hr', footnote_definition: 'note', refdef: 'ref' };
+
+/** A node's kind as the outline shows it: tasks, callouts and atoms as the flavor reads them. */
+function label(n: OutlineNode): string {
   if (n.kind === 'heading') return `H${n.head!.level}`;
-  if (n.kind === 'item') return /^\[[ xX]\]/.test(doc.headLines(n)[0] ?? '') ? '☐' : n.block.list!.type === 'ordered' ? '1.' : '•';
+  if (n.kind === 'item') return n.block.task ? (n.block.task.checked ? '☑' : '☐') : n.block.list!.type === 'ordered' ? '1.' : '•';
   if (n.kind === 'paragraph') return '¶';
-  return n.block.type.replace('_block', '').replace('blockquote', 'quote').replace('thematic_break', 'hr');
+  if (n.kind === 'quote') return n.block.callout ? n.block.callout.kind : 'quote';
+  return ATOM_LABELS[n.block.type] ?? n.block.type.replace('_block', '');
 }
 
 function renderOutline(panel: HTMLElement, doc: OutlineDoc, current: OutlineNode | null): void {
@@ -195,11 +228,11 @@ function renderOutline(panel: HTMLElement, doc: OutlineDoc, current: OutlineNode
           .map((n) => {
             const lines = doc.headLines(n).map((l) => l.trim());
             // an atom shows its first line of content: past a fence, without quote markers
-            const text = n.kind === 'atom' ? (lines.find((l) => l !== '' && !/^(`{3,}|~{3,})/.test(l)) ?? '').replace(/^>\s?/, '') : lines.join(' ');
+            const text = n.kind === 'atom' ? (lines.find((l) => l !== '' && !/^(`{3,}|~{3,})|^(\$\$|%%)$/.test(l)) ?? '').replace(/^>\s?/, '') : lines.join(' ');
             const range = doc.headRange(n);
-            const pos = range ? range.from : doc.lines[n.startLine]!.to;
-            const placeholders = doc.placeholders.some((p) => p >= doc.lines[n.startLine]!.from && p <= doc.lines[n.headEndLine]!.to);
-            return `<li><div class="node${n === current ? ' current' : ''}${placeholders ? ' placeholders' : ''}" data-pos="${pos}"><span class="kind kind-${n.kind}">${escapeHtml(label(doc, n))}</span><span class="text">${escapeHtml(text) || '<i>empty</i>'}</span><span class="id">#${n.id}</span></div>${list(n.children)}</li>`;
+            const pos = range ? range.from : doc.line(n.startLine).to;
+            const placeholders = doc.placeholders.some((p) => p >= doc.line(n.startLine).from && p <= doc.line(n.headEndLine).to);
+            return `<li><div class="node${n === current ? ' current' : ''}${placeholders ? ' placeholders' : ''}" data-pos="${pos}"><span class="kind kind-${n.kind}">${escapeHtml(label(n))}</span><span class="text">${escapeHtml(text) || '<i>empty</i>'}</span><span class="id">#${n.id}</span></div>${list(n.children)}</li>`;
           })
           .join('')}</ul>`;
   panel.innerHTML = list(doc.outline.children);
@@ -207,9 +240,13 @@ function renderOutline(panel: HTMLElement, doc: OutlineDoc, current: OutlineNode
 
 // ------------------------------------------------------------------ page
 
-const SAMPLE = `# ourus demo
+const SAMPLE = `---
+title: ourus demo
+tags: [demo]
+---
+# ourus demo
 
-A paragraph at the top level. Paragraphs are leaves; list items and headings hold children.
+A paragraph at the top level. Paragraphs are leaves; list items and headings hold children. The header picks the **flavor** ourus reads this text in, and the **renderer** of the middle pane.
 
 ## Lists
 
@@ -222,7 +259,9 @@ A paragraph at the top level. Paragraphs are leaves; list items and headings hol
 - Shift-Enter breaks a line inside an item,
   which stays one item
 - Enter on an empty item outdents it, or leaves the list (Enter twice ends a list)
-- [ ] tasks are items too
+- [ ] tasks are items too (GFM and Obsidian)
+- [x] done
+- [?] Obsidian reads any status
 
 1. ordered lists
 2. renumber when they start a nested list
@@ -233,28 +272,137 @@ Tab on a heading demotes it, together with its section.
 
 ### A subsection
 
-Some text.
+Some text: ~~struck~~, ==highlighted==, a #tag, a [[Note#Heading|wikilink]], math $e^{i\\pi} + 1 = 0$, a footnote[^1], a link to https://commonmark.org and a hidden %%comment%%.
 
 \`\`\`js
-code blocks are atoms
+// code blocks are atoms
+const greet = (name) => \`hello, \${name}\`;
 \`\`\`
 
-> quotes are atoms for now
+| flavor | tables | callouts |
+| --- | :-: | :-: |
+| CommonMark | – | – |
+| GFM | ✓ | – |
+| Obsidian | ✓ | ✓ |
+
+> [!tip] Callouts
+> Obsidian's quotes with a type; elsewhere, a quote.
+
+> quotes hold nodes
+> - like this item
+
+$$
+\\int_0^1 x\\,dx = \\tfrac{1}{2}
+$$
+
+[^1]: Footnotes are GFM's (and Obsidian's).
 `;
 
 // ------------------------------------------------------------------ rendered panel
 
-/** The document as a standard CommonMark reader renders it (commonmark.js), raw HTML escaped. */
-const reader = new Parser();
-const renderer = new HtmlRenderer({ safe: true });
-const renderPreview = (pane: HTMLElement, text: string): void => {
-  pane.innerHTML = renderer.render(reader.parse(text));
+/** A renderer set up for a flavor: what it reads the text as, and the HTML it writes for it. */
+interface Rendering {
+  readonly reads: string;
+  /** The document as HTML, raw HTML in it escaped, left out or sanitized. */
+  render(doc: OutlineDoc): string;
+}
+
+interface Renderer {
+  readonly name: string;
+  setup(flavor: Flavor): Rendering;
+}
+
+const FLAVOR_NAMES: Record<Flavor, string> = { commonmark: 'CommonMark', gfm: 'GFM', obsidian: 'Obsidian' };
+
+/** By flavor: nothing, GFM, GFM and math (as each renderer's plugins have it). */
+const pick = <T,>(flavor: Flavor, commonmark: T, gfm: T, obsidian: T): T => (flavor === 'commonmark' ? commonmark : flavor === 'gfm' ? gfm : obsidian);
+
+const RENDERERS: Record<string, Renderer> = {
+  // from the snapshot's own parse: the blocks are already read, incrementally, as the text changed
+  ourus: { name: 'ourus', setup: (flavor) => ({ reads: FLAVOR_NAMES[flavor], render: (doc) => renderHtml(doc.syntax, { escapeRawHtml: true }) }) },
+  commonmark: {
+    name: 'commonmark.js',
+    setup: () => {
+      const reader = new Parser();
+      const writer = new HtmlRenderer({ safe: true });
+      return { reads: 'CommonMark, its only flavor', render: (doc) => writer.render(reader.parse(doc.text)) };
+    },
+  },
+  'markdown-it': {
+    name: 'markdown-it',
+    setup: (flavor) => {
+      const md = flavor === 'commonmark' ? new MarkdownIt('commonmark', { html: false }) : new MarkdownIt({ html: false, linkify: true }).use(taskLists).use(footnote);
+      if (flavor === 'obsidian') md.use(mark);
+      return { reads: pick(flavor, "preset 'commonmark'", 'default preset, task lists, footnotes', 'default preset, task lists, footnotes, mark'), render: (doc) => md.render(doc.text) };
+    },
+  },
+  marked: {
+    name: 'marked',
+    setup: (flavor) => {
+      const marked = new Marked({ gfm: flavor !== 'commonmark', renderer: { html: ({ text }) => escapeHtml(text) } });
+      return { reads: `gfm: ${flavor !== 'commonmark'}`, render: (doc) => marked.parse(doc.text, { async: false }) };
+    },
+  },
+  micromark: {
+    name: 'micromark',
+    setup: (flavor) => {
+      const extensions = pick(flavor, [], [gfm()], [gfm(), math()]);
+      const htmlExtensions = pick(flavor, [], [gfmHtml()], [gfmHtml(), mathHtml({ throwOnError: false })]);
+      return { reads: pick(flavor, 'CommonMark', '+ gfm', '+ gfm, math'), render: (doc) => micromark(doc.text, { extensions, htmlExtensions }) };
+    },
+  },
+  remark: {
+    name: 'remark',
+    setup: (flavor) => {
+      const plugins: PluggableList = pick(flavor, [], [remarkGfm], [remarkGfm, remarkMath]);
+      const processor = unified().use(remarkParse).use(plugins).use(remarkRehype).use(rehypeStringify);
+      return { reads: pick(flavor, 'CommonMark', '+ remark-gfm', '+ remark-gfm, remark-math'), render: (doc) => String(processor.processSync(doc.text)) };
+    },
+  },
+  showdown: {
+    name: 'showdown',
+    setup: (flavor) => {
+      const converter = new showdown.Converter();
+      converter.setFlavor(flavor === 'commonmark' ? 'vanilla' : 'github');
+      return { reads: `flavor '${flavor === 'commonmark' ? 'vanilla' : 'github'}'`, render: (doc) => DOMPurify.sanitize(converter.makeHtml(doc.text)) };
+    },
+  },
 };
+
+const setups = new Map<string, Rendering>();
+function rendering(key: string, flavor: Flavor): Rendering {
+  let r = setups.get(`${key} ${flavor}`);
+  if (!r) setups.set(`${key} ${flavor}`, (r = (RENDERERS[key] ?? RENDERERS.ourus!).setup(flavor)));
+  return r;
+}
+
+/**
+ * Math typeset and code highlighted, as the renderers mark them: `math-inline` / `math-display` /
+ * `math-block` (ourus, micromark, remark's `code.language-math`) and `language-*` code.
+ */
+function decorate(pane: HTMLElement): void {
+  for (const el of pane.querySelectorAll<HTMLElement>('.math-inline, .math-display, .math-block, code.language-math')) {
+    if (el.querySelector('.katex')) continue; // typeset by the renderer
+    const target = el.matches('code') && el.parentElement?.tagName === 'PRE' ? el.parentElement : el;
+    const out = document.createElement(target.tagName === 'DIV' || target.tagName === 'PRE' ? 'div' : 'span');
+    katex.render(el.textContent ?? '', out, { displayMode: el.matches('.math-display, .math-block'), throwOnError: false });
+    target.replaceWith(out);
+  }
+  for (const el of pane.querySelectorAll<HTMLElement>('pre code[class*="language-"]')) {
+    const language = /language-(\S+)/.exec(el.className)![1]!;
+    if (hljs.getLanguage(language)) hljs.highlightElement(el);
+  }
+}
 
 function main(): void {
   const panel = document.getElementById('outline')!;
   const preview = document.getElementById('preview')!;
-  let rendered: string | null = null;
+  const previewTitle = document.getElementById('preview-title')!;
+  const flavorSelect = document.getElementById('flavor') as HTMLSelectElement;
+  const rendererSelect = document.getElementById('renderer') as HTMLSelectElement;
+  flavorSelect.value = initialFlavor;
+  /** What the pane shows: the snapshot and renderer it was rendered from. */
+  let rendered: { doc: OutlineDoc; renderer: Rendering } | null = null;
   const status = document.getElementById('status')!;
   const stats = document.getElementById('stats')!;
 
@@ -272,11 +420,18 @@ function main(): void {
     frame = requestAnimationFrame(() => {
       const doc = view.state.field(ourusDoc);
       renderOutline(panel, doc, doc.nodeAt(view.state.selection.main.head));
-      if (doc.text !== rendered) {
-        renderPreview(preview, doc.text);
-        rendered = doc.text;
+      const renderer = rendering(rendererSelect.value, doc.config.flavor);
+      // an external renderer reads the text alone; ours, the snapshot's parse
+      if (!rendered || rendered.renderer !== renderer || rendered.doc.syntax !== doc.syntax) {
+        const t0 = performance.now();
+        preview.innerHTML = renderer.render(doc);
+        const ms = performance.now() - t0;
+        decorate(preview);
+        const name = RENDERERS[rendererSelect.value]?.name ?? 'ourus';
+        previewTitle.textContent = `Rendered · ${name} · ${renderer.reads} · ${ms < 10 ? ms.toFixed(1) : Math.round(ms)} ms`;
+        rendered = { doc, renderer };
       }
-      stats.textContent = `${doc.lines.length} lines · ${doc.nodes.length - 1} nodes`;
+      stats.textContent = `${doc.syntax.lineCount} lines · ${doc.nodes.length - 1} nodes · ${FLAVOR_NAMES[doc.config.flavor]}`;
     });
   };
 
@@ -288,7 +443,7 @@ function main(): void {
         outlinerKeymap,
         pasteHandler,
         basicSetup,
-        markdown(),
+        markdown({ base: markdownLanguage }),
         ourusDoc,
         placeholderHistory,
         currentNode,
@@ -321,6 +476,28 @@ function main(): void {
     }),
   });
   refresh(view);
+
+  // the flavor: the text read again, keeping its placeholders (node ids start over)
+  flavorSelect.addEventListener('change', () => {
+    initialFlavor = flavorSelect.value as Flavor;
+    const doc = view.state.field(ourusDoc);
+    const next = OutlineDoc.parse(doc.text, { placeholders: doc.placeholders, config: { ...doc.config, flavor: initialFlavor } });
+    view.dispatch({ effects: setDoc.of(next) });
+    refresh(view);
+    view.focus();
+  });
+  rendererSelect.addEventListener('change', () => {
+    refresh(view);
+    view.focus();
+  });
+  // links in the preview go nowhere but to its own anchors (footnotes)
+  preview.addEventListener('click', (e) => {
+    const a = (e.target as HTMLElement).closest('a');
+    if (!a) return;
+    const href = a.getAttribute('href') ?? '';
+    e.preventDefault();
+    if (href.startsWith('#')) preview.querySelector(`[id="${CSS.escape(decodeURIComponent(href.slice(1)))}"]`)?.scrollIntoView({ block: 'nearest' });
+  });
 
   panel.addEventListener('mousedown', (e) => {
     const el = (e.target as HTMLElement).closest('[data-pos]');

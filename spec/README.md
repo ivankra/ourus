@@ -174,7 +174,9 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
   - `status`: `pending` marks behaviour agreed on but not built yet. It is reported as a todo, and
     fails once it passes, so it gets promoted. `ready` (the default) is the rest; a test can set it
     over a file's `status: pending`;
-  - the options of ourus's config (`src/config.ts`): `outdent` (`direct`, the default, or
+  - `flavor`: the Markdown flavor the text is read in, `commonmark`, `gfm` or `obsidian`. An example
+    that names none runs in each of them, with the same expectations;
+  - the other options of ourus's config (`src/config.ts`): `outdent` (`direct`, the default, or
     `logical`), `bullet` (`-`, the default, `*` or `+`), `enterOnEmptyItem` (`sibling`, the
     default, or `outdent`), `handleFenceContents` (`true`, the default, or `false`),
     `headingEditing` (`text`, the default, or `block`), `taskEditing` (`text`, the default,

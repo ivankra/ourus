@@ -654,6 +654,42 @@ At the end of a lone title: an empty body line to type into.
 > x┃
 ```
 
+### Splitting a callout title before a list marker
+
+The rest starts the body as text: a marker in it is escaped, so it doesn't start a list.
+
+```buffer
+> [!tip] Title┃- x
+> - y
+```
+
+> enter
+
+```buffer
+> [!tip] Title
+> ┃\- x
+> - y
+```
+
+### Enter in a callout's type
+
+In the Obsidian flavor a callout's title is a line of its own, and a line break in its `[!type]`
+would unmake the callout.
+
+```config
+flavor: obsidian
+```
+
+```buffer
+> [!ti┃p] Title
+```
+
+> enter
+
+```result
+rejected: not-expressible
+```
+
 ## Shift-Enter in a quote
 
 ### Line break in a quoted paragraph
@@ -704,6 +740,25 @@ In a quoted item.
 ```buffer
 > - ab
 >   ┃cd
+```
+
+### No line break in an Obsidian callout title
+
+In the Obsidian flavor a callout's title is a single line, as a heading is.
+
+```config
+flavor: obsidian
+```
+
+```buffer
+> [!tip] Ti┃tle
+> body
+```
+
+> shiftEnter
+
+```result
+rejected: not-expressible
 ```
 
 ## Joining in a quote

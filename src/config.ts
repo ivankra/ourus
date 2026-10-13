@@ -6,7 +6,16 @@
 // what "empty" means, which node keeps its id. An option is not a way to postpone a decision: its
 // default is what nearly everyone gets. Add one when a spec case needs it.
 
+import { commonmark, type Flavor } from './parsing/flavor.ts';
+import { gfm } from './parsing/gfm.ts';
+import { obsidian } from './parsing/obsidian.ts';
+
 export interface Config {
+  /**
+   * The Markdown dialect the document is read as: CommonMark 0.31.2 (the default), GitHub Flavored
+   * Markdown, or Obsidian's (GFM plus callouts, wikilinks, frontmatter, ...). See src/parsing/.
+   */
+  readonly flavor: 'commonmark' | 'gfm' | 'obsidian';
   /**
    * Shift-Tab's later siblings. `direct` (the default, as in Logseq): they become the item's
    * children, after its own, so the document order stays the same. `logical`: they stay with their
@@ -78,17 +87,16 @@ export interface Config {
   // - emptyNodeLeft: 'keep' | 'remove'. Leaving an empty node the text can't hold. Decided instead
   //   (spec/placeholders.md): an empty item stays, set off by a blank line; an empty paragraph goes.
   //   It is tied into placeholders and `settle`, so it stays a decision, not an option.
-  // - format: 'commonmark' | 'gfm' | 'obsidian'. The Markdown dialect, which changes parsing (tables,
-  //   task lists, callouts, wikilinks), so an `OutlineDoc` needs it to parse. Today: CommonMark.
   // - readers: host parsers (lezer in CodeMirror 6, Obsidian's Live Preview) that verification
   //   also checks a result against, so other tools read the text as ourus does. Opt-in: lezer
   //   misreads lists in a tab-indented quote. A host's objects, not a value a file can set.
 }
 
-export const defaultConfig: Config = { outdent: 'direct', bullet: '-', enterOnEmptyItem: 'sibling', handleFenceContents: true, headingEditing: 'text', taskEditing: 'text', pasteMidText: 'after', deleteAtGap: 'join' };
+export const defaultConfig: Config = { flavor: 'commonmark', outdent: 'direct', bullet: '-', enterOnEmptyItem: 'sibling', handleFenceContents: true, headingEditing: 'text', taskEditing: 'text', pasteMidText: 'after', deleteAtGap: 'join' };
 
 /** The values each option takes, for readers of string settings (spec files, frontmatter). */
 export const configValues: { readonly [K in keyof Config]: readonly Config[K][] } = {
+  flavor: ['commonmark', 'gfm', 'obsidian'],
   outdent: ['direct', 'logical'],
   bullet: ['-', '*', '+'],
   enterOnEmptyItem: ['sibling', 'outdent'],
@@ -124,4 +132,9 @@ export function readSettings(settings: Readonly<Record<string, string>>): Partia
 export function readConfig(settings: Readonly<Record<string, string>>): Config | string {
   const set = readSettings(settings);
   return typeof set === 'string' ? set : configOf(set);
+}
+
+/** The parser's flavor that `Config.flavor` names. */
+export function flavorOf(name: Config['flavor']): Flavor {
+  return name === 'gfm' ? gfm : name === 'obsidian' ? obsidian : commonmark;
 }

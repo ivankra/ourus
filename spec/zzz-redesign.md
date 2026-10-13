@@ -126,11 +126,11 @@ status: pending
 
 ### Obsidian: frontmatter is a preamble
 
-Frontmatter is no node, so Enter in it is the host's newline. Today `a: b` / `---` reads as a
-setext heading, and Enter writes a paragraph after the frontmatter instead.
+In the Obsidian flavor frontmatter is no node, so Enter in it is the host's newline. (CommonMark and
+GFM have no frontmatter: there `a: b` / `---` is a setext heading.)
 
 ```config
-status: pending
+flavor: obsidian
 ```
 
 ```buffer

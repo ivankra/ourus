@@ -5,7 +5,7 @@
 // commonmark.js are normalized here and listed in DEVIATIONS.
 
 import * as commonmark from 'commonmark';
-import type { Block } from '../src/block.ts';
+import type { Block } from '../src/parsing/types.ts';
 
 /**
  * - commonmark.js keeps an empty paragraph when a setext underline follows only link reference
@@ -27,6 +27,19 @@ function listAttrs(type: string, bullet: string | null, delim: string | null, st
 const range = (start: number | null, end: number) => `[${start === null ? '?' : start}-${end}]`;
 
 const reader = new commonmark.Parser();
+
+// commonmark.js after 0.31.2 (2cbde72, "keep spaces on blank lines inside list-fenced code", as cmark
+// does it): a line indented as far as the item's content continues it before blankness is looked at,
+// so a blank line with that indentation goes on even in an empty item. ourus reads items that way.
+type ItemNode = { _firstChild: unknown; _listData: { markerOffset: number; padding: number } };
+type ParserState = { indent: number; blank: boolean; advanceOffset(n: number, columns: boolean): void; advanceNextNonspace(): void };
+(reader as unknown as { blocks: { item: { continue(p: ParserState, c: ItemNode): number } } }).blocks.item.continue = (parser, container) => {
+  if (parser.indent >= container._listData.markerOffset + container._listData.padding) {
+    parser.advanceOffset(container._listData.markerOffset + container._listData.padding, true);
+  } else if (parser.blank && container._firstChild != null) parser.advanceNextNonspace();
+  else return 1;
+  return 0;
+};
 
 /** `refdefLines`: lines ourus parsed as link reference definitions. */
 export function referenceSkeleton(markdown: string, refdefLines: ReadonlySet<number> = new Set()): string {
@@ -118,7 +131,7 @@ export function ourusSkeleton(root: Block): string {
         return `${b.fenced ? 'fence' : 'code'}${r(b.startLine)}`;
       case 'html_block':
         return `html${r(b.startLine)}`;
-      case 'refdef':
+      default:
         return null;
     }
   };

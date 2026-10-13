@@ -4,12 +4,13 @@
 
 import * as esbuild from 'esbuild';
 import { chromium } from 'playwright-core';
+import { bundleOptions } from './bundle.ts';
 
 const here = new URL('.', import.meta.url).pathname;
 const shotArg = process.argv.indexOf('--screenshot');
 const screenshot = shotArg > 0 ? process.argv[shotArg + 1] : undefined;
 
-const ctx = await esbuild.context({ entryPoints: [here + 'main.ts'], bundle: true, format: 'esm', target: 'es2022', outfile: here + 'dist/main.js' });
+const ctx = await esbuild.context(bundleOptions);
 await ctx.rebuild();
 const { port } = await ctx.serve({ servedir: here, port: 0 });
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM ?? '/usr/bin/chromium' });
@@ -97,6 +98,33 @@ const results = [
   await scenario('Delete on an empty item with children pulls its first child up', '- x\n- ┃\n  - a\n', ['Delete', 'type:X'], '- x\n- Xa\n'),
   await scenario('Mod-Backspace stops at the text start', '- alpha beta┃\n', ['Control+Backspace', 'type:x'], '- x\n'),
 ];
+
+/** Every renderer renders the sample in every flavor: tables and math where it reads them, code highlighted. */
+async function renderers(): Promise<boolean[]> {
+  await page.reload();
+  await page.waitForFunction(() => 'ourusDemo' in window);
+  const names = await page.$$eval('#renderer option', (options) => options.map((o) => (o as HTMLOptionElement).value));
+  const out: boolean[] = [];
+  for (const flavor of ['obsidian', 'gfm', 'commonmark']) {
+    await page.selectOption('#flavor', flavor);
+    for (const name of names) {
+      await page.selectOption('#renderer', name);
+      await page.waitForTimeout(100); // the pane is rendered in an animation frame
+      const got = await page.evaluate(() => {
+        const count = (selector: string) => document.querySelectorAll('#preview ' + selector).length;
+        return { title: document.getElementById('preview-title')!.textContent, katex: count('.katex'), hljs: count('.hljs'), tables: count('table') };
+      });
+      const math = flavor === 'obsidian' && ['ourus', 'micromark', 'remark'].includes(name);
+      // showdown's delimiter cells need two dashes: the sample's `:-:` isn't one
+      const tables = flavor !== 'commonmark' && name !== 'commonmark' && name !== 'showdown';
+      const ok = got.hljs > 0 && got.katex > 0 === math && got.tables > 0 === tables;
+      console.log(`${ok ? 'ok  ' : 'FAIL'} ${flavor}, ${name}: ${got.title} (math ${got.katex}, highlighted ${got.hljs}, tables ${got.tables})`);
+      out.push(ok);
+    }
+  }
+  return out;
+}
+results.push(...(await renderers()));
 
 if (screenshot) {
   await page.reload();

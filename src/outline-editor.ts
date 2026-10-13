@@ -21,7 +21,7 @@
 
 import type { OutlineDoc } from './doc.ts';
 import type { OutlineKind, OutlineNode } from './outline.ts';
-import type { Block, LineInfo } from './block.ts';
+import type { Block, LineInfo } from './parsing/types.ts';
 import { advanceColumns, dominantEnding, mapPos, type TextChange } from './text.ts';
 
 // ------------------------------------------------------------------ edited outlines
@@ -319,7 +319,7 @@ export function writeOutline(doc: OutlineDoc, edited: OutlineNode | EditedOutlin
         if (change === 'fail') return `the lines of ${placed.kind} ${placed.node!.id} can't move ${placed.delta} columns`;
         if (change) local.push({ from: change.from - line.from, to: change.to - line.from, insert: change.insert });
         if (placed.marker !== null && lineNo === placed.node!.startLine) {
-          local.push({ from: placed.node!.block.markerFrom! - line.from, to: placed.node!.block.markerTo! - line.from, insert: placed.marker });
+          local.push({ from: doc.markerFrom(placed.node!.block) - line.from, to: doc.markerTo(placed.node!.block) - line.from, insert: placed.marker });
         }
         out.push({ origin: lineNo, text: applyLocal(doc.text.slice(line.from, line.to), local), ending: line.ending, local, weight });
         emitted.add(lineNo);
@@ -504,10 +504,10 @@ function shift(doc: OutlineDoc, placed: Placed, tabs: boolean): string | null {
       const exact = placed.edited?.exactMarker ? placed.edited.marker : undefined;
       if (exact || arrived) {
         const marker = exact ?? markerOf(doc, placed, sibling);
-        if (marker !== doc.text.slice(node.block.markerFrom!, node.block.markerTo!)) placed.marker = marker;
+        if (marker !== doc.text.slice(doc.markerFrom(node.block), doc.markerTo(node.block))) placed.marker = marker;
       }
       placed.markerColumn = node.block.markerColumn! + placed.delta;
-      placed.contentColumn = node.block.contentColumn! + placed.delta + (placed.marker ?? '').length - (placed.marker ? node.block.markerTo! - node.block.markerFrom! : 0);
+      placed.contentColumn = node.block.contentColumn! + placed.delta + (placed.marker ?? '').length - (placed.marker ? doc.markerTo(node.block) - doc.markerFrom(node.block) : 0);
     }
     if (placed.lines && placed.delta !== 0) return `a rewritten ${node.kind} moving columns: not written yet`;
   }
@@ -527,8 +527,8 @@ function oldContentColumn(doc: OutlineDoc, node: OutlineNode): number {
 
 /** The marker an item takes in its place: always a new item's, an old one's only when it changes. */
 function markerOf(doc: OutlineDoc, placed: Placed, sibling: Placed | null): string {
-  const markerText = (item: Placed): string => item.marker ?? (item.node ? doc.text.slice(item.node.block.markerFrom!, item.node.block.markerTo!) : doc.config.bullet);
-  const own = placed.node ? doc.text.slice(placed.node.block.markerFrom!, placed.node.block.markerTo!) : (placed.edited!.marker ?? doc.config.bullet);
+  const markerText = (item: Placed): string => item.marker ?? (item.node ? doc.text.slice(doc.markerFrom(item.node.block), doc.markerTo(item.node.block)) : doc.config.bullet);
+  const own = placed.node ? doc.text.slice(doc.markerFrom(placed.node.block), doc.markerTo(placed.node.block)) : (placed.edited!.marker ?? doc.config.bullet);
   const theirs = sibling ? markerText(sibling) : null;
   const ordered = (marker: string): boolean => /^\d/.test(marker);
   // a new item joins its list whatever its own kind; an old one keeps its kind
@@ -566,7 +566,7 @@ function writeLines(doc: OutlineDoc, placed: Placed, own: { first: number; last:
     first = doc.text.slice(firstLine.from, contentStart(firstLine));
     if (placed.marker !== null) {
       const block = placed.node.block;
-      first = first.slice(0, block.markerFrom! - firstLine.from) + placed.marker + first.slice(block.markerTo! - firstLine.from);
+      first = first.slice(0, doc.markerFrom(block) - firstLine.from) + placed.marker + first.slice(doc.markerTo(block) - firstLine.from);
     }
     const secondLine = own.last > own.first ? doc.lines[own.first + 1]! : null;
     rest = secondLine && !secondLine.blank ? doc.text.slice(secondLine.from, contentStart(secondLine)) : linePrefix(placed.kind === 'item' ? placed : placed.parent, tabs);
@@ -599,8 +599,8 @@ function rerendered(doc: OutlineDoc, placed: Placed, lineNo: number, tabs: boole
     // the marker line: indentation to the marker, the marker, and its padding as written
     const piece = line.prefix.find((candidate) => candidate.block === node.block);
     const within = prefixWithin(placed.parent, tabs);
-    const marker = placed.marker ?? doc.text.slice(node.block.markerFrom!, node.block.markerTo!);
-    const padding = piece ? doc.text.slice(node.block.markerTo!, piece.to) : ' ';
+    const marker = placed.marker ?? doc.text.slice(doc.markerFrom(node.block), doc.markerTo(node.block));
+    const padding = piece ? doc.text.slice(doc.markerTo(node.block), piece.to) : ' ';
     return within.text + whitespace(within.column, Math.max(within.column, placed.markerColumn), tabs) + marker + padding + content;
   }
   const prefix = linePrefix(node.kind === 'item' ? placed : placed.parent, tabs);
@@ -672,7 +672,7 @@ export function contentOf(doc: OutlineDoc, node: OutlineNode): NewContent {
       gap++;
     } else if (owner || after) break;
   }
-  const marker = node.kind === 'item' ? { marker: doc.text.slice(node.block.markerFrom!, node.block.markerTo!) } : {};
+  const marker = node.kind === 'item' ? { marker: doc.text.slice(doc.markerFrom(node.block), doc.markerTo(node.block)) } : {};
   return { lines: lines.length || node.kind === 'quote' ? lines : [''], gap, ...marker };
 }
 

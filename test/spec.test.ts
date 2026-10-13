@@ -1,8 +1,10 @@
-// Runs the behaviour spec in spec/*.md (the format is in spec/README.md) against the core.
+// Runs the behaviour spec in spec/*.md (the format is in spec/README.md) against the core, in every
+// Markdown flavor, or in the one an example names.
 
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { test, type TestContext } from 'node:test';
+import { configValues, type Config } from '../src/config.ts';
 import { OutlineDoc } from '../src/doc.ts';
 import { drawState, drawText, readDrawing, readText } from './drawing.ts';
 import { isAction, play, type Played } from './player.ts';
@@ -20,15 +22,18 @@ function outcome(state: Played): string {
 // a drawn selection without a caret glyph is forward
 const normalize = (drawn: string): string => drawn.replace(/»┃/g, '»');
 
-function run(t: SpecTest): void {
+/** The flavors an example runs in: the one it names, or all (most behaviour doesn't depend on it). */
+const flavorsOf = (t: SpecTest): readonly Config['flavor'][] => (t.options.flavor ? [t.options.flavor as Config['flavor']] : configValues.flavor);
+
+function run(t: SpecTest, flavor: Config['flavor']): void {
   const start = readDrawing(t.initial.buffer);
   let state: Played = {
-    doc: OutlineDoc.parse(start.text, { placeholders: start.placeholders, config: specConfig(t.options) }),
+    doc: OutlineDoc.parse(start.text, { placeholders: start.placeholders, config: { flavor, ...specConfig(t.options) } }),
     selection: start.selection,
     clipboard: readText(t.initial.clipboard ?? ''),
   };
   for (const step of t.steps) {
-    const at = `${t.file}:${step.line}`;
+    const at = `${t.file}:${step.line} (${flavor})`;
     const unknown = step.actions.filter((a) => !isAction(a));
     assert.deepEqual(unknown, [], `${at}: unknown actions`);
     state = play(state, step.actions);
@@ -56,11 +61,14 @@ for (const file of readdirSync(specDir).filter((f) => f.endsWith('.md') && f !==
   for (const t of tests) {
     // files drawing another editor's behaviour (`editor: logseq`) are that editor's runner's
     if ((t.options.editor ?? 'ourus') !== 'ourus') continue;
+    const runAll = (): void => {
+      for (const flavor of flavorsOf(t)) run(t, flavor);
+    };
     test(`${file} › ${t.name}`, (ctx: TestContext) => {
-      if (!t.pending) return run(t);
-      // a pending example fails once it passes, so it gets promoted rather than forgotten
+      if (!t.pending) return runAll();
+      // a pending example fails once it passes (in every flavor), so it gets promoted rather than forgotten
       try {
-        run(t);
+        runAll();
       } catch (e) {
         ctx.todo('pending');
         throw e;

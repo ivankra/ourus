@@ -1,9 +1,9 @@
 // The immutable document snapshot: text plus its derived block tree, line table and outline.
 
-import { configOf, type Config } from './config.ts';
+import { configOf, flavorOf, type Config } from './config.ts';
 import { buildOutline, headOwners, outlineNodes, type OutlineNode } from './outline.ts';
-import { parseCommonMark } from './syntax/commonmark.ts';
-import type { Block, LineInfo } from './block.ts';
+import { Syntax } from './parsing/syntax.ts';
+import type { Block, LineInfo } from './parsing/types.ts';
 import { applyChanges, diffLines, invertChanges, lineIndexAt, mapPos, normalizeChanges, type TextChange } from './text.ts';
 
 export interface OutlineDocApplyParams {
@@ -49,12 +49,13 @@ function validPlaces(text: string, marks: readonly number[]): number[] {
 
 export class OutlineDoc {
   readonly text: string;
+  /** The parse: block tree, line table and inlines, updated incrementally from snapshot to snapshot. */
+  readonly syntax: Syntax;
   /** The block tree's root: the document. */
   readonly blocks: Block;
   readonly outline: OutlineNode;
   /** Outline nodes in document order, root first. */
   readonly nodes: readonly OutlineNode[];
-  readonly lines: readonly LineInfo[];
   /**
    * Placeholders: ends of empty lines read as if text had been typed there, so an empty
    * item or paragraph the user is about to fill exists in the outline. Session state the text
@@ -65,7 +66,6 @@ export class OutlineDoc {
   readonly config: Config;
   private readonly owners: readonly (OutlineNode | null)[];
   private readonly byId: ReadonlyMap<number, OutlineNode>;
-  private readonly lineStarts: readonly number[];
   /** Next id to hand out in this lineage. */
   private readonly nextId: number;
 
@@ -73,24 +73,35 @@ export class OutlineDoc {
     text: string,
     placeholders: readonly number[],
     config: Config,
-    ids?: (node: OutlineNode, lines: readonly LineInfo[]) => number | undefined,
+    ids?: (node: OutlineNode, syntax: Syntax) => number | undefined,
     nextId = 1,
+    parse: (placeholders: readonly number[]) => Syntax = (sentinels) => Syntax.parse(text, flavorOf(config.flavor), { sentinels }),
+    /** A snapshot whose outline holds for this one when the parse kept its blocks. */
+    same?: OutlineDoc,
   ) {
     this.text = text;
     this.config = config;
     this.placeholders = validPlaces(text, placeholders);
-    const { root: blocks, lines } = parseCommonMark(text, { placeholders: this.placeholders });
+    this.syntax = parse(this.placeholders);
+    const blocks = this.syntax.root;
     this.blocks = blocks;
-    this.lines = lines;
-    this.lineStarts = this.lines.map((line) => line.from);
-    const root = buildOutline(blocks, lines, text);
+    if (same && same.syntax.root === blocks) {
+      // the same blocks: the same outline, ids and all (they hold line numbers, not offsets)
+      this.outline = same.outline;
+      this.nodes = same.nodes;
+      this.owners = same.owners;
+      this.byId = same.byId;
+      this.nextId = same.nextId;
+      return;
+    }
+    const root = buildOutline(blocks, (i) => this.syntax.line(i), text);
     const nodes = outlineNodes(root);
     // carry ids over from a previous snapshot where the caller can match nodes
     if (ids) {
       const used = new Set<number>([0]);
       for (const n of nodes) {
         if (n.kind === 'root') continue;
-        const id = ids(n, this.lines);
+        const id = ids(n, this.syntax);
         (n as { id: number }).id = id !== undefined && !used.has(id) ? id : nextId++;
         used.add(n.id);
       }
@@ -100,8 +111,27 @@ export class OutlineDoc {
     this.nextId = nextId;
     this.outline = root;
     this.nodes = nodes;
-    this.owners = headOwners(nodes, this.lines.length);
+    this.owners = headOwners(nodes, this.syntax.lineCount);
     this.byId = new Map(nodes.map((n) => [n.id, n]));
+  }
+
+  /** The line table (built when first asked for: prefer `line`). */
+  get lines(): readonly LineInfo[] {
+    return this.syntax.lines;
+  }
+
+  /** Line `i`. */
+  line(i: number): LineInfo {
+    return this.syntax.line(i);
+  }
+
+  /** Where an item's marker (`-`, `1.`) starts and ends in the text. */
+  markerFrom(item: Block): number {
+    return this.syntax.markerFrom(item);
+  }
+
+  markerTo(item: Block): number {
+    return this.syntax.markerTo(item);
   }
 
   static parse(text: string, params: { placeholders?: readonly number[]; config?: Partial<Config> } = {}): OutlineDoc {
@@ -130,14 +160,30 @@ export class OutlineDoc {
       text,
       [...places, ...(params.placeholders ?? [])],
       this.config,
-      (n, lines) => {
-        const explicit = params.identity?.get(headStartIn(n, lines));
+      (n, syntax) => {
+        const explicit = params.identity?.get(headStartIn(n, syntax));
         if (explicit !== undefined) return explicit;
-        carried ??= this.carriedIds(sorted, lines, claimed);
+        carried ??= this.carriedIds(sorted, syntax, claimed);
         return carried.get(rankedKey(ranks, `${n.kind}@${n.startLine}`));
       },
       this.nextId,
+      (sentinels) => this.syntax.update(sorted, { sentinels }),
+      !params.identity && this.withinLines(sorted) ? this : undefined,
     );
+  }
+
+  /**
+   * Whether every change stays inside one line, adds no line and leaves part of the line's text:
+   * then ids carry by position exactly as the outline would be rebuilt, and a kept parse keeps it.
+   */
+  private withinLines(changes: readonly TextChange[]): boolean {
+    const { starts, ends } = this.syntax;
+    for (const c of changes) {
+      if (/[\r\n]/.test(c.insert)) return false;
+      const i = lineIndexAt({ starts, ends }, c.from);
+      if (c.to > ends[i]! || (c.to > c.from && c.from <= starts[i]! && c.to >= ends[i]!)) return false;
+    }
+    return true;
   }
 
   /**
@@ -150,18 +196,19 @@ export class OutlineDoc {
     if (!changes.some((change) => change.to > change.from) || !isPlace(text, caret)) return false;
     const shape = (doc: OutlineDoc): string => doc.nodes.map((node) => `${node.depth}:${node.kind}`).join(',');
     const before = shape(this);
-    const config = this.config;
-    return shape(OutlineDoc.parse(text, { config })) !== before && shape(OutlineDoc.parse(text, { placeholders: [caret], config })) === before;
+    const read = (placeholders: readonly number[]): OutlineDoc =>
+      new OutlineDoc(text, placeholders, this.config, undefined, 1, (sentinels) => this.syntax.update(changes, { sentinels }));
+    return shape(read([])) !== before && shape(read([caret])) === before;
   }
 
   /** Ids of this snapshot's nodes by the key they will have in the new lines, after `changes`. */
-  private carriedIds(changes: readonly TextChange[], lines: readonly LineInfo[], claimed: ReadonlySet<number>): Map<string, number> {
-    const starts = { starts: lines.map((line) => line.from), ends: [] };
+  private carriedIds(changes: readonly TextChange[], syntax: Syntax, claimed: ReadonlySet<number>): Map<string, number> {
+    const starts = { starts: syntax.starts, ends: [] };
     const ranks = new Map<string, number>();
     const out = new Map<string, number>();
     for (const n of this.nodes) {
       if (n.kind === 'root' || claimed.has(n.id)) continue;
-      const first = this.lines[n.startLine]!;
+      const first = { from: this.syntax.starts[n.startLine]!, to: this.syntax.ends[n.startLine]! };
       if (changes.some((c) => c.from < c.to && c.from <= first.from && c.to >= first.to)) continue;
       const line = lineIndexAt(starts, mapPos(changes, first.from, 1));
       const key = rankedKey(ranks, `${n.kind}@${line}`);
@@ -192,21 +239,30 @@ export class OutlineDoc {
   }
 
   lineAt(pos: number): LineInfo {
-    return this.lines[lineIndexAt({ starts: this.lineStarts, ends: [] }, pos)] ?? emptyLine;
+    return this.syntax.lineCount ? this.syntax.line(lineIndexAt({ starts: this.syntax.starts, ends: [] }, pos)) : emptyLine;
   }
 
   /** Offset where a node starts: an item's marker, or the content start of its first line. */
   headStart(node: OutlineNode): number {
-    return headStartIn(node, this.lines);
+    return headStartIn(node, this.syntax);
   }
 
-  /** The node's own text, line by line, without container prefixes, list markers or heading marks. */
+  /**
+   * The node's own text, line by line, without container prefixes, list markers or heading marks.
+   * A task's checkbox is text, as in CommonMark, also where the flavor reads it as markup: a task
+   * with nothing after its checkbox (GFM's `- [ ] `, which has no paragraph) has the checkbox.
+   */
   headLines(node: OutlineNode): string[] {
-    if (!node.head) return [];
+    if (!node.head) {
+      const task = node.kind === 'item' ? node.block.task : undefined;
+      if (!task) return [];
+      const line = this.syntax.line(node.block.startLine);
+      return [this.text.slice(line.from + task.start, line.to)];
+    }
     const head = node.head;
     const out: string[] = [];
     for (let lineNo = head.startLine; lineNo <= head.endLine; lineNo++) {
-      const line = this.lines[lineNo]!;
+      const line = this.syntax.line(lineNo);
       out.push(this.text.slice(line.contentFrom, line.to));
     }
     if (head.type === 'heading') {
@@ -222,12 +278,12 @@ export class OutlineDoc {
    */
   headRange(node: OutlineNode): { from: number; to: number } | null {
     if (!node.head) return null;
-    const first = this.lines[node.head.startLine]!;
-    const last = this.lines[node.head.endLine]!;
+    const first = this.syntax.line(node.head.startLine);
+    const last = this.syntax.line(node.head.endLine);
     let from = first.contentFrom;
     while (from < first.to && isSpace(this.text.charCodeAt(from))) from++;
     let to = last.to;
-    if (node.head.type === 'heading' && node.head.setext) to = this.lines[node.head.endLine - 1]!.to;
+    if (node.head.type === 'heading' && node.head.setext) to = this.syntax.line(node.head.endLine - 1).to;
     else if (node.head.type === 'heading') {
       const m = /^#{1,6}[ \t]*/.exec(this.text.slice(from, first.to));
       if (m) from += m[0].length;
@@ -255,10 +311,12 @@ const emptyLine: LineInfo = {
   prefix: [],
   contentFrom: 0,
   contentColumn: 0,
+  containers: [],
   container: null as never,
   leaf: null,
   lazy: false,
   blank: true,
+  empty: true,
 };
 
 /** `key` numbered by how many times it was seen before: `item@3#0`, then `item@3#1` for an item nested on the same line. */
@@ -268,7 +326,7 @@ function rankedKey(seen: Map<string, number>, key: string): string {
   return `${key}#${rank}`;
 }
 
-function headStartIn(node: OutlineNode, lines: readonly LineInfo[]): number {
-  if (node.kind === 'item') return node.block.markerFrom!;
-  return lines[node.startLine]?.contentFrom ?? 0;
+function headStartIn(node: OutlineNode, syntax: Syntax): number {
+  if (node.kind === 'item') return syntax.markerFrom(node.block);
+  return node.startLine < syntax.lineCount ? syntax.line(node.startLine).contentFrom : 0;
 }

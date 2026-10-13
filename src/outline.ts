@@ -5,9 +5,11 @@
 // child; in a section (the root's or a heading's children), a paragraph owns the lists right after
 // it (with or without a blank line between), whose items are its children; a quote is a container
 // like an item, its blocks its children, with no text of its own but a callout's title (its first
-// paragraph, `[!type] Title`); code, HTML, thematic breaks and reference definitions are atoms.
+// paragraph, `[!type] Title`, or in the Obsidian flavor its title line); code, HTML, thematic breaks,
+// reference definitions, tables, math and comment blocks, and footnote definitions are atoms.
+// Frontmatter is a preamble: no node.
 
-import type { Block, LineInfo } from './block.ts';
+import type { Block, LineInfo } from './parsing/types.ts';
 
 export type OutlineKind = 'root' | 'heading' | 'item' | 'paragraph' | 'quote' | 'atom';
 
@@ -36,12 +38,12 @@ type MutableOutlineNode = { -readonly [K in keyof OutlineNode]: OutlineNode[K] }
   children: MutableOutlineNode[];
 };
 
-const ATOMS = new Set(['code_block', 'html_block', 'thematic_break', 'refdef']);
+const ATOMS = new Set(['code_block', 'html_block', 'thematic_break', 'refdef', 'table', 'math_block', 'comment_block', 'footnote_definition']);
 /** The blocks that can be an item's text: any other first block stays its child. */
-const HEADS = new Set(['paragraph', 'heading', 'code_block', 'html_block']);
+const HEADS = new Set(['paragraph', 'heading', 'code_block', 'html_block', 'math_block', 'comment_block']);
 
 /** Builds the outline and returns its root. Ids are assigned in document order starting at 1; the root gets 0. */
-export function buildOutline(document: Block, lines: readonly LineInfo[], text: string): OutlineNode {
+export function buildOutline(document: Block, line: (index: number) => LineInfo, text: string): OutlineNode {
   let nextId = 0;
   const add = (kind: OutlineKind, block: Block, head: Block | null, parent: MutableOutlineNode | null): MutableOutlineNode => {
     const startLine = kind === 'root' ? 0 : block.startLine;
@@ -95,9 +97,14 @@ export function buildOutline(document: Block, lines: readonly LineInfo[], text: 
   };
 
   const addQuote = (quote: Block, parent: MutableOutlineNode): void => {
-    // a callout's title line is its text
+    // a callout's title line is its text: a title block where the flavor has callouts, else the
+    // first paragraph when it starts with `[!type]`
     const first = quote.children[0];
-    const title = first?.type === 'paragraph' && /^[ \t]*\[![^\]]*\]/.test(text.slice(lines[first.startLine]!.contentFrom, lines[first.startLine]!.to)) ? first : null;
+    const title =
+      first?.type === 'callout_title' ||
+      (first?.type === 'paragraph' && /^[ \t]*\[![^\]]*\]/.test(text.slice(line(first.startLine).contentFrom, line(first.startLine).to)))
+        ? first
+        : null;
     const node = add('quote', quote, title, parent);
     addBlocks(title ? quote.children.slice(1) : quote.children, node);
   };

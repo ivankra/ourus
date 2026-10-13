@@ -6,9 +6,9 @@
 
 import { OutlineDoc, type OutlineDocApplyParams } from './doc.ts';
 import type { OutlineKind, OutlineNode } from './outline.ts';
-import { startsBlock } from './syntax/commonmark.ts';
-import { scanReference } from './syntax/refdef.ts';
-import type { Block, LineInfo, PrefixPiece } from './block.ts';
+import { startsBlock } from './parsing/blocks.ts';
+import { scanReference } from './parsing/refs.ts';
+import type { Block, LineInfo, PrefixPiece } from './parsing/types.ts';
 import { advanceColumns, applyChanges, composeChanges, dominantEnding, mapPos, type TextChange } from './text.ts';
 import {
   asNewNode,
@@ -164,23 +164,23 @@ function renumber(doc: OutlineDoc, plan: Plan): Plan | null {
     // the old list's head still opens an earlier list beside this one: this is the lower part of a split
     const headList = newList.get(before.get(old.children[0]!)!);
     if (headList && headList !== list && headList.parent === list.parent && headList.startLine < list.startLine) return numbers[0]!;
-    return parseInt(doc.text.slice(old.children[0]!.markerFrom!, old.children[0]!.markerTo!), 10);
+    return parseInt(doc.text.slice(doc.markerFrom(old.children[0]!), doc.markerTo(old.children[0]!)), 10);
   };
   const tabs = usesTabs(next);
   const extra: TextChange[] = [];
   let failed = false;
   const walk = (b: Block): void => {
     if (b.type === 'list' && b.list!.type === 'ordered') {
-      const numbers = b.children.map((item) => parseInt(text.slice(item.markerFrom!, item.markerTo!), 10));
+      const numbers = b.children.map((item) => parseInt(text.slice(next.markerFrom(item), next.markerTo(item)), 10));
       const alike = numbers.length > 1 && numbers.every((n) => n === numbers[0]);
       if (!alike && changed(b)) {
         const start = startOf(b, numbers);
         b.children.forEach((item, i) => {
           if (numbers[i] === start + i) return;
           const marker = `${start + i}${item.list!.delimiter}`;
-          extra.push({ from: item.markerFrom!, to: item.markerTo!, insert: marker });
+          extra.push({ from: next.markerFrom(item), to: next.markerTo(item), insert: marker });
           // a wider or narrower marker moves the item's content column: its other lines follow
-          const delta = marker.length - (item.markerTo! - item.markerFrom!);
+          const delta = marker.length - (next.markerTo(item) - next.markerFrom(item));
           for (let lineNo = item.startLine + 1; lineNo <= item.endLine && delta !== 0; lineNo++) {
             const c = reindent(next, lineNo, item, item, delta, tabs);
             if (c === 'fail') failed = true;
@@ -207,10 +207,10 @@ function renumber(doc: OutlineDoc, plan: Plan): Plan | null {
     const owner = nodes[0]!.parent!.id;
     const kept = nodes.filter((n) => expectedParent.get(n.id) === owner);
     if (kept.length === nodes.length || kept.every((n) => next.node(n.id)?.kind === 'item')) continue;
-    const start = parseInt(doc.text.slice(list.children[0]!.markerFrom!, list.children[0]!.markerTo!), 10);
+    const start = parseInt(doc.text.slice(doc.markerFrom(list.children[0]!), doc.markerTo(list.children[0]!)), 10);
     kept.forEach((n, i) => {
-      const old = doc.text.slice(n.block.markerFrom!, n.block.markerTo!);
-      const at = mapPos(plan.changes, n.block.markerFrom!, 1);
+      const old = doc.text.slice(doc.markerFrom(n.block), doc.markerTo(n.block));
+      const at = mapPos(plan.changes, doc.markerFrom(n.block), 1);
       const marker = `${start + i}${n.block.list!.delimiter}`;
       if (text.slice(at, at + old.length) === old && old !== marker && !extra.some((c) => c.from === at)) {
         extra.push({ from: at, to: at + old.length, insert: marker });
@@ -319,13 +319,13 @@ function lineSpan(text: string, pos: number): [number, number] {
   return [start, end];
 }
 
-/** An item with no text of its own and no children (its head may be a placeholder). */
 /** Whether `node` is an item with no text of its own (a checkbox aside) but with children. */
 function isEmptyWithChildren(doc: OutlineDoc, node: OutlineNode): boolean {
   if (node.kind !== 'item' || node.children.length === 0) return false;
   return !node.head || (node.head.type === 'paragraph' && isEmptyText(doc.headLines(node).join('\n')));
 }
 
+/** An item with no text of its own and no children (its head may be a placeholder). */
 function isEmptyItem(doc: OutlineDoc, node: OutlineNode): boolean {
   if (node.kind !== 'item' || node.children.length > 0) return false;
   if (node.head && node.head.type !== 'paragraph') return false;
@@ -851,9 +851,9 @@ function siblingPrefix(doc: OutlineDoc, node: OutlineNode): string {
   const ownPiece = line.prefix[own]!;
   // outer containers whose marker is also on this line (`- - a`) are rewritten as indentation
   if (outer.every((p) => p.block.type === 'blockquote' || p.block.startLine < node.startLine)) {
-    return doc.text.slice(line.from, node.block.markerFrom!);
+    return doc.text.slice(line.from, doc.markerFrom(node.block));
   }
-  return outer.map((p) => continuationText(doc, p)).join('') + doc.text.slice(ownPiece.from, node.block.markerFrom!);
+  return outer.map((p) => continuationText(doc, p)).join('') + doc.text.slice(ownPiece.from, doc.markerFrom(node.block));
 }
 
 /** The text before a child block's first character: the containers' prefixes, then its indentation. */
@@ -872,7 +872,7 @@ function continuationText(doc: OutlineDoc, p: PrefixPiece): string {
 
 function markerText(doc: OutlineDoc, node: OutlineNode, next: boolean): string {
   const b = node.block;
-  const text = doc.text.slice(b.markerFrom!, b.markerTo!);
+  const text = doc.text.slice(doc.markerFrom(b), doc.markerTo(b));
   if (!next || b.list!.type === 'bullet') return text;
   return `${parseInt(text, 10) + 1}${b.list!.delimiter}`;
 }
@@ -935,6 +935,36 @@ function encodeRest(rest: string, lines: readonly string[]): { escape: boolean; 
   return { escape: false, marker: m ? m[0].length : 0 };
 }
 
+/**
+ * Enter in a callout's title where the flavor reads the title as a line of its own (Obsidian): the
+ * rest of the title starts the body, in the paragraph the body starts with or in a new one before
+ * it. In the `[!type]` marker a line break would unmake the callout.
+ */
+function splitCalloutTitle(doc: OutlineDoc, node: OutlineNode, line: LineInfo, selFrom: number, selTo: number): Outcome {
+  if (line.index !== node.head!.startLine) return notApplicable;
+  const text = doc.text;
+  const markerEnd = line.contentFrom + (/^\[![^\]]*\][+-]?/.exec(text.slice(line.contentFrom, line.to))?.[0].length ?? 0);
+  if (selFrom < markerEnd) return reject('not-expressible', "a line break would split the callout's type");
+  let from = selFrom;
+  while (from > markerEnd && isBlankChar(text.charCodeAt(from - 1))) from--;
+  let to = selTo;
+  while (to < line.to && isBlankChar(text.charCodeAt(to))) to++;
+  let rest = text.slice(to, line.to);
+  const first = node.children[0];
+  const joins = first?.kind === 'paragraph' && first.startLine === line.index + 1;
+  const body = joins ? doc.headLines(first) : [];
+  // the rest starts a paragraph: escaped where it would start a block instead
+  if (rest !== '' && (encodeRest(rest, body).escape || reListMarker.test(rest))) {
+    const digits = /^\d*/.exec(rest)![0].length;
+    rest = rest.slice(0, digits) + '\\' + rest.slice(digits);
+  }
+  const insert = (line.ending || dominantEnding(text)) + line.prefix.map((p) => continuationText(doc, p)).join('');
+  const caret = from + insert.length;
+  const kept = withText(doc.outline, node.id, normText([text.slice(line.contentFrom, from)]));
+  const expected = joins ? withText(kept, first.id, normText([rest, ...body])) : append(kept, node.id, 'first', [created('paragraph', normText([rest]))]);
+  return { changes: [{ from, to: line.to, insert: insert + rest }], selection: { anchor: caret, head: caret }, expected, compare: 'tree' };
+}
+
 function split(doc: OutlineDoc, sel: Selection): Outcome {
   const selFrom = Math.min(sel.anchor, sel.head);
   const selTo = Math.max(sel.anchor, sel.head);
@@ -948,7 +978,9 @@ function split(doc: OutlineDoc, sel: Selection): Outcome {
     return splitParagraph(doc, node, line, selFrom, selTo);
   }
   if (node.kind === 'heading') return splitHeading(doc, node, line, selFrom, selTo);
-  // a callout's title and body are one paragraph: Enter in the title starts the body with the rest
+  // a callout's title: a line of its own (Obsidian), or with the body one paragraph, whose line Enter
+  // breaks; either way the rest starts the body
+  if (node.kind === 'quote' && node.head?.type === 'callout_title') return splitCalloutTitle(doc, node, line, selFrom, selTo);
   if (node.kind === 'quote' && node.head) return lineBreak(doc, sel);
   if (line.leaf?.type === 'code_block' && line.leaf.fenced) return enterAfterFence(doc, node, line, selFrom, selTo) ?? fenceNewline(doc, node, line, selFrom, selTo);
   if (node.kind !== 'item') return notApplicable;
@@ -959,9 +991,9 @@ function split(doc: OutlineDoc, sel: Selection): Outcome {
   // an empty item with children: Enter makes a new empty first child, the caret going into it, as at
   // the end of any item with children (Workflowy, Logseq, Roam)
   if (isEmptyWithChildren(doc, node)) {
-    if (pos < node.block.markerTo! || selFrom !== selTo) return notApplicable;
+    if (pos < doc.markerTo(node.block) || selFrom !== selTo) return notApplicable;
     const first = node.children[0]!;
-    const box = node.head && reTaskBox.test(doc.headLines(node)[0]!.trimStart()) ? '[ ] ' : '';
+    const box = reTaskBox.test(doc.headLines(node)[0]?.trimStart() ?? '') ? '[ ] ' : '';
     const prefix = first.kind === 'item' ? siblingPrefix(doc, first) : childIndent(doc, node, first);
     const marker = first.kind === 'item' ? markerText(doc, first, false) : markerText(doc, node, false).replace(/^\d+/, '1');
     const markerLine = doc.lines[node.startLine]!;
@@ -971,7 +1003,7 @@ function split(doc: OutlineDoc, sel: Selection): Outcome {
     return { changes: [{ from: markerLine.to, to: markerLine.to, insert }], selection: { anchor: caret, head: caret }, expected, compare: 'tree' };
   }
   if (isEmptyItem(doc, node)) {
-    if (pos < node.block.markerTo!) return notApplicable;
+    if (pos < doc.markerTo(node.block)) return notApplicable;
     // Enter on an empty item: a nested one outdents as the last child. First or in the middle of its
     // list, it gets a new empty sibling, the caret going into it (Workflowy, Logseq), or with
     // `enterOnEmptyItem: outdent` it outdents there too (Roam). A top-level one, or one in a quote,
@@ -1156,7 +1188,7 @@ function insertBefore(doc: OutlineDoc, node: OutlineNode, pos: number, box: stri
   const changes = [{ from: markerLine.from, to: markerLine.from, insert }];
   const caret = markerLine.from + line.length;
   const expected = place(doc.outline, node.parent!.id, node.id, 'before', [created('item', box.trim())]);
-  const identity = new Map([[node.block.markerFrom! + insert.length, node.id]]);
+  const identity = new Map([[doc.markerFrom(node.block) + insert.length, node.id]]);
   return { changes, selection: { anchor: caret, head: caret }, expected, compare: 'tree', identity, ...(held ? { placeholders: [caret] } : {}) };
 }
 
@@ -1436,7 +1468,7 @@ function pastePlain(doc: OutlineDoc, sel: Selection, payload: string): Outcome {
   }
   if (node?.kind === 'heading') return reject('not-expressible', 'a heading is a single line');
   // on an empty item, the text is its text: its first line escaped where it would start a block
-  if (node && isEmptyItem(doc, node) && from >= node.block.markerTo! && from === to) {
+  if (node && isEmptyItem(doc, node) && from >= doc.markerTo(node.block) && from === to) {
     const prefix = siblingPrefix(doc, node) + ' '.repeat(node.block.contentColumn! - node.block.markerColumn!);
     const eol = line.ending || dominantEnding(doc.text);
     const escapeFirst = (text: string): string => {
@@ -1451,7 +1483,7 @@ function pastePlain(doc: OutlineDoc, sel: Selection, payload: string): Outcome {
     };
     const textLines = lines.map((text, k) => (k === 0 ? escapeFirst(text.trim()) : escapeNext(text.trimStart())));
     // the space after the marker, if the line ends without one
-    const lead = doc.text.slice(node.block.markerTo!, line.to) === '' ? ' ' : '';
+    const lead = doc.text.slice(doc.markerTo(node.block), line.to) === '' ? ' ' : '';
     const insert = lead + textLines.map((text, k) => (k === 0 ? text : eol + prefix + text)).join('');
     const changes = [{ from, to, insert }];
     const caret = from + insert.length;
@@ -1519,7 +1551,7 @@ function paste(doc: OutlineDoc, sel: Selection, payload: string): Outcome {
   if (!node) return notApplicable;
   // in code, what is pasted is code
   if (isCodeLine(doc, doc.lineAt(pos))) return pastePlain(doc, sel, payload);
-  const empty = isEmptyItem(doc, node) && pos >= node.block.markerTo!;
+  const empty = isEmptyItem(doc, node) && pos >= doc.markerTo(node.block);
   if (!empty) {
     if (!node.head || (node.kind !== 'item' && node.kind !== 'heading' && node.kind !== 'paragraph')) return notApplicable;
     const range = doc.headRange(node)!;
@@ -1585,7 +1617,7 @@ function fitPaste(doc: OutlineDoc, node: OutlineNode, fragment: OutlineDoc, empt
   const copy = (root: OutlineNode): EditedOutlineNode => asNewNode(root, (n) => nodeText(fragment, n), (n) => contentOf(fragment, n));
   // outside a list (a paragraph's own list aside), the nodes go in as they are
   if (node.kind !== 'item' && !(node.kind === 'paragraph' && asChildren)) return { nodes: roots.map(copy), restyle: [] };
-  const markerOf = (item: OutlineNode, text: OutlineDoc): string => text.text.slice(item.block.markerFrom!, item.block.markerTo!);
+  const markerOf = (item: OutlineNode, text: OutlineDoc): string => text.text.slice(text.markerFrom(item.block), text.markerTo(item.block));
   // the list the paste lands in, and the item whose marker gives its form
   const first = node.children[0];
   const siblings = asChildren ? node.children : node.parent!.children;
@@ -1665,7 +1697,7 @@ function pasteSplit(doc: OutlineDoc, node: OutlineNode, line: LineInfo, pos: num
   const before = [...headLines.slice(0, i), headLines[i]!.slice(0, offset).trimStart() + pasted[0]];
   const after = [headLines[i]!.slice(offset), ...headLines.slice(i + 1)];
   const restText = normText(after);
-  const marker = doc.text.slice(node.block.markerFrom!, node.block.markerTo!);
+  const marker = doc.text.slice(doc.markerFrom(node.block), doc.markerTo(node.block));
   const item = (text: string): EditedOutlineNode => ({ ...created('item', normText([text])), lines: [text], marker });
   const fresh = pasted.slice(1).map((text) => item(escaped(text)));
   const last = fresh[fresh.length - 1]!;
@@ -1784,6 +1816,7 @@ function lineBreak(doc: OutlineDoc, sel: Selection): Outcome {
   if (codeLine.leaf?.type === 'code_block' && codeLine.leaf.fenced) return fenceNewline(doc, node, codeLine, pos, selTo);
   if (node.kind === 'atom') return notApplicable;
   if (node.kind === 'heading') return reject('not-expressible', 'a heading is a single line');
+  if (node.head?.type === 'callout_title') return reject('not-expressible', 'a callout title is a single line');
   if (!node.head || node.head.type !== 'paragraph') return notApplicable;
   const line = doc.lineAt(pos);
   const lines = doc.headLines(node);
@@ -1901,9 +1934,12 @@ function join(doc: OutlineDoc, sel: Selection): Outcome {
   if (node.kind !== 'item') return notApplicable;
   const range = doc.headRange(node);
   const markerLine = doc.lines[node.startLine]!;
+  // a task with nothing after its checkbox has no head where the flavor reads tasks (GFM): the checkbox
+  const task = node.block.task;
+  const textFrom = range ? range.from : task ? markerLine.from + task.start : null;
   // a task's checkbox is chrome, like the marker: the text starts after it
-  const box = range && node.head!.type === 'paragraph' ? /^\[[ xX]\](?:[ \t]+|$)/.exec(doc.text.slice(range.from, markerLine.to)) : null;
-  const contentStart = range ? range.from + (box ? box[0].length : 0) : markerLine.to;
+  const box = textFrom !== null && (!node.head || node.head.type === 'paragraph') ? /^\[[ xX]\](?:[ \t]+|$)/.exec(doc.text.slice(textFrom, markerLine.to)) : null;
+  const contentStart = textFrom !== null ? textFrom + (box ? box[0].length : 0) : markerLine.to;
   // anywhere in the item's marker zone counts as its start: deleting the line break before
   // a marker would merge the item's marker into the text above
   if (pos > contentStart || pos < markerLine.from || doc.lineAt(pos).index !== node.startLine) return notApplicable;
@@ -1912,10 +1948,10 @@ function join(doc: OutlineDoc, sel: Selection): Outcome {
   // goes, and the task is a plain item (`checkbox`)
   if (box && pos === contentStart && doc.config.taskEditing === 'text') return notApplicable;
   if (box && pos === contentStart && doc.config.taskEditing === 'checkbox') {
-    const changes = [{ from: range!.from, to: range!.from + box[0].length, insert: '' }];
+    const changes = [{ from: textFrom!, to: textFrom! + box[0].length, insert: '' }];
     const lines = doc.headLines(node);
     lines[0] = lines[0]!.trimStart().slice(box[0].length);
-    const caret = range!.from;
+    const caret = textFrom!;
     // emptied right after its parent's text, the item exists only under the caret
     const held = normText(lines) === '' && followsParentText(doc, node);
     return { changes, selection: { anchor: caret, head: caret }, expected: withText(doc.outline, node.id, normText(lines)), compare: 'tree', ...(held ? { placeholders: [caret] } : {}) };
@@ -1984,7 +2020,7 @@ function join(doc: OutlineDoc, sel: Selection): Outcome {
   // into an empty item above: the text moves up into it, checkbox and all
   if (range && prev.kind === 'item' && (!prev.head || (prev.head.type === 'paragraph' && normText(doc.headLines(prev)) === ''))) {
     const prevLine = doc.lines[prev.startLine]!;
-    const spaced = prevLine.to > prev.block.markerTo! && isBlankChar(doc.text.charCodeAt(prevLine.to - 1));
+    const spaced = prevLine.to > doc.markerTo(prev.block) && isBlankChar(doc.text.charCodeAt(prevLine.to - 1));
     const text = normText(doc.headLines(node));
     if (node.children.length > 0) {
       // the children move: the writer writes the text into the item above, and them
@@ -2247,7 +2283,7 @@ function joinForward(doc: OutlineDoc, sel: Selection): Outcome {
   // the end of the text: its line's end, or before a heading's closing `#`s; on an empty item, anywhere
   // after its marker (only spaces follow it there)
   const lastTextLine = !head ? node.startLine : head.type === 'heading' && head.setext ? head.endLine - 1 : head.endLine;
-  const emptyItem = (isEmptyItem(doc, node) || isEmptyWithChildren(doc, node)) && line.index === node.startLine && pos >= node.block.markerTo! && doc.text.slice(pos, line.to).trim() === '';
+  const emptyItem = (isEmptyItem(doc, node) || isEmptyWithChildren(doc, node)) && line.index === node.startLine && pos >= doc.markerTo(node.block) && doc.text.slice(pos, line.to).trim() === '';
   if (!emptyItem && (line.index !== lastTextLine || (pos !== line.to && pos !== doc.headRange(node)?.to))) return notApplicable;
   const next = doc.nodes[doc.nodes.indexOf(node) + 1];
   if (!next) return notApplicable;

@@ -3,8 +3,8 @@
 // a `config` block before them sets a test's options over the file's frontmatter.
 
 import { readConfig, readSettings, type Config } from '../src/config.ts';
-import { parseCommonMark } from '../src/syntax/commonmark.ts';
-import type { Block, LineInfo } from '../src/block.ts';
+import { Syntax } from '../src/parsing/syntax.ts';
+import type { Block, LineInfo } from '../src/parsing/types.ts';
 
 /** A parsed spec file: its text, block tree and line table. */
 type Parsed = { readonly text: string; readonly root: Block; readonly lines: readonly LineInfo[] };
@@ -56,7 +56,8 @@ export class SpecError extends Error {}
 
 export function readSpec(file: string, source: string): SpecTest[] {
   const { body, options: fileOptions } = frontmatter(file, source);
-  const tree: Parsed = { text: body, ...parseCommonMark(body) };
+  const syntax = Syntax.parse(body);
+  const tree: Parsed = { text: body, root: syntax.root, lines: syntax.lines };
   const fail = (line: number, message: string): never => {
     throw new SpecError(`${file}:${line + 1}: ${message}`);
   };

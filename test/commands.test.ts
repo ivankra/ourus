@@ -2,17 +2,21 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import fc from 'fast-check';
 import { execute, type Command } from '../src/commands.ts';
+import { configValues } from '../src/config.ts';
 import { OutlineDoc } from '../src/doc.ts';
 import { applyChanges } from '../src/text.ts';
 
 const RUNS = Number(process.env.OURUS_FUZZ_RUNS ?? 2000);
 
+/** The flavor a document is read in: commands behave alike in all, but read tasks and callouts apart. */
+const arbFlavor = fc.constantFrom(...configValues.flavor);
+
 /** Outline-shaped documents: headings, paragraphs and nested lists in tidy and untidy styles. */
 const arbOutlineDoc = fc
   .array(
     fc.oneof(
-      { weight: 6, arbitrary: fc.tuple(fc.integer({ min: 0, max: 3 }), fc.constantFrom('- ', '* ', '1. ', '2) ', '- [ ] '), fc.constantFrom('a', 'b c', 'x', 'long text')) },
-      { weight: 1, arbitrary: fc.constantFrom('', '# H', '## H2', 'para', '```', 'code', '  cont') },
+      { weight: 6, arbitrary: fc.tuple(fc.integer({ min: 0, max: 3 }), fc.constantFrom('- ', '* ', '1. ', '2) ', '- [ ] ', '- [x] '), fc.constantFrom('a', 'b c', 'x', 'long text', '')) },
+      { weight: 1, arbitrary: fc.constantFrom('', '# H', '## H2', 'para', '```', 'code', '  cont', '> [!note] T', '> q', '> - q') },
     ),
     { minLength: 1, maxLength: 14 },
   )
@@ -44,8 +48,8 @@ const CARET_COMMANDS = new Set<Command['type']>(['enter', 'shiftEnter', 'deleteC
 test('commands keep text, changes and selection consistent', () => {
   const tally = new Map<string, number>();
   fc.assert(
-    fc.property(arbOutlineDoc, fc.nat(), fc.nat(), fc.constantFrom(...COMMANDS), (text, a, b, type) => {
-      const doc = OutlineDoc.parse(text);
+    fc.property(arbOutlineDoc, arbFlavor, fc.nat(), fc.nat(), fc.constantFrom(...COMMANDS), (text, flavor, a, b, type) => {
+      const doc = OutlineDoc.parse(text, { config: { flavor } });
       const anchor = a % (text.length + 1);
       const head = CARET_COMMANDS.has(type) ? anchor : b % (text.length + 1);
       const r = execute(doc, { type } as Command, { anchor, head });
@@ -67,8 +71,8 @@ test('commands keep text, changes and selection consistent', () => {
 
 test('outdent undoes indent of a list item in a tidy outline', () => {
   fc.assert(
-    fc.property(arbTidyOutline, fc.nat(), (text, a) => {
-      const doc = OutlineDoc.parse(text);
+    fc.property(arbTidyOutline, arbFlavor, fc.nat(), (text, flavor, a) => {
+      const doc = OutlineDoc.parse(text, { config: { flavor } });
       const pos = a % (text.length + 1);
       const r1 = execute(doc, { type: 'indent' }, { anchor: pos, head: pos });
       if (r1.status !== 'applied') return;
@@ -85,10 +89,10 @@ test('outdent undoes indent of a list item in a tidy outline', () => {
 
 test('on tidy outlines every command plans correctly (verification never has to step in)', () => {
   fc.assert(
-    fc.property(arbTidyOutline, fc.nat(), fc.nat(), fc.constantFrom(...COMMANDS), (text, a, b, type) => {
+    fc.property(arbTidyOutline, arbFlavor, fc.nat(), fc.nat(), fc.constantFrom(...COMMANDS), (text, flavor, a, b, type) => {
       const anchor = a % (text.length + 1);
       const head = CARET_COMMANDS.has(type) ? anchor : b % (text.length + 1);
-      const r = execute(OutlineDoc.parse(text), { type } as Command, { anchor, head });
+      const r = execute(OutlineDoc.parse(text, { config: { flavor } }), { type } as Command, { anchor, head });
       if (r.status === 'rejected') assert.notEqual(r.reason, 'encoding-failed', r.detail ?? '');
     }),
     { numRuns: RUNS },
