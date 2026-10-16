@@ -5,6 +5,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { linkSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
+import { ensureAptInstalled } from './system.ts';
 
 export const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
@@ -19,12 +20,13 @@ export const freePort = (): Promise<number> =>
   });
 
 /** An Xvfb on a display it finds free itself (`-displayfd`: two runs starting at once can't pick the same one), once it takes connections. */
-export function startXvfb(): Promise<{ display: string; proc: ChildProcess }> {
+export function startXvfb(say: (line: string) => void): Promise<{ display: string; proc: ChildProcess }> {
+  ensureAptInstalled('a display', [{ pkg: 'xvfb', command: 'Xvfb' }], say);
   const proc = spawn('Xvfb', ['-displayfd', '3', '-screen', '0', '1280x900x24', '-nolisten', 'tcp'], { stdio: ['ignore', 'ignore', 'ignore', 'pipe'] });
   return new Promise((resolve, reject) => {
     const fail = (why: string): void => {
       proc.kill();
-      reject(new Error(`can't start Xvfb (${why}); it is in Debian's xvfb package`));
+      reject(new Error(`can't start Xvfb (${why})`));
     };
     const timer = setTimeout(() => fail('no display in 10s'), 10000);
     let out = '';

@@ -21,8 +21,23 @@ import ObsidianLauncher, { type PluginEntry } from 'obsidian-launcher';
 import { chromium, type Page } from 'playwright-core';
 import { freePort, sleep, startXvfb, takeLock } from '../lib/desktop.ts';
 import type { Driver } from '../lib/driver.ts';
+import { ensureAptInstalled, type Need } from '../lib/system.ts';
 import { cacheDir } from '../proxy.ts';
 import type { TextDoc } from '../lib/text.ts';
+
+/** Electron's libraries (they bring the rest), by their names from Debian 13 on (`t64`: 64-bit time) and before. */
+const ELECTRON_LIBRARIES: Need[] = [
+  ['libgtk-3-0t64', 'libgtk-3-0'],
+  ['libnss3'],
+  ['libasound2t64', 'libasound2'],
+  ['libgbm1'],
+  ['libxkbcommon0'],
+  ['libcups2t64', 'libcups2'],
+  ['libatk-bridge2.0-0t64', 'libatk-bridge2.0-0'],
+  ['libxcomposite1'],
+  ['libxdamage1'],
+  ['libxrandr2'],
+].map((pkg) => ({ pkg }));
 
 const MOTIONS: Record<string, string> = {
   CharLeft: 'ArrowLeft',
@@ -246,7 +261,8 @@ export function obsidianDriver(profile: Profile): Driver {
       const unlock = await takeLock(join(dir, `${profile.name}.lock`), false, profile.name);
       process.once('exit', unlock);
       const log = join(dir, 'obsidian.log');
-      const xvfb = headed && process.env.DISPLAY ? null : await startXvfb();
+      ensureAptInstalled('Obsidian', ELECTRON_LIBRARIES, say);
+      const xvfb = headed && process.env.DISPLAY ? null : await startXvfb(say);
       if (xvfb) process.once('exit', () => xvfb.proc.kill());
       // the vault, written anew for each launch
       const vault = join(dir, 'vault');

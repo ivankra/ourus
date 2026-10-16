@@ -1,0 +1,19 @@
+{
+  "documents": 1500,
+  "corpus": "1d897f77e1566e01",
+  "failures": {
+    "deleteContentBackward": 10,
+    "deleteContentForward": 7,
+    "deleteSoftLineBackward": 12,
+    "deleteSubtree": 2,
+    "duplicateSubtree": 9,
+    "enter": 5,
+    "indent": 15,
+    "moveSubtreeDown": 1,
+    "moveSubtreeUp": 2,
+    "outdent": 25,
+    "pastePlain": 9,
+    "pasteStructured": 19,
+    "shiftEnter": 6
+  }
+}

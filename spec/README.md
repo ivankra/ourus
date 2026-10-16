@@ -14,7 +14,8 @@ actions use current command names, so the same files can drive editors with diff
 - [Backspace](backspace.md): `deleteContentBackward`.
 - [Delete](del.md): `deleteContentForward`.
 - [Paste](paste.md): `pasteStructured`, `pastePlain`.
-- [Fenced code](fences.md): Enter and Shift-Enter in a fenced code block.
+- [Fenced code](fences.md): Enter and Shift-Enter in a fenced code block, and in the other blocks
+  of lines (math, comments, indented code).
 - [`scenarios.md`](scenarios.md): longer sequences, as a user would type them.
 - [`cursor.md`](cursor.md): caret motions, for moving the caret between actions in tests.
 - [`undo.md`](undo.md): undo and redo, placeholders included.
@@ -68,11 +69,16 @@ No command breaks these; a case that seems to need to is wrong, or is a refusal.
 4. **Other nodes keep their parents**: a command changes the parents of its operands, and of the
    neighbors its own definition names, never of any other node. Those neighbors: direct outdent's
    later siblings, the section an unwrapped heading releases
-   ([Backspace35](backspace.md#backspace35)), what a pasted heading takes in
+   ([Backspace35](backspace.md#backspace35)), the children of an item whose text becomes a block of
+   lines, which holds none ([Outdent19](outdent.md#outdent19)), what a pasted heading takes in
    ([Paste34](paste.md#paste34)), and the list a paragraph that stays takes in when a move leaves it
    right above one ([MoveUp35](move-subtree-up.md#moveup35)).
 5. **Inverse pairs invert** (indent and outdent, up and down, Enter and Backspace, Shift-Enter and
    Backspace), or at least their outline where Markdown forces a difference, which the case states.
+   One difference is by design: a split at a line break inside a node's text joins back glued, as a
+   join puts the text at the end of the text above, wherever it came from
+   ([Enter51](enter.md#enter51)); between paragraphs Backspace takes only the blank line, and the
+   lines come back ([Backspace12](backspace.md#backspace12)).
 6. **The caret never ends in markup**: after a command it is in a node's text, never where typing
    would break the node.
 7. **Text stays text**: text after the caret that would start a block at a line's start is

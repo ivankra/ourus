@@ -16,6 +16,7 @@ import { join } from 'node:path';
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright-core';
 import type { Session } from './driver.ts';
 import { idleVersion } from './idle.ts';
+import { ensureAptInstalled } from './system.ts';
 import { cacheDir, DEFAULT_PORT, proxyVersion } from '../proxy.ts';
 
 export const proxyPort = Number(process.env.OURUS_PROXY_PORT ?? DEFAULT_PORT);
@@ -49,6 +50,8 @@ export async function ensureProxy(offline: boolean, say: (line: string) => void)
     await fetch(`${proxyUrl}/__proxy/stop`).catch(() => {});
     for (let i = 0; i < 50 && (await health()); i++) await new Promise((r) => setTimeout(r, 100));
   }
+  // its certificate is made once with openssl
+  ensureAptInstalled('the proxy', [{ pkg: 'openssl', command: 'openssl' }], say);
   mkdirSync(cacheDir, { recursive: true });
   const out = openSync(proxyLog, 'a');
   const args = [new URL('../proxy.ts', import.meta.url).pathname, `--port=${proxyPort}`, ...(offline ? ['--offline'] : [])];
@@ -146,6 +149,8 @@ function clearStaleLock(profile: string): void {
  * or with `headed`, a visible one of the run's own.
  */
 export async function launch(headed: boolean, say: (line: string) => void, app: string): Promise<Browser> {
+  // Debian's Chromium, unless `CHROMIUM` names another
+  if (!process.env.CHROMIUM) ensureAptInstalled('the browser', [{ pkg: 'chromium', command: executablePath }], say);
   if (headed) return chromium.launch({ executablePath, headless: false, proxy: { server: proxyUrl }, args: ['--ignore-certificate-errors'] });
   const profile = profileOf(app);
   const log = browserLogOf(app);

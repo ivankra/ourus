@@ -5,9 +5,27 @@ import { OutlineState, type OutlineNode } from '../outline/index.ts';
 import type { LineInfo } from '../parser/index.ts';
 import { isSpaceOrTab, mapPos, skipSpaces, type ChangeSpec } from '../text.ts';
 import { OutlinePlan, type OutlinePlanNode } from '../encoder/index.ts';
-import { CommandContext, blankInQuote, followsParentText, isClosingFence, isEmptyItem, isEmptyWithChildren, lineEndWithEnding, normText, removeLines } from './context.ts';
-import { notApplicable, reject, run, type Outcome } from './plan.ts';
-import { joinCodeLines } from './code.ts';
+import { CommandContext, isFenceLine, outOfQuoteOpeningItem, referenceFix, blankInQuote, followsParentText, isClosingFence, isEmptyItem, isEmptyWithChildren, lineEndWithEnding, normText, removeLines } from './context.ts';
+import { notApplicable, reject, run, withPlan, type CommandPlan, type Outcome } from './plan.ts';
+import { joinCodeLines, joinPayloadLines } from './code.ts';
+
+/**
+ * `plan` (its node's lines removed), or, where what was below would then run into what was above (a
+ * paragraph into an item's text), the encoder's writing of its outline (`expected`, with the lines
+ * of what it rewrites), which sets them apart, the caret at `at` (an old position) where it lands.
+ */
+function orEncoded(ctx: CommandContext, plan: CommandPlan, at: number, assoc: -1 | 1, expected = plan.expected): CommandPlan {
+  return {
+    ...plan,
+    fallback: () => {
+      const encoded = ctx.encode(expected, {}, (writtenOutline) => {
+        const caret = writtenOutline.map(at, assoc);
+        return { anchor: caret, head: caret };
+      });
+      return 'changes' in encoded ? encoded : null;
+    },
+  };
+}
 
 /**
  * Cmd-Backspace: deletes back to the start of the text on the caret's line, never into a list
@@ -18,8 +36,11 @@ export function deleteToTextStart(ctx: CommandContext): Outcome {
   if (!ctx.collapsed) return notApplicable;
   const pos = ctx.sel.head;
   const node = doc.nodeAt(pos);
-  if (!node || node.kind === 'atom' || !node.head) return notApplicable;
   const line = doc.lineAt(pos);
+  // a fence (code's, a math block's `$$`, a comment's `%%`) is markup, with no text to delete back
+  // through: deleting it would unmake the block
+  if (node && isFenceLine(ctx, line) && pos > skipSpaces(doc.text, line.contentFrom, line.to, 1)) return reject('not-expressible', 'a fence has no text');
+  if (!node || node.kind === 'atom' || !node.head) return notApplicable;
   const start = doc.textStart(pos);
   if (pos <= start) return join(ctx);
   // the spaces after the caret go too: left after a marker, they would move the content column
@@ -61,7 +82,7 @@ export function join(ctx: CommandContext, opts: { forward?: boolean; headingAsTe
   if (!ctx.collapsed) return deleteSelection(ctx);
   const pos = ctx.sel.head;
   const node = doc.nodeAt(pos);
-  const code = joinCodeLines(ctx, node ?? null, pos, -1);
+  const code = joinCodeLines(ctx, node ?? null, pos, -1) ?? joinPayloadLines(ctx, node ?? null, pos, -1);
   if (code) return code;
   if (!node) return notApplicable;
   const line = doc.lineAt(pos);
@@ -80,10 +101,15 @@ export function join(ctx: CommandContext, opts: { forward?: boolean; headingAsTe
     const joinedLine = lines[i]!.trimStart();
     const k = lineStartEscape(joinedLine);
     const tail = k < 0 ? joinedLine : joinedLine.slice(0, k) + joinedLine.slice(k + 1);
-    const expected = ctx.plan.setText(node, normText([...lines.slice(0, i - 1), lines[i - 1]! + tail, ...lines.slice(i + 1)]));
+    const after = [...lines.slice(0, i - 1), lines[i - 1]! + tail, ...lines.slice(i + 1)];
+    // the text's start may read as a link reference definition now, or no longer need its escape
+    const ref = referenceFix(ctx, node, lines, after);
+    const expected = ctx.plan.setText(node, normText(ref?.lines ?? after));
     const changes: ChangeSpec[] = [{ from: prevLine.to, to: first, insert: '' }];
     if (k >= 0) changes.push({ from: first + k, to: first + k + 1, insert: '' });
-    return ctx.caret(changes, prevLine.to, expected);
+    if (ref) changes.push(ref.change);
+    const shift = ref && ref.change.from < prevLine.to ? ref.change.insert.length - (ref.change.to - ref.change.from) : 0;
+    return ctx.caret(changes, prevLine.to + shift, expected);
   }
 
   // an empty paragraph's placeholder (Enter twice left a list): back to the end of the node above;
@@ -164,6 +190,16 @@ export function join(ctx: CommandContext, opts: { forward?: boolean; headingAsTe
   // first in a quote, with text: nothing above it in the quote to join, so its marker goes
   // (`backspaceAtTopItem`); an empty one goes, as anywhere, the caret going to the text above
   if (quote && !empty && !isEmptyWithChildren(ctx, node)) return unwrapItem(ctx, node);
+  // first in an item whose marker shares its line (`- - a`), which has no text: its marker goes, and
+  // its text, on that line, is the item's, its children and the items after it the item's children
+  if (prev.kind === 'item' && prev.startLine === node.startLine && node.parent === prev && !empty && !isEmptyWithChildren(ctx, node)) {
+    let planned: OutlinePlanNode | undefined;
+    const expected = ctx.plan.update(prev, (n) => (planned = { ...n, text: doc.nodeText(node), lines: doc.contentOf(node).lines, children: [...node.children, ...n.children.filter((child) => child !== node)] }));
+    return ctx.encode(expected, {}, (writtenOutline) => {
+      const caret = writtenOutline.at(planned!, 0, 0);
+      return { anchor: caret, head: caret };
+    });
+  }
   // an empty item with children, below another node: it goes, its children going to the node above
   // as in any join (into its place when that node is its parent), the caret to the end of its text
   if (isEmptyWithChildren(ctx, node)) {
@@ -194,7 +230,7 @@ export function join(ctx: CommandContext, opts: { forward?: boolean; headingAsTe
     // an empty item: remove its line, caret to the end of the node above
     const from = node.startLine > 0 ? doc.lines[node.startLine - 1]!.to : markerLine.from;
     const to = node.startLine > 0 ? markerLine.to : lineEndWithEnding(doc, node.startLine);
-    return ctx.caret([{ from, to, insert: '' }], textEnd(ctx, prev), expected);
+    return orEncoded(ctx, ctx.caret([{ from, to, insert: '' }], textEnd(ctx, prev), expected), textEnd(ctx, prev), -1);
   }
 
   // into an empty item above (an empty task's too): the text moves up into it, its own checkbox and
@@ -247,8 +283,15 @@ export function join(ctx: CommandContext, opts: { forward?: boolean; headingAsTe
     const at = prevLines[prevLines.length - 1]!.length + k;
     merged[prevLines.length - 1] = joinedLine.slice(0, at) + joinedLine.slice(at + 1);
   }
-  expected = expected.setText(prev, normText(merged));
-  return ctx.caret(changes, prevRange.to, expected);
+  // the text's start may read as a link reference definition now, or no longer need the escape it had
+  const ref = referenceFix(ctx, prev, prevLines, merged);
+  if (ref) changes.push(ref.change);
+  expected = expected.setText(prev, normText(ref?.lines ?? merged));
+  const shift = ref ? ref.change.insert.length - (ref.change.to - ref.change.from) : 0;
+  // what followed the item may run into the joined text now (an ordered list from 2 can't interrupt
+  // a paragraph): the encoder sets it apart
+  const written = expected.update(prev, (n) => ({ ...n, lines: (ref?.lines ?? merged).map((l, i) => (i ? l : l.trimStart())) }));
+  return orEncoded(ctx, ctx.caret(changes, prevRange.to + shift, expected), prevRange.to, -1, written);
 }
 
 /**
@@ -407,6 +450,13 @@ function unwrapItem(ctx: CommandContext, node: OutlineNode): Outcome {
  * `offset` of its line `line`.
  */
 function joined(ctx: CommandContext, plan: OutlinePlan, into: OutlineNode, merged: Pick<OutlinePlanNode, 'text' | 'lines' | 'gap'>, line: number, offset: number): Outcome {
+  // the text's start may read as a link reference definition now, or no longer need the escape it had
+  const ref = merged.lines ? referenceFix(ctx, into, ctx.doc.contentOf(into).lines ?? [], merged.lines) : null;
+  if (ref) {
+    const added = ref.change.insert.length > 0;
+    merged = { ...merged, lines: ref.lines, text: added ? '\\' + merged.text : merged.text!.replace(/^\\/, '') };
+    if (line === 0 && offset > 0) offset += added ? 1 : -1;
+  }
   let node: OutlinePlanNode | null = null;
   const expected = plan.update(into, (old) => (node = { ...old, ...merged }));
   return ctx.encode(expected, {}, (writtenOutline) => {
@@ -542,6 +592,23 @@ function joinParagraph(ctx: CommandContext, node: OutlineNode, line: LineInfo, p
     if (space) changes[0] = { ...changes[0]!, insert: space + changes[0]!.insert };
     return ctx.caret(changes, prevRange.to + space.length, expected, { compare: 'flat' });
   }
+  // a setext title takes the line at the end of its text, before the underline, as an ATX title does
+  // (a setext title can hold several lines: a paragraph of several joins as more of them)
+  if (prev.head?.type === 'heading' && prev.head.setext && prev.kind === 'heading') {
+    const titleEnd = doc.lines[prev.head.endLine - 1]!.to;
+    const titleLines = doc.headLines(prev);
+    const own = doc.headLines(node).map((l, k) => (k === 0 ? l.trimStart() : l));
+    const expected = ctx.plan.place('instead', node, node.children).setText(prev, normText([...titleLines.slice(0, -1), titleLines[titleLines.length - 1]! + own[0]!, ...own.slice(1)]));
+    // the paragraph's lines move up before the underline, the first onto the title's last line
+    const paraFrom = doc.lines[node.head!.startLine]!;
+    const paraTo = doc.lines[node.head!.endLine]!;
+    const moved = doc.text.slice(skipSpaces(doc.text, paraFrom.contentFrom, paraFrom.to, 1), paraTo.to);
+    const changes = [
+      { from: titleEnd, to: titleEnd, insert: moved },
+      { from: doc.lines[node.head!.startLine - 1]!.to, to: paraTo.to, insert: '' },
+    ];
+    return ctx.caret(changes, titleEnd, expected, { compare: 'flat' });
+  }
   // into an empty item above, the text moves up into it
   if (prev.kind === 'item' && prev.children.length === 0 && doc.isEmpty(prev) && !prev.block.task) {
     const { lines: own, gap } = doc.contentOf(node);
@@ -587,9 +654,12 @@ function joinParagraphLines(ctx: CommandContext, node: OutlineNode, prev: Outlin
  * it; a quote it was all of goes.
  */
 function leaveQuote(ctx: CommandContext, node: OutlineNode, quote: OutlineNode): Outcome {
+  const { doc } = ctx;
+  // a quote that is an item's first block (`- > q`): out of it, a paragraph is the item's text
+  const opening = outOfQuoteOpeningItem(ctx, node);
+  if (opening) return opening;
   const rest = quote.children.slice(1);
   const expected = rest.length === 0 ? ctx.plan.place('instead', quote, [node]) : ctx.plan.remove([node]).place('before', quote, [node]);
-  const { doc } = ctx;
   const from = doc.headRange(node)?.from ?? doc.lines[node.startLine]!.to;
   return ctx.encode(expected, {}, (written) => {
     const caret = written.map(from, 1);
@@ -838,7 +908,7 @@ function joinBelow(ctx: CommandContext): Outcome {
   if (!ctx.collapsed) return deleteSelection(ctx);
   const pos = ctx.sel.head;
   const node = doc.nodeAt(pos);
-  const code = joinCodeLines(ctx, node ?? null, pos, 1);
+  const code = joinCodeLines(ctx, node ?? null, pos, 1) ?? joinPayloadLines(ctx, node ?? null, pos, 1);
   if (code) return code;
   if (!node) return notApplicable;
   const line = doc.lineAt(pos);
@@ -869,9 +939,9 @@ function joinBelow(ctx: CommandContext): Outcome {
   if (isEmptyItem(ctx, node)) {
     const changes = removeLines(ctx, [node.startLine]);
     // at the text start below: after a checkbox, not in it
-    const caret = mapPos(changes, doc.textStart(doc.lines[next.startLine]!.from), 1);
+    const below = doc.textStart(doc.lines[next.startLine]!.from);
     const expected = ctx.plan.remove([node]);
-    return ctx.caret(changes, caret, expected);
+    return orEncoded(ctx, ctx.caret(changes, mapPos(changes, below, 1), expected), below, 1);
   }
   // the caret, for the joins below: at the end of the text (before a heading's closing `#`s)
   const end = doc.headRange(node)?.to ?? pos;
@@ -880,13 +950,18 @@ function joinBelow(ctx: CommandContext): Outcome {
   // an empty paragraph (held by a placeholder) goes with its blank lines: the node below keeps its
   // kind, rather than its text joining into the empty one, and the caret goes to its text's start
   if (node.kind === 'paragraph' && node.children.length === 0 && doc.nodeText(node).trim() === '') {
+    const drop = doc.placeholders.filter((p) => doc.lineAt(p).index === node.startLine);
+    const expected = ctx.plan.remove([node]);
+    const below = doc.textStart(doc.lines[next.startLine]!.from);
+    // in a quote its blank lines are quoted, and an item's marker on its line (`- > ◌`) stays: the
+    // encoder writes what is left
+    if (node.parent?.kind === 'quote') {
+      return withPlan(ctx.encode(expected, {}, (written) => ({ anchor: written.map(below, 1), head: written.map(below, 1) })), { drop });
+    }
     const lines = [node.startLine];
     for (let lineNo = node.startLine + 1; lineNo < next.startLine && doc.lines[lineNo]!.blank; lineNo++) lines.push(lineNo);
     const changes = removeLines(ctx, lines);
-    const caret = mapPos(changes, doc.textStart(doc.lines[next.startLine]!.from), 1);
-    const drop = doc.placeholders.filter((p) => doc.lineAt(p).index === node.startLine);
-    const expected = ctx.plan.remove([node]);
-    return ctx.caret(changes, caret, expected, { drop });
+    return ctx.caret(changes, mapPos(changes, below, 1), expected, { drop });
   }
   // a heading below joins as its whole line: its `#`s are text once it isn't a heading (as a text
   // editor deleting the line break would leave them); its section stays where it was

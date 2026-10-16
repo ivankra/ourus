@@ -1,7 +1,7 @@
 // Settling placeholders the caret has left.
 
 import { OutlineState, type OutlineNode } from '../outline/index.ts';
-import { lineSpan, type ChangeSpec } from '../text.ts';
+import { diffText, lineSpan, type ChangeSpec } from '../text.ts';
 import { CommandContext, isEmptyItem, normText } from './context.ts';
 import { run } from './plan.ts';
 
@@ -56,18 +56,21 @@ export function settlePlaceholders(doc: OutlineState, caret: number): { changes:
     }
     const { lines } = doc.contentOf(node);
     const index = lineNo - doc.lines.findIndex((line) => doc.nodeAtLine(line.index) === node);
-    expected = expected.update(node, (n) => ({
-      ...n,
-      text: normText(text.filter((_, i) => i !== index)),
-      lines: lines!.filter((_, i) => i !== index),
-    }));
+    // a task's first line, emptied, keeps its checkbox: the line after comes up after it
+    const box = index === 0 ? /^\s*\[[ xX]\]\s*$/.exec(text[0]!)?.[0].trim() : undefined;
+    const without = (all: readonly string[]): string[] =>
+      box && all.length > 1 ? [`${box} ${all[1]!.trimStart()}`, ...all.slice(2)] : all.filter((_, i) => i !== index);
+    expected = expected.update(node, (n) => ({ ...n, text: normText(without(text)), lines: without(lines!) }));
   }
   if (!expected.changed) return null;
   const plan = ctx.encode(expected);
   if ('status' in plan) return null;
   // what can't be written as meant stays as it is, its placeholder kept
   const result = run(ctx, { ...plan, drop: abandoned });
-  return result.status === 'applied' ? { changes: [...result.changes], state: result.state } : null;
+  if (result.status !== 'applied') return null;
+  // as one change, the span that differs: where the caret went, onto the line below an emptied one
+  // (or anywhere past the edit), it keeps its place in the text
+  return { changes: diffText(doc.text, result.state.text), state: result.state };
 }
 
 /**

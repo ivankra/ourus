@@ -43,7 +43,8 @@ https://github.com/jrblevin/markdown-mode
 
 [`emacs.ts`](emacs.ts):
 
-- **Emacs**, the system's (`apt install emacs-nox`: Debian's 30.2 here), started `emacs -Q -nw` on a
+- **Emacs**, the system's (`apt install emacs-nox`: Debian's 30.2 here; installed with tmux when
+  either is missing, as every run's packages are: [`lib/system.ts`](../lib/system.ts)), started `emacs -Q -nw` on a
   terminal: a tmux server of the run's own (`-L ourus-sxs-<pid>`), one session 80 by 24, and Emacs's
   server started in it on a socket in `.sxs/emacs-markdown/server-<pid>/` (Emacs refuses a socket directory
   others can read: it is made 700; a Unix socket's path is at most about 108 bytes, so an

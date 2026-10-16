@@ -29,9 +29,19 @@ continuation indentation, a quote's `>`), their own indentation kept, and no edi
    block of it, from either side (Fence26, Fence34). Delete at a closing fence's end before text is
    refused (Fence35).
 7. **No split or join may assemble a fence from code**: one that would close the block early is
-   refused (Fence36, Fence37, Fence38, Fence39, Fence40).
+   refused (Fence36, Fence37, Fence38, Fence39, Fence40); nor may Cmd-Backspace delete a fence
+   ([SoftBackspace9](backspace.md#softbackspace9)).
 8. **Tab and Shift-Tab on a code line are the host's**: they indent the code (Fence21). **Pasted
    text on a code line is code** ([Paste22](paste.md#paste22)).
+9. **The other blocks of lines, math (`$$`), comments (`%%`) and indented code, take the same**:
+   Enter and Shift-Enter make a line of the block in its containers, its own indentation carrying
+   over, and Backspace and Delete join its lines, the containers' prefix going with the line break
+   (Fence42, Fence43, Fence44, Fence46); text against a `$$` or `%%` line, or a break in one, would
+   unmake the block: refused (Fence45, Fence47). Pasted lines there are the block's. In an item or a
+   quote, the host's keys would leave the containers' prefix behind and end the block.
+10. **A block moving out of an item or into one takes its blank lines along**: the item's
+    indentation on a blank code line goes with the item, what is past it moves with the code
+    (Fence48).
 
 Bare Obsidian agrees on most code-line edits; at the fence lines and an item's indentation its
 one-character Backspace and Delete unmake the block (Fence16, Fence23, Fence33).
@@ -1270,3 +1280,252 @@ rank: rare
   ┃
   ```
 ````
+
+## Fence48
+
+An item holding code outdented: the code's blank line, indented as the item's lines are, gives up the
+indentation the item gives up, as they do. Indent gives the outline back, the blank line short of the
+item's column, as a blank line in code may be.
+
+```yaml
+rank: rare
+```
+
+````buffer
+- p
+  - ┃a
+    ```
+    x
+    
+    y
+    ```
+````
+
+> outdent
+
+````buffer
+- p
+- ┃a
+  ```
+  x
+  
+  y
+  ```
+````
+
+> indent
+
+````buffer
+- p
+  - ┃a
+    ```
+    x
+  
+    y
+    ```
+````
+
+## Math, comments and indented code
+
+### Fence42
+
+Enter in a math block in an item: a new line of the block at the item's column, which Backspace
+takes back. Left to the host, the line would start at column 0, ending the item and the block.
+
+```yaml
+rank: edge
+flavor: obsidian
+```
+
+```buffer
+- Euler:
+  $$
+  e^{i\pi}+1=0┃
+  $$
+```
+
+> enter
+
+```buffer
+- Euler:
+  $$
+  e^{i\pi}+1=0
+  ┃
+  $$
+```
+
+> deleteContentBackward
+
+```buffer
+- Euler:
+  $$
+  e^{i\pi}+1=0┃
+  $$
+```
+
+> enter "x"
+
+```buffer
+- Euler:
+  $$
+  e^{i\pi}+1=0
+  x┃
+  $$
+```
+
+### Fence43
+
+Shift-Enter in a comment block in a quote, in an item, and Backspace taking the line back: the
+quote's `>` goes with the line break, not as a character of the text.
+
+```yaml
+rank: rare
+flavor: obsidian
+```
+
+```buffer
+- task:
+  > %%
+  > hidden┃
+  > %%
+```
+
+> shiftEnter "more"
+
+```buffer
+- task:
+  > %%
+  > hidden
+  > more┃
+  > %%
+```
+
+> cursorLineBoundaryBackward deleteContentBackward
+
+```buffer
+- task:
+  > %%
+  > hidden┃more
+  > %%
+```
+
+### Fence44
+
+Enter in indented code in an item: the code's own indentation carries over, as in code editors.
+
+```yaml
+rank: rare
+```
+
+```buffer
+- a
+
+      x = 1┃
+      y = 2
+```
+
+> enter "z"
+
+```buffer
+- a
+
+      x = 1
+      z┃
+      y = 2
+```
+
+### Fence45
+
+Enter inside a math block's `$$` is refused, at the top level as anywhere: the block would no longer
+open, and the rest of the document would be math.
+
+```yaml
+rank: rare
+flavor: obsidian
+```
+
+```buffer
+$┃$
+x
+$$
+```
+
+> enter
+
+```result
+rejected: not-expressible
+```
+
+```buffer
+$┃$
+x
+$$
+```
+
+### Fence46
+
+Delete at the end of a comment line in a quote joins the next line, the quote's `>` going with the
+break, as Backspace does from the other side ([Fence43](#fence43)).
+
+```yaml
+rank: rare
+flavor: obsidian
+```
+
+```buffer
+> %%
+> a┃
+> b
+> %%
+```
+
+> deleteContentForward
+
+```buffer
+> %%
+> a┃b
+> %%
+```
+
+### Fence47
+
+Against a `$$` line a line with text on it doesn't join, from either side, as against a code fence
+([Fence17](#fence17), [Fence19](#fence19)).
+
+```yaml
+rank: rare
+flavor: obsidian
+```
+
+```buffer
+- a
+  $$
+  ┃x
+  $$
+```
+
+> deleteContentBackward
+
+```result
+rejected: not-expressible
+```
+
+```buffer
+- a
+  $$
+  ┃x
+  $$
+```
+
+> cursorLineBoundaryForward deleteContentForward
+
+```result
+rejected: not-expressible
+```
+
+```buffer
+- a
+  $$
+  x┃
+  $$
+```

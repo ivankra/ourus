@@ -24,10 +24,11 @@ wins:
    another node a new parent: a heading past a heading of another level or past a node it would take
    into its section (`not-expressible`, MoveUp28, MoveUp33). A paragraph that doesn't move takes
    in the list a move leaves right after it, as the text reads it (MoveUp35).
-6. **What would run together is set apart** by a blank line (MoveUp18, MoveUp19, MoveUp20); a
-   paragraph's leading indentation, not part of its text, is rewritten where it would make code
-   (MoveUp30); a renumbered list keeps its children at their content column (MoveUp15). The caret
-   ends in the node's text (MoveUp34).
+6. **What would run together is set apart** by a blank line (MoveUp18, MoveUp19, MoveUp20,
+   MoveUp36); a paragraph's leading indentation, not part of its text, is rewritten where it would
+   make code (MoveUp30); a renumbered list keeps its children at their content column (MoveUp15).
+   The caret ends in the node's text (MoveUp34); in a math block, after its opening `$$` and before
+   its closing one, wherever that is (MoveUp37, MoveUp38).
 
 [Move subtree down](move-subtree-down.md) mirrors each case and takes each move back.
 
@@ -991,3 +992,89 @@ para
 
 > q┃
 ```
+
+## MoveUp36
+
+The first item of a paragraph's list moved up out of it, above the paragraph: the next list, ordered
+from 2, comes right under the paragraph, which it can't interrupt and would continue; a blank line
+keeps it a list. Back down, the outline comes back, the blank line the paragraph needed above it
+staying, as a paragraph's list may have one.
+
+```yaml
+rank: edge
+```
+
+```buffer
+para
+┃- i
+2. m
+```
+
+> moveSubtreeUp
+
+```buffer
+- ┃i
+
+para
+
+2. m
+```
+
+> moveSubtreeDown
+
+```buffer
+para
+
+- ┃i
+2. m
+```
+
+## MoveUp37
+
+An item whose text is a math block's opening `$$`, the block unclosed, moved with the caret before
+it: the caret goes after the `$$`, where typing is the block's, not before it, where it would make
+the text a paragraph.
+
+```yaml
+rank: edge
+flavor: obsidian
+```
+
+```buffer
+- a
+- ┃$$
+```
+
+> moveSubtreeUp
+
+```buffer
+- $$┃
+- a
+```
+
+## MoveUp38
+
+A math block closed by text and `$$` on one line (`x$$`), moved with the caret after that `$$`: the
+caret goes before it, where typing is more of the formula; after it, the block wouldn't close there.
+
+```yaml
+rank: edge
+flavor: obsidian
+```
+
+```buffer
+- b
+- $$
+  x$$┃
+  tail
+```
+
+> moveSubtreeUp
+
+```buffer
+- $$
+  x┃$$
+  tail
+- b
+```
+

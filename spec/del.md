@@ -18,7 +18,8 @@ the text it is the host's. The rules, in order; the first that applies wins:
    (Delete16g). What ourus can't make exactly there (before the marker or inside it, or where the
    paragraph would run into its parent's text) is the host's edit (`editInMarkup: host`, the
    default; Delete23, Delete24, Delete25), or refused (`refuse`; Delete16b, Delete16c).
-4. **On an empty item**, the item goes, the caret moving on to the node below (Delete6); with
+4. **On an empty item**, the item goes, the caret moving on to the node below (Delete6), a paragraph
+   it kept apart from the text above set apart by a blank line (Delete28); with
    children, its first child moves up into it (Delete5). An empty item below goes (Delete20).
 5. **Before a heading**, its whole line joins, `#`s included (`headingEditing: text`, the default;
    Delete13); with `block`, its title (Delete13b). A setext heading can't join as text: refused
@@ -26,8 +27,10 @@ the text it is the host's. The rules, in order; the first that applies wins:
 6. **Between paragraphs the blank lines go**: the paragraph below is more lines of this one
    (Delete18, Delete18b, Delete18c).
 7. **Otherwise the node below joins this one**, its children coming along (Delete1, Delete2,
-   Delete7). At the end of a line inside the text, the next line joins it (Delete3). A heading's
-   closing `#`s stay at the end (Delete4, Delete4b).
+   Delete7); at a setext title's end, before its underline (Delete26); escaped where the joined
+   text would read as a link reference definition (Delete27). At the end of a line inside
+   the text, the next line joins it (Delete3). A heading's closing `#`s stay at the end (Delete4,
+   Delete4b).
 8. **What can't be written is refused**: a quote or a code block below (Delete10, Delete11).
 9. **A selection across nodes** goes and the ends join, as with Backspace (Delete21); within one
    node's text it is the host's (Delete22).
@@ -1105,4 +1108,70 @@ notApplicable
 - p
   -┃a
     - b
+```
+
+## Delete26
+
+Delete at a setext title's end joins the paragraph below the underline into the title, as Backspace
+at the paragraph's start does ([Backspace36](backspace.md#backspace36)).
+
+```yaml
+rank: rare
+```
+
+```buffer
+Title┃
+=====
+text
+```
+
+> deleteContentForward
+
+```buffer
+Title┃text
+=====
+```
+
+## Delete27
+
+Delete at the end of `[a]:` joins the item below into a link reference definition's shape: the
+joined text's start is escaped, as Backspace does from the other side
+([Backspace38](backspace.md#backspace38)).
+
+```yaml
+rank: rare
+```
+
+```buffer
+- [a]:┃
+- b
+```
+
+> deleteContentForward
+
+```buffer
+- \[a]:┃b
+```
+
+## Delete28
+
+The same from Delete on the empty item ([Backspace39](backspace.md#backspace39)): the paragraph,
+set apart from the item above, takes the caret.
+
+```yaml
+rank: rare
+```
+
+```buffer
+- a
+- ┃
+p
+```
+
+> deleteContentForward
+
+```buffer
+- a
+
+┃p
 ```

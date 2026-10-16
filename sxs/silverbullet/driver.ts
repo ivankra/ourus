@@ -61,12 +61,28 @@ export const driver: Driver = {
   },
 
   async open(page: Page) {
-    await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
-    await page.waitForFunction(() => (window as any).client?.systemReady && (window as any).client?.editorView, null, { timeout: 120000 });
+    const boot = async (): Promise<void> => {
+      await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
+      await page.waitForFunction(() => (window as any).client?.systemReady && (window as any).client?.editorView, null, { timeout: 120000 });
+    };
     // a profile that hasn't synced the space yet (a cold run) has its service worker pass every
     // request to the server until the first full sync, a write too (503 here: "Offline"); after it,
     // the worker serves the space from the browser's copy, and a write stays there
-    await page.waitForFunction(() => navigator.serviceWorker?.controller && (window as any).client?.fullSyncCompleted, null, { timeout: 120000 });
+    const synced = (timeout: number): Promise<boolean> =>
+      page.waitForFunction(() => navigator.serviceWorker?.controller && (window as any).client?.fullSyncCompleted, null, { timeout }).then(() => true, () => false);
+    await boot();
+    if (!(await synced(20000))) {
+      // the browser's copy holds the test pages of runs before, which each sync pushes to the server
+      // and the proxy refuses; SilverBullet then never completes a full sync. The demo's data goes
+      // from the browser, and the space is synced anew, cold
+      await page.goto('about:blank');
+      const cdp = await page.context().newCDPSession(page);
+      await cdp.send('Storage.clearDataForOrigin', { origin: new URL(this.url).origin, storageTypes: 'all' });
+      await cdp.detach();
+      // a cold load fetches the whole app through the proxy: given a second try
+      await boot().catch(() => boot());
+      if (!(await synced(120000))) throw new Error("SilverBullet's first full sync didn't complete, a cold one either");
+    }
     const settled = await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 300, timeout: 20000 }));
     if (settled.timedOut) throw new Error(`SilverBullet didn't settle after loading: ${settled.pending}`);
     // ready once an outline command (a plug, loaded on first use) indents an item

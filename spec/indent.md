@@ -16,7 +16,9 @@ subtrees. The rules, in order; the first that applies wins:
    Indent2, Indent9): it lines up with the children there, adopting their marker (Indent3); a new
    ordered list starts at 1, so it can't read as more of the text above (Indent4); one joining an
    ordered list continues its numbers (Indent5). Outdent gives it back (Indent26, Indent27). The
-   caret ends in its text, even from before its marker (Indent28).
+   caret ends in its text, even from before its marker (Indent28). Under an empty item it comes
+   right after the marker's line, the blank lines between going: an item can start with one blank
+   line, no more, and with one it ends (Indent30).
 5. **With nothing above it at its level, it is refused** (`no-previous-sibling`, Indent10,
    Indent11).
 6. **Indentation follows the document**: tabs where the list has tabs (Indent6, Indent7). What the
@@ -794,4 +796,37 @@ para┃
 ```buffer
 - a
   - para┃
+```
+
+## Indent30
+
+An item indented under an empty item set off by a blank line: the blank line goes, since an empty
+item followed by one ends there and could hold no child. Outdent gives the outline back, the list
+tight now.
+
+```yaml
+rank: rare
+```
+
+```buffer
+- a
+- 
+
+┃- b
+```
+
+> indent
+
+```buffer
+- a
+- 
+  - ┃b
+```
+
+> outdent
+
+```buffer
+- a
+- 
+- ┃b
 ```

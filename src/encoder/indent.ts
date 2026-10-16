@@ -34,16 +34,13 @@ export function whitespace(fromCol: number, toCol: number, tabs: boolean): strin
 /**
  * Widens or narrows by `delta` columns the whitespace where `base`'s piece starts on line `lineNo`,
  * shifting everything after it. `base` is the item whose level the line moves into (indent) or
- * out of (outdent). Returns the change (null when the line is left alone: blank lines and lazy
- * continuations), or 'fail' when the line can't move that far.
+ * out of (outdent). Returns the change (null when the line is left alone: blank lines with nothing
+ * to shift and lazy continuations), or 'fail' when the line can't move that far.
  */
 export function reindent(doc: OutlineState, lineNo: number, base: Block | null, owner: Block | null, delta: number, tabs: boolean): ChangeSpec | null | 'fail' {
   if (delta === 0 || !base || !owner) return null;
   const line = doc.lines[lineNo]!;
   const text = doc.text;
-  // blank lines carry nothing to shift: inside an item even a code block's blank line is empty; but
-  // an empty line held by a placeholder is a line of text, where the caret types, and moves with it
-  if (line.blank && !doc.placeholders.includes(line.to)) return null;
   const piece = line.prefix.find((candidate) => candidate.block === base);
   // lazy continuation lines (the moving item didn't match them) stay as they are
   if (!piece || !line.prefix.some((candidate) => candidate.block === owner)) return null;
@@ -52,6 +49,16 @@ export function reindent(doc: OutlineState, lineNo: number, base: Block | null, 
   const charCol = advanceColumns(text, line.from, piece.from, 0);
   const endCol = advanceColumns(text, piece.from, runTo, charCol);
   const target = endCol + delta;
+  // a blank line's whitespace is text only in code, past its containers' columns: that moves with the
+  // line; what the containers had, a line moving out of one gives up, as far as it reaches. (An empty
+  // line held by a placeholder is a line of text, where the caret types, and moves with it.)
+  if (line.blank && !doc.placeholders.includes(line.to)) {
+    if (delta > 0 && line.contentFrom === line.to) return null;
+    if (delta < 0) {
+      const narrowed = Math.max(target, piece.fromColumn);
+      return narrowed === endCol ? null : { from: piece.from, to: runTo, insert: whitespace(charCol, narrowed, tabs) };
+    }
+  }
   if (target < piece.fromColumn) return 'fail';
   if (delta > 0) {
     if (tabs && delta % 4 === 0) {

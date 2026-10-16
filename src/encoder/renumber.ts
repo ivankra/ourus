@@ -50,7 +50,10 @@ export function renumber(doc: OutlineState, changes: readonly ChangeSpec[], plan
   const walk = (b: Block): void => {
     if (b.type === 'list' && b.list!.type === 'ordered') {
       const numbers = b.children.map((item) => parseInt(text.slice(next.markerFrom(item), next.markerTo(item)), 10));
-      const alike = numbers.length > 1 && numbers.every((n) => n === numbers[0]);
+      // numbered all alike as written before (where its items were), not only now: the encoder may
+      // have given an item moved to the front the list's start
+      const was = b.children.map((item) => oldItem.get(after.get(item)!)).map((item) => (item ? parseInt(doc.text.slice(doc.markerFrom(item), doc.markerTo(item)), 10) : null));
+      const alike = numbers.length > 1 && numbers.every((n) => n === numbers[0]) && was.every((n) => n === null || n === numbers[0]);
       if (!alike && changed(b)) {
         const start = startOf(b, numbers);
         b.children.forEach((item, i) => {

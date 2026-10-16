@@ -21,9 +21,13 @@ subtrees. The rules, in order; the first that applies wins:
    (DirectOutdent2, DirectOutdent3, DirectOutdent4, LogicalOutdent2, LogicalOutdent3,
    LogicalOutdent4); any other top-level item is refused (`at-top-level`, Outdent2); a selection
    from the first item on outdents together, each item a paragraph (Outdent8, Outdent12). Indent
-   makes it an item again ([Indent21](indent.md#indent21)).
+   makes it an item again ([Indent21](indent.md#indent21)). An item whose text is a heading becomes
+   that heading, the rest of the list its section (Outdent17, Outdent17b); where it would take in
+   what follows the list, or end the section it is in, it is refused (Outdent18). One whose text is
+   code or another block of lines becomes that block, its children items after it (Outdent19).
 6. **Blank lines go only where the structure needs one**: an empty item left right under an item's
-   text is set off by one, as when the caret leaves it (Outdent7); a paragraph needs one before it,
+   text is set off by one, as when the caret leaves it (Outdent7), and so is one left right under a
+   paragraph's (Outdent16); a paragraph needs one before it,
    not before its own list (Outdent8).
 
 Indent and outdent invert (Outdent9, Outdent10), except where direct outdent gave the item its later
@@ -634,3 +638,129 @@ outdent: logical
 # A┃
 ## B
 ```
+
+## Outdent16
+
+The first item outdented to a paragraph right above an empty item: a blank line sets the empty item
+off, which right under the paragraph's text would read as a setext underline.
+
+```yaml
+rank: rare
+```
+
+```buffer
+┃1. n
+- 
+  - g
+```
+
+> outdent
+
+```buffer
+┃n
+
+- 
+  - g
+```
+
+## Outdent17
+
+At the top level, the first item of a list whose text is a heading becomes that heading: its text is
+a heading, and as a paragraph its `#` would read as one anyway. The rest of the list is its section,
+as it would be a paragraph's list. Indent doesn't make it an item again: on a heading it deepens the
+level ([Indent12](indent.md#indent12)).
+
+```yaml
+rank: rare
+```
+
+```buffer
+- ┃# H
+- b
+```
+
+> outdent
+
+```buffer
+# ┃H
+- b
+```
+
+## Outdent17b
+
+With `outdent: logical`, the heading follows the rest of the list, which stays a list.
+
+```yaml
+rank: rare
+outdent: logical
+```
+
+```buffer
+- ┃# H
+- b
+```
+
+> outdent
+
+```buffer
+- b
+# ┃H
+```
+
+## Outdent18
+
+Where the heading would take in what follows the list, a paragraph or a list of its own, as its
+section, outdent is refused; so it is where its level would end the section it is in.
+
+```yaml
+rank: rare
+```
+
+```buffer
+- ┃# H
+- b
+
+after
+```
+
+> outdent
+
+```result
+rejected: not-expressible
+```
+
+```buffer
+- ┃# H
+- b
+
+after
+```
+
+## Outdent19
+
+At the top level, an item whose text is fenced code becomes the code block, its children the items
+after it: a block of lines has no list of its own (the README's guarantee 4 names them). The caret
+goes into the code, where typing can't break its fence. Indent
+doesn't make it an item again: with nothing above, a block has nothing to be an item of.
+
+```yaml
+rank: rare
+```
+
+````buffer
+- ┃```
+  code
+  ```
+  - c
+- d
+````
+
+> outdent
+
+````buffer
+```
+┃code
+```
+- c
+- d
+````
