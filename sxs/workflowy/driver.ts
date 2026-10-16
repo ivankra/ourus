@@ -66,11 +66,11 @@ export const driver: Driver = {
     outdent: 'Shift+Tab',
     deleteContentBackward: 'Backspace',
     deleteContentForward: 'Delete',
-    moveBlockUp: 'Alt+Shift+ArrowUp',
-    moveBlockDown: 'Alt+Shift+ArrowDown',
+    moveSubtreeUp: 'Alt+Shift+ArrowUp',
+    moveSubtreeDown: 'Alt+Shift+ArrowDown',
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
     deleteSubtree: 'Control+Shift+Backspace',
-    duplicateNode: 'Alt+Shift+d',
+    duplicateSubtree: 'Alt+Shift+d',
     pasteStructured: 'Control+v',
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
@@ -83,7 +83,7 @@ export const driver: Driver = {
   // code, tables and other atoms have no faithful item form yet
   refuses: ['code block', 'html', 'table', 'math', 'thematic break', 'link reference definition', 'comment', 'footnote'],
   // Shift+Tab moves an item past its parent, leaving its later siblings there: logical outdenting
-  behaves: { outdent: 'logical', enterOnEmptyItem: 'sibling' },
+  behaves: { outdent: 'logical', enterOnEmptyItem: 'sibling', pasteStructuredLines: 'items' },
   // WorkFlowy counts its animations (an item sliding into place, a zoom) while they run
   idle: { busy: `window.WF?.GuiAnimate?.animationsAreInProgress?.()` },
   holds(doc: Outline) {

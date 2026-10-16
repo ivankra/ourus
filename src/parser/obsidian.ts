@@ -219,6 +219,17 @@ function fencedBlock(type: string, fence: string, name: string): { spec: BlockSp
 const mathBlock = fencedBlock('math_block', '$$', 'mathBlock');
 const commentBlock = fencedBlock('comment_block', '%%', 'commentBlock');
 
+/** Whether `text` at a line's content start opens a block fenced by `fence`, as `fencedBlock` starts one. */
+const opensFence =
+  (fence: string) =>
+  (text: string): boolean => {
+    const t = text.trimStart();
+    if (text.length - t.length >= 4 || !t.startsWith(fence)) return false;
+    const rest = t.slice(fence.length).trimEnd();
+    const close = rest.indexOf(fence);
+    return !(close >= 0 && close + fence.length < rest.length);
+  };
+
 /** A math block's TeX: its lines, the `$$` fences off. */
 export function mathContent(syntax: SyntaxTree, b: Block): string {
   const text = syntax.leafLines(b).join('\n');
@@ -231,6 +242,7 @@ export const mathBlocks: Extension = {
   name: 'mathBlocks',
   blockStarts: [mathBlock.start],
   blockStartChars: '$',
+  startsBlock: opensFence('$$'),
   render: {
     blocks: {
       math_block(r, b, entering) {
@@ -249,6 +261,7 @@ export const commentBlocks: Extension = {
   name: 'commentBlocks',
   blockStarts: [commentBlock.start],
   blockStartChars: '%',
+  startsBlock: opensFence('%%'),
   render: { blocks: { comment_block: () => false } },
 };
 

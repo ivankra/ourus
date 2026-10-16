@@ -14,7 +14,7 @@ From `src/keybindings.ts` and the block editor's handlers, checked in the app:
 | --- | --- |
 | `enter`, `shiftEnter` | Enter (splits; at the text's start, an empty block above), Shift+Enter (a line break in the block) |
 | `indent`, `outdent` | Tab, Shift+Tab (outdenting is direct by default; Settings › Editor has logical) |
-| `moveBlockUp`, `moveBlockDown` | Alt+Shift+Up, Alt+Shift+Down: the block with its children |
+| `moveSubtreeUp`, `moveSubtreeDown` | Alt+Shift+Up, Alt+Shift+Down: the block with its children |
 | `deleteContentBackward`, `deleteContentForward` | Backspace, Delete (joining at a block's edge) |
 | `deleteSoftLineBackward` | Alt+U ("kill line before") |
 | `deleteSubtree` | Escape (the block selected), then Backspace |
@@ -23,7 +23,7 @@ From `src/keybindings.ts` and the block editor's handlers, checked in the app:
 | caret motions | arrows, Home, End (the visual line's); `select…` with Shift |
 | `cursorDocStart`, `cursorDocEnd` | Up (Down) until the caret stops, then Ctrl+Home (End), the block's start (end) |
 
-`duplicateNode` has no command; its examples are skipped.
+`duplicateSubtree` has no command; its examples are skipped.
 
 ## Stack
 

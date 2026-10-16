@@ -16,10 +16,10 @@ checked in the app:
 | --- | --- |
 | `enter`, `shiftEnter` | Enter, Shift+Enter (a line break in the block) |
 | `indent`, `outdent` | Tab, Shift+Tab: the item with its children (outdenting is direct) |
-| `moveBlockUp`, `moveBlockDown` | Ctrl+Shift+Up, Ctrl+Shift+Down ("Move up", "Move down", ⇧⌘↑ and ⇧⌘↓) |
+| `moveSubtreeUp`, `moveSubtreeDown` | Ctrl+Shift+Up, Ctrl+Shift+Down ("Move up", "Move down", ⇧⌘↑ and ⇧⌘↓) |
 | `deleteContentBackward`, `deleteContentForward` | Backspace, Delete |
 | `deleteSoftLineBackward` | Shift+Home, then Backspace (no command for it) |
-| `duplicateNode` | Ctrl+D ("Duplicate", ⌘D): the block being edited, which in an item is its paragraph, not the item |
+| `duplicateSubtree` | Ctrl+D ("Duplicate", ⌘D): the block being edited, which in an item is its paragraph, not the item |
 | `pasteStructured`, `pastePlain` | Ctrl+V, Ctrl+Shift+V |
 | `undo`, `redo` | Ctrl+Z, Ctrl+Y |
 | caret motions | arrows, Home, End, Ctrl+Home, Ctrl+End; `select…` with Shift |
@@ -118,7 +118,7 @@ with the reason (`holds`):
 | a line's trailing whitespace | trimmed, a hard break's two spaces too (an empty task's `[ ] ` is its checkbox, and held) | `indent.md › Indent19`, `del.md › Delete5d` |
 | a block's text ending in a line break | the empty last line trimmed | `shift-enter.md › ShiftEnter11`, `12` |
 | a heading's closing #s | dropped: `# Title #` is `# Title` | `backspace.md › Backspace4` |
-| a thematic break as an item | `- ---` is a thematic break, not an item holding one, and SiYuan makes it one, outside the list | `block-up.md › BlockUp19` |
+| a thematic break as an item | `- ---` is a thematic break, not an item holding one, and SiYuan makes it one, outside the list | `move-subtree-up.md › MoveUp19` |
 | a caret in a task's checkbox | the checkbox is drawn, not text | `tasks.md › TaskBackspace1` |
 | a caret on a code block's fence | the code block's editor has the code alone; its language is a label | `fences.md › Fence6`, `7`, `13` |
 
@@ -129,7 +129,7 @@ with the reason (`holds`):
 - **Enter on an empty middle child** doesn't make a sibling or outdent it: the empty item becomes a
   second paragraph of its parent item (`enter.md › Enter28`), none of ourus's `enterOnEmptyItem`.
 - **Ctrl+D in an item** duplicates its paragraph inside the item, and selects the copy
-  (`duplicate-block.md › BlockDuplicate1`).
+  (`duplicate-subtree.md › DuplicateSubtree1`).
 
 ## Internals
 

@@ -19,10 +19,10 @@
 // The changes leave every line that keeps its order where it is (the heaviest run of them), so a
 // move is written as a move.
 
-import type { OutlineState, OutlineNode } from '../outline/index.ts';
+import { OutlineState, type OutlineNode } from '../outline/index.ts';
 import type { OutlinePlan, OutlinePlanNode } from './outline-plan.ts';
 import type { PrefixPiece } from '../parser/index.ts';
-import { applyChanges, diffText, dominantEnding, mapPos, type ChangeSpec } from '../text.ts';
+import { advanceColumns, applyChanges, diffText, dominantEnding, mapPos, type ChangeSpec } from '../text.ts';
 import { place, shift, type Placed } from './layout.ts';
 import { blankBetween, rerendered, writeLines } from './lines.ts';
 import { seam, unitsOf, type Units } from './seams.ts';
@@ -31,6 +31,16 @@ import { reindent, usesTabs } from './indent.ts';
 import { childIndent, continuation, markerText, siblingPrefix } from './prefix.ts';
 import { escape, interruptsParagraph, startOfNode } from './escapes.ts';
 import { renumber } from './renumber.ts';
+
+/** The leading whitespace of a paragraph's line `lineNo` after its containers' prefix, where it is four columns or more; else null. */
+function paragraphIndent(doc: OutlineState, lineNo: number): { from: number; to: number } | null {
+  const line = doc.lines[lineNo]!;
+  const from = line.prefix.length ? line.prefix[line.prefix.length - 1]!.to : line.from;
+  let to = from;
+  while (to < line.to && (doc.text.charCodeAt(to) === 32 || doc.text.charCodeAt(to) === 9)) to++;
+  const column = advanceColumns(doc.text, line.from, from, 0);
+  return advanceColumns(doc.text, from, to, column) - column >= 4 ? { from, to } : null;
+}
 
 /** One way of writing a plan: the changes, and where things land. A candidate, until the command runner verifies it. */
 export interface EncodeResult {
@@ -53,6 +63,14 @@ export interface EncodeOptions {
   readonly separate?: 'after' | 'around';
   /** The seams the edit made that get a blank line, by their index among the candidates, or all. */
   readonly pad?: ReadonlySet<number> | 'all';
+}
+
+/** Whether `next` is an empty item without children, the first child of item `parent`. */
+function emptyFirstChild(doc: OutlineState, parent: Placed, next: Placed | null): boolean {
+  if (!next || next.parent !== parent || parent.kind !== 'item' || next.kind !== 'item' || next.children.length > 0) return false;
+  const old = next.node ?? next.was;
+  const text = next.edited?.text ?? (old ? doc.nodeText(old) : null);
+  return text !== null && OutlineState.isEmptyText(text);
 }
 
 /**
@@ -134,6 +152,13 @@ export class OutlineEncoder {
           const change = reindent(doc, lineNo, placed.base, placed.owner, placed.delta, tabs);
           if (change === 'fail') return `the lines of ${placed.kind} ${placed.node!.id} can't move ${placed.delta} columns`;
           if (change) local.push({ from: change.from - line.from, to: change.to - line.from, insert: change.insert });
+          else if (lineNo === own.first && placed.kind === 'paragraph' && out[out.length - 1]?.origin !== lineNo - 1) {
+            // a paragraph's indentation isn't its text: where it lands after other text than before, a
+            // first line indented four columns or more (the rest of a paragraph a definition was taken
+            // from) would read as code, and loses it
+            const indent = paragraphIndent(doc, lineNo);
+            if (indent) local.push({ from: indent.from - line.from, to: indent.to - line.from, insert: '' });
+          }
           if (placed.marker !== null && lineNo === placed.node!.startLine) {
             local.push({ from: doc.markerFrom(placed.node!.block) - line.from, to: doc.markerTo(placed.node!.block) - line.from, insert: placed.marker });
           }
@@ -148,8 +173,11 @@ export class OutlineEncoder {
       const blank = (): string => (blankText ??= blankBetween(placed, order[i + 1] ?? null, tabs));
       emitGap(gap.lines, weight, gap.lines.length ? blank() : null);
       for (let count = 0; count < gap.blanks; count++) out.push(blankLine(blank()));
-      if (!gap.separable || gap.blanks > 0 || gap.lines.some((lineNo) => lines[lineNo]!.blank)) continue;
-      if (gap.fresh === 'after' ? options.separate : gap.fresh === 'before' && options.separate === 'around') {
+      // an empty item right under its parent item's text reads as a setext underline: a blank line may
+      // set it apart, as when the caret leaves one (`spec/placeholders.md`)
+      const apart = gap.separable || emptyFirstChild(doc, placed, order[i + 1] ?? null);
+      if (!apart || gap.blanks > 0 || gap.lines.some((lineNo) => lines[lineNo]!.blank)) continue;
+      if (gap.separable && (gap.fresh === 'after' ? options.separate : gap.fresh === 'before' && options.separate === 'around')) {
         out.push(blankLine(blank()));
         continue;
       }

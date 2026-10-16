@@ -1,11 +1,11 @@
 // Enter and Shift-Enter: splitting a node, and breaking a line inside one.
 
 import { OutlineState, type OutlineNode } from '../outline/index.ts';
-import type { LineInfo } from '../parser/index.ts';
+import type { Block, LineInfo } from '../parser/index.ts';
 import { advanceColumns, lineSpan, skipSpaces, type ChangeSpec } from '../text.ts';
 import { OutlinePlan, type OutlinePlanNode } from '../encoder/index.ts';
 import { CommandContext, Operands, blankInQuote, followsParentText, isEmptyItem, isEmptyWithChildren, normText, reTaskBox } from './context.ts';
-import { notApplicable, reject, type Outcome } from './plan.ts';
+import { notApplicable, reject, type Outcome, type CommandPlan } from './plan.ts';
 import { outdent } from './structure.ts';
 import { enterAfterFence, fenceNewline } from './code.ts';
 
@@ -54,9 +54,46 @@ function cutText(ctx: CommandContext, node: OutlineNode, line: LineInfo, selFrom
 }
 
 /**
+ * The changes writing a split: `insert` in the cut's place, and the rest of the line escaped where,
+ * at the start of a new node, it would start a block or read as a list marker (a typed `- ` stays
+ * text, as outliners keep it): a backslash at its start, or after an ordered marker's digits (a
+ * backslash before a digit escapes nothing). With the new node's first line as it then reads.
+ */
+function writeRest(ctx: CommandContext, cut: Cut, insert: string): { changes: ChangeSpec[]; first: string } {
+  const first = cut.after[0]!.trimStart();
+  const at = ctx.encoder.escape(cut.rest, 'start', cut.after.slice(1)).at;
+  if (at === null) return { changes: [{ from: cut.from, to: cut.to, insert }], first };
+  const changes: ChangeSpec[] =
+    at === 0 ? [{ from: cut.from, to: cut.to, insert: insert + '\\' }] : [{ from: cut.from, to: cut.to, insert }, { from: cut.to + at, to: cut.to + at, insert: '\\' }];
+  return { changes, first: first.slice(0, at) + '\\' + first.slice(at) };
+}
+
+/**
+ * Whether new text written right above `line` would run into it: a paragraph's line there continues
+ * the new text, unless it starts a block that interrupts a paragraph (a list item does).
+ */
+function runsInto(ctx: CommandContext, above: LineInfo, line: LineInfo | undefined): boolean {
+  const { doc } = ctx;
+  if (!line || line.blank || blankInQuote(ctx, line) || line.leaf?.type !== 'paragraph') return false;
+  // the line's text after the containers it shares with the line above (a quote's `>` it has of its own
+  // interrupts a paragraph)
+  const text = doc.text.slice(line.from + (above.contentFrom - above.from), line.to);
+  return !ctx.encoder.interruptsParagraph(text.trimStart());
+}
+
+/** In a loose list (blank lines between its items), the blank line that sets a new item off, as the others are; else ''. */
+function looseGap(ctx: CommandContext, item: OutlineNode, list: Block | null | undefined): string {
+  if (!list || list.tight !== false) return '';
+  const line = ctx.doc.lines[item.startLine]!;
+  const outer = ctx.encoder.continuation(line.prefix.slice(0, line.prefix.findIndex((p) => p.block === item.block)));
+  return outer.trimEnd() + ctx.ending(line);
+}
+
+/**
  * Enter in a callout's title where the flavor reads the title as a line of its own (Obsidian): the
- * rest of the title starts the body, in the paragraph the body starts with or in a new one before
- * it. In the `[!type]` marker a line break would unmake the callout.
+ * rest of the title becomes the callout's first paragraph, set off by a quoted blank line from body
+ * text it would run into, as the rest of a split heading is from the text below. In the `[!type]`
+ * marker a line break would unmake the callout.
  */
 function splitCalloutTitle(ctx: CommandContext, node: OutlineNode, line: LineInfo, selFrom: number, selTo: number): Outcome {
   const { doc } = ctx;
@@ -69,16 +106,17 @@ function splitCalloutTitle(ctx: CommandContext, node: OutlineNode, line: LineInf
   let to = selTo;
   to = skipSpaces(text, to, line.to, 1);
   let rest = text.slice(to, line.to);
-  const first = node.children[0];
-  const joins = first?.kind === 'paragraph' && first.startLine === line.index + 1;
-  const body = joins ? doc.headLines(first) : [];
-  // the rest starts a paragraph: escaped where it would start a block instead
-  if (rest !== '') rest = ctx.encoder.escape(rest, 'start', body).text;
-  const insert = ctx.ending(line) + ctx.encoder.continuation(line.prefix);
+  // the rest starts a paragraph: escaped where it would start a block or a list instead
+  if (rest !== '') rest = ctx.encoder.escape(rest, 'start').text;
+  const eol = ctx.ending(line);
+  const cont = ctx.encoder.continuation(line.prefix);
+  const insert = eol + cont;
   const caret = from + insert.length;
+  // an empty rest is a paragraph too, held by a placeholder until typed into, and set off as well
+  const apart = runsInto(ctx, line, doc.lines[line.index + 1]);
   const kept = ctx.plan.setText(node, normText([text.slice(line.contentFrom, from)]));
-  const expected = joins ? kept.setText(first, normText([rest, ...body])) : kept.append(node, 'first', [OutlinePlan.created('paragraph', normText([rest]))]);
-  return ctx.caret([{ from, to: line.to, insert: insert + rest }], caret, expected);
+  const expected = kept.append(node, 'first', [OutlinePlan.created('paragraph', normText([rest]))]);
+  return ctx.caret([{ from, to: line.to, insert: insert + rest + (apart ? eol + cont.trimEnd() : '') }], caret, expected, rest === '' ? { placeholders: [caret] } : {});
 }
 
 export function split(ctx: CommandContext): Outcome {
@@ -121,20 +159,27 @@ export function split(ctx: CommandContext): Outcome {
   }
   if (isEmptyItem(ctx, node)) {
     if (pos < doc.markerTo(node.block)) return notApplicable;
-    // Enter on an empty item: a nested one outdents as the last child. First or in the middle of its
-    // list, it gets a new empty sibling, the caret going into it (Workflowy, Logseq), or with
-    // `enterOnEmptyItem: outdent` it outdents there too (Roam). A top-level one, or one in a quote,
-    // leaves the list, becoming an empty paragraph held by a placeholder, set off from the items around
-    // it by blank lines; in a quote, it stays in the quote (Obsidian).
-    if (node.parent!.kind === 'item') {
-      const siblings = node.parent!.children;
-      if (siblings[siblings.length - 1] === node || doc.config.enterOnEmptyItem === 'outdent') return outdent(ctx.at(pos), new Operands([node]));
-      // right after the parent's text the empty item exists only under the caret: the new one goes above
-      if (followsParentText(ctx, node)) return insertBefore(ctx, node, pos, '');
+    // Enter on an empty item: first or in the middle of its list, it gets a new empty sibling, the
+    // caret going into it (Workflowy, Logseq), at any depth; with `enterOnEmptyItem: outdent` (Roam),
+    // and as the last item of its list, it outdents. A nested one outdents as Shift-Tab does; a
+    // top-level one, or one in a quote, leaves the list, becoming an empty paragraph held by a
+    // placeholder, set off from the items around it by blank lines; in a quote, it stays in the quote
+    // (Obsidian).
+    const siblings = node.parent!.children;
+    const following = siblings[siblings.indexOf(node) + 1];
+    const last = !(following?.kind === 'item' && following.block.parent === node.block.parent);
+    if (node.parent!.kind === 'item' || (!last && doc.config.enterOnEmptyItem === 'sibling')) {
+      if (node.parent!.kind === 'item' && (last || doc.config.enterOnEmptyItem === 'outdent')) return outdent(ctx.at(pos), new Operands([node]));
+      // an empty task's new sibling is a task too, as after any task
+      const box = reTaskBox.test(doc.headLines(node)[0]?.trimStart() ?? '') ? '[ ] ' : '';
+      // right after the parent's text a bare empty item exists only under the caret: the new one goes
+      // above (an empty task's checkbox is text the line holds)
+      if (!box && followsParentText(ctx, node)) return insertBefore(ctx, node, pos, '');
       const markerLine = doc.lines[node.startLine]!;
-      const insert = eol + ctx.encoder.siblingPrefix(node) + ctx.encoder.markerText(node, true) + ' ';
+      // in a loose list (blank lines between its items), the new item is set off as the others are
+      const insert = eol + looseGap(ctx, node, node.block.parent) + ctx.encoder.siblingPrefix(node) + ctx.encoder.markerText(node, true) + ' ' + box;
       const caret = markerLine.to + insert.length;
-      const expected = ctx.plan.place('after', node, [OutlinePlan.created('item', '')]);
+      const expected = ctx.plan.place('after', node, [OutlinePlan.created('item', box.trim())]);
       return ctx.caret([{ from: markerLine.to, to: markerLine.to, insert }], caret, expected);
     }
     const markerLine = doc.lines[node.startLine]!;
@@ -164,10 +209,13 @@ export function split(ctx: CommandContext): Outcome {
   if (!cut) return notApplicable;
   // a task's new sibling is a task too, unchecked
   const box = reTaskBox.test(doc.headLines(node)[0]!.trimStart()) ? '[ ] ' : '';
-  if (cut.atStart && selFrom === selTo && normText(cut.after) !== '') return insertBefore(ctx, node, at, box);
+  if (cut.atStart && selFrom === selTo && normText(cut.after) !== '') return insertBefore(ctx, node, at, box, doc.config.enterAtTextStart === 'stay');
 
-  // the new node is the first child when the node has items below it, else the next sibling
-  const firstChild = node.children[0];
+  // split mid-text, an item with children hands them to the rest, the next sibling
+  // (`enterMidItem: sibling`); else the new node is the first child when the item has children
+  // (as at its end), else the next sibling
+  const handsOver = doc.config.enterMidItem === 'sibling' && node.children.length > 0 && normText(cut.after) !== '';
+  const firstChild = handsOver ? undefined : node.children[0];
   let prefix: string;
   let marker: string;
   if (firstChild?.kind === 'item') {
@@ -181,31 +229,28 @@ export function split(ctx: CommandContext): Outcome {
     prefix = ctx.encoder.siblingPrefix(node);
     marker = ctx.encoder.markerText(node, true);
   }
-  const rest = ctx.encoder.startOfNode(cut.rest, cut.after.slice(1));
   // in a loose list (blank lines between its items), the new item is set off as the others are
   const list = firstChild?.kind === 'item' ? firstChild.block.parent : firstChild ? null : node.block.parent;
-  const gap = list && list.tight === false ? eol : '';
-  let insert = eol + gap + prefix + marker + ' ' + box;
-  let caret = cut.from + insert.length;
-  let first = cut.after[0]!.trimStart();
-  if (box) {
-    // after a task's checkbox the rest doesn't start the line's text: nothing to escape
-    first = box + first;
-  } else if (rest.escape) {
-    insert += '\\';
-    first = '\\' + first;
-  }
-  const changes = [{ from: cut.from, to: cut.to, insert }];
-  if (!box && rest.marker) {
-    // a list marker in the rest stays text, as outliners keep it: escaped, a bullet before itself,
-    // an ordered marker before its `.` or `)` (a backslash before a digit escapes nothing)
-    const digits = ctx.encoder.escape(cut.rest, 'start').at!;
-    if (digits) changes.push({ from: cut.to + digits, to: cut.to + digits, insert: '\\' });
-    else changes[0]!.insert += '\\';
-    first = first.slice(0, digits) + '\\' + first.slice(digits);
+  const gap = looseGap(ctx, firstChild?.kind === 'item' ? firstChild : node, list);
+  const insert = eol + gap + prefix + marker + ' ' + box;
+  const caret = cut.from + insert.length;
+  // after a task's checkbox the rest doesn't start the line's text: nothing to escape
+  const { changes, first } = box ? { changes: [{ from: cut.from, to: cut.to, insert }], first: box + cut.after[0]!.trimStart() } : writeRest(ctx, cut, insert);
+  const fresh = OutlinePlan.created('item', normText([first, ...cut.after.slice(1)]));
+  if (handsOver) {
+    const expected = ctx.plan.update(node, (n) => ({ ...n, text: normText(cut.before), children: [] })).place('after', node, [{ ...fresh, children: node.children }]);
+    // the children's lines stay where they are, under the new item, when its text starts no further
+    // right than the item's did; a wider marker (`9.` to `10.`) moves past them, and the encoder
+    // rewrites them at the new content column
+    if (marker.length + 1 <= node.block.contentColumn! - node.block.markerColumn!) return ctx.caret(changes, caret, expected);
+    const written: OutlinePlanNode = { ...fresh, lines: [first, ...cut.after.slice(1)], children: node.children };
+    const rewritten = ctx.plan.update(node, (n) => ({ ...n, text: normText(cut.before), lines: cut.before.map((l) => l.trimEnd()), children: [] })).place('after', node, [written]);
+    return ctx.encode(rewritten, {}, (writtenOutline) => {
+      const at = writtenOutline.at(written, 0, box.length);
+      return { anchor: at, head: at };
+    });
   }
   const split = ctx.plan.setText(node, normText(cut.before));
-  const fresh = OutlinePlan.created('item', normText([first, ...cut.after.slice(1)]));
   const expected = firstChild ? split.append(node, 'first', [fresh]) : split.place('after', node, [fresh]);
   return ctx.caret(changes, caret, expected);
 }
@@ -270,29 +315,76 @@ function leaveItem(ctx: CommandContext, pos: number): Outcome | null {
 
 /**
  * Enter at the start of an item: a new empty item above it, the caret going into it (as Workflowy,
- * Logseq, Roam and Dynalist do). Right after its parent's text the empty item would be a setext
- * underline, so a placeholder holds it.
+ * Logseq, Roam and Dynalist do), or with `stay` (`enterAtTextStart: stay`, as Obsidian) staying at
+ * `pos`, with the text. Right after its parent's text the empty item would be a setext underline, so
+ * a placeholder holds it while the caret is in it; away from the caret, a blank line above it does,
+ * as when the caret leaves a placeholder.
  */
-export function insertBefore(ctx: CommandContext, node: OutlineNode, pos: number, box: string): Outcome {
+export function insertBefore(ctx: CommandContext, node: OutlineNode, pos: number, box: string, stay = false): Outcome {
   const { doc } = ctx;
   // a new task's checkbox is text the line can hold, so only a bare empty item needs the placeholder
   const held = !box && followsParentText(ctx, node);
   const markerLine = doc.lines[node.startLine]!;
+  const eol = ctx.ending(markerLine);
   const line = ctx.encoder.siblingPrefix(node) + ctx.encoder.markerText(node, false) + ' ' + box;
-  const insert = line + ctx.ending(markerLine);
+  const outer = ctx.encoder.continuation(markerLine.prefix.slice(0, markerLine.prefix.findIndex((p) => p.block === node.block)));
+  const blank = held && stay ? outer.trimEnd() + eol : '';
+  const insert = blank + line + eol;
   const changes = [{ from: markerLine.from, to: markerLine.from, insert }];
-  const caret = markerLine.from + line.length;
+  const caret = stay ? pos + insert.length : markerLine.from + blank.length + line.length;
   const expected = ctx.plan.place('before', node, [OutlinePlan.created('item', box.trim())]);
   const identity = new Map([[doc.markerFrom(node.block) + insert.length, node.id]]);
-  return ctx.caret(changes, caret, expected, { identity, ...(held ? { placeholders: [caret] } : {}) });
+  return ctx.caret(changes, caret, expected, { identity, ...(held && !stay ? { placeholders: [caret] } : {}) });
 }
 
-/** Enter at the start of a paragraph or heading: a blank line above it, the text staying put. */
+/**
+ * Enter at the start of a paragraph or heading: a blank line above it, the text staying put. The
+ * blank line keeps the markers of the containers that go on past it (a quote's `>`); a container
+ * starting on the line gets the blank line above it.
+ */
+/**
+ * Enter at the start of a paragraph's or a heading's text (`enterAtTextStart: into`): an empty
+ * paragraph above it, held by a placeholder, the caret in it, a blank line between them. Where a quote
+ * or an item starts on the node's line, the line keeps its markers and holds the empty paragraph;
+ * else, after a line of text, a blank line sets the empty paragraph off from it too. After a
+ * heading's section the text puts it at the section's end. Where Markdown can't hold it, a blank
+ * line above the text, as with `stay`.
+ */
+function paragraphAbove(ctx: CommandContext, node: OutlineNode): Outcome {
+  const { doc } = ctx;
+  const first = doc.lines[node.startLine]!;
+  const eol = ctx.ending(first);
+  const continuation = ctx.encoder.continuation(first.prefix);
+  const blank = continuation.trimEnd();
+  const fresh = OutlinePlan.created('paragraph', '');
+  // after a heading's section, its end: inside the last sub-heading of it
+  const siblings = node.parent!.children;
+  let section = siblings[siblings.indexOf(node) - 1];
+  if (section?.kind !== 'heading') section = undefined;
+  while (section && section.children[section.children.length - 1]?.kind === 'heading') section = section.children[section.children.length - 1];
+  const expected = section ? ctx.plan.append(section, 'last', [fresh]) : ctx.plan.place('before', node, [fresh]);
+  const stay = (): CommandPlan | null => {
+    const outcome = blankLineAbove(ctx, node, doc.headRange(node)!.from);
+    return 'changes' in outcome ? outcome : null;
+  };
+  if (first.prefix.some((p) => p.block.startLine === first.index)) {
+    const plan = ctx.caret([{ from: first.contentFrom, to: first.contentFrom, insert: eol + blank + eol + continuation }], first.contentFrom, expected);
+    return 'changes' in plan ? { ...plan, fallback: stay } : plan;
+  }
+  const prefix = doc.text.slice(first.from, first.contentFrom);
+  const above = doc.lines[first.index - 1];
+  const apart = above && !blankInQuote(ctx, above) ? blank + eol : '';
+  const plan = ctx.caret([{ from: first.from, to: first.from, insert: apart + prefix + eol + blank + eol }], first.from + apart.length + prefix.length, expected);
+  return 'changes' in plan ? { ...plan, fallback: stay } : plan;
+}
+
 function blankLineAbove(ctx: CommandContext, node: OutlineNode, pos: number): Outcome {
   const { doc } = ctx;
   const first = doc.lines[node.startLine]!;
   const eol = ctx.ending(first);
-  return ctx.caret([{ from: first.from, to: first.from, insert: eol }], pos + eol.length, ctx.plan);
+  const end = first.prefix.findIndex((p) => p.block.startLine === first.index);
+  const insert = ctx.encoder.continuation(end < 0 ? first.prefix : first.prefix.slice(0, end)).trimEnd() + eol;
+  return ctx.caret([{ from: first.from, to: first.from, insert }], pos + insert.length, ctx.plan);
 }
 
 /** Enter in a paragraph: two paragraphs, a blank line between them. */
@@ -301,29 +393,19 @@ function splitParagraph(ctx: CommandContext, node: OutlineNode, line: LineInfo, 
   const cut = cutText(ctx, node, line, selFrom, selTo);
   if (!cut) return notApplicable;
   if (normText(doc.headLines(node)) === '') return reject('not-expressible', 'an empty paragraph has nothing to split');
-  if (cut.atStart && selFrom === selTo) return blankLineAbove(ctx, node, selFrom);
+  if (cut.atStart && selFrom === selTo) return doc.config.enterAtTextStart === 'stay' ? blankLineAbove(ctx, node, selFrom) : paragraphAbove(ctx, node);
   const firstLine = doc.lines[node.head!.startLine]!;
   const prefix = doc.text.slice(firstLine.from, firstLine.contentFrom);
   const eol = ctx.ending(line);
-  const rest = ctx.encoder.startOfNode(cut.rest, cut.after.slice(1));
   // the blank line between the halves keeps the quotes' `>`
-  let insert = eol + prefix.trimEnd() + eol + prefix;
-  let caret = cut.from + insert.length;
-  let first = cut.after[0]!.trimStart();
-  if (rest.escape) {
-    insert += '\\';
-    first = '\\' + first;
-  } else if (rest.marker) {
-    caret += rest.marker;
-    first = first.slice(rest.marker);
-  }
-  const fresh = OutlinePlan.created(rest.marker ? 'item' : 'paragraph', normText([first, ...cut.after.slice(1)]));
-  // a second half that is a paragraph is right above the paragraph's list now, and takes it; one
-  // that is an item opens that list
-  const expected = rest.marker
-    ? ctx.plan.update(node, (n) => ({ ...n, text: normText(cut.before), children: [fresh, ...n.children] }))
-    : ctx.plan.update(node, (n) => ({ ...n, text: normText(cut.before), children: [] })).place('after', node, [{ ...fresh, children: node.children }]);
-  return ctx.caret([{ from: cut.from, to: cut.to, insert }], caret, expected);
+  const insert = eol + prefix.trimEnd() + eol + prefix;
+  const caret = cut.from + insert.length;
+  // the second half is a paragraph, a list marker in it staying text (as in an item), and it is right
+  // above the paragraph's list now, so it takes it
+  const { changes, first } = writeRest(ctx, cut, insert);
+  const fresh = OutlinePlan.created('paragraph', normText([first, ...cut.after.slice(1)]));
+  const expected = ctx.plan.update(node, (n) => ({ ...n, text: normText(cut.before), children: [] })).place('after', node, [{ ...fresh, children: node.children }]);
+  return ctx.caret(changes, caret, expected);
 }
 
 /** Enter in a heading: the rest of the title becomes the first paragraph of its section. */
@@ -332,21 +414,20 @@ function splitHeading(ctx: CommandContext, node: OutlineNode, line: LineInfo, se
   if (node.head!.setext) return splitSetext(ctx, node, line, selFrom, selTo);
   const range = doc.headRange(node)!;
   const text = doc.text;
-  // before the title's text (in its `#`s) Enter opens a line above; at the text start it splits, as
-  // anywhere in the title, leaving an empty heading above the text (as Obsidian does)
+  // before the title's text (in its `#`s) Enter opens a line above; at the text start, an empty
+  // paragraph above (`into`), or a split, as anywhere in the title, leaving an empty heading above
+  // the text (`stay`, as Obsidian does)
   if (selFrom < range.from && selFrom === selTo) return blankLineAbove(ctx, node, selFrom);
+  if (selFrom === range.from && selFrom === selTo && doc.config.enterAtTextStart === 'into') return paragraphAbove(ctx, node);
   if (selFrom < range.from) return notApplicable;
   let from = selFrom;
   from = skipSpaces(text, from, range.from, -1);
   let to = selTo;
   to = skipSpaces(text, to, line.to, 1);
-  const restText = text.slice(to, line.to);
-  const rest = ctx.encoder.startOfNode(restText, []);
-  // the rest becomes the section's first paragraph (an item, if it starts with a list marker); the
-  // encoder sets it off from what follows where it would run into it
-  const marker = rest.marker && !rest.escape ? restText.slice(0, rest.marker).trim() : null;
-  const first = rest.escape ? '\\' + restText : marker ? restText.slice(rest.marker) : restText;
-  const fresh: OutlinePlanNode = { id: null, kind: marker ? 'item' : 'paragraph', text: normText([first]), lines: [first], ...(marker ? { marker } : {}), children: [] };
+  // the rest becomes the section's first paragraph, a list marker in it staying text (as in an item);
+  // the encoder sets it off from what follows where it would run into it
+  const first = ctx.encoder.escape(text.slice(to, line.to), 'start').text;
+  const fresh: OutlinePlanNode = { id: null, kind: 'paragraph', text: normText([first]), lines: [first], children: [] };
   const own = doc.contentOf(node).lines![0]!;
   const title = own.slice(0, from - (line.to - own.length));
   const expected = ctx.plan.update(node, (n) => ({
@@ -355,11 +436,11 @@ function splitHeading(ctx: CommandContext, node: OutlineNode, line: LineInfo, se
     lines: [title],
     children: [fresh, ...n.children],
   }));
-  // a paragraph's text right below (an item's included) stays apart from the new one
-  const below = doc.lines[line.index + 1];
-  const apart = !!below && !below.blank && below.leaf?.type === 'paragraph';
+  // text right below that would continue the new paragraph stays apart from it; a list there needs no
+  // blank line, a list item interrupting a paragraph (the caret before an escape, as everywhere)
+  const apart = runsInto(ctx, line, doc.lines[line.index + 1]);
   return ctx.encode(expected, apart ? { separate: 'after' } : {}, (writtenOutline) => {
-    const caret = writtenOutline.at(fresh, 0, rest.escape ? 1 : 0);
+    const caret = writtenOutline.at(fresh, 0, 0);
     return { anchor: caret, head: caret };
   });
 }
@@ -381,7 +462,9 @@ function splitSetext(ctx: CommandContext, node: OutlineNode, line: LineInfo, sel
     selFrom = selTo = lastTitle.to;
   }
   const range = doc.headRange(node)!;
-  if (selFrom === selTo && text.slice(range.from, Math.max(selFrom, range.from)).trim() === '') return blankLineAbove(ctx, node, selFrom);
+  // at the title's start, an empty paragraph above (`into`), or a blank line, the split's empty half (`stay`)
+  if (selFrom === selTo && text.slice(range.from, Math.max(selFrom, range.from)).trim() === '')
+    return selFrom >= range.from && doc.config.enterAtTextStart === 'into' ? paragraphAbove(ctx, node) : blankLineAbove(ctx, node, selFrom);
   if (selFrom < line.contentFrom) return notApplicable;
   let from = selFrom;
   from = skipSpaces(text, from, line.contentFrom, -1);
@@ -395,24 +478,22 @@ function splitSetext(ctx: CommandContext, node: OutlineNode, line: LineInfo, sel
   const prefix = text.slice(underline.from, underline.contentFrom);
   // the rest of the title, with any title lines below it, moves below the underline
   let moved = text.slice(to, lastTitle.to);
-  const rest = ctx.encoder.startOfNode(after[0]!, after.slice(1));
-  let lead = eol + prefix;
+  const lead = eol + prefix;
+  // a list marker in the rest stays text, as in an item: escaped where it would start a block
+  const at = ctx.encoder.escape(after[0]!, 'start', after.slice(1)).at;
   let first = after[0]!;
-  if (rest.escape) {
-    lead += '\\';
-    first = '\\' + first;
-  } else if (rest.marker) {
-    first = first.slice(rest.marker);
+  if (at !== null) {
+    moved = moved.slice(0, at) + '\\' + moved.slice(at);
+    first = first.slice(0, at) + '\\' + first.slice(at);
   }
-  // a paragraph right below the underline stays a paragraph of its own
-  const next = doc.lines[head.endLine + 1];
-  if (next && !next.blank && next.leaf?.type === 'paragraph') moved += eol;
+  // text right below the underline that would continue the new paragraph stays a paragraph of its own
+  if (runsInto(ctx, underline, doc.lines[head.endLine + 1])) moved += eol;
   const changes: ChangeSpec[] = [
     { from, to: lastTitle.to, insert: '' },
     { from: underline.to, to: underline.to, insert: lead + moved },
   ];
-  const caret = underline.to - (lastTitle.to - from) + lead.length + (rest.marker && !rest.escape ? rest.marker : 0);
-  const fresh = OutlinePlan.created(rest.marker ? 'item' : 'paragraph', normText([first, ...after.slice(1)]));
+  const caret = underline.to - (lastTitle.to - from) + lead.length;
+  const fresh = OutlinePlan.created('paragraph', normText([first, ...after.slice(1)]));
   const expected = ctx.plan.setText(node, normText(before)).append(node, 'first', [fresh]);
   return ctx.caret(changes, caret, expected);
 }

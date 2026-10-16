@@ -15,7 +15,7 @@ From Roam's bundle (`CV(isPC ? "alt-shift-up" : "cmd-shift-up", ...)`):
 | --- | --- |
 | `enter`, `shiftEnter` | Enter, Shift+Enter (a line break in the block) |
 | `indent`, `outdent` | Tab, Shift+Tab (also Alt+Shift+Right and Left) |
-| `moveBlockUp`, `moveBlockDown` | Alt+Shift+Up, Alt+Shift+Down (Cmd+Shift on a Mac) |
+| `moveSubtreeUp`, `moveSubtreeDown` | Alt+Shift+Up, Alt+Shift+Down (Cmd+Shift on a Mac) |
 | `deleteContentBackward`, `deleteContentForward` | Backspace, Delete |
 | `deleteSoftLineBackward` | Shift+Home, Backspace |
 | `pasteStructured`, `pastePlain` | Ctrl+V, Ctrl+Shift+V |
@@ -23,7 +23,7 @@ From Roam's bundle (`CV(isPC ? "alt-shift-up" : "cmd-shift-up", ...)`):
 | caret motions | arrows, Home, End; `select…` with Shift |
 | `cursorDocStart`, `cursorDocEnd` | Up (Down) until the caret stops, then Home (End); Up from the first block goes into the page's title, so back down from there |
 
-`deleteSubtree` and `duplicateNode` have no key here yet; their tests are skipped.
+`deleteSubtree` and `duplicateSubtree` have no key here yet; their tests are skipped.
 
 The bundle branches on the platform for each binding, and the Mac's keys aren't the PC's: a first run
 used Ctrl+Shift+Z for redo (the Mac's Cmd+Shift+Z, carried over), and `undo.md › Undo1` and `Undo4`

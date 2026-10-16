@@ -16,7 +16,7 @@
 //   DIFF_DOCS=3000 DIFF_EXAMPLES=8 node test/differential.ts
 
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -49,16 +49,21 @@ interface Core {
   replace(doc: Snapshot, text: string, params: Record<string, unknown>): Snapshot;
 }
 
+/** Commands by their names before they were renamed, for a copy from before. */
+const formerNames: Record<string, string> = { moveSubtreeUp: 'moveBlockUp', moveSubtreeDown: 'moveBlockDown', duplicateSubtree: 'duplicateNode' };
+
 /** The core of a copy, through its package entry, whatever its API's names are at that point. */
 async function load(root: string): Promise<Core> {
   const api = await import(join(root, 'src/index.ts'));
   const State = api.OutlineState ?? api.OutlineDoc;
   const execute = api.executeCommand ?? api.execute;
   const settle = api.settlePlaceholders ?? api.settle;
+  // a copy from before the commands' renaming knows them by their former names
+  const former = !readFileSync(join(root, 'src/commands/index.ts'), 'utf8').includes("'moveSubtreeUp'");
   return {
     parse: (text, config) => State.parse(text, { config }),
     execute: (doc, command, selection) => {
-      const result = execute(doc, command, selection);
+      const result = execute(doc, former ? { ...command, type: formerNames[command.type] ?? command.type } : command, selection);
       return result.status === 'applied' ? { ...result, doc: result.state ?? result.doc } : result;
     },
     edit: (doc: any, changes, params) => (doc.update ?? doc.apply).call(doc, changes, params),
@@ -84,13 +89,14 @@ const blocks = [
   // text that reads as something else at a line's start, for splits, joins and pastes to escape
   'p - x', '- i 1. x', 'p # h', '# H - x', 'p > q', 'p\n[r]: /u', '- i ``` c', 'p ---', 'p 2) x',
 ];
-const commands = ['indent', 'outdent', 'moveBlockUp', 'moveBlockDown', 'enter', 'shiftEnter', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward', 'pasteStructured', 'pastePlain', 'deleteSubtree', 'duplicateNode'];
+const commands = ['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'enter', 'shiftEnter', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward', 'pasteStructured', 'pastePlain', 'deleteSubtree', 'duplicateSubtree'];
 const pastes = ['x', '- a\n- b', '> q', '```\nc\n```', 'one\ntwo', '1. a\n2. b\n'];
 /** Every flavor with the defaults, then every other value of every option (CommonMark), one at a time. */
 const configs: Record<string, unknown>[] = [
   { flavor: 'commonmark' }, { flavor: 'gfm' }, { flavor: 'obsidian' },
-  { outdent: 'logical' }, { bullet: '*' }, { enterOnEmptyItem: 'outdent' }, { handleFenceContents: false },
-  { headingEditing: 'block' }, { taskEditing: 'checkbox' }, { taskEditing: 'block' }, { pasteMidText: 'split' }, { deleteAtGap: 'gap' },
+  { outdent: 'logical' }, { bullet: '*' }, { enterOnEmptyItem: 'outdent' }, { enterMidItem: 'child' }, { enterAtTextStart: 'stay' },
+  { backspaceAtTopItem: 'refuse' }, { handleFenceContents: false },
+  { headingEditing: 'block' }, { taskEditing: 'text' }, { taskEditing: 'block' }, { pasteStructuredLines: 'items' }, { pasteStructuredMidText: 'after' }, { deleteAtGap: 'gap' }, { editInMarkup: 'refuse' },
 ];
 const documents = Number(process.env.DIFF_DOCS ?? 1500);
 const examples = Number(process.env.DIFF_EXAMPLES ?? 3);

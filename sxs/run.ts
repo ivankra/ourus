@@ -22,6 +22,8 @@
 //   --json=FILE     write the run as data to FILE too, as .sxs/<app>/sxs.json has it
 //   --jobs=N        with several apps, run at most N at once (all of them by default)
 //   --table         with several apps, run nothing: write the table from the verdicts the last runs left
+//   --regenerate-report  run no app: judge what it did in its last run against the spec as it is now, and
+//                   write the report (and with several apps, the table) again ("regenerating", below)
 //   --timing        print how long the app took to settle after each action, and what kept it busy
 //
 //   node sxs/run.ts --stop    stops the shared proxy and browsers, and the servers drivers started
@@ -32,16 +34,16 @@
 // for a fixed time.
 
 import { spawn } from 'node:child_process';
-import { closeSync, copyFileSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { closeSync, copyFileSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Page } from 'playwright-core';
-import type { Config } from '../src/config.ts';
+import { Config } from '../src/config.ts';
 import { appPage, ensureProxy, launch, proxyStats, stopShared, type AppPage } from './lib/browser.ts';
 import type { Doc, Driver, Session } from './lib/driver.ts';
 import { idleVersion, installIdle, type IdleOptions, type IdleResult } from './lib/idle.ts';
-import { compareOutlines, draw, project, sameOutline, type Outline, type Verdict } from './lib/outline.ts';
-import { compareTexts, drawTextDoc, sameText, type TextDoc } from './lib/text.ts';
+import { compareOutlines, draw, project, readOutline, sameOutline, type Outline, type Verdict } from './lib/outline.ts';
+import { compareTexts, drawTextDoc, readTextDoc, sameText, type TextDoc } from './lib/text.ts';
 import { adapt, allTests, selects, type Plan, type PlanStep } from './lib/plan.ts';
 import { cacheDir } from './proxy.ts';
 
@@ -71,6 +73,25 @@ const here = fileURLToPath(new URL('./', import.meta.url));
 const lastRun = (app: string, ext: 'md' | 'json' | 'log'): string => join(cacheDir, app, `sxs.${ext}`);
 
 /**
+ * What an app did in a spec file's examples, as the last run of each left it (`.sxs/<app>/<file>.json`,
+ * `indent.json` for `indent.md`): a run replaces the examples it ran and keeps the file's others, so runs
+ * of a few examples add up; a run of every example of a file replaces them all. A regenerated report is
+ * made from them (a run's own, `sxs.json`, from what it ran).
+ */
+interface FileRun {
+  type: 'SxS';
+  app: string;
+  file: string;
+  /** Its latest run's: the app's version, the command, how long it took, and when it ran. */
+  version: string | null;
+  command: string;
+  elapsed_s: number;
+  ran: string;
+  examples: RunExample[];
+}
+const fileRun = (app: string, file: string): string => join(cacheDir, app, `${file.replace(/\.md$/, '')}.json`);
+
+/**
  * A run as data: what its report says, and what the app did in each example, every state drawn as
  * the spec draws a buffer. Every run writes it beside its report (`.sxs/<app>/sxs.json`); a run of
  * several apps reads each run's there.
@@ -90,6 +111,8 @@ interface AppRun {
   examples: RunExample[];
   /** The examples skipped, in the spec's order, each with why. */
   skipped: { name: string; file: string; anchor: string; line: number; reason: string }[];
+  /** A regenerated report's examples its last run didn't play as the spec now has them, each with why: they want a run. */
+  notRun?: { name: string; file: string; anchor: string; line: number; reason: string }[];
 }
 
 /** A count per verdict, and the total. */
@@ -185,8 +208,10 @@ async function runMany(spec: string, selectors: string[], flags: string[]): Prom
   const pass = flags.filter((f) => !f.startsWith('--jobs=') && !f.startsWith('--json='));
   const verbose = pass.includes('-v') || pass.includes('--verbose');
   const tableOnly = pass.includes('--table');
+  const regenerating = pass.includes('--regenerate-report');
   const t0 = Date.now();
   const exits = new Map<string, number>();
+  const failed = new Set<string>();
 
   if (tableOnly) {
     // the verdicts of each app's last run (`.sxs/<app>/sxs.json`), as they are; an app with none is left out
@@ -197,7 +222,7 @@ async function runMany(spec: string, selectors: string[], flags: string[]): Prom
     apps = apps.filter((app) => read(lastRun(app, 'json')));
   } else {
     // the proxy, up before the runs that share it, so they don't race to start it (each app has a browser of its own)
-    if (!pass.includes('--list')) await ensureProxy(pass.includes('--offline'), say);
+    if (!pass.includes('--list') && !regenerating) await ensureProxy(pass.includes('--offline'), say);
 
     say(`${apps.length} apps, ${Math.min(jobs, apps.length)} at a time: ${apps.join(', ')}; logs in ${relative(process.cwd(), cacheDir)}/<app>/sxs.log`);
     const queue = [...apps];
@@ -205,17 +230,19 @@ async function runMany(spec: string, selectors: string[], flags: string[]): Prom
       const log = lastRun(app, 'log');
       const json = lastRun(app, 'json');
       mkdirSync(join(log, '..'), { recursive: true });
-      rmSync(json, { force: true });
+      // the run's own data, written anew: none since it started, and it failed (what it had, the files' keep)
+      const since = Date.now();
       const out = openSync(log, 'w');
       const child = spawn(process.execPath, [...process.execArgv, fileURLToPath(import.meta.url), app, ...selectors, ...pass], { stdio: ['ignore', out, out] });
       const code = await new Promise<number>((resolve) => child.on('exit', (c) => resolve(c ?? 1)));
       closeSync(out);
       exits.set(app, code);
-      const r = read(json);
+      const r = existsSync(json) && statSync(json).mtimeMs >= since ? read(json) : null;
+      if (!r) failed.add(app);
       const s = (Date.now() - t0) / 1000;
       if (pass.includes('--list')) return;
       if (!r) say(`${app.padEnd(24)} failed (exit ${code}): ${relative(process.cwd(), log)}`);
-      else say(`${app.padEnd(24)} ${VERDICTS.map((v) => `${v} ${r.examples.filter((e) => e.verdict === v).length}`).join(', ')}; skipped ${r.skipped.length}  (${r.elapsed_s}s, done at ${s.toFixed(0)}s)`);
+      else say(`${app.padEnd(24)} ${VERDICTS.map((v) => `${v} ${r.examples.filter((e) => e.verdict === v).length}`).join(', ')}; skipped ${r.skipped.length}${r.notRun?.length ? `; not run ${r.notRun.length}` : ''}  (${r.elapsed_s}s, done at ${s.toFixed(0)}s)`);
     };
     await Promise.all(
       Array.from({ length: Math.min(jobs, apps.length) }, async () => {
@@ -232,7 +259,7 @@ async function runMany(spec: string, selectors: string[], flags: string[]): Prom
   const names = allTests()
     .filter((t) => selectors.length === 0 || selectors.some((s) => selects(s, t)))
     .map((t) => `${t.file} › ${t.name}`);
-  const byApp = new Map(apps.map((app) => [app, read(lastRun(app, 'json'))]));
+  const byApp = new Map<string, AppRun | null>(apps.map((app) => [app, failed.has(app) ? null : read(lastRun(app, 'json'))]));
   const cell = (app: string, name: string): string => {
     const r = byApp.get(app);
     if (!r) return 'missing';
@@ -259,7 +286,7 @@ async function runMany(spec: string, selectors: string[], flags: string[]): Prom
   // reports checked in here too
   const everything = spec === 'all' && selectors.length === 0 && !pass.includes('--strict') && !pass.includes('--no-report');
   // the run's time; a table of runs before, the longest of them (they ran side by side)
-  const elapsed = tableOnly ? Math.max(0, ...[...byApp.values()].map((r) => r?.elapsed_s ?? 0)) : (Date.now() - t0) / 1000;
+  const elapsed = tableOnly || regenerating ? Math.max(0, ...[...byApp.values()].map((r) => r?.elapsed_s ?? 0)) : (Date.now() - t0) / 1000;
   const command = `node sxs/run.ts ${spec}${selectors.length ? ` ${selectors.join(' ')}` : ''}`;
   const written = matrix({ apps: order, byApp, rows, command, elapsed });
   writeFileSync(join(cacheDir, 'sxs.md'), written.md);
@@ -272,9 +299,9 @@ async function runMany(spec: string, selectors: string[], flags: string[]): Prom
   return [...exits.values()].some((c) => c !== 0) ? 1 : 0;
 }
 
-function read(file: string): AppRun | null {
+function read<T = AppRun>(file: string): T | null {
   try {
-    return JSON.parse(readFileSync(file, 'utf8')) as AppRun;
+    return JSON.parse(readFileSync(file, 'utf8')) as T;
   } catch {
     return null;
   }
@@ -298,6 +325,8 @@ function matrix(o: {
   const short = (name: string): string => ([...name].length > 20 ? `${[...name].slice(0, 20).join('').trimEnd()}…` : name);
   // the examples' table: each example, how many apps agree on it, then each app's verdict
   const count = (app: string, v: string): number => o.rows.filter((r) => r.cells[o.apps.indexOf(app)] === v).length;
+  // examples a regenerated report's app hasn't run as the spec has them now, a column if any
+  const columns = [...VERDICTS, 'skipped', ...(o.rows.some((r) => r.cells.includes('missing')) ? ['missing'] : [])];
   const map = heatmap(o);
   const out = [
     '---',
@@ -309,16 +338,17 @@ function matrix(o: {
     '# Every app side by side',
     '',
     `Each test case of the spec, run in each app and compared with ourus: ✓ agrees, ✗ disagrees, \`caret\` the`,
-    `same text with the caret elsewhere, \`space\` a difference in spaces only, \`error\` didn't run, – skipped;`,
+    `same text with the caret elsewhere, \`space\` a difference in spaces only, \`error\` didn't run, – skipped, ? not run`,
+    `as the spec has it now (a report regenerated from an earlier run, \`--regenerate-report\`; it wants a run of the app);`,
     `in brackets, \`(✗)\`, a difference in an example adapted for the app: its buffers projected onto blocks, so it compares those.`,
     `An app's report (its name above its column) has the outcomes and the reasons for its skips.`,
     '',
     '## Summary',
     '',
     // a row per app, its model (block or text), a column per verdict
-    row(['', 'model', ...VERDICTS, 'skipped', 'total']),
-    `| --- | --- |${' --- |'.repeat(VERDICTS.length + 2)}`,
-    ...o.apps.map((a) => row([`[${a}](${toReport(a)})`, o.byApp.get(a)?.model ?? '', ...[...VERDICTS, 'skipped'].map((v) => count(a, v) || ''), `**${o.rows.length}**`])),
+    row(['', 'model', ...columns.map((c) => (c === 'missing' ? 'not run' : c)), 'total']),
+    `| --- | --- |${' --- |'.repeat(columns.length + 1)}`,
+    ...o.apps.map((a) => row([`[${a}](${toReport(a)})`, o.byApp.get(a)?.model ?? '', ...columns.map((v) => count(a, v) || ''), `**${o.rows.length}**`])),
     '',
     ...map.lines,
     '',
@@ -453,6 +483,7 @@ const verbose = flag('-v') || flag('--verbose');
 const repeat = Number(option('--repeat') ?? 1);
 const slow = Number(option('--slow') ?? 0);
 const timing = flag('--timing');
+const regenerating = flag('--regenerate-report');
 
 if (!app || !existsSync(new URL(`./${app}/driver.ts`, import.meta.url))) {
   console.error(`usage: node sxs/run.ts <app> [selector...] [options]; an app is a directory of sxs/ with a driver.ts`);
@@ -460,6 +491,49 @@ if (!app || !existsSync(new URL(`./${app}/driver.ts`, import.meta.url))) {
 }
 const driver = ((await import(`./${app}/driver.ts`)) as { driver: Driver }).driver;
 const say = (line: string): void => console.log(line);
+
+/**
+ * What the app did in every spec file's examples (`FileRun`); a run of the whole spec from before them
+ * (`sxs.json` but no file's), split into them first.
+ */
+function fileRuns(): FileRun[] {
+  const files = [...new Set(allTests().map((t) => t.file))];
+  // every file's, whether or not the spec still has its cases: a case moved to another file is matched there too
+  const dir = join(cacheDir, driver.name);
+  const all = (): FileRun[] =>
+    existsSync(dir)
+      ? readdirSync(dir)
+          .filter((f) => f.endsWith('.json') && f !== 'sxs.json')
+          .map((f) => read<FileRun>(join(dir, f)))
+          .filter((r): r is FileRun => r?.type === 'SxS' && typeof r.file === 'string')
+      : [];
+  const runs = all();
+  const whole = runs.length ? null : read(lastRun(driver.name, 'json'));
+  if (!whole) return runs;
+  const ran = statSync(lastRun(driver.name, 'json')).mtime.toISOString();
+  for (const file of files) {
+    const examples = whole.examples.filter((e) => e.file === file);
+    if (examples.length) writeFileRun({ type: 'SxS', app: driver.name, file, version: whole.version, command: whole.command, elapsed_s: whole.elapsed_s, ran, examples });
+  }
+  return all();
+}
+function writeFileRun(r: FileRun): void {
+  mkdirSync(join(fileRun(r.app, r.file), '..'), { recursive: true });
+  writeFileSync(fileRun(r.app, r.file), `${JSON.stringify(r, null, 2)}\n`);
+}
+
+/** A regenerated report's last runs: every example's (`FileRun`), with the version, command and time of the latest. */
+const previous = regenerating
+  ? (() => {
+      const runs = fileRuns();
+      const latest = runs.reduce<FileRun | null>((a, b) => (a && a.ran > b.ran ? a : b), null);
+      return latest && { version: latest.version, command: latest.command, elapsed_s: latest.elapsed_s, examples: runs.flatMap((r) => r.examples) };
+    })()
+  : null;
+if (regenerating && !previous) {
+  console.error(`no run of ${driver.title} to regenerate the report from in ${relative(process.cwd(), join(cacheDir, driver.name))}`);
+  process.exit(1);
+}
 
 // the app's kind of document (`Driver.model`): how one is drawn, compared, and told apart from another
 const isText = driver.model === 'text';
@@ -472,6 +546,8 @@ const sameDoc = (a: Doc, b: Doc): boolean => (isText ? sameText(a as TextDoc, b 
 const tests = allTests().filter((t) => selectors.length === 0 || selectors.some((s) => selects(s, t)));
 const plans: Plan[] = [];
 const skipped = new Map<string, string[]>();
+/** A regenerated report's examples that its last run didn't play as they are now, by why: they want a run. */
+const notRun = new Map<string, string[]>();
 for (const t of tests) {
   const a = adapt(driver, t);
   const why = 'skip' in a ? a.skip : flag('--strict') && a.plan.notes.length ? `adapted (${a.plan.notes.join(', ')})` : null;
@@ -534,6 +610,7 @@ function runData(results: readonly Result[], version: string | undefined): AppRu
   });
   const tally = (xs: RunExample[]): Counts => ({ ...(Object.fromEntries(VERDICTS.map((v) => [v, xs.filter((e) => e.verdict === v).length])) as Record<(typeof VERDICTS)[number], number>), total: xs.length });
   const skips = inSpecOrder([...skipped].flatMap(([reason, names]) => names.map((name) => ({ name, ...where(name), reason }))));
+  const unrun = inSpecOrder([...notRun].flatMap(([reason, names]) => names.map((name) => ({ name, ...where(name), reason }))));
   return {
     type: 'SxS',
     app: driver.name,
@@ -541,16 +618,18 @@ function runData(results: readonly Result[], version: string | undefined): AppRu
     version: version ?? null,
     url: driver.url,
     model: driver.model,
-    command: `node sxs/run.ts ${[driver.name, ...selectors].join(' ')}`,
-    elapsed_s: Math.round((Date.now() - started) / 1000),
+    // a regenerated report's, the run's it was made from
+    command: previous?.command ?? `node sxs/run.ts ${[driver.name, ...selectors].join(' ')}`,
+    elapsed_s: previous?.elapsed_s ?? Math.round((Date.now() - started) / 1000),
     summary: {
       ...tally(examples),
       skipped: skips.length,
-      total: examples.length + skips.length,
+      total: examples.length + skips.length + unrun.length,
       ...(!isText && { original: tally(examples.filter((e) => !e.adapted.length)), adapted: tally(examples.filter((e) => e.adapted.length)) }),
     },
     examples: inSpecOrder(examples),
     skipped: skips,
+    ...(unrun.length && { notRun: unrun }),
   };
 }
 
@@ -715,6 +794,11 @@ async function runPlan(page: Page, plan: Plan): Promise<Outcome> {
   } finally {
     await driver.unload?.(page).catch(() => {});
   }
+  return { ...judge(plan, got, clipboards), got, clipboards, unsettled, ms: Date.now() - t0 };
+}
+
+/** How an example came out from what the app did in each step: as its worst step, the first that came out so. */
+function judge(plan: Plan, got: readonly (Doc | null)[], clipboards: readonly (string | null)[]): { verdict: Verdict; step: number } {
   let verdict: Verdict = 'agree';
   let at = -1;
   plan.steps.forEach((step, i) => {
@@ -724,65 +808,68 @@ async function runPlan(page: Page, plan: Plan): Promise<Outcome> {
       at = i;
     }
   });
-  return { verdict, step: Math.max(at, 0), got, clipboards, unsettled, ms: Date.now() - t0 };
+  return { verdict, step: Math.max(at, 0) };
+}
+
+// ------------------------------------------------------------------ regenerating
+//
+// A regenerated report (--regenerate-report) runs no app: each example is judged again, against the spec
+// as it is now, from what the app did in it in its last run (`.sxs/<app>/sxs.json` draws every state the
+// app reached), where that run played it as the spec has it now: the same start, clipboard and settings,
+// and the same actions in each step (of an example since grown more steps, in its first ones). The
+// rest want a run of the app: they are left out (`?` in the table of several apps), and say why.
+
+/** A state as the last run drew it, read back as the app's model has it; null where it doesn't read back. */
+function readDoc(drawn: string): Doc | null {
+  if (!isText) return readOutline(drawn);
+  const d = readTextDoc(drawn);
+  return drawTextDoc(d) === drawn ? d : null;
+}
+
+/** The app's settings (`Driver.settings`) as strings, each as `get` has it. */
+const settingsOf = (get: (k: keyof Config) => unknown): string[] => Object.keys(driver.settings ?? {}).map((k) => String(get(k as keyof Config)));
+
+/** A plan's outcome in the last run's example, if that played it as it is now; else why not. */
+function replay(plan: Plan, e: RunExample): Outcome | string {
+  if (e.steps.length < plan.steps.length) return 'a step added since';
+  const got: (Doc | null)[] = [];
+  const clipboards: (string | null)[] = [];
+  for (const [i, step] of plan.steps.entries()) {
+    const was = e.steps[i]!;
+    if (JSON.stringify(was.actions) !== JSON.stringify(step.actions)) return 'its actions changed since';
+    if (e.verdict === 'error' && e.step === i) return { verdict: 'error', step: i, got, clipboards, ...(e.error !== undefined && { error: e.error }), unsettled: e.unsettled ?? [], ms: e.ms };
+    const doc = step.want && was.app !== null ? readDoc(was.app) : null;
+    if (step.want && !doc) return was.app === null ? 'a buffer expected since' : 'a state that doesn\'t read back';
+    if (step.clipboard !== undefined && !was.clipboard) return 'a clipboard expected since';
+    got.push(doc);
+    clipboards.push(step.clipboard !== undefined ? was.clipboard!.app : null);
+  }
+  return { ...judge(plan, got, clipboards), got, clipboards, unsettled: e.unsettled ?? [], ms: e.ms };
+}
+
+/** Judges every example again from the last run, into `results`, or `notRun` with why; the app's version then. */
+function regenerate(): string | undefined {
+  const key = (start: string, clipboard: string | null, settings: string[]): string => JSON.stringify([start, clipboard, settings]);
+  const played = new Map<string, RunExample[]>();
+  for (const e of previous!.examples) {
+    const k = key(e.start, e.clipboard, settingsOf((s) => e.options[s] ?? Config.defaults[s]));
+    played.set(k, [...(played.get(k) ?? []), e]);
+  }
+  for (const { plan, names } of unique.values()) {
+    const tries = (played.get(key(drawDoc(plan.initial), plan.clipboard, settingsOf((s) => plan.settings[s]))) ?? []).map((e) => ({ e, outcome: replay(plan, e) }));
+    const found = tries.find((t) => typeof t.outcome !== 'string');
+    if (found) results.push({ plan, names, outcome: found.outcome as Outcome, ...(found.e.flaky && { flaky: found.e.flaky }) });
+    else {
+      const why = (tries[0]?.outcome as string | undefined) ?? 'new, or its start changed since';
+      notRun.set(why, [...(notRun.get(why) ?? []), ...names]);
+    }
+  }
+  const unrun = [...notRun.values()].reduce((n, names) => n + names.length, 0);
+  say(`${driver.title}${previous!.version ? ` ${previous!.version}` : ''}: regenerated from its last run, no run; ${plans.length - unrun} tests judged again, ${unrun} not run as they are now, ${tests.length - plans.length} skipped`);
+  return previous!.version ?? undefined;
 }
 
 // ------------------------------------------------------------------ main
-
-await ensureProxy(flag('--offline'), say);
-await proxyStats(); // counts from here on
-// an app that starts itself (a desktop app) needs no shared browser
-const browser = driver.launch ? null : await launch(flag('--headed'), say, driver.name);
-// an app served from this machine: its server up before its page loads (or an earlier run's tab is tried)
-await driver.serve?.(say).catch((e: Error) => {
-  console.error(`can't start ${driver.title}'s server: ${e.message}`);
-  return process.exit(1);
-});
-const opened = Date.now();
-type Marked = { __ourusApp?: string; __ourusVersion?: string };
-
-/**
- * The app's page, loaded: an earlier run's, if it still holds a document and reads it back, else a new
- * one; or the window of an app the driver starts itself.
- */
-async function ready(): Promise<{ app: AppPage; version: string | undefined; how: string }> {
-  if (!browser) {
-    const app = await driver.launch!({ headed: flag('--headed'), say }).catch((e: Error) => {
-      console.error(`can't start ${driver.title}: ${e.message}`);
-      return process.exit(1);
-    });
-    // a page's settling is the idle script's; a session's calls return once the app is done
-    if (!app.session) await app.page.addInitScript(installIdle, idleVersion());
-    return { app, version: await driver.open(app.page), how: 'started' };
-  }
-  let app = await appPage(browser, driver.name, driver.url, { shared: !flag('--headed'), fresh: flag('--fresh') });
-  // the tab in front: its Clipboard API works only there, and a tab behind another can crawl
-  await app.page.bringToFront();
-  if (app.reused) {
-    const probe: Doc = isText ? { text: '- a\n- b\n', sel: { anchor: 7, head: 7 } } : { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } };
-    const works = await driver
-      .load(app.page, probe)
-      .then(() => driver.read(app.page))
-      .then((o) => sameDoc(o, probe))
-      .catch(() => false);
-    if (works) return { app, version: await app.page.evaluate(() => (window as Marked).__ourusVersion), how: 'reused from an earlier run' };
-    await app.page.close();
-    await app.release();
-    app = await appPage(browser, driver.name, driver.url, { shared: !flag('--headed'), fresh: true });
-  }
-  await app.page.addInitScript(installIdle, idleVersion());
-  const version = await driver.open(app.page);
-  await app.page.evaluate(([name, v]) => Object.assign(window as Marked, { __ourusApp: name, __ourusVersion: v }), [driver.name, version] as const);
-  return { app, version, how: 'loaded' };
-}
-const { app: appTab, version, how } = await ready();
-const page = appTab.page;
-actor = appTab.session ? sessionActor(appTab.session) : pageActor(page);
-typesAtOnce = !!appTab.session;
-await actor.front();
-const errors: string[] = [];
-if (!appTab.session) page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
-say(`${driver.title}${version ? ` ${version}` : ''} at ${driver.url}, ${how} in ${((Date.now() - opened) / 1000).toFixed(1)}s; ${unique.size} examples to run (${plans.length} tests), ${tests.length - plans.length} skipped`);
 
 interface Result {
   plan: Plan;
@@ -793,43 +880,105 @@ interface Result {
 }
 const results: Result[] = [];
 
-function detail(plan: Plan, o: Outcome): string {
-  if (o.verdict === 'error') return `  error at step ${o.step + 1}: ${o.error}`;
-  const step = plan.steps[o.step]!;
-  const lines = [`  line ${step.line}: > ${step.actions.join(' ')}`];
-  if (step.want && o.got[o.step]) lines.push('  expected:', indent(drawDoc(step.want)), `  ${driver.name}:`, indent(drawDoc(o.got[o.step]!)));
-  if (step.caretLost) lines.push(`  (the expected caret isn't compared: ${step.caretLost})`);
-  if (step.clipboard !== undefined && o.clipboards[o.step] !== step.clipboard) lines.push(`  clipboard: expected ${JSON.stringify(step.clipboard)}, got ${JSON.stringify(o.clipboards[o.step])}`);
-  return lines.join('\n');
-}
+/** Errors the app's page threw. */
+const errors: string[] = [];
+const version = regenerating ? regenerate() : await playAll();
 
-const signature = (o: Outcome): string => JSON.stringify([o.verdict, o.got, o.clipboards, o.error]);
+/** Plays every example in the app, into `results`; the app's version. */
+async function playAll(): Promise<string | undefined> {
+  await ensureProxy(flag('--offline'), say);
+  await proxyStats(); // counts from here on
+  // an app that starts itself (a desktop app) needs no shared browser
+  const browser = driver.launch ? null : await launch(flag('--headed'), say, driver.name);
+  // an app served from this machine: its server up before its page loads (or an earlier run's tab is tried)
+  await driver.serve?.(say).catch((e: Error) => {
+    console.error(`can't start ${driver.title}'s server: ${e.message}`);
+    return process.exit(1);
+  });
+  const opened = Date.now();
+  type Marked = { __ourusApp?: string; __ourusVersion?: string };
 
-for (const { plan, names } of unique.values()) {
-  let outcome = await runPlan(page, plan);
-  // a promise of the app's that never settles is collected instead of waited on (V8's inspector holds
-  // an evaluation's promise weakly): rare, and nothing of the example's, so it runs once more
-  if (outcome.verdict === 'error' && /Resulting promise was garbage collected/.test(outcome.error ?? '')) {
-    say(`again      ${names.join(' = ')}: ${outcome.error}`);
-    outcome = await runPlan(page, plan);
+  /**
+   * The app's page, loaded: an earlier run's, if it still holds a document and reads it back, else a new
+   * one; or the window of an app the driver starts itself.
+   */
+  async function ready(): Promise<{ app: AppPage; version: string | undefined; how: string }> {
+    if (!browser) {
+      const app = await driver.launch!({ headed: flag('--headed'), say }).catch((e: Error) => {
+        console.error(`can't start ${driver.title}: ${e.message}`);
+        return process.exit(1);
+      });
+      // a page's settling is the idle script's; a session's calls return once the app is done
+      if (!app.session) await app.page.addInitScript(installIdle, idleVersion());
+      return { app, version: await driver.open(app.page), how: 'started' };
+    }
+    let app = await appPage(browser, driver.name, driver.url, { shared: !flag('--headed'), fresh: flag('--fresh') });
+    // the tab in front: its Clipboard API works only there, and a tab behind another can crawl
+    await app.page.bringToFront();
+    if (app.reused) {
+      const probe: Doc = isText ? { text: '- a\n- b\n', sel: { anchor: 7, head: 7 } } : { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } };
+      const works = await driver
+        .load(app.page, probe)
+        .then(() => driver.read(app.page))
+        .then((o) => sameDoc(o, probe))
+        .catch(() => false);
+      if (works) return { app, version: await app.page.evaluate(() => (window as Marked).__ourusVersion), how: 'reused from an earlier run' };
+      await app.page.close();
+      await app.release();
+      app = await appPage(browser, driver.name, driver.url, { shared: !flag('--headed'), fresh: true });
+    }
+    await app.page.addInitScript(installIdle, idleVersion());
+    const version = await driver.open(app.page);
+    await app.page.evaluate(([name, v]) => Object.assign(window as Marked, { __ourusApp: name, __ourusVersion: v }), [driver.name, version] as const);
+    return { app, version, how: 'loaded' };
   }
-  let flaky: string | undefined;
-  for (let i = 1; i < repeat && !flaky; i++) {
-    const again = await runPlan(page, plan);
-    if (signature(again) !== signature(outcome)) flaky = `run ${i + 1}: ${again.verdict}${again.verdict !== 'agree' ? `\n${detail(plan, again)}` : ''}`;
+  const { app: appTab, version, how } = await ready();
+  const page = appTab.page;
+  actor = appTab.session ? sessionActor(appTab.session) : pageActor(page);
+  typesAtOnce = !!appTab.session;
+  await actor.front();
+  if (!appTab.session) page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
+  say(`${driver.title}${version ? ` ${version}` : ''} at ${driver.url}, ${how} in ${((Date.now() - opened) / 1000).toFixed(1)}s; ${unique.size} examples to run (${plans.length} tests), ${tests.length - plans.length} skipped`);
+
+  function detail(plan: Plan, o: Outcome): string {
+    if (o.verdict === 'error') return `  error at step ${o.step + 1}: ${o.error}`;
+    const step = plan.steps[o.step]!;
+    const lines = [`  line ${step.line}: > ${step.actions.join(' ')}`];
+    if (step.want && o.got[o.step]) lines.push('  expected:', indent(drawDoc(step.want)), `  ${driver.name}:`, indent(drawDoc(o.got[o.step]!)));
+    if (step.caretLost) lines.push(`  (the expected caret isn't compared: ${step.caretLost})`);
+    if (step.clipboard !== undefined && o.clipboards[o.step] !== step.clipboard) lines.push(`  clipboard: expected ${JSON.stringify(step.clipboard)}, got ${JSON.stringify(o.clipboards[o.step])}`);
+    return lines.join('\n');
   }
-  results.push({ plan, names, outcome, ...(flaky && { flaky }) });
-  const tag = `${outcome.verdict}${flaky ? ' FLAKY' : ''}`;
-  if (outcome.verdict !== 'agree' || flaky || verbose) {
-    say(`${tag.padEnd(10)} ${names.join(' = ')}${plan.notes.length ? `  [${plan.notes.join(', ')}]` : ''}  ${outcome.ms}ms`);
-    if (outcome.verdict !== 'agree') say(detail(plan, outcome));
-    if (flaky) say(`  but ${flaky}`);
+
+  const signature = (o: Outcome): string => JSON.stringify([o.verdict, o.got, o.clipboards, o.error]);
+
+  for (const { plan, names } of unique.values()) {
+    let outcome = await runPlan(page, plan);
+    // a promise of the app's that never settles is collected instead of waited on (V8's inspector holds
+    // an evaluation's promise weakly): rare, and nothing of the example's, so it runs once more
+    if (outcome.verdict === 'error' && /Resulting promise was garbage collected/.test(outcome.error ?? '')) {
+      say(`again      ${names.join(' = ')}: ${outcome.error}`);
+      outcome = await runPlan(page, plan);
+    }
+    let flaky: string | undefined;
+    for (let i = 1; i < repeat && !flaky; i++) {
+      const again = await runPlan(page, plan);
+      if (signature(again) !== signature(outcome)) flaky = `run ${i + 1}: ${again.verdict}${again.verdict !== 'agree' ? `\n${detail(plan, again)}` : ''}`;
+    }
+    results.push({ plan, names, outcome, ...(flaky && { flaky }) });
+    const tag = `${outcome.verdict}${flaky ? ' FLAKY' : ''}`;
+    if (outcome.verdict !== 'agree' || flaky || verbose) {
+      say(`${tag.padEnd(10)} ${names.join(' = ')}${plan.notes.length ? `  [${plan.notes.join(', ')}]` : ''}  ${outcome.ms}ms`);
+      if (outcome.verdict !== 'agree') say(detail(plan, outcome));
+      if (flaky) say(`  but ${flaky}`);
+    }
+    for (const u of outcome.unsettled) say(`  unsettled after ${u}`);
   }
-  for (const u of outcome.unsettled) say(`  unsettled after ${u}`);
+  // the shared browser stays up, the app loaded in it for the next run; this only disconnects
+  await appTab.release().catch((e) => say(`couldn't release ${driver.title}: ${String(e).slice(0, 200)}`));
+  await browser?.close();
+  return version;
 }
-// the shared browser stays up, the app loaded in it for the next run; this only disconnects
-await appTab.release().catch((e) => say(`couldn't release ${driver.title}: ${String(e).slice(0, 200)}`));
-await browser?.close();
 
 // ------------------------------------------------------------------ summary
 
@@ -845,23 +994,40 @@ say(`\n${driver.title}: ` + verdicts.map((v) => `${v} ${count(v)}${isText ? '' :
 const flakes = results.filter((r) => r.flaky).length;
 if (repeat > 1) say(`flaky over ${repeat} runs: ${flakes}`);
 if (skipped.size) say('skipped, by reason: ' + [...skipped].sort((a, b) => b[1].length - a[1].length).map(([k, v]) => `${k} ${v.length}`).join(', '));
+if (notRun.size) say('not run as they are now, by reason: ' + [...notRun].sort((a, b) => b[1].length - a[1].length).map(([k, v]) => `${k} ${v.length}`).join(', '));
 const unsettledRuns = results.filter((r) => r.outcome.unsettled.length).length;
 if (unsettledRuns) say(`${unsettledRuns} examples had actions after which ${driver.title} didn't settle (see "unsettled after" above)`);
 if (errors.length) say(`page errors: ${errors.length} (first: ${errors[0]})`);
 const run = runData(results, version);
+if (!regenerating) keep(run);
 writeJson(run);
+
+/** Keeps what the app did in the examples run (`FileRun`): theirs replaced, their files' others kept, unless it ran every example of the file. */
+function keep(run: AppRun): void {
+  fileRuns(); // a run of the whole spec from before, split first
+  const all = allTests();
+  const selected = new Set(tests.map((t) => `${t.file} › ${t.name}`));
+  for (const file of new Set(run.examples.map((e) => e.file))) {
+    const ran = run.examples.filter((e) => e.file === file);
+    const whole = !flag('--strict') && all.filter((t) => t.file === file).every((t) => selected.has(`${t.file} › ${t.name}`));
+    const before = whole ? [] : (read<FileRun>(fileRun(driver.name, file))?.examples ?? []).filter((e) => !ran.some((r) => r.name === e.name));
+    writeFileRun({ type: 'SxS', app: driver.name, file, version: run.version, command: run.command, elapsed_s: run.elapsed_s, ran: new Date().toISOString(), examples: [...before, ...ran] });
+  }
+}
 
 // traffic: what the proxy fetched or passed through live is what a warm cache should not need, and
 // what it blocked may be something an app needs; -v lists every host and URL
-const stats = await proxyStats();
-const served = Object.values(stats).flatMap((b) => Object.entries(b));
-const sum = (how: string): number => served.filter(([h]) => h === how).reduce((n, [, c]) => n + c.n, 0);
-say(`proxy: ${sum('hit')} from cache, ${sum('miss')} fetched and cached, ${sum('live') + sum('live-ws')} live, ${sum('blocked')} blocked`);
-for (const [host, byHow] of Object.entries(stats).sort()) {
-  const hows = Object.entries(byHow).filter(([how]) => verbose || how !== 'hit');
-  if (!hows.length) continue;
-  say(`  ${host}: ${hows.map(([how, c]) => `${how} ${c.n}`).join(', ')}`);
-  if (verbose) for (const [how, c] of hows) for (const u of c.urls) say(`    ${how.padEnd(8)} ${u.slice(0, 200)}`);
+if (!regenerating) {
+  const stats = await proxyStats();
+  const served = Object.values(stats).flatMap((b) => Object.entries(b));
+  const sum = (how: string): number => served.filter(([h]) => h === how).reduce((n, [, c]) => n + c.n, 0);
+  say(`proxy: ${sum('hit')} from cache, ${sum('miss')} fetched and cached, ${sum('live') + sum('live-ws')} live, ${sum('blocked')} blocked`);
+  for (const [host, byHow] of Object.entries(stats).sort()) {
+    const hows = Object.entries(byHow).filter(([how]) => verbose || how !== 'hit');
+    if (!hows.length) continue;
+    say(`  ${host}: ${hows.map(([how, c]) => `${how} ${c.n}`).join(', ')}`);
+    if (verbose) for (const [how, c] of hows) for (const u of c.urls) say(`    ${how.padEnd(8)} ${u.slice(0, 200)}`);
+  }
 }
 
 // ------------------------------------------------------------------ report
@@ -910,7 +1076,8 @@ function report(): string {
   };
   for (const r of results) for (const n of r.names) tallyIn(n, r.outcome.verdict, r.plan.notes.length ? 'adapted' : 'original');
   for (const names of skipped.values()) for (const n of names) tallyIn(n, 'skipped');
-  const columns = [...verdicts, 'skipped'];
+  for (const names of notRun.values()) for (const n of names) tallyIn(n, 'not run');
+  const columns = [...verdicts, 'skipped', ...(notRun.size ? ['not run'] : [])];
   const kinds = isText ? [] : ['original', 'adapted'];
   /** A count's share of all the examples, to two significant digits: `38%`, `6.6%`. */
   const percent = (n: number): string => `${Number(((100 * n) / tests.length).toPrecision(2))}%`;
@@ -938,13 +1105,14 @@ function report(): string {
   // the same columns as per file, and the same bold totals: (for a block app) a row each for original
   // and adapted examples, then the total row, each column's share of all the examples
   const skips = tests.length - plans.length;
+  const unrun = [...notRun.values()].reduce((n, names) => n + names.length, 0);
   const summary = [
     '## Summary',
     '',
     row(['', ...columns, 'total']),
     `|${' --- |'.repeat(columns.length + 2)}`,
     ...kinds.map((k) => row([k, ...verdicts.map((v) => cell(count(v, k))), '', bold(ran(k))])),
-    row([bold('total'), ...[...verdicts.map((v) => count(v)), skips].map((n) => bold(share(n))), bold(tests.length)]),
+    row([bold('total'), ...[...verdicts.map((v) => count(v)), skips, ...(notRun.size ? [unrun] : [])].map((n) => bold(share(n))), bold(tests.length)]),
     '',
   ];
   // what ran, as frontmatter; values quoted as JSON, which YAML reads as double-quoted strings
@@ -956,13 +1124,16 @@ function report(): string {
     `url: ${JSON.stringify(driver.url)}`,
     `model: ${JSON.stringify(driver.model)}`,
     `command: ${JSON.stringify(`node sxs/run.ts ${driver.name}`)}`,
-    `elapsed_s: ${Math.round((Date.now() - started) / 1000)}`,
+    `elapsed_s: ${previous?.elapsed_s ?? Math.round((Date.now() - started) / 1000)}`,
     '---',
     '',
     `# ${driver.title} vs ourus`,
     '',
     `Spec test suite replayed in ${driver.title} and compared against ourus.`,
     '',
+    ...(regenerating
+      ? [`Regenerated from an earlier run (\`--regenerate-report\`): what ${driver.title} did then, judged against the spec as it is now. ${unrun ? `The ${unrun} examples it didn't play as they are now ("Not run", below) want a run.` : 'It played every example as it is now.'}`, '']
+      : []),
     isText
       ? 'Model: [text](../lib/text.ts) (buffers loaded and compared as written, caret included)'
       : 'Model: [block](../lib/outline.ts) (free-form cases had to be adapted into outlines of blocks)',
@@ -1034,6 +1205,10 @@ function report(): string {
   if (skipped.size) {
     out.push('## Skipped', '');
     for (const [why, names] of [...skipped].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))) out.push(`### ${why} (${names.length})`, '', ...names.map((n, i) => `${i + 1}. ${link(n)}`), '');
+  }
+  if (notRun.size) {
+    out.push('## Not run', '');
+    for (const [why, names] of [...notRun].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))) out.push(`### ${why} (${names.length})`, '', ...names.map((n, i) => `${i + 1}. ${link(n)}`), '');
   }
   return out.join('\n');
 }

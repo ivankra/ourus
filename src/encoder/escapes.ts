@@ -13,14 +13,15 @@ const escapePoint = (text: string): number => /^\d*/.exec(text)![0].length;
  * `text` escaped where it would not read as text at a line's start, and where the backslash went
  * (null when it needs none). `start`: the line starts a node's text, where any block start or list
  * marker would take it; `continuation`: it continues a paragraph, where only a block that
- * interrupts one (or a setext underline) would. With `below`, the lines after it: also where it
- * and they would read as a link reference definition.
+ * interrupts one (or a setext underline) would, or what other readers take for a block there
+ * (`readsAsBlockElsewhere`). With `below`, the lines after it: also where it and they would read
+ * as a link reference definition.
  */
 export function escape(flavor: Flavor, text: string, where: 'start' | 'continuation', below?: readonly string[]): { text: string; at: number | null } {
   const needed =
     where === 'start'
       ? flavor.startsBlock(text, false) || reListMarker.test(text) || (below !== undefined && readsAsReference(flavor, text, below))
-      : flavor.startsBlock(text, true);
+      : flavor.startsBlock(text, true) || readsAsBlockElsewhere(text);
   if (!needed) return { text, at: null };
   const at = escapePoint(text);
   return { text: text.slice(0, at) + '\\' + text.slice(at), at };
@@ -35,6 +36,19 @@ export function startOfNode(flavor: Flavor, text: string, below: readonly string
   if (flavor.startsBlock(text, false) || readsAsReference(flavor, text, below)) return { escape: true, marker: 0 };
   const m = reListMarker.exec(text);
   return { escape: false, marker: m ? m[0].length : 0 };
+}
+
+/**
+ * Whether a line continuing a paragraph reads as a block to another reader, though not to the flavor:
+ * an ordered item from any number (CommonMark lets only `1.` interrupt a paragraph, but lezer, in
+ * CodeMirror and Obsidian's Live Preview, nests it), or a table's delimiter row (which makes the line
+ * above a table's header in GFM). Escaped in every flavor, so the text is the same in each.
+ */
+function readsAsBlockElsewhere(text: string): boolean {
+  if (/^\d{1,9}[.)][ \t]+\S/.test(text)) return true;
+  if (!text.includes('|')) return false;
+  const cells = text.trim().replace(/^\|/, '').replace(/\|$/, '').split('|');
+  return cells.every((cell) => /^[ \t]*:?-+:?[ \t]*$/.test(cell));
 }
 
 /** Whether `text`, on the line after paragraph text, starts a block of its own rather than continuing it. */

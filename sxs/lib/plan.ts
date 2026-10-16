@@ -43,7 +43,7 @@ export interface Plan {
 export type Adapted = { plan: Plan } | { skip: string };
 
 /** Options the spec has besides ourus's config. */
-const SPEC_ONLY = new Set(['status', 'flavor']);
+const SPEC_ONLY = new Set(['status', 'rank', 'flavor']);
 const isMotion = (a: string): boolean => /^(?:cursor|select)(?:CharLeft|CharRight|LineUp|LineDown|LineBoundaryBackward|LineBoundaryForward|DocStart|DocEnd)$/.test(a);
 
 /** Whether the app can play an action. */

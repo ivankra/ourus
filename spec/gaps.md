@@ -1,3 +1,4 @@
+
 # Blank lines
 
 Blank lines belong to the node above them, as its **trailing gap**: a node's span is its own lines,
@@ -11,67 +12,86 @@ Two consequences, drawn below:
   item, or the document's last node). It separates the whole scope from what follows, so it stays
   at the scope's end, and the two nodes swap around the blank lines between them.
 - **A caret on a blank line is in the gap of the node above.** Structural keys there act on that
-  node, and the blank lines are left as they are. In the preamble there is no node above, and the
-  keys do nothing.
+  node, and the blank lines are left as they are. In the preamble there is no node above: the keys
+  are refused (`nothing-above`), not left to the host, whose Tab there would start indented code.
+- **A command writes a blank line only where the structure needs one**: to end a list before a
+  paragraph, to keep an empty item from reading as a setext underline, to separate two paragraphs;
+  where a list or a section has none, it adds none (Gap6, Gap13). Joins take the blank lines between
+  the two nodes with them ([Delete17](del.md#delete17)); other commands leave blank lines where they
+  are, but for one that no longer separates anything: a node that was right after another, set off
+  by a blank line, and is now its first item in a tight list takes none
+  ([Indent29](indent.md#indent29), [Outdent15](outdent.md#outdent15)).
+- **Frontmatter is a preamble too**, in the Obsidian flavor: no node, its lines the host's (Gap19).
 
-## moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down)
+A node's span is ourus's model, for blank lines that the block outliners don't have. Bare Obsidian
+moves lines, not nodes, so its moves leave gaps behind, and a paragraph moved next to another runs
+into it.
 
-### Gaps travel with their nodes
+## moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down)
 
-`a`'s three blank lines stay below `a`, and `b`'s one stays below `b`.
+### Gap1
+
+Gaps travel with their nodes: `a`'s three blank lines stay below `a`, and `b`'s one below `b`.
+
+```yaml
+rank: core
+```
 
 ```buffer
 a
-
-
 
 b┃
 
 c
 ```
 
-> moveBlockUp
+> moveSubtreeUp
 
 ```buffer
 b┃
 
 a
 
-
-
 c
 ```
 
-### Moving down carries the gap too
+### Gap2
+
+Moving down carries the gap too.
+
+```yaml
+rank: core
+```
 
 ```buffer
 a┃
-
-
 
 b
 
 c
 ```
 
-> moveBlockDown
+> moveSubtreeDown
 
 ```buffer
 b
 
 a┃
 
-
-
 c
 ```
 
-### A section carries its last line's gap
+### Gap3
+
+A section carries its last line's gap.
+
+```yaml
+rank: common
+```
 
 ```buffer
 # A
 text
-
 
 # B┃
 more
@@ -79,7 +99,7 @@ more
 # C
 ```
 
-> moveBlockUp
+> moveSubtreeUp
 
 ```buffer
 # B┃
@@ -88,11 +108,16 @@ more
 # A
 text
 
-
 # C
 ```
 
-### An item carries its gap inside a loose list
+### Gap4
+
+An item carries its gap inside a loose list.
+
+```yaml
+rank: common
+```
 
 ```buffer
 - a
@@ -101,7 +126,7 @@ text
 - c
 ```
 
-> moveBlockUp
+> moveSubtreeUp
 
 ```buffer
 - b┃
@@ -110,31 +135,40 @@ text
 - c
 ```
 
-### A subtree's gap is its last descendant's
+### Gap5
+
+A subtree's gap is its last descendant's.
+
+```yaml
+rank: common
+```
 
 ```buffer
 - a
   - a1
 
-
 - b┃
 - c
 ```
 
-> moveBlockUp
+> moveSubtreeUp
 
 ```buffer
 - b┃
 - a
   - a1
 
-
 - c
 ```
 
-### Sections written without blank lines stay without
+### Gap6
 
-A blank line is added only where the text needs one to keep the two apart.
+Sections written without blank lines stay without: a blank line is added only where the text needs
+one to keep the two apart.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 ## A┃
@@ -144,7 +178,7 @@ b
 ## C
 ```
 
-> moveBlockDown
+> moveSubtreeDown
 
 ```buffer
 ## B
@@ -154,9 +188,14 @@ a
 ## C
 ```
 
-### A paragraph landing above another one is set off by a blank line
+### Gap7
 
-Without it, `x` and `q` would read as one paragraph.
+A paragraph landing above another one is set off by a blank line: without it, `x` and `q` would read
+as one paragraph.
+
+```yaml
+rank: edge
+```
 
 ````buffer
 x┃
@@ -167,7 +206,7 @@ code
 q
 ````
 
-> moveBlockDown
+> moveSubtreeDown
 
 ````buffer
 ```
@@ -179,10 +218,14 @@ x┃
 q
 ````
 
-### The gap ending a list stays at the list's end
+### Gap8
 
-The blank line after `b` separates the list from `para`. If it went up with `b`, the list would
-loosen and `para` would continue `a` lazily.
+The gap ending a list stays at the list's end: it separates the list from `para`. Gone up with `b`,
+it would loosen the list, and `para` would continue `a` lazily.
+
+```yaml
+rank: common
+```
 
 ```buffer
 - a
@@ -191,7 +234,7 @@ loosen and `para` would continue `a` lazily.
 para
 ```
 
-> moveBlockUp
+> moveSubtreeUp
 
 ```buffer
 - b┃
@@ -200,79 +243,95 @@ para
 para
 ```
 
-### The gap ending a parent's children stays at their end
+### Gap9
+
+The gap ending a parent's children stays at their end.
+
+```yaml
+rank: common
+```
 
 ```buffer
 - p
   - x
-
 
   - y┃
 
 - q
 ```
 
-> moveBlockUp
+> moveSubtreeUp
 
 ```buffer
 - p
   - y┃
-
 
   - x
 
 - q
 ```
 
-### The document's trailing blank lines stay at its end
+### Gap10
+
+The document's trailing blank lines stay at its end.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 a
 
 b┃
 
-
 ```
 
-> moveBlockUp
+> moveSubtreeUp
 
 ```buffer
 b┃
 
 a
 
-
 ```
 
-### The preamble stays at the top
+### Gap11
+
+The preamble stays at the top.
+
+```yaml
+rank: edge
+```
 
 ```buffer
-
 
 a┃
-
 
 b
 
 c
 ```
 
-> moveBlockDown
+> moveSubtreeDown
 
 ```buffer
-
 
 b
 
 a┃
-
 
 c
 ```
 
 ## New text and gaps
 
-### Enter at the end of a heading keeps its gap below the new paragraph
+### Gap12
+
+Enter at the end of a heading keeps its gap below the new paragraph.
+
+```yaml
+rank: core
+```
 
 ```buffer
 ## S┃
@@ -289,11 +348,15 @@ p
 p
 ```
 
-### Items pasted at the end of a tight list keep it tight
+### Gap13
 
-```clipboard
-- a
-- b
+Items pasted at the end of a tight list keep it tight.
+
+```yaml
+rank: common
+clipboard: |
+  - a
+  - b
 ```
 
 ```buffer
@@ -312,32 +375,16 @@ para
 para
 ```
 
-### Items pasted as first children land at the existing children's column
-
-```clipboard
-- a
-- b
-```
-
-```buffer
-- [ ] t┃
-    - g
-```
-
-> pasteStructured
-
-```buffer
-- [ ] t
-    - a
-    - b┃
-    - g
-```
-
 ## Keys on a blank line
 
-### Moving from a blank line moves the node above
+### Gap14
 
-The caret is in `b`'s gap, so `b` moves, and the gap and the caret with it.
+Moving from a blank line moves the node above: the caret is in `b`'s gap, so `b` moves, and the gap
+and the caret with it.
+
+```yaml
+rank: common
+```
 
 ```buffer
 a
@@ -348,7 +395,7 @@ b
 c
 ```
 
-> moveBlockUp
+> moveSubtreeUp
 
 ```buffer
 b
@@ -359,7 +406,13 @@ a
 c
 ```
 
-### Tab on a blank line indents the node above
+### Gap15
+
+Tab on a blank line indents the node above.
+
+```yaml
+rank: common
+```
 
 ```buffer
 - a
@@ -377,7 +430,13 @@ c
 - c
 ```
 
-### Shift-Tab on a blank line outdents the node above
+### Gap16
+
+Shift-Tab on a blank line outdents the node above.
+
+```yaml
+rank: common
+```
 
 ```buffer
 - a
@@ -395,7 +454,13 @@ c
 - c
 ```
 
-### A blank line between a node's text and its first child is the node's
+### Gap17
+
+A blank line between a node's text and its first child is the node's.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - a
@@ -404,7 +469,7 @@ c
 - c
 ```
 
-> moveBlockDown
+> moveSubtreeDown
 
 ```buffer
 - c
@@ -413,7 +478,15 @@ c
   b
 ```
 
-### Keys in the preamble do nothing
+### Gap18
+
+Keys in the preamble do nothing: there is no node above the preamble's blank lines for them to act
+on, so ourus refuses them, rather than leave them to the host, whose Tab there would start indented
+code.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 ┃
@@ -421,10 +494,10 @@ c
 a
 ```
 
-> moveBlockDown
+> moveSubtreeDown
 
 ```result
-notApplicable
+rejected: nothing-above
 ```
 
 ```buffer
@@ -436,11 +509,38 @@ a
 > indent
 
 ```result
-notApplicable
+rejected: nothing-above
 ```
 
 ```buffer
 ┃
 
 a
+```
+
+### Gap19
+
+In the Obsidian flavor frontmatter is the preamble, no node, so Enter in it is the host's newline.
+(CommonMark and GFM have no frontmatter: there `a: b` / `---` is a setext heading.)
+
+```yaml
+rank: edge
+flavor: obsidian
+```
+
+```buffer
+---
+a: b┃
+---
+- x
+```
+
+> enter
+
+```buffer
+---
+a: b
+┃
+---
+- x
 ```

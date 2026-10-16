@@ -9,7 +9,9 @@ export const driver = obsidianDriver({
   mode: 'live-preview',
   plugins: [{ id: 'obsidian-outliner', version: '4.10.2' }],
   // "Move list item up" and "Move list item down": the item with its children
-  keys: { moveBlockUp: 'Control+Shift+ArrowUp', moveBlockDown: 'Control+Shift+ArrowDown' },
+  keys: { moveSubtreeUp: 'Control+Shift+ArrowUp', moveSubtreeDown: 'Control+Shift+ArrowDown' },
   // "stick the cursor to the content" (`stickCursor`)
   holds: keepsCaretOnText('Outliner', { checkbox: true }),
+  // its Shift-Tab, and Enter on an empty item, outdent logically
+  behaves: { outdent: 'logical' },
 });

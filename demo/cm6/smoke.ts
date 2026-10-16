@@ -76,7 +76,7 @@ const results = [
   await scenario('Delete at an item\'s text start keeps its child; typing fills the place', '- ┃a b\n  - c\n', ['Delete', 'type:x'], '- x b\n  - c\n'),
   await scenario('Delete at an item\'s text start, then leave: the surplus space goes', '- ┃a b\n  - c\n', ['Delete', 'ArrowDown'], '- b\n  - c\n'),
   await scenario('Enter twice ends the list', '- a┃\n', ['Enter', 'Enter', 'type:text'], '- a\n\ntext\n'),
-  await scenario('Enter twice mid-list splits it', '- a┃\n- b\n', ['Enter', 'Enter', 'type:p'], '- a\n\np\n\n- b\n'),
+  await scenario('Enter on an empty item mid-list makes another', '- a┃\n- b\n', ['Enter', 'Enter', 'type:p'], '- a\n- \n- p\n- b\n'),
   await scenario('Enter before a typed marker keeps it as text', '- abc ┃- def\n', ['Enter'], '- abc\n- \\- def\n'),
   await scenario('Shift-Enter breaks a line inside the item', '- one┃ two\n', ['Shift+Enter', 'type:x'], '- one\n  xtwo\n'),
   await scenario('Shift-Enter at the end, then type: same item, two lines', '- one┃\n- b\n', ['Shift+Enter', 'type:two', 'Tab'], '- one\n  two\n- b\n'),

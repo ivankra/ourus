@@ -7,8 +7,8 @@ import { test, type TestContext } from 'node:test';
 import { Config } from '../src/config.ts';
 import { OutlineState } from '../src/outline/index.ts';
 import { drawState, drawText, readDrawing, readText } from './drawing.ts';
-import { isAction, play, type Played } from './player.ts';
-import { readSpec, specConfig, type SpecTest } from './specfile.ts';
+import { isAction, isCommand, play, type Played } from './player.ts';
+import { readSpec, slug, specConfig, type SpecTest } from './specfile.ts';
 
 const specDir = new URL('../spec/', import.meta.url);
 
@@ -36,7 +36,11 @@ function run(t: SpecTest, flavor: Config['flavor']): void {
     const at = `${t.file}:${step.line} (${flavor})`;
     const unknown = step.actions.filter((a) => !isAction(a));
     assert.deepEqual(unknown, [], `${at}: unknown actions`);
-    state = play(state, step.actions);
+    for (const action of step.actions) {
+      state = play(state, [action]);
+      // encoding-failed is a bug, never an outcome: a later action can't hide one
+      assert.ok(state.last?.status !== 'rejected' || state.last.reason !== 'encoding-failed', `${at}: ${action} failed to encode${state.last?.status === 'rejected' && state.last.detail ? `: ${state.last.detail}` : ''}`);
+    }
     const { buffer, clipboard, result } = step.expect;
     const why = state.last?.status === 'rejected' && state.last.detail ? ` (${state.last.reason}: ${state.last.detail})` : '';
     if (result !== undefined) assert.equal(outcome(state), result, `${at}: result${why}`);
@@ -75,3 +79,48 @@ for (const file of readdirSync(specDir).filter((f) => f.endsWith('.md') && f !==
     });
   }
 }
+
+const specFiles = (): string[] => readdirSync(specDir).filter((f) => f.endsWith('.md') && f !== 'README.md');
+
+// every case is ranked, and every core one is walked through in a daily flow of scenarios.md
+test('every case has a rank, and every core case appears in scenarios.md', () => {
+  const scenarios = readFileSync(new URL('scenarios.md', specDir), 'utf8');
+  const problems: string[] = [];
+  for (const file of specFiles()) {
+    for (const t of readSpec(file, readFileSync(new URL(file, specDir), 'utf8'))) {
+      if (!t.options.rank) problems.push(`${file} › ${t.name}: no rank`);
+      const id = t.name.split(' › ').pop()!;
+      if (t.options.rank === 'core' && file !== 'scenarios.md' && !scenarios.includes(`${file}#${slug(id)})`)) problems.push(`${file} › ${t.name}: core, but in no scenario`);
+    }
+  }
+  assert.deepEqual(problems, []);
+});
+
+// the caret never ends in markup: after an applied command it is in a node's text, never before a
+// marker, a checkbox, a heading's `#`s, a quote's `>` or a callout's `[!type]`
+test('no applied command leaves the caret in markup', () => {
+  const problems: string[] = [];
+  for (const file of specFiles()) {
+    for (const t of readSpec(file, readFileSync(new URL(file, specDir), 'utf8'))) {
+      if (t.pending) continue;
+      for (const flavor of flavorsOf(t)) {
+        const start = readDrawing(t.initial.buffer);
+        let state: Played = {
+          doc: OutlineState.parse(start.text, { placeholders: start.placeholders, config: { flavor, ...specConfig(t.options) } }),
+          selection: start.selection,
+          clipboard: readText(t.initial.clipboard ?? ''),
+        };
+        for (const step of t.steps) {
+          for (const action of step.actions) {
+            state = play(state, [action]);
+            const { anchor, head } = state.selection;
+            if (!isCommand(action) || state.last?.status !== 'applied' || anchor !== head) continue;
+            const doc = state.doc;
+            if (head <= doc.lineAt(head).to && doc.nodeAt(head) && head < doc.textStart(head)) problems.push(`${file}:${step.line} (${flavor}) ${action}: ${drawState(doc.text, state.selection, doc.placeholders)}`);
+          }
+        }
+      }
+    }
+  }
+  assert.deepEqual(problems, []);
+});

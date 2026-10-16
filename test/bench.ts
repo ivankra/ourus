@@ -55,12 +55,12 @@ console.log(`${doc.lines.length} lines, ${doc.nodes.length} nodes, ${(text.lengt
 console.log(`${''.padEnd(28)} ${'median'.padStart(8)} ${'p95'.padStart(8)}`);
 measure('full parse', () => OutlineState.parse(text));
 measure('keystroke (OutlineState.apply)', () => doc.update([{ from: end, to: end, insert: 'x' }], { caret: end + 1 }));
-command('moveBlockDown', { type: 'moveBlockDown' }, end);
+command('moveSubtreeDown', { type: 'moveSubtreeDown' }, end);
 command('indent', { type: 'indent' }, end);
 command('outdent (child)', { type: 'outdent' }, doc.headRange(item.children[0]!)!.to);
 command('enter (split)', { type: 'enter' }, start + 2);
 command('shiftEnter', { type: 'shiftEnter' }, start + 2);
 command('deleteContentBackward', { type: 'deleteContentBackward' }, start);
 command('pasteStructured (list)', { type: 'pasteStructured', text: '- pasted\n  - nested' }, end);
-command('duplicateNode', { type: 'duplicateNode' }, end);
+command('duplicateSubtree', { type: 'duplicateSubtree' }, end);
 command('deleteSubtree', { type: 'deleteSubtree' }, end);

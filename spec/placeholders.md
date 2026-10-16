@@ -1,7 +1,9 @@
+
 # Placeholders
 
-Some empty nodes have no Markdown of their own: an empty child right under an item's text (`- a` /
-`  - ` reads as a setext heading), an empty paragraph, an empty line inside a node's text. While the
+Some empty nodes have no Markdown of their own: an empty item right under an item's or a paragraph's
+text (`- a` / `  - ` and `para` / `- ` read as setext headings), an empty paragraph, an empty line
+inside a node's text. While the
 caret is in one, the document reads its line as if a character had been typed at its end, so the
 node exists in the outline: that line end is a **placeholder**, drawn `◌`.
 
@@ -13,19 +15,21 @@ as text, and the item keeps its column.
 Only the editor makes a placeholder, and the document keeps it (each editor view has its own):
 
 - **A command** that leaves the caret in an empty node the text can't hold makes one.
-- **An edit that deletes** text makes one at the caret when the outline would otherwise change there:
-  deleting a child's last character leaves the child, not a heading, and deleting an item's first
-  character keeps its column. Typing never makes one: what is typed is text.
+- **An edit that deletes** text makes one at the caret when the outline would otherwise change
+  there: deleting a child's last character leaves the child, not a heading, and deleting an item's
+  first character keeps its column. Typing never makes one: what is typed is text.
 - **It lasts** while the text doesn't hold its node anyway: typing there ends it.
-- **Leaving it**, the node stays when the text can hold it some other way: an empty item gets a blank
-  line above it (`- a` / blank / `  - `), and a deleted character's place gives up its surplus space
-  (`- b`). A node no text can hold, an empty paragraph or an empty line inside a node's text, goes.
-  Either way it is one edit, verified, one undo step.
+- **Leaving it**, the node stays when the text can hold it some other way: an empty item gets a
+  blank line above it (`- a` / blank / `  - `), and a deleted character's place gives up its surplus
+  space (`- b`). A node no text can hold, an empty paragraph or an empty line inside a node's text,
+  goes. Either way it is one edit, verified, one undo step.
 - **Undo and redo** bring it back with the rest: the host keeps the document, placeholders included,
   in its history ([undo.md](undo.md)).
 
 A file never has placeholders: `- a` / `  - ` reads as a heading with an empty underline until
-someone edits there. Leaving never changes what the rest of the text reads as.
+someone edits there. Leaving never changes the outline the rest of the text reads as, though the
+blank line set above an empty child makes its list loose: there is no tighter Markdown for an empty
+child under text.
 
 ## Transitions
 
@@ -42,13 +46,17 @@ someone edits there. Leaving never changes what the rest of the text reads as.
 | the caret leaves an empty node the text can hold | none was made | nothing changes |
 | undo or redo | comes back with the document | |
 | an edit from elsewhere (another plugin, sync) | mapped through the edit; ends if its line gets text | |
-| the selection is not collapsed | kept | |
+| a selection is made | its head counts as the caret: kept while the head is on its line | |
 
 ## Placeholder1
 
 Enter, then Tab: an empty child under text.
 
 A command makes one.
+
+```yaml
+rank: core
+```
 
 ```buffer
 - a┃
@@ -84,7 +92,12 @@ Left, it stays, with a blank line above it.
 
 ## Placeholder2
 
-Enter twice leaves a list for an empty paragraph.
+Enter twice leaves a list for an empty paragraph, set off by the blank line a paragraph after a list
+needs (bare Obsidian drops the marker too, but without it what is typed next continues `a`).
+
+```yaml
+rank: common
+```
 
 ```buffer
 - a┃
@@ -115,7 +128,12 @@ No text holds an empty paragraph: it goes.
 
 ## Placeholder3
 
-Enter at the end of a paragraph.
+Enter at the end of a paragraph makes a new, empty paragraph: it needs a blank line, and has no
+text to hold it.
+
+```yaml
+rank: core
+```
 
 ```buffer
 para┃
@@ -139,6 +157,10 @@ para
 
 Shift-Enter at the end of a paragraph opens an empty line in it.
 
+```yaml
+rank: common
+```
+
 ```buffer
 para┃
 ```
@@ -160,9 +182,12 @@ An empty line inside a paragraph has no Markdown: it goes.
 
 ## Placeholder5
 
-Tab, Shift-Tab, Tab: the node is still the one written.
+A command acting on the empty node carries its placeholder along: Tab, Shift-Tab, Tab, and leaving
+ends it as if the last Tab had been the only one.
 
-A command carries it.
+```yaml
+rank: common
+```
 
 ```buffer
 - a┃
@@ -206,9 +231,11 @@ A command carries it.
 
 ## Placeholder6
 
-The node has text: leaving changes nothing.
+Typing ends it: the node has text, and leaving changes nothing.
 
-Typing ends it.
+```yaml
+rank: common
+```
 
 ```buffer
 - a┃
@@ -250,6 +277,10 @@ An edit empties a node. The deletion is the host's, but read as written the empt
 would be a setext underline: `a` would become a heading and the child would be gone. A placeholder
 at the caret keeps the empty child the user is in.
 
+```yaml
+rank: common
+```
+
 ```buffer
 - a
   - b┃
@@ -272,14 +303,15 @@ at the caret keeps the empty child the user is in.
 
 ## Placeholder8
 
-Delete at the text start.
+Delete at the text start keeps the item's column. Deleting a text's first character can leave the
+space after it right after the marker (`-  b`): the wider padding moves the item's content column,
+and its child would stop being one. The space at the caret, in the deleted character's place,
+becomes the placeholder: read as text, it keeps the item's column. Typing fills the place; leaving,
+the surplus space goes.
 
-A deletion at the text start keeps the item's column.
-
-Deleting a text's first character can leave the space after it right after the marker (`-  b`):
-the wider padding moves the item's content column, and its child would stop being one. The space
-at the caret, in the deleted character's place, becomes the placeholder: read as text, it keeps the
-item's column. Typing fills the place; leaving, the surplus space goes.
+```yaml
+rank: edge
+```
 
 ```buffer
 - ┃a b
@@ -302,7 +334,12 @@ item's column. Typing fills the place; leaving, the surplus space goes.
 
 ## Placeholder9
 
-Backspace after the first character.
+The same with Backspace after the first character. Bare editors leave `-  b`, whose wider padding
+makes `c` a sibling instead of a child.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - a┃ b
@@ -327,11 +364,12 @@ Leaving, the surplus space goes, and `c` is still a child.
 
 ## Placeholder10
 
-An empty child typed out stays as typed.
+An empty child typed out stays as typed: typing makes text, never a placeholder, and the text reads
+as it reads.
 
-Typing makes no placeholder.
-
-Typing makes text, not a placeholder: the text reads as it reads.
+```yaml
+rank: edge
+```
 
 ```buffer
 - a
@@ -356,9 +394,12 @@ No `◌`: the line is text, and `a` reads as a heading with an empty underline.
 
 ## Placeholder11
 
-An empty item between items stays as it is.
+An empty item between items: the text holds it, so no placeholder is made, and leaving changes
+nothing.
 
-Leaving where the text can hold the node.
+```yaml
+rank: common
+```
 
 ```buffer
 - a┃
@@ -387,6 +428,10 @@ An empty child under text, never edited, is no placeholder.
 
 A file reads as written.
 
+```yaml
+rank: edge
+```
+
 ```buffer
 - a
   - ┃
@@ -404,8 +449,12 @@ A file reads as written.
 Delete on an empty paragraph's placeholder removes the paragraph.
 
 The empty paragraph goes with its blank line. The node below keeps its kind, and the caret goes to
-the start of its line: the heading isn't joined into the empty paragraph, which would make it a
-paragraph and drop its `##`.
+the start of its text, after the `##` (never in markup): the heading isn't joined into the empty
+paragraph, which would make it a paragraph and drop its `##`.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 # H1
@@ -430,12 +479,16 @@ paragraph and drop its `##`.
 ```buffer
 # H1
 
-┃## H2
+## ┃H2
 ```
 
 ## Placeholder14
 
 The same before a paragraph: the empty paragraph goes, and the paragraph below stays as it was.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 para
@@ -470,6 +523,10 @@ Enter at the start of an item right after paragraph text: a placeholder holds th
 Right after `para`, an empty item would be a setext underline, so it exists only while the caret
 is in it. Leaving, it stays, set off by a blank line.
 
+```yaml
+rank: common
+```
+
 ```buffer
 para
 - ┃a
@@ -490,4 +547,39 @@ para
 
 - 
 - a┃
+```
+
+## Placeholder16
+
+A selection's head counts as the caret: selecting within the line keeps the placeholder, and a
+selection whose head leaves the line ends it, as the caret leaving would.
+
+```yaml
+rank: rare
+```
+
+```buffer
+- a┃
+```
+
+> enter indent selectCharLeft
+
+```buffer
+- a
+  -┃« »◌
+```
+
+> cursorCharRight
+
+```buffer
+- a
+  - ┃◌
+```
+
+> selectDocStart
+
+```buffer
+┃«- a
+
+  - »
 ```

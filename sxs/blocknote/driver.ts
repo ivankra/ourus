@@ -169,6 +169,8 @@ export const driver: Driver = {
   title: 'BlockNote',
   url: 'https://www.blocknotejs.org/examples/basic/minimal',
   model: 'block',
+  // measured: Enter at an item's text start leaves the caret with the text
+  behaves: { enterAtTextStart: 'stay' },
   keys: {
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
@@ -177,8 +179,8 @@ export const driver: Driver = {
     deleteContentBackward: 'Backspace',
     deleteContentForward: 'Delete',
     // "Move block up", "down" (Mod-Shift-ArrowUp, -ArrowDown): the block with its children
-    moveBlockUp: 'Control+Shift+ArrowUp',
-    moveBlockDown: 'Control+Shift+ArrowDown',
+    moveSubtreeUp: 'Control+Shift+ArrowUp',
+    moveSubtreeDown: 'Control+Shift+ArrowDown',
     // no command: selecting to the line's start, then deleting
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
     pasteStructured: 'Control+v',

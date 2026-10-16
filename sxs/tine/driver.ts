@@ -78,8 +78,8 @@ export const driver: Driver = {
     outdent: 'Shift+Tab',
     deleteContentBackward: 'Backspace',
     deleteContentForward: 'Delete',
-    moveBlockUp: 'Alt+Shift+ArrowUp',
-    moveBlockDown: 'Alt+Shift+ArrowDown',
+    moveSubtreeUp: 'Alt+Shift+ArrowUp',
+    moveSubtreeDown: 'Alt+Shift+ArrowDown',
     // "kill line before"
     deleteSoftLineBackward: 'Alt+u',
     // Escape selects the block being edited, and Backspace deletes the selected blocks with their children
@@ -92,7 +92,7 @@ export const driver: Driver = {
   },
   emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd'],
   refuses: [],
-  behaves: { outdent: 'direct', enterOnEmptyItem: 'sibling' },
+  behaves: { outdent: 'direct', enterOnEmptyItem: 'sibling', enterMidItem: 'child', pasteStructuredMidText: 'after' },
   holds(doc) {
     const o = doc as Outline;
     if (!o.sel) return undefined;

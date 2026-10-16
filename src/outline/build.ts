@@ -97,14 +97,7 @@ export function buildOutline(document: Block, line: (index: number) => LineInfo,
   };
 
   const addQuote = (quote: Block, parent: MutableOutlineNode): void => {
-    // a callout's title line is its text: a title block where the flavor has callouts, else the
-    // first paragraph when it starts with `[!type]`
-    const first = quote.children[0];
-    const title =
-      first?.type === 'callout_title' ||
-      (first?.type === 'paragraph' && /^[ \t]*\[![^\]]*\]/.test(text.slice(line(first.startLine).contentFrom, line(first.startLine).to)))
-        ? first
-        : null;
+    const title = calloutTitle(quote, line, text);
     const node = add('quote', quote, title, parent);
     addBlocks(title ? quote.children.slice(1) : quote.children, node);
   };
@@ -141,4 +134,16 @@ export function headOwners(nodes: readonly OutlineNode[], lineCount: number): (O
     for (let lineNo = node.startLine; lineNo <= node.headEndLine; lineNo++) owners[lineNo] = node;
   }
   return owners;
+}
+
+/**
+ * A quote's callout title, its text: a title block where the flavor has callouts, else the first
+ * paragraph when it starts with `[!type]`; or null. It depends on the text, not only on the blocks.
+ */
+export function calloutTitle(quote: Block, line: (i: number) => LineInfo, text: string): Block | null {
+  const first = quote.children[0];
+  if (first?.type === 'callout_title') return first;
+  if (first?.type !== 'paragraph') return null;
+  const start = line(first.startLine);
+  return /^[ \t]*\[![^\]]*\]/.test(text.slice(start.contentFrom, start.to)) ? first : null;
 }

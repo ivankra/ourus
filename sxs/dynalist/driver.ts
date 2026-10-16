@@ -63,8 +63,8 @@ export const driver: Driver = {
     outdent: 'Shift+Tab',
     deleteContentBackward: 'Backspace',
     deleteContentForward: 'Delete',
-    moveBlockUp: 'Control+ArrowUp',
-    moveBlockDown: 'Control+ArrowDown',
+    moveSubtreeUp: 'Control+ArrowUp',
+    moveSubtreeDown: 'Control+ArrowDown',
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
     deleteSubtree: 'Control+Shift+Backspace',
     pasteStructured: 'Control+v',
@@ -77,7 +77,7 @@ export const driver: Driver = {
     ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
   },
   refuses: [],
-  behaves: { outdent: 'logical' },
+  behaves: { outdent: 'logical', pasteStructuredLines: 'items' },
   // "Unindent in place" (Settings › Editor): Shift+Tab takes the item's later siblings along as children
   settings: { outdent: ['logical', 'direct'] },
   holds(doc) {

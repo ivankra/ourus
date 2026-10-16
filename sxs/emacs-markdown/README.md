@@ -17,7 +17,7 @@ Emacs's and markdown-mode's own, in Emacs's notation, from markdown-mode's keyma
 | `enter` | RET (`markdown-enter-key`: a line break, indented as `markdown-indent-on-enter` says; no list item continued: that is M-RET, `markdown-insert-list-item`) |
 | `shiftEnter` | S-&lt;return&gt;: unbound, so Emacs takes it as RET (the shift dropped, `<return>` translated), as for a user |
 | `indent`, `outdent` | C-c &lt;right&gt;, C-c &lt;left&gt; ("Indent Subtree", "Outdent Subtree": `markdown-demote`, `markdown-promote`) |
-| `moveBlockUp`, `moveBlockDown` | C-c &lt;up&gt;, C-c &lt;down&gt; ("Move Subtree Up", "Down": `markdown-move-up`, `markdown-move-down`) |
+| `moveSubtreeUp`, `moveSubtreeDown` | C-c &lt;up&gt;, C-c &lt;down&gt; ("Move Subtree Up", "Down": `markdown-move-up`, `markdown-move-down`) |
 | `deleteContentBackward`, `deleteContentForward` | DEL (`markdown-outdent-or-delete`), the Delete key (`delete-forward-char`) |
 | `deleteSoftLineBackward` | C-0 C-k (`kill-line` with 0: the text before point on its line) |
 | `deleteSubtree` | C-c C-k ("Kill Element", `markdown-kill-thing-at-point`: a list item with its children) |
@@ -27,7 +27,7 @@ Emacs's and markdown-mode's own, in Emacs's notation, from markdown-mode's keyma
 
 TAB isn't `indent`: in markdown-mode it is `markdown-cycle`, which on a list item cycles the line's
 indentation through the positions it allows (two spaces, then a tab), the line alone; Shift+Tab
-(`markdown-shifttab`) folds the outline. `duplicateNode` has no key (Emacs 29's `duplicate-dwim` is
+(`markdown-shifttab`) folds the outline. `duplicateSubtree` has no key (Emacs 29's `duplicate-dwim` is
 unbound); its examples are skipped.
 
 ## Stack
@@ -99,10 +99,10 @@ https://github.com/jrblevin/markdown-mode
   text, keep an item's marker, and don't renumber (`indent.md › Indent3`, `4`, `5`); they act on the
   item at point, not on a region's items (`Indent9`); a heading's level changes with its subtree, blank
   lines put around it (`Indent12`); a paragraph is no item to indent (`Indent21`, `22`).
-- **Moving keeps to the item's list**: a first item doesn't move up out of it (`block-up.md ›
-  BlockUp7`).
+- **Moving keeps to the item's list**: a first item doesn't move up out of it (`move-subtree-up.md ›
+  MoveUp7`).
 - **"Kill Element"** kills an item with its children and leaves a blank line (`delete-subtree.md ›
-  BlockDelete1`).
+  DeleteSubtree1`).
 - **Yank is plain**: the text goes in as it is (`paste.md › Paste3`, `Paste7`).
 - **Home is the line's start**, before the marker (`markdown-special-ctrl-a/e` is off by default);
   Up on the first line beeps and stays (`cursor.md › CursorUp1`).

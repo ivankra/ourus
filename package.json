@@ -54,6 +54,7 @@
     "remark-rehype": "^11.1.2",
     "showdown": "^2.1.0",
     "typescript": "^7.0.2",
-    "unified": "^11.0.5"
+    "unified": "^11.0.5",
+    "yaml": "^2.8.1"
   }
 }

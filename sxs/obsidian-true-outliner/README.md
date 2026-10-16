@@ -35,7 +35,7 @@ hotkey settings; out of it, every key is Obsidian's.
 | --- | --- | --- |
 | `enter`, `shiftEnter` | Enter, Shift+Enter | split the node, continue it |
 | `indent`, `outdent` | Tab, Shift+Tab | the node with its children; the indent unit is the document's (a tab, else its first step), else Obsidian's (a tab) |
-| `moveBlockUp`, `moveBlockDown` | Ctrl+Shift+Up, Ctrl+Shift+Down | "Move node up" and "down" (`move-node-up`, `-down`), the node with its children; Alt+Up and Down do nothing in outline mode |
+| `moveSubtreeUp`, `moveSubtreeDown` | Ctrl+Shift+Up, Ctrl+Shift+Down | "Move node up" and "down" (`move-node-up`, `-down`), the node with its children; Alt+Up and Down do nothing in outline mode |
 | `deleteContentBackward`, `deleteContentForward` | Backspace, Delete | take back a place a structural key just made, refuse to join a block id's line; else Obsidian's |
 | caret motions | arrows, Home, End | outline-aware; Shift+Up and Down extend the selection by node |
 | `pasteStructured` | Ctrl+V | a paste of several blocks is made a structural one (a transaction filter) |
@@ -57,8 +57,8 @@ Against bare Obsidian in Live Preview ([`../obsidian-lp/sxs.md`](../obsidian-lp/
   Backspace, Delete and indenting than in the other setups. The spec's cases were measured from
   true-outliner and then drawn as wanted, so where it still differs is mostly where the spec chose
   otherwise (the spec's prose says which).
-- **A move puts the caret at the moved item's text start**, not where it was (`block-up.md ›
-  BlockUp1`: `- b┃` comes out `- ┃b`): moves agree on the text and give `caret`. Home stays at the
+- **A move puts the caret at the moved item's text start**, not where it was (`move-subtree-up.md ›
+  MoveUp1`: `- b┃` comes out `- ┃b`): moves agree on the text and give `caret`. Home stays at the
   text's start (`cursor.md › CursorHome2`).
 - **Sections of headings and paragraphs** disagree more than in bare Obsidian (`obsidian-true-outliner.md
   › Enter › E29`: Enter at a paragraph's start).

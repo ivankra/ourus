@@ -28,9 +28,9 @@ ChromeOS.
 | `enter`, `shiftEnter` | Enter, Shift+Enter (to the note and back) |
 | `indent`, `outdent` | Tab, Shift+Tab |
 | `deleteContentBackward`, `deleteContentForward` | Backspace, Delete |
-| `moveBlockUp`, `moveBlockDown` | Alt+Shift+Up, Alt+Shift+Down |
+| `moveSubtreeUp`, `moveSubtreeDown` | Alt+Shift+Up, Alt+Shift+Down |
 | `deleteSubtree` | Ctrl+Shift+Backspace |
-| `duplicateNode` | Alt+Shift+D |
+| `duplicateSubtree` | Alt+Shift+D |
 | `deleteSoftLineBackward` | Shift+Home, Backspace |
 | `pasteStructured`, `pastePlain` | Ctrl+V, Ctrl+Shift+V |
 | `undo`, `redo` | Ctrl+Z, Ctrl+Y |

@@ -5,12 +5,14 @@ version: "4.3.2610140850"
 url: "https://beta.workflowy.com/guide/embed/"
 model: "block"
 command: "node sxs/run.ts workflowy"
-elapsed_s: 232
+elapsed_s: 60
 ---
 
 # WorkFlowy vs ourus
 
 Spec test suite replayed in WorkFlowy and compared against ourus.
+
+Regenerated from an earlier run (`--regenerate-report`): what WorkFlowy did then, judged against the spec as it is now. It played every example as it is now.
 
 Model: [block](../lib/outline.ts) (free-form cases had to be adapted into outlines of blocks)
 
@@ -18,40 +20,40 @@ Model: [block](../lib/outline.ts) (free-form cases had to be adapted into outlin
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 65 | 4 | 3 | 34 |  |  | **106** |
-| adapted | 76 | 7 | 8 | 86 |  |  | **177** |
-| **total** | **141 (31%)** | **11 (2.4%)** | **11 (2.4%)** | **120 (26%)** | **0 (0%)** | **175 (38%)** | **458** |
+| original | 89 | 4 | 4 | 44 |  |  | **141** |
+| adapted | 105 | 6 | 12 | 132 |  |  | **255** |
+| **total** | **194 (30%)** | **10 (1.5%)** | **16 (2.4%)** | **176 (27%)** | **0 (0%)** | **258 (39%)** | **654** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total | original | adapted |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [backspace.md](../../spec/backspace.md) | 9 | 1 |  | 13 |  | 5 | **28** | 11 | 12 |
-| [block-down.md](../../spec/block-down.md) | 9 |  |  | 4 |  | 7 | **20** | 4 | 9 |
-| [block-up.md](../../spec/block-up.md) | 11 |  |  | 5 |  | 8 | **24** | 4 | 12 |
-| [cursor.md](../../spec/cursor.md) | 23 | 4 |  |  |  | 5 | **32** | 12 | 15 |
-| [del.md](../../spec/del.md) | 5 |  |  | 13 |  | 6 | **24** | 11 | 7 |
-| [delete-subtree.md](../../spec/delete-subtree.md) | 2 | 2 |  |  |  |  | **4** | 1 | 3 |
-| [duplicate-block.md](../../spec/duplicate-block.md) |  | 2 |  |  |  |  | **2** | 1 | 1 |
-| [enter.md](../../spec/enter.md) | 12 | 1 | 7 | 7 |  | 6 | **33** | 11 | 16 |
-| [fences.md](../../spec/fences.md) |  |  |  |  |  | 25 | **25** |  |  |
-| [gaps.md](../../spec/gaps.md) | 11 |  |  | 2 |  | 6 | **19** |  | 13 |
-| [indent.md](../../spec/indent.md) | 12 |  |  | 3 |  | 7 | **22** | 8 | 7 |
-| [obsidian-true-outliner.md](../../spec/obsidian-true-outliner.md) | 26 |  | 2 | 26 |  | 18 | **72** | 24 | 30 |
-| [outdent.md](../../spec/outdent.md) | 4 |  |  | 8 |  | 4 | **16** | 4 | 8 |
-| [paste.md](../../spec/paste.md) | 2 |  |  | 14 |  | 7 | **23** | 5 | 11 |
-| [placeholders.md](../../spec/placeholders.md) | 6 |  | 1 | 3 |  | 5 | **15** | 2 | 8 |
-| [quotes.md](../../spec/quotes.md) |  |  |  |  |  | 53 | **53** |  |  |
-| [scenarios.md](../../spec/scenarios.md) | 4 |  |  |  |  |  | **4** | 3 | 1 |
-| [shift-enter.md](../../spec/shift-enter.md) | 1 |  |  | 13 |  | 2 | **16** | 3 | 11 |
-| [tasks.md](../../spec/tasks.md) | 1 |  | 1 | 2 |  | 4 | **8** |  | 4 |
-| [undo.md](../../spec/undo.md) | 2 |  |  | 1 |  | 1 | **4** | 2 | 1 |
-| [zzz-redesign.md](../../spec/zzz-redesign.md) | 1 | 1 |  | 6 |  | 6 | **14** |  | 8 |
-| **total** | **141 (31%)** | **11 (2.4%)** | **11 (2.4%)** | **120 (26%)** | **0 (0%)** | **175 (38%)** | **458** | **106 (23%)** | **177 (39%)** |
+| [backspace.md](../../spec/backspace.md) | 17 | 1 |  | 22 |  | 12 | **52** | 13 | 27 |
+| [cursor.md](../../spec/cursor.md) | 24 | 4 |  |  |  | 8 | **36** | 12 | 16 |
+| [del.md](../../spec/del.md) | 8 |  |  | 18 |  | 18 | **44** | 13 | 13 |
+| [delete-subtree.md](../../spec/delete-subtree.md) | 2 | 2 |  | 1 |  | 1 | **6** | 1 | 4 |
+| [duplicate-subtree.md](../../spec/duplicate-subtree.md) |  | 2 |  |  |  | 1 | **3** | 1 | 1 |
+| [enter.md](../../spec/enter.md) | 21 | 1 | 10 | 6 |  | 14 | **52** | 17 | 21 |
+| [fences.md](../../spec/fences.md) |  |  |  |  |  | 44 | **44** |  |  |
+| [gaps.md](../../spec/gaps.md) | 11 |  |  | 1 |  | 7 | **19** |  | 12 |
+| [indent.md](../../spec/indent.md) | 16 |  |  | 5 |  | 8 | **29** | 9 | 12 |
+| [move-subtree-down.md](../../spec/move-subtree-down.md) | 18 |  |  | 8 |  | 6 | **32** | 6 | 20 |
+| [move-subtree-up.md](../../spec/move-subtree-up.md) | 16 |  |  | 9 |  | 10 | **35** | 7 | 18 |
+| [obsidian-true-outliner.md](../../spec/obsidian-true-outliner.md) | 23 |  | 2 | 23 |  | 19 | **67** | 21 | 27 |
+| [outdent.md](../../spec/outdent.md) | 8 |  |  | 12 |  | 4 | **24** | 6 | 14 |
+| [paste.md](../../spec/paste.md) | 5 |  |  | 28 |  | 15 | **48** | 12 | 21 |
+| [placeholders.md](../../spec/placeholders.md) | 6 |  | 1 | 3 |  | 6 | **16** | 2 | 8 |
+| [quotes.md](../../spec/quotes.md) |  |  |  |  |  | 74 | **74** |  |  |
+| [scenarios.md](../../spec/scenarios.md) | 11 |  |  | 12 |  | 1 | **24** | 12 | 11 |
+| [shift-enter.md](../../spec/shift-enter.md) | 1 |  | 2 | 18 |  | 2 | **23** | 6 | 15 |
+| [tasks.md](../../spec/tasks.md) | 4 |  | 1 | 7 |  | 5 | **17** |  | 12 |
+| [typing.md](../../spec/typing.md) |  |  |  | 2 |  | 2 | **4** |  | 2 |
+| [undo.md](../../spec/undo.md) | 3 |  |  | 1 |  | 1 | **5** | 3 | 1 |
+| **total** | **194 (30%)** | **10 (1.5%)** | **16 (2.4%)** | **176 (27%)** | **0 (0%)** | **258 (39%)** | **654** | **141 (22%)** | **255 (39%)** |
 
 ## Original cases
 
-### Disagree (34)
+### Disagree (44)
 
 #### 1. [Backspace3](../../spec/backspace.md#backspace3)
 
@@ -463,41 +465,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 11. [Enter3](../../spec/enter.md#enter3)
-
-> enter
-
-<table>
-<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃ b
-  - c
-```
-
-</td><td>
-
-<!--workflowy-->
-```buffer
-- a
-- ┃ b
-  - c
-```
-
-</td><td>
-
-<!--ourus-->
-```buffer
-- a
-  - ┃b
-  - c
-```
-
-</td></tr>
-</table>
-
-#### 12. [Enter16](../../spec/enter.md#enter16)
+#### 11. [Enter16](../../spec/enter.md#enter16)
 
 > enter
 
@@ -530,12 +498,67 @@ Per-file:
 </td></tr>
 </table>
 
-#### 13. [Indent19](../../spec/indent.md#indent19)
-
-> indent
+#### 12. [Enter44](../../spec/enter.md#enter44)
 
 <table>
-<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one two┃ three
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- one two
+- ┃ three
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- one two
+- ┃three
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- one two┃ three
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- one two┃three
+```
+
+</td></tr>
+</table>
+
+#### 13. [Indent19](../../spec/indent.md#indent19)
+
+<table>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
@@ -544,7 +567,14 @@ Per-file:
   c┃
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> indent
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 <!--workflowy-->
 ```buffer
@@ -560,6 +590,31 @@ Per-file:
 - a
   - b  
     c┃
+```
+
+</td></tr>
+</table>
+
+> outdent
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- a
+- b  
+  c→┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a
+- b  
+  c┃
 ```
 
 </td></tr>
@@ -599,41 +654,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 15. [Enter › E7, E8 › Split item becomes first tab-indented child](../../spec/obsidian-true-outliner.md#split-item-becomes-first-tab-indented-child)
-
-> enter
-
-<table>
-<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- alpha┃ beta
-  - child
-```
-
-</td><td>
-
-<!--workflowy-->
-```buffer
-- alpha
-- ┃ beta
-  - child
-```
-
-</td><td>
-
-<!--ourus-->
-```buffer
-- alpha
-  - ┃beta
-  - child
-```
-
-</td></tr>
-</table>
-
-#### 16. [Shift-Enter › S11 › Place inside a multi-line item](../../spec/obsidian-true-outliner.md#place-inside-a-multi-line-item)
+#### 15. [Shift-Enter › S11 › Place inside a multi-line item](../../spec/obsidian-true-outliner.md#place-inside-a-multi-line-item)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -695,7 +716,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 17. [Shift-Enter › S13](../../spec/obsidian-true-outliner.md#s13)
+#### 16. [Shift-Enter › S13](../../spec/obsidian-true-outliner.md#s13)
 
 > shiftEnter
 
@@ -726,7 +747,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 18. [Backspace › Joining an item with children › Children move to the joined node](../../spec/obsidian-true-outliner.md#children-move-to-the-joined-node)
+#### 17. [Backspace › Joining an item with children › Children move to the joined node](../../spec/obsidian-true-outliner.md#children-move-to-the-joined-node)
 
 > deleteContentBackward
 
@@ -760,7 +781,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 19. [Backspace › Joining an item with children › Delete forward absorbs child with grandchildren](../../spec/obsidian-true-outliner.md#delete-forward-absorbs-child-with-grandchildren)
+#### 18. [Backspace › Joining an item with children › Delete forward absorbs child with grandchildren](../../spec/obsidian-true-outliner.md#delete-forward-absorbs-child-with-grandchildren)
 
 > deleteContentForward
 
@@ -794,7 +815,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 20. [Abandoning an empty place › Shift-Enter, Tab, then leave › Carried place removed on leaving](../../spec/obsidian-true-outliner.md#carried-place-removed-on-leaving)
+#### 19. [Abandoning an empty place › Shift-Enter, Tab, then leave › Carried place removed on leaving](../../spec/obsidian-true-outliner.md#carried-place-removed-on-leaving)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -862,7 +883,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 21. [Abandoning an empty place › Shift-Enter, Tab, then leave › Doubly indented place removed on leaving](../../spec/obsidian-true-outliner.md#doubly-indented-place-removed-on-leaving)
+#### 20. [Abandoning an empty place › Shift-Enter, Tab, then leave › Doubly indented place removed on leaving](../../spec/obsidian-true-outliner.md#doubly-indented-place-removed-on-leaving)
 
 > shiftEnter indent indent cursorDocStart
 
@@ -901,7 +922,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 22. [Abandoning an empty place › Shift-Enter, Tab, then leave › Backspace returns to the start](../../spec/obsidian-true-outliner.md#backspace-returns-to-the-start)
+#### 21. [Abandoning an empty place › Shift-Enter, Tab, then leave › Backspace returns to the start](../../spec/obsidian-true-outliner.md#backspace-returns-to-the-start)
 
 > shiftEnter indent deleteContentBackward
 
@@ -936,7 +957,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 23. [Abandoning an empty place › Shift-Enter, Tab, then leave › Shift-Tab then Backspace returns to start](../../spec/obsidian-true-outliner.md#shift-tab-then-backspace-returns-to-start)
+#### 22. [Abandoning an empty place › Shift-Enter, Tab, then leave › Shift-Tab then Backspace returns to start](../../spec/obsidian-true-outliner.md#shift-tab-then-backspace-returns-to-start)
 
 > shiftEnter outdent deleteContentBackward
 
@@ -971,7 +992,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 24. [Abandoning an empty place › Shift-Enter, Tab, then Enter](../../spec/obsidian-true-outliner.md#shift-enter-tab-then-enter)
+#### 23. [Abandoning an empty place › Shift-Enter, Tab, then Enter](../../spec/obsidian-true-outliner.md#shift-enter-tab-then-enter)
 
 > shiftEnter indent enter
 
@@ -1013,41 +1034,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 25. [Abandoning an empty place › Enter twice, then leave › Empty paragraph and blank lines removed](../../spec/obsidian-true-outliner.md#empty-paragraph-and-blank-lines-removed)
-
-> enter enter cursorDocStart
-
-<table>
-<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃
-- b
-```
-
-</td><td>
-
-<!--workflowy-->
-```buffer
-- ┃a
-- 
-- 
-- b
-```
-
-</td><td>
-
-<!--ourus-->
-```buffer
-- a
-- b
-```
-
-</td></tr>
-</table>
-
-#### 26. [Paste › #216 › Pasted list takes space indent unit](../../spec/obsidian-true-outliner.md#pasted-list-takes-space-indent-unit)
+#### 24. [Paste › #216 › Pasted list takes space indent unit](../../spec/obsidian-true-outliner.md#pasted-list-takes-space-indent-unit)
 
 > pasteStructured
 
@@ -1092,7 +1079,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 27. [Paste › #216 › Pasted list takes tab indent unit](../../spec/obsidian-true-outliner.md#pasted-list-takes-tab-indent-unit)
+#### 25. [Paste › #216 › Pasted list takes tab indent unit](../../spec/obsidian-true-outliner.md#pasted-list-takes-tab-indent-unit)
 
 > pasteStructured
 
@@ -1137,7 +1124,77 @@ Per-file:
 </td></tr>
 </table>
 
-#### 28. [Direct outdent › DirectOutdent1](../../spec/outdent.md#directoutdent1)
+#### 26. [Outdent13](../../spec/outdent.md#outdent13)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b┃
+    - c
+  - d
+```
+
+</td></tr>
+</table>
+
+> outdent
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- a
+  - d
+- b┃
+  - c
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a
+- b┃
+  - c
+  - d
+```
+
+</td></tr>
+</table>
+
+> indent
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- a
+  - d
+  - b┃
+    - c
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a
+  - b┃
+    - c
+    - d
+```
+
+</td></tr>
+</table>
+
+#### 27. [Direct outdent › DirectOutdent1](../../spec/outdent.md#directoutdent1)
 
 > outdent
 
@@ -1178,7 +1235,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 29. [Paste3](../../spec/paste.md#paste3)
+#### 28. [Paste3](../../spec/paste.md#paste3)
 
 > pastePlain
 
@@ -1218,7 +1275,7 @@ y
 </td></tr>
 </table>
 
-#### 30. [Paste5](../../spec/paste.md#paste5)
+#### 29. [Paste5](../../spec/paste.md#paste5)
 
 > pastePlain
 
@@ -1257,7 +1314,7 @@ y
 </td></tr>
 </table>
 
-#### 31. [Paste7](../../spec/paste.md#paste7)
+#### 30. [Paste7](../../spec/paste.md#paste7)
 
 > pasteStructured
 
@@ -1289,15 +1346,15 @@ y
 
 <!--ourus-->
 ```buffer
-- ab
-- x
-- y┃
+- ax
+  y
+  ┃b
 ```
 
 </td></tr>
 </table>
 
-#### 32. [Paste19](../../spec/paste.md#paste19)
+#### 31. [Paste8b](../../spec/paste.md#paste8b)
 
 > pasteStructured
 
@@ -1306,37 +1363,777 @@ y
 <tr valign="top"><td>
 
 ```clipboard
-# h
-text
+x
+y
 ```
 
 </td><td>
 
 ```buffer
-- a┃
+- a┃b
 ```
 
 </td><td>
 
 <!--workflowy-->
 ```buffer
-- # ah
-- text┃
+- ax
+- y
+- ┃b
 ```
 
 </td><td>
 
 <!--ourus-->
 ```buffer
-- a# h
-  text
+- ax
+- y┃b
+```
+
+</td></tr>
+</table>
+
+#### 32. [Paste10](../../spec/paste.md#paste10)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+y
+```
+
+</td><td>
+
+```buffer
+- a
+- ┃
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- a
+- x
+- y┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a
+- x
+  y
   ┃
 ```
 
 </td></tr>
 </table>
 
-#### 33. [ShiftEnter1](../../spec/shift-enter.md#shiftenter1)
+#### 33. [Paste26](../../spec/paste.md#paste26)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+```
+
+</td><td>
+
+```buffer
+- a┃
+- b
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- ax┃
+- b
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a
+- x┃
+- b
+```
+
+</td></tr>
+</table>
+
+#### 34. [Paste36](../../spec/paste.md#paste36)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+- y
+```
+
+</td><td>
+
+```buffer
+- list
+  - See ┃here.
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- list
+  - See x
+  - y
+  - ┃here.
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- list
+  - See x
+    - y
+  - ┃here.
+```
+
+</td></tr>
+</table>
+
+#### 35. [Paste42](../../spec/paste.md#paste42)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td><td>
+
+```buffer
+- a┃b
+  - child
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- ab
+  - child
+- x
+- y┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- ax
+- y
+- ┃b
+  - child
+```
+
+</td></tr>
+</table>
+
+#### 36. [Outliner flows › Scenario7](../../spec/scenarios.md#scenario7)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- buy milk┃ and eggs
+- call Ann
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- buy milk
+- ┃ and eggs
+- call Ann
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- buy milk
+- ┃and eggs
+- call Ann
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward " "
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- buy milk ┃ and eggs
+- call Ann
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- buy milk ┃and eggs
+- call Ann
+```
+
+</td></tr>
+</table>
+
+> cursorLineBoundaryBackward
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- ┃buy milk  and eggs
+- call Ann
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- ┃buy milk and eggs
+- call Ann
+```
+
+</td></tr>
+</table>
+
+> enter "today:"
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- today:┃
+- buy milk  and eggs
+- call Ann
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- today:┃
+- buy milk and eggs
+- call Ann
+```
+
+</td></tr>
+</table>
+
+> cursorLineDown cursorLineDown cursorLineBoundaryForward deleteContentBackward deleteContentBackward
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- today:
+- buy milk  and eggs
+- call A┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- today:
+- buy milk and eggs
+- call A┃
+```
+
+</td></tr>
+</table>
+
+> cursorLineUp cursorLineBoundaryForward deleteContentForward
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- today:
+- buy milk  and eggs┃call A
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- today:
+- buy milk and eggs┃call A
+```
+
+</td></tr>
+</table>
+
+#### 37. [Outliner flows › Scenario10](../../spec/scenarios.md#scenario10)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b┃
+    - b1
+  - c
+```
+
+</td></tr>
+</table>
+
+> outdent
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- a
+  - c
+- b┃
+  - b1
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a
+- b┃
+  - b1
+  - c
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeUp
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- b┃
+  - b1
+- a
+  - c
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- b┃
+  - b1
+  - c
+- a
+```
+
+</td></tr>
+</table>
+
+> deleteSubtree
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- a
+  - c
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- ┃a
+```
+
+</td></tr>
+</table>
+
+#### 38. [Outliner flows › Scenario11](../../spec/scenarios.md#scenario11)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+```
+
+</td></tr>
+</table>
+
+> shiftEnter
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  ┃
+- b
+```
+
+</td></tr>
+</table>
+
+> "more"
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  more┃
+- b
+```
+
+</td></tr>
+</table>
+
+> cursorLineBoundaryBackward deleteContentBackward
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- a
+  ┃more
+  
+- b
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a┃more
+- b
+```
+
+</td></tr>
+</table>
+
+> cursorLineBoundaryForward deleteContentForward
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- a
+  more┃
+  
+- b
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- amore┃b
+```
+
+</td></tr>
+</table>
+
+> undo
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- a
+  ┃
+- b
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- amore┃
+- b
+```
+
+</td></tr>
+</table>
+
+> redo
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- a
+  more┃
+  
+- b
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- amore┃b
+```
+
+</td></tr>
+</table>
+
+#### 39. [Outliner flows › Scenario12](../../spec/scenarios.md#scenario12)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - b
+- c
+  - d
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - ┃
+  - b
+- c
+  - d
+```
+
+</td></tr>
+</table>
+
+> "x"
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - x┃
+  - b
+- c
+  - d
+```
+
+</td></tr>
+</table>
+
+> cursorLineBoundaryBackward deleteContentBackward
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- a
+  - ┃x
+  - b
+- c
+  - d
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a┃x
+  - b
+- c
+  - d
+```
+
+</td></tr>
+</table>
+
+> cursorDocStart cursorLineBoundaryForward deleteContentForward
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- a┃
+  - x
+  - b
+- c
+  - d
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- ax┃b
+- c
+  - d
+```
+
+</td></tr>
+</table>
+
+#### 40. [Outliner flows › Scenario17](../../spec/scenarios.md#scenario17)
+
+<table>
+<tr><th>clipboard</th><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+bread
+butter
+```
+
+</td><td>
+
+```buffer
+- milk┃
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- milk
+- ┃
+```
+
+</td></tr>
+</table>
+
+> pasteStructured
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- milk
+- bread
+- butter┃
+```
+
+</td></tr>
+</table>
+
+> cursorDocStart cursorLineBoundaryForward pasteStructured
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- milkbread
+- butter┃
+- bread
+- butter
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- milk
+- bread
+- butter┃
+- bread
+- butter
+```
+
+</td></tr>
+</table>
+
+#### 41. [ShiftEnter1](../../spec/shift-enter.md#shiftenter1)
 
 > shiftEnter
 
@@ -1367,7 +2164,7 @@ text
 </td></tr>
 </table>
 
-#### 34. [ShiftEnter3](../../spec/shift-enter.md#shiftenter3)
+#### 42. [ShiftEnter3](../../spec/shift-enter.md#shiftenter3)
 
 > shiftEnter
 
@@ -1401,7 +2198,121 @@ text
 </td></tr>
 </table>
 
-### Whitespace (3)
+#### 43. [ShiftEnter17](../../spec/shift-enter.md#shiftenter17)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one┃two
+```
+
+</td></tr>
+</table>
+
+> shiftEnter
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- onetwo
+  ┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- one
+  ┃two
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- onetwo┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- one┃two
+```
+
+</td></tr>
+</table>
+
+#### 44. [ShiftEnter21](../../spec/shift-enter.md#shiftenter21)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one two┃ three
+```
+
+</td></tr>
+</table>
+
+> shiftEnter
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- one two three
+  ┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- one two
+  ┃three
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- one two three┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- one two┃three
+```
+
+</td></tr>
+</table>
+
+### Whitespace (4)
 
 #### 1. [Enter1](../../spec/enter.md#enter1)
 
@@ -1437,7 +2348,7 @@ text
 </td></tr>
 </table>
 
-#### 2. [Enter › E1](../../spec/obsidian-true-outliner.md#e1)
+#### 2. [Enter3](../../spec/enter.md#enter3)
 
 > enter
 
@@ -1446,23 +2357,26 @@ text
 <tr valign="top"><td>
 
 ```buffer
-- alpha┃ beta
+- a┃ b
+  - c
 ```
 
 </td><td>
 
 <!--workflowy-->
 ```buffer
-- alpha
-- ┃ beta
+- a
+- ┃ b
+  - c
 ```
 
 </td><td>
 
 <!--ourus-->
 ```buffer
-- alpha
-- ┃beta
+- a
+- ┃b
+  - c
 ```
 
 </td></tr>
@@ -1519,6 +2433,36 @@ text
 </td></tr>
 </table>
 
+#### 4. [ShiftEnter13](../../spec/shift-enter.md#shiftenter13)
+
+> shiftEnter
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃one
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- one
+  ┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- ┃one
+```
+
+</td></tr>
+</table>
+
 ### Caret (4)
 
 #### 1. [Backspace17](../../spec/backspace.md#backspace17)
@@ -1564,7 +2508,7 @@ text
 
 ```buffer
 - abc┃
-  - bcd
+- abcd
 ```
 
 </td><td>
@@ -1572,7 +2516,7 @@ text
 <!--workflowy-->
 ```buffer
 - abc
-  - ┃bcd
+- ┃abcd
 ```
 
 </td><td>
@@ -1580,15 +2524,15 @@ text
 <!--ourus-->
 ```buffer
 - abc
-  - b┃cd
+- abc┃d
 ```
 
 </td></tr>
 </table>
 
-#### 3. [BlockDuplicate1](../../spec/duplicate-block.md#blockduplicate1)
+#### 3. [DuplicateSubtree1](../../spec/duplicate-subtree.md#duplicatesubtree1)
 
-> duplicateNode
+> duplicateSubtree
 
 <table>
 <tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
@@ -1662,7 +2606,7 @@ text
 </td></tr>
 </table>
 
-### Agree (65)
+### Agree (89)
 
 1. [Backspace1](../../spec/backspace.md#backspace1)
 2. [Backspace5](../../spec/backspace.md#backspace5)
@@ -1670,69 +2614,93 @@ text
 4. [Backspace8](../../spec/backspace.md#backspace8)
 5. [Backspace13](../../spec/backspace.md#backspace13)
 6. [Backspace17d](../../spec/backspace.md#backspace17d)
-7. [BlockDown7](../../spec/block-down.md#blockdown7)
-8. [BlockDown9](../../spec/block-down.md#blockdown9)
-9. [BlockDown10](../../spec/block-down.md#blockdown10)
-10. [BlockDown15](../../spec/block-down.md#blockdown15)
-11. [BlockUp1](../../spec/block-up.md#blockup1)
-12. [BlockUp6](../../spec/block-up.md#blockup6)
-13. [BlockUp8](../../spec/block-up.md#blockup8)
-14. [BlockUp9](../../spec/block-up.md#blockup9)
-15. [CursorUp3](../../spec/cursor.md#cursorup3)
-16. [CursorDown3](../../spec/cursor.md#cursordown3)
-17. [CursorHome1](../../spec/cursor.md#cursorhome1)
-18. [CursorHome2](../../spec/cursor.md#cursorhome2)
-19. [CursorHome5](../../spec/cursor.md#cursorhome5)
-20. [CursorHome6](../../spec/cursor.md#cursorhome6)
-21. [CursorHome12](../../spec/cursor.md#cursorhome12)
-22. [CursorHome13](../../spec/cursor.md#cursorhome13)
-23. [CursorEnd1](../../spec/cursor.md#cursorend1)
-24. [CursorDocStart1](../../spec/cursor.md#cursordocstart1)
-25. [SelectHome1](../../spec/cursor.md#selecthome1)
-26. [Delete2](../../spec/del.md#delete2)
-27. [Delete6](../../spec/del.md#delete6)
-28. [Delete7](../../spec/del.md#delete7)
-29. [Delete8](../../spec/del.md#delete8)
-30. [Delete12](../../spec/del.md#delete12)
-31. [BlockDelete1](../../spec/delete-subtree.md#blockdelete1)
-32. [Enter4](../../spec/enter.md#enter4)
-33. [Enter5](../../spec/enter.md#enter5)
-34. [Enter21](../../spec/enter.md#enter21)
-35. [Enter26](../../spec/enter.md#enter26)
-36. [Enter27](../../spec/enter.md#enter27)
-37. [Enter29](../../spec/enter.md#enter29)
-38. [Enter31](../../spec/enter.md#enter31)
-39. [Indent1](../../spec/indent.md#indent1)
-40. [Indent14](../../spec/indent.md#indent14)
-41. [Indent17](../../spec/indent.md#indent17)
+7. [Backspace30](../../spec/backspace.md#backspace30)
+8. [Backspace32](../../spec/backspace.md#backspace32)
+9. [CursorUp3](../../spec/cursor.md#cursorup3)
+10. [CursorDown3](../../spec/cursor.md#cursordown3)
+11. [CursorHome1](../../spec/cursor.md#cursorhome1)
+12. [CursorHome2](../../spec/cursor.md#cursorhome2)
+13. [CursorHome5](../../spec/cursor.md#cursorhome5)
+14. [CursorHome6](../../spec/cursor.md#cursorhome6)
+15. [CursorHome12](../../spec/cursor.md#cursorhome12)
+16. [CursorHome13](../../spec/cursor.md#cursorhome13)
+17. [CursorEnd1](../../spec/cursor.md#cursorend1)
+18. [CursorDocStart1](../../spec/cursor.md#cursordocstart1)
+19. [SelectHome1](../../spec/cursor.md#selecthome1)
+20. [Delete2](../../spec/del.md#delete2)
+21. [Delete6](../../spec/del.md#delete6)
+22. [Delete7](../../spec/del.md#delete7)
+23. [Delete8](../../spec/del.md#delete8)
+24. [Delete12](../../spec/del.md#delete12)
+25. [Delete20](../../spec/del.md#delete20)
+26. [Delete22](../../spec/del.md#delete22)
+27. [DeleteSubtree1](../../spec/delete-subtree.md#deletesubtree1)
+28. [Enter3d](../../spec/enter.md#enter3d)
+29. [Enter4](../../spec/enter.md#enter4)
+30. [Enter5](../../spec/enter.md#enter5)
+31. [Enter7](../../spec/enter.md#enter7)
+32. [Enter15](../../spec/enter.md#enter15)
+33. [Enter21](../../spec/enter.md#enter21)
+34. [Enter26](../../spec/enter.md#enter26)
+35. [Enter27](../../spec/enter.md#enter27)
+36. [Enter29](../../spec/enter.md#enter29)
+37. [Enter31](../../spec/enter.md#enter31)
+38. [Enter38](../../spec/enter.md#enter38)
+39. [Enter39](../../spec/enter.md#enter39)
+40. [Indent1](../../spec/indent.md#indent1)
+41. [Indent14](../../spec/indent.md#indent14)
 42. [Indent2](../../spec/indent.md#indent2)
 43. [Indent6](../../spec/indent.md#indent6)
 44. [Indent7](../../spec/indent.md#indent7)
 45. [Indent8](../../spec/indent.md#indent8)
-46. [Enter › E7, E8 › End of parent opens empty first child](../../spec/obsidian-true-outliner.md#end-of-parent-opens-empty-first-child)
-47. [Enter › E33](../../spec/obsidian-true-outliner.md#e33)
-48. [Backspace › #153 › Undoing a fresh line break](../../spec/obsidian-true-outliner.md#undoing-a-fresh-line-break)
-49. [Backspace › delete-to-content-start](../../spec/obsidian-true-outliner.md#delete-to-content-start)
-50. [Indentation › list-marker-content-column](../../spec/obsidian-true-outliner.md#list-marker-content-column)
-51. [Indentation › indent-unit-on-every-line](../../spec/obsidian-true-outliner.md#indent-unit-on-every-line)
-52. [Moving › lone-block-id › Block id moves with its item](../../spec/obsidian-true-outliner.md#block-id-moves-with-its-item)
-53. [Abandoning an empty place › Enter, then Shift-Enter and Backspace](../../spec/obsidian-true-outliner.md#enter-then-shift-enter-and-backspace)
-54. [Abandoning an empty place › Enter, Shift-Tab, then leave › Second Enter outdents to a kept item](../../spec/obsidian-true-outliner.md#second-enter-outdents-to-a-kept-item)
-55. [Outdent1](../../spec/outdent.md#outdent1)
-56. [Outdent3](../../spec/outdent.md#outdent3)
-57. [Logical outdent › LogicalOutdent1](../../spec/outdent.md#logicaloutdent1)
-58. [Paste10](../../spec/paste.md#paste10)
-59. [Placeholder6](../../spec/placeholders.md#placeholder6)
-60. [Outliner flows › Typing a new child](../../spec/scenarios.md#typing-a-new-child)
-61. [Outliner flows › Enter outdents the empty child](../../spec/scenarios.md#enter-outdents-the-empty-child)
-62. [Outliner flows › Backspace removes the empty child](../../spec/scenarios.md#backspace-removes-the-empty-child)
-63. [ShiftEnter4](../../spec/shift-enter.md#shiftenter4)
-64. [Undo1](../../spec/undo.md#undo1)
-65. [Undo4](../../spec/undo.md#undo4)
+46. [Indent10](../../spec/indent.md#indent10)
+47. [Indent26](../../spec/indent.md#indent26)
+48. [MoveDown3](../../spec/move-subtree-down.md#movedown3)
+49. [MoveDown6](../../spec/move-subtree-down.md#movedown6)
+50. [MoveDown7](../../spec/move-subtree-down.md#movedown7)
+51. [MoveDown9](../../spec/move-subtree-down.md#movedown9)
+52. [MoveDown10](../../spec/move-subtree-down.md#movedown10)
+53. [MoveDown15](../../spec/move-subtree-down.md#movedown15)
+54. [MoveUp1](../../spec/move-subtree-up.md#moveup1)
+55. [MoveUp2](../../spec/move-subtree-up.md#moveup2)
+56. [MoveUp5](../../spec/move-subtree-up.md#moveup5)
+57. [MoveUp6](../../spec/move-subtree-up.md#moveup6)
+58. [MoveUp8](../../spec/move-subtree-up.md#moveup8)
+59. [MoveUp9](../../spec/move-subtree-up.md#moveup9)
+60. [MoveUp32](../../spec/move-subtree-up.md#moveup32)
+61. [Enter › E7, E8 › End of parent opens empty first child](../../spec/obsidian-true-outliner.md#end-of-parent-opens-empty-first-child)
+62. [Enter › E33](../../spec/obsidian-true-outliner.md#e33)
+63. [Backspace › #153 › Undoing a fresh line break](../../spec/obsidian-true-outliner.md#undoing-a-fresh-line-break)
+64. [Backspace › delete-to-content-start](../../spec/obsidian-true-outliner.md#delete-to-content-start)
+65. [Indentation › list-marker-content-column](../../spec/obsidian-true-outliner.md#list-marker-content-column)
+66. [Indentation › indent-unit-on-every-line](../../spec/obsidian-true-outliner.md#indent-unit-on-every-line)
+67. [Moving › lone-block-id › Block id moves with its item](../../spec/obsidian-true-outliner.md#block-id-moves-with-its-item)
+68. [Abandoning an empty place › Enter, then Shift-Enter and Backspace](../../spec/obsidian-true-outliner.md#enter-then-shift-enter-and-backspace)
+69. [Abandoning an empty place › Enter, Shift-Tab, then leave › Second Enter outdents to a kept item](../../spec/obsidian-true-outliner.md#second-enter-outdents-to-a-kept-item)
+70. [Outdent1](../../spec/outdent.md#outdent1)
+71. [Outdent3](../../spec/outdent.md#outdent3)
+72. [Outdent2](../../spec/outdent.md#outdent2)
+73. [Logical outdent › LogicalOutdent1](../../spec/outdent.md#logicaloutdent1)
+74. [Paste8](../../spec/paste.md#paste8)
+75. [Paste24](../../spec/paste.md#paste24)
+76. [Paste31](../../spec/paste.md#paste31)
+77. [Paste39](../../spec/paste.md#paste39)
+78. [Placeholder6](../../spec/placeholders.md#placeholder6)
+79. [Outliner flows › Scenario1](../../spec/scenarios.md#scenario1)
+80. [Outliner flows › Scenario2](../../spec/scenarios.md#scenario2)
+81. [Outliner flows › Scenario3](../../spec/scenarios.md#scenario3)
+82. [Outliner flows › Scenario5](../../spec/scenarios.md#scenario5)
+83. [Outliner flows › Scenario8](../../spec/scenarios.md#scenario8)
+84. [Outliner flows › Scenario9](../../spec/scenarios.md#scenario9)
+85. [Outliner flows › Scenario14](../../spec/scenarios.md#scenario14)
+86. [ShiftEnter4](../../spec/shift-enter.md#shiftenter4)
+87. [Undo1](../../spec/undo.md#undo1)
+88. [Undo4](../../spec/undo.md#undo4)
+89. [Undo5](../../spec/undo.md#undo5)
 
 ## Adapted cases
 
-### Disagree (86)
+### Disagree (132)
 
 #### 1. [Backspace4](../../spec/backspace.md#backspace4)
 
@@ -1840,7 +2808,142 @@ a
 </td></tr>
 </table>
 
-#### 3. [Backspace14](../../spec/backspace.md#backspace14)
+#### 3. [Backspace12b](../../spec/backspace.md#backspace12b)
+
+Adapted: blank lines, paragraph
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃b
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- ┃b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward deleteContentBackward
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- ┃b
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a┃b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter</th><th>deleteContentBackward deleteContentBackward</th></tr>
+<tr valign="top"><td>
+
+```buffer
+a┃b
+```
+
+</td><td>
+
+```buffer
+a
+
+┃b
+```
+
+</td><td>
+
+```buffer
+a┃b
+```
+
+</td></tr>
+</table>
+
+#### 4. [Backspace12c](../../spec/backspace.md#backspace12c)
+
+> deleteContentBackward
+
+Adapted: blank lines, paragraph
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- ┃b
+  - x
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- a┃b
+  - x
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a
+  ┃b
+  - x
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+a
+
+┃b
+- x
+```
+
+</td><td>
+
+```buffer
+a
+┃b
+- x
+```
+
+</td></tr>
+</table>
+
+#### 5. [Backspace14](../../spec/backspace.md#backspace14)
 
 Adapted: blank lines, heading, paragraph
 
@@ -1930,7 +3033,7 @@ a┃
 </td></tr>
 </table>
 
-#### 4. [Backspace15](../../spec/backspace.md#backspace15)
+#### 6. [Backspace15](../../spec/backspace.md#backspace15)
 
 > deleteContentBackward
 
@@ -1983,7 +3086,7 @@ para┃a
 </td></tr>
 </table>
 
-#### 5. [Backspace18](../../spec/backspace.md#backspace18)
+#### 7. [Backspace18](../../spec/backspace.md#backspace18)
 
 > deleteContentBackward
 
@@ -2046,7 +3149,7 @@ body
 </td></tr>
 </table>
 
-#### 6. [Backspace18c](../../spec/backspace.md#backspace18c)
+#### 8. [Backspace18c](../../spec/backspace.md#backspace18c)
 
 > deleteContentBackward
 
@@ -2103,7 +3206,7 @@ text
 </td></tr>
 </table>
 
-#### 7. [Backspace18d](../../spec/backspace.md#backspace18d)
+#### 9. [Backspace18d](../../spec/backspace.md#backspace18d)
 
 > deleteContentBackward
 
@@ -2164,7 +3267,61 @@ text
 </td></tr>
 </table>
 
-#### 8. [Backspace19](../../spec/backspace.md#backspace19)
+#### 10. [Backspace18e](../../spec/backspace.md#backspace18e)
+
+> deleteContentBackward
+
+Adapted: heading
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- # ┃H
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- a
+- # ┃H
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a
+- ┃H
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- # ┃H
+```
+
+</td><td>
+
+```buffer
+- a
+- ┃H
+```
+
+</td></tr>
+</table>
+
+#### 11. [Backspace19](../../spec/backspace.md#backspace19)
 
 > deleteContentBackward
 
@@ -2219,7 +3376,7 @@ Original:
 </td></tr>
 </table>
 
-#### 9. [Backspace20](../../spec/backspace.md#backspace20)
+#### 12. [Backspace20](../../spec/backspace.md#backspace20)
 
 > deleteContentBackward
 
@@ -2278,9 +3435,9 @@ Original:
 </td></tr>
 </table>
 
-#### 10. [BlockDown2](../../spec/block-down.md#blockdown2)
+#### 13. [Backspace22](../../spec/backspace.md#backspace22)
 
-> moveBlockDown
+> deleteContentBackward
 
 Adapted: blank lines, heading, paragraph
 
@@ -2289,27 +3446,23 @@ Adapted: blank lines, heading, paragraph
 <tr valign="top"><td>
 
 ```buffer
-- # H
-  - a┃
-  - para
+- # Title
+  - ┃more
 ```
 
 </td><td>
 
 <!--workflowy-->
 ```buffer
-- # H
-  - para
-  - a┃
+- # Title
+  - ┃more
 ```
 
 </td><td>
 
 <!--ourus-->
 ```buffer
-- # H
-  - para
-    - a┃
+- # Title┃more
 ```
 
 </td></tr>
@@ -2321,59 +3474,49 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-# H
-- a┃
+# Title
 
-para
+┃more
 ```
 
 </td><td>
 
 ```buffer
-# H
-para
-
-- a┃
+# Title┃more
 ```
 
 </td></tr>
 </table>
 
-#### 11. [BlockDown8](../../spec/block-down.md#blockdown8)
+#### 14. [Backspace33](../../spec/backspace.md#backspace33)
 
-> moveBlockDown
+> deleteContentBackward
 
-Adapted: blank lines, paragraph
+Adapted: paragraph
 
 <table>
 <tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- a
-- b┃
-- para
-  - c
+- ┃a
+- b
 ```
 
 </td><td>
 
 <!--workflowy-->
 ```buffer
-- a
-- para
-  - c
-- b┃
+- ┃a
+- b
 ```
 
 </td><td>
 
 <!--ourus-->
 ```buffer
-- a
-- para
-  - b┃
-  - c
+- ┃a
+  - b
 ```
 
 </td></tr>
@@ -2385,46 +3528,133 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-- a
-- b┃
-
-para
-
-- c
+- ┃a
+- b
 ```
 
 </td><td>
 
 ```buffer
-- a
-
-para
-
-- b┃
-- c
+┃a
+- b
 ```
 
 </td></tr>
 </table>
 
-#### 12. [BlockDown13](../../spec/block-down.md#blockdown13)
+#### 15. [Backspace35](../../spec/backspace.md#backspace35)
 
-Adapted: blank lines, paragraph
+> deleteContentBackward
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # A
+  - intro
+  - ## ┃B
+    - para
+      - item
+  - ## C
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # A
+  - intro
+  - ## ┃B
+    - para
+      - item
+  - ## C
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # A
+  - intro
+  - ┃B
+  - para
+    - item
+  - ## C
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# A
+
+intro
+
+## ┃B
+
+para
+
+- item
+
+## C
+```
+
+</td><td>
+
+```buffer
+# A
+
+intro
+
+┃B
+
+para
+
+- item
+
+## C
+```
+
+</td></tr>
+</table>
+
+#### 16. [Cmd-Backspace › SoftBackspace1](../../spec/backspace.md#softbackspace1)
+
+Adapted: task
 
 <table>
 <tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- b┃
-  - b1
-- intro
+- [ ] abc ┃def
 ```
 
 </td></tr>
 </table>
 
-> moveBlockDown
+> deleteSoftLineBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [ ] ┃def
+```
+
+</td></tr>
+</table>
+
+> deleteSoftLineBackward
 
 <table>
 <tr><th>workflowy</th><th>ourus</th></tr>
@@ -2432,33 +3662,14 @@ Adapted: blank lines, paragraph
 
 <!--workflowy-->
 ```buffer
-- intro
-- b┃
-  - b1
+- [ ] ┃def
 ```
 
 </td><td>
 
 <!--ourus-->
 ```buffer
-- intro
-  - b┃
-    - b1
-```
-
-</td></tr>
-</table>
-
-> moveBlockUp
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- b┃
-  - b1
-- intro
+- ┃def
 ```
 
 </td></tr>
@@ -2466,75 +3677,54 @@ Adapted: blank lines, paragraph
 
 Original:
 <table>
-<tr><th>buffer</th><th>moveBlockDown</th><th>moveBlockUp</th></tr>
+<tr><th>buffer</th><th>deleteSoftLineBackward</th><th>deleteSoftLineBackward</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- b┃
-  - b1
-
-intro
+- [ ] abc ┃def
 ```
 
 </td><td>
 
 ```buffer
-intro
-
-- b┃
-  - b1
+- [ ] ┃def
 ```
 
 </td><td>
 
 ```buffer
-- b┃
-  - b1
-
-intro
+- ┃def
 ```
 
 </td></tr>
 </table>
 
-#### 13. [BlockDown20](../../spec/block-down.md#blockdown20)
+#### 17. [Cmd-Backspace › SoftBackspace3](../../spec/backspace.md#softbackspace3)
 
-> moveBlockDown
+> deleteSoftLineBackward
 
-Adapted: blank lines, heading
+Adapted: heading, setext heading
 
 <table>
 <tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- # Todo
-  - one
-  - two┃
-  - ## Later
-    - three
+- # abc ┃- x tail
 ```
 
 </td><td>
 
 <!--workflowy-->
 ```buffer
-- # Todo
-  - one
-  - ## Later
-    - three
-  - two┃
+- # ┃- x tail
 ```
 
 </td><td>
 
 <!--ourus-->
 ```buffer
-- # Todo
-  - one
-  - ## Later
-    - two┃
-    - three
+- # ┃\- x tail
 ```
 
 </td></tr>
@@ -2546,63 +3736,49 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-# Todo
-- one
-- two┃
-
-## Later
-- three
+abc ┃- x tail
+===
 ```
 
 </td><td>
 
 ```buffer
-# Todo
-- one
-
-## Later
-- two┃
-- three
+┃\- x tail
+===
 ```
 
 </td></tr>
 </table>
 
-#### 14. [BlockUp7](../../spec/block-up.md#blockup7)
+#### 18. [Cmd-Backspace › SoftBackspace5](../../spec/backspace.md#softbackspace5)
 
-> moveBlockUp
+> deleteSoftLineBackward
 
-Adapted: blank lines, paragraph
+Adapted: heading, setext heading
 
 <table>
 <tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- a
-- para
-  - b┃
-  - c
+- # first
+  abc ┃- x
 ```
 
 </td><td>
 
 <!--workflowy-->
 ```buffer
-- a
-  - b┃
-- para
-  - c
+- # first
+  ┃\- x
 ```
 
 </td><td>
 
 <!--ourus-->
 ```buffer
-- a
-- b┃
-- para
-  - c
+- # first
+  ┃\- x
 ```
 
 </td></tr>
@@ -2614,287 +3790,17 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-- a
-
-para
-
-- b┃
-- c
+first
+abc ┃- x
+===
 ```
 
 </td><td>
 
 ```buffer
-- a
-- b┃
-
-para
-
-- c
-```
-
-</td></tr>
-</table>
-
-#### 15. [BlockUp12](../../spec/block-up.md#blockup12)
-
-> moveBlockUp
-
-Adapted: blank lines, paragraph
-
-<table>
-<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- intro
-  - b┃
-    - b1
-```
-
-</td><td>
-
-<!--workflowy-->
-```buffer
-- intro
-  - b┃
-    - b1
-```
-
-</td><td>
-
-<!--ourus-->
-```buffer
-- b┃
-  - b1
-- intro
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-intro
-
-- b┃
-  - b1
-```
-
-</td><td>
-
-```buffer
-- b┃
-  - b1
-
-intro
-```
-
-</td></tr>
-</table>
-
-#### 16. [BlockUp21](../../spec/block-up.md#blockup21)
-
-> moveBlockUp
-
-Adapted: blank lines, paragraph
-
-<table>
-<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- para
-  - a┃
-  - b
-```
-
-</td><td>
-
-<!--workflowy-->
-```buffer
-- para
-  - a┃
-  - b
-```
-
-</td><td>
-
-<!--ourus-->
-```buffer
-- a┃
-- para
-  - b
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-para
-- a┃
-- b
-```
-
-</td><td>
-
-```buffer
-- a┃
-
-para
-- b
-```
-
-</td></tr>
-</table>
-
-#### 17. [BlockUp23](../../spec/block-up.md#blockup23)
-
-> moveBlockUp
-
-Adapted: blank lines, heading, paragraph
-
-<table>
-<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- # A
-  - ## sub
-    - s1
-- # B
-  - ┃para
-```
-
-</td><td>
-
-<!--workflowy-->
-```buffer
-- # A
-  - ## sub
-    - s1
-  - ┃para
-- # B
-```
-
-</td><td>
-
-<!--ourus-->
-```buffer
-- # A
-  - ## sub
-    - s1
-    - ┃para
-- # B
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-# A
-## sub
-- s1
-
-# B
-┃para
-```
-
-</td><td>
-
-```buffer
-# A
-## sub
-- s1
-
-┃para
-
-# B
-```
-
-</td></tr>
-</table>
-
-#### 18. [BlockUp24](../../spec/block-up.md#blockup24)
-
-> moveBlockUp
-
-Adapted: blank lines, heading
-
-<table>
-<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- # Todo
-  - one
-  - ## Later
-    - ┃two
-    - three
-```
-
-</td><td>
-
-<!--workflowy-->
-```buffer
-- # Todo
-  - one
-    - ┃two
-  - ## Later
-    - three
-```
-
-</td><td>
-
-<!--ourus-->
-```buffer
-- # Todo
-  - one
-  - ┃two
-  - ## Later
-    - three
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-# Todo
-- one
-
-## Later
-- ┃two
-- three
-```
-
-</td><td>
-
-```buffer
-# Todo
-- one
-- ┃two
-
-## Later
-- three
+first
+┃\- x
+===
 ```
 
 </td></tr>
@@ -2952,7 +3858,59 @@ Original:
 </td></tr>
 </table>
 
-#### 20. [Delete9](../../spec/del.md#delete9)
+#### 20. [Delete4b](../../spec/del.md#delete4b)
+
+> deleteContentForward
+
+Adapted: heading
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Title #┃
+  - more
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # Title #┃
+  - more
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # Title┃more #
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# Title #┃
+- more
+```
+
+</td><td>
+
+```buffer
+# Title┃more #
+```
+
+</td></tr>
+</table>
+
+#### 21. [Delete9](../../spec/del.md#delete9)
 
 Adapted: blank lines, heading, paragraph
 
@@ -3042,7 +4000,7 @@ Original:
 </td></tr>
 </table>
 
-#### 21. [Delete13](../../spec/del.md#delete13)
+#### 22. [Delete13](../../spec/del.md#delete13)
 
 > deleteContentForward
 
@@ -3095,7 +4053,7 @@ a┃# H1
 </td></tr>
 </table>
 
-#### 22. [Delete13c](../../spec/del.md#delete13c)
+#### 23. [Delete13c](../../spec/del.md#delete13c)
 
 > deleteContentForward
 
@@ -3154,7 +4112,59 @@ text
 </td></tr>
 </table>
 
-#### 23. [Delete14](../../spec/del.md#delete14)
+#### 24. [Delete13g](../../spec/del.md#delete13g)
+
+> deleteContentForward
+
+Adapted: heading
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- # H
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- a┃
+- # H
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a┃# H
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- # H
+```
+
+</td><td>
+
+```buffer
+- a┃# H
+```
+
+</td></tr>
+</table>
+
+#### 25. [Delete14](../../spec/del.md#delete14)
 
 > deleteContentForward
 
@@ -3214,7 +4224,7 @@ body
 </td></tr>
 </table>
 
-#### 24. [Delete15](../../spec/del.md#delete15)
+#### 26. [Delete15](../../spec/del.md#delete15)
 
 > deleteContentForward
 
@@ -3266,7 +4276,7 @@ Original:
 </td></tr>
 </table>
 
-#### 25. [Delete17](../../spec/del.md#delete17)
+#### 27. [Delete17](../../spec/del.md#delete17)
 
 > deleteContentForward
 
@@ -3324,19 +4334,18 @@ Shopping:┃milk
 </td></tr>
 </table>
 
-#### 26. [Enter7](../../spec/enter.md#enter7)
+#### 28. [Delete18](../../spec/del.md#delete18)
 
-> enter
+> deleteContentForward
 
-Adapted: blank lines, paragraph; Also: [enter.md › Enter15](../../spec/enter.md#enter15)
+Adapted: blank lines, paragraph; Also: [del.md › Delete18c](../../spec/del.md#delete18c)
 
 <table>
 <tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- a
-- ┃
+- a┃
 - b
 ```
 
@@ -3344,19 +4353,15 @@ Adapted: blank lines, paragraph; Also: [enter.md › Enter15](../../spec/enter.m
 
 <!--workflowy-->
 ```buffer
-- a
-- 
-- ┃
-- b
+- a┃b
 ```
 
 </td><td>
 
 <!--ourus-->
 ```buffer
-- a
-- ┃
-  - b
+- a┃
+  b
 ```
 
 </td></tr>
@@ -3368,25 +4373,128 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-- a
-- ┃
-- b
+a┃
+
+b
 ```
 
 </td><td>
 
 ```buffer
-- a
-
-┃◌
-
-- b
+a┃
+b
 ```
 
 </td></tr>
 </table>
 
-#### 27. [Enter14](../../spec/enter.md#enter14)
+#### 29. [Delete18b](../../spec/del.md#delete18b)
+
+> deleteContentForward
+
+Adapted: blank lines, paragraph
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - bc
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- a┃
+  - bc
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a┃
+  bc
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+
+  bc
+```
+
+</td><td>
+
+```buffer
+- a┃
+  bc
+```
+
+</td></tr>
+</table>
+
+#### 30. [DeleteSubtree6](../../spec/delete-subtree.md#deletesubtree6)
+
+> deleteSubtree "x"
+
+Adapted: paragraph
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - b
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- x┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - b
+```
+
+</td><td>
+
+```buffer
+x┃
+```
+
+</td></tr>
+</table>
+
+#### 31. [Enter14](../../spec/enter.md#enter14)
 
 > enter enter enter "p"
 
@@ -3445,92 +4553,131 @@ p┃
 </td></tr>
 </table>
 
-#### 28. [Enter22](../../spec/enter.md#enter22)
-
-> enter
+#### 32. [Enter40](../../spec/enter.md#enter40)
 
 Adapted: blank lines, paragraph
 
 <table>
-<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- para ┃- x
-  - a
-```
-
-</td><td>
-
-<!--workflowy-->
-```buffer
-- para 
-- ┃- x
-  - a
-```
-
-</td><td>
-
-<!--ourus-->
-```buffer
-- para
-  - ┃x
-  - a
+- a
+- ┃
 ```
 
 </td></tr>
 </table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-para ┃- x
-- a
-```
-
-</td><td>
-
-```buffer
-para
-
-- ┃x
-- a
-```
-
-</td></tr>
-</table>
-
-#### 29. [Enter32](../../spec/enter.md#enter32)
 
 > enter
 
-Adapted: heading, paragraph
-
 <table>
-<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr><th>workflowy</th><th>ourus</th></tr>
 <tr valign="top"><td>
-
-```buffer
-- # ┃H1
-```
-
-</td><td>
 
 <!--workflowy-->
 ```buffer
+- a
+- 
 - ┃
-- # H1
 ```
 
 </td><td>
 
 <!--ourus-->
 ```buffer
-- # 
-  - ┃H1
+- a
+- ┃
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- a
+- 
+- 
+- ┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a
+- ┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter</th><th>enter</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- ┃
+```
+
+</td><td>
+
+```buffer
+- a
+
+┃◌
+```
+
+</td><td>
+
+```buffer
+- a
+
+┃◌
+```
+
+</td></tr>
+</table>
+
+#### 33. [Enter41](../../spec/enter.md#enter41)
+
+> enter
+
+Adapted: escape, heading, paragraph
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Title ┃- x
+  - y
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- Title 
+- # ┃- x
+  - y
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # Title
+  - ┃- x
+    - y
 ```
 
 </td></tr>
@@ -3542,20 +4689,76 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-# ┃H1
+# Title ┃- x
+- y
 ```
 
 </td><td>
 
 ```buffer
-# 
-┃H1
+# Title
+┃\- x
+- y
 ```
 
 </td></tr>
 </table>
 
-#### 30. [New text and gaps › Items pasted at the end of a tight list keep it tight](../../spec/gaps.md#items-pasted-at-the-end-of-a-tight-list-keep-it-tight)
+#### 34. [Enter42](../../spec/enter.md#enter42)
+
+> enter
+
+Adapted: escape, heading, paragraph, setext heading
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # title ┃- x
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- title 
+- # ┃- x
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # title
+  - ┃- x
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+title ┃- x
+===
+```
+
+</td><td>
+
+```buffer
+title
+===
+┃\- x
+```
+
+</td></tr>
+</table>
+
+#### 35. [New text and gaps › Gap13](../../spec/gaps.md#gap13)
 
 > pasteStructured
 
@@ -3623,74 +4826,7 @@ para
 </td></tr>
 </table>
 
-#### 31. [New text and gaps › Items pasted as first children land at the existing children's column](../../spec/gaps.md#items-pasted-as-first-children-land-at-the-existing-childrens-column)
-
-> pasteStructured
-
-Adapted: task
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-- a
-- b
-```
-
-</td><td>
-
-```buffer
-- [ ] t┃
-  - g
-```
-
-</td><td>
-
-<!--workflowy-->
-```buffer
-- [ ] t
-  - g
-- a
-- b┃
-```
-
-</td><td>
-
-<!--ourus-->
-```buffer
-- [ ] t
-  - a
-  - b┃
-  - g
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- [ ] t┃
-    - g
-```
-
-</td><td>
-
-```buffer
-- [ ] t
-    - a
-    - b┃
-    - g
-```
-
-</td></tr>
-</table>
-
-#### 32. [Indent12](../../spec/indent.md#indent12)
+#### 36. [Indent12](../../spec/indent.md#indent12)
 
 > indent
 
@@ -3749,7 +4885,7 @@ Original:
 </td></tr>
 </table>
 
-#### 33. [Indent16](../../spec/indent.md#indent16)
+#### 37. [Indent16](../../spec/indent.md#indent16)
 
 > indent
 
@@ -3807,11 +4943,1291 @@ Title┃
 </td></tr>
 </table>
 
-#### 34. [Enter › E15](../../spec/obsidian-true-outliner.md#e15)
+#### 38. [Indent23](../../spec/indent.md#indent23)
+
+> indent
+
+Adapted: heading
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # A
+  - ## B
+  - ## C┃
+    - ### D
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # A
+  - ## B
+    - ## C┃
+      - ### D
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # A
+  - ## B
+    - ### C┃
+      - #### D
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# A
+## B
+## C┃
+### D
+```
+
+</td><td>
+
+```buffer
+# A
+## B
+### C┃
+#### D
+```
+
+</td></tr>
+</table>
+
+#### 39. [Indent25](../../spec/indent.md#indent25)
+
+> indent
+
+Adapted: blank lines, heading, setext heading
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## Title┃
+  - ### Sub
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- ## Title┃
+  - ### Sub
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- ### Title┃
+  - #### Sub
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+Title┃
+-----
+
+### Sub
+```
+
+</td><td>
+
+```buffer
+### Title┃
+
+#### Sub
+```
+
+</td></tr>
+</table>
+
+#### 40. [MoveDown2](../../spec/move-subtree-down.md#movedown2)
+
+> moveSubtreeDown
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # H
+  - a┃
+  - para
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # H
+  - para
+  - a┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # H
+  - para
+    - a┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# H
+- a┃
+
+para
+```
+
+</td><td>
+
+```buffer
+# H
+para
+
+- a┃
+```
+
+</td></tr>
+</table>
+
+#### 41. [MoveDown8](../../spec/move-subtree-down.md#movedown8)
+
+> moveSubtreeDown
+
+Adapted: blank lines, paragraph
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- b┃
+- para
+  - c
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- a
+- para
+  - c
+- b┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a
+- para
+  - b┃
+  - c
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- b┃
+
+para
+
+- c
+```
+
+</td><td>
+
+```buffer
+- a
+
+para
+
+- b┃
+- c
+```
+
+</td></tr>
+</table>
+
+#### 42. [MoveDown13](../../spec/move-subtree-down.md#movedown13)
+
+Adapted: blank lines, paragraph
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- b┃
+  - b1
+- intro
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeDown
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- intro
+- b┃
+  - b1
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- intro
+  - b┃
+    - b1
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeUp
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- b┃
+  - b1
+- intro
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>moveSubtreeDown</th><th>moveSubtreeUp</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- b┃
+  - b1
+
+intro
+```
+
+</td><td>
+
+```buffer
+intro
+
+- b┃
+  - b1
+```
+
+</td><td>
+
+```buffer
+- b┃
+  - b1
+
+intro
+```
+
+</td></tr>
+</table>
+
+#### 43. [MoveDown17](../../spec/move-subtree-down.md#movedown17)
+
+> moveSubtreeDown
+
+Adapted: heading
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## ┃H
+- # H
+  - a
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # H
+  - a
+- ## ┃H
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- ## ┃H
+- # H
+  - a
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+## ┃H
+# H
+- a
+```
+
+</td><td>
+
+```buffer
+## ┃H
+# H
+- a
+```
+
+</td></tr>
+</table>
+
+#### 44. [MoveDown19](../../spec/move-subtree-down.md#movedown19)
+
+> moveSubtreeDown
+
+Adapted: blank lines, heading
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # A
+  - ## s┃
+- # B
+  - x
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # A
+- # B
+  - ## s┃
+  - x
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # A
+  - ## s┃
+- # B
+  - x
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# A
+## s┃
+
+# B
+- x
+```
+
+</td><td>
+
+```buffer
+# A
+## s┃
+
+# B
+- x
+```
+
+</td></tr>
+</table>
+
+#### 45. [MoveDown20](../../spec/move-subtree-down.md#movedown20)
+
+> moveSubtreeDown
+
+Adapted: blank lines, heading
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Todo
+  - one
+  - two┃
+  - ## Later
+    - three
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # Todo
+  - one
+  - ## Later
+    - three
+  - two┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # Todo
+  - one
+  - ## Later
+    - two┃
+    - three
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# Todo
+- one
+- two┃
+
+## Later
+- three
+```
+
+</td><td>
+
+```buffer
+# Todo
+- one
+
+## Later
+- two┃
+- three
+```
+
+</td></tr>
+</table>
+
+#### 46. [MoveDown25](../../spec/move-subtree-down.md#movedown25)
+
+> moveSubtreeDown
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # A
+  - para┃
+- # B
+  - x
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # A
+- # B
+  - para┃
+  - x
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # A
+  - para┃
+- # B
+  - x
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# A
+para┃
+
+# B
+- x
+```
+
+</td><td>
+
+```buffer
+# A
+para┃
+
+# B
+- x
+```
+
+</td></tr>
+</table>
+
+#### 47. [MoveDown28](../../spec/move-subtree-down.md#movedown28)
+
+> moveSubtreeDown
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # A
+  - ## sub
+    - s1
+    - ┃para
+- # B
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # A
+  - ## sub
+    - s1
+    - ┃para
+- # B
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # A
+  - ## sub
+    - s1
+- # B
+  - ┃para
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# A
+## sub
+- s1
+
+┃para
+
+# B
+```
+
+</td><td>
+
+```buffer
+# A
+## sub
+- s1
+
+# B
+┃para
+```
+
+</td></tr>
+</table>
+
+#### 48. [MoveUp7](../../spec/move-subtree-up.md#moveup7)
+
+> moveSubtreeUp
+
+Adapted: blank lines, paragraph
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- para
+  - b┃
+  - c
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- a
+  - b┃
+- para
+  - c
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a
+- b┃
+- para
+  - c
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+
+para
+
+- b┃
+- c
+```
+
+</td><td>
+
+```buffer
+- a
+- b┃
+
+para
+
+- c
+```
+
+</td></tr>
+</table>
+
+#### 49. [MoveUp12](../../spec/move-subtree-up.md#moveup12)
+
+> moveSubtreeUp
+
+Adapted: blank lines, paragraph
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- intro
+  - b┃
+    - b1
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- intro
+  - b┃
+    - b1
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- b┃
+  - b1
+- intro
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+intro
+
+- b┃
+  - b1
+```
+
+</td><td>
+
+```buffer
+- b┃
+  - b1
+
+intro
+```
+
+</td></tr>
+</table>
+
+#### 50. [MoveUp21](../../spec/move-subtree-up.md#moveup21)
+
+> moveSubtreeUp
+
+Adapted: blank lines, paragraph
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- para
+  - a┃
+  - b
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- para
+  - a┃
+  - b
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a┃
+- para
+  - b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+para
+- a┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a┃
+
+para
+- b
+```
+
+</td></tr>
+</table>
+
+#### 51. [MoveUp23](../../spec/move-subtree-up.md#moveup23)
+
+> moveSubtreeUp
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # A
+  - ## sub
+    - s1
+- # B
+  - ┃para
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # A
+  - ## sub
+    - s1
+  - ┃para
+- # B
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # A
+  - ## sub
+    - s1
+    - ┃para
+- # B
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# A
+## sub
+- s1
+
+# B
+┃para
+```
+
+</td><td>
+
+```buffer
+# A
+## sub
+- s1
+
+┃para
+
+# B
+```
+
+</td></tr>
+</table>
+
+#### 52. [MoveUp24](../../spec/move-subtree-up.md#moveup24)
+
+> moveSubtreeUp
+
+Adapted: blank lines, heading
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Todo
+  - one
+  - ## Later
+    - ┃two
+    - three
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # Todo
+  - one
+    - ┃two
+  - ## Later
+    - three
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # Todo
+  - one
+  - ┃two
+  - ## Later
+    - three
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# Todo
+- one
+
+## Later
+- ┃two
+- three
+```
+
+</td><td>
+
+```buffer
+# Todo
+- one
+- ┃two
+
+## Later
+- three
+```
+
+</td></tr>
+</table>
+
+#### 53. [MoveUp27](../../spec/move-subtree-up.md#moveup27)
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Work
+  - para
+- # Home
+  - ┃review
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeUp
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- # Work
+  - para
+  - ┃review
+- # Home
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # Work
+  - para
+    - ┃review
+- # Home
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeDown
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Work
+  - para
+- # Home
+  - ┃review
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>moveSubtreeUp</th><th>moveSubtreeDown</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# Work
+para
+
+# Home
+- ┃review
+```
+
+</td><td>
+
+```buffer
+# Work
+para
+- ┃review
+
+# Home
+```
+
+</td><td>
+
+```buffer
+# Work
+para
+
+# Home
+- ┃review
+```
+
+</td></tr>
+</table>
+
+#### 54. [MoveUp28](../../spec/move-subtree-up.md#moveup28)
+
+> moveSubtreeUp
+
+Adapted: heading
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## X
+- # A┃
+  - a
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # A┃
+  - a
+- ## X
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- ## X
+- # A┃
+  - a
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+## X
+# A┃
+- a
+```
+
+</td><td>
+
+```buffer
+## X
+# A┃
+- a
+```
+
+</td></tr>
+</table>
+
+#### 55. [MoveUp29](../../spec/move-subtree-up.md#moveup29)
+
+> moveSubtreeUp
+
+Adapted: heading
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # H
+  - ┃a
+  - b
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # H
+  - ┃a
+  - b
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- ┃a
+- # H
+  - b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# H
+- ┃a
+- b
+```
+
+</td><td>
+
+```buffer
+- ┃a
+# H
+- b
+```
+
+</td></tr>
+</table>
+
+#### 56. [MoveUp33](../../spec/move-subtree-up.md#moveup33)
+
+> moveSubtreeUp
+
+Adapted: heading
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # H
+  - a
+  - ## ┃H
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # H
+  - ## ┃H
+  - a
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # H
+  - a
+  - ## ┃H
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# H
+- a
+## ┃H
+```
+
+</td><td>
+
+```buffer
+# H
+- a
+## ┃H
+```
+
+</td></tr>
+</table>
+
+#### 57. [Enter › E15](../../spec/obsidian-true-outliner.md#e15)
 
 > enter
 
-Adapted: blank lines, heading, paragraph
+Adapted: heading, paragraph
 
 <table>
 <tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
@@ -3858,14 +6274,13 @@ Original:
 ```buffer
 # Head
 ┃line
-
 - item
 ```
 
 </td></tr>
 </table>
 
-#### 35. [Enter › E17](../../spec/obsidian-true-outliner.md#e17)
+#### 58. [Enter › E17](../../spec/obsidian-true-outliner.md#e17)
 
 > enter
 
@@ -3919,7 +6334,7 @@ Hello
 </td></tr>
 </table>
 
-#### 36. [Enter › E19, E21 › End of lone heading starts a paragraph](../../spec/obsidian-true-outliner.md#end-of-lone-heading-starts-a-paragraph)
+#### 59. [Enter › E19, E21 › End of lone heading starts a paragraph](../../spec/obsidian-true-outliner.md#end-of-lone-heading-starts-a-paragraph)
 
 > enter "x"
 
@@ -3971,11 +6386,11 @@ x┃
 </td></tr>
 </table>
 
-#### 37. [Enter › E19, E21 › Empty paragraph before a section list](../../spec/obsidian-true-outliner.md#empty-paragraph-before-a-section-list)
+#### 60. [Enter › E19, E21 › Empty paragraph before a section list](../../spec/obsidian-true-outliner.md#empty-paragraph-before-a-section-list)
 
 > enter
 
-Adapted: blank lines, heading, paragraph
+Adapted: heading, paragraph
 
 <table>
 <tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
@@ -4022,14 +6437,13 @@ Original:
 ```buffer
 # Head
 ┃◌
-
 - item
 ```
 
 </td></tr>
 </table>
 
-#### 38. [Enter › E32 › Task checkbox carries over unchecked](../../spec/obsidian-true-outliner.md#task-checkbox-carries-over-unchecked)
+#### 61. [Enter › E32 › Task checkbox carries over unchecked](../../spec/obsidian-true-outliner.md#task-checkbox-carries-over-unchecked)
 
 > enter
 
@@ -4081,7 +6495,7 @@ Original:
 </td></tr>
 </table>
 
-#### 39. [Enter › E13, E16 › Split title above a subheading](../../spec/obsidian-true-outliner.md#split-title-above-a-subheading)
+#### 62. [Enter › E13, E16 › Split title above a subheading](../../spec/obsidian-true-outliner.md#split-title-above-a-subheading)
 
 > enter
 
@@ -4138,7 +6552,7 @@ Original:
 </td></tr>
 </table>
 
-#### 40. [Enter › E14, E20 › Split title above an existing paragraph](../../spec/obsidian-true-outliner.md#split-title-above-an-existing-paragraph)
+#### 63. [Enter › E14, E20 › Split title above an existing paragraph](../../spec/obsidian-true-outliner.md#split-title-above-an-existing-paragraph)
 
 > enter
 
@@ -4196,7 +6610,7 @@ Body.
 </td></tr>
 </table>
 
-#### 41. [Shift-Enter › S4](../../spec/obsidian-true-outliner.md#s4)
+#### 64. [Shift-Enter › S4](../../spec/obsidian-true-outliner.md#s4)
 
 > shiftEnter
 
@@ -4248,7 +6662,7 @@ one
 </td></tr>
 </table>
 
-#### 42. [Shift-Enter › S9](../../spec/obsidian-true-outliner.md#s9)
+#### 65. [Shift-Enter › S9](../../spec/obsidian-true-outliner.md#s9)
 
 > shiftEnter
 
@@ -4307,7 +6721,7 @@ Original:
 </td></tr>
 </table>
 
-#### 43. [Backspace › Joining away the head of a list › Next item becomes the new 1.](../../spec/obsidian-true-outliner.md#next-item-becomes-the-new-1)
+#### 66. [Backspace › Joining away the head of a list › Next item becomes the new 1.](../../spec/obsidian-true-outliner.md#next-item-becomes-the-new-1)
 
 > deleteContentBackward
 
@@ -4364,68 +6778,7 @@ Original:
 </td></tr>
 </table>
 
-#### 44. [Abandoning an empty place › Enter twice, then leave › Indented list under paragraph restored](../../spec/obsidian-true-outliner.md#indented-list-under-paragraph-restored)
-
-> enter enter cursorDocStart
-
-Adapted: paragraph
-
-<table>
-<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- para
-  - a┃
-  - b
-```
-
-</td><td>
-
-<!--workflowy-->
-```buffer
-- ┃para
-  - a
-  - 
-  - 
-  - b
-```
-
-</td><td>
-
-<!--ourus-->
-```buffer
-- ┃para
-  - a
-  - b
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-para
-  - a┃
-  - b
-```
-
-</td><td>
-
-```buffer
-┃para
-  - a
-  - b
-```
-
-</td></tr>
-</table>
-
-#### 45. [Outdent4](../../spec/outdent.md#outdent4)
+#### 67. [Outdent4](../../spec/outdent.md#outdent4)
 
 > outdent
 
@@ -4479,7 +6832,7 @@ Original:
 </td></tr>
 </table>
 
-#### 46. [Outdent6](../../spec/outdent.md#outdent6)
+#### 68. [Outdent6](../../spec/outdent.md#outdent6)
 
 > outdent
 
@@ -4549,7 +6902,126 @@ Original:
 </td></tr>
 </table>
 
-#### 47. [Direct outdent › DirectOutdent2](../../spec/outdent.md#directoutdent2)
+#### 69. [Outdent7](../../spec/outdent.md#outdent7)
+
+> outdent
+
+Adapted: blank lines
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - ┃x
+  - 
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- a
+  - 
+- ┃x
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a
+- ┃x
+  - 
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - ┃x
+  - 
+```
+
+</td><td>
+
+```buffer
+- a
+- ┃x
+
+  - 
+```
+
+</td></tr>
+</table>
+
+#### 70. [Outdent11](../../spec/outdent.md#outdent11)
+
+> outdent
+
+Adapted: heading; Also: [outdent.md › Logical outdent › LogicalOutdent5](../../spec/outdent.md#logicaloutdent5)
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # T
+  - ## A┃
+  - ## B
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # T
+  - ## B
+- ## A┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # T
+- # A┃
+  - ## B
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# T
+## A┃
+## B
+```
+
+</td><td>
+
+```buffer
+# T
+# A┃
+## B
+```
+
+</td></tr>
+</table>
+
+#### 71. [Direct outdent › DirectOutdent2](../../spec/outdent.md#directoutdent2)
 
 > outdent
 
@@ -4603,7 +7075,7 @@ a┃
 </td></tr>
 </table>
 
-#### 48. [Direct outdent › DirectOutdent3](../../spec/outdent.md#directoutdent3)
+#### 72. [Direct outdent › DirectOutdent3](../../spec/outdent.md#directoutdent3)
 
 > outdent
 
@@ -4662,7 +7134,7 @@ a┃
 </td></tr>
 </table>
 
-#### 49. [Direct outdent › DirectOutdent4](../../spec/outdent.md#directoutdent4)
+#### 73. [Direct outdent › DirectOutdent4](../../spec/outdent.md#directoutdent4)
 
 > outdent
 
@@ -4722,7 +7194,7 @@ a┃
 </td></tr>
 </table>
 
-#### 50. [Logical outdent › LogicalOutdent2](../../spec/outdent.md#logicaloutdent2)
+#### 74. [Logical outdent › LogicalOutdent2](../../spec/outdent.md#logicaloutdent2)
 
 > outdent
 
@@ -4777,7 +7249,7 @@ a┃
 </td></tr>
 </table>
 
-#### 51. [Logical outdent › LogicalOutdent3](../../spec/outdent.md#logicaloutdent3)
+#### 75. [Logical outdent › LogicalOutdent3](../../spec/outdent.md#logicaloutdent3)
 
 > outdent
 
@@ -4837,7 +7309,7 @@ a┃
 </td></tr>
 </table>
 
-#### 52. [Paste2](../../spec/paste.md#paste2)
+#### 76. [Paste2](../../spec/paste.md#paste2)
 
 > pasteStructured
 
@@ -4897,13 +7369,13 @@ Original:
 1. a
 2. x
 3. y┃
-2. b
+4. b
 ```
 
 </td></tr>
 </table>
 
-#### 53. [Paste4](../../spec/paste.md#paste4)
+#### 77. [Paste4](../../spec/paste.md#paste4)
 
 > pastePlain
 
@@ -4965,45 +7437,40 @@ Original:
 </td></tr>
 </table>
 
-#### 54. [Paste12](../../spec/paste.md#paste12)
+#### 78. [Paste6](../../spec/paste.md#paste6)
 
-> pasteStructured
+> pastePlain
 
-Adapted: escape
+Adapted: heading
 
 <table>
 <tr><th>clipboard</th><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```clipboard
-> q
-> r
+x
+y
 ```
 
 </td><td>
 
 ```buffer
-- a
-- ┃
+- # H┃
 ```
 
 </td><td>
 
 <!--workflowy-->
 ```buffer
-- a
-- q
-- r┃
+- # Hx
+- y┃
 ```
 
 </td><td>
 
 <!--ourus-->
 ```buffer
-- a
-- > q
-  > r
-  ┃
+- # H┃
 ```
 
 </td></tr>
@@ -5015,23 +7482,19 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-- a
-- ┃
+# H┃
 ```
 
 </td><td>
 
 ```buffer
-- a
-- \> q
-  \> r
-  ┃◌
+# H┃
 ```
 
 </td></tr>
 </table>
 
-#### 55. [Paste13](../../spec/paste.md#paste13)
+#### 79. [Paste13](../../spec/paste.md#paste13)
 
 > pasteStructured
 
@@ -5097,7 +7560,7 @@ Original:
 </td></tr>
 </table>
 
-#### 56. [Paste14](../../spec/paste.md#paste14)
+#### 80. [Paste14](../../spec/paste.md#paste14)
 
 > pasteStructured
 
@@ -5164,7 +7627,7 @@ Original:
 </td></tr>
 </table>
 
-#### 57. [Paste15](../../spec/paste.md#paste15)
+#### 81. [Paste15](../../spec/paste.md#paste15)
 
 > pasteStructured
 
@@ -5228,7 +7691,7 @@ Original:
 </td></tr>
 </table>
 
-#### 58. [Paste17](../../spec/paste.md#paste17)
+#### 82. [Paste17](../../spec/paste.md#paste17)
 
 > pasteStructured
 
@@ -5293,7 +7756,7 @@ Original:
 </td></tr>
 </table>
 
-#### 59. [Paste18](../../spec/paste.md#paste18)
+#### 83. [Paste18](../../spec/paste.md#paste18)
 
 > pasteStructured
 
@@ -5351,15 +7814,76 @@ Original:
 
 ```buffer
 1. a
-1. x
-2. y┃
-2. b
+2. x
+3. y┃
+4. b
 ```
 
 </td></tr>
 </table>
 
-#### 60. [Paste20](../../spec/paste.md#paste20)
+#### 84. [Paste19](../../spec/paste.md#paste19)
+
+> pasteStructured
+
+Adapted: heading, paragraph
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+# h
+text
+```
+
+</td><td>
+
+```buffer
+- a┃
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # ah
+- text┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a
+- # h
+  - text┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+```
+
+</td><td>
+
+```buffer
+- a
+- # h
+  text┃
+```
+
+</td></tr>
+</table>
+
+#### 85. [Paste20](../../spec/paste.md#paste20)
 
 > pasteStructured
 
@@ -5433,7 +7957,7 @@ Notes
 </td></tr>
 </table>
 
-#### 61. [Paste21](../../spec/paste.md#paste21)
+#### 86. [Paste21](../../spec/paste.md#paste21)
 
 > pasteStructured
 
@@ -5500,7 +8024,605 @@ Notes
 </td></tr>
 </table>
 
-#### 62. [Placeholder2](../../spec/placeholders.md#placeholder2)
+#### 87. [Paste27](../../spec/paste.md#paste27)
+
+> pasteStructured
+
+Adapted: task
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+- a
+- b
+```
+
+</td><td>
+
+```buffer
+- [ ] t┃
+  - g
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- [ ] t
+  - g
+- a
+- b┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- [ ] t
+  - a
+  - b┃
+  - g
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [ ] t┃
+    - g
+```
+
+</td><td>
+
+```buffer
+- [ ] t
+    - a
+    - b┃
+    - g
+```
+
+</td></tr>
+</table>
+
+#### 88. [Paste30](../../spec/paste.md#paste30)
+
+> pastePlain
+
+Adapted: escape
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+2. y
+```
+
+</td><td>
+
+```buffer
+- a┃
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- ax
+- 2. y┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- ax
+  2\. y┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+```
+
+</td><td>
+
+```buffer
+- ax
+  2\. y┃
+```
+
+</td></tr>
+</table>
+
+#### 89. [Paste32](../../spec/paste.md#paste32)
+
+> pasteStructured
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+# h
+```
+
+</td><td>
+
+```buffer
+- para┃
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # parah┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- para
+- # h┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+para┃
+```
+
+</td><td>
+
+```buffer
+para
+
+# h┃
+```
+
+</td></tr>
+</table>
+
+#### 90. [Paste33](../../spec/paste.md#paste33)
+
+> pasteStructured
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+## h
+```
+
+</td><td>
+
+```buffer
+- ## A
+  - para┃
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- ## A
+  - ## parah┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- ## A
+  - para
+- ## h┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+## A
+
+para┃
+```
+
+</td><td>
+
+```buffer
+## A
+
+para
+
+## h┃
+```
+
+</td></tr>
+</table>
+
+#### 91. [Paste34](../../spec/paste.md#paste34)
+
+> pasteStructured
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+# h
+```
+
+</td><td>
+
+```buffer
+- para┃
+- next
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # parah┃
+- next
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- para
+- # h┃
+  - next
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+para┃
+
+next
+```
+
+</td><td>
+
+```buffer
+para
+
+# h┃
+
+next
+```
+
+</td></tr>
+</table>
+
+#### 92. [Paste35](../../spec/paste.md#paste35)
+
+> pasteStructured
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+## h
+```
+
+</td><td>
+
+```buffer
+- ## A
+  - para┃
+  - more
+  - ### C
+- ## B
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- ## A
+  - ## parah┃
+  - more
+  - ### C
+- ## B
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- ## A
+  - para
+- ## h┃
+  - more
+  - ### C
+- ## B
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+## A
+
+para┃
+
+more
+
+### C
+
+## B
+```
+
+</td><td>
+
+```buffer
+## A
+
+para
+
+## h┃
+
+more
+
+### C
+
+## B
+```
+
+</td></tr>
+</table>
+
+#### 93. [Paste37](../../spec/paste.md#paste37)
+
+> pasteStructured
+
+Adapted: blank lines, paragraph
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+- y
+```
+
+</td><td>
+
+```buffer
+- See ┃here.
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- See x
+- y
+- ┃here.
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- See x
+  - y
+- ┃here.
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+See ┃here.
+```
+
+</td><td>
+
+```buffer
+See x
+- y
+
+┃here.
+```
+
+</td></tr>
+</table>
+
+#### 94. [Paste40](../../spec/paste.md#paste40)
+
+> pastePlain
+
+Adapted: blank lines, paragraph
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+
+y
+```
+
+</td><td>
+
+```buffer
+- a┃b
+- c
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- ax
+- y
+- ┃b
+- c
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- ax
+  - y
+    ┃b
+- c
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃b
+- c
+```
+
+</td><td>
+
+```buffer
+- ax
+
+  y
+  ┃b
+- c
+```
+
+</td></tr>
+</table>
+
+#### 95. [Paste45](../../spec/paste.md#paste45)
+
+> pastePlain
+
+Adapted: escape
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+$$
+x^2
+$$
+```
+
+</td><td>
+
+```buffer
+- a┃b
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- a$$
+- x^2
+- $$
+- ┃b
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a$$
+  x^2
+  $$
+  ┃b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃b
+```
+
+</td><td>
+
+```buffer
+- a$$
+  x^2
+  \$$
+  ┃b
+```
+
+</td></tr>
+</table>
+
+#### 96. [Placeholder2](../../spec/placeholders.md#placeholder2)
 
 Adapted: blank lines, paragraph
 
@@ -5609,7 +8731,7 @@ Original:
 </td></tr>
 </table>
 
-#### 63. [Placeholder3](../../spec/placeholders.md#placeholder3)
+#### 97. [Placeholder3](../../spec/placeholders.md#placeholder3)
 
 Adapted: blank lines, paragraph
 
@@ -5686,7 +8808,7 @@ para
 </td></tr>
 </table>
 
-#### 64. [Placeholder13](../../spec/placeholders.md#placeholder13)
+#### 98. [Placeholder13](../../spec/placeholders.md#placeholder13)
 
 Adapted: blank lines, heading, paragraph
 
@@ -5736,7 +8858,7 @@ Adapted: blank lines, heading, paragraph
 <!--ourus-->
 ```buffer
 - # H1
-  - ┃## H2
+  - ## ┃H2
 ```
 
 </td></tr>
@@ -5770,13 +8892,1048 @@ Original:
 ```buffer
 # H1
 
-┃## H2
+## ┃H2
 ```
 
 </td></tr>
 </table>
 
-#### 65. [ShiftEnter2](../../spec/shift-enter.md#shiftenter2)
+#### 99. [Outliner flows › Scenario6](../../spec/scenarios.md#scenario6)
+
+Adapted: blank lines, paragraph
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Groceries┃
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Groceries
+- ┃
+```
+
+</td></tr>
+</table>
+
+> "- milk"
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- Groceries
+- - milk┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- Groceries
+  - milk┃
+```
+
+</td></tr>
+</table>
+
+> enter "eggs"
+
+> enter indent "brown"
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- Groceries
+- - milk
+- eggs
+  - brown┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- Groceries
+  - milk
+  - eggs
+    - brown┃
+```
+
+</td></tr>
+</table>
+
+> enter enter
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- Groceries
+- - milk
+- eggs
+  - brown
+- ┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- Groceries
+  - milk
+  - eggs
+    - brown
+  - ┃
+```
+
+</td></tr>
+</table>
+
+> enter "Done."
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- Groceries
+- - milk
+- eggs
+  - brown
+- 
+- Done.┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- Groceries
+  - milk
+  - eggs
+    - brown
+- Done.┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter</th><th>"- milk"</th><th>enter indent "brown"</th><th>enter enter</th><th>enter "Done."</th></tr>
+<tr valign="top"><td>
+
+```buffer
+Groceries┃
+```
+
+</td><td>
+
+```buffer
+Groceries
+
+┃◌
+```
+
+</td><td>
+
+```buffer
+Groceries
+
+- milk┃
+```
+
+</td><td>
+
+```buffer
+Groceries
+
+- milk
+- eggs
+  - brown┃
+```
+
+</td><td>
+
+```buffer
+Groceries
+
+- milk
+- eggs
+  - brown
+- ┃
+```
+
+</td><td>
+
+```buffer
+Groceries
+
+- milk
+- eggs
+  - brown
+
+Done.┃
+```
+
+</td></tr>
+</table>
+
+#### 100. [Outliner flows › Scenario15](../../spec/scenarios.md#scenario15)
+
+Adapted: blank lines, paragraph, task
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [ ] milk┃
+```
+
+</td></tr>
+</table>
+
+> enter "bread" enter
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [ ] milk
+- [ ] bread
+- [ ] ┃
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward "two loaves" indent
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- [ ] milk
+  - [ ] breadtwo loaves┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- [ ] milk
+- [ ] bread
+  - two loaves┃
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- [ ] milk
+  - [ ] breadtwo loaves
+  - [ ] ┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- [ ] milk
+- [ ] bread
+  - two loaves
+  - ┃
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- [ ] milk
+  - [ ] breadtwo loaves
+- [ ] ┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- [ ] milk
+- [ ] bread
+  - two loaves
+- ┃
+```
+
+</td></tr>
+</table>
+
+> enter "Shop closes at six."
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- [ ] milk
+  - [ ] breadtwo loaves
+- [ ] 
+- [ ] Shop closes at six.┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- [ ] milk
+- [ ] bread
+  - two loaves
+- Shop closes at six.┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter "bread" enter</th><th>deleteContentBackward "two loaves" indent</th><th>enter</th><th>enter</th><th>enter "Shop closes at six."</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [ ] milk┃
+```
+
+</td><td>
+
+```buffer
+- [ ] milk
+- [ ] bread
+- [ ] ┃
+```
+
+</td><td>
+
+```buffer
+- [ ] milk
+- [ ] bread
+  - two loaves┃
+```
+
+</td><td>
+
+```buffer
+- [ ] milk
+- [ ] bread
+  - two loaves
+  - ┃
+```
+
+</td><td>
+
+```buffer
+- [ ] milk
+- [ ] bread
+  - two loaves
+- ┃
+```
+
+</td><td>
+
+```buffer
+- [ ] milk
+- [ ] bread
+  - two loaves
+
+Shop closes at six.┃
+```
+
+</td></tr>
+</table>
+
+#### 101. [Notes and sections › Scenario19](../../spec/scenarios.md#scenario19)
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Notes┃
+```
+
+</td></tr>
+</table>
+
+> enter "first idea"
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- # Notes
+- first idea┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # Notes
+  - first idea┃
+```
+
+</td></tr>
+</table>
+
+> enter "second"
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- # Notes
+- first idea
+- second┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # Notes
+  - first idea
+  - second┃
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeUp
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- # Notes
+- second┃
+- first idea
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # Notes
+  - second┃
+  - first idea
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter "first idea"</th><th>enter "second"</th><th>moveSubtreeUp</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# Notes┃
+```
+
+</td><td>
+
+```buffer
+# Notes
+first idea┃
+```
+
+</td><td>
+
+```buffer
+# Notes
+first idea
+
+second┃
+```
+
+</td><td>
+
+```buffer
+# Notes
+second┃
+
+first idea
+```
+
+</td></tr>
+</table>
+
+#### 102. [Notes and sections › Scenario20](../../spec/scenarios.md#scenario20)
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Trip┃
+```
+
+</td></tr>
+</table>
+
+> enter "Pack light." enter "Book the train."
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- # Trip
+- Pack light.
+- Book the train.┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # Trip
+  - Pack light.
+  - Book the train.┃
+```
+
+</td></tr>
+</table>
+
+> shiftEnter "Seat 42."
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- # Trip
+- Pack light.
+- Book the train.
+  Seat 42.┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # Trip
+  - Pack light.
+  - Book the train.
+    Seat 42.┃
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeUp
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- # Trip
+- Book the train.
+  Seat 42.┃
+- Pack light.
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # Trip
+  - Book the train.
+    Seat 42.┃
+  - Pack light.
+```
+
+</td></tr>
+</table>
+
+> undo
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- # Trip
+- Pack light.
+- Book the train.
+  Seat 42.┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # Trip
+  - Pack light.
+  - Book the train.
+    Seat 42.┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter "Pack light." enter "Book the train."</th><th>shiftEnter "Seat 42."</th><th>moveSubtreeUp</th><th>undo</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# Trip┃
+```
+
+</td><td>
+
+```buffer
+# Trip
+Pack light.
+
+Book the train.┃
+```
+
+</td><td>
+
+```buffer
+# Trip
+Pack light.
+
+Book the train.
+Seat 42.┃
+```
+
+</td><td>
+
+```buffer
+# Trip
+Book the train.
+Seat 42.┃
+
+Pack light.
+```
+
+</td><td>
+
+```buffer
+# Trip
+Pack light.
+
+Book the train.
+Seat 42.┃
+```
+
+</td></tr>
+</table>
+
+#### 103. [Notes and sections › Scenario21](../../spec/scenarios.md#scenario21)
+
+Adapted: blank lines, paragraph
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one┃two
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one
+- ┃two
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- one┃two
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- one
+  ┃two
+```
+
+</td></tr>
+</table>
+
+> cursorLineUp cursorLineBoundaryForward
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- onetwo
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- one┃
+  two
+```
+
+</td></tr>
+</table>
+
+> deleteContentForward
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- onetwo
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- one┃two
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter</th><th>deleteContentBackward</th><th>cursorLineUp cursorLineBoundaryForward</th><th>deleteContentForward</th></tr>
+<tr valign="top"><td>
+
+```buffer
+one┃two
+```
+
+</td><td>
+
+```buffer
+one
+
+┃two
+```
+
+</td><td>
+
+```buffer
+one
+┃two
+```
+
+</td><td>
+
+```buffer
+one┃
+two
+```
+
+</td><td>
+
+```buffer
+one┃two
+```
+
+</td></tr>
+</table>
+
+#### 104. [Notes and sections › Scenario23](../../spec/scenarios.md#scenario23)
+
+Adapted: escape, heading, paragraph
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Plan┃2. draft
+```
+
+</td></tr>
+</table>
+
+> enter "revise "
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- Plan
+- # revise ┃2. draft
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # Plan
+  - revise ┃2\. draft
+```
+
+</td></tr>
+</table>
+
+> shiftEnter
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- Plan
+- # revise 2. draft
+  ┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # Plan
+  - revise
+    ┃2\. draft
+```
+
+</td></tr>
+</table>
+
+> undo undo undo
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # Plan┃2. draft
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter "revise "</th><th>shiftEnter</th><th>undo undo undo</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# Plan┃2. draft
+```
+
+</td><td>
+
+```buffer
+# Plan
+revise ┃2\. draft
+```
+
+</td><td>
+
+```buffer
+# Plan
+revise
+┃2\. draft
+```
+
+</td><td>
+
+```buffer
+# Plan┃2. draft
+```
+
+</td></tr>
+</table>
+
+#### 105. [Notes and sections › Scenario24](../../spec/scenarios.md#scenario24)
+
+Adapted: paragraph
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Shopping:
+  ┃milk
+  bread
+```
+
+</td></tr>
+</table>
+
+> "- "
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- Shopping:
+  \- ┃milk
+  bread
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- Shopping:
+  - ┃milk
+    bread
+```
+
+</td></tr>
+</table>
+
+> cursorLineDown cursorLineBoundaryBackward "- "
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- Shopping:
+  \- milk
+  \- ┃bread
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- Shopping:
+  - milk
+  - ┃bread
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>"- "</th><th>cursorLineDown cursorLineBoundaryBackward "- "</th></tr>
+<tr valign="top"><td>
+
+```buffer
+Shopping:
+┃milk
+bread
+```
+
+</td><td>
+
+```buffer
+Shopping:
+- ┃milk
+bread
+```
+
+</td><td>
+
+```buffer
+Shopping:
+- milk
+- ┃bread
+```
+
+</td></tr>
+</table>
+
+#### 106. [ShiftEnter2](../../spec/shift-enter.md#shiftenter2)
 
 > shiftEnter
 
@@ -5833,7 +9990,7 @@ Original:
 </td></tr>
 </table>
 
-#### 66. [ShiftEnter5](../../spec/shift-enter.md#shiftenter5)
+#### 107. [ShiftEnter5](../../spec/shift-enter.md#shiftenter5)
 
 > shiftEnter
 
@@ -5885,7 +10042,7 @@ Original:
 </td></tr>
 </table>
 
-#### 67. [ShiftEnter6](../../spec/shift-enter.md#shiftenter6)
+#### 108. [ShiftEnter6](../../spec/shift-enter.md#shiftenter6)
 
 > shiftEnter
 
@@ -5937,7 +10094,7 @@ Original:
 </td></tr>
 </table>
 
-#### 68. [ShiftEnter7](../../spec/shift-enter.md#shiftenter7)
+#### 109. [ShiftEnter7](../../spec/shift-enter.md#shiftenter7)
 
 > shiftEnter
 
@@ -5989,7 +10146,7 @@ Title
 </td></tr>
 </table>
 
-#### 69. [ShiftEnter8](../../spec/shift-enter.md#shiftenter8)
+#### 110. [ShiftEnter8](../../spec/shift-enter.md#shiftenter8)
 
 > shiftEnter
 
@@ -6041,7 +10198,7 @@ Title
 </td></tr>
 </table>
 
-#### 70. [ShiftEnter9](../../spec/shift-enter.md#shiftenter9)
+#### 111. [ShiftEnter9](../../spec/shift-enter.md#shiftenter9)
 
 > shiftEnter
 
@@ -6093,7 +10250,7 @@ Original:
 </td></tr>
 </table>
 
-#### 71. [ShiftEnter10](../../spec/shift-enter.md#shiftenter10)
+#### 112. [ShiftEnter10](../../spec/shift-enter.md#shiftenter10)
 
 Adapted: blank lines, paragraph
 
@@ -6184,7 +10341,7 @@ Original:
 </td></tr>
 </table>
 
-#### 72. [ShiftEnter11](../../spec/shift-enter.md#shiftenter11)
+#### 113. [ShiftEnter11](../../spec/shift-enter.md#shiftenter11)
 
 > shiftEnter
 
@@ -6243,7 +10400,7 @@ Original:
 </td></tr>
 </table>
 
-#### 73. [ShiftEnter12](../../spec/shift-enter.md#shiftenter12)
+#### 114. [ShiftEnter12](../../spec/shift-enter.md#shiftenter12)
 
 > shiftEnter
 
@@ -6297,7 +10454,7 @@ para
 </td></tr>
 </table>
 
-#### 74. [ShiftEnter15](../../spec/shift-enter.md#shiftenter15)
+#### 115. [ShiftEnter15](../../spec/shift-enter.md#shiftenter15)
 
 > shiftEnter shiftEnter "p"
 
@@ -6349,7 +10506,7 @@ Original:
 </td></tr>
 </table>
 
-#### 75. [ShiftEnter16](../../spec/shift-enter.md#shiftenter16)
+#### 116. [ShiftEnter16](../../spec/shift-enter.md#shiftenter16)
 
 > shiftEnter shiftEnter "p"
 
@@ -6401,7 +10558,195 @@ Original:
 </td></tr>
 </table>
 
-#### 76. [TaskEnter1](../../spec/tasks.md#taskenter1)
+#### 117. [ShiftEnter18](../../spec/shift-enter.md#shiftenter18)
+
+> shiftEnter
+
+Adapted: escape, numbered list
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- abc ┃2. x
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- abc 2. x
+  ┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- abc
+  ┃2\. x
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+1. abc ┃2. x
+```
+
+</td><td>
+
+```buffer
+1. abc
+   ┃2\. x
+```
+
+</td></tr>
+</table>
+
+#### 118. [ShiftEnter19](../../spec/shift-enter.md#shiftenter19)
+
+> shiftEnter
+
+Adapted: escape, paragraph
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a | b ┃|---|---|
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- a | b |---|---|
+  ┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a | b
+  ┃|---|---|
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+a | b ┃|---|---|
+```
+
+</td><td>
+
+```buffer
+a | b
+┃\|---|---|
+```
+
+</td></tr>
+</table>
+
+#### 119. [ShiftEnter20](../../spec/shift-enter.md#shiftenter20)
+
+Adapted: escape
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- abc┃- def
+```
+
+</td></tr>
+</table>
+
+> shiftEnter
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- abc- def
+  ┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- abc
+  ┃\- def
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- abc- def┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- abc┃- def
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>shiftEnter</th><th>deleteContentBackward</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- abc┃- def
+```
+
+</td><td>
+
+```buffer
+- abc
+  ┃\- def
+```
+
+</td><td>
+
+```buffer
+- abc┃- def
+```
+
+</td></tr>
+</table>
+
+#### 120. [TaskEnter1](../../spec/tasks.md#taskenter1)
 
 > enter
 
@@ -6457,7 +10802,64 @@ Original:
 </td></tr>
 </table>
 
-#### 77. [TaskBackspace5](../../spec/tasks.md#taskbackspace5)
+#### 121. [TaskEnter7](../../spec/tasks.md#taskenter7)
+
+> enter
+
+Adapted: task
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [x] a┃ b
+  - c
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- [ ] a
+- [x] ┃ b
+  - c
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- [x] a
+- [ ] ┃b
+  - c
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [x] a┃ b
+  - c
+```
+
+</td><td>
+
+```buffer
+- [x] a
+- [ ] ┃b
+  - c
+```
+
+</td></tr>
+</table>
+
+#### 122. [TaskBackspace2](../../spec/tasks.md#taskbackspace2)
 
 Adapted: task
 
@@ -6466,6 +10868,7 @@ Adapted: task
 <tr valign="top"><td>
 
 ```buffer
+- a
 - [ ] ┃
 ```
 
@@ -6480,14 +10883,15 @@ Adapted: task
 
 <!--workflowy-->
 ```buffer
-
+- a┃
 ```
 
 </td><td>
 
 <!--ourus-->
 ```buffer
-- [ ]┃
+- a
+- ┃
 ```
 
 </td></tr>
@@ -6501,14 +10905,14 @@ Adapted: task
 
 <!--workflowy-->
 ```buffer
-
+- ┃
 ```
 
 </td><td>
 
 <!--ourus-->
 ```buffer
-- [ ┃
+- a┃
 ```
 
 </td></tr>
@@ -6520,25 +10924,345 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
+- a
 - [ ] ┃
 ```
 
 </td><td>
 
 ```buffer
-- [ ]┃
+- a
+- ┃
 ```
 
 </td><td>
 
 ```buffer
-- [ ┃
+- a┃
 ```
 
 </td></tr>
 </table>
 
-#### 78. [Undo3](../../spec/undo.md#undo3)
+#### 123. [TaskBackspace3](../../spec/tasks.md#taskbackspace3)
+
+> deleteContentBackward
+
+Adapted: task
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- [x] ┃b
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- a
+- [x] ┃b
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a
+- ┃b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- [x] ┃b
+```
+
+</td><td>
+
+```buffer
+- a
+- ┃b
+```
+
+</td></tr>
+</table>
+
+#### 124. [TaskDelete1](../../spec/tasks.md#taskdelete1)
+
+> deleteContentForward
+
+Adapted: task
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- [ ] b
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- a┃
+- [ ] b
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a┃b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- [ ] b
+```
+
+</td><td>
+
+```buffer
+- a┃b
+```
+
+</td></tr>
+</table>
+
+#### 125. [TaskDelete2](../../spec/tasks.md#taskdelete2)
+
+> deleteContentForward
+
+Adapted: task
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+- [x] a
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- ┃
+- [x] a
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- [x] ┃a
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+- [x] a
+```
+
+</td><td>
+
+```buffer
+- [x] ┃a
+```
+
+</td></tr>
+</table>
+
+#### 126. [TaskDelete3](../../spec/tasks.md#taskdelete3)
+
+> deleteContentForward
+
+Adapted: task
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- [ ] 
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- a┃
+- [ ] 
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- [ ] 
+```
+
+</td><td>
+
+```buffer
+- a┃
+```
+
+</td></tr>
+</table>
+
+#### 127. [Typing2](../../spec/typing.md#typing2)
+
+> deleteContentBackward
+
+Adapted: heading, paragraph, setext heading
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- para
+  ---x┃
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- para
+  ---┃
+  
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- ## para
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+para
+---x┃
+```
+
+</td><td>
+
+```buffer
+para
+---┃
+```
+
+</td></tr>
+</table>
+
+#### 128. [Typing3](../../spec/typing.md#typing3)
+
+> "- "
+
+Adapted: paragraph
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- para
+  ┃more
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- para
+  \- ┃more
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- para
+  - ┃more
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+para
+┃more
+```
+
+</td><td>
+
+```buffer
+para
+- ┃more
+```
+
+</td></tr>
+</table>
+
+#### 129. [Undo3](../../spec/undo.md#undo3)
 
 Adapted: blank lines
 
@@ -6690,35 +11414,42 @@ Original:
 </td></tr>
 </table>
 
-#### 79. [Decisions of the redesign › The guard › Setext authoring › Deleting to finish the underline](../../spec/zzz-redesign.md#deleting-to-finish-the-underline)
+### Whitespace (12)
 
-> deleteContentBackward
+#### 1. [Enter3c](../../spec/enter.md#enter3c)
 
-Adapted: heading, paragraph, setext heading
+> enter
+
+Adapted: numbered list
 
 <table>
 <tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- para
-  ---x┃
+- a┃ b
+  - c
+- d
 ```
 
 </td><td>
 
 <!--workflowy-->
 ```buffer
-- para
-  ---┃
-  
+- a
+- ┃ b
+  - c
+- d
 ```
 
 </td><td>
 
 <!--ourus-->
 ```buffer
-- ## para
+- a
+- ┃b
+  - c
+- d
 ```
 
 </td></tr>
@@ -6730,294 +11461,24 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-para
----x┃
+9. a┃ b
+   - c
+10. d
 ```
 
 </td><td>
 
 ```buffer
-para
----┃
+9. a
+10. ┃b
+    - c
+11. d
 ```
 
 </td></tr>
 </table>
 
-#### 80. [Decisions of the redesign › The guard › A list marker typed on a continuation line](../../spec/zzz-redesign.md#a-list-marker-typed-on-a-continuation-line)
-
-> "- "
-
-Adapted: paragraph
-
-<table>
-<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- para
-  ┃more
-```
-
-</td><td>
-
-<!--workflowy-->
-```buffer
-- para
-  \- ┃more
-```
-
-</td><td>
-
-<!--ourus-->
-```buffer
-- para
-  - ┃more
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-para
-┃more
-```
-
-</td><td>
-
-```buffer
-para
-- ┃more
-```
-
-</td></tr>
-</table>
-
-#### 81. [Decisions of the redesign › Paragraphs own the list that follows them › A paragraph owns consecutive lists](../../spec/zzz-redesign.md#a-paragraph-owns-consecutive-lists)
-
-> shiftEnter
-
-Adapted: numbered list, paragraph
-
-<table>
-<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- pa┃ra
-  - a
-  - b
-```
-
-</td><td>
-
-<!--workflowy-->
-```buffer
-- para
-  ┃
-  - a
-  - b
-```
-
-</td><td>
-
-<!--ourus-->
-```buffer
-- pa
-  ┃ra
-  - a
-  - b
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-pa┃ra
-1. a
-- b
-```
-
-</td><td>
-
-```buffer
-pa
-┃ra
-1. a
-- b
-```
-
-</td></tr>
-</table>
-
-#### 82. [Findings of the design experiments › Escapes › Cmd-Backspace in a setext title](../../spec/zzz-redesign.md#cmd-backspace-in-a-setext-title)
-
-> deleteSoftLineBackward
-
-Adapted: heading, setext heading
-
-<table>
-<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- # abc ┃- x tail
-```
-
-</td><td>
-
-<!--workflowy-->
-```buffer
-- # ┃- x tail
-```
-
-</td><td>
-
-<!--ourus-->
-```buffer
-- # ┃\- x tail
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-abc ┃- x tail
-===
-```
-
-</td><td>
-
-```buffer
-┃\- x tail
-===
-```
-
-</td></tr>
-</table>
-
-#### 83. [Findings of the design experiments › Escapes › Text other readers would read differently › Ordered marker split onto a new line](../../spec/zzz-redesign.md#ordered-marker-split-onto-a-new-line)
-
-> shiftEnter
-
-Adapted: escape, numbered list
-
-<table>
-<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- abc ┃2. x
-```
-
-</td><td>
-
-<!--workflowy-->
-```buffer
-- abc 2. x
-  ┃
-```
-
-</td><td>
-
-<!--ourus-->
-```buffer
-- abc
-  ┃2\. x
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-1. abc ┃2. x
-```
-
-</td><td>
-
-```buffer
-1. abc
-   ┃2\. x
-```
-
-</td></tr>
-</table>
-
-#### 84. [Findings of the design experiments › Escapes › Text other readers would read differently › Table delimiter row split onto a new line](../../spec/zzz-redesign.md#table-delimiter-row-split-onto-a-new-line)
-
-> shiftEnter
-
-Adapted: escape, paragraph
-
-<table>
-<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a | b ┃|---|---|
-```
-
-</td><td>
-
-<!--workflowy-->
-```buffer
-- a | b |---|---|
-  ┃
-```
-
-</td><td>
-
-<!--ourus-->
-```buffer
-- a | b
-  ┃|---|---|
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-a | b ┃|---|---|
-```
-
-</td><td>
-
-```buffer
-a | b
-┃\|---|---|
-```
-
-</td></tr>
-</table>
-
-### Whitespace (8)
-
-#### 1. [Enter8](../../spec/enter.md#enter8)
+#### 2. [Enter8](../../spec/enter.md#enter8)
 
 > enter
 
@@ -7069,7 +11530,7 @@ Original:
 </td></tr>
 </table>
 
-#### 2. [Enter9](../../spec/enter.md#enter9)
+#### 3. [Enter9](../../spec/enter.md#enter9)
 
 > enter
 
@@ -7121,7 +11582,7 @@ Original:
 </td></tr>
 </table>
 
-#### 3. [Enter10](../../spec/enter.md#enter10)
+#### 4. [Enter10](../../spec/enter.md#enter10)
 
 > enter
 
@@ -7173,7 +11634,7 @@ Original:
 </td></tr>
 </table>
 
-#### 4. [Enter11](../../spec/enter.md#enter11)
+#### 5. [Enter11](../../spec/enter.md#enter11)
 
 > enter
 
@@ -7226,7 +11687,7 @@ see
 </td></tr>
 </table>
 
-#### 5. [Enter12](../../spec/enter.md#enter12)
+#### 6. [Enter12](../../spec/enter.md#enter12)
 
 > enter
 
@@ -7279,7 +11740,65 @@ some
 </td></tr>
 </table>
 
-#### 6. [Enter35](../../spec/enter.md#enter35)
+#### 7. [Enter22](../../spec/enter.md#enter22)
+
+> enter
+
+Adapted: blank lines, escape, paragraph
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- para ┃- x
+  - a
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- para 
+- ┃- x
+  - a
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- para
+- ┃- x
+  - a
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+para ┃- x
+- a
+```
+
+</td><td>
+
+```buffer
+para
+
+┃\- x
+- a
+```
+
+</td></tr>
+</table>
+
+#### 8. [Enter35](../../spec/enter.md#enter35)
 
 > enter
 
@@ -7331,7 +11850,7 @@ Original:
 </td></tr>
 </table>
 
-#### 7. [Enter › E9](../../spec/obsidian-true-outliner.md#e9)
+#### 9. [Enter › E9](../../spec/obsidian-true-outliner.md#e9)
 
 > enter
 
@@ -7389,7 +11908,109 @@ one
 </td></tr>
 </table>
 
-#### 8. [TaskEnter3](../../spec/tasks.md#taskenter3)
+#### 10. [Shift-Enter › S7, S8 › Line break in setext title refused](../../spec/obsidian-true-outliner.md#line-break-in-setext-title-refused)
+
+> shiftEnter
+
+Adapted: heading, setext heading
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Hello┃ world
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # Hello world
+  ┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # Hello┃ world
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+Hello┃ world
+====
+```
+
+</td><td>
+
+```buffer
+Hello┃ world
+====
+```
+
+</td></tr>
+</table>
+
+#### 11. [ShiftEnter14](../../spec/shift-enter.md#shiftenter14)
+
+> shiftEnter
+
+Adapted: heading
+
+<table>
+<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Title┃ more
+```
+
+</td><td>
+
+<!--workflowy-->
+```buffer
+- # Title more
+  ┃
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- # Title┃ more
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# Title┃ more
+```
+
+</td><td>
+
+```buffer
+# Title┃ more
+```
+
+</td></tr>
+</table>
+
+#### 12. [TaskEnter3](../../spec/tasks.md#taskenter3)
 
 > enter
 
@@ -7441,7 +12062,7 @@ Original:
 </td></tr>
 </table>
 
-### Caret (7)
+### Caret (6)
 
 #### 1. [CursorRight1](../../spec/cursor.md#cursorright1)
 
@@ -7602,7 +12223,7 @@ abc┃def
 </td></tr>
 </table>
 
-#### 4. [BlockDelete3](../../spec/delete-subtree.md#blockdelete3)
+#### 4. [DeleteSubtree3](../../spec/delete-subtree.md#deletesubtree3)
 
 > deleteSubtree
 
@@ -7657,7 +12278,7 @@ para┃
 </td></tr>
 </table>
 
-#### 5. [BlockDelete4](../../spec/delete-subtree.md#blockdelete4)
+#### 5. [DeleteSubtree4](../../spec/delete-subtree.md#deletesubtree4)
 
 > deleteSubtree
 
@@ -7710,14 +12331,12 @@ Original:
 </td></tr>
 </table>
 
-#### 6. [BlockDuplicate2](../../spec/duplicate-block.md#blockduplicate2)
-
-> duplicateNode
+#### 6. [DuplicateSubtree2](../../spec/duplicate-subtree.md#duplicatesubtree2)
 
 Adapted: numbered list
 
 <table>
-<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
@@ -7725,7 +12344,14 @@ Adapted: numbered list
 - b
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> duplicateSubtree
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 <!--workflowy-->
 ```buffer
@@ -7746,9 +12372,32 @@ Adapted: numbered list
 </td></tr>
 </table>
 
+> deleteSubtree
+
+<table>
+<tr><th>workflowy</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+<!--workflowy-->
+```buffer
+- a
+- b
+```
+
+</td><td>
+
+<!--ourus-->
+```buffer
+- a┃
+- b
+```
+
+</td></tr>
+</table>
+
 Original:
 <table>
-<tr><th>buffer</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>duplicateSubtree</th><th>deleteSubtree</th></tr>
 <tr valign="top"><td>
 
 ```buffer
@@ -7764,208 +12413,213 @@ Original:
 3. b
 ```
 
-</td></tr>
-</table>
-
-#### 7. [Findings of the design experiments › Empty tasks and empty items › B8: joining into an empty task](../../spec/zzz-redesign.md#b8-joining-into-an-empty-task)
-
-> deleteContentBackward
-
-Adapted: task
-
-<table>
-<tr><th>buffer</th><th>workflowy</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- [ ] 
-- [x] ┃a
-```
-
 </td><td>
 
-<!--workflowy-->
 ```buffer
-- [x] ┃a
-```
-
-</td><td>
-
-<!--ourus-->
-```buffer
-- ┃[x] a
+1. a┃
+2. b
 ```
 
 </td></tr>
 </table>
 
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- [ ] 
-- [x] ┃a
-```
-
-</td><td>
-
-```buffer
-- ┃[x] a
-```
-
-</td></tr>
-</table>
-
-### Agree (76)
+### Agree (105)
 
 1. [Backspace10](../../spec/backspace.md#backspace10) (blank lines, paragraph)
 2. [Backspace11](../../spec/backspace.md#backspace11) (blank lines, paragraph)
 3. [Backspace21](../../spec/backspace.md#backspace21) (blank lines, paragraph)
-4. [BlockDown1](../../spec/block-down.md#blockdown1) (blank lines)
-5. [BlockDown4](../../spec/block-down.md#blockdown4) (blank lines, heading, paragraph)
-6. [BlockDown5](../../spec/block-down.md#blockdown5) (blank lines, paragraph)
-7. [BlockDown16](../../spec/block-down.md#blockdown16) (heading)
-8. [BlockDown18](../../spec/block-down.md#blockdown18) (blank lines, heading)
-9. [BlockUp3](../../spec/block-up.md#blockup3) (blank lines, heading, paragraph)
-10. [BlockUp4](../../spec/block-up.md#blockup4) (blank lines, paragraph)
-11. [BlockUp14](../../spec/block-up.md#blockup14) (numbered list)
-12. [moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down) › The document's trailing blank lines stay at its end](../../spec/gaps.md#the-documents-trailing-blank-lines-stay-at-its-end) (numbered list)
-13. [BlockUp15](../../spec/block-up.md#blockup15) (numbered list)
-14. [BlockUp16](../../spec/block-up.md#blockup16) (heading)
-15. [BlockUp17](../../spec/block-up.md#blockup17) (blank lines, paragraph)
-16. [BlockUp22](../../spec/block-up.md#blockup22) (blank lines, heading)
-17. [CursorLeft1](../../spec/cursor.md#cursorleft1) (paragraph)
-18. [CursorLeft2](../../spec/cursor.md#cursorleft2) (paragraph)
-19. [CursorLeft3](../../spec/cursor.md#cursorleft3) (paragraph)
-20. [CursorRight2](../../spec/cursor.md#cursorright2) (paragraph)
-21. [CursorUp2](../../spec/cursor.md#cursorup2) (heading)
-22. [CursorHome7](../../spec/cursor.md#cursorhome7) (numbered list)
-23. [CursorHome8](../../spec/cursor.md#cursorhome8) (task)
-24. [CursorHome9](../../spec/cursor.md#cursorhome9) (task)
-25. [CursorHome10](../../spec/cursor.md#cursorhome10) (heading)
-26. [CursorHome14](../../spec/cursor.md#cursorhome14) (paragraph)
-27. [SelectLeft1](../../spec/cursor.md#selectleft1) (paragraph)
-28. [SelectRightEnd1](../../spec/cursor.md#selectrightend1) (paragraph)
-29. [BlockDelete2](../../spec/delete-subtree.md#blockdelete2) (numbered list)
-30. [Enter2](../../spec/enter.md#enter2) (numbered list)
-31. [Enter17](../../spec/enter.md#enter17) (CR line endings)
-32. [Enter18](../../spec/enter.md#enter18) (CR line endings)
-33. [Enter25](../../spec/enter.md#enter25) (numbered list)
-34. [Enter36](../../spec/enter.md#enter36) (blank lines)
-35. [moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down) › Gaps travel with their nodes](../../spec/gaps.md#gaps-travel-with-their-nodes) (blank lines, paragraph)
-36. [moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down) › An item carries its gap inside a loose list](../../spec/gaps.md#an-item-carries-its-gap-inside-a-loose-list) (blank lines, paragraph)
-37. [moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down) › Moving down carries the gap too](../../spec/gaps.md#moving-down-carries-the-gap-too) (blank lines, paragraph)
-38. [moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down) › The preamble stays at the top](../../spec/gaps.md#the-preamble-stays-at-the-top) (blank lines, paragraph)
-39. [moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down) › A section carries its last line's gap](../../spec/gaps.md#a-section-carries-its-last-lines-gap) (blank lines, heading, paragraph)
-40. [moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down) › A subtree's gap is its last descendant's](../../spec/gaps.md#a-subtrees-gap-is-its-last-descendants) (blank lines)
-41. [moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down) › Sections written without blank lines stay without](../../spec/gaps.md#sections-written-without-blank-lines-stay-without) (heading, paragraph)
-42. [moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down) › The gap ending a list stays at the list's end](../../spec/gaps.md#the-gap-ending-a-list-stays-at-the-lists-end) (blank lines, paragraph)
-43. [moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down) › The gap ending a parent's children stays at their end](../../spec/gaps.md#the-gap-ending-a-parents-children-stays-at-their-end) (blank lines)
-44. [New text and gaps › Enter at the end of a heading keeps its gap below the new paragraph](../../spec/gaps.md#enter-at-the-end-of-a-heading-keeps-its-gap-below-the-new-paragraph) (blank lines, heading, paragraph)
-45. [Indent3](../../spec/indent.md#indent3) (bullet *)
-46. [Indent5](../../spec/indent.md#indent5) (bullet *)
-47. [Indentation › destination-list-style](../../spec/obsidian-true-outliner.md#destination-list-style) (bullet *)
-48. [Indent4](../../spec/indent.md#indent4) (numbered list)
-49. [Indent15](../../spec/indent.md#indent15) (numbered list)
-50. [Indent21](../../spec/indent.md#indent21) (blank lines, paragraph)
-51. [Enter › E3](../../spec/obsidian-true-outliner.md#e3) (numbered list)
-52. [Enter › #228 › Renumbering stops at a delimiter change](../../spec/obsidian-true-outliner.md#renumbering-stops-at-a-delimiter-change) (numbered list)
-53. [Enter › E10](../../spec/obsidian-true-outliner.md#e10) (blank lines, paragraph)
-54. [Enter › E32 › Checked task gives unchecked new item](../../spec/obsidian-true-outliner.md#checked-task-gives-unchecked-new-item) (task)
-55. [Enter › E14, E20 › End of heading above a paragraph](../../spec/obsidian-true-outliner.md#end-of-heading-above-a-paragraph) (blank lines, heading, paragraph)
-56. [Shift-Enter › S11 › Leaving the place removes it](../../spec/obsidian-true-outliner.md#leaving-the-place-removes-it) (paragraph)
-57. [Backspace › #269 › Emptied middle item removed and renumbered](../../spec/obsidian-true-outliner.md#emptied-middle-item-removed-and-renumbered) (numbered list)
-58. [Backspace › Joining across ordered runs](../../spec/obsidian-true-outliner.md#joining-across-ordered-runs) (numbered list)
-59. [Backspace › Joining away the head of a list › List starting at 3 keeps its start](../../spec/obsidian-true-outliner.md#list-starting-at-3-keeps-its-start) (numbered list)
-60. [Moving › lone-block-id › Block id moves with its paragraph](../../spec/obsidian-true-outliner.md#block-id-moves-with-its-paragraph) (blank lines, paragraph)
-61. [Ordered lists › #159 (ordered-run-split-numbering) › Renumbering only the touched part](../../spec/obsidian-true-outliner.md#renumbering-only-the-touched-part) (numbered list)
-62. [Ordered lists › Outdenting the head of a nested list](../../spec/obsidian-true-outliner.md#outdenting-the-head-of-a-nested-list) (numbered list)
-63. [Abandoning an empty place › Enter, Tab, then leave › Empty child under parent text kept with a blank line](../../spec/obsidian-true-outliner.md#empty-child-under-parent-text-kept-with-a-blank-line) (blank lines)
-64. [Abandoning an empty place › Enter, Tab, then leave › An empty ordered child kept with a blank line](../../spec/obsidian-true-outliner.md#an-empty-ordered-child-kept-with-a-blank-line) (blank lines, numbered list)
-65. [Abandoning an empty place › Enter, Tab, then leave › Blank line after the list stays](../../spec/obsidian-true-outliner.md#blank-line-after-the-list-stays) (blank lines, paragraph)
-66. [Abandoning an empty place › Enter, Shift-Tab, then leave › Outdented empty ordered item stays](../../spec/obsidian-true-outliner.md#outdented-empty-ordered-item-stays) (numbered list)
-67. [Logical outdent › LogicalOutdent4](../../spec/outdent.md#logicaloutdent4) (blank lines, paragraph)
-68. [Paste16](../../spec/paste.md#paste16) (numbered list)
-69. [Placeholder1](../../spec/placeholders.md#placeholder1) (blank lines)
-70. [Outliner flows › Walking away keeps the empty child, set off by a blank line](../../spec/scenarios.md#walking-away-keeps-the-empty-child-set-off-by-a-blank-line) (blank lines)
-71. [Placeholder4](../../spec/placeholders.md#placeholder4) (paragraph)
-72. [Placeholder5](../../spec/placeholders.md#placeholder5) (blank lines)
-73. [Placeholder7](../../spec/placeholders.md#placeholder7) (blank lines)
-74. [Placeholder14](../../spec/placeholders.md#placeholder14) (blank lines, paragraph)
-75. [TaskEnter2](../../spec/tasks.md#taskenter2) (task)
-76. [Findings of the design experiments › Escapes › Cmd-Backspace leaving a link reference definition](../../spec/zzz-redesign.md#cmd-backspace-leaving-a-link-reference-definition) (escape, paragraph)
+4. [Backspace23](../../spec/backspace.md#backspace23) (blank lines, heading, paragraph)
+5. [Backspace25](../../spec/backspace.md#backspace25) (blank lines, paragraph)
+6. [Backspace26](../../spec/backspace.md#backspace26) (paragraph)
+7. [Backspace29](../../spec/backspace.md#backspace29) (numbered list)
+8. [Cmd-Backspace › SoftBackspace2](../../spec/backspace.md#softbackspace2) (escape, paragraph)
+9. [Cmd-Backspace › SoftBackspace4](../../spec/backspace.md#softbackspace4) (heading)
+10. [CursorLeft1](../../spec/cursor.md#cursorleft1) (paragraph)
+11. [CursorLeft2](../../spec/cursor.md#cursorleft2) (paragraph)
+12. [CursorLeft3](../../spec/cursor.md#cursorleft3) (paragraph)
+13. [CursorRight2](../../spec/cursor.md#cursorright2) (paragraph)
+14. [CursorUp2](../../spec/cursor.md#cursorup2) (heading)
+15. [CursorDown5](../../spec/cursor.md#cursordown5) (task)
+16. [CursorHome7](../../spec/cursor.md#cursorhome7) (numbered list)
+17. [CursorHome8](../../spec/cursor.md#cursorhome8) (task)
+18. [CursorHome9](../../spec/cursor.md#cursorhome9) (task)
+19. [CursorHome10](../../spec/cursor.md#cursorhome10) (heading)
+20. [CursorHome14](../../spec/cursor.md#cursorhome14) (paragraph)
+21. [SelectLeft1](../../spec/cursor.md#selectleft1) (paragraph)
+22. [SelectRightEnd1](../../spec/cursor.md#selectrightend1) (paragraph)
+23. [Delete13e](../../spec/del.md#delete13e) (blank lines, heading, paragraph, setext heading)
+24. [DeleteSubtree2](../../spec/delete-subtree.md#deletesubtree2) (numbered list)
+25. [Enter2](../../spec/enter.md#enter2) (numbered list)
+26. [Enter17](../../spec/enter.md#enter17) (CR line endings)
+27. [Enter18](../../spec/enter.md#enter18) (CR line endings)
+28. [Enter25](../../spec/enter.md#enter25) (numbered list)
+29. [Enter32](../../spec/enter.md#enter32) (blank lines, heading, paragraph)
+30. [Enter33](../../spec/enter.md#enter33) (blank lines, paragraph)
+31. [Enter36](../../spec/enter.md#enter36) (blank lines)
+32. [Enter43](../../spec/enter.md#enter43) (escape)
+33. [Enter45](../../spec/enter.md#enter45) (blank lines, heading, paragraph)
+34. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap1](../../spec/gaps.md#gap1) (blank lines, paragraph)
+35. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap4](../../spec/gaps.md#gap4) (blank lines, paragraph)
+36. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap2](../../spec/gaps.md#gap2) (blank lines, paragraph)
+37. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap11](../../spec/gaps.md#gap11) (blank lines, paragraph)
+38. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap3](../../spec/gaps.md#gap3) (blank lines, heading, paragraph)
+39. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap5](../../spec/gaps.md#gap5) (blank lines)
+40. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap6](../../spec/gaps.md#gap6) (heading, paragraph)
+41. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap8](../../spec/gaps.md#gap8) (blank lines, paragraph)
+42. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap9](../../spec/gaps.md#gap9) (blank lines)
+43. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap10](../../spec/gaps.md#gap10) (blank lines, paragraph)
+44. [MoveUp14](../../spec/move-subtree-up.md#moveup14) (blank lines, paragraph)
+45. [New text and gaps › Gap12](../../spec/gaps.md#gap12) (blank lines, heading, paragraph)
+46. [Indent3](../../spec/indent.md#indent3) (bullet *)
+47. [Indent5](../../spec/indent.md#indent5) (bullet *)
+48. [Indentation › destination-list-style](../../spec/obsidian-true-outliner.md#destination-list-style) (bullet *)
+49. [Indent4](../../spec/indent.md#indent4) (numbered list)
+50. [Indent11](../../spec/indent.md#indent11) (blank lines, paragraph)
+51. [Indent15](../../spec/indent.md#indent15) (numbered list)
+52. [Indent17](../../spec/indent.md#indent17) (CR line endings)
+53. [Indent21](../../spec/indent.md#indent21) (blank lines, paragraph)
+54. [Indent29](../../spec/indent.md#indent29) (blank lines, paragraph)
+55. [MoveDown1](../../spec/move-subtree-down.md#movedown1) (blank lines)
+56. [MoveDown4](../../spec/move-subtree-down.md#movedown4) (blank lines, heading, paragraph)
+57. [MoveDown5](../../spec/move-subtree-down.md#movedown5) (blank lines, paragraph)
+58. [MoveDown16](../../spec/move-subtree-down.md#movedown16) (heading)
+59. [MoveDown18](../../spec/move-subtree-down.md#movedown18) (blank lines, heading)
+60. [MoveDown22](../../spec/move-subtree-down.md#movedown22) (numbered list)
+61. [MoveDown23](../../spec/move-subtree-down.md#movedown23) (numbered list)
+62. [MoveDown24](../../spec/move-subtree-down.md#movedown24) (blank lines, paragraph)
+63. [MoveDown26](../../spec/move-subtree-down.md#movedown26) (blank lines, heading, paragraph)
+64. [MoveDown27](../../spec/move-subtree-down.md#movedown27) (blank lines, heading)
+65. [MoveDown29](../../spec/move-subtree-down.md#movedown29) (blank lines, numbered list, paragraph)
+66. [MoveDown30](../../spec/move-subtree-down.md#movedown30) (numbered list)
+67. [MoveUp3](../../spec/move-subtree-up.md#moveup3) (blank lines, heading, paragraph)
+68. [MoveUp4](../../spec/move-subtree-up.md#moveup4) (blank lines, paragraph)
+69. [MoveUp15](../../spec/move-subtree-up.md#moveup15) (numbered list)
+70. [MoveUp16](../../spec/move-subtree-up.md#moveup16) (heading)
+71. [MoveUp17](../../spec/move-subtree-up.md#moveup17) (blank lines, paragraph)
+72. [MoveUp22](../../spec/move-subtree-up.md#moveup22) (blank lines, heading)
+73. [MoveUp25](../../spec/move-subtree-up.md#moveup25) (blank lines)
+74. [MoveUp26](../../spec/move-subtree-up.md#moveup26) (blank lines, heading)
+75. [Enter › #228 › Renumbering stops at a delimiter change](../../spec/obsidian-true-outliner.md#renumbering-stops-at-a-delimiter-change) (numbered list)
+76. [Enter › E10](../../spec/obsidian-true-outliner.md#e10) (blank lines, paragraph)
+77. [Enter › E32 › Checked task gives unchecked new item](../../spec/obsidian-true-outliner.md#checked-task-gives-unchecked-new-item) (task)
+78. [Enter › E14, E20 › End of heading above a paragraph](../../spec/obsidian-true-outliner.md#end-of-heading-above-a-paragraph) (blank lines, heading, paragraph)
+79. [Shift-Enter › S11 › Leaving the place removes it](../../spec/obsidian-true-outliner.md#leaving-the-place-removes-it) (paragraph)
+80. [Backspace › #269 › Emptied middle item removed and renumbered](../../spec/obsidian-true-outliner.md#emptied-middle-item-removed-and-renumbered) (numbered list)
+81. [Backspace › Joining across ordered runs](../../spec/obsidian-true-outliner.md#joining-across-ordered-runs) (numbered list)
+82. [Backspace › Joining away the head of a list › List starting at 3 keeps its start](../../spec/obsidian-true-outliner.md#list-starting-at-3-keeps-its-start) (numbered list)
+83. [Moving › lone-block-id › Block id moves with its paragraph](../../spec/obsidian-true-outliner.md#block-id-moves-with-its-paragraph) (blank lines, paragraph)
+84. [Ordered lists › Outdenting the head of a nested list](../../spec/obsidian-true-outliner.md#outdenting-the-head-of-a-nested-list) (numbered list)
+85. [Abandoning an empty place › Enter, Tab, then leave › An empty ordered child kept with a blank line](../../spec/obsidian-true-outliner.md#an-empty-ordered-child-kept-with-a-blank-line) (blank lines, numbered list)
+86. [Abandoning an empty place › Enter, Tab, then leave › Blank line after the list stays](../../spec/obsidian-true-outliner.md#blank-line-after-the-list-stays) (blank lines, paragraph)
+87. [Abandoning an empty place › Enter, Shift-Tab, then leave › Outdented empty ordered item stays](../../spec/obsidian-true-outliner.md#outdented-empty-ordered-item-stays) (numbered list)
+88. [Outdent5](../../spec/outdent.md#outdent5) (heading)
+89. [Outdent9](../../spec/outdent.md#outdent9) (numbered list)
+90. [Outdent15](../../spec/outdent.md#outdent15) (blank lines, paragraph)
+91. [Logical outdent › LogicalOutdent4](../../spec/outdent.md#logicaloutdent4) (blank lines, paragraph)
+92. [Paste16](../../spec/paste.md#paste16) (numbered list)
+93. [Placeholder1](../../spec/placeholders.md#placeholder1) (blank lines)
+94. [Placeholder4](../../spec/placeholders.md#placeholder4) (paragraph)
+95. [Placeholder5](../../spec/placeholders.md#placeholder5) (blank lines)
+96. [Placeholder7](../../spec/placeholders.md#placeholder7) (blank lines)
+97. [Placeholder14](../../spec/placeholders.md#placeholder14) (blank lines, paragraph)
+98. [Outliner flows › Scenario4](../../spec/scenarios.md#scenario4) (blank lines)
+99. [Outliner flows › Scenario13](../../spec/scenarios.md#scenario13) (numbered list)
+100. [Outliner flows › Scenario16](../../spec/scenarios.md#scenario16) (blank lines, heading, task)
+101. [Notes and sections › Scenario22](../../spec/scenarios.md#scenario22) (blank lines, heading)
+102. [TaskEnter2](../../spec/tasks.md#taskenter2) (task)
+103. [TaskEnter4](../../spec/tasks.md#taskenter4) (task)
+104. [TaskEnter5](../../spec/tasks.md#taskenter5) (task)
+105. [TaskEnter6](../../spec/tasks.md#taskenter6) (task)
 
 ## Skipped
 
-### a quote (59)
+### a quote (79)
 
-1. [cursor.md › CursorHome11](../../spec/cursor.md#cursorhome11)
-2. [del.md › Delete10](../../spec/del.md#delete10)
-3. [fences.md › Fence4](../../spec/fences.md#fence4)
-4. [fences.md › Fence20](../../spec/fences.md#fence20)
-5. [obsidian-true-outliner.md › Enter › #267, E5](../../spec/obsidian-true-outliner.md#267-e5)
-6. [obsidian-true-outliner.md › Indentation › #255 › Outdented child leaves quote above alone](../../spec/obsidian-true-outliner.md#outdented-child-leaves-quote-above-alone)
-7. [obsidian-true-outliner.md › Indentation › seams-across-a-re-indent › Indented item keeps its quote](../../spec/obsidian-true-outliner.md#indented-item-keeps-its-quote)
-8. [obsidian-true-outliner.md › Indentation › seams-across-a-re-indent › Outdented item keeps its quote](../../spec/obsidian-true-outliner.md#outdented-item-keeps-its-quote)
-9. [obsidian-true-outliner.md › Moving › lazy-continuation-at-seams › Blank line added below a quote](../../spec/obsidian-true-outliner.md#blank-line-added-below-a-quote)
-10. [obsidian-true-outliner.md › Paste › #264 › Pasted quote set off from paragraph](../../spec/obsidian-true-outliner.md#pasted-quote-set-off-from-paragraph)
-11. [obsidian-true-outliner.md › Paste › #197 › Pasted list and block become children](../../spec/obsidian-true-outliner.md#pasted-list-and-block-become-children)
-12. [paste.md › Paste23](../../spec/paste.md#paste23)
-13. [quotes.md › A quote as an item's first block](../../spec/quotes.md#a-quote-as-an-items-first-block)
-14. [quotes.md › Indent inside a quote › Item nests after the quote marker](../../spec/quotes.md#item-nests-after-the-quote-marker)
-15. [quotes.md › Indent inside a quote › No space after the quote marker](../../spec/quotes.md#no-space-after-the-quote-marker)
-16. [quotes.md › Indent inside a quote › Tab-indented items in a quote](../../spec/quotes.md#tab-indented-items-in-a-quote)
-17. [quotes.md › Indent inside a quote › Quote inside an item](../../spec/quotes.md#quote-inside-an-item)
-18. [quotes.md › Indent inside a quote › Item in nested quotes](../../spec/quotes.md#item-in-nested-quotes)
-19. [quotes.md › Indent inside a quote › Lazy continuation line stays put](../../spec/quotes.md#lazy-continuation-line-stays-put)
-20. [quotes.md › Outdent inside a quote](../../spec/quotes.md#outdent-inside-a-quote)
-21. [quotes.md › Outdent out of a quote › Item becomes the quote's next sibling](../../spec/quotes.md#item-becomes-the-quotes-next-sibling)
-22. [quotes.md › Outdent out of a quote › Item with a child leaves below its siblings](../../spec/quotes.md#item-with-a-child-leaves-below-its-siblings)
-23. [quotes.md › Outdent out of a quote › Lazy continuation line goes along](../../spec/quotes.md#lazy-continuation-line-goes-along)
-24. [quotes.md › Outdent out of a quote › From a quote inside an item](../../spec/quotes.md#from-a-quote-inside-an-item)
-25. [quotes.md › Outdent out of a quote › Quoted blank lines lose their marker](../../spec/quotes.md#quoted-blank-lines-lose-their-marker)
-26. [quotes.md › Indent into a quote › Item joins the quote above](../../spec/quotes.md#item-joins-the-quote-above)
-27. [quotes.md › Indent into a quote › Children and blank lines enter the quote](../../spec/quotes.md#children-and-blank-lines-enter-the-quote)
-28. [quotes.md › Indent into a quote › Outdent undoes indent into a quote](../../spec/quotes.md#outdent-undoes-indent-into-a-quote)
-29. [quotes.md › Moving between quotes › Out of one quote and into the next](../../spec/quotes.md#out-of-one-quote-and-into-the-next)
-30. [quotes.md › Moving between quotes › Adjacent quotes kept apart by a blank line](../../spec/quotes.md#adjacent-quotes-kept-apart-by-a-blank-line)
-31. [quotes.md › Moving inside a quote › Swapping two quoted items](../../spec/quotes.md#swapping-two-quoted-items)
-32. [quotes.md › Moving inside a quote › Loose list keeps its quoted blank line](../../spec/quotes.md#loose-list-keeps-its-quoted-blank-line)
-33. [quotes.md › Moving inside a quote › Quote moves past an item](../../spec/quotes.md#quote-moves-past-an-item)
-34. [quotes.md › A quote and a heading don't swap › A heading doesn't move above a quote](../../spec/quotes.md#a-heading-doesnt-move-above-a-quote)
-35. [quotes.md › A quote and a heading don't swap › A quote moved down past a heading joins its section](../../spec/quotes.md#a-quote-moved-down-past-a-heading-joins-its-section)
-36. [quotes.md › Enter in a quote › New item gets the quote marker](../../spec/quotes.md#new-item-gets-the-quote-marker)
-37. [quotes.md › Enter in a quote › New item in a quote inside an item](../../spec/quotes.md#new-item-in-a-quote-inside-an-item)
-38. [quotes.md › Enter in a quote › At the end of a lazy line](../../spec/quotes.md#at-the-end-of-a-lazy-line)
-39. [quotes.md › Enter in a quote › Empty item leaves the list, then the quote](../../spec/quotes.md#empty-item-leaves-the-list-then-the-quote)
-40. [quotes.md › Enter in a quote › Empty item leaves a quote inside an item](../../spec/quotes.md#empty-item-leaves-a-quote-inside-an-item)
-41. [quotes.md › Enter in a quote › Empty paragraph that is all of its quote](../../spec/quotes.md#empty-paragraph-that-is-all-of-its-quote)
-42. [quotes.md › Enter in a quote › Splitting a quoted paragraph](../../spec/quotes.md#splitting-a-quoted-paragraph)
-43. [quotes.md › Shift-Enter in a quote › Line break in a quoted paragraph](../../spec/quotes.md#line-break-in-a-quoted-paragraph)
-44. [quotes.md › Shift-Enter in a quote › Held-open empty line at the end](../../spec/quotes.md#held-open-empty-line-at-the-end)
-45. [quotes.md › Shift-Enter in a quote › Line break in a quoted item](../../spec/quotes.md#line-break-in-a-quoted-item)
-46. [quotes.md › Joining in a quote › Backspace joins two quoted items](../../spec/quotes.md#backspace-joins-two-quoted-items)
-47. [quotes.md › Joining in a quote › Item joins a quoted paragraph above](../../spec/quotes.md#item-joins-a-quoted-paragraph-above)
-48. [quotes.md › Joining in a quote › Delete joins the item below](../../spec/quotes.md#delete-joins-the-item-below)
-49. [quotes.md › Joining across a quote's edge › Item below joins the quoted node](../../spec/quotes.md#item-below-joins-the-quoted-node)
-50. [quotes.md › Joining across a quote's edge › Quote's first paragraph left to the host](../../spec/quotes.md#quotes-first-paragraph-left-to-the-host)
-51. [quotes.md › Joining across a quote's edge › Quote's first item cannot leave](../../spec/quotes.md#quotes-first-item-cannot-leave)
-52. [quotes.md › Pasting in a quote](../../spec/quotes.md#pasting-in-a-quote)
-53. [quotes.md › Headings in a quote](../../spec/quotes.md#headings-in-a-quote)
-54. [quotes.md › Indenting a paragraph into a quote › Paragraph becomes the quote's last child](../../spec/quotes.md#paragraph-becomes-the-quotes-last-child)
-55. [quotes.md › Indenting a paragraph into a quote › Paragraph back out with a blank line](../../spec/quotes.md#paragraph-back-out-with-a-blank-line)
-56. [quotes.md › A paragraph moves inside a quote without becoming its text](../../spec/quotes.md#a-paragraph-moves-inside-a-quote-without-becoming-its-text)
-57. [quotes.md › A whole quote moves](../../spec/quotes.md#a-whole-quote-moves)
-58. [quotes.md › A paragraph outdented out of a nested quote › Inner quote emptied and removed](../../spec/quotes.md#inner-quote-emptied-and-removed)
-59. [quotes.md › A paragraph outdented out of a nested quote › Paragraph above a quoted item](../../spec/quotes.md#paragraph-above-a-quoted-item)
+1. [backspace.md › Backspace27](../../spec/backspace.md#backspace27)
+2. [cursor.md › CursorHome11](../../spec/cursor.md#cursorhome11)
+3. [cursor.md › CursorHome16](../../spec/cursor.md#cursorhome16)
+4. [del.md › Delete10](../../spec/del.md#delete10)
+5. [enter.md › Enter36b](../../spec/enter.md#enter36b)
+6. [enter.md › Enter46](../../spec/enter.md#enter46)
+7. [fences.md › Fence4](../../spec/fences.md#fence4)
+8. [fences.md › Fence20](../../spec/fences.md#fence20)
+9. [fences.md › Fence40](../../spec/fences.md#fence40)
+10. [move-subtree-up.md › MoveUp35](../../spec/move-subtree-up.md#moveup35)
+11. [obsidian-true-outliner.md › Enter › #267, E5](../../spec/obsidian-true-outliner.md#267-e5)
+12. [obsidian-true-outliner.md › Indentation › #255 › Outdented child leaves quote above alone](../../spec/obsidian-true-outliner.md#outdented-child-leaves-quote-above-alone)
+13. [obsidian-true-outliner.md › Indentation › seams-across-a-re-indent › Indented item keeps its quote](../../spec/obsidian-true-outliner.md#indented-item-keeps-its-quote)
+14. [obsidian-true-outliner.md › Indentation › seams-across-a-re-indent › Outdented item keeps its quote](../../spec/obsidian-true-outliner.md#outdented-item-keeps-its-quote)
+15. [obsidian-true-outliner.md › Moving › lazy-continuation-at-seams › Blank line added below a quote](../../spec/obsidian-true-outliner.md#blank-line-added-below-a-quote)
+16. [obsidian-true-outliner.md › Paste › #264 › Pasted quote set off from paragraph](../../spec/obsidian-true-outliner.md#pasted-quote-set-off-from-paragraph)
+17. [obsidian-true-outliner.md › Paste › #197 › Pasted list and block become children](../../spec/obsidian-true-outliner.md#pasted-list-and-block-become-children)
+18. [paste.md › Paste12](../../spec/paste.md#paste12)
+19. [paste.md › Paste23](../../spec/paste.md#paste23)
+20. [paste.md › Paste29](../../spec/paste.md#paste29)
+21. [paste.md › Paste41](../../spec/paste.md#paste41)
+22. [quotes.md › Quote1](../../spec/quotes.md#quote1)
+23. [quotes.md › Indent inside a quote › Quote2](../../spec/quotes.md#quote2)
+24. [quotes.md › Indent inside a quote › Quote3](../../spec/quotes.md#quote3)
+25. [quotes.md › Indent inside a quote › Quote4](../../spec/quotes.md#quote4)
+26. [quotes.md › Indent inside a quote › Quote5](../../spec/quotes.md#quote5)
+27. [quotes.md › Indent inside a quote › Quote6](../../spec/quotes.md#quote6)
+28. [quotes.md › Indent inside a quote › Quote8](../../spec/quotes.md#quote8)
+29. [quotes.md › Indent inside a quote › Quote9](../../spec/quotes.md#quote9)
+30. [quotes.md › Quote10](../../spec/quotes.md#quote10)
+31. [quotes.md › Outdent out of a quote › Quote11](../../spec/quotes.md#quote11)
+32. [quotes.md › Outdent out of a quote › Quote12](../../spec/quotes.md#quote12)
+33. [quotes.md › Outdent out of a quote › Quote12b](../../spec/quotes.md#quote12b)
+34. [quotes.md › Outdent out of a quote › Quote14](../../spec/quotes.md#quote14)
+35. [quotes.md › Outdent out of a quote › Quote15](../../spec/quotes.md#quote15)
+36. [quotes.md › Outdent out of a quote › Quote16](../../spec/quotes.md#quote16)
+37. [quotes.md › Indent into a quote › Quote17](../../spec/quotes.md#quote17)
+38. [quotes.md › Indent into a quote › Quote18](../../spec/quotes.md#quote18)
+39. [quotes.md › Indent into a quote › Quote19](../../spec/quotes.md#quote19)
+40. [quotes.md › Moving between quotes › Quote20](../../spec/quotes.md#quote20)
+41. [quotes.md › Moving between quotes › Quote21](../../spec/quotes.md#quote21)
+42. [quotes.md › Moving between quotes › Quote22](../../spec/quotes.md#quote22)
+43. [quotes.md › Moving between quotes › Quote23](../../spec/quotes.md#quote23)
+44. [quotes.md › Moving inside a quote › Quote24](../../spec/quotes.md#quote24)
+45. [quotes.md › Moving inside a quote › Quote25](../../spec/quotes.md#quote25)
+46. [quotes.md › Moving inside a quote › Quote26](../../spec/quotes.md#quote26)
+47. [quotes.md › A quote and a heading don't swap › Quote27](../../spec/quotes.md#quote27)
+48. [quotes.md › A quote and a heading don't swap › Quote28](../../spec/quotes.md#quote28)
+49. [quotes.md › Enter in a quote › Quote29](../../spec/quotes.md#quote29)
+50. [quotes.md › Enter in a quote › Quote30](../../spec/quotes.md#quote30)
+51. [quotes.md › Enter in a quote › Quote31](../../spec/quotes.md#quote31)
+52. [quotes.md › Enter in a quote › Quote32](../../spec/quotes.md#quote32)
+53. [quotes.md › Enter in a quote › Quote33](../../spec/quotes.md#quote33)
+54. [quotes.md › Enter in a quote › Quote34](../../spec/quotes.md#quote34)
+55. [quotes.md › Enter in a quote › Quote35](../../spec/quotes.md#quote35)
+56. [quotes.md › Enter in a quote › Quote36](../../spec/quotes.md#quote36)
+57. [quotes.md › Enter in a quote › Quote37](../../spec/quotes.md#quote37)
+58. [quotes.md › Enter in a quote › Quote42](../../spec/quotes.md#quote42)
+59. [quotes.md › Shift-Enter in a quote › Quote44](../../spec/quotes.md#quote44)
+60. [quotes.md › Shift-Enter in a quote › Quote45](../../spec/quotes.md#quote45)
+61. [quotes.md › Shift-Enter in a quote › Quote46](../../spec/quotes.md#quote46)
+62. [quotes.md › Joining in a quote › Quote48](../../spec/quotes.md#quote48)
+63. [quotes.md › Joining in a quote › Quote49](../../spec/quotes.md#quote49)
+64. [quotes.md › Joining in a quote › Quote50](../../spec/quotes.md#quote50)
+65. [quotes.md › Joining in a quote › Quote51](../../spec/quotes.md#quote51)
+66. [quotes.md › Joining across a quote's edge › Quote52](../../spec/quotes.md#quote52)
+67. [quotes.md › Backspace at a quote's start › Quote53](../../spec/quotes.md#quote53)
+68. [quotes.md › Backspace at a quote's start › Quote54](../../spec/quotes.md#quote54)
+69. [quotes.md › Backspace at a quote's start › Quote56](../../spec/quotes.md#quote56)
+70. [quotes.md › Backspace at a quote's start › Quote59](../../spec/quotes.md#quote59)
+71. [quotes.md › Quote63](../../spec/quotes.md#quote63)
+72. [quotes.md › Quote64](../../spec/quotes.md#quote64)
+73. [quotes.md › Indenting a paragraph into a quote › Quote65](../../spec/quotes.md#quote65)
+74. [quotes.md › Indenting a paragraph into a quote › Quote66](../../spec/quotes.md#quote66)
+75. [quotes.md › Quote67](../../spec/quotes.md#quote67)
+76. [quotes.md › Quote68](../../spec/quotes.md#quote68)
+77. [quotes.md › Quote72](../../spec/quotes.md#quote72)
+78. [quotes.md › A paragraph outdented out of a nested quote › Quote69](../../spec/quotes.md#quote69)
+79. [quotes.md › A paragraph outdented out of a nested quote › Quote70](../../spec/quotes.md#quote70)
 
-### code block (35)
+### code block (57)
 
 1. [backspace.md › Backspace16](../../spec/backspace.md#backspace16)
-2. [block-up.md › BlockUp13](../../spec/block-up.md#blockup13)
-3. [block-up.md › BlockUp18](../../spec/block-up.md#blockup18)
+2. [backspace.md › Backspace24](../../spec/backspace.md#backspace24)
+3. [backspace.md › Backspace28](../../spec/backspace.md#backspace28)
 4. [cursor.md › CursorDown2](../../spec/cursor.md#cursordown2)
 5. [del.md › Delete11](../../spec/del.md#delete11)
 6. [enter.md › Enter23](../../spec/enter.md#enter23)
@@ -7990,77 +12644,118 @@ Original:
 25. [fences.md › Fence19](../../spec/fences.md#fence19)
 26. [fences.md › Fence21](../../spec/fences.md#fence21)
 27. [fences.md › Fence22](../../spec/fences.md#fence22)
-28. [gaps.md › moveBlockUp, moveBlockDown (Alt-Shift-Up, Alt-Shift-Down) › A paragraph landing above another one is set off by a blank line](../../spec/gaps.md#a-paragraph-landing-above-another-one-is-set-off-by-a-blank-line)
-29. [indent.md › Indent13](../../spec/indent.md#indent13)
-30. [indent.md › Indent20](../../spec/indent.md#indent20)
-31. [obsidian-true-outliner.md › Enter › E11](../../spec/obsidian-true-outliner.md#e11)
-32. [obsidian-true-outliner.md › Indentation › seams-across-a-re-indent › Outdented item keeps its code block](../../spec/obsidian-true-outliner.md#outdented-item-keeps-its-code-block)
-33. [obsidian-true-outliner.md › Moving › lazy-continuation-at-seams › No blank line needed after a fence](../../spec/obsidian-true-outliner.md#no-blank-line-needed-after-a-fence)
-34. [obsidian-true-outliner.md › Moving › lazy-continuation-at-seams › No blank line needed before a fence](../../spec/obsidian-true-outliner.md#no-blank-line-needed-before-a-fence)
-35. [paste.md › Paste22](../../spec/paste.md#paste22)
+28. [fences.md › Fence23](../../spec/fences.md#fence23)
+29. [fences.md › Fence24](../../spec/fences.md#fence24)
+30. [fences.md › Fence25](../../spec/fences.md#fence25)
+31. [fences.md › Fence26](../../spec/fences.md#fence26)
+32. [fences.md › Fence27](../../spec/fences.md#fence27)
+33. [fences.md › Fence28](../../spec/fences.md#fence28)
+34. [fences.md › Fence29](../../spec/fences.md#fence29)
+35. [fences.md › Fence30](../../spec/fences.md#fence30)
+36. [fences.md › Fence31](../../spec/fences.md#fence31)
+37. [fences.md › Fence32](../../spec/fences.md#fence32)
+38. [fences.md › Fence33](../../spec/fences.md#fence33)
+39. [fences.md › Fence34](../../spec/fences.md#fence34)
+40. [fences.md › Fence35](../../spec/fences.md#fence35)
+41. [fences.md › Fence36](../../spec/fences.md#fence36)
+42. [fences.md › Fence37](../../spec/fences.md#fence37)
+43. [fences.md › Fence38](../../spec/fences.md#fence38)
+44. [fences.md › Fence39](../../spec/fences.md#fence39)
+45. [fences.md › Fence41](../../spec/fences.md#fence41)
+46. [gaps.md › moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap7](../../spec/gaps.md#gap7)
+47. [indent.md › Indent13](../../spec/indent.md#indent13)
+48. [indent.md › Indent20](../../spec/indent.md#indent20)
+49. [move-subtree-down.md › MoveDown21](../../spec/move-subtree-down.md#movedown21)
+50. [move-subtree-up.md › MoveUp13](../../spec/move-subtree-up.md#moveup13)
+51. [move-subtree-up.md › MoveUp18](../../spec/move-subtree-up.md#moveup18)
+52. [obsidian-true-outliner.md › Indentation › seams-across-a-re-indent › Outdented item keeps its code block](../../spec/obsidian-true-outliner.md#outdented-item-keeps-its-code-block)
+53. [obsidian-true-outliner.md › Moving › lazy-continuation-at-seams › No blank line needed after a fence](../../spec/obsidian-true-outliner.md#no-blank-line-needed-after-a-fence)
+54. [obsidian-true-outliner.md › Moving › lazy-continuation-at-seams › No blank line needed before a fence](../../spec/obsidian-true-outliner.md#no-blank-line-needed-before-a-fence)
+55. [paste.md › Paste22](../../spec/paste.md#paste22)
+56. [paste.md › Paste46](../../spec/paste.md#paste46)
+57. [paste.md › Paste47](../../spec/paste.md#paste47)
 
-### nothing to compare (15)
-
-1. [block-down.md › BlockDown3](../../spec/block-down.md#blockdown3)
-2. [block-down.md › BlockDown6](../../spec/block-down.md#blockdown6)
-3. [block-down.md › BlockDown17](../../spec/block-down.md#blockdown17)
-4. [block-down.md › BlockDown19](../../spec/block-down.md#blockdown19)
-5. [block-up.md › BlockUp2](../../spec/block-up.md#blockup2)
-6. [block-up.md › BlockUp5](../../spec/block-up.md#blockup5)
-7. [indent.md › Indent10](../../spec/indent.md#indent10)
-8. [indent.md › Indent11](../../spec/indent.md#indent11)
-9. [obsidian-true-outliner.md › Shift-Enter › S7, S8 › Line break in setext title refused](../../spec/obsidian-true-outliner.md#line-break-in-setext-title-refused)
-10. [outdent.md › Outdent2](../../spec/outdent.md#outdent2)
-11. [outdent.md › Outdent5](../../spec/outdent.md#outdent5)
-12. [outdent.md › Outdent7](../../spec/outdent.md#outdent7)
-13. [paste.md › Paste6](../../spec/paste.md#paste6)
-14. [shift-enter.md › ShiftEnter13](../../spec/shift-enter.md#shiftenter13)
-15. [shift-enter.md › ShiftEnter14](../../spec/shift-enter.md#shiftenter14)
-
-### a caret on a blank line (11)
-
-1. [enter.md › Enter37](../../spec/enter.md#enter37)
-2. [gaps.md › Keys on a blank line › Moving from a blank line moves the node above](../../spec/gaps.md#moving-from-a-blank-line-moves-the-node-above)
-3. [gaps.md › Keys on a blank line › Tab on a blank line indents the node above](../../spec/gaps.md#tab-on-a-blank-line-indents-the-node-above)
-4. [gaps.md › Keys on a blank line › Shift-Tab on a blank line outdents the node above](../../spec/gaps.md#shift-tab-on-a-blank-line-outdents-the-node-above)
-5. [gaps.md › Keys on a blank line › A blank line between a node's text and its first child is the node's](../../spec/gaps.md#a-blank-line-between-a-nodes-text-and-its-first-child-is-the-nodes)
-6. [gaps.md › Keys on a blank line › Keys in the preamble do nothing](../../spec/gaps.md#keys-in-the-preamble-do-nothing)
-7. [obsidian-true-outliner.md › Enter › E18](../../spec/obsidian-true-outliner.md#e18)
-8. [obsidian-true-outliner.md › Shift-Enter › S7, S8 › Line break in setext underline refused](../../spec/obsidian-true-outliner.md#line-break-in-setext-underline-refused)
-9. [placeholders.md › Placeholder10](../../spec/placeholders.md#placeholder10)
-10. [placeholders.md › Placeholder12](../../spec/placeholders.md#placeholder12)
-11. [zzz-redesign.md › Decisions of the redesign › The guard › Setext authoring › Typing an underline makes a heading](../../spec/zzz-redesign.md#typing-an-underline-makes-a-heading)
-
-### a caret in a marker (9)
+### a caret in a marker (19)
 
 1. [backspace.md › Backspace2](../../spec/backspace.md#backspace2)
 2. [cursor.md › CursorHome3](../../spec/cursor.md#cursorhome3)
 3. [cursor.md › CursorHome4](../../spec/cursor.md#cursorhome4)
-4. [del.md › Delete16](../../spec/del.md#delete16)
-5. [enter.md › Enter34](../../spec/enter.md#enter34)
-6. [obsidian-true-outliner.md › Shift-Enter › S5](../../spec/obsidian-true-outliner.md#s5)
-7. [zzz-redesign.md › Decisions of the redesign › The guard › Deleting the space after a marker › Childless item becomes text](../../spec/zzz-redesign.md#childless-item-becomes-text)
-8. [zzz-redesign.md › Decisions of the redesign › The guard › Deleting the space after a marker › Nested item with children is refused](../../spec/zzz-redesign.md#nested-item-with-children-is-refused)
-9. [zzz-redesign.md › Decisions of the redesign › The guard › Typing in a list marker](../../spec/zzz-redesign.md#typing-in-a-list-marker)
+4. [cursor.md › CursorHome15](../../spec/cursor.md#cursorhome15)
+5. [del.md › Delete16](../../spec/del.md#delete16)
+6. [del.md › Delete16d](../../spec/del.md#delete16d)
+7. [del.md › Delete16e](../../spec/del.md#delete16e)
+8. [del.md › Delete16f](../../spec/del.md#delete16f)
+9. [del.md › Delete16g](../../spec/del.md#delete16g)
+10. [del.md › Delete23](../../spec/del.md#delete23)
+11. [del.md › Delete24](../../spec/del.md#delete24)
+12. [del.md › Delete25](../../spec/del.md#delete25)
+13. [enter.md › Enter34](../../spec/enter.md#enter34)
+14. [indent.md › Indent28](../../spec/indent.md#indent28)
+15. [move-subtree-down.md › MoveDown32](../../spec/move-subtree-down.md#movedown32)
+16. [move-subtree-up.md › MoveUp34](../../spec/move-subtree-up.md#moveup34)
+17. [obsidian-true-outliner.md › Shift-Enter › S5](../../spec/obsidian-true-outliner.md#s5)
+18. [outdent.md › Outdent14](../../spec/outdent.md#outdent14)
+19. [shift-enter.md › ShiftEnter22](../../spec/shift-enter.md#shiftenter22)
 
-### a selection across blocks (7)
+### a callout (16)
 
-1. [block-down.md › BlockDown11](../../spec/block-down.md#blockdown11)
-2. [block-down.md › BlockDown12](../../spec/block-down.md#blockdown12)
-3. [block-down.md › BlockDown14](../../spec/block-down.md#blockdown14)
-4. [block-up.md › BlockUp10](../../spec/block-up.md#blockup10)
-5. [block-up.md › BlockUp11](../../spec/block-up.md#blockup11)
-6. [indent.md › Indent9](../../spec/indent.md#indent9)
-7. [outdent.md › Outdent8](../../spec/outdent.md#outdent8)
+1. [cursor.md › CursorHome17](../../spec/cursor.md#cursorhome17)
+2. [paste.md › Paste28](../../spec/paste.md#paste28)
+3. [quotes.md › Indent inside a quote › Quote7](../../spec/quotes.md#quote7)
+4. [quotes.md › Outdent out of a quote › Quote13](../../spec/quotes.md#quote13)
+5. [quotes.md › Enter in a quote › Quote38](../../spec/quotes.md#quote38)
+6. [quotes.md › Enter in a quote › Quote39](../../spec/quotes.md#quote39)
+7. [quotes.md › Enter in a quote › Quote40](../../spec/quotes.md#quote40)
+8. [quotes.md › Enter in a quote › Quote41](../../spec/quotes.md#quote41)
+9. [quotes.md › Enter in a quote › Quote43](../../spec/quotes.md#quote43)
+10. [quotes.md › Shift-Enter in a quote › Quote47](../../spec/quotes.md#quote47)
+11. [quotes.md › Backspace at a quote's start › Quote57](../../spec/quotes.md#quote57)
+12. [quotes.md › Backspace at a quote's start › Quote58](../../spec/quotes.md#quote58)
+13. [quotes.md › Joining into a callout's title › Quote60](../../spec/quotes.md#quote60)
+14. [quotes.md › Joining into a callout's title › Quote61](../../spec/quotes.md#quote61)
+15. [quotes.md › Joining into a callout's title › Quote62](../../spec/quotes.md#quote62)
+16. [quotes.md › Quote71](../../spec/quotes.md#quote71)
 
-### a callout (6)
+### a selection across blocks (15)
 
-1. [quotes.md › Indent inside a quote › Item in a callout](../../spec/quotes.md#item-in-a-callout)
-2. [quotes.md › Enter in a quote › Splitting a callout title](../../spec/quotes.md#splitting-a-callout-title)
-3. [quotes.md › Enter in a quote › Empty body line after a lone title](../../spec/quotes.md#empty-body-line-after-a-lone-title)
-4. [quotes.md › Enter in a quote › Splitting a callout title before a list marker](../../spec/quotes.md#splitting-a-callout-title-before-a-list-marker)
-5. [quotes.md › Enter in a quote › Enter in a callout's type](../../spec/quotes.md#enter-in-a-callouts-type)
-6. [quotes.md › Shift-Enter in a quote › No line break in an Obsidian callout title](../../spec/quotes.md#no-line-break-in-an-obsidian-callout-title)
+1. [backspace.md › Backspace31](../../spec/backspace.md#backspace31)
+2. [del.md › Delete21](../../spec/del.md#delete21)
+3. [delete-subtree.md › DeleteSubtree5](../../spec/delete-subtree.md#deletesubtree5)
+4. [duplicate-subtree.md › DuplicateSubtree3](../../spec/duplicate-subtree.md#duplicatesubtree3)
+5. [indent.md › Indent9](../../spec/indent.md#indent9)
+6. [indent.md › Indent27](../../spec/indent.md#indent27)
+7. [move-subtree-down.md › MoveDown11](../../spec/move-subtree-down.md#movedown11)
+8. [move-subtree-down.md › MoveDown12](../../spec/move-subtree-down.md#movedown12)
+9. [move-subtree-down.md › MoveDown14](../../spec/move-subtree-down.md#movedown14)
+10. [move-subtree-up.md › MoveUp10](../../spec/move-subtree-up.md#moveup10)
+11. [move-subtree-up.md › MoveUp11](../../spec/move-subtree-up.md#moveup11)
+12. [move-subtree-up.md › MoveUp31](../../spec/move-subtree-up.md#moveup31)
+13. [outdent.md › Outdent8](../../spec/outdent.md#outdent8)
+14. [outdent.md › Outdent10](../../spec/outdent.md#outdent10)
+15. [outdent.md › Outdent12](../../spec/outdent.md#outdent12)
+
+### a caret on a blank line (12)
+
+1. [backspace.md › Cmd-Backspace › SoftBackspace6](../../spec/backspace.md#softbackspace6)
+2. [enter.md › Enter37](../../spec/enter.md#enter37)
+3. [gaps.md › Keys on a blank line › Gap14](../../spec/gaps.md#gap14)
+4. [gaps.md › Keys on a blank line › Gap15](../../spec/gaps.md#gap15)
+5. [gaps.md › Keys on a blank line › Gap16](../../spec/gaps.md#gap16)
+6. [gaps.md › Keys on a blank line › Gap17](../../spec/gaps.md#gap17)
+7. [gaps.md › Keys on a blank line › Gap18](../../spec/gaps.md#gap18)
+8. [obsidian-true-outliner.md › Enter › E18](../../spec/obsidian-true-outliner.md#e18)
+9. [obsidian-true-outliner.md › Shift-Enter › S7, S8 › Line break in setext underline refused](../../spec/obsidian-true-outliner.md#line-break-in-setext-underline-refused)
+10. [placeholders.md › Placeholder10](../../spec/placeholders.md#placeholder10)
+11. [placeholders.md › Placeholder12](../../spec/placeholders.md#placeholder12)
+12. [typing.md › Typing1](../../spec/typing.md#typing1)
+
+### code block (expected) (5)
+
+1. [paste.md › Paste1](../../spec/paste.md#paste1)
+2. [paste.md › Paste9](../../spec/paste.md#paste9)
+3. [paste.md › Paste11](../../spec/paste.md#paste11)
+4. [paste.md › Paste25](../../spec/paste.md#paste25)
+5. [scenarios.md › Outliner flows › Scenario18](../../spec/scenarios.md#scenario18)
 
 ### cursorCharLeft after cursorDocEnd (5)
 
@@ -8070,34 +12765,71 @@ Original:
 4. [placeholders.md › Placeholder15](../../spec/placeholders.md#placeholder15)
 5. [undo.md › Undo2](../../spec/undo.md#undo2)
 
-### changes only what blocks can't show (4)
+### option editInMarkup: refuse (5)
 
-1. [enter.md › Enter6](../../spec/enter.md#enter6)
-2. [enter.md › Enter33](../../spec/enter.md#enter33)
-3. [indent.md › Indent22](../../spec/indent.md#indent22)
-4. [obsidian-true-outliner.md › Enter › E29 › Start of paragraph opens line above](../../spec/obsidian-true-outliner.md#start-of-paragraph-opens-line-above)
+1. [del.md › Delete16b](../../spec/del.md#delete16b)
+2. [del.md › Delete16c](../../spec/del.md#delete16c)
+3. [quotes.md › Enter in a quote › Quote43b](../../spec/quotes.md#quote43b)
+4. [shift-enter.md › ShiftEnter22b](../../spec/shift-enter.md#shiftenter22b)
+5. [typing.md › Typing4](../../spec/typing.md#typing4)
 
-### code block (expected) (3)
+### option enterOnEmptyItem: outdent (5)
 
-1. [paste.md › Paste1](../../spec/paste.md#paste1)
-2. [paste.md › Paste9](../../spec/paste.md#paste9)
-3. [paste.md › Paste11](../../spec/paste.md#paste11)
+1. [enter.md › Enter7b](../../spec/enter.md#enter7b)
+2. [enter.md › Enter15b](../../spec/enter.md#enter15b)
+3. [enter.md › Enter30](../../spec/enter.md#enter30)
+4. [obsidian-true-outliner.md › Abandoning an empty place › Enter twice, then leave › Empty paragraph and blank lines removed](../../spec/obsidian-true-outliner.md#empty-paragraph-and-blank-lines-removed)
+5. [obsidian-true-outliner.md › Abandoning an empty place › Enter twice, then leave › Indented list under paragraph restored](../../spec/obsidian-true-outliner.md#indented-list-under-paragraph-restored)
 
-### option headingEditing: block (3)
+### option headingEditing: block (5)
 
 1. [backspace.md › Backspace18b](../../spec/backspace.md#backspace18b)
-2. [del.md › Delete13b](../../spec/del.md#delete13b)
-3. [del.md › Delete13d](../../spec/del.md#delete13d)
+2. [backspace.md › Backspace18f](../../spec/backspace.md#backspace18f)
+3. [del.md › Delete13b](../../spec/del.md#delete13b)
+4. [del.md › Delete13d](../../spec/del.md#delete13d)
+5. [del.md › Delete13f](../../spec/del.md#delete13f)
 
-### a caret in a task's checkbox or a heading's #s (2)
+### a caret in a task's checkbox or a heading's #s (4)
 
-1. [obsidian-true-outliner.md › Backspace › Joining a task › Backspace before the checkbox](../../spec/obsidian-true-outliner.md#backspace-before-the-checkbox)
-2. [tasks.md › TaskBackspace1](../../spec/tasks.md#taskbackspace1)
+1. [del.md › Delete19](../../spec/del.md#delete19)
+2. [obsidian-true-outliner.md › Backspace › Joining a task › Backspace before the checkbox](../../spec/obsidian-true-outliner.md#backspace-before-the-checkbox)
+3. [tasks.md › TaskBackspace1](../../spec/tasks.md#taskbackspace1)
+4. [tasks.md › TaskBackspace6](../../spec/tasks.md#taskbackspace6)
+
+### option enterAtTextStart: stay (4)
+
+1. [enter.md › Enter26b](../../spec/enter.md#enter26b)
+2. [enter.md › Enter29b](../../spec/enter.md#enter29b)
+3. [enter.md › Enter32b](../../spec/enter.md#enter32b)
+4. [enter.md › Enter33b](../../spec/enter.md#enter33b)
+
+### option enterMidItem: child (4)
+
+1. [enter.md › Enter3b](../../spec/enter.md#enter3b)
+2. [obsidian-true-outliner.md › Enter › E7, E8 › Split item becomes first tab-indented child](../../spec/obsidian-true-outliner.md#split-item-becomes-first-tab-indented-child)
+3. [obsidian-true-outliner.md › Enter › E11](../../spec/obsidian-true-outliner.md#e11)
+4. [paste.md › Paste43](../../spec/paste.md#paste43)
+
+### thematic break (3)
+
+1. [move-subtree-down.md › MoveDown31](../../spec/move-subtree-down.md#movedown31)
+2. [move-subtree-up.md › MoveUp19](../../spec/move-subtree-up.md#moveup19)
+3. [obsidian-true-outliner.md › Indentation › seams-across-a-re-indent › Indented item keeps its thematic break](../../spec/obsidian-true-outliner.md#indented-item-keeps-its-thematic-break)
+
+### changes only what blocks can't show (2)
+
+1. [enter.md › Enter6](../../spec/enter.md#enter6)
+2. [indent.md › Indent22](../../spec/indent.md#indent22)
 
 ### link reference definition (2)
 
-1. [block-up.md › BlockUp20](../../spec/block-up.md#blockup20)
-2. [zzz-redesign.md › Findings of the design experiments › Separators › Moves that would need a block re-encoded, not a separator › Leftover paragraph loses its four spaces](../../spec/zzz-redesign.md#leftover-paragraph-loses-its-four-spaces)
+1. [move-subtree-up.md › MoveUp20](../../spec/move-subtree-up.md#moveup20)
+2. [move-subtree-up.md › MoveUp30](../../spec/move-subtree-up.md#moveup30)
+
+### option backspaceAtTopItem: refuse (2)
+
+1. [backspace.md › Backspace34](../../spec/backspace.md#backspace34)
+2. [quotes.md › Backspace at a quote's start › Quote55](../../spec/quotes.md#quote55)
 
 ### option deleteAtGap: gap (2)
 
@@ -8109,19 +12841,26 @@ Original:
 1. [fences.md › Fence10](../../spec/fences.md#fence10)
 2. [fences.md › Fence11](../../spec/fences.md#fence11)
 
-### option taskEditing: checkbox (2)
+### option taskEditing: block (2)
 
-1. [tasks.md › TaskBackspace2](../../spec/tasks.md#taskbackspace2)
-2. [tasks.md › TaskBackspace3](../../spec/tasks.md#taskbackspace3)
+1. [tasks.md › TaskBackspace4](../../spec/tasks.md#taskbackspace4)
+2. [tasks.md › TaskBackspace7](../../spec/tasks.md#taskbackspace7)
 
-### thematic break (2)
+### a heading deeper than H3 (1)
 
-1. [block-up.md › BlockUp19](../../spec/block-up.md#blockup19)
-2. [obsidian-true-outliner.md › Indentation › seams-across-a-re-indent › Indented item keeps its thematic break](../../spec/obsidian-true-outliner.md#indented-item-keeps-its-thematic-break)
+1. [indent.md › Indent24](../../spec/indent.md#indent24)
+
+### action selectDocStart (1)
+
+1. [placeholders.md › Placeholder16](../../spec/placeholders.md#placeholder16)
 
 ### frontmatter (1)
 
-1. [zzz-redesign.md › Decisions of the redesign › Obsidian: frontmatter is a preamble](../../spec/zzz-redesign.md#obsidian-frontmatter-is-a-preamble)
+1. [gaps.md › Keys on a blank line › Gap19](../../spec/gaps.md#gap19)
+
+### math (expected) (1)
+
+1. [paste.md › Paste44](../../spec/paste.md#paste44)
 
 ### no nodes (1)
 
@@ -8131,14 +12870,10 @@ Original:
 
 1. [indent.md › Indent18](../../spec/indent.md#indent18)
 
-### option enterOnEmptyItem: outdent (1)
+### option pasteStructuredMidText: after (1)
 
-1. [enter.md › Enter30](../../spec/enter.md#enter30)
+1. [paste.md › Paste38](../../spec/paste.md#paste38)
 
-### option pasteMidText: split (1)
+### option taskEditing: text (1)
 
-1. [paste.md › Paste8](../../spec/paste.md#paste8)
-
-### option taskEditing: block (1)
-
-1. [tasks.md › TaskBackspace4](../../spec/tasks.md#taskbackspace4)
+1. [tasks.md › TaskBackspace5](../../spec/tasks.md#taskbackspace5)

@@ -430,8 +430,8 @@ The disagreements worth knowing, with an example of each:
 - **Enter on an empty middle child** puts the caret in the new block, below; ourus leaves it above
   (`enter.md › Enter28`).
 - **Headings.** Tab doesn't change a heading's level (`indent.md › Indent12`, `Indent16`). A heading
-  block owns no section, so blocks moved past it don't enter it (`block-down.md › BlockDown20`,
-  `block-up.md › BlockUp24`).
+  block owns no section, so blocks moved past it don't enter it (`move-subtree-down.md › MoveDown20`,
+  `move-subtree-up.md › MoveUp24`).
 - **Paste.** Plain multi-line text pastes into the block (`paste.md › Paste7`, `Paste10`); only text
   that reads as list items or headings, or has blank lines, becomes blocks. Pasted code leaves the
   caret on a line of its own (`Paste9`).
@@ -491,7 +491,7 @@ the proxy refuses its "signal" WebSocket and answers its calls to save a setting
   note past the name and a line break. To-dos are tasks (`[ ] `, `[x] `), H1 to H3 are `#` to `###`;
   code and tables are refused.
 - The keys come from WorkFlowy's own keymap: Alt+Shift+Up and Down move, Ctrl+Shift+Backspace deletes
-  an item with its children (`deleteSubtree`), Alt+Shift+D duplicates it (`duplicateNode`, which Logseq
+  an item with its children (`deleteSubtree`), Alt+Shift+D duplicates it (`duplicateSubtree`, which Logseq
   has no key for), Ctrl+Home and Ctrl+End go to the first and last item. Ctrl+Home lands in the title
   of the zoomed item, so `cursorDocStart` is Ctrl+Home, Down, Home.
 - Outdenting is logical (Shift+Tab leaves later siblings with the parent): the driver declares
@@ -525,7 +525,7 @@ checkbox or a heading's `#`s. The disagreements worth knowing:
 - **Paste.** The first pasted line goes into the item at the caret, the rest become items, and the text
   after the caret becomes an item of its own (`paste.md › Paste7`). With markdown pasting, quote lines
   become items (`Paste12`), but `1. x` stays as written (`Paste15`).
-- **Duplicate** leaves the caret on the original (`duplicate-block.md › BlockDuplicate1`).
+- **Duplicate** leaves the caret on the original (`duplicate-subtree.md › DuplicateSubtree1`).
 - **Item types stay**: Tab doesn't deepen a heading (`indent.md › Indent12`), and Backspace at its
   start doesn't drop its type (`backspace.md › Backspace18`), as in Logseq.
 
@@ -570,7 +570,7 @@ CodeMirror transaction, and reading is the editor's state. The version comes fro
 an answer (`outstandingInvocations`): without it, a read once fell between a command's change and its
 caret. `indent` and `outdent` are "Outline: Move Right" and "Move Left" (Ctrl+. then L or H), which
 move an item with its children and change a heading's level; Tab is CodeMirror's `indentMore`, which
-indents lines. `deleteSubtree` and `duplicateNode` have no command.
+indents lines. `deleteSubtree` and `duplicateSubtree` have no command.
 
 **Results:** agree 111, caret 17, whitespace 8, disagree 265, error 0. SilverBullet is a text editor
 with outline commands, not an outliner, and most of the spec's structural behavior isn't there:
@@ -692,7 +692,7 @@ model follows the editor as it types, so there is no save to wait for, unlike Lo
 - **Keys** from Dynalist's shortcut table, read through `app.shortcuts.get_shortcuts(id)` for ids
   taken from the bundle: Ctrl+Up and Down move an item, Ctrl+Shift+Backspace deletes it with its
   children, Ctrl+Home and Ctrl+End go to the first item's start and the last one's end (no emulation
-  needed), Ctrl+Y redoes. `doc-duplicate` has no default key, so `duplicateNode` is skipped.
+  needed), Ctrl+Y redoes. `doc-duplicate` has no default key, so `duplicateSubtree` is skipped.
 - **Outdenting is a setting**: logical by default, direct with "unindent in place"
   (`unindent_in_place`, read by `view.unindent`). The driver declares both and sets it per test, as
   Logseq's does; `outdent.md › DirectOutdent1` and `LogicalOutdent1` both agree.
@@ -909,7 +909,7 @@ Obsidian in Live Preview, 44 examples agree that didn't, and 21 don't that did:
 - **Backspace and Delete join** where children allow (`backspace.md` 9 of 28, `del.md` 8 of 24);
   where they don't, Backspace does nothing.
 - **Moving is by item**, with its children, into the neighboring item at a list's edge; but a
-  selection of several items doesn't move at all (`block-down.md › BlockDown11`), where bare
+  selection of several items doesn't move at all (`move-subtree-down.md › MoveDown11`), where bare
   Obsidian's move-line moved every line.
 - **Quotes do worse** (9 of 53): moves past and between quoted items (`quotes.md › swapping two
   quoted items`).
@@ -945,8 +945,8 @@ didn't, and 38 don't that did:
   an indented item keeps its own bullet (`destination-list-style`); and `list-marker-content-column`
   is the tab translation's (§12.2).
 - **The caret, not the text**: a move puts the caret at the moved item's text start rather than where
-  it was (`block-up.md › BlockUp1`: `- b┃` comes out `- ┃b`), so moves agree on the text and give
-  `caret` (none of `block-up.md`'s 24 agree outright); Home stays at the text's start
+  it was (`move-subtree-up.md › MoveUp1`: `- b┃` comes out `- ┃b`), so moves agree on the text and give
+  `caret` (none of `move-subtree-up.md`'s 24 agree outright); Home stays at the text's start
   (`cursor.md › CursorHome2`).
 - **Headings and paragraphs** in a document of sections disagree more than bare Obsidian does
   (`obsidian-true-outliner.md › Enter › E29`: Enter at a paragraph's start).
@@ -965,7 +965,7 @@ Source mode agrees on the same, but for the frontmatter example):
 | `enter.md` | 33 | 6 | 6 | 11 |
 | `shift-enter.md` | 16 | 2 | 2 | 5 |
 | `obsidian-true-outliner.md` | 72 | 13 | 22 | 34 |
-| `block-up.md`, `block-down.md` | 44 | 8 | 9 | 1 |
+| `move-subtree-up.md`, `move-subtree-down.md` | 44 | 8 | 9 | 1 |
 | `cursor.md` | 32 | 23 | 22 | 19 |
 | `quotes.md` | 53 | 14 | 9 | 10 |
 | `paste.md` | 23 | 0 | 0 | 1 |
@@ -1054,7 +1054,7 @@ the 305 examples it runs, second of the block apps (Logseq 63%, Dynalist 55%). W
 - **Enter keeps the space** after where it splits (`enter.md › Enter1`): most of the whitespace
   verdicts.
 - **Skipped**: quotes (53), code blocks with the caret on a fence or kept as Tine can't (18 of
-  `fences.md`'s 25), and `duplicateNode`, which has no command.
+  `fences.md`'s 25), and `duplicateSubtree`, which has no command.
 
 ## 14. SiYuan
 
@@ -1112,8 +1112,8 @@ and by share between Tine (58%) and Dynalist (55%). What it does:
 - **Shift+Tab on a top-level item** makes it a paragraph owning the list after it, as ourus does
   (`outdent.md › DirectOutdent2`, `3` agree).
 - **Moves go by position, not among siblings**: a block moved up past an item with children goes in
-  among them (`block-up.md › BlockUp7`), and one moved down past its parent's last child leaves the
-  parent (`block-down.md › BlockDown8`), as Outliner's moves do in Obsidian.
+  among them (`move-subtree-up.md › MoveUp7`), and one moved down past its parent's last child leaves the
+  parent (`move-subtree-down.md › MoveDown8`), as Outliner's moves do in Obsidian.
 - **Enter on an empty middle child** makes it a second paragraph of its parent item (`enter.md ›
   Enter28`), none of ourus's `enterOnEmptyItem`; Enter and Shift+Enter keep the space at the split,
   most of the whitespace verdicts.
@@ -1122,7 +1122,7 @@ and by share between Tine (58%) and Dynalist (55%). What it does:
 - **Paste is text**: lines pasted go into the block as its lines, with either key (`paste.md ›
   Paste3`, `Paste7`).
 - **Duplicate in an item** copies its paragraph inside the item, and selects the copy
-  (`duplicate-block.md › BlockDuplicate1`).
+  (`duplicate-subtree.md › DuplicateSubtree1`).
 
 ## 15. Emacs with markdown-mode
 
@@ -1177,8 +1177,8 @@ agreements, a Markdown editor with a few list commands, not an outliner.
 - **Its subtree commands** indent by its own width, keep the item's marker, don't renumber
   (`indent.md › Indent3`, `4`, `5`), act on the item at point, not a region's (`Indent9`), put blank
   lines around a heading whose level they change (`Indent12`), and leave a paragraph alone
-  (`Indent21`, `22`). A first item doesn't move up out of its list (`block-up.md › BlockUp7`).
-- **Kill Element** leaves a blank line where the item was (`delete-subtree.md › BlockDelete1`).
+  (`Indent21`, `22`). A first item doesn't move up out of its list (`move-subtree-up.md › MoveUp7`).
+- **Kill Element** leaves a blank line where the item was (`delete-subtree.md › DeleteSubtree1`).
 - **Yank is plain** (`paste.md › Paste3`, `Paste7`).
 - **Home is the line's start**, before the marker (`markdown-special-ctrl-a/e` is off), most of the
   caret verdicts; Up on the first line beeps and stays (`cursor.md › CursorUp1`); redo leaves point at
@@ -1206,7 +1206,7 @@ history is empty: loading is a transaction, and undo would otherwise undo it. Th
 ProseMirror selection by block and offset; reading is `editor.document`, each block's canonical
 text. A paragraph reads as its text, as the projection has one: marked (`¶ `), the 52 differences that
 read a paragraph gave 3 more, each where ourus made a paragraph too, and none of the others agreed for
-want of the mark. Keys are BlockNote's defaults; `deleteSubtree` and `duplicateNode` are the block's
+want of the mark. Keys are BlockNote's defaults; `deleteSubtree` and `duplicateSubtree` are the block's
 side menu, with the mouse, and skipped. Two kinds of start it won't hold were found by the load check
 (a caret in a task's checkbox, on a code block's fence) and are skipped. An example takes 100 ms, the
 whole spec 36 s; two runs gave the same verdicts.
@@ -1221,7 +1221,7 @@ whole spec 36 s; two runs gave the same verdicts.
   space at the split (most of the whitespace verdicts).
 - **Tab nests a heading and keeps its level** (`indent.md › Indent12`), as Logseq does; Shift+Tab at
   the top level does nothing, and the focus leaves the editor (`outdent.md › DirectOutdent2`, `3`).
-- **Moves carry the block's children** (`block-up.md › BlockUp1` agrees); pasted lines go into the
+- **Moves carry the block's children** (`move-subtree-up.md › MoveUp1` agrees); pasted lines go into the
   block, as line breaks (`paste.md › Paste3`, `Paste7`).
 
 ## 17. What it says about the spec
@@ -1478,7 +1478,7 @@ to the browser one (Emacs).
 
 - Done: Logseq's logical-outdenting setting (`:editor/logical-outdenting?`) is switched per test, and
   the five `outdent: logical` examples run (§21). Other settings could follow the same way.
-- `duplicateNode` has no key in Logseq; copying and pasting a selected block might stand in for it.
+- `duplicateSubtree` has no key in Logseq; copying and pasting a selected block might stand in for it.
 - The demo is Logseq OG. Logseq's database version is a different app, and worth a driver of its own;
   it has a public demo now (above, 3).
 
@@ -1682,7 +1682,7 @@ source.
   under an ordered item read differently once translated; frontmatter, a caret by a checkbox (bare)
   and before an item's text (the plugins) are starts it won't hold, skipped (§12.3).
 - SilverBullet: examples with CR line endings are skipped (CodeMirror keeps LF); `deleteSubtree` and
-  `duplicateNode` have no command.
+  `duplicateSubtree` have no command.
 - WorkFlowy: tests run zoomed into an item whose title comes before the first block; Up from the first
   block goes there (`cursor.md › CursorUp1`).
 - Undo can reach the operations that loaded the test (WorkFlowy and Logseq record them): an example that undoes
@@ -1772,11 +1772,11 @@ source.
    own defaults later); declare `enterOnEmptyItem: outdent` for bare Obsidian if Enter on an empty
    item outdents everywhere (`enter.md › Enter28`, `Enter30`); true-outliner's prerelease that fixes
    paste under 1.14.4, once released; Outliner off its defaults (`stickCursor: never`, say).
-7. Dynalist: `duplicateNode` has no default key (`doc-duplicate`); a key could be bound for the test
+7. Dynalist: `duplicateSubtree` has no default key (`doc-duplicate`); a key could be bound for the test
    (`shortcuts.set_all_overrides`), which is a setting a user can change too.
 8. WorkFlowy: map code blocks to its `code-block` type (40 examples skipped for code); its `p` and
    `numbered` types aren't mapped (a block's canonical text doesn't say paragraph or numbered).
-9. Logseq: `duplicateNode` by copying and pasting a selected block, perhaps.
+9. Logseq: `duplicateSubtree` by copying and pasting a selected block, perhaps.
 10. Tine: logical outdenting (a setting, Settings › Editor › "Logical outdenting", reached through its
     command palette), so that `outdent: logical` examples run; its version in a browser (the bundle's
     name isn't found among the page's scripts, so only the export date shows); the guide is older than
@@ -1960,7 +1960,7 @@ source.
   in browsers, the four Obsidian setups, and Tine), took 344 s, against about 35 minutes run one after
   another, and wrote every report and `results/all.md`. Compared example by example with each app's
   run alone: identical for Roam, SilverBullet, WorkFlowy and the four Obsidian setups; Dynalist's
-  `CursorDown4` flipped as it does alone (§20.4); Logseq's `BlockUp8` was an error, its start held
+  `CursorDown4` flipped as it does alone (§20.4); Logseq's `MoveUp8` was an error, its start held
   wrong (a load racing the app on a busy machine; alone it agrees, 5 times of 5). So a start held
   wrong is loaded **once more** before it counts as the app's: an app that rewrites what it is given
   rewrites it again.
@@ -1977,7 +1977,7 @@ source.
   verdict, skipped and total, zeros blank, as in each app's report.
 - **One table of examples in `sxs.md`**: every example in one table after the summary, its header
   once, a bold row naming each spec file above its examples, in the spec's order.
-- **Logseq's load race, found by its symptom**: in the full run of ten apps, `block-up.md › BlockUp8`
+- **Logseq's load race, found by its symptom**: in the full run of ten apps, `move-subtree-up.md › MoveUp8`
   started with its last block, `c1`, held as `c`, the text of the block the caret goes into. Logseq
   opens an inserted block for editing a moment after the insert; on that busy machine it came after
   the driver had opened its own block, and the driver, writing into the focused editor (Logseq trims
@@ -1985,7 +1985,7 @@ source.
   core didn't reproduce it, but the symptom says which write went where. The driver now writes only
   into the editor inside the target block, reopening it if the focus has moved.
 - **The full run again, after Logseq's fix**: 338 s, and compared example by example with the runs
-  alone, identical for eight of the nine apps with a report alone to compare (Logseq's `BlockUp8`
+  alone, identical for eight of the nine apps with a report alone to compare (Logseq's `MoveUp8`
   agreed, and so did the rest of Logseq; Dynalist's `CursorDown4` didn't flip this time). Obsidian in
   Source mode had one error, `shift-enter.md › ShiftEnter5`: "Resulting promise was garbage
   collected", 11 ms into loading, as Live Preview had once before. Not the connection: Playwright
@@ -2056,7 +2056,7 @@ source.
   stays in `.sxs/`. A full run from there gave the reports as rewritten in place, `elapsed_s` aside.
 - **The table's rows, shorter** (`sxs.md`): a spec file's row is its name in bold, no link, so it
   stands apart from the examples; an example is its own name, without its sections' (`Gaps travel
-  with the…`, not `moveBlockUp, moveBlockDown (…) › Gaps travel with their nodes`), at most 20
+  with the…`, not `moveSubtreeUp, moveSubtreeDown (…) › Gaps travel with their nodes`), at most 20
   characters and `…`, linking to it in the spec, its full name, sections and all, the link's title (a
   tooltip); a second column, `agree`, counts the apps that agree on each. Eight pairs of names in a
   file come out the same (`quotes.md`, `obsidian-true-outliner.md`): the spec's names are to be made

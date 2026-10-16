@@ -3,7 +3,7 @@
 import { Config } from '../config.ts';
 import { Flavor, SyntaxTree, type Block, type LineInfo } from '../parser/index.ts';
 import { applyChanges, diffLines, isSpaceOrTab, lineIndexAt, mapPos, normalizeChanges, skipSpaces, type ChangeSpec } from '../text.ts';
-import { buildOutline, headOwners, outlineNodes, type OutlineNode } from './build.ts';
+import { buildOutline, calloutTitle, headOwners, outlineNodes, type OutlineNode } from './build.ts';
 import { IdCarrier, headStartIn } from './identity.ts';
 import { isPlace, validPlaces } from './placeholders.ts';
 
@@ -63,7 +63,8 @@ export class OutlineState {
     this.placeholders = validPlaces(text, placeholders);
     this.syntaxTree = parse(this.placeholders);
     const blocks = this.syntaxTree.root;
-    if (same && same.syntaxTree.root === blocks) {
+    // the outline reads text as well as blocks: whether a quote's first paragraph is a callout title
+    if (same && same.syntaxTree.root === blocks && same.nodes.every((n) => n.kind !== 'quote' || calloutTitle(n.block, (i) => this.syntaxTree.line(i), text) === n.head)) {
       // the same blocks: the same outline, ids and all (they hold line numbers, not offsets)
       this.root = same.root;
       this.nodes = same.nodes;
@@ -223,16 +224,26 @@ export class OutlineState {
     return pos === start ? line.from : start;
   }
 
-  /** Where the text starts on `pos`'s line: past container prefixes, a list marker, a task's checkbox and a heading's `#`s. */
+  /** Where the text starts on `pos`'s line: past container prefixes, a list marker, a task's checkbox, a heading's `#`s and a callout's `[!type]`. */
   textStart(pos: number): number {
     const line = this.lineAt(pos);
     let start = line.contentFrom;
     start = skipSpaces(this.text, start, line.to, 1);
     const rest = this.text.slice(start, line.to);
     const node = this.nodeAt(pos);
-    if (node?.kind === 'item' && node.head && line.index === node.head.startLine) {
-      const box = /^\[[ xX]\][ \t]+/.exec(rest);
-      if (box) start += box[0].length;
+    if (node?.kind === 'item' && line.index === node.startLine && (!node.head || line.index === node.head.startLine)) {
+      // the flavor's checkbox (GFM: an empty task has no head, only it), else one read as text
+      const task = node.block.task;
+      if (task) start = skipSpaces(this.text, Math.max(start, line.from + task.end), line.to, 1);
+      else {
+        const box = /^\[[ xX]\][ \t]+/.exec(rest);
+        if (box) start += box[0].length;
+      }
+    }
+    // a callout's `[!type]` is markup its title starts after
+    if (node?.kind === 'quote' && node.head && line.index === node.head.startLine) {
+      const type = /^\[![^\]\s]*\][+-]?(?:[ \t]+|$)/.exec(rest);
+      if (type) start += type[0].length;
     }
     if (line.leaf?.type === 'heading' && !line.leaf.setext) {
       const marks = /^#{1,6}(?:[ \t]+|$)/.exec(rest);

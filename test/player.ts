@@ -14,8 +14,8 @@ import { advanceColumns, applyChanges, dominantEnding, type ChangeSpec } from '.
 const COMMANDS = new Set<string>([
   'indent',
   'outdent',
-  'moveBlockUp',
-  'moveBlockDown',
+  'moveSubtreeUp',
+  'moveSubtreeDown',
   'enter',
   'shiftEnter',
   'deleteContentBackward',
@@ -24,7 +24,7 @@ const COMMANDS = new Set<string>([
   'pasteStructured',
   'pastePlain',
   'deleteSubtree',
-  'duplicateNode',
+  'duplicateSubtree',
 ]);
 
 /** The command an action names (the clipboard is what a paste pastes). */
@@ -63,6 +63,9 @@ const isMotion = (action: string): boolean => /^(?:cursor|select)/.test(action) 
  * and the caret it had, nothing else (places are not restored: that is the host's contract).
  */
 const HOST_ACTIONS = new Set<string>(['undo', 'redo']);
+
+/** Whether an action is an ourus command (the rest are typing, motions and the host's undo). */
+export const isCommand = (token: string): boolean => COMMANDS.has(token);
 
 export const isAction = (token: string): boolean => /^"[^"]*"$/.test(token) || COMMANDS.has(token) || HOST_ACTIONS.has(token) || isMotion(token);
 

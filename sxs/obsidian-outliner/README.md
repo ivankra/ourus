@@ -22,7 +22,7 @@ while an IME is composing, the key is Obsidian's.
 | --- | --- | --- |
 | `enter` | Enter | "better Enter" (`betterEnter`, on): an empty child item outdents, else a new item |
 | `indent`, `outdent` | Tab, Shift+Tab | "better Tab" (`betterTab`, on): the item with its children; the indentation is copied from a sibling or a child where there is one, else Obsidian's (a tab) |
-| `moveBlockUp`, `moveBlockDown` | Ctrl+Shift+Up, Ctrl+Shift+Down | "Move list item up" and "down" (`move-list-item-up`, `-down`): the item with its children, into the neighboring item at a list's edge; an ordered list is renumbered |
+| `moveSubtreeUp`, `moveSubtreeDown` | Ctrl+Shift+Up, Ctrl+Shift+Down | "Move list item up" and "down" (`move-list-item-up`, `-down`): the item with its children, into the neighboring item at a list's edge; an ordered list is renumbered |
 | `deleteContentBackward`, `deleteContentForward` | Backspace, Delete | "stick the cursor to the content" (`stickCursor: bullet-and-checkbox`): at an item's start, it joins the previous item only where children allow, and otherwise does nothing |
 | caret motions | arrows, Home, End | the same setting keeps the caret off bullets and checkboxes, after any move |
 
@@ -41,7 +41,7 @@ Against bare Obsidian in Live Preview ([`../obsidian-lp/sxs.md`](../obsidian-lp/
 - **Indenting carries the children** (`indent.md › Indent2` agrees), and so do moves.
 - **Backspace and Delete join items** where their children allow (`backspace.md`, `del.md` agree
   more); where they don't, Backspace does nothing.
-- **A selection of several items doesn't move** (`block-down.md › BlockDown11`): the command wants
+- **A selection of several items doesn't move** (`move-subtree-down.md › MoveDown11`): the command wants
   one caret, where bare Obsidian's "Move line down" moves every selected line.
 - **Quotes do worse**: moving past and between quoted items (`quotes.md › Swapping two quoted
   items`).

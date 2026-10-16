@@ -35,7 +35,7 @@ as data). Names follow W3C `inputType` where one exists:
 | `type` | Key | What it does |
 | --- | --- | --- |
 | `indent`, `outdent` | Tab, Shift-Tab | The selected nodes go under the node above, or out of their parent. Heading levels change; paragraphs become items and back. |
-| `moveBlockUp`, `moveBlockDown` | Alt-↑, Alt-↓ | The selected nodes swap with the sibling above or below, crossing into the parent's sibling at an edge. |
+| `moveSubtreeUp`, `moveSubtreeDown` | Alt-↑, Alt-↓ | The selected nodes swap with the sibling above or below, crossing into the parent's sibling at an edge. |
 | `enter` | Enter | Splits the node at the caret: a new item, paragraph or section paragraph. |
 | `shiftEnter` | Shift-Enter | A line break inside the node's text, which stays one node. |
 | `deleteContentBackward` | Backspace | At a node's text start: joins it to the node above. |
@@ -43,7 +43,7 @@ as data). Names follow W3C `inputType` where one exists:
 | `deleteSoftLineBackward` | Cmd-Backspace | Deletes back to the text start of the line, never into a marker. |
 | `pasteStructured` (`text`) | Ctrl-V | Markdown pasted as nodes, where Enter would put a new node. |
 | `pastePlain` (`text`) | Ctrl-Shift-V | Text pasted into the node, its line breaks as Shift-Enter's. |
-| `deleteSubtree`, `duplicateNode` | | The selected nodes go, or a copy goes below them, with their subtrees. |
+| `deleteSubtree`, `duplicateSubtree` | | The selected nodes go, or a copy goes below them, with their subtrees. |
 
 `selection` is `{ anchor, head }`, as CM6's `selection.main` is. The selected nodes of a structural
 command are the topmost nodes whose own lines the selection touches; they must be contiguous
@@ -57,7 +57,10 @@ siblings of one kind.
 - **`rejected`**: `reason` (`RejectReason`) and sometimes a `detail`. The key does nothing; the host
   should swallow it.
 - **`notApplicable`**: the command has nothing to do here (Enter in the middle of a code line, with
-  `handleFenceContents: false`; Backspace inside text). The host runs its default.
+  `handleFenceContents: false`; Backspace inside text). The host runs its default. With the caret in
+  markup, where only the host puts it, an edit ourus would refuse is the host's too
+  (`editInMarkup: host`, the default), and `detail` says why ("a list marker isn't text"): an
+  advisory the host may show.
 
 **`RejectReason`:**
 
@@ -96,8 +99,9 @@ next state, or null when nothing changes.
 
 How commands behave where users disagree is a `Config` option, set when the state is made
 (`OutlineState.parse(text, { config })`): `outdent` (`direct` or `logical`), `bullet`,
-`enterOnEmptyItem`, `handleFenceContents`, `headingEditing`, `taskEditing`, `pasteMidText`,
-`deleteAtGap`, and `flavor`. Each option's choices and default are documented in `src/config.ts`.
+`enterOnEmptyItem`, `enterMidItem`, `enterAtTextStart`, `backspaceAtTopItem`, `handleFenceContents`,
+`headingEditing`, `taskEditing`, `pasteStructuredLines`, `pasteStructuredMidText`, `deleteAtGap`,
+`editInMarkup`, and `flavor`. Each option's choices and default are documented in `src/config.ts`.
 
 ## Inside
 

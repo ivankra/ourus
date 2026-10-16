@@ -15,7 +15,7 @@ so on, defined by `ra("doc-indent", ...)` calls in `main.min.js`):
 | --- | --- |
 | `enter`, `shiftEnter` | Enter, Ctrl+Shift+Enter (`doc-insert-new-line`) |
 | `indent`, `outdent` | Tab, Shift+Tab |
-| `moveBlockUp`, `moveBlockDown` | Ctrl+Up, Ctrl+Down (`doc-swap-up`, `doc-swap-down`) |
+| `moveSubtreeUp`, `moveSubtreeDown` | Ctrl+Up, Ctrl+Down (`doc-swap-up`, `doc-swap-down`) |
 | `deleteContentBackward`, `deleteContentForward` | Backspace, Delete |
 | `deleteSoftLineBackward` | Shift+Home, Backspace |
 | `deleteSubtree` | Ctrl+Shift+Backspace (`doc-delete-left`: the item and its children) |
@@ -24,7 +24,7 @@ so on, defined by `ra("doc-indent", ...)` calls in `main.min.js`):
 | `cursorDocStart`, `cursorDocEnd` | Ctrl+Home, Ctrl+End (`doc-goto-first`, `doc-goto-last`: the first item's start, the last one's end) |
 | caret motions | arrows, Home, End; `select…` with Shift |
 
-`duplicateNode` (`doc-duplicate`) has no key by default; its tests are skipped. Shift+Up and Down at
+`duplicateSubtree` (`doc-duplicate`) has no key by default; its tests are skipped. Shift+Up and Down at
 an item's edge select items, not text.
 
 ## Stack

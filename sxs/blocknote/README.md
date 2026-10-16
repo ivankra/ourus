@@ -27,14 +27,14 @@ BlockNote's defaults (its block keyboard shortcuts, and ProseMirror's and Tiptap
 | --- | --- |
 | `enter`, `shiftEnter` | Enter (splits a block; on an empty list item, makes it a paragraph), Shift+Enter (a line break in the block) |
 | `indent`, `outdent` | Tab, Shift+Tab: nest the block, with its children, under the one before; unnest it |
-| `moveBlockUp`, `moveBlockDown` | Ctrl+Shift+Up, Ctrl+Shift+Down ("move block up", "down": the block with its children) |
+| `moveSubtreeUp`, `moveSubtreeDown` | Ctrl+Shift+Up, Ctrl+Shift+Down ("move block up", "down": the block with its children) |
 | `deleteContentBackward`, `deleteContentForward` | Backspace (at a list item's start, makes it a paragraph first), Delete |
 | `deleteSoftLineBackward` | Shift+Home, then Backspace (no command for it) |
 | `pasteStructured`, `pastePlain` | Ctrl+V, Ctrl+Shift+V |
 | `undo`, `redo` | Ctrl+Z, Ctrl+Shift+Z |
 | caret motions | arrows, Home, End, Ctrl+Home, Ctrl+End; `select…` with Shift |
 
-`deleteSubtree` and `duplicateNode` have no key: deleting or duplicating a block goes through the
+`deleteSubtree` and `duplicateSubtree` have no key: deleting or duplicating a block goes through the
 block's side menu (its drag handle), with the mouse. Their examples are skipped.
 
 ## Stack
@@ -98,4 +98,4 @@ Measured (each was a start the load check found held otherwise), and skipped wit
 - **Shift+Tab at the top level** does nothing in the editor, and the browser takes the key: the focus
   leaves the editor (`outdent.md › DirectOutdent2`, `3`).
 - **Pasted lines go into the block**, as line breaks, with either key (`paste.md › Paste3`, `Paste7`).
-- **Moves carry the block's children** (`block-up.md › BlockUp1` agrees).
+- **Moves carry the block's children** (`move-subtree-up.md › MoveUp1` agrees).

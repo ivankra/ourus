@@ -1,0 +1,993 @@
+# Move subtree up
+
+Command: `moveSubtreeUp`, usually bound to Alt-Shift-Up / Alt-Up. Its mirror is
+[`moveSubtreeDown`](move-subtree-down.md).
+
+A move takes the selected nodes (the topmost ones the selection touches, contiguous siblings of one
+kind) with their subtrees and their trailing gaps ([gaps.md](gaps.md)): a node keeps its kind and
+its own indentation, and lands where the text puts it. The rules, in order; the first that applies
+wins:
+
+1. **Everything in a quote moves the quote** ([quotes.md](quotes.md)).
+2. **Within its parent, the node swaps with the sibling above**: items with items, paragraphs and
+   other blocks among themselves, a heading (with its section) with a heading of its level, a quote
+   with any node but a heading (MoveUp1, MoveUp3, MoveUp4, MoveUp16).
+3. **The first item of a paragraph's list moves above the paragraph**, joining the list above where
+   there is one (MoveUp7, MoveUp12, MoveUp21).
+4. **At its parent's edge it crosses into the parent's previous sibling**, as its last child: an
+   item into an item or a paragraph's list (MoveUp6, MoveUp8, MoveUp9); any node but a heading
+   into the section above, at the end of the text there, inside its sub-headings (MoveUp22,
+   MoveUp23); out of a sub-heading's section into the enclosing section's own nodes, before the
+   sub-heading (MoveUp24), and above the document's first heading (MoveUp29); a heading into the
+   section above, at its end, where it takes nothing in (MoveUp26).
+5. **Otherwise it is refused** (`no-previous-sibling`, MoveUp2, MoveUp5), or where it would give
+   another node a new parent: a heading past a heading of another level or past a node it would take
+   into its section (`not-expressible`, MoveUp28, MoveUp33). A paragraph that doesn't move takes
+   in the list a move leaves right after it, as the text reads it (MoveUp35).
+6. **What would run together is set apart** by a blank line (MoveUp18, MoveUp19, MoveUp20); a
+   paragraph's leading indentation, not part of its text, is rewritten where it would make code
+   (MoveUp30); a renumbered list keeps its children at their content column (MoveUp15). The caret
+   ends in the node's text (MoveUp34).
+
+[Move subtree down](move-subtree-down.md) mirrors each case and takes each move back.
+
+Bare Obsidian's Alt-Up moves the caret's line, not its node: an item's children stay behind (and
+become the next item's), a heading leaves its section, a paragraph moved next to another joins it.
+Obsidian's Outliner plugin moves an item with its children, as the outliners and ourus do.
+
+## MoveUp1
+
+Moving up carries the subtree; move subtree down takes it back.
+
+Bare Obsidian moves the line, and `b1` becomes `a`'s child.
+
+```yaml
+rank: core
+```
+
+```buffer
+- a
+- b┃
+  - b1
+- c
+```
+
+> moveSubtreeUp
+
+```buffer
+- b┃
+  - b1
+- a
+- c
+```
+
+> moveSubtreeDown
+
+```buffer
+- a
+- b┃
+  - b1
+- c
+```
+
+## MoveUp2
+
+The first top-level item cannot move up.
+
+```yaml
+rank: common
+```
+
+```buffer
+- a┃
+- b
+```
+
+> moveSubtreeUp
+
+```result
+rejected: no-previous-sibling
+```
+
+```buffer
+- a┃
+- b
+```
+
+## MoveUp3
+
+Headings move with their sections.
+
+Bare Obsidian moves only the heading's line, which would leave `text b` under `# A`.
+
+```yaml
+rank: core
+```
+
+```buffer
+# A
+
+text a
+
+# B┃
+
+text b
+```
+
+> moveSubtreeUp
+
+```buffer
+# B┃
+
+text b
+
+# A
+
+text a
+```
+
+## MoveUp4
+
+Paragraphs and other leaf blocks reorder among themselves.
+
+The blank line between them stays; bare Obsidian moves the line, which runs into `one` as one
+paragraph.
+
+```yaml
+rank: core
+```
+
+```buffer
+one
+
+two┃
+```
+
+> moveSubtreeUp
+
+```buffer
+two┃
+
+one
+```
+
+## MoveUp5
+
+The first child cannot move up when its parent has no previous sibling to receive it.
+
+```yaml
+rank: edge
+```
+
+```buffer
+- a
+  - b┃
+```
+
+> moveSubtreeUp
+
+```result
+rejected: no-previous-sibling
+```
+
+```buffer
+- a
+  - b┃
+```
+
+## MoveUp6
+
+The first child crosses into its parent's previous sibling as its last child. Another move subtree
+up then swaps it with the preceding child there.
+
+```yaml
+rank: core
+```
+
+```buffer
+- a
+→- b
+- c
+→- d┃
+```
+
+> moveSubtreeUp
+
+```buffer
+- a
+→- b
+→- d┃
+- c
+```
+
+> moveSubtreeUp
+
+```buffer
+- a
+→- d┃
+→- b
+- c
+```
+
+## MoveUp7
+
+The first list item owned by a paragraph moves above the paragraph and joins the preceding list.
+The remaining items stay with the paragraph.
+
+`b` keeps its column, so it joins `a`'s list rather than nesting under `a` (as the block apps
+do, adapted).
+
+```yaml
+rank: common
+```
+
+```buffer
+- a
+
+para
+
+- b┃
+- c
+```
+
+> moveSubtreeUp
+
+```buffer
+- a
+- b┃
+
+para
+
+- c
+```
+
+## MoveUp8
+
+Crossing into a branch with no children creates its first child. The moved subtree stays intact,
+and move subtree down restores the original tree.
+
+Bare Obsidian leaves `c1` behind under `b`.
+
+```yaml
+rank: common
+```
+
+```buffer
+- a
+- b
+  - c┃
+    - c1
+```
+
+> moveSubtreeUp
+
+```buffer
+- a
+  - c┃
+    - c1
+- b
+```
+
+> moveSubtreeDown
+
+```buffer
+- a
+- b
+  - c┃
+    - c1
+```
+
+## MoveUp9
+
+Crossing moves only the first child's subtree. Its later siblings stay with their parent;
+the destination's existing child and grandchild stay together.
+
+```yaml
+rank: common
+```
+
+```buffer
+- a
+  - a1
+    - a11
+- b
+  - c┃
+    - c1
+  - d
+```
+
+> moveSubtreeUp
+
+```buffer
+- a
+  - a1
+    - a11
+  - c┃
+    - c1
+- b
+  - d
+```
+
+## MoveUp10
+
+Selected siblings swap upward together. A child included in the selection travels with its
+parent once, and the selection stays on the moved text.
+
+```yaml
+rank: common
+```
+
+```buffer
+- a
+- «b
+  - b1
+- c»
+- d
+```
+
+> moveSubtreeUp
+
+```buffer
+- «b
+  - b1
+- c»
+- a
+- d
+```
+
+## MoveUp11
+
+A selected run at the start of a parent's children crosses together, preserving order and
+subtrees. Unselected children remain with their parent.
+
+```yaml
+rank: edge
+```
+
+```buffer
+- a
+  - a1
+- b
+  - «c
+    - c1
+  - d»
+  - e
+```
+
+> moveSubtreeUp
+
+```buffer
+- a
+  - a1
+  - «c
+    - c1
+  - d»
+- b
+  - e
+```
+
+## MoveUp12
+
+A paragraph's only list item can move above it without a preceding list to join. Its subtree
+comes along; the paragraph remains below, with a blank line keeping it outside the item.
+
+```yaml
+rank: edge
+```
+
+```buffer
+intro
+
+- b┃
+  - b1
+```
+
+> moveSubtreeUp
+
+```buffer
+- b┃
+  - b1
+
+intro
+```
+
+## MoveUp13
+
+Fenced code with a blank line moves with its item: the code's blank line is payload, not a gap.
+
+```yaml
+rank: edge
+```
+
+````buffer
+- a
+- b┃
+  ```
+  x
+
+  y
+  ```
+````
+
+> moveSubtreeUp
+
+````buffer
+- b┃
+  ```
+  x
+
+  y
+  ```
+- a
+````
+
+## MoveUp14
+
+Moving renumbers the items.
+
+```yaml
+rank: core
+```
+
+```buffer
+1. a
+2. b┃
+```
+
+> moveSubtreeUp
+
+```buffer
+1. b┃
+2. a
+```
+
+## MoveUp15
+
+Renumbering past 9 widens the marker, and the children follow the new content column.
+
+```yaml
+rank: rare
+```
+
+```buffer
+9. a
+   - x
+10. b┃
+```
+
+> moveSubtreeUp
+
+```buffer
+9. b┃
+10. a
+    - x
+```
+
+## MoveUp16
+
+Heading moves with its subheadings.
+
+```yaml
+rank: common
+```
+
+```buffer
+# A
+## a1
+# B┃
+## b1
+```
+
+> moveSubtreeUp
+
+```buffer
+# B┃
+## b1
+# A
+## a1
+```
+
+## MoveUp17
+
+A paragraph moves with its list.
+
+```yaml
+rank: common
+```
+
+```buffer
+first
+
+para┃
+- a
+```
+
+> moveSubtreeUp
+
+```buffer
+para┃
+- a
+
+first
+```
+
+## MoveUp18
+
+A paragraph moved up past indented code (`→- a`, a tab reaching column four) is set apart from it:
+right below a paragraph, it would be a continuation line.
+
+```yaml
+rank: rare
+```
+
+```buffer
+→- a
+┃para
+```
+
+> moveSubtreeUp
+
+```buffer
+┃para
+
+→- a
+```
+
+## MoveUp19
+
+A paragraph moved up past a thematic break is set apart from it: right below a paragraph, `---`
+would be a setext underline.
+
+```yaml
+rank: rare
+```
+
+```buffer
+---
+para┃
+```
+
+> moveSubtreeUp
+
+```buffer
+para┃
+
+---
+```
+
+## MoveUp20
+
+A paragraph moved up past a link reference definition is set apart from it: right below a
+paragraph, the definition would be paragraph text.
+
+```yaml
+rank: rare
+```
+
+```buffer
+[a]: /u
+para┃
+```
+
+> moveSubtreeUp
+
+```buffer
+para┃
+
+[a]: /u
+```
+
+## MoveUp21
+
+The first item of a paragraph's list moves above the paragraph; the items after it stay with the
+paragraph. With no list above to join, a blank line sets the item off from the paragraph.
+
+```yaml
+rank: edge
+```
+
+```buffer
+para
+- a┃
+- b
+```
+
+> moveSubtreeUp
+
+```buffer
+- a┃
+
+para
+- b
+```
+
+## MoveUp22
+
+The first item of a heading's section moves up into the section above, as its last item, as a first
+child crosses in a list. The section's end gap stays at its end.
+
+```yaml
+rank: common
+```
+
+```buffer
+# Work
+- email
+
+# Home
+- ┃review
+- water
+```
+
+> moveSubtreeUp
+
+```buffer
+# Work
+- email
+- ┃review
+
+# Home
+- water
+```
+
+## MoveUp23
+
+Moving up into a section that ends with a sub-heading, the node lands at the end of that
+sub-heading's section, where the text above it ends. Move subtree down takes it back
+([MoveDown28](move-subtree-down.md#movedown28)).
+
+```yaml
+rank: edge
+```
+
+```buffer
+# A
+## sub
+- s1
+
+# B
+┃para
+```
+
+> moveSubtreeUp
+
+```buffer
+# A
+## sub
+- s1
+
+┃para
+
+# B
+```
+
+## MoveUp24
+
+The first item of a sub-heading's section moves up into the enclosing section, before the
+sub-heading: it keeps its column and joins `one`'s list, rather than nesting under `one` as in a
+list (and the block apps, adapted).
+
+```yaml
+rank: edge
+```
+
+```buffer
+# Todo
+- one
+
+## Later
+- ┃two
+- three
+```
+
+> moveSubtreeUp
+
+```buffer
+# Todo
+- one
+- ┃two
+
+## Later
+- three
+```
+
+## MoveUp25
+
+In a loose list, the item moves with its subtree and the blank line stays between the two items
+(MoveDown1's mirror).
+
+```yaml
+rank: common
+```
+
+```buffer
+- a
+
+- b┃
+  - b1
+```
+
+> moveSubtreeUp
+
+```buffer
+- b┃
+  - b1
+
+- a
+```
+
+## MoveUp26
+
+A sub-heading first in its section crosses up into the section above, as its last node, with its
+own section: there it takes nothing in. Move subtree down takes it back.
+
+```yaml
+rank: edge
+```
+
+```buffer
+# A
+- x
+
+# B
+## s┃
+- y
+```
+
+> moveSubtreeUp
+
+```buffer
+# A
+- x
+## s┃
+- y
+
+# B
+```
+
+> moveSubtreeDown
+
+```buffer
+# A
+- x
+
+# B
+## s┃
+- y
+```
+
+## MoveUp27
+
+Into a section that ends with a paragraph, an item lands under it, as the paragraph's list item;
+move subtree down takes it back out, into the next section.
+
+```yaml
+rank: edge
+```
+
+```buffer
+# Work
+para
+
+# Home
+- ┃review
+```
+
+> moveSubtreeUp
+
+```buffer
+# Work
+para
+- ┃review
+
+# Home
+```
+
+> moveSubtreeDown
+
+```buffer
+# Work
+para
+
+# Home
+- ┃review
+```
+
+## MoveUp28
+
+A heading doesn't move past a heading of another level: above `## X`, `# A` would take it into its
+section (MoveDown17's mirror).
+
+```yaml
+rank: edge
+```
+
+```buffer
+## X
+# A┃
+- a
+```
+
+> moveSubtreeUp
+
+```result
+rejected: not-expressible
+```
+
+```buffer
+## X
+# A┃
+- a
+```
+
+## MoveUp29
+
+The first node of the document's first section moves up above its heading, into the text before
+it, as a first item leaves a sub-heading's section in MoveUp24.
+
+```yaml
+rank: edge
+```
+
+```buffer
+# H
+- ┃a
+- b
+```
+
+> moveSubtreeUp
+
+```buffer
+- ┃a
+# H
+- b
+```
+
+## MoveUp30
+
+`    code` is a paragraph (what was left of a paragraph after its definition). Moved above the
+definition, its four spaces would make it indented code; a paragraph's leading indentation isn't
+its text, so it goes, and a blank line sets the paragraph off from the definition.
+
+```yaml
+rank: rare
+```
+
+```buffer
+[a]: /u
+    ┃code
+```
+
+> moveSubtreeUp
+
+```buffer
+┃code
+
+[a]: /u
+```
+
+## MoveUp31
+
+A selection over a parent and its child moves the parent with its subtree (MoveDown14's mirror).
+
+```yaml
+rank: common
+```
+
+```buffer
+- c
+- «a
+  - b»
+```
+
+> moveSubtreeUp
+
+```buffer
+- «a
+  - b»
+- c
+```
+
+## MoveUp32
+
+An empty item the text can hold moves like any other (MoveDown15's mirror).
+
+```yaml
+rank: edge
+```
+
+```buffer
+- a
+- ┃
+- b
+```
+
+> moveSubtreeUp
+
+```buffer
+- ┃
+- a
+- b
+```
+
+## MoveUp33
+
+A heading doesn't move up past a node of another kind: above `- a`, `## H` would take it into its
+section.
+
+```yaml
+rank: edge
+```
+
+```buffer
+# H
+- a
+## ┃H
+```
+
+> moveSubtreeUp
+
+```result
+rejected: not-expressible
+```
+
+```buffer
+# H
+- a
+## ┃H
+```
+
+## MoveUp34
+
+From before the marker, the item moves and the caret ends in its text.
+
+```yaml
+rank: rare
+```
+
+```buffer
+- a
+┃- b
+```
+
+> moveSubtreeUp
+
+```buffer
+- ┃b
+- a
+```
+
+## MoveUp35
+
+A quote moving up leaves the paragraph right above the list, and the paragraph takes the list in, as
+the text reads it: the paragraph isn't what moves, and the list renders as before. A paragraph that
+moves above a list is still refused ([MoveDown25](move-subtree-down.md#movedown25)). Down again, the
+quote passes the paragraph and its list.
+
+```yaml
+rank: edge
+```
+
+```buffer
+para
+> q┃
+- a
+```
+
+> moveSubtreeUp
+
+```buffer
+> q┃
+
+para
+- a
+```
+
+> moveSubtreeDown
+
+```buffer
+para
+- a
+
+> q┃
+```

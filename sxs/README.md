@@ -43,6 +43,7 @@ pick the examples matching any of them; none picks every example. Options:
 | `--json=FILE` | write the run as data to FILE too, as `.sxs/<app>/sxs.json` has it |
 | `--jobs=N` | with several apps, run at most N at once (all of them by default) |
 | `--table` | with several apps, run nothing: write the table from the verdicts each app's last run left in `.sxs/<app>/sxs.json` (an app with none left out) |
+| `--regenerate-report` | run no app: judge what it did in its last runs (`.sxs/<app>/<file>.json`) against the spec as it is now, and write its report and run as data again (with several apps, the table too); an example its runs didn't play as the spec has it now is left out, under "Not run" (`?` in the table), wanting a run |
 | `--stop` | stop the shared proxy, the apps' browsers and the servers drivers started, and nothing else |
 
 A run prints each example that doesn't agree, with what ourus expected and what the app did, drawn as
@@ -50,6 +51,16 @@ spec buffers. It ends with the counts, the skips by reason, and what the proxy f
 live and blocked, per host. Every run writes its report and its run as data to `.sxs/<app>/sxs.md`
 and `.sxs/<app>/sxs.json`, not checked in (`.sxs/` mirrors this directory); a run of every example (no selector, no `--strict`)
 copies the report to `<app>/sxs.md`, which is: diff it to see what changed since the last run.
+
+Each run also keeps what the app did in each example, per spec file (`.sxs/<app>/indent.json` for
+`indent.md`, `FileRun` in `run.ts`): a run replaces the examples it ran and keeps the rest of their
+files', so runs of a few examples add up, and a run of every example of a file replaces it whole.
+After a change to the spec, `run.ts all --regenerate-report` writes every report and the table again
+from them in seconds, without running an app: an example is judged again from the states the app
+reached in it, if its last run played it as the spec has it now (the same start, clipboard and
+settings, and the same actions in each step, or in its first ones where steps were added since);
+the rest want a run, as `run.ts <app> <selector>`. On the spec its runs were made with, it gives
+every verdict the runs gave.
 
 **Several apps** (`logseq,dynalist`, or `all`) run side by side (`run.ts`, "several apps"): a run of the
 above for each, in a process of its own, all at once unless `--jobs` says fewer, each with its output
@@ -212,7 +223,8 @@ for apps behind a login.
 `.sxs/` (git-ignored, at the root of the checkout; `OURUS_SXS_DIR` moves it) holds the
 HTTP cache (`http/`; delete a file to refetch it, or the directory to start cold), the proxy's
 certificate and log, the last table (`sxs.md`, `sxs-heatmap.svg`), and a directory per app (`<app>/`):
-its last run (`sxs.md`, `sxs.json`, `sxs.log`), its browser's profile (`chromium/`) and log
+its last run (`sxs.md`, `sxs.json`, `sxs.log`), what it did in each spec file's examples
+(`<file>.json`), its browser's profile (`chromium/`) and log
 (`chromium.log`), the lock of the run that holds it (`<app>.lock`), the pid of the server its driver started (`server.pid`), what
 the app needs fetched (`files/`: SiYuan's release, Obsidian's app and plugins, markdown-mode), and the
 app's own state (SiYuan's workspace, an Obsidian setup's vault and log, ...).

@@ -11,7 +11,7 @@ saves nothing. The last full run is [`sxs.md`](sxs.md).
 | `enter`, `shiftEnter` | Enter, Shift+Enter |
 | `indent`, `outdent` | Tab, Shift+Tab |
 | `deleteContentBackward`, `deleteContentForward` | Backspace, Delete |
-| `moveBlockUp`, `moveBlockDown` | Alt+Shift+Up, Alt+Shift+Down |
+| `moveSubtreeUp`, `moveSubtreeDown` | Alt+Shift+Up, Alt+Shift+Down |
 | `deleteSoftLineBackward` | Shift+Home, Backspace (no key of its own on Linux) |
 | `deleteSubtree` | Escape (selects the block), Backspace (deletes the selection) |
 | `pasteStructured`, `pastePlain` | Ctrl+V, Ctrl+Shift+V |
@@ -19,7 +19,7 @@ saves nothing. The last full run is [`sxs.md`](sxs.md).
 | caret motions | arrows, Home, End; `select…` with Shift |
 | `cursorDocStart`, `cursorDocEnd` | Up (Down) until the caret stops, then Home (End) |
 
-`duplicateNode` has no key in Logseq, and its tests are skipped.
+`duplicateSubtree` has no key in Logseq, and its tests are skipped.
 
 ## Stack
 
@@ -71,7 +71,7 @@ Repo: https://github.com/logseq/og
 - **Inserting blocks opens one for editing**, a moment later: the driver lets that pass before
   choosing the block to edit, and checks it got the right one. On a busy machine (ten apps run at
   once) it came even later, after the driver had opened its block, and the text meant for that
-  block's editor went into the last inserted block's (`block-up.md › BlockUp8`: `c1` held as `c`). So
+  block's editor went into the last inserted block's (`move-subtree-up.md › MoveUp8`: `c1` held as `c`). So
   the driver writes only into the editor inside the target block (`.ls-block[blockid]`), opening the
   target again if the focus has moved, and the runner loads a start held wrong once more.
 - **Plain lines paste as text.** Multi-line text pastes into the block, unless it reads as Markdown

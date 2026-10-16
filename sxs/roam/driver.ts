@@ -71,8 +71,8 @@ export const driver: Driver = {
     outdent: 'Shift+Tab',
     deleteContentBackward: 'Backspace',
     deleteContentForward: 'Delete',
-    moveBlockUp: 'Alt+Shift+ArrowUp',
-    moveBlockDown: 'Alt+Shift+ArrowDown',
+    moveSubtreeUp: 'Alt+Shift+ArrowUp',
+    moveSubtreeDown: 'Alt+Shift+ArrowDown',
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
     pasteStructured: 'Control+v',
     pastePlain: 'Control+Shift+v',
@@ -83,7 +83,7 @@ export const driver: Driver = {
   emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd'],
   // Shift+Tab leaves later siblings with the parent (logical outdenting); Enter on an empty nested
   // block outdents it, as ourus's config says of Roam
-  behaves: { outdent: 'logical', enterOnEmptyItem: 'outdent' },
+  behaves: { outdent: 'logical', enterOnEmptyItem: 'outdent', pasteStructuredLines: 'items', pasteStructuredMidText: 'after' },
   // Roam's code blocks are a format of its own
   refuses: ['code block', 'html', 'table', 'math'],
   holds(doc) {

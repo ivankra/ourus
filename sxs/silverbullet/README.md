@@ -16,14 +16,14 @@ read-only space (the manual).
 | --- | --- |
 | `enter`, `shiftEnter` | Enter (SilverBullet's own list continuation), Shift+Enter |
 | `indent`, `outdent` | Ctrl+. then L, Ctrl+. then H: "Outline: Move Right" and "Move Left" |
-| `moveBlockUp`, `moveBlockDown` | Alt+Up, Alt+Down: "Outline: Move Up" and "Move Down" |
+| `moveSubtreeUp`, `moveSubtreeDown` | Alt+Up, Alt+Down: "Outline: Move Up" and "Move Down" |
 | `deleteContentBackward`, `deleteContentForward` | Backspace (CodeMirror's `deleteMarkupBackward`), Delete |
 | `deleteSoftLineBackward` | Shift+Home, Backspace ("Delete Line Boundary Backward" is bound on a Mac only) |
 | `pasteStructured`, `pastePlain` | Ctrl+V, Ctrl+Shift+V |
 | `undo`, `redo` | Ctrl+Z, Ctrl+Y |
 | caret motions | arrows, Home, End, Ctrl+Home, Ctrl+End; `select…` with Shift |
 
-`deleteSubtree` and `duplicateNode` have no command in SilverBullet; their tests are skipped.
+`deleteSubtree` and `duplicateSubtree` have no command in SilverBullet; their tests are skipped.
 
 **Tab is not the outline indent.** Tab is "Editor: Indent", CodeMirror's `indentMore`: it indents the
 selected lines by the indent unit, so a list item's children stay where they were. The outline

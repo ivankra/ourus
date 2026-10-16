@@ -19,7 +19,7 @@ const RUNS = Number(process.argv[2] ?? 3000);
 const MODE = (process.argv[3] ?? 'md') as Mode;
 const GEN = process.argv[4] ?? 'all';
 
-const CMDS: Cmd[] = ['indent', 'outdent', 'moveBlockUp', 'moveBlockDown', 'enter', 'deleteContentBackward', 'deleteContentForward'];
+const CMDS: Cmd[] = ['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'enter', 'deleteContentBackward', 'deleteContentForward'];
 const TEXTS = ['a', 'b c', 'x', 'long text', ''];
 const MARKERS = ['- ', '- ', '* ', '1. ', '- [ ] ', '- [x] '];
 const OTHER = ['', '', '# H', '## H2', '### H3', 'para', 'p q', '> q'];

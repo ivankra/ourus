@@ -1,7 +1,9 @@
 // Reads the behaviour spec (spec/*.md, format in spec/README.md) with ourus's own parser: fenced
-// `buffer`, `clipboard` (or `clipboard-no-newline`) and `result` blocks are editor states, quotes the actions between them, and
-// a `config` block before them sets a test's options over the file's frontmatter.
+// `buffer`, `clipboard` and `result` blocks are editor states, quotes the actions between them, and
+// a config block before them (a `yaml` block) sets a test's options over the file's frontmatter, and
+// the clipboard it starts with.
 
+import { isMap, isScalar, parseDocument, Scalar } from 'yaml';
 import { Config } from '../src/config.ts';
 import { SyntaxTree } from '../src/parser/syntax.ts';
 import type { Block, LineInfo } from '../src/parser/types.ts';
@@ -32,7 +34,7 @@ export interface SpecTest {
   readonly name: string;
   /** Agreed behaviour not implemented yet: `status: pending`. */
   readonly pending: boolean;
-  /** Frontmatter, then the test's `config` block, which wins. */
+  /** Frontmatter, then the test's config block, which wins. */
   readonly options: Readonly<Record<string, string>>;
   readonly initial: State & { buffer: string };
   readonly steps: Step[];
@@ -40,10 +42,11 @@ export interface SpecTest {
 
 /**
  * Known options, so an unknown one is an error, not silently ignored: `status` (`pending` for
- * behaviour agreed on but not built, or `ready`, the default), and the keys of ourus's config
- * (`src/config.ts`).
+ * behaviour agreed on but not built, or `ready`, the default), `rank` (how often a user meets the
+ * case: `core`, `common`, `edge`, `rare`; review metadata, never an editor setting), and the keys of
+ * ourus's config (`src/config.ts`).
  */
-const SPEC_OPTIONS: Readonly<Record<string, readonly string[]>> = { status: ['ready', 'pending'] };
+const SPEC_OPTIONS: Readonly<Record<string, readonly string[]>> = { status: ['ready', 'pending'], rank: ['core', 'common', 'edge', 'rare'] };
 
 /** The ourus config a test's options set: every option but the spec's own, as values. */
 export function specConfig(options: Readonly<Record<string, string>>): Partial<Config> {
@@ -63,8 +66,8 @@ export function readSpec(file: string, source: string): SpecTest[] {
   };
 
   const tests: SpecTest[] = [];
-  /** A `config` block read, waiting for the test it starts. */
-  let config: { line: number; options: Record<string, string> } | null = null;
+  /** A config block read, waiting for the test it starts. */
+  let config: ({ line: number } & Read) | null = null;
   const headings: string[] = [];
   /** Every heading's anchor, so none is repeated: a heading names a test and links to it. */
   const anchors = new Map<string, number>();
@@ -102,13 +105,15 @@ export function readSpec(file: string, source: string): SpecTest[] {
     }
     if (block.type !== 'code_block' || !block.fenced) continue;
     const [kind, ...words] = (block.info ?? '').trim().split(/\s+/);
-    if (kind !== 'buffer' && kind !== 'clipboard' && kind !== 'clipboard-no-newline' && kind !== 'result' && kind !== 'config') continue;
+    if (kind === 'clipboard-no-newline') fail(block.startLine, 'no "clipboard-no-newline" block: a clipboard is a literal block in the config, and "clipboard: |-" ends it without a line break');
+    if (kind === 'config') fail(block.startLine, 'a config block is a `yaml` block');
+    if (kind !== 'buffer' && kind !== 'clipboard' && kind !== 'result' && kind !== 'yaml') continue;
     if (block.fenceOffset) fail(block.startLine, 'an indented fence would change its content');
     if (words.length > 0) fail(block.startLine, `"${words.join(' ')}" after "${kind}": options go in a config block before the test's first block`);
-    if (kind === 'config') {
+    if (kind === 'yaml') {
       if (test) fail(block.startLine, "a config block goes before a test's first block");
       if (config) fail(block.startLine, 'a second config block for one test');
-      config = { line: block.startLine, options: readOptions(fenceContent(tree, block), block.startLine + 1, (line, m) => fail(line, m)) };
+      config = { line: block.startLine, ...readConfig(fenceContent(tree, block), block.startLine + 1, (line, m) => fail(line, m), true) };
       continue;
     }
     if (!test) {
@@ -118,17 +123,18 @@ export function readSpec(file: string, source: string): SpecTest[] {
       sectionHasTest = true;
       const options = { ...fileOptions, ...config?.options };
       test = { file, line: (config?.line ?? block.startLine) + 1, name, pending: options.status === 'pending', options, initial: { buffer: '' }, steps: [] };
-      config = null;
       delete (test.initial as State).buffer;
+      if (config?.clipboard !== undefined) test.initial.clipboard = config.clipboard;
+      config = null;
       tests.push(test);
       group = test.initial;
     }
     if (kind === 'result' && group === test.initial) fail(block.startLine, 'a result before any action');
-    // a clipboard whose text doesn't end with a line break
-    const field = kind === 'clipboard-no-newline' ? 'clipboard' : kind;
-    if (group![field] !== undefined) fail(block.startLine, `a second ${field} block for one state (each test needs a heading of its own)`);
+    // before the first action: the config, then the buffer, and nothing else
+    if (kind === 'clipboard' && group === test.initial) fail(block.startLine, 'the clipboard a test starts with goes in its config block: "clipboard: |", its lines indented under it');
+    if (group![kind] !== undefined) fail(block.startLine, `a second ${kind} block for one state (each test needs a heading of its own)`);
     const content = fenceContent(tree, block);
-    group![field] = kind === 'result' ? content.trim() : kind === 'clipboard-no-newline' ? content.replace(/\n$/, '') : content;
+    group![kind] = kind === 'result' ? content.trim() : content;
   }
 
   if (config) fail(config.line, 'a config block with no test after it');
@@ -151,35 +157,58 @@ export const tokenize = (s: string): string[] => s.match(/"[^"]*"|\S+/g) ?? [];
 function frontmatter(file: string, source: string): { body: string; options: Record<string, string> } {
   const m = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(source);
   if (!m) return { body: source, options: {} };
-  const options = readOptions(m[1]!, 1, (line, msg) => {
+  const { options } = readConfig(m[1]!, 1, (line, msg) => {
     throw new SpecError(`${file}:${line + 1}: ${msg}`);
   });
   // blank lines in its place keep line numbers right
   return { body: m[0].replace(/[^\r\n]/g, '') + source.slice(m[0].length), options };
 }
 
+/** What frontmatter or a config block says: options, and (a config block's) the clipboard a test starts with. */
+type Read = { options: Record<string, string>; clipboard?: string };
+
 /**
- * Options from `key: value` lines (frontmatter, a config block), checked: an unknown key or a value
- * the option doesn't take is an error. `first` is the 0-based line of the first one.
+ * Frontmatter or a config block, read as YAML, every value a string (YAML's failsafe schema: `false`
+ * is the word). Its options are checked: an unknown key or a value the option doesn't take is an
+ * error. A config block's `clipboard` is a literal block, its lines indented two spaces under it:
+ * `|` ends the text with a line break, `|-` without one, and an indentation indicator (`|2`) keeps
+ * the spaces its lines all start with, which YAML would otherwise take for the block's indentation.
+ * `first` is the 0-based line of the text's first line.
  */
-function readOptions(text: string, first: number, fail: (line: number, message: string) => never): Record<string, string> {
-  const options: Record<string, string> = {};
-  text.split(/\r?\n/).forEach((line, i) => {
-    if (line.trim() === '' || line.trimStart().startsWith('#')) return;
-    const kv = /^([\w-]+):\s*(.*)$/.exec(line);
-    if (!kv) fail(first + i, 'options are "key: value" lines');
-    const [, key, raw] = kv!;
-    const value = raw!.trim();
-    const values = SPEC_OPTIONS[key!];
-    if (values) {
-      if (!values.includes(value)) fail(first + i, `option "${key}" takes ${values.join(', ')}, not "${value}"`);
-    } else {
-      const set = Config.read({ [key!]: value });
-      if (typeof set === 'string') fail(first + i, set);
+function readConfig(text: string, first: number, fail: (line: number, message: string) => never, inTest = false): Read {
+  const lineAt = (offset: number): number => first + (text.slice(0, offset).match(/\n/g)?.length ?? 0);
+  const doc = parseDocument(text, { schema: 'failsafe' });
+  const error = doc.errors[0];
+  if (error) fail(lineAt(error.pos[0]), `not YAML: ${error.message.split('\n')[0]!.replace(/ at line \d+, column \d+:?$/, '')}`);
+  const read: Read = { options: {} };
+  if (doc.contents === null) return read;
+  if (!isMap(doc.contents)) fail(first, 'options are "key: value" lines');
+  for (const { key: k, value: v } of doc.contents.items) {
+    const at = lineAt(isScalar(k) ? k.range![0] : 0);
+    const key = isScalar(k) ? String(k.value) : fail(at, 'options are "key: value" lines');
+    if (!isScalar(v) || typeof v.value !== 'string') fail(at, `option "${key}" takes one value`);
+    const value = (v as Scalar<string>).value;
+    if (key === 'clipboard') {
+      if (!inTest) fail(at, "a clipboard is a test's: it goes in its config block");
+      if ((v as Scalar).type !== Scalar.BLOCK_LITERAL) fail(at, 'a clipboard is a literal block: "clipboard: |", its lines indented two spaces under it');
+      // without an indicator, YAML takes the first line's indentation for the block's, and drops it from every line
+      const [header, ...after] = text.slice((v as Scalar).range![0]).split('\n');
+      const firstLine = after.find((l) => l.trim() !== '');
+      if (!/\d/.test(header!) && value !== '' && /^ */.exec(firstLine ?? '')![0].length !== 2)
+        fail(at + 1, `a clipboard's lines are indented two spaces under it; for spaces they all start with, an indentation indicator says where its text starts ("|2")`);
+      read.clipboard = value;
+      continue;
     }
-    options[key!] = value;
-  });
-  return options;
+    const values = SPEC_OPTIONS[key];
+    if (values) {
+      if (!values.includes(value)) fail(at, `option "${key}" takes ${values.join(', ')}, not "${value}"`);
+    } else {
+      const set = Config.read({ [key]: value });
+      if (typeof set === 'string') fail(at, set);
+    }
+    read.options[key] = value;
+  }
+  return read;
 }
 
 function lineText(tree: Parsed, l: number): string {

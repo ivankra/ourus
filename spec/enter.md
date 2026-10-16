@@ -1,12 +1,58 @@
+
 # Enter
 
 Command: `enter`.
 
-Enter splits an item at the caret. The text after the caret becomes a new item below it.
+Enter makes a node; whereas [`shiftEnter`](shift-enter.md) makes a line.
+The rules, in order; the first that applies wins:
+
+1. **In fenced code**, a new code line ([fences.md](fences.md)).
+2. **A selection across lines** is the host's.
+3. **On an empty item** first or in the middle of its list, a new empty sibling, the caret going
+   into it (`enterOnEmptyItem: sibling`, the default); as the last item of its list, or with
+   `enterOnEmptyItem: outdent` anywhere, a nested item outdents as Shift-Tab does, and a top-level
+   one leaves the list: it becomes an empty paragraph, held by a placeholder and set off by blank
+   lines. In a quote it stays in the quote. The same at every depth (Enter5, Enter6, Enter7,
+   Enter7b, Enter15, Enter15b, Enter27, Enter30). On that empty paragraph Enter is refused: there is
+   no second one to make (Enter40).
+4. **On an empty item with children**, a new empty first child (Enter21).
+5. **In an item's marker**, Enter acts at the item's text start (Enter34).
+6. **At the start of a node's text**, with `enterAtTextStart: into` (the default), a new empty
+   node above it, the caret going into it: an empty item above an item, an empty paragraph, held
+   by a placeholder, above a paragraph or a heading (Enter26, Enter29, Enter31, Enter32, Enter33,
+   Enter45, Enter46).
+   With `stay`, Enter splits there as anywhere in the text, the caret staying with the text: an
+   empty item above an item, a blank line above a paragraph (an empty paragraph has no Markdown),
+   and above a heading's title an empty heading, the title a paragraph below (Enter26b, Enter29b,
+   Enter32b, Enter33b).
+7. **In the middle of an item's text**, the item splits. The text after the caret becomes the next
+   sibling, which takes the item's children (`enterMidItem: sibling`, the default), or its first
+   child (`child`) (Enter1, Enter3, Enter3b, Enter3c). The spaces at the split go with neither half.
+8. **At the end of an item's text**, a new empty item: the first child of an item with children,
+   else the next sibling, numbered on, set off by a blank line in a loose list (Enter2, Enter4,
+   Enter36, Enter36b).
+9. **In a paragraph**, two paragraphs, a blank line between; the second takes the paragraph's list
+   (Enter12, Enter22). In a heading, the rest of the title becomes the section's first paragraph
+   (Enter23, Enter41, Enter42).
+10. **Text after the caret that would start a block stays text**: it is escaped, a list marker
+    included, in every kind of node (Enter8, Enter9, Enter10, Enter11, Enter22, Enter35, Enter41,
+    Enter42).
+
+Backspace takes an Enter back (Enter3d, Enter38, Enter39, Enter43), up to the spaces at the split
+(Enter44).
+
+Bare Obsidian's Enter is a text editor's newline with list continuation. It doesn't escape what
+follows the caret (`- abc ┃- def` gives a nested item), splits a paragraph into two lines of one
+paragraph, and continues a list without the blank line a loose list or a paragraph needs.
 
 ## Enter1
 
-Splits item at the caret.
+Splits item at the caret. The space at the split goes with neither half, as in Logseq and bare
+Obsidian, and Backspace doesn't bring it back ([Enter44](#enter44) says why).
+
+```yaml
+rank: core
+```
 
 ```buffer
 - one two┃ three
@@ -27,6 +73,10 @@ Ordered item counts on at end.
 
 At the end of an item, Enter makes an empty sibling. Ordered items count on.
 
+```yaml
+rank: core
+```
+
 ```buffer
 1. one┃
 ```
@@ -40,9 +90,37 @@ At the end of an item, Enter makes an empty sibling. Ordered items count on.
 
 ## Enter3
 
-Becomes first child of parent item.
+In the middle of an item with children, the rest becomes the next sibling and takes the children
+(`enterMidItem: sibling`, the default), as they follow it in the text: Roam, WorkFlowy, Dynalist,
+SiYuan, BlockNote and Obsidian (bare and Outliner) do this. Logseq and Tine make the rest the first
+child ([Enter3b](#enter3b)).
 
-An item with children gets the new item as its first child.
+```yaml
+rank: common
+```
+
+```buffer
+- a┃ b
+  - c
+```
+
+> enter
+
+```buffer
+- a
+- ┃b
+  - c
+```
+
+## Enter3b
+
+With `enterMidItem: child`, the rest becomes the item's first child and the item keeps its
+children, as in Logseq and Tine.
+
+```yaml
+rank: edge
+enterMidItem: child
+```
 
 ```buffer
 - a┃ b
@@ -57,12 +135,68 @@ An item with children gets the new item as its first child.
   - c
 ```
 
+## Enter3c
+
+The sibling that takes the children is numbered on; where its number is a column wider, the
+children move with its content column.
+
+```yaml
+rank: rare
+```
+
+```buffer
+9. a┃ b
+   - c
+10. d
+```
+
+> enter
+
+```buffer
+9. a
+10. ┃b
+    - c
+11. d
+```
+
+## Enter3d
+
+Enter in the middle of an item with children, then Backspace: the text comes back as it was, the
+children going back to the joined item.
+
+```yaml
+rank: common
+```
+
+```buffer
+- a┃b
+  - c
+```
+
+> enter
+
+```buffer
+- a
+- ┃b
+  - c
+```
+
+> deleteContentBackward
+
+```buffer
+- a┃b
+  - c
+```
+
 ## Enter4
 
-Empty first child is held by a placeholder.
+At the end of an item with children the new item is its first child. Empty right after the
+parent's text, where `  - ` would be a setext underline, it is held by a placeholder until something
+is typed. Bare Obsidian makes a sibling, which takes the children.
 
-At the end of such an item the new child is empty, right after the parent's text, where Markdown
-can't hold it: a placeholder holds it until something is typed.
+```yaml
+rank: core
+```
 
 ```buffer
 - a┃
@@ -79,12 +213,12 @@ can't hold it: a placeholder holds it until something is typed.
 
 ## Enter5
 
-Empty nested item outdents.
+Enter on an empty nested item that is the last child outdents it: Enter twice ends a nested list,
+as at the top level ([Enter6](#enter6)).
 
-Enter on an empty nested item that is the last child outdents it. On an empty top-level item it
-leaves the list: the item becomes an empty paragraph, held by a placeholder and set off from the
-items around it by blank lines. So Enter twice ends a list. Workflowy, Logseq, Roam and Dynalist
-all outdent here.
+```yaml
+rank: core
+```
 
 ```buffer
 - a
@@ -102,7 +236,13 @@ all outdent here.
 
 ## Enter6
 
-Empty top-level item leaves the list.
+The last empty item of a top-level list becomes an empty paragraph, held by a placeholder. Bare
+Obsidian removes the marker without the blank line, so what is typed there continues the item above
+as a lazy line.
+
+```yaml
+rank: core
+```
 
 ```buffer
 - a
@@ -119,9 +259,39 @@ Empty top-level item leaves the list.
 
 ## Enter7
 
-Leaving mid-list splits the list.
+On an empty top-level item in the middle of its list, Enter makes another empty item, as in a
+nested list ([Enter27](#enter27)): only the last empty item of a list leaves it (a user decision).
+The block apps do the same; bare Obsidian leaves the list, which is `enterOnEmptyItem: outdent`
+([Enter7b](#enter7b)).
 
-In the middle of a list, leaving it splits the list in two.
+```yaml
+rank: common
+```
+
+```buffer
+- a
+- ┃
+- b
+```
+
+> enter
+
+```buffer
+- a
+- 
+- ┃
+- b
+```
+
+## Enter7b
+
+With `enterOnEmptyItem: outdent`, Enter on an empty item in the middle of a top-level list leaves
+the list, splitting it in two.
+
+```yaml
+rank: edge
+enterOnEmptyItem: outdent
+```
 
 ```buffer
 - a
@@ -141,11 +311,13 @@ In the middle of a list, leaving it splits the list in two.
 
 ## Enter8
 
-A list marker after the caret stays text in the new item.
+Text after the caret that would start a block stays text: the new item's text is `- def`, as the
+outliners keep it, written `\- def` since `- - def` would be a nested item. Bare Obsidian makes it a
+nested item or a paragraph line.
 
-Text after the caret that would start a block stays text: it is escaped. That includes a list
-marker: the new item's text is `- def`, as Workflowy, Logseq, Roam and Dynalist keep it, written
-`\- def` since `- - def` would be a nested item.
+```yaml
+rank: common
+```
 
 ```buffer
 - abc ┃- def
@@ -161,6 +333,10 @@ marker: the new item's text is `- def`, as Workflowy, Logseq, Roam and Dynalist 
 ## Enter9
 
 Trailing heading marker escaped.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - abc ┃# def
@@ -179,6 +355,10 @@ HTML block tag escaped.
 
 That includes an HTML block's opening tag, and a link reference definition.
 
+```yaml
+rank: rare
+```
+
 ```buffer
 - abc ┃<div>
 ```
@@ -194,6 +374,10 @@ That includes an HTML block's opening tag, and a link reference definition.
 
 Link reference definition escaped.
 
+```yaml
+rank: rare
+```
+
 ```buffer
 see ┃[a]: /url
 ```
@@ -208,9 +392,13 @@ see
 
 ## Enter12
 
-Paragraph splits in two.
+Enter in a paragraph makes two paragraphs, a blank line between them: a node is what Enter makes.
+Bare Obsidian breaks the line, which is one paragraph to every reader: that is Shift-Enter's
+([ShiftEnter7](shift-enter.md#shiftenter7)).
 
-Enter in a paragraph makes two paragraphs, a blank line between them.
+```yaml
+rank: core
+```
 
 ```buffer
 some┃ text
@@ -226,9 +414,12 @@ some
 
 ## Enter14
 
-Repeated Enter walks out of the list.
+Enter repeatedly walks out of a nested list and then out of the list. The blank line keeps `p` a
+paragraph; bare Obsidian leaves it right under `b`, a lazy line of `b`.
 
-Enter repeatedly walks out of a nested list and then out of the list.
+```yaml
+rank: core
+```
 
 ```buffer
 - a
@@ -246,9 +437,42 @@ p┃
 
 ## Enter15
 
-Leaving a loose list in the middle.
+In a loose list, Enter on an empty item in the middle makes another, set off as the others are
+([Enter7](#enter7), [Enter36](#enter36)).
 
-In a loose list, leaving it in the middle needs no extra blank lines.
+```yaml
+rank: edge
+```
+
+```buffer
+- a
+
+- ┃
+
+- b
+```
+
+> enter
+
+```buffer
+- a
+
+- 
+
+- ┃
+
+- b
+```
+
+## Enter15b
+
+With `enterOnEmptyItem: outdent`, leaving a loose list in the middle needs no extra blank lines, as
+in bare Obsidian.
+
+```yaml
+rank: rare
+enterOnEmptyItem: outdent
+```
 
 ```buffer
 - a
@@ -270,9 +494,12 @@ In a loose list, leaving it in the middle needs no extra blank lines.
 
 ## Enter16
 
-Lazy line goes with the second half.
+A lazy continuation line is part of the item's text, so it goes with the second half, the line
+break at the split going as spaces do.
 
-A lazy continuation line is part of the item's text, so it goes with the second half.
+```yaml
+rank: edge
+```
 
 ```buffer
 - a┃
@@ -291,6 +518,10 @@ lazy
 Enter copies the CRLF of the split line.
 
 New lines take the ending of the line they split.
+
+```yaml
+rank: rare
+```
 
 ```buffer
 - a┃␍
@@ -311,6 +542,10 @@ CRLF line in an LF document.
 
 New lines take the ending of the line they split.
 
+```yaml
+rank: rare
+```
+
 ```buffer
 - a
 - b┃␍
@@ -328,9 +563,13 @@ New lines take the ending of the line they split.
 
 ## Enter21
 
-Enter on an empty item with children makes a new empty first child, the caret going into it.
+Enter on an empty item with children makes a new empty first child, as at the end of any item with
+children ([Enter4](#enter4)). Bare Obsidian removes the marker, which leaves the children a list of
+their own.
 
-As at the end of any item with children ([Enter3](#enter3)). Workflowy, Logseq and Roam do this.
+```yaml
+rank: common
+```
 
 ```buffer
 - ┃
@@ -347,9 +586,13 @@ As at the end of any item with children ([Enter3](#enter3)). Workflowy, Logseq a
 
 ## Enter22
 
-Enter before a list marker in a paragraph opens the paragraph's list.
+Enter before a list marker in a paragraph: the rest is a paragraph of its own, the marker escaped,
+as in an item ([Enter8](#enter8)); it takes the paragraph's list, as any second half does. Bare
+Obsidian makes `- x` the list's first item.
 
-The rest of the text is an item: the paragraph keeps its list, and the item comes first in it.
+```yaml
+rank: edge
+```
 
 ```buffer
 para ┃- x
@@ -361,7 +604,7 @@ para ┃- x
 ```buffer
 para
 
-- ┃x
+┃\- x
 - a
 ```
 
@@ -370,6 +613,10 @@ para
 Enter in a heading above indented code sets the code apart.
 
 The new paragraph needs a blank line before the code, or it takes the code in as a continuation.
+
+```yaml
+rank: rare
+```
 
 ```buffer
 ### H┃2
@@ -387,10 +634,12 @@ The new paragraph needs a blank line before the code, or it takes the code in as
 
 ## Enter25
 
-A marker that grows moves its item's other lines.
+A new item before `9.` renumbers it to `10.`, a column wider, so the item's child moves with its
+content column. Bare Obsidian leaves the child at three columns, no longer `10.`'s.
 
-A new item before `9.` renumbers it to `10.`, which is a column wider, so the item's child moves
-with its content column.
+```yaml
+rank: rare
+```
 
 ```buffer
 8. z┃
@@ -411,11 +660,13 @@ with its content column.
 
 ## Enter26
 
-Enter at the start of a first child puts an empty item above, the caret going into it.
+Enter at the start of a first child puts an empty item above, the caret going into it, as at any
+item's start ([Enter29](#enter29)). Right after `a`'s text the empty item would be a setext
+underline, so a placeholder holds it.
 
-As at any item's start ([Enter29](#enter29)). Right after `a`'s text, an empty item would be a
-setext underline, so a placeholder holds it while the caret is in it. Workflowy, Logseq, Roam and
-Dynalist all do this.
+```yaml
+rank: common
+```
 
 ```buffer
 - a
@@ -430,14 +681,40 @@ Dynalist all do this.
   - b
 ```
 
+## Enter26b
+
+With `enterAtTextStart: stay`, the caret stays with the text, and the empty item above it, away
+from the caret, is set off from the parent's text by a blank line. Bare Obsidian writes `  - ` right
+under `- a`: a setext underline, `a` a heading.
+
+```yaml
+rank: edge
+enterAtTextStart: stay
+```
+
+```buffer
+- a
+  - ┃b
+```
+
+> enter
+
+```buffer
+- a
+
+  - 
+  - ┃b
+```
+
 ## Enter27
 
-Enter on an empty item in the middle of a nested list makes another empty item.
+In the middle of a nested list, Enter on an empty item makes a new empty sibling, as Logseq,
+WorkFlowy, Dynalist and Tine do. Roam and Obsidian's Outliner outdent it logically, the caret
+jumping below `c` ([Enter30](#enter30)); bare Obsidian outdents it directly.
 
-Enter outdents an empty nested item only when it is the last child ([Enter5](#enter5)), to leave
-the list at its end. In the middle of its list, Enter makes a new empty sibling and the caret goes
-into it. Workflowy, Logseq and Dynalist do this. Roam outdents the item instead, logically, so the
-caret jumps below `c` ([Enter30](#enter30): `enterOnEmptyItem: outdent`); so does obsidian-outliner.
+```yaml
+rank: common
+```
 
 ```buffer
 - a
@@ -458,11 +735,13 @@ caret jumps below `c` ([Enter30](#enter30): `enterOnEmptyItem: outdent`); so doe
 
 ## Enter28
 
-Enter on an empty first child makes another empty item, above it, the caret going into the new one.
+On an empty first child, another empty item goes above it, the caret going into it: right after
+`a`'s text an empty item exists only under the caret. The outliners put the caret in the lower one;
+only the caret differs.
 
-The same as [Enter27](#enter27), for the first child, and the outliners behave the same. Right
-after `a`'s text an empty item exists only under the caret (held by a placeholder), so the new item
-goes above, as in [Enter26](#enter26), and the caret goes into it.
+```yaml
+rank: edge
+```
 
 ```buffer
 - a
@@ -481,11 +760,13 @@ goes above, as in [Enter26](#enter26), and the caret goes into it.
 
 ## Enter29
 
-Enter at the start of an item's text puts an empty item above, the caret going into it.
+Enter at the start of an item's text puts an empty item above, the caret going into it
+(`enterAtTextStart: into`, the default), as Logseq, Roam, WorkFlowy, Dynalist, Tine and SiYuan do.
+Bare Obsidian, its Outliner and BlockNote keep the caret with the text ([Enter29b](#enter29b)).
 
-Workflowy, Logseq, Roam and Dynalist all do this. obsidian-true-outliner does it on an item with
-children, but on a childless item it treats Enter at the start as a split, and the caret stays with
-the text (its catalogue's E26 and E28).
+```yaml
+rank: core
+```
 
 ```buffer
 - a
@@ -502,15 +783,38 @@ the text (its catalogue's E26 and E28).
   - c
 ```
 
+## Enter29b
+
+With `enterAtTextStart: stay`, the caret stays with the text, as in bare Obsidian, its Outliner,
+BlockNote and SilverBullet.
+
+```yaml
+rank: common
+enterAtTextStart: stay
+```
+
+```buffer
+- a
+  - b
+  - ┃c
+```
+
+> enter
+
+```buffer
+- a
+  - b
+  - 
+  - ┃c
+```
+
 ## Enter30
 
-With `enterOnEmptyItem: outdent`, Enter on an empty item in the middle of a nested list outdents it.
+With `enterOnEmptyItem: outdent` and `outdent: logical` (Roam's way), the item outdents as Shift-Tab
+would, moving past its later siblings.
 
-Roam's behaviour, set with `enterOnEmptyItem: outdent` and `outdent: logical`: the item outdents as
-Shift-Tab would, so with logical outdent it moves past its later siblings and the caret jumps below
-`c`. With the default, Enter makes another empty item ([Enter27](#enter27)).
-
-```config
+```yaml
+rank: edge
 enterOnEmptyItem: outdent
 outdent: logical
 ```
@@ -533,10 +837,12 @@ outdent: logical
 
 ## Enter31
 
-Enter at the start of an item with children puts the new item above, the caret going into it.
+Enter at the start of an item with children puts the new item above, the caret going into it. No
+placeholder is needed: an empty item can start a document, or follow an item or a heading.
 
-The item keeps its text and children. No placeholder is needed: an empty item can start a document,
-or follow an item or a heading.
+```yaml
+rank: common
+```
 
 ```buffer
 - ┃a
@@ -553,10 +859,44 @@ or follow an item or a heading.
 
 ## Enter32
 
-Enter at the start of a heading's text splits the heading there, as anywhere in it.
+Enter at the start of a heading's text puts an empty paragraph above it, held by a placeholder, the
+caret going into it; the heading and its section stay as they are, as Dynalist, Roam, SiYuan and
+WorkFlowy keep a heading block. True-outliner puts an empty heading above instead.
 
-An empty heading stays above, and the text becomes a paragraph below it, the caret with it.
-Obsidian and most plain text editors do this.
+```yaml
+rank: common
+```
+
+```buffer
+para
+
+# ┃Title
+
+body
+```
+
+> enter
+
+```buffer
+para
+
+┃◌
+
+# Title
+
+body
+```
+
+## Enter32b
+
+With `enterAtTextStart: stay`, Enter splits the heading there, as anywhere in its title: an empty
+heading stays above, the title a paragraph below, under it. Bare Obsidian, the text editors, Logseq
+and Tine do this.
+
+```yaml
+rank: edge
+enterAtTextStart: stay
+```
 
 ```buffer
 # ┃H1
@@ -571,10 +911,50 @@ Obsidian and most plain text editors do this.
 
 ## Enter33
 
-Enter at the start of a paragraph opens a blank line above it, the text staying put.
+Enter at the start of a paragraph puts an empty paragraph above it, held by a placeholder, the
+caret going into it, as at an item's start ([Enter29](#enter29)). What is typed there is a
+paragraph of its own; left without typing, it is a blank line again.
 
-An empty paragraph has no Markdown, so no node is made: the caret stays with the text.
-Obsidian and most plain text editors do this.
+```yaml
+rank: common
+```
+
+```buffer
+intro
+
+┃hello
+```
+
+> enter
+
+```buffer
+intro
+
+┃◌
+
+hello
+```
+
+> "x"
+
+```buffer
+intro
+
+x┃
+
+hello
+```
+
+## Enter33b
+
+With `enterAtTextStart: stay`, Enter splits there: the empty half has no Markdown, so it is a blank
+line above, the caret staying with the text. Bare Obsidian and the text editors do this. The blank
+line shows nothing, and text typed after Up joins `intro` or `hello` (Up lands next to one of them).
+
+```yaml
+rank: edge
+enterAtTextStart: stay
+```
 
 ```buffer
 ┃hello
@@ -589,9 +969,12 @@ Obsidian and most plain text editors do this.
 
 ## Enter34
 
-Enter with the caret in an item's marker acts at its text start.
+Enter with the caret in an item's marker acts at its text start ([Enter29](#enter29)). Bare
+Obsidian splits the marker from the text, unmaking the item.
 
-An empty item above, the caret going into it ([Enter29](#enter29)).
+```yaml
+rank: edge
+```
 
 ```buffer
 -┃ alpha
@@ -610,6 +993,10 @@ An ordered marker after the caret stays text too, escaped before its `.`.
 
 A backslash before a digit escapes nothing, so the escape goes before the `.` (or `)`).
 
+```yaml
+rank: rare
+```
+
 ```buffer
 1. abc ┃2. def
 ```
@@ -623,7 +1010,11 @@ A backslash before a digit escapes nothing, so the escape goes before the `.` (o
 
 ## Enter36
 
-In a loose list (blank lines between its items), Enter sets the new item off as the others are.
+In a loose list, Enter sets the new item off as the others are. Bare Obsidian adds it tight.
+
+```yaml
+rank: common
+```
 
 ```buffer
 - a
@@ -641,13 +1032,40 @@ In a loose list (blank lines between its items), Enter sets the new item off as 
 - ┃
 ```
 
+## Enter36b
+
+In a loose list in a quote, the blank line that sets the new item off is quoted: a bare blank line
+would end the quote.
+
+```yaml
+rank: rare
+```
+
+```buffer
+> - a
+>
+> - b┃
+```
+
+> enter
+
+```buffer
+> - a
+>
+> - b
+>
+> - ┃
+```
+
 ## Enter37
 
 Enter on an empty line at the end of an item's content, the caret at its content column: the line
-becomes the item's next sibling, numbered on.
+becomes the item's next sibling, numbered on, as Enter on an empty nested item outdents it. With
+more of the item below the line, Enter there is the host's.
 
-As Enter on an empty nested item outdents it. With more of the item below the line, Enter there is
-the host's.
+```yaml
+rank: rare
+```
 
 ```buffer
 1. a
@@ -661,4 +1079,239 @@ the host's.
 1. a
    text
 2. ┃
+```
+
+## Enter38
+
+Enter, then Backspace: the split item is joined back.
+
+```yaml
+rank: core
+```
+
+```buffer
+- one┃two
+- next
+```
+
+> enter
+
+```buffer
+- one
+- ┃two
+- next
+```
+
+> deleteContentBackward
+
+```buffer
+- one┃two
+- next
+```
+
+## Enter39
+
+Enter at the end of an item, then Backspace: the empty item goes, and the text is as it was.
+
+```yaml
+rank: common
+```
+
+```buffer
+- ab┃
+- c
+```
+
+> enter
+
+```buffer
+- ab
+- ┃
+- c
+```
+
+> deleteContentBackward
+
+```buffer
+- ab┃
+- c
+```
+
+## Enter40
+
+Enter on the empty paragraph that leaving a list made is refused: an empty paragraph exists only
+under the caret, and blank lines more make no second one.
+
+```yaml
+rank: edge
+```
+
+```buffer
+- a
+- ┃
+```
+
+> enter
+
+```buffer
+- a
+
+┃◌
+```
+
+> enter
+
+```result
+rejected: not-expressible
+```
+
+```buffer
+- a
+
+┃◌
+```
+
+## Enter41
+
+A list marker after the caret stays text in a heading too: the rest is a paragraph, its `- x`
+escaped. The list below needs no blank line: it is the new paragraph's either way.
+
+```yaml
+rank: edge
+```
+
+```buffer
+# Title ┃- x
+- y
+```
+
+> enter
+
+```buffer
+# Title
+┃\- x
+- y
+```
+
+## Enter42
+
+In a setext title the same: the underline stays with the heading, and the rest, escaped, follows it.
+
+```yaml
+rank: rare
+```
+
+```buffer
+title ┃- x
+===
+```
+
+> enter
+
+```buffer
+title
+===
+┃\- x
+```
+
+## Enter43
+
+Enter, then Backspace, where the split escaped a marker: the join drops the escape Enter wrote,
+which mid-line serves nothing, and the text is as it was.
+
+```yaml
+rank: rare
+```
+
+```buffer
+- abc┃- def
+```
+
+> enter
+
+```buffer
+- abc
+- ┃\- def
+```
+
+> deleteContentBackward
+
+```buffer
+- abc┃- def
+```
+
+## Enter44
+
+Enter at a space, then Backspace: the text comes back without the space, the inverse pair's stated
+exception. Roam, WorkFlowy, Dynalist and Tine keep the space at the start of the new item, so their
+join restores it. Markdown can't hold it there: in `-  three` the extra space is the marker's
+padding, not text (the item reads `three`), and it moves the item's content column, so children
+indented two spaces stop being its children. Kept as a trailing space on the first half instead, it
+would be invisible, and stripped by editors that trim whitespace on save; added back by every join,
+it would also go into joins of text that never had one.
+
+```yaml
+rank: edge
+```
+
+```buffer
+- one two┃ three
+```
+
+> enter
+
+```buffer
+- one two
+- ┃three
+```
+
+> deleteContentBackward
+
+```buffer
+- one two┃three
+```
+
+## Enter45
+
+At the start of a heading's text right under a paragraph, the empty paragraph is set off from both:
+right under `para` it would be more of `para`'s text.
+
+```yaml
+rank: edge
+```
+
+```buffer
+para
+# ┃Title
+```
+
+> enter
+
+```buffer
+para
+
+┃◌
+
+# Title
+```
+
+## Enter46
+
+At the start of a quote's first paragraph, the empty paragraph is the quote's first, on the line its
+`>` starts.
+
+```yaml
+rank: edge
+```
+
+```buffer
+> ┃quote
+```
+
+> enter
+
+```buffer
+> ┃◌
+>
+> quote
 ```

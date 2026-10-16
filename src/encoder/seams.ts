@@ -83,11 +83,21 @@ export function seam(units: Units, unit: Placed, next: Placed | null, nextUnit: 
   if (!next) return kept(units.last ? units.gap.get(units.last)! : []);
   const fresh = !unit.node ? 'after' : !next.node ? 'before' : null;
   const prev = next.prev;
-  const separable = !((prev ?? unit).kind === 'item' && next.kind === 'item');
+  // within a list, and between a paragraph and the list it owns, where that list can interrupt it, no
+  // blank line is needed
+  const separable = !((prev ?? unit).kind === 'item' && next.kind === 'item') && !ownListFollows(unit, next);
   const made = (lines: readonly number[]): Seam =>
     lines === own && rewritten !== null ? { lines: [], blanks: rewritten, separable, fresh } : { lines, blanks: 0, separable, fresh };
   // new text keeps its own gaps within it
   if (!old(unit) && !old(next)) return { lines: [], blanks: unit.gap, separable: false, fresh: null };
+  // the node that was right after this one, set off by its blank lines, now its first item: they
+  // separated siblings, and a first item in a tight list needs none (a paragraph indented under an
+  // item, an item indented back into a paragraph's list); an empty one still does, which right under
+  // text would read as a setext underline
+  if (!prev && next.kind === 'item' && next.parent === unit && old(next)?.head && old(unit) && units.nextUnit.get(units.lastUnit(old(unit)!)) === old(next)) {
+    const list = unit.kind === 'item' ? (unit.node ?? unit.was)?.block.parent : null;
+    if (unit.kind === 'paragraph' || list?.tight) return { lines: [], blanks: 0, separable: false, fresh: null };
+  }
   // two units that were already next to each other keep what was between them
   const nextOld = nextUnit ? old(nextUnit) : null;
   if (old(unit) && (!nextUnit || nextOld) && (units.nextUnit.get(old(unit)!) ?? null) === nextOld) {
@@ -103,6 +113,10 @@ export function seam(units: Units, unit: Placed, next: Placed | null, nextUnit: 
   if (!prev && owner?.kind === 'paragraph' && next.kind === 'item' && old(next) && old(next)!.parent === owner.parent && arrived(next) && old(next)!.startLine < owner.startLine) {
     return made(gapAfter(old(next)!));
   }
+  // a run arriving from elsewhere as the first children of a childless node that ended its scope:
+  // that node's gap is the scope's end gap, and stays at the end, after them (a run that was right
+  // above the node, moving past it, keeps the blank line between them: see above)
+  if (!prev && arrived(next) && next.parent === unit && old(unit) && old(unit)!.children.length === 0 && endsScope(units, old(unit)!) && !(old(next) && units.nextUnit.get(units.lastUnit(old(next)!)) === old(unit))) return made([]);
   if (!prev) return fresh === 'before' && next.edited?.id == null ? made([]) : fresh ? made(own) : kept(own);
   if (arrived(next) !== arrived(prev)) {
     // a run arriving from elsewhere takes the separation of the place it lands in, on both sides:
@@ -120,9 +134,10 @@ export function seam(units: Units, unit: Placed, next: Placed | null, nextUnit: 
     if (arrived(next) && node.kind === 'item' && next.kind === 'item' && !continues(node, siblingAfter(node), true)) {
       return { lines: [], blanks: node.block.parent!.tight ? 0 : 1, separable: false, fresh: null };
     }
-    // at the end of the text, the gap there is how the text ends, not a separation
+    // at the end of the text, the gap there is how the text ends, not a separation; after the node
+    // that ended its scope, the gap is the scope's end gap, and stays at its end, after the run
     const atEnd = units.nextUnit.get(units.lastUnit(node)) === null;
-    return made(atEnd ? [] : gapAfter(node));
+    return made(atEnd || endsScope(units, node) ? [] : gapAfter(node));
   }
   // a new node's subtree ends with the last unit written
   if (arrived(next)) return made(old(prev) ? gapAfter(old(prev)!) : own);
@@ -141,6 +156,21 @@ export function seam(units: Units, unit: Placed, next: Placed | null, nextUnit: 
   let last = before;
   for (let sibling = siblingAfter(last); continues(last, sibling, true); sibling = siblingAfter(last)) last = sibling!;
   return made(gapAfter(last));
+}
+
+/** Whether `node`'s subtree ended its parent's: the gap after it was the gap ending the parent's scope. */
+const endsScope = (units: Units, node: OutlineNode): boolean => !!node.parent && node.parent.kind !== 'root' && units.lastUnit(node.parent) === units.lastUnit(node);
+
+/**
+ * Whether `next` is the first item of the list paragraph `unit` owns, and that list can interrupt a
+ * paragraph (a bullet list, or an ordered one from 1, its first item not empty): right under the
+ * paragraph's text, it reads as the paragraph's list without a blank line.
+ */
+function ownListFollows(unit: Placed, next: Placed): boolean {
+  if (unit.kind !== 'paragraph' || next.kind !== 'item' || next.parent !== unit || unit.children[0] !== next) return false;
+  const item = next.node ?? next.was;
+  const list = item?.block.list;
+  return !!list && item!.block.children.length > 0 && (list.type === 'bullet' || list.start === 1);
 }
 
 const siblingAfter = (node: OutlineNode): OutlineNode | undefined => {

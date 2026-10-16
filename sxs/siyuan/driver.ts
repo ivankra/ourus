@@ -243,6 +243,8 @@ export const driver: Driver = {
   title: 'SiYuan',
   url: `${origin}/stage/build/desktop/`,
   model: 'block',
+  // structured paste in the middle of a block's text goes after it
+  behaves: { pasteStructuredMidText: 'after' },
   keys: {
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
@@ -251,10 +253,10 @@ export const driver: Driver = {
     deleteContentBackward: 'Backspace',
     deleteContentForward: 'Delete',
     // "Move up", "Move down" (⇧⌘↑, ⇧⌘↓)
-    moveBlockUp: 'Control+Shift+ArrowUp',
-    moveBlockDown: 'Control+Shift+ArrowDown',
+    moveSubtreeUp: 'Control+Shift+ArrowUp',
+    moveSubtreeDown: 'Control+Shift+ArrowDown',
     // "Duplicate" (⌘D): the block being edited, which in an item is its paragraph, not the item
-    duplicateNode: 'Control+d',
+    duplicateSubtree: 'Control+d',
     // no `deleteSubtree`: Escape puts the item's paragraph in block selection, Space selects it, and
     // Backspace empties it, the item and its children staying; an item is selected by its bullet, a click
     // no command: selecting to the line's start, then deleting

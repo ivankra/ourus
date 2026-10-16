@@ -5,7 +5,7 @@ import type { Flavor, LineInfo, PrefixPiece } from '../parser/index.ts';
 import { dominantEnding, mapPos, skipSpaces, type ChangeSpec } from '../text.ts';
 import { OutlineEncoder, OutlinePlan, type EncodeOptions, type EncodeResult } from '../encoder/index.ts';
 import type { CommandResult, Selection } from './index.ts';
-import { reject, type Outcome, type CommandPlan } from './plan.ts';
+import { notApplicable, reject, type Outcome, type CommandPlan } from './plan.ts';
 
 /** One command's context: the document and selection it runs on, and what nearly every command needs of them. */
 export class CommandContext {
@@ -202,6 +202,19 @@ export function operands(ctx: CommandContext): Operands | Extract<CommandResult,
   const indexes = tops.map((n) => parent.children.indexOf(n)).sort((a, b) => a - b);
   for (let i = 1; i < indexes.length; i++) if (indexes[i] !== indexes[i - 1]! + 1) return nonContiguous;
   return new Operands(indexes.map((i) => parent.children[i]!));
+}
+
+/**
+ * A structural command where the selection is on no node: in the preamble's blank lines, with no node
+ * above them to act on, the key is refused (the host's Tab would start indented code there); in text
+ * that is no node (Obsidian's frontmatter), it is the host's.
+ */
+export function noOperands(ctx: CommandContext): Outcome {
+  const { doc } = ctx;
+  const lo = doc.lineAt(ctx.from).index;
+  const hi = doc.lineAt(ctx.to).index;
+  for (let i = lo; i <= hi; i++) if (!doc.lines[i]!.blank) return notApplicable;
+  return reject('nothing-above', 'no node above the blank lines to act on');
 }
 
 /** The node whose trailing gap holds blank line `lineNo`: the node of the nearest non-blank line above. */

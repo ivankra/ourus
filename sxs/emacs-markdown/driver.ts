@@ -58,6 +58,8 @@ export const driver: Driver = {
   title: 'Emacs with markdown-mode',
   url: 'emacs -Q -nw, on a terminal',
   model: 'text',
+  // Backspace right after a checkbox deletes a character (`taskEditing: text`)
+  behaves: { taskEditing: 'text' },
   keys: {
     // `markdown-enter-key`: a line break, indented as the line before (no list item is continued)
     enter: 'RET',
@@ -67,8 +69,8 @@ export const driver: Driver = {
     indent: 'C-c <right>',
     outdent: 'C-c <left>',
     // "Move Subtree Up", "Down" (`markdown-move-up`, `markdown-move-down`)
-    moveBlockUp: 'C-c <up>',
-    moveBlockDown: 'C-c <down>',
+    moveSubtreeUp: 'C-c <up>',
+    moveSubtreeDown: 'C-c <down>',
     // `markdown-outdent-or-delete`; the Delete key, `delete-forward-char`
     deleteContentBackward: 'DEL',
     deleteContentForward: '<deletechar>',

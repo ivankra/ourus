@@ -7,8 +7,8 @@ actions use current command names, so the same files can drive editors with diff
 
 - [Indent (Tab)](indent.md): `indent`.
 - [Outdent (Shift-Tab)](outdent.md): `outdent`.
-- [Block up (Alt-Shift-Up)](block-up.md): `moveBlockUp`.
-- [Block down (Alt-Shift-Down)](block-down.md): `moveBlockDown`.
+- [Move subtree up (Alt-Shift-Up)](move-subtree-up.md): `moveSubtreeUp`.
+- [Move subtree down (Alt-Shift-Down)](move-subtree-down.md): `moveSubtreeDown`.
 - [Enter](enter.md): `enter`.
 - [Shift-Enter](shift-enter.md): `shiftEnter`.
 - [Backspace](backspace.md): `deleteContentBackward`.
@@ -19,31 +19,67 @@ actions use current command names, so the same files can drive editors with diff
 - [`cursor.md`](cursor.md): caret motions, for moving the caret between actions in tests.
 - [`undo.md`](undo.md): undo and redo, placeholders included.
 - [`gaps.md`](gaps.md): blank lines as the trailing gap of the node above, and the preamble.
-- [Delete block](delete-subtree.md): `deleteSubtree`.
-- [Duplicate block](duplicate-block.md): `duplicateNode`.
+- [Delete subtree](delete-subtree.md): `deleteSubtree`.
+- [Duplicate subtree](duplicate-subtree.md): `duplicateSubtree`.
 - [Tasks](tasks.md): Enter and Backspace on tasks.
-- [`placeholders.md`](placeholders.md): empty nodes the text can't hold, kept at the caret: when they come and go.
+- [`placeholders.md`](placeholders.md): empty nodes the text can't hold, kept at the caret: when
+  they come and go.
 - [`obsidian-true-outliner.md`](obsidian-true-outliner.md): obsidian-true-outliner's measured
   cases and catalogue entries.
-- [`quotes.md`](quotes.md): quotes and callouts as containers (postimpl1c §6).
-- [`zzz-open.md`](zzz-open.md): open questions, one case each, drawing what ourus does today, with
-  what other outliners do; a settled one moves to its command's file.
-- [`zzz-redesign.md`](zzz-redesign.md): what the redesign specified and the experiments found that
-  isn't settled yet: the guard's cases, escapes, frontmatter (9 of its 14 cases `pending`).
+- [`quotes.md`](quotes.md): quotes and callouts as containers.
+- [`z-open.md`](z-open.md): open questions, one each, drawing what ourus does today where no
+  command file does, with the alternative and a recommendation; a settled one moves to its
+  command's file.
+- [Typing](typing.md): what the host types, with no ourus command, and what the guard is to do.
 
-Each command has its own spec, named for its key or editing behaviour. Case headings use short
-IDs; the prose explains each case. Current API names are noted in backticks in each file, and
-executable actions keep those names until the API is renamed.
+Each command has its own spec, named for its key or editing behaviour. Its intro lists the
+command's rules in order, the first that applies winning, and every case is an instance of one.
+Case headings use short IDs (`Enter3`, `Quote12`, `Gap4`, `Scenario7`), and prose refers to cases
+by their full IDs, never ranges or abbreviations. The prose under a case says in a sentence or two
+what it shows and why; where bare Obsidian does something else on a common case, what it does and
+why ourus doesn't. Current API names are noted in backticks in each file, and executable actions
+keep those names until the API is renamed.
 
-Outdent's treatment of later siblings is a config option, `outdent`: [direct](outdent.md#direct-outdent)
-(the default, as in Logseq) makes them children of the moved item, preserving document order;
-[logical](outdent.md#logical-outdent) keeps them with their parent. Cases that depend on it live in those
-sections, or set it in their `config` block.
+Outdent's treatment of later siblings is a config option, `outdent`:
+[direct](outdent.md#direct-outdent) (the default, as in Logseq) makes them children of the moved
+item, preserving document order; [logical](outdent.md#logical-outdent) keeps them with their parent.
+Cases that depend on it live in those sections, or set it in their config block.
 
 Some empty nodes have no Markdown of their own. A placeholder (`◌`) holds one open while the user
 edits it; [placeholders.md](placeholders.md) specifies what happens when it is filled or left.
 Applied commands are checked by re-parsing their output against the intended outline. Where a
-command does not apply, the host runs its own default.
+command does not apply, the host runs its own default; that is only for edits within one node's
+text, and for edits with the caret in markup that ourus would refuse (`editInMarkup: host`).
+
+## What every case holds to
+
+No command breaks these; a case that seems to need to is wrong, or is a refusal.
+
+1. **Exactly the intended structure, or a clean refusal**, with a reason Markdown imposes
+   (`not-expressible`, `nothing-above`, ...). `encoding-failed` is a bug, never an outcome.
+2. **Lossless and minimal.** Nothing the user wrote is lost; text the edit isn't about stays byte
+   for byte (other lines, the node's own text, hard-break spaces, code, tabs, CRLF, the numbers of
+   untouched lists). Prefixes, markers and blank lines change only where the structure requires.
+3. **The host's key only inside text.** At a markup boundary (a marker, a checkbox, `#`s, a fence
+   line, a quote's `>`, a callout title, a blank line between nodes) ourus does the edit or refuses.
+   With the caret in markup itself, where only the host puts it, an edit ourus would refuse is the
+   host's under `editInMarkup: host` (the default), whatever the text then reads as; `refuse`
+   keeps the refusal ([Delete23](del.md#delete23), [Delete16c](del.md#delete16c)).
+4. **Other nodes keep their parents**: a command changes the parents of its operands, and of the
+   neighbors its own definition names, never of any other node. Those neighbors: direct outdent's
+   later siblings, the section an unwrapped heading releases
+   ([Backspace35](backspace.md#backspace35)), what a pasted heading takes in
+   ([Paste34](paste.md#paste34)), and the list a paragraph that stays takes in when a move leaves it
+   right above one ([MoveUp35](move-subtree-up.md#moveup35)).
+5. **Inverse pairs invert** (indent and outdent, up and down, Enter and Backspace, Shift-Enter and
+   Backspace), or at least their outline where Markdown forces a difference, which the case states.
+6. **The caret never ends in markup**: after a command it is in a node's text, never where typing
+   would break the node.
+7. **Text stays text**: text after the caret that would start a block at a line's start is
+   escaped; only the user's own typing authors structure.
+8. **Empty nodes are held, then resolved**: an empty node Markdown can't hold is held by a
+   placeholder while the caret is in it; when the caret leaves, an empty item stays, set off by a
+   blank line, and an empty paragraph goes.
 
 ## A test
 
@@ -75,12 +111,13 @@ The item becomes the last child of the item above.
   and is an error.
 - **Headings are unique in their file** (compared as anchors: case and punctuation aside), since a
   repeated one would give an ambiguous link and an ambiguous name. A repeat is an error.
-- **The blocks before the first quote are where the test starts**: a `buffer` (required) and,
-  optionally, a `clipboard`. A `config` block, if any, comes first (see below).
+- **The blocks before the first quote are where the test starts**: a config block (a `yaml`
+  block), if any, then one `buffer`, and nothing else. The clipboard the test starts with is in the
+  config block (see below).
 - **A quote lists actions**, applied in order to the current state.
 - **The blocks after a quote are what must hold then**, and they become the current state:
   - `buffer`: the drawn editor state;
-  - `clipboard`: the clipboard's text, ending with a line break; `clipboard-no-newline`: without it;
+  - `clipboard`: the clipboard's text, ending with a line break;
   - `result`: what ourus made of the last action, which must be one of its commands:
     `applied`, `notApplicable` (the host's default ran instead) or `rejected: <reason>`. Other
     editors check buffers only.
@@ -88,10 +125,10 @@ The item becomes the last child of the item above.
   What isn't drawn isn't checked. The blocks of one state can come in any order, at most one of
   each kind.
 - **A test's name is the headings above it**, below the file's title. Per-command files use short
-  case IDs (`Enter1`, `ShiftEnter1`, `BlockUp1`) and explain the behaviour in prose below each ID.
-  Keep assigned IDs stable as cases are added. File titles use keys and semantics (Enter, Block up);
-  mention the current API name in backticks in the prose (`shiftEnter`, `moveBlockUp`). Executable
-  actions retain current API names until the command API is renamed.
+  case IDs (`Enter1`, `ShiftEnter1`, `MoveUp1`) and explain the behaviour in prose below each ID.
+  Keep assigned IDs stable as cases are added. File titles use keys and semantics (Enter, Move
+  subtree up); mention the current API name in backticks in the prose (`shiftEnter`,
+  `moveSubtreeUp`). Executable actions retain current API names until the command API is renamed.
 - Prose can go anywhere, and other fenced blocks are ignored.
 
 ## Drawing a buffer
@@ -104,23 +141,22 @@ The item becomes the last child of the item above.
 | `→` | a tab |
 | `␍` | a carriage return |
 
-A `clipboard` block uses `→` and `␍` too, and like a buffer its text ends with a line ending; a
-`clipboard-no-newline` block is a clipboard whose text doesn't. A buffer's last line always ends with a line ending. A buffer that contains a code fence needs a
-longer fence of its own (` ````buffer `).
+A clipboard uses `→` and `␍` too. A buffer's last line always ends with a line ending. A buffer
+that contains a code fence needs a longer fence of its own (`` ````buffer ``).
 
 ## Actions
 
 | action | what the user does |
 | --- | --- |
 | `indent`, `outdent` | indent or outdent the node(s) at the selection |
-| `moveBlockUp`, `moveBlockDown` | move them past their sibling, or at the edge of their parent into the parent's sibling |
+| `moveSubtreeUp`, `moveSubtreeDown` | move them past their sibling, or at the edge of their parent into the parent's sibling |
 | `enter` | Enter |
 | `shiftEnter` | Shift-Enter |
 | `deleteContentBackward`, `deleteContentForward` | Backspace, Delete |
 | `"text"` | types the text, replacing the selection |
 | `pasteStructured` | Ctrl-V: pastes the clipboard, Markdown as nodes at the end of a node's text, else as plain text |
 | `pastePlain` | Ctrl-Shift-V: pastes the clipboard into the node's text, its line breaks as Shift-Enter's |
-| `deleteSubtree`, `duplicateNode` | the commands of the same names |
+| `deleteSubtree`, `duplicateSubtree` | the commands of the same names |
 | `deleteSoftLineBackward` | Cmd-Backspace: deletes back to the start of the line's text |
 | `cursorCharLeft`, `cursorCharRight` | moves the caret a character; a selection collapses to that end |
 | `cursorLineUp`, `cursorLineDown` | moves the caret a line, keeping a goal column while it keeps moving up and down |
@@ -132,14 +168,14 @@ longer fence of its own (` ````buffer `).
 
 Enter and Shift-Enter are named for their keys (`enter`, `shiftEnter`), which hardly ever get
 remapped; the other text edits as the W3C Input Events `inputType`s (`deleteContentBackward`, …);
-structural commands by ourus (`indent`, `outdent`, `moveBlockUp`, `pasteStructured`, …); and caret
-motions as CodeMirror's commands. The core runner plays them the way an editor host does: an ourus command runs,
-and where it returns `notApplicable` the host's default runs instead (a line break, deleting a
-character). Placeholders the caret leaves are settled after every action.
+structural commands by ourus (`indent`, `outdent`, `moveSubtreeUp`, `pasteStructured`, …); and caret
+motions as CodeMirror's commands. The core runner plays them the way an editor host does: an ourus
+command runs, and where it returns `notApplicable` the host's default runs instead (a line break,
+deleting a character). Placeholders the caret leaves are settled after every action.
 
 Caret motions are here so a test can move the caret between actions; [cursor.md](cursor.md) has
-their cases. The core runner moves it in a monospace font with tab stops of 4, which is enough for
-that. A real editor moves the caret as
+their cases, drawn so a column means the same place in any font. The core runner moves it in a
+monospace font with tab stops of 4, which is enough for that. A real editor moves the caret as
 its own layout and GUI dictate (wrapped lines, proportional fonts, bidi text), and a runner
 driving one leaves motion to the editor; a test whose outcome depends on exactly where a motion
 lands belongs to that editor's own tests.
@@ -149,13 +185,15 @@ of vertical motion, so they don't prescribe where Up or Down lands relative to n
 
 ## Options
 
-Options are `key: value` lines. Options for a whole file go in frontmatter; options for one test go
-in a `config` block before its first block, combined with the frontmatter, and they win over it:
+Options are YAML, `key: value` lines, every value read as a string (YAML's failsafe schema:
+`false` is the word; a value YAML reads otherwise, like `*`, is quoted: `bullet: "*"`). Options
+for a whole file go in frontmatter; options for one test go in a config block, a `yaml` block
+before its first block, combined with the frontmatter, and they win over it:
 
 ````md
 ## Indent18
 
-```config
+```yaml
 status: pending
 bullet: +
 ```
@@ -167,19 +205,50 @@ b┃
 ```
 ````
 
+A test's config block also holds the clipboard it starts with, as a literal block, its lines
+indented two spaces under `clipboard:`. `|` ends its text with a line break, `|-` without one:
+
+````md
+## Paste13
+
+```yaml
+rank: edge
+clipboard: |
+  1. x
+  2. y
+```
+
+```buffer
+- a┃
+- b
+```
+````
+
+For a clipboard whose lines all start with spaces, an indentation indicator says where its text
+starts (`clipboard: |2`, the text two spaces in: a line indented six spaces keeps four); without
+one, YAML would take those spaces for the block's indentation, so lines indented more than two
+spaces are an error. A clipboard that holds a code fence needs a longer fence for the config block
+(`` ````yaml ``), as a buffer does.
+
 An unknown option, or a value an option doesn't take, is an error. Defined:
 
   - `status`: `pending` marks behaviour agreed on but not built yet. It is reported as a todo, and
     fails once it passes, so it gets promoted. `ready` (the default) is the rest; a test can set it
     over a file's `status: pending`;
+  - `rank`: how often a user meets the case, `core` (every session), `common`, `edge` or `rare`;
+    review metadata, never an editor setting. Every case has one, and every `core` case is walked
+    through in a flow of [scenarios.md](scenarios.md) (the spec test checks both);
   - `flavor`: the Markdown flavor the text is read in, `commonmark`, `gfm` or `obsidian`. An example
     that names none runs in each of them, with the same expectations;
   - the other options of ourus's config (`src/config.ts`): `outdent` (`direct`, the default, or
     `logical`), `bullet` (`-`, the default, `*` or `+`), `enterOnEmptyItem` (`sibling`, the
-    default, or `outdent`), `handleFenceContents` (`true`, the default, or `false`),
-    `headingEditing` (`text`, the default, or `block`), `taskEditing` (`text`, the default,
-    `checkbox` or `block`), `pasteMidText` (`after`, the default, or `split`), and `deleteAtGap`
-    (`join`, the default, or `gap`).
+    default, or `outdent`), `enterMidItem` (`sibling`, the default, or `child`),
+    `enterAtTextStart` (`into`, the default, or `stay`), `backspaceAtTopItem` (`unwrap`, the
+    default, or `refuse`), `handleFenceContents` (`true`, the default, or `false`),
+    `headingEditing` (`text`, the default, or `block`), `taskEditing` (`checkbox`, the default,
+    `text` or `block`), `pasteStructuredLines` (`text`, the default, or `items`),
+    `pasteStructuredMidText` (`split`, the default, or `after`), `deleteAtGap` (`join`, the
+    default, or `gap`), and `editInMarkup` (`host`, the default, or `refuse`).
 
 How other outliners do on the same files (Logseq, ...) is measured by replaying them there:
 [`sxs/`](../sxs/README.md).

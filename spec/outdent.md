@@ -1,20 +1,46 @@
 # Outdent
 
-Command: `outdent` (Shift-Tab)
+Command: `outdent` (Shift-Tab). Its inverse is [`indent`](indent.md).
 
-Makes an item the next sibling of its parent, carrying its subtree along.
-At the top level, only the first item of a list can outdent: it becomes a paragraph, placed as the
-`outdent` option says (below). A heading goes one level up, with the headings in its section.
+Outdent takes the selected nodes (contiguous siblings of one kind) one level up, with their
+subtrees. The rules, in order; the first that applies wins:
 
-What happens to later siblings is the `outdent` config option:
+1. **On a code line**, Shift-Tab is the host's ([Fence21](fences.md#fence21)).
+2. **A heading goes one level up in place**, the headings in its section with it (Outdent4),
+   whatever the `outdent` option: its level is its own text, and the headings after it at its old
+   level become its subsections (Outdent11, LogicalOutdent5). Past `#` it is refused (Outdent5).
+3. **Out of a quote**, the node leaves it where it is, splitting it (`direct`), or becomes its next
+   sibling (`logical`) ([quotes.md](quotes.md#quote12)).
+4. **An item becomes the next sibling of its parent**, its subtree coming along (Outdent1,
+   Outdent3). What happens to its later siblings is the `outdent` option:
+     * [direct](#direct-outdent) (the default, as in Logseq) makes them its children,
+       after its own, so the document order stays;
+     * [logical](#logical-outdent) (as in WorkFlowy and Roam) keeps them with their parent,
+       and the item moves past them.
+5. **At the top level, the first item of a list becomes a paragraph**, placed as the option says
+   (DirectOutdent2, DirectOutdent3, DirectOutdent4, LogicalOutdent2, LogicalOutdent3,
+   LogicalOutdent4); any other top-level item is refused (`at-top-level`, Outdent2); a selection
+   from the first item on outdents together, each item a paragraph (Outdent8, Outdent12). Indent
+   makes it an item again ([Indent21](indent.md#indent21)).
+6. **Blank lines go only where the structure needs one**: an empty item left right under an item's
+   text is set off by one, as when the caret leaves it (Outdent7); a paragraph needs one before it,
+   not before its own list (Outdent8).
 
-- [Direct outdent](#direct-outdent) (the default) makes them children of the moved item,
-  after its existing children, preserving document order.
-- [Logical outdent](#logical-outdent) keeps them with their parent.
+Indent and outdent invert (Outdent9, Outdent10), except where direct outdent gave the item its later
+siblings: indent takes them along (Outdent13). The caret ends in the item's text, even from before
+its marker (Outdent14).
+
+Bare Obsidian's Shift-Tab unindents the caret's line: an item's children stay indented, which keeps
+them its children here only by luck of their extra indentation; at the top level it does nothing.
+Obsidian's Outliner outdents logically, as WorkFlowy and Roam.
 
 ## Outdent1
 
 Item becomes next sibling of its parent.
+
+```yaml
+rank: core
+```
 
 ```buffer
 - a
@@ -30,7 +56,12 @@ Item becomes next sibling of its parent.
 
 ## Outdent2
 
-A top-level item that isn't the first of its list can't outdent.
+A top-level item that isn't the first of its list can't outdent: its paragraph would split the
+list, and no app measured outdents a top-level item.
+
+```yaml
+rank: common
+```
 
 ```buffer
 - a
@@ -43,9 +74,18 @@ A top-level item that isn't the first of its list can't outdent.
 rejected: at-top-level
 ```
 
+```buffer
+- a
+- b┃
+```
+
 ## Outdent3
 
 Tab-nested item outdents.
+
+```yaml
+rank: common
+```
 
 ```buffer
 - a
@@ -61,8 +101,12 @@ Tab-nested item outdents.
 
 ## Outdent4
 
-Outdent on a heading changes its level and the levels of the headings in its
-section with it.
+A heading goes up a level, its section's headings with it: Indent12's inverse. Bare Obsidian does
+nothing.
+
+```yaml
+rank: common
+```
 
 ```buffer
 ## A┃
@@ -80,6 +124,10 @@ section with it.
 
 H1 cannot outdent further.
 
+```yaml
+rank: edge
+```
+
 ```buffer
 # A┃
 ```
@@ -90,12 +138,20 @@ H1 cannot outdent further.
 rejected: at-h1-bound
 ```
 
+```buffer
+# A┃
+```
+
 ## Outdent6
 
 Outdent in a loose list stays loose.
 
 Outdenting from the middle of a loose list keeps it loose. (With direct outdent, `c` becomes
 `b`'s child.)
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - a
@@ -121,10 +177,13 @@ Outdenting from the middle of a loose list keeps it loose. (With direct outdent,
 
 ## Outdent7
 
-An outdent that would leave an empty item where the text can't hold it is refused.
+The empty item after `x` becomes its child (direct outdent). Right under `x`'s text it would read
+as a setext underline, and the caret isn't there to hold it, so a blank line sets it off, as when
+the caret leaves such an item. Every app outdents here.
 
-The empty item would end up right after an item's text, where it reads as a setext underline, and
-the caret isn't in it to hold it as a placeholder. The command is refused, not `encoding-failed`.
+```yaml
+rank: rare
+```
 
 ```buffer
 - a
@@ -134,15 +193,23 @@ the caret isn't in it to hold it as a placeholder. The command is refused, not `
 
 > outdent
 
-```result
-rejected: not-expressible
+```buffer
+- a
+- ┃x
+
+  - 
 ```
 
 ## Outdent8
 
 Outdenting several items of a paragraph's list makes each a paragraph.
 
-Each becomes a paragraph after the one above; a child goes with its item, which now owns it.
+Each becomes a paragraph; a child goes with its item, which now owns it, right under it as in
+DirectOutdent4. Blank lines go only where a paragraph needs one. Bare Obsidian does nothing.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 para
@@ -157,19 +224,201 @@ para
 para
 
 «a
-
 - b
 
 c»
+```
+
+## Outdent9
+
+An ordered item outdents into its parent's list, numbered on, and the items after it renumber:
+Indent4's inverse.
+
+```yaml
+rank: common
+```
+
+```buffer
+1. a
+   1. b┃
+2. c
+```
+
+> outdent
+
+```buffer
+1. a
+2. b┃
+3. c
+```
+
+## Outdent10
+
+Selected siblings outdent together: Indent9's inverse.
+
+```yaml
+rank: common
+```
+
+```buffer
+- a
+  - «b
+  - c»
+- d
+```
+
+> outdent
+
+```buffer
+- a
+- «b
+- c»
+- d
+```
+
+## Outdent11
+
+A heading goes up a level in place; the heading after it, now a level below it, becomes its
+subsection.
+
+```yaml
+rank: common
+```
+
+```buffer
+# T
+## A┃
+## B
+```
+
+> outdent
+
+```buffer
+# T
+# A┃
+## B
+```
+
+## Outdent12
+
+A selection of top-level items from the list's first: each becomes a paragraph. `b` alone couldn't
+outdent (Outdent2), but goes with the item above it.
+
+```yaml
+rank: edge
+```
+
+```buffer
+- «a
+- b»
+```
+
+> outdent
+
+```buffer
+«a
+
+b»
+```
+
+## Outdent13
+
+Outdent, then indent: the item is back, but direct outdent gave it `d`, which indent takes along.
+The inverse pair's stated exception.
+
+```yaml
+rank: edge
+```
+
+```buffer
+- a
+  - b┃
+    - c
+  - d
+```
+
+> outdent
+
+```buffer
+- a
+- b┃
+  - c
+  - d
+```
+
+> indent
+
+```buffer
+- a
+  - b┃
+    - c
+    - d
+```
+
+## Outdent14
+
+From before the marker, Shift-Tab outdents the item and the caret ends in its text (Indent28's
+mirror).
+
+```yaml
+rank: rare
+```
+
+```buffer
+- a
+  ┃- b
+```
+
+> outdent
+
+```buffer
+- a
+- ┃b
+```
+
+## Outdent15
+
+Out of a paragraph's list and back: outdented, `b` is a paragraph, set off by the blank line two
+paragraphs need; indented back, it is the paragraph's list again, which needs none, and the blank
+line goes: the text comes back as it was.
+
+```yaml
+rank: edge
+```
+
+```buffer
+para
+- b┃
+```
+
+> outdent
+
+```buffer
+para
+
+b┃
+```
+
+> indent
+
+```buffer
+para
+- b┃
 ```
 
 ## Direct outdent
 
 Direct outdent keeps the item and its subtree in document order. Later siblings become its
 children, after its existing children; their subtrees come along. It is the default
-(`outdent: direct`), as in Logseq.
+(`outdent: direct`), as in Logseq, Tine, SiYuan, BlockNote, true-outliner, and Dynalist with its
+"unindent in place" preference. Bare Obsidian, which unindents only the caret's line, leaves the
+later siblings under it too.
 
 ### DirectOutdent1
+
+```yaml
+rank: core
+```
 
 ```buffer
 - a
@@ -191,8 +440,13 @@ children, after its existing children; their subtrees come along. It is the defa
 
 ### DirectOutdent2
 
-At the top level, the first item of a list becomes a paragraph. The rest of its list stays where
-it is and becomes the paragraph's list.
+At the top level, the first item of a list becomes a paragraph, one level above a top-level item
+(Indent22's inverse). The rest of its list stays where it is and becomes the paragraph's list.
+Bare Obsidian does nothing.
+
+```yaml
+rank: common
+```
 
 ```buffer
 - a┃
@@ -210,6 +464,10 @@ a┃
 
 The item's children stay its children, before the items that followed it. The list is flat: `a1`
 is now level with `b`.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - a┃
@@ -230,6 +488,10 @@ a┃
 An item of a paragraph's list leaves the paragraph and becomes a paragraph after it. The items
 after it come along, and become the new paragraph's list.
 
+```yaml
+rank: edge
+```
+
 ```buffer
 para
 - a┃
@@ -248,12 +510,14 @@ a┃
 ## Logical outdent
 
 Logical outdent moves the item and its subtree after its parent. Later siblings keep their
-parent, so the moved subtree passes them in document order. Set with `outdent: logical`, which each case
-below sets in a config block.
+parent, so the moved subtree passes them in document order: as in WorkFlowy, Roam, Dynalist (by
+default) and Obsidian's Outliner, and Logseq and Tine with their "logical outdenting" setting. Set
+with `outdent: logical`, which each case below sets in a config block.
 
 ### LogicalOutdent1
 
-```config
+```yaml
+rank: common
 outdent: logical
 ```
 
@@ -280,7 +544,8 @@ outdent: logical
 At the top level, the first item of a list becomes a paragraph. It passes the rest of its list,
 which keeps its parent, and follows it, set off by a blank line.
 
-```config
+```yaml
+rank: edge
 outdent: logical
 ```
 
@@ -301,7 +566,8 @@ a┃
 
 The item's children come along. Below the new paragraph, they become its list.
 
-```config
+```yaml
+rank: edge
 outdent: logical
 ```
 
@@ -325,7 +591,8 @@ a┃
 An item of a paragraph's list leaves the paragraph and becomes a paragraph after it. The items
 after it stay with their paragraph, so the new paragraph goes past them.
 
-```config
+```yaml
+rank: edge
 outdent: logical
 ```
 
@@ -342,4 +609,28 @@ para
 - b
 
 a┃
+```
+
+### LogicalOutdent5
+
+A heading outdents in place under logical outdent too: keeping the headings after it under their
+parent would move whole sections past each other (Outdent11).
+
+```yaml
+rank: edge
+outdent: logical
+```
+
+```buffer
+# T
+## A┃
+## B
+```
+
+> outdent
+
+```buffer
+# T
+# A┃
+## B
 ```

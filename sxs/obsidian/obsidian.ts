@@ -71,6 +71,8 @@ export interface Profile {
   readonly keys?: Driver['keys'];
   /** Why this setup can't start from a document, besides bare Obsidian's reasons. */
   readonly holds?: (doc: TextDoc) => string | undefined;
+  /** How the setup behaves where ourus has an option, over bare Obsidian's. */
+  readonly behaves?: Driver['behaves'];
 }
 
 // ------------------------------------------------------------------ indentation
@@ -214,8 +216,8 @@ export function obsidianDriver(profile: Profile): Driver {
       outdent: 'Shift+Tab',
       deleteContentBackward: 'Backspace',
       deleteContentForward: 'Delete',
-      moveBlockUp: 'Alt+ArrowUp',
-      moveBlockDown: 'Alt+ArrowDown',
+      moveSubtreeUp: 'Alt+ArrowUp',
+      moveSubtreeDown: 'Alt+ArrowDown',
       // CodeMirror binds "delete line boundary backward" on a Mac only (Cmd-Backspace)
       deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
       pasteStructured: 'Control+v',
@@ -225,7 +227,10 @@ export function obsidianDriver(profile: Profile): Driver {
       ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
       ...profile.keys,
     },
-    behaves: { flavor: 'obsidian' },
+    // bare Obsidian (measured): the caret stays with the text on Enter at an item's start, Backspace
+    // after a checkbox deletes a character, Delete before a blank line deletes it, and Enter on an
+    // empty item outdents it or leaves the list wherever it is
+    behaves: { flavor: 'obsidian', enterAtTextStart: 'stay', taskEditing: 'text', deleteAtGap: 'gap', enterOnEmptyItem: 'outdent', ...profile.behaves },
     holds(doc) {
       const d = doc as TextDoc;
       // CodeMirror keeps line breaks as LF

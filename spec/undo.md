@@ -1,13 +1,18 @@
+
 # Undo and redo
 
-Actions: `undo`, `redo`, the host's. Each action that changed the text is one step of history, and
-a step restores the text and the caret. The host keeps the document, placeholders included, in its
-history, so undo and redo bring placeholders back with the rest ([placeholders.md](placeholders.md)).
-The core runner plays the host's part.
+Actions: `undo`, `redo`, the host's. Each action that changed the text is one step of history, and a
+step restores the text and the caret. The host keeps the document, placeholders included, in its
+history, so undo and redo bring placeholders back with the rest
+([placeholders.md](placeholders.md)). The core runner plays the host's part.
 
 ## Undo1
 
 Undo and redo of a command bring back the text and the caret.
+
+```yaml
+rank: core
+```
 
 ```buffer
 - a
@@ -30,12 +35,13 @@ Undo and redo of a command bring back the text and the caret.
 
 ## Undo2
 
-An authored blank line survives typing, undo and leaving.
+An authored blank line survives typing, undo and leaving: undo restores the document as it was, and
+leaving must not delete the line, or the two paragraphs would merge. Only a line the session wrote
+may be removed.
 
-Undo restores the document as it was: no placeholder, and the blank line stays. Typing on it and
-undoing puts the caret back on it, on a line an edit just touched; leaving must not delete it, or
-the two paragraphs merge into one. Removing text needs evidence that the session wrote it, and an
-edit that touched the line is no such evidence.
+```yaml
+rank: common
+```
 
 ```buffer
 a
@@ -69,7 +75,12 @@ b┃
 
 ## Undo3
 
-Undo brings a placeholder back, and leaving keeps the item again.
+Undo brings a placeholder back, and leaving keeps the item again. Leaving was an edit of its own
+(the blank line), so the first undo takes back that, the caret going back into the empty child.
+
+```yaml
+rank: common
+```
 
 ```buffer
 - a┃
@@ -116,6 +127,10 @@ Undo brings a placeholder back, and leaving keeps the item again.
 
 Redo of a command brings its placeholder back too.
 
+```yaml
+rank: common
+```
+
 ```buffer
 - a┃
 ```
@@ -128,6 +143,47 @@ Redo of a command brings its placeholder back too.
 ```
 
 > indent
+
+```buffer
+- a
+  - ┃◌
+```
+
+> undo
+
+```buffer
+- a
+- ┃
+```
+
+> redo
+
+```buffer
+- a
+  - ┃◌
+```
+
+## Undo5
+
+Undo of what was typed into an empty child brings back its placeholder; the next undo takes back the
+indent, and redo brings the placeholder back again.
+
+```yaml
+rank: common
+```
+
+```buffer
+- a┃
+```
+
+> enter indent "x"
+
+```buffer
+- a
+  - x┃
+```
+
+> undo
 
 ```buffer
 - a

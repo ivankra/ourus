@@ -17,14 +17,14 @@ Obsidian's defaults, and CodeMirror's beneath them, but for two the vault binds 
 | --- | --- |
 | `enter`, `shiftEnter` | Enter (Obsidian's list continuation), Shift+Enter |
 | `indent`, `outdent` | Tab, Shift+Tab |
-| `moveBlockUp`, `moveBlockDown` | Alt+Up, Alt+Down: "Move line up" and "Move line down" (`editor:swap-line-up`, `-down`), which have no hotkey out of the box; they move the line, not the item with its children |
+| `moveSubtreeUp`, `moveSubtreeDown` | Alt+Up, Alt+Down: "Move line up" and "Move line down" (`editor:swap-line-up`, `-down`), which have no hotkey out of the box; they move the line, not the item with its children |
 | `deleteContentBackward`, `deleteContentForward` | Backspace, Delete |
 | `deleteSoftLineBackward` | Shift+Home, Backspace ("delete line boundary backward" is bound on a Mac only) |
 | `pasteStructured`, `pastePlain` | Ctrl+V, Ctrl+Shift+V |
 | `undo`, `redo` | Ctrl+Z, Ctrl+Shift+Z |
 | caret motions | arrows, Home, End, Ctrl+Home, Ctrl+End; `select…` with Shift |
 
-`deleteSubtree` and `duplicateNode` have no command in Obsidian; their tests are skipped.
+`deleteSubtree` and `duplicateSubtree` have no command in Obsidian; their tests are skipped.
 
 ## Stack
 

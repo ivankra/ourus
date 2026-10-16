@@ -40,7 +40,7 @@ const arbTidyOutline = fc
   })
   .chain((items) => fc.constantFrom('  ', '\t').map((unit) => items.map(([d, m, t]) => unit.repeat(d) + m + t).join('\n') + '\n'));
 
-const COMMANDS: Command['type'][] = ['indent', 'outdent', 'moveBlockUp', 'moveBlockDown', 'enter', 'shiftEnter', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward'];
+const COMMANDS: Command['type'][] = ['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'enter', 'shiftEnter', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward'];
 
 /** Commands that act at a caret; the others take a selection. */
 const CARET_COMMANDS = new Set<Command['type']>(['enter', 'shiftEnter', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward']);
@@ -104,7 +104,7 @@ test('ids follow nodes through structural commands', () => {
   const idOf = (d: OutlineState, text: string) => d.nodes.find((n) => d.headLines(n)[0] === text)!.id;
   const before = ['a', 'b', 'c', 'd'].map((t) => idOf(doc, t));
   const pos = doc.text.indexOf('b');
-  const r = executeCommand(doc, { type: 'moveBlockDown' }, { anchor: pos, head: pos });
+  const r = executeCommand(doc, { type: 'moveSubtreeDown' }, { anchor: pos, head: pos });
   assert.equal(r.status, 'applied');
   if (r.status !== 'applied') return;
   assert.equal(r.state.text, '- a\n- d\n- b\n  - c\n');
@@ -113,14 +113,17 @@ test('ids follow nodes through structural commands', () => {
 
 test('ids stay with nodes that a command indents or opens a line above', () => {
   const ids = (d: OutlineState) => d.nodes.slice(1).map((n) => `${n.id}:${d.headLines(n).join('').trim()}`);
-  const run = (text: string, type: Command['type'], pos: number) => {
-    const doc = OutlineState.parse(text);
+  const run = (text: string, type: Command['type'], pos: number, config = {}) => {
+    const doc = OutlineState.parse(text, { config });
     const r = executeCommand(doc, { type } as Command, { anchor: pos, head: pos });
     assert.equal(r.status, 'applied');
     return r.status === 'applied' ? [ids(doc), ids(r.state)] : [];
   };
   const [a, b] = run('- a\n- b\n  - c\n', 'indent', 7);
   assert.deepEqual(b, a);
-  const [c, d] = run('# H\n\npara\n', 'enter', 5);
+  const [c, d] = run('# H\n\npara\n', 'enter', 5, { enterAtTextStart: 'stay' });
   assert.deepEqual(d, c);
+  // an empty paragraph put above (`enterAtTextStart: into`) is a new node; the others keep their ids
+  const [e, f] = run('# H\n\npara\n', 'enter', 5);
+  assert.deepEqual([f!.filter((n) => !n.endsWith(':')), f!.length], [e, e!.length + 1]);
 });

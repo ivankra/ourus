@@ -167,8 +167,8 @@ const outlinerKeymap = Prec.highest(
   keymap.of([
     { key: 'Tab', run: command('indent') },
     { key: 'Shift-Tab', run: command('outdent') },
-    { key: 'Alt-ArrowUp', run: command('moveBlockUp') },
-    { key: 'Alt-ArrowDown', run: command('moveBlockDown') },
+    { key: 'Alt-ArrowUp', run: command('moveSubtreeUp') },
+    { key: 'Alt-ArrowDown', run: command('moveSubtreeDown') },
     { key: 'Enter', run: command('enter') },
     { key: 'Shift-Enter', run: command('shiftEnter') },
     { key: 'Home', run: home(false), shift: home(true) },

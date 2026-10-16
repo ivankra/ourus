@@ -651,7 +651,7 @@ added later without changing anything else (each family file already exports its
 host wants to bind keys to individual commands, that's the moment. The user decides.
 
 What we take from CM6 is its vocabulary, where it fits (§4.0): `mapPos`, `anchor`/`head`, the
-`from`/`to`/`insert` fields, verb-first names (`moveBlockUp` beside CM6's `moveLineUp`;
+`from`/`to`/`insert` fields, verb-first names (`moveSubtreeUp` beside CM6's `moveLineUp`;
 `deleteContentBackward` is W3C's `inputType`). One clash to note: CM6's `Command` is a function,
 ours is a value. Renaming ours would churn every spec and test for a small gain, so it stays.
 

@@ -28,13 +28,14 @@ export function writeLines(doc: OutlineState, placed: Placed, own: { first: numb
       first = first.slice(0, doc.markerFrom(block) - firstLine.from) + placed.marker + first.slice(doc.markerTo(block) - firstLine.from);
     }
     const secondLine = own.last > own.first ? doc.lines[own.first + 1]! : null;
-    rest = secondLine && !secondLine.blank ? doc.text.slice(secondLine.from, secondLine.contentFrom) : linePrefix(placed.kind === 'item' ? placed : placed.parent, tabs);
+    rest = secondLine && !secondLine.blank ? doc.text.slice(secondLine.from, secondLine.contentFrom) : linePrefix(holdsOwnLines(placed) ? placed : placed.parent, tabs);
   } else if (placed.kind === 'item') {
     const within = prefixWithin(placed.parent, tabs);
     first = within.text + whitespace(within.column, Math.max(within.column, placed.markerColumn), tabs) + placed.marker + ' ';
     rest = linePrefix(placed, tabs);
   } else {
-    first = rest = linePrefix(placed.parent, tabs);
+    // a quote's own lines (a callout's title) are inside it, after its `>`
+    first = rest = linePrefix(holdsOwnLines(placed) ? placed : placed.parent, tabs);
   }
   return content.map((text, i) => {
     const prefix = i === 0 ? first : rest;
@@ -62,9 +63,12 @@ export function rerendered(doc: OutlineState, placed: Placed, lineNo: number, ta
     const padding = piece ? doc.text.slice(doc.markerTo(node.block), piece.to) : ' ';
     return within.text + whitespace(within.column, Math.max(within.column, placed.markerColumn), tabs) + marker + padding + content;
   }
-  const prefix = linePrefix(node.kind === 'item' ? placed : placed.parent, tabs);
+  const prefix = linePrefix(holdsOwnLines(placed) ? placed : placed.parent, tabs);
   return content === '' ? prefix.trimEnd() : prefix + content;
 }
+
+/** Whether a node's own lines are inside it, in its prefix: an item's (after its marker), a quote's (a callout's title). */
+const holdsOwnLines = (placed: Placed): boolean => placed.kind === 'item' || placed.kind === 'quote';
 
 /**
  * The prefix of a line inside `container`: up to and including the last enclosing quote's `> `

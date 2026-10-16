@@ -41,8 +41,9 @@ export function reindent(doc: OutlineState, lineNo: number, base: Block | null, 
   if (delta === 0 || !base || !owner) return null;
   const line = doc.lines[lineNo]!;
   const text = doc.text;
-  // blank lines carry nothing to shift: inside an item even a code block's blank line is empty
-  if (line.blank) return null;
+  // blank lines carry nothing to shift: inside an item even a code block's blank line is empty; but
+  // an empty line held by a placeholder is a line of text, where the caret types, and moves with it
+  if (line.blank && !doc.placeholders.includes(line.to)) return null;
   const piece = line.prefix.find((candidate) => candidate.block === base);
   // lazy continuation lines (the moving item didn't match them) stay as they are
   if (!piece || !line.prefix.some((candidate) => candidate.block === owner)) return null;

@@ -27,7 +27,7 @@ export interface Caret {
   offset: number;
 }
 
-export type Cmd = 'indent' | 'outdent' | 'moveBlockUp' | 'moveBlockDown' | 'enter' | 'deleteContentBackward' | 'deleteContentForward';
+export type Cmd = 'indent' | 'outdent' | 'moveSubtreeUp' | 'moveSubtreeDown' | 'enter' | 'deleteContentBackward' | 'deleteContentForward';
 
 export type Outcome = { status: 'applied'; root: MNode; caret: Caret } | { status: 'rejected'; reason: string };
 
@@ -134,8 +134,8 @@ const COMMANDS: Record<Cmd, Command> = {
     return ctx.ok({ node: n, offset });
   },
 
-  moveBlockUp: (ctx, n, offset) => move(ctx, n, -1, offset),
-  moveBlockDown: (ctx, n, offset) => move(ctx, n, 1, offset),
+  moveSubtreeUp: (ctx, n, offset) => move(ctx, n, -1, offset),
+  moveSubtreeDown: (ctx, n, offset) => move(ctx, n, 1, offset),
 
   enter(ctx, n, offset) {
     const parent = ctx.parent(n)!;

@@ -10,54 +10,32 @@ Derived from obsidian-true-outliner (https://github.com/laughedelic/obsidian-tru
 *This file is under the [Mozilla Public License 2.0](https://mozilla.org/MPL/2.0/), as
 obsidian-true-outliner is; the rest of ourus is MIT.*
 
-Cases from obsidian-true-outliner (`../repos/obsidian-true-outliner`, "TO" below): its measured
+Cases from [obsidian-true-outliner](https://github.com/laughedelic/obsidian-true-outliner) ("TO" below): its measured
 real-app regressions (`e2e-tests/cases/`, headed by issue number), its Enter and Shift-Enter
-catalogue (`docs/research/enter-and-shift-enter-catalogue.md`, headed by entry), and shapes measured
+catalog (`docs/research/enter-and-shift-enter-catalogue.md`, headed by entry), and shapes measured
 in its research notes (headed by the note). TO is pre-release, and many of these record defects
-there. The behaviour drawn here is the one that was wanted, checked against what other outliners
+there. The behavior drawn here is the one that was wanted, checked against what other outliners
 (Logseq, Workflowy, Dynalist) and editors do; where it differs from TO's, the prose says so.
-`pending` marks the cases ourus doesn't handle yet.
 
 ## Enter
 
-### E1
+### E1, E3
 
-Enter in the middle of an item splits it; the space at the split goes with neither half.
-
-```buffer
-- alpha┃ beta
-```
-
-> enter
-
-```buffer
-- alpha
-- ┃beta
-```
-
-### E3
-
-Enter in an ordered list renumbers the items after the split.
-
-```buffer
-1. one┃
-2. two
-```
-
-> enter
-
-```buffer
-1. one
-2. ┃
-3. two
-```
+Enter in the middle of an item splits it, the space at the split going with neither half
+([Enter1](enter.md#enter1)); in an ordered list, the items after the new one renumber
+([Enter2](enter.md#enter2), [Enter25](enter.md#enter25)).
 
 ### #228
 
 The renumbering stops at the list's end: the next list, written with the other delimiter, keeps
-its numbers.
+its numbers. TO's e2e case for #228 is marked known-failing: it renumbers on into the `1)` list, as
+Outliner and bare Obsidian do.
 
 #### Renumbering stops at a delimiter change
+
+```yaml
+rank: edge
+```
 
 ```buffer
 1. a┃
@@ -76,7 +54,13 @@ its numbers.
 
 ### E4
 
-Enter on a continuation line of a multi-line item splits the item there.
+Enter on a continuation line of a multi-line item splits the item there, as Enter anywhere in an
+item's text does (Logseq and TO agree; Roam, Dynalist, Tine and Outliner too, keeping the space;
+WorkFlowy and bare Obsidian break the line inside the item instead).
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - first
@@ -93,9 +77,19 @@ Enter on a continuation line of a multi-line item splits the item there.
 
 ### E7, E8
 
-An item with tab-indented children gets the new item as its first child.
+An item with tab-indented children gets the new item as its first child, indented with a tab as they
+are ([Enter3](enter.md#enter3) and [Enter4](enter.md#enter4) are the same with spaces). Split
+mid-text, the item keeps its text up to the caret and its children, and the rest becomes the new
+node where Enter at the end puts one: TO's split, as in Logseq and Tine (`enterMidItem: child`); by
+default ourus, as WorkFlowy, Roam, Dynalist and Obsidian (bare or with Outliner), keeps the children
+with the second half instead, the first half going before it ([Enter3](enter.md#enter3)).
 
 #### Split item becomes first tab-indented child
+
+```yaml
+rank: edge
+enterMidItem: child
+```
 
 ```buffer
 - alpha┃ beta
@@ -112,6 +106,10 @@ An item with tab-indented children gets the new item as its first child.
 
 #### End of parent opens empty first child
 
+```yaml
+rank: edge
+```
+
 ```buffer
 - alpha┃
 →- child
@@ -127,9 +125,16 @@ An item with tab-indented children gets the new item as its first child.
 
 ### E9
 
-Enter in a paragraph followed by a list makes two paragraphs; the list is unchanged. Paragraphs
-are leaves here, so the list is not the paragraph's child, and the second half stays a paragraph
-(in TO, which makes the list a child, it became an item).
+Enter in a paragraph followed by a list makes two paragraphs, set off by the blank line Markdown
+needs between them. The list, which a paragraph owns when it comes right after it, goes with the
+second half, which it still follows; its seam is left as it was. TO made the second half an item,
+the first one keeping the list, as an item keeps its children when split (E7); here text split in a
+paragraph stays paragraphs. Bare Obsidian and Outliner make a line break in the paragraph instead
+([Enter12](enter.md#enter12) is ourus's Enter in a paragraph).
+
+```yaml
+rank: edge
+```
 
 ```buffer
 one┃ two
@@ -148,8 +153,14 @@ one
 ### E10
 
 Enter at the end of an item whose first child is a paragraph: the new item is the first child,
-as with list children (TO put it after the whole subtree). Logseq and Workflowy add the new
-node as the first child too.
+as with list children, and as the outliners open a first child at the end of any parent (End of
+parent opens empty first child; Logseq, WorkFlowy, Roam, Dynalist, Tine and SiYuan agree here).
+TO now opens an empty line in the item above the paragraph, no item; Obsidian, bare or with
+Outliner, adds a sibling, which takes the paragraph as its own.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - item┃
@@ -169,8 +180,13 @@ node as the first child too.
 ### E11
 
 The same with a code block as the first child: the new child copies the indentation of the
-existing one, so the code block stays where it is (TO used its own unit and made it a
-grandchild).
+existing one, so the code block stays where it is (TO, when measured, used its own unit and made
+it a grandchild; it now agrees). With TO's split (`enterMidItem: child`), as E7.
+
+```yaml
+rank: edge
+enterMidItem: child
+```
 
 ````buffer
 - item┃ text
@@ -191,8 +207,14 @@ grandchild).
 
 ### E15
 
-Enter in a heading followed by a list: the rest of the title becomes a paragraph, not an item
-(TO turned it into an item).
+Enter in a heading followed by a list: the rest of the title becomes a paragraph, not an item (TO
+turned it into an item), and the list, right after it, is that paragraph's. The seam is left as it
+was: a list needs no blank line to start after a paragraph, as a quote needs none (#267, E5) and a
+heading none (Split title above a subheading). Bare Obsidian and Outliner do the same.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 # Head┃line
@@ -204,14 +226,18 @@ Enter in a heading followed by a list: the rest of the title becomes a paragraph
 ```buffer
 # Head
 ┃line
-
 - item
 ```
 
 ### E17
 
 Enter in a setext heading's title splits it as in an ATX heading: the underline stays with the
-first half, and the rest of the title becomes the section's first paragraph.
+first half, and the rest of the title becomes the section's first paragraph (TO now sets it off with
+a blank line). A text editor's line break would make a two-line heading instead.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 Hello┃ world
@@ -229,7 +255,12 @@ Hello
 ### E18
 
 Enter in a setext underline acts at the end of the title, as Enter in a list marker acts at the
-item's text start (E30): the underline is markup, not text to split.
+item's text start ([Enter34](enter.md#enter34)): the underline is markup, not text to split. TO now
+refuses it; a text editor splits the underline.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 Hello world
@@ -247,9 +278,15 @@ Hello world
 ### E19, E21
 
 Enter at the end of a heading starts its section with an empty paragraph, also when the
-section begins with a list (TO made an empty item there).
+section begins with a list (TO made an empty item there). A blank line is written below it only
+where the next block would otherwise run into it (a paragraph: End of heading above a paragraph);
+a list needs none, so its seam is left as it was, as bare Obsidian and Outliner leave it.
 
 #### End of lone heading starts a paragraph
+
+```yaml
+rank: edge
+```
 
 ```buffer
 # Head┃
@@ -264,6 +301,10 @@ x┃
 
 #### Empty paragraph before a section list
 
+```yaml
+rank: edge
+```
+
 ```buffer
 # Head┃
 - item
@@ -274,15 +315,19 @@ x┃
 ```buffer
 # Head
 ┃◌
-
 - item
 ```
 
 ### E32
 
-Enter on a task: the checkbox carries over to the new item, unchecked.
+Enter on a task: the checkbox carries over to the new item, unchecked, as in Obsidian (bare, with
+Outliner or TO).
 
 #### Task checkbox carries over unchecked
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - [ ] alpha┃ beta
@@ -297,6 +342,10 @@ Enter on a task: the checkbox carries over to the new item, unchecked.
 
 #### Checked task gives unchecked new item
 
+```yaml
+rank: edge
+```
+
 ```buffer
 - [x] done┃
 ```
@@ -310,7 +359,12 @@ Enter on a task: the checkbox carries over to the new item, unchecked.
 
 ### E33
 
-Enter replaces a selection inside the text, then splits the item. A defect in true-outliner.
+Enter replaces a selection inside the text, then splits the item, as typing would (a defect in TO
+when measured, since fixed).
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - al«pha be»ta
@@ -326,7 +380,12 @@ Enter replaces a selection inside the text, then splits the item. A defect in tr
 ### #267, E5
 
 In a paragraph, Enter makes two paragraphs. TO also wrote a blank line between the second
-half and the quote below it; both read the same, and here the quote's seam is left as it was.
+half and the quote below it; both read the same, and here the quote's seam is left as it was. (Bare
+Obsidian and Outliner make a line break in the paragraph: see [Enter12](enter.md#enter12).)
+
+```yaml
+rank: edge
+```
 
 ```buffer
 # H
@@ -346,9 +405,14 @@ para
 
 ### E13, E16
 
-In a heading, the rest of the title becomes the section's first paragraph.
+In a heading, the rest of the title becomes the section's first paragraph, right under it, as
+in bare Obsidian and Outliner (TO now writes a blank line between them).
 
 #### Rest of title becomes first paragraph
+
+```yaml
+rank: edge
+```
 
 ```buffer
 # Hello┃ world
@@ -362,6 +426,10 @@ In a heading, the rest of the title becomes the section's first paragraph.
 ```
 
 #### Split title above a subheading
+
+```yaml
+rank: edge
+```
 
 ```buffer
 # He┃ad
@@ -378,9 +446,15 @@ In a heading, the rest of the title becomes the section's first paragraph.
 
 ### E14, E20
 
-Enter in a heading: a paragraph right under the heading stays a paragraph of its own.
+Enter in a heading: a paragraph right under the heading stays a paragraph of its own, set off
+from the new one by a blank line; without it the two would read as one paragraph, which is what
+bare Obsidian and Outliner leave.
 
 #### Split title above an existing paragraph
+
+```yaml
+rank: edge
+```
 
 ```buffer
 # Head┃line
@@ -398,6 +472,10 @@ Body.
 
 #### End of heading above a paragraph
 
+```yaml
+rank: edge
+```
+
 ```buffer
 # Head┃
 Body.
@@ -414,27 +492,23 @@ Body.
 
 ### E29
 
-Enter at the start of a paragraph opens a blank line above; the text stays put. (E27, the heading's
-start, is ourus's [Enter32](enter.md#enter32): ourus follows Obsidian there, not true-outliner.)
-
-#### Start of paragraph opens line above
-
-```buffer
-┃thought
-```
-
-> enter
-
-```buffer
-
-┃thought
-```
+Enter at the start of a paragraph: TO puts the caret on a new line above, as Enter at an item's
+start puts it in the new item above ([Enter31](enter.md#enter31)), and so does ourus
+([Enter33](enter.md#enter33)); bare Obsidian and Outliner open a blank line above, the text and the
+caret staying put ([Enter33b](enter.md#enter33b), `enterAtTextStart: stay`). At a heading's start
+(E27), TO puts an empty heading above; ourus an empty paragraph ([Enter32](enter.md#enter32)).
 
 ## Shift-Enter
 
 ### S4
 
-Shift-Enter in a paragraph continues it on a new line: still one paragraph.
+Shift-Enter in a paragraph continues it on a new line: still one paragraph. The space at the break
+goes, as at an Enter split (bare Obsidian and Outliner keep it at the new line's start, where
+Markdown ignores it).
+
+```yaml
+rank: edge
+```
 
 ```buffer
 one┃ two
@@ -449,8 +523,12 @@ one
 
 ### S5
 
-With the caret in a list marker, Shift-Enter acts at the text start, where there is no line
-to break (TO split the marker).
+With the caret in a list marker, Shift-Enter is the host's (`editInMarkup: host`, the default;
+[ShiftEnter22](shift-enter.md#shiftenter22)), which splits the marker, as TO does.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 -┃ alpha
@@ -459,15 +537,26 @@ to break (TO split the marker).
 > shiftEnter
 
 ```result
-rejected: not-expressible
+notApplicable
+```
+
+```buffer
+-
+┃ alpha
 ```
 
 ### S7, S8
 
-A heading is one line, setext headings included, and its underline is not text: Shift-Enter
-is refused (TO made a three-line setext heading, or cut the underline in two).
+ourus keeps a heading to one line, setext headings included (CommonMark lets a setext title run over
+several lines, but an ATX heading can't, and a heading is a title), and its underline is not text:
+Shift-Enter is refused, the text left as it was (TO made a three-line setext heading, or cut the
+underline in two).
 
 #### Line break in setext title refused
+
+```yaml
+rank: edge
+```
 
 ```buffer
 Hello┃ world
@@ -480,7 +569,16 @@ Hello┃ world
 rejected: not-expressible
 ```
 
+```buffer
+Hello┃ world
+====
+```
+
 #### Line break in setext underline refused
+
+```yaml
+rank: edge
+```
 
 ```buffer
 Hello world
@@ -493,10 +591,19 @@ Hello world
 rejected: not-expressible
 ```
 
+```buffer
+Hello world
+==┃==
+```
+
 ### S9
 
-The new line keeps an indented paragraph's indentation (TO wrote it at column 0, where it
-stayed in the paragraph only by lazy continuation).
+The new line keeps an indented paragraph's indentation (TO, when measured, wrote it at column 0,
+where it stayed in the paragraph only by lazy continuation; it now agrees).
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - item
@@ -516,10 +623,15 @@ stayed in the paragraph only by lazy continuation).
 ### S11
 
 At the end of a line that isn't the node's last, the new line is a place inside the node, which
-stays one node; typing fills it, and leaving removes it (TO's blank line split the node in
-two).
+stays one node; typing fills it, and leaving removes it: left empty, the line would split the
+paragraph in two, as it does in bare Obsidian and Outliner (TO's blank line split the node too when
+measured; it now agrees).
 
 #### Place inside a multi-line item
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - foo┃
@@ -544,6 +656,10 @@ two).
 
 #### Leaving the place removes it
 
+```yaml
+rank: edge
+```
+
 ```buffer
 foo┃
 bar
@@ -559,6 +675,10 @@ bar
 ### S13
 
 Shift-Enter over a selection replaces it, then breaks the line, as typing would.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - a«lpha» beta
@@ -582,6 +702,10 @@ Backspace on an emptied item. (An emptied first item, with nothing above, is rem
 
 Twice on an emptied middle item: the text goes, then the item, and the list renumbers.
 
+```yaml
+rank: edge
+```
+
 ```buffer
 1. p
 2. a┃
@@ -601,6 +725,10 @@ Right after Shift-Enter, Backspace takes the new line back.
 
 #### Undoing a fresh line break
 
+```yaml
+rank: edge
+```
+
 ```buffer
 - one
   - kid
@@ -618,6 +746,10 @@ Right after Shift-Enter, Backspace takes the new line back.
 ### delete-to-content-start
 
 Cmd-Backspace on an item deletes back to the start of its text, never into its marker.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - alpha beta┃
@@ -638,6 +770,10 @@ by default: [TaskBackspace5](tasks.md#taskbackspace5).)
 
 #### Backspace before the checkbox
 
+```yaml
+rank: edge
+```
+
 ```buffer
 - a
 - ┃[ ] b
@@ -651,11 +787,21 @@ by default: [TaskBackspace5](tasks.md#taskbackspace5).)
 
 ### Joining an item with children
 
-An item with children joins the node above too, and its children move to that node, as they do in
-Workflowy and Logseq when a block with children is merged (TO: "a parent absorbs its first child;
-grandchildren re-parent").
+A first child that has children of its own joins its parent, its children moving up a level into its
+place, by Backspace's rule 4 ([backspace.md](backspace.md)): as Tine and TO do (TO's grammar: "a
+parent absorbs its first child; grandchildren re-parent"). Logseq, WorkFlowy, Roam, Dynalist and
+Outliner refuse both keys here, on these very outlines (BlockNote's Delete joins), so as not to
+restructure a subtree on the way; ourus joins, as decided (2026-10-14: nothing is lost, and the key
+does what it does elsewhere). The joins those apps do make, ourus makes too: a sibling with children
+joins the node above, its children keeping their depth ([Backspace8](backspace.md#backspace8),
+[Delete7](del.md#delete7)), and a first child without children joins its parent
+([Backspace3](backspace.md#backspace3), [Delete1](del.md#delete1)).
 
 #### Children move to the joined node
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - a
@@ -671,6 +817,10 @@ grandchildren re-parent").
 ```
 
 #### Delete forward absorbs child with grandchildren
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - a┃
@@ -688,6 +838,10 @@ grandchildren re-parent").
 ### Joining across ordered runs
 
 A bullet between two runs of an ordered list joins away, and the runs become one list again.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 1. a
@@ -712,6 +866,10 @@ list that started elsewhere keeps its start.
 
 #### Next item becomes the new 1.
 
+```yaml
+rank: edge
+```
+
 ```buffer
 - p
   1. ┃a
@@ -726,6 +884,10 @@ list that started elsewhere keeps its start.
 ```
 
 #### List starting at 3 keeps its start
+
+```yaml
+rank: edge
+```
 
 ```buffer
 3. a
@@ -744,9 +906,14 @@ list that started elsewhere keeps its start.
 
 ### #255
 
-Outdenting a later child leaves the quote above it alone.
+Outdenting a later child leaves the quote above it alone (TO's e2e case for #255 is marked
+known-failing: it sets the quote off with a blank line).
 
 #### Outdented child leaves quote above alone
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - item
@@ -766,7 +933,13 @@ Outdenting a later child leaves the quote above it alone.
 
 ### list-marker-content-column
 
-A child nests at its parent's content column, which a wider gap after the marker moves.
+A child nests at its parent's content column, which a wider gap after the marker moves; the child
+keeps its own gap. (TO narrows the gap to one space; Obsidian, which indents with a tab, can't be
+compared here: its runs translate tabs to two spaces.)
+
+```yaml
+rank: edge
+```
 
 ```buffer
 -  parent
@@ -783,7 +956,12 @@ A child nests at its parent's content column, which a wider gap after the marker
 ### indent-unit-on-every-line
 
 In a tab-indented list, an indent writes the tab on every line of the node, continuation
-lines included (TO wrote a tab on the first line and spaces below it).
+lines included (TO, when measured, wrote a tab on the first line and spaces below it; it now agrees,
+as Outliner does; bare Obsidian leaves the continuation line behind).
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - a
@@ -804,10 +982,16 @@ lines included (TO wrote a tab on the first line and spaces below it).
 ### seams-across-a-re-indent
 
 A quote, a thematic break or an indented code block inside an item keeps its kind when the item
-is indented or outdented: the shift is the same on every line of the subtree (in TO, a block
-pushed past column 3 of its container became a paragraph or a list item).
+is indented or outdented: the shift is the same on every line of the subtree (in TO, when measured,
+a block pushed past column 3 of its container became a paragraph or a list item; it now keeps the
+thematic break and the code, and sets the quote off with a blank line). Bare Obsidian shifts only
+the item's own line.
 
 #### Indented item keeps its quote
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - a
@@ -825,6 +1009,10 @@ pushed past column 3 of its container became a paragraph or a list item).
 
 #### Outdented item keeps its quote
 
+```yaml
+rank: edge
+```
+
 ```buffer
 - a
   - b┃
@@ -840,6 +1028,10 @@ pushed past column 3 of its container became a paragraph or a list item).
 ```
 
 #### Indented item keeps its thematic break
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - a
@@ -859,6 +1051,10 @@ pushed past column 3 of its container became a paragraph or a list item).
 
 #### Outdented item keeps its code block
 
+```yaml
+rank: edge
+```
+
 ```buffer
 - a
   - b┃
@@ -877,7 +1073,13 @@ pushed past column 3 of its container became a paragraph or a list item).
 
 ### destination-list-style
 
-An item joining a list takes the list's bullet: a different bullet would start a new list.
+An item joining a list takes the list's bullet: a different bullet would start a new list, as
+[Indent3](indent.md#indent3) has it too. TO, Outliner and bare Obsidian keep the item's own bullet,
+and so start a second list under `a`.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 * a
@@ -897,9 +1099,14 @@ An item joining a list takes the list's bullet: a different bullet would start a
 
 ### lone-block-id
 
-A block id on its own line is the node's last line, and moves with it.
+A block id on its own line is the node's last line, and moves with it (bare Obsidian moves the
+caret's line, leaving the id behind).
 
 #### Block id moves with its item
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - a
@@ -907,7 +1114,7 @@ A block id on its own line is the node's last line, and moves with it.
   ^id
 ```
 
-> moveBlockUp
+> moveSubtreeUp
 
 ```buffer
 - b┃
@@ -917,6 +1124,10 @@ A block id on its own line is the node's last line, and moves with it.
 
 #### Block id moves with its paragraph
 
+```yaml
+rank: edge
+```
+
 ```buffer
 para one
 ^blk
@@ -924,7 +1135,7 @@ para one
 para┃ two
 ```
 
-> moveBlockUp
+> moveSubtreeUp
 
 ```buffer
 para┃ two
@@ -940,12 +1151,16 @@ one, it would continue the quote. A fence needs no blank line on either side.
 
 #### Blank line added below a quote
 
+```yaml
+rank: edge
+```
+
 ```buffer
 para┃
 > q
 ```
 
-> moveBlockDown
+> moveSubtreeDown
 
 ```buffer
 > q
@@ -955,6 +1170,10 @@ para┃
 
 #### No blank line needed after a fence
 
+```yaml
+rank: edge
+```
+
 ````buffer
 para┃
 ```
@@ -962,7 +1181,7 @@ code
 ```
 ````
 
-> moveBlockDown
+> moveSubtreeDown
 
 ````buffer
 ```
@@ -973,6 +1192,10 @@ para┃
 
 #### No blank line needed before a fence
 
+```yaml
+rank: edge
+```
+
 ````buffer
 ```
 code┃
@@ -980,7 +1203,7 @@ code┃
 para
 ````
 
-> moveBlockDown
+> moveSubtreeDown
 
 ````buffer
 para
@@ -993,25 +1216,9 @@ code┃
 
 ### #159 (ordered-run-split-numbering)
 
-A list split in two by an item of another kind leaves the lower part's numbers alone; renumbering
-never reaches past the part the split touched.
-
-#### Renumbering only the touched part
-
-```buffer
-8. eight
-9. nine┃
-10. ten
-```
-
-> enter
-
-```buffer
-8. eight
-9. nine
-10. ┃
-11. ten
-```
+Its numbering half is [Enter25](enter.md#enter25)'s: Enter in a list starting at 8 renumbers the
+items after the new one, past 10. Its split of a list by a bullet item is ourus's own Enter now,
+and the renumbering stops at a list's end (#228).
 
 ### Outdenting the head of a nested list
 
@@ -1019,7 +1226,8 @@ The item outdents after its parent, and the items it leaves behind renumber from
 so `2. c` becomes `1. c` and stays a list under `a`'s text. (obsidian-true-outliner outdents
 logically.)
 
-```config
+```yaml
+rank: edge
 outdent: logical
 ```
 
@@ -1042,18 +1250,23 @@ outdent: logical
 ## Abandoning an empty place
 
 From TO's `carried-place-removal.md` (#249): an empty node a key made, then left without typing,
-possibly after Tab or Shift-Tab carried it. An empty node Markdown can hold (an empty item after
-another item) stays, as Logseq and Workflowy keep an empty bullet the caret leaves. One it can't (an
-empty child right under its parent's text, an empty paragraph, an empty line inside a node) goes,
-with the lines that were written for it. TO instead restores the document from before the key that
-made it.
+possibly after Tab or Shift-Tab carried it. An empty item stays, as Logseq, WorkFlowy, Roam and
+Dynalist keep an empty bullet the caret leaves: after another item as it is, and right under its
+parent's text, where Markdown would read it as a setext underline, set off by a blank line above it.
+What Markdown can't hold at all (an empty paragraph, an empty line inside a node) goes, with the
+lines that were written for it. TO instead restores the document from before the key that made it.
 
 ### Shift-Enter, Tab, then leave
 
-The place carried into the indented node goes; one Backspace on it goes back to where
-Shift-Enter started.
+The place moves with the node it is in, to the node's new content column, as every line of an
+indented node does (indent-unit-on-every-line), so typing there continues the node's text; leaving
+it removes it, and one Backspace on it goes back to where Shift-Enter started.
 
 #### Carried place removed on leaving
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - one
@@ -1067,7 +1280,7 @@ Shift-Enter started.
 - one
   - kid
   - foo
-  ┃◌
+    ┃◌
 ```
 
 > cursorDocStart
@@ -1079,6 +1292,10 @@ Shift-Enter started.
 ```
 
 #### Doubly indented place removed on leaving
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - one
@@ -1098,6 +1315,10 @@ Shift-Enter started.
 
 #### Backspace returns to the start
 
+```yaml
+rank: edge
+```
+
 ```buffer
 - one
   - kid
@@ -1113,6 +1334,10 @@ Shift-Enter started.
 ```
 
 #### Shift-Tab then Backspace returns to start
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - a
@@ -1132,6 +1357,10 @@ Shift-Enter started.
 
 Enter on the place splits there: a new item after the node (TO dropped the place and moved
 to the next item).
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - one
@@ -1153,7 +1382,11 @@ to the next item).
 ### Enter, then Shift-Enter and Backspace
 
 Shift-Enter on an empty item is the host's line break, and Backspace takes it back; the empty
-item stays.
+item stays, as in Logseq, WorkFlowy, Roam, Dynalist and Outliner.
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - foo┃
@@ -1169,34 +1402,17 @@ item stays.
 ### Enter, Tab, then leave
 
 An empty child right under its parent's text is a placeholder while the caret is in it. Leaving it,
-it stays, written with a blank line above it, so the text still reads as an empty child (a blank
-line after the list stays too).
-
-#### Empty child under parent text kept with a blank line
-
-```buffer
-- one
-- foo┃
-```
-
-> enter indent
-
-```buffer
-- one
-- foo
-  - ┃◌
-```
-
-> cursorDocStart
-
-```buffer
-┃- one
-- foo
-
-  - 
-```
+it stays, written with a blank line above it, so the text still reads as an empty child: an empty
+item can't interrupt a paragraph, so right under the text `  - ` would be a setext underline (the
+parent's text a heading) and `   1. ` more of the text, which is what bare Obsidian and Outliner
+leave. A blank line after the list stays too. (The bullet case is
+[Placeholder1](placeholders.md#placeholder1).)
 
 #### An empty ordered child kept with a blank line
+
+```yaml
+rank: edge
+```
 
 ```buffer
 1. a┃
@@ -1221,6 +1437,10 @@ line after the list stays too).
 ```
 
 #### Blank line after the list stays
+
+```yaml
+rank: edge
+```
 
 ```buffer
 - foo┃
@@ -1258,9 +1478,14 @@ para
 
 ### Enter, Shift-Tab, then leave
 
-An empty item after another item can be written, so it stays, like an empty bullet in Logseq.
+An empty item after another item can be written, so it stays, as an empty bullet does in Logseq,
+WorkFlowy, Roam and Dynalist.
 
 #### Outdented empty ordered item stays
+
+```yaml
+rank: edge
+```
 
 ```buffer
 1. p
@@ -1279,6 +1504,10 @@ An empty item after another item can be written, so it stays, like an empty bull
 
 #### Second Enter outdents to a kept item
 
+```yaml
+rank: edge
+```
+
 ```buffer
 - a
   - b┃
@@ -1294,10 +1523,17 @@ An empty item after another item can be written, so it stays, like an empty bull
 
 ### Enter twice, then leave
 
-Enter twice leaves the list for an empty paragraph, which Markdown can't hold: leaving it removes
-it together with the blank lines that set it off, and the list is as tight as before.
+With `enterOnEmptyItem: outdent`, Enter twice in the middle of a list leaves it for an empty
+paragraph ([Enter7b](enter.md#enter7b)), which Markdown can't hold: leaving it removes it together
+with the blank lines that set it off, and the list is as tight as before. By default Enter makes a
+second empty item there instead, as the outliners do ([Enter7](enter.md#enter7)).
 
 #### Empty paragraph and blank lines removed
+
+```yaml
+enterOnEmptyItem: outdent
+rank: edge
+```
 
 ```buffer
 - a┃
@@ -1312,6 +1548,11 @@ it together with the blank lines that set it off, and the list is as tight as be
 ```
 
 #### Indented list under paragraph restored
+
+```yaml
+enterOnEmptyItem: outdent
+rank: edge
+```
 
 ```buffer
 para
@@ -1329,10 +1570,12 @@ para
 
 ## Paste
 
-TO's real-app paste regressions. Pasted Markdown is placed as nodes, as Logseq and Workflowy paste
-outlines: re-indented to the destination's depth and indent unit, with blank lines where blocks
-would otherwise run together. ourus has no structural paste yet; the host pastes the text as it
-is.
+TO's real-app paste regressions, played as `pasteStructured` (Ctrl-V; its rules are
+[paste.md](paste.md)'s). Pasted Markdown is placed as nodes where Enter at the end of the node's
+text would put a new one, as Logseq pastes an outline (Roam and Tine too): re-indented to the
+destination's depth and indent unit, its spacing the destination's, with a blank line only where
+blocks would otherwise run together. Bare Obsidian and Outliner paste the text as it is, into the
+item's text at the caret.
 
 ### #216
 
@@ -1340,15 +1583,17 @@ A pasted list takes the destination's indent unit, tabs or spaces, on every leve
 
 #### Pasted list takes space indent unit
 
+```yaml
+rank: edge
+clipboard: |
+  - a
+  →- b
+  →→- c
+```
+
 ```buffer
 - top
   - sib┃
-```
-
-```clipboard
-- a
-→- b
-→→- c
 ```
 
 > pasteStructured
@@ -1363,15 +1608,17 @@ A pasted list takes the destination's indent unit, tabs or spaces, on every leve
 
 #### Pasted list takes tab indent unit
 
+```yaml
+rank: edge
+clipboard: |
+  - a
+    - b
+      - c
+```
+
 ```buffer
 - top
 →- sib┃
-```
-
-```clipboard
-- a
-  - b
-    - c
 ```
 
 > pasteStructured
@@ -1390,15 +1637,17 @@ A pasted quote is set off from the paragraph below it, and the payload's own ind
 
 #### Pasted quote set off from paragraph
 
+```yaml
+rank: edge
+clipboard: |2
+      first
+
+      > quote
+```
+
 ```buffer
 ## H┃
 below
-```
-
-```clipboard
-    first
-
-    > quote
 ```
 
 > pasteStructured
@@ -1415,20 +1664,26 @@ below
 
 ### #197
 
-A list and a block pasted at the end of an item with children become its first children, and
-stay apart from each other and from the children below.
+A list and a block pasted at the end of an item with children become its first children, in the
+order pasted, before the children it had. The list stays as tight as it was (the destination decides
+the spacing: [paste.md](paste.md)'s rule 2, as in [Paste25](paste.md#paste25)): no blank line is
+needed to keep them apart, the quote ending `alpha`'s list and `see`'s starting after it, and the
+clipboard's own blank line between them goes. (TO's e2e case, with a table, which a list item's text
+would otherwise take in, sets them off with blank lines.)
 
 #### Pasted list and block become children
+
+```yaml
+rank: edge
+clipboard: |
+  - alpha
+
+  > note
+```
 
 ```buffer
 - top┃
   - see
-```
-
-```clipboard
-- alpha
-
-> note
 ```
 
 > pasteStructured
@@ -1436,8 +1691,6 @@ stay apart from each other and from the children below.
 ```buffer
 - top
   - alpha
-
   > note┃
-
   - see
 ```

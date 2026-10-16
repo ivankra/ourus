@@ -55,6 +55,8 @@ export interface Extension {
   readonly render?: RenderRules;
   /** Rule names of the extensions before it that this one takes out (a dialect without some syntax). */
   readonly remove?: readonly string[];
+  /** Whether `text` at a line's content start opens one of the extension's blocks (`Flavor.startsBlock`). */
+  readonly startsBlock?: (text: string, inParagraph: boolean) => boolean;
 }
 
 export interface Flavor {
@@ -77,8 +79,8 @@ export interface Flavor {
   /**
    * Whether `text`, written where a line's content starts, opens a block instead of being paragraph
    * text; with `inParagraph`, whether it would also interrupt (or underline) a paragraph above it.
-   * List markers are the caller's concern without `inParagraph`. For now CommonMark's blocks only:
-   * the seam for escaping the flavor's own blocks (`$$`, `%%`, a table's `|`).
+   * List markers are the caller's concern without `inParagraph`. CommonMark's blocks, and those its
+   * extensions declare (`$$`, `%%`); a table's delimiter row is the escaper's concern.
    */
   startsBlock(text: string, inParagraph: boolean): boolean;
   /** Whether `text` (a paragraph's lines, joined by `\n`) would read as a link reference definition. */
@@ -143,7 +145,7 @@ export function defineFlavor(name: string, extensions: readonly Extension[]): Fl
     inline: compileInlines(inlines, delimiters, brackets, textRules),
     render,
     has: (extension) => names.has(extension),
-    startsBlock,
+    startsBlock: (text, inParagraph) => startsBlock(text, inParagraph) || all.some((e) => e.startsBlock?.(text, inParagraph)),
     readsAsReference: (text) => scanReference(text) !== null,
   };
 }

@@ -226,6 +226,60 @@ export function draw(o: Outline): string {
   return out.join('\n').replace(/\t/g, '→') + '\n';
 }
 
+/**
+ * Reads back an outline `draw` drew (a run's data keeps the app's states drawn), or null where the
+ * drawing is no outline's.
+ */
+export function readOutline(drawn: string): Outline | null {
+  const blocks: Block[] = [];
+  const raw: string[][] = [];
+  const selected: number[] = [];
+  // no blocks at all draw as one empty line
+  for (const line of drawn === '\n' ? [] : drawn.replace(/\n$/, '').replace(/→/g, '\t').split('\n')) {
+    const item = /^((?: {2})*)- (▮ )?(.*)$/.exec(line);
+    if (item) {
+      if (item[2]) selected.push(blocks.length);
+      blocks.push({ depth: item[1]!.length / 2, text: '' });
+      raw.push([item[3]!]);
+      continue;
+    }
+    const ind = blocks.length ? `${'  '.repeat(blocks.at(-1)!.depth)}  ` : null;
+    if (ind === null || !line.startsWith(ind)) return null;
+    raw.at(-1)!.push(line.slice(ind.length));
+  }
+  let sel: Sel | null = null;
+  raw.forEach((lines, i) => {
+    // the caret or selection out first, then the backslashes `draw` escaped continuation lines with
+    let t = lines.join('\n');
+    const caret = t.indexOf('┃');
+    const open = t.indexOf('«');
+    if (caret >= 0 || open >= 0) {
+      const marks = t.replace(/┃«/, '«');
+      const from = marks.indexOf('«') >= 0 ? marks.indexOf('«') : marks.indexOf('┃');
+      const to = marks.indexOf('»') >= 0 ? marks.indexOf('»') - 1 : from;
+      sel = { block: i, anchor: caret >= 0 && open >= 0 ? to : from, head: caret >= 0 ? from : to };
+      t = t.replace(/[┃«»]/g, '');
+    }
+    let at = 0;
+    t = t
+      .split('\n')
+      .map((line, k) => {
+        const unescaped = k === 0 ? line : line.replace(/^\\([-*+](?=[ \t]|$))/, '$1').replace(/^(\d{1,9})\\([.)](?=[ \t]|$))/, '$1$2').replace(/^\\(#{1,6}(?=[ \t]|$))/, '$1');
+        if (unescaped.length < line.length && sel?.block === i) {
+          const cut = at + line.indexOf('\\');
+          if (sel.anchor > cut) sel.anchor--;
+          if (sel.head > cut) sel.head--;
+        }
+        at += unescaped.length + 1;
+        return unescaped;
+      })
+      .join('\n');
+    blocks[i]!.text = t;
+  });
+  const o: Outline = { blocks, sel, ...(selected.length && { selected }) };
+  return draw(o) === drawn ? o : null;
+}
+
 export type Verdict = 'agree' | 'whitespace' | 'caret' | 'disagree';
 
 /** Text compared without the spaces next to line breaks and at the ends, where editors differ in trimming. */

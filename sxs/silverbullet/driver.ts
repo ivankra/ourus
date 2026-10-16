@@ -29,6 +29,8 @@ export const driver: Driver = {
   title: 'SilverBullet',
   url: 'https://demo.silverbullet.md/personal/',
   model: 'text',
+  // measured: Enter at an item's text start leaves the caret with the text
+  behaves: { enterAtTextStart: 'stay' },
   keys: {
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
@@ -39,8 +41,8 @@ export const driver: Driver = {
     deleteContentBackward: 'Backspace',
     deleteContentForward: 'Delete',
     // "Outline: Move Up" and "Move Down"
-    moveBlockUp: 'Alt+ArrowUp',
-    moveBlockDown: 'Alt+ArrowDown',
+    moveSubtreeUp: 'Alt+ArrowUp',
+    moveSubtreeDown: 'Alt+ArrowDown',
     // "Delete Line Boundary Backward" is bound on a Mac only (Cmd-Backspace)
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
     pasteStructured: 'Control+v',

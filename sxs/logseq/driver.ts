@@ -68,8 +68,8 @@ export const driver: Driver = {
     outdent: 'Shift+Tab',
     deleteContentBackward: 'Backspace',
     deleteContentForward: 'Delete',
-    moveBlockUp: 'Alt+Shift+ArrowUp',
-    moveBlockDown: 'Alt+Shift+ArrowDown',
+    moveSubtreeUp: 'Alt+Shift+ArrowUp',
+    moveSubtreeDown: 'Alt+Shift+ArrowDown',
     // Logseq has no key to delete to the line's start on Linux; selecting there and deleting is what a user does
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
     // Escape selects the block being edited, and Backspace deletes the selected blocks with their children
@@ -83,7 +83,7 @@ export const driver: Driver = {
   emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd'],
   // quotes and callouts are skipped for every block app (../lib/outline.ts)
   refuses: [],
-  behaves: { outdent: 'direct', enterOnEmptyItem: 'sibling' },
+  behaves: { outdent: 'direct', enterOnEmptyItem: 'sibling', enterMidItem: 'child', pasteStructuredMidText: 'after' },
   // Logseq's "logical outdenting" (Settings › Editor, `:editor/logical-outdenting?`)
   settings: { outdent: ['direct', 'logical'] },
   holds(doc: Outline) {
