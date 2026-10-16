@@ -15,7 +15,8 @@ text on its line, a marker included (Backspace2). The rules, in order; the first
    `#`s or its setext underline (`headingEditing: text`, the default; Backspace18, Backspace18e), a
    task's checkbox (`taskEditing: checkbox`, the default; [tasks.md](tasks.md)), a callout's
    `[!type]` ([quotes.md](quotes.md)).
-4. **An empty item goes**, the caret to the end of the text above (Backspace7). Its children go to
+4. **An empty item goes**, the caret to the end of the text above (Backspace7); a paragraph it kept
+   from running into the text above is set apart by a blank line (Backspace39). Its children go to
    the node above, into its place when that node is its parent (Backspace17c, Backspace17d); with
    nothing above, they take its place (Backspace17b). The first item of the document goes, the caret
    to the text below (Backspace17); the only one leaves an empty line (Backspace17e).
@@ -24,15 +25,20 @@ text on its line, a marker included (Backspace2). The rules, in order; the first
    (Backspace9).
 6. **Otherwise the node joins the node above in its container**: its text at the end of that node's
    text, its children to that node, into its place when it is the parent (Backspace1, Backspace3,
-   Backspace8, Backspace11, Backspace15, Backspace22). At the start of a continuation line, the line
-   joins the line above (Backspace9).
+   Backspace8, Backspace11, Backspace15, Backspace22), a setext title's included, before its
+   underline, which holds several lines (Backspace36, Backspace37). At the start of a continuation
+   line, the line joins the line above (Backspace9). Where the joined text would read as a link
+   reference definition, its start is escaped; an escape a split wrote goes when the join leaves it
+   nothing to keep (Backspace38, [Enter47](enter.md#enter47)). A list the join leaves right under
+   text it can't interrupt is set apart by a blank line (Backspace40).
 7. **With nothing above it in its container, the next layer of markup goes**: an item's marker, the
    item becoming a paragraph where it is (`backspaceAtTopItem: unwrap`, the default; Backspace33),
    or nothing (`refuse`, Backspace34); a quote's `>`, the node leaving the quote, the rest of which
    stays quoted ([quotes.md](quotes.md)). So `> - [ ] ┃b` loses its checkbox, then its marker, then
-   its `>`, and then joins the node above.
+   its `>`, and then joins the node above. First in an item whose marker shares its line (`- - a`),
+   which has no text of its own, its marker goes and its text is that item's (Backspace41).
 8. **What can't be written is refused**: text into code (Backspace16, Backspace24) or a table, more
-   than one line into a heading's title (Backspace23); with nothing above, `nothing-above`
+   than one line into an ATX heading's title (Backspace23); with nothing above, `nothing-above`
    (Backspace26).
 9. **A selection across nodes** is ourus's too: the selected text goes and the two ends join, as
    Backspace at the second end's start would join them (Backspace31). Within one node's text it is
@@ -41,7 +47,8 @@ text on its line, a marker included (Backspace2). The rules, in order; the first
 
 Cmd-Backspace (`deleteSoftLineBackward`) deletes back to the start of the text on the caret's line,
 never into a marker, a checkbox or `#`s; what is left there is escaped where it would start a block,
-and a setext underline is refused ([below](#cmd-backspace)). At the text start it is Backspace.
+and a setext underline or a fence is refused ([below](#cmd-backspace)). At the text start it is
+Backspace.
 
 Delete mirrors these from the other side ([del.md](del.md)). Bare Obsidian's Backspace is a text
 editor's: at an item's text start it deletes the space after the marker, and `-two` then reads as
@@ -1198,6 +1205,144 @@ para
 ## C
 ```
 
+## Backspace36
+
+A paragraph right under a setext heading joins its title, before the underline, as one under an
+ATX heading does ([Backspace22](#backspace22)). true-outliner joins it; bare Obsidian
+deletes the line break, putting the text on the underline.
+
+```yaml
+rank: edge
+```
+
+```buffer
+Title
+=====
+┃text
+```
+
+> deleteContentBackward
+
+```buffer
+Title┃text
+=====
+```
+
+## Backspace37
+
+A paragraph of several lines joins a setext title as more of its lines, which a setext title holds
+and an ATX one doesn't ([Backspace23](#backspace23)).
+
+```yaml
+rank: rare
+```
+
+```buffer
+Title
+=====
+┃more
+lines
+```
+
+> deleteContentBackward
+
+```buffer
+Title┃more
+lines
+=====
+```
+
+## Backspace38
+
+Joined to `[a]:`, the text would be a link reference definition, invisible: the joined paragraph's
+start is escaped.
+
+```yaml
+rank: rare
+```
+
+```buffer
+[a]:
+
+┃b
+```
+
+> deleteContentBackward
+
+```buffer
+\[a]:
+┃b
+```
+
+## Backspace39
+
+An empty item between an item and a paragraph goes: right under the item's text, the paragraph would
+continue it, so a blank line keeps it apart.
+
+```yaml
+rank: rare
+```
+
+```buffer
+- a
+- ┃
+p
+```
+
+> deleteContentBackward
+
+```buffer
+- a┃
+
+p
+```
+
+## Backspace40
+
+The first item of a paragraph's list joins the paragraph; an ordered list from 2 after it can't
+interrupt the joined text, which it would continue, so a blank line sets it apart.
+
+```yaml
+rank: edge
+```
+
+```buffer
+p
+
+- ┃t
+2. m
+```
+
+> deleteContentBackward
+
+```buffer
+p┃t
+
+2. m
+```
+
+## Backspace41
+
+The first item of a list that is an item's first block, on its marker's line (`- - a`): the item has
+no text to join, so the inner marker goes, and the text, on the outer marker's line, is the outer
+item's; the items after it are its children.
+
+```yaml
+rank: edge
+```
+
+```buffer
+- - ┃a
+  - b
+```
+
+> deleteContentBackward
+
+```buffer
+- ┃a
+  - b
+```
+
 ## Cmd-Backspace
 
 `deleteSoftLineBackward` deletes back to the start of the line's text. What is left must not start a
@@ -1331,3 +1476,87 @@ rejected: not-expressible
 title
 =┃==
 ```
+
+### SoftBackspace7
+
+Cmd-Backspace emptying the first line of a paragraph of several lines: the empty line is held by a
+placeholder, as an emptied line is anywhere, here on the marker's line of a quote that is an
+item's first block. Left, it goes, the line below coming up onto the marker's line, the caret
+keeping its place in the text.
+
+```yaml
+rank: rare
+```
+
+```buffer
+- > q┃
+  > m
+```
+
+> deleteSoftLineBackward
+
+```buffer
+- > ┃◌
+  > m
+```
+
+> cursorLineDown
+
+```buffer
+- > ┃m
+```
+
+### SoftBackspace8
+
+As [SoftBackspace7](#softbackspace7), in a task: the emptied first line keeps the checkbox, and
+left, the line below comes up after it.
+
+```yaml
+rank: rare
+flavor: gfm
+```
+
+```buffer
+- [ ] t┃
+  m
+```
+
+> deleteSoftLineBackward
+
+```buffer
+- [ ] ┃◌
+  m
+```
+
+> cursorLineDown
+
+```buffer
+- [ ] m┃
+```
+
+### SoftBackspace9
+
+On a fence, Cmd-Backspace is refused: the fence is markup, and deleting it would unmake the code
+block (the host's would leave a fence opening at the block's end). The same on a math block's `$$`.
+
+```yaml
+rank: rare
+```
+
+````buffer
+```┃
+code
+```
+````
+
+> deleteSoftLineBackward
+
+```result
+rejected: not-expressible
+```
+
+````buffer
+```┃
+code
+```
+````

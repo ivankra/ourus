@@ -9,7 +9,9 @@ where it differs (with both outcomes drawn), and which examples it can't run, an
 
 From the root of the checkout, after `npm install`. It needs Chromium (`CHROMIUM`, default
 `/usr/bin/chromium`), `openssl` (once, for the proxy's certificate) and, on a cold cache, the network;
-for Obsidian, Xvfb (`obsidian/README.md`), and for Emacs, `emacs-nox` and `tmux`.
+for Obsidian, Xvfb and Electron's libraries (`obsidian/README.md`), and for Emacs, `emacs-nox` and
+`tmux`. On Debian and its derivatives, as root or with passwordless `sudo`, the run installs what is
+missing with `apt-get` ([`lib/system.ts`](lib/system.ts)); elsewhere it stops, saying what to install.
 It is not a CI gate: it measures other apps, through live sites.
 
 ```
@@ -68,9 +70,10 @@ in `.sxs/<app>/sxs.log` and its report and run as data beside it, as alone. The 
 started first, so the runs don't race to start it; each app has a browser of its own. A line per app says its
 counts as it finishes; then a table gives every example's verdict in each app, the apps by how many
 examples agree, the most first, in every table (`ok`, `DIFF`, `caret`,
-`space`, `ERROR`, `-` for skipped): every row for a few examples or with `-v`, else the rows where
+`space`, `ERROR`, `-` for skipped; in `sxs.md`, ✓, ✗, C, S, E, –, explained in its legend): every row for a few examples or with `-v`, else the rows where
 the apps don't all agree. The table is written too, as Markdown, to `.sxs/sxs.md` with its
-heatmap, `sxs-heatmap.svg`; a run of every app on the whole spec copies both here, [`sxs.md`](sxs.md),
+heatmap, `sxs-heatmap.svg` (how alike two apps did in the examples both ran as written, none adapted:
+the same result 1, the same but for the caret or spaces ½; ourus among them, as its own runs of the examples have it, `test/spec-run.ts`); a run of every app on the whole spec copies both here, [`sxs.md`](sxs.md),
 checked in, each app's column linking its report (which its run copies here, as a full run does alone). Apps run side by side compete for the
 machine, so each takes longer, but their verdicts are those of a run alone: compared example by
 example, they were, once each app had its own browser and the idle script waited for clipboard
@@ -204,6 +207,7 @@ for apps behind a login.
 | `lib/idle.ts` | the init script that tells when a page has settled |
 | `lib/browser.ts` | the shared proxy, browser and app pages |
 | `lib/desktop.ts` | for a driver that starts a desktop app: a free port, an Xvfb, a run's lock |
+| `lib/system.ts` | the system's packages a run needs, installed by apt when missing |
 | `lib/driver.ts` | what a driver provides |
 | `lib/outline.test.ts` | the projection, offline (part of `npm test`) |
 | `logseq/` | Logseq's driver, notes |

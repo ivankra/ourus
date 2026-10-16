@@ -129,8 +129,10 @@ export class OutlineState {
     const sorted = normalizeChanges(changes);
     const carrier = new IdCarrier(this, sorted, params.identity);
     const dropped = new Set(params.drop);
-    // a place follows typing that keeps its line empty (a space), so map it past insertions
-    const places = this.placeholders.filter((p) => !dropped.has(p)).map((p) => mapPos(changes, p, 1));
+    // a place follows typing that keeps its line empty (a space), so map it past insertions; one inside
+    // text replaced is gone with it
+    const replaced = (p: number): boolean => sorted.some((c) => c.from < p && p < c.to);
+    const places = this.placeholders.filter((p) => !dropped.has(p) && !replaced(p)).map((p) => mapPos(changes, p, 1));
     if (params.caret !== undefined && this.keptAt(changes, text, params.caret)) places.push(params.caret);
     return new OutlineState(
       text,
@@ -205,6 +207,11 @@ export class OutlineState {
   isEmpty(node: OutlineNode): boolean {
     if (node.head && node.head.type !== 'paragraph') return false;
     return OutlineState.isEmptyText(this.headLines(node).join('\n'));
+  }
+
+  /** Whether offset `p` of `text` can be a placeholder (see `placeholders.ts`). */
+  static isPlace(text: string, p: number): boolean {
+    return isPlace(text, p);
   }
 
   /** What "empty" means for a node's text, however it was obtained: nothing, or only a task's checkbox, which is markup. */
@@ -302,6 +309,19 @@ export class OutlineState {
   nodeText(node: OutlineNode): string {
     const lines = this.headLines(node);
     return node.kind === 'atom' ? lines.join('\n') : lines.map((line) => line.trim()).join('\n');
+  }
+
+  /** The lines `node` holds of its own, those `contentOf` gives the content of. */
+  ownLines(node: OutlineNode): LineInfo[] {
+    const lines: LineInfo[] = [];
+    let after = false;
+    for (const line of this.lines.slice(node.startLine)) {
+      const owner = this.nodeAtLine(line.index);
+      if (owner === node) lines.push(line);
+      else if (!owner && lines.length) after = true;
+      else if (owner || after) break;
+    }
+    return lines;
   }
 
   /**

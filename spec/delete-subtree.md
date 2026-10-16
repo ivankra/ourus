@@ -6,12 +6,18 @@ Command: `deleteSubtree`.
 The rules:
 
 1. **The selected nodes go, with their subtrees**: a paragraph with the list it owns, a heading with
-   its section (DeleteSubtree1, DeleteSubtree3).
+   its section (DeleteSubtree1, DeleteSubtree3); a quote without text they are all of goes with them
+   (DeleteSubtree7).
 2. **The caret goes to the end of the text above**, or, when the first node goes, to the start of
    the text that follows, after its marker (DeleteSubtree1, DeleteSubtree3, DeleteSubtree4).
+   What the deleted node kept apart is set apart by a blank line: a paragraph of an item, now
+   right under its text, which it would continue (DeleteSubtree8).
 3. **A list the command touches is renumbered** (DeleteSubtree2).
 4. **Selected nodes go together** (DeleteSubtree5).
 5. **The document's only nodes leave it empty** (DeleteSubtree6).
+6. **A thematic break that comes first in an Obsidian note**, where its `---` would open the
+   frontmatter, is set off by a blank line above it (DeleteSubtree9); a `***` opens none
+   (DeleteSubtree10).
 
 ## DeleteSubtree1
 
@@ -141,4 +147,104 @@ rank: rare
 
 ```buffer
 x┃
+```
+
+## DeleteSubtree7
+
+Deleting a quote's only node deletes the quote: its `>` alone is no node, and a quote without text
+holding nothing can't be written.
+
+```yaml
+rank: edge
+```
+
+```buffer
+- a
+> - ┃q
+```
+
+> deleteSubtree
+
+```buffer
+- a┃
+```
+
+## DeleteSubtree8
+
+Code deleted from between an item's text and a paragraph of the item: the paragraph, right under the
+text, would continue it, and a blank line keeps it a paragraph of its own. Moving the code below it
+does the same ([MoveDown34](move-subtree-down.md#movedown34)).
+
+```yaml
+rank: rare
+```
+
+````buffer
+- a
+  ┃```
+  code
+  ```
+  x
+````
+
+> deleteSubtree
+
+```buffer
+- a┃
+
+  x
+```
+
+## DeleteSubtree9
+
+In an Obsidian note, deleting what is above a thematic break would put its `---` on the first line,
+where, with a `---` below to close it, it would open the note's frontmatter: a blank line above
+keeps it a thematic break. The caret goes to the text after it.
+
+```yaml
+rank: edge
+flavor: obsidian
+```
+
+```buffer
+┃Intro
+
+---
+title: x
+---
+```
+
+> deleteSubtree
+
+```buffer
+
+---
+┃title: x
+---
+```
+
+## DeleteSubtree10
+
+A thematic break written `***`, first in an Obsidian note: only `---` opens frontmatter, so no blank
+line goes above it.
+
+```yaml
+rank: edge
+flavor: obsidian
+```
+
+```buffer
+┃a
+
+***
+title
+---
+```
+
+> deleteSubtree
+
+```buffer
+***
+┃title
+---
 ```

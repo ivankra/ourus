@@ -54,12 +54,66 @@ export function fenceNewline(ctx: CommandContext, node: OutlineNode, line: LineI
  * An edit of a fenced block's code lines: the outline stays, the block's text changing. Where the
  * edit would make a fence of code (a line of backticks closing the block early), it is refused.
  */
-export function codeEdit(ctx: CommandContext, node: OutlineNode, changes: ChangeSpec[], caret: number): Outcome {
+export function codeEdit(ctx: CommandContext, node: OutlineNode, changes: ChangeSpec[], caret: number, refusal = 'the code would make a fence'): Outcome {
   const { doc } = ctx;
   const next = doc.update(changes);
   const expected = ctx.plan.setText(node, next.nodeText(next.nodeAt(caret) ?? node));
-  if (expected.differenceFrom(next, doc, 'tree') !== null) return reject('not-expressible', 'the code would make a fence');
+  if (expected.differenceFrom(next, doc, 'tree') !== null) return reject('not-expressible', refusal);
   return ctx.caret(changes, caret, expected);
+}
+
+/**
+ * Whether `line` is a line of a block whose lines are payload, other than fenced code (which has rules
+ * of its own): math, a comment, indented code. In an item or a quote the host's line break or
+ * one-character delete would leave the containers' prefix behind and end the block; anywhere, a break
+ * in a `$$` or `%%` would unmake it.
+ */
+export function isPayloadLine(line: LineInfo | undefined): boolean {
+  const block = line?.leaf;
+  if (!line || !block) return false;
+  return block.type === 'math_block' || block.type === 'comment_block' || (block.type === 'code_block' && !block.fenced);
+}
+
+/**
+ * Enter and Shift-Enter on such a line: a new line of the block, in its containers, the line's own
+ * indentation carrying over (indented code's included), as on a fenced code line. Refused where the
+ * block would end or change (a math block's `$$` split).
+ */
+export function payloadNewline(ctx: CommandContext, node: OutlineNode, line: LineInfo, selFrom: number, selTo: number): Outcome {
+  const { doc } = ctx;
+  if (selFrom < line.contentFrom) return notApplicable;
+  const text = doc.text;
+  const indentEnd = skipSpaces(text, line.contentFrom, line.to, 1);
+  const own = text.slice(line.contentFrom, Math.min(indentEnd, selFrom));
+  const insert = ctx.ending(line) + ctx.encoder.continuation(line.prefix) + own;
+  return codeEdit(ctx, node, [{ from: selFrom, to: selTo, insert }], selFrom + insert.length, `a new line would end the ${line.leaf!.type.replace('_', ' ')}`);
+}
+
+/**
+ * Backspace at the start of such a line and Delete at its end: the lines of the block join, the
+ * containers' prefix going with the line break. Null where that doesn't apply.
+ */
+export function joinPayloadLines(ctx: CommandContext, node: OutlineNode | null, pos: number, dir: -1 | 1): Outcome | null {
+  const { doc } = ctx;
+  const line = doc.lineAt(pos);
+  if (!node || !isPayloadLine(line)) return null;
+  const other = doc.lines[line.index + dir];
+  if (!other || other.leaf !== line.leaf) return null;
+  // as at a code fence: against a `$$` or `%%` line a line with text on it is refused, an empty one
+  // just goes
+  const block = line.leaf!;
+  const fence = (l: LineInfo): boolean =>
+    (block.type === 'math_block' || block.type === 'comment_block') && (l.index === block.startLine || (l.index === block.endLine && l.index > block.startLine && /(\$\$|%%)[ \t]*$/.test(doc.text.slice(l.contentFrom, l.to))));
+  if (fence(line) || fence(other)) {
+    const content = fence(line) ? other : line;
+    if (fence(content) || doc.text.slice(content.contentFrom, content.to).trim() !== '') {
+      if (dir < 0 ? pos !== line.contentFrom : pos !== line.to) return null;
+      return reject('not-expressible', 'the text would join the fence');
+    }
+  }
+  const refusal = `the lines would end the ${block.type.replace('_', ' ')}`;
+  if (dir < 0) return pos === line.contentFrom ? codeEdit(ctx, node, [{ from: other.to, to: line.contentFrom, insert: '' }], other.to, refusal) : null;
+  return pos === line.to ? codeEdit(ctx, node, [{ from: line.to, to: other.contentFrom, insert: '' }], pos, refusal) : null;
 }
 
 /**

@@ -31,6 +31,12 @@ export interface OutlinePlanNode {
   readonly exactMarker?: boolean;
   /** Blank lines after the node's own lines: a new node's, or a rewritten one's in place of its old gap. */
   readonly gap?: number;
+  /**
+   * A copy's lazy continuation lines, by their index in `lines` (that very array: lines written anew
+   * leave them): written as they were, without their containers' prefix, which would make some read
+   * as blocks of their own (a table's delimiter row).
+   */
+  readonly lazy?: { readonly lines: readonly string[]; readonly at: readonly number[] };
   readonly children: readonly PlanTree[];
 }
 
@@ -82,15 +88,30 @@ export class OutlinePlan {
   }
 
   /** A new node meaning what `node` of `state` means (a pasted or duplicated node), its subtree copied the same way. */
+  /**
+   * A paragraph's or an item's lines (`contentOf`'s) as its text starts: without the indentation before
+   * its first character, which isn't text (four columns of it would make code where the node is written
+   * anew); an item whose text is a block of its own (indented code) keeps its lines as they are.
+   */
+  static textLines<T extends { lines: string[] }>(node: OutlineNode, content: T): T {
+    // an item's text that is indented code keeps its indentation: it is what makes it code
+    if ((node.kind !== 'paragraph' && node.kind !== 'item') || node.head?.type !== 'paragraph') return content;
+    const [first = '', ...rest] = content.lines;
+    return { ...content, lines: [first.replace(/^[ \t]+/, ''), ...rest] };
+  }
+
   static copy(state: OutlineState, node: OutlineNode): OutlinePlanNode {
     const { level, block } = describe(node, (n) => state.nodeText(n));
+    const content = OutlinePlan.textLines(node, state.contentOf(node));
+    const at = state.ownLines(node).flatMap((line, i) => (line.lazy ? [i] : []));
     return {
       id: null,
       kind: node.kind,
       text: state.nodeText(node),
       ...(level !== undefined ? { level } : {}),
       ...(block !== undefined ? { blockType: block } : {}),
-      ...state.contentOf(node),
+      ...content,
+      ...(at.length ? { lazy: { lines: content.lines, at } } : {}),
       children: node.children.map((child) => OutlinePlan.copy(state, child)),
     };
   }
@@ -188,11 +209,14 @@ export class OutlinePlan {
 
 }
 
-function ownLists(node: PlanTree): PlanTree {
-  const children = node.children.map(ownLists);
+function ownLists(node: PlanTree, contained = false): PlanTree {
+  // as the outline reads them: a paragraph owns the list after it in a section, but not anywhere in an
+  // item or a quote, under a heading there too
+  const inside = contained || node.kind === 'item' || node.kind === 'quote';
+  const children = node.children.map((child) => ownLists(child, inside));
   let changed = children.some((child, i) => child !== node.children[i]);
   let regrouped = children;
-  if (node.kind === 'root' || node.kind === 'heading') {
+  if ((node.kind === 'root' || node.kind === 'heading') && !inside) {
     regrouped = [];
     const pending = [...children];
     while (pending.length) {
@@ -231,10 +255,18 @@ function nodeDifference(expected: PlanTree, actual: OutlineNode, text: OutlineTe
   }
   const got = describe(actual, text.new);
   for (const key of ['kind', 'level', 'text', 'block'] as const) {
+    if (key === 'text' && want.kind !== 'atom' && unescaped(want.text) === unescaped(got.text)) continue;
     if (want[key] !== got[key]) return `${key} ${JSON.stringify(want[key])}, got ${JSON.stringify(got[key])}`;
   }
   return null;
 }
+
+/**
+ * Text without the backslashes that only keep its lines from starting blocks (`\- x`, `1\. x`,
+ * `\|---|`): it reads the same with them, where the outline around it is the same (which the rest of
+ * the comparison checks).
+ */
+const unescaped = (text: string | undefined): string | undefined => text?.replace(/^(\d*)\\(?=[!-/:-@[-`{-~])/gm, '$1');
 
 /** Where the re-parsed outline differs from the planned tree, or null when it is that tree. */
 function treeDifference(expected: PlanTree, actual: OutlineNode, text: OutlineText, at = 'root'): string | null {

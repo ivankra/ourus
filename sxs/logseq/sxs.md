@@ -5,14 +5,12 @@ version: "build b8f87af5"
 url: "https://demo.logseq.com/"
 model: "block"
 command: "node sxs/run.ts logseq"
-elapsed_s: 35
+elapsed_s: 253
 ---
 
 # Logseq vs ourus
 
 Spec test suite replayed in Logseq and compared against ourus.
-
-Regenerated from an earlier run (`--regenerate-report`): what Logseq did then, judged against the spec as it is now. It played every example as it is now.
 
 Model: [block](../lib/outline.ts) (free-form cases had to be adapted into outlines of blocks)
 
@@ -20,42 +18,43 @@ Model: [block](../lib/outline.ts) (free-form cases had to be adapted into outlin
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 112 | 4 | 6 | 18 |  |  | **140** |
-| adapted | 146 | 15 | 16 | 142 |  |  | **319** |
-| **total** | **258 (39%)** | **19 (2.9%)** | **22 (3.4%)** | **160 (24%)** | **0 (0%)** | **195 (30%)** | **654** |
+| original | 113 | 4 | 8 | 21 |  |  | **146** |
+| adapted | 165 | 21 | 20 | 174 |  |  | **380** |
+| **total** | **278 (37%)** | **25 (3.3%)** | **28 (3.7%)** | **195 (26%)** | **0 (0%)** | **229 (30%)** | **755** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total | original | adapted |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [backspace.md](../../spec/backspace.md) | 19 | 2 |  | 22 |  | 9 | **52** | 13 | 30 |
+| [backspace.md](../../spec/backspace.md) | 23 | 2 |  | 26 |  | 10 | **61** | 14 | 37 |
 | [cursor.md](../../spec/cursor.md) | 21 | 8 |  |  |  | 7 | **36** | 12 | 17 |
-| [del.md](../../spec/del.md) | 13 |  |  | 14 |  | 17 | **44** | 13 | 14 |
-| [delete-subtree.md](../../spec/delete-subtree.md) | 2 | 2 |  | 1 |  | 1 | **6** | 1 | 4 |
-| [duplicate-subtree.md](../../spec/duplicate-subtree.md) |  |  |  |  |  | 3 | **3** |  |  |
-| [enter.md](../../spec/enter.md) | 28 | 1 |  | 10 |  | 13 | **52** | 18 | 21 |
-| [fences.md](../../spec/fences.md) | 13 | 3 | 2 | 18 |  | 8 | **44** |  | 36 |
+| [del.md](../../spec/del.md) | 16 |  |  | 14 |  | 17 | **47** | 13 | 17 |
+| [delete-subtree.md](../../spec/delete-subtree.md) | 2 | 4 |  | 2 |  | 2 | **10** | 1 | 7 |
+| [duplicate-subtree.md](../../spec/duplicate-subtree.md) |  |  |  |  |  | 8 | **8** |  |  |
+| [enter.md](../../spec/enter.md) | 30 | 1 |  | 15 |  | 13 | **59** | 18 | 28 |
+| [fences.md](../../spec/fences.md) | 14 | 3 | 2 | 22 |  | 10 | **51** |  | 41 |
 | [gaps.md](../../spec/gaps.md) | 13 |  |  |  |  | 6 | **19** |  | 13 |
-| [indent.md](../../spec/indent.md) | 20 |  |  | 4 |  | 5 | **29** | 9 | 15 |
-| [move-subtree-down.md](../../spec/move-subtree-down.md) | 20 |  |  | 8 |  | 4 | **32** | 6 | 22 |
-| [move-subtree-up.md](../../spec/move-subtree-up.md) | 20 |  |  | 9 |  | 6 | **35** | 7 | 22 |
+| [indent.md](../../spec/indent.md) | 20 |  |  | 4 |  | 6 | **30** | 9 | 15 |
+| [move-subtree-down.md](../../spec/move-subtree-down.md) | 21 | 2 |  | 10 |  | 4 | **37** | 7 | 26 |
+| [move-subtree-up.md](../../spec/move-subtree-up.md) | 20 | 2 |  | 9 |  | 7 | **38** | 7 | 24 |
 | [obsidian-true-outliner.md](../../spec/obsidian-true-outliner.md) | 34 |  | 4 | 15 |  | 14 | **67** | 22 | 31 |
-| [outdent.md](../../spec/outdent.md) | 13 |  |  | 7 |  | 4 | **24** | 6 | 14 |
-| [paste.md](../../spec/paste.md) | 17 |  | 3 | 20 |  | 8 | **48** | 11 | 29 |
+| [outdent.md](../../spec/outdent.md) | 14 |  |  | 10 |  | 5 | **29** | 6 | 18 |
+| [paste.md](../../spec/paste.md) | 25 |  | 8 | 33 |  | 14 | **80** | 15 | 51 |
 | [placeholders.md](../../spec/placeholders.md) | 6 | 1 | 2 | 2 |  | 5 | **16** | 2 | 9 |
-| [quotes.md](../../spec/quotes.md) |  |  |  |  |  | 74 | **74** |  |  |
+| [quotes.md](../../spec/quotes.md) |  |  |  |  |  | 90 | **90** |  |  |
 | [scenarios.md](../../spec/scenarios.md) | 13 | 1 |  | 9 |  | 1 | **24** | 11 | 12 |
-| [shift-enter.md](../../spec/shift-enter.md) | 3 |  | 11 | 7 |  | 2 | **23** | 6 | 15 |
+| [shift-enter.md](../../spec/shift-enter.md) | 3 |  | 12 | 9 |  | 2 | **26** | 6 | 18 |
 | [tasks.md](../../spec/tasks.md) |  | 1 |  | 11 |  | 5 | **17** |  | 12 |
 | [typing.md](../../spec/typing.md) |  |  |  | 2 |  | 2 | **4** |  | 2 |
 | [undo.md](../../spec/undo.md) | 3 |  |  | 1 |  | 1 | **5** | 3 | 1 |
-| **total** | **258 (39%)** | **19 (2.9%)** | **22 (3.4%)** | **160 (24%)** | **0 (0%)** | **195 (30%)** | **654** | **140 (21%)** | **319 (49%)** |
+| [z-open.md](../../spec/z-open.md) |  |  |  | 1 |  |  | **1** |  | 1 |
+| **total** | **278 (37%)** | **25 (3.3%)** | **28 (3.7%)** | **195 (26%)** | **0 (0%)** | **229 (30%)** | **755** | **146 (19%)** | **380 (50%)** |
 
 ## Original cases
 
-### Disagree (18)
+### Disagree (21)
 
-#### 1. [Backspace17b](../../spec/backspace.md#backspace17b)
+#### [Backspace17b](../../spec/backspace.md#backspace17b)
 
 > deleteContentBackward
 
@@ -71,7 +70,6 @@ Per-file:
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ┃
   - a
@@ -80,7 +78,6 @@ Per-file:
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃a
   - b
@@ -89,7 +86,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 2. [Backspace17c](../../spec/backspace.md#backspace17c)
+#### [Backspace17c](../../spec/backspace.md#backspace17c)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -133,7 +130,6 @@ Per-file:
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - a
   - ┃
@@ -146,7 +142,6 @@ Per-file:
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
   - b
@@ -159,7 +154,39 @@ Per-file:
 </td></tr>
 </table>
 
-#### 3. [Delete5](../../spec/del.md#delete5)
+#### [Backspace41](../../spec/backspace.md#backspace41)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- - ┃a
+  - a
+  - b
+```
+
+</td><td>
+
+```buffer
+- -┃a
+  - a
+  - b
+```
+
+</td><td>
+
+```buffer
+- ┃a
+  - b
+```
+
+</td></tr>
+</table>
+
+#### [Delete5](../../spec/del.md#delete5)
 
 > deleteContentForward
 
@@ -177,7 +204,6 @@ Per-file:
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ┃
   - a
@@ -188,7 +214,6 @@ Per-file:
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃a
   - b
@@ -199,7 +224,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 4. [Delete5b](../../spec/del.md#delete5b)
+#### [Delete5b](../../spec/del.md#delete5b)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -243,7 +268,6 @@ Per-file:
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - a
   - ┃
@@ -256,7 +280,6 @@ Per-file:
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - ┃b
@@ -269,7 +292,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 5. [Delete5c](../../spec/del.md#delete5c)
+#### [Delete5c](../../spec/del.md#delete5c)
 
 > deleteContentForward
 
@@ -286,7 +309,6 @@ Per-file:
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - x
 - ┃
@@ -296,7 +318,6 @@ Per-file:
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - x
 - ┃a
@@ -306,7 +327,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 6. [Delete5d](../../spec/del.md#delete5d)
+#### [Delete5d](../../spec/del.md#delete5d)
 
 > deleteContentForward
 
@@ -322,7 +343,6 @@ Per-file:
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ┃
   - a
@@ -331,7 +351,6 @@ Per-file:
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃a
   - b
@@ -340,7 +359,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 7. [Enter3](../../spec/enter.md#enter3)
+#### [Enter3](../../spec/enter.md#enter3)
 
 > enter
 
@@ -355,7 +374,6 @@ Per-file:
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
   - ┃b
@@ -364,7 +382,6 @@ Per-file:
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃b
@@ -374,7 +391,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 8. [Enter3d](../../spec/enter.md#enter3d)
+#### [Enter3d](../../spec/enter.md#enter3d)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -394,7 +411,6 @@ Per-file:
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - a
   - ┃b
@@ -403,7 +419,6 @@ Per-file:
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃b
@@ -427,7 +442,60 @@ Per-file:
 </td></tr>
 </table>
 
-#### 9. [Backspace › Joining an item with children › Children move to the joined node](../../spec/obsidian-true-outliner.md#children-move-to-the-joined-node)
+#### [MoveDown33](../../spec/move-subtree-down.md#movedown33)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- - ┃a
+  - a
+  - b
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeDown
+
+<table>
+<tr><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- - ┃a
+  - a
+  - b
+```
+
+</td><td>
+
+```buffer
+- - b
+  - b
+  - ┃a
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeUp
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- - ┃a
+  - a
+  - b
+```
+
+</td></tr>
+</table>
+
+#### [Backspace › Joining an item with children › Children move to the joined node](../../spec/obsidian-true-outliner.md#children-move-to-the-joined-node)
 
 > deleteContentBackward
 
@@ -443,7 +511,6 @@ Per-file:
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
   - ┃b
@@ -452,7 +519,6 @@ Per-file:
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃b
   - c
@@ -461,7 +527,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 10. [Backspace › Joining an item with children › Delete forward absorbs child with grandchildren](../../spec/obsidian-true-outliner.md#delete-forward-absorbs-child-with-grandchildren)
+#### [Backspace › Joining an item with children › Delete forward absorbs child with grandchildren](../../spec/obsidian-true-outliner.md#delete-forward-absorbs-child-with-grandchildren)
 
 > deleteContentForward
 
@@ -477,7 +543,6 @@ Per-file:
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a┃
   - b
@@ -486,7 +551,6 @@ Per-file:
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃b
   - c
@@ -495,7 +559,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 11. [Abandoning an empty place › Shift-Enter, Tab, then leave › Backspace returns to the start](../../spec/obsidian-true-outliner.md#backspace-returns-to-the-start)
+#### [Abandoning an empty place › Shift-Enter, Tab, then leave › Backspace returns to the start](../../spec/obsidian-true-outliner.md#backspace-returns-to-the-start)
 
 > shiftEnter indent deleteContentBackward
 
@@ -511,7 +575,6 @@ Per-file:
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - one
   - kid
@@ -520,7 +583,6 @@ Per-file:
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one
   - kid
@@ -530,7 +592,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 12. [Abandoning an empty place › Shift-Enter, Tab, then leave › Shift-Tab then Backspace returns to start](../../spec/obsidian-true-outliner.md#shift-tab-then-backspace-returns-to-start)
+#### [Abandoning an empty place › Shift-Enter, Tab, then leave › Shift-Tab then Backspace returns to start](../../spec/obsidian-true-outliner.md#shift-tab-then-backspace-returns-to-start)
 
 > shiftEnter outdent deleteContentBackward
 
@@ -546,7 +608,6 @@ Per-file:
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
 - ┃
@@ -555,7 +616,6 @@ Per-file:
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - b┃
@@ -565,7 +625,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 13. [Paste36](../../spec/paste.md#paste36)
+#### [Paste36](../../spec/paste.md#paste36)
 
 > pasteStructured
 
@@ -587,7 +647,6 @@ x
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - list
   - See here.
@@ -597,7 +656,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - list
   - See x
@@ -608,7 +666,7 @@ x
 </td></tr>
 </table>
 
-#### 14. [Paste38](../../spec/paste.md#paste38)
+#### [Paste38](../../spec/paste.md#paste38)
 
 > pasteStructured
 
@@ -630,7 +688,6 @@ x
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - list
   - See here.
@@ -640,7 +697,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - list
   - See here.
@@ -651,7 +707,7 @@ x
 </td></tr>
 </table>
 
-#### 15. [Paste42](../../spec/paste.md#paste42)
+#### [Paste42](../../spec/paste.md#paste42)
 
 > pasteStructured
 
@@ -673,7 +729,6 @@ x
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ab
   - x
@@ -683,7 +738,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ax
 - y
@@ -694,7 +748,7 @@ x
 </td></tr>
 </table>
 
-#### 16. [Paste43](../../spec/paste.md#paste43)
+#### [Paste43](../../spec/paste.md#paste43)
 
 > pasteStructured
 
@@ -716,7 +770,6 @@ x
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ab
   - x
@@ -726,7 +779,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ax
   - y
@@ -737,7 +789,47 @@ x
 </td></tr>
 </table>
 
-#### 17. [Outliner flows › Scenario11](../../spec/scenarios.md#scenario11)
+#### [Paste49](../../spec/paste.md#paste49)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+- a
+- b
+```
+
+</td><td>
+
+```buffer
+- «placeholder»
+- next
+```
+
+</td><td>
+
+```buffer
+- placeholder
+- a
+- b┃
+- next
+```
+
+</td><td>
+
+```buffer
+- a
+- b┃
+- next
+```
+
+</td></tr>
+</table>
+
+#### [Outliner flows › Scenario11](../../spec/scenarios.md#scenario11)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -814,7 +906,6 @@ x
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - a┃
 - b
@@ -822,7 +913,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - amore┃
 - b
@@ -837,14 +927,12 @@ x
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - amoreb┃
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - amore┃b
 ```
@@ -852,7 +940,7 @@ x
 </td></tr>
 </table>
 
-#### 18. [ShiftEnter21](../../spec/shift-enter.md#shiftenter21)
+#### [ShiftEnter21](../../spec/shift-enter.md#shiftenter21)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -871,7 +959,6 @@ x
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - one two
   ┃ three
@@ -879,7 +966,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one two
   ┃three
@@ -894,14 +980,12 @@ x
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - one two┃ three
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one two┃three
 ```
@@ -909,9 +993,9 @@ x
 </td></tr>
 </table>
 
-### Whitespace (6)
+### Whitespace (8)
 
-#### 1. [Shift-Enter › S13](../../spec/obsidian-true-outliner.md#s13)
+#### [Shift-Enter › S13](../../spec/obsidian-true-outliner.md#s13)
 
 > shiftEnter
 
@@ -925,7 +1009,6 @@ x
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
   ┃ beta
@@ -933,7 +1016,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   ┃beta
@@ -942,7 +1024,7 @@ x
 </td></tr>
 </table>
 
-#### 2. [Abandoning an empty place › Shift-Enter, Tab, then leave › Carried place removed on leaving](../../spec/obsidian-true-outliner.md#carried-place-removed-on-leaving)
+#### [Abandoning an empty place › Shift-Enter, Tab, then leave › Carried place removed on leaving](../../spec/obsidian-true-outliner.md#carried-place-removed-on-leaving)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -963,7 +1045,6 @@ x
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - one
   - kid
@@ -972,7 +1053,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one
   - kid
@@ -998,7 +1078,86 @@ x
 </td></tr>
 </table>
 
-#### 3. [Placeholder8](../../spec/placeholders.md#placeholder8)
+#### [Paste73](../../spec/paste.md#paste73)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+y
+```
+
+</td><td>
+
+```buffer
+-  ┃
+  - kid
+```
+
+</td><td>
+
+```buffer
+-  x
+  y
+  ┃
+  - kid
+```
+
+</td><td>
+
+```buffer
+- x
+  y
+  ┃
+  - kid
+```
+
+</td></tr>
+</table>
+
+#### [Paste78](../../spec/paste.md#paste78)
+
+> pastePlain
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+    first
+    second
+```
+
+</td><td>
+
+```buffer
+- ┃a
+```
+
+</td><td>
+
+```buffer
+-     first
+      second
+  ┃a
+```
+
+</td><td>
+
+```buffer
+- first
+  second
+  ┃a
+```
+
+</td></tr>
+</table>
+
+#### [Placeholder8](../../spec/placeholders.md#placeholder8)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -1018,7 +1177,6 @@ x
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - ┃ b
   - c
@@ -1026,7 +1184,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - b
   - c
@@ -1049,7 +1206,7 @@ x
 </td></tr>
 </table>
 
-#### 4. [ShiftEnter1](../../spec/shift-enter.md#shiftenter1)
+#### [ShiftEnter1](../../spec/shift-enter.md#shiftenter1)
 
 > shiftEnter
 
@@ -1063,7 +1220,6 @@ x
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - one two
   ┃ three
@@ -1071,7 +1227,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one two
   ┃three
@@ -1080,7 +1235,7 @@ x
 </td></tr>
 </table>
 
-#### 5. [ShiftEnter3](../../spec/shift-enter.md#shiftenter3)
+#### [ShiftEnter3](../../spec/shift-enter.md#shiftenter3)
 
 > shiftEnter
 
@@ -1095,7 +1250,6 @@ x
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - x
   - a
@@ -1104,7 +1258,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - x
   - a
@@ -1114,7 +1267,7 @@ x
 </td></tr>
 </table>
 
-#### 6. [ShiftEnter13](../../spec/shift-enter.md#shiftenter13)
+#### [ShiftEnter13](../../spec/shift-enter.md#shiftenter13)
 
 > shiftEnter
 
@@ -1128,7 +1281,6 @@ x
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - 
   ┃one
@@ -1136,7 +1288,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃one
 ```
@@ -1146,7 +1297,7 @@ x
 
 ### Caret (4)
 
-#### 1. [Backspace17](../../spec/backspace.md#backspace17)
+#### [Backspace17](../../spec/backspace.md#backspace17)
 
 > deleteContentBackward
 
@@ -1162,7 +1313,6 @@ x
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - b
 - c
@@ -1170,7 +1320,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃b
 - c
@@ -1179,7 +1328,7 @@ x
 </td></tr>
 </table>
 
-#### 2. [CursorUp3](../../spec/cursor.md#cursorup3)
+#### [CursorUp3](../../spec/cursor.md#cursorup3)
 
 > cursorLineUp
 
@@ -1195,7 +1344,6 @@ x
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
   - b┃
@@ -1204,7 +1352,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - ┃b
@@ -1214,7 +1361,7 @@ x
 </td></tr>
 </table>
 
-#### 3. [Enter28](../../spec/enter.md#enter28)
+#### [Enter28](../../spec/enter.md#enter28)
 
 > enter
 
@@ -1230,7 +1377,6 @@ x
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
   - 
@@ -1240,7 +1386,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - ┃
@@ -1251,7 +1396,7 @@ x
 </td></tr>
 </table>
 
-#### 4. [Outliner flows › Scenario10](../../spec/scenarios.md#scenario10)
+#### [Outliner flows › Scenario10](../../spec/scenarios.md#scenario10)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -1305,14 +1450,12 @@ x
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - a
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃a
 ```
@@ -1320,7 +1463,7 @@ x
 </td></tr>
 </table>
 
-### Agree (112)
+### Agree (113)
 
 1. [Backspace1](../../spec/backspace.md#backspace1)
 2. [Backspace3](../../spec/backspace.md#backspace3)
@@ -1419,27 +1562,28 @@ x
 95. [Paste24](../../spec/paste.md#paste24)
 96. [Paste26](../../spec/paste.md#paste26)
 97. [Paste31](../../spec/paste.md#paste31)
-98. [Placeholder6](../../spec/placeholders.md#placeholder6)
-99. [Outliner flows › Scenario1](../../spec/scenarios.md#scenario1)
-100. [Outliner flows › Scenario2](../../spec/scenarios.md#scenario2)
-101. [Outliner flows › Scenario3](../../spec/scenarios.md#scenario3)
-102. [Outliner flows › Scenario5](../../spec/scenarios.md#scenario5)
-103. [Outliner flows › Scenario7](../../spec/scenarios.md#scenario7)
-104. [Outliner flows › Scenario8](../../spec/scenarios.md#scenario8)
-105. [Outliner flows › Scenario9](../../spec/scenarios.md#scenario9)
-106. [Outliner flows › Scenario12](../../spec/scenarios.md#scenario12)
-107. [Outliner flows › Scenario14](../../spec/scenarios.md#scenario14)
-108. [ShiftEnter4](../../spec/shift-enter.md#shiftenter4)
-109. [ShiftEnter17](../../spec/shift-enter.md#shiftenter17)
-110. [Undo1](../../spec/undo.md#undo1)
-111. [Undo4](../../spec/undo.md#undo4)
-112. [Undo5](../../spec/undo.md#undo5)
+98. [Paste48](../../spec/paste.md#paste48)
+99. [Placeholder6](../../spec/placeholders.md#placeholder6)
+100. [Outliner flows › Scenario1](../../spec/scenarios.md#scenario1)
+101. [Outliner flows › Scenario2](../../spec/scenarios.md#scenario2)
+102. [Outliner flows › Scenario3](../../spec/scenarios.md#scenario3)
+103. [Outliner flows › Scenario5](../../spec/scenarios.md#scenario5)
+104. [Outliner flows › Scenario7](../../spec/scenarios.md#scenario7)
+105. [Outliner flows › Scenario8](../../spec/scenarios.md#scenario8)
+106. [Outliner flows › Scenario9](../../spec/scenarios.md#scenario9)
+107. [Outliner flows › Scenario12](../../spec/scenarios.md#scenario12)
+108. [Outliner flows › Scenario14](../../spec/scenarios.md#scenario14)
+109. [ShiftEnter4](../../spec/shift-enter.md#shiftenter4)
+110. [ShiftEnter17](../../spec/shift-enter.md#shiftenter17)
+111. [Undo1](../../spec/undo.md#undo1)
+112. [Undo4](../../spec/undo.md#undo4)
+113. [Undo5](../../spec/undo.md#undo5)
 
 ## Adapted cases
 
-### Disagree (142)
+### Disagree (174)
 
-#### 1. [Backspace4](../../spec/backspace.md#backspace4)
+#### [Backspace4](../../spec/backspace.md#backspace4)
 
 > deleteContentBackward
 
@@ -1456,14 +1600,12 @@ Adapted: heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # Title #┃more
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Title┃more #
 ```
@@ -1490,7 +1632,7 @@ Original:
 </td></tr>
 </table>
 
-#### 2. [Backspace12](../../spec/backspace.md#backspace12)
+#### [Backspace12](../../spec/backspace.md#backspace12)
 
 > deleteContentBackward
 
@@ -1507,14 +1649,12 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a┃b
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   ┃b
@@ -1544,7 +1684,7 @@ a
 </td></tr>
 </table>
 
-#### 3. [Backspace12b](../../spec/backspace.md#backspace12b)
+#### [Backspace12b](../../spec/backspace.md#backspace12b)
 
 Adapted: blank lines, paragraph
 
@@ -1579,14 +1719,12 @@ Adapted: blank lines, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - ┃b
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃b
 ```
@@ -1620,7 +1758,7 @@ a┃b
 </td></tr>
 </table>
 
-#### 4. [Backspace12c](../../spec/backspace.md#backspace12c)
+#### [Backspace12c](../../spec/backspace.md#backspace12c)
 
 > deleteContentBackward
 
@@ -1638,7 +1776,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a┃b
   - x
@@ -1646,7 +1783,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   ┃b
@@ -1679,7 +1815,7 @@ a
 </td></tr>
 </table>
 
-#### 5. [Backspace14](../../spec/backspace.md#backspace14)
+#### [Backspace14](../../spec/backspace.md#backspace14)
 
 Adapted: blank lines, heading, paragraph
 
@@ -1717,7 +1853,6 @@ Adapted: blank lines, heading, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - ┃# H1
   - 
@@ -1726,7 +1861,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃# H1
   - ## H2
@@ -1769,7 +1903,7 @@ a┃
 </td></tr>
 </table>
 
-#### 6. [Backspace16](../../spec/backspace.md#backspace16)
+#### [Backspace16](../../spec/backspace.md#backspace16)
 
 > deleteContentBackward
 
@@ -1788,7 +1922,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - ```
   x
@@ -1797,7 +1930,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - ```
   x
@@ -1832,7 +1964,7 @@ x
 </td></tr>
 </table>
 
-#### 7. [Backspace18](../../spec/backspace.md#backspace18)
+#### [Backspace18](../../spec/backspace.md#backspace18)
 
 > deleteContentBackward
 
@@ -1850,7 +1982,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - para
 - #┃Hello
@@ -1859,7 +1990,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - para
 - ┃Hello
@@ -1895,7 +2025,7 @@ body
 </td></tr>
 </table>
 
-#### 8. [Backspace18c](../../spec/backspace.md#backspace18c)
+#### [Backspace18c](../../spec/backspace.md#backspace18c)
 
 > deleteContentBackward
 
@@ -1912,7 +2042,6 @@ Adapted: blank lines, heading, paragraph, setext heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - #┃Title
   - text
@@ -1920,7 +2049,6 @@ Adapted: blank lines, heading, paragraph, setext heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃Title
 - text
@@ -1952,7 +2080,7 @@ text
 </td></tr>
 </table>
 
-#### 9. [Backspace18d](../../spec/backspace.md#backspace18d)
+#### [Backspace18d](../../spec/backspace.md#backspace18d)
 
 > deleteContentBackward
 
@@ -1970,7 +2098,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
 - #┃H1
@@ -1979,7 +2106,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃H1
@@ -2013,7 +2139,7 @@ text
 </td></tr>
 </table>
 
-#### 10. [Backspace18e](../../spec/backspace.md#backspace18e)
+#### [Backspace18e](../../spec/backspace.md#backspace18e)
 
 > deleteContentBackward
 
@@ -2030,7 +2156,6 @@ Adapted: heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
 - #┃H
@@ -2038,7 +2163,6 @@ Adapted: heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃H
@@ -2067,7 +2191,7 @@ Original:
 </td></tr>
 </table>
 
-#### 11. [Backspace19](../../spec/backspace.md#backspace19)
+#### [Backspace19](../../spec/backspace.md#backspace19)
 
 > deleteContentBackward
 
@@ -2084,14 +2208,12 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a┃bc
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   ┃bc
@@ -2121,7 +2243,7 @@ Original:
 </td></tr>
 </table>
 
-#### 12. [Backspace20](../../spec/backspace.md#backspace20)
+#### [Backspace20](../../spec/backspace.md#backspace20)
 
 > deleteContentBackward
 
@@ -2139,7 +2261,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a┃
   - b
@@ -2147,7 +2268,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
 - b
@@ -2180,7 +2300,7 @@ Original:
 </td></tr>
 </table>
 
-#### 13. [Backspace23](../../spec/backspace.md#backspace23)
+#### [Backspace23](../../spec/backspace.md#backspace23)
 
 > deleteContentBackward
 
@@ -2198,7 +2318,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # Title┃more
   lines
@@ -2206,7 +2325,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Title
   - ┃more
@@ -2240,7 +2358,7 @@ lines
 </td></tr>
 </table>
 
-#### 14. [Backspace24](../../spec/backspace.md#backspace24)
+#### [Backspace24](../../spec/backspace.md#backspace24)
 
 > deleteContentBackward
 
@@ -2259,7 +2377,6 @@ Adapted: blank lines, code block, paragraph
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - ```
   x
@@ -2268,7 +2385,6 @@ Adapted: blank lines, code block, paragraph
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - ```
   x
@@ -2305,7 +2421,7 @@ x
 </td></tr>
 </table>
 
-#### 15. [Backspace33](../../spec/backspace.md#backspace33)
+#### [Backspace33](../../spec/backspace.md#backspace33)
 
 > deleteContentBackward
 
@@ -2322,7 +2438,6 @@ Adapted: paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ┃a
 - b
@@ -2330,7 +2445,6 @@ Adapted: paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃a
   - b
@@ -2359,7 +2473,7 @@ Original:
 </td></tr>
 </table>
 
-#### 16. [Backspace35](../../spec/backspace.md#backspace35)
+#### [Backspace35](../../spec/backspace.md#backspace35)
 
 > deleteContentBackward
 
@@ -2380,7 +2494,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # A
   - intro
@@ -2392,7 +2505,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # A
   - intro
@@ -2443,7 +2555,59 @@ para
 </td></tr>
 </table>
 
-#### 17. [Cmd-Backspace › SoftBackspace1](../../spec/backspace.md#softbackspace1)
+#### [Backspace38](../../spec/backspace.md#backspace38)
+
+> deleteContentBackward
+
+Adapted: blank lines, escape, paragraph
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [a]:
+- ┃b
+```
+
+</td><td>
+
+```buffer
+- [a]:┃b
+```
+
+</td><td>
+
+```buffer
+- [a]:
+  ┃b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+[a]:
+
+┃b
+```
+
+</td><td>
+
+```buffer
+\[a]:
+┃b
+```
+
+</td></tr>
+</table>
+
+#### [Cmd-Backspace › SoftBackspace1](../../spec/backspace.md#softbackspace1)
 
 Adapted: task
 
@@ -2464,14 +2628,12 @@ Adapted: task
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - ┃def
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] ┃def
 ```
@@ -2516,7 +2678,7 @@ Original:
 </td></tr>
 </table>
 
-#### 18. [Cmd-Backspace › SoftBackspace3](../../spec/backspace.md#softbackspace3)
+#### [Cmd-Backspace › SoftBackspace3](../../spec/backspace.md#softbackspace3)
 
 > deleteSoftLineBackward
 
@@ -2532,14 +2694,12 @@ Adapted: heading, setext heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ┃- x tail
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # ┃\- x tail
 ```
@@ -2567,7 +2727,7 @@ abc ┃- x tail
 </td></tr>
 </table>
 
-#### 19. [Cmd-Backspace › SoftBackspace4](../../spec/backspace.md#softbackspace4)
+#### [Cmd-Backspace › SoftBackspace4](../../spec/backspace.md#softbackspace4)
 
 > deleteSoftLineBackward
 
@@ -2583,14 +2743,12 @@ Adapted: heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ┃title #
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # ┃title #
 ```
@@ -2616,7 +2774,7 @@ Original:
 </td></tr>
 </table>
 
-#### 20. [Cmd-Backspace › SoftBackspace5](../../spec/backspace.md#softbackspace5)
+#### [Cmd-Backspace › SoftBackspace5](../../spec/backspace.md#softbackspace5)
 
 > deleteSoftLineBackward
 
@@ -2633,7 +2791,6 @@ Adapted: heading, setext heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # first
   ┃\- x
@@ -2641,7 +2798,6 @@ Adapted: heading, setext heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # first
   ┃\- x
@@ -2672,7 +2828,147 @@ first
 </td></tr>
 </table>
 
-#### 21. [Delete4](../../spec/del.md#delete4)
+#### [Cmd-Backspace › SoftBackspace8](../../spec/backspace.md#softbackspace8)
+
+Adapted: task
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [ ] t┃
+  m
+```
+
+</td></tr>
+</table>
+
+> deleteSoftLineBackward
+
+<table>
+<tr><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+  m
+```
+
+</td><td>
+
+```buffer
+- [ ] ┃
+  m
+```
+
+</td></tr>
+</table>
+
+> cursorLineDown
+
+<table>
+<tr><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- 
+  ┃m
+```
+
+</td><td>
+
+```buffer
+- [ ] m┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>deleteSoftLineBackward</th><th>cursorLineDown</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [ ] t┃
+  m
+```
+
+</td><td>
+
+```buffer
+- [ ] ┃◌
+  m
+```
+
+</td><td>
+
+```buffer
+- [ ] m┃
+```
+
+</td></tr>
+</table>
+
+#### [Cmd-Backspace › SoftBackspace9](../../spec/backspace.md#softbackspace9)
+
+> deleteSoftLineBackward
+
+Adapted: code block
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ```┃
+  code
+  ```
+````
+
+</td><td>
+
+````buffer
+- ┃
+  code
+  ```
+````
+
+</td><td>
+
+````buffer
+- ```┃
+  code
+  ```
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```┃
+code
+```
+````
+
+</td><td>
+
+````buffer
+```┃
+code
+```
+````
+
+</td></tr>
+</table>
+
+#### [Delete4](../../spec/del.md#delete4)
 
 > deleteContentForward
 
@@ -2689,7 +2985,6 @@ Adapted: heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # Title┃#
   - more
@@ -2697,7 +2992,6 @@ Adapted: heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Title┃more #
 ```
@@ -2724,7 +3018,7 @@ Original:
 </td></tr>
 </table>
 
-#### 22. [Delete4b](../../spec/del.md#delete4b)
+#### [Delete4b](../../spec/del.md#delete4b)
 
 > deleteContentForward
 
@@ -2741,14 +3035,12 @@ Adapted: heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # Title #┃more
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Title┃more #
 ```
@@ -2775,7 +3067,7 @@ Original:
 </td></tr>
 </table>
 
-#### 23. [Delete9](../../spec/del.md#delete9)
+#### [Delete9](../../spec/del.md#delete9)
 
 Adapted: blank lines, heading, paragraph
 
@@ -2813,7 +3105,6 @@ Adapted: blank lines, heading, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - ┃# H1
   - 
@@ -2822,7 +3113,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃# H1
   - ## H2
@@ -2865,7 +3155,7 @@ Original:
 </td></tr>
 </table>
 
-#### 24. [Delete13c](../../spec/del.md#delete13c)
+#### [Delete13c](../../spec/del.md#delete13c)
 
 > deleteContentForward
 
@@ -2883,7 +3173,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a┃# H1
   - text
@@ -2891,7 +3180,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃# H1
 - text
@@ -2923,7 +3211,7 @@ text
 </td></tr>
 </table>
 
-#### 25. [Delete13e](../../spec/del.md#delete13e)
+#### [Delete13e](../../spec/del.md#delete13e)
 
 > deleteContentForward
 
@@ -2940,14 +3228,12 @@ Adapted: blank lines, heading, paragraph, setext heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a┃# Title
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
 - # Title
@@ -2980,7 +3266,7 @@ Title
 </td></tr>
 </table>
 
-#### 26. [Delete14](../../spec/del.md#delete14)
+#### [Delete14](../../spec/del.md#delete14)
 
 > deleteContentForward
 
@@ -2998,7 +3284,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a┃# H1
   - body
@@ -3006,7 +3291,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃# H1
 - body
@@ -3039,7 +3323,7 @@ body
 </td></tr>
 </table>
 
-#### 27. [Delete18](../../spec/del.md#delete18)
+#### [Delete18](../../spec/del.md#delete18)
 
 > deleteContentForward
 
@@ -3056,14 +3340,12 @@ Adapted: blank lines, paragraph; Also: [del.md › Delete18c](../../spec/del.md#
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a┃b
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
   b
@@ -3093,7 +3375,7 @@ b
 </td></tr>
 </table>
 
-#### 28. [Delete18b](../../spec/del.md#delete18b)
+#### [Delete18b](../../spec/del.md#delete18b)
 
 > deleteContentForward
 
@@ -3110,14 +3392,12 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a┃bc
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
   bc
@@ -3147,7 +3427,7 @@ Original:
 </td></tr>
 </table>
 
-#### 29. [Delete19](../../spec/del.md#delete19)
+#### [Delete19](../../spec/del.md#delete19)
 
 > deleteContentForward
 
@@ -3163,14 +3443,12 @@ Adapted: task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ┃ODO task
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃task
 ```
@@ -3196,7 +3474,7 @@ Original:
 </td></tr>
 </table>
 
-#### 30. [DeleteSubtree6](../../spec/delete-subtree.md#deletesubtree6)
+#### [DeleteSubtree6](../../spec/delete-subtree.md#deletesubtree6)
 
 > deleteSubtree "x"
 
@@ -3213,14 +3491,12 @@ Adapted: paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - x┃
 ```
@@ -3247,7 +3523,69 @@ x┃
 </td></tr>
 </table>
 
-#### 31. [Enter3c](../../spec/enter.md#enter3c)
+#### [DeleteSubtree8](../../spec/delete-subtree.md#deletesubtree8)
+
+> deleteSubtree
+
+Adapted: blank lines, code block, paragraph
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a
+  - ┃```
+    code
+    ```
+  - x
+````
+
+</td><td>
+
+````buffer
+- a
+  - ```
+    code
+    ```
+  - x
+````
+
+</td><td>
+
+```buffer
+- a┃
+  - x
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a
+  ┃```
+  code
+  ```
+  x
+````
+
+</td><td>
+
+```buffer
+- a┃
+
+  x
+```
+
+</td></tr>
+</table>
+
+#### [Enter3c](../../spec/enter.md#enter3c)
 
 > enter
 
@@ -3265,7 +3603,6 @@ Adapted: numbered list
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
   - ┃b
@@ -3275,7 +3612,6 @@ Adapted: numbered list
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃b
@@ -3309,7 +3645,7 @@ Original:
 </td></tr>
 </table>
 
-#### 32. [Enter14](../../spec/enter.md#enter14)
+#### [Enter14](../../spec/enter.md#enter14)
 
 > enter enter enter "p"
 
@@ -3326,7 +3662,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
   - b
@@ -3336,7 +3671,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - b
@@ -3368,7 +3702,7 @@ p┃
 </td></tr>
 </table>
 
-#### 33. [Enter22](../../spec/enter.md#enter22)
+#### [Enter22](../../spec/enter.md#enter22)
 
 > enter
 
@@ -3385,7 +3719,6 @@ Adapted: blank lines, escape, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - para
   - ┃- x
@@ -3394,7 +3727,6 @@ Adapted: blank lines, escape, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - para
 - ┃- x
@@ -3426,7 +3758,7 @@ para
 </td></tr>
 </table>
 
-#### 34. [Enter32](../../spec/enter.md#enter32)
+#### [Enter32](../../spec/enter.md#enter32)
 
 > enter
 
@@ -3444,7 +3776,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - para
 - #
@@ -3454,7 +3785,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - para
 - ┃
@@ -3493,7 +3823,7 @@ body
 </td></tr>
 </table>
 
-#### 35. [Enter40](../../spec/enter.md#enter40)
+#### [Enter40](../../spec/enter.md#enter40)
 
 Adapted: blank lines, paragraph
 
@@ -3515,7 +3845,6 @@ Adapted: blank lines, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - a
 - 
@@ -3524,7 +3853,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃
@@ -3539,7 +3867,6 @@ Adapted: blank lines, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - a
 - 
@@ -3549,7 +3876,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃
@@ -3587,7 +3913,7 @@ Original:
 </td></tr>
 </table>
 
-#### 36. [Enter41](../../spec/enter.md#enter41)
+#### [Enter41](../../spec/enter.md#enter41)
 
 > enter
 
@@ -3604,7 +3930,6 @@ Adapted: escape, heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # Title
   - ┃- x
@@ -3613,7 +3938,6 @@ Adapted: escape, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Title
   - ┃- x
@@ -3644,7 +3968,7 @@ Original:
 </td></tr>
 </table>
 
-#### 37. [Enter42](../../spec/enter.md#enter42)
+#### [Enter42](../../spec/enter.md#enter42)
 
 > enter
 
@@ -3660,7 +3984,6 @@ Adapted: escape, heading, paragraph, setext heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # title
 - ┃- x
@@ -3668,7 +3991,6 @@ Adapted: escape, heading, paragraph, setext heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # title
   - ┃- x
@@ -3698,7 +4020,7 @@ title
 </td></tr>
 </table>
 
-#### 38. [Enter45](../../spec/enter.md#enter45)
+#### [Enter45](../../spec/enter.md#enter45)
 
 > enter
 
@@ -3715,7 +4037,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - para
 - #
@@ -3724,7 +4045,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - para
 - ┃
@@ -3757,7 +4077,395 @@ para
 </td></tr>
 </table>
 
-#### 39. [Fence7](../../spec/fences.md#fence7)
+#### [Enter47](../../spec/enter.md#enter47)
+
+Adapted: blank lines, escape, paragraph
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [Note]: this ┃matters a lot
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [Note]: this
+- ┃matters a lot
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward deleteContentBackward
+
+<table>
+<tr><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [Note]: thi┃matters a lot
+```
+
+</td><td>
+
+```buffer
+- [Note]: this┃matters a lot
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter</th><th>deleteContentBackward deleteContentBackward</th></tr>
+<tr valign="top"><td>
+
+```buffer
+[Note]: this ┃matters a lot
+```
+
+</td><td>
+
+```buffer
+\[Note]: this
+
+┃matters a lot
+```
+
+</td><td>
+
+```buffer
+[Note]: this┃matters a lot
+```
+
+</td></tr>
+</table>
+
+#### [Enter50](../../spec/enter.md#enter50)
+
+> enter
+
+Adapted: table
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- | a | b |
+  | --- | --- |
+  | on┃e | 2 |
+```
+
+</td><td>
+
+```buffer
+- | a | b |
+  | --- | --- |
+  | on
+- ┃e | 2 |
+```
+
+</td><td>
+
+```buffer
+- | a | b |
+  | --- | --- |
+  | on┃e | 2 |
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+| a | b |
+| --- | --- |
+| on┃e | 2 |
+```
+
+</td><td>
+
+```buffer
+| a | b |
+| --- | --- |
+| on┃e | 2 |
+```
+
+</td></tr>
+</table>
+
+#### [Enter51](../../spec/enter.md#enter51)
+
+Adapted: heading, paragraph, setext heading
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## one
+  ┃two
+  three
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## one
+- ┃two
+  three
+```
+
+</td><td>
+
+```buffer
+- ## one
+  - ┃two
+    three
+```
+
+</td></tr>
+</table>
+
+> undo
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## one
+  ┃two
+  three
+```
+
+</td></tr>
+</table>
+
+> cursorLineBoundaryForward enter
+
+<table>
+<tr><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## one
+  two
+- ┃three
+```
+
+</td><td>
+
+```buffer
+- ## one
+  two
+  - ┃three
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter</th><th>undo</th><th>cursorLineBoundaryForward enter</th></tr>
+<tr valign="top"><td>
+
+```buffer
+one
+┃two
+three
+---
+```
+
+</td><td>
+
+```buffer
+one
+---
+┃two
+three
+```
+
+</td><td>
+
+```buffer
+one
+┃two
+three
+---
+```
+
+</td><td>
+
+```buffer
+one
+two
+---
+┃three
+```
+
+</td></tr>
+</table>
+
+#### [Enter52](../../spec/enter.md#enter52)
+
+> enter
+
+Adapted: blank lines, heading, paragraph, setext heading
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## one
+  ┃two
+- ## three
+```
+
+</td><td>
+
+```buffer
+- ## one
+- ┃two
+- ## three
+```
+
+</td><td>
+
+```buffer
+- ## one
+  - ┃two
+- ## three
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+one
+┃two
+---
+three
+---
+```
+
+</td><td>
+
+```buffer
+one
+---
+┃two
+
+three
+---
+```
+
+</td></tr>
+</table>
+
+#### [Enter53](../../spec/enter.md#enter53)
+
+Adapted: blank lines, escape, paragraph
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- -┃a
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- -
+- ┃a
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward deleteContentBackward
+
+<table>
+<tr><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃a
+```
+
+</td><td>
+
+```buffer
+- -┃a
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter</th><th>deleteContentBackward deleteContentBackward</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-┃a
+```
+
+</td><td>
+
+```buffer
+\-
+
+┃a
+```
+
+</td><td>
+
+```buffer
+-┃a
+```
+
+</td></tr>
+</table>
+
+#### [Fence7](../../spec/fences.md#fence7)
 
 > enter "b"
 
@@ -3776,7 +4484,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - a
   - ```
@@ -3787,7 +4494,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - ```
@@ -3824,7 +4530,7 @@ Original:
 </td></tr>
 </table>
 
-#### 40. [Fence7b](../../spec/fences.md#fence7b)
+#### [Fence7b](../../spec/fences.md#fence7b)
 
 > shiftEnter "x"
 
@@ -3843,7 +4549,6 @@ Adapted: code block, paragraph
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - a
   - ```
@@ -3854,7 +4559,6 @@ Adapted: code block, paragraph
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - ```
@@ -3891,7 +4595,7 @@ Original:
 </td></tr>
 </table>
 
-#### 41. [Fence7d](../../spec/fences.md#fence7d)
+#### [Fence7d](../../spec/fences.md#fence7d)
 
 > enter
 
@@ -3911,7 +4615,6 @@ Adapted: blank lines, code block, paragraph
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - a
   - ```
@@ -3923,7 +4626,6 @@ Adapted: blank lines, code block, paragraph
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - ```
@@ -3964,7 +4666,7 @@ Original:
 </td></tr>
 </table>
 
-#### 42. [Fence9](../../spec/fences.md#fence9)
+#### [Fence9](../../spec/fences.md#fence9)
 
 > enter
 
@@ -3982,7 +4684,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - `
   ┃``
@@ -3992,7 +4693,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - `┃``
   code
@@ -4024,7 +4724,7 @@ code
 </td></tr>
 </table>
 
-#### 43. [Fence14](../../spec/fences.md#fence14)
+#### [Fence14](../../spec/fences.md#fence14)
 
 > enter
 
@@ -4042,7 +4742,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - ```
   code
@@ -4052,7 +4751,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - ```
   code
@@ -4084,7 +4782,7 @@ code
 </td></tr>
 </table>
 
-#### 44. [Fence17](../../spec/fences.md#fence17)
+#### [Fence17](../../spec/fences.md#fence17)
 
 > deleteContentBackward
 
@@ -4103,7 +4801,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - a
   - ```┃one
@@ -4112,7 +4809,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - ```
@@ -4147,7 +4843,7 @@ Original:
 </td></tr>
 </table>
 
-#### 45. [Fence19](../../spec/fences.md#fence19)
+#### [Fence19](../../spec/fences.md#fence19)
 
 > deleteContentForward
 
@@ -4166,7 +4862,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - a
   - ```
@@ -4175,7 +4870,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - ```
@@ -4210,7 +4904,7 @@ Original:
 </td></tr>
 </table>
 
-#### 46. [Fence22](../../spec/fences.md#fence22)
+#### [Fence22](../../spec/fences.md#fence22)
 
 > shiftEnter enter
 
@@ -4230,7 +4924,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - a
   - b
@@ -4242,7 +4935,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - b
@@ -4282,7 +4974,7 @@ Original:
 </td></tr>
 </table>
 
-#### 47. [Fence23](../../spec/fences.md#fence23)
+#### [Fence23](../../spec/fences.md#fence23)
 
 > deleteContentBackward
 
@@ -4301,7 +4993,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - a
   - ```
@@ -4310,7 +5001,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - ```
@@ -4345,7 +5035,7 @@ Original:
 </td></tr>
 </table>
 
-#### 48. [Fence24](../../spec/fences.md#fence24)
+#### [Fence24](../../spec/fences.md#fence24)
 
 > deleteContentForward
 
@@ -4364,7 +5054,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - a
   - ```js┃one
@@ -4373,7 +5062,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - ```js┃
@@ -4408,7 +5096,7 @@ Original:
 </td></tr>
 </table>
 
-#### 49. [Fence25](../../spec/fences.md#fence25)
+#### [Fence25](../../spec/fences.md#fence25)
 
 > deleteContentBackward
 
@@ -4427,7 +5115,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - a```┃
   one
@@ -4436,7 +5123,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - ┃```
@@ -4471,7 +5157,7 @@ Original:
 </td></tr>
 </table>
 
-#### 50. [Fence26](../../spec/fences.md#fence26)
+#### [Fence26](../../spec/fences.md#fence26)
 
 > deleteContentBackward
 
@@ -4490,7 +5176,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - a```┃
   one
@@ -4499,7 +5184,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a┃
   - ```
@@ -4534,7 +5218,7 @@ Original:
 </td></tr>
 </table>
 
-#### 51. [Fence33](../../spec/fences.md#fence33)
+#### [Fence33](../../spec/fences.md#fence33)
 
 > deleteContentBackward
 
@@ -4553,7 +5237,6 @@ Adapted: code block, paragraph
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - para```┃
   x
@@ -4562,7 +5245,6 @@ Adapted: code block, paragraph
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - para
 - ┃```
@@ -4597,7 +5279,7 @@ x
 </td></tr>
 </table>
 
-#### 52. [Fence34](../../spec/fences.md#fence34)
+#### [Fence34](../../spec/fences.md#fence34)
 
 > deleteContentForward
 
@@ -4616,7 +5298,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - a┃```
   one
@@ -4625,7 +5306,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a┃
   - ```
@@ -4660,7 +5340,7 @@ Original:
 </td></tr>
 </table>
 
-#### 53. [Fence36](../../spec/fences.md#fence36)
+#### [Fence36](../../spec/fences.md#fence36)
 
 > deleteContentBackward
 
@@ -4680,7 +5360,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - ```
   ``┃`
@@ -4690,7 +5369,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - ```
   ``
@@ -4728,7 +5406,7 @@ body
 </td></tr>
 </table>
 
-#### 54. [Fence37](../../spec/fences.md#fence37)
+#### [Fence37](../../spec/fences.md#fence37)
 
 > deleteContentForward
 
@@ -4748,7 +5426,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - ```
   ``┃`
@@ -4758,7 +5435,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - ```
   ``┃
@@ -4796,7 +5472,7 @@ body
 </td></tr>
 </table>
 
-#### 55. [Fence38](../../spec/fences.md#fence38)
+#### [Fence38](../../spec/fences.md#fence38)
 
 > shiftEnter
 
@@ -4815,7 +5491,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - ```
   x
@@ -4826,7 +5501,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - ```
   x┃```
@@ -4861,7 +5535,7 @@ body
 </td></tr>
 </table>
 
-#### 56. [Fence39](../../spec/fences.md#fence39)
+#### [Fence39](../../spec/fences.md#fence39)
 
 > enter
 
@@ -4880,7 +5554,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - ```
   ```
@@ -4891,7 +5564,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - ```
   ```┃x
@@ -4926,7 +5598,364 @@ body
 </td></tr>
 </table>
 
-#### 57. [Indent12](../../spec/indent.md#indent12)
+#### [Math, comments and indented code › Fence42](../../spec/fences.md#fence42)
+
+Adapted: math
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Euler:
+  - $$
+    e^{i\pi}+1=0┃
+    $$
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Euler:
+  - $$
+    e^{i\pi}+1=0
+  - $$┃
+```
+
+</td><td>
+
+```buffer
+- Euler:
+  - $$
+    e^{i\pi}+1=0
+    ┃
+    $$
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Euler:
+  - $$
+    e^{i\pi}+1=0
+  - $┃
+```
+
+</td><td>
+
+```buffer
+- Euler:
+  - $$
+    e^{i\pi}+1=0┃
+    $$
+```
+
+</td></tr>
+</table>
+
+> enter "x"
+
+<table>
+<tr><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Euler:
+  - $$
+    e^{i\pi}+1=0
+  - $
+  - x┃
+```
+
+</td><td>
+
+```buffer
+- Euler:
+  - $$
+    e^{i\pi}+1=0
+    x┃
+    $$
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter</th><th>deleteContentBackward</th><th>enter "x"</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Euler:
+  $$
+  e^{i\pi}+1=0┃
+  $$
+```
+
+</td><td>
+
+```buffer
+- Euler:
+  $$
+  e^{i\pi}+1=0
+  ┃
+  $$
+```
+
+</td><td>
+
+```buffer
+- Euler:
+  $$
+  e^{i\pi}+1=0┃
+  $$
+```
+
+</td><td>
+
+```buffer
+- Euler:
+  $$
+  e^{i\pi}+1=0
+  x┃
+  $$
+```
+
+</td></tr>
+</table>
+
+#### [Math, comments and indented code › Fence44](../../spec/fences.md#fence44)
+
+> enter "z"
+
+Adapted: blank lines, code block
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  -     x = 1┃
+        y = 2
+```
+
+</td><td>
+
+```buffer
+- a
+  - x = 1
+  - z┃y = 2
+```
+
+</td><td>
+
+```buffer
+- a
+  -     x = 1
+        z┃
+        y = 2
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+
+      x = 1┃
+      y = 2
+```
+
+</td><td>
+
+```buffer
+- a
+
+      x = 1
+      z┃
+      y = 2
+```
+
+</td></tr>
+</table>
+
+#### [Math, comments and indented code › Fence45](../../spec/fences.md#fence45)
+
+> enter
+
+Adapted: math
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- $┃$
+  x
+  $$
+```
+
+</td><td>
+
+```buffer
+- $
+- $┃
+  x
+  $$
+```
+
+</td><td>
+
+```buffer
+- $┃$
+  x
+  $$
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+$┃$
+x
+$$
+```
+
+</td><td>
+
+```buffer
+$┃$
+x
+$$
+```
+
+</td></tr>
+</table>
+
+#### [Math, comments and indented code › Fence47](../../spec/fences.md#fence47)
+
+Adapted: math
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - $$
+    ┃x
+    $$
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - $$┃x
+    $$
+```
+
+</td><td>
+
+```buffer
+- a
+  - $$
+    ┃x
+    $$
+```
+
+</td></tr>
+</table>
+
+> cursorLineBoundaryForward deleteContentForward
+
+<table>
+<tr><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - $$x┃$$
+```
+
+</td><td>
+
+```buffer
+- a
+  - $$
+    x┃
+    $$
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>deleteContentBackward</th><th>cursorLineBoundaryForward deleteContentForward</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  $$
+  ┃x
+  $$
+```
+
+</td><td>
+
+```buffer
+- a
+  $$
+  ┃x
+  $$
+```
+
+</td><td>
+
+```buffer
+- a
+  $$
+  x┃
+  $$
+```
+
+</td></tr>
+</table>
+
+#### [Indent12](../../spec/indent.md#indent12)
 
 > indent
 
@@ -4944,7 +5973,6 @@ Adapted: heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # A
   - ## B┃
@@ -4953,7 +5981,6 @@ Adapted: heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # A
   - ### B┃
@@ -4985,7 +6012,7 @@ Original:
 </td></tr>
 </table>
 
-#### 58. [Indent16](../../spec/indent.md#indent16)
+#### [Indent16](../../spec/indent.md#indent16)
 
 > indent
 
@@ -5002,7 +6029,6 @@ Adapted: blank lines, heading, setext heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # Title┃
   - ## Sub
@@ -5010,7 +6036,6 @@ Adapted: blank lines, heading, setext heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ## Title┃
   - ### Sub
@@ -5043,7 +6068,7 @@ Title┃
 </td></tr>
 </table>
 
-#### 59. [Indent23](../../spec/indent.md#indent23)
+#### [Indent23](../../spec/indent.md#indent23)
 
 > indent
 
@@ -5062,7 +6087,6 @@ Adapted: heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # A
   - ## B
@@ -5072,7 +6096,6 @@ Adapted: heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # A
   - ## B
@@ -5107,7 +6130,7 @@ Original:
 </td></tr>
 </table>
 
-#### 60. [Indent25](../../spec/indent.md#indent25)
+#### [Indent25](../../spec/indent.md#indent25)
 
 > indent
 
@@ -5124,7 +6147,6 @@ Adapted: blank lines, heading, setext heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ## Title┃
   - ### Sub
@@ -5132,7 +6154,6 @@ Adapted: blank lines, heading, setext heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ### Title┃
   - #### Sub
@@ -5164,7 +6185,7 @@ Title┃
 </td></tr>
 </table>
 
-#### 61. [MoveDown2](../../spec/move-subtree-down.md#movedown2)
+#### [MoveDown2](../../spec/move-subtree-down.md#movedown2)
 
 > moveSubtreeDown
 
@@ -5182,7 +6203,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # H
   - para
@@ -5191,7 +6211,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # H
   - para
@@ -5225,7 +6244,7 @@ para
 </td></tr>
 </table>
 
-#### 62. [MoveDown8](../../spec/move-subtree-down.md#movedown8)
+#### [MoveDown8](../../spec/move-subtree-down.md#movedown8)
 
 > moveSubtreeDown
 
@@ -5244,7 +6263,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
 - para
@@ -5254,7 +6272,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - para
@@ -5293,7 +6310,7 @@ para
 </td></tr>
 </table>
 
-#### 63. [MoveDown13](../../spec/move-subtree-down.md#movedown13)
+#### [MoveDown13](../../spec/move-subtree-down.md#movedown13)
 
 Adapted: blank lines, paragraph
 
@@ -5316,7 +6333,6 @@ Adapted: blank lines, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - intro
 - b┃
@@ -5325,7 +6341,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - intro
   - b┃
@@ -5383,7 +6398,7 @@ intro
 </td></tr>
 </table>
 
-#### 64. [MoveDown17](../../spec/move-subtree-down.md#movedown17)
+#### [MoveDown17](../../spec/move-subtree-down.md#movedown17)
 
 > moveSubtreeDown
 
@@ -5401,7 +6416,6 @@ Adapted: heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # H
   - a
@@ -5410,7 +6424,6 @@ Adapted: heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ## ┃H
 - # H
@@ -5442,7 +6455,7 @@ Original:
 </td></tr>
 </table>
 
-#### 65. [MoveDown19](../../spec/move-subtree-down.md#movedown19)
+#### [MoveDown19](../../spec/move-subtree-down.md#movedown19)
 
 > moveSubtreeDown
 
@@ -5461,7 +6474,6 @@ Adapted: blank lines, heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # A
 - # B
@@ -5471,7 +6483,6 @@ Adapted: blank lines, heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # A
   - ## s┃
@@ -5508,7 +6519,7 @@ Original:
 </td></tr>
 </table>
 
-#### 66. [MoveDown20](../../spec/move-subtree-down.md#movedown20)
+#### [MoveDown20](../../spec/move-subtree-down.md#movedown20)
 
 > moveSubtreeDown
 
@@ -5528,7 +6539,6 @@ Adapted: blank lines, heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # Todo
   - one
@@ -5539,7 +6549,6 @@ Adapted: blank lines, heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Todo
   - one
@@ -5579,7 +6588,7 @@ Original:
 </td></tr>
 </table>
 
-#### 67. [MoveDown25](../../spec/move-subtree-down.md#movedown25)
+#### [MoveDown25](../../spec/move-subtree-down.md#movedown25)
 
 > moveSubtreeDown
 
@@ -5598,7 +6607,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # A
 - # B
@@ -5608,7 +6616,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # A
   - para┃
@@ -5645,7 +6652,7 @@ para┃
 </td></tr>
 </table>
 
-#### 68. [MoveDown28](../../spec/move-subtree-down.md#movedown28)
+#### [MoveDown28](../../spec/move-subtree-down.md#movedown28)
 
 > moveSubtreeDown
 
@@ -5665,7 +6672,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # A
   - ## sub
@@ -5676,7 +6682,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # A
   - ## sub
@@ -5717,7 +6722,66 @@ Original:
 </td></tr>
 </table>
 
-#### 69. [MoveUp7](../../spec/move-subtree-up.md#moveup7)
+#### [MoveDown36](../../spec/move-subtree-down.md#movedown36)
+
+> moveSubtreeDown
+
+Adapted: blank lines, paragraph
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- item
+  - ┃a
+  - para
+```
+
+</td><td>
+
+```buffer
+- item
+  - para
+  - ┃a
+```
+
+</td><td>
+
+```buffer
+- item
+  - ┃a
+  - para
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- item
+  - ┃a
+
+  para
+```
+
+</td><td>
+
+```buffer
+- item
+  - ┃a
+
+  para
+```
+
+</td></tr>
+</table>
+
+#### [MoveUp7](../../spec/move-subtree-up.md#moveup7)
 
 > moveSubtreeUp
 
@@ -5736,7 +6800,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
   - b┃
@@ -5746,7 +6809,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - b┃
@@ -5785,7 +6847,7 @@ para
 </td></tr>
 </table>
 
-#### 70. [MoveUp12](../../spec/move-subtree-up.md#moveup12)
+#### [MoveUp12](../../spec/move-subtree-up.md#moveup12)
 
 > moveSubtreeUp
 
@@ -5803,7 +6865,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - intro
   - b┃
@@ -5812,7 +6873,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - b┃
   - b1
@@ -5846,7 +6906,7 @@ intro
 </td></tr>
 </table>
 
-#### 71. [MoveUp21](../../spec/move-subtree-up.md#moveup21)
+#### [MoveUp21](../../spec/move-subtree-up.md#moveup21)
 
 > moveSubtreeUp
 
@@ -5864,7 +6924,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - para
   - a┃
@@ -5873,7 +6932,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
 - para
@@ -5906,7 +6964,7 @@ para
 </td></tr>
 </table>
 
-#### 72. [MoveUp23](../../spec/move-subtree-up.md#moveup23)
+#### [MoveUp23](../../spec/move-subtree-up.md#moveup23)
 
 > moveSubtreeUp
 
@@ -5926,7 +6984,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # A
   - ## sub
@@ -5937,7 +6994,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # A
   - ## sub
@@ -5978,7 +7034,7 @@ Original:
 </td></tr>
 </table>
 
-#### 73. [MoveUp24](../../spec/move-subtree-up.md#moveup24)
+#### [MoveUp24](../../spec/move-subtree-up.md#moveup24)
 
 > moveSubtreeUp
 
@@ -5998,7 +7054,6 @@ Adapted: blank lines, heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # Todo
   - one
@@ -6009,7 +7064,6 @@ Adapted: blank lines, heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Todo
   - one
@@ -6049,7 +7103,7 @@ Original:
 </td></tr>
 </table>
 
-#### 74. [MoveUp27](../../spec/move-subtree-up.md#moveup27)
+#### [MoveUp27](../../spec/move-subtree-up.md#moveup27)
 
 Adapted: blank lines, heading, paragraph
 
@@ -6073,7 +7127,6 @@ Adapted: blank lines, heading, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - # Work
   - para
@@ -6083,7 +7136,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Work
   - para
@@ -6100,7 +7152,6 @@ Adapted: blank lines, heading, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - # Work
   - para
@@ -6110,7 +7161,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Work
   - para
@@ -6157,7 +7207,7 @@ para
 </td></tr>
 </table>
 
-#### 75. [MoveUp28](../../spec/move-subtree-up.md#moveup28)
+#### [MoveUp28](../../spec/move-subtree-up.md#moveup28)
 
 > moveSubtreeUp
 
@@ -6175,7 +7225,6 @@ Adapted: heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # A┃
   - a
@@ -6184,7 +7233,6 @@ Adapted: heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ## X
 - # A┃
@@ -6216,7 +7264,7 @@ Original:
 </td></tr>
 </table>
 
-#### 76. [MoveUp29](../../spec/move-subtree-up.md#moveup29)
+#### [MoveUp29](../../spec/move-subtree-up.md#moveup29)
 
 > moveSubtreeUp
 
@@ -6234,7 +7282,6 @@ Adapted: heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # H
   - ┃a
@@ -6243,7 +7290,6 @@ Adapted: heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃a
 - # H
@@ -6275,7 +7321,7 @@ Original:
 </td></tr>
 </table>
 
-#### 77. [MoveUp33](../../spec/move-subtree-up.md#moveup33)
+#### [MoveUp33](../../spec/move-subtree-up.md#moveup33)
 
 > moveSubtreeUp
 
@@ -6293,7 +7339,6 @@ Adapted: heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # H
   - ## ┃H
@@ -6302,7 +7347,6 @@ Adapted: heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # H
   - a
@@ -6334,7 +7378,7 @@ Original:
 </td></tr>
 </table>
 
-#### 78. [Enter › E9](../../spec/obsidian-true-outliner.md#e9)
+#### [Enter › E9](../../spec/obsidian-true-outliner.md#e9)
 
 > enter
 
@@ -6351,7 +7395,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - one
   - ┃two
@@ -6360,7 +7403,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one
 - ┃two
@@ -6392,7 +7434,7 @@ one
 </td></tr>
 </table>
 
-#### 79. [Enter › E15](../../spec/obsidian-true-outliner.md#e15)
+#### [Enter › E15](../../spec/obsidian-true-outliner.md#e15)
 
 > enter
 
@@ -6409,7 +7451,6 @@ Adapted: heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # Head
   - ┃line
@@ -6418,7 +7459,6 @@ Adapted: heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Head
   - ┃line
@@ -6449,7 +7489,7 @@ Original:
 </td></tr>
 </table>
 
-#### 80. [Enter › E17](../../spec/obsidian-true-outliner.md#e17)
+#### [Enter › E17](../../spec/obsidian-true-outliner.md#e17)
 
 > enter
 
@@ -6465,7 +7505,6 @@ Adapted: heading, paragraph, setext heading; Also: [obsidian-true-outliner.md �
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # Hello
 - ┃world
@@ -6473,7 +7512,6 @@ Adapted: heading, paragraph, setext heading; Also: [obsidian-true-outliner.md �
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Hello
   - ┃world
@@ -6503,7 +7541,7 @@ Hello
 </td></tr>
 </table>
 
-#### 81. [Enter › E19, E21 › End of lone heading starts a paragraph](../../spec/obsidian-true-outliner.md#end-of-lone-heading-starts-a-paragraph)
+#### [Enter › E19, E21 › End of lone heading starts a paragraph](../../spec/obsidian-true-outliner.md#end-of-lone-heading-starts-a-paragraph)
 
 > enter "x"
 
@@ -6519,7 +7557,6 @@ Adapted: heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # Head
 - x┃
@@ -6527,7 +7564,6 @@ Adapted: heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Head
   - x┃
@@ -6555,7 +7591,7 @@ x┃
 </td></tr>
 </table>
 
-#### 82. [Enter › E19, E21 › Empty paragraph before a section list](../../spec/obsidian-true-outliner.md#empty-paragraph-before-a-section-list)
+#### [Enter › E19, E21 › Empty paragraph before a section list](../../spec/obsidian-true-outliner.md#empty-paragraph-before-a-section-list)
 
 > enter
 
@@ -6572,7 +7608,6 @@ Adapted: heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # Head
   - ┃
@@ -6581,7 +7616,6 @@ Adapted: heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Head
   - ┃
@@ -6612,7 +7646,7 @@ Original:
 </td></tr>
 </table>
 
-#### 83. [Enter › E32 › Task checkbox carries over unchecked](../../spec/obsidian-true-outliner.md#task-checkbox-carries-over-unchecked)
+#### [Enter › E32 › Task checkbox carries over unchecked](../../spec/obsidian-true-outliner.md#task-checkbox-carries-over-unchecked)
 
 > enter
 
@@ -6628,7 +7662,6 @@ Adapted: task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - [ ] alpha
 - ┃beta
@@ -6636,7 +7669,6 @@ Adapted: task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] alpha
 - [ ] ┃beta
@@ -6664,7 +7696,7 @@ Original:
 </td></tr>
 </table>
 
-#### 84. [Enter › E32 › Checked task gives unchecked new item](../../spec/obsidian-true-outliner.md#checked-task-gives-unchecked-new-item)
+#### [Enter › E32 › Checked task gives unchecked new item](../../spec/obsidian-true-outliner.md#checked-task-gives-unchecked-new-item)
 
 > enter
 
@@ -6680,7 +7712,6 @@ Adapted: task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - [x] done
 - ┃
@@ -6688,7 +7719,6 @@ Adapted: task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [x] done
 - [ ] ┃
@@ -6716,7 +7746,7 @@ Original:
 </td></tr>
 </table>
 
-#### 85. [Shift-Enter › S7, S8 › Line break in setext title refused](../../spec/obsidian-true-outliner.md#line-break-in-setext-title-refused)
+#### [Shift-Enter › S7, S8 › Line break in setext title refused](../../spec/obsidian-true-outliner.md#line-break-in-setext-title-refused)
 
 > shiftEnter
 
@@ -6732,7 +7762,6 @@ Adapted: heading, setext heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # Hello
   ┃ world
@@ -6740,7 +7769,6 @@ Adapted: heading, setext heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Hello┃ world
 ```
@@ -6768,7 +7796,7 @@ Hello┃ world
 </td></tr>
 </table>
 
-#### 86. [Shift-Enter › S11 › Leaving the place removes it](../../spec/obsidian-true-outliner.md#leaving-the-place-removes-it)
+#### [Shift-Enter › S11 › Leaving the place removes it](../../spec/obsidian-true-outliner.md#leaving-the-place-removes-it)
 
 > shiftEnter cursorDocStart
 
@@ -6785,7 +7813,6 @@ Adapted: paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ┃foo
   
@@ -6794,7 +7821,6 @@ Adapted: paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃foo
   bar
@@ -6823,7 +7849,7 @@ bar
 </td></tr>
 </table>
 
-#### 87. [Backspace › Joining a task › Backspace before the checkbox](../../spec/obsidian-true-outliner.md#backspace-before-the-checkbox)
+#### [Backspace › Joining a task › Backspace before the checkbox](../../spec/obsidian-true-outliner.md#backspace-before-the-checkbox)
 
 > deleteContentBackward
 
@@ -6840,14 +7866,12 @@ Adapted: task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a┃TODO b
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃b
 ```
@@ -6874,7 +7898,7 @@ Original:
 </td></tr>
 </table>
 
-#### 88. [Outdent4](../../spec/outdent.md#outdent4)
+#### [Outdent4](../../spec/outdent.md#outdent4)
 
 > outdent
 
@@ -6891,7 +7915,6 @@ Adapted: heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ## A┃
   - ### B
@@ -6899,7 +7922,6 @@ Adapted: heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # A┃
   - ## B
@@ -6928,7 +7950,7 @@ Original:
 </td></tr>
 </table>
 
-#### 89. [Outdent11](../../spec/outdent.md#outdent11)
+#### [Outdent11](../../spec/outdent.md#outdent11)
 
 > outdent
 
@@ -6946,7 +7968,6 @@ Adapted: heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # T
 - ## A┃
@@ -6955,7 +7976,6 @@ Adapted: heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # T
 - # A┃
@@ -6987,7 +8007,7 @@ Original:
 </td></tr>
 </table>
 
-#### 90. [Direct outdent › DirectOutdent2](../../spec/outdent.md#directoutdent2)
+#### [Direct outdent › DirectOutdent2](../../spec/outdent.md#directoutdent2)
 
 > outdent
 
@@ -7004,7 +8024,6 @@ Adapted: paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a┃
 - b
@@ -7012,7 +8031,6 @@ Adapted: paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
   - b
@@ -7041,7 +8059,7 @@ a┃
 </td></tr>
 </table>
 
-#### 91. [Direct outdent › DirectOutdent3](../../spec/outdent.md#directoutdent3)
+#### [Direct outdent › DirectOutdent3](../../spec/outdent.md#directoutdent3)
 
 > outdent
 
@@ -7059,7 +8077,6 @@ Adapted: paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a┃
   - a1
@@ -7068,7 +8085,6 @@ Adapted: paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
   - a1
@@ -7100,7 +8116,7 @@ a┃
 </td></tr>
 </table>
 
-#### 92. [Logical outdent › LogicalOutdent2](../../spec/outdent.md#logicaloutdent2)
+#### [Logical outdent › LogicalOutdent2](../../spec/outdent.md#logicaloutdent2)
 
 > outdent
 
@@ -7117,7 +8133,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a┃
 - b
@@ -7125,7 +8140,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - b
 - a┃
@@ -7155,7 +8169,7 @@ a┃
 </td></tr>
 </table>
 
-#### 93. [Logical outdent › LogicalOutdent3](../../spec/outdent.md#logicaloutdent3)
+#### [Logical outdent › LogicalOutdent3](../../spec/outdent.md#logicaloutdent3)
 
 > outdent
 
@@ -7173,7 +8187,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a┃
   - a1
@@ -7182,7 +8195,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - b
 - a┃
@@ -7215,7 +8227,7 @@ a┃
 </td></tr>
 </table>
 
-#### 94. [Logical outdent › LogicalOutdent5](../../spec/outdent.md#logicaloutdent5)
+#### [Logical outdent › LogicalOutdent5](../../spec/outdent.md#logicaloutdent5)
 
 > outdent
 
@@ -7233,7 +8245,6 @@ Adapted: heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # T
   - ## B
@@ -7242,7 +8253,6 @@ Adapted: heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # T
 - # A┃
@@ -7274,7 +8284,178 @@ Original:
 </td></tr>
 </table>
 
-#### 95. [Paste1](../../spec/paste.md#paste1)
+#### [Outdent17](../../spec/outdent.md#outdent17)
+
+> outdent
+
+Adapted: heading
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃# H
+- b
+```
+
+</td><td>
+
+```buffer
+- ┃# H
+- b
+```
+
+</td><td>
+
+```buffer
+- # ┃H
+  - b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃# H
+- b
+```
+
+</td><td>
+
+```buffer
+# ┃H
+- b
+```
+
+</td></tr>
+</table>
+
+#### [Outdent17b](../../spec/outdent.md#outdent17b)
+
+> outdent
+
+Adapted: heading
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃# H
+- b
+```
+
+</td><td>
+
+```buffer
+- ┃# H
+- b
+```
+
+</td><td>
+
+```buffer
+- b
+- # ┃H
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃# H
+- b
+```
+
+</td><td>
+
+```buffer
+- b
+# ┃H
+```
+
+</td></tr>
+</table>
+
+#### [Outdent19](../../spec/outdent.md#outdent19)
+
+> outdent
+
+Adapted: code block
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ┃```
+  code
+  ```
+  - c
+- d
+````
+
+</td><td>
+
+````buffer
+- ┃```
+  code
+  ```
+  - c
+- d
+````
+
+</td><td>
+
+````buffer
+- ```
+  ┃code
+  ```
+- c
+- d
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ┃```
+  code
+  ```
+  - c
+- d
+````
+
+</td><td>
+
+````buffer
+```
+┃code
+```
+- c
+- d
+````
+
+</td></tr>
+</table>
+
+#### [Paste1](../../spec/paste.md#paste1)
 
 > pasteStructured
 
@@ -7300,7 +8481,6 @@ c
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - para
   - a```
@@ -7312,7 +8492,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - para
   - a
@@ -7350,7 +8529,7 @@ para
 </td></tr>
 </table>
 
-#### 96. [Paste6](../../spec/paste.md#paste6)
+#### [Paste6](../../spec/paste.md#paste6)
 
 > pastePlain
 
@@ -7373,7 +8552,6 @@ y
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # Hx
   y
@@ -7382,7 +8560,6 @@ y
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # H┃
 ```
@@ -7408,7 +8585,7 @@ Original:
 </td></tr>
 </table>
 
-#### 97. [Paste13](../../spec/paste.md#paste13)
+#### [Paste13](../../spec/paste.md#paste13)
 
 > pasteStructured
 
@@ -7432,7 +8609,6 @@ Adapted: escape
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a1. x
   2\. y
@@ -7442,7 +8618,6 @@ Adapted: escape
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - 1. x
@@ -7475,7 +8650,7 @@ Original:
 </td></tr>
 </table>
 
-#### 98. [Paste14](../../spec/paste.md#paste14)
+#### [Paste14](../../spec/paste.md#paste14)
 
 > pasteStructured
 
@@ -7499,7 +8674,6 @@ Adapted: escape
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a1. x
   2\. y
@@ -7509,7 +8683,6 @@ Adapted: escape
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - 1. x
@@ -7542,7 +8715,7 @@ Original:
 </td></tr>
 </table>
 
-#### 99. [Paste15](../../spec/paste.md#paste15)
+#### [Paste15](../../spec/paste.md#paste15)
 
 > pasteStructured
 
@@ -7566,7 +8739,6 @@ Adapted: numbered list
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - 1. x
   2\. y
@@ -7576,7 +8748,6 @@ Adapted: numbered list
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - x
 - y┃
@@ -7607,7 +8778,7 @@ Original:
 </td></tr>
 </table>
 
-#### 100. [Paste17](../../spec/paste.md#paste17)
+#### [Paste17](../../spec/paste.md#paste17)
 
 > pasteStructured
 
@@ -7631,7 +8802,6 @@ Adapted: escape, numbered list
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a1. x
      1. x1
@@ -7641,7 +8811,6 @@ Adapted: escape, numbered list
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - 1. x
@@ -7673,7 +8842,7 @@ Original:
 </td></tr>
 </table>
 
-#### 101. [Paste18](../../spec/paste.md#paste18)
+#### [Paste18](../../spec/paste.md#paste18)
 
 > pasteStructured
 
@@ -7697,7 +8866,6 @@ Adapted: numbered list
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a1. x
   2\. y
@@ -7707,7 +8875,6 @@ Adapted: numbered list
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - x
@@ -7740,7 +8907,7 @@ Original:
 </td></tr>
 </table>
 
-#### 102. [Paste19](../../spec/paste.md#paste19)
+#### [Paste19](../../spec/paste.md#paste19)
 
 > pasteStructured
 
@@ -7763,7 +8930,6 @@ text
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
 - # h
@@ -7772,7 +8938,6 @@ text
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - # h
@@ -7802,7 +8967,7 @@ Original:
 </td></tr>
 </table>
 
-#### 103. [Paste25](../../spec/paste.md#paste25)
+#### [Paste25](../../spec/paste.md#paste25)
 
 > pasteStructured
 
@@ -7828,7 +8993,6 @@ c
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - a```
   c
@@ -7840,7 +9004,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - ```
@@ -7878,7 +9041,7 @@ Original:
 </td></tr>
 </table>
 
-#### 104. [Paste33](../../spec/paste.md#paste33)
+#### [Paste33](../../spec/paste.md#paste33)
 
 > pasteStructured
 
@@ -7901,7 +9064,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ## A
   - para
@@ -7910,7 +9072,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ## A
   - para
@@ -7944,7 +9105,7 @@ para
 </td></tr>
 </table>
 
-#### 105. [Paste34](../../spec/paste.md#paste34)
+#### [Paste34](../../spec/paste.md#paste34)
 
 > pasteStructured
 
@@ -7967,7 +9128,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - para
 - # h┃
@@ -7976,7 +9136,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - para
 - # h┃
@@ -8010,7 +9169,7 @@ next
 </td></tr>
 </table>
 
-#### 106. [Paste35](../../spec/paste.md#paste35)
+#### [Paste35](../../spec/paste.md#paste35)
 
 > pasteStructured
 
@@ -8036,7 +9195,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ## A
   - para
@@ -8048,7 +9206,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ## A
   - para
@@ -8097,7 +9254,7 @@ more
 </td></tr>
 </table>
 
-#### 107. [Paste37](../../spec/paste.md#paste37)
+#### [Paste37](../../spec/paste.md#paste37)
 
 > pasteStructured
 
@@ -8120,7 +9277,6 @@ x
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - See here.
 - x
@@ -8129,7 +9285,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - See x
   - y
@@ -8160,7 +9315,7 @@ See x
 </td></tr>
 </table>
 
-#### 108. [Paste40](../../spec/paste.md#paste40)
+#### [Paste40](../../spec/paste.md#paste40)
 
 > pastePlain
 
@@ -8185,7 +9340,6 @@ y
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ax
   
@@ -8196,7 +9350,6 @@ y
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ax
   - y
@@ -8230,7 +9383,7 @@ Original:
 </td></tr>
 </table>
 
-#### 109. [Paste46](../../spec/paste.md#paste46)
+#### [Paste46](../../spec/paste.md#paste46)
 
 > pasteStructured
 
@@ -8257,7 +9410,6 @@ code
 
 </td><td>
 
-<!--logseq-->
 ```````buffer
 - list
   - ```js
@@ -8270,7 +9422,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - list
   - ```js
@@ -8312,7 +9463,7 @@ Original:
 </td></tr>
 </table>
 
-#### 110. [Paste47](../../spec/paste.md#paste47)
+#### [Paste47](../../spec/paste.md#paste47)
 
 > pasteStructured
 
@@ -8337,7 +9488,6 @@ two
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - ```
   x
@@ -8348,7 +9498,6 @@ two
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - ```
   x
@@ -8385,7 +9534,827 @@ two┃
 </td></tr>
 </table>
 
-#### 111. [Placeholder2](../../spec/placeholders.md#placeholder2)
+#### [Paste53](../../spec/paste.md#paste53)
+
+> pasteStructured
+
+Adapted: blank lines, heading, paragraph, setext heading
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+Title
+=====
+```
+
+</td><td>
+
+```buffer
+- para┃
+```
+
+</td><td>
+
+```buffer
+- paraTitle
+  =====
+  ┃
+```
+
+</td><td>
+
+```buffer
+- para
+- # Title┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+para┃
+```
+
+</td><td>
+
+```buffer
+para
+
+Title┃
+=====
+```
+
+</td></tr>
+</table>
+
+#### [Paste54](../../spec/paste.md#paste54)
+
+> pasteStructured
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+y
+```
+
+</td><td>
+
+```buffer
+- # Hel┃lo
+```
+
+</td><td>
+
+```buffer
+- # Helx
+  y
+  ┃lo
+```
+
+</td><td>
+
+```buffer
+- # Hello
+  - x
+    y┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# Hel┃lo
+```
+
+</td><td>
+
+```buffer
+# Hello
+
+x
+y┃
+```
+
+</td></tr>
+</table>
+
+#### [Paste56](../../spec/paste.md#paste56)
+
+> pasteStructured
+
+Adapted: table
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+y
+```
+
+</td><td>
+
+```buffer
+- | a┃ | b |
+  | - | - |
+```
+
+</td><td>
+
+```buffer
+- | ax
+  y
+  ┃ | b |
+  | - | - |
+```
+
+</td><td>
+
+```buffer
+- | a┃ | b |
+  | - | - |
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+| a┃ | b |
+| - | - |
+```
+
+</td><td>
+
+```buffer
+| a┃ | b |
+| - | - |
+```
+
+</td></tr>
+</table>
+
+#### [Paste57](../../spec/paste.md#paste57)
+
+> pasteStructured
+
+Adapted: heading, paragraph
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+## Summary
+
+The fix:
+- parser
+- test
+```
+
+</td><td>
+
+```buffer
+- Notes┃
+- Later
+```
+
+</td><td>
+
+```buffer
+- Notes
+- ## Summary
+  
+  The fix:
+- parser
+- test┃
+- Later
+```
+
+</td><td>
+
+```buffer
+- Notes
+- ## Summary
+  - The fix:
+  - parser
+  - test┃
+- Later
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Notes┃
+- Later
+```
+
+</td><td>
+
+```buffer
+- Notes
+- ## Summary
+  The fix:
+  - parser
+  - test┃
+- Later
+```
+
+</td></tr>
+</table>
+
+#### [Paste58](../../spec/paste.md#paste58)
+
+> pasteStructured
+
+Adapted: blank lines, heading, paragraph, setext heading, thematic break
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+---
+title: x
+---
+```
+
+</td><td>
+
+```buffer
+- Intro
+- ┃
+- Outro
+```
+
+</td><td>
+
+```buffer
+- Intro
+- ---
+  title: x
+  ---
+  ┃
+- Outro
+```
+
+</td><td>
+
+```buffer
+- Intro
+- ---
+- ## title: x┃
+  - Outro
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+Intro
+
+┃◌
+
+Outro
+```
+
+</td><td>
+
+```buffer
+Intro
+
+---
+title: x┃
+---
+
+Outro
+```
+
+</td></tr>
+</table>
+
+#### [Paste61](../../spec/paste.md#paste61)
+
+> pasteStructured
+
+Adapted: heading, paragraph
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+# Z
+```
+
+</td><td>
+
+```buffer
+- # A
+  - ## B
+    - text┃
+  - ## C
+```
+
+</td><td>
+
+```buffer
+- # A
+  - ## B
+    - text
+    - # Z┃
+  - ## C
+```
+
+</td><td>
+
+```buffer
+- # A
+  - ## B
+    - text
+- # Z┃
+  - ## C
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# A
+## B
+text┃
+## C
+```
+
+</td><td>
+
+```buffer
+# A
+## B
+text
+# Z┃
+## C
+```
+
+</td></tr>
+</table>
+
+#### [Paste62](../../spec/paste.md#paste62)
+
+> pasteStructured
+
+Adapted: blank lines, code block, paragraph
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````clipboard
+```
+make build
+```
+````
+
+</td><td>
+
+```buffer
+- Run ┃then deploy.
+```
+
+</td><td>
+
+````buffer
+- Run ```
+  make build
+  ```
+  ┃then deploy.
+````
+
+</td><td>
+
+````buffer
+- Run
+- ```
+  make build
+  ```
+- ┃then deploy.
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+Run ┃then deploy.
+```
+
+</td><td>
+
+````buffer
+Run
+```
+make build
+```
+
+┃then deploy.
+````
+
+</td></tr>
+</table>
+
+#### [Paste63](../../spec/paste.md#paste63)
+
+> pasteStructured
+
+Adapted: escape
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+1. x
+2. y
+```
+
+</td><td>
+
+```buffer
+- see ┃here
+```
+
+</td><td>
+
+```buffer
+- see 1. x
+  2\. y
+  ┃here
+```
+
+</td><td>
+
+```buffer
+- see 1. x
+- 2. y
+- ┃here
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- see ┃here
+```
+
+</td><td>
+
+```buffer
+- see 1. x
+- 2\. y
+- ┃here
+```
+
+</td></tr>
+</table>
+
+#### [Paste66](../../spec/paste.md#paste66)
+
+> pasteStructured
+
+Adapted: code block
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````clipboard
+```js
+      // greet
+        f();
+      ```
+````
+
+</td><td>
+
+```buffer
+- grandchild┃
+```
+
+</td><td>
+
+````buffer
+- grandchild```js
+        // greet
+          f();
+        ```┃
+````
+
+</td><td>
+
+````buffer
+- grandchild
+  - ```js
+    // greet
+      f();┃
+    ```
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- grandchild┃
+```
+
+</td><td>
+
+````buffer
+- grandchild
+  ```js
+  // greet
+    f();┃
+  ```
+````
+
+</td></tr>
+</table>
+
+#### [Paste70](../../spec/paste.md#paste70)
+
+> pasteStructured
+
+Adapted: blank lines, code block, escape, paragraph
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````clipboard
+```
+c
+```
+````
+
+</td><td>
+
+```buffer
+- p┃
+  \- g
+```
+
+</td><td>
+
+````buffer
+- p```
+  c
+  ```
+  ┃
+  \- g
+````
+
+</td><td>
+
+````buffer
+- p
+- ```
+  c
+  ```
+- ┃- g
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+p┃
+    - g
+```
+
+</td><td>
+
+````buffer
+p
+```
+c
+```
+
+┃\- g
+````
+
+</td></tr>
+</table>
+
+#### [Paste71](../../spec/paste.md#paste71)
+
+> pasteStructured
+
+Adapted: blank lines, code block, heading
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+# h
+```
+
+</td><td>
+
+````buffer
+- i
+  - ```
+    x
+    ```┃
+  - ```
+    y
+    ```
+````
+
+</td><td>
+
+````buffer
+- i
+  - ```
+    x
+    ```
+  - # h┃
+  - ```
+    y
+    ```
+````
+
+</td><td>
+
+````buffer
+- i
+  - ```
+    x
+    ```
+  - # h┃
+    - ```
+      y
+      ```
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- i
+  ```
+  x
+  ```┃
+
+  ```
+  y
+  ```
+````
+
+</td><td>
+
+````buffer
+- i
+  ```
+  x
+  ```
+
+  # h┃
+
+  ```
+  y
+  ```
+````
+
+</td></tr>
+</table>
+
+#### [Paste79](../../spec/paste.md#paste79)
+
+> pasteStructured
+
+Adapted: blank lines, math, paragraph
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+$$
+    x
+    $$
+```
+
+</td><td>
+
+```buffer
+- a┃
+```
+
+</td><td>
+
+```buffer
+- a$$
+      x
+      $$┃
+```
+
+</td><td>
+
+```buffer
+- a
+- $$
+      x┃
+      $$
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+a┃
+```
+
+</td><td>
+
+```buffer
+a
+
+$$
+    x┃
+    $$
+```
+
+</td></tr>
+</table>
+
+#### [Placeholder2](../../spec/placeholders.md#placeholder2)
 
 Adapted: blank lines, paragraph
 
@@ -8420,7 +10389,6 @@ Adapted: blank lines, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - a
 - 
@@ -8429,7 +10397,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃
@@ -8444,7 +10411,6 @@ Adapted: blank lines, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - ┃a
 - 
@@ -8453,7 +10419,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 ```
@@ -8494,7 +10459,7 @@ Original:
 </td></tr>
 </table>
 
-#### 112. [Placeholder3](../../spec/placeholders.md#placeholder3)
+#### [Placeholder3](../../spec/placeholders.md#placeholder3)
 
 Adapted: blank lines, paragraph
 
@@ -8529,7 +10494,6 @@ Adapted: blank lines, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - ┃para
 - 
@@ -8537,7 +10501,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃para
 ```
@@ -8571,7 +10534,7 @@ para
 </td></tr>
 </table>
 
-#### 113. [Outliner flows › Scenario6](../../spec/scenarios.md#scenario6)
+#### [Outliner flows › Scenario6](../../spec/scenarios.md#scenario6)
 
 Adapted: blank lines, paragraph
 
@@ -8606,7 +10569,6 @@ Adapted: blank lines, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - Groceries
 - - milk┃
@@ -8614,7 +10576,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - Groceries
   - milk┃
@@ -8631,7 +10592,6 @@ Adapted: blank lines, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - Groceries
 - - milk
@@ -8641,7 +10601,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - Groceries
   - milk
@@ -8658,7 +10617,6 @@ Adapted: blank lines, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - Groceries
 - - milk
@@ -8669,7 +10627,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - Groceries
   - milk
@@ -8687,7 +10644,6 @@ Adapted: blank lines, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - Groceries
 - - milk
@@ -8699,7 +10655,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - Groceries
   - milk
@@ -8772,7 +10727,7 @@ Done.┃
 </td></tr>
 </table>
 
-#### 114. [Outliner flows › Scenario15](../../spec/scenarios.md#scenario15)
+#### [Outliner flows › Scenario15](../../spec/scenarios.md#scenario15)
 
 Adapted: blank lines, paragraph, task
 
@@ -8793,7 +10748,6 @@ Adapted: blank lines, paragraph, task
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - [ ] milk
 - bread
@@ -8802,7 +10756,6 @@ Adapted: blank lines, paragraph, task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] milk
 - [ ] bread
@@ -8818,7 +10771,6 @@ Adapted: blank lines, paragraph, task
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - [ ] milk
   - breadtwo loaves┃
@@ -8826,7 +10778,6 @@ Adapted: blank lines, paragraph, task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] milk
 - [ ] bread
@@ -8842,7 +10793,6 @@ Adapted: blank lines, paragraph, task
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - [ ] milk
   - breadtwo loaves
@@ -8851,7 +10801,6 @@ Adapted: blank lines, paragraph, task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] milk
 - [ ] bread
@@ -8868,7 +10817,6 @@ Adapted: blank lines, paragraph, task
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - [ ] milk
   - breadtwo loaves
@@ -8877,7 +10825,6 @@ Adapted: blank lines, paragraph, task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] milk
 - [ ] bread
@@ -8894,7 +10841,6 @@ Adapted: blank lines, paragraph, task
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - [ ] milk
   - breadtwo loaves
@@ -8904,7 +10850,6 @@ Adapted: blank lines, paragraph, task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] milk
 - [ ] bread
@@ -8971,7 +10916,7 @@ Shop closes at six.┃
 </td></tr>
 </table>
 
-#### 115. [Outliner flows › Scenario18](../../spec/scenarios.md#scenario18)
+#### [Outliner flows › Scenario18](../../spec/scenarios.md#scenario18)
 
 > pasteStructured "!"
 
@@ -8997,7 +10942,6 @@ code
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - Notes
   - example```
@@ -9009,7 +10953,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - Notes
   - example
@@ -9047,7 +10990,7 @@ Notes
 </td></tr>
 </table>
 
-#### 116. [Notes and sections › Scenario19](../../spec/scenarios.md#scenario19)
+#### [Notes and sections › Scenario19](../../spec/scenarios.md#scenario19)
 
 Adapted: blank lines, heading, paragraph
 
@@ -9068,7 +11011,6 @@ Adapted: blank lines, heading, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - # Notes
 - first idea┃
@@ -9076,7 +11018,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Notes
   - first idea┃
@@ -9091,7 +11032,6 @@ Adapted: blank lines, heading, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - # Notes
 - first idea
@@ -9100,7 +11040,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Notes
   - first idea
@@ -9116,7 +11055,6 @@ Adapted: blank lines, heading, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - # Notes
 - second┃
@@ -9125,7 +11063,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Notes
   - second┃
@@ -9172,7 +11109,7 @@ first idea
 </td></tr>
 </table>
 
-#### 117. [Notes and sections › Scenario20](../../spec/scenarios.md#scenario20)
+#### [Notes and sections › Scenario20](../../spec/scenarios.md#scenario20)
 
 Adapted: blank lines, heading, paragraph
 
@@ -9193,7 +11130,6 @@ Adapted: blank lines, heading, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - # Trip
 - Pack light.
@@ -9202,7 +11138,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Trip
   - Pack light.
@@ -9218,7 +11153,6 @@ Adapted: blank lines, heading, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - # Trip
 - Pack light.
@@ -9228,7 +11162,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Trip
   - Pack light.
@@ -9245,7 +11178,6 @@ Adapted: blank lines, heading, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - # Trip
 - Book the train.
@@ -9255,7 +11187,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Trip
   - Book the train.
@@ -9272,7 +11203,6 @@ Adapted: blank lines, heading, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - # Trip
 - Pack light.
@@ -9282,7 +11212,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Trip
   - Pack light.
@@ -9344,7 +11273,7 @@ Seat 42.┃
 </td></tr>
 </table>
 
-#### 118. [Notes and sections › Scenario21](../../spec/scenarios.md#scenario21)
+#### [Notes and sections › Scenario21](../../spec/scenarios.md#scenario21)
 
 Adapted: blank lines, paragraph
 
@@ -9379,14 +11308,12 @@ Adapted: blank lines, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - one┃two
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one
   ┃two
@@ -9401,14 +11328,12 @@ Adapted: blank lines, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - onetwo┃
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one┃
   two
@@ -9423,14 +11348,12 @@ Adapted: blank lines, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - onetwo┃
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one┃two
 ```
@@ -9478,7 +11401,7 @@ one┃two
 </td></tr>
 </table>
 
-#### 119. [Notes and sections › Scenario23](../../spec/scenarios.md#scenario23)
+#### [Notes and sections › Scenario23](../../spec/scenarios.md#scenario23)
 
 Adapted: escape, heading, paragraph
 
@@ -9499,7 +11422,6 @@ Adapted: escape, heading, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - # Plan
 - revise ┃2. draft
@@ -9507,7 +11429,6 @@ Adapted: escape, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Plan
   - revise ┃2\. draft
@@ -9522,7 +11443,6 @@ Adapted: escape, heading, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - # Plan
 - revise 
@@ -9531,7 +11451,6 @@ Adapted: escape, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Plan
   - revise
@@ -9547,7 +11466,6 @@ Adapted: escape, heading, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - 
 - # Plan┃2. draft
@@ -9555,7 +11473,6 @@ Adapted: escape, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Plan┃2. draft
 ```
@@ -9596,7 +11513,7 @@ revise
 </td></tr>
 </table>
 
-#### 120. [Notes and sections › Scenario24](../../spec/scenarios.md#scenario24)
+#### [Notes and sections › Scenario24](../../spec/scenarios.md#scenario24)
 
 Adapted: paragraph
 
@@ -9619,7 +11536,6 @@ Adapted: paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - Shopping:
   \- ┃milk
@@ -9628,7 +11544,6 @@ Adapted: paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - Shopping:
   - ┃milk
@@ -9644,7 +11559,6 @@ Adapted: paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - Shopping:
   \- milk
@@ -9653,7 +11567,6 @@ Adapted: paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - Shopping:
   - milk
@@ -9693,7 +11606,7 @@ Shopping:
 </td></tr>
 </table>
 
-#### 121. [ShiftEnter10](../../spec/shift-enter.md#shiftenter10)
+#### [ShiftEnter10](../../spec/shift-enter.md#shiftenter10)
 
 Adapted: blank lines, paragraph
 
@@ -9715,7 +11628,6 @@ Adapted: blank lines, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - a
   
@@ -9724,7 +11636,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - ┃bc
@@ -9739,7 +11650,6 @@ Adapted: blank lines, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - a
   
@@ -9748,7 +11658,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - x┃bc
@@ -9786,7 +11695,7 @@ Original:
 </td></tr>
 </table>
 
-#### 122. [ShiftEnter11](../../spec/shift-enter.md#shiftenter11)
+#### [ShiftEnter11](../../spec/shift-enter.md#shiftenter11)
 
 > shiftEnter
 
@@ -9804,7 +11713,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - one
   
@@ -9814,7 +11722,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one
   - ┃
@@ -9847,7 +11754,7 @@ Original:
 </td></tr>
 </table>
 
-#### 123. [ShiftEnter12](../../spec/shift-enter.md#shiftenter12)
+#### [ShiftEnter12](../../spec/shift-enter.md#shiftenter12)
 
 > shiftEnter
 
@@ -9864,7 +11771,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - para
   
@@ -9873,7 +11779,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - para
 - ┃
@@ -9903,7 +11808,7 @@ para
 </td></tr>
 </table>
 
-#### 124. [ShiftEnter14](../../spec/shift-enter.md#shiftenter14)
+#### [ShiftEnter14](../../spec/shift-enter.md#shiftenter14)
 
 > shiftEnter
 
@@ -9919,7 +11824,6 @@ Adapted: heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # Title
   ┃ more
@@ -9927,7 +11831,6 @@ Adapted: heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # Title┃ more
 ```
@@ -9953,7 +11856,7 @@ Original:
 </td></tr>
 </table>
 
-#### 125. [ShiftEnter15](../../spec/shift-enter.md#shiftenter15)
+#### [ShiftEnter15](../../spec/shift-enter.md#shiftenter15)
 
 > shiftEnter shiftEnter "p"
 
@@ -9969,7 +11872,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - one
   
@@ -9978,7 +11880,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one
   - p┃
@@ -10007,7 +11908,7 @@ Original:
 </td></tr>
 </table>
 
-#### 126. [ShiftEnter16](../../spec/shift-enter.md#shiftenter16)
+#### [ShiftEnter16](../../spec/shift-enter.md#shiftenter16)
 
 > shiftEnter shiftEnter "p"
 
@@ -10023,7 +11924,6 @@ Adapted: CR line endings, blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
   
@@ -10032,7 +11932,6 @@ Adapted: CR line endings, blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - p┃
@@ -10061,7 +11960,119 @@ Original:
 </td></tr>
 </table>
 
-#### 127. [TaskEnter1](../../spec/tasks.md#taskenter1)
+#### [ShiftEnter24](../../spec/shift-enter.md#shiftenter24)
+
+> shiftEnter
+
+Adapted: table
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- | a | b |
+  | --- | --- |
+  | on┃e | 2 |
+```
+
+</td><td>
+
+```buffer
+- | a | b |
+  | --- | --- |
+  | on
+  ┃e | 2 |
+```
+
+</td><td>
+
+```buffer
+- | a | b |
+  | --- | --- |
+  | on┃e | 2 |
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+| a | b |
+| --- | --- |
+| on┃e | 2 |
+```
+
+</td><td>
+
+```buffer
+| a | b |
+| --- | --- |
+| on┃e | 2 |
+```
+
+</td></tr>
+</table>
+
+#### [ShiftEnter25](../../spec/shift-enter.md#shiftenter25)
+
+> shiftEnter
+
+Adapted: blank lines, escape, paragraph
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- p
+  ┃[r]: /u
+```
+
+</td><td>
+
+```buffer
+- p
+  
+  ┃[r]: /u
+```
+
+</td><td>
+
+```buffer
+- p
+- ┃[r]: /u
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+p
+┃[r]: /u
+```
+
+</td><td>
+
+```buffer
+p
+
+┃\[r]: /u
+```
+
+</td></tr>
+</table>
+
+#### [TaskEnter1](../../spec/tasks.md#taskenter1)
 
 > enter
 
@@ -10078,7 +12089,6 @@ Adapted: blank lines, paragraph, task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
 - [ ] 
@@ -10087,7 +12097,6 @@ Adapted: blank lines, paragraph, task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃
@@ -10117,7 +12126,7 @@ Original:
 </td></tr>
 </table>
 
-#### 128. [TaskEnter2](../../spec/tasks.md#taskenter2)
+#### [TaskEnter2](../../spec/tasks.md#taskenter2)
 
 > enter
 
@@ -10134,7 +12143,6 @@ Adapted: task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
   - [ ] 
@@ -10143,7 +12151,6 @@ Adapted: task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - [ ] ┃
@@ -10172,7 +12179,7 @@ Original:
 </td></tr>
 </table>
 
-#### 129. [TaskEnter3](../../spec/tasks.md#taskenter3)
+#### [TaskEnter3](../../spec/tasks.md#taskenter3)
 
 > enter
 
@@ -10188,7 +12195,6 @@ Adapted: task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - [ ] abc
 - ┃# x
@@ -10196,7 +12202,6 @@ Adapted: task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] abc
 - [ ] ┃# x
@@ -10224,7 +12229,7 @@ Original:
 </td></tr>
 </table>
 
-#### 130. [TaskEnter4](../../spec/tasks.md#taskenter4)
+#### [TaskEnter4](../../spec/tasks.md#taskenter4)
 
 > enter
 
@@ -10240,7 +12245,6 @@ Adapted: task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - [ ]
 - ┃abc
@@ -10248,7 +12252,6 @@ Adapted: task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] ┃
 - [ ] abc
@@ -10276,7 +12279,7 @@ Original:
 </td></tr>
 </table>
 
-#### 131. [TaskEnter5](../../spec/tasks.md#taskenter5)
+#### [TaskEnter5](../../spec/tasks.md#taskenter5)
 
 > enter
 
@@ -10295,7 +12298,6 @@ Adapted: task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
   - b
@@ -10306,7 +12308,6 @@ Adapted: task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - b
@@ -10343,7 +12344,7 @@ Original:
 </td></tr>
 </table>
 
-#### 132. [TaskEnter6](../../spec/tasks.md#taskenter6)
+#### [TaskEnter6](../../spec/tasks.md#taskenter6)
 
 > enter
 
@@ -10361,7 +12362,6 @@ Adapted: task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
   - [ ] 
@@ -10371,7 +12371,6 @@ Adapted: task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - [ ] 
@@ -10405,7 +12404,7 @@ Original:
 </td></tr>
 </table>
 
-#### 133. [TaskEnter7](../../spec/tasks.md#taskenter7)
+#### [TaskEnter7](../../spec/tasks.md#taskenter7)
 
 > enter
 
@@ -10422,7 +12421,6 @@ Adapted: task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - [x] a
   - ┃b
@@ -10431,7 +12429,6 @@ Adapted: task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [x] a
 - [ ] ┃b
@@ -10462,7 +12459,7 @@ Original:
 </td></tr>
 </table>
 
-#### 134. [TaskBackspace1](../../spec/tasks.md#taskbackspace1)
+#### [TaskBackspace1](../../spec/tasks.md#taskbackspace1)
 
 > deleteContentBackward
 
@@ -10481,7 +12478,6 @@ Adapted: task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
 - 
@@ -10491,7 +12487,6 @@ Adapted: task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - [ ] ┃task
@@ -10524,7 +12519,7 @@ Original:
 </td></tr>
 </table>
 
-#### 135. [TaskBackspace2](../../spec/tasks.md#taskbackspace2)
+#### [TaskBackspace2](../../spec/tasks.md#taskbackspace2)
 
 Adapted: task
 
@@ -10546,7 +12541,6 @@ Adapted: task
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - a
 - [ ]┃
@@ -10554,7 +12548,6 @@ Adapted: task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃
@@ -10569,7 +12562,6 @@ Adapted: task
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - a
 - TOD┃
@@ -10577,7 +12569,6 @@ Adapted: task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
 ```
@@ -10611,7 +12602,7 @@ Original:
 </td></tr>
 </table>
 
-#### 136. [TaskBackspace3](../../spec/tasks.md#taskbackspace3)
+#### [TaskBackspace3](../../spec/tasks.md#taskbackspace3)
 
 > deleteContentBackward
 
@@ -10628,7 +12619,6 @@ Adapted: task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
 - DONE┃b
@@ -10636,7 +12626,6 @@ Adapted: task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃b
@@ -10665,7 +12654,7 @@ Original:
 </td></tr>
 </table>
 
-#### 137. [TaskDelete1](../../spec/tasks.md#taskdelete1)
+#### [TaskDelete1](../../spec/tasks.md#taskdelete1)
 
 > deleteContentForward
 
@@ -10682,14 +12671,12 @@ Adapted: task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a┃TODO b
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃b
 ```
@@ -10716,7 +12703,7 @@ Original:
 </td></tr>
 </table>
 
-#### 138. [Typing2](../../spec/typing.md#typing2)
+#### [Typing2](../../spec/typing.md#typing2)
 
 > deleteContentBackward
 
@@ -10733,7 +12720,6 @@ Adapted: heading, paragraph, setext heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - para
   ---┃
@@ -10741,7 +12727,6 @@ Adapted: heading, paragraph, setext heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ## para
 ```
@@ -10769,7 +12754,7 @@ para
 </td></tr>
 </table>
 
-#### 139. [Typing3](../../spec/typing.md#typing3)
+#### [Typing3](../../spec/typing.md#typing3)
 
 > "- "
 
@@ -10786,7 +12771,6 @@ Adapted: paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - para
   \- ┃more
@@ -10794,7 +12778,6 @@ Adapted: paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - para
   - ┃more
@@ -10823,7 +12806,7 @@ para
 </td></tr>
 </table>
 
-#### 140. [Undo3](../../spec/undo.md#undo3)
+#### [Undo3](../../spec/undo.md#undo3)
 
 Adapted: blank lines
 
@@ -10886,7 +12869,6 @@ Adapted: blank lines
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - a
 - ┃
@@ -10894,7 +12876,6 @@ Adapted: blank lines
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - ┃
@@ -10909,7 +12890,6 @@ Adapted: blank lines
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - a┃
 - 
@@ -10917,7 +12897,6 @@ Adapted: blank lines
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
   - 
@@ -10975,9 +12954,65 @@ Original:
 </td></tr>
 </table>
 
-### Whitespace (16)
+#### [Open2](../../spec/z-open.md#open2)
 
-#### 1. [Fence3](../../spec/fences.md#fence3)
+> deleteSubtree
+
+Adapted: code block
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ┃```
+  code
+  ```
+- c
+````
+
+</td><td>
+
+````buffer
+- ```
+  code
+  ```
+- c
+````
+
+</td><td>
+
+```buffer
+- ┃c
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+┃```
+code
+```
+- c
+````
+
+</td><td>
+
+```buffer
+- ┃c
+```
+
+</td></tr>
+</table>
+
+### Whitespace (20)
+
+#### [Fence3](../../spec/fences.md#fence3)
 
 > enter
 
@@ -10996,7 +13031,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - a
   - ```
@@ -11007,7 +13041,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - ```
@@ -11044,7 +13077,7 @@ Original:
 </td></tr>
 </table>
 
-#### 2. [Fence32](../../spec/fences.md#fence32)
+#### [Fence32](../../spec/fences.md#fence32)
 
 Adapted: blank lines, code block
 
@@ -11068,7 +13101,6 @@ Adapted: blank lines, code block
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ````buffer
 - a
   - ```
@@ -11079,7 +13111,6 @@ Adapted: blank lines, code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - ```
@@ -11140,7 +13171,7 @@ Original:
 </td></tr>
 </table>
 
-#### 3. [Shift-Enter › S4](../../spec/obsidian-true-outliner.md#s4)
+#### [Shift-Enter › S4](../../spec/obsidian-true-outliner.md#s4)
 
 > shiftEnter
 
@@ -11156,7 +13187,6 @@ Adapted: paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - one
   ┃ two
@@ -11164,7 +13194,6 @@ Adapted: paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one
   ┃two
@@ -11192,7 +13221,7 @@ one
 </td></tr>
 </table>
 
-#### 4. [Shift-Enter › S9](../../spec/obsidian-true-outliner.md#s9)
+#### [Shift-Enter › S9](../../spec/obsidian-true-outliner.md#s9)
 
 > shiftEnter
 
@@ -11209,7 +13238,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - item
   - para
@@ -11218,7 +13246,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - item
   - para
@@ -11251,7 +13278,7 @@ Original:
 </td></tr>
 </table>
 
-#### 5. [Paste9](../../spec/paste.md#paste9)
+#### [Paste9](../../spec/paste.md#paste9)
 
 > pasteStructured
 
@@ -11276,7 +13303,6 @@ code
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - a
 - ```
@@ -11287,7 +13313,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
 - ```
@@ -11320,7 +13345,7 @@ Original:
 </td></tr>
 </table>
 
-#### 6. [Paste11](../../spec/paste.md#paste11)
+#### [Paste11](../../spec/paste.md#paste11)
 
 > pasteStructured
 
@@ -11345,7 +13370,6 @@ code
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - a
   - ```
@@ -11356,7 +13380,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - ```
@@ -11389,7 +13412,7 @@ Original:
 </td></tr>
 </table>
 
-#### 7. [Paste44](../../spec/paste.md#paste44)
+#### [Paste44](../../spec/paste.md#paste44)
 
 > pasteStructured
 
@@ -11414,7 +13437,6 @@ $$
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
 - $$
@@ -11425,7 +13447,6 @@ $$
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - $$
@@ -11458,7 +13479,201 @@ Original:
 </td></tr>
 </table>
 
-#### 8. [Placeholder4](../../spec/placeholders.md#placeholder4)
+#### [Paste52](../../spec/paste.md#paste52)
+
+> pasteStructured
+
+Adapted: code block
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````clipboard
+```
+code
+```
+````
+
+</td><td>
+
+```buffer
+- ┃
+  - kid
+```
+
+</td><td>
+
+````buffer
+- ```
+  code
+  ```
+  ┃
+  - kid
+````
+
+</td><td>
+
+````buffer
+- ```
+  code┃
+  ```
+  - kid
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+  - kid
+```
+
+</td><td>
+
+````buffer
+- ```
+  code┃
+  ```
+  - kid
+````
+
+</td></tr>
+</table>
+
+#### [Paste68](../../spec/paste.md#paste68)
+
+> pastePlain
+
+Adapted: escape, paragraph
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```buffer
+- p┃ ---
+```
+
+</td><td>
+
+```buffer
+- px
+  ┃ ---
+```
+
+</td><td>
+
+```buffer
+- px
+  ┃---
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+p┃ ---
+```
+
+</td><td>
+
+```buffer
+px
+┃\---
+```
+
+</td></tr>
+</table>
+
+#### [Paste74](../../spec/paste.md#paste74)
+
+> pasteStructured
+
+Adapted: code block
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````clipboard
+```
+if x:
+    y
+```
+````
+
+</td><td>
+
+```buffer
+- a
+- ┃
+```
+
+</td><td>
+
+````buffer
+- a
+- ```
+  if x:
+      y
+  ```
+  ┃
+````
+
+</td><td>
+
+````buffer
+- a
+- ```
+  if x:
+      y┃
+  ```
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- ┃
+```
+
+</td><td>
+
+````buffer
+- a
+- ```
+  if x:
+      y┃
+  ```
+````
+
+</td></tr>
+</table>
+
+#### [Placeholder4](../../spec/placeholders.md#placeholder4)
 
 Adapted: paragraph
 
@@ -11493,7 +13708,6 @@ Adapted: paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - ┃para
   
@@ -11501,7 +13715,6 @@ Adapted: paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃para
 ```
@@ -11534,7 +13747,7 @@ para
 </td></tr>
 </table>
 
-#### 9. [ShiftEnter2](../../spec/shift-enter.md#shiftenter2)
+#### [ShiftEnter2](../../spec/shift-enter.md#shiftenter2)
 
 > shiftEnter
 
@@ -11551,7 +13764,6 @@ Adapted: numbered list
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
   - b
@@ -11560,7 +13772,6 @@ Adapted: numbered list
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - b
@@ -11591,7 +13802,7 @@ Original:
 </td></tr>
 </table>
 
-#### 10. [ShiftEnter5](../../spec/shift-enter.md#shiftenter5)
+#### [ShiftEnter5](../../spec/shift-enter.md#shiftenter5)
 
 > shiftEnter
 
@@ -11607,7 +13818,6 @@ Adapted: escape
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - abc 
   ┃\- def
@@ -11615,7 +13825,6 @@ Adapted: escape
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - abc
   ┃\- def
@@ -11643,7 +13852,7 @@ Original:
 </td></tr>
 </table>
 
-#### 11. [ShiftEnter6](../../spec/shift-enter.md#shiftenter6)
+#### [ShiftEnter6](../../spec/shift-enter.md#shiftenter6)
 
 > shiftEnter
 
@@ -11659,7 +13868,6 @@ Adapted: escape
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - abc 
   ┃1\. def
@@ -11667,7 +13875,6 @@ Adapted: escape
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - abc
   ┃1\. def
@@ -11695,7 +13902,7 @@ Original:
 </td></tr>
 </table>
 
-#### 12. [ShiftEnter7](../../spec/shift-enter.md#shiftenter7)
+#### [ShiftEnter7](../../spec/shift-enter.md#shiftenter7)
 
 > shiftEnter
 
@@ -11711,7 +13918,6 @@ Adapted: escape, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - Title 
   ┃===
@@ -11719,7 +13925,6 @@ Adapted: escape, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - Title
   ┃===
@@ -11747,7 +13952,7 @@ Title
 </td></tr>
 </table>
 
-#### 13. [ShiftEnter8](../../spec/shift-enter.md#shiftenter8)
+#### [ShiftEnter8](../../spec/shift-enter.md#shiftenter8)
 
 > shiftEnter
 
@@ -11763,7 +13968,6 @@ Adapted: escape, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - Title 
   ┃--
@@ -11771,7 +13975,6 @@ Adapted: escape, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - Title
   ┃--
@@ -11799,7 +14002,7 @@ Title
 </td></tr>
 </table>
 
-#### 14. [ShiftEnter9](../../spec/shift-enter.md#shiftenter9)
+#### [ShiftEnter9](../../spec/shift-enter.md#shiftenter9)
 
 > shiftEnter
 
@@ -11815,7 +14018,6 @@ Adapted: escape
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - one 
   ┃<div>
@@ -11823,7 +14025,6 @@ Adapted: escape
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one
   ┃<div>
@@ -11851,7 +14052,7 @@ Original:
 </td></tr>
 </table>
 
-#### 15. [ShiftEnter18](../../spec/shift-enter.md#shiftenter18)
+#### [ShiftEnter18](../../spec/shift-enter.md#shiftenter18)
 
 > shiftEnter
 
@@ -11867,7 +14068,6 @@ Adapted: escape, numbered list
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - abc 
   ┃2\. x
@@ -11875,7 +14075,6 @@ Adapted: escape, numbered list
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - abc
   ┃2\. x
@@ -11903,7 +14102,7 @@ Original:
 </td></tr>
 </table>
 
-#### 16. [ShiftEnter19](../../spec/shift-enter.md#shiftenter19)
+#### [ShiftEnter19](../../spec/shift-enter.md#shiftenter19)
 
 > shiftEnter
 
@@ -11919,7 +14118,6 @@ Adapted: escape, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a | b 
   ┃|---|---|
@@ -11927,7 +14125,6 @@ Adapted: escape, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a | b
   ┃|---|---|
@@ -11955,9 +14152,59 @@ a | b
 </td></tr>
 </table>
 
-### Caret (15)
+#### [ShiftEnter23](../../spec/shift-enter.md#shiftenter23)
 
-#### 1. [Backspace28](../../spec/backspace.md#backspace28)
+> shiftEnter
+
+Adapted: escape, paragraph
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [Note]: this ┃matters a lot
+```
+
+</td><td>
+
+```buffer
+- [Note]: this 
+  ┃matters a lot
+```
+
+</td><td>
+
+```buffer
+- [Note]: this
+  ┃matters a lot
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+[Note]: this ┃matters a lot
+```
+
+</td><td>
+
+```buffer
+\[Note]: this
+┃matters a lot
+```
+
+</td></tr>
+</table>
+
+### Caret (21)
+
+#### [Backspace28](../../spec/backspace.md#backspace28)
 
 > deleteContentBackward
 
@@ -11976,7 +14223,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - ```
   x
@@ -11985,7 +14231,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - ```
   x┃
@@ -12018,7 +14263,7 @@ x┃
 </td></tr>
 </table>
 
-#### 2. [CursorUp2](../../spec/cursor.md#cursorup2)
+#### [CursorUp2](../../spec/cursor.md#cursorup2)
 
 > cursorLineUp
 
@@ -12035,7 +14280,6 @@ Adapted: heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ┃## Title
   - a
@@ -12043,7 +14287,6 @@ Adapted: heading
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ## ┃Title
   - a
@@ -12072,7 +14315,7 @@ Original:
 </td></tr>
 </table>
 
-#### 3. [CursorDown1](../../spec/cursor.md#cursordown1)
+#### [CursorDown1](../../spec/cursor.md#cursordown1)
 
 > cursorLineDown cursorLineDown
 
@@ -12089,7 +14332,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - abc
 - abcdef┃
@@ -12097,7 +14339,6 @@ Adapted: blank lines, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - abc
 - abc┃def
@@ -12128,7 +14369,7 @@ abc┃def
 </td></tr>
 </table>
 
-#### 4. [CursorDown2](../../spec/cursor.md#cursordown2)
+#### [CursorDown2](../../spec/cursor.md#cursordown2)
 
 > cursorLineDown
 
@@ -12145,7 +14386,6 @@ Adapted: code block, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - →x
 - ab┃cdefg
@@ -12153,7 +14393,6 @@ Adapted: code block, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - →x
 - abcde┃fg
@@ -12182,7 +14421,7 @@ abcde┃fg
 </td></tr>
 </table>
 
-#### 5. [CursorDown5](../../spec/cursor.md#cursordown5)
+#### [CursorDown5](../../spec/cursor.md#cursordown5)
 
 > cursorLineDown
 
@@ -12199,7 +14438,6 @@ Adapted: task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - a
 - [┃ ] task
@@ -12207,7 +14445,6 @@ Adapted: task
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - [ ] ┃task
@@ -12236,7 +14473,7 @@ Original:
 </td></tr>
 </table>
 
-#### 6. [CursorHome8](../../spec/cursor.md#cursorhome8)
+#### [CursorHome8](../../spec/cursor.md#cursorhome8)
 
 > cursorLineBoundaryBackward
 
@@ -12252,14 +14489,12 @@ Adapted: task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ┃[ ] task
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] ┃task
 ```
@@ -12285,7 +14520,7 @@ Original:
 </td></tr>
 </table>
 
-#### 7. [CursorHome9](../../spec/cursor.md#cursorhome9)
+#### [CursorHome9](../../spec/cursor.md#cursorhome9)
 
 > cursorLineBoundaryBackward
 
@@ -12301,14 +14536,12 @@ Adapted: task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ┃[x] done
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [x] ┃done
 ```
@@ -12334,7 +14567,7 @@ Original:
 </td></tr>
 </table>
 
-#### 8. [CursorHome10](../../spec/cursor.md#cursorhome10)
+#### [CursorHome10](../../spec/cursor.md#cursorhome10)
 
 > cursorLineBoundaryBackward
 
@@ -12350,14 +14583,12 @@ Adapted: heading
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ┃## Title
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ## ┃Title
 ```
@@ -12383,7 +14614,7 @@ Original:
 </td></tr>
 </table>
 
-#### 9. [DeleteSubtree3](../../spec/delete-subtree.md#deletesubtree3)
+#### [DeleteSubtree3](../../spec/delete-subtree.md#deletesubtree3)
 
 > deleteSubtree
 
@@ -12401,14 +14632,12 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - # H
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # ┃H
 ```
@@ -12438,7 +14667,7 @@ para┃
 </td></tr>
 </table>
 
-#### 10. [DeleteSubtree4](../../spec/delete-subtree.md#deletesubtree4)
+#### [DeleteSubtree4](../../spec/delete-subtree.md#deletesubtree4)
 
 > deleteSubtree
 
@@ -12456,14 +14685,12 @@ Adapted: task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - [ ] b
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] ┃b
 ```
@@ -12491,7 +14718,122 @@ Original:
 </td></tr>
 </table>
 
-#### 11. [Fence13](../../spec/fences.md#fence13)
+#### [DeleteSubtree9](../../spec/delete-subtree.md#deletesubtree9)
+
+> deleteSubtree
+
+Adapted: blank lines, heading, paragraph, setext heading, thematic break
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃Intro
+- ---
+- ## title: x
+```
+
+</td><td>
+
+```buffer
+- ---
+- ## title: x
+```
+
+</td><td>
+
+```buffer
+- ---
+- ## ┃title: x
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃Intro
+
+---
+title: x
+---
+```
+
+</td><td>
+
+```buffer
+
+---
+┃title: x
+---
+```
+
+</td></tr>
+</table>
+
+#### [DeleteSubtree10](../../spec/delete-subtree.md#deletesubtree10)
+
+> deleteSubtree
+
+Adapted: blank lines, heading, paragraph, setext heading, thematic break
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃a
+- ***
+- ## title
+```
+
+</td><td>
+
+```buffer
+- ***
+- ## title
+```
+
+</td><td>
+
+```buffer
+- ***
+- ## ┃title
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃a
+
+***
+title
+---
+```
+
+</td><td>
+
+```buffer
+***
+┃title
+---
+```
+
+</td></tr>
+</table>
+
+#### [Fence13](../../spec/fences.md#fence13)
 
 > enter
 
@@ -12510,7 +14852,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - a
   - ```
@@ -12521,7 +14862,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - ```
@@ -12558,7 +14898,7 @@ Original:
 </td></tr>
 </table>
 
-#### 12. [Fence29](../../spec/fences.md#fence29)
+#### [Fence29](../../spec/fences.md#fence29)
 
 Adapted: code block
 
@@ -12582,7 +14922,6 @@ Adapted: code block
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ````buffer
 - a
   - ```
@@ -12593,7 +14932,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - ```
@@ -12611,7 +14949,6 @@ Adapted: code block
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ````buffer
 - a
   - ```
@@ -12621,7 +14958,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - ```
@@ -12666,7 +15002,7 @@ Original:
 </td></tr>
 </table>
 
-#### 13. [Fence41](../../spec/fences.md#fence41)
+#### [Fence41](../../spec/fences.md#fence41)
 
 > shiftEnter
 
@@ -12685,7 +15021,6 @@ Adapted: code block
 
 </td><td>
 
-<!--logseq-->
 ````buffer
 - a
   - ```
@@ -12696,7 +15031,6 @@ Adapted: code block
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - ```
@@ -12733,7 +15067,299 @@ Original:
 </td></tr>
 </table>
 
-#### 14. [Placeholder13](../../spec/placeholders.md#placeholder13)
+#### [MoveDown34](../../spec/move-subtree-down.md#movedown34)
+
+Adapted: blank lines, code block, paragraph
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a
+  - ┃```
+    code
+    ```
+  - x
+````
+
+</td></tr>
+</table>
+
+> moveSubtreeDown
+
+<table>
+<tr><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a
+  - x
+  - ┃```
+    code
+    ```
+````
+
+</td><td>
+
+````buffer
+- a
+  - x
+  - ```
+    ┃code
+    ```
+````
+
+</td></tr>
+</table>
+
+> moveSubtreeUp
+
+<table>
+<tr><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a
+  - ┃```
+    code
+    ```
+  - x
+````
+
+</td><td>
+
+````buffer
+- a
+  - ```
+    ┃code
+    ```
+  - x
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>moveSubtreeDown</th><th>moveSubtreeUp</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a
+  ┃```
+  code
+  ```
+  x
+````
+
+</td><td>
+
+````buffer
+- a
+
+  x
+  ```
+  ┃code
+  ```
+````
+
+</td><td>
+
+````buffer
+- a
+
+  ```
+  ┃code
+  ```
+  x
+````
+
+</td></tr>
+</table>
+
+#### [MoveDown37](../../spec/move-subtree-down.md#movedown37)
+
+> moveSubtreeDown
+
+Adapted: code block
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ┃```
+  
+  x
+  ```
+- b
+````
+
+</td><td>
+
+````buffer
+- b
+- ┃```
+  
+  x
+  ```
+````
+
+</td><td>
+
+````buffer
+- b
+- ```
+  
+  ┃x
+  ```
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ┃```
+
+  x
+  ```
+- b
+````
+
+</td><td>
+
+````buffer
+- b
+- ```
+
+  ┃x
+  ```
+````
+
+</td></tr>
+</table>
+
+#### [MoveUp37](../../spec/move-subtree-up.md#moveup37)
+
+> moveSubtreeUp
+
+Adapted: math
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- ┃$$
+```
+
+</td><td>
+
+```buffer
+- ┃$$
+- a
+```
+
+</td><td>
+
+```buffer
+- $$┃
+- a
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- ┃$$
+```
+
+</td><td>
+
+```buffer
+- $$┃
+- a
+```
+
+</td></tr>
+</table>
+
+#### [MoveUp38](../../spec/move-subtree-up.md#moveup38)
+
+> moveSubtreeUp
+
+Adapted: math, paragraph
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- b
+- $$
+  x$$┃
+  - tail
+```
+
+</td><td>
+
+```buffer
+- $$
+  x$$┃
+  - tail
+- b
+```
+
+</td><td>
+
+```buffer
+- $$
+  x┃$$
+  - tail
+- b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- b
+- $$
+  x$$┃
+  tail
+```
+
+</td><td>
+
+```buffer
+- $$
+  x┃$$
+  tail
+- b
+```
+
+</td></tr>
+</table>
+
+#### [Placeholder13](../../spec/placeholders.md#placeholder13)
 
 Adapted: blank lines, heading, paragraph
 
@@ -12771,7 +15397,6 @@ Adapted: blank lines, heading, paragraph
 <tr><th>logseq</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--logseq-->
 ```buffer
 - # H1
   - ┃## H2
@@ -12779,7 +15404,6 @@ Adapted: blank lines, heading, paragraph
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - # H1
   - ## ┃H2
@@ -12822,7 +15446,7 @@ Original:
 </td></tr>
 </table>
 
-#### 15. [TaskDelete2](../../spec/tasks.md#taskdelete2)
+#### [TaskDelete2](../../spec/tasks.md#taskdelete2)
 
 > deleteContentForward
 
@@ -12839,14 +15463,12 @@ Adapted: task
 
 </td><td>
 
-<!--logseq-->
 ```buffer
 - ┃[x] a
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [x] ┃a
 ```
@@ -12873,7 +15495,7 @@ Original:
 </td></tr>
 </table>
 
-### Agree (146)
+### Agree (165)
 
 1. [Backspace10](../../spec/backspace.md#backspace10) (blank lines, paragraph)
 2. [Backspace11](../../spec/backspace.md#backspace11) (blank lines, paragraph)
@@ -12883,230 +15505,268 @@ Original:
 6. [Backspace25](../../spec/backspace.md#backspace25) (blank lines, paragraph)
 7. [Backspace26](../../spec/backspace.md#backspace26) (paragraph)
 8. [Backspace29](../../spec/backspace.md#backspace29) (numbered list)
-9. [Cmd-Backspace › SoftBackspace2](../../spec/backspace.md#softbackspace2) (escape, paragraph)
-10. [CursorLeft1](../../spec/cursor.md#cursorleft1) (paragraph)
-11. [CursorLeft2](../../spec/cursor.md#cursorleft2) (paragraph)
-12. [CursorLeft3](../../spec/cursor.md#cursorleft3) (paragraph)
-13. [CursorRight1](../../spec/cursor.md#cursorright1) (paragraph)
-14. [CursorRight2](../../spec/cursor.md#cursorright2) (paragraph)
-15. [CursorUp1](../../spec/cursor.md#cursorup1) (paragraph)
-16. [CursorHome7](../../spec/cursor.md#cursorhome7) (numbered list)
-17. [CursorHome14](../../spec/cursor.md#cursorhome14) (paragraph)
-18. [SelectLeft1](../../spec/cursor.md#selectleft1) (paragraph)
-19. [SelectRightEnd1](../../spec/cursor.md#selectrightend1) (paragraph)
-20. [Delete13](../../spec/del.md#delete13) (blank lines, heading, paragraph)
-21. [Delete13g](../../spec/del.md#delete13g) (heading)
-22. [Delete15](../../spec/del.md#delete15) (heading)
-23. [Delete17](../../spec/del.md#delete17) (blank lines, paragraph)
-24. [DeleteSubtree2](../../spec/delete-subtree.md#deletesubtree2) (numbered list)
-25. [Enter2](../../spec/enter.md#enter2) (numbered list)
-26. [Enter8](../../spec/enter.md#enter8) (escape)
-27. [Enter9](../../spec/enter.md#enter9) (escape)
-28. [Enter10](../../spec/enter.md#enter10) (escape)
-29. [Enter11](../../spec/enter.md#enter11) (blank lines, escape, paragraph)
-30. [Enter12](../../spec/enter.md#enter12) (blank lines, paragraph)
-31. [Enter17](../../spec/enter.md#enter17) (CR line endings)
-32. [Enter18](../../spec/enter.md#enter18) (CR line endings)
-33. [Enter25](../../spec/enter.md#enter25) (numbered list)
-34. [Enter33](../../spec/enter.md#enter33) (blank lines, paragraph)
-35. [Enter35](../../spec/enter.md#enter35) (escape, numbered list)
-36. [Enter36](../../spec/enter.md#enter36) (blank lines)
-37. [Enter43](../../spec/enter.md#enter43) (escape)
-38. [Fence1](../../spec/fences.md#fence1) (code block)
-39. [Fence2](../../spec/fences.md#fence2) (code block)
-40. [Fence5](../../spec/fences.md#fence5) (code block)
-41. [Fence6](../../spec/fences.md#fence6) (code block)
-42. [Fence7c](../../spec/fences.md#fence7c) (code block)
-43. [Fence8](../../spec/fences.md#fence8) (code block)
-44. [Fence15](../../spec/fences.md#fence15) (code block)
-45. [Fence16](../../spec/fences.md#fence16) (code block)
-46. [Fence18](../../spec/fences.md#fence18) (code block)
-47. [Fence27](../../spec/fences.md#fence27) (code block)
-48. [Fence28](../../spec/fences.md#fence28) (code block)
-49. [Fence30](../../spec/fences.md#fence30) (code block)
-50. [Fence35](../../spec/fences.md#fence35) (code block)
-51. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap1](../../spec/gaps.md#gap1) (blank lines, paragraph)
-52. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap4](../../spec/gaps.md#gap4) (blank lines, paragraph)
-53. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap2](../../spec/gaps.md#gap2) (blank lines, paragraph)
-54. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap11](../../spec/gaps.md#gap11) (blank lines, paragraph)
-55. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap3](../../spec/gaps.md#gap3) (blank lines, heading, paragraph)
-56. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap5](../../spec/gaps.md#gap5) (blank lines)
-57. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap6](../../spec/gaps.md#gap6) (heading, paragraph)
-58. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap7](../../spec/gaps.md#gap7) (blank lines, code block, paragraph)
-59. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap8](../../spec/gaps.md#gap8) (blank lines, paragraph)
-60. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap9](../../spec/gaps.md#gap9) (blank lines)
-61. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap10](../../spec/gaps.md#gap10) (blank lines, paragraph)
-62. [MoveUp14](../../spec/move-subtree-up.md#moveup14) (blank lines, paragraph)
-63. [New text and gaps › Gap12](../../spec/gaps.md#gap12) (blank lines, heading, paragraph)
-64. [New text and gaps › Gap13](../../spec/gaps.md#gap13) (blank lines, paragraph)
-65. [Indent3](../../spec/indent.md#indent3) (bullet *)
-66. [Indent5](../../spec/indent.md#indent5) (bullet *)
-67. [Indentation › destination-list-style](../../spec/obsidian-true-outliner.md#destination-list-style) (bullet *)
-68. [Indent4](../../spec/indent.md#indent4) (numbered list)
-69. [Indent11](../../spec/indent.md#indent11) (blank lines, paragraph)
-70. [Indent13](../../spec/indent.md#indent13) (code block)
-71. [Indent15](../../spec/indent.md#indent15) (numbered list)
-72. [Indent17](../../spec/indent.md#indent17) (CR line endings)
-73. [Indent20](../../spec/indent.md#indent20) (code block)
-74. [Indent21](../../spec/indent.md#indent21) (blank lines, paragraph)
-75. [Indent24](../../spec/indent.md#indent24) (heading)
-76. [Indent29](../../spec/indent.md#indent29) (blank lines, paragraph)
-77. [MoveDown1](../../spec/move-subtree-down.md#movedown1) (blank lines)
-78. [MoveDown4](../../spec/move-subtree-down.md#movedown4) (blank lines, heading, paragraph)
-79. [MoveDown5](../../spec/move-subtree-down.md#movedown5) (blank lines, paragraph)
-80. [MoveDown16](../../spec/move-subtree-down.md#movedown16) (heading)
-81. [MoveDown18](../../spec/move-subtree-down.md#movedown18) (blank lines, heading)
-82. [MoveDown21](../../spec/move-subtree-down.md#movedown21) (code block)
-83. [MoveDown22](../../spec/move-subtree-down.md#movedown22) (numbered list)
-84. [MoveDown23](../../spec/move-subtree-down.md#movedown23) (numbered list)
-85. [MoveDown24](../../spec/move-subtree-down.md#movedown24) (blank lines, paragraph)
-86. [MoveDown26](../../spec/move-subtree-down.md#movedown26) (blank lines, heading, paragraph)
-87. [MoveDown27](../../spec/move-subtree-down.md#movedown27) (blank lines, heading)
-88. [MoveDown29](../../spec/move-subtree-down.md#movedown29) (blank lines, numbered list, paragraph)
-89. [MoveDown30](../../spec/move-subtree-down.md#movedown30) (numbered list)
-90. [MoveDown31](../../spec/move-subtree-down.md#movedown31) (blank lines, paragraph, thematic break)
-91. [MoveUp3](../../spec/move-subtree-up.md#moveup3) (blank lines, heading, paragraph)
-92. [MoveUp4](../../spec/move-subtree-up.md#moveup4) (blank lines, paragraph)
-93. [MoveUp13](../../spec/move-subtree-up.md#moveup13) (code block)
-94. [MoveUp15](../../spec/move-subtree-up.md#moveup15) (numbered list)
-95. [MoveUp16](../../spec/move-subtree-up.md#moveup16) (heading)
-96. [MoveUp17](../../spec/move-subtree-up.md#moveup17) (blank lines, paragraph)
-97. [MoveUp19](../../spec/move-subtree-up.md#moveup19) (blank lines, paragraph, thematic break)
-98. [MoveUp20](../../spec/move-subtree-up.md#moveup20) (blank lines, link reference definition, paragraph)
-99. [MoveUp22](../../spec/move-subtree-up.md#moveup22) (blank lines, heading)
-100. [MoveUp25](../../spec/move-subtree-up.md#moveup25) (blank lines)
-101. [MoveUp26](../../spec/move-subtree-up.md#moveup26) (blank lines, heading)
-102. [MoveUp30](../../spec/move-subtree-up.md#moveup30) (blank lines, link reference definition, paragraph)
-103. [Enter › #228 › Renumbering stops at a delimiter change](../../spec/obsidian-true-outliner.md#renumbering-stops-at-a-delimiter-change) (numbered list)
-104. [Enter › E10](../../spec/obsidian-true-outliner.md#e10) (blank lines, paragraph)
-105. [Enter › E13, E16 › Split title above a subheading](../../spec/obsidian-true-outliner.md#split-title-above-a-subheading) (heading, paragraph)
-106. [Enter › E14, E20 › Split title above an existing paragraph](../../spec/obsidian-true-outliner.md#split-title-above-an-existing-paragraph) (blank lines, heading, paragraph)
-107. [Enter › E14, E20 › End of heading above a paragraph](../../spec/obsidian-true-outliner.md#end-of-heading-above-a-paragraph) (blank lines, heading, paragraph)
-108. [Backspace › #269 › Emptied middle item removed and renumbered](../../spec/obsidian-true-outliner.md#emptied-middle-item-removed-and-renumbered) (numbered list)
-109. [Backspace › Joining across ordered runs](../../spec/obsidian-true-outliner.md#joining-across-ordered-runs) (numbered list)
-110. [Backspace › Joining away the head of a list › Next item becomes the new 1.](../../spec/obsidian-true-outliner.md#next-item-becomes-the-new-1) (numbered list)
-111. [Backspace › Joining away the head of a list › List starting at 3 keeps its start](../../spec/obsidian-true-outliner.md#list-starting-at-3-keeps-its-start) (numbered list)
-112. [Indentation › seams-across-a-re-indent › Indented item keeps its thematic break](../../spec/obsidian-true-outliner.md#indented-item-keeps-its-thematic-break) (blank lines, thematic break)
-113. [Moving › lone-block-id › Block id moves with its paragraph](../../spec/obsidian-true-outliner.md#block-id-moves-with-its-paragraph) (blank lines, paragraph)
-114. [Moving › lazy-continuation-at-seams › No blank line needed after a fence](../../spec/obsidian-true-outliner.md#no-blank-line-needed-after-a-fence) (code block, paragraph)
-115. [Moving › lazy-continuation-at-seams › No blank line needed before a fence](../../spec/obsidian-true-outliner.md#no-blank-line-needed-before-a-fence) (code block, paragraph)
-116. [Ordered lists › Outdenting the head of a nested list](../../spec/obsidian-true-outliner.md#outdenting-the-head-of-a-nested-list) (numbered list)
-117. [Abandoning an empty place › Enter, Tab, then leave › An empty ordered child kept with a blank line](../../spec/obsidian-true-outliner.md#an-empty-ordered-child-kept-with-a-blank-line) (blank lines, numbered list)
-118. [Abandoning an empty place › Enter, Tab, then leave › Blank line after the list stays](../../spec/obsidian-true-outliner.md#blank-line-after-the-list-stays) (blank lines, paragraph)
-119. [Abandoning an empty place › Enter, Shift-Tab, then leave › Outdented empty ordered item stays](../../spec/obsidian-true-outliner.md#outdented-empty-ordered-item-stays) (numbered list)
-120. [Outdent5](../../spec/outdent.md#outdent5) (heading)
-121. [Outdent6](../../spec/outdent.md#outdent6) (blank lines)
-122. [Outdent7](../../spec/outdent.md#outdent7) (blank lines)
-123. [Outdent9](../../spec/outdent.md#outdent9) (numbered list)
-124. [Outdent15](../../spec/outdent.md#outdent15) (blank lines, paragraph)
-125. [Direct outdent › DirectOutdent4](../../spec/outdent.md#directoutdent4) (blank lines, paragraph)
-126. [Logical outdent › LogicalOutdent4](../../spec/outdent.md#logicaloutdent4) (blank lines, paragraph)
-127. [Paste2](../../spec/paste.md#paste2) (numbered list)
-128. [Paste4](../../spec/paste.md#paste4) (escape)
-129. [Paste16](../../spec/paste.md#paste16) (numbered list)
-130. [Paste20](../../spec/paste.md#paste20) (blank lines, paragraph)
-131. [Paste21](../../spec/paste.md#paste21) (paragraph)
-132. [Paste22](../../spec/paste.md#paste22) (code block)
-133. [Paste27](../../spec/paste.md#paste27) (task)
-134. [Paste30](../../spec/paste.md#paste30) (escape)
-135. [Paste32](../../spec/paste.md#paste32) (blank lines, heading, paragraph)
-136. [Paste45](../../spec/paste.md#paste45) (escape)
-137. [Placeholder1](../../spec/placeholders.md#placeholder1) (blank lines)
-138. [Placeholder5](../../spec/placeholders.md#placeholder5) (blank lines)
-139. [Placeholder7](../../spec/placeholders.md#placeholder7) (blank lines)
-140. [Placeholder14](../../spec/placeholders.md#placeholder14) (blank lines, paragraph)
-141. [Placeholder16](../../spec/placeholders.md#placeholder16) (blank lines)
-142. [Outliner flows › Scenario4](../../spec/scenarios.md#scenario4) (blank lines)
-143. [Outliner flows › Scenario13](../../spec/scenarios.md#scenario13) (numbered list)
-144. [Outliner flows › Scenario16](../../spec/scenarios.md#scenario16) (blank lines, heading, task)
-145. [Notes and sections › Scenario22](../../spec/scenarios.md#scenario22) (blank lines, heading)
-146. [ShiftEnter20](../../spec/shift-enter.md#shiftenter20) (escape)
+9. [Backspace36](../../spec/backspace.md#backspace36) (heading, paragraph, setext heading)
+10. [Backspace37](../../spec/backspace.md#backspace37) (heading, paragraph, setext heading)
+11. [Backspace39](../../spec/backspace.md#backspace39) (blank lines, paragraph)
+12. [Backspace40](../../spec/backspace.md#backspace40) (blank lines, numbered list, paragraph)
+13. [Cmd-Backspace › SoftBackspace2](../../spec/backspace.md#softbackspace2) (escape, paragraph)
+14. [CursorLeft1](../../spec/cursor.md#cursorleft1) (paragraph)
+15. [CursorLeft2](../../spec/cursor.md#cursorleft2) (paragraph)
+16. [CursorLeft3](../../spec/cursor.md#cursorleft3) (paragraph)
+17. [CursorRight1](../../spec/cursor.md#cursorright1) (paragraph)
+18. [CursorRight2](../../spec/cursor.md#cursorright2) (paragraph)
+19. [CursorUp1](../../spec/cursor.md#cursorup1) (paragraph)
+20. [CursorHome7](../../spec/cursor.md#cursorhome7) (numbered list)
+21. [CursorHome14](../../spec/cursor.md#cursorhome14) (paragraph)
+22. [SelectLeft1](../../spec/cursor.md#selectleft1) (paragraph)
+23. [SelectRightEnd1](../../spec/cursor.md#selectrightend1) (paragraph)
+24. [Delete13](../../spec/del.md#delete13) (blank lines, heading, paragraph)
+25. [Delete13g](../../spec/del.md#delete13g) (heading)
+26. [Delete15](../../spec/del.md#delete15) (heading)
+27. [Delete17](../../spec/del.md#delete17) (blank lines, paragraph)
+28. [Delete26](../../spec/del.md#delete26) (heading, paragraph, setext heading)
+29. [Delete27](../../spec/del.md#delete27) (escape)
+30. [Delete28](../../spec/del.md#delete28) (blank lines, paragraph)
+31. [DeleteSubtree2](../../spec/delete-subtree.md#deletesubtree2) (numbered list)
+32. [Enter2](../../spec/enter.md#enter2) (numbered list)
+33. [Enter8](../../spec/enter.md#enter8) (escape)
+34. [Enter9](../../spec/enter.md#enter9) (escape)
+35. [Enter10](../../spec/enter.md#enter10) (escape)
+36. [Enter11](../../spec/enter.md#enter11) (blank lines, escape, paragraph)
+37. [Enter12](../../spec/enter.md#enter12) (blank lines, paragraph)
+38. [Enter17](../../spec/enter.md#enter17) (CR line endings)
+39. [Enter18](../../spec/enter.md#enter18) (CR line endings)
+40. [Enter25](../../spec/enter.md#enter25) (numbered list)
+41. [Enter33](../../spec/enter.md#enter33) (blank lines, paragraph)
+42. [Enter35](../../spec/enter.md#enter35) (escape, numbered list)
+43. [Enter36](../../spec/enter.md#enter36) (blank lines)
+44. [Enter43](../../spec/enter.md#enter43) (escape)
+45. [Enter48](../../spec/enter.md#enter48) (escape)
+46. [Enter49](../../spec/enter.md#enter49) (blank lines, paragraph, table)
+47. [Fence1](../../spec/fences.md#fence1) (code block)
+48. [Fence2](../../spec/fences.md#fence2) (code block)
+49. [Fence5](../../spec/fences.md#fence5) (code block)
+50. [Fence6](../../spec/fences.md#fence6) (code block)
+51. [Fence7c](../../spec/fences.md#fence7c) (code block)
+52. [Fence8](../../spec/fences.md#fence8) (code block)
+53. [Fence15](../../spec/fences.md#fence15) (code block)
+54. [Fence16](../../spec/fences.md#fence16) (code block)
+55. [Fence18](../../spec/fences.md#fence18) (code block)
+56. [Fence27](../../spec/fences.md#fence27) (code block)
+57. [Fence28](../../spec/fences.md#fence28) (code block)
+58. [Fence30](../../spec/fences.md#fence30) (code block)
+59. [Fence35](../../spec/fences.md#fence35) (code block)
+60. [Fence48](../../spec/fences.md#fence48) (code block)
+61. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap1](../../spec/gaps.md#gap1) (blank lines, paragraph)
+62. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap4](../../spec/gaps.md#gap4) (blank lines, paragraph)
+63. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap2](../../spec/gaps.md#gap2) (blank lines, paragraph)
+64. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap11](../../spec/gaps.md#gap11) (blank lines, paragraph)
+65. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap3](../../spec/gaps.md#gap3) (blank lines, heading, paragraph)
+66. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap5](../../spec/gaps.md#gap5) (blank lines)
+67. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap6](../../spec/gaps.md#gap6) (heading, paragraph)
+68. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap7](../../spec/gaps.md#gap7) (blank lines, code block, paragraph)
+69. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap8](../../spec/gaps.md#gap8) (blank lines, paragraph)
+70. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap9](../../spec/gaps.md#gap9) (blank lines)
+71. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap10](../../spec/gaps.md#gap10) (blank lines, paragraph)
+72. [MoveUp14](../../spec/move-subtree-up.md#moveup14) (blank lines, paragraph)
+73. [New text and gaps › Gap12](../../spec/gaps.md#gap12) (blank lines, heading, paragraph)
+74. [New text and gaps › Gap13](../../spec/gaps.md#gap13) (blank lines, paragraph)
+75. [Indent3](../../spec/indent.md#indent3) (bullet *)
+76. [Indent5](../../spec/indent.md#indent5) (bullet *)
+77. [Indentation › destination-list-style](../../spec/obsidian-true-outliner.md#destination-list-style) (bullet *)
+78. [Indent4](../../spec/indent.md#indent4) (numbered list)
+79. [Indent11](../../spec/indent.md#indent11) (blank lines, paragraph)
+80. [Indent13](../../spec/indent.md#indent13) (code block)
+81. [Indent15](../../spec/indent.md#indent15) (numbered list)
+82. [Indent17](../../spec/indent.md#indent17) (CR line endings)
+83. [Indent20](../../spec/indent.md#indent20) (code block)
+84. [Indent21](../../spec/indent.md#indent21) (blank lines, paragraph)
+85. [Indent24](../../spec/indent.md#indent24) (heading)
+86. [Indent29](../../spec/indent.md#indent29) (blank lines, paragraph)
+87. [MoveDown1](../../spec/move-subtree-down.md#movedown1) (blank lines)
+88. [MoveDown4](../../spec/move-subtree-down.md#movedown4) (blank lines, heading, paragraph)
+89. [MoveDown5](../../spec/move-subtree-down.md#movedown5) (blank lines, paragraph)
+90. [MoveDown16](../../spec/move-subtree-down.md#movedown16) (heading)
+91. [MoveDown18](../../spec/move-subtree-down.md#movedown18) (blank lines, heading)
+92. [MoveDown21](../../spec/move-subtree-down.md#movedown21) (code block)
+93. [MoveDown22](../../spec/move-subtree-down.md#movedown22) (numbered list)
+94. [MoveDown23](../../spec/move-subtree-down.md#movedown23) (numbered list)
+95. [MoveDown24](../../spec/move-subtree-down.md#movedown24) (blank lines, paragraph)
+96. [MoveDown26](../../spec/move-subtree-down.md#movedown26) (blank lines, heading, paragraph)
+97. [MoveDown27](../../spec/move-subtree-down.md#movedown27) (blank lines, heading)
+98. [MoveDown29](../../spec/move-subtree-down.md#movedown29) (blank lines, numbered list, paragraph)
+99. [MoveDown30](../../spec/move-subtree-down.md#movedown30) (numbered list)
+100. [MoveDown31](../../spec/move-subtree-down.md#movedown31) (blank lines, paragraph, thematic break)
+101. [MoveDown35](../../spec/move-subtree-down.md#movedown35) (numbered list)
+102. [MoveUp3](../../spec/move-subtree-up.md#moveup3) (blank lines, heading, paragraph)
+103. [MoveUp4](../../spec/move-subtree-up.md#moveup4) (blank lines, paragraph)
+104. [MoveUp13](../../spec/move-subtree-up.md#moveup13) (code block)
+105. [MoveUp15](../../spec/move-subtree-up.md#moveup15) (numbered list)
+106. [MoveUp16](../../spec/move-subtree-up.md#moveup16) (heading)
+107. [MoveUp17](../../spec/move-subtree-up.md#moveup17) (blank lines, paragraph)
+108. [MoveUp19](../../spec/move-subtree-up.md#moveup19) (blank lines, paragraph, thematic break)
+109. [MoveUp20](../../spec/move-subtree-up.md#moveup20) (blank lines, link reference definition, paragraph)
+110. [MoveUp22](../../spec/move-subtree-up.md#moveup22) (blank lines, heading)
+111. [MoveUp25](../../spec/move-subtree-up.md#moveup25) (blank lines)
+112. [MoveUp26](../../spec/move-subtree-up.md#moveup26) (blank lines, heading)
+113. [MoveUp30](../../spec/move-subtree-up.md#moveup30) (blank lines, link reference definition, paragraph)
+114. [Enter › #228 › Renumbering stops at a delimiter change](../../spec/obsidian-true-outliner.md#renumbering-stops-at-a-delimiter-change) (numbered list)
+115. [Enter › E10](../../spec/obsidian-true-outliner.md#e10) (blank lines, paragraph)
+116. [Enter › E13, E16 › Split title above a subheading](../../spec/obsidian-true-outliner.md#split-title-above-a-subheading) (heading, paragraph)
+117. [Enter › E14, E20 › Split title above an existing paragraph](../../spec/obsidian-true-outliner.md#split-title-above-an-existing-paragraph) (blank lines, heading, paragraph)
+118. [Enter › E14, E20 › End of heading above a paragraph](../../spec/obsidian-true-outliner.md#end-of-heading-above-a-paragraph) (blank lines, heading, paragraph)
+119. [Backspace › #269 › Emptied middle item removed and renumbered](../../spec/obsidian-true-outliner.md#emptied-middle-item-removed-and-renumbered) (numbered list)
+120. [Backspace › Joining across ordered runs](../../spec/obsidian-true-outliner.md#joining-across-ordered-runs) (numbered list)
+121. [Backspace › Joining away the head of a list › Next item becomes the new 1.](../../spec/obsidian-true-outliner.md#next-item-becomes-the-new-1) (numbered list)
+122. [Backspace › Joining away the head of a list › List starting at 3 keeps its start](../../spec/obsidian-true-outliner.md#list-starting-at-3-keeps-its-start) (numbered list)
+123. [Indentation › seams-across-a-re-indent › Indented item keeps its thematic break](../../spec/obsidian-true-outliner.md#indented-item-keeps-its-thematic-break) (blank lines, thematic break)
+124. [Moving › lone-block-id › Block id moves with its paragraph](../../spec/obsidian-true-outliner.md#block-id-moves-with-its-paragraph) (blank lines, paragraph)
+125. [Moving › lazy-continuation-at-seams › No blank line needed after a fence](../../spec/obsidian-true-outliner.md#no-blank-line-needed-after-a-fence) (code block, paragraph)
+126. [Moving › lazy-continuation-at-seams › No blank line needed before a fence](../../spec/obsidian-true-outliner.md#no-blank-line-needed-before-a-fence) (code block, paragraph)
+127. [Ordered lists › Outdenting the head of a nested list](../../spec/obsidian-true-outliner.md#outdenting-the-head-of-a-nested-list) (numbered list)
+128. [Abandoning an empty place › Enter, Tab, then leave › An empty ordered child kept with a blank line](../../spec/obsidian-true-outliner.md#an-empty-ordered-child-kept-with-a-blank-line) (blank lines, numbered list)
+129. [Abandoning an empty place › Enter, Tab, then leave › Blank line after the list stays](../../spec/obsidian-true-outliner.md#blank-line-after-the-list-stays) (blank lines, paragraph)
+130. [Abandoning an empty place › Enter, Shift-Tab, then leave › Outdented empty ordered item stays](../../spec/obsidian-true-outliner.md#outdented-empty-ordered-item-stays) (numbered list)
+131. [Outdent5](../../spec/outdent.md#outdent5) (heading)
+132. [Outdent6](../../spec/outdent.md#outdent6) (blank lines)
+133. [Outdent7](../../spec/outdent.md#outdent7) (blank lines)
+134. [Outdent9](../../spec/outdent.md#outdent9) (numbered list)
+135. [Outdent15](../../spec/outdent.md#outdent15) (blank lines, paragraph)
+136. [Direct outdent › DirectOutdent4](../../spec/outdent.md#directoutdent4) (blank lines, paragraph)
+137. [Logical outdent › LogicalOutdent4](../../spec/outdent.md#logicaloutdent4) (blank lines, paragraph)
+138. [Outdent18](../../spec/outdent.md#outdent18) (blank lines, heading, paragraph)
+139. [Paste2](../../spec/paste.md#paste2) (numbered list)
+140. [Paste4](../../spec/paste.md#paste4) (escape)
+141. [Paste16](../../spec/paste.md#paste16) (numbered list)
+142. [Paste20](../../spec/paste.md#paste20) (blank lines, paragraph)
+143. [Paste21](../../spec/paste.md#paste21) (paragraph)
+144. [Paste22](../../spec/paste.md#paste22) (code block)
+145. [Paste27](../../spec/paste.md#paste27) (task)
+146. [Paste30](../../spec/paste.md#paste30) (escape)
+147. [Paste32](../../spec/paste.md#paste32) (blank lines, heading, paragraph)
+148. [Paste45](../../spec/paste.md#paste45) (escape)
+149. [Paste51](../../spec/paste.md#paste51) (escape)
+150. [Paste59](../../spec/paste.md#paste59) (blank lines, heading)
+151. [Paste60](../../spec/paste.md#paste60) (blank lines)
+152. [Paste64](../../spec/paste.md#paste64) (escape, paragraph)
+153. [Paste69](../../spec/paste.md#paste69) (escape, paragraph)
+154. [Paste75](../../spec/paste.md#paste75) (task)
+155. [Paste76](../../spec/paste.md#paste76) (blank lines, heading, paragraph)
+156. [Placeholder1](../../spec/placeholders.md#placeholder1) (blank lines)
+157. [Placeholder5](../../spec/placeholders.md#placeholder5) (blank lines)
+158. [Placeholder7](../../spec/placeholders.md#placeholder7) (blank lines)
+159. [Placeholder14](../../spec/placeholders.md#placeholder14) (blank lines, paragraph)
+160. [Placeholder16](../../spec/placeholders.md#placeholder16) (blank lines)
+161. [Outliner flows › Scenario4](../../spec/scenarios.md#scenario4) (blank lines)
+162. [Outliner flows › Scenario13](../../spec/scenarios.md#scenario13) (numbered list)
+163. [Outliner flows › Scenario16](../../spec/scenarios.md#scenario16) (blank lines, heading, task)
+164. [Notes and sections › Scenario22](../../spec/scenarios.md#scenario22) (blank lines, heading)
+165. [ShiftEnter20](../../spec/shift-enter.md#shiftenter20) (escape)
 
 ## Skipped
 
-### a quote (79)
+### a quote (98)
 
 1. [backspace.md › Backspace27](../../spec/backspace.md#backspace27)
-2. [cursor.md › CursorHome11](../../spec/cursor.md#cursorhome11)
-3. [cursor.md › CursorHome16](../../spec/cursor.md#cursorhome16)
-4. [del.md › Delete10](../../spec/del.md#delete10)
-5. [enter.md › Enter36b](../../spec/enter.md#enter36b)
-6. [enter.md › Enter46](../../spec/enter.md#enter46)
-7. [fences.md › Fence4](../../spec/fences.md#fence4)
-8. [fences.md › Fence20](../../spec/fences.md#fence20)
-9. [fences.md › Fence40](../../spec/fences.md#fence40)
-10. [move-subtree-up.md › MoveUp35](../../spec/move-subtree-up.md#moveup35)
-11. [obsidian-true-outliner.md › Enter › #267, E5](../../spec/obsidian-true-outliner.md#267-e5)
-12. [obsidian-true-outliner.md › Indentation › #255 › Outdented child leaves quote above alone](../../spec/obsidian-true-outliner.md#outdented-child-leaves-quote-above-alone)
-13. [obsidian-true-outliner.md › Indentation › seams-across-a-re-indent › Indented item keeps its quote](../../spec/obsidian-true-outliner.md#indented-item-keeps-its-quote)
-14. [obsidian-true-outliner.md › Indentation › seams-across-a-re-indent › Outdented item keeps its quote](../../spec/obsidian-true-outliner.md#outdented-item-keeps-its-quote)
-15. [obsidian-true-outliner.md › Moving › lazy-continuation-at-seams › Blank line added below a quote](../../spec/obsidian-true-outliner.md#blank-line-added-below-a-quote)
-16. [obsidian-true-outliner.md › Paste › #264 › Pasted quote set off from paragraph](../../spec/obsidian-true-outliner.md#pasted-quote-set-off-from-paragraph)
-17. [obsidian-true-outliner.md › Paste › #197 › Pasted list and block become children](../../spec/obsidian-true-outliner.md#pasted-list-and-block-become-children)
-18. [paste.md › Paste12](../../spec/paste.md#paste12)
-19. [paste.md › Paste23](../../spec/paste.md#paste23)
-20. [paste.md › Paste29](../../spec/paste.md#paste29)
-21. [paste.md › Paste41](../../spec/paste.md#paste41)
-22. [quotes.md › Quote1](../../spec/quotes.md#quote1)
-23. [quotes.md › Indent inside a quote › Quote2](../../spec/quotes.md#quote2)
-24. [quotes.md › Indent inside a quote › Quote3](../../spec/quotes.md#quote3)
-25. [quotes.md › Indent inside a quote › Quote4](../../spec/quotes.md#quote4)
-26. [quotes.md › Indent inside a quote › Quote5](../../spec/quotes.md#quote5)
-27. [quotes.md › Indent inside a quote › Quote6](../../spec/quotes.md#quote6)
-28. [quotes.md › Indent inside a quote › Quote8](../../spec/quotes.md#quote8)
-29. [quotes.md › Indent inside a quote › Quote9](../../spec/quotes.md#quote9)
-30. [quotes.md › Quote10](../../spec/quotes.md#quote10)
-31. [quotes.md › Outdent out of a quote › Quote11](../../spec/quotes.md#quote11)
-32. [quotes.md › Outdent out of a quote › Quote12](../../spec/quotes.md#quote12)
-33. [quotes.md › Outdent out of a quote › Quote12b](../../spec/quotes.md#quote12b)
-34. [quotes.md › Outdent out of a quote › Quote14](../../spec/quotes.md#quote14)
-35. [quotes.md › Outdent out of a quote › Quote15](../../spec/quotes.md#quote15)
-36. [quotes.md › Outdent out of a quote › Quote16](../../spec/quotes.md#quote16)
-37. [quotes.md › Indent into a quote › Quote17](../../spec/quotes.md#quote17)
-38. [quotes.md › Indent into a quote › Quote18](../../spec/quotes.md#quote18)
-39. [quotes.md › Indent into a quote › Quote19](../../spec/quotes.md#quote19)
-40. [quotes.md › Moving between quotes › Quote20](../../spec/quotes.md#quote20)
-41. [quotes.md › Moving between quotes › Quote21](../../spec/quotes.md#quote21)
-42. [quotes.md › Moving between quotes › Quote22](../../spec/quotes.md#quote22)
-43. [quotes.md › Moving between quotes › Quote23](../../spec/quotes.md#quote23)
-44. [quotes.md › Moving inside a quote › Quote24](../../spec/quotes.md#quote24)
-45. [quotes.md › Moving inside a quote › Quote25](../../spec/quotes.md#quote25)
-46. [quotes.md › Moving inside a quote › Quote26](../../spec/quotes.md#quote26)
-47. [quotes.md › A quote and a heading don't swap › Quote27](../../spec/quotes.md#quote27)
-48. [quotes.md › A quote and a heading don't swap › Quote28](../../spec/quotes.md#quote28)
-49. [quotes.md › Enter in a quote › Quote29](../../spec/quotes.md#quote29)
-50. [quotes.md › Enter in a quote › Quote30](../../spec/quotes.md#quote30)
-51. [quotes.md › Enter in a quote › Quote31](../../spec/quotes.md#quote31)
-52. [quotes.md › Enter in a quote › Quote32](../../spec/quotes.md#quote32)
-53. [quotes.md › Enter in a quote › Quote33](../../spec/quotes.md#quote33)
-54. [quotes.md › Enter in a quote › Quote34](../../spec/quotes.md#quote34)
-55. [quotes.md › Enter in a quote › Quote35](../../spec/quotes.md#quote35)
-56. [quotes.md › Enter in a quote › Quote36](../../spec/quotes.md#quote36)
-57. [quotes.md › Enter in a quote › Quote37](../../spec/quotes.md#quote37)
-58. [quotes.md › Enter in a quote › Quote42](../../spec/quotes.md#quote42)
-59. [quotes.md › Shift-Enter in a quote › Quote44](../../spec/quotes.md#quote44)
-60. [quotes.md › Shift-Enter in a quote › Quote45](../../spec/quotes.md#quote45)
-61. [quotes.md › Shift-Enter in a quote › Quote46](../../spec/quotes.md#quote46)
-62. [quotes.md › Joining in a quote › Quote48](../../spec/quotes.md#quote48)
-63. [quotes.md › Joining in a quote › Quote49](../../spec/quotes.md#quote49)
-64. [quotes.md › Joining in a quote › Quote50](../../spec/quotes.md#quote50)
-65. [quotes.md › Joining in a quote › Quote51](../../spec/quotes.md#quote51)
-66. [quotes.md › Joining across a quote's edge › Quote52](../../spec/quotes.md#quote52)
-67. [quotes.md › Backspace at a quote's start › Quote53](../../spec/quotes.md#quote53)
-68. [quotes.md › Backspace at a quote's start › Quote54](../../spec/quotes.md#quote54)
-69. [quotes.md › Backspace at a quote's start › Quote56](../../spec/quotes.md#quote56)
-70. [quotes.md › Backspace at a quote's start › Quote59](../../spec/quotes.md#quote59)
-71. [quotes.md › Quote63](../../spec/quotes.md#quote63)
-72. [quotes.md › Quote64](../../spec/quotes.md#quote64)
-73. [quotes.md › Indenting a paragraph into a quote › Quote65](../../spec/quotes.md#quote65)
-74. [quotes.md › Indenting a paragraph into a quote › Quote66](../../spec/quotes.md#quote66)
-75. [quotes.md › Quote67](../../spec/quotes.md#quote67)
-76. [quotes.md › Quote68](../../spec/quotes.md#quote68)
-77. [quotes.md › Quote72](../../spec/quotes.md#quote72)
-78. [quotes.md › A paragraph outdented out of a nested quote › Quote69](../../spec/quotes.md#quote69)
-79. [quotes.md › A paragraph outdented out of a nested quote › Quote70](../../spec/quotes.md#quote70)
+2. [backspace.md › Cmd-Backspace › SoftBackspace7](../../spec/backspace.md#softbackspace7)
+3. [cursor.md › CursorHome11](../../spec/cursor.md#cursorhome11)
+4. [cursor.md › CursorHome16](../../spec/cursor.md#cursorhome16)
+5. [del.md › Delete10](../../spec/del.md#delete10)
+6. [delete-subtree.md › DeleteSubtree7](../../spec/delete-subtree.md#deletesubtree7)
+7. [enter.md › Enter36b](../../spec/enter.md#enter36b)
+8. [enter.md › Enter46](../../spec/enter.md#enter46)
+9. [fences.md › Fence4](../../spec/fences.md#fence4)
+10. [fences.md › Fence20](../../spec/fences.md#fence20)
+11. [fences.md › Fence40](../../spec/fences.md#fence40)
+12. [fences.md › Math, comments and indented code › Fence43](../../spec/fences.md#fence43)
+13. [fences.md › Math, comments and indented code › Fence46](../../spec/fences.md#fence46)
+14. [move-subtree-up.md › MoveUp35](../../spec/move-subtree-up.md#moveup35)
+15. [obsidian-true-outliner.md › Enter › #267, E5](../../spec/obsidian-true-outliner.md#267-e5)
+16. [obsidian-true-outliner.md › Indentation › #255 › Outdented child leaves quote above alone](../../spec/obsidian-true-outliner.md#outdented-child-leaves-quote-above-alone)
+17. [obsidian-true-outliner.md › Indentation › seams-across-a-re-indent › Indented item keeps its quote](../../spec/obsidian-true-outliner.md#indented-item-keeps-its-quote)
+18. [obsidian-true-outliner.md › Indentation › seams-across-a-re-indent › Outdented item keeps its quote](../../spec/obsidian-true-outliner.md#outdented-item-keeps-its-quote)
+19. [obsidian-true-outliner.md › Moving › lazy-continuation-at-seams › Blank line added below a quote](../../spec/obsidian-true-outliner.md#blank-line-added-below-a-quote)
+20. [obsidian-true-outliner.md › Paste › #264 › Pasted quote set off from paragraph](../../spec/obsidian-true-outliner.md#pasted-quote-set-off-from-paragraph)
+21. [obsidian-true-outliner.md › Paste › #197 › Pasted list and block become children](../../spec/obsidian-true-outliner.md#pasted-list-and-block-become-children)
+22. [paste.md › Paste12](../../spec/paste.md#paste12)
+23. [paste.md › Paste23](../../spec/paste.md#paste23)
+24. [paste.md › Paste29](../../spec/paste.md#paste29)
+25. [paste.md › Paste41](../../spec/paste.md#paste41)
+26. [paste.md › Paste72](../../spec/paste.md#paste72)
+27. [paste.md › Paste77](../../spec/paste.md#paste77)
+28. [quotes.md › Quote1](../../spec/quotes.md#quote1)
+29. [quotes.md › Indent inside a quote › Quote2](../../spec/quotes.md#quote2)
+30. [quotes.md › Indent inside a quote › Quote3](../../spec/quotes.md#quote3)
+31. [quotes.md › Indent inside a quote › Quote4](../../spec/quotes.md#quote4)
+32. [quotes.md › Indent inside a quote › Quote5](../../spec/quotes.md#quote5)
+33. [quotes.md › Indent inside a quote › Quote6](../../spec/quotes.md#quote6)
+34. [quotes.md › Indent inside a quote › Quote8](../../spec/quotes.md#quote8)
+35. [quotes.md › Indent inside a quote › Quote9](../../spec/quotes.md#quote9)
+36. [quotes.md › Quote10](../../spec/quotes.md#quote10)
+37. [quotes.md › Outdent out of a quote › Quote11](../../spec/quotes.md#quote11)
+38. [quotes.md › Outdent out of a quote › Quote12](../../spec/quotes.md#quote12)
+39. [quotes.md › Outdent out of a quote › Quote12b](../../spec/quotes.md#quote12b)
+40. [quotes.md › Outdent out of a quote › Quote14](../../spec/quotes.md#quote14)
+41. [quotes.md › Outdent out of a quote › Quote15](../../spec/quotes.md#quote15)
+42. [quotes.md › Outdent out of a quote › Quote16](../../spec/quotes.md#quote16)
+43. [quotes.md › Indent into a quote › Quote17](../../spec/quotes.md#quote17)
+44. [quotes.md › Indent into a quote › Quote18](../../spec/quotes.md#quote18)
+45. [quotes.md › Indent into a quote › Quote19](../../spec/quotes.md#quote19)
+46. [quotes.md › Moving between quotes › Quote20](../../spec/quotes.md#quote20)
+47. [quotes.md › Moving between quotes › Quote21](../../spec/quotes.md#quote21)
+48. [quotes.md › Moving between quotes › Quote22](../../spec/quotes.md#quote22)
+49. [quotes.md › Moving between quotes › Quote23](../../spec/quotes.md#quote23)
+50. [quotes.md › Moving inside a quote › Quote24](../../spec/quotes.md#quote24)
+51. [quotes.md › Moving inside a quote › Quote25](../../spec/quotes.md#quote25)
+52. [quotes.md › Moving inside a quote › Quote26](../../spec/quotes.md#quote26)
+53. [quotes.md › A quote and a heading don't swap › Quote27](../../spec/quotes.md#quote27)
+54. [quotes.md › A quote and a heading don't swap › Quote28](../../spec/quotes.md#quote28)
+55. [quotes.md › Enter in a quote › Quote29](../../spec/quotes.md#quote29)
+56. [quotes.md › Enter in a quote › Quote30](../../spec/quotes.md#quote30)
+57. [quotes.md › Enter in a quote › Quote31](../../spec/quotes.md#quote31)
+58. [quotes.md › Enter in a quote › Quote32](../../spec/quotes.md#quote32)
+59. [quotes.md › Enter in a quote › Quote33](../../spec/quotes.md#quote33)
+60. [quotes.md › Enter in a quote › Quote34](../../spec/quotes.md#quote34)
+61. [quotes.md › Enter in a quote › Quote35](../../spec/quotes.md#quote35)
+62. [quotes.md › Enter in a quote › Quote36](../../spec/quotes.md#quote36)
+63. [quotes.md › Enter in a quote › Quote37](../../spec/quotes.md#quote37)
+64. [quotes.md › Enter in a quote › Quote42](../../spec/quotes.md#quote42)
+65. [quotes.md › Shift-Enter in a quote › Quote44](../../spec/quotes.md#quote44)
+66. [quotes.md › Shift-Enter in a quote › Quote45](../../spec/quotes.md#quote45)
+67. [quotes.md › Shift-Enter in a quote › Quote46](../../spec/quotes.md#quote46)
+68. [quotes.md › Joining in a quote › Quote48](../../spec/quotes.md#quote48)
+69. [quotes.md › Joining in a quote › Quote49](../../spec/quotes.md#quote49)
+70. [quotes.md › Joining in a quote › Quote50](../../spec/quotes.md#quote50)
+71. [quotes.md › Joining in a quote › Quote51](../../spec/quotes.md#quote51)
+72. [quotes.md › Joining across a quote's edge › Quote52](../../spec/quotes.md#quote52)
+73. [quotes.md › Backspace at a quote's start › Quote53](../../spec/quotes.md#quote53)
+74. [quotes.md › Backspace at a quote's start › Quote54](../../spec/quotes.md#quote54)
+75. [quotes.md › Backspace at a quote's start › Quote56](../../spec/quotes.md#quote56)
+76. [quotes.md › Backspace at a quote's start › Quote59](../../spec/quotes.md#quote59)
+77. [quotes.md › Quote63](../../spec/quotes.md#quote63)
+78. [quotes.md › Quote64](../../spec/quotes.md#quote64)
+79. [quotes.md › Indenting a paragraph into a quote › Quote65](../../spec/quotes.md#quote65)
+80. [quotes.md › Indenting a paragraph into a quote › Quote66](../../spec/quotes.md#quote66)
+81. [quotes.md › Quote67](../../spec/quotes.md#quote67)
+82. [quotes.md › Quote68](../../spec/quotes.md#quote68)
+83. [quotes.md › Quote72](../../spec/quotes.md#quote72)
+84. [quotes.md › Quote73](../../spec/quotes.md#quote73)
+85. [quotes.md › Quote74](../../spec/quotes.md#quote74)
+86. [quotes.md › Quote75](../../spec/quotes.md#quote75)
+87. [quotes.md › Quote76](../../spec/quotes.md#quote76)
+88. [quotes.md › Quote77](../../spec/quotes.md#quote77)
+89. [quotes.md › Quote78](../../spec/quotes.md#quote78)
+90. [quotes.md › Quote80](../../spec/quotes.md#quote80)
+91. [quotes.md › Quote81](../../spec/quotes.md#quote81)
+92. [quotes.md › Quote82](../../spec/quotes.md#quote82)
+93. [quotes.md › Quote88](../../spec/quotes.md#quote88)
+94. [quotes.md › Quote83](../../spec/quotes.md#quote83)
+95. [quotes.md › Quote85](../../spec/quotes.md#quote85)
+96. [quotes.md › Quote87](../../spec/quotes.md#quote87)
+97. [quotes.md › A paragraph outdented out of a nested quote › Quote69](../../spec/quotes.md#quote69)
+98. [quotes.md › A paragraph outdented out of a nested quote › Quote70](../../spec/quotes.md#quote70)
 
-### a caret in a marker (19)
+### a caret in a marker (22)
 
 1. [backspace.md › Backspace2](../../spec/backspace.md#backspace2)
 2. [cursor.md › CursorHome3](../../spec/cursor.md#cursorhome3)
@@ -13122,32 +15782,38 @@ Original:
 12. [del.md › Delete25](../../spec/del.md#delete25)
 13. [enter.md › Enter34](../../spec/enter.md#enter34)
 14. [indent.md › Indent28](../../spec/indent.md#indent28)
-15. [move-subtree-down.md › MoveDown32](../../spec/move-subtree-down.md#movedown32)
-16. [move-subtree-up.md › MoveUp34](../../spec/move-subtree-up.md#moveup34)
-17. [obsidian-true-outliner.md › Shift-Enter › S5](../../spec/obsidian-true-outliner.md#s5)
-18. [outdent.md › Outdent14](../../spec/outdent.md#outdent14)
-19. [shift-enter.md › ShiftEnter22](../../spec/shift-enter.md#shiftenter22)
+15. [indent.md › Indent30](../../spec/indent.md#indent30)
+16. [move-subtree-down.md › MoveDown32](../../spec/move-subtree-down.md#movedown32)
+17. [move-subtree-up.md › MoveUp34](../../spec/move-subtree-up.md#moveup34)
+18. [move-subtree-up.md › MoveUp36](../../spec/move-subtree-up.md#moveup36)
+19. [obsidian-true-outliner.md › Shift-Enter › S5](../../spec/obsidian-true-outliner.md#s5)
+20. [outdent.md › Outdent14](../../spec/outdent.md#outdent14)
+21. [outdent.md › Outdent16](../../spec/outdent.md#outdent16)
+22. [shift-enter.md › ShiftEnter22](../../spec/shift-enter.md#shiftenter22)
 
-### a callout (16)
+### a callout (19)
 
 1. [cursor.md › CursorHome17](../../spec/cursor.md#cursorhome17)
 2. [paste.md › Paste28](../../spec/paste.md#paste28)
-3. [quotes.md › Indent inside a quote › Quote7](../../spec/quotes.md#quote7)
-4. [quotes.md › Outdent out of a quote › Quote13](../../spec/quotes.md#quote13)
-5. [quotes.md › Enter in a quote › Quote38](../../spec/quotes.md#quote38)
-6. [quotes.md › Enter in a quote › Quote39](../../spec/quotes.md#quote39)
-7. [quotes.md › Enter in a quote › Quote40](../../spec/quotes.md#quote40)
-8. [quotes.md › Enter in a quote › Quote41](../../spec/quotes.md#quote41)
-9. [quotes.md › Enter in a quote › Quote43](../../spec/quotes.md#quote43)
-10. [quotes.md › Shift-Enter in a quote › Quote47](../../spec/quotes.md#quote47)
-11. [quotes.md › Backspace at a quote's start › Quote57](../../spec/quotes.md#quote57)
-12. [quotes.md › Backspace at a quote's start › Quote58](../../spec/quotes.md#quote58)
-13. [quotes.md › Joining into a callout's title › Quote60](../../spec/quotes.md#quote60)
-14. [quotes.md › Joining into a callout's title › Quote61](../../spec/quotes.md#quote61)
-15. [quotes.md › Joining into a callout's title › Quote62](../../spec/quotes.md#quote62)
-16. [quotes.md › Quote71](../../spec/quotes.md#quote71)
+3. [paste.md › Paste55](../../spec/paste.md#paste55)
+4. [quotes.md › Indent inside a quote › Quote7](../../spec/quotes.md#quote7)
+5. [quotes.md › Outdent out of a quote › Quote13](../../spec/quotes.md#quote13)
+6. [quotes.md › Enter in a quote › Quote38](../../spec/quotes.md#quote38)
+7. [quotes.md › Enter in a quote › Quote39](../../spec/quotes.md#quote39)
+8. [quotes.md › Enter in a quote › Quote40](../../spec/quotes.md#quote40)
+9. [quotes.md › Enter in a quote › Quote41](../../spec/quotes.md#quote41)
+10. [quotes.md › Enter in a quote › Quote43](../../spec/quotes.md#quote43)
+11. [quotes.md › Shift-Enter in a quote › Quote47](../../spec/quotes.md#quote47)
+12. [quotes.md › Backspace at a quote's start › Quote57](../../spec/quotes.md#quote57)
+13. [quotes.md › Backspace at a quote's start › Quote58](../../spec/quotes.md#quote58)
+14. [quotes.md › Joining into a callout's title › Quote60](../../spec/quotes.md#quote60)
+15. [quotes.md › Joining into a callout's title › Quote61](../../spec/quotes.md#quote61)
+16. [quotes.md › Joining into a callout's title › Quote62](../../spec/quotes.md#quote62)
+17. [quotes.md › Quote71](../../spec/quotes.md#quote71)
+18. [quotes.md › Quote79](../../spec/quotes.md#quote79)
+19. [quotes.md › Quote84](../../spec/quotes.md#quote84)
 
-### a selection across blocks (14)
+### a selection across blocks (15)
 
 1. [backspace.md › Backspace31](../../spec/backspace.md#backspace31)
 2. [del.md › Delete21](../../spec/del.md#delete21)
@@ -13163,8 +15829,9 @@ Original:
 12. [outdent.md › Outdent8](../../spec/outdent.md#outdent8)
 13. [outdent.md › Outdent10](../../spec/outdent.md#outdent10)
 14. [outdent.md › Outdent12](../../spec/outdent.md#outdent12)
+15. [paste.md › Paste50](../../spec/paste.md#paste50)
 
-### a caret on a blank line (12)
+### a caret on a blank line (14)
 
 1. [backspace.md › Cmd-Backspace › SoftBackspace6](../../spec/backspace.md#softbackspace6)
 2. [enter.md › Enter37](../../spec/enter.md#enter37)
@@ -13175,9 +15842,23 @@ Original:
 7. [gaps.md › Keys on a blank line › Gap18](../../spec/gaps.md#gap18)
 8. [obsidian-true-outliner.md › Enter › E18](../../spec/obsidian-true-outliner.md#e18)
 9. [obsidian-true-outliner.md › Shift-Enter › S7, S8 › Line break in setext underline refused](../../spec/obsidian-true-outliner.md#line-break-in-setext-underline-refused)
-10. [placeholders.md › Placeholder10](../../spec/placeholders.md#placeholder10)
-11. [placeholders.md › Placeholder12](../../spec/placeholders.md#placeholder12)
-12. [typing.md › Typing1](../../spec/typing.md#typing1)
+10. [paste.md › Paste65](../../spec/paste.md#paste65)
+11. [paste.md › Paste67](../../spec/paste.md#paste67)
+12. [placeholders.md › Placeholder10](../../spec/placeholders.md#placeholder10)
+13. [placeholders.md › Placeholder12](../../spec/placeholders.md#placeholder12)
+14. [typing.md › Typing1](../../spec/typing.md#typing1)
+
+### action duplicateSubtree (9)
+
+1. [duplicate-subtree.md › DuplicateSubtree1](../../spec/duplicate-subtree.md#duplicatesubtree1)
+2. [duplicate-subtree.md › DuplicateSubtree2](../../spec/duplicate-subtree.md#duplicatesubtree2)
+3. [duplicate-subtree.md › DuplicateSubtree3](../../spec/duplicate-subtree.md#duplicatesubtree3)
+4. [duplicate-subtree.md › DuplicateSubtree4](../../spec/duplicate-subtree.md#duplicatesubtree4)
+5. [duplicate-subtree.md › DuplicateSubtree5](../../spec/duplicate-subtree.md#duplicatesubtree5)
+6. [duplicate-subtree.md › DuplicateSubtree6](../../spec/duplicate-subtree.md#duplicatesubtree6)
+7. [duplicate-subtree.md › DuplicateSubtree7](../../spec/duplicate-subtree.md#duplicatesubtree7)
+8. [duplicate-subtree.md › DuplicateSubtree8](../../spec/duplicate-subtree.md#duplicatesubtree8)
+9. [quotes.md › Quote86](../../spec/quotes.md#quote86)
 
 ### whitespace at the edge of a block not being edited (7)
 
@@ -13241,12 +15922,6 @@ Original:
 2. [paste.md › Paste8b](../../spec/paste.md#paste8b)
 3. [paste.md › Paste39](../../spec/paste.md#paste39)
 4. [scenarios.md › Outliner flows › Scenario17](../../spec/scenarios.md#scenario17)
-
-### action duplicateSubtree (3)
-
-1. [duplicate-subtree.md › DuplicateSubtree1](../../spec/duplicate-subtree.md#duplicatesubtree1)
-2. [duplicate-subtree.md › DuplicateSubtree2](../../spec/duplicate-subtree.md#duplicatesubtree2)
-3. [duplicate-subtree.md › DuplicateSubtree3](../../spec/duplicate-subtree.md#duplicatesubtree3)
 
 ### option backspaceAtTopItem: refuse (2)
 

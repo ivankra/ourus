@@ -7,11 +7,13 @@ items, and the quote's `>` is written on every line a command makes in it. A par
 owns no list, as in an item: a list after it is the quote's. The rules quotes add:
 
 1. **Outdent leaves a quote**: with `outdent: direct` (the default) the node stays where it is in
-   the text, the quote split around it, what followed it quoted after it (Quote12, Quote72); with
-   `logical` it follows the quote, below its other children (Quote12b). At the quote's end the two
-   agree (Quote11, Quote14, Quote15, Quote16); a callout keeps its title (Quote13). **Indent enters the quote above**, as its last child (Quote17,
-   Quote18, Quote19, Quote65, Quote66); a quoted paragraph after a paragraph becomes an item in
-   place (Quote9).
+   the text, the quote split around it, what followed it quoted after it (Quote12, Quote72), its
+   lines without `>` (lazy continuations) as written, escaped where out of the quote they'd start a
+   block (Quote87); with `logical` it follows the quote, below its other children (Quote12b). At the
+   quote's end the two agree (Quote11, Quote14, Quote15, Quote16); a callout keeps its title
+   (Quote13). **Indent enters the quote above**, as its last child (Quote17, Quote18, Quote19,
+   Quote65, Quote66), a paragraph with the list it owned, which follows it there (Quote78); a quoted
+   paragraph after a paragraph becomes an item in place (Quote9).
 2. **A move of everything in a quote moves the quote** (Quote68), but a callout's title stays: its
    only child moves out of it as out of an item (Quote71); a node moves into and out of
    quotes as into and out of items, and back (Quote20, Quote21, Quote22, Quote23, Quote24, Quote25,
@@ -20,7 +22,8 @@ owns no list, as in an item: a list after it is the quote's. The rules quotes ad
    Quote37, Quote42). On an empty item it leaves the list, then the quote, as at the top level
    (Quote32, Quote33, Quote34, Quote35). In a callout's title (Obsidian flavor) the rest is a
    paragraph of its own, as a heading's is (Quote38, Quote39, Quote40, Quote41); in its `[!type]`,
-   Enter is refused (Quote43).
+   Enter is refused (Quote43), and outside the Obsidian flavor too (Quote79); at a lazy line of its
+   title there, the rest is a paragraph of the callout (Quote84).
 4. **Backspace peels the markup in front of a quote's first node, nearest first**: a callout's
    `[!type]` (Quote57, Quote58); then an item's marker, the item becoming a paragraph in the quote
    (`backspaceAtTopItem: unwrap`, the default; with `refuse`, nothing, Quote55); then the quote's
@@ -31,6 +34,12 @@ owns no list, as in an item: a list after it is the quote's. The rules quotes ad
 6. **A join across a quote's edge brings the node into the quote** (Quote51, Quote52); Delete before
    a quote is refused ([Delete10](del.md#delete10)).
 7. **A callout's title is one line in the Obsidian flavor**: Shift-Enter there is refused (Quote47).
+8. **A quote can be an item's first block** (`- > q`): its lines go on at the item's column (`  > `),
+   not after its marker, which would make each a new item (Quote73, Quote74, Quote76); an empty
+   paragraph or line there is held on the marker's line as on any other (Quote80), and the item's
+   marker stays on its first line whichever block is first (Quote81, Quote82, Quote88); out of it, by
+   Backspace or outdent, its paragraph is the item's text, as on the marker's line it can only be
+   (Quote75, Quote77).
 
 Bare Obsidian and the text editors edit quotes as text: Tab inserts a tab after the `>`, Shift-Tab
 out of a quote does nothing, Backspace and Delete delete a space or a `>`, which moves text between
@@ -1823,6 +1832,400 @@ rank: rare
 > - x
 - a┃
 > - b
+```
+
+## Quote73
+
+Enter in a quote that is an item's first block: the new paragraph is quoted at the item's column.
+Backspace takes it back, the blank line first, as between paragraphs.
+
+```yaml
+rank: edge
+```
+
+```buffer
+- > a┃b
+```
+
+> enter
+
+```buffer
+- > a
+  >
+  > ┃b
+```
+
+> deleteContentBackward deleteContentBackward
+
+```buffer
+- > a┃b
+```
+
+## Quote74
+
+Shift-Enter there: a line of the quote's paragraph, at the item's column; Backspace takes it back.
+
+```yaml
+rank: edge
+```
+
+```buffer
+- > a┃b
+```
+
+> shiftEnter
+
+```buffer
+- > a
+  > ┃b
+```
+
+> deleteContentBackward
+
+```buffer
+- > a┃b
+```
+
+## Quote75
+
+Backspace at the start of such a quote: its `>` goes, and its paragraph is the item's text; the rest
+of the quote stays quoted under it.
+
+```yaml
+rank: edge
+```
+
+```buffer
+- a
+- > ┃q
+  >
+  > r
+```
+
+> deleteContentBackward
+
+```buffer
+- a
+- ┃q
+  > r
+```
+
+## Quote76
+
+Lines pasted as plain text there, at the item's column.
+
+```yaml
+rank: rare
+clipboard: |
+  x
+  y
+```
+
+```buffer
+- > a┃b
+```
+
+> pastePlain
+
+```buffer
+- > ax
+  > y
+  > ┃b
+```
+
+## Quote77
+
+Outdent out of a quote that is an item's first block: the paragraph leaves the quote and, on the
+marker's line, is the item's text, as Backspace makes it ([Quote75](#quote75)).
+
+```yaml
+rank: rare
+```
+
+```buffer
+- a
+  - > ┃q
+```
+
+> outdent
+
+```buffer
+- a
+  - ┃q
+```
+
+## Quote78
+
+A paragraph indented into the quote above takes its list along: in a quote a paragraph owns no
+list, so the list follows it there.
+
+```yaml
+rank: rare
+```
+
+```buffer
+> q
+
+┃p
+- x
+```
+
+> indent
+
+```buffer
+> q
+>
+> ┃p
+> - x
+```
+
+## Quote79
+
+Enter with a selection in a callout's `[!type]`, where its title is a paragraph (outside the
+Obsidian flavor): the break would split the type, so it is refused, as in the Obsidian flavor
+([Quote43](#quote43)).
+
+```yaml
+rank: rare
+flavor: gfm
+```
+
+```buffer
+> [«!note] q6»
+```
+
+> enter
+
+```result
+rejected: not-expressible
+```
+
+```buffer
+> [«!note] q6»
+```
+
+## Quote80
+
+Enter at the start of a quote that is an item's first block: an empty paragraph above, in the
+quote, held by a placeholder, as at a quote's start anywhere ([Enter33](enter.md#enter33)). The
+marker's line holds it as any line does.
+
+```yaml
+rank: rare
+```
+
+```buffer
+- > ┃q
+```
+
+> enter
+
+```buffer
+- > ┃◌
+  >
+  > q
+```
+
+> "x"
+
+```buffer
+- > x┃
+  >
+  > q
+```
+
+## Quote81
+
+A move of the first paragraph of a quote that is an item's first block: the item's marker stays on
+its first line, which the paragraph moving up takes ([Quote80](#quote80)); back, the same.
+
+```yaml
+rank: rare
+```
+
+```buffer
+- > ┃p
+  >
+  > q
+```
+
+> moveSubtreeDown
+
+```buffer
+- > q
+  >
+  > ┃p
+```
+
+> moveSubtreeUp
+
+```buffer
+- > ┃p
+  >
+  > q
+```
+
+## Quote82
+
+The first paragraph of a quote that is an item's first block deleted: the next comes up onto the
+marker's line, its quoted blank line gone with it, as anywhere in a quote.
+
+```yaml
+rank: rare
+```
+
+```buffer
+- > ┃p
+  >
+  > q
+```
+
+> deleteSubtree
+
+```buffer
+- > ┃q
+```
+
+## Quote88
+
+Delete on an empty paragraph opening such a quote ([Quote80](#quote80)): it goes, and the next comes
+up onto the marker's line, as [Quote82](#quote82) has it.
+
+```yaml
+rank: rare
+```
+
+```buffer
+- > ┃◌
+  >
+  > q
+```
+
+> deleteContentForward
+
+```buffer
+- > ┃q
+```
+
+## Quote83
+
+A list under a quote that is an item's first block, moved up past the quote: its item goes onto the
+item's marker line, at the item's content column (`- - g`), and the quote below it. Back down, the
+same in reverse.
+
+```yaml
+rank: edge
+```
+
+```buffer
+- > q
+  - ┃g
+```
+
+> moveSubtreeUp
+
+```buffer
+- - ┃g
+  > q
+```
+
+> moveSubtreeDown
+
+```buffer
+- > q
+  - ┃g
+```
+
+## Quote84
+
+Outside the Obsidian flavor a callout's title is a paragraph, and lines below it that aren't quoted
+continue it lazily. Enter at the start of one breaks there: the rest is a paragraph of the callout,
+quoted, the lines after it staying as they were.
+
+```yaml
+rank: edge
+flavor: gfm
+```
+
+```buffer
+> [!note] Title
+┃two
+lines
+```
+
+> enter
+
+```buffer
+> [!note] Title
+>
+> ┃two
+lines
+```
+
+## Quote85
+
+Outdent of a quoted item that shares its line with the item holding the quote (`- > - a`): it leaves
+the quote for that item, as its first block, the item's marker staying on the line.
+
+```yaml
+rank: edge
+```
+
+```buffer
+- > - ┃a
+  > - b
+```
+
+> outdent
+
+```buffer
+- - ┃a
+  > - b
+```
+
+## Quote86
+
+A quote written `>` without its space on its first line (`>- a`) still puts its content after `> `
+on the lines below: a copy of its item lines up with what is below, its child under it.
+
+```yaml
+rank: edge
+```
+
+```buffer
+┃>- a
+>   - b
+```
+
+> duplicateSubtree
+
+```buffer
+>- a
+>   - b
+> - ┃a
+>   - b
+```
+
+## Quote87
+
+A quoted item whose text goes on in a line without `>` (a lazy continuation, `- g` text there, not an
+item: four columns in, past the quote, it can start nothing) outdented out of the quote: the line
+stays as written, but under the item it would start a child item, so it is escaped.
+
+```yaml
+rank: edge
+```
+
+```buffer
+> - ┃q
+    - g
+```
+
+> outdent
+
+```buffer
+- ┃q
+    \- g
 ```
 
 ## A paragraph outdented out of a nested quote

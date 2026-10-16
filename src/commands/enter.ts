@@ -4,10 +4,10 @@ import { OutlineState, type OutlineNode } from '../outline/index.ts';
 import type { Block, LineInfo } from '../parser/index.ts';
 import { advanceColumns, lineSpan, skipSpaces, type ChangeSpec } from '../text.ts';
 import { OutlinePlan, type OutlinePlanNode } from '../encoder/index.ts';
-import { CommandContext, Operands, blankInQuote, followsParentText, isEmptyItem, isEmptyWithChildren, normText, reTaskBox } from './context.ts';
+import { CommandContext, Operands, blankInQuote, followsParentText, isEmptyItem, isEmptyWithChildren, normText, paragraphPrefix, reTaskBox, referenceEscape } from './context.ts';
 import { notApplicable, reject, type Outcome, type CommandPlan } from './plan.ts';
 import { outdent } from './structure.ts';
-import { enterAfterFence, fenceNewline } from './code.ts';
+import { enterAfterFence, fenceNewline, isPayloadLine, payloadNewline } from './code.ts';
 
 /** Where a node's text splits: the range the split replaces, the two halves, and what follows. */
 interface Cut {
@@ -74,7 +74,9 @@ function writeRest(ctx: CommandContext, cut: Cut, insert: string): { changes: Ch
  */
 function runsInto(ctx: CommandContext, above: LineInfo, line: LineInfo | undefined): boolean {
   const { doc } = ctx;
-  if (!line || line.blank || blankInQuote(ctx, line) || line.leaf?.type !== 'paragraph') return false;
+  // a paragraph's line, or a setext title's (its text as a paragraph's, until its underline)
+  const leaf = line?.leaf;
+  if (!line || line.blank || blankInQuote(ctx, line) || !(leaf?.type === 'paragraph' || (leaf?.type === 'heading' && leaf.setext && line.index < leaf.endLine))) return false;
   // the line's text after the containers it shares with the line above (a quote's `>` it has of its own
   // interrupts a paragraph)
   const text = doc.text.slice(line.from + (above.contentFrom - above.from), line.to);
@@ -138,6 +140,8 @@ export function split(ctx: CommandContext): Outcome {
   if (node.kind === 'quote' && node.head?.type === 'callout_title') return splitCalloutTitle(ctx, node, line, selFrom, selTo);
   if (node.kind === 'quote' && node.head) return lineBreak(ctx);
   if (line.leaf?.type === 'code_block' && line.leaf.fenced) return enterAfterFence(ctx, node, line, selFrom, selTo) ?? fenceNewline(ctx, node, line, selFrom, selTo);
+  if (isPayloadLine(line)) return payloadNewline(ctx, node, line, selFrom, selTo);
+  if (line.leaf?.type === 'table') return tableEnter(ctx, node, line, selFrom, selTo);
   if (node.kind !== 'item') return notApplicable;
   const pos = selFrom;
   if (pos < line.contentFrom && line.index !== node.startLine) return notApplicable;
@@ -233,26 +237,51 @@ export function split(ctx: CommandContext): Outcome {
   const list = firstChild?.kind === 'item' ? firstChild.block.parent : firstChild ? null : node.block.parent;
   const gap = looseGap(ctx, firstChild?.kind === 'item' ? firstChild : node, list);
   const insert = eol + gap + prefix + marker + ' ' + box;
-  const caret = cut.from + insert.length;
+  // the first half, ended here, stays text where it would read as a link reference definition
+  const ref = referenceEscape(ctx, node, cut.before);
+  const before = ref?.lines ?? cut.before;
+  const caret = cut.from + insert.length + (ref ? 1 : 0);
   // after a task's checkbox the rest doesn't start the line's text: nothing to escape
   const { changes, first } = box ? { changes: [{ from: cut.from, to: cut.to, insert }], first: box + cut.after[0]!.trimStart() } : writeRest(ctx, cut, insert);
+  if (ref) changes.push(ref.change);
   const fresh = OutlinePlan.created('item', normText([first, ...cut.after.slice(1)]));
   if (handsOver) {
-    const expected = ctx.plan.update(node, (n) => ({ ...n, text: normText(cut.before), children: [] })).place('after', node, [{ ...fresh, children: node.children }]);
+    const expected = ctx.plan.update(node, (n) => ({ ...n, text: normText(before), children: [] })).place('after', node, [{ ...fresh, children: node.children }]);
     // the children's lines stay where they are, under the new item, when its text starts no further
     // right than the item's did; a wider marker (`9.` to `10.`) moves past them, and the encoder
     // rewrites them at the new content column
     if (marker.length + 1 <= node.block.contentColumn! - node.block.markerColumn!) return ctx.caret(changes, caret, expected);
     const written: OutlinePlanNode = { ...fresh, lines: [first, ...cut.after.slice(1)], children: node.children };
-    const rewritten = ctx.plan.update(node, (n) => ({ ...n, text: normText(cut.before), lines: cut.before.map((l) => l.trimEnd()), children: [] })).place('after', node, [written]);
+    const rewritten = ctx.plan.update(node, (n) => ({ ...n, text: normText(before), lines: before.map((l) => l.trimEnd()), children: [] })).place('after', node, [written]);
     return ctx.encode(rewritten, {}, (writtenOutline) => {
       const at = writtenOutline.at(written, 0, box.length);
       return { anchor: at, head: at };
     });
   }
-  const split = ctx.plan.setText(node, normText(cut.before));
+  const split = ctx.plan.setText(node, normText(before));
   const expected = firstChild ? split.append(node, 'first', [fresh]) : split.place('after', node, [fresh]);
   return ctx.caret(changes, caret, expected);
+}
+
+/**
+ * Enter in a table: at the end of its last row, a paragraph after it, held by a placeholder and set
+ * off by a blank line (in GFM a line right after a table is another row of it); elsewhere in a row,
+ * refused: a row is a line, and a break in it would make two.
+ */
+function tableEnter(ctx: CommandContext, node: OutlineNode, line: LineInfo, selFrom: number, selTo: number): Outcome {
+  const { doc } = ctx;
+  if (selFrom < line.contentFrom) return notApplicable;
+  if (selFrom !== selTo || line.index !== line.leaf!.endLine || selFrom !== line.to) return reject('not-expressible', 'a table row is a single line');
+  const eol = ctx.ending(line);
+  const prefix = ctx.encoder.continuation(line.prefix);
+  const open = eol + prefix.trimEnd() + eol + prefix;
+  // text right below would continue the new paragraph: a blank line keeps it apart
+  const next = doc.lines[line.index + 1];
+  const same = !!next && next.prefix.length === line.prefix.length && next.prefix.every((p, k) => p.block === line.prefix[k]!.block);
+  const apart = same && runsInto(ctx, line, next) ? eol + prefix.trimEnd() : '';
+  const caret = line.to + open.length;
+  const expected = ctx.plan.place('after', node, [OutlinePlan.created('paragraph', '')]);
+  return ctx.caret([{ from: line.to, to: line.to, insert: open + apart }], caret, expected, { placeholders: [caret] });
 }
 
 /**
@@ -394,17 +423,19 @@ function splitParagraph(ctx: CommandContext, node: OutlineNode, line: LineInfo, 
   if (!cut) return notApplicable;
   if (normText(doc.headLines(node)) === '') return reject('not-expressible', 'an empty paragraph has nothing to split');
   if (cut.atStart && selFrom === selTo) return doc.config.enterAtTextStart === 'stay' ? blankLineAbove(ctx, node, selFrom) : paragraphAbove(ctx, node);
-  const firstLine = doc.lines[node.head!.startLine]!;
-  const prefix = doc.text.slice(firstLine.from, firstLine.contentFrom);
+  const prefix = paragraphPrefix(ctx, doc.lines[node.head!.startLine]!);
   const eol = ctx.ending(line);
   // the blank line between the halves keeps the quotes' `>`
   const insert = eol + prefix.trimEnd() + eol + prefix;
-  const caret = cut.from + insert.length;
+  // the first half, ended here, stays text where it would read as a link reference definition
+  const ref = referenceEscape(ctx, node, cut.before);
+  const caret = cut.from + insert.length + (ref ? 1 : 0);
   // the second half is a paragraph, a list marker in it staying text (as in an item), and it is right
   // above the paragraph's list now, so it takes it
   const { changes, first } = writeRest(ctx, cut, insert);
+  if (ref) changes.push(ref.change);
   const fresh = OutlinePlan.created('paragraph', normText([first, ...cut.after.slice(1)]));
-  const expected = ctx.plan.update(node, (n) => ({ ...n, text: normText(cut.before), children: [] })).place('after', node, [{ ...fresh, children: node.children }]);
+  const expected = ctx.plan.update(node, (n) => ({ ...n, text: normText(ref?.lines ?? cut.before), children: [] })).place('after', node, [{ ...fresh, children: node.children }]);
   return ctx.caret(changes, caret, expected);
 }
 
@@ -465,15 +496,11 @@ function splitSetext(ctx: CommandContext, node: OutlineNode, line: LineInfo, sel
   // at the title's start, an empty paragraph above (`into`), or a blank line, the split's empty half (`stay`)
   if (selFrom === selTo && text.slice(range.from, Math.max(selFrom, range.from)).trim() === '')
     return selFrom >= range.from && doc.config.enterAtTextStart === 'into' ? paragraphAbove(ctx, node) : blankLineAbove(ctx, node, selFrom);
-  if (selFrom < line.contentFrom) return notApplicable;
-  let from = selFrom;
-  from = skipSpaces(text, from, line.contentFrom, -1);
-  let to = selTo;
-  to = skipSpaces(text, to, line.to, 1);
-  const lines = doc.headLines(node);
-  const i = line.index - head.startLine;
-  const before = [...lines.slice(0, i), lines[i]!.slice(0, from - line.contentFrom)];
-  const after = [lines[i]!.slice(to - line.contentFrom), ...lines.slice(i + 1)];
+  // split as a paragraph is: at a line break of the title, the break goes with neither half
+  const cut = cutText(ctx, node, line, selFrom, selTo);
+  if (!cut) return notApplicable;
+  const { from, to, before } = cut;
+  const after = [cut.after[0]!.trimStart(), ...cut.after.slice(1)];
   const eol = ctx.ending(underline);
   const prefix = text.slice(underline.from, underline.contentFrom);
   // the rest of the title, with any title lines below it, moves below the underline
@@ -516,6 +543,8 @@ export function lineBreak(ctx: CommandContext): Outcome {
   // in code a line break is a new line, as Enter makes it
   const codeLine = doc.lineAt(pos);
   if (codeLine.leaf?.type === 'code_block' && codeLine.leaf.fenced) return fenceNewline(ctx, node, codeLine, pos, selTo);
+  if (isPayloadLine(codeLine)) return payloadNewline(ctx, node, codeLine, pos, selTo);
+  if (codeLine.leaf?.type === 'table' && pos >= codeLine.contentFrom) return reject('not-expressible', 'a table row is a single line');
   if (node.kind === 'atom') return notApplicable;
   if (node.kind === 'heading') return reject('not-expressible', 'a heading is a single line');
   if (node.head?.type === 'callout_title') return reject('not-expressible', 'a callout title is a single line');
@@ -526,12 +555,16 @@ export function lineBreak(ctx: CommandContext): Outcome {
   // in an item's marker, the break would split the marker: it acts at the text start
   if (collapsed && i === 0 && node.kind === 'item') pos = selTo = Math.max(pos, doc.headRange(node)!.from);
   if (i < 0 || i >= lines.length || pos < line.contentFrom) return notApplicable;
+  // in a callout's `[!type]` (its title a paragraph, outside the Obsidian flavor) a break would split it
+  if (node.kind === 'quote' && i === 0 && pos < line.contentFrom + (/^[ \t]*\[![^\]]*\][+-]?/.exec(doc.text.slice(line.contentFrom, line.to))?.[0].length ?? 0)) {
+    return reject('not-expressible', "a line break would split the callout's type");
+  }
   if (normText(lines) === '') return reject('not-expressible', 'an empty node has no line to break');
   const text = doc.text;
   const prefix =
     node.kind === 'item'
       ? ctx.encoder.siblingPrefix(node) + ' '.repeat(node.block.contentColumn! - node.block.markerColumn!)
-      : text.slice(doc.lines[node.head.startLine]!.from, doc.lines[node.head.startLine]!.contentFrom);
+      : paragraphPrefix(ctx, doc.lines[node.head.startLine]!);
   const eol = ctx.ending(line);
   if (lines[i]!.slice(0, pos - line.contentFrom).trim() === '') {
     if (!collapsed) return notApplicable;
@@ -548,7 +581,7 @@ export function lineBreak(ctx: CommandContext): Outcome {
       textFrom = skipSpaces(text, textFrom, line.to, 1);
       let firstLine = text.slice(textFrom, line.to);
       const changes: ChangeSpec[] = [{ from: above.to, to: above.to, insert: blank }, { from: line.from, to: textFrom, insert: prefix }];
-      const escaped = ctx.encoder.escape(firstLine, 'start');
+      const escaped = ctx.encoder.escape(firstLine, 'start', lines.slice(i + 1).map((l) => l.trimStart()));
       if (escaped.at) changes.push({ from: textFrom + escaped.at, to: textFrom + escaped.at, insert: '\\' });
       else if (escaped.at === 0) changes[1] = { from: line.from, to: textFrom, insert: prefix + '\\' };
       firstLine = escaped.text;
@@ -556,7 +589,8 @@ export function lineBreak(ctx: CommandContext): Outcome {
       const owns = node.kind === 'paragraph';
       const kept = ctx.plan.update(node, (n) => ({ ...n, text: normText(lines.slice(0, i)), children: owns ? [] : n.children }));
       const fresh: OutlinePlanNode = { ...OutlinePlan.created('paragraph', normText([firstLine, ...lines.slice(i + 1)])), children: owns ? node.children : [] };
-      const expected = node.kind === 'item' ? kept.append(node, 'first', [fresh]) : kept.place('after', node, [fresh]);
+      // in an item, or a quote whose text this is (a callout's title), the new paragraph is its first child
+      const expected = node.kind === 'item' || node.kind === 'quote' ? kept.append(node, 'first', [fresh]) : kept.place('after', node, [fresh]);
       const caret = line.from + blank.length + prefix.length;
       return ctx.caret(changes, caret, expected);
     }
@@ -567,7 +601,7 @@ export function lineBreak(ctx: CommandContext): Outcome {
     const caret = line.from + eol.length + prefix.length;
     const kept = ctx.plan.setText(node, normText(lines.slice(0, i)));
     const fresh = OutlinePlan.created('paragraph', normText(['', ...lines.slice(i + 1)]));
-    const expected = node.kind === 'item' ? kept.append(node, 'first', [fresh]) : kept.place('after', node, [fresh]);
+    const expected = node.kind === 'item' || node.kind === 'quote' ? kept.append(node, 'first', [fresh]) : kept.place('after', node, [fresh]);
     return ctx.caret(changes, caret, expected);
   }
 
@@ -584,9 +618,12 @@ export function lineBreak(ctx: CommandContext): Outcome {
   if (escaped.at) changes.push({ from: to + escaped.at, to: to + escaped.at, insert: '\\' });
   else if (escaped.at === 0) changes[0] = { from, to, insert: eol + prefix + '\\' };
   rest = escaped.text;
-  const caret = from + eol.length + prefix.length;
-
   const offset = pos - line.contentFrom;
-  const expected = ctx.plan.setText(node, normText([...lines.slice(0, i), lines[i]!.slice(0, offset), rest, ...lines.slice(i + 1)]));
+  // the text, broken here, stays text where it would read as a link reference definition
+  const broken = [...lines.slice(0, i), lines[i]!.slice(0, offset), rest, ...lines.slice(i + 1)];
+  const ref = referenceEscape(ctx, node, broken);
+  if (ref) changes.push(ref.change);
+  const caret = from + eol.length + prefix.length + (ref && ref.change.from <= from ? 1 : 0);
+  const expected = ctx.plan.setText(node, normText(ref?.lines ?? broken));
   return ctx.caret(changes, caret, expected);
 }

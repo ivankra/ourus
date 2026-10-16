@@ -5,7 +5,7 @@ import type { OutlineNode } from '../outline/index.ts';
 import { skipSpaces, type ChangeSpec } from '../text.ts';
 import { OutlinePlan, type OutlinePlanNode, type PlanTree, type EncodeResult } from '../encoder/index.ts';
 import type { Selection } from './index.ts';
-import { CommandContext, Operands, mapSelection, operands } from './context.ts';
+import { CommandContext, Operands, mapSelection, operands, outOfQuoteOpeningItem } from './context.ts';
 import { notApplicable, reject, type Outcome } from './plan.ts';
 
 /**
@@ -15,6 +15,9 @@ import { notApplicable, reject, type Outcome } from './plan.ts';
  */
 export function leaveQuote(ctx: CommandContext, ops: Operands): Outcome {
   const quote = ops.parent;
+  // a quote that is an item's first block (`- > q`): out of it, its first paragraph is the item's text
+  const opening = ops.nodes.length === 1 ? outOfQuoteOpeningItem(ctx, ops.first) : null;
+  if (opening) return opening;
   // a quote the operands empty goes, unless it has text (a callout's title): they take its place
   if (ops.nodes.length === quote.children.length && !quote.head) return ctx.encode(ctx.plan.place('instead', quote, ops.nodes));
   const after = quote.children.slice(quote.children.indexOf(ops.last) + 1);
@@ -39,11 +42,12 @@ export function indent(ctx: CommandContext, ops: Operands): Outcome {
  * `node` as a new node of another kind (a paragraph indented into a list, an item outdented out of a
  * paragraph's list): the same text and children.
  */
-function converted(ctx: CommandContext, node: OutlineNode, kind: 'item' | 'paragraph'): OutlinePlanNode {
+function converted(ctx: CommandContext, node: OutlineNode, kind: 'item' | 'paragraph' | 'heading' | 'atom'): OutlinePlanNode {
   const { doc } = ctx;
-  const { lines } = doc.contentOf(node);
+  const { lines } = OutlinePlan.textLines(node, doc.contentOf(node));
   // the same node in another kind: it keeps its id
-  return { id: node.id, kind, text: doc.nodeText(node), lines, ...(kind === 'item' ? { marker: doc.config.bullet } : {}), children: node.children };
+  const extra = kind === 'item' ? { marker: doc.config.bullet } : kind === 'heading' ? { level: node.head!.level! } : kind === 'atom' ? { blockType: node.head!.type } : {};
+  return { id: node.id, kind, text: doc.nodeText(node), lines, ...extra, children: node.children };
 }
 
 /** The selection kept on the same text, now in `nodes` converted to `copies`. */
@@ -65,8 +69,11 @@ function convertedSelection(ctx: CommandContext, nodes: readonly OutlineNode[], 
 export function indentParagraphs(ctx: CommandContext, ops: Operands): Outcome {
   const parent = ops.parent;
   const prev = ops.prev;
-  // into a quote, a paragraph stays a paragraph
-  if (prev?.kind === 'quote') return ctx.encode(ctx.plan.remove(ops.nodes).append(prev, 'last', ops.nodes));
+  // into a quote, a paragraph stays a paragraph, and owns no list there: the list it owned follows it
+  if (prev?.kind === 'quote') {
+    const moved = ops.nodes.flatMap((node): PlanTree[] => (node.kind === 'paragraph' && node.children.length ? [{ ...OutlinePlan.editable(node), children: [] }, ...node.children] : [node]));
+    return ctx.encode(ctx.plan.remove(ops.nodes).append(prev, 'last', moved));
+  }
   const section = parent.kind === 'root' || parent.kind === 'heading';
   // only a section's paragraph owns the list after it; in a quote or an item, a paragraph's list is its sibling
   const holds = (prev?.kind === 'paragraph' && section) || prev?.kind === 'item';
@@ -101,17 +108,31 @@ export function outdent(ctx: CommandContext, ops: Operands): Outcome {
       const prev = ops.prev;
       if (prev?.kind === 'item') return reject('at-top-level');
     }
-    const paragraphs = ops.nodes.map((node) => converted(ctx, node, 'paragraph'));
-    const select = convertedSelection(ctx, ops.nodes, paragraphs);
+    // an item whose text is a heading becomes that heading, the rest of the list its section
+    const heading = (node: OutlineNode): boolean => node.kind === 'item' && node.head?.type === 'heading';
+    // and one whose text is code (or another block of lines) becomes that block, its children after it
+    const block = (node: OutlineNode): boolean => node.kind === 'item' && !!node.head && node.head.type !== 'paragraph' && node.head.type !== 'heading';
+    const converts = ops.nodes.map((node) => converted(ctx, node, heading(node) ? 'heading' : block(node) ? 'atom' : 'paragraph'));
+    const select = convertedSelection(ctx, ops.nodes, converts);
+    const paragraphs = converts.flatMap((node): PlanTree[] => (node.kind === 'atom' ? [{ ...node, children: [] }, ...node.children] : [node]));
+    const headings = ops.nodes.filter(heading);
+    if (headings.length && parent.kind === 'paragraph') return reject('not-expressible', "a heading can't be in a paragraph's list");
     if (parent.kind !== 'paragraph') {
       // direct: in place, the rest of the list becoming theirs; logical: past the rest of the list
       const items = later.slice(0, (later.findIndex((node) => node.kind !== 'item') + 1 || later.length + 1) - 1);
       const tail = direct ? [] : items;
+      if (headings.length) {
+        // a heading's section is what follows it, up to a heading of its level or above: it may take in
+        // the rest of the list, nothing after it, and must stay in the section it is in
+        if (later.length > items.length) return reject('not-expressible', 'the heading would take in what follows the list');
+        const level = parent.kind === 'heading' ? parent.head!.level! : 0;
+        if (headings.some((node) => node.head!.level! <= level)) return reject('not-expressible', 'the heading would end the section it is in');
+      }
       const expected = ctx.plan.update(parent, (p) => {
         const i = p.children.indexOf(ops.first);
         return { ...p, children: [...p.children.slice(0, i), ...tail, ...paragraphs, ...p.children.slice(i + ops.nodes.length + tail.length)] };
       });
-      return ctx.encode(expected, {}, select);
+      return ctx.encode(expected, headings.length ? { compare: 'flat' } : {}, select);
     }
     // after the paragraph, an item would join its list again; direct: the items after the operands
     // follow it, and join the last new paragraph's list
@@ -192,8 +213,9 @@ export function move(ctx: CommandContext, ops: Operands, dir: -1 | 1): Outcome {
     return ctx.encode(crossed);
   }
   let expected: OutlinePlan;
-  if (dir > 0 && items && other.kind === 'paragraph') {
-    // an item below a paragraph becomes its first list item
+  if (dir > 0 && items && other.kind === 'paragraph' && (parent.kind === 'root' || parent.kind === 'heading')) {
+    // an item below a section's paragraph becomes its first list item (in an item or a quote a
+    // paragraph owns no list)
     expected = ctx.plan.remove(ops.nodes).append(other, 'first', ops.nodes);
   } else if (dir > 0 && other.kind === 'heading' && first.kind !== 'heading') {
     // down past a sub-heading: into its section, as its first node
@@ -320,18 +342,27 @@ export function deleteSubtree(ctx: CommandContext): Outcome {
   const ops = operands(ctx);
   if (ops === null) return notApplicable;
   if ('status' in ops) return ops;
-  const expected = ctx.plan.remove(ops.nodes);
+  // a quote without text that the nodes are all of goes with them: its `>` alone is no node
+  let gone: readonly OutlineNode[] = ops.nodes;
+  for (let parent = gone[0]!.parent; parent?.kind === 'quote' && !parent.head && parent.children.length === gone.length; parent = parent.parent) gone = [parent];
+  const expected = ctx.plan.remove(gone);
+  const [first, last] = [gone[0]!, gone[gone.length - 1]!];
   // the document's only nodes: it is empty after them, but for its last line ending
-  const from = doc.lines[ops.first.startLine]!.from;
-  const to = doc.lines[doc.lastDescendant(ops.last).endLine]!.to;
+  const from = doc.lines[first.startLine]!.from;
+  const to = doc.lines[doc.lastDescendant(last).endLine]!.to;
   if (!expected.root.children.length && doc.text.slice(0, from).trim() === '' && doc.text.slice(to).trim() === '') {
     const end = /\r?\n$|\r$/.exec(doc.text)?.[0].length ?? 0;
     return ctx.caret([{ from: 0, to: doc.text.length - end, insert: '' }], 0, expected);
   }
-  // the text above: a quote without text has none (its `>` is markup)
-  let above = doc.before(ops.first);
-  while (above?.kind === 'quote' && !above.head) above = doc.before(above);
-  const after = doc.after(doc.lastDescendant(ops.last));
+  // the text above: a quote without text has none (its `>` is markup), nor an item whose first block
+  // shares its line (`- > q`)
+  const textless = (node: OutlineNode): boolean =>
+    !node.head && (node.kind === 'quote' || (node.kind === 'item' && node.children[0]?.startLine === node.startLine));
+  let above = doc.before(first);
+  while (above && textless(above)) above = doc.before(above);
+  // the text below: a thematic break has none
+  let after = doc.after(doc.lastDescendant(last));
+  while (after?.kind === 'atom' && after.block.type === 'thematic_break') after = doc.after(after);
   return ctx.encode(expected, {}, (writtenOutline) => {
     const caret =
       above && above.kind !== 'root'
@@ -349,6 +380,14 @@ export function duplicate(ctx: CommandContext): Outcome {
   const ops = operands(ctx);
   if (ops === null) return notApplicable;
   if ('status' in ops) return ops;
+  // the copies go after the last heading's section: those before it that it would take in (any node
+  // but a heading of its level or above) would land under another parent than their originals, a
+  // selection deleteSubtree couldn't take back
+  const last = ops.nodes.map((node) => node.kind).lastIndexOf('heading');
+  const level = last > 0 ? ops.nodes[last]!.head!.level! : 0;
+  if (last > 0 && ops.nodes.slice(0, last).some((node) => node.kind !== 'heading' || node.head!.level! > level)) {
+    return reject('not-expressible', 'the copies before the heading would land in its section');
+  }
   const copies = ops.nodes.map((node) => OutlinePlan.copy(doc, node));
   const expected = ctx.plan.place('after', ops.last, copies);
   return ctx.encode(expected, {}, convertedSelection(ctx, ops.nodes, copies));

@@ -89,7 +89,9 @@ the same version at once is untested). Side by side they compete for the CPU, so
 
 Packages it needs on Debian (13 and later; the names with `t64` are the 64-bit-time ones): `xvfb`,
 and Electron's libraries, `libgtk-3-0t64 libnss3 libasound2t64 libgbm1 libxkbcommon0 libcups2t64
-libatk-bridge2.0-0t64 libxcomposite1 libxdamage1 libxrandr2` (they bring the rest). As root,
+libatk-bridge2.0-0t64 libxcomposite1 libxdamage1 libxrandr2` (they bring the rest; before Debian 13,
+the names without `t64`). The driver installs what is missing, as root or with passwordless `sudo`
+([`lib/system.ts`](../lib/system.ts)). As root,
 Electron needs `--no-sandbox`, which the driver passes.
 
 ## Indentation: tabs

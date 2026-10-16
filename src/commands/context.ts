@@ -3,7 +3,7 @@
 import { OutlineState, type OutlineKind, type OutlineNode } from '../outline/index.ts';
 import type { Flavor, LineInfo, PrefixPiece } from '../parser/index.ts';
 import { dominantEnding, mapPos, skipSpaces, type ChangeSpec } from '../text.ts';
-import { OutlineEncoder, OutlinePlan, type EncodeOptions, type EncodeResult } from '../encoder/index.ts';
+import { OutlineEncoder, OutlinePlan, type EncodeOptions, type EncodeResult, type OutlinePlanNode } from '../encoder/index.ts';
 import type { CommandResult, Selection } from './index.ts';
 import { notApplicable, reject, type Outcome, type CommandPlan } from './plan.ts';
 
@@ -72,14 +72,15 @@ export class CommandContext {
    * A plan that encodes `expected` with the encoder. The selection is the old one mapped along,
    * or, given `select`, chosen from what was written. Where the edit made seams that could take a
    * blank line, the plan tries them without, then each with one, then all with one: the first that
-   * reads as intended is written.
+   * reads as intended is written. `compare: 'flat'` checks it in document order only (a heading made
+   * re-derives sections).
    */
-  encode(expected: OutlinePlan, options: Pick<EncodeOptions, 'separate'> = {}, select?: (writtenOutline: EncodeResult) => Selection): Outcome {
-      const toPlan = (writtenOutline: EncodeResult): CommandPlan => ({
+  encode(expected: OutlinePlan, { compare = 'tree', ...options }: Pick<EncodeOptions, 'separate'> & Partial<Pick<CommandPlan, 'compare'>> = {}, select?: (writtenOutline: EncodeResult) => Selection): Outcome {
+    const toPlan = (writtenOutline: EncodeResult): CommandPlan => ({
       changes: writtenOutline.changes,
       selection: select ? select(writtenOutline) : { anchor: writtenOutline.map(this.sel.anchor, 1), head: writtenOutline.map(this.sel.head, 1) },
       expected,
-      compare: 'tree',
+      compare,
       identity: writtenOutline.identity,
     });
     const first = this.encoder.encode(expected, options);
@@ -218,7 +219,7 @@ export function noOperands(ctx: CommandContext): Outcome {
 }
 
 /** The node whose trailing gap holds blank line `lineNo`: the node of the nearest non-blank line above. */
-function gapOwner(ctx: CommandContext, lineNo: number): OutlineNode | null {
+export function gapOwner(ctx: CommandContext, lineNo: number): OutlineNode | null {
   const { doc } = ctx;
   for (let i = lineNo; i >= 0; i--) {
     if (doc.lines[i]!.blank) continue;
@@ -258,8 +259,91 @@ export function isClosingFence(ctx: CommandContext, line: LineInfo): boolean {
   return rest.length >= block.fenceLength! && /^(.)\1*$/.test(rest) && rest[0] === block.fenceChar;
 }
 
+/** Whether `line` is a fence: a fenced code block's opening or closing one, or a math block's `$$` or a comment's `%%` line. */
+export function isFenceLine(ctx: CommandContext, line: LineInfo): boolean {
+  const block = line.leaf;
+  if (!block) return false;
+  if (block.type === 'code_block' && block.fenced) return line.index === block.startLine || isClosingFence(ctx, line);
+  if (block.type !== 'math_block' && block.type !== 'comment_block') return false;
+  const delimiter = block.type === 'math_block' ? '$$' : '%%';
+  return (line.index === block.startLine || line.index === block.endLine) && ctx.doc.text.slice(line.contentFrom, line.to).trim().startsWith(delimiter);
+}
+
 /** Whether `line` is a code line of a fenced block: inside it, neither fence. */
 export function isCodeLine(ctx: CommandContext, line: LineInfo | undefined): line is LineInfo {
   const block = line?.leaf;
   return !!line && block?.type === 'code_block' && !!block.fenced && line.index !== block.startLine && !isClosingFence(ctx, line);
+}
+
+/**
+ * The prefix a new line of a paragraph starting on `first` takes: its containers' (a marker on that
+ * line rewritten as indentation, as `- > a` goes on as `  > `), then the paragraph's own indentation.
+ */
+export function paragraphPrefix(ctx: CommandContext, first: LineInfo): string {
+  const last = first.prefix[first.prefix.length - 1];
+  return ctx.encoder.continuation(first.prefix) + ctx.doc.text.slice(last ? last.to : first.from, first.contentFrom);
+}
+
+/**
+ * A paragraph's or an item's text, as these lines once an edit ends or breaks it, escaped where it
+ * would read as a block: a link reference definition (`[a]: b ┃c`, split by Enter, leaves `[a]: b`),
+ * a list item (`-┃a` leaves `-`): a backslash before it. The change writing it, and the lines; null
+ * where it needs none.
+ */
+export function referenceEscape(ctx: CommandContext, node: OutlineNode, lines: readonly string[]): { change: ChangeSpec; lines: string[] } | null {
+  const range = ctx.doc.headRange(node);
+  if (!range || node.head?.type !== 'paragraph') return null;
+  const first = lines[0] ?? '';
+  const lead = /^[ \t]*/.exec(first)![0].length;
+  // a link reference definition, or, ended where it now ends, any block (a lone `-` is an empty item)
+  const at = ctx.encoder.escape(first.slice(lead), 'start', lines.slice(1)).at;
+  if (at === null || first.startsWith('\\', lead)) return null;
+  return { change: { from: range.from + at, to: range.from + at, insert: '\\' }, lines: [first.slice(0, lead + at) + '\\' + first.slice(lead + at), ...lines.slice(1)] };
+}
+
+/**
+ * A join's fix to the escape a paragraph's or an item's text needs at its start, from its lines
+ * `before` the join and `after` it: a backslash where the joined text would read as a block (a link
+ * reference definition); where an escape there kept the text from reading as one and the join leaves
+ * it nothing to keep (the escape a split wrote, [Enter47](../../spec/enter.md#enter47),
+ * [Enter53](../../spec/enter.md#enter53)), it goes, as a join drops the escape at its seam. Null
+ * where nothing changes.
+ */
+export function referenceFix(ctx: CommandContext, node: OutlineNode, before: readonly string[], after: readonly string[]): { change: ChangeSpec; lines: string[] } | null {
+  const add = referenceEscape(ctx, node, after);
+  if (add) return add;
+  const range = ctx.doc.headRange(node);
+  if (!range || node.head?.type !== 'paragraph') return null;
+  const lead = (ls: readonly string[]): number => /^[ \t]*/.exec(ls[0] ?? '')![0].length;
+  // where the escape's backslash is: at the start, or after an ordered marker's digits
+  const escapeAt = (ls: readonly string[]): number => {
+    const m = /^(\d*)\\(?=[!-/:-@[-`{-~])/.exec((ls[0] ?? '').slice(lead(ls)));
+    return m ? m[1]!.length : -1;
+  };
+  const at = escapeAt(after);
+  if (at < 0 || escapeAt(before) !== at) return null;
+  const unescape = (ls: readonly string[]): string[] => [ls[0]!.slice(0, lead(ls) + at) + ls[0]!.slice(lead(ls) + at + 1), ...ls.slice(1)];
+  const reads = (ls: readonly string[]): boolean => ctx.encoder.escape(ls[0]!.slice(lead(ls)), 'start', ls.slice(1)).at !== null;
+  if (!reads(unescape(before)) || reads(unescape(after))) return null;
+  return { change: { from: range.from + at, to: range.from + at + 1, insert: '' }, lines: unescape(after) };
+}
+
+/**
+ * A quote that is an item's first block (`- > q`), its first paragraph `node` leaving it: on the
+ * marker's line it can only be the item's text, the rest of the quote staying quoted after it. The
+ * plan, with the caret at the text's start; null for any other shape.
+ */
+export function outOfQuoteOpeningItem(ctx: CommandContext, node: OutlineNode): Outcome | null {
+  const { doc } = ctx;
+  const quote = node.parent!;
+  const item = quote.parent;
+  if (quote.kind !== 'quote' || quote.head || quote.children[0] !== node || node.kind !== 'paragraph') return null;
+  if (item?.kind !== 'item' || item.children[0] !== quote || quote.startLine !== item.startLine || !doc.isEmpty(item)) return null;
+  let planned: OutlinePlanNode | undefined;
+  const lines = doc.headLines(node);
+  const expected = (quote.children.length === 1 ? ctx.plan.remove([quote]) : ctx.plan.remove([node])).update(item, (n) => (planned = { ...n, text: normText(lines), lines }));
+  return ctx.encode(expected, {}, (written) => {
+    const caret = written.at(planned!, 0, 0);
+    return { anchor: caret, head: caret };
+  });
 }

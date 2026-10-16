@@ -98,6 +98,9 @@ export function seam(units: Units, unit: Placed, next: Placed | null, nextUnit: 
     const list = unit.kind === 'item' ? (unit.node ?? unit.was)?.block.parent : null;
     if (unit.kind === 'paragraph' || list?.tight) return { lines: [], blanks: 0, separable: false, fresh: null };
   }
+  // an empty item's first child comes right after its marker's line: a blank line there would end the
+  // item, which can start with one blank line only
+  if (!prev && next.parent === unit && unit.kind === 'item' && old(unit) && !old(unit)!.head && !unit.lines) return { lines: [], blanks: 0, separable: false, fresh: null };
   // two units that were already next to each other keep what was between them
   const nextOld = nextUnit ? old(nextUnit) : null;
   if (old(unit) && (!nextUnit || nextOld) && (units.nextUnit.get(old(unit)!) ?? null) === nextOld) {
@@ -117,14 +120,28 @@ export function seam(units: Units, unit: Placed, next: Placed | null, nextUnit: 
   // that node's gap is the scope's end gap, and stays at the end, after them (a run that was right
   // above the node, moving past it, keeps the blank line between them: see above)
   if (!prev && arrived(next) && next.parent === unit && old(unit) && old(unit)!.children.length === 0 && endsScope(units, old(unit)!) && !(old(next) && units.nextUnit.get(units.lastUnit(old(next)!)) === old(unit))) return made([]);
+  // new items written at the head of the list a heading's section starts with (a paste, in that list's
+  // form) join that list: the heading's gap stays above them, and below them the list's spacing (see
+  // the landing case below)
+  if (!prev && unit.kind === 'heading' && next.kind === 'item' && !old(next) && old(unit)?.children[0]?.kind === 'item') return made(own);
+  // a list that can't interrupt a paragraph (ordered, from 2), first under one now, would continue it
+  if (!prev && unit.kind === 'paragraph' && next.parent === unit && next.kind === 'item' && own.length === 0 && old(next) && !ownListFollows(unit, next)) {
+    const nodeAfter = old(unit) ? units.nextUnit.get(units.lastUnit(old(unit)!)) : null;
+    if (nodeAfter !== old(next)) return { lines: [], blanks: 1, separable: false, fresh: null };
+  }
+  // a paragraph first under an item's text would continue it: a blank line between, where none is
+  if (!prev && next.kind === 'paragraph' && next.parent === unit && unit.kind === 'item' && (unit.lines || old(unit)?.head) && own.length === 0) {
+    return { lines: [], blanks: 1, separable: false, fresh: null };
+  }
   if (!prev) return fresh === 'before' && next.edited?.id == null ? made([]) : fresh ? made(own) : kept(own);
   if (arrived(next) !== arrived(prev)) {
     // a run arriving from elsewhere takes the separation of the place it lands in, on both sides:
     // the gap after the last node before it that was already there, or its parent's own gap
     let landing: Placed | null = prev;
     while (landing && arrived(landing)) landing = landing.prev;
-    // items arriving at the head of a paragraph's list are set apart from its items as the list sets them apart
-    if (!landing && owner?.kind === 'paragraph' && next.kind === 'item' && old(next)) {
+    // items arriving at the head of a paragraph's list, or new ones at the head of a section's, are set
+    // apart from its items as the list sets them apart
+    if (!landing && (owner?.kind === 'paragraph' || (owner?.kind === 'heading' && !old(prev) && prev.kind === 'item')) && next.kind === 'item' && old(next)) {
       return { lines: [], blanks: old(next)!.block.parent!.tight ? 0 : 1, separable: false, fresh: null };
     }
     if (!landing) return made(next.parent?.node ? (units.gap.get(next.parent.node) ?? []) : []);

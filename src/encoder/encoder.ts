@@ -65,12 +65,72 @@ export interface EncodeOptions {
   readonly pad?: ReadonlySet<number> | 'all';
 }
 
-/** Whether `next` is an empty item without children, the first child of item `parent`. */
+/** Whether `next` is an empty item (children or not), the first child of item or paragraph `parent` (its list). */
 function emptyFirstChild(doc: OutlineState, parent: Placed, next: Placed | null): boolean {
-  if (!next || next.parent !== parent || parent.kind !== 'item' || next.kind !== 'item' || next.children.length > 0) return false;
+  if (!next || next.parent !== parent || (parent.kind !== 'item' && parent.kind !== 'paragraph') || next.kind !== 'item') return false;
   const old = next.node ?? next.was;
   const text = next.edited?.text ?? (old ? doc.nodeText(old) : null);
   return text !== null && OutlineState.isEmptyText(text);
+}
+
+/**
+ * An old item whose first block shares its marker's line (`- > q`, `- - a`) has no line of its own:
+ * its marker goes on the first line written in it, wherever its first block now is, and off the line
+ * that had it, where that line is now another in the item. Returns why it can't, or null.
+ */
+function moveSharedMarkers(doc: OutlineState, order: readonly Placed[], units: Units, out: OutputLine[], firstLine: ReadonlyMap<Placed, number>): string | null {
+  const rewrite = (index: number, text: string): void => {
+    const output = out[index]!;
+    if (output.origin === null) out[index] = { ...output, text };
+    else {
+      const line = doc.lines[output.origin]!;
+      out[index] = { ...output, text, local: diffText(doc.text.slice(line.from, line.to), text) };
+    }
+  };
+  // where column `column` starts in `text`, or null where a tab spans it
+  const offsetAt = (text: string, column: number): number | null => {
+    let col = 0;
+    let i = 0;
+    while (col < column && i < text.length) col = advanceColumns(text, i, ++i, col);
+    return col === column ? i : null;
+  };
+  for (let at = 0; at < order.length; at++) {
+    const placed = order[at]!;
+    const node = placed.node;
+    if (placed.kind !== 'item' || !node || placed.lines || units.own.has(node)) continue;
+    // the item's lines: its descendants', in order
+    let first: number | null = null;
+    let last = -1;
+    for (let i = at + 1; i < order.length; i++) {
+      let inside = false;
+      for (let up = order[i]!.parent; up && !inside; up = up.parent) inside = up === placed;
+      if (!inside) break;
+      const start = firstLine.get(order[i]!)!;
+      const next = i + 1 < order.length ? firstLine.get(order[i + 1]!)! : out.length;
+      if (next > start) {
+        first ??= start;
+        last = next - 1;
+      }
+    }
+    if (first === null) continue;
+    const had = out.findIndex((output) => output.origin === node.startLine);
+    if (had === first) continue;
+    const marker = placed.marker ?? doc.text.slice(doc.markerFrom(node.block), doc.markerTo(node.block));
+    // the marker on the item's first line, in the whitespace that indents it to the item's content
+    const text = out[first]!.text;
+    const from = offsetAt(text, placed.markerColumn);
+    if (from === null || !/^ +$/.test(text.slice(from, from + marker.length + 1))) return `item ${node.id}'s marker has no place on its first line`;
+    rewrite(first, text.slice(0, from) + marker + text.slice(from + marker.length));
+    // and off the line that had it, now another line of the item: spaces as wide
+    if (had > first && had <= last) {
+      const old = doc.lines[node.startLine]!;
+      const output = out[had]!;
+      const markerAt = mapPos(output.local, doc.markerFrom(node.block) - old.from, 1);
+      if (output.text.slice(markerAt, markerAt + marker.length) !== marker) return `item ${node.id}'s marker isn't where it was`;
+      rewrite(had, output.text.slice(0, markerAt) + ' '.repeat(marker.length) + output.text.slice(markerAt + marker.length));
+    }
+  }
+  return null;
 }
 
 /**
@@ -126,11 +186,19 @@ export class OutlineEncoder {
     };
     const blankLine = (text = ''): OutputLine => ({ origin: null, text, ending: eol, local: [], weight: 0 });
     emitGap(units.preamble, 2);
+    // in Obsidian a `---` on the first line, with a `---` line below, opens the frontmatter: a thematic
+    // break that comes first is set off by a blank line above it (below, once the lines are written)
+    const head = order[0];
+    const headOld = head && (head.node ?? head.was);
+    const breakFirst = out.length === 0 && doc.config.flavor === 'obsidian' && head?.kind === 'atom' && headOld?.block.type === 'thematic_break';
     let candidates = 0;
+    // the first line each node writes of its own
+    const firstLine = new Map<Placed, number>();
     for (let i = 0; i < order.length; i++) {
       const placed = order[i]!;
       const weight = placed.arrived ? 1 : 2;
       const own = placed.node ? units.own.get(placed.node) : null;
+      firstLine.set(placed, out.length);
       if (placed.lines) {
         const written = writeLines(doc, placed, own ?? null, tabs);
         written.forEach((line) => {
@@ -173,7 +241,7 @@ export class OutlineEncoder {
       const blank = (): string => (blankText ??= blankBetween(placed, order[i + 1] ?? null, tabs));
       emitGap(gap.lines, weight, gap.lines.length ? blank() : null);
       for (let count = 0; count < gap.blanks; count++) out.push(blankLine(blank()));
-      // an empty item right under its parent item's text reads as a setext underline: a blank line may
+      // an empty item right under its parent's text (an item's, a paragraph's) reads as a setext underline: a blank line may
       // set it apart, as when the caret leaves one (`spec/placeholders.md`)
       const apart = gap.separable || emptyFirstChild(doc, placed, order[i + 1] ?? null);
       if (!apart || gap.blanks > 0 || gap.lines.some((lineNo) => lines[lineNo]!.blank)) continue;
@@ -185,6 +253,12 @@ export class OutlineEncoder {
       if (options.pad === 'all' || options.pad?.has(candidate)) out.push(blankLine(blank()));
     }
     if (out.length === 0) return 'nothing to write';
+    const moved = moveSharedMarkers(doc, order, units, out, firstLine);
+    if (moved) return moved;
+    if (breakFirst && /^---[ \t]*$/.test(out[0]!.text) && out.slice(1).some((output) => /^---[ \t]*$/.test(output.text))) {
+      out.unshift(blankLine());
+      for (const placed of order) for (const entry of placed.output) entry.index++;
+    }
     // every line but the last ends in a line break; the last ends as the old text did
     const lastEnding = lines.length ? lines[lines.length - 1]!.ending : '';
     for (const output of out) if (output.ending === '') output.ending = eol;
@@ -216,7 +290,13 @@ export class OutlineEncoder {
       return starts[entry.index]! + entry.prefix + offset;
     };
     const identity = new Map<number, number>();
-    for (const placed of order) if (placed.node) identity.set(map(doc.headStart(placed.node), 1), placed.node.id);
+    // a head's start maps past indentation written before it, but not past an item's marker rewritten there
+    const newText = applyChanges(doc.text, changes);
+    const headAt = (placed: Placed, pos: number): number => {
+      const [before, after] = [map(pos, -1), map(pos, 1)];
+      return placed.marker === null || /^[ \t]*$/.test(newText.slice(before, after)) ? after : before;
+    };
+    for (const placed of order) if (placed.node) identity.set(headAt(placed, doc.headStart(placed.node)), placed.node.id);
     return { changes, map, at: atContent, identity, candidates };
   }
 

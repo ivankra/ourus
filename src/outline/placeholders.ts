@@ -3,8 +3,8 @@
 
 import { lineSpan } from '../text.ts';
 
-/** A placeholder stays one while its line holds no text: nothing, or only container markers. */
-const reEmptyPlaceLine = /^[ \t>]*(?:(?:[-+*]|\d{1,9}[.)])[ \t]+)*$/;
+/** A placeholder stays one while its line holds no text: nothing, or only container markers (a task's checkbox included). */
+const reEmptyPlaceLine = /^(?:[ \t>]|(?:[-+*]|\d{1,9}[.)])[ \t]+(?:\[[ xX]\][ \t]+)?)*$/;
 
 /** A marker and its one padding space, after the line's containers: what precedes a stand-in space. */
 const reMarkerAndSpace = /^[ \t>]*(?:[-+*]|\d{1,9}[.)])[ \t]$/;

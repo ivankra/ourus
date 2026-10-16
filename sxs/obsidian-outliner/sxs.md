@@ -5,14 +5,12 @@ version: "1.14.4 (installer 1.14.4), obsidian-outliner 4.10.2"
 url: "app://obsidian.md/"
 model: "text"
 command: "node sxs/run.ts obsidian-outliner"
-elapsed_s: 101
+elapsed_s: 600
 ---
 
 # Obsidian with Outliner vs ourus
 
 Spec test suite replayed in Obsidian with Outliner and compared against ourus.
-
-Regenerated from an earlier run (`--regenerate-report`): what Obsidian with Outliner did then, judged against the spec as it is now. It played every example as it is now.
 
 Model: [text](../lib/text.ts) (buffers loaded and compared as written, caret included)
 
@@ -20,40 +18,41 @@ Model: [text](../lib/text.ts) (buffers loaded and compared as written, caret inc
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| **total** | **183 (28%)** | **18 (2.8%)** | **4 (0.61%)** | **382 (58%)** | **0 (0%)** | **67 (10%)** | **654** |
+| **total** | **187 (25%)** | **20 (2.6%)** | **5 (0.66%)** | **457 (61%)** | **4 (0.53%)** | **82 (11%)** | **755** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| [backspace.md](../../spec/backspace.md) | 15 |  |  | 33 |  | 4 | **52** |
+| [backspace.md](../../spec/backspace.md) | 15 |  |  | 42 |  | 4 | **61** |
 | [cursor.md](../../spec/cursor.md) | 24 | 8 |  |  |  | 4 | **36** |
-| [del.md](../../spec/del.md) | 14 |  |  | 16 |  | 14 | **44** |
-| [delete-subtree.md](../../spec/delete-subtree.md) |  |  |  |  |  | 6 | **6** |
-| [duplicate-subtree.md](../../spec/duplicate-subtree.md) |  |  |  |  |  | 3 | **3** |
-| [enter.md](../../spec/enter.md) | 11 | 3 |  | 34 |  | 4 | **52** |
-| [fences.md](../../spec/fences.md) | 16 | 4 |  | 21 |  | 3 | **44** |
+| [del.md](../../spec/del.md) | 14 |  |  | 19 |  | 14 | **47** |
+| [delete-subtree.md](../../spec/delete-subtree.md) |  |  |  |  |  | 10 | **10** |
+| [duplicate-subtree.md](../../spec/duplicate-subtree.md) |  |  |  |  |  | 8 | **8** |
+| [enter.md](../../spec/enter.md) | 11 | 3 |  | 39 | 2 | 4 | **59** |
+| [fences.md](../../spec/fences.md) | 17 | 4 | 1 | 26 |  | 3 | **51** |
 | [gaps.md](../../spec/gaps.md) | 2 |  |  | 15 |  | 2 | **19** |
-| [indent.md](../../spec/indent.md) | 14 |  |  | 12 |  | 3 | **29** |
-| [move-subtree-down.md](../../spec/move-subtree-down.md) | 10 |  |  | 21 |  | 1 | **32** |
-| [move-subtree-up.md](../../spec/move-subtree-up.md) | 10 |  |  | 24 |  | 1 | **35** |
+| [indent.md](../../spec/indent.md) | 14 |  |  | 12 |  | 4 | **30** |
+| [move-subtree-down.md](../../spec/move-subtree-down.md) | 12 |  |  | 24 |  | 1 | **37** |
+| [move-subtree-up.md](../../spec/move-subtree-up.md) | 10 | 2 |  | 24 |  | 2 | **38** |
 | [obsidian-true-outliner.md](../../spec/obsidian-true-outliner.md) | 23 | 2 |  | 38 |  | 4 | **67** |
-| [outdent.md](../../spec/outdent.md) | 8 |  |  | 15 |  | 1 | **24** |
-| [paste.md](../../spec/paste.md) | 2 |  |  | 41 |  | 5 | **48** |
+| [outdent.md](../../spec/outdent.md) | 9 |  |  | 18 |  | 2 | **29** |
+| [paste.md](../../spec/paste.md) | 2 |  |  | 72 | 1 | 5 | **80** |
 | [placeholders.md](../../spec/placeholders.md) | 5 |  |  | 11 |  |  | **16** |
-| [quotes.md](../../spec/quotes.md) | 8 |  |  | 64 |  | 2 | **74** |
+| [quotes.md](../../spec/quotes.md) | 8 |  |  | 78 |  | 4 | **90** |
 | [scenarios.md](../../spec/scenarios.md) | 10 |  |  | 12 |  | 2 | **24** |
-| [shift-enter.md](../../spec/shift-enter.md) | 3 |  | 3 | 14 |  | 3 | **23** |
+| [shift-enter.md](../../spec/shift-enter.md) | 3 |  | 3 | 16 | 1 | 3 | **26** |
 | [tasks.md](../../spec/tasks.md) | 3 | 1 | 1 | 8 |  | 4 | **17** |
 | [typing.md](../../spec/typing.md) | 3 |  |  |  |  | 1 | **4** |
 | [undo.md](../../spec/undo.md) | 2 |  |  | 3 |  |  | **5** |
-| **total** | **183 (28%)** | **18 (2.8%)** | **4 (0.61%)** | **382 (58%)** | **0 (0%)** | **67 (10%)** | **654** |
+| [z-open.md](../../spec/z-open.md) |  |  |  |  |  | 1 | **1** |
+| **total** | **187 (25%)** | **20 (2.6%)** | **5 (0.66%)** | **457 (61%)** | **4 (0.53%)** | **82 (11%)** | **755** |
 
 ## Examples
 
-### Disagree (382)
+### Disagree (457)
 
-#### 1. [Backspace4](../../spec/backspace.md#backspace4)
+#### [Backspace4](../../spec/backspace.md#backspace4)
 
 > deleteContentBackward
 
@@ -68,7 +67,6 @@ Per-file:
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Title #
 -┃more
@@ -76,7 +74,6 @@ Per-file:
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Title┃more #
 ```
@@ -84,7 +81,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 2. [Backspace10](../../spec/backspace.md#backspace10)
+#### [Backspace10](../../spec/backspace.md#backspace10)
 
 > deleteContentBackward
 
@@ -100,7 +97,6 @@ Per-file:
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 ┃
@@ -108,7 +104,6 @@ Per-file:
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
 ```
@@ -116,7 +111,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 3. [Backspace11](../../spec/backspace.md#backspace11)
+#### [Backspace11](../../spec/backspace.md#backspace11)
 
 > deleteContentBackward
 
@@ -132,7 +127,6 @@ Per-file:
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 ┃b
@@ -140,7 +134,6 @@ Per-file:
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃b
 ```
@@ -148,7 +141,7 @@ Per-file:
 </td></tr>
 </table>
 
-#### 4. [Backspace12b](../../spec/backspace.md#backspace12b)
+#### [Backspace12b](../../spec/backspace.md#backspace12b)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -167,7 +160,6 @@ a┃b
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 a
 ┃b
@@ -175,7 +167,6 @@ a
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 a
 
@@ -191,14 +182,12 @@ a
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ┃b
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 a┃b
 ```
@@ -206,7 +195,7 @@ a┃b
 </td></tr>
 </table>
 
-#### 5. [Backspace14](../../spec/backspace.md#backspace14)
+#### [Backspace14](../../spec/backspace.md#backspace14)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -246,7 +235,6 @@ a┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ┃# H1
 
@@ -257,7 +245,6 @@ a┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃# H1
 
@@ -267,7 +254,7 @@ a┃
 </td></tr>
 </table>
 
-#### 6. [Backspace15](../../spec/backspace.md#backspace15)
+#### [Backspace15](../../spec/backspace.md#backspace15)
 
 > deleteContentBackward
 
@@ -283,7 +270,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para
 
@@ -292,7 +278,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para┃a
 ```
@@ -300,7 +285,7 @@ para┃a
 </td></tr>
 </table>
 
-#### 7. [Backspace16](../../spec/backspace.md#backspace16)
+#### [Backspace16](../../spec/backspace.md#backspace16)
 
 > deleteContentBackward
 
@@ -317,7 +302,6 @@ x
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 ```
 x
@@ -327,7 +311,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 ```
 x
@@ -338,7 +321,7 @@ x
 </td></tr>
 </table>
 
-#### 8. [Backspace17](../../spec/backspace.md#backspace17)
+#### [Backspace17](../../spec/backspace.md#backspace17)
 
 > deleteContentBackward
 
@@ -354,7 +337,6 @@ x
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 -┃
 - b
@@ -363,7 +345,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃b
 - c
@@ -372,7 +353,7 @@ x
 </td></tr>
 </table>
 
-#### 9. [Backspace17b](../../spec/backspace.md#backspace17b)
+#### [Backspace17b](../../spec/backspace.md#backspace17b)
 
 > deleteContentBackward
 
@@ -388,7 +369,6 @@ x
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ┃
   - a
@@ -397,7 +377,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃a
   - b
@@ -406,7 +385,7 @@ x
 </td></tr>
 </table>
 
-#### 10. [Backspace17c](../../spec/backspace.md#backspace17c)
+#### [Backspace17c](../../spec/backspace.md#backspace17c)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -450,7 +429,6 @@ x
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - ┃
@@ -463,7 +441,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
   - b
@@ -476,7 +453,7 @@ x
 </td></tr>
 </table>
 
-#### 11. [Backspace17e](../../spec/backspace.md#backspace17e)
+#### [Backspace17e](../../spec/backspace.md#backspace17e)
 
 > deleteContentBackward
 
@@ -490,14 +467,12 @@ x
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 -┃
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃
 ```
@@ -505,7 +480,7 @@ x
 </td></tr>
 </table>
 
-#### 12. [Backspace18](../../spec/backspace.md#backspace18)
+#### [Backspace18](../../spec/backspace.md#backspace18)
 
 > deleteContentBackward
 
@@ -523,7 +498,6 @@ body
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para
 
@@ -534,7 +508,6 @@ body
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para
 
@@ -546,7 +519,7 @@ body
 </td></tr>
 </table>
 
-#### 13. [Backspace18c](../../spec/backspace.md#backspace18c)
+#### [Backspace18c](../../spec/backspace.md#backspace18c)
 
 > deleteContentBackward
 
@@ -563,7 +536,6 @@ text
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ┃Title
 ===
@@ -573,7 +545,6 @@ text
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃Title
 
@@ -583,7 +554,7 @@ text
 </td></tr>
 </table>
 
-#### 14. [Backspace18d](../../spec/backspace.md#backspace18d)
+#### [Backspace18d](../../spec/backspace.md#backspace18d)
 
 > deleteContentBackward
 
@@ -599,7 +570,6 @@ text
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 a
 #┃H1
@@ -608,7 +578,6 @@ text
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 a
 
@@ -620,7 +589,7 @@ text
 </td></tr>
 </table>
 
-#### 15. [Backspace18e](../../spec/backspace.md#backspace18e)
+#### [Backspace18e](../../spec/backspace.md#backspace18e)
 
 > deleteContentBackward
 
@@ -635,7 +604,6 @@ text
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 - #┃H
@@ -643,7 +611,6 @@ text
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃H
@@ -652,7 +619,7 @@ text
 </td></tr>
 </table>
 
-#### 16. [Backspace19](../../spec/backspace.md#backspace19)
+#### [Backspace19](../../spec/backspace.md#backspace19)
 
 > deleteContentBackward
 
@@ -668,7 +635,6 @@ text
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 
@@ -677,7 +643,6 @@ text
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   ┃bc
@@ -686,7 +651,7 @@ text
 </td></tr>
 </table>
 
-#### 17. [Backspace20](../../spec/backspace.md#backspace20)
+#### [Backspace20](../../spec/backspace.md#backspace20)
 
 > deleteContentBackward
 
@@ -704,7 +669,6 @@ text
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 ┃
@@ -714,7 +678,6 @@ text
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
 
@@ -724,7 +687,7 @@ text
 </td></tr>
 </table>
 
-#### 18. [Backspace21](../../spec/backspace.md#backspace21)
+#### [Backspace21](../../spec/backspace.md#backspace21)
 
 > deleteContentBackward
 
@@ -740,7 +703,6 @@ text
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 
@@ -749,7 +711,6 @@ text
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃b
 ```
@@ -757,7 +718,7 @@ text
 </td></tr>
 </table>
 
-#### 19. [Backspace21b](../../spec/backspace.md#backspace21b)
+#### [Backspace21b](../../spec/backspace.md#backspace21b)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -778,7 +739,6 @@ text
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 
@@ -787,7 +747,6 @@ text
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃b
@@ -802,7 +761,6 @@ text
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 
@@ -811,7 +769,6 @@ text
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃b
 ```
@@ -819,7 +776,7 @@ text
 </td></tr>
 </table>
 
-#### 20. [Backspace22](../../spec/backspace.md#backspace22)
+#### [Backspace22](../../spec/backspace.md#backspace22)
 
 > deleteContentBackward
 
@@ -835,7 +792,6 @@ text
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Title
 ┃more
@@ -843,7 +799,6 @@ text
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Title┃more
 ```
@@ -851,7 +806,7 @@ text
 </td></tr>
 </table>
 
-#### 21. [Backspace23](../../spec/backspace.md#backspace23)
+#### [Backspace23](../../spec/backspace.md#backspace23)
 
 > deleteContentBackward
 
@@ -868,7 +823,6 @@ lines
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Title
 ┃more
@@ -877,7 +831,6 @@ lines
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Title
 
@@ -888,7 +841,7 @@ lines
 </td></tr>
 </table>
 
-#### 22. [Backspace24](../../spec/backspace.md#backspace24)
+#### [Backspace24](../../spec/backspace.md#backspace24)
 
 > deleteContentBackward
 
@@ -906,7 +859,6 @@ x
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 ```
 x
@@ -916,7 +868,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 ```
 x
@@ -928,7 +879,7 @@ x
 </td></tr>
 </table>
 
-#### 23. [Backspace25](../../spec/backspace.md#backspace25)
+#### [Backspace25](../../spec/backspace.md#backspace25)
 
 > deleteContentBackward
 
@@ -945,7 +896,6 @@ x
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 - 
@@ -954,7 +904,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃para
@@ -963,7 +912,7 @@ x
 </td></tr>
 </table>
 
-#### 24. [Backspace27](../../spec/backspace.md#backspace27)
+#### [Backspace27](../../spec/backspace.md#backspace27)
 
 > deleteContentBackward
 
@@ -979,7 +928,6 @@ x
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > q
 ┃b
@@ -987,7 +935,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > q
 > ┃b
@@ -996,7 +943,7 @@ x
 </td></tr>
 </table>
 
-#### 25. [Backspace28](../../spec/backspace.md#backspace28)
+#### [Backspace28](../../spec/backspace.md#backspace28)
 
 > deleteContentBackward
 
@@ -1013,7 +960,6 @@ x
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 ```
 x
@@ -1023,7 +969,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 ```
 x┃
@@ -1033,7 +978,7 @@ x┃
 </td></tr>
 </table>
 
-#### 26. [Backspace33](../../spec/backspace.md#backspace33)
+#### [Backspace33](../../spec/backspace.md#backspace33)
 
 > deleteContentBackward
 
@@ -1048,7 +993,6 @@ x┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 -┃a
 - b
@@ -1056,7 +1000,6 @@ x┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃a
 - b
@@ -1065,7 +1008,7 @@ x┃
 </td></tr>
 </table>
 
-#### 27. [Backspace35](../../spec/backspace.md#backspace35)
+#### [Backspace35](../../spec/backspace.md#backspace35)
 
 > deleteContentBackward
 
@@ -1089,7 +1032,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # A
 
@@ -1106,7 +1048,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # A
 
@@ -1124,7 +1065,200 @@ para
 </td></tr>
 </table>
 
-#### 28. [Cmd-Backspace › SoftBackspace1](../../spec/backspace.md#softbackspace1)
+#### [Backspace36](../../spec/backspace.md#backspace36)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+Title
+=====
+┃text
+```
+
+</td><td>
+
+```buffer
+Title
+=====┃text
+```
+
+</td><td>
+
+```buffer
+Title┃text
+=====
+```
+
+</td></tr>
+</table>
+
+#### [Backspace37](../../spec/backspace.md#backspace37)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+Title
+=====
+┃more
+lines
+```
+
+</td><td>
+
+```buffer
+Title
+=====┃more
+lines
+```
+
+</td><td>
+
+```buffer
+Title┃more
+lines
+=====
+```
+
+</td></tr>
+</table>
+
+#### [Backspace38](../../spec/backspace.md#backspace38)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+[a]:
+
+┃b
+```
+
+</td><td>
+
+```buffer
+[a]:
+┃b
+```
+
+</td><td>
+
+```buffer
+\[a]:
+┃b
+```
+
+</td></tr>
+</table>
+
+#### [Backspace39](../../spec/backspace.md#backspace39)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- ┃
+p
+```
+
+</td><td>
+
+```buffer
+- a┃
+p
+```
+
+</td><td>
+
+```buffer
+- a┃
+
+p
+```
+
+</td></tr>
+</table>
+
+#### [Backspace40](../../spec/backspace.md#backspace40)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+p
+
+- ┃t
+2. m
+```
+
+</td><td>
+
+```buffer
+p
+
+-┃t
+2. m
+```
+
+</td><td>
+
+```buffer
+p┃t
+
+2. m
+```
+
+</td></tr>
+</table>
+
+#### [Backspace41](../../spec/backspace.md#backspace41)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- - ┃a
+  - b
+```
+
+</td><td>
+
+```buffer
+- -┃a
+  - b
+```
+
+</td><td>
+
+```buffer
+- ┃a
+  - b
+```
+
+</td></tr>
+</table>
+
+#### [Cmd-Backspace › SoftBackspace1](../../spec/backspace.md#softbackspace1)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -1156,14 +1290,12 @@ para
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ┃def
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃def
 ```
@@ -1171,7 +1303,7 @@ para
 </td></tr>
 </table>
 
-#### 29. [Cmd-Backspace › SoftBackspace2](../../spec/backspace.md#softbackspace2)
+#### [Cmd-Backspace › SoftBackspace2](../../spec/backspace.md#softbackspace2)
 
 > deleteSoftLineBackward
 
@@ -1185,14 +1317,12 @@ abc ┃[a]: tail
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ┃[a]: tail
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃\[a]: tail
 ```
@@ -1200,7 +1330,7 @@ abc ┃[a]: tail
 </td></tr>
 </table>
 
-#### 30. [Cmd-Backspace › SoftBackspace3](../../spec/backspace.md#softbackspace3)
+#### [Cmd-Backspace › SoftBackspace3](../../spec/backspace.md#softbackspace3)
 
 > deleteSoftLineBackward
 
@@ -1215,7 +1345,6 @@ abc ┃- x tail
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ┃x tail
 ===
@@ -1223,7 +1352,6 @@ abc ┃- x tail
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃\- x tail
 ===
@@ -1232,7 +1360,7 @@ abc ┃- x tail
 </td></tr>
 </table>
 
-#### 31. [Cmd-Backspace › SoftBackspace4](../../spec/backspace.md#softbackspace4)
+#### [Cmd-Backspace › SoftBackspace4](../../spec/backspace.md#softbackspace4)
 
 > deleteSoftLineBackward
 
@@ -1246,14 +1374,12 @@ abc ┃- x tail
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ┃title #
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # ┃title #
 ```
@@ -1261,7 +1387,7 @@ abc ┃- x tail
 </td></tr>
 </table>
 
-#### 32. [Cmd-Backspace › SoftBackspace5](../../spec/backspace.md#softbackspace5)
+#### [Cmd-Backspace › SoftBackspace5](../../spec/backspace.md#softbackspace5)
 
 > deleteSoftLineBackward
 
@@ -1277,7 +1403,6 @@ abc ┃- x
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 first
 - ┃x
@@ -1286,7 +1411,6 @@ first
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 first
 ┃\- x
@@ -1296,7 +1420,7 @@ first
 </td></tr>
 </table>
 
-#### 33. [Cmd-Backspace › SoftBackspace6](../../spec/backspace.md#softbackspace6)
+#### [Cmd-Backspace › SoftBackspace6](../../spec/backspace.md#softbackspace6)
 
 > deleteSoftLineBackward
 
@@ -1311,7 +1435,6 @@ title
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 title
 ┃==
@@ -1319,7 +1442,6 @@ title
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 title
 =┃==
@@ -1328,7 +1450,143 @@ title
 </td></tr>
 </table>
 
-#### 34. [Delete4](../../spec/del.md#delete4)
+#### [Cmd-Backspace › SoftBackspace7](../../spec/backspace.md#softbackspace7)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > q┃
+  > m
+```
+
+</td></tr>
+</table>
+
+> deleteSoftLineBackward
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+  > m
+```
+
+</td><td>
+
+```buffer
+- > ┃
+  > m
+```
+
+</td></tr>
+</table>
+
+> cursorLineDown
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- 
+  ┃> m
+```
+
+</td><td>
+
+```buffer
+- > ┃m
+```
+
+</td></tr>
+</table>
+
+#### [Cmd-Backspace › SoftBackspace8](../../spec/backspace.md#softbackspace8)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [ ] t┃
+  m
+```
+
+</td></tr>
+</table>
+
+> deleteSoftLineBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [ ] ┃
+  m
+```
+
+</td></tr>
+</table>
+
+> cursorLineDown
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [ ] 
+  ┃m
+```
+
+</td><td>
+
+```buffer
+- [ ] m┃
+```
+
+</td></tr>
+</table>
+
+#### [Cmd-Backspace › SoftBackspace9](../../spec/backspace.md#softbackspace9)
+
+> deleteSoftLineBackward
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```┃
+code
+```
+````
+
+</td><td>
+
+````buffer
+┃
+code
+```
+````
+
+</td><td>
+
+````buffer
+```┃
+code
+```
+````
+
+</td></tr>
+</table>
+
+#### [Delete4](../../spec/del.md#delete4)
 
 > deleteContentForward
 
@@ -1343,7 +1601,6 @@ title
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Title┃#
 - more
@@ -1351,7 +1608,6 @@ title
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Title┃more #
 ```
@@ -1359,7 +1615,7 @@ title
 </td></tr>
 </table>
 
-#### 35. [Delete4b](../../spec/del.md#delete4b)
+#### [Delete4b](../../spec/del.md#delete4b)
 
 > deleteContentForward
 
@@ -1374,14 +1630,12 @@ title
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Title #┃- more
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Title┃more #
 ```
@@ -1389,7 +1643,7 @@ title
 </td></tr>
 </table>
 
-#### 36. [Delete5](../../spec/del.md#delete5)
+#### [Delete5](../../spec/del.md#delete5)
 
 > deleteContentForward
 
@@ -1407,7 +1661,6 @@ title
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ┃
   - a
@@ -1418,7 +1671,6 @@ title
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃a
   - b
@@ -1429,7 +1681,7 @@ title
 </td></tr>
 </table>
 
-#### 37. [Delete5b](../../spec/del.md#delete5b)
+#### [Delete5b](../../spec/del.md#delete5b)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -1473,7 +1725,6 @@ title
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - ┃
@@ -1486,7 +1737,6 @@ title
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - ┃b
@@ -1499,7 +1749,7 @@ title
 </td></tr>
 </table>
 
-#### 38. [Delete5c](../../spec/del.md#delete5c)
+#### [Delete5c](../../spec/del.md#delete5c)
 
 > deleteContentForward
 
@@ -1516,7 +1766,6 @@ title
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - x
 - ┃
@@ -1526,7 +1775,6 @@ title
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - x
 - ┃a
@@ -1536,7 +1784,7 @@ title
 </td></tr>
 </table>
 
-#### 39. [Delete5d](../../spec/del.md#delete5d)
+#### [Delete5d](../../spec/del.md#delete5d)
 
 > deleteContentForward
 
@@ -1552,7 +1800,6 @@ title
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ┃
   - a
@@ -1561,7 +1808,6 @@ title
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃a
   - b
@@ -1570,7 +1816,7 @@ title
 </td></tr>
 </table>
 
-#### 40. [Delete9](../../spec/del.md#delete9)
+#### [Delete9](../../spec/del.md#delete9)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -1610,7 +1856,6 @@ title
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ┃# H1
 
@@ -1621,7 +1866,6 @@ title
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃# H1
 
@@ -1631,7 +1875,7 @@ title
 </td></tr>
 </table>
 
-#### 41. [Delete10](../../spec/del.md#delete10)
+#### [Delete10](../../spec/del.md#delete10)
 
 > deleteContentForward
 
@@ -1646,14 +1890,12 @@ title
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a┃> q
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
 > q
@@ -1662,7 +1904,7 @@ title
 </td></tr>
 </table>
 
-#### 42. [Delete11](../../spec/del.md#delete11)
+#### [Delete11](../../spec/del.md#delete11)
 
 > deleteContentForward
 
@@ -1677,14 +1919,12 @@ title
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # H┃→→code
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # H┃
     code
@@ -1693,7 +1933,7 @@ title
 </td></tr>
 </table>
 
-#### 43. [Delete13](../../spec/del.md#delete13)
+#### [Delete13](../../spec/del.md#delete13)
 
 > deleteContentForward
 
@@ -1709,7 +1949,6 @@ a┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 a┃
 # H1
@@ -1717,7 +1956,6 @@ a┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 a┃# H1
 ```
@@ -1725,7 +1963,7 @@ a┃# H1
 </td></tr>
 </table>
 
-#### 44. [Delete13c](../../spec/del.md#delete13c)
+#### [Delete13c](../../spec/del.md#delete13c)
 
 > deleteContentForward
 
@@ -1742,7 +1980,6 @@ text
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 a┃
 # H1
@@ -1751,7 +1988,6 @@ text
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 a┃# H1
 
@@ -1761,7 +1997,7 @@ text
 </td></tr>
 </table>
 
-#### 45. [Delete13e](../../spec/del.md#delete13e)
+#### [Delete13e](../../spec/del.md#delete13e)
 
 > deleteContentForward
 
@@ -1778,7 +2014,6 @@ Title
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 a┃
 Title
@@ -1787,7 +2022,6 @@ Title
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 a┃
 
@@ -1798,7 +2032,7 @@ Title
 </td></tr>
 </table>
 
-#### 46. [Delete14](../../spec/del.md#delete14)
+#### [Delete14](../../spec/del.md#delete14)
 
 > deleteContentForward
 
@@ -1816,7 +2050,6 @@ body
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 a┃
 # H1
@@ -1826,7 +2059,6 @@ body
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 a┃# H1
 
@@ -1836,7 +2068,7 @@ body
 </td></tr>
 </table>
 
-#### 47. [Delete17](../../spec/del.md#delete17)
+#### [Delete17](../../spec/del.md#delete17)
 
 > deleteContentForward
 
@@ -1853,7 +2085,6 @@ Shopping:┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 Shopping:┃
 - milk
@@ -1862,7 +2093,6 @@ Shopping:┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 Shopping:┃milk
 - eggs
@@ -1871,7 +2101,7 @@ Shopping:┃milk
 </td></tr>
 </table>
 
-#### 48. [Delete17b](../../spec/del.md#delete17b)
+#### [Delete17b](../../spec/del.md#delete17b)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -1908,7 +2138,6 @@ Shopping:┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 Shopping:┃- milk
 - eggs
@@ -1916,7 +2145,6 @@ Shopping:┃- milk
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 Shopping:┃milk
 - eggs
@@ -1925,7 +2153,7 @@ Shopping:┃milk
 </td></tr>
 </table>
 
-#### 49. [Delete18c](../../spec/del.md#delete18c)
+#### [Delete18c](../../spec/del.md#delete18c)
 
 > deleteContentForward
 
@@ -1942,7 +2170,6 @@ b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 a┃
 
@@ -1951,7 +2178,6 @@ b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 a┃
 b
@@ -1960,7 +2186,98 @@ b
 </td></tr>
 </table>
 
-#### 50. [Enter1](../../spec/enter.md#enter1)
+#### [Delete26](../../spec/del.md#delete26)
+
+> deleteContentForward
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+Title┃
+=====
+text
+```
+
+</td><td>
+
+```buffer
+Title┃=====
+text
+```
+
+</td><td>
+
+```buffer
+Title┃text
+=====
+```
+
+</td></tr>
+</table>
+
+#### [Delete27](../../spec/del.md#delete27)
+
+> deleteContentForward
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [a]:┃
+- b
+```
+
+</td><td>
+
+```buffer
+- [a]:┃b
+```
+
+</td><td>
+
+```buffer
+- \[a]:┃b
+```
+
+</td></tr>
+</table>
+
+#### [Delete28](../../spec/del.md#delete28)
+
+> deleteContentForward
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- ┃
+p
+```
+
+</td><td>
+
+```buffer
+- a
+- ┃p
+```
+
+</td><td>
+
+```buffer
+- a
+
+┃p
+```
+
+</td></tr>
+</table>
+
+#### [Enter1](../../spec/enter.md#enter1)
 
 > enter
 
@@ -1975,7 +2292,6 @@ b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - one two
 - ┃ three
@@ -1984,7 +2300,6 @@ b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one two
 - ┃three
@@ -1994,7 +2309,7 @@ b
 </td></tr>
 </table>
 
-#### 51. [Enter3](../../spec/enter.md#enter3)
+#### [Enter3](../../spec/enter.md#enter3)
 
 > enter
 
@@ -2009,7 +2324,6 @@ b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 - ┃ b
@@ -2018,7 +2332,6 @@ b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃b
@@ -2028,7 +2341,7 @@ b
 </td></tr>
 </table>
 
-#### 52. [Enter3c](../../spec/enter.md#enter3c)
+#### [Enter3c](../../spec/enter.md#enter3c)
 
 > enter
 
@@ -2044,7 +2357,6 @@ b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. a
 2. ┃ b
@@ -2054,7 +2366,6 @@ b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 9. a
 10. ┃b
@@ -2065,7 +2376,7 @@ b
 </td></tr>
 </table>
 
-#### 53. [Enter6](../../spec/enter.md#enter6)
+#### [Enter6](../../spec/enter.md#enter6)
 
 > enter
 
@@ -2080,7 +2391,6 @@ b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 ┃
@@ -2088,7 +2398,6 @@ b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 
@@ -2098,7 +2407,7 @@ b
 </td></tr>
 </table>
 
-#### 54. [Enter7](../../spec/enter.md#enter7)
+#### [Enter7](../../spec/enter.md#enter7)
 
 > enter
 
@@ -2114,7 +2423,6 @@ b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 ┃
@@ -2123,7 +2431,6 @@ b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - 
@@ -2134,7 +2441,7 @@ b
 </td></tr>
 </table>
 
-#### 55. [Enter7b](../../spec/enter.md#enter7b)
+#### [Enter7b](../../spec/enter.md#enter7b)
 
 > enter
 
@@ -2150,7 +2457,6 @@ b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 ┃
@@ -2159,7 +2465,6 @@ b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 
@@ -2171,7 +2476,7 @@ b
 </td></tr>
 </table>
 
-#### 56. [Enter8](../../spec/enter.md#enter8)
+#### [Enter8](../../spec/enter.md#enter8)
 
 > enter
 
@@ -2185,7 +2490,6 @@ b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - abc 
 - ┃- def
@@ -2193,7 +2497,6 @@ b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - abc
 - ┃\- def
@@ -2202,7 +2505,7 @@ b
 </td></tr>
 </table>
 
-#### 57. [Enter9](../../spec/enter.md#enter9)
+#### [Enter9](../../spec/enter.md#enter9)
 
 > enter
 
@@ -2216,7 +2519,6 @@ b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - abc 
 - ┃# def
@@ -2224,7 +2526,6 @@ b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - abc
 - ┃\# def
@@ -2233,7 +2534,7 @@ b
 </td></tr>
 </table>
 
-#### 58. [Enter10](../../spec/enter.md#enter10)
+#### [Enter10](../../spec/enter.md#enter10)
 
 > enter
 
@@ -2247,7 +2548,6 @@ b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - abc 
 - ┃<div>
@@ -2255,7 +2555,6 @@ b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - abc
 - ┃\<div>
@@ -2264,7 +2563,7 @@ b
 </td></tr>
 </table>
 
-#### 59. [Enter11](../../spec/enter.md#enter11)
+#### [Enter11](../../spec/enter.md#enter11)
 
 > enter
 
@@ -2278,7 +2577,6 @@ see ┃[a]: /url
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 see 
 ┃[a]: /url
@@ -2286,7 +2584,6 @@ see
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 see
 
@@ -2296,7 +2593,7 @@ see
 </td></tr>
 </table>
 
-#### 60. [Enter12](../../spec/enter.md#enter12)
+#### [Enter12](../../spec/enter.md#enter12)
 
 > enter
 
@@ -2310,7 +2607,6 @@ some┃ text
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 some
 ┃text
@@ -2318,7 +2614,6 @@ some
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 some
 
@@ -2328,7 +2623,7 @@ some
 </td></tr>
 </table>
 
-#### 61. [Enter14](../../spec/enter.md#enter14)
+#### [Enter14](../../spec/enter.md#enter14)
 
 > enter enter enter "p"
 
@@ -2343,7 +2638,6 @@ some
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - b
@@ -2352,7 +2646,6 @@ p┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - b
@@ -2363,7 +2656,7 @@ p┃
 </td></tr>
 </table>
 
-#### 62. [Enter15](../../spec/enter.md#enter15)
+#### [Enter15](../../spec/enter.md#enter15)
 
 > enter
 
@@ -2381,7 +2674,6 @@ p┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 
@@ -2392,7 +2684,6 @@ p┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 
@@ -2406,7 +2697,7 @@ p┃
 </td></tr>
 </table>
 
-#### 63. [Enter16](../../spec/enter.md#enter16)
+#### [Enter16](../../spec/enter.md#enter16)
 
 > enter
 
@@ -2421,7 +2712,6 @@ lazy
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 - ┃
@@ -2430,7 +2720,6 @@ lazy
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃lazy
@@ -2439,7 +2728,7 @@ lazy
 </td></tr>
 </table>
 
-#### 64. [Enter21](../../spec/enter.md#enter21)
+#### [Enter21](../../spec/enter.md#enter21)
 
 > enter
 
@@ -2454,7 +2743,6 @@ lazy
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ┃
   - a
@@ -2462,7 +2750,6 @@ lazy
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - 
   - ┃
@@ -2472,7 +2759,7 @@ lazy
 </td></tr>
 </table>
 
-#### 65. [Enter22](../../spec/enter.md#enter22)
+#### [Enter22](../../spec/enter.md#enter22)
 
 > enter
 
@@ -2487,7 +2774,6 @@ para ┃- x
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para 
 - ┃x
@@ -2496,7 +2782,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para
 
@@ -2507,7 +2792,7 @@ para
 </td></tr>
 </table>
 
-#### 66. [Enter23](../../spec/enter.md#enter23)
+#### [Enter23](../../spec/enter.md#enter23)
 
 > enter
 
@@ -2522,7 +2807,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ### H
 ┃2
@@ -2531,7 +2815,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ### H
 ┃2
@@ -2542,7 +2825,7 @@ para
 </td></tr>
 </table>
 
-#### 67. [Enter25](../../spec/enter.md#enter25)
+#### [Enter25](../../spec/enter.md#enter25)
 
 > enter
 
@@ -2559,7 +2842,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. z
 2. ┃
@@ -2570,7 +2852,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 8. z
 9. ┃
@@ -2582,7 +2863,7 @@ para
 </td></tr>
 </table>
 
-#### 68. [Enter26b](../../spec/enter.md#enter26b)
+#### [Enter26b](../../spec/enter.md#enter26b)
 
 > enter
 
@@ -2597,7 +2878,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - 
@@ -2606,7 +2886,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 
@@ -2617,7 +2896,7 @@ para
 </td></tr>
 </table>
 
-#### 69. [Enter27](../../spec/enter.md#enter27)
+#### [Enter27](../../spec/enter.md#enter27)
 
 > enter
 
@@ -2634,7 +2913,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - b
@@ -2644,7 +2922,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - b
@@ -2656,7 +2933,7 @@ para
 </td></tr>
 </table>
 
-#### 70. [Enter28](../../spec/enter.md#enter28)
+#### [Enter28](../../spec/enter.md#enter28)
 
 > enter
 
@@ -2672,7 +2949,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - c
@@ -2681,7 +2957,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - ┃
@@ -2692,7 +2967,7 @@ para
 </td></tr>
 </table>
 
-#### 71. [Enter32](../../spec/enter.md#enter32)
+#### [Enter32](../../spec/enter.md#enter32)
 
 > enter
 
@@ -2710,7 +2985,6 @@ body
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para
 
@@ -2722,7 +2996,6 @@ body
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para
 
@@ -2736,7 +3009,7 @@ body
 </td></tr>
 </table>
 
-#### 72. [Enter33](../../spec/enter.md#enter33)
+#### [Enter33](../../spec/enter.md#enter33)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -2757,7 +3030,6 @@ intro
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 intro
 
@@ -2767,7 +3039,6 @@ intro
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 intro
 
@@ -2785,7 +3056,6 @@ hello
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 intro
 
@@ -2795,7 +3065,6 @@ x┃hello
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 intro
 
@@ -2807,7 +3076,7 @@ hello
 </td></tr>
 </table>
 
-#### 73. [Enter35](../../spec/enter.md#enter35)
+#### [Enter35](../../spec/enter.md#enter35)
 
 > enter
 
@@ -2821,7 +3090,6 @@ hello
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. abc 
 2. ┃2. def
@@ -2829,7 +3097,6 @@ hello
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 1. abc
 2. ┃2\. def
@@ -2838,7 +3105,7 @@ hello
 </td></tr>
 </table>
 
-#### 74. [Enter36](../../spec/enter.md#enter36)
+#### [Enter36](../../spec/enter.md#enter36)
 
 > enter
 
@@ -2854,7 +3121,6 @@ hello
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 
@@ -2864,7 +3130,6 @@ hello
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 
@@ -2876,7 +3141,7 @@ hello
 </td></tr>
 </table>
 
-#### 75. [Enter36b](../../spec/enter.md#enter36b)
+#### [Enter36b](../../spec/enter.md#enter36b)
 
 > enter
 
@@ -2892,7 +3157,6 @@ hello
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a
 >
@@ -2902,7 +3166,6 @@ hello
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - a
 >
@@ -2914,7 +3177,7 @@ hello
 </td></tr>
 </table>
 
-#### 76. [Enter37](../../spec/enter.md#enter37)
+#### [Enter37](../../spec/enter.md#enter37)
 
 > enter
 
@@ -2930,7 +3193,6 @@ hello
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. a
    text
@@ -2940,7 +3202,6 @@ hello
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 1. a
    text
@@ -2950,7 +3211,7 @@ hello
 </td></tr>
 </table>
 
-#### 77. [Enter40](../../spec/enter.md#enter40)
+#### [Enter40](../../spec/enter.md#enter40)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -2970,7 +3231,6 @@ hello
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 ┃
@@ -2978,7 +3238,6 @@ hello
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 
@@ -3003,7 +3262,7 @@ hello
 </td></tr>
 </table>
 
-#### 78. [Enter41](../../spec/enter.md#enter41)
+#### [Enter41](../../spec/enter.md#enter41)
 
 > enter
 
@@ -3018,7 +3277,6 @@ hello
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Title 
 - ┃x
@@ -3027,7 +3285,6 @@ hello
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Title
 ┃\- x
@@ -3037,7 +3294,7 @@ hello
 </td></tr>
 </table>
 
-#### 79. [Enter42](../../spec/enter.md#enter42)
+#### [Enter42](../../spec/enter.md#enter42)
 
 > enter
 
@@ -3052,7 +3309,6 @@ title ┃- x
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 title 
 - ┃x
@@ -3061,7 +3317,6 @@ title
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 title
 ===
@@ -3071,7 +3326,7 @@ title
 </td></tr>
 </table>
 
-#### 80. [Enter43](../../spec/enter.md#enter43)
+#### [Enter43](../../spec/enter.md#enter43)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -3090,7 +3345,6 @@ title
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - abc
 - ┃- def
@@ -3098,7 +3352,6 @@ title
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - abc
 - ┃\- def
@@ -3120,7 +3373,7 @@ title
 </td></tr>
 </table>
 
-#### 81. [Enter44](../../spec/enter.md#enter44)
+#### [Enter44](../../spec/enter.md#enter44)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -3139,7 +3392,6 @@ title
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - one two
 - ┃ three
@@ -3147,7 +3399,6 @@ title
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one two
 - ┃three
@@ -3162,14 +3413,12 @@ title
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - one two┃ three
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one two┃three
 ```
@@ -3177,7 +3426,7 @@ title
 </td></tr>
 </table>
 
-#### 82. [Enter45](../../spec/enter.md#enter45)
+#### [Enter45](../../spec/enter.md#enter45)
 
 > enter
 
@@ -3192,7 +3441,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para
 # 
@@ -3201,7 +3449,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para
 
@@ -3213,7 +3460,7 @@ para
 </td></tr>
 </table>
 
-#### 83. [Enter46](../../spec/enter.md#enter46)
+#### [Enter46](../../spec/enter.md#enter46)
 
 > enter
 
@@ -3227,7 +3474,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > 
 > ┃quote
@@ -3235,7 +3481,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > ┃
 >
@@ -3245,7 +3490,287 @@ para
 </td></tr>
 </table>
 
-#### 84. [Fence7d](../../spec/fences.md#fence7d)
+#### [Enter47](../../spec/enter.md#enter47)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+[Note]: this ┃matters a lot
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+[Note]: this 
+┃matters a lot
+```
+
+</td><td>
+
+```buffer
+\[Note]: this
+
+┃matters a lot
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+[Note]: this┃matters a lot
+```
+
+</td></tr>
+</table>
+
+#### [Enter48](../../spec/enter.md#enter48)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [a]: b ┃c
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [a]: b 
+- ┃c
+```
+
+</td><td>
+
+```buffer
+- \[a]: b
+- ┃c
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [a]: b ┃c
+```
+
+</td><td>
+
+```buffer
+- \[a]: b┃c
+```
+
+</td></tr>
+</table>
+
+#### [Enter51](../../spec/enter.md#enter51)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+one
+┃two
+three
+---
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+one
+
+┃two
+three
+---
+```
+
+</td><td>
+
+```buffer
+one
+---
+┃two
+three
+```
+
+</td></tr>
+</table>
+
+> undo
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+one
+┃two
+three
+---
+```
+
+</td></tr>
+</table>
+
+> cursorLineBoundaryForward enter
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+one
+two
+┃
+three
+---
+```
+
+</td><td>
+
+```buffer
+one
+two
+---
+┃three
+```
+
+</td></tr>
+</table>
+
+#### [Enter52](../../spec/enter.md#enter52)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+one
+┃two
+---
+three
+---
+```
+
+</td><td>
+
+```buffer
+one
+
+┃two
+---
+three
+---
+```
+
+</td><td>
+
+```buffer
+one
+---
+┃two
+
+three
+---
+```
+
+</td></tr>
+</table>
+
+#### [Enter53](../../spec/enter.md#enter53)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-┃a
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-
+┃a
+```
+
+</td><td>
+
+```buffer
+\-
+
+┃a
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward deleteContentBackward
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃a
+```
+
+</td><td>
+
+```buffer
+-┃a
+```
+
+</td></tr>
+</table>
+
+#### [Fence7d](../../spec/fences.md#fence7d)
 
 > enter
 
@@ -3264,7 +3789,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a
   ```
@@ -3277,7 +3801,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   ```
@@ -3291,7 +3814,7 @@ para
 </td></tr>
 </table>
 
-#### 85. [Fence9](../../spec/fences.md#fence9)
+#### [Fence9](../../spec/fences.md#fence9)
 
 > enter
 
@@ -3307,7 +3830,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 `
 ┃``
@@ -3317,7 +3839,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 `┃``
 code
@@ -3327,7 +3848,7 @@ code
 </td></tr>
 </table>
 
-#### 86. [Fence12](../../spec/fences.md#fence12)
+#### [Fence12](../../spec/fences.md#fence12)
 
 > enter
 
@@ -3344,7 +3865,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a
   
@@ -3355,7 +3875,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
 
@@ -3367,7 +3886,7 @@ code
 </td></tr>
 </table>
 
-#### 87. [Fence14](../../spec/fences.md#fence14)
+#### [Fence14](../../spec/fences.md#fence14)
 
 > enter
 
@@ -3383,7 +3902,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 ```
 code
@@ -3393,7 +3911,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 ```
 code
@@ -3403,7 +3920,7 @@ code
 </td></tr>
 </table>
 
-#### 88. [Fence17](../../spec/fences.md#fence17)
+#### [Fence17](../../spec/fences.md#fence17)
 
 > deleteContentBackward
 
@@ -3420,7 +3937,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a
   ```┃one
@@ -3429,7 +3945,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   ```
@@ -3440,7 +3955,7 @@ code
 </td></tr>
 </table>
 
-#### 89. [Fence19](../../spec/fences.md#fence19)
+#### [Fence19](../../spec/fences.md#fence19)
 
 > deleteContentForward
 
@@ -3457,7 +3972,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a
   ```
@@ -3466,7 +3980,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   ```
@@ -3477,7 +3990,7 @@ code
 </td></tr>
 </table>
 
-#### 90. [Fence20](../../spec/fences.md#fence20)
+#### [Fence20](../../spec/fences.md#fence20)
 
 > deleteContentBackward
 
@@ -3494,7 +4007,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 > ```
 > one
@@ -3504,7 +4016,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 > ```
 > one┃two
@@ -3514,7 +4025,7 @@ code
 </td></tr>
 </table>
 
-#### 91. [Fence22](../../spec/fences.md#fence22)
+#### [Fence22](../../spec/fences.md#fence22)
 
 > shiftEnter enter
 
@@ -3532,7 +4043,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a
   - b
@@ -3545,7 +4055,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - b
@@ -3558,7 +4067,7 @@ code
 </td></tr>
 </table>
 
-#### 92. [Fence23](../../spec/fences.md#fence23)
+#### [Fence23](../../spec/fences.md#fence23)
 
 > deleteContentBackward
 
@@ -3575,7 +4084,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a
   ```
@@ -3584,7 +4092,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   ```
@@ -3595,7 +4102,7 @@ code
 </td></tr>
 </table>
 
-#### 93. [Fence24](../../spec/fences.md#fence24)
+#### [Fence24](../../spec/fences.md#fence24)
 
 > deleteContentForward
 
@@ -3612,7 +4119,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a
   ```js┃one
@@ -3621,7 +4127,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   ```js┃
@@ -3632,7 +4137,7 @@ code
 </td></tr>
 </table>
 
-#### 94. [Fence25](../../spec/fences.md#fence25)
+#### [Fence25](../../spec/fences.md#fence25)
 
 > deleteContentBackward
 
@@ -3649,7 +4154,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a┃```
   one
@@ -3658,7 +4162,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   ┃```
@@ -3669,7 +4172,7 @@ code
 </td></tr>
 </table>
 
-#### 95. [Fence26](../../spec/fences.md#fence26)
+#### [Fence26](../../spec/fences.md#fence26)
 
 > deleteContentBackward
 
@@ -3686,7 +4189,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a┃```
   one
@@ -3695,7 +4197,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a┃
   ```
@@ -3706,7 +4207,7 @@ code
 </td></tr>
 </table>
 
-#### 96. [Fence31](../../spec/fences.md#fence31)
+#### [Fence31](../../spec/fences.md#fence31)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -3728,7 +4229,6 @@ code
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a
   
@@ -3739,7 +4239,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
 
@@ -3767,7 +4266,7 @@ code
 </td></tr>
 </table>
 
-#### 97. [Fence33](../../spec/fences.md#fence33)
+#### [Fence33](../../spec/fences.md#fence33)
 
 > deleteContentBackward
 
@@ -3784,7 +4283,6 @@ x
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 para┃```
 x
@@ -3793,7 +4291,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 para
 ┃```
@@ -3804,7 +4301,7 @@ x
 </td></tr>
 </table>
 
-#### 98. [Fence34](../../spec/fences.md#fence34)
+#### [Fence34](../../spec/fences.md#fence34)
 
 > deleteContentForward
 
@@ -3821,7 +4318,6 @@ x
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a┃```
   one
@@ -3830,7 +4326,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a┃
   ```
@@ -3841,7 +4336,7 @@ x
 </td></tr>
 </table>
 
-#### 99. [Fence35](../../spec/fences.md#fence35)
+#### [Fence35](../../spec/fences.md#fence35)
 
 > deleteContentForward
 
@@ -3859,7 +4354,6 @@ x
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a
   ```
@@ -3869,7 +4363,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   ```
@@ -3881,7 +4374,7 @@ x
 </td></tr>
 </table>
 
-#### 100. [Fence36](../../spec/fences.md#fence36)
+#### [Fence36](../../spec/fences.md#fence36)
 
 > deleteContentBackward
 
@@ -3899,7 +4392,6 @@ body
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 ```
 ``┃`
@@ -3909,7 +4401,6 @@ body
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 ```
 ``
@@ -3921,7 +4412,7 @@ body
 </td></tr>
 </table>
 
-#### 101. [Fence37](../../spec/fences.md#fence37)
+#### [Fence37](../../spec/fences.md#fence37)
 
 > deleteContentForward
 
@@ -3939,7 +4430,6 @@ body
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 ```
 ``┃`
@@ -3949,7 +4439,6 @@ body
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 ```
 ``┃
@@ -3961,7 +4450,7 @@ body
 </td></tr>
 </table>
 
-#### 102. [Fence38](../../spec/fences.md#fence38)
+#### [Fence38](../../spec/fences.md#fence38)
 
 > shiftEnter
 
@@ -3978,7 +4467,6 @@ body
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 ```
 x
@@ -3989,7 +4477,6 @@ body
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 ```
 x┃```
@@ -4000,7 +4487,7 @@ body
 </td></tr>
 </table>
 
-#### 103. [Fence39](../../spec/fences.md#fence39)
+#### [Fence39](../../spec/fences.md#fence39)
 
 > enter
 
@@ -4017,7 +4504,6 @@ body
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 ```
 ```
@@ -4028,7 +4514,6 @@ body
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 ```
 ```┃x
@@ -4039,7 +4524,7 @@ body
 </td></tr>
 </table>
 
-#### 104. [Fence40](../../spec/fences.md#fence40)
+#### [Fence40](../../spec/fences.md#fence40)
 
 > deleteContentForward
 
@@ -4057,7 +4542,6 @@ body
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > ~~~
 > ~~┃> ~
@@ -4067,7 +4551,6 @@ body
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > ~~~
 > ~~┃
@@ -4079,7 +4562,283 @@ body
 </td></tr>
 </table>
 
-#### 105. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap1](../../spec/gaps.md#gap1)
+#### [Math, comments and indented code › Fence42](../../spec/fences.md#fence42)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Euler:
+  $$
+  e^{i\pi}+1=0┃
+  $$
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Euler:
+  $$
+  e^{i\pi}+1=0
+- ┃
+  $$
+```
+
+</td><td>
+
+```buffer
+- Euler:
+  $$
+  e^{i\pi}+1=0
+  ┃
+  $$
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Euler:
+  $$
+  e^{i\pi}+1=0┃
+  $$
+```
+
+</td></tr>
+</table>
+
+> enter "x"
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Euler:
+  $$
+  e^{i\pi}+1=0
+- x┃
+  $$
+```
+
+</td><td>
+
+```buffer
+- Euler:
+  $$
+  e^{i\pi}+1=0
+  x┃
+  $$
+```
+
+</td></tr>
+</table>
+
+#### [Math, comments and indented code › Fence43](../../spec/fences.md#fence43)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- task:
+  > %%
+  > hidden┃
+  > %%
+```
+
+</td></tr>
+</table>
+
+> shiftEnter "more"
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- task:
+  > %%
+  > hidden
+  > more┃
+  > %%
+```
+
+</td></tr>
+</table>
+
+> cursorLineBoundaryBackward deleteContentBackward
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- task:
+  > %%
+  > hidden
+  >┃more
+  > %%
+```
+
+</td><td>
+
+```buffer
+- task:
+  > %%
+  > hidden┃more
+  > %%
+```
+
+</td></tr>
+</table>
+
+#### [Math, comments and indented code › Fence45](../../spec/fences.md#fence45)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+$┃$
+x
+$$
+```
+
+</td><td>
+
+```buffer
+$
+┃$
+x
+$$
+```
+
+</td><td>
+
+```buffer
+$┃$
+x
+$$
+```
+
+</td></tr>
+</table>
+
+#### [Math, comments and indented code › Fence46](../../spec/fences.md#fence46)
+
+> deleteContentForward
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> %%
+> a┃
+> b
+> %%
+```
+
+</td><td>
+
+```buffer
+> %%
+> a┃> b
+> %%
+```
+
+</td><td>
+
+```buffer
+> %%
+> a┃b
+> %%
+```
+
+</td></tr>
+</table>
+
+#### [Math, comments and indented code › Fence47](../../spec/fences.md#fence47)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  $$
+  ┃x
+  $$
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  $$┃x
+  $$
+```
+
+</td><td>
+
+```buffer
+- a
+  $$
+  ┃x
+  $$
+```
+
+</td></tr>
+</table>
+
+> cursorLineBoundaryForward deleteContentForward
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  $$x┃$$
+```
+
+</td><td>
+
+```buffer
+- a
+  $$
+  x┃
+  $$
+```
+
+</td></tr>
+</table>
+
+#### [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap1](../../spec/gaps.md#gap1)
 
 > moveSubtreeUp
 
@@ -4097,7 +4856,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 a
 
@@ -4108,7 +4866,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 b┃
 
@@ -4120,7 +4877,7 @@ c
 </td></tr>
 </table>
 
-#### 106. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap2](../../spec/gaps.md#gap2)
+#### [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap2](../../spec/gaps.md#gap2)
 
 > moveSubtreeDown
 
@@ -4138,7 +4895,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 a┃
 
@@ -4149,7 +4905,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 b
 
@@ -4161,7 +4916,7 @@ c
 </td></tr>
 </table>
 
-#### 107. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap3](../../spec/gaps.md#gap3)
+#### [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap3](../../spec/gaps.md#gap3)
 
 > moveSubtreeUp
 
@@ -4181,7 +4936,6 @@ more
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # A
 text
@@ -4194,7 +4948,6 @@ more
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # B┃
 more
@@ -4208,7 +4961,7 @@ text
 </td></tr>
 </table>
 
-#### 108. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap4](../../spec/gaps.md#gap4)
+#### [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap4](../../spec/gaps.md#gap4)
 
 > moveSubtreeUp
 
@@ -4225,7 +4978,6 @@ text
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 
@@ -4235,7 +4987,6 @@ text
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - b┃
 - a
@@ -4246,7 +4997,7 @@ text
 </td></tr>
 </table>
 
-#### 109. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap5](../../spec/gaps.md#gap5)
+#### [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap5](../../spec/gaps.md#gap5)
 
 > moveSubtreeUp
 
@@ -4264,7 +5015,6 @@ text
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - a1
@@ -4275,7 +5025,6 @@ text
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - b┃
 - a
@@ -4287,7 +5036,7 @@ text
 </td></tr>
 </table>
 
-#### 110. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap6](../../spec/gaps.md#gap6)
+#### [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap6](../../spec/gaps.md#gap6)
 
 > moveSubtreeDown
 
@@ -4305,7 +5054,6 @@ b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ## A┃
 a
@@ -4316,7 +5064,6 @@ b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ## B
 b
@@ -4328,7 +5075,7 @@ a
 </td></tr>
 </table>
 
-#### 111. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap7](../../spec/gaps.md#gap7)
+#### [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap7](../../spec/gaps.md#gap7)
 
 > moveSubtreeDown
 
@@ -4347,7 +5094,6 @@ q
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 x┃
 ```
@@ -4359,7 +5105,6 @@ q
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 ```
 code
@@ -4373,7 +5118,7 @@ q
 </td></tr>
 </table>
 
-#### 112. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap9](../../spec/gaps.md#gap9)
+#### [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap9](../../spec/gaps.md#gap9)
 
 > moveSubtreeUp
 
@@ -4392,7 +5137,6 @@ q
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - p
   - x
@@ -4404,7 +5148,6 @@ q
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - p
   - y┃
@@ -4417,7 +5160,7 @@ q
 </td></tr>
 </table>
 
-#### 113. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap10](../../spec/gaps.md#gap10)
+#### [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap10](../../spec/gaps.md#gap10)
 
 > moveSubtreeUp
 
@@ -4434,7 +5177,6 @@ b┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 a
 
@@ -4444,7 +5186,6 @@ b┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 b┃
 
@@ -4455,7 +5196,7 @@ a
 </td></tr>
 </table>
 
-#### 114. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap11](../../spec/gaps.md#gap11)
+#### [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap11](../../spec/gaps.md#gap11)
 
 > moveSubtreeDown
 
@@ -4474,7 +5215,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 
 a┃
@@ -4486,7 +5226,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 
 b
@@ -4499,7 +5238,7 @@ c
 </td></tr>
 </table>
 
-#### 115. [New text and gaps › Gap13](../../spec/gaps.md#gap13)
+#### [New text and gaps › Gap13](../../spec/gaps.md#gap13)
 
 > pasteStructured
 
@@ -4522,7 +5261,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - t- a
 - b
@@ -4533,7 +5271,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - t
 - a
@@ -4545,7 +5282,7 @@ para
 </td></tr>
 </table>
 
-#### 116. [Keys on a blank line › Gap14](../../spec/gaps.md#gap14)
+#### [Keys on a blank line › Gap14](../../spec/gaps.md#gap14)
 
 > moveSubtreeUp
 
@@ -4564,7 +5301,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 a
 
@@ -4576,7 +5312,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 b
 ┃
@@ -4589,7 +5324,7 @@ c
 </td></tr>
 </table>
 
-#### 117. [Keys on a blank line › Gap15](../../spec/gaps.md#gap15)
+#### [Keys on a blank line › Gap15](../../spec/gaps.md#gap15)
 
 > indent
 
@@ -4606,7 +5341,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 - b
@@ -4616,7 +5350,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - b
@@ -4627,7 +5360,7 @@ c
 </td></tr>
 </table>
 
-#### 118. [Keys on a blank line › Gap16](../../spec/gaps.md#gap16)
+#### [Keys on a blank line › Gap16](../../spec/gaps.md#gap16)
 
 > outdent
 
@@ -4644,7 +5377,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - b
@@ -4654,7 +5386,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - b
@@ -4665,7 +5396,7 @@ c
 </td></tr>
 </table>
 
-#### 119. [Keys on a blank line › Gap17](../../spec/gaps.md#gap17)
+#### [Keys on a blank line › Gap17](../../spec/gaps.md#gap17)
 
 > moveSubtreeDown
 
@@ -4682,7 +5413,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 ┃
@@ -4692,7 +5422,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - c
 - a
@@ -4703,7 +5432,7 @@ c
 </td></tr>
 </table>
 
-#### 120. [Indent3](../../spec/indent.md#indent3)
+#### [Indent3](../../spec/indent.md#indent3)
 
 > indent
 
@@ -4719,7 +5448,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
     * x
@@ -4728,7 +5456,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
     * x
@@ -4738,7 +5465,7 @@ c
 </td></tr>
 </table>
 
-#### 121. [Indent4](../../spec/indent.md#indent4)
+#### [Indent4](../../spec/indent.md#indent4)
 
 > indent
 
@@ -4754,7 +5481,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. a
   1. b┃
@@ -4763,7 +5489,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 1. a
    1. b┃
@@ -4773,7 +5498,7 @@ c
 </td></tr>
 </table>
 
-#### 122. [Indent12](../../spec/indent.md#indent12)
+#### [Indent12](../../spec/indent.md#indent12)
 
 > indent
 
@@ -4789,7 +5514,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # A
   ## B┃
@@ -4798,7 +5522,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # A
 ### B┃
@@ -4808,7 +5531,7 @@ c
 </td></tr>
 </table>
 
-#### 123. [Indent13](../../spec/indent.md#indent13)
+#### [Indent13](../../spec/indent.md#indent13)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -4833,7 +5556,6 @@ c
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a
   - b┃
@@ -4846,7 +5568,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - b┃
@@ -4879,7 +5600,7 @@ c
 </td></tr>
 </table>
 
-#### 124. [Indent15](../../spec/indent.md#indent15)
+#### [Indent15](../../spec/indent.md#indent15)
 
 > indent
 
@@ -4897,7 +5618,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. a
    - x
@@ -4908,7 +5628,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 1. a
    - x
@@ -4920,7 +5639,7 @@ c
 </td></tr>
 </table>
 
-#### 125. [Indent16](../../spec/indent.md#indent16)
+#### [Indent16](../../spec/indent.md#indent16)
 
 > indent
 
@@ -4937,7 +5656,6 @@ Title┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
   Title┃
 =====
@@ -4947,7 +5665,6 @@ Title┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 Title┃
 -----
@@ -4958,7 +5675,7 @@ Title┃
 </td></tr>
 </table>
 
-#### 126. [Indent21](../../spec/indent.md#indent21)
+#### [Indent21](../../spec/indent.md#indent21)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -4979,7 +5696,6 @@ para b┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para a
 
@@ -4988,7 +5704,6 @@ para a
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para a
 - para b┃
@@ -5012,7 +5727,7 @@ para b┃
 </td></tr>
 </table>
 
-#### 127. [Indent22](../../spec/indent.md#indent22)
+#### [Indent22](../../spec/indent.md#indent22)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -5031,14 +5746,12 @@ Para┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
   Para┃
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - Para┃
 ```
@@ -5059,7 +5772,7 @@ Para┃
 </td></tr>
 </table>
 
-#### 128. [Indent23](../../spec/indent.md#indent23)
+#### [Indent23](../../spec/indent.md#indent23)
 
 > indent
 
@@ -5076,7 +5789,6 @@ Para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # A
 ## B
@@ -5086,7 +5798,6 @@ Para┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # A
 ## B
@@ -5097,7 +5808,7 @@ Para┃
 </td></tr>
 </table>
 
-#### 129. [Indent24](../../spec/indent.md#indent24)
+#### [Indent24](../../spec/indent.md#indent24)
 
 > indent
 
@@ -5112,7 +5823,6 @@ Para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # A
   ###### B┃
@@ -5120,7 +5830,6 @@ Para┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # A
 ###### B┃
@@ -5129,7 +5838,7 @@ Para┃
 </td></tr>
 </table>
 
-#### 130. [Indent25](../../spec/indent.md#indent25)
+#### [Indent25](../../spec/indent.md#indent25)
 
 > indent
 
@@ -5146,7 +5855,6 @@ Title┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
   Title┃
 -----
@@ -5156,7 +5864,6 @@ Title┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ### Title┃
 
@@ -5166,7 +5873,7 @@ Title┃
 </td></tr>
 </table>
 
-#### 131. [Indent29](../../spec/indent.md#indent29)
+#### [Indent29](../../spec/indent.md#indent29)
 
 > indent
 
@@ -5182,7 +5889,6 @@ para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 
@@ -5191,7 +5897,6 @@ para┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - para┃
@@ -5200,7 +5905,7 @@ para┃
 </td></tr>
 </table>
 
-#### 132. [MoveDown1](../../spec/move-subtree-down.md#movedown1)
+#### [MoveDown1](../../spec/move-subtree-down.md#movedown1)
 
 > moveSubtreeDown
 
@@ -5217,7 +5922,6 @@ para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a┃
   - a1
@@ -5227,7 +5931,6 @@ para┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - b
 
@@ -5238,7 +5941,7 @@ para┃
 </td></tr>
 </table>
 
-#### 133. [MoveDown2](../../spec/move-subtree-down.md#movedown2)
+#### [MoveDown2](../../spec/move-subtree-down.md#movedown2)
 
 > moveSubtreeDown
 
@@ -5255,7 +5958,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # H
 - a┃
@@ -5265,7 +5967,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # H
 para
@@ -5276,7 +5977,7 @@ para
 </td></tr>
 </table>
 
-#### 134. [MoveDown4](../../spec/move-subtree-down.md#movedown4)
+#### [MoveDown4](../../spec/move-subtree-down.md#movedown4)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -5301,7 +6002,6 @@ text b
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # A┃
 
@@ -5314,7 +6014,6 @@ text b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # B
 
@@ -5347,7 +6046,7 @@ text b
 </td></tr>
 </table>
 
-#### 135. [MoveDown5](../../spec/move-subtree-down.md#movedown5)
+#### [MoveDown5](../../spec/move-subtree-down.md#movedown5)
 
 > moveSubtreeDown
 
@@ -5363,7 +6062,6 @@ two
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 one┃
 
@@ -5372,7 +6070,6 @@ two
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 two
 
@@ -5382,7 +6079,7 @@ one┃
 </td></tr>
 </table>
 
-#### 136. [MoveDown8](../../spec/move-subtree-down.md#movedown8)
+#### [MoveDown8](../../spec/move-subtree-down.md#movedown8)
 
 > moveSubtreeDown
 
@@ -5401,7 +6098,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 - b┃
@@ -5413,7 +6109,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 
@@ -5426,7 +6121,7 @@ para
 </td></tr>
 </table>
 
-#### 137. [MoveDown11](../../spec/move-subtree-down.md#movedown11)
+#### [MoveDown11](../../spec/move-subtree-down.md#movedown11)
 
 > moveSubtreeDown
 
@@ -5444,7 +6139,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 - «b
@@ -5455,7 +6149,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - d
@@ -5467,7 +6160,7 @@ para
 </td></tr>
 </table>
 
-#### 138. [MoveDown12](../../spec/move-subtree-down.md#movedown12)
+#### [MoveDown12](../../spec/move-subtree-down.md#movedown12)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -5492,7 +6185,6 @@ para
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - b
@@ -5505,7 +6197,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - b
@@ -5525,7 +6216,6 @@ para
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - b
@@ -5538,7 +6228,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - b
@@ -5552,7 +6241,7 @@ para
 </td></tr>
 </table>
 
-#### 139. [MoveDown13](../../spec/move-subtree-down.md#movedown13)
+#### [MoveDown13](../../spec/move-subtree-down.md#movedown13)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -5574,7 +6263,6 @@ intro
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - b┃
   - b1
@@ -5584,7 +6272,6 @@ intro
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 intro
 
@@ -5611,7 +6298,7 @@ intro
 </td></tr>
 </table>
 
-#### 140. [MoveDown14](../../spec/move-subtree-down.md#movedown14)
+#### [MoveDown14](../../spec/move-subtree-down.md#movedown14)
 
 > moveSubtreeDown
 
@@ -5627,7 +6314,6 @@ intro
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - «a
   - b»
@@ -5636,7 +6322,6 @@ intro
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - c
 - «a
@@ -5646,7 +6331,7 @@ intro
 </td></tr>
 </table>
 
-#### 141. [MoveDown16](../../spec/move-subtree-down.md#movedown16)
+#### [MoveDown16](../../spec/move-subtree-down.md#movedown16)
 
 > moveSubtreeDown
 
@@ -5663,7 +6348,6 @@ intro
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # A┃
 - x
@@ -5673,7 +6357,6 @@ intro
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # B
 - y
@@ -5684,7 +6367,7 @@ intro
 </td></tr>
 </table>
 
-#### 142. [MoveDown18](../../spec/move-subtree-down.md#movedown18)
+#### [MoveDown18](../../spec/move-subtree-down.md#movedown18)
 
 > moveSubtreeDown
 
@@ -5703,7 +6386,6 @@ intro
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Work
 - email
@@ -5715,7 +6397,6 @@ intro
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Work
 - email
@@ -5728,7 +6409,7 @@ intro
 </td></tr>
 </table>
 
-#### 143. [MoveDown20](../../spec/move-subtree-down.md#movedown20)
+#### [MoveDown20](../../spec/move-subtree-down.md#movedown20)
 
 > moveSubtreeDown
 
@@ -5747,7 +6428,6 @@ intro
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Todo
 - one
@@ -5759,7 +6439,6 @@ intro
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Todo
 - one
@@ -5772,7 +6451,7 @@ intro
 </td></tr>
 </table>
 
-#### 144. [MoveDown21](../../spec/move-subtree-down.md#movedown21)
+#### [MoveDown21](../../spec/move-subtree-down.md#movedown21)
 
 > moveSubtreeDown
 
@@ -5792,7 +6471,6 @@ intro
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a┃
   ```
@@ -5805,7 +6483,6 @@ intro
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - b
 - a┃
@@ -5819,7 +6496,7 @@ intro
 </td></tr>
 </table>
 
-#### 145. [MoveDown23](../../spec/move-subtree-down.md#movedown23)
+#### [MoveDown23](../../spec/move-subtree-down.md#movedown23)
 
 > moveSubtreeDown
 
@@ -5835,7 +6512,6 @@ intro
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. b
 2. a┃
@@ -5844,7 +6520,6 @@ intro
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 9. b
 10. a┃
@@ -5854,7 +6529,7 @@ intro
 </td></tr>
 </table>
 
-#### 146. [MoveDown24](../../spec/move-subtree-down.md#movedown24)
+#### [MoveDown24](../../spec/move-subtree-down.md#movedown24)
 
 > moveSubtreeDown
 
@@ -5871,7 +6546,6 @@ last
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para┃
 - a
@@ -5881,7 +6555,6 @@ last
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 last
 
@@ -5892,7 +6565,7 @@ para┃
 </td></tr>
 </table>
 
-#### 147. [MoveDown26](../../spec/move-subtree-down.md#movedown26)
+#### [MoveDown26](../../spec/move-subtree-down.md#movedown26)
 
 > moveSubtreeDown
 
@@ -5910,7 +6583,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Work
 - review┃
@@ -5921,7 +6593,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Work
 
@@ -5934,7 +6605,7 @@ para
 </td></tr>
 </table>
 
-#### 148. [MoveDown27](../../spec/move-subtree-down.md#movedown27)
+#### [MoveDown27](../../spec/move-subtree-down.md#movedown27)
 
 > moveSubtreeDown
 
@@ -5952,7 +6623,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # A
 ## s┃
@@ -5963,7 +6633,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # A
 
@@ -5975,7 +6644,7 @@ para
 </td></tr>
 </table>
 
-#### 149. [MoveDown28](../../spec/move-subtree-down.md#movedown28)
+#### [MoveDown28](../../spec/move-subtree-down.md#movedown28)
 
 > moveSubtreeDown
 
@@ -5995,7 +6664,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # A
 ## sub
@@ -6008,7 +6676,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # A
 ## sub
@@ -6021,7 +6688,7 @@ para
 </td></tr>
 </table>
 
-#### 150. [MoveDown29](../../spec/move-subtree-down.md#movedown29)
+#### [MoveDown29](../../spec/move-subtree-down.md#movedown29)
 
 > moveSubtreeDown
 
@@ -6039,7 +6706,6 @@ next
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 pa┃ra
 1. a
@@ -6050,7 +6716,6 @@ next
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 next
 
@@ -6062,7 +6727,7 @@ pa┃ra
 </td></tr>
 </table>
 
-#### 151. [MoveDown30](../../spec/move-subtree-down.md#movedown30)
+#### [MoveDown30](../../spec/move-subtree-down.md#movedown30)
 
 > moveSubtreeDown
 
@@ -6078,7 +6743,6 @@ pa┃ra
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. b
     - x
@@ -6087,7 +6751,6 @@ pa┃ra
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 9. b
    - x
@@ -6097,7 +6760,7 @@ pa┃ra
 </td></tr>
 </table>
 
-#### 152. [MoveDown31](../../spec/move-subtree-down.md#movedown31)
+#### [MoveDown31](../../spec/move-subtree-down.md#movedown31)
 
 > moveSubtreeDown
 
@@ -6113,7 +6776,6 @@ para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para┃
 
@@ -6122,7 +6784,6 @@ para┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ---
 
@@ -6132,7 +6793,168 @@ para┃
 </td></tr>
 </table>
 
-#### 153. [MoveUp3](../../spec/move-subtree-up.md#moveup3)
+#### [MoveDown33](../../spec/move-subtree-down.md#movedown33)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- - ┃a
+  - b
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeDown
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- - ┃a
+  - b
+```
+
+</td><td>
+
+```buffer
+- - b
+  - ┃a
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeUp
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- - ┃a
+  - b
+```
+
+</td></tr>
+</table>
+
+#### [MoveDown34](../../spec/move-subtree-down.md#movedown34)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a
+  ┃```
+  code
+  ```
+  x
+````
+
+</td></tr>
+</table>
+
+> moveSubtreeDown
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a
+  ┃```
+  code
+  ```
+  x
+````
+
+</td><td>
+
+````buffer
+- a
+
+  x
+  ```
+  ┃code
+  ```
+````
+
+</td></tr>
+</table>
+
+> moveSubtreeUp
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a
+  ┃```
+  code
+  ```
+  x
+````
+
+</td><td>
+
+````buffer
+- a
+
+  ```
+  ┃code
+  ```
+  x
+````
+
+</td></tr>
+</table>
+
+#### [MoveDown37](../../spec/move-subtree-down.md#movedown37)
+
+> moveSubtreeDown
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ┃```
+
+  x
+  ```
+- b
+````
+
+</td><td>
+
+````buffer
+- ┃```
+
+  x
+  ```
+- b
+````
+
+</td><td>
+
+````buffer
+- b
+- ```
+
+  ┃x
+  ```
+````
+
+</td></tr>
+</table>
+
+#### [MoveUp3](../../spec/move-subtree-up.md#moveup3)
 
 > moveSubtreeUp
 
@@ -6152,7 +6974,6 @@ text b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # A
 
@@ -6165,7 +6986,6 @@ text b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # B┃
 
@@ -6179,7 +6999,7 @@ text a
 </td></tr>
 </table>
 
-#### 154. [MoveUp4](../../spec/move-subtree-up.md#moveup4)
+#### [MoveUp4](../../spec/move-subtree-up.md#moveup4)
 
 > moveSubtreeUp
 
@@ -6195,7 +7015,6 @@ two┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 one
 
@@ -6204,7 +7023,6 @@ two┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 two┃
 
@@ -6214,7 +7032,7 @@ one
 </td></tr>
 </table>
 
-#### 155. [MoveUp7](../../spec/move-subtree-up.md#moveup7)
+#### [MoveUp7](../../spec/move-subtree-up.md#moveup7)
 
 > moveSubtreeUp
 
@@ -6233,7 +7051,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 
@@ -6245,7 +7062,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - b┃
@@ -6258,7 +7074,7 @@ para
 </td></tr>
 </table>
 
-#### 156. [MoveUp10](../../spec/move-subtree-up.md#moveup10)
+#### [MoveUp10](../../spec/move-subtree-up.md#moveup10)
 
 > moveSubtreeUp
 
@@ -6276,7 +7092,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 - «b
@@ -6287,7 +7102,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - «b
   - b1
@@ -6299,7 +7113,7 @@ para
 </td></tr>
 </table>
 
-#### 157. [MoveUp11](../../spec/move-subtree-up.md#moveup11)
+#### [MoveUp11](../../spec/move-subtree-up.md#moveup11)
 
 > moveSubtreeUp
 
@@ -6319,7 +7133,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - a1
@@ -6332,7 +7145,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - a1
@@ -6346,7 +7158,7 @@ para
 </td></tr>
 </table>
 
-#### 158. [MoveUp12](../../spec/move-subtree-up.md#moveup12)
+#### [MoveUp12](../../spec/move-subtree-up.md#moveup12)
 
 > moveSubtreeUp
 
@@ -6363,7 +7175,6 @@ intro
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 intro
 
@@ -6373,7 +7184,6 @@ intro
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - b┃
   - b1
@@ -6384,7 +7194,7 @@ intro
 </td></tr>
 </table>
 
-#### 159. [MoveUp13](../../spec/move-subtree-up.md#moveup13)
+#### [MoveUp13](../../spec/move-subtree-up.md#moveup13)
 
 > moveSubtreeUp
 
@@ -6404,7 +7214,6 @@ intro
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - b┃
   ```
@@ -6417,7 +7226,6 @@ intro
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - b┃
   ```
@@ -6431,7 +7239,7 @@ intro
 </td></tr>
 </table>
 
-#### 160. [MoveUp15](../../spec/move-subtree-up.md#moveup15)
+#### [MoveUp15](../../spec/move-subtree-up.md#moveup15)
 
 > moveSubtreeUp
 
@@ -6447,7 +7255,6 @@ intro
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. b
 2. ┃a
@@ -6456,7 +7263,6 @@ intro
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 9. b┃
 10. a
@@ -6466,7 +7272,7 @@ intro
 </td></tr>
 </table>
 
-#### 161. [MoveUp16](../../spec/move-subtree-up.md#moveup16)
+#### [MoveUp16](../../spec/move-subtree-up.md#moveup16)
 
 > moveSubtreeUp
 
@@ -6483,7 +7289,6 @@ intro
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # A
 ## a1
@@ -6493,7 +7298,6 @@ intro
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # B┃
 ## b1
@@ -6504,7 +7308,7 @@ intro
 </td></tr>
 </table>
 
-#### 162. [MoveUp17](../../spec/move-subtree-up.md#moveup17)
+#### [MoveUp17](../../spec/move-subtree-up.md#moveup17)
 
 > moveSubtreeUp
 
@@ -6521,7 +7325,6 @@ para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 first
 
@@ -6531,7 +7334,6 @@ para┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para┃
 - a
@@ -6542,7 +7344,7 @@ first
 </td></tr>
 </table>
 
-#### 163. [MoveUp18](../../spec/move-subtree-up.md#moveup18)
+#### [MoveUp18](../../spec/move-subtree-up.md#moveup18)
 
 > moveSubtreeUp
 
@@ -6557,7 +7359,6 @@ first
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 →- a
 ┃para
@@ -6565,7 +7366,6 @@ first
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃para
 
@@ -6575,7 +7375,7 @@ first
 </td></tr>
 </table>
 
-#### 164. [MoveUp19](../../spec/move-subtree-up.md#moveup19)
+#### [MoveUp19](../../spec/move-subtree-up.md#moveup19)
 
 > moveSubtreeUp
 
@@ -6590,7 +7390,6 @@ para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ---
 para┃
@@ -6598,7 +7397,6 @@ para┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para┃
 
@@ -6608,7 +7406,7 @@ para┃
 </td></tr>
 </table>
 
-#### 165. [MoveUp20](../../spec/move-subtree-up.md#moveup20)
+#### [MoveUp20](../../spec/move-subtree-up.md#moveup20)
 
 > moveSubtreeUp
 
@@ -6623,7 +7421,6 @@ para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 [a]: /u
 para┃
@@ -6631,7 +7428,6 @@ para┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para┃
 
@@ -6641,7 +7437,7 @@ para┃
 </td></tr>
 </table>
 
-#### 166. [MoveUp21](../../spec/move-subtree-up.md#moveup21)
+#### [MoveUp21](../../spec/move-subtree-up.md#moveup21)
 
 > moveSubtreeUp
 
@@ -6657,7 +7453,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para
 - a┃
@@ -6666,7 +7461,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
 
@@ -6677,7 +7471,7 @@ para
 </td></tr>
 </table>
 
-#### 167. [MoveUp22](../../spec/move-subtree-up.md#moveup22)
+#### [MoveUp22](../../spec/move-subtree-up.md#moveup22)
 
 > moveSubtreeUp
 
@@ -6696,7 +7490,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Work
 - email
@@ -6708,7 +7501,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Work
 - email
@@ -6721,7 +7513,7 @@ para
 </td></tr>
 </table>
 
-#### 168. [MoveUp23](../../spec/move-subtree-up.md#moveup23)
+#### [MoveUp23](../../spec/move-subtree-up.md#moveup23)
 
 > moveSubtreeUp
 
@@ -6740,7 +7532,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # A
 ## sub
@@ -6752,7 +7543,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # A
 ## sub
@@ -6766,7 +7556,7 @@ para
 </td></tr>
 </table>
 
-#### 169. [MoveUp24](../../spec/move-subtree-up.md#moveup24)
+#### [MoveUp24](../../spec/move-subtree-up.md#moveup24)
 
 > moveSubtreeUp
 
@@ -6785,7 +7575,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Todo
 - one
@@ -6797,7 +7586,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Todo
 - one
@@ -6810,7 +7598,7 @@ para
 </td></tr>
 </table>
 
-#### 170. [MoveUp25](../../spec/move-subtree-up.md#moveup25)
+#### [MoveUp25](../../spec/move-subtree-up.md#moveup25)
 
 > moveSubtreeUp
 
@@ -6827,7 +7615,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 
@@ -6837,7 +7624,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - b┃
   - b1
@@ -6848,7 +7634,7 @@ para
 </td></tr>
 </table>
 
-#### 171. [MoveUp26](../../spec/move-subtree-up.md#moveup26)
+#### [MoveUp26](../../spec/move-subtree-up.md#moveup26)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -6872,7 +7658,6 @@ para
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # A
 - x
@@ -6884,7 +7669,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # A
 - x
@@ -6915,7 +7699,7 @@ para
 </td></tr>
 </table>
 
-#### 172. [MoveUp27](../../spec/move-subtree-up.md#moveup27)
+#### [MoveUp27](../../spec/move-subtree-up.md#moveup27)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -6938,7 +7722,6 @@ para
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Work
 para
@@ -6949,7 +7732,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Work
 para
@@ -6978,7 +7760,7 @@ para
 </td></tr>
 </table>
 
-#### 173. [MoveUp29](../../spec/move-subtree-up.md#moveup29)
+#### [MoveUp29](../../spec/move-subtree-up.md#moveup29)
 
 > moveSubtreeUp
 
@@ -6994,7 +7776,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # H
 - ┃a
@@ -7003,7 +7784,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃a
 # H
@@ -7013,7 +7793,7 @@ para
 </td></tr>
 </table>
 
-#### 174. [MoveUp30](../../spec/move-subtree-up.md#moveup30)
+#### [MoveUp30](../../spec/move-subtree-up.md#moveup30)
 
 > moveSubtreeUp
 
@@ -7028,7 +7808,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 [a]: /u
     ┃code
@@ -7036,7 +7815,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃code
 
@@ -7046,7 +7824,7 @@ para
 </td></tr>
 </table>
 
-#### 175. [MoveUp31](../../spec/move-subtree-up.md#moveup31)
+#### [MoveUp31](../../spec/move-subtree-up.md#moveup31)
 
 > moveSubtreeUp
 
@@ -7062,7 +7840,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - c
 - «a
@@ -7071,7 +7848,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - «a
   - b»
@@ -7081,7 +7857,7 @@ para
 </td></tr>
 </table>
 
-#### 176. [MoveUp35](../../spec/move-subtree-up.md#moveup35)
+#### [MoveUp35](../../spec/move-subtree-up.md#moveup35)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -7102,7 +7878,6 @@ para
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para
 > q┃
@@ -7111,7 +7886,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > q┃
 
@@ -7128,7 +7902,6 @@ para
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para
 > q┃
@@ -7137,7 +7910,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para
 - a
@@ -7148,7 +7920,7 @@ para
 </td></tr>
 </table>
 
-#### 177. [Enter › #228 › Renumbering stops at a delimiter change](../../spec/obsidian-true-outliner.md#renumbering-stops-at-a-delimiter-change)
+#### [Enter › #228 › Renumbering stops at a delimiter change](../../spec/obsidian-true-outliner.md#renumbering-stops-at-a-delimiter-change)
 
 > enter
 
@@ -7164,7 +7936,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. a
 2. ┃
@@ -7174,7 +7945,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 1. a
 2. ┃
@@ -7185,7 +7955,7 @@ para
 </td></tr>
 </table>
 
-#### 178. [Enter › E4](../../spec/obsidian-true-outliner.md#e4)
+#### [Enter › E4](../../spec/obsidian-true-outliner.md#e4)
 
 > enter
 
@@ -7200,7 +7970,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - first
   second
@@ -7209,7 +7978,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - first
   second
@@ -7219,7 +7987,7 @@ para
 </td></tr>
 </table>
 
-#### 179. [Enter › E9](../../spec/obsidian-true-outliner.md#e9)
+#### [Enter › E9](../../spec/obsidian-true-outliner.md#e9)
 
 > enter
 
@@ -7234,7 +8002,6 @@ one┃ two
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 one
 ┃two
@@ -7243,7 +8010,6 @@ one
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 one
 
@@ -7254,7 +8020,7 @@ one
 </td></tr>
 </table>
 
-#### 180. [Enter › E10](../../spec/obsidian-true-outliner.md#e10)
+#### [Enter › E10](../../spec/obsidian-true-outliner.md#e10)
 
 > enter
 
@@ -7270,7 +8036,6 @@ one
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - item
 - ┃
@@ -7280,7 +8045,6 @@ one
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - item
   - ┃
@@ -7291,7 +8055,7 @@ one
 </td></tr>
 </table>
 
-#### 181. [Enter › E17](../../spec/obsidian-true-outliner.md#e17)
+#### [Enter › E17](../../spec/obsidian-true-outliner.md#e17)
 
 > enter
 
@@ -7306,7 +8070,6 @@ Hello┃ world
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 Hello
 ┃world
@@ -7315,7 +8078,6 @@ Hello
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 Hello
 ====
@@ -7325,7 +8087,7 @@ Hello
 </td></tr>
 </table>
 
-#### 182. [Enter › E18](../../spec/obsidian-true-outliner.md#e18)
+#### [Enter › E18](../../spec/obsidian-true-outliner.md#e18)
 
 > enter
 
@@ -7340,7 +8102,6 @@ Hello world
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 Hello world
 ==
@@ -7349,7 +8110,6 @@ Hello world
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 Hello world
 ====
@@ -7359,7 +8119,7 @@ Hello world
 </td></tr>
 </table>
 
-#### 183. [Enter › E32 › Task checkbox carries over unchecked](../../spec/obsidian-true-outliner.md#task-checkbox-carries-over-unchecked)
+#### [Enter › E32 › Task checkbox carries over unchecked](../../spec/obsidian-true-outliner.md#task-checkbox-carries-over-unchecked)
 
 > enter
 
@@ -7373,7 +8133,6 @@ Hello world
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - [ ] alpha
 - [ ] ┃ beta
@@ -7381,7 +8140,6 @@ Hello world
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] alpha
 - [ ] ┃beta
@@ -7390,7 +8148,7 @@ Hello world
 </td></tr>
 </table>
 
-#### 184. [Enter › #267, E5](../../spec/obsidian-true-outliner.md#267-e5)
+#### [Enter › #267, E5](../../spec/obsidian-true-outliner.md#267-e5)
 
 > enter
 
@@ -7406,7 +8164,6 @@ para┃ text
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # H
 para
@@ -7416,7 +8173,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # H
 para
@@ -7428,7 +8184,7 @@ para
 </td></tr>
 </table>
 
-#### 185. [Enter › E14, E20 › Split title above an existing paragraph](../../spec/obsidian-true-outliner.md#split-title-above-an-existing-paragraph)
+#### [Enter › E14, E20 › Split title above an existing paragraph](../../spec/obsidian-true-outliner.md#split-title-above-an-existing-paragraph)
 
 > enter
 
@@ -7443,7 +8199,6 @@ Body.
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Head
 ┃line
@@ -7452,7 +8207,6 @@ Body.
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Head
 ┃line
@@ -7463,7 +8217,7 @@ Body.
 </td></tr>
 </table>
 
-#### 186. [Enter › E14, E20 › End of heading above a paragraph](../../spec/obsidian-true-outliner.md#end-of-heading-above-a-paragraph)
+#### [Enter › E14, E20 › End of heading above a paragraph](../../spec/obsidian-true-outliner.md#end-of-heading-above-a-paragraph)
 
 > enter
 
@@ -7478,7 +8232,6 @@ Body.
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Head
 ┃
@@ -7487,7 +8240,6 @@ Body.
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Head
 ┃
@@ -7498,7 +8250,7 @@ Body.
 </td></tr>
 </table>
 
-#### 187. [Shift-Enter › S4](../../spec/obsidian-true-outliner.md#s4)
+#### [Shift-Enter › S4](../../spec/obsidian-true-outliner.md#s4)
 
 > shiftEnter
 
@@ -7512,7 +8264,6 @@ one┃ two
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 one
 ┃ two
@@ -7520,7 +8271,6 @@ one
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 one
 ┃two
@@ -7529,7 +8279,7 @@ one
 </td></tr>
 </table>
 
-#### 188. [Shift-Enter › S7, S8 › Line break in setext title refused](../../spec/obsidian-true-outliner.md#line-break-in-setext-title-refused)
+#### [Shift-Enter › S7, S8 › Line break in setext title refused](../../spec/obsidian-true-outliner.md#line-break-in-setext-title-refused)
 
 > shiftEnter
 
@@ -7544,7 +8294,6 @@ Hello┃ world
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 Hello
 ┃ world
@@ -7553,7 +8302,6 @@ Hello
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 Hello┃ world
 ====
@@ -7562,7 +8310,7 @@ Hello┃ world
 </td></tr>
 </table>
 
-#### 189. [Shift-Enter › S7, S8 › Line break in setext underline refused](../../spec/obsidian-true-outliner.md#line-break-in-setext-underline-refused)
+#### [Shift-Enter › S7, S8 › Line break in setext underline refused](../../spec/obsidian-true-outliner.md#line-break-in-setext-underline-refused)
 
 > shiftEnter
 
@@ -7577,7 +8325,6 @@ Hello world
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 Hello world
 ==
@@ -7586,7 +8333,6 @@ Hello world
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 Hello world
 ==┃==
@@ -7595,7 +8341,7 @@ Hello world
 </td></tr>
 </table>
 
-#### 190. [Shift-Enter › S9](../../spec/obsidian-true-outliner.md#s9)
+#### [Shift-Enter › S9](../../spec/obsidian-true-outliner.md#s9)
 
 > shiftEnter
 
@@ -7611,7 +8357,6 @@ Hello world
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - item
 
@@ -7621,7 +8366,6 @@ Hello world
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - item
 
@@ -7632,7 +8376,7 @@ Hello world
 </td></tr>
 </table>
 
-#### 191. [Shift-Enter › S11 › Leaving the place removes it](../../spec/obsidian-true-outliner.md#leaving-the-place-removes-it)
+#### [Shift-Enter › S11 › Leaving the place removes it](../../spec/obsidian-true-outliner.md#leaving-the-place-removes-it)
 
 > shiftEnter cursorDocStart
 
@@ -7647,7 +8391,6 @@ bar
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ┃foo
 
@@ -7656,7 +8399,6 @@ bar
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃foo
 bar
@@ -7665,7 +8407,7 @@ bar
 </td></tr>
 </table>
 
-#### 192. [Shift-Enter › S13](../../spec/obsidian-true-outliner.md#s13)
+#### [Shift-Enter › S13](../../spec/obsidian-true-outliner.md#s13)
 
 > shiftEnter
 
@@ -7679,7 +8421,6 @@ bar
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
  ┃beta
@@ -7687,7 +8428,6 @@ bar
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   ┃beta
@@ -7696,7 +8436,7 @@ bar
 </td></tr>
 </table>
 
-#### 193. [Backspace › Joining an item with children › Children move to the joined node](../../spec/obsidian-true-outliner.md#children-move-to-the-joined-node)
+#### [Backspace › Joining an item with children › Children move to the joined node](../../spec/obsidian-true-outliner.md#children-move-to-the-joined-node)
 
 > deleteContentBackward
 
@@ -7712,7 +8452,6 @@ bar
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - ┃b
@@ -7721,7 +8460,6 @@ bar
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃b
   - c
@@ -7730,7 +8468,7 @@ bar
 </td></tr>
 </table>
 
-#### 194. [Backspace › Joining an item with children › Delete forward absorbs child with grandchildren](../../spec/obsidian-true-outliner.md#delete-forward-absorbs-child-with-grandchildren)
+#### [Backspace › Joining an item with children › Delete forward absorbs child with grandchildren](../../spec/obsidian-true-outliner.md#delete-forward-absorbs-child-with-grandchildren)
 
 > deleteContentForward
 
@@ -7746,7 +8484,6 @@ bar
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a┃
   - b
@@ -7755,7 +8492,6 @@ bar
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃b
   - c
@@ -7764,7 +8500,7 @@ bar
 </td></tr>
 </table>
 
-#### 195. [Backspace › Joining away the head of a list › List starting at 3 keeps its start](../../spec/obsidian-true-outliner.md#list-starting-at-3-keeps-its-start)
+#### [Backspace › Joining away the head of a list › List starting at 3 keeps its start](../../spec/obsidian-true-outliner.md#list-starting-at-3-keeps-its-start)
 
 > deleteContentBackward
 
@@ -7780,7 +8516,6 @@ bar
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. a┃b
 2. c
@@ -7788,7 +8523,6 @@ bar
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 3. a┃b
 4. c
@@ -7797,7 +8531,7 @@ bar
 </td></tr>
 </table>
 
-#### 196. [Indentation › list-marker-content-column](../../spec/obsidian-true-outliner.md#list-marker-content-column)
+#### [Indentation › list-marker-content-column](../../spec/obsidian-true-outliner.md#list-marker-content-column)
 
 > indent
 
@@ -7812,7 +8546,6 @@ bar
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 -  parent
   -  kid┃
@@ -7820,7 +8553,6 @@ bar
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 -  parent
    -  kid┃
@@ -7829,7 +8561,7 @@ bar
 </td></tr>
 </table>
 
-#### 197. [Indentation › seams-across-a-re-indent › Indented item keeps its thematic break](../../spec/obsidian-true-outliner.md#indented-item-keeps-its-thematic-break)
+#### [Indentation › seams-across-a-re-indent › Indented item keeps its thematic break](../../spec/obsidian-true-outliner.md#indented-item-keeps-its-thematic-break)
 
 > indent
 
@@ -7846,7 +8578,6 @@ bar
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - b┃
@@ -7856,7 +8587,6 @@ bar
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - b┃
@@ -7867,7 +8597,7 @@ bar
 </td></tr>
 </table>
 
-#### 198. [Indentation › seams-across-a-re-indent › Outdented item keeps its code block](../../spec/obsidian-true-outliner.md#outdented-item-keeps-its-code-block)
+#### [Indentation › seams-across-a-re-indent › Outdented item keeps its code block](../../spec/obsidian-true-outliner.md#outdented-item-keeps-its-code-block)
 
 > outdent
 
@@ -7884,7 +8614,6 @@ bar
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 - b┃
@@ -7894,7 +8623,6 @@ bar
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - b┃
@@ -7905,7 +8633,7 @@ bar
 </td></tr>
 </table>
 
-#### 199. [Indentation › destination-list-style](../../spec/obsidian-true-outliner.md#destination-list-style)
+#### [Indentation › destination-list-style](../../spec/obsidian-true-outliner.md#destination-list-style)
 
 > indent
 
@@ -7921,7 +8649,6 @@ bar
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 * a
   * x
@@ -7930,7 +8657,6 @@ bar
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 * a
   * x
@@ -7940,7 +8666,7 @@ bar
 </td></tr>
 </table>
 
-#### 200. [Moving › lone-block-id › Block id moves with its paragraph](../../spec/obsidian-true-outliner.md#block-id-moves-with-its-paragraph)
+#### [Moving › lone-block-id › Block id moves with its paragraph](../../spec/obsidian-true-outliner.md#block-id-moves-with-its-paragraph)
 
 > moveSubtreeUp
 
@@ -7957,7 +8683,6 @@ para┃ two
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para one
 ^blk
@@ -7967,7 +8692,6 @@ para┃ two
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para┃ two
 
@@ -7978,7 +8702,7 @@ para one
 </td></tr>
 </table>
 
-#### 201. [Moving › lazy-continuation-at-seams › Blank line added below a quote](../../spec/obsidian-true-outliner.md#blank-line-added-below-a-quote)
+#### [Moving › lazy-continuation-at-seams › Blank line added below a quote](../../spec/obsidian-true-outliner.md#blank-line-added-below-a-quote)
 
 > moveSubtreeDown
 
@@ -7993,7 +8717,6 @@ para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para┃
 > q
@@ -8001,7 +8724,6 @@ para┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > q
 
@@ -8011,7 +8733,7 @@ para┃
 </td></tr>
 </table>
 
-#### 202. [Moving › lazy-continuation-at-seams › No blank line needed after a fence](../../spec/obsidian-true-outliner.md#no-blank-line-needed-after-a-fence)
+#### [Moving › lazy-continuation-at-seams › No blank line needed after a fence](../../spec/obsidian-true-outliner.md#no-blank-line-needed-after-a-fence)
 
 > moveSubtreeDown
 
@@ -8028,7 +8750,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 para┃
 ```
@@ -8038,7 +8759,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 ```
 code
@@ -8049,7 +8769,7 @@ para┃
 </td></tr>
 </table>
 
-#### 203. [Moving › lazy-continuation-at-seams › No blank line needed before a fence](../../spec/obsidian-true-outliner.md#no-blank-line-needed-before-a-fence)
+#### [Moving › lazy-continuation-at-seams › No blank line needed before a fence](../../spec/obsidian-true-outliner.md#no-blank-line-needed-before-a-fence)
 
 > moveSubtreeDown
 
@@ -8066,7 +8786,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 ```
 code┃
@@ -8076,7 +8795,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 para
 ```
@@ -8087,7 +8805,7 @@ code┃
 </td></tr>
 </table>
 
-#### 204. [Abandoning an empty place › Shift-Enter, Tab, then leave › Carried place removed on leaving](../../spec/obsidian-true-outliner.md#carried-place-removed-on-leaving)
+#### [Abandoning an empty place › Shift-Enter, Tab, then leave › Carried place removed on leaving](../../spec/obsidian-true-outliner.md#carried-place-removed-on-leaving)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -8124,7 +8842,6 @@ code┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ┃one
   - kid
@@ -8134,7 +8851,6 @@ code┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃- one
   - kid
@@ -8144,7 +8860,7 @@ code┃
 </td></tr>
 </table>
 
-#### 205. [Abandoning an empty place › Shift-Enter, Tab, then leave › Doubly indented place removed on leaving](../../spec/obsidian-true-outliner.md#doubly-indented-place-removed-on-leaving)
+#### [Abandoning an empty place › Shift-Enter, Tab, then leave › Doubly indented place removed on leaving](../../spec/obsidian-true-outliner.md#doubly-indented-place-removed-on-leaving)
 
 > shiftEnter indent indent cursorDocStart
 
@@ -8161,7 +8877,6 @@ code┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ┃one
   - kid
@@ -8172,7 +8887,6 @@ code┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃- one
   - kid
@@ -8183,7 +8897,7 @@ code┃
 </td></tr>
 </table>
 
-#### 206. [Abandoning an empty place › Shift-Enter, Tab, then Enter](../../spec/obsidian-true-outliner.md#shift-enter-tab-then-enter)
+#### [Abandoning an empty place › Shift-Enter, Tab, then Enter](../../spec/obsidian-true-outliner.md#shift-enter-tab-then-enter)
 
 > shiftEnter indent enter
 
@@ -8200,7 +8914,6 @@ code┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - one
   - kid
@@ -8212,7 +8925,6 @@ code┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one
   - kid
@@ -8224,7 +8936,7 @@ code┃
 </td></tr>
 </table>
 
-#### 207. [Abandoning an empty place › Enter, Tab, then leave › An empty ordered child kept with a blank line](../../spec/obsidian-true-outliner.md#an-empty-ordered-child-kept-with-a-blank-line)
+#### [Abandoning an empty place › Enter, Tab, then leave › An empty ordered child kept with a blank line](../../spec/obsidian-true-outliner.md#an-empty-ordered-child-kept-with-a-blank-line)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -8244,7 +8956,6 @@ code┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. a
   1. ┃
@@ -8253,7 +8964,6 @@ code┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 1. a
    1. ┃
@@ -8269,7 +8979,6 @@ code┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. ┃a
   1. 
@@ -8278,7 +8987,6 @@ code┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃1. a
 
@@ -8289,7 +8997,7 @@ code┃
 </td></tr>
 </table>
 
-#### 208. [Abandoning an empty place › Enter, Tab, then leave › Blank line after the list stays](../../spec/obsidian-true-outliner.md#blank-line-after-the-list-stays)
+#### [Abandoning an empty place › Enter, Tab, then leave › Blank line after the list stays](../../spec/obsidian-true-outliner.md#blank-line-after-the-list-stays)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -8342,7 +9050,6 @@ para
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ┃foo
   - 
@@ -8352,7 +9059,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃- foo
 
@@ -8364,7 +9070,7 @@ para
 </td></tr>
 </table>
 
-#### 209. [Abandoning an empty place › Enter twice, then leave › Empty paragraph and blank lines removed](../../spec/obsidian-true-outliner.md#empty-paragraph-and-blank-lines-removed)
+#### [Abandoning an empty place › Enter twice, then leave › Empty paragraph and blank lines removed](../../spec/obsidian-true-outliner.md#empty-paragraph-and-blank-lines-removed)
 
 > enter enter cursorDocStart
 
@@ -8379,7 +9085,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ┃a
 
@@ -8388,7 +9093,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃- a
 - b
@@ -8397,7 +9101,7 @@ para
 </td></tr>
 </table>
 
-#### 210. [Abandoning an empty place › Enter twice, then leave › Indented list under paragraph restored](../../spec/obsidian-true-outliner.md#indented-list-under-paragraph-restored)
+#### [Abandoning an empty place › Enter twice, then leave › Indented list under paragraph restored](../../spec/obsidian-true-outliner.md#indented-list-under-paragraph-restored)
 
 > enter enter cursorDocStart
 
@@ -8413,7 +9117,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ┃para
   - a
@@ -8423,7 +9126,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃para
   - a
@@ -8433,7 +9135,7 @@ para
 </td></tr>
 </table>
 
-#### 211. [Paste › #216 › Pasted list takes space indent unit](../../spec/obsidian-true-outliner.md#pasted-list-takes-space-indent-unit)
+#### [Paste › #216 › Pasted list takes space indent unit](../../spec/obsidian-true-outliner.md#pasted-list-takes-space-indent-unit)
 
 > pasteStructured
 
@@ -8456,7 +9158,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - top
   - sib- a
@@ -8467,7 +9168,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - top
   - sib
@@ -8479,7 +9179,7 @@ para
 </td></tr>
 </table>
 
-#### 212. [Paste › #216 › Pasted list takes tab indent unit](../../spec/obsidian-true-outliner.md#pasted-list-takes-tab-indent-unit)
+#### [Paste › #216 › Pasted list takes tab indent unit](../../spec/obsidian-true-outliner.md#pasted-list-takes-tab-indent-unit)
 
 > pasteStructured
 
@@ -8502,7 +9202,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - top
 →- sib- a
@@ -8513,7 +9212,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - top
 →- sib
@@ -8525,7 +9223,7 @@ para
 </td></tr>
 </table>
 
-#### 213. [Paste › #264 › Pasted quote set off from paragraph](../../spec/obsidian-true-outliner.md#pasted-quote-set-off-from-paragraph)
+#### [Paste › #264 › Pasted quote set off from paragraph](../../spec/obsidian-true-outliner.md#pasted-quote-set-off-from-paragraph)
 
 > pasteStructured
 
@@ -8548,7 +9246,6 @@ below
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ## H    first
 
@@ -8559,7 +9256,6 @@ below
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ## H
 
@@ -8573,7 +9269,7 @@ below
 </td></tr>
 </table>
 
-#### 214. [Paste › #197 › Pasted list and block become children](../../spec/obsidian-true-outliner.md#pasted-list-and-block-become-children)
+#### [Paste › #197 › Pasted list and block become children](../../spec/obsidian-true-outliner.md#pasted-list-and-block-become-children)
 
 > pasteStructured
 
@@ -8596,7 +9292,6 @@ below
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - top- alpha
 
@@ -8607,7 +9302,6 @@ below
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - top
   - alpha
@@ -8618,7 +9312,7 @@ below
 </td></tr>
 </table>
 
-#### 215. [Outdent4](../../spec/outdent.md#outdent4)
+#### [Outdent4](../../spec/outdent.md#outdent4)
 
 > outdent
 
@@ -8633,7 +9327,6 @@ below
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ## A┃
 ### B
@@ -8641,7 +9334,6 @@ below
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # A┃
 ## B
@@ -8650,7 +9342,7 @@ below
 </td></tr>
 </table>
 
-#### 216. [Outdent7](../../spec/outdent.md#outdent7)
+#### [Outdent7](../../spec/outdent.md#outdent7)
 
 > outdent
 
@@ -8666,7 +9358,6 @@ below
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - 
@@ -8675,7 +9366,6 @@ below
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃x
@@ -8686,7 +9376,7 @@ below
 </td></tr>
 </table>
 
-#### 217. [Outdent8](../../spec/outdent.md#outdent8)
+#### [Outdent8](../../spec/outdent.md#outdent8)
 
 > outdent
 
@@ -8703,7 +9393,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para
 - «a
@@ -8713,7 +9402,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para
 
@@ -8726,7 +9414,7 @@ c»
 </td></tr>
 </table>
 
-#### 218. [Outdent11](../../spec/outdent.md#outdent11)
+#### [Outdent11](../../spec/outdent.md#outdent11)
 
 > outdent
 
@@ -8744,7 +9432,6 @@ Also: [outdent.md › Logical outdent › LogicalOutdent5](../../spec/outdent.md
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # T
 ## A┃
@@ -8753,7 +9440,6 @@ Also: [outdent.md › Logical outdent › LogicalOutdent5](../../spec/outdent.md
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # T
 # A┃
@@ -8763,7 +9449,7 @@ Also: [outdent.md › Logical outdent › LogicalOutdent5](../../spec/outdent.md
 </td></tr>
 </table>
 
-#### 219. [Outdent12](../../spec/outdent.md#outdent12)
+#### [Outdent12](../../spec/outdent.md#outdent12)
 
 > outdent
 
@@ -8778,7 +9464,6 @@ Also: [outdent.md › Logical outdent › LogicalOutdent5](../../spec/outdent.md
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - «a
 - b»
@@ -8786,7 +9471,6 @@ Also: [outdent.md › Logical outdent › LogicalOutdent5](../../spec/outdent.md
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 «a
 
@@ -8796,7 +9480,7 @@ b»
 </td></tr>
 </table>
 
-#### 220. [Outdent13](../../spec/outdent.md#outdent13)
+#### [Outdent13](../../spec/outdent.md#outdent13)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -8818,7 +9502,6 @@ b»
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - d
@@ -8828,7 +9511,6 @@ b»
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - b┃
@@ -8845,7 +9527,6 @@ b»
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - d
@@ -8855,7 +9536,6 @@ b»
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - b┃
@@ -8866,7 +9546,7 @@ b»
 </td></tr>
 </table>
 
-#### 221. [Outdent15](../../spec/outdent.md#outdent15)
+#### [Outdent15](../../spec/outdent.md#outdent15)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -8886,7 +9566,6 @@ para
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para
 - b┃
@@ -8894,7 +9573,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para
 
@@ -8918,7 +9596,7 @@ para
 </td></tr>
 </table>
 
-#### 222. [Direct outdent › DirectOutdent1](../../spec/outdent.md#directoutdent1)
+#### [Direct outdent › DirectOutdent1](../../spec/outdent.md#directoutdent1)
 
 > outdent
 
@@ -8936,7 +9614,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - c
@@ -8947,7 +9624,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - b┃
@@ -8959,7 +9635,7 @@ para
 </td></tr>
 </table>
 
-#### 223. [Direct outdent › DirectOutdent2](../../spec/outdent.md#directoutdent2)
+#### [Direct outdent › DirectOutdent2](../../spec/outdent.md#directoutdent2)
 
 > outdent
 
@@ -8974,7 +9650,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a┃
 - b
@@ -8982,7 +9657,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 a┃
 - b
@@ -8991,7 +9665,7 @@ a┃
 </td></tr>
 </table>
 
-#### 224. [Direct outdent › DirectOutdent3](../../spec/outdent.md#directoutdent3)
+#### [Direct outdent › DirectOutdent3](../../spec/outdent.md#directoutdent3)
 
 > outdent
 
@@ -9007,7 +9681,6 @@ a┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a┃
   - a1
@@ -9016,7 +9689,6 @@ a┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 a┃
 - a1
@@ -9026,7 +9698,7 @@ a┃
 </td></tr>
 </table>
 
-#### 225. [Direct outdent › DirectOutdent4](../../spec/outdent.md#directoutdent4)
+#### [Direct outdent › DirectOutdent4](../../spec/outdent.md#directoutdent4)
 
 > outdent
 
@@ -9042,7 +9714,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para
 - a┃
@@ -9051,7 +9722,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para
 
@@ -9062,7 +9732,7 @@ a┃
 </td></tr>
 </table>
 
-#### 226. [Logical outdent › LogicalOutdent2](../../spec/outdent.md#logicaloutdent2)
+#### [Logical outdent › LogicalOutdent2](../../spec/outdent.md#logicaloutdent2)
 
 > outdent
 
@@ -9077,7 +9747,6 @@ a┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a┃
 - b
@@ -9085,7 +9754,6 @@ a┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - b
 
@@ -9095,7 +9763,7 @@ a┃
 </td></tr>
 </table>
 
-#### 227. [Logical outdent › LogicalOutdent3](../../spec/outdent.md#logicaloutdent3)
+#### [Logical outdent › LogicalOutdent3](../../spec/outdent.md#logicaloutdent3)
 
 > outdent
 
@@ -9111,7 +9779,6 @@ a┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a┃
   - a1
@@ -9120,7 +9787,6 @@ a┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - b
 
@@ -9131,7 +9797,7 @@ a┃
 </td></tr>
 </table>
 
-#### 228. [Logical outdent › LogicalOutdent4](../../spec/outdent.md#logicaloutdent4)
+#### [Logical outdent › LogicalOutdent4](../../spec/outdent.md#logicaloutdent4)
 
 > outdent
 
@@ -9147,7 +9813,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para
 - a┃
@@ -9156,7 +9821,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para
 - b
@@ -9167,7 +9831,106 @@ a┃
 </td></tr>
 </table>
 
-#### 229. [Paste1](../../spec/paste.md#paste1)
+#### [Outdent17](../../spec/outdent.md#outdent17)
+
+> outdent
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃# H
+- b
+```
+
+</td><td>
+
+```buffer
+- ┃# H
+- b
+```
+
+</td><td>
+
+```buffer
+# ┃H
+- b
+```
+
+</td></tr>
+</table>
+
+#### [Outdent17b](../../spec/outdent.md#outdent17b)
+
+> outdent
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃# H
+- b
+```
+
+</td><td>
+
+```buffer
+- ┃# H
+- b
+```
+
+</td><td>
+
+```buffer
+- b
+# ┃H
+```
+
+</td></tr>
+</table>
+
+#### [Outdent19](../../spec/outdent.md#outdent19)
+
+> outdent
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ┃```
+  code
+  ```
+  - c
+- d
+````
+
+</td><td>
+
+````buffer
+- ┃```
+  code
+  ```
+  - c
+- d
+````
+
+</td><td>
+
+````buffer
+```
+┃code
+```
+- c
+- d
+````
+
+</td></tr>
+</table>
+
+#### [Paste1](../../spec/paste.md#paste1)
 
 > pasteStructured
 
@@ -9191,7 +9954,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 para
 - a```
@@ -9203,7 +9965,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 para
 - a
@@ -9216,7 +9977,7 @@ para
 </td></tr>
 </table>
 
-#### 230. [Paste2](../../spec/paste.md#paste2)
+#### [Paste2](../../spec/paste.md#paste2)
 
 > pasteStructured
 
@@ -9238,7 +9999,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. a- x
 - y
@@ -9248,7 +10008,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 1. a
 2. x
@@ -9259,7 +10018,7 @@ para
 </td></tr>
 </table>
 
-#### 231. [Paste3](../../spec/paste.md#paste3)
+#### [Paste3](../../spec/paste.md#paste3)
 
 > pastePlain
 
@@ -9280,7 +10039,6 @@ y
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ax
 y
@@ -9289,7 +10047,6 @@ y
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ax
   y
@@ -9299,7 +10056,7 @@ y
 </td></tr>
 </table>
 
-#### 232. [Paste4](../../spec/paste.md#paste4)
+#### [Paste4](../../spec/paste.md#paste4)
 
 > pastePlain
 
@@ -9320,7 +10077,6 @@ x
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ax
 - y
@@ -9329,7 +10085,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ax
   \- y
@@ -9339,7 +10094,7 @@ x
 </td></tr>
 </table>
 
-#### 233. [Paste5](../../spec/paste.md#paste5)
+#### [Paste5](../../spec/paste.md#paste5)
 
 > pastePlain
 
@@ -9360,7 +10115,6 @@ y
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ax
 y
@@ -9369,7 +10123,6 @@ y
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ax
   y
@@ -9379,7 +10132,7 @@ y
 </td></tr>
 </table>
 
-#### 234. [Paste6](../../spec/paste.md#paste6)
+#### [Paste6](../../spec/paste.md#paste6)
 
 > pastePlain
 
@@ -9400,7 +10153,6 @@ y
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Hx
 y
@@ -9409,7 +10161,6 @@ y
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # H┃
 ```
@@ -9417,7 +10168,7 @@ y
 </td></tr>
 </table>
 
-#### 235. [Paste7](../../spec/paste.md#paste7)
+#### [Paste7](../../spec/paste.md#paste7)
 
 > pasteStructured
 
@@ -9438,7 +10189,6 @@ y
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ax
 y
@@ -9447,7 +10197,6 @@ y
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ax
   y
@@ -9457,7 +10206,7 @@ y
 </td></tr>
 </table>
 
-#### 236. [Paste9](../../spec/paste.md#paste9)
+#### [Paste9](../../spec/paste.md#paste9)
 
 > pasteStructured
 
@@ -9480,7 +10229,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a
 - ```
@@ -9491,7 +10239,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
 - ```
@@ -9502,7 +10249,7 @@ code
 </td></tr>
 </table>
 
-#### 237. [Paste10](../../spec/paste.md#paste10)
+#### [Paste10](../../spec/paste.md#paste10)
 
 > pasteStructured
 
@@ -9524,7 +10271,6 @@ y
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 - x
@@ -9534,7 +10280,6 @@ y
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - x
@@ -9545,7 +10290,7 @@ y
 </td></tr>
 </table>
 
-#### 238. [Paste11](../../spec/paste.md#paste11)
+#### [Paste11](../../spec/paste.md#paste11)
 
 > pasteStructured
 
@@ -9568,7 +10313,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a
   - ```
@@ -9579,7 +10323,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   - ```
@@ -9590,7 +10333,7 @@ code
 </td></tr>
 </table>
 
-#### 239. [Paste12](../../spec/paste.md#paste12)
+#### [Paste12](../../spec/paste.md#paste12)
 
 > pasteStructured
 
@@ -9612,7 +10355,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 - > q
@@ -9622,7 +10364,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - > q
@@ -9632,7 +10373,7 @@ code
 </td></tr>
 </table>
 
-#### 240. [Paste13](../../spec/paste.md#paste13)
+#### [Paste13](../../spec/paste.md#paste13)
 
 > pasteStructured
 
@@ -9654,7 +10395,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a1. x
 2. y
@@ -9664,7 +10404,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - 1\. x
@@ -9675,7 +10414,7 @@ code
 </td></tr>
 </table>
 
-#### 241. [Paste14](../../spec/paste.md#paste14)
+#### [Paste14](../../spec/paste.md#paste14)
 
 > pasteStructured
 
@@ -9697,7 +10436,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a1. x
 2. y
@@ -9707,7 +10445,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - 1\. x
@@ -9718,7 +10455,7 @@ code
 </td></tr>
 </table>
 
-#### 242. [Paste15](../../spec/paste.md#paste15)
+#### [Paste15](../../spec/paste.md#paste15)
 
 > pasteStructured
 
@@ -9740,7 +10477,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - x
 2. y
@@ -9750,7 +10486,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 1. x
 2. y┃
@@ -9760,7 +10495,7 @@ code
 </td></tr>
 </table>
 
-#### 243. [Paste16](../../spec/paste.md#paste16)
+#### [Paste16](../../spec/paste.md#paste16)
 
 > pasteStructured
 
@@ -9782,7 +10517,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. x
 - y
@@ -9792,7 +10526,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 1. x
 2. y┃
@@ -9802,7 +10535,7 @@ code
 </td></tr>
 </table>
 
-#### 244. [Paste17](../../spec/paste.md#paste17)
+#### [Paste17](../../spec/paste.md#paste17)
 
 > pasteStructured
 
@@ -9824,7 +10557,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a1. x
    1. x1
@@ -9834,7 +10566,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - 1\. x
@@ -9845,7 +10576,7 @@ code
 </td></tr>
 </table>
 
-#### 245. [Paste18](../../spec/paste.md#paste18)
+#### [Paste18](../../spec/paste.md#paste18)
 
 > pasteStructured
 
@@ -9867,7 +10598,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. a1. x
 2. y
@@ -9877,7 +10607,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 1. a
 2. x
@@ -9888,7 +10617,7 @@ code
 </td></tr>
 </table>
 
-#### 246. [Paste19](../../spec/paste.md#paste19)
+#### [Paste19](../../spec/paste.md#paste19)
 
 > pasteStructured
 
@@ -9909,7 +10638,6 @@ text
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a# h
 text
@@ -9918,7 +10646,6 @@ text
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - # h
@@ -9928,7 +10655,7 @@ text
 </td></tr>
 </table>
 
-#### 247. [Paste20](../../spec/paste.md#paste20)
+#### [Paste20](../../spec/paste.md#paste20)
 
 > pasteStructured
 
@@ -9952,7 +10679,6 @@ Notes┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 Notes- p
 - q
@@ -9964,7 +10690,6 @@ Notes- p
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 Notes
 
@@ -9977,7 +10702,7 @@ Notes
 </td></tr>
 </table>
 
-#### 248. [Paste21](../../spec/paste.md#paste21)
+#### [Paste21](../../spec/paste.md#paste21)
 
 > pasteStructured
 
@@ -9999,7 +10724,6 @@ Notes┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 Notes- p
 - q
@@ -10009,7 +10733,6 @@ Notes- p
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 Notes
 - p
@@ -10020,7 +10743,7 @@ Notes
 </td></tr>
 </table>
 
-#### 249. [Paste22](../../spec/paste.md#paste22)
+#### [Paste22](../../spec/paste.md#paste22)
 
 > pastePlain
 
@@ -10044,7 +10767,6 @@ a = 1
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - code
   ```
@@ -10055,7 +10777,6 @@ a = 1
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - code
   ```
@@ -10067,7 +10788,7 @@ a = 1
 </td></tr>
 </table>
 
-#### 250. [Paste23](../../spec/paste.md#paste23)
+#### [Paste23](../../spec/paste.md#paste23)
 
 > pasteStructured
 
@@ -10090,7 +10811,6 @@ a = 1
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 > ```
 > x- a
@@ -10100,7 +10820,6 @@ a = 1
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 > ```
 > x- a
@@ -10111,7 +10830,7 @@ a = 1
 </td></tr>
 </table>
 
-#### 251. [Paste25](../../spec/paste.md#paste25)
+#### [Paste25](../../spec/paste.md#paste25)
 
 > pasteStructured
 
@@ -10135,7 +10854,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a```
 c
@@ -10147,7 +10865,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   ```
@@ -10160,7 +10877,7 @@ c
 </td></tr>
 </table>
 
-#### 252. [Paste26](../../spec/paste.md#paste26)
+#### [Paste26](../../spec/paste.md#paste26)
 
 > pasteStructured
 
@@ -10181,7 +10898,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a- x
 ┃
@@ -10190,7 +10906,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - x┃
@@ -10200,7 +10915,7 @@ c
 </td></tr>
 </table>
 
-#### 253. [Paste27](../../spec/paste.md#paste27)
+#### [Paste27](../../spec/paste.md#paste27)
 
 > pasteStructured
 
@@ -10222,7 +10937,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - [ ] t- a
 - b
@@ -10232,7 +10946,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] t
     - a
@@ -10243,7 +10956,7 @@ c
 </td></tr>
 </table>
 
-#### 254. [Paste28](../../spec/paste.md#paste28)
+#### [Paste28](../../spec/paste.md#paste28)
 
 > pasteStructured
 
@@ -10265,7 +10978,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a> [!note] t
 > body
@@ -10275,7 +10987,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   > [!note] t
@@ -10286,7 +10997,7 @@ c
 </td></tr>
 </table>
 
-#### 255. [Paste29](../../spec/paste.md#paste29)
+#### [Paste29](../../spec/paste.md#paste29)
 
 > pasteStructured
 
@@ -10309,7 +11020,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - top- alpha
 
@@ -10320,7 +11030,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - top
 - alpha
@@ -10331,7 +11040,7 @@ c
 </td></tr>
 </table>
 
-#### 256. [Paste30](../../spec/paste.md#paste30)
+#### [Paste30](../../spec/paste.md#paste30)
 
 > pastePlain
 
@@ -10352,7 +11061,6 @@ x
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ax
 2. y┃
@@ -10360,7 +11068,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ax
   2\. y┃
@@ -10369,7 +11076,7 @@ x
 </td></tr>
 </table>
 
-#### 257. [Paste32](../../spec/paste.md#paste32)
+#### [Paste32](../../spec/paste.md#paste32)
 
 > pasteStructured
 
@@ -10389,7 +11096,6 @@ para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para# h
 ┃
@@ -10397,7 +11103,6 @@ para# h
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para
 
@@ -10407,7 +11112,7 @@ para
 </td></tr>
 </table>
 
-#### 258. [Paste33](../../spec/paste.md#paste33)
+#### [Paste33](../../spec/paste.md#paste33)
 
 > pasteStructured
 
@@ -10429,7 +11134,6 @@ para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ## A
 
@@ -10439,7 +11143,6 @@ para## h
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ## A
 
@@ -10451,7 +11154,7 @@ para
 </td></tr>
 </table>
 
-#### 259. [Paste34](../../spec/paste.md#paste34)
+#### [Paste34](../../spec/paste.md#paste34)
 
 > pasteStructured
 
@@ -10473,7 +11176,6 @@ next
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para# h
 ┃
@@ -10483,7 +11185,6 @@ next
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para
 
@@ -10495,7 +11196,7 @@ next
 </td></tr>
 </table>
 
-#### 260. [Paste35](../../spec/paste.md#paste35)
+#### [Paste35](../../spec/paste.md#paste35)
 
 > pasteStructured
 
@@ -10523,7 +11224,6 @@ more
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ## A
 
@@ -10539,7 +11239,6 @@ more
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ## A
 
@@ -10557,7 +11256,7 @@ more
 </td></tr>
 </table>
 
-#### 261. [Paste36](../../spec/paste.md#paste36)
+#### [Paste36](../../spec/paste.md#paste36)
 
 > pasteStructured
 
@@ -10579,7 +11278,6 @@ x
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - list
   - See x
@@ -10589,7 +11287,6 @@ x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - list
   - See x
@@ -10600,7 +11297,7 @@ x
 </td></tr>
 </table>
 
-#### 262. [Paste37](../../spec/paste.md#paste37)
+#### [Paste37](../../spec/paste.md#paste37)
 
 > pasteStructured
 
@@ -10621,7 +11318,6 @@ See ┃here.
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 See x
 - y
@@ -10630,7 +11326,6 @@ See x
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 See x
 - y
@@ -10641,7 +11336,7 @@ See x
 </td></tr>
 </table>
 
-#### 263. [Paste40](../../spec/paste.md#paste40)
+#### [Paste40](../../spec/paste.md#paste40)
 
 > pastePlain
 
@@ -10664,7 +11359,6 @@ y
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ax
 
@@ -10675,7 +11369,6 @@ y
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ax
 
@@ -10687,7 +11380,7 @@ y
 </td></tr>
 </table>
 
-#### 264. [Paste41](../../spec/paste.md#paste41)
+#### [Paste41](../../spec/paste.md#paste41)
 
 > pastePlain
 
@@ -10709,7 +11402,6 @@ y
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > See x
 
@@ -10719,7 +11411,6 @@ y
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > See x
 >
@@ -10730,7 +11421,7 @@ y
 </td></tr>
 </table>
 
-#### 265. [Paste42](../../spec/paste.md#paste42)
+#### [Paste42](../../spec/paste.md#paste42)
 
 > pasteStructured
 
@@ -10752,7 +11443,6 @@ y
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a- x
 - y
@@ -10762,7 +11452,6 @@ y
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ax
 - y
@@ -10773,7 +11462,7 @@ y
 </td></tr>
 </table>
 
-#### 266. [Paste44](../../spec/paste.md#paste44)
+#### [Paste44](../../spec/paste.md#paste44)
 
 > pasteStructured
 
@@ -10796,7 +11485,6 @@ $$
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 - $$
@@ -10807,7 +11495,6 @@ $$
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - $$
@@ -10818,7 +11505,7 @@ $$
 </td></tr>
 </table>
 
-#### 267. [Paste45](../../spec/paste.md#paste45)
+#### [Paste45](../../spec/paste.md#paste45)
 
 > pastePlain
 
@@ -10840,7 +11527,6 @@ $$
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a$$
 x^2
@@ -10850,7 +11536,6 @@ $$
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a$$
   x^2
@@ -10861,7 +11546,7 @@ $$
 </td></tr>
 </table>
 
-#### 268. [Paste46](../../spec/paste.md#paste46)
+#### [Paste46](../../spec/paste.md#paste46)
 
 > pasteStructured
 
@@ -10886,7 +11571,6 @@ code
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```````buffer
 - list
   ```js
@@ -10899,7 +11583,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - list
   ```js
@@ -10914,7 +11597,7 @@ code
 </td></tr>
 </table>
 
-#### 269. [Paste47](../../spec/paste.md#paste47)
+#### [Paste47](../../spec/paste.md#paste47)
 
 > pasteStructured
 
@@ -10937,7 +11620,6 @@ x
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 ```
 x
@@ -10948,7 +11630,6 @@ two
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 ```
 x
@@ -10961,7 +11642,1317 @@ two┃
 </td></tr>
 </table>
 
-#### 270. [Placeholder1](../../spec/placeholders.md#placeholder1)
+#### [Paste48](../../spec/paste.md#paste48)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+new
+better
+```
+
+</td><td>
+
+```buffer
+- the «old» plan
+```
+
+</td><td>
+
+```buffer
+- the new
+better┃ plan
+```
+
+</td><td>
+
+```buffer
+- the new
+  better┃ plan
+```
+
+</td></tr>
+</table>
+
+#### [Paste49](../../spec/paste.md#paste49)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+- a
+- b
+```
+
+</td><td>
+
+```buffer
+- «placeholder»
+- next
+```
+
+</td><td>
+
+```buffer
+- a
+- b
+┃
+- next
+```
+
+</td><td>
+
+```buffer
+- a
+- b┃
+- next
+```
+
+</td></tr>
+</table>
+
+#### [Paste50](../../spec/paste.md#paste50)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td><td>
+
+```buffer
+- al«pha
+- be»ta
+```
+
+</td><td>
+
+```buffer
+- al- x
+- y
+┃ta
+```
+
+</td><td>
+
+```buffer
+- alx
+- y
+- ┃ta
+```
+
+</td></tr>
+</table>
+
+#### [Paste51](../../spec/paste.md#paste51)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```buffer
+- see ┃- below
+```
+
+</td><td>
+
+```buffer
+- see x
+- ┃below
+```
+
+</td><td>
+
+```buffer
+- see x
+  ┃\- below
+```
+
+</td></tr>
+</table>
+
+#### [Paste52](../../spec/paste.md#paste52)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````clipboard
+```
+code
+```
+````
+
+</td><td>
+
+```buffer
+- ┃
+  - kid
+```
+
+</td><td>
+
+````buffer
+- ```
+code
+```
+┃
+  - kid
+````
+
+</td><td>
+
+````buffer
+- ```
+  code┃
+  ```
+  - kid
+````
+
+</td></tr>
+</table>
+
+#### [Paste53](../../spec/paste.md#paste53)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+Title
+=====
+```
+
+</td><td>
+
+```buffer
+para┃
+```
+
+</td><td>
+
+```buffer
+paraTitle
+=====
+┃
+```
+
+</td><td>
+
+```buffer
+para
+
+Title┃
+=====
+```
+
+</td></tr>
+</table>
+
+#### [Paste54](../../spec/paste.md#paste54)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+y
+```
+
+</td><td>
+
+```buffer
+# Hel┃lo
+```
+
+</td><td>
+
+```buffer
+# Helx
+y
+┃lo
+```
+
+</td><td>
+
+```buffer
+# Hello
+
+x
+y┃
+```
+
+</td></tr>
+</table>
+
+#### [Paste55](../../spec/paste.md#paste55)
+
+> pastePlain
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+y
+```
+
+</td><td>
+
+```buffer
+> [!note] Ti┃tle
+> body
+```
+
+</td><td>
+
+```buffer
+> [!note] Tix
+y
+┃tle
+> body
+```
+
+</td><td>
+
+```buffer
+> [!note] Ti┃tle
+> body
+```
+
+</td></tr>
+</table>
+
+#### [Paste57](../../spec/paste.md#paste57)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+## Summary
+
+The fix:
+- parser
+- test
+```
+
+</td><td>
+
+```buffer
+- Notes┃
+- Later
+```
+
+</td><td>
+
+```buffer
+- Notes## Summary
+
+The fix:
+- parser
+- test
+┃
+- Later
+```
+
+</td><td>
+
+```buffer
+- Notes
+- ## Summary
+  The fix:
+  - parser
+  - test┃
+- Later
+```
+
+</td></tr>
+</table>
+
+#### [Paste58](../../spec/paste.md#paste58)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+---
+title: x
+---
+```
+
+</td><td>
+
+```buffer
+Intro
+
+┃
+
+Outro
+```
+
+</td><td>
+
+```buffer
+Intro
+
+---
+title: x
+---
+┃
+
+Outro
+```
+
+</td><td>
+
+```buffer
+Intro
+
+---
+title: x┃
+---
+
+Outro
+```
+
+</td></tr>
+</table>
+
+#### [Paste59](../../spec/paste.md#paste59)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+- milk
+- eggs
+```
+
+</td><td>
+
+```buffer
+# Groceries┃
+
+- bread
+```
+
+</td><td>
+
+```buffer
+# Groceries- milk
+- eggs
+┃
+
+- bread
+```
+
+</td><td>
+
+```buffer
+# Groceries
+
+- milk
+- eggs┃
+- bread
+```
+
+</td></tr>
+</table>
+
+#### [Paste60](../../spec/paste.md#paste60)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td><td>
+
+```buffer
+- a
+
+- ┃
+```
+
+</td><td>
+
+```buffer
+- a
+
+- x
+- y
+┃
+```
+
+</td><td>
+
+```buffer
+- a
+
+- x
+
+- y┃
+```
+
+</td></tr>
+</table>
+
+#### [Paste61](../../spec/paste.md#paste61)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+# Z
+```
+
+</td><td>
+
+```buffer
+# A
+## B
+text┃
+## C
+```
+
+</td><td>
+
+```buffer
+# A
+## B
+text# Z
+┃
+## C
+```
+
+</td><td>
+
+```buffer
+# A
+## B
+text
+# Z┃
+## C
+```
+
+</td></tr>
+</table>
+
+#### [Paste62](../../spec/paste.md#paste62)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````clipboard
+```
+make build
+```
+````
+
+</td><td>
+
+```buffer
+Run ┃then deploy.
+```
+
+</td><td>
+
+````buffer
+Run ```
+make build
+```
+┃then deploy.
+````
+
+</td><td>
+
+````buffer
+Run
+```
+make build
+```
+
+┃then deploy.
+````
+
+</td></tr>
+</table>
+
+#### [Paste63](../../spec/paste.md#paste63)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+1. x
+2. y
+```
+
+</td><td>
+
+```buffer
+- see ┃here
+```
+
+</td><td>
+
+```buffer
+- see 1. x
+2. y
+┃here
+```
+
+</td><td>
+
+```buffer
+- see 1. x
+- 2\. y
+- ┃here
+```
+
+</td></tr>
+</table>
+
+#### [Paste64](../../spec/paste.md#paste64)
+
+> pastePlain
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+- a
+- b
+```
+
+</td><td>
+
+```buffer
+┃words
+```
+
+</td><td>
+
+```buffer
+- a
+- b┃words
+```
+
+</td><td>
+
+```buffer
+\- a
+\- b┃words
+```
+
+</td></tr>
+</table>
+
+#### [Paste65](../../spec/paste.md#paste65)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````clipboard
+```js
+y
+```
+````
+
+</td><td>
+
+````buffer
+- grandchild
+  ```js
+  x
+  ```
+┃
+- next
+````
+
+</td><td>
+
+````buffer
+- grandchild
+  ```js
+  x
+  ```
+```js
+y
+```
+┃
+- next
+````
+
+</td><td>
+
+````buffer
+- grandchild
+  ```js
+  x
+  ```
+
+  ```js
+  y┃
+  ```
+
+- next
+````
+
+</td></tr>
+</table>
+
+#### [Paste66](../../spec/paste.md#paste66)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````clipboard
+```js
+      // greet
+        f();
+      ```
+````
+
+</td><td>
+
+```buffer
+- grandchild┃
+```
+
+</td><td>
+
+````buffer
+- grandchild```js
+      // greet
+        f();
+      ```┃
+````
+
+</td><td>
+
+````buffer
+- grandchild
+  ```js
+  // greet
+    f();┃
+  ```
+````
+
+</td></tr>
+</table>
+
+#### [Paste67](../../spec/paste.md#paste67)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+y
+```
+
+</td><td>
+
+```buffer
+a
+┃
+b
+```
+
+</td><td>
+
+```buffer
+a
+x
+y
+┃
+b
+```
+
+</td><td>
+
+```buffer
+a
+
+x
+y┃
+
+b
+```
+
+</td></tr>
+</table>
+
+#### [Paste68](../../spec/paste.md#paste68)
+
+> pastePlain
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```buffer
+p┃ ---
+```
+
+</td><td>
+
+```buffer
+px
+┃ ---
+```
+
+</td><td>
+
+```buffer
+px
+┃\---
+```
+
+</td></tr>
+</table>
+
+#### [Paste69](../../spec/paste.md#paste69)
+
+> pastePlain
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```buffer
+[a]: ┃b c
+```
+
+</td><td>
+
+```buffer
+[a]: x
+┃b c
+```
+
+</td><td>
+
+```buffer
+\[a]: x
+┃b c
+```
+
+</td></tr>
+</table>
+
+#### [Paste70](../../spec/paste.md#paste70)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````clipboard
+```
+c
+```
+````
+
+</td><td>
+
+```buffer
+p┃
+    - g
+```
+
+</td><td>
+
+````buffer
+p```
+c
+```
+┃
+    - g
+````
+
+</td><td>
+
+````buffer
+p
+```
+c
+```
+
+┃\- g
+````
+
+</td></tr>
+</table>
+
+#### [Paste71](../../spec/paste.md#paste71)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+# h
+```
+
+</td><td>
+
+````buffer
+- i
+  ```
+  x
+  ```┃
+
+  ```
+  y
+  ```
+````
+
+</td><td>
+
+````buffer
+- i
+  ```
+  x
+  ```# h
+┃
+
+  ```
+  y
+  ```
+````
+
+</td><td>
+
+````buffer
+- i
+  ```
+  x
+  ```
+
+  # h┃
+
+  ```
+  y
+  ```
+````
+
+</td></tr>
+</table>
+
+#### [Paste72](../../spec/paste.md#paste72)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+> q
+```
+
+</td><td>
+
+```buffer
+- a
+- [ ] ┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- [ ] > q
+┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- [ ] 
+  > q┃
+- b
+```
+
+</td></tr>
+</table>
+
+#### [Paste73](../../spec/paste.md#paste73)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+y
+```
+
+</td><td>
+
+```buffer
+-  ┃
+  - kid
+```
+
+</td><td>
+
+```buffer
+-  x
+y
+┃
+  - kid
+```
+
+</td><td>
+
+```buffer
+- x
+  y
+  ┃
+  - kid
+```
+
+</td></tr>
+</table>
+
+#### [Paste74](../../spec/paste.md#paste74)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````clipboard
+```
+if x:
+    y
+```
+````
+
+</td><td>
+
+```buffer
+- a
+- ┃
+```
+
+</td><td>
+
+````buffer
+- a
+- ```
+if x:
+    y
+```
+┃
+````
+
+</td><td>
+
+````buffer
+- a
+- ```
+  if x:
+      y┃
+  ```
+````
+
+</td></tr>
+</table>
+
+#### [Paste75](../../spec/paste.md#paste75)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+y
+```
+
+</td><td>
+
+```buffer
+- a
+- [ ] ┃
+```
+
+</td><td>
+
+```buffer
+- a
+- [ ] x
+y
+┃
+```
+
+</td><td>
+
+```buffer
+- a
+- [ ] x
+  y
+  ┃
+```
+
+</td></tr>
+</table>
+
+#### [Paste76](../../spec/paste.md#paste76)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+- a
+- b
+```
+
+</td><td>
+
+```buffer
+# ┃Hello
+body
+```
+
+</td><td>
+
+```buffer
+# - a
+- b
+┃Hello
+body
+```
+
+</td><td>
+
+```buffer
+# Hello
+
+- a
+- b┃
+
+body
+```
+
+</td></tr>
+</table>
+
+#### [Paste77](../../spec/paste.md#paste77)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+## S
+fix:
+- p
+```
+
+</td><td>
+
+```buffer
+> a┃
+```
+
+</td><td>
+
+```buffer
+> a## S
+fix:
+- p
+┃
+```
+
+</td><td>
+
+```buffer
+> a
+>
+> ## S
+> fix:
+> - p┃
+```
+
+</td></tr>
+</table>
+
+#### [Paste78](../../spec/paste.md#paste78)
+
+> pastePlain
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+    first
+    second
+```
+
+</td><td>
+
+```buffer
+- ┃a
+```
+
+</td><td>
+
+```buffer
+-     first
+    second
+┃a
+```
+
+</td><td>
+
+```buffer
+- first
+  second
+  ┃a
+```
+
+</td></tr>
+</table>
+
+#### [Paste79](../../spec/paste.md#paste79)
+
+> pasteStructured
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+$$
+    x
+    $$
+```
+
+</td><td>
+
+```buffer
+a┃
+```
+
+</td><td>
+
+```buffer
+a$$
+    x
+    $$┃
+```
+
+</td><td>
+
+```buffer
+a
+
+$$
+    x┃
+    $$
+```
+
+</td></tr>
+</table>
+
+#### [Placeholder1](../../spec/placeholders.md#placeholder1)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -11008,7 +12999,6 @@ two┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a┃
   - 
@@ -11016,7 +13006,6 @@ two┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
 
@@ -11026,7 +13015,7 @@ two┃
 </td></tr>
 </table>
 
-#### 271. [Placeholder2](../../spec/placeholders.md#placeholder2)
+#### [Placeholder2](../../spec/placeholders.md#placeholder2)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -11059,7 +13048,6 @@ two┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 ┃
@@ -11067,7 +13055,6 @@ two┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 
@@ -11083,7 +13070,6 @@ two┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ┃a
 
@@ -11091,7 +13077,6 @@ two┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃- a
 ```
@@ -11099,7 +13084,7 @@ two┃
 </td></tr>
 </table>
 
-#### 272. [Placeholder3](../../spec/placeholders.md#placeholder3)
+#### [Placeholder3](../../spec/placeholders.md#placeholder3)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -11118,7 +13103,6 @@ para┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para
 ┃
@@ -11126,7 +13110,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para
 
@@ -11142,7 +13125,6 @@ para
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ┃para
 
@@ -11150,7 +13132,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃para
 ```
@@ -11158,7 +13139,7 @@ para
 </td></tr>
 </table>
 
-#### 273. [Placeholder4](../../spec/placeholders.md#placeholder4)
+#### [Placeholder4](../../spec/placeholders.md#placeholder4)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -11191,7 +13172,6 @@ para
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ┃para
 
@@ -11199,7 +13179,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃para
 ```
@@ -11207,7 +13186,7 @@ para
 </td></tr>
 </table>
 
-#### 274. [Placeholder5](../../spec/placeholders.md#placeholder5)
+#### [Placeholder5](../../spec/placeholders.md#placeholder5)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -11282,7 +13261,6 @@ para
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a┃
   - 
@@ -11290,7 +13268,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
 
@@ -11300,7 +13277,7 @@ para
 </td></tr>
 </table>
 
-#### 275. [Placeholder7](../../spec/placeholders.md#placeholder7)
+#### [Placeholder7](../../spec/placeholders.md#placeholder7)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -11334,7 +13311,6 @@ para
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a┃
   - 
@@ -11342,7 +13318,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
 
@@ -11352,7 +13327,7 @@ para
 </td></tr>
 </table>
 
-#### 276. [Placeholder9](../../spec/placeholders.md#placeholder9)
+#### [Placeholder9](../../spec/placeholders.md#placeholder9)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -11386,7 +13361,6 @@ para
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 -  b
   - c┃
@@ -11394,7 +13368,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - b
   - c┃
@@ -11403,7 +13376,7 @@ para
 </td></tr>
 </table>
 
-#### 277. [Placeholder13](../../spec/placeholders.md#placeholder13)
+#### [Placeholder13](../../spec/placeholders.md#placeholder13)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -11443,7 +13416,6 @@ para
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # H1
 
@@ -11453,7 +13425,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # H1
 
@@ -11463,7 +13434,7 @@ para
 </td></tr>
 </table>
 
-#### 278. [Placeholder14](../../spec/placeholders.md#placeholder14)
+#### [Placeholder14](../../spec/placeholders.md#placeholder14)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -11503,7 +13474,6 @@ text
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para
 
@@ -11513,7 +13483,6 @@ text
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para
 
@@ -11523,7 +13492,7 @@ para
 </td></tr>
 </table>
 
-#### 279. [Placeholder15](../../spec/placeholders.md#placeholder15)
+#### [Placeholder15](../../spec/placeholders.md#placeholder15)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -11543,7 +13512,6 @@ para
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para
 - 
@@ -11552,7 +13520,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para
 - ┃
@@ -11568,7 +13535,6 @@ para
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para
 - 
@@ -11577,7 +13543,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para
 
@@ -11588,7 +13553,7 @@ para
 </td></tr>
 </table>
 
-#### 280. [Placeholder16](../../spec/placeholders.md#placeholder16)
+#### [Placeholder16](../../spec/placeholders.md#placeholder16)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -11635,7 +13600,6 @@ para
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ┃«- a
   - »
@@ -11643,7 +13607,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃«- a
 
@@ -11653,7 +13616,7 @@ para
 </td></tr>
 </table>
 
-#### 281. [Quote1](../../spec/quotes.md#quote1)
+#### [Quote1](../../spec/quotes.md#quote1)
 
 > indent
 
@@ -11668,7 +13631,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - > - a
   > - b┃
@@ -11676,7 +13638,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - > - a
   >   - b┃
@@ -11685,7 +13646,7 @@ para
 </td></tr>
 </table>
 
-#### 282. [Indent inside a quote › Quote2](../../spec/quotes.md#quote2)
+#### [Indent inside a quote › Quote2](../../spec/quotes.md#quote2)
 
 > indent
 
@@ -11700,7 +13661,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a
 > →- b┃
@@ -11708,7 +13668,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - a
 >   - b┃
@@ -11717,7 +13676,7 @@ para
 </td></tr>
 </table>
 
-#### 283. [Indent inside a quote › Quote3](../../spec/quotes.md#quote3)
+#### [Indent inside a quote › Quote3](../../spec/quotes.md#quote3)
 
 > indent
 
@@ -11732,7 +13691,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 >- a
 >→- b┃
@@ -11740,7 +13698,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 >- a
 >   - b┃
@@ -11749,7 +13706,7 @@ para
 </td></tr>
 </table>
 
-#### 284. [Indent inside a quote › Quote5](../../spec/quotes.md#quote5)
+#### [Indent inside a quote › Quote5](../../spec/quotes.md#quote5)
 
 > indent
 
@@ -11765,7 +13722,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - x
   > - a
@@ -11774,7 +13730,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - x
   > - a
@@ -11784,7 +13739,7 @@ para
 </td></tr>
 </table>
 
-#### 285. [Indent inside a quote › Quote6](../../spec/quotes.md#quote6)
+#### [Indent inside a quote › Quote6](../../spec/quotes.md#quote6)
 
 > indent
 
@@ -11799,7 +13754,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > > - a
 > > →- b┃
@@ -11807,7 +13761,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > > - a
 > >   - b┃
@@ -11816,7 +13769,7 @@ para
 </td></tr>
 </table>
 
-#### 286. [Indent inside a quote › Quote7](../../spec/quotes.md#quote7)
+#### [Indent inside a quote › Quote7](../../spec/quotes.md#quote7)
 
 > indent
 
@@ -11832,7 +13785,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > [!note] Title
 > - a
@@ -11841,7 +13793,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > [!note] Title
 > - a
@@ -11851,7 +13802,7 @@ para
 </td></tr>
 </table>
 
-#### 287. [Indent inside a quote › Quote8](../../spec/quotes.md#quote8)
+#### [Indent inside a quote › Quote8](../../spec/quotes.md#quote8)
 
 > indent
 
@@ -11867,7 +13818,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a
 > →- b┃
@@ -11876,7 +13826,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - a
 >   - b┃
@@ -11886,7 +13835,7 @@ c
 </td></tr>
 </table>
 
-#### 288. [Indent inside a quote › Quote9](../../spec/quotes.md#quote9)
+#### [Indent inside a quote › Quote9](../../spec/quotes.md#quote9)
 
 > indent
 
@@ -11902,7 +13851,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > a
 >
@@ -11911,7 +13859,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > a
 >
@@ -11921,7 +13868,7 @@ c
 </td></tr>
 </table>
 
-#### 289. [Outdent out of a quote › Quote11](../../spec/quotes.md#quote11)
+#### [Outdent out of a quote › Quote11](../../spec/quotes.md#quote11)
 
 > outdent
 
@@ -11936,7 +13883,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a
 > - b┃
@@ -11944,7 +13890,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - a
 - b┃
@@ -11953,7 +13898,7 @@ c
 </td></tr>
 </table>
 
-#### 290. [Outdent out of a quote › Quote12](../../spec/quotes.md#quote12)
+#### [Outdent out of a quote › Quote12](../../spec/quotes.md#quote12)
 
 > outdent
 
@@ -11969,7 +13914,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a┃
 >   - c
@@ -11978,7 +13922,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
   - c
@@ -11988,7 +13931,7 @@ c
 </td></tr>
 </table>
 
-#### 291. [Outdent out of a quote › Quote12b](../../spec/quotes.md#quote12b)
+#### [Outdent out of a quote › Quote12b](../../spec/quotes.md#quote12b)
 
 > outdent
 
@@ -12004,7 +13947,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a┃
 >   - c
@@ -12013,7 +13955,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - b
 - a┃
@@ -12023,7 +13964,7 @@ c
 </td></tr>
 </table>
 
-#### 292. [Outdent out of a quote › Quote13](../../spec/quotes.md#quote13)
+#### [Outdent out of a quote › Quote13](../../spec/quotes.md#quote13)
 
 > outdent
 
@@ -12038,7 +13979,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > [!note] T
 > - a┃
@@ -12046,7 +13986,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > [!note] T
 - a┃
@@ -12055,7 +13994,7 @@ c
 </td></tr>
 </table>
 
-#### 293. [Outdent out of a quote › Quote14](../../spec/quotes.md#quote14)
+#### [Outdent out of a quote › Quote14](../../spec/quotes.md#quote14)
 
 > outdent
 
@@ -12071,7 +14010,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a
 > - b┃
@@ -12080,7 +14018,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - a
 - b┃
@@ -12090,7 +14027,7 @@ c
 </td></tr>
 </table>
 
-#### 294. [Outdent out of a quote › Quote15](../../spec/quotes.md#quote15)
+#### [Outdent out of a quote › Quote15](../../spec/quotes.md#quote15)
 
 > outdent
 
@@ -12106,7 +14043,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - x
   > - a
@@ -12115,7 +14051,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - x
   > - a
@@ -12125,7 +14060,7 @@ c
 </td></tr>
 </table>
 
-#### 295. [Outdent out of a quote › Quote16](../../spec/quotes.md#quote16)
+#### [Outdent out of a quote › Quote16](../../spec/quotes.md#quote16)
 
 > outdent
 
@@ -12142,7 +14077,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a
 > - b┃
@@ -12152,7 +14086,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - a
 - b┃
@@ -12163,7 +14096,7 @@ c
 </td></tr>
 </table>
 
-#### 296. [Indent into a quote › Quote17](../../spec/quotes.md#quote17)
+#### [Indent into a quote › Quote17](../../spec/quotes.md#quote17)
 
 > indent
 
@@ -12178,7 +14111,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a
 - b┃
@@ -12186,7 +14118,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - a
 > - b┃
@@ -12195,7 +14126,7 @@ c
 </td></tr>
 </table>
 
-#### 297. [Indent into a quote › Quote18](../../spec/quotes.md#quote18)
+#### [Indent into a quote › Quote18](../../spec/quotes.md#quote18)
 
 > indent
 
@@ -12214,7 +14145,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a
 
@@ -12226,7 +14156,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - a
 >
@@ -12239,7 +14168,7 @@ c
 </td></tr>
 </table>
 
-#### 298. [Indent into a quote › Quote19](../../spec/quotes.md#quote19)
+#### [Indent into a quote › Quote19](../../spec/quotes.md#quote19)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -12259,7 +14188,6 @@ c
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a
 - b┃
@@ -12267,7 +14195,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - a
 > - b┃
@@ -12290,7 +14217,7 @@ c
 </td></tr>
 </table>
 
-#### 299. [Moving between quotes › Quote20](../../spec/quotes.md#quote20)
+#### [Moving between quotes › Quote20](../../spec/quotes.md#quote20)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -12312,7 +14239,6 @@ c
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a┃
 > - x
@@ -12322,7 +14248,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - x
 
@@ -12340,7 +14265,6 @@ c
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a┃
 > - x
@@ -12350,7 +14274,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - x
 
@@ -12368,7 +14291,6 @@ c
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > →- a┃
 > - x
@@ -12378,7 +14300,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - x
 
@@ -12390,7 +14311,7 @@ c
 </td></tr>
 </table>
 
-#### 300. [Moving between quotes › Quote21](../../spec/quotes.md#quote21)
+#### [Moving between quotes › Quote21](../../spec/quotes.md#quote21)
 
 > moveSubtreeDown
 
@@ -12407,7 +14328,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - x
 - a┃
@@ -12417,7 +14337,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - x
 
@@ -12429,7 +14348,7 @@ c
 </td></tr>
 </table>
 
-#### 301. [Moving between quotes › Quote22](../../spec/quotes.md#quote22)
+#### [Moving between quotes › Quote22](../../spec/quotes.md#quote22)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -12451,7 +14370,6 @@ c
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a
 > - b┃
@@ -12461,7 +14379,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - a
 
@@ -12488,7 +14405,7 @@ c
 </td></tr>
 </table>
 
-#### 302. [Moving between quotes › Quote23](../../spec/quotes.md#quote23)
+#### [Moving between quotes › Quote23](../../spec/quotes.md#quote23)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -12509,7 +14426,6 @@ c
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - c
 > - a┃
@@ -12518,7 +14434,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - c
   - a┃
@@ -12543,7 +14458,7 @@ c
 </td></tr>
 </table>
 
-#### 303. [Moving inside a quote › Quote24](../../spec/quotes.md#quote24)
+#### [Moving inside a quote › Quote24](../../spec/quotes.md#quote24)
 
 > moveSubtreeUp
 
@@ -12558,7 +14473,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a
 > - b┃
@@ -12566,7 +14480,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - b┃
 > - a
@@ -12575,7 +14488,7 @@ c
 </td></tr>
 </table>
 
-#### 304. [Moving inside a quote › Quote25](../../spec/quotes.md#quote25)
+#### [Moving inside a quote › Quote25](../../spec/quotes.md#quote25)
 
 > moveSubtreeUp
 
@@ -12591,7 +14504,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a
 >
@@ -12600,7 +14512,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - b┃
 >
@@ -12610,7 +14521,7 @@ c
 </td></tr>
 </table>
 
-#### 305. [Moving inside a quote › Quote26](../../spec/quotes.md#quote26)
+#### [Moving inside a quote › Quote26](../../spec/quotes.md#quote26)
 
 > moveSubtreeUp
 
@@ -12625,7 +14536,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 > q┃
@@ -12633,7 +14543,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > q┃
 - a
@@ -12642,7 +14551,7 @@ c
 </td></tr>
 </table>
 
-#### 306. [A quote and a heading don't swap › Quote28](../../spec/quotes.md#quote28)
+#### [A quote and a heading don't swap › Quote28](../../spec/quotes.md#quote28)
 
 > moveSubtreeDown
 
@@ -12657,7 +14566,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > ┃q
 ## S
@@ -12665,7 +14573,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ## S
 > ┃q
@@ -12674,7 +14581,7 @@ c
 </td></tr>
 </table>
 
-#### 307. [Enter in a quote › Quote30](../../spec/quotes.md#quote30)
+#### [Enter in a quote › Quote30](../../spec/quotes.md#quote30)
 
 > enter
 
@@ -12689,7 +14596,6 @@ c
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - x
   > - a
@@ -12698,7 +14604,6 @@ c
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - x
   > - a
@@ -12708,7 +14613,7 @@ c
 </td></tr>
 </table>
 
-#### 308. [Enter in a quote › Quote31](../../spec/quotes.md#quote31)
+#### [Enter in a quote › Quote31](../../spec/quotes.md#quote31)
 
 > enter
 
@@ -12723,7 +14628,6 @@ b┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a
 b
@@ -12732,7 +14636,6 @@ b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - a
 b
@@ -12742,7 +14645,7 @@ b
 </td></tr>
 </table>
 
-#### 309. [Enter in a quote › Quote32](../../spec/quotes.md#quote32)
+#### [Enter in a quote › Quote32](../../spec/quotes.md#quote32)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -12777,7 +14680,6 @@ b
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > Quote:
 > - one
@@ -12786,7 +14688,6 @@ b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > Quote:
 > - one
@@ -12829,7 +14730,7 @@ Back to text.┃
 </td></tr>
 </table>
 
-#### 310. [Enter in a quote › Quote33](../../spec/quotes.md#quote33)
+#### [Enter in a quote › Quote33](../../spec/quotes.md#quote33)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -12849,7 +14750,6 @@ Back to text.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - x
   > - a
@@ -12858,7 +14758,6 @@ Back to text.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - x
   > - a
@@ -12875,7 +14774,6 @@ Back to text.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - x
   > - a
@@ -12885,7 +14783,6 @@ Back to text.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - x
   > - a
@@ -12896,7 +14793,7 @@ Back to text.┃
 </td></tr>
 </table>
 
-#### 311. [Enter in a quote › Quote34](../../spec/quotes.md#quote34)
+#### [Enter in a quote › Quote34](../../spec/quotes.md#quote34)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -12928,7 +14825,6 @@ Back to text.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 
 ┃
@@ -12936,7 +14832,6 @@ Back to text.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃
 ```
@@ -12944,7 +14839,7 @@ Back to text.┃
 </td></tr>
 </table>
 
-#### 312. [Enter in a quote › Quote35](../../spec/quotes.md#quote35)
+#### [Enter in a quote › Quote35](../../spec/quotes.md#quote35)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -12963,7 +14858,6 @@ Back to text.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > ab
 > ┃
@@ -12971,7 +14865,6 @@ Back to text.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > ab
 >
@@ -13011,7 +14904,7 @@ c┃
 </td></tr>
 </table>
 
-#### 313. [Enter in a quote › Quote36](../../spec/quotes.md#quote36)
+#### [Enter in a quote › Quote36](../../spec/quotes.md#quote36)
 
 > enter
 
@@ -13025,7 +14918,6 @@ c┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > ab
 > ┃cd
@@ -13033,7 +14925,6 @@ c┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > ab
 >
@@ -13043,7 +14934,7 @@ c┃
 </td></tr>
 </table>
 
-#### 314. [Enter in a quote › Quote37](../../spec/quotes.md#quote37)
+#### [Enter in a quote › Quote37](../../spec/quotes.md#quote37)
 
 > enter
 
@@ -13059,7 +14950,6 @@ c┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > a
 >
@@ -13069,7 +14959,6 @@ c┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > a
 >
@@ -13081,7 +14970,7 @@ c┃
 </td></tr>
 </table>
 
-#### 315. [Enter in a quote › Quote38](../../spec/quotes.md#quote38)
+#### [Enter in a quote › Quote38](../../spec/quotes.md#quote38)
 
 > enter
 
@@ -13096,7 +14985,6 @@ c┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > [!note] Ti
 > ┃tle
@@ -13105,7 +14993,6 @@ c┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > [!note] Ti
 > ┃tle
@@ -13116,7 +15003,7 @@ c┃
 </td></tr>
 </table>
 
-#### 316. [Enter in a quote › Quote40](../../spec/quotes.md#quote40)
+#### [Enter in a quote › Quote40](../../spec/quotes.md#quote40)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -13136,7 +15023,6 @@ c┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > [!note] Title
 > ┃
@@ -13145,7 +15031,6 @@ c┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > [!note] Title
 > ┃
@@ -13162,7 +15047,6 @@ c┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > [!note] Title
 > x┃
@@ -13171,7 +15055,6 @@ c┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > [!note] Title
 > x┃
@@ -13182,7 +15065,7 @@ c┃
 </td></tr>
 </table>
 
-#### 317. [Enter in a quote › Quote41](../../spec/quotes.md#quote41)
+#### [Enter in a quote › Quote41](../../spec/quotes.md#quote41)
 
 > enter
 
@@ -13197,7 +15080,6 @@ c┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > [!tip] Title
 > ┃- x
@@ -13206,7 +15088,6 @@ c┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > [!tip] Title
 > ┃\- x
@@ -13216,7 +15097,7 @@ c┃
 </td></tr>
 </table>
 
-#### 318. [Enter in a quote › Quote42](../../spec/quotes.md#quote42)
+#### [Enter in a quote › Quote42](../../spec/quotes.md#quote42)
 
 > enter
 
@@ -13231,7 +15112,6 @@ c┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > para 
 > ┃- x
@@ -13240,7 +15120,6 @@ c┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > para
 >
@@ -13251,7 +15130,7 @@ c┃
 </td></tr>
 </table>
 
-#### 319. [Enter in a quote › Quote43](../../spec/quotes.md#quote43)
+#### [Enter in a quote › Quote43](../../spec/quotes.md#quote43)
 
 > enter
 
@@ -13265,7 +15144,6 @@ c┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > [!ti
 > ┃p] Title
@@ -13273,7 +15151,6 @@ c┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > [!ti
 ┃p] Title
@@ -13282,7 +15159,7 @@ c┃
 </td></tr>
 </table>
 
-#### 320. [Shift-Enter in a quote › Quote47](../../spec/quotes.md#quote47)
+#### [Shift-Enter in a quote › Quote47](../../spec/quotes.md#quote47)
 
 > shiftEnter
 
@@ -13297,7 +15174,6 @@ c┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > [!tip] Ti
 > ┃tle
@@ -13306,7 +15182,6 @@ c┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > [!tip] Ti┃tle
 > body
@@ -13315,7 +15190,7 @@ c┃
 </td></tr>
 </table>
 
-#### 321. [Joining in a quote › Quote48](../../spec/quotes.md#quote48)
+#### [Joining in a quote › Quote48](../../spec/quotes.md#quote48)
 
 > deleteContentBackward
 
@@ -13330,7 +15205,6 @@ c┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a
 > -┃b
@@ -13338,7 +15212,6 @@ c┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - a┃b
 ```
@@ -13346,7 +15219,7 @@ c┃
 </td></tr>
 </table>
 
-#### 322. [Joining in a quote › Quote49](../../spec/quotes.md#quote49)
+#### [Joining in a quote › Quote49](../../spec/quotes.md#quote49)
 
 > deleteContentBackward
 
@@ -13361,7 +15234,6 @@ c┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > a
 > -┃b
@@ -13369,7 +15241,6 @@ c┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > a┃b
 ```
@@ -13377,7 +15248,7 @@ c┃
 </td></tr>
 </table>
 
-#### 323. [Joining in a quote › Quote50](../../spec/quotes.md#quote50)
+#### [Joining in a quote › Quote50](../../spec/quotes.md#quote50)
 
 > deleteContentForward
 
@@ -13392,14 +15263,12 @@ c┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > a┃> - b
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > a┃b
 ```
@@ -13407,7 +15276,7 @@ c┃
 </td></tr>
 </table>
 
-#### 324. [Joining in a quote › Quote51](../../spec/quotes.md#quote51)
+#### [Joining in a quote › Quote51](../../spec/quotes.md#quote51)
 
 > deleteContentForward
 
@@ -13423,7 +15292,6 @@ c┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > a┃>
 > b
@@ -13431,7 +15299,6 @@ c┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > a┃
 > b
@@ -13440,7 +15307,7 @@ c┃
 </td></tr>
 </table>
 
-#### 325. [Joining across a quote's edge › Quote52](../../spec/quotes.md#quote52)
+#### [Joining across a quote's edge › Quote52](../../spec/quotes.md#quote52)
 
 > deleteContentBackward
 
@@ -13456,7 +15323,6 @@ c┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a
 - ┃b
@@ -13465,7 +15331,6 @@ c┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - a┃b
 >   - c
@@ -13474,7 +15339,7 @@ c┃
 </td></tr>
 </table>
 
-#### 326. [Backspace at a quote's start › Quote53](../../spec/quotes.md#quote53)
+#### [Backspace at a quote's start › Quote53](../../spec/quotes.md#quote53)
 
 > deleteContentBackward
 
@@ -13490,7 +15355,6 @@ c┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 
@@ -13499,7 +15363,6 @@ c┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 
@@ -13509,7 +15372,7 @@ c┃
 </td></tr>
 </table>
 
-#### 327. [Backspace at a quote's start › Quote54](../../spec/quotes.md#quote54)
+#### [Backspace at a quote's start › Quote54](../../spec/quotes.md#quote54)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -13530,7 +15393,6 @@ c┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 > -┃b
@@ -13539,7 +15401,6 @@ c┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 > ┃b
@@ -13555,7 +15416,6 @@ c┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 > ┃b
@@ -13564,7 +15424,6 @@ c┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 
@@ -13581,7 +15440,6 @@ c┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 >┃b
@@ -13590,7 +15448,6 @@ c┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃b
 
@@ -13600,7 +15457,7 @@ c┃
 </td></tr>
 </table>
 
-#### 328. [Backspace at a quote's start › Quote56](../../spec/quotes.md#quote56)
+#### [Backspace at a quote's start › Quote56](../../spec/quotes.md#quote56)
 
 > deleteContentBackward
 
@@ -13618,7 +15475,6 @@ c┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 
@@ -13629,7 +15485,6 @@ c┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 
@@ -13641,7 +15496,7 @@ c┃
 </td></tr>
 </table>
 
-#### 329. [Backspace at a quote's start › Quote57](../../spec/quotes.md#quote57)
+#### [Backspace at a quote's start › Quote57](../../spec/quotes.md#quote57)
 
 > deleteContentBackward
 
@@ -13658,7 +15513,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para
 
@@ -13668,7 +15522,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para
 
@@ -13680,7 +15533,7 @@ para
 </td></tr>
 </table>
 
-#### 330. [Backspace at a quote's start › Quote58](../../spec/quotes.md#quote58)
+#### [Backspace at a quote's start › Quote58](../../spec/quotes.md#quote58)
 
 > deleteContentBackward
 
@@ -13697,7 +15550,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 para
 
@@ -13707,7 +15559,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 para
 
@@ -13718,7 +15569,7 @@ para
 </td></tr>
 </table>
 
-#### 331. [Backspace at a quote's start › Quote59](../../spec/quotes.md#quote59)
+#### [Backspace at a quote's start › Quote59](../../spec/quotes.md#quote59)
 
 > deleteContentBackward
 
@@ -13732,14 +15583,12 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > -┃
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃
 ```
@@ -13747,7 +15596,7 @@ para
 </td></tr>
 </table>
 
-#### 332. [Joining into a callout's title › Quote60](../../spec/quotes.md#quote60)
+#### [Joining into a callout's title › Quote60](../../spec/quotes.md#quote60)
 
 > deleteContentBackward
 
@@ -13764,7 +15613,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > [!note] Ti
 >┃tle
@@ -13774,7 +15622,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > [!note] Ti┃tle
 >
@@ -13784,7 +15631,7 @@ para
 </td></tr>
 </table>
 
-#### 333. [Joining into a callout's title › Quote61](../../spec/quotes.md#quote61)
+#### [Joining into a callout's title › Quote61](../../spec/quotes.md#quote61)
 
 > deleteContentForward
 
@@ -13799,14 +15646,12 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > [!note] Title┃> body
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > [!note] Title┃body
 ```
@@ -13814,7 +15659,7 @@ para
 </td></tr>
 </table>
 
-#### 334. [Joining into a callout's title › Quote62](../../spec/quotes.md#quote62)
+#### [Joining into a callout's title › Quote62](../../spec/quotes.md#quote62)
 
 > deleteContentBackward
 
@@ -13829,7 +15674,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > [!note] Title
 > -┃a
@@ -13837,7 +15681,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > [!note] Title┃a
 ```
@@ -13845,7 +15688,7 @@ para
 </td></tr>
 </table>
 
-#### 335. [Quote63](../../spec/quotes.md#quote63)
+#### [Quote63](../../spec/quotes.md#quote63)
 
 > pasteStructured
 
@@ -13866,7 +15709,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a- x
   - y
@@ -13875,7 +15717,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - a
 > - x
@@ -13885,7 +15726,7 @@ para
 </td></tr>
 </table>
 
-#### 336. [Quote64](../../spec/quotes.md#quote64)
+#### [Quote64](../../spec/quotes.md#quote64)
 
 > indent
 
@@ -13901,7 +15742,6 @@ para
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > # H
 > - a
@@ -13910,7 +15750,6 @@ para
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > # H
 > - a
@@ -13920,7 +15759,7 @@ para
 </td></tr>
 </table>
 
-#### 337. [Indenting a paragraph into a quote › Quote65](../../spec/quotes.md#quote65)
+#### [Indenting a paragraph into a quote › Quote65](../../spec/quotes.md#quote65)
 
 > indent
 
@@ -13936,7 +15775,6 @@ para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > q
 
@@ -13945,7 +15783,6 @@ para┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > q
 >
@@ -13955,7 +15792,7 @@ para┃
 </td></tr>
 </table>
 
-#### 338. [Indenting a paragraph into a quote › Quote66](../../spec/quotes.md#quote66)
+#### [Indenting a paragraph into a quote › Quote66](../../spec/quotes.md#quote66)
 
 > outdent
 
@@ -13971,7 +15808,6 @@ para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > q
 >
@@ -13980,7 +15816,6 @@ para┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > q
 
@@ -13990,7 +15825,7 @@ para┃
 </td></tr>
 </table>
 
-#### 339. [Quote67](../../spec/quotes.md#quote67)
+#### [Quote67](../../spec/quotes.md#quote67)
 
 > moveSubtreeUp
 
@@ -14005,7 +15840,6 @@ para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > >     code
 > a┃
@@ -14013,7 +15847,6 @@ para┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > a┃
 > >     code
@@ -14022,7 +15855,7 @@ para┃
 </td></tr>
 </table>
 
-#### 340. [Quote68](../../spec/quotes.md#quote68)
+#### [Quote68](../../spec/quotes.md#quote68)
 
 > moveSubtreeUp
 
@@ -14039,7 +15872,6 @@ para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - x
 > - y
@@ -14049,7 +15881,6 @@ para┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > q┃
 
@@ -14060,7 +15891,7 @@ para┃
 </td></tr>
 </table>
 
-#### 341. [Quote71](../../spec/quotes.md#quote71)
+#### [Quote71](../../spec/quotes.md#quote71)
 
 > moveSubtreeDown
 
@@ -14077,7 +15908,6 @@ para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > [!note] T
 > - a┃
@@ -14087,7 +15917,6 @@ para┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > [!note] T
 
@@ -14098,7 +15927,7 @@ para┃
 </td></tr>
 </table>
 
-#### 342. [Quote72](../../spec/quotes.md#quote72)
+#### [Quote72](../../spec/quotes.md#quote72)
 
 > outdent
 
@@ -14114,7 +15943,6 @@ para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - x
 > - a┃
@@ -14123,7 +15951,6 @@ para┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - x
 - a┃
@@ -14133,7 +15960,559 @@ para┃
 </td></tr>
 </table>
 
-#### 343. [A paragraph outdented out of a nested quote › Quote69](../../spec/quotes.md#quote69)
+#### [Quote73](../../spec/quotes.md#quote73)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > a┃b
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > a
+- ┃b
+```
+
+</td><td>
+
+```buffer
+- > a
+  >
+  > ┃b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward deleteContentBackward
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > ┃b
+```
+
+</td><td>
+
+```buffer
+- > a┃b
+```
+
+</td></tr>
+</table>
+
+#### [Quote74](../../spec/quotes.md#quote74)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > a┃b
+```
+
+</td></tr>
+</table>
+
+> shiftEnter
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > a
+  ┃b
+```
+
+</td><td>
+
+```buffer
+- > a
+  > ┃b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > a┃b
+```
+
+</td></tr>
+</table>
+
+#### [Quote75](../../spec/quotes.md#quote75)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- > ┃q
+  >
+  > r
+```
+
+</td><td>
+
+```buffer
+- a
+- >┃q
+  >
+  > r
+```
+
+</td><td>
+
+```buffer
+- a
+- ┃q
+  > r
+```
+
+</td></tr>
+</table>
+
+#### [Quote76](../../spec/quotes.md#quote76)
+
+> pastePlain
+
+<table>
+<tr><th>clipboard</th><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+y
+```
+
+</td><td>
+
+```buffer
+- > a┃b
+```
+
+</td><td>
+
+```buffer
+- > ax
+y
+┃b
+```
+
+</td><td>
+
+```buffer
+- > ax
+  > y
+  > ┃b
+```
+
+</td></tr>
+</table>
+
+#### [Quote77](../../spec/quotes.md#quote77)
+
+> outdent
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - > ┃q
+```
+
+</td><td>
+
+```buffer
+- a
+- > ┃q
+```
+
+</td><td>
+
+```buffer
+- a
+  - ┃q
+```
+
+</td></tr>
+</table>
+
+#### [Quote78](../../spec/quotes.md#quote78)
+
+> indent
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> q
+
+┃p
+- x
+```
+
+</td><td>
+
+```buffer
+> q
+
+  ┃p
+- x
+```
+
+</td><td>
+
+```buffer
+> q
+>
+> ┃p
+> - x
+```
+
+</td></tr>
+</table>
+
+#### [Quote79](../../spec/quotes.md#quote79)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> [«!note] q6»
+```
+
+</td><td>
+
+```buffer
+> [
+┃
+```
+
+</td><td>
+
+```buffer
+> [«!note] q6»
+```
+
+</td></tr>
+</table>
+
+#### [Quote80](../../spec/quotes.md#quote80)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > ┃q
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > 
+- ┃q
+```
+
+</td><td>
+
+```buffer
+- > ┃
+  >
+  > q
+```
+
+</td></tr>
+</table>
+
+> "x"
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > 
+- x┃q
+```
+
+</td><td>
+
+```buffer
+- > x┃
+  >
+  > q
+```
+
+</td></tr>
+</table>
+
+#### [Quote81](../../spec/quotes.md#quote81)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > ┃p
+  >
+  > q
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeDown
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > ┃p
+  >
+  > q
+```
+
+</td><td>
+
+```buffer
+- > q
+  >
+  > ┃p
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeUp
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > ┃p
+  >
+  > q
+```
+
+</td></tr>
+</table>
+
+#### [Quote88](../../spec/quotes.md#quote88)
+
+> deleteContentForward
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > ┃
+  >
+  > q
+```
+
+</td><td>
+
+```buffer
+- > ┃>
+  > q
+```
+
+</td><td>
+
+```buffer
+- > ┃q
+```
+
+</td></tr>
+</table>
+
+#### [Quote83](../../spec/quotes.md#quote83)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > q
+  - ┃g
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeUp
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > q
+  - ┃g
+```
+
+</td><td>
+
+```buffer
+- - ┃g
+  > q
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeDown
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > q
+  - ┃g
+```
+
+</td></tr>
+</table>
+
+#### [Quote84](../../spec/quotes.md#quote84)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> [!note] Title
+┃two
+lines
+```
+
+</td><td>
+
+```buffer
+> [!note] Title
+
+┃two
+lines
+```
+
+</td><td>
+
+```buffer
+> [!note] Title
+>
+> ┃two
+lines
+```
+
+</td></tr>
+</table>
+
+#### [Quote85](../../spec/quotes.md#quote85)
+
+> outdent
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > - ┃a
+  > - b
+```
+
+</td><td>
+
+```buffer
+- > - ┃a
+  > - b
+```
+
+</td><td>
+
+```buffer
+- - ┃a
+  > - b
+```
+
+</td></tr>
+</table>
+
+#### [Quote87](../../spec/quotes.md#quote87)
+
+> outdent
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> - ┃q
+    - g
+```
+
+</td><td>
+
+```buffer
+> - ┃q
+    - g
+```
+
+</td><td>
+
+```buffer
+- ┃q
+    \- g
+```
+
+</td></tr>
+</table>
+
+#### [A paragraph outdented out of a nested quote › Quote69](../../spec/quotes.md#quote69)
 
 > outdent
 
@@ -14148,7 +16527,6 @@ para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > - a
 > > q┃
@@ -14156,7 +16534,6 @@ para┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > - a
 >
@@ -14166,7 +16543,7 @@ para┃
 </td></tr>
 </table>
 
-#### 344. [A paragraph outdented out of a nested quote › Quote70](../../spec/quotes.md#quote70)
+#### [A paragraph outdented out of a nested quote › Quote70](../../spec/quotes.md#quote70)
 
 > outdent
 
@@ -14181,7 +16558,6 @@ para┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > > q┃
 > - a
@@ -14189,7 +16565,6 @@ para┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > q┃
 > - a
@@ -14198,7 +16573,7 @@ para┃
 </td></tr>
 </table>
 
-#### 345. [Outliner flows › Scenario4](../../spec/scenarios.md#scenario4)
+#### [Outliner flows › Scenario4](../../spec/scenarios.md#scenario4)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -14231,7 +16606,6 @@ para┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a┃
   - 
@@ -14239,7 +16613,6 @@ para┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
 
@@ -14255,7 +16628,6 @@ para┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - 
@@ -14264,7 +16636,6 @@ b┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 
@@ -14274,7 +16645,7 @@ b┃
 </td></tr>
 </table>
 
-#### 346. [Outliner flows › Scenario6](../../spec/scenarios.md#scenario6)
+#### [Outliner flows › Scenario6](../../spec/scenarios.md#scenario6)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -14293,7 +16664,6 @@ Groceries┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 Groceries
 ┃
@@ -14301,7 +16671,6 @@ Groceries
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 Groceries
 
@@ -14317,7 +16686,6 @@ Groceries
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 Groceries
 - milk┃
@@ -14325,7 +16693,6 @@ Groceries
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 Groceries
 
@@ -14343,7 +16710,6 @@ Groceries
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 Groceries
 - milk
@@ -14353,7 +16719,6 @@ Groceries
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 Groceries
 
@@ -14371,7 +16736,6 @@ Groceries
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 Groceries
 - milk
@@ -14382,7 +16746,6 @@ Groceries
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 Groceries
 
@@ -14401,7 +16764,6 @@ Groceries
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 Groceries
 - milk
@@ -14412,7 +16774,6 @@ Done.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 Groceries
 
@@ -14426,7 +16787,7 @@ Done.┃
 </td></tr>
 </table>
 
-#### 347. [Outliner flows › Scenario7](../../spec/scenarios.md#scenario7)
+#### [Outliner flows › Scenario7](../../spec/scenarios.md#scenario7)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -14446,7 +16807,6 @@ Done.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - buy milk
 - ┃ and eggs
@@ -14455,7 +16815,6 @@ Done.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - buy milk
 - ┃and eggs
@@ -14471,7 +16830,6 @@ Done.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - buy milk ┃ and eggs
 - call Ann
@@ -14479,7 +16837,6 @@ Done.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - buy milk ┃and eggs
 - call Ann
@@ -14494,7 +16851,6 @@ Done.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ┃buy milk  and eggs
 - call Ann
@@ -14502,7 +16858,6 @@ Done.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃buy milk and eggs
 - call Ann
@@ -14517,7 +16872,6 @@ Done.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - 
 - today:┃buy milk  and eggs
@@ -14526,7 +16880,6 @@ Done.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - today:┃
 - buy milk and eggs
@@ -14542,7 +16895,6 @@ Done.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - 
 - today:buy milk  and eggs
@@ -14551,7 +16903,6 @@ Done.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - today:
 - buy milk and eggs
@@ -14567,7 +16918,6 @@ Done.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - 
 - today:buy milk  and eggs┃call An
@@ -14575,7 +16925,6 @@ Done.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - today:
 - buy milk and eggs┃call A
@@ -14584,7 +16933,7 @@ Done.┃
 </td></tr>
 </table>
 
-#### 348. [Outliner flows › Scenario11](../../spec/scenarios.md#scenario11)
+#### [Outliner flows › Scenario11](../../spec/scenarios.md#scenario11)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -14675,7 +17024,6 @@ Done.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   ┃more
@@ -14684,7 +17032,6 @@ Done.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - amore┃b
 ```
@@ -14692,7 +17039,7 @@ Done.┃
 </td></tr>
 </table>
 
-#### 349. [Outliner flows › Scenario15](../../spec/scenarios.md#scenario15)
+#### [Outliner flows › Scenario15](../../spec/scenarios.md#scenario15)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -14726,7 +17073,6 @@ Done.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - [ ] milk
 - [ ] bread
@@ -14735,7 +17081,6 @@ Done.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] milk
 - [ ] bread
@@ -14751,7 +17096,6 @@ Done.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - [ ] milk
 - [ ] bread
@@ -14761,7 +17105,6 @@ Done.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] milk
 - [ ] bread
@@ -14778,7 +17121,6 @@ Done.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - [ ] milk
 - [ ] bread
@@ -14788,7 +17130,6 @@ Done.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] milk
 - [ ] bread
@@ -14805,7 +17146,6 @@ Done.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - [ ] milk
 - [ ] bread
@@ -14815,7 +17155,6 @@ Shop closes at six.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] milk
 - [ ] bread
@@ -14827,7 +17166,7 @@ Shop closes at six.┃
 </td></tr>
 </table>
 
-#### 350. [Outliner flows › Scenario16](../../spec/scenarios.md#scenario16)
+#### [Outliner flows › Scenario16](../../spec/scenarios.md#scenario16)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -14851,7 +17190,6 @@ Shop closes at six.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Work
 - email
@@ -14863,7 +17201,6 @@ Shop closes at six.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Work
 - email
@@ -14882,7 +17219,6 @@ Shop closes at six.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Work
 - email
@@ -14894,7 +17230,6 @@ Shop closes at six.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Work
 - email
@@ -14925,7 +17260,7 @@ Shop closes at six.┃
 </td></tr>
 </table>
 
-#### 351. [Outliner flows › Scenario18](../../spec/scenarios.md#scenario18)
+#### [Outliner flows › Scenario18](../../spec/scenarios.md#scenario18)
 
 > pasteStructured "!"
 
@@ -14949,7 +17284,6 @@ Notes
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 Notes
 - example```
@@ -14961,7 +17295,6 @@ code
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 Notes
 - example
@@ -14974,7 +17307,7 @@ Notes
 </td></tr>
 </table>
 
-#### 352. [Notes and sections › Scenario19](../../spec/scenarios.md#scenario19)
+#### [Notes and sections › Scenario19](../../spec/scenarios.md#scenario19)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -15007,7 +17340,6 @@ first idea┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Notes
 first idea
@@ -15016,7 +17348,6 @@ second┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Notes
 first idea
@@ -15033,7 +17364,6 @@ second┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Notes
 first idea
@@ -15042,7 +17372,6 @@ second┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Notes
 second┃
@@ -15053,7 +17382,7 @@ first idea
 </td></tr>
 </table>
 
-#### 353. [Notes and sections › Scenario20](../../spec/scenarios.md#scenario20)
+#### [Notes and sections › Scenario20](../../spec/scenarios.md#scenario20)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -15072,7 +17401,6 @@ first idea
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Trip
 Pack light.
@@ -15081,7 +17409,6 @@ Book the train.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Trip
 Pack light.
@@ -15098,7 +17425,6 @@ Book the train.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Trip
 Pack light.
@@ -15108,7 +17434,6 @@ Seat 42.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Trip
 Pack light.
@@ -15126,7 +17451,6 @@ Seat 42.┃
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Trip
 Pack light.
@@ -15136,7 +17460,6 @@ Seat 42.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Trip
 Book the train.
@@ -15154,7 +17477,6 @@ Pack light.
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Trip
 Pack light.┃
@@ -15162,7 +17484,6 @@ Pack light.┃
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Trip
 Pack light.
@@ -15174,7 +17495,7 @@ Seat 42.┃
 </td></tr>
 </table>
 
-#### 354. [Notes and sections › Scenario21](../../spec/scenarios.md#scenario21)
+#### [Notes and sections › Scenario21](../../spec/scenarios.md#scenario21)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -15193,7 +17514,6 @@ one┃two
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 one
 ┃two
@@ -15201,7 +17521,6 @@ one
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 one
 
@@ -15217,14 +17536,12 @@ one
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 one┃two
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 one
 ┃two
@@ -15239,14 +17556,12 @@ one
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 onetwo
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 one┃
 two
@@ -15261,14 +17576,12 @@ two
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 onetwo
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 one┃two
 ```
@@ -15276,7 +17589,7 @@ one┃two
 </td></tr>
 </table>
 
-#### 355. [Notes and sections › Scenario22](../../spec/scenarios.md#scenario22)
+#### [Notes and sections › Scenario22](../../spec/scenarios.md#scenario22)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -15301,7 +17614,6 @@ one┃two
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Work┃
 
@@ -15314,7 +17626,6 @@ one┃two
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Home
 
@@ -15347,7 +17658,7 @@ one┃two
 </td></tr>
 </table>
 
-#### 356. [Notes and sections › Scenario23](../../spec/scenarios.md#scenario23)
+#### [Notes and sections › Scenario23](../../spec/scenarios.md#scenario23)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -15366,7 +17677,6 @@ one┃two
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Plan
 2. revise ┃draft
@@ -15374,7 +17684,6 @@ one┃two
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Plan
 revise ┃2\. draft
@@ -15389,7 +17698,6 @@ revise ┃2\. draft
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Plan
 2. revise 
@@ -15398,7 +17706,6 @@ revise ┃2\. draft
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Plan
 revise
@@ -15421,7 +17728,7 @@ revise
 </td></tr>
 </table>
 
-#### 357. [ShiftEnter1](../../spec/shift-enter.md#shiftenter1)
+#### [ShiftEnter1](../../spec/shift-enter.md#shiftenter1)
 
 > shiftEnter
 
@@ -15435,7 +17742,6 @@ revise
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - one two
   ┃ three
@@ -15443,7 +17749,6 @@ revise
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one two
   ┃three
@@ -15452,7 +17757,7 @@ revise
 </td></tr>
 </table>
 
-#### 358. [ShiftEnter2](../../spec/shift-enter.md#shiftenter2)
+#### [ShiftEnter2](../../spec/shift-enter.md#shiftenter2)
 
 > shiftEnter
 
@@ -15467,7 +17772,6 @@ revise
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. a
    - b
@@ -15476,7 +17780,6 @@ revise
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 1. a
    - b
@@ -15486,7 +17789,7 @@ revise
 </td></tr>
 </table>
 
-#### 359. [ShiftEnter3](../../spec/shift-enter.md#shiftenter3)
+#### [ShiftEnter3](../../spec/shift-enter.md#shiftenter3)
 
 > shiftEnter
 
@@ -15501,7 +17804,6 @@ revise
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - x
 →- a
@@ -15510,7 +17812,6 @@ revise
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - x
 →- a
@@ -15520,7 +17821,7 @@ revise
 </td></tr>
 </table>
 
-#### 360. [ShiftEnter5](../../spec/shift-enter.md#shiftenter5)
+#### [ShiftEnter5](../../spec/shift-enter.md#shiftenter5)
 
 > shiftEnter
 
@@ -15534,7 +17835,6 @@ revise
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - abc 
   ┃- def
@@ -15542,7 +17842,6 @@ revise
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - abc
   ┃\- def
@@ -15551,7 +17850,7 @@ revise
 </td></tr>
 </table>
 
-#### 361. [ShiftEnter6](../../spec/shift-enter.md#shiftenter6)
+#### [ShiftEnter6](../../spec/shift-enter.md#shiftenter6)
 
 > shiftEnter
 
@@ -15565,7 +17864,6 @@ revise
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - abc 
   ┃1. def
@@ -15573,7 +17871,6 @@ revise
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - abc
   ┃1\. def
@@ -15582,7 +17879,7 @@ revise
 </td></tr>
 </table>
 
-#### 362. [ShiftEnter7](../../spec/shift-enter.md#shiftenter7)
+#### [ShiftEnter7](../../spec/shift-enter.md#shiftenter7)
 
 > shiftEnter
 
@@ -15596,7 +17893,6 @@ Title ┃===
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 Title 
 ┃===
@@ -15604,7 +17900,6 @@ Title
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 Title
 ┃\===
@@ -15613,7 +17908,7 @@ Title
 </td></tr>
 </table>
 
-#### 363. [ShiftEnter8](../../spec/shift-enter.md#shiftenter8)
+#### [ShiftEnter8](../../spec/shift-enter.md#shiftenter8)
 
 > shiftEnter
 
@@ -15627,7 +17922,6 @@ Title ┃--
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 Title 
 ┃--
@@ -15635,7 +17929,6 @@ Title
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 Title
 ┃\--
@@ -15644,7 +17937,7 @@ Title
 </td></tr>
 </table>
 
-#### 364. [ShiftEnter9](../../spec/shift-enter.md#shiftenter9)
+#### [ShiftEnter9](../../spec/shift-enter.md#shiftenter9)
 
 > shiftEnter
 
@@ -15658,7 +17951,6 @@ Title
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - one 
   ┃<div>
@@ -15666,7 +17958,6 @@ Title
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one
   ┃\<div>
@@ -15675,7 +17966,7 @@ Title
 </td></tr>
 </table>
 
-#### 365. [ShiftEnter13](../../spec/shift-enter.md#shiftenter13)
+#### [ShiftEnter13](../../spec/shift-enter.md#shiftenter13)
 
 > shiftEnter
 
@@ -15689,7 +17980,6 @@ Title
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - 
   ┃one
@@ -15697,7 +17987,6 @@ Title
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃one
 ```
@@ -15705,7 +17994,7 @@ Title
 </td></tr>
 </table>
 
-#### 366. [ShiftEnter14](../../spec/shift-enter.md#shiftenter14)
+#### [ShiftEnter14](../../spec/shift-enter.md#shiftenter14)
 
 > shiftEnter
 
@@ -15719,7 +18008,6 @@ Title
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 # Title
 ┃ more
@@ -15727,7 +18015,6 @@ Title
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 # Title┃ more
 ```
@@ -15735,7 +18022,7 @@ Title
 </td></tr>
 </table>
 
-#### 367. [ShiftEnter18](../../spec/shift-enter.md#shiftenter18)
+#### [ShiftEnter18](../../spec/shift-enter.md#shiftenter18)
 
 > shiftEnter
 
@@ -15749,7 +18036,6 @@ Title
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. abc 
    ┃2. x
@@ -15757,7 +18043,6 @@ Title
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 1. abc
    ┃2\. x
@@ -15766,7 +18051,7 @@ Title
 </td></tr>
 </table>
 
-#### 368. [ShiftEnter19](../../spec/shift-enter.md#shiftenter19)
+#### [ShiftEnter19](../../spec/shift-enter.md#shiftenter19)
 
 > shiftEnter
 
@@ -15780,7 +18065,6 @@ a | b ┃|---|---|
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 a | b 
 ┃|---|---|
@@ -15788,7 +18072,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 a | b
 ┃\|---|---|
@@ -15797,7 +18080,7 @@ a | b
 </td></tr>
 </table>
 
-#### 369. [ShiftEnter20](../../spec/shift-enter.md#shiftenter20)
+#### [ShiftEnter20](../../spec/shift-enter.md#shiftenter20)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -15816,7 +18099,6 @@ a | b
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - abc
   ┃- def
@@ -15824,7 +18106,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - abc
   ┃\- def
@@ -15839,7 +18120,6 @@ a | b
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - abc
 - ┃def
@@ -15847,7 +18127,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - abc┃- def
 ```
@@ -15855,7 +18134,7 @@ a | b
 </td></tr>
 </table>
 
-#### 370. [ShiftEnter21](../../spec/shift-enter.md#shiftenter21)
+#### [ShiftEnter21](../../spec/shift-enter.md#shiftenter21)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -15874,7 +18153,6 @@ a | b
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - one two
   ┃ three
@@ -15882,7 +18160,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one two
   ┃three
@@ -15897,7 +18174,6 @@ a | b
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - one two
  ┃three
@@ -15905,7 +18181,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one two┃three
 ```
@@ -15913,7 +18188,68 @@ a | b
 </td></tr>
 </table>
 
-#### 371. [TaskEnter1](../../spec/tasks.md#taskenter1)
+#### [ShiftEnter23](../../spec/shift-enter.md#shiftenter23)
+
+> shiftEnter
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+[Note]: this ┃matters a lot
+```
+
+</td><td>
+
+```buffer
+[Note]: this 
+┃matters a lot
+```
+
+</td><td>
+
+```buffer
+\[Note]: this
+┃matters a lot
+```
+
+</td></tr>
+</table>
+
+#### [ShiftEnter25](../../spec/shift-enter.md#shiftenter25)
+
+> shiftEnter
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+p
+┃[r]: /u
+```
+
+</td><td>
+
+```buffer
+p
+
+┃[r]: /u
+```
+
+</td><td>
+
+```buffer
+p
+
+┃\[r]: /u
+```
+
+</td></tr>
+</table>
+
+#### [TaskEnter1](../../spec/tasks.md#taskenter1)
 
 > enter
 
@@ -15928,7 +18264,6 @@ a | b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 ┃
@@ -15936,7 +18271,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 
@@ -15946,7 +18280,7 @@ a | b
 </td></tr>
 </table>
 
-#### 372. [TaskEnter5](../../spec/tasks.md#taskenter5)
+#### [TaskEnter5](../../spec/tasks.md#taskenter5)
 
 > enter
 
@@ -15963,7 +18297,6 @@ a | b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - b
@@ -15973,7 +18306,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - b
@@ -15985,7 +18317,7 @@ a | b
 </td></tr>
 </table>
 
-#### 373. [TaskEnter6](../../spec/tasks.md#taskenter6)
+#### [TaskEnter6](../../spec/tasks.md#taskenter6)
 
 > enter
 
@@ -16001,7 +18333,6 @@ a | b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - b
@@ -16010,7 +18341,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - [ ] 
@@ -16021,7 +18351,7 @@ a | b
 </td></tr>
 </table>
 
-#### 374. [TaskEnter7](../../spec/tasks.md#taskenter7)
+#### [TaskEnter7](../../spec/tasks.md#taskenter7)
 
 > enter
 
@@ -16036,7 +18366,6 @@ a | b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - [x] a
 - [ ] ┃ b
@@ -16045,7 +18374,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [x] a
 - [ ] ┃b
@@ -16055,7 +18383,7 @@ a | b
 </td></tr>
 </table>
 
-#### 375. [TaskBackspace2](../../spec/tasks.md#taskbackspace2)
+#### [TaskBackspace2](../../spec/tasks.md#taskbackspace2)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -16075,7 +18403,6 @@ a | b
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 - [ ]┃
@@ -16083,7 +18410,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃
@@ -16098,7 +18424,6 @@ a | b
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 - [ ┃
@@ -16106,7 +18431,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
 ```
@@ -16114,7 +18438,7 @@ a | b
 </td></tr>
 </table>
 
-#### 376. [TaskBackspace3](../../spec/tasks.md#taskbackspace3)
+#### [TaskBackspace3](../../spec/tasks.md#taskbackspace3)
 
 > deleteContentBackward
 
@@ -16129,7 +18453,6 @@ a | b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 - [x]┃b
@@ -16137,7 +18460,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - ┃b
@@ -16146,7 +18468,7 @@ a | b
 </td></tr>
 </table>
 
-#### 377. [TaskDelete1](../../spec/tasks.md#taskdelete1)
+#### [TaskDelete1](../../spec/tasks.md#taskdelete1)
 
 > deleteContentForward
 
@@ -16161,14 +18483,12 @@ a | b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a┃[ ] b
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃b
 ```
@@ -16176,7 +18496,7 @@ a | b
 </td></tr>
 </table>
 
-#### 378. [TaskDelete3](../../spec/tasks.md#taskdelete3)
+#### [TaskDelete3](../../spec/tasks.md#taskdelete3)
 
 > deleteContentForward
 
@@ -16191,14 +18511,12 @@ a | b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a┃[ ] 
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
 ```
@@ -16206,7 +18524,7 @@ a | b
 </td></tr>
 </table>
 
-#### 379. [Undo3](../../spec/undo.md#undo3)
+#### [Undo3](../../spec/undo.md#undo3)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -16253,7 +18571,6 @@ a | b
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a┃
   - 
@@ -16261,7 +18578,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
 
@@ -16277,7 +18593,6 @@ a | b
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 - ┃
@@ -16285,7 +18600,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - ┃
@@ -16300,7 +18614,6 @@ a | b
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a┃
 - 
@@ -16308,7 +18621,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a┃
 
@@ -16318,7 +18630,7 @@ a | b
 </td></tr>
 </table>
 
-#### 380. [Undo4](../../spec/undo.md#undo4)
+#### [Undo4](../../spec/undo.md#undo4)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -16379,14 +18691,12 @@ a | b
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a┃
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - ┃
@@ -16395,7 +18705,7 @@ a | b
 </td></tr>
 </table>
 
-#### 381. [Undo5](../../spec/undo.md#undo5)
+#### [Undo5](../../spec/undo.md#undo5)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -16456,14 +18766,12 @@ a | b
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a┃
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - ┃
@@ -16472,9 +18780,78 @@ a | b
 </td></tr>
 </table>
 
-### Whitespace (4)
+### Whitespace (5)
 
-#### 1. [ShiftEnter10](../../spec/shift-enter.md#shiftenter10)
+#### [Fence48](../../spec/fences.md#fence48)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- p
+  - ┃a
+    ```
+    x
+    
+    y
+    ```
+````
+
+</td></tr>
+</table>
+
+> outdent
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- p
+- ┃a
+  ```
+  x
+  
+  y
+  ```
+````
+
+</td></tr>
+</table>
+
+> indent
+
+<table>
+<tr><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- p
+  - ┃a
+    ```
+    x
+    
+    y
+    ```
+````
+
+</td><td>
+
+````buffer
+- p
+  - ┃a
+    ```
+    x
+  
+    y
+    ```
+````
+
+</td></tr>
+</table>
+
+#### [ShiftEnter10](../../spec/shift-enter.md#shiftenter10)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -16494,7 +18871,6 @@ a | b
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   
@@ -16503,7 +18879,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 
@@ -16519,7 +18894,6 @@ a | b
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   
@@ -16528,7 +18902,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 
@@ -16538,7 +18911,7 @@ a | b
 </td></tr>
 </table>
 
-#### 2. [ShiftEnter11](../../spec/shift-enter.md#shiftenter11)
+#### [ShiftEnter11](../../spec/shift-enter.md#shiftenter11)
 
 > shiftEnter
 
@@ -16554,7 +18927,6 @@ a | b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - one
   
@@ -16564,7 +18936,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one
 
@@ -16575,7 +18946,7 @@ a | b
 </td></tr>
 </table>
 
-#### 3. [ShiftEnter15](../../spec/shift-enter.md#shiftenter15)
+#### [ShiftEnter15](../../spec/shift-enter.md#shiftenter15)
 
 > shiftEnter shiftEnter "p"
 
@@ -16589,7 +18960,6 @@ a | b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - one
   
@@ -16598,7 +18968,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one
 
@@ -16608,7 +18977,7 @@ a | b
 </td></tr>
 </table>
 
-#### 4. [TaskEnter3](../../spec/tasks.md#taskenter3)
+#### [TaskEnter3](../../spec/tasks.md#taskenter3)
 
 > enter
 
@@ -16622,7 +18991,6 @@ a | b
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - [ ] abc 
 - [ ] ┃# x
@@ -16630,7 +18998,6 @@ a | b
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] abc
 - [ ] ┃# x
@@ -16639,9 +19006,9 @@ a | b
 </td></tr>
 </table>
 
-### Caret (18)
+### Caret (20)
 
-#### 1. [CursorUp1](../../spec/cursor.md#cursorup1)
+#### [CursorUp1](../../spec/cursor.md#cursorup1)
 
 > cursorLineUp
 
@@ -16655,14 +19022,12 @@ ab┃
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ab
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃ab
 ```
@@ -16670,7 +19035,7 @@ ab
 </td></tr>
 </table>
 
-#### 2. [CursorUp2](../../spec/cursor.md#cursorup2)
+#### [CursorUp2](../../spec/cursor.md#cursorup2)
 
 > cursorLineUp
 
@@ -16685,7 +19050,6 @@ ab
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ## Ti┃tle
 - a
@@ -16693,7 +19057,6 @@ ab
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ## ┃Title
 - a
@@ -16702,7 +19065,7 @@ ab
 </td></tr>
 </table>
 
-#### 3. [CursorDown5](../../spec/cursor.md#cursordown5)
+#### [CursorDown5](../../spec/cursor.md#cursordown5)
 
 > cursorLineDown
 
@@ -16717,7 +19080,6 @@ ab
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
 - [ ] t┃ask
@@ -16725,7 +19087,6 @@ ab
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
 - [ ] ┃task
@@ -16734,7 +19095,7 @@ ab
 </td></tr>
 </table>
 
-#### 4. [CursorHome2](../../spec/cursor.md#cursorhome2)
+#### [CursorHome2](../../spec/cursor.md#cursorhome2)
 
 > cursorLineBoundaryBackward
 
@@ -16748,14 +19109,12 @@ ab
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ┃one two
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃- one two
 ```
@@ -16763,7 +19122,7 @@ ab
 </td></tr>
 </table>
 
-#### 5. [CursorHome10](../../spec/cursor.md#cursorhome10)
+#### [CursorHome10](../../spec/cursor.md#cursorhome10)
 
 > cursorLineBoundaryBackward
 
@@ -16777,14 +19136,12 @@ ab
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 ┃## Title
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ## ┃Title
 ```
@@ -16792,7 +19149,7 @@ ab
 </td></tr>
 </table>
 
-#### 6. [CursorHome13](../../spec/cursor.md#cursorhome13)
+#### [CursorHome13](../../spec/cursor.md#cursorhome13)
 
 > cursorLineBoundaryBackward
 
@@ -16807,7 +19164,6 @@ ab
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - one
   ┃two
@@ -16815,7 +19171,6 @@ ab
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - one
 ┃  two
@@ -16824,7 +19179,7 @@ ab
 </td></tr>
 </table>
 
-#### 7. [CursorHome17](../../spec/cursor.md#cursorhome17)
+#### [CursorHome17](../../spec/cursor.md#cursorhome17)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -16843,14 +19198,12 @@ ab
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ```buffer
 > ┃[!note] Title
 ```
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 > [!note] ┃Title
 ```
@@ -16871,7 +19224,7 @@ ab
 </td></tr>
 </table>
 
-#### 8. [CursorDocStart1](../../spec/cursor.md#cursordocstart1)
+#### [CursorDocStart1](../../spec/cursor.md#cursordocstart1)
 
 > cursorDocStart
 
@@ -16886,7 +19239,6 @@ ab
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ┃ab
 - c
@@ -16894,7 +19246,6 @@ ab
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃- ab
 - c
@@ -16903,7 +19254,7 @@ ab
 </td></tr>
 </table>
 
-#### 9. [Enter26](../../spec/enter.md#enter26)
+#### [Enter26](../../spec/enter.md#enter26)
 
 > enter
 
@@ -16918,7 +19269,6 @@ ab
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - 
@@ -16927,7 +19277,6 @@ ab
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - ┃
@@ -16937,7 +19286,7 @@ ab
 </td></tr>
 </table>
 
-#### 10. [Enter29](../../spec/enter.md#enter29)
+#### [Enter29](../../spec/enter.md#enter29)
 
 > enter
 
@@ -16953,7 +19302,6 @@ ab
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - a
   - b
@@ -16963,7 +19311,6 @@ ab
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - a
   - b
@@ -16974,7 +19321,7 @@ ab
 </td></tr>
 </table>
 
-#### 11. [Enter31](../../spec/enter.md#enter31)
+#### [Enter31](../../spec/enter.md#enter31)
 
 > enter
 
@@ -16989,7 +19336,6 @@ ab
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - 
 - ┃a
@@ -16998,7 +19344,6 @@ ab
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - ┃
 - a
@@ -17008,7 +19353,7 @@ ab
 </td></tr>
 </table>
 
-#### 12. [Fence13](../../spec/fences.md#fence13)
+#### [Fence13](../../spec/fences.md#fence13)
 
 > enter
 
@@ -17025,7 +19370,6 @@ ab
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a
   ```
@@ -17036,7 +19380,6 @@ ab
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   ```
@@ -17048,7 +19391,7 @@ ab
 </td></tr>
 </table>
 
-#### 13. [Fence15](../../spec/fences.md#fence15)
+#### [Fence15](../../spec/fences.md#fence15)
 
 > enter
 
@@ -17064,7 +19407,6 @@ ab
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - 
 - ┃```
@@ -17074,7 +19416,6 @@ ab
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - ┃
 - ```
@@ -17085,7 +19426,7 @@ ab
 </td></tr>
 </table>
 
-#### 14. [Fence29](../../spec/fences.md#fence29)
+#### [Fence29](../../spec/fences.md#fence29)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -17107,7 +19448,6 @@ ab
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a
   ```
@@ -17118,7 +19458,6 @@ ab
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   ```
@@ -17136,7 +19475,6 @@ ab
 <tr><th>obsidian-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a
   ```
@@ -17146,7 +19484,6 @@ ab
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   ```
@@ -17157,7 +19494,7 @@ ab
 </td></tr>
 </table>
 
-#### 15. [Fence41](../../spec/fences.md#fence41)
+#### [Fence41](../../spec/fences.md#fence41)
 
 > shiftEnter
 
@@ -17174,7 +19511,6 @@ ab
 
 </td><td>
 
-<!--obsidian-outliner-->
 ````buffer
 - a
   ```
@@ -17185,7 +19521,6 @@ ab
 
 </td><td>
 
-<!--ourus-->
 ````buffer
 - a
   ```
@@ -17197,7 +19532,73 @@ ab
 </td></tr>
 </table>
 
-#### 16. [Abandoning an empty place › Enter, Shift-Tab, then leave › Outdented empty ordered item stays](../../spec/obsidian-true-outliner.md#outdented-empty-ordered-item-stays)
+#### [MoveUp37](../../spec/move-subtree-up.md#moveup37)
+
+> moveSubtreeUp
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- ┃$$
+```
+
+</td><td>
+
+```buffer
+- ┃$$
+- a
+```
+
+</td><td>
+
+```buffer
+- $$┃
+- a
+```
+
+</td></tr>
+</table>
+
+#### [MoveUp38](../../spec/move-subtree-up.md#moveup38)
+
+> moveSubtreeUp
+
+<table>
+<tr><th>buffer</th><th>obsidian-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- b
+- $$
+  x$$┃
+  tail
+```
+
+</td><td>
+
+```buffer
+- $$
+  x$$┃
+  tail
+- b
+```
+
+</td><td>
+
+```buffer
+- $$
+  x┃$$
+  tail
+- b
+```
+
+</td></tr>
+</table>
+
+#### [Abandoning an empty place › Enter, Shift-Tab, then leave › Outdented empty ordered item stays](../../spec/obsidian-true-outliner.md#outdented-empty-ordered-item-stays)
 
 > enter outdent cursorDocStart
 
@@ -17213,7 +19614,6 @@ ab
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 1. ┃p
    1. a
@@ -17223,7 +19623,6 @@ ab
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃1. p
    1. a
@@ -17234,7 +19633,7 @@ ab
 </td></tr>
 </table>
 
-#### 17. [Abandoning an empty place › Enter, Shift-Tab, then leave › Second Enter outdents to a kept item](../../spec/obsidian-true-outliner.md#second-enter-outdents-to-a-kept-item)
+#### [Abandoning an empty place › Enter, Shift-Tab, then leave › Second Enter outdents to a kept item](../../spec/obsidian-true-outliner.md#second-enter-outdents-to-a-kept-item)
 
 > enter enter cursorDocStart
 
@@ -17249,7 +19648,6 @@ ab
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - ┃a
   - b
@@ -17258,7 +19656,6 @@ ab
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 ┃- a
   - b
@@ -17268,7 +19665,7 @@ ab
 </td></tr>
 </table>
 
-#### 18. [TaskEnter4](../../spec/tasks.md#taskenter4)
+#### [TaskEnter4](../../spec/tasks.md#taskenter4)
 
 > enter
 
@@ -17282,7 +19679,6 @@ ab
 
 </td><td>
 
-<!--obsidian-outliner-->
 ```buffer
 - [ ] 
 - [ ] ┃abc
@@ -17290,7 +19686,6 @@ ab
 
 </td><td>
 
-<!--ourus-->
 ```buffer
 - [ ] ┃
 - [ ] abc
@@ -17299,7 +19694,125 @@ ab
 </td></tr>
 </table>
 
-### Agree (183)
+### Error (4)
+
+#### [Enter49](../../spec/enter.md#enter49)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+| a | b |
+| --- | --- |
+| 1 | 2 |┃
+```
+
+</td></tr>
+</table>
+
+> enter
+
+Error: Obsidian with Outliner holds the starting state differently:
+  meant:
+    | a | b |
+    | --- | --- |
+    | 1 | 2 |┃
+  holds:
+    | a   | b   |
+    | --- | --- |
+    | 1   | 2   |
+
+> deleteContentBackward
+
+> enter "after"
+
+#### [Enter50](../../spec/enter.md#enter50)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+| a | b |
+| --- | --- |
+| on┃e | 2 |
+```
+
+</td></tr>
+</table>
+
+> enter
+
+Error: Obsidian with Outliner holds the starting state differently:
+  meant:
+    | a | b |
+    | --- | --- |
+    | on┃e | 2 |
+  holds:
+    | a | b |
+    | --- | --- |
+    | one | 2 |
+
+#### [Paste56](../../spec/paste.md#paste56)
+
+<table>
+<tr><th>clipboard</th><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+y
+```
+
+</td><td>
+
+```buffer
+| a┃ | b |
+| - | - |
+```
+
+</td></tr>
+</table>
+
+> pasteStructured
+
+Error: Obsidian with Outliner holds the starting state differently:
+  meant:
+    | a┃ | b |
+    | - | - |
+  holds:
+    | a | b |
+    | - | - |
+
+#### [ShiftEnter24](../../spec/shift-enter.md#shiftenter24)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+| a | b |
+| --- | --- |
+| on┃e | 2 |
+```
+
+</td></tr>
+</table>
+
+> shiftEnter
+
+Error: Obsidian with Outliner holds the starting state differently:
+  meant:
+    | a | b |
+    | --- | --- |
+    | on┃e | 2 |
+  holds:
+    | a | b |
+    | --- | --- |
+    | one | 2 |
+
+### Agree (187)
 
 1. [Backspace1](../../spec/backspace.md#backspace1)
 2. [Backspace3](../../spec/backspace.md#backspace3)
@@ -17381,113 +19894,117 @@ ab
 78. [Fence28](../../spec/fences.md#fence28)
 79. [Fence30](../../spec/fences.md#fence30)
 80. [Fence32](../../spec/fences.md#fence32)
-81. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap8](../../spec/gaps.md#gap8)
-82. [New text and gaps › Gap12](../../spec/gaps.md#gap12)
-83. [Indent1](../../spec/indent.md#indent1)
-84. [Indent2](../../spec/indent.md#indent2)
-85. [Indent5](../../spec/indent.md#indent5)
-86. [Indent6](../../spec/indent.md#indent6)
-87. [Indent7](../../spec/indent.md#indent7)
-88. [Indent8](../../spec/indent.md#indent8)
-89. [Indent9](../../spec/indent.md#indent9)
-90. [Indent10](../../spec/indent.md#indent10)
-91. [Indent11](../../spec/indent.md#indent11)
-92. [Indent14](../../spec/indent.md#indent14)
-93. [Indent19](../../spec/indent.md#indent19)
-94. [Indent20](../../spec/indent.md#indent20)
-95. [Indent26](../../spec/indent.md#indent26)
-96. [Indent27](../../spec/indent.md#indent27)
-97. [MoveDown3](../../spec/move-subtree-down.md#movedown3)
-98. [MoveDown6](../../spec/move-subtree-down.md#movedown6)
-99. [MoveDown7](../../spec/move-subtree-down.md#movedown7)
-100. [MoveDown9](../../spec/move-subtree-down.md#movedown9)
-101. [MoveDown10](../../spec/move-subtree-down.md#movedown10)
-102. [MoveDown15](../../spec/move-subtree-down.md#movedown15)
-103. [MoveDown17](../../spec/move-subtree-down.md#movedown17)
-104. [MoveDown19](../../spec/move-subtree-down.md#movedown19)
-105. [MoveDown22](../../spec/move-subtree-down.md#movedown22)
-106. [MoveDown25](../../spec/move-subtree-down.md#movedown25)
-107. [MoveUp1](../../spec/move-subtree-up.md#moveup1)
-108. [MoveUp2](../../spec/move-subtree-up.md#moveup2)
-109. [MoveUp5](../../spec/move-subtree-up.md#moveup5)
-110. [MoveUp6](../../spec/move-subtree-up.md#moveup6)
-111. [MoveUp8](../../spec/move-subtree-up.md#moveup8)
-112. [MoveUp9](../../spec/move-subtree-up.md#moveup9)
-113. [MoveUp14](../../spec/move-subtree-up.md#moveup14)
-114. [MoveUp28](../../spec/move-subtree-up.md#moveup28)
-115. [MoveUp32](../../spec/move-subtree-up.md#moveup32)
-116. [MoveUp33](../../spec/move-subtree-up.md#moveup33)
-117. [Enter › E7, E8 › End of parent opens empty first child](../../spec/obsidian-true-outliner.md#end-of-parent-opens-empty-first-child)
-118. [Enter › E15](../../spec/obsidian-true-outliner.md#e15)
-119. [Enter › E19, E21 › End of lone heading starts a paragraph](../../spec/obsidian-true-outliner.md#end-of-lone-heading-starts-a-paragraph)
-120. [Enter › E19, E21 › Empty paragraph before a section list](../../spec/obsidian-true-outliner.md#empty-paragraph-before-a-section-list)
-121. [Enter › E32 › Checked task gives unchecked new item](../../spec/obsidian-true-outliner.md#checked-task-gives-unchecked-new-item)
-122. [Enter › E33](../../spec/obsidian-true-outliner.md#e33)
-123. [Enter › E13, E16 › Rest of title becomes first paragraph](../../spec/obsidian-true-outliner.md#rest-of-title-becomes-first-paragraph)
-124. [Enter › E13, E16 › Split title above a subheading](../../spec/obsidian-true-outliner.md#split-title-above-a-subheading)
-125. [Shift-Enter › S11 › Place inside a multi-line item](../../spec/obsidian-true-outliner.md#place-inside-a-multi-line-item)
-126. [Backspace › #269 › Emptied middle item removed and renumbered](../../spec/obsidian-true-outliner.md#emptied-middle-item-removed-and-renumbered)
-127. [Backspace › #153 › Undoing a fresh line break](../../spec/obsidian-true-outliner.md#undoing-a-fresh-line-break)
-128. [Backspace › delete-to-content-start](../../spec/obsidian-true-outliner.md#delete-to-content-start)
-129. [Backspace › Joining across ordered runs](../../spec/obsidian-true-outliner.md#joining-across-ordered-runs)
-130. [Backspace › Joining away the head of a list › Next item becomes the new 1.](../../spec/obsidian-true-outliner.md#next-item-becomes-the-new-1)
-131. [Indentation › #255 › Outdented child leaves quote above alone](../../spec/obsidian-true-outliner.md#outdented-child-leaves-quote-above-alone)
-132. [Indentation › indent-unit-on-every-line](../../spec/obsidian-true-outliner.md#indent-unit-on-every-line)
-133. [Indentation › seams-across-a-re-indent › Indented item keeps its quote](../../spec/obsidian-true-outliner.md#indented-item-keeps-its-quote)
-134. [Indentation › seams-across-a-re-indent › Outdented item keeps its quote](../../spec/obsidian-true-outliner.md#outdented-item-keeps-its-quote)
-135. [Moving › lone-block-id › Block id moves with its item](../../spec/obsidian-true-outliner.md#block-id-moves-with-its-item)
-136. [Ordered lists › Outdenting the head of a nested list](../../spec/obsidian-true-outliner.md#outdenting-the-head-of-a-nested-list)
-137. [Abandoning an empty place › Shift-Enter, Tab, then leave › Backspace returns to the start](../../spec/obsidian-true-outliner.md#backspace-returns-to-the-start)
-138. [Abandoning an empty place › Shift-Enter, Tab, then leave › Shift-Tab then Backspace returns to start](../../spec/obsidian-true-outliner.md#shift-tab-then-backspace-returns-to-start)
-139. [Abandoning an empty place › Enter, then Shift-Enter and Backspace](../../spec/obsidian-true-outliner.md#enter-then-shift-enter-and-backspace)
-140. [Outdent1](../../spec/outdent.md#outdent1)
-141. [Outdent2](../../spec/outdent.md#outdent2)
-142. [Outdent3](../../spec/outdent.md#outdent3)
-143. [Outdent5](../../spec/outdent.md#outdent5)
-144. [Outdent6](../../spec/outdent.md#outdent6)
-145. [Outdent9](../../spec/outdent.md#outdent9)
-146. [Outdent10](../../spec/outdent.md#outdent10)
-147. [Logical outdent › LogicalOutdent1](../../spec/outdent.md#logicaloutdent1)
-148. [Paste24](../../spec/paste.md#paste24)
-149. [Paste31](../../spec/paste.md#paste31)
-150. [Placeholder6](../../spec/placeholders.md#placeholder6)
-151. [Placeholder8](../../spec/placeholders.md#placeholder8)
-152. [Placeholder10](../../spec/placeholders.md#placeholder10)
-153. [Placeholder11](../../spec/placeholders.md#placeholder11)
-154. [Placeholder12](../../spec/placeholders.md#placeholder12)
-155. [Indent inside a quote › Quote4](../../spec/quotes.md#quote4)
-156. [Quote10](../../spec/quotes.md#quote10)
-157. [A quote and a heading don't swap › Quote27](../../spec/quotes.md#quote27)
-158. [Enter in a quote › Quote29](../../spec/quotes.md#quote29)
-159. [Enter in a quote › Quote39](../../spec/quotes.md#quote39)
-160. [Shift-Enter in a quote › Quote44](../../spec/quotes.md#quote44)
-161. [Shift-Enter in a quote › Quote45](../../spec/quotes.md#quote45)
-162. [Shift-Enter in a quote › Quote46](../../spec/quotes.md#quote46)
-163. [Outliner flows › Scenario1](../../spec/scenarios.md#scenario1)
-164. [Outliner flows › Scenario2](../../spec/scenarios.md#scenario2)
-165. [Outliner flows › Scenario3](../../spec/scenarios.md#scenario3)
-166. [Outliner flows › Scenario5](../../spec/scenarios.md#scenario5)
-167. [Outliner flows › Scenario8](../../spec/scenarios.md#scenario8)
-168. [Outliner flows › Scenario9](../../spec/scenarios.md#scenario9)
-169. [Outliner flows › Scenario12](../../spec/scenarios.md#scenario12)
-170. [Outliner flows › Scenario13](../../spec/scenarios.md#scenario13)
-171. [Outliner flows › Scenario14](../../spec/scenarios.md#scenario14)
-172. [Notes and sections › Scenario24](../../spec/scenarios.md#scenario24)
-173. [ShiftEnter4](../../spec/shift-enter.md#shiftenter4)
-174. [ShiftEnter12](../../spec/shift-enter.md#shiftenter12)
-175. [ShiftEnter17](../../spec/shift-enter.md#shiftenter17)
-176. [TaskEnter2](../../spec/tasks.md#taskenter2)
-177. [TaskBackspace5](../../spec/tasks.md#taskbackspace5)
-178. [TaskDelete2](../../spec/tasks.md#taskdelete2)
-179. [Typing1](../../spec/typing.md#typing1)
-180. [Typing2](../../spec/typing.md#typing2)
-181. [Typing3](../../spec/typing.md#typing3)
-182. [Undo1](../../spec/undo.md#undo1)
-183. [Undo2](../../spec/undo.md#undo2)
+81. [Math, comments and indented code › Fence44](../../spec/fences.md#fence44)
+82. [moveSubtreeUp, moveSubtreeDown (Alt-Shift-Up, Alt-Shift-Down) › Gap8](../../spec/gaps.md#gap8)
+83. [New text and gaps › Gap12](../../spec/gaps.md#gap12)
+84. [Indent1](../../spec/indent.md#indent1)
+85. [Indent2](../../spec/indent.md#indent2)
+86. [Indent5](../../spec/indent.md#indent5)
+87. [Indent6](../../spec/indent.md#indent6)
+88. [Indent7](../../spec/indent.md#indent7)
+89. [Indent8](../../spec/indent.md#indent8)
+90. [Indent9](../../spec/indent.md#indent9)
+91. [Indent10](../../spec/indent.md#indent10)
+92. [Indent11](../../spec/indent.md#indent11)
+93. [Indent14](../../spec/indent.md#indent14)
+94. [Indent19](../../spec/indent.md#indent19)
+95. [Indent20](../../spec/indent.md#indent20)
+96. [Indent26](../../spec/indent.md#indent26)
+97. [Indent27](../../spec/indent.md#indent27)
+98. [MoveDown3](../../spec/move-subtree-down.md#movedown3)
+99. [MoveDown6](../../spec/move-subtree-down.md#movedown6)
+100. [MoveDown7](../../spec/move-subtree-down.md#movedown7)
+101. [MoveDown9](../../spec/move-subtree-down.md#movedown9)
+102. [MoveDown10](../../spec/move-subtree-down.md#movedown10)
+103. [MoveDown15](../../spec/move-subtree-down.md#movedown15)
+104. [MoveDown17](../../spec/move-subtree-down.md#movedown17)
+105. [MoveDown19](../../spec/move-subtree-down.md#movedown19)
+106. [MoveDown22](../../spec/move-subtree-down.md#movedown22)
+107. [MoveDown25](../../spec/move-subtree-down.md#movedown25)
+108. [MoveDown35](../../spec/move-subtree-down.md#movedown35)
+109. [MoveDown36](../../spec/move-subtree-down.md#movedown36)
+110. [MoveUp1](../../spec/move-subtree-up.md#moveup1)
+111. [MoveUp2](../../spec/move-subtree-up.md#moveup2)
+112. [MoveUp5](../../spec/move-subtree-up.md#moveup5)
+113. [MoveUp6](../../spec/move-subtree-up.md#moveup6)
+114. [MoveUp8](../../spec/move-subtree-up.md#moveup8)
+115. [MoveUp9](../../spec/move-subtree-up.md#moveup9)
+116. [MoveUp14](../../spec/move-subtree-up.md#moveup14)
+117. [MoveUp28](../../spec/move-subtree-up.md#moveup28)
+118. [MoveUp32](../../spec/move-subtree-up.md#moveup32)
+119. [MoveUp33](../../spec/move-subtree-up.md#moveup33)
+120. [Enter › E7, E8 › End of parent opens empty first child](../../spec/obsidian-true-outliner.md#end-of-parent-opens-empty-first-child)
+121. [Enter › E15](../../spec/obsidian-true-outliner.md#e15)
+122. [Enter › E19, E21 › End of lone heading starts a paragraph](../../spec/obsidian-true-outliner.md#end-of-lone-heading-starts-a-paragraph)
+123. [Enter › E19, E21 › Empty paragraph before a section list](../../spec/obsidian-true-outliner.md#empty-paragraph-before-a-section-list)
+124. [Enter › E32 › Checked task gives unchecked new item](../../spec/obsidian-true-outliner.md#checked-task-gives-unchecked-new-item)
+125. [Enter › E33](../../spec/obsidian-true-outliner.md#e33)
+126. [Enter › E13, E16 › Rest of title becomes first paragraph](../../spec/obsidian-true-outliner.md#rest-of-title-becomes-first-paragraph)
+127. [Enter › E13, E16 › Split title above a subheading](../../spec/obsidian-true-outliner.md#split-title-above-a-subheading)
+128. [Shift-Enter › S11 › Place inside a multi-line item](../../spec/obsidian-true-outliner.md#place-inside-a-multi-line-item)
+129. [Backspace › #269 › Emptied middle item removed and renumbered](../../spec/obsidian-true-outliner.md#emptied-middle-item-removed-and-renumbered)
+130. [Backspace › #153 › Undoing a fresh line break](../../spec/obsidian-true-outliner.md#undoing-a-fresh-line-break)
+131. [Backspace › delete-to-content-start](../../spec/obsidian-true-outliner.md#delete-to-content-start)
+132. [Backspace › Joining across ordered runs](../../spec/obsidian-true-outliner.md#joining-across-ordered-runs)
+133. [Backspace › Joining away the head of a list › Next item becomes the new 1.](../../spec/obsidian-true-outliner.md#next-item-becomes-the-new-1)
+134. [Indentation › #255 › Outdented child leaves quote above alone](../../spec/obsidian-true-outliner.md#outdented-child-leaves-quote-above-alone)
+135. [Indentation › indent-unit-on-every-line](../../spec/obsidian-true-outliner.md#indent-unit-on-every-line)
+136. [Indentation › seams-across-a-re-indent › Indented item keeps its quote](../../spec/obsidian-true-outliner.md#indented-item-keeps-its-quote)
+137. [Indentation › seams-across-a-re-indent › Outdented item keeps its quote](../../spec/obsidian-true-outliner.md#outdented-item-keeps-its-quote)
+138. [Moving › lone-block-id › Block id moves with its item](../../spec/obsidian-true-outliner.md#block-id-moves-with-its-item)
+139. [Ordered lists › Outdenting the head of a nested list](../../spec/obsidian-true-outliner.md#outdenting-the-head-of-a-nested-list)
+140. [Abandoning an empty place › Shift-Enter, Tab, then leave › Backspace returns to the start](../../spec/obsidian-true-outliner.md#backspace-returns-to-the-start)
+141. [Abandoning an empty place › Shift-Enter, Tab, then leave › Shift-Tab then Backspace returns to start](../../spec/obsidian-true-outliner.md#shift-tab-then-backspace-returns-to-start)
+142. [Abandoning an empty place › Enter, then Shift-Enter and Backspace](../../spec/obsidian-true-outliner.md#enter-then-shift-enter-and-backspace)
+143. [Outdent1](../../spec/outdent.md#outdent1)
+144. [Outdent2](../../spec/outdent.md#outdent2)
+145. [Outdent3](../../spec/outdent.md#outdent3)
+146. [Outdent5](../../spec/outdent.md#outdent5)
+147. [Outdent6](../../spec/outdent.md#outdent6)
+148. [Outdent9](../../spec/outdent.md#outdent9)
+149. [Outdent10](../../spec/outdent.md#outdent10)
+150. [Logical outdent › LogicalOutdent1](../../spec/outdent.md#logicaloutdent1)
+151. [Outdent18](../../spec/outdent.md#outdent18)
+152. [Paste24](../../spec/paste.md#paste24)
+153. [Paste31](../../spec/paste.md#paste31)
+154. [Placeholder6](../../spec/placeholders.md#placeholder6)
+155. [Placeholder8](../../spec/placeholders.md#placeholder8)
+156. [Placeholder10](../../spec/placeholders.md#placeholder10)
+157. [Placeholder11](../../spec/placeholders.md#placeholder11)
+158. [Placeholder12](../../spec/placeholders.md#placeholder12)
+159. [Indent inside a quote › Quote4](../../spec/quotes.md#quote4)
+160. [Quote10](../../spec/quotes.md#quote10)
+161. [A quote and a heading don't swap › Quote27](../../spec/quotes.md#quote27)
+162. [Enter in a quote › Quote29](../../spec/quotes.md#quote29)
+163. [Enter in a quote › Quote39](../../spec/quotes.md#quote39)
+164. [Shift-Enter in a quote › Quote44](../../spec/quotes.md#quote44)
+165. [Shift-Enter in a quote › Quote45](../../spec/quotes.md#quote45)
+166. [Shift-Enter in a quote › Quote46](../../spec/quotes.md#quote46)
+167. [Outliner flows › Scenario1](../../spec/scenarios.md#scenario1)
+168. [Outliner flows › Scenario2](../../spec/scenarios.md#scenario2)
+169. [Outliner flows › Scenario3](../../spec/scenarios.md#scenario3)
+170. [Outliner flows › Scenario5](../../spec/scenarios.md#scenario5)
+171. [Outliner flows › Scenario8](../../spec/scenarios.md#scenario8)
+172. [Outliner flows › Scenario9](../../spec/scenarios.md#scenario9)
+173. [Outliner flows › Scenario12](../../spec/scenarios.md#scenario12)
+174. [Outliner flows › Scenario13](../../spec/scenarios.md#scenario13)
+175. [Outliner flows › Scenario14](../../spec/scenarios.md#scenario14)
+176. [Notes and sections › Scenario24](../../spec/scenarios.md#scenario24)
+177. [ShiftEnter4](../../spec/shift-enter.md#shiftenter4)
+178. [ShiftEnter12](../../spec/shift-enter.md#shiftenter12)
+179. [ShiftEnter17](../../spec/shift-enter.md#shiftenter17)
+180. [TaskEnter2](../../spec/tasks.md#taskenter2)
+181. [TaskBackspace5](../../spec/tasks.md#taskbackspace5)
+182. [TaskDelete2](../../spec/tasks.md#taskdelete2)
+183. [Typing1](../../spec/typing.md#typing1)
+184. [Typing2](../../spec/typing.md#typing2)
+185. [Typing3](../../spec/typing.md#typing3)
+186. [Undo1](../../spec/undo.md#undo1)
+187. [Undo2](../../spec/undo.md#undo2)
 
 ## Skipped
 
-### a caret before an item's text (Outliner keeps it on the text) (23)
+### a caret before an item's text (Outliner keeps it on the text) (26)
 
 1. [backspace.md › Backspace2](../../spec/backspace.md#backspace2)
 2. [cursor.md › CursorHome3](../../spec/cursor.md#cursorhome3)
@@ -17504,16 +20021,19 @@ ab
 13. [del.md › Delete25](../../spec/del.md#delete25)
 14. [enter.md › Enter34](../../spec/enter.md#enter34)
 15. [indent.md › Indent28](../../spec/indent.md#indent28)
-16. [move-subtree-down.md › MoveDown32](../../spec/move-subtree-down.md#movedown32)
-17. [move-subtree-up.md › MoveUp34](../../spec/move-subtree-up.md#moveup34)
-18. [obsidian-true-outliner.md › Shift-Enter › S5](../../spec/obsidian-true-outliner.md#s5)
-19. [obsidian-true-outliner.md › Backspace › Joining a task › Backspace before the checkbox](../../spec/obsidian-true-outliner.md#backspace-before-the-checkbox)
-20. [outdent.md › Outdent14](../../spec/outdent.md#outdent14)
-21. [shift-enter.md › ShiftEnter22](../../spec/shift-enter.md#shiftenter22)
-22. [tasks.md › TaskBackspace1](../../spec/tasks.md#taskbackspace1)
-23. [tasks.md › TaskBackspace6](../../spec/tasks.md#taskbackspace6)
+16. [indent.md › Indent30](../../spec/indent.md#indent30)
+17. [move-subtree-down.md › MoveDown32](../../spec/move-subtree-down.md#movedown32)
+18. [move-subtree-up.md › MoveUp34](../../spec/move-subtree-up.md#moveup34)
+19. [move-subtree-up.md › MoveUp36](../../spec/move-subtree-up.md#moveup36)
+20. [obsidian-true-outliner.md › Shift-Enter › S5](../../spec/obsidian-true-outliner.md#s5)
+21. [obsidian-true-outliner.md › Backspace › Joining a task › Backspace before the checkbox](../../spec/obsidian-true-outliner.md#backspace-before-the-checkbox)
+22. [outdent.md › Outdent14](../../spec/outdent.md#outdent14)
+23. [outdent.md › Outdent16](../../spec/outdent.md#outdent16)
+24. [shift-enter.md › ShiftEnter22](../../spec/shift-enter.md#shiftenter22)
+25. [tasks.md › TaskBackspace1](../../spec/tasks.md#taskbackspace1)
+26. [tasks.md › TaskBackspace6](../../spec/tasks.md#taskbackspace6)
 
-### action deleteSubtree (7)
+### action deleteSubtree (13)
 
 1. [delete-subtree.md › DeleteSubtree1](../../spec/delete-subtree.md#deletesubtree1)
 2. [delete-subtree.md › DeleteSubtree2](../../spec/delete-subtree.md#deletesubtree2)
@@ -17521,7 +20041,25 @@ ab
 4. [delete-subtree.md › DeleteSubtree4](../../spec/delete-subtree.md#deletesubtree4)
 5. [delete-subtree.md › DeleteSubtree5](../../spec/delete-subtree.md#deletesubtree5)
 6. [delete-subtree.md › DeleteSubtree6](../../spec/delete-subtree.md#deletesubtree6)
-7. [scenarios.md › Outliner flows › Scenario10](../../spec/scenarios.md#scenario10)
+7. [delete-subtree.md › DeleteSubtree7](../../spec/delete-subtree.md#deletesubtree7)
+8. [delete-subtree.md › DeleteSubtree8](../../spec/delete-subtree.md#deletesubtree8)
+9. [delete-subtree.md › DeleteSubtree9](../../spec/delete-subtree.md#deletesubtree9)
+10. [delete-subtree.md › DeleteSubtree10](../../spec/delete-subtree.md#deletesubtree10)
+11. [quotes.md › Quote82](../../spec/quotes.md#quote82)
+12. [scenarios.md › Outliner flows › Scenario10](../../spec/scenarios.md#scenario10)
+13. [z-open.md › Open2](../../spec/z-open.md#open2)
+
+### action duplicateSubtree (9)
+
+1. [duplicate-subtree.md › DuplicateSubtree1](../../spec/duplicate-subtree.md#duplicatesubtree1)
+2. [duplicate-subtree.md › DuplicateSubtree2](../../spec/duplicate-subtree.md#duplicatesubtree2)
+3. [duplicate-subtree.md › DuplicateSubtree3](../../spec/duplicate-subtree.md#duplicatesubtree3)
+4. [duplicate-subtree.md › DuplicateSubtree4](../../spec/duplicate-subtree.md#duplicatesubtree4)
+5. [duplicate-subtree.md › DuplicateSubtree5](../../spec/duplicate-subtree.md#duplicatesubtree5)
+6. [duplicate-subtree.md › DuplicateSubtree6](../../spec/duplicate-subtree.md#duplicatesubtree6)
+7. [duplicate-subtree.md › DuplicateSubtree7](../../spec/duplicate-subtree.md#duplicatesubtree7)
+8. [duplicate-subtree.md › DuplicateSubtree8](../../spec/duplicate-subtree.md#duplicatesubtree8)
+9. [quotes.md › Quote86](../../spec/quotes.md#quote86)
 
 ### CR line endings (5)
 
@@ -17560,12 +20098,6 @@ ab
 2. [paste.md › Paste8b](../../spec/paste.md#paste8b)
 3. [paste.md › Paste39](../../spec/paste.md#paste39)
 4. [scenarios.md › Outliner flows › Scenario17](../../spec/scenarios.md#scenario17)
-
-### action duplicateSubtree (3)
-
-1. [duplicate-subtree.md › DuplicateSubtree1](../../spec/duplicate-subtree.md#duplicatesubtree1)
-2. [duplicate-subtree.md › DuplicateSubtree2](../../spec/duplicate-subtree.md#duplicatesubtree2)
-3. [duplicate-subtree.md › DuplicateSubtree3](../../spec/duplicate-subtree.md#duplicatesubtree3)
 
 ### option backspaceAtTopItem: refuse (2)
 

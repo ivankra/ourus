@@ -121,6 +121,8 @@ export const BLOCKED_HOSTS: readonly string[] = [
   'safebrowsing.googleapis.com',
   'www.google.com',
   '.gvt1.com',
+  // its captive-portal check (`/generate_204`): the empty 204 a block answers is what it expects
+  'connectivitycheck.gstatic.com',
 ];
 
 /** Content types by file extension, for apps served from a directory on disk (`fromDirectory`). */

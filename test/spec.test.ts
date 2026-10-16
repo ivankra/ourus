@@ -4,53 +4,14 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { test, type TestContext } from 'node:test';
-import { Config } from '../src/config.ts';
 import { OutlineState } from '../src/outline/index.ts';
-import { drawState, drawText, readDrawing, readText } from './drawing.ts';
-import { isAction, isCommand, play, type Played } from './player.ts';
+import { drawState, readDrawing, readText } from './drawing.ts';
+import { isCommand, play, type Played } from './player.ts';
+import { textPosition } from '../src/commands/index.ts';
+import { flavorsOf, run } from './spec-run.ts';
 import { readSpec, slug, specConfig, type SpecTest } from './specfile.ts';
 
 const specDir = new URL('../spec/', import.meta.url);
-
-/** The result block's form of the last action's outcome. */
-function outcome(state: Played): string {
-  const r = state.last;
-  if (!r) return 'none (the last action is not an ourus command)';
-  return r.status === 'rejected' ? `rejected: ${r.reason}` : r.status;
-}
-
-// a drawn selection without a caret glyph is forward
-const normalize = (drawn: string): string => drawn.replace(/»┃/g, '»');
-
-/** The flavors an example runs in: the one it names, or all (most behaviour doesn't depend on it). */
-const flavorsOf = (t: SpecTest): readonly Config['flavor'][] => (t.options.flavor ? [t.options.flavor as Config['flavor']] : Config.values.flavor);
-
-function run(t: SpecTest, flavor: Config['flavor']): void {
-  const start = readDrawing(t.initial.buffer);
-  let state: Played = {
-    doc: OutlineState.parse(start.text, { placeholders: start.placeholders, config: { flavor, ...specConfig(t.options) } }),
-    selection: start.selection,
-    clipboard: readText(t.initial.clipboard ?? ''),
-  };
-  for (const step of t.steps) {
-    const at = `${t.file}:${step.line} (${flavor})`;
-    const unknown = step.actions.filter((a) => !isAction(a));
-    assert.deepEqual(unknown, [], `${at}: unknown actions`);
-    for (const action of step.actions) {
-      state = play(state, [action]);
-      // encoding-failed is a bug, never an outcome: a later action can't hide one
-      assert.ok(state.last?.status !== 'rejected' || state.last.reason !== 'encoding-failed', `${at}: ${action} failed to encode${state.last?.status === 'rejected' && state.last.detail ? `: ${state.last.detail}` : ''}`);
-    }
-    const { buffer, clipboard, result } = step.expect;
-    const why = state.last?.status === 'rejected' && state.last.detail ? ` (${state.last.reason}: ${state.last.detail})` : '';
-    if (result !== undefined) assert.equal(outcome(state), result, `${at}: result${why}`);
-    if (buffer !== undefined) {
-      const got = drawState(state.doc.text, state.selection, state.doc.placeholders);
-      assert.equal(normalize(got), normalize(buffer), `${at}: buffer${why}`);
-    }
-    if (clipboard !== undefined) assert.equal(drawText(state.clipboard), clipboard, `${at}: clipboard`);
-  }
-}
 
 for (const file of readdirSync(specDir).filter((f) => f.endsWith('.md') && f !== 'README.md')) {
   let tests: SpecTest[];
@@ -97,7 +58,29 @@ test('every case has a rank, and every core case appears in scenarios.md', () =>
 });
 
 // the caret never ends in markup: after an applied command it is in a node's text, never before a
-// marker, a checkbox, a heading's `#`s, a quote's `>` or a callout's `[!type]`
+// marker, a checkbox, a heading's `#`s, a quote's `>` or a callout's `[!type]`; after a structural
+// command, never on a fence either (Enter's, Backspace's and Delete's carets on fences are drawn as
+// fences.md decided them)
+const STRUCTURAL = ['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'duplicateSubtree', 'deleteSubtree'];
+/** Whether typing a character at `head` leaves the outline's nodes as they are, one node's text aside. */
+function typingKeepsOutline(doc: OutlineState, head: number): boolean {
+  const shape = (d: OutlineState): { node: string; text: string }[] => {
+    const out: { node: string; text: string }[] = [];
+    const walk = (n: OutlineState['root'], depth: number): void => {
+      for (const c of n.children) {
+        // what a node's text is (an empty item's is a paragraph, once typed into), and a heading's level
+        out.push({ node: `${depth}:${c.kind}:${c.kind === 'atom' ? c.block.type : (c.head?.type ?? 'paragraph')}:${c.head?.level ?? ''}`, text: d.nodeText(c) });
+        walk(c, depth + 1);
+      }
+    };
+    walk(d.root, 0);
+    return out;
+  };
+  const [before, after] = [shape(doc), shape(doc.update([{ from: head, to: head, insert: 'x' }], { caret: head + 1 }))];
+  if (before.map((n) => n.node).join() !== after.map((n) => n.node).join()) return false;
+  return before.filter((n, i) => n.text !== after[i]!.text).length <= 1;
+}
+
 test('no applied command leaves the caret in markup', () => {
   const problems: string[] = [];
   for (const file of specFiles()) {
@@ -116,7 +99,11 @@ test('no applied command leaves the caret in markup', () => {
             const { anchor, head } = state.selection;
             if (!isCommand(action) || state.last?.status !== 'applied' || anchor !== head) continue;
             const doc = state.doc;
-            if (head <= doc.lineAt(head).to && doc.nodeAt(head) && head < doc.textStart(head)) problems.push(`${file}:${step.line} (${flavor}) ${action}: ${drawState(doc.text, state.selection, doc.placeholders)}`);
+            const markup = head <= doc.lineAt(head).to && doc.nodeAt(head) && head < doc.textStart(head);
+            if (markup || (STRUCTURAL.includes(action) && textPosition(doc, head) !== head)) problems.push(`${file}:${step.line} (${flavor}) ${action}: ${drawState(doc.text, state.selection, doc.placeholders)}`);
+            // and, apart from that helper, typing there after a structural command, in a node, keeps the
+            // outline: the same nodes, only one of them with other text
+            else if (STRUCTURAL.includes(action) && doc.nodeAt(head) && !typingKeepsOutline(doc, head)) problems.push(`${file}:${step.line} (${flavor}) ${action}, then typing: ${drawState(doc.text, state.selection, doc.placeholders)}`);
           }
         }
       }

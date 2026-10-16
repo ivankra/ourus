@@ -24,6 +24,22 @@ export function indentedCodeAfterItem(plan: OutlinePlan): boolean {
   return expected.children.some((child) => visit(child, [expected]));
 }
 
+/**
+ * Whether `expected` has two indented code blocks as siblings, one right after the other: with only
+ * blank lines between them, Markdown reads them as one block.
+ */
+export function adjacentIndentedCode(plan: OutlinePlan): boolean {
+  const indented = (node: PlanTree): boolean => {
+    if (node.kind !== 'atom') return false;
+    const old = OutlinePlan.isPlanned(node) ? node.original : node;
+    if (old) return old.block.type === 'code_block' && !old.block.fenced;
+    const planned = node as OutlinePlanNode;
+    return planned.blockType === 'code_block' && /^(?: {4}|\t)/.test(planned.lines?.[0] ?? '');
+  };
+  const visit = (node: PlanTree): boolean => node.children.some((child, k) => (k > 0 && indented(child) && indented(node.children[k - 1]!)) || visit(child));
+  return visit(plan.root);
+}
+
 /** Verifies a plan (renumbered where it needs it), then its fallback if it doesn't read as intended. */
 export function run(ctx: CommandContext, plan: CommandPlan): CommandResult {
   // renumbering is best effort: a marker that grows a digit can move its item's content column
@@ -100,29 +116,48 @@ function verify(ctx: CommandContext, plan: CommandPlan): CommandResult {
   const onCaretLine = (p: number) => caret >= 0 && p >= lineStart && p <= lineEnd;
   const drop = doc.placeholders.filter((p) => onCaretLine(mapPos(plan.changes, p, 1)));
   let next = attempt({ ...base, drop: [...drop, ...(plan.drop ?? [])] });
+  let selection = plan.selection;
   if (typeof next === 'string' && caret >= 0) {
-    const retry = attempt({ ...base, drop: [...(plan.drop ?? [])], placeholders: [...base.placeholders, caret] });
-    if (typeof retry !== 'string') next = retry;
+    // on a line holding no text, in its markers, the caret goes to its end, where what is typed goes
+    const at = OutlineState.isPlace(newText, lineEnd) ? lineEnd : caret;
+    const retry = attempt({ ...base, drop: [...(plan.drop ?? [])], placeholders: [...base.placeholders, at] });
+    if (typeof retry !== 'string') {
+      next = retry;
+      selection = { anchor: at, head: at };
+    }
   }
   if (typeof next === 'string') return { status: 'rejected', reason: 'encoding-failed', detail: next };
-  return { status: 'applied', state: next, changes: plan.changes, selection: plan.selection };
+  return { status: 'applied', state: next, changes: plan.changes, selection };
 }
 
 /**
- * Whether `expected` holds an empty item or paragraph other than `caretNode`. The text can't hold
- * one away from the caret, where no placeholder is: such a command isn't expressible.
+ * Whether `expected` holds an empty item or paragraph other than `caretNode`, or an empty line inside
+ * the text of a node other than it, or of more than one. The text can't hold one away from the caret,
+ * where no placeholder is: such a command isn't expressible.
  */
 export function emptyAwayFromCaret(ctx: CommandContext, plan: OutlinePlan, caretNode: OutlineNode | null): boolean {
   const { doc } = ctx;
   const empty = (node: OutlineNode | OutlinePlanNode): boolean => {
-    if ((node.kind !== 'item' && node.kind !== 'paragraph') || node.children.length > 0) return false;
+    // an empty item with children is written (`- ` over them); an empty paragraph never is
+    if ((node.kind !== 'item' && node.kind !== 'paragraph') || (node.kind === 'item' && node.children.length > 0)) return false;
     const old = OutlinePlan.isPlanned(node) ? node.original : node;
     if (old && old === caretNode) return false;
     const text = OutlinePlan.isPlanned(node) ? (node.text ?? (old ? doc.nodeText(old) : '')) : doc.nodeText(node);
     return OutlineState.isEmptyText(text);
   };
   const visit = (node: PlanTree): boolean => empty(node) || node.children.some(visit);
-  return plan.root.children.some(visit);
+  if (plan.root.children.some(visit)) return true;
+  // an empty line inside a text is held at the caret only: in one node, the caret's
+  const holding: PlanTree[] = [];
+  const lines = (node: PlanTree): void => {
+    const old = OutlinePlan.isPlanned(node) ? node.original : node;
+    const text = OutlinePlan.isPlanned(node) ? (node.text ?? (old ? doc.nodeText(old) : '')) : doc.nodeText(node);
+    if (node.kind !== 'atom' && /\n[ \t]*(?:\n|$)|^[ \t]*\n/.test(text)) holding.push(node);
+    node.children.forEach(lines);
+  };
+  plan.root.children.forEach(lines);
+  const at = (node: PlanTree): OutlineNode | undefined => (OutlinePlan.isPlanned(node) ? node.original : node);
+  return holding.length > 1 || (holding.length === 1 && at(holding[0]!) !== caretNode);
 }
 
 /** A plan, and its fallbacks, with `extra` fields (numbers kept, placeholders dropped). */

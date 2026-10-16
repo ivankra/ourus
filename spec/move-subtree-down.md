@@ -8,7 +8,8 @@ Command: `moveSubtreeDown`, usually bound to Alt-Shift-Down / Alt-Down. Its mirr
    subtree up (MoveDown1, MoveDown4, MoveDown5, MoveDown16); a heading doesn't swap with a heading
    of another level (MoveDown17).
 3. **An item right above a paragraph moves below it**, becoming the first item of its list
-   (MoveDown2, MoveDown8, MoveDown13).
+   (MoveDown2, MoveDown8, MoveDown13); in an item or a quote, where a paragraph owns no list, an
+   item doesn't swap with a paragraph (MoveDown36).
 4. **Past a sub-heading, a node goes into its section**, as its first node (MoveDown20).
 5. **At its parent's edge it crosses into the parent's next sibling**, as its first child: an item
    into an item (MoveDown7, MoveDown9, MoveDown10); any node but a heading into the next section,
@@ -20,7 +21,12 @@ Command: `moveSubtreeDown`, usually bound to Alt-Shift-Down / Alt-Down. Its mirr
    ([MoveUp35](move-subtree-up.md#moveup35)).
 7. **What would run together is set apart** by a blank line (MoveDown26, MoveDown31); a renumbered
    list keeps its children at their content column (MoveDown23, MoveDown30). The caret ends in the
-   node's text (MoveDown32).
+   node's text (MoveDown32), in code on its first line with text, not on a fence (MoveDown34,
+   MoveDown37). An item whose first block shares its marker's line (`- - a`, `- > q`)
+   keeps its marker on its first line, whichever block is first (MoveDown33,
+   [Quote81](quotes.md#quote81)), the block now first at the item's content column (Quote83). A
+   paragraph that comes right under an item's text is set apart from it by a blank line, which it
+   would otherwise continue (MoveDown34).
 
 Bare Obsidian's Alt-Down moves the caret's line, not its node (see
 [move-subtree-up.md](move-subtree-up.md)).
@@ -924,3 +930,159 @@ rank: rare
 - b
 - ┃a
 ```
+
+## MoveDown33
+
+An item whose first block is a list: its first item moved down, the next comes up onto the outer
+item's marker line, the outer marker staying where it is; back up, the same.
+
+```yaml
+rank: edge
+```
+
+```buffer
+- - ┃a
+  - b
+```
+
+> moveSubtreeDown
+
+```buffer
+- - b
+  - ┃a
+```
+
+> moveSubtreeUp
+
+```buffer
+- - ┃a
+  - b
+```
+
+## MoveDown34
+
+Code moved below a paragraph of its item: the paragraph comes right under the item's text, which it
+would continue, so a blank line sets it apart. Back up, the blank line stays: it is the item's gap.
+The caret goes into the code, where typing can't break its fence.
+
+```yaml
+rank: rare
+```
+
+````buffer
+- a
+  ┃```
+  code
+  ```
+  x
+````
+
+> moveSubtreeDown
+
+````buffer
+- a
+
+  x
+  ```
+  ┃code
+  ```
+````
+
+> moveSubtreeUp
+
+````buffer
+- a
+
+  ```
+  ┃code
+  ```
+  x
+````
+
+## MoveDown35
+
+The first item of an ordered list right under an item's text moved down: the item below, now first,
+is renumbered from the list's start, which it needs to interrupt the text above (`2.` can't), and the
+moved one counts on; back up, the same.
+
+```yaml
+rank: rare
+```
+
+```buffer
+1. a
+   1. ┃x
+   2. b
+```
+
+> moveSubtreeDown
+
+```buffer
+1. a
+   1. b
+   2. ┃x
+```
+
+> moveSubtreeUp
+
+```buffer
+1. a
+   1. ┃x
+   2. b
+```
+
+## MoveDown36
+
+In an item, a paragraph owns no list: a child item above a paragraph of the item would have to swap
+with it, and items swap only with items. Refused.
+
+```yaml
+rank: edge
+```
+
+```buffer
+- item
+  - ┃a
+
+  para
+```
+
+> moveSubtreeDown
+
+```result
+rejected: not-expressible
+```
+
+```buffer
+- item
+  - ┃a
+
+  para
+```
+
+## MoveDown37
+
+An item whose text is fenced code, its first code line blank, moved with the caret on its fence: the
+caret goes to the first code line with text, as on a blank one typing at its start would end the item.
+
+```yaml
+rank: edge
+```
+
+````buffer
+- ┃```
+
+  x
+  ```
+- b
+````
+
+> moveSubtreeDown
+
+````buffer
+- b
+- ```
+
+  ┃x
+  ```
+````

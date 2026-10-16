@@ -6,7 +6,8 @@ Two commands, as most outliners have two pastes; both take the clipboard's text.
 - `pasteStructured` (Ctrl-V): the clipboard's Markdown as nodes.
 - `pastePlain` (Ctrl-Shift-V): the text goes into the text of the node at the caret, its line breaks
   as Shift-Enter makes them: the next line continues the text at its column, and a line that would
-  start a block is escaped. A heading, a single line, refuses several.
+  start a block is escaped; a line starting a line of the text loses its leading spaces, which would
+  make it code (Paste78). A heading, a single line, refuses several.
 
 A text editor (bare Obsidian, and Obsidian with Outliner) pastes the clipboard as it is: its first
 line joins the text at the caret and the rest start at column 0, so pasted lines land glued to the
@@ -40,21 +41,43 @@ It follows a few rules:
    or nodes, one each (`items`; Paste8, Paste39). Into a list, items and headings are items. A block that is none of these (code, a
    quote, a table) would end the list: it goes into the item before it, the item at the caret
    (after its text) or a pasted item, as Markdown notes put code under an item; on an empty item it
-   is the item's first block; among an item's children it stays where it is
+   is the item's first block, the item's children, if any, staying under it (Paste52), its text at the
+   item's column (Paste73), and on an empty task the checkbox's first child (Paste72); among an
+   item's children it stays where it is
    ([#197](obsidian-true-outliner.md#pasted-list-and-block-become-children)). After pasted code the
-   caret is at the end of its last line, not after the closing fence, where typing would unmake it.
-6. **What can't be a node where it lands is pasted as text**, as `pastePlain` would.
+   caret is at the end of its last line, not after the closing fence, where typing would unmake it;
+   after a setext heading, at its title's end (Paste53).
+6. **What can't be a node where it lands is pasted as text**, as `pastePlain` would; where it can't
+   be text either (a heading's title, a callout's, a table's row are a line each), it is refused
+   (Paste6, Paste55, Paste56). Several lines are never left to the host, whose lines would land at
+   column 0, outside the node's nesting.
 7. **A list the paste touches is renumbered** from its first number, as by every other command; a
    list it doesn't touch keeps its numbers. Pasted into an ordered list, the paste's items take the
    list's numbers (Paste2, Paste16, Paste18).
+8. **The destination's spacing holds** (rule 2): items joining a list are as tight or loose as it is,
+   between themselves too (Paste59, Paste60); after a paragraph or a block written without a blank
+   line below it, the paste gets none where Markdown needs none (Paste61). Under a heading, as its
+   first nodes, it is set off as the section would be
+   ([#264](obsidian-true-outliner.md#pasted-quote-set-off-from-paragraph)).
 
-One line of plain text is inline text, the host's ([Paste24](#paste24)), and so is any one line in
-the middle of the text ([Paste31](#paste31)); at the end of the text, a line that is an item, a
+A selection is deleted first, as Backspace deletes it, and the paste goes in at the caret that
+leaves ([Paste48](#paste48), [Paste49](#paste49), [Paste50](#paste50)); one that starts in markup
+(a checkbox, a fence) is the host's, as its delete is. On a blank line, in the gap of the node
+above ([gaps.md](gaps.md)), the paste goes where Enter at the end of that node would put a new one,
+as new nodes, plain lines too ([Paste65](#paste65), [Paste67](#paste67)). A fenced block copied from
+inside a list or a quote, from its fence on, is read with the indentation its other lines kept gone,
+as its closing fence closes it ([Paste66](#paste66)); a block that closes as it is reads as it is
+([Paste79](#paste79)). One line of plain text is
+inline text, the host's ([Paste24](#paste24)), and so is any one line in the middle of the text
+([Paste31](#paste31)); a line copied with its line break is two lines, the break Shift-Enter's
+([Paste51](#paste51)). At the end of the text, a line that is an item, a
 heading or a quote is pasted as nodes, as several are ([Paste26](#paste26)). Outside a list, a
 pasted heading is a node ([Paste32](#paste32)) that splits the section it lands in, as a heading
 typed there would: what follows it, up to a heading of its level or above, becomes its section
-([Paste34](#paste34), [Paste35](#paste35)), and it goes after the sections it closes
-([Paste33](#paste33)).
+([Paste34](#paste34), [Paste35](#paste35); in an item, [Paste71](#paste71)), and it goes after the
+sections it closes
+([Paste33](#paste33)). Pasted frontmatter is frontmatter only at a document's start; elsewhere its
+lines read as they do there ([Paste58](#paste58)).
 On a code line, what is
 pasted is code: plain text, each line in the containers the block is in ([Paste22](#paste22),
 [Paste23](#paste23)).
@@ -1346,3 +1369,887 @@ x
 one
 two┃
 ````
+
+## Paste48
+
+Lines pasted over a selection in an item's text replace it, in the item, as at a caret: the
+selection goes first. Logseq, Tine, SiYuan and BlockNote keep the lines in the block; bare Obsidian
+pastes the second line at column 0, outside the item.
+
+```yaml
+rank: common
+clipboard: |-
+  new
+  better
+```
+
+```buffer
+- the «old» plan
+```
+
+> pasteStructured
+
+```buffer
+- the new
+  better┃ plan
+```
+
+## Paste49
+
+Items pasted over an item's whole text take its place, as on an empty item. Bare Obsidian leaves the
+clipboard's last line break as an empty line at column 0, where typed text would be a lazy line of
+`b`.
+
+```yaml
+rank: common
+clipboard: |
+  - a
+  - b
+```
+
+```buffer
+- «placeholder»
+- next
+```
+
+> pasteStructured
+
+```buffer
+- a
+- b┃
+- next
+```
+
+## Paste50
+
+Over a selection across two items, the items join first, as Backspace joins them, and the paste
+splits the joined item at the caret.
+
+```yaml
+rank: edge
+clipboard: |
+  - x
+  - y
+```
+
+```buffer
+- al«pha
+- be»ta
+```
+
+> pasteStructured
+
+```buffer
+- alx
+- y
+- ┃ta
+```
+
+## Paste51
+
+A line copied whole, with its line break (as code editors copy a line), pasted in the middle of an
+item's text: the break is Shift-Enter's, and what follows the caret stays text on the next line.
+Bare Obsidian makes `- below` a new item.
+
+```yaml
+rank: common
+clipboard: |
+  x
+```
+
+```buffer
+- see ┃- below
+```
+
+> pasteStructured
+
+```buffer
+- see x
+  ┃\- below
+```
+
+## Paste52
+
+Code pasted on an empty item with children is the item's text, the children staying under it, as
+on an empty item ([Paste9](#paste9)). Bare Obsidian pastes the fences at column 0, which ends the
+list.
+
+````yaml
+rank: edge
+clipboard: |
+  ```
+  code
+  ```
+````
+
+```buffer
+- ┃
+  - kid
+```
+
+> pasteStructured
+
+````buffer
+- ```
+  code┃
+  ```
+  - kid
+````
+
+## Paste53
+
+A pasted setext heading leaves the caret at its title's end, not after its underline, where typing
+would unmake the heading.
+
+```yaml
+rank: rare
+clipboard: |
+  Title
+  =====
+```
+
+```buffer
+para┃
+```
+
+> pasteStructured
+
+```buffer
+para
+
+Title┃
+=====
+```
+
+## Paste54
+
+Lines pasted in the middle of a heading's title go after it, as at its end: a title is one line,
+and the host's paste would break it in two.
+
+```yaml
+rank: edge
+clipboard: |
+  x
+  y
+```
+
+```buffer
+# Hel┃lo
+```
+
+> pasteStructured
+
+```buffer
+# Hello
+
+x
+y┃
+```
+
+## Paste55
+
+Lines pasted as plain text into a callout's title are refused: in the Obsidian flavor the title is
+one line, and the host's paste would leave the callout.
+
+```yaml
+rank: rare
+flavor: obsidian
+clipboard: |
+  x
+  y
+```
+
+```buffer
+> [!note] Ti┃tle
+> body
+```
+
+> pastePlain
+
+```result
+rejected: not-expressible
+```
+
+```buffer
+> [!note] Ti┃tle
+> body
+```
+
+## Paste56
+
+Lines pasted into a table's cell are refused: a row is one line, and the host's paste would break
+it into rows.
+
+```yaml
+rank: rare
+flavor: gfm
+clipboard: |
+  x
+  y
+```
+
+```buffer
+| a┃ | b |
+| - | - |
+```
+
+> pasteStructured
+
+```result
+rejected: not-expressible
+```
+
+```buffer
+| a┃ | b |
+| - | - |
+```
+
+## Paste57
+
+A heading pasted into a list with a paragraph and a list in its section: in an item a paragraph
+owns no list, so the list follows it among the item's children; the list stays tight, the
+clipboard's blank lines gone.
+
+```yaml
+rank: edge
+clipboard: |
+  ## Summary
+
+  The fix:
+  - parser
+  - test
+```
+
+```buffer
+- Notes┃
+- Later
+```
+
+> pasteStructured
+
+```buffer
+- Notes
+- ## Summary
+  The fix:
+  - parser
+  - test┃
+- Later
+```
+
+## Paste58
+
+A note's frontmatter pasted into another note: frontmatter is only at a document's start, so here
+its lines are a thematic break and a setext heading, which takes in the paragraph after it.
+
+```yaml
+rank: rare
+flavor: obsidian
+clipboard: |
+  ---
+  title: x
+  ---
+```
+
+```buffer
+Intro
+
+┃◌
+
+Outro
+```
+
+> pasteStructured
+
+```buffer
+Intro
+
+---
+title: x┃
+---
+
+Outro
+```
+
+## Paste59
+
+Items pasted at a heading's end go first in the list its section starts with, as tight as it is;
+the heading's blank line stays above them. Bare Obsidian glues the first one onto the title
+(`# Groceries- milk`); true-outliner sets the paste off from `bread`, which makes the list loose.
+
+```yaml
+rank: common
+clipboard: |
+  - milk
+  - eggs
+```
+
+```buffer
+# Groceries┃
+
+- bread
+```
+
+> pasteStructured
+
+```buffer
+# Groceries
+
+- milk
+- eggs┃
+- bread
+```
+
+## Paste60
+
+Items pasted on an empty item of a loose list are set off from each other, as the list's items are.
+
+```yaml
+rank: edge
+clipboard: |
+  - x
+  - y
+```
+
+```buffer
+- a
+
+- ┃
+```
+
+> pasteStructured
+
+```buffer
+- a
+
+- x
+
+- y┃
+```
+
+## Paste61
+
+A section written without blank lines stays without: a heading pasted after a paragraph with a
+heading right below it gets none.
+
+```yaml
+rank: rare
+clipboard: |
+  # Z
+```
+
+```buffer
+# A
+## B
+text┃
+## C
+```
+
+> pasteStructured
+
+```buffer
+# A
+## B
+text
+# Z┃
+## C
+```
+
+## Paste62
+
+Code pasted in the middle of a paragraph splits it, the space at the split going with neither half,
+as at Enter's.
+
+````yaml
+rank: edge
+clipboard: |
+  ```
+  make build
+  ```
+````
+
+```buffer
+Run ┃then deploy.
+```
+
+> pasteStructured
+
+````buffer
+Run
+```
+make build
+```
+
+┃then deploy.
+````
+
+## Paste63
+
+An ordered list pasted in the middle of a bullet item: its first item joins the text before the
+caret, its number with it, as text (rule 1), and the second is an item, its number escaped.
+
+```yaml
+rank: edge
+clipboard: |
+  1. x
+  2. y
+```
+
+```buffer
+- see ┃here
+```
+
+> pasteStructured
+
+```buffer
+- see 1. x
+- 2\. y
+- ┃here
+```
+
+## Paste64
+
+Plain paste at the start of a paragraph's text: the first pasted line starts the line, escaped where
+it would start a block there.
+
+```yaml
+rank: edge
+clipboard: |-
+  - a
+  - b
+```
+
+```buffer
+┃words
+```
+
+> pastePlain
+
+```buffer
+\- a
+\- b┃words
+```
+
+## Paste65
+
+On the blank line after a code block in an item, a code block goes after the first, in the item,
+as at the first's closing fence ([Paste46](#paste46)). Left to the host, it would land at column 0,
+outside the list, and end it.
+
+````yaml
+rank: common
+clipboard: |
+  ```js
+  y
+  ```
+````
+
+````buffer
+- grandchild
+  ```js
+  x
+  ```
+┃
+- next
+````
+
+> pasteStructured
+
+````buffer
+- grandchild
+  ```js
+  x
+  ```
+
+  ```js
+  y┃
+  ```
+
+- next
+````
+
+## Paste66
+
+A code block copied from inside an item, from its fence on: the lines after the fence kept the
+item's indentation, the fence's line lost it, so read as it is the block wouldn't close. Without
+that indentation it does, and the code keeps its own. Bare Obsidian glues the fence onto the item's
+text (`- grandchild```js`), and the code is the item's text.
+
+````yaml
+rank: common
+clipboard: |-
+  ```js
+        // greet
+          f();
+        ```
+````
+
+```buffer
+- grandchild┃
+```
+
+> pasteStructured
+
+````buffer
+- grandchild
+  ```js
+  // greet
+    f();┃
+  ```
+````
+
+## Paste67
+
+On the blank line between two paragraphs, plain lines are a paragraph between them. Bare Obsidian
+pastes them in the blank line's place, where they run into the paragraph above.
+
+```yaml
+rank: edge
+clipboard: |
+  x
+  y
+```
+
+```buffer
+a
+┃
+b
+```
+
+> pasteStructured
+
+```buffer
+a
+
+x
+y┃
+
+b
+```
+
+## Paste68
+
+Plain paste ending with a line break, before ` ---`: the space at the break goes with neither line,
+as at Shift-Enter's, and `---`, starting a line, is escaped; kept, the space would leave an
+underline making the paragraph a heading.
+
+```yaml
+rank: rare
+clipboard: |
+  x
+```
+
+```buffer
+p┃ ---
+```
+
+> pastePlain
+
+```buffer
+px
+┃\---
+```
+
+## Paste69
+
+Plain paste breaking prose that starts like a link reference definition: ended at the break,
+`[a]: x` would be one, so it is escaped, as Enter's split escapes it
+([Enter47](enter.md#enter47)).
+
+```yaml
+rank: rare
+clipboard: |
+  x
+```
+
+```buffer
+[a]: ┃b c
+```
+
+> pastePlain
+
+```buffer
+\[a]: x
+┃b c
+```
+
+## Paste70
+
+Code pasted at the end of a paragraph's first line, before a continuation line indented four
+spaces: that line starts the paragraph after the code, its spaces gone, which would make it code.
+
+````yaml
+rank: rare
+clipboard: |
+  ```
+  c
+  ```
+````
+
+```buffer
+p┃
+    - g
+```
+
+> pasteStructured
+
+````buffer
+p
+```
+c
+```
+
+┃\- g
+````
+
+## Paste71
+
+A heading pasted after code in an item, with another block after it in the item: the heading takes
+the block in as its section, which stays in the item, at its column.
+
+````yaml
+rank: rare
+clipboard: |
+  # h
+````
+
+````buffer
+- i
+  ```
+  x
+  ```┃
+
+  ```
+  y
+  ```
+````
+
+> pasteStructured
+
+````buffer
+- i
+  ```
+  x
+  ```
+
+  # h┃
+
+  ```
+  y
+  ```
+````
+
+## Paste72
+
+A quote pasted on an empty task: the checkbox stays, and the quote, which can't follow it on its
+line, is the task's first child.
+
+```yaml
+rank: rare
+clipboard: |
+  > q
+```
+
+```buffer
+- a
+- [ ] ┃
+- b
+```
+
+> pasteStructured
+
+```buffer
+- a
+- [ ] 
+  > q┃
+- b
+```
+
+## Paste73
+
+Lines pasted on an empty item with children whose marker has a second space after it (a deleted
+character's place): the space goes, so the text starts at the item's column and the children stay
+its children.
+
+```yaml
+rank: rare
+clipboard: |
+  x
+  y
+```
+
+```buffer
+-  ┃
+  - kid
+```
+
+> pasteStructured
+
+```buffer
+- x
+  y
+  ┃◌
+  - kid
+```
+
+## Paste74
+
+Code with an indented line pasted on an empty item: the code is the item's text, its lines'
+own indentation kept at the item's column.
+
+````yaml
+rank: rare
+clipboard: |
+  ```
+  if x:
+      y
+  ```
+````
+
+```buffer
+- a
+- ┃
+```
+
+> pasteStructured
+
+````buffer
+- a
+- ```
+  if x:
+      y┃
+  ```
+````
+
+## Paste75
+
+Lines pasted on an empty task are its text after the checkbox, which stays.
+
+```yaml
+rank: rare
+clipboard: |
+  x
+  y
+```
+
+```buffer
+- a
+- [ ] ┃
+```
+
+> pasteStructured
+
+```buffer
+- a
+- [ ] x
+  y
+  ┃◌
+```
+
+## Paste76
+
+A list pasted at a heading's text start goes after the heading, as at its end: a title is one line,
+and a split paste has nothing to split off before the caret. A choice made without the user, open in
+[z-open.md](z-open.md).
+
+```yaml
+rank: rare
+clipboard: |
+  - a
+  - b
+```
+
+```buffer
+# ┃Hello
+body
+```
+
+> pasteStructured
+
+```buffer
+# Hello
+
+- a
+- b┃
+
+body
+```
+
+## Paste77
+
+A heading with its section pasted into a quote: in a quote a paragraph owns no list, under the
+pasted heading too, so the list follows `fix:` as the heading's.
+
+```yaml
+rank: rare
+clipboard: |
+  ## S
+  fix:
+  - p
+```
+
+```buffer
+> a┃
+```
+
+> pasteStructured
+
+```buffer
+> a
+>
+> ## S
+> fix:
+> - p┃
+```
+
+## Paste78
+
+Plain lines pasted at an item's text start, the first indented as code is: it starts the item's text
+without its leading spaces, which after the marker would make it code, as the later lines do.
+
+```yaml
+rank: rare
+clipboard: |2
+      first
+      second
+```
+
+```buffer
+- ┃a
+```
+
+> pastePlain
+
+```buffer
+- first
+  second
+  ┃a
+```
+
+## Paste79
+
+A math block pasted whose lines all keep an indentation its closing `$$` closes with: it closes as it
+is, so its lines are pasted as they are, unlike a code fence copied from inside a list
+([Paste66](#paste66)).
+
+```yaml
+rank: rare
+flavor: obsidian
+clipboard: |-
+  $$
+      x
+      $$
+```
+
+```buffer
+a┃
+```
+
+> pasteStructured
+
+```buffer
+a
+
+$$
+    x┃
+    $$
+```

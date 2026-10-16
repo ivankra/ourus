@@ -8,11 +8,13 @@ The rules, in order; the first that applies wins:
 
 1. **In fenced code**, a new code line, as Enter ([Fence8](fences.md#fence8)).
 2. **Where the node can't hold a second line, it is refused**: a heading (ShiftEnter14), a callout's
-   title in the Obsidian flavor ([quotes.md](quotes.md)), an item's text start (ShiftEnter13). With
+   title in the Obsidian flavor ([quotes.md](quotes.md)), a table's row (ShiftEnter24), an item's
+   text start (ShiftEnter13). With
    the caret in the item's marker, the line break is the host's (`editInMarkup: host`, the default;
    ShiftEnter22), or refused (`refuse`; ShiftEnter22b).
 3. **At the start of a continuation line**, a blank line above it: the line and the rest of the
-   text become the node's next paragraph (ShiftEnter10). Markdown has no empty line inside a
+   text become the node's next paragraph (ShiftEnter10), escaped where it would start a block or read as a link reference
+   definition (ShiftEnter25). Markdown has no empty line inside a
    paragraph, so a blank line is what a line break there can be.
 4. **On the empty line a Shift-Enter made**, a paragraph break, for the same reason: an empty
    paragraph inside the item, or after the paragraph (ShiftEnter11, ShiftEnter12, ShiftEnter15,
@@ -21,7 +23,8 @@ The rules, in order; the first that applies wins:
    (ShiftEnter1, ShiftEnter2, ShiftEnter3); at the end of the text the empty new line is held by a
    placeholder (ShiftEnter4). Text after the caret that would start a block there, or underline the
    paragraph into a heading, is escaped, in every flavor (ShiftEnter5, ShiftEnter6, ShiftEnter7,
-   ShiftEnter8, ShiftEnter9, ShiftEnter18, ShiftEnter19).
+   ShiftEnter8, ShiftEnter9, ShiftEnter18, ShiftEnter19), and so is the text's start where its first
+   line would read as a link reference definition (ShiftEnter23).
 
 Backspace takes a Shift-Enter back (ShiftEnter17, ShiftEnter20), up to the spaces at the break
 (ShiftEnter21). The spaces at the break go with
@@ -536,4 +539,73 @@ rejected: not-expressible
 
 ```buffer
 -┃ a
+```
+
+## ShiftEnter23
+
+A line break after prose that starts like a link reference definition: `[Note]: this` on a line of
+its own would be one, and the rest a paragraph after it, so it is escaped.
+
+```yaml
+rank: rare
+```
+
+```buffer
+[Note]: this ┃matters a lot
+```
+
+> shiftEnter
+
+```buffer
+\[Note]: this
+┃matters a lot
+```
+
+## ShiftEnter24
+
+Shift-Enter in a table's row is refused, as Enter is ([Enter50](enter.md#enter50)).
+
+```yaml
+rank: rare
+flavor: gfm
+```
+
+```buffer
+| a | b |
+| --- | --- |
+| on┃e | 2 |
+```
+
+> shiftEnter
+
+```result
+rejected: not-expressible
+```
+
+```buffer
+| a | b |
+| --- | --- |
+| on┃e | 2 |
+```
+
+## ShiftEnter25
+
+Shift-Enter at the start of a continuation line that reads as a link reference definition on its
+own: the new paragraph's start is escaped, so it stays text.
+
+```yaml
+rank: rare
+```
+
+```buffer
+p
+┃[r]: /u
+```
+
+> shiftEnter
+
+```buffer
+p
+
+┃\[r]: /u
 ```

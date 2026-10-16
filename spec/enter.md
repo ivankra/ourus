@@ -33,10 +33,18 @@ The rules, in order; the first that applies wins:
    Enter36, Enter36b).
 9. **In a paragraph**, two paragraphs, a blank line between; the second takes the paragraph's list
    (Enter12, Enter22). In a heading, the rest of the title becomes the section's first paragraph
-   (Enter23, Enter41, Enter42).
+   (Enter23, Enter41, Enter42); at a line break of a title of several lines, the break goes with
+   neither half, as in a paragraph (Enter51), and the rest is set apart from text below it would run
+   into (Enter52).
 10. **Text after the caret that would start a block stays text**: it is escaped, a list marker
     included, in every kind of node (Enter8, Enter9, Enter10, Enter11, Enter22, Enter35, Enter41,
-    Enter42).
+    Enter42); so does the text before it, where, ended there, it would read as a block: a link
+    reference definition (Enter47, Enter48), a lone `-` (Enter53).
+11. **In a table**, at the end of its last row a paragraph after it, set off by a blank line, as in
+    GFM a line right after a table is another row (Enter49); elsewhere in a row, refused: a row is a
+    line (Enter50).
+
+Code, math and comment blocks are [fences.md](fences.md)'s.
 
 Backspace takes an Enter back (Enter3d, Enter38, Enter39, Enter43), up to the spaces at the split
 (Enter44).
@@ -1314,4 +1322,232 @@ rank: edge
 > ┃◌
 >
 > quote
+```
+
+## Enter47
+
+Enter in prose that starts like a link reference definition: ended at the split, `[Note]: this`
+would be one, invisible, so it is escaped and stays a paragraph. Backspace takes the split back, and
+the escape with it, as a join drops the escape a split wrote ([Enter43](#enter43)).
+
+```yaml
+rank: rare
+```
+
+```buffer
+[Note]: this ┃matters a lot
+```
+
+> enter
+
+```buffer
+\[Note]: this
+
+┃matters a lot
+```
+
+> deleteContentBackward deleteContentBackward
+
+```buffer
+[Note]: this┃matters a lot
+```
+
+## Enter48
+
+The same in an item, whose text would be a definition and the item empty. Here Backspace keeps the
+escape: without the space the split dropped ([Enter44](#enter44)), `[a]: bc` would be a definition.
+
+```yaml
+rank: rare
+```
+
+```buffer
+- [a]: b ┃c
+```
+
+> enter
+
+```buffer
+- \[a]: b
+- ┃c
+```
+
+> deleteContentBackward
+
+```buffer
+- \[a]: b┃c
+```
+
+## Enter49
+
+Enter at the end of a table's last row: a paragraph after the table, set off by a blank line,
+since in GFM a line right after a table is another row. Bare Obsidian breaks the line, and in GFM
+the text typed there is a row. Backspace on the empty paragraph takes it back.
+
+```yaml
+rank: common
+flavor: gfm
+```
+
+```buffer
+| a | b |
+| --- | --- |
+| 1 | 2 |┃
+```
+
+> enter
+
+```buffer
+| a | b |
+| --- | --- |
+| 1 | 2 |
+
+┃◌
+```
+
+> deleteContentBackward
+
+```buffer
+| a | b |
+| --- | --- |
+| 1 | 2 |┃
+```
+
+> enter "after"
+
+```buffer
+| a | b |
+| --- | --- |
+| 1 | 2 |
+
+after┃
+```
+
+## Enter50
+
+Enter inside a table's row is refused: a row is a line, and a break in it would make two rows.
+
+```yaml
+rank: edge
+flavor: gfm
+```
+
+```buffer
+| a | b |
+| --- | --- |
+| on┃e | 2 |
+```
+
+> enter
+
+```result
+rejected: not-expressible
+```
+
+```buffer
+| a | b |
+| --- | --- |
+| on┃e | 2 |
+```
+
+## Enter51
+
+Enter at the start of a later line of a setext title: the lines above stay the title, over the
+underline, and the rest is the section's first paragraph; the line break between goes with neither,
+as in a paragraph. At a line's end, the same. Backspace joins the paragraph back glued, onto the
+title's line ([Backspace36](backspace.md#backspace36)), as any join after a split at a line break
+does (the README's guarantee 5).
+
+```yaml
+rank: edge
+```
+
+```buffer
+one
+┃two
+three
+---
+```
+
+> enter
+
+```buffer
+one
+---
+┃two
+three
+```
+
+> undo
+
+```buffer
+one
+┃two
+three
+---
+```
+
+> cursorLineBoundaryForward enter
+
+```buffer
+one
+two
+---
+┃three
+```
+
+## Enter52
+
+The rest of a setext title, a paragraph below its underline now, is set apart from the title of a
+setext heading right below, which it would join (and so become part of that title).
+
+```yaml
+rank: edge
+```
+
+```buffer
+one
+┃two
+---
+three
+---
+```
+
+> enter
+
+```buffer
+one
+---
+┃two
+
+three
+---
+```
+
+## Enter53
+
+The text before the caret, ended there, would read as a block: a lone `-` is an empty list item. It
+is escaped, as a link reference definition is ([Enter47](#enter47)); joined back, the escape goes,
+as it has nothing left to keep ([Enter43](#enter43)).
+
+```yaml
+rank: edge
+```
+
+```buffer
+-┃a
+```
+
+> enter
+
+```buffer
+\-
+
+┃a
+```
+
+> deleteContentBackward deleteContentBackward
+
+```buffer
+-┃a
 ```

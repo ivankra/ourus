@@ -66,6 +66,14 @@ died in `open`. Every run before had a synced profile. `open` now waits until th
 the page and the client has had its `space-sync-complete` (`client.fullSyncCompleted`, the syscall
 `sync.hasInitialSyncCompleted`): about 10 s of fetching the demo's 150-odd files, cold.
 
+**A warm start can wait forever.** A run leaves its test pages in the browser's copy of the space,
+and each sync pushes them to the server, which the proxy answers with 503. SilverBullet 2.12 (from
+about October 2026) then never marks a full sync completed, so `open` waited its 120 s and the run
+died there, on every browser start since (not on a page an earlier run left loaded, which `open`
+doesn't reload). `open` now gives the full sync 20 s; past that, it clears the demo's data from the
+browser (`Storage.clearDataForOrigin`: its service worker, its IndexedDB copy of the space) and
+starts cold, as above: about 23 s in all.
+
 ## Setting up and reading a test
 
 - **A page per test**, named `ourus-sxs-<time>-<n>`: written into the space in the browser

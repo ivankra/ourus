@@ -121,11 +121,11 @@ export function shift(doc: OutlineState, placed: Placed, tabs: boolean): string 
   if (parent && !node) {
     // a new node
     if (placed.kind === 'item') {
-      placed.markerColumn = landingColumn(placed, sibling, tabs);
+      placed.markerColumn = Math.max(landingColumn(placed, sibling, tabs), containerColumn(parent));
       placed.marker = placed.edited?.exactMarker && placed.edited.marker ? placed.edited.marker : markerOf(doc, placed, sibling);
       placed.contentColumn = placed.markerColumn + placed.marker.length + 1;
     } else {
-      placed.markerColumn = placed.contentColumn = parent.kind === 'item' || parent.kind === 'quote' ? parent.contentColumn : 0;
+      placed.markerColumn = placed.contentColumn = containerColumn(parent);
       // a quote's content starts after its `> `
       if (placed.kind === 'quote') placed.contentColumn = placed.markerColumn + 2;
     }
@@ -137,14 +137,16 @@ export function shift(doc: OutlineState, placed: Placed, tabs: boolean): string 
     if (node.kind === 'quote') {
       const piece = doc.lines[node.startLine]!.prefix.find((candidate) => candidate.block === node.block);
       placed.markerColumn = (piece?.fromColumn ?? 0) + placed.delta;
-      placed.contentColumn = (piece?.toColumn ?? 0) + placed.delta;
+      // where lines are written in it, after its `> `: a first line's `>` without the space (`>- a`)
+      // doesn't hold for the others
+      placed.contentColumn = Math.max(piece?.toColumn ?? 0, (piece?.fromColumn ?? 0) + 2) + placed.delta;
     }
     if (node.kind !== 'item') {
       if (arrived) {
         // a block under another parent moves from its old parent's content column to its new one's
         const oldParent = node.parent;
         const from = oldParent ? oldContentColumn(doc, oldParent) : 0;
-        const to = parent.kind === 'item' || parent.kind === 'quote' ? parent.contentColumn : 0;
+        const to = containerColumn(parent);
         placed.delta = to - from;
         if (placed.delta !== 0 && !placed.rerender) {
           if (oldParent?.kind !== 'item') return `a ${node.kind} moving into an item: not written yet`;
@@ -157,6 +159,9 @@ export function shift(doc: OutlineState, placed: Placed, tabs: boolean): string 
       if (arrived) target = landingColumn(placed, sibling, tabs);
       else if (sibling && column >= sibling.contentColumn) target = sibling.markerColumn;
       else if (!sibling && parent.kind === 'item' && column < parent.contentColumn) target = firstChildColumn(parent, tabs);
+      // first in an item whose first block shares its marker's line (`- - a`), it goes on that line, at
+      // the item's content column
+      if (!placed.prev && parent.kind === 'item' && sharesMarkerLine(parent)) target = parent.contentColumn;
       if (target !== column) {
         placed.delta = target - node.block.markerColumn!;
         placed.base = placed.delta < 0 && node.parent?.kind === 'item' ? node.parent.block : node.block;
@@ -166,6 +171,12 @@ export function shift(doc: OutlineState, placed: Placed, tabs: boolean): string 
       if (exact || arrived) {
         const marker = exact ?? markerOf(doc, placed, sibling);
         if (marker !== doc.text.slice(doc.markerFrom(node.block), doc.markerTo(node.block))) placed.marker = marker;
+      } else if (!sibling && placed.prev?.kind !== 'item' && (parent.kind === 'paragraph' || (parent.kind === 'item' && !!parent.node?.head))) {
+        // an ordered item first in its list now, from further down it, right under text: it takes the
+        // list's start, which lets it interrupt the text (renumbering the rest needs the list read as one)
+        const list = node.block.list;
+        const own = doc.text.slice(doc.markerFrom(node.block), doc.markerTo(node.block));
+        if (list?.type === 'ordered' && node.block.parent?.children[0] !== node.block && /^\d/.test(own)) placed.marker = `${node.block.parent?.list?.start ?? 1}${own.slice(-1)}`;
       }
       placed.markerColumn = node.block.markerColumn! + placed.delta;
       placed.contentColumn = node.block.contentColumn! + placed.delta + (placed.marker ?? '').length - (placed.marker ? doc.markerTo(node.block) - doc.markerFrom(node.block) : 0);
@@ -179,11 +190,28 @@ export function shift(doc: OutlineState, placed: Placed, tabs: boolean): string 
   return null;
 }
 
-/** Where an old container's content starts: an item's content column, after a quote's `>`; 0 elsewhere. */
+/**
+ * Where an old node's children start: an item's content column, after a quote's `>`; a section's (a
+ * heading's, a paragraph's list) are its container's, the nearest item or quote holding it, else 0.
+ */
 function oldContentColumn(doc: OutlineState, node: OutlineNode): number {
-  if (node.kind === 'item') return node.block.contentColumn!;
-  if (node.kind !== 'quote') return 0;
-  return doc.lines[node.startLine]!.prefix.find((piece) => piece.block === node.block)?.toColumn ?? 0;
+  for (let at: OutlineNode | null = node; at; at = at.parent) {
+    if (at.kind === 'item') return at.block.contentColumn!;
+    if (at.kind === 'quote') return doc.lines[at.startLine]!.prefix.find((piece) => piece.block === at!.block)?.toColumn ?? 0;
+  }
+  return 0;
+}
+
+/** Where a placed node's children start, as `oldContentColumn` for where it now is. */
+function containerColumn(placed: Placed | null): number {
+  for (let at = placed; at; at = at.parent) if (at.kind === 'item' || at.kind === 'quote') return at.contentColumn;
+  return 0;
+}
+
+/** Whether an old item's first block is on its marker's line (`- > q`, `- - a`): it has no line of its own. */
+function sharesMarkerLine(placed: Placed): boolean {
+  const node = placed.node;
+  return !!node && !placed.lines && !node.head && node.children[0]?.startLine === node.startLine;
 }
 
 /** The marker an item takes in its place: always a new item's, an old one's only when it changes. */
