@@ -52,8 +52,18 @@ export interface Driver {
   readonly keys: Readonly<Record<string, string | readonly string[]>>;
   /** Actions `act` plays, besides those with keys. */
   readonly emulated?: readonly string[];
-  /** What a projection adapted (`outline.ts` notes) that the app can't hold: tests needing it are skipped. */
+  /**
+   * What a projection adapted (`outline.ts` notes) that the app can't hold, and the spec's `markup-`
+   * tags at markup the app holds as text or as an attribute, where it has no boundary to compare:
+   * tests needing either are skipped.
+   */
   readonly refuses?: readonly string[];
+  /**
+   * The app has numbered blocks, which the driver loads and reads as such: an ordered item is a block
+   * whose canonical text starts with its number (`1. x`), a number that is text keeps its escape
+   * (`1\. x`), and an ordered list is no adaptation (`ProjectOptions.ordered` in outline.ts).
+   */
+  readonly ordered?: boolean;
   /**
    * How the app behaves where ourus has an option, out of the box. A test that sets an option to
    * another value than ourus's default is run only when the app behaves that way, or can be set to.

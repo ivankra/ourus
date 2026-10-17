@@ -28,15 +28,31 @@ It follows a few rules:
 2. **The destination decides form, the paste content.** Form is the bullet, the columns, the
    spacing; content is the text, the numbers, the checkboxes and the paste's own nesting. So pasted
    bullets take a list's marker or numbering, and pasted numbers are kept: in a bullet list as
-   text (`- 1\. x`).
+   text (`- 1\. x`). Outliners differ on a list landing in one of the other kind, and
+   `pasteStructuredListForm` follows them: `literal` keeps a pasted number as text everywhere, in
+   an ordered list and in nested lists too (Roam, WorkFlowy and Dynalist, given Markdown as plain
+   text; Paste15b, Paste17b, Paste18b); `drop` lets it go, the number being form (SiYuan, and
+   Logseq, Tine, Roam, WorkFlowy and Dynalist given a rendered page's HTML, where a list's numbers
+   are no text; Paste13b, Paste15c, Paste17c); `own` keeps the paste's form, a list of its own where
+   it lands (BlockNote, true-outliner; Paste2b, Paste13c, Paste15d, Paste16b).
 3. **A list's first item sets its form.** Pasted as a list's first items (on its empty first item),
    a single ordered list keeps its numbers, and the items after it are numbered on.
 4. **The paste's nesting is kept**, rebased where it lands: its top level takes the destination's
-   form, a nested list keeps its own.
+   form, a nested list keeps its own. In a list a paragraph owns no list, so a pasted paragraph's
+   list is items after it, at its level (Paste36, Paste38), as Logseq, Tine, WorkFlowy and BlockNote
+   paste it; `pasteStructuredParagraphList: children` nests it under the paragraph's item, as the
+   paragraph owned it in the clipboard, as Roam, Dynalist and true-outliner do (Paste36b, Paste38b).
 5. **The nodes go where Enter at the end of the node's text would put a new one**, or in an empty
    item's place. In the middle of a paragraph's or an item's text, `pasteStructuredMidText`
    decides: `split` (the default) splits the node where Enter would, the paste going in between
-   (Paste36, Paste37); `after` leaves it as it is, the paste going after it (Paste38). Plain lines
+   (Paste36, Paste37); `after` leaves it as it is, the paste going after it (Paste38). At the end
+   of the text, `pasteStructuredAtEnd` does: `after` (the default) as above, or `join`, as `split`
+   with nothing after the caret: the paste's first text joins the node's, the rest follows, and the
+   node's children follow the paste, or stay with `enterMidItem: child` (WorkFlowy, BlockNote;
+   Paste8c, Paste13d, Paste13e, Paste17d, Paste19b, Paste20b, Paste26b, Paste27b, Paste27c). In an
+   item with children, `pasteStructuredOnParent: after` puts the paste after them instead, as the
+   item's next siblings, its text left as it is, and a list last in a heading's section (Tine,
+   WorkFlowy, Dynalist, SiYuan; Paste14b, Paste27d, Paste42b, Paste59b). Plain lines
    are text, as plain paste puts them (`pasteStructuredLines: text`, the default; Paste7, Paste10),
    or nodes, one each (`items`; Paste8, Paste39). Into a list, items and headings are items. A block that is none of these (code, a
    quote, a table) would end the list: it goes into the item before it, the item at the caret
@@ -90,7 +106,7 @@ paragraph's list; placed after the list, the code would end it and take `b` away
 paragraph. The caret ends in the code, not on its closing fence.
 
 ````yaml
-rank: edge
+tags: edge
 clipboard: |
   ```
   c
@@ -120,7 +136,7 @@ Bullets pasted into an ordered list are numbered, from the item before, and the 
 renumbered (rule 7): a bullet is form (rule 2), so nothing is lost.
 
 ```yaml
-rank: common
+tags: common
 clipboard: |
   - x
   - y
@@ -140,6 +156,33 @@ clipboard: |
 4. b
 ```
 
+## Paste2b
+
+With `pasteStructuredListForm: own`, pasted bullets stay bullets, a list of their own in the
+ordered list, and the items after it keep their numbers, as true-outliner pastes them.
+
+```yaml
+tags: edge
+pasteStructuredListForm: own
+clipboard: |
+  - x
+  - y
+```
+
+```buffer
+1. a┃
+2. b
+```
+
+> pasteStructured
+
+```buffer
+1. a
+- x
+- y┃
+2. b
+```
+
 ## Paste3
 
 Several lines pasted as plain text in the middle of an item continue the item at its content
@@ -147,7 +190,7 @@ column (the clipboard ends with a line ending, so `b` starts a line of its own).
 pastes them at column 0, out of the item.
 
 ```yaml
-rank: common
+tags: common
 clipboard: |
   x
   y
@@ -170,7 +213,7 @@ clipboard: |
 Plain paste: a pasted line that would start a block is escaped, so it stays text.
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   x
   - y
@@ -194,7 +237,7 @@ Plain paste ending with a line break at the end of the text leaves an empty line
 a placeholder, as Shift-Enter there does.
 
 ```yaml
-rank: common
+tags: common
 clipboard: |
   x
   y
@@ -217,7 +260,7 @@ clipboard: |
 Plain paste of several lines into a heading is refused: a heading is a single line.
 
 ```yaml
-rank: edge
+tags: edge free-form
 clipboard: |
   x
   y
@@ -244,7 +287,7 @@ Plain lines pasted in the middle of an item's text go into it, as plain paste pu
 editor. Roam, WorkFlowy and Dynalist make each line an item ([Paste8](#paste8)).
 
 ```yaml
-rank: core
+tags: core
 clipboard: |
   x
   y
@@ -270,7 +313,7 @@ caret, each further line is an item, and since the clipboard ends with a line br
 the caret is an item of its own, the caret at its start. WorkFlowy and Dynalist do this.
 
 ```yaml
-rank: edge
+tags: edge
 pasteStructuredLines: items
 clipboard: |
   x
@@ -294,7 +337,7 @@ clipboard: |
 The same with no line break at the clipboard's end: the text after the caret ends the last line.
 
 ```yaml
-rank: edge
+tags: edge
 pasteStructuredLines: items
 clipboard: |-
   x
@@ -312,6 +355,31 @@ clipboard: |-
 - y┃b
 ```
 
+## Paste8c
+
+With `pasteStructuredLines: items` and `pasteStructuredAtEnd: join`, plain lines at the end of
+an item: the first joins it, the others are items, as WorkFlowy pastes them.
+
+```yaml
+tags: edge
+pasteStructuredLines: items
+pasteStructuredAtEnd: join
+clipboard: |
+  x
+  y
+```
+
+```buffer
+- a┃
+```
+
+> pasteStructured
+
+```buffer
+- ax
+- y┃
+```
+
 ## Paste9
 
 Structured paste on an empty item: the item takes the paste, a code block as its text, as outliners
@@ -319,7 +387,7 @@ fill an empty block; placed after the item instead, the code would end the list.
 the code.
 
 ````yaml
-rank: common
+tags: common
 clipboard: |
   ```
   code
@@ -347,7 +415,7 @@ break leaves an empty line to type on, held by a placeholder. With `pasteStructu
 they are items ([Paste39](#paste39)).
 
 ```yaml
-rank: core
+tags: core
 clipboard: |
   x
   y
@@ -372,7 +440,7 @@ clipboard: |
 On an empty first child, held by a placeholder right after its parent's text, the same.
 
 ````yaml
-rank: edge
+tags: edge
 clipboard: |
   ```
   code
@@ -400,7 +468,7 @@ quote with no text of its own ([Quote1](quotes.md#quote1)). Escaped as text inst
 show.
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   > q
   > r
@@ -427,7 +495,7 @@ The bullets are the list's form (rule 2), and the numbers are content (rule 1): 
 bullet whose text starts with its number, escaped so it stays text.
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   1. x
   2. y
@@ -447,12 +515,119 @@ clipboard: |
 - b
 ```
 
+## Paste13b
+
+With `pasteStructuredListForm: drop`, the pasted items take the bullet list's form and their
+numbers go, as SiYuan pastes them.
+
+```yaml
+tags: edge
+pasteStructuredListForm: drop
+clipboard: |
+  1. x
+  2. y
+```
+
+```buffer
+- a┃
+- b
+```
+
+> pasteStructured
+
+```buffer
+- a
+- x
+- y┃
+- b
+```
+
+## Paste13c
+
+With `pasteStructuredListForm: own`, the pasted list keeps its form, a list of its own among the
+bullets, as true-outliner and BlockNote paste it.
+
+```yaml
+tags: edge
+pasteStructuredListForm: own
+clipboard: |
+  1. x
+  2. y
+```
+
+```buffer
+- a┃
+- b
+```
+
+> pasteStructured
+
+```buffer
+- a
+1. x
+2. y┃
+- b
+```
+
+## Paste13d
+
+With `pasteStructuredAtEnd: join`, the paste's first text joins the item's, its number kept as
+text, and the rest follows as items, as WorkFlowy pastes Markdown that comes as plain text.
+
+```yaml
+tags: edge
+pasteStructuredAtEnd: join
+clipboard: |
+  1. x
+  2. y
+```
+
+```buffer
+- a┃
+- b
+```
+
+> pasteStructured
+
+```buffer
+- a1. x
+- 2\. y┃
+- b
+```
+
+## Paste13e
+
+With `pasteStructuredAtEnd: join` and `pasteStructuredListForm: own`, the joined item's number
+is its form, and goes; the rest keeps its own.
+
+```yaml
+tags: edge
+pasteStructuredAtEnd: join
+pasteStructuredListForm: own
+clipboard: |
+  1. x
+  2. y
+```
+
+```buffer
+- a┃
+- b
+```
+
+> pasteStructured
+
+```buffer
+- ax
+2. y┃
+- b
+```
+
 ## Paste14
 
 The same as an item's first children, before a list already there.
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   1. x
   2. y
@@ -472,6 +647,35 @@ clipboard: |
   - kid
 ```
 
+## Paste14b
+
+With `pasteStructuredOnParent: after`, the paste goes after the item's children, as its next
+siblings, and here with `pasteStructuredListForm: drop` the numbers go: as Tine, WorkFlowy,
+Dynalist and SiYuan paste a rendered list.
+
+```yaml
+tags: edge
+pasteStructuredOnParent: after
+pasteStructuredListForm: drop
+clipboard: |
+  1. x
+  2. y
+```
+
+```buffer
+- a┃
+  - kid
+```
+
+> pasteStructured
+
+```buffer
+- a
+  - kid
+- x
+- y┃
+```
+
 ## Paste15
 
 An ordered list pasted on a list's empty first item makes the list ordered, numbered on.
@@ -479,7 +683,7 @@ An ordered list pasted on a list's empty first item makes the list ordered, numb
 A list's first item sets its form (rule 3).
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   1. x
   2. y
@@ -498,13 +702,91 @@ clipboard: |
 3. b
 ```
 
+## Paste15b
+
+With `pasteStructuredListForm: literal`, a pasted number is text even as a list's first items:
+the list keeps its bullets, as Roam and WorkFlowy paste Markdown that comes as plain text.
+
+```yaml
+tags: edge
+pasteStructuredListForm: literal
+clipboard: |
+  1. x
+  2. y
+```
+
+```buffer
+- ┃
+- b
+```
+
+> pasteStructured
+
+```buffer
+- 1\. x
+- 2\. y┃
+- b
+```
+
+## Paste15c
+
+With `pasteStructuredListForm: drop`, the list keeps its bullets and the numbers go, as SiYuan
+pastes it.
+
+```yaml
+tags: edge
+pasteStructuredListForm: drop
+clipboard: |
+  1. x
+  2. y
+```
+
+```buffer
+- ┃
+- b
+```
+
+> pasteStructured
+
+```buffer
+- x
+- y┃
+- b
+```
+
+## Paste15d
+
+With `pasteStructuredListForm: own`, the pasted list keeps its form, and the item after it keeps
+its bullet, as BlockNote pastes it.
+
+```yaml
+tags: edge
+pasteStructuredListForm: own
+clipboard: |
+  1. x
+  2. y
+```
+
+```buffer
+- ┃
+- b
+```
+
+> pasteStructured
+
+```buffer
+1. x
+2. y┃
+- b
+```
+
 ## Paste16
 
 Bullets pasted on an empty first item of an ordered list are numbered, and the items after are
 renumbered (rule 7): bullets carry no numbers to keep, so the list keeps its form (rule 2).
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   - x
   - y
@@ -523,13 +805,40 @@ clipboard: |
 3. b
 ```
 
+## Paste16b
+
+With `pasteStructuredListForm: own`, bullets pasted on an ordered list's empty first item stay
+bullets, and the list after them, which the paste touched, is renumbered from its first number
+(rule 7), as true-outliner numbers it.
+
+```yaml
+tags: edge
+pasteStructuredListForm: own
+clipboard: |
+  - x
+  - y
+```
+
+```buffer
+1. ┃
+2. b
+```
+
+> pasteStructured
+
+```buffer
+- x
+- y┃
+1. b
+```
+
 ## Paste17
 
 A nested list in the paste keeps its own marker: only the pasted top level takes the destination's
 form (rule 4).
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   1. x
      1. x1
@@ -549,13 +858,95 @@ clipboard: |
 - 2\. y┃
 ```
 
+## Paste17b
+
+With `pasteStructuredListForm: literal`, the nested list's numbers are text too, as Roam and
+WorkFlowy paste Markdown that comes as plain text.
+
+```yaml
+tags: edge
+pasteStructuredListForm: literal
+clipboard: |
+  1. x
+     1. x1
+  2. y
+```
+
+```buffer
+- a┃
+```
+
+> pasteStructured
+
+```buffer
+- a
+- 1\. x
+  - 1\. x1
+- 2\. y┃
+```
+
+## Paste17c
+
+With `pasteStructuredListForm: drop`, the top level's numbers go, and the nested list keeps its
+own form, as SiYuan pastes it.
+
+```yaml
+tags: edge
+pasteStructuredListForm: drop
+clipboard: |
+  1. x
+     1. x1
+  2. y
+```
+
+```buffer
+- a┃
+```
+
+> pasteStructured
+
+```buffer
+- a
+- x
+  1. x1
+- y┃
+```
+
+## Paste17d
+
+With `pasteStructuredAtEnd: join` and `pasteStructuredListForm: literal`, the first item's text
+joins the item's, its number with it, and every number is text, the nested list's too, as WorkFlowy
+pastes Markdown that comes as plain text.
+
+```yaml
+tags: edge
+pasteStructuredAtEnd: join
+pasteStructuredListForm: literal
+clipboard: |
+  1. x
+     1. x1
+  2. y
+```
+
+```buffer
+- a┃
+```
+
+> pasteStructured
+
+```buffer
+- a1. x
+  - 1\. x1
+- 2\. y┃
+```
+
 ## Paste18
 
 An ordered list pasted into an ordered list takes its numbers, and the items after are renumbered
 (rule 7): in an ordered list the numbers are form.
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   1. x
   2. y
@@ -575,6 +966,33 @@ clipboard: |
 4. b
 ```
 
+## Paste18b
+
+With `pasteStructuredListForm: literal`, pasted items in an ordered list take its numbers and
+keep their own as text, as Roam pastes Markdown that comes as plain text.
+
+```yaml
+tags: edge
+pasteStructuredListForm: literal
+clipboard: |
+  1. x
+  2. y
+```
+
+```buffer
+1. a┃
+2. b
+```
+
+> pasteStructured
+
+```buffer
+1. a
+2. 1\. x
+3. 2\. y┃
+4. b
+```
+
 ## Paste19
 
 A heading pasted into a list is an item whose text is the heading (an item's first block can be a
@@ -583,7 +1001,32 @@ text (`a# h`), as bare Obsidian, WorkFlowy and Dynalist paste it, the heading wo
 and Roam make a heading block.
 
 ```yaml
-rank: edge
+tags: edge
+clipboard: |
+  # h
+  text
+```
+
+```buffer
+- a┃
+```
+
+> pasteStructured
+
+```buffer
+- a
+- # h
+  text┃
+```
+
+## Paste19b
+
+With `pasteStructuredAtEnd: join`, a pasted heading joins nothing: it goes after the item, as
+with `after`.
+
+```yaml
+tags: edge
+pasteStructuredAtEnd: join
 clipboard: |
   # h
   text
@@ -608,7 +1051,7 @@ puts a new node right after the paragraph's text (rule 5); the pasted items take
 (rule 2).
 
 ```yaml
-rank: common
+tags: common
 clipboard: |
   - p
   - q
@@ -632,13 +1075,43 @@ Notes
 - z
 ```
 
+## Paste20b
+
+With `pasteStructuredAtEnd: join`, the first pasted item's text joins the paragraph's, and the
+rest goes first in its list, the list's items after it.
+
+```yaml
+tags: edge
+pasteStructuredAtEnd: join
+clipboard: |
+  - p
+  - q
+```
+
+```buffer
+Notes┃
+
+- x
+- z
+```
+
+> pasteStructured
+
+```buffer
+Notesp
+
+- q┃
+- x
+- z
+```
+
 ## Paste21
 
 The same with no blank line between the paragraph and its list: none is added (rule 2: the
 destination decides spacing).
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   - p
   - q
@@ -664,7 +1137,7 @@ Plain paste on a code line: the lines are code as they are, each taking the cont
 in (here the item's indentation).
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |-
   a = 1
     b = 2
@@ -692,7 +1165,7 @@ clipboard: |-
 Structured paste on a code line pastes as plain text: in code, what is pasted is code.
 
 ```yaml
-rank: rare
+tags: rare
 clipboard: |-
   - a
   - b
@@ -718,9 +1191,8 @@ clipboard: |-
 One line of plain text is inline text: the host pastes it at the caret.
 
 ```yaml
-rank: common
-clipboard: |-
-  x
+tags: common
+clipboard: "x"
 ```
 
 ```buffer
@@ -744,7 +1216,7 @@ before its children, the list tight as it was (rule 2): blank lines around the c
 loose.
 
 ````yaml
-rank: common
+tags: common
 clipboard: |
   ```
   c
@@ -775,7 +1247,7 @@ by the host as text, it would read `- a- x`. Logseq, Tine and SiYuan make the it
 BlockNote paste its text into the item.
 
 ```yaml
-rank: common
+tags: common
 clipboard: |
   - x
 ```
@@ -793,13 +1265,37 @@ clipboard: |
 - b
 ```
 
+## Paste26b
+
+With `pasteStructuredAtEnd: join`, one pasted item's text joins the item's, as WorkFlowy and
+BlockNote paste it.
+
+```yaml
+tags: edge
+pasteStructuredAtEnd: join
+clipboard: |
+  - x
+```
+
+```buffer
+- a┃
+- b
+```
+
+> pasteStructured
+
+```buffer
+- ax┃
+- b
+```
+
 ## Paste27
 
 Items pasted as first children land at the existing children's column, here four columns in,
 under a task: the destination decides the form (rule 2), so the paste's own indentation goes.
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   - a
   - b
@@ -819,13 +1315,93 @@ clipboard: |
     - g
 ```
 
+## Paste27b
+
+With `pasteStructuredAtEnd: join`, the item's children follow the paste, under its last item,
+as BlockNote pastes it.
+
+```yaml
+tags: edge
+pasteStructuredAtEnd: join
+clipboard: |
+  - a
+  - b
+```
+
+```buffer
+- [ ] t┃
+    - g
+```
+
+> pasteStructured
+
+```buffer
+- [ ] ta
+- b┃
+  - g
+```
+
+## Paste27c
+
+With `pasteStructuredAtEnd: join` and `enterMidItem: child`, the item keeps its children, the
+rest of the paste their first siblings.
+
+```yaml
+tags: edge
+pasteStructuredAtEnd: join
+enterMidItem: child
+clipboard: |
+  - a
+  - b
+```
+
+```buffer
+- [ ] t┃
+    - g
+```
+
+> pasteStructured
+
+```buffer
+- [ ] ta
+    - b┃
+    - g
+```
+
+## Paste27d
+
+With `pasteStructuredOnParent: after`, the items go after the task's child, the task as it is,
+as Tine, WorkFlowy and Dynalist paste them.
+
+```yaml
+tags: edge
+pasteStructuredOnParent: after
+clipboard: |
+  - a
+  - b
+```
+
+```buffer
+- [ ] t┃
+    - g
+```
+
+> pasteStructured
+
+```buffer
+- [ ] t
+    - g
+- a
+- b┃
+```
+
 ## Paste28
 
 A callout pasted at the end of an item's text goes into the item, as a quote does (rule 5): it is a
 quote whose first line is `[!type]`.
 
 ```yaml
-rank: rare
+tags: rare
 clipboard: |
   > [!note] t
   > body
@@ -852,7 +1428,7 @@ item before it (rule 5), and the list stays tight (rule 2): the clipboard's blan
 goes, as in [Paste25](#paste25).
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   - alpha
 
@@ -880,7 +1456,7 @@ Plain paste escapes a line that would start a block as Shift-Enter does
 even when its number isn't 1.
 
 ```yaml
-rank: rare
+tags: rare
 clipboard: |-
   x
   2. y
@@ -903,9 +1479,8 @@ One line pasted in the middle of the text goes in inline, even one that would be
 text's end ([Paste26](#paste26)): a sentence keeps what is pasted into it.
 
 ```yaml
-rank: common
-clipboard: |-
-  1. Introduction
+tags: common
+clipboard: "1. Introduction"
 ```
 
 ```buffer
@@ -928,7 +1503,7 @@ A heading pasted at the end of a paragraph is a heading node after it, where Ent
 node. A host pastes it as text, glued onto the paragraph: `para# h`.
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   # h
 ```
@@ -951,7 +1526,7 @@ At the end of a section, a heading of its level goes after the section: it close
 nothing.
 
 ```yaml
-rank: rare
+tags: rare
 clipboard: |
   ## h
 ```
@@ -978,7 +1553,7 @@ A heading pasted with a paragraph after it takes the paragraph in, as a heading 
 `next` becomes its section's first paragraph.
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   # h
 ```
@@ -1005,7 +1580,7 @@ Inside a section, a heading of its level closes it and takes in the rest of it, 
 heading of its level: `more` and `C` become `h`'s, and `B` stays where it is.
 
 ```yaml
-rank: rare
+tags: rare
 clipboard: |
   ## h
 ```
@@ -1042,12 +1617,39 @@ more
 
 Structured paste in the middle of an item's text splits the item where Enter would
 (`pasteStructuredMidText: split`, the default), and the paste goes in between: its first text joins
-the text before the caret, `y` stays that text's child, as in the clipboard, and the text after the
-caret is the next item, the caret at its start. WorkFlowy and Dynalist split; neither keeps `y`
-under `x`.
+the text before the caret, `y` follows it as an item (in a list a paragraph owns no list, so the
+paste's `x` and `y` are both at its top level), and the text after the caret is the next item, the
+caret at its start, as WorkFlowy pastes it.
 
 ```yaml
-rank: edge
+tags: edge
+clipboard: |
+  x
+  - y
+```
+
+```buffer
+- list
+  - See ┃here.
+```
+
+> pasteStructured
+
+```buffer
+- list
+  - See x
+  - y
+  - ┃here.
+```
+
+## Paste36b
+
+With `pasteStructuredParagraphList: children`, `y` nests under the joined text, as the paragraph
+owns its list where the clipboard was written: as Roam, Dynalist and true-outliner paste it.
+
+```yaml
+tags: edge
+pasteStructuredParagraphList: children
 clipboard: |
   x
   - y
@@ -1073,7 +1675,7 @@ In a paragraph the same: the text after the caret is a paragraph of its own afte
 by a blank line, which `y` would otherwise take in.
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   x
   - y
@@ -1098,8 +1700,35 @@ With `pasteStructuredMidText: after`, the item is left as it is, and the paste g
 the end of its text. Logseq, Tine, Roam, SiYuan and true-outliner do this.
 
 ```yaml
-rank: edge
+tags: edge
 pasteStructuredMidText: after
+clipboard: |
+  x
+  - y
+```
+
+```buffer
+- list
+  - See ┃here.
+```
+
+> pasteStructured
+
+```buffer
+- list
+  - See here.
+  - x
+  - y┃
+```
+
+## Paste38b
+
+With `pasteStructuredParagraphList: children` too, `y` nests under `x`, as Roam pastes it.
+
+```yaml
+tags: edge
+pasteStructuredMidText: after
+pasteStructuredParagraphList: children
 clipboard: |
   x
   - y
@@ -1125,7 +1754,7 @@ With `pasteStructuredLines: items`, plain lines on an empty item are items, one 
 as Roam, WorkFlowy and Dynalist make them.
 
 ```yaml
-rank: edge
+tags: edge
 pasteStructuredLines: items
 clipboard: |
   x
@@ -1151,7 +1780,7 @@ Plain paste of two paragraphs: the blank line is a paragraph break in the item, 
 make one, `y` and the rest of the text the item's second paragraph. Logseq, Roam and Tine keep it so.
 
 ```yaml
-rank: edge
+tags: edge free-form
 clipboard: |
   x
 
@@ -1178,7 +1807,7 @@ clipboard: |
 In a quote, the paragraph break keeps its `>`.
 
 ```yaml
-rank: rare
+tags: rare free-form
 clipboard: |
   x
 
@@ -1205,7 +1834,7 @@ In an item with children, the text after the caret takes them, as Enter's split 
 its marker being form.
 
 ```yaml
-rank: rare
+tags: rare
 clipboard: |
   - x
   - y
@@ -1225,13 +1854,40 @@ clipboard: |
   - child
 ```
 
+## Paste42b
+
+With `pasteStructuredOnParent: after`, in the middle of an item with children nothing is split:
+the paste goes after its children, as WorkFlowy and SiYuan paste it.
+
+```yaml
+tags: edge
+pasteStructuredOnParent: after
+clipboard: |
+  - x
+  - y
+```
+
+```buffer
+- a┃b
+  - child
+```
+
+> pasteStructured
+
+```buffer
+- ab
+  - child
+- x
+- y┃
+```
+
 ## Paste43
 
 With `enterMidItem: child`, the text after the caret is the item's first child after the paste, as
 Enter makes it, and the item keeps its children.
 
 ```yaml
-rank: rare
+tags: rare
 enterMidItem: child
 clipboard: |
   - x
@@ -1258,7 +1914,7 @@ On an empty item, a math block is the item's text, as code is ([Paste9](#paste9)
 the end of its last line, not after the closing `$$`, where typing would unmake it.
 
 ```yaml
-rank: edge
+tags: edge
 flavor: obsidian
 clipboard: |
   $$
@@ -1286,7 +1942,7 @@ Plain paste of a math block's lines: a `$$` at a line's start would open a math 
 escaped, as any line that would start a block; the first line joins the text before the caret.
 
 ```yaml
-rank: rare
+tags: rare
 flavor: obsidian
 clipboard: |
   $$
@@ -1314,7 +1970,7 @@ Enter puts a new node: a second code block goes into the item after the first. L
 it would join the closing fence (```` ``````js ````), and the code would run on to the end.
 
 ````yaml
-rank: edge
+tags: edge markup-fence
 clipboard: |
   ```js
   code
@@ -1347,7 +2003,7 @@ Plain lines at the end of a code block are a paragraph after it: a block that is
 lines of its own.
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 clipboard: |
   one
   two
@@ -1377,7 +2033,7 @@ selection goes first. Logseq, Tine, SiYuan and BlockNote keep the lines in the b
 pastes the second line at column 0, outside the item.
 
 ```yaml
-rank: common
+tags: common
 clipboard: |-
   new
   better
@@ -1401,7 +2057,7 @@ clipboard's last line break as an empty line at column 0, where typed text would
 `b`.
 
 ```yaml
-rank: common
+tags: common
 clipboard: |
   - a
   - b
@@ -1426,7 +2082,7 @@ Over a selection across two items, the items join first, as Backspace joins them
 splits the joined item at the caret.
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   - x
   - y
@@ -1452,7 +2108,7 @@ item's text: the break is Shift-Enter's, and what follows the caret stays text o
 Bare Obsidian makes `- below` a new item.
 
 ```yaml
-rank: common
+tags: common
 clipboard: |
   x
 ```
@@ -1475,7 +2131,7 @@ on an empty item ([Paste9](#paste9)). Bare Obsidian pastes the fences at column 
 list.
 
 ````yaml
-rank: edge
+tags: edge
 clipboard: |
   ```
   code
@@ -1502,7 +2158,7 @@ A pasted setext heading leaves the caret at its title's end, not after its under
 would unmake the heading.
 
 ```yaml
-rank: rare
+tags: rare
 clipboard: |
   Title
   =====
@@ -1527,7 +2183,7 @@ Lines pasted in the middle of a heading's title go after it, as at its end: a ti
 and the host's paste would break it in two.
 
 ```yaml
-rank: edge
+tags: edge free-form
 clipboard: |
   x
   y
@@ -1552,7 +2208,7 @@ Lines pasted as plain text into a callout's title are refused: in the Obsidian f
 one line, and the host's paste would leave the callout.
 
 ```yaml
-rank: rare
+tags: rare free-form
 flavor: obsidian
 clipboard: |
   x
@@ -1581,7 +2237,7 @@ Lines pasted into a table's cell are refused: a row is one line, and the host's 
 it into rows.
 
 ```yaml
-rank: rare
+tags: rare free-form
 flavor: gfm
 clipboard: |
   x
@@ -1611,7 +2267,7 @@ owns no list, so the list follows it among the item's children; the list stays t
 clipboard's blank lines gone.
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   ## Summary
 
@@ -1642,7 +2298,7 @@ A note's frontmatter pasted into another note: frontmatter is only at a document
 its lines are a thematic break and a setext heading, which takes in the paragraph after it.
 
 ```yaml
-rank: rare
+tags: rare
 flavor: obsidian
 clipboard: |
   ---
@@ -1677,7 +2333,7 @@ the heading's blank line stays above them. Bare Obsidian glues the first one ont
 (`# Groceries- milk`); true-outliner sets the paste off from `bread`, which makes the list loose.
 
 ```yaml
-rank: common
+tags: common
 clipboard: |
   - milk
   - eggs
@@ -1699,12 +2355,41 @@ clipboard: |
 - bread
 ```
 
+## Paste59b
+
+With `pasteStructuredOnParent: after`, a list pasted at a heading's end goes last in its section,
+after the list there, as Tine, WorkFlowy, Dynalist and SiYuan paste it.
+
+```yaml
+tags: edge
+pasteStructuredOnParent: after
+clipboard: |
+  - milk
+  - eggs
+```
+
+```buffer
+# Groceries┃
+
+- bread
+```
+
+> pasteStructured
+
+```buffer
+# Groceries
+
+- bread
+- milk
+- eggs┃
+```
+
 ## Paste60
 
 Items pasted on an empty item of a loose list are set off from each other, as the list's items are.
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   - x
   - y
@@ -1732,7 +2417,7 @@ A section written without blank lines stays without: a heading pasted after a pa
 heading right below it gets none.
 
 ```yaml
-rank: rare
+tags: rare
 clipboard: |
   # Z
 ```
@@ -1760,7 +2445,7 @@ Code pasted in the middle of a paragraph splits it, the space at the split going
 as at Enter's.
 
 ````yaml
-rank: edge
+tags: edge
 clipboard: |
   ```
   make build
@@ -1788,7 +2473,7 @@ An ordered list pasted in the middle of a bullet item: its first item joins the 
 caret, its number with it, as text (rule 1), and the second is an item, its number escaped.
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   1. x
   2. y
@@ -1812,7 +2497,7 @@ Plain paste at the start of a paragraph's text: the first pasted line starts the
 it would start a block there.
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |-
   - a
   - b
@@ -1836,7 +2521,7 @@ as at the first's closing fence ([Paste46](#paste46)). Left to the host, it woul
 outside the list, and end it.
 
 ````yaml
-rank: common
+tags: common
 clipboard: |
   ```js
   y
@@ -1875,7 +2560,7 @@ that indentation it does, and the code keeps its own. Bare Obsidian glues the fe
 text (`- grandchild```js`), and the code is the item's text.
 
 ````yaml
-rank: common
+tags: common
 clipboard: |-
   ```js
         // greet
@@ -1903,7 +2588,7 @@ On the blank line between two paragraphs, plain lines are a paragraph between th
 pastes them in the blank line's place, where they run into the paragraph above.
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   x
   y
@@ -1933,7 +2618,7 @@ as at Shift-Enter's, and `---`, starting a line, is escaped; kept, the space wou
 underline making the paragraph a heading.
 
 ```yaml
-rank: rare
+tags: rare
 clipboard: |
   x
 ```
@@ -1956,7 +2641,7 @@ Plain paste breaking prose that starts like a link reference definition: ended a
 ([Enter47](enter.md#enter47)).
 
 ```yaml
-rank: rare
+tags: rare
 clipboard: |
   x
 ```
@@ -1978,7 +2663,7 @@ Code pasted at the end of a paragraph's first line, before a continuation line i
 spaces: that line starts the paragraph after the code, its spaces gone, which would make it code.
 
 ````yaml
-rank: rare
+tags: rare
 clipboard: |
   ```
   c
@@ -2007,7 +2692,7 @@ A heading pasted after code in an item, with another block after it in the item:
 the block in as its section, which stays in the item, at its column.
 
 ````yaml
-rank: rare
+tags: rare markup-fence
 clipboard: |
   # h
 ````
@@ -2044,7 +2729,7 @@ A quote pasted on an empty task: the checkbox stays, and the quote, which can't 
 line, is the task's first child.
 
 ```yaml
-rank: rare
+tags: rare markup-task
 clipboard: |
   > q
 ```
@@ -2071,7 +2756,7 @@ character's place): the space goes, so the text starts at the item's column and 
 its children.
 
 ```yaml
-rank: rare
+tags: rare
 clipboard: |
   x
   y
@@ -2097,7 +2782,7 @@ Code with an indented line pasted on an empty item: the code is the item's text,
 own indentation kept at the item's column.
 
 ````yaml
-rank: rare
+tags: rare
 clipboard: |
   ```
   if x:
@@ -2125,7 +2810,7 @@ clipboard: |
 Lines pasted on an empty task are its text after the checkbox, which stays.
 
 ```yaml
-rank: rare
+tags: rare markup-task
 clipboard: |
   x
   y
@@ -2152,7 +2837,7 @@ and a split paste has nothing to split off before the caret. A choice made witho
 [z-open.md](z-open.md).
 
 ```yaml
-rank: rare
+tags: rare markup-heading
 clipboard: |
   - a
   - b
@@ -2180,7 +2865,7 @@ A heading with its section pasted into a quote: in a quote a paragraph owns no l
 pasted heading too, so the list follows `fix:` as the heading's.
 
 ```yaml
-rank: rare
+tags: rare
 clipboard: |
   ## S
   fix:
@@ -2207,7 +2892,7 @@ Plain lines pasted at an item's text start, the first indented as code is: it st
 without its leading spaces, which after the marker would make it code, as the later lines do.
 
 ```yaml
-rank: rare
+tags: rare
 clipboard: |2
       first
       second
@@ -2232,7 +2917,7 @@ is, so its lines are pasted as they are, unlike a code fence copied from inside 
 ([Paste66](#paste66)).
 
 ```yaml
-rank: rare
+tags: rare
 flavor: obsidian
 clipboard: |-
   $$
@@ -2252,4 +2937,52 @@ a
 $$
     x┃
     $$
+```
+
+## Paste80
+
+Plain paste joined onto text before the caret that, with the pasted line, would start a block: a
+number before `. a` would make the paragraph a list, so the pasted line is escaped where it joins.
+
+```yaml
+tags: rare
+clipboard: |
+  . a
+  b
+```
+
+```buffer
+1┃
+```
+
+> pastePlain
+
+```buffer
+1\. a
+b
+┃◌
+```
+
+## Paste81
+
+The same at an item's text start: `2` and the pasted `1. a` would read as a nested list, `21.`, so
+the joined line is escaped after its number.
+
+```yaml
+tags: rare
+clipboard: |
+  1. a
+  2. b
+```
+
+```buffer
+- 2┃\. y
+```
+
+> pastePlain
+
+```buffer
+- 21\. a
+  2\. b
+  ┃\. y
 ```

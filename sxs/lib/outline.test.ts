@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { compareOutlines, draw, project, Unsupported, type Outline } from './outline.ts';
+import { compareOutlines, draw, project, sectioned, unescapeLaterLines, Unsupported, type Outline } from './outline.ts';
 
 const blocks = (o: Outline): string[] => o.blocks.map((b) => `${'  '.repeat(b.depth)}${b.text}`);
 
@@ -52,6 +52,8 @@ test("an escape at a line's start is dropped, and the caret moves with it", () =
   assert.deepEqual(blocks(p.outline), ['a\n- b']);
   assert.deepEqual(p.outline.sel, { block: 0, anchor: 5, head: 5 });
   assert.ok(p.notes.has('escape'));
+  // a setext title's lines too: the block holds `- x`, as the app does
+  assert.deepEqual(blocks(project('first\n┃\\- x\n===\n', 'gfm').outline), ['# first\n- x']);
 });
 
 test('CRLF endings go, positions shifting with them', () => {
@@ -90,4 +92,55 @@ test('comparing: blocks first, then whitespace at line breaks, then the caret', 
   assert.equal(compareOutlines(want, { blocks: [{ depth: 0, text: 'a ' }, { depth: 0, text: 'b' }], sel: want.sel }), 'whitespace');
   assert.equal(compareOutlines(want, { blocks: [{ depth: 0, text: 'a' }, { depth: 1, text: 'b' }], sel: want.sel }), 'disagree');
   assert.equal(compareOutlines({ ...want, sel: null }, { ...want, sel: null }), 'agree');
+  // spaces right after a block's prefix (its number, checkbox, `#`s) are whitespace too
+  const numbered = { blocks: [{ depth: 0, text: '10. b' }, { depth: 0, text: '[ ] c' }], sel: null };
+  assert.equal(compareOutlines(numbered, { blocks: [{ depth: 0, text: '10.  b' }, { depth: 0, text: '[ ]  c' }], sel: null }), 'whitespace');
+  assert.equal(compareOutlines(numbered, { blocks: [{ depth: 0, text: '10. b ' }, { depth: 0, text: '[ ] cc' }], sel: null }), 'disagree');
 });
+
+test("blocks after a heading compare as its section, beside it or under it", () => {
+  const read = (drawn: string) => project(drawn, 'gfm').outline;
+  const want = (drawn: string) => [project(drawn, 'gfm').outline, project(drawn, 'gfm').sections] as const;
+  // Enter at a heading's end: the app's block beside the heading is the projection's under it
+  const [notes, ownsNotes] = want('# Notes\nfirst┃\n');
+  assert.equal(compareOutlines(notes, read('- # Notes\n- first┃\n'), ownsNotes), 'agree');
+  // a sub-heading takes what follows it; a heading of its level or above ends it
+  assert.deepEqual(sectioned(read('- # A\n- ## s\n- x\n- # B\n'), [0, 1, 3]).blocks.map((b) => b.depth), [0, 1, 2, 0]);
+  // a heading an app nests in a section of its level is that section's sibling, as Markdown reads it
+  const [z, ownsZ] = want('# A\n## B\ntext\n# Z┃\n## C\n');
+  assert.equal(compareOutlines(z, read('- # A\n  - ## B\n    - text\n    - # Z┃\n  - ## C\n'), ownsZ), 'agree');
+  // a real difference stays one: the block under the wrong heading
+  const [ab, ownsAB] = want('# A\nx\n# B\n');
+  assert.equal(compareOutlines(ab, read('- # A\n- # B\n  - x\n'), ownsAB), 'disagree');
+  // an item whose text is a heading owns no section: text in the item isn't an item beside it
+  const [item, ownsItem] = want('- a\n- # h\n  text┃\n');
+  assert.deepEqual(ownsItem, []);
+  assert.equal(compareOutlines(item, read('- a\n- # h\n- text┃\n'), ownsItem), 'disagree');
+});
+
+test("a heading's closing #s and indented code have no block form", () => {
+  assert.throws(() => project('# Title #\n- ┃more\n', 'gfm'), (e) => e instanceof Unsupported && /closing #s/.test(e.message));
+  assert.throws(() => project('    ┃code\n', 'gfm'), (e) => e instanceof Unsupported && /indented code/.test(e.message));
+  // a setext title of several lines is a heading block with line breaks, which block apps hold
+  assert.deepEqual(blocks(project('one\n┃two\n---\n', 'gfm').outline), ['## one\ntwo']);
+});
+
+test("Markdown source's escapes at a block's later lines are taken off, the caret moving with them", () => {
+  const o = unescapeLaterLines({ blocks: [{ depth: 0, text: '21\\. a\n\\. y' }, { depth: 0, text: '\\- x' }], sel: { block: 0, anchor: 10, head: 10 } });
+  // a first line keeps its escape: it is what tells the text from a block's own form
+  assert.deepEqual(o.blocks.map((b) => b.text), ['21\\. a\n. y', '\\- x']);
+  assert.deepEqual(o.sel, { block: 0, anchor: 9, head: 9 });
+});
+
+test('for an app that numbers blocks, an ordered item is a numbered block and a number that is text keeps its escape', () => {
+  const read = (drawn: string) => project(drawn, 'gfm', { ordered: true });
+  // as a reader sees the numbers: the list's start, counted on
+  assert.deepEqual(blocks(read('1. a\n1. b┃\n').outline), ['1. a', '2. b']);
+  assert.deepEqual(blocks(read('9. a\n   - x\n10. b┃\n').outline), ['9. a', '  x', '10. b']);
+  assert.deepEqual(blocks(read('- a\n- 1\\. x┃\n').outline), ['a', '1\\. x']);
+  assert.ok(!read('1. a┃\n').notes.has('numbered list'));
+  // else the number goes, an adaptation
+  assert.deepEqual(blocks(project('1. a┃\n', 'gfm').outline), ['a']);
+  assert.ok(project('1. a┃\n', 'gfm').notes.has('numbered list'));
+});
+

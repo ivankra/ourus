@@ -99,9 +99,9 @@ next state, or null when nothing changes.
 
 How commands behave where users disagree is a `Config` option, set when the state is made
 (`OutlineState.parse(text, { config })`): `outdent` (`direct` or `logical`), `bullet`,
-`enterOnEmptyItem`, `enterMidItem`, `enterAtTextStart`, `backspaceAtTopItem`, `handleFenceContents`,
-`headingEditing`, `taskEditing`, `pasteStructuredLines`, `pasteStructuredMidText`, `deleteAtGap`,
-`editInMarkup`, and `flavor`. Each option's choices and default are documented in `src/config.ts`.
+`enterOnEmptyItem`, `enterMidItem`, `enterAtTextStart`, `backspaceAtTopItem`, `emptyItemWithChildren`,
+`handleFenceContents`, `headingEditing`, `taskEditing`, `pasteStructuredLines`, `pasteStructuredMidText`,
+`pasteStructuredAtEnd`, `pasteStructuredOnParent`, `pasteStructuredParagraphList`, `pasteStructuredListForm`, `deleteAtGap`, `editInMarkup`, and `flavor`. Each option's choices and default are documented in `src/config.ts`.
 
 ## Inside
 

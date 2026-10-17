@@ -43,15 +43,14 @@ for (const file of readdirSync(specDir).filter((f) => f.endsWith('.md') && f !==
 
 const specFiles = (): string[] => readdirSync(specDir).filter((f) => f.endsWith('.md') && f !== 'README.md');
 
-// every case is ranked, and every core one is walked through in a daily flow of scenarios.md
-test('every case has a rank, and every core case appears in scenarios.md', () => {
+// every core case (the reader requires every case's rank) is walked through in a daily flow of scenarios.md
+test('every core case appears in scenarios.md', () => {
   const scenarios = readFileSync(new URL('scenarios.md', specDir), 'utf8');
   const problems: string[] = [];
   for (const file of specFiles()) {
     for (const t of readSpec(file, readFileSync(new URL(file, specDir), 'utf8'))) {
-      if (!t.options.rank) problems.push(`${file} › ${t.name}: no rank`);
       const id = t.name.split(' › ').pop()!;
-      if (t.options.rank === 'core' && file !== 'scenarios.md' && !scenarios.includes(`${file}#${slug(id)})`)) problems.push(`${file} › ${t.name}: core, but in no scenario`);
+      if (t.rank === 'core' && file !== 'scenarios.md' && !scenarios.includes(`${file}#${slug(id)})`)) problems.push(`${file} › ${t.name}: core, but in no scenario`);
     }
   }
   assert.deepEqual(problems, []);

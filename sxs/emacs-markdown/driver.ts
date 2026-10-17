@@ -59,7 +59,7 @@ export const driver: Driver = {
   url: 'emacs -Q -nw, on a terminal',
   model: 'text',
   // Backspace right after a checkbox deletes a character (`taskEditing: text`)
-  behaves: { taskEditing: 'text' },
+  behaves: { taskEditing: 'text', deleteAtGap: 'gap' },
   keys: {
     // `markdown-enter-key`: a line break, indented as the line before (no list item is continued)
     enter: 'RET',

@@ -42,6 +42,7 @@ pick the examples matching any of them; none picks every example. Options:
 | `--fresh` | load the app anew, rather than take over the page an earlier run left loaded |
 | `--no-report` | don't copy the report into `<app>/sxs.md` (nor the table into `sxs.md`) |
 | `--timing` | print how long the app took to settle after each action, and what it waited on last |
+| `--plain-clipboard` | give the app the clipboard's Markdown as plain text only, without its HTML rendering |
 | `--json=FILE` | write the run as data to FILE too, as `.sxs/<app>/sxs.json` has it |
 | `--jobs=N` | with several apps, run at most N at once (all of them by default) |
 | `--table` | with several apps, run nothing: write the table from the verdicts each app's last run left in `.sxs/<app>/sxs.json` (an app with none left out) |
@@ -72,7 +73,7 @@ counts as it finishes; then a table gives every example's verdict in each app, t
 examples agree, the most first, in every table (`ok`, `DIFF`, `caret`,
 `space`, `ERROR`, `-` for skipped; in `sxs.md`, ✓, ✗, C, S, E, –, explained in its legend): every row for a few examples or with `-v`, else the rows where
 the apps don't all agree. The table is written too, as Markdown, to `.sxs/sxs.md` with its
-heatmap, `sxs-heatmap.svg` (how alike two apps did in the examples both ran as written, none adapted:
+heatmap, `sxs-heatmap.svg` (how alike two apps did in the examples both ran alike, both as written or both adapted the same way:
 the same result 1, the same but for the caret or spaces ½; ourus among them, as its own runs of the examples have it, `test/spec-run.ts`); a run of every app on the whole spec copies both here, [`sxs.md`](sxs.md),
 checked in, each app's column linking its report (which its run copies here, as a full run does alone). Apps run side by side compete for the
 machine, so each takes longer, but their verdicts are those of a run alone: compared example by
@@ -82,13 +83,18 @@ reads (`12-sxs.md` §20 has how it went wrong before).
 In `sxs.md` the summary gives each app's model (`block` or `text`) after its name. In its table of
 examples a bold row names each spec file, and each example is its own name (not its sections'),
 at most 20 characters and `…`, linking to it in the spec, with its full name, sections and all, as
-the link's title (a tooltip); its second column counts the apps that agree on it (0 shown: none). A verdict in brackets, `(✗)`, is
+the link's title (a tooltip); after the apps come the count of apps that disagree on it and its
+rank, and a file's total row gives the examples each app disagrees on and their sum. A verdict in brackets, `(✗)`, is
 a difference in an example adapted for that app (its buffers projected onto blocks), so it compares
 those, not the buffers, with what was adapted as its tooltip (`adapted: heading`); an adapted
 example that agrees is a plain ✓. `run.ts all --table` writes it again from
 the last runs, without running anything: after a change to the table's layout, or after rerunning
 only some apps (`run.ts a,b`), each of which leaves its verdicts; its `elapsed_s` is then the
 longest app's run.
+
+After the summary, **By spec file** sums each spec file: its examples, the apps' runs of them, the
+disagreements among those runs (and their share), the block apps' disagreements among them, and each
+app's; the most first, then the total.
 
 The first run of an app starts the proxy and the app's headless Chromium, and leaves them running
 for the next runs, with the app loaded (`.sxs/proxy.log` and `.sxs/<app>/chromium.log` say what they did).
@@ -98,7 +104,7 @@ Later runs reuse them, so a run of one example takes under a second. Stop them a
 
 1. **Choosing and adapting** ([`lib/plan.ts`](lib/plan.ts)). Each selected example is adapted to the app,
    or skipped with a reason: an action the app has no key for, an option the app doesn't have
-   and can't be set to (`outdent: logical`), a buffer it can't hold (a quote, for a block app), a caret with no place in
+   and can't be set to (`outdent: logical`), a tag it skips (below), a buffer it can't hold (a quote, for a block app), a caret with no place in
    it. Examples that adapt to the same thing run once.
 2. **The proxy** ([`proxy.ts`](proxy.ts)), a caching forward proxy the browser reaches every site
    through. It intercepts HTTPS with one self-signed certificate (the browser ignores certificate
@@ -125,7 +131,13 @@ Later runs reuse them, so a run of one example takes under a second. Stop them a
    fresh document (through whatever the app offers: a plugin API, its stores), and the runner checks
    that the app holds it as given, since an app that rewrites its input (trimming, normalizing)
    would make the test meaningless. Then the actions are played as a user plays them, with the app's
-   keys; text is typed a character at a time; pastes put the clipboard first. After every key the
+   keys; text is typed a character at a time; pastes put the clipboard first: the example's
+   Markdown as plain text and, where it has structure, rendered as HTML too
+   ([`lib/clipboard.ts`](lib/clipboard.ts)), as a copy from a rendered page carries it. Nearly every
+   app reads the HTML when there is one (Logseq, Tine, Roam, Dynalist, WorkFlowy, SiYuan, the
+   Obsidian apps and SilverBullet converting it; BlockNote at a text's end only); ourus reads the
+   Markdown, as a Markdown host passes it the plain text. Plain lines carry no HTML, as a copy of
+   plain text doesn't, and Emacs's kill ring holds text alone. After every key the
    runner **waits for the app to settle** ([`lib/idle.ts`](lib/idle.ts)), never for a fixed time: an init
    script tracks the page's short timers and animation frames until they fire or are cleared, and
    its DOM mutations; the page is idle when none is pending and nothing changed for 40 ms, and the
@@ -136,7 +148,8 @@ Later runs reuse them, so a run of one example takes under a second. Stop them a
    form with ourus's own parser (every outline node a block holding its own text, in canonical
    Markdown: `[ ] ` for a task, `## ` for a heading, `\n` between lines), and compared block for
    block. Verdicts: `agree`; `caret` (blocks agree, the caret doesn't); `whitespace` (they differ in
-   spaces next to line breaks only); `disagree` (the blocks differ: their text, their nesting, how
+   spaces next to line breaks only; a text app's text, in spaces before line breaks, or in spaces
+   anywhere that leave the document as ourus reads it the same, its code byte for byte); `disagree` (the blocks differ: their text, their nesting, how
    many there are); `error` (the run failed, or the app didn't hold the
    starting state).
 
@@ -163,7 +176,10 @@ Later runs reuse them, so a run of one example takes under a second. Stop them a
 
 **Original and adapted.** An example whose buffers are `-` outlines as written is *original*: the comparison
 means exactly what it says. The others are *adapted*: a paragraph or a heading stood in for a block,
-blank lines were dropped, a numbered item became a plain one. Their notes say how. ourus gives these
+blank lines were dropped, a numbered item became a plain one (where the app has no numbered blocks:
+a driver that loads and reads them declares `ordered`, and an ordered item is then a block whose
+canonical text starts with its number, `1. x`, a number that is text kept escaped, `1\. x`; SiYuan,
+BlockNote, Logseq, Roam, WorkFlowy and Dynalist number blocks so). Their notes say how. ourus gives these
 Markdown structures meaning that blocks don't have (a paragraph owns the list after it, a heading
 its section, a blank line is a gap), so an adapted difference is often the two models disagreeing
 rather than a choice either app made. They are counted apart, and `--strict` runs the original ones only.
@@ -172,6 +188,15 @@ A projection can lose an example's point: one whose expected buffer differs from
 in what blocks can't show (blank lines, markers) is skipped. And where ourus's caret has no place in
 a block (in a marker, on a blank line, past the last line ending), the expected caret isn't
 compared, and a starting caret there skips the example.
+
+A case's `tags` ([`spec/README.md`](../spec/README.md#options)) say what else a projection would
+lose. A block app runs no `free-form` case, one that depends on free-form Markdown structure blocks
+have no form for: projected, the case tests something else, or nothing, and the app's difference is
+the two models'. A `markup-` tag (`markup-heading`,
+`markup-task`, `markup-fence`) is a step at markup an app may hold as text, where it edits a
+character, or as an attribute, where there is no boundary at all; a driver whose app holds it so
+lists the tag in `refuses`. Logseq, Tine and Dynalist refuse all three, Roam and WorkFlowy the
+heading's and the task's; SiYuan and BlockNote, whose blocks have these types, none.
 
 ## Adding an app
 

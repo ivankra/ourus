@@ -26,7 +26,7 @@ The rules:
 A copy goes below, the caret in the copy.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -50,7 +50,7 @@ rank: common
 Ordered items renumber, and deleting the copy gives the list back.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -78,7 +78,7 @@ rank: common
 Selected nodes are copied together, below the last of them, and the selection goes to the copies.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -105,7 +105,7 @@ Indented code can't be duplicated: with only a blank line between them, two inde
 one. Refused.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -133,7 +133,7 @@ as the original's, unquoted. Quoted, `| a |` over `|---|` would be a table, not 
 paragraph.
 
 ```yaml
-rank: rare
+tags: rare
 flavor: gfm
 ```
 
@@ -162,7 +162,7 @@ section, the copied paragraph into that section, under another parent than its o
 `deleteSubtree` couldn't take back copies with two parents. Refused.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -191,7 +191,7 @@ definition was taken from: the copy is written without the indentation, which is
 its own line would make code.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -214,7 +214,7 @@ A code block duplicated with the caret on its opening fence: the caret goes into
 typing can't break its fence.
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ````buffer

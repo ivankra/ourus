@@ -133,7 +133,8 @@ export function seam(units: Units, unit: Placed, next: Placed | null, nextUnit: 
   if (!prev && next.kind === 'paragraph' && next.parent === unit && unit.kind === 'item' && (unit.lines || old(unit)?.head) && own.length === 0) {
     return { lines: [], blanks: 1, separable: false, fresh: null };
   }
-  if (!prev) return fresh === 'before' && next.edited?.id == null ? made([]) : fresh ? made(own) : kept(own);
+  // (a rewritten node that says what its own gap is keeps it before new first children)
+  if (!prev) return fresh === 'before' && next.edited?.id == null && rewritten === null ? made([]) : fresh ? made(own) : kept(own);
   if (arrived(next) !== arrived(prev)) {
     // a run arriving from elsewhere takes the separation of the place it lands in, on both sides:
     // the gap after the last node before it that was already there, or its parent's own gap

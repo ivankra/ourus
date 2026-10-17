@@ -22,7 +22,7 @@ are drawn so the column means the same place in any font.
 Into the line above.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -42,7 +42,7 @@ b
 Over a CRLF ending as one character.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -62,7 +62,7 @@ b
 A selection collapses to its start.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -80,7 +80,7 @@ rank: common
 Into the line below.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -100,7 +100,7 @@ a
 A selection collapses to its end.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -119,7 +119,7 @@ Up from the first line goes to its start, as in CodeMirror; some apps take the c
 document instead, or leave it where it was.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -138,7 +138,7 @@ A column in a heading's marks lands at the start of its text. Bare Obsidian keep
 the marks.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -158,7 +158,7 @@ rank: common
 A column in a deeper item's indentation lands at the start of its text.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -183,7 +183,7 @@ The caret keeps its column while it keeps moving up and down: a shorter line on 
 change where it lands after.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -205,7 +205,7 @@ abc┃def
 Columns count tabs to stops of 4.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -225,7 +225,7 @@ abcde┃fg
 A column in a line's marker or indentation lands at the start of its text.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -246,7 +246,7 @@ A column past the text start keeps its place: only a column in the markup moves 
 The lines start alike, so the column is the same place in any font.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -266,7 +266,7 @@ rank: rare
 A column in a task's checkbox lands at the start of its text, after the checkbox.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -290,7 +290,7 @@ selection): to the start of the line's text, past markers and indentation, then 
 start of the line. From the line start it goes to the text start again.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -308,7 +308,7 @@ rank: core
 Again, to the line start.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -326,7 +326,7 @@ rank: common
 From the line start, to the text start.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -344,7 +344,7 @@ rank: edge
 From inside the marker, to the text start.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -362,7 +362,7 @@ rank: edge
 Past the indentation of a nested item.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -382,7 +382,7 @@ rank: common
 Past tab indentation.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -402,7 +402,7 @@ rank: common
 Past an ordered marker.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -420,7 +420,7 @@ rank: common
 Past a task's checkbox.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -438,7 +438,7 @@ rank: common
 Past a checked task's checkbox.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -458,7 +458,7 @@ Past a heading's marks: they are markup, like a list marker, which Obsidian's Ho
 (CursorHome2).
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -476,7 +476,7 @@ rank: edge
 Past a quote's marker.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -494,7 +494,7 @@ rank: edge
 On a continuation line, past the item's indentation.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -514,7 +514,7 @@ rank: edge
 On a continuation line, again to the line start.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -534,7 +534,7 @@ rank: edge
 On a paragraph's second line, to the line start.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -555,7 +555,7 @@ Past an empty task's checkbox: its text starts after the checkbox all the same, 
 there, never inside the checkbox, where typing would break the task.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -574,7 +574,7 @@ Past a quote's marker and the item's: a quoted item's text starts after both. Ho
 line's start.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -599,7 +599,7 @@ Home in a callout's title stops after its `[!type]`, as after a checkbox, then g
 start.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -625,7 +625,7 @@ To the end of the line.
 End: to the end of the line.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -643,7 +643,7 @@ rank: common
 To the start of the document.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -666,7 +666,7 @@ The document's end is after its last line ending, which a buffer can't draw: one
 the end of the last line.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -686,7 +686,7 @@ rank: rare
 selectCharLeft extends it backward.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -704,7 +704,7 @@ a┃«b»c
 selectCharRight and selectLineBoundaryForward extend the selection.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -724,7 +724,7 @@ selectLineBoundaryBackward selects to the text start.
 Shift-Home: the same stops as Home, extending the selection.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer

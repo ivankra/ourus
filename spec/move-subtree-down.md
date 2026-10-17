@@ -37,7 +37,7 @@ In a loose list, the item moves with its subtree, and the blank line stays betwe
 Bare Obsidian moves the line, and `a1` becomes `b`'s child.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -62,7 +62,7 @@ An item moves below a paragraph and becomes its first owned list item, keeping i
 Obsidian moves the line below the paragraph, without the blank line it needs.
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -86,7 +86,7 @@ para
 The last top-level item cannot move down.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -110,7 +110,7 @@ rejected: no-next-sibling
 Headings move with their sections; move subtree up takes them back.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -152,7 +152,7 @@ text b
 Paragraphs reorder among themselves.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -174,7 +174,7 @@ one┃
 The last child cannot move down when its parent has no next sibling to receive it.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -199,7 +199,7 @@ A last child crosses into its parent's next sibling as its first child. Another 
 then swaps it with the following child there. Its existing subtree comes along both times.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -236,7 +236,7 @@ An item leaves the preceding list and becomes the paragraph's first owned list i
 Items already owned by that paragraph follow it (MoveUp7's mirror).
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -266,7 +266,7 @@ Crossing into a branch with no children creates its first child. The moved subtr
 and moving the move subtree up restores the original tree.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -300,7 +300,7 @@ Crossing moves only the last child's subtree. Its earlier siblings stay with the
 the destination's existing child and grandchild stay together.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -343,7 +343,7 @@ Selected siblings swap downward together. A child included in the selection trav
 parent once, and the selection stays on the moved text.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -370,7 +370,7 @@ A selected run at the end of a parent's children crosses together, preserving or
 subtrees. Unselected children remain with their parent.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -413,7 +413,7 @@ An item with a subtree can move below a paragraph that owns no list yet. The sub
 item; the paragraph becomes the item's owner. Moving the move subtree up restores the original tree.
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -446,7 +446,7 @@ intro
 A selection over a parent and its child moves the parent with its subtree.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -468,7 +468,7 @@ rank: common
 An empty item the text can hold moves like any other.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -490,7 +490,7 @@ rank: edge
 A heading moves with its section, past a heading of the same level.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -514,7 +514,7 @@ rank: common
 A heading doesn't move past a heading of another level: below `# H`, `## H` would be in its section.
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -540,7 +540,7 @@ rejected: not-expressible
 The last item of a heading's section moves down into the next section, as its first item.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -570,7 +570,7 @@ as `B`'s first child, `## s` would have `- x` in its section. Where it takes in 
 (MoveDown27).
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -602,7 +602,7 @@ An item moved down past a sub-heading goes into that sub-heading's section, as i
 What follows `## Later` is in its section (MoveUp24's mirror).
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -631,7 +631,7 @@ Fenced code with a blank line moves with its item: the code's blank line is payl
 (MoveUp13's mirror).
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ````buffer
@@ -661,7 +661,7 @@ rank: edge
 Moving renumbers the items (MoveUp14's mirror).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -682,7 +682,7 @@ Renumbering past 9 widens the marker; the moved item's children follow its conte
 (MoveUp15's mirror).
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -704,7 +704,7 @@ rank: rare
 A paragraph moves with its list (MoveUp17's mirror).
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -729,7 +729,7 @@ A paragraph doesn't cross into a section that starts with a list: right above it
 would own the section's list (as MoveDown19 for a heading).
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -760,7 +760,7 @@ An item moved down into a section that starts with a paragraph is set apart from
 the item, the paragraph would continue its text.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -788,7 +788,7 @@ A sub-heading last in its section moves down into the next section, as its first
 where it takes in nothing (MoveUp26's mirror). The section's end gap stays at its end.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -815,7 +815,7 @@ From the end of a sub-heading's section, a node moves into the next section, out
 that end there: the way back from [MoveUp23](move-subtree-up.md#moveup23).
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -845,7 +845,7 @@ A paragraph owns consecutive lists: an ordered and a bullet list right after it 
 CommonMark, both its children, and both move with it.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -871,7 +871,7 @@ pa┃ra
 Renumbering below 10 narrows the marker, and the children follow the new content column.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -894,7 +894,7 @@ A paragraph moved down past a thematic break keeps the blank line that sets it a
 a paragraph, `---` would be a setext underline (MoveUp19's mirror).
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -916,7 +916,7 @@ para┃
 From before the marker, the item moves and the caret ends in its text (MoveUp34's mirror).
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -937,7 +937,7 @@ An item whose first block is a list: its first item moved down, the next comes u
 item's marker line, the outer marker staying where it is; back up, the same.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -966,7 +966,7 @@ would continue, so a blank line sets it apart. Back up, the blank line stays: it
 The caret goes into the code, where typing can't break its fence.
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ````buffer
@@ -1006,7 +1006,7 @@ is renumbered from the list's start, which it needs to interrupt the text above 
 moved one counts on; back up, the same.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -1037,7 +1037,7 @@ In an item, a paragraph owns no list: a child item above a paragraph of the item
 with it, and items swap only with items. Refused.
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -1066,7 +1066,7 @@ An item whose text is fenced code, its first code line blank, moved with the car
 caret goes to the first code line with text, as on a blank one typing at its start would end the item.
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer

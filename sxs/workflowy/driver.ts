@@ -30,25 +30,39 @@ interface Item {
   name: string;
   /** null: no note. */
   note: string | null;
-  layout: 'bullets' | 'todo' | 'h1' | 'h2' | 'h3';
+  layout: 'bullets' | 'todo' | 'h1' | 'h2' | 'h3' | 'numbered';
   completed: boolean;
 }
 
 /** A block's canonical text as an item, and how many characters of its first line the item type took. */
-function toItem(depth: number, text: string): Item & { prefix: number } {
+function toItem(depth: number, text: string): Item & { prefix: number; cut?: number } {
   const [first, ...rest] = text.split('\n');
   const note = rest.length ? rest.join('\n') : null;
   const task = /^\[([ xX])\](?: |$)/.exec(first!);
   if (task) return { depth, name: first!.slice(task[0].length), note, layout: 'todo', completed: task[1] !== ' ', prefix: task[0].length };
   const heading = /^(#{1,3}) /.exec(first!);
   if (heading) return { depth, name: first!.slice(heading[0].length), note, layout: `h${heading[1]!.length}` as Item['layout'], completed: false, prefix: heading[0].length };
-  return { depth, name: first!, note, layout: 'bullets', completed: false, prefix: 0 };
+  // a numbered item: its number its place in its run of numbered siblings
+  const numbered = /^\d{1,9}\. /.exec(first!);
+  const prefix = numbered?.[0].length ?? 0;
+  const name = first!.slice(prefix);
+  // a number that is text (after a numbered item's own number too): escaped in the canonical text,
+  // not in the item's name
+  const literal = /^(\d{1,9})\\(?=[.)])/.exec(name);
+  const layout = numbered ? 'numbered' : 'bullets';
+  if (literal) return { depth, name: literal[1] + name.slice(literal[0].length), note, layout, completed: false, prefix, cut: prefix + literal[1]!.length };
+  return { depth, name, note, layout, completed: false, prefix };
 }
 
-/** An item's canonical text, and the length of the prefix its type stands for. */
-function fromItem(it: Item): { text: string; prefix: number } {
-  const prefix = it.layout === 'todo' ? (it.completed ? '[x] ' : '[ ] ') : /^h[123]$/.test(it.layout) ? '#'.repeat(Number(it.layout[1])) + ' ' : it.completed ? '[x] ' : '';
-  return { text: prefix + it.name + (it.note !== null ? '\n' + it.note : ''), prefix: prefix.length };
+/**
+ * An item's canonical text, and the length of the prefix its type stands for: a numbered item's
+ * number is `number`, its place in its run; a number that is text is escaped (`cut`).
+ */
+function fromItem(it: Item, number: number | null): { text: string; prefix: number; cut?: number } {
+  const prefix = it.layout === 'todo' ? (it.completed ? '[x] ' : '[ ] ') : /^h[123]$/.test(it.layout) ? '#'.repeat(Number(it.layout[1])) + ' ' : it.layout === 'numbered' && number !== null ? `${number}. ` : it.completed ? '[x] ' : '';
+  const literal = !prefix || it.layout === 'numbered' ? /^\d{1,9}(?=[.)])/.exec(it.name) : null;
+  const name = literal ? it.name.slice(0, literal[0].length) + '\\' + it.name.slice(literal[0].length) : it.name;
+  return { text: prefix + name + (it.note !== null ? '\n' + it.note : ''), prefix: prefix.length, ...(literal && { cut: literal[0].length }) };
 }
 
 /** The test's item, made once per page. */
@@ -80,16 +94,28 @@ export const driver: Driver = {
     ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
   },
   emulated: ['cursorDocStart'],
-  // code, tables and other atoms have no faithful item form yet
-  refuses: ['code block', 'html', 'table', 'math', 'thematic break', 'link reference definition', 'comment', 'footnote'],
+  // code, tables and other atoms have no faithful item form yet; headings and to-dos are an item's
+  // type, with no boundary in its text
+  refuses: ['code block', 'html', 'table', 'math', 'thematic break', 'link reference definition', 'comment', 'footnote', 'markup-heading', 'markup-task'],
+  ordered: true,
   // Shift+Tab moves an item past its parent, leaving its later siblings there: logical outdenting
-  behaves: { outdent: 'logical', enterOnEmptyItem: 'sibling', pasteStructuredLines: 'items' },
+  behaves: { outdent: 'logical', enterOnEmptyItem: 'sibling', pasteStructuredLines: 'items', emptyItemWithChildren: 'refuse', pasteStructuredAtEnd: 'join', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after' },
   // WorkFlowy counts its animations (an item sliding into place, a zoom) while they run
   idle: { busy: `window.WF?.GuiAnimate?.animationsAreInProgress?.()` },
   holds(doc: Outline) {
     if (doc.blocks.some((b) => /^#{4,6} /.test(b.text))) return 'a heading deeper than H3';
     // a to-do's checkbox and a heading's level are the item's type, not text: no caret goes there
     if (doc.sel && Math.min(doc.sel.anchor, doc.sel.head) < toItem(0, doc.blocks[doc.sel.block]!.text).prefix) return "a caret in a task's checkbox or a heading's #s";
+    // an item has one layout: numbered, or a task, or a heading
+    if (doc.blocks.some((b) => /^\d{1,9}\. (?:\[[ xX]\]|#{1,6} )/.test(b.text))) return 'a numbered task or heading';
+    // a run of numbered siblings is numbered from 1
+    const run: number[] = [];
+    for (const b of doc.blocks) {
+      run.length = b.depth + 1;
+      const n = /^(\d{1,9})\. /.exec(b.text);
+      run[b.depth] = n ? (run[b.depth] ?? 0) + 1 : 0;
+      if (n && Number(n[1]) !== run[b.depth]) return 'a numbered list from another number than 1';
+    }
     return undefined;
   },
 
@@ -126,7 +152,7 @@ export const driver: Driver = {
       // an offset in the block's text: in the item's type prefix, the name's start; past the first line, the note
       const nameEnd = it.prefix + it.name.length;
       const inNote = Math.max(doc.sel.anchor, doc.sel.head) > nameEnd && it.note !== null;
-      const local = (p: number) => (inNote ? p - nameEnd - 1 : Math.max(0, p - it.prefix));
+      const local = (p: number) => (inNote ? p - nameEnd - 1 : Math.max(0, p - it.prefix - (it.cut !== undefined && p > it.cut ? 1 : 0)));
       sel = { block: doc.sel.block, anchor: local(doc.sel.anchor), head: local(doc.sel.head), inNote };
       if (inNote && it.note === '') {
         openNote = true;
@@ -259,14 +285,22 @@ export const driver: Driver = {
       const selected = WF.getSelection().map((it: any) => flat.findIndex((f) => f.id === it.getId())).filter((i: number) => i >= 0);
       return { flat, sel, selected };
     }, CONTAINER);
-    const texts = raw.flat.map((f) => fromItem(f as Item));
+    // a numbered item's place in its run of numbered siblings
+    const run: number[] = [];
+    const numbers = raw.flat.map((f) => {
+      run.length = f.depth + 1;
+      run[f.depth] = f.layout === 'numbered' ? (run[f.depth] ?? 0) + 1 : 0;
+      return f.layout === 'numbered' ? run[f.depth]! : null;
+    });
+    const texts = raw.flat.map((f, i) => fromItem(f as Item, numbers[i]!));
     const blocks = raw.flat.map((f, i) => ({ depth: f.depth, text: texts[i]!.text }));
     let sel: Outline['sel'] = null;
     if (raw.sel && raw.sel.block >= 0) {
       const it = raw.flat[raw.sel.block]!;
-      const { prefix } = texts[raw.sel.block]!;
-      const base = raw.sel.inNote ? prefix + it.name.length + 1 : prefix;
-      sel = { block: raw.sel.block, anchor: base + raw.sel.anchor, head: base + raw.sel.head };
+      const { prefix, cut } = texts[raw.sel.block]!;
+      const base = raw.sel.inNote ? prefix + it.name.length + (cut !== undefined ? 1 : 0) + 1 : prefix;
+      const at = (p: number): number => base + p + (!raw.sel!.inNote && cut !== undefined && p > cut ? 1 : 0);
+      sel = { block: raw.sel.block, anchor: at(raw.sel.anchor), head: at(raw.sel.head) };
     }
     return { blocks, sel, ...(raw.selected.length && { selected: raw.selected }) };
   },

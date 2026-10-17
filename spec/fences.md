@@ -54,7 +54,7 @@ At column 0 the new line would end the item; with the item's indentation, what i
 stays in the code, in the item.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ````buffer
@@ -93,7 +93,7 @@ applied
 Enter in the middle of a code line splits it.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ````buffer
@@ -116,7 +116,7 @@ co
 The code line's own indentation carries over, as in code editors.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ````buffer
@@ -141,7 +141,7 @@ rank: common
 In a quote, the new line keeps the `>`.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ````buffer
@@ -164,7 +164,7 @@ rank: edge
 When the fence is the item's text, the new line takes the item's continuation indentation.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ````buffer
@@ -187,7 +187,7 @@ rank: edge
 After the opening fence's info string, the new line is the block's first line.
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer
@@ -214,7 +214,7 @@ item's text: the code is part of the item. Bare Obsidian makes a new line in the
 Shift-Enter's here ([Fence7b](#fence7b)).
 
 ```yaml
-rank: common
+tags: common markup-fence
 ```
 
 ````buffer
@@ -240,7 +240,7 @@ After the closing fence, Shift-Enter makes a new line in the item: what is typed
 next paragraph.
 
 ```yaml
-rank: common
+tags: common markup-fence
 ```
 
 ````buffer
@@ -266,7 +266,7 @@ With child items after the fence, Enter after it makes the first child, as at th
 an item with children.
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer
@@ -294,7 +294,7 @@ With a paragraph after the fence in the item, Enter after the fence makes a new 
 Shift-Enter does: a new item there would come before the paragraph.
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer
@@ -323,7 +323,7 @@ rank: edge
 Shift-Enter in a fenced block makes a new line, as Enter does.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ````buffer
@@ -348,7 +348,7 @@ rank: common
 Inside a fence's run of backticks, Enter is refused: a new line there would break the fence.
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ````buffer
@@ -374,7 +374,7 @@ code
 With `handleFenceContents: false`, Enter on a code line is the host's.
 
 ```yaml
-rank: rare
+tags: rare
 handleFenceContents: false
 ```
 
@@ -396,7 +396,7 @@ notApplicable
 With `handleFenceContents: false`, the fence lines are still ourus's.
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 handleFenceContents: false
 ```
 
@@ -427,7 +427,7 @@ At the start of the opening fence, Enter opens a line above the block, the block
 caret: the fence is no text to go into a node above from.
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer
@@ -453,7 +453,7 @@ At the start of the closing fence, Enter adds an empty last code line, the caret
 the closing fence, typing there would unmake it.
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer
@@ -478,7 +478,7 @@ rank: edge
 Inside the closing fence's run of backticks, Enter is refused too.
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ````buffer
@@ -505,7 +505,7 @@ At the start of a fence that is an item's text, Enter is at the item's text star
 above, the caret going into it.
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer
@@ -531,7 +531,7 @@ on the joined line goes too.
 The indentation is the item's, not code: deleting one space of it would end the item and the block.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ````buffer
@@ -557,7 +557,7 @@ Backspace at the start of the first code line is refused: the code would join th
 its info string. An empty first line just goes ([Fence27](#fence27)).
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer
@@ -585,7 +585,7 @@ rejected: not-expressible
 Delete at the end of a code line joins the next line, without the item's indentation.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ````buffer
@@ -611,7 +611,7 @@ Delete at the end of the last code line is refused: the closing fence would join
 last line just goes ([Fence30](#fence30)).
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer
@@ -640,7 +640,7 @@ In a quote, a joined code line's `>` goes with its line break. The host's Backsp
 space after the `>` instead, and then the `>`, ending the quote and the block.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ````buffer
@@ -663,7 +663,7 @@ rank: edge
 Tab and Shift-Tab on a code line are the host's: they indent the code, as in Logseq and Obsidian.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ````buffer
@@ -692,7 +692,7 @@ After Shift-Enter past a closing fence, Enter on the empty line leaves the item:
 the item's next sibling ([Enter37](enter.md#enter37)).
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ````buffer
@@ -720,7 +720,7 @@ Backspace at the start of the closing fence is refused: the fence would join the
 and the block would run on to the end of the document (Fence19's mirror).
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer
@@ -749,7 +749,7 @@ Delete at the end of the opening fence's line is refused: the first code line wo
 string (Fence17's mirror).
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ````buffer
@@ -779,7 +779,7 @@ can't join code ([Backspace16](backspace.md#backspace16)). The host's Backspace 
 of the item's indentation and take the block out of the item.
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer
@@ -809,7 +809,7 @@ marker goes, and the code becomes a block of that item, the caret at the end of 
 join. The host's Backspace would delete the space after the marker, leaving no item.
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer
@@ -834,7 +834,7 @@ Backspace on the empty first code line Enter made after the info string takes it
 ([Fence6](#fence6)).
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer
@@ -869,7 +869,7 @@ Delete at the end of the opening fence's line, before an empty first code line: 
 (Fence24 refuses a line with code on it).
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ````buffer
@@ -895,7 +895,7 @@ Enter at the start of the closing fence, then Backspace on the empty line it mad
 ([Fence13](#fence13)), and the text is as it was.
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer
@@ -930,7 +930,7 @@ Delete on an empty last code line: the line goes, the fence moving up (Fence19 r
 code on it).
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ````buffer
@@ -957,7 +957,7 @@ code staying a block of the item. The host's Backspace deletes a space of the it
 taking the code out of the item.
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer
@@ -993,7 +993,7 @@ Backspace on the empty line Shift-Enter made after a closing fence takes it back
 typed next would leave the list.
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer
@@ -1029,7 +1029,7 @@ At the top level too, Backspace at the start of a fence right after a paragraph 
 would then open a block running to the end of the document.
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer
@@ -1058,7 +1058,7 @@ Delete at the end of an item's text before an item whose text is a fence joins t
 Backspace at the fence's start does ([Fence26](#fence26)); the caret stays where it was.
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ````buffer
@@ -1083,7 +1083,7 @@ Delete at the end of a closing fence before a line with text is refused: the lin
 fence, which would then close nothing.
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ````buffer
@@ -1114,7 +1114,7 @@ Backspace that would join code fragments into a closing fence is refused: two li
 and one, would make a fence, closing the block early.
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ````buffer
@@ -1144,7 +1144,7 @@ body
 Delete, the same from the other side (Fence36's mirror).
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ````buffer
@@ -1174,7 +1174,7 @@ body
 Shift-Enter that would leave a closing fence at the start of the rest of a code line is refused.
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ````buffer
@@ -1202,7 +1202,7 @@ body
 Enter that would leave a closing fence as the first half of a code line is refused.
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ````buffer
@@ -1230,7 +1230,7 @@ body
 The same protection in a quote, and with tilde fences.
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ````buffer
@@ -1261,7 +1261,7 @@ Shift-Enter at the start of the closing fence does as Enter there ([Fence13](#fe
 last code line, the caret on it.
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ````buffer
@@ -1288,7 +1288,7 @@ indentation the item gives up, as they do. Indent gives the outline back, the bl
 item's column, as a blank line in code may be.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ````buffer
@@ -1333,7 +1333,7 @@ Enter in a math block in an item: a new line of the block at the item's column, 
 takes back. Left to the host, the line would start at column 0, ending the item and the block.
 
 ```yaml
-rank: edge
+tags: edge
 flavor: obsidian
 ```
 
@@ -1379,7 +1379,7 @@ Shift-Enter in a comment block in a quote, in an item, and Backspace taking the 
 quote's `>` goes with the line break, not as a character of the text.
 
 ```yaml
-rank: rare
+tags: rare
 flavor: obsidian
 ```
 
@@ -1414,7 +1414,7 @@ flavor: obsidian
 Enter in indented code in an item: the code's own indentation carries over, as in code editors.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -1440,7 +1440,7 @@ Enter inside a math block's `$$` is refused, at the top level as anywhere: the b
 open, and the rest of the document would be math.
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 flavor: obsidian
 ```
 
@@ -1468,7 +1468,7 @@ Delete at the end of a comment line in a quote joins the next line, the quote's 
 break, as Backspace does from the other side ([Fence43](#fence43)).
 
 ```yaml
-rank: rare
+tags: rare
 flavor: obsidian
 ```
 
@@ -1493,7 +1493,7 @@ Against a `$$` line a line with text on it doesn't join, from either side, as ag
 ([Fence17](#fence17), [Fence19](#fence19)).
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 flavor: obsidian
 ```
 

@@ -30,7 +30,7 @@ export const driver: Driver = {
   url: 'https://demo.silverbullet.md/personal/',
   model: 'text',
   // measured: Enter at an item's text start leaves the caret with the text
-  behaves: { enterAtTextStart: 'stay' },
+  behaves: { enterAtTextStart: 'stay', deleteAtGap: 'gap' },
   keys: {
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',

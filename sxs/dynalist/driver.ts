@@ -34,21 +34,34 @@ interface Item {
   checked: boolean;
   /** 0: none, 1 to 3: H1 to H3. */
   heading: number;
+  /** Numbered (its list style): its number the count of its numbered siblings up to it. */
+  numbered: boolean;
 }
 
-/** A block's canonical text as an item, and how many characters of it the item's attributes took. */
-function toItem(depth: number, text: string): Item & { prefix: number } {
-  const task = /^\[([ xX])\](?: |$)/.exec(text);
-  const rest = task ? text.slice(task[0].length) : text;
+/**
+ * A block's canonical text as an item, and how many characters of it the item's attributes took; a
+ * number that is text is escaped in the canonical text, not in the content (`cut`).
+ */
+function toItem(depth: number, text: string): Item & { prefix: number; cut?: number } {
+  const numbered = /^\d{1,9}\. /.exec(text);
+  const after = numbered ? text.slice(numbered[0].length) : text;
+  const task = /^\[([ xX])\](?: |$)/.exec(after);
+  const rest = task ? after.slice(task[0].length) : after;
   const heading = /^(#{1,3}) /.exec(rest);
-  const prefix = (task?.[0].length ?? 0) + (heading?.[0].length ?? 0);
-  return { depth, content: text.slice(prefix), note: '', checkbox: !!task, checked: !!task && task[1] !== ' ', heading: heading?.[1]!.length ?? 0, prefix };
+  const prefix = (numbered?.[0].length ?? 0) + (task?.[0].length ?? 0) + (heading?.[0].length ?? 0);
+  let content = text.slice(prefix);
+  // a number that is text (after a numbered item's own number too)
+  const literal = prefix === (numbered?.[0].length ?? 0) ? /^(\d{1,9})\\(?=[.)])/.exec(content) : null;
+  if (literal) content = literal[1] + content.slice(literal[0].length);
+  return { depth, content, note: '', checkbox: !!task, checked: !!task && task[1] !== ' ', heading: heading?.[1]!.length ?? 0, numbered: !!numbered, prefix, ...(literal && { cut: prefix + literal[1]!.length }) };
 }
 
-/** An item's canonical text, and the length of the prefix its attributes stand for. */
-function fromItem(it: Item): { text: string; prefix: number } {
-  const prefix = (it.checkbox || it.checked ? (it.checked ? '[x] ' : '[ ] ') : '') + (it.heading ? '#'.repeat(it.heading) + ' ' : '');
-  return { text: prefix + it.content + (it.note ? '\n' + it.note : ''), prefix: prefix.length };
+/** An item's canonical text, and the length of the prefix its attributes stand for: its number `number` where it is numbered. */
+function fromItem(it: Item, number: number | null): { text: string; prefix: number; cut?: number } {
+  const prefix = (number !== null ? `${number}. ` : '') + (it.checkbox || it.checked ? (it.checked ? '[x] ' : '[ ] ') : '') + (it.heading ? '#'.repeat(it.heading) + ' ' : '');
+  const literal = !prefix || prefix === `${number}. ` ? /^\d{1,9}(?=[.)])/.exec(it.content) : null;
+  const content = literal ? it.content.slice(0, literal[0].length) + '\\' + it.content.slice(literal[0].length) : it.content;
+  return { text: prefix + content + (it.note ? '\n' + it.note : ''), prefix: prefix.length, ...(literal && { cut: literal[0].length }) };
 }
 
 export const driver: Driver = {
@@ -76,8 +89,11 @@ export const driver: Driver = {
     cursorDocEnd: 'Control+End',
     ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
   },
-  refuses: [],
-  behaves: { outdent: 'logical', pasteStructuredLines: 'items' },
+  // headings and to-dos are an item's attributes, with no boundary in its text; a code block's
+  // fences are text in it, edited a character at a time
+  refuses: ['markup-heading', 'markup-task', 'markup-fence'],
+  ordered: true,
+  behaves: { outdent: 'logical', pasteStructuredLines: 'items', emptyItemWithChildren: 'refuse', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after', pasteStructuredParagraphList: 'children' },
   // "Unindent in place" (Settings › Editor): Shift+Tab takes the item's later siblings along as children
   settings: { outdent: ['logical', 'direct'] },
   holds(doc) {
@@ -85,6 +101,14 @@ export const driver: Driver = {
     if (o.blocks.some((b) => /^(\[[ xX]\] )?#{4,6} /.test(b.text))) return 'a heading deeper than H3';
     // a checkbox and a heading level are the item's attributes, not text: no caret goes there
     if (o.sel && Math.min(o.sel.anchor, o.sel.head) < toItem(0, o.blocks[o.sel.block]!.text).prefix) return "a caret in a task's checkbox or a heading's #s";
+    // numbered siblings count 1, 2, ... whatever is between them, from 1 in each parent
+    const count: number[] = [];
+    for (const b of o.blocks) {
+      count.length = b.depth + 1;
+      const n = /^(\d{1,9})\. /.exec(b.text);
+      if (n) count[b.depth] = (count[b.depth] ?? 0) + 1;
+      if (n && Number(n[1]) !== count[b.depth]) return 'a numbered list that Dynalist would number otherwise';
+    }
     return undefined;
   },
 
@@ -118,7 +142,8 @@ export const driver: Driver = {
   async load(page: Page, doc) {
     const o = doc as Outline;
     const items = o.blocks.map((b) => toItem(b.depth, b.text));
-    const sel = o.sel && { block: o.sel.block, anchor: o.sel.anchor - items[o.sel.block]!.prefix, head: o.sel.head - items[o.sel.block]!.prefix };
+    const local = (p: number, it: (typeof items)[number]): number => p - it.prefix - (it.cut !== undefined && p > it.cut ? 1 : 0);
+    const sel = o.sel && { block: o.sel.block, anchor: local(o.sel.anchor, items[o.sel.block]!), head: local(o.sel.head, items[o.sel.block]!) };
     await page.evaluate(
       async ({ items, sel }) => {
         const ad = (window as any).DYNALIST.app.app_document;
@@ -141,6 +166,7 @@ export const driver: Driver = {
               if (it.checkbox) m.set_checkbox(true);
               if (it.checked) m.set_checked(true);
               if (it.heading) m.set_heading(it.heading);
+              if (it.numbered) m.set_list_style(1);
             });
             parents[it.depth + 1] = node;
             parents.length = it.depth + 2;
@@ -170,13 +196,18 @@ export const driver: Driver = {
     const raw = await page.evaluate(() => {
       const ad = (window as any).DYNALIST.app.app_document;
       const root = ad.document.get_node_collection().get_root();
-      const flat: { depth: number; content: string; note: string; checkbox: boolean; checked: boolean; heading: number; id: string }[] = [];
-      const walk = (node: any, depth: number) =>
+      const flat: { depth: number; content: string; note: string; checkbox: boolean; checked: boolean; heading: number; numbered: boolean; number: number | null; id: string }[] = [];
+      const walk = (node: any, depth: number) => {
+        // numbered children count on, whatever is between them (a CSS counter, reset per parent)
+        let n = 0;
         node.children.each((c: any) => {
           const m = c.get_meta_object();
-          flat.push({ depth, content: m.get_content(), note: m.get_note(), checkbox: m.has_checkbox(), checked: m.is_checked(), heading: m.get_heading() || 0, id: c.get_id() });
+          const numbered = m.is_numbered_list();
+          if (numbered) n++;
+          flat.push({ depth, content: m.get_content(), note: m.get_note(), checkbox: m.has_checkbox(), checked: m.is_checked(), heading: m.get_heading() || 0, numbered, number: numbered ? n : null, id: c.get_id() });
           walk(c, depth + 1);
         });
+      };
       walk(root, 0);
       const s = ad.ui.selection().get();
       const index = (n: any) => (n ? flat.findIndex((f) => f.id === n.get_id()) : -1);
@@ -200,13 +231,15 @@ export const driver: Driver = {
       const selected = !editing && s?.get_nodes ? s.get_nodes().map(index).filter((i: number) => i >= 0) : [];
       return { flat, sel, selected };
     });
-    const texts = raw.flat.map((f) => fromItem(f));
+    const texts = raw.flat.map((f) => fromItem(f, f.number));
     const blocks = raw.flat.map((f, i) => ({ depth: f.depth, text: texts[i]!.text }));
     let sel: Outline['sel'] = null;
     if (raw.sel) {
       const it = raw.flat[raw.sel.block]!;
-      const base = texts[raw.sel.block]!.prefix + (raw.sel.inNote ? it.content.length + 1 : 0);
-      sel = { block: raw.sel.block, anchor: base + raw.sel.anchor, head: base + raw.sel.head };
+      const { prefix, cut } = texts[raw.sel.block]!;
+      const base = prefix + (raw.sel.inNote ? it.content.length + (cut !== undefined ? 1 : 0) + 1 : 0);
+      const at = (p: number): number => base + p + (!raw.sel!.inNote && cut !== undefined && p > cut ? 1 : 0);
+      sel = { block: raw.sel.block, anchor: at(raw.sel.anchor), head: at(raw.sel.head) };
     }
     return { blocks, sel, ...(raw.selected.length && { selected: raw.selected }) };
   },

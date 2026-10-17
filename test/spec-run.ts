@@ -49,6 +49,24 @@ export function run(t: SpecTest, flavor: Config['flavor']): void {
   }
 }
 
+/**
+ * What the core does in example `t`, in `flavor`, with `config` over the example's options: each
+ * step's buffer drawn, as the example would draw it (no checks). For the SxS, to tell whether an
+ * app's own option values change the example's outcome.
+ */
+export function drawnSteps(t: SpecTest, flavor: Config['flavor'], config: Partial<Config> = {}): string[] {
+  const start = readDrawing(t.initial.buffer);
+  let state: Played = {
+    doc: OutlineState.parse(start.text, { placeholders: start.placeholders, config: { flavor, ...specConfig(t.options), ...config } }),
+    selection: start.selection,
+    clipboard: readText(t.initial.clipboard ?? ''),
+  };
+  return t.steps.map((step) => {
+    state = play(state, step.actions);
+    return normalize(drawState(state.doc.text, state.selection, state.doc.placeholders));
+  });
+}
+
 /** Whether the core does what example `t` draws, in every flavor it runs in. */
 export function passes(t: SpecTest): boolean {
   try {

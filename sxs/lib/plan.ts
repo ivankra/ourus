@@ -1,11 +1,13 @@
 // Spec tests adapted to one app: which can run there, and what each becomes. A test runs when every
-// action has a key (or an emulation) in the app, its options are ones the app has, and its buffers are
-// something the app holds: for a block app, they project onto blocks (outline.ts); for a text editor,
-// they are taken as written (text.ts). Otherwise it is skipped, with the reason.
+// action has a key (or an emulation) in the app, its options are ones the app has, its tags are none
+// the app skips, and its buffers are something the app holds: for a block app, they project onto
+// blocks (outline.ts); for a text editor, they are taken as written (text.ts). Otherwise it is
+// skipped, with the reason.
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { Config } from '../../src/config.ts';
 import { readText } from '../../test/drawing.ts';
+import { drawnSteps } from '../../test/spec-run.ts';
 import { readSpec, slug, specConfig, type SpecTest } from '../../test/specfile.ts';
 import type { Doc, Driver } from './driver.ts';
 import { project, sameOutline, Unsupported, type Outline } from './outline.ts';
@@ -21,6 +23,8 @@ export interface PlanStep {
   readonly drawn?: string;
   /** Why the expected caret isn't compared (it has no place in a block). */
   readonly caretLost?: string;
+  /** Which of the expected blocks are headings owning a section (`sectioned` in outline.ts). */
+  readonly sections?: readonly number[];
   /** The expected clipboard. */
   readonly clipboard?: string;
 }
@@ -43,7 +47,7 @@ export interface Plan {
 export type Adapted = { plan: Plan } | { skip: string };
 
 /** Options the spec has besides ourus's config. */
-const SPEC_ONLY = new Set(['status', 'rank', 'flavor']);
+const SPEC_ONLY = new Set(['status', 'flavor']);
 const isMotion = (a: string): boolean => /^(?:cursor|select)(?:CharLeft|CharRight|LineUp|LineDown|LineBoundaryBackward|LineBoundaryForward|DocStart|DocEnd)$/.test(a);
 
 /** Whether the app can play an action. */
@@ -56,6 +60,9 @@ export function playable(driver: Driver, action: string): boolean {
 export function adapt(driver: Driver, test: SpecTest): Adapted {
   const name = `${test.file} › ${test.name}`;
   const skip = (why: string): Adapted => ({ skip: why });
+  // a `free-form` case, projected onto blocks, tests something else or nothing: no block app runs it
+  const tag = test.tags.find((t) => (driver.model === 'block' && t === 'free-form') || driver.refuses?.includes(t));
+  if (tag) return skip(`tag ${tag}`);
   for (const [key, value] of Object.entries(test.options)) {
     if (SPEC_ONLY.has(key)) continue;
     const k = key as keyof Config;
@@ -65,6 +72,16 @@ export function adapt(driver: Driver, test: SpecTest): Adapted {
   const options = specConfig(test.options);
   const settings = Object.fromEntries(Object.keys(driver.settings ?? {}).map((k) => [k, options[k as keyof Config] ?? Config.defaults[k as keyof Config]])) as Partial<Config>;
   for (const s of test.steps) for (const a of s.actions) if (!playable(driver, a)) return skip(`action ${isMotion(a) || /^[a-z]/i.test(a) ? a : 'unknown'}`);
+  // an option the app has another value of, and can't be set to the example's: where that value
+  // changes what ourus does in the example, the app differs by its option, which the spec draws in a
+  // case of its own (Enter3b for Enter3)
+  const flavor = (test.options.flavor ?? 'gfm') as Config['flavor'];
+  const theirs = Object.entries(driver.behaves ?? {}).filter(([k, v]) => v !== undefined && !(k in (driver.settings ?? {})) && String(v) !== String(options[k as keyof Config] ?? Config.defaults[k as keyof Config]));
+  if (theirs.length) {
+    const ours = drawnSteps(test, flavor).join('\n');
+    const by = theirs.find(([k, v]) => drawnSteps(test, flavor, { [k]: v }).join('\n') !== ours);
+    if (by) return skip(`option ${by[0]}: the app's ${by[1]}`);
+  }
   const clipboard = test.initial.clipboard !== undefined ? readText(test.initial.clipboard) : null;
   if (driver.model === 'text') return adaptText(driver, test, name, clipboard, settings);
   // ourus's document end is past the last line ending, on an empty line no block has: what is typed
@@ -73,11 +90,10 @@ export function adapt(driver: Driver, test: SpecTest): Adapted {
   for (let i = 0; i < actions.length; i++) {
     if (/^(?:cursor|select)DocEnd$/.test(actions[i]!) && i + 1 < actions.length && actions[i + 1] !== 'cursorDocStart') return skip(`${actions[i + 1]} after ${actions[i]}`);
   }
-  const flavor = (test.options.flavor ?? 'gfm') as Config['flavor'];
   const notes = new Set<string>();
   const refused = (n: Set<string>): string | undefined => driver.refuses?.find((r) => n.has(r));
   try {
-    const start = project(test.initial.buffer, flavor);
+    const start = project(test.initial.buffer, flavor, { ordered: driver.ordered });
     if (start.caretLost) return skip(start.caretLost);
     const no = refused(start.notes) ?? driver.holds?.(start.outline);
     if (no) return skip(no);
@@ -93,14 +109,14 @@ export function adapt(driver: Driver, test: SpecTest): Adapted {
         prev = null;
         continue;
       }
-      const p = project(s.expect.buffer, flavor);
+      const p = project(s.expect.buffer, flavor, { ordered: driver.ordered });
       const no = refused(p.notes);
       if (no) return skip(`${no} (expected)`);
       p.notes.forEach((n) => notes.add(n));
       // a step whose buffer changed only in what blocks can't show (blank lines, markers) tests nothing here
       const lost = prev && prev.drawn !== s.expect.buffer && sameOutline(prev.outline, p.outline) && !p.caretLost;
       if (!lost || clipboard !== undefined) meaningful = true;
-      steps.push({ line: s.line, actions: s.actions, want: p.outline, drawn: s.expect.buffer, ...(p.caretLost && { caretLost: p.caretLost }), ...(clipboard !== undefined && { clipboard }) });
+      steps.push({ line: s.line, actions: s.actions, want: p.outline, drawn: s.expect.buffer, ...(p.caretLost && { caretLost: p.caretLost }), ...(p.sections.length && { sections: p.sections }), ...(clipboard !== undefined && { clipboard }) });
       prev = { outline: p.outline, drawn: s.expect.buffer };
     }
     if (!steps.some((s) => s.want || s.clipboard !== undefined)) return skip('nothing to compare');

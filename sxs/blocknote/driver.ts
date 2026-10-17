@@ -38,16 +38,29 @@ interface BnBlock {
   children: BnBlock[];
 }
 
-/** A block's canonical text as BlockNote's: its type, props and text, and how long its prefix is. */
-function toBlockNote(text: string): { block: Omit<BnBlock, 'children'>; prefix: number } {
+/**
+ * A block's canonical text as BlockNote's: its type, props and text, and how long its prefix is; and
+ * where a number that is text has its escape (`1\. x`), which BlockNote's text hasn't (`cut`).
+ */
+function toBlockNote(text: string): { block: Omit<BnBlock, 'children'>; prefix: number; cut?: number } {
   const task = /^\[([ xX])\] /.exec(text);
   if (task) return { block: { type: 'checkListItem', props: { checked: task[1] !== ' ' }, content: text.slice(4) }, prefix: 4 };
   const heading = /^(#{1,6}) /.exec(text);
   if (heading) return { block: { type: 'heading', props: { level: heading[1]!.length }, content: text.slice(heading[0].length) }, prefix: heading[0].length };
   const fence = /^```([^\n`]*)\n([\s\S]*?)\n?```$/.exec(text);
   if (fence) return { block: { type: 'codeBlock', props: { language: fence[1] || 'text' }, content: fence[2] }, prefix: 4 + fence[1]!.length };
-  return { block: { type: 'bulletListItem', content: text }, prefix: 0 };
+  // a numbered block, numbered as its run of them is (`nest` gives the run its first number)
+  const numbered = /^(\d{1,9})\. /.exec(text);
+  const prefix = numbered?.[0].length ?? 0;
+  const type = numbered ? 'numberedListItem' : 'bulletListItem';
+  // a number that is text (after a numbered block's own number too)
+  const literal = /^(\d{1,9})\\[.)]/.exec(text.slice(prefix));
+  if (literal) return { block: { type, content: literal[1] + text.slice(prefix + literal[0].length) }, prefix, cut: prefix + literal[1]!.length };
+  return { block: { type, content: text.slice(prefix) }, prefix };
 }
+
+/** A canonical offset in a block's text as one in BlockNote's, the prefix and an escape (`cut`) taken off. */
+const appOffset = (offset: number, at: { prefix: number; cut?: number }): number => Math.max(0, offset - at.prefix - (at.cut !== undefined && offset > at.cut ? 1 : 0));
 
 /**
  * Starts BlockNote can't hold, measured (each was a start the load check found held otherwise): a
@@ -77,7 +90,11 @@ function nest(blocks: readonly Block[]): BnBlock[] {
   for (const b of blocks) {
     const bn: BnBlock = { ...toBlockNote(b.text).block, children: [] };
     stack.length = b.depth;
-    (b.depth === 0 ? roots : stack[b.depth - 1]!.children).push(bn);
+    const siblings = b.depth === 0 ? roots : stack[b.depth - 1]!.children;
+    // a run of numbered blocks counts on from its first's number, the one it was written with
+    const n = /^(\d{1,9})\. /.exec(b.text);
+    if (bn.type === 'numberedListItem' && siblings[siblings.length - 1]?.type !== 'numberedListItem' && n && n[1] !== '1') bn.props = { start: Number(n[1]) };
+    siblings.push(bn);
     stack[b.depth] = bn;
   }
   return roots;
@@ -101,23 +118,38 @@ function find(): boolean {
 function readPage(): { blocks: { depth: number; text: string; prefix: number }[]; sel: Sel | null } {
   const w = window as any;
   const view = w.__sxsView;
-  const flat: { depth: number; text: string; prefix: number; id: string }[] = [];
+  const flat: { depth: number; text: string; prefix: number; cut?: number; id: string }[] = [];
   const textOf = (b: any): string => (Array.isArray(b.content) ? b.content.map((c: any) => (c.type === 'text' ? c.text : c.type === 'link' ? c.content.map((x: any) => x.text).join('') : '')).join('') : '');
-  const walk = (bs: any[], depth: number): void =>
-    bs.forEach((b) => {
-      const t = textOf(b);
+  const walk = (bs: any[], depth: number): void => {
+    // a run of numbered blocks is numbered from its first's `start`
+    let number = 0;
+    bs.forEach((b, k) => {
+      let t = textOf(b);
       let prefix = '';
       let suffix = '';
+      let cut: number | undefined;
+      if (b.type === 'numberedListItem') {
+        number = k > 0 && bs[k - 1].type === 'numberedListItem' ? number + 1 : Number(b.props?.start) || 1;
+        prefix = `${number}. `;
+      }
+      if ((b.type === 'numberedListItem' || b.type === 'bulletListItem' || b.type === 'paragraph') && /^\d{1,9}[.)]/.test(t)) {
+        // a number that is text, escaped in the canonical text
+        cut = /^\d+/.exec(t)![0].length;
+        t = t.slice(0, cut) + '\\' + t.slice(cut);
+      }
       if (b.type === 'checkListItem') prefix = b.props.checked ? '[x] ' : '[ ] ';
       else if (b.type === 'heading') prefix = `${'#'.repeat(b.props.level)} `;
       else if (b.type === 'codeBlock') {
         prefix = `\`\`\`${b.props.language === 'text' ? '' : b.props.language}\n`;
         suffix = '\n```';
       } else if (b.type === 'quote') prefix = '> ';
+      // a divider is a thematic break, as the projection has one
+      else if (b.type === 'divider') prefix = '---';
       else if (b.type !== 'bulletListItem' && b.type !== 'numberedListItem' && b.type !== 'paragraph') prefix = `<${b.type}> `;
-      flat.push({ depth, text: prefix + t + suffix, prefix: prefix.length, id: b.id });
+      flat.push({ depth, text: prefix + t + suffix, prefix: prefix.length, ...(cut !== undefined && { cut }), id: b.id });
       walk(b.children, depth + 1);
     });
+  };
   walk(w.__sxsBn.document, 0);
   // the caret: the block container each end of the selection is in, and its offset in the block's content
   const at = (pos: number): { block: number; offset: number } | null => {
@@ -127,7 +159,9 @@ function readPage(): { blocks: { depth: number; text: string; prefix: number }[]
       const id = $p.node(d).attrs.id;
       const block = flat.findIndex((b) => b.id === id);
       const content = $p.start(d) + 1; // the container's content node, then its text
-      return block < 0 || pos < content ? null : { block, offset: flat[block]!.prefix + pos - content };
+      if (block < 0 || pos < content) return null;
+      const { prefix, cut } = flat[block]!;
+      return { block, offset: prefix + pos - content + (cut !== undefined && pos - content > cut ? 1 : 0) };
     }
     return null;
   };
@@ -170,7 +204,7 @@ export const driver: Driver = {
   url: 'https://www.blocknotejs.org/examples/basic/minimal',
   model: 'block',
   // measured: Enter at an item's text start leaves the caret with the text
-  behaves: { enterAtTextStart: 'stay' },
+  behaves: { enterAtTextStart: 'stay', pasteStructuredAtEnd: 'join', pasteStructuredListForm: 'own' },
   keys: {
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
@@ -189,7 +223,10 @@ export const driver: Driver = {
     redo: 'Control+Shift+z',
     ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
   },
-  refuses: [],
+  // a code block is a block of its own, its fences no text: code lines that would make a fence are
+  // only text there
+  refuses: ['markup-fence'],
+  ordered: true,
   holds: (doc) => holds(doc as Outline),
 
   async open(page: Page) {
@@ -212,10 +249,10 @@ export const driver: Driver = {
   async load(page: Page, doc) {
     const o = doc as Outline;
     if (!(await page.evaluate(find))) throw new Error("BlockNote's editor isn't on the page");
-    const at = o.sel && { block: o.sel.block, prefix: toBlockNote(o.blocks[o.sel.block]!.text).prefix };
+    const at = o.sel && toBlockNote(o.blocks[o.sel.block]!.text);
     const placed = await page.evaluate(loadPage, {
       blocks: nest(o.blocks),
-      at: o.sel && at ? { block: at.block, anchor: Math.max(0, o.sel.anchor - at.prefix), head: Math.max(0, o.sel.head - at.prefix) } : null,
+      at: o.sel && at ? { block: o.sel.block, anchor: appOffset(o.sel.anchor, at), head: appOffset(o.sel.head, at) } : null,
     });
     if (placed !== 'placed' && placed !== 'no caret') throw new Error(`the caret has no place: ${placed}`);
   },

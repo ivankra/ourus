@@ -20,7 +20,8 @@ the text it is the host's. The rules, in order; the first that applies wins:
    default; Delete23, Delete24, Delete25), or refused (`refuse`; Delete16b, Delete16c).
 4. **On an empty item**, the item goes, the caret moving on to the node below (Delete6), a paragraph
    it kept apart from the text above set apart by a blank line (Delete28); with
-   children, its first child moves up into it (Delete5). An empty item below goes (Delete20).
+   children, its first child moves up into it (Delete5), or nothing happens with
+   `emptyItemWithChildren: refuse` (Delete5e). An empty item below goes (Delete20).
 5. **Before a heading**, its whole line joins, `#`s included (`headingEditing: text`, the default;
    Delete13); with `block`, its title (Delete13b). A setext heading can't join as text: refused
    (Delete13e), its title joining under `block` (Delete13f).
@@ -45,7 +46,7 @@ ourus does on plain lists.
 Joins a child into its parent.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -66,7 +67,7 @@ Joins the next sibling.
 Bare Obsidian leaves `- one┃- two`.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -88,7 +89,7 @@ At the end of a line inside the text, Delete joins the next line to it: the inve
 Shift-Enter.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -109,7 +110,7 @@ Joins before closing hashes.
 A heading's title ends before its closing `#`s: the caret there is at the end of its text.
 
 ```yaml
-rank: rare
+tags: rare markup-heading
 ```
 
 ```buffer
@@ -128,7 +129,7 @@ rank: rare
 From after the closing `#`s, Delete joins the same way, the caret going to the end of the title.
 
 ```yaml
-rank: rare
+tags: rare markup-heading
 ```
 
 ```buffer
@@ -146,10 +147,11 @@ rank: rare
 
 Delete on an empty item with children: its first child moves up into it, as Delete joins the node
 below into any item ([Delete1](#delete1)), that child's children coming along and the caret staying
-put. Most outliners ignore the key here; ourus joins (a user decision).
+put. Most outliners ignore the key here (`emptyItemWithChildren: refuse`, [Delete5e](#delete5e));
+by default ourus joins (a user decision).
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -178,7 +180,7 @@ The first Delete deletes the child's only character, which leaves it empty, held
 child `b` up into it; `b`'s child `c` comes along, and the empty item's other child `d` stays.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -219,7 +221,7 @@ rank: edge
 The same after a sibling: the first child moves up into the empty item.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -244,7 +246,7 @@ On an empty item, Delete acts from anywhere after the marker, trailing spaces an
 Only spaces follow the caret there, so it counts as the end of the item's text.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -260,6 +262,38 @@ rank: rare
   - b
 ```
 
+## Delete5e
+
+With `emptyItemWithChildren: refuse`, Delete on an empty item with children does nothing, as most
+outliners leave it ([Delete5](#delete5) joins its first child up into it).
+
+```yaml
+tags: rare
+emptyItemWithChildren: refuse
+```
+
+```buffer
+- ┃
+  - a
+    - b
+  - c
+- d
+```
+
+> deleteContentForward
+
+```result
+rejected: has-children
+```
+
+```buffer
+- ┃
+  - a
+    - b
+  - c
+- d
+```
+
 ## Delete6
 
 Empty item removed, caret moves on.
@@ -267,7 +301,7 @@ Empty item removed, caret moves on.
 On an empty item, Delete removes the item, and the caret moves on to the node below.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -290,7 +324,7 @@ Next sibling's children come along.
 The node below can have children; they come along.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -311,7 +345,7 @@ rank: common
 Mid-text delete.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -331,7 +365,7 @@ Backspace does ([Backspace14](backspace.md#backspace14)). When the caret leaves,
 goes.
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -367,7 +401,7 @@ Delete at the end of a node before a quote is refused.
 The quote would merge into the node's text, its `>` text, as bare Obsidian leaves it (`- a┃> q`).
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -391,7 +425,7 @@ rejected: not-expressible
 Delete at the end of a node before indented code is refused.
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ```buffer
@@ -417,7 +451,7 @@ Children that move with a join are written in the document's indentation.
 In a tab-indented document, `c`'s child stays tab-indented under the joined item.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -444,7 +478,7 @@ The blank line between goes too; bare Obsidian deletes it first, as `deleteAtGap
 `headingEditing: block`, only the title joins ([Delete13b](#delete13b)).
 
 ```yaml
-rank: edge
+tags: edge markup-heading
 ```
 
 ```buffer
@@ -464,7 +498,7 @@ a┃# H1
 With `headingEditing: block`, Delete before a heading joins just its title.
 
 ```yaml
-rank: rare
+tags: rare markup-heading
 headingEditing: block
 ```
 
@@ -486,7 +520,7 @@ Before a heading with text right under it, the joined line is set off from that 
 line: right under it, the text would continue the joined paragraph.
 
 ```yaml
-rank: rare
+tags: rare free-form markup-heading
 ```
 
 ```buffer
@@ -509,7 +543,7 @@ text
 With `headingEditing: block` too, the heading's text right under it is set off by a blank line.
 
 ```yaml
-rank: rare
+tags: rare free-form markup-heading
 headingEditing: block
 ```
 
@@ -534,7 +568,7 @@ Before a setext heading, Delete is refused: joined as text, its underline would 
 paragraph a heading.
 
 ```yaml
-rank: rare
+tags: rare free-form markup-heading
 ```
 
 ```buffer
@@ -562,7 +596,7 @@ Title
 With `headingEditing: block`, before a setext heading, its title joins and the underline goes.
 
 ```yaml
-rank: rare
+tags: rare markup-heading
 headingEditing: block
 ```
 
@@ -585,7 +619,7 @@ Before an item whose text is a heading, the item's text joins as before any head
 text, and the item's marker goes.
 
 ```yaml
-rank: rare
+tags: rare markup-heading
 ```
 
 ```buffer
@@ -604,7 +638,7 @@ rank: rare
 The heading's section stays where it was.
 
 ```yaml
-rank: rare
+tags: rare free-form markup-heading
 ```
 
 ```buffer
@@ -629,7 +663,7 @@ Joined into a heading, the line below becomes part of its title; closing `#`s cl
 heading.
 
 ```yaml
-rank: rare
+tags: rare markup-heading
 ```
 
 ```buffer
@@ -652,7 +686,7 @@ a paragraph owns the list after it, so `b` stays under the text, now `-a`. ourus
 the host would, and checks what it reads as.
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -677,7 +711,7 @@ With `editInMarkup: refuse`, deleting the space after a marker inside an item is
 would be more of `p`'s text, and `b` would become `p`'s child.
 
 ```yaml
-rank: rare
+tags: rare free-form
 editInMarkup: refuse
 ```
 
@@ -705,7 +739,7 @@ With `editInMarkup: refuse`, Delete before the marker is refused: it would take 
 and ` a` would continue `x`'s text.
 
 ```yaml
-rank: rare
+tags: rare free-form
 editInMarkup: refuse
 ```
 
@@ -731,7 +765,7 @@ After another item, the paragraph the item becomes is set off by a blank line, s
 continue that item; its children become its list.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -755,7 +789,7 @@ A tab-indented child would be a lazy line of the paragraph: it moves to the para
 keeping its text and parent.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -776,7 +810,7 @@ A first item with items after it becomes a paragraph too, the items after it its
 outdent makes them ([DirectOutdent2](outdent.md#directoutdent2)).
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -796,7 +830,7 @@ rank: rare
 Of two spaces after a marker, one goes, and the item stays; the caret goes to its text.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -822,7 +856,7 @@ As Delete joins any node below. Bare Obsidian deletes the blank line only, as `d
 does ([Delete17b](#delete17b)).
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -847,7 +881,7 @@ Delete again joins.
 As in Obsidian, where Delete deletes one line break.
 
 ```yaml
-rank: rare
+tags: rare
 deleteAtGap: gap
 ```
 
@@ -879,7 +913,7 @@ Delete at the end of a paragraph before another: the blank line goes, the paragr
 lines of this one, and the caret stays (Backspace12's mirror, ourus's edit as there).
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -905,7 +939,7 @@ Inside an item, Delete before a blank line removes it, and the paragraph below b
 the text: the mirror of [Backspace19](backspace.md#backspace19).
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -926,7 +960,7 @@ rank: edge
 With several blank lines between two paragraphs, all of them go (Backspace12c's mirror).
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -950,7 +984,7 @@ right after it ([TaskBackspace3](tasks.md#taskbackspace3)). The host's Delete wo
 task`.
 
 ```yaml
-rank: edge
+tags: edge markup-task
 ```
 
 ```buffer
@@ -968,7 +1002,7 @@ rank: edge
 Before an empty item, Delete removes it: the empty node below joins with nothing to add.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -990,7 +1024,7 @@ A selection across two items: the selected text goes, markup included, and the t
 (Backspace31's mirror).
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -1015,7 +1049,7 @@ applied
 A selection within one item's text is the host's: Delete21's control.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -1041,7 +1075,7 @@ host's (`editInMarkup: host`, the default), and ` a` continues `x`'s text, as in
 result says why ourus stepped aside: the marker isn't text.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -1066,7 +1100,7 @@ Inside an ordered marker the same: the host deletes the `.`, and the item become
 `1 a`.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -1089,7 +1123,7 @@ Inside an item, the host deletes the space after the marker: `-a` is more of `p`
 becomes `p`'s child, as the text now reads.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -1116,7 +1150,7 @@ Delete at a setext title's end joins the paragraph below the underline into the 
 at the paragraph's start does ([Backspace36](backspace.md#backspace36)).
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -1139,7 +1173,7 @@ joined text's start is escaped, as Backspace does from the other side
 ([Backspace38](backspace.md#backspace38)).
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -1159,7 +1193,7 @@ The same from Delete on the empty item ([Backspace39](backspace.md#backspace39))
 set apart from the item above, takes the caret.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer

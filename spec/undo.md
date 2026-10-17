@@ -11,7 +11,7 @@ history, so undo and redo bring placeholders back with the rest
 Undo and redo of a command bring back the text and the caret.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -40,7 +40,7 @@ leaving must not delete the line, or the two paragraphs would merge. Only a line
 may be removed.
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -79,7 +79,7 @@ Undo brings a placeholder back, and leaving keeps the item again. Leaving was an
 (the blank line), so the first undo takes back that, the caret going back into the empty child.
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -128,7 +128,7 @@ rank: common
 Redo of a command brings its placeholder back too.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -169,7 +169,7 @@ Undo of what was typed into an empty child brings back its placeholder; the next
 indent, and redo brings the placeholder back again.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer

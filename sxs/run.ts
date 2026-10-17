@@ -25,6 +25,8 @@
 //   --regenerate-report  run no app: judge what it did in its last run against the spec as it is now, and
 //                   write the report (and with several apps, the table) again ("regenerating", below)
 //   --timing        print how long the app took to settle after each action, and what kept it busy
+//   --plain-clipboard  give the app the clipboard's Markdown as plain text only, without its HTML
+//                   rendering (lib/clipboard.ts)
 //
 //   node sxs/run.ts --stop    stops the shared proxy and browsers, and the servers drivers started
 //
@@ -40,6 +42,7 @@ import { fileURLToPath } from 'node:url';
 import type { Page } from 'playwright-core';
 import { Config } from '../src/config.ts';
 import { appPage, ensureProxy, launch, proxyStats, stopShared, type AppPage } from './lib/browser.ts';
+import { clipboardHtml } from './lib/clipboard.ts';
 import type { Doc, Driver, Session } from './lib/driver.ts';
 import { idleVersion, installIdle, type IdleOptions, type IdleResult } from './lib/idle.ts';
 import { compareOutlines, draw, project, readOutline, sameOutline, type Outline, type Verdict } from './lib/outline.ts';
@@ -331,6 +334,30 @@ function matrix(o: {
   const tests = new Map(allTests().map((t) => [`${t.file} › ${t.name}`, t]));
   const ours = (name: string): string => (tests.has(name) ? (passes(tests.get(name)!) ? 'agree' : 'disagree') : 'missing');
   const map = heatmap({ apps: [OURUS, ...o.apps], byApp: o.byApp, rows: o.rows.map((r) => ({ name: r.name, cells: [ours(r.name), ...r.cells], adapted: [[], ...r.adapted] })) });
+  // per spec file, its disagreements: the apps' runs of its examples, the disagreements among them and
+  // their share, the block apps' among them, and each app's (blank where it ran none); the most first,
+  // then the total
+  const block = o.apps.map((a) => o.byApp.get(a)?.model === 'block');
+  const byFile = [...new Set(o.rows.map((r) => r.name.split(' › ')[0]!))].map((f) => {
+    const inFile = o.rows.filter((r) => r.name.split(' › ')[0] === f);
+    const ran = (i: number): number => inFile.filter((r) => (VERDICTS as readonly string[]).includes(r.cells[i]!)).length;
+    const dis = (i: number): number => inFile.filter((r) => r.cells[i] === 'disagree').length;
+    return { f, cases: inFile.length, runs: o.apps.reduce((n, _, i) => n + ran(i), 0), dis: o.apps.reduce((n, _, i) => n + dis(i), 0), blockDis: o.apps.reduce((n, _, i) => n + (block[i] ? dis(i) : 0), 0), blockRan: o.apps.reduce((n, _, i) => n + (block[i] ? ran(i) : 0), 0), apps: o.apps.map((_, i) => (ran(i) ? String(dis(i)) : '')) };
+  }).sort((a, b) => b.dis - a.dis || a.f.localeCompare(b.f));
+  const share = (dis: number, runs: number): string => (runs ? `${Math.round((100 * dis) / runs)}%` : '');
+  const sum = { cases: byFile.reduce((n, r) => n + r.cases, 0), runs: byFile.reduce((n, r) => n + r.runs, 0), dis: byFile.reduce((n, r) => n + r.dis, 0), blockDis: byFile.reduce((n, r) => n + r.blockDis, 0) };
+  const byFileLines = [
+    '## By spec file',
+    '',
+    'Each spec file\'s examples, the apps\' runs of them, the disagreements among those runs (and their share), the block apps\' disagreements among them, and each app\'s (blank: it ran none there); the most disagreements first.',
+    '',
+    `| spec file | examples | runs | disagree | block apps | ${o.apps.map((a) => SHORT[a] ?? a).join(' | ')} |`,
+    `| --- | ---: | ---: | ---: | ---: | ${o.apps.map(() => '---:').join(' | ')} |`,
+    ...byFile.map((r) => `| [${r.f}](../spec/${r.f}) | ${r.cases} | ${r.runs} | ${r.dis} (${share(r.dis, r.runs)}) | ${r.blockRan ? r.blockDis : ''} | ${r.apps.join(' | ')} |`),
+    `| **total** | **${sum.cases}** | **${sum.runs}** | **${sum.dis} (${share(sum.dis, sum.runs)})** | **${sum.blockDis}** | ${o.apps.map((_, i) => `**${o.rows.filter((r) => r.cells[i] === 'disagree').length}**`).join(' | ')} |`,
+    '',
+  
+  ];
   const out = [
     '---',
     `type: ${JSON.stringify('SxS')}`,
@@ -350,12 +377,14 @@ function matrix(o: {
     `| --- | --- |${' --- |'.repeat(columns.length + 1)}`,
     ...o.apps.map((a) => row([`[${a}](${toReport(a)})`, o.byApp.get(a)?.model ?? '', ...columns.map((v) => count(a, v) || ''), `**${o.rows.length}**`])),
     '',
+    ...byFileLines,
     ...map.lines,
     '',
   ];
   // the examples, one HTML table, so that its columns line up: per spec file, in the spec's order, a
-  // header row (the file's name, `agree` and the apps), its examples, and a row, `total`, of each
-  // app's agreements in it (blank if it ran none); an empty row between files. No `</td>`s, for size.
+  // header row (the file's name, the apps, `disagree` and `rank`), its examples (each with the count
+  // of apps that disagree on it, and its rank), and a row, `total`, of each app's disagreements in it
+  // (blank if it ran none) and their sum; an empty row between files. No `</td>`s, for size.
   const html = (t: string): string => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const rows: string[] = [];
   const tr = (cells: string[]): void => void rows.push(`<tr>${cells.join('')}</tr>`);
@@ -363,21 +392,22 @@ function matrix(o: {
     const inFile = o.rows.filter((x) => x.name.split(' › ')[0] === f);
     const tally = (i: number): string => {
       const ran = inFile.filter((r) => (VERDICTS as readonly string[]).includes(r.cells[i]!)).length;
-      return `<td>${ran ? `<b>${inFile.filter((r) => r.cells[i] === 'agree').length}</b>` : ''}`;
+      return `<td>${ran ? `<b>${inFile.filter((r) => r.cells[i] === 'disagree').length}</b>` : ''}`;
     };
+    const disagree = (r: (typeof inFile)[number]): number => r.cells.filter((c) => c === 'disagree').length;
     // between files, one or two empty rows: GitHub shades every even row, and each file's header is one
     if (rows.length) {
       const gap = (): void => tr([`<td colspan="${o.apps.length + 3}">`]);
       gap();
       if (rows.length % 2 === 0) gap();
     }
-    tr([`<td><b>${html(f)}</b>`, '<td><b>rank</b>', '<td><b>agree</b>', ...o.apps.map((a) => `<td><b><a href="${toReport(a)}"${SHORT[a] ? ` title="${html(a)}"` : ''}>${html(SHORT[a] ?? a)}</a></b>`)]);
+    tr([`<td><b>${html(f)}</b>`, ...o.apps.map((a) => `<td><b><a href="${toReport(a)}"${SHORT[a] ? ` title="${html(a)}"` : ''}>${html(SHORT[a] ?? a)}</a></b>`), '<td><b>disagree</b>', '<td><b>rank</b>']);
     for (const r of inFile) {
-      const agree = r.cells.filter((c) => c === 'agree').length;
       const cells = r.cells.map((c, i) => (r.adapted[i]!.length && c !== 'agree' && c !== 'skipped' ? `<td>(${CELL[c]![1]})` : `<td>${CELL[c]![1]}`));
-      tr([`<td><a href="../spec/${f}#${anchor(r.name)}">${html(short(r.name.split(' › ').pop()!))}</a>`, `<td>${html(tests.get(r.name)?.options.rank ?? '')}`, `<td align="right">${agree}`, ...cells]);
+      const rank = tests.get(r.name)?.rank;
+      tr([`<td><a href="../spec/${f}#${anchor(r.name)}">${html(short(r.name.split(' › ').pop()!))}</a>`, ...cells, `<td align="right">${disagree(r)}`, `<td>${html(rank ?? '')}`]);
     }
-    tr(['<td><b>total</b>', '<td>', '<td>', ...o.apps.map((_, i) => tally(i))]);
+    tr(['<td><b>total</b>', ...o.apps.map((_, i) => tally(i)), `<td align="right"><b>${inFile.reduce((n, r) => n + disagree(r), 0)}</b>`, '<td>']);
   }
   out.push(
     '## Legend',
@@ -387,13 +417,13 @@ function matrix(o: {
     `| ${CELL.agree![1]} | agrees: the same result, caret included |`,
     `| ${CELL.disagree![1]} | disagrees: other text, or (a block app) other blocks, nesting or count |`,
     `| ${CELL.caret![1]} | caret: the same result, the caret elsewhere |`,
-    `| ${CELL.whitespace![1]} | spaces: the same but for spaces next to line breaks |`,
+    `| ${CELL.whitespace![1]} | spaces: the same but for spaces next to line breaks, or (a text app) spaces that leave the document as ourus reads it the same |`,
     `| ${CELL.error![1]} | error: the run failed, or the app didn't hold the starting state |`,
     `| blank | skipped: the app can't run the example as written (its report says why) |`,
     ...(columns.includes('missing') ? [`| ${CELL.missing![1]} | not run: the app's last run didn't play the example as the spec has it now |`] : []),
     `| (${CELL.disagree![1]}) | in brackets, a difference in an example adapted for the app: its buffers projected onto blocks, so it compares those |`,
     '',
-    'An example\'s **rank** is how often users meet it (`core`, `common`, `edge` or `rare`: [the spec\'s README](../spec/README.md)); a file\'s **agree** column counts the apps that agree on the example; its **total** row, the examples each app agrees on.',
+    'An example\'s **rank** is how often users meet it (`core`, `common`, `edge` or `rare`: [the spec\'s README](../spec/README.md)); a file\'s **disagree** column counts the apps that disagree on the example; its **total** row, the examples each app disagrees on, and all of them.',
     Object.entries(SHORT)
       .filter(([app]) => o.apps.includes(app))
       .map(([app, short]) => `**${short}** is ${app}.`)
@@ -429,14 +459,10 @@ const SHORT: Record<string, string> = { 'obsidian-true-outliner': 'TO', 'obsidia
 /** ourus's own column in the heatmap: its verdicts are its runs of the examples. */
 const OURUS = 'ourus';
 
-/** The heatmap's poles: an outliner of blocks and a Markdown editor of text, the two most unlike kinds. */
-const POLES = ['logseq', 'obsidian'] as const;
-
 /**
- * The heatmap: for each two apps, how alike they did in the examples both ran as written, none adapted
- * (`score`: the same result 1, the same but for the caret or spaces ½), colored by it, ourus among them.
- * The apps go from one pole to the other (`POLES`), the rest between them by how like the first they
- * are, less how like the second; without both, block apps first, then text apps.
+ * The heatmap: for each two apps, how alike they did in the examples both ran alike, as written or
+ * adapted the same way (`score`: the same result 1, the same but for the caret or spaces ½), colored by
+ * it, ourus among them, in the order given: the table's, by how many examples agree, ourus first.
  */
 function heatmap(o: { apps: string[]; byApp: Map<string, AppRun | null>; rows: { name: string; cells: string[]; adapted: string[][] }[] }): { lines: string[]; svg: string } {
   const ran = (c: string): boolean => c !== 'error' && (VERDICTS as readonly string[]).includes(c);
@@ -450,18 +476,23 @@ function heatmap(o: { apps: string[]; byApp: Map<string, AppRun | null>; rows: {
   };
   /**
    * How alike two apps did in an example, 0 to 1, or null where it doesn't say (not run by both, run
-   * adapted by either, or both apart from ourus from different starts): from the same start, their
+   * adapted by one and not the other, or both apart from ourus from different starts): from the same
+   * start, their
    * outputs compared step by step, the worst step counting; else by how each did against ourus.
    */
   const score = (a: string, b: string, row: { name: string; cells: string[]; adapted: string[][] }): number | null => {
     const [i, k] = [o.apps.indexOf(a), o.apps.indexOf(b)];
     const [va, vb] = [row.cells[i]!, row.cells[k]!];
-    if (!ran(va) || !ran(vb) || row.adapted[i]!.length || row.adapted[k]!.length) return null;
-    // ourus's own outcome where it fails an example isn't recorded: only that it differs from those that pass
+    if (!ran(va) || !ran(vb)) return null;
+    // ourus's own outcome where it fails an example isn't recorded: only that it differs from those that
+    // pass; an app's verdict compares it with ourus's outcome adapted as its own run was
     if (a === OURUS || b === OURUS) {
       const [ours, theirs] = a === OURUS ? [va, vb] : [vb, va];
       return ours === 'agree' ? points(theirs) : theirs === 'agree' ? 0 : null;
     }
+    // two apps compare only on an example both ran alike, as written or adapted the same way: one's
+    // blocks and another's text, or two adaptations, aren't the same document
+    if (row.adapted[i]!.join() !== row.adapted[k]!.join()) return null;
     const [x, y] = [examples.get(a)!.get(row.name), examples.get(b)!.get(row.name)];
     if (x && y && x.start === y.start && x.steps.length === y.steps.length) {
       const steps = x.steps.flatMap((step, i) => (step.app !== null && y.steps[i]!.app !== null ? [points(compare(step.app, y.steps[i]!.app!))] : []));
@@ -475,17 +506,7 @@ function heatmap(o: { apps: string[]; byApp: Map<string, AppRun | null>; rows: {
     const told = o.rows.map((r) => score(a, b, r)).filter((v) => v !== null);
     return { same: told.reduce((n, v) => n + v, 0), of: told.length };
   };
-  const share = (a: string, b: string): number => {
-    const { same, of } = alike(a, b);
-    return of ? same / of : 0;
-  };
-  const model = (a: string): string => o.byApp.get(a)?.model ?? '';
-  const [near, far] = POLES;
-  const poled = o.apps.includes(near) && o.apps.includes(far);
-  const lean = (a: string): number => share(a, near) - share(a, far);
-  const apps = poled
-    ? [near, ...o.apps.filter((a) => a !== near && a !== far).sort((x, y) => lean(y) - lean(x)), far]
-    : [...o.apps].sort((x, y) => (model(x) === model(y) ? 0 : model(x) === 'block' ? -1 : 1));
+  const apps = o.apps;
   const label = (a: string): string => (a === OURUS ? 'label ours' : 'label');
   const xml = (t: string): string => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   // the grid: app names down the left and slanted along the top, a cell per two apps, colored by
@@ -529,12 +550,13 @@ function heatmap(o: { apps: string[]; byApp: Map<string, AppRun | null>; rows: {
     lines: [
       '## Heatmap',
       '',
-      'Each cell is how alike two apps did, in percent of the examples both ran as written (an example',
-      'either ran adapted is left out): one where they end the same counts 1, the same but for the caret',
-      'or for spaces ½, otherwise 0, their results compared from the same start, or, from different',
+      'Each cell is how alike two apps did, in percent of the examples both ran alike: both as written, or',
+      'both adapted the same way (block apps), an example one ran adapted and the other as written left',
+      'out. One where they end the same counts 1, the same but for the caret or for spaces ½, otherwise 0,',
+      'their results compared from the same start, or, from different',
       'starts, as each compares with ourus (both apart from ourus, it is left out). ourus is there too, as',
       'its own runs of the examples have it: its cell with an app is how that app compares with it.',
-      poled ? `Apps most like ${near} come first, apps most like ${far} last, ourus among them.` : 'Block apps come first, then text apps.',
+      'The apps are in the table\'s order, by how many examples agree, the most first, ourus first.',
       '',
       `![Heatmap: how alike two apps did](sxs-heatmap.svg)`,
     ],
@@ -603,7 +625,10 @@ if (regenerating && !previous) {
 // the app's kind of document (`Driver.model`): how one is drawn, compared, and told apart from another
 const isText = driver.model === 'text';
 const drawDoc = (d: Doc): string => (isText ? drawTextDoc(d as TextDoc) : draw(d as Outline));
-const compareDocs = (want: Doc, got: Doc): Verdict => (isText ? compareTexts(want as TextDoc, got as TextDoc) : compareOutlines(want as Outline, got as Outline));
+const compareDocs = (want: Doc, got: Doc, sections?: readonly number[], flavor?: Config['flavor']): Verdict =>
+  isText ? compareTexts(want as TextDoc, got as TextDoc, flavor) : compareOutlines(want as Outline, got as Outline, sections);
+/** The flavor a plan's example is read in. */
+const flavorOf = (plan: Plan): Config['flavor'] => (plan.test.options.flavor ?? 'gfm') as Config['flavor'];
 const sameDoc = (a: Doc, b: Doc): boolean => (isText ? sameText(a as TextDoc, b as TextDoc) : sameOutline(a as Outline, b as Outline));
 
 // ------------------------------------------------------------------ choosing and adapting
@@ -646,7 +671,7 @@ function runData(results: readonly Result[], version: string | undefined): AppRu
       const reached = outcome.verdict !== 'error' || i < outcome.step;
       const got = reached ? (outcome.got[i] ?? null) : null;
       const ourus = step.want ? drawDoc(step.want) : null;
-      const s: RunStep = { line: step.line, actions: [...step.actions], ...(reached && (step.want || step.clipboard !== undefined) && { verdict: stepVerdict(step, got, outcome.clipboards[i]) }), ourus, app: got ? drawDoc(got) : null };
+      const s: RunStep = { line: step.line, actions: [...step.actions], ...(reached && (step.want || step.clipboard !== undefined) && { verdict: stepVerdict(step, got, outcome.clipboards[i], flavorOf(plan)) }), ourus, app: got ? drawDoc(got) : null };
       if (isText) s.blocks = got ? projected(got as TextDoc, plan) : null;
       if (step.drawn !== undefined && step.drawn !== ourus) s.written = step.drawn;
       if (step.caretLost) s.caretLost = step.caretLost;
@@ -708,9 +733,9 @@ function projected(d: TextDoc, plan: Plan): string | null {
 }
 
 /** How a step came out: its buffer against the spec's (a caret with no place in a block not compared), and its clipboard. */
-function stepVerdict(step: PlanStep, got: Doc | null, clipboard: string | null | undefined): Verdict {
+function stepVerdict(step: PlanStep, got: Doc | null, clipboard: string | null | undefined, flavor: Config['flavor']): Verdict {
   let v: Verdict = 'agree';
-  if (step.want && got) v = compareDocs(step.caretLost ? { ...step.want, sel: null } : step.want, got);
+  if (step.want && got) v = compareDocs(step.caretLost ? { ...step.want, sel: null } : step.want, got, step.sections, flavor);
   if (step.clipboard !== undefined && clipboard !== step.clipboard) v = 'disagree';
   return v;
 }
@@ -747,6 +772,8 @@ interface Outcome {
  * session of an app that isn't a page (`Session`, lib/driver.ts), which settles by returning.
  */
 interface Actor extends Session {
+  /** The clipboard: plain text, with its HTML where it has one (a session's takes the text alone). */
+  clipboard: { write(text: string, html?: string | null): Promise<void>; read(): Promise<string> };
   settle(o: IdleOptions): Promise<IdleResult>;
   /** Brings the app's page to the front, where its Clipboard API works. */
   front(): Promise<void>;
@@ -755,7 +782,14 @@ const pageActor = (page: Page): Actor => ({
   press: (key) => page.keyboard.press(key),
   type: (text) => page.keyboard.type(text),
   clipboard: {
-    write: (text) => page.evaluate((t) => navigator.clipboard.writeText(t), text),
+    write: (text, html) =>
+      page.evaluate(
+        ([t, h]) =>
+          h
+            ? navigator.clipboard.write([new ClipboardItem({ 'text/plain': new Blob([t], { type: 'text/plain' }), 'text/html': new Blob([h], { type: 'text/html' }) })])
+            : navigator.clipboard.writeText(t),
+        [text, html ?? null] as const,
+      ),
     read: () => page.evaluate(() => navigator.clipboard.readText()),
   },
   settle: (o) => page.evaluate((o) => (window as unknown as { __ourusIdle: { wait(o: IdleOptions): Promise<IdleResult> } }).__ourusIdle.wait(o), o),
@@ -832,7 +866,7 @@ async function runPlan(page: Page, plan: Plan): Promise<Outcome> {
     // is dropped and a read comes back empty, without an error)
     if (usesClipboard) await actor.front();
     await driver.load(page, plan.initial);
-    if (plan.clipboard !== null) await actor.clipboard.write(plan.clipboard);
+    if (plan.clipboard !== null) await actor.clipboard.write(plan.clipboard, args.includes('--plain-clipboard') ? null : clipboardHtml(plan.clipboard, flavorOf(plan)));
     await settleAfter('loading');
     // the app holds what the test starts from, or the test means nothing: an app may rewrite what it
     // is given (trimming, normalizing), and that is no behavior of a key
@@ -866,7 +900,7 @@ function judge(plan: Plan, got: readonly (Doc | null)[], clipboards: readonly (s
   let verdict: Verdict = 'agree';
   let at = -1;
   plan.steps.forEach((step, i) => {
-    const v = stepVerdict(step, got[i] ?? null, clipboards[i]);
+    const v = stepVerdict(step, got[i] ?? null, clipboards[i], flavorOf(plan));
     if (rank[v] > rank[verdict]) {
       verdict = v;
       at = i;
@@ -1250,7 +1284,7 @@ function report(): string {
               return;
             }
             const got = outcome.got[i];
-            if (step.want && got && compareDocs(step.want, got) !== 'agree') out.push(...sideBySide([{ head: driver.name, body: drawDoc(got) }, { head: 'ourus', body: drawDoc(step.want) }]), '');
+            if (step.want && got && compareDocs(step.want, got, step.sections, flavorOf(plan)) !== 'agree') out.push(...sideBySide([{ head: driver.name, body: drawDoc(got) }, { head: 'ourus', body: drawDoc(step.want) }]), '');
             else if (got) out.push(...sideBySide([{ head: 'buffer', body: drawDoc(got) }]), '');
           });
         }

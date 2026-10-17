@@ -28,8 +28,25 @@ interface RoamBlock {
   heading: number;
 }
 
-/** Canonical prefixes and what Roam holds for them: a task's marker is text, a heading's level an attribute. */
-function toRoam(depth: number, text: string): RoamBlock & { from: number; to: number } {
+/**
+ * Canonical prefixes and what Roam holds for them: a task's marker is text, a heading's level an
+ * attribute, a numbered block's number its parent's view (`numbered`: the children of a parent with
+ * `children-view-type: numbered` are numbered from 1).
+ */
+function toRoam(depth: number, text: string): RoamBlock & { from: number; to: number; numbered: boolean; cut?: number } {
+  const n = /^\d{1,9}\. /.exec(text);
+  if (n) {
+    const rest = toRoam(depth, text.slice(n[0].length));
+    return { ...rest, from: rest.from + n[0].length, numbered: true, ...(rest.cut !== undefined && { cut: rest.cut + n[0].length }) };
+  }
+  // a number that is text: escaped in the canonical text, not in Roam's, which has no Markdown to
+  // escape in (`cut`, where the escape was)
+  const literal = /^(\d{1,9})\\(?=[.)])/.exec(text);
+  if (literal) return { ...toRoamText(depth, literal[1] + text.slice(literal[0].length)), numbered: false, cut: literal[1]!.length };
+  return { ...toRoamText(depth, text), numbered: false };
+}
+
+function toRoamText(depth: number, text: string): RoamBlock & { from: number; to: number } {
   const task = /^\[([ xX])\](?= |$)/.exec(text);
   if (task) {
     const marker = task[1] === ' ' ? '{{[[TODO]]}}' : '{{[[DONE]]}}';
@@ -40,7 +57,17 @@ function toRoam(depth: number, text: string): RoamBlock & { from: number; to: nu
   return { depth, string: text, heading: 0, from: 0, to: 0 };
 }
 
-function fromRoam(b: RoamBlock): { text: string; from: number; to: number } {
+/** Roam's block as canonical text: its number where its parent numbers its children, else a number that is text escaped (`cut`). */
+function fromRoam(b: RoamBlock, number: number | null): { text: string; from: number; to: number; cut?: number } {
+  const t = fromRoamText(b);
+  // a number that is text, escaped also after a numbered block's own number (`2. 2\. x`)
+  const pre = number !== null ? `${number}. ` : '';
+  const literal = /^\d{1,9}(?=[.)])/.exec(t.text);
+  const text = literal ? t.text.slice(0, literal[0].length) + '\\' + t.text.slice(literal[0].length) : t.text;
+  return { text: pre + text, from: t.from, to: t.to + pre.length, ...(literal && { cut: t.to + pre.length + literal[0].length }) };
+}
+
+function fromRoamText(b: RoamBlock): { text: string; from: number; to: number } {
   const task = /^\{\{\[\[(TODO|DONE)\]\]\}\}/.exec(b.string);
   if (task) {
     const box = task[1] === 'TODO' ? '[ ]' : '[x]';
@@ -83,12 +110,27 @@ export const driver: Driver = {
   emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd'],
   // Shift+Tab leaves later siblings with the parent (logical outdenting); Enter on an empty nested
   // block outdents it, as ourus's config says of Roam
-  behaves: { outdent: 'logical', enterOnEmptyItem: 'outdent', pasteStructuredLines: 'items', pasteStructuredMidText: 'after' },
-  // Roam's code blocks are a format of its own
-  refuses: ['code block', 'html', 'table', 'math'],
+  behaves: { outdent: 'logical', enterOnEmptyItem: 'outdent', pasteStructuredLines: 'items', pasteStructuredMidText: 'after', emptyItemWithChildren: 'refuse', pasteStructuredListForm: 'drop', pasteStructuredParagraphList: 'children' },
+  // Roam's code blocks are a format of its own; a heading is a block's attribute, with no boundary in
+  // its text, and a task's `{{[[TODO]]}}` is text, edited a character at a time
+  refuses: ['code block', 'html', 'table', 'math', 'markup-heading', 'markup-task'],
+  ordered: true,
   holds(doc) {
     const o = doc as Outline;
-    if (o.blocks.some((b) => /^#{4,6} /.test(b.text))) return 'a heading deeper than H3';
+    if (o.blocks.some((b) => /^#{4,6} /.test(b.text.replace(/^\d{1,9}\. /, '')))) return 'a heading deeper than H3';
+    // numbering is a parent's: all its children numbered, from 1, or none
+    const kids = new Map<number, number[]>();
+    const path: number[] = [];
+    o.blocks.forEach((b, i) => {
+      path.length = b.depth;
+      const parent = b.depth ? path[b.depth - 1]! : -1;
+      kids.set(parent, [...(kids.get(parent) ?? []), i]);
+      path[b.depth] = i;
+    });
+    for (const list of kids.values()) {
+      const numbers = list.map((i) => /^(\d{1,9})\. /.exec(o.blocks[i]!.text)?.[1]);
+      if (numbers.some(Boolean) && !numbers.every((n, k) => Number(n) === k + 1)) return 'a list numbered in part, or not from 1';
+    }
     if (o.sel && Math.min(o.sel.anchor, o.sel.head) < toRoam(0, o.blocks[o.sel.block]!.text).from && /^#/.test(o.blocks[o.sel.block]!.text)) return "a caret in a heading's #s";
     return undefined;
   },
@@ -120,7 +162,8 @@ export const driver: Driver = {
   async load(page: Page, doc) {
     const o = doc as Outline;
     const blocks = o.blocks.map((b) => toRoam(b.depth, b.text));
-    const sel = o.sel && { block: o.sel.block, anchor: shiftOffset(o.sel.anchor, blocks[o.sel.block]!.from, blocks[o.sel.block]!.to), head: shiftOffset(o.sel.head, blocks[o.sel.block]!.from, blocks[o.sel.block]!.to) };
+    const at = (p: number, { from, to, cut }: { from: number; to: number; cut?: number }): number => shiftOffset(p - (cut !== undefined && p > cut ? 1 : 0), from, to);
+    const sel = o.sel && { block: o.sel.block, anchor: at(o.sel.anchor, blocks[o.sel.block]!), head: at(o.sel.head, blocks[o.sel.block]!) };
     current = await page.evaluate(
       async ({ blocks, sel, previous }) => {
         const api = (window as any).roamAlphaAPI;
@@ -132,8 +175,10 @@ export const driver: Driver = {
         const uids: string[] = [];
         const parents: string[] = [pageUid];
         const order: number[] = [0];
+        const numbered = new Set<string>();
         for (const b of blocks) {
           const uid = api.util.generateUID();
+          if (b.numbered) numbered.add(parents[b.depth]!);
           await api.data.block.create({ location: { 'parent-uid': parents[b.depth], order: order[b.depth] }, block: { string: b.string, uid, ...(b.heading && { heading: b.heading }), open: true } });
           order[b.depth] = (order[b.depth] ?? 0) + 1;
           parents[b.depth + 1] = uid;
@@ -141,6 +186,11 @@ export const driver: Driver = {
           parents.length = b.depth + 2;
           order.length = b.depth + 2;
           uids.push(uid);
+        }
+        // a parent whose children are numbered views them so: the page, or a block
+        for (const parent of numbered) {
+          if (parent === pageUid) await api.data.page.update({ page: { uid: parent, 'children-view-type': 'numbered' } });
+          else await api.data.block.update({ block: { uid: parent, 'children-view-type': 'numbered' } });
         }
         await api.ui.mainWindow.openPage({ page: { uid: pageUid } });
         const rendered = () => uids.every((u) => document.querySelector(`.roam-article [id$="${u}"]`));
@@ -160,22 +210,24 @@ export const driver: Driver = {
         }
         return pageUid;
       },
-      { blocks: blocks.map(({ depth, string, heading }) => ({ depth, string, heading })), sel, previous: current },
+      { blocks: blocks.map(({ depth, string, heading, numbered }) => ({ depth, string, heading, numbered })), sel, previous: current },
     );
   },
 
   async read(page: Page) {
     const raw = await page.evaluate((pageUid) => {
       const api = (window as any).roamAlphaAPI;
-      const tree = api.pull('[:block/uid :block/string :block/heading :block/order {:block/children ...}]', [':block/uid', pageUid]);
-      const flat: { depth: number; string: string; heading: number; uid: string }[] = [];
-      const walk = (kids: any[] | undefined, depth: number) => {
-        for (const k of [...(kids ?? [])].sort((a, b) => a[':block/order'] - b[':block/order'])) {
-          flat.push({ depth, string: k[':block/string'] ?? '', heading: k[':block/heading'] ?? 0, uid: k[':block/uid'] });
-          walk(k[':block/children'], depth + 1);
-        }
+      const tree = api.pull('[:block/uid :block/string :block/heading :block/order :children/view-type {:block/children ...}]', [':block/uid', pageUid]);
+      const flat: { depth: number; string: string; heading: number; uid: string; number: number | null }[] = [];
+      // a parent viewing its children as numbered numbers them from 1
+      const numbers = (x: any): boolean => String(x?.[':children/view-type'] ?? '').replace(/^:/, '') === 'numbered';
+      const walk = (parent: any, depth: number) => {
+        [...(parent?.[':block/children'] ?? [])].sort((a, b) => a[':block/order'] - b[':block/order']).forEach((k, n) => {
+          flat.push({ depth, string: k[':block/string'] ?? '', heading: k[':block/heading'] ?? 0, uid: k[':block/uid'], number: numbers(parent) ? n + 1 : null });
+          walk(k, depth + 1);
+        });
       };
-      walk(tree?.[':block/children'], 0);
+      walk(tree, 0);
       const focused = api.ui.getFocusedBlock()?.['block-uid'];
       const ta = document.activeElement as HTMLTextAreaElement | null;
       const i = focused && ta?.tagName === 'TEXTAREA' ? flat.findIndex((b) => b.uid === focused) : -1;
@@ -184,12 +236,13 @@ export const driver: Driver = {
       const back = ta?.selectionDirection === 'backward';
       return { flat, sel: i >= 0 ? { block: i, anchor: back ? ta!.selectionEnd : ta!.selectionStart, head: back ? ta!.selectionStart : ta!.selectionEnd } : null };
     }, current);
-    const texts = raw.flat.map((b) => fromRoam(b));
+    const texts = raw.flat.map((b) => fromRoam(b, b.number));
     const blocks = raw.flat.map((b, i) => ({ depth: b.depth, text: texts[i]!.text }));
     let sel = raw.sel;
     if (sel) {
-      const { from, to } = texts[sel.block]!;
-      sel = { block: sel.block, anchor: shiftOffset(sel.anchor, from, to), head: shiftOffset(sel.head, from, to) };
+      const { from, to, cut } = texts[sel.block]!;
+      const at = (p: number): number => shiftOffset(p, from, to) + (cut !== undefined && shiftOffset(p, from, to) > cut ? 1 : 0);
+      sel = { block: sel.block, anchor: at(sel.anchor), head: at(sel.head) };
     }
     return { blocks, sel };
   },

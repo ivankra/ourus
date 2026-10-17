@@ -78,6 +78,18 @@ export interface Config {
   readonly backspaceAtTopItem: 'unwrap' | 'refuse';
 
   /**
+   * Backspace or Delete on an empty item with children, where they would move up into its place
+   * (Backspace with nothing above it in its parent, Delete, whose first child joins up into it):
+   * - `lift` (the default): the item goes, its children taking its place, a level up.
+   * - `refuse` (as Logseq, Tine, Roam, WorkFlowy, Dynalist and Obsidian's Outliner do nothing):
+   *   `has-children`. SiYuan, BlockNote and true-outliner refuse only Backspace with nothing above the
+   *   item, and lift its children on Delete.
+   *
+   * Backspace into an item above it, which takes its children at their depth, joins either way.
+   */
+  readonly emptyItemWithChildren: 'lift' | 'refuse';
+
+  /**
    * Enter and Shift-Enter on the code lines of a fenced block:
    * - `true` (the default): ourus makes the new line, in the containers the block is in, with the
    *   line's own indentation.
@@ -129,12 +141,66 @@ export interface Config {
   readonly pasteStructuredMidText: 'split' | 'after';
 
   /**
+   * Structured paste (Ctrl-V) of several lines, or of one item, at the end of a paragraph's or an
+   * item's text:
+   * - `after` (the default, as in Logseq, Tine, Roam, SiYuan and true-outliner): the paste goes where
+   *   Enter at the end of the text would put a new node.
+   * - `join` (as in WorkFlowy and BlockNote, and Dynalist with Markdown as plain text): as
+   *   `pasteStructuredMidText: split` with nothing after the caret: the paste's first text joins the
+   *   node's text, the rest follows. The node's children follow the paste (under its last item, or
+   *   after it in a paragraph's list), or with `enterMidItem: child` stay, the paste their first
+   *   siblings. A heading, a quote or code joins nothing, and goes as with `after`.
+   */
+  readonly pasteStructuredAtEnd: 'after' | 'join';
+
+  /**
+   * Structured paste (Ctrl-V) into an item that has children, at the end of its text or in the middle
+   * of it, and a list pasted at the end of a heading's title, its section holding content:
+   * - `children` (the default, as in Logseq and Roam): the paste goes first among them, where Enter
+   *   at the end of the text puts a new node.
+   * - `after` (as in Tine, WorkFlowy, Dynalist and SiYuan): the paste goes after them, as the item's
+   *   next siblings, or last in the heading's section; the text is left as it is, nothing split or
+   *   joined.
+   */
+  readonly pasteStructuredOnParent: 'children' | 'after';
+
+  /**
+   * Structured paste of a paragraph and the list right after it, landing in a list:
+   * - `siblings` (the default, as in Logseq, Tine, WorkFlowy and BlockNote): the list's items follow
+   *   the paragraph's item, at its level: in a list a paragraph owns no list.
+   * - `children` (as in Roam, Dynalist and true-outliner): they nest under it, as the paragraph owns
+   *   its list where the clipboard was written.
+   */
+  readonly pasteStructuredParagraphList: 'siblings' | 'children';
+
+  /**
+   * Structured paste (Ctrl-V) of a list into a list of the other kind (numbers into bullets, bullets
+   * into numbers); a list of the same kind joins the destination's either way:
+   * - `text` (the default): the pasted items take the list's form; in a bullet list a pasted number
+   *   is kept as text (`- 1\. x`), and on a list's empty first item a single pasted ordered list
+   *   makes the list ordered. A nested list keeps its own form.
+   * - `literal` (as Roam, WorkFlowy and Dynalist paste Markdown that comes as plain text): a pasted
+   *   number is always text, nested lists' too: the items are bullets, or numbered in an ordered
+   *   list, their text starting with it (`2. 1\. x`).
+   * - `drop` (as in SiYuan, and in Logseq, Tine, Roam, WorkFlowy and Dynalist from a copy of a
+   *   rendered page, whose HTML list has no number text): the pasted items take the list's form,
+   *   their numbers dropped. A nested list keeps its own form.
+   * - `own` (as in BlockNote and true-outliner): the paste keeps its form, a list of its own where it
+   *   lands; the list it lands in keeps its own, renumbered as any list a paste touches.
+   *
+   * A pasted item whose text joins the node's (`pasteStructuredMidText: split`, `pasteStructuredAtEnd:
+   * join`) keeps its number as text under `text` (in a bullet list) and `literal`, and loses it under
+   * `drop` and `own`.
+   */
+  readonly pasteStructuredListForm: 'text' | 'literal' | 'drop' | 'own';
+
+  /**
    * Delete at the end of a node's text before a blank line, and Backspace at the start of a node's
    * text after one:
    * - `join` (the default, as outliners join nodes): the node below joins the node above, the blank
    *   lines between going too.
-   * - `gap` (as in Obsidian, a text editor here): one blank line goes, the nodes staying as they are;
-   *   a second press joins them.
+   * - `gap` (as in Obsidian, SilverBullet and Emacs, text editors here): one blank line goes, the
+   *   nodes staying as they are; a second press joins them.
    *
    * Between two paragraphs the blank lines go either way, the paragraphs becoming one (ourus's edit,
    * as the host's would make them).
@@ -165,7 +231,9 @@ export interface Config {
   //   Decided (2026-10-14): build it, `detect` by default with spaces as the fallback, so an
   //   Obsidian host can pass `tab` for its "Use tabs".
   // - homeAtTask: 'after' | 'before'. Whether Home stops after a task's checkbox or before it.
-  // - pastedNumbering: 'continue' | 'restart'. Whether a pasted ordered run takes the list's numbers.
+  // - pastedNumbering: 'continue' | 'restart'. Whether a pasted ordered run takes the list's numbers,
+  //   and whether the items after a list of its own (`pasteStructuredListForm: own`) restart at 1, as
+  //   BlockNote, Tine, WorkFlowy and true-outliner number them.
   // - emptyNodeLeft: 'keep' | 'remove'. Leaving an empty node the text can't hold. Decided instead
   //   (spec/placeholders.md): an empty item stays, set off by a blank line; an empty paragraph goes.
   //   It is tied into placeholders and `settlePlaceholders`, so it stays a decision, not an option.
@@ -182,11 +250,16 @@ const defaults: Config = {
   enterMidItem: 'sibling',
   enterAtTextStart: 'into',
   backspaceAtTopItem: 'unwrap',
+  emptyItemWithChildren: 'lift',
   handleFenceContents: true,
   headingEditing: 'text',
   taskEditing: 'checkbox',
   pasteStructuredLines: 'text',
   pasteStructuredMidText: 'split',
+  pasteStructuredAtEnd: 'after',
+  pasteStructuredOnParent: 'children',
+  pasteStructuredParagraphList: 'siblings',
+  pasteStructuredListForm: 'text',
   deleteAtGap: 'join',
   editInMarkup: 'host',
 };
@@ -200,11 +273,16 @@ const values: { readonly [K in keyof Config]: readonly Config[K][] } = {
   enterMidItem: ['sibling', 'child'],
   enterAtTextStart: ['into', 'stay'],
   backspaceAtTopItem: ['unwrap', 'refuse'],
+  emptyItemWithChildren: ['lift', 'refuse'],
   handleFenceContents: [true, false],
   headingEditing: ['text', 'block'],
   taskEditing: ['checkbox', 'text', 'block'],
   pasteStructuredLines: ['text', 'items'],
   pasteStructuredMidText: ['split', 'after'],
+  pasteStructuredAtEnd: ['after', 'join'],
+  pasteStructuredOnParent: ['children', 'after'],
+  pasteStructuredParagraphList: ['siblings', 'children'],
+  pasteStructuredListForm: ['text', 'literal', 'drop', 'own'],
   deleteAtGap: ['join', 'gap'],
   editInMarkup: ['host', 'refuse'],
 };

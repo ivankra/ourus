@@ -36,7 +36,7 @@ outliners and ourus do.
 Item becomes last child of previous sibling.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -58,7 +58,7 @@ The item's whole subtree moves with the item.
 Bare Obsidian indents only the line, so `c` stops being `b`'s child.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -86,7 +86,7 @@ Bare Obsidian and the text editors indent the line by their own unit, which leav
 below `x`, a child of nothing it can be.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -109,7 +109,7 @@ An ordered item that starts a new list is renumbered from 1, as only a list star
 interrupt a paragraph: `   2. b` would read as more of `a`'s text. The list it left renumbers too.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -131,7 +131,7 @@ rank: common
 Items joining an existing ordered list continue its numbering.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -153,7 +153,7 @@ rank: common
 Tab-indented list keeps indenting with tabs.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -175,7 +175,7 @@ rank: common
 Tab nesting elsewhere in the list sets the indent.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -202,7 +202,7 @@ Due to `- a\n  -` parsing as a setext heading in commonmark,
 it needs to open with a placeholder until something is typed.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -229,7 +229,7 @@ rank: core
 Selected siblings indent together.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -253,7 +253,7 @@ rank: common
 First item cannot indent: there is nothing above to nest under, and no tab is typed either.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -278,7 +278,7 @@ First item of a paragraph's list cannot indent: the paragraph owns the list, and
 nest under a paragraph's text.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -306,7 +306,7 @@ its level, and Markdown can skip one (as org-mode demotes a first subheading). B
 spaces before the `#`s, which leaves the heading as it was.
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -330,7 +330,7 @@ Fenced code reindents with its item.
 Its own relative indentation and blank lines are payload, kept there and back.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ````buffer
@@ -375,7 +375,7 @@ A tab after the marker: shifting the line changes how far the tab reaches, not w
 starts.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -397,7 +397,7 @@ Untouched list keeps its numbers.
 A list whose items a command leaves alone keeps its numbers, however they run.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -425,7 +425,7 @@ Setext heading demoted with its subheading.
 No app measured changes a setext heading's level.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -451,7 +451,7 @@ Indent keeps CRLF endings.
 The lines keep their CRLF endings, there and back.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -478,7 +478,7 @@ rank: rare
 A paragraph indented under a paragraph becomes its first item, with the `bullet` option's bullet.
 
 ```yaml
-rank: edge
+tags: edge
 bullet: +
 ```
 
@@ -502,7 +502,7 @@ Hard-break spaces survive an indent.
 A structural command may rewrite prefixes, never a node's own text.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -532,7 +532,7 @@ rank: edge
 Code whitespace survives an indent.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ````buffer
@@ -562,7 +562,7 @@ again, set off by a blank line, and the text comes back as it was.
 Bare Obsidian and its Outliner indent the paragraph by a tab, which makes it indented code.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -594,7 +594,7 @@ again.
 Bare Obsidian and its Outliner make it indented code, as in [Indent21](#indent21).
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -619,7 +619,7 @@ A heading with a heading above at its level becomes that heading's last subheadi
 subheadings going one level deeper with it.
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -643,7 +643,7 @@ rank: common
 A level-6 heading can't go deeper (Outdent5's mirror).
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -667,7 +667,7 @@ rejected: at-h6-bound
 A setext level-2 heading indents to ATX `###`, the only way to write level 3.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -690,7 +690,7 @@ Title┃
 Indent, then outdent: the item and its subtree are back as they were.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -723,7 +723,7 @@ rank: common
 Indent, then outdent, on a selection: back as it was (Indent9's inverse).
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -761,7 +761,7 @@ From before the marker, Tab indents the item and the caret ends in its text, whe
 break the marker.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -782,7 +782,7 @@ A paragraph indented under an item becomes its child item, without the blank lin
 separated the item from a paragraph, and kept, it would make the list loose.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -805,7 +805,7 @@ item followed by one ends there and could hold no child. Outdent gives the outli
 tight now.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer

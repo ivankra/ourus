@@ -15,5 +15,5 @@ export const driver = obsidianDriver({
   holds: keepsCaretOnText('true-outliner', { spaces: true }),
   // not measured against ourus's options but one: Enter mid-text keeps the children with the first
   // half (E7)
-  behaves: { enterAtTextStart: undefined, taskEditing: undefined, deleteAtGap: undefined, enterOnEmptyItem: undefined, enterMidItem: 'child', pasteStructuredMidText: 'after' },
+  behaves: { enterAtTextStart: undefined, taskEditing: undefined, deleteAtGap: undefined, enterOnEmptyItem: undefined, enterMidItem: 'child', pasteStructuredMidText: 'after', pasteStructuredListForm: 'own', pasteStructuredParagraphList: 'children' },
 });

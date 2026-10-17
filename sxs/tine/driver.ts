@@ -5,13 +5,14 @@
 // Each test's page is pushed into the backend's pages and opened through the search (Ctrl+K); the
 // caret is the block's textarea's. The actions are Tine's keys on Linux.
 //
-// - A block's text is its `raw`; a task's checkbox is `TODO` / `DONE`, as in Logseq.
+// - A block's text is its `raw`; a task's checkbox is `TODO` / `DONE`, and a numbered block has
+//   Logseq's property `logseq.order-list-type:: number`, as in Logseq.
 // - Undo is "page only" (Tine's "Toggle undo/redo mode"), so it stays within the test's page.
 // - The textarea is committed to the store as it is typed in, so the store is read as it is.
 
 import type { Page } from 'playwright-core';
 import type { Driver } from '../lib/driver.ts';
-import type { Outline } from '../lib/outline.ts';
+import { unescapeLaterLines, type Outline } from '../lib/outline.ts';
 
 /** Tine's keys for the spec's actions (Linux); the `select…` motions add Shift. */
 const MOTIONS: Record<string, string> = {
@@ -44,6 +45,33 @@ function swapPrefix(text: string, table: [RegExp, string][]): { text: string; fr
 
 /** An offset in a text whose prefix of `from` characters became `to` characters: past it, shifted; inside it, clamped. */
 const shiftOffset = (p: number, from: number, to: number): number => (p >= from ? p - from + to : Math.min(p, to));
+
+/** The property that makes a block numbered (Logseq's, which Tine reads): a run of such siblings is numbered from 1. */
+const NUMBERED = 'logseq.order-list-type:: number';
+
+/**
+ * A block's canonical text as Tine's: a task's checkbox as its marker, and a numbered block (`1. x`)
+ * without its number, the property after its text; `from` and `to` the prefixes' lengths, for the caret.
+ */
+function toTine(text: string): { text: string; from: number; to: number } {
+  const n = /^\d{1,9}\. /.exec(text);
+  const task = swapPrefix(n ? text.slice(n[0].length) : text, TO_TINE);
+  return { text: n ? `${task.text}\n${NUMBERED}` : task.text, from: (n?.[0].length ?? 0) + task.from, to: task.to };
+}
+
+/**
+ * Tine's text of a block as canonical: a numbered one's property taken off and its number (its place
+ * in its run of numbered siblings) put before its text; a number that is text escaped (`1\. x`, the
+ * escape at `cut`); a task's marker as its checkbox.
+ */
+function fromTine(raw: string, number: number | null): { text: string; from: number; to: number; cut?: number } {
+  const task = swapPrefix(raw.replace(/\n?logseq\.order-list-type:: number[ \t]*(?=\n|$)/, ''), FROM_TINE);
+  // a number that is text, escaped also after a numbered block's own number (`2. 2\. x`)
+  const pre = number !== null ? `${number}. ` : '';
+  const literal = /^\d{1,9}(?=[.)])/.exec(task.text);
+  const text = literal ? task.text.slice(0, literal[0].length) + '\\' + task.text.slice(literal[0].length) : task.text;
+  return { text: pre + text, from: task.from, to: task.to + pre.length, ...(literal && { cut: task.to + pre.length + literal[0].length }) };
+}
 
 /**
  * A fenced code block's code, where its text has one: Tine edits a code block in an editor of the code
@@ -91,10 +119,21 @@ export const driver: Driver = {
     ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
   },
   emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd'],
-  refuses: [],
-  behaves: { outdent: 'direct', enterOnEmptyItem: 'sibling', enterMidItem: 'child', pasteStructuredMidText: 'after' },
+  // a heading's `#`s, a task's `TODO` and a code block's fences are text in a block, edited a
+  // character at a time
+  refuses: ['markup-heading', 'markup-task', 'markup-fence'],
+  ordered: true,
+  behaves: { outdent: 'direct', enterOnEmptyItem: 'sibling', enterMidItem: 'child', pasteStructuredMidText: 'after', emptyItemWithChildren: 'refuse', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after' },
   holds(doc) {
     const o = doc as Outline;
+    // a run of numbered siblings is numbered from 1, whatever it was written with
+    const run: number[] = [];
+    for (const b of o.blocks) {
+      run.length = b.depth + 1;
+      const n = /^(\d{1,9})\. /.exec(b.text);
+      run[b.depth] = n ? (run[b.depth] ?? 0) + 1 : 0;
+      if (n && Number(n[1]) !== run[b.depth]) return 'a numbered list from another number than 1';
+    }
     if (!o.sel) return undefined;
     const code = codeOf(o.blocks[o.sel.block]!.text);
     const inCode = (p: number): boolean => !!code && p >= code.start && p <= code.end;
@@ -144,7 +183,7 @@ export const driver: Driver = {
 
   async load(page: Page, doc) {
     const o = doc as Outline;
-    const blocks = o.blocks.map((b) => ({ depth: b.depth, ...swapPrefix(b.text, TO_TINE) }));
+    const blocks = o.blocks.map((b) => ({ depth: b.depth, ...toTine(b.text) }));
     const swapped = o.sel && blocks[o.sel.block]!;
     const sel = o.sel && { block: o.sel.block, anchor: shiftOffset(o.sel.anchor, swapped!.from, swapped!.to), head: shiftOffset(o.sel.head, swapped!.from, swapped!.to) };
     current = `sxs-${run}-${String(++pages).padStart(5, '0')}`;
@@ -202,8 +241,17 @@ export const driver: Driver = {
     const raw = await page.evaluate((name) => {
       const [doc] = (globalThis as any).__sxsDoc;
       const p = doc.pages.find((q: any) => q.name === name);
-      const flat: { depth: number; text: string; id: string }[] = [];
-      const walk = (ids: string[], d: number) => ids.forEach((id) => (flat.push({ depth: d, text: doc.byId[id].raw, id }), walk(doc.byId[id].children, d + 1)));
+      const flat: { depth: number; text: string; id: string; number: number | null }[] = [];
+      // a numbered block's place in its run of numbered siblings, from 1, as Tine counts it
+      const numbered = (raw: string): boolean => /(?:^|\n)logseq\.order-list-type:: number[ \t]*(?:\n|$)/.test(raw ?? '');
+      const walk = (ids: string[], d: number) => {
+        let n = 0;
+        ids.forEach((id) => {
+          n = numbered(doc.byId[id].raw) ? n + 1 : 0;
+          flat.push({ depth: d, text: doc.byId[id].raw, id, number: n || null });
+          walk(doc.byId[id].children, d + 1);
+        });
+      };
       walk(p?.roots ?? [], 0);
       const ta = document.activeElement as HTMLTextAreaElement | null;
       const editing = ta?.tagName === 'TEXTAREA' ? ta.closest('.ls-block')?.getAttribute('data-block-id') : null;
@@ -214,6 +262,7 @@ export const driver: Driver = {
         .filter((k) => k >= 0);
       return {
         blocks: flat.map(({ depth, text }) => ({ depth, text })),
+        numbers: flat.map(({ number }) => number),
         sel: i >= 0 ? { block: i, anchor: back ? ta!.selectionEnd : ta!.selectionStart, head: back ? ta!.selectionStart : ta!.selectionEnd } : null,
         code: i >= 0 && ta!.classList.contains('code-edit'),
         selected,
@@ -224,14 +273,16 @@ export const driver: Driver = {
       const start = codeOf(raw.blocks[raw.sel.block]!.text)?.start ?? 0;
       raw.sel = { block: raw.sel.block, anchor: raw.sel.anchor + start, head: raw.sel.head + start };
     }
-    const swaps = raw.blocks.map((b) => swapPrefix(b.text, FROM_TINE));
+    const swaps = raw.blocks.map((b, i) => fromTine(b.text, raw.numbers[i] ?? null));
     const blocks = raw.blocks.map((b, i) => ({ depth: b.depth, text: swaps[i]!.text }));
     let sel = raw.sel;
     if (sel) {
-      const { from, to } = swaps[sel.block]!;
-      sel = { block: sel.block, anchor: shiftOffset(sel.anchor, from, to), head: shiftOffset(sel.head, from, to) };
+      const { from, to, cut } = swaps[sel.block]!;
+      const at = (p: number): number => shiftOffset(p, from, to) + (cut !== undefined && shiftOffset(p, from, to) > cut ? 1 : 0);
+      sel = { block: sel.block, anchor: at(sel.anchor), head: at(sel.head) };
     }
-    return { blocks, sel, ...(raw.selected.length && { selected: raw.selected }) };
+    // the block's later lines keep the escapes Markdown source has at their start; a block's text needs none
+    return unescapeLaterLines({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) });
   },
 
   async act(page: Page, action: string, settle: () => Promise<void>) {

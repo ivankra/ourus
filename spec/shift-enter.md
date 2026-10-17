@@ -38,7 +38,7 @@ Continues at the content column. The space at the break goes with neither line, 
 and Backspace doesn't bring it back ([ShiftEnter21](#shiftenter21)).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -57,7 +57,7 @@ rank: core
 Nested item under ordered parent.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -78,7 +78,7 @@ rank: common
 Tab-nested item breaks with tab.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -100,7 +100,7 @@ Empty new line is held by a placeholder: an empty new line would end the paragra
 placeholder holds it until something is typed.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -122,7 +122,7 @@ Leading bullet escaped: text that would start a block on its own line, or underl
 into a heading, is escaped.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -141,7 +141,7 @@ rank: common
 Ordered marker escaped.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -161,7 +161,7 @@ Setext equals underline escaped. Bare Obsidian leaves `===` under `Title `, whic
 paragraph a heading.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -180,7 +180,7 @@ Title
 Setext dash underline escaped.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -199,7 +199,7 @@ Title
 HTML tag escaped on new line.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -220,7 +220,7 @@ the text: the line and the rest become the item's next paragraph, as in Logseq. 
 back ([Backspace19](backspace.md#backspace19)).
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -250,7 +250,7 @@ A second Shift-Enter, on the empty line the first one made, is a paragraph break
 blank line, and the caret moves to a new empty paragraph inside the item, its first child.
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -273,7 +273,7 @@ rank: common
 After a paragraph that isn't an item's, the new paragraph follows it.
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -294,7 +294,7 @@ para
 Rejected at the start of text: the item's first line would be empty.
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -316,7 +316,7 @@ rejected: not-expressible
 Rejected in a heading: a heading is one line (Enter splits it).
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -338,7 +338,7 @@ rejected: not-expressible
 Shift-Enter twice at an item's end, then typing: the text is the item's second paragraph.
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -358,7 +358,7 @@ rank: common
 Paragraph break in a CRLF item: new lines take the ending of the line they split.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -378,7 +378,7 @@ rank: rare
 Shift-Enter, then Backspace: the line break goes, and the text is as it was.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -405,7 +405,7 @@ here (`2.` can't interrupt a paragraph): lezer (CodeMirror, Obsidian's Live Prev
 item. The escape keeps every reader agreeing.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -425,7 +425,7 @@ A table's delimiter row split onto a new line is escaped: under the text it woul
 GFM. It is escaped in every flavor, so the text is the same in each.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -445,7 +445,7 @@ Shift-Enter, then Backspace, where the break escaped a marker: the join drops th
 mid-line serves nothing ([Enter43](enter.md#enter43)'s mirror).
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -473,7 +473,7 @@ reads none (a continuation line's leading spaces aren't text); kept at the end o
 would be stripped by editors that trim whitespace, and two or more would make a hard break.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -500,7 +500,7 @@ In the marker, a line break can't be one in the item's text: the host makes it
 paragraph.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -523,7 +523,7 @@ notApplicable
 With `editInMarkup: refuse`, it is refused.
 
 ```yaml
-rank: rare
+tags: rare free-form
 editInMarkup: refuse
 ```
 
@@ -547,7 +547,7 @@ A line break after prose that starts like a link reference definition: `[Note]: 
 its own would be one, and the rest a paragraph after it, so it is escaped.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -566,7 +566,7 @@ rank: rare
 Shift-Enter in a table's row is refused, as Enter is ([Enter50](enter.md#enter50)).
 
 ```yaml
-rank: rare
+tags: rare free-form
 flavor: gfm
 ```
 
@@ -594,7 +594,7 @@ Shift-Enter at the start of a continuation line that reads as a link reference d
 own: the new paragraph's start is escaped, so it stays text.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer

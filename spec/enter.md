@@ -59,7 +59,7 @@ Splits item at the caret. The space at the split goes with neither half, as in L
 Obsidian, and Backspace doesn't bring it back ([Enter44](#enter44) says why).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -82,7 +82,7 @@ Ordered item counts on at end.
 At the end of an item, Enter makes an empty sibling. Ordered items count on.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -104,7 +104,7 @@ SiYuan, BlockNote and Obsidian (bare and Outliner) do this. Logseq and Tine make
 child ([Enter3b](#enter3b)).
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -126,7 +126,7 @@ With `enterMidItem: child`, the rest becomes the item's first child and the item
 children, as in Logseq and Tine.
 
 ```yaml
-rank: edge
+tags: edge
 enterMidItem: child
 ```
 
@@ -149,7 +149,7 @@ The sibling that takes the children is numbered on; where its number is a column
 children move with its content column.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -173,7 +173,7 @@ Enter in the middle of an item with children, then Backspace: the text comes bac
 children going back to the joined item.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -203,7 +203,7 @@ parent's text, where `  - ` would be a setext underline, it is held by a placeho
 is typed. Bare Obsidian makes a sibling, which takes the children.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -225,7 +225,7 @@ Enter on an empty nested item that is the last child outdents it: Enter twice en
 as at the top level ([Enter6](#enter6)).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -249,7 +249,7 @@ Obsidian removes the marker without the blank line, so what is typed there conti
 as a lazy line.
 
 ```yaml
-rank: core
+tags: core free-form
 ```
 
 ```buffer
@@ -273,7 +273,7 @@ The block apps do the same; bare Obsidian leaves the list, which is `enterOnEmpt
 ([Enter7b](#enter7b)).
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -297,7 +297,7 @@ With `enterOnEmptyItem: outdent`, Enter on an empty item in the middle of a top-
 the list, splitting it in two.
 
 ```yaml
-rank: edge
+tags: edge free-form
 enterOnEmptyItem: outdent
 ```
 
@@ -324,7 +324,7 @@ outliners keep it, written `\- def` since `- - def` would be a nested item. Bare
 nested item or a paragraph line.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -343,7 +343,7 @@ rank: common
 Trailing heading marker escaped.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -364,7 +364,7 @@ HTML block tag escaped.
 That includes an HTML block's opening tag, and a link reference definition.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -383,7 +383,7 @@ rank: rare
 Link reference definition escaped.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -405,7 +405,7 @@ Bare Obsidian breaks the line, which is one paragraph to every reader: that is S
 ([ShiftEnter7](shift-enter.md#shiftenter7)).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -426,7 +426,7 @@ Enter repeatedly walks out of a nested list and then out of the list. The blank 
 paragraph; bare Obsidian leaves it right under `b`, a lazy line of `b`.
 
 ```yaml
-rank: core
+tags: core free-form
 ```
 
 ```buffer
@@ -449,7 +449,7 @@ In a loose list, Enter on an empty item in the middle makes another, set off as 
 ([Enter7](#enter7), [Enter36](#enter36)).
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -478,7 +478,7 @@ With `enterOnEmptyItem: outdent`, leaving a loose list in the middle needs no ex
 in bare Obsidian.
 
 ```yaml
-rank: rare
+tags: rare free-form
 enterOnEmptyItem: outdent
 ```
 
@@ -506,7 +506,7 @@ A lazy continuation line is part of the item's text, so it goes with the second 
 break at the split going as spaces do.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -528,7 +528,7 @@ Enter copies the CRLF of the split line.
 New lines take the ending of the line they split.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -551,7 +551,7 @@ CRLF line in an LF document.
 New lines take the ending of the line they split.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -576,7 +576,7 @@ children ([Enter4](#enter4)). Bare Obsidian removes the marker, which leaves the
 their own.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -599,7 +599,7 @@ as in an item ([Enter8](#enter8)); it takes the paragraph's list, as any second 
 Obsidian makes `- x` the list's first item.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -623,7 +623,7 @@ Enter in a heading above indented code sets the code apart.
 The new paragraph needs a blank line before the code, or it takes the code in as a continuation.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -646,7 +646,7 @@ A new item before `9.` renumbers it to `10.`, a column wider, so the item's chil
 content column. Bare Obsidian leaves the child at three columns, no longer `10.`'s.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -673,7 +673,7 @@ item's start ([Enter29](#enter29)). Right after `a`'s text the empty item would 
 underline, so a placeholder holds it.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -696,7 +696,7 @@ from the caret, is set off from the parent's text by a blank line. Bare Obsidian
 under `- a`: a setext underline, `a` a heading.
 
 ```yaml
-rank: edge
+tags: edge
 enterAtTextStart: stay
 ```
 
@@ -721,7 +721,7 @@ WorkFlowy, Dynalist and Tine do. Roam and Obsidian's Outliner outdent it logical
 jumping below `c` ([Enter30](#enter30)); bare Obsidian outdents it directly.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -748,7 +748,7 @@ On an empty first child, another empty item goes above it, the caret going into 
 only the caret differs.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -773,7 +773,7 @@ Enter at the start of an item's text puts an empty item above, the caret going i
 Bare Obsidian, its Outliner and BlockNote keep the caret with the text ([Enter29b](#enter29b)).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -797,7 +797,7 @@ With `enterAtTextStart: stay`, the caret stays with the text, as in bare Obsidia
 BlockNote and SilverBullet.
 
 ```yaml
-rank: common
+tags: common
 enterAtTextStart: stay
 ```
 
@@ -822,7 +822,7 @@ With `enterOnEmptyItem: outdent` and `outdent: logical` (Roam's way), the item o
 would, moving past its later siblings.
 
 ```yaml
-rank: edge
+tags: edge
 enterOnEmptyItem: outdent
 outdent: logical
 ```
@@ -849,7 +849,7 @@ Enter at the start of an item with children puts the new item above, the caret g
 placeholder is needed: an empty item can start a document, or follow an item or a heading.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -872,7 +872,7 @@ caret going into it; the heading and its section stay as they are, as Dynalist, 
 WorkFlowy keep a heading block. True-outliner puts an empty heading above instead.
 
 ```yaml
-rank: common
+tags: common markup-heading
 ```
 
 ```buffer
@@ -902,7 +902,7 @@ heading stays above, the title a paragraph below, under it. Bare Obsidian, the t
 and Tine do this.
 
 ```yaml
-rank: edge
+tags: edge markup-heading
 enterAtTextStart: stay
 ```
 
@@ -924,7 +924,7 @@ caret going into it, as at an item's start ([Enter29](#enter29)). What is typed 
 paragraph of its own; left without typing, it is a blank line again.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -960,7 +960,7 @@ line above, the caret staying with the text. Bare Obsidian and the text editors 
 line shows nothing, and text typed after Up joins `intro` or `hello` (Up lands next to one of them).
 
 ```yaml
-rank: edge
+tags: edge
 enterAtTextStart: stay
 ```
 
@@ -981,7 +981,7 @@ Enter with the caret in an item's marker acts at its text start ([Enter29](#ente
 Obsidian splits the marker from the text, unmaking the item.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -1002,7 +1002,7 @@ An ordered marker after the caret stays text too, escaped before its `.`.
 A backslash before a digit escapes nothing, so the escape goes before the `.` (or `)`).
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -1021,7 +1021,7 @@ rank: rare
 In a loose list, Enter sets the new item off as the others are. Bare Obsidian adds it tight.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -1046,7 +1046,7 @@ In a loose list in a quote, the blank line that sets the new item off is quoted:
 would end the quote.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -1072,7 +1072,7 @@ becomes the item's next sibling, numbered on, as Enter on an empty nested item o
 more of the item below the line, Enter there is the host's.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -1094,7 +1094,7 @@ rank: rare
 Enter, then Backspace: the split item is joined back.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -1122,7 +1122,7 @@ rank: core
 Enter at the end of an item, then Backspace: the empty item goes, and the text is as it was.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -1151,7 +1151,7 @@ Enter on the empty paragraph that leaving a list made is refused: an empty parag
 under the caret, and blank lines more make no second one.
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -1185,7 +1185,7 @@ A list marker after the caret stays text in a heading too: the rest is a paragra
 escaped. The list below needs no blank line: it is the new paragraph's either way.
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -1206,7 +1206,7 @@ rank: edge
 In a setext title the same: the underline stays with the heading, and the rest, escaped, follows it.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -1228,7 +1228,7 @@ Enter, then Backspace, where the split escaped a marker: the join drops the esca
 which mid-line serves nothing, and the text is as it was.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -1259,7 +1259,7 @@ would be invisible, and stripped by editors that trim whitespace on save; added 
 it would also go into joins of text that never had one.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -1285,7 +1285,7 @@ At the start of a heading's text right under a paragraph, the empty paragraph is
 right under `para` it would be more of `para`'s text.
 
 ```yaml
-rank: edge
+tags: edge markup-heading
 ```
 
 ```buffer
@@ -1309,7 +1309,7 @@ At the start of a quote's first paragraph, the empty paragraph is the quote's fi
 `>` starts.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -1331,7 +1331,7 @@ would be one, invisible, so it is escaped and stays a paragraph. Backspace takes
 the escape with it, as a join drops the escape a split wrote ([Enter43](#enter43)).
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -1358,7 +1358,7 @@ The same in an item, whose text would be a definition and the item empty. Here B
 escape: without the space the split dropped ([Enter44](#enter44)), `[a]: bc` would be a definition.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -1385,7 +1385,7 @@ since in GFM a line right after a table is another row. Bare Obsidian breaks the
 the text typed there is a row. Backspace on the empty paragraph takes it back.
 
 ```yaml
-rank: common
+tags: common
 flavor: gfm
 ```
 
@@ -1428,7 +1428,7 @@ after┃
 Enter inside a table's row is refused: a row is a line, and a break in it would make two rows.
 
 ```yaml
-rank: edge
+tags: edge free-form
 flavor: gfm
 ```
 
@@ -1459,7 +1459,7 @@ title's line ([Backspace36](backspace.md#backspace36)), as any join after a spli
 does (the README's guarantee 5).
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -1502,7 +1502,7 @@ The rest of a setext title, a paragraph below its underline now, is set apart fr
 setext heading right below, which it would join (and so become part of that title).
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -1531,7 +1531,7 @@ is escaped, as a link reference definition is ([Enter47](#enter47)); joined back
 as it has nothing left to keep ([Enter43](#enter43)).
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer

@@ -212,13 +212,15 @@ b┃
 ````
 
 A test's config block also holds the clipboard it starts with, as a literal block, its lines
-indented two spaces under `clipboard:`. `|` ends its text with a line break, `|-` without one:
+indented two spaces under `clipboard:`. `|` ends its text with a line break, `|-` without one. One
+line without a line break, which paste puts inline as text, is a quoted string instead, and only it
+(`clipboard: "1. Introduction"`):
 
 ````md
 ## Paste13
 
 ```yaml
-rank: edge
+tags: edge
 clipboard: |
   1. x
   2. y
@@ -241,19 +243,63 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
   - `status`: `pending` marks behaviour agreed on but not built yet. It is reported as a todo, and
     fails once it passes, so it gets promoted. `ready` (the default) is the rest; a test can set it
     over a file's `status: pending`;
-  - `rank`: how often a user meets the case, `core` (every session), `common`, `edge` or `rare`;
-    review metadata, never an editor setting. Every case has one, and every `core` case is walked
-    through in a flow of [scenarios.md](scenarios.md) (the spec test checks both);
   - `flavor`: the Markdown flavor the text is read in, `commonmark`, `gfm` or `obsidian`. An example
     that names none runs in each of them, with the same expectations;
+  - `tags`: words separated by spaces, in a test's config block only, every test having it. The
+    first is the case's **rank**, how often a user meets it: `core` (every session), `common`,
+    `edge` or `rare`; review metadata, never an editor setting. Every `core` case is walked through
+    in a flow of [scenarios.md](scenarios.md) (the spec test checks it). The words after it, if any,
+    say what the case depends on, for runners to select cases by, from the list below
+    (`tags: edge free-form markup-task`). Each is a
+    fact about the case, never an editor's name or a verdict, and a case has every tag that applies
+    to it. A refusal of what a tag describes counts as the tag.
+    - `free-form`: the case depends on free-form Markdown structure that an outliner of blocks has
+      no form for, so the case, projected onto blocks, tests something else
+      ([`sxs/`](../sxs/README.md) skips it for block apps). Not every case with a paragraph or a
+      heading: one that moves, joins or splits them as blocks would compares fine. It is one of:
+      - a line edit (Backspace, Delete, Shift-Enter, a paste, typing on the blank line) adds or
+        removes the blank line between two paragraphs, or between an item's text and its next
+        paragraph. Enter, which makes a node either way, doesn't count;
+      - a node becomes an item or stops being one at its depth (outdent at the top level, the first
+        item unwrapped, Enter on an empty last item), or typing or the host's key changes structure
+        (a list marker typed or deleted, a setext underline). A paragraph indented into an item
+        under the node above, or an item outdented out of a paragraph's list, doesn't count;
+      - a paragraph takes in a list or releases one, or a node moves into or out of a paragraph's
+        list. Indent and outdent don't count (a node indented into the list above it or outdented
+        out of one, the later siblings an outdented node takes);
+      - a heading is unwrapped or joined into the text above, and its section goes to the section
+        above;
+      - where a move or a copy lands depends on Markdown's section order: a node moved past a
+        sibling heading lands in its section, one at a nested section's end crosses more than one
+        level, a heading moves only among headings of its level. A move into the next section at
+        the end of one, as outliners cross into the next parent, doesn't count;
+      - a heading's level changes (indent, outdent, setext to ATX);
+      - a held empty paragraph or empty line goes when the caret leaves it (deleting one doesn't
+        count);
+      - ourus refuses, or puts the text elsewhere, because Markdown can't write the result, though a
+        block could hold it: two lines in a title, a split table row, two empty paragraphs in a row,
+        adjacent indented code;
+    - `markup-heading`, `markup-task`, `markup-fence`: a step at markup that an editor may hold as
+      text or as a block's attribute, where ourus has a boundary (a driver opts out of those it
+      can't compare):
+      - `markup-heading`: at a heading's title start, its closing `#`s or a setext underline, a
+        Cmd-Backspace up to it, a join that takes in a heading below;
+      - `markup-task`: before a task's checkbox or right after it, a Cmd-Backspace up to it, on a
+        task with nothing but its checkbox, a join that takes in a task below;
+      - `markup-fence`: on a code, math or comment fence line (or a structural command from one,
+        which puts the caret in the code), a join of text into code, or a join or split of code
+        lines that would make a fence;
   - the other options of ourus's config (`src/config.ts`): `outdent` (`direct`, the default, or
     `logical`), `bullet` (`-`, the default, `*` or `+`), `enterOnEmptyItem` (`sibling`, the
     default, or `outdent`), `enterMidItem` (`sibling`, the default, or `child`),
     `enterAtTextStart` (`into`, the default, or `stay`), `backspaceAtTopItem` (`unwrap`, the
-    default, or `refuse`), `handleFenceContents` (`true`, the default, or `false`),
-    `headingEditing` (`text`, the default, or `block`), `taskEditing` (`checkbox`, the default,
+    default, or `refuse`), `emptyItemWithChildren` (`lift`, the default, or `refuse`),
+    `handleFenceContents` (`true`, the default, or `false`), `headingEditing` (`text`, the default, or `block`), `taskEditing` (`checkbox`, the default,
     `text` or `block`), `pasteStructuredLines` (`text`, the default, or `items`),
-    `pasteStructuredMidText` (`split`, the default, or `after`), `deleteAtGap` (`join`, the
+    `pasteStructuredMidText` (`split`, the default, or `after`), `pasteStructuredAtEnd` (`after`,
+    the default, or `join`), `pasteStructuredOnParent` (`children`, the default, or `after`),
+    `pasteStructuredParagraphList` (`siblings`, the default, or `children`), `pasteStructuredListForm` (`text`, the default, `literal`, `drop` or
+    `own`), `deleteAtGap` (`join`, the
     default, or `gap`), and `editInMarkup` (`host`, the default, or `refuse`).
 
 How other outliners do on the same files (Logseq, ...) is measured by replaying them there:

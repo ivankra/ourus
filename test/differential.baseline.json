@@ -1,19 +1,18 @@
 {
   "documents": 1500,
-  "corpus": "1d897f77e1566e01",
+  "corpus": "5f602e2e7c85ee47",
   "failures": {
-    "deleteContentBackward": 10,
+    "deleteContentBackward": 8,
     "deleteContentForward": 7,
-    "deleteSoftLineBackward": 12,
+    "deleteSoftLineBackward": 10,
     "deleteSubtree": 2,
     "duplicateSubtree": 9,
-    "enter": 5,
-    "indent": 15,
-    "moveSubtreeDown": 1,
+    "enter": 6,
+    "indent": 16,
     "moveSubtreeUp": 2,
-    "outdent": 25,
+    "outdent": 24,
     "pastePlain": 9,
-    "pasteStructured": 19,
+    "pasteStructured": 23,
     "shiftEnter": 6
   }
 }

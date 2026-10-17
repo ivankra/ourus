@@ -168,7 +168,9 @@ export function join(ctx: CommandContext, opts: { forward?: boolean; headingAsTe
   if (!prev || prev.kind === 'root') {
     const next = doc.nodes[index + 1];
     // an empty one with children goes too, its children taking its place, as Delete does there
+    // (`emptyItemWithChildren: lift`), or the key does nothing (`refuse`)
     if (isEmptyWithChildren(ctx, node)) {
+      if (doc.config.emptyItemWithChildren === 'refuse') return reject('has-children');
       const first = node.children[0]!;
       const from = doc.headRange(first)?.from ?? doc.lines[first.startLine]!.to;
       return ctx.encode(ctx.plan.place('instead', node, node.children), {}, (writtenOutline) => {
@@ -201,9 +203,11 @@ export function join(ctx: CommandContext, opts: { forward?: boolean; headingAsTe
     });
   }
   // an empty item with children, below another node: it goes, its children going to the node above
-  // as in any join (into its place when that node is its parent), the caret to the end of its text
+  // as in any join (into its place when that node is its parent, which `emptyItemWithChildren:
+  // refuse` refuses), the caret to the end of its text
   if (isEmptyWithChildren(ctx, node)) {
     const adoptsChildren = prev.kind === 'item' && prev !== node.parent && !quote;
+    if (!adoptsChildren && doc.config.emptyItemWithChildren === 'refuse') return reject('has-children');
     const expected = adoptsChildren
       ? ctx.plan.remove([node]).append(prev, 'last', node.children)
       : ctx.plan.place('instead', node, node.children);
@@ -505,6 +509,14 @@ function joinItemHeading(ctx: CommandContext, node: OutlineNode, pos: number, as
     changes.push({ from: marksFrom, to: range.from, insert: escaped.at === 0 ? '\\' : '' });
     if (escaped.at) changes.push({ from: range.from + escaped.at, to: range.from + escaped.at, insert: '\\' });
     if (range.to < markerLine.to) changes.push({ from: range.to, to: markerLine.to, insert: '' });
+    // a line below that would continue the title, now paragraph text (the item's next paragraph): a
+    // blank line keeps it apart, with the containers' prefix
+    const next = doc.lines[markerLine.index + 1];
+    const owner = next && doc.nodeAtLine(next.index);
+    const from = owner?.kind === 'item' && owner.startLine === next!.index ? doc.markerFrom(owner.block) : next?.contentFrom;
+    if (next && !next.blank && !ctx.encoder.interruptsParagraph(doc.text.slice(from, next.to).trimStart())) {
+      changes.push({ from: markerLine.to, to: markerLine.to, insert: ctx.ending(markerLine) + ctx.encoder.continuation(next.prefix).trimEnd() });
+    }
     title = escaped.text;
   }
   const item: OutlinePlanNode = { id: node.id, kind: 'item', text: normText(title.split('\n')), children: node.children };
@@ -946,7 +958,9 @@ function joinBelow(ctx: CommandContext): Outcome {
   // the caret, for the joins below: at the end of the text (before a heading's closing `#`s)
   const end = doc.headRange(node)?.to ?? pos;
   // an empty item with children takes no special case: its first child joins up into it, as the node
-  // below joins any node Delete is at the end of, and that child's children come along
+  // below joins any node Delete is at the end of, and that child's children come along; or the key
+  // does nothing (`emptyItemWithChildren: refuse`)
+  if (isEmptyWithChildren(ctx, node) && doc.config.emptyItemWithChildren === 'refuse') return reject('has-children');
   // an empty paragraph (held by a placeholder) goes with its blank lines: the node below keeps its
   // kind, rather than its text joining into the empty one, and the caret goes to its text's start
   if (node.kind === 'paragraph' && node.children.length === 0 && doc.nodeText(node).trim() === '') {

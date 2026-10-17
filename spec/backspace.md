@@ -18,7 +18,9 @@ text on its line, a marker included (Backspace2). The rules, in order; the first
 4. **An empty item goes**, the caret to the end of the text above (Backspace7); a paragraph it kept
    from running into the text above is set apart by a blank line (Backspace39). Its children go to
    the node above, into its place when that node is its parent (Backspace17c, Backspace17d); with
-   nothing above, they take its place (Backspace17b). The first item of the document goes, the caret
+   nothing above, they take its place (Backspace17b). With `emptyItemWithChildren: refuse`, where
+   they would move up into its place, the key does nothing (Backspace17f, Backspace17g); into an item
+   above it, it joins as before (Backspace17h). The first item of the document goes, the caret
    to the text below (Backspace17); the only one leaves an empty line (Backspace17e).
 5. **Between paragraphs the blank lines go**: the paragraph is more lines of the one above
    (Backspace12, Backspace12c, Backspace19, Backspace27). A second Backspace joins the lines
@@ -62,7 +64,7 @@ Joins text to the item above.
 Bare Obsidian deletes the space after the marker instead: `-two` is a lazy line of `one`.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -85,7 +87,7 @@ before a marker would turn the marker into text of the item above, as bare Obsid
 (`- one┃- two`).
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -106,7 +108,7 @@ Joins into the parent.
 The node above can be the parent.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -127,7 +129,7 @@ Heading closing hashes stay at end.
 A heading's closing `#`s stay at the end of its line.
 
 ```yaml
-rank: rare
+tags: rare markup-heading
 ```
 
 ```buffer
@@ -148,7 +150,7 @@ Empty item above takes the text.
 Into an empty item above, the text moves up, and the empty item takes it.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -169,7 +171,7 @@ Empty item is removed.
 The caret goes to the end of the text above. Bare Obsidian leaves `-`, an empty item still.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -193,7 +195,7 @@ An item with children joins too, and its children go to the node above: into its
 that node is its parent ([Backspace17c](#backspace17c)), else after that node's own children.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -217,7 +219,7 @@ At the start of a continuation line, Backspace joins it to the line above: the i
 Shift-Enter.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -239,7 +241,7 @@ On the empty paragraph left by Enter on an empty item, Backspace goes back to th
 node above.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -263,7 +265,7 @@ The paragraph Enter made by leaving the list goes back into the item, as the emp
 `a` anyway.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -287,7 +289,7 @@ Obsidian. ourus makes the edit itself: a blank line between nodes is a boundary,
 second Backspace joins the lines ([Backspace9](#backspace9)).
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -313,7 +315,7 @@ Enter in a paragraph, then Backspace twice: the text is as it was. The blank lin
 the line break: Enter's inverse is two Backspaces here.
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -340,7 +342,7 @@ With several blank lines between two paragraphs, all of them go: deleting only o
 paragraphs apart, the key seeming to do nothing (`deleteAtGap: gap` deletes one at a time).
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -365,7 +367,7 @@ Mid-text backspace left to the host.
 In the middle of a node's text, Backspace is the host's.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -384,7 +386,7 @@ Backspace that deletes a paragraph's only character leaves an empty line, held a
 Delete does ([Delete9](del.md#delete9)). When the caret leaves, the empty line goes.
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -421,7 +423,7 @@ A paragraph's first item joins into the paragraph, as into any node above. Bare 
 marker's space, leaving `-a` as text.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -443,7 +445,7 @@ No joining into a code block.
 The item's text can't become code: refused.
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ````buffer
@@ -474,7 +476,7 @@ The caret goes to the start of the text below. Logseq, WorkFlowy and Dynalist re
 but put the caret elsewhere; Roam and BlockNote ignore the key.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -493,11 +495,12 @@ rank: common
 ## Backspace17b
 
 On an empty first item with children, with nothing above it, the item goes and its children take its
-place, a level up, the caret at the first child's text. Every outliner ignores the key here; ourus
-lets the empty item go as anywhere else (a user decision), rather than leave the key dead.
+place, a level up, the caret at the first child's text. Every outliner ignores the key here
+(`emptyItemWithChildren: refuse`, [Backspace17f](#backspace17f)); by default ourus lets the empty
+item go as anywhere else (a user decision), rather than leave the key dead.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -521,7 +524,7 @@ first Backspace empties the child, held by a placeholder.) Most outliners ignore
 Backspace; ourus joins, as in [Backspace17b](#backspace17b).
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -563,7 +566,7 @@ Backspace on an empty item with children after a sibling: the item goes, its chi
 that sibling, and the caret goes to the end of its text.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -588,7 +591,7 @@ Backspace on the only item, empty: its marker goes, leaving an empty line to typ
 Nothing is above to join into or below to move to, so it is the marker itself that goes.
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -601,6 +604,85 @@ rank: edge
 ┃
 ```
 
+## Backspace17f
+
+With `emptyItemWithChildren: refuse`, Backspace on an empty first item with children does nothing,
+as every outliner leaves it ([Backspace17b](#backspace17b) lifts its children instead).
+
+```yaml
+tags: rare
+emptyItemWithChildren: refuse
+```
+
+```buffer
+- ┃
+  - a
+    - b
+```
+
+> deleteContentBackward
+
+```result
+rejected: has-children
+```
+
+```buffer
+- ┃
+  - a
+    - b
+```
+
+## Backspace17g
+
+With `emptyItemWithChildren: refuse`, an empty first child with children stays too: its children
+would move up into its place ([Backspace17c](#backspace17c)).
+
+```yaml
+tags: rare
+emptyItemWithChildren: refuse
+```
+
+```buffer
+- a
+  - ┃◌
+    - b
+```
+
+> deleteContentBackward
+
+```result
+rejected: has-children
+```
+
+```buffer
+- a
+  - ┃◌
+    - b
+```
+
+## Backspace17h
+
+With `emptyItemWithChildren: refuse`, an empty item with children below an item still joins it: the
+item above takes the children at their depth, as with `lift` ([Backspace17d](#backspace17d)).
+
+```yaml
+tags: rare
+emptyItemWithChildren: refuse
+```
+
+```buffer
+- x
+- ┃
+  - a
+```
+
+> deleteContentBackward
+
+```buffer
+- x┃
+  - a
+```
+
 ## Backspace18
 
 Backspace at a heading's text start removes its marks: the title becomes a paragraph where it is.
@@ -610,7 +692,7 @@ Obsidian deletes the space, leaving `#Hello`, which it reads as a tag. With `hea
 the title joins the node above instead ([Backspace18b](#backspace18b)).
 
 ```yaml
-rank: common
+tags: common free-form markup-heading
 ```
 
 ```buffer
@@ -639,7 +721,7 @@ above.
 As outliners join any block into the one above.
 
 ```yaml
-rank: rare
+tags: rare free-form markup-heading
 headingEditing: block
 ```
 
@@ -664,7 +746,7 @@ body
 On a setext heading, the underline goes.
 
 ```yaml
-rank: rare
+tags: rare free-form markup-heading
 ```
 
 ```buffer
@@ -688,7 +770,7 @@ The unwrapped title stays apart from paragraph text right above or below: a blan
 paragraph of its own.
 
 ```yaml
-rank: rare
+tags: rare free-form markup-heading
 ```
 
 ```buffer
@@ -713,7 +795,7 @@ A heading that is an item's text loses its marks the same way, and the item stay
 nearest the caret goes first.
 
 ```yaml
-rank: rare
+tags: rare markup-heading
 ```
 
 ```buffer
@@ -734,7 +816,7 @@ With `headingEditing: block`, a setext title joins the node above and its underl
 place, the underline would make the joined paragraph a heading.
 
 ```yaml
-rank: rare
+tags: rare markup-heading
 headingEditing: block
 ```
 
@@ -751,6 +833,30 @@ para
 para┃Title
 ```
 
+## Backspace18g
+
+The item's paragraph right under its heading is set apart by a blank line when the marks go: under
+the title, now paragraph text, it would continue it.
+
+```yaml
+tags: rare markup-heading
+```
+
+```buffer
+- a
+- # ┃H
+  text
+```
+
+> deleteContentBackward
+
+```buffer
+- a
+- ┃H
+
+  text
+```
+
 ## Backspace19
 
 Inside an item, Backspace at the start of a paragraph after a blank line removes the blank line, as
@@ -758,7 +864,7 @@ between top-level paragraphs ([Backspace12](#backspace12)): the inverse of Shift
 start ([ShiftEnter10](shift-enter.md#shiftenter10)).
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -783,7 +889,7 @@ paragraph owned stay.
 The empty paragraph owns the list after it; removing it keeps that list, which joins the list above.
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -810,7 +916,7 @@ going too (`deleteAtGap: join`, the default).
 With `deleteAtGap: gap` only the blank line goes ([Backspace21b](#backspace21b)).
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -831,7 +937,7 @@ With `deleteAtGap: gap`, Backspace after a blank line deletes it, the nodes stay
 Backspace again joins.
 
 ```yaml
-rank: rare
+tags: rare
 deleteAtGap: gap
 ```
 
@@ -860,7 +966,7 @@ A paragraph after a heading joins the heading's title, as an item does ([Backspa
 Bare Obsidian deletes the blank line instead, as `deleteAtGap: gap` does.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -880,7 +986,7 @@ rank: common
 A paragraph of more than one line doesn't join a heading's title: a title is one line.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -909,7 +1015,7 @@ A paragraph after a code block doesn't join it: text can't become code. The host
 put the text on the fence's line, unmaking the block.
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer
@@ -939,7 +1045,7 @@ x
 An empty item above takes a paragraph's text, as it takes an item's ([Backspace5](#backspace5)).
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -961,7 +1067,7 @@ rank: edge
 At the start of the document's first paragraph, there is nothing to join into.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -984,7 +1090,7 @@ A paragraph after a quote becomes more lines of the quote's last paragraph, as b
 ([Backspace12](#backspace12)), written with its `>`. The host's Backspace leaves `b` a lazy line.
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -1006,7 +1112,7 @@ An empty item after a fenced code block goes, the caret going to the end of the 
 after the closing fence, anything typed would stop it closing the block.
 
 ```yaml
-rank: edge
+tags: edge markup-fence
 ```
 
 ````buffer
@@ -1029,7 +1135,7 @@ x┃
 An empty ordered item goes, and the items after it are renumbered.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -1051,7 +1157,7 @@ Backspace on a new, empty child undoes Enter and Tab: the child goes, the caret 
 its parent's text.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -1071,7 +1177,7 @@ A selection across two items: the selected text goes, markup included, and the t
 The host's result here is the same text, but the edit crosses a marker, so it is ourus's.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -1096,7 +1202,7 @@ applied
 A selection within one item's text is the host's: Backspace31's control.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -1123,7 +1229,7 @@ is, the items after it its list, as Shift-Tab makes them
 Obsidian gets there in two presses, through `-a`.
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -1144,7 +1250,7 @@ With `backspaceAtTopItem: refuse`, the document's first item stays as it is, as 
 WorkFlowy, which do nothing at the first block.
 
 ```yaml
-rank: edge
+tags: edge
 backspaceAtTopItem: refuse
 ```
 
@@ -1172,7 +1278,7 @@ Releasing the section is what removing a heading means, so it is a command's own
 parent, as guarantee 4 allows. The text editors end up the same way.
 
 ```yaml
-rank: edge
+tags: edge free-form markup-heading
 ```
 
 ```buffer
@@ -1212,7 +1318,7 @@ ATX heading does ([Backspace22](#backspace22)). true-outliner joins it; bare Obs
 deletes the line break, putting the text on the underline.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -1234,7 +1340,7 @@ A paragraph of several lines joins a setext title as more of its lines, which a 
 and an ATX one doesn't ([Backspace23](#backspace23)).
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -1258,7 +1364,7 @@ Joined to `[a]:`, the text would be a link reference definition, invisible: the 
 start is escaped.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -1280,7 +1386,7 @@ An empty item between an item and a paragraph goes: right under the item's text,
 continue it, so a blank line keeps it apart.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -1303,7 +1409,7 @@ The first item of a paragraph's list joins the paragraph; an ordered list from 2
 interrupt the joined text, which it would continue, so a blank line sets it apart.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -1328,7 +1434,7 @@ no text to join, so the inner marker goes, and the text, on the outer marker's l
 item's; the items after it are its children.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -1354,7 +1460,7 @@ Cmd-Backspace deletes back to the text start, the checkbox and marker staying; a
 is Backspace, whose checkbox rule takes the checkbox.
 
 ```yaml
-rank: common
+tags: common markup-task
 ```
 
 ```buffer
@@ -1379,7 +1485,7 @@ The rest of the line would become a link reference definition at the paragraph's
 from the text as read: it is escaped.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -1398,7 +1504,7 @@ A setext title is paragraph text: `- x tail` at its start would be an item. It i
 title keeps its underline.
 
 ```yaml
-rank: rare
+tags: rare markup-heading
 ```
 
 ```buffer
@@ -1418,7 +1524,7 @@ abc ┃- x tail
 In an ATX heading, the closing `#`s stay, and nothing needs escaping: the title has its own marker.
 
 ```yaml
-rank: rare
+tags: rare markup-heading
 ```
 
 ```buffer
@@ -1436,7 +1542,7 @@ rank: rare
 On a later line of a setext title, the lines above stay; what is left is escaped as on the first.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -1458,7 +1564,7 @@ first
 In a setext underline, Cmd-Backspace is refused: the underline is markup, not text.
 
 ```yaml
-rank: rare
+tags: rare markup-heading
 ```
 
 ```buffer
@@ -1485,7 +1591,7 @@ item's first block. Left, it goes, the line below coming up onto the marker's li
 keeping its place in the text.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -1512,7 +1618,7 @@ As [SoftBackspace7](#softbackspace7), in a task: the emptied first line keeps th
 left, the line below comes up after it.
 
 ```yaml
-rank: rare
+tags: rare free-form markup-task
 flavor: gfm
 ```
 
@@ -1540,7 +1646,7 @@ On a fence, Cmd-Backspace is refused: the fence is markup, and deleting it would
 block (the host's would leave a fence opening at the block's end). The same on a math block's `$$`.
 
 ```yaml
-rank: rare
+tags: rare markup-fence
 ```
 
 ````buffer

@@ -24,7 +24,7 @@ The rules:
 A node goes with its children.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -46,7 +46,7 @@ rank: common
 Ordered lists renumber.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -69,7 +69,7 @@ The first node: the caret goes to what follows.
 A paragraph's list is its children: it goes too.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -92,7 +92,7 @@ para┃
 The first item: the caret goes to the next item's text, after its marker, where typing extends it.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -112,7 +112,7 @@ rank: common
 Selected nodes go together; the caret goes to the end of the text before them.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -135,7 +135,7 @@ The document's only node goes, and the document is empty; typed text is then its
 (an empty buffer has no drawing).
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -155,7 +155,7 @@ Deleting a quote's only node deletes the quote: its `>` alone is no node, and a 
 holding nothing can't be written.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -176,7 +176,7 @@ text, would continue it, and a blank line keeps it a paragraph of its own. Movin
 does the same ([MoveDown34](move-subtree-down.md#movedown34)).
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ````buffer
@@ -202,7 +202,7 @@ where, with a `---` below to close it, it would open the note's frontmatter: a b
 keeps it a thematic break. The caret goes to the text after it.
 
 ```yaml
-rank: edge
+tags: edge
 flavor: obsidian
 ```
 
@@ -229,7 +229,7 @@ A thematic break written `***`, first in an Obsidian note: only `---` opens fron
 line goes above it.
 
 ```yaml
-rank: edge
+tags: edge
 flavor: obsidian
 ```
 

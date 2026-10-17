@@ -15,7 +15,7 @@
 
 import type { Page } from 'playwright-core';
 import type { Driver } from '../lib/driver.ts';
-import type { Outline } from '../lib/outline.ts';
+import { unescapeLaterLines, type Outline } from '../lib/outline.ts';
 
 /** Logseq's keys for the spec's actions (Linux); the `select…` motions add Shift. */
 const MOTIONS: Record<string, string> = {
@@ -53,6 +53,36 @@ function swapPrefix(text: string, table: [RegExp, string][]): { text: string; fr
 /** An offset in a text whose prefix of `from` characters became `to` characters: past it, shifted; inside it, clamped. */
 const shiftOffset = (p: number, from: number, to: number): number => (p >= from ? p - from + to : Math.min(p, to));
 
+/** The property that makes a block numbered: a run of such siblings is numbered from 1. */
+const NUMBERED = 'logseq.order-list-type:: number';
+
+/**
+ * A block's canonical text as Logseq's: a task's checkbox as its marker, and a numbered block
+ * (`1. x`) without its number, the property after its text (`numbered`); `from` and `to`, the
+ * prefixes' lengths before and after, for the caret.
+ */
+function toLogseq(text: string): { text: string; from: number; to: number; numbered: boolean } {
+  const n = /^\d{1,9}\. /.exec(text);
+  const rest = n ? text.slice(n[0].length) : text;
+  const task = swapPrefix(rest, TO_LOGSEQ);
+  return { text: n ? `${task.text}\n${NUMBERED}` : task.text, from: (n?.[0].length ?? 0) + task.from, to: task.to, numbered: !!n };
+}
+
+/**
+ * Logseq's text of a block as canonical: the property of a numbered one taken off and its number put
+ * before its text (`number`, its place in its run of numbered siblings); a number that is text
+ * escaped (`1\. x`); a task's marker as its checkbox. `from` and `to` as in `swapPrefix`, `cut`
+ * where an escape went in.
+ */
+function fromLogseq(raw: string, number: number | null): { text: string; from: number; to: number; cut?: number } {
+  const task = swapPrefix(raw.replace(/\n?logseq\.order-list-type:: number[ \t]*(?=\n|$)/, ''), FROM_LOGSEQ);
+  // a number that is text, escaped also after a numbered block's own number (`2. 2\. x`)
+  const pre = number !== null ? `${number}. ` : '';
+  const literal = /^\d{1,9}(?=[.)])/.exec(task.text);
+  const text = literal ? task.text.slice(0, literal[0].length) + '\\' + task.text.slice(literal[0].length) : task.text;
+  return { text: pre + text, from: task.from, to: task.to + pre.length, ...(literal && { cut: task.to + pre.length + literal[0].length }) };
+}
+
 /** The page the current test runs on, to delete once the next test has moved on. */
 let current: string | null = null;
 
@@ -81,15 +111,26 @@ export const driver: Driver = {
     ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
   },
   emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd'],
-  // quotes and callouts are skipped for every block app (../lib/outline.ts)
-  refuses: [],
-  behaves: { outdent: 'direct', enterOnEmptyItem: 'sibling', enterMidItem: 'child', pasteStructuredMidText: 'after' },
+  // quotes and callouts are skipped for every block app (../lib/outline.ts); a heading's `#`s, a task's
+  // `TODO` and a code block's fences are text in a block, edited a character at a time
+  refuses: ['markup-heading', 'markup-task', 'markup-fence'],
+  ordered: true,
+  behaves: { outdent: 'direct', enterOnEmptyItem: 'sibling', enterMidItem: 'child', pasteStructuredMidText: 'after', emptyItemWithChildren: 'refuse', pasteStructuredListForm: 'drop' },
   // Logseq's "logical outdenting" (Settings › Editor, `:editor/logical-outdenting?`)
   settings: { outdent: ['direct', 'logical'] },
   holds(doc: Outline) {
     // Logseq trims a stored block's text; only the block being edited (its textarea) keeps it as is
-    const trimmed = doc.blocks.findIndex((b, i) => i !== doc.sel?.block && /^\s|\s$/.test(swapPrefix(b.text, TO_LOGSEQ).text));
-    return trimmed >= 0 ? 'whitespace at the edge of a block not being edited' : undefined;
+    const trimmed = doc.blocks.findIndex((b, i) => i !== doc.sel?.block && /^\s|\s$/.test(swapPrefix(b.text.replace(/^\d{1,9}\. /, ''), TO_LOGSEQ).text));
+    if (trimmed >= 0) return 'whitespace at the edge of a block not being edited';
+    // a run of numbered siblings is numbered from 1, whatever it was written with
+    const run: number[] = [];
+    for (const b of doc.blocks) {
+      run.length = b.depth + 1;
+      const n = /^(\d{1,9})\. /.exec(b.text);
+      run[b.depth] = n ? (run[b.depth] ?? 0) + 1 : 0;
+      if (n && Number(n[1]) !== run[b.depth]) return 'a numbered list from another number than 1';
+    }
+    return undefined;
   },
   idle: {
     busy: `(() => { const op = window.logseq?.api?.get_state_from_store('editor/op'); return op != null && op !== 'nil'; })()`,
@@ -125,7 +166,7 @@ export const driver: Driver = {
   },
 
   async load(page: Page, doc: Outline) {
-    const blocks = doc.blocks.map((b) => ({ depth: b.depth, ...swapPrefix(b.text, TO_LOGSEQ) }));
+    const blocks = doc.blocks.map((b) => ({ depth: b.depth, ...toLogseq(b.text) }));
     const swapped = doc.sel && blocks[doc.sel.block]!;
     const sel = doc.sel && { block: doc.sel.block, anchor: shiftOffset(doc.sel.anchor, swapped!.from, swapped!.to), head: shiftOffset(doc.sel.head, swapped!.from, swapped!.to) };
     current = await page.evaluate(
@@ -205,7 +246,20 @@ export const driver: Driver = {
       const api = (window as any).logseq.api;
       const flat: { depth: number; text: string; uuid: string }[] = [];
       const walk = (bs: any[], d: number) => bs.forEach((x) => (flat.push({ depth: d, text: x.content, uuid: x.uuid }), walk(x.children ?? [], d + 1)));
-      walk(await api.get_page_blocks_tree(name), 0);
+      // a numbered block's place in its run of numbered siblings, from 1
+      const numbers: (number | null)[] = [];
+      const number = (bs: any[]) => {
+        let n = 0;
+        for (const x of bs) {
+          const numbered = /(?:^|\n)logseq\.order-list-type:: number[ \t]*(?:\n|$)/.test(x.content ?? '') || x.properties?.['logseqOrderListType'] === 'number' || x.properties?.['logseq.order-list-type'] === 'number';
+          n = numbered ? n + 1 : 0;
+          numbers.push(numbered ? n : null);
+          number(x.children ?? []);
+        }
+      };
+      const tree = await api.get_page_blocks_tree(name);
+      walk(tree, 0);
+      number(tree);
       const editing = await api.check_editing();
       const ta = document.activeElement as HTMLTextAreaElement | null;
       const i = editing && ta?.tagName === 'TEXTAREA' ? flat.findIndex((b) => b.uuid === editing) : -1;
@@ -215,18 +269,21 @@ export const driver: Driver = {
       const selected = ((await api.get_selected_blocks()) ?? []).map((b: any) => flat.findIndex((f) => f.uuid === b.uuid)).filter((k: number) => k >= 0);
       return {
         blocks: flat.map(({ depth, text }) => ({ depth, text })),
+        numbers,
         sel: i >= 0 ? { block: i, anchor: back ? ta!.selectionEnd : ta!.selectionStart, head: back ? ta!.selectionStart : ta!.selectionEnd } : null,
         selected,
       };
     }, current);
-    const swaps = raw.blocks.map((b) => swapPrefix(b.text, FROM_LOGSEQ));
+    const swaps = raw.blocks.map((b, i) => fromLogseq(b.text, raw.numbers[i] ?? null));
     const blocks = raw.blocks.map((b, i) => ({ depth: b.depth, text: swaps[i]!.text }));
     let sel = raw.sel;
     if (sel) {
-      const { from, to } = swaps[sel.block]!;
-      sel = { block: sel.block, anchor: shiftOffset(sel.anchor, from, to), head: shiftOffset(sel.head, from, to) };
+      const { from, to, cut } = swaps[sel.block]!;
+      const at = (p: number): number => shiftOffset(p, from, to) + (cut !== undefined && shiftOffset(p, from, to) > cut ? 1 : 0);
+      sel = { block: sel.block, anchor: at(sel.anchor), head: at(sel.head) };
     }
-    return { blocks, sel, ...(raw.selected.length && { selected: raw.selected }) };
+    // the block's later lines keep the escapes Markdown source has at their start; a block's text needs none
+    return unescapeLaterLines({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) });
   },
 
   async configure(page: Page, settings) {

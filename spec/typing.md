@@ -16,7 +16,7 @@ reads it, and these cases pin what it then reads as. The rules:
 Typing an underline under a paragraph makes it a heading, as Markdown authoring.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -36,7 +36,7 @@ para
 Deleting the rest of the line to finish the underline is setext authoring too.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -57,7 +57,7 @@ Typing `- ` at the start of a paragraph's continuation line turns that line into
 when a paragraph's lines are made a list ([Scenario24](scenarios.md#scenario24)).
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -80,7 +80,7 @@ content"), which comes to the same. By default the host types `-x a`, no item, a
 editor does.
 
 ```yaml
-rank: edge
+tags: edge
 status: pending
 editInMarkup: refuse
 ```

@@ -55,7 +55,7 @@ Enter, then Tab: an empty child under text.
 A command makes one.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -96,7 +96,7 @@ Enter twice leaves a list for an empty paragraph, set off by the blank line a pa
 needs (bare Obsidian drops the marker too, but without it what is typed next continues `a`).
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -132,7 +132,7 @@ Enter at the end of a paragraph makes a new, empty paragraph: it needs a blank l
 text to hold it.
 
 ```yaml
-rank: core
+tags: core free-form
 ```
 
 ```buffer
@@ -158,7 +158,7 @@ para
 Shift-Enter at the end of a paragraph opens an empty line in it.
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -186,7 +186,7 @@ A command acting on the empty node carries its placeholder along: Tab, Shift-Tab
 ends it as if the last Tab had been the only one.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -234,7 +234,7 @@ rank: common
 Typing ends it: the node has text, and leaving changes nothing.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -278,7 +278,7 @@ would be a setext underline: `a` would become a heading and the child would be g
 at the caret keeps the empty child the user is in.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -310,7 +310,7 @@ becomes the placeholder: read as text, it keeps the item's column. Typing fills 
 the surplus space goes.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -338,7 +338,7 @@ The same with Backspace after the first character. Bare editors leave `-  b`, wh
 makes `c` a sibling instead of a child.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -368,7 +368,7 @@ An empty child typed out stays as typed: typing makes text, never a placeholder,
 as it reads.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -398,7 +398,7 @@ An empty item between items: the text holds it, so no placeholder is made, and l
 nothing.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -429,7 +429,7 @@ An empty child under text, never edited, is no placeholder.
 A file reads as written.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -453,7 +453,7 @@ the start of its text, after the `##` (never in markup): the heading isn't joine
 paragraph, which would make it a paragraph and drop its `##`.
 
 ```yaml
-rank: edge
+tags: edge markup-heading
 ```
 
 ```buffer
@@ -487,7 +487,7 @@ rank: edge
 The same before a paragraph: the empty paragraph goes, and the paragraph below stays as it was.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -524,7 +524,7 @@ Right after `para`, an empty item would be a setext underline, so it exists only
 is in it. Leaving, it stays, set off by a blank line.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -555,7 +555,7 @@ A selection's head counts as the caret: selecting within the line keeps the plac
 selection whose head leaves the line ends it, as the caret leaving would.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer

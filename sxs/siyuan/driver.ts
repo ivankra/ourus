@@ -34,14 +34,22 @@ const MOTIONS: Record<string, string> = {
   DocEnd: 'Control+End',
 };
 
-/** An outline as Markdown for `createDocWithMd`: every block a list item, nested by its depth. */
+/**
+ * An outline as Markdown for `createDocWithMd`: every block a list item, nested by its depth, a
+ * numbered block (`1. x`) an ordered list's item, its children at its content column.
+ */
 function markdownOf(blocks: readonly Block[]): string {
+  const columns: number[] = [];
   return (
     blocks
       .map((b) => {
-        const pad = '  '.repeat(b.depth);
-        const [first, ...rest] = b.text.split('\n');
-        return [`${pad}- ${first}`, ...rest.map((l) => (l ? `${pad}  ${l}` : ''))].join('\n');
+        const pad = ' '.repeat(b.depth ? (columns[b.depth - 1] ?? 2 * b.depth) : 0);
+        const numbered = /^(\d{1,9})\. /.exec(b.text);
+        const marker = numbered ? `${numbered[1]}.` : '-';
+        columns.length = b.depth;
+        columns[b.depth] = pad.length + marker.length + 1;
+        const [first, ...rest] = (numbered ? b.text.slice(numbered[0].length) : b.text).split('\n');
+        return [`${pad}${marker} ${first}`, ...rest.map((l) => (l ? `${' '.repeat(columns[b.depth]!)}${l}` : ''))].join('\n');
       })
       .join('\n') + '\n'
   );
@@ -116,12 +124,24 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
   type Group = { els: HTMLElement[]; depth: number; prefix: string; holder: HTMLElement };
   const groups: Group[] = [];
   const items = (list: Element, depth: number): void => {
-    for (const li of [...list.children].filter((c) => data(c).type === 'NodeListItem') as HTMLElement[]) {
+    [...list.children].filter((c) => data(c).type === 'NodeListItem').forEach((li, k) => {
       const kids = [...li.children].filter((c) => data(c).nodeId) as HTMLElement[];
-      const task = li.dataset.task;
-      groups.push({ els: kids.filter((c) => data(c).type !== 'NodeList'), depth, prefix: task === undefined ? '' : task === ' ' ? '[ ] ' : '[x] ', holder: li });
-      for (const sub of kids.filter((c) => data(c).type === 'NodeList')) items(sub, depth + 1);
-    }
+      const task = (li as HTMLElement).dataset.task;
+      // an ordered list's item: its number, as the canonical text has it (`1. `)
+      const number = data(list).subtype === 'o' ? `${parseInt(data(li).marker ?? '', 10) || k + 1}. ` : '';
+      // its first block is its text; its other blocks (code after its text, a second paragraph) are
+      // its children, in order with its nested lists, as the projection has an item's blocks. An empty
+      // paragraph SiYuan leaves in it is no block in Markdown: it stays with the text, a line of it
+      const empty = (c: Element): boolean => data(c).type === 'NodeParagraph' && md(c).trim() === '';
+      const own = kids.filter((c) => data(c).type !== 'NodeList');
+      const first = own.find((c) => !empty(c)) ?? own[0];
+      const text = own.filter((c) => c === first || empty(c));
+      groups.push({ els: text, depth, prefix: number + (task === undefined ? '' : task === ' ' ? '[ ] ' : '[x] '), holder: li as HTMLElement });
+      for (const kid of kids) {
+        if (data(kid).type === 'NodeList') items(kid, depth + 1);
+        else if (!text.includes(kid)) groups.push({ els: [kid], depth: depth + 1, prefix: '', holder: kid });
+      }
+    });
   };
   // blocks outside every list, owned as ourus owns them: a heading its section (to the next heading
   // of its level or higher), a paragraph the list right after it
@@ -244,7 +264,7 @@ export const driver: Driver = {
   url: `${origin}/stage/build/desktop/`,
   model: 'block',
   // structured paste in the middle of a block's text goes after it
-  behaves: { pasteStructuredMidText: 'after' },
+  behaves: { pasteStructuredMidText: 'after', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after' },
   keys: {
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
@@ -267,7 +287,10 @@ export const driver: Driver = {
     redo: 'Control+y',
     ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
   },
-  refuses: [],
+  // a code or math block is a block of its own, its fences no text: a caret on one has no place, and
+  // code lines that would make a fence are only text there
+  refuses: ['markup-fence'],
+  ordered: true,
   holds: (doc) => holds(doc as Outline),
   idle: {
     // edits go to the kernel (a transaction), undo and redo come back from it: a request owed is work

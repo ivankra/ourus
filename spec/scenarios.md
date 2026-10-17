@@ -13,7 +13,7 @@ Typing a new child: Enter at the end of an item, Tab on the new one, then text
 ([Enter2](enter.md#enter2), [Indent8](indent.md#indent8), [Indent1](indent.md#indent1)).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -32,7 +32,7 @@ rank: core
 Enter on the empty child outdents it ([Enter5](enter.md#enter5)).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -52,7 +52,7 @@ Backspace removes the empty child ([Backspace30](backspace.md#backspace30),
 [Backspace7](backspace.md#backspace7)).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -71,7 +71,7 @@ Walking away keeps the empty child, set off by a blank line, and coming back to 
 there is the child's ([Placeholder1](placeholders.md#placeholder1)).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -109,7 +109,7 @@ moves past it with its children, and the move is undone ([Enter2](enter.md#enter
 [Undo1](undo.md#undo1)).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -151,7 +151,7 @@ Writing a list under a paragraph, nesting in it, and walking out of it with Ente
 ([Enter6](enter.md#enter6), [Enter14](enter.md#enter14)).
 
 ```yaml
-rank: core
+tags: core free-form
 ```
 
 ```buffer
@@ -220,7 +220,7 @@ Splitting an item and joining it back, editing in between: Enter in the middle
 next item ([Delete2](del.md#delete2)).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -281,7 +281,7 @@ Reorganizing an outline: an item moves with its subtree ([MoveUp1](move-subtree-
 `Work`'s line without `email`.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -340,7 +340,7 @@ child ([MoveDown7](move-subtree-down.md#movedown7)); a new sibling is typed afte
 its child with it ([MoveDown29](move-subtree-down.md#movedown29)).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -386,7 +386,7 @@ child ([DirectOutdent1](outdent.md#directoutdent1)), the subtree moves whole
 ([MoveUp1](move-subtree-up.md#moveup1)) and goes whole ([DeleteSubtree1](delete-subtree.md#deletesubtree1)).
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -428,7 +428,7 @@ Lines in an item: Shift-Enter makes one ([ShiftEnter1](shift-enter.md#shiftenter
 ([Delete2](del.md#delete2)), and undo and redo step through it ([Undo1](undo.md#undo1)).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -486,7 +486,7 @@ child ([Enter4](enter.md#enter4)), Backspace at the child's start joins it into 
 ([Delete1](del.md#delete1)).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -539,7 +539,7 @@ Reordering a numbered list: moves renumber it ([MoveUp14](move-subtree-up.md#mov
 [MoveDown22](move-subtree-down.md#movedown22)).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -570,7 +570,7 @@ Moving a child across parents: at its parent's edge it crosses into the next par
 child, and back ([MoveDown7](move-subtree-down.md#movedown7), [MoveUp6](move-subtree-up.md#moveup6)).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -606,7 +606,7 @@ there is a note, nested by Tab; Enter on the empty child outdents it, Enter agai
 ([TaskEnter1](tasks.md#taskenter1)), and what is typed next is a paragraph after it.
 
 ```yaml
-rank: core
+tags: core free-form markup-task
 ```
 
 ```buffer
@@ -664,7 +664,7 @@ into the section above ([MoveUp22](move-subtree-up.md#moveup22)), its checkbox a
 item untouched ([Undo1](undo.md#undo1)).
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -721,7 +721,7 @@ WorkFlowy and Dynalist): on an empty item, they are items in its place
 the item's text instead ([Paste7](paste.md#paste7), [Paste10](paste.md#paste10)).
 
 ```yaml
-rank: core
+tags: core
 pasteStructuredLines: items
 clipboard: |
   bread
@@ -763,7 +763,7 @@ Pasting code at the end of an item's text and typing on: the code goes into the 
 the end of its last line, and the next item stays where it was ([Paste1](paste.md#paste1)).
 
 ````yaml
-rank: common
+tags: common
 clipboard: |
   ```
   code
@@ -796,7 +796,7 @@ Notes under a heading: Enter after the heading starts its first paragraph
 paragraphs move among themselves ([MoveUp4](move-subtree-up.md#moveup4)).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -836,7 +836,7 @@ a paragraph's end the next, Shift-Enter a line inside one ([Gap12](gaps.md#gap12
 lines together ([MoveUp4](move-subtree-up.md#moveup4)), and the move is undone.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -890,7 +890,7 @@ Splitting a paragraph and joining it back, from either side: Enter makes two par
 ([Delete3](del.md#delete3)).
 
 ```yaml
-rank: core
+tags: core free-form
 ```
 
 ```buffer
@@ -932,7 +932,7 @@ Reordering sections: a heading moves with its section, past one of its level and
 ([Gap1](gaps.md#gap1), [Gap2](gaps.md#gap2)).
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -976,7 +976,7 @@ escaped ([Enter41](enter.md#enter41)); Shift-Enter breaks the line, and undo tak
 ([Undo1](undo.md#undo1)).
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -1011,7 +1011,7 @@ line an item of the paragraph's list, and the line below reads as more of that i
 a marker of its own ([Typing3](typing.md#typing3)).
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer

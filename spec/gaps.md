@@ -34,7 +34,7 @@ into it.
 Gaps travel with their nodes: `a`'s three blank lines stay below `a`, and `b`'s one below `b`.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -60,7 +60,7 @@ c
 Moving down carries the gap too.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -86,7 +86,7 @@ c
 A section carries its last line's gap.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -116,7 +116,7 @@ text
 An item carries its gap inside a loose list.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -140,7 +140,7 @@ rank: common
 A subtree's gap is its last descendant's.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -167,7 +167,7 @@ Sections written without blank lines stay without: a blank line is added only wh
 one to keep the two apart.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -194,7 +194,7 @@ A paragraph landing above another one is set off by a blank line: without it, `x
 as one paragraph.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ````buffer
@@ -224,7 +224,7 @@ The gap ending a list stays at the list's end: it separates the list from `para`
 it would loosen the list, and `para` would continue `a` lazily.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -248,7 +248,7 @@ para
 The gap ending a parent's children stays at their end.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -276,7 +276,7 @@ rank: common
 The document's trailing blank lines stay at its end.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -300,7 +300,7 @@ a
 The preamble stays at the top.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -330,7 +330,7 @@ c
 Enter at the end of a heading keeps its gap below the new paragraph.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -353,7 +353,7 @@ p
 Items pasted at the end of a tight list keep it tight.
 
 ```yaml
-rank: common
+tags: common
 clipboard: |
   - a
   - b
@@ -383,7 +383,7 @@ Moving from a blank line moves the node above: the caret is in `b`'s gap, so `b`
 and the caret with it.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -411,7 +411,7 @@ c
 Tab on a blank line indents the node above.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -435,7 +435,7 @@ rank: common
 Shift-Tab on a blank line outdents the node above.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -459,7 +459,7 @@ rank: common
 A blank line between a node's text and its first child is the node's.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -485,7 +485,7 @@ on, so ourus refuses them, rather than leave them to the host, whose Tab there w
 code.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -524,7 +524,7 @@ In the Obsidian flavor frontmatter is the preamble, no node, so Enter in it is t
 (CommonMark and GFM have no frontmatter: there `a: b` / `---` is a setext heading.)
 
 ```yaml
-rank: edge
+tags: edge
 flavor: obsidian
 ```
 

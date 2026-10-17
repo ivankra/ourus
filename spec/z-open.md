@@ -37,7 +37,7 @@ answers: one rule in guarantee 4 (children a node can't hold where it lands foll
 siblings), each case stating its inverse; or refusing all of them. Decided with the above.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ````buffer

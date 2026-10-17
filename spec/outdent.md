@@ -43,7 +43,7 @@ Obsidian's Outliner outdents logically, as WorkFlowy and Roam.
 Item becomes next sibling of its parent.
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -64,7 +64,7 @@ A top-level item that isn't the first of its list can't outdent: its paragraph w
 list, and no app measured outdents a top-level item.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -88,7 +88,7 @@ rejected: at-top-level
 Tab-nested item outdents.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -109,7 +109,7 @@ A heading goes up a level, its section's headings with it: Indent12's inverse. B
 nothing.
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -129,7 +129,7 @@ rank: common
 H1 cannot outdent further.
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -154,7 +154,7 @@ Outdenting from the middle of a loose list keeps it loose. (With direct outdent,
 `b`'s child.)
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -186,7 +186,7 @@ as a setext underline, and the caret isn't there to hold it, so a blank line set
 the caret leaves such an item. Every app outdents here.
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -212,7 +212,7 @@ Each becomes a paragraph; a child goes with its item, which now owns it, right u
 DirectOutdent4. Blank lines go only where a paragraph needs one. Bare Obsidian does nothing.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -239,7 +239,7 @@ An ordered item outdents into its parent's list, numbered on, and the items afte
 Indent4's inverse.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -261,7 +261,7 @@ rank: common
 Selected siblings outdent together: Indent9's inverse.
 
 ```yaml
-rank: common
+tags: common
 ```
 
 ```buffer
@@ -286,7 +286,7 @@ A heading goes up a level in place; the heading after it, now a level below it, 
 subsection.
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -309,7 +309,7 @@ A selection of top-level items from the list's first: each becomes a paragraph. 
 outdent (Outdent2), but goes with the item above it.
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -331,7 +331,7 @@ Outdent, then indent: the item is back, but direct outdent gave it `d`, which in
 The inverse pair's stated exception.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -365,7 +365,7 @@ From before the marker, Shift-Tab outdents the item and the caret ends in its te
 mirror).
 
 ```yaml
-rank: rare
+tags: rare
 ```
 
 ```buffer
@@ -387,7 +387,7 @@ paragraphs need; indented back, it is the paragraph's list again, which needs no
 line goes: the text comes back as it was.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -421,7 +421,7 @@ later siblings under it too.
 ### DirectOutdent1
 
 ```yaml
-rank: core
+tags: core
 ```
 
 ```buffer
@@ -449,7 +449,7 @@ At the top level, the first item of a list becomes a paragraph, one level above 
 Bare Obsidian does nothing.
 
 ```yaml
-rank: common
+tags: common free-form
 ```
 
 ```buffer
@@ -470,7 +470,7 @@ The item's children stay its children, before the items that followed it. The li
 is now level with `b`.
 
 ```yaml
-rank: edge
+tags: edge free-form
 ```
 
 ```buffer
@@ -493,7 +493,7 @@ An item of a paragraph's list leaves the paragraph and becomes a paragraph after
 after it come along, and become the new paragraph's list.
 
 ```yaml
-rank: edge
+tags: edge
 ```
 
 ```buffer
@@ -521,7 +521,7 @@ with `outdent: logical`, which each case below sets in a config block.
 ### LogicalOutdent1
 
 ```yaml
-rank: common
+tags: common
 outdent: logical
 ```
 
@@ -549,7 +549,7 @@ At the top level, the first item of a list becomes a paragraph. It passes the re
 which keeps its parent, and follows it, set off by a blank line.
 
 ```yaml
-rank: edge
+tags: edge free-form
 outdent: logical
 ```
 
@@ -571,7 +571,7 @@ a┃
 The item's children come along. Below the new paragraph, they become its list.
 
 ```yaml
-rank: edge
+tags: edge free-form
 outdent: logical
 ```
 
@@ -596,7 +596,7 @@ An item of a paragraph's list leaves the paragraph and becomes a paragraph after
 after it stay with their paragraph, so the new paragraph goes past them.
 
 ```yaml
-rank: edge
+tags: edge
 outdent: logical
 ```
 
@@ -621,7 +621,7 @@ A heading outdents in place under logical outdent too: keeping the headings afte
 parent would move whole sections past each other (Outdent11).
 
 ```yaml
-rank: edge
+tags: edge free-form
 outdent: logical
 ```
 
@@ -645,7 +645,7 @@ The first item outdented to a paragraph right above an empty item: a blank line 
 off, which right under the paragraph's text would read as a setext underline.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -671,7 +671,7 @@ as it would be a paragraph's list. Indent doesn't make it an item again: on a he
 level ([Indent12](indent.md#indent12)).
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -691,7 +691,7 @@ rank: rare
 With `outdent: logical`, the heading follows the rest of the list, which stays a list.
 
 ```yaml
-rank: rare
+tags: rare free-form
 outdent: logical
 ```
 
@@ -713,7 +713,7 @@ Where the heading would take in what follows the list, a paragraph or a list of 
 section, outdent is refused; so it is where its level would end the section it is in.
 
 ```yaml
-rank: rare
+tags: rare free-form
 ```
 
 ```buffer
@@ -744,7 +744,7 @@ goes into the code, where typing can't break its fence. Indent
 doesn't make it an item again: with nothing above, a block has nothing to be an item of.
 
 ```yaml
-rank: rare
+tags: rare free-form markup-fence
 ```
 
 ````buffer

@@ -91,11 +91,22 @@ export function pastePlain(ctx: CommandContext, payload: string): Outcome {
   const rest = text.slice(restFrom, line.to);
   // the first line joins the text before the caret; at the start of a line of the text it starts that
   // line, without its leading spaces (four would make it code), escaped where it would start a block
-  // there (a node's first line) or interrupt the text
-  const lineStart = text.slice(line.contentFrom, from).trim() === '';
-  const firstLine = lineStart ? ctx.encoder.escape(lines[0]!.trimStart(), line.index === node.head.startLine ? 'start' : 'continuation').text : lines[0]!;
+  // there (a node's first line) or interrupt the text; joined onto text before the caret, the line may
+  // read as a block start too (`1` and `. a`, `1` and `1. a`), escaped where the escape falls: in the
+  // pasted line, or in the text before the caret (`escapeAt`)
+  const kind = line.index === node.head.startLine ? 'start' : 'continuation';
+  const beforeText = text.slice(line.contentFrom, from);
+  const lineStart = beforeText.trim() === '';
+  const own = beforeText.trimStart();
+  const at = lineStart ? null : ctx.encoder.escape(own + lines[0]!, kind).at;
+  const escapeAt = at !== null && at < own.length ? from - own.length + at : null;
+  const firstLine = lineStart
+    ? ctx.encoder.escape(lines[0]!.trimStart(), kind).text
+    : at !== null && escapeAt === null
+      ? lines[0]!.slice(0, at - own.length) + '\\' + lines[0]!.slice(at - own.length)
+      : lines[0]!;
   let insert = firstLine;
-  const changes: ChangeSpec[] = [];
+  const changes: ChangeSpec[] = escapeAt !== null ? [{ from: escapeAt, to: escapeAt, insert: '\\' }] : [];
   // the lines after the first as written; a blank one before the last is a paragraph break (null)
   const written: (string | null)[] = [];
   let restWritten = rest;
@@ -128,13 +139,15 @@ export function pastePlain(ctx: CommandContext, payload: string): Outcome {
   const headLines = doc.headLines(node);
   const i = line.index - node.head.startLine;
   const lastLine = written[written.length - 1]! + restWritten;
-  const broken = [...headLines.slice(0, i), headLines[i]!.slice(0, from - line.contentFrom) + firstLine, ...written.slice(0, -1), lastLine, ...headLines.slice(i + 1)];
+  const kept = headLines[i]!.slice(0, from - line.contentFrom);
+  const keptLine = escapeAt !== null ? kept.slice(0, escapeAt - line.contentFrom) + '\\' + kept.slice(escapeAt - line.contentFrom) : kept;
+  const broken = [...headLines.slice(0, i), keptLine + firstLine, ...written.slice(0, -1), lastLine, ...headLines.slice(i + 1)];
   // broken there, the text's start may read as a link reference definition (`[a]: x`): escaped
   const firstBreak = broken.indexOf(null);
   const ref = referenceEscape(ctx, node, (firstBreak < 0 ? broken : broken.slice(0, firstBreak)) as string[]);
   if (ref) changes.push(ref.change);
   const textLines = ref ? [ref.lines[0]!, ...broken.slice(1)] : broken;
-  const caret = from + insert.length + (ref && ref.change.from <= from ? 1 : 0);
+  const caret = from + insert.length + (ref && ref.change.from <= from ? 1 : 0) + (escapeAt !== null ? 1 : 0);
   // an empty last line exists only as a place to type into, as after Shift-Enter
   const placeholders = lastLine.trim() === '' && i === headLines.length - 1 ? [caret] : undefined;
   return ctx.caret(changes, caret, paragraphsPlan(ctx, node, paragraphsOf(textLines)), { ...(placeholders ? { placeholders } : {}) });
@@ -188,7 +201,9 @@ function paragraphsPlan(ctx: CommandContext, node: OutlineNode, paragraphs: read
  * One line of plain text is inline text, the host's; one that is an item, a heading or a quote is
  * pasted as nodes, as several lines are. Plain lines are text, as plain paste puts them
  * (`pasteStructuredLines: text`), or nodes (`items`). In the middle of a node's text the node splits
- * there (`pasteStructuredMidText: split`), or the paste goes after it (`after`).
+ * there (`pasteStructuredMidText: split`), or the paste goes after it (`after`); at its end the paste
+ * goes after it (`pasteStructuredAtEnd: after`), or its first text joins it (`join`). A list landing
+ * in a list of the other kind takes its form, its numbers kept as text (`pasteStructuredListForm`).
  */
 export function paste(ctx: CommandContext, payload: string): Outcome {
   const { doc } = ctx;
@@ -251,6 +266,10 @@ export function paste(ctx: CommandContext, payload: string): Outcome {
   if (doc.config.pasteStructuredLines === 'text' && node.kind !== 'heading' && !atBlockEnd && !onBlank && roots.every((root) => root.kind === 'paragraph' && !root.children.length)) return pastePlain(ctx, payload);
   // an empty item, with children or not, takes the paste in its place, its children after it
   const empty = isEmptyText(ctx, node) && pos >= doc.markerTo(node.block);
+  // with `pasteStructuredOnParent: after`, after an item's children, as its next siblings, or a list
+  // last in a heading's section, the text left as it is
+  const lastChild = node.children[node.children.length - 1];
+  const afterChildren = doc.config.pasteStructuredOnParent === 'after' && !empty && !onBlank && !!lastChild && (node.kind === 'item' || (node.kind === 'heading' && roots.every((root) => root.kind === 'item')));
   if (!empty && !atBlockEnd) {
     if (!node.head || (node.kind !== 'item' && node.kind !== 'heading' && node.kind !== 'paragraph')) return notApplicable;
     const range = doc.headRange(node)!;
@@ -263,10 +282,14 @@ export function paste(ctx: CommandContext, payload: string): Outcome {
       if (line.index < node.head.startLine || line.index > lastText || pos < line.contentFrom || (node.kind === 'heading' && pos < range.from)) return notApplicable;
       // in the middle of the text one line is inline text, the host's, whatever it would be at the end
       if (inline) return notApplicable;
-      if (doc.config.pasteStructuredMidText === 'split' && node.head.type === 'paragraph') {
+      if (doc.config.pasteStructuredMidText === 'split' && node.head.type === 'paragraph' && !afterChildren) {
         const split = pasteSplit(ctx, node, line, pos, fragment, source, /(\r\n|\n|\r)\s*$/.test(payload));
         if (split) return split;
       }
+    } else if (doc.config.pasteStructuredAtEnd === 'join' && !onBlank && node.head.type === 'paragraph' && !afterChildren) {
+      // at the end of the text, the paste's first text joins it, as `split` joins it in the middle
+      const joined = pasteSplit(ctx, node, line, pos, fragment, source, /(\r\n|\n|\r)\s*$/.test(payload));
+      if (joined) return joined;
     }
   }
 
@@ -277,10 +300,12 @@ export function paste(ctx: CommandContext, payload: string): Outcome {
   // a list pasted at the end of a paragraph that owns one goes first in it, as Enter there puts a new
   // node right after the paragraph's text
   const ownsList = node.kind === 'paragraph' && node.children[0]?.kind === 'item' && fragment.root.children.every((root) => root.kind === 'item');
-  const asChildren = !empty && (node.kind === 'heading' || (node.kind === 'item' && node.children.length > 0) || ownsList);
+  const asChildren = !empty && (node.kind === 'heading' || (node.kind === 'item' && node.children.length > 0 && !afterChildren) || ownsList);
   // the list the paste lands in: the children's of an item that has them, else the item's own
-  // (at a heading's end, the list its section starts with, which the pasted items join)
-  const destList = asChildren && (node.kind === 'item' || node.kind === 'heading') && node.children[0]?.kind === 'item' && fragment.root.children.every((root) => root.kind === 'item') ? node.children[0].block.parent : node.kind === 'item' ? node.block.parent : null;
+  // (at a heading's end, the list its section starts with, which the pasted items join; with
+  // `pasteStructuredOnParent: after`, the list it ends with)
+  const landing = afterChildren ? lastChild : node.children[0];
+  const destList = asChildren && (node.kind === 'item' || node.kind === 'heading') && landing?.kind === 'item' && fragment.root.children.every((root) => root.kind === 'item') ? landing.block.parent : node.kind === 'item' ? node.block.parent : null;
   // a tight list takes the pasted nodes tight, whatever their spacing in the clipboard (rule 2): the
   // blank lines after each of them go (a blank line is still written where Markdown needs one)
   const tight = destList?.tight === true;
@@ -313,7 +338,7 @@ export function paste(ctx: CommandContext, payload: string): Outcome {
       : fitted.after
         ? base.place('after', fitted.after, fitted.nodes)
         : asChildren
-          ? base.append(node, 'first', fitted.nodes)
+          ? base.append(node, afterChildren ? 'last' : 'first', fitted.nodes)
           : base.place('after', node, fitted.nodes);
   // blocks that would end the list go into the item at the caret, after its text
   if (fitted.into.length) expected = expected.append(node, 'first', fitted.into);
@@ -373,6 +398,22 @@ const allTight = (n: OutlinePlanNode): OutlinePlanNode => ({ ...n, gap: 0, child
 const withGap = (n: OutlinePlanNode): OutlinePlanNode => (n.children.length ? { ...n, children: [...n.children.slice(0, -1), withGap(n.children[n.children.length - 1] as OutlinePlanNode)] } : { ...n, gap: 1 });
 
 /**
+ * Pasted lists with their numbers as text (`pasteStructuredListForm: literal`), at every depth: an
+ * ordered item is an item of `bullet`, its text starting with its number, escaped (`- 1\. x`); one
+ * whose text can't start with it (a heading, code) keeps its number.
+ */
+function literalLists(nodes: readonly PlanTree[], bullet: string): PlanTree[] {
+  return nodes.map((n) => {
+    if (!OutlinePlan.isPlanned(n)) return n;
+    const children = literalLists(n.children, bullet);
+    const number = n.kind === 'item' && !n.blockType && n.lines?.length ? /^(\d{1,9})([.)])$/.exec(n.marker ?? '') : null;
+    if (!number) return { ...n, children };
+    const lines = [`${number[1]}\\${number[2]} ${n.lines![0]!}`, ...n.lines!.slice(1)];
+    return { ...n, marker: bullet, exactMarker: true, lines, text: normText(lines), children };
+  });
+}
+
+/**
  * The pasted fragment's top-level nodes as they land at `node` (`after` a section the paste closes), or
  * null where one can't be a node there (a heading outside a list that would take in what follows it;
  * a block in an empty item's place that can't be its first block),
@@ -380,7 +421,9 @@ const withGap = (n: OutlinePlanNode): OutlinePlanNode => (n.children.length ? { 
  * numbering, starting from the item before. A pasted ordered item in a bullet list keeps its number
  * as text (`- 1\. x`), and a pasted number in an ordered list is kept as written. Pasted as a list's
  * first items, a single ordered list keeps its form, and the items after it are numbered on
- * (`restyle`). Plain lines are items, one each, and a heading is an item, its section with it. A block
+ * (`restyle`). So with `pasteStructuredListForm: text`; with `literal` a pasted number is always text,
+ * nested lists' too; with `drop` it goes; with `own` items of the other kind keep their form. Plain
+ * lines are items, one each, and a heading is an item, its section with it. A block
  * that is none of these (code, a quote, a table) would end the list as a sibling of its items: it goes
  * into the item before it, the item at the caret (`into`) or a pasted one; among an item's children,
  * or in an empty item's place, it stays where it is.
@@ -461,10 +504,15 @@ function fitPaste(ctx: CommandContext, node: OutlineNode, fragment: OutlineState
   const ordered = (marker: string): boolean => /^\d/.test(marker);
   const delimiter = (marker: string): string => marker.slice(-1);
   const numberOf = (marker: string): number => parseInt(marker, 10);
-  const pastedItems = roots.filter((root) => root.kind === 'item');
-  const oneOrderedList = pastedItems.length === roots.length && pastedItems.every((root) => ordered(markerOf(root, fragment))) && new Set(pastedItems.map((root) => root.block.parent)).size === 1;
+  // in a list a paragraph owns no list: a pasted paragraph's list is items after it, at its level
+  // (`pasteStructuredParagraphList: siblings`), or its item's children (`children`)
+  const siblingList = doc.config.pasteStructuredParagraphList === 'siblings';
+  const listed = siblingList ? roots.flatMap((root) => (root.kind === 'paragraph' ? [root, ...root.children] : [root])) : roots;
+  const pastedItems = listed.filter((root) => root.kind === 'item');
+  const oneOrderedList = pastedItems.length === listed.length && pastedItems.every((root) => ordered(markerOf(root, fragment))) && new Set(pastedItems.map((root) => root.block.parent)).size === 1;
+  const form = doc.config.pasteStructuredListForm;
   // a list's first items set its form: a single pasted ordered list keeps its own
-  const keepForm = startsList && oneOrderedList;
+  const keepForm = form === 'text' && startsList && oneOrderedList;
   let next = reference && ordered(destMarker) ? (asChildren || empty ? numberOf(destMarker) : numberOf(destMarker) + 1) : 1;
   const numbered = (): string => `${next++}${delimiter(destMarker)}`;
   const nodes: OutlinePlanNode[] = [];
@@ -481,7 +529,7 @@ function fitPaste(ctx: CommandContext, node: OutlineNode, fragment: OutlineState
     else if (!prev && !empty) into.push(made);
     else nodes.push(made);
   };
-  for (const root of roots) {
+  for (const root of listed) {
     if (root.kind === 'heading') {
       // a heading is an item's first block, the rest of its section the item's children; in an item a
       // paragraph owns no list, so the list one owned in the section follows it
@@ -491,18 +539,32 @@ function fitPaste(ctx: CommandContext, node: OutlineNode, fragment: OutlineState
     } else if (root.kind === 'item') {
       const own = markerOf(root, fragment);
       const item = copy(root);
-      if (keepForm) nodes.push(item);
-      else if (ordered(destMarker)) nodes.push({ ...item, marker: ordered(own) ? `${numberOf(own)}${delimiter(destMarker)}` : numbered() });
-      else if (ordered(own)) {
-        // the number is content: in a bullet list it stays as text, escaped
+      // the number as content: text, escaped, before the item's text
+      const numberAsText = (marker: string): OutlinePlanNode | null => {
         if (root.head?.type !== 'paragraph') return null;
-        const text = `${numberOf(own)}\\${delimiter(own)} `;
-        const itemLines = [text + item.lines![0]!, ...item.lines!.slice(1)];
-        nodes.push({ ...item, marker: destMarker, lines: itemLines, text: normText(itemLines) });
+        const itemLines = [`${numberOf(own)}\\${delimiter(own)} ${item.lines![0]!}`, ...item.lines!.slice(1)];
+        return { ...item, marker, lines: itemLines, text: normText(itemLines) };
+      };
+      if (keepForm || (form === 'own' && ordered(own) !== ordered(destMarker))) nodes.push(item);
+      else if (ordered(destMarker)) {
+        if (form === 'literal' && ordered(own)) {
+          const literal = numberAsText(numbered());
+          if (!literal) return null;
+          nodes.push(literal);
+        } else nodes.push({ ...item, marker: ordered(own) ? `${numberOf(own)}${delimiter(destMarker)}` : numbered() });
+      } else if (ordered(own) && form !== 'drop') {
+        // the number is content: in a bullet list it stays as text, escaped
+        const literal = numberAsText(destMarker);
+        if (!literal) return null;
+        nodes.push(literal);
       } else nodes.push({ ...item, marker: destMarker });
     } else if (root.kind === 'paragraph') {
       const rootLines = fragment.contentOf(root).lines!.map((text) => text.trim()).filter((text) => text !== '');
-      rootLines.forEach((text, k) => nodes.push({ ...OutlinePlan.created('item', normText([text])), lines: [text], marker: ordered(destMarker) ? numbered() : destMarker, children: k === rootLines.length - 1 ? copy(root).children : [] }));
+      // each line an item's text: escaped where it would start a block there (`2. y`, a nested list)
+      rootLines.forEach((text, k) => {
+        const line = ctx.encoder.escape(text, 'start').text;
+        nodes.push({ ...OutlinePlan.created('item', normText([line])), lines: [line], marker: ordered(destMarker) ? numbered() : destMarker, children: !siblingList && k === rootLines.length - 1 ? copy(root).children : [] });
+      });
     } else if (empty && !nodes.length) {
       // in an empty item's place, a code, math, comment or HTML block is an item's text; anything else isn't
       if (!['code_block', 'math_block', 'comment_block', 'html_block'].includes(root.block.type)) return null;
@@ -513,6 +575,11 @@ function fitPaste(ctx: CommandContext, node: OutlineNode, fragment: OutlineState
   }
   // the markers decided here are written as they are
   for (let k = 0; k < nodes.length; k++) if (nodes[k]!.kind === 'item' && nodes[k]!.marker) nodes[k] = { ...nodes[k]!, exactMarker: true };
+  // with `literal`, nested lists' numbers are text too
+  if (form === 'literal') {
+    const bullet = ordered(destMarker) ? doc.config.bullet : destMarker;
+    for (const list of [nodes, into]) for (let k = 0; k < list.length; k++) list[k] = { ...list[k]!, children: literalLists(list[k]!.children, bullet) };
+  }
   // the items after the paste in the list it starts take its form, numbered on
   const restyle: [OutlineNode, string][] = [];
   if (keepForm && !ordered(destMarker)) {
@@ -557,19 +624,22 @@ function pasteFirstBlock(ctx: CommandContext, node: OutlineNode, root: OutlineNo
 }
 
 /**
- * Structured paste in the middle of a paragraph's or an item's text (`pasteStructuredMidText: split`):
- * the node splits where Enter would split it, and the paste goes in between. Its first text joins the
- * text before the caret, with the nodes it owns: a paragraph's (with `pasteStructuredLines: items`
- * only its first line, the others items) or an item's, its marker being form; a heading, a quote or
- * code joins nothing. The rest of the paste follows, as at the end of the node's text. The text after
- * the caret is a node of its own after the paste: an item, taking the item's children (with
- * `enterMidItem: child` its first child, the item keeping them), or a paragraph, taking the
- * paragraph's list. Without a line break at the clipboard's end it ends the last pasted line instead,
- * where that is text and the node has no children. The caret goes to the start of the text after the
- * caret, or after the pasted text. Null where the paste goes after the node instead: outside a list,
- * a pasted heading would take in the text after the caret; at the text's very start (a checkbox
- * before it aside) nothing joining, there is nothing to split off; and a pasted ordered list from
- * another number than 1 right under the text, which it couldn't interrupt.
+ * Structured paste in the middle of a paragraph's or an item's text (`pasteStructuredMidText: split`),
+ * or at its end (`pasteStructuredAtEnd: join`): the node splits where Enter would split it, and the
+ * paste goes in between. Its first text joins the text before the caret, with the nodes it owns: a
+ * paragraph's (with `pasteStructuredLines: items` only its first line, the others items) or an
+ * item's, its marker being form; a heading, a quote or code joins nothing. The rest of the paste
+ * follows, as at the end of the node's text. The text after the caret is a node of its own after the
+ * paste: an item, taking the item's children (with `enterMidItem: child` its first child, the item
+ * keeping them), or a paragraph, taking the paragraph's list. Without a line break at the
+ * clipboard's end it ends the last pasted line instead, where that is text and the node has no
+ * children. At the text's end nothing is split off, and the node's children follow the paste (or
+ * stay, with `enterMidItem: child`). The caret goes to the start of the text after the caret, or
+ * after the pasted text. Null where the paste goes after the node instead: outside a list, a pasted
+ * heading would take in the text after the caret; at the text's very start (a checkbox before it
+ * aside), or at its end, nothing joining; at its end, a paragraph's list would follow blocks pasted
+ * after it; and a pasted ordered list from another number than 1 right under the text, which it
+ * couldn't interrupt.
  */
 function pasteSplit(ctx: CommandContext, node: OutlineNode, line: LineInfo, pos: number, fragment: OutlineState, source: readonly string[], endsWithBreak: boolean): Outcome | null {
   const { doc } = ctx;
@@ -597,17 +667,28 @@ function pasteSplit(ctx: CommandContext, node: OutlineNode, line: LineInfo, pos:
         ? fragment.headLines(first).map((text) => text.trim())
         : [];
   // a pasted item's number is content, kept as text, but where the item at the caret is ordered too,
-  // whose marker is the list's form
+  // whose marker is the list's form (`pasteStructuredListForm: text`); always (`literal`); never, its
+  // number being the item's form (`drop`, `own`)
   const firstMarker = first.kind === 'item' ? fragment.text.slice(fragment.markerFrom(first.block), fragment.markerTo(first.block)) : '';
-  const destOrdered = node.kind === 'item' && /^\d/.test(doc.text.slice(doc.markerFrom(node.block), doc.markerTo(node.block)));
-  if (firstLines.length && /^\d/.test(firstMarker) && !destOrdered) firstLines[0] = `${firstMarker} ${firstLines[0]}`;
+  const destMarker = node.kind === 'item' ? doc.text.slice(doc.markerFrom(node.block), doc.markerTo(node.block)) : '';
+  const form = doc.config.pasteStructuredListForm;
+  const numberKept = form === 'literal' || (form === 'text' && !/^\d/.test(destMarker));
+  if (firstLines.length && /^\d/.test(firstMarker) && numberKept) firstLines[0] = `${firstMarker} ${firstLines[0]}`;
   const partial = first.kind === 'paragraph' && doc.config.pasteStructuredLines === 'items' && firstLines.length > 1;
   const joined = partial ? firstLines.slice(0, 1) : firstLines;
   // joining at the start of a line of the text, it starts that line: escaped where it would start a block
   if (joined.length && before[before.length - 1]!.trim() === '') joined[0] = ctx.encoder.escape(joined[0]!, before.length === 1 ? 'start' : 'continuation').text;
-  const joinedChildren: PlanTree[] = joined.length && !partial ? first.children.map((child) => OutlinePlan.copy(fragment, child)) : [];
+  // a joined paragraph's list follows with the rest of the paste: in a list a paragraph owns none
+  // (`pasteStructuredParagraphList: siblings`); else it is the joined text's
+  const ownsItsList = first.kind !== 'paragraph' || doc.config.pasteStructuredParagraphList === 'children';
+  const copied = joined.length && !partial && ownsItsList ? first.children.map((child) => OutlinePlan.copy(fragment, child)) : [];
+  const joinedChildren: PlanTree[] = form === 'literal' ? literalLists(copied, /^\d/.test(destMarker) || !destMarker ? doc.config.bullet : destMarker) : copied;
+  // at the end of the text (`pasteStructuredAtEnd: join`) nothing is split off: where nothing joins,
+  // the paste goes after the node, as at `after`
+  const atEnd = restText === '';
+  if (atEnd && !joined.length) return null;
   // the rest of the paste, as at the end of the node's text
-  const restFrom = !joined.length ? 0 : partial ? first.startLine + 1 : fragment.lastDescendant(first).endLine + 1;
+  const restFrom = !joined.length ? 0 : partial ? first.startLine + 1 : !ownsItsList ? first.headEndLine + 1 : fragment.lastDescendant(first).endLine + 1;
   const restSource = source.slice(restFrom).join('\n');
   const childMode = node.kind === 'item' && doc.config.enterMidItem === 'child';
   const tight = node.kind === 'item' && node.block.parent?.tight === true;
@@ -673,11 +754,26 @@ function pasteSplit(ctx: CommandContext, node: OutlineNode, line: LineInfo, pos:
     const before = siblings.length ? siblings : pastedChildren;
     if (before.length) before[before.length - 1] = withGap(before[before.length - 1] as OutlinePlanNode);
   }
-  const children = childMode ? [...pastedChildren, ...(restNode ? [restNode] : []), ...node.children] : pastedChildren;
+  let children = childMode ? [...pastedChildren, ...(restNode ? [restNode] : []), ...node.children] : pastedChildren;
+  // at the end of the text, the node's children follow the paste, keeping their depth: under the last
+  // item pasted after an item, or after the paste in a paragraph's list (blocks pasted after a
+  // paragraph would take its list in: the paste goes after the node, as at `after`)
+  if (atEnd && !childMode && node.children.length) {
+    if (!siblings.length) children = [...pastedChildren, ...node.children];
+    else if (node.kind !== 'item') return null;
+    else {
+      const last = siblings[siblings.length - 1]!;
+      const adopted: OutlinePlanNode = { ...last, children: [...last.children, ...node.children] };
+      if (caret?.node === last) caret = { ...caret, node: adopted };
+      siblings[siblings.length - 1] = adopted;
+    }
+  }
   // an ordered list from another number than 1 can't interrupt the text above it: the paste goes after the node
   const firstChild = children[0] as OutlinePlanNode | undefined;
   if (firstChild?.kind === 'item' && /^\d+/.test(firstChild.marker ?? '') && parseInt(firstChild.marker!, 10) !== 1) return null;
-  let expected = ctx.plan.update(node, (n) => ({ ...n, text: normText(kept), lines: ownLines, children }));
+  // a paragraph's list written apart from it stays so, the paste going first in it
+  const apart = atEnd && node.kind === 'paragraph' && node.children[0]?.kind === 'item' && doc.lines.slice(node.headEndLine + 1, node.children[0].startLine).some((l) => l.blank);
+  let expected = ctx.plan.update(node, (n) => ({ ...n, text: normText(kept), lines: ownLines, children, ...(apart && { gap: 1 }) }));
   const after = childMode ? [] : [...siblings, ...(restNode ? [restNode] : [])];
   if (after.length) expected = expected.place('after', node, after);
   for (const [item, restyled] of fitted.restyle) expected = expected.update(item, (n) => ({ ...n, marker: restyled, exactMarker: true }));
