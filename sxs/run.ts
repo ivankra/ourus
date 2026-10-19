@@ -2,8 +2,8 @@
 // Replays the spec (spec/*.md) in another app, headless, and reports where it agrees with ourus.
 //
 //   node sxs/run.ts <app> [selector...] [options]     (or: npm run sxs -- <app> ...)
-//   node sxs/run.ts <app>,<app>... [selector...] [options] [--jobs=N]
-//   node sxs/run.ts all [selector...] [options] [--jobs=N]
+//   node sxs/run.ts <app>,<app>... [selector...] [options]
+//   node sxs/run.ts all [selector...] [options]     (all: also when no app is given)
 //
 // <app> is a directory here with a driver.ts (sxs/logseq/). A selector picks tests: a
 // file (`indent.md`, `indent`), one test (`indent.md#indent3`), or any part of a test's full name
@@ -16,13 +16,15 @@
 //   --list          print what would run and what is skipped, and stop (no browser)
 //   --headed        show the browser
 //   --slow=MS       pause after every action, on top of settling (to watch, or to rule timing out)
-//   --offline       serve only what the proxy has cached; a miss fails instead of being fetched
-//   --fresh         load the app anew, rather than take over the page an earlier run left loaded
-//   --no-report     don't copy the report into <app>/sxs.md (a run of every test does by default)
-//   --json=FILE     write the run as data to FILE too, as .sxs/<app>/sxs.json has it
-//   --jobs=N        with several apps, run at most N at once (all of them by default)
-//   --table         with several apps, run nothing: write the table from the verdicts the last runs left
-//   --regenerate-report  run no app: judge what it did in its last run against the spec as it is now, and
+//   --cache=MODE    how the proxy uses its cache: use (the default: serve what it has, fetch and keep the
+//                   rest), offline (serve only what it has, reach no network, write nothing: a miss fails),
+//                   refresh (fetch anew, once per proxy run, and keep)
+//   --fresh         load the app anew, rather than take over the page a run that died left loaded
+//   --no-report     don't copy the report into <app>.md (a run of every test does by default)
+//   --json=FILE     write the run as data to FILE too, as .sxs/results/<app>/sxs.json has it
+//   --pace=MS       keys at least MS apart (100, a typist's pace; 0: as fast as the app settles)
+//   --workers=N     N workers side by side (by default one per 30 examples, at most one per browser of the pool, and the driver's `parallel`)
+//   --report        run no app: judge what it did in its last run against the spec as it is now, and
 //                   write the report (and with several apps, the table) again ("regenerating", below)
 //   --timing        print how long the app took to settle after each action, and what kept it busy
 //   --plain-clipboard  give the app the clipboard's Markdown as plain text only, without its HTML
@@ -30,8 +32,8 @@
 //
 //   node sxs/run.ts --stop    stops the shared proxy and browsers, and the servers drivers started
 //
-// The proxy, a headless Chromium and the app's loaded page are shared between runs (lib/browser.ts):
-// started by the first run that needs them and left running. Each test starts from a fresh document
+// The proxy, a pool of headless Chromiums and the app's loaded page (a window of one of them) are
+// shared between runs (lib/browser.ts): started by the first run that needs them and left running. Each test starts from a fresh document
 // in the loaded app. After every key the runner waits for the app to settle (lib/idle.ts) rather than
 // for a fixed time.
 
@@ -39,23 +41,27 @@ import { spawn } from 'node:child_process';
 import { closeSync, copyFileSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Page } from 'playwright-core';
+import type { Browser, Page } from 'playwright-core';
 import { Config } from '../src/config.ts';
-import { appPage, ensureProxy, launch, proxyStats, stopShared, type AppPage } from './lib/browser.ts';
+import { appPage, BROWSERS, ensureProxy, launch, lockApp, proxyStats, stopShared, type AppPage } from './lib/browser.ts';
 import { clipboardHtml } from './lib/clipboard.ts';
 import type { Doc, Driver, Session } from './lib/driver.ts';
 import { idleVersion, installIdle, type IdleOptions, type IdleResult } from './lib/idle.ts';
-import { compareOutlines, draw, project, readOutline, sameOutline, type Outline, type Verdict } from './lib/outline.ts';
+import { LOGIN_EXIT, LoginRequired } from './lib/login.ts';
+import { compareOutlines, draw, project, readOutline, sameOutline, type Outline, type Verdict } from './lib/block.ts';
 import { compareTexts, drawTextDoc, readTextDoc, sameText, type TextDoc } from './lib/text.ts';
 import { adapt, allTests, selects, type Plan, type PlanStep } from './lib/plan.ts';
 import { passes } from '../test/spec-run.ts';
-import { cacheDir } from './proxy.ts';
+import { cacheDir, cacheMode } from './proxy.ts';
 
 const started = Date.now();
 const args = process.argv.slice(2);
 const flag = (name: string): boolean => args.includes(name);
 const option = (name: string): string | undefined => args.find((a) => a.startsWith(`${name}=`))?.slice(name.length + 1);
-const [app, ...selectors] = args.filter((a) => !a.startsWith('-'));
+// no app given: every app (`--report` alone regenerates them all)
+const [app = 'all', ...selectors] = args.filter((a) => !a.startsWith('-'));
+/** A run of some of the examples (selectors, `--strict` or `--ignore-options`): its report and data go to `.partial` files, the full run's kept. */
+const partialRun = selectors.length > 0 || flag('--strict') || flag('--ignore-options');
 if (flag('--stop')) {
   await stopShared((line) => console.log(line));
   process.exit(0);
@@ -63,24 +69,45 @@ if (flag('--stop')) {
 // ------------------------------------------------------------------ several apps
 //
 // Several apps (`logseq,dynalist`, or `all`) run side by side: a run of this for each, in a process
-// of its own (so the apps in browsers and the ones that start themselves go together), at
-// most `--jobs` at once, and one table of every example's verdict in each app. Each run's output goes
+// of its own (so the apps in browsers and the ones that start themselves go together), all at once,
+// their workers waiting for room in the pools, and one table of every example's verdict in each app. Each run's output goes
 // to `.sxs/<app>/sxs.log`, beside its report and run as data. The table is printed (every row for a few
-// examples or with -v, else the rows where the apps don't all agree), and written to `.sxs/sxs.md`, with
-// its heatmap, linking each app's report (`<app>/sxs.md`); for every app on the whole spec, copied here too.
+// examples or with -v, else the rows where the apps don't all agree), and written to `.sxs/results/sxs.md`,
+// with its heatmap, linking each app's report there (`<app>.md`); for every app on the whole spec,
+// here too.
 
 const here = fileURLToPath(new URL('./', import.meta.url));
 /**
- * What the last run of an app left, not checked in: `.sxs/<app>/sxs.{md,json,log}`; `.sxs/` mirrors
- * this directory (`.sxs/sxs.md`, `.sxs/<app>/sxs.md`), so the links of a report or the table hold in both.
+ * What the last run of an app left, not checked in: its report and run as data in the app's results,
+ * `.sxs/results/<app>/sxs.{md,json}`, or for a run of some of the examples (selectors, `--strict`),
+ * `sxs.partial.{md,json}`, the full run's left as they were; its output in the app's directory,
+ * `.sxs/<app>/sxs.log`.
  */
-const lastRun = (app: string, ext: 'md' | 'json' | 'log'): string => join(cacheDir, app, `sxs.${ext}`);
+const lastRun = (app: string, ext: 'md' | 'json' | 'log', partial = false): string =>
+  ext === 'log'
+    ? join(cacheDir, app, 'sxs.log')
+    : ext === 'md'
+      ? join(resultsRoot, `${app}${partial ? '.partial' : ''}.md`)
+      : join(resultsDir(app), `sxs${partial ? '.partial' : ''}.json`);
+/**
+ * The results in `.sxs/`, as `sxs/` has its checked-in ones: the last table (`sxs.md`, `sxs-heatmap.svg`),
+ * each app's report (`<app>.md`), and each app's run as data (`<app>/`: its last run, `sxs.json`, and each
+ * spec file's, `<file>.json`).
+ */
+const resultsRoot = join(cacheDir, 'results');
+const resultsDir = (app: string): string => join(resultsRoot, app);
+/**
+ * A report or table written for `sxs/`, as it reads in `.sxs/results/`, one directory deeper: each
+ * relative link out of it (`../spec/`) one `../` more; its links within (an app's report
+ * from the table) hold as they are.
+ */
+const inResults = (md: string): string => md.replace(/(\]\(|href=")\.\.\//g, '$1../../');
 
 /**
- * What an app did in a spec file's examples, as the last run of each left it (`.sxs/<app>/<file>.json`,
- * `indent.json` for `indent.md`): a run replaces the examples it ran and keeps the file's others, so runs
- * of a few examples add up; a run of every example of a file replaces them all. A regenerated report is
- * made from them (a run's own, `sxs.json`, from what it ran).
+ * What an app did in a spec file's examples, as the last run of every one of them left it
+ * (`.sxs/results/<app>/<file>.json`, `indent.json` for `indent.md`); a run of some of a file's examples
+ * writes them alone to `<file>.partial.json`, and the file's own stays as it was. A regenerated report
+ * is made from the files' own (a run's, `sxs.json`, from what it ran).
  */
 interface FileRun {
   type: 'SxS';
@@ -93,11 +120,11 @@ interface FileRun {
   ran: string;
   examples: RunExample[];
 }
-const fileRun = (app: string, file: string): string => join(cacheDir, app, `${file.replace(/\.md$/, '')}.json`);
+const fileRun = (app: string, file: string, partial = false): string => join(resultsDir(app), `${file.replace(/\.md$/, '')}${partial ? '.partial' : ''}.json`);
 
 /**
  * A run as data: what its report says, and what the app did in each example, every state drawn as
- * the spec draws a buffer. Every run writes it beside its report (`.sxs/<app>/sxs.json`); a run of
+ * the spec draws a buffer. Every run writes it beside its report (`.sxs/results/<app>/sxs.json`); a run of
  * several apps reads each run's there.
  */
 interface AppRun {
@@ -109,6 +136,8 @@ interface AppRun {
   model: Driver['model'];
   command: string;
   elapsed_s: number;
+  /** The workers it ran with (`--workers`): its time over one worker's is about this many. */
+  workers?: number;
   /** How many examples came out each way, skipped and in all; a block app's original and adapted ones apart too. */
   summary: Counts & { skipped: number; original?: Counts; adapted?: Counts };
   /** The examples run, in the spec's order. */
@@ -132,7 +161,7 @@ interface RunExample {
   verdict: Verdict | 'error';
   /** The step the verdict is about (the first that came out so), where it isn't `agree`. */
   step?: number;
-  /** What its buffers lost or had reinterpreted on blocks (lib/outline.ts); none for an original outline, and a text app's. */
+  /** What its buffers lost or had reinterpreted on blocks (lib/block.ts); none for an original outline, and a text app's. */
   adapted: string[];
   /** Its options as the spec sets them (the file's frontmatter, then its config block). */
   options: Record<string, string>;
@@ -199,6 +228,32 @@ const anchor = (name: string): string =>
     .trim()
     .replace(/\s/g, '-');
 
+/**
+ * How many workers each app's run gets (`--workers`), and its examples: as many as it can use, as a run
+ * of the app alone takes (one per 30 examples, at most one per browser of the pool, `BROWSERS`, never more than its driver allows,
+ * `Driver.parallel`); `--workers` given, every app's (within its driver's limit).
+ */
+async function workersOf(apps: string[], selectors: string[], pass: string[]): Promise<Map<string, { workers: number; examples: number }>> {
+  const asked = pass.find((f) => f.startsWith('--workers='))?.slice('--workers='.length);
+  const tests = allTests().filter((t) => selectors.length === 0 || selectors.some((s) => selects(s, t)));
+  return new Map(
+    await Promise.all(
+      apps.map(async (app) => {
+        const d = ((await import(`./${app}/driver.ts`)) as { driver: Driver }).driver;
+        // its examples this run, adapted as its run will adapt them (no browser)
+        const examples = new Set(
+          tests
+            .map((t) => adapt(d, t, { ignoreOptions: pass.includes('--ignore-options') }))
+            .flatMap((a) => ('plan' in a && !(pass.includes('--strict') && a.plan.notes.length) ? [a.plan.key] : [])),
+        ).size;
+        const most = Math.min(d.parallel ?? (d.launch ? 1 : BROWSERS), BROWSERS, Math.max(1, examples));
+        const workers = asked !== undefined ? Math.max(1, Math.min(most, Number(asked) || 1)) : Math.max(1, Math.min(most, Math.ceil(examples / 30)));
+        return [app, { workers, examples }] as const;
+      }),
+    ),
+  );
+}
+
 async function runMany(spec: string, selectors: string[], flags: string[]): Promise<number> {
   const say = (line: string): void => console.log(line);
   let apps = spec === 'all' ? allApps() : spec.split(',').filter(Boolean);
@@ -207,52 +262,48 @@ async function runMany(spec: string, selectors: string[], flags: string[]): Prom
     console.error(`no such app: ${unknown.join(', ') || spec}; the apps are ${allApps().join(', ')}`);
     return 2;
   }
-  const jobs = Math.max(1, Number(flags.find((f) => f.startsWith('--jobs='))?.slice('--jobs='.length) ?? apps.length) || apps.length);
-  const pass = flags.filter((f) => !f.startsWith('--jobs=') && !f.startsWith('--json='));
+  const pass = flags.filter((f) => !f.startsWith('--json='));
+  // every app's run of some examples (selectors, `--strict`): their `.partial` data, a `.partial` table
+  const partial = selectors.length > 0 || pass.includes('--strict') || pass.includes('--ignore-options');
   const verbose = pass.includes('-v') || pass.includes('--verbose');
-  const tableOnly = pass.includes('--table');
-  const regenerating = pass.includes('--regenerate-report');
+  const regenerating = pass.includes('--report');
   const t0 = Date.now();
   const exits = new Map<string, number>();
   const failed = new Set<string>();
 
-  if (tableOnly) {
-    // the verdicts of each app's last run (`.sxs/<app>/sxs.json`), as they are; an app with none is left out
-    for (const app of apps) {
-      const r = read(lastRun(app, 'json'));
-      say(r ? `${app.padEnd(24)} ${r.version ?? ''}, run in ${r.elapsed_s}s` : `${app.padEnd(24)} no verdicts (${relative(process.cwd(), lastRun(app, 'json'))}): left out`);
-    }
-    apps = apps.filter((app) => read(lastRun(app, 'json')));
-  } else {
-    // the proxy, up before the runs that share it, so they don't race to start it (each app has a browser of its own)
-    if (!pass.includes('--list') && !regenerating) await ensureProxy(pass.includes('--offline'), say);
+  // the proxy, up before the runs that share it, so they don't race to start it (each app has a browser of its own)
+  if (!pass.includes('--list') && !regenerating) await ensureProxy(cacheMode(pass), say);
 
-    say(`${apps.length} apps, ${Math.min(jobs, apps.length)} at a time: ${apps.join(', ')}; logs in ${relative(process.cwd(), cacheDir)}/<app>/sxs.log`);
-    const queue = [...apps];
-    const one = async (app: string): Promise<void> => {
-      const log = lastRun(app, 'log');
-      const json = lastRun(app, 'json');
-      mkdirSync(join(log, '..'), { recursive: true });
-      // the run's own data, written anew: none since it started, and it failed (what it had, the files' keep)
-      const since = Date.now();
-      const out = openSync(log, 'w');
-      const child = spawn(process.execPath, [...process.execArgv, fileURLToPath(import.meta.url), app, ...selectors, ...pass], { stdio: ['ignore', out, out] });
-      const code = await new Promise<number>((resolve) => child.on('exit', (c) => resolve(c ?? 1)));
-      closeSync(out);
-      exits.set(app, code);
-      const r = existsSync(json) && statSync(json).mtimeMs >= since ? read(json) : null;
-      if (!r) failed.add(app);
-      const s = (Date.now() - t0) / 1000;
-      if (pass.includes('--list')) return;
-      if (!r) say(`${app.padEnd(24)} failed (exit ${code}): ${relative(process.cwd(), log)}`);
-      else say(`${app.padEnd(24)} ${VERDICTS.map((v) => `${v} ${r.examples.filter((e) => e.verdict === v).length}`).join(', ')}; skipped ${r.skipped.length}${r.notRun?.length ? `; not run ${r.notRun.length}` : ''}  (${r.elapsed_s}s, done at ${s.toFixed(0)}s)`);
-    };
-    await Promise.all(
-      Array.from({ length: Math.min(jobs, apps.length) }, async () => {
-        for (let app = queue.shift(); app; app = queue.shift()) await one(app);
-      }),
-    );
-  }
+  // Obsidian's instances fewer with apps of the pool's browsers beside them, the two pools, full, under
+  // the container's cap on tasks (`obsidian/obsidian.ts`); the apps' runs have it from here
+  const drivers = new Map(await Promise.all(apps.map(async (a) => [a, ((await import(`./${a}/driver.ts`)) as { driver: Driver }).driver] as const)));
+  if ([...drivers.values()].some((d) => !d.launch)) process.env.OURUS_SXS_OBSIDIANS ??= '2';
+  const plan = await workersOf(apps, selectors, pass);
+  say(`${apps.length} apps at once, their workers as the pools have room: ${apps.map((a) => `${a}${plan.get(a)!.workers > 1 ? ` ×${plan.get(a)!.workers}` : ''}`).join(', ')}; logs in ${relative(process.cwd(), cacheDir)}/<app>/sxs.log`);
+  const one = async (app: string): Promise<void> => {
+    const log = lastRun(app, 'log');
+    const json = lastRun(app, 'json', partial);
+    mkdirSync(join(log, '..'), { recursive: true });
+    // the run's own data, written anew: none since it started, and it failed (what it had, the files' keep)
+    const since = Date.now();
+    const out = openSync(log, 'w');
+    // the app's workers (`--workers` given, every app's)
+    const workers = pass.some((f) => f.startsWith('--workers=')) ? [] : [`--workers=${plan.get(app)!.workers}`];
+    const child = spawn(process.execPath, [...process.execArgv, fileURLToPath(import.meta.url), app, ...selectors, ...pass, ...workers], { stdio: ['ignore', out, out] });
+    const code = await new Promise<number>((resolve) => child.on('exit', (c) => resolve(c ?? 1)));
+    closeSync(out);
+    exits.set(app, code);
+    const r = existsSync(json) && statSync(json).mtimeMs >= since ? read(json) : null;
+    if (!r) failed.add(app);
+    const s = (Date.now() - t0) / 1000;
+    if (pass.includes('--list')) return;
+    if (!r && code === LOGIN_EXIT) say(`${app.padEnd(24)} wants a signed-in session, left out: ${relative(process.cwd(), log)} says how to give it one`);
+    else if (!r && code === 0) say(`${app.padEnd(24)} no verdicts, left out: ${relative(process.cwd(), log)}`);
+    else if (!r) say(`${app.padEnd(24)} failed (exit ${code}): ${relative(process.cwd(), log)}`);
+    else say(`${app.padEnd(24)} ${VERDICTS.map((v) => `${v} ${r.examples.filter((e) => e.verdict === v).length}`).join(', ')}; skipped ${r.skipped.length}${r.notRun?.length ? `; not run ${r.notRun.length}` : ''}  (${r.elapsed_s}s, done at ${s.toFixed(0)}s)`);
+  };
+  // every app at once: its workers wait for room in the pools (`lib/browser.ts`, an app's own)
+  await Promise.all(apps.map(one));
   if (pass.includes('--list')) {
     for (const app of apps) say(`\n== ${app}\n${readFileSync(lastRun(app, 'log'), 'utf8').trimEnd()}`);
     return [...exits.values()].some((c) => c !== 0) ? 1 : 0;
@@ -262,7 +313,12 @@ async function runMany(spec: string, selectors: string[], flags: string[]): Prom
   const names = allTests()
     .filter((t) => selectors.length === 0 || selectors.some((s) => selects(s, t)))
     .map((t) => `${t.file} › ${t.name}`);
-  const byApp = new Map<string, AppRun | null>(apps.map((app) => [app, failed.has(app) ? null : read(lastRun(app, 'json'))]));
+  const byApp = new Map<string, AppRun | null>(apps.map((app) => [app, failed.has(app) ? null : read(lastRun(app, 'json', partial))]));
+  // an app with no verdicts (its run failed: behind a login with no session, say; or none to regenerate
+  // from) is left out, not a column of `?`
+  const without = apps.filter((app) => !byApp.get(app));
+  if (without.length) say(`left out of the table, with no verdicts: ${without.join(', ')}`);
+  apps = apps.filter((app) => byApp.get(app));
   const cell = (app: string, name: string): string => {
     const r = byApp.get(app);
     if (!r) return 'missing';
@@ -271,7 +327,7 @@ async function runMany(spec: string, selectors: string[], flags: string[]): Prom
   // the apps by how many examples agree, the most first: the order of every table
   const agrees = (app: string): number => names.filter((n) => cell(app, n) === 'agree').length;
   const order = [...apps].sort((x, y) => agrees(y) - agrees(x) || x.localeCompare(y));
-  // an example an app ran adapted (its buffers projected onto blocks, lib/outline.ts), per app
+  // an example an app ran adapted (its buffers projected onto blocks, lib/block.ts), per app
   const adapted = (app: string, name: string): string[] => byApp.get(app)?.examples.find((e) => e.name === name)?.adapted ?? [];
   const rows = names.map((name) => ({ name, cells: order.map((app) => cell(app, name)), adapted: order.map((app) => adapted(app, name)) }));
 
@@ -287,19 +343,32 @@ async function runMany(spec: string, selectors: string[], flags: string[]): Prom
 
   // written to .sxs/, beside the apps' reports; every app on the whole spec, copied beside the
   // reports checked in here too
-  const everything = spec === 'all' && selectors.length === 0 && !pass.includes('--strict') && !pass.includes('--no-report');
+  const everything = spec === 'all' && selectors.length === 0 && !pass.includes('--strict') && !pass.includes('--ignore-options') && !pass.includes('--no-report');
   // the run's time; a table of runs before, the longest of them (they ran side by side)
-  const elapsed = tableOnly || regenerating ? Math.max(0, ...[...byApp.values()].map((r) => r?.elapsed_s ?? 0)) : (Date.now() - t0) / 1000;
+  const elapsed = regenerating ? Math.max(0, ...[...byApp.values()].map((r) => r?.elapsed_s ?? 0)) : (Date.now() - t0) / 1000;
   const command = `node sxs/run.ts ${spec}${selectors.length ? ` ${selectors.join(' ')}` : ''}`;
-  const written = matrix({ apps: order, byApp, rows, command, elapsed });
-  writeFileSync(join(cacheDir, 'sxs.md'), written.md);
-  writeFileSync(join(cacheDir, 'sxs-heatmap.svg'), written.svg);
-  say(`\nwrote ${relative(process.cwd(), join(cacheDir, 'sxs.md'))}`);
-  if (everything) {
-    for (const f of ['sxs.md', 'sxs-heatmap.svg']) copyFileSync(join(cacheDir, f), join(here, f));
+  // the apps by their ids in the tables, as their drivers say them
+  const ids = new Map(order.map((a) => [a, drivers.get(a)!.id]));
+  const twice = [...ids].filter(([a, id]) => [...ids].some(([b, other]) => b !== a && other === id));
+  if (twice.length) throw new Error(`apps with the same id: ${twice.map(([a, id]) => `${a} ${id}`).join(', ')}`);
+  const ordered = new Set(order.filter((a) => drivers.get(a)!.ordered));
+  const written = matrix({ apps: order, ids, ordered, byApp, rows, command, elapsed });
+  mkdirSync(resultsRoot, { recursive: true });
+  // a run of some of the examples: the table and its heatmap as `.partial`, the full run's kept
+  const [md, svg] = partial ? ['sxs.partial.md', 'sxs-heatmap.partial.svg'] : ['sxs.md', 'sxs-heatmap.svg'];
+  writeFileSync(join(resultsRoot, md), inResults(partial ? written.md.replace('(sxs-heatmap.svg)', `(${svg})`) : written.md));
+  writeFileSync(join(resultsRoot, svg), written.svg);
+  say(`\nwrote ${relative(process.cwd(), join(resultsRoot, md))}`);
+  // an app that failed would lose its column in the table checked in: kept as it was until a run of every app works
+  // (an app wanting a session isn't a failure: it has no column until it has one)
+  const broken = [...exits].filter(([, c]) => c !== 0 && c !== LOGIN_EXIT).map(([a]) => a);
+  if (everything && broken.length) say(`not copied to sxs/sxs.md: ${broken.join(', ')} failed`);
+  else if (everything) {
+    writeFileSync(join(here, 'sxs.md'), written.md);
+    copyFileSync(join(resultsRoot, 'sxs-heatmap.svg'), join(here, 'sxs-heatmap.svg'));
     say(`copied it to sxs/sxs.md`);
   }
-  return [...exits.values()].some((c) => c !== 0) ? 1 : 0;
+  return broken.length ? 1 : 0;
 }
 
 function read<T = AppRun>(file: string): T | null {
@@ -312,17 +381,21 @@ function read<T = AppRun>(file: string): T | null {
 
 /**
  * The table as Markdown: what ran as frontmatter, the counts per app, then a table per spec file; its
- * links are from `sxs.md` (here or in `.sxs/`): each app's report, `<app>/sxs.md`, the spec, `../spec/`,
+ * links are from `sxs.md` (here or in `.sxs/`): each app's report, `<app>.md`, the spec, `../spec/`,
  * and the heatmap beside it, `sxs-heatmap.svg`, an SVG (GitHub keeps no colors in a table's cells).
  */
 function matrix(o: {
   apps: string[];
+  /** Each app's two capitals (`Driver.id`), its column's heading where the summary's row has named it. */
+  ids: Map<string, string>;
+  /** The apps that number blocks (`Driver.ordered`), whose states are drawn so. */
+  ordered: ReadonlySet<string>;
   byApp: Map<string, AppRun | null>;
   rows: { name: string; cells: string[]; adapted: string[][] }[];
   command: string;
   elapsed: number;
 }): { md: string; svg: string } {
-  const toReport = (app: string): string => `${app}/sxs.md`;
+  const toReport = (app: string): string => `${app}.md`;
   const row = (cells: (string | number)[]): string => `| ${cells.join(' | ')} |`;
   // an example by its own name (not its sections'), at most 20 characters and an ellipsis
   const short = (name: string): string => ([...name].length > 20 ? `${[...name].slice(0, 20).join('').trimEnd()}…` : name);
@@ -333,7 +406,7 @@ function matrix(o: {
   // the heatmap has ourus too, its verdict its own run of the example (a pending one disagrees)
   const tests = new Map(allTests().map((t) => [`${t.file} › ${t.name}`, t]));
   const ours = (name: string): string => (tests.has(name) ? (passes(tests.get(name)!) ? 'agree' : 'disagree') : 'missing');
-  const map = heatmap({ apps: [OURUS, ...o.apps], byApp: o.byApp, rows: o.rows.map((r) => ({ name: r.name, cells: [ours(r.name), ...r.cells], adapted: [[], ...r.adapted] })) });
+  const map = heatmap({ apps: [OURUS, ...o.apps], ids: new Map([[OURUS, 'US'], ...o.ids]), ordered: o.ordered, byApp: o.byApp, rows: o.rows.map((r) => ({ name: r.name, cells: [ours(r.name), ...r.cells], adapted: [[], ...r.adapted] })) });
   // per spec file, its disagreements: the apps' runs of its examples, the disagreements among them and
   // their share, the block apps' among them, and each app's (blank where it ran none); the most first,
   // then the total
@@ -351,7 +424,7 @@ function matrix(o: {
     '',
     'Each spec file\'s examples, the apps\' runs of them, the disagreements among those runs (and their share), the block apps\' disagreements among them, and each app\'s (blank: it ran none there); the most disagreements first.',
     '',
-    `| spec file | examples | runs | disagree | block apps | ${o.apps.map((a) => SHORT[a] ?? a).join(' | ')} |`,
+    `| spec file | examples | runs | disagree | block apps | ${o.apps.map((a) => `[${o.ids.get(a)}](${toReport(a)} "${a}")`).join(' | ')} |`,
     `| --- | ---: | ---: | ---: | ---: | ${o.apps.map(() => '---:').join(' | ')} |`,
     ...byFile.map((r) => `| [${r.f}](../spec/${r.f}) | ${r.cases} | ${r.runs} | ${r.dis} (${share(r.dis, r.runs)}) | ${r.blockRan ? r.blockDis : ''} | ${r.apps.join(' | ')} |`),
     `| **total** | **${sum.cases}** | **${sum.runs}** | **${sum.dis} (${share(sum.dis, sum.runs)})** | **${sum.blockDis}** | ${o.apps.map((_, i) => `**${o.rows.filter((r) => r.cells[i] === 'disagree').length}**`).join(' | ')} |`,
@@ -368,14 +441,15 @@ function matrix(o: {
     '# Every app side by side',
     '',
     `Each test case of the spec, run in each app and compared with ourus (the [legend](#legend) is above`,
-    `the test cases). An app's report (its name above its column) has the outcomes and the reasons for its skips.`,
+    `the test cases). An app's report (its id above its column links it) has the outcomes and the reasons for its skips.`,
     '',
     '## Summary',
     '',
-    // a row per app, its model (block or text), a column per verdict
-    row(['', 'model', ...columns.map((c) => (c === 'missing' ? 'not run' : c)), 'total']),
-    `| --- | --- |${' --- |'.repeat(columns.length + 1)}`,
-    ...o.apps.map((a) => row([`[${a}](${toReport(a)})`, o.byApp.get(a)?.model ?? '', ...columns.map((v) => count(a, v) || ''), `**${o.rows.length}**`])),
+    // a row per app, its id (its column's heading in the tables below), its model (block or text), a
+    // column per verdict
+    row(['', 'id', 'model', ...columns.map((c) => (c === 'missing' ? 'not run' : c)), 'total']),
+    `| --- | --- | --- |${' --- |'.repeat(columns.length + 1)}`,
+    ...o.apps.map((a) => row([`[${a}](${toReport(a)})`, o.ids.get(a)!, o.byApp.get(a)?.model ?? '', ...columns.map((v) => count(a, v) || ''), `**${o.rows.length}**`])),
     '',
     ...byFileLines,
     ...map.lines,
@@ -401,7 +475,7 @@ function matrix(o: {
       gap();
       if (rows.length % 2 === 0) gap();
     }
-    tr([`<td><b>${html(f)}</b>`, ...o.apps.map((a) => `<td><b><a href="${toReport(a)}"${SHORT[a] ? ` title="${html(a)}"` : ''}>${html(SHORT[a] ?? a)}</a></b>`), '<td><b>disagree</b>', '<td><b>rank</b>']);
+    tr([`<td><b>${html(f)}</b>`, ...o.apps.map((a) => `<td><b><a href="${toReport(a)}" title="${html(a)}">${html(o.ids.get(a)!)}</a></b>`), '<td><b>disagree</b>', '<td><b>rank</b>']);
     for (const r of inFile) {
       const cells = r.cells.map((c, i) => (r.adapted[i]!.length && c !== 'agree' && c !== 'skipped' ? `<td>(${CELL[c]![1]})` : `<td>${CELL[c]![1]}`));
       const rank = tests.get(r.name)?.rank;
@@ -423,11 +497,7 @@ function matrix(o: {
     ...(columns.includes('missing') ? [`| ${CELL.missing![1]} | not run: the app's last run didn't play the example as the spec has it now |`] : []),
     `| (${CELL.disagree![1]}) | in brackets, a difference in an example adapted for the app: its buffers projected onto blocks, so it compares those |`,
     '',
-    'An example\'s **rank** is how often users meet it (`core`, `common`, `edge` or `rare`: [the spec\'s README](../spec/README.md)); a file\'s **disagree** column counts the apps that disagree on the example; its **total** row, the examples each app disagrees on, and all of them.',
-    Object.entries(SHORT)
-      .filter(([app]) => o.apps.includes(app))
-      .map(([app, short]) => `**${short}** is ${app}.`)
-      .join(' '),
+    'An example\'s **rank** is how often users meet it (`core`, `common`, `edge` or `rare`: [the spec\'s README](../spec/README.md)); a file\'s **disagree** column counts the apps that disagree on the example; its **total** row, the examples each app disagrees on, and all of them. An app is its id in the tables, as the [summary](#summary) has it.',
     '',
   );
   out.push('## Test cases', '', '<table>', ...rows, '</table>', '');
@@ -453,9 +523,6 @@ function heat(p: number): { bg: string; fg: string } {
   return { bg: `#${[r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')}`, fg: 0.299 * r + 0.587 * g + 0.114 * b < 140 ? '#fff' : '#000' };
 }
 
-/** Apps by a shorter name in the test cases' table, for its width (the legend says which). */
-const SHORT: Record<string, string> = { 'obsidian-true-outliner': 'TO', 'obsidian-outliner': 'outliner', 'obsidian-lp': 'lp', 'emacs-markdown': 'emacs' };
-
 /** ourus's own column in the heatmap: its verdicts are its runs of the examples. */
 const OURUS = 'ourus';
 
@@ -464,14 +531,21 @@ const OURUS = 'ourus';
  * adapted the same way (`score`: the same result 1, the same but for the caret or spaces ½), colored by
  * it, ourus among them, in the order given: the table's, by how many examples agree, ourus first.
  */
-function heatmap(o: { apps: string[]; byApp: Map<string, AppRun | null>; rows: { name: string; cells: string[]; adapted: string[][] }[] }): { lines: string[]; svg: string } {
+function heatmap(o: { apps: string[]; ids: Map<string, string>; ordered: ReadonlySet<string>; byApp: Map<string, AppRun | null>; rows: { name: string; cells: string[]; adapted: string[][] }[] }): { lines: string[]; svg: string } {
   const ran = (c: string): boolean => c !== 'error' && (VERDICTS as readonly string[]).includes(c);
   const examples = new Map(o.apps.map((a) => [a, new Map((o.byApp.get(a)?.examples ?? []).map((e) => [e.name, e]))]));
   /** A verdict's points: agreeing with ourus is 1, a difference only in the caret or in spaces half. */
   const points = (v: string): number => (v === 'agree' ? 1 : v === 'caret' || v === 'whitespace' ? 0.5 : 0);
-  /** How two outputs compare, as an app's with ourus's: as outlines where both read as one, else as text. */
-  const compare = (x: string, y: string): string => {
-    const [ox, oy] = [readOutline(x), readOutline(y)];
+  /** A state of `app`'s as an outline, read as the app's are drawn, or null where it reads as none. */
+  const outline = (app: string, drawn: string): Outline | null => readOutline(drawn, { ordered: o.ordered.has(app) });
+  /** A state of `app`'s as it is drawn now: a run's data keeps the drawing of its day. */
+  const redrawn = (app: string, drawn: string): string => {
+    const d = outline(app, drawn);
+    return d ? draw(d, { ordered: o.ordered.has(app) }) : drawn;
+  };
+  /** How two apps' outputs compare: as outlines where both read as one, else as text. */
+  const compare = (a: string, x: string, b: string, y: string): string => {
+    const [ox, oy] = [outline(a, x), outline(b, y)];
     return ox && oy ? compareOutlines(ox, oy) : compareTexts(readTextDoc(x), readTextDoc(y));
   };
   /**
@@ -494,8 +568,8 @@ function heatmap(o: { apps: string[]; byApp: Map<string, AppRun | null>; rows: {
     // blocks and another's text, or two adaptations, aren't the same document
     if (row.adapted[i]!.join() !== row.adapted[k]!.join()) return null;
     const [x, y] = [examples.get(a)!.get(row.name), examples.get(b)!.get(row.name)];
-    if (x && y && x.start === y.start && x.steps.length === y.steps.length) {
-      const steps = x.steps.flatMap((step, i) => (step.app !== null && y.steps[i]!.app !== null ? [points(compare(step.app, y.steps[i]!.app!))] : []));
+    if (x && y && redrawn(a, x.start) === redrawn(b, y.start) && x.steps.length === y.steps.length) {
+      const steps = x.steps.flatMap((step, i) => (step.app !== null && y.steps[i]!.app !== null ? [points(compare(a, step.app, b, y.steps[i]!.app!))] : []));
       if (steps.length) return Math.min(...steps);
     }
     if (va === 'agree' || vb === 'agree') return points(va === 'agree' ? vb : va);
@@ -509,13 +583,14 @@ function heatmap(o: { apps: string[]; byApp: Map<string, AppRun | null>; rows: {
   const apps = o.apps;
   const label = (a: string): string => (a === OURUS ? 'label ours' : 'label');
   const xml = (t: string): string => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  // the grid: app names down the left and slanted along the top, a cell per two apps, colored by
-  // their share, its count as its title (a tooltip where the SVG is opened as itself)
+  // the grid: app names down the left, their ids along the top (in the same order, right-aligned as
+  // the cells' numbers), a cell per two apps, colored by their share, its count as its title (a tooltip
+  // where the SVG is opened as itself)
   const W = 36;
   const H = 22;
   const left = 8 + Math.max(...apps.map((a) => a.length)) * 7;
-  const top = 12 + Math.max(...apps.map((a) => a.length)) * 5;
-  const width = left + W * apps.length + top;
+  const top = 24;
+  const width = left + W * apps.length + 8;
   const height = top + H * apps.length + 8;
   const svg: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" shape-rendering="crispEdges" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12">`,
@@ -525,7 +600,7 @@ function heatmap(o: { apps: string[]; byApp: Map<string, AppRun | null>; rows: {
     // system's preference, which needn't be the page's)
     '<style>.label{fill:#8b949e}.ours{font-weight:bold}.empty{fill:rgba(128,128,128,0.15)}' +
       '@media (prefers-color-scheme: dark){.label{fill:#c9d1d9}}</style>',
-    ...apps.map((a, k) => `<text class="${label(a)}" transform="translate(${left + W * k + W / 2 - 3},${top - 6}) rotate(-45)">${xml(a)}</text>`),
+    ...apps.map((a, k) => `<text class="${label(a)}" x="${left + W * k + W - 6}" y="${top - 8}" text-anchor="end">${xml(o.ids.get(a) ?? a)}</text>`),
     ...apps.map((a, i) => `<text class="${label(a)}" x="${left - 8}" y="${top + H * i + H / 2 + 4}" text-anchor="end">${xml(a)}</text>`),
   ];
   apps.forEach((a, i) =>
@@ -570,7 +645,7 @@ const verbose = flag('-v') || flag('--verbose');
 const repeat = Number(option('--repeat') ?? 1);
 const slow = Number(option('--slow') ?? 0);
 const timing = flag('--timing');
-const regenerating = flag('--regenerate-report');
+const regenerating = flag('--report');
 
 if (!app || !existsSync(new URL(`./${app}/driver.ts`, import.meta.url))) {
   console.error(`usage: node sxs/run.ts <app> [selector...] [options]; an app is a directory of sxs/ with a driver.ts`);
@@ -586,11 +661,11 @@ const say = (line: string): void => console.log(line);
 function fileRuns(): FileRun[] {
   const files = [...new Set(allTests().map((t) => t.file))];
   // every file's, whether or not the spec still has its cases: a case moved to another file is matched there too
-  const dir = join(cacheDir, driver.name);
+  const dir = resultsDir(driver.name);
   const all = (): FileRun[] =>
     existsSync(dir)
       ? readdirSync(dir)
-          .filter((f) => f.endsWith('.json') && f !== 'sxs.json')
+          .filter((f) => f.endsWith('.json') && !f.endsWith('.partial.json') && f !== 'sxs.json')
           .map((f) => read<FileRun>(join(dir, f)))
           .filter((r): r is FileRun => r?.type === 'SxS' && typeof r.file === 'string')
       : [];
@@ -604,27 +679,42 @@ function fileRuns(): FileRun[] {
   }
   return all();
 }
-function writeFileRun(r: FileRun): void {
+function writeFileRun(r: FileRun, partial = false): void {
   mkdirSync(join(fileRun(r.app, r.file), '..'), { recursive: true });
-  writeFileSync(fileRun(r.app, r.file), `${JSON.stringify(r, null, 2)}\n`);
+  writeFileSync(fileRun(r.app, r.file, partial), `${JSON.stringify(r, null, 2)}\n`);
 }
 
-/** A regenerated report's last runs: every example's (`FileRun`), with the version, command and time of the latest. */
+/**
+ * A regenerated report's last runs: every example's (`FileRun`). Its version, command and time are the
+ * report's as it stands (`<app>.md`): regenerating runs nothing, and changes no run's facts. An app
+ * with no report yet takes the latest run of every example's (its command without selectors), else the
+ * latest run's.
+ */
 const previous = regenerating
   ? (() => {
       const runs = fileRuns();
-      const latest = runs.reduce<FileRun | null>((a, b) => (a && a.ran > b.ran ? a : b), null);
-      return latest && { version: latest.version, command: latest.command, elapsed_s: latest.elapsed_s, examples: runs.flatMap((r) => r.examples) };
+      const latestOf = (rs: FileRun[]): FileRun | null => rs.reduce<FileRun | null>((a, b) => (a && a.ran > b.ran ? a : b), null);
+      const latest = latestOf(runs);
+      if (!latest) return null;
+      const report = existsSync(join(here, `${driver.name}.md`)) ? readFileSync(join(here, `${driver.name}.md`), 'utf8') : '';
+      const field = (name: string): string | undefined => new RegExp(`^${name}: (.*)$`, 'm').exec(report.split(/^---$/m)[1] ?? '')?.[1];
+      const examples = runs.flatMap((r) => r.examples);
+      const [version, command, elapsed, workers] = [field('version'), field('command'), field('elapsed_s'), field('workers')];
+      // a run that said no version is reported as "unknown"
+      if (command !== undefined && elapsed !== undefined) return { version: version === undefined ? latest.version : version === '"unknown"' ? null : (JSON.parse(version) as string | null), command: JSON.parse(command) as string, elapsed_s: Number(elapsed), workers: Number(workers ?? 1), examples };
+      const whole = latestOf(runs.filter((r) => /^node sxs\/run\.ts [\w-]+$/.test(r.command))) ?? latest;
+      return { version: whole.version, command: whole.command, elapsed_s: whole.elapsed_s, workers: 1, examples };
     })()
   : null;
 if (regenerating && !previous) {
+  // nothing to judge again is no failure: a run of several apps leaves the app out
   console.error(`no run of ${driver.title} to regenerate the report from in ${relative(process.cwd(), join(cacheDir, driver.name))}`);
-  process.exit(1);
+  process.exit(0);
 }
 
 // the app's kind of document (`Driver.model`): how one is drawn, compared, and told apart from another
 const isText = driver.model === 'text';
-const drawDoc = (d: Doc): string => (isText ? drawTextDoc(d as TextDoc) : draw(d as Outline));
+const drawDoc = (d: Doc): string => (isText ? drawTextDoc(d as TextDoc) : draw(d as Outline, { ordered: driver.ordered }));
 const compareDocs = (want: Doc, got: Doc, sections?: readonly number[], flavor?: Config['flavor']): Verdict =>
   isText ? compareTexts(want as TextDoc, got as TextDoc, flavor) : compareOutlines(want as Outline, got as Outline, sections);
 /** The flavor a plan's example is read in. */
@@ -639,7 +729,7 @@ const skipped = new Map<string, string[]>();
 /** A regenerated report's examples that its last run didn't play as they are now, by why: they want a run. */
 const notRun = new Map<string, string[]>();
 for (const t of tests) {
-  const a = adapt(driver, t);
+  const a = adapt(driver, t, { ignoreOptions: flag('--ignore-options') });
   const why = 'skip' in a ? a.skip : flag('--strict') && a.plan.notes.length ? `adapted (${a.plan.notes.join(', ')})` : null;
   if (why === null && 'plan' in a) plans.push(a.plan);
   else skipped.set(why!, [...(skipped.get(why!) ?? []), `${t.file} › ${t.name}`]);
@@ -710,6 +800,7 @@ function runData(results: readonly Result[], version: string | undefined): AppRu
     // a regenerated report's, the run's it was made from
     command: previous?.command ?? `node sxs/run.ts ${[driver.name, ...selectors].join(' ')}`,
     elapsed_s: previous?.elapsed_s ?? Math.round((Date.now() - started) / 1000),
+    ...((previous?.workers ?? workersUsed) > 1 && { workers: previous?.workers ?? workersUsed }),
     summary: {
       ...tally(examples),
       skipped: skips.length,
@@ -740,10 +831,10 @@ function stepVerdict(step: PlanStep, got: Doc | null, clipboard: string | null |
   return v;
 }
 
-/** The run as data, in `.sxs/<app>/sxs.json`, and to `--json`'s file if asked. */
+/** The run as data, in `.sxs/results/<app>/sxs.json` (a run of some examples, `sxs.partial.json`), and to `--json`'s file if asked. */
 function writeJson(run: AppRun): void {
   mkdirSync(join(lastRun(driver.name, 'json'), '..'), { recursive: true });
-  for (const file of [lastRun(driver.name, 'json'), option('--json')]) if (file) writeFileSync(file, `${JSON.stringify(run, null, 2)}\n`);
+  for (const file of [lastRun(driver.name, 'json', partialRun), option('--json')]) if (file) writeFileSync(file, `${JSON.stringify(run, null, 2)}\n`);
 }
 if (unique.size === 0) {
   say(`nothing to run: ${tests.length} tests selected, all skipped`);
@@ -800,30 +891,67 @@ const sessionActor = (session: Session): Actor => ({
   settle: async () => ({ ms: 0, timedOut: false }),
   front: async () => {},
 });
-/** The run's actor, once the app is ready; whether it types a text at once (a session). */
-let actor: Actor;
-let typesAtOnce = false;
+/**
+ * A worker of the run (`--workers`): the app's page in a browser of its own, what it plays the app
+ * through, and what it holds. The workers take the run's examples one after another from one queue.
+ */
+interface Worker {
+  page: Page;
+  actor: Actor;
+  /** It types a text at once (a session). */
+  typesAtOnce: boolean;
+  /** Holds the clipboard of the worker's browser, which other apps' windows in it share (`AppPage.clipboard`). */
+  holdClipboard?: () => Promise<() => void>;
+  /** The settings the app was last set to in its page (`Driver.configure`); unknown at first, in a page an earlier run may have left set. */
+  configured: string | null;
+}
 
-async function settle(after: string, unsettled: string[]): Promise<void> {
+/**
+ * A typist's pace: a key (or a typed character) at least this long after the one before (80 to 120
+ * words a minute). Apps that tell one undo step from the next by the time between edits see the pace
+ * they are typed at: settling alone gave about 45 ms, at Tana's 50 ms (records closer than that are
+ * undone together), so which characters one undo took back was the machine's timing.
+ */
+const PACE = Number(option('--pace') ?? 100);
+
+/**
+ * In an example that undoes or redoes, the pause between its steps, and before an undo or redo after
+ * other actions of its step: a user's steps are seconds apart, and apps group what one undo takes back
+ * by the time between edits (ProseMirror's 500 ms, BlockNote's; Tana's 50 ms), or store an edit when a
+ * timer of theirs fires (Logseq's save, 500 ms after the last input; WorkFlowy's, debounced 500 ms).
+ * Played at the pace, a step's edits joined the last step's, or weren't stored yet, as the machine's
+ * load had it: the same undo example came out otherwise from run to run (Logseq's late save, after the
+ * first of two undos, stored the undone text again, and the second undo took that back, not the step
+ * before). So a pause is this long, and then waits for the timers the app had pending (`drain`, up to
+ * `UNDO_DRAIN`: its saves) and settles.
+ */
+const UNDO_GAP = 750;
+const UNDO_DRAIN = 2000;
+const isUndo = (action: string): boolean => action === 'undo' || action === 'redo';
+
+async function settle(w: Worker, after: string, unsettled: string[]): Promise<void> {
   const t0 = Date.now();
-  const r = await actor.settle(idle);
+  const r = await w.actor.settle(idle);
   if (r.timedOut) unsettled.push(`${after}: ${r.pending}`);
   if (timing) say(`    ${String(Date.now() - t0).padStart(5)}ms  ${after}${r.busiest ? `  (longest wait: ${r.busiest})` : ''}`);
+  // a session's app has done what it was asked when its call returns, and keeps no clock between keys
+  const rest = PACE - (Date.now() - t0);
+  if (!w.typesAtOnce && !after.startsWith('loading') && rest > 0) await new Promise((r) => setTimeout(r, rest));
   if (slow) await new Promise((r) => setTimeout(r, slow));
 }
 
-async function play(page: Page, action: string, settleAfter: (what: string) => Promise<void>): Promise<void> {
+async function play(w: Worker, action: string, settleAfter: (what: string) => Promise<void>): Promise<void> {
   if (action.startsWith('"')) {
     // a session takes the text as one run, as a user's typing (it settles by returning; Emacs's undo
     // takes a run of typing as one change, and characters typed in calls of their own as one each)
-    if (typesAtOnce) {
-      await actor.type(action.slice(1, -1));
+    if (w.typesAtOnce) {
+      await w.actor.type(action.slice(1, -1));
       await settleAfter(`typing ${action}`);
       return;
     }
     // one character at a time, each settled: an app may react to a character (pairing a bracket)
     for (const ch of action.slice(1, -1)) {
-      await actor.type(ch);
+      await w.actor.type(ch);
       await settleAfter(`typing ${JSON.stringify(ch)}`);
     }
     return;
@@ -831,42 +959,48 @@ async function play(page: Page, action: string, settleAfter: (what: string) => P
   const keys = driver.keys[action];
   if (keys !== undefined) {
     for (const key of typeof keys === 'string' ? [keys] : keys) {
-      await actor.press(key);
+      await w.actor.press(key);
       await settleAfter(`${action} (${key})`);
     }
     return;
   }
   if (!driver.act) throw new Error(`${driver.name} has no key for ${action}`);
-  await driver.act(page, action, () => settleAfter(action));
+  await driver.act(w.page, action, () => settleAfter(action));
 }
 
 const indent = (s: string, by = '    '): string => s.replace(/\n$/, '').replace(/^/gm, by);
 
 const rank: Record<Verdict | 'error', number> = { agree: 0, caret: 1, whitespace: 2, disagree: 3, error: 4 };
 
-/** The settings the app was last set to (`Driver.configure`); unknown at first, in a page an earlier run may have left set. */
-let configured: string | null = null;
-
-async function runPlan(page: Page, plan: Plan): Promise<Outcome> {
+async function runPlan(w: Worker, plan: Plan): Promise<Outcome> {
+  const { page } = w;
   const t0 = Date.now();
   const unsettled: string[] = [];
   const got: (Doc | null)[] = [];
   const clipboards: (string | null)[] = [];
-  const settleAfter = (what: string): Promise<void> => settle(what, unsettled);
+  const settleAfter = (what: string): Promise<void> => settle(w, what, unsettled);
+  /** A user's pause (`UNDO_GAP`): time, then what the app put off till then done, then settled. */
+  const pause = async (): Promise<void> => {
+    await new Promise((r) => setTimeout(r, UNDO_GAP));
+    if (page) await page.evaluate((upTo) => (window as unknown as { __ourusIdle: { drain(o: { upTo: number; timeout: number }): Promise<unknown> } }).__ourusIdle.drain({ upTo, timeout: 3 * upTo }), UNDO_DRAIN);
+    await settleAfter('a pause');
+  };
   // an example that pastes or checks the clipboard
   const usesClipboard = plan.clipboard !== null || plan.steps.some((s) => s.clipboard !== undefined || s.actions.some((a) => /^(paste|copy|cut)/.test(a)));
+  // the browser's clipboard, its other windows' too: held for the whole example
+  const unhold = usesClipboard ? await w.holdClipboard?.() : undefined;
   try {
     const settings = JSON.stringify(plan.settings);
-    if (driver.configure && settings !== configured) {
-      configured = null;
+    if (driver.configure && settings !== w.configured) {
+      w.configured = null;
       await driver.configure(page, plan.settings);
-      configured = settings;
+      w.configured = settings;
     }
     // an example that uses the clipboard has its tab in front (behind another, a Clipboard API write
     // is dropped and a read comes back empty, without an error)
-    if (usesClipboard) await actor.front();
+    if (usesClipboard) await w.actor.front();
     await driver.load(page, plan.initial);
-    if (plan.clipboard !== null) await actor.clipboard.write(plan.clipboard, args.includes('--plain-clipboard') ? null : clipboardHtml(plan.clipboard, flavorOf(plan)));
+    if (plan.clipboard !== null) await w.actor.clipboard.write(plan.clipboard, args.includes('--plain-clipboard') ? null : clipboardHtml(plan.clipboard, flavorOf(plan)));
     await settleAfter('loading');
     // the app holds what the test starts from, or the test means nothing: an app may rewrite what it
     // is given (trimming, normalizing), and that is no behavior of a key
@@ -879,10 +1013,15 @@ async function runPlan(page: Page, plan: Plan): Promise<Outcome> {
       loaded = await driver.read(page);
     }
     if (!sameDoc(loaded, plan.initial)) throw new Error(`${driver.title} holds the starting state differently:\n  meant:\n${indent(drawDoc(plan.initial))}\n  holds:\n${indent(drawDoc(loaded))}`);
-    for (const step of plan.steps) {
-      for (const action of step.actions) await play(page, action, settleAfter);
+    const undoes = plan.steps.some((s) => s.actions.some(isUndo));
+    for (const [i, step] of plan.steps.entries()) {
+      if (undoes && i > 0) await pause();
+      for (const [j, action] of step.actions.entries()) {
+        if (undoes && j > 0 && isUndo(action) && !isUndo(step.actions[j - 1]!)) await pause();
+        await play(w, action, settleAfter);
+      }
       got.push(step.want ? await driver.read(page) : null);
-      clipboards.push(step.clipboard !== undefined ? await actor.clipboard.read() : null);
+      clipboards.push(step.clipboard !== undefined ? await w.actor.clipboard.read() : null);
     }
   } catch (e) {
     const message = String(e instanceof Error ? e.message : e);
@@ -890,6 +1029,7 @@ async function runPlan(page: Page, plan: Plan): Promise<Outcome> {
     const error = message.startsWith(`${driver.title} holds`) ? message : message.split('\n')[0]!.slice(0, 300);
     return { verdict: 'error', step: got.length, got, clipboards, error, unsettled, ms: Date.now() - t0 };
   } finally {
+    unhold?.();
     await driver.unload?.(page).catch(() => {});
   }
   return { ...judge(plan, got, clipboards), got, clipboards, unsettled, ms: Date.now() - t0 };
@@ -911,15 +1051,15 @@ function judge(plan: Plan, got: readonly (Doc | null)[], clipboards: readonly (s
 
 // ------------------------------------------------------------------ regenerating
 //
-// A regenerated report (--regenerate-report) runs no app: each example is judged again, against the spec
-// as it is now, from what the app did in it in its last run (`.sxs/<app>/sxs.json` draws every state the
+// A regenerated report (--report) runs no app: each example is judged again, against the spec
+// as it is now, from what the app did in it in its last run (`.sxs/results/<app>/sxs.json` draws every state the
 // app reached), where that run played it as the spec has it now: the same start, clipboard and settings,
 // and the same actions in each step (of an example since grown more steps, in its first ones). The
 // rest want a run of the app: they are left out (`?` in the table of several apps), and say why.
 
 /** A state as the last run drew it, read back as the app's model has it; null where it doesn't read back. */
 function readDoc(drawn: string): Doc | null {
-  if (!isText) return readOutline(drawn);
+  if (!isText) return readOutline(drawn, { ordered: driver.ordered });
   const d = readTextDoc(drawn);
   return drawTextDoc(d) === drawn ? d : null;
 }
@@ -948,9 +1088,14 @@ function replay(plan: Plan, e: RunExample): Outcome | string {
 /** Judges every example again from the last run, into `results`, or `notRun` with why; the app's version then. */
 function regenerate(): string | undefined {
   const key = (start: string, clipboard: string | null, settings: string[]): string => JSON.stringify([start, clipboard, settings]);
+  // a start as it is drawn now: a run's data keeps the drawing of its day
+  const redrawn = (drawn: string): string => {
+    const d = readDoc(drawn);
+    return d ? drawDoc(d) : drawn;
+  };
   const played = new Map<string, RunExample[]>();
   for (const e of previous!.examples) {
-    const k = key(e.start, e.clipboard, settingsOf((s) => e.options[s] ?? Config.defaults[s]));
+    const k = key(redrawn(e.start), e.clipboard, settingsOf((s) => e.options[s] ?? Config.defaults[s]));
     played.set(k, [...(played.get(k) ?? []), e]);
   }
   for (const { plan, names } of unique.values()) {
@@ -980,38 +1125,63 @@ const results: Result[] = [];
 
 /** Errors the app's page threw. */
 const errors: string[] = [];
+/** The workers the run played with. */
+let workersUsed = 1;
 const version = regenerating ? regenerate() : await playAll();
 
-/** Plays every example in the app, into `results`; the app's version. */
+/**
+ * How many workers the run has (`--workers`, each in a browser of the pool of its own, or with an app it
+ * starts of its own): as asked, else as many as its examples warrant (one per 30, at most `BROWSERS`); never
+ * more than the driver allows
+ * (`Driver.parallel`: 1 by default for one that starts its app), nor more than one for a
+ * browser of the run's own (`--headed`).
+ */
+function workerCount(): number {
+  if (flag('--headed')) return 1;
+  const most = driver.parallel ?? (driver.launch ? 1 : Infinity);
+  const asked = option('--workers');
+  if (asked !== undefined) return Math.max(1, Math.min(most, unique.size, Math.floor(Number(asked)) || 1));
+  return Math.max(1, Math.min(most, BROWSERS, Math.ceil(unique.size / 30)));
+}
+
+/** Plays every example in the app, into `results`, its workers side by side; the app's version. */
 async function playAll(): Promise<string | undefined> {
-  await ensureProxy(flag('--offline'), say);
+  await ensureProxy(cacheMode(args), say);
   await proxyStats(); // counts from here on
-  // an app that starts itself (a desktop app) needs no shared browser
-  const browser = driver.launch ? null : await launch(flag('--headed'), say, driver.name);
-  // an app served from this machine: its server up before its page loads (or an earlier run's tab is tried)
-  await driver.serve?.(say).catch((e: Error) => {
-    console.error(`can't start ${driver.title}'s server: ${e.message}`);
-    return process.exit(1);
-  });
+  const count = workerCount();
+  // one run of the app at a time; each worker holds a browser of the pool besides (or an app it starts,
+  // a desktop app, of its own)
+  const unlockApp = !flag('--headed')
+    ? await lockApp(driver.name).catch((e: Error) => {
+        console.error(e.message);
+        return process.exit(1);
+      })
+    : () => {};
   const opened = Date.now();
   type Marked = { __ourusApp?: string; __ourusVersion?: string };
+  // the name a browser's window of the app is held by: the driver's, or its app's for setups that share one (`Driver.pool`)
+  const pooled = driver.pool ?? driver.name;
+
+  type Ready = { app: AppPage; version: string | undefined; how: string; browser?: Browser };
 
   /**
-   * The app's page, loaded: an earlier run's, if it still holds a document and reads it back, else a new
-   * one; or the window of an app the driver starts itself.
+   * The app's page in `browser`, loaded: an earlier run's, if it still holds a document and reads it
+   * back, else a new one; or the window of an app the driver starts itself (no browser), null if `gone`
+   * says the worker is no longer wanted while it waits for room.
    */
-  async function ready(): Promise<{ app: AppPage; version: string | undefined; how: string }> {
+  async function ready(browser: Browser | null, gone?: () => boolean): Promise<Ready | null> {
     if (!browser) {
-      const app = await driver.launch!({ headed: flag('--headed'), say }).catch((e: Error) => {
+      const app = await driver.launch!({ headed: flag('--headed'), say, gone }).catch((e: Error) => {
         console.error(`can't start ${driver.title}: ${e.message}`);
         return process.exit(1);
       });
+      if (!app) return null;
       // a page's settling is the idle script's; a session's calls return once the app is done
       if (!app.session) await app.page.addInitScript(installIdle, idleVersion());
       return { app, version: await driver.open(app.page), how: 'started' };
     }
-    let app = await appPage(browser, driver.name, driver.url, { shared: !flag('--headed'), fresh: flag('--fresh') });
-    // the tab in front: its Clipboard API works only there, and a tab behind another can crawl
+    let app = await appPage(browser, pooled, driver.scope ?? driver.url, { shared: !flag('--headed'), fresh: flag('--fresh') });
+    // the window's page in front: its Clipboard API works only there, and a tab behind another can crawl
     await app.page.bringToFront();
     if (app.reused) {
       const probe: Doc = isText ? { text: '- a\n- b\n', sel: { anchor: 7, head: 7 } } : { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } };
@@ -1022,22 +1192,17 @@ async function playAll(): Promise<string | undefined> {
         .catch(() => false);
       if (works) return { app, version: await app.page.evaluate(() => (window as Marked).__ourusVersion), how: 'reused from an earlier run' };
       await app.page.close();
-      await app.release();
-      app = await appPage(browser, driver.name, driver.url, { shared: !flag('--headed'), fresh: true });
+      app = await appPage(browser, pooled, driver.scope ?? driver.url, { shared: !flag('--headed'), fresh: true });
     }
     await app.page.addInitScript(installIdle, idleVersion());
-    const version = await driver.open(app.page);
-    await app.page.evaluate(([name, v]) => Object.assign(window as Marked, { __ourusApp: name, __ourusVersion: v }), [driver.name, version] as const);
+    // a window its app didn't open in closes, not left blank in the shared browser
+    const version = await driver.open(app.page).catch(async (e: unknown) => {
+      await app.release().catch(() => {});
+      throw e;
+    });
+    await app.page.evaluate(([name, v]) => Object.assign(window as Marked, { __ourusApp: name, __ourusVersion: v }), [pooled, version] as const);
     return { app, version, how: 'loaded' };
   }
-  const { app: appTab, version, how } = await ready();
-  const page = appTab.page;
-  actor = appTab.session ? sessionActor(appTab.session) : pageActor(page);
-  typesAtOnce = !!appTab.session;
-  await actor.front();
-  if (!appTab.session) page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
-  say(`${driver.title}${version ? ` ${version}` : ''} at ${driver.url}, ${how} in ${((Date.now() - opened) / 1000).toFixed(1)}s; ${unique.size} examples to run (${plans.length} tests), ${tests.length - plans.length} skipped`);
-
   function detail(plan: Plan, o: Outcome): string {
     if (o.verdict === 'error') return `  error at step ${o.step + 1}: ${o.error}`;
     const step = plan.steps[o.step]!;
@@ -1050,31 +1215,108 @@ async function playAll(): Promise<string | undefined> {
 
   const signature = (o: Outcome): string => JSON.stringify([o.verdict, o.got, o.clipboards, o.error]);
 
-  for (const { plan, names } of unique.values()) {
-    let outcome = await runPlan(page, plan);
-    // a promise of the app's that never settles is collected instead of waited on (V8's inspector holds
-    // an evaluation's promise weakly): rare, and nothing of the example's, so it runs once more
-    if (outcome.verdict === 'error' && /Resulting promise was garbage collected/.test(outcome.error ?? '')) {
-      say(`again      ${names.join(' = ')}: ${outcome.error}`);
-      outcome = await runPlan(page, plan);
+  // the examples, in the spec's order, taken by whichever worker is free; what came out said in that
+  // order too, each as soon as those before it are done
+  const queue = [...unique.values()];
+  const done: (Result | undefined)[] = [];
+  let next = 0;
+  let shown = 0;
+  const show = (): void => {
+    for (; done[shown]; shown++) {
+      const { plan, names, outcome, flaky } = done[shown]!;
+      const tag = `${outcome.verdict}${flaky ? ' FLAKY' : ''}`;
+      if (outcome.verdict !== 'agree' || flaky || verbose) {
+        say(`${tag.padEnd(10)} ${names.join(' = ')}${plan.notes.length ? `  [${plan.notes.join(', ')}]` : ''}  ${outcome.ms}ms`);
+        if (outcome.verdict !== 'agree') say(detail(plan, outcome));
+        if (flaky) say(`  but ${flaky}`);
+      }
+      for (const u of outcome.unsettled) say(`  unsettled after ${u}`);
     }
-    let flaky: string | undefined;
-    for (let i = 1; i < repeat && !flaky; i++) {
-      const again = await runPlan(page, plan);
-      if (signature(again) !== signature(outcome)) flaky = `run ${i + 1}: ${again.verdict}${again.verdict !== 'agree' ? `\n${detail(plan, again)}` : ''}`;
+  };
+  const work = async (w: Worker): Promise<void> => {
+    for (let i = next++; i < queue.length; i = next++) {
+      const { plan, names } = queue[i]!;
+      let outcome = await runPlan(w, plan);
+      // a promise of the app's that never settles is collected instead of waited on (V8's inspector holds
+      // an evaluation's promise weakly): rare, and nothing of the example's, so it runs once more
+      if (outcome.verdict === 'error' && /Resulting promise was garbage collected/.test(outcome.error ?? '')) {
+        say(`again      ${names.join(' = ')}: ${outcome.error}`);
+        outcome = await runPlan(w, plan);
+      }
+      // the app's page is gone (it crashed; the machine ran out of processes): every example after would
+      // be an error of no app's doing, and the report one to copy over the last; the run stops, writing
+      // nothing
+      if (outcome.verdict === 'error' && /Target crashed|Target page, context or browser has been closed|Browser has been closed/.test(outcome.error ?? '')) {
+        console.error(`${driver.title}'s page is gone at ${names.join(' = ')} (${outcome.error}): stopped, with no report and no run data written`);
+        process.exit(1);
+      }
+      let flaky: string | undefined;
+      for (let k = 1; k < repeat && !flaky; k++) {
+        const again = await runPlan(w, plan);
+        if (signature(again) !== signature(outcome)) flaky = `run ${k + 1}: ${again.verdict}${again.verdict !== 'agree' ? `\n${detail(plan, again)}` : ''}`;
+      }
+      done[i] = { plan, names, outcome, ...(flaky && { flaky }) };
+      show();
     }
-    results.push({ plan, names, outcome, ...(flaky && { flaky }) });
-    const tag = `${outcome.verdict}${flaky ? ' FLAKY' : ''}`;
-    if (outcome.verdict !== 'agree' || flaky || verbose) {
-      say(`${tag.padEnd(10)} ${names.join(' = ')}${plan.notes.length ? `  [${plan.notes.join(', ')}]` : ''}  ${outcome.ms}ms`);
-      if (outcome.verdict !== 'agree') say(detail(plan, outcome));
-      if (flaky) say(`  but ${flaky}`);
+  };
+  // each worker: a place in a pool as one has room (a browser's window, or the driver's own app's: an
+  // Obsidian's), its page readied, then examples from the queue as they come; the first waits as long as
+  // it takes, the others only while examples are left
+  const readied: Ready[] = [];
+  const browsers: Browser[] = [];
+  let version: string | undefined;
+  const join = async (k: number): Promise<void> => {
+    const gone = k === 0 ? undefined : (): boolean => next >= queue.length;
+    let r: Ready | null;
+    let b: Browser | null = null;
+    try {
+      if (driver.launch) r = await ready(null, gone);
+      else {
+        b = await launch(flag('--headed'), say, pooled, gone, driver.browsers);
+        if (!b) return;
+        browsers.push(b);
+        r = await ready(b);
+      }
+    } catch (e) {
+      // a worker that can't open the app leaves the examples to the others; the first's failure is the run's
+      if (k === 0 || e instanceof LoginRequired) throw e;
+      say(`worker ${k + 1} couldn't open ${driver.title}, the others go on: ${String(e).slice(0, 200)}`);
+      return;
     }
-    for (const u of outcome.unsettled) say(`  unsettled after ${u}`);
+    if (!r) return;
+    if (b) r.browser = b;
+    // which worker is ready first, decided here: workers ready together all pushed before any check after an await
+    const nth = readied.push(r);
+    const w: Worker = { page: r.app.page, actor: r.app.session ? sessionActor(r.app.session) : pageActor(r.app.page), typesAtOnce: !!r.app.session, holdClipboard: r.app.clipboard, configured: null };
+    await w.actor.front();
+    if (!r.app.session) w.page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
+    if (nth === 1) {
+      version = r.version;
+      say(`${driver.title}${version ? ` ${version}` : ''} at ${driver.url}, ${r.how} in ${((Date.now() - opened) / 1000).toFixed(1)}s; ${unique.size} examples to run (${plans.length} tests), ${tests.length - plans.length} skipped${count > 1 ? `; up to ${count} workers` : ''}`);
+    } else say(`worker ${nth} joined (${r.how})`);
+    await work(w);
+  };
+  await Promise.all(Array.from({ length: count }, (_, k) => join(k))).catch((e: unknown) => {
+    // an app behind a login without a session: what to give it, not a stack
+    if (!(e instanceof LoginRequired)) throw e;
+    console.error(`${driver.title} wants a signed-in session. ${e.message}`);
+    return process.exit(LOGIN_EXIT);
+  });
+  workersUsed = readied.length;
+  results.push(...(done as Result[]));
+  // each worker's window closes, the shared browsers staying up for the next run (an instance of
+  // Obsidian's stops with its last window, `obsidian/obsidian.ts`)
+  // each worker disconnects holding its browser's clipboard: a connection's end resets the permissions
+  // it granted, the clipboard's, for every page of the browser, so another run's example reading the
+  // clipboard then would read nothing (the next to hold it grants them again)
+  for (const r of readied) {
+    const unhold = await r.app.clipboard?.();
+    await r.app.release().catch((e) => say(`couldn't release ${driver.title}: ${String(e).slice(0, 200)}`));
+    await r.browser?.close();
+    unhold?.();
   }
-  // the shared browser stays up, the app loaded in it for the next run; this only disconnects
-  await appTab.release().catch((e) => say(`couldn't release ${driver.title}: ${String(e).slice(0, 200)}`));
-  await browser?.close();
+  for (const b of browsers) if (!readied.some((r) => r.browser === b)) await b.close();
+  unlockApp();
   return version;
 }
 
@@ -1100,16 +1342,15 @@ const run = runData(results, version);
 if (!regenerating) keep(run);
 writeJson(run);
 
-/** Keeps what the app did in the examples run (`FileRun`): theirs replaced, their files' others kept, unless it ran every example of the file. */
+/** Keeps what the app did in the examples run (`FileRun`), by spec file: a file's own where it ran every example of it, else its `.partial.json`. */
 function keep(run: AppRun): void {
   fileRuns(); // a run of the whole spec from before, split first
   const all = allTests();
   const selected = new Set(tests.map((t) => `${t.file} › ${t.name}`));
   for (const file of new Set(run.examples.map((e) => e.file))) {
     const ran = run.examples.filter((e) => e.file === file);
-    const whole = !flag('--strict') && all.filter((t) => t.file === file).every((t) => selected.has(`${t.file} › ${t.name}`));
-    const before = whole ? [] : (read<FileRun>(fileRun(driver.name, file))?.examples ?? []).filter((e) => !ran.some((r) => r.name === e.name));
-    writeFileRun({ type: 'SxS', app: driver.name, file, version: run.version, command: run.command, elapsed_s: run.elapsed_s, ran: new Date().toISOString(), examples: [...before, ...ran] });
+    const whole = !flag('--strict') && !flag('--ignore-options') && all.filter((t) => t.file === file).every((t) => selected.has(`${t.file} › ${t.name}`));
+    writeFileRun({ type: 'SxS', app: driver.name, file, version: run.version, command: run.command, elapsed_s: run.elapsed_s, ran: new Date().toISOString(), examples: ran }, !whole);
   }
 }
 
@@ -1130,12 +1371,13 @@ if (!regenerating) {
 
 // ------------------------------------------------------------------ report
 
-// in .sxs/<app>/, beside the run as data; a run of every example, copied beside the driver, checked in
-writeFileSync(lastRun(driver.name, 'md'), report());
-say(`wrote ${relative(process.cwd(), lastRun(driver.name, 'md'))} and sxs.json`);
-if (selectors.length === 0 && !flag('--strict') && !flag('--no-report')) {
-  copyFileSync(lastRun(driver.name, 'md'), join(here, driver.name, 'sxs.md'));
-  say(`copied it to sxs/${driver.name}/sxs.md`);
+// in .sxs/results/<app>/, beside the run as data; a run of every example, beside the driver too, checked in
+const reported = report();
+writeFileSync(lastRun(driver.name, 'md', partialRun), inResults(reported));
+say(`wrote ${relative(process.cwd(), lastRun(driver.name, 'md', partialRun))} and its run as data beside it`);
+if (selectors.length === 0 && !flag('--strict') && !flag('--ignore-options') && !flag('--no-report')) {
+  writeFileSync(join(here, `${driver.name}.md`), reported);
+  say(`copied it to sxs/${driver.name}.md`);
 }
 
 function report(): string {
@@ -1154,7 +1396,7 @@ function report(): string {
   };
   /** A count, linked to its section. */
   const linked = (n: number, what: string, kind?: string): string => `[${n}](#${slug(heading(what, n, kind))})`;
-  const href = (name: string): string => `../../spec/${parts(name).file}#${parts(name).anchor}`;
+  const href = (name: string): string => `../spec/${parts(name).file}#${parts(name).anchor}`;
   const fence = (kind: string, body: string): string => {
     const longest = Math.max(2, ...(body.match(/`+/g) ?? []).map((r) => r.length));
     const f = '`'.repeat(longest + 1);
@@ -1201,7 +1443,7 @@ function report(): string {
     `|${' --- |'.repeat(columns.length + kinds.length + 2)}`,
     ...[...byFile].map(([file, m]) => {
       const of = (c: string): number => m.get(c) ?? 0;
-      return row([`[${file}](../../spec/${file})`, ...columns.map((c) => cell(of(c))), bold(columns.reduce((n, c) => n + of(c), 0)), ...kinds.map((c) => cell(of(c)))]);
+      return row([`[${file}](../spec/${file})`, ...columns.map((c) => cell(of(c))), bold(columns.reduce((n, c) => n + of(c), 0)), ...kinds.map((c) => cell(of(c)))]);
     }),
     row([bold('total'), ...columns.map((c) => bold(share(allFiles(c)))), bold(tests.length), ...kinds.map((c) => bold(share(allFiles(c))))]),
     '',
@@ -1212,19 +1454,20 @@ function report(): string {
   // its subsection, where it has one (agreements have none, nor a block app's totals of a verdict)
   const skips = tests.length - plans.length;
   const unrun = [...notRun.values()].reduce((n, names) => n + names.length, 0);
+  // a text app's one row needs no label: its leftmost column goes
+  const labelled = (label: string, cells: (string | number)[]): (string | number)[] => (isText ? cells : [label, ...cells]);
   const summary = [
     'Summary:',
     '',
-    row(['', ...columns, 'total']),
-    `|${' --- |'.repeat(columns.length + 2)}`,
+    row(labelled('', [...columns, 'total'])),
+    `|${' --- |'.repeat(columns.length + (isText ? 1 : 2))}`,
     ...kinds.map((k) => row([k, ...verdicts.map((v) => (v !== 'agree' && count(v, k) ? linked(count(v, k), v, k) : cell(count(v, k)))), '', ...(notRun.size ? [''] : []), bold(ran(k))])),
-    row([
-      bold('total'),
+    row(labelled(bold('total'), [
       ...verdicts.map((v) => bold(share(count(v), isText && v !== 'agree' && count(v) ? linked(count(v), v) : count(v)))),
       bold(share(skips, skips ? linked(skips, 'skipped') : skips)),
       ...(notRun.size ? [bold(share(unrun, linked(unrun, 'not run')))] : []),
       bold(tests.length),
-    ]),
+    ])),
     '',
   ];
   // what ran, as frontmatter; values quoted as JSON, which YAML reads as double-quoted strings
@@ -1236,7 +1479,10 @@ function report(): string {
     `url: ${JSON.stringify(driver.url)}`,
     `model: ${JSON.stringify(driver.model)}`,
     `command: ${JSON.stringify(`node sxs/run.ts ${driver.name}`)}`,
-    `elapsed_s: ${previous?.elapsed_s ?? Math.round((Date.now() - started) / 1000)}`,
+    // the run data's, not the clock's a moment later
+    `elapsed_s: ${run.elapsed_s}`,
+    // the run's workers, if more than one (its time is one worker's over about this many)
+    ...((previous?.workers ?? workersUsed) > 1 ? [`workers: ${previous?.workers ?? workersUsed}`] : []),
     '---',
     '',
     `# ${driver.title} vs ourus`,

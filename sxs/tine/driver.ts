@@ -9,10 +9,13 @@
 //   Logseq's property `logseq.order-list-type:: number`, as in Logseq.
 // - Undo is "page only" (Tine's "Toggle undo/redo mode"), so it stays within the test's page.
 // - The textarea is committed to the store as it is typed in, so the store is read as it is.
+// - A test's blocks come with their header facets (task marker, heading level, properties) from
+//   Tine's own parse, as its backend ships them: given none, Tine took a numbered block for no list
+//   and a `TODO` for no task until its text changed.
 
 import type { Page } from 'playwright-core';
-import type { Driver } from '../lib/driver.ts';
-import { unescapeLaterLines, type Outline } from '../lib/outline.ts';
+import { perPage, type Driver } from '../lib/driver.ts';
+import { unescapeLaterLines, type Outline } from '../lib/block.ts';
 
 /** Tine's keys for the spec's actions (Linux); the `select…` motions add Shift. */
 const MOTIONS: Record<string, string> = {
@@ -68,7 +71,7 @@ function fromTine(raw: string, number: number | null): { text: string; from: num
   const task = swapPrefix(raw.replace(/\n?logseq\.order-list-type:: number[ \t]*(?=\n|$)/, ''), FROM_TINE);
   // a number that is text, escaped also after a numbered block's own number (`2. 2\. x`)
   const pre = number !== null ? `${number}. ` : '';
-  const literal = /^\d{1,9}(?=[.)])/.exec(task.text);
+  const literal = /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(task.text);
   const text = literal ? task.text.slice(0, literal[0].length) + '\\' + task.text.slice(literal[0].length) : task.text;
   return { text: pre + text, from: task.from, to: task.to + pre.length, ...(literal && { cut: task.to + pre.length + literal[0].length }) };
 }
@@ -91,12 +94,13 @@ function codeOf(text: string): { start: number; end: number } | null {
  */
 const run = Date.now().toString(36);
 let pages = 0;
-/** The current test's page. */
-let current = '';
+/** The current test's page, a worker's (`perPage`). */
+const pageState = perPage(() => ({ current: '' }));
 
 export const driver: Driver = {
   name: 'tine',
   title: 'Tine',
+  id: 'TI',
   url: 'https://tine.page/guide/app/',
   model: 'block',
   keys: {
@@ -123,7 +127,7 @@ export const driver: Driver = {
   // character at a time
   refuses: ['markup-heading', 'markup-task', 'markup-fence'],
   ordered: true,
-  behaves: { outdent: 'direct', enterOnEmptyItem: 'sibling', enterMidItem: 'child', pasteStructuredMidText: 'after', emptyItemWithChildren: 'refuse', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after' },
+  behaves: { outdent: 'direct', enterOnEmptyItem: 'sibling', enterMidItem: 'child', pasteStructuredMidText: 'after', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after' },
   holds(doc) {
     const o = doc as Outline;
     // a run of numbered siblings is numbered from 1, whatever it was written with
@@ -146,7 +150,7 @@ export const driver: Driver = {
     await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
     await page.waitForSelector('.ls-block', { timeout: 120000 });
     // the proxy's patches name the store and the backend's pages: a bundle they don't match leaves them out
-    const named = await page.evaluate(() => Array.isArray((globalThis as any).__sxsDoc) && Array.isArray((globalThis as any).__sxsPages));
+    const named = await page.evaluate(() => Array.isArray((globalThis as any).__sxsDoc) && Array.isArray((globalThis as any).__sxsPages) && typeof (globalThis as any).__sxsFacets === 'function');
     if (!named) throw new Error("Tine's bundle didn't take the proxy's patches (tine/proxy.ts): its store or pages aren't named");
     const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
     await idle();
@@ -186,13 +190,19 @@ export const driver: Driver = {
     const blocks = o.blocks.map((b) => ({ depth: b.depth, ...toTine(b.text) }));
     const swapped = o.sel && blocks[o.sel.block]!;
     const sel = o.sel && { block: o.sel.block, anchor: shiftOffset(o.sel.anchor, swapped!.from, swapped!.to), head: shiftOffset(o.sel.head, swapped!.from, swapped!.to) };
-    current = `sxs-${run}-${String(++pages).padStart(5, '0')}`;
+    const current = (pageState(page).current = `sxs-${run}-${String(++pages).padStart(5, '0')}`);
     await page.evaluate(
       ({ name, blocks }) => {
         const roots: any[] = [];
         const stack: any[] = [];
+        // a block's header facets as the backend ships them (Tine takes them as they are, `seedFacets`):
+        // Tine's own reading of its text, so a numbered block is ordered to it, a `TODO` a task, a `# ` a heading
+        const facets = (raw: string) => {
+          const f = (globalThis as any).__sxsFacets(raw, 'md');
+          return { marker: f.marker ?? undefined, priority: f.priority ?? undefined, heading_level: f.headingLevel ?? undefined, scheduled: f.scheduled ?? undefined, deadline: f.deadline ?? undefined, tags: f.tags, properties: f.properties };
+        };
         blocks.forEach((b, k) => {
-          const dto = { id: `${name}-${k}`, raw: b.text, collapsed: false, children: [], properties: [], tags: [] };
+          const dto = { id: `${name}-${k}`, raw: b.text, collapsed: false, children: [], ...facets(b.text) };
           stack.length = b.depth;
           (b.depth === 0 ? roots : stack[b.depth - 1].children).push(dto);
           stack[b.depth] = dto;
@@ -267,7 +277,7 @@ export const driver: Driver = {
         code: i >= 0 && ta!.classList.contains('code-edit'),
         selected,
       };
-    }, current);
+    }, pageState(page).current);
     // in a code block's editor, the offsets are the code's
     if (raw.sel && raw.code) {
       const start = codeOf(raw.blocks[raw.sel.block]!.text)?.start ?? 0;

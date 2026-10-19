@@ -5,7 +5,7 @@
 `jrblevin/markdown-mode`), and nothing else (`emacs -Q`). Emacs is no page: the driver starts it on a
 terminal of its own and plays keys into it through its server (a `Session`, [`../lib/driver.ts`](../lib/driver.ts)),
 the first app driven so. Its documents are text, compared as text, caret included (the `text` model,
-[`../lib/text.ts`](../lib/text.ts)). Last results: [`sxs.md`](sxs.md).
+[`../lib/text.ts`](../lib/text.ts)).
 
 ## Keys
 
@@ -16,19 +16,23 @@ Emacs's and markdown-mode's own, in Emacs's notation, from markdown-mode's keyma
 | --- | --- |
 | `enter` | RET (`markdown-enter-key`: a line break, indented as `markdown-indent-on-enter` says; no list item continued: that is M-RET, `markdown-insert-list-item`) |
 | `shiftEnter` | S-&lt;return&gt;: unbound, so Emacs takes it as RET (the shift dropped, `<return>` translated), as for a user |
-| `indent`, `outdent` | C-c &lt;right&gt;, C-c &lt;left&gt; ("Indent Subtree", "Outdent Subtree": `markdown-demote`, `markdown-promote`) |
-| `moveSubtreeUp`, `moveSubtreeDown` | C-c &lt;up&gt;, C-c &lt;down&gt; ("Move Subtree Up", "Down": `markdown-move-up`, `markdown-move-down`) |
-| `deleteContentBackward`, `deleteContentForward` | DEL (`markdown-outdent-or-delete`), the Delete key (`delete-forward-char`) |
+| `indent` | C-c &lt;right&gt; ("Indent Subtree", `markdown-demote`); TAB isn't it (below) |
+| `outdent` | C-c &lt;left&gt; ("Outdent Subtree", `markdown-promote`) |
+| `moveSubtreeUp` | C-c &lt;up&gt; ("Move Subtree Up", `markdown-move-up`) |
+| `moveSubtreeDown` | C-c &lt;down&gt; ("Move Subtree Down", `markdown-move-down`) |
+| `deleteContentBackward` | DEL (`markdown-outdent-or-delete`) |
+| `deleteContentForward` | the Delete key (`delete-forward-char`) |
 | `deleteSoftLineBackward` | C-0 C-k (`kill-line` with 0: the text before point on its line) |
 | `deleteSubtree` | C-c C-k ("Kill Element", `markdown-kill-thing-at-point`: a list item with its children) |
-| `pasteStructured`, `pastePlain` | C-y (`yank`): Emacs has one paste, from the kill ring |
-| `undo`, `redo` | C-/ (`undo`), C-M-_ (`undo-redo`) |
-| caret motions | the arrows, &lt;home&gt;, &lt;end&gt;, C-&lt;home&gt;, C-&lt;end&gt;; `select…` with Shift (shift-selection) |
+| `duplicateSubtree` | *missing* (Emacs 29's `duplicate-dwim` is unbound): its examples are skipped |
+| `pasteStructured` | C-y (`yank`): Emacs has one paste, from the kill ring |
+| `pastePlain` | C-y, the same |
+| `undo` | C-/ (`undo`) |
+| `redo` | C-M-_ (`undo-redo`) |
 
 TAB isn't `indent`: in markdown-mode it is `markdown-cycle`, which on a list item cycles the line's
 indentation through the positions it allows (two spaces, then a tab), the line alone; Shift+Tab
-(`markdown-shifttab`) folds the outline. `duplicateSubtree` has no key (Emacs 29's `duplicate-dwim` is
-unbound); its examples are skipped.
+(`markdown-shifttab`) folds the outline.
 
 ## Stack
 
@@ -92,7 +96,13 @@ https://github.com/jrblevin/markdown-mode
 ## What markdown-mode does
 
 - **RET continues no list**: a line break, indented or not (`enter.md › Enter1`, `Enter3`), and on an
-  empty item, a line break after its marker (`Enter28`). M-RET is the list command.
+  empty item, a line break after its marker (`Enter28`). M-RET is the list command. Most of Enter's
+  disagreements are this (125 of 143, where bare Obsidian's Enter disagrees in 76 of 117); `enter`
+  stays RET, the Enter key. Tried as M-RET (2026-10-18, one run): 504 disagreements, not 511, lists
+  continued (Enter2, 7, 27 agree) but list items made inside code blocks (`* ┃de` in a fence: Fence1
+  to 6 from agree to disagree).
+- **The harness, against real keys**: every example replayed as keystrokes on Emacs's terminal (`tmux
+  send-keys`) rather than `execute-kbd-macro` came out the same in 659 of 665 (2026-10-18).
 - **DEL after a marker deletes the space before the text** (`- ┃two` is `-┃two`), and at a line's start
   joins it to the line before, marker and all (`backspace.md › Backspace1`, `3`); it outdents only
   in the indentation.

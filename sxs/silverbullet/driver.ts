@@ -27,6 +27,7 @@ let pages = 0;
 export const driver: Driver = {
   name: 'silverbullet',
   title: 'SilverBullet',
+  id: 'SB',
   url: 'https://demo.silverbullet.md/personal/',
   model: 'text',
   // measured: Enter at an item's text start leaves the caret with the text

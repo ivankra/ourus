@@ -141,7 +141,7 @@ tags: common
 In a quote, the new line keeps the `>`.
 
 ```yaml
-tags: edge
+tags: edge quote-container
 ```
 
 ````buffer
@@ -640,7 +640,7 @@ In a quote, a joined code line's `>` goes with its line break. The host's Backsp
 space after the `>` instead, and then the `>`, ending the quote and the block.
 
 ```yaml
-tags: edge
+tags: edge quote-container
 ```
 
 ````buffer
@@ -1230,7 +1230,7 @@ body
 The same protection in a quote, and with tilde fences.
 
 ```yaml
-tags: rare markup-fence
+tags: rare markup-fence quote-container
 ```
 
 ````buffer
@@ -1379,7 +1379,7 @@ Shift-Enter in a comment block in a quote, in an item, and Backspace taking the 
 quote's `>` goes with the line break, not as a character of the text.
 
 ```yaml
-tags: rare
+tags: rare quote-container
 flavor: obsidian
 ```
 
@@ -1468,7 +1468,7 @@ Delete at the end of a comment line in a quote joins the next line, the quote's 
 break, as Backspace does from the other side ([Fence43](#fence43)).
 
 ```yaml
-tags: rare
+tags: rare quote-container
 flavor: obsidian
 ```
 

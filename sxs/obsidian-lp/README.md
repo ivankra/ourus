@@ -6,8 +6,8 @@ frontmatter as properties. [`../obsidian/`](../obsidian/) is the same in Source 
 editor shows the text as it is; the plugin setups ([`../obsidian-outliner/`](../obsidian-outliner/),
 [`../obsidian-true-outliner/`](../obsidian-true-outliner/)) run in Live Preview, so this is their
 baseline. The driver is bare Obsidian's ([`../obsidian/obsidian.ts`](../obsidian/obsidian.ts)): how
-it runs, the indentation as tabs and the keys are in [`../obsidian/README.md`](../obsidian/README.md).
-Last results: [`sxs.md`](sxs.md).
+it runs, the indentation as tabs, the keys and other shortcuts (the same in Live Preview) are in
+[`../obsidian/README.md`](../obsidian/README.md).
 
 ## Stack
 
@@ -18,12 +18,14 @@ widgets show (a callout, a table, math) is drawn by reading view's pipeline, fro
 ## What Live Preview changes
 
 What a key does to the text is the same as in Source mode; where the caret goes by the layout is
-not. Measured outcome for outcome against [`../obsidian/sxs.md`](../obsidian/sxs.md), and by
+not. Measured outcome for outcome against Source mode's, and by
 cases written to find where the two editing modes part:
 
 - **Starts it won't hold**, skipped (`holds`): a caret in the frontmatter (shown as properties) ends
   up outside it, and one between a task's marker and its checkbox's end goes to the line's start
-  (`inCheckbox`). Source mode keeps both.
+  (`inCheckbox`). Source mode keeps both. A caret in a table goes into a cell's editor of the table
+  Live Preview draws (the note's editor loses the focus) and the table is padded: skipped too
+  (`inTable`; they were the setups' four errors: Enter49, Enter50, Paste56, ShiftEnter24).
 - **Up and Down land by what is drawn**: hidden markers and a heading's larger font move the column.
   Up from `abcdef┃ghijk` into `abc**def**ghi` lands at `abc**de┃f**ghi` (Source mode: `abc**d┃ef**ghi`,
   the text's column); Up into `## Title` lands at `## Ti┃tle` (`cursor.md › CursorUp2`; Source mode:

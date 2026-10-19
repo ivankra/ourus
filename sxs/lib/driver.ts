@@ -11,7 +11,7 @@ import type { Page } from 'playwright-core';
 import type { Config } from '../../src/config.ts';
 import type { AppPage } from './browser.ts';
 import type { IdleOptions } from './idle.ts';
-import type { Outline } from './outline.ts';
+import type { Outline } from './block.ts';
 import type { TextDoc } from './text.ts';
 
 /** A document as a driver loads and reads it: an outline of blocks, or Markdown text (`Driver.model`). */
@@ -37,11 +37,28 @@ export interface Driver {
   readonly name: string;
   /** The app's name in reports: `Logseq`. */
   readonly title: string;
-  /** The page the app runs at. */
+  /** Two capitals that stand for the app in `sxs.md`'s tables, where its name is too wide: `LS`. */
+  readonly id: string;
+  /**
+   * The page the app is opened at: the runner loads it, a report names it, and the proxy's greeting has a
+   * person open it in a browser through the proxy.
+   */
   readonly url: string;
   /**
+   * The prefix of every page of the app, when the app moves away from `url` (RemNote's documents are
+   * `/w/null/<id>`, its guest mode `/notes`): a run takes over the tab an earlier run left only if the
+   * tab is still under it. `url` when not given.
+   */
+  readonly scope?: string;
+  /**
+   * For an app behind a login: the environment variable a signed-in session is given in (a cookie
+   * header, or a "Copy as cURL"). `open` throws `LoginRequired` (lib/login.ts) when the app isn't signed
+   * in and the variable doesn't sign it in; the app's browser profile keeps the session it gives.
+   */
+  readonly login?: string;
+  /**
    * What the app's documents are: an outline of blocks (`Outline`: the spec's buffers are projected
-   * onto blocks, see outline.ts), or Markdown text (`TextDoc`: the buffers as drawn, see text.ts).
+   * onto blocks, see block.ts), or Markdown text (`TextDoc`: the buffers as drawn, see text.ts).
    * `load` is given, and `read` returns, a document of that kind.
    */
   readonly model: 'block' | 'text';
@@ -53,7 +70,7 @@ export interface Driver {
   /** Actions `act` plays, besides those with keys. */
   readonly emulated?: readonly string[];
   /**
-   * What a projection adapted (`outline.ts` notes) that the app can't hold, and the spec's `markup-`
+   * What a projection adapted (`block.ts` notes) that the app can't hold, and the spec's `markup-`
    * tags at markup the app holds as text or as an attribute, where it has no boundary to compare:
    * tests needing either are skipped.
    */
@@ -61,9 +78,15 @@ export interface Driver {
   /**
    * The app has numbered blocks, which the driver loads and reads as such: an ordered item is a block
    * whose canonical text starts with its number (`1. x`), a number that is text keeps its escape
-   * (`1\. x`), and an ordered list is no adaptation (`ProjectOptions.ordered` in outline.ts).
+   * (`1\. x`), and an ordered list is no adaptation (`ProjectOptions.ordered` in block.ts).
    */
   readonly ordered?: boolean;
+  /**
+   * The app tells a block outside every list (a paragraph, a heading) from an item, which the driver
+   * loads and reads as such (`Block.free`): a block app with a form for free-form Markdown, which runs
+   * the spec's `free-form` cases (RemNote's documents without bullets: `ProjectOptions.freeForm`).
+   */
+  readonly freeForm?: boolean;
   /**
    * How the app behaves where ourus has an option, out of the box. A test that sets an option to
    * another value than ourus's default is run only when the app behaves that way, or can be set to.
@@ -81,19 +104,34 @@ export interface Driver {
   holds?(doc: Doc): string | undefined;
   /** Overrides for settling after each key. */
   readonly idle?: Partial<IdleOptions>;
+  /**
+   * At most this many workers of a run at once (`run.ts --workers`), each in a browser of the pool of its
+   * own, the app's storage its browser's profile's. 1 by default for an app that isn't a page of the
+   * pool (`launch`); any number for the rest, so a driver whose app keeps state outside the browser
+   * keeps it apart for each worker and says how many (SiYuan: a kernel each). A driver keeps what it
+   * knows of a test per page (`perPage`).
+   */
+  readonly parallel?: number;
+  /**
+   * The name its page holds a browser's window by (the pool's locks, `appPage`), where it isn't the
+   * driver's: setups of one app that mustn't share a browser and may take over each other's window
+   * (RemNote's, two of whose tabs break each other).
+   */
+  readonly pool?: string;
+  /**
+   * The pool's browsers its workers take, where not any: the even-numbered or the odd ones (RemNote's
+   * two setups, one each, so that neither's knowledge base, in a profile's storage, meets the other's).
+   */
+  readonly browsers?: 'even' | 'odd';
 
   /**
    * Starts the app itself, for one that isn't a web page (a desktop app): its window, driven in place
-   * of a tab in the shared browser, and `release` stops it; or, for one that isn't a page at all (a
-   * process), a `session` the runner plays it through. `headed` asks for it to be shown.
+   * of a tab in the shared browser, and `release` ends the worker's use of it; or, for one that isn't a
+   * page at all (a process), a `session` the runner plays it through. `headed` asks for it to be shown.
+   * Where it waits for room (a pool of the driver's, full), null once `gone` says the worker is no
+   * longer wanted.
    */
-  launch?(opts: { headed: boolean; say: (line: string) => void }): Promise<AppPage>;
-  /**
-   * Starts what the app's page needs before it can load, for an app served from this machine (SiYuan's
-   * kernel): left running for later runs, as the shared browser is, and stopped by `run.ts --stop`
-   * (`recordServer` in browser.ts). The runner calls it before it takes over or loads the app's tab.
-   */
-  serve?(say: (line: string) => void): Promise<void>;
+  launch?(opts: { headed: boolean; say: (line: string) => void; gone?: () => boolean }): Promise<AppPage | null>;
   /**
    * Loads the app in `page` (already pointed at nothing, or a window `launch` started, to be reloaded
    * so that the runner's init script runs) and makes it ready; returns its version, if known.
@@ -109,4 +147,18 @@ export interface Driver {
   act?(page: Page, action: string, settle: () => Promise<void>): Promise<void>;
   /** Ends a test. */
   unload?(page: Page): Promise<void>;
+}
+
+/**
+ * What a driver keeps of the test a page is on (the page it made for it, to remove when the next test
+ * starts): each of a run's workers has a page of its own, so the state is the page's. `of(page)` is the
+ * page's, made by `init` the first time. A counter that only makes names unique can be the module's.
+ */
+export function perPage<T>(init: () => T): (page: Page) => T {
+  const states = new WeakMap<Page, T>();
+  return (page) => {
+    let s = states.get(page);
+    if (s === undefined) states.set(page, (s = init()));
+    return s;
+  };
 }

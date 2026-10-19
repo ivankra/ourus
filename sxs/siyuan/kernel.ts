@@ -1,14 +1,16 @@
 // SiYuan's kernel (https://github.com/siyuan-note/siyuan, AGPL-3.0), for its driver (driver.ts). The
 // release for this machine is downloaded once into `.sxs/siyuan/files/` (its SHA-256 checked against
 // the release's SHA256SUMS.txt), its `resources/` unpacked there (`siyuan-<version>-linux-<arch>/`) and
-// the archive deleted; the kernel
-// (`resources/kernel/SiYuan-Kernel serve`) runs on a workspace of its own, `.sxs/siyuan/workspace/`,
-// and serves the web UI the shared browser loads and the API (`/api/...`) the driver loads and reads
-// through. It listens on 127.0.0.1 only (the workspace's `system.networkServe` is off), needs no auth
-// code there (`SIYUAN_ACCESS_AUTH_CODE_BYPASS`), and has no way out: its HTTP(S) proxy is a port
-// nothing listens on. Started detached and left running for the next run, as the shared browser is,
-// while its workspace has the driver's plugin (a workspace deleted under it, it is started anew);
-// `run.ts --stop` stops it (`recordServer`).
+// the archive deleted. A kernel (`resources/kernel/SiYuan-Kernel serve`) runs for each of a run's
+// workers, numbered as the pool's browsers are: kernel n on a workspace of its own,
+// `.sxs/siyuan/<n>/workspace/`, on port 6816 + n, its log and pid beside it; a worker takes the first no
+// other worker holds (`kernel.lock`, `leaseKernel`). Each serves the web UI its worker's window loads
+// and the API (`/api/...`) the driver loads and reads through. It listens on 127.0.0.1 only (the
+// workspace's `system.networkServe` is off), needs no auth code there
+// (`SIYUAN_ACCESS_AUTH_CODE_BYPASS`), and has no way out: its HTTP(S) proxy is a port nothing listens
+// on. Started detached and left running for the next run, as the pool's browsers are, while its
+// workspace has the driver's plugin (a workspace deleted under it, it is started anew);
+// `run.ts --stop` stops them (`recordServer`).
 //
 // The driver's plugin (`plugin/`, the plugin API's `openTab`) is installed into the workspace, enabled,
 // and plugins trusted there (Settings › Marketplace: a user's setting of the workspace).
@@ -22,31 +24,75 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 import { recordServer, serverPid, stopServer } from '../lib/browser.ts';
+import { takeLock } from '../lib/desktop.ts';
+import { record } from '../lib/records.ts';
 import { cacheDir } from '../proxy.ts';
 
 /** The release to run: pinned, so a report changes when the app does, not when SiYuan releases. */
 export const VERSION = process.env.SIYUAN_VERSION ?? '3.8.6';
-export const PORT = Number(process.env.OURUS_SIYUAN_PORT ?? 6816);
-export const origin = `http://127.0.0.1:${PORT}`;
+/** Kernel 0's port; kernel n listens on the n-th after it. */
+const BASE_PORT = Number(process.env.OURUS_SIYUAN_PORT ?? 6816);
 const root = join(cacheDir, 'siyuan');
-export const workspace = join(root, 'workspace');
-export const kernelLog = join(root, 'kernel.log');
 const PLUGIN = 'ourus-sxs';
+
+/** A kernel: its number, directory (`.sxs/siyuan/<n>/`: workspace, log, server.pid), port and origin. */
+export interface Kernel {
+  n: number;
+  dir: string;
+  workspace: string;
+  log: string;
+  port: number;
+  origin: string;
+  /** Its name for `recordServer`: `siyuan/<n>`, its pid in its directory. */
+  server: string;
+}
+
+export function kernelOf(n: number): Kernel {
+  const dir = join(root, String(n));
+  return { n, dir, workspace: join(dir, 'workspace'), log: join(dir, 'kernel.log'), port: BASE_PORT + n, origin: `http://127.0.0.1:${BASE_PORT + n}`, server: `siyuan/${n}` };
+}
+
+/** The kernel serving a page of SiYuan's UI: by its port. */
+export const kernelOfPage = (url: string): Kernel => kernelOf(Number(new URL(url).port) - BASE_PORT);
+
+/**
+ * A kernel for a worker of the run: the first no other worker holds (`kernel.lock` in its directory),
+ * held until the run ends.
+ */
+export async function leaseKernel(): Promise<Kernel> {
+  for (let n = 0; ; n++) {
+    const k = kernelOf(n);
+    mkdirSync(k.dir, { recursive: true });
+    try {
+      process.once('exit', await takeLock(record(join(k.dir, 'kernel.lock')), false, `SiYuan's kernel ${n}`));
+      return k;
+    } catch (e) {
+      if (!/^another run has/.test((e as Error).message)) throw e;
+    }
+  }
+}
+
+/** Holds kernel `k` for a worker whose window an earlier run left on it, until the run ends; throws if another worker holds it. */
+export async function holdKernel(k: Kernel): Promise<void> {
+  mkdirSync(k.dir, { recursive: true });
+  process.once('exit', await takeLock(record(join(k.dir, 'kernel.lock')), false, `SiYuan's kernel ${k.n}`));
+}
+
 /** A port nothing listens on, as the kernel's proxy: no update, announcement or sync reaches out. */
 const NOWHERE = 'http://127.0.0.1:9';
 
-/** A call of the kernel's API: its `data`, or an error with its message. */
-export async function api<T = unknown>(path: string, body: unknown = {}): Promise<T> {
+/** A call of a kernel's API (at `origin`): its `data`, or an error with its message. */
+export async function api<T = unknown>(origin: string, path: string, body: unknown = {}): Promise<T> {
   const res = await fetch(`${origin}/api/${path}`, { method: 'POST', body: JSON.stringify(body), signal: AbortSignal.timeout(15000) });
   const j = (await res.json()) as { code: number; msg: string; data: T };
   if (j.code !== 0) throw new Error(`SiYuan's /api/${path}: ${j.msg || `code ${j.code}`}`);
   return j.data;
 }
 
-/** The running kernel's version, if one answers on the port. */
-async function running(): Promise<string | null> {
+/** The version of the kernel answering at `origin`, if one does. */
+async function running(origin: string): Promise<string | null> {
   try {
-    return await api<string>('system/version');
+    return await api<string>(origin, 'system/version');
   } catch {
     return null;
   }
@@ -86,12 +132,12 @@ async function resources(say: (line: string) => void): Promise<string> {
   return res;
 }
 
-/** The driver's plugin in the workspace. */
-const pluginDir = join(workspace, 'data', 'plugins', PLUGIN);
+/** The driver's plugin in a workspace. */
+const pluginDir = (workspace: string): string => join(workspace, 'data', 'plugins', PLUGIN);
 
-/** The driver's plugin in the workspace, enabled (the kernel reads both when the UI asks for its plugins). */
-function installPlugin(): void {
-  const dir = pluginDir;
+/** The driver's plugin in a workspace, enabled (the kernel reads both when the UI asks for its plugins). */
+function installPlugin(workspace: string): void {
+  const dir = pluginDir(workspace);
   mkdirSync(dir, { recursive: true });
   for (const f of ['plugin.json', 'index.js']) copyFileSync(fileURLToPath(new URL(`./plugin/${f}`, import.meta.url)), join(dir, f));
   const petal = join(workspace, 'data', 'storage', 'petal');
@@ -100,34 +146,37 @@ function installPlugin(): void {
 }
 
 /**
- * The kernel of `VERSION`, running and booted: the one already running if it is that version and its
+ * Kernel `k` of `VERSION`, running and booted: the one already running if it is that version and its
  * workspace has the plugin, else a new one (the other stopped first).
  */
-export async function serve(say: (line: string) => void): Promise<void> {
-  const v = await running();
-  if (v === VERSION && existsSync(pluginDir)) return;
-  if (v || serverPid('siyuan')) await stopServer('siyuan', say);
-  if (await running()) throw new Error(`a SiYuan kernel on 127.0.0.1:${PORT} isn't recorded (.sxs/siyuan/server.pid), so not stopped: stop it`);
-  const res = await resources(say);
+export async function serve(k: Kernel, say: (line: string) => void): Promise<void> {
+  const { origin, workspace, port, log: kernelLog } = k;
+  const v = await running(origin);
+  if (v === VERSION && existsSync(pluginDir(workspace))) return;
+  if (v || serverPid(k.server)) await stopServer(k.server, say);
+  if (await running(origin)) throw new Error(`a SiYuan kernel on 127.0.0.1:${port} isn't recorded (${record(join(k.dir, 'server.pid'))}), so not stopped: stop it`);
+  // the release downloaded and unpacked once, kernels starting at once taking turns
+  const unlock = await takeLock(record(join(root, 'files.lock')), true, "SiYuan's download");
+  const res = await resources(say).finally(unlock);
   mkdirSync(workspace, { recursive: true });
-  installPlugin();
+  installPlugin(workspace);
   const out = openSync(kernelLog, 'a');
   const env = { ...process.env, SIYUAN_ACCESS_AUTH_CODE_BYPASS: 'true', HTTP_PROXY: NOWHERE, HTTPS_PROXY: NOWHERE, http_proxy: NOWHERE, https_proxy: NOWHERE, NO_PROXY: '127.0.0.1,localhost', no_proxy: '127.0.0.1,localhost' };
-  const args = ['serve', `--workspace=${workspace}`, `--port=${PORT}`, `--wd=${res}`, '--lang=en'];
+  const args = ['serve', `--workspace=${workspace}`, `--port=${port}`, `--wd=${res}`, '--lang=en'];
   const child = spawn(join(res, 'kernel', 'SiYuan-Kernel'), args, { detached: true, stdio: ['ignore', out, out], env });
   child.unref();
   if (!child.pid) throw new Error(`SiYuan's kernel didn't start (${join(res, 'kernel', 'SiYuan-Kernel')}); see ${kernelLog}`);
-  recordServer('siyuan', child.pid);
+  recordServer(k.server, child.pid);
   for (let i = 0; ; i++) {
     if (i > 600) throw new Error(`SiYuan's kernel didn't boot in a minute; see ${kernelLog}`);
     if (child.exitCode !== null) throw new Error(`SiYuan's kernel exited (${child.exitCode}); see ${kernelLog}`);
     await new Promise((r) => setTimeout(r, 100));
-    const boot = await api<{ progress: number }>('system/bootProgress').catch(() => null);
+    const boot = await api<{ progress: number }>(origin, 'system/bootProgress').catch(() => null);
     if (boot?.progress === 100) break;
   }
-  const conf = await api<{ conf: { system: { networkServe: boolean } } }>('system/getConf');
+  const conf = await api<{ conf: { system: { networkServe: boolean } } }>(origin, 'system/getConf');
   if (conf.conf.system.networkServe) throw new Error("SiYuan's workspace serves the network (system.networkServe), with no auth code: refusing");
   // plugins trusted in the workspace (a fresh one doesn't), so that the UI loads the driver's
-  await api('setting/setBazaar', { trust: true, petalDisabled: false });
-  say(`started SiYuan's kernel ${VERSION} on 127.0.0.1:${PORT} (pid ${child.pid}, log ${kernelLog})`);
+  await api(origin, 'setting/setBazaar', { trust: true, petalDisabled: false });
+  say(`started SiYuan's kernel ${k.n}, ${VERSION}, on 127.0.0.1:${port} (pid ${child.pid}, log ${kernelLog})`);
 }

@@ -9,8 +9,8 @@
 // - The block being edited is read from its textarea.
 
 import type { Page } from 'playwright-core';
-import type { Driver } from '../lib/driver.ts';
-import type { Outline } from '../lib/outline.ts';
+import { perPage, type Driver } from '../lib/driver.ts';
+import type { Outline } from '../lib/block.ts';
 
 const MOTIONS: Record<string, string> = {
   CharLeft: 'ArrowLeft',
@@ -62,7 +62,7 @@ function fromRoam(b: RoamBlock, number: number | null): { text: string; from: nu
   const t = fromRoamText(b);
   // a number that is text, escaped also after a numbered block's own number (`2. 2\. x`)
   const pre = number !== null ? `${number}. ` : '';
-  const literal = /^\d{1,9}(?=[.)])/.exec(t.text);
+  const literal = /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(t.text);
   const text = literal ? t.text.slice(0, literal[0].length) + '\\' + t.text.slice(literal[0].length) : t.text;
   return { text: pre + text, from: t.from, to: t.to + pre.length, ...(literal && { cut: t.to + pre.length + literal[0].length }) };
 }
@@ -83,12 +83,13 @@ function fromRoamText(b: RoamBlock): { text: string; from: number; to: number } 
 /** An offset in a text whose prefix of `from` characters became `to` characters: past it, shifted; inside it, clamped. */
 const shiftOffset = (p: number, from: number, to: number): number => (p >= from ? p - from + to : Math.min(p, to));
 
-/** The page the current test runs on, to delete when the next test starts. */
-let current: string | null = null;
+/** The page the current test runs on, a worker's (`perPage`), to delete when the next test starts. */
+const pageState = perPage(() => ({ current: null as string | null }));
 
 export const driver: Driver = {
   name: 'roam',
   title: 'Roam',
+  id: 'RR', // Roam Research
   url: 'https://roamresearch.com/#/app/help',
   model: 'block',
   keys: {
@@ -101,6 +102,9 @@ export const driver: Driver = {
     moveSubtreeUp: 'Alt+Shift+ArrowUp',
     moveSubtreeDown: 'Alt+Shift+ArrowDown',
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
+    // Escape selects the block being edited with its children (`init-or-cancel-selection`), Backspace
+    // deletes the selected blocks
+    deleteSubtree: ['Escape', 'Backspace'],
     pasteStructured: 'Control+v',
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
@@ -109,11 +113,12 @@ export const driver: Driver = {
   },
   emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd'],
   // Shift+Tab leaves later siblings with the parent (logical outdenting); Enter on an empty nested
-  // block outdents it, as ourus's config says of Roam
-  behaves: { outdent: 'logical', enterOnEmptyItem: 'outdent', pasteStructuredLines: 'items', pasteStructuredMidText: 'after', emptyItemWithChildren: 'refuse', pasteStructuredListForm: 'drop', pasteStructuredParagraphList: 'children' },
-  // Roam's code blocks are a format of its own; a heading is a block's attribute, with no boundary in
-  // its text, and a task's `{{[[TODO]]}}` is text, edited a character at a time
-  refuses: ['code block', 'html', 'table', 'math', 'markup-heading', 'markup-task'],
+  // block outdents it; Backspace on a page's first block does nothing: as ourus's config says of Roam
+  behaves: { outdent: 'logical', enterOnEmptyItem: 'outdent', backspaceAtTopItem: 'refuse', pasteStructuredLines: 'items', pasteStructuredMidText: 'after', emptyItemWithChildren: 'refuse', pasteStructuredListForm: 'drop', pasteStructuredParagraphList: 'children' },
+  // Roam's code blocks are a format of its own (not driven yet: a CodeMirror editor in the block); a
+  // heading is a block's attribute, with no boundary in its text, and a task's `{{[[TODO]]}}` is text,
+  // edited a character at a time, as math's `$$` are. Math, tables and HTML are a block's text, as typed (measured)
+  refuses: ['code block', 'markup-heading', 'markup-task', 'markup-fence'],
   ordered: true,
   holds(doc) {
     const o = doc as Outline;
@@ -164,7 +169,7 @@ export const driver: Driver = {
     const blocks = o.blocks.map((b) => toRoam(b.depth, b.text));
     const at = (p: number, { from, to, cut }: { from: number; to: number; cut?: number }): number => shiftOffset(p - (cut !== undefined && p > cut ? 1 : 0), from, to);
     const sel = o.sel && { block: o.sel.block, anchor: at(o.sel.anchor, blocks[o.sel.block]!), head: at(o.sel.head, blocks[o.sel.block]!) };
-    current = await page.evaluate(
+    pageState(page).current = await page.evaluate(
       async ({ blocks, sel, previous }) => {
         const api = (window as any).roamAlphaAPI;
         const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -210,7 +215,7 @@ export const driver: Driver = {
         }
         return pageUid;
       },
-      { blocks: blocks.map(({ depth, string, heading, numbered }) => ({ depth, string, heading, numbered })), sel, previous: current },
+      { blocks: blocks.map(({ depth, string, heading, numbered }) => ({ depth, string, heading, numbered })), sel, previous: pageState(page).current },
     );
   },
 
@@ -235,7 +240,7 @@ export const driver: Driver = {
       if (i >= 0) flat[i]!.string = ta!.value;
       const back = ta?.selectionDirection === 'backward';
       return { flat, sel: i >= 0 ? { block: i, anchor: back ? ta!.selectionEnd : ta!.selectionStart, head: back ? ta!.selectionStart : ta!.selectionEnd } : null };
-    }, current);
+    }, pageState(page).current);
     const texts = raw.flat.map((b) => fromRoam(b, b.number));
     const blocks = raw.flat.map((b, i) => ({ depth: b.depth, text: texts[i]!.text }));
     let sel = raw.sel;

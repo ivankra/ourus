@@ -13,7 +13,7 @@
 
 import type { Page } from 'playwright-core';
 import type { Driver } from '../lib/driver.ts';
-import type { Outline } from '../lib/outline.ts';
+import type { Outline } from '../lib/block.ts';
 
 const MOTIONS: Record<string, string> = {
   CharLeft: 'ArrowLeft',
@@ -34,8 +34,21 @@ interface Item {
   checked: boolean;
   /** 0: none, 1 to 3: H1 to H3. */
   heading: number;
-  /** Numbered (its list style): its number the count of its numbered siblings up to it. */
+  /** Numbered: its parent's list style numbers all its children, from 1 (a CSS counter per parent). */
   numbered: boolean;
+}
+
+/** Each block's siblings, the blocks of one parent (-1: the top level), by their parent's index. */
+function siblings(o: Outline): Map<number, number[]> {
+  const kids = new Map<number, number[]>();
+  const path: number[] = [];
+  o.blocks.forEach((b, i) => {
+    path.length = b.depth;
+    const parent = b.depth ? path[b.depth - 1]! : -1;
+    kids.set(parent, [...(kids.get(parent) ?? []), i]);
+    path[b.depth] = i;
+  });
+  return kids;
 }
 
 /**
@@ -59,7 +72,7 @@ function toItem(depth: number, text: string): Item & { prefix: number; cut?: num
 /** An item's canonical text, and the length of the prefix its attributes stand for: its number `number` where it is numbered. */
 function fromItem(it: Item, number: number | null): { text: string; prefix: number; cut?: number } {
   const prefix = (number !== null ? `${number}. ` : '') + (it.checkbox || it.checked ? (it.checked ? '[x] ' : '[ ] ') : '') + (it.heading ? '#'.repeat(it.heading) + ' ' : '');
-  const literal = !prefix || prefix === `${number}. ` ? /^\d{1,9}(?=[.)])/.exec(it.content) : null;
+  const literal = !prefix || prefix === `${number}. ` ? /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(it.content) : null;
   const content = literal ? it.content.slice(0, literal[0].length) + '\\' + it.content.slice(literal[0].length) : it.content;
   return { text: prefix + content + (it.note ? '\n' + it.note : ''), prefix: prefix.length, ...(literal && { cut: literal[0].length }) };
 }
@@ -67,6 +80,7 @@ function fromItem(it: Item, number: number | null): { text: string; prefix: numb
 export const driver: Driver = {
   name: 'dynalist',
   title: 'Dynalist',
+  id: 'DL',
   url: 'https://dynalist.io/demo',
   model: 'block',
   keys: {
@@ -89,9 +103,10 @@ export const driver: Driver = {
     cursorDocEnd: 'Control+End',
     ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
   },
-  // headings and to-dos are an item's attributes, with no boundary in its text; a code block's
-  // fences are text in it, edited a character at a time
-  refuses: ['markup-heading', 'markup-task', 'markup-fence'],
+  // none of the `markup-` tags: a caret at a heading's or a to-do's text start is the item's start
+  // (one inside the `#`s or the checkbox, `holds` declines), a join takes the item's attributes along,
+  // and a code block's fences are text, edited a character at a time: all played, all Dynalist's
+  refuses: [],
   ordered: true,
   behaves: { outdent: 'logical', pasteStructuredLines: 'items', emptyItemWithChildren: 'refuse', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after', pasteStructuredParagraphList: 'children' },
   // "Unindent in place" (Settings › Editor): Shift+Tab takes the item's later siblings along as children
@@ -101,13 +116,10 @@ export const driver: Driver = {
     if (o.blocks.some((b) => /^(\[[ xX]\] )?#{4,6} /.test(b.text))) return 'a heading deeper than H3';
     // a checkbox and a heading level are the item's attributes, not text: no caret goes there
     if (o.sel && Math.min(o.sel.anchor, o.sel.head) < toItem(0, o.blocks[o.sel.block]!.text).prefix) return "a caret in a task's checkbox or a heading's #s";
-    // numbered siblings count 1, 2, ... whatever is between them, from 1 in each parent
-    const count: number[] = [];
-    for (const b of o.blocks) {
-      count.length = b.depth + 1;
-      const n = /^(\d{1,9})\. /.exec(b.text);
-      if (n) count[b.depth] = (count[b.depth] ?? 0) + 1;
-      if (n && Number(n[1]) !== count[b.depth]) return 'a numbered list that Dynalist would number otherwise';
+    // numbering is a parent's list style: all its children numbered, from 1, or none
+    for (const list of siblings(o).values()) {
+      const numbers = list.map((i) => /^(\d{1,9})\. /.exec(o.blocks[i]!.text)?.[1]);
+      if (numbers.some(Boolean) && !numbers.every((n, k) => Number(n) === k + 1)) return 'a list numbered in part, or not from 1';
     }
     return undefined;
   },
@@ -144,9 +156,16 @@ export const driver: Driver = {
     const items = o.blocks.map((b) => toItem(b.depth, b.text));
     const local = (p: number, it: (typeof items)[number]): number => p - it.prefix - (it.cut !== undefined && p > it.cut ? 1 : 0);
     const sel = o.sel && { block: o.sel.block, anchor: local(o.sel.anchor, items[o.sel.block]!), head: local(o.sel.head, items[o.sel.block]!) };
+    // a numbered list is its parent's list style (the root's for the top level): `holds` saw to it
+    // that a parent's children are all numbered or none
+    const numbers = new Set([...siblings(o)].filter(([, list]) => items[list[0]!]!.numbered).map(([parent]) => parent));
+    const lists = items.map((_, i) => numbers.has(i));
     await page.evaluate(
-      async ({ items, sel }) => {
+      async ({ items, lists, topNumbered, sel }) => {
         const ad = (window as any).DYNALIST.app.app_document;
+        // a popup the last test opened (`!` at a word's start opens the date picker) is a scope over
+        // the editor's, and outlives the test: under it, the paste handler leaves a paste to the browser
+        (window as any).DYNALIST.app.scope.fix_scope_to_editor();
         (document.activeElement as HTMLElement | null)?.blur();
         ad.ui.selection().set_no_select();
         const root = ad.document.get_node_collection().get_root();
@@ -156,8 +175,14 @@ export const driver: Driver = {
         const made: any[] = [];
         ad.view.exec((a: any) => {
           for (const child of root.children.array().slice()) a.detach(child);
+          // the title as the demo has it: Backspace at the first item's start joins the item to it,
+          // and a caret left there types into it, test after test
+          a.edit(root, (m: any) => {
+            m.set_content('Welcome to Dynalist');
+            m.set_list_style(topNumbered ? 1 : 0);
+          });
           const parents = [root];
-          for (const it of items) {
+          for (const [i, it] of items.entries()) {
             const node = ad.controller.create_node();
             const parent = parents[it.depth];
             a.attach(node, parent, parent.children.length());
@@ -166,7 +191,7 @@ export const driver: Driver = {
               if (it.checkbox) m.set_checkbox(true);
               if (it.checked) m.set_checked(true);
               if (it.heading) m.set_heading(it.heading);
-              if (it.numbered) m.set_list_style(1);
+              if (lists[i]) m.set_list_style(1);
             });
             parents[it.depth + 1] = node;
             parents.length = it.depth + 2;
@@ -188,7 +213,7 @@ export const driver: Driver = {
         for (let i = 0; i < 100 && document.activeElement !== el; i++) await new Promise((r) => setTimeout(r, 10));
         if (document.activeElement !== el) throw new Error(`the item didn't take the caret (focus: ${(document.activeElement as HTMLElement | null)?.className})`);
       },
-      { items, sel },
+      { items, lists, topNumbered: numbers.has(-1), sel },
     );
   },
 
@@ -198,12 +223,12 @@ export const driver: Driver = {
       const root = ad.document.get_node_collection().get_root();
       const flat: { depth: number; content: string; note: string; checkbox: boolean; checked: boolean; heading: number; numbered: boolean; number: number | null; id: string }[] = [];
       const walk = (node: any, depth: number) => {
-        // numbered children count on, whatever is between them (a CSS counter, reset per parent)
+        // a parent's list style numbers all its children, from 1 (a CSS counter per parent)
+        const numbered = node.get_meta_object().is_numbered_list();
         let n = 0;
         node.children.each((c: any) => {
           const m = c.get_meta_object();
-          const numbered = m.is_numbered_list();
-          if (numbered) n++;
+          n++;
           flat.push({ depth, content: m.get_content(), note: m.get_note(), checkbox: m.has_checkbox(), checked: m.is_checked(), heading: m.get_heading() || 0, numbered, number: numbered ? n : null, id: c.get_id() });
           walk(c, depth + 1);
         });

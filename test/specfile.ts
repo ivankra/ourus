@@ -62,7 +62,7 @@ export type Rank = (typeof RANKS)[number];
  * form for that structure; a driver lists the `markup-` tags its app can't compare in `refuses`,
  * and the case is skipped there.
  */
-export const TAGS = ['free-form', 'markup-heading', 'markup-task', 'markup-fence'] as const;
+export const TAGS = ['free-form', 'markup-heading', 'markup-task', 'markup-fence', 'quote-container'] as const;
 
 export type Tag = (typeof TAGS)[number];
 

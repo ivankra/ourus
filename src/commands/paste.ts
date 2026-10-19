@@ -1,5 +1,6 @@
 // Paste: structured (Markdown pasted as nodes) and plain (text pasted into the node).
 
+import type { Config } from '../config.ts';
 import { OutlineState, type OutlineNode } from '../outline/index.ts';
 import type { LineInfo } from '../parser/index.ts';
 import { advanceColumns, dropColumns, skipSpaces, type ChangeSpec } from '../text.ts';
@@ -205,6 +206,29 @@ function paragraphsPlan(ctx: CommandContext, node: OutlineNode, paragraphs: read
  * goes after it (`pasteStructuredAtEnd: after`), or its first text joins it (`join`). A list landing
  * in a list of the other kind takes its form, its numbers kept as text (`pasteStructuredListForm`).
  */
+/**
+ * A clipboard's lines (its blank ones at either end gone) as paste reads them: without the indentation
+ * all of them share; and a fenced block copied from inside a list or a quote, from its fence on, whose
+ * fence's line lost the indentation the others keep, its closing fence among them, which then doesn't
+ * close the block (a code fence four columns in), read with the others losing it too, which closes the
+ * fence and gives the code its own indentation back. A block that closes as it is reads as it is, its
+ * code's indentation kept (so do other clipboards). The side-by-side runs render the same Markdown as
+ * HTML for apps that read a clipboard's HTML (`sxs/lib/clipboard.ts`).
+ */
+export function clipboardSource(lines: readonly string[], config: Partial<Config>): string[] {
+  const indentOf = (text: string): number => advanceColumns(text, 0, /^[ \t]*/.exec(text)![0].length, 0);
+  const common = Math.min(...lines.filter((text) => text.trim() !== '').map(indentOf));
+  const source = lines.map((text) => (text.trim() === '' ? '' : dropColumns(text, common)));
+  const fence = /^(`{3,}|~{3,}|\$\$|%%)/.exec(source[0]!);
+  const rest = source.slice(1).filter((text) => text !== '');
+  const inner = rest.length ? Math.min(...rest.map(indentOf)) : 0;
+  const closes = (): boolean => !!(OutlineState.parse(source.join('\n'), { config }).root.children[0]?.block as { closed?: boolean } | undefined)?.closed;
+  if (fence && inner > 0 && indentOf(source[source.length - 1]!) === inner && !closes() && new RegExp(`^[ \\t]*\\${fence[1]![0]}{${Math.min(fence[1]!.length, 3)},}[ \\t]*$`).test(source[source.length - 1]!)) {
+    return [source[0]!, ...source.slice(1).map((text) => (text === '' ? '' : dropColumns(text, inner)))];
+  }
+  return source;
+}
+
 export function paste(ctx: CommandContext, payload: string): Outcome {
   const { doc } = ctx;
   if (!ctx.collapsed) return notApplicable;
@@ -231,22 +255,7 @@ export function paste(ctx: CommandContext, payload: string): Outcome {
   if (!node) return notApplicable;
   // in code, what is pasted is code
   if (isCodeLine(ctx, doc.lineAt(pos))) return pastePlain(ctx, payload);
-  // the payload, without the indentation all its lines share
-  const indentOf = (text: string): number => advanceColumns(text, 0, /^[ \t]*/.exec(text)![0].length, 0);
-  const common = Math.min(...lines.filter((text) => text.trim() !== '').map(indentOf));
-  let source = lines.map((text) => (text.trim() === '' ? '' : dropColumns(text, common)));
-  // a fenced block copied from inside a list or a quote, from its fence on: the fence's line lost the
-  // indentation the others keep, its closing fence among them, which then doesn't close the block (a
-  // code fence four columns in); they lose it too, which closes the fence and gives the code its own
-  // indentation back. A block that closes as it is reads as it is, its code's indentation kept (so do
-  // other clipboards)
-  const fence = /^(`{3,}|~{3,}|\$\$|%%)/.exec(source[0]!);
-  const rest = source.slice(1).filter((text) => text !== '');
-  const inner = rest.length ? Math.min(...rest.map(indentOf)) : 0;
-  const closes = (): boolean => !!(OutlineState.parse(source.join('\n'), { config: doc.config }).root.children[0]?.block as { closed?: boolean } | undefined)?.closed;
-  if (fence && inner > 0 && indentOf(source[source.length - 1]!) === inner && !closes() && new RegExp(`^[ \\t]*\\${fence[1]![0]}{${Math.min(fence[1]!.length, 3)},}[ \\t]*$`).test(source[source.length - 1]!)) {
-    source = [source[0]!, ...source.slice(1).map((text) => (text === '' ? '' : dropColumns(text, inner)))];
-  }
+  let source = clipboardSource(lines, doc.config);
   let fragment = OutlineState.parse(source.join('\n'), { config: doc.config });
   // frontmatter is only at a document's start: pasted into one, its lines are what they read as there
   // (a thematic break, a setext heading), read after a blank line, which keeps line numbers by a line

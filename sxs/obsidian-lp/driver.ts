@@ -3,4 +3,4 @@
 
 import { inCheckbox, obsidianDriver } from '../obsidian/obsidian.ts';
 
-export const driver = obsidianDriver({ name: 'obsidian-lp', title: 'Obsidian (Live Preview)', mode: 'live-preview', holds: inCheckbox });
+export const driver = obsidianDriver({ name: 'obsidian-lp', title: 'Obsidian (Live Preview)', id: 'LP', mode: 'live-preview', holds: inCheckbox });

@@ -47,6 +47,11 @@ export function installIdle(version: string): void {
   const nativeCancelRaf = window.cancelAnimationFrame.bind(window);
   /** Pending short timers and frames, by the id the page got for them. */
   const timers = new Map<number, number>();
+  /**
+   * Pending timers longer than that, up to 5 s, by id: what the app puts off (a debounced save), not
+   * part of reacting to a key; `drain` waits for those pending at a moment.
+   */
+  const later = new Map<number, number>();
   const frames = new Set<number>();
   let shortTimer = 300;
   let lastChange = performance.now();
@@ -59,7 +64,16 @@ export function installIdle(version: string): void {
 
   window.setTimeout = ((handler: TimerHandler, ms?: number, ...args: unknown[]): number => {
     const delay = Number(ms) || 0;
-    if (delay > shortTimer) return nativeSetTimeout(handler, ms, ...args);
+    if (delay > 5000) return nativeSetTimeout(handler, ms, ...args);
+    if (delay > shortTimer) {
+      const id = nativeSetTimeout(() => {
+        later.delete(id);
+        if (typeof handler === 'function') (handler as (...a: unknown[]) => void)(...args);
+        else (0, eval)(handler);
+      }, delay);
+      later.set(id, delay);
+      return id;
+    }
     const id = nativeSetTimeout(() => {
       timers.delete(id);
       changed(`a ${delay}ms timer`);
@@ -70,7 +84,10 @@ export function installIdle(version: string): void {
     return id;
   }) as typeof window.setTimeout;
   window.clearTimeout = ((id?: number): void => {
-    if (id !== undefined) timers.delete(id);
+    if (id !== undefined) {
+      timers.delete(id);
+      later.delete(id);
+    }
     nativeClearTimeout(id);
   }) as typeof window.clearTimeout;
   window.requestAnimationFrame = (cb: FrameRequestCallback): number => {
@@ -131,6 +148,23 @@ export function installIdle(version: string): void {
 
   w.__ourusIdle = {
     version,
+    /**
+     * Resolves once each timer pending now, of up to `upTo` ms, has fired or been cleared (or after
+     * `timeout`): what the app put off till a user's pause, done. Timers made after don't count.
+     */
+    drain(o: { upTo: number; timeout: number }): Promise<{ ms: number; left: number }> {
+      const start = performance.now();
+      const pending = [...later].filter(([, delay]) => delay <= o.upTo).map(([id]) => id);
+      return new Promise((resolve) => {
+        const poll = (): void => {
+          const left = pending.filter((id) => later.has(id)).length;
+          const ms = Math.round(performance.now() - start);
+          if (!left || ms > o.timeout) return resolve({ ms, left });
+          nativeSetTimeout(poll, 10);
+        };
+        poll();
+      });
+    },
     /** Resolves once no short timer or frame is pending, the app isn't busy, and nothing changed for `quiet` ms. */
     wait(o: IdleOptions): Promise<IdleResult> {
       shortTimer = o.shortTimer;

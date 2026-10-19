@@ -6,6 +6,7 @@ import { keepsCaretOnText, obsidianDriver } from '../obsidian/obsidian.ts';
 export const driver = obsidianDriver({
   name: 'obsidian-true-outliner',
   title: 'Obsidian with true-outliner',
+  id: 'TO',
   mode: 'live-preview',
   plugins: [{ repo: 'https://github.com/laughedelic/obsidian-true-outliner', version: '0.14.4' }],
   pluginData: { 'true-outliner': { outlineByDefault: true } },

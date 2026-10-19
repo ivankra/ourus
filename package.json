@@ -10,15 +10,16 @@
     "./extend": "./src/parser/extend.ts"
   },
   "scripts": {
-    "test": "node --test test/*.test.ts test/*/*.test.ts sxs/*/*.test.ts",
-    "typecheck": "tsc -p . && tsc -p demo/cm6",
+    "bench": "node test/bench.ts",
     "demo:build": "node demo/cm6/build.ts",
     "demo:serve": "node demo/cm6/build.ts --serve",
     "demo:smoke": "node demo/cm6/smoke.ts",
-    "test:model": "node test/model/run.ts",
     "sxs": "node sxs/run.ts",
+    "sxs:proxy": "node sxs/proxy.ts --cache=offline",
+    "test": "node --test test/*.test.ts test/*/*.test.ts sxs/*/*.test.ts",
     "test:diff": "node test/differential.ts",
-    "bench": "node test/bench.ts"
+    "test:model": "node test/model/run.ts",
+    "typecheck": "tsc -p . && tsc -p demo/cm6"
   },
   "devDependencies": {
     "@codemirror/commands": "^6.11.1",

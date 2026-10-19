@@ -1,52 +1,53 @@
 ---
 type: "SxS"
 app: "obsidian"
-version: "1.14.4 (installer 1.14.4)"
+version: "1.14.4"
 url: "app://obsidian.md/"
 model: "text"
 command: "node sxs/run.ts obsidian"
-elapsed_s: 609
+elapsed_s: 427
+workers: 2
 ---
 
 # Obsidian (Source mode) vs ourus
 
 Summary:
 
-|  | agree | caret | whitespace | disagree | error | skipped | total |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| **total** | **137 (17%)** | **[18](#caret-18) (2.3%)** | **[33](#whitespace-33) (4.2%)** | **[463](#disagree-463) (59%)** | **0 (0%)** | **[136](#skipped-136) (17%)** | **787** |
+| agree | caret | whitespace | disagree | error | skipped | total |
+| --- | --- | --- | --- | --- | --- | --- |
+| **144 (18%)** | **[18](#caret-18) (2.3%)** | **[33](#whitespace-33) (4.2%)** | **[457](#disagree-457) (58%)** | **0 (0%)** | **[135](#skipped-135) (17%)** | **787** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| [backspace.md](../../spec/backspace.md) | 6 |  |  | 45 |  | 14 | **65** |
-| [cursor.md](../../spec/cursor.md) | 25 | 10 |  |  |  | 1 | **36** |
-| [del.md](../../spec/del.md) | 11 | 1 |  | 24 |  | 12 | **48** |
-| [delete-subtree.md](../../spec/delete-subtree.md) |  |  |  |  |  | 10 | **10** |
-| [duplicate-subtree.md](../../spec/duplicate-subtree.md) |  |  |  |  |  | 8 | **8** |
-| [enter.md](../../spec/enter.md) | 8 |  |  | 35 |  | 16 | **59** |
-| [fences.md](../../spec/fences.md) | 11 | 2 | 1 | 34 |  | 3 | **51** |
-| [gaps.md](../../spec/gaps.md) | 3 |  |  | 15 |  | 1 | **19** |
-| [indent.md](../../spec/indent.md) | 7 | 1 | 3 | 17 |  | 2 | **30** |
-| [move-subtree-down.md](../../spec/move-subtree-down.md) | 4 | 1 |  | 32 |  |  | **37** |
-| [move-subtree-up.md](../../spec/move-subtree-up.md) | 8 | 2 |  | 28 |  |  | **38** |
-| [obsidian-true-outliner.md](../../spec/obsidian-true-outliner.md) | 12 |  | 6 | 46 |  | 3 | **67** |
-| [outdent.md](../../spec/outdent.md) | 7 | 1 | 2 | 13 |  | 6 | **29** |
-| [paste.md](../../spec/paste.md) | 3 |  | 6 | 68 |  | 30 | **107** |
-| [placeholders.md](../../spec/placeholders.md) | 5 |  |  | 9 |  | 2 | **16** |
-| [quotes.md](../../spec/quotes.md) | 12 |  | 8 | 57 |  | 13 | **90** |
-| [scenarios.md](../../spec/scenarios.md) | 4 |  |  | 16 |  | 4 | **24** |
-| [shift-enter.md](../../spec/shift-enter.md) | 3 |  | 6 | 15 |  | 2 | **26** |
-| [tasks.md](../../spec/tasks.md) | 3 |  | 1 | 6 |  | 7 | **17** |
-| [typing.md](../../spec/typing.md) | 3 |  |  |  |  | 1 | **4** |
-| [undo.md](../../spec/undo.md) | 2 |  |  | 3 |  |  | **5** |
-| [z-open.md](../../spec/z-open.md) |  |  |  |  |  | 1 | **1** |
-| **total** | **137 (17%)** | **18 (2.3%)** | **33 (4.2%)** | **463 (59%)** | **0 (0%)** | **136 (17%)** | **787** |
+| [backspace.md](../spec/backspace.md) | 6 |  |  | 45 |  | 14 | **65** |
+| [cursor.md](../spec/cursor.md) | 25 | 10 |  |  |  | 1 | **36** |
+| [del.md](../spec/del.md) | 11 | 1 |  | 24 |  | 12 | **48** |
+| [delete-subtree.md](../spec/delete-subtree.md) |  |  |  |  |  | 10 | **10** |
+| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 8 | **8** |
+| [enter.md](../spec/enter.md) | 9 |  |  | 34 |  | 16 | **59** |
+| [fences.md](../spec/fences.md) | 11 | 2 | 1 | 34 |  | 3 | **51** |
+| [gaps.md](../spec/gaps.md) | 3 |  | 1 | 15 |  |  | **19** |
+| [indent.md](../spec/indent.md) | 9 | 1 | 3 | 15 |  | 2 | **30** |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 4 | 1 |  | 32 |  |  | **37** |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 8 | 2 |  | 28 |  |  | **38** |
+| [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 15 |  | 5 | 44 |  | 3 | **67** |
+| [outdent.md](../spec/outdent.md) | 8 | 1 | 1 | 13 |  | 6 | **29** |
+| [paste.md](../spec/paste.md) | 3 |  | 6 | 68 |  | 30 | **107** |
+| [placeholders.md](../spec/placeholders.md) | 5 |  | 1 | 8 |  | 2 | **16** |
+| [quotes.md](../spec/quotes.md) | 12 |  | 8 | 57 |  | 13 | **90** |
+| [scenarios.md](../spec/scenarios.md) | 4 |  |  | 16 |  | 4 | **24** |
+| [shift-enter.md](../spec/shift-enter.md) | 3 |  | 6 | 15 |  | 2 | **26** |
+| [tasks.md](../spec/tasks.md) | 3 |  | 1 | 6 |  | 7 | **17** |
+| [typing.md](../spec/typing.md) | 3 |  |  |  |  | 1 | **4** |
+| [undo.md](../spec/undo.md) | 2 |  |  | 3 |  |  | **5** |
+| [z-open.md](../spec/z-open.md) |  |  |  |  |  | 1 | **1** |
+| **total** | **144 (18%)** | **18 (2.3%)** | **33 (4.2%)** | **457 (58%)** | **0 (0%)** | **135 (17%)** | **787** |
 
-## Disagree (463)
+## Disagree (457)
 
-### [Backspace1](../../spec/backspace.md#backspace1)
+### [Backspace1](../spec/backspace.md#backspace1)
 
 > deleteContentBackward
 
@@ -75,7 +76,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [Backspace2](../../spec/backspace.md#backspace2)
+### [Backspace2](../spec/backspace.md#backspace2)
 
 > deleteContentBackward
 
@@ -103,7 +104,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [Backspace3](../../spec/backspace.md#backspace3)
+### [Backspace3](../spec/backspace.md#backspace3)
 
 > deleteContentBackward
 
@@ -132,7 +133,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [Backspace4](../../spec/backspace.md#backspace4)
+### [Backspace4](../spec/backspace.md#backspace4)
 
 > deleteContentBackward
 
@@ -161,7 +162,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [Backspace5](../../spec/backspace.md#backspace5)
+### [Backspace5](../spec/backspace.md#backspace5)
 
 > deleteContentBackward
 
@@ -190,7 +191,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [Backspace7](../../spec/backspace.md#backspace7)
+### [Backspace7](../spec/backspace.md#backspace7)
 
 > deleteContentBackward
 
@@ -222,7 +223,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [Backspace8](../../spec/backspace.md#backspace8)
+### [Backspace8](../spec/backspace.md#backspace8)
 
 > deleteContentBackward
 
@@ -254,7 +255,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [Backspace9](../../spec/backspace.md#backspace9)
+### [Backspace9](../spec/backspace.md#backspace9)
 
 > deleteContentBackward
 
@@ -283,7 +284,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [Backspace10](../../spec/backspace.md#backspace10)
+### [Backspace10](../spec/backspace.md#backspace10)
 
 > deleteContentBackward
 
@@ -313,7 +314,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [Backspace11](../../spec/backspace.md#backspace11)
+### [Backspace11](../spec/backspace.md#backspace11)
 
 > deleteContentBackward
 
@@ -343,7 +344,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [Backspace12b](../../spec/backspace.md#backspace12b)
+### [Backspace12b](../spec/backspace.md#backspace12b)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -397,7 +398,7 @@ a┃b
 </td></tr>
 </table>
 
-### [Backspace14](../../spec/backspace.md#backspace14)
+### [Backspace14](../spec/backspace.md#backspace14)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -456,7 +457,7 @@ a┃
 </td></tr>
 </table>
 
-### [Backspace16](../../spec/backspace.md#backspace16)
+### [Backspace16](../spec/backspace.md#backspace16)
 
 > deleteContentBackward
 
@@ -492,7 +493,7 @@ x
 </td></tr>
 </table>
 
-### [Backspace17](../../spec/backspace.md#backspace17)
+### [Backspace17](../spec/backspace.md#backspace17)
 
 > deleteContentBackward
 
@@ -524,7 +525,7 @@ x
 </td></tr>
 </table>
 
-### [Backspace17b](../../spec/backspace.md#backspace17b)
+### [Backspace17b](../spec/backspace.md#backspace17b)
 
 > deleteContentBackward
 
@@ -556,7 +557,7 @@ x
 </td></tr>
 </table>
 
-### [Backspace17c](../../spec/backspace.md#backspace17c)
+### [Backspace17c](../spec/backspace.md#backspace17c)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -624,7 +625,7 @@ x
 </td></tr>
 </table>
 
-### [Backspace17d](../../spec/backspace.md#backspace17d)
+### [Backspace17d](../spec/backspace.md#backspace17d)
 
 > deleteContentBackward
 
@@ -659,7 +660,7 @@ x
 </td></tr>
 </table>
 
-### [Backspace17e](../../spec/backspace.md#backspace17e)
+### [Backspace17e](../spec/backspace.md#backspace17e)
 
 > deleteContentBackward
 
@@ -686,7 +687,7 @@ x
 </td></tr>
 </table>
 
-### [Backspace18](../../spec/backspace.md#backspace18)
+### [Backspace18](../spec/backspace.md#backspace18)
 
 > deleteContentBackward
 
@@ -725,7 +726,7 @@ body
 </td></tr>
 </table>
 
-### [Backspace18c](../../spec/backspace.md#backspace18c)
+### [Backspace18c](../spec/backspace.md#backspace18c)
 
 > deleteContentBackward
 
@@ -760,7 +761,7 @@ text
 </td></tr>
 </table>
 
-### [Backspace18d](../../spec/backspace.md#backspace18d)
+### [Backspace18d](../spec/backspace.md#backspace18d)
 
 > deleteContentBackward
 
@@ -795,7 +796,7 @@ text
 </td></tr>
 </table>
 
-### [Backspace18e](../../spec/backspace.md#backspace18e)
+### [Backspace18e](../spec/backspace.md#backspace18e)
 
 > deleteContentBackward
 
@@ -825,7 +826,7 @@ text
 </td></tr>
 </table>
 
-### [Backspace18g](../../spec/backspace.md#backspace18g)
+### [Backspace18g](../spec/backspace.md#backspace18g)
 
 > deleteContentBackward
 
@@ -859,7 +860,7 @@ text
 </td></tr>
 </table>
 
-### [Backspace19](../../spec/backspace.md#backspace19)
+### [Backspace19](../spec/backspace.md#backspace19)
 
 > deleteContentBackward
 
@@ -891,7 +892,7 @@ text
 </td></tr>
 </table>
 
-### [Backspace20](../../spec/backspace.md#backspace20)
+### [Backspace20](../spec/backspace.md#backspace20)
 
 > deleteContentBackward
 
@@ -927,7 +928,7 @@ text
 </td></tr>
 </table>
 
-### [Backspace21b](../../spec/backspace.md#backspace21b)
+### [Backspace21b](../spec/backspace.md#backspace21b)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -985,7 +986,7 @@ text
 </td></tr>
 </table>
 
-### [Backspace27](../../spec/backspace.md#backspace27)
+### [Backspace27](../spec/backspace.md#backspace27)
 
 > deleteContentBackward
 
@@ -1016,7 +1017,7 @@ text
 </td></tr>
 </table>
 
-### [Backspace28](../../spec/backspace.md#backspace28)
+### [Backspace28](../spec/backspace.md#backspace28)
 
 > deleteContentBackward
 
@@ -1051,7 +1052,7 @@ x┃
 </td></tr>
 </table>
 
-### [Backspace29](../../spec/backspace.md#backspace29)
+### [Backspace29](../spec/backspace.md#backspace29)
 
 > deleteContentBackward
 
@@ -1083,7 +1084,7 @@ x┃
 </td></tr>
 </table>
 
-### [Backspace30](../../spec/backspace.md#backspace30)
+### [Backspace30](../spec/backspace.md#backspace30)
 
 > deleteContentBackward
 
@@ -1112,7 +1113,7 @@ x┃
 </td></tr>
 </table>
 
-### [Backspace33](../../spec/backspace.md#backspace33)
+### [Backspace33](../spec/backspace.md#backspace33)
 
 > deleteContentBackward
 
@@ -1142,7 +1143,7 @@ x┃
 </td></tr>
 </table>
 
-### [Backspace35](../../spec/backspace.md#backspace35)
+### [Backspace35](../spec/backspace.md#backspace35)
 
 > deleteContentBackward
 
@@ -1199,7 +1200,7 @@ para
 </td></tr>
 </table>
 
-### [Backspace36](../../spec/backspace.md#backspace36)
+### [Backspace36](../spec/backspace.md#backspace36)
 
 > deleteContentBackward
 
@@ -1230,7 +1231,7 @@ Title┃text
 </td></tr>
 </table>
 
-### [Backspace37](../../spec/backspace.md#backspace37)
+### [Backspace37](../spec/backspace.md#backspace37)
 
 > deleteContentBackward
 
@@ -1264,7 +1265,7 @@ lines
 </td></tr>
 </table>
 
-### [Backspace38](../../spec/backspace.md#backspace38)
+### [Backspace38](../spec/backspace.md#backspace38)
 
 > deleteContentBackward
 
@@ -1295,7 +1296,7 @@ lines
 </td></tr>
 </table>
 
-### [Backspace39](../../spec/backspace.md#backspace39)
+### [Backspace39](../spec/backspace.md#backspace39)
 
 > deleteContentBackward
 
@@ -1328,7 +1329,7 @@ p
 </td></tr>
 </table>
 
-### [Backspace41](../../spec/backspace.md#backspace41)
+### [Backspace41](../spec/backspace.md#backspace41)
 
 > deleteContentBackward
 
@@ -1358,7 +1359,7 @@ p
 </td></tr>
 </table>
 
-### [SoftBackspace2](../../spec/backspace.md#softbackspace2)
+### [SoftBackspace2](../spec/backspace.md#softbackspace2)
 
 > deleteSoftLineBackward
 
@@ -1385,7 +1386,7 @@ abc ┃[a]: tail
 </td></tr>
 </table>
 
-### [SoftBackspace3](../../spec/backspace.md#softbackspace3)
+### [SoftBackspace3](../spec/backspace.md#softbackspace3)
 
 > deleteSoftLineBackward
 
@@ -1415,7 +1416,7 @@ abc ┃- x tail
 </td></tr>
 </table>
 
-### [SoftBackspace4](../../spec/backspace.md#softbackspace4)
+### [SoftBackspace4](../spec/backspace.md#softbackspace4)
 
 > deleteSoftLineBackward
 
@@ -1442,7 +1443,7 @@ abc ┃- x tail
 </td></tr>
 </table>
 
-### [SoftBackspace5](../../spec/backspace.md#softbackspace5)
+### [SoftBackspace5](../spec/backspace.md#softbackspace5)
 
 > deleteSoftLineBackward
 
@@ -1475,7 +1476,7 @@ first
 </td></tr>
 </table>
 
-### [SoftBackspace6](../../spec/backspace.md#softbackspace6)
+### [SoftBackspace6](../spec/backspace.md#softbackspace6)
 
 > deleteSoftLineBackward
 
@@ -1505,7 +1506,7 @@ title
 </td></tr>
 </table>
 
-### [SoftBackspace7](../../spec/backspace.md#softbackspace7)
+### [SoftBackspace7](../spec/backspace.md#softbackspace7)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -1560,7 +1561,7 @@ title
 </td></tr>
 </table>
 
-### [SoftBackspace8](../../spec/backspace.md#softbackspace8)
+### [SoftBackspace8](../spec/backspace.md#softbackspace8)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -1608,7 +1609,7 @@ title
 </td></tr>
 </table>
 
-### [SoftBackspace9](../../spec/backspace.md#softbackspace9)
+### [SoftBackspace9](../spec/backspace.md#softbackspace9)
 
 > deleteSoftLineBackward
 
@@ -1641,7 +1642,7 @@ code
 </td></tr>
 </table>
 
-### [Delete1](../../spec/del.md#delete1)
+### [Delete1](../spec/del.md#delete1)
 
 > deleteContentForward
 
@@ -1669,7 +1670,7 @@ code
 </td></tr>
 </table>
 
-### [Delete2](../../spec/del.md#delete2)
+### [Delete2](../spec/del.md#delete2)
 
 > deleteContentForward
 
@@ -1697,7 +1698,7 @@ code
 </td></tr>
 </table>
 
-### [Delete3](../../spec/del.md#delete3)
+### [Delete3](../spec/del.md#delete3)
 
 > deleteContentForward
 
@@ -1713,7 +1714,7 @@ code
 </td><td>
 
 ```buffer
-- one┃→two
+- one┃  two
 ```
 
 </td><td>
@@ -1725,7 +1726,7 @@ code
 </td></tr>
 </table>
 
-### [Delete4](../../spec/del.md#delete4)
+### [Delete4](../spec/del.md#delete4)
 
 > deleteContentForward
 
@@ -1754,7 +1755,7 @@ code
 </td></tr>
 </table>
 
-### [Delete4b](../../spec/del.md#delete4b)
+### [Delete4b](../spec/del.md#delete4b)
 
 > deleteContentForward
 
@@ -1782,7 +1783,7 @@ code
 </td></tr>
 </table>
 
-### [Delete5](../../spec/del.md#delete5)
+### [Delete5](../spec/del.md#delete5)
 
 > deleteContentForward
 
@@ -1819,7 +1820,7 @@ code
 </td></tr>
 </table>
 
-### [Delete5b](../../spec/del.md#delete5b)
+### [Delete5b](../spec/del.md#delete5b)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -1886,7 +1887,7 @@ code
 </td></tr>
 </table>
 
-### [Delete5c](../../spec/del.md#delete5c)
+### [Delete5c](../spec/del.md#delete5c)
 
 > deleteContentForward
 
@@ -1920,7 +1921,7 @@ code
 </td></tr>
 </table>
 
-### [Delete5d](../../spec/del.md#delete5d)
+### [Delete5d](../spec/del.md#delete5d)
 
 > deleteContentForward
 
@@ -1952,7 +1953,7 @@ code
 </td></tr>
 </table>
 
-### [Delete6](../../spec/del.md#delete6)
+### [Delete6](../spec/del.md#delete6)
 
 > deleteContentForward
 
@@ -1983,7 +1984,7 @@ code
 </td></tr>
 </table>
 
-### [Delete7](../../spec/del.md#delete7)
+### [Delete7](../spec/del.md#delete7)
 
 > deleteContentForward
 
@@ -2014,7 +2015,7 @@ code
 </td></tr>
 </table>
 
-### [Delete9](../../spec/del.md#delete9)
+### [Delete9](../spec/del.md#delete9)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -2073,7 +2074,7 @@ code
 </td></tr>
 </table>
 
-### [Delete10](../../spec/del.md#delete10)
+### [Delete10](../spec/del.md#delete10)
 
 > deleteContentForward
 
@@ -2102,7 +2103,7 @@ code
 </td></tr>
 </table>
 
-### [Delete11](../../spec/del.md#delete11)
+### [Delete11](../spec/del.md#delete11)
 
 > deleteContentForward
 
@@ -2131,7 +2132,7 @@ code
 </td></tr>
 </table>
 
-### [Delete12](../../spec/del.md#delete12)
+### [Delete12](../spec/del.md#delete12)
 
 > deleteContentForward
 
@@ -2165,7 +2166,7 @@ code
 </td></tr>
 </table>
 
-### [Delete13e](../../spec/del.md#delete13e)
+### [Delete13e](../spec/del.md#delete13e)
 
 > deleteContentForward
 
@@ -2200,7 +2201,7 @@ Title
 </td></tr>
 </table>
 
-### [Delete13g](../../spec/del.md#delete13g)
+### [Delete13g](../spec/del.md#delete13g)
 
 > deleteContentForward
 
@@ -2228,7 +2229,7 @@ Title
 </td></tr>
 </table>
 
-### [Delete16d](../../spec/del.md#delete16d)
+### [Delete16d](../spec/del.md#delete16d)
 
 > deleteContentForward
 
@@ -2262,7 +2263,7 @@ Title
 </td></tr>
 </table>
 
-### [Delete16e](../../spec/del.md#delete16e)
+### [Delete16e](../spec/del.md#delete16e)
 
 > deleteContentForward
 
@@ -2292,7 +2293,7 @@ Title
 </td></tr>
 </table>
 
-### [Delete17b](../../spec/del.md#delete17b)
+### [Delete17b](../spec/del.md#delete17b)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -2344,7 +2345,7 @@ Shopping:┃milk
 </td></tr>
 </table>
 
-### [Delete20](../../spec/del.md#delete20)
+### [Delete20](../spec/del.md#delete20)
 
 > deleteContentForward
 
@@ -2375,7 +2376,7 @@ Shopping:┃milk
 </td></tr>
 </table>
 
-### [Delete26](../../spec/del.md#delete26)
+### [Delete26](../spec/del.md#delete26)
 
 > deleteContentForward
 
@@ -2406,7 +2407,7 @@ Title┃text
 </td></tr>
 </table>
 
-### [Delete27](../../spec/del.md#delete27)
+### [Delete27](../spec/del.md#delete27)
 
 > deleteContentForward
 
@@ -2434,7 +2435,7 @@ Title┃text
 </td></tr>
 </table>
 
-### [Delete28](../../spec/del.md#delete28)
+### [Delete28](../spec/del.md#delete28)
 
 > deleteContentForward
 
@@ -2466,7 +2467,7 @@ p
 </td></tr>
 </table>
 
-### [Enter3c](../../spec/enter.md#enter3c)
+### [Enter3c](../spec/enter.md#enter3c)
 
 > enter
 
@@ -2485,7 +2486,7 @@ p
 ```buffer
 9. a
 10. ┃b
-   - c
+    - c
 10. d
 ```
 
@@ -2501,7 +2502,7 @@ p
 </td></tr>
 </table>
 
-### [Enter3d](../../spec/enter.md#enter3d)
+### [Enter3d](../spec/enter.md#enter3d)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -2552,7 +2553,7 @@ p
 </td></tr>
 </table>
 
-### [Enter4](../../spec/enter.md#enter4)
+### [Enter4](../spec/enter.md#enter4)
 
 > enter
 
@@ -2584,7 +2585,7 @@ p
 </td></tr>
 </table>
 
-### [Enter6](../../spec/enter.md#enter6)
+### [Enter6](../spec/enter.md#enter6)
 
 > enter
 
@@ -2615,7 +2616,7 @@ p
 </td></tr>
 </table>
 
-### [Enter7b](../../spec/enter.md#enter7b)
+### [Enter7b](../spec/enter.md#enter7b)
 
 > enter
 
@@ -2650,7 +2651,7 @@ p
 </td></tr>
 </table>
 
-### [Enter8](../../spec/enter.md#enter8)
+### [Enter8](../spec/enter.md#enter8)
 
 > enter
 
@@ -2679,7 +2680,7 @@ p
 </td></tr>
 </table>
 
-### [Enter9](../../spec/enter.md#enter9)
+### [Enter9](../spec/enter.md#enter9)
 
 > enter
 
@@ -2708,7 +2709,7 @@ p
 </td></tr>
 </table>
 
-### [Enter10](../../spec/enter.md#enter10)
+### [Enter10](../spec/enter.md#enter10)
 
 > enter
 
@@ -2737,7 +2738,7 @@ p
 </td></tr>
 </table>
 
-### [Enter11](../../spec/enter.md#enter11)
+### [Enter11](../spec/enter.md#enter11)
 
 > enter
 
@@ -2767,7 +2768,7 @@ see
 </td></tr>
 </table>
 
-### [Enter12](../../spec/enter.md#enter12)
+### [Enter12](../spec/enter.md#enter12)
 
 > enter
 
@@ -2797,7 +2798,7 @@ some
 </td></tr>
 </table>
 
-### [Enter14](../../spec/enter.md#enter14)
+### [Enter14](../spec/enter.md#enter14)
 
 > enter enter enter "p"
 
@@ -2830,7 +2831,7 @@ p┃
 </td></tr>
 </table>
 
-### [Enter16](../../spec/enter.md#enter16)
+### [Enter16](../spec/enter.md#enter16)
 
 > enter
 
@@ -2861,7 +2862,7 @@ lazy
 </td></tr>
 </table>
 
-### [Enter21](../../spec/enter.md#enter21)
+### [Enter21](../spec/enter.md#enter21)
 
 > enter
 
@@ -2892,7 +2893,7 @@ lazy
 </td></tr>
 </table>
 
-### [Enter22](../../spec/enter.md#enter22)
+### [Enter22](../spec/enter.md#enter22)
 
 > enter
 
@@ -2925,7 +2926,7 @@ para
 </td></tr>
 </table>
 
-### [Enter23](../../spec/enter.md#enter23)
+### [Enter23](../spec/enter.md#enter23)
 
 > enter
 
@@ -2958,45 +2959,7 @@ para
 </td></tr>
 </table>
 
-### [Enter25](../../spec/enter.md#enter25)
-
-> enter
-
-<table>
-<tr><th>buffer</th><th>obsidian</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-8. z┃
-9. a
-   - child
-10. b
-```
-
-</td><td>
-
-```buffer
-8. z
-9. ┃
-10. a
-   - child
-11. b
-```
-
-</td><td>
-
-```buffer
-8. z
-9. ┃
-10. a
-    - child
-11. b
-```
-
-</td></tr>
-</table>
-
-### [Enter26b](../../spec/enter.md#enter26b)
+### [Enter26b](../spec/enter.md#enter26b)
 
 > enter
 
@@ -3029,7 +2992,7 @@ para
 </td></tr>
 </table>
 
-### [Enter35](../../spec/enter.md#enter35)
+### [Enter35](../spec/enter.md#enter35)
 
 > enter
 
@@ -3058,7 +3021,7 @@ para
 </td></tr>
 </table>
 
-### [Enter36](../../spec/enter.md#enter36)
+### [Enter36](../spec/enter.md#enter36)
 
 > enter
 
@@ -3094,7 +3057,7 @@ para
 </td></tr>
 </table>
 
-### [Enter36b](../../spec/enter.md#enter36b)
+### [Enter36b](../spec/enter.md#enter36b)
 
 > enter
 
@@ -3130,7 +3093,7 @@ para
 </td></tr>
 </table>
 
-### [Enter37](../../spec/enter.md#enter37)
+### [Enter37](../spec/enter.md#enter37)
 
 > enter
 
@@ -3149,7 +3112,7 @@ para
 ```buffer
 1. a
    text
-  ┃
+┃
 ```
 
 </td><td>
@@ -3163,7 +3126,7 @@ para
 </td></tr>
 </table>
 
-### [Enter38](../../spec/enter.md#enter38)
+### [Enter38](../spec/enter.md#enter38)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -3214,7 +3177,7 @@ para
 </td></tr>
 </table>
 
-### [Enter39](../../spec/enter.md#enter39)
+### [Enter39](../spec/enter.md#enter39)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -3265,7 +3228,7 @@ para
 </td></tr>
 </table>
 
-### [Enter40](../../spec/enter.md#enter40)
+### [Enter40](../spec/enter.md#enter40)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -3316,7 +3279,7 @@ para
 </td></tr>
 </table>
 
-### [Enter41](../../spec/enter.md#enter41)
+### [Enter41](../spec/enter.md#enter41)
 
 > enter
 
@@ -3348,7 +3311,7 @@ para
 </td></tr>
 </table>
 
-### [Enter42](../../spec/enter.md#enter42)
+### [Enter42](../spec/enter.md#enter42)
 
 > enter
 
@@ -3380,7 +3343,7 @@ title
 </td></tr>
 </table>
 
-### [Enter43](../../spec/enter.md#enter43)
+### [Enter43](../spec/enter.md#enter43)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -3427,7 +3390,7 @@ title
 </td></tr>
 </table>
 
-### [Enter44](../../spec/enter.md#enter44)
+### [Enter44](../spec/enter.md#enter44)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -3474,7 +3437,7 @@ title
 </td></tr>
 </table>
 
-### [Enter47](../../spec/enter.md#enter47)
+### [Enter47](../spec/enter.md#enter47)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -3522,7 +3485,7 @@ title
 </td></tr>
 </table>
 
-### [Enter48](../../spec/enter.md#enter48)
+### [Enter48](../spec/enter.md#enter48)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -3576,7 +3539,7 @@ title
 </td></tr>
 </table>
 
-### [Enter49](../../spec/enter.md#enter49)
+### [Enter49](../spec/enter.md#enter49)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -3658,7 +3621,7 @@ after┃
 </td></tr>
 </table>
 
-### [Enter50](../../spec/enter.md#enter50)
+### [Enter50](../spec/enter.md#enter50)
 
 > enter
 
@@ -3692,7 +3655,7 @@ after┃
 </td></tr>
 </table>
 
-### [Enter51](../../spec/enter.md#enter51)
+### [Enter51](../spec/enter.md#enter51)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -3776,7 +3739,7 @@ two
 </td></tr>
 </table>
 
-### [Enter52](../../spec/enter.md#enter52)
+### [Enter52](../spec/enter.md#enter52)
 
 > enter
 
@@ -3817,7 +3780,7 @@ three
 </td></tr>
 </table>
 
-### [Enter53](../../spec/enter.md#enter53)
+### [Enter53](../spec/enter.md#enter53)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -3871,7 +3834,7 @@ three
 </td></tr>
 </table>
 
-### [Fence7](../../spec/fences.md#fence7)
+### [Fence7](../spec/fences.md#fence7)
 
 > enter "b"
 
@@ -3909,7 +3872,7 @@ three
 </td></tr>
 </table>
 
-### [Fence7c](../../spec/fences.md#fence7c)
+### [Fence7c](../spec/fences.md#fence7c)
 
 > enter
 
@@ -3950,7 +3913,7 @@ three
 </td></tr>
 </table>
 
-### [Fence9](../../spec/fences.md#fence9)
+### [Fence9](../spec/fences.md#fence9)
 
 > enter
 
@@ -3984,7 +3947,7 @@ code
 </td></tr>
 </table>
 
-### [Fence14](../../spec/fences.md#fence14)
+### [Fence14](../spec/fences.md#fence14)
 
 > enter
 
@@ -4018,7 +3981,7 @@ code
 </td></tr>
 </table>
 
-### [Fence15](../../spec/fences.md#fence15)
+### [Fence15](../spec/fences.md#fence15)
 
 > enter
 
@@ -4053,7 +4016,7 @@ code
 </td></tr>
 </table>
 
-### [Fence16](../../spec/fences.md#fence16)
+### [Fence16](../spec/fences.md#fence16)
 
 > deleteContentBackward
 
@@ -4091,7 +4054,7 @@ code
 </td></tr>
 </table>
 
-### [Fence17](../../spec/fences.md#fence17)
+### [Fence17](../spec/fences.md#fence17)
 
 > deleteContentBackward
 
@@ -4127,7 +4090,7 @@ code
 </td></tr>
 </table>
 
-### [Fence18](../../spec/fences.md#fence18)
+### [Fence18](../spec/fences.md#fence18)
 
 > deleteContentForward
 
@@ -4148,7 +4111,7 @@ code
 ````buffer
 - a
   ```
-  one┃→two
+  one┃  two
   ```
 ````
 
@@ -4164,7 +4127,7 @@ code
 </td></tr>
 </table>
 
-### [Fence19](../../spec/fences.md#fence19)
+### [Fence19](../spec/fences.md#fence19)
 
 > deleteContentForward
 
@@ -4184,7 +4147,7 @@ code
 ````buffer
 - a
   ```
-  one┃→```
+  one┃  ```
 ````
 
 </td><td>
@@ -4199,7 +4162,7 @@ code
 </td></tr>
 </table>
 
-### [Fence20](../../spec/fences.md#fence20)
+### [Fence20](../spec/fences.md#fence20)
 
 > deleteContentBackward
 
@@ -4234,7 +4197,7 @@ code
 </td></tr>
 </table>
 
-### [Fence22](../../spec/fences.md#fence22)
+### [Fence22](../spec/fences.md#fence22)
 
 > shiftEnter enter
 
@@ -4258,7 +4221,7 @@ code
     ```
     x
     ```
-┃
+  ┃
 ````
 
 </td><td>
@@ -4275,7 +4238,7 @@ code
 </td></tr>
 </table>
 
-### [Fence23](../../spec/fences.md#fence23)
+### [Fence23](../spec/fences.md#fence23)
 
 > deleteContentBackward
 
@@ -4311,7 +4274,7 @@ code
 </td></tr>
 </table>
 
-### [Fence24](../../spec/fences.md#fence24)
+### [Fence24](../spec/fences.md#fence24)
 
 > deleteContentForward
 
@@ -4330,7 +4293,7 @@ code
 
 ````buffer
 - a
-  ```js┃→one
+  ```js┃  one
   ```
 ````
 
@@ -4346,7 +4309,7 @@ code
 </td></tr>
 </table>
 
-### [Fence25](../../spec/fences.md#fence25)
+### [Fence25](../spec/fences.md#fence25)
 
 > deleteContentBackward
 
@@ -4382,7 +4345,7 @@ code
 </td></tr>
 </table>
 
-### [Fence26](../../spec/fences.md#fence26)
+### [Fence26](../spec/fences.md#fence26)
 
 > deleteContentBackward
 
@@ -4418,7 +4381,7 @@ code
 </td></tr>
 </table>
 
-### [Fence27](../../spec/fences.md#fence27)
+### [Fence27](../spec/fences.md#fence27)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -4477,7 +4440,7 @@ code
 </td></tr>
 </table>
 
-### [Fence29](../../spec/fences.md#fence29)
+### [Fence29](../spec/fences.md#fence29)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -4546,7 +4509,7 @@ code
 </td></tr>
 </table>
 
-### [Fence30](../../spec/fences.md#fence30)
+### [Fence30](../spec/fences.md#fence30)
 
 > deleteContentForward
 
@@ -4583,7 +4546,7 @@ code
 </td></tr>
 </table>
 
-### [Fence31](../../spec/fences.md#fence31)
+### [Fence31](../spec/fences.md#fence31)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -4652,7 +4615,7 @@ code
 </td></tr>
 </table>
 
-### [Fence32](../../spec/fences.md#fence32)
+### [Fence32](../spec/fences.md#fence32)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -4711,7 +4674,7 @@ code
 </td></tr>
 </table>
 
-### [Fence33](../../spec/fences.md#fence33)
+### [Fence33](../spec/fences.md#fence33)
 
 > deleteContentBackward
 
@@ -4746,7 +4709,7 @@ x
 </td></tr>
 </table>
 
-### [Fence34](../../spec/fences.md#fence34)
+### [Fence34](../spec/fences.md#fence34)
 
 > deleteContentForward
 
@@ -4781,7 +4744,7 @@ x
 </td></tr>
 </table>
 
-### [Fence35](../../spec/fences.md#fence35)
+### [Fence35](../spec/fences.md#fence35)
 
 > deleteContentForward
 
@@ -4819,7 +4782,7 @@ x
 </td></tr>
 </table>
 
-### [Fence36](../../spec/fences.md#fence36)
+### [Fence36](../spec/fences.md#fence36)
 
 > deleteContentBackward
 
@@ -4857,7 +4820,7 @@ body
 </td></tr>
 </table>
 
-### [Fence37](../../spec/fences.md#fence37)
+### [Fence37](../spec/fences.md#fence37)
 
 > deleteContentForward
 
@@ -4895,7 +4858,7 @@ body
 </td></tr>
 </table>
 
-### [Fence38](../../spec/fences.md#fence38)
+### [Fence38](../spec/fences.md#fence38)
 
 > shiftEnter
 
@@ -4932,7 +4895,7 @@ body
 </td></tr>
 </table>
 
-### [Fence39](../../spec/fences.md#fence39)
+### [Fence39](../spec/fences.md#fence39)
 
 > enter
 
@@ -4969,7 +4932,7 @@ body
 </td></tr>
 </table>
 
-### [Fence40](../../spec/fences.md#fence40)
+### [Fence40](../spec/fences.md#fence40)
 
 > deleteContentForward
 
@@ -5007,7 +4970,7 @@ body
 </td></tr>
 </table>
 
-### [Fence48](../../spec/fences.md#fence48)
+### [Fence48](../spec/fences.md#fence48)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -5088,7 +5051,7 @@ body
 </td></tr>
 </table>
 
-### [Fence42](../../spec/fences.md#fence42)
+### [Fence42](../spec/fences.md#fence42)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -5175,7 +5138,7 @@ x┃
 </td></tr>
 </table>
 
-### [Fence43](../../spec/fences.md#fence43)
+### [Fence43](../spec/fences.md#fence43)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -5234,7 +5197,7 @@ x┃
 </td></tr>
 </table>
 
-### [Fence45](../../spec/fences.md#fence45)
+### [Fence45](../spec/fences.md#fence45)
 
 > enter
 
@@ -5268,7 +5231,7 @@ $$
 </td></tr>
 </table>
 
-### [Fence46](../../spec/fences.md#fence46)
+### [Fence46](../spec/fences.md#fence46)
 
 > deleteContentForward
 
@@ -5302,7 +5265,7 @@ $$
 </td></tr>
 </table>
 
-### [Fence47](../../spec/fences.md#fence47)
+### [Fence47](../spec/fences.md#fence47)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -5352,7 +5315,7 @@ $$
 ```buffer
 - a
   $$
-x┃→$$
+x┃  $$
 ```
 
 </td><td>
@@ -5367,7 +5330,7 @@ x┃→$$
 </td></tr>
 </table>
 
-### [Gap1](../../spec/gaps.md#gap1)
+### [Gap1](../spec/gaps.md#gap1)
 
 > moveSubtreeUp
 
@@ -5406,7 +5369,7 @@ c
 </td></tr>
 </table>
 
-### [Gap2](../../spec/gaps.md#gap2)
+### [Gap2](../spec/gaps.md#gap2)
 
 > moveSubtreeDown
 
@@ -5445,7 +5408,7 @@ c
 </td></tr>
 </table>
 
-### [Gap3](../../spec/gaps.md#gap3)
+### [Gap3](../spec/gaps.md#gap3)
 
 > moveSubtreeUp
 
@@ -5490,7 +5453,7 @@ text
 </td></tr>
 </table>
 
-### [Gap4](../../spec/gaps.md#gap4)
+### [Gap4](../spec/gaps.md#gap4)
 
 > moveSubtreeUp
 
@@ -5526,7 +5489,7 @@ text
 </td></tr>
 </table>
 
-### [Gap5](../../spec/gaps.md#gap5)
+### [Gap5](../spec/gaps.md#gap5)
 
 > moveSubtreeUp
 
@@ -5565,7 +5528,7 @@ text
 </td></tr>
 </table>
 
-### [Gap6](../../spec/gaps.md#gap6)
+### [Gap6](../spec/gaps.md#gap6)
 
 > moveSubtreeDown
 
@@ -5604,7 +5567,7 @@ a
 </td></tr>
 </table>
 
-### [Gap7](../../spec/gaps.md#gap7)
+### [Gap7](../spec/gaps.md#gap7)
 
 > moveSubtreeDown
 
@@ -5647,7 +5610,7 @@ q
 </td></tr>
 </table>
 
-### [Gap9](../../spec/gaps.md#gap9)
+### [Gap9](../spec/gaps.md#gap9)
 
 > moveSubtreeUp
 
@@ -5689,7 +5652,7 @@ q
 </td></tr>
 </table>
 
-### [Gap10](../../spec/gaps.md#gap10)
+### [Gap10](../spec/gaps.md#gap10)
 
 > moveSubtreeUp
 
@@ -5725,7 +5688,7 @@ a
 </td></tr>
 </table>
 
-### [Gap11](../../spec/gaps.md#gap11)
+### [Gap11](../spec/gaps.md#gap11)
 
 > moveSubtreeDown
 
@@ -5767,7 +5730,7 @@ c
 </td></tr>
 </table>
 
-### [Gap13](../../spec/gaps.md#gap13)
+### [Gap13](../spec/gaps.md#gap13)
 
 > pasteStructured
 
@@ -5810,7 +5773,7 @@ para
 </td></tr>
 </table>
 
-### [Gap14](../../spec/gaps.md#gap14)
+### [Gap14](../spec/gaps.md#gap14)
 
 > moveSubtreeUp
 
@@ -5852,7 +5815,7 @@ c
 </td></tr>
 </table>
 
-### [Gap15](../../spec/gaps.md#gap15)
+### [Gap15](../spec/gaps.md#gap15)
 
 > indent
 
@@ -5888,7 +5851,7 @@ c
 </td></tr>
 </table>
 
-### [Gap16](../../spec/gaps.md#gap16)
+### [Gap16](../spec/gaps.md#gap16)
 
 > outdent
 
@@ -5924,7 +5887,7 @@ c
 </td></tr>
 </table>
 
-### [Gap17](../../spec/gaps.md#gap17)
+### [Gap17](../spec/gaps.md#gap17)
 
 > moveSubtreeDown
 
@@ -5960,7 +5923,7 @@ c
 </td></tr>
 </table>
 
-### [Indent2](../../spec/indent.md#indent2)
+### [Indent2](../spec/indent.md#indent2)
 
 > indent
 
@@ -5996,7 +5959,7 @@ c
 </td></tr>
 </table>
 
-### [Indent3](../../spec/indent.md#indent3)
+### [Indent3](../spec/indent.md#indent3)
 
 > indent
 
@@ -6029,73 +5992,7 @@ c
 </td></tr>
 </table>
 
-### [Indent4](../../spec/indent.md#indent4)
-
-> indent
-
-<table>
-<tr><th>buffer</th><th>obsidian</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-1. a
-2. b┃
-3. c
-```
-
-</td><td>
-
-```buffer
-1. a
-  1. b┃
-2. c
-```
-
-</td><td>
-
-```buffer
-1. a
-   1. b┃
-2. c
-```
-
-</td></tr>
-</table>
-
-### [Indent5](../../spec/indent.md#indent5)
-
-> indent
-
-<table>
-<tr><th>buffer</th><th>obsidian</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-1. a
-   1. x
-2. b┃
-```
-
-</td><td>
-
-```buffer
-1. a
-   1. x
-  2. b┃
-```
-
-</td><td>
-
-```buffer
-1. a
-   1. x
-   2. b┃
-```
-
-</td></tr>
-</table>
-
-### [Indent12](../../spec/indent.md#indent12)
+### [Indent12](../spec/indent.md#indent12)
 
 > indent
 
@@ -6128,7 +6025,7 @@ c
 </td></tr>
 </table>
 
-### [Indent13](../../spec/indent.md#indent13)
+### [Indent13](../spec/indent.md#indent13)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -6197,7 +6094,7 @@ c
 </td></tr>
 </table>
 
-### [Indent15](../../spec/indent.md#indent15)
+### [Indent15](../spec/indent.md#indent15)
 
 > indent
 
@@ -6236,7 +6133,7 @@ c
 </td></tr>
 </table>
 
-### [Indent16](../../spec/indent.md#indent16)
+### [Indent16](../spec/indent.md#indent16)
 
 > indent
 
@@ -6272,7 +6169,7 @@ Title┃
 </td></tr>
 </table>
 
-### [Indent19](../../spec/indent.md#indent19)
+### [Indent19](../spec/indent.md#indent19)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -6325,7 +6222,7 @@ Title┃
 </td></tr>
 </table>
 
-### [Indent20](../../spec/indent.md#indent20)
+### [Indent20](../spec/indent.md#indent20)
 
 > indent
 
@@ -6364,7 +6261,7 @@ Title┃
 </td></tr>
 </table>
 
-### [Indent21](../../spec/indent.md#indent21)
+### [Indent21](../spec/indent.md#indent21)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -6416,7 +6313,7 @@ para b┃
 </td></tr>
 </table>
 
-### [Indent22](../../spec/indent.md#indent22)
+### [Indent22](../spec/indent.md#indent22)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -6461,7 +6358,7 @@ Para┃
 </td></tr>
 </table>
 
-### [Indent23](../../spec/indent.md#indent23)
+### [Indent23](../spec/indent.md#indent23)
 
 > indent
 
@@ -6497,7 +6394,7 @@ Para┃
 </td></tr>
 </table>
 
-### [Indent25](../../spec/indent.md#indent25)
+### [Indent25](../spec/indent.md#indent25)
 
 > indent
 
@@ -6532,7 +6429,7 @@ Title┃
 </td></tr>
 </table>
 
-### [Indent26](../../spec/indent.md#indent26)
+### [Indent26](../spec/indent.md#indent26)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -6589,7 +6486,7 @@ Title┃
 </td></tr>
 </table>
 
-### [Indent29](../../spec/indent.md#indent29)
+### [Indent29](../spec/indent.md#indent29)
 
 > indent
 
@@ -6621,7 +6518,7 @@ para┃
 </td></tr>
 </table>
 
-### [Indent30](../../spec/indent.md#indent30)
+### [Indent30](../spec/indent.md#indent30)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -6685,7 +6582,7 @@ para┃
 </td></tr>
 </table>
 
-### [MoveDown1](../../spec/move-subtree-down.md#movedown1)
+### [MoveDown1](../spec/move-subtree-down.md#movedown1)
 
 > moveSubtreeDown
 
@@ -6721,7 +6618,7 @@ para┃
 </td></tr>
 </table>
 
-### [MoveDown2](../../spec/move-subtree-down.md#movedown2)
+### [MoveDown2](../spec/move-subtree-down.md#movedown2)
 
 > moveSubtreeDown
 
@@ -6757,7 +6654,7 @@ para
 </td></tr>
 </table>
 
-### [MoveDown3](../../spec/move-subtree-down.md#movedown3)
+### [MoveDown3](../spec/move-subtree-down.md#movedown3)
 
 > moveSubtreeDown
 
@@ -6788,7 +6685,7 @@ para
 </td></tr>
 </table>
 
-### [MoveDown4](../../spec/move-subtree-down.md#movedown4)
+### [MoveDown4](../spec/move-subtree-down.md#movedown4)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -6857,7 +6754,7 @@ text b
 </td></tr>
 </table>
 
-### [MoveDown5](../../spec/move-subtree-down.md#movedown5)
+### [MoveDown5](../spec/move-subtree-down.md#movedown5)
 
 > moveSubtreeDown
 
@@ -6890,7 +6787,7 @@ one┃
 </td></tr>
 </table>
 
-### [MoveDown6](../../spec/move-subtree-down.md#movedown6)
+### [MoveDown6](../spec/move-subtree-down.md#movedown6)
 
 > moveSubtreeDown
 
@@ -6921,7 +6818,7 @@ one┃
 </td></tr>
 </table>
 
-### [MoveDown7](../../spec/move-subtree-down.md#movedown7)
+### [MoveDown7](../spec/move-subtree-down.md#movedown7)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -6992,7 +6889,7 @@ one┃
 </td></tr>
 </table>
 
-### [MoveDown8](../../spec/move-subtree-down.md#movedown8)
+### [MoveDown8](../spec/move-subtree-down.md#movedown8)
 
 > moveSubtreeDown
 
@@ -7034,7 +6931,7 @@ para
 </td></tr>
 </table>
 
-### [MoveDown9](../../spec/move-subtree-down.md#movedown9)
+### [MoveDown9](../spec/move-subtree-down.md#movedown9)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -7091,7 +6988,7 @@ para
 </td></tr>
 </table>
 
-### [MoveDown10](../../spec/move-subtree-down.md#movedown10)
+### [MoveDown10](../spec/move-subtree-down.md#movedown10)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -7172,7 +7069,7 @@ para
 </td></tr>
 </table>
 
-### [MoveDown13](../../spec/move-subtree-down.md#movedown13)
+### [MoveDown13](../spec/move-subtree-down.md#movedown13)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -7229,7 +7126,7 @@ intro
 </td></tr>
 </table>
 
-### [MoveDown16](../../spec/move-subtree-down.md#movedown16)
+### [MoveDown16](../spec/move-subtree-down.md#movedown16)
 
 > moveSubtreeDown
 
@@ -7265,7 +7162,7 @@ intro
 </td></tr>
 </table>
 
-### [MoveDown17](../../spec/move-subtree-down.md#movedown17)
+### [MoveDown17](../spec/move-subtree-down.md#movedown17)
 
 > moveSubtreeDown
 
@@ -7298,7 +7195,7 @@ intro
 </td></tr>
 </table>
 
-### [MoveDown18](../../spec/move-subtree-down.md#movedown18)
+### [MoveDown18](../spec/move-subtree-down.md#movedown18)
 
 > moveSubtreeDown
 
@@ -7340,7 +7237,7 @@ intro
 </td></tr>
 </table>
 
-### [MoveDown19](../../spec/move-subtree-down.md#movedown19)
+### [MoveDown19](../spec/move-subtree-down.md#movedown19)
 
 > moveSubtreeDown
 
@@ -7379,7 +7276,7 @@ intro
 </td></tr>
 </table>
 
-### [MoveDown20](../../spec/move-subtree-down.md#movedown20)
+### [MoveDown20](../spec/move-subtree-down.md#movedown20)
 
 > moveSubtreeDown
 
@@ -7421,7 +7318,7 @@ intro
 </td></tr>
 </table>
 
-### [MoveDown21](../../spec/move-subtree-down.md#movedown21)
+### [MoveDown21](../spec/move-subtree-down.md#movedown21)
 
 > moveSubtreeDown
 
@@ -7466,7 +7363,7 @@ intro
 </td></tr>
 </table>
 
-### [MoveDown22](../../spec/move-subtree-down.md#movedown22)
+### [MoveDown22](../spec/move-subtree-down.md#movedown22)
 
 > moveSubtreeDown
 
@@ -7496,7 +7393,7 @@ intro
 </td></tr>
 </table>
 
-### [MoveDown23](../../spec/move-subtree-down.md#movedown23)
+### [MoveDown23](../spec/move-subtree-down.md#movedown23)
 
 > moveSubtreeDown
 
@@ -7513,7 +7410,7 @@ intro
 </td><td>
 
 ```buffer
-   - x
+  - x
 9. a┃
 10. b
 ```
@@ -7529,7 +7426,7 @@ intro
 </td></tr>
 </table>
 
-### [MoveDown24](../../spec/move-subtree-down.md#movedown24)
+### [MoveDown24](../spec/move-subtree-down.md#movedown24)
 
 > moveSubtreeDown
 
@@ -7565,7 +7462,7 @@ para┃
 </td></tr>
 </table>
 
-### [MoveDown25](../../spec/move-subtree-down.md#movedown25)
+### [MoveDown25](../spec/move-subtree-down.md#movedown25)
 
 > moveSubtreeDown
 
@@ -7604,7 +7501,7 @@ para┃
 </td></tr>
 </table>
 
-### [MoveDown26](../../spec/move-subtree-down.md#movedown26)
+### [MoveDown26](../spec/move-subtree-down.md#movedown26)
 
 > moveSubtreeDown
 
@@ -7644,7 +7541,7 @@ para
 </td></tr>
 </table>
 
-### [MoveDown27](../../spec/move-subtree-down.md#movedown27)
+### [MoveDown27](../spec/move-subtree-down.md#movedown27)
 
 > moveSubtreeDown
 
@@ -7683,7 +7580,7 @@ para
 </td></tr>
 </table>
 
-### [MoveDown28](../../spec/move-subtree-down.md#movedown28)
+### [MoveDown28](../spec/move-subtree-down.md#movedown28)
 
 > moveSubtreeDown
 
@@ -7727,7 +7624,7 @@ para
 </td></tr>
 </table>
 
-### [MoveDown29](../../spec/move-subtree-down.md#movedown29)
+### [MoveDown29](../spec/move-subtree-down.md#movedown29)
 
 > moveSubtreeDown
 
@@ -7766,7 +7663,7 @@ pa┃ra
 </td></tr>
 </table>
 
-### [MoveDown30](../../spec/move-subtree-down.md#movedown30)
+### [MoveDown30](../spec/move-subtree-down.md#movedown30)
 
 > moveSubtreeDown
 
@@ -7799,7 +7696,7 @@ pa┃ra
 </td></tr>
 </table>
 
-### [MoveDown31](../../spec/move-subtree-down.md#movedown31)
+### [MoveDown31](../spec/move-subtree-down.md#movedown31)
 
 > moveSubtreeDown
 
@@ -7832,7 +7729,7 @@ para┃
 </td></tr>
 </table>
 
-### [MoveDown33](../../spec/move-subtree-down.md#movedown33)
+### [MoveDown33](../spec/move-subtree-down.md#movedown33)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -7881,7 +7778,7 @@ para┃
 </td></tr>
 </table>
 
-### [MoveDown34](../../spec/move-subtree-down.md#movedown34)
+### [MoveDown34](../spec/move-subtree-down.md#movedown34)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -7954,7 +7851,7 @@ para┃
 </td></tr>
 </table>
 
-### [MoveDown35](../../spec/move-subtree-down.md#movedown35)
+### [MoveDown35](../spec/move-subtree-down.md#movedown35)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -8015,7 +7912,7 @@ para┃
 </td></tr>
 </table>
 
-### [MoveDown36](../../spec/move-subtree-down.md#movedown36)
+### [MoveDown36](../spec/move-subtree-down.md#movedown36)
 
 > moveSubtreeDown
 
@@ -8051,7 +7948,7 @@ para┃
 </td></tr>
 </table>
 
-### [MoveDown37](../../spec/move-subtree-down.md#movedown37)
+### [MoveDown37](../spec/move-subtree-down.md#movedown37)
 
 > moveSubtreeDown
 
@@ -8090,7 +7987,7 @@ para┃
 </td></tr>
 </table>
 
-### [MoveUp1](../../spec/move-subtree-up.md#moveup1)
+### [MoveUp1](../spec/move-subtree-up.md#moveup1)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -8147,7 +8044,7 @@ para┃
 </td></tr>
 </table>
 
-### [MoveUp3](../../spec/move-subtree-up.md#moveup3)
+### [MoveUp3](../spec/move-subtree-up.md#moveup3)
 
 > moveSubtreeUp
 
@@ -8192,7 +8089,7 @@ text a
 </td></tr>
 </table>
 
-### [MoveUp4](../../spec/move-subtree-up.md#moveup4)
+### [MoveUp4](../spec/move-subtree-up.md#moveup4)
 
 > moveSubtreeUp
 
@@ -8225,7 +8122,7 @@ one
 </td></tr>
 </table>
 
-### [MoveUp5](../../spec/move-subtree-up.md#moveup5)
+### [MoveUp5](../spec/move-subtree-up.md#moveup5)
 
 > moveSubtreeUp
 
@@ -8255,7 +8152,7 @@ one
 </td></tr>
 </table>
 
-### [MoveUp7](../../spec/move-subtree-up.md#moveup7)
+### [MoveUp7](../spec/move-subtree-up.md#moveup7)
 
 > moveSubtreeUp
 
@@ -8297,7 +8194,7 @@ para
 </td></tr>
 </table>
 
-### [MoveUp8](../../spec/move-subtree-up.md#moveup8)
+### [MoveUp8](../spec/move-subtree-up.md#moveup8)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -8354,7 +8251,7 @@ para
 </td></tr>
 </table>
 
-### [MoveUp9](../../spec/move-subtree-up.md#moveup9)
+### [MoveUp9](../spec/move-subtree-up.md#moveup9)
 
 > moveSubtreeUp
 
@@ -8399,7 +8296,7 @@ para
 </td></tr>
 </table>
 
-### [MoveUp12](../../spec/move-subtree-up.md#moveup12)
+### [MoveUp12](../spec/move-subtree-up.md#moveup12)
 
 > moveSubtreeUp
 
@@ -8435,7 +8332,7 @@ intro
 </td></tr>
 </table>
 
-### [MoveUp13](../../spec/move-subtree-up.md#moveup13)
+### [MoveUp13](../spec/move-subtree-up.md#moveup13)
 
 > moveSubtreeUp
 
@@ -8480,7 +8377,7 @@ intro
 </td></tr>
 </table>
 
-### [MoveUp15](../../spec/move-subtree-up.md#moveup15)
+### [MoveUp15](../spec/move-subtree-up.md#moveup15)
 
 > moveSubtreeUp
 
@@ -8499,7 +8396,7 @@ intro
 ```buffer
 9. a
 10. b┃
-   - x
+    - x
 ```
 
 </td><td>
@@ -8513,7 +8410,7 @@ intro
 </td></tr>
 </table>
 
-### [MoveUp16](../../spec/move-subtree-up.md#moveup16)
+### [MoveUp16](../spec/move-subtree-up.md#moveup16)
 
 > moveSubtreeUp
 
@@ -8549,7 +8446,7 @@ intro
 </td></tr>
 </table>
 
-### [MoveUp17](../../spec/move-subtree-up.md#moveup17)
+### [MoveUp17](../spec/move-subtree-up.md#moveup17)
 
 > moveSubtreeUp
 
@@ -8585,7 +8482,7 @@ first
 </td></tr>
 </table>
 
-### [MoveUp18](../../spec/move-subtree-up.md#moveup18)
+### [MoveUp18](../spec/move-subtree-up.md#moveup18)
 
 > moveSubtreeUp
 
@@ -8616,7 +8513,7 @@ first
 </td></tr>
 </table>
 
-### [MoveUp19](../../spec/move-subtree-up.md#moveup19)
+### [MoveUp19](../spec/move-subtree-up.md#moveup19)
 
 > moveSubtreeUp
 
@@ -8647,7 +8544,7 @@ para┃
 </td></tr>
 </table>
 
-### [MoveUp20](../../spec/move-subtree-up.md#moveup20)
+### [MoveUp20](../spec/move-subtree-up.md#moveup20)
 
 > moveSubtreeUp
 
@@ -8678,7 +8575,7 @@ para┃
 </td></tr>
 </table>
 
-### [MoveUp21](../../spec/move-subtree-up.md#moveup21)
+### [MoveUp21](../spec/move-subtree-up.md#moveup21)
 
 > moveSubtreeUp
 
@@ -8712,7 +8609,7 @@ para
 </td></tr>
 </table>
 
-### [MoveUp22](../../spec/move-subtree-up.md#moveup22)
+### [MoveUp22](../spec/move-subtree-up.md#moveup22)
 
 > moveSubtreeUp
 
@@ -8754,7 +8651,7 @@ para
 </td></tr>
 </table>
 
-### [MoveUp23](../../spec/move-subtree-up.md#moveup23)
+### [MoveUp23](../spec/move-subtree-up.md#moveup23)
 
 > moveSubtreeUp
 
@@ -8797,7 +8694,7 @@ para
 </td></tr>
 </table>
 
-### [MoveUp24](../../spec/move-subtree-up.md#moveup24)
+### [MoveUp24](../spec/move-subtree-up.md#moveup24)
 
 > moveSubtreeUp
 
@@ -8839,7 +8736,7 @@ para
 </td></tr>
 </table>
 
-### [MoveUp25](../../spec/move-subtree-up.md#moveup25)
+### [MoveUp25](../spec/move-subtree-up.md#moveup25)
 
 > moveSubtreeUp
 
@@ -8875,7 +8772,7 @@ para
 </td></tr>
 </table>
 
-### [MoveUp26](../../spec/move-subtree-up.md#moveup26)
+### [MoveUp26](../spec/move-subtree-up.md#moveup26)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -8940,7 +8837,7 @@ para
 </td></tr>
 </table>
 
-### [MoveUp27](../../spec/move-subtree-up.md#moveup27)
+### [MoveUp27](../spec/move-subtree-up.md#moveup27)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -9001,7 +8898,7 @@ para
 </td></tr>
 </table>
 
-### [MoveUp28](../../spec/move-subtree-up.md#moveup28)
+### [MoveUp28](../spec/move-subtree-up.md#moveup28)
 
 > moveSubtreeUp
 
@@ -9034,7 +8931,7 @@ para
 </td></tr>
 </table>
 
-### [MoveUp30](../../spec/move-subtree-up.md#moveup30)
+### [MoveUp30](../spec/move-subtree-up.md#moveup30)
 
 > moveSubtreeUp
 
@@ -9065,7 +8962,7 @@ para
 </td></tr>
 </table>
 
-### [MoveUp33](../../spec/move-subtree-up.md#moveup33)
+### [MoveUp33](../spec/move-subtree-up.md#moveup33)
 
 > moveSubtreeUp
 
@@ -9098,7 +8995,7 @@ para
 </td></tr>
 </table>
 
-### [MoveUp35](../../spec/move-subtree-up.md#moveup35)
+### [MoveUp35](../spec/move-subtree-up.md#moveup35)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -9161,7 +9058,7 @@ para
 </td></tr>
 </table>
 
-### [MoveUp36](../../spec/move-subtree-up.md#moveup36)
+### [MoveUp36](../spec/move-subtree-up.md#moveup36)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -9225,7 +9122,7 @@ para
 </td></tr>
 </table>
 
-### [MoveUp38](../../spec/move-subtree-up.md#moveup38)
+### [MoveUp38](../spec/move-subtree-up.md#moveup38)
 
 > moveSubtreeUp
 
@@ -9261,7 +9158,7 @@ para
 </td></tr>
 </table>
 
-### [Renumbering stops at a delimiter change](../../spec/obsidian-true-outliner.md#renumbering-stops-at-a-delimiter-change)
+### [Renumbering stops at a delimiter change](../spec/obsidian-true-outliner.md#renumbering-stops-at-a-delimiter-change)
 
 > enter
 
@@ -9296,39 +9193,7 @@ para
 </td></tr>
 </table>
 
-### [E4](../../spec/obsidian-true-outliner.md#e4)
-
-> enter
-
-<table>
-<tr><th>buffer</th><th>obsidian</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- first
-  second┃ line
-```
-
-</td><td>
-
-```buffer
-- first
-  second
-  ┃ line
-```
-
-</td><td>
-
-```buffer
-- first
-  second
-- ┃line
-```
-
-</td></tr>
-</table>
-
-### [End of parent opens empty first child](../../spec/obsidian-true-outliner.md#end-of-parent-opens-empty-first-child)
+### [End of parent opens empty first child](../spec/obsidian-true-outliner.md#end-of-parent-opens-empty-first-child)
 
 > enter
 
@@ -9360,7 +9225,7 @@ para
 </td></tr>
 </table>
 
-### [E9](../../spec/obsidian-true-outliner.md#e9)
+### [E9](../spec/obsidian-true-outliner.md#e9)
 
 > enter
 
@@ -9393,7 +9258,7 @@ one
 </td></tr>
 </table>
 
-### [E10](../../spec/obsidian-true-outliner.md#e10)
+### [E10](../spec/obsidian-true-outliner.md#e10)
 
 > enter
 
@@ -9428,7 +9293,7 @@ one
 </td></tr>
 </table>
 
-### [E17](../../spec/obsidian-true-outliner.md#e17)
+### [E17](../spec/obsidian-true-outliner.md#e17)
 
 > enter
 
@@ -9460,7 +9325,7 @@ Hello
 </td></tr>
 </table>
 
-### [E18](../../spec/obsidian-true-outliner.md#e18)
+### [E18](../spec/obsidian-true-outliner.md#e18)
 
 > enter
 
@@ -9492,7 +9357,7 @@ Hello world
 </td></tr>
 </table>
 
-### [E33](../../spec/obsidian-true-outliner.md#e33)
+### [E33](../spec/obsidian-true-outliner.md#e33)
 
 > enter
 
@@ -9521,7 +9386,7 @@ Hello world
 </td></tr>
 </table>
 
-### [#267, E5](../../spec/obsidian-true-outliner.md#267-e5)
+### [#267, E5](../spec/obsidian-true-outliner.md#267-e5)
 
 > enter
 
@@ -9557,7 +9422,7 @@ para
 </td></tr>
 </table>
 
-### [Split title above an existing paragraph](../../spec/obsidian-true-outliner.md#split-title-above-an-existing-paragraph)
+### [Split title above an existing paragraph](../spec/obsidian-true-outliner.md#split-title-above-an-existing-paragraph)
 
 > enter
 
@@ -9590,7 +9455,7 @@ Body.
 </td></tr>
 </table>
 
-### [End of heading above a paragraph](../../spec/obsidian-true-outliner.md#end-of-heading-above-a-paragraph)
+### [End of heading above a paragraph](../spec/obsidian-true-outliner.md#end-of-heading-above-a-paragraph)
 
 > enter
 
@@ -9623,7 +9488,7 @@ Body.
 </td></tr>
 </table>
 
-### [Line break in setext title refused](../../spec/obsidian-true-outliner.md#line-break-in-setext-title-refused)
+### [Line break in setext title refused](../spec/obsidian-true-outliner.md#line-break-in-setext-title-refused)
 
 > shiftEnter
 
@@ -9654,7 +9519,7 @@ Hello┃ world
 </td></tr>
 </table>
 
-### [Line break in setext underline refused](../../spec/obsidian-true-outliner.md#line-break-in-setext-underline-refused)
+### [Line break in setext underline refused](../spec/obsidian-true-outliner.md#line-break-in-setext-underline-refused)
 
 > shiftEnter
 
@@ -9685,7 +9550,7 @@ Hello world
 </td></tr>
 </table>
 
-### [Leaving the place removes it](../../spec/obsidian-true-outliner.md#leaving-the-place-removes-it)
+### [Leaving the place removes it](../spec/obsidian-true-outliner.md#leaving-the-place-removes-it)
 
 > shiftEnter cursorDocStart
 
@@ -9716,7 +9581,7 @@ bar
 </td></tr>
 </table>
 
-### [Emptied middle item removed and renumbered](../../spec/obsidian-true-outliner.md#emptied-middle-item-removed-and-renumbered)
+### [Emptied middle item removed and renumbered](../spec/obsidian-true-outliner.md#emptied-middle-item-removed-and-renumbered)
 
 > deleteContentBackward deleteContentBackward
 
@@ -9748,7 +9613,7 @@ bar
 </td></tr>
 </table>
 
-### [Undoing a fresh line break](../../spec/obsidian-true-outliner.md#undoing-a-fresh-line-break)
+### [Undoing a fresh line break](../spec/obsidian-true-outliner.md#undoing-a-fresh-line-break)
 
 > shiftEnter deleteContentBackward
 
@@ -9782,7 +9647,7 @@ bar
 </td></tr>
 </table>
 
-### [Backspace before the checkbox](../../spec/obsidian-true-outliner.md#backspace-before-the-checkbox)
+### [Backspace before the checkbox](../spec/obsidian-true-outliner.md#backspace-before-the-checkbox)
 
 > deleteContentBackward
 
@@ -9811,7 +9676,7 @@ bar
 </td></tr>
 </table>
 
-### [Children move to the joined node](../../spec/obsidian-true-outliner.md#children-move-to-the-joined-node)
+### [Children move to the joined node](../spec/obsidian-true-outliner.md#children-move-to-the-joined-node)
 
 > deleteContentBackward
 
@@ -9843,7 +9708,7 @@ bar
 </td></tr>
 </table>
 
-### [Delete forward absorbs child with grandchildren](../../spec/obsidian-true-outliner.md#delete-forward-absorbs-child-with-grandchildren)
+### [Delete forward absorbs child with grandchildren](../spec/obsidian-true-outliner.md#delete-forward-absorbs-child-with-grandchildren)
 
 > deleteContentForward
 
@@ -9874,7 +9739,7 @@ bar
 </td></tr>
 </table>
 
-### [Joining across ordered runs](../../spec/obsidian-true-outliner.md#joining-across-ordered-runs)
+### [Joining across ordered runs](../spec/obsidian-true-outliner.md#joining-across-ordered-runs)
 
 > deleteContentBackward
 
@@ -9909,7 +9774,7 @@ bar
 </td></tr>
 </table>
 
-### [Next item becomes the new 1.](../../spec/obsidian-true-outliner.md#next-item-becomes-the-new-1)
+### [Next item becomes the new 1.](../spec/obsidian-true-outliner.md#next-item-becomes-the-new-1)
 
 > deleteContentBackward
 
@@ -9941,7 +9806,7 @@ bar
 </td></tr>
 </table>
 
-### [List starting at 3 keeps its start](../../spec/obsidian-true-outliner.md#list-starting-at-3-keeps-its-start)
+### [List starting at 3 keeps its start](../spec/obsidian-true-outliner.md#list-starting-at-3-keeps-its-start)
 
 > deleteContentBackward
 
@@ -9973,37 +9838,7 @@ bar
 </td></tr>
 </table>
 
-### [list-marker-content-column](../../spec/obsidian-true-outliner.md#list-marker-content-column)
-
-> indent
-
-<table>
-<tr><th>buffer</th><th>obsidian</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
--  parent
--  kid┃
-```
-
-</td><td>
-
-```buffer
--  parent
-  -  kid┃
-```
-
-</td><td>
-
-```buffer
--  parent
-   -  kid┃
-```
-
-</td></tr>
-</table>
-
-### [Indented item keeps its quote](../../spec/obsidian-true-outliner.md#indented-item-keeps-its-quote)
+### [Indented item keeps its quote](../spec/obsidian-true-outliner.md#indented-item-keeps-its-quote)
 
 > indent
 
@@ -10036,7 +9871,7 @@ bar
 </td></tr>
 </table>
 
-### [Indented item keeps its thematic break](../../spec/obsidian-true-outliner.md#indented-item-keeps-its-thematic-break)
+### [Indented item keeps its thematic break](../spec/obsidian-true-outliner.md#indented-item-keeps-its-thematic-break)
 
 > indent
 
@@ -10072,7 +9907,7 @@ bar
 </td></tr>
 </table>
 
-### [Outdented item keeps its code block](../../spec/obsidian-true-outliner.md#outdented-item-keeps-its-code-block)
+### [Outdented item keeps its code block](../spec/obsidian-true-outliner.md#outdented-item-keeps-its-code-block)
 
 > outdent
 
@@ -10108,7 +9943,7 @@ bar
 </td></tr>
 </table>
 
-### [destination-list-style](../../spec/obsidian-true-outliner.md#destination-list-style)
+### [destination-list-style](../spec/obsidian-true-outliner.md#destination-list-style)
 
 > indent
 
@@ -10141,7 +9976,7 @@ bar
 </td></tr>
 </table>
 
-### [Block id moves with its item](../../spec/obsidian-true-outliner.md#block-id-moves-with-its-item)
+### [Block id moves with its item](../spec/obsidian-true-outliner.md#block-id-moves-with-its-item)
 
 > moveSubtreeUp
 
@@ -10174,7 +10009,7 @@ bar
 </td></tr>
 </table>
 
-### [Block id moves with its paragraph](../../spec/obsidian-true-outliner.md#block-id-moves-with-its-paragraph)
+### [Block id moves with its paragraph](../spec/obsidian-true-outliner.md#block-id-moves-with-its-paragraph)
 
 > moveSubtreeUp
 
@@ -10210,7 +10045,7 @@ para one
 </td></tr>
 </table>
 
-### [Blank line added below a quote](../../spec/obsidian-true-outliner.md#blank-line-added-below-a-quote)
+### [Blank line added below a quote](../spec/obsidian-true-outliner.md#blank-line-added-below-a-quote)
 
 > moveSubtreeDown
 
@@ -10241,7 +10076,7 @@ para┃
 </td></tr>
 </table>
 
-### [No blank line needed after a fence](../../spec/obsidian-true-outliner.md#no-blank-line-needed-after-a-fence)
+### [No blank line needed after a fence](../spec/obsidian-true-outliner.md#no-blank-line-needed-after-a-fence)
 
 > moveSubtreeDown
 
@@ -10277,7 +10112,7 @@ para┃
 </td></tr>
 </table>
 
-### [No blank line needed before a fence](../../spec/obsidian-true-outliner.md#no-blank-line-needed-before-a-fence)
+### [No blank line needed before a fence](../spec/obsidian-true-outliner.md#no-blank-line-needed-before-a-fence)
 
 > moveSubtreeDown
 
@@ -10313,7 +10148,7 @@ code┃
 </td></tr>
 </table>
 
-### [Carried place removed on leaving](../../spec/obsidian-true-outliner.md#carried-place-removed-on-leaving)
+### [Carried place removed on leaving](../spec/obsidian-true-outliner.md#carried-place-removed-on-leaving)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -10377,7 +10212,7 @@ code┃
 </td></tr>
 </table>
 
-### [Doubly indented place removed on leaving](../../spec/obsidian-true-outliner.md#doubly-indented-place-removed-on-leaving)
+### [Doubly indented place removed on leaving](../spec/obsidian-true-outliner.md#doubly-indented-place-removed-on-leaving)
 
 > shiftEnter indent indent cursorDocStart
 
@@ -10414,7 +10249,7 @@ code┃
 </td></tr>
 </table>
 
-### [Backspace returns to the start](../../spec/obsidian-true-outliner.md#backspace-returns-to-the-start)
+### [Backspace returns to the start](../spec/obsidian-true-outliner.md#backspace-returns-to-the-start)
 
 > shiftEnter indent deleteContentBackward
 
@@ -10448,7 +10283,7 @@ code┃
 </td></tr>
 </table>
 
-### [Shift-Tab then Backspace returns to start](../../spec/obsidian-true-outliner.md#shift-tab-then-backspace-returns-to-start)
+### [Shift-Tab then Backspace returns to start](../spec/obsidian-true-outliner.md#shift-tab-then-backspace-returns-to-start)
 
 > shiftEnter outdent deleteContentBackward
 
@@ -10482,7 +10317,7 @@ code┃
 </td></tr>
 </table>
 
-### [Shift-Enter, Tab, then Enter](../../spec/obsidian-true-outliner.md#shift-enter-tab-then-enter)
+### [Shift-Enter, Tab, then Enter](../spec/obsidian-true-outliner.md#shift-enter-tab-then-enter)
 
 > shiftEnter indent enter
 
@@ -10520,7 +10355,7 @@ code┃
 </td></tr>
 </table>
 
-### [Enter, then Shift-Enter and Backspace](../../spec/obsidian-true-outliner.md#enter-then-shift-enter-and-backspace)
+### [Enter, then Shift-Enter and Backspace](../spec/obsidian-true-outliner.md#enter-then-shift-enter-and-backspace)
 
 > enter shiftEnter deleteContentBackward
 
@@ -10550,7 +10385,7 @@ code┃
 </td></tr>
 </table>
 
-### [An empty ordered child kept with a blank line](../../spec/obsidian-true-outliner.md#an-empty-ordered-child-kept-with-a-blank-line)
+### [An empty ordered child kept with a blank line](../spec/obsidian-true-outliner.md#an-empty-ordered-child-kept-with-a-blank-line)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -10567,16 +10402,8 @@ code┃
 > enter indent
 
 <table>
-<tr><th>obsidian</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
-
-```buffer
-1. a
-  1. ┃
-2. b
-```
-
-</td><td>
 
 ```buffer
 1. a
@@ -10595,7 +10422,7 @@ code┃
 
 ```buffer
 ┃1. a
-  1. 
+   1. 
 2. b
 ```
 
@@ -10611,7 +10438,7 @@ code┃
 </td></tr>
 </table>
 
-### [Blank line after the list stays](../../spec/obsidian-true-outliner.md#blank-line-after-the-list-stays)
+### [Blank line after the list stays](../spec/obsidian-true-outliner.md#blank-line-after-the-list-stays)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -10684,7 +10511,7 @@ para
 </td></tr>
 </table>
 
-### [Empty paragraph and blank lines removed](../../spec/obsidian-true-outliner.md#empty-paragraph-and-blank-lines-removed)
+### [Empty paragraph and blank lines removed](../spec/obsidian-true-outliner.md#empty-paragraph-and-blank-lines-removed)
 
 > enter enter cursorDocStart
 
@@ -10715,7 +10542,7 @@ para
 </td></tr>
 </table>
 
-### [Indented list under paragraph restored](../../spec/obsidian-true-outliner.md#indented-list-under-paragraph-restored)
+### [Indented list under paragraph restored](../spec/obsidian-true-outliner.md#indented-list-under-paragraph-restored)
 
 > enter enter cursorDocStart
 
@@ -10749,7 +10576,7 @@ para
 </td></tr>
 </table>
 
-### [Pasted list takes space indent unit](../../spec/obsidian-true-outliner.md#pasted-list-takes-space-indent-unit)
+### [Pasted list takes space indent unit](../spec/obsidian-true-outliner.md#pasted-list-takes-space-indent-unit)
 
 > pasteStructured
 
@@ -10792,7 +10619,7 @@ para
 </td></tr>
 </table>
 
-### [Pasted list takes tab indent unit](../../spec/obsidian-true-outliner.md#pasted-list-takes-tab-indent-unit)
+### [Pasted list takes tab indent unit](../spec/obsidian-true-outliner.md#pasted-list-takes-tab-indent-unit)
 
 > pasteStructured
 
@@ -10835,7 +10662,7 @@ para
 </td></tr>
 </table>
 
-### [Pasted quote set off from paragraph](../../spec/obsidian-true-outliner.md#pasted-quote-set-off-from-paragraph)
+### [Pasted quote set off from paragraph](../spec/obsidian-true-outliner.md#pasted-quote-set-off-from-paragraph)
 
 > pasteStructured
 
@@ -10880,7 +10707,7 @@ below
 </td></tr>
 </table>
 
-### [Pasted list and block become children](../../spec/obsidian-true-outliner.md#pasted-list-and-block-become-children)
+### [Pasted list and block become children](../spec/obsidian-true-outliner.md#pasted-list-and-block-become-children)
 
 > pasteStructured
 
@@ -10922,7 +10749,7 @@ below
 </td></tr>
 </table>
 
-### [Outdent4](../../spec/outdent.md#outdent4)
+### [Outdent4](../spec/outdent.md#outdent4)
 
 > outdent
 
@@ -10952,7 +10779,7 @@ below
 </td></tr>
 </table>
 
-### [Outdent7](../../spec/outdent.md#outdent7)
+### [Outdent7](../spec/outdent.md#outdent7)
 
 > outdent
 
@@ -10986,7 +10813,7 @@ below
 </td></tr>
 </table>
 
-### [Outdent8](../../spec/outdent.md#outdent8)
+### [Outdent8](../spec/outdent.md#outdent8)
 
 > outdent
 
@@ -11024,7 +10851,7 @@ c»
 </td></tr>
 </table>
 
-### [Outdent11](../../spec/outdent.md#outdent11)
+### [Outdent11](../spec/outdent.md#outdent11)
 
 > outdent
 
@@ -11057,7 +10884,7 @@ c»
 </td></tr>
 </table>
 
-### [Outdent12](../../spec/outdent.md#outdent12)
+### [Outdent12](../spec/outdent.md#outdent12)
 
 > outdent
 
@@ -11088,7 +10915,7 @@ b»
 </td></tr>
 </table>
 
-### [Outdent13](../../spec/outdent.md#outdent13)
+### [Outdent13](../spec/outdent.md#outdent13)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -11154,7 +10981,7 @@ b»
 </td></tr>
 </table>
 
-### [Outdent15](../../spec/outdent.md#outdent15)
+### [Outdent15](../spec/outdent.md#outdent15)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -11211,7 +11038,7 @@ para
 </td></tr>
 </table>
 
-### [DirectOutdent2](../../spec/outdent.md#directoutdent2)
+### [DirectOutdent2](../spec/outdent.md#directoutdent2)
 
 > outdent
 
@@ -11241,7 +11068,7 @@ a┃
 </td></tr>
 </table>
 
-### [DirectOutdent3](../../spec/outdent.md#directoutdent3)
+### [DirectOutdent3](../spec/outdent.md#directoutdent3)
 
 > outdent
 
@@ -11274,7 +11101,7 @@ a┃
 </td></tr>
 </table>
 
-### [DirectOutdent4](../../spec/outdent.md#directoutdent4)
+### [DirectOutdent4](../spec/outdent.md#directoutdent4)
 
 > outdent
 
@@ -11308,7 +11135,7 @@ a┃
 </td></tr>
 </table>
 
-### [Outdent16](../../spec/outdent.md#outdent16)
+### [Outdent16](../spec/outdent.md#outdent16)
 
 > outdent
 
@@ -11342,7 +11169,7 @@ a┃
 </td></tr>
 </table>
 
-### [Outdent17](../../spec/outdent.md#outdent17)
+### [Outdent17](../spec/outdent.md#outdent17)
 
 > outdent
 
@@ -11372,7 +11199,7 @@ a┃
 </td></tr>
 </table>
 
-### [Outdent19](../../spec/outdent.md#outdent19)
+### [Outdent19](../spec/outdent.md#outdent19)
 
 > outdent
 
@@ -11411,7 +11238,7 @@ a┃
 </td></tr>
 </table>
 
-### [Paste1](../../spec/paste.md#paste1)
+### [Paste1](../spec/paste.md#paste1)
 
 > pasteStructured
 
@@ -11457,7 +11284,7 @@ para
 </td></tr>
 </table>
 
-### [Paste2](../../spec/paste.md#paste2)
+### [Paste2](../spec/paste.md#paste2)
 
 > pasteStructured
 
@@ -11497,7 +11324,7 @@ para
 </td></tr>
 </table>
 
-### [Paste4](../../spec/paste.md#paste4)
+### [Paste4](../spec/paste.md#paste4)
 
 > pastePlain
 
@@ -11535,7 +11362,7 @@ x
 </td></tr>
 </table>
 
-### [Paste6](../../spec/paste.md#paste6)
+### [Paste6](../spec/paste.md#paste6)
 
 > pastePlain
 
@@ -11571,7 +11398,7 @@ y
 </td></tr>
 </table>
 
-### [Paste9](../../spec/paste.md#paste9)
+### [Paste9](../spec/paste.md#paste9)
 
 > pasteStructured
 
@@ -11613,7 +11440,7 @@ code
 </td></tr>
 </table>
 
-### [Paste11](../../spec/paste.md#paste11)
+### [Paste11](../spec/paste.md#paste11)
 
 > pasteStructured
 
@@ -11655,7 +11482,7 @@ code
 </td></tr>
 </table>
 
-### [Paste12](../../spec/paste.md#paste12)
+### [Paste12](../spec/paste.md#paste12)
 
 > pasteStructured
 
@@ -11693,7 +11520,7 @@ code
 </td></tr>
 </table>
 
-### [Paste13](../../spec/paste.md#paste13)
+### [Paste13](../spec/paste.md#paste13)
 
 > pasteStructured
 
@@ -11733,7 +11560,7 @@ code
 </td></tr>
 </table>
 
-### [Paste14](../../spec/paste.md#paste14)
+### [Paste14](../spec/paste.md#paste14)
 
 > pasteStructured
 
@@ -11758,7 +11585,7 @@ code
 ```buffer
 - a1. x
 2. y┃
-  - kid
+   - kid
 ```
 
 </td><td>
@@ -11773,7 +11600,7 @@ code
 </td></tr>
 </table>
 
-### [Paste15](../../spec/paste.md#paste15)
+### [Paste15](../spec/paste.md#paste15)
 
 > pasteStructured
 
@@ -11812,7 +11639,7 @@ code
 </td></tr>
 </table>
 
-### [Paste16](../../spec/paste.md#paste16)
+### [Paste16](../spec/paste.md#paste16)
 
 > pasteStructured
 
@@ -11851,7 +11678,7 @@ code
 </td></tr>
 </table>
 
-### [Paste17](../../spec/paste.md#paste17)
+### [Paste17](../spec/paste.md#paste17)
 
 > pasteStructured
 
@@ -11891,7 +11718,7 @@ code
 </td></tr>
 </table>
 
-### [Paste18](../../spec/paste.md#paste18)
+### [Paste18](../spec/paste.md#paste18)
 
 > pasteStructured
 
@@ -11931,7 +11758,7 @@ code
 </td></tr>
 </table>
 
-### [Paste19](../../spec/paste.md#paste19)
+### [Paste19](../spec/paste.md#paste19)
 
 > pasteStructured
 
@@ -11969,7 +11796,7 @@ text┃
 </td></tr>
 </table>
 
-### [Paste20](../../spec/paste.md#paste20)
+### [Paste20](../spec/paste.md#paste20)
 
 > pasteStructured
 
@@ -12015,7 +11842,7 @@ Notes
 </td></tr>
 </table>
 
-### [Paste21](../../spec/paste.md#paste21)
+### [Paste21](../spec/paste.md#paste21)
 
 > pasteStructured
 
@@ -12055,7 +11882,7 @@ Notes
 </td></tr>
 </table>
 
-### [Paste22](../../spec/paste.md#paste22)
+### [Paste22](../spec/paste.md#paste22)
 
 > pastePlain
 
@@ -12100,7 +11927,7 @@ a = 1
 </td></tr>
 </table>
 
-### [Paste23](../../spec/paste.md#paste23)
+### [Paste23](../spec/paste.md#paste23)
 
 > pasteStructured
 
@@ -12142,7 +11969,7 @@ a = 1
 </td></tr>
 </table>
 
-### [Paste25](../../spec/paste.md#paste25)
+### [Paste25](../spec/paste.md#paste25)
 
 > pasteStructured
 
@@ -12188,7 +12015,7 @@ c
 </td></tr>
 </table>
 
-### [Paste26](../../spec/paste.md#paste26)
+### [Paste26](../spec/paste.md#paste26)
 
 > pasteStructured
 
@@ -12225,7 +12052,7 @@ c
 </td></tr>
 </table>
 
-### [Paste27](../../spec/paste.md#paste27)
+### [Paste27](../spec/paste.md#paste27)
 
 > pasteStructured
 
@@ -12265,7 +12092,7 @@ c
 </td></tr>
 </table>
 
-### [Paste28](../../spec/paste.md#paste28)
+### [Paste28](../spec/paste.md#paste28)
 
 > pasteStructured
 
@@ -12304,7 +12131,7 @@ c
 </td></tr>
 </table>
 
-### [Paste29](../../spec/paste.md#paste29)
+### [Paste29](../spec/paste.md#paste29)
 
 > pasteStructured
 
@@ -12346,7 +12173,7 @@ c
 </td></tr>
 </table>
 
-### [Paste30](../../spec/paste.md#paste30)
+### [Paste30](../spec/paste.md#paste30)
 
 > pastePlain
 
@@ -12382,7 +12209,7 @@ x
 </td></tr>
 </table>
 
-### [Paste32](../../spec/paste.md#paste32)
+### [Paste32](../spec/paste.md#paste32)
 
 > pasteStructured
 
@@ -12417,7 +12244,7 @@ para
 </td></tr>
 </table>
 
-### [Paste33](../../spec/paste.md#paste33)
+### [Paste33](../spec/paste.md#paste33)
 
 > pasteStructured
 
@@ -12458,7 +12285,7 @@ para
 </td></tr>
 </table>
 
-### [Paste34](../../spec/paste.md#paste34)
+### [Paste34](../spec/paste.md#paste34)
 
 > pasteStructured
 
@@ -12499,7 +12326,7 @@ next
 </td></tr>
 </table>
 
-### [Paste35](../../spec/paste.md#paste35)
+### [Paste35](../spec/paste.md#paste35)
 
 > pasteStructured
 
@@ -12558,7 +12385,7 @@ more
 </td></tr>
 </table>
 
-### [Paste36](../../spec/paste.md#paste36)
+### [Paste36](../spec/paste.md#paste36)
 
 > pasteStructured
 
@@ -12599,7 +12426,7 @@ x
 </td></tr>
 </table>
 
-### [Paste37](../../spec/paste.md#paste37)
+### [Paste37](../spec/paste.md#paste37)
 
 > pasteStructured
 
@@ -12638,7 +12465,7 @@ See x
 </td></tr>
 </table>
 
-### [Paste40](../../spec/paste.md#paste40)
+### [Paste40](../spec/paste.md#paste40)
 
 > pastePlain
 
@@ -12682,7 +12509,7 @@ y
 </td></tr>
 </table>
 
-### [Paste41](../../spec/paste.md#paste41)
+### [Paste41](../spec/paste.md#paste41)
 
 > pastePlain
 
@@ -12723,7 +12550,7 @@ y
 </td></tr>
 </table>
 
-### [Paste42](../../spec/paste.md#paste42)
+### [Paste42](../spec/paste.md#paste42)
 
 > pasteStructured
 
@@ -12763,7 +12590,7 @@ y
 </td></tr>
 </table>
 
-### [Paste44](../../spec/paste.md#paste44)
+### [Paste44](../spec/paste.md#paste44)
 
 > pasteStructured
 
@@ -12806,7 +12633,7 @@ $$
 </td></tr>
 </table>
 
-### [Paste45](../../spec/paste.md#paste45)
+### [Paste45](../spec/paste.md#paste45)
 
 > pastePlain
 
@@ -12847,7 +12674,7 @@ $$
 </td></tr>
 </table>
 
-### [Paste46](../../spec/paste.md#paste46)
+### [Paste46](../spec/paste.md#paste46)
 
 > pasteStructured
 
@@ -12897,7 +12724,7 @@ code
 </td></tr>
 </table>
 
-### [Paste47](../../spec/paste.md#paste47)
+### [Paste47](../spec/paste.md#paste47)
 
 > pasteStructured
 
@@ -12942,7 +12769,7 @@ two┃
 </td></tr>
 </table>
 
-### [Paste50](../../spec/paste.md#paste50)
+### [Paste50](../spec/paste.md#paste50)
 
 > pasteStructured
 
@@ -12980,7 +12807,7 @@ two┃
 </td></tr>
 </table>
 
-### [Paste51](../../spec/paste.md#paste51)
+### [Paste51](../spec/paste.md#paste51)
 
 > pasteStructured
 
@@ -13015,7 +12842,7 @@ x
 </td></tr>
 </table>
 
-### [Paste52](../../spec/paste.md#paste52)
+### [Paste52](../spec/paste.md#paste52)
 
 > pasteStructured
 
@@ -13057,7 +12884,7 @@ code
 </td></tr>
 </table>
 
-### [Paste53](../../spec/paste.md#paste53)
+### [Paste53](../spec/paste.md#paste53)
 
 > pasteStructured
 
@@ -13094,7 +12921,7 @@ Title┃
 </td></tr>
 </table>
 
-### [Paste54](../../spec/paste.md#paste54)
+### [Paste54](../spec/paste.md#paste54)
 
 > pasteStructured
 
@@ -13133,7 +12960,7 @@ y┃
 </td></tr>
 </table>
 
-### [Paste55](../../spec/paste.md#paste55)
+### [Paste55](../spec/paste.md#paste55)
 
 > pastePlain
 
@@ -13172,7 +12999,7 @@ y
 </td></tr>
 </table>
 
-### [Paste56](../../spec/paste.md#paste56)
+### [Paste56](../spec/paste.md#paste56)
 
 > pasteStructured
 
@@ -13211,7 +13038,7 @@ y
 </td></tr>
 </table>
 
-### [Paste57](../../spec/paste.md#paste57)
+### [Paste57](../spec/paste.md#paste57)
 
 > pasteStructured
 
@@ -13260,7 +13087,7 @@ The fix:
 </td></tr>
 </table>
 
-### [Paste58](../../spec/paste.md#paste58)
+### [Paste58](../spec/paste.md#paste58)
 
 > pasteStructured
 
@@ -13312,7 +13139,7 @@ Outro
 </td></tr>
 </table>
 
-### [Paste59](../../spec/paste.md#paste59)
+### [Paste59](../spec/paste.md#paste59)
 
 > pasteStructured
 
@@ -13355,7 +13182,7 @@ Outro
 </td></tr>
 </table>
 
-### [Paste60](../../spec/paste.md#paste60)
+### [Paste60](../spec/paste.md#paste60)
 
 > pasteStructured
 
@@ -13398,7 +13225,7 @@ Outro
 </td></tr>
 </table>
 
-### [Paste61](../../spec/paste.md#paste61)
+### [Paste61](../spec/paste.md#paste61)
 
 > pasteStructured
 
@@ -13441,7 +13268,7 @@ text
 </td></tr>
 </table>
 
-### [Paste62](../../spec/paste.md#paste62)
+### [Paste62](../spec/paste.md#paste62)
 
 > pasteStructured
 
@@ -13483,7 +13310,7 @@ make build
 </td></tr>
 </table>
 
-### [Paste63](../../spec/paste.md#paste63)
+### [Paste63](../spec/paste.md#paste63)
 
 > pasteStructured
 
@@ -13520,7 +13347,7 @@ make build
 </td></tr>
 </table>
 
-### [Paste64](../../spec/paste.md#paste64)
+### [Paste64](../spec/paste.md#paste64)
 
 > pastePlain
 
@@ -13556,7 +13383,7 @@ make build
 </td></tr>
 </table>
 
-### [Paste65](../../spec/paste.md#paste65)
+### [Paste65](../spec/paste.md#paste65)
 
 > pasteStructured
 
@@ -13612,7 +13439,7 @@ y
 </td></tr>
 </table>
 
-### [Paste66](../../spec/paste.md#paste66)
+### [Paste66](../spec/paste.md#paste66)
 
 > pasteStructured
 
@@ -13637,9 +13464,8 @@ y
 
 ````buffer
 - grandchild```js
-      // greet
-        f();
-      ```
+// greet
+  f();
 ```┃
 ````
 
@@ -13656,7 +13482,7 @@ y
 </td></tr>
 </table>
 
-### [Paste67](../../spec/paste.md#paste67)
+### [Paste67](../spec/paste.md#paste67)
 
 > pasteStructured
 
@@ -13701,7 +13527,7 @@ b
 </td></tr>
 </table>
 
-### [Paste68](../../spec/paste.md#paste68)
+### [Paste68](../spec/paste.md#paste68)
 
 > pastePlain
 
@@ -13736,7 +13562,7 @@ px
 </td></tr>
 </table>
 
-### [Paste69](../../spec/paste.md#paste69)
+### [Paste69](../spec/paste.md#paste69)
 
 > pastePlain
 
@@ -13771,7 +13597,7 @@ x
 </td></tr>
 </table>
 
-### [Paste70](../../spec/paste.md#paste70)
+### [Paste70](../spec/paste.md#paste70)
 
 > pasteStructured
 
@@ -13815,7 +13641,7 @@ c
 </td></tr>
 </table>
 
-### [Paste71](../../spec/paste.md#paste71)
+### [Paste71](../spec/paste.md#paste71)
 
 > pasteStructured
 
@@ -13871,7 +13697,7 @@ c
 </td></tr>
 </table>
 
-### [Paste72](../../spec/paste.md#paste72)
+### [Paste72](../spec/paste.md#paste72)
 
 > pasteStructured
 
@@ -13911,7 +13737,7 @@ c
 </td></tr>
 </table>
 
-### [Paste73](../../spec/paste.md#paste73)
+### [Paste73](../spec/paste.md#paste73)
 
 > pasteStructured
 
@@ -13952,7 +13778,7 @@ y
 </td></tr>
 </table>
 
-### [Paste74](../../spec/paste.md#paste74)
+### [Paste74](../spec/paste.md#paste74)
 
 > pasteStructured
 
@@ -13997,7 +13823,7 @@ if x:
 </td></tr>
 </table>
 
-### [Paste76](../../spec/paste.md#paste76)
+### [Paste76](../spec/paste.md#paste76)
 
 > pasteStructured
 
@@ -14039,7 +13865,7 @@ body
 </td></tr>
 </table>
 
-### [Paste77](../../spec/paste.md#paste77)
+### [Paste77](../spec/paste.md#paste77)
 
 > pasteStructured
 
@@ -14082,7 +13908,7 @@ fix:
 </td></tr>
 </table>
 
-### [Paste78](../../spec/paste.md#paste78)
+### [Paste78](../spec/paste.md#paste78)
 
 > pastePlain
 
@@ -14120,7 +13946,7 @@ fix:
 </td></tr>
 </table>
 
-### [Paste79](../../spec/paste.md#paste79)
+### [Paste79](../spec/paste.md#paste79)
 
 > pasteStructured
 
@@ -14161,7 +13987,7 @@ $$
 </td></tr>
 </table>
 
-### [Paste80](../../spec/paste.md#paste80)
+### [Paste80](../spec/paste.md#paste80)
 
 > pastePlain
 
@@ -14199,7 +14025,7 @@ b
 </td></tr>
 </table>
 
-### [Paste81](../../spec/paste.md#paste81)
+### [Paste81](../spec/paste.md#paste81)
 
 > pastePlain
 
@@ -14237,7 +14063,7 @@ b
 </td></tr>
 </table>
 
-### [Placeholder1](../../spec/placeholders.md#placeholder1)
+### [Placeholder1](../spec/placeholders.md#placeholder1)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -14300,7 +14126,7 @@ b
 </td></tr>
 </table>
 
-### [Placeholder2](../../spec/placeholders.md#placeholder2)
+### [Placeholder2](../spec/placeholders.md#placeholder2)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -14369,7 +14195,7 @@ b
 </td></tr>
 </table>
 
-### [Placeholder3](../../spec/placeholders.md#placeholder3)
+### [Placeholder3](../spec/placeholders.md#placeholder3)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -14424,7 +14250,7 @@ para
 </td></tr>
 </table>
 
-### [Placeholder4](../../spec/placeholders.md#placeholder4)
+### [Placeholder4](../spec/placeholders.md#placeholder4)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -14471,7 +14297,7 @@ para
 </td></tr>
 </table>
 
-### [Placeholder5](../../spec/placeholders.md#placeholder5)
+### [Placeholder5](../spec/placeholders.md#placeholder5)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -14562,7 +14388,7 @@ para
 </td></tr>
 </table>
 
-### [Placeholder7](../../spec/placeholders.md#placeholder7)
+### [Placeholder7](../spec/placeholders.md#placeholder7)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -14612,56 +14438,7 @@ para
 </td></tr>
 </table>
 
-### [Placeholder9](../../spec/placeholders.md#placeholder9)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃ b
-  - c
-```
-
-</td></tr>
-</table>
-
-> deleteContentBackward
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- ┃ b
-  - c
-```
-
-</td></tr>
-</table>
-
-> cursorDocEnd cursorCharLeft
-
-<table>
-<tr><th>obsidian</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
--  b
-  - c┃
-```
-
-</td><td>
-
-```buffer
-- b
-  - c┃
-```
-
-</td></tr>
-</table>
-
-### [Placeholder14](../../spec/placeholders.md#placeholder14)
+### [Placeholder14](../spec/placeholders.md#placeholder14)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -14719,7 +14496,7 @@ para
 </td></tr>
 </table>
 
-### [Placeholder16](../../spec/placeholders.md#placeholder16)
+### [Placeholder16](../spec/placeholders.md#placeholder16)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -14782,7 +14559,7 @@ para
 </td></tr>
 </table>
 
-### [Quote9](../../spec/quotes.md#quote9)
+### [Quote9](../spec/quotes.md#quote9)
 
 > indent
 
@@ -14815,7 +14592,7 @@ para
 </td></tr>
 </table>
 
-### [Quote11](../../spec/quotes.md#quote11)
+### [Quote11](../spec/quotes.md#quote11)
 
 > outdent
 
@@ -14845,7 +14622,7 @@ para
 </td></tr>
 </table>
 
-### [Quote12](../../spec/quotes.md#quote12)
+### [Quote12](../spec/quotes.md#quote12)
 
 > outdent
 
@@ -14878,7 +14655,7 @@ para
 </td></tr>
 </table>
 
-### [Quote13](../../spec/quotes.md#quote13)
+### [Quote13](../spec/quotes.md#quote13)
 
 > outdent
 
@@ -14908,7 +14685,7 @@ para
 </td></tr>
 </table>
 
-### [Quote14](../../spec/quotes.md#quote14)
+### [Quote14](../spec/quotes.md#quote14)
 
 > outdent
 
@@ -14941,7 +14718,7 @@ c
 </td></tr>
 </table>
 
-### [Quote15](../../spec/quotes.md#quote15)
+### [Quote15](../spec/quotes.md#quote15)
 
 > outdent
 
@@ -14974,7 +14751,7 @@ c
 </td></tr>
 </table>
 
-### [Quote16](../../spec/quotes.md#quote16)
+### [Quote16](../spec/quotes.md#quote16)
 
 > outdent
 
@@ -15010,7 +14787,7 @@ c
 </td></tr>
 </table>
 
-### [Quote17](../../spec/quotes.md#quote17)
+### [Quote17](../spec/quotes.md#quote17)
 
 > indent
 
@@ -15040,7 +14817,7 @@ c
 </td></tr>
 </table>
 
-### [Quote18](../../spec/quotes.md#quote18)
+### [Quote18](../spec/quotes.md#quote18)
 
 > indent
 
@@ -15082,7 +14859,7 @@ c
 </td></tr>
 </table>
 
-### [Quote19](../../spec/quotes.md#quote19)
+### [Quote19](../spec/quotes.md#quote19)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -15131,7 +14908,7 @@ c
 </td></tr>
 </table>
 
-### [Quote21](../../spec/quotes.md#quote21)
+### [Quote21](../spec/quotes.md#quote21)
 
 > moveSubtreeDown
 
@@ -15168,7 +14945,7 @@ c
 </td></tr>
 </table>
 
-### [Quote22](../../spec/quotes.md#quote22)
+### [Quote22](../spec/quotes.md#quote22)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -15225,7 +15002,7 @@ c
 </td></tr>
 </table>
 
-### [Quote23](../../spec/quotes.md#quote23)
+### [Quote23](../spec/quotes.md#quote23)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -15278,7 +15055,7 @@ c
 </td></tr>
 </table>
 
-### [Quote25](../../spec/quotes.md#quote25)
+### [Quote25](../spec/quotes.md#quote25)
 
 > moveSubtreeUp
 
@@ -15311,7 +15088,7 @@ c
 </td></tr>
 </table>
 
-### [Quote27](../../spec/quotes.md#quote27)
+### [Quote27](../spec/quotes.md#quote27)
 
 > moveSubtreeUp
 
@@ -15341,7 +15118,7 @@ c
 </td></tr>
 </table>
 
-### [Quote31](../../spec/quotes.md#quote31)
+### [Quote31](../spec/quotes.md#quote31)
 
 > enter
 
@@ -15373,7 +15150,7 @@ b
 </td></tr>
 </table>
 
-### [Quote32](../../spec/quotes.md#quote32)
+### [Quote32](../spec/quotes.md#quote32)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -15458,7 +15235,7 @@ Back to text.┃
 </td></tr>
 </table>
 
-### [Quote33](../../spec/quotes.md#quote33)
+### [Quote33](../spec/quotes.md#quote33)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -15521,7 +15298,7 @@ Back to text.┃
 </td></tr>
 </table>
 
-### [Quote34](../../spec/quotes.md#quote34)
+### [Quote34](../spec/quotes.md#quote34)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -15567,7 +15344,7 @@ Back to text.┃
 </td></tr>
 </table>
 
-### [Quote35](../../spec/quotes.md#quote35)
+### [Quote35](../spec/quotes.md#quote35)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -15632,7 +15409,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote36](../../spec/quotes.md#quote36)
+### [Quote36](../spec/quotes.md#quote36)
 
 > enter
 
@@ -15662,7 +15439,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote38](../../spec/quotes.md#quote38)
+### [Quote38](../spec/quotes.md#quote38)
 
 > enter
 
@@ -15695,7 +15472,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote40](../../spec/quotes.md#quote40)
+### [Quote40](../spec/quotes.md#quote40)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -15757,7 +15534,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote41](../../spec/quotes.md#quote41)
+### [Quote41](../spec/quotes.md#quote41)
 
 > enter
 
@@ -15789,7 +15566,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote42](../../spec/quotes.md#quote42)
+### [Quote42](../spec/quotes.md#quote42)
 
 > enter
 
@@ -15822,7 +15599,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote43](../../spec/quotes.md#quote43)
+### [Quote43](../spec/quotes.md#quote43)
 
 > enter
 
@@ -15851,7 +15628,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote47](../../spec/quotes.md#quote47)
+### [Quote47](../spec/quotes.md#quote47)
 
 > shiftEnter
 
@@ -15882,7 +15659,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote48](../../spec/quotes.md#quote48)
+### [Quote48](../spec/quotes.md#quote48)
 
 > deleteContentBackward
 
@@ -15911,7 +15688,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote49](../../spec/quotes.md#quote49)
+### [Quote49](../spec/quotes.md#quote49)
 
 > deleteContentBackward
 
@@ -15940,7 +15717,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote50](../../spec/quotes.md#quote50)
+### [Quote50](../spec/quotes.md#quote50)
 
 > deleteContentForward
 
@@ -15968,7 +15745,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote51](../../spec/quotes.md#quote51)
+### [Quote51](../spec/quotes.md#quote51)
 
 > deleteContentForward
 
@@ -15999,7 +15776,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote52](../../spec/quotes.md#quote52)
+### [Quote52](../spec/quotes.md#quote52)
 
 > deleteContentBackward
 
@@ -16031,7 +15808,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote54](../../spec/quotes.md#quote54)
+### [Quote54](../spec/quotes.md#quote54)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -16116,7 +15893,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote59](../../spec/quotes.md#quote59)
+### [Quote59](../spec/quotes.md#quote59)
 
 > deleteContentBackward
 
@@ -16143,7 +15920,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote60](../../spec/quotes.md#quote60)
+### [Quote60](../spec/quotes.md#quote60)
 
 > deleteContentBackward
 
@@ -16178,7 +15955,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote61](../../spec/quotes.md#quote61)
+### [Quote61](../spec/quotes.md#quote61)
 
 > deleteContentForward
 
@@ -16206,7 +15983,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote62](../../spec/quotes.md#quote62)
+### [Quote62](../spec/quotes.md#quote62)
 
 > deleteContentBackward
 
@@ -16235,7 +16012,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote63](../../spec/quotes.md#quote63)
+### [Quote63](../spec/quotes.md#quote63)
 
 > pasteStructured
 
@@ -16272,7 +16049,7 @@ c┃
 </td></tr>
 </table>
 
-### [Quote65](../../spec/quotes.md#quote65)
+### [Quote65](../spec/quotes.md#quote65)
 
 > indent
 
@@ -16305,7 +16082,7 @@ para┃
 </td></tr>
 </table>
 
-### [Quote66](../../spec/quotes.md#quote66)
+### [Quote66](../spec/quotes.md#quote66)
 
 > outdent
 
@@ -16338,7 +16115,7 @@ para┃
 </td></tr>
 </table>
 
-### [Quote68](../../spec/quotes.md#quote68)
+### [Quote68](../spec/quotes.md#quote68)
 
 > moveSubtreeUp
 
@@ -16374,7 +16151,7 @@ para┃
 </td></tr>
 </table>
 
-### [Quote71](../../spec/quotes.md#quote71)
+### [Quote71](../spec/quotes.md#quote71)
 
 > moveSubtreeDown
 
@@ -16410,7 +16187,7 @@ para┃
 </td></tr>
 </table>
 
-### [Quote72](../../spec/quotes.md#quote72)
+### [Quote72](../spec/quotes.md#quote72)
 
 > outdent
 
@@ -16443,7 +16220,7 @@ para┃
 </td></tr>
 </table>
 
-### [Quote73](../../spec/quotes.md#quote73)
+### [Quote73](../spec/quotes.md#quote73)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -16498,7 +16275,7 @@ para┃
 </td></tr>
 </table>
 
-### [Quote74](../../spec/quotes.md#quote74)
+### [Quote74](../spec/quotes.md#quote74)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -16552,7 +16329,7 @@ para┃
 </td></tr>
 </table>
 
-### [Quote75](../../spec/quotes.md#quote75)
+### [Quote75](../spec/quotes.md#quote75)
 
 > deleteContentBackward
 
@@ -16587,7 +16364,7 @@ para┃
 </td></tr>
 </table>
 
-### [Quote76](../../spec/quotes.md#quote76)
+### [Quote76](../spec/quotes.md#quote76)
 
 > pastePlain
 
@@ -16625,7 +16402,7 @@ y
 </td></tr>
 </table>
 
-### [Quote77](../../spec/quotes.md#quote77)
+### [Quote77](../spec/quotes.md#quote77)
 
 > outdent
 
@@ -16655,7 +16432,7 @@ y
 </td></tr>
 </table>
 
-### [Quote78](../../spec/quotes.md#quote78)
+### [Quote78](../spec/quotes.md#quote78)
 
 > indent
 
@@ -16691,7 +16468,7 @@ y
 </td></tr>
 </table>
 
-### [Quote79](../../spec/quotes.md#quote79)
+### [Quote79](../spec/quotes.md#quote79)
 
 > enter
 
@@ -16719,7 +16496,7 @@ y
 </td></tr>
 </table>
 
-### [Quote81](../../spec/quotes.md#quote81)
+### [Quote81](../spec/quotes.md#quote81)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -16772,7 +16549,7 @@ y
 </td></tr>
 </table>
 
-### [Quote88](../../spec/quotes.md#quote88)
+### [Quote88](../spec/quotes.md#quote88)
 
 > deleteContentForward
 
@@ -16789,7 +16566,7 @@ y
 </td><td>
 
 ```buffer
-- > ┃→>
+- > ┃  >
   > q
 ```
 
@@ -16802,7 +16579,7 @@ y
 </td></tr>
 </table>
 
-### [Quote83](../../spec/quotes.md#quote83)
+### [Quote83](../spec/quotes.md#quote83)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -16851,7 +16628,7 @@ y
 </td></tr>
 </table>
 
-### [Quote85](../../spec/quotes.md#quote85)
+### [Quote85](../spec/quotes.md#quote85)
 
 > outdent
 
@@ -16881,7 +16658,7 @@ y
 </td></tr>
 </table>
 
-### [Quote87](../../spec/quotes.md#quote87)
+### [Quote87](../spec/quotes.md#quote87)
 
 > outdent
 
@@ -16911,7 +16688,7 @@ y
 </td></tr>
 </table>
 
-### [Quote69](../../spec/quotes.md#quote69)
+### [Quote69](../spec/quotes.md#quote69)
 
 > outdent
 
@@ -16942,7 +16719,7 @@ y
 </td></tr>
 </table>
 
-### [Quote70](../../spec/quotes.md#quote70)
+### [Quote70](../spec/quotes.md#quote70)
 
 > outdent
 
@@ -16972,7 +16749,7 @@ y
 </td></tr>
 </table>
 
-### [Scenario3](../../spec/scenarios.md#scenario3)
+### [Scenario3](../spec/scenarios.md#scenario3)
 
 > enter indent deleteContentBackward
 
@@ -17000,7 +16777,7 @@ y
 </td></tr>
 </table>
 
-### [Scenario4](../../spec/scenarios.md#scenario4)
+### [Scenario4](../spec/scenarios.md#scenario4)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -17072,7 +16849,7 @@ b┃
 </td></tr>
 </table>
 
-### [Scenario5](../../spec/scenarios.md#scenario5)
+### [Scenario5](../spec/scenarios.md#scenario5)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -17142,7 +16919,7 @@ b┃
 </td></tr>
 </table>
 
-### [Scenario6](../../spec/scenarios.md#scenario6)
+### [Scenario6](../spec/scenarios.md#scenario6)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -17284,7 +17061,7 @@ Done.┃
 </td></tr>
 </table>
 
-### [Scenario8](../../spec/scenarios.md#scenario8)
+### [Scenario8](../spec/scenarios.md#scenario8)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -17399,7 +17176,7 @@ Done.┃
 </td></tr>
 </table>
 
-### [Scenario9](../../spec/scenarios.md#scenario9)
+### [Scenario9](../spec/scenarios.md#scenario9)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -17475,7 +17252,7 @@ Done.┃
 </td></tr>
 </table>
 
-### [Scenario11](../../spec/scenarios.md#scenario11)
+### [Scenario11](../spec/scenarios.md#scenario11)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -17604,7 +17381,7 @@ more┃
 </td></tr>
 </table>
 
-### [Scenario12](../../spec/scenarios.md#scenario12)
+### [Scenario12](../spec/scenarios.md#scenario12)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -17724,7 +17501,7 @@ more┃
 </td></tr>
 </table>
 
-### [Scenario13](../../spec/scenarios.md#scenario13)
+### [Scenario13](../spec/scenarios.md#scenario13)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -17777,7 +17554,7 @@ more┃
 </td></tr>
 </table>
 
-### [Scenario16](../../spec/scenarios.md#scenario16)
+### [Scenario16](../spec/scenarios.md#scenario16)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -17871,7 +17648,7 @@ more┃
 </td></tr>
 </table>
 
-### [Scenario18](../../spec/scenarios.md#scenario18)
+### [Scenario18](../spec/scenarios.md#scenario18)
 
 > pasteStructured "!"
 
@@ -17917,7 +17694,7 @@ Notes
 </td></tr>
 </table>
 
-### [Scenario19](../../spec/scenarios.md#scenario19)
+### [Scenario19](../spec/scenarios.md#scenario19)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -17992,7 +17769,7 @@ first idea
 </td></tr>
 </table>
 
-### [Scenario20](../../spec/scenarios.md#scenario20)
+### [Scenario20](../spec/scenarios.md#scenario20)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -18107,7 +17884,7 @@ Seat 42.┃
 </td></tr>
 </table>
 
-### [Scenario21](../../spec/scenarios.md#scenario21)
+### [Scenario21](../spec/scenarios.md#scenario21)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -18201,7 +17978,7 @@ one┃two
 </td></tr>
 </table>
 
-### [Scenario22](../../spec/scenarios.md#scenario22)
+### [Scenario22](../spec/scenarios.md#scenario22)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -18270,7 +18047,7 @@ one┃two
 </td></tr>
 </table>
 
-### [Scenario23](../../spec/scenarios.md#scenario23)
+### [Scenario23](../spec/scenarios.md#scenario23)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -18340,7 +18117,7 @@ revise
 </td></tr>
 </table>
 
-### [ShiftEnter5](../../spec/shift-enter.md#shiftenter5)
+### [ShiftEnter5](../spec/shift-enter.md#shiftenter5)
 
 > shiftEnter
 
@@ -18369,7 +18146,7 @@ revise
 </td></tr>
 </table>
 
-### [ShiftEnter6](../../spec/shift-enter.md#shiftenter6)
+### [ShiftEnter6](../spec/shift-enter.md#shiftenter6)
 
 > shiftEnter
 
@@ -18398,7 +18175,7 @@ revise
 </td></tr>
 </table>
 
-### [ShiftEnter7](../../spec/shift-enter.md#shiftenter7)
+### [ShiftEnter7](../spec/shift-enter.md#shiftenter7)
 
 > shiftEnter
 
@@ -18427,7 +18204,7 @@ Title
 </td></tr>
 </table>
 
-### [ShiftEnter8](../../spec/shift-enter.md#shiftenter8)
+### [ShiftEnter8](../spec/shift-enter.md#shiftenter8)
 
 > shiftEnter
 
@@ -18456,7 +18233,7 @@ Title
 </td></tr>
 </table>
 
-### [ShiftEnter9](../../spec/shift-enter.md#shiftenter9)
+### [ShiftEnter9](../spec/shift-enter.md#shiftenter9)
 
 > shiftEnter
 
@@ -18485,7 +18262,7 @@ Title
 </td></tr>
 </table>
 
-### [ShiftEnter13](../../spec/shift-enter.md#shiftenter13)
+### [ShiftEnter13](../spec/shift-enter.md#shiftenter13)
 
 > shiftEnter
 
@@ -18513,7 +18290,7 @@ Title
 </td></tr>
 </table>
 
-### [ShiftEnter14](../../spec/shift-enter.md#shiftenter14)
+### [ShiftEnter14](../spec/shift-enter.md#shiftenter14)
 
 > shiftEnter
 
@@ -18541,7 +18318,7 @@ Title
 </td></tr>
 </table>
 
-### [ShiftEnter17](../../spec/shift-enter.md#shiftenter17)
+### [ShiftEnter17](../spec/shift-enter.md#shiftenter17)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -18588,7 +18365,7 @@ Title
 </td></tr>
 </table>
 
-### [ShiftEnter18](../../spec/shift-enter.md#shiftenter18)
+### [ShiftEnter18](../spec/shift-enter.md#shiftenter18)
 
 > shiftEnter
 
@@ -18617,7 +18394,7 @@ Title
 </td></tr>
 </table>
 
-### [ShiftEnter19](../../spec/shift-enter.md#shiftenter19)
+### [ShiftEnter19](../spec/shift-enter.md#shiftenter19)
 
 > shiftEnter
 
@@ -18646,7 +18423,7 @@ a | b
 </td></tr>
 </table>
 
-### [ShiftEnter20](../../spec/shift-enter.md#shiftenter20)
+### [ShiftEnter20](../spec/shift-enter.md#shiftenter20)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -18700,7 +18477,7 @@ a | b
 </td></tr>
 </table>
 
-### [ShiftEnter21](../../spec/shift-enter.md#shiftenter21)
+### [ShiftEnter21](../spec/shift-enter.md#shiftenter21)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -18754,7 +18531,7 @@ a | b
 </td></tr>
 </table>
 
-### [ShiftEnter23](../../spec/shift-enter.md#shiftenter23)
+### [ShiftEnter23](../spec/shift-enter.md#shiftenter23)
 
 > shiftEnter
 
@@ -18783,7 +18560,7 @@ a | b
 </td></tr>
 </table>
 
-### [ShiftEnter24](../../spec/shift-enter.md#shiftenter24)
+### [ShiftEnter24](../spec/shift-enter.md#shiftenter24)
 
 > shiftEnter
 
@@ -18817,7 +18594,7 @@ a | b
 </td></tr>
 </table>
 
-### [ShiftEnter25](../../spec/shift-enter.md#shiftenter25)
+### [ShiftEnter25](../spec/shift-enter.md#shiftenter25)
 
 > shiftEnter
 
@@ -18849,7 +18626,7 @@ p
 </td></tr>
 </table>
 
-### [TaskEnter1](../../spec/tasks.md#taskenter1)
+### [TaskEnter1](../spec/tasks.md#taskenter1)
 
 > enter
 
@@ -18880,7 +18657,7 @@ p
 </td></tr>
 </table>
 
-### [TaskBackspace1](../../spec/tasks.md#taskbackspace1)
+### [TaskBackspace1](../spec/tasks.md#taskbackspace1)
 
 > deleteContentBackward
 
@@ -18915,7 +18692,7 @@ p
 </td></tr>
 </table>
 
-### [TaskBackspace6](../../spec/tasks.md#taskbackspace6)
+### [TaskBackspace6](../spec/tasks.md#taskbackspace6)
 
 > deleteContentBackward
 
@@ -18944,7 +18721,7 @@ p
 </td></tr>
 </table>
 
-### [TaskDelete1](../../spec/tasks.md#taskdelete1)
+### [TaskDelete1](../spec/tasks.md#taskdelete1)
 
 > deleteContentForward
 
@@ -18972,7 +18749,7 @@ p
 </td></tr>
 </table>
 
-### [TaskDelete2](../../spec/tasks.md#taskdelete2)
+### [TaskDelete2](../spec/tasks.md#taskdelete2)
 
 > deleteContentForward
 
@@ -19000,7 +18777,7 @@ p
 </td></tr>
 </table>
 
-### [TaskDelete3](../../spec/tasks.md#taskdelete3)
+### [TaskDelete3](../spec/tasks.md#taskdelete3)
 
 > deleteContentForward
 
@@ -19028,7 +18805,7 @@ p
 </td></tr>
 </table>
 
-### [Undo3](../../spec/undo.md#undo3)
+### [Undo3](../spec/undo.md#undo3)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -19134,7 +18911,7 @@ p
 </td></tr>
 </table>
 
-### [Undo4](../../spec/undo.md#undo4)
+### [Undo4](../spec/undo.md#undo4)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -19209,7 +18986,7 @@ p
 </td></tr>
 </table>
 
-### [Undo5](../../spec/undo.md#undo5)
+### [Undo5](../spec/undo.md#undo5)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -19286,7 +19063,7 @@ p
 
 ## Whitespace (33)
 
-### [Fence12](../../spec/fences.md#fence12)
+### [Fence12](../spec/fences.md#fence12)
 
 > enter
 
@@ -19324,7 +19101,68 @@ p
 </td></tr>
 </table>
 
-### [Indent10](../../spec/indent.md#indent10)
+### [Gap18](../spec/gaps.md#gap18)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+
+a
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeDown
+
+<table>
+<tr><th>obsidian</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+
+┃
+a
+```
+
+</td><td>
+
+```buffer
+┃
+
+a
+```
+
+</td></tr>
+</table>
+
+> indent
+
+<table>
+<tr><th>obsidian</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+
+  ┃
+a
+```
+
+</td><td>
+
+```buffer
+┃
+
+a
+```
+
+</td></tr>
+</table>
+
+### [Indent10](../spec/indent.md#indent10)
 
 > indent
 
@@ -19354,7 +19192,7 @@ p
 </td></tr>
 </table>
 
-### [Indent11](../../spec/indent.md#indent11)
+### [Indent11](../spec/indent.md#indent11)
 
 > indent
 
@@ -19387,7 +19225,7 @@ Intro
 </td></tr>
 </table>
 
-### [Indent24](../../spec/indent.md#indent24)
+### [Indent24](../spec/indent.md#indent24)
 
 > indent
 
@@ -19417,7 +19255,7 @@ Intro
 </td></tr>
 </table>
 
-### [S4](../../spec/obsidian-true-outliner.md#s4)
+### [S4](../spec/obsidian-true-outliner.md#s4)
 
 > shiftEnter
 
@@ -19446,7 +19284,7 @@ one
 </td></tr>
 </table>
 
-### [S9](../../spec/obsidian-true-outliner.md#s9)
+### [S9](../spec/obsidian-true-outliner.md#s9)
 
 > shiftEnter
 
@@ -19481,7 +19319,7 @@ one
 </td></tr>
 </table>
 
-### [S13](../../spec/obsidian-true-outliner.md#s13)
+### [S13](../spec/obsidian-true-outliner.md#s13)
 
 > shiftEnter
 
@@ -19510,7 +19348,7 @@ one
 </td></tr>
 </table>
 
-### [indent-unit-on-every-line](../../spec/obsidian-true-outliner.md#indent-unit-on-every-line)
+### [indent-unit-on-every-line](../spec/obsidian-true-outliner.md#indent-unit-on-every-line)
 
 > indent
 
@@ -19546,7 +19384,7 @@ one
 </td></tr>
 </table>
 
-### [Outdented item keeps its quote](../../spec/obsidian-true-outliner.md#outdented-item-keeps-its-quote)
+### [Outdented item keeps its quote](../spec/obsidian-true-outliner.md#outdented-item-keeps-its-quote)
 
 > outdent
 
@@ -19579,75 +19417,7 @@ one
 </td></tr>
 </table>
 
-### [Outdented empty ordered item stays](../../spec/obsidian-true-outliner.md#outdented-empty-ordered-item-stays)
-
-> enter outdent cursorDocStart
-
-<table>
-<tr><th>buffer</th><th>obsidian</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-1. p
-   1. a┃
-2. q
-```
-
-</td><td>
-
-```buffer
-┃1. p
-   1. a
- 2. 
-3. q
-```
-
-</td><td>
-
-```buffer
-┃1. p
-   1. a
-2. 
-3. q
-```
-
-</td></tr>
-</table>
-
-### [Outdent9](../../spec/outdent.md#outdent9)
-
-> outdent
-
-<table>
-<tr><th>buffer</th><th>obsidian</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-1. a
-   1. b┃
-2. c
-```
-
-</td><td>
-
-```buffer
-1. a
- 2. b┃
-3. c
-```
-
-</td><td>
-
-```buffer
-1. a
-2. b┃
-3. c
-```
-
-</td></tr>
-</table>
-
-### [DirectOutdent1](../../spec/outdent.md#directoutdent1)
+### [DirectOutdent1](../spec/outdent.md#directoutdent1)
 
 > outdent
 
@@ -19686,7 +19456,7 @@ one
 </td></tr>
 </table>
 
-### [Paste3](../../spec/paste.md#paste3)
+### [Paste3](../spec/paste.md#paste3)
 
 > pastePlain
 
@@ -19724,7 +19494,7 @@ y
 </td></tr>
 </table>
 
-### [Paste5](../../spec/paste.md#paste5)
+### [Paste5](../spec/paste.md#paste5)
 
 > pastePlain
 
@@ -19762,7 +19532,7 @@ y
 </td></tr>
 </table>
 
-### [Paste7](../../spec/paste.md#paste7)
+### [Paste7](../spec/paste.md#paste7)
 
 > pasteStructured
 
@@ -19800,7 +19570,7 @@ y
 </td></tr>
 </table>
 
-### [Paste10](../../spec/paste.md#paste10)
+### [Paste10](../spec/paste.md#paste10)
 
 > pasteStructured
 
@@ -19841,7 +19611,7 @@ y
 </td></tr>
 </table>
 
-### [Paste48](../../spec/paste.md#paste48)
+### [Paste48](../spec/paste.md#paste48)
 
 > pasteStructured
 
@@ -19877,7 +19647,7 @@ better┃ plan
 </td></tr>
 </table>
 
-### [Paste75](../../spec/paste.md#paste75)
+### [Paste75](../spec/paste.md#paste75)
 
 > pasteStructured
 
@@ -19918,7 +19688,56 @@ y
 </td></tr>
 </table>
 
-### [Quote1](../../spec/quotes.md#quote1)
+### [Placeholder9](../spec/placeholders.md#placeholder9)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃ b
+  - c
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃ b
+  - c
+```
+
+</td></tr>
+</table>
+
+> cursorDocEnd cursorCharLeft
+
+<table>
+<tr><th>obsidian</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  b
+   - c┃
+```
+
+</td><td>
+
+```buffer
+- b
+  - c┃
+```
+
+</td></tr>
+</table>
+
+### [Quote1](../spec/quotes.md#quote1)
 
 > indent
 
@@ -19948,7 +19767,7 @@ y
 </td></tr>
 </table>
 
-### [Quote2](../../spec/quotes.md#quote2)
+### [Quote2](../spec/quotes.md#quote2)
 
 > indent
 
@@ -19978,7 +19797,7 @@ y
 </td></tr>
 </table>
 
-### [Quote3](../../spec/quotes.md#quote3)
+### [Quote3](../spec/quotes.md#quote3)
 
 > indent
 
@@ -20008,7 +19827,7 @@ y
 </td></tr>
 </table>
 
-### [Quote5](../../spec/quotes.md#quote5)
+### [Quote5](../spec/quotes.md#quote5)
 
 > indent
 
@@ -20041,7 +19860,7 @@ y
 </td></tr>
 </table>
 
-### [Quote6](../../spec/quotes.md#quote6)
+### [Quote6](../spec/quotes.md#quote6)
 
 > indent
 
@@ -20071,7 +19890,7 @@ y
 </td></tr>
 </table>
 
-### [Quote7](../../spec/quotes.md#quote7)
+### [Quote7](../spec/quotes.md#quote7)
 
 > indent
 
@@ -20104,7 +19923,7 @@ y
 </td></tr>
 </table>
 
-### [Quote8](../../spec/quotes.md#quote8)
+### [Quote8](../spec/quotes.md#quote8)
 
 > indent
 
@@ -20137,7 +19956,7 @@ c
 </td></tr>
 </table>
 
-### [Quote64](../../spec/quotes.md#quote64)
+### [Quote64](../spec/quotes.md#quote64)
 
 > indent
 
@@ -20170,7 +19989,7 @@ c
 </td></tr>
 </table>
 
-### [ShiftEnter1](../../spec/shift-enter.md#shiftenter1)
+### [ShiftEnter1](../spec/shift-enter.md#shiftenter1)
 
 > shiftEnter
 
@@ -20199,7 +20018,7 @@ c
 </td></tr>
 </table>
 
-### [ShiftEnter2](../../spec/shift-enter.md#shiftenter2)
+### [ShiftEnter2](../spec/shift-enter.md#shiftenter2)
 
 > shiftEnter
 
@@ -20231,7 +20050,7 @@ c
 </td></tr>
 </table>
 
-### [ShiftEnter3](../../spec/shift-enter.md#shiftenter3)
+### [ShiftEnter3](../spec/shift-enter.md#shiftenter3)
 
 > shiftEnter
 
@@ -20263,7 +20082,7 @@ c
 </td></tr>
 </table>
 
-### [ShiftEnter10](../../spec/shift-enter.md#shiftenter10)
+### [ShiftEnter10](../spec/shift-enter.md#shiftenter10)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -20323,7 +20142,7 @@ c
 </td></tr>
 </table>
 
-### [ShiftEnter11](../../spec/shift-enter.md#shiftenter11)
+### [ShiftEnter11](../spec/shift-enter.md#shiftenter11)
 
 > shiftEnter
 
@@ -20358,7 +20177,7 @@ c
 </td></tr>
 </table>
 
-### [ShiftEnter15](../../spec/shift-enter.md#shiftenter15)
+### [ShiftEnter15](../spec/shift-enter.md#shiftenter15)
 
 > shiftEnter shiftEnter "p"
 
@@ -20389,7 +20208,7 @@ c
 </td></tr>
 </table>
 
-### [TaskEnter3](../../spec/tasks.md#taskenter3)
+### [TaskEnter3](../spec/tasks.md#taskenter3)
 
 > enter
 
@@ -20420,7 +20239,7 @@ c
 
 ## Caret (18)
 
-### [CursorUp1](../../spec/cursor.md#cursorup1)
+### [CursorUp1](../spec/cursor.md#cursorup1)
 
 > cursorLineUp
 
@@ -20447,7 +20266,7 @@ ab
 </td></tr>
 </table>
 
-### [CursorUp2](../../spec/cursor.md#cursorup2)
+### [CursorUp2](../spec/cursor.md#cursorup2)
 
 > cursorLineUp
 
@@ -20477,7 +20296,7 @@ ab
 </td></tr>
 </table>
 
-### [CursorUp3](../../spec/cursor.md#cursorup3)
+### [CursorUp3](../spec/cursor.md#cursorup3)
 
 > cursorLineUp
 
@@ -20510,7 +20329,7 @@ ab
 </td></tr>
 </table>
 
-### [CursorDown3](../../spec/cursor.md#cursordown3)
+### [CursorDown3](../spec/cursor.md#cursordown3)
 
 > cursorLineDown
 
@@ -20540,7 +20359,7 @@ ab
 </td></tr>
 </table>
 
-### [CursorDown5](../../spec/cursor.md#cursordown5)
+### [CursorDown5](../spec/cursor.md#cursordown5)
 
 > cursorLineDown
 
@@ -20570,7 +20389,7 @@ ab
 </td></tr>
 </table>
 
-### [CursorHome3](../../spec/cursor.md#cursorhome3)
+### [CursorHome3](../spec/cursor.md#cursorhome3)
 
 > cursorLineBoundaryBackward
 
@@ -20597,7 +20416,7 @@ ab
 </td></tr>
 </table>
 
-### [CursorHome4](../../spec/cursor.md#cursorhome4)
+### [CursorHome4](../spec/cursor.md#cursorhome4)
 
 > cursorLineBoundaryBackward
 
@@ -20624,7 +20443,7 @@ ab
 </td></tr>
 </table>
 
-### [CursorHome10](../../spec/cursor.md#cursorhome10)
+### [CursorHome10](../spec/cursor.md#cursorhome10)
 
 > cursorLineBoundaryBackward
 
@@ -20651,7 +20470,7 @@ ab
 </td></tr>
 </table>
 
-### [CursorHome15](../../spec/cursor.md#cursorhome15)
+### [CursorHome15](../spec/cursor.md#cursorhome15)
 
 > cursorLineBoundaryBackward
 
@@ -20678,7 +20497,7 @@ ab
 </td></tr>
 </table>
 
-### [CursorHome17](../../spec/cursor.md#cursorhome17)
+### [CursorHome17](../spec/cursor.md#cursorhome17)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -20723,7 +20542,7 @@ ab
 </td></tr>
 </table>
 
-### [Delete16g](../../spec/del.md#delete16g)
+### [Delete16g](../spec/del.md#delete16g)
 
 > deleteContentForward
 
@@ -20750,7 +20569,7 @@ ab
 </td></tr>
 </table>
 
-### [Fence13](../../spec/fences.md#fence13)
+### [Fence13](../spec/fences.md#fence13)
 
 > enter
 
@@ -20788,7 +20607,7 @@ ab
 </td></tr>
 </table>
 
-### [Fence41](../../spec/fences.md#fence41)
+### [Fence41](../spec/fences.md#fence41)
 
 > shiftEnter
 
@@ -20826,7 +20645,7 @@ ab
 </td></tr>
 </table>
 
-### [Indent28](../../spec/indent.md#indent28)
+### [Indent28](../spec/indent.md#indent28)
 
 > indent
 
@@ -20856,7 +20675,7 @@ ab
 </td></tr>
 </table>
 
-### [MoveDown32](../../spec/move-subtree-down.md#movedown32)
+### [MoveDown32](../spec/move-subtree-down.md#movedown32)
 
 > moveSubtreeDown
 
@@ -20886,7 +20705,7 @@ ab
 </td></tr>
 </table>
 
-### [MoveUp34](../../spec/move-subtree-up.md#moveup34)
+### [MoveUp34](../spec/move-subtree-up.md#moveup34)
 
 > moveSubtreeUp
 
@@ -20916,7 +20735,7 @@ ab
 </td></tr>
 </table>
 
-### [MoveUp37](../../spec/move-subtree-up.md#moveup37)
+### [MoveUp37](../spec/move-subtree-up.md#moveup37)
 
 > moveSubtreeUp
 
@@ -20946,7 +20765,7 @@ ab
 </td></tr>
 </table>
 
-### [Outdent14](../../spec/outdent.md#outdent14)
+### [Outdent14](../spec/outdent.md#outdent14)
 
 > outdent
 
@@ -20976,162 +20795,160 @@ ab
 </td></tr>
 </table>
 
-## Skipped (136)
+## Skipped (135)
 
 | example | why |
 | --- | --- |
 | **backspace.md** | |
-| [Backspace15](../../spec/backspace.md#backspace15) | option deleteAtGap: the app's gap |
-| [Backspace17f](../../spec/backspace.md#backspace17f) | option emptyItemWithChildren: refuse |
-| [Backspace17g](../../spec/backspace.md#backspace17g) | option emptyItemWithChildren: refuse |
-| [Backspace17h](../../spec/backspace.md#backspace17h) | option emptyItemWithChildren: refuse |
-| [Backspace18b](../../spec/backspace.md#backspace18b) | option headingEditing: block |
-| [Backspace18f](../../spec/backspace.md#backspace18f) | option headingEditing: block |
-| [Backspace21](../../spec/backspace.md#backspace21) | option deleteAtGap: the app's gap |
-| [Backspace22](../../spec/backspace.md#backspace22) | option deleteAtGap: the app's gap |
-| [Backspace23](../../spec/backspace.md#backspace23) | option deleteAtGap: the app's gap |
-| [Backspace24](../../spec/backspace.md#backspace24) | option deleteAtGap: the app's gap |
-| [Backspace25](../../spec/backspace.md#backspace25) | option deleteAtGap: the app's gap |
-| [Backspace34](../../spec/backspace.md#backspace34) | option backspaceAtTopItem: refuse |
-| [Backspace40](../../spec/backspace.md#backspace40) | option deleteAtGap: the app's gap |
-| [SoftBackspace1](../../spec/backspace.md#softbackspace1) | option taskEditing: the app's text |
+| [Backspace15](../spec/backspace.md#backspace15) | option deleteAtGap: the app's gap |
+| [Backspace17f](../spec/backspace.md#backspace17f) | option emptyItemWithChildren: refuse |
+| [Backspace17g](../spec/backspace.md#backspace17g) | option emptyItemWithChildren: refuse |
+| [Backspace17h](../spec/backspace.md#backspace17h) | option emptyItemWithChildren: refuse |
+| [Backspace18b](../spec/backspace.md#backspace18b) | option headingEditing: block |
+| [Backspace18f](../spec/backspace.md#backspace18f) | option headingEditing: block |
+| [Backspace21](../spec/backspace.md#backspace21) | option deleteAtGap: the app's gap |
+| [Backspace22](../spec/backspace.md#backspace22) | option deleteAtGap: the app's gap |
+| [Backspace23](../spec/backspace.md#backspace23) | option deleteAtGap: the app's gap |
+| [Backspace24](../spec/backspace.md#backspace24) | option deleteAtGap: the app's gap |
+| [Backspace25](../spec/backspace.md#backspace25) | option deleteAtGap: the app's gap |
+| [Backspace34](../spec/backspace.md#backspace34) | option backspaceAtTopItem: refuse |
+| [Backspace40](../spec/backspace.md#backspace40) | option deleteAtGap: the app's gap |
+| [SoftBackspace1](../spec/backspace.md#softbackspace1) | option taskEditing: the app's text |
 | **cursor.md** | |
-| [CursorLeft2](../../spec/cursor.md#cursorleft2) | CR line endings |
+| [CursorLeft2](../spec/cursor.md#cursorleft2) | CR line endings |
 | **del.md** | |
-| [Delete5e](../../spec/del.md#delete5e) | option emptyItemWithChildren: refuse |
-| [Delete13](../../spec/del.md#delete13) | option deleteAtGap: the app's gap |
-| [Delete13b](../../spec/del.md#delete13b) | option headingEditing: block |
-| [Delete13c](../../spec/del.md#delete13c) | option deleteAtGap: the app's gap |
-| [Delete13d](../../spec/del.md#delete13d) | option headingEditing: block |
-| [Delete13f](../../spec/del.md#delete13f) | option headingEditing: block |
-| [Delete14](../../spec/del.md#delete14) | option deleteAtGap: the app's gap |
-| [Delete16b](../../spec/del.md#delete16b) | option editInMarkup: refuse |
-| [Delete16c](../../spec/del.md#delete16c) | option editInMarkup: refuse |
-| [Delete17](../../spec/del.md#delete17) | option deleteAtGap: the app's gap |
-| [Delete18c](../../spec/del.md#delete18c) | option deleteAtGap: the app's gap |
-| [Delete19](../../spec/del.md#delete19) | option taskEditing: the app's text |
+| [Delete5e](../spec/del.md#delete5e) | option emptyItemWithChildren: refuse |
+| [Delete13](../spec/del.md#delete13) | option deleteAtGap: the app's gap |
+| [Delete13b](../spec/del.md#delete13b) | option headingEditing: block |
+| [Delete13c](../spec/del.md#delete13c) | option deleteAtGap: the app's gap |
+| [Delete13d](../spec/del.md#delete13d) | option headingEditing: block |
+| [Delete13f](../spec/del.md#delete13f) | option headingEditing: block |
+| [Delete14](../spec/del.md#delete14) | option deleteAtGap: the app's gap |
+| [Delete16b](../spec/del.md#delete16b) | option editInMarkup: refuse |
+| [Delete16c](../spec/del.md#delete16c) | option editInMarkup: refuse |
+| [Delete17](../spec/del.md#delete17) | option deleteAtGap: the app's gap |
+| [Delete18c](../spec/del.md#delete18c) | option deleteAtGap: the app's gap |
+| [Delete19](../spec/del.md#delete19) | option taskEditing: the app's text |
 | **delete-subtree.md** | |
-| [DeleteSubtree1](../../spec/delete-subtree.md#deletesubtree1) | action deleteSubtree |
-| [DeleteSubtree2](../../spec/delete-subtree.md#deletesubtree2) | action deleteSubtree |
-| [DeleteSubtree3](../../spec/delete-subtree.md#deletesubtree3) | action deleteSubtree |
-| [DeleteSubtree4](../../spec/delete-subtree.md#deletesubtree4) | action deleteSubtree |
-| [DeleteSubtree5](../../spec/delete-subtree.md#deletesubtree5) | action deleteSubtree |
-| [DeleteSubtree6](../../spec/delete-subtree.md#deletesubtree6) | action deleteSubtree |
-| [DeleteSubtree7](../../spec/delete-subtree.md#deletesubtree7) | action deleteSubtree |
-| [DeleteSubtree8](../../spec/delete-subtree.md#deletesubtree8) | action deleteSubtree |
-| [DeleteSubtree9](../../spec/delete-subtree.md#deletesubtree9) | action deleteSubtree |
-| [DeleteSubtree10](../../spec/delete-subtree.md#deletesubtree10) | action deleteSubtree |
+| [DeleteSubtree1](../spec/delete-subtree.md#deletesubtree1) | action deleteSubtree |
+| [DeleteSubtree2](../spec/delete-subtree.md#deletesubtree2) | action deleteSubtree |
+| [DeleteSubtree3](../spec/delete-subtree.md#deletesubtree3) | action deleteSubtree |
+| [DeleteSubtree4](../spec/delete-subtree.md#deletesubtree4) | action deleteSubtree |
+| [DeleteSubtree5](../spec/delete-subtree.md#deletesubtree5) | action deleteSubtree |
+| [DeleteSubtree6](../spec/delete-subtree.md#deletesubtree6) | action deleteSubtree |
+| [DeleteSubtree7](../spec/delete-subtree.md#deletesubtree7) | action deleteSubtree |
+| [DeleteSubtree8](../spec/delete-subtree.md#deletesubtree8) | action deleteSubtree |
+| [DeleteSubtree9](../spec/delete-subtree.md#deletesubtree9) | action deleteSubtree |
+| [DeleteSubtree10](../spec/delete-subtree.md#deletesubtree10) | action deleteSubtree |
 | **duplicate-subtree.md** | |
-| [DuplicateSubtree1](../../spec/duplicate-subtree.md#duplicatesubtree1) | action duplicateSubtree |
-| [DuplicateSubtree2](../../spec/duplicate-subtree.md#duplicatesubtree2) | action duplicateSubtree |
-| [DuplicateSubtree3](../../spec/duplicate-subtree.md#duplicatesubtree3) | action duplicateSubtree |
-| [DuplicateSubtree4](../../spec/duplicate-subtree.md#duplicatesubtree4) | action duplicateSubtree |
-| [DuplicateSubtree5](../../spec/duplicate-subtree.md#duplicatesubtree5) | action duplicateSubtree |
-| [DuplicateSubtree6](../../spec/duplicate-subtree.md#duplicatesubtree6) | action duplicateSubtree |
-| [DuplicateSubtree7](../../spec/duplicate-subtree.md#duplicatesubtree7) | action duplicateSubtree |
-| [DuplicateSubtree8](../../spec/duplicate-subtree.md#duplicatesubtree8) | action duplicateSubtree |
+| [DuplicateSubtree1](../spec/duplicate-subtree.md#duplicatesubtree1) | action duplicateSubtree |
+| [DuplicateSubtree2](../spec/duplicate-subtree.md#duplicatesubtree2) | action duplicateSubtree |
+| [DuplicateSubtree3](../spec/duplicate-subtree.md#duplicatesubtree3) | action duplicateSubtree |
+| [DuplicateSubtree4](../spec/duplicate-subtree.md#duplicatesubtree4) | action duplicateSubtree |
+| [DuplicateSubtree5](../spec/duplicate-subtree.md#duplicatesubtree5) | action duplicateSubtree |
+| [DuplicateSubtree6](../spec/duplicate-subtree.md#duplicatesubtree6) | action duplicateSubtree |
+| [DuplicateSubtree7](../spec/duplicate-subtree.md#duplicatesubtree7) | action duplicateSubtree |
+| [DuplicateSubtree8](../spec/duplicate-subtree.md#duplicatesubtree8) | action duplicateSubtree |
 | **enter.md** | |
-| [Enter3b](../../spec/enter.md#enter3b) | option enterMidItem: child |
-| [Enter7](../../spec/enter.md#enter7) | option enterOnEmptyItem: the app's outdent |
-| [Enter15](../../spec/enter.md#enter15) | option enterOnEmptyItem: the app's outdent |
-| [Enter17](../../spec/enter.md#enter17) | CR line endings |
-| [Enter18](../../spec/enter.md#enter18) | CR line endings |
-| [Enter26](../../spec/enter.md#enter26) | option enterAtTextStart: the app's stay |
-| [Enter27](../../spec/enter.md#enter27) | option enterOnEmptyItem: the app's outdent |
-| [Enter28](../../spec/enter.md#enter28) | option enterOnEmptyItem: the app's outdent |
-| [Enter29](../../spec/enter.md#enter29) | option enterAtTextStart: the app's stay |
-| [Enter30](../../spec/enter.md#enter30) | option outdent: logical |
-| [Enter31](../../spec/enter.md#enter31) | option enterAtTextStart: the app's stay |
-| [Enter32](../../spec/enter.md#enter32) | option enterAtTextStart: the app's stay |
-| [Enter33](../../spec/enter.md#enter33) | option enterAtTextStart: the app's stay |
-| [Enter34](../../spec/enter.md#enter34) | option enterAtTextStart: the app's stay |
-| [Enter45](../../spec/enter.md#enter45) | option enterAtTextStart: the app's stay |
-| [Enter46](../../spec/enter.md#enter46) | option enterAtTextStart: the app's stay |
+| [Enter3b](../spec/enter.md#enter3b) | option enterMidItem: child |
+| [Enter7](../spec/enter.md#enter7) | option enterOnEmptyItem: the app's outdent |
+| [Enter15](../spec/enter.md#enter15) | option enterOnEmptyItem: the app's outdent |
+| [Enter17](../spec/enter.md#enter17) | CR line endings |
+| [Enter18](../spec/enter.md#enter18) | CR line endings |
+| [Enter26](../spec/enter.md#enter26) | option enterAtTextStart: the app's stay |
+| [Enter27](../spec/enter.md#enter27) | option enterOnEmptyItem: the app's outdent |
+| [Enter28](../spec/enter.md#enter28) | option enterOnEmptyItem: the app's outdent |
+| [Enter29](../spec/enter.md#enter29) | option enterAtTextStart: the app's stay |
+| [Enter30](../spec/enter.md#enter30) | option outdent: logical |
+| [Enter31](../spec/enter.md#enter31) | option enterAtTextStart: the app's stay |
+| [Enter32](../spec/enter.md#enter32) | option enterAtTextStart: the app's stay |
+| [Enter33](../spec/enter.md#enter33) | option enterAtTextStart: the app's stay |
+| [Enter34](../spec/enter.md#enter34) | option enterAtTextStart: the app's stay |
+| [Enter45](../spec/enter.md#enter45) | option enterAtTextStart: the app's stay |
+| [Enter46](../spec/enter.md#enter46) | option enterAtTextStart: the app's stay |
 | **fences.md** | |
-| [Fence10](../../spec/fences.md#fence10) | option handleFenceContents: false |
-| [Fence11](../../spec/fences.md#fence11) | option handleFenceContents: false |
-| [Fence21](../../spec/fences.md#fence21) | nothing to compare |
-| **gaps.md** | |
-| [Gap18](../../spec/gaps.md#gap18) | a caret inside two spaces of indentation |
+| [Fence10](../spec/fences.md#fence10) | option handleFenceContents: false |
+| [Fence11](../spec/fences.md#fence11) | option handleFenceContents: false |
+| [Fence21](../spec/fences.md#fence21) | nothing to compare |
 | **indent.md** | |
-| [Indent17](../../spec/indent.md#indent17) | CR line endings |
-| [Indent18](../../spec/indent.md#indent18) | option bullet: + |
+| [Indent17](../spec/indent.md#indent17) | CR line endings |
+| [Indent18](../spec/indent.md#indent18) | option bullet: + |
 | **obsidian-true-outliner.md** | |
-| [Split item becomes first tab-indented child](../../spec/obsidian-true-outliner.md#split-item-becomes-first-tab-indented-child) | option enterMidItem: child |
-| [E11](../../spec/obsidian-true-outliner.md#e11) | option enterMidItem: child |
-| [Outdenting the head of a nested list](../../spec/obsidian-true-outliner.md#outdenting-the-head-of-a-nested-list) | option outdent: logical |
+| [Split item becomes first tab-indented child](../spec/obsidian-true-outliner.md#split-item-becomes-first-tab-indented-child) | option enterMidItem: child |
+| [E11](../spec/obsidian-true-outliner.md#e11) | option enterMidItem: child |
+| [Outdenting the head of a nested list](../spec/obsidian-true-outliner.md#outdenting-the-head-of-a-nested-list) | option outdent: logical |
 | **outdent.md** | |
-| [LogicalOutdent1](../../spec/outdent.md#logicaloutdent1) | option outdent: logical |
-| [LogicalOutdent2](../../spec/outdent.md#logicaloutdent2) | option outdent: logical |
-| [LogicalOutdent3](../../spec/outdent.md#logicaloutdent3) | option outdent: logical |
-| [LogicalOutdent4](../../spec/outdent.md#logicaloutdent4) | option outdent: logical |
-| [LogicalOutdent5](../../spec/outdent.md#logicaloutdent5) | option outdent: logical |
-| [Outdent17b](../../spec/outdent.md#outdent17b) | option outdent: logical |
+| [LogicalOutdent1](../spec/outdent.md#logicaloutdent1) | option outdent: logical |
+| [LogicalOutdent2](../spec/outdent.md#logicaloutdent2) | option outdent: logical |
+| [LogicalOutdent3](../spec/outdent.md#logicaloutdent3) | option outdent: logical |
+| [LogicalOutdent4](../spec/outdent.md#logicaloutdent4) | option outdent: logical |
+| [LogicalOutdent5](../spec/outdent.md#logicaloutdent5) | option outdent: logical |
+| [Outdent17b](../spec/outdent.md#outdent17b) | option outdent: logical |
 | **paste.md** | |
-| [Paste2b](../../spec/paste.md#paste2b) | option pasteStructuredListForm: own |
-| [Paste8](../../spec/paste.md#paste8) | option pasteStructuredLines: items |
-| [Paste8b](../../spec/paste.md#paste8b) | option pasteStructuredLines: items |
-| [Paste8c](../../spec/paste.md#paste8c) | option pasteStructuredLines: items |
-| [Paste13b](../../spec/paste.md#paste13b) | option pasteStructuredListForm: drop |
-| [Paste13c](../../spec/paste.md#paste13c) | option pasteStructuredListForm: own |
-| [Paste13d](../../spec/paste.md#paste13d) | option pasteStructuredAtEnd: join |
-| [Paste13e](../../spec/paste.md#paste13e) | option pasteStructuredAtEnd: join |
-| [Paste14b](../../spec/paste.md#paste14b) | option pasteStructuredOnParent: after |
-| [Paste15b](../../spec/paste.md#paste15b) | option pasteStructuredListForm: literal |
-| [Paste15c](../../spec/paste.md#paste15c) | option pasteStructuredListForm: drop |
-| [Paste15d](../../spec/paste.md#paste15d) | option pasteStructuredListForm: own |
-| [Paste16b](../../spec/paste.md#paste16b) | option pasteStructuredListForm: own |
-| [Paste17b](../../spec/paste.md#paste17b) | option pasteStructuredListForm: literal |
-| [Paste17c](../../spec/paste.md#paste17c) | option pasteStructuredListForm: drop |
-| [Paste17d](../../spec/paste.md#paste17d) | option pasteStructuredAtEnd: join |
-| [Paste18b](../../spec/paste.md#paste18b) | option pasteStructuredListForm: literal |
-| [Paste19b](../../spec/paste.md#paste19b) | option pasteStructuredAtEnd: join |
-| [Paste20b](../../spec/paste.md#paste20b) | option pasteStructuredAtEnd: join |
-| [Paste26b](../../spec/paste.md#paste26b) | option pasteStructuredAtEnd: join |
-| [Paste27b](../../spec/paste.md#paste27b) | option pasteStructuredAtEnd: join |
-| [Paste27c](../../spec/paste.md#paste27c) | option pasteStructuredAtEnd: join |
-| [Paste27d](../../spec/paste.md#paste27d) | option pasteStructuredOnParent: after |
-| [Paste36b](../../spec/paste.md#paste36b) | option pasteStructuredParagraphList: children |
-| [Paste38](../../spec/paste.md#paste38) | option pasteStructuredMidText: after |
-| [Paste38b](../../spec/paste.md#paste38b) | option pasteStructuredMidText: after |
-| [Paste39](../../spec/paste.md#paste39) | option pasteStructuredLines: items |
-| [Paste42b](../../spec/paste.md#paste42b) | option pasteStructuredOnParent: after |
-| [Paste43](../../spec/paste.md#paste43) | option enterMidItem: child |
-| [Paste59b](../../spec/paste.md#paste59b) | option pasteStructuredOnParent: after |
+| [Paste2b](../spec/paste.md#paste2b) | option pasteStructuredListForm: own |
+| [Paste8](../spec/paste.md#paste8) | option pasteStructuredLines: items |
+| [Paste8b](../spec/paste.md#paste8b) | option pasteStructuredLines: items |
+| [Paste8c](../spec/paste.md#paste8c) | option pasteStructuredLines: items |
+| [Paste13b](../spec/paste.md#paste13b) | option pasteStructuredListForm: drop |
+| [Paste13c](../spec/paste.md#paste13c) | option pasteStructuredListForm: own |
+| [Paste13d](../spec/paste.md#paste13d) | option pasteStructuredAtEnd: join |
+| [Paste13e](../spec/paste.md#paste13e) | option pasteStructuredAtEnd: join |
+| [Paste14b](../spec/paste.md#paste14b) | option pasteStructuredOnParent: after |
+| [Paste15b](../spec/paste.md#paste15b) | option pasteStructuredListForm: literal |
+| [Paste15c](../spec/paste.md#paste15c) | option pasteStructuredListForm: drop |
+| [Paste15d](../spec/paste.md#paste15d) | option pasteStructuredListForm: own |
+| [Paste16b](../spec/paste.md#paste16b) | option pasteStructuredListForm: own |
+| [Paste17b](../spec/paste.md#paste17b) | option pasteStructuredListForm: literal |
+| [Paste17c](../spec/paste.md#paste17c) | option pasteStructuredListForm: drop |
+| [Paste17d](../spec/paste.md#paste17d) | option pasteStructuredAtEnd: join |
+| [Paste18b](../spec/paste.md#paste18b) | option pasteStructuredListForm: literal |
+| [Paste19b](../spec/paste.md#paste19b) | option pasteStructuredAtEnd: join |
+| [Paste20b](../spec/paste.md#paste20b) | option pasteStructuredAtEnd: join |
+| [Paste26b](../spec/paste.md#paste26b) | option pasteStructuredAtEnd: join |
+| [Paste27b](../spec/paste.md#paste27b) | option pasteStructuredAtEnd: join |
+| [Paste27c](../spec/paste.md#paste27c) | option pasteStructuredAtEnd: join |
+| [Paste27d](../spec/paste.md#paste27d) | option pasteStructuredOnParent: after |
+| [Paste36b](../spec/paste.md#paste36b) | option pasteStructuredParagraphList: children |
+| [Paste38](../spec/paste.md#paste38) | option pasteStructuredMidText: after |
+| [Paste38b](../spec/paste.md#paste38b) | option pasteStructuredMidText: after |
+| [Paste39](../spec/paste.md#paste39) | option pasteStructuredLines: items |
+| [Paste42b](../spec/paste.md#paste42b) | option pasteStructuredOnParent: after |
+| [Paste43](../spec/paste.md#paste43) | option enterMidItem: child |
+| [Paste59b](../spec/paste.md#paste59b) | option pasteStructuredOnParent: after |
 | **placeholders.md** | |
-| [Placeholder13](../../spec/placeholders.md#placeholder13) | option deleteAtGap: the app's gap |
-| [Placeholder15](../../spec/placeholders.md#placeholder15) | option enterAtTextStart: the app's stay |
+| [Placeholder13](../spec/placeholders.md#placeholder13) | option deleteAtGap: the app's gap |
+| [Placeholder15](../spec/placeholders.md#placeholder15) | option enterAtTextStart: the app's stay |
 | **quotes.md** | |
-| [Quote12b](../../spec/quotes.md#quote12b) | option outdent: logical |
-| [Quote20](../../spec/quotes.md#quote20) | option outdent: logical |
-| [Quote37](../../spec/quotes.md#quote37) | option enterAtTextStart: the app's stay |
-| [Quote43b](../../spec/quotes.md#quote43b) | option editInMarkup: refuse |
-| [Quote53](../../spec/quotes.md#quote53) | option deleteAtGap: the app's gap |
-| [Quote55](../../spec/quotes.md#quote55) | option backspaceAtTopItem: refuse |
-| [Quote56](../../spec/quotes.md#quote56) | option deleteAtGap: the app's gap |
-| [Quote57](../../spec/quotes.md#quote57) | option deleteAtGap: the app's gap |
-| [Quote58](../../spec/quotes.md#quote58) | option flavor: the app's obsidian |
-| [Quote80](../../spec/quotes.md#quote80) | option enterAtTextStart: the app's stay |
-| [Quote82](../../spec/quotes.md#quote82) | action deleteSubtree |
-| [Quote84](../../spec/quotes.md#quote84) | option flavor: the app's obsidian |
-| [Quote86](../../spec/quotes.md#quote86) | action duplicateSubtree |
+| [Quote12b](../spec/quotes.md#quote12b) | option outdent: logical |
+| [Quote20](../spec/quotes.md#quote20) | option outdent: logical |
+| [Quote37](../spec/quotes.md#quote37) | option enterAtTextStart: the app's stay |
+| [Quote43b](../spec/quotes.md#quote43b) | option editInMarkup: refuse |
+| [Quote53](../spec/quotes.md#quote53) | option deleteAtGap: the app's gap |
+| [Quote55](../spec/quotes.md#quote55) | option backspaceAtTopItem: refuse |
+| [Quote56](../spec/quotes.md#quote56) | option deleteAtGap: the app's gap |
+| [Quote57](../spec/quotes.md#quote57) | option deleteAtGap: the app's gap |
+| [Quote58](../spec/quotes.md#quote58) | option flavor: the app's obsidian |
+| [Quote80](../spec/quotes.md#quote80) | option enterAtTextStart: the app's stay |
+| [Quote82](../spec/quotes.md#quote82) | action deleteSubtree |
+| [Quote84](../spec/quotes.md#quote84) | option flavor: the app's obsidian |
+| [Quote86](../spec/quotes.md#quote86) | action duplicateSubtree |
 | **scenarios.md** | |
-| [Scenario7](../../spec/scenarios.md#scenario7) | option enterAtTextStart: the app's stay |
-| [Scenario10](../../spec/scenarios.md#scenario10) | action deleteSubtree |
-| [Scenario15](../../spec/scenarios.md#scenario15) | option taskEditing: the app's text |
-| [Scenario17](../../spec/scenarios.md#scenario17) | option pasteStructuredLines: items |
+| [Scenario7](../spec/scenarios.md#scenario7) | option enterAtTextStart: the app's stay |
+| [Scenario10](../spec/scenarios.md#scenario10) | action deleteSubtree |
+| [Scenario15](../spec/scenarios.md#scenario15) | option taskEditing: the app's text |
+| [Scenario17](../spec/scenarios.md#scenario17) | option pasteStructuredLines: items |
 | **shift-enter.md** | |
-| [ShiftEnter16](../../spec/shift-enter.md#shiftenter16) | CR line endings |
-| [ShiftEnter22b](../../spec/shift-enter.md#shiftenter22b) | option editInMarkup: refuse |
+| [ShiftEnter16](../spec/shift-enter.md#shiftenter16) | CR line endings |
+| [ShiftEnter22b](../spec/shift-enter.md#shiftenter22b) | option editInMarkup: refuse |
 | **tasks.md** | |
-| [TaskEnter4](../../spec/tasks.md#taskenter4) | option enterAtTextStart: the app's stay |
-| [TaskEnter5](../../spec/tasks.md#taskenter5) | option enterOnEmptyItem: the app's outdent |
-| [TaskEnter6](../../spec/tasks.md#taskenter6) | option enterOnEmptyItem: the app's outdent |
-| [TaskBackspace2](../../spec/tasks.md#taskbackspace2) | option taskEditing: the app's text |
-| [TaskBackspace3](../../spec/tasks.md#taskbackspace3) | option taskEditing: the app's text |
-| [TaskBackspace4](../../spec/tasks.md#taskbackspace4) | option taskEditing: block |
-| [TaskBackspace7](../../spec/tasks.md#taskbackspace7) | option taskEditing: block |
+| [TaskEnter4](../spec/tasks.md#taskenter4) | option enterAtTextStart: the app's stay |
+| [TaskEnter5](../spec/tasks.md#taskenter5) | option enterOnEmptyItem: the app's outdent |
+| [TaskEnter6](../spec/tasks.md#taskenter6) | option enterOnEmptyItem: the app's outdent |
+| [TaskBackspace2](../spec/tasks.md#taskbackspace2) | option taskEditing: the app's text |
+| [TaskBackspace3](../spec/tasks.md#taskbackspace3) | option taskEditing: the app's text |
+| [TaskBackspace4](../spec/tasks.md#taskbackspace4) | option taskEditing: block |
+| [TaskBackspace7](../spec/tasks.md#taskbackspace7) | option taskEditing: block |
 | **typing.md** | |
-| [Typing4](../../spec/typing.md#typing4) | option editInMarkup: refuse |
+| [Typing4](../spec/typing.md#typing4) | option editInMarkup: refuse |
 | **z-open.md** | |
-| [Open2](../../spec/z-open.md#open2) | action deleteSubtree |
+| [Open2](../spec/z-open.md#open2) | action deleteSubtree |

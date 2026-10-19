@@ -56,6 +56,7 @@ let emacs: Emacs;
 export const driver: Driver = {
   name: 'emacs-markdown',
   title: 'Emacs with markdown-mode',
+  id: 'EM',
   url: 'emacs -Q -nw, on a terminal',
   model: 'text',
   // Backspace right after a checkbox deletes a character (`taskEditing: text`)

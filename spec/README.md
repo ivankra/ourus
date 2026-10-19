@@ -279,6 +279,11 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
       - ourus refuses, or puts the text elsewhere, because Markdown can't write the result, though a
         block could hold it: two lines in a title, a split table row, two empty paragraphs in a row,
         adjacent indented code;
+    - `quote-container`: a quote or callout is a container in the case, as ourus's outline has it
+      (its blocks its children): a buffer has a quote holding more than one node, or anything but a
+      paragraph with nothing under it (a list, a heading, a held empty line), or a callout with a
+      body. An editor whose quote is a style on one block (RemNote's) has no form for it; a quote
+      of one paragraph, all through the case, doesn't count.
     - `markup-heading`, `markup-task`, `markup-fence`: a step at markup that an editor may hold as
       text or as a block's attribute, where ourus has a boundary (a driver opts out of those it
       can't compare):

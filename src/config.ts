@@ -20,8 +20,8 @@ export interface Config {
    * - `direct` (the default, as in Logseq): they become the item's children, after its own, so the
    *   document order stays the same. Out of a quote, the item leaves where it is, the quote split
    *   around it.
-   * - `logical`: they stay with their parent, and the item and its subtree move past them. Out of a
-   *   quote, the item goes below the quote's other children.
+   * - `logical` (as in Roam, WorkFlowy and RemNote): they stay with their parent, and the item and its
+   *   subtree move past them. Out of a quote, the item goes below the quote's other children.
    *
    * Enter on an empty nested item outdents by it too (see `enterOnEmptyItem`).
    */
@@ -46,8 +46,8 @@ export interface Config {
    * Enter in the middle of the text of an item with children:
    * - `sibling` (the default, as in WorkFlowy, Roam, Dynalist and Obsidian): the text after the caret
    *   becomes the item's next sibling, and the children go with it, as they follow it in the text.
-   * - `child` (as in Logseq and Tine): it becomes the item's first child, and the item keeps its
-   *   children.
+   * - `child` (as in Logseq, Tine and RemNote): it becomes the item's first child, and the item keeps
+   *   its children.
    *
    * At the end of the text, Enter makes a first child either way.
    */
@@ -81,9 +81,10 @@ export interface Config {
    * Backspace or Delete on an empty item with children, where they would move up into its place
    * (Backspace with nothing above it in its parent, Delete, whose first child joins up into it):
    * - `lift` (the default): the item goes, its children taking its place, a level up.
-   * - `refuse` (as Logseq, Tine, Roam, WorkFlowy, Dynalist and Obsidian's Outliner do nothing):
-   *   `has-children`. SiYuan, BlockNote and true-outliner refuse only Backspace with nothing above the
-   *   item, and lift its children on Delete.
+   * - `refuse` (as Logseq, Roam, WorkFlowy, Dynalist and Obsidian's Outliner do nothing):
+   *   `has-children`. SiYuan, BlockNote, true-outliner and Tine refuse only Backspace with nothing
+   *   above the item, and lift its children on Delete (Tine putting them after the other children of
+   *   the item they join).
    *
    * Backspace into an item above it, which takes its children at their depth, joins either way.
    */
@@ -105,7 +106,8 @@ export interface Config {
    * - `text` (the default): Backspace removes the heading's marks as a unit, the title becoming a
    *   paragraph where it is (bare Obsidian deletes one character, leaving `#Hello`); Delete joins the
    *   heading's whole line, `#`s included, as text, as a text editor does.
-   * - `block` (as outliners join any block): both join just the title into the node above.
+   * - `block` (as outliners join any block, Tana's sections among them): both join just the title into
+   *   the node above.
    */
   readonly headingEditing: 'text' | 'block';
 
@@ -158,9 +160,9 @@ export interface Config {
    * of it, and a list pasted at the end of a heading's title, its section holding content:
    * - `children` (the default, as in Logseq and Roam): the paste goes first among them, where Enter
    *   at the end of the text puts a new node.
-   * - `after` (as in Tine, WorkFlowy, Dynalist and SiYuan): the paste goes after them, as the item's
-   *   next siblings, or last in the heading's section; the text is left as it is, nothing split or
-   *   joined.
+   * - `after` (as in Tine, WorkFlowy, Dynalist, SiYuan and Tana): the paste goes after them, as the
+   *   item's next siblings, or last in the heading's section; the text is left as it is, nothing split
+   *   or joined.
    */
   readonly pasteStructuredOnParent: 'children' | 'after';
 

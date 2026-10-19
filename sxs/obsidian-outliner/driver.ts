@@ -6,6 +6,7 @@ import { keepsCaretOnText, obsidianDriver } from '../obsidian/obsidian.ts';
 export const driver = obsidianDriver({
   name: 'obsidian-outliner',
   title: 'Obsidian with Outliner',
+  id: 'OO',
   mode: 'live-preview',
   plugins: [{ id: 'obsidian-outliner', version: '4.10.2' }],
   // "Move list item up" and "Move list item down": the item with its children

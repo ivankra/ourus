@@ -1,9 +1,9 @@
-// The projection of spec buffers onto blocks (outline.ts), offline: what every block app's comparison
+// The projection of spec buffers onto blocks (block.ts), offline: what every block app's comparison
 // rests on.
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { compareOutlines, draw, project, sectioned, unescapeLaterLines, Unsupported, type Outline } from './outline.ts';
+import { compareOutlines, draw, liftOwned, ownBlocks, project, readOutline, sectioned, unescapeLaterLines, Unsupported, type Outline } from './block.ts';
 
 const blocks = (o: Outline): string[] => o.blocks.map((b) => `${'  '.repeat(b.depth)}${b.text}`);
 
@@ -35,6 +35,13 @@ test('tasks keep their checkbox, numbered and starred items are plain blocks', (
 test('an empty item, and one with only a checkbox', () => {
   assert.deepEqual(project('- a\n- ┃\n', 'gfm').outline, { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: '' }], sel: { block: 1, anchor: 0, head: 0 } });
   assert.deepEqual(project('- [ ] ┃\n', 'gfm').outline.sel, { block: 0, anchor: 4, head: 4 });
+});
+
+test("an item whose first block is a list has no text, its marker's line the inner item's", () => {
+  const p = project('- - ┃a\n  - b\n', 'gfm');
+  assert.deepEqual(blocks(p.outline), ['', '  a', '  b']);
+  assert.deepEqual(p.outline.sel, { block: 1, anchor: 0, head: 0 });
+  assert.deepEqual([...p.notes], ["a list as an item's first block"]);
 });
 
 test('a placeholder holds an empty node', () => {
@@ -139,8 +146,41 @@ test('for an app that numbers blocks, an ordered item is a numbered block and a 
   assert.deepEqual(blocks(read('9. a\n   - x\n10. b┃\n').outline), ['9. a', '  x', '10. b']);
   assert.deepEqual(blocks(read('- a\n- 1\\. x┃\n').outline), ['a', '1\\. x']);
   assert.ok(!read('1. a┃\n').notes.has('numbered list'));
+  // drawn with the number in the bullet's place, children and later lines where its text starts
+  for (const drawn of ['1. a\n- ┃\n1. c\n', '9. a\n   - x\n     more\n10. b┃\n    1. c\n', '- a\n- 1\\. x┃\n', '1. ```\n     - x\n   ```\n']) {
+    const o = read(drawn).outline;
+    assert.equal(draw(o, { ordered: true }), drawn);
+    assert.deepEqual(readOutline(drawn, { ordered: true }), o);
+  }
+  const nested: Outline = { blocks: [{ depth: 0, text: 'p' }, { depth: 1, text: '1. a\n2. b' }, { depth: 1, text: '2. ' }], sel: { block: 2, anchor: 3, head: 3 }, selected: [1] };
+  assert.equal(draw(nested, { ordered: true }), '- p\n  1. ▮ a\n     2\\. b\n  2. ┃\n');
+  assert.deepEqual(readOutline(draw(nested, { ordered: true }), { ordered: true }), nested);
+  // a caret in the number leaves it under a bullet; an app that numbers nothing draws the text so too,
+  // and reads no number in a bullet's place
+  assert.equal(draw({ blocks: [{ depth: 0, text: '1. a' }], sel: { block: 0, anchor: 1, head: 1 } }, { ordered: true }), '- 1┃. a\n');
+  assert.equal(draw({ blocks: [{ depth: 0, text: '1. a' }], sel: null }), '- 1. a\n');
+  assert.equal(readOutline('1. a\n'), null);
+  // a drawing from before, with a numbered block under a bullet, reads as it did
+  for (const options of [{}, { ordered: true }]) assert.deepEqual(readOutline('- 1. a\n  - b┃\n', options), { blocks: [{ depth: 0, text: '1. a' }, { depth: 1, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } });
+  assert.equal(readOutline('1. a\n  - b\n', { ordered: true }), null);
   // else the number goes, an adaptation
   assert.deepEqual(blocks(project('1. a┃\n', 'gfm').outline), ['a']);
   assert.ok(project('1. a┃\n', 'gfm').notes.has('numbered list'));
 });
 
+
+test("owned blocks lift beside their owner in free form, and own takes them back, an app's own children kept", () => {
+  const outline = project('# H\n\nbody\n- item\n  - sub\n\n## S\n\ntext\n\n# Two\n', 'commonmark', { freeForm: true }).outline;
+  const owns = (b: { text: string; free?: true }): boolean => !!b.free && !/^#/.test(b.text);
+  const lifted = liftOwned(outline.blocks);
+  // as Markdown has them: the section and the paragraph's list beside, the item's child still its child
+  assert.deepEqual(blocks({ ...outline, blocks: lifted }), ['# H', 'body', 'item', '  sub', '## S', 'text', '# Two']);
+  assert.deepEqual(ownBlocks(lifted, owns), outline.blocks);
+  // a paragraph an app nested under another (BlockNote's Tab) stays its child; the list after it, its own
+  const nested = [
+    { depth: 0, text: 'a', free: true as const },
+    { depth: 1, text: 'b', free: true as const },
+    { depth: 1, text: 'x' },
+  ];
+  assert.deepEqual(blocks({ blocks: ownBlocks(nested, owns), sel: null }), ['a', '  b', '    x']);
+});

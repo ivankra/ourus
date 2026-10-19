@@ -1,26 +1,27 @@
 /// <reference lib="dom" />
 // SiYuan (https://b3log.org/siyuan/, see README.md): a block editor over Markdown, open source
-// (AGPL-3.0), run here from its release: its kernel (kernel.ts) serves the web UI and the API on
-// 127.0.0.1. Each test's outline is a document of its own, made from Markdown through the API
-// (`filetree/createDocWithMd`: every block a list item at its depth) and opened in the editor through
+// (AGPL-3.0), run here from its release: a kernel for each of a run's workers (kernel.ts) serves the
+// web UI and the API on 127.0.0.1, the page's port telling its kernel. Each test's outline is a document of its own, made from Markdown through the API
+// (`filetree/createDocWithMd`, in free form: a paragraph, a heading or code a block of its own, a list
+// item an item, what a free block owns beside it as Markdown has it) and opened in the editor through
 // the driver's plugin (plugin/, the plugin API's `openTab`); the last test's document is removed, which
 // closes its tab. Undo is the kernel's, per document, so it stays within the test. The actions are
 // SiYuan's keymap on Linux (⌘ is Ctrl there).
 //
 // Reading is the editor's DOM (`protyle.wysiwyg`), SiYuan's own tree: list items in order, each
 // block's text its own blocks' Markdown by SiYuan's converter (Lute's `BlockDOM2StdMd`), a task item
-// `[ ] ` / `[x] ` before it. A block outside every list (a paragraph SiYuan made of an item) is owned
-// as the spec's buffers' blocks are (../lib/outline.ts): a paragraph owns the list right after it, a heading
-// its section. The caret is mapped into a block's Markdown, and back, through a marker character put
+// `[ ] ` / `[x] ` before it. Any block but an item's text is free, and owned as the spec's buffers'
+// blocks are (`ownBlocks`, ../lib/block.ts): a paragraph owns the list right after it, a heading its
+// section. The caret is mapped into a block's Markdown, and back, through a marker character put
 // where it is, so markup the editor draws as no text (`**b**`, a heading's `## `) counts as it does in
 // the text. (The whole document's Markdown, projected as the spec's buffers are, would read SiYuan's
 // tree wrong where its Markdown doesn't say it: `-  b` with a child indented two columns, after a
 // deletion at the text's start, isn't the child's parent in CommonMark.)
 
 import type { Page } from 'playwright-core';
-import type { Driver } from '../lib/driver.ts';
-import type { Block, Outline } from '../lib/outline.ts';
-import { api, origin, serve } from './kernel.ts';
+import { perPage, type Driver } from '../lib/driver.ts';
+import { liftOwned, ownBlocks, type Block, type Outline } from '../lib/block.ts';
+import { api, holdKernel, kernelOf, kernelOfPage, leaseKernel, serve, type Kernel } from './kernel.ts';
 
 /** SiYuan's keys for the spec's motions (Linux); the `select…` motions add Shift. */
 const MOTIONS: Record<string, string> = {
@@ -35,24 +36,58 @@ const MOTIONS: Record<string, string> = {
 };
 
 /**
- * An outline as Markdown for `createDocWithMd`: every block a list item, nested by its depth, a
- * numbered block (`1. x`) an ordered list's item, its children at its content column.
+ * A free block's text as Markdown's lines: a paragraph's lines escaped where they would read as a
+ * list's item or a quote (`- x` is the paragraph's text); a heading, code, math, a table or a thematic
+ * break as it is.
  */
-function markdownOf(blocks: readonly Block[]): string {
+function freeLines(text: string): string[] {
+  const lines = text.split('\n');
+  if (/^(?:#{1,6}(?:[ \t]|$)|`{3,}|~{3,}|\$\$|\||<| {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$)/.test(lines[0]!)) return lines;
+  return lines.map((l) => l.replace(/^([-*+>])(?=[ \t]|$)/, '\\$1').replace(/^(\d{1,9})([.)])(?=[ \t]|$)/, '$1\\$2'));
+}
+
+/**
+ * An outline as Markdown for `createDocWithMd`, in free form: a free block (`Block.free`: a paragraph,
+ * a heading, code) a block of its own, set off by blank lines, at the top level or in the item it is
+ * under, at its content column; what one owns in ourus's outline (a heading its section, a paragraph
+ * the list after it) beside it, as Markdown has them (`liftOwned`). An item a list item, nested by its
+ * depth, a numbered one (`1. x`) an ordered list's, its children at its content column. A numbered
+ * item that doesn't go on from the one before it (`1. a`, `1. b`) starts a list of its own, by the
+ * other delimiter (`1)`), which SiYuan keeps as a list apart (drawing it `1.`).
+ */
+function markdownOf(outline: readonly Block[]): string {
   const columns: number[] = [];
-  return (
-    blocks
-      .map((b) => {
-        const pad = ' '.repeat(b.depth ? (columns[b.depth - 1] ?? 2 * b.depth) : 0);
-        const numbered = /^(\d{1,9})\. /.exec(b.text);
-        const marker = numbered ? `${numbered[1]}.` : '-';
-        columns.length = b.depth;
-        columns[b.depth] = pad.length + marker.length + 1;
-        const [first, ...rest] = (numbered ? b.text.slice(numbered[0].length) : b.text).split('\n');
-        return [`${pad}${marker} ${first}`, ...rest.map((l) => (l ? `${' '.repeat(columns[b.depth]!)}${l}` : ''))].join('\n');
-      })
-      .join('\n') + '\n'
-  );
+  // each depth's last sibling, if numbered: its number and delimiter
+  const runs: ({ n: number; delim: string } | null)[] = [];
+  const out: string[] = [];
+  let afterFree = false;
+  for (const b of liftOwned(outline)) {
+    const pad = ' '.repeat(b.depth ? (columns[b.depth - 1] ?? 2 * b.depth) : 0);
+    if (b.free) {
+      // a free block ends the list at its depth: an item after it starts another
+      runs.length = b.depth;
+      columns.length = b.depth;
+      // an empty one (a paragraph Markdown can't hold) as a zero-width space, which SiYuan makes an
+      // empty paragraph of and its converter drops
+      out.push('', ...(b.text ? freeLines(b.text).map((l) => (l ? pad + l : '')) : [`${pad}\u200b`]));
+      afterFree = true;
+      continue;
+    }
+    if (afterFree) out.push('');
+    afterFree = false;
+    const numbered = /^(\d{1,9})\. /.exec(b.text);
+    const before = runs[b.depth];
+    const n = numbered ? Number(numbered[1]) : 0;
+    const delim = !numbered || !before || n === before.n + 1 ? (before?.delim ?? '.') : before.delim === '.' ? ')' : '.';
+    runs.length = b.depth;
+    runs[b.depth] = numbered ? { n, delim } : null;
+    const marker = numbered ? `${numbered[1]}${delim}` : '-';
+    columns.length = b.depth;
+    columns[b.depth] = pad.length + marker.length + 1;
+    const [first, ...rest] = (numbered ? b.text.slice(numbered[0].length) : b.text).split('\n');
+    out.push(`${pad}${marker} ${first}`, ...rest.map((l) => (l ? `${' '.repeat(columns[b.depth]!)}${l}` : '')));
+  }
+  return `${out.join('\n').replace(/^\n/, '')}\n`;
 }
 
 /**
@@ -86,7 +121,13 @@ function holds(o: Outline): string | undefined {
     // `# Title #`: held as `# Title`
     if (/^#{1,6}(?:[ \t].*)?[ \t]#+[ \t]*$/.test(first) || /^#{1,6}[ \t]+#+[ \t]*$/.test(first)) return "a heading's closing #s";
     // `- ---` is a thematic break, not an item holding one
-    if (/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(first)) return 'a thematic break as an item';
+    if (!b.free && /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(first)) return 'a thematic break as an item';
+    // a table SiYuan writes otherwise: a column with a cell of three characters or more is padded to
+    // it, its delimiter longer (measured: `| a | b |` stays, `| a   | b |` above `| one | 2 |`)
+    const rows = b.text.split('\n').filter((l) => /^\s*\|.*\|\s*$/.test(l));
+    if (rows.length && rows.some((r) => r.split('|').slice(1, -1).some((c) => (/^\s*:?-+:?\s*$/.test(c) ? c !== ' --- ' : c.trim().length > 2 || c !== ` ${c.trim()} `)))) return 'a table SiYuan writes otherwise (its columns padded to their widest cell)';
+    // `# first` / `abc`: a heading is one line, the next a paragraph after it
+    if (/^#{1,6}(?:[ \t]|$)/.test(first) && b.text.includes('\n')) return 'a heading with more lines';
   }
   if (!o.sel) return undefined;
   const text = o.blocks[o.sel.block]!.text;
@@ -94,16 +135,41 @@ function holds(o: Outline): string | undefined {
   const to = Math.max(o.sel.anchor, o.sel.head);
   // a task's checkbox is drawn, not text
   if (/^\[[ xX]\] /.test(text) && from < 4) return "a caret in a task's checkbox";
+  // a heading's #s are its level, not text
+  const hashes = /^(?:\d{1,9}\. )?(?:\[[ xX]\] )?#{1,6} /.exec(text);
+  if (hashes && from < hashes[0].length) return "a caret in a heading's #s";
   // a code block's editor has the code alone
   const code = codeOf(text);
   const onFence = (p: number): boolean => !!code && p >= code.from && p <= code.to && (p < code.start || p > code.end);
   if (onFence(from) || onFence(to)) return "a caret on a code block's fence";
+  // a math block is drawn (KaTeX), its TeX edited in a popup
+  const math = /(?:^|\n)\$\$[^\n]*(?:\n[^]*?(?:\n\$\$[ \t]*(?=\n|$)|$)|$)/.exec(text);
+  const inMath = (p: number): boolean => !!math && p >= math.index && p <= math.index + math[0].length;
+  if (inMath(from) || inMath(to)) return 'a caret in a math block';
+  // a table's cells are its text: a caret on a pipe, its padding or the delimiter row has no place
+  const outsideCell = (p: number): boolean => {
+    const start = text.lastIndexOf('\n', p - 1) + 1;
+    const line = text.slice(start, (text.indexOf('\n', p) + 1 || text.length + 1) - 1);
+    if (!/^\s*\|.*\|\s*$/.test(line)) return false;
+    if (/^\s*\|(?:\s*:?-+:?\s*\|)+\s*$/.test(line)) return true;
+    const at = p - start;
+    // within a cell's text, from its first character to past its last
+    return ![...line.matchAll(/\|([^|]*)(?=\|)/g)].some((m) => {
+      const cell = m[1]!;
+      const lead = cell.length - cell.trimStart().length;
+      const begin = m.index + 1 + lead;
+      return at >= begin && at <= begin + cell.trim().length;
+    });
+  };
+  if (outsideCell(from) || outsideCell(to)) return "a caret outside a table's cells";
   return undefined;
 }
 
 /** What the page gives back: the blocks in order, the caret in Markdown offsets, the blocks selected. */
 interface Raw {
   blocks: Block[];
+  /** Each block's owning the list right after it, as Markdown's paragraph does (`ownBlocks`). */
+  owns: boolean[];
   sel: { block: number; anchor: number; head: number } | null;
   selected: number[];
 }
@@ -118,10 +184,14 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
   const p = (window as any).__ourusSxs.editor()?.protyle;
   if (!p) throw new Error('no editor open');
   const wys = p.wysiwyg.element as HTMLElement;
-  const md = (el: Element): string => (p.lute.BlockDOM2StdMd(el.outerHTML) as string).replace(/\n$/, '');
+  // the zero-width joiner SiYuan puts before three backticks in code, so that they close no fence
+  // (its `removeZWJ` takes it out of what it copies): no character of the code's, the caret's markers
+  // (S1, S2) maybe among the backticks
+  const md = (el: Element): string => (p.lute.BlockDOM2StdMd(el.outerHTML) as string).replace(/\n$/, '').replace(/\u200D(?=(?:[\u2063\u2064\u200D]*`){3})/g, '');
   const data = (el: Element): DOMStringMap => (el as HTMLElement).dataset ?? {};
-  // a block: a list item's own blocks (not its nested lists), or a block outside every list
-  type Group = { els: HTMLElement[]; depth: number; prefix: string; holder: HTMLElement };
+  // a block: a list item's own blocks (not its nested lists), or a block outside every list; free (a
+  // paragraph, a heading, code, ...) but an item's text, a paragraph owning the list right after it
+  type Group = { els: HTMLElement[]; depth: number; prefix: string; holder: HTMLElement; free: boolean; owns: boolean };
   const groups: Group[] = [];
   const items = (list: Element, depth: number): void => {
     [...list.children].filter((c) => data(c).type === 'NodeListItem').forEach((li, k) => {
@@ -131,35 +201,23 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
       const number = data(list).subtype === 'o' ? `${parseInt(data(li).marker ?? '', 10) || k + 1}. ` : '';
       // its first block is its text; its other blocks (code after its text, a second paragraph) are
       // its children, in order with its nested lists, as the projection has an item's blocks. An empty
-      // paragraph SiYuan leaves in it is no block in Markdown: it stays with the text, a line of it
-      const empty = (c: Element): boolean => data(c).type === 'NodeParagraph' && md(c).trim() === '';
-      const own = kids.filter((c) => data(c).type !== 'NodeList');
-      const first = own.find((c) => !empty(c)) ?? own[0];
-      const text = own.filter((c) => c === first || empty(c));
-      groups.push({ els: text, depth, prefix: number + (task === undefined ? '' : task === ' ' ? '[ ] ' : '[x] '), holder: li as HTMLElement });
+      // paragraph too, where it is: SiYuan leaves one where an item's blocks went into the item above
+      // (Backspace at an empty item's start, Enter on an empty child), a block until it is deleted, and
+      // typing there fills it, the read's structure the same
+      const first = kids[0] && data(kids[0]).type !== 'NodeList' ? kids[0] : undefined;
+      const text = first ? [first] : [];
+      groups.push({ els: text, depth, prefix: number + (task === undefined ? '' : task === ' ' ? '[ ] ' : '[x] '), holder: li as HTMLElement, free: false, owns: false });
       for (const kid of kids) {
         if (data(kid).type === 'NodeList') items(kid, depth + 1);
-        else if (!text.includes(kid)) groups.push({ els: [kid], depth: depth + 1, prefix: '', holder: kid });
+        else if (!text.includes(kid)) groups.push({ els: [kid], depth: depth + 1, prefix: '', holder: kid, free: true, owns: data(kid).type === 'NodeParagraph' });
       }
     });
   };
-  // blocks outside every list, owned as ourus owns them: a heading its section (to the next heading
-  // of its level or higher), a paragraph the list right after it
-  const levels: number[] = [];
-  let ownsList = false;
+  // blocks outside every list, free; owned as ourus owns them (a heading its section, a paragraph the
+  // list right after it) by `ownBlocks`, out of the page
   for (const c of [...wys.children].filter((c) => data(c).nodeId) as HTMLElement[]) {
-    const type = data(c).type;
-    if (type === 'NodeList') {
-      items(c, levels.length + (ownsList ? 1 : 0));
-    } else if (type === 'NodeHeading') {
-      const level = Number(data(c).subtype?.slice(1)) || 1;
-      while (levels.length && levels[levels.length - 1]! >= level) levels.pop();
-      groups.push({ els: [c], depth: levels.length, prefix: '', holder: c });
-      levels.push(level);
-    } else {
-      groups.push({ els: [c], depth: levels.length, prefix: '', holder: c });
-    }
-    ownsList = type === 'NodeParagraph';
+    if (data(c).type === 'NodeList') items(c, 0);
+    else groups.push({ els: [c], depth: 0, prefix: '', holder: c, free: true, owns: data(c).type === 'NodeParagraph' });
   }
   // a position (node, offset) inside `el`, copied into a clone of it with a marker there
   const path = (root: Node, n: Node): number[] => {
@@ -183,8 +241,30 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
     const t = md(clone);
     const i1 = t.indexOf(S1);
     const i2 = t.indexOf(S2);
+    const text = t.replaceAll(S1, '').replaceAll(S2, '');
+    // a table's columns are padded to their widest cell, a marker counted in it: the text unmarked,
+    // and each marker by its cell (row, column, offset in the cell's text)
+    const plain = md(el);
+    if (plain !== text && /^\s*\|.*\|\s*$/m.test(plain)) {
+      const cellAt = (marked: string, m: string): number => {
+        const i = marked.indexOf(m);
+        if (i < 0) return -1;
+        const lineStart = marked.lastIndexOf('\n', i - 1) + 1;
+        const row = marked.slice(0, lineStart).split('\n').length - 1;
+        const upTo = marked.slice(lineStart, i);
+        const column = (upTo.match(/\|/g) ?? []).length;
+        const inCell = upTo.split('|').pop()!.trimStart().length;
+        const lines = plain.split('\n');
+        const line = lines[row] ?? '';
+        let at = 0;
+        for (let j = 0, pipes = 0; j < line.length && pipes < column; j++) if (line[j] === '|' && ++pipes === column) at = j + 1;
+        const rest = line.slice(at);
+        return lines.slice(0, row).reduce((n, l) => n + l.length + 1, 0) + at + (rest.length - rest.trimStart().length) + inCell;
+      };
+      return { text: plain, at: { [S1]: cellAt(t.replaceAll(S2, ''), S1), [S2]: cellAt(t.replaceAll(S1, ''), S2) } };
+    }
     return {
-      text: t.replaceAll(S1, '').replaceAll(S2, ''),
+      text,
       at: { [S1]: i1 < 0 ? -1 : i1 - (i2 >= 0 && i2 < i1 ? 1 : 0), [S2]: i2 < 0 ? -1 : i2 - (i1 >= 0 && i1 < i2 ? 1 : 0) },
     };
   };
@@ -195,6 +275,10 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
   const blocks: Block[] = [];
   let anchor: [number, number] | null = null;
   let head: [number, number] | null = null;
+  // a free block's escape at its start (`\- x`: SiYuan keeps a paragraph's backslash), off, as the
+  // projection has a block's text: the block needs none there (a number's, `1\.`, isn't at the start)
+  const lead = (g: Group, el: HTMLElement): number => (g.free && el === g.els[0] && /^\\[!-/:-@[-`{-~]/.test(md(el)) ? 1 : 0);
+  const less = (at: number, l: number): number => (l && at > 0 ? at - 1 : at);
   groups.forEach((g, k) => {
     const parts: string[] = [];
     let base = g.prefix.length;
@@ -202,67 +286,100 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
       const marks: { node: Node; offset: number; s: string }[] = [];
       if (caretIn && el.contains(caretIn.anchorNode)) marks.push({ node: caretIn.anchorNode!, offset: caretIn.anchorOffset, s: S1 });
       if (caretIn && el.contains(caretIn.focusNode)) marks.push({ node: caretIn.focusNode!, offset: caretIn.focusOffset, s: S2 });
-      const { text, at } = withMarks(el, marks);
-      if (at[S1]! >= 0) anchor = [k, base + at[S1]!];
-      if (at[S2]! >= 0) head = [k, base + at[S2]!];
+      const l = lead(g, el);
+      const { text: marked, at } = withMarks(el, marks);
+      const text = marked.slice(l);
+      if (at[S1]! >= 0) anchor = [k, base + less(at[S1]!, l)];
+      if (at[S2]! >= 0) head = [k, base + less(at[S2]!, l)];
       parts.push(text);
       base += text.length + 1;
     }
-    blocks.push({ depth: g.depth, text: g.prefix + parts.join('\n') });
+    blocks.push({ depth: g.depth, text: g.prefix + parts.join('\n'), ...(g.free && { free: true as const }) });
   });
   // a caret or selection within one block (one across blocks has no place in the model)
   const [a0, h0] = [anchor as [number, number] | null, head as [number, number] | null];
   const sel: Raw['sel'] = a0 && h0 && a0[0] === h0[0] ? { block: a0[0], anchor: a0[1], head: h0[1] } : null;
   const selected = groups.map((g, k) => (g.holder.classList.contains('protyle-wysiwyg--select') || g.els.some((e) => e.classList.contains('protyle-wysiwyg--select')) ? k : -1)).filter((k) => k >= 0);
-  if (!want) return { blocks, sel, selected };
+  const owns = groups.map((g) => g.owns);
+  if (!want) return { blocks, owns, sel, selected };
 
   // placing: the DOM position whose Markdown offset is the one wanted, in the block's own elements
   const g = groups[want.block];
-  if (!g) return { blocks, sel, selected, placed: `no block ${want.block}` };
+  if (!g) return { blocks, owns, sel, selected, placed: `no block ${want.block}` };
   const find = (offset: number): { node: Node; offset: number; el: HTMLElement } | null => {
     let base = g.prefix.length;
     for (const el of g.els) {
       const ce = (el.querySelector('[contenteditable="true"]') as HTMLElement | null) ?? el;
       const candidates: { node: Node; offset: number }[] = [];
       const walker = document.createTreeWalker(ce, NodeFilter.SHOW_TEXT);
-      for (let t = walker.nextNode() as Text | null; t; t = walker.nextNode() as Text | null) for (let i = 0; i <= t.data.length; i++) candidates.push({ node: t, offset: i });
+      // not before the escape of three backticks: it joins the character before it, a user's caret
+      // goes past them both
+      for (let t = walker.nextNode() as Text | null; t; t = walker.nextNode() as Text | null) for (let i = 0; i <= t.data.length; i++) if (t.data[i] !== '‍') candidates.push({ node: t, offset: i });
       if (!candidates.length) candidates.push({ node: ce, offset: 0 });
+      const l = lead(g, el);
       for (const c of candidates) {
         const { at } = withMarks(el, [{ ...c, s: S1 }]);
-        if (base + at[S1]! === offset) return { ...c, el: ce };
+        if (base + less(at[S1]!, l) === offset) return { ...c, el: ce };
       }
-      base += md(el).length + 1;
+      base += md(el).length - l + 1;
     }
     return null;
   };
   const a = find(want.anchor);
   const h = want.head === want.anchor ? a : find(want.head);
-  if (!a || !h) return { blocks, sel, selected, placed: `no place for ${!a ? want.anchor : want.head} in "${blocks[want.block]?.text}"` };
+  if (!a || !h) return { blocks, owns, sel, selected, placed: `no place for ${!a ? want.anchor : want.head} in "${blocks[want.block]?.text}"` };
   a.el.focus();
   getSelection()!.setBaseAndExtent(a.node, a.offset, h.node, h.offset);
-  return { blocks, sel, selected, placed: 'placed' };
+  return { blocks, owns, sel, selected, placed: 'placed' };
 }
 
-/** The test notebook: `ourus sxs`, made if the workspace has none. */
-let notebook = '';
-async function notebookId(): Promise<string> {
-  if (notebook) return notebook;
-  const { notebooks } = await api<{ notebooks: { id: string; name: string }[] }>('notebook/lsNotebooks');
-  notebook = notebooks.find((n) => n.name === 'ourus sxs')?.id ?? (await api<{ notebook: { id: string } }>('notebook/createNotebook', { name: 'ourus sxs' })).notebook.id;
-  return notebook;
+/** Each kernel's test notebook (by its origin): `ourus sxs`, made if its workspace has none. */
+const notebooks = new Map<string, string>();
+async function notebookId(origin: string): Promise<string> {
+  const known = notebooks.get(origin);
+  if (known) return known;
+  const { notebooks: all } = await api<{ notebooks: { id: string; name: string }[] }>(origin, 'notebook/lsNotebooks');
+  const id = all.find((n) => n.name === 'ourus sxs')?.id ?? (await api<{ notebook: { id: string } }>(origin, 'notebook/createNotebook', { name: 'ourus sxs' })).notebook.id;
+  notebooks.set(origin, id);
+  return id;
 }
 
 /** Documents are named for the run and numbered within it. */
 const run = Date.now().toString(36);
 let docs = 0;
-/** The current test's document; '' before this run's first, when every earlier one is removed. */
-let current = '';
+/** A worker's (`perPage`): its kernel, and its current test's document ('' before its first). */
+const pageState = perPage(() => ({ kernel: null as Kernel | null, current: '' }));
+/** The kernels whose earlier runs' documents are gone (by origin): removed by the run's first test on each. */
+const swept = new Set<string>();
+
+/**
+ * The kernel of a worker's page, held for the worker: the one `open` leased, or, for a window an
+ * earlier run left, the one it is on (by its port), which throws if another worker holds it: the
+ * runner then opens a window anew, on a kernel of its own.
+ */
+async function kernelFor(page: Page): Promise<Kernel> {
+  const state = pageState(page);
+  if (!state.kernel) {
+    const k = kernelOfPage(page.url());
+    await holdKernel(k);
+    state.kernel = k;
+  }
+  return state.kernel;
+}
 
 export const driver: Driver = {
   name: 'siyuan',
   title: 'SiYuan',
-  url: `${origin}/stage/build/desktop/`,
+  id: 'SY',
+  url: `${kernelOf(0).origin}/stage/build/desktop/`,
+  // its UI on every kernel's port
+  scope: 'http://127.0.0.1:',
   model: 'block',
+  // paragraphs, headings and code are blocks outside every list, and in items, as the spec's buffers
+  // have them; list items the rest
+  freeForm: true,
+  // a kernel for each worker (kernel.ts)
+  parallel: 4,
   // structured paste in the middle of a block's text goes after it
   behaves: { pasteStructuredMidText: 'after', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after' },
   keys: {
@@ -287,9 +404,9 @@ export const driver: Driver = {
     redo: 'Control+y',
     ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
   },
-  // a code or math block is a block of its own, its fences no text: a caret on one has no place, and
-  // code lines that would make a fence are only text there
-  refuses: ['markup-fence'],
+  // a code or math block is a block of its own, its fences no text: a caret on one has no place
+  // (`holds`); a join into code, or of code lines that make a fence, is SiYuan's to show
+  refuses: [],
   ordered: true,
   holds: (doc) => holds(doc as Outline),
   idle: {
@@ -297,10 +414,12 @@ export const driver: Driver = {
     busy: '(window.__sxsFetching?.() ?? 0) > 0',
   },
 
-  serve,
-
   async open(page: Page) {
-    await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    // a kernel of the worker's own, running, its UI loaded
+    const k = await leaseKernel();
+    await serve(k, (line) => console.log(line));
+    pageState(page).kernel = k;
+    await page.goto(`${k.origin}/stage/build/desktop/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.waitForFunction(() => (window as any).siyuan?.isReady && (window as any).__ourusSxs, null, { timeout: 60000 });
     // the requests the page owes, counted (the busy signal)
     await page.evaluate(() => {
@@ -324,17 +443,25 @@ export const driver: Driver = {
 
   async load(page: Page, doc) {
     const o = doc as Outline;
-    const nb = await notebookId();
-    const id = await api<string>('filetree/createDocWithMd', { notebook: nb, path: `/ourus-sxs-${run}-${String(++docs).padStart(5, '0')}`, markdown: markdownOf(o.blocks) });
+    const { origin } = await kernelFor(page);
+    const nb = await notebookId(origin);
+    const id = await api<string>(origin, 'filetree/createDocWithMd', { notebook: nb, path: `/ourus-sxs-${run}-${String(++docs).padStart(5, '0')}`, markdown: markdownOf(o.blocks) });
     await page.evaluate((id) => (window as any).__ourusSxs.open(id), id);
     await page.waitForFunction((id) => {
       const p = (window as any).__ourusSxs.editor()?.protyle;
       return p?.block.rootID === id && p.wysiwyg.element.querySelector('[data-node-id]');
     }, id);
-    // the last test's document removed (its tab closes with it); before this run's first, every earlier one
-    const old = current ? [current] : (await api<{ files: { id: string }[] }>('filetree/listDocsByPath', { notebook: nb, path: '/' })).files.map((f) => f.id).filter((d) => d !== id);
-    for (const d of old) await api('filetree/removeDocByID', { id: d }).catch(() => {});
-    current = id;
+    // the worker's last test's document removed (its tab closes with it); at the run's first on the
+    // kernel, every earlier run's there (named for another run)
+    const state = pageState(page);
+    const old = state.current ? [state.current] : [];
+    if (!swept.has(origin)) {
+      swept.add(origin);
+      const files = (await api<{ files: { id: string; name: string }[] }>(origin, 'filetree/listDocsByPath', { notebook: nb, path: '/' })).files;
+      old.push(...files.filter((f) => !f.name.startsWith(`ourus-sxs-${run}-`)).map((f) => f.id));
+    }
+    for (const d of old) await api(origin, 'filetree/removeDocByID', { id: d }).catch(() => {});
+    state.current = id;
     const idle = () => page.evaluate((busy) => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 60, timeout: 5000, busy }), this.idle!.busy!);
     await idle();
     if (!o.sel) {
@@ -348,6 +475,6 @@ export const driver: Driver = {
 
   async read(page: Page) {
     const r = await page.evaluate(inPage, null);
-    return { blocks: r.blocks, sel: r.sel, ...(r.selected.length && { selected: r.selected }) };
+    return { blocks: ownBlocks(r.blocks, (_, i) => r.owns[i]!), sel: r.sel, ...(r.selected.length && { selected: r.selected }) };
   },
 };

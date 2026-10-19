@@ -5,7 +5,6 @@ open to anyone without a login, editable in the session, and saved nowhere (Roam
 the help database will be saved", and sends no writes: nothing goes over its Firebase connection
 after loading). Roam 0.13.12 (commit 39a714f3, API 1.1.5) on 2026-10-13: the version and commit are
 literals in its bundle (`main.js`), which the driver reads; `roamAlphaAPI.apiVersion` is the API's.
-Last results: [`sxs.md`](sxs.md).
 
 ## Keys (Linux)
 
@@ -13,17 +12,42 @@ From Roam's bundle (`CV(isPC ? "alt-shift-up" : "cmd-shift-up", ...)`):
 
 | action | keys |
 | --- | --- |
-| `enter`, `shiftEnter` | Enter, Shift+Enter (a line break in the block) |
-| `indent`, `outdent` | Tab, Shift+Tab (also Alt+Shift+Right and Left) |
-| `moveSubtreeUp`, `moveSubtreeDown` | Alt+Shift+Up, Alt+Shift+Down (Cmd+Shift on a Mac) |
-| `deleteContentBackward`, `deleteContentForward` | Backspace, Delete |
+| `enter` | Enter |
+| `shiftEnter` | Shift+Enter (a line break in the block) |
+| `indent` | Tab (also Alt+Shift+Right) |
+| `outdent` | Shift+Tab (also Alt+Shift+Left) |
+| `moveSubtreeUp` | Alt+Shift+Up (Cmd+Shift+Up on a Mac) |
+| `moveSubtreeDown` | Alt+Shift+Down (Cmd+Shift+Down on a Mac) |
+| `deleteContentBackward` | Backspace |
+| `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Shift+Home, Backspace |
-| `pasteStructured`, `pastePlain` | Ctrl+V, Ctrl+Shift+V |
-| `undo`, `redo` | Ctrl+Z, Ctrl+Y (Cmd+Shift+Z on a Mac) |
-| caret motions | arrows, Home, End; `select…` with Shift |
-| `cursorDocStart`, `cursorDocEnd` | Up (Down) until the caret stops, then Home (End); Up from the first block goes into the page's title, so back down from there |
+| `deleteSubtree` | Escape (the block selected with its children: Roam's `init-or-cancel-selection`, of its bindings for selected blocks, `multiselect`), Backspace (the selection deleted); skipped, for want of a key, until 2026-10-18 |
+| `duplicateSubtree` | *missing*: its tests are skipped |
+| `pasteStructured` | Ctrl+V |
+| `pastePlain` | Ctrl+Shift+V |
+| `undo` | Ctrl+Z |
+| `redo` | Ctrl+Y (Cmd+Shift+Z on a Mac) |
 
-`deleteSubtree` and `duplicateSubtree` have no key here yet; their tests are skipped.
+Other shortcuts (Roam's Settings › Hotkeys, every default editable there; measured in the help graph):
+
+| shortcut | keys | what it does |
+| --- | --- | --- |
+| toggle TODO | Ctrl+Enter | none, then `{{[[TODO]]}}`, `{{[[DONE]]}}`, none; on selected blocks, each of them |
+| fold, unfold, toggle | Ctrl+Up, Ctrl+Down, Ctrl+Space | a block's children hidden or shown |
+| heading 1, 2, 3; none | Ctrl+Alt+1, 2, 3; Ctrl+Alt+0 | the block's heading attribute |
+| zoom in, zoom out | Alt+Right, Alt+Left | a block as the page, and back |
+| select blocks | Escape; then Shift+Up, Shift+Down | the block being edited, with its children; then more |
+| select all | Ctrl+A, Ctrl+Shift+A | Ctrl+A: the text, then every block on the page; Ctrl+Shift+A: every block |
+| on selected blocks | Tab, Shift+Tab, Alt+Shift+Up/Down, Backspace, Ctrl+C | indented, outdented, moved, deleted, copied |
+| block versions | Ctrl+Comma, Ctrl+Period; Ctrl+Shift+Comma/Period | add a version, show them; cycle through them |
+| bold, italics, highlight, strikethrough | Ctrl+B, Ctrl+I, Ctrl+H, Win+Y | |
+| markdown link, follow link | Ctrl+K, Ctrl+O (Ctrl+Shift+O: in the sidebar) | |
+| comment | Ctrl+Alt+= | a comment on the block |
+| document view | Ctrl+M, then Ctrl+D | |
+| command palette, search | Ctrl+P, Ctrl+U | |
+
+"Delete current block" and "Add a new block below the current one" are commands with no key.
+Formatting, links, versions, comments and document view are from the list, not measured.
 
 The bundle branches on the platform for each binding, and the Mac's keys aren't the PC's: a first run
 used Ctrl+Shift+Z for redo (the Mac's Cmd+Shift+Z, carried over), and `undo.md › Undo1` and `Undo4`
@@ -67,6 +91,21 @@ that with the same 401, so tests send Roam nothing. Analytics, Intercom and Stri
   `unindent-blocks` and `unindent-sibling-group` for a selection, `create-new-or-unindent` for Enter
   on an empty block) and no option near them; it calls outdenting "unindent".
 - The page's title is editable and comes before the first block.
+- **Backspace on a page's first block does nothing**, empty or not (`backspaceAtTopItem: refuse`,
+  declared since 2026-10-18; ourus deletes an empty first block either way, so `backspace.md ›
+  Backspace17` disagrees).
+- **Enter splits a block by making a new one above**: the text before the caret goes into a new
+  block, the original block (its uid, its heading, its children) keeps the rest, the caret with it.
+  So a heading split mid-title leaves the heading on the second half (`- Hello` / `- # ┃ world`,
+  the same 2 s later), and the spaces at the split stay on both halves.
+- **A one-block clipboard pastes into the block's text**: with HTML, the block's text (`- x` pasted
+  after `a` gives `ax`, `# h` gives `…h`); as text alone, the line as it is, its marker and its line
+  break too (`a- x⏎`). Two blocks or more paste as blocks either way, the caret at the first.
+- **Typed text is stored about 600 ms after the last key** (a debounce: read back right after
+  typing, the database still has the text before it). `scenarios.md › Scenario16` (a move, typing,
+  two undos) once came out with the move not undone, in a full run with four workers; six runs of it
+  alone, and nine plays at pauses of 0.75, 2.5 and 6 s, didn't. Open: which store an undo takes back
+  under load.
 
 ## Internals
 

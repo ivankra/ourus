@@ -1165,7 +1165,7 @@ clipboard: |-
 Structured paste on a code line pastes as plain text: in code, what is pasted is code.
 
 ```yaml
-tags: rare
+tags: rare quote-container
 clipboard: |-
   - a
   - b
@@ -1401,7 +1401,7 @@ A callout pasted at the end of an item's text goes into the item, as a quote doe
 quote whose first line is `[!type]`.
 
 ```yaml
-tags: rare
+tags: rare quote-container
 clipboard: |
   > [!note] t
   > body
@@ -1807,7 +1807,7 @@ clipboard: |
 In a quote, the paragraph break keeps its `>`.
 
 ```yaml
-tags: rare free-form
+tags: rare free-form quote-container
 clipboard: |
   x
 
@@ -2208,7 +2208,7 @@ Lines pasted as plain text into a callout's title are refused: in the Obsidian f
 one line, and the host's paste would leave the callout.
 
 ```yaml
-tags: rare free-form
+tags: rare free-form quote-container
 flavor: obsidian
 clipboard: |
   x
@@ -2865,7 +2865,7 @@ A heading with its section pasted into a quote: in a quote a paragraph owns no l
 pasted heading too, so the list follows `fix:` as the heading's.
 
 ```yaml
-tags: rare
+tags: rare quote-container
 clipboard: |
   ## S
   fix:

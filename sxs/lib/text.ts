@@ -5,7 +5,7 @@
 import type { Config } from '../../src/config.ts';
 import { OutlineState } from '../../src/outline/index.ts';
 import { drawState, drawText, readDrawing } from '../../test/drawing.ts';
-import type { Verdict } from './outline.ts';
+import type { Verdict } from './block.ts';
 
 export interface TextDoc {
   text: string;

@@ -1,7 +1,7 @@
 // Spec tests adapted to one app: which can run there, and what each becomes. A test runs when every
 // action has a key (or an emulation) in the app, its options are ones the app has, its tags are none
 // the app skips, and its buffers are something the app holds: for a block app, they project onto
-// blocks (outline.ts); for a text editor, they are taken as written (text.ts). Otherwise it is
+// blocks (block.ts); for a text editor, they are taken as written (text.ts). Otherwise it is
 // skipped, with the reason.
 
 import { readdirSync, readFileSync } from 'node:fs';
@@ -10,7 +10,7 @@ import { readText } from '../../test/drawing.ts';
 import { drawnSteps } from '../../test/spec-run.ts';
 import { readSpec, slug, specConfig, type SpecTest } from '../../test/specfile.ts';
 import type { Doc, Driver } from './driver.ts';
-import { project, sameOutline, Unsupported, type Outline } from './outline.ts';
+import { draw, project, sameOutline, Unsupported, type Outline } from './block.ts';
 import { readTextDoc } from './text.ts';
 
 export interface PlanStep {
@@ -23,7 +23,7 @@ export interface PlanStep {
   readonly drawn?: string;
   /** Why the expected caret isn't compared (it has no place in a block). */
   readonly caretLost?: string;
-  /** Which of the expected blocks are headings owning a section (`sectioned` in outline.ts). */
+  /** Which of the expected blocks are headings owning a section (`sectioned` in block.ts). */
   readonly sections?: readonly number[];
   /** The expected clipboard. */
   readonly clipboard?: string;
@@ -57,14 +57,26 @@ export function playable(driver: Driver, action: string): boolean {
   return action in driver.keys || !!driver.emulated?.includes(action);
 }
 
-export function adapt(driver: Driver, test: SpecTest): Adapted {
+/**
+ * How a test is adapted: `ignoreOptions` plays the tests an option would skip (a value the app lacks,
+ * or one it has its own of), each against ourus with its options, to check what a driver declares
+ * (`run.ts --ignore-options`).
+ */
+export interface AdaptOptions {
+  readonly ignoreOptions?: boolean;
+}
+
+export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): Adapted {
   const name = `${test.file} › ${test.name}`;
   const skip = (why: string): Adapted => ({ skip: why });
   // a `free-form` case, projected onto blocks, tests something else or nothing: no block app runs it
-  const tag = test.tags.find((t) => (driver.model === 'block' && t === 'free-form') || driver.refuses?.includes(t));
+  // but one that tells a free block from an item (`Driver.freeForm`)
+  const tag = test.tags.find((t) => (driver.model === 'block' && !driver.freeForm && t === 'free-form') || driver.refuses?.includes(t));
   if (tag) return skip(`tag ${tag}`);
-  for (const [key, value] of Object.entries(test.options)) {
+  for (const [key, value] of opts.ignoreOptions ? [] : Object.entries(test.options)) {
     if (SPEC_ONLY.has(key)) continue;
+    // the marker ourus writes for an item, which a block has none of
+    if (key === 'bullet' && driver.model === 'block') continue;
     const k = key as keyof Config;
     const settable = driver.settings?.[k]?.some((v) => String(v) === value);
     if (!settable && value !== String(Config.defaults[k]) && String(driver.behaves?.[k]) !== value) return skip(`option ${key}: ${value}`);
@@ -76,7 +88,7 @@ export function adapt(driver: Driver, test: SpecTest): Adapted {
   // changes what ourus does in the example, the app differs by its option, which the spec draws in a
   // case of its own (Enter3b for Enter3)
   const flavor = (test.options.flavor ?? 'gfm') as Config['flavor'];
-  const theirs = Object.entries(driver.behaves ?? {}).filter(([k, v]) => v !== undefined && !(k in (driver.settings ?? {})) && String(v) !== String(options[k as keyof Config] ?? Config.defaults[k as keyof Config]));
+  const theirs = opts.ignoreOptions ? [] : Object.entries(driver.behaves ?? {}).filter(([k, v]) => v !== undefined && !(k in (driver.settings ?? {})) && String(v) !== String(options[k as keyof Config] ?? Config.defaults[k as keyof Config]));
   if (theirs.length) {
     const ours = drawnSteps(test, flavor).join('\n');
     const by = theirs.find(([k, v]) => drawnSteps(test, flavor, { [k]: v }).join('\n') !== ours);
@@ -93,7 +105,7 @@ export function adapt(driver: Driver, test: SpecTest): Adapted {
   const notes = new Set<string>();
   const refused = (n: Set<string>): string | undefined => driver.refuses?.find((r) => n.has(r));
   try {
-    const start = project(test.initial.buffer, flavor, { ordered: driver.ordered });
+    const start = project(test.initial.buffer, flavor, { ordered: driver.ordered, freeForm: driver.freeForm });
     if (start.caretLost) return skip(start.caretLost);
     const no = refused(start.notes) ?? driver.holds?.(start.outline);
     if (no) return skip(no);
@@ -109,7 +121,7 @@ export function adapt(driver: Driver, test: SpecTest): Adapted {
         prev = null;
         continue;
       }
-      const p = project(s.expect.buffer, flavor, { ordered: driver.ordered });
+      const p = project(s.expect.buffer, flavor, { ordered: driver.ordered, freeForm: driver.freeForm });
       const no = refused(p.notes);
       if (no) return skip(`${no} (expected)`);
       p.notes.forEach((n) => notes.add(n));
@@ -121,6 +133,22 @@ export function adapt(driver: Driver, test: SpecTest): Adapted {
     }
     if (!steps.some((s) => s.want || s.clipboard !== undefined)) return skip('nothing to compare');
     if (!meaningful) return skip('changes only what blocks can\'t show');
+    // the same for the blocks the app is given: an adapted start can be where the app's option acts
+    // though the Markdown isn't (a paragraph's list its children, so Enter mid-paragraph splits a
+    // block with children: E9 and `enterMidItem`), so ourus plays the start as drawn, items, both ways
+    if (theirs.length && start.notes.size && !driver.freeForm) {
+      const asBlocks: SpecTest = { ...test, initial: { ...test.initial, buffer: draw(start.outline, { ordered: driver.ordered }) } };
+      const played = (config?: Partial<Config>): string | null => {
+        try {
+          return drawnSteps(asBlocks, flavor, config).join('\n');
+        } catch {
+          return null;
+        }
+      };
+      const ours = played();
+      const by = ours === null ? undefined : theirs.find(([k, v]) => played({ [k]: v }) !== ours);
+      if (by) return skip(`option ${by[0]}: the app's ${by[1]}, as blocks`);
+    }
     const key = JSON.stringify([start.outline, clipboard, steps.map((s) => [s.actions, s.want, s.clipboard]), settings]);
     return { plan: { test, name, initial: start.outline, clipboard, steps, notes: [...notes].sort(), settings, key } };
   } catch (e) {

@@ -5,18 +5,19 @@
 // its own, shared with whoever has the link), so it isn't the one driven.
 //
 // BlockNote's editor is found through React (the `editor` prop of `BlockNoteView`, on its container's
-// fiber); a test's outline goes in through its API (`replaceBlocks`, every block a bullet list item at
-// its depth, or a heading, a task, a code block by its text), then the editor's ProseMirror state is
+// fiber); a test's outline goes in through its API (`replaceBlocks`: a free block a paragraph, or by
+// its text a heading or a code block; an item a bullet, numbered or check list item), then the
+// editor's ProseMirror state is
 // made anew from the same document and plugins, so the history is empty and undo stays within the
 // test. The caret is a ProseMirror selection, by block and offset; reading is `editor.document`, each
-// block's text as the spec's canonical form has it (`[ ] `, `## `, a fence), a paragraph as its text,
-// as the projection has a paragraph (BlockNote makes one of an item: Backspace at its start, Enter on
-// an empty one). Marked (`¶ `), the 52 differences with a paragraph read gave 3 more, all where ourus
-// made a paragraph there too, and none of the rest agreed for want of the mark (2026-10-14).
+// block's text as the spec's canonical form has it (`[ ] `, `## `, a fence). In free form: a
+// paragraph, a heading or code is a block outside every list (`free`), as BlockNote's are, and what one
+// owns in ourus's outline (a heading its section, a paragraph the list after it) is beside it in
+// BlockNote, as in Markdown (`liftOwned`, `ownBlocks`).
 
 import type { Page } from 'playwright-core';
 import type { Driver } from '../lib/driver.ts';
-import type { Block, Outline, Sel } from '../lib/outline.ts';
+import { liftOwned, ownBlocks, type Block, type Outline, type Sel } from '../lib/block.ts';
 
 /** BlockNote's keys for the spec's motions; the `select…` motions add Shift. */
 const MOTIONS: Record<string, string> = {
@@ -40,21 +41,23 @@ interface BnBlock {
 
 /**
  * A block's canonical text as BlockNote's: its type, props and text, and how long its prefix is; and
- * where a number that is text has its escape (`1\. x`), which BlockNote's text hasn't (`cut`).
+ * where a number that is text has its escape (`1\. x`), which BlockNote's text hasn't (`cut`). A free
+ * block (outside every list, `Block.free`) is a paragraph, or by its text a heading or a code block;
+ * an item a list item: a task, numbered or a bullet.
  */
-function toBlockNote(text: string): { block: Omit<BnBlock, 'children'>; prefix: number; cut?: number } {
-  const task = /^\[([ xX])\] /.exec(text);
-  if (task) return { block: { type: 'checkListItem', props: { checked: task[1] !== ' ' }, content: text.slice(4) }, prefix: 4 };
+function toBlockNote(text: string, free = false): { block: Omit<BnBlock, 'children'>; prefix: number; cut?: number } {
   const heading = /^(#{1,6}) /.exec(text);
-  if (heading) return { block: { type: 'heading', props: { level: heading[1]!.length }, content: text.slice(heading[0].length) }, prefix: heading[0].length };
   const fence = /^```([^\n`]*)\n([\s\S]*?)\n?```$/.exec(text);
-  if (fence) return { block: { type: 'codeBlock', props: { language: fence[1] || 'text' }, content: fence[2] }, prefix: 4 + fence[1]!.length };
+  if (free && heading) return { block: { type: 'heading', props: { level: heading[1]!.length }, content: text.slice(heading[0].length) }, prefix: heading[0].length };
+  if (free && fence) return { block: { type: 'codeBlock', props: { language: fence[1] || 'text' }, content: fence[2] }, prefix: 4 + fence[1]!.length };
+  const task = free ? null : /^\[([ xX])\] /.exec(text);
+  if (task) return { block: { type: 'checkListItem', props: { checked: task[1] !== ' ' }, content: text.slice(4) }, prefix: 4 };
   // a numbered block, numbered as its run of them is (`nest` gives the run its first number)
-  const numbered = /^(\d{1,9})\. /.exec(text);
+  const numbered = free ? null : /^(\d{1,9})\. /.exec(text);
   const prefix = numbered?.[0].length ?? 0;
-  const type = numbered ? 'numberedListItem' : 'bulletListItem';
-  // a number that is text (after a numbered block's own number too)
-  const literal = /^(\d{1,9})\\[.)]/.exec(text.slice(prefix));
+  const type = free ? 'paragraph' : numbered ? 'numberedListItem' : 'bulletListItem';
+  // a number that is text (after a numbered block's own number too): the escape's backslash off
+  const literal = /^(\d{1,9})\\(?=[.)])/.exec(text.slice(prefix));
   if (literal) return { block: { type, content: literal[1] + text.slice(prefix + literal[0].length) }, prefix, cut: prefix + literal[1]!.length };
   return { block: { type, content: text.slice(prefix) }, prefix };
 }
@@ -67,6 +70,21 @@ const appOffset = (offset: number, at: { prefix: number; cut?: number }): number
  * caret where a block's text has no place in BlockNote, its markup being a widget or the block's type.
  */
 function holds(o: Outline): string | undefined {
+  // a list item is a list item's text: BlockNote's headings and code blocks are blocks of their own
+  for (const b of o.blocks) {
+    if (b.free) continue;
+    if (/^#{1,6} /.test(b.text)) return 'a heading as a list item (a heading is a block of its own)';
+    if (/^```/.test(b.text)) return 'a code block as a list item (a code block is a block of its own)';
+  }
+  // numbered siblings that don't count on (`1. a`, `1. b`): BlockNote numbers a run of them on from its
+  // first, whose `start` alone it draws (measured)
+  const last: (number | null)[] = [];
+  for (const b of o.blocks) {
+    last.length = b.depth + 1;
+    const n = !b.free && /^(\d{1,9})\. /.exec(b.text);
+    if (n && last[b.depth] != null && Number(n[1]) !== last[b.depth]! + 1) return 'a numbered list right after another (BlockNote numbers them as one)';
+    last[b.depth] = n ? Number(n[1]) : null;
+  }
   if (!o.sel) return undefined;
   const text = o.blocks[o.sel.block]!.text;
   const from = Math.min(o.sel.anchor, o.sel.head);
@@ -83,12 +101,15 @@ function holds(o: Outline): string | undefined {
   return undefined;
 }
 
+/** A free block that owns the list right after it, as Markdown's paragraph does (not code, a divider, a heading). */
+const ownsList = (b: Block): boolean => !!b.free && !/^#{1,6} /.test(b.text) && !b.text.startsWith('```') && !/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(b.text);
+
 /** The outline's blocks as BlockNote's, nested by depth. */
 function nest(blocks: readonly Block[]): BnBlock[] {
   const roots: BnBlock[] = [];
   const stack: BnBlock[] = [];
   for (const b of blocks) {
-    const bn: BnBlock = { ...toBlockNote(b.text).block, children: [] };
+    const bn: BnBlock = { ...toBlockNote(b.text, !!b.free).block, children: [] };
     stack.length = b.depth;
     const siblings = b.depth === 0 ? roots : stack[b.depth - 1]!.children;
     // a run of numbered blocks counts on from its first's number, the one it was written with
@@ -115,10 +136,10 @@ function find(): boolean {
 }
 
 /** In the page: the blocks (canonical text, depth, prefix length) and the caret, by block and offset. */
-function readPage(): { blocks: { depth: number; text: string; prefix: number }[]; sel: Sel | null } {
+function readPage(): { blocks: { depth: number; text: string; prefix: number; free: boolean }[]; sel: Sel | null } {
   const w = window as any;
   const view = w.__sxsView;
-  const flat: { depth: number; text: string; prefix: number; cut?: number; id: string }[] = [];
+  const flat: { depth: number; text: string; prefix: number; cut?: number; id: string; free: boolean }[] = [];
   const textOf = (b: any): string => (Array.isArray(b.content) ? b.content.map((c: any) => (c.type === 'text' ? c.text : c.type === 'link' ? c.content.map((x: any) => x.text).join('') : '')).join('') : '');
   const walk = (bs: any[], depth: number): void => {
     // a run of numbered blocks is numbered from its first's `start`
@@ -146,7 +167,9 @@ function readPage(): { blocks: { depth: number; text: string; prefix: number }[]
       // a divider is a thematic break, as the projection has one
       else if (b.type === 'divider') prefix = '---';
       else if (b.type !== 'bulletListItem' && b.type !== 'numberedListItem' && b.type !== 'paragraph') prefix = `<${b.type}> `;
-      flat.push({ depth, text: prefix + t + suffix, prefix: prefix.length, ...(cut !== undefined && { cut }), id: b.id });
+      // outside every list: a paragraph, a heading, code, a quote, a divider, any block but a list item
+      const free = !['bulletListItem', 'numberedListItem', 'checkListItem', 'toggleListItem'].includes(b.type);
+      flat.push({ depth, text: prefix + t + suffix, prefix: prefix.length, ...(cut !== undefined && { cut }), id: b.id, free });
       walk(b.children, depth + 1);
     });
   };
@@ -169,7 +192,7 @@ function readPage(): { blocks: { depth: number; text: string; prefix: number }[]
   const a = view.hasFocus() ? at(anchor) : null;
   const h = view.hasFocus() ? at(head) : null;
   const sel = a && h && a.block === h.block ? { block: a.block, anchor: a.offset, head: h.offset } : null;
-  return { blocks: flat.map(({ depth, text, prefix }) => ({ depth, text, prefix })), sel };
+  return { blocks: flat.map(({ depth, text, prefix, free }) => ({ depth, text, prefix, free })), sel };
 }
 
 /** In the page: the outline loaded, the history made empty, the caret placed (block, offsets past its prefix). */
@@ -201,8 +224,12 @@ function loadPage({ blocks, at }: { blocks: BnBlock[]; at: { block: number; anch
 export const driver: Driver = {
   name: 'blocknote',
   title: 'BlockNote',
+  id: 'BN',
   url: 'https://www.blocknotejs.org/examples/basic/minimal',
   model: 'block',
+  // paragraphs, headings and code are blocks outside every list, as the spec's buffers have them; list
+  // items the rest
+  freeForm: true,
   // measured: Enter at an item's text start leaves the caret with the text
   behaves: { enterAtTextStart: 'stay', pasteStructuredAtEnd: 'join', pasteStructuredListForm: 'own' },
   keys: {
@@ -249,9 +276,9 @@ export const driver: Driver = {
   async load(page: Page, doc) {
     const o = doc as Outline;
     if (!(await page.evaluate(find))) throw new Error("BlockNote's editor isn't on the page");
-    const at = o.sel && toBlockNote(o.blocks[o.sel.block]!.text);
+    const at = o.sel && toBlockNote(o.blocks[o.sel.block]!.text, !!o.blocks[o.sel.block]!.free);
     const placed = await page.evaluate(loadPage, {
-      blocks: nest(o.blocks),
+      blocks: nest(liftOwned(o.blocks)),
       at: o.sel && at ? { block: o.sel.block, anchor: appOffset(o.sel.anchor, at), head: appOffset(o.sel.head, at) } : null,
     });
     if (placed !== 'placed' && placed !== 'no caret') throw new Error(`the caret has no place: ${placed}`);
@@ -259,6 +286,6 @@ export const driver: Driver = {
 
   async read(page: Page) {
     const r = await page.evaluate(readPage);
-    return { blocks: r.blocks.map(({ depth, text }) => ({ depth, text })), sel: r.sel };
+    return { blocks: ownBlocks(r.blocks.map(({ depth, text, free }) => ({ depth, text, ...(free && { free: true as const }) })), ownsList), sel: r.sel };
   },
 };

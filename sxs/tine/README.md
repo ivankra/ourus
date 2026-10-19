@@ -4,7 +4,7 @@
 blocks, stored as Logseq's Markdown), through its live guide, https://tine.page/guide/app/: Tine's
 own editor (SolidJS, its parser in WASM), the guide export of 2026-09-28 (bundle `app-BBSWYxDX`; the
 desktop app is 0.7.1). The spec's buffers are projected onto blocks, as for Logseq (the `block`
-model, [`../lib/outline.ts`](../lib/outline.ts)). Last results: [`sxs.md`](sxs.md).
+model, [`../lib/block.ts`](../lib/block.ts)).
 
 ## Keys (Linux)
 
@@ -12,18 +12,47 @@ From `src/keybindings.ts` and the block editor's handlers, checked in the app:
 
 | action | keys |
 | --- | --- |
-| `enter`, `shiftEnter` | Enter (splits; at the text's start, an empty block above), Shift+Enter (a line break in the block) |
-| `indent`, `outdent` | Tab, Shift+Tab (outdenting is direct by default; Settings › Editor has logical) |
-| `moveSubtreeUp`, `moveSubtreeDown` | Alt+Shift+Up, Alt+Shift+Down: the block with its children |
-| `deleteContentBackward`, `deleteContentForward` | Backspace, Delete (joining at a block's edge) |
+| `enter` | Enter (splits; at the text's start, an empty block above) |
+| `shiftEnter` | Shift+Enter (a line break in the block) |
+| `indent` | Tab |
+| `outdent` | Shift+Tab (outdenting is direct by default; Settings › Editor has logical) |
+| `moveSubtreeUp` | Alt+Shift+Up: the block with its children |
+| `moveSubtreeDown` | Alt+Shift+Down: the block with its children |
+| `deleteContentBackward` | Backspace (joining at a block's start) |
+| `deleteContentForward` | Delete (joining at a block's end) |
 | `deleteSoftLineBackward` | Alt+U ("kill line before") |
 | `deleteSubtree` | Escape (the block selected), then Backspace |
-| `pasteStructured`, `pastePlain` | Ctrl+V (`- ` outlines become blocks), Ctrl+Shift+V (as it is) |
-| `undo`, `redo` | Ctrl+Z, Ctrl+Shift+Z |
-| caret motions | arrows, Home, End (the visual line's); `select…` with Shift |
-| `cursorDocStart`, `cursorDocEnd` | Up (Down) until the caret stops, then Ctrl+Home (End), the block's start (end) |
+| `duplicateSubtree` | *missing* (no command): its examples are skipped |
+| `pasteStructured` | Ctrl+V (`- ` outlines become blocks) |
+| `pastePlain` | Ctrl+Shift+V (as it is) |
+| `undo` | Ctrl+Z |
+| `redo` | Ctrl+Shift+Z |
 
-`duplicateSubtree` has no command; its examples are skipped.
+Other shortcuts:
+
+| shortcut | keys | what it does |
+| --- | --- | --- |
+| cycle task | Ctrl+Enter | none, then `TODO`, `DOING` (a clock entry added under it), `DONE`, none; on selected blocks, each of them |
+| clear block | Alt+L | the block's text deleted, its children kept |
+| kill line after | Alt+K | to the end of the caret's line |
+| word backward, forward | Alt+B, Alt+F | |
+| kill word backward, forward | Alt+W, Alt+D | |
+| select blocks | Shift+Up, Shift+Down (from a block's first or last line) | the block and the one above (below), then more |
+| select all | Ctrl+A | the text, then the block with its children, then its parent's |
+| edit the selected block | Enter | the caret at its end |
+| indent, outdent selected blocks | Tab, Shift+Tab | all of them |
+| fold, unfold | Ctrl+Up, Ctrl+Down | a block's children hidden (its `collapsed:: true`) or shown |
+| copy embed | Ctrl+Shift+C (no text selected) | `{{embed ((<uuid>))}}`, the block given an `id::` |
+| numbered list | typing `1. ` in an empty block | numbered (`logseq.order-list-type:: number`) |
+| quick capture | Ctrl+Shift+Enter | the block filed to today's journal |
+| bold, italic, strikethrough, highlight | Ctrl+B, Ctrl+I, Ctrl+Shift+S, Ctrl+Shift+H | |
+| insert link, follow link | Ctrl+L, Ctrl+O (Ctrl+Shift+O: in the sidebar) | |
+| document mode | `t d` (not editing) | Enter a line break, Shift+Enter a new block |
+
+From Tine's binding table (`src/keybindings.ts`, OG's ids and keys) and its block editor
+(`src/components/Block.tsx`), each measured in the guide but quick capture, the formatting and link
+keys and document mode. Unlike OG, Alt+Left and Alt+Right go back and forward, not zoom: a block is
+zoomed into by a click on its bullet only. Headings have no key (the block's context menu).
 
 ## Stack
 
@@ -42,9 +71,10 @@ Repo: https://github.com/martinkoutecky/tine
 and marked so (`<meta name="tine-published" content="snapshot.json">`): the app then takes a backend
 that refuses every write, and nothing opens for editing. Without the meta it takes its in-memory
 backend (the mock it ships for running in a browser), editable, with the day's journal and a few
-pages, saving nothing. So [`proxy.ts`](proxy.ts) drops the meta from the app's page, and names two
+pages, saving nothing. So [`proxy.ts`](proxy.ts) drops the meta from the app's page, and names three
 of the bundle's values on `globalThis`, which the bundle keeps to itself: the document store
-(`__sxsDoc`, `[doc, setDoc]`) and the backend's pages (`__sxsPages`). Both patches are applied on
+(`__sxsDoc`, `[doc, setDoc]`), the backend's pages (`__sxsPages`) and Tine's reading of a block's
+header from its text (`__sxsFacets`, `deriveFacets(raw, format)`). Both patches are applied on
 the way out, so the cache keeps what the site sent. A new bundle the patterns don't match leaves the
 names out, and `open` stops the run saying so. The only traffic is GETs: the app, and the plugin
 registry on raw.githubusercontent.com.
@@ -53,9 +83,16 @@ registry on raw.githubusercontent.com.
 
 - **A page per test**, `sxs-<run>-<n>`: pushed into the backend's pages as a page of blocks (each
   `{ id, raw, children }`, the id `<page>-<i>`), then opened as a user would, with the search (Ctrl+K,
-  its name, Enter): the app has no route to a page. The name has the run in it: a tab outlives a run,
-  and the next run of Tine takes it over with the last run's pages still there, so a name of its own
+  its name, Enter): the app has no route to a page. The name has the run in it: a tab can outlive a
+  run (one that died), and the next run of Tine takes it over with the last run's pages still there, so a name of its own
   per run is what keeps the search from opening an old page of the same name.
+- **A block's header facets**: a page's blocks come from the backend with their task marker,
+  priority, heading level, dates, tags and properties, the Rust parser's, and Tine takes those as
+  they are (`seedFacets`, `src/render/facets.ts`) until a block's text changes. So the driver's
+  blocks carry Tine's own reading of their text (`deriveFacets`, named by `proxy.ts`, as Tine
+  derives them for an edited block). Until 2026-10-18 they carried none: a numbered block was no
+  list to Tine (no `1.` drawn, Enter and paste not numbering what they made, Backspace joining it
+  where Tine, as OG, takes its number off), and a `TODO` block no task, until edited.
 - **The caret**: a click on the block's text opens its editor, a `textarea.block-editor`, and the
   caret is set there until it stays. A fenced code block opens an editor of its code alone
   (`.code-edit`), so a caret in it is an offset in the code: the driver adds and takes off the
@@ -77,6 +114,34 @@ registry on raw.githubusercontent.com.
   reads the page of a block that is gone (`Block.tsx`): harmless, but a page error in the run's count.
 - A notice ("New: in-app Guide") shows in the in-memory mode; it is in no one's way.
 - Shift+Up and Down at a block's edge select blocks, not text.
+- **Enter always splits** (after its own cases: in a fence, in `$$` math, in page properties, on an
+  empty numbered item, on a list line inside the block): an empty last child makes another, where
+  OG outdents it (`Block.tsx`'s Enter, then `splitBlock`). The split keeps the spaces at both halves'
+  edges (nothing trimmed), and over a selection splits at its start, the selected text kept.
+- **A join never refuses but at the top**: Backspace at a block's start joins it into the block
+  above, Delete at the very end of its text the block below into it (`absorbInto`), their children
+  appended to the survivor's; Backspace on a page's first block does nothing. Delete joins only with
+  the caret at the text's very end: a space after the caret is deleted first. So of ourus's
+  `emptyItemWithChildren` camps Tine is SiYuan's and BlockNote's (refusing Backspace with nothing
+  above, lifting on Delete), and the driver declares no value: it said `refuse` until 2026-10-18,
+  skipping six examples Tine plays otherwise.
+
+- **Against Logseq OG**, which Tine copies: of 334 examples both ran from the same start, 275 came
+  out the same before the facets were seeded (the driver's loads gave Tine none: a numbered block was
+  no list to it), 282 after; of the 50 apart, Tine's own rules above (Enter always splits, joins
+  never refuse) and Logseq's (a join refused where both blocks have children, the hidden property of
+  a numbered block). Where a near-clone differs from its original, the driver is the first place to
+  look.
+
+## Tine bugs met on the way
+
+Seen in the guide's export of 2026-09-28; source references to Tine's repository as of 2026-10-17.
+
+1. **A join puts the joined block's children last** (`del.md › Delete5`, `5b`, `5e`,
+   `backspace.md › Backspace17c`). `absorbInto` appends the absorbed block's children to the
+   survivor's (`children.push(...node.children)`), so where the survivor has other children after
+   the absorbed one, the outline's order changes: Delete at the end of an empty block whose first
+   child `a` has a child `b` and a sibling `c` reads `a`, `c`, `b` after.
 
 ## Internals
 

@@ -1,25 +1,56 @@
-# Logseq
+# Logseq OG
 
-[`driver.ts`](driver.ts) drives Logseq's web demo, https://demo.logseq.com/: the file-based app
-("OG", https://github.com/logseq/og) with a demo graph that lives in the browser and
-saves nothing. The last full run is [`sxs.md`](sxs.md).
+[`driver.ts`](driver.ts) drives [Logseq OG](https://github.com/logseq/og) on [demo.logseq.com](https://demo.logseq.com/):
+the file-based app ("OG") with a demo graph that lives in the browser and saves nothing. The driver is
+both Logseqs' (`logseqDriver`): the database version runs on it too ([`../logseq-db/`](../logseq-db/)),
+a flavor of its own deciding how a block's text is held (OG's: all of it in the text).
 
 ## Keys (Linux)
 
 | action | keys |
 | --- | --- |
-| `enter`, `shiftEnter` | Enter, Shift+Enter |
-| `indent`, `outdent` | Tab, Shift+Tab |
-| `deleteContentBackward`, `deleteContentForward` | Backspace, Delete |
-| `moveSubtreeUp`, `moveSubtreeDown` | Alt+Shift+Up, Alt+Shift+Down |
-| `deleteSoftLineBackward` | Shift+Home, Backspace (no key of its own on Linux) |
-| `deleteSubtree` | Escape (selects the block), Backspace (deletes the selection) |
-| `pasteStructured`, `pastePlain` | Ctrl+V, Ctrl+Shift+V |
-| `undo`, `redo` | Ctrl+Z, Ctrl+Shift+Z |
-| caret motions | arrows, Home, End; `select…` with Shift |
-| `cursorDocStart`, `cursorDocEnd` | Up (Down) until the caret stops, then Home (End) |
+| `enter` | Enter |
+| `shiftEnter` | Shift+Enter |
+| `indent` | Tab |
+| `outdent` | Shift+Tab |
+| `moveSubtreeUp` | Alt+Shift+Up |
+| `moveSubtreeDown` | Alt+Shift+Down |
+| `deleteContentBackward` | Backspace |
+| `deleteContentForward` | Delete |
+| `deleteSoftLineBackward` | Alt+U ("kill line before": from the start of the caret's line; nothing at a line's start) |
+| `deleteSubtree` | Escape (selects the block), Backspace (deletes the selection); in a block with a code fence, which Escape never selects, Ctrl+A until the block is (its text, then the block) |
+| `duplicateSubtree` | *missing* |
+| `pasteStructured` | Ctrl+V |
+| `pastePlain` | Ctrl+Shift+V |
+| `undo` | Ctrl+Z |
+| `redo` | Ctrl+Shift+Z |
 
-`duplicateSubtree` has no key in Logseq, and its tests are skipped.
+Other shortcuts:
+
+| shortcut | keys | what it does |
+| --- | --- | --- |
+| cycle task | Ctrl+Enter | none, then `LATER`, `NOW`, `DONE`, none (the demo's workflow; the other is `TODO`, `DOING`, `DONE`) |
+| clear block | Alt+L | the block's text deleted, its children kept |
+| kill line after | Alt+K | to the end of the caret's line |
+| kill word backward, forward | Alt+W, Alt+D | |
+| word forward, backward | Alt+F, Alt+B | |
+| block start, end | Alt+A, Alt+E | the caret to the start or end of the block's text |
+| select block up, down | Alt+Up, Alt+Down | the block being edited selected, then the selection extended; Shift+Up and Shift+Down too, from a block's first or last line |
+| select parent, select all | Ctrl+A, Ctrl+Shift+A | Ctrl+A: the text, then (all of it selected) the block, then its parent (at the top, every block); Ctrl+Shift+A: every block |
+| edit the selected block | Enter | the caret at its end |
+| fold, unfold, toggle | Ctrl+Up, Ctrl+Down, Ctrl+; | a block's children hidden or shown |
+| fold or unfold all | `t o` (not editing) | |
+| zoom in, zoom out | Alt+Right, Alt+Left | a block as the page, and back |
+| numbered list | `t n` (blocks selected) | toggled on the selected blocks (their `logseq.order-list-type` property); typing `1. ` in an empty block makes it numbered |
+| copy, cut | Ctrl+C, Ctrl+X | selected blocks, in three formats (below) |
+| copy as text | Ctrl+Shift+C | selected blocks as Markdown (`- a\n\t- b`) |
+| copy embed | Ctrl+E | `{{embed ((<uuid>))}}` of the block |
+| bold, italic, highlight, strikethrough | Ctrl+B, Ctrl+I, Ctrl+Shift+H, Ctrl+Shift+S | |
+| insert link, follow link | Ctrl+L, Ctrl+O | |
+| up, down | Ctrl+P, Ctrl+N | as Up and Down |
+
+From Logseq's shortcut table (`modules/shortcut/config.cljs`), each measured in the demo but the
+formatting and link keys. Headings have no key (a block's context menu, `/h1` ...).
 
 ## Stack
 
@@ -40,13 +71,25 @@ Repo: https://github.com/logseq/og
 - **Text Logseq would trim** (a trailing line break, spaces at a block's edge) is held only by the
   block being edited: its textarea gets the text as if typed (the value set, `input` dispatched).
   Other blocks can't start with such text, and those tests are skipped.
+- **A numbered block's editor shows its text alone.** The number is a property stored in the
+  block's content (`a\nlogseq.order-list-type:: number`), one of Logseq's hidden ones
+  (`hidden-built-in-properties`), which an editor never shows: the driver's editor holds `a`, as
+  Logseq opens it. (It held the property line until 2026-10-18: Logseq's keys read the editor, and an
+  empty numbered block wasn't empty to its paste, Paste16.)
 - **Reading**: `get_page_blocks_tree`, except for the block being edited, which is read from its
-  textarea: Logseq stores what is typed about half a second after typing stops. Selected blocks
-  come from `get_selected_blocks`.
+  textarea (its number from the database): Logseq stores what is typed about half a second after
+  typing stops. Selected blocks come from `get_selected_blocks`.
 - **Tasks** are Logseq's markers: `[ ]` is `TODO`, `[x]` is `DONE` (and `LATER`, `NOW`, `DOING`,
   ... read as tasks).
 - **Undo** is Logseq's "page only" history (a setting of its right sidebar), so it stays within the
-  test's page.
+  test's page, and it starts with the test: Logseq's history takes every transaction but an undo's
+  (`listen-db-changes!`), the load's too, and keeps it in a module of its own, so
+  [`proxy.ts`](proxy.ts) adds one statement to Logseq's bundle on the way to the browser (the cache
+  keeps what the site sent), naming a function that empties the graph's undo and redo stacks
+  (`__ourusLogseq.clearHistory`), which the load calls last. Before it, an undo past what a test did
+  took back part of its load: three undos after a load emptied the page, and
+  `scenarios.md › Scenario23`'s three undos came back with the page's first empty block one run in
+  five. `open` reloads with the browser's cache cleared if the bundle came unpatched.
 - **`outdent: logical`** is Logseq's "logical outdenting" (Settings › Editor,
   `:editor/logical-outdenting?`); every other test runs with it off, as ourus's default and Logseq's.
   The driver sets it in the graph's config as Logseq holds it (`set_state_from_store`), not as the
@@ -74,9 +117,27 @@ Repo: https://github.com/logseq/og
   block's editor went into the last inserted block's (`move-subtree-up.md › MoveUp8`: `c1` held as `c`). So
   the driver writes only into the editor inside the target block (`.ls-block[blockid]`), opening the
   target again if the focus has moved, and the runner loads a start held wrong once more.
-- **Plain lines paste as text.** Multi-line text pastes into the block, unless it reads as Markdown
-  blocks (list items, headings) or has blank lines (`handler/paste.cljs`). So Paste7 and Paste10
-  differ, though `spec/paste.md` says Logseq makes items there.
+- **What Ctrl+V pastes is the clipboard's HTML, where it has some** (`paste-copied-text`): the HTML
+  converted to Markdown, else the text; then blocks if that reads as Markdown blocks (a line starting
+  `-`, `+`, `*` or `#`: `markdown-blocks?`), else paragraphs if it has blank lines, else text into
+  the block. So Paste7 and Paste10's plain lines paste as text, though `spec/paste.md` says Logseq
+  makes items there; a numbered list pastes as blocks (from the runner's HTML, its numbers dropped),
+  where as text alone it would go into the block as text; and a heading and a line come out of the
+  conversion with a blank line between them (Paste19, Paste57). Measured with text alone against the
+  runner's text and HTML, 2026-10-18.
+- **Logseq's own copy** (Ctrl+C on selected blocks) writes three formats: `web application/logseq`,
+  the blocks as EDN (DataScript's entities, properties and all), which a paste in Logseq takes
+  first, restoring the blocks exactly; `text/plain`, the blocks as Logseq's Markdown, the hidden
+  properties showing (`- a\n  logseq.order-list-type:: number\n\t- kid`), which pastes back exactly
+  too; and `text/html`, an export through XSLT, which this Chromium prefixes with its notice that
+  XSLT is going away: pasted alone, the notice is a block, the list under it. The runner writes
+  neither the first nor such HTML, and reads an app's copy as text.
+- **Escape never selects a block with a code fence** (`components/block.cljs`, the editor's
+  `on-hide`: `select? (not (string/includes? value "```"))`): it leaves the editor, nothing selected.
+  `deleteSubtree` selects such a block with Ctrl+A instead (DeleteSubtree8, Open2: Escape and
+  Backspace did nothing).
+- **Backspace at the first block's start does nothing** (`backspaceAtTopItem: refuse`, declared for both
+  Logseqs: `backspace.md › Backspace34` agrees with it, played with `--ignore-options`).
 - **The caret moves by pixels**, in a proportional font: after Up or Down it lands at another column
   than the spec's monospace one.
 - The demo doesn't say its version (`get_app_info` answers `1.0.0`, the plugin API's); its bundle's
@@ -107,6 +168,12 @@ Seen in the demo's build b8f87af5; source references are to Logseq's source
    loses its indentation (`insert_block` and `update_block` keep it).
 6. The demo requests `/js/eventemitter3.umd.min.js`, which the site doesn't have: a 404 page, which
    the browser refuses to run as a script.
+7. **A paste into a numbered block takes its number away** (`paste.md › Paste2`, `Paste18`: `1. a┃`
+   and a list pasted, `a` unnumbered after, the list numbered from 1). `paste-blocks` takes the
+   editor's text (`a`) for unsaved edits when it differs from the stored content, which a numbered
+   block's always does (`a\nlogseq.order-list-type:: number`: the editor shows no hidden property),
+   and saves it over the block, its number with it; the pasted blocks take the number the block had.
+   The same with the list typed (`1. ` makes a numbered block), with text alone, and after a pause.
 
 Suspected and not seen: a key that lands while the focus is between editors goes to the page, where
 Logseq's single-letter shortcuts (`t t` toggles the theme, `g a` opens All pages) would take it.

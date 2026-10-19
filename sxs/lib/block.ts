@@ -18,6 +18,11 @@ import { readDrawing } from '../../test/drawing.ts';
 export interface Block {
   depth: number;
   text: string;
+  /**
+   * A block outside every list (a paragraph, a heading, an atom), where the projection keeps free form
+   * (`ProjectOptions.freeForm`); without it, an item, a block as block apps have them. Drawn `¶`.
+   */
+  free?: true;
 }
 
 /** A caret or selection inside one block's text. */
@@ -46,6 +51,12 @@ export interface ProjectOptions {
    * Else an ordered item is a plain block, its number dropped (`numbered list`).
    */
   readonly ordered?: boolean;
+  /**
+   * The app tells a block outside every list from an item (`Driver.freeForm`): a paragraph, a heading
+   * or an atom is a free block (`Block.free`), no adaptation, and so is a blank line next to one (the
+   * boundary free form has); else every node is a block alike.
+   */
+  readonly freeForm?: boolean;
 }
 
 export interface Projection {
@@ -110,13 +121,23 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
   const maps: LineMap[][] = [];
   const sections: number[] = [];
   for (const node of nodes) {
-    const { text, lines } = blockText(doc, node, notes, options.ordered ?? false);
+    const { text, lines } = blockText(doc, node, notes, options.ordered ?? false, options.freeForm ?? false);
     if (node.kind === 'heading') sections.push(blocks.length);
-    blocks.push({ depth: node.depth - 1, text });
+    blocks.push({ depth: node.depth - 1, text, ...(options.freeForm && node.kind !== 'item' && { free: true as const }) });
     maps.push(lines);
   }
   doc.lines.forEach((line, i) => {
-    if (!doc.nodeAtLine(i) && line.blank) notes.add('blank lines');
+    if (doc.nodeAtLine(i) || !line.blank) return;
+    if (options.freeForm) {
+      // the nodes on either side: a blank line next to a free block is free form's own boundary
+      let before = i - 1;
+      while (before >= 0 && !doc.nodeAtLine(before)) before--;
+      let after = i + 1;
+      while (after < doc.lines.length && !doc.nodeAtLine(after)) after++;
+      const near = [before >= 0 ? doc.nodeAtLine(before) : null, after < doc.lines.length ? doc.nodeAtLine(after) : null];
+      if (near.some((n) => n && n.kind !== 'item')) return;
+    }
+    notes.add('blank lines');
   });
 
   const locate = (p: number): { block: number; offset: number } | string => {
@@ -143,7 +164,7 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
 }
 
 /** A node's own text as a block holds it, and where each of its lines came from. */
-function blockText(doc: OutlineState, node: OutlineNode, notes: Set<string>, ordered: boolean): { text: string; lines: LineMap[] } {
+function blockText(doc: OutlineState, node: OutlineNode, notes: Set<string>, ordered: boolean, freeForm: boolean): { text: string; lines: LineMap[] } {
   if (node.kind === 'quote') throw new Unsupported(doc.syntaxTree.line(node.startLine) && /^\s*>\s*\[!/.test(doc.text.slice(doc.line(node.startLine).from, doc.line(node.startLine).to)) ? 'a callout' : 'a quote');
   const lines: LineMap[] = [];
   const parts: string[] = [];
@@ -176,15 +197,23 @@ function blockText(doc: OutlineState, node: OutlineNode, notes: Set<string>, ord
     if (list?.type === 'ordered' && !ordered) notes.add('numbered list');
     else if (list?.bulletChar && list.bulletChar !== '-') notes.add(`bullet ${list.bulletChar}`);
     if (node.block.task) notes.add('task');
-  } else if (node.kind === 'paragraph') notes.add('paragraph');
-  else if (node.kind === 'heading') notes.add('heading');
-  else if (node.kind === 'atom') notes.add(ATOM_NOTES[node.block.type] ?? node.block.type);
+  } else if (node.kind === 'paragraph') {
+    if (!freeForm) notes.add('paragraph');
+  } else if (node.kind === 'heading') {
+    if (!freeForm) notes.add('heading');
+  } else if (node.kind === 'atom') notes.add(ATOM_NOTES[node.block.type] ?? node.block.type);
 
   const head = node.kind === 'atom' ? node.block : node.head;
   // markup no block has a form for: a block would hold it as text, and edit it so
   const title = head?.type === 'heading' && !head.setext ? doc.headRange(node) : null;
   if (title && /^[ \t]*#/.test(doc.text.slice(title.to, doc.line(head!.startLine).to))) throw new Unsupported("a heading's closing #s");
   if (head?.type === 'code_block' && !head.fenced) throw new Unsupported('indented code');
+  if (!head && node.kind === 'item' && node.block.children[0]?.startLine === node.block.startLine) {
+    // an item whose first block is a list (`- - a`): it has no text, and the rest of its marker's line
+    // is the inner item's, a child block
+    notes.add("a list as an item's first block");
+    return { text: number, lines };
+  }
   if (!head) {
     // an empty item, or one holding only a task's checkbox
     const line = doc.line(node.block.startLine);
@@ -221,9 +250,16 @@ const escapeLine = (s: string): string =>
     .replace(/^(\d{1,9})([.)])(?=[ \t]|$)/, '$1\\$2')
     .replace(/^(#{1,6})(?=[ \t]|$)/, '\\$1');
 
-/** Draws an outline as a spec buffer: `-` items, two spaces a level, the caret or selection. */
-export function draw(o: Outline): string {
+/**
+ * Draws an outline as a spec buffer: `-` items (`¶` a free block), the caret or selection. Where blocks
+ * are numbered (`ordered`, `ProjectOptions.ordered`), a numbered block has its number in its bullet's
+ * place (`1. a`), as the apps show it. A block's later lines and its children start where its text does:
+ * two spaces a level under bullets, the number's width under a number.
+ */
+export function draw(o: Outline, options: Pick<ProjectOptions, 'ordered'> = {}): string {
   const out: string[] = [];
+  /** Where the text of the last block at each depth starts: its children's indentation. */
+  const cols: number[] = [];
   o.blocks.forEach((b, i) => {
     let sel = o.sel?.block === i ? { ...o.sel } : null;
     let t = '';
@@ -244,10 +280,58 @@ export function draw(o: Outline): string {
       t = from === to ? t.slice(0, from) + '┃' + t.slice(from) : t.slice(0, from) + (sel.head === from ? '┃«' : '«') + t.slice(from, to) + '»' + t.slice(to);
     }
     const mark = o.selected?.includes(i) ? '▮ ' : '';
-    const ind = '  '.repeat(b.depth);
-    t.split('\n').forEach((line, k) => out.push(k === 0 ? `${ind}- ${mark}${line}` : `${ind}  ${line}`));
+    // a caret or selection inside the number leaves it text, under a bullet
+    const number = options.ordered && !b.free ? /^\d{1,9}\. /.exec(t)?.[0] : undefined;
+    if (number) t = t.slice(number.length);
+    const marker = number ? number.slice(0, -1) : b.free ? '¶' : '-';
+    const at = b.depth ? (cols[b.depth - 1] ?? 2 * b.depth) : 0;
+    cols.length = b.depth;
+    cols[b.depth] = at + marker.length + 1;
+    t.split('\n').forEach((line, k) => out.push(k === 0 ? `${' '.repeat(at)}${marker} ${mark}${line}` : `${' '.repeat(cols[b.depth]!)}${line}`));
   });
   return out.join('\n').replace(/\t/g, '→') + '\n';
+}
+
+/**
+ * An outline as an app in free form holds it, as Markdown has it: what a free block owns in ourus's
+ * outline (a heading its section, a paragraph the list right after it) beside it, not its child
+ * (BlockNote's blocks, SiYuan's). `ownBlocks` is the way back.
+ */
+export function liftOwned(blocks: readonly Block[]): Block[] {
+  const path: Block[] = [];
+  return blocks.map((b) => {
+    path.length = b.depth;
+    const up = path.filter((p) => p.free).length;
+    path.push(b);
+    return up ? { ...b, depth: b.depth - up } : b;
+  });
+}
+
+/**
+ * An app's free-form blocks nested as ourus's outline is (`liftOwned`'s inverse), among each block's
+ * siblings: a heading takes what follows it up to a heading of its level or above, a free block that
+ * `ownsList` says owns one (a paragraph) the items right after it. A block's own children (an app may
+ * nest any block: BlockNote's Tab nests a paragraph) stay its children.
+ */
+export function ownBlocks(blocks: readonly Block[], ownsList: (b: Block, i: number) => boolean): Block[] {
+  const scope: { headings: number[]; paragraph: boolean }[] = [];
+  const depthOf: number[] = [];
+  return blocks.map((b, i) => {
+    scope.length = b.depth + 1;
+    depthOf.length = b.depth;
+    const sc = (scope[b.depth] ??= { headings: [], paragraph: false });
+    let shift: number;
+    if (b.free) {
+      const level = /^(#{1,6}) /.exec(b.text)?.[1]!.length ?? 0;
+      if (level) while (sc.headings.length && sc.headings.at(-1)! >= level) sc.headings.pop();
+      shift = sc.headings.length;
+      if (level) sc.headings.push(level);
+      sc.paragraph = !level && ownsList(b, i);
+    } else shift = sc.headings.length + (sc.paragraph ? 1 : 0);
+    const depth = (b.depth ? depthOf[b.depth - 1]! + 1 : 0) + shift;
+    depthOf[b.depth] = depth;
+    return depth === b.depth ? b : { ...b, depth };
+  });
 }
 
 /**
@@ -279,22 +363,32 @@ export function unescapeLaterLines(o: Outline): Outline {
 
 /**
  * Reads back an outline `draw` drew (a run's data keeps the app's states drawn), or null where the
- * drawing is no outline's.
+ * drawing is no outline's. Where blocks are numbered (`ordered`), a number in a bullet's place is a
+ * numbered block, and a drawing from before numbers took the bullet's place (`- 1. a`) reads too;
+ * elsewhere a line starting with a number is no block's.
  */
-export function readOutline(drawn: string): Outline | null {
+export function readOutline(drawn: string, options: Pick<ProjectOptions, 'ordered'> = {}): Outline | null {
   const blocks: Block[] = [];
   const raw: string[][] = [];
   const selected: number[] = [];
+  /** Where the text of the last block at each depth starts, as `draw` indents. */
+  const cols: number[] = [];
   // no blocks at all draw as one empty line
   for (const line of drawn === '\n' ? [] : drawn.replace(/\n$/, '').replace(/→/g, '\t').split('\n')) {
-    const item = /^((?: {2})*)- (▮ )?(.*)$/.exec(line);
-    if (item) {
-      if (item[2]) selected.push(blocks.length);
-      blocks.push({ depth: item[1]!.length / 2, text: '' });
-      raw.push([item[3]!]);
+    const item = /^( *)(?:([-¶])|(\d{1,9}\.)) (▮ )?(.*)$/.exec(line);
+    const spaces = item?.[1]!.length ?? 0;
+    // a block's depth: where blocks are numbered, it starts where its parent's text does; else two
+    // spaces a level
+    const depth = !item || (item[3] && !options.ordered) ? -1 : !spaces ? 0 : options.ordered ? (cols.includes(spaces) ? cols.indexOf(spaces) + 1 : -1) : spaces % 2 ? -1 : spaces / 2;
+    if (item && depth >= 0) {
+      if (item[4]) selected.push(blocks.length);
+      blocks.push({ depth, text: '', ...(item[2] === '¶' && { free: true as const }) });
+      raw.push([item[3] ? `${item[3]} ${item[5]!}` : item[5]!]);
+      cols.length = depth;
+      cols[depth] = spaces + (item[2] ?? item[3]!).length + 1;
       continue;
     }
-    const ind = blocks.length ? `${'  '.repeat(blocks.at(-1)!.depth)}  ` : null;
+    const ind = blocks.length ? ' '.repeat(cols[blocks.at(-1)!.depth]!) : null;
     if (ind === null || !line.startsWith(ind)) return null;
     raw.at(-1)!.push(line.slice(ind.length));
   }
@@ -328,7 +422,7 @@ export function readOutline(drawn: string): Outline | null {
     blocks[i]!.text = t;
   });
   const o: Outline = { blocks, sel, ...(selected.length && { selected }) };
-  return draw(o) === drawn ? o : null;
+  return draw(o) === drawn || (options.ordered && draw(o, options) === drawn) ? o : null;
 }
 
 export type Verdict = 'agree' | 'whitespace' | 'caret' | 'disagree';
@@ -338,7 +432,7 @@ export type Verdict = 'agree' | 'whitespace' | 'caret' | 'disagree';
  * canonical prefix (`10. `, `[ ] `, `# `), where editors differ in trimming.
  */
 const loose = (b: Block): string =>
-  `${b.depth}:${b.text
+  `${b.depth}${b.free ? '¶' : ''}:${b.text
     .replace(/[ \t]*\n[ \t]*/g, '\n')
     .replace(/^((?:\d{1,9}\. )?(?:\[[ xX]\] )?(?:#{1,6} )?)[ \t]+/, '$1')
     .trim()}`;
@@ -346,7 +440,7 @@ const loose = (b: Block): string =>
 /** How `got` compares with `want`; a selection is compared only where `want` has one. */
 export function compareOutlines(want: Outline, got: Outline, sections: readonly number[] = []): Verdict {
   [want, got] = [sectioned(want, sections), sectioned(got, sections)];
-  const same = want.blocks.length === got.blocks.length && want.blocks.every((b, i) => b.depth === got.blocks[i]!.depth && b.text === got.blocks[i]!.text);
+  const same = want.blocks.length === got.blocks.length && want.blocks.every((b, i) => b.depth === got.blocks[i]!.depth && !b.free === !got.blocks[i]!.free && b.text === got.blocks[i]!.text);
   if (!same) {
     const close = want.blocks.length === got.blocks.length && want.blocks.every((b, i) => loose(b) === loose(got.blocks[i]!));
     return close ? 'whitespace' : 'disagree';

@@ -13,7 +13,7 @@
 
 import type { Page } from 'playwright-core';
 import type { Driver } from '../lib/driver.ts';
-import type { Outline } from '../lib/outline.ts';
+import type { Outline } from '../lib/block.ts';
 
 const MOTIONS: Record<string, string> = {
   CharLeft: 'ArrowLeft',
@@ -30,12 +30,23 @@ interface Item {
   name: string;
   /** null: no note. */
   note: string | null;
-  layout: 'bullets' | 'todo' | 'h1' | 'h2' | 'h3' | 'numbered';
+  /** `code-block`: its name the code, many lines; `quote-block`: one item's quote. Other layouts read as bullets. */
+  layout: 'bullets' | 'todo' | 'h1' | 'h2' | 'h3' | 'numbered' | 'code-block' | 'quote-block';
   completed: boolean;
+  /** A numbered item's number as written, which the first of a run starts the run with (`numbered_start`). */
+  number?: number;
 }
+
+/** A fenced code block as WorkFlowy's code block holds it: backticks, no info string (it keeps no language). */
+const FENCE = /^(`{3,})\n([\s\S]*)\n\1$/;
+
+/** The fence a code block reads back with (WorkFlowy's export writes three backticks): the shortest run of three or more longer than any in the code. */
+const fenceFor = (code: string): string => '`'.repeat(Math.max(3, ...[...code.matchAll(/`+/g)].map((m) => m[0].length + 1)));
 
 /** A block's canonical text as an item, and how many characters of its first line the item type took. */
 function toItem(depth: number, text: string): Item & { prefix: number; cut?: number } {
+  const code = FENCE.exec(text);
+  if (code) return { depth, name: code[2]!, note: null, layout: 'code-block', completed: false, prefix: code[1]!.length + 1 };
   const [first, ...rest] = text.split('\n');
   const note = rest.length ? rest.join('\n') : null;
   const task = /^\[([ xX])\](?: |$)/.exec(first!);
@@ -50,17 +61,23 @@ function toItem(depth: number, text: string): Item & { prefix: number; cut?: num
   // not in the item's name
   const literal = /^(\d{1,9})\\(?=[.)])/.exec(name);
   const layout = numbered ? 'numbered' : 'bullets';
-  if (literal) return { depth, name: literal[1] + name.slice(literal[0].length), note, layout, completed: false, prefix, cut: prefix + literal[1]!.length };
-  return { depth, name, note, layout, completed: false, prefix };
+  const number = numbered ? { number: Number(numbered[0].slice(0, -2)) } : {};
+  if (literal) return { depth, name: literal[1] + name.slice(literal[0].length), note, layout, completed: false, prefix, cut: prefix + literal[1]!.length, ...number };
+  return { depth, name, note, layout, completed: false, prefix, ...number };
 }
 
 /**
  * An item's canonical text, and the length of the prefix its type stands for: a numbered item's
  * number is `number`, its place in its run; a number that is text is escaped (`cut`).
  */
-function fromItem(it: Item, number: number | null): { text: string; prefix: number; cut?: number } {
+function fromItem(it: Item, number: number | null): { text: string; prefix: number; cut?: number; fence?: string } {
+  if (it.layout === 'code-block') {
+    const fence = fenceFor(it.name);
+    return { text: `${fence}\n${it.name}\n${fence}` + (it.note !== null ? '\n' + it.note : ''), prefix: fence.length + 1, fence };
+  }
+  if (it.layout === 'quote-block') return { text: '> ' + it.name + (it.note !== null ? '\n' + it.note : ''), prefix: 2 };
   const prefix = it.layout === 'todo' ? (it.completed ? '[x] ' : '[ ] ') : /^h[123]$/.test(it.layout) ? '#'.repeat(Number(it.layout[1])) + ' ' : it.layout === 'numbered' && number !== null ? `${number}. ` : it.completed ? '[x] ' : '';
-  const literal = !prefix || it.layout === 'numbered' ? /^\d{1,9}(?=[.)])/.exec(it.name) : null;
+  const literal = !prefix || it.layout === 'numbered' ? /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(it.name) : null;
   const name = literal ? it.name.slice(0, literal[0].length) + '\\' + it.name.slice(literal[0].length) : it.name;
   return { text: prefix + name + (it.note !== null ? '\n' + it.note : ''), prefix: prefix.length, ...(literal && { cut: literal[0].length }) };
 }
@@ -71,6 +88,7 @@ const CONTAINER = 'ourus sxs';
 export const driver: Driver = {
   name: 'workflowy',
   title: 'WorkFlowy',
+  id: 'WF',
   url: 'https://beta.workflowy.com/guide/embed/',
   model: 'block',
   keys: {
@@ -94,9 +112,10 @@ export const driver: Driver = {
     ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
   },
   emulated: ['cursorDocStart'],
-  // code, tables and other atoms have no faithful item form yet; headings and to-dos are an item's
-  // type, with no boundary in its text
-  refuses: ['code block', 'html', 'table', 'math', 'thematic break', 'link reference definition', 'comment', 'footnote', 'markup-heading', 'markup-task'],
+  // a fenced block is a code block item (`holds` declines what it can't hold); tables and other atoms
+  // have no faithful item form yet. No `markup-` tag: a heading's or a to-do's text start is the item's
+  // start (a caret inside the `#`s or the checkbox `holds` declines), and those cases play as any
+  refuses: ['html', 'table', 'math', 'thematic break', 'link reference definition', 'comment', 'footnote'],
   ordered: true,
   // Shift+Tab moves an item past its parent, leaving its later siblings there: logical outdenting
   behaves: { outdent: 'logical', enterOnEmptyItem: 'sibling', pasteStructuredLines: 'items', emptyItemWithChildren: 'refuse', pasteStructuredAtEnd: 'join', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after' },
@@ -104,17 +123,29 @@ export const driver: Driver = {
   idle: { busy: `window.WF?.GuiAnimate?.animationsAreInProgress?.()` },
   holds(doc: Outline) {
     if (doc.blocks.some((b) => /^#{4,6} /.test(b.text))) return 'a heading deeper than H3';
+    // a code block is an item of its own, its fence three or more backticks, no more than its code needs,
+    // and no language (WorkFlowy keeps none); the caret in its code
+    for (const b of doc.blocks) {
+      if (!/(^|\n)(`{3,}|~{3,})/.test(b.text)) continue;
+      const code = FENCE.exec(b.text);
+      if (!code) return "a fenced block with a language, tildes, or text around it in its item: WorkFlowy's code block is an item of backticks alone";
+      if (code[1] !== fenceFor(code[2]!)) return "a code block's fence longer than its code needs, which WorkFlowy's reads back without";
+    }
+    if (doc.sel) {
+      const it = toItem(0, doc.blocks[doc.sel.block]!.text);
+      if (it.layout === 'code-block' && Math.max(doc.sel.anchor, doc.sel.head) > it.prefix + it.name.length) return "a caret in a code block's fences";
+    }
     // a to-do's checkbox and a heading's level are the item's type, not text: no caret goes there
     if (doc.sel && Math.min(doc.sel.anchor, doc.sel.head) < toItem(0, doc.blocks[doc.sel.block]!.text).prefix) return "a caret in a task's checkbox or a heading's #s";
     // an item has one layout: numbered, or a task, or a heading
     if (doc.blocks.some((b) => /^\d{1,9}\. (?:\[[ xX]\]|#{1,6} )/.test(b.text))) return 'a numbered task or heading';
-    // a run of numbered siblings is numbered from 1
+    // a run of numbered siblings counts on from its first item's number (its `numbered_start`)
     const run: number[] = [];
     for (const b of doc.blocks) {
       run.length = b.depth + 1;
       const n = /^(\d{1,9})\. /.exec(b.text);
-      run[b.depth] = n ? (run[b.depth] ?? 0) + 1 : 0;
-      if (n && Number(n[1]) !== run[b.depth]) return 'a numbered list from another number than 1';
+      if (n && run[b.depth] && Number(n[1]) !== run[b.depth]! + 1) return 'a numbered list that skips a number';
+      run[b.depth] = n ? Number(n[1]) : 0;
     }
     return undefined;
   },
@@ -136,9 +167,18 @@ export const driver: Driver = {
       if (!ready) await page.waitForTimeout(250);
     }
     if (!ready) throw new Error("WorkFlowy's keys didn't come up: Tab doesn't indent");
-    // "Recognize markdown pasting" (Settings › Features): pasted Markdown becomes items, headings and
-    // to-dos, as ourus's structured paste reads it. Off for the anonymous live demo, on in the copy.
-    await page.evaluate(() => (window as any).WF.Features.enable('markdown_pasting'));
+    // the features WorkFlowy's server enables for this user (`/get_enabled_features/`: numbered lists,
+    // dates, the slash command, ...): the demo's settings carry only their own features, which replace
+    // the server's, and without them a numbered item is drawn as a bullet, though the item keeps its
+    // layout. And "Recognize markdown pasting" (Settings › Features): pasted Markdown becomes items,
+    // headings and to-dos, as ourus's structured paste reads it.
+    await page.evaluate(async () => {
+      const WF = (window as any).WF;
+      const { features } = await (await fetch('/get_enabled_features/')).json();
+      for (const [name, on] of Object.entries(features as Record<string, boolean>)) if (on && !WF.Features.on(name)) WF.Features.enable(name);
+      if (!WF.Features.on('markdown_pasting')) WF.Features.enable('markdown_pasting');
+      if (!WF.Features.on('numbered_list')) throw new Error("WorkFlowy's numbered lists didn't come on");
+    });
     return page.evaluate(() => (window as any).WF.AppBuild.number as string);
   },
 
@@ -166,15 +206,19 @@ export const driver: Driver = {
         (document.activeElement as HTMLElement | null)?.blur();
         WF.setSelection([]);
         if (!WF.completedVisible()) WF.toggleCompletedVisible();
-        let box = WF.rootItem()
+        // the test's item, by its id: a caret left in its title (the zoomed-in item's name, which Up
+        // from the first block and Backspace at an empty first block go into) types into it, and
+        // found by name, a renamed one would be lost and another made, test after test
+        const W = window as any;
+        let box = W.__ourusBox ? WF.getItemById(W.__ourusBox) : null;
+        box ??= WF.rootItem()
           .getChildren()
           .find((c: any) => c.getNameInPlainText() === container);
-        if (!box) {
-          await WF.editGroup(() => {
-            box = WF.createItem(WF.rootItem(), 0);
-            WF.setItemName(box, container);
-          });
-        }
+        await WF.editGroup(() => {
+          if (!box) box = WF.createItem(WF.rootItem(), 0);
+          if (box.getNameInPlainText() !== container) WF.setItemName(box, container);
+        });
+        W.__ourusBox = box.getId();
         if (!WF.currentItem().equals(box)) WF.zoomTo(box);
         const rendered = (it: any) => !!it.getElement();
         for (let i = 0; i < 300 && !box.getChildren().every(rendered); i++) await new Promise((r) => setTimeout(r, 10));
@@ -197,13 +241,28 @@ export const driver: Driver = {
             const ref = item.data.projectReferenceOrThrow;
             // an Immer recipe: it changes the draft and returns nothing
             if (it.layout !== 'bullets') ref.setMetadata((m: any) => void (m.layoutMode = it.layout));
+            // a run's first number, where it isn't 1 (a later item's number counts on from the one before)
+            const before = parent.getChildren()[count[it.depth]! - 2];
+            const runStarts = it.layout === 'numbered' && !(before && before.data.projectReferenceOrThrow.getItem()?.layoutMode === 'numbered');
+            if (runStarts && it.number !== undefined && it.number !== 1) ref.setMetadata((m: any) => void (m.numbered_start = it.number));
             if (it.completed) ref.getItem().applyLocalComplete();
             made.push(item);
           }
         });
         // a new item's children show once it is expanded
         for (const item of made) if (item.getChildren().length && !item.isExpanded()) WF.expandItem(item);
+        // a note set through `setItemNote` is stored but not drawn (its line kept, empty, and its editor
+        // too) until the item is drawn again: zooming out and back in does it
+        if (items.some((it) => it.note)) {
+          WF.zoomTo(WF.rootItem());
+          await (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 });
+          WF.zoomTo(box);
+          await (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 });
+        }
         for (let i = 0; i < 300 && !made.every(rendered); i++) await new Promise((r) => setTimeout(r, 10));
+        const drawn = (it: any, i: number) => !items[i]!.note || it.getElement().querySelector(':scope > .notes > .content')?.textContent === it.getNoteInPlainText();
+        for (let i = 0; i < 300 && !made.every(drawn); i++) await new Promise((r) => setTimeout(r, 10));
+        if (!made.every(drawn)) throw new Error("the test's notes weren't drawn");
         if (!made.every(rendered)) throw new Error("the test's items didn't render");
         await (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 });
         if (!sel) return;
@@ -250,14 +309,12 @@ export const driver: Driver = {
   async read(page: Page) {
     const raw = await page.evaluate((container) => {
       const WF = (window as any).WF;
-      const box = WF.rootItem()
-        .getChildren()
-        .find((c: any) => c.getNameInPlainText() === container);
+      const box = (window as any).__ourusBox ? WF.getItemById((window as any).__ourusBox) : null;
       const active = document.activeElement as HTMLElement | null;
       const content = active?.classList.contains('content') ? active : null;
       const inNote = !!content?.closest('.notes');
       const focusedId = content ? WF.focusedItem()?.getId() : null;
-      const flat: { depth: number; name: string; note: string | null; layout: string; completed: boolean; id: string }[] = [];
+      const flat: { depth: number; name: string; note: string | null; layout: string; completed: boolean; id: string; shown: number | null; start: number | null }[] = [];
       const walk = (it: any, depth: number) => {
         for (const c of it.getChildren()) {
           const internal = c.data.projectReferenceOrThrow.getItem();
@@ -271,7 +328,10 @@ export const driver: Driver = {
             if (inNote) note = text;
             else name = text;
           }
-          flat.push({ depth, name, note, layout, completed: c.isCompleted(), id: c.getId() });
+          // a numbered item's number as WorkFlowy draws it: a prefix of the name, outside its text
+          const drawn = layout === 'numbered' ? [...(c.getElement()?.querySelectorAll(':scope > .name span') ?? [])].find((sp: any) => !sp.closest('.content') && /^\d+\.$/.test(sp.textContent.trim())) : undefined;
+          const start = internal?.metadata?.numbered_start ?? null;
+          flat.push({ depth, name, note, layout, completed: c.isCompleted(), id: c.getId(), shown: drawn ? parseInt(drawn.textContent, 10) : null, start });
           walk(c, depth + 1);
         }
       };
@@ -285,11 +345,12 @@ export const driver: Driver = {
       const selected = WF.getSelection().map((it: any) => flat.findIndex((f) => f.id === it.getId())).filter((i: number) => i >= 0);
       return { flat, sel, selected };
     }, CONTAINER);
-    // a numbered item's place in its run of numbered siblings
+    // a numbered item's number: as drawn, else as WorkFlowy counts it (the run's start, then one more
+    // than the numbered sibling before)
     const run: number[] = [];
     const numbers = raw.flat.map((f) => {
       run.length = f.depth + 1;
-      run[f.depth] = f.layout === 'numbered' ? (run[f.depth] ?? 0) + 1 : 0;
+      run[f.depth] = f.layout === 'numbered' ? (f.shown ?? (run[f.depth] ? run[f.depth]! + 1 : (f.start ?? 1))) : 0;
       return f.layout === 'numbered' ? run[f.depth]! : null;
     });
     const texts = raw.flat.map((f, i) => fromItem(f as Item, numbers[i]!));
@@ -298,7 +359,8 @@ export const driver: Driver = {
     if (raw.sel && raw.sel.block >= 0) {
       const it = raw.flat[raw.sel.block]!;
       const { prefix, cut } = texts[raw.sel.block]!;
-      const base = raw.sel.inNote ? prefix + it.name.length + (cut !== undefined ? 1 : 0) + 1 : prefix;
+      const { fence } = texts[raw.sel.block]!;
+      const base = raw.sel.inNote ? prefix + it.name.length + (cut !== undefined ? 1 : 0) + 1 + (fence ? fence.length + 1 : 0) : prefix;
       const at = (p: number): number => base + p + (!raw.sel!.inNote && cut !== undefined && p > cut ? 1 : 0);
       sel = { block: raw.sel.block, anchor: at(raw.sel.anchor), head: at(raw.sel.head) };
     }

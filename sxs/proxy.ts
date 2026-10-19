@@ -2,7 +2,7 @@
 // first fetch goes to the network and lands on disk, and later runs are served from disk, so a live
 // demo is taxed once per cold cache rather than once per run.
 //
-//   node sxs/proxy.ts [--port=8899] [--offline] [--refresh] [--quiet]
+//   node sxs/proxy.ts [--port=8899] [--host=127.0.0.1] [--cache=use|offline|refresh] [--quiet]
 //
 // - HTTP requests (absolute-form URLs) and HTTPS (CONNECT) are both served. HTTPS is intercepted
 //   with one self-signed certificate for every host, generated once with `openssl`; the browser must
@@ -12,16 +12,23 @@
 //   otherwise (`ProxyRules`, below). WebSockets are tunnelled live.
 // - Analytics, error reporting, embedded video and the browser's own background traffic are answered
 //   empty and never contacted (`BLOCKED_HOSTS`, below).
-// - `--offline` answers a cache miss with 504 instead of fetching; `--refresh` refetches everything
-//   it is asked for once per proxy run.
+// - `--cache` says how the cache is used (`CacheMode`): `use` (the default) serves what it has and
+//   fetches and keeps the rest; `offline` serves what it has and nothing else, a miss (and what would
+//   go live: other methods, a rule's live requests, WebSockets) answered 504 or refused, writing
+//   nothing, so the cache may be read-only (it needs a run online first, for the certificate too);
+//   `refresh` fetches everything it is asked for once per proxy run, and keeps it.
+// - Started on a terminal, it prints each app's editor, where a browser pointed at it opens one
+//   (`Driver.url`), and how to start Chromium so.
+// - It listens on 127.0.0.1, unless `--host` says otherwise: `--host=0.0.0.0` in a container whose
+//   port is published (podman's `-p 8899:8899` reaches the container's interface, not its loopback).
 // - Every request is logged, one line each with how it was served (hit, miss, live, local, blocked);
 //   `GET /__proxy/stats` (asked of the proxy itself) tallies them per host, with their distinct URLs, since the last `/__proxy/stats?reset`, so traffic
 //   that should be blocked or cached stands out, and so does something blocked that shouldn't be.
 //   `/__proxy/health` reports its pid and version; `/__proxy/stop` stops it.
 //
-// The cache is `.sxs/http/<host>/` in the ourus checkout (git-ignored; `OURUS_SXS_DIR`
-// moves it), one `.json` (status, headers, URL) and one `.body` per response, named for the path;
-// delete a file to refetch it.
+// The cache is `.sxs/http/<host>/` in the ourus checkout (git-ignored; `OURUS_SXS_DIR` moves
+// `.sxs/`, `OURUS_SXS_HTTP` the cache alone), one `.json` (status, headers, URL) and one `.body` per
+// response, named for the path; delete a file to refetch it.
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -95,6 +102,8 @@ export const BLOCKED_HOSTS: readonly string[] = [
   '.intercomcdn.com',
   '.fullstory.com',
   '.plausible.io',
+  // Cloudflare's Web Analytics beacon, on Dynalist's and SilverBullet's pages
+  '.cloudflareinsights.com',
   '.clarity.ms',
   '.facebook.net',
   '.bugsnag.com',
@@ -183,6 +192,19 @@ export function withBody(res: ProxyResponse, body: string | Buffer): ProxyRespon
 export const DEFAULT_PORT = 8899;
 /** Where the side-by-side runs keep their state: the HTTP cache, the certificate, the shared browser's profile, logs. */
 export const cacheDir = process.env.OURUS_SXS_DIR || fileURLToPath(new URL('../.sxs/', import.meta.url));
+/** The HTTP cache: in `cacheDir`, or wherever `OURUS_SXS_HTTP` says (a read-only copy, for `--cache=offline`). */
+export const httpDir = process.env.OURUS_SXS_HTTP || join(cacheDir, 'http');
+
+/** How the proxy uses its cache: serve and keep (`use`), serve only (`offline`), or fetch anew and keep (`refresh`). */
+export type CacheMode = 'use' | 'offline' | 'refresh';
+export const CACHE_MODES: readonly CacheMode[] = ['use', 'offline', 'refresh'];
+
+/** The last `--cache=<mode>` among `args` (a script's own, then the user's), `use` without one; throws on a mode it doesn't know. */
+export function cacheMode(args: readonly string[]): CacheMode {
+  const mode = [...args].reverse().find((a) => a.startsWith('--cache='))?.slice('--cache='.length) ?? 'use';
+  if (!(CACHE_MODES as readonly string[]).includes(mode)) throw new Error(`--cache=${mode}: one of ${CACHE_MODES.join(', ')}`);
+  return mode as CacheMode;
+}
 const sxsDir = fileURLToPath(new URL('./', import.meta.url));
 
 /** This proxy's version: a hash of its sources, so a runner can tell a stale running proxy from a current one. */
@@ -254,7 +276,7 @@ function cachePath(url: URL, key: string): string {
     .replace(/^_+|_+$/g, '')
     .slice(-80);
   const hash = createHash('sha1').update(key).digest('hex').slice(0, 12);
-  return join(cacheDir, 'http', url.host.replace(/[^A-Za-z0-9.-]/g, '_'), `${readable || 'index'}-${hash}`);
+  return join(httpDir, url.host.replace(/[^A-Za-z0-9.-]/g, '_'), `${readable || 'index'}-${hash}`);
 }
 
 function readCache(base: string): ProxyResponse | null {
@@ -300,15 +322,16 @@ async function fetchUpstream(req: ProxyRequest): Promise<ProxyResponse> {
 
 export interface ProxyOptions {
   port: number;
-  offline: boolean;
-  refresh: boolean;
+  /** The address it listens on: 127.0.0.1, or all of them (`0.0.0.0`) in a container. */
+  host: string;
+  cache: CacheMode;
   quiet: boolean;
 }
 
-let options: ProxyOptions = { port: DEFAULT_PORT, offline: false, refresh: false, quiet: false };
+let options: ProxyOptions = { port: DEFAULT_PORT, host: '127.0.0.1', cache: 'use', quiet: false };
 /** Fetches under way, by cache key, so concurrent misses for one resource fetch it once. */
 const inflight = new Map<string, Promise<ProxyResponse>>();
-/** Keys refetched in this run (`--refresh` refetches each once). */
+/** Keys refetched in this run (`--cache=refresh` refetches each once). */
 const refreshed = new Set<string>();
 /** Requests per host and how they were served, with bytes and the first distinct URLs, since the last reset. */
 let stats = new Map<string, Record<string, { n: number; bytes: number; urls: string[] }>>();
@@ -338,12 +361,13 @@ async function answer(req: ProxyRequest): Promise<{ res: ProxyResponse; how: str
   if (stub) return { res: stub, how: 'local' };
   const ruled = rules?.key?.(req);
   const key = ruled !== undefined ? ruled : req.method === 'GET' || req.method === 'HEAD' ? req.url.href : null;
+  if (key === null && options.cache === 'offline') return { res: text(504, `ourus proxy: offline, and never cached: ${req.method} ${req.url.href}\n`), how: 'offline-live' };
   if (key === null) return { res: await fetchUpstream(req), how: 'live' };
   const base = cachePath(req.url, `${req.method} ${key}`);
-  const fresh = options.refresh && !refreshed.has(base);
+  const fresh = options.cache === 'refresh' && !refreshed.has(base);
   const cached = fresh ? null : readCache(base);
   if (cached) return { res: cached, how: 'hit' };
-  if (options.offline) return { res: text(504, `ourus proxy: offline, and not cached: ${req.method} ${req.url.href}\n`), how: 'offline-miss' };
+  if (options.cache === 'offline') return { res: text(504, `ourus proxy: offline, and not cached: ${req.method} ${req.url.href}\n`), how: 'offline-miss' };
   let pending = inflight.get(base);
   if (!pending) {
     pending = fetchUpstream(req).then((res) => {
@@ -401,6 +425,12 @@ function tunnelUpgrade(secure: boolean, req: http.IncomingMessage, client: Duple
     client.end(`HTTP/1.1 ${stub.status} Refused\r\ncontent-length: 0\r\nconnection: close\r\n\r\n`);
     return;
   }
+  if (options.cache === 'offline') {
+    log(`${'offline-ws'.padEnd(12)} ${url}`);
+    count(url, host, 'offline-ws', 0);
+    client.end('HTTP/1.1 504 Offline\r\ncontent-length: 0\r\nconnection: close\r\n\r\n');
+    return;
+  }
   log(`${'live-ws'.padEnd(12)} ${url}`);
   count(url, host, 'live-ws', 0);
   const upstream: Duplex = secure ? tls.connect({ host, port, servername: host }) : net.connect({ host, port });
@@ -420,12 +450,13 @@ function splitHost(hostport: string, fallback: number): [string, number] {
   return [m?.[1] ?? hostport, m?.[2] ? Number(m[2]) : fallback];
 }
 
-/** The one certificate every intercepted host gets, made once with openssl. */
+/** The one certificate every intercepted host gets, made once with openssl (not offline: that runs on what an online run made). */
 function certificate(): { key: Buffer; cert: Buffer } {
   const dir = join(cacheDir, 'cert');
   const key = join(dir, 'key.pem');
   const cert = join(dir, 'cert.pem');
   if (!existsSync(key) || !existsSync(cert)) {
+    if (options.cache === 'offline') throw new Error(`--cache=offline, and no certificate in ${dir}: run once online first`);
     mkdirSync(dir, { recursive: true });
     execFileSync('openssl', ['req', '-x509', '-newkey', 'ec', '-pkeyopt', 'ec_paramgen_curve:prime256v1', '-nodes', '-keyout', key, '-out', cert, '-days', '3650', '-subj', '/CN=ourus sxs proxy', '-addext', 'subjectAltName=DNS:localhost'], { stdio: 'ignore' });
   }
@@ -450,7 +481,7 @@ export async function startProxy(opts: Partial<ProxyOptions> = {}): Promise<http
     // asked of the proxy itself
     if (url === '/__proxy/health') {
       res.writeHead(200, { 'content-type': 'application/json' });
-      return void res.end(JSON.stringify({ pid: process.pid, version, started, cacheDir, offline: options.offline }));
+      return void res.end(JSON.stringify({ pid: process.pid, version, started, cacheDir, httpDir, cache: options.cache }));
     }
     if (url === '/__proxy/stats' || url === '/__proxy/stats?reset') {
       res.writeHead(200, { 'content-type': 'application/json' });
@@ -477,19 +508,59 @@ export async function startProxy(opts: Partial<ProxyOptions> = {}): Promise<http
   server.on('clientError', (_e, socket) => socket.destroy());
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
-    server.listen(options.port, '127.0.0.1', resolve);
+    server.listen(options.port, options.host, resolve);
   });
-  log(`ourus sxs proxy ${version} on 127.0.0.1:${options.port}, cache ${cacheDir}${options.offline ? ' (offline)' : ''}`);
+  log(`ourus sxs proxy ${version} on ${options.host}:${options.port}`);
+  // it intercepts TLS and answers anyone: on a port others reach, it is theirs too, /__proxy/stop included
+  if (!/^(127\.|::1$|localhost$)/.test(options.host)) log(`listening beyond the loopback: whoever reaches port ${options.port} can use it (in a container, publish it as -p 127.0.0.1:${options.port}:${options.port})`);
+  log(`cache: ${httpDir} (${options.cache})`);
   return server;
+}
+
+/**
+ * Says what a person points a browser at to open each app's editor through the proxy (its driver's
+ * `url`: only the apps a browser opens, not a desktop app or one whose server a run
+ * starts), and how to start Chromium so. Drivers are imported for it, after the proxy listens.
+ */
+async function sayApps(): Promise<void> {
+  const rows: [string, string][] = [];
+  for (const d of readdirSync(sxsDir, { withFileTypes: true })) {
+    const file = join(sxsDir, d.name, 'driver.ts');
+    if (!d.isDirectory() || !existsSync(file)) continue;
+    try {
+      const { driver } = (await import(pathToFileURL(file).href)) as { driver?: { url: string; login?: string; launch?: unknown; serve?: unknown } };
+      // lib/driver.ts says what a driver is, and is none
+      if (driver && !driver.launch && !driver.serve) rows.push([d.name, driver.url + (driver.login ? `  (signed in: ${driver.login} once)` : '')]);
+    } catch (e) {
+      rows.push([d.name, `(its driver didn't load: ${String(e).split('\n')[0]})`]);
+    }
+  }
+  const table: [string, string][] = [['app', 'url'], ['', ''], ...rows];
+  const width = (i: 0 | 1): number => Math.max(...table.map((r) => r[i].length));
+  table[1] = ['-'.repeat(width(0)), '-'.repeat(width(1))];
+  log('available apps:');
+  console.log(table.map((r) => `  ${r[0].padEnd(width(0))}  ${r[1]}`).join('\n'));
+  // a profile of its own: Chromium handed a profile another one holds ignores the flags
+  log('start chromium to browse them as:');
+  console.log(`  ${process.env.CHROMIUM ?? 'chromium'} --proxy-server=http://127.0.0.1:${options.port} --ignore-certificate-errors --user-data-dir=${join(cacheDir, 'browse')} --no-first-run`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const args = process.argv.slice(2);
   const port = Number(args.find((a) => a.startsWith('--port='))?.slice(7) ?? process.env.OURUS_PROXY_PORT ?? DEFAULT_PORT);
+  const host = args.find((a) => a.startsWith('--host='))?.slice(7) ?? '127.0.0.1';
   // not awaited at the top level: app rules importing from this module (silverbullet's) would wait
   // for it to finish evaluating, and it for them, and Node would exit with the proxy never listening
-  startProxy({ port, offline: args.includes('--offline'), refresh: args.includes('--refresh'), quiet: args.includes('--quiet') }).catch((e) => {
-    console.error(e);
-    process.exit(1);
-  });
+  Promise.resolve()
+    .then(() => startProxy({ port, host, cache: cacheMode(args), quiet: args.includes('--quiet') }))
+    .then(async () => {
+      // for a person at a terminal; the shared proxy a run starts writes to a log, and needn't import every driver
+      if (!options.quiet && process.stdout.isTTY) await sayApps();
+    })
+    .catch((e) => {
+      // the shared proxy a run started (lib/browser.ts) holds the port until stopped
+      if ((e as NodeJS.ErrnoException).code === 'EADDRINUSE') console.error(`a proxy already listens on ${host}:${port}: \`node sxs/run.ts --stop\` stops the shared one, or give another --port=`);
+      else console.error(e instanceof Error ? e.message : e);
+      process.exit(1);
+    });
 }

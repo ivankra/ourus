@@ -1046,7 +1046,7 @@ In a loose list in a quote, the blank line that sets the new item off is quoted:
 would end the quote.
 
 ```yaml
-tags: rare
+tags: rare quote-container
 ```
 
 ```buffer
@@ -1309,7 +1309,7 @@ At the start of a quote's first paragraph, the empty paragraph is the quote's fi
 `>` starts.
 
 ```yaml
-tags: edge
+tags: edge quote-container
 ```
 
 ```buffer

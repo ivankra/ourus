@@ -155,7 +155,7 @@ Deleting a quote's only node deletes the quote: its `>` alone is no node, and a 
 holding nothing can't be written.
 
 ```yaml
-tags: edge
+tags: edge quote-container
 ```
 
 ```buffer

@@ -1,29 +1,58 @@
 # SilverBullet
 
-[`driver.ts`](driver.ts) drives SilverBullet's live demo, https://demo.silverbullet.md/personal/
-(the "Personal" space of the demo server; 2.12.0-50-gb2726cd8 on 2026-10-13, from its
-`system.getVersion` syscall). SilverBullet is a Markdown editor (CodeMirror 6) with outline
-commands, so its documents are text: the spec's buffers are loaded as written and compared as text,
-caret included (the `text` model, [`../lib/text.ts`](../lib/text.ts)), and almost the whole spec runs. Last
-results: [`sxs.md`](sxs.md).
-
-https://silverbullet.md/ is the project's website, and https://docs.silverbullet.md/ another
-read-only space (the manual).
+[`driver.ts`](driver.ts) drives [SilverBullet](https://silverbullet.md/)'s [live demo](https://demo.silverbullet.md/personal/).
+SilverBullet is a Markdown editor (CodeMirror 6) with outline commands,
+so its documents are text: the spec's buffers are loaded as written and compared as text,
+caret included (the `text` model, [`../lib/text.ts`](../lib/text.ts)), and almost the whole spec runs.
 
 ## Keys (Linux)
 
 | action | keys |
 | --- | --- |
-| `enter`, `shiftEnter` | Enter (SilverBullet's own list continuation), Shift+Enter |
-| `indent`, `outdent` | Ctrl+. then L, Ctrl+. then H: "Outline: Move Right" and "Move Left" |
-| `moveSubtreeUp`, `moveSubtreeDown` | Alt+Up, Alt+Down: "Outline: Move Up" and "Move Down" |
-| `deleteContentBackward`, `deleteContentForward` | Backspace (CodeMirror's `deleteMarkupBackward`), Delete |
+| `enter` | Enter (SilverBullet's own list continuation) |
+| `shiftEnter` | Shift+Enter |
+| `indent` | Ctrl+. then L ("Outline: Move Right") |
+| `outdent` | Ctrl+. then H ("Outline: Move Left") |
+| `moveSubtreeUp` | Alt+Up ("Outline: Move Up"; also Ctrl+. then K) |
+| `moveSubtreeDown` | Alt+Down ("Outline: Move Down"; also Ctrl+. then J) |
+| `deleteContentBackward` | Backspace (CodeMirror's `deleteMarkupBackward`) |
+| `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Shift+Home, Backspace ("Delete Line Boundary Backward" is bound on a Mac only) |
-| `pasteStructured`, `pastePlain` | Ctrl+V, Ctrl+Shift+V |
-| `undo`, `redo` | Ctrl+Z, Ctrl+Y |
-| caret motions | arrows, Home, End, Ctrl+Home, Ctrl+End; `select…` with Shift |
+| `deleteSubtree` | *missing* (no command): its tests are skipped |
+| `duplicateSubtree` | *missing* (no command): its tests are skipped |
+| `pasteStructured` | Ctrl+V |
+| `pastePlain` | Ctrl+Shift+V |
+| `undo` | Ctrl+Z |
+| `redo` | Ctrl+Y |
 
-`deleteSubtree` and `duplicateSubtree` have no command in SilverBullet; their tests are skipped.
+The outline commands (the `editor` plug's, `plugs/editor/outline.ts`; documented on its
+[Outlines](https://docs.silverbullet.md/Outlines) page) act on what the caret is in: a list item with its
+children; a heading with its section (to the next heading of its level or above), Move Right and Left
+changing its level (`##` to `###`); a table's data row (the header row stays); a top-level paragraph,
+moved past the blocks beside it.
+
+Other shortcuts (from the source, `plugs/*/*.plug.yaml` and `client/editor_commands.ts` at the demo's
+build, `b2726cd8`, the same keys the client's command hook reports; Linux; each pressed in the demo
+but Fold, which changes no text):
+
+| shortcut | keys | what it does |
+| --- | --- | --- |
+| Outline: Move Up, Move Down | Ctrl+. then K, Ctrl+. then J | as Alt+Up and Alt+Down |
+| Outline: Toggle Fold | Ctrl+. then Ctrl+. | fold or unfold the item's children; "Fold", "Unfold", "Fold All", "Unfold All" have no key |
+| Task: Cycle State | Ctrl+. then T | `[ ]` to `[x]` and on, through the task states, with the caret at or in the `[ ]` (at the line's end, nothing) |
+| Text: Listify Selection | Ctrl+Shift+8 | the selected lines as list items |
+| Text: Quote Selection | Ctrl+Shift+. | the selected lines as a quote (the key `>` on the `.` key; a `.` with Shift and Ctrl held, as a test may send it, is the `Ctrl+.` chord's start instead, and takes the next key) |
+| Delete Line | Ctrl+D | the caret's line, the item's children left where they are |
+| Editor: Indent, Outdent | Tab, Shift+Tab | the selected lines by the indent unit (CodeMirror's `indentMore`, `indentLess`), not items |
+| Editor: Delete Group Backward, Forward | Ctrl+Backspace, Ctrl+Delete | a word |
+| Editor: Transpose Chars | Ctrl+T | |
+| Text: Bold, Italic, Strikethrough, Marker | Ctrl+B, Ctrl+I, Ctrl+Shift+S, Ctrl+Alt+M | |
+| Comment: Add | Ctrl+Alt+C | |
+| Navigate: To This Page | Ctrl+Enter | follow the link at the caret |
+| Page: Create Under Cursor | Ctrl+Shift+Enter | |
+| Navigate: Page Picker, Meta Picker | Ctrl+K, Ctrl+Shift+K | |
+| Open Command Palette | Ctrl+/ | every command, by name |
+| Editor: Start Completion | Ctrl+Space | |
 
 **Tab is not the outline indent.** Tab is "Editor: Indent", CodeMirror's `indentMore`: it indents the
 selected lines by the indent unit, so a list item's children stay where they were. The outline
@@ -60,7 +89,7 @@ found" itself (a GET of `/.fs/ourus-sxs…` gets a 404), and a full run fetches 
 after a first full sync: until then the service worker passes every request to the server, writes
 too (its `fullSyncConfirmed`; "First full sync confirmed, will now start serving requests locally" in
 its log), while a profile with a snapshot from before is served locally at once. So on a fresh
-profile (`.sxs/` new, or `.sxs/silverbullet/chromium/` gone) the first test page's write reached the
+profile (`.sxs/` new, or the pool's browser profiles, `.sxs/chromium/`, gone) the first test page's write reached the
 proxy, got its 503, and `space.writePage` threw `Offline` (the client's error for a 5xx), and the run
 died in `open`. Every run before had a synced profile. `open` now waits until the worker controls
 the page and the client has had its `space-sync-complete` (`client.fullSyncCompleted`, the syscall
@@ -89,14 +118,33 @@ starts cold, as above: about 23 s in all.
   could come between a command's change and its caret.
 - CodeMirror keeps line breaks as LF, so examples with CR line endings are skipped.
 
-## What SilverBullet does that a driver has to know
+## What SilverBullet does
 
 - The outline commands work on list items (bullet and ordered), headings (a whole section), table
   rows and top-level paragraphs, per SilverBullet's own docs (`docs/Outlines.md` in its source,
   https://github.com/silverbulletmd/silverbullet).
 - They indent by SilverBullet's indent unit (two spaces), whatever the list uses (tabs, a wider
   column), and don't renumber ordered lists.
-- They act on the item at the caret, not on every item a selection covers.
+- They act on the item at the caret, not on every item a selection covers (`indent.md › Indent9`;
+  Tab, line indentation, would indent every selected line, and leave an item's children behind:
+  the outline command is the one played).
+- **Move Up and Down stay among an item's siblings**: a last child doesn't move down, an item next
+  to a paragraph doesn't pass it (`move-subtree-down.md › MoveDown9`, `MoveDown2`); blank lines stay
+  where they were (`gaps.md › Gap4`); a list indented with tabs doesn't move (`MoveDown7`).
+- **They don't read a quote's `> `**: an item in a quote is indented before its `>` (`  > - b`, not
+  nested: `quotes.md › Quote1`), and an outline command on a paragraph or a setext heading does
+  nothing (`indent.md › Indent21`, `Indent16`).
+- **Editing is CodeMirror's Markdown**: Backspace at an item's text start takes its marker off and
+  keeps the text, indented, as a continuation (`deleteMarkupBackward`: `backspace.md › Backspace1`);
+  Backspace after a heading's `# ` deletes the space; blank lines stay where ourus joins blocks.
+- **Home is "Cursor Line Start"** (`cursorLineStart`), the line's first column, before any marker,
+  indentation or `> ` (`cursor.md › CursorHome1`, most caret verdicts); Shift+Home then Backspace
+  deletes the markers too, as the Mac's Cmd-Backspace ("Delete Line Boundary Backward") does.
+- **Paste goes in at the caret as text**, with no list's structure: the clipboard's text as it is, or
+  its HTML through SilverBullet's HTML-to-Markdown converter (`*   a`, `1.  x`). Played both ways
+  (`--plain-clipboard`), the 85 paste cases' verdicts were the same; 52 buffers differed.
+- **Undo groups edits less than 500 ms apart** (CodeMirror's history): at a slower pace, an undo
+  scenario's later buffers differ (`scenarios.md › Scenario23`), its verdict, decided earlier, not.
 
 ## Internals
 

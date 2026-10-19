@@ -1,9 +1,10 @@
 // Obsidian, the desktop app (see obsidian/README.md), as a driver to be made for each setup of it: bare,
 // or with plugins (`obsidianDriver`). It is an Electron app, not a web page, so the driver starts it
 // itself (`Driver.launch`): obsidian-launcher downloads the version asked for into
-// `.sxs/obsidian/files/` and opens a vault written for the run (`.sxs/<setup>/vault/`), with a sandboxed configuration
-// directory and its plugins installed; the runner drives the window over the DevTools protocol. Under
-// Linux without a display it gets an Xvfb of its own; it runs offline.
+// `.sxs/obsidian/files/`, and a worker opens a vault written for the run (its plugins installed) as a
+// window of an Obsidian of the driver's pool, which every setup shares as apps share the pool's
+// browsers (`.sxs/obsidian/<n>/`, `leaseInstance`); the runner drives the window over the DevTools
+// protocol. Under Linux without a display an instance gets an Xvfb of its own; it runs offline.
 //
 // A Markdown editor (CodeMirror 6): the `text` model. Each test gets a note of its
 // own, opened in the editor so that it starts with no history to undo; the caret is placed through
@@ -15,12 +16,15 @@
 // its lines' indentation loaded as a tab and read back as two spaces (`asTabs`, `asSpaces`). A test
 // whose starting buffer is already indented with tabs is taken as written.
 
-import { closeSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { spawn } from 'node:child_process';
+import { appendFileSync, closeSync, copyFileSync, linkSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
 import ObsidianLauncher, { type PluginEntry } from 'obsidian-launcher';
-import { chromium, type Page } from 'playwright-core';
-import { freePort, sleep, startXvfb, takeLock } from '../lib/desktop.ts';
-import type { Driver } from '../lib/driver.ts';
+import { chromium, type BrowserContext, type Page } from 'playwright-core';
+import { recordServer, serverPid, stopServer } from '../lib/browser.ts';
+import { alive, freePort, sleep, startXvfb, takeLock } from '../lib/desktop.ts';
+import { record, recordDir } from '../lib/records.ts';
+import { perPage, type Driver } from '../lib/driver.ts';
 import { ensureAptInstalled, type Need } from '../lib/system.ts';
 import { cacheDir } from '../proxy.ts';
 import type { TextDoc } from '../lib/text.ts';
@@ -67,6 +71,8 @@ export interface Profile {
   readonly name: string;
   /** In reports: `Obsidian`. */
   readonly title: string;
+  /** In `sxs.md`'s tables: `OB`. */
+  readonly id: string;
   /**
    * Installed and enabled in the vault, as obsidian-launcher takes them: a community plugin by `id`, a
    * GitHub release by `repo` (the repository's URL), or a built plugin by `path` (its `manifest.json`
@@ -92,47 +98,153 @@ export interface Profile {
 
 // ------------------------------------------------------------------ indentation
 
-/** A document with each line's indentation rewritten, and its selection carried along. */
-function reindent(d: TextDoc, lead: (ws: string) => string, at: (ws: string, i: number) => number): TextDoc {
+/**
+ * A line's indentation rewritten: pieces of the new indentation, each with how many characters of the
+ * old it stands for (a tab for two spaces: 2; a space for a space: 1), so that a caret at a piece's
+ * edge keeps its place.
+ */
+type Pieces = [string, number][];
+
+/**
+ * A document with each line's indentation rewritten (`lead`, given every line, and the columns where
+ * the selection's ends are on each), and its selection carried along.
+ */
+function reindent(d: TextDoc, lead: (lines: string[], ends: number[][]) => Pieces[]): TextDoc {
   const lines = d.text.split('\n');
+  const ends: number[][] = lines.map(() => []);
+  for (const { offset } of d.sel ? [{ offset: d.sel.anchor }, { offset: d.sel.head }] : []) {
+    const line = d.text.slice(0, offset).split('\n').length - 1;
+    ends[line]!.push(offset - (d.text.lastIndexOf('\n', offset - 1) + 1));
+  }
+  const pieces = lead(lines, ends);
   const out: string[] = [];
   /** Old offset of each line's start, and new. */
   let from = 0;
   let to = 0;
-  const starts: [number, number, string, string][] = [];
-  for (const line of lines) {
+  const starts: [number, number, number, Pieces][] = [];
+  lines.forEach((line, i) => {
     const ws = /^[ \t]*/.exec(line)![0];
-    const now = lead(ws);
-    starts.push([from, to, ws, now]);
+    const now = pieces[i]!.map(([s]) => s).join('');
+    starts.push([from, to, ws.length, pieces[i]!]);
     out.push(now + line.slice(ws.length));
     from += line.length + 1;
     to += now.length + line.length - ws.length + 1;
-  }
+  });
   const map = (offset: number): number => {
     let i = starts.length - 1;
     while (i > 0 && starts[i]![0] > offset) i--;
-    const [old, now, ws, nowWs] = starts[i]!;
+    const [old, now, wsLength, ps] = starts[i]!;
     const col = offset - old;
-    return now + (col <= ws.length ? at(ws, col) : nowWs.length + col - ws.length);
+    let o = 0;
+    let n = 0;
+    for (const [s, k] of ps) {
+      // inside a piece (a caret between a tab's two spaces: `splitsIndent` declines it), its start
+      if (col < o + k) break;
+      o += k;
+      n += s.length;
+    }
+    return now + (col <= wsLength ? n : n + col - wsLength);
   };
   return { text: out.join('\n'), sel: d.sel && { anchor: map(d.sel.anchor), head: map(d.sel.head) } };
 }
 
-/** Each two spaces of a line's indentation as a tab (an odd one left a space). */
-export const asTabs = (d: TextDoc): TextDoc =>
-  reindent(
-    d,
-    (ws) => '\t'.repeat(ws.length >> 1) + ' '.repeat(ws.length & 1),
-    (_, i) => (i >> 1) + (i & 1),
-  );
+/**
+ * A list item's line: its indentation, and its text's column from the indentation: its marker and the
+ * spaces after it (CommonMark's), but where a caret is after the marker's first space (`carets`), the
+ * spaces after the caret are the text's (ourus's `- ┃ b`, a place before ` b`).
+ */
+function listItem(line: string, carets: number[] = []): { ws: string; width: number } | null {
+  const m = /^([ \t]*)([-*+]|\d{1,9}[.)])( *)(\S?)/.exec(line);
+  if (!m || (m[3] === '' && m[4] !== '')) return null;
+  const spaces = m[3]!.length;
+  const placed = spaces > 1 && carets.includes(m[1]!.length + m[2]!.length + 1);
+  return { ws: m[1]!, width: m[2]!.length + (m[4] === '' || spaces > 4 || placed ? 1 : spaces) };
+}
 
-/** Each tab of a line's indentation as two spaces. */
+/**
+ * Each line of a document with what is in a fenced code block (its fences not included) marked, to be
+ * left out of the list structure.
+ */
+function inFences(lines: string[]): boolean[] {
+  let fence: string | null = null;
+  return lines.map((line) => {
+    const m = /^[ \t]*(`{3,}|~{3,})/.exec(line);
+    if (fence === null) {
+      if (m) fence = m[1]!;
+      return false;
+    }
+    if (m && m[1]![0] === fence[0] && m[1]!.length >= fence.length && !line.trim().slice(m[1]!.length)) fence = null;
+    return fence !== null;
+  });
+}
+
+/** Spaces of indentation as Obsidian's tabs beyond what the list structure says: each two a tab, an odd one a space. */
+const paired = (n: number): Pieces => [...Array.from({ length: n >> 1 }, (): [string, number] => ['\t', 2]), ...(n & 1 ? [[' ', 1] as [string, number]] : [])];
+const spaced = (n: number): Pieces => Array.from({ length: n }, (): [string, number] => [' ', 1]);
+
+/**
+ * A test's spaces as Obsidian writes them: an item nested in another is indented by the parent's
+ * indentation and a tab (Tab's, whatever the parent's marker: `1. a` / `\t- b`, not three spaces), any
+ * other line in an item by the item's indentation and spaces to its text (Shift+Enter's: `1. a` /
+ * `   text`, `\t- b` / `\t  text`), and indentation past that by the old rule (`paired`: two spaces a tab)
+ * for an item, as spaces for any other line (a code block's own indentation). Indentation outside any
+ * item, each two spaces a tab.
+ */
+export const asTabs = (d: TextDoc): TextDoc =>
+  reindent(d, (lines, ends) => {
+    const fenced = inFences(lines);
+    /** The items the line may be in: their indentation in spaces, their text's column, their new indentation. */
+    const open: { at: number; text: number; now: Pieces }[] = [];
+    return lines.map((line, i) => {
+      const w = /^ */.exec(line)![0].length;
+      const blank = line.trim() === '';
+      const it = fenced[i] ? null : listItem(line, ends[i]);
+      if (!blank && !fenced[i]) while (open.length && open.at(-1)!.text > w) open.pop();
+      // a blank line or a code block's ends no item
+      const parent = blank || fenced[i] ? open.findLast((o) => o.text <= w) : open.at(-1);
+      if (it) {
+        const now: Pieces = parent ? [...parent.now, ['\t', parent.text - parent.at], ...paired(w - parent.text)] : paired(w);
+        open.push({ at: w, text: w + it.width, now });
+        return now;
+      }
+      return parent ? [...parent.now, ...spaced(w - parent.at)] : paired(w);
+    });
+  });
+
+/**
+ * Obsidian's indentation read back as the spec's spaces (`asTabs`'s rule the other way): a tab into an
+ * item is its text's column (`1. a` / `\t- b` is `1. a` / `   - b`), spaces stay spaces, and a tab
+ * with no item to go into two spaces.
+ */
 export const asSpaces = (d: TextDoc): TextDoc =>
-  reindent(
-    d,
-    (ws) => ws.replace(/\t/g, '  '),
-    (ws, i) => i + (ws.slice(0, i).match(/\t/g)?.length ?? 0),
-  );
+  reindent(d, (lines, ends) => {
+    const fenced = inFences(lines);
+    /** The items a line may be in: their indentation's tabs and spaces (after the tabs), their marker's width, their new indentation and text's column. */
+    const open: { tabs: number; spaces: number; width: number; now: number }[] = [];
+    const within = (o: (typeof open)[number], tabs: number, spaces: number): boolean => tabs > o.tabs || (tabs === o.tabs && spaces >= o.spaces + o.width);
+    return lines.map((line, i) => {
+      const ws = /^[ \t]*/.exec(line)![0];
+      // tabs, then spaces, as Obsidian writes them; any other mix, each tab two spaces
+      const m = /^(\t*)( *)$/.exec(ws)!;
+      const plain = (): Pieces => [...ws].map((c): [string, number] => [c === '\t' ? '  ' : ' ', 1]);
+      if (!m) return plain();
+      const tabs = m[1]!.length;
+      const spaces = m[2]!.length;
+      const blank = line.trim() === '';
+      const it = fenced[i] ? null : listItem(line, ends[i]);
+      if (!blank && !fenced[i]) while (open.length && !within(open.at(-1)!, tabs, spaces)) open.pop();
+      const parent = blank || fenced[i] ? open.findLast((o) => within(o, tabs, spaces)) : open.at(-1);
+      let now: Pieces;
+      if (!parent) now = plain();
+      else if (tabs > parent.tabs) {
+        // the parent's own indentation, the tab into it, then the rest
+        const into = parent.now + parent.width;
+        now = [[' '.repeat(into), parent.tabs + 1], ...Array.from({ length: tabs - parent.tabs - 1 }, (): [string, number] => ['  ', 1]), ...spaced(spaces)];
+      } else now = [[' '.repeat(parent.now + parent.width), tabs + parent.spaces + parent.width], ...spaced(spaces - parent.spaces - parent.width)];
+      if (it) open.push({ tabs, spaces, width: it.width, now: now.reduce((n, [s]) => n + s.length, 0) });
+      return now;
+    });
+  });
 
 /** Whether a document is indented with tabs already, and so is taken as written. */
 export const tabbed = (text: string): boolean => /^ *\t/m.test(text);
@@ -158,10 +270,12 @@ function item(line: string, spaces = false): { marker: number; text: number } | 
   return { marker: m[0].length, text: m[0].length + (box?.[0].length ?? 0) };
 }
 
-/** Why a document indented with spaces can't be loaded as tabs: an end of its selection is between two of them. */
+/** Why a document indented with spaces can't be loaded as tabs: an end of its selection is inside what becomes a tab. */
 function splitsIndent(d: TextDoc): string | undefined {
   if (tabbed(d.text)) return undefined;
-  for (const { line, col } of ends(d)) if (col < /^ */.exec(line)![0].length && col & 1) return 'a caret inside two spaces of indentation';
+  const there = asTabs(d);
+  // a caret inside a tab's spaces lands at its start: loaded and read back, it moved
+  if (d.sel && JSON.stringify(asSpaces(there).sel) !== JSON.stringify(d.sel)) return 'a caret inside the spaces of a tab of indentation';
   return undefined;
 }
 
@@ -169,6 +283,24 @@ function splitsIndent(d: TextDoc): string | undefined {
 function inFrontmatter(d: TextDoc): string | undefined {
   const frontmatter = /^---\n[\s\S]*?\n---(?:\n|$)/.exec(d.text)?.[0].length ?? 0;
   return ends(d).some((e) => e.offset < frontmatter) ? 'a caret in the frontmatter (Live Preview shows it as properties)' : undefined;
+}
+
+/**
+ * Why Live Preview won't keep a caret where a document has it: in a table, which it draws as a table
+ * of its own, a caret goes into a cell's editor (the note's loses the focus), and the table is padded.
+ */
+function inTable(d: TextDoc): string | undefined {
+  const lines = d.text.split('\n');
+  const delimiter = /^ *\|? *:?-+:? *(\| *:?-+:? *)*\|? *$/;
+  for (const { offset } of ends(d)) {
+    const at = d.text.slice(0, offset).split('\n').length - 1;
+    let from = at;
+    while (from > 0 && lines[from - 1]!.trim()) from--;
+    let to = at;
+    while (to < lines.length - 1 && lines[to + 1]!.trim()) to++;
+    if (lines[at]!.includes('|') && lines.slice(from, to + 1).some((l) => l.includes('|') && delimiter.test(l))) return 'a caret in a table (Live Preview edits it in a table of its own)';
+  }
+  return undefined;
 }
 
 /**
@@ -202,15 +334,282 @@ export const keepsCaretOnText =
 
 /** What obsidian-launcher downloads (the app, the installer, plugins), shared by every setup: `.sxs/obsidian/files/`, its lock beside it. */
 const files = join(cacheDir, 'obsidian', 'files');
-/** A setup's own: its lock, log and vault, `.sxs/<setup>/`. */
-const setupDir = (profile: Profile): string => join(cacheDir, profile.name);
-/** The versions a launch resolved, for `open` to report. */
-let launched: { app: string; installer: string } | undefined;
+const launcher = new ObsidianLauncher({ cacheDir: files });
 
-/** Notes are numbered within a launch, so each test's note is new. */
+/**
+ * The versions to run (the app, the installer) and their downloads, resolved once a run. The downloads
+ * are fetched by the launcher, not through the proxy: runs starting at once take turns, so a cold cache
+ * downloads each once.
+ */
+let resolved: Promise<{ app: string; installer: string; appPath: string; installerPath: string }> | undefined;
+const versions = (): NonNullable<typeof resolved> =>
+  (resolved ??= (async () => {
+    mkdirSync(files, { recursive: true });
+    const unlock = await takeLock(record(`${files}.lock`), true, "Obsidian's downloads");
+    try {
+      const [app, installer] = await launcher.resolveVersion(process.env.OBSIDIAN_VERSION?.trim() || 'latest', 'latest');
+      return { app, installer, appPath: await launcher.downloadApp(app), installerPath: await launcher.downloadInstaller(installer) };
+    } finally {
+      unlock();
+    }
+  })());
+
+/**
+ * Obsidian's instances, shared by every setup's runs as the pool's browsers are by apps': instance n in
+ * `.sxs/obsidian/<n>/`. One Obsidian opens any number of vaults, each in a window of its own (its own
+ * `app`, settings and plugins); an instance has at most one window of each setup (its vault
+ * `<n>/<setup>/`, written anew for each run), a run's at a time (`<setup>.lock`), and one clipboard its
+ * windows share (`clipboard.lock`). Beside them its configuration directory (`config/`, Electron's
+ * `--user-data-dir`), log, debugging port, versions, and pid (`server.pid`, so that `run.ts --stop`
+ * stops it). Started detached on an Xvfb of its own (gone with it), and stopped once no run has a window
+ * in it (`release`: an idle instance is some 95 tasks); its starter window (the vault chooser, which it
+ * opens with no vault) keeps it up between one setup's window and the next.
+ */
+const pool = join(cacheDir, 'obsidian');
+const instanceDir = (n: number | string): string => join(pool, String(n));
+/**
+ * At most this many instances, each with a window of each setup at most: a setup's run has as many
+ * workers at once (`parallel`). 4 (the pool, full, some 800 tasks: an instance some 95, a window 25), or
+ * as `OURUS_SXS_OBSIDIANS` says: 2 in a run of several apps with apps of the pool's browsers among
+ * them (`run.ts`), the two pools, full, under the container's cap on tasks (2048).
+ */
+const obsidians = (): number => Number(process.env.OURUS_SXS_OBSIDIANS) || 4;
+const serverOf = (n: number): string => `obsidian/${n}`;
+
+/** Electron's flags. */
+const FLAGS = [
+  '--no-sandbox',
+  // /dev/shm is small in a container (64 MB), and several of them at once crash a renderer there
+  '--disable-dev-shm-usage',
+  // offline: nothing it fetches (an update, a plugin list) changes what is tested
+  '--proxy-server=127.0.0.1:9',
+  '--disable-renderer-backgrounding',
+  '--disable-background-timer-throttling',
+  '--disable-backgrounding-occluded-windows',
+];
+
+/** An instance a worker uses: its number (or `headed`), directory and debugging port, and its release. */
+interface Instance {
+  n: number | 'headed';
+  dir: string;
+  port: number;
+  release(): Promise<void>;
+}
+
+/** Whether a run has a window in instance n (a setup's lock in its directory, its holder running). */
+function held(n: number): boolean {
+  const locks = recordDir(instanceDir(n));
+  return readdirSync(locks)
+    .filter((f) => f.endsWith('.lock') && f !== 'clipboard.lock')
+    .some((f) => {
+      try {
+        return alive(Number(readFileSync(join(locks, f), 'utf8')));
+      } catch {
+        return false;
+      }
+    });
+}
+
+/** Instance n's debugging port, if it runs and answers there. */
+async function portOf(n: number): Promise<number | null> {
+  if (!serverPid(serverOf(n))) return null;
+  try {
+    const port = Number(readFileSync(record(join(instanceDir(n), 'port')), 'utf8'));
+    return (await fetch(`http://127.0.0.1:${port}/json/version`, { signal: AbortSignal.timeout(5000) }).then((r) => r.ok)) ? port : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Starts an instance in `dir`, detached, on `display` (else an Xvfb of its own), once its debugging port answers. */
+async function startInstance(dir: string, display: string | undefined, say: (line: string) => void): Promise<{ pid: number; port: number }> {
+  const v = await versions();
+  const config = join(dir, 'config');
+  rmSync(config, { recursive: true, force: true });
+  mkdirSync(config, { recursive: true });
+  // no updates; no vault, so that it opens its starter window
+  writeFileSync(join(config, 'obsidian.json'), JSON.stringify({ updateDisabled: true }));
+  // the app's bundle, which the installer loads from its configuration directory
+  try {
+    linkSync(v.appPath, join(config, basename(v.appPath)));
+  } catch {
+    copyFileSync(v.appPath, join(config, basename(v.appPath)));
+  }
+  const xvfb = display ? null : await startXvfb(say, { detached: true });
+  const port = await freePort();
+  const log = join(dir, 'obsidian.log');
+  const out = openSync(log, 'w');
+  const proc = spawn(v.installerPath, [`--user-data-dir=${config}`, `--remote-debugging-port=${port}`, ...FLAGS], {
+    detached: true,
+    stdio: ['ignore', out, out],
+    env: { ...process.env, DISPLAY: display ?? xvfb!.display },
+  });
+  closeSync(out);
+  proc.unref();
+  const tail = (): string => readFileSync(log, 'utf8').split('\n').slice(-20).join('\n');
+  try {
+    for (const t0 = Date.now(); ; await sleep(100)) {
+      if (proc.exitCode !== null) throw new Error(`Obsidian exited (${proc.exitCode}):\n${tail()}`);
+      if (await fetch(`http://127.0.0.1:${port}/json/version`).then((r) => r.ok, () => false)) break;
+      if (Date.now() - t0 > 60000) throw new Error(`Obsidian's debugging port didn't answer in 60s:\n${tail()}`);
+    }
+  } catch (e) {
+    try {
+      process.kill(-proc.pid!);
+    } catch {}
+    xvfb?.proc.kill();
+    throw e;
+  }
+  writeFileSync(record(join(dir, 'port')), String(port));
+  writeFileSync(record(join(dir, 'version')), `${v.app} ${v.installer}`);
+  const name = `${v.app}${v.installer === v.app ? '' : ` (installer ${v.installer})`}`;
+  say(`started Obsidian ${name} in ${dir}${xvfb ? ` on Xvfb ${xvfb.display}` : ''} (pid ${proc.pid}, log ${log})`);
+  return { pid: proc.pid!, port };
+}
+
+/**
+ * An instance for a worker of `setup`'s run, held for it (`<setup>.lock`) until released: a running
+ * instance of the versions to run with no window of the setup's in use, else one started at the first
+ * number none runs at while fewer than `obsidians()` run (one running that doesn't answer is left alone:
+ * `--stop` stops it), else, the pool full, the first that has room, waited for until `gone` says the
+ * worker is no longer wanted (null). Taken under the pool's lock, one worker at a time.
+ */
+async function leaseInstance(setup: string, say: (line: string) => void, gone?: () => boolean): Promise<Instance | null> {
+  for (const t0 = Date.now(); ; await sleep(1000)) {
+    const got = await tryInstance(setup, say);
+    if (got) return got;
+    if (gone?.()) return null;
+    if (Date.now() - t0 < 1000) say(`Obsidian's ${obsidians()} instances have no room for ${setup}: waiting for a run to end`);
+  }
+}
+
+/** One look at the pool for `leaseInstance`: an instance, or null if the pool is full. */
+async function tryInstance(setup: string, say: (line: string) => void): Promise<Instance | null> {
+  mkdirSync(pool, { recursive: true });
+  const { app, installer } = await versions();
+  const unlockPool = await takeLock(record(join(pool, 'pool.lock')), true, "Obsidian's pool");
+  const hold = async (n: number): Promise<(() => void) | null> =>
+    takeLock(record(join(instanceDir(n), `${setup}.lock`)), false, `${setup}'s window in Obsidian ${n}`).catch((e: Error) => {
+      if (/^another run has/.test(e.message)) return null;
+      throw e;
+    });
+  const instance = (n: number, port: number, unlock: () => void): Instance => {
+    process.once('exit', unlock);
+    const release = async (): Promise<void> => {
+      process.off('exit', unlock);
+      unlock();
+      // the instance stopped with the last window a run had in it, under the pool's lock (a worker
+      // taking it then starts another)
+      const unlockPool = await takeLock(record(join(pool, 'pool.lock')), true, "Obsidian's pool");
+      try {
+        if (!held(n)) await stopServer(serverOf(n), say);
+      } finally {
+        unlockPool();
+      }
+    };
+    return { n, dir: instanceDir(n), port, release };
+  };
+  try {
+    // the instances with a directory or a record (one may run with its directory cleaned away)
+    const numbers = [...new Set([...readdirSync(pool), ...readdirSync(recordDir(pool))].filter((d) => /^\d+$/.test(d)).map(Number))].sort((a, b) => a - b);
+    for (const n of numbers) {
+      const port = await portOf(n);
+      let version = '';
+      try {
+        version = readFileSync(record(join(instanceDir(n), 'version')), 'utf8');
+      } catch {}
+      if (!port || version !== `${app} ${installer}`) continue;
+      // one past the pool's size (a run with a larger one left it): stopped once no run holds it
+      if (n >= obsidians()) {
+        if (!held(n)) await stopServer(serverOf(n), say);
+        continue;
+      }
+      const unlock = await hold(n);
+      if (unlock) return instance(n, port, unlock);
+    }
+    if (numbers.filter((n) => serverPid(serverOf(n))).length >= obsidians()) return null;
+    for (let n = 0; ; n++) {
+      if (serverPid(serverOf(n))) continue;
+      mkdirSync(instanceDir(n), { recursive: true });
+      const unlock = await hold(n);
+      if (!unlock) continue;
+      try {
+        const { pid, port } = await startInstance(instanceDir(n), undefined, say);
+        recordServer(serverOf(n), pid);
+        return instance(n, port, unlock);
+      } catch (e) {
+        unlock();
+        throw e;
+      }
+    }
+  } finally {
+    unlockPool();
+  }
+}
+
+/** An instance of the run's own on the display it has (`--headed`), stopped at its release. */
+async function ownInstance(say: (line: string) => void): Promise<Instance> {
+  const dir = instanceDir('headed');
+  mkdirSync(dir, { recursive: true });
+  const unlock = await takeLock(record(join(dir, 'launch.lock')), false, 'the headed Obsidian');
+  const { pid, port } = await startInstance(dir, process.env.DISPLAY, say);
+  const stop = (): void => {
+    try {
+      process.kill(-pid);
+    } catch {}
+    unlock();
+  };
+  process.once('exit', stop);
+  return { n: 'headed', dir, port, release: async () => (process.off('exit', stop), stop()) };
+}
+
+/** The vault a window of an instance has open, if it has one (the starter window has none). */
+const vaultOf = (page: Page): Promise<string | undefined> => page.evaluate(() => (window as any).app?.vault?.adapter?.basePath as string | undefined).catch(() => undefined);
+
+/**
+ * Opens `vault` in an instance (from its starter window, else any other: its vault-open message) and
+ * returns its window. Its plugins are trusted, as a user does once for a vault: else Obsidian starts a
+ * vault it hasn't seen in restricted mode, its community plugins off (the `enable-plugin-<vault id>`
+ * flag in local storage, which the instance's windows share). The id is the instance's, given as the
+ * vault is first opened there, so the flag is set before the window loads where the vault was opened
+ * before, and right after its opening where it wasn't, the window's first load perhaps too early for it:
+ * `open` reloads the window, and checks that every plugin loaded. The app's version is set as seen too
+ * (no changelog).
+ */
+async function openVault(context: BrowserContext, vault: string, version: string): Promise<Page> {
+  const windows = context.pages().filter((p) => p.url().startsWith('app://obsidian.md/'));
+  windows.sort((a, b) => Number(b.url().endsWith('/starter.html')) - Number(a.url().endsWith('/starter.html')));
+  let opened: unknown = 'no window to open it from';
+  for (const w of windows) {
+    opened = await w
+      .evaluate(
+        ({ path, version }) => {
+          const ipc = (window as any).require('electron').ipcRenderer;
+          const trust = (): boolean => {
+            const id = Object.entries(ipc.sendSync('vault-list') as Record<string, { path: string }>).find(([, v]) => v.path === path)?.[0];
+            if (id) localStorage.setItem(`enable-plugin-${id}`, 'true');
+            return !!id;
+          };
+          localStorage.setItem('most-recently-installed-version', version);
+          const known = trust();
+          const result = ipc.sendSync('vault-open', path, false);
+          if (!known) trust();
+          return result;
+        },
+        { path: vault, version },
+      )
+      .catch((e: Error) => e.message);
+    if (opened === true) break;
+  }
+  if (opened !== true) throw new Error(`Obsidian didn't open ${vault}: ${String(opened)}`);
+  for (const t0 = Date.now(); Date.now() - t0 < 30000; await sleep(100)) for (const p of context.pages()) if ((await vaultOf(p)) === vault) return p;
+  throw new Error(`Obsidian opened no window for ${vault}`);
+}
+
+/** Notes are numbered in the run, so each test's note is new (each worker has a vault of its own). */
 let notes = 0;
-/** The test's buffer is loaded with its spaces as tabs, and is read back so. */
-let retabbed = false;
+/** A worker's: its instance's log, and whether its test's buffer was loaded with its spaces as tabs, to be read back so. */
+const pageState = perPage(() => ({ log: '', retabbed: false }));
 
 export function obsidianDriver(profile: Profile): Driver {
   const hotkeys: Record<string, readonly Hotkey[]> = {
@@ -222,7 +621,12 @@ export function obsidianDriver(profile: Profile): Driver {
   return {
     name: profile.name,
     title: profile.title,
+    id: profile.id,
     url: 'app://obsidian.md/',
+    // a window of its own for each worker, in an instance of the pool (`leaseInstance`), one a setup each
+    get parallel() {
+      return obsidians();
+    },
     model: 'text',
     keys: {
       enter: 'Enter',
@@ -250,110 +654,48 @@ export function obsidianDriver(profile: Profile): Driver {
       const d = doc as TextDoc;
       // CodeMirror keeps line breaks as LF
       if (d.text.includes('\r')) return 'CR line endings';
-      return splitsIndent(d) ?? (profile.mode === 'live-preview' ? inFrontmatter(d) : undefined) ?? profile.holds?.(d);
+      return splitsIndent(d) ?? (profile.mode === 'live-preview' ? (inFrontmatter(d) ?? inTable(d)) : undefined) ?? profile.holds?.(d);
     },
 
-    async launch({ headed, say }) {
-      const dir = setupDir(profile);
-      mkdirSync(dir, { recursive: true });
-      // the setup is this run's until it stops, or exits some other way
-      // a second run of the setup stops rather than rewrite the vault under the first
-      const unlock = await takeLock(join(dir, `${profile.name}.lock`), false, profile.name);
-      process.once('exit', unlock);
-      const log = join(dir, 'obsidian.log');
+    async launch({ headed, say, gone }) {
       ensureAptInstalled('Obsidian', ELECTRON_LIBRARIES, say);
-      const xvfb = headed && process.env.DISPLAY ? null : await startXvfb(say);
-      if (xvfb) process.once('exit', () => xvfb.proc.kill());
-      // the vault, written anew for each launch
-      const vault = join(dir, 'vault');
-      rmSync(vault, { recursive: true, force: true });
-      mkdirSync(join(vault, '.obsidian'), { recursive: true });
-      writeFileSync(join(vault, '.obsidian', 'app.json'), JSON.stringify({ useTab: true, livePreview: profile.mode === 'live-preview', ...profile.appConfig }, null, 2));
-      writeFileSync(join(vault, '.obsidian', 'hotkeys.json'), JSON.stringify(hotkeys, null, 2));
-      for (const [id, data] of Object.entries(profile.pluginData ?? {})) {
-        mkdirSync(join(vault, '.obsidian', 'plugins', id), { recursive: true });
-        writeFileSync(join(vault, '.obsidian', 'plugins', id, 'data.json'), JSON.stringify(data, null, 2));
-      }
-
-      mkdirSync(files, { recursive: true });
-      const launcher = new ObsidianLauncher({ cacheDir: files });
-      // the downloads (the app, the installer, plugins) are fetched by the launcher, not through the
-      // proxy: setups starting at once take turns, so a cold cache downloads each once
-      const downloaded = await takeLock(`${files}.lock`, true, "Obsidian's downloads");
-      process.once('exit', downloaded);
-      const [app, installer] = await launcher.resolveVersion(process.env.OBSIDIAN_VERSION?.trim() || 'latest', 'latest').catch((e) => {
-        downloaded();
-        throw e;
-      });
-      launched = { app, installer };
-      notes = 0;
-      const port = await freePort();
-      const out = openSync(log, 'w');
-      const { proc, configDir } = await launcher.launch({
-        appVersion: app,
-        installerVersion: installer,
-        vault,
-        plugins: [...(profile.plugins ?? [])],
-        args: [
-          `--remote-debugging-port=${port}`,
-          '--no-sandbox',
-          // /dev/shm is small in a container (64 MB), and several of them at once crash a renderer there
-          '--disable-dev-shm-usage',
-          // offline: nothing it fetches (an update, a plugin list) changes what is tested
-          '--proxy-server=127.0.0.1:9',
-          '--disable-renderer-backgrounding',
-          '--disable-background-timer-throttling',
-          '--disable-backgrounding-occluded-windows',
-        ],
-        spawnOptions: { detached: true, stdio: ['ignore', out, out], env: { ...process.env, ...(xvfb && { DISPLAY: xvfb.display }) } },
-      }).finally(downloaded);
-      closeSync(out);
-      let stopped = false;
-      const stop = (): void => {
-        if (stopped) return;
-        stopped = true;
-        try {
-          process.kill(-proc.pid!);
-        } catch {}
-        xvfb?.proc.kill();
-        unlock();
-        // the app may still be writing its configuration as it goes, and what is left is only clutter
-        try {
-          rmSync(configDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
-        } catch {}
-      };
-      process.once('exit', stop);
-      /** Stops the app, once it has had a moment to exit. */
-      const quit = async (): Promise<void> => {
-        try {
-          process.kill(-proc.pid!);
-        } catch {}
-        for (let i = 0; i < 50 && proc.exitCode === null && proc.signalCode === null; i++) await sleep(100);
-        stop();
-      };
-      const tail = (): string => readFileSync(log, 'utf8').split('\n').slice(-20).join('\n');
+      // one run of the setup at a time is the runner's (its lock); each of its workers a window in an
+      // instance of the pool of its own, or the run's own on its display
+      const inst = headed && process.env.DISPLAY ? await ownInstance(say) : await leaseInstance(profile.name, say, gone);
+      if (!inst) return null;
       try {
-        for (let t0 = Date.now(); ; ) {
-          if (proc.exitCode !== null) throw new Error(`Obsidian exited (${proc.exitCode}):\n${tail()}`);
-          if (await fetch(`http://127.0.0.1:${port}/json/version`).then((r) => r.ok, () => false)) break;
-          if (Date.now() - t0 > 60000) throw new Error(`Obsidian's debugging port didn't answer in 60s:\n${tail()}`);
-          await sleep(100);
+        const browser = await chromium.connectOverCDP(`http://127.0.0.1:${inst.port}`);
+        const context = browser.contexts()[0]!;
+        const vault = join(inst.dir, profile.name);
+        // the setup's window an earlier run left open (one that stopped some other way), closed first
+        for (const p of context.pages()) if ((await vaultOf(p)) === vault) await p.evaluate(() => window.close()).catch(() => {});
+        // the vault, written anew for each run
+        rmSync(vault, { recursive: true, force: true });
+        mkdirSync(join(vault, '.obsidian'), { recursive: true });
+        writeFileSync(join(vault, '.obsidian', 'app.json'), JSON.stringify({ useTab: true, livePreview: profile.mode === 'live-preview', ...profile.appConfig }, null, 2));
+        writeFileSync(join(vault, '.obsidian', 'hotkeys.json'), JSON.stringify(hotkeys, null, 2));
+        for (const [id, data] of Object.entries(profile.pluginData ?? {})) {
+          mkdirSync(join(vault, '.obsidian', 'plugins', id), { recursive: true });
+          writeFileSync(join(vault, '.obsidian', 'plugins', id, 'data.json'), JSON.stringify(data, null, 2));
         }
-        const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
-        let page: Page | undefined;
-        for (let t0 = Date.now(); !page && Date.now() - t0 < 30000; await sleep(100)) page = browser.contexts().flatMap((c) => c.pages()).find((p) => p.url().startsWith('app://obsidian.md/'));
-        if (!page) throw new Error(`Obsidian opened no window:\n${tail()}`);
-        say(`started Obsidian ${app} (installer ${installer})${xvfb ? ` on Xvfb ${xvfb.display}` : ''}, log ${log}`);
+        const downloaded = await takeLock(record(`${files}.lock`), true, "Obsidian's downloads");
+        await launcher.installPlugins(vault, [...(profile.plugins ?? [])]).finally(downloaded);
+        const page = await openVault(context, vault, (await versions()).app);
+        pageState(page).log = join(inst.dir, 'obsidian.log');
+        say(`opened ${vault} in Obsidian ${inst.n}`);
         return {
           page,
           reused: false,
+          // the instance's, which its other setups' windows share
+          clipboard: () => takeLock(record(join(inst.dir, 'clipboard.lock')), true, `Obsidian ${inst.n}'s clipboard`),
           release: async () => {
+            await page.evaluate(() => window.close()).catch(() => {});
             await browser.close().catch(() => {});
-            await quit();
+            await inst.release();
           },
         };
       } catch (e) {
-        stop();
+        await inst.release();
         throw e;
       }
     },
@@ -370,7 +712,7 @@ export function obsidianDriver(profile: Profile): Driver {
         return [...p.enabledPlugins].map((id: string) => ({ id, version: p.manifests[id]?.version, loaded: !!p.plugins[id]?._loaded }));
       });
       const missing = plugins.filter((p) => !p.loaded).map((p) => p.id);
-      if (missing.length) throw new Error(`Obsidian didn't load ${missing.join(', ')}: see ${join(setupDir(profile), 'obsidian.log')}`);
+      if (missing.length) throw new Error(`Obsidian didn't load ${missing.join(', ')}: see ${pageState(page).log}`);
       // ready once a key does what it should: Tab indents
       await this.load(page, { text: '- a\n- b', sel: { anchor: 7, head: 7 } });
       await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
@@ -381,13 +723,17 @@ export function obsidianDriver(profile: Profile): Driver {
       // the editor in the setup's editing mode: Source mode is the editing view's `source`
       const source = await page.evaluate(() => (window as any).app.workspace.activeLeaf?.view?.getState?.()?.source);
       if (source !== (profile.mode === 'source')) throw new Error(`Obsidian's editor isn't in ${profile.mode === 'source' ? 'Source mode' : 'Live Preview'} (source: ${source})`);
-      return [`${launched!.app} (installer ${launched!.installer})`, ...plugins.map((p) => `${p.id} ${p.version}`)].join(', ');
+      // the app (its bundle) and the installer (the Electron it runs in) are versioned apart: the
+      // installer named only where it isn't the app's
+      const { app, installer } = await versions();
+      return [installer === app ? app : `${app} (installer ${installer})`, ...plugins.map((p) => `${p.id} ${p.version}`)].join(', ');
     },
 
     async load(page: Page, doc) {
       const d = doc as TextDoc;
-      retabbed = !tabbed(d.text);
-      const { text, sel } = retabbed ? asTabs(d) : d;
+      const state = pageState(page);
+      state.retabbed = !tabbed(d.text);
+      const { text, sel } = state.retabbed ? asTabs(d) : d;
       await page.evaluate(
         async ({ path, text, sel }) => {
           const app = (window as any).app;
@@ -409,12 +755,22 @@ export function obsidianDriver(profile: Profile): Driver {
     },
 
     async read(page: Page) {
-      const got: TextDoc = await page.evaluate(() => {
+      const { doc: got, lost } = await page.evaluate(() => {
         const cm = (window as any).app.workspace.activeEditor.editor.cm;
         const { anchor, head } = cm.state.selection.main;
-        return { text: cm.state.doc.toString() as string, sel: cm.hasFocus ? { anchor, head } : null };
+        // the caret is the editor's where its content has the page's focus, whether or not the
+        // window has the system's (CodeMirror's `hasFocus` wants both: a window of the shared
+        // instance can lose it a moment under load); another element's focus (the note's title) is no caret
+        const active = document.activeElement;
+        const focused = cm.hasFocus || (!!active && cm.contentDOM.contains(active));
+        return {
+          doc: { text: cm.state.doc.toString() as string, sel: focused ? { anchor, head } : null },
+          lost: !cm.hasFocus && focused ? `window ${document.hasFocus() ? 'focused' : 'unfocused'}, ${document.visibilityState}` : null,
+        };
       });
-      return retabbed ? asSpaces(got) : got;
+      // a record of each read that only the page's focus kept a caret in: what took the window's
+      if (lost) appendFileSync(join(dirname(pageState(page).log), 'focus.log'), `${new Date().toISOString()} ${profile.name}: ${lost}\n`);
+      return pageState(page).retabbed ? asSpaces(got) : got;
     },
   };
 }
