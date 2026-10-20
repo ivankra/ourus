@@ -3,7 +3,7 @@
 import type { Config } from '../config.ts';
 import { OutlineState, type OutlineNode } from '../outline/index.ts';
 import type { LineInfo } from '../parser/index.ts';
-import { advanceColumns, dropColumns, skipSpaces, type ChangeSpec } from '../text.ts';
+import { advanceColumns, dropColumns, skipSpaces, trimMd, trimMdEnd, trimMdStart, type ChangeSpec } from '../text.ts';
 import { OutlinePlan, type OutlinePlanNode, type PlanTree } from '../encoder/index.ts';
 import { CommandContext, blankInQuote, gapOwner, isCodeLine, isEmptyItem, normText, paragraphPrefix, referenceEscape } from './context.ts';
 import { notApplicable, reject, withPlan, type Outcome } from './plan.ts';
@@ -32,11 +32,9 @@ export function pastePlain(ctx: CommandContext, payload: string): Outcome {
   const line = doc.lineAt(from);
   if (doc.lineAt(to).index !== line.index || from < line.contentFrom) return notApplicable;
   const node = doc.nodeAt(from);
-  // on a code line, the lines are code as they are, each in the containers the block is in
+  // on a code line, the lines are code as they are, each in the containers the block is in; where
+  // one would close the block, its fences grow past it (`codeEdit`)
   if (node && isCodeLine(ctx, line)) {
-    // a pasted line that is a fence would close the block
-    const block = line.leaf!;
-    if (lines.some((text) => new RegExp(`^ {0,3}\\${block.fenceChar}{${block.fenceLength},}\\s*$`).test(text))) return reject('not-expressible', 'a pasted fence would close the code block');
     const prefix = ctx.encoder.continuation(line.prefix);
     const eol = ctx.ending(line);
     const insert = lines.join(eol + prefix);
@@ -47,29 +45,39 @@ export function pastePlain(ctx: CommandContext, payload: string): Outcome {
     const insert = lines.join(ctx.ending(line) + ctx.encoder.continuation(line.prefix));
     return codeEdit(ctx, node, [{ from, to, insert }], from + insert.length, `the lines would end the ${line.leaf!.type.replace('_', ' ')}`);
   }
-  if (node?.kind === 'heading') return reject('not-expressible', 'a heading is a single line');
+  // an ATX title is a single line; a setext title holds several, but no blank line
+  const setext = node?.kind === 'heading' && !!node.head?.setext;
+  if (node?.kind === 'heading' && !setext) return reject('not-expressible', 'a heading is a single line');
+  if (setext && lines.slice(1, -1).some((text) => trimMd(text) === '')) return reject('not-expressible', 'a heading has no blank line in its title');
   // a callout's title and a table's row are a line each: the host's line breaks would end them
   if (node && line.leaf?.type === 'callout_title') return reject('not-expressible', 'a callout title is a single line');
   if (node && line.leaf?.type === 'table') return reject('not-expressible', 'a table row is a single line');
   const empty = !!node && isEmptyText(ctx, node);
-  // before a node's text on its first line (a callout's `[!type]`), the lines would go into its markup
-  if (node && line.index === node.startLine && from < doc.textStart(from) && !empty) return reject('not-expressible', 'the caret is in markup');
-  // on an empty item, the text is its text: its first line escaped where it would start a block
+  // before a node's text on its first line (a callout's `[!type]`), the lines would go into its markup;
+  // a space a placeholder holds is text (a deleted character's place), and the lines go before it,
+  // as typing does
+  const held = from === to && doc.placeholders.includes(from) && doc.textStart(from) === from + 1;
+  if (node && line.index === node.startLine && from < doc.textStart(from) && !empty && !held) return reject('not-expressible', 'the caret is in markup');
+  // on an empty item, the text is its text: its first line escaped where it would start a block; in
+  // or before an empty task's checkbox, after it
   if (node && empty && from >= doc.markerTo(node.block) && from === to) {
-    const prefix = ctx.encoder.siblingPrefix(node) + ' '.repeat(node.block.contentColumn! - node.block.markerColumn!);
+    if (from < doc.textStart(from)) return pastePlain(ctx.at(doc.textStart(from)), payload);
+    const prefix = ctx.encoder.itemContinuation(node);
     const eol = ctx.ending(line);
     // a blank line before the last is a paragraph break (null), the line after it a paragraph's start
-    const parts = lines.map((text, k) => (k > 0 && k < lines.length - 1 && text.trim() === '' ? null : text));
-    const textLines = parts.map((text, k) => (text === null ? null : ctx.encoder.escape(k === 0 ? text.trim() : text.trimStart(), k === 0 || parts[k - 1] === null ? 'start' : 'continuation').text));
+    const parts = lines.map((text, k) => (k > 0 && k < lines.length - 1 && trimMd(text) === '' ? null : text));
+    // each line without its leading spaces, which would make it code; its trailing ones are what was
+    // pasted (a hard break's two)
+    const textLines = parts.map((text, k) => (text === null ? null : ctx.encoder.escape(trimMdStart(text), k === 0 || parts[k - 1] === null ? 'start' : 'continuation').text));
     // one space after the marker, then the text; an empty task's checkbox stays, the text after it
     const start = emptyItemStart(ctx, node, from, line.to);
-    const box = /^\[[ xX]\][ \t]*/.exec(doc.headLines(node)[0]?.trimStart() ?? '')?.[0];
-    if (box && textLines[0] !== null) textLines[0] = box.trimEnd() + ' ' + textLines[0];
-    const insert = start.lead + textLines.map((text, k) => (k === 0 ? (box ? text!.slice(box.trimEnd().length + 1) : text) : text === null ? eol + prefix.trimEnd() : eol + prefix + text)).join('');
+    const box = /^\[[ xX]\][ \t]*/.exec(trimMdStart(doc.headLines(node)[0] ?? ''))?.[0];
+    if (box && textLines[0] !== null) textLines[0] = trimMdEnd(box) + ' ' + textLines[0];
+    const insert = start.lead + textLines.map((text, k) => (k === 0 ? (box ? text!.slice(trimMdEnd(box).length + 1) : text) : text === null ? eol + trimMdEnd(prefix) : eol + prefix + text)).join('');
     const changes = [{ from: start.from, to: Math.max(to, line.to), insert }];
     const caret = start.from + insert.length;
     const last = textLines[textLines.length - 1]!;
-    const placeholders = last.trim() === '' ? [caret] : undefined;
+    const placeholders = trimMd(last) === '' ? [caret] : undefined;
     const expected = paragraphsPlan(ctx, node, paragraphsOf(textLines));
     const extra = placeholders ? { placeholders } : {};
     const plan = ctx.caret(changes, caret, expected, extra);
@@ -79,16 +87,16 @@ export function pastePlain(ctx: CommandContext, payload: string): Outcome {
     const blank = eol + ctx.encoder.continuation(line.prefix).replace(/[ \t]+$/, '');
     return { ...plan, fallback: () => ctx.caret([{ from: start.from, to: Math.max(to, line.to), insert: insert + blank }], caret, expected, extra) };
   }
-  if (!node?.head || node.head.type !== 'paragraph' || line.index < node.head.startLine || line.index > node.head.endLine) return notApplicable;
+  if (!node?.head || (node.head.type !== 'paragraph' && !setext) || line.index < node.head.startLine || line.index > node.head.endLine - (setext ? 1 : 0)) return notApplicable;
   const text = doc.text;
   const prefix =
     node.kind === 'item'
-      ? ctx.encoder.siblingPrefix(node) + ' '.repeat(node.block.contentColumn! - node.block.markerColumn!)
+      ? ctx.encoder.itemContinuation(node)
       : paragraphPrefix(ctx, doc.lines[node.head.startLine]!);
   const eol = ctx.ending(line);
   // where the clipboard ends with a line break, the rest of the line starts a line of its own: the
   // spaces at the break go with neither line, as at Enter's split
-  const restFrom = lines[lines.length - 1]!.trim() === '' ? skipSpaces(text, to, line.to, 1) : to;
+  const restFrom = trimMd(lines[lines.length - 1]!) === '' ? skipSpaces(text, to, line.to, 1) : to;
   const rest = text.slice(restFrom, line.to);
   // the first line joins the text before the caret; at the start of a line of the text it starts that
   // line, without its leading spaces (four would make it code), escaped where it would start a block
@@ -97,12 +105,12 @@ export function pastePlain(ctx: CommandContext, payload: string): Outcome {
   // pasted line, or in the text before the caret (`escapeAt`)
   const kind = line.index === node.head.startLine ? 'start' : 'continuation';
   const beforeText = text.slice(line.contentFrom, from);
-  const lineStart = beforeText.trim() === '';
-  const own = beforeText.trimStart();
+  const lineStart = trimMd(beforeText) === '';
+  const own = trimMdStart(beforeText);
   const at = lineStart ? null : ctx.encoder.escape(own + lines[0]!, kind).at;
   const escapeAt = at !== null && at < own.length ? from - own.length + at : null;
   const firstLine = lineStart
-    ? ctx.encoder.escape(lines[0]!.trimStart(), kind).text
+    ? ctx.encoder.escape(trimMdStart(lines[0]!), kind).text
     : at !== null && escapeAt === null
       ? lines[0]!.slice(0, at - own.length) + '\\' + lines[0]!.slice(at - own.length)
       : lines[0]!;
@@ -113,11 +121,11 @@ export function pastePlain(ctx: CommandContext, payload: string): Outcome {
   let restWritten = rest;
   let opens = false;
   for (let i = 1; i < lines.length; i++) {
-    const own = lines[i]!.trimStart();
+    const own = trimMdStart(lines[i]!);
     // the last line runs into the rest of the line, which then starts it
     const last = i === lines.length - 1;
     if (own === '' && !last) {
-      insert += eol + prefix.trimEnd();
+      insert += eol + trimMdEnd(prefix);
       written.push(null);
       opens = true;
       continue;
@@ -150,7 +158,7 @@ export function pastePlain(ctx: CommandContext, payload: string): Outcome {
   const textLines = ref ? [ref.lines[0]!, ...broken.slice(1)] : broken;
   const caret = from + insert.length + (ref && ref.change.from <= from ? 1 : 0) + (escapeAt !== null ? 1 : 0);
   // an empty last line exists only as a place to type into, as after Shift-Enter
-  const placeholders = lastLine.trim() === '' && i === headLines.length - 1 ? [caret] : undefined;
+  const placeholders = trimMd(lastLine) === '' && i === headLines.length - 1 ? [caret] : undefined;
   return ctx.caret(changes, caret, paragraphsPlan(ctx, node, paragraphsOf(textLines)), { ...(placeholders ? { placeholders } : {}) });
 }
 
@@ -217,8 +225,8 @@ function paragraphsPlan(ctx: CommandContext, node: OutlineNode, paragraphs: read
  */
 export function clipboardSource(lines: readonly string[], config: Partial<Config>): string[] {
   const indentOf = (text: string): number => advanceColumns(text, 0, /^[ \t]*/.exec(text)![0].length, 0);
-  const common = Math.min(...lines.filter((text) => text.trim() !== '').map(indentOf));
-  const source = lines.map((text) => (text.trim() === '' ? '' : dropColumns(text, common)));
+  const common = Math.min(...lines.filter((text) => trimMd(text) !== '').map(indentOf));
+  const source = lines.map((text) => (trimMd(text) === '' ? '' : dropColumns(text, common)));
   const fence = /^(`{3,}|~{3,}|\$\$|%%)/.exec(source[0]!);
   const rest = source.slice(1).filter((text) => text !== '');
   const inner = rest.length ? Math.min(...rest.map(indentOf)) : 0;
@@ -233,12 +241,12 @@ export function paste(ctx: CommandContext, payload: string): Outcome {
   const { doc } = ctx;
   if (!ctx.collapsed) return notApplicable;
   const lines = payload.split(/\r\n|\n|\r/);
-  while (lines.length && lines[0]!.trim() === '') lines.shift();
-  while (lines.length && lines[lines.length - 1]!.trim() === '') lines.pop();
+  while (lines.length && trimMd(lines[0]!) === '') lines.shift();
+  while (lines.length && trimMd(lines[lines.length - 1]!) === '') lines.pop();
   if (lines.length === 0) return notApplicable;
   // one line without a line break is inline text; with one (a line copied whole), the break is
   // Shift-Enter's, and what follows the caret starts a line of its own
-  const inline = lines.length < 2 && !/[\r\n]\s*$/.test(payload);
+  const inline = lines.length < 2 && !/[\r\n][ \t\r\n]*$/.test(payload);
   let pos = ctx.sel.head;
   let node = doc.nodeAt(pos);
   // on a blank line, in the gap of the node above: the paste goes where Enter at the end of that node
@@ -255,6 +263,8 @@ export function paste(ctx: CommandContext, payload: string): Outcome {
   if (!node) return notApplicable;
   // in code, what is pasted is code
   if (isCodeLine(ctx, doc.lineAt(pos))) return pastePlain(ctx, payload);
+  // in or before an empty task's checkbox, the paste goes after it, as into its text
+  if (!onBlank && isEmptyText(ctx, node) && pos >= doc.markerTo(node.block) && pos < doc.textStart(pos)) return paste(ctx.at(doc.textStart(pos)), payload);
   let source = clipboardSource(lines, doc.config);
   let fragment = OutlineState.parse(source.join('\n'), { config: doc.config });
   // frontmatter is only at a document's start: pasted into one, its lines are what they read as there
@@ -262,6 +272,16 @@ export function paste(ctx: CommandContext, payload: string): Outcome {
   if (fragment.lines[0]?.leaf?.type === 'frontmatter') {
     source.unshift('');
     fragment = OutlineState.parse(source.join('\n'), { config: doc.config });
+  }
+  // a fenced block the clipboard leaves open is closed where it ends, as it reads there: open, it
+  // would run on into the text after the paste
+  const lastLeaf = fragment.lines[fragment.lines.length - 1]?.leaf;
+  if (lastLeaf && ((lastLeaf.type === 'code_block' && lastLeaf.fenced) || lastLeaf.type === 'math_block' || lastLeaf.type === 'comment_block') && !closesFence(source.slice(lastLeaf.startLine, lastLeaf.endLine + 1))) {
+    const opening = /^.*?(?:`{3,}|~{3,}|\$\$|%%)/.exec(source[lastLeaf.startLine]!);
+    if (opening) {
+      source = [...source, opening[0]];
+      fragment = OutlineState.parse(source.join('\n'), { config: doc.config });
+    }
   }
   const roots = fragment.root.children;
   // one line of plain text is inline text, the host's; one that is an item, a heading or a quote is nodes
@@ -292,12 +312,12 @@ export function paste(ctx: CommandContext, payload: string): Outcome {
       // in the middle of the text one line is inline text, the host's, whatever it would be at the end
       if (inline) return notApplicable;
       if (doc.config.pasteStructuredMidText === 'split' && node.head.type === 'paragraph' && !afterChildren) {
-        const split = pasteSplit(ctx, node, line, pos, fragment, source, /(\r\n|\n|\r)\s*$/.test(payload));
+        const split = pasteSplit(ctx, node, line, pos, fragment, source, /(\r\n|\n|\r)[ \t\r\n]*$/.test(payload));
         if (split) return split;
       }
     } else if (doc.config.pasteStructuredAtEnd === 'join' && !onBlank && node.head.type === 'paragraph' && !afterChildren) {
       // at the end of the text, the paste's first text joins it, as `split` joins it in the middle
-      const joined = pasteSplit(ctx, node, line, pos, fragment, source, /(\r\n|\n|\r)\s*$/.test(payload));
+      const joined = pasteSplit(ctx, node, line, pos, fragment, source, /(\r\n|\n|\r)[ \t\r\n]*$/.test(payload));
       if (joined) return joined;
     }
   }
@@ -321,6 +341,13 @@ export function paste(ctx: CommandContext, payload: string): Outcome {
   const fitted0 = fitPaste(ctx, node, fragment, empty, asChildren, tight);
   // what can't be a node where it lands is pasted as text
   if (!fitted0) return pastePlain(ctx, payload);
+  // on an empty task the first pasted item takes its place with its checkbox, unless it has its own
+  const box = empty ? /^\[[ xX]\]/.exec(trimMdStart(doc.headLines(node)[0] ?? '')) : null;
+  const head = fitted0.nodes[0];
+  if (box && head?.kind === 'item' && !head.blockType && head.lines?.length && !/^\[[ xX]\](?:[ \t]|$)/.test(head.lines[0]!)) {
+    const lines = [`${box[0]} ${head.lines[0]}`, ...head.lines.slice(1)];
+    fitted0.nodes[0] = { ...head, lines, text: normText(lines) };
+  }
   const fitted1 = tight ? { ...fitted0, nodes: fitted0.nodes.map(allTight), into: fitted0.into.map(allTight) } : fitted0;
   // the caret goes to the end of the pasted text; after code, to the end of its last line, not after
   // the closing fence, where typing would unmake it; after a setext title, to its end, not the underline's
@@ -568,7 +595,7 @@ function fitPaste(ctx: CommandContext, node: OutlineNode, fragment: OutlineState
         nodes.push(literal);
       } else nodes.push({ ...item, marker: destMarker });
     } else if (root.kind === 'paragraph') {
-      const rootLines = fragment.contentOf(root).lines!.map((text) => text.trim()).filter((text) => text !== '');
+      const rootLines = fragment.contentOf(root).lines!.map((text) => trimMd(text)).filter((text) => text !== '');
       // each line an item's text: escaped where it would start a block there (`2. y`, a nested list)
       rootLines.forEach((text, k) => {
         const line = ctx.encoder.escape(text, 'start').text;
@@ -607,13 +634,13 @@ function fitPaste(ctx: CommandContext, node: OutlineNode, fragment: OutlineState
 function pasteFirstBlock(ctx: CommandContext, node: OutlineNode, root: OutlineNode, fragment: OutlineState, source: readonly string[]): Outcome {
   const { doc } = ctx;
   const line = doc.lineAt(ctx.sel.head);
-  const prefix = ctx.encoder.siblingPrefix(node) + ' '.repeat(node.block.contentColumn! - node.block.markerColumn!);
+  const prefix = ctx.encoder.itemContinuation(node);
   const eol = ctx.ending(line);
   const blockLines = source.slice(root.startLine, fragment.lastDescendant(root).endLine + 1);
   // one space after the marker, then the block; after an empty task's checkbox, which a block can't
   // follow on its line, the block starts the next, the task's first child
   const start = emptyItemStart(ctx, node, ctx.sel.head, line.to);
-  const box = /^\[[ xX]\]/.test(doc.headLines(node)[0]?.trimStart() ?? '');
+  const box = /^\[[ xX]\]/.test(trimMdStart(doc.headLines(node)[0] ?? ''));
   const insert = box
     ? blockLines.map((text) => eol + (text === '' ? '' : prefix + text)).join('')
     : start.lead + blockLines.map((text, k) => (k === 0 ? text : eol + (text === '' ? '' : prefix + text))).join('');
@@ -659,21 +686,21 @@ function pasteSplit(ctx: CommandContext, node: OutlineNode, line: LineInfo, pos:
   const i = line.index - node.head!.startLine;
   const offset = pos - line.contentFrom;
   const before = [...headLines.slice(0, i), headLines[i]!.slice(0, offset)];
-  const afterLines = [headLines[i]!.slice(offset).trimStart(), ...headLines.slice(i + 1)];
+  const afterLines = [trimMdStart(headLines[i]!.slice(offset)), ...headLines.slice(i + 1)];
   // at a line's end inside the text, the rest starts at the next line, not with an empty one, as at Enter's split
-  if (afterLines.length > 1 && afterLines[0]!.trim() === '') {
+  if (afterLines.length > 1 && trimMd(afterLines[0]!) === '') {
     afterLines.shift();
     // a continuation line's leading spaces aren't text: starting a node, they would make it code
-    afterLines[0] = afterLines[0]!.trimStart();
+    afterLines[0] = trimMdStart(afterLines[0]!);
   }
   const restText = normText(afterLines);
   // the paste's first text, joining the text before the caret
   const first = roots[0]!;
   const firstLines =
     first.kind === 'paragraph'
-      ? fragment.contentOf(first).lines!.map((text) => text.trim()).filter((text) => text !== '')
+      ? fragment.contentOf(first).lines!.map((text) => trimMd(text)).filter((text) => text !== '')
       : first.kind === 'item' && first.head?.type === 'paragraph'
-        ? fragment.headLines(first).map((text) => text.trim())
+        ? fragment.headLines(first).map((text) => trimMd(text))
         : [];
   // a pasted item's number is content, kept as text, but where the item at the caret is ordered too,
   // whose marker is the list's form (`pasteStructuredListForm: text`); always (`literal`); never, its
@@ -686,7 +713,7 @@ function pasteSplit(ctx: CommandContext, node: OutlineNode, line: LineInfo, pos:
   const partial = first.kind === 'paragraph' && doc.config.pasteStructuredLines === 'items' && firstLines.length > 1;
   const joined = partial ? firstLines.slice(0, 1) : firstLines;
   // joining at the start of a line of the text, it starts that line: escaped where it would start a block
-  if (joined.length && before[before.length - 1]!.trim() === '') joined[0] = ctx.encoder.escape(joined[0]!, before.length === 1 ? 'start' : 'continuation').text;
+  if (joined.length && trimMd(before[before.length - 1]!) === '') joined[0] = ctx.encoder.escape(joined[0]!, before.length === 1 ? 'start' : 'continuation').text;
   // a joined paragraph's list follows with the rest of the paste: in a list a paragraph owns none
   // (`pasteStructuredParagraphList: siblings`); else it is the joined text's
   const ownsItsList = first.kind !== 'paragraph' || doc.config.pasteStructuredParagraphList === 'children';
@@ -701,7 +728,7 @@ function pasteSplit(ctx: CommandContext, node: OutlineNode, line: LineInfo, pos:
   const restSource = source.slice(restFrom).join('\n');
   const childMode = node.kind === 'item' && doc.config.enterMidItem === 'child';
   const tight = node.kind === 'item' && node.block.parent?.tight === true;
-  const fitted = restSource.trim() === '' ? { nodes: [], into: [], restyle: [] } : fitPaste(ctx, node, OutlineState.parse(restSource, { config: doc.config }), false, childMode, tight);
+  const fitted = trimMd(restSource) === '' ? { nodes: [], into: [], restyle: [] } : fitPaste(ctx, node, OutlineState.parse(restSource, { config: doc.config }), false, childMode, tight);
   if (!fitted) return null;
   // in a section, items right after the paragraph are its list; in a quote or an item a paragraph
   // owns none, and the list the joined text brings follows it
@@ -716,15 +743,15 @@ function pasteSplit(ctx: CommandContext, node: OutlineNode, line: LineInfo, pos:
   // where nothing joins, the text before the caret keeps no empty line; at the text's very start
   // there is nothing to split off, and the paste goes after the node
   if (!joined.length) {
-    while (kept.length > 1 && kept[kept.length - 1]!.trim() === '') kept.pop();
+    while (kept.length > 1 && trimMd(kept[kept.length - 1]!) === '') kept.pop();
     // the spaces at the split go with neither half, as at Enter's
-    kept[kept.length - 1] = kept[kept.length - 1]!.trimEnd();
+    kept[kept.length - 1] = trimMdEnd(kept[kept.length - 1]!);
   }
   if (normText(kept).replace(!joined.length ? /^\[[ xX]\]$/ : /^$/, '') === '') return null;
   // ended here, the text before the caret may read as a link reference definition (`[a]: x`): escaped
   const ref = referenceEscape(ctx, node, kept);
   if (ref) kept.splice(0, kept.length, ...ref.lines);
-  const ownLines = node.kind === 'item' ? kept.map((text, k) => (k === 0 ? text.trimStart() : text)) : kept;
+  const ownLines = node.kind === 'item' ? kept.map((text, k) => (k === 0 ? trimMdStart(text) : text)) : kept;
   const pastedChildren: PlanTree[] = [...joinedChildren, ...fitted.into, ...owned, ...(childMode ? placed : [])];
   // the text after the caret: the end of the last pasted line, or a node of its own
   let caret: { node: OutlinePlanNode; line: number; offset: number } | null = null;

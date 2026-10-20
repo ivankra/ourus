@@ -1,4 +1,3 @@
-
 # Shift-Enter
 
 Command: `shiftEnter` (Shift-Enter).
@@ -7,14 +6,17 @@ Makes a line: the node stays one node; whereas [`enter`](enter.md) makes a node.
 The rules, in order; the first that applies wins:
 
 1. **In fenced code**, a new code line, as Enter ([Fence8](fences.md#fence8)).
-2. **Where the node can't hold a second line, it is refused**: a heading (ShiftEnter14), a callout's
-   title in the Obsidian flavor ([quotes.md](quotes.md)), a table's row (ShiftEnter24), an item's
-   text start (ShiftEnter13). With
-   the caret in the item's marker, the line break is the host's (`editInMarkup: host`, the default;
-   ShiftEnter22), or refused (`refuse`; ShiftEnter22b).
+2. **Where the node can't hold a second line**: an ATX heading splits, as with Enter
+   (ShiftEnter14; a setext title holds several, ShiftEnter29, its underline being markup); a
+   callout's title in the Obsidian flavor ([quotes.md](quotes.md)) and a table's row (ShiftEnter24)
+   refuse it. At an item's text start the line breaks after the marker (ShiftEnter13,
+   ShiftEnter13b), the text escaped where on its own line it would start a block (ShiftEnter30).
+   With the caret in the item's marker or a task's checkbox, the line break is the host's (`markup:
+   text`, the default; ShiftEnter22, ShiftEnter26); where the host decorates markup (`markup:
+   decorated`), Shift-Enter acts at the text start (ShiftEnter22b, ShiftEnter26b).
 3. **At the start of a continuation line**, a blank line above it: the line and the rest of the
-   text become the node's next paragraph (ShiftEnter10), escaped where it would start a block or read as a link reference
-   definition (ShiftEnter25). Markdown has no empty line inside a
+   text become the node's next paragraph (ShiftEnter10), escaped where it would start a block or
+   read as a link reference definition (ShiftEnter25). Markdown has no empty line inside a
    paragraph, so a blank line is what a line break there can be.
 4. **On the empty line a Shift-Enter made**, a paragraph break, for the same reason: an empty
    paragraph inside the item, or after the paragraph (ShiftEnter11, ShiftEnter12, ShiftEnter15,
@@ -24,18 +26,23 @@ The rules, in order; the first that applies wins:
    placeholder (ShiftEnter4). Text after the caret that would start a block there, or underline the
    paragraph into a heading, is escaped, in every flavor (ShiftEnter5, ShiftEnter6, ShiftEnter7,
    ShiftEnter8, ShiftEnter9, ShiftEnter18, ShiftEnter19), and so is the text's start where its first
-   line would read as a link reference definition (ShiftEnter23).
+   line would read as a link reference definition (ShiftEnter23), the held empty line counting as
+   typed on (ShiftEnter31).
 
-Backspace takes a Shift-Enter back (ShiftEnter17, ShiftEnter20), up to the spaces at the break
-(ShiftEnter21). The spaces at the break go with
-neither line, as at Enter's split: a continuation line's leading spaces aren't text in Markdown, and
-spaces left before the break could make it a hard break. Bare Obsidian and the text editors don't
+Over a selection across lines, the selection goes first, as Backspace deletes it, and the line
+breaks at the caret that leaves (ShiftEnter27).
+
+Backspace takes a Shift-Enter back (ShiftEnter17, ShiftEnter20), the spaces at the break included
+(ShiftEnter21). The spaces at the break start the new line, after its indentation: a continuation
+line's leading spaces render as nothing but are kept in the text, and they change no structure,
+where left before the break two would make a hard break. Spaces before a task's text are its
+checkbox's, and go (ShiftEnter26b). Bare Obsidian and the text editors don't
 escape what follows the caret, which turns `- def` into a list and `===` into a heading underline.
 
 ## ShiftEnter1
 
-Continues at the content column. The space at the break goes with neither line, as at Enter's split,
-and Backspace doesn't bring it back ([ShiftEnter21](#shiftenter21)).
+Continues at the content column, the space at the break starting the new line, which Backspace
+brings back ([ShiftEnter21](#shiftenter21)).
 
 ```yaml
 tags: core
@@ -49,7 +56,7 @@ tags: core
 
 ```buffer
 - one two
-  ┃three
+   ┃three
 ```
 
 ## ShiftEnter2
@@ -70,7 +77,7 @@ tags: common
 ```buffer
 1. a
    - b
-     ┃c
+      ┃c
 ```
 
 ## ShiftEnter3
@@ -91,7 +98,7 @@ tags: edge
 ```buffer
 - x
 →- a
-→  ┃b
+→   ┃b
 ```
 
 ## ShiftEnter4
@@ -133,7 +140,7 @@ tags: common
 
 ```buffer
 - abc
-  ┃\- def
+   ┃\- def
 ```
 
 ## ShiftEnter6
@@ -152,7 +159,7 @@ tags: edge
 
 ```buffer
 - abc
-  ┃1\. def
+   ┃1\. def
 ```
 
 ## ShiftEnter7
@@ -172,7 +179,7 @@ Title ┃===
 
 ```buffer
 Title
-┃\===
+ ┃\===
 ```
 
 ## ShiftEnter8
@@ -191,7 +198,7 @@ Title ┃--
 
 ```buffer
 Title
-┃\--
+ ┃\--
 ```
 
 ## ShiftEnter9
@@ -210,14 +217,14 @@ tags: rare
 
 ```buffer
 - one
-  ┃\<div>
+   ┃\<div>
 ```
 
 ## ShiftEnter10
 
 Shift-Enter at the start of a continuation line opens a blank line above it, the caret staying with
-the text: the line and the rest become the item's next paragraph, as in Logseq. Backspace takes it
-back ([Backspace19](backspace.md#backspace19)).
+the text: the line and the rest become the item's next paragraph, as in Logseq. Backspace takes the
+blank line back, the line break staying ([Backspace19](backspace.md#backspace19)).
 
 ```yaml
 tags: edge free-form
@@ -247,7 +254,10 @@ tags: edge free-form
 ## ShiftEnter11
 
 A second Shift-Enter, on the empty line the first one made, is a paragraph break: the line becomes a
-blank line, and the caret moves to a new empty paragraph inside the item, its first child.
+blank line, and the caret moves to a new empty paragraph inside the item, its first child. Backspace
+takes the second back, as it takes back a fresh Shift-Enter: inside an item only Shift-Enter makes
+such a paragraph. (After a paragraph that isn't an item's, the same state comes from Enter, and
+Backspace takes that back: [ShiftEnter12](#shiftenter12).)
 
 ```yaml
 tags: common free-form
@@ -264,13 +274,23 @@ tags: common free-form
 ```buffer
 - one
 
+  ┃◌
+- two
+```
+
+> deleteContentBackward
+
+```buffer
+- one
   ┃◌
 - two
 ```
 
 ## ShiftEnter12
 
-After a paragraph that isn't an item's, the new paragraph follows it.
+After a paragraph that isn't an item's, the new paragraph follows it. Backspace goes back to the end
+of the paragraph: the same state is Enter's at a paragraph's end, the commoner key, whose inverse
+this is.
 
 ```yaml
 tags: common free-form
@@ -289,9 +309,18 @@ para
 ┃◌
 ```
 
+> deleteContentBackward
+
+```buffer
+para┃
+```
+
 ## ShiftEnter13
 
-Rejected at the start of text: the item's first line would be empty.
+At the start of an item's text, Shift-Enter breaks the line: `-` alone, then the text on the next
+line at the item's column, which CommonMark reads as the same item (an item may begin with a blank
+line), as Dynalist, BlockNote, true-outliner and the text editors break the line there. Backspace
+takes the break back, rather than unwrapping or joining the item as at a text start.
 
 ```yaml
 tags: edge free-form
@@ -303,17 +332,73 @@ tags: edge free-form
 
 > shiftEnter
 
-```result
-rejected: not-expressible
+```buffer
+-
+  ┃one
 ```
+
+> deleteContentBackward
 
 ```buffer
 - ┃one
 ```
 
+## ShiftEnter13b
+
+A first child right under its parent's text: the bare `-` would underline that text into a heading,
+so a blank line sets it off, as above an empty item there.
+
+```yaml
+tags: rare free-form
+```
+
+```buffer
+- a
+  - ┃b
+```
+
+> shiftEnter
+
+```buffer
+- a
+
+  -
+    ┃b
+```
+
+## ShiftEnter30
+
+At the text start of an item whose first character was just deleted, the space after it held as
+text ([Placeholder17](placeholders.md#placeholder17)): on its own line at the item's column the text
+would be a code fence, so it is escaped.
+
+```yaml
+tags: rare
+```
+
+```buffer
+- ┃a ``` x
+```
+
+> deleteContentForward cursorCharRight
+
+```buffer
+- ◌ ┃``` x
+```
+
+> shiftEnter
+
+```buffer
+-
+  ┃\``` x
+```
+
 ## ShiftEnter14
 
-Rejected in a heading: a heading is one line (Enter splits it).
+In an ATX heading, whose title is one line, Shift-Enter does what Enter does: the rest of the title
+becomes the section's first paragraph ([Enter23](enter.md#enter23)). No app refuses it, and six
+that make paragraphs split it so. (A setext title takes a second line:
+[ShiftEnter29](#shiftenter29).)
 
 ```yaml
 tags: common free-form
@@ -325,12 +410,9 @@ tags: common free-form
 
 > shiftEnter
 
-```result
-rejected: not-expressible
-```
-
 ```buffer
-# Title┃ more
+# Title
+┃more
 ```
 
 ## ShiftEnter15
@@ -416,7 +498,7 @@ tags: rare
 
 ```buffer
 1. abc
-   ┃2\. x
+    ┃2\. x
 ```
 
 ## ShiftEnter19
@@ -436,7 +518,7 @@ a | b ┃|---|---|
 
 ```buffer
 a | b
-┃\|---|---|
+ ┃\|---|---|
 ```
 
 ## ShiftEnter20
@@ -467,10 +549,11 @@ tags: rare
 
 ## ShiftEnter21
 
-Shift-Enter at a space, then Backspace: the text comes back without the space, as after Enter
-([Enter44](enter.md#enter44)). Most apps keep the space at the start of the new line, where Markdown
-reads none (a continuation line's leading spaces aren't text); kept at the end of the first line, it
-would be stripped by editors that trim whitespace, and two or more would make a hard break.
+Shift-Enter at a space, then Backspace: the text comes back, the space with it, unlike after Enter,
+which trims it ([Enter44](enter.md#enter44)). The space starts the new line, after its indentation, as bare
+Obsidian keeps it and every app that breaks the line but true-outliner: Markdown renders a
+continuation line without its leading spaces, but keeps them in the text, and the join, which
+concatenates, gives them back; at the end of the first line two would make a hard break.
 
 ```yaml
 tags: edge
@@ -484,19 +567,19 @@ tags: edge
 
 ```buffer
 - one two
-  ┃three
+   ┃three
 ```
 
 > deleteContentBackward
 
 ```buffer
-- one two┃three
+- one two ┃three
 ```
 
 ## ShiftEnter22
 
 In the marker, a line break can't be one in the item's text: the host makes it
-(`editInMarkup: host`, the default), and the text reads as it then does, an empty item and a
+(`markup: text`, the default), and the text reads as it then does, an empty item and a
 paragraph.
 
 ```yaml
@@ -520,11 +603,12 @@ notApplicable
 
 ## ShiftEnter22b
 
-With `editInMarkup: refuse`, it is refused.
+Where the host decorates markup (`markup: decorated`), it acts at the text start, where the line
+breaks after the marker ([ShiftEnter13](#shiftenter13)).
 
 ```yaml
 tags: rare free-form
-editInMarkup: refuse
+markup: decorated
 ```
 
 ```buffer
@@ -533,12 +617,9 @@ editInMarkup: refuse
 
 > shiftEnter
 
-```result
-rejected: not-expressible
-```
-
 ```buffer
--┃ a
+-
+  ┃a
 ```
 
 ## ShiftEnter23
@@ -558,7 +639,7 @@ tags: rare
 
 ```buffer
 \[Note]: this
-┃matters a lot
+ ┃matters a lot
 ```
 
 ## ShiftEnter24
@@ -608,4 +689,165 @@ p
 p
 
 ┃\[r]: /u
+```
+
+## ShiftEnter26
+
+Inside a task's checkbox, as in an item's marker ([ShiftEnter22](#shiftenter22)), a line break can't
+be one in the item's text: where the host shows markup as text (`markup: text`, the default), the
+line break is the host's, and the text reads as it then does, the checkbox broken.
+
+```yaml
+tags: rare free-form markup-task
+```
+
+```buffer
+- [ ┃] task
+```
+
+> shiftEnter
+
+```result
+notApplicable
+```
+
+```buffer
+- [ 
+┃] task
+```
+
+## ShiftEnter26b
+
+Where the host decorates markup (`markup: decorated`), it acts at the text start, after the
+checkbox, where the line breaks, the checkbox staying on the marker's line.
+
+```yaml
+tags: rare markup-task
+markup: decorated
+```
+
+```buffer
+- [ ┃] task
+```
+
+> shiftEnter
+
+```buffer
+- [ ]
+  ┃task
+```
+
+## ShiftEnter27
+
+Shift-Enter over a selection across nodes deletes it first, as Backspace does, and breaks the line
+at the caret that leaves, as Enter does over one ([Enter56](enter.md#enter56)).
+
+```yaml
+tags: rare
+```
+
+```buffer
+- a«bc
+- de»f
+```
+
+> shiftEnter
+
+```buffer
+- a
+  ┃f
+```
+
+## ShiftEnter28
+
+A line break on a continuation line after text that, ended there, would read as a block: a lone `-`
+under the item's text would underline it into a heading, so it is escaped, as a split's first half
+is at the text's start ([Enter53](enter.md#enter53)). Backspace takes the break back and the escape
+with it, which nothing then needs.
+
+```yaml
+tags: rare
+```
+
+```buffer
+- p
+  -┃a
+```
+
+> shiftEnter
+
+```buffer
+- p
+  \-
+  ┃a
+```
+
+> deleteContentBackward
+
+```buffer
+- p
+  -┃a
+```
+
+## ShiftEnter29
+
+A setext heading's title can hold several lines, as the paragraph it underlines can: Shift-Enter
+breaks it, the heading staying one. Only an ATX title is a single line
+([ShiftEnter14](#shiftenter14)).
+
+```yaml
+tags: rare markup-heading
+```
+
+```buffer
+Title┃more
+---
+```
+
+> shiftEnter
+
+```buffer
+Title
+┃more
+---
+```
+
+> deleteContentBackward
+
+```buffer
+Title┃more
+---
+```
+
+## ShiftEnter31
+
+At the end of a text that is a link reference definition but for its destination (`[a]:`), the new
+line, held by a placeholder, would be read as typed on, and make it one: the start is escaped, and
+Backspace takes the break and the escape back.
+
+```yaml
+tags: rare
+```
+
+```buffer
+[a]:┃
+
+b
+```
+
+> shiftEnter
+
+```buffer
+\[a]:
+┃◌
+
+b
+```
+
+> deleteContentBackward
+
+```buffer
+[a]:┃
+
+b
 ```

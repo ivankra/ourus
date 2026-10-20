@@ -1,18 +1,16 @@
 {
   "documents": 1500,
-  "corpus": "5f602e2e7c85ee47",
+  "corpus": "006f997b97b9656a",
   "failures": {
-    "deleteContentBackward": 8,
-    "deleteContentForward": 7,
-    "deleteSoftLineBackward": 10,
-    "deleteSubtree": 2,
-    "duplicateSubtree": 9,
-    "enter": 6,
-    "indent": 16,
-    "moveSubtreeUp": 2,
-    "outdent": 24,
-    "pastePlain": 9,
-    "pasteStructured": 23,
-    "shiftEnter": 6
+    "deleteContentBackward": 9,
+    "deleteContentForward": 5,
+    "deleteSoftLineBackward": 11,
+    "duplicateSubtree": 23,
+    "enter": 15,
+    "indent": 25,
+    "moveSubtreeDown": 5,
+    "outdent": 45,
+    "pastePlain": 5,
+    "pasteStructured": 47
   }
 }

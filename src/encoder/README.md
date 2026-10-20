@@ -81,7 +81,7 @@ first needs it, and kept for the next try).
 | --- | --- |
 | `encode(plan, { separate?, pad? })` | The plan as changes to the text (`EncodeResult`), or a string saying why it can't be written. |
 | `renumber(changes, plan, { identity?, placeholders })` | The extra changes that renumber the ordered lists `changes` add, remove or reorder, or null. |
-| `siblingPrefix(node)`, `childIndent(node, child)`, `continuation(pieces)`, `markerText(node, next)` | What starts a new line: at a node's level, inside its containers, with its marker (or the next one's). |
+| `siblingPrefix(node)`, `childIndent(node, child)`, `continuation(pieces)`, `itemContinuation(node)`, `markerText(node, next)` | What starts a new line: at a node's level, inside its containers, in an item's text, with its marker (or the next one's). |
 | `escape(text, 'start' \| 'continuation', below?)` | `text` escaped where it would not read as text at a line's start, and where the backslash went. |
 | `startOfNode(text, below)` | How text at the start of a new node reads: a list marker it becomes, or a block start it needs escaping from. |
 | `interruptsParagraph(text)` | Whether `text` on the line after a paragraph starts a block of its own. |

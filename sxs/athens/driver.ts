@@ -48,9 +48,9 @@ function fromAthens(string: string): { text: string; from: number; to: number } 
 const shiftOffset = (p: number, from: number, to: number): number => (p >= from ? p - from + to : Math.min(p, to));
 
 export const driver: Driver = {
-  name: 'athens',
-  title: 'Athens',
-  id: 'AR', // Athens Research
+  shortId: 'AR', // Athens Research
+  longId: 'athens',
+  displayName: 'Athens',
   url: 'https://athensresearch.github.io/athens/',
   model: 'block',
   keys: {
@@ -75,7 +75,7 @@ export const driver: Driver = {
   // block with children isn't joined into or out of, as in Roam. A paste goes after the block, nothing
   // split, lines as blocks, numbers as text, a paragraph's list under it (each measured, playing its
   // examples with `run.ts --ignore-options`)
-  behaves: { outdent: 'logical', enterOnEmptyItem: 'outdent', emptyItemWithChildren: 'refuse', pasteStructuredLines: 'items', pasteStructuredMidText: 'after', pasteStructuredListForm: 'literal', pasteStructuredParagraphList: 'children' },
+  behaves: { enterSplitSpace: 'start', enterTask: 'plain', outdent: 'logical', enterOnEmptyItem: 'outdent', emptyItemWithChildren: 'refuse', joinWithChildren: 'refuse', pasteStructuredLines: 'items', pasteStructuredMidText: 'after', pasteStructuredListForm: 'literal', pasteStructuredParagraphList: 'children' },
 
 
   async open(page: Page) {

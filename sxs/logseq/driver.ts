@@ -72,9 +72,9 @@ export interface CanonicalBlock {
 
 /** What one Logseq differs in. */
 export interface LogseqFlavor {
-  readonly name: string;
-  readonly title: string;
-  readonly id: string;
+  readonly shortId: string;
+  readonly longId: string;
+  readonly displayName: string;
   readonly url: string;
   /** The database version: pages go to a recycle bin, code blocks are code editors, the history is graph-wide. */
   readonly db: boolean;
@@ -124,9 +124,9 @@ const NUMBERED = 'logseq.order-list-type:: number';
 
 /** Logseq OG on its web demo: a block's text is all of it, a task's checkbox Logseq's `TODO` / `DONE`. */
 export const OG: LogseqFlavor = {
-  name: 'logseq',
-  title: 'Logseq',
-  id: 'LO',
+  shortId: 'LO',
+  longId: 'logseq',
+  displayName: 'Logseq (OG)',
   url: 'https://demo.logseq.com/',
   db: false,
   // Logseq's "logical outdenting" (Settings › Editor, `:editor/logical-outdenting?`)
@@ -164,9 +164,9 @@ const pageState = perPage(() => ({ current: null as string | null }));
 export function logseqDriver(flavor: LogseqFlavor): Driver {
   const { db } = flavor;
   return {
-    name: flavor.name,
-    title: flavor.title,
-    id: flavor.id,
+    shortId: flavor.shortId,
+    longId: flavor.longId,
+    displayName: flavor.displayName,
     url: flavor.url,
     model: 'block',
     keys: {
@@ -194,7 +194,7 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
     ordered: true,
     // Backspace at the first block's start does nothing in both (measured with `--ignore-options`:
     // `backspace.md › Backspace34` agrees; its `unwrap` case needs a paragraph, which no block app runs)
-    behaves: { outdent: 'direct', enterOnEmptyItem: 'sibling', enterMidItem: 'child', pasteStructuredMidText: 'after', emptyItemWithChildren: 'refuse', pasteStructuredListForm: 'drop', backspaceAtTopItem: 'refuse' },
+    behaves: { enterTask: 'plain', outdent: 'direct', enterOnEmptyItem: 'sibling', enterMidItem: 'child', pasteStructuredMidText: 'after', emptyItemWithChildren: 'refuse', joinWithChildren: 'refuse', pasteStructuredListForm: 'drop', backspaceAtTopItem: 'refuse' },
     ...(flavor.settings && { settings: flavor.settings }),
     holds(doc: Outline) {
       const own = flavor.holds(doc);
@@ -205,7 +205,7 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
         run.length = b.depth + 1;
         const n = /^(\d{1,9})\. /.exec(b.text);
         run[b.depth] = n ? (run[b.depth] ?? 0) + 1 : 0;
-        if (n && Number(n[1]) !== run[b.depth]) return 'a numbered list from another number than 1';
+        if (n && Number(n[1]) !== run[b.depth]) return 'numbered list from another number than 1';
       }
       return undefined;
     },
@@ -226,7 +226,7 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
         const cdp = await page.context().newCDPSession(page);
         await cdp.send('Network.clearBrowserCache');
         await cdp.detach();
-        if (!(await loaded())) throw new Error(`Logseq's bundle came without what ${flavor.name}/proxy.ts adds to it (its names not found in it?)`);
+        if (!(await loaded())) throw new Error(`Logseq's bundle came without what ${flavor.longId}/proxy.ts adds to it (its names not found in it?)`);
       }
       const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
       // Logseq installs its global keys (Tab among them) through `shortcut/refresh!`, debounced by a
@@ -278,8 +278,11 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
           const name = 'spec-' + Math.random().toString(36).slice(2, 10);
           const roots: any[] = [];
           const stack: any[] = [];
+          // the DB version's batch insert refuses a tag (`#a`: its transaction is invalid, the tag made
+          // or not); such a block goes in empty, and the update below writes it, as typing would
+          const tagged = (text: string): boolean => db && /(^|\s)#\S/.test(text);
           for (const b of blocks) {
-            const node = { content: b.content, children: [] as any[] };
+            const node = { content: tagged(b.content) ? '' : b.content, children: [] as any[] };
             stack.length = b.depth;
             (b.depth === 0 ? roots : stack[b.depth - 1].children).push(node);
             stack[b.depth] = node;
@@ -399,6 +402,21 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
               walk(x.children ?? [], d + 1);
             });
           walk(await api.get_page_blocks_tree(name), 0);
+          // the DB version stores a reference by its uuid (`#[[uuid]]`, `[[uuid]]`), its editor shows the
+          // name: the text as written
+          if (db) {
+            const uuidRef = /(#?)\[\[([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\]\]/g;
+            for (const b of flat) {
+              const refs = [...String(b.raw.content).matchAll(uuidRef)];
+              if (!refs.length) continue;
+              const titles = new Map<string, string>();
+              for (const [, , uuid] of refs) titles.set(uuid!, (await api.get_block(uuid))?.title ?? uuid);
+              b.raw.content = String(b.raw.content).replace(uuidRef, (_: string, hash: string, uuid: string) => {
+                const title = titles.get(uuid)!;
+                return hash && !/\s/.test(title) ? `#${title}` : `${hash}[[${title}]]`;
+              });
+            }
+          }
           const active = document.activeElement as HTMLTextAreaElement | null;
           const cm = (active?.closest('.CodeMirror') as any)?.CodeMirror;
           // a code block's editor (the DB version's) is no block being edited to Logseq: its block is the editor's

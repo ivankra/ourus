@@ -33,12 +33,12 @@ export interface Session {
 }
 
 export interface Driver {
-  /** The directory name: `logseq`. */
-  readonly name: string;
-  /** The app's name in reports: `Logseq`. */
-  readonly title: string;
-  /** Two capitals that stand for the app in `sxs.md`'s tables, where its name is too wide: `LS`. */
-  readonly id: string;
+  /** Two capitals that stand for the app where its name is too wide (the tables' columns), and on the command line: `LO`. */
+  readonly shortId: string;
+  /** The app's directory here, its name on the command line and in results: `logseq`. */
+  readonly longId: string;
+  /** The app's name in reports: `Logseq (OG)`. */
+  readonly displayName: string;
   /**
    * The page the app is opened at: the runner loads it, a report names it, and the proxy's greeting has a
    * person open it in a browser through the proxy.

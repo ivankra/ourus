@@ -1,7 +1,8 @@
 // Drawn editor states: `┃` caret, `«…»` selection (head where `┃` touches), `◌` placeholders
-// place, `→` tab, `␍` carriage return.
+// place, `→` tab, `␍` carriage return, `⍽` no-break space (U+00A0, which Markdown reads as text).
 
 import type { Selection } from '../src/commands/index.ts';
+import type { OutlineState } from '../src/outline/index.ts';
 
 /**
  * Reads a drawn state: text plus caret (`┃`) or selection (`«…»`), placeholders (`◌`),
@@ -14,7 +15,7 @@ export function readDrawing(drawn: string): { text: string; selection: Selection
   let open = -1;
   let close = -1;
   let headAtStart = false;
-  const s = drawn.replace(/→/g, '\t').replace(/␍/g, '\r');
+  const s = readText(drawn);
   for (let i = 0; i < s.length; i++) {
     const c = s[i]!;
     if (c === '┃') {
@@ -46,9 +47,29 @@ export function drawState(text: string, sel: Selection, placeholders: readonly n
   for (const p of placeholders) add(p, '◌');
   let out = '';
   for (let i = 0; i <= text.length; i++) out += (marks.get(i) ?? '') + (text[i] ?? '');
-  return out.replace(/\t/g, '→').replace(/\r/g, '␍');
+  return drawText(out);
 }
 
-/** Plain text drawn with the buffer glyphs for invisible characters (a clipboard's): `→` tab, `␍` CR. */
-export const readText = (drawn: string): string => drawn.replace(/→/g, '\t').replace(/␍/g, '\r');
-export const drawText = (text: string): string => text.replace(/\t/g, '→').replace(/\r/g, '␍');
+/** Plain text drawn with the buffer glyphs for invisible characters (a clipboard's): `→` tab, `␍` CR, `⍽` U+00A0. */
+export const readText = (drawn: string): string => drawn.replace(/→/g, '\t').replace(/␍/g, '\r').replace(/⍽/g, '\u00a0');
+export const drawText = (text: string): string => text.replace(/\t/g, '→').replace(/\r/g, '␍').replace(/\u00a0/g, '⍽');
+
+/**
+ * How a document reads, drawn: a line per node in document order, indented two spaces a level, its
+ * kind (a heading with its level, an atom with its block's type, a task with its checkbox), then its
+ * text, line breaks drawn `⏎`. For a case whose point is a reading the bytes don't show (a setext
+ * underline against an empty child, a lazy line against a paragraph, a task against `[ ]` text).
+ */
+export function drawOutline(doc: OutlineState): string {
+  return doc.nodes
+    .filter((node) => node.kind !== 'root')
+    .map((node) => {
+      const kind = node.kind === 'heading' ? `heading ${node.head!.level}` : node.kind === 'atom' ? `atom ${node.block.type}` : node.kind;
+      const task = node.kind === 'item' && node.block.task ? ` [${node.block.task.status}]` : '';
+      // a task's checkbox is its kind's, not its text's
+      const own = task ? doc.nodeText(node).replace(/^\[[^\]]\][ \t]*/, '') : doc.nodeText(node);
+      const text = drawText(own).replace(/\r?\n/g, '⏎');
+      return `${'  '.repeat(node.depth - 1)}${kind}${task}${text ? `: ${text}` : ''}`;
+    })
+    .join('\n');
+}

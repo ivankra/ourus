@@ -1,4 +1,3 @@
-
 # Duplicate subtree
 
 Command: `duplicateSubtree`.

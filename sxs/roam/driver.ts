@@ -87,9 +87,9 @@ const shiftOffset = (p: number, from: number, to: number): number => (p >= from 
 const pageState = perPage(() => ({ current: null as string | null }));
 
 export const driver: Driver = {
-  name: 'roam',
-  title: 'Roam',
-  id: 'RR', // Roam Research
+  shortId: 'RR', // Roam Research
+  longId: 'roam',
+  displayName: 'Roam',
   url: 'https://roamresearch.com/#/app/help',
   model: 'block',
   keys: {
@@ -114,7 +114,7 @@ export const driver: Driver = {
   emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd'],
   // Shift+Tab leaves later siblings with the parent (logical outdenting); Enter on an empty nested
   // block outdents it; Backspace on a page's first block does nothing: as ourus's config says of Roam
-  behaves: { outdent: 'logical', enterOnEmptyItem: 'outdent', backspaceAtTopItem: 'refuse', pasteStructuredLines: 'items', pasteStructuredMidText: 'after', emptyItemWithChildren: 'refuse', pasteStructuredListForm: 'drop', pasteStructuredParagraphList: 'children' },
+  behaves: { enterSplitSpace: 'start', enterTask: 'plain', outdent: 'logical', enterOnEmptyItem: 'outdent', backspaceAtTopItem: 'refuse', pasteStructuredLines: 'items', pasteStructuredMidText: 'after', emptyItemWithChildren: 'refuse', joinWithChildren: 'refuse', pasteStructuredListForm: 'drop', pasteStructuredParagraphList: 'children' },
   // Roam's code blocks are a format of its own (not driven yet: a CodeMirror editor in the block); a
   // heading is a block's attribute, with no boundary in its text, and a task's `{{[[TODO]]}}` is text,
   // edited a character at a time, as math's `$$` are. Math, tables and HTML are a block's text, as typed (measured)
@@ -122,7 +122,7 @@ export const driver: Driver = {
   ordered: true,
   holds(doc) {
     const o = doc as Outline;
-    if (o.blocks.some((b) => /^#{4,6} /.test(b.text.replace(/^\d{1,9}\. /, '')))) return 'a heading deeper than H3';
+    if (o.blocks.some((b) => /^#{4,6} /.test(b.text.replace(/^\d{1,9}\. /, '')))) return 'heading deeper than H3';
     // numbering is a parent's: all its children numbered, from 1, or none
     const kids = new Map<number, number[]>();
     const path: number[] = [];
@@ -134,9 +134,9 @@ export const driver: Driver = {
     });
     for (const list of kids.values()) {
       const numbers = list.map((i) => /^(\d{1,9})\. /.exec(o.blocks[i]!.text)?.[1]);
-      if (numbers.some(Boolean) && !numbers.every((n, k) => Number(n) === k + 1)) return 'a list numbered in part, or not from 1';
+      if (numbers.some(Boolean) && !numbers.every((n, k) => Number(n) === k + 1)) return 'list numbered in part, or not from 1';
     }
-    if (o.sel && Math.min(o.sel.anchor, o.sel.head) < toRoam(0, o.blocks[o.sel.block]!.text).from && /^#/.test(o.blocks[o.sel.block]!.text)) return "a caret in a heading's #s";
+    if (o.sel && Math.min(o.sel.anchor, o.sel.head) < toRoam(0, o.blocks[o.sel.block]!.text).from && /^#/.test(o.blocks[o.sel.block]!.text)) return "caret in a heading's #s";
     return undefined;
   },
 

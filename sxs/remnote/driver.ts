@@ -94,9 +94,9 @@ function fromItem(it: Item, number: number | null): { text: string; prefix: numb
 
 /** A setup of RemNote: its name, title and id, and whether its documents hide their bullets. */
 export interface Setup {
-  readonly name: string;
-  readonly title: string;
-  readonly id: string;
+  readonly shortId: string;
+  readonly longId: string;
+  readonly displayName: string;
   /** Documents without bullets: a rem a paragraph unless bulleted (free form). */
   readonly bulletless?: boolean;
 }
@@ -155,17 +155,17 @@ export function own(o: Outline): Outline {
 export function bulletless(outline: Outline): string | undefined {
   const o = lift(outline);
   for (const [i, b] of o.blocks.entries()) {
-    if (b.free && b.depth > 0) return 'a paragraph inside an item (a rem there shows a bullet)';
-    if (b.free && (o.blocks[i + 1]?.depth ?? -1) > b.depth) return 'a free block with children (a rem with children shows a bullet)';
+    if (b.free && b.depth > 0) return 'paragraph inside an item (a rem there shows a bullet)';
+    if (b.free && (o.blocks[i + 1]?.depth ?? -1) > b.depth) return 'free block with children (a rem with children shows a bullet)';
   }
   return undefined;
 }
 
 export function remnoteDriver(setup: Setup): Driver {
   return {
-    name: setup.name,
-    title: setup.title,
-    id: setup.id,
+    shortId: setup.shortId,
+    longId: setup.longId,
+    displayName: setup.displayName,
     // its guest mode; a test's document is `/w/null/<id>` (`null`, the guest's knowledge base)
     url: 'https://www.remnote.com/notes',
     scope: 'https://www.remnote.com/',
@@ -203,11 +203,11 @@ export function remnoteDriver(setup: Setup): Driver {
     // Shift+Tab leaves the later siblings with the parent (and a Tab right after puts the rem back where it
     // was, `outdentInOriginalLocation`); Enter mid-text in a rem with children makes its first child
     // (without bullets, Enter on an empty top-level item makes it a paragraph, its Enter handler's
-    // `SHOW_BULLET` set false, but an empty nested one still a sibling: `enterOnEmptyItem` the default,
-    // measured on Enter7b and Enter30); Enter at a text's start makes an empty rem above, the caret staying
-    // in the text; Backspace at the first rem's start does nothing (the last two measured, and their
-    // examples played with `run.ts --ignore-options`, 2026-10-18)
-    behaves: { outdent: 'logical', enterMidItem: 'child', enterAtTextStart: 'stay', backspaceAtTopItem: 'refuse' },
+    // `SHOW_BULLET` set false, but an empty nested one still a sibling: `enterOnEmptyItem: exit`, with
+    // bullets the default, measured on Enter7b and Enter30); Enter at a text's start makes an empty rem
+    // above, the caret staying in the text; Backspace at the first rem's start does nothing (the last
+    // two measured, and their examples played with `run.ts --ignore-options`, 2026-10-18)
+    behaves: { enterSplitSpace: 'drop', outdent: 'logical', enterMidItem: 'child', enterAtTextStart: 'stay', backspaceAtTopItem: 'refuse', ...(setup.bulletless ? { enterOnEmptyItem: 'exit' as const } : {}) },
     idle: { busy: `window.getNumOngoingWriteGuarantees?.() > 0` },
     holds(doc) {
       const o = doc as Outline;
@@ -216,17 +216,17 @@ export function remnoteDriver(setup: Setup): Driver {
         if (no) return no;
       }
       const fenced = o.blocks.map((b) => /^(`{3,}|~{3,})/.test(b.text) && b.text.includes('\n'));
-      if (o.blocks.some((b, i) => fenced[i] && !FENCE.test(b.text))) return "a code block's fences that don't match";
+      if (o.blocks.some((b, i) => fenced[i] && !FENCE.test(b.text))) return "code block's fences that don't match";
       const fences = o.blocks.map((b) => FENCE.exec(b.text));
-      if (fences.some((f) => f?.[2])) return "a code block's language";
-      if (fences.some((f) => f && f[1] !== fenceFor(f[3]!))) return "a code block's fences other than the shortest backticks that hold its code, which a code rem reads back with (it keeps no fences)";
+      if (fences.some((f) => f?.[2])) return "code block's language";
+      if (fences.some((f) => f && f[1] !== fenceFor(f[3]!))) return "code block's fences other than the shortest backticks that hold its code, which a code rem reads back with (it keeps no fences)";
       if (o.sel) {
         const b = o.blocks[o.sel.block]!.text;
         const it = toItem(0, b);
         const [from, to] = [Math.min(o.sel.anchor, o.sel.head), Math.max(o.sel.anchor, o.sel.head)];
         // a to-do's checkbox, a heading's level, a code rem's fences are attributes: no caret goes there
         // (a code rem's closing fence: the fence and the newline before it)
-        if (from < it.prefix || (it.code && to > b.length - FENCE.exec(b)![1]!.length - 1)) return "a caret in a task's checkbox, a heading's #s or a code block's fences";
+        if (from < it.prefix || (it.code && to > b.length - FENCE.exec(b)![1]!.length - 1)) return "caret in a task's checkbox, a heading's #s or a code block's fences";
       }
       // numbered siblings count 1, 2, ... in a run
       const count: number[] = [];
@@ -234,7 +234,7 @@ export function remnoteDriver(setup: Setup): Driver {
         count.length = b.depth + 1;
         const n = /^(\d{1,9})\. /.exec(b.text);
         count[b.depth] = n ? (count[b.depth] ?? 0) + 1 : 0;
-        if (n && Number(n[1]) !== count[b.depth]) return 'a numbered list that RemNote would number otherwise';
+        if (n && Number(n[1]) !== count[b.depth]) return 'numbered list that RemNote would number otherwise';
       }
       return undefined;
     },
@@ -433,4 +433,4 @@ export function remnoteDriver(setup: Setup): Driver {
 }
 
 // documents without bullets, RemNote's free form; with bullets, ../remnote-bl/
-export const driver = remnoteDriver({ name: 'remnote', title: 'RemNote', id: 'RN', bulletless: true });
+export const driver = remnoteDriver({ shortId: 'RN', longId: 'remnote', displayName: 'RemNote (nbl)', bulletless: true });

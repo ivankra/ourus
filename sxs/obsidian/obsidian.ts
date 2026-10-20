@@ -67,12 +67,12 @@ interface Hotkey {
  * settings).
  */
 export interface Profile {
-  /** The directory name: `obsidian`. */
-  readonly name: string;
-  /** In reports: `Obsidian`. */
-  readonly title: string;
   /** In `sxs.md`'s tables: `OB`. */
-  readonly id: string;
+  readonly shortId: string;
+  /** The directory name: `obsidian`. */
+  readonly longId: string;
+  /** In reports: `Obsidian`. */
+  readonly displayName: string;
   /**
    * Installed and enabled in the vault, as obsidian-launcher takes them: a community plugin by `id`, a
    * GitHub release by `repo` (the repository's URL), or a built plugin by `path` (its `manifest.json`
@@ -201,7 +201,7 @@ export const asTabs = (d: TextDoc): TextDoc =>
       const it = fenced[i] ? null : listItem(line, ends[i]);
       if (!blank && !fenced[i]) while (open.length && open.at(-1)!.text > w) open.pop();
       // a blank line or a code block's ends no item
-      const parent = blank || fenced[i] ? open.findLast((o) => o.text <= w) : open.at(-1);
+      const parent = blank || fenced[i] ? [...open].reverse().find((o) => o.text <= w) : open.at(-1);
       if (it) {
         const now: Pieces = parent ? [...parent.now, ['\t', parent.text - parent.at], ...paired(w - parent.text)] : paired(w);
         open.push({ at: w, text: w + it.width, now });
@@ -233,7 +233,7 @@ export const asSpaces = (d: TextDoc): TextDoc =>
       const blank = line.trim() === '';
       const it = fenced[i] ? null : listItem(line, ends[i]);
       if (!blank && !fenced[i]) while (open.length && !within(open.at(-1)!, tabs, spaces)) open.pop();
-      const parent = blank || fenced[i] ? open.findLast((o) => within(o, tabs, spaces)) : open.at(-1);
+      const parent = blank || fenced[i] ? [...open].reverse().find((o) => within(o, tabs, spaces)) : open.at(-1);
       let now: Pieces;
       if (!parent) now = plain();
       else if (tabs > parent.tabs) {
@@ -275,14 +275,14 @@ function splitsIndent(d: TextDoc): string | undefined {
   if (tabbed(d.text)) return undefined;
   const there = asTabs(d);
   // a caret inside a tab's spaces lands at its start: loaded and read back, it moved
-  if (d.sel && JSON.stringify(asSpaces(there).sel) !== JSON.stringify(d.sel)) return 'a caret inside the spaces of a tab of indentation';
+  if (d.sel && JSON.stringify(asSpaces(there).sel) !== JSON.stringify(d.sel)) return 'caret inside the spaces of a tab of indentation';
   return undefined;
 }
 
 /** Why Live Preview won't keep a caret where a document has it: the frontmatter is shown as properties. */
 function inFrontmatter(d: TextDoc): string | undefined {
   const frontmatter = /^---\n[\s\S]*?\n---(?:\n|$)/.exec(d.text)?.[0].length ?? 0;
-  return ends(d).some((e) => e.offset < frontmatter) ? 'a caret in the frontmatter (Live Preview shows it as properties)' : undefined;
+  return ends(d).some((e) => e.offset < frontmatter) ? 'caret in the frontmatter (Live Preview shows it as properties)' : undefined;
 }
 
 /**
@@ -298,7 +298,7 @@ function inTable(d: TextDoc): string | undefined {
     while (from > 0 && lines[from - 1]!.trim()) from--;
     let to = at;
     while (to < lines.length - 1 && lines[to + 1]!.trim()) to++;
-    if (lines[at]!.includes('|') && lines.slice(from, to + 1).some((l) => l.includes('|') && delimiter.test(l))) return 'a caret in a table (Live Preview edits it in a table of its own)';
+    if (lines[at]!.includes('|') && lines.slice(from, to + 1).some((l) => l.includes('|') && delimiter.test(l))) return 'caret in a table (Live Preview edits it in a table of its own)';
   }
   return undefined;
 }
@@ -310,7 +310,7 @@ function inTable(d: TextDoc): string | undefined {
 export function inCheckbox(d: TextDoc): string | undefined {
   for (const { line, col } of ends(d)) {
     const it = item(line);
-    if (it && col >= it.marker && col < it.text) return "a caret in a task's checkbox (Live Preview draws it)";
+    if (it && col >= it.marker && col < it.text) return "caret in a task's checkbox (Live Preview draws it)";
   }
   return undefined;
 }
@@ -325,7 +325,7 @@ export const keepsCaretOnText =
   (doc: TextDoc): string | undefined => {
     for (const { line, col } of ends(doc)) {
       const it = item(line, spaces);
-      if (it && col < (checkbox ? it.text : it.marker)) return `a caret before an item's text (${plugin} keeps it on the text)`;
+      if (it && col < (checkbox ? it.text : it.marker)) return `caret before an item's text (${plugin} keeps it on the text)`;
     }
     return undefined;
   };
@@ -619,9 +619,9 @@ export function obsidianDriver(profile: Profile): Driver {
     ...profile.hotkeys,
   };
   return {
-    name: profile.name,
-    title: profile.title,
-    id: profile.id,
+    shortId: profile.shortId,
+    longId: profile.longId,
+    displayName: profile.displayName,
     url: 'app://obsidian.md/',
     // a window of its own for each worker, in an instance of the pool (`leaseInstance`), one a setup each
     get parallel() {
@@ -649,7 +649,7 @@ export function obsidianDriver(profile: Profile): Driver {
     // bare Obsidian (measured): the caret stays with the text on Enter at an item's start, Backspace
     // after a checkbox deletes a character, Delete before a blank line deletes it, and Enter on an
     // empty item outdents it or leaves the list wherever it is
-    behaves: { flavor: 'obsidian', enterAtTextStart: 'stay', taskEditing: 'text', deleteAtGap: 'gap', enterOnEmptyItem: 'outdent', ...profile.behaves },
+    behaves: { flavor: 'obsidian', enterSplitSpace: 'drop', enterAtTextStart: 'stay', taskEditing: 'text', enterOnEmptyItem: 'outdent', ...profile.behaves },
     holds(doc) {
       const d = doc as TextDoc;
       // CodeMirror keeps line breaks as LF
@@ -661,12 +661,12 @@ export function obsidianDriver(profile: Profile): Driver {
       ensureAptInstalled('Obsidian', ELECTRON_LIBRARIES, say);
       // one run of the setup at a time is the runner's (its lock); each of its workers a window in an
       // instance of the pool of its own, or the run's own on its display
-      const inst = headed && process.env.DISPLAY ? await ownInstance(say) : await leaseInstance(profile.name, say, gone);
+      const inst = headed && process.env.DISPLAY ? await ownInstance(say) : await leaseInstance(profile.longId, say, gone);
       if (!inst) return null;
       try {
         const browser = await chromium.connectOverCDP(`http://127.0.0.1:${inst.port}`);
         const context = browser.contexts()[0]!;
-        const vault = join(inst.dir, profile.name);
+        const vault = join(inst.dir, profile.longId);
         // the setup's window an earlier run left open (one that stopped some other way), closed first
         for (const p of context.pages()) if ((await vaultOf(p)) === vault) await p.evaluate(() => window.close()).catch(() => {});
         // the vault, written anew for each run
@@ -769,7 +769,7 @@ export function obsidianDriver(profile: Profile): Driver {
         };
       });
       // a record of each read that only the page's focus kept a caret in: what took the window's
-      if (lost) appendFileSync(join(dirname(pageState(page).log), 'focus.log'), `${new Date().toISOString()} ${profile.name}: ${lost}\n`);
+      if (lost) appendFileSync(join(dirname(pageState(page).log), 'focus.log'), `${new Date().toISOString()} ${profile.longId}: ${lost}\n`);
       return pageState(page).retabbed ? asSpaces(got) : got;
     },
   };

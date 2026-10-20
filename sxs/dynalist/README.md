@@ -130,7 +130,7 @@ block), and are cached then. Setting a preference (below) sends nothing.
   code block Enter splits the item too (`fences.md`).
 - **Joining**: Backspace at an item's start joins it to the item above, but not a first child to its
   parent (`obsidian-true-outliner.md › Backspace › Children move to the joined node`); Delete doesn't
-  pull up the first child of an empty item (`del.md › Delete5` family).
+  pull up the first child of an empty item (`delete.md › Delete5` family).
 - **Empty items stay** when the caret leaves them (`obsidian-true-outliner.md › Abandoning an empty
   place`).
 - **Item attributes stay**: Tab doesn't change a heading's level (`indent.md › Indent12`), as in

@@ -55,8 +55,8 @@ tags: edge
 ### E4
 
 Enter on a continuation line of a multi-line item splits the item there, as Enter anywhere in an
-item's text does (Logseq and TO agree; Roam, Dynalist, Tine and Outliner too, keeping the space;
-WorkFlowy and bare Obsidian break the line inside the item instead).
+item's text does (Logseq, bare Obsidian and TO agree; Roam, Dynalist, Tine and Outliner too, keeping
+the space at the new item's start; WorkFlowy breaks the line inside the item instead).
 
 ```yaml
 tags: edge
@@ -153,10 +153,11 @@ one
 ### E10
 
 Enter at the end of an item whose first child is a paragraph: the new item is the first child,
-as with list children, and as the outliners open a first child at the end of any parent (End of
-parent opens empty first child; Logseq, WorkFlowy, Roam, Dynalist, Tine and SiYuan agree here).
-TO now opens an empty line in the item above the paragraph, no item; Obsidian, bare or with
-Outliner, adds a sibling, which takes the paragraph as its own.
+as at the end of any item with children ([Enter4](enter.md#enter4)). The outliners agree (Logseq,
+WorkFlowy, Roam, Dynalist, Tana), but for them the paragraph is a block like any other; of the apps
+with paragraphs none does it: SiYuan opens an empty paragraph in the item above it and TO an empty
+line there, and Obsidian, bare or with Outliner, adds a sibling, which takes the paragraph as its
+own.
 
 ```yaml
 tags: edge
@@ -503,8 +504,8 @@ caret staying put ([Enter33b](enter.md#enter33b), `enterAtTextStart: stay`). At 
 ### S4
 
 Shift-Enter in a paragraph continues it on a new line: still one paragraph. The space at the break
-goes, as at an Enter split (bare Obsidian and Outliner keep it at the new line's start, where
-Markdown ignores it).
+starts the new line, where Markdown renders nothing of it, as bare Obsidian and Outliner keep it
+(TO drops it).
 
 ```yaml
 tags: edge
@@ -518,13 +519,13 @@ one┃ two
 
 ```buffer
 one
-┃two
+ ┃two
 ```
 
 ### S5
 
-With the caret in a list marker, Shift-Enter is the host's (`editInMarkup: host`, the default;
-[ShiftEnter22](shift-enter.md#shiftenter22)), which splits the marker, as TO does.
+With the caret in a list marker, Shift-Enter is the host's (`markup: text`, the default;
+[ShiftEnter22](shift-enter.md#shiftenter22)), which splits the marker, as TO's catalogue has it.
 
 ```yaml
 tags: edge free-form
@@ -547,15 +548,15 @@ notApplicable
 
 ### S7, S8
 
-ourus keeps a heading to one line, setext headings included (CommonMark lets a setext title run over
-several lines, but an ATX heading can't, and a heading is a title), and its underline is not text:
-Shift-Enter is refused, the text left as it was (TO made a three-line setext heading, or cut the
-underline in two).
+A setext title runs over several lines, as CommonMark lets it and as the paragraph it underlines
+can, so Shift-Enter breaks it, the heading staying one (TO now makes the rest a new ATX heading
+below); only an ATX title is a single line. Its underline is not text: Shift-Enter there is refused, the text left as
+it was (TO cut the underline in two).
 
-#### Line break in setext title refused
+#### Line break in setext title
 
 ```yaml
-tags: edge free-form
+tags: edge markup-heading
 ```
 
 ```buffer
@@ -565,12 +566,9 @@ Hello┃ world
 
 > shiftEnter
 
-```result
-rejected: not-expressible
-```
-
 ```buffer
-Hello┃ world
+Hello
+ ┃world
 ====
 ```
 
@@ -617,7 +615,7 @@ tags: edge
 - item
 
   para
-  ┃text
+   ┃text
 ```
 
 ### S11
@@ -688,7 +686,7 @@ tags: edge
 
 ```buffer
 - a
-  ┃beta
+   ┃beta
 ```
 
 ## Backspace
@@ -735,7 +733,16 @@ tags: edge
 - foo┃
 ```
 
-> shiftEnter deleteContentBackward
+> shiftEnter
+
+```buffer
+- one
+  - kid
+- foo
+  ┃◌
+```
+
+> deleteContentBackward
 
 ```buffer
 - one
@@ -772,6 +779,7 @@ by default: [TaskBackspace5](tasks.md#taskbackspace5).)
 
 ```yaml
 tags: edge markup-task
+markup: decorated
 ```
 
 ```buffer
@@ -788,14 +796,16 @@ tags: edge markup-task
 ### Joining an item with children
 
 A first child that has children of its own joins its parent, its children moving up a level into its
-place, by Backspace's rule 4 ([backspace.md](backspace.md)): as Tine and TO do (TO's grammar: "a
-parent absorbs its first child; grandchildren re-parent"). Logseq, WorkFlowy, Roam, Dynalist and
-Outliner refuse both keys here, on these very outlines (BlockNote's Delete joins), so as not to
-restructure a subtree on the way; ourus joins, as decided (2026-10-14: nothing is lost, and the key
-does what it does elsewhere). The joins those apps do make, ourus makes too: a sibling with children
+place, by Backspace's rule 5 ([backspace.md](backspace.md); `joinWithChildren: join`, the default):
+as Tine, RemNote and TO do (TO's grammar: "a parent absorbs its first child; grandchildren
+re-parent"). Logseq, Roam, WorkFlowy, Dynalist, Tana and Outliner refuse both keys here, on these
+very outlines (`refuse`, [Backspace45b](backspace.md#backspace45b); BlockNote's Delete joins), so
+as not to restructure a subtree on the way; by default ourus joins: nothing is lost, and the key
+does what it does elsewhere. The joins those apps do make, ourus makes too: a sibling with children
 joins the node above, its children keeping their depth ([Backspace8](backspace.md#backspace8),
-[Delete7](del.md#delete7)), and a first child without children joins its parent
-([Backspace3](backspace.md#backspace3), [Delete1](del.md#delete1)).
+[Delete7](delete.md#delete7); only Tana refuses it), and a first child without children joins its
+parent ([Backspace3](backspace.md#backspace3), [Delete1](delete.md#delete1); only WorkFlowy refuses
+it).
 
 #### Children move to the joined node
 

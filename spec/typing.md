@@ -7,9 +7,10 @@ reads it, and these cases pin what it then reads as. The rules:
    under a paragraph makes it a heading (Typing1, Typing2), a list marker on a paragraph's
    continuation line makes that line an item (Typing3). Text that ourus moves or splits never does
    (escaped instead: guarantee 7).
-2. **In markup, the host types** (`editInMarkup: host`, the default), whatever the text then reads
-   as. A strict editor's guard (`refuse`) puts the typed text at the text start, as Enter there
-   does (Typing4); the guard isn't built yet, so its case is `pending`.
+2. **In markup, the host types**, whatever the text then reads as: `x` typed at `-┃ a` gives
+   `-x a`, no item, as every text editor does. Where markup is decorated (`markup: decorated`),
+   keeping the caret out of it is the host's: no ourus command leaves one there (guarantee 6), and
+   Obsidian's Outliner keeps the user's out of a marker too ("stick the cursor to the content").
 
 ## Typing1
 
@@ -29,6 +30,10 @@ para
 ```buffer
 para
 ---┃
+```
+
+```outline
+heading 2: para
 ```
 
 ## Typing2
@@ -70,27 +75,4 @@ para
 ```buffer
 para
 - ┃more
-```
-
-## Typing4
-
-With `editInMarkup: refuse`, typed text is content, so typing in the marker lands at the text
-start. Obsidian's Outliner keeps the caret out of a marker altogether ("stick the cursor to the
-content"), which comes to the same. By default the host types `-x a`, no item, as every text
-editor does.
-
-```yaml
-tags: edge
-status: pending
-editInMarkup: refuse
-```
-
-```buffer
--┃ a
-```
-
-> "x"
-
-```buffer
-- x┃a
 ```

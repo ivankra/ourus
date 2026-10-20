@@ -8,7 +8,8 @@ kind) with their subtrees and their trailing gaps ([gaps.md](gaps.md)): a node k
 its own indentation, and lands where the text puts it. The rules, in order; the first that applies
 wins:
 
-1. **Everything in a quote moves the quote** ([quotes.md](quotes.md)).
+1. **A move of everything in a quote moves the quote** ([quotes.md](quotes.md)); one node of it
+   moves as in an item, into and out of quotes too.
 2. **Within its parent, the node swaps with the sibling above**: items with items, paragraphs and
    other blocks among themselves, a heading (with its section) with a heading of its level, a quote
    with any node but a heading (MoveUp1, MoveUp3, MoveUp4, MoveUp16).
@@ -22,7 +23,7 @@ wins:
    section above, at its end, where it takes nothing in (MoveUp26).
 5. **Otherwise it is refused** (`no-previous-sibling`, MoveUp2, MoveUp5), or where it would give
    another node a new parent: a heading past a heading of another level or past a node it would take
-   into its section (`not-expressible`, MoveUp28, MoveUp33). A paragraph that doesn't move takes
+   into its section (`would-reparent`, MoveUp28, MoveUp33). A paragraph that doesn't move takes
    in the list a move leaves right after it, as the text reads it (MoveUp35).
 6. **What would run together is set apart** by a blank line (MoveUp18, MoveUp19, MoveUp20,
    MoveUp36); a paragraph's leading indentation, not part of its text, is rewritten where it would
@@ -215,8 +216,8 @@ tags: core
 The first list item owned by a paragraph moves above the paragraph and joins the preceding list.
 The remaining items stay with the paragraph.
 
-`b` keeps its column, so it joins `a`'s list rather than nesting under `a` (as the block apps
-do, adapted).
+`b` keeps its column, so it joins `a`'s list rather than nesting under `a`, as RemNote without
+bullets and BlockNote move it; SiYuan keeps it in the paragraph's list.
 
 ```yaml
 tags: common free-form
@@ -581,7 +582,9 @@ para┃
 ## MoveUp21
 
 The first item of a paragraph's list moves above the paragraph; the items after it stay with the
-paragraph. With no list above to join, a blank line sets the item off from the paragraph.
+paragraph. With no list above to join, a blank line sets the item off from the paragraph. Back down,
+the outline comes back, the blank line staying above the list, as a paragraph's list may have one
+([MoveUp36](#moveup36)).
 
 ```yaml
 tags: edge free-form
@@ -599,6 +602,15 @@ para
 - a┃
 
 para
+- b
+```
+
+> moveSubtreeDown
+
+```buffer
+para
+
+- a┃
 - b
 ```
 
@@ -666,7 +678,7 @@ tags: edge free-form
 
 The first item of a sub-heading's section moves up into the enclosing section, before the
 sub-heading: it keeps its column and joins `one`'s list, rather than nesting under `one` as in a
-list (and the block apps, adapted).
+list, as RemNote without bullets and BlockNote move it; SiYuan does nothing.
 
 ```yaml
 tags: edge free-form
@@ -812,7 +824,7 @@ tags: edge free-form
 > moveSubtreeUp
 
 ```result
-rejected: not-expressible
+rejected: would-reparent
 ```
 
 ```buffer
@@ -848,7 +860,8 @@ tags: edge free-form
 
 `    code` is a paragraph (what was left of a paragraph after its definition). Moved above the
 definition, its four spaces would make it indented code; a paragraph's leading indentation isn't
-its text, so it goes, and a blank line sets the paragraph off from the definition.
+its text, so it goes, and a blank line sets the paragraph off from the definition. Bare Obsidian
+moves the line as it is, indented code above the definition.
 
 ```yaml
 tags: rare
@@ -929,7 +942,7 @@ tags: edge free-form
 > moveSubtreeUp
 
 ```result
-rejected: not-expressible
+rejected: would-reparent
 ```
 
 ```buffer
@@ -1078,3 +1091,52 @@ flavor: obsidian
 - b
 ```
 
+
+## MoveUp39
+
+From a trailing blank line, the last node moves, and the caret goes with it, into its text: the
+blank line ends the document and stays there, the gap of the node now last, where the caret would
+make a second press move that node.
+
+```yaml
+tags: rare
+```
+
+```buffer
+- one
+- two
+┃
+```
+
+> moveSubtreeUp
+
+```buffer
+- two┃
+- one
+
+```
+
+## MoveUp40
+
+A move keeps a continuation line's extra leading space as it rewrites the line's indentation, as
+indent does ([Indent33](indent.md#indent33)).
+
+```yaml
+tags: rare
+```
+
+```buffer
+- x
+  - y
+  - a┃
+     b
+```
+
+> moveSubtreeUp
+
+```buffer
+- x
+  - a┃
+     b
+  - y
+```

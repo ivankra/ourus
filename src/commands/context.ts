@@ -2,7 +2,7 @@
 
 import { OutlineState, type OutlineKind, type OutlineNode } from '../outline/index.ts';
 import type { Flavor, LineInfo, PrefixPiece } from '../parser/index.ts';
-import { dominantEnding, mapPos, skipSpaces, type ChangeSpec } from '../text.ts';
+import { advanceColumns, dominantEnding, mapPos, skipSpaces, trimMd, trimMdStart, type ChangeSpec } from '../text.ts';
 import { OutlineEncoder, OutlinePlan, type EncodeOptions, type EncodeResult, type OutlinePlanNode } from '../encoder/index.ts';
 import type { CommandResult, Selection } from './index.ts';
 import { notApplicable, reject, type Outcome, type CommandPlan } from './plan.ts';
@@ -71,9 +71,9 @@ export class CommandContext {
   /**
    * A plan that encodes `expected` with the encoder. The selection is the old one mapped along,
    * or, given `select`, chosen from what was written. Where the edit made seams that could take a
-   * blank line, the plan tries them without, then each with one, then all with one: the first that
-   * reads as intended is written. `compare: 'flat'` checks it in document order only (a heading made
-   * re-derives sections).
+   * blank line, the plan tries them without, then each with one, then all with one, the seams around
+   * new text before those within it: the first that reads as intended is written. `compare: 'flat'`
+   * checks it in document order only (a heading made re-derives sections).
    */
   encode(expected: OutlinePlan, { compare = 'tree', ...options }: Pick<EncodeOptions, 'separate'> & Partial<Pick<CommandPlan, 'compare'>> = {}, select?: (writtenOutline: EncodeResult) => Selection): Outcome {
     const toPlan = (writtenOutline: EncodeResult): CommandPlan => ({
@@ -86,8 +86,13 @@ export class CommandContext {
     const first = this.encoder.encode(expected, options);
     if (typeof first === 'string') return reject('not-expressible', first);
     const tries: (EncodeOptions['pad'] | undefined)[] = [undefined];
-    for (let i = 0; i < first.candidates; i++) tries.push(new Set([i]));
-    if (first.candidates > 1) tries.push('all');
+    // the seams around new text first, then those within it, then all of them
+    const seams = Array.from({ length: first.candidates }, (_, i) => i);
+    for (const group of [seams.filter((i) => !first.within.has(i)), seams.filter((i) => first.within.has(i))]) {
+      for (const i of group) tries.push(new Set([i]));
+      if (group.length > 1) tries.push(new Set(group));
+    }
+    if (first.within.size && first.within.size < first.candidates) tries.push('all');
     // each try falls back to the next, written only when it's needed
     const attempt = (i: number): CommandPlan | null => {
       if (i >= tries.length) return null;
@@ -139,7 +144,7 @@ export class Operands {
   }
 }
 
-export const normText = (lines: readonly string[]): string => lines.map((line) => line.trim()).join('\n');
+export const normText = (lines: readonly string[]): string => lines.map((line) => trimMd(line)).join('\n');
 
 /** Whether `node` is an item with no text of its own (a checkbox aside) but with children. */
 export function isEmptyWithChildren(ctx: CommandContext, node: OutlineNode): boolean {
@@ -214,21 +219,21 @@ export function noOperands(ctx: CommandContext): Outcome {
   const { doc } = ctx;
   const lo = doc.lineAt(ctx.from).index;
   const hi = doc.lineAt(ctx.to).index;
-  for (let i = lo; i <= hi; i++) if (!doc.lines[i]!.blank) return notApplicable;
+  // an empty document has no line at all: as blank as one
+  for (let i = lo; i <= Math.min(hi, doc.lines.length - 1); i++) if (!doc.lines[i]!.blank) return notApplicable;
   return reject('nothing-above', 'no node above the blank lines to act on');
 }
 
 /** The node whose trailing gap holds blank line `lineNo`: the node of the nearest non-blank line above. */
 export function gapOwner(ctx: CommandContext, lineNo: number): OutlineNode | null {
   const { doc } = ctx;
-  for (let i = lineNo; i >= 0; i--) {
+  // an empty document has no line `lineNo`: nothing above it either
+  for (let i = Math.min(lineNo, doc.lines.length - 1); i >= 0; i--) {
     if (doc.lines[i]!.blank) continue;
     return doc.nodeAtLine(i);
   }
   return null;
 }
-
-export const lineEndWithEnding = (doc: OutlineState, lineNo: number): number => doc.lines[lineNo]!.to + doc.lines[lineNo]!.ending.length;
 
 export function mapSelection(changes: readonly ChangeSpec[], sel: Selection, assoc: -1 | 1): Selection {
   return { anchor: mapPos(changes, sel.anchor, assoc), head: mapPos(changes, sel.head, assoc) };
@@ -240,7 +245,25 @@ export const reTaskBox = /^\[[ xX]\](?=[ \t]|$)/;
 /** Whether a line is blank, or only quote markers (`>`). */
 export function blankInQuote(ctx: CommandContext, line: LineInfo): boolean {
   const { doc } = ctx;
-  return /^[\s>]*$/.test(doc.text.slice(line.from, line.to));
+  return /^[ \t>]*$/.test(doc.text.slice(line.from, line.to));
+}
+
+/**
+ * Whether a line's text, after the containers' prefix it shares with a paragraph's line above, would
+ * interrupt that paragraph: from four columns in it never does, as more of the paragraph.
+ */
+export function interrupts(ctx: CommandContext, text: string): boolean {
+  const lead = /^[ \t]*/.exec(text)![0];
+  if (advanceColumns(lead, 0, lead.length, 0) >= 4) return false;
+  return ctx.encoder.interruptsParagraph(trimMdStart(text));
+}
+
+/**
+ * Whether a line's text right below new paragraph text would continue it, or underline it into a
+ * setext heading (`-`, `- `, `===`): then a blank line has to keep them apart.
+ */
+export function runsOnto(ctx: CommandContext, text: string): boolean {
+  return trimMd(text) !== '' && (!interrupts(ctx, text) || /^ {0,3}(?:=+|-+)[ \t]*$/.test(text));
 }
 
 /** Whether `node`'s first line comes right after its parent's own text (a paragraph). */
@@ -255,7 +278,7 @@ export function isClosingFence(ctx: CommandContext, line: LineInfo): boolean {
   const { doc } = ctx;
   const block = line.leaf;
   if (!block || block.type !== 'code_block' || !block.fenced || line.index === block.startLine || line.index !== block.endLine) return false;
-  const rest = doc.text.slice(line.contentFrom, line.to).trim();
+  const rest = trimMd(doc.text.slice(line.contentFrom, line.to));
   return rest.length >= block.fenceLength! && /^(.)\1*$/.test(rest) && rest[0] === block.fenceChar;
 }
 
@@ -266,7 +289,7 @@ export function isFenceLine(ctx: CommandContext, line: LineInfo): boolean {
   if (block.type === 'code_block' && block.fenced) return line.index === block.startLine || isClosingFence(ctx, line);
   if (block.type !== 'math_block' && block.type !== 'comment_block') return false;
   const delimiter = block.type === 'math_block' ? '$$' : '%%';
-  return (line.index === block.startLine || line.index === block.endLine) && ctx.doc.text.slice(line.contentFrom, line.to).trim().startsWith(delimiter);
+  return (line.index === block.startLine || line.index === block.endLine) && trimMd(ctx.doc.text.slice(line.contentFrom, line.to)).startsWith(delimiter);
 }
 
 /** Whether `line` is a code line of a fenced block: inside it, neither fence. */
@@ -284,6 +307,9 @@ export function paragraphPrefix(ctx: CommandContext, first: LineInfo): string {
   return ctx.encoder.continuation(first.prefix) + ctx.doc.text.slice(last ? last.to : first.from, first.contentFrom);
 }
 
+/** Whether `node`'s text reads as a paragraph's: a paragraph's, an item's, a setext title's (up to its underline). */
+const paragraphText = (node: OutlineNode): boolean => node.head?.type === 'paragraph' || (node.head?.type === 'heading' && !!node.head.setext);
+
 /**
  * A paragraph's or an item's text, as these lines once an edit ends or breaks it, escaped where it
  * would read as a block: a link reference definition (`[a]: b ┃c`, split by Enter, leaves `[a]: b`),
@@ -292,13 +318,51 @@ export function paragraphPrefix(ctx: CommandContext, first: LineInfo): string {
  */
 export function referenceEscape(ctx: CommandContext, node: OutlineNode, lines: readonly string[]): { change: ChangeSpec; lines: string[] } | null {
   const range = ctx.doc.headRange(node);
-  if (!range || node.head?.type !== 'paragraph') return null;
+  if (!range || !paragraphText(node)) return null;
   const first = lines[0] ?? '';
   const lead = /^[ \t]*/.exec(first)![0].length;
   // a link reference definition, or, ended where it now ends, any block (a lone `-` is an empty item)
   const at = ctx.encoder.escape(first.slice(lead), 'start', lines.slice(1)).at;
   if (at === null || first.startsWith('\\', lead)) return null;
   return { change: { from: range.from + at, to: range.from + at, insert: '\\' }, lines: [first.slice(0, lead + at) + '\\' + first.slice(lead + at), ...lines.slice(1)] };
+}
+
+/**
+ * A paragraph's or an item's line `k` of `lines` (its text as an edit leaves it), not its first, ended
+ * by the edit: where it would then read as a block or a setext underline (a lone `-` under the text
+ * above, a lone `#`), a backslash before it, as at the text's start (`referenceEscape`). The change
+ * writing it, and the line; null where it needs none.
+ */
+export function continuationEscape(ctx: CommandContext, node: OutlineNode, lines: readonly string[], k: number): { change: ChangeSpec; line: string } | null {
+  if (k <= 0 || !node.head) return null;
+  const text = lines[k]!;
+  const lead = /^[ \t]*/.exec(text)![0].length;
+  const at = ctx.encoder.escape(text.slice(lead), 'continuation').at;
+  if (at === null || text.startsWith('\\', lead + at)) return null;
+  const pos = ctx.doc.lines[node.head.startLine + k]!.contentFrom + lead + at;
+  return { change: { from: pos, to: pos, insert: '\\' }, line: text.slice(0, lead + at) + '\\' + text.slice(lead + at) };
+}
+
+/**
+ * A join's fix to the escape on line `k` of a paragraph's or an item's text (not its first), from its
+ * lines `before` the join and `after` it: where the escape kept the line, ended there, from reading as
+ * a block (the escape `continuationEscape` wrote) and the join leaves it nothing to keep, it goes. The
+ * change, and the lines; null where nothing changes.
+ */
+export function continuationUnescape(ctx: CommandContext, node: OutlineNode, before: readonly string[], after: readonly string[], k: number): { change: ChangeSpec; lines: string[] } | null {
+  if (k <= 0 || !node.head || before[k] === undefined || after[k] === undefined) return null;
+  const lead = (line: string): number => /^[ \t]*/.exec(line)![0].length;
+  const escapeAt = (line: string): number => {
+    const m = /^(\d*)\\(?=[!-/:-@[-`{-~])/.exec(line.slice(lead(line)));
+    return m ? m[1]!.length : -1;
+  };
+  const at = escapeAt(after[k]!);
+  if (at < 0 || escapeAt(before[k]!) !== at) return null;
+  const unescape = (line: string): string => line.slice(0, lead(line) + at) + line.slice(lead(line) + at + 1);
+  const reads = (line: string): boolean => ctx.encoder.escape(line.slice(lead(line)), 'continuation').at !== null;
+  if (!reads(unescape(before[k]!)) || reads(unescape(after[k]!))) return null;
+  const pos = ctx.doc.lines[node.head.startLine + k]!.contentFrom + lead(before[k]!) + at;
+  return { change: { from: pos, to: pos + 1, insert: '' }, lines: [...after.slice(0, k), unescape(after[k]!), ...after.slice(k + 1)] };
 }
 
 /**
@@ -313,7 +377,7 @@ export function referenceFix(ctx: CommandContext, node: OutlineNode, before: rea
   const add = referenceEscape(ctx, node, after);
   if (add) return add;
   const range = ctx.doc.headRange(node);
-  if (!range || node.head?.type !== 'paragraph') return null;
+  if (!range || !paragraphText(node)) return null;
   const lead = (ls: readonly string[]): number => /^[ \t]*/.exec(ls[0] ?? '')![0].length;
   // where the escape's backslash is: at the start, or after an ordered marker's digits
   const escapeAt = (ls: readonly string[]): number => {

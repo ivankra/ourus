@@ -168,3 +168,14 @@ The plugin API (`window.logseq.api`), as the driver uses it beyond OG's: `create
 `get_page_blocks_tree` has its built-in properties as `:logseq.property/…` keys, a property's value an
 entity (`{id}`) where it has values of its own (status, order-list-type). The block being edited is the
 focused `TEXTAREA`, or the focused CodeMirror (`.CodeMirror`'s `CodeMirror`) in a code block.
+
+## Tags and references in a loaded block
+
+The batch insert (`insert_batch_block`) refuses a block whose text has a tag (`#a`, `#[[a b]]`): its
+transaction is invalid (`MelangeError: Db_tx.Invalid_tx`), whether the tag exists or not. Such a
+block is inserted empty and then written by `update_block`, which, as typing does, makes the tag.
+The database stores a tag or a page reference by uuid (`#[[uuid]]`, `[[uuid]]`), in `content`,
+`title` and `fullTitle` alike; the read gives the name back (`#a`, `#[[a b]]`, `[[a]]`), as the
+editor shows it. Before this, every start with a tag failed to load (Enter57's `p⏎#a`, an error in
+every run) and a page reference read back as a uuid.
+

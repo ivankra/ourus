@@ -1,7 +1,7 @@
 // New and rewritten lines, and the prefixes of where they are: quotes' `>` and items' indentation.
 
 import type { OutlineState } from '../outline/index.ts';
-import { advanceColumns, diffText, type ChangeSpec } from '../text.ts';
+import { advanceColumns, diffText, trimMdEnd, type ChangeSpec } from '../text.ts';
 import type { Placed } from './layout.ts';
 import { escape } from './escapes.ts';
 import { whitespace } from './indent.ts';
@@ -15,8 +15,11 @@ interface ContentLine {
   readonly prefix: number;
 }
 
-/** A node's lines written from its `lines`, with the prefix of where it is. */
-export function writeLines(doc: OutlineState, placed: Placed, own: { first: number; last: number } | null, tabs: boolean): ContentLine[] {
+/**
+ * A node's lines written from its `lines`, with the prefix of where it is; `was`, the lines of the old
+ * node a new one stands in for (the same node as another kind), gives the new lines their endings.
+ */
+export function writeLines(doc: OutlineState, placed: Placed, own: { first: number; last: number } | null, tabs: boolean, was: { first: number; last: number } | null = null): ContentLine[] {
   const content = placed.lines!;
   let first: string;
   let rest: string;
@@ -45,9 +48,10 @@ export function writeLines(doc: OutlineState, placed: Placed, own: { first: numb
   return content.map((text, i) => {
     const prefix = i === 0 || !lazy?.has(i) ? (i === 0 ? first : rest) : '';
     // an empty line keeps only its quotes' markers
-    const line = i === 0 || text !== '' ? prefix + text : prefix.trimEnd();
+    const line = i === 0 || text !== '' ? prefix + text : trimMdEnd(prefix);
     const oldNo = own && own.first + i <= own.last ? own.first + i : null;
-    if (oldNo === null) return { origin: null, text: line, ending: '', local: [], prefix: prefix.length };
+    // a new line takes the ending of the line it stands for, where it stands for one (`was`'s)
+    if (oldNo === null) return { origin: null, text: line, ending: was && was.first + i <= was.last ? doc.lines[was.first + i]!.ending : '', local: [], prefix: prefix.length };
     const old = doc.lines[oldNo]!;
     return { origin: oldNo, text: line, ending: old.ending, local: diffText(doc.text.slice(old.from, old.to), line), prefix: prefix.length };
   });
@@ -85,7 +89,7 @@ export function rerendered(doc: OutlineState, placed: Placed, lineNo: number, ta
     return within.text + whitespace(within.column, Math.max(within.column, placed.markerColumn), tabs) + marker + padding + content;
   }
   const prefix = linePrefix(holdsOwnLines(placed) ? placed : placed.parent, tabs, { doc, lineNo });
-  return content === '' ? prefix.trimEnd() : prefix + content;
+  return content === '' ? trimMdEnd(prefix) : prefix + content;
 }
 
 /** Whether a node's own lines are inside it, in its prefix: an item's (after its marker), a quote's (a callout's title). */
@@ -131,5 +135,5 @@ export function blankBetween(before: Placed, after: Placed | null, tabs: boolean
   for (let at: Placed | null = before; at; at = at.parent) holding.add(at);
   let common: Placed | null = after.parent;
   while (common && !holding.has(common)) common = common.parent;
-  return linePrefix(common, tabs).trimEnd();
+  return trimMdEnd(linePrefix(common, tabs));
 }

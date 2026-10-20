@@ -17,14 +17,20 @@ subtrees. The rules, in order; the first that applies wins:
        after its own, so the document order stays;
      * [logical](#logical-outdent) (as in WorkFlowy and Roam) keeps them with their parent,
        and the item moves past them.
-5. **At the top level, the first item of a list becomes a paragraph**, placed as the option says
-   (DirectOutdent2, DirectOutdent3, DirectOutdent4, LogicalOutdent2, LogicalOutdent3,
-   LogicalOutdent4); any other top-level item is refused (`at-top-level`, Outdent2); a selection
-   from the first item on outdents together, each item a paragraph (Outdent8, Outdent12). Indent
-   makes it an item again ([Indent21](indent.md#indent21)). An item whose text is a heading becomes
+5. **At the top level, an item becomes a paragraph in place**, under either value of the option
+   (there is no parent for logical outdent to keep the later items with): the first of a list
+   (DirectOutdent2, DirectOutdent3, LogicalOutdent2, LogicalOutdent3) or a later one, set off from the items above it (Outdent2, DirectOutdent5,
+   DirectOutdent6, LogicalOutdent6), the items after it its list. In a paragraph's list the
+   paragraph is its parent: direct makes the item a paragraph in place (DirectOutdent4), logical
+   after the paragraph's list, which keeps the later items (LogicalOutdent4). A selection outdents together,
+   each item a paragraph (Outdent8, Outdent12). Indent makes it an item again
+   ([Indent21](indent.md#indent21)), in the list it left where it follows one (Outdent2,
+   [Indent29](indent.md#indent29)). An item whose text is a heading becomes
    that heading, the rest of the list its section (Outdent17, Outdent17b); where it would take in
    what follows the list, or end the section it is in, it is refused (Outdent18). One whose text is
    code or another block of lines becomes that block, its children items after it (Outdent19).
+   Lines its text continues lazily stay its text: escaped where, the paragraph's own lines, they
+   would start a block (a table's delimiter row, a setext underline; Outdent20, Outdent20b).
 6. **Blank lines go only where the structure needs one**: an empty item left right under an item's
    text is set off by one, as when the caret leaves it (Outdent7), and so is one left right under a
    paragraph's (Outdent16); a paragraph needs one before it,
@@ -60,11 +66,15 @@ tags: core
 
 ## Outdent2
 
-A top-level item that isn't the first of its list can't outdent: its paragraph would split the
-list, and no app measured outdents a top-level item.
+A top-level item after another becomes a paragraph, as the first does
+([DirectOutdent2](#directoutdent2)): after the items above it, set off from them by a blank line, the
+items after it its list ([DirectOutdent5](#directoutdent5)), as RemNote without bullets and SiYuan
+make it a paragraph. The outliners, which hold no paragraphs, do nothing, and so do bare Obsidian
+and its Outliner. Indented, the paragraph is an item of the list again, beside `a`, as any paragraph
+after a list ([Indent29](indent.md#indent29)), as RemNote gives it back.
 
 ```yaml
-tags: common
+tags: common free-form
 ```
 
 ```buffer
@@ -74,9 +84,13 @@ tags: common
 
 > outdent
 
-```result
-rejected: at-top-level
+```buffer
+- a
+
+b┃
 ```
+
+> indent
 
 ```buffer
 - a
@@ -283,7 +297,8 @@ tags: common
 ## Outdent11
 
 A heading goes up a level in place; the heading after it, now a level below it, becomes its
-subsection.
+subsection. Indented back, `A` takes `B` down with it, as its subsection: Markdown has no way to keep
+`B` where it was.
 
 ```yaml
 tags: common free-form
@@ -301,6 +316,14 @@ tags: common free-form
 # T
 # A┃
 ## B
+```
+
+> indent
+
+```buffer
+# T
+## A┃
+### B
 ```
 
 ## Outdent12
@@ -511,10 +534,59 @@ a┃
 - b
 ```
 
+### DirectOutdent5
+
+A later top-level item becomes a paragraph in place, the items after it its list, as the first
+item's do ([DirectOutdent2](#directoutdent2)).
+
+```yaml
+tags: edge free-form
+```
+
+```buffer
+- a
+- b┃
+- c
+```
+
+> outdent
+
+```buffer
+- a
+
+b┃
+- c
+```
+
+### DirectOutdent6
+
+In an ordered list, the items after it start again at 1: a list that follows a paragraph has to,
+or the paragraph would take it in as text.
+
+```yaml
+tags: rare free-form
+```
+
+```buffer
+1. a
+2. b┃
+3. c
+```
+
+> outdent
+
+```buffer
+1. a
+
+b┃
+1. c
+```
+
 ## Logical outdent
 
 Logical outdent moves the item and its subtree after its parent. Later siblings keep their
-parent, so the moved subtree passes them in document order: as in WorkFlowy, Roam, Dynalist (by
+parent, so the moved subtree passes them in document order (at the top level, with no parent, an
+item outdents in place as with direct, LogicalOutdent2): as in WorkFlowy, Roam, Dynalist (by
 default) and Obsidian's Outliner, and Logseq and Tine with their "logical outdenting" setting. Set
 with `outdent: logical`, which each case below sets in a config block.
 
@@ -545,8 +617,11 @@ outdent: logical
 
 ### LogicalOutdent2
 
-At the top level, the first item of a list becomes a paragraph. It passes the rest of its list,
-which keeps its parent, and follows it, set off by a blank line.
+At the top level there is no parent for the rest of the list to keep, so logical outdent does what
+direct does: the item becomes a paragraph in place, the rest of the list its list
+([DirectOutdent2](#directoutdent2)), as RemNote, the one logical app that holds paragraphs, makes it.
+Moving it past the rest of the list would carry the text far; the outliners, holding no paragraphs,
+do nothing, and so does Obsidian's Outliner.
 
 ```yaml
 tags: edge free-form
@@ -561,14 +636,14 @@ outdent: logical
 > outdent
 
 ```buffer
-- b
-
 a┃
+- b
 ```
 
 ### LogicalOutdent3
 
-The item's children come along. Below the new paragraph, they become its list.
+The item's children come along, and with the rest of the list they are the paragraph's list, as
+direct outdent has it ([DirectOutdent3](#directoutdent3)).
 
 ```yaml
 tags: edge free-form
@@ -584,16 +659,16 @@ outdent: logical
 > outdent
 
 ```buffer
-- b
-
 a┃
 - a1
+- b
 ```
 
 ### LogicalOutdent4
 
 An item of a paragraph's list leaves the paragraph and becomes a paragraph after it. The items
-after it stay with their paragraph, so the new paragraph goes past them.
+after it stay with their paragraph, their parent, so the new paragraph goes past them, as the block
+outliners move an item out of a parent block; RemNote makes it a paragraph in place.
 
 ```yaml
 tags: edge
@@ -615,10 +690,35 @@ para
 a┃
 ```
 
+### LogicalOutdent6
+
+A later top-level item becomes a paragraph in place, set off from the items above, the items after
+it its list, as direct outdent has it ([DirectOutdent5](#directoutdent5)), and as RemNote makes it.
+
+```yaml
+tags: edge free-form
+outdent: logical
+```
+
+```buffer
+- a
+- b┃
+- c
+```
+
+> outdent
+
+```buffer
+- a
+
+b┃
+- c
+```
+
 ### LogicalOutdent5
 
 A heading outdents in place under logical outdent too: keeping the headings after it under their
-parent would move whole sections past each other (Outdent11).
+parent would move whole sections past each other (Outdent11), whose inverse this shares.
 
 ```yaml
 tags: edge free-form
@@ -637,6 +737,14 @@ outdent: logical
 # T
 # A┃
 ## B
+```
+
+> indent
+
+```buffer
+# T
+## A┃
+### B
 ```
 
 ## Outdent16
@@ -688,7 +796,8 @@ tags: rare free-form
 
 ## Outdent17b
 
-With `outdent: logical`, the heading follows the rest of the list, which stays a list.
+With `outdent: logical` the same as with direct ([Outdent17](#outdent17)): at the top level there is
+no parent to keep the rest of the list, so the heading takes it in as its section.
 
 ```yaml
 tags: rare free-form
@@ -703,8 +812,8 @@ outdent: logical
 > outdent
 
 ```buffer
-- b
 # ┃H
+- b
 ```
 
 ## Outdent18
@@ -740,11 +849,40 @@ after
 
 At the top level, an item whose text is fenced code becomes the code block, its children the items
 after it: a block of lines has no list of its own (the README's guarantee 4 names them). The caret
-goes into the code, where typing can't break its fence. Indent
-doesn't make it an item again: with nothing above, a block has nothing to be an item of.
+stays on the fence, where the user had it, as after indent where the host shows markup as text
+([Indent31](indent.md#indent31)); where it decorates markup, it goes into the code (Outdent19b).
+Indent doesn't make it an item again: with nothing above, a block has nothing to be an item of.
 
 ```yaml
 tags: rare free-form markup-fence
+```
+
+````buffer
+- ┃```
+  code
+  ```
+  - c
+- d
+````
+
+> outdent
+
+````buffer
+┃```
+code
+```
+- c
+- d
+````
+
+## Outdent19b
+
+The same where the host decorates markup (`markup: decorated`): the caret goes into the code, where
+typing can't break its fence.
+
+```yaml
+tags: rare free-form markup-fence
+markup: decorated
 ```
 
 ````buffer
@@ -764,3 +902,47 @@ tags: rare free-form markup-fence
 - c
 - d
 ````
+
+## Outdent20
+
+Lines that continue an item's text lazily, at column 0, are its text however they look, as GFM's
+readers take them (micromark, markdown-it). A paragraph's own lines are read otherwise: `|---|---|`
+under `| a | b |` would make the two a table, so the item made a paragraph escapes it.
+
+```yaml
+tags: rare free-form
+```
+
+```buffer
+- t1┃
+| a | b |
+|---|---|
+```
+
+> outdent
+
+```buffer
+t1┃
+| a | b |
+\|---|---|
+```
+
+## Outdent20b
+
+The same for a line that would underline the paragraph into a setext heading.
+
+```yaml
+tags: rare free-form
+```
+
+```buffer
+- t1┃
+===
+```
+
+> outdent
+
+```buffer
+t1┃
+\===
+```

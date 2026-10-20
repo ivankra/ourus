@@ -55,6 +55,17 @@ export function unitsOf(doc: OutlineState): Units {
 const continues = (node: OutlineNode, after: OutlineNode | undefined, sameList: boolean): boolean =>
   !!after && (node.kind !== 'item' || (after.kind === 'item' && (!sameList || after.block.parent === node.block.parent)));
 
+/**
+ * Whether old node `was`, now after `item` under `parent`, comes into `item`'s list from elsewhere: it
+ * wasn't an item (it takes the list's marker), or was an item of another parent's list of the same kind.
+ */
+const joinsList = (item: OutlineNode, was: OutlineNode, parent: OutlineNode | null): boolean => {
+  if (was.kind !== 'item') return true;
+  if (was.parent === parent || was.block.parent === item.block.parent) return false;
+  const [a, b] = [item.block.list!, was.block.list!];
+  return a.type === b.type && a.bulletChar === b.bulletChar && a.delimiter === b.delimiter;
+};
+
 interface Seam {
   /** Old blank lines to write. */
   readonly lines: readonly number[];
@@ -64,6 +75,8 @@ interface Seam {
   readonly separable: boolean;
   /** Where it meets new text: after it, or before it (see `separate`). */
   readonly fresh: 'after' | 'before' | null;
+  /** Within new text. */
+  readonly within?: boolean;
 }
 
 /**
@@ -88,8 +101,9 @@ export function seam(units: Units, unit: Placed, next: Placed | null, nextUnit: 
   const separable = !((prev ?? unit).kind === 'item' && next.kind === 'item') && !ownListFollows(unit, next);
   const made = (lines: readonly number[]): Seam =>
     lines === own && rewritten !== null ? { lines: [], blanks: rewritten, separable, fresh } : { lines, blanks: 0, separable, fresh };
-  // new text keeps its own gaps within it
-  if (!old(unit) && !old(next)) return { lines: [], blanks: unit.gap, separable: false, fresh: null };
+  // new text keeps its own gaps within it; where it has none, a blank line may still set two of its
+  // blocks apart, where Markdown needs one (two quotes, two paragraphs: a paste made tight)
+  if (!old(unit) && !old(next)) return { lines: [], blanks: unit.gap, separable: unit.gap === 0 && separable, fresh: null, within: true };
   // the node that was right after this one, set off by its blank lines, now its first item: they
   // separated siblings, and a first item in a tight list needs none (a paragraph indented under an
   // item, an item indented back into a paragraph's list); an empty one still does, which right under
@@ -101,9 +115,17 @@ export function seam(units: Units, unit: Placed, next: Placed | null, nextUnit: 
   // an empty item's first child comes right after its marker's line: a blank line there would end the
   // item, which can start with one blank line only
   if (!prev && next.parent === unit && unit.kind === 'item' && old(unit) && !old(unit)!.head && !unit.lines) return { lines: [], blanks: 0, separable: false, fresh: null };
-  // two units that were already next to each other keep what was between them
+  // two units that were already next to each other keep what was between them; but a node that was
+  // right after a tight list, set off by its blank lines, and is now its last item, has none: they
+  // separated it from the list, and in it would make the list loose (a paragraph indented under a
+  // list's last item, an item indented back into a paragraph's list, an item into a quote's list)
   const nextOld = nextUnit ? old(nextUnit) : null;
   if (old(unit) && (!nextUnit || nextOld) && (units.nextUnit.get(old(unit)!) ?? null) === nextOld) {
+    const was = old(next);
+    const before = prev && old(prev);
+    if (before && was && next.kind === 'item' && before.kind === 'item' && before.parent === prev!.parent?.node && before.block.parent!.tight && joinsList(before, was, next.parent?.node ?? null) && !continues(before, siblingAfter(before), true)) {
+      return { lines: [], blanks: 0, separable: false, fresh: null };
+    }
     // still, a seam whose quotes changed may need a blank line where a quote's `>` set them apart
     return fresh || unit.rerender || nextUnit?.rerender ? made(own) : kept(own);
   }
@@ -111,10 +133,15 @@ export function seam(units: Units, unit: Placed, next: Placed | null, nextUnit: 
   // the parent's lines, its gap staying after them, unless they keep an old node's id (a node
   // converted to another kind is still where it was)
   const arrived = (placed: Placed): boolean => !old(placed) || old(placed)!.parent !== placed.parent!.node;
-  // an item moved down below a paragraph, into its list, swaps with it around the blank lines between them
+  // an item moved down below a paragraph, into its list, swaps with it around the blank lines between
+  // them; where items of its list stay above, those blank lines end that list, and stay at its end,
+  // the paragraph keeping its own gap above its list
   const owner = next.parent?.node;
   if (!prev && owner?.kind === 'paragraph' && next.kind === 'item' && old(next) && old(next)!.parent === owner.parent && arrived(next) && old(next)!.startLine < owner.startLine) {
-    return made(gapAfter(old(next)!));
+    const item = old(next)!;
+    const siblings = item.parent!.children;
+    const above = siblings[siblings.indexOf(item) - 1];
+    return made(above && continues(above, item, true) ? own : gapAfter(item));
   }
   // a run arriving from elsewhere as the first children of a childless node that ended its scope:
   // that node's gap is the scope's end gap, and stays at the end, after them (a run that was right

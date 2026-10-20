@@ -5,7 +5,7 @@ returns either the changes that do what the key means (verified), a refusal that
 "not mine": the host runs its own default. Commands are pure: they never touch editor state; the
 host commits what they return.
 
-The layer's place among the others: [`11-api.md`](../../11-api.md). Behaviour is specified, case by
+The layer's place among the others: [`11-api.md`](../../11-api.md). Behavior is specified, case by
 case, in [`spec/`](../../spec/): drawn editor states and the actions between them.
 
 ## The API
@@ -59,7 +59,7 @@ siblings of one kind.
 - **`notApplicable`**: the command has nothing to do here (Enter in the middle of a code line, with
   `handleFenceContents: false`; Backspace inside text). The host runs its default. With the caret in
   markup, where only the host puts it, an edit ourus would refuse is the host's too
-  (`editInMarkup: host`, the default), and `detail` says why ("a list marker isn't text"): an
+  (`markup: text`, the default), and `detail` says why ("a list marker isn't text"): an
   advisory the host may show.
 
 **`RejectReason`:**
@@ -73,6 +73,7 @@ siblings of one kind.
 | `nothing-above` | Backspace at the first node, with nothing to join into. |
 | `has-children` | A join that would have to drop children. |
 | `not-expressible` | Markdown can't say what the command means here (an empty node away from the caret, a heading that would span lines, ...); `detail` says what. |
+| `would-reparent` | A move would give another node a new parent (a heading taking in what follows it, a paragraph owning a list). |
 | `encoding-failed` | The changes didn't re-parse as intended. A bug to fix, never a tolerated rate. |
 
 ### `settlePlaceholders(state, caret)`
@@ -99,9 +100,9 @@ next state, or null when nothing changes.
 
 How commands behave where users disagree is a `Config` option, set when the state is made
 (`OutlineState.parse(text, { config })`): `outdent` (`direct` or `logical`), `bullet`,
-`enterOnEmptyItem`, `enterMidItem`, `enterAtTextStart`, `backspaceAtTopItem`, `emptyItemWithChildren`,
+`enterOnEmptyItem`, `enterMidItem`, `enterAtTextStart`, `backspaceAtTopItem`, `emptyItemWithChildren`, `joinWithChildren`, `enterTask`, `enterSplitSpace`,
 `handleFenceContents`, `headingEditing`, `taskEditing`, `pasteStructuredLines`, `pasteStructuredMidText`,
-`pasteStructuredAtEnd`, `pasteStructuredOnParent`, `pasteStructuredParagraphList`, `pasteStructuredListForm`, `deleteAtGap`, `editInMarkup`, and `flavor`. Each option's choices and default are documented in `src/config.ts`.
+`pasteStructuredAtEnd`, `pasteStructuredOnParent`, `pasteStructuredParagraphList`, `pasteStructuredListForm`, `markup`, and `flavor`. Each option's choices and default are documented in `src/config.ts`.
 
 ## Inside
 
@@ -128,5 +129,8 @@ runner, which applies the changes to a new state and checks it against the plan.
 
 `test/commands/commands.test.ts` (changes, text and selection agree; round trips; ids), the spec
 (`test/spec.test.ts` over `spec/*.md`, every example in every flavor), the placeholder lifecycle
-(`test/placeholders.test.ts`), and the differential (`npm run test:diff`), which compares every
-command's outcome with the last commit's.
+(`test/placeholders.test.ts`), the differential (`npm run test:diff`), which compares every
+command's outcome with the last commit's, and the inverse pairs (`npm run test:inverse`), which play
+every pair of commands that undo each other at every caret position of the spec's buffers. To look
+at one case by hand: `npm run probe` (`sxs/probe.ts --help`), on ourus alone, or the SxS's apps
+beside it (`npm run probe -- all ...`).

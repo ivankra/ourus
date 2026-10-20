@@ -152,7 +152,9 @@ export function emptyAwayFromCaret(ctx: CommandContext, plan: OutlinePlan, caret
   const lines = (node: PlanTree): void => {
     const old = OutlinePlan.isPlanned(node) ? node.original : node;
     const text = OutlinePlan.isPlanned(node) ? (node.text ?? (old ? doc.nodeText(old) : '')) : doc.nodeText(node);
-    if (node.kind !== 'atom' && /\n[ \t]*(?:\n|$)|^[ \t]*\n/.test(text)) holding.push(node);
+    // a block of lines holds blank ones, an item's whose text it is too (code, a quote)
+    const ofLines = node.kind === 'atom' || (OutlinePlan.isPlanned(node) && node.blockType !== undefined) || (!!old?.head && old.head.type !== 'paragraph');
+    if (!ofLines && /\n[ \t]*(?:\n|$)|^[ \t]*\n/.test(text)) holding.push(node);
     node.children.forEach(lines);
   };
   plan.root.children.forEach(lines);

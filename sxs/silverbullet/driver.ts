@@ -25,13 +25,13 @@ const MOTIONS: Record<string, string> = {
 let pages = 0;
 
 export const driver: Driver = {
-  name: 'silverbullet',
-  title: 'SilverBullet',
-  id: 'SB',
+  shortId: 'SB',
+  longId: 'silverbullet',
+  displayName: 'SilverBullet',
   url: 'https://demo.silverbullet.md/personal/',
   model: 'text',
   // measured: Enter at an item's text start leaves the caret with the text
-  behaves: { enterAtTextStart: 'stay', deleteAtGap: 'gap' },
+  behaves: { enterSplitSpace: 'start', enterAtTextStart: 'stay' },
   keys: {
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',

@@ -29,7 +29,25 @@ export function childIndent(doc: OutlineState, node: OutlineNode, child: Outline
 
 /** The prefix a new line in these containers starts with: a quote's `>` as written, an item's indentation as spaces. */
 export function continuation(doc: OutlineState, pieces: readonly PrefixPiece[]): string {
-  return pieces.map((p) => (p.block.type === 'blockquote' ? doc.text.slice(p.from, p.to) : ' '.repeat(p.toColumn - p.fromColumn))).join('');
+  return pieces
+    .map((p, k) => {
+      if (p.block.type !== 'blockquote') return ' '.repeat(p.toColumn - p.fromColumn);
+      const next = pieces[k + 1];
+      return quoteMarker(doc.text.slice(p.from, p.to), !!next && next.block.type !== 'blockquote' && next.toColumn > next.fromColumn);
+    })
+    .join('');
+}
+
+/** The prefix of a continuation line of an item's text: its sibling prefix, then spaces to its content column. */
+export function itemContinuation(doc: OutlineState, node: OutlineNode): string {
+  const sibling = siblingPrefix(doc, node);
+  return quoteMarker(sibling, true) + ' '.repeat(node.block.contentColumn! - node.block.markerColumn!);
+}
+
+// a `>` written without its space takes the first space of what follows as its own: before
+// indentation, it gets one, so the indentation keeps its width
+function quoteMarker(text: string, indented: boolean): string {
+  return indented && text.endsWith('>') ? text + ' ' : text;
 }
 
 /** An item's marker as written, or (`next`) the marker of the item after it: an ordered one counts on. */

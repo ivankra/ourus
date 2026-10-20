@@ -1,10 +1,11 @@
-
 # Quotes and callouts as containers
 
 A quote is an outline container: its blocks are its children, and it has no text of its own, except
 a callout, whose title line is its text. Item commands work inside quotes the way they work inside
-items, and the quote's `>` is written on every line a command makes in it. A paragraph in a quote
-owns no list, as in an item: a list after it is the quote's. The rules quotes add:
+items, and the quote's `>` is written on every line a command makes in it, followed by its space
+where indentation follows, even where the quote's first line has none (Quote86, Quote91). A
+paragraph in a quote owns no list, as in an item: a list after it is the quote's. The rules quotes
+add:
 
 1. **Outdent leaves a quote**: with `outdent: direct` (the default) the node stays where it is in
    the text, the quote split around it, what followed it quoted after it (Quote12, Quote72), its
@@ -32,7 +33,7 @@ owns no list, as in an item: a list after it is the quote's. The rules quotes ad
 5. **A callout's title takes joins as a heading does**: its first node joins it by Backspace, the
    node below by Delete (Quote60, Quote61, Quote62).
 6. **A join across a quote's edge brings the node into the quote** (Quote51, Quote52); Delete before
-   a quote is refused ([Delete10](del.md#delete10)).
+   a quote is refused ([Delete10](delete.md#delete10)).
 7. **A callout's title is one line in the Obsidian flavor**: Shift-Enter there is refused (Quote47).
 8. **A quote can be an item's first block** (`- > q`): its lines go on at the item's column (`  > `),
    not after its marker, which would make each a new item (Quote73, Quote74, Quote76); an empty
@@ -43,7 +44,8 @@ owns no list, as in an item: a list after it is the quote's. The rules quotes ad
 
 Bare Obsidian and the text editors edit quotes as text: Tab inserts a tab after the `>`, Shift-Tab
 out of a quote does nothing, Backspace and Delete delete a space or a `>`, which moves text between
-containers without saying so.
+containers without saying so. Obsidian's Outliner doesn't reach into quotes: there it does what bare
+Obsidian does, or nothing.
 
 ## Quote1
 
@@ -373,7 +375,9 @@ c
 
 ### Quote15
 
-Out of a quote inside an item: the item's own child.
+Out of a quote inside an item: the item's own child, unquoted, as outdent out of any container makes
+the node its parent's (rule 1). Bare Obsidian unindents the line, `> - b` a quote of its own after
+the item; its Outliner does nothing.
 
 ```yaml
 tags: rare quote-container
@@ -442,8 +446,8 @@ tags: edge quote-container
 
 ### Quote18
 
-Its children and blank lines come along, and the blank line before it joins the quote (a bare one
-would end it).
+Its children and blank lines come along, quoted; the blank line that set it apart from the quote
+goes, as in the quote's list it would make the list loose.
 
 ```yaml
 tags: edge quote-container
@@ -462,7 +466,6 @@ tags: edge quote-container
 
 ```buffer
 > - a
->
 > - b┃
 >   - c
 >
@@ -505,7 +508,8 @@ applied
 ### Quote20
 
 Out of one quote, past another, into it, with `outdent: logical`, where the item leaves below the
-quote's other children; outdent copies the separator its new neighbors use.
+quote's other children; outdent copies the separator its new neighbors use, and indent, the item
+the last of the quote's tight list, drops it.
 
 ```yaml
 tags: edge quote-container
@@ -545,7 +549,6 @@ outdent: logical
 > - x
 
 > - b
->
 > - a┃
 ```
 
@@ -725,7 +728,7 @@ tags: edge free-form
 > moveSubtreeUp
 
 ```result
-rejected: not-expressible
+rejected: would-reparent
 ```
 
 ```buffer
@@ -1139,7 +1142,7 @@ tags: edge quote-container
 ### Quote43
 
 In the Obsidian flavor a callout's title is a line of its own, and a line break in its `[!type]`
-would unmake the callout. The `[!type]` is markup, so the edit is the host's (`editInMarkup: host`,
+would unmake the callout. The `[!type]` is markup, so the edit is the host's (`markup: text`,
 the default), and the callout is a quote of two lines.
 
 ```yaml
@@ -1164,12 +1167,12 @@ notApplicable
 
 ### Quote43b
 
-With `editInMarkup: refuse`, it is refused, and the callout stays.
+With `markup: decorated`, it is refused, and the callout stays.
 
 ```yaml
 tags: rare
 flavor: obsidian
-editInMarkup: refuse
+markup: decorated
 ```
 
 ```buffer
@@ -1340,7 +1343,7 @@ tags: edge quote-container
 ### Quote51
 
 Delete at a quoted paragraph's end before a quoted blank line takes the blank line, its `>` with it,
-and the paragraphs are one, as outside a quote ([Delete18](del.md#delete18)). Left to the host, the
+and the paragraphs are one, as outside a quote ([Delete18](delete.md#delete18)). Left to the host, the
 blank line's `>` would become text: `> a┃>`.
 
 ```yaml
@@ -1356,8 +1359,7 @@ tags: edge free-form quote-container
 > deleteContentForward
 
 ```buffer
-> a┃
-> b
+> a┃b
 ```
 
 ## Joining across a quote's edge
@@ -1390,7 +1392,8 @@ Backspace peels the markup in front of a quote's first node, nearest first (rule
 ### Quote53
 
 Backspace at the start of a quote's first paragraph takes the `>` off it, and it leaves the quote;
-a quote it was all of goes. Bare Obsidian gets there in two presses, the space, then the `>`.
+a quote it was all of goes. Bare Obsidian and its Outliner get there in two presses, the space,
+then the `>`.
 
 ```yaml
 tags: common
@@ -1506,7 +1509,8 @@ tags: edge quote-container
 
 Backspace at the start of a callout's title takes its `[!type]` first: the callout is a plain quote,
 the title its first paragraph, set off from the body by a quoted blank line (it is a line of its own
-in the Obsidian flavor). Bare Obsidian deletes the space, leaving `[!note]Title`, still a callout.
+in the Obsidian flavor). Bare Obsidian and its Outliner delete the space, leaving `[!note]Title`,
+still a callout.
 
 ```yaml
 tags: edge quote-container
@@ -1543,7 +1547,7 @@ flavor: commonmark
 ```buffer
 para
 
-> ┃[!note] Title
+> [!note] ┃Title
 > body
 ```
 
@@ -1574,6 +1578,67 @@ tags: rare free-form quote-container
 ```buffer
 ┃
 ```
+
+### Quote89
+
+Backspace on the empty paragraph Enter put above a quote's first paragraph takes it back, the quoted
+blank line with it, as above the document's first paragraph
+([Backspace43](backspace.md#backspace43)): with nothing above it in the quote, it has nothing to join.
+
+```yaml
+tags: rare quote-container
+```
+
+```buffer
+> ┃q
+```
+
+> enter
+
+```buffer
+> ┃◌
+>
+> q
+```
+
+> deleteContentBackward
+
+```buffer
+> ┃q
+```
+
+### Quote90
+
+After a closing fence that ends a quote, Enter makes an empty paragraph in the quote, held by a
+placeholder, as after a fence elsewhere ([Fence59](fences.md#fence59)): left empty, it goes with its
+`>`, where a bare `> ` line would stay behind.
+
+```yaml
+tags: rare quote-container markup-fence
+```
+
+````buffer
+> ```
+> code
+> ```┃
+````
+
+> enter
+
+````buffer
+> ```
+> code
+> ```
+> ┃◌
+````
+
+> cursorDocStart
+
+````buffer
+┃> ```
+> code
+> ```
+````
 
 ## Joining into a callout's title
 
@@ -1836,8 +1901,9 @@ tags: rare quote-container
 
 ## Quote73
 
-Enter in a quote that is an item's first block: the new paragraph is quoted at the item's column.
-Backspace takes it back, the blank line first, as between paragraphs.
+Enter in a quote that is an item's first block: the new paragraph is quoted at the item's column, as
+Enter in a quote makes a node in the quote (rule 3). Backspace takes it back in one press, as between
+paragraphs. Bare Obsidian and its Outliner make a new item instead, leaving the quote.
 
 ```yaml
 tags: edge free-form quote-container
@@ -1855,7 +1921,7 @@ tags: edge free-form quote-container
   > ┃b
 ```
 
-> deleteContentBackward deleteContentBackward
+> deleteContentBackward
 
 ```buffer
 - > a┃b
@@ -2221,11 +2287,119 @@ tags: edge quote-container
     - g
 ```
 
+```outline
+quote
+  item: q⏎- g
+```
+
 > outdent
 
 ```buffer
 - ┃q
     \- g
+```
+
+## Quote91
+
+A quote written `>` without its space (`>- a`): a line Shift-Enter makes in its item puts the item's
+text after `> `, as the lines below its first do (Quote86). After a bare `>`, the quote would take
+one of the item's two columns as its own space, and the line would be lazy at best.
+
+```yaml
+tags: rare quote-container
+```
+
+```buffer
+>- a┃b
+```
+
+> shiftEnter
+
+```buffer
+>- a
+>   ┃b
+```
+
+## Quote91b
+
+The same at the item's text start: there the text's line can't be lazy, as the item has no text
+above it, so at two columns the text would be a paragraph of the quote, out of the item.
+
+```yaml
+tags: rare quote-container
+```
+
+```buffer
+>- ┃a
+>- b
+```
+
+> shiftEnter
+
+```buffer
+>-
+>   ┃a
+>- b
+```
+
+## Quote92
+
+A quote in an item, its paragraphs apart by a quoted blank line: indented, the item's quote moves
+whole, the blank line's `>` with it, or the quote would end there.
+
+```yaml
+tags: rare quote-container
+```
+
+```buffer
+- a
+- ┃b
+  > q
+  >
+  > r
+```
+
+> indent
+
+```buffer
+- a
+  - ┃b
+    > q
+    >
+    > r
+```
+
+> outdent
+
+```buffer
+- a
+- ┃b
+  > q
+  >
+  > r
+```
+
+## Quote93
+
+Backspace at a quoted heading's text start takes its `#`s, as anywhere: the title, now paragraph
+text, is set apart from the quoted paragraph above by a quoted blank line, not a bare one, which
+would end the quote.
+
+```yaml
+tags: rare quote-container markup-heading
+```
+
+```buffer
+> a
+> # ┃H
+```
+
+> deleteContentBackward
+
+```buffer
+> a
+>
+> ┃H
 ```
 
 ## A paragraph outdented out of a nested quote

@@ -140,6 +140,18 @@ export function lineSpan(text: string, pos: number): [number, number] {
 /** A space or a tab: the whitespace of indentation and of the gaps around markers. */
 export const isSpaceOrTab = (c: number): boolean => c === 32 || c === 9;
 
+// Markdown's whitespace, where it decides a blank line, indentation, or what a paragraph's lines are
+// stripped of, is spaces and tabs (CommonMark 0.31.2); a no-break space (U+00A0, U+202F) and the
+// other Unicode spaces are text, which JavaScript's `trim` and `\s` would take. Line endings go too,
+// for text of several lines joined.
+
+/** `text` without the Markdown whitespace at either end. */
+export const trimMd = (text: string): string => text.replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, '');
+/** `text` without the Markdown whitespace at its start. */
+export const trimMdStart = (text: string): string => text.replace(/^[ \t\r\n]+/, '');
+/** `text` without the Markdown whitespace at its end. */
+export const trimMdEnd = (text: string): string => text.replace(/[ \t\r\n]+$/, '');
+
 /**
  * From `pos`, past the spaces and tabs in `text` towards `limit`: forward (`dir` 1, up to `limit`) or
  * backward (`dir` -1, down to `limit`, looking at the character before each position).

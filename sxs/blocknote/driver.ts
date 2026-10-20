@@ -73,8 +73,8 @@ function holds(o: Outline): string | undefined {
   // a list item is a list item's text: BlockNote's headings and code blocks are blocks of their own
   for (const b of o.blocks) {
     if (b.free) continue;
-    if (/^#{1,6} /.test(b.text)) return 'a heading as a list item (a heading is a block of its own)';
-    if (/^```/.test(b.text)) return 'a code block as a list item (a code block is a block of its own)';
+    if (/^#{1,6} /.test(b.text)) return 'heading as a list item (a heading is a block of its own)';
+    if (/^```/.test(b.text)) return 'code block as a list item (a code block is a block of its own)';
   }
   // numbered siblings that don't count on (`1. a`, `1. b`): BlockNote numbers a run of them on from its
   // first, whose `start` alone it draws (measured)
@@ -82,7 +82,7 @@ function holds(o: Outline): string | undefined {
   for (const b of o.blocks) {
     last.length = b.depth + 1;
     const n = !b.free && /^(\d{1,9})\. /.exec(b.text);
-    if (n && last[b.depth] != null && Number(n[1]) !== last[b.depth]! + 1) return 'a numbered list right after another (BlockNote numbers them as one)';
+    if (n && last[b.depth] != null && Number(n[1]) !== last[b.depth]! + 1) return 'numbered list right after another (BlockNote numbers them as one)';
     last[b.depth] = n ? Number(n[1]) : null;
   }
   if (!o.sel) return undefined;
@@ -90,13 +90,16 @@ function holds(o: Outline): string | undefined {
   const from = Math.min(o.sel.anchor, o.sel.head);
   const to = Math.max(o.sel.anchor, o.sel.head);
   // a task's checkbox is drawn, not text
-  if (/^\[[ xX]\] /.test(text) && from < 4) return "a caret in a task's checkbox";
+  if (/^\[[ xX]\] /.test(text) && from < 4) return "caret in a task's checkbox";
+  // a heading's #s are its level, not text: the caret goes to the title's start (Enter55)
+  const hashes = /^#{1,6} /.exec(text);
+  if (hashes && from < hashes[0].length) return "caret in a heading's #s";
   // a code block's editor has the code alone, its language a menu
   const fence = /^```[^\n`]*\n([\s\S]*?)\n?```$/.exec(text);
   if (fence) {
     const start = text.indexOf('\n') + 1;
     const end = start + fence[1]!.length;
-    if (from < start || to > end) return "a caret on a code block's fence";
+    if (from < start || to > end) return "caret on a code block's fence";
   }
   return undefined;
 }
@@ -222,16 +225,16 @@ function loadPage({ blocks, at }: { blocks: BnBlock[]; at: { block: number; anch
 }
 
 export const driver: Driver = {
-  name: 'blocknote',
-  title: 'BlockNote',
-  id: 'BN',
+  shortId: 'BN',
+  longId: 'blocknote',
+  displayName: 'BlockNote',
   url: 'https://www.blocknotejs.org/examples/basic/minimal',
   model: 'block',
   // paragraphs, headings and code are blocks outside every list, as the spec's buffers have them; list
   // items the rest
   freeForm: true,
   // measured: Enter at an item's text start leaves the caret with the text
-  behaves: { enterAtTextStart: 'stay', pasteStructuredAtEnd: 'join', pasteStructuredListForm: 'own' },
+  behaves: { enterSplitSpace: 'start', enterAtTextStart: 'stay', pasteStructuredAtEnd: 'join', pasteStructuredListForm: 'own' },
   keys: {
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',

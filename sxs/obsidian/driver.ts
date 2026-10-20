@@ -3,4 +3,4 @@
 
 import { obsidianDriver } from './obsidian.ts';
 
-export const driver = obsidianDriver({ name: 'obsidian', title: 'Obsidian (Source mode)', id: 'OB', mode: 'source' });
+export const driver = obsidianDriver({ shortId: 'OB', longId: 'obsidian', displayName: 'Obsidian', mode: 'source' });

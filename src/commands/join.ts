@@ -3,9 +3,9 @@
 
 import { OutlineState, type OutlineNode } from '../outline/index.ts';
 import type { LineInfo } from '../parser/index.ts';
-import { isSpaceOrTab, mapPos, skipSpaces, type ChangeSpec } from '../text.ts';
+import { isSpaceOrTab, mapPos, skipSpaces, trimMd, trimMdEnd, trimMdStart, type ChangeSpec } from '../text.ts';
 import { OutlinePlan, type OutlinePlanNode } from '../encoder/index.ts';
-import { CommandContext, isFenceLine, outOfQuoteOpeningItem, referenceFix, blankInQuote, followsParentText, isClosingFence, isEmptyItem, isEmptyWithChildren, lineEndWithEnding, normText, removeLines } from './context.ts';
+import { CommandContext, continuationUnescape, interrupts, isFenceLine, outOfQuoteOpeningItem, referenceFix, blankInQuote, followsParentText, isClosingFence, isEmptyItem, isEmptyWithChildren, normText, removeLines } from './context.ts';
 import { notApplicable, reject, run, withPlan, type CommandPlan, type Outcome } from './plan.ts';
 import { joinCodeLines, joinPayloadLines } from './code.ts';
 
@@ -42,6 +42,20 @@ export function deleteToTextStart(ctx: CommandContext): Outcome {
   if (node && isFenceLine(ctx, line) && pos > skipSpaces(doc.text, line.contentFrom, line.to, 1)) return reject('not-expressible', 'a fence has no text');
   if (!node || node.kind === 'atom' || !node.head) return notApplicable;
   const start = doc.textStart(pos);
+  // with `taskEditing: text`, from right after the checkbox, it goes, as text, back to the marker
+  // (SoftBackspace10); the text after it, now the item's, is escaped where it would start a block
+  if (pos === start && doc.config.taskEditing === 'text' && node.kind === 'item' && line.index === node.startLine) {
+    const from = skipSpaces(doc.text, doc.markerTo(node.block), line.to, 1);
+    if (from < pos && /^\[[ xX]\][ \t]+$/.test(doc.text.slice(from, pos))) {
+      const lines = doc.headLines(node).map((l) => trimMdStart(l));
+      lines[0] = lines[0]!.slice(pos - from);
+      const escaped = ctx.encoder.escape(lines[0]!, 'start', lines.slice(1));
+      const changes = [{ from, to: pos, insert: escaped.at !== null ? lines[0]!.slice(0, escaped.at) + '\\' : '' }];
+      if (escaped.at !== null) changes[0]!.to = pos + escaped.at;
+      lines[0] = escaped.text;
+      return ctx.caret(changes, from, ctx.plan.setText(node, normText(lines)));
+    }
+  }
   if (pos <= start) return join(ctx);
   // the spaces after the caret go too: left after a marker, they would move the content column
   let to = pos;
@@ -64,7 +78,8 @@ export function deleteToTextStart(ctx: CommandContext): Outcome {
     // a setext underline is markup, with no text to delete back through
     if (node.head.type === 'heading' && i === lines.length) return reject('not-expressible', 'a setext underline has no text');
     if (i < 0 || i >= lines.length) return notApplicable;
-    lines[i] = lines[i]!.slice(0, start - line.contentFrom) + rest;
+    // the text may start before Markdown's content does (a split's kept padding, `enterSplitSpace: start`)
+    lines[i] = lines[i]!.slice(0, Math.max(0, start - line.contentFrom)) + rest;
     expected = ctx.plan.setText(node, normText(lines));
   }
   const changes: ChangeSpec[] = [{ from: start, to, insert: '' }];
@@ -74,20 +89,17 @@ export function deleteToTextStart(ctx: CommandContext): Outcome {
 
 /**
  * Backspace at `ctx`'s caret. `forward`: Delete at the end of the node above asked for it, and the
- * caret stays there; `headingAsText`: Delete before an item whose text is a heading, whose whole line
- * joins.
+ * caret stays there.
  */
-export function join(ctx: CommandContext, opts: { forward?: boolean; headingAsText?: boolean } = {}): Outcome {
+export function join(ctx: CommandContext, opts: { forward?: boolean } = {}): Outcome {
   const { doc } = ctx;
   if (!ctx.collapsed) return deleteSelection(ctx);
-  const pos = ctx.sel.head;
+  let pos = ctx.sel.head;
   const node = doc.nodeAt(pos);
   const code = joinCodeLines(ctx, node ?? null, pos, -1) ?? joinPayloadLines(ctx, node ?? null, pos, -1);
   if (code) return code;
   if (!node) return notApplicable;
   const line = doc.lineAt(pos);
-  const gap = deleteGap(ctx, node, pos, -1);
-  if (gap) return gap;
 
   // at the start of a continuation line of a node's text: join it to the line above
   if (node.head?.type === 'paragraph' && line.index > node.head.startLine && line.index <= node.head.endLine) {
@@ -97,26 +109,42 @@ export function join(ctx: CommandContext, opts: { forward?: boolean; headingAsTe
     const prevLine = doc.lines[line.index - 1]!;
     const lines = doc.headLines(node);
     const i = line.index - node.head.startLine;
-    // an escape that only kept the line from starting a block goes: mid-line it serves nothing
-    const joinedLine = lines[i]!.trimStart();
-    const k = lineStartEscape(joinedLine);
-    const tail = k < 0 ? joinedLine : joinedLine.slice(0, k) + joinedLine.slice(k + 1);
+    // the line's spaces past its column (a break's, which Shift-Enter put there) join with it: the text
+    // concatenates; an escape that only kept the line from starting a block goes: mid-line it serves
+    // nothing
+    const spaces = first - line.contentFrom;
+    const joinedLine = lines[i]!;
+    const k = lineStartEscape(joinedLine.slice(spaces));
+    const tail = k < 0 ? joinedLine : joinedLine.slice(0, spaces + k) + joinedLine.slice(spaces + k + 1);
     const after = [...lines.slice(0, i - 1), lines[i - 1]! + tail, ...lines.slice(i + 1)];
-    // the text's start may read as a link reference definition now, or no longer need its escape
-    const ref = referenceFix(ctx, node, lines, after);
-    const expected = ctx.plan.setText(node, normText(ref?.lines ?? after));
-    const changes: ChangeSpec[] = [{ from: prevLine.to, to: first, insert: '' }];
+    // the text's start may read as a link reference definition now, or no longer need its escape; so
+    // may the line joined into, ended by a split there (an empty line, held by a placeholder, read as
+    // the text it stands for: the escape Shift-Enter wrote over it kept `[a]:` from a definition)
+    const held = lines.map((l, k) => (k === i && trimMd(l) === '' ? 'x' : l));
+    const ref = referenceFix(ctx, node, held, after);
+    const seam = ref ? null : continuationUnescape(ctx, node, lines, after, i - 1);
+    const expected = ctx.plan.setText(node, normText(ref?.lines ?? seam?.lines ?? after));
+    const changes: ChangeSpec[] = [{ from: prevLine.to, to: line.contentFrom, insert: '' }];
     if (k >= 0) changes.push({ from: first + k, to: first + k + 1, insert: '' });
-    if (ref) changes.push(ref.change);
-    const shift = ref && ref.change.from < prevLine.to ? ref.change.insert.length - (ref.change.to - ref.change.from) : 0;
-    return ctx.caret(changes, prevLine.to + shift, expected);
+    const fix = ref ?? seam;
+    if (fix) changes.push(fix.change);
+    const shift = fix && fix.change.from < prevLine.to ? fix.change.insert.length - (fix.change.to - fix.change.from) : 0;
+    return ctx.caret(changes, prevLine.to + spaces + shift, expected);
   }
 
   // an empty paragraph's placeholder (Enter twice left a list): back to the end of the node above;
   // the list the paragraph owned (Enter left from the middle of a list) stays, in its place
   if (node.kind === 'paragraph' && normText(doc.headLines(node)) === '') {
+    // in an item, right after its text, two Shift-Enters made it: the second goes (ShiftEnter11)
+    const back = node.parent?.kind === 'item' ? joinParagraphAfterGap(ctx, node, line, pos) : null;
+    if (back) return back;
     const prev = doc.before(node);
-    if (!prev || prev.kind === 'root') return notApplicable;
+    // with nothing above it in its container (the document's start, a quote's), it goes with its blank
+    // lines, as Delete takes it, the caret to the text below (Backspace43, Quote89)
+    if (!prev || prev.kind === 'root' || (prev === node.parent && prev.kind === 'quote' && !prev.head)) {
+      const next = doc.after(node);
+      return next && node.children.length === 0 ? dropEmptyParagraph(ctx, node, next) : notApplicable;
+    }
     // the node's lines stay whole (a setext underline, a closing `#`), the caret goes to its text's end
     const end = doc.lines[prev.headEndLine]!.to;
     const caret = doc.headRange(prev)?.to ?? end;
@@ -126,9 +154,30 @@ export function join(ctx: CommandContext, opts: { forward?: boolean; headingAsTe
 
   if (node.kind === 'quote' && node.head && line.index === node.head.startLine) return unwrapCallout(ctx, node, line, pos);
   if (node.kind === 'heading') return doc.config.headingEditing === 'text' ? unwrapHeading(ctx, node, line, pos) : joinHeading(ctx, node, line, pos);
-  if (node.kind === 'paragraph') return joinParagraphAfterGap(ctx, node, line, pos) ?? joinParagraph(ctx, node, line, pos, !!opts.forward);
+  if (node.kind === 'paragraph') {
+    // spaces before its text that are its own (`enterSplitSpace: start`): from their start Backspace
+    // joins, the spaces with the text; inside them it deletes a character, the host's
+    const range = doc.headRange(node);
+    const lead = keptSpaces(ctx, node);
+    if (range && lead && line.index === node.head!.startLine && pos >= range.from - lead.length && pos <= range.from) {
+      if (pos > range.from - lead.length) return notApplicable;
+      pos = range.from;
+    }
+    return joinParagraphAfterGap(ctx, node, line, pos) ?? joinParagraph(ctx, node, line, pos, !!opts.forward);
+  }
   if (node.kind !== 'item') return notApplicable;
-  if (node.head?.type === 'heading') return joinItemHeading(ctx, node, pos, !!opts.headingAsText);
+  if (node.head?.type === 'heading') return joinItemHeading(ctx, node, pos);
+  // the text alone on the line after its marker's (Shift-Enter at the text start made it): Backspace at
+  // its start takes the break back, and the blank line that set the bare marker apart (ShiftEnter13)
+  if (node.head?.type === 'paragraph' && node.head.startLine > node.startLine && line.index === node.head.startLine && pos >= ownTextFrom(ctx, node) && pos <= doc.headRange(node)!.from) {
+    // inside spaces that are the text's (`enterSplitSpace: start`), a character's, the host's
+    if (pos > ownTextFrom(ctx, node)) return notApplicable;
+    const markerLine = doc.lines[node.startLine]!;
+    const changes: ChangeSpec[] = [{ from: doc.markerTo(node.block), to: pos, insert: ' ' }];
+    const above = doc.lines[node.startLine - 1];
+    if (above?.blank && node.parent?.children[0] === node && (node.parent.kind === 'item' || node.parent.kind === 'paragraph') && doc.nodeAtLine(node.startLine - 2) === node.parent) changes.unshift({ from: above.from, to: markerLine.from, insert: '' });
+    return ctx.caret(changes, mapPos(changes, pos, 1), ctx.plan);
+  }
   const range = doc.headRange(node);
   const markerLine = doc.lines[node.startLine]!;
   // a task with nothing after its checkbox has no head where the flavor reads tasks (GFM): the checkbox
@@ -137,22 +186,29 @@ export function join(ctx: CommandContext, opts: { forward?: boolean; headingAsTe
   // a task's checkbox is chrome, like the marker: the text starts after it
   const box = textFrom !== null && (!node.head || node.head.type === 'paragraph') ? /^\[[ xX]\](?:[ \t]+|$)/.exec(doc.text.slice(textFrom, markerLine.to)) : null;
   const contentStart = textFrom !== null ? textFrom + (box ? box[0].length : 0) : markerLine.to;
+  // inside the checkbox, its character goes, as in text (TaskBackspace8)
+  if (box && pos === textFrom! + 2 && doc.lineAt(pos).index === node.startLine) return checkboxCharacter(ctx, node, pos - 1);
   // anywhere in the item's marker zone counts as its start: deleting the line break before
-  // a marker would merge the item's marker into the text above
-  if (pos > contentStart || pos < markerLine.from || doc.lineAt(pos).index !== node.startLine) return notApplicable;
+  // a marker would merge the item's marker into the text above; past spaces that are its text's (a
+  // split's kept padding, a held space), inside the text, Backspace deletes a character, the host's
+  const ownFrom = range ? spacesFrom(ctx, node, contentStart) : contentStart;
+  if (pos > contentStart || (pos > ownFrom && ownFrom < contentStart) || pos < markerLine.from || doc.lineAt(pos).index !== node.startLine) return notApplicable;
   if (range && node.head!.type !== 'paragraph') return notApplicable;
   // right after a checkbox: the checkbox goes, and the task is a plain item (`checkbox`, the default:
   // the markup in front of the text goes first); or one character of it, as plain text (`text`)
   if (box && pos === contentStart && doc.config.taskEditing === 'text') {
     const lines = doc.headLines(node);
-    const first = lines[0]!.trimStart();
+    const first = trimMdStart(lines[0]!);
     lines[0] = first.slice(0, box[0].length - 1) + first.slice(box[0].length);
     return ctx.caret([{ from: pos - 1, to: pos, insert: '' }], pos - 1, ctx.plan.setText(node, normText(lines)));
   }
   if (box && pos === contentStart && doc.config.taskEditing === 'checkbox') {
     const changes = [{ from: textFrom!, to: textFrom! + box[0].length, insert: '' }];
     const lines = doc.headLines(node);
-    lines[0] = lines[0]!.trimStart().slice(box[0].length);
+    // the text now starts the item's: escaped where it would start a block there (`- \# x`)
+    const escaped = ctx.encoder.escape(trimMdStart(lines[0]!).slice(box[0].length), 'start', lines.slice(1).map((l) => trimMdStart(l)));
+    if (escaped.at !== null) changes.push({ from: contentStart + escaped.at, to: contentStart + escaped.at, insert: '\\' });
+    lines[0] = escaped.text;
     const caret = textFrom!;
     // emptied right after its parent's text, the item exists only under the caret
     const held = normText(lines) === '' && followsParentText(ctx, node);
@@ -220,8 +276,11 @@ export function join(ctx: CommandContext, opts: { forward?: boolean; headingAsTe
   if (node.children.length > 0 && empty) return reject('has-children');
 
   // Its children go to the node above, as when Logseq or Workflowy merge a block: into its place
-  // when that node is its parent (or can't hold them), else as the node's last children.
+  // when that node is its parent (or can't hold them), else as the node's last children. Coming up a
+  // level so, they make the join refused with `joinWithChildren: refuse` (Delete at the parent's end
+  // asks for this join too).
   const adopt = prev.kind === 'item' && prev !== node.parent;
+  if (!adopt && node.children.length > 0 && doc.config.joinWithChildren === 'refuse') return reject('has-children');
   let expected =
     node.children.length === 0
       ? ctx.plan.remove([gone])
@@ -231,10 +290,9 @@ export function join(ctx: CommandContext, opts: { forward?: boolean; headingAsTe
   const prevRange = doc.headRange(prev);
 
   if (empty) {
-    // an empty item: remove its line, caret to the end of the node above
-    const from = node.startLine > 0 ? doc.lines[node.startLine - 1]!.to : markerLine.from;
-    const to = node.startLine > 0 ? markerLine.to : lineEndWithEnding(doc, node.startLine);
-    return orEncoded(ctx, ctx.caret([{ from, to, insert: '' }], textEnd(ctx, prev), expected), textEnd(ctx, prev), -1);
+    // an empty item: its lines go, caret to the end of the node above
+    const changes = removeLines(ctx, emptyItemLines(ctx, node));
+    return orEncoded(ctx, ctx.caret(changes, mapPos(changes, textEnd(ctx, prev), -1), expected), textEnd(ctx, prev), -1);
   }
 
   // into an empty item above (an empty task's too): the text moves up into it, its own checkbox and
@@ -261,9 +319,15 @@ export function join(ctx: CommandContext, opts: { forward?: boolean; headingAsTe
   if (!range || !prevRange || !prev.head || !joinsInto(prev)) return reject('not-expressible', `can't join into ${prev.head?.type ?? 'an empty item'}`);
   const prevLines = doc.headLines(prev);
   const lines = doc.headLines(node);
-  if (box) lines[0] = lines[0]!.trimStart().slice(box[0].length);
+  if (box) lines[0] = trimMdStart(lines[0]!).slice(box[0].length);
   if (lines.length > 1 && singleLine(prev)) return reject('not-expressible', singleLine(prev));
-  const merged = [...prevLines.slice(0, -1), prevLines[prevLines.length - 1]! + lines[0]!.trimStart(), ...lines.slice(1)];
+  // the spaces before the text that are its own (a placeholder's, a split's padding under
+  // `enterSplitSpace: start`) join with it
+  const movedFrom = spacesFrom(ctx, node, contentStart);
+  const lineEnd = doc.lines[node.head!.startLine]!.to;
+  const lead = doc.text.slice(movedFrom, contentStart);
+  const own = trimMdStart(lines[0]!);
+  const merged = [...prevLines.slice(0, -1), prevLines[prevLines.length - 1]! + lead + own, ...lines.slice(1)];
   if (node.children.length > 0) {
     // the children move: the encoder writes the merged text, as the node above's own lines, and them
     const above = doc.contentOf(prev).lines!;
@@ -272,31 +336,71 @@ export function join(ctx: CommandContext, opts: { forward?: boolean; headingAsTe
     const lastLine = doc.lines[prev.head.endLine]!;
     // where the text ends on the last line (before a heading's closing `#`s)
     const end = prevRange.to - (lastLine.to - above[last]!.length);
-    const rest = doc.text.slice(contentStart, doc.lines[node.head!.startLine]!.to);
+    const rest = lead + doc.text.slice(contentStart, lineEnd);
     const written = [...above.slice(0, last), above[last]!.slice(0, end) + rest + above[last]!.slice(end), ...own!.slice(1)];
     // the text keeps the gap it had before its children
     return joined(ctx, expected, prev, { text: normText(merged), lines: written, gap }, last, end);
   }
-  const changes = joinChanges(ctx, prev, prevRange, contentStart, doc.lines[node.head!.startLine]!.to);
+  const changes = joinChanges(ctx, prev, prevRange, movedFrom, lineEnd);
   // an escape that only kept the text from starting a block at its line's start goes: mid-line it
   // serves nothing (`- abc` / `- \- def` joins back to `- abc- def`)
-  const k = prevRange.to === doc.lines[prev.headEndLine]!.to ? lineStartEscape(lines[0]!.trimStart()) : -1;
+  const k = prevRange.to === doc.lines[prev.headEndLine]!.to ? lineStartEscape(trimMdStart(lines[0]!)) : -1;
   if (k >= 0) {
     changes.push({ from: contentStart + k, to: contentStart + k + 1, insert: '' });
     const joinedLine = merged[prevLines.length - 1]!;
-    const at = prevLines[prevLines.length - 1]!.length + k;
+    const at = prevLines[prevLines.length - 1]!.length + lead.length + k;
     merged[prevLines.length - 1] = joinedLine.slice(0, at) + joinedLine.slice(at + 1);
   }
-  // the text's start may read as a link reference definition now, or no longer need the escape it had
-  const ref = referenceFix(ctx, prev, prevLines, merged);
+  // the text's start may read as a link reference definition now, or no longer need the escape it had;
+  // so may the last line of the text joined into, ended by a split there
+  const ref = referenceFix(ctx, prev, prevLines, merged) ?? continuationUnescape(ctx, prev, prevLines, merged, prevLines.length - 1);
   if (ref) changes.push(ref.change);
   expected = expected.setText(prev, normText(ref?.lines ?? merged));
   const shift = ref ? ref.change.insert.length - (ref.change.to - ref.change.from) : 0;
   // what followed the item may run into the joined text now (an ordered list from 2 can't interrupt
   // a paragraph): the encoder sets it apart
-  const written = expected.update(prev, (n) => ({ ...n, lines: (ref?.lines ?? merged).map((l, i) => (i ? l : l.trimStart())) }));
+  const written = expected.update(prev, (n) => ({ ...n, lines: (ref?.lines ?? merged).map((l, i) => (i ? l : trimMdStart(l))) }));
   return orEncoded(ctx, ctx.caret(changes, prevRange.to + shift, expected), prevRange.to, -1, written);
 }
+
+/**
+ * The spaces before a paragraph's text that are its text's (`enterSplitSpace: start`, `␠Two.`, as
+ * `OutlineState.textStart` reads them), which a join takes with it; '' where there are none.
+ */
+function keptSpaces(ctx: CommandContext, node: OutlineNode): string {
+  const range = ctx.doc.headRange(node);
+  return range ? ctx.doc.text.slice(ownTextFrom(ctx, node), range.from) : '';
+}
+
+/** Where `node`'s text starts, the spaces before it that are its own included (`OutlineState.textStart`). */
+function ownTextFrom(ctx: CommandContext, node: OutlineNode): number {
+  const range = ctx.doc.headRange(node)!;
+  return Math.min(range.from, ctx.doc.textStart(range.from));
+}
+
+/**
+ * Where the spaces before `node`'s text start (`textStart`, where Markdown reads it) that are its
+ * text's start: the first a placeholder holds as text (`- ◌ x`), or the padding a split kept
+ * (`enterSplitSpace: start`, `OutlineState.textStart`); else `textStart`.
+ */
+function spacesFrom(ctx: CommandContext, node: OutlineNode, textStart: number): number {
+  const { doc } = ctx;
+  const held = doc.placeholders.find((p) => p >= doc.markerTo(node.block) && p < textStart && isSpaceOrTab(doc.text.charCodeAt(p)));
+  return Math.min(held ?? textStart, doc.textStart(textStart));
+}
+
+/**
+ * What only served `text` (a node's first line, its leading spaces gone) at its line's start, which
+ * a join moves mid-line: an escape that kept it from starting a block (`lineStartEscape`). Where it
+ * is in `text`, how long, and what replaces it; null where nothing does.
+ */
+function lineStartFix(text: string): { at: number; length: number; insert: string } | null {
+  const k = lineStartEscape(text);
+  return k < 0 ? null : { at: k, length: 1, insert: '' };
+}
+
+/** `text` with `fix` applied. */
+const fixed = (text: string, fix: { at: number; length: number; insert: string } | null): string => (fix ? text.slice(0, fix.at) + fix.insert + text.slice(fix.at + fix.length) : text);
 
 /**
  * Where a backslash at the start of `text` only kept it from starting a block at a line's start (a
@@ -347,7 +451,7 @@ function deleteSelection(ctx: CommandContext): Outcome {
   let rest = lastLines[b]!.slice(to - toLine.contentFrom);
   // the rest starting a line now (nothing kept before it) is escaped where it would start a block there
   const changes: ChangeSpec[] = [{ from, to, insert: '' }];
-  if (kept.trim() === '') {
+  if (trimMd(kept) === '') {
     const escaped = ctx.encoder.escape(rest, a === 0 ? 'start' : 'continuation', a === 0 ? lastLines.slice(b + 1) : undefined);
     if (escaped.at !== null) changes.push({ from: to + escaped.at, to: to + escaped.at, insert: '\\' });
     rest = escaped.text;
@@ -438,8 +542,12 @@ function unwrapItem(ctx: CommandContext, node: OutlineNode): Outcome {
     if (sibling.kind !== 'item') break;
     later.push(sibling);
   }
-  const { lines: written } = doc.contentOf(node);
-  const paragraph: OutlinePlanNode = { id: node.id, kind: 'paragraph', text: normText(doc.headLines(node)), lines: written!, children: ownsList ? [...node.children, ...later] : [] };
+  let lines = doc.contentOf(node).lines!;
+  // with `taskEditing: block` a task's checkbox goes with its marker, as a join drops it; what it
+  // leaves at the paragraph's start is escaped where it would start a block
+  const box = doc.config.taskEditing === 'block' ? /^([ \t]*)\[[ xX]\](?:[ \t]+|$)/.exec(lines[0]!) : null;
+  if (box) lines = [box[1] + ctx.encoder.escape(lines[0]!.slice(box[0].length), 'start', lines.slice(1).map((l) => trimMdStart(l))).text, ...lines.slice(1)];
+  const paragraph: OutlinePlanNode = { id: node.id, kind: 'paragraph', text: normText(box ? lines.map((l) => trimMdStart(l)) : doc.headLines(node)), lines, children: ownsList ? [...node.children, ...later] : [] };
   const base = later.length > 0 ? ctx.plan.remove(later) : ctx.plan;
   const expected = ownsList ? base.place('instead', node, [paragraph]) : base.place('instead', node, [paragraph, ...node.children]);
   const plan = ctx.encode(expected, {}, (written) => {
@@ -454,12 +562,18 @@ function unwrapItem(ctx: CommandContext, node: OutlineNode): Outcome {
  * `offset` of its line `line`.
  */
 function joined(ctx: CommandContext, plan: OutlinePlan, into: OutlineNode, merged: Pick<OutlinePlanNode, 'text' | 'lines' | 'gap'>, line: number, offset: number): Outcome {
-  // the text's start may read as a link reference definition now, or no longer need the escape it had
+  // the text's start may read as a link reference definition now, or no longer need the escape it had;
+  // so may the line joined into, ended by a split there
   const ref = merged.lines ? referenceFix(ctx, into, ctx.doc.contentOf(into).lines ?? [], merged.lines) : null;
   if (ref) {
     const added = ref.change.insert.length > 0;
     merged = { ...merged, lines: ref.lines, text: added ? '\\' + merged.text : merged.text!.replace(/^\\/, '') };
     if (line === 0 && offset > 0) offset += added ? 1 : -1;
+  }
+  const seam = !ref && merged.lines ? continuationUnescape(ctx, into, ctx.doc.contentOf(into).lines ?? [], merged.lines, line) : null;
+  if (seam) {
+    merged = { ...merged, lines: seam.lines, text: normText(seam.lines) };
+    offset--;
   }
   let node: OutlinePlanNode | null = null;
   const expected = plan.update(into, (old) => (node = { ...old, ...merged }));
@@ -473,10 +587,9 @@ function joined(ctx: CommandContext, plan: OutlinePlan, into: OutlineNode, merge
  * Backspace at the start of an item whose text is a heading (`- # H`). The markup nearest the caret
  * goes first: with `headingEditing: text`, the heading's marks (`#`s, closing ones too, or a setext
  * underline), the item staying with its title as a paragraph; with `block`, the title joins the node
- * above, as any item's text does. `asText` (Delete before the item, `headingEditing: text`): the line
- * joins whole, its `#`s as text, as Delete joins any heading's line.
+ * above, as any item's text does.
  */
-function joinItemHeading(ctx: CommandContext, node: OutlineNode, pos: number, asText: boolean): Outcome {
+function joinItemHeading(ctx: CommandContext, node: OutlineNode, pos: number): Outcome {
   const { doc } = ctx;
   const head = node.head!;
   const range = doc.headRange(node)!;
@@ -484,14 +597,9 @@ function joinItemHeading(ctx: CommandContext, node: OutlineNode, pos: number, as
   if (pos < markerLine.from || doc.lineAt(pos).index !== node.startLine) return notApplicable;
   // where the heading's markup starts, after the marker
   const marksFrom = skipSpaces(doc.text, doc.markerTo(node.block), markerLine.to, 1);
-  if (asText ? pos > marksFrom : pos > range.from) return notApplicable;
-  if (asText || doc.config.headingEditing === 'block') {
-    // joined text: the whole line (`# H` as text), or the title alone
-    if (asText && head.setext) return reject('not-expressible', "can't join a setext heading's lines as text");
-    const textFrom = asText ? marksFrom : range.from;
-    const textTo = asText ? markerLine.to : range.to;
-    return joinItemText(ctx, node, textFrom, textTo, head.setext ? head.endLine : null);
-  }
+  if (pos > range.from) return notApplicable;
+  // `headingEditing: block`: the title alone joins
+  if (doc.config.headingEditing === 'block') return joinItemText(ctx, node, range.from, range.to, head.setext ? head.endLine : null);
   // `headingEditing: text`: the marks go, the title stays the item's text
   let title = doc.text.slice(range.from, range.to);
   const changes: ChangeSpec[] = [];
@@ -499,9 +607,9 @@ function joinItemHeading(ctx: CommandContext, node: OutlineNode, pos: number, as
     // the underline goes; a blank line stays in its place where the line below would continue the title
     const underline = doc.lines[head.endLine]!;
     const next = doc.lines[head.endLine + 1];
-    const runsInto = !!next && !next.blank && !ctx.encoder.interruptsParagraph(doc.text.slice(next.contentFrom, next.to).trimStart());
+    const runsInto = !!next && !next.blank && !interrupts(ctx, doc.text.slice(next.contentFrom, next.to));
     // the blank line keeps the containers' prefix, trailing spaces trimmed (a quote's `>`)
-    const blank = ctx.encoder.continuation(underline.prefix).trimEnd();
+    const blank = trimMdEnd(ctx.encoder.continuation(underline.prefix));
     changes.push(runsInto ? { from: underline.from, to: underline.to, insert: blank } : { from: doc.lines[head.endLine - 1]!.to, to: underline.to, insert: '' });
   } else {
     // the title would start a block of its own at the item's text start (`- # - x`): escaped
@@ -514,8 +622,8 @@ function joinItemHeading(ctx: CommandContext, node: OutlineNode, pos: number, as
     const next = doc.lines[markerLine.index + 1];
     const owner = next && doc.nodeAtLine(next.index);
     const from = owner?.kind === 'item' && owner.startLine === next!.index ? doc.markerFrom(owner.block) : next?.contentFrom;
-    if (next && !next.blank && !ctx.encoder.interruptsParagraph(doc.text.slice(from, next.to).trimStart())) {
-      changes.push({ from: markerLine.to, to: markerLine.to, insert: ctx.ending(markerLine) + ctx.encoder.continuation(next.prefix).trimEnd() });
+    if (next && !next.blank && !interrupts(ctx, doc.text.slice(from, next.to))) {
+      changes.push({ from: markerLine.to, to: markerLine.to, insert: ctx.ending(markerLine) + trimMdEnd(ctx.encoder.continuation(next.prefix)) });
     }
     title = escaped.text;
   }
@@ -538,7 +646,7 @@ function joinItemText(ctx: CommandContext, node: OutlineNode, textFrom: number, 
   const text = doc.text.slice(textFrom, textTo);
   if (text.includes('\n') && singleLine(prev)) return reject('not-expressible', singleLine(prev));
   const prevLines = doc.headLines(prev);
-  const lines = text.split('\n').map((l) => l.trim());
+  const lines = text.split('\n').map((l) => trimMd(l));
   const merged = [...prevLines.slice(0, -1), prevLines[prevLines.length - 1]! + lines[0]!, ...lines.slice(1)];
   if (node.children.length > 0) {
     // the children go as in any join (into its place when the node above is its parent, else as that
@@ -589,9 +697,24 @@ function joinParagraph(ctx: CommandContext, node: OutlineNode, line: LineInfo, p
   const quote = node.parent!;
   if (quote.kind === 'quote' && !quote.head && quote.children[0] === node) return leaveQuote(ctx, node, quote);
   const prev = doc.before(node);
-  if (!prev || prev.kind === 'root') return reject('nothing-above');
-  // between paragraphs the blank line goes: the paragraph is more lines of the one above
-  if (prev.kind === 'paragraph' && prev.head?.type === 'paragraph') return joinParagraphLines(ctx, node, prev, forward);
+  if (!prev || prev.kind === 'root') {
+    // the document's first paragraph, after blank lines only: they go (Backspace43c)
+    const above = Array.from({ length: node.startLine }, (_, i) => i);
+    if (forward || node.parent?.kind !== 'root' || !above.length || !above.every((i) => doc.lines[i]!.blank)) return reject('nothing-above');
+    const changes = removeLines(ctx, above);
+    return ctx.caret(changes, mapPos(changes, pos, 1), ctx.plan);
+  }
+  // between paragraphs the blank line goes: the paragraph is more lines of the one above; with
+  // `enterAtTextStart: stay`, whose Enter leaves a blank line, one a press while more are there
+  // (Backspace12e, Delete18d)
+  if (prev.kind === 'paragraph' && prev.head?.type === 'paragraph') {
+    const between = Array.from({ length: node.startLine - prev.headEndLine - 1 }, (_, k) => prev.headEndLine + 1 + k);
+    if (doc.config.enterAtTextStart === 'stay' && between.length > 1 && between.every((l) => doc.lines[l]!.blank || blankInQuote(ctx, doc.lines[l]!))) {
+      const changes = removeLines(ctx, [between[between.length - 1]!]);
+      return ctx.caret(changes, forward ? mapPos(changes, doc.headRange(prev)!.to, -1) : mapPos(changes, pos, 1), ctx.plan);
+    }
+    return joinParagraphLines(ctx, node, prev);
+  }
   // a heading's title, and a callout's in the Obsidian flavor, is one line: only one joins it
   if ((prev.head?.type === 'heading' && !prev.head.setext) || prev.head?.type === 'callout_title') {
     if (doc.headLines(node).length > 1) return reject('not-expressible', singleLine(prev));
@@ -599,9 +722,15 @@ function joinParagraph(ctx: CommandContext, node: OutlineNode, line: LineInfo, p
     const title = doc.headLines(prev)[0]!;
     // a title that is only its `[!type]` gets the space its text follows
     const space = prev.head.type === 'callout_title' && /^[ \t]*\[![^\]]*\][+-]?$/.test(title) ? ' ' : '';
-    const expected = ctx.plan.place('instead', node, node.children).setText(prev, normText([title + space + doc.headLines(node)[0]!.trimStart()]));
-    const changes = joinChanges(ctx, prev, prevRange, range.from, doc.lines[node.head!.startLine]!.to);
+    // an escape that only kept the text from starting a block at its line's start goes (Enter60b)
+    const first = trimMdStart(doc.headLines(node)[0]!);
+    const fix = prevRange.to === doc.lines[prev.headEndLine]!.to ? lineStartFix(first) : null;
+    const lead = keptSpaces(ctx, node);
+    const own = lead + fixed(first, fix);
+    const expected = ctx.plan.place('instead', node, node.children).setText(prev, normText([title + space + own]));
+    const changes = joinChanges(ctx, prev, prevRange, range.from - lead.length, doc.lines[node.head!.startLine]!.to);
     if (space) changes[0] = { ...changes[0]!, insert: space + changes[0]!.insert };
+    if (fix) changes.push({ from: range.from + fix.at, to: range.from + fix.at + fix.length, insert: fix.insert });
     return ctx.caret(changes, prevRange.to + space.length, expected, { compare: 'flat' });
   }
   // a setext title takes the line at the end of its text, before the underline, as an ATX title does
@@ -609,12 +738,16 @@ function joinParagraph(ctx: CommandContext, node: OutlineNode, line: LineInfo, p
   if (prev.head?.type === 'heading' && prev.head.setext && prev.kind === 'heading') {
     const titleEnd = doc.lines[prev.head.endLine - 1]!.to;
     const titleLines = doc.headLines(prev);
-    const own = doc.headLines(node).map((l, k) => (k === 0 ? l.trimStart() : l));
+    const own = doc.headLines(node).map((l, k) => (k === 0 ? trimMdStart(l) : l));
+    // an escape that only kept the text from starting a block at its line's start goes (Enter60)
+    const fix = lineStartFix(own[0]!);
+    const lead = keptSpaces(ctx, node);
+    own[0] = lead + fixed(own[0]!, fix);
     const expected = ctx.plan.place('instead', node, node.children).setText(prev, normText([...titleLines.slice(0, -1), titleLines[titleLines.length - 1]! + own[0]!, ...own.slice(1)]));
     // the paragraph's lines move up before the underline, the first onto the title's last line
     const paraFrom = doc.lines[node.head!.startLine]!;
     const paraTo = doc.lines[node.head!.endLine]!;
-    const moved = doc.text.slice(skipSpaces(doc.text, paraFrom.contentFrom, paraFrom.to, 1), paraTo.to);
+    const moved = lead + fixed(doc.text.slice(skipSpaces(doc.text, paraFrom.contentFrom, paraFrom.to, 1), paraTo.to), fix);
     const changes = [
       { from: titleEnd, to: titleEnd, insert: moved },
       { from: doc.lines[node.head!.startLine - 1]!.to, to: paraTo.to, insert: '' },
@@ -633,31 +766,34 @@ function joinParagraph(ctx: CommandContext, node: OutlineNode, line: LineInfo, p
   const own = doc.contentOf(node).lines!;
   const last = above.length - 1;
   const end = prevRange.to - (doc.lines[prev.head.endLine]!.to - above[last]!.length);
-  const lines = [...above.slice(0, last), above[last]!.slice(0, end) + own[0]!.trimStart() + above[last]!.slice(end), ...own.slice(1)];
+  const lead = keptSpaces(ctx, node);
+  const lines = [...above.slice(0, last), above[last]!.slice(0, end) + lead + trimMdStart(own[0]!) + above[last]!.slice(end), ...own.slice(1)];
   const prevText = doc.headLines(prev);
-  const text = normText([...prevText.slice(0, -1), prevText[prevText.length - 1]! + doc.headLines(node)[0]!.trimStart(), ...doc.headLines(node).slice(1)]);
+  const text = normText([...prevText.slice(0, -1), prevText[prevText.length - 1]! + lead + trimMdStart(doc.headLines(node)[0]!), ...doc.headLines(node).slice(1)]);
   const expected = ctx.plan.place('instead', node, node.children);
   return joined(ctx, expected, prev, { text, lines }, last, end);
 }
 
 /**
- * Backspace at the start of a paragraph after another (the blank lines between them going): its
- * lines continue the paragraph above, escaped where they would start a block there, and what it held
- * goes to that paragraph. The caret stays at the start of the joined text, or for Delete, at the end
- * of the text above.
+ * Backspace at the start of a paragraph after another, or Delete at the end of the one above: the
+ * paragraphs join, glued, as at every boundary, the blank lines between going at once: its first line
+ * joins the end of the text above (an escape that only kept it from starting a block at its line's
+ * start going), its other lines follow, and what it held goes to that paragraph. The caret is at the
+ * seam.
  */
-function joinParagraphLines(ctx: CommandContext, node: OutlineNode, prev: OutlineNode, forward: boolean): Outcome {
+function joinParagraphLines(ctx: CommandContext, node: OutlineNode, prev: OutlineNode): Outcome {
   const { doc } = ctx;
   const above = doc.contentOf(prev).lines!;
   const { lines: written, gap } = doc.contentOf(node);
-  const own = written!.map((l, k) => (k === 0 ? l.trimStart() : l));
-  own[0] = ctx.encoder.escape(own[0]!, 'continuation').text;
-  const text = normText([...doc.headLines(prev), ...own]);
+  const own = written!.map((l, k) => (k === 0 ? trimMdStart(l) : l));
+  own[0] = keptSpaces(ctx, node) + fixed(own[0]!, lineStartFix(own[0]!));
+  const prevLines = doc.headLines(prev);
+  const text = normText([...prevLines.slice(0, -1), prevLines[prevLines.length - 1]! + own[0]!, ...own.slice(1)]);
   const expected = ctx.plan.place('instead', node, node.children);
   const last = above.length - 1;
-  // the blank lines between go; the joined text keeps the gap the paragraph had below it
-  const merged = { text, lines: [...above, ...own], gap };
-  return forward ? joined(ctx, expected, prev, merged, last, above[last]!.trimEnd().length) : joined(ctx, expected, prev, merged, above.length, 0);
+  // the joined text keeps the gap the paragraph had below it
+  const merged = { text, lines: [...above.slice(0, last), above[last]! + own[0]!, ...own.slice(1)], gap };
+  return joined(ctx, expected, prev, merged, last, above[last]!.length);
 }
 
 /**
@@ -692,11 +828,12 @@ function unwrapHeading(ctx: CommandContext, node: OutlineNode, line: LineInfo, p
   const text = doc.text;
   const eol = ctx.ending(line);
   // any line right above or below could run into the title, now paragraph text (a lazy line, indented
-  // code, a setext underline): a blank line keeps it apart
+  // code, a setext underline): a blank line keeps it apart, in the containers' markers (a quote's `>`)
   const runsInto = (lineNo: number): boolean => {
     const other = doc.lines[lineNo];
-    return !!other && !other.blank;
+    return !!other && !other.blank && !blankInQuote(ctx, other);
   };
+  const blank = trimMdEnd(ctx.encoder.continuation(line.prefix));
   const changes: ChangeSpec[] = [];
   let titleFrom: number;
   let title: string;
@@ -724,15 +861,15 @@ function unwrapHeading(ctx: CommandContext, node: OutlineNode, line: LineInfo, p
     title = escaped.text;
     changes.push({ from: line.contentFrom, to: range.from, insert: escape });
     if (range.to < line.to) changes.push({ from: range.to, to: line.to, insert: '' });
-    if (runsInto(line.index + 1)) changes.push({ from: line.to, to: line.to, insert: eol });
+    if (runsInto(line.index + 1)) changes.push({ from: line.to, to: line.to, insert: eol + blank });
   }
   const apartAbove = runsInto(line.index - 1);
-  if (apartAbove) changes.push({ from: line.from, to: line.from, insert: eol });
+  if (apartAbove) changes.push({ from: line.from, to: line.from, insert: blank + eol });
   const paragraph: OutlinePlanNode = { id: node.id, kind: 'paragraph', text: normText(title.split('\n')), children: [] };
   const expected = ctx.plan.place('instead', node, [paragraph, ...node.children]);
   const sorted = [...changes].sort((a, b) => a.from - b.from);
   // the caret goes to the title's start (before an escape), on the line moved down by a blank line above
-  const caret = (head.setext ? titleFrom : line.contentFrom) + (apartAbove ? eol.length : 0);
+  const caret = (head.setext ? titleFrom : line.contentFrom) + (apartAbove ? blank.length + eol.length : 0);
   return ctx.caret(sorted, caret, expected, { compare: 'flat' });
 }
 
@@ -757,7 +894,7 @@ function unwrapCallout(ctx: CommandContext, node: OutlineNode, line: LineInfo, p
   // as a lazy line, now that it is a paragraph: a blank line keeps it out
   if (node.head!.type === 'callout_title' && next && !next.blank && !next.prefix.some((p) => p.block === node.block)) changes.push({ from: line.to, to: line.to, insert: ctx.ending(line) });
   if (separate) {
-    changes.push({ from: line.to, to: line.to, insert: ctx.ending(line) + ctx.encoder.continuation(line.prefix).trimEnd() });
+    changes.push({ from: line.to, to: line.to, insert: ctx.ending(line) + trimMdEnd(ctx.encoder.continuation(line.prefix)) });
     // the body's lazy lines, past the blank line, would be no longer the quote's: they get its `>`
     const body = node.children[0]!;
     for (let i = body.startLine; i <= body.headEndLine; i++) {
@@ -772,27 +909,43 @@ function unwrapCallout(ctx: CommandContext, node: OutlineNode, line: LineInfo, p
 }
 
 /**
- * Backspace at the start of a paragraph inside an item, after a blank line: the blank line goes, and
- * the paragraph is more lines of the text above, undoing Shift-Enter at the start of a line
- * (ShiftEnter10). Null where that doesn't apply. `caretAt`: Delete's caret, which stays where it was.
+ * Backspace at the start of an item's first paragraph after its text, after a blank line, or Delete
+ * at the end of the text: only the blank lines go, the paragraph's lines continuing the text
+ * (Backspace19), as Backspace takes back a Shift-Enter: at an item's text Enter makes items, so a
+ * paragraph there is Shift-Enter's. An empty one (two Shift-Enters: ShiftEnter11) is an empty line of
+ * the text again, held by its placeholder. Null where that doesn't apply. `caretAt`: Delete's caret,
+ * which stays where it was.
  */
 function joinParagraphAfterGap(ctx: CommandContext, node: OutlineNode, line: LineInfo, pos: number, caretAt?: number): Outcome | null {
   const { doc } = ctx;
   const range = doc.headRange(node);
   if (!range || pos !== range.from || line.index !== node.head!.startLine || node.parent!.kind !== 'item') return null;
   const above = doc.before(node);
-  // the text above is the item's own or a paragraph's: after a sub-item, the line would be its lazy continuation
-  if (!above?.head || above.head.type !== 'paragraph' || (above !== node.parent && !(above.kind === 'paragraph' && above.parent === node.parent))) return null;
+  // right after the item's own text, where Enter makes items: after a body paragraph Enter made it
+  // too, and the paragraphs join glued, Enter's inverse (Backspace19b)
+  if (!above?.head || above.head.type !== 'paragraph' || above !== node.parent) return null;
   const blanks: number[] = [];
   for (let lineNo = node.startLine - 1; lineNo > above.headEndLine; lineNo--) {
-    if (!doc.lines[lineNo]!.blank) return null;
+    if (!doc.lines[lineNo]!.blank && !blankInQuote(ctx, doc.lines[lineNo]!)) return null;
     blanks.push(lineNo);
   }
   if (blanks.length === 0) return null;
+  if (node.children.length > 0) return null;
+  const aboveLines = doc.headLines(above);
+  const own = [...doc.headLines(node)];
   const changes = removeLines(ctx, blanks.reverse());
-  const text = normText([...doc.headLines(above), ...doc.headLines(node)]);
-  const expected = ctx.plan.remove([node]).setText(above, text);
-  const caret = caretAt !== undefined ? mapPos(changes, caretAt, -1) : mapPos(changes, pos, 1);
+  // its first line, continuing the text, escaped where it would underline it or start a block there
+  if (normText(own) !== '') {
+    const first = trimMdStart(own[0]!);
+    const at = ctx.encoder.escape(first, 'continuation').at;
+    if (at !== null) {
+      changes.push({ from: range.from + at, to: range.from + at, insert: '\\' });
+      own[0] = own[0]!.slice(0, own[0]!.length - first.length) + first.slice(0, at) + '\\' + first.slice(at);
+    }
+  }
+  const expected = ctx.plan.remove([node]).setText(above, normText([...aboveLines, ...own]));
+  // before an escape it wrote, where typing keeps it one
+  const caret = caretAt !== undefined ? mapPos(changes, caretAt, -1) : mapPos(changes, pos, -1);
   return ctx.caret(changes, caret, expected);
 }
 
@@ -815,7 +968,7 @@ function joinHeading(ctx: CommandContext, node: OutlineNode, line: LineInfo, pos
   if (!prevRange || !prev.head || !joinsInto(prev)) return reject('not-expressible', `can't join into ${prev.head?.type ?? 'an empty item'}`);
   const prevLines = doc.headLines(prev);
   // a setext title's lines, trimmed as text reads them; an ATX title's one line
-  const title = head.setext ? doc.headLines(node).map((l) => l.trim()) : [doc.text.slice(range.from, range.to)];
+  const title = head.setext ? doc.headLines(node).map((l) => trimMd(l)) : [doc.text.slice(range.from, range.to)];
   if (title.length > 1 && singleLine(prev)) return reject('not-expressible', singleLine(prev));
   const unwrapped = ctx.plan.place('instead', node, node.children);
   const expected = unwrapped.setText(prev, normText([...prevLines.slice(0, -1), prevLines[prevLines.length - 1]! + title[0]!, ...title.slice(1)]));
@@ -843,37 +996,8 @@ function gapBelowHeading(ctx: CommandContext, headingLine: LineInfo, into: Outli
   const below = doc.lines[headingLine.index + 1];
   // joined into a heading, the text is one line: nothing continues it
   if (!below || blankInQuote(ctx, below) || into.head?.type === 'heading') return '';
-  if (ctx.encoder.interruptsParagraph(doc.text.slice(below.from + headingLine.contentFrom - headingLine.from, below.to).trimStart())) return '';
-  return ctx.ending(headingLine) + ctx.encoder.continuation(headingLine.prefix).trimEnd();
-}
-
-/**
- * With `deleteAtGap: gap`, Delete at the end of a node's text before a blank line, or Backspace at the
- * start of its text after one, deletes that blank line, the outline staying as it is. Null where that
- * doesn't apply, or where the outline would change (two paragraphs merging): the command goes on.
- */
-function deleteGap(ctx: CommandContext, node: OutlineNode, pos: number, dir: -1 | 1): Outcome | null {
-  const { doc } = ctx;
-  if (doc.config.deleteAtGap !== 'gap' || !node.head) return null;
-  const range = doc.headRange(node);
-  if (!range) return null;
-  const line = doc.lineAt(pos);
-  let change: ChangeSpec;
-  if (dir > 0) {
-    const next = doc.lines[line.index + 1];
-    if (pos !== range.to || pos !== line.to || !next || !blankInQuote(ctx, next)) return null;
-    change = { from: line.to, to: next.to, insert: '' };
-  } else {
-    // a heading's `#`s are text Backspace edits (`headingEditing: text`), before its blank line
-    if (node.kind === 'heading' && doc.config.headingEditing === 'text') return null;
-    const prev = doc.lines[line.index - 1];
-    if (line.index !== node.head.startLine || pos !== doc.textStart(pos) || !prev || !blankInQuote(ctx, prev)) return null;
-    change = { from: prev.from, to: prev.to + prev.ending.length, insert: '' };
-  }
-  const shape = (d: OutlineState): string => d.nodes.map((n) => `${n.depth}:${n.kind}`).join(',');
-  if (shape(doc.update([change])) !== shape(doc)) return null;
-  const caret = mapPos([change], pos, dir > 0 ? -1 : 1);
-  return ctx.caret([change], caret, ctx.plan);
+  if (interrupts(ctx, doc.text.slice(below.from + headingLine.contentFrom - headingLine.from, below.to))) return '';
+  return ctx.ending(headingLine) + trimMdEnd(ctx.encoder.continuation(headingLine.prefix));
 }
 
 /**
@@ -927,11 +1051,10 @@ function joinBelow(ctx: CommandContext): Outcome {
   // in an item's marker or checkbox, before its text: ourus's, as the markup it is
   if (node.kind === 'item' && line.index === node.startLine && pos >= doc.markerFrom(node.block)) {
     const box = checkbox(ctx, node);
+    if (box && pos === box.from + 1) return checkboxCharacter(ctx, node, pos);
     if (box && pos >= box.from && pos < box.to) return deleteCheckbox(ctx, node, box, pos);
     if (pos < (box?.from ?? doc.textStart(pos)) && !isEmptyItem(ctx, node) && !isEmptyWithChildren(ctx, node)) return deleteInMarker(ctx, node, pos);
   }
-  const gap = deleteGap(ctx, node, pos, 1);
-  if (gap) return gap;
   const head = node.head;
   if (head?.type === 'paragraph' && line.index >= head.startLine && line.index < head.endLine) {
     if (pos !== line.to) return notApplicable;
@@ -943,13 +1066,15 @@ function joinBelow(ctx: CommandContext): Outcome {
   // the end of the text: its line's end, or before a heading's closing `#`s; on an empty item, anywhere
   // after its marker (only spaces follow it there)
   const lastTextLine = !head ? node.startLine : head.type === 'heading' && head.setext ? head.endLine - 1 : head.endLine;
-  const emptyItem = (isEmptyItem(ctx, node) || isEmptyWithChildren(ctx, node)) && line.index === node.startLine && pos >= doc.markerTo(node.block) && doc.text.slice(pos, line.to).trim() === '';
-  const atEnd = pos === line.to || pos === doc.headRange(node)?.to || (head?.type === 'heading' && !head.setext && pos > (doc.headRange(node)?.to ?? line.to) && doc.text.slice(pos, line.to).trim() === '');
+  const emptyItem = (isEmptyItem(ctx, node) || isEmptyWithChildren(ctx, node)) && line.index === node.startLine && pos >= doc.markerTo(node.block) && trimMd(doc.text.slice(pos, line.to)) === '';
+  const atEnd = pos === line.to || pos === doc.headRange(node)?.to || (head?.type === 'heading' && !head.setext && pos > (doc.headRange(node)?.to ?? line.to) && trimMd(doc.text.slice(pos, line.to)) === '');
   if (!emptyItem && (line.index !== lastTextLine || !atEnd)) return notApplicable;
   const next = doc.after(node);
   if (!next) return notApplicable;
+  // a paragraph below an empty item joins it, as Backspace at the paragraph's start would (Delete28)
+  if (isEmptyItem(ctx, node) && next.kind === 'paragraph' && next.head?.type === 'paragraph' && !node.block.task) return join(ctx.at(ownTextFrom(ctx, next)), { forward: true });
   if (isEmptyItem(ctx, node)) {
-    const changes = removeLines(ctx, [node.startLine]);
+    const changes = removeLines(ctx, emptyItemLines(ctx, node));
     // at the text start below: after a checkbox, not in it
     const below = doc.textStart(doc.lines[next.startLine]!.from);
     const expected = ctx.plan.remove([node]);
@@ -963,37 +1088,14 @@ function joinBelow(ctx: CommandContext): Outcome {
   if (isEmptyWithChildren(ctx, node) && doc.config.emptyItemWithChildren === 'refuse') return reject('has-children');
   // an empty paragraph (held by a placeholder) goes with its blank lines: the node below keeps its
   // kind, rather than its text joining into the empty one, and the caret goes to its text's start
-  if (node.kind === 'paragraph' && node.children.length === 0 && doc.nodeText(node).trim() === '') {
-    const drop = doc.placeholders.filter((p) => doc.lineAt(p).index === node.startLine);
-    const expected = ctx.plan.remove([node]);
-    const below = doc.textStart(doc.lines[next.startLine]!.from);
-    // in a quote its blank lines are quoted, and an item's marker on its line (`- > ◌`) stays: the
-    // encoder writes what is left
-    if (node.parent?.kind === 'quote') {
-      return withPlan(ctx.encode(expected, {}, (written) => ({ anchor: written.map(below, 1), head: written.map(below, 1) })), { drop });
-    }
-    const lines = [node.startLine];
-    for (let lineNo = node.startLine + 1; lineNo < next.startLine && doc.lines[lineNo]!.blank; lineNo++) lines.push(lineNo);
-    const changes = removeLines(ctx, lines);
-    return ctx.caret(changes, mapPos(changes, below, 1), expected, { drop });
-  }
-  // a heading below joins as its whole line: its `#`s are text once it isn't a heading (as a text
-  // editor deleting the line break would leave them); its section stays where it was
-  if (doc.config.headingEditing === 'text' && next.kind === 'heading' && !next.head!.setext && (head?.type === 'paragraph' || (head?.type === 'heading' && !head.setext))) {
-    const range = doc.headRange(node)!;
-    const headingLine = doc.lines[next.startLine]!;
-    let from = headingLine.contentFrom;
-    from = skipSpaces(doc.text, from, headingLine.to, 1);
-    const lines = doc.headLines(node);
-    // joined into a heading, the closing `#`s of the line below close that heading: they aren't text
-    let joinedText = doc.text.slice(from, headingLine.to);
-    if (head.type === 'heading') joinedText = joinedText.replace(/[ \t]+#+[ \t]*$/, '');
-    const unwrapped = ctx.plan.place('instead', next, next.children);
-    const expected = unwrapped.setText(node, normText([...lines.slice(0, -1), lines[lines.length - 1]! + joinedText]));
-    const changes = joinChanges(ctx, node, range, from, headingLine.to);
-    const gap = gapBelowHeading(ctx, headingLine, node);
-    if (gap) changes.push({ from: headingLine.to, to: headingLine.to, insert: gap });
-    return ctx.caret(changes, range.to, expected, { compare: 'flat' });
+  if (node.kind === 'paragraph' && node.children.length === 0 && trimMd(doc.nodeText(node)) === '') return dropEmptyParagraph(ctx, node, next);
+  // a heading below loses its marks first, as Backspace at its text start takes them: a paragraph
+  // where it is, which Delete again joins; the caret stays (an item whose text is a heading the same)
+  if (doc.config.headingEditing === 'text' && (next.kind === 'heading' || (next.kind === 'item' && next.head?.type === 'heading'))) {
+    const peeled = join(ctx.at(doc.headRange(next)!.from));
+    if (!('changes' in peeled)) return peeled;
+    const caret = mapPos(peeled.changes, end, -1);
+    return { ...peeled, selection: { anchor: caret, head: caret } };
   }
   // the host would join the block below into the text: Backspace from its side is refused too
   if (next.kind === 'atom' || next.kind === 'quote') return reject('not-expressible', `can't take in the ${next.block.type} below`);
@@ -1005,19 +1107,47 @@ function joinBelow(ctx: CommandContext): Outcome {
     const merged = nextRange && joinParagraphAfterGap(ctx, next, doc.lineAt(nextRange.from), nextRange.from, end);
     if (merged) return merged;
   }
-  // an item whose text is a heading joins as a heading below does: its whole line, `#`s as text
-  // (`headingEditing: text`), or its title (`block`); never unwrapped, as Backspace at its start would
-  if (next.kind === 'item' && next.head?.type === 'heading') {
-    if (doc.config.headingEditing === 'block') return join(ctx.at(doc.headRange(next)!.from), { forward: true });
-    return join(ctx.at(skipSpaces(doc.text, doc.markerTo(next.block), nextLine.to, 1)), { headingAsText: true, forward: true });
-  }
-  // Backspace at a heading's start would unwrap it, and Delete never does; a heading the line join above
-  // didn't take (into code, before a setext heading) is refused, as the join was before
-  if (next.kind === 'heading' && doc.config.headingEditing === 'text') return reject('not-expressible', `can't join the heading below into ${head?.type ?? 'this node'}`);
+  // an item whose text is a heading joins its title (`headingEditing: block`), as Backspace at it does
+  if (next.kind === 'item' && next.head?.type === 'heading') return join(ctx.at(ownTextFrom(ctx, next)), { forward: true });
   // an empty task below joins from before its checkbox, as Backspace there does: it goes whole, rather
   // than losing only its checkbox (Backspace after it)
   const task = !doc.headRange(next) ? next.block.task : undefined;
-  return join(ctx.at(doc.headRange(next)?.from ?? (task ? nextLine.from + task.start : nextLine.to)), { forward: true });
+  return join(ctx.at(doc.headRange(next) ? ownTextFrom(ctx, next) : task ? nextLine.from + task.start : nextLine.to), { forward: true });
+}
+
+/**
+ * The lines that go with an empty item: its own, and its gap, as a node's gap travels with it
+ * (Backspace44); last in its scope, its gap stays, separating the scope from what follows, and the
+ * blank lines above it go instead, which only set it off from the node above (Backspace44b; see
+ * [gaps.md](../../spec/gaps.md)). So one gap is left where there was one.
+ */
+function emptyItemLines(ctx: CommandContext, node: OutlineNode): number[] {
+  const { doc } = ctx;
+  const siblings = node.parent!.children;
+  if (siblings[siblings.length - 1] !== node) return Array.from({ length: 1 + doc.contentOf(node).gap }, (_, k) => node.startLine + k);
+  const lines = [node.startLine];
+  for (let k = node.startLine - 1; k > 0 && blankInQuote(ctx, doc.lines[k]!) && doc.nodeAtLine(k) === null; k--) lines.unshift(k);
+  return lines;
+}
+
+/**
+ * An empty paragraph (held by a placeholder) going with its blank lines, the node below `next` keeping
+ * its kind, rather than its text joining into the empty one, and the caret going to its text's start.
+ */
+function dropEmptyParagraph(ctx: CommandContext, node: OutlineNode, next: OutlineNode): Outcome {
+  const { doc } = ctx;
+  const drop = doc.placeholders.filter((p) => doc.lineAt(p).index === node.startLine);
+  const expected = ctx.plan.remove([node]);
+  const below = doc.textStart(doc.lines[next.startLine]!.from);
+  // in a quote its blank lines are quoted, and an item's marker on its line (`- > ◌`) stays: the
+  // encoder writes what is left
+  if (node.parent?.kind === 'quote') {
+    return withPlan(ctx.encode(expected, {}, (written) => ({ anchor: written.map(below, 1), head: written.map(below, 1) })), { drop });
+  }
+  const lines = [node.startLine];
+  for (let lineNo = node.startLine + 1; lineNo < next.startLine && doc.lines[lineNo]!.blank; lineNo++) lines.push(lineNo);
+  const changes = removeLines(ctx, lines);
+  return ctx.caret(changes, mapPos(changes, below, 1), expected, { drop });
 }
 
 /**
@@ -1073,16 +1203,34 @@ function checkbox(ctx: CommandContext, node: OutlineNode): { from: number; to: n
 }
 
 /**
- * Delete before a task's text, in its checkbox or right before it: the checkbox goes, the task a plain
- * item, as Backspace right after it does; with `taskEditing: text`, the character after the caret.
+ * Backspace or Delete inside a task's checkbox: the character between its brackets, at `at`, goes, as
+ * in text, the brackets staying (`[]` is text, and a character typed between them makes a checkbox
+ * again), so a task is checked or unchecked by hand, as where markup is text to edit.
+ */
+function checkboxCharacter(ctx: CommandContext, node: OutlineNode, at: number): Outcome {
+  const changes = [{ from: at, to: at + 1, insert: '' }];
+  const next = ctx.doc.update(changes);
+  return ctx.caret(changes, at, ctx.plan.setText(node, next.nodeText(next.nodeAt(at) ?? node)));
+}
+
+/**
+ * Delete before a task's text, right before its checkbox or after the character inside it: the
+ * checkbox goes, the task a plain item, as Backspace right after it does; with `taskEditing: text`,
+ * the character after the caret.
  */
 function deleteCheckbox(ctx: CommandContext, node: OutlineNode, box: { from: number; to: number }, pos: number): Outcome {
   const { doc } = ctx;
   const lines = doc.headLines(node);
-  const first = (lines[0] ?? '').trimStart();
+  const first = trimMdStart((lines[0] ?? ''));
   const changes = doc.config.taskEditing === 'text' ? [{ from: pos, to: pos + 1, insert: '' }] : [{ from: box.from, to: box.to, insert: '' }];
   const offset = changes[0]!.from - box.from;
   lines[0] = first.slice(0, offset) + first.slice(offset + changes[0]!.to - changes[0]!.from);
+  // the checkbox gone, the text starts the item's: escaped where it would start a block there
+  if (doc.config.taskEditing !== 'text') {
+    const escaped = ctx.encoder.escape(lines[0], 'start', lines.slice(1).map((l) => trimMdStart(l)));
+    if (escaped.at !== null) changes.push({ from: box.to + escaped.at, to: box.to + escaped.at, insert: '\\' });
+    lines[0] = escaped.text;
+  }
   const caret = changes[0]!.from;
   const held = normText(lines) === '' && followsParentText(ctx, node);
   return ctx.caret(changes, caret, ctx.plan.setText(node, normText(lines)), { ...(held ? { placeholders: [caret] } : {}) });

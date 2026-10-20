@@ -54,13 +54,13 @@ const shifted = (k: string): string => (k.startsWith('C-') ? `C-S-${k.slice(2)}`
 let emacs: Emacs;
 
 export const driver: Driver = {
-  name: 'emacs-markdown',
-  title: 'Emacs with markdown-mode',
-  id: 'EM',
+  shortId: 'EM',
+  longId: 'emacs-markdown',
+  displayName: 'Emacs (markdown-mode)',
   url: 'emacs -Q -nw, on a terminal',
   model: 'text',
   // Backspace right after a checkbox deletes a character (`taskEditing: text`)
-  behaves: { taskEditing: 'text', deleteAtGap: 'gap' },
+  behaves: { enterSplitSpace: 'drop', taskEditing: 'text' },
   keys: {
     // `markdown-enter-key`: a line break, indented as the line before (no list item is continued)
     enter: 'RET',
@@ -89,8 +89,14 @@ export const driver: Driver = {
   },
 
   holds(doc) {
+    const text = (doc as TextDoc).text;
     // a file's CRLF is decoded when Emacs reads it (its coding system): a buffer holds no CR of a line ending
-    return (doc as TextDoc).text.includes('\r') ? 'CR line endings' : undefined;
+    if (text.includes('\r')) return 'CR line endings';
+    // typed through the terminal, a no-break space or a character outside the Basic Multilingual Plane
+    // (an emoji) arrives as its code (`302240`), not the character
+    if (text.includes('\u00a0')) return 'no-break space, which the terminal types as its code';
+    if (/[\u{10000}-\u{10ffff}]/u.test(text)) return 'character outside the Basic Multilingual Plane, which the terminal types as its code';
+    return undefined;
   },
 
   async launch({ say }) {

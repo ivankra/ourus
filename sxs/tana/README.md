@@ -210,7 +210,7 @@ Tana's code:
 - **Outdenting is logical** (declared): the later siblings stay with the parent.
 - **Joins at a section** are of its name (`headingEditing: block`, declared): Backspace at a section's
   start joins its name into the node above, and Delete before one takes its name, the section gone
-  (`backspace.md › Backspace18f`, `del.md › Delete13b`); ourus's default takes the `# ` off first.
+  (`backspace.md › Backspace18f`, `delete.md › Delete13b`); ourus's default takes the `# ` off first.
 - **A list pasted into a node with children** goes after them (`pasteStructuredOnParent: after`,
   declared; at the end of the parent's children, as above).
 - **Joins into code**: Backspace at the start of the node after a code block joins its text into the
@@ -222,10 +222,10 @@ Tana's code:
   by Ctrl+Enter alike; Enter on an empty to-do takes its checkbox away, the node staying
   (`TaskEnter2`, `TaskEnter5`).
 - **A description joins nothing**: Backspace at its start, Delete at the name's end (`backspace.md ›
-  Backspace9`, `del.md › Delete3`); Enter at the name's end leaves it with the name, the new node
+  Backspace9`, `delete.md › Delete3`); Enter at the name's end leaves it with the name, the new node
   after (`enter.md › Enter16`), and Enter in it doesn't split it (`E4`).
 - **Before a to-do's checkbox** (the checkbox focused) Backspace, Delete and typing do nothing
-  (`tasks.md › TaskBackspace1`, `del.md › Delete19`); Right goes into the text.
+  (`tasks.md › TaskBackspace1`, `delete.md › Delete19`); Right goes into the text.
 - **A paste over a selection** of more than one line leaves the selected text and adds the nodes after
   (`paste.md › Paste48`, `Paste49`: a selection made with Shift and the arrows the same); one line
   replaces it.
@@ -233,9 +233,9 @@ Tana's code:
   whole. No key breaks a line in a name.
 - **Backspace and Delete don't join a node with children** to another: at the start of a node with
   children, or at the end of a node whose next has children, nothing happens (`backspace.md ›
-  Backspace8`, `del.md › Delete7`, `Delete12`). Backspace on an empty node with children does nothing
+  Backspace8`, `delete.md › Delete7`, `Delete12`). Backspace on an empty node with children does nothing
   either; Delete on one takes its first child's place, the first child keeping its own children and the
-  others going up a level (`del.md › Delete5`): neither of ourus's `emptyItemWithChildren` values, so
+  others going up a level (`delete.md › Delete5`): neither of ourus's `emptyItemWithChildren` values, so
   undeclared.
 - **Backspace at the start of a page's first node joins it to the page's title** (`backspace.md ›
   Backspace26`: the test's own node's name becomes `ourus sxspara`).
@@ -248,7 +248,7 @@ Checked again on 2026-10-18, every verdict but agree (142), three ways: replayed
 (the scratchpad's `verify.js`), each step's read the same as the run's; the read against the outline
 as the page draws it (its rows, their depth, numbers, checkboxes, sections, names and descriptions),
 the same but for one thing, below; and at `--slow=400`, no verdict or buffer changed. The one thing:
-**a node Delete leaves in an empty node's place shows collapsed** (`del.md › Delete5`, `Delete5b`):
+**a node Delete leaves in an empty node's place shows collapsed** (`delete.md › Delete5`, `Delete5b`):
 its children are in the model, and read, but folded on the screen (the bullet ringed).
 
 **The clipboard's format decides 12 paste verdicts.** Tana's paste picks its importer by the formats

@@ -122,7 +122,7 @@ same web app.
 - **Backspace joins siblings, not a child into its parent**: at the start of an item it merges into
   the previous sibling, but at the start of a first child it does nothing.
 - **Only items of one type join**: two headings, two to-dos, two bullets; Backspace or Delete between a
-  bullet and a heading or a to-do does nothing (`backspace.md › Backspace18e`, `del.md › Delete13`,
+  bullet and a heading or a to-do does nothing (`backspace.md › Backspace18e`, `delete.md › Delete13`,
   `tasks.md`). The driver refuses no `markup-` tag since (2026-10-18): those cases are played.
 - **A list's start belongs to its first item**: split, moved or joined away, the start goes with it or
   is lost, and the list counts from 1 (`enter.md › Enter3c`, `move-subtree-down.md › MoveDown23`).

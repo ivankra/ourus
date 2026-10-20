@@ -9,14 +9,17 @@ subtrees. The rules, in order; the first that applies wins:
 2. **A heading goes one level deeper**, the headings in its section with it, even past a missing
    level (Indent12, Indent23); a setext heading stays setext where it can say the level (Indent16)
    and becomes ATX where it can't (Indent25); past `######` it is refused (Indent24).
-3. **A paragraph becomes an item**: the first item of the paragraph above (Indent18, Indent21), or
-   of an item above (as its child); with nothing above to hold it, an item in place (Indent22). Into
-   a quote above, it is the quote's last child ([quotes.md](quotes.md)).
+3. **A paragraph becomes an item**: the first item of the paragraph above (Indent18, Indent21); after
+   a list, its next item, one level in as anywhere, with the list's marker (Indent29, Indent29b,
+   Indent29c); with nothing above to hold it, an item in place (Indent22). Into a quote above, it is
+   the quote's last child ([quotes.md](quotes.md)).
 4. **An item becomes the last child of its previous sibling**, its subtree coming along (Indent1,
    Indent2, Indent9): it lines up with the children there, adopting their marker (Indent3); a new
    ordered list starts at 1, so it can't read as more of the text above (Indent4); one joining an
    ordered list continues its numbers (Indent5). Outdent gives it back (Indent26, Indent27). The
-   caret ends in its text, even from before its marker (Indent28). Under an empty item it comes
+   caret ends in its text, even from before its marker (Indent28); from the fence line of an item
+   whose text is fenced code, it stays there where the host shows markup as text, so the outdent can
+   follow, and else goes into the code (Indent31, Indent31b). Under an empty item it comes
    right after the marker's line, the blank lines between going: an item can start with one blank
    line, no more, and with one it ends (Indent30).
 5. **With nothing above it at its level, it is refused** (`no-previous-sibling`, Indent10,
@@ -82,8 +85,9 @@ tags: core
 When the parent already has children, the item lines up with them and adopts their bullet: a
 different bullet would start a second list under `a`.
 
-Bare Obsidian and the text editors indent the line by their own unit, which leaves `b` a level
-below `x`, a child of nothing it can be.
+Bare Obsidian indents the line by its own unit and keeps its bullet: `b` is `a`'s child, but in a
+second list under it; Obsidian's Outliner lines `b` up with `x`, its bullet kept, the same second
+list.
 
 ```yaml
 tags: common
@@ -422,7 +426,8 @@ tags: edge
 
 Setext heading demoted with its subheading.
 
-No app measured changes a setext heading's level.
+Emacs demotes it as ourus does, setext still (`-----`); true-outliner writes it as an ATX `##`; bare
+Obsidian and its Outliner indent the line, which leaves it a level-1 heading.
 
 ```yaml
 tags: rare free-form
@@ -664,7 +669,8 @@ rejected: at-h6-bound
 
 ## Indent25
 
-A setext level-2 heading indents to ATX `###`, the only way to write level 3.
+A setext level-2 heading indents to ATX `###`, the only way to write level 3. Outdented back, it
+stays ATX: the outline comes back, its text written as `##`.
 
 ```yaml
 tags: rare free-form
@@ -683,6 +689,14 @@ Title┃
 ### Title┃
 
 #### Sub
+```
+
+> outdent
+
+```buffer
+## Title┃
+
+### Sub
 ```
 
 ## Indent26
@@ -778,8 +792,12 @@ tags: rare
 
 ## Indent29
 
-A paragraph indented under an item becomes its child item, without the blank line above it: that
-separated the item from a paragraph, and kept, it would make the list loose.
+A paragraph right after a list becomes its next item, one level in as Tab is anywhere
+([Indent22](#indent22)), not the last item's child, two levels in; so outdent and indent invert
+([Outdent2](outdent.md#outdent2)). The blank line above it goes: it separated the list from a
+paragraph, and kept, it would make the list loose. RemNote does the same; BlockNote, bare Obsidian
+and its Outliner make it the item's second paragraph, set off by the blank line, and true-outliner
+its child item.
 
 ```yaml
 tags: edge
@@ -795,7 +813,52 @@ para┃
 
 ```buffer
 - a
-  - para┃
+- para┃
+```
+
+## Indent29b
+
+After an ordered list, the paragraph takes its numbering, the next number.
+
+```yaml
+tags: rare
+```
+
+```buffer
+1. a
+
+para┃
+```
+
+> indent
+
+```buffer
+1. a
+2. para┃
+```
+
+## Indent29c
+
+After a nested list, it joins the list it is one level in from: the top-level one, after `a` and
+its children.
+
+```yaml
+tags: rare
+```
+
+```buffer
+- a
+  - b
+
+para┃
+```
+
+> indent
+
+```buffer
+- a
+  - b
+- para┃
 ```
 
 ## Indent30
@@ -829,4 +892,126 @@ tags: rare
 - a
 - 
 - ┃b
+```
+
+## Indent31
+
+From the fence line of an item whose text is fenced code, the caret stays on the fence where the
+host shows markup as text (`markup: text`, the default), where the user had it: in the code, Tab and
+Shift-Tab are the host's and indent the code ([Fence21](fences.md#fence21)), so there the outdent
+couldn't follow.
+
+```yaml
+tags: rare markup-fence
+```
+
+````buffer
+- a
+- ┃```
+  code
+  ```
+````
+
+> indent
+
+````buffer
+- a
+  - ┃```
+    code
+    ```
+````
+
+> outdent
+
+````buffer
+- a
+- ┃```
+  code
+  ```
+````
+
+## Indent31b
+
+Where the host decorates markup (`markup: decorated`), the caret goes into the code, where typing
+can't break its fence.
+
+```yaml
+tags: rare markup-fence
+markup: decorated
+```
+
+````buffer
+- a
+- ┃```
+  code
+  ```
+````
+
+> indent
+
+````buffer
+- a
+  - ```
+    ┃code
+    ```
+````
+
+## Indent32
+
+A paragraph whose lines end differently (a CRLF, then an LF) keeps each line's ending as an item,
+and outdented back: the command is about the paragraph's place, not its line endings.
+
+```yaml
+tags: rare
+```
+
+```buffer
+a┃␍
+b
+```
+
+> indent
+
+```buffer
+- a┃␍
+  b
+```
+
+> outdent
+
+```buffer
+a┃␍
+b
+```
+
+## Indent33
+
+A continuation line's extra leading space, which Shift-Enter's break left there
+([ShiftEnter21](shift-enter.md#shiftenter21)), stays when indent and outdent rewrite the line's
+indentation: it is the text's, kept past the item's column.
+
+```yaml
+tags: rare
+```
+
+```buffer
+- x
+- a┃
+   b
+```
+
+> indent
+
+```buffer
+- x
+  - a┃
+     b
+```
+
+> outdent
+
+```buffer
+- x
+- a┃
+   b
 ```

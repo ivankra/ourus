@@ -1,13 +1,10 @@
-
 # Paste
 
 Two commands, as most outliners have two pastes; both take the clipboard's text.
 
 - `pasteStructured` (Ctrl-V): the clipboard's Markdown as nodes.
 - `pastePlain` (Ctrl-Shift-V): the text goes into the text of the node at the caret, its line breaks
-  as Shift-Enter makes them: the next line continues the text at its column, and a line that would
-  start a block is escaped; a line starting a line of the text loses its leading spaces, which would
-  make it code (Paste78). A heading, a single line, refuses several.
+  as Shift-Enter makes them ([paste-plain.md](paste-plain.md)).
 
 A text editor (bare Obsidian, and Obsidian with Outliner) pastes the clipboard as it is: its first
 line joins the text at the caret and the rest start at column 0, so pasted lines land glued to the
@@ -65,8 +62,8 @@ It follows a few rules:
    after a setext heading, at its title's end (Paste53).
 6. **What can't be a node where it lands is pasted as text**, as `pastePlain` would; where it can't
    be text either (a heading's title, a callout's, a table's row are a line each), it is refused
-   (Paste6, Paste55, Paste56). Several lines are never left to the host, whose lines would land at
-   column 0, outside the node's nesting.
+   ([Paste6](paste-plain.md#paste6), [Paste55](paste-plain.md#paste55), Paste56). Several lines are
+   never left to the host, whose lines would land at column 0, outside the node's nesting.
 7. **A list the paste touches is renumbered** from its first number, as by every other command; a
    list it doesn't touch keeps its numbers. Pasted into an ordered list, the paste's items take the
    list's numbers (Paste2, Paste16, Paste18).
@@ -95,7 +92,7 @@ sections it closes
 ([Paste33](#paste33)). Pasted frontmatter is frontmatter only at a document's start; elsewhere its
 lines read as they do there ([Paste58](#paste58)).
 On a code line, what is
-pasted is code: plain text, each line in the containers the block is in ([Paste22](#paste22),
+pasted is code: plain text, each line in the containers the block is in ([Paste22](paste-plain.md#paste22),
 [Paste23](#paste23)).
 
 ## Paste1
@@ -181,103 +178,6 @@ clipboard: |
 - x
 - y┃
 2. b
-```
-
-## Paste3
-
-Several lines pasted as plain text in the middle of an item continue the item at its content
-column (the clipboard ends with a line ending, so `b` starts a line of its own). Bare Obsidian
-pastes them at column 0, out of the item.
-
-```yaml
-tags: common
-clipboard: |
-  x
-  y
-```
-
-```buffer
-- a┃b
-```
-
-> pastePlain
-
-```buffer
-- ax
-  y
-  ┃b
-```
-
-## Paste4
-
-Plain paste: a pasted line that would start a block is escaped, so it stays text.
-
-```yaml
-tags: edge
-clipboard: |
-  x
-  - y
-```
-
-```buffer
-- a┃b
-```
-
-> pastePlain
-
-```buffer
-- ax
-  \- y
-  ┃b
-```
-
-## Paste5
-
-Plain paste ending with a line break at the end of the text leaves an empty line to type on, held by
-a placeholder, as Shift-Enter there does.
-
-```yaml
-tags: common
-clipboard: |
-  x
-  y
-```
-
-```buffer
-- a┃
-```
-
-> pastePlain
-
-```buffer
-- ax
-  y
-  ┃◌
-```
-
-## Paste6
-
-Plain paste of several lines into a heading is refused: a heading is a single line.
-
-```yaml
-tags: edge free-form
-clipboard: |
-  x
-  y
-```
-
-```buffer
-# H┃
-```
-
-> pastePlain
-
-```result
-rejected: not-expressible
-```
-
-```buffer
-# H┃
 ```
 
 ## Paste7
@@ -1131,35 +1031,6 @@ Notes
 - x
 ```
 
-## Paste22
-
-Plain paste on a code line: the lines are code as they are, each taking the containers the block is
-in (here the item's indentation).
-
-```yaml
-tags: edge
-clipboard: |-
-  a = 1
-    b = 2
-```
-
-````buffer
-- code
-  ```
-  ┃
-  ```
-````
-
-> pastePlain
-
-````buffer
-- code
-  ```
-  a = 1
-    b = 2┃
-  ```
-````
-
 ## Paste23
 
 Structured paste on a code line pastes as plain text: in code, what is pasted is code.
@@ -1447,30 +1318,6 @@ clipboard: |
 - alpha
   > note┃
 - next
-```
-
-## Paste30
-
-Plain paste escapes a line that would start a block as Shift-Enter does
-([ShiftEnter18](shift-enter.md#shiftenter18)): an ordered marker on a continuation line is escaped
-even when its number isn't 1.
-
-```yaml
-tags: rare
-clipboard: |-
-  x
-  2. y
-```
-
-```buffer
-- a┃
-```
-
-> pastePlain
-
-```buffer
-- ax
-  2\. y┃
 ```
 
 ## Paste31
@@ -1774,59 +1621,6 @@ clipboard: |
 - y┃
 ```
 
-## Paste40
-
-Plain paste of two paragraphs: the blank line is a paragraph break in the item, as two Shift-Enters
-make one, `y` and the rest of the text the item's second paragraph. Logseq, Roam and Tine keep it so.
-
-```yaml
-tags: edge free-form
-clipboard: |
-  x
-
-  y
-```
-
-```buffer
-- a┃b
-- c
-```
-
-> pastePlain
-
-```buffer
-- ax
-
-  y
-  ┃b
-- c
-```
-
-## Paste41
-
-In a quote, the paragraph break keeps its `>`.
-
-```yaml
-tags: rare free-form quote-container
-clipboard: |
-  x
-
-  y
-```
-
-```buffer
-> See ┃here.
-```
-
-> pastePlain
-
-```buffer
-> See x
->
-> y
-> ┃here.
-```
-
 ## Paste42
 
 In an item with children, the text after the caret takes them, as Enter's split gives them to it
@@ -1934,33 +1728,6 @@ clipboard: |
 - $$
   x^2┃
   $$
-```
-
-## Paste45
-
-Plain paste of a math block's lines: a `$$` at a line's start would open a math block, so it is
-escaped, as any line that would start a block; the first line joins the text before the caret.
-
-```yaml
-tags: rare
-flavor: obsidian
-clipboard: |
-  $$
-  x^2
-  $$
-```
-
-```buffer
-- a┃b
-```
-
-> pastePlain
-
-```buffer
-- a$$
-  x^2
-  \$$
-  ┃b
 ```
 
 ## Paste46
@@ -2200,35 +1967,6 @@ clipboard: |
 
 x
 y┃
-```
-
-## Paste55
-
-Lines pasted as plain text into a callout's title are refused: in the Obsidian flavor the title is
-one line, and the host's paste would leave the callout.
-
-```yaml
-tags: rare free-form quote-container
-flavor: obsidian
-clipboard: |
-  x
-  y
-```
-
-```buffer
-> [!note] Ti┃tle
-> body
-```
-
-> pastePlain
-
-```result
-rejected: not-expressible
-```
-
-```buffer
-> [!note] Ti┃tle
-> body
 ```
 
 ## Paste56
@@ -2491,29 +2229,6 @@ clipboard: |
 - ┃here
 ```
 
-## Paste64
-
-Plain paste at the start of a paragraph's text: the first pasted line starts the line, escaped where
-it would start a block there.
-
-```yaml
-tags: edge
-clipboard: |-
-  - a
-  - b
-```
-
-```buffer
-┃words
-```
-
-> pastePlain
-
-```buffer
-\- a
-\- b┃words
-```
-
 ## Paste65
 
 On the blank line after a code block in an item, a code block goes after the first, in the item,
@@ -2611,52 +2326,6 @@ y┃
 b
 ```
 
-## Paste68
-
-Plain paste ending with a line break, before ` ---`: the space at the break goes with neither line,
-as at Shift-Enter's, and `---`, starting a line, is escaped; kept, the space would leave an
-underline making the paragraph a heading.
-
-```yaml
-tags: rare
-clipboard: |
-  x
-```
-
-```buffer
-p┃ ---
-```
-
-> pastePlain
-
-```buffer
-px
-┃\---
-```
-
-## Paste69
-
-Plain paste breaking prose that starts like a link reference definition: ended at the break,
-`[a]: x` would be one, so it is escaped, as Enter's split escapes it
-([Enter47](enter.md#enter47)).
-
-```yaml
-tags: rare
-clipboard: |
-  x
-```
-
-```buffer
-[a]: ┃b c
-```
-
-> pastePlain
-
-```buffer
-\[a]: x
-┃b c
-```
-
 ## Paste70
 
 Code pasted at the end of a paragraph's first line, before a continuation line indented four
@@ -2748,6 +2417,67 @@ clipboard: |
   > q┃
 - b
 ```
+
+## Paste92
+
+Items pasted on an empty task: the first takes its place, its checkbox with it, so the task keeps
+its checkbox and gets the pasted text (rule 1); the others are items after it, as pasted. A pasted
+item with a checkbox of its own keeps that one.
+
+```yaml
+tags: rare markup-task
+clipboard: |
+  - x
+  - y
+```
+
+```buffer
+- a
+- [ ] ┃
+- b
+```
+
+> pasteStructured
+
+```buffer
+- a
+- [ ] x
+- y┃
+- b
+```
+
+## Paste93
+
+A fenced block the clipboard leaves open is closed where the clipboard ends, as it reads there:
+left open, it would run on and take in the text after the paste (rule 1, nothing pasted changes
+what isn't).
+
+````yaml
+tags: rare
+clipboard: |-
+  x
+  ```
+  y
+````
+
+```buffer
+a┃
+
+b
+```
+
+> pasteStructured
+
+````buffer
+a
+
+x
+```
+y┃
+```
+
+b
+````
 
 ## Paste73
 
@@ -2886,30 +2616,6 @@ clipboard: |
 > - p┃
 ```
 
-## Paste78
-
-Plain lines pasted at an item's text start, the first indented as code is: it starts the item's text
-without its leading spaces, which after the marker would make it code, as the later lines do.
-
-```yaml
-tags: rare
-clipboard: |2
-      first
-      second
-```
-
-```buffer
-- ┃a
-```
-
-> pastePlain
-
-```buffer
-- first
-  second
-  ┃a
-```
-
 ## Paste79
 
 A math block pasted whose lines all keep an indentation its closing `$$` closes with: it closes as it
@@ -2939,50 +2645,64 @@ $$
     $$
 ```
 
-## Paste80
+## Paste90
 
-Plain paste joined onto text before the caret that, with the pasted line, would start a block: a
-number before `. a` would make the paragraph a list, so the pasted line is escaped where it joins.
-
-```yaml
-tags: rare
-clipboard: |
-  . a
-  b
-```
-
-```buffer
-1┃
-```
-
-> pastePlain
-
-```buffer
-1\. a
-b
-┃◌
-```
-
-## Paste81
-
-The same at an item's text start: `2` and the pasted `1. a` would read as a nested list, `21.`, so
-the joined line is escaped after its number.
+Blocks pasted into a tight list go without the blank lines between them (rule 8), but where
+Markdown needs one: two quotes pasted at an item's end go into it (rule 5), set apart, as without a
+blank line they would be one quote. The list is loose then, as a blank line between an item's
+blocks makes it.
 
 ```yaml
-tags: rare
+tags: edge
 clipboard: |
-  1. a
-  2. b
+  > p
+
+  > q
 ```
 
 ```buffer
-- 2┃\. y
+- a┃
+- b
 ```
 
-> pastePlain
+> pasteStructured
 
 ```buffer
-- 21\. a
-  2\. b
-  ┃\. y
+- a
+  > p
+
+  > q┃
+- b
+```
+
+## Paste90b
+
+The same for an item pasted with its blocks: its paragraphs keep the blank lines between them,
+which without them would be its text's lines.
+
+```yaml
+tags: edge
+clipboard: |
+  - x
+
+    p
+
+    q
+```
+
+```buffer
+- a┃
+- b
+```
+
+> pasteStructured
+
+```buffer
+- a
+- x
+
+  p
+
+  q┃
+- b
 ```

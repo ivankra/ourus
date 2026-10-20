@@ -106,7 +106,7 @@ fixtures do). Nothing went to RemNote's servers. The disagreements, each checked
 - **Enter over a selection** splits at its start and keeps the selected text (typing replaces it):
   `obsidian-true-outliner.md › E33`, `S13`; the same with a selection made by Shift+Right.
 - **An empty rem with children** goes, and its children take its place, rather than joining the rem
-  before (`backspace.md › Backspace17d`, `del.md › Delete5`, `5b`).
+  before (`backspace.md › Backspace17d`, `delete.md › Delete5`, `5b`).
 - **The caret leaves the rems** after Backspace on the first, empty, one (to the document's title) and
   after "Delete Bullet" (`backspace.md › Backspace17`, `delete-subtree.md › DeleteSubtree3`).
 - **Paste**: the clipboard's last line break makes an empty rem (`paste.md › Paste3`, `5`, `7`, `10`),

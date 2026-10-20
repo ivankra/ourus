@@ -78,9 +78,9 @@ function fromItem(it: Item, number: number | null): { text: string; prefix: numb
 }
 
 export const driver: Driver = {
-  name: 'dynalist',
-  title: 'Dynalist',
-  id: 'DL',
+  shortId: 'DL',
+  longId: 'dynalist',
+  displayName: 'Dynalist',
   url: 'https://dynalist.io/demo',
   model: 'block',
   keys: {
@@ -108,18 +108,18 @@ export const driver: Driver = {
   // and a code block's fences are text, edited a character at a time: all played, all Dynalist's
   refuses: [],
   ordered: true,
-  behaves: { outdent: 'logical', pasteStructuredLines: 'items', emptyItemWithChildren: 'refuse', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after', pasteStructuredParagraphList: 'children' },
+  behaves: { enterSplitSpace: 'start', outdent: 'logical', pasteStructuredLines: 'items', emptyItemWithChildren: 'refuse', joinWithChildren: 'refuse', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after', pasteStructuredParagraphList: 'children' },
   // "Unindent in place" (Settings › Editor): Shift+Tab takes the item's later siblings along as children
   settings: { outdent: ['logical', 'direct'] },
   holds(doc) {
     const o = doc as Outline;
-    if (o.blocks.some((b) => /^(\[[ xX]\] )?#{4,6} /.test(b.text))) return 'a heading deeper than H3';
+    if (o.blocks.some((b) => /^(\[[ xX]\] )?#{4,6} /.test(b.text))) return 'heading deeper than H3';
     // a checkbox and a heading level are the item's attributes, not text: no caret goes there
-    if (o.sel && Math.min(o.sel.anchor, o.sel.head) < toItem(0, o.blocks[o.sel.block]!.text).prefix) return "a caret in a task's checkbox or a heading's #s";
+    if (o.sel && Math.min(o.sel.anchor, o.sel.head) < toItem(0, o.blocks[o.sel.block]!.text).prefix) return "caret in a task's checkbox or a heading's #s";
     // numbering is a parent's list style: all its children numbered, from 1, or none
     for (const list of siblings(o).values()) {
       const numbers = list.map((i) => /^(\d{1,9})\. /.exec(o.blocks[i]!.text)?.[1]);
-      if (numbers.some(Boolean) && !numbers.every((n, k) => Number(n) === k + 1)) return 'a list numbered in part, or not from 1';
+      if (numbers.some(Boolean) && !numbers.every((n, k) => Number(n) === k + 1)) return 'list numbered in part, or not from 1';
     }
     return undefined;
   },

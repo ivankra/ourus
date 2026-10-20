@@ -4,4 +4,4 @@
 
 import { remnoteDriver } from '../remnote/driver.ts';
 
-export const driver = remnoteDriver({ name: 'remnote-bl', title: 'RemNote (bullets)', id: 'RB' });
+export const driver = remnoteDriver({ shortId: 'RB', longId: 'remnote-bl', displayName: 'RemNote (bl)' });

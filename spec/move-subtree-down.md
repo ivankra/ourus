@@ -3,7 +3,8 @@
 Command: `moveSubtreeDown`, usually bound to Alt-Shift-Down / Alt-Down. Its mirror is
 [`moveSubtreeUp`](move-subtree-up.md), whose rules these are, from the other side:
 
-1. **Everything in a quote moves the quote** ([quotes.md](quotes.md)).
+1. **A move of everything in a quote moves the quote** ([quotes.md](quotes.md)); one node of it
+   moves as in an item, into and out of quotes too.
 2. **Within its parent, the node swaps with the sibling below**, of the same kind as for move
    subtree up (MoveDown1, MoveDown4, MoveDown5, MoveDown16); a heading doesn't swap with a heading
    of another level (MoveDown17).
@@ -16,8 +17,9 @@ Command: `moveSubtreeDown`, usually bound to Alt-Shift-Down / Alt-Down. Its mirr
    out of every section that ends there (MoveDown18, MoveDown28); a heading only where it takes
    nothing in (MoveDown19, MoveDown27).
 6. **Otherwise it is refused** (`no-next-sibling`, MoveDown3, MoveDown6), as is a move that would
-   give another node a new parent: a paragraph moved right above a section's list would own it
-   (MoveDown25). A paragraph that doesn't move takes in the list a move leaves right after it
+   give another node a new parent (`would-reparent`): a heading past a heading of another level
+   (MoveDown17), a heading into a section it would take in (MoveDown19), a paragraph moved right
+   above a section's list, which it would own (MoveDown25). A paragraph that doesn't move takes in the list a move leaves right after it
    ([MoveUp35](move-subtree-up.md#moveup35)).
 7. **What would run together is set apart** by a blank line (MoveDown26, MoveDown31); a renumbered
    list keeps its children at their content column (MoveDown23, MoveDown30). The caret ends in the
@@ -58,8 +60,9 @@ tags: core
 
 ## MoveDown2
 
-An item moves below a paragraph and becomes its first owned list item, keeping its column. Bare
-Obsidian moves the line below the paragraph, without the blank line it needs.
+An item moves below a paragraph and becomes its first owned list item, keeping its column, as
+RemNote without bullets, SiYuan and BlockNote move it. Bare Obsidian moves the line past the blank
+line only, so `para` becomes a lazy line of the item.
 
 ```yaml
 tags: edge free-form
@@ -526,7 +529,7 @@ tags: edge free-form
 > moveSubtreeDown
 
 ```result
-rejected: not-expressible
+rejected: would-reparent
 ```
 
 ```buffer
@@ -584,7 +587,7 @@ tags: edge free-form
 > moveSubtreeDown
 
 ```result
-rejected: no-next-sibling
+rejected: would-reparent
 ```
 
 ```buffer
@@ -743,7 +746,7 @@ para┃
 > moveSubtreeDown
 
 ```result
-rejected: no-next-sibling
+rejected: would-reparent
 ```
 
 ```buffer
@@ -1003,7 +1006,8 @@ tags: rare markup-fence
 
 The first item of an ordered list right under an item's text moved down: the item below, now first,
 is renumbered from the list's start, which it needs to interrupt the text above (`2.` can't), and the
-moved one counts on; back up, the same.
+moved one counts on; back up, the same, as Obsidian's Outliner renumbers them. Bare Obsidian's list
+starts from 2 after the move, which can't interrupt `a`: its items become `a`'s text.
 
 ```yaml
 tags: rare
@@ -1086,3 +1090,71 @@ tags: edge markup-fence
   ┃x
   ```
 ````
+
+## MoveDown38
+
+From the blank line after a list's last item, the item moves down past the paragraph, and the caret
+goes with it, into its text. Left on the blank line, which is now the gap of the item above, it
+would have a second press move that item. The blank line ends the list and stays after it
+([MoveDown39](#movedown39)).
+
+```yaml
+tags: rare free-form
+```
+
+```buffer
+- a
+- b
+┃
+para
+```
+
+> moveSubtreeDown
+
+```buffer
+- a
+
+para
+- b┃
+```
+
+## MoveDown39
+
+A list's last item moved down past the paragraph after the list: the blank lines that end the list
+stay at its end, after the item now last, and the item becomes the paragraph's list, right under its
+text ([gaps.md](gaps.md)): written on both sides, they would double. Up again, it comes back.
+
+```yaml
+tags: rare free-form
+```
+
+```buffer
+- a
+- b┃
+
+
+
+para
+```
+
+> moveSubtreeDown
+
+```buffer
+- a
+
+
+
+para
+- b┃
+```
+
+> moveSubtreeUp
+
+```buffer
+- a
+- b┃
+
+
+
+para
+```

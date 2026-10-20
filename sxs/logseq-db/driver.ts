@@ -35,9 +35,9 @@ function split(text: string): { rest: string; number: boolean; task?: 'Todo' | '
 }
 
 export const DB: LogseqFlavor = {
-  name: 'logseq-db',
-  title: 'Logseq DB',
-  id: 'LD',
+  shortId: 'LD',
+  longId: 'logseq-db',
+  displayName: 'Logseq (DB)',
   url: 'https://test.logseq.com/',
   db: true,
   toLogseq(text): BlockToLoad {
@@ -120,13 +120,13 @@ export const DB: LogseqFlavor = {
       if (own) {
         const sel = doc.sel?.block === i ? doc.sel : undefined;
         const inside = (p: number) => p >= own.at && p <= own.at + own.text.length;
-        if (sel && !(inside(sel.anchor) && inside(sel.head))) return `a caret on a ${own.what} block's delimiter line`;
+        if (sel && !(inside(sel.anchor) && inside(sel.head))) return `caret on a ${own.what} block's delimiter line`;
         if (/^\s|\s$/.test(own.text)) return `${own.what} starting or ending with whitespace`;
         continue;
       }
-      if (/^[ \t]*(?:`{3,}|~{3,})/m.test(b.text)) return 'a code fence other than a block of ``` alone';
+      if (/^[ \t]*(?:`{3,}|~{3,})/m.test(b.text)) return 'code fence other than a block of ``` alone';
       // Logseq drops a line break at a stored text's edge; the block being edited (its editor) keeps it
-      if (doc.sel?.block !== i && /^\n|\n$/.test(split(b.text).rest)) return 'a line break at the edge of a block not being edited';
+      if (doc.sel?.block !== i && /^\n|\n$/.test(split(b.text).rest)) return 'line break at the edge of a block not being edited';
     }
     return undefined;
   },

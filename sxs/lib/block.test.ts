@@ -41,7 +41,7 @@ test("an item whose first block is a list has no text, its marker's line the inn
   const p = project('- - ┃a\n  - b\n', 'gfm');
   assert.deepEqual(blocks(p.outline), ['', '  a', '  b']);
   assert.deepEqual(p.outline.sel, { block: 1, anchor: 0, head: 0 });
-  assert.deepEqual([...p.notes], ["a list as an item's first block"]);
+  assert.deepEqual([...p.notes], ["list as an item's first block"]);
 });
 
 test('a placeholder holds an empty node', () => {
@@ -71,15 +71,15 @@ test('CRLF endings go, positions shifting with them', () => {
 });
 
 test('a caret with no place in a block is lost, with the reason', () => {
-  assert.equal(project('┃- a\n', 'gfm').caretLost, 'a caret in a marker');
-  assert.equal(project('a\n┃\nb\n', 'gfm').caretLost, 'a caret on a blank line');
-  assert.equal(project('- a\n┃', 'gfm').caretLost, 'a caret after the last line');
-  assert.equal(project('- «a\n- b»\n', 'gfm').caretLost, 'a selection across blocks');
+  assert.equal(project('┃- a\n', 'gfm').caretLost, 'caret in a marker');
+  assert.equal(project('a\n┃\nb\n', 'gfm').caretLost, 'caret on a blank line');
+  assert.equal(project('- a\n┃', 'gfm').caretLost, 'caret after the last line');
+  assert.equal(project('- «a\n- b»\n', 'gfm').caretLost, 'selection across blocks');
 });
 
 test('quotes, callouts and frontmatter have no block form', () => {
-  assert.throws(() => project('> q┃\n', 'gfm'), (e) => e instanceof Unsupported && e.message === 'a quote');
-  assert.throws(() => project('> [!note] t\n> q┃\n', 'obsidian'), (e) => e instanceof Unsupported && e.message === 'a callout');
+  assert.throws(() => project('> q┃\n', 'gfm'), (e) => e instanceof Unsupported && e.message === 'quote');
+  assert.throws(() => project('> [!note] t\n> q┃\n', 'obsidian'), (e) => e instanceof Unsupported && e.message === 'callout');
   assert.throws(() => project('---\na: 1\n---\n- x┃\n', 'obsidian'), (e) => e instanceof Unsupported && e.message === 'frontmatter');
 });
 

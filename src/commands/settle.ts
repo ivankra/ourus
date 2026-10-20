@@ -1,7 +1,7 @@
 // Settling placeholders the caret has left.
 
 import { OutlineState, type OutlineNode } from '../outline/index.ts';
-import { diffText, lineSpan, type ChangeSpec } from '../text.ts';
+import { diffText, lineSpan, trimMd, trimMdEnd, trimMdStart, type ChangeSpec } from '../text.ts';
 import { CommandContext, isEmptyItem, normText } from './context.ts';
 import { run } from './plan.ts';
 
@@ -24,16 +24,23 @@ export function settlePlaceholders(doc: OutlineState, caret: number): { changes:
     return ctx.plan.differenceFrom(without, doc, 'tree') !== null;
   });
   if (matters.length === 0) return { changes: [], state: doc.update([], { drop: abandoned }) };
-  // a deleted character's place after a marker: leaving it, the surplus space goes
+  // a deleted character's place after a marker: leaving it, the surplus space goes, the text escaped
+  // where it would start a block right after the marker (`- \``` x`)
   const spaces = matters.filter((p) => doc.text[p] === ' ' || doc.text[p] === '\t');
   if (spaces.length) {
-    const changes = spaces.map((p) => {
+    let expected = ctx.plan;
+    const changes = spaces.flatMap((p) => {
       let to = p;
       while (doc.text[to] === ' ' || doc.text[to] === '\t') to++;
-      return { from: p, to, insert: '' };
+      const node = doc.nodeAt(p);
+      const lines = node ? doc.headLines(node) : [];
+      const escaped = ctx.encoder.escape(doc.text.slice(to, lineSpan(doc.text, p)[1]), 'start', lines.slice(1).map((l) => trimMdStart(l)));
+      if (!node || escaped.at === null) return [{ from: p, to, insert: '' }];
+      expected = expected.setText(node, normText([escaped.text, ...lines.slice(1)]));
+      return [{ from: p, to, insert: '' }, { from: to + escaped.at, to: to + escaped.at, insert: '\\' }];
     });
     const next = doc.update(changes, { drop: [...abandoned] });
-    if (ctx.plan.differenceFrom(next, doc, 'tree') === null) return { changes, state: next };
+    if (expected.differenceFrom(next, doc, 'tree') === null) return { changes, state: next };
   }
   // an empty item the text can hold set off by a blank line (an empty child under text, an empty
   // item right after a paragraph) stays, written that way
@@ -57,9 +64,9 @@ export function settlePlaceholders(doc: OutlineState, caret: number): { changes:
     const { lines } = doc.contentOf(node);
     const index = lineNo - doc.lines.findIndex((line) => doc.nodeAtLine(line.index) === node);
     // a task's first line, emptied, keeps its checkbox: the line after comes up after it
-    const box = index === 0 ? /^\s*\[[ xX]\]\s*$/.exec(text[0]!)?.[0].trim() : undefined;
+    const box = index === 0 ? trimMd(/^[ \t]*\[[ xX]\][ \t]*$/.exec(text[0]!)?.[0] ?? '') || undefined : undefined;
     const without = (all: readonly string[]): string[] =>
-      box && all.length > 1 ? [`${box} ${all[1]!.trimStart()}`, ...all.slice(2)] : all.filter((_, i) => i !== index);
+      box && all.length > 1 ? [`${box} ${trimMdStart(all[1]!)}`, ...all.slice(2)] : all.filter((_, i) => i !== index);
     expected = expected.update(node, (n) => ({ ...n, text: normText(without(text)), lines: without(lines!) }));
   }
   if (!expected.changed) return null;
@@ -86,7 +93,7 @@ function keptApart(ctx: CommandContext, placeholders: readonly number[], abandon
     if (!node || node.kind !== 'item' || node.startLine !== line.index || !isEmptyItem(ctx, node)) return null;
     // the blank line keeps the quotes around the item
     const piece = line.prefix.find((candidate) => candidate.block === node.block);
-    const blank = doc.text.slice(line.from, piece ? piece.from : line.from).trimEnd();
+    const blank = trimMdEnd(doc.text.slice(line.from, piece ? piece.from : line.from));
     changes.push({ from: line.from, to: line.from, insert: blank + ctx.ending(line) });
   }
   const next = doc.update(changes, { drop: [...abandoned] });

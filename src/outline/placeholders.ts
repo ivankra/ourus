@@ -1,7 +1,7 @@
 // Placeholders: offsets read as if text had been typed there, so an empty node the user is about to
 // fill exists in the outline. Which offsets can be one.
 
-import { lineSpan } from '../text.ts';
+import { lineSpan, trimMd } from '../text.ts';
 
 /** A placeholder stays one while its line holds no text: nothing, or only container markers (a task's checkbox included). */
 const reEmptyPlaceLine = /^(?:[ \t>]|(?:[-+*]|\d{1,9}[.)])[ \t]+(?:\[[ xX]\][ \t]+)?)*$/;
@@ -20,7 +20,7 @@ export function isPlace(text: string, p: number): boolean {
   const c = text.charCodeAt(p);
   if (p === text.length || c === 10 || c === 13) return reEmptyPlaceLine.test(text.slice(start, p));
   if (c !== 32 && c !== 9) return false;
-  return reMarkerAndSpace.test(text.slice(start, p)) && text.slice(p, lineSpan(text, p)[1]).trim() !== '';
+  return reMarkerAndSpace.test(text.slice(start, p)) && trimMd(text.slice(p, lineSpan(text, p)[1])) !== '';
 }
 
 export function validPlaces(text: string, marks: readonly number[]): number[] {

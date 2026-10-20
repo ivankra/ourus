@@ -3,6 +3,7 @@
 // What counts as a block start is the flavor's (`Flavor.startsBlock`).
 
 import type { Flavor } from '../parser/index.ts';
+import { trimMd, trimMdStart } from '../text.ts';
 
 const reListMarker = /^(?:[-+*]|\d{1,9}[.)])(?:[ \t]+|$)/;
 
@@ -45,9 +46,9 @@ export function startOfNode(flavor: Flavor, text: string, below: readonly string
  * above a table's header in GFM). Escaped in every flavor, so the text is the same in each.
  */
 function readsAsBlockElsewhere(text: string): boolean {
-  if (/^\d{1,9}[.)][ \t]+\S/.test(text)) return true;
+  if (/^\d{1,9}[.)][ \t]+[^ \t]/.test(text)) return true;
   if (!text.includes('|')) return false;
-  const cells = text.trim().replace(/^\|/, '').replace(/\|$/, '').split('|');
+  const cells = trimMd(text).replace(/^\|/, '').replace(/\|$/, '').split('|');
   return cells.every((cell) => /^[ \t]*:?-+:?[ \t]*$/.test(cell));
 }
 
@@ -56,8 +57,8 @@ export function interruptsParagraph(flavor: Flavor, text: string): boolean {
   if (flavor.startsBlock(text, true)) return true;
   // a list item with text interrupts a paragraph; an ordered one only from 1
   const m = reListMarker.exec(text);
-  return !!m && text.slice(m[0].length).trim() !== '' && (!/^\d/.test(text) || /^0*1[.)]/.test(text));
+  return !!m && trimMd(text.slice(m[0].length)) !== '' && (!/^\d/.test(text) || /^0*1[.)]/.test(text));
 }
 
 const readsAsReference = (flavor: Flavor, text: string, below: readonly string[]): boolean =>
-  flavor.readsAsReference([text, ...below.map((line) => line.trimStart())].join('\n'));
+  flavor.readsAsReference([text, ...below.map((line) => trimMdStart(line))].join('\n'));

@@ -127,3 +127,56 @@ test('ids stay with nodes that a command indents or opens a line above', () => {
   const [e, f] = run('# H\n\npara\n', 'enter', 5);
   assert.deepEqual([f!.filter((n) => !n.endsWith(':')), f!.length], [e, e!.length + 1]);
 });
+
+// The empty document, and the bare line break with and without a held empty paragraph: three states
+// the spec's drawings can't tell apart (a buffer's last line always ends with a line ending, and `''`
+// has no line at all), each its own path through the commands.
+test('every command from an empty document neither throws nor fails to encode', () => {
+  const starts: [string, string, number[]][] = [['nothing', '', []], ['a line break', '\n', []], ['a held empty paragraph', '\n', [0]]];
+  const clipboards = ['- x\n', 'x\n', 'x', '\n', 'a\n\nb\n', '# h\n', '---\ntitle: x\n---\n', '```\ncode\n```\n'];
+  const commands: Command[] = [
+    ...(['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'deleteSubtree', 'duplicateSubtree', ...CARET_COMMANDS] as const).map((type) => ({ type }) as Command),
+    ...clipboards.flatMap((text) => [{ type: 'pasteStructured', text } as const, { type: 'pastePlain', text } as const]),
+  ];
+  const problems: string[] = [];
+  for (const flavor of Config.values.flavor) {
+    for (const [name, text, placeholders] of starts) {
+      const doc = OutlineState.parse(text, { placeholders, config: { flavor } });
+      for (let pos = 0; pos <= text.length; pos++) {
+        for (const command of commands) {
+          const what = `${flavor}, ${name}, at ${pos}: ${JSON.stringify(command)}`;
+          try {
+            const r = executeCommand(doc, command, { anchor: pos, head: pos });
+            if (r.status === 'rejected' && r.reason === 'encoding-failed') problems.push(`${what}: ${r.detail}`);
+            if (r.status === 'applied') assert.equal(applyChanges(text, r.changes), r.state.text, what);
+          } catch (e) {
+            problems.push(`${what}: throws ${(e as Error).message}`);
+          }
+        }
+      }
+    }
+  }
+  assert.deepEqual(problems, []);
+  // with no line to act on, a structural command is refused, and a paste is the host's
+  const empty = OutlineState.parse('');
+  assert.equal(executeCommand(empty, { type: 'indent' }, { anchor: 0, head: 0 }).status, 'rejected');
+  assert.equal(executeCommand(empty, { type: 'pasteStructured', text: '- x\n' }, { anchor: 0, head: 0 }).status, 'notApplicable');
+});
+
+// The document's true end, after its last line ending, is on no line, which the spec's buffers can't
+// draw: a structural command from there acts on the last node, and the caret goes into its text
+// (spec: MoveUp39, from a trailing blank line).
+test('a structural command from the document end leaves the caret in the node it moved', () => {
+  const doc = OutlineState.parse('- one\n- two\n');
+  const end = doc.text.length;
+  for (const [type, text] of [['moveSubtreeUp', '- two\n- one\n'], ['indent', '- one\n  - two\n']] as const) {
+    const r = executeCommand(doc, { type }, { anchor: end, head: end });
+    assert.equal(r.status, 'applied', type);
+    if (r.status !== 'applied') continue;
+    assert.equal(r.state.text, text, type);
+    const node = r.state.nodeAt(r.selection.head);
+    assert.equal(node && r.state.headLines(node)[0], 'two', `${type}: the caret in "two"`);
+    // so the next press acts on it again
+    if (type === 'moveSubtreeUp') assert.equal(executeCommand(r.state, { type: 'moveSubtreeDown' }, r.selection).status, 'applied');
+  }
+});

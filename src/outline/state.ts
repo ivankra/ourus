@@ -2,7 +2,7 @@
 
 import { Config } from '../config.ts';
 import { Flavor, SyntaxTree, type Block, type LineInfo } from '../parser/index.ts';
-import { applyChanges, diffLines, isSpaceOrTab, lineIndexAt, mapPos, normalizeChanges, skipSpaces, type ChangeSpec } from '../text.ts';
+import { applyChanges, diffLines, isSpaceOrTab, lineIndexAt, mapPos, normalizeChanges, skipSpaces, trimMd, type ChangeSpec } from '../text.ts';
 import { buildOutline, calloutTitle, headOwners, outlineNodes, type OutlineNode } from './build.ts';
 import { IdCarrier, headStartIn } from './identity.ts';
 import { isPlace, validPlaces } from './placeholders.ts';
@@ -163,11 +163,13 @@ export class OutlineState {
    * Whether a placeholder at `caret` (in the new text) keeps the outline a deletion would otherwise
    * change: the deletion emptied a node (the caret at its line's end) or widened an item's padding
    * (the caret on the space now after its marker), and read with a placeholder there the outline has
-   * the shape it had. Typing never makes one: what is typed is text.
+   * the shape it had, each node's text the same kind of block (`-  ``` x` is code). Typing never
+   * makes one: what is typed is text.
    */
   private keptAt(changes: readonly ChangeSpec[], text: string, caret: number): boolean {
     if (!changes.some((change) => change.to > change.from) || !isPlace(text, caret)) return false;
-    const shape = (doc: OutlineState): string => doc.nodes.map((node) => `${node.depth}:${node.kind}`).join(',');
+    // an emptied node's text reads as a paragraph's: emptying keeps its kind
+    const shape = (doc: OutlineState): string => doc.nodes.map((node) => `${node.depth}:${node.kind}:${node.head?.type ?? 'paragraph'}`).join(',');
     const before = shape(this);
     const read = (placeholders: readonly number[]): OutlineState =>
       new OutlineState(text, placeholders, this.config, undefined, 1, (sentinels) => this.syntaxTree.update(changes, { sentinels }));
@@ -216,7 +218,7 @@ export class OutlineState {
 
   /** What "empty" means for a node's text, however it was obtained: nothing, or only a task's checkbox, which is markup. */
   static isEmptyText(text: string): boolean {
-    return text.trim().replace(/^\[[ xX]\]/, '').trim() === '';
+    return trimMd(trimMd(text).replace(/^\[[ xX]\]/, '')) === '';
   }
 
   /**
@@ -231,8 +233,55 @@ export class OutlineState {
     return pos === start ? line.from : start;
   }
 
-  /** Where the text starts on `pos`'s line: past container prefixes, a list marker, a task's checkbox, a heading's `#`s and a callout's `[!type]`. */
+  /**
+   * Where the text starts on `pos`'s line: past container prefixes, a list marker, a task's checkbox, a
+   * heading's `#`s and a callout's `[!type]`. With `enterSplitSpace: start`, an item's spaces there
+   * past the padding of the item above it are its text's (`extraPadding`).
+   */
   textStart(pos: number): number {
+    const start = this.markupEnd(pos);
+    const node = this.nodeAt(pos);
+    const line = this.lineAt(pos);
+    if (this.config.enterSplitSpace !== 'start' || !node?.head || line.index !== node.head.startLine) return start;
+    if (node.kind === 'item' && node.head.startLine === node.startLine) return start - this.extraPadding(node.block, start);
+    // a paragraph's first line, or an item's text on the line after its marker: its leading spaces past
+    // where its container's content starts, which Markdown strips (`One.` / `␠Two.`)
+    if (node.head.type !== 'paragraph' || (node.kind !== 'paragraph' && node.kind !== 'item')) return start;
+    const from = node.kind === 'item' ? this.columnAt(line, node.block.contentColumn!) : line.contentFrom;
+    return from < start && start - from < 4 && trimMd(this.text.slice(from, start)) === '' ? from : start;
+  }
+
+  /** Where column `column` is on `line` (tabs to the next stop of four), or its end. */
+  private columnAt(line: LineInfo, column: number): number {
+    let col = 0;
+    let p = line.from;
+    while (p < line.to && col < column) col = this.text.charCodeAt(p++) === 9 ? col + 4 - (col % 4) : col + 1;
+    return p;
+  }
+
+  /**
+   * How many of the spaces before an item's text (at `start`) a split kept as text
+   * (`enterSplitSpace: start`, `- one two` / `-  three`): those past the padding of the item above
+   * it, its previous sibling, else the item whose first child it is; none past four columns (code)
+   * and none where the padding is the list's own (`-   a` / `-   b`), Markdown's padding either way.
+   */
+  private extraPadding(item: Block, start: number): number {
+    const spacesBefore = (at: number): number => {
+      let k = at;
+      while (k > 0 && isSpaceOrTab(this.text.charCodeAt(k - 1))) k--;
+      return at - k;
+    };
+    const mine = spacesBefore(start);
+    if (mine < 2 || mine > 4) return 0;
+    const siblings = item.parent?.children ?? [];
+    const above = siblings[siblings.indexOf(item) - 1] ?? (item.parent?.parent?.type === 'item' ? item.parent.parent : undefined);
+    if (!above || above.type !== 'item') return 0;
+    const theirs = spacesBefore(this.markupEnd(this.markerTo(above)));
+    return Math.max(0, mine - Math.max(theirs, 1));
+  }
+
+  /** Where the text starts on `pos`'s line as Markdown reads it, past its markup (`textStart`). */
+  private markupEnd(pos: number): number {
     const line = this.lineAt(pos);
     let start = line.contentFrom;
     start = skipSpaces(this.text, start, line.to, 1);
@@ -308,7 +357,7 @@ export class OutlineState {
   /** A node's text as verification compares it: an atom's lines as they are, any other node's trimmed, joined by `\n`. */
   nodeText(node: OutlineNode): string {
     const lines = this.headLines(node);
-    return node.kind === 'atom' ? lines.join('\n') : lines.map((line) => line.trim()).join('\n');
+    return node.kind === 'atom' ? lines.join('\n') : lines.map((line) => trimMd(line)).join('\n');
   }
 
   /** The lines `node` holds of its own, those `contentOf` gives the content of. */

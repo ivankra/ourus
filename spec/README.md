@@ -1,9 +1,28 @@
-# The behaviour spec
+# The behavior spec
 
 The files here say what an outliner does, as examples: an editor state, what the user does, and
 the state that results. `npm test` runs every example against the ourus core
-(`test/spec.test.ts`). File titles name the editing behaviour or familiar key, while executable
+(`test/spec.test.ts`). File titles name the editing behavior or familiar key, while executable
 actions use current command names, so the same files can drive editors with different keymaps.
+
+To see what ourus does before drawing a case, or why one fails, `npm run probe` (`sxs/probe.ts`)
+plays actions on a buffer drawn this way and prints each state, under every value of an option if
+asked, as a case's blocks if asked (`--spec`); `--case=Enter28` replays a case, each step checked
+against what it draws. Given apps first (`all`, a group, apps by name or two capitals, `LO,RR`), it
+plays the same on the SxS's apps too, each step's states with the apps grouped by what they did,
+without writing a case or a result:
+
+```
+npm run probe -- '- [ ┃] task' deleteContentBackward '"x"'
+npm run probe -- --each=markup '- one┃ two' enter deleteContentBackward
+npm run probe -- --case=Enter28
+npm run probe -- all '- one⏎  ┃two' shiftEnter deleteContentBackward
+```
+
+After a behavior changed on purpose, `npm run redraw` (`test/redraw.ts`) lists every case drawn
+otherwise than ourus now does, each step's drawing beside ourus's, and `--apply` rewrites those
+buffer and result blocks (a file or case named to narrow it: `npm run redraw -- enter.md --apply`).
+Read every difference first; a case whose actions should change is redrawn by hand.
 
 - [Indent (Tab)](indent.md): `indent`.
 - [Outdent (Shift-Tab)](outdent.md): `outdent`.
@@ -12,8 +31,9 @@ actions use current command names, so the same files can drive editors with diff
 - [Enter](enter.md): `enter`.
 - [Shift-Enter](shift-enter.md): `shiftEnter`.
 - [Backspace](backspace.md): `deleteContentBackward`.
-- [Delete](del.md): `deleteContentForward`.
-- [Paste](paste.md): `pasteStructured`, `pastePlain`.
+- [Delete](delete.md): `deleteContentForward`.
+- [Paste](paste.md): `pasteStructured`.
+- [Plain paste](paste-plain.md): `pastePlain`.
 - [Fenced code](fences.md): Enter and Shift-Enter in a fenced code block, and in the other blocks
   of lines (math, comments, indented code).
 - [`scenarios.md`](scenarios.md): longer sequences, as a user would type them.
@@ -31,9 +51,9 @@ actions use current command names, so the same files can drive editors with diff
 - [`z-open.md`](z-open.md): open questions, one each, drawing what ourus does today where no
   command file does, with the alternative and a recommendation; a settled one moves to its
   command's file.
-- [Typing](typing.md): what the host types, with no ourus command, and what the guard is to do.
+- [Typing](typing.md): what the host types, with no ourus command, and what it then reads as.
 
-Each command has its own spec, named for its key or editing behaviour. Its intro lists the
+Each command has its own spec, named for its key or editing behavior. Its intro lists the
 command's rules in order, the first that applies winning, and every case is an instance of one.
 Case headings use short IDs (`Enter3`, `Quote12`, `Gap4`, `Scenario7`), and prose refers to cases
 by their full IDs, never ranges or abbreviations. The prose under a case says in a sentence or two
@@ -50,7 +70,14 @@ Some empty nodes have no Markdown of their own. A placeholder (`◌`) holds one 
 edits it; [placeholders.md](placeholders.md) specifies what happens when it is filled or left.
 Applied commands are checked by re-parsing their output against the intended outline. Where a
 command does not apply, the host runs its own default; that is only for edits within one node's
-text, and for edits with the caret in markup that ourus would refuse (`editInMarkup: host`).
+text, and, where the host shows markup as text (`markup: text`), for edits with the caret in markup
+that ourus would refuse.
+
+ourus serves two kinds of host, and the `markup` option says which it is in. One shows markup as
+text the user edits by hand (`text`, the default: raw CodeMirror, a textarea, Obsidian's source
+mode): there ourus mustn't stand in the way of a user fixing markup. The other decorates it
+(`decorated`: rendered checkboxes and bullets, Live Preview's widgets): there ourus keeps the user
+from breaking the node through it. Guarantees 3 and 6 say what each kind gets.
 
 ## What every case holds to
 
@@ -58,14 +85,20 @@ No command breaks these; a case that seems to need to is wrong, or is a refusal.
 
 1. **Exactly the intended structure, or a clean refusal**, with a reason Markdown imposes
    (`not-expressible`, `nothing-above`, ...). `encoding-failed` is a bug, never an outcome.
-2. **Lossless and minimal.** Nothing the user wrote is lost; text the edit isn't about stays byte
-   for byte (other lines, the node's own text, hard-break spaces, code, tabs, CRLF, the numbers of
-   untouched lists). Prefixes, markers and blank lines change only where the structure requires.
+2. **Lossless and minimal.** Nothing the user wrote is lost, but the spaces an Enter split trims
+   (`enterSplitSpace: trim`, the default, and `drop`: [Enter44](enter.md#enter44)); text the edit
+   isn't about stays byte for byte (other lines, the node's own text, hard-break spaces, code, tabs,
+   CRLF, the numbers of untouched lists). Prefixes, markers and blank lines change only where the structure requires.
 3. **The host's key only inside text.** At a markup boundary (a marker, a checkbox, `#`s, a fence
    line, a quote's `>`, a callout title, a blank line between nodes) ourus does the edit or refuses.
-   With the caret in markup itself, where only the host puts it, an edit ourus would refuse is the
-   host's under `editInMarkup: host` (the default), whatever the text then reads as; `refuse`
-   keeps the refusal ([Delete23](del.md#delete23), [Delete16c](del.md#delete16c)).
+   With the caret in markup itself, where only the host puts it, Enter acts at the node's text start
+   ([Enter34](enter.md#enter34)), and a task's checkbox is edited as text
+   ([TaskBackspace8](tasks.md#taskbackspace8)); Shift-Enter, Backspace and Delete, and an edit ourus
+   would refuse, are the host's where markup is text (`markup: text`), whatever the text then reads
+   as ([Backspace42](backspace.md#backspace42), [Delete29](delete.md#delete29),
+   [ShiftEnter26](shift-enter.md#shiftenter26)), and act at the text start or are refused where it is
+   decorated ([Backspace42b](backspace.md#backspace42b), [Delete16c](delete.md#delete16c),
+   [ShiftEnter26b](shift-enter.md#shiftenter26b)).
 4. **Other nodes keep their parents**: a command changes the parents of its operands, and of the
    neighbors its own definition names, never of any other node. Those neighbors: direct outdent's
    later siblings, the section an unwrapped heading releases
@@ -77,10 +110,25 @@ No command breaks these; a case that seems to need to is wrong, or is a refusal.
    Backspace), or at least their outline where Markdown forces a difference, which the case states.
    One difference is by design: a split at a line break inside a node's text joins back glued, as a
    join puts the text at the end of the text above, wherever it came from
-   ([Enter51](enter.md#enter51)); between paragraphs Backspace takes only the blank line, and the
-   lines come back ([Backspace12](backspace.md#backspace12)).
+   ([Enter51](enter.md#enter51)). Shift-Enter keeps the spaces at a break, starting its new line, so
+   the join, which concatenates, gives them back ([ShiftEnter21](shift-enter.md#shiftenter21)); Enter
+   trims them from both halves, as Logseq does, and its join can't (`enterSplitSpace: trim`, the
+   default; `start` keeps them: [Enter44](enter.md#enter44)). Paragraphs join
+   glued, in one press, Enter's inverse ([Backspace12b](backspace.md#backspace12b)), so at the top
+   level Shift-Enter at a line's start, whose paragraphs are the same, comes back glued too; right
+   after an item's text, where Enter makes no paragraph, Backspace takes back Shift-Enter's
+   ([Backspace19](backspace.md#backspace19)). In code, the indentation Enter carries
+   to the new line is code, which Backspace deletes as the host deletes code (a code editor by its
+   indentation unit), so taking it back may take more than one press
+   ([Fence1](fences.md#fence1)). Blank lines may differ too: a command writes the blank lines
+   Markdown needs around the node it puts in, and the one that takes it out leaves those of the node
+   above ([gaps.md](gaps.md)), so where two starts give the same text (`a⏎# ┃H1` and `a⏎⏎# ┃H1`, Enter),
+   the round trip can leave a blank line more or fewer than one of them had.
 6. **The caret never ends in markup**: after a command it is in a node's text, never where typing
-   would break the node.
+   would break the node. Where markup is text, a command may leave it on a fence line where the user
+   had it: indent and outdent from one, which in the code would be the host's
+   ([Indent31](indent.md#indent31)), and Backspace back to a fence's end
+   ([Fence32](fences.md#fence32)); where it is decorated, never ([Fence32b](fences.md#fence32b)).
 7. **Text stays text**: text after the caret that would start a block at a line's start is
    escaped; only the user's own typing authors structure.
 8. **Empty nodes are held, then resolved**: an empty node Markdown can't hold is held by a
@@ -118,20 +166,24 @@ The item becomes the last child of the item above.
 - **Headings are unique in their file** (compared as anchors: case and punctuation aside), since a
   repeated one would give an ambiguous link and an ambiguous name. A repeat is an error.
 - **The blocks before the first quote are where the test starts**: a config block (a `yaml`
-  block), if any, then one `buffer`, and nothing else. The clipboard the test starts with is in the
-  config block (see below).
+  block), if any, then one `buffer`, and, if the case is about it, its `outline` (below), and
+  nothing else. The clipboard the test starts with is in the config block (see below).
 - **A quote lists actions**, applied in order to the current state.
 - **The blocks after a quote are what must hold then**, and they become the current state:
   - `buffer`: the drawn editor state;
   - `clipboard`: the clipboard's text, ending with a line break;
   - `result`: what ourus made of the last action, which must be one of its commands:
     `applied`, `notApplicable` (the host's default ran instead) or `rejected: <reason>`. Other
-    editors check buffers only.
+    editors check buffers only;
+  - `outline`: how the buffer reads, where a case's point is a reading its bytes don't show (a
+    setext underline against an empty child, a lazy line against an item, a task against `[ ]`
+    text): a line per node in document order, indented two spaces a level, its kind (`heading 2`,
+    `atom code_block`, `item [x]` for a task), then `: ` and its text, line breaks drawn `⏎`.
 
   What isn't drawn isn't checked. The blocks of one state can come in any order, at most one of
   each kind.
 - **A test's name is the headings above it**, below the file's title. Per-command files use short
-  case IDs (`Enter1`, `ShiftEnter1`, `MoveUp1`) and explain the behaviour in prose below each ID.
+  case IDs (`Enter1`, `ShiftEnter1`, `MoveUp1`) and explain the behavior in prose below each ID.
   Keep assigned IDs stable as cases are added. File titles use keys and semantics (Enter, Move
   subtree up); mention the current API name in backticks in the prose (`shiftEnter`,
   `moveSubtreeUp`). Executable actions retain current API names until the command API is renamed.
@@ -146,8 +198,9 @@ The item becomes the last child of the item above.
 | `◌` | a placeholder: the end of an empty line the document reads as if text had been typed there; right before a space that follows a list marker, that space, read as text (a deleted character's place) |
 | `→` | a tab |
 | `␍` | a carriage return |
+| `⍽` | a no-break space (U+00A0), which Markdown reads as text, not as a space |
 
-A clipboard uses `→` and `␍` too. A buffer's last line always ends with a line ending. A buffer
+A clipboard uses `→`, `␍` and `⍽` too. A buffer's last line always ends with a line ending. A buffer
 that contains a code fence needs a longer fence of its own (`` ````buffer ``).
 
 ## Actions
@@ -236,15 +289,16 @@ For a clipboard whose lines all start with spaces, an indentation indicator says
 starts (`clipboard: |2`, the text two spaces in: a line indented six spaces keeps four); without
 one, YAML would take those spaces for the block's indentation, so lines indented more than two
 spaces are an error. A clipboard that holds a code fence needs a longer fence for the config block
-(`` ````yaml ``), as a buffer does.
+(`` ````yaml ``), as a buffer does. A clipboard of line breaks only keeps them with `|+`, followed by
+an empty line for each (`clipboard: |+` and one empty line is a single line break).
 
 An unknown option, or a value an option doesn't take, is an error. Defined:
 
-  - `status`: `pending` marks behaviour agreed on but not built yet. It is reported as a todo, and
+  - `status`: `pending` marks behavior agreed on but not built yet. It is reported as a todo, and
     fails once it passes, so it gets promoted. `ready` (the default) is the rest; a test can set it
     over a file's `status: pending`;
-  - `flavor`: the Markdown flavor the text is read in, `commonmark`, `gfm` or `obsidian`. An example
-    that names none runs in each of them, with the same expectations;
+  - `flavor`: the Markdown flavor the text is read in, `gfm` (the default), `commonmark` or
+    `obsidian`. An example that names none runs in each of them, with the same expectations;
   - `tags`: words separated by spaces, in a test's config block only, every test having it. The
     first is the case's **rank**, how often a user meets it: `core` (every session), `common`,
     `edge` or `rare`; review metadata, never an editor setting. Every `core` case is walked through
@@ -296,16 +350,18 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
         lines that would make a fence;
   - the other options of ourus's config (`src/config.ts`): `outdent` (`direct`, the default, or
     `logical`), `bullet` (`-`, the default, `*` or `+`), `enterOnEmptyItem` (`sibling`, the
-    default, or `outdent`), `enterMidItem` (`sibling`, the default, or `child`),
+    default, `outdent` or `exit`), `enterMidItem` (`sibling`, the default, or `child`),
     `enterAtTextStart` (`into`, the default, or `stay`), `backspaceAtTopItem` (`unwrap`, the
     default, or `refuse`), `emptyItemWithChildren` (`lift`, the default, or `refuse`),
+    `joinWithChildren` (`join`, the default, or `refuse`), `enterTask` (`continue`, the default, or
+    `plain`), `enterSplitSpace` (`trim`, the default, `drop` or `start`),
     `handleFenceContents` (`true`, the default, or `false`), `headingEditing` (`text`, the default, or `block`), `taskEditing` (`checkbox`, the default,
     `text` or `block`), `pasteStructuredLines` (`text`, the default, or `items`),
     `pasteStructuredMidText` (`split`, the default, or `after`), `pasteStructuredAtEnd` (`after`,
     the default, or `join`), `pasteStructuredOnParent` (`children`, the default, or `after`),
-    `pasteStructuredParagraphList` (`siblings`, the default, or `children`), `pasteStructuredListForm` (`text`, the default, `literal`, `drop` or
-    `own`), `deleteAtGap` (`join`, the
-    default, or `gap`), and `editInMarkup` (`host`, the default, or `refuse`).
+    `pasteStructuredParagraphList` (`siblings`, the default, or `children`),
+    `pasteStructuredListForm` (`text`, the default, `literal`, `drop` or `own`), and `markup`
+    (`text`, the default, or `decorated`).
 
 How other outliners do on the same files (Logseq, ...) is measured by replaying them there:
 [`sxs/`](../sxs/README.md).

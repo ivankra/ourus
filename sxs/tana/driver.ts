@@ -102,9 +102,9 @@ function fromItem(it: Item, number: number | null): { text: string; prefix: numb
 const HOME = 'SXS_HOME';
 
 export const driver: Driver = {
-  name: 'tana',
-  title: 'Tana',
-  id: 'TA',
+  shortId: 'TA',
+  longId: 'tana',
+  displayName: 'Tana',
   // its UI-test page: the app with no account, waiting for a test's workspace (opened by hand, it waits
   // for `bootTest`, as `open` calls it)
   url: 'https://app.tana.inc/tests',
@@ -139,24 +139,29 @@ export const driver: Driver = {
   // Shift+Tab leaves the later siblings with the parent; Enter mid-text in a node with children makes
   // its first child; Backspace at a section's start and Delete before one join its name, the section
   // gone; a list pasted into a node with children goes after them (played with `--ignore-options`)
-  behaves: { outdent: 'logical', enterMidItem: 'child', headingEditing: 'block', pasteStructuredOnParent: 'after' },
+  behaves: { enterSplitSpace: 'start', outdent: 'logical', enterMidItem: 'child', headingEditing: 'block', joinWithChildren: 'refuse', pasteStructuredOnParent: 'after' },
   holds(doc) {
     const o = doc as Outline;
+    // a no-break space: held as a space
+    if (o.blocks.some((b) => b.text.includes('\u00a0'))) return 'no-break space, which Tana holds as a space';
+    // a character outside the Basic Multilingual Plane (an emoji): its two UTF-16 units put the caret past
+    // where Tana counts it
+    if (o.blocks.some((b) => /[\u{10000}-\u{10ffff}]/u.test(b.text))) return 'character outside the Basic Multilingual Plane, where the caret lands elsewhere';
     const fenced = o.blocks.map((b) => /^(`{3,}|~{3,})/.test(b.text) && b.text.includes('\n'));
-    if (o.blocks.some((b, i) => fenced[i] && !FENCE.test(b.text))) return "a code block's fences that don't match";
+    if (o.blocks.some((b, i) => fenced[i] && !FENCE.test(b.text))) return "code block's fences that don't match";
     const fences = o.blocks.map((b) => FENCE.exec(b.text));
-    if (fences.some((f) => f && (f[1] !== fenceFor(f[3]!) || f[2] !== f[2]!.trim()))) return "a code block's fences other than the shortest backticks that hold its code, which Tana's code block reads back with (it keeps no fences), or spaces around its language";
+    if (fences.some((f) => f && (f[1] !== fenceFor(f[3]!) || f[2] !== f[2]!.trim()))) return "code block's fences other than the shortest backticks that hold its code, which Tana's code block reads back with (it keeps no fences), or spaces around its language";
     // a block's later lines are its node's description, which an empty last line isn't
-    if (o.blocks.some((b, i) => b.text.endsWith('\n') && !fenced[i])) return "a block's text ending in a line break: an empty description is none";
-    if (o.blocks.some((b) => /^#{2,6} /.test(b.text.replace(/^\[[ xX]\] /, '')))) return "a heading other than H1: Tana's (a section) has one level";
+    if (o.blocks.some((b, i) => b.text.endsWith('\n') && !fenced[i])) return "block's text ending in a line break: an empty description is none";
+    if (o.blocks.some((b) => /^#{2,6} /.test(b.text.replace(/^\[[ xX]\] /, '')))) return "heading other than H1: Tana's (a section) has one level";
     if (o.sel) {
       const b = o.blocks[o.sel.block]!.text;
       const it = toItem(0, b);
       // before a to-do's `[ ] ` is its checkbox focused, as Up and Down leave it (`load` focuses it)
       const onCheckbox = it.todo && !it.numbered && o.sel.anchor === 0 && o.sel.head === 0;
-      if ((Math.min(o.sel.anchor, o.sel.head) < it.prefix && !onCheckbox) || (it.code && Math.max(o.sel.anchor, o.sel.head) > b.length - it.prefix)) return "a caret in a number, a task's checkbox, a heading's # or a code block's fences";
+      if ((Math.min(o.sel.anchor, o.sel.head) < it.prefix && !onCheckbox) || (it.code && Math.max(o.sel.anchor, o.sel.head) > b.length - it.prefix)) return "caret in a number, a task's checkbox, a heading's # or a code block's fences";
       const br = it.code ? -1 : b.indexOf('\n');
-      if (br >= 0 && Math.min(o.sel.anchor, o.sel.head) <= br && Math.max(o.sel.anchor, o.sel.head) > br) return "a selection across a node's name and its description, each an editor of its own";
+      if (br >= 0 && Math.min(o.sel.anchor, o.sel.head) <= br && Math.max(o.sel.anchor, o.sel.head) > br) return "selection across a node's name and its description, each an editor of its own";
     }
     // numbering is a parent's: all its children numbered, from 1, or none
     const kids = new Map<number, number[]>();
@@ -169,7 +174,7 @@ export const driver: Driver = {
     });
     for (const list of kids.values()) {
       const numbers = list.map((i) => /^(\d{1,9})\. /.exec(o.blocks[i]!.text)?.[1]);
-      if (numbers.some(Boolean) && !numbers.every((n, k) => Number(n) === k + 1)) return 'a list numbered in part, or not from 1';
+      if (numbers.some(Boolean) && !numbers.every((n, k) => Number(n) === k + 1)) return 'list numbered in part, or not from 1';
     }
     return undefined;
   },

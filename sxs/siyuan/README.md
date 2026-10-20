@@ -169,8 +169,8 @@ with the reason (`holds`):
 
 | reason | what SiYuan does | e.g. |
 | --- | --- | --- |
-| a block's text starting with whitespace | a tab or an indented line becomes structure, or is trimmed | `cursor.md › CursorDown2`, `del.md › Delete11` |
-| a line's trailing whitespace | trimmed, a hard break's two spaces too (an empty task's `[ ] ` is its checkbox, and held) | `indent.md › Indent19`, `del.md › Delete5d` |
+| a block's text starting with whitespace | a tab or an indented line becomes structure, or is trimmed | `cursor.md › CursorDown2`, `delete.md › Delete11` |
+| a line's trailing whitespace | trimmed, a hard break's two spaces too (an empty task's `[ ] ` is its checkbox, and held) | `indent.md › Indent19`, `delete.md › Delete5d` |
 | a block's text ending in a line break | the empty last line trimmed | `shift-enter.md › ShiftEnter11`, `12` |
 | a heading's closing #s | dropped: `# Title #` is `# Title` | `backspace.md › Backspace4` |
 | a thematic break as an item | `- ---` is a thematic break, not an item holding one, and SiYuan makes it one, outside the list | `move-subtree-up.md › MoveUp19` |

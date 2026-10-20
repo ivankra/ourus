@@ -16,6 +16,8 @@
     "demo:smoke": "node demos/cm6/smoke.ts",
     "demo:textarea": "node demos/textarea/build.ts",
     "demo:gtk": "node demos/gtk/build.ts",
+    "probe": "node sxs/probe.ts",
+    "redraw": "node test/redraw.ts",
     "sxs": "node sxs/run.ts",
     "sxs:proxy": "node sxs/proxy.ts --cache=offline",
     "test": "node --test test/*.test.ts test/*/*.test.ts sxs/*/*.test.ts",

@@ -98,9 +98,9 @@ let pages = 0;
 const pageState = perPage(() => ({ current: '' }));
 
 export const driver: Driver = {
-  name: 'tine',
-  title: 'Tine',
-  id: 'TI',
+  shortId: 'TI',
+  longId: 'tine',
+  displayName: 'Tine',
   url: 'https://tine.page/guide/app/',
   model: 'block',
   keys: {
@@ -127,7 +127,7 @@ export const driver: Driver = {
   // character at a time
   refuses: ['markup-heading', 'markup-task', 'markup-fence'],
   ordered: true,
-  behaves: { outdent: 'direct', enterOnEmptyItem: 'sibling', enterMidItem: 'child', pasteStructuredMidText: 'after', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after' },
+  behaves: { enterSplitSpace: 'start', backspaceAtTopItem: 'refuse', enterTask: 'plain', outdent: 'direct', enterOnEmptyItem: 'sibling', enterMidItem: 'child', pasteStructuredMidText: 'after', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after' },
   holds(doc) {
     const o = doc as Outline;
     // a run of numbered siblings is numbered from 1, whatever it was written with
@@ -136,13 +136,13 @@ export const driver: Driver = {
       run.length = b.depth + 1;
       const n = /^(\d{1,9})\. /.exec(b.text);
       run[b.depth] = n ? (run[b.depth] ?? 0) + 1 : 0;
-      if (n && Number(n[1]) !== run[b.depth]) return 'a numbered list from another number than 1';
+      if (n && Number(n[1]) !== run[b.depth]) return 'numbered list from another number than 1';
     }
     if (!o.sel) return undefined;
     const code = codeOf(o.blocks[o.sel.block]!.text);
     const inCode = (p: number): boolean => !!code && p >= code.start && p <= code.end;
     // the code's editor has the code alone: a caret on a fence has no place there
-    if (code && !(inCode(o.sel.anchor) && inCode(o.sel.head))) return "a caret on a code block's fence";
+    if (code && !(inCode(o.sel.anchor) && inCode(o.sel.head))) return "caret on a code block's fence";
     return undefined;
   },
 

@@ -1,4 +1,3 @@
-
 # Cursor movement
 
 Caret motions, named as CodeMirror's commands; each `cursor…` command has a `select…` twin that

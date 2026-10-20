@@ -1,4 +1,3 @@
-
 # Fenced code
 
 Enter, Shift-Enter, Backspace, Delete, Tab and paste in a fenced code block. Code is payload and
@@ -8,13 +7,15 @@ continuation indentation, a quote's `>`), their own indentation kept, and no edi
 
 1. **In a fence's run of backticks**, Enter is refused: a line break there would break the fence
    (Fence9, Fence14).
-2. **At the start of the opening fence**, Enter opens a line above the block, which stays with the
-   caret (Fence12); **at the start of the closing fence**, Enter and Shift-Enter add an empty last
-   code line, the caret on it (Fence13, Fence41); **at the start of a fence that is an item's
-   text**, Enter is at the item's text start (Fence15).
+2. **At the start of an opening fence in an item**, Enter splits the item there, the code going to
+   a new item as its text, the caret to the code's first line (Fence12, Fence50); elsewhere it opens
+   a line above the block, which stays with the caret. **At the start of the closing fence**, Enter
+   and Shift-Enter add an empty last code line, the caret on it (Fence13, Fence41); **at the start
+   of a fence that is an item's text**, Enter is at the item's text start (Fence15).
 3. **After the closing fence that ends an item's content**, Enter makes the next item, or the first
-   child where the item has children, and a new line in the item where a paragraph of the item
-   follows (Fence7, Fence7c, Fence7d); Shift-Enter makes a new line in the item (Fence7b).
+   child where the item has children (Fence7, Fence7c); **after any other closing fence**, an empty
+   paragraph after the block, held by a placeholder (Fence7d, Fence59, Fence59b,
+   [Quote90](quotes.md#quote90)). Shift-Enter makes a new line in the item (Fence7b).
 4. **On a code line**, Enter and Shift-Enter make a new line in the block's containers, the line's
    own indentation carrying over, as code editors do (Fence1, Fence2, Fence3, Fence4, Fence5,
    Fence6, Fence8). With `handleFenceContents: false` they are the host's, for hosts that edit code
@@ -23,22 +24,32 @@ continuation indentation, a quote's `>`), their own indentation kept, and no edi
    prefix on the joined line going with the line break (Fence16, Fence18, Fence20). Against a fence
    they are refused, from either side, where the code line has code on it (Fence17, Fence19,
    Fence23, Fence24); an empty code line just goes, so Backspace takes back the empty lines Enter
-   makes next to a fence (Fence27, Fence28, Fence29, Fence30, Fence31, Fence32).
+   makes next to a fence (Fence27, Fence28, Fence29, Fence30, Fence32), the caret left where typing
+   keeps the block (Fence30), or on the fence where the user had it, where markup is text the user
+   edits (Fence32; elsewhere at the code's end, Fence32b).
 6. **At a fence's start in an item**, Backspace can't join the code to the text above: refused
    (Fence25, and Fence33 at the top level). A fence that is an item's text joins the item above as a
-   block of it, from either side (Fence26, Fence34). Delete at a closing fence's end before text is
-   refused (Fence35).
-7. **No split or join may assemble a fence from code**: one that would close the block early is
-   refused (Fence36, Fence37, Fence38, Fence39, Fence40); nor may Cmd-Backspace delete a fence
+   block of it, its code as written, from either side (Fence26, Fence34, Fence49), and so does
+   Backspace at its code's start, which takes Enter's split back (Fence31); into an empty item above,
+   it takes the item's place (Fence51). Delete at a closing fence's end before text is refused (Fence35).
+7. **No split or join may assemble a fence from code**: where one would close the block early, the
+   block's fences grow past it, as WorkFlowy and Tana write them (Fence36, Fence37, Fence38,
+   Fence39, Fence40; a pasted line too, [Paste91](paste-plain.md#paste91)), and stay longer once it
+   is gone; nor may Cmd-Backspace delete a fence
    ([SoftBackspace9](backspace.md#softbackspace9)).
 8. **Tab and Shift-Tab on a code line are the host's**: they indent the code (Fence21). **Pasted
-   text on a code line is code** ([Paste22](paste.md#paste22)).
+   text on a code line is code** ([Paste22](paste-plain.md#paste22)).
 9. **The other blocks of lines, math (`$$`), comments (`%%`) and indented code, take the same**:
    Enter and Shift-Enter make a line of the block in its containers, its own indentation carrying
    over, and Backspace and Delete join its lines, the containers' prefix going with the line break
-   (Fence42, Fence43, Fence44, Fence46); text against a `$$` or `%%` line, or a break in one, would
-   unmake the block: refused (Fence45, Fence47). Pasted lines there are the block's. In an item or a
-   quote, the host's keys would leave the containers' prefix behind and end the block.
+   (Fence42, Fence43, Fence44, Fence46), indented code's four columns too (Fence52, Fence53); text
+   against a `$$` or `%%` line, or a break in one, would unmake the block: refused (Fence45,
+   Fence47), and so is indented code joining the text above (Fence54). At the start of a `$$` or
+   `%%` that opens a block, Enter and Backspace do as at a code fence: in an item, Enter splits it
+   and Backspace takes the split back, a block that is an item's text joins the item above, and
+   elsewhere Backspace takes the line Enter opened above (Fence55, Fence56, Fence57). Pasted lines
+   there are the block's. In an item or a quote, the host's keys would leave the containers' prefix
+   behind and end the block.
 10. **A block moving out of an item or into one takes its blank lines along**: the item's
     indentation on a blank code line goes with the item, what is past it moves with the code
     (Fence48).
@@ -290,8 +301,9 @@ tags: edge markup-fence
 
 ## Fence7d
 
-With a paragraph after the fence in the item, Enter after the fence makes a new line in the item, as
-Shift-Enter does: a new item there would come before the paragraph.
+With a paragraph after the fence in the item, Enter after the fence makes an empty paragraph in the
+item, held by a placeholder, as after a fence elsewhere ([Fence59](#fence59)): a new item there
+would come before the paragraph.
 
 ```yaml
 tags: edge markup-fence
@@ -313,7 +325,7 @@ tags: edge markup-fence
   ```
   code
   ```
-  ┃
+  ┃◌
 
   para
 ````
@@ -423,8 +435,10 @@ applied
 
 ## Fence12
 
-At the start of the opening fence, Enter opens a line above the block, the block staying with the
-caret: the fence is no text to go into a node above from.
+At the start of an opening fence in an item, Enter splits the item there, as it splits an item's
+text: the code goes to a new item after it, as its text, and the caret to the code's first line,
+where typing goes into the code. A line opened above the fence would leave the caret on it, where
+typing unmakes the block.
 
 ```yaml
 tags: edge markup-fence
@@ -441,9 +455,8 @@ tags: edge markup-fence
 
 ````buffer
 - a
-
-  ┃```
-  code
+- ```
+  ┃code
   ```
 ````
 
@@ -502,7 +515,8 @@ code
 ## Fence15
 
 At the start of a fence that is an item's text, Enter is at the item's text start: an empty item
-above, the caret going into it.
+above, the caret going into it, under `enterAtTextStart: stay` too, as staying would leave the caret
+on the fence, which is markup.
 
 ```yaml
 tags: edge markup-fence
@@ -528,7 +542,8 @@ tags: edge markup-fence
 Backspace at the start of a code line joins it to the line above; in an item, the item's indentation
 on the joined line goes too.
 
-The indentation is the item's, not code: deleting one space of it would end the item and the block.
+The indentation is the item's, not code: bare Obsidian deletes all of it, which ends the item and
+the block; its Outliner joins the lines as ourus does.
 
 ```yaml
 tags: common
@@ -582,7 +597,9 @@ rejected: not-expressible
 
 ## Fence18
 
-Delete at the end of a code line joins the next line, without the item's indentation.
+Delete at the end of a code line joins the next line, without the item's indentation, which is the
+item's, not the code's, as Obsidian's Outliner joins it. Bare Obsidian joins the indentation in, two
+spaces of code the line never had.
 
 ```yaml
 tags: common
@@ -927,7 +944,9 @@ tags: edge markup-fence
 ## Fence30
 
 Delete on an empty last code line: the line goes, the fence moving up (Fence19 refuses a line with
-code on it).
+code on it), and the caret goes to the end of the code above: left before the closing fence, it
+would have what is typed there unmake the block, and the item's text after it become code. Bare
+Obsidian deletes only the line break, so the fence takes in the item's indentation twice.
 
 ```yaml
 tags: rare markup-fence
@@ -946,15 +965,17 @@ tags: rare markup-fence
 ````buffer
 - a
   ```
-  code
-  ┃```
+  code┃
+  ```
 ````
 
 ## Fence31
 
-Backspace after the blank line Enter opened above a fence takes it back ([Fence12](#fence12)), the
-code staying a block of the item. The host's Backspace deletes a space of the item's indentation,
-taking the code out of the item.
+Backspace at the start of the code of an item whose text is the fence takes Enter's split back
+([Fence12](#fence12)): the item joins the item above, its code a block of it again, as Backspace at
+the fence's start joins it ([Fence26](#fence26)), and the caret stays at the code's start. The code
+can't join the fence, so there is nothing else for the key to do. Bare Obsidian's Backspace deletes
+the item's indentation, taking the code out of the item.
 
 ```yaml
 tags: edge markup-fence
@@ -971,9 +992,8 @@ tags: edge markup-fence
 
 ````buffer
 - a
-
-  ┃```
-  code
+- ```
+  ┃code
   ```
 ````
 
@@ -981,16 +1001,16 @@ tags: edge markup-fence
 
 ````buffer
 - a
-  ┃```
-  code
+  ```
+  ┃code
   ```
 ````
 
 ## Fence32
 
 Backspace on the empty line Shift-Enter made after a closing fence takes it back
-([Fence7b](#fence7b)). The host's Backspace deletes a space of the item's indentation, so what is
-typed next would leave the list.
+([Fence7b](#fence7b)), as Obsidian's Outliner does. Bare Obsidian's Backspace deletes the item's
+indentation, so what is typed next would leave the list.
 
 ```yaml
 tags: edge markup-fence
@@ -1020,6 +1040,42 @@ tags: edge markup-fence
   ```
   code
   ```┃
+````
+
+## Fence32b
+
+Where the host decorates markup (`markup: decorated`), the caret can't be left at the fence's end,
+where typing writes after it: the same Backspace puts it at the end of the code.
+
+```yaml
+tags: rare markup-fence
+markup: decorated
+```
+
+````buffer
+- a
+  ```
+  code
+  ```┃
+````
+
+> shiftEnter
+
+````buffer
+- a
+  ```
+  code
+  ```
+  ┃
+````
+
+> deleteContentBackward
+
+````buffer
+- a
+  ```
+  code┃
+  ```
 ````
 
 ## Fence33
@@ -1055,7 +1111,9 @@ x
 ## Fence34
 
 Delete at the end of an item's text before an item whose text is a fence joins that item up, as
-Backspace at the fence's start does ([Fence26](#fence26)); the caret stays where it was.
+Backspace at the fence's start does ([Fence26](#fence26)); the caret stays where it was. Bare
+Obsidian deletes only the line break, leaving `- ```` as text after `a`, and Dynalist and Obsidian's
+Outliner join the fence into the text: either way the block is gone. WorkFlowy does nothing.
 
 ```yaml
 tags: rare markup-fence
@@ -1110,34 +1168,30 @@ rejected: not-expressible
 
 ## Fence36
 
-Backspace that would join code fragments into a closing fence is refused: two lines, two backticks
-and one, would make a fence, closing the block early.
+Backspace that would join code fragments into a fence, two backticks and one, closing the block
+early: the block's fences grow by one, as WorkFlowy and Tana write them, so the line is code. Bare
+Obsidian joins them and the block ends there.
 
 ```yaml
 tags: rare markup-fence
 ```
 
-````buffer
+`````buffer
 ```
 ``
 ┃`
 body
 ```
-````
+`````
 
 > deleteContentBackward
 
-```result
-rejected: not-expressible
-```
-
-````buffer
-```
-``
-┃`
-body
-```
+`````buffer
 ````
+``┃`
+body
+````
+`````
 
 ## Fence37
 
@@ -1147,83 +1201,82 @@ Delete, the same from the other side (Fence36's mirror).
 tags: rare markup-fence
 ```
 
-````buffer
+`````buffer
 ```
 ``┃
 `
 body
 ```
-````
+`````
 
 > deleteContentForward
 
-```result
-rejected: not-expressible
-```
-
-````buffer
-```
-``┃
-`
-body
-```
+`````buffer
 ````
+``┃`
+body
+````
+`````
 
 ## Fence38
 
-Shift-Enter that would leave a closing fence at the start of the rest of a code line is refused.
+Shift-Enter that would leave a closing fence at the start of the rest of a code line: the fences
+grow; Backspace joins the line back, and they stay longer.
 
 ```yaml
 tags: rare markup-fence
 ```
 
-````buffer
+`````buffer
 ```
 x┃```
 body
 ```
-````
+`````
 
 > shiftEnter
 
-```result
-rejected: not-expressible
-```
+`````buffer
+````
+x
+┃```
+body
+````
+`````
 
-````buffer
-```
+> deleteContentBackward
+
+`````buffer
+````
 x┃```
 body
-```
 ````
+`````
 
 ## Fence39
 
-Enter that would leave a closing fence as the first half of a code line is refused.
+Enter that would leave a closing fence as the first half of a code line: the fences grow.
 
 ```yaml
 tags: rare markup-fence
 ```
 
-````buffer
+`````buffer
 ```
 ```┃x
 body
 ```
-````
+`````
 
 > enter
 
-```result
-rejected: not-expressible
-```
-
-````buffer
-```
-```┃x
-body
-```
+`````buffer
 ````
+```
+┃x
+body
+````
+`````
 
 ## Fence40
 
@@ -1243,16 +1296,11 @@ tags: rare markup-fence quote-container
 
 > deleteContentForward
 
-```result
-rejected: not-expressible
-```
-
 ````buffer
-> ~~~
-> ~~┃
-> ~
+> ~~~~
+> ~~┃~
 > body
-> ~~~
+> ~~~~
 ````
 
 ## Fence41
@@ -1325,12 +1373,212 @@ tags: rare
     ```
 ````
 
+## Fence49
+
+A fence that is an item's text joins the item above with its code as written: the code's own
+indentation, past the item's, stays the code's ([Fence26](#fence26)).
+
+```yaml
+tags: rare markup-fence
+```
+
+````buffer
+- a
+- ┃```
+    x
+  ```
+````
+
+> deleteContentBackward
+
+````buffer
+- a┃
+  ```
+    x
+  ```
+````
+
+## Fence50
+
+The same the other way: Enter at the opening fence of such a block splits the item with the code as
+written ([Fence12](#fence12)), the caret at the code's first character.
+
+```yaml
+tags: rare markup-fence
+```
+
+````buffer
+- a
+  ┃```
+    x
+  ```
+````
+
+> enter
+
+````buffer
+- a
+- ```
+    ┃x
+  ```
+````
+
+## Fence51
+
+Into an empty item above, a fence that is an item's text takes the empty item's place, as text moves
+up into one ([Backspace5](backspace.md#backspace5)), the caret going to the code's first line: as a
+block of the empty item, the code would be its text.
+
+```yaml
+tags: rare markup-fence
+```
+
+````buffer
+- 
+- ┃```
+  code
+  ```
+````
+
+> deleteContentBackward
+
+````buffer
+- ```
+  ┃code
+  ```
+````
+
+## Fence58
+
+A code line of only a no-break space has code on it: Backspace at the closing fence after it is
+refused, as after any code ([Fence17](#fence17)), where an empty code line would go.
+
+```yaml
+tags: rare markup-fence
+```
+
+````buffer
+- a
+  ```
+  ⍽
+  ┃```
+````
+
+> deleteContentBackward
+
+```result
+rejected: not-expressible
+```
+
+````buffer
+- a
+  ```
+  ⍽
+  ┃```
+````
+
+## Fence59
+
+After a closing fence outside an item, Enter makes an empty paragraph after the block, held by a
+placeholder; left empty, it goes when the caret leaves, as any empty paragraph
+([placeholders.md](placeholders.md)), rather than leaving a blank line behind.
+
+```yaml
+tags: rare markup-fence
+```
+
+````buffer
+```
+code
+```┃
+````
+
+> enter
+
+````buffer
+```
+code
+```
+┃◌
+````
+
+> cursorDocStart
+
+````buffer
+┃```
+code
+```
+````
+
+## Fence59b
+
+Text right below would continue the new paragraph: a blank line keeps it apart, as after a table
+([Enter49](enter.md#enter49)).
+
+```yaml
+tags: rare markup-fence
+```
+
+````buffer
+```
+code
+```┃
+q
+````
+
+> enter "x"
+
+````buffer
+```
+code
+```
+x┃
+
+q
+````
+
+## Fence60
+
+Before a list, the new paragraph owns it, as a paragraph owns the list right after it; Backspace
+takes the paragraph back, and the list is the document's again.
+
+```yaml
+tags: rare markup-fence
+```
+
+````buffer
+```
+code
+```┃
+- a
+````
+
+> enter
+
+````buffer
+```
+code
+```
+┃◌
+- a
+````
+
+> deleteContentBackward
+
+````buffer
+```
+code
+```┃
+- a
+````
+
 ## Math, comments and indented code
 
 ### Fence42
 
 Enter in a math block in an item: a new line of the block at the item's column, which Backspace
-takes back. Left to the host, the line would start at column 0, ending the item and the block.
+takes back. Bare Obsidian keeps the column too, but its Backspace then deletes the whole
+indentation, ending the item and the block; its Outliner makes a new item there instead.
 
 ```yaml
 tags: edge
@@ -1528,4 +1776,181 @@ rejected: not-expressible
   $$
   x┃
   $$
+```
+
+### Fence52
+
+Backspace at the start of an indented code line's code, after the block's four columns, joins the
+line above, the four columns going with the line break, as an item's indentation does on a fenced
+code line ([Fence16](#fence16)). The host's Backspace deletes one of the columns, and the line is no
+longer code.
+
+```yaml
+tags: rare
+```
+
+```buffer
+para
+
+    a
+    ┃code
+```
+
+> deleteContentBackward
+
+```buffer
+para
+
+    a┃code
+```
+
+### Fence53
+
+Delete at the end of an indented code line joins the next, its four columns going with the line
+break, as Backspace does from the other side ([Fence52](#fence52)).
+
+```yaml
+tags: rare
+```
+
+```buffer
+para
+
+    a┃
+    code
+```
+
+> deleteContentForward
+
+```buffer
+para
+
+    a┃code
+```
+
+### Fence54
+
+Backspace at the start of indented code's first line after a paragraph is refused: the code can't
+join the text, and without the blank line between them it would be more lines of the paragraph.
+
+```yaml
+tags: rare
+```
+
+```buffer
+para
+
+    ┃a
+```
+
+> deleteContentBackward
+
+```result
+rejected: not-expressible
+```
+
+```buffer
+para
+
+    ┃a
+```
+
+### Fence55
+
+Enter at the start of a math block's `$$` in an item splits the item there, as at a code fence
+([Fence12](#fence12)): the math goes to a new item as its text, the caret to its first line, and
+Backspace there takes the split back ([Fence31](#fence31)). The host's Backspace would delete a
+space of the item's indentation, taking the math out of the item.
+
+```yaml
+tags: rare markup-fence
+flavor: obsidian
+```
+
+```buffer
+- Euler:
+  ┃$$
+  x
+  $$
+```
+
+> enter
+
+```buffer
+- Euler:
+- $$
+  ┃x
+  $$
+```
+
+> deleteContentBackward
+
+```buffer
+- Euler:
+  $$
+  ┃x
+  $$
+```
+
+### Fence56
+
+Backspace at the start of a math block that is an item's text joins the item above, the math a block
+of it, as a code fence there does ([Fence26](#fence26)).
+
+```yaml
+tags: rare markup-fence
+flavor: obsidian
+```
+
+```buffer
+- Euler:
+- ┃$$
+  x
+  $$
+```
+
+> deleteContentBackward
+
+```buffer
+- Euler:┃
+  $$
+  x
+  $$
+```
+
+### Fence57
+
+In a quote, Enter at the start of a comment block's `%%` opens a quoted blank line above it, and
+Backspace takes it back, the `>` going with it, as at a code fence. The host's Backspace would delete
+the space after the `>`.
+
+```yaml
+tags: rare quote-container markup-fence
+flavor: obsidian
+```
+
+```buffer
+> a
+> ┃%%
+> x
+> %%
+```
+
+> enter
+
+```buffer
+> a
+>
+> ┃%%
+> x
+> %%
+```
+
+> deleteContentBackward
+
+```buffer
+> a
+> ┃%%
+> x
+> %%
 ```

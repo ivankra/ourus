@@ -1,4 +1,3 @@
-
 # Placeholders
 
 Some empty nodes have no Markdown of their own: an empty item right under an item's or a paragraph's
@@ -9,8 +8,9 @@ node exists in the outline: that line end is a **placeholder**, drawn `◌`.
 
 A placeholder can also stand in a deleted character's place. Deleting the first character of an
 item's text can leave the space after it right after the marker (`-  b`), where it would widen the
-item's padding and move its content column; that space, at the caret, is then the placeholder, read
-as text, and the item keeps its column.
+item's padding and move its content column, or make the text after it another block (`-  ``` x` is
+code); that space, at the caret, is then the placeholder, read as text, and the item keeps its column
+and its text.
 
 Only the editor makes a placeholder, and the document keeps it (each editor view has its own):
 
@@ -21,8 +21,10 @@ Only the editor makes a placeholder, and the document keeps it (each editor view
 - **It lasts** while the text doesn't hold its node anyway: typing there ends it.
 - **Leaving it**, the node stays when the text can hold it some other way: an empty item gets a
   blank line above it (`- a` / blank / `  - `), and a deleted character's place gives up its surplus
-  space (`- b`). A node no text can hold, an empty paragraph or an empty line inside a node's text,
-  goes. Either way it is one edit, verified, one undo step.
+  space (`- b`), the text escaped where it would start a block there (`- \``` x`). A node no text
+  can hold, an empty paragraph or an empty line inside a node's text, goes. Either way it is one
+  edit, verified, part of the undo step before it, which made the empty node: one undo takes both
+  back ([Undo3](undo.md#undo3)).
 - **Undo and redo** bring it back with the rest: the host keeps the document, placeholders included,
   in its history ([undo.md](undo.md)).
 
@@ -42,7 +44,7 @@ child under text.
 | typing | none made; on its line, it ends: the node has text | |
 | the caret leaves an empty item | ends | the item stays, a blank line above it |
 | the caret leaves an empty paragraph, or an empty line in a node's text | ends | the node or line goes |
-| the caret leaves a deleted character's place | ends | the surplus space goes |
+| the caret leaves a deleted character's place | ends | the surplus space goes, the text escaped where it would start a block |
 | the caret leaves an empty node the text can hold | none was made | nothing changes |
 | undo or redo | comes back with the document | |
 | an edit from elsewhere (another plugin, sync) | mapped through the edit; ends if its line gets text | |
@@ -78,6 +80,11 @@ Under `a`'s text, it would be a setext underline: a placeholder holds it.
 ```buffer
 - a
   - ┃◌
+```
+
+```outline
+item: a
+  item
 ```
 
 > cursorDocStart cursorLineBoundaryForward
@@ -129,7 +136,8 @@ No text holds an empty paragraph: it goes.
 ## Placeholder3
 
 Enter at the end of a paragraph makes a new, empty paragraph: it needs a blank line, and has no
-text to hold it.
+text to hold it. Left, it goes. Bare Obsidian breaks the line instead, one paragraph to every reader,
+which is Shift-Enter's ([Enter12](enter.md#enter12)).
 
 ```yaml
 tags: core free-form
@@ -334,8 +342,9 @@ tags: edge
 
 ## Placeholder9
 
-The same with Backspace after the first character. Bare editors leave `-  b`, whose wider padding
-makes `c` a sibling instead of a child.
+The same with Backspace after the first character. SilverBullet leaves `-  b`, whose wider padding
+makes `c` a sibling instead of a child; bare Obsidian and its Outliner re-indent `c` to keep it a
+child, rewriting a line the edit isn't about.
 
 ```yaml
 tags: edge
@@ -360,6 +369,35 @@ Leaving, the surplus space goes, and `c` is still a child.
 ```buffer
 - b
   - c┃
+```
+
+## Placeholder17
+
+Backspace after the first character, before text that right after the marker would start a block:
+bare editors leave `-  ``` x`, an item whose text is now a code fence. The space is held as text, and
+leaving, it goes and the fence is escaped, so the item's text is still its text.
+
+```yaml
+tags: rare
+```
+
+```buffer
+- a┃ ``` x
+- b
+```
+
+> deleteContentBackward
+
+```buffer
+- ┃◌ ``` x
+- b
+```
+
+> cursorDocEnd cursorCharLeft
+
+```buffer
+- \``` x
+- b┃
 ```
 
 ## Placeholder10

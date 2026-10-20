@@ -1,4 +1,4 @@
-// Reads the behaviour spec (spec/*.md, format in spec/README.md) with ourus's own parser: fenced
+// Reads the behavior spec (spec/*.md, format in spec/README.md) with ourus's own parser: fenced
 // `buffer`, `clipboard` and `result` blocks are editor states, quotes the actions between them, and
 // a config block before them (a `yaml` block) sets a test's options over the file's frontmatter, and
 // the clipboard it starts with.
@@ -16,6 +16,8 @@ export interface State {
   buffer?: string;
   clipboard?: string;
   result?: string;
+  /** How the buffer reads (`drawOutline`), where a case's point is a reading its bytes don't show. */
+  outline?: string;
 }
 
 export interface Step {
@@ -32,7 +34,7 @@ export interface SpecTest {
   readonly line: number;
   /** The headings above it, below the file's title (`Enter › At the start of an item`). */
   readonly name: string;
-  /** Agreed behaviour not implemented yet: `status: pending`. */
+  /** Agreed behavior not implemented yet: `status: pending`. */
   readonly pending: boolean;
   /** Frontmatter, then the test's config block, which wins. */
   readonly options: Readonly<Record<string, string>>;
@@ -46,7 +48,7 @@ export interface SpecTest {
 
 /**
  * Known options, so an unknown one is an error, not silently ignored: `status` (`pending` for
- * behaviour agreed on but not built, or `ready`, the default), and the keys of ourus's config
+ * behavior agreed on but not built, or `ready`, the default), and the keys of ourus's config
  * (`src/config.ts`).
  */
 const SPEC_OPTIONS: Readonly<Record<string, readonly string[]>> = { status: ['ready', 'pending'] };
@@ -125,7 +127,7 @@ export function readSpec(file: string, source: string): SpecTest[] {
     const [kind, ...words] = (block.info ?? '').trim().split(/\s+/);
     if (kind === 'clipboard-no-newline') fail(block.startLine, 'no "clipboard-no-newline" block: a clipboard is a literal block in the config, and "clipboard: |-" ends it without a line break');
     if (kind === 'config') fail(block.startLine, 'a config block is a `yaml` block');
-    if (kind !== 'buffer' && kind !== 'clipboard' && kind !== 'result' && kind !== 'yaml') continue;
+    if (kind !== 'buffer' && kind !== 'clipboard' && kind !== 'result' && kind !== 'outline' && kind !== 'yaml') continue;
     if (block.fenceOffset) fail(block.startLine, 'an indented fence would change its content');
     if (words.length > 0) fail(block.startLine, `"${words.join(' ')}" after "${kind}": options go in a config block before the test's first block`);
     if (kind === 'yaml') {
@@ -153,7 +155,7 @@ export function readSpec(file: string, source: string): SpecTest[] {
     if (kind === 'clipboard' && group === test.initial) fail(block.startLine, 'the clipboard a test starts with goes in its config block: "clipboard: |", its lines indented under it');
     if (group![kind] !== undefined) fail(block.startLine, `a second ${kind} block for one state (each test needs a heading of its own)`);
     const content = fenceContent(tree, block);
-    group![kind] = kind === 'result' ? content.trim() : content;
+    group![kind] = kind === 'result' || kind === 'outline' ? content.trim() : content;
   }
 
   if (config) fail(config.line, 'a config block with no test after it');
@@ -223,7 +225,8 @@ function readConfig(text: string, first: number, fail: (line: number, message: s
       // without an indicator, YAML takes the first line's indentation for the block's, and drops it from every line
       const [header, ...after] = text.slice((v as Scalar).range![0]).split('\n');
       const firstLine = after.find((l) => l.trim() !== '');
-      if (!/\d/.test(header!) && value !== '' && /^ */.exec(firstLine ?? '')![0].length !== 2)
+      // a clipboard of line breaks only has no line to take the indentation from
+      if (!/\d/.test(header!) && firstLine !== undefined && /^ */.exec(firstLine)![0].length !== 2)
         fail(at + 1, `a clipboard's lines are indented two spaces under it; for spaces they all start with, an indentation indicator says where its text starts ("|2")`);
       read.clipboard = value;
       continue;

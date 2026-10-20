@@ -121,7 +121,7 @@ Each played in a probe and, where it decides, read in BlockNote's source (v0.55.
 
 - **Backspace at a list item's start makes it a paragraph**, keeping it where it is, children and
   all; a second Backspace joins it to the block before (`backspace.md › Backspace1`, `3`). Delete at
-  an item's end joins the next (`del.md › Delete1` agrees). At a task's start, likewise a paragraph,
+  an item's end joins the next (`delete.md › Delete1` agrees). At a task's start, likewise a paragraph,
   where ourus keeps an item without its checkbox (`tasks.md › TaskBackspace2`).
 - **Backspace at a paragraph's start joins it** to the block before (`backspace.md › Backspace10`
   agrees); after another paragraph, the text joined, where ourus, taking the blank line, makes one

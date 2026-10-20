@@ -105,7 +105,7 @@ tags: core
 
 Building a small outline: a parent, two children typed under it, a sibling after them; the parent
 moves past it with its children, and the move is undone ([Enter2](enter.md#enter2),
-[Indent8](indent.md#indent8), [Enter5](enter.md#enter5), [MoveDown29](move-subtree-down.md#movedown29),
+[Indent8](indent.md#indent8), [Enter5](enter.md#enter5), [MoveDown1](move-subtree-down.md#movedown1),
 [Undo1](undo.md#undo1)).
 
 ```yaml
@@ -212,12 +212,13 @@ Done.┃
 ### Scenario7
 
 Splitting an item and joining it back, editing in between: Enter in the middle
-([Enter1](enter.md#enter1)), Backspace at the start joins it back
-([Backspace1](backspace.md#backspace1), [Enter38](enter.md#enter38)), Home goes to the text start
+([Enter1](enter.md#enter1)), the space at the split trimmed from both halves, Backspace at the start
+joins it back, glued, and the space is typed again ([Backspace1](backspace.md#backspace1),
+[Enter38](enter.md#enter38), [Enter44](enter.md#enter44)), Home goes to the text start
 ([CursorHome1](cursor.md#cursorhome1)), Enter there puts an item above
 ([Enter29](enter.md#enter29)), Backspace and Delete inside the text are the host's
-([Backspace13](backspace.md#backspace13), [Delete8](del.md#delete8)), Delete at the end joins the
-next item ([Delete2](del.md#delete2)).
+([Backspace13](backspace.md#backspace13), [Delete8](delete.md#delete8)), Delete at the end joins the
+next item ([Delete2](delete.md#delete2)).
 
 ```yaml
 tags: core
@@ -258,7 +259,7 @@ tags: core
 - call Ann
 ```
 
-> cursorLineDown cursorLineDown cursorLineBoundaryForward deleteContentBackward deleteContentBackward
+> cursorLineDown cursorLineDown cursorLineBoundaryForward deleteContentBackward cursorCharLeft deleteContentForward
 
 ```buffer
 - today:
@@ -337,7 +338,7 @@ tags: core
 Reorganizing across parents: an item moved down past its parent's end becomes the next item's first
 child ([MoveDown7](move-subtree-down.md#movedown7)); a new sibling is typed after it and moved above it
 ([Enter2](enter.md#enter2), [MoveUp6](move-subtree-up.md#moveup6)); a whole parent moves past the other,
-its child with it ([MoveDown29](move-subtree-down.md#movedown29)).
+its child with it ([MoveDown1](move-subtree-down.md#movedown1)).
 
 ```yaml
 tags: core
@@ -425,7 +426,7 @@ tags: common
 Lines in an item: Shift-Enter makes one ([ShiftEnter1](shift-enter.md#shiftenter1),
 [ShiftEnter4](shift-enter.md#shiftenter4)), Backspace at its start joins it back
 ([Backspace9](backspace.md#backspace9)), Delete at the end joins the next item
-([Delete2](del.md#delete2)), and undo and redo step through it ([Undo1](undo.md#undo1)).
+([Delete2](delete.md#delete2)), and undo and redo step through it ([Undo1](undo.md#undo1)).
 
 ```yaml
 tags: core
@@ -483,7 +484,7 @@ tags: core
 A first child, typed and joined away: Enter at the end of an item with children makes its first
 child ([Enter4](enter.md#enter4)), Backspace at the child's start joins it into the parent
 ([Backspace3](backspace.md#backspace3)), Delete at the parent's end joins the next child
-([Delete1](del.md#delete1)).
+([Delete1](delete.md#delete1)).
 
 ```yaml
 tags: core
@@ -600,13 +601,13 @@ tags: core
 
 ### Scenario15
 
-A task list: Enter on a task makes the next task ([TaskEnter3](tasks.md#taskenter3)); Backspace on
+A task list: Enter on a task makes the next task ([TaskEnter8](tasks.md#taskenter8)); Backspace on
 the empty one removes its checkbox ([TaskBackspace2](tasks.md#taskbackspace2)), and the item typed
-there is a note, nested by Tab; Enter on the empty child outdents it, Enter again leaves the list
-([TaskEnter1](tasks.md#taskenter1)), and what is typed next is a paragraph after it.
+there is a note, nested by Tab; Enter on the empty child outdents it ([Enter5](enter.md#enter5)).
+Leaving the list from there is [Scenario25](#scenario25).
 
 ```yaml
-tags: core free-form markup-task
+tags: core markup-task
 ```
 
 ```buffer
@@ -647,21 +648,12 @@ tags: core free-form markup-task
 - ┃
 ```
 
-> enter "Shop closes at six."
-
-```buffer
-- [ ] milk
-- [ ] bread
-  - two loaves
-
-Shop closes at six.┃
-```
-
 ### Scenario16
 
-Moving a checked task to another section, extending its text, then undoing both: the task crosses
-into the section above ([MoveUp22](move-subtree-up.md#moveup22)), its checkbox and the other section's
-item untouched ([Undo1](undo.md#undo1)).
+Moving a checked task to another section, then undoing it: the task crosses into the section above
+([MoveUp22](move-subtree-up.md#moveup22)), its checkbox and the other section's item untouched, and
+undo brings it back ([Undo1](undo.md#undo1)). (No typing in between: apps disagree on how many undo
+steps typed text is.)
 
 ```yaml
 tags: common
@@ -691,18 +683,7 @@ tags: common
 applied
 ```
 
-> "today "
-
-```buffer
-# Work
-- email
-- [x] today ┃review
-
-# Home
-- water
-```
-
-> undo undo
+> undo
 
 ```buffer
 # Work
@@ -771,7 +752,6 @@ clipboard: |
 ````
 
 ````buffer
-Notes
 - example┃
 - next
 ````
@@ -779,7 +759,6 @@ Notes
 > pasteStructured "!"
 
 ````buffer
-Notes
 - example
   ```
   code!┃
@@ -885,9 +864,9 @@ Seat 42.┃
 ### Scenario21
 
 Splitting a paragraph and joining it back, from either side: Enter makes two paragraphs
-([Enter12](enter.md#enter12)), Backspace at the second's start removes the blank line
-([Backspace12](backspace.md#backspace12)), and Delete at the first line's end joins the lines
-([Delete3](del.md#delete3)).
+([Enter12](enter.md#enter12)), Backspace at the second's start joins them, glued, in one press
+([Backspace12](backspace.md#backspace12)), and so does Delete at the first's end
+([Delete18](delete.md#delete18)).
 
 ```yaml
 tags: core free-form
@@ -908,14 +887,14 @@ one
 > deleteContentBackward
 
 ```buffer
-one
-┃two
+one┃two
 ```
 
-> cursorLineUp cursorLineBoundaryForward
+> enter cursorDocStart cursorLineBoundaryForward
 
 ```buffer
 one┃
+
 two
 ```
 
@@ -923,6 +902,33 @@ two
 
 ```buffer
 one┃two
+```
+
+### Scenario21b
+
+The same at a sentence boundary: the space at the split goes from both paragraphs, and the join
+glues the sentences, the default's cost ([Enter44](enter.md#enter44)).
+
+```yaml
+tags: core free-form
+```
+
+```buffer
+One.┃ Two.
+```
+
+> enter
+
+```buffer
+One.
+
+┃Two.
+```
+
+> deleteContentBackward
+
+```buffer
+One.┃Two.
 ```
 
 ### Scenario22
@@ -995,7 +1001,7 @@ revise ┃2\. draft
 ```buffer
 # Plan
 revise
-┃2\. draft
+ ┃2\. draft
 ```
 
 > undo undo undo
@@ -1034,4 +1040,31 @@ bread
 Shopping:
 - milk
 - ┃bread
+```
+
+### Scenario25
+
+Leaving a task list after a note: Enter on its last, empty item leaves the list, and what is typed
+next is a paragraph after it ([Enter6](enter.md#enter6)), where bare Obsidian's text would continue
+the item above.
+
+```yaml
+tags: common free-form
+```
+
+```buffer
+- [ ] milk
+- [ ] bread
+  - two loaves
+- ┃
+```
+
+> enter "Shop closes at six."
+
+```buffer
+- [ ] milk
+- [ ] bread
+  - two loaves
+
+Shop closes at six.┃
 ```

@@ -57,6 +57,11 @@ export interface ProjectOptions {
    * boundary free form has); else every node is a block alike.
    */
   readonly freeForm?: boolean;
+  /**
+   * The case's options, where they decide how ourus reads the text: with `enterSplitSpace: start` an
+   * item's padding past the item above's is its text, as the app's block starts with the spaces.
+   */
+  readonly config?: Partial<Config>;
 }
 
 export interface Projection {
@@ -112,7 +117,7 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
     } else if (c !== undefined) text += c;
   }
   const at = (p: number): number => shift[p]!;
-  const doc = OutlineState.parse(text, { placeholders: drawing.placeholders.map(at), config: { flavor } });
+  const doc = OutlineState.parse(text, { placeholders: drawing.placeholders.map(at), config: { ...options.config, flavor } });
   if (doc.syntaxTree.root.children.some((b) => b.type === 'frontmatter')) throw new Unsupported('frontmatter');
 
   const nodes = doc.nodes.filter((n) => n.kind !== 'root');
@@ -142,15 +147,15 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
 
   const locate = (p: number): { block: number; offset: number } | string => {
     const line = doc.lineAt(p);
-    if (p > line.to) return 'a caret after the last line';
+    if (p > line.to) return 'caret after the last line';
     for (let i = 0; i < maps.length; i++) {
       for (const m of maps[i]!) {
         if (m.line !== line.index) continue;
-        if (p < m.from) return 'a caret in a marker';
+        if (p < m.from) return 'caret in a marker';
         return { block: i, offset: m.at + (p - m.from) - (m.cut !== undefined && p > m.cut ? 1 : 0) };
       }
     }
-    return 'a caret on a blank line';
+    return 'caret on a blank line';
   };
   const hasCaret = /┃|«/.test(drawn);
   if (!hasCaret) return { outline: { blocks, sel: null }, notes, sections };
@@ -159,13 +164,13 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
   const a = anchor === head ? h : locate(at(anchor));
   if (typeof h === 'string') return { outline: { blocks, sel: null }, notes, caretLost: h, sections };
   if (typeof a === 'string') return { outline: { blocks, sel: null }, notes, caretLost: a, sections };
-  if (a.block !== h.block) return { outline: { blocks, sel: null }, notes, caretLost: 'a selection across blocks', sections };
+  if (a.block !== h.block) return { outline: { blocks, sel: null }, notes, caretLost: 'selection across blocks', sections };
   return { outline: { blocks, sel: { block: h.block, anchor: a.offset, head: h.offset } }, notes, sections };
 }
 
 /** A node's own text as a block holds it, and where each of its lines came from. */
 function blockText(doc: OutlineState, node: OutlineNode, notes: Set<string>, ordered: boolean, freeForm: boolean): { text: string; lines: LineMap[] } {
-  if (node.kind === 'quote') throw new Unsupported(doc.syntaxTree.line(node.startLine) && /^\s*>\s*\[!/.test(doc.text.slice(doc.line(node.startLine).from, doc.line(node.startLine).to)) ? 'a callout' : 'a quote');
+  if (node.kind === 'quote') throw new Unsupported(doc.syntaxTree.line(node.startLine) && /^\s*>\s*\[!/.test(doc.text.slice(doc.line(node.startLine).from, doc.line(node.startLine).to)) ? 'callout' : 'quote');
   const lines: LineMap[] = [];
   const parts: string[] = [];
   const add = (line: number, from: number, to: number, prefix = '', unescape = false): void => {
@@ -174,7 +179,8 @@ function blockText(doc: OutlineState, node: OutlineNode, notes: Set<string>, ord
     // a Markdown escape at a line's start (`\#`, `\-`, `1\.`) only keeps the line from reading as
     // markup in the file; a block's text needs none, but where blocks are numbered, `1\.` starting a
     // block is text a numbered block's `1. ` isn't, and stays
-    const m = !unescape ? null : ordered && !parts.length ? /^\\(?=[!-/:-@[-`{-~])/.exec(s) : /^\\(?=[!-/:-@[-`{-~])|^\d{1,9}\\(?=[.)])/.exec(s);
+    // (after spaces a split kept before the text, `enterSplitSpace: start`, as at its start)
+    const m = !unescape ? null : ordered && !parts.length ? /^[ \t]*\\(?=[!-/:-@[-`{-~])/.exec(s) : /^[ \t]*\\(?=[!-/:-@[-`{-~])|^[ \t]*\d{1,9}\\(?=[.)])/.exec(s);
     if (m) {
       notes.add('escape');
       const cut = m[0].length - 1;
@@ -206,12 +212,12 @@ function blockText(doc: OutlineState, node: OutlineNode, notes: Set<string>, ord
   const head = node.kind === 'atom' ? node.block : node.head;
   // markup no block has a form for: a block would hold it as text, and edit it so
   const title = head?.type === 'heading' && !head.setext ? doc.headRange(node) : null;
-  if (title && /^[ \t]*#/.test(doc.text.slice(title.to, doc.line(head!.startLine).to))) throw new Unsupported("a heading's closing #s");
+  if (title && /^[ \t]*#/.test(doc.text.slice(title.to, doc.line(head!.startLine).to))) throw new Unsupported("heading's closing #s");
   if (head?.type === 'code_block' && !head.fenced) throw new Unsupported('indented code');
   if (!head && node.kind === 'item' && node.block.children[0]?.startLine === node.block.startLine) {
     // an item whose first block is a list (`- - a`): it has no text, and the rest of its marker's line
     // is the inner item's, a child block
-    notes.add("a list as an item's first block");
+    notes.add("list as an item's first block");
     return { text: number, lines };
   }
   if (!head) {
@@ -236,7 +242,15 @@ function blockText(doc: OutlineState, node: OutlineNode, notes: Set<string>, ord
   const trim = head.type === 'paragraph' || head.type === 'heading';
   for (let l = head.startLine; l <= head.endLine; l++) {
     const line = doc.line(l);
-    add(l, trim ? skipSpaces(line.contentFrom, line.to) : line.contentFrom, line.to, l === head.startLine ? number : '', trim);
+    let from = trim ? skipSpaces(line.contentFrom, line.to) : line.contentFrom;
+    // spaces before it that are the text's are the block's, as the app's block starts with them: a
+    // space a placeholder holds as text (`- ◌ x`), what a split kept (`enterSplitSpace: start`: an
+    // item's padding, a paragraph's leading spaces, where ourus's text start is before them)
+    if (l === head.startLine) {
+      const held = doc.placeholders.find((p) => p >= line.from && p < from && (doc.text[p] === ' ' || doc.text[p] === '\t'));
+      from = Math.min(held ?? from, node.kind === 'item' || node.kind === 'paragraph' ? doc.textStart(from) : from);
+    }
+    add(l, from, line.to, l === head.startLine ? number : '', trim);
   }
   return { text: parts.join('\n'), lines };
 }

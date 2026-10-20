@@ -86,9 +86,9 @@ function fromItem(it: Item, number: number | null): { text: string; prefix: numb
 const CONTAINER = 'ourus sxs';
 
 export const driver: Driver = {
-  name: 'workflowy',
-  title: 'WorkFlowy',
-  id: 'WF',
+  shortId: 'WF',
+  longId: 'workflowy',
+  displayName: 'WorkFlowy',
   url: 'https://beta.workflowy.com/guide/embed/',
   model: 'block',
   keys: {
@@ -118,33 +118,36 @@ export const driver: Driver = {
   refuses: ['html', 'table', 'math', 'thematic break', 'link reference definition', 'comment', 'footnote'],
   ordered: true,
   // Shift+Tab moves an item past its parent, leaving its later siblings there: logical outdenting
-  behaves: { outdent: 'logical', enterOnEmptyItem: 'sibling', pasteStructuredLines: 'items', emptyItemWithChildren: 'refuse', pasteStructuredAtEnd: 'join', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after' },
+  behaves: { enterSplitSpace: 'start', backspaceAtTopItem: 'refuse', outdent: 'logical', enterOnEmptyItem: 'sibling', pasteStructuredLines: 'items', emptyItemWithChildren: 'refuse', joinWithChildren: 'refuse', pasteStructuredAtEnd: 'join', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after' },
   // WorkFlowy counts its animations (an item sliding into place, a zoom) while they run
   idle: { busy: `window.WF?.GuiAnimate?.animationsAreInProgress?.()` },
   holds(doc: Outline) {
-    if (doc.blocks.some((b) => /^#{4,6} /.test(b.text))) return 'a heading deeper than H3';
+    if (doc.blocks.some((b) => /^#{4,6} /.test(b.text))) return 'heading deeper than H3';
     // a code block is an item of its own, its fence three or more backticks, no more than its code needs,
     // and no language (WorkFlowy keeps none); the caret in its code
     for (const b of doc.blocks) {
       if (!/(^|\n)(`{3,}|~{3,})/.test(b.text)) continue;
       const code = FENCE.exec(b.text);
-      if (!code) return "a fenced block with a language, tildes, or text around it in its item: WorkFlowy's code block is an item of backticks alone";
-      if (code[1] !== fenceFor(code[2]!)) return "a code block's fence longer than its code needs, which WorkFlowy's reads back without";
+      if (!code) return "fenced block with a language, tildes, or text around it in its item: WorkFlowy's code block is an item of backticks alone";
+      if (code[1] !== fenceFor(code[2]!)) return "code block's fence longer than its code needs, which WorkFlowy's reads back without";
     }
     if (doc.sel) {
       const it = toItem(0, doc.blocks[doc.sel.block]!.text);
-      if (it.layout === 'code-block' && Math.max(doc.sel.anchor, doc.sel.head) > it.prefix + it.name.length) return "a caret in a code block's fences";
+      if (it.layout === 'code-block' && Math.max(doc.sel.anchor, doc.sel.head) > it.prefix + it.name.length) return "caret in a code block's fences";
+      // the name and the note are fields of their own: no selection spans both
+      const nameEnd = it.prefix + it.name.length;
+      if (it.note !== null && Math.min(doc.sel.anchor, doc.sel.head) <= nameEnd && Math.max(doc.sel.anchor, doc.sel.head) > nameEnd) return "selection across an item's name and its note";
     }
     // a to-do's checkbox and a heading's level are the item's type, not text: no caret goes there
-    if (doc.sel && Math.min(doc.sel.anchor, doc.sel.head) < toItem(0, doc.blocks[doc.sel.block]!.text).prefix) return "a caret in a task's checkbox or a heading's #s";
+    if (doc.sel && Math.min(doc.sel.anchor, doc.sel.head) < toItem(0, doc.blocks[doc.sel.block]!.text).prefix) return "caret in a task's checkbox or a heading's #s";
     // an item has one layout: numbered, or a task, or a heading
-    if (doc.blocks.some((b) => /^\d{1,9}\. (?:\[[ xX]\]|#{1,6} )/.test(b.text))) return 'a numbered task or heading';
+    if (doc.blocks.some((b) => /^\d{1,9}\. (?:\[[ xX]\]|#{1,6} )/.test(b.text))) return 'numbered task or heading';
     // a run of numbered siblings counts on from its first item's number (its `numbered_start`)
     const run: number[] = [];
     for (const b of doc.blocks) {
       run.length = b.depth + 1;
       const n = /^(\d{1,9})\. /.exec(b.text);
-      if (n && run[b.depth] && Number(n[1]) !== run[b.depth]! + 1) return 'a numbered list that skips a number';
+      if (n && run[b.depth] && Number(n[1]) !== run[b.depth]! + 1) return 'numbered list that skips a number';
       run[b.depth] = n ? Number(n[1]) : 0;
     }
     return undefined;

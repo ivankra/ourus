@@ -1,4 +1,3 @@
-
 # Delete
 
 Command: `deleteContentForward` (Delete).
@@ -9,33 +8,38 @@ the text it is the host's. The rules, in order; the first that applies wins:
 
 1. **On a code line**, the next code line joins it; before a fence it is refused
    ([fences.md](fences.md)).
-2. **Before a blank line, with `deleteAtGap: gap`**, the blank line goes, where the nodes stay as
-   they are (Delete17b).
-3. **Before an item's text, in its marker or its checkbox**: the checkbox goes, as Backspace right
+2. **Before an item's text, in its marker or its checkbox**, Delete is the host's where the host
+   shows markup as text (`markup: text`, the default; Delete29, Delete23, Delete24, Delete25). Where
+   it decorates markup (`decorated`), ourus makes the edit: the checkbox goes, as Backspace right
    after it takes it (Delete19); in the marker, the space goes and the item is a paragraph, keeping
    its children, set off by a blank line where it needs one (Delete16, Delete16d, Delete16e); the
    items after a first item become its list (Delete16f). Of two spaces, one goes and the item stays
-   (Delete16g). What ourus can't make exactly there (before the marker or inside it, or where the
-   paragraph would run into its parent's text) is the host's edit (`editInMarkup: host`, the
-   default; Delete23, Delete24, Delete25), or refused (`refuse`; Delete16b, Delete16c).
-4. **On an empty item**, the item goes, the caret moving on to the node below (Delete6), a paragraph
-   it kept apart from the text above set apart by a blank line (Delete28); with
+   (Delete16g). What it can't make exactly there (before the marker or inside it, or where the
+   paragraph would run into its parent's text) is refused (Delete16b, Delete16c). Inside the
+   checkbox its character goes, either way ([TaskDelete4](tasks.md#taskdelete4)).
+3. **On an empty item**, the item goes, the caret moving on to the node below (Delete6); a paragraph
+   below joins it instead, as Backspace at its start would (Delete28); with
    children, its first child moves up into it (Delete5), or nothing happens with
    `emptyItemWithChildren: refuse` (Delete5e). An empty item below goes (Delete20).
-5. **Before a heading**, its whole line joins, `#`s included (`headingEditing: text`, the default;
-   Delete13); with `block`, its title (Delete13b). A setext heading can't join as text: refused
-   (Delete13e), its title joining under `block` (Delete13f).
-6. **Between paragraphs the blank lines go**: the paragraph below is more lines of this one
-   (Delete18, Delete18b, Delete18c).
-7. **Otherwise the node below joins this one**, its children coming along (Delete1, Delete2,
+4. **Before a heading, it loses its marks first**, as Backspace at its text start takes them: the
+   title is a paragraph where it is, the caret staying, and a second Delete joins it as any
+   paragraph (`headingEditing: text`, the default; Delete13, Delete13c, Delete13e, Delete13g);
+   with `block`, its title joins (Delete13b, Delete13f).
+5. **Between paragraphs the blank lines go, and the paragraphs join, glued**, in one press: the
+   paragraph below continues this one's text (Delete18, Delete18c); with `enterAtTextStart: stay`,
+   one blank line a press while more than one is there (Delete18d). At an item's text, before the
+   paragraph right after it, only the blank lines go, the paragraph's lines continuing the text
+   (Delete18b), as Backspace takes them back.
+6. **Otherwise the node below joins this one**, its children coming along (Delete1, Delete2,
    Delete7); at a setext title's end, before its underline (Delete26); escaped where the joined
    text would read as a link reference definition (Delete27). At the end of a line inside
    the text, the next line joins it (Delete3). A heading's closing `#`s stay at the end (Delete4,
-   Delete4b).
-8. **What can't be written is refused**: a quote or a code block below (Delete10, Delete11).
-9. **A selection across nodes** goes and the ends join, as with Backspace (Delete21); within one
+   Delete4b). A first child with children joins up a level the same (`joinWithChildren: join`, the
+   default; Delete31), or nothing happens (`refuse`, Delete31b).
+7. **What can't be written is refused**: a quote or a code block below (Delete10, Delete11).
+8. **A selection across nodes** goes and the ends join, as with Backspace (Delete21); within one
    node's text it is the host's (Delete22).
-10. **In the middle of the text**, the host's Delete (Delete8).
+9. **In the middle of the text**, the host's Delete (Delete8).
 
 Bare Obsidian's Delete deletes the line break: the next item's marker becomes text of this one
 (`- one┃- two`), a child's indentation too (`- abc┃  - def`). Obsidian's Outliner plugin joins as
@@ -177,7 +181,11 @@ The same for a first child below the top level, reached by deleting its text.
 
 The first Delete deletes the child's only character, which leaves it empty, held by a placeholder
 (right after `a`'s text, `  - ` alone would be a setext underline). The second pulls its first
-child `b` up into it; `b`'s child `c` comes along, and the empty item's other child `d` stays.
+child `b` up into it; `b`'s child `c` comes along, and the empty item's other child `d` stays. So
+the tree differs from Backspace's on the same item, which removes it and lifts all its children
+([Backspace17c](backspace.md#backspace17c)): Delete joins the node below into the empty item, which
+keeps its place and id, as Delete joins anywhere, where Backspace joins the empty item into the node
+above.
 
 ```yaml
 tags: edge
@@ -471,11 +479,11 @@ tags: rare
 
 ## Delete13
 
-Delete at the end of a paragraph before a heading joins the heading's whole line, `#`s included.
-
-Once it isn't a heading, its `#`s are text, as a text editor deleting the line break leaves them.
-The blank line between goes too; bare Obsidian deletes it first, as `deleteAtGap: gap` does. With
-`headingEditing: block`, only the title joins ([Delete13b](#delete13b)).
+Delete at the end of a paragraph before a heading takes the heading's `#`s, as Backspace at its text
+start does ([Backspace18](backspace.md#backspace18)): the title is a paragraph where it is, and
+Delete again joins it, as SiYuan does. Bare Obsidian deletes the blank line first, and the line
+break then joins the `#`s as text; WorkFlowy does nothing, Dynalist joins `a` into the heading. With
+`headingEditing: block`, the title joins at once ([Delete13b](#delete13b)).
 
 ```yaml
 tags: edge markup-heading
@@ -490,7 +498,15 @@ a┃
 > deleteContentForward
 
 ```buffer
-a┃# H1
+a┃
+
+H1
+```
+
+> deleteContentForward
+
+```buffer
+a┃H1
 ```
 
 ## Delete13b
@@ -516,8 +532,8 @@ a┃H1
 
 ## Delete13c
 
-Before a heading with text right under it, the joined line is set off from that text by a blank
-line: right under it, the text would continue the joined paragraph.
+Before a heading with text right under it, the peeled title is set off from that text by a blank
+line: right under it, the text would continue the title's paragraph.
 
 ```yaml
 tags: rare free-form markup-heading
@@ -533,7 +549,9 @@ text
 > deleteContentForward
 
 ```buffer
-a┃# H1
+a┃
+
+H1
 
 text
 ```
@@ -564,8 +582,7 @@ text
 
 ## Delete13e
 
-Before a setext heading, Delete is refused: joined as text, its underline would make the joined
-paragraph a heading.
+Before a setext heading, the underline goes, as Backspace at the title's start takes it.
 
 ```yaml
 tags: rare free-form markup-heading
@@ -580,15 +597,10 @@ Title
 
 > deleteContentForward
 
-```result
-rejected: not-expressible
-```
-
 ```buffer
 a┃
 
 Title
-=====
 ```
 
 ## Delete13f
@@ -615,8 +627,8 @@ a┃Title
 
 ## Delete13g
 
-Before an item whose text is a heading, the item's text joins as before any heading, its `#`s as
-text, and the item's marker goes.
+Before an item whose text is a heading, its `#`s go first, as before any heading: the item's text is
+a paragraph, and Delete again joins the item as any item.
 
 ```yaml
 tags: rare markup-heading
@@ -630,12 +642,19 @@ tags: rare markup-heading
 > deleteContentForward
 
 ```buffer
-- a┃# H
+- a┃
+- H
+```
+
+> deleteContentForward
+
+```buffer
+- a┃H
 ```
 
 ## Delete14
 
-The heading's section stays where it was.
+The heading's section stays where it was, after the title's paragraph, and after the join.
 
 ```yaml
 tags: rare free-form markup-heading
@@ -652,15 +671,25 @@ body
 > deleteContentForward
 
 ```buffer
-a┃# H1
+a┃
+
+H1
+
+body
+```
+
+> deleteContentForward
+
+```buffer
+a┃H1
 
 body
 ```
 
 ## Delete15
 
-Joined into a heading, the line below becomes part of its title; closing `#`s close the merged
-heading.
+After a heading the same: the heading below loses its marks, closing `#`s too, and its title then
+joins the heading's.
 
 ```yaml
 tags: rare markup-heading
@@ -674,19 +703,30 @@ tags: rare markup-heading
 > deleteContentForward
 
 ```buffer
-## A┃# H1 ##
+## A┃
+
+H1
+```
+
+> deleteContentForward
+
+```buffer
+## A┃H1
 ```
 
 ## Delete16
 
-Deleting the space after a top-level item's marker makes the item a paragraph, keeping its children.
+Where the host decorates markup (`markup: decorated`), deleting the space after a top-level item's
+marker makes the item a paragraph, keeping its children.
 
 Without the space, `-` is no list marker: the text becomes a paragraph, `-` included. In a section,
-a paragraph owns the list after it, so `b` stays under the text, now `-a`. ourus makes the edit, as
-the host would, and checks what it reads as.
+a paragraph owns the list after it, so `b` stays under the text, now `-a`. ourus makes the edit and
+checks what it reads as; where the host shows markup as text, the edit is the host's
+([Delete29](#delete29)).
 
 ```yaml
 tags: edge free-form
+markup: decorated
 ```
 
 ```buffer
@@ -707,12 +747,12 @@ applied
 
 ## Delete16b
 
-With `editInMarkup: refuse`, deleting the space after a marker inside an item is refused: `-a`
+With `markup: decorated`, deleting the space after a marker inside an item is refused: `-a`
 would be more of `p`'s text, and `b` would become `p`'s child.
 
 ```yaml
 tags: rare free-form
-editInMarkup: refuse
+markup: decorated
 ```
 
 ```buffer
@@ -735,12 +775,12 @@ rejected: not-expressible
 
 ## Delete16c
 
-With `editInMarkup: refuse`, Delete before the marker is refused: it would take the marker itself,
+With `markup: decorated`, Delete before the marker is refused: it would take the marker itself,
 and ` a` would continue `x`'s text.
 
 ```yaml
 tags: rare free-form
-editInMarkup: refuse
+markup: decorated
 ```
 
 ```buffer
@@ -762,10 +802,12 @@ rejected: not-expressible
 ## Delete16d
 
 After another item, the paragraph the item becomes is set off by a blank line, so it doesn't
-continue that item; its children become its list.
+continue that item; its children become its list. Where markup is text, the host's Delete leaves
+`-b` more of `a`'s text ([Delete29](#delete29)).
 
 ```yaml
 tags: rare free-form
+markup: decorated
 ```
 
 ```buffer
@@ -790,6 +832,7 @@ keeping its text and parent.
 
 ```yaml
 tags: rare free-form
+markup: decorated
 ```
 
 ```buffer
@@ -811,6 +854,7 @@ outdent makes them ([DirectOutdent2](outdent.md#directoutdent2)).
 
 ```yaml
 tags: rare free-form
+markup: decorated
 ```
 
 ```buffer
@@ -831,6 +875,7 @@ Of two spaces after a marker, one goes, and the item stays; the caret goes to it
 
 ```yaml
 tags: rare
+markup: decorated
 ```
 
 ```buffer
@@ -850,10 +895,10 @@ applied
 ## Delete17
 
 Delete at the end of a paragraph, a blank line before its list: the first item joins, the blank line
-going too (`deleteAtGap: join`, the default).
+going too.
 
-As Delete joins any node below. Bare Obsidian deletes the blank line only, as `deleteAtGap: gap`
-does ([Delete17b](#delete17b)).
+As Delete joins any node below, as the outliners join blocks. Bare Obsidian and the other text
+editors delete the blank line only, one per press, as a plain line editor does.
 
 ```yaml
 tags: common
@@ -873,44 +918,10 @@ Shopping:┃milk
 - eggs
 ```
 
-## Delete17b
-
-With `deleteAtGap: gap`, Delete before a blank line deletes it, the nodes staying as they are;
-Delete again joins.
-
-As in Obsidian, where Delete deletes one line break.
-
-```yaml
-tags: rare
-deleteAtGap: gap
-```
-
-```buffer
-Shopping:┃
-
-- milk
-- eggs
-```
-
-> deleteContentForward
-
-```buffer
-Shopping:┃
-- milk
-- eggs
-```
-
-> deleteContentForward
-
-```buffer
-Shopping:┃milk
-- eggs
-```
-
 ## Delete18
 
-Delete at the end of a paragraph before another: the blank line goes, the paragraph below is more
-lines of this one, and the caret stays (Backspace12's mirror, ourus's edit as there).
+Delete at the end of a paragraph before another: the blank line goes, the paragraph below joins
+this one, glued, and the caret stays (Backspace12's mirror, ourus's edit as there).
 
 ```yaml
 tags: common free-form
@@ -929,14 +940,13 @@ applied
 ```
 
 ```buffer
-a┃
-b
+a┃b
 ```
 
 ## Delete18b
 
-Inside an item, Delete before a blank line removes it, and the paragraph below becomes more lines of
-the text: the mirror of [Backspace19](backspace.md#backspace19).
+Inside an item, Delete before a blank line removes it, and the paragraph below continues the text
+on the next line: the mirror of [Backspace19](backspace.md#backspace19).
 
 ```yaml
 tags: edge free-form
@@ -973,7 +983,31 @@ b
 > deleteContentForward
 
 ```buffer
+a┃b
+```
+
+## Delete18d
+
+With `enterAtTextStart: stay`, one blank line a press while more than one is there, as Backspace
+takes them ([Backspace12e](backspace.md#backspace12e)).
+
+```yaml
+tags: rare free-form
+enterAtTextStart: stay
+```
+
+```buffer
 a┃
+
+
+b
+```
+
+> deleteContentForward
+
+```buffer
+a┃
+
 b
 ```
 
@@ -985,6 +1019,7 @@ task`.
 
 ```yaml
 tags: edge markup-task
+markup: decorated
 ```
 
 ```buffer
@@ -1071,7 +1106,7 @@ notApplicable
 ## Delete23
 
 Before the marker, Delete would take the marker itself, which ourus doesn't do: the edit is the
-host's (`editInMarkup: host`, the default), and ` a` continues `x`'s text, as in a text editor. The
+host's (`markup: text`, the default), and ` a` continues `x`'s text, as in a text editor. The
 result says why ourus stepped aside: the marker isn't text.
 
 ```yaml
@@ -1189,8 +1224,10 @@ tags: rare
 
 ## Delete28
 
-The same from Delete on the empty item ([Backspace39](backspace.md#backspace39)): the paragraph,
-set apart from the item above, takes the caret.
+Delete on an empty item before a paragraph joins the paragraph into it, as Backspace at the
+paragraph's start does from the other side ([Backspace5](backspace.md#backspace5)): the empty item
+takes the text, the caret staying where it was. All nine apps that have paragraphs do this. Backspace
+on the empty item itself is another key, and removes it ([Backspace39](backspace.md#backspace39)).
 
 ```yaml
 tags: rare
@@ -1206,6 +1243,118 @@ p
 
 ```buffer
 - a
+- ┃p
+```
 
-┃p
+## Delete29
+
+With the caret inside markup, Delete is the host's where the host shows markup as text (`markup:
+text`, the default): one character goes, here the space after the marker, and `-b` is then more of
+`a`'s text, as in a text editor. Where the host decorates markup, ourus keeps the item apart
+([Delete16d](#delete16d)).
+
+```yaml
+tags: rare free-form
+```
+
+```buffer
+- a
+-┃ b
+  - c
+```
+
+> deleteContentForward
+
+```result
+notApplicable
+```
+
+```buffer
+- a
+-┃b
+  - c
+```
+
+## Delete30
+
+Delete on an empty item in a loose list takes its gap too, as Backspace does
+([Backspace44](backspace.md#backspace44)).
+
+```yaml
+tags: rare
+```
+
+```buffer
+- a
+
+- ┃
+
+- b
+```
+
+> deleteContentForward
+
+```buffer
+- a
+
+- ┃b
+```
+
+## Delete31
+
+At a parent's end, its first child with children joins it, as Backspace at the child's start does
+([Backspace45](backspace.md#backspace45)): the children come up into its place (`joinWithChildren:
+join`, the default), as RemNote and BlockNote do.
+
+```yaml
+tags: edge
+```
+
+```buffer
+- a┃
+  - b
+    - c
+    - d
+  - e
+```
+
+> deleteContentForward
+
+```buffer
+- a┃b
+  - c
+  - d
+  - e
+```
+
+## Delete31b
+
+With `joinWithChildren: refuse`, nothing happens, as in Logseq, Roam, WorkFlowy, Dynalist, Tana and
+Obsidian's Outliner.
+
+```yaml
+tags: edge
+joinWithChildren: refuse
+```
+
+```buffer
+- a┃
+  - b
+    - c
+    - d
+  - e
+```
+
+> deleteContentForward
+
+```result
+rejected: has-children
+```
+
+```buffer
+- a┃
+  - b
+    - c
+    - d
+  - e
 ```

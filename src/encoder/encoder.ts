@@ -28,7 +28,7 @@ import { blankBetween, rerendered, writeLines } from './lines.ts';
 import { seam, unitsOf, type Units } from './seams.ts';
 import { changesOf, type OutputLine } from './changes.ts';
 import { reindent, usesTabs } from './indent.ts';
-import { childIndent, continuation, markerText, siblingPrefix } from './prefix.ts';
+import { childIndent, continuation, itemContinuation, markerText, siblingPrefix } from './prefix.ts';
 import { escape, interruptsParagraph, startOfNode } from './escapes.ts';
 import { renumber } from './renumber.ts';
 
@@ -53,6 +53,8 @@ export interface EncodeResult {
   readonly identity: Map<number, number>;
   /** How many seams the edit made could take a blank line they don't have (see `pad`). */
   readonly candidates: number;
+  /** Those of them within new text, which has no blank line there of its own. */
+  readonly within: ReadonlySet<number>;
 }
 
 export interface EncodeOptions {
@@ -176,8 +178,17 @@ export class OutlineEncoder {
       for (const lineNo of gap) {
         const line = lines[lineNo]!;
         const old = doc.text.slice(line.from, line.to);
-        // a blank line keeps its quotes' markers only while it sits in the same quotes
-        const quotes = (text: string): number => (text.match(/>/g) ?? []).length;
+        // a blank line keeps its quotes' markers only while it sits in the same quotes, at the same
+        // columns (a quote in an item that moved has its `>` where the item's lines have it now)
+        const quotes = (text: string): string => {
+          const columns: number[] = [];
+          let column = 0;
+          for (const c of text) {
+            if (c === '>') columns.push(column);
+            column = c === '\t' ? column + 4 - (column % 4) : column + 1;
+          }
+          return columns.join(',');
+        };
         const text = blank !== null && quotes(old) !== quotes(blank) ? blank : old;
         // a gap line written twice (a separation copied) is new text the second time
         out.push({ origin: emitted.has(lineNo) ? null : lineNo, text, ending: line.ending, local: diffText(old, text), weight });
@@ -192,6 +203,7 @@ export class OutlineEncoder {
     const headOld = head && (head.node ?? head.was);
     const breakFirst = out.length === 0 && doc.config.flavor === 'obsidian' && head?.kind === 'atom' && headOld?.block.type === 'thematic_break';
     let candidates = 0;
+    const within = new Set<number>();
     // the first line each node writes of its own
     const firstLine = new Map<Placed, number>();
     for (let i = 0; i < order.length; i++) {
@@ -200,7 +212,9 @@ export class OutlineEncoder {
       const own = placed.node ? units.own.get(placed.node) : null;
       firstLine.set(placed, out.length);
       if (placed.lines) {
-        const written = writeLines(doc, placed, own ?? null, tabs);
+        // a node made anew in an old one's place (another kind) keeps its lines' endings
+        const was = !placed.node && placed.was ? (units.own.get(placed.was) ?? null) : null;
+        const written = writeLines(doc, placed, own ?? null, tabs, was);
         written.forEach((line) => {
           placed.output.push({ index: out.length, prefix: line.prefix });
           out.push({ origin: line.origin, text: line.text, ending: line.ending || eol, local: line.local, weight });
@@ -243,13 +257,15 @@ export class OutlineEncoder {
       for (let count = 0; count < gap.blanks; count++) out.push(blankLine(blank()));
       // an empty item right under its parent's text (an item's, a paragraph's) reads as a setext underline: a blank line may
       // set it apart, as when the caret leaves one (`spec/placeholders.md`)
-      const apart = gap.separable || emptyFirstChild(doc, placed, order[i + 1] ?? null);
+      const underline = emptyFirstChild(doc, placed, order[i + 1] ?? null);
+      const apart = gap.separable || underline;
       if (!apart || gap.blanks > 0 || gap.lines.some((lineNo) => lines[lineNo]!.blank)) continue;
       if (gap.separable && (gap.fresh === 'after' ? options.separate : gap.fresh === 'before' && options.separate === 'around')) {
         out.push(blankLine(blank()));
         continue;
       }
       const candidate = candidates++;
+      if (gap.within && !underline) within.add(candidate);
       if (options.pad === 'all' || options.pad?.has(candidate)) out.push(blankLine(blank()));
     }
     if (out.length === 0) return 'nothing to write';
@@ -297,7 +313,7 @@ export class OutlineEncoder {
       return placed.marker === null || /^[ \t]*$/.test(newText.slice(before, after)) ? after : before;
     };
     for (const placed of order) if (placed.node) identity.set(headAt(placed, doc.headStart(placed.node)), placed.node.id);
-    return { changes, map, at: atContent, identity, candidates };
+    return { changes, map, at: atContent, identity, candidates, within };
   }
 
   /**
@@ -322,6 +338,11 @@ export class OutlineEncoder {
   /** The prefix a new line in these containers starts with: a quote's `>` as written, an item's indentation as spaces. */
   continuation(pieces: readonly PrefixPiece[]): string {
     return continuation(this.state, pieces);
+  }
+
+  /** The prefix of a continuation line of an item's text: its sibling prefix, then spaces to its content column. */
+  itemContinuation(node: OutlineNode): string {
+    return itemContinuation(this.state, node);
   }
 
   /** An item's marker as written, or (`next`) the marker of the item after it. */

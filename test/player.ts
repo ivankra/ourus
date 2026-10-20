@@ -101,11 +101,8 @@ export function play(state: Played, actions: readonly string[]): Played {
     state = step({ ...state, last: undefined, ...(/Line(?:Up|Down)$/.test(action) ? {} : { goal: undefined }) }, action);
     if (state.doc.text !== before.text) state = { ...state, undone: [...(state.undone ?? []), before], redone: [] };
     const settled = settlePlaceholders(state.doc, state.selection.head);
-    if (settled) {
-      // leaving a placeholder is an edit of its own: undo returns to it, the caret where it was
-      const left = snapshot(state, before.selection);
-      state = { ...state, doc: settled.state, selection: mapSel(settled.changes, state.selection), undone: [...(state.undone ?? []), left], redone: [] };
-    }
+    // leaving a placeholder joins the step before it, which made the empty node: one undo takes both back
+    if (settled) state = { ...state, doc: settled.state, selection: mapSel(settled.changes, state.selection), redone: [] };
   }
   return state;
 }
@@ -166,8 +163,8 @@ function step(state: Played, action: string): Played {
     case 'deleteContentBackward': {
       if (from !== to) return { ...edit(state, { from, to, insert: '' }), last };
       if (from === 0) return { ...state, last };
-      const back = doc.text.slice(from - 2, from) === '\r\n' ? 2 : 1;
-      return { ...edit(state, { from: from - back, to: from, insert: '' }), last };
+      // one character: a line ending or a surrogate pair is one, as the caret's motions step over it
+      return { ...edit(state, { from: charBefore(doc.text, from), to: from, insert: '' }), last };
     }
     case 'pasteStructured':
     case 'pastePlain':
@@ -178,8 +175,7 @@ function step(state: Played, action: string): Played {
     case 'deleteContentForward': {
       if (from !== to) return { ...edit(state, { from, to, insert: '' }), last };
       if (to === doc.text.length) return { ...state, last };
-      const ahead = doc.text.slice(to, to + 2) === '\r\n' ? 2 : 1;
-      return { ...edit(state, { from: to, to: to + ahead, insert: '' }), last };
+      return { ...edit(state, { from: to, to: charAfter(doc.text, to), insert: '' }), last };
     }
     default:
       return { ...state, last };

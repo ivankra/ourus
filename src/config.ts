@@ -1,19 +1,43 @@
-// Config: behaviour users disagree on, as options with documented defaults. An `OutlineState` holds its
+// Config: behavior users disagree on, as options with documented defaults. An `OutlineState` holds its
 // config and every snapshot after it carries it. Spec files set options by the same keys
 // (`outdent: logical` in frontmatter, or in one test's `config` block).
 //
 // Grammar correctness is never configurable, and neither are invariants other parts depend on:
 // what "empty" means, which node keeps its id. An option is not a way to postpone a decision: its
-// default is what nearly everyone gets. Add one when a spec case needs it.
+// default is the behavior the spec argues for, which users get unless their host says otherwise;
+// each option's doc names who does what, and some defaults are the block outliners' minority, chosen
+// for Markdown's sake (`outdent`, `enterMidItem`, `joinWithChildren`). Add one when a spec case
+// needs it.
 
 export interface Config {
   /**
    * The Markdown dialect the document is read as (see src/parser/):
-   * - `commonmark` (the default): CommonMark 0.31.2.
-   * - `gfm`: GitHub Flavored Markdown.
+   * - `gfm` (the default): GitHub Flavored Markdown, CommonMark with tables, tasks, strikethrough and
+   *   autolinks.
+   * - `commonmark`: CommonMark 0.31.2.
    * - `obsidian`: GFM plus callouts, wikilinks, frontmatter, math and comment blocks, ...
    */
-  readonly flavor: 'commonmark' | 'gfm' | 'obsidian';
+  readonly flavor: 'gfm' | 'commonmark' | 'obsidian';
+
+  /**
+   * How the host shows markup (list markers, checkboxes, a heading's `#`s, a quote's `>`, fences),
+   * which decides what ourus does with the caret in it, where only the host puts it:
+   * - `text` (the default; raw CodeMirror, a textarea, Obsidian's source mode): markup is text the
+   *   user edits by hand. Shift-Enter, Backspace, Delete and Cmd-Backspace there are the host's
+   *   (`notApplicable`), and so is an edit at the caret that ourus would refuse there (the refusal's
+   *   reason as its `detail`), whatever the text then reads as; and a command may leave the caret on
+   *   a fence where the user had it: Backspace back to a fence's end, indent and outdent from a fence
+   *   line (where Tab and Shift-Tab in the code are the host's).
+   * - `decorated` (rendered checkboxes and bullets, Obsidian's Live Preview): markup is the host's to
+   *   draw, and the node can't break through ourus: those keys act at the text start, or make the
+   *   edit ourus can check, or are refused (`rejected`); and no command leaves the caret in markup or
+   *   on a fence, where typing would break the node.
+   *
+   * Either way, Enter in markup acts at the node's text start, the character inside a task's
+   * checkbox is edited as text, and a structural command from before a node's text (in its marker)
+   * leaves the caret in its text.
+   */
+  readonly markup: 'text' | 'decorated';
 
   /**
    * Shift-Tab's later siblings:
@@ -23,7 +47,9 @@ export interface Config {
    * - `logical` (as in Roam, WorkFlowy and RemNote): they stay with their parent, and the item and its
    *   subtree move past them. Out of a quote, the item goes below the quote's other children.
    *
-   * Enter on an empty nested item outdents by it too (see `enterOnEmptyItem`).
+   * At the top level, where there is no parent, an item becomes a paragraph in place with either, the
+   * items after it its list (as RemNote does). Enter on an empty nested item outdents by it too (see
+   * `enterOnEmptyItem`).
    */
   readonly outdent: 'direct' | 'logical';
 
@@ -34,13 +60,39 @@ export interface Config {
   readonly bullet: '-' | '*' | '+';
 
   /**
-   * Enter on an empty nested item that isn't its parent's last child:
-   * - `sibling` (the default, as in WorkFlowy, Logseq and Dynalist): a new empty item.
-   * - `outdent` (as in Roam): it outdents, as the `outdent` option says.
+   * The spaces at the caret when Enter splits a node's text (`- one two┃ three`):
+   * - `trim` (the default, as Logseq): both halves lose them, `- one two` and `- three`; joined back,
+   *   the text is `one twothree`, the one place a command loses what the user wrote.
+   * - `drop` (as bare Obsidian, its Live Preview, true-outliner, RemNote and Emacs): the spaces after
+   *   the caret go, those before it end the first half (`- one two ┃three` keeps `two␠`).
+   * - `start` (as Tine, Roam, Athens, Tana, Dynalist, WorkFlowy, SiYuan, BlockNote, SilverBullet and
+   *   Obsidian's Outliner): the spaces after the caret start the second half, the caret before them,
+   *   where Markdown keeps them unseen: an item's padding (`- one two` / `-  three`, its children
+   *   moved as far right), a paragraph's or a title's rest's leading spaces (`One.` / `␠Two.`).
+   *   Markdown reads neither as text; ourus does (an item's padding past the item above's, a
+   *   paragraph's leading spaces), so a join gives them back. Four columns would make code: there
+   *   they go, as with `drop`; a marker after them is escaped. A list padded unevenly by hand, or a
+   *   paragraph indented, reads those extra spaces as text too. SiYuan and SilverBullet also trim
+   *   the first half's end.
    *
-   * A last child outdents either way.
+   * Shift-Enter isn't this option's: its line keeps the spaces at its start, as every app but
+   * true-outliner does.
    */
-  readonly enterOnEmptyItem: 'sibling' | 'outdent';
+  readonly enterSplitSpace: 'trim' | 'drop' | 'start';
+
+  /**
+   * Enter on an empty item that isn't the last of its list:
+   * - `sibling` (the default, as in Logseq, Tine, WorkFlowy, Dynalist, Tana and RemNote with bullets):
+   *   a new empty item, at any depth.
+   * - `outdent` (as in Roam, Athens and Obsidian, bare and with its Outliner): it outdents, as the
+   *   `outdent` option says; at the top level it leaves the list, an empty paragraph.
+   * - `exit` (as RemNote nbl): at the top level it leaves the list, as `outdent`;
+   *   nested, a new empty item, as `sibling`.
+   *
+   * The last item of its list outdents, or leaves the list, with every value. (Tine and Tana make a
+   * new empty item there too.)
+   */
+  readonly enterOnEmptyItem: 'sibling' | 'outdent' | 'exit';
 
   /**
    * Enter in the middle of the text of an item with children:
@@ -55,17 +107,44 @@ export interface Config {
 
   /**
    * Enter at the start of a node's text:
-   * - `into` (the default, as in WorkFlowy, Roam, Dynalist and SiYuan): a new empty node above it,
-   *   the caret going into it: an item above an item, an empty paragraph (held by a placeholder)
+   * - `into` (the default, as in Logseq, Roam, WorkFlowy, Dynalist and Tana): a new empty node above
+   *   it, the caret going into it: an item above an item, an empty paragraph (held by a placeholder)
    *   above a paragraph or a heading.
-   * - `stay` (as in Obsidian, with or without its Outliner plugin, and SilverBullet): Enter splits
-   *   there as anywhere in the text, the caret staying with it: an empty item above an item, a blank
-   *   line above a paragraph, and an empty heading above a heading's title, which becomes a paragraph.
+   * - `stay` (as in Obsidian, bare and with its Outliner, and RemNote): Enter splits there as anywhere
+   *   in the text, the caret staying with it: an empty item above an item, a blank line above a
+   *   paragraph, and an empty heading above a heading's title, which becomes a paragraph.
    *
-   * Logseq and Tine go `into` at an item and split a heading; BlockNote stays at an item and puts an
-   * empty block above a heading.
+   * SiYuan goes `into` at an item and stays at a paragraph or a heading; Logseq and Tine split a
+   * heading; at a heading SiYuan and BlockNote put an empty block above and keep the caret in the
+   * heading, which neither value draws. At a fence that is an item's text, Enter goes `into` either way:
+   * staying would leave the caret on the fence, markup (Fence15).
    */
   readonly enterAtTextStart: 'into' | 'stay';
+
+  /**
+   * Enter on a task with text (at its end, in it, at its start): the item Enter makes is
+   * - `continue` (the default, as WorkFlowy, Dynalist, RemNote, SiYuan, BlockNote and Obsidian, bare
+   *   and with its Outliner): a task too, unchecked.
+   * - `plain` (as Logseq, Tine, Roam and Athens, which keep a task as a marker in a block's text, and
+   *   Tana on a split): a plain item.
+   *
+   * The task keeps its checkbox either way; which half of a checked task stays checked is not this
+   * option's (the first, here).
+   */
+  readonly enterTask: 'continue' | 'plain';
+
+  /**
+   * A first child with children joining its parent, by Backspace at its text start or Delete at the
+   * parent's text end, its children coming up a level into its place:
+   * - `join` (the default, as Tine, RemNote, true-outliner and, by Delete, BlockNote join it).
+   * - `refuse` (as Logseq, Roam, Athens, WorkFlowy, Dynalist, Tana and Obsidian's Outliner do
+   *   nothing): `has-children`.
+   *
+   * A sibling with children joining the sibling above keeps them at their depth, and joins either
+   * way (Tana alone refuses it). An empty item's own children are `emptyItemWithChildren`'s; where
+   * both options apply (Delete on an empty item whose first child has children), either refuses.
+   */
+  readonly joinWithChildren: 'join' | 'refuse';
 
   /**
    * Backspace at the start of an item with nothing above it in its container (the document's first
@@ -73,39 +152,33 @@ export interface Config {
    * - `unwrap` (the default, where bare Obsidian ends up in two presses): the marker goes and the item
    *   is a paragraph where it is, the items after a top-level one its list, as Shift-Tab makes them;
    *   in a quote, Backspace again takes the `>`.
-   * - `refuse` (as Logseq, Roam and WorkFlowy do nothing at the first block): `nothing-above`.
+   * - `refuse` (as Logseq, Roam, WorkFlowy, Tine and RemNote do nothing at the first block):
+   *   `nothing-above`.
    */
   readonly backspaceAtTopItem: 'unwrap' | 'refuse';
 
   /**
    * Backspace or Delete on an empty item with children, where they would move up into its place
    * (Backspace with nothing above it in its parent, Delete, whose first child joins up into it):
-   * - `lift` (the default): the item goes, its children taking its place, a level up.
-   * - `refuse` (as Logseq, Roam, WorkFlowy, Dynalist and Obsidian's Outliner do nothing):
-   *   `has-children`. SiYuan, BlockNote, true-outliner and Tine refuse only Backspace with nothing
-   *   above the item, and lift its children on Delete (Tine putting them after the other children of
-   *   the item they join).
+   * - `lift` (the default): with Backspace, the item goes, its children taking its place, a level up;
+   *   with Delete, its first child joins up into it, that child's children coming along and the
+   *   item's other children staying (Delete joins the node below into the one it is at, as anywhere).
+   * - `refuse` (as Logseq, Roam, Athens, WorkFlowy, Dynalist and Obsidian's Outliner do nothing):
+   *   `has-children`. BlockNote, true-outliner, Tine and Tana refuse only Backspace with nothing above
+   *   the item, and lift its children on Delete (Tine putting them after the other children of the
+   *   item they join; Tana lifting all of them, as Backspace would); RemNote lifts them with both
+   *   keys, as Backspace does; SiYuan makes an empty paragraph of the item with Backspace.
    *
    * Backspace into an item above it, which takes its children at their depth, joins either way.
    */
   readonly emptyItemWithChildren: 'lift' | 'refuse';
 
   /**
-   * Enter and Shift-Enter on the code lines of a fenced block:
-   * - `true` (the default): ourus makes the new line, in the containers the block is in, with the
-   *   line's own indentation.
-   * - `false`: they are the host's (`notApplicable`), for hosts that edit code themselves
-   *   (language-aware indentation, embedded code editors).
-   *
-   * The fence lines are ourus's either way.
-   */
-  readonly handleFenceContents: boolean;
-
-  /**
    * Backspace at a heading's text start, and Delete before a heading:
-   * - `text` (the default): Backspace removes the heading's marks as a unit, the title becoming a
-   *   paragraph where it is (bare Obsidian deletes one character, leaving `#Hello`); Delete joins the
-   *   heading's whole line, `#`s included, as text, as a text editor does.
+   * - `text` (the default): the heading's marks go as a unit, the title becoming a paragraph where it
+   *   is, by Backspace at its text start and by Delete before it, the caret staying (as SiYuan does);
+   *   a second press joins it as any paragraph. Bare Obsidian deletes one character, leaving
+   *   `#Hello`, and its Delete joins the `#`s as text.
    * - `block` (as outliners join any block, Tana's sections among them): both join just the title into
    *   the node above.
    */
@@ -117,10 +190,24 @@ export interface Config {
    *   plain item, its text staying put.
    * - `text` (as a plain text editor and bare Obsidian): one character of the checkbox goes, done by
    *   ourus, and the item's text then starts with what is left of it.
-   * - `block` (as outliners join any block): the task joins the node above, its checkbox going with
-   *   its marker; an empty task goes as any empty item.
+   * - `block` (as outliners join any block, true-outliner among them; WorkFlowy and Dynalist on an
+   *   empty task): the task joins the node above, its checkbox going with its marker; an empty task
+   *   goes as any empty item.
+   *
+   * Tana peels the checkbox of an empty task only, SiYuan and BlockNote make it a paragraph.
    */
   readonly taskEditing: 'checkbox' | 'text' | 'block';
+
+  /**
+   * Enter and Shift-Enter on the code lines of a fenced block:
+   * - `true` (the default): ourus makes the new line, in the containers the block is in, with the
+   *   line's own indentation.
+   * - `false`: they are the host's (`notApplicable`), for hosts that edit code themselves
+   *   (language-aware indentation, embedded code editors).
+   *
+   * The fence lines are ourus's either way.
+   */
+  readonly handleFenceContents: boolean;
 
   /**
    * Structured paste (Ctrl-V) of plain lines, a clipboard of paragraphs only:
@@ -196,36 +283,9 @@ export interface Config {
    */
   readonly pasteStructuredListForm: 'text' | 'literal' | 'drop' | 'own';
 
-  /**
-   * Delete at the end of a node's text before a blank line, and Backspace at the start of a node's
-   * text after one:
-   * - `join` (the default, as outliners join nodes): the node below joins the node above, the blank
-   *   lines between going too.
-   * - `gap` (as in Obsidian, SilverBullet and Emacs, text editors here): one blank line goes, the
-   *   nodes staying as they are; a second press joins them.
-   *
-   * Between two paragraphs the blank lines go either way, the paragraphs becoming one (ourus's edit,
-   * as the host's would make them).
-   */
-  readonly deleteAtGap: 'join' | 'gap';
-
-  /**
-   * An edit at the caret that ourus would refuse while the caret is in markup (before a line's text,
-   * in a list marker, a heading's `#`s, a quote's `>`), where only the host puts it:
-   * - `host` (the default, as every text editor does): ourus steps aside (`notApplicable`, the
-   *   refusal's reason as its `detail`), and the host makes the edit, whatever the text then reads as.
-   * - `refuse`: refused (`rejected`), so the node can't break.
-   *
-   * Structural commands are refused either way.
-   */
-  readonly editInMarkup: 'host' | 'refuse';
-
   // Not built yet: options considered, kept here for later. ourus2 (`src/commands/policy.ts`,
   // `01-redesign.md` "Feel is a policy") had most of them.
   //
-  // - joinWithChildren: 'allowed' | 'refused'. Backspace joining a node that has children: they go
-  //   to the node above (today), or the join is refused (Logseq). Decided (2026-10-14): allowed,
-  //   also for a first child with children, which Logseq, WorkFlowy, Roam and Dynalist refuse.
   // - renumbering: 'changed' | 'never'. Ordered lists an edit touched are renumbered (today), or
   //   numbers are left as written.
   // - indentUnit: 'detect' | 'tab' | number. New nesting follows a sibling, then the document
@@ -244,60 +304,49 @@ export interface Config {
   //   misreads lists in a tab-indented quote. A host's objects, not a value a file can set.
 }
 
-const defaults: Config = {
-  flavor: 'commonmark',
-  outdent: 'direct',
-  bullet: '-',
-  enterOnEmptyItem: 'sibling',
-  enterMidItem: 'sibling',
-  enterAtTextStart: 'into',
-  backspaceAtTopItem: 'unwrap',
-  emptyItemWithChildren: 'lift',
-  handleFenceContents: true,
-  headingEditing: 'text',
-  taskEditing: 'checkbox',
-  pasteStructuredLines: 'text',
-  pasteStructuredMidText: 'split',
-  pasteStructuredAtEnd: 'after',
-  pasteStructuredOnParent: 'children',
-  pasteStructuredParagraphList: 'siblings',
-  pasteStructuredListForm: 'text',
-  deleteAtGap: 'join',
-  editInMarkup: 'host',
-};
-
-/** The values each option takes, for readers of string settings (spec files, frontmatter). */
-const values: { readonly [K in keyof Config]: readonly Config[K][] } = {
-  flavor: ['commonmark', 'gfm', 'obsidian'],
+/** The values each option takes, its default first, for readers of string settings (spec files, frontmatter). */
+const CONFIG_VALUES: { readonly [K in keyof Config]: readonly [Config[K], ...Config[K][]] } = {
+  // how the text reads, and how the host shows its markup: every command
+  flavor: ['gfm', 'commonmark', 'obsidian'],
+  markup: ['text', 'decorated'],
+  // the outline: what Shift-Tab does, and a new item's bullet
   outdent: ['direct', 'logical'],
   bullet: ['-', '*', '+'],
-  enterOnEmptyItem: ['sibling', 'outdent'],
+  // Enter, the key pressed most
+  enterSplitSpace: ['trim', 'drop', 'start'],
+  enterOnEmptyItem: ['sibling', 'outdent', 'exit'],
   enterMidItem: ['sibling', 'child'],
   enterAtTextStart: ['into', 'stay'],
+  enterTask: ['continue', 'plain'],
+  // Backspace and Delete at a node's edge
+  joinWithChildren: ['join', 'refuse'],
   backspaceAtTopItem: ['unwrap', 'refuse'],
   emptyItemWithChildren: ['lift', 'refuse'],
-  handleFenceContents: [true, false],
+  // editing markup: a heading's `#`s, a task's checkbox, a fence's contents
   headingEditing: ['text', 'block'],
   taskEditing: ['checkbox', 'text', 'block'],
+  handleFenceContents: [true, false],
+  // structured paste
   pasteStructuredLines: ['text', 'items'],
   pasteStructuredMidText: ['split', 'after'],
   pasteStructuredAtEnd: ['after', 'join'],
   pasteStructuredOnParent: ['children', 'after'],
   pasteStructuredParagraphList: ['siblings', 'children'],
   pasteStructuredListForm: ['text', 'literal', 'drop', 'own'],
-  deleteAtGap: ['join', 'gap'],
-  editInMarkup: ['host', 'refuse'],
 };
 
+/** Every option's default: the first of its values. */
+const CONFIG_DEFAULTS = Object.fromEntries(Object.entries(CONFIG_VALUES).map(([key, values]) => [key, values[0]])) as unknown as Config;
+
 export const Config = {
-  /** Every option's default: what nearly everyone gets. */
-  defaults,
-  /** The values each option takes. */
-  values,
+  /** Every option's default: the value the spec argues for. */
+  defaults: CONFIG_DEFAULTS,
+  /** The values each option takes, its default first. */
+  values: CONFIG_VALUES,
 
   /** `partial` over the defaults. */
   of(partial: Partial<Config> = {}): Config {
-    return { ...defaults, ...partial };
+    return { ...CONFIG_DEFAULTS, ...partial };
   },
 
   /**
@@ -307,7 +356,7 @@ export const Config = {
   read(settings: Readonly<Record<string, string>>): Partial<Config> | string {
     const config: Record<string, unknown> = {};
     for (const [key, text] of Object.entries(settings)) {
-      const allowed = (values as Record<string, readonly unknown[]>)[key];
+      const allowed = (CONFIG_VALUES as Record<string, readonly unknown[]>)[key];
       if (!allowed) return `unknown option "${key}"`;
       const value = allowed.find((v) => String(v) === text);
       if (value === undefined) return `option "${key}" takes ${allowed.join(', ')}, not "${text}"`;

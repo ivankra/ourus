@@ -112,40 +112,44 @@ function codeOf(text: string): { from: number; to: number; start: number; end: n
 function holds(o: Outline): string | undefined {
   for (const b of o.blocks) {
     const first = b.text.split('\n')[0]!;
+    // a no-break space: held as a space
+    if (b.text.includes('\u00a0')) return 'no-break space, which SiYuan holds as a space';
     // `- →x` and `-     code`: a tab or an indented line becomes structure, or is trimmed
-    if (/^[ \t]/.test(b.text)) return "a block's text starting with whitespace";
+    if (/^[ \t]/.test(b.text)) return "block's text starting with whitespace";
     // a hard break's spaces, a space after the text: trimmed (an empty task's `[ ] ` is its checkbox, held)
-    if (/[ \t]$/m.test(b.text.replace(/^\[[ xX]\] /, ''))) return "a line's trailing whitespace";
+    if (/[ \t]$/m.test(b.text.replace(/^\[[ xX]\] /, ''))) return "line's trailing whitespace";
     // an empty last line: trimmed
-    if (b.text.endsWith('\n')) return "a block's text ending in a line break";
+    if (b.text.endsWith('\n')) return "block's text ending in a line break";
     // `# Title #`: held as `# Title`
-    if (/^#{1,6}(?:[ \t].*)?[ \t]#+[ \t]*$/.test(first) || /^#{1,6}[ \t]+#+[ \t]*$/.test(first)) return "a heading's closing #s";
+    if (/^#{1,6}(?:[ \t].*)?[ \t]#+[ \t]*$/.test(first) || /^#{1,6}[ \t]+#+[ \t]*$/.test(first)) return "heading's closing #s";
     // `- ---` is a thematic break, not an item holding one
-    if (!b.free && /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(first)) return 'a thematic break as an item';
+    if (!b.free && /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(first)) return 'thematic break as an item';
     // a table SiYuan writes otherwise: a column with a cell of three characters or more is padded to
     // it, its delimiter longer (measured: `| a | b |` stays, `| a   | b |` above `| one | 2 |`)
     const rows = b.text.split('\n').filter((l) => /^\s*\|.*\|\s*$/.test(l));
-    if (rows.length && rows.some((r) => r.split('|').slice(1, -1).some((c) => (/^\s*:?-+:?\s*$/.test(c) ? c !== ' --- ' : c.trim().length > 2 || c !== ` ${c.trim()} `)))) return 'a table SiYuan writes otherwise (its columns padded to their widest cell)';
+    if (rows.length && rows.some((r) => r.split('|').slice(1, -1).some((c) => (/^\s*:?-+:?\s*$/.test(c) ? c !== ' --- ' : c.trim().length > 2 || c !== ` ${c.trim()} `)))) return 'table SiYuan writes otherwise (its columns padded to their widest cell)';
     // `# first` / `abc`: a heading is one line, the next a paragraph after it
-    if (/^#{1,6}(?:[ \t]|$)/.test(first) && b.text.includes('\n')) return 'a heading with more lines';
+    if (/^#{1,6}(?:[ \t]|$)/.test(first) && b.text.includes('\n')) return 'heading with more lines';
+    // `p` / `- g`: a later line of a block's text that starts with a list marker, held otherwise (Paste70)
+    if (b.text.split('\n').slice(1).some((l) => /^ {0,3}(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)/.test(l))) return 'later line starting with a list marker';
   }
   if (!o.sel) return undefined;
   const text = o.blocks[o.sel.block]!.text;
   const from = Math.min(o.sel.anchor, o.sel.head);
   const to = Math.max(o.sel.anchor, o.sel.head);
   // a task's checkbox is drawn, not text
-  if (/^\[[ xX]\] /.test(text) && from < 4) return "a caret in a task's checkbox";
+  if (/^\[[ xX]\] /.test(text) && from < 4) return "caret in a task's checkbox";
   // a heading's #s are its level, not text
   const hashes = /^(?:\d{1,9}\. )?(?:\[[ xX]\] )?#{1,6} /.exec(text);
-  if (hashes && from < hashes[0].length) return "a caret in a heading's #s";
+  if (hashes && from < hashes[0].length) return "caret in a heading's #s";
   // a code block's editor has the code alone
   const code = codeOf(text);
   const onFence = (p: number): boolean => !!code && p >= code.from && p <= code.to && (p < code.start || p > code.end);
-  if (onFence(from) || onFence(to)) return "a caret on a code block's fence";
+  if (onFence(from) || onFence(to)) return "caret on a code block's fence";
   // a math block is drawn (KaTeX), its TeX edited in a popup
   const math = /(?:^|\n)\$\$[^\n]*(?:\n[^]*?(?:\n\$\$[ \t]*(?=\n|$)|$)|$)/.exec(text);
   const inMath = (p: number): boolean => !!math && p >= math.index && p <= math.index + math[0].length;
-  if (inMath(from) || inMath(to)) return 'a caret in a math block';
+  if (inMath(from) || inMath(to)) return 'caret in a math block';
   // a table's cells are its text: a caret on a pipe, its padding or the delimiter row has no place
   const outsideCell = (p: number): boolean => {
     const start = text.lastIndexOf('\n', p - 1) + 1;
@@ -161,7 +165,7 @@ function holds(o: Outline): string | undefined {
       return at >= begin && at <= begin + cell.trim().length;
     });
   };
-  if (outsideCell(from) || outsideCell(to)) return "a caret outside a table's cells";
+  if (outsideCell(from) || outsideCell(to)) return "caret outside a table's cells";
   return undefined;
 }
 
@@ -368,9 +372,9 @@ async function kernelFor(page: Page): Promise<Kernel> {
 }
 
 export const driver: Driver = {
-  name: 'siyuan',
-  title: 'SiYuan',
-  id: 'SY',
+  shortId: 'SY',
+  longId: 'siyuan',
+  displayName: 'SiYuan',
   url: `${kernelOf(0).origin}/stage/build/desktop/`,
   // its UI on every kernel's port
   scope: 'http://127.0.0.1:',
@@ -381,7 +385,7 @@ export const driver: Driver = {
   // a kernel for each worker (kernel.ts)
   parallel: 4,
   // structured paste in the middle of a block's text goes after it
-  behaves: { pasteStructuredMidText: 'after', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after' },
+  behaves: { enterSplitSpace: 'start', pasteStructuredMidText: 'after', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after' },
   keys: {
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',

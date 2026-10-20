@@ -137,7 +137,7 @@ registry on raw.githubusercontent.com.
 
 Seen in the guide's export of 2026-09-28; source references to Tine's repository as of 2026-10-17.
 
-1. **A join puts the joined block's children last** (`del.md › Delete5`, `5b`, `5e`,
+1. **A join puts the joined block's children last** (`delete.md › Delete5`, `5b`, `5e`,
    `backspace.md › Backspace17c`). `absorbInto` appends the absorbed block's children to the
    survivor's (`children.push(...node.children)`), so where the survivor has other children after
    the absorbed one, the outline's order changes: Delete at the end of an empty block whose first

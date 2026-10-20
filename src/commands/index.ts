@@ -3,11 +3,12 @@
 // structural ones the lowest (Enter and the joins call them, never the reverse).
 
 import { OutlineState } from '../outline/index.ts';
-import { composeChanges, type ChangeSpec } from '../text.ts';
-import { CommandContext, isCodeLine, noOperands, operands } from './context.ts';
+import { composeChanges, isSpaceOrTab, trimMd, trimMdEnd, type ChangeSpec } from '../text.ts';
+import { CommandContext, gapOwner, isCodeLine, isFenceLine, noOperands, operands } from './context.ts';
 import { adjacentIndentedCode, emptyAwayFromCaret, indentedCodeAfterItem, notApplicable, reject, run, type Outcome } from './plan.ts';
 import { deleteSubtree, duplicate, headingLevel, indent, indentParagraphs, leaveQuote, move, outdent } from './structure.ts';
 import { lineBreak, split } from './enter.ts';
+import { isPayloadLine } from './code.ts';
 import { paste, pastePlain } from './paste.ts';
 import { deleteToTextStart, join, joinForward } from './join.ts';
 
@@ -49,6 +50,7 @@ export type RejectReason =
   | 'at-h1-bound'
   | 'at-h6-bound'
   | 'not-expressible'
+  | 'would-reparent'
   | 'non-contiguous'
   | 'mixed-kinds'
   | 'has-children'
@@ -59,16 +61,21 @@ export type CommandResult =
   | { readonly status: 'applied'; readonly state: OutlineState; readonly changes: readonly ChangeSpec[]; readonly selection: Selection }
   | { readonly status: 'rejected'; readonly reason: RejectReason; readonly detail?: string }
   /**
-   * The command doesn't apply here; the host should run its default behaviour. `detail` says why,
-   * where ourus stepped aside from an edit in markup it would refuse (`editInMarkup: host`).
+   * The command doesn't apply here; the host should run its default behavior. `detail` says why,
+   * where ourus stepped aside from an edit in markup it would refuse (`markup: text`).
    */
   | { readonly status: 'notApplicable'; readonly detail?: string };
 
 export function executeCommand(doc: OutlineState, command: Command, selection: Selection): CommandResult {
-  if (selection.anchor !== selection.head && (command.type === 'pasteStructured' || (command.type === 'pastePlain' && doc.lineAt(selection.anchor).index !== doc.lineAt(selection.head).index))) {
-    return pasteOverSelection(doc, command, selection);
+  const acrossLines = doc.lineAt(selection.anchor).index !== doc.lineAt(selection.head).index;
+  if (selection.anchor !== selection.head && (command.type === 'pasteStructured' || command.type === 'enter' || command.type === 'shiftEnter' || (acrossLines && command.type === 'pastePlain'))) {
+    const over = overSelection(doc, command, selection);
+    if (over) return over;
   }
   const ctx = new CommandContext(doc, selection);
+  // where markup is text the user edits, a key in it is the host's: a line break, a character
+  if (doc.config.markup === 'text' && ctx.collapsed && HOST_IN_MARKUP.has(command.type) && inMarkupAt(doc, selection.head)) return { status: 'notApplicable', detail: 'the caret is in markup' };
+  if (command.type === 'pastePlain' && ctx.collapsed && /^(?:\r\n|\n|\r)/.test(command.text) && !isCodeLine(ctx, doc.lineAt(ctx.sel.head)) && !isPayloadLine(doc.lineAt(ctx.sel.head))) return breakThenPaste(doc, command, selection);
   const plan = planCommand(ctx, command);
   if ('status' in plan) return inMarkup(ctx, command, plan);
   const result = run(ctx, plan);
@@ -84,39 +91,115 @@ export function executeCommand(doc: OutlineState, command: Command, selection: S
   if (result.status === 'rejected' && result.reason === 'encoding-failed' && indentedCodeAfterItem(plan.expected)) {
     return reject('not-expressible', 'indented code after an item would join it') as CommandResult;
   }
-  return STRUCTURAL.has(command.type) ? caretInText(result) : inMarkup(ctx, command, result);
+  if (STRUCTURAL.has(command.type)) return caretInText(fromGap(ctx, command, result), doc.config.markup === 'text' && (command.type === 'indent' || command.type === 'outdent') && isFenceLine(ctx, doc.lineAt(selection.head)));
+  // where the host decorates markup, no command leaves the caret in it
+  return doc.config.markup === 'decorated' ? caretInText(result) : inMarkup(ctx, command, result);
 }
 
 /**
- * A paste over a selection: the selection goes first, as Backspace deletes it (across nodes ourus's
- * join, within a node's text the host's delete), and the paste goes in at the caret that leaves, as
- * one edit. Left to the host, its lines would land at column 0, outside the node's nesting.
+ * A paste over a selection (plain paste's within one line is its own), or Enter or Shift-Enter over
+ * one: the selection goes first, as Backspace deletes it (across nodes ourus's join, within a node's
+ * text the host's delete), and the command runs at the caret that leaves, as one edit; null where the
+ * command plans the selection itself. Left to the host, a paste's lines would land at
+ * column 0, outside the node's nesting, and a line break would take the markers it replaced along.
  */
-function pasteOverSelection(doc: OutlineState, command: Extract<Command, { type: 'pasteStructured' | 'pastePlain' }>, selection: Selection): CommandResult {
+function overSelection(doc: OutlineState, command: Extract<Command, { type: 'pasteStructured' | 'pastePlain' | 'enter' | 'shiftEnter' }>, selection: Selection): CommandResult | null {
   const from = Math.min(selection.anchor, selection.head);
   const to = Math.max(selection.anchor, selection.head);
   const deleted = executeCommand(doc, { type: 'deleteContentBackward' }, selection);
   if (deleted.status === 'rejected') return deleted;
-  // a selection the host deletes is ourus's to paste over only within one line of a node's text;
-  // elsewhere (in a fence, across markup, over a line's whole text) the whole paste is the host's, as
-  // the delete is
+  // a selection the host deletes is ourus's to go on from only within a node's text; elsewhere (in a
+  // fence, across markup) the whole edit is the host's, as the delete is
   const node = doc.nodeAt(from);
-  const range = node && node.kind !== 'atom' ? doc.headRange(node) : null;
-  const inLine = doc.lineAt(from).index === doc.lineAt(to).index;
-  if (deleted.status === 'notApplicable' && !(range && inLine && doc.nodeAt(to) === node && from >= range.from && from >= doc.textStart(from) && to <= range.to)) return deleted;
+  const range = node && node.head?.type === 'paragraph' ? doc.headRange(node) : null;
+  const paste = command.type === 'pasteStructured' || command.type === 'pastePlain';
+  const inText = !!range && doc.nodeAt(to) === node && from >= range.from && from >= doc.textStart(from) && to <= range.to && to >= doc.textStart(to);
+  // a line break over a selection in one line that isn't all text plans it itself (it may split markup)
+  if (deleted.status === 'notApplicable' && !inText) return paste || doc.lineAt(from).index !== doc.lineAt(to).index ? deleted : null;
   const removal = [{ from, to, insert: '' }];
   const first =
     deleted.status === 'applied' ? deleted : { state: doc.update(removal, { caret: from }), changes: removal, selection: { anchor: from, head: from } };
-  const pasted = executeCommand(first.state, command, first.selection);
-  if (pasted.status === 'rejected') return pasted;
-  if (pasted.status === 'notApplicable') {
+  const done = executeCommand(first.state, command, first.selection);
+  if (done.status === 'rejected') return done;
+  if (done.status === 'notApplicable') {
+    // a line break the host makes: over the selection, as it would have
+    if (!paste) return done;
     // inline text, the host's: over a selection in one node's text, the host replaces it
-    if (deleted.status !== 'applied') return pasted;
+    if (deleted.status !== 'applied') return done;
     const at = first.selection.head;
     const insert = [{ from: at, to: at, insert: command.text }];
     return { status: 'applied', state: first.state.update(insert), changes: composeChanges(doc.text, first.changes, insert), selection: { anchor: at + command.text.length, head: at + command.text.length } };
   }
-  return { ...pasted, changes: composeChanges(doc.text, first.changes, pasted.changes) };
+  return { ...done, changes: composeChanges(doc.text, first.changes, done.changes) };
+}
+
+/**
+ * Plain text starting with a line break, outside code: the break is Shift-Enter's at the caret, as
+ * plain paste makes every line break, and the rest is pasted where that leaves the caret, as one edit.
+ * Where Shift-Enter is refused, so is the paste; where it is the host's, so is the paste. One line
+ * left, which the host would put at the new line's start as it is, is escaped where it would start a
+ * block there, as plain paste escapes its lines.
+ */
+function breakThenPaste(doc: OutlineState, command: Extract<Command, { type: 'pastePlain' }>, selection: Selection): CommandResult {
+  const broken = executeCommand(doc, { type: 'shiftEnter' }, selection);
+  // where Shift-Enter is refused (a paragraph's text start), the leading line breaks go and the rest
+  // is pasted at the caret; a clipboard of line breaks alone is refused with it
+  if (broken.status === 'rejected') {
+    const rest = command.text.replace(/^(?:[ \t]*(?:\r\n|\n|\r))+/, '');
+    if (rest === '') return broken;
+    const pasted = executeCommand(doc, { type: 'pastePlain', text: rest }, selection);
+    return pasted.status === 'notApplicable' ? typedAt(doc, rest, selection) : pasted;
+  }
+  if (broken.status !== 'applied') return broken;
+  const rest = command.text.replace(/^(?:\r\n|\n|\r)/, '');
+  if (rest === '') return broken;
+  const pasted = executeCommand(broken.state, { type: 'pastePlain', text: rest }, broken.selection);
+  if (pasted.status === 'rejected') return pasted;
+  if (pasted.status === 'applied') return { ...pasted, changes: composeChanges(doc.text, broken.changes, pasted.changes) };
+  // one line, at the start of the line Shift-Enter made: the node's first, after a paragraph break, or
+  // a continuation line
+  const typed = typedAt(broken.state, rest, broken.selection);
+  return { ...typed, changes: composeChanges(doc.text, broken.changes, typed.changes) };
+}
+
+/**
+ * One line of pasted text put in at the caret of `state` (the host's paste would have taken the whole
+ * clipboard, its line breaks with it), escaped where at a line's start it would start a block with the
+ * text after it: the node's first line, or a continuation line.
+ */
+function typedAt(state: OutlineState, rest: string, selection: Selection): Extract<CommandResult, { status: 'applied' }> {
+  const at = selection.head;
+  const node = state.nodeAt(at);
+  const line = state.lineAt(at);
+  const ctx = new CommandContext(state, selection);
+  const after = state.text.slice(at, line.to);
+  const atStart = at <= state.textStart(at);
+  const escaped = atStart ? ctx.encoder.escape(rest + after, node?.head && line.index === node.head.startLine ? 'start' : 'continuation').at : null;
+  const text = escaped !== null && escaped <= rest.length ? rest.slice(0, escaped) + '\\' + rest.slice(escaped) : rest;
+  const insert = [{ from: at, to: at, insert: text }];
+  return { status: 'applied', state: state.update(insert), changes: insert, selection: { anchor: at + text.length, head: at + text.length } };
+}
+
+/** The keys that, with the caret in markup shown as text, are the host's: they edit it as text. */
+const HOST_IN_MARKUP = new Set<Command['type']>(['shiftEnter', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward']);
+
+/**
+ * Whether `head` is inside markup: on a node's line, past the line's start (where Backspace and
+ * Delete are at a boundary, ourus's) and before the text: in a list marker or its padding, a task's
+ * checkbox, a heading's `#`s, a quote's `>`, a callout's `[!type]`, the containers' indentation. On
+ * a line of code its own indentation is code; on an empty item what follows the marker is its text.
+ */
+function inMarkupAt(doc: OutlineState, head: number): boolean {
+  const line = doc.lineAt(head);
+  const node = doc.nodeAt(head);
+  if (!node || head <= line.from || head > line.to) return false;
+  const leaf = line.leaf;
+  const payload = leaf?.type === 'code_block' || leaf?.type === 'math_block' || leaf?.type === 'comment_block';
+  if (payload && !(node.kind === 'item' && line.index === node.startLine)) return head < line.contentFrom;
+  if (node.kind === 'item' && line.index === node.startLine && doc.isEmpty(node) && head >= doc.markerTo(node.block)) return false;
+  // a space a placeholder holds as text (`- ┃◌ x`) is the text's start
+  if (doc.placeholders.includes(head) && isSpaceOrTab(doc.text.charCodeAt(head))) return false;
+  return head < doc.textStart(head);
 }
 
 const STRUCTURAL = new Set<Command['type']>(['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'duplicateSubtree', 'deleteSubtree']);
@@ -126,12 +209,13 @@ const AT_CARET = new Set<Command['type']>(['enter', 'shiftEnter', 'deleteContent
 
 /**
  * With the caret in markup (before its line's text: a marker, `#`s, `>`, where the host put it), an
- * edit at the caret that ourus would refuse is the host's under `editInMarkup: host`: ourus steps
- * aside, saying why.
+ * edit at the caret that ourus would refuse is the host's where it shows markup as text (`markup:
+ * text`): ourus steps aside, saying why.
  */
 function inMarkup(ctx: CommandContext, command: Command, result: CommandResult): CommandResult {
   const { doc } = ctx;
-  if (result.status !== 'rejected' || doc.config.editInMarkup !== 'host' || !AT_CARET.has(command.type) || !ctx.collapsed) return result;
+  // an encoding failure is a bug, never the host's to cover
+  if (result.status !== 'rejected' || result.reason === 'encoding-failed' || doc.config.markup !== 'text' || !AT_CARET.has(command.type) || !ctx.collapsed) return result;
   const head = ctx.sel.head;
   if (!doc.nodeAt(head) || head > doc.lineAt(head).to || head >= doc.textStart(head)) return result;
   return { status: 'notApplicable', detail: result.detail ?? result.reason };
@@ -160,7 +244,7 @@ export function textPosition(state: OutlineState, head: number): number {
     // the line a closing delimiter ends the block on (the parser's), and where on it that delimiter
     // starts: a code fence is the whole line; math and comments close after text on the line (`x$$`)
     const closing = leaf.closed ? leaf.endLine : -1;
-    const closeAt = (index: number): number => state.lines[index]!.contentFrom + (code ? 0 : content(index).trimEnd().length - mark.length);
+    const closeAt = (index: number): number => state.lines[index]!.contentFrom + (code ? 0 : trimMdEnd(content(index)).length - mark.length);
     // a one-line block (`$$x$$`): between its delimiters
     if (closing === leaf.startLine) return Math.min(Math.max(head, opening.contentFrom + run), closeAt(closing));
     // a line of payload with text, where typing goes in the block: from the opening delimiter the first,
@@ -170,7 +254,7 @@ export function textPosition(state: OutlineState, head: number): number {
       const lines: number[] = [];
       for (let index = leaf.startLine + 1; index <= leaf.endLine; index++) {
         const text = index === closing ? (code ? '' : content(index).slice(0, closeAt(index) - state.lines[index]!.contentFrom)) : content(index);
-        if (text.trim() !== '') lines.push(index);
+        if (trimMd(text) !== '') lines.push(index);
       }
       return lines;
     };
@@ -187,17 +271,45 @@ export function textPosition(state: OutlineState, head: number): number {
       return lines.length ? state.lines[lines[lines.length - 1]!]!.to : opening.to;
     }
   }
-  return head < state.textStart(head) ? state.textStart(head) : head;
+  // a space a placeholder holds as text (`- ◌ x`) starts the text
+  const start = state.textStart(head);
+  const held = state.placeholders.find((p) => p >= line.from && p < start && isSpaceOrTab(state.text.charCodeAt(p)) && trimMd(state.text.slice(p, start)) === '');
+  return head < (held ?? start) ? (held ?? start) : head;
+}
+
+/**
+ * After a move, indent or outdent from a blank line or the document's end, where the caret is in the
+ * gap of the node it acts on: the caret stays in that gap where the gap went with the node (Gap14),
+ * and else goes to the end of the node's text, where a second press acts on it again (MoveUp39); left
+ * in a gap that is now another node's, or in another node's text, it would act on that one.
+ */
+function fromGap(ctx: CommandContext, command: Command, result: CommandResult): CommandResult {
+  const { doc } = ctx;
+  if (result.status !== 'applied' || !ctx.collapsed || doc.nodeAt(ctx.sel.head) || command.type === 'deleteSubtree' || command.type === 'duplicateSubtree') return result;
+  const ops = operands(ctx);
+  if (!ops || 'status' in ops) return result;
+  const state = result.state;
+  const node = state.node(ops.first.id);
+  if (!node) return result;
+  const head = result.selection.head;
+  const line = state.lineAt(head);
+  const at = head > line.to ? null : (state.nodeAt(head) ?? gapOwner(new CommandContext(state, result.selection), line.index));
+  if (at === node) return result;
+  const end = state.headRange(node)?.to ?? state.lines[node.headEndLine]!.to;
+  return { ...result, selection: { anchor: end, head: end } };
 }
 
 /**
  * The caret never ends in markup: after a structural command that kept it where it was (before a
- * marker, where the user put it, or on a fence), it goes where typing can't break the node.
+ * marker, where the user put it, or on a fence), it goes where typing can't break the node; and after
+ * any command where the host decorates markup. `onFence`: it may stay on a fence line (indent and
+ * outdent from one, where markup is text).
  */
-function caretInText(result: CommandResult): CommandResult {
+function caretInText(result: CommandResult, onFence = false): CommandResult {
   if (result.status !== 'applied' || result.selection.anchor !== result.selection.head) return result;
-  const at = textPosition(result.state, result.selection.head);
-  return at === result.selection.head ? result : { ...result, selection: { anchor: at, head: at } };
+  const head = result.selection.head;
+  const at = onFence && isFenceLine(new CommandContext(result.state, result.selection), result.state.lineAt(head)) ? Math.max(head, result.state.textStart(head)) : textPosition(result.state, head);
+  return at === head ? result : { ...result, selection: { anchor: at, head: at } };
 }
 
 function planCommand(ctx: CommandContext, command: Command): Outcome {
