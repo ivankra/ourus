@@ -8,13 +8,16 @@
 //
 // The header picks the flavor ourus reads the text in, and the renderer of the middle pane: ourus's
 // own (from the snapshot's parse) or a popular external one, set up for the flavor as far as it goes.
-// Code blocks are highlighted (highlight.js) and math typeset (KaTeX) after any renderer.
+// Code blocks are highlighted (highlight.js) and math typeset (KaTeX) after any renderer. The pane
+// shows the editor's caret and selection, scrolls along with the editor, and keeps the caret in view (mirror.ts).
 
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
-import { cursorLineDown, cursorLineUp, invertedEffects, selectLineDown, selectLineUp } from '@codemirror/commands';
-import { Annotation, EditorSelection, EditorState, Prec, RangeSetBuilder, StateEffect, StateField, Transaction } from '@codemirror/state';
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { cursorLineDown, cursorLineUp, invertedEffects, redo, selectLineDown, selectLineUp, undo } from '@codemirror/commands';
+import { Annotation, Compartment, EditorSelection, EditorState, Prec, RangeSetBuilder, StateEffect, StateField, Transaction } from '@codemirror/state';
 import { Decoration, EditorView, keymap, ViewPlugin, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
+import { tags } from '@lezer/highlight';
 import { HtmlRenderer, Parser } from 'commonmark';
 import DOMPurify from 'dompurify';
 import hljs from 'highlight.js/lib/common';
@@ -34,8 +37,9 @@ import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import showdown from 'showdown';
 import { unified, type PluggableList } from 'unified';
-import 'highlight.js/styles/github.css';
+import './hljs.css';
 import 'katex/dist/katex.min.css';
+import { Mirror } from './mirror.ts';
 import { OutlineState, executeCommand, mapPos, renderHtml, settlePlaceholders, type Config, type ChangeSpec, type Command, type OutlineNode, type CommandResult } from '../../src/index.ts';
 
 type Flavor = Config['flavor'];
@@ -205,6 +209,40 @@ const currentNode = ViewPlugin.fromClass(
   { decorations: (v) => v.decorations },
 );
 
+/** The editor's colours in the dark: CodeMirror's dark base theme with the page's gutter and selection, and code colours that read on it. */
+const darkHighlight = HighlightStyle.define([
+  { tag: tags.meta, color: '#8b949e' },
+  { tag: tags.link, textDecoration: 'underline' },
+  { tag: tags.heading, textDecoration: 'underline', fontWeight: 'bold' },
+  { tag: tags.emphasis, fontStyle: 'italic' },
+  { tag: tags.strong, fontWeight: 'bold' },
+  { tag: tags.strikethrough, textDecoration: 'line-through' },
+  { tag: tags.keyword, color: '#ff7b72' },
+  { tag: [tags.atom, tags.bool, tags.url, tags.contentSeparator, tags.labelName], color: '#79c0ff' },
+  { tag: [tags.literal, tags.inserted], color: '#7ee787' },
+  { tag: [tags.string, tags.deleted], color: '#a5d6ff' },
+  { tag: [tags.regexp, tags.escape, tags.special(tags.string)], color: '#ffa657' },
+  { tag: tags.definition(tags.variableName), color: '#d2a8ff' },
+  { tag: tags.local(tags.variableName), color: '#ffa657' },
+  { tag: [tags.typeName, tags.namespace], color: '#ffa657' },
+  { tag: tags.className, color: '#f0883e' },
+  { tag: [tags.special(tags.variableName), tags.macroName], color: '#79c0ff' },
+  { tag: tags.definition(tags.propertyName), color: '#79c0ff' },
+  { tag: tags.comment, color: '#8b949e' },
+  { tag: tags.invalid, color: '#f85149' },
+]);
+const darkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+const theme = new Compartment();
+const darkTheme = EditorView.theme(
+  {
+    '.cm-gutters': { backgroundColor: 'var(--bg)', color: 'var(--muted)', borderColor: 'var(--line)' },
+    '.cm-selectionBackground': { background: 'var(--selection)' },
+    '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': { background: 'var(--selection-focused)' },
+  },
+  { dark: true },
+);
+const themeFor = (dark: boolean) => (dark ? [darkTheme, syntaxHighlighting(darkHighlight)] : []);
+
 // ------------------------------------------------------------------ outline panel
 
 const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
@@ -246,7 +284,7 @@ tags: [demo]
 ---
 # ourus demo
 
-A paragraph at the top level. Paragraphs are leaves; list items and headings hold children. The header picks the **flavor** ourus reads this text in, and the **renderer** of the middle pane.
+A paragraph at the top level. Headings and list items hold children, and so does a paragraph: the list right after it. The header picks the **flavor** ourus reads this text in, and the **renderer** of the rendered pane.
 
 ## Lists
 
@@ -258,6 +296,8 @@ A paragraph at the top level. Paragraphs are leaves; list items and headings hol
 - Enter splits an item; Backspace at its start joins it to the node above, Delete at its end joins the node below
 - Shift-Enter breaks a line inside an item,
   which stays one item
+- Home goes to the start of the text, again to the start of the line
+- Ctrl-V pastes Markdown as nodes, Ctrl-Shift-V as plain text
 - Enter on an empty item outdents it, or leaves the list (Enter twice ends a list)
 - [ ] tasks are items too (GFM and Obsidian)
 - [x] done
@@ -396,6 +436,7 @@ function decorate(pane: HTMLElement): void {
 
 function main(): void {
   const panel = document.getElementById('outline')!;
+  const previewPane = document.getElementById('preview-pane')!;
   const preview = document.getElementById('preview')!;
   const previewTitle = document.getElementById('preview-title')!;
   const flavorSelect = document.getElementById('flavor') as HTMLSelectElement;
@@ -406,20 +447,33 @@ function main(): void {
   const status = document.getElementById('status')!;
   const stats = document.getElementById('stats')!;
 
+  // on narrow screens the status is a notification, for a few seconds; none for a key left to
+  // CodeMirror (most typing), which hides the last one
+  let hideStatus = 0;
   onResult = (type, result) => {
     status.className = result.status;
     status.textContent =
       result.status === 'rejected'
-        ? `${type}: rejected — ${result.reason}${result.detail && result.reason !== 'encoding-failed' ? ` (${result.detail})` : ''}`
+        ? `${type}: rejected — ${result.reason}${result.detail && result.reason !== 'encoding-failed' ? ` (${result.detail.replace(/\.$/, '')})` : ''}`
         : `${type}: ${result.status === 'applied' ? 'applied' : 'not applicable (editor default)'}`;
+    clearTimeout(hideStatus);
+    if (result.status === 'notApplicable') return;
+    status.classList.add('shown');
+    hideStatus = window.setTimeout(() => status.classList.remove('shown'), 3000);
   };
 
   let frame = 0;
+  // the pane follows the editor scrolled by hand; when the editor scrolls to its caret, the pane only keeps its own in view
+  let byHand = true;
   const refresh = (view: EditorView) => {
     cancelAnimationFrame(frame);
     frame = requestAnimationFrame(() => {
       const doc = view.state.field(ourusDoc);
       renderOutline(panel, doc, doc.nodeAt(view.state.selection.main.head));
+      stats.textContent = `${doc.syntaxTree.lineCount} lines · ${doc.nodes.length - 1} nodes · ${FLAVOR_NAMES[doc.config.flavor]}`;
+      // the renderer 'none': the pane hidden, nothing rendered
+      previewPane.hidden = rendererSelect.value === 'none';
+      if (previewPane.hidden) return;
       const renderer = rendering(rendererSelect.value, doc.config.flavor);
       // an external renderer reads the text alone; ours, the snapshot's parse
       if (!rendered || rendered.renderer !== renderer || rendered.doc.syntaxTree !== doc.syntaxTree) {
@@ -427,11 +481,15 @@ function main(): void {
         preview.innerHTML = renderer.render(doc);
         const ms = performance.now() - t0;
         decorate(preview);
+        mirror.realign(doc.text);
         const name = RENDERERS[rendererSelect.value]?.name ?? 'ourus';
-        previewTitle.textContent = `Rendered · ${name} · ${renderer.reads} · ${ms < 10 ? ms.toFixed(1) : Math.round(ms)} ms`;
+        // 'micromark + gfm, math', 'marked (gfm: true)'
+        const reads = renderer.reads.startsWith('+') ? ` ${renderer.reads}` : ` (${renderer.reads})`;
+        previewTitle.textContent = `Rendered · ${name}${reads} · ${ms < 10 ? ms.toFixed(1) : Math.round(ms)} ms`;
         rendered = { doc, renderer };
       }
-      stats.textContent = `${doc.syntaxTree.lineCount} lines · ${doc.nodes.length - 1} nodes · ${FLAVOR_NAMES[doc.config.flavor]}`;
+      mirror.draw();
+      mirror.reveal();
     });
   };
 
@@ -447,9 +505,11 @@ function main(): void {
         ourusDoc,
         placeholderHistory,
         currentNode,
+        theme.of(themeFor(darkScheme.matches)),
         EditorView.lineWrapping,
         EditorView.updateListener.of((u) => {
-          if (u.docChanged || u.selectionSet) refresh(u.view);
+          if (u.docChanged || u.selectionSet || u.focusChanged) refresh(u.view);
+          if (u.transactions.some((tr) => tr.scrollIntoView)) byHand = false;
           // a placeholder the caret has left is settled: dropped, or removed when the
           // text can't hold it (an empty item right after its parent's text)
           if (u.selectionSet && !u.view.composing) {
@@ -460,8 +520,11 @@ function main(): void {
               const r = settlePlaceholders(state.field(ourusDoc), state.selection.main.head);
               if (!r) return;
               const to = state.selection.main;
-              // leaving is an undo step of its own; history keeps the selection before a step, so
-              // the caret goes back onto the placeholder first, outside history, and undo returns there
+              // the spec joins this edit to the step before it (undo.md's Undo3); CodeMirror's history
+              // joins nothing to an event once the selection has moved after it, which is what
+              // triggers this, so here leaving is an undo step of its own. History keeps the selection
+              // before a step, so the caret goes back onto the placeholder first, outside history, and
+              // undo returns there
               u.view.dispatch({ selection: left, annotations: Transaction.addToHistory.of(false) });
               u.view.dispatch({
                 changes: r.changes,
@@ -475,6 +538,12 @@ function main(): void {
       ],
     }),
   });
+  const mirror = new Mirror(view, previewPane, preview);
+  darkScheme.addEventListener('change', (e) => view.dispatch({ effects: theme.reconfigure(themeFor(e.matches)) }));
+  for (const type of ['wheel', 'mousedown', 'touchstart']) view.scrollDOM.addEventListener(type, () => (byHand = true), { passive: true });
+  view.scrollDOM.addEventListener('scroll', () => byHand && !previewPane.hidden && mirror.scroll());
+  // the pane's layout changes as it's resized, and as KaTeX's fonts arrive
+  new ResizeObserver(() => refresh(view)).observe(preview);
   refresh(view);
 
   // the flavor: the text read again, keeping its placeholders (node ids start over)
@@ -507,6 +576,25 @@ function main(): void {
     view.dispatch({ selection: { anchor: pos }, scrollIntoView: true });
     view.focus();
   });
+
+  // buttons for the keys touch keyboards lack; pressing one leaves the focus (and the keyboard) in the editor
+  const keys = document.getElementById('keys')!;
+  for (const button of keys.querySelectorAll('button')) {
+    button.addEventListener('mousedown', (e) => e.preventDefault());
+    button.addEventListener('click', () => {
+      const { history } = button.dataset;
+      if (history) (history === 'redo' ? redo : undo)(view);
+      else command(button.dataset.command as Command['type'])(view);
+    });
+    // pressed, as :active isn't on touch screens (iOS) or sticks (Chrome)
+    button.addEventListener('pointerdown', () => button.classList.add('pressed'));
+    for (const type of ['pointerup', 'pointercancel', 'pointerleave']) button.addEventListener(type, () => button.classList.remove('pressed'));
+  }
+  // iOS leaves the page under its keyboard (Android shrinks it): the bar stays at the bottom of what's visible
+  const viewport = window.visualViewport;
+  const lift = () => (keys.style.bottom = `${Math.max(0, innerHeight - viewport!.height - viewport!.offsetTop)}px`);
+  viewport?.addEventListener('resize', lift);
+  viewport?.addEventListener('scroll', lift);
 
   // a handle for scripted checks
   (window as unknown as { ourusDemo: unknown }).ourusDemo = {

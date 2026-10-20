@@ -1,0 +1,163 @@
+/* The CodeMirror 6 demo's page. */
+
+/* the colours, light and dark (as the system has it); the browser draws its controls to match */
+:root {
+  --bg: #fbfbfa;
+  --pane: #fff;
+  --fg: #1f2328;
+  --muted: #6e7781;
+  --line: #e4e4e0;
+  --accent: #3b6fd8;
+  --head: #e9f0fd;
+  --sub: #f4f7fd;
+  --current: #c5d6f6;
+  --bad: #b42318;
+  --good: #1a7f37;
+  --caret: #000;
+  --selection: #d9d9d9;
+  --selection-focused: #d7d4f0;
+  --selection-blend: multiply;
+  --mark: #fff3a3;
+  --tag: #eef1fb;
+  --internal: #7a4cc2;
+  --tip: #f1f8f3;
+  --warning: #fdf3f2;
+  --toast: #1f2328;
+  --toast-fg: #fff;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151b23;
+    --pane: #0d1117;
+    --fg: #e6edf3;
+    --muted: #8b949e;
+    --line: #30363d;
+    --accent: #4493f8;
+    --head: #172a45;
+    --sub: #121a26;
+    --current: #2f4a7a;
+    --bad: #f85149;
+    --good: #3fb950;
+    --caret: #e6edf3;
+    --selection: #3a3f47;
+    --selection-focused: #264f78;
+    --selection-blend: screen;
+    --mark: #594a00;
+    --tag: #1c2a44;
+    --internal: #b88cf0;
+    --tip: #12261b;
+    --warning: #2d1517;
+    --toast: #e6edf3;
+    --toast-fg: #1f2328;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.45 system-ui, sans-serif; color: var(--fg); background: var(--bg); }
+header { padding: 12px 20px; border-bottom: 1px solid var(--line); display: flex; gap: 24px; align-items: baseline; flex-wrap: wrap; }
+header h1 { font-size: 16px; margin: 0; }
+/* the name links to the source, but in the name's colour, not a link's */
+header h1 a { color: inherit; text-decoration: none; }
+header .pickers { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
+header label { white-space: nowrap; }
+header select { font: inherit; color: var(--fg); background: var(--pane); border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px; margin-left: 4px; }
+main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(240px, 340px); height: calc(100vh - 92px); }
+/* the rendered pane hidden: the editor takes its room */
+main:has(> #preview-pane[hidden]) { grid-template-columns: minmax(0, 1fr) minmax(240px, 340px); }
+#editor { overflow: auto; border-right: 1px solid var(--line); background: var(--pane); }
+#editor .cm-editor { height: 100%; }
+#editor .cm-scroller { font: 14px/1.6 ui-monospace, 'SF Mono', Menlo, monospace; }
+.ourus-head { background: var(--head); }
+.ourus-subtree { background: var(--sub); }
+aside { overflow: auto; padding: 8px 12px; }
+#preview-pane { position: relative; overflow: auto; padding: 8px 16px; border-right: 1px solid var(--line); background: var(--pane); }
+/* the editor's caret and selection, as CodeMirror draws them */
+.mirror { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
+.mirror-spacer { position: absolute; width: 1px; height: 1px; }
+.mirror-selection { position: absolute; background: var(--selection); mix-blend-mode: var(--selection-blend); }
+.mirror.focused .mirror-selection { background: var(--selection-focused); }
+.mirror-cursor { position: absolute; border-left: 1.2px solid var(--caret); margin-left: -0.6px; display: none; }
+.mirror.focused .mirror-cursor { display: block; }
+.mirror.focused .mirror-cursors { animation: steps(1) mirror-blink 1.2s infinite; }
+@keyframes mirror-blink { 50% { opacity: 0; } }
+#preview { line-height: 1.55; }
+#preview > :first-child { margin-top: 0; }
+#preview h1, #preview h2, #preview h3, #preview h4, #preview h5, #preview h6 { line-height: 1.25; margin: 1em 0 0.4em; }
+#preview h1 { font-size: 1.6em; } #preview h2 { font-size: 1.35em; } #preview h3 { font-size: 1.15em; }
+#preview p { margin: 0.4em 0; }
+/* an empty block keeps its line, for the caret (a new heading, as one types it) */
+#preview :is(p, h1, h2, h3, h4, h5, h6, li, td, th):empty::before { content: '\200b'; }
+#preview ul, #preview ol { margin: 0.3em 0; padding-left: 1.4em; }
+#preview li > p { margin: 0.2em 0; }
+#preview blockquote { margin: 0.5em 0; padding: 0 0.9em; color: var(--muted); border-left: 3px solid var(--line); }
+#preview pre { background: var(--sub); padding: 8px 10px; border-radius: 4px; overflow: auto; }
+#preview code { font: 13px ui-monospace, 'SF Mono', Menlo, monospace; }
+#preview :not(pre) > code { background: var(--sub); padding: 0 3px; border-radius: 3px; }
+#preview hr { border: 0; border-top: 1px solid var(--line); margin: 1em 0; }
+#preview a { color: var(--accent); text-decoration: none; }
+#preview a:hover { text-decoration: underline; }
+#preview table { border-collapse: collapse; margin: 0.5em 0; }
+#preview th, #preview td { border: 1px solid var(--line); padding: 2px 8px; }
+#preview th { background: var(--sub); }
+#preview li:has(> input[type='checkbox']), #preview li:has(> p > input[type='checkbox']), #preview li.task-list-item { list-style: none; }
+#preview li > input[type='checkbox'], #preview li > p > input[type='checkbox'] { margin: 0 0.4em 0 -1.3em; vertical-align: -1px; }
+#preview mark { background: var(--mark); color: inherit; padding: 0 2px; border-radius: 2px; }
+#preview a.tag { background: var(--tag); border-radius: 10px; padding: 0 6px; font-size: 0.92em; }
+#preview a.internal-link { color: var(--internal); }
+#preview .internal-embed::before { content: '⧉ ' attr(src); color: var(--internal); font-size: 0.92em; }
+#preview .katex-display { margin: 0.6em 0; }
+#preview .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+#preview pre code.hljs { background: none; padding: 0; }
+#preview .callout { margin: 0.6em 0; padding: 6px 12px; border-left: 3px solid var(--accent); background: var(--sub); border-radius: 4px; }
+#preview .callout-title { font-weight: 600; color: var(--accent); }
+#preview .callout[data-callout='tip'], #preview .callout[data-callout='success'] { border-color: var(--good); background: var(--tip); }
+#preview .callout[data-callout='tip'] .callout-title, #preview .callout[data-callout='success'] .callout-title { color: var(--good); }
+#preview .callout[data-callout='warning'], #preview .callout[data-callout='danger'] { border-color: var(--bad); background: var(--warning); }
+#preview .callout[data-callout='warning'] .callout-title, #preview .callout[data-callout='danger'] .callout-title { color: var(--bad); }
+#preview .callout-content > :first-child { margin-top: 0.2em; }
+#preview sup.footnote-inline { color: var(--muted); }
+#preview section.footnotes, #preview .footnotes { margin-top: 1.5em; padding-top: 0.5em; border-top: 1px solid var(--line); font-size: 0.92em; color: var(--muted); }
+aside h2, #preview-pane > h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 4px 0 8px; }
+#outline ul { list-style: none; margin: 0; padding-left: 16px; border-left: 1px solid var(--line); }
+#outline > ul { padding-left: 0; border-left: 0; }
+#outline .node { display: flex; gap: 6px; align-items: baseline; padding: 1px 6px; border-radius: 4px; cursor: pointer; }
+#outline .node:hover { background: var(--sub); }
+#outline .node.current { background: var(--head); outline: 1px solid var(--current); }
+#outline .kind { font: 11px ui-monospace, monospace; color: var(--accent); min-width: 2.2em; }
+#outline .kind-atom { color: var(--muted); }
+#outline .text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#outline .id { font: 11px ui-monospace, monospace; color: var(--muted); }
+#outline .placeholders .text { color: var(--muted); }
+#outline .placeholders .text::after { content: ' ◌ placeholders'; font-size: 11px; }
+footer { height: 36px; padding: 8px 20px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; font-size: 13px; }
+#status { color: var(--muted); }
+#status.applied { color: var(--good); }
+#status.rejected { color: var(--bad); }
+#stats { color: var(--muted); }
+/* narrow: no outline; the panes one above the other, the rendered one first, half each, filling
+   the screen between the header and the footer */
+@media (max-width: 900px) {
+  body { display: flex; flex-direction: column; height: 100dvh; }
+  header { padding: 8px 12px; gap: 6px 16px; }
+  main { flex: 1; min-height: 0; height: auto; grid-template: minmax(0, 1fr) minmax(0, 1fr) / 1fr; }
+  main:has(> #preview-pane[hidden]) { grid-template: minmax(0, 1fr) / 1fr; }
+  aside { display: none; }
+  #editor { border-right: 0; }
+  #preview-pane { order: -1; border-right: 0; border-bottom: 1px solid var(--line); }
+  /* no footer: the stats go, the status is a notification at the top */
+  footer { display: contents; }
+  #stats { display: none; }
+  #status, #status.applied, #status.rejected { position: fixed; top: 8px; left: 50%; z-index: 2; transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px); padding: 6px 12px; border-radius: 8px; background: var(--toast); color: var(--toast-fg); font-size: 13px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.2); pointer-events: none; opacity: 0; transition: opacity 0.3s; }
+  #status.rejected { background: var(--bad); color: #fff; }
+  #status.shown { opacity: 1; }
+}
+/* touch screens: a bar of buttons for the keys they lack, at the bottom (above the keyboard);
+   text big enough that iOS doesn't zoom in */
+#keys { display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 1; justify-content: center; gap: 2px; padding: 4px 8px; background: var(--bg); border-top: 1px solid var(--line); }
+#keys button { flex: 0 1 52px; height: 38px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--fg); touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+#keys button.pressed { background: var(--line); }
+@media (pointer: coarse) {
+  #keys { display: flex; }
+  body { padding-bottom: 47px; }
+  #editor .cm-scroller { font-size: 16px; }
+}

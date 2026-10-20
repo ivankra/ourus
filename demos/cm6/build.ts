@@ -1,5 +1,5 @@
 // Builds the demo bundle; `--serve` also serves the demo and rebuilds on change.
-//   node demo/cm6/build.ts [--serve] [--port 8000]
+//   node demos/cm6/build.ts [--serve] [--port 8000]
 
 import * as esbuild from 'esbuild';
 import { bundleOptions } from './bundle.ts';

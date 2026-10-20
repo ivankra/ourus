@@ -1,0 +1,47 @@
+# Builds the demos and publishes them on GitHub Pages: the textarea demo at /, its link to the
+# CodeMirror 6 demo rewritten for the move up, and the CodeMirror 6 demo at /cm6/.
+# Needs Settings → Pages → Source: GitHub Actions.
+
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node demos/cm6/build.ts && node demos/textarea/build.ts
+      - name: Assemble the site
+        run: |
+          mkdir -p _site/cm6
+          sed 's|href="../cm6/index.html"|href="cm6/"|' demos/textarea/index.html > _site/index.html
+          cp -r demos/textarea/style.css demos/textarea/dist _site/
+          cp -r demos/cm6/index.html demos/cm6/style.css demos/cm6/dist _site/cm6/
+      - uses: actions/upload-pages-artifact@v5
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

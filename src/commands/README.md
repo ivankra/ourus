@@ -93,7 +93,7 @@ next state, or null when nothing changes.
    return to (`state.update(changes, { drop, placeholders })`). CM6 can carry them with
    `invertedEffects`; the demo does.
 
-`demo/cm6/main.ts` is a complete CM6 host; `test/player.ts` plays the same contract for the spec.
+`demos/cm6/main.ts` is a complete CM6 host; `test/player.ts` plays the same contract for the spec.
 
 ### Config
 

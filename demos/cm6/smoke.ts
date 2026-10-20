@@ -1,5 +1,5 @@
 // Drives the built demo in headless Chromium with real key presses.
-//   node demo/cm6/smoke.ts [--screenshot out.png]
+//   node demos/cm6/smoke.ts [--screenshot out.png]
 // Needs a Chromium; set CHROMIUM to its path (default /usr/bin/chromium).
 
 import * as esbuild from 'esbuild';
@@ -77,8 +77,8 @@ const results = [
   await scenario('Delete at an item\'s text start, then leave: the surplus space goes', '- ┃a b\n  - c\n', ['Delete', 'ArrowDown'], '- b\n  - c\n'),
   await scenario('Enter twice ends the list', '- a┃\n', ['Enter', 'Enter', 'type:text'], '- a\n\ntext\n'),
   await scenario('Enter on an empty item mid-list makes another', '- a┃\n- b\n', ['Enter', 'Enter', 'type:p'], '- a\n- \n- p\n- b\n'),
-  await scenario('Enter before a typed marker keeps it as text', '- abc ┃- def\n', ['Enter'], '- abc\n- \\- def\n'),
-  await scenario('Shift-Enter breaks a line inside the item', '- one┃ two\n', ['Shift+Enter', 'type:x'], '- one\n  xtwo\n'),
+  await scenario('Enter before a typed marker keeps it as text', '- abc ┃- def\n', ['Enter'], '- abc \n- \\- def\n'),
+  await scenario('Shift-Enter breaks a line inside the item', '- one┃ two\n', ['Shift+Enter', 'type:x'], '- one\n   xtwo\n'),
   await scenario('Shift-Enter at the end, then type: same item, two lines', '- one┃\n- b\n', ['Shift+Enter', 'type:two', 'Tab'], '- one\n  two\n- b\n'),
   await scenario('Shift-Enter then leave: the empty line goes away', '- one┃\n- b\n', ['Shift+Enter', 'ArrowDown'], '- one\n- b\n'),
   await scenario('Backspace undoes Shift-Enter', '- one┃two\n', ['Shift+Enter', 'Backspace'], '- onetwo\n'),
@@ -103,7 +103,7 @@ const results = [
 async function renderers(): Promise<boolean[]> {
   await page.reload();
   await page.waitForFunction(() => 'ourusDemo' in window);
-  const names = await page.$$eval('#renderer option', (options) => options.map((o) => (o as HTMLOptionElement).value));
+  const names = await page.$$eval('#renderer option', (options) => options.map((o) => (o as HTMLOptionElement).value).filter((v) => v !== 'none'));
   const out: boolean[] = [];
   for (const flavor of ['obsidian', 'gfm', 'commonmark']) {
     await page.selectOption('#flavor', flavor);
@@ -122,6 +122,15 @@ async function renderers(): Promise<boolean[]> {
       out.push(ok);
     }
   }
+  // 'none' hides the pane; a renderer again shows it, rendered
+  await page.selectOption('#renderer', 'none');
+  await page.waitForTimeout(100);
+  const hidden = await page.isHidden('#preview-pane');
+  await page.selectOption('#renderer', 'ourus');
+  await page.waitForTimeout(100);
+  const shown = (await page.isVisible('#preview-pane')) && (await page.textContent('#preview'))!.includes('ourus demo');
+  console.log(`${hidden && shown ? 'ok  ' : 'FAIL'} renderer none: hidden ${hidden}, shown again ${shown}`);
+  out.push(hidden && shown);
   return out;
 }
 results.push(...(await renderers()));
