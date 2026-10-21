@@ -30,8 +30,15 @@ export const driver: Driver = {
   displayName: 'SilverBullet',
   url: 'https://demo.silverbullet.md/personal/',
   model: 'text',
-  // measured: Enter at an item's text start leaves the caret with the text
-  behaves: { enterSplitSpace: 'start', enterAtTextStart: 'stay' },
+  // measured: Enter at an item's text start leaves the caret with the text; a typed fence is left
+  // open (Backtick1 to Backtick4)
+  behaves: {
+    enterSplitSpace: 'start',
+    enterAtTextStart: 'stay',
+    closeBackticks: 'none',
+    copyAtCaret: 'host',
+    pastePlainLines: 'host',
+  },
   keys: {
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
@@ -46,7 +53,9 @@ export const driver: Driver = {
     moveSubtreeDown: 'Alt+ArrowDown',
     // "Delete Line Boundary Backward" is bound on a Mac only (Cmd-Backspace)
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
-    pasteStructured: 'Control+v',
+    copy: 'Control+c',
+    cut: 'Control+x',
+    paste: 'Control+v',
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
     redo: 'Control+y',

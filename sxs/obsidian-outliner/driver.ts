@@ -14,5 +14,10 @@ export const driver = obsidianDriver({
   // "stick the cursor to the content" (`stickCursor`)
   holds: keepsCaretOnText('Outliner', { checkbox: true }),
   // its Shift-Tab, and Enter on an empty item, outdent logically
-  behaves: { enterSplitSpace: 'start', outdent: 'logical', emptyItemWithChildren: 'refuse', joinWithChildren: 'refuse' },
+  behaves: {
+    outdent: 'logical',
+    enterSplitSpace: 'start',
+    joinWithChildren: 'refuse',
+    emptyItemWithChildren: 'refuse',
+  },
 });

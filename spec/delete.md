@@ -25,6 +25,9 @@ the text it is the host's. The rules, in order; the first that applies wins:
    title is a paragraph where it is, the caret staying, and a second Delete joins it as any
    paragraph (`headingEditing: text`, the default; Delete13, Delete13c, Delete13e, Delete13g);
    with `block`, its title joins (Delete13b, Delete13f).
+   Before an item whose first block is an item on its marker's line (`- - b`), an empty item with
+   children as written apart (`-` / `  - b`), it goes, as one written so does: its children become
+   the item's, the caret staying (Delete33).
 5. **Between paragraphs the blank lines go, and the paragraphs join, glued**, in one press: the
    paragraph below continues this one's text (Delete18, Delete18c); with `enterAtTextStart: stay`,
    one blank line a press while more than one is there (Delete18d). At an item's text, before the
@@ -36,7 +39,8 @@ the text it is the host's. The rules, in order; the first that applies wins:
    the text, the next line joins it (Delete3). A heading's closing `#`s stay at the end (Delete4,
    Delete4b). A first child with children joins up a level the same (`joinWithChildren: join`, the
    default; Delete31), or nothing happens (`refuse`, Delete31b).
-7. **What can't be written is refused**: a quote or a code block below (Delete10, Delete11).
+7. **What can't be written is refused**: a quote or a code block below (Delete10, Delete11), an
+   item whose first block, on its marker's line, is a quote or a table (Delete34).
 8. **A selection across nodes** goes and the ends join, as with Backspace (Delete21); within one
    node's text it is the host's (Delete22).
 9. **In the middle of the text**, the host's Delete (Delete8).
@@ -290,8 +294,8 @@ emptyItemWithChildren: refuse
 
 > deleteContentForward
 
-```result
-rejected: has-children
+```yaml
+result: rejected has-children
 ```
 
 ```buffer
@@ -419,8 +423,8 @@ tags: rare
 
 > deleteContentForward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer
@@ -443,8 +447,8 @@ tags: rare markup-fence
 
 > deleteContentForward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer
@@ -736,8 +740,8 @@ markup: decorated
 
 > deleteContentForward
 
-```result
-applied
+```yaml
+result: applied
 ```
 
 ```buffer
@@ -763,8 +767,8 @@ markup: decorated
 
 > deleteContentForward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer
@@ -790,8 +794,8 @@ markup: decorated
 
 > deleteContentForward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer
@@ -884,8 +888,8 @@ markup: decorated
 
 > deleteContentForward
 
-```result
-applied
+```yaml
+result: applied
 ```
 
 ```buffer
@@ -935,8 +939,8 @@ b
 
 > deleteContentForward
 
-```result
-applied
+```yaml
+result: applied
 ```
 
 ```buffer
@@ -1075,8 +1079,8 @@ tags: common
 - g
 ```
 
-```result
-applied
+```yaml
+result: applied
 ```
 
 ## Delete22
@@ -1099,8 +1103,8 @@ tags: common
 - g
 ```
 
-```result
-notApplicable
+```yaml
+result: notApplicable
 ```
 
 ## Delete23
@@ -1120,8 +1124,8 @@ tags: rare free-form
 
 > deleteContentForward
 
-```result
-notApplicable
+```yaml
+result: notApplicable
 ```
 
 ```buffer
@@ -1144,8 +1148,8 @@ tags: rare free-form
 
 > deleteContentForward
 
-```result
-notApplicable
+```yaml
+result: notApplicable
 ```
 
 ```buffer
@@ -1169,8 +1173,8 @@ tags: rare free-form
 
 > deleteContentForward
 
-```result
-notApplicable
+```yaml
+result: notApplicable
 ```
 
 ```buffer
@@ -1265,8 +1269,8 @@ tags: rare free-form
 
 > deleteContentForward
 
-```result
-notApplicable
+```yaml
+result: notApplicable
 ```
 
 ```buffer
@@ -1347,8 +1351,8 @@ joinWithChildren: refuse
 
 > deleteContentForward
 
-```result
-rejected: has-children
+```yaml
+result: rejected has-children
 ```
 
 ```buffer
@@ -1357,4 +1361,81 @@ rejected: has-children
     - c
     - d
   - e
+```
+
+## Delete32
+
+At a space a placeholder holds as text, where Backspace left a deleted first character's place
+([Placeholder17](placeholders.md#placeholder17)), the caret is at the text's start, and Delete
+takes the space, its first character. The text, right after the marker now, is escaped, as leaving
+the place escapes it: bare, `- # b` is a heading in the item. Every app but SiYuan deletes the
+space and leaves `- # b`.
+
+```yaml
+tags: rare
+```
+
+```buffer
+- a┃ # b
+```
+
+> deleteContentBackward
+
+```buffer
+- ┃◌ # b
+```
+
+> deleteContentForward
+
+```buffer
+- ┃\# b
+```
+
+## Delete33
+
+Delete at the end of an item before an item whose first block is an item on its marker's line, an
+empty item with children as `-` / `  - b` writes it: it goes, its children become the item's, the
+caret staying, as the block outliners do with that empty item; a second Delete joins the child. The
+host's would glue the markers into the text (`- a- - b`).
+
+```yaml
+tags: rare
+```
+
+```buffer
+- a┃
+- - b
+```
+
+> deleteContentForward
+
+```buffer
+- a┃
+  - b
+```
+
+> deleteContentForward
+
+```buffer
+- a┃b
+```
+
+## Delete34
+
+Delete at the end of an item before an item whose first block, on its marker's line, is a quote is
+refused, as before a quote (Delete10).
+
+```yaml
+tags: rare
+```
+
+```buffer
+- a┃
+- > q
+```
+
+> deleteContentForward
+
+```yaml
+result: rejected not-expressible
 ```

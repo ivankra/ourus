@@ -1,6 +1,7 @@
 // The plan laid out: each node placed where it lands, with its columns and its list marker.
 
 import type { OutlineState, OutlineKind, OutlineNode } from '../outline/index.ts';
+import { advanceColumns, skipSpaces } from '../text.ts';
 import { OutlinePlan, type OutlinePlanNode, type PlanTree } from './outline-plan.ts';
 import type { Block } from '../parser/index.ts';
 
@@ -96,7 +97,8 @@ function firstChildColumn(parent: Placed, tabs: boolean): number {
 /**
  * The column an item arriving in its place (new, or from another parent) lands at: its previous
  * item's, else that of the old item after it (past the ones arriving with it), else its parent
- * item's first-child column, else the start of the line.
+ * item's first-child column, else the content column of the item or quote holding it (under a
+ * heading or a paragraph), else the start of the line.
  */
 function landingColumn(placed: Placed, sibling: Placed | null, tabs: boolean): number {
   if (sibling) return sibling.markerColumn;
@@ -104,7 +106,7 @@ function landingColumn(placed: Placed, sibling: Placed | null, tabs: boolean): n
   while (after && (!after.node || after.node.parent !== placed.parent!.node)) after = after.next;
   if (after?.node?.kind === 'item') return after.node.block.markerColumn! + placed.parent!.delta;
   const parent = placed.parent!;
-  return parent.kind === 'item' ? firstChildColumn(parent, tabs) : parent.kind === 'quote' ? parent.contentColumn : 0;
+  return parent.kind === 'item' ? firstChildColumn(parent, tabs) : containerColumn(parent);
 }
 
 /**
@@ -134,12 +136,22 @@ export function shift(doc: OutlineState, placed: Placed, tabs: boolean): string 
     placed.delta = parent.delta;
     placed.base = parent.base;
     placed.owner = parent.owner;
+    // a block staying in its item, now after an item it would nest under at its column (items pasted
+    // before it): it goes to the item's content column
+    const prevItem = placed.prev?.kind === 'item' ? placed.prev : null;
+    if (!arrived && node.kind !== 'item' && prevItem && parent.kind === 'item' && node.parent?.kind === 'item') {
+      const column = blockColumn(doc, node) + parent.delta;
+      if (column >= prevItem.contentColumn) {
+        placed.delta = parent.delta + parent.contentColumn - column;
+        placed.base = placed.owner = node.parent.block;
+      }
+    }
     if (node.kind === 'quote') {
       const piece = doc.lines[node.startLine]!.prefix.find((candidate) => candidate.block === node.block);
-      placed.markerColumn = (piece?.fromColumn ?? 0) + placed.delta;
+      placed.markerColumn = blockColumn(doc, node) + placed.delta;
       // where lines are written in it, after its `> `: a first line's `>` without the space (`>- a`)
       // doesn't hold for the others
-      placed.contentColumn = Math.max(piece?.toColumn ?? 0, (piece?.fromColumn ?? 0) + 2) + placed.delta;
+      placed.contentColumn = Math.max(piece?.toColumn ?? 0, blockColumn(doc, node) + 2) + placed.delta;
     }
     if (node.kind !== 'item') {
       if (arrived) {
@@ -188,6 +200,14 @@ export function shift(doc: OutlineState, placed: Placed, tabs: boolean): string 
     if (childFailure) return childFailure;
   }
   return null;
+}
+
+/** The column an old block (not an item) starts at on its first line: a quote's `>`, past the spaces its piece takes in; another's first character. */
+function blockColumn(doc: OutlineState, node: OutlineNode): number {
+  const line = doc.lines[node.startLine]!;
+  const piece = node.kind === 'quote' ? line.prefix.find((candidate) => candidate.block === node.block) : undefined;
+  const [from, column] = piece ? [piece.from, piece.fromColumn] : [line.contentFrom, line.contentColumn];
+  return advanceColumns(doc.text, from, skipSpaces(doc.text, from, line.to, 1), column);
 }
 
 /**

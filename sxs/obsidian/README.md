@@ -193,7 +193,7 @@ What the four setups share (every key the plugins leave to Obsidian):
   to the title (`scenarios.md › Scenario21`). true-outliner's Up stays in the editor.
 - **It is a text editor**: Enter and Backspace keep spaces and blank lines a structural editor would
   drop (most `whitespace` verdicts); a paste is Markdown inserted where the caret is, the clipboard's
-  HTML converted (`paste.md`).
+  HTML converted (`paste-old.md`).
 
 ## Settings
 

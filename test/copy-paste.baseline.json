@@ -1,0 +1,33 @@
+{
+  "corpus": "e7bbcf66452f194c",
+  "counts": {
+    "atom (code_block) blank+": 38,
+    "atom (code_block) duplicate: rejected, paste: applied": 9,
+    "atom (code_block) same": 19,
+    "atom (code_block) text": 1,
+    "atom (comment_block) blank+": 3,
+    "atom (footnote_definition) blank+": 1,
+    "atom (math_block) blank+": 4,
+    "atom (refdef) same": 2,
+    "atom (table) same": 2,
+    "atom (thematic_break) blank+": 2,
+    "atom (thematic_break) same": 3,
+    "atom (unclosed) duplicate: rejected, paste: applied": 3,
+    "heading (heading) blank+": 64,
+    "item (code_block) same": 8,
+    "item (empty) same": 2,
+    "item (empty) tree": 32,
+    "item (heading) same": 5,
+    "item (lazy) same": 6,
+    "item (lazy) tree": 1,
+    "item (math_block) same": 1,
+    "item (unclosed) text": 2,
+    "item same": 584,
+    "paragraph (lazy) tree": 1,
+    "paragraph same": 2,
+    "paragraph tree": 257,
+    "quote (callout_title) tree": 3,
+    "quote (lazy) tree": 1,
+    "quote tree": 5
+  }
+}

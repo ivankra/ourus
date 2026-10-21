@@ -152,8 +152,8 @@ tags: edge free-form
 
 > outdent
 
-```result
-rejected: at-h1-bound
+```yaml
+result: rejected at-h1-bound
 ```
 
 ```buffer
@@ -834,8 +834,8 @@ after
 
 > outdent
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer

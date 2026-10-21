@@ -95,25 +95,78 @@ function command(type: Command['type']) {
   };
 }
 
+/**
+ * Typing: ourus's `insertText` first (a backtick can open a code fence or change one), CodeMirror's
+ * own input where it doesn't apply. Composition (IME) is left to CodeMirror.
+ */
+const typingHandler = EditorView.inputHandler.of((view, from, to, text) => {
+  if (view.composing) return false;
+  // input that replaces another range than the selection (a text replacement) is CodeMirror's
+  const { anchor, head } = view.state.selection.main;
+  if (from !== Math.min(anchor, head) || to !== Math.max(anchor, head)) return false;
+  const result = executeCommand(view.state.field(ourusDoc), { type: 'insertText', text }, { anchor, head });
+  if (result.status === 'notApplicable') return false;
+  onResult('insertText', result);
+  if (result.status === 'applied') {
+    view.dispatch({
+      changes: [...result.changes],
+      selection: result.selection,
+      annotations: [planned.of(result.state), Transaction.userEvent.of('ourus.insertText')],
+      scrollIntoView: true,
+    });
+  }
+  return true;
+});
+
 /** Set by Ctrl-Shift-V's keydown, for the paste event it fires: paste as plain text. */
 let plainPaste = false;
 
 /**
+ * Copy and cut: the selection's Markdown, every format ourus gives (the node at a caret alone); a cut
+ * takes it out. Where ourus steps aside, CodeMirror's (a caret's line).
+ */
+function copyOrCut(type: 'copy' | 'cut', event: ClipboardEvent, view: EditorView): boolean {
+  const data = event.clipboardData;
+  if (!data) return false;
+  const { anchor, head } = view.state.selection.main;
+  const result = executeCommand(view.state.field(ourusDoc), { type }, { anchor, head });
+  onResult(type, result);
+  if (result.status === 'notApplicable') return false;
+  event.preventDefault();
+  if (result.status !== 'applied') return true;
+  for (const [format, text] of Object.entries(result.clipboard ?? {})) data.setData(format, text);
+  if (type === 'cut') {
+    view.dispatch({
+      changes: [...result.changes],
+      selection: result.selection,
+      annotations: [planned.of(result.state), Transaction.userEvent.of('ourus.cut')],
+      scrollIntoView: true,
+    });
+  }
+  return true;
+}
+
+/**
  * Paste: Ctrl-V places Markdown as nodes where ourus applies, Ctrl-Shift-V pastes the text into the
- * node; elsewhere CodeMirror pastes the text.
+ * node; elsewhere CodeMirror pastes the text. Copy and cut: `copyOrCut`.
  */
 const pasteHandler = EditorView.domEventHandlers({
+  copy: (event, view) => copyOrCut('copy', event, view),
+  cut: (event, view) => copyOrCut('cut', event, view),
   keydown(event) {
     plainPaste = (event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'v';
     return false;
   },
   paste(event, view) {
-    const type = plainPaste ? 'pastePlain' : 'pasteStructured';
+    const type = plainPaste ? 'pastePlain' : 'paste';
     plainPaste = false;
-    const text = event.clipboardData?.getData('text/plain');
-    if (!text) return false;
+    // Ctrl-V reads every format the clipboard has (a page's HTML, a Markdown app's `text/markdown`), Ctrl-Shift-V its text
+    const data = event.clipboardData;
+    const text = data?.getData('text/plain');
+    if (!data || !text) return false;
+    const clipboard = Object.fromEntries(['text/plain', 'text/markdown', 'text/html', 'vscode-editor-data'].flatMap((t) => (data.types.includes(t) ? [[t, data.getData(t)]] : [])));
     const { anchor, head } = view.state.selection.main;
-    const result = executeCommand(view.state.field(ourusDoc), { type, text }, { anchor, head });
+    const result = executeCommand(view.state.field(ourusDoc), type === 'paste' ? { type, clipboard } : { type, text }, { anchor, head });
     onResult(type, result);
     if (result.status === 'notApplicable') return false;
     event.preventDefault();
@@ -298,6 +351,7 @@ A paragraph at the top level. Headings and list items hold children, and so does
   which stays one item
 - Home goes to the start of the text, again to the start of the line
 - Ctrl-V pastes Markdown as nodes, Ctrl-Shift-V as plain text
+- Ctrl-C and Ctrl-X copy and cut the selection as Markdown, at a caret its item with its children
 - Enter on an empty item outdents it, or leaves the list (Enter twice ends a list)
 - [ ] tasks are items too (GFM and Obsidian)
 - [x] done
@@ -499,6 +553,7 @@ function main(): void {
       doc: SAMPLE,
       extensions: [
         outlinerKeymap,
+        typingHandler,
         pasteHandler,
         basicSetup,
         markdown({ base: markdownLanguage }),

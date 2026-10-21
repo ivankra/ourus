@@ -50,8 +50,11 @@ export function drawState(text: string, sel: Selection, placeholders: readonly n
   return drawText(out);
 }
 
-/** Plain text drawn with the buffer glyphs for invisible characters (a clipboard's): `→` tab, `␍` CR, `⍽` U+00A0. */
-export const readText = (drawn: string): string => drawn.replace(/→/g, '\t').replace(/␍/g, '\r').replace(/⍽/g, '\u00a0');
+/**
+ * Plain text drawn with the buffer glyphs for invisible characters (a clipboard's): `→` tab, `␍` CR, `⍽`
+ * U+00A0, `␠` a space (as `probe.ts` draws a line's trailing ones; drawing writes them as they are).
+ */
+export const readText = (drawn: string): string => drawn.replace(/→/g, '\t').replace(/␍/g, '\r').replace(/⍽/g, '\u00a0').replace(/␠/g, ' ');
 export const drawText = (text: string): string => text.replace(/\t/g, '→').replace(/\r/g, '␍').replace(/\u00a0/g, '⍽');
 
 /**

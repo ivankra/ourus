@@ -40,7 +40,8 @@ add:
    paragraph or line there is held on the marker's line as on any other (Quote80), and the item's
    marker stays on its first line whichever block is first (Quote81, Quote82, Quote88); out of it, by
    Backspace or outdent, its paragraph is the item's text, as on the marker's line it can only be
-   (Quote75, Quote77).
+   (Quote75, Quote77), and on the line after an empty item's, an empty task's checkbox kept
+   (Quote94).
 
 Bare Obsidian and the text editors edit quotes as text: Tab inserts a tab after the `>`, Shift-Tab
 out of a quote does nothing, Backspace and Delete delete a space or a `>`, which moves text between
@@ -492,8 +493,8 @@ tags: edge quote-container
 > - b┃
 ```
 
-```result
-applied
+```yaml
+result: applied
 ```
 
 > outdent
@@ -727,8 +728,8 @@ tags: edge free-form
 
 > moveSubtreeUp
 
-```result
-rejected: would-reparent
+```yaml
+result: rejected would-reparent
 ```
 
 ```buffer
@@ -1156,8 +1157,8 @@ flavor: obsidian
 
 > enter
 
-```result
-notApplicable
+```yaml
+result: notApplicable
 ```
 
 ```buffer
@@ -1181,8 +1182,8 @@ markup: decorated
 
 > enter
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer
@@ -1272,8 +1273,8 @@ flavor: obsidian
 
 > shiftEnter
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer
@@ -1470,8 +1471,8 @@ backspaceAtTopItem: refuse
 
 > deleteContentBackward
 
-```result
-rejected: nothing-above
+```yaml
+result: rejected nothing-above
 ```
 
 ```buffer
@@ -1728,7 +1729,7 @@ clipboard: |
 > - a┃
 ```
 
-> pasteStructured
+> paste
 
 ```buffer
 > - a
@@ -2062,8 +2063,8 @@ flavor: gfm
 
 > enter
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer
@@ -2280,16 +2281,14 @@ stays as written, but under the item it would start a child item, so it is escap
 
 ```yaml
 tags: edge quote-container
+outline: |
+  quote
+    item: q⏎- g
 ```
 
 ```buffer
 > - ┃q
     - g
-```
-
-```outline
-quote
-  item: q⏎- g
 ```
 
 > outdent
@@ -2446,4 +2445,29 @@ tags: rare quote-container
 ```buffer
 > q┃
 > - a
+```
+
+## Quote94
+
+A quote that is the first block of an empty task, on the line after its marker: Backspace at its
+text takes the `>` away, and the paragraph, right under the checkbox, is the task's text, as on the
+marker's line ([Quote75](#quote75)). The checkbox stays; outdent does the same.
+
+```yaml
+tags: rare markup-task
+```
+
+```buffer
+- a
+- [ ] 
+  > ┃q
+- b
+```
+
+> deleteContentBackward
+
+```buffer
+- a
+- [ ] ┃q
+- b
 ```

@@ -113,7 +113,7 @@ Measured (each was a start the load check found held otherwise), and skipped wit
 | a numbered list right after another | BlockNote numbers a run of numbered blocks on from its first, whose `start` alone it draws | `obsidian-true-outliner.md › #228` |
 
 A number that is text (`2\. y`) loaded without its `.` until 2026-10-18 (the escape's backslash and the
-dot cut together): `paste.md › Paste81`, an error, now run.
+dot cut together): `paste-old.md › PasteOld81`, an error, now run.
 
 ## What BlockNote does
 
@@ -142,7 +142,7 @@ Each played in a probe and, where it decides, read in BlockNote's source (v0.55.
   first away numbers the run from 1 (`MoveDown23`).
 - **Pasted plain text is read as Markdown** (`plainTextAsMarkdown`, true by default, in
   `pasteExtension.ts`), with Ctrl+V and Ctrl+Shift+V alike: `1. Introduction` pasted mid-text is a
-  list of one item, whose text alone joins the paragraph (`paste.md › Paste31`: the number lost).
+  list of one item, whose text alone joins the paragraph (`paste-old.md › PasteOld31`: the number lost).
 - **Undo groups by time**: ProseMirror's history puts edits less than 500 ms apart in one undo step, so
   Enter, Tab and a typed `x` at the runner's pace (100 ms) undo at once (`undo.md › Undo5`; with 500 ms
   between keys, `--slow=400`, they undo one at a time and agree). And under a full run's load
@@ -157,5 +157,5 @@ Each played in a probe and, where it decides, read in BlockNote's source (v0.55.
 - **Tab nests a heading and keeps its level** (`indent.md › Indent12`), as Logseq does.
 - **Shift+Tab at the top level** does nothing in the editor, and the browser takes the key: the focus
   leaves the editor (`outdent.md › DirectOutdent2`, `3`).
-- **Pasted lines go into the block**, as line breaks, with either key (`paste.md › Paste3`, `Paste7`).
+- **Pasted lines go into the block**, as line breaks, with either key (`paste-old.md › PasteOld3`, `PasteOld7`).
 - **Moves carry the block's children** (`move-subtree-up.md › MoveUp1` agrees).

@@ -19,6 +19,8 @@ The rules:
    (DuplicateSubtree7).
 9. **The caret goes into the copy where typing can't break it**: in code, not on a fence
    (DuplicateSubtree8).
+10. **An unclosed fence is refused**: it reads to the end of its container, so its copy would be
+    more of its code (DuplicateSubtree9).
 
 ## DuplicateSubtree1
 
@@ -115,8 +117,8 @@ p
 
 > duplicateSubtree
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer
@@ -173,8 +175,8 @@ x
 
 > duplicateSubtree
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer
@@ -231,4 +233,30 @@ x
 ```
 ┃x
 ```
+````
+
+## DuplicateSubtree9
+
+An unclosed fence reads to the end of its container: a copy below it would be more of its code.
+Refused.
+
+```yaml
+tags: rare markup-fence
+closeBackticks: none
+```
+
+````buffer
+```
+code┃
+````
+
+> duplicateSubtree
+
+```yaml
+result: rejected not-expressible
+```
+
+````buffer
+```
+code┃
 ````

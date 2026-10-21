@@ -5,10 +5,10 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { test, type TestContext } from 'node:test';
 import { OutlineState } from '../src/outline/index.ts';
-import { drawState, readDrawing, readText } from './drawing.ts';
+import { drawState, readDrawing } from './drawing.ts';
 import { isCommand, play, type Played } from './player.ts';
 import { textPosition } from '../src/commands/index.ts';
-import { flavorsOf, run } from './spec-run.ts';
+import { flavorsOf, readClipboard, run } from './spec-run.ts';
 import { readSpec, slug, specConfig, type SpecTest } from './specfile.ts';
 
 const specDir = new URL('../spec/', import.meta.url);
@@ -27,7 +27,7 @@ for (const file of readdirSync(specDir).filter((f) => f.endsWith('.md') && f !==
     const runAll = (): void => {
       for (const flavor of flavorsOf(t)) run(t, flavor);
     };
-    test(`${file} › ${t.name}`, (ctx: TestContext) => {
+    test(t.name, (ctx: TestContext) => {
       if (!t.pending) return runAll();
       // a pending example fails once it passes (in every flavor), so it gets promoted rather than forgotten
       try {
@@ -43,14 +43,27 @@ for (const file of readdirSync(specDir).filter((f) => f.endsWith('.md') && f !==
 
 const specFiles = (): string[] => readdirSync(specDir).filter((f) => f.endsWith('.md') && f !== 'README.md');
 
+// a case's name (its own heading) is unique across the spec, not only in its file: reports, the SxS
+// and notes name a case by it alone
+test('every case name is unique across the spec files', () => {
+  const files = new Map<string, string[]>();
+  for (const file of specFiles()) {
+    for (const t of readSpec(file, readFileSync(new URL(file, specDir), 'utf8'))) {
+      const id = t.name;
+      files.set(id, [...(files.get(id) ?? []), file]);
+    }
+  }
+  assert.deepEqual([...files].filter(([, in_]) => in_.length > 1).map(([id, in_]) => `${id}: ${in_.join(', ')}`), []);
+});
+
 // every core case (the reader requires every case's rank) is walked through in a daily flow of scenarios.md
 test('every core case appears in scenarios.md', () => {
   const scenarios = readFileSync(new URL('scenarios.md', specDir), 'utf8');
   const problems: string[] = [];
   for (const file of specFiles()) {
     for (const t of readSpec(file, readFileSync(new URL(file, specDir), 'utf8'))) {
-      const id = t.name.split(' › ').pop()!;
-      if (t.rank === 'core' && file !== 'scenarios.md' && !scenarios.includes(`${file}#${slug(id)})`)) problems.push(`${file} › ${t.name}: core, but in no scenario`);
+      const id = t.name;
+      if (t.rank === 'core' && file !== 'scenarios.md' && !scenarios.includes(`${file}#${slug(id)})`)) problems.push(`${t.name} (${file}): core, but in no scenario`);
     }
   }
   assert.deepEqual(problems, []);
@@ -105,14 +118,15 @@ for (const markup of ['text', 'decorated'] as const) {
           let state: Played = {
             doc: OutlineState.parse(start.text, { placeholders: start.placeholders, config: { flavor, ...options } }),
             selection: start.selection,
-            clipboard: readText(t.initial.clipboard ?? ''),
+            clipboard: readClipboard(t.initial.clipboard),
           };
           for (const step of t.steps) {
             for (const action of step.actions) {
               const before = state;
               state = play(state, [action]);
               const { anchor, head } = state.selection;
-              if (!isCommand(action) || state.last?.status !== 'applied' || anchor !== head) continue;
+              // typed text too, where ourus's `insertText` applied
+              if (!(isCommand(action) || action.startsWith('"')) || state.last?.status !== 'applied' || anchor !== head) continue;
               const doc = state.doc;
               // a space a placeholder holds as text (`- ┃◌ x`) starts the text
               const held = doc.placeholders.includes(head) && /[ \t]/.test(doc.text[head] ?? '');

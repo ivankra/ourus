@@ -435,6 +435,11 @@ export class Machine {
     this.attrs[index] = { ...this.attrs[index], ...attrs };
   }
 
+  /** What the container at stack `index` was annotated with (`annotate`), or null. */
+  attrsAt(index: number): Readonly<Record<string, unknown>> | null {
+    return this.attrs[index] ?? null;
+  }
+
   /** Whether the container at stack `index` was opened on this line. */
   openedHere(index: number): boolean {
     return index >= this.pushedFrom;

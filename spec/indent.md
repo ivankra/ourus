@@ -267,8 +267,8 @@ tags: common
 
 > indent
 
-```result
-rejected: no-previous-sibling
+```yaml
+result: rejected no-previous-sibling
 ```
 
 ```buffer
@@ -293,8 +293,8 @@ Intro
 
 > indent
 
-```result
-rejected: no-previous-sibling
+```yaml
+result: rejected no-previous-sibling
 ```
 
 ```buffer
@@ -658,8 +658,8 @@ tags: rare free-form
 
 > indent
 
-```result
-rejected: at-h6-bound
+```yaml
+result: rejected at-h6-bound
 ```
 
 ```buffer
@@ -756,8 +756,8 @@ tags: common
 - d
 ```
 
-```result
-applied
+```yaml
+result: applied
 ```
 
 > outdent

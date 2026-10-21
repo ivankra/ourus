@@ -99,8 +99,8 @@ tags: common
 
 > moveSubtreeDown
 
-```result
-rejected: no-next-sibling
+```yaml
+result: rejected no-next-sibling
 ```
 
 ```buffer
@@ -187,8 +187,8 @@ tags: edge
 
 > moveSubtreeDown
 
-```result
-rejected: no-next-sibling
+```yaml
+result: rejected no-next-sibling
 ```
 
 ```buffer
@@ -528,8 +528,8 @@ tags: edge free-form
 
 > moveSubtreeDown
 
-```result
-rejected: would-reparent
+```yaml
+result: rejected would-reparent
 ```
 
 ```buffer
@@ -586,8 +586,8 @@ tags: edge free-form
 
 > moveSubtreeDown
 
-```result
-rejected: would-reparent
+```yaml
+result: rejected would-reparent
 ```
 
 ```buffer
@@ -745,8 +745,8 @@ para┃
 
 > moveSubtreeDown
 
-```result
-rejected: would-reparent
+```yaml
+result: rejected would-reparent
 ```
 
 ```buffer
@@ -1053,8 +1053,8 @@ tags: edge free-form
 
 > moveSubtreeDown
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer

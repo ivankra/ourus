@@ -121,9 +121,9 @@ markup: a code block with ```` ``` ```` and its language, a math block with `$$`
 - **Text is saved as markup is parsed**: a split-off `# def` becomes a heading on save
   (`enter.md › Enter9`, `tasks.md › TaskEnter3`), where ourus keeps the text, escaped (`\# def`); the
   projection drops that escape, so these read as caret verdicts or near ones, as SiYuan's do.
-- **Paste**: a code block pasted at an item's end goes after it, not under it (`paste.md › Paste1`,
+- **Paste**: a code block pasted at an item's end goes after it, not under it (`paste-old.md › PasteOld1`,
   `scenarios.md › Scenario18`); a heading and the text after it come apart by two blank lines
-  (`Paste19`, `Paste57`); a paste into a numbered block keeps its number (OG's bug 7 isn't here).
+  (`PasteOld19`, `PasteOld57`); a paste into a numbered block keeps its number (OG's bug 7 isn't here).
 
 Against OG, example by example, most come out the same; most of the rest are the paste bug below, OG
 caret verdicts the DB version agrees on (Home, Up and Down in `cursor.md`, the caret after some
@@ -137,13 +137,14 @@ https://github.com/logseq/logseq as of 2026-10-19.
 1. **A list pasted as HTML with line breaks between its items nests each under the one before**
    (`<ul>\n<li>x</li>\n<li>y</li>\n</ul>`, as commonmark renders a list and a copy of a rendered page
    carries it: `x`, then `y` under it); the same HTML without them pastes them as siblings, as OG does
-   with either. The runner's clipboards have such HTML: `paste.md › Paste13b`, `15c`, `16`, `20`, `21`,
-   `27`, `38`, `59`, `60` and `gaps.md › Gap13` agree when played with the text alone
-   (`--plain-clipboard`), and `Paste17c`, `18`, `49` nest so too.
+   with either. The runner's clipboards had such HTML (rendered from each case's Markdown, until
+   2026-10-21): `paste-old.md › PasteOld13b`, `15c`, `16`, `20`, `21`, `27`, `38`, `59`, `60`
+   and `gaps.md › Gap13` agree when played with the text alone, as the cases now give it, and
+   `PasteOld17c`, `18`, `49` nested so too.
 2. **Logical outdenting does nothing** (above): the OCaml worker's op drops the option its outliner
    honors.
-3. **Ctrl+Shift+V in a code block pastes nothing** (`paste.md › Paste22`); Ctrl+V does.
-4. **A code block pasted as HTML loses its language** (`paste.md › Paste66`: ```` ```js ```` in, a code
+3. **Ctrl+Shift+V in a code block pastes nothing** (`paste-old.md › PasteOld22`); Ctrl+V does.
+4. **A code block pasted as HTML loses its language** (`paste-old.md › PasteOld66`: ```` ```js ```` in, a code
    block with none out).
 5. A longer fence's extra backticks go into the language (```` ````js ````: `` `js ``), and around code
    with ```` ``` ```` in it the block stays text: only ```` ``` ```` fences make code blocks.
@@ -155,7 +156,7 @@ https://github.com/logseq/logseq as of 2026-10-19.
    CodeMirror only if it exists by then (`src/main/frontend/handler/events.cljs`: `(when-let [cm
    (util/get-cm-instance container)] …)`), and nothing tries again. Measured: of ten pastes, five left
    nothing focused; with the CPU slowed six times, all ten. What is typed next then goes nowhere
-   (`paste.md › Paste1`, `Paste25`, `scenarios.md › Scenario18` come out otherwise from run to run).
+   (`paste-old.md › PasteOld1`, `PasteOld25`, `scenarios.md › Scenario18` come out otherwise from run to run).
 8. Undo and redo leave `editor/op` set (`src/main/frontend/handler/history.cljs`, `undo-aux!`,
    `redo-aux!`: `:undo`, `:redo`, never cleared), where every other operation clears it.
 

@@ -130,6 +130,10 @@ export interface Config {
    *
    * The task keeps its checkbox either way; which half of a checked task stays checked is not this
    * option's (the first, here).
+   *
+   * It says what a task is, which shows most at Enter: an item with a checkbox (`continue`), or a
+   * block whose text starts with a task's marker (`plain`). So a paste on an empty task (spec/paste.md)
+   * fills it, its checkbox the first pasted item's, or goes after it, the task not being empty.
    */
   readonly enterTask: 'continue' | 'plain';
 
@@ -210,91 +214,133 @@ export interface Config {
   readonly handleFenceContents: boolean;
 
   /**
-   * Structured paste (Ctrl-V) of plain lines, a clipboard of paragraphs only:
-   * - `text` (the default, as in Logseq, Tine, SiYuan, BlockNote and every text editor): they go into
-   *   the text at the caret, as plain paste puts them, a blank line a paragraph break; in a heading,
-   *   which holds one line, they are nodes.
-   * - `items` (as in Roam, WorkFlowy and Dynalist): each line is a node, an item in a list.
-   */
-  readonly pasteStructuredLines: 'text' | 'items';
-
-  /**
-   * Structured paste (Ctrl-V) of several lines in the middle of a paragraph's or an item's text:
-   * - `split` (the default, as in WorkFlowy and Dynalist): the node splits where Enter would split it,
-   *   and the paste goes in between: its first text joins the text before the caret, the rest
-   *   follows, and the text after the caret is a node of its own when the clipboard ends with a line
-   *   break, else the end of the last pasted line.
-   * - `after` (as in Logseq, Tine, Roam, SiYuan and true-outliner): the node is left as it is, and the
-   *   paste goes after it, as at the end of its text.
-   */
-  readonly pasteStructuredMidText: 'split' | 'after';
-
-  /**
-   * Structured paste (Ctrl-V) of several lines, or of one item, at the end of a paragraph's or an
-   * item's text:
-   * - `after` (the default, as in Logseq, Tine, Roam, SiYuan and true-outliner): the paste goes where
-   *   Enter at the end of the text would put a new node.
-   * - `join` (as in WorkFlowy and BlockNote, and Dynalist with Markdown as plain text): as
-   *   `pasteStructuredMidText: split` with nothing after the caret: the paste's first text joins the
-   *   node's text, the rest follows. The node's children follow the paste (under its last item, or
-   *   after it in a paragraph's list), or with `enterMidItem: child` stay, the paste their first
-   *   siblings. A heading, a quote or code joins nothing, and goes as with `after`.
-   */
-  readonly pasteStructuredAtEnd: 'after' | 'join';
-
-  /**
-   * Structured paste (Ctrl-V) into an item that has children, at the end of its text or in the middle
-   * of it, and a list pasted at the end of a heading's title, its section holding content:
-   * - `children` (the default, as in Logseq and Roam): the paste goes first among them, where Enter
-   *   at the end of the text puts a new node.
-   * - `after` (as in Tine, WorkFlowy, Dynalist, SiYuan and Tana): the paste goes after them, as the
-   *   item's next siblings, or last in the heading's section; the text is left as it is, nothing split
-   *   or joined.
-   */
-  readonly pasteStructuredOnParent: 'children' | 'after';
-
-  /**
-   * Structured paste of a paragraph and the list right after it, landing in a list:
-   * - `siblings` (the default, as in Logseq, Tine, WorkFlowy and BlockNote): the list's items follow
-   *   the paragraph's item, at its level: in a list a paragraph owns no list.
-   * - `children` (as in Roam, Dynalist and true-outliner): they nest under it, as the paragraph owns
-   *   its list where the clipboard was written.
-   */
-  readonly pasteStructuredParagraphList: 'siblings' | 'children';
-
-  /**
-   * Structured paste (Ctrl-V) of a list into a list of the other kind (numbers into bullets, bullets
-   * into numbers); a list of the same kind joins the destination's either way:
-   * - `text` (the default): the pasted items take the list's form; in a bullet list a pasted number
-   *   is kept as text (`- 1\. x`), and on a list's empty first item a single pasted ordered list
-   *   makes the list ordered. A nested list keeps its own form.
-   * - `literal` (as Roam, WorkFlowy and Dynalist paste Markdown that comes as plain text): a pasted
-   *   number is always text, nested lists' too: the items are bullets, or numbered in an ordered
-   *   list, their text starting with it (`2. 1\. x`).
-   * - `drop` (as in SiYuan, and in Logseq, Tine, Roam, WorkFlowy and Dynalist from a copy of a
-   *   rendered page, whose HTML list has no number text): the pasted items take the list's form,
-   *   their numbers dropped. A nested list keeps its own form.
-   * - `own` (as in BlockNote and true-outliner): the paste keeps its form, a list of its own where it
-   *   lands; the list it lands in keeps its own, renumbered as any list a paste touches.
+   * A typed backtick that opens something a backtick closes (a tilde, for a tilde fence, the same):
+   * - `fences` (the default): a code fence typed at a line's text start gets its closing fence, as
+   *   long, on the line below, so the block takes in nothing that follows it; inline backticks are
+   *   the host's.
+   * - `all` (as bare Obsidian, its "Auto pair Markdown syntax" on by default): inline code too: a
+   *   backtick at a word boundary is typed as a pair, the caret between; typed before the closing
+   *   backtick of an empty pair or a code span it steps over it; around a selection on one line it
+   *   makes it code; Backspace in an empty pair takes both.
+   * - `none` (as a text editor, Emacs's markdown-mode): nothing is closed: an unclosed fence reads
+   *   to the end of its container, as Markdown reads it.
    *
-   * A pasted item whose text joins the node's (`pasteStructuredMidText: split`, `pasteStructuredAtEnd:
-   * join`) keeps its number as text under `text` (in a bullet list) and `literal`, and loses it under
-   * `drop` and `own`.
+   * A fence's two runs keep one length whatever the value: a backtick typed on either fence, or
+   * Backspace and Delete in one, change both, since an opening longer than its closing fence would
+   * leave the block unclosed.
    */
-  readonly pasteStructuredListForm: 'text' | 'literal' | 'drop' | 'own';
+  readonly closeBackticks: 'fences' | 'all' | 'none';
 
-  // Not built yet: options considered, kept here for later. ourus2 (`src/commands/policy.ts`,
-  // `01-redesign.md` "Feel is a policy") had most of them.
+  /**
+   * Copy and cut (Ctrl-C, Ctrl-X: `copy`, `cut`) with no selection, a caret alone (spec/copy.md):
+   * - `node` (the default, as Tana): the node at the caret with its subtree; a cut takes them out.
+   * - `host`: the host's, CodeMirror's the line, a textarea's nothing; most apps copy nothing there
+   *   (Roam, Athens, WorkFlowy, Dynalist, BlockNote) or a block reference, which Markdown has no
+   *   form for (Logseq, Logseq DB, Tine, RemNote); Obsidian, true-outliner and SilverBullet copy and
+   *   cut the line.
+   */
+  readonly copyAtCaret: 'node' | 'host';
+
+  /**
+   * Copy and cut (`copy`, `cut`) of a selection across nodes (spec/copy.md):
+   * - `text` (the default, as BlockNote, Obsidian and SilverBullet): the selected Markdown as written,
+   *   out of the containers holding all of it; a cut deletes the range as Backspace over it does.
+   * - `nodes` (as Logseq, Logseq DB, Tine, Athens, Tana, Dynalist, RemNote and true-outliner, most
+   *   turning the selection into blocks selected): the whole nodes it touches, with their subtrees; a
+   *   cut takes them out, as `deleteSubtree`. Both are refused where it refuses those nodes (siblings
+   *   not in a row).
+   * Within one node's text, the text either way.
+   */
+  readonly copySelection: 'text' | 'nodes';
+
+  /**
+   * Paste (Ctrl-V, `paste`) of nodes into a node's text (spec/paste-list.md):
+   * - `closed` (the default, as Logseq, Logseq DB, Tine, Roam, Athens, Tana, SiYuan and true-outliner
+   *   paste): the paste is whole nodes, put between nodes; the node at the caret is left as it is,
+   *   wherever in its text the caret is.
+   * - `open` (as BlockNote pastes; WorkFlowy, RemNote and Dynalist each open a seam their own way): the
+   *   first pasted text joins the text before the caret, the text after the caret joins the last, and
+   *   the node's children follow the last pasted node, as a text editor's paste of the Markdown would
+   *   have them. A heading's title joins too. Where a seam can't close (a block that isn't text, a
+   *   heading that takes in what follows it, the caret in a heading's title), the paste is closed.
+   */
+  readonly pasteSeams: 'closed' | 'open';
+
+  /**
+   * Paste (Ctrl-V, `paste`) of plain lines, a clipboard of paragraphs only (spec/paste.md):
+   * - `text` (the default, as Logseq, Logseq DB, Tine and SiYuan paste them): they go into the text at
+   *   the caret, as plain paste puts them; in a heading, which holds one line, they are a paragraph.
+   *   Pasted into a list, a paragraph is one item, its lines the item's text.
+   * - `items` (as Roam, Athens, WorkFlowy and Dynalist paste them): each line is a node, an item each
+   *   in a list, a paragraph's lines too.
+   */
+  readonly pasteLines: 'text' | 'items';
+
+  /**
+   * Plain paste (Ctrl-Shift-V, `pastePlain`) of text with a line break (spec/paste-plain.md):
+   * - `text` (the default, as Logseq, Logseq DB, Tine, Roam and Athens): the lines go into the text
+   *   at the caret, each line break Shift-Enter's.
+   * - `items` (as Tana and WorkFlowy, which have no plain paste that keeps lines in a block): each
+   *   line is a node, its Markdown escaped (text, not structure) but a list marker, which makes it an
+   *   item, placed as paste places nodes (`pasteSeams`, `pasteAtTextStart`, `pasteOnParent`).
+   * - `enter` (as Dynalist): the text typed, each line break an Enter: the line at the caret splits,
+   *   each line after it a new node, the last the text after the caret's.
+   * - `host` (as Obsidian, SilverBullet and Emacs): the host's, the text inserted as it is.
+   * RemNote's, a node per line with only the first line joining the text at the caret, is none of them.
+   */
+  readonly pastePlainLines: 'text' | 'items' | 'enter' | 'host';
+
+  /**
+   * Paste (Ctrl-V, `paste`) at the start of a node's text, where the paste goes (spec/paste-list.md):
+   * - `after` (the default, as Logseq, Logseq DB, Tine, Tana and Athens paste): after the node, as
+   *   anywhere else in its text.
+   * - `before` (as Roam, SiYuan and WorkFlowy paste): before it, where the caret is; pasted items
+   *   before an item take its list's form, numbered from it.
+   */
+  readonly pasteAtTextStart: 'after' | 'before';
+
+  /**
+   * Paste (Ctrl-V, `paste`) on a node with children, where the paste goes (spec/paste-list.md):
+   * - `children` (the default, as Logseq, Logseq DB, Roam, Athens and true-outliner paste): first among
+   *   them, an item's, a heading's section's, a paragraph's list's.
+   * - `after` (as Tine, Tana, SiYuan, WorkFlowy and Dynalist paste): after them: after an item and its
+   *   children, as its next siblings; last in a heading's section; last in a paragraph's list.
+   */
+  readonly pasteOnParent: 'children' | 'after';
+
+  /**
+   * Paste (Ctrl-V, `paste`) into a list of a paragraph followed by its list (spec/paste-list.md): the
+   * paragraph is an item, and the list's items are
+   * - `siblings` (the default, as Logseq, Logseq DB, Tine, WorkFlowy and BlockNote paste them): after
+   *   it.
+   * - `children` (as Roam, Athens, true-outliner, SiYuan and Dynalist paste them, and Tana and RemNote
+   *   from HTML): its children, as an outliner's copy means them (Tana's: a node's children as a
+   *   paragraph's list).
+   * In an item or a quote, where a paragraph owns no list, the list follows the paragraph either way.
+   */
+  readonly pasteParagraphList: 'siblings' | 'children';
+
+  /**
+   * Paste (Ctrl-V, `paste`) of items into a list of the other kind, numbered into bullets or bullets
+   * into numbered (spec/paste-list-form.md):
+   * - `destination` (the default, as Logseq, Logseq DB, Tine, Roam, Athens, Tana, SiYuan, WorkFlowy and
+   *   Dynalist paste HTML lists): they take the list's form, its bullet or its numbers.
+   * - `own` (as BlockNote, RemNote and true-outliner paste): they keep their markers, a list of their
+   *   own where they land, as a move keeps an item's.
+   * Into a list of their kind they take its marker either way; a pasted paragraph or heading, which has
+   * no form, the list's.
+   */
+  readonly pasteListForm: 'destination' | 'own';
+
+  // Not built yet: options considered, kept here for later.
   //
   // - renumbering: 'changed' | 'never'. Ordered lists an edit touched are renumbered (today), or
   //   numbers are left as written.
   // - indentUnit: 'detect' | 'tab' | number. New nesting follows a sibling, then the document
   //   (today). CommonMark mostly decides this already (children nest at the parent's content column).
-  //   Decided (2026-10-14): build it, `detect` by default with spaces as the fallback, so an
-  //   Obsidian host can pass `tab` for its "Use tabs".
   // - homeAtTask: 'after' | 'before'. Whether Home stops after a task's checkbox or before it.
   // - pastedNumbering: 'continue' | 'restart'. Whether a pasted ordered run takes the list's numbers,
-  //   and whether the items after a list of its own (`pasteStructuredListForm: own`) restart at 1, as
+  //   and whether the items after a list of its own (`pasteListForm: own`, to come) restart at 1, as
   //   BlockNote, Tine, WorkFlowy and true-outliner number them.
   // - emptyNodeLeft: 'keep' | 'remove'. Leaving an empty node the text can't hold. Decided instead
   //   (spec/placeholders.md): an empty item stays, set off by a blank line; an empty paragraph goes.
@@ -322,17 +368,21 @@ const CONFIG_VALUES: { readonly [K in keyof Config]: readonly [Config[K], ...Con
   joinWithChildren: ['join', 'refuse'],
   backspaceAtTopItem: ['unwrap', 'refuse'],
   emptyItemWithChildren: ['lift', 'refuse'],
-  // editing markup: a heading's `#`s, a task's checkbox, a fence's contents
+  // editing markup: a heading's `#`s, a task's checkbox, a fence's contents, a typed backtick
   headingEditing: ['text', 'block'],
   taskEditing: ['checkbox', 'text', 'block'],
   handleFenceContents: [true, false],
-  // structured paste
-  pasteStructuredLines: ['text', 'items'],
-  pasteStructuredMidText: ['split', 'after'],
-  pasteStructuredAtEnd: ['after', 'join'],
-  pasteStructuredOnParent: ['children', 'after'],
-  pasteStructuredParagraphList: ['siblings', 'children'],
-  pasteStructuredListForm: ['text', 'literal', 'drop', 'own'],
+  closeBackticks: ['fences', 'all', 'none'],
+  // clipboard
+  copyAtCaret: ['node', 'host'],
+  copySelection: ['text', 'nodes'],
+  pasteSeams: ['closed', 'open'],
+  pasteLines: ['text', 'items'],
+  pastePlainLines: ['text', 'items', 'enter', 'host'],
+  pasteAtTextStart: ['after', 'before'],
+  pasteOnParent: ['children', 'after'],
+  pasteParagraphList: ['siblings', 'children'],
+  pasteListForm: ['destination', 'own'],
 };
 
 /** Every option's default: the first of its values. */

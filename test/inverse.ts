@@ -22,6 +22,8 @@
 //   INVERSE_UPDATE=1 node test/inverse.ts    # the same, then its counts as the new baseline, once read
 //   INVERSE_EXAMPLES=8 node test/inverse.ts  # examples per group (default 3)
 //   INVERSE_WORKERS=1 node test/inverse.ts   # one thread (by default one per core): the same report
+//   INVERSE_DUMP=f.txt node test/inverse.ts  # every round trip that doesn't come back, a line each, sorted:
+//                                            # diff two trees' dumps to see which runs a change moved
 //
 // The buffers are played in worker threads, each a share of them; what they report is merged in the
 // buffers' order, so the report is the same however many play it.
@@ -45,6 +47,8 @@ const PAIRS: readonly [string, string][] = [
   ['outdent', 'indent'],
   ['moveSubtreeUp', 'moveSubtreeDown'],
   ['moveSubtreeDown', 'moveSubtreeUp'],
+  // a cut (at a caret, the node with its subtree) pasted back where it leaves the caret
+  ['cut', 'paste'],
 ];
 const examples = Number(process.env.INVERSE_EXAMPLES ?? 3);
 
@@ -61,7 +65,7 @@ for (const file of isMainThread ? readdirSync(specDir).filter((f) => f.endsWith(
     const key = JSON.stringify([start.text, config]);
     if (seen.has(key)) continue;
     seen.add(key);
-    starts.push({ text: start.text, config, name: `${file} › ${t.name}` });
+    starts.push({ text: start.text, config, name: t.name });
   }
 }
 // the corpus's identity, whatever order its files are read in (a renamed file changes nothing)
@@ -90,12 +94,15 @@ interface Found {
   runs: number;
   groups: Map<string, { runs: number; buffers: string[]; examples: Noted[] }>;
   failures: Noted[];
+  /** Every round trip that doesn't come back, with `INVERSE_DUMP`. */
+  dumped: string[];
 }
+const dumping = !!process.env.INVERSE_DUMP;
 const draw = (p: Played): string => JSON.stringify(drawState(p.doc.text, p.selection, p.doc.placeholders));
 
 /** Plays every pair at every caret position of the start buffers `share` names. */
 function playShare(share: readonly number[]): Found {
-  const found: Found = { runs: 0, groups: new Map(), failures: [] };
+  const found: Found = { runs: 0, groups: new Map(), failures: [], dumped: [] };
   const groups = new Map<string, { runs: number; buffers: Set<string>; examples: Noted[] }>();
   const fail = (index: number, text: string): void => void found.failures.push({ at: index, buffer: '', text });
   for (const index of share) {
@@ -104,7 +111,7 @@ function playShare(share: readonly number[]): Found {
     for (const [first, second] of PAIRS) {
       for (let pos = 0; pos <= s.text.length; pos++) {
         if (s.text[pos - 1] === '\r' && s.text[pos] === '\n') continue;
-        const at: Played = { doc, selection: { anchor: pos, head: pos }, clipboard: '' };
+        const at: Played = { doc, selection: { anchor: pos, head: pos }, clipboard: {} };
         found.runs++;
         let mid: Played;
         let end: Played;
@@ -128,6 +135,7 @@ function playShare(share: readonly number[]): Found {
         const shape = last?.status === 'applied' ? classify(doc, end, pos) : last?.status === 'rejected' ? `rejected ${last.reason}` : (last?.status ?? '-');
         if (shape === 'same') continue;
         const key = `${first}, ${second}: ${shape}`;
+        if (dumping) found.dumped.push(`${key}\t${s.name}\t${draw(at)}\t${draw(mid)}\t${draw(end)}`);
         const group = groups.get(key) ?? { runs: 0, buffers: new Set<string>(), examples: [] };
         group.runs++;
         if (!group.buffers.has(s.text) && group.examples.length < examples) group.examples.push({ at: index, buffer: s.text, text: `${s.name}\n           ${draw(at)}\n         → ${draw(mid)}\n         → ${draw(end)}` });
@@ -196,6 +204,7 @@ for (const [key, group] of [...groups].sort((x, y) => y[1].buffers.size - x[1].b
   for (const example of group.examples) console.log(`         ${example}`);
 }
 for (const failure of failures) console.log(`FAIL ${failure}`);
+if (dumping) writeFileSync(process.env.INVERSE_DUMP!, parts.flatMap((p) => p.dumped).sort().join('\n') + '\n');
 if (rose.length) console.log(`\nmore round trips than the baseline don't come back: ${rose.join('; ')}`);
 if (baseline && !sameCorpus) console.log('\nthe corpus changed since the baseline (the spec): its counts are not held to it; INVERSE_UPDATE=1 records them');
 if (process.env.INVERSE_UPDATE === '1') {

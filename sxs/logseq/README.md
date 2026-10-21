@@ -75,7 +75,7 @@ Repo: https://github.com/logseq/og
   block's content (`a\nlogseq.order-list-type:: number`), one of Logseq's hidden ones
   (`hidden-built-in-properties`), which an editor never shows: the driver's editor holds `a`, as
   Logseq opens it. (It held the property line until 2026-10-18: Logseq's keys read the editor, and an
-  empty numbered block wasn't empty to its paste, Paste16.)
+  empty numbered block wasn't empty to its paste, PasteOld16.)
 - **Reading**: `get_page_blocks_tree`, except for the block being edited, which is read from its
   textarea (its number from the database): Logseq stores what is typed about half a second after
   typing stops. Selected blocks come from `get_selected_blocks`.
@@ -120,10 +120,10 @@ Repo: https://github.com/logseq/og
 - **What Ctrl+V pastes is the clipboard's HTML, where it has some** (`paste-copied-text`): the HTML
   converted to Markdown, else the text; then blocks if that reads as Markdown blocks (a line starting
   `-`, `+`, `*` or `#`: `markdown-blocks?`), else paragraphs if it has blank lines, else text into
-  the block. So Paste7 and Paste10's plain lines paste as text, though `spec/paste.md` says Logseq
+  the block. So PasteOld7 and PasteOld10's plain lines paste as text, though `spec/paste-old.md` says Logseq
   makes items there; a numbered list pastes as blocks (from the runner's HTML, its numbers dropped),
   where as text alone it would go into the block as text; and a heading and a line come out of the
-  conversion with a blank line between them (Paste19, Paste57). Measured with text alone against the
+  conversion with a blank line between them (PasteOld19, PasteOld57). Measured with text alone against the
   runner's text and HTML, 2026-10-18.
 - **Logseq's own copy** (Ctrl+C on selected blocks) writes three formats: `web application/logseq`,
   the blocks as EDN (DataScript's entities, properties and all), which a paste in Logseq takes
@@ -168,7 +168,7 @@ Seen in the demo's build b8f87af5; source references are to Logseq's source
    loses its indentation (`insert_block` and `update_block` keep it).
 6. The demo requests `/js/eventemitter3.umd.min.js`, which the site doesn't have: a 404 page, which
    the browser refuses to run as a script.
-7. **A paste into a numbered block takes its number away** (`paste.md › Paste2`, `Paste18`: `1. a┃`
+7. **A paste into a numbered block takes its number away** (`paste-old.md › PasteOld2`, `PasteOld18`: `1. a┃`
    and a list pasted, `a` unnumbered after, the list numbered from 1). `paste-blocks` takes the
    editor's text (`a`) for unsaved edits when it differs from the stored content, which a numbered
    block's always does (`a\nlogseq.order-list-type:: number`: the editor shows no hidden property),

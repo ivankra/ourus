@@ -21,7 +21,7 @@ This directory runs it in "no bullet" (nbl) mode; [`remnote-bl`](../remnote-bl/)
 | `deleteSubtree` | Ctrl+Shift+Alt+Backspace ("Delete Bullet") |
 | `duplicateSubtree` | *missing*: its tests are skipped |
 | `pasteStructured` | Ctrl+V |
-| `pastePlain` | Ctrl+Shift+V ("Paste Without Formatting") |
+| `pastePlain` | Ctrl+Shift+V ("Paste Without Formatting": a rem per line; Quirks) |
 | `undo` | Ctrl+Z |
 | `redo` | Ctrl+Y |
 
@@ -47,7 +47,7 @@ Other shortcuts:
 | Zoom Out of Bullet & Open in Other Pane | Ctrl+Shift+; | |
 | Go to Parent | Ctrl+\ | the caret to the parent rem |
 | Go Backward, Go Forward | Alt+Left, Alt+Right | navigation history |
-| Paste as Single Bullet | Ctrl+Shift+Alt+V | a structured clipboard into one rem |
+| Paste as Single Bullet | Ctrl+Shift+Alt+V | the clipboard's lines into the rem at the caret; the desktop app's only (Quirks) |
 | Cut, Copy | Ctrl+X, Ctrl+C | over a selection of rems: the rems, with their children |
 | Select all | Ctrl+A | the rem's text, then the document's rems |
 | Shift+Up, Shift+Down | | at a rem's edge, a selection of rems; Alt+Up and Down move the selection |
@@ -109,7 +109,7 @@ fixtures do). Nothing went to RemNote's servers. The disagreements, each checked
   before (`backspace.md › Backspace17d`, `delete.md › Delete5`, `5b`).
 - **The caret leaves the rems** after Backspace on the first, empty, one (to the document's title) and
   after "Delete Bullet" (`backspace.md › Backspace17`, `delete-subtree.md › DeleteSubtree3`).
-- **Paste**: the clipboard's last line break makes an empty rem (`paste.md › Paste3`, `5`, `7`, `10`),
+- **Paste**: the clipboard's last line break makes an empty rem (`paste-old.md › PasteOld3`, `5`, `7`, `10`),
   as in Dynalist and WorkFlowy.
 - **Whitespace**: Enter keeps the space before where it splits, Shift+Enter the space after the break.
 
@@ -262,6 +262,15 @@ A code rem is otherwise: its text keeps a trailing space after a line break, in 
 (`code⏎ `, then `code⏎x `), RemNote's own (`fences.md › Fence8`, whitespace).
 
 ## Quirks
+
+- **Plain paste is the desktop app's.** "Paste as Single Bullet" (`PasteInSingleRem`,
+  Ctrl+Shift+Alt+V) puts the clipboard's lines into the rem at the caret, as ourus's plain paste does,
+  but only Electron sends it (`ipcListenOnPasteAllInOneRem`, the menu's `PASTE_ALL_IN_ONE_REM`): in the
+  web app the key does nothing. The driver's `pastePlain` is Ctrl+Shift+V, "Paste Without Formatting",
+  which makes a rem of each line as Ctrl+V does, and paste-plain.md's verdicts measure that.
+  Dispatched by hand once (2026-10-21, the bundle's module 357851, `Hn()`, as the menu does; not in the
+  driver), Single Bullet agreed with ourus on 7 of 12 probes of plain paste, kept a line's leading
+  spaces (as Logseq does), kept two blank lines as one, and made a rem with a pasted `# x` a heading.
 
 - **One RemNote tab per browser.** RemNote locks its database across tabs; with two open, each write
   makes the other set a database error ("Need to refresh tabs broadcast"), go to `/database_error` and

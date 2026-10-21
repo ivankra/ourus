@@ -4,10 +4,35 @@
 
 import { OutlineState, type OutlineUpdateParams, type OutlineNode } from '../outline/index.ts';
 import type { Block } from '../parser/index.ts';
-import { applyChanges, composeChanges, lineSpan, mapPos, type ChangeSpec } from '../text.ts';
+import { applyChanges, composeChanges, lineSpan, mapPos, trimMd, type ChangeSpec } from '../text.ts';
 import { OutlinePlan, type OutlinePlanNode, type PlanTree } from '../encoder/index.ts';
 import type { RejectReason, CommandResult, Selection } from './index.ts';
 import { type CommandContext } from './context.ts';
+
+/**
+ * Whether `expected` has an empty item whose first child isn't an item (a paragraph, code): written
+ * under the empty marker, that block reads as the item's own text.
+ */
+export function emptyItemOverBlock(ctx: CommandContext, plan: OutlinePlan): boolean {
+  const visit = (node: PlanTree): boolean => {
+    const first = node.children[0];
+    if (node.kind === 'item' && first && first.kind !== 'item') {
+      const text = OutlinePlan.isPlanned(node) ? (node.text ?? (node.original ? ctx.doc.nodeText(node.original) : '')) : ctx.doc.nodeText(node);
+      if (OutlineState.isEmptyText(text)) return true;
+    }
+    return node.children.some(visit);
+  };
+  return visit(plan.root);
+}
+
+/** Whether a planned or old node is indented code: an old one's block says so, a new one's first line. */
+function indentedCode(node: PlanTree): boolean {
+  if (node.kind !== 'atom') return false;
+  const old = OutlinePlan.isPlanned(node) ? node.original : node;
+  if (old) return old.block.type === 'code_block' && !old.block.fenced;
+  const planned = node as OutlinePlanNode;
+  return planned.blockType === 'code_block' && /^(?: {4}|\t)/.test(planned.lines?.[0] ?? '');
+}
 
 /** Whether `expected` has indented code right after an item it isn't in, where it would read as the item's. */
 export function indentedCodeAfterItem(plan: OutlinePlan): boolean {
@@ -15,8 +40,7 @@ export function indentedCodeAfterItem(plan: OutlinePlan): boolean {
   // the node above in document order, with the nodes holding it
   let above: PlanTree[] = [];
   const visit = (node: PlanTree, holders: PlanTree[]): boolean => {
-    const old = OutlinePlan.isPlanned(node) ? node.original : node;
-    if (node.kind === 'atom' && old?.block.type === 'code_block' && !old.block.fenced && above.some((n) => n.kind === 'item' && !holders.includes(n))) return true;
+    if (indentedCode(node) && above.some((n) => n.kind === 'item' && !holders.includes(n))) return true;
     const here = [...holders, node];
     above = here;
     return node.children.some((child) => visit(child, here));
@@ -29,15 +53,39 @@ export function indentedCodeAfterItem(plan: OutlinePlan): boolean {
  * blank lines between them, Markdown reads them as one block.
  */
 export function adjacentIndentedCode(plan: OutlinePlan): boolean {
-  const indented = (node: PlanTree): boolean => {
-    if (node.kind !== 'atom') return false;
-    const old = OutlinePlan.isPlanned(node) ? node.original : node;
-    if (old) return old.block.type === 'code_block' && !old.block.fenced;
-    const planned = node as OutlinePlanNode;
-    return planned.blockType === 'code_block' && /^(?: {4}|\t)/.test(planned.lines?.[0] ?? '');
-  };
-  const visit = (node: PlanTree): boolean => node.children.some((child, k) => (k > 0 && indented(child) && indented(node.children[k - 1]!)) || visit(child));
+  const visit = (node: PlanTree): boolean => node.children.some((child, k) => (k > 0 && indentedCode(child) && indentedCode(node.children[k - 1]!)) || visit(child));
   return visit(plan.root);
+}
+
+/**
+ * Whether `expected` has a node after an unclosed fence in the fence's container (an item or a quote
+ * holding it, or the document): such a fence reads to its container's end, taking the node in. A
+ * math block's `$$` or a comment's `%%` without its closing one the same.
+ */
+export function afterUnclosedFence(plan: OutlinePlan): boolean {
+  const open = new Set<PlanTree>();
+  const visit = (node: PlanTree, containers: readonly PlanTree[]): boolean => {
+    if (containers.some((c) => open.has(c))) return true;
+    const old = OutlinePlan.isPlanned(node) ? node.original : node;
+    const block = old?.kind === 'atom' ? old.block : old?.kind === 'item' ? old.head : null;
+    const inner = node.kind === 'item' || node.kind === 'quote' ? [...containers, node] : containers;
+    // an item whose text is the fence takes in its own children too
+    const fenced = (block?.type === 'code_block' && block.fenced) || block?.type === 'math_block' || block?.type === 'comment_block';
+    if ((fenced && !block!.closed) || (!old && unclosedLines(node as OutlinePlanNode))) open.add(inner[inner.length - 1]!);
+    return node.children.some((child) => visit(child, inner));
+  };
+  return plan.root.children.some((child) => visit(child, [plan.root]));
+}
+
+/** Whether a new node's planned lines open a block of lines (a fence, `$$`, `%%`) that they don't close. */
+function unclosedLines(node: OutlinePlanNode): boolean {
+  const lines = node.lines;
+  if (!lines?.length || (node.blockType !== 'code_block' && node.blockType !== 'math_block' && node.blockType !== 'comment_block')) return false;
+  const last = lines.length > 1 ? trimMd(lines[lines.length - 1]!) : '';
+  if (node.blockType === 'math_block') return !last.endsWith('$$');
+  if (node.blockType === 'comment_block') return !last.endsWith('%%');
+  const fence = /^[ \t]*(`{3,}|~{3,})/.exec(lines[0]!)?.[1];
+  return !!fence && !new RegExp(`^${fence[0] === '`' ? '`' : '~'}{${fence.length},}$`).test(last);
 }
 
 /** Verifies a plan (renumbered where it needs it), then its fallback if it doesn't read as intended. */
@@ -58,9 +106,13 @@ export function run(ctx: CommandContext, plan: CommandPlan): CommandResult {
  * nothing needs renumbering.
  */
 function renumber(ctx: CommandContext, plan: CommandPlan): CommandPlan | null {
+  // the caret holds an empty node there, never a space as text: that only a plan's placeholders say
+  const head = plan.selection.head;
+  const after = applyChanges(ctx.doc.text, plan.changes);
+  const caret = after[head] === ' ' || after[head] === '\t' ? [] : [head];
   const extra = ctx.encoder.renumber(plan.changes, plan.expected, {
     ...(plan.identity ? { identity: plan.identity } : {}),
-    placeholders: [...(plan.placeholders ?? []), plan.selection.head],
+    placeholders: [...(plan.placeholders ?? []), ...caret],
   });
   if (!extra) return null;
   const { doc } = ctx;
@@ -124,6 +176,14 @@ function verify(ctx: CommandContext, plan: CommandPlan): CommandResult {
     if (typeof retry !== 'string') {
       next = retry;
       selection = { anchor: at, head: at };
+    }
+  } else if (typeof next === 'string') {
+    // a selection's head counts as the caret: an empty node on its line is held there, the selection
+    // staying as it is; the old placeholders, which only the head's line had, are that one
+    const end = lineSpan(newText, plan.selection.head)[1];
+    if (OutlineState.isPlace(newText, end) && newText[end - 1] !== ' ') {
+      const retry = attempt({ ...base, drop: [...(plan.drop ?? []), ...doc.placeholders], placeholders: [...base.placeholders, end] });
+      if (typeof retry !== 'string') next = retry;
     }
   }
   if (typeof next === 'string') return { status: 'rejected', reason: 'encoding-failed', detail: next };

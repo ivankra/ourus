@@ -23,7 +23,8 @@ wins:
    section above, at its end, where it takes nothing in (MoveUp26).
 5. **Otherwise it is refused** (`no-previous-sibling`, MoveUp2, MoveUp5), or where it would give
    another node a new parent: a heading past a heading of another level or past a node it would take
-   into its section (`would-reparent`, MoveUp28, MoveUp33). A paragraph that doesn't move takes
+   into its section (`would-reparent`, MoveUp28, MoveUp33), or a node past an unclosed fence, which
+   would take it in as code (`not-expressible`, MoveUp41). A paragraph that doesn't move takes
    in the list a move leaves right after it, as the text reads it (MoveUp35).
 6. **What would run together is set apart** by a blank line (MoveUp18, MoveUp19, MoveUp20,
    MoveUp36); a paragraph's leading indentation, not part of its text, is rewritten where it would
@@ -87,8 +88,8 @@ tags: common
 
 > moveSubtreeUp
 
-```result
-rejected: no-previous-sibling
+```yaml
+result: rejected no-previous-sibling
 ```
 
 ```buffer
@@ -168,8 +169,8 @@ tags: edge
 
 > moveSubtreeUp
 
-```result
-rejected: no-previous-sibling
+```yaml
+result: rejected no-previous-sibling
 ```
 
 ```buffer
@@ -823,8 +824,8 @@ tags: edge free-form
 
 > moveSubtreeUp
 
-```result
-rejected: would-reparent
+```yaml
+result: rejected would-reparent
 ```
 
 ```buffer
@@ -941,8 +942,8 @@ tags: edge free-form
 
 > moveSubtreeUp
 
-```result
-rejected: would-reparent
+```yaml
+result: rejected would-reparent
 ```
 
 ```buffer
@@ -1140,3 +1141,33 @@ tags: rare
      b
   - y
 ```
+
+## MoveUp41
+
+An unclosed fence reads to the end of its container: moved above the paragraph, it would take the
+paragraph in as code. Refused.
+
+```yaml
+tags: rare markup-fence
+closeBackticks: none
+```
+
+````buffer
+intro
+
+```┃
+code
+````
+
+> moveSubtreeUp
+
+```yaml
+result: rejected not-expressible
+```
+
+````buffer
+intro
+
+```┃
+code
+````

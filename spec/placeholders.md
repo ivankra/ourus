@@ -6,18 +6,22 @@ inside a node's text. While the
 caret is in one, the document reads its line as if a character had been typed at its end, so the
 node exists in the outline: that line end is a **placeholder**, drawn `◌`.
 
-A placeholder can also stand in a deleted character's place. Deleting the first character of an
-item's text can leave the space after it right after the marker (`-  b`), where it would widen the
-item's padding and move its content column, or make the text after it another block (`-  ``` x` is
-code); that space, at the caret, is then the placeholder, read as text, and the item keeps its column
-and its text.
+A placeholder can also stand in a deleted character's place. Deleting the first character of a
+line's text can leave the space after it at the text's start: right after an item's marker (`-  b`),
+where it would widen the item's padding and move its content column, or anywhere the text after it
+would then start another block (`-  ``` x` is code, ` # b` a heading, ` ``` x` a fence that takes
+in the rest of the document). That space, at the caret, is then the placeholder, read as text, and
+the node keeps its column and its text: an item's, a paragraph's, a quote's, on any line of the
+text ([Placeholder17](#placeholder17), [Placeholder18](#placeholder18),
+[Placeholder19](#placeholder19)). A command that rewrites the node (a move, a copy, an indent,
+structured paste) settles the space first, as leaving it does.
 
 Only the editor makes a placeholder, and the document keeps it (each editor view has its own):
 
 - **A command** that leaves the caret in an empty node the text can't hold makes one.
 - **An edit that deletes** text makes one at the caret when the outline would otherwise change
-  there: deleting a child's last character leaves the child, not a heading, and deleting an item's
-  first character keeps its column. Typing never makes one: what is typed is text.
+  there: deleting a child's last character leaves the child, not a heading, and deleting a text's
+  first character keeps its column and its text. Typing never makes one: what is typed is text.
 - **It lasts** while the text doesn't hold its node anyway: typing there ends it.
 - **Leaving it**, the node stays when the text can hold it some other way: an empty item gets a
   blank line above it (`- a` / blank / `  - `), and a deleted character's place gives up its surplus
@@ -40,11 +44,12 @@ child under text.
 | a command leaves the caret in an empty node the text can't hold | made | |
 | a command acts on that node and the caret stays in it (Tab, Shift-Tab) | carried along | |
 | an edit deletes a node's last text on the caret's line | made at the line's end | |
-| an edit deletes an item's first character, widening its padding | made on the space at the caret | |
+| an edit deletes a line's first character, the space after it widening an item's padding or starting a block | made on the space at the caret | |
 | typing | none made; on its line, it ends: the node has text | |
 | the caret leaves an empty item | ends | the item stays, a blank line above it |
 | the caret leaves an empty paragraph, or an empty line in a node's text | ends | the node or line goes |
 | the caret leaves a deleted character's place | ends | the surplus space goes, the text escaped where it would start a block |
+| Delete before the held space, or Backspace after it | ends | the same, the caret staying ([Delete32](delete.md#delete32), [Backspace48](backspace.md#backspace48)); other keys there act at the text's start |
 | the caret leaves an empty node the text can hold | none was made | nothing changes |
 | undo or redo | comes back with the document | |
 | an edit from elsewhere (another plugin, sync) | mapped through the edit; ends if its line gets text | |
@@ -82,9 +87,10 @@ Under `a`'s text, it would be a setext underline: a placeholder holds it.
   - ┃◌
 ```
 
-```outline
-item: a
-  item
+```yaml
+outline: |
+  item: a
+    item
 ```
 
 > cursorDocStart cursorLineBoundaryForward
@@ -620,4 +626,101 @@ tags: rare
 ┃«- a
 
   - »
+```
+
+## Placeholder18
+
+The same at a paragraph's start: deleting its first character before text that at the line's start
+would start a block leaves ` # b`, a heading to bare editors. The space is held as text, as after an
+item's marker ([Placeholder17](#placeholder17)), and leaving, it goes and the text is escaped.
+
+```yaml
+tags: rare
+```
+
+```buffer
+a┃ # b
+
+after
+```
+
+> deleteContentBackward
+
+```buffer
+┃◌ # b
+
+after
+```
+
+> cursorDocEnd cursorCharLeft
+
+```buffer
+\# b
+
+after┃
+```
+
+## Placeholder19
+
+On a paragraph's later line too, where a fence would interrupt the paragraph and take in everything
+after it: the text is escaped as a continuation line.
+
+```yaml
+tags: rare
+```
+
+````buffer
+para
+a┃ ``` x
+
+after
+````
+
+> deleteContentBackward
+
+````buffer
+para
+┃◌ ``` x
+
+after
+````
+
+> cursorDocEnd cursorCharLeft
+
+````buffer
+para
+\``` x
+
+after┃
+````
+
+## Placeholder20
+
+With `enterSplitSpace: start`, the space after a deleted first character, past the padding of the
+item above, is the text's, as `start` reads such padding
+([config](../src/config.ts)): nothing is held, and the text keeps its leading space, as most block
+apps keep it.
+
+```yaml
+tags: rare
+enterSplitSpace: start
+```
+
+```buffer
+- z
+- a┃ x
+```
+
+> deleteContentBackward
+
+```buffer
+- z
+- ┃ x
+```
+
+> cursorDocStart
+
+```buffer
+┃- z
+-  x
 ```

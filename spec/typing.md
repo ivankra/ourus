@@ -1,7 +1,7 @@
 # Typing
 
-What the host types, or deletes a character of, with no ourus command: the text reads as Markdown
-reads it, and these cases pin what it then reads as. The rules:
+What the host types, or deletes a character of, with no ourus command (but a backtick's): the text
+reads as Markdown reads it, and these cases pin what it then reads as. The rules:
 
 1. **Typing authors structure only where the user writes markup** at a line's start: an underline
    under a paragraph makes it a heading (Typing1, Typing2), a list marker on a paragraph's
@@ -11,6 +11,9 @@ reads it, and these cases pin what it then reads as. The rules:
    `-x a`, no item, as every text editor does. Where markup is decorated (`markup: decorated`),
    keeping the caret out of it is the host's: no ourus command leaves one there (guarantee 6), and
    Obsidian's Outliner keeps the user's out of a marker too ("stick the cursor to the content").
+3. **A backtick is ourus's where it opens, closes or changes a code fence** (`insertText`): a fence
+   typed gets its closing fence, and a fence's two runs stay matched ([backtick.md](backtick.md)).
+   Every other character is the host's.
 
 ## Typing1
 
@@ -32,8 +35,9 @@ para
 ---┃
 ```
 
-```outline
-heading 2: para
+```yaml
+outline: |
+  heading 2: para
 ```
 
 ## Typing2

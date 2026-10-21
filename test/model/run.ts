@@ -109,7 +109,7 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
     const firedBefore = [...fired.values()].reduce((a, b) => a + b, 0);
     const before = drawState(doc.text, { anchor: pos, head: pos }, doc.placeholders);
     const model = apply(l.root, caret, cmd, MODE);
-    const state = play({ doc, selection: { anchor: pos, head: pos }, clipboard: '' }, [cmd]);
+    const state = play({ doc, selection: { anchor: pos, head: pos }, clipboard: {} }, [cmd]);
     const r = state.last!;
     const ourusStatus = r.status === 'rejected' ? `rejected:${r.reason}` : r.status;
     const after = lift(state.doc);

@@ -34,11 +34,11 @@ continuation indentation, a quote's `>`), their own indentation kept, and no edi
    it takes the item's place (Fence51). Delete at a closing fence's end before text is refused (Fence35).
 7. **No split or join may assemble a fence from code**: where one would close the block early, the
    block's fences grow past it, as WorkFlowy and Tana write them (Fence36, Fence37, Fence38,
-   Fence39, Fence40; a pasted line too, [Paste91](paste-plain.md#paste91)), and stay longer once it
-   is gone; nor may Cmd-Backspace delete a fence
+   Fence39, Fence40; a pasted line too, [PastePlain29](paste-plain.md#pasteplain29); a character
+   Backspace or Delete takes, Fence62), and stay longer once it is gone; nor may Cmd-Backspace delete a fence
    ([SoftBackspace9](backspace.md#softbackspace9)).
 8. **Tab and Shift-Tab on a code line are the host's**: they indent the code (Fence21). **Pasted
-   text on a code line is code** ([Paste22](paste-plain.md#paste22)).
+   text on a code line is code** ([PastePlain28](paste-plain.md#pasteplain28)).
 9. **The other blocks of lines, math (`$$`), comments (`%%`) and indented code, take the same**:
    Enter and Shift-Enter make a line of the block in its containers, its own indentation carrying
    over, and Backspace and Delete join its lines, the containers' prefix going with the line break
@@ -53,6 +53,8 @@ continuation indentation, a quote's `>`), their own indentation kept, and no edi
 10. **A block moving out of an item or into one takes its blank lines along**: the item's
     indentation on a blank code line goes with the item, what is past it moves with the code
     (Fence48).
+11. **A fence's run is kept matched**: a backtick typed on either fence, or Backspace and Delete in
+    a run, change both fences, and a fence typed is closed below it ([backtick.md](backtick.md)).
 
 Bare Obsidian agrees on most code-line edits; at the fence lines and an item's indentation its
 one-character Backspace and Delete unmake the block (Fence16, Fence23, Fence33).
@@ -85,8 +87,8 @@ tags: common
   ```
 ````
 
-```result
-applied
+```yaml
+result: applied
 ```
 
 > "x"
@@ -371,8 +373,8 @@ code
 
 > enter
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ````buffer
@@ -399,8 +401,8 @@ handleFenceContents: false
 
 > enter
 
-```result
-notApplicable
+```yaml
+result: notApplicable
 ```
 
 ## Fence11
@@ -429,8 +431,8 @@ handleFenceContents: false
   ```
 ````
 
-```result
-applied
+```yaml
+result: applied
 ```
 
 ## Fence12
@@ -502,8 +504,8 @@ code
 
 > enter
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ````buffer
@@ -584,8 +586,8 @@ tags: edge markup-fence
 
 > deleteContentBackward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ````buffer
@@ -640,8 +642,8 @@ tags: edge markup-fence
 
 > deleteContentForward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ````buffer
@@ -693,14 +695,14 @@ tags: common
 
 > indent
 
-```result
-notApplicable
+```yaml
+result: notApplicable
 ```
 
 > outdent
 
-```result
-notApplicable
+```yaml
+result: notApplicable
 ```
 
 ## Fence22
@@ -749,8 +751,8 @@ tags: edge markup-fence
 
 > deleteContentBackward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ````buffer
@@ -778,8 +780,8 @@ tags: rare markup-fence
 
 > deleteContentForward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ````buffer
@@ -808,8 +810,8 @@ tags: edge markup-fence
 
 > deleteContentBackward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ````buffer
@@ -1006,6 +1008,49 @@ tags: edge markup-fence
   ```
 ````
 
+## Fence31b
+
+After a body paragraph, the code goes back to its place among the item's blocks, the blank line
+between them with it.
+
+```yaml
+tags: rare markup-fence
+```
+
+````buffer
+- a
+
+  para
+
+  ┃```
+  code
+  ```
+````
+
+> enter
+
+````buffer
+- a
+
+  para
+
+- ```
+  ┃code
+  ```
+````
+
+> deleteContentBackward
+
+````buffer
+- a
+
+  para
+
+  ```
+  ┃code
+  ```
+````
+
 ## Fence32
 
 Backspace on the empty line Shift-Enter made after a closing fence takes it back
@@ -1097,8 +1142,8 @@ x
 
 > deleteContentBackward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ````buffer
@@ -1154,8 +1199,8 @@ tags: rare markup-fence
 
 > deleteContentForward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ````buffer
@@ -1466,8 +1511,8 @@ tags: rare markup-fence
 
 > deleteContentBackward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ````buffer
@@ -1700,8 +1745,8 @@ $$
 
 > enter
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer
@@ -1754,8 +1799,8 @@ flavor: obsidian
 
 > deleteContentBackward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer
@@ -1767,8 +1812,8 @@ rejected: not-expressible
 
 > cursorLineBoundaryForward deleteContentForward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer
@@ -1845,8 +1890,8 @@ para
 
 > deleteContentBackward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer
@@ -1954,3 +1999,56 @@ flavor: obsidian
 > x
 > %%
 ```
+
+### Fence61
+
+An item whose text is a `$$` with no closing one reads to the end of its container. Outdented, the
+block would take in the item after it, as an unclosed code fence would
+([MoveUp41](move-subtree-up.md#moveup41)): refused.
+
+```yaml
+tags: rare markup-fence
+flavor: obsidian
+```
+
+```buffer
+┃- $$
+- a
+```
+
+> outdent
+
+```yaml
+result: rejected not-expressible
+```
+
+```buffer
+┃- $$
+- a
+```
+
+## Fence62
+
+Backspace on a code line that would leave a fence of it, closing the block early: the fences grow
+past it, as anywhere else a fence would be assembled from code. Elsewhere in code, Backspace is the
+host's.
+
+````yaml
+tags: edge
+````
+
+````buffer
+```
+x┃```
+body
+```
+````
+
+> deleteContentBackward
+
+`````buffer
+````
+┃```
+body
+````
+`````

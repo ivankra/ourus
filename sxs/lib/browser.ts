@@ -63,7 +63,7 @@ export async function ensureProxy(cache: CacheMode, say: (line: string) => void)
   if (running && running.version === proxyVersion() && running.cache === cache && running.httpDir === httpDir) return;
   if (running) {
     const why = running.version !== proxyVersion() ? 'its sources changed' : running.cache !== cache ? `--cache=${cache}, not ${running.cache}` : `its cache is ${running.httpDir}, not ${httpDir}`;
-    say(`restarting the proxy (pid ${running.pid}): ${why}`);
+    say(`Restarting the proxy (pid ${running.pid}): ${why}`);
     await fetch(`${proxyUrl}/__proxy/stop`).catch(() => {});
     for (let i = 0; i < 50 && (await health()); i++) await new Promise((r) => setTimeout(r, 100));
   }
@@ -76,7 +76,7 @@ export async function ensureProxy(cache: CacheMode, say: (line: string) => void)
   child.unref();
   for (let i = 0; i < 100; i++) {
     const h = await health();
-    if (h) return say(`started the proxy on :${proxyPort} (pid ${h.pid}, --cache=${cache}, log ${proxyLog})`);
+    if (h) return say(`Started proxy on :${proxyPort}, pid ${h.pid}, --cache=${cache}, log ${proxyLog}`);
     // one that exits (offline without a certificate) says why last in its log
     if (child.exitCode !== null) break;
     await new Promise((r) => setTimeout(r, 100));
@@ -153,12 +153,52 @@ function runsIn(n: number): string[] {
 /** Whether a run of the app is going (its lock, `.sxs/<app>/<app>.lock`). */
 const running = (app: string): boolean => !!holderOf(record(join(cacheDir, app, `${app}.lock`)));
 
+/** Where a window of `app` loaded in browser `n` is recorded: a run writes it as it opens or takes over the window, and takes it away as it closes it. */
+const windowRecord = (n: number, app: string): string => record(join(browserDir(n), `${app}.window`));
+
+/** The apps with a window loaded in browser `n`, as their runs recorded them: no browser asked. */
+function windowsIn(n: number): Set<string> {
+  try {
+    return new Set(readdirSync(recordDir(browserDir(n))).filter((f) => f.endsWith('.window')).map((f) => f.slice(0, -'.window'.length)));
+  } catch {
+    return new Set();
+  }
+}
+
+/** Records that browser `n` has a window of `app` loaded (`open`), or no longer has. */
+function recordWindow(n: number, app: string, open: boolean): void {
+  if (open) writeFileSync(windowRecord(n, app), '');
+  else rmSync(windowRecord(n, app), { force: true });
+}
+
+/** Forgets every window recorded for browser `n`: one starting, or stopped, has none. */
+function forgetWindows(n: number): void {
+  for (const app of windowsIn(n)) recordWindow(n, app, false);
+}
+
+/**
+ * The app a window holds (`window.__ourusApp`): undefined for none, `hung` where the window doesn't
+ * answer in two seconds (a page stuck in a dialog or a busy script would hold every run that asks it).
+ */
+async function appOf(page: Page): Promise<string | undefined> {
+  const asked = page.evaluate(() => (window as { __ourusApp?: string }).__ourusApp).catch(() => undefined);
+  return Promise.race([asked, new Promise<string>((done) => setTimeout(() => done('hung'), 2000))]);
+}
+
+/** Closes a window, one that doesn't answer too: by its target, through the browser, which a hung page doesn't hold up. */
+async function closeWindow(page: Page): Promise<void> {
+  const closed = page.close({ runBeforeUnload: false }).catch(() => {});
+  if (await Promise.race([closed.then(() => true), new Promise<boolean>((done) => setTimeout(() => done(false), 2000))])) return;
+  const session = await page.context().newCDPSession(page).catch(() => null);
+  await session?.send('Page.close').catch(() => {});
+}
+
 /** The apps loaded in a browser's windows (`window.__ourusApp`), with their pages. */
 async function appsIn(browser: Browser): Promise<Map<string, Page>> {
   const found = new Map<string, Page>();
   for (const page of browser.contexts()[0]?.pages() ?? []) {
-    const app = await page.evaluate(() => (window as { __ourusApp?: string }).__ourusApp).catch(() => undefined);
-    if (app) found.set(app, page);
+    const app = await appOf(page);
+    if (app && app !== 'hung') found.set(app, page);
   }
   return found;
 }
@@ -302,6 +342,7 @@ async function startBrowser(n: number, say: (line: string) => void): Promise<Bro
   rmSync(portRecordOf(profile), { force: true });
   clearStaleLock(profile);
   writeFileSync(flagsFileOf(profile), flagsNow());
+  forgetWindows(n);
   const out = openSync(log, 'a');
   const child = spawn(executablePath, ['--headless=new', ...FLAGS, `--user-data-dir=${profile}`, '--remote-debugging-port=0', 'about:blank'], { detached: true, stdio: ['ignore', out, out] });
   child.unref();
@@ -322,80 +363,105 @@ const leases = new WeakMap<Browser, { n: number; release: () => void }>();
 
 /**
  * The app's lock, for a run of it (its workers each hold a browser too, `lease`): another run of the app
- * while it is held stops. Returns its release.
+ * while it is held stops, or (`wait`, a probe's) waits its turn. Returns its release.
  */
-export async function lockApp(app: string): Promise<() => void> {
+export async function lockApp(app: string, wait = false): Promise<() => void> {
   mkdirSync(join(cacheDir, app), { recursive: true });
-  return takeLock(record(join(cacheDir, app, `${app}.lock`)), false, `${app} (a run of it)`);
+  return takeLock(record(join(cacheDir, app, `${app}.lock`)), wait, `${app} (a run of it)`);
 }
 
 /**
  * A browser of the pool for a worker of a run of `app` (the run holds the app's lock, `lockApp`), held
  * until the worker releases its page (`AppPage.release`): deciding while it holds the pool's lock (so
  * that runs and workers starting together don't start the same browser), one without a worker of the
- * app and with room for a run, the fewest runs first and of those the app's window in it if one has:
- * an idle one, else a new one while fewer than `BROWSERS` run, else a busy one; of the even-numbered or
- * the odd ones only where `parity` says (`Driver.browsers`). With the pool full, it waits for room, or
+ * app: the one with the app's window loaded (busy or not), else, with room for a run, the fewest runs
+ * first and of those the fewest windows: an idle one, else a new one while fewer than `BROWSERS` run,
+ * else a busy one; of the even-numbered or the odd ones only where `parity` says (`Driver.browsers`).
+ * It decides from files alone (the browsers' processes, their flags, the runs' locks, the windows'
+ * records), connecting only to the browser it takes (one that doesn't answer is left alone and another
+ * taken) and to one it stops. With the pool full, it waits for room, or
  * until `gone` says the worker is no longer wanted (null). One running with other flags than these
  * starts again once no run holds it.
  */
 async function lease(app: string, say: (line: string) => void, gone?: () => boolean, parity?: 'even' | 'odd'): Promise<Browser | null> {
   const mine = (n: number): boolean => !parity || n % 2 === (parity === 'even' ? 0 : 1);
   mkdirSync(poolDir, { recursive: true });
+  /** Browsers that run but didn't answer a connection, this lease: left alone, their numbers too. */
+  const unreached = new Set<number>();
+  /** The browser a round took: its number, its run's lock's release, and itself where the round started it. */
+  let taken: { n: number; releaseHere: () => void; browser: Browser | null } | null = null;
   for (const t0 = Date.now(); ; await new Promise((r) => setTimeout(r, 1000))) {
     const releasePool = await takeLock(record(join(poolDir, 'pool.lock')), true, 'the pool of browsers');
     try {
-      const up: { n: number; browser: Browser; runs: string[] }[] = [];
-      /** Browsers running that don't answer (busy, or their port file gone): left alone, their numbers too. */
-      const unreached: number[] = [];
+      // what the pool holds, from its files alone: which browsers run (their processes), their flags,
+      // the runs in each (their locks), the windows loaded in each (their records)
+      const up: { n: number; runs: string[]; windows: Set<string> }[] = [];
       for (const n of poolBrowsers()) {
-        const browser = await connectShared(profileOf(n));
-        // one past the pool's size (a run with a larger one left it): stopped once no run holds it
-        if (n >= BROWSERS) {
-          if (browser && !runsIn(n).length) {
-            say(`stopping Chromium ${n}: past the pool's ${BROWSERS}`);
-            await closeShared(browser, profileOf(n));
-          } else await browser?.close().catch(() => {});
-          continue;
-        }
-        if (!browser && profileHolder(profileOf(n))) {
-          unreached.push(n);
-          say(`Chromium ${n} runs (pid ${profileHolder(profileOf(n))}) but doesn't answer: left alone`);
-        }
-        if (!browser) continue;
+        if (!profileHolder(profileOf(n))) continue;
         let flags = '';
         try {
           flags = readFileSync(flagsFileOf(profileOf(n)), 'utf8');
         } catch {}
-        if (flags !== flagsNow() && !runsIn(n).length) {
-          say(`restarting Chromium ${n}: its flags changed`);
-          await closeShared(browser, profileOf(n));
+        const runs = runsIn(n);
+        // one past the pool's size (a run with a larger one left it), or started with other flags: stopped
+        // once no run holds it (a connection, to close it)
+        if ((n >= BROWSERS || flags !== flagsNow()) && !runs.length) {
+          const browser = await connectShared(profileOf(n));
+          if (browser) {
+            say(n >= BROWSERS ? `stopping Chromium ${n}: past the pool's ${BROWSERS}` : `restarting Chromium ${n}: its flags changed`);
+            await closeShared(browser, profileOf(n));
+            forgetWindows(n);
+          }
           continue;
         }
-        up.push({ n, browser, runs: runsIn(n) });
+        if (n >= BROWSERS) continue;
+        if (unreached.has(n)) continue;
+        up.push({ n, runs, windows: windowsIn(n) });
       }
       // the first number free for a new browser, if the pool (the app's part of it) has one
       let next = 0;
-      while (next < BROWSERS && (!mine(next) || up.some((b) => b.n === next) || unreached.includes(next))) next++;
+      while (next < BROWSERS && (!mine(next) || up.some((b) => b.n === next) || unreached.has(next) || profileHolder(profileOf(next)))) next++;
       const full = next >= BROWSERS;
       const free = up.filter((b) => mine(b.n) && b.runs.length < WINDOWS && !b.runs.includes(app));
-      const fewest = Math.min(...free.map((b) => b.runs.length));
-      let pick: (typeof up)[number] | undefined;
-      // runs spread over the pool's browsers before any takes a second
-      if (free.length && (fewest === 0 || full)) {
-        const least = free.filter((b) => b.runs.length === fewest);
-        for (const b of least) if (!pick && (await appsIn(b.browser)).has(app)) pick = b;
-        pick ??= least[0];
+      // the app's window where one is loaded (a run that kept it, `keep`), in any browser of the app's part
+      // of the pool without a run of the app: taken over, however many runs its browser has (it adds no
+      // window), not loaded again elsewhere, closing another app's window there
+      let pick: { n: number; runs: string[]; windows: Set<string> } | undefined = up.find((b) => mine(b.n) && !b.runs.includes(app) && b.windows.has(app));
+      // else a browser with room for a new window, so that it closes no other app's while one has room;
+      // of those (or, the pool's windows all taken, of all) runs spread over the browsers before any takes
+      // a second, and then the fewest windows
+      if (!pick && free.length) {
+        const roomy = free.filter((b) => b.windows.size < WINDOWS);
+        const among = roomy.length ? roomy : free;
+        const least = Math.min(...among.map((b) => b.runs.length));
+        // a new browser rather than a second run in one, while the pool has room for one and no browser
+        // up has room for a window and no run
+        if (least === 0 || full || roomy.length) pick = among.filter((b) => b.runs.length === least).reduce((a, b) => (b.windows.size < a.windows.size ? b : a));
       }
-      if (!pick && !full) pick = { n: next, browser: await startBrowser(next, say), runs: [] };
-      for (const b of up) if (b !== pick) await b.browser.close().catch(() => {});
-      if (pick) {
-        const releaseHere = await takeLock(record(join(browserDir(pick.n), `${app}.lock`)), false, `${app} in Chromium ${pick.n}`);
-        leases.set(pick.browser, { n: pick.n, release: releaseHere });
-        return pick.browser;
+      // the browser taken: its run's lock (a file) under the pool's lock, so that no other lease takes the
+      // same room; a new browser started under it too, so that no other starts the same one
+      if (pick || !full) {
+        const n = pick ? pick.n : next;
+        const started = pick ? null : await startBrowser(next, say);
+        const releaseHere = await takeLock(record(join(browserDir(n), `${app}.lock`)), false, `${app} in Chromium ${n}`);
+        taken = { n, releaseHere, browser: started };
       }
     } finally {
       releasePool();
+    }
+    if (taken) {
+      // the one connection a lease makes, to the browser it took, with the pool's lock given back: the
+      // leases waiting on it don't wait for a connection too
+      const browser = taken.browser ?? (await connectShared(profileOf(taken.n)));
+      if (browser) {
+        leases.set(browser, { n: taken.n, release: taken.releaseHere });
+        return browser;
+      }
+      taken.releaseHere();
+      unreached.add(taken.n);
+      say(`Chromium ${taken.n} runs (pid ${profileHolder(profileOf(taken.n))}) but doesn't answer: left alone`);
+      taken = null;
+      continue;
     }
     if (gone?.()) return null;
     if (Date.now() - t0 < 1000) say(`the pool's ${parity ? `${parity}-numbered ` : ''}browsers have no room for ${app}: waiting for a run to end`);
@@ -461,6 +527,7 @@ function zombie(pid: number): boolean {
 /** Stops the pool's browsers, each server a driver started (`.sxs/<app>/`, or a worker's in `.sxs/<app>/<n>/`), and the proxy, if running. */
 export async function stopShared(say: (line: string) => void): Promise<void> {
   for (const n of poolBrowsers()) {
+    forgetWindows(n);
     const browser = await connectShared(profileOf(n));
     if (browser) {
       await closeShared(browser, profileOf(n));
@@ -507,7 +574,7 @@ export interface AppPage {
   session?: Session;
   /** The app was already loaded by an earlier run (`window.__ourusApp`), and is to be checked, not opened. */
   reused: boolean;
-  /** Ends the run's use of it: its window closes (a shared browser stays up for the next run). */
+  /** Ends the run's use of it: its window closes, or with `keep` stays loaded for the next run (a shared browser stays up either way). */
   release(): Promise<void>;
   /**
    * Holds the browser's clipboard, which its other windows share, until the returned release: for an
@@ -518,10 +585,13 @@ export interface AppPage {
 
 /**
  * The page a worker drives `app` in. In a browser of the pool: the app's window an earlier run left with
- * it loaded from `url` (one that died before closing it), unless `fresh` asks for a new one; else a new
- * window (one of the app's in a browser). Elsewhere (a headed browser): a page in a context of the run's own.
+ * it loaded from `url` (one that kept it, `keep`, or died before closing it), unless `fresh` asks for a
+ * new one; else a new window (one of the app's in a browser). With `keep`, the window stays loaded when
+ * the run ends, for the next run to take over (the probe's: a probe after another loads nothing), the
+ * longest idle closing when a browser's windows are all taken. Elsewhere (a headed browser): a page in
+ * a context of the run's own.
  */
-export async function appPage(browser: Browser, app: string, url: string, opts: { shared: boolean; fresh: boolean }): Promise<AppPage> {
+export async function appPage(browser: Browser, app: string, url: string, opts: { shared: boolean; fresh: boolean; keep?: boolean }): Promise<AppPage> {
   const held = leases.get(browser);
   if (!opts.shared || !held) {
     const context: BrowserContext = await browser.newContext({ viewport, ignoreHTTPSErrors: true, permissions });
@@ -530,9 +600,12 @@ export async function appPage(browser: Browser, app: string, url: string, opts: 
   writeFileSync(record(join(cacheDir, app, 'last-run')), `${new Date().toISOString()}\n`);
   const context = browser.contexts()[0]!;
   await context.grantPermissions(permissions);
-  // the window closed, its tasks with it, and the browser left to the next run
+  // the window closed, its tasks with it (or kept, loaded, its record staying), and the browser left to the next run
   const release = (page: Page) => async (): Promise<void> => {
-    await page.close().catch(() => {});
+    if (!opts.keep) {
+      await closeWindow(page);
+      recordWindow(held.n, app, false);
+    }
     held.release();
   };
   // the browser's clipboard, held, with the permission to read it granted again: a DevTools connection's
@@ -545,8 +618,15 @@ export async function appPage(browser: Browser, app: string, url: string, opts: 
   };
   // one window of the app in a browser: any more (a run that died opening one) go
   const mine: Page[] = [];
-  for (const p of context.pages()) if ((await p.evaluate(() => (window as { __ourusApp?: string }).__ourusApp).catch(() => undefined)) === app) mine.push(p);
-  for (const extra of mine.slice(1)) await extra.close().catch(() => {});
+  for (const p of context.pages()) {
+    const of = await appOf(p);
+    // a window that doesn't answer is no use to any run, and would hold the next one that asks it
+    if (of === 'hung') {
+      console.log(`closed a window that doesn't answer (${p.url().slice(0, 80)}) in Chromium ${held.n}`);
+      await closeWindow(p);
+    } else if (of === app) mine.push(p);
+  }
+  for (const extra of mine.slice(1)) await closeWindow(extra);
   const page = mine[0];
   if (page) {
     type Marked = { __ourusIdle?: { version?: string } };
@@ -558,20 +638,25 @@ export async function appPage(browser: Browser, app: string, url: string, opts: 
     // Dynalist, for one, lays itself out for a phone there)
     if (!opts.fresh && idle === idleVersion() && page.url().startsWith(url)) {
       await page.setViewportSize(viewport);
+      recordWindow(held.n, app, true);
       return { page, reused: true, release: release(page), clipboard };
     }
-    await page.close().catch(() => {});
+    await closeWindow(page);
+    recordWindow(held.n, app, false);
   }
   // a place among the browser's windows: while every one is taken, the longest idle (an app no run here
   // holds) closes
   const busy = runsIn(held.n);
   const idle = [...(await appsIn(browser))].filter(([a]) => a !== app && !busy.includes(a)).sort((x, y) => lastRunOf(x[0]) - lastRunOf(y[0]));
-  for (let open = context.pages().length; open >= WINDOWS && idle.length; open--) {
+  // (the blank page a browser starts with is no window of an app's)
+  for (let open = context.pages().filter((p) => p.url() !== 'about:blank').length; open >= WINDOWS && idle.length; open--) {
     const [a, p] = idle.shift()!;
-    await p.close().catch(() => {});
+    await closeWindow(p);
+    recordWindow(held.n, a, false);
     console.log(`closed ${a}'s idle window in Chromium ${held.n}, for ${app}'s`);
   }
   const fresh = await newWindow(browser);
   await fresh.setViewportSize(viewport);
+  recordWindow(held.n, app, true);
   return { page: fresh, reused: false, release: release(fresh), clipboard };
 }

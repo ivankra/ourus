@@ -132,7 +132,14 @@ export class OutlineState {
     // a place follows typing that keeps its line empty (a space), so map it past insertions; one inside
     // text replaced is gone with it
     const replaced = (p: number): boolean => sorted.some((c) => c.from < p && p < c.to);
-    const places = this.placeholders.filter((p) => !dropped.has(p) && !replaced(p)).map((p) => mapPos(changes, p, 1));
+    // a place keeps what it stands for: an empty line's end mapped onto a space isn't a held space
+    const space = (t: string, p: number): boolean => t[p] === ' ' || t[p] === '\t';
+    const places = this.placeholders
+      .filter((p) => !dropped.has(p) && !replaced(p))
+      .flatMap((p) => {
+        const at = mapPos(changes, p, 1);
+        return space(text, at) && !space(this.text, p) ? [] : [at];
+      });
     if (params.caret !== undefined && this.keptAt(changes, text, params.caret)) places.push(params.caret);
     return new OutlineState(
       text,
@@ -381,9 +388,12 @@ export class OutlineState {
     const lines: string[] = [];
     let gap = 0;
     let after = false;
+    // a footnote definition's label and indentation are its own prefix piece, which its lines keep
+    const own = node.kind === 'atom' && node.block.type === 'footnote_definition';
     for (const line of this.lines.slice(node.startLine)) {
       const owner = this.nodeAtLine(line.index);
-      if (owner === node) lines.push(this.text.slice(line.contentFrom, line.to));
+      const piece = own ? line.prefix.find((p) => p.block === node.block) : undefined;
+      if (owner === node) lines.push(this.text.slice(piece ? piece.from : line.contentFrom, line.to));
       else if (!owner && lines.length) {
         after = true;
         gap++;

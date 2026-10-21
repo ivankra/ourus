@@ -21,7 +21,7 @@ whose text is only a checkbox is empty. The rules a task adds to Enter's, Backsp
 4. **Before the checkbox, the task is an item**: where the host decorates markup, Backspace there
    joins it as any item (where it shows markup as text, the key is the host's); and Delete before
    the item joins its text, the checkbox going with the marker (TaskDelete1,
-   [obsidian-true-outliner.md](obsidian-true-outliner.md#backspace-before-the-checkbox)). Into an
+   [TO1](obsidian-true-outliner.md#to1)). Into an
    empty item or an empty task, the task keeps its own checkbox (TaskBackspace1, TaskBackspace6,
    TaskDelete2). An empty task below goes as an empty item does (TaskDelete3).
 5. **Inside the checkbox, Backspace and Delete edit its character**, as in text: the brackets stay,
@@ -414,8 +414,8 @@ taskEditing: text
 
 > deleteContentBackward
 
-```result
-applied
+```yaml
+result: applied
 ```
 
 ```buffer
@@ -572,14 +572,12 @@ one; a character typed back makes it a task again.
 ```yaml
 tags: rare markup-task
 flavor: gfm
+outline: |
+  item [ ]: task
 ```
 
 ```buffer
 - [ ┃] task
-```
-
-```outline
-item [ ]: task
 ```
 
 > deleteContentBackward
@@ -588,8 +586,9 @@ item [ ]: task
 - [┃] task
 ```
 
-```outline
-item: [] task
+```yaml
+outline: |
+  item: [] task
 ```
 
 > "x"
@@ -598,8 +597,9 @@ item: [] task
 - [x┃] task
 ```
 
-```outline
-item [x]: task
+```yaml
+outline: |
+  item [x]: task
 ```
 
 ## TaskBackspace9

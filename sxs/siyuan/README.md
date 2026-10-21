@@ -179,7 +179,7 @@ with the reason (`holds`):
 | a heading with more lines | a heading is one line: the next ones a paragraph after it | `backspace.md › SoftBackspace5`, `enter.md › Enter51` |
 | a caret in a math block | the block is drawn (KaTeX), its TeX edited in a popup; a `$$` line alone is an empty math block | `fences.md › Fence42`, `move-subtree-up.md › MoveUp37` |
 | a caret outside a table's cells | a table's cells are its text: a pipe, a cell's padding or the delimiter row has no place | `enter.md › Enter49` |
-| a table SiYuan writes otherwise | a column with a cell of three characters or more is padded to it, its delimiter row longer (`\| a   \| b \|` above `\| one \| 2 \|`) | `enter.md › Enter50`, `paste.md › Paste56` |
+| a table SiYuan writes otherwise | a column with a cell of three characters or more is padded to it, its delimiter row longer (`\| a   \| b \|` above `\| one \| 2 \|`) | `enter.md › Enter50`, `paste-old.md › PasteOld56` |
 | a caret in a heading's #s | its level, not text: the caret goes to the title's start | `outdent.md › Outdent17` |
 
 The driver refuses no tag. `markup-fence` was refused until 2026-10-18 ("code lines that would make a
@@ -213,13 +213,13 @@ splits in the source (`removeBlock`, `removeLi` in `app/src/protyle/wysiwyg/remo
 - **Split text is read again as Markdown**: after Enter, `2. def` is a nested ordered list starting
   at 2 (`Enter35`) and `# def` a heading (`Enter9`, `TaskEnter3`: the caret at its text's start); the
   space at the split stays (`Enter1`, `ShiftEnter1`: whitespace).
-- **Paste**: into an item, what is pasted goes inside it, after its paragraph (`Paste38`); pasted
-  items take the list's kind (into a task list, tasks: `Paste27d`); one pasted block joins the
-  paragraph (`# h` at a paragraph's end is `h` in it: `Paste32`); a trailing line break is dropped
-  (`Paste3`, `Paste5`). "Paste as plain text" (Ctrl+Shift+V) isn't verbatim: the text is read as
+- **Paste**: into an item, what is pasted goes inside it, after its paragraph (`PasteOld38`); pasted
+  items take the list's kind (into a task list, tasks: `PasteOld27d`); one pasted block joins the
+  paragraph (`# h` at a paragraph's end is `h` in it: `PasteOld32`); a trailing line break is dropped
+  (`PasteOld3`, `PasteOld5`). "Paste as plain text" (Ctrl+Shift+V) isn't verbatim: the text is read as
   Markdown into blocks (`Md2BlockDOM`) and flattened back into the block's text
   (`BlockDOM2EscapeMarkerContent`, `pasteAsPlainText` in `app/src/protyle/util/paste.ts`): `x` /
-  `- y` is `xy` (`Paste4`, `Paste64`), `$$` math its TeX (`Paste45`); leading spaces stay (`Paste78`).
+  `- y` is `xy` (`PasteOld4`, `PasteOld64`), `$$` math its TeX (`PasteOld45`); leading spaces stay (`PasteOld78`).
 - **Up from the first line** goes to the document's title, out of the outline (`CursorUp1`); Up and
   Down keep the caret's x, not its column (`CursorUp2`, `CursorDown5`).
 - **A list holds one kind of item**: tasks and plain items given as one list become sibling lists, a
@@ -229,7 +229,7 @@ splits in the source (`removeBlock`, `removeLi` in `app/src/protyle/wysiwyg/remo
 
 SiYuan bugs met on the way:
 
-- **A plain paste into `[a]: b c`** (`Paste69`) makes the item a checked task: the list becomes a task
+- **A plain paste into `[a]: b c`** (`PasteOld69`) makes the item a checked task: the list becomes a task
   list, the item's marker `a` (`data-task="a"`), its text `: xb c`; exported, `- [X] : xb c`.
 - **Shift+Enter before an escaped ```` ``` ````** in code (`Fence38`) leaves the escape at the end of the
   line before and the new line's backticks unescaped: in the editor still code, in SiYuan's Markdown
@@ -243,9 +243,10 @@ checked against the screen's kinds, and the 24 verdicts that went from agree to 
 SiYuan's: **Tab in a paragraph outside a list types a tab** (`indent.md › Indent21`, `Indent22`), a
 heading or a paragraph moves alone, its section or list staying (`move-subtree-down.md › MoveDown4`),
 Shift+Tab on a top-level item makes it a paragraph (`outdent.md › Outdent2`), an item at its list's edge
-stays in the list (`MoveDown18`), a list pasted at a heading's end goes before the list after it
-(`paste.md › Paste59b`, against the declared `pasteStructuredOnParent: after`, measured on the item
-form; with `--ignore-options` the camp agrees in part, and stays declared). Paragraphs join as text
+stays in the list (`MoveDown18`). **Pasting on a node with children isn't one rule**: after an item's
+children, but first in a heading's section and in a paragraph's list, before what is there. Declared
+`pasteOnParent: after`, its item form, so `paste.md › Paste4`, `Paste6`, `Paste11` and
+`Paste12` (a paragraph's list, a heading's section) disagree as declared. Paragraphs join as text
 (`backspace.md › Backspace12`: ourus, taking the blank line, makes one paragraph of two lines).
 
 Open: the projection takes the escape off a block's first line (`\# def` is the block text `# def`),

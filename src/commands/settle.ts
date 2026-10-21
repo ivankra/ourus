@@ -2,7 +2,7 @@
 
 import { OutlineState, type OutlineNode } from '../outline/index.ts';
 import { diffText, lineSpan, trimMd, trimMdEnd, trimMdStart, type ChangeSpec } from '../text.ts';
-import { CommandContext, isEmptyItem, normText } from './context.ts';
+import { CommandContext, dropHeldSpace, heldSpaceAt, isEmptyItem, normText } from './context.ts';
 import { run } from './plan.ts';
 
 /**
@@ -26,18 +26,13 @@ export function settlePlaceholders(doc: OutlineState, caret: number): { changes:
   if (matters.length === 0) return { changes: [], state: doc.update([], { drop: abandoned }) };
   // a deleted character's place after a marker: leaving it, the surplus space goes, the text escaped
   // where it would start a block right after the marker (`- \``` x`)
-  const spaces = matters.filter((p) => doc.text[p] === ' ' || doc.text[p] === '\t');
+  const spaces = matters.filter((p) => heldSpaceAt(doc, p));
   if (spaces.length) {
     let expected = ctx.plan;
     const changes = spaces.flatMap((p) => {
-      let to = p;
-      while (doc.text[to] === ' ' || doc.text[to] === '\t') to++;
-      const node = doc.nodeAt(p);
-      const lines = node ? doc.headLines(node) : [];
-      const escaped = ctx.encoder.escape(doc.text.slice(to, lineSpan(doc.text, p)[1]), 'start', lines.slice(1).map((l) => trimMdStart(l)));
-      if (!node || escaped.at === null) return [{ from: p, to, insert: '' }];
-      expected = expected.setText(node, normText([escaped.text, ...lines.slice(1)]));
-      return [{ from: p, to, insert: '' }, { from: to + escaped.at, to: to + escaped.at, insert: '\\' }];
+      const held = dropHeldSpace(ctx, p, expected);
+      expected = held.plan;
+      return held.changes;
     });
     const next = doc.update(changes, { drop: [...abandoned] });
     if (expected.differenceFrom(next, doc, 'tree') === null) return { changes, state: next };

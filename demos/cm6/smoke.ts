@@ -32,7 +32,20 @@ async function scenario(name: string, before: string, keys: string[], after: str
   await page.focus('.cm-content');
   for (const k of keys) {
     if (k.startsWith('type:')) await page.keyboard.type(k.slice(5));
-    else if (k.startsWith('paste:') || k.startsWith('pastePlain:')) {
+    else if (k === 'copy' || k === 'cut') {
+      // a real copy or cut event, its formats kept for `paste:copied`
+      await page.evaluate((type) => {
+        const data = new DataTransfer();
+        document.querySelector('.cm-content')!.dispatchEvent(new ClipboardEvent(type, { clipboardData: data, bubbles: true, cancelable: true }));
+        (window as unknown as { copied: Record<string, string> }).copied = Object.fromEntries(data.types.map((t) => [t, data.getData(t)]));
+      }, k);
+    } else if (k === 'paste:copied') {
+      await page.evaluate(() => {
+        const data = new DataTransfer();
+        for (const [t, v] of Object.entries((window as unknown as { copied: Record<string, string> }).copied)) data.setData(t, v);
+        document.querySelector('.cm-content')!.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+      });
+    } else if (k.startsWith('paste:') || k.startsWith('pastePlain:')) {
       // a real paste event, as the browser fires it, carrying the text; Ctrl-Shift-V's keydown first
       const plain = k.startsWith('pastePlain:');
       await page.evaluate(([text, plain]) => {
@@ -64,6 +77,11 @@ const results = [
   await scenario('Enter in a paragraph makes a new paragraph', 'para┃\n', ['Enter', 'type:x'], 'para\n\nx\n'),
   await scenario('Enter in a code block is CodeMirror\'s', '```\ncode┃\n```\n', ['Enter', 'type:x'], '```\ncode\nx\n```\n'),
   await scenario('Enter in an ordered list renumbers', '1. a┃\n2. b\n', ['Enter', 'type:x'], '1. a\n2. x\n3. b\n'),
+  await scenario('A typed fence gets its closing fence, in the item', '- a\n- ┃\n', ['type:```py', 'Enter', 'type:x'], '- a\n- ```py\n  x\n  ```\n'),
+  await scenario('A backtick on a closing fence lengthens both fences', '```\nx\n```┃\n', ['type:`'], '````\nx\n````\n'),
+  await scenario('The closing fence typed again closes the block once', '```\nx┃\n```\n', ['Enter', 'type:```'], '```\nx\n```\n'),
+  await scenario('Backspace after a typed fence takes it back', 'a\n\n┃\n', ['type:```', 'Backspace'], 'a\n\n``\n'),
+  await scenario('Backspace on an empty block\'s closing fence takes the block', 'intro\n\n```c++\n\n\n```┃\n\nafter\n', ['Backspace', 'type:!'], 'intro!\n\nafter\n'),
   await scenario('Enter on a task continues the checkbox', '- [x] done┃\n', ['Enter', 'type:next'], '- [x] done\n- [ ] next\n'),
   await scenario('a rejected command leaves the text alone', '- a┃\n- b\n', ['Tab'], '- a┃\n- b\n'.replace('┃', '')),
   await scenario('typing keeps the outline in sync for the next command', '- a\n- b┃\n', ['type: and more', 'Tab', 'Shift+Tab'], '- a\n- b and more\n'),
@@ -77,7 +95,7 @@ const results = [
   await scenario('Delete at an item\'s text start, then leave: the surplus space goes', '- ┃a b\n  - c\n', ['Delete', 'ArrowDown'], '- b\n  - c\n'),
   await scenario('Enter twice ends the list', '- a┃\n', ['Enter', 'Enter', 'type:text'], '- a\n\ntext\n'),
   await scenario('Enter on an empty item mid-list makes another', '- a┃\n- b\n', ['Enter', 'Enter', 'type:p'], '- a\n- \n- p\n- b\n'),
-  await scenario('Enter before a typed marker keeps it as text', '- abc ┃- def\n', ['Enter'], '- abc \n- \\- def\n'),
+  await scenario('Enter before a typed marker keeps it as text', '- abc ┃- def\n', ['Enter'], '- abc\n- \\- def\n'),
   await scenario('Shift-Enter breaks a line inside the item', '- one┃ two\n', ['Shift+Enter', 'type:x'], '- one\n   xtwo\n'),
   await scenario('Shift-Enter at the end, then type: same item, two lines', '- one┃\n- b\n', ['Shift+Enter', 'type:two', 'Tab'], '- one\n  two\n- b\n'),
   await scenario('Shift-Enter then leave: the empty line goes away', '- one┃\n- b\n', ['Shift+Enter', 'ArrowDown'], '- one\n- b\n'),
@@ -92,8 +110,10 @@ const results = [
   await scenario('Paste places a tab list as nodes in a two-space list', '- top\n  - sib┃\n', ['paste:- a\n\t- b\n'], '- top\n  - sib\n  - a\n    - b\n'),
   await scenario('Ctrl-Shift-V pastes lines into the item', '- a┃b\n', ['pastePlain:x\ny\n'], '- ax\n  y\n  b\n'),
   await scenario('Paste of a code block into an empty item fills it', '- a\n- ┃\n', ['paste:```\ncode\n```\n'], '- a\n- ```\n  code\n  ```\n'),
-  await scenario('Paste of an ordered list into a bullet list keeps its numbers as text', '- a┃\n  - kid\n', ['paste:1. x\n2. y\n'], '- a\n  - 1\\. x\n  - 2\\. y\n  - kid\n'),
+  await scenario('Paste of an ordered list into a bullet list takes its bullets', '- a┃\n  - kid\n', ['paste:1. x\n2. y\n'], '- a\n  - x\n  - y\n  - kid\n'),
   await scenario('Paste of one line is plain text', '- a┃\n', ['paste: and more'], '- a and more\n'),
+  await scenario('Cut at a caret takes the item and its children, paste puts them back', '- one┃\n  - kid\n- two\n', ['cut', 'End', 'paste:copied'], '- two\n- one\n  - kid\n'),
+  await scenario('Copy of a selection in an item\'s text pastes as its Markdown', '- a **b**┃\n', ['Shift+Home', 'copy', 'End', 'paste:copied'], '- a **b**a **b**\n'),
   await scenario('Backspace joins text into an empty item above', '- \n- ┃b\n', ['Backspace', 'type:X'], '- Xb\n'),
   await scenario('Delete on an empty item with children pulls its first child up', '- x\n- ┃\n  - a\n', ['Delete', 'type:X'], '- x\n- Xa\n'),
   await scenario('Mod-Backspace stops at the text start', '- alpha beta┃\n', ['Control+Backspace', 'type:x'], '- x\n'),

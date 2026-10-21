@@ -51,6 +51,9 @@ function select(anchor: number, head: number) {
   area.setSelectionRange(Math.min(anchor, head), Math.max(anchor, head), head < anchor ? 'backward' : 'forward');
 }
 
+/** ourus's own edit is being made: its input events aren't typing. */
+let applying = false;
+
 /** Replaces the span the changes cover with what they make of it, as one step of the browser's undo. */
 function apply(changes: readonly ChangeSpec[], next: OutlineState) {
   doc = next; // before the input event the edit fires, so it isn't read back
@@ -61,7 +64,10 @@ function apply(changes: readonly ChangeSpec[], next: OutlineState) {
   const to = Math.max(...changes.map((c) => c.to));
   const insert = next.text.slice(from, next.text.length - (old.length - to));
   area.setSelectionRange(from, to);
-  if (!document.execCommand(insert ? 'insertText' : 'delete', false, insert) || area.value !== next.text) {
+  applying = true;
+  const done = document.execCommand(insert ? 'insertText' : 'delete', false, insert);
+  applying = false;
+  if (!done || area.value !== next.text) {
     // the edit didn't come out as planned (and was read back as it did): set the text outright
     area.value = next.text;
     doc = next;
@@ -137,6 +143,18 @@ const INPUTS: Record<string, Command['type']> = {
 };
 
 area.addEventListener('beforeinput', (e) => {
+  // typing: ourus's where Markdown reads the character as structure (a backtick), else the browser's
+  if (e.inputType === 'insertText' && e.data && !applying && !composing && !e.isComposing && e.cancelable) {
+    const result = executeCommand(doc, { type: 'insertText', text: e.data }, selection());
+    if (result.status === 'notApplicable') return;
+    e.preventDefault();
+    say(`insertText: ${result.status === 'rejected' ? `rejected — ${result.reason}` : result.status}`);
+    if (result.status === 'applied') {
+      apply(result.changes, result.state);
+      select(result.selection.anchor, result.selection.head);
+    }
+    return;
+  }
   const type = INPUTS[e.inputType];
   if (!type || keyed || composing || e.isComposing || !e.cancelable) return;
   if (run({ type } as Command).status !== 'notApplicable') e.preventDefault();
@@ -169,13 +187,29 @@ const lift = () => (keys.style.bottom = `${Math.max(0, innerHeight - viewport!.h
 viewport?.addEventListener('resize', lift);
 viewport?.addEventListener('scroll', lift);
 
+// Ctrl-C and Ctrl-X: the selection's Markdown, every format ourus gives (the node at a caret alone);
+// a cut takes it out. Where ourus steps aside, the browser's
+for (const type of ['copy', 'cut'] as const) {
+  area.addEventListener(type, (e) => {
+    if (composing || !e.clipboardData) return;
+    const result = run({ type });
+    if (result.status === 'notApplicable') return;
+    e.preventDefault();
+    if (result.status === 'applied') for (const [format, text] of Object.entries(result.clipboard ?? {})) e.clipboardData.setData(format, text);
+  });
+}
+
 // Ctrl-V places Markdown as nodes, Ctrl-Shift-V puts the text into the node at the caret
 area.addEventListener('paste', (e) => {
   if (composing) return;
-  const type = plainPaste ? 'pastePlain' : 'pasteStructured';
+  const type = plainPaste ? 'pastePlain' : 'paste';
   plainPaste = false;
-  const text = e.clipboardData?.getData('text/plain');
-  if (text && run({ type, text }).status !== 'notApplicable') e.preventDefault();
+  // Ctrl-V reads every format the clipboard has (a page's HTML, a Markdown app's `text/markdown`), Ctrl-Shift-V its text
+  const data = e.clipboardData;
+  const text = data?.getData('text/plain');
+  if (!data || !text) return;
+  const clipboard = Object.fromEntries(['text/plain', 'text/markdown', 'text/html', 'vscode-editor-data'].flatMap((t) => (data.types.includes(t) ? [[t, data.getData(t)]] : [])));
+  if (run(type === 'paste' ? { type, clipboard } : { type, text }).status !== 'notApplicable') e.preventDefault();
 });
 
 // typing, undo and the like: the one span that changed, read back with the caret

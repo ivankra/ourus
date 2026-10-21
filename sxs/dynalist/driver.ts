@@ -94,7 +94,9 @@ export const driver: Driver = {
     moveSubtreeDown: 'Control+ArrowDown',
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
     deleteSubtree: 'Control+Shift+Backspace',
-    pasteStructured: 'Control+v',
+    copy: 'Control+c',
+    cut: 'Control+x',
+    paste: 'Control+v',
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
     redo: 'Control+y',
@@ -108,7 +110,20 @@ export const driver: Driver = {
   // and a code block's fences are text, edited a character at a time: all played, all Dynalist's
   refuses: [],
   ordered: true,
-  behaves: { enterSplitSpace: 'start', outdent: 'logical', pasteStructuredLines: 'items', emptyItemWithChildren: 'refuse', joinWithChildren: 'refuse', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after', pasteStructuredParagraphList: 'children' },
+  // a typed fence is left open (Backtick2, Backtick12, Backtick15)
+  behaves: {
+    outdent: 'logical',
+    enterSplitSpace: 'start',
+    joinWithChildren: 'refuse',
+    emptyItemWithChildren: 'refuse',
+    closeBackticks: 'none',
+    copyAtCaret: 'host',
+    copySelection: 'nodes',
+    pasteLines: 'items',
+    pastePlainLines: 'enter',
+    pasteOnParent: 'after',
+    pasteParagraphList: 'children',
+  },
   // "Unindent in place" (Settings › Editor): Shift+Tab takes the item's later siblings along as children
   settings: { outdent: ['logical', 'direct'] },
   holds(doc) {

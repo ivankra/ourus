@@ -62,15 +62,24 @@ runs, `.sxs/results/<app>/<file>.json`, have each step's buffers, ourus's and th
 
 To see what the apps do on a shape no case draws, without writing a case or a result,
 [`probe.ts`](probe.ts) (`npm run probe`) plays a buffer and actions on ourus and on the apps named
-first, as `run.ts` names them, in parallel (each a `run.ts --probe` of its own), and prints each step's
-states, the apps grouped by what they did beside the ourus state they are compared with. With no
+first, as `run.ts` names them, in parallel (each a `run.ts --probe` of its own, `--keep-windows`, so a
+probe after another loads no app). It prints ourus's states first, then each app as its run ends: its
+verdict, its long id and seconds, then, aligned, the state it is compared with where that isn't
+ourus's own result (`= ourus as blocks`, `against ourus, under …` for its declared values), or why it
+was skipped; then its state as it is. A state is
+held by a bracket on the left (`⎡ ⎢ ⎣`, `[` for one line). An ourus state other than ourus's own that
+an app doesn't agree with is printed once before it (`= ourus as blocks`), unless an agreeing app
+showed it. Coloured on a terminal. With no
 apps (the first argument a buffer: a caret, a selection, a space or a line break in it), ourus alone:
 
 ```
 node sxs/probe.ts '- one⏎  ┃two' shiftEnter deleteContentBackward        # ourus alone, at once
+node sxs/probe.ts '- one⏎  |two' shiftEnter                              # | for the caret, on the command line
 node sxs/probe.ts all '- one⏎  ┃two' shiftEnter deleteContentBackward    # and every app
 node sxs/probe.ts block --file=probes.md     # several probes in the spec's format, one start each
+node sxs/probe.ts block probes.md            # the same: an .md file that exists
 node sxs/probe.ts all --case=Enter28         # a spec case's start and actions
+node sxs/probe.ts all Enter28                # the same: a case's ID alone (IDs are unique across the spec)
 ```
 
 Options are the case's (`--flavor=obsidian`, `--clipboard=`, `--tags=free-form`); `--spec` prints the
@@ -99,6 +108,7 @@ pick the examples matching any of them; none picks every example. Options:
 | `--workers=N` | N workers side by side, each in a browser of the pool of its own (or a window in an Obsidian of the driver's pool); by default one per 30 examples, at most 6 (the pool's browsers) and the driver's `parallel` (1 by default for one that starts its app) |
 | `--cache=MODE` | how the proxy uses its cache: `use` (the default) serves what it has and fetches and keeps the rest; `offline` serves only what it has and reaches no network, a miss and anything that would go live (other methods, a rule's live requests, WebSockets) failing (504), and writes nothing to the cache, which may then be read-only (`OURUS_SXS_HTTP`), after a run online made it and the proxy's certificate; `refresh` fetches everything anew, once per proxy run, and keeps it |
 | `--fresh` | load the app anew, rather than take over the page a run that died left loaded |
+| `--keep-windows` | leave the app's window loaded when the run ends, for the next run to take over ([`probe.ts`](probe.ts) passes it: a probe after another loads nothing); by default the window closes. A browser's windows are its runs' records (`<app>.window`), so a run takes the browser holding its app's window without asking any browser |
 | `--no-report` | don't copy the report into `<app>.md` (nor the table into `README.md`) |
 | `--timing` | print how long the app took to settle after each action, and what it waited on last |
 | `--plain-clipboard` | give the app the clipboard's Markdown as plain text only, without its HTML rendering |
@@ -144,9 +154,10 @@ every verdict the runs gave.
 above for each, in a process of its own, all at once (their workers as the pools have room), each with its output
 in `.sxs/<app>/sxs.log` and its report and run as data beside it, as alone. The proxy is
 started first, so the runs don't race to start it; each app has a browser of its own. A line per app says its
-counts as it finishes; then a table gives every example's verdict in each app, the apps by how many
-examples they disagree on, the fewest first, in every table (`ok`, `DIFF`, `caret`,
-`space`, `ERROR`, `-` for skipped; in `README.md`, ✓, ✗, C, S, E, –, explained in its legend): every row for a few examples or with `-v`, else the rows where
+counts as it finishes; then a table gives every example's verdict in each app, the apps by their short ids
+(`LO`, `RR`) and by how many examples they disagree on, the fewest first, in every table, a row per spec file
+and under it its cases by their ids (`ok`, `D`, `C`, `S`, `ERROR`, `-` for skipped; in `README.md`,
+✓, ✗, C, S, E, –, explained in its legend): every row for a few examples or with `-v`, else the rows where
 the apps don't all agree. The table is written too, as Markdown, to `.sxs/results/README.md` with its
 heatmap, `heatmap.svg` (how alike two apps did in the examples both ran alike, both as written or both adapted the same way:
 the same result 1, the same but for the caret or spaces ½; ourus among them, as its own runs of the examples have it, `test/spec-run.ts`); a run of every app on the whole spec copies both here, into [`README.md`](README.md) below its introduction (unless an app failed, which would lose its column; an app with no verdicts, wanting a session or with no run to regenerate from, is left out of the table),
@@ -158,9 +169,8 @@ reads (`12-sxs.md` §20 has how it went wrong before).
 In `README.md` the summary gives each app's id (two capitals, its driver's `shortId`: `LO` for Logseq (OG)) and its
 model (`block` or `text`) after its name; the tables below it head an app's column with its id, linking
 its report, with its name as the link's title. In its table of
-examples a bold row names each spec file, and each example is its own name (not its sections'),
-at most 20 characters and `…`, linking to it in the spec, with its full name, sections and all, as
-the link's title (a tooltip); after the apps come the count of apps that disagree on it and its
+examples a bold row names each spec file, and each example is its ID, at most 20 characters and
+`…`, linking to it in the spec, with its whole ID as the link's title (a tooltip); after the apps come the count of apps that disagree on it and its
 rank, and a file's total row gives the examples each app disagrees on and their sum. A verdict in brackets, `(✗)`, is
 a difference in an example adapted for that app (its buffers projected onto blocks), so it compares
 those, not the buffers, with what was adapted as its tooltip (`adapted: heading`); an adapted
@@ -245,18 +255,15 @@ Later runs reuse them, so a run of one example takes under a second. Stop them a
    fresh document (through whatever the app offers: a plugin API, its stores), and the runner checks
    that the app holds it as given, since an app that rewrites its input (trimming, normalizing)
    would make the test meaningless. Then the actions are played as a user plays them, with the app's
-   keys; text is typed a character at a time; pastes put the clipboard first: the example's
-   Markdown as plain text and, where it has structure, rendered as HTML too
-   ([`lib/clipboard.ts`](lib/clipboard.ts)), as a copy from a rendered page carries it. Nearly every
-   app reads the HTML when there is one (both Logseqs, Tine, Roam, Dynalist, WorkFlowy, SiYuan, Tana, the
-   Obsidian apps and SilverBullet converting it; BlockNote at a text's end only; Tana's paste is a
-   choice among readings of the clipboard, [`tana/README.md`](tana/README.md#paste)); ourus reads the
-   Markdown, as a Markdown host passes it the plain text. Plain lines carry no HTML, as a copy of
-   plain text doesn't, and Emacs's kill ring holds text alone. Which copy the spec's clipboard
-   stands for decides verdicts where an app reads the two formats otherwise: played with the text
-   alone (`--plain-clipboard`, as a copy out of a Markdown source carries it), 12 of Tana's 48 paste
-   verdicts changed (a list pasted as Markdown goes after the item, as HTML to the end of its
-   parent's children); SilverBullet's buffers changed and none of its verdicts. After every key the
+   keys; text is typed a character at a time; pastes put the clipboard first: exactly the formats
+   the case gives (its `clipboard`, keyed by MIME type: [the spec's README](../spec/README.md)),
+   through a copy event (`setData` takes any type, and a real Ctrl-V's paste event has them all), and
+   an app's report shows them so, a table of the clipboard given to the app above the command, a
+   column per MIME type. Emacs's kill ring holds the text alone. `--plain-clipboard` gives the app
+   `text/plain` alone. (Runs from before October 2026 had the case's Markdown as `text/plain` and,
+   where it had structure, its commonmark rendering as `text/html`, a copy no source makes;
+   they are read back so, `startClipboard` and
+   [`lib/clipboard.ts`](lib/clipboard.ts).) After every key the
    runner **waits for the app to settle** ([`lib/idle.ts`](lib/idle.ts)), never for a fixed time: an init
    script tracks the page's short timers and animation frames until they fire or are cleared, and
    its DOM mutations; the page is idle when none is pending and nothing changed for 40 ms, and the
@@ -274,7 +281,8 @@ Later runs reuse them, so a run of one example takes under a second. Stop them a
    depth and a text, the caret's block and offsets. The spec's buffers are projected onto the same
    form with ourus's own parser (every outline node a block holding its own text, in canonical
    Markdown: `[ ] ` for a task, `## ` for a heading, `\n` between lines), and compared block for
-   block. Verdicts: `agree`; `caret` (blocks agree, the caret doesn't); `whitespace` (they differ in
+   block, a code block's closing fence at a block's end optional (a block ends its code: ourus closes
+   the fences it writes, Logseq and Tine leave them open). Verdicts: `agree`; `caret` (blocks agree, the caret doesn't); `whitespace` (they differ in
    spaces next to line breaks only; a text app's text, in spaces before line breaks, or in spaces
    anywhere that leave the document as ourus reads it the same, its code byte for byte); `disagree` (the blocks differ: their text, their nesting, how
    many there are); `error` (the run failed, or the app didn't hold the
@@ -285,6 +293,14 @@ Later runs reuse them, so a run of one example takes under a second. Stop them a
    marks a place rather than text, and the app's text is compared with them as drawn, caret included
    (`whitespace`: they differ only in spaces ending lines). Nothing is projected, so quotes, blank
    lines and frontmatter run too.
+
+   A step's clipboard is its `text/plain`, read back after the step (a test that uses the clipboard
+   and gives none starts with an empty one, so a copy of nothing reads as nothing): `whitespace` where
+   it is written otherwise but reads as the same outline (an app's tabs for indentation, no final line
+   break), the same items in lists of the same kind; else `disagree`. A copy or cut at a caret, which
+   ourus takes as the node's (`copyAtCaret: node`), is played on an app that copies nothing there
+   (`copyAtCaret: host`) on the node selected its way first, as it selects a block (`selectSubtree`:
+   Escape in Logseq, Tine and Roam, Shift+Up in Athens), and judged against ourus's copy.
 6. **Reporting**. Disagreements are printed with both outcomes drawn; a run of every example writes
    `<app>.md`: the app (by its directory's name), its version, its URL and the command as
    frontmatter, the counts, then the original and the adapted cases in sections of their own. Each
@@ -362,7 +378,8 @@ stops it: SiYuan's kernels, one for each worker, in `.sxs/siyuan/<n>/`); `load` 
 document with the starting state, the caret placed); `read` (the state back, in canonical form);
 the keys for each action (`select…` motions are the same keys with Shift), and `act` for those
 emulated with keys (Logseq has no key for the document's start: Up until the caret stops, then
-Home); what it can't hold (`refuses`, `holds`); how it behaves where ourus has an option
+Home; `selectSubtree`, the block at the caret selected with its children, which `deleteSubtree`
+then deletes); what it can't hold (`refuses`, `holds`); how it behaves where ourus has an option
 (`behaves`), and which of those options it has settings for (`settings`, set by `configure` before a
 test that needs other values than the last one); its busy signal for settling (`idle.busy`, a JavaScript expression);
 how many of a run's workers it takes (`parallel`: 1 by default for an app it starts, whose state outside

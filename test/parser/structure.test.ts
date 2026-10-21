@@ -7,6 +7,8 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import fc from 'fast-check';
 import { SyntaxTree } from '../../src/parser/syntax.ts';
+import { gfm } from '../../src/parser/gfm.ts';
+import { renderHtml } from '../../src/parser/html.ts';
 import { arbDoc, TIDY, WILD } from './arbitraries.ts';
 import { DEVIATIONS, ourusSkeleton, refdefLines, referenceSkeleton } from './oracle.ts';
 
@@ -53,4 +55,10 @@ test('prefix pieces of a nested list inside a quote', () => {
     'blockquote:quote:"> " item:indent:"  "',
   ]);
   assert.equal(syntax.lines[3]!.leaf?.type, 'paragraph');
+});
+
+test("text right after a task's checkbox is no link reference definition (GFM: cmark-gfm reads the checkbox after the blocks, as micromark does)", () => {
+  assert.equal(renderHtml(SyntaxTree.parse('- [ ] [r]: /u\n', gfm)), '<ul>\n<li><input type="checkbox" disabled="" /> [r]: /u</li>\n</ul>\n');
+  // a definition starting a later paragraph of the item is one
+  assert.equal(SyntaxTree.parse('- [ ] x\n\n  [r]: /u\n', gfm).root.children[0]!.children[0]!.children.map((b) => b.type).join(' '), 'paragraph refdef');
 });

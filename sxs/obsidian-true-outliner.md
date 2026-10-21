@@ -5,7 +5,7 @@ version: "1.14.4, true-outliner 0.14.4"
 url: "app://obsidian.md/"
 model: "text"
 command: "node sxs/run.ts obsidian-true-outliner"
-elapsed_s: 432
+elapsed_s: 498
 workers: 2
 ---
 
@@ -15,38 +15,44 @@ Summary:
 
 | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- |
-| **229 (25%)** | **[67](#caret-67) (7.4%)** | **[35](#whitespace-35) (3.9%)** | **[421](#disagree-421) (46%)** | **0 (0%)** | **[155](#skipped-155) (17%)** | **907** |
+| **260 (27%)** | **[68](#caret-68) (7%)** | **[29](#whitespace-29) (3%)** | **[444](#disagree-444) (46%)** | **0 (0%)** | **[169](#skipped-169) (17%)** | **970** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| [backspace.md](../spec/backspace.md) | 30 |  | 1 | 34 |  | 13 | **78** |
+| [backspace.md](../spec/backspace.md) | 30 |  | 1 | 38 |  | 13 | **82** |
+| [backtick.md](../spec/backtick.md) | 5 |  |  | 18 |  | 9 | **32** |
+| [copy.md](../spec/copy.md) | 2 |  |  | 4 |  | 7 | **13** |
 | [cursor.md](../spec/cursor.md) | 20 | 12 |  |  |  | 4 | **36** |
 | [delete-subtree.md](../spec/delete-subtree.md) |  |  |  |  |  | 10 | **10** |
-| [delete.md](../spec/delete.md) | 16 |  | 1 | 16 |  | 19 | **52** |
-| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 8 | **8** |
-| [enter.md](../spec/enter.md) | 22 |  | 1 | 38 |  | 28 | **89** |
-| [fences.md](../spec/fences.md) | 13 | 3 | 1 | 44 |  | 4 | **65** |
+| [delete.md](../spec/delete.md) | 16 |  | 1 | 18 |  | 20 | **55** |
+| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 9 | **9** |
+| [enter.md](../spec/enter.md) | 23 |  | 1 | 40 |  | 28 | **92** |
+| [fences.md](../spec/fences.md) | 13 | 3 | 1 | 46 |  | 5 | **68** |
 | [gaps.md](../spec/gaps.md) |  | 11 | 1 | 6 |  | 1 | **19** |
 | [indent.md](../spec/indent.md) | 19 | 1 | 1 | 9 |  | 6 | **36** |
 | [move-subtree-down.md](../spec/move-subtree-down.md) | 7 | 12 | 1 | 18 |  | 1 | **39** |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 5 | 14 | 1 | 18 |  | 2 | **40** |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 5 | 14 | 1 | 18 |  | 3 | **41** |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 26 | 6 | 4 | 26 |  | 5 | **67** |
 | [outdent.md](../spec/outdent.md) | 9 | 1 |  | 15 |  | 10 | **35** |
-| [paste-plain.md](../spec/paste-plain.md) | 2 |  | 4 | 22 |  |  | **28** |
-| [paste.md](../spec/paste.md) | 17 |  | 5 | 50 |  | 23 | **95** |
-| [placeholders.md](../spec/placeholders.md) | 6 |  | 1 | 10 |  |  | **17** |
-| [quotes.md](../spec/quotes.md) | 9 | 2 | 8 | 71 |  | 6 | **96** |
+| [paste-conv.md](../spec/paste-conv.md) | 4 |  |  | 2 |  |  | **6** |
+| [paste-html.md](../spec/paste-html.md) | 3 | 1 | 2 | 13 |  |  | **19** |
+| [paste-list-form.md](../spec/paste-list-form.md) | 4 |  |  | 2 |  |  | **6** |
+| [paste-list.md](../spec/paste-list.md) | 8 |  |  | 13 |  | 7 | **28** |
+| [paste-plain.md](../spec/paste-plain.md) | 21 |  |  | 9 |  | 4 | **34** |
+| [paste.md](../spec/paste.md) | 1 |  | 1 | 20 |  | 5 | **27** |
+| [placeholders.md](../spec/placeholders.md) | 6 |  | 1 | 12 |  | 1 | **20** |
+| [quotes.md](../spec/quotes.md) | 10 | 2 | 8 | 71 |  | 6 | **97** |
 | [scenarios.md](../spec/scenarios.md) | 9 | 4 |  | 11 |  | 2 | **26** |
-| [shift-enter.md](../spec/shift-enter.md) | 2 |  | 5 | 22 |  | 5 | **34** |
+| [shift-enter.md](../spec/shift-enter.md) | 2 |  | 5 | 24 |  | 5 | **36** |
 | [tasks.md](../spec/tasks.md) | 13 |  |  | 8 |  | 7 | **28** |
 | [typing.md](../spec/typing.md) | 3 |  |  |  |  |  | **3** |
 | [undo.md](../spec/undo.md) | 1 | 1 |  | 3 |  |  | **5** |
 | [z-open.md](../spec/z-open.md) |  |  |  |  |  | 1 | **1** |
-| **total** | **229 (25%)** | **67 (7.4%)** | **35 (3.9%)** | **421 (46%)** | **0 (0%)** | **155 (17%)** | **907** |
+| **total** | **260 (27%)** | **68 (7%)** | **29 (3%)** | **444 (46%)** | **0 (0%)** | **169 (17%)** | **970** |
 
-## Disagree (421)
+## Disagree (444)
 
 ### [Backspace4](../spec/backspace.md#backspace4)
 
@@ -1192,6 +1198,51 @@ code
 </td></tr>
 </table>
 
+### [SoftBackspace11](../spec/backspace.md#softbackspace11)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃ # b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃ # b
+```
+
+</td></tr>
+</table>
+
+> deleteSoftLineBackward
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃ # b
+```
+
+</td><td>
+
+```buffer
+┃\# b
+```
+
+</td></tr>
+</table>
+
 ### [Backspace43](../spec/backspace.md#backspace43)
 
 <table>
@@ -1292,6 +1343,973 @@ para
 - a
 
 - b┃
+```
+
+</td></tr>
+</table>
+
+### [Backspace47](../spec/backspace.md#backspace47)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃ # b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃ # b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-┃ # b
+```
+
+</td><td>
+
+```buffer
+┃\# b
+```
+
+</td></tr>
+</table>
+
+### [Backspace48](../spec/backspace.md#backspace48)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃ # b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃ # b
+```
+
+</td></tr>
+</table>
+
+> cursorCharRight deleteContentBackward
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃# b
+```
+
+</td><td>
+
+```buffer
+- ┃\# b
+```
+
+</td></tr>
+</table>
+
+### [Backspace49](../spec/backspace.md#backspace49)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+para
+- ┃i
+| a |
+|---|
+```
+
+</td><td>
+
+```buffer
+para┃i
+
+| a |
+|---|
+```
+
+</td><td>
+
+```buffer
+para┃i
+| a |
+\|---|
+```
+
+</td></tr>
+</table>
+
+### [Backtick1](../spec/backtick.md#backtick1)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+intro
+
+┃
+```
+
+</td></tr>
+</table>
+
+> "```"
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+intro
+
+``
+
+`
+
+```
+┃
+````
+
+</td><td>
+
+````buffer
+intro
+
+```┃
+```
+````
+
+</td></tr>
+</table>
+
+> "js" enter "x"
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+intro
+
+``
+
+`
+
+```
+js
+x┃
+````
+
+</td><td>
+
+````buffer
+intro
+
+```js
+x┃
+```
+````
+
+</td></tr>
+</table>
+
+### [Backtick2](../spec/backtick.md#backtick2)
+
+> "```"
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- ┃
+```
+
+</td><td>
+
+````buffer
+- a
+- ``
+- `
+
+```
+┃
+````
+
+</td><td>
+
+````buffer
+- a
+- ```┃
+  ```
+````
+
+</td></tr>
+</table>
+
+### [Backtick3](../spec/backtick.md#backtick3)
+
+> "```"
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> quote
+>
+> ┃
+```
+
+</td><td>
+
+````buffer
+> quote
+>
+> ``
+
+`
+
+> ```┃
+````
+
+</td><td>
+
+````buffer
+> quote
+>
+> ```┃
+> ```
+````
+
+</td></tr>
+</table>
+
+### [Backtick4](../spec/backtick.md#backtick4)
+
+> "````"
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+````buffer
+``
+
+`
+
+```
+`┃`
+````
+
+</td><td>
+
+`````buffer
+````┃
+````
+`````
+
+</td></tr>
+</table>
+
+### [Backtick5](../spec/backtick.md#backtick5)
+
+> "`"
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```js
+code
+```┃
+````
+
+</td><td>
+
+`````buffer
+```js
+code
+````┃
+`````
+
+</td><td>
+
+`````buffer
+````js
+code
+````┃
+`````
+
+</td></tr>
+</table>
+
+### [Backtick6](../spec/backtick.md#backtick6)
+
+> "`"
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a
+  ```┃js
+  code
+  ```
+- b
+````
+
+</td><td>
+
+`````buffer
+- a
+  ````┃js
+  code
+  ```
+- b
+`````
+
+</td><td>
+
+`````buffer
+- a
+  ````┃js
+  code
+  ````
+- b
+`````
+
+</td></tr>
+</table>
+
+### [Backtick9](../spec/backtick.md#backtick9)
+
+> "```"
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```
+code
+┃
+```
+````
+
+</td><td>
+
+````buffer
+```
+code
+``
+```
+
+`
+
+```
+┃
+````
+
+</td><td>
+
+````buffer
+```
+code
+```┃
+````
+
+</td></tr>
+</table>
+
+### [Backtick10](../spec/backtick.md#backtick10)
+
+> "```"
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```md
+┃
+text
+```
+````
+
+</td><td>
+
+````buffer
+```md
+``
+text
+```
+
+`
+
+```
+┃
+````
+
+</td><td>
+
+`````buffer
+````md
+```┃
+text
+````
+`````
+
+</td></tr>
+</table>
+
+### [Backtick12](../spec/backtick.md#backtick12)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+``┃print(1)
+```
+
+</td></tr>
+</table>
+
+> "`"
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+``print(1)
+
+`
+
+```
+┃
+````
+
+</td><td>
+
+````buffer
+```┃print(1)
+```
+````
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+``print(1)
+
+`
+
+```
+
+┃
+````
+
+</td><td>
+
+````buffer
+```
+┃print(1)
+```
+````
+
+</td></tr>
+</table>
+
+### [Backtick14](../spec/backtick.md#backtick14)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+`````buffer
+````
+code
+````┃
+
+after
+`````
+
+</td><td>
+
+`````buffer
+````
+code
+```┃
+
+after
+`````
+
+</td><td>
+
+````buffer
+```
+code
+```┃
+
+after
+````
+
+</td></tr>
+</table>
+
+### [Backtick22](../spec/backtick.md#backtick22)
+
+> "```"
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+intro
+
+┃
+```
+
+</td><td>
+
+````buffer
+intro
+
+``
+
+`
+
+```
+┃
+````
+
+</td><td>
+
+````buffer
+intro
+
+```┃
+```
+````
+
+</td></tr>
+</table>
+
+### [Backtick23](../spec/backtick.md#backtick23)
+
+> deleteContentForward
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+`````buffer
+````
+code
+┃````
+`````
+
+</td><td>
+
+`````buffer
+````
+code
+┃```
+`````
+
+</td><td>
+
+````buffer
+```
+code
+┃```
+````
+
+</td></tr>
+</table>
+
+### [Backtick24](../spec/backtick.md#backtick24)
+
+> deleteContentForward
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+┃```
+```
+````
+
+</td><td>
+
+````buffer
+┃``
+```
+````
+
+</td><td>
+
+```buffer
+┃``
+```
+
+</td></tr>
+</table>
+
+### [Backtick25](../spec/backtick.md#backtick25)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+intro
+
+```c++
+
+
+```┃
+
+after
+````
+
+</td><td>
+
+````buffer
+intro
+
+```c++
+
+
+``┃
+
+after
+````
+
+</td><td>
+
+```buffer
+intro┃
+
+after
+```
+
+</td></tr>
+</table>
+
+### [Backtick26](../spec/backtick.md#backtick26)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a
+- ```c++
+  ```┃
+- b
+````
+
+</td><td>
+
+````buffer
+- a
+- ```c++
+  ``┃
+- b
+````
+
+</td><td>
+
+```buffer
+- a
+- ┃
+- b
+```
+
+</td></tr>
+</table>
+
+### [Backtick27](../spec/backtick.md#backtick27)
+
+> deleteContentForward
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+intro
+
+┃```c++
+```
+
+after
+````
+
+</td><td>
+
+````buffer
+intro
+
+┃``c++
+```
+
+after
+````
+
+</td><td>
+
+```buffer
+intro
+
+┃after
+```
+
+</td></tr>
+</table>
+
+### [Backtick29](../spec/backtick.md#backtick29)
+
+> "~"
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+~~~js
+code
+~~~┃
+```
+
+</td><td>
+
+```buffer
+~~~js
+code
+~~~~┃
+```
+
+</td><td>
+
+```buffer
+~~~~js
+code
+~~~~┃
+```
+
+</td></tr>
+</table>
+
+### [Backtick30](../spec/backtick.md#backtick30)
+
+> "~~~"
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+intro
+
+┃
+```
+
+</td><td>
+
+```buffer
+intro
+
+~~~┃
+```
+
+</td><td>
+
+```buffer
+intro
+
+~~~┃
+~~~
+```
+
+</td></tr>
+</table>
+
+### [Copy2](../spec/copy.md#copy2)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one «two
+  - ki»d
+- three
+```
+
+</td></tr>
+</table>
+
+> copy
+
+### [Copy3](../spec/copy.md#copy3)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> a «b
+> c» d
+```
+
+</td></tr>
+</table>
+
+> copy
+
+### [Cut2](../spec/copy.md#cut2)
+
+> cut
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one «two
+  - ki»d
+- three
+```
+
+</td><td>
+
+```buffer
+- ┃three
+```
+
+</td><td>
+
+```buffer
+- one ┃d
+- three
+```
+
+</td></tr>
+</table>
+
+### [Cut4](../spec/copy.md#cut4)
+
+> cut
+
+Adapted: under copyAtCaret: host
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one ┃two
+  - kid
+- three
+```
+
+</td><td>
+
+```buffer
+┃  - kid
+- three
+```
+
+</td><td>
+
+```buffer
+- one ┃two
+  - kid
+- three
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one ┃two
+  - kid
+- three
+```
+
+</td><td>
+
+```buffer
+- one ┃two
+  - kid
+- three
 ```
 
 </td></tr>
@@ -1926,6 +2944,104 @@ Title┃text
 
 ```buffer
 - \[a]:┃b
+```
+
+</td></tr>
+</table>
+
+### [Delete32](../spec/delete.md#delete32)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃ # b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃ # b
+```
+
+</td></tr>
+</table>
+
+> deleteContentForward
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃# b
+```
+
+</td><td>
+
+```buffer
+- ┃\# b
+```
+
+</td></tr>
+</table>
+
+### [Delete33](../spec/delete.md#delete33)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- - b
+```
+
+</td></tr>
+</table>
+
+> deleteContentForward
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃- b
+```
+
+</td><td>
+
+```buffer
+- a┃
+  - b
+```
+
+</td></tr>
+</table>
+
+> deleteContentForward
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃ b
+```
+
+</td><td>
+
+```buffer
+- a┃b
 ```
 
 </td></tr>
@@ -3660,6 +4776,92 @@ title┃- x
 </td></tr>
 </table>
 
+### [Enter67](../spec/enter.md#enter67)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+---┃
+```
+
+</td><td>
+
+```buffer
+---┃
+```
+
+</td><td>
+
+```buffer
+---
+
+┃
+```
+
+</td></tr>
+</table>
+
+### [Enter68](../spec/enter.md#enter68)
+
+> enter
+
+Adapted: under enterSplitSpace: drop
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> [!note] ┃q
+p # h
+```
+
+</td><td>
+
+```buffer
+> [!note] 
+> ┃q
+p # h
+```
+
+</td><td>
+
+```buffer
+> [!note] 
+> ┃q
+>
+p # h
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> [!note] ┃q
+p # h
+```
+
+</td><td>
+
+```buffer
+> [!note] 
+> ┃q
+>
+p # h
+```
+
+</td></tr>
+</table>
+
 ### [Fence5](../spec/fences.md#fence5)
 
 > enter
@@ -4529,6 +5731,133 @@ Original:
 
 ````buffer
 - a
+  ```
+  ┃code
+  ```
+````
+
+</td></tr>
+</table>
+
+### [Fence31b](../spec/fences.md#fence31b)
+
+Adapted: under enterMidItem: child
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a
+
+  para
+
+  ┃```
+  code
+  ```
+````
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a
+
+  para
+
+  
+  ┃```
+  code
+  ```
+````
+
+</td><td>
+
+````buffer
+- a
+
+  para
+
+  - ```
+    ┃code
+    ```
+````
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a
+
+  para
+
+  
+┃```
+  code
+  ```
+````
+
+</td><td>
+
+````buffer
+- a
+
+  para
+
+  ```
+  ┃code
+  ```
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter</th><th>deleteContentBackward</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a
+
+  para
+
+  ┃```
+  code
+  ```
+````
+
+</td><td>
+
+````buffer
+- a
+
+  para
+
+  - ```
+    ┃code
+    ```
+````
+
+</td><td>
+
+````buffer
+- a
+
+  para
+
   ```
   ┃code
   ```
@@ -5700,6 +7029,42 @@ Original:
 </td></tr>
 </table>
 
+### [Fence62](../spec/fences.md#fence62)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```
+x┃```
+body
+```
+````
+
+</td><td>
+
+````buffer
+```
+┃```
+body
+```
+````
+
+</td><td>
+
+`````buffer
+````
+┃```
+body
+````
+`````
+
+</td></tr>
+</table>
+
 ### [Gap4](../spec/gaps.md#gap4)
 
 > moveSubtreeUp
@@ -5854,10 +7219,8 @@ p
 
 ### [Gap13](../spec/gaps.md#gap13)
 
-> pasteStructured
-
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -5865,7 +7228,14 @@ p
 - b
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - t┃
@@ -8050,7 +9420,7 @@ para
 </td></tr>
 </table>
 
-### [Renumbering stops at a delimiter change](../spec/obsidian-true-outliner.md#renumbering-stops-at-a-delimiter-change)
+### [TO-Bug228](../spec/obsidian-true-outliner.md#to-bug228)
 
 > enter
 
@@ -8085,7 +9455,7 @@ para
 </td></tr>
 </table>
 
-### [E9](../spec/obsidian-true-outliner.md#e9)
+### [TO-E9](../spec/obsidian-true-outliner.md#to-e9)
 
 > enter
 
@@ -8119,7 +9489,7 @@ one
 </td></tr>
 </table>
 
-### [E10](../spec/obsidian-true-outliner.md#e10)
+### [TO-E10](../spec/obsidian-true-outliner.md#to-e10)
 
 > enter
 
@@ -8155,7 +9525,7 @@ one
 </td></tr>
 </table>
 
-### [E15](../spec/obsidian-true-outliner.md#e15)
+### [TO-E15](../spec/obsidian-true-outliner.md#to-e15)
 
 > enter
 
@@ -8188,7 +9558,7 @@ one
 </td></tr>
 </table>
 
-### [E17](../spec/obsidian-true-outliner.md#e17)
+### [TO-E17](../spec/obsidian-true-outliner.md#to-e17)
 
 > enter
 
@@ -8221,7 +9591,7 @@ Hello
 </td></tr>
 </table>
 
-### [E18](../spec/obsidian-true-outliner.md#e18)
+### [TO-E18](../spec/obsidian-true-outliner.md#to-e18)
 
 > enter
 
@@ -8252,7 +9622,7 @@ Hello world
 </td></tr>
 </table>
 
-### [End of lone heading starts a paragraph](../spec/obsidian-true-outliner.md#end-of-lone-heading-starts-a-paragraph)
+### [TO-E19-E21](../spec/obsidian-true-outliner.md#to-e19-e21)
 
 > enter "x"
 
@@ -8282,7 +9652,7 @@ x┃
 </td></tr>
 </table>
 
-### [Empty paragraph before a section list](../spec/obsidian-true-outliner.md#empty-paragraph-before-a-section-list)
+### [TO-E19-E21b](../spec/obsidian-true-outliner.md#to-e19-e21b)
 
 > enter
 
@@ -8314,7 +9684,7 @@ x┃
 </td></tr>
 </table>
 
-### [#267, E5](../spec/obsidian-true-outliner.md#267-e5)
+### [TO-Bug267-E5](../spec/obsidian-true-outliner.md#to-bug267-e5)
 
 > enter
 
@@ -8353,7 +9723,7 @@ para
 </td></tr>
 </table>
 
-### [Rest of title becomes first paragraph](../spec/obsidian-true-outliner.md#rest-of-title-becomes-first-paragraph)
+### [TO-E13-E16](../spec/obsidian-true-outliner.md#to-e13-e16)
 
 > enter
 
@@ -8383,7 +9753,7 @@ para
 </td></tr>
 </table>
 
-### [Split title above a subheading](../spec/obsidian-true-outliner.md#split-title-above-a-subheading)
+### [TO-E13-E16b](../spec/obsidian-true-outliner.md#to-e13-e16b)
 
 > enter
 
@@ -8417,7 +9787,7 @@ para
 </td></tr>
 </table>
 
-### [Split title above an existing paragraph](../spec/obsidian-true-outliner.md#split-title-above-an-existing-paragraph)
+### [TO-E14-E20](../spec/obsidian-true-outliner.md#to-e14-e20)
 
 > enter
 
@@ -8452,7 +9822,7 @@ Body.
 </td></tr>
 </table>
 
-### [Line break in setext title](../spec/obsidian-true-outliner.md#line-break-in-setext-title)
+### [TO-S7-S8](../spec/obsidian-true-outliner.md#to-s7-s8)
 
 > shiftEnter
 
@@ -8485,7 +9855,7 @@ Hello
 </td></tr>
 </table>
 
-### [Line break in setext underline refused](../spec/obsidian-true-outliner.md#line-break-in-setext-underline-refused)
+### [TO-S7-S8b](../spec/obsidian-true-outliner.md#to-s7-s8b)
 
 > shiftEnter
 
@@ -8516,7 +9886,7 @@ Hello world
 </td></tr>
 </table>
 
-### [Outdented child leaves quote above alone](../spec/obsidian-true-outliner.md#outdented-child-leaves-quote-above-alone)
+### [TO-Bug255](../spec/obsidian-true-outliner.md#to-bug255)
 
 > outdent
 
@@ -8553,7 +9923,7 @@ Hello world
 </td></tr>
 </table>
 
-### [Indented item keeps its quote](../spec/obsidian-true-outliner.md#indented-item-keeps-its-quote)
+### [TO-Seams](../spec/obsidian-true-outliner.md#to-seams)
 
 > indent
 
@@ -8587,7 +9957,7 @@ Hello world
 </td></tr>
 </table>
 
-### [Outdented item keeps its quote](../spec/obsidian-true-outliner.md#outdented-item-keeps-its-quote)
+### [TO-Seamsb](../spec/obsidian-true-outliner.md#to-seamsb)
 
 > outdent
 
@@ -8621,7 +9991,7 @@ Hello world
 </td></tr>
 </table>
 
-### [destination-list-style](../spec/obsidian-true-outliner.md#destination-list-style)
+### [TO-ListStyle](../spec/obsidian-true-outliner.md#to-liststyle)
 
 > indent
 
@@ -8654,7 +10024,7 @@ Hello world
 </td></tr>
 </table>
 
-### [No blank line needed after a fence](../spec/obsidian-true-outliner.md#no-blank-line-needed-after-a-fence)
+### [TO-Lazyb](../spec/obsidian-true-outliner.md#to-lazyb)
 
 > moveSubtreeDown
 
@@ -8691,7 +10061,7 @@ para┃
 </td></tr>
 </table>
 
-### [No blank line needed before a fence](../spec/obsidian-true-outliner.md#no-blank-line-needed-before-a-fence)
+### [TO-Lazyc](../spec/obsidian-true-outliner.md#to-lazyc)
 
 > moveSubtreeDown
 
@@ -8728,7 +10098,7 @@ code┃
 </td></tr>
 </table>
 
-### [Shift-Enter, Tab, then Enter](../spec/obsidian-true-outliner.md#shift-enter-tab-then-enter)
+### [TO12](../spec/obsidian-true-outliner.md#to12)
 
 > shiftEnter indent enter
 
@@ -8765,7 +10135,7 @@ code┃
 </td></tr>
 </table>
 
-### [An empty ordered child kept with a blank line](../spec/obsidian-true-outliner.md#an-empty-ordered-child-kept-with-a-blank-line)
+### [TO14](../spec/obsidian-true-outliner.md#to14)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -8817,7 +10187,7 @@ code┃
 </td></tr>
 </table>
 
-### [Blank line after the list stays](../spec/obsidian-true-outliner.md#blank-line-after-the-list-stays)
+### [TO15](../spec/obsidian-true-outliner.md#to15)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -8889,7 +10259,7 @@ para
 </td></tr>
 </table>
 
-### [Outdented empty ordered item stays](../spec/obsidian-true-outliner.md#outdented-empty-ordered-item-stays)
+### [TO16](../spec/obsidian-true-outliner.md#to16)
 
 > enter outdent cursorDocStart
 
@@ -8923,7 +10293,7 @@ para
 </td></tr>
 </table>
 
-### [Second Enter outdents to a kept item](../spec/obsidian-true-outliner.md#second-enter-outdents-to-a-kept-item)
+### [TO17](../spec/obsidian-true-outliner.md#to17)
 
 > enter enter cursorDocStart
 
@@ -8954,12 +10324,10 @@ para
 </td></tr>
 </table>
 
-### [Pasted list and block become children](../spec/obsidian-true-outliner.md#pasted-list-and-block-become-children)
-
-> pasteStructured
+### [TO-Bug197](../spec/obsidian-true-outliner.md#to-bug197)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -8968,7 +10336,14 @@ para
 > note
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - top┃
@@ -9575,23 +10950,931 @@ t1┃
 </td></tr>
 </table>
 
-### [Paste4](../spec/paste-plain.md#paste4)
-
-> pastePlain
+### [PasteConvVSC](../spec/paste-conv.md#pasteconvvsc)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th colspan=3>clipboard</tr>
+<tr><td>text/plain<td>text/html<td>vscode-editor-data</tr>
 <tr valign="top"><td>
 
 ```clipboard
-x
+- x
 - y
 ```
 
 </td><td>
 
+```clipboard
+<div style="white-space: pre;"><div><span style="color: #569cd6;">-</span><span> x</span></div><div><span style="color: #569cd6;">-</span><span> y</span></div></div>
+```
+
+</td><td>
+
+```clipboard
+{"version":1,"isFromEmptySelection":false,"mode":"markdown"}
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
 ```buffer
-- a┃b
+- a┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- x
+
+- y┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- x
+- y┃
+- b
+```
+
+</td></tr>
+</table>
+
+### [PasteConvPhraseInCode](../spec/paste-conv.md#pasteconvphraseincode)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x y
+```
+
+</td><td>
+
+```clipboard
+<span>x <b>y</b></span>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```
+a┃
+```
+````
+
+</td><td>
+
+````buffer
+```
+ax **y**┃
+```
+````
+
+</td><td>
+
+````buffer
+```
+ax y┃
+```
+````
+
+</td></tr>
+</table>
+
+### [PasteHtml3](../spec/paste-html.md#pastehtml3)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x **b**
+	- y
+- z
+```
+
+</td><td>
+
+```clipboard
+<ul><div xmlns="http://www.w3.org/1999/xhtml">This site uses XSLT; that functionality is being <a href="https://chromestatus.com/feature/4709671889534976">removed from this browser very soon</a>.</div>
+  <li>x <b>b</b></li>
+  <ul>
+    <li>y</li>
+  </ul>
+  <li>z</li>
+</ul>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+This site uses XSLT; that functionality is being [removed from this browser very soon](https://chromestatus.com/feature/4709671889534976).
+
+- x **b**
+
+- y
+
+- z┃
+```
+
+</td><td>
+
+```buffer
+- x **b**
+  - y
+- z┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml4](../spec/paste-html.md#pastehtml4)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x b
+    y
+z
+```
+
+</td><td>
+
+```clipboard
+<ul><div rem="true" showbullet="true">x <b>b</b><ul><div rem="true" showbullet="true">y</div></ul></div><div rem="true" showbullet="true">z</div></ul>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+x **b**
+
+y
+
+z┃
+```
+
+</td><td>
+
+```buffer
+- x **b**
+  - y
+- z┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml5](../spec/paste-html.md#pastehtml5)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+y
+z
+```
+
+</td><td>
+
+```clipboard
+<ul><li><p class="bn-inline-content">x</p><ul><li data-nesting-level="1"><p class="bn-inline-content">y</p></li></ul></li><li><p class="bn-inline-content">z</p></li></ul>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+- x
+
+  - y
+
+- z┃
+```
+
+</td><td>
+
+```buffer
+- x
+  - y
+- z┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml6](../spec/paste-html.md#pastehtml6)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+- y
+z
+```
+
+</td><td>
+
+```clipboard
+<html><body><p>x</p><ul><li><p>y</p></li></ul><p>z</p></body></html>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+x
+
+- y
+
+
+z┃
+```
+
+</td><td>
+
+```buffer
+x
+
+- y
+
+z┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml8](../spec/paste-html.md#pastehtml8)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+ done
+ todo
+```
+
+</td><td>
+
+```clipboard
+<ul class="contains-task-list"><li class="task-list-item"><input type="checkbox" disabled="" class="task-list-item-checkbox" checked=""> done</li><li class="task-list-item"><input type="checkbox" disabled="" class="task-list-item-checkbox"> todo</li></ul>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+- [x]  done
+- [ ]  todo┃
+```
+
+</td><td>
+
+```buffer
+- [x] done
+- [ ] todo┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml10](../spec/paste-html.md#pastehtml10)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+Title
+para bold c
+```
+
+</td><td>
+
+```clipboard
+<h2>Title</h2><p>para <b>bold</b> <code>c</code></p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+# Title
+
+para **bold** `c`┃
+```
+
+</td><td>
+
+```buffer
+## Title
+
+para **bold** `c`┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml13](../spec/paste-html.md#pastehtml13)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+a	b
+1	2
+```
+
+</td><td>
+
+```clipboard
+<table><thead><tr><th>a</th><th align="right">b</th></tr></thead><tbody><tr><td>1</td><td align="right">2</td></tr></tbody></table>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+|a|b|
+|---|--:|
+|1|2|┃
+```
+
+</td><td>
+
+```buffer
+| a | b |
+| --- | ---: |
+| 1 | 2 |┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml14](../spec/paste-html.md#pastehtml14)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+a b i c s l
+z
+```
+
+</td><td>
+
+```clipboard
+<ul><li>a <strong>b</strong> <em>i</em> <code>c</code> <del>s</del> <a href="https://e.x/p">l</a></li><li>z</li></ul>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+- a **b** _i_ `c` ~~s~~ [l](https://e.x/p)
+- z┃
+```
+
+</td><td>
+
+```buffer
+- a **b** *i* `c` ~~s~~ [l](https://e.x/p)
+- z┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml15](../spec/paste-html.md#pastehtml15)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+1. not a list, *x* and [y]
+# not a heading
+```
+
+</td><td>
+
+```clipboard
+<ul><li>1. not a list, *x* and [y]</li><li># not a heading</li></ul>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+- 1. not a list, *x* and [y]
+- # not a heading┃
+```
+
+</td><td>
+
+```buffer
+- 1\. not a list, \*x\* and \[y\]
+- \# not a heading┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml16](../spec/paste-html.md#pastehtml16)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+Setup
+npm install
+```
+
+</td><td>
+
+```clipboard
+<div class="markdown-heading"><h2 class="heading-element">Setup</h2><a class="anchor" aria-label="Permalink: Setup" href="#setup"><svg class="octicon octicon-link" viewBox="0 0 16 16"><path d="m7.775 3.275"></path></svg></a></div><div class="highlight highlight-source-shell"><pre>npm install</pre><div class="zeroclipboard-container"><clipboard-copy aria-label="Copy" class="ClipboardButton btn" value="npm install" role="button"><svg class="octicon octicon-copy"><path d="M0 6.75"></path></svg></clipboard-copy></div></div>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+````buffer
+# Setup
+
+[](#setup)
+
+```shell
+npm install
+```┃
+````
+
+</td><td>
+
+````buffer
+## Setup
+
+```shell
+npm install┃
+```
+````
+
+</td></tr>
+</table>
+
+### [PasteHtml17](../spec/paste-html.md#pastehtml17)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+Bold start
+nested
+```
+
+</td><td>
+
+```clipboard
+<meta charset="utf-8"><b style="font-weight:normal;" id="docs-internal-guid-6a1b2c3d"><ul style="margin-top:0;"><li dir="ltr" aria-level="1"><p dir="ltr" role="presentation"><span style="font-weight:700;font-style:normal;">Bold</span><span style="font-weight:400;font-style:normal;"> start</span></p></li><ul style="margin-top:0;"><li dir="ltr" aria-level="2"><p dir="ltr" role="presentation"><span style="font-weight:400;font-style:italic;">nested</span></p></li></ul></ul></b>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+**
+
+- Bold start
+
+
+- nested
+
+
+
+
+**┃
+```
+
+</td><td>
+
+```buffer
+- **Bold** start
+  - *nested*┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml18](../spec/paste-html.md#pastehtml18)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+·       one
+o       nested
+```
+
+</td><td>
+
+```clipboard
+<html><body><!--StartFragment--><p class=MsoListParagraphCxSpFirst style='margin-left:.5in;text-indent:-.25in;mso-list:l0 level1 lfo1'><![if !supportLists]><span style='font-family:Symbol'><span style='mso-list:Ignore'>·<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>one<o:p></o:p></p>
+<p class=MsoListParagraphCxSpLast style='margin-left:1.0in;text-indent:-.25in;mso-list:l0 level2 lfo1'><![if !supportLists]><span style='font-family:"Courier New"'><span style='mso-list:Ignore'>o<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>nested<o:p></o:p></p><!--EndFragment--></body></html>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+·⍽⍽⍽⍽⍽ one
+
+o⍽⍽⍽⍽⍽ nested┃
+```
+
+</td><td>
+
+```buffer
+- one
+  - nested┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml19](../spec/paste-html.md#pastehtml19)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+javascript
+Copy code
+let a = 1;
+```
+
+</td><td>
+
+```clipboard
+<pre class="overflow-visible!"><div class="contain-inline-size"><div class="flex items-center">javascript</div><div class="sticky top-9"><button aria-label="Copy">Copy code</button></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-javascript"><span class="hljs-keyword">let</span> a = <span class="hljs-number">1</span>;</code></div></div></pre>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+javascript
+
+Copy code
+
+`let a = 1;`┃
+```
+
+</td><td>
+
+````buffer
+```javascript
+let a = 1;┃
+```
+````
+
+</td></tr>
+</table>
+
+### [PasteListForm4](../spec/paste-list-form.md#pastelistform4)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- x
+
+- y┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- x
+- y┃
+- b
+```
+
+</td></tr>
+</table>
+
+### [PasteListForm5](../spec/paste-list-form.md#pastelistform5)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+
+- x
+- y┃
+
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+
+- x
+
+- y┃
+
+- b
+```
+
+</td></tr>
+</table>
+
+### [PasteList3](../spec/paste-list.md#pastelist3)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃ab
+- c
+```
+
+</td><td>
+
+```buffer
+- x
+- y┃ab
+- c
 ```
 
 </td><td>
@@ -9599,115 +11882,124 @@ x
 ```buffer
 - ab
 - x
+- y┃
+- c
+```
+
+</td></tr>
+</table>
+
+### [PasteList6](../spec/paste-list.md#pastelist6)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+  - kid
+```
+
+</td><td>
+
+```buffer
+- x
+- y┃
+  - kid
+```
+
+</td><td>
+
+```buffer
+- 
+  - x
   - y┃
-```
-
-</td><td>
-
-```buffer
-- ax
-  \- y
-  ┃b
+  - kid
 ```
 
 </td></tr>
 </table>
 
-### [Paste6](../spec/paste-plain.md#paste6)
-
-> pastePlain
+### [PasteList8](../spec/paste-list.md#pastelist8)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
-x
-y
+- x
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
 ```
 
 </td><td>
 
 ```buffer
-# H┃
-```
-
-</td><td>
-
-```buffer
-# Hx
-y
+- a- x
 ┃
+- b
 ```
 
 </td><td>
 
 ```buffer
-# H┃
+- a
+- x┃
+- b
 ```
 
 </td></tr>
 </table>
 
-### [Paste22](../spec/paste-plain.md#paste22)
-
-> pastePlain
+### [PasteList11](../spec/paste-list.md#pastelist11)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
-a = 1
-  b = 2
+one
+two
+
+- x
 ```
-
-</td><td>
-
-````buffer
-- code
-  ```
-  ┃
-  ```
-````
-
-</td><td>
-
-````buffer
-- code
-  ```
-  a = 1
-  b = 2┃
-  ```
-````
-
-</td><td>
-
-````buffer
-- code
-  ```
-  a = 1
-    b = 2┃
-  ```
-````
 
 </td></tr>
 </table>
 
-### [Paste30](../spec/paste-plain.md#paste30)
+> paste
 
-> pastePlain
+Adapted: under pasteParagraphList: children
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
-
-```clipboard
-x
-2. y
-```
-
-</td><td>
 
 ```buffer
 - a┃
@@ -9717,26 +12009,470 @@ x
 
 ```buffer
 - a
-- x
-  2. y┃
+- one
+  two
+
+  - x┃
 ```
 
 </td><td>
 
 ```buffer
-- ax
-  2\. y┃
+- a
+- one
+  two
+  - x┃
 ```
 
 </td></tr>
 </table>
 
-### [Paste40](../spec/paste-plain.md#paste40)
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
-> pastePlain
+```buffer
+- a┃
+```
+
+</td><td>
+
+```buffer
+- a
+- one
+  two
+  - x┃
+```
+
+</td></tr>
+</table>
+
+### [PasteList12](../spec/paste-list.md#pastelist12)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+````clipboard
+```
+c
+```
+````
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+```
+
+</td><td>
+
+````buffer
+- a```
+c
+```┃
+- b
+````
+
+</td><td>
+
+````buffer
+- a
+  ```
+  c┃
+  ```
+- b
+````
+
+</td></tr>
+</table>
+
+### [PasteList13](../spec/paste-list.md#pastelist13)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+````clipboard
+- x
+
+```
+c
+```
+````
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+```
+
+</td><td>
+
+````buffer
+- a
+- x
+
+```
+c
+```┃
+
+- b
+````
+
+</td><td>
+
+````buffer
+- a
+- x
+  ```
+  c┃
+  ```
+- b
+````
+
+</td></tr>
+</table>
+
+### [PasteList14](../spec/paste-list.md#pastelist14)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+````clipboard
+```
+c
+```
+````
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - kid
+```
+
+</td><td>
+
+````buffer
+- a```
+c
+```┃
+  - kid
+````
+
+</td><td>
+
+````buffer
+- a
+  ```
+  c┃
+  ```
+  - kid
+````
+
+</td></tr>
+</table>
+
+### [PasteList15](../spec/paste-list.md#pastelist15)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+````clipboard
+```
+c
+```
+````
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+- b
+```
+
+</td><td>
+
+````buffer
+- ```
+c
+```┃
+- b
+````
+
+</td><td>
+
+````buffer
+- ```
+  c┃
+  ```
+- b
+````
+
+</td></tr>
+</table>
+
+### [PasteList16](../spec/paste-list.md#pastelist16)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+# h
+text
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- # h
+  - text┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- # h
+  text┃
+- b
+```
+
+</td></tr>
+</table>
+
+### [PasteList17](../spec/paste-list.md#pastelist17)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+> q
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- ┃
+```
+
+</td><td>
+
+```buffer
+- a
+- > q
+┃
+```
+
+</td><td>
+
+```buffer
+- a
+- > q┃
+```
+
+</td></tr>
+</table>
+
+### [PasteList25](../spec/paste-list.md#pastelist25)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+1. Introduction
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃here
+```
+
+</td><td>
+
+```buffer
+- Introduction┃here
+```
+
+</td><td>
+
+```buffer
+- 1\. Introduction┃here
+```
+
+</td></tr>
+</table>
+
+### [PasteList26](../spec/paste-list.md#pastelist26)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+````clipboard
+- ```
+  code
+  ```
+````
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+```
+
+</td><td>
+
+````buffer
+- a
+- ```
+  code
+  ```
+
+- b
+┃
+````
+
+</td><td>
+
+````buffer
+- a
+- ```
+  code┃
+  ```
+- b
+````
+
+</td></tr>
+</table>
+
+### [PasteList27](../spec/paste-list.md#pastelist27)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+````clipboard
+- ```
+  code
+````
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+```
+
+</td><td>
+
+````buffer
+- a- ```
+  code┃
+- b
+````
+
+</td><td>
+
+````buffer
+- a
+- ```
+  code┃
+  ```
+- b
+````
+
+</td></tr>
+</table>
+
+### [PastePlain3](../spec/paste-plain.md#pasteplain3)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -9745,7 +12481,16 @@ x
 y
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: under pastePlainLines: host
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - a┃b
@@ -9767,20 +12512,41 @@ y
 ```buffer
 - ax
 
-  y
-  ┃b
+y
+┃b
 - c
 ```
 
 </td></tr>
 </table>
 
-### [Paste41](../spec/paste-plain.md#paste41)
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
-> pastePlain
+```buffer
+- a┃b
+- c
+```
+
+</td><td>
+
+```buffer
+- ax
+
+y
+┃b
+- c
+```
+
+</td></tr>
+</table>
+
+### [PastePlain4](../spec/paste-plain.md#pasteplain4)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -9789,7 +12555,16 @@ x
 y
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: under pastePlainLines: host
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 > See ┃here.
@@ -9809,29 +12584,56 @@ y┃
 
 ```buffer
 > See x
->
-> y
-> ┃here.
+
+y
+┃here.
 ```
 
 </td></tr>
 </table>
 
-### [Paste45](../spec/paste-plain.md#paste45)
-
-> pastePlain
-
+Original:
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-```clipboard
-$$
-x^2
-$$
+```buffer
+> See ┃here.
 ```
 
 </td><td>
+
+```buffer
+> See x
+
+y
+┃here.
+```
+
+</td></tr>
+</table>
+
+### [PastePlain5](../spec/paste-plain.md#pasteplain5)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+- y
+```
+
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: under pastePlainLines: host
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - a┃b
@@ -9840,69 +12642,109 @@ $$
 </td><td>
 
 ```buffer
-- a$$
-x^2
-$$
-┃b
+- ab
+- x
+  - y┃
 ```
 
 </td><td>
 
 ```buffer
-- a$$
-  x^2
-  \$$
-  ┃b
+- ax
+- y
+┃b
 ```
 
 </td></tr>
 </table>
 
-### [Paste55](../spec/paste-plain.md#paste55)
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
-> pastePlain
+```buffer
+- a┃b
+```
+
+</td><td>
+
+```buffer
+- ax
+- y
+┃b
+```
+
+</td></tr>
+</table>
+
+### [PastePlain6](../spec/paste-plain.md#pasteplain6)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
 x
-y
-```
-
-</td><td>
-
-```buffer
-> [!note] Ti┃tle
-> body
-```
-
-</td><td>
-
-```buffer
-> [!note] Tix
-y
-┃tle
-> body
-```
-
-</td><td>
-
-```buffer
-> [!note] Ti┃tle
-> body
+2. y
 ```
 
 </td></tr>
 </table>
 
-### [Paste64](../spec/paste-plain.md#paste64)
-
 > pastePlain
 
+Adapted: under pastePlainLines: host
+
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+```
+
+</td><td>
+
+```buffer
+- a
+- x
+  2. y┃
+```
+
+</td><td>
+
+```buffer
+- ax
+2. y┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+```
+
+</td><td>
+
+```buffer
+- ax
+2. y┃
+```
+
+</td></tr>
+</table>
+
+### [PastePlain8](../spec/paste-plain.md#pasteplain8)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -9910,7 +12752,16 @@ y
 - b
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: under pastePlainLines: host
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 ┃words
@@ -9929,165 +12780,36 @@ b┃
 </td><td>
 
 ```buffer
-\- a
-\- b┃words
+- a
+- b┃words
 ```
 
 </td></tr>
 </table>
 
-### [Paste68](../spec/paste-plain.md#paste68)
-
-> pastePlain
-
+Original:
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-```clipboard
-x
+```buffer
+┃words
 ```
 
 </td><td>
 
 ```buffer
-p┃ ---
-```
-
-</td><td>
-
-```buffer
-px
-┃ ---
-```
-
-</td><td>
-
-```buffer
-px
-┃\---
+- a
+- b┃words
 ```
 
 </td></tr>
 </table>
 
-### [Paste69](../spec/paste-plain.md#paste69)
-
-> pastePlain
+### [PastePlain10](../spec/paste-plain.md#pasteplain10)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-x
-```
-
-</td><td>
-
-```buffer
-[a]: ┃b c
-```
-
-</td><td>
-
-```buffer
-[a]: x
-┃b c
-```
-
-</td><td>
-
-```buffer
-\[a]: x
-┃b c
-```
-
-</td></tr>
-</table>
-
-### [Paste78](../spec/paste-plain.md#paste78)
-
-> pastePlain
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-    first
-    second
-```
-
-</td><td>
-
-```buffer
-- ┃a
-```
-
-</td><td>
-
-```buffer
--     first
-    second
-┃a
-```
-
-</td><td>
-
-```buffer
-- first
-  second
-  ┃a
-```
-
-</td></tr>
-</table>
-
-### [Paste80](../spec/paste-plain.md#paste80)
-
-> pastePlain
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-. a
-b
-```
-
-</td><td>
-
-```buffer
-1┃
-```
-
-</td><td>
-
-```buffer
-1. a
-b
-┃
-```
-
-</td><td>
-
-```buffer
-1\. a
-b
-┃
-```
-
-</td></tr>
-</table>
-
-### [Paste81](../spec/paste-plain.md#paste81)
-
-> pastePlain
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -10095,7 +12817,16 @@ b
 2. b
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: under pastePlainLines: host
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - 2┃\. y
@@ -10112,251 +12843,106 @@ b
 </td><td>
 
 ```buffer
-- 21\. a
-  2\. b
-  ┃\. y
+- 21. a
+2. b
+┃\. y
 ```
 
 </td></tr>
 </table>
 
-### [Paste82](../spec/paste-plain.md#paste82)
-
-> pastePlain
-
+Original:
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-```clipboard
-
-x
+```buffer
+- 2┃\. y
 ```
 
 </td><td>
 
 ```buffer
-- a
-  ┃b
-```
-
-</td><td>
-
-```buffer
-- a
-  
-x┃b
-```
-
-</td><td>
-
-```buffer
-- a
-
-  x┃b
+- 21. a
+2. b
+┃\. y
 ```
 
 </td></tr>
 </table>
 
-### [Paste83](../spec/paste-plain.md#paste83)
-
-> pastePlain
+### [PastePlain12](../spec/paste-plain.md#pasteplain12)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-
-x
-```
-
-</td><td>
-
-```buffer
-┃abc
-```
-
-</td><td>
-
-```buffer
-
-x┃abc
-```
-
-</td><td>
-
-```buffer
-x┃abc
-```
-
-</td></tr>
-</table>
-
-### [Paste83b](../spec/paste-plain.md#paste83b)
-
-> pastePlain
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-
-
-x
-```
-
-</td><td>
-
-```buffer
-p
-
-┃abc
-```
-
-</td><td>
-
-```buffer
-p
-
-
-
-x┃abc
-```
-
-</td><td>
-
-```buffer
-p
-
-x┃abc
-```
-
-</td></tr>
-</table>
-
-### [Paste84](../spec/paste-plain.md#paste84)
-
-> pastePlain
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-
-```
-
-</td><td>
-
-```buffer
-p
-
-┃
-```
-
-</td><td>
-
-```buffer
-p
-
-
-┃
-```
-
-</td><td>
-
-```buffer
-p
-
-┃
-```
-
-</td></tr>
-</table>
-
-### [Paste85](../spec/paste-plain.md#paste85)
-
-> pastePlain
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
 x
-- y
-```
 
-</td><td>
-
-```buffer
-- a«bc
-  de»f
-```
-
-</td><td>
-
-```buffer
-- ax
-- y┃f
-```
-
-</td><td>
-
-```buffer
-- ax
-  \- y┃f
+[a]: /u
 ```
 
 </td></tr>
 </table>
 
-### [Paste85b](../spec/paste-plain.md#paste85b)
-
 > pastePlain
 
+Adapted: under pastePlainLines: host
+
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-```clipboard
+```buffer
+p┃
+```
+
+</td><td>
+
+```buffer
+p
+
 x
-# y
+
+[a]: /u┃
 ```
 
 </td><td>
 
 ```buffer
-> a«bc
-> de»f
-```
+px
 
-</td><td>
-
-```buffer
-> ax
-# y┃f
-```
-
-</td><td>
-
-```buffer
-> ax
-> \# y┃f
+[a]: /u┃
 ```
 
 </td></tr>
 </table>
 
-### [Paste87b](../spec/paste-plain.md#paste87b)
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
-> pastePlain
+```buffer
+p┃
+```
+
+</td><td>
+
+```buffer
+px
+
+[a]: /u┃
+```
+
+</td></tr>
+</table>
+
+### [PastePlain15](../spec/paste-plain.md#pasteplain15)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -10365,7 +12951,14 @@ x
 y
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> pastePlain
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 p┃
@@ -10392,12 +12985,10 @@ y┃
 </td></tr>
 </table>
 
-### [Paste91](../spec/paste-plain.md#paste91)
-
-> pastePlain
+### [PastePlain29](../spec/paste-plain.md#pasteplain29)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ````clipboard
@@ -10406,7 +12997,16 @@ x
 y
 ````
 
-</td><td>
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: under pastePlainLines: host
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ````buffer
 ```
@@ -10430,222 +13030,13 @@ y
 
 </td><td>
 
-`````buffer
-````
+````buffer
+```
 cox
 ```
 y┃de
-````
-`````
-
-</td></tr>
-</table>
-
-### [Paste1](../spec/paste.md#paste1)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````clipboard
-```
-c
 ```
 ````
-
-</td><td>
-
-```buffer
-para
-- a┃
-- b
-```
-
-</td><td>
-
-````buffer
-para
-- a```
-c
-```┃
-- b
-````
-
-</td><td>
-
-````buffer
-para
-- a
-  ```
-  c┃
-  ```
-- b
-````
-
-</td></tr>
-</table>
-
-### [Paste9](../spec/paste.md#paste9)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````clipboard
-```
-code
-```
-````
-
-</td><td>
-
-```buffer
-- a
-- ┃
-```
-
-</td><td>
-
-````buffer
-- a
-- ```
-code
-```┃
-````
-
-</td><td>
-
-````buffer
-- a
-- ```
-  code┃
-  ```
-````
-
-</td></tr>
-</table>
-
-### [Paste11](../spec/paste.md#paste11)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````clipboard
-```
-code
-```
-````
-
-</td><td>
-
-```buffer
-- a
-  - ┃
-```
-
-</td><td>
-
-````buffer
-- a
-  - ```
-code
-```┃
-````
-
-</td><td>
-
-````buffer
-- a
-  - ```
-    code┃
-    ```
-````
-
-</td></tr>
-</table>
-
-### [Paste12](../spec/paste.md#paste12)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-> q
-> r
-```
-
-</td><td>
-
-```buffer
-- a
-- ┃
-```
-
-</td><td>
-
-```buffer
-- a
-- > q r┃
-```
-
-</td><td>
-
-```buffer
-- a
-- > q
-  > r┃
-```
-
-</td></tr>
-</table>
-
-### [Paste15](../spec/paste.md#paste15)
-
-> pasteStructured
-
-Adapted: under pasteStructuredListForm: own
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-1. x
-2. y
-```
-
-</td><td>
-
-```buffer
-- ┃
-- b
-```
-
-</td><td>
-
-```buffer
-- x
-2. y┃
-- b
-```
-
-</td><td>
-
-```buffer
-1. x
-2. y┃
-- b
-```
 
 </td></tr>
 </table>
@@ -10655,30 +13046,78 @@ Original:
 <tr><th>buffer</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-```buffer
-- ┃
-- b
+````buffer
 ```
+co┃de
+```
+````
 
 </td><td>
 
-```buffer
-1. x
-2. y┃
-- b
+````buffer
+```
+cox
+```
+y┃de
+```
+````
+
+</td></tr>
+</table>
+
+### [Paste2](../spec/paste.md#paste2)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+y
 ```
 
 </td></tr>
 </table>
 
-### [Paste16](../spec/paste.md#paste16)
-
-> pasteStructured
-
-Adapted: under pasteStructuredListForm: own
+> paste
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# T┃
+
+para
+```
+
+</td><td>
+
+```buffer
+# Tx
+y┃
+
+para
+```
+
+</td><td>
+
+```buffer
+# T
+
+x
+y┃
+
+para
+```
+
+</td></tr>
+</table>
+
+### [Paste3](../spec/paste.md#paste3)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -10686,110 +13125,19 @@ Adapted: under pasteStructuredListForm: own
 - y
 ```
 
-</td><td>
-
-```buffer
-1. ┃
-2. b
-```
-
-</td><td>
-
-```buffer
-1. x
-- y┃
-1. b
-```
-
-</td><td>
-
-```buffer
-- x
-- y┃
-1. b
-```
-
 </td></tr>
 </table>
 
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-1. ┃
-2. b
-```
-
-</td><td>
-
-```buffer
-- x
-- y┃
-1. b
-```
-
-</td></tr>
-</table>
-
-### [Paste19](../spec/paste.md#paste19)
-
-> pasteStructured
+> paste
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
-
-```clipboard
-# h
-text
-```
-
-</td><td>
-
-```buffer
-- a┃
-```
-
-</td><td>
-
-```buffer
-- a
-- # h
-
-  - text┃
-```
-
-</td><td>
-
-```buffer
-- a
-- # h
-  text┃
-```
-
-</td></tr>
-</table>
-
-### [Paste21](../spec/paste.md#paste21)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-- p
-- q
-```
-
-</td><td>
 
 ```buffer
 Notes┃
-- x
+
+more
 ```
 
 </td><td>
@@ -10797,491 +13145,96 @@ Notes┃
 ```buffer
 Notes
 
-- p
-- q┃
-- x
+x
+
+y┃
+
+more
 ```
 
 </td><td>
 
 ```buffer
 Notes
-- p
-- q┃
+
 - x
+- y┃
+
+more
 ```
 
 </td></tr>
 </table>
 
-### [Paste23](../spec/paste.md#paste23)
-
-> pasteStructured
+### [Paste4](../spec/paste.md#paste4)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-- a
-- b
-```
-
-</td><td>
-
-````buffer
-> ```
-> x┃
-> ```
-````
-
-</td><td>
-
-````buffer
-> ```
-> x
-> ```
-
-- a
-- b┃
-````
-
-</td><td>
-
-````buffer
-> ```
-> x- a
-> - b┃
-> ```
-````
-
-</td></tr>
-</table>
-
-### [Paste25](../spec/paste.md#paste25)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````clipboard
-```
-c
-```
-````
-
-</td><td>
-
-```buffer
-- a┃
-  - kid
-- b
-```
-
-</td><td>
-
-````buffer
-- a```
-c
-```┃
-  - kid
-- b
-````
-
-</td><td>
-
-````buffer
-- a
-  ```
-  c┃
-  ```
-  - kid
-- b
-````
-
-</td></tr>
-</table>
-
-### [Paste26](../spec/paste.md#paste26)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
 - x
-```
-
-</td><td>
-
-```buffer
-- a┃
-- b
-```
-
-</td><td>
-
-```buffer
-- a- x┃
-- b
-```
-
-</td><td>
-
-```buffer
-- a
-- x┃
-- b
-```
-
-</td></tr>
-</table>
-
-### [Paste28](../spec/paste.md#paste28)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-> [!note] t
-> body
-```
-
-</td><td>
-
-```buffer
-- a┃
-- b
-```
-
-</td><td>
-
-```buffer
-- a> [!note] t body┃
-- b
-```
-
-</td><td>
-
-```buffer
-- a
-  > [!note] t
-  > body┃
-- b
-```
-
-</td></tr>
-</table>
-
-### [Paste29](../spec/paste.md#paste29)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-- alpha
-
-> note
-```
-
-</td><td>
-
-```buffer
-- top┃
-- next
-```
-
-</td><td>
-
-```buffer
-- top
-- alpha
-
-> note┃
-
-- next
-```
-
-</td><td>
-
-```buffer
-- top
-- alpha
-  > note┃
-- next
-```
-
-</td></tr>
-</table>
-
-### [Paste32](../spec/paste.md#paste32)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-# h
-```
-
-</td><td>
-
-```buffer
-para┃
-```
-
-</td><td>
-
-```buffer
-para# h┃
-```
-
-</td><td>
-
-```buffer
-para
-
-# h┃
-```
-
-</td></tr>
-</table>
-
-### [Paste33](../spec/paste.md#paste33)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-## h
-```
-
-</td><td>
-
-```buffer
-## A
-
-para┃
-```
-
-</td><td>
-
-```buffer
-## A
-
-para## h┃
-```
-
-</td><td>
-
-```buffer
-## A
-
-para
-
-## h┃
-```
-
-</td></tr>
-</table>
-
-### [Paste34](../spec/paste.md#paste34)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-# h
-```
-
-</td><td>
-
-```buffer
-para┃
-
-next
-```
-
-</td><td>
-
-```buffer
-para# h┃
-
-next
-```
-
-</td><td>
-
-```buffer
-para
-
-# h┃
-
-next
-```
-
-</td></tr>
-</table>
-
-### [Paste35](../spec/paste.md#paste35)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-## h
-```
-
-</td><td>
-
-```buffer
-## A
-
-para┃
-
-more
-
-### C
-
-## B
-```
-
-</td><td>
-
-```buffer
-## A
-
-para## h┃
-
-more
-
-### C
-
-## B
-```
-
-</td><td>
-
-```buffer
-## A
-
-para
-
-## h┃
-
-more
-
-### C
-
-## B
-```
-
-</td></tr>
-</table>
-
-### [Paste36](../spec/paste.md#paste36)
-
-> pasteStructured
-
-Adapted: under enterMidItem: child, under pasteStructuredMidText: after, under pasteStructuredParagraphList: children
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-x
 - y
 ```
 
-</td><td>
-
-```buffer
-- list
-  - See ┃here.
-```
-
-</td><td>
-
-```buffer
-- list
-  - See here.
-  - x
-
-    - y┃
-```
-
-</td><td>
-
-```buffer
-- list
-  - See here.
-  - x
-    - y┃
-```
-
 </td></tr>
 </table>
 
-Original:
+> paste
+
 <table>
-<tr><th>buffer</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- list
-  - See ┃here.
+Notes┃
+
+- z
 ```
 
 </td><td>
 
 ```buffer
-- list
-  - See here.
-  - x
-    - y┃
+Notes
+
+- x
+- y┃
+
+- z
+```
+
+</td><td>
+
+```buffer
+Notes
+
+- x
+- y┃
+- z
 ```
 
 </td></tr>
 </table>
 
-### [Paste37](../spec/paste.md#paste37)
-
-> pasteStructured
-
-Adapted: under pasteStructuredMidText: after
+### [Paste5](../spec/paste.md#paste5)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
-x
+- x
 - y
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 See ┃here.
@@ -11294,7 +13247,7 @@ See here.
 
 x
 
-- y┃
+y┃
 ```
 
 </td><td>
@@ -11302,180 +13255,17 @@ x
 ```buffer
 See here.
 
-x
+- x
 - y┃
 ```
 
 </td></tr>
 </table>
 
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-See ┃here.
-```
-
-</td><td>
-
-```buffer
-See here.
-
-x
-- y┃
-```
-
-</td></tr>
-</table>
-
-### [Paste44](../spec/paste.md#paste44)
-
-> pasteStructured
+### [Paste6](../spec/paste.md#paste6)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-$$
-x^2
-$$
-```
-
-</td><td>
-
-```buffer
-- a
-- ┃
-```
-
-</td><td>
-
-```buffer
-- a
-- $$
-x^2
-$$
-┃
-```
-
-</td><td>
-
-```buffer
-- a
-- $$
-  x^2┃
-  $$
-```
-
-</td></tr>
-</table>
-
-### [Paste46](../spec/paste.md#paste46)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````clipboard
-```js
-code
-```
-````
-
-</td><td>
-
-````buffer
-- list
-  ```js
-  code
-  ```┃
-````
-
-</td><td>
-
-```````buffer
-- list
-  ```js
-  code
-  ``````js
-code
-```┃
-```````
-
-</td><td>
-
-````buffer
-- list
-  ```js
-  code
-  ```
-
-  ```js
-  code┃
-  ```
-````
-
-</td></tr>
-</table>
-
-### [Paste47](../spec/paste.md#paste47)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-one
-two
-```
-
-</td><td>
-
-````buffer
-```
-x
-```┃
-````
-
-</td><td>
-
-````buffer
-```
-x
-```one
-two
-┃
-````
-
-</td><td>
-
-````buffer
-```
-x
-```
-
-one
-two┃
-````
-
-</td></tr>
-</table>
-
-### [Paste50](../spec/paste.md#paste50)
-
-> pasteStructured
-
-Adapted: under enterMidItem: child, under pasteStructuredMidText: after
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -11483,655 +13273,49 @@ Adapted: under enterMidItem: child, under pasteStructuredMidText: after
 - y
 ```
 
-</td><td>
-
-```buffer
-- al«pha
-- be»ta
-```
-
-</td><td>
-
-```buffer
-- x
-- y┃
-```
-
-</td><td>
-
-```buffer
-- alta
-- x
-- y┃
-```
-
 </td></tr>
 </table>
 
-Original:
+> paste
+
 <table>
-<tr><th>buffer</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- al«pha
-- be»ta
+# T┃
+
+- z
 ```
 
 </td><td>
 
 ```buffer
-- alta
-- x
-- y┃
-```
-
-</td></tr>
-</table>
-
-### [Paste51](../spec/paste.md#paste51)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-x
-```
-
-</td><td>
-
-```buffer
-- see ┃- below
-```
-
-</td><td>
-
-```buffer
-- see x
-┃- below
-```
-
-</td><td>
-
-```buffer
-- see x
-  ┃\- below
-```
-
-</td></tr>
-</table>
-
-### [Paste52](../spec/paste.md#paste52)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````clipboard
-```
-code
-```
-````
-
-</td><td>
-
-```buffer
-- ┃
-  - kid
-```
-
-</td><td>
-
-````buffer
-- ```
-code
-```┃
-  - kid
-````
-
-</td><td>
-
-````buffer
-- ```
-  code┃
-  ```
-  - kid
-````
-
-</td></tr>
-</table>
-
-### [Paste53](../spec/paste.md#paste53)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-Title
-=====
-```
-
-</td><td>
-
-```buffer
-para┃
-```
-
-</td><td>
-
-```buffer
-para# Title┃
-```
-
-</td><td>
-
-```buffer
-para
-
-Title┃
-=====
-```
-
-</td></tr>
-</table>
-
-### [Paste54](../spec/paste.md#paste54)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-x
-y
-```
-
-</td><td>
-
-```buffer
-# Hel┃lo
-```
-
-</td><td>
-
-```buffer
-# Helx
-y
-┃lo
-```
-
-</td><td>
-
-```buffer
-# Hello
-
-x
-y┃
-```
-
-</td></tr>
-</table>
-
-### [Paste57](../spec/paste.md#paste57)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-## Summary
-
-The fix:
-- parser
-- test
-```
-
-</td><td>
-
-```buffer
-- Notes┃
-- Later
-```
-
-</td><td>
-
-```buffer
-- Notes
-- ## Summary
-
-  - The fix:
-
-    - parser
-    - test┃
-- Later
-```
-
-</td><td>
-
-```buffer
-- Notes
-- ## Summary
-  The fix:
-  - parser
-  - test┃
-- Later
-```
-
-</td></tr>
-</table>
-
-### [Paste58](../spec/paste.md#paste58)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
----
-title: x
----
-```
-
-</td><td>
-
-```buffer
-Intro
-
-┃
-
-Outro
-```
-
-</td><td>
-
-```buffer
-Intro
-
----
-title: x
----
-┃
-
-Outro
-```
-
-</td><td>
-
-```buffer
-Intro
-
----
-title: x┃
----
-
-Outro
-```
-
-</td></tr>
-</table>
-
-### [Paste59](../spec/paste.md#paste59)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-- milk
-- eggs
-```
-
-</td><td>
-
-```buffer
-# Groceries┃
-
-- bread
-```
-
-</td><td>
-
-```buffer
-# Groceries
-
-- milk
-- eggs┃
-
-- bread
-```
-
-</td><td>
-
-```buffer
-# Groceries
-
-- milk
-- eggs┃
-- bread
-```
-
-</td></tr>
-</table>
-
-### [Paste60](../spec/paste.md#paste60)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-- x
-- y
-```
-
-</td><td>
-
-```buffer
-- a
-
-- ┃
-```
-
-</td><td>
-
-```buffer
-- a
+# T
 
 - x
 - y┃
+
+- z
 ```
 
 </td><td>
 
 ```buffer
-- a
+# T
 
 - x
-
 - y┃
+- z
 ```
 
 </td></tr>
 </table>
 
-### [Paste61](../spec/paste.md#paste61)
-
-> pasteStructured
+### [Paste7](../spec/paste.md#paste7)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-# Z
-```
-
-</td><td>
-
-```buffer
-# A
-## B
-text┃
-## C
-```
-
-</td><td>
-
-```buffer
-# A
-## B
-text# Z┃
-## C
-```
-
-</td><td>
-
-```buffer
-# A
-## B
-text
-# Z┃
-## C
-```
-
-</td></tr>
-</table>
-
-### [Paste62](../spec/paste.md#paste62)
-
-> pasteStructured
-
-Adapted: under pasteStructuredMidText: after
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````clipboard
-```
-make build
-```
-````
-
-</td><td>
-
-```buffer
-Run ┃then deploy.
-```
-
-</td><td>
-
-````buffer
-Run ```
-make build
-```┃then deploy.
-````
-
-</td><td>
-
-````buffer
-Run then deploy.
-
-```
-make build┃
-```
-````
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-Run ┃then deploy.
-```
-
-</td><td>
-
-````buffer
-Run then deploy.
-
-```
-make build┃
-```
-````
-
-</td></tr>
-</table>
-
-### [Paste65](../spec/paste.md#paste65)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````clipboard
-```js
-y
-```
-````
-
-</td><td>
-
-````buffer
-- grandchild
-  ```js
-  x
-  ```
-┃
-- next
-````
-
-</td><td>
-
-````buffer
-- grandchild
-  ```js
-  x
-  ```
-```js
-y
-```┃
-- next
-````
-
-</td><td>
-
-````buffer
-- grandchild
-  ```js
-  x
-  ```
-
-  ```js
-  y┃
-  ```
-
-- next
-````
-
-</td></tr>
-</table>
-
-### [Paste66](../spec/paste.md#paste66)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````clipboard
-```js
-      // greet
-        f();
-      ```
-````
-
-</td><td>
-
-```buffer
-- grandchild┃
-```
-
-</td><td>
-
-````buffer
-- grandchild```js
-// greet
-  f();
-```┃
-````
-
-</td><td>
-
-````buffer
-- grandchild
-  ```js
-  // greet
-    f();┃
-  ```
-````
-
-</td></tr>
-</table>
-
-### [Paste67](../spec/paste.md#paste67)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-x
-y
-```
-
-</td><td>
-
-```buffer
-a
-┃
-b
-```
-
-</td><td>
-
-```buffer
-a
-x
-y
-┃
-b
-```
-
-</td><td>
-
-```buffer
-a
-
-x
-y┃
-
-b
-```
-
-</td></tr>
-</table>
-
-### [Paste70](../spec/paste.md#paste70)
-
-> pasteStructured
-
-Adapted: under pasteStructuredMidText: after
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ````clipboard
@@ -12140,11 +13324,19 @@ c
 ```
 ````
 
-</td><td>
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 p┃
-    - g
+
+q
 ```
 
 </td><td>
@@ -12153,408 +13345,758 @@ p┃
 p```
 c
 ```┃
-    - g
+
+q
 ````
 
 </td><td>
 
 ````buffer
 p
-    - g
 
 ```
 c┃
 ```
+
+q
 ````
 
 </td></tr>
 </table>
 
-Original:
+### [Paste8](../spec/paste.md#paste8)
+
 <table>
-<tr><th>buffer</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
+- a
+
+  p┃
+
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+
+  p
+
+  x
+
+  y┃
+
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+
+  p
+
+  - x
+  - y┃
+
+- b
+```
+
+</td></tr>
+</table>
+
+### [Paste9](../spec/paste.md#paste9)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> p┃
+
+after
+```
+
+</td><td>
+
+```buffer
+> p
+
+- x
+- y┃
+
+after
+```
+
+</td><td>
+
+```buffer
+> p
+>
+> - x
+> - y┃
+
+after
+```
+
+</td></tr>
+</table>
+
+### [Paste10](../spec/paste.md#paste10)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+## h
+text
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# A
+
 p┃
-    - g
+
+q
+
+## B
+
+r
 ```
 
 </td><td>
 
-````buffer
+```buffer
+# A
+
 p
-    - g
 
+## h
+
+text┃
+
+q
+
+## B
+
+r
 ```
-c┃
+
+</td><td>
+
+```buffer
+# A
+
+p
+
+## h
+text┃
+
+q
+
+## B
+
+r
 ```
-````
 
 </td></tr>
 </table>
 
-### [Paste71](../spec/paste.md#paste71)
-
-> pasteStructured
+### [Paste11](../spec/paste.md#paste11)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
-# h
+## h
+text
 ```
-
-</td><td>
-
-````buffer
-- i
-  ```
-  x
-  ```┃
-
-  ```
-  y
-  ```
-````
-
-</td><td>
-
-````buffer
-- i
-  ```
-  x
-  ```# h┃
-
-  ```
-  y
-  ```
-````
-
-</td><td>
-
-````buffer
-- i
-  ```
-  x
-  ```
-
-  # h┃
-
-  ```
-  y
-  ```
-````
 
 </td></tr>
 </table>
 
-### [Paste72](../spec/paste.md#paste72)
-
-> pasteStructured
+> paste
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+## A┃
+
+p
+
+## B
+```
+
+</td><td>
+
+```buffer
+## A
+
+### h
+
+text┃
+
+p
+
+## B
+```
+
+</td><td>
+
+```buffer
+## A
+
+## h
+text┃
+
+p
+
+## B
+```
+
+</td></tr>
+</table>
+
+### [Paste12](../spec/paste.md#paste12)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
-> q
-```
-
-</td><td>
-
-```buffer
-- a
-- [ ] ┃
-- b
-```
-
-</td><td>
-
-```buffer
-- a
-- [ ] > q┃
-- b
-```
-
-</td><td>
-
-```buffer
-- a
-- [ ] 
-  > q┃
-- b
+### h
+text
 ```
 
 </td></tr>
 </table>
 
-### [Paste93](../spec/paste.md#paste93)
-
-> pasteStructured
+> paste
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-````clipboard
-x
+```buffer
+## A┃
+
+p
 ```
-y
-````
 
 </td><td>
 
 ```buffer
-a┃
+## A
 
-b
+### h
+
+text┃
+
+p
 ```
 
 </td><td>
 
-````buffer
+```buffer
+## A
+
+### h
+text┃
+
+p
+```
+
+</td></tr>
+</table>
+
+### [Paste13](../spec/paste.md#paste13)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
 a
-
-x
-
-```
-y
-```┃
-
-b
-````
-
-</td><td>
-
-````buffer
-a
-
-x
-```
-y┃
-```
-
-b
-````
-
-</td></tr>
-</table>
-
-### [Paste73](../spec/paste.md#paste73)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-x
-y
-```
-
-</td><td>
-
-```buffer
--  ┃
-  - kid
-```
-
-</td><td>
-
-```buffer
--  x
-y
 ┃
-  - kid
+
+b
+```
+
+</td><td>
+
+```buffer
+a
+- x
+┃
+
+b
+```
+
+</td><td>
+
+```buffer
+a
+
+- x┃
+
+
+b
+```
+
+</td></tr>
+</table>
+
+### [Paste14](../spec/paste.md#paste14)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```
+a┃
+```
+````
+
+</td><td>
+
+````buffer
+```
+a
+```
+
+- x
+- y┃
+````
+
+</td><td>
+
+````buffer
+```
+a- x
+- y
+┃
+```
+````
+
+</td></tr>
+</table>
+
+### [Paste17](../spec/paste.md#paste17)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a«bc»d
+- e
 ```
 
 </td><td>
 
 ```buffer
 - x
-  y
-  ┃
-  - kid
+- y┃
+- e
 ```
-
-</td></tr>
-</table>
-
-### [Paste74](../spec/paste.md#paste74)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````clipboard
-```
-if x:
-    y
-```
-````
 
 </td><td>
 
 ```buffer
-- a
-- ┃
+- ad
+- x
+- y┃
+- e
 ```
-
-</td><td>
-
-````buffer
-- a
-- ```
-if x:
-    y
-```┃
-````
-
-</td><td>
-
-````buffer
-- a
-- ```
-  if x:
-      y┃
-  ```
-````
 
 </td></tr>
 </table>
 
-### [Paste77](../spec/paste.md#paste77)
-
-> pasteStructured
+### [Paste22](../spec/paste.md#paste22)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
-## S
-fix:
-- p
+x
+
+# h
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+## A
+
+p┃
+
+q
+
+## B
 ```
 
 </td><td>
 
 ```buffer
-> a┃
+## A
+
+p
+
+x
+
+### h┃
+
+q
+
+## B
 ```
 
 </td><td>
 
 ```buffer
-> a
+## A
 
-# S
+p
 
-fix:
+x
 
-- p┃
+# h┃
+
+q
+
+## B
+```
+
+</td></tr>
+</table>
+
+### [Paste23](../spec/paste.md#paste23)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+## h
+text
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> [!note] q┃
+
+after
 ```
 
 </td><td>
 
 ```buffer
-> a
+> [!note] q
+
+# h
+
+text┃
+
+after
+```
+
+</td><td>
+
+```buffer
+> [!note] q
+> ## h
+> text┃
+
+after
+```
+
+</td></tr>
+</table>
+
+### [Paste24](../spec/paste.md#paste24)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- a
+  - b
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# h1
+┃
+```
+
+</td><td>
+
+```buffer
+# h1
+
+- a
+  - b┃
+```
+
+</td><td>
+
+```buffer
+# h1
+- a
+  - b┃
+```
+
+</td></tr>
+</table>
+
+### [Paste25](../spec/paste.md#paste25)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> [!note] q┃
+> body
+```
+
+</td><td>
+
+```buffer
+> [!note] qx
+y┃
+> body
+```
+
+</td><td>
+
+```buffer
+> [!note] q
+> x
+> y┃
 >
-> ## S
-> fix:
-> - p┃
+> body
 ```
 
 </td></tr>
 </table>
 
-### [Paste79](../spec/paste.md#paste79)
-
-> pasteStructured
+### [Paste26](../spec/paste.md#paste26)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
-$$
-    x
-    $$
+- a
+- b
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+p
+┃
 ```
 
 </td><td>
 
 ```buffer
-a┃
-```
+p
 
-</td><td>
-
-```buffer
-a$$
-    x
-    $$┃
-```
-
-</td><td>
-
-```buffer
 a
 
-$$
-    x┃
-    $$
+b┃
+```
+
+</td><td>
+
+```buffer
+p
+- a
+- b┃
 ```
 
 </td></tr>
 </table>
 
-### [Paste90](../spec/paste.md#paste90)
-
-> pasteStructured
+### [Paste27](../spec/paste.md#paste27)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
-> p
+> # q
+```
 
-> q
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# A
+para┃
+
+more
 ```
 
 </td><td>
 
 ```buffer
-- a┃
-- b
+# A
+para> # q
+┃
+
+more
 ```
 
 </td><td>
 
 ```buffer
-- a
+# A
+para
 
-> p
+> # q┃
 
-> q┃
-
-- b
-```
-
-</td><td>
-
-```buffer
-- a
-  > p
-
-  > q┃
-- b
+more
 ```
 
 </td></tr>
@@ -13156,6 +14698,116 @@ para
 
   - »
 ```
+
+</td></tr>
+</table>
+
+### [Placeholder18](../spec/placeholders.md#placeholder18)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+a┃ # b
+
+after
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃ # b
+
+after
+```
+
+</td></tr>
+</table>
+
+> cursorDocEnd cursorCharLeft
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+ # b
+
+afte┃r
+```
+
+</td><td>
+
+```buffer
+\# b
+
+after┃
+```
+
+</td></tr>
+</table>
+
+### [Placeholder19](../spec/placeholders.md#placeholder19)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+````buffer
+para
+a┃ ``` x
+
+after
+````
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+````buffer
+para
+┃ ``` x
+
+after
+````
+
+</td></tr>
+</table>
+
+> cursorDocEnd cursorCharLeft
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+para
+ ``` x
+
+after┃
+````
+
+</td><td>
+
+````buffer
+para
+\``` x
+
+after┃
+````
 
 </td></tr>
 </table>
@@ -14966,10 +16618,8 @@ para
 
 ### [Quote63](../spec/quotes.md#quote63)
 
-> pasteStructured
-
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -14977,7 +16627,14 @@ para
   - y
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 > - a┃
@@ -15300,44 +16957,6 @@ para┃
 - a
 - ┃q
   > r
-```
-
-</td></tr>
-</table>
-
-### [Quote76](../spec/quotes.md#quote76)
-
-> pastePlain
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-x
-y
-```
-
-</td><td>
-
-```buffer
-- > a┃b
-```
-
-</td><td>
-
-```buffer
-- > ax
-y
-┃b
-```
-
-</td><td>
-
-```buffer
-- > ax
-  > y
-  > ┃b
 ```
 
 </td></tr>
@@ -15949,6 +17568,41 @@ lines
 </td></tr>
 </table>
 
+### [Quote94](../spec/quotes.md#quote94)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- [ ] 
+  > ┃q
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- [ ] 
+  >┃q
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- [ ] ┃q
+- b
+```
+
+</td></tr>
+</table>
+
 ### [Scenario4](../spec/scenarios.md#scenario4)
 
 <table>
@@ -16477,10 +18131,8 @@ more┃
 
 ### [Scenario18](../spec/scenarios.md#scenario18)
 
-> pasteStructured "!"
-
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ````clipboard
@@ -16489,7 +18141,14 @@ code
 ```
 ````
 
-</td><td>
+</td></tr>
+</table>
+
+> paste "!"
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - example┃
@@ -16501,7 +18160,8 @@ code
 ````buffer
 - example```
 code
-```!┃
+```
+!┃
 - next
 ````
 
@@ -17768,6 +19428,84 @@ b
 </td></tr>
 </table>
 
+### [ShiftEnter32](../spec/shift-enter.md#shiftenter32)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃ # b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃ # b
+```
+
+</td></tr>
+</table>
+
+> shiftEnter
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  # 
+   ┃b
+```
+
+</td><td>
+
+```buffer
+-
+  ┃\# b
+```
+
+</td></tr>
+</table>
+
+### [ShiftEnter33](../spec/shift-enter.md#shiftenter33)
+
+> shiftEnter
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-
+  ┃ three
+```
+
+</td><td>
+
+```buffer
+-
+   
+   ┃three
+```
+
+</td><td>
+
+```buffer
+-
+  ┃ three
+```
+
+</td></tr>
+</table>
+
 ### [TaskEnter1](../spec/tasks.md#taskenter1)
 
 > enter
@@ -18312,7 +20050,7 @@ Original:
 </td></tr>
 </table>
 
-## Whitespace (35)
+## Whitespace (29)
 
 ### [Backspace17d](../spec/backspace.md#backspace17d)
 
@@ -18650,7 +20388,7 @@ a
 </td></tr>
 </table>
 
-### [S4](../spec/obsidian-true-outliner.md#s4)
+### [TO-S4](../spec/obsidian-true-outliner.md#to-s4)
 
 > shiftEnter
 
@@ -18679,7 +20417,7 @@ one
 </td></tr>
 </table>
 
-### [S9](../spec/obsidian-true-outliner.md#s9)
+### [TO-S9](../spec/obsidian-true-outliner.md#to-s9)
 
 > shiftEnter
 
@@ -18714,7 +20452,7 @@ one
 </td></tr>
 </table>
 
-### [S13](../spec/obsidian-true-outliner.md#s13)
+### [TO-S13](../spec/obsidian-true-outliner.md#to-s13)
 
 > shiftEnter
 
@@ -18743,7 +20481,7 @@ one
 </td></tr>
 </table>
 
-### [list-marker-content-column](../spec/obsidian-true-outliner.md#list-marker-content-column)
+### [TO-MarkerCol](../spec/obsidian-true-outliner.md#to-markercol)
 
 > indent
 
@@ -18773,12 +20511,115 @@ one
 </td></tr>
 </table>
 
-### [Paste3](../spec/paste-plain.md#paste3)
-
-> pastePlain
+### [PasteHtml11](../spec/paste-html.md#pastehtml11)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+line one
+line two
+
+p2
+```
+
+</td><td>
+
+```clipboard
+<p>line one<br>line two</p><p>p2</p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+line one  
+line two
+
+p2┃
+```
+
+</td><td>
+
+```buffer
+line one
+line two
+
+p2┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml12](../spec/paste-html.md#pastehtml12)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+q1
+
+q2
+```
+
+</td><td>
+
+```clipboard
+<blockquote><p>q1</p><p>q2</p></blockquote>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+> q1
+> 
+> q2┃
+```
+
+</td><td>
+
+```buffer
+> q1
+>
+> q2┃
+```
+
+</td></tr>
+</table>
+
+### [Paste1](../spec/paste.md#paste1)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -18786,7 +20627,14 @@ x
 y
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - a┃b
@@ -18806,344 +20654,6 @@ y
 - ax
   y
   ┃b
-```
-
-</td></tr>
-</table>
-
-### [Paste5](../spec/paste-plain.md#paste5)
-
-> pastePlain
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-x
-y
-```
-
-</td><td>
-
-```buffer
-- a┃
-```
-
-</td><td>
-
-```buffer
-- ax
-y
-┃
-```
-
-</td><td>
-
-```buffer
-- ax
-  y
-  ┃
-```
-
-</td></tr>
-</table>
-
-### [Paste86](../spec/paste-plain.md#paste86)
-
-> pastePlain
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-a  
-b
-```
-
-</td><td>
-
-```buffer
-- ┃
-```
-
-</td><td>
-
-```buffer
-- a  
-b┃
-```
-
-</td><td>
-
-```buffer
-- a  
-  b┃
-```
-
-</td></tr>
-</table>
-
-### [Paste89](../spec/paste-plain.md#paste89)
-
-<table>
-<tr><th>clipboard</th><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-x
-y
-```
-
-</td><td>
-
-```buffer
-- ┃a b
-  - c
-```
-
-</td></tr>
-</table>
-
-> deleteContentForward
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- ┃ b
-  - c
-```
-
-</td></tr>
-</table>
-
-> pastePlain
-
-<table>
-<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x
-y┃ b
-  - c
-```
-
-</td><td>
-
-```buffer
-- x
-  y┃ b
-  - c
-```
-
-</td></tr>
-</table>
-
-### [Paste7](../spec/paste.md#paste7)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-x
-y
-```
-
-</td><td>
-
-```buffer
-- a┃b
-```
-
-</td><td>
-
-```buffer
-- ax
-y
-┃b
-```
-
-</td><td>
-
-```buffer
-- ax
-  y
-  ┃b
-```
-
-</td></tr>
-</table>
-
-### [Paste10](../spec/paste.md#paste10)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-x
-y
-```
-
-</td><td>
-
-```buffer
-- a
-- ┃
-```
-
-</td><td>
-
-```buffer
-- a
-- x
-y
-┃
-```
-
-</td><td>
-
-```buffer
-- a
-- x
-  y
-  ┃
-```
-
-</td></tr>
-</table>
-
-### [Paste48](../spec/paste.md#paste48)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-new
-better
-```
-
-</td><td>
-
-```buffer
-- the «old» plan
-```
-
-</td><td>
-
-```buffer
-- the new
-better┃ plan
-```
-
-</td><td>
-
-```buffer
-- the new
-  better┃ plan
-```
-
-</td></tr>
-</table>
-
-### [Paste75](../spec/paste.md#paste75)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-x
-y
-```
-
-</td><td>
-
-```buffer
-- a
-- [ ] ┃
-```
-
-</td><td>
-
-```buffer
-- a
-- [ ] x
-y
-┃
-```
-
-</td><td>
-
-```buffer
-- a
-- [ ] x
-  y
-  ┃
-```
-
-</td></tr>
-</table>
-
-### [Paste90b](../spec/paste.md#paste90b)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-- x
-
-  p
-
-  q
-```
-
-</td><td>
-
-```buffer
-- a┃
-- b
-```
-
-</td><td>
-
-```buffer
-- a
-- x
-
-    p
-
-    q┃
-- b
-```
-
-</td><td>
-
-```buffer
-- a
-- x
-
-  p
-
-  q┃
-- b
 ```
 
 </td></tr>
@@ -19602,7 +21112,7 @@ c
 </td></tr>
 </table>
 
-## Caret (67)
+## Caret (68)
 
 ### [CursorUp2](../spec/cursor.md#cursorup2)
 
@@ -21608,7 +23118,7 @@ para┃
 </td></tr>
 </table>
 
-### [End of heading above a paragraph](../spec/obsidian-true-outliner.md#end-of-heading-above-a-paragraph)
+### [TO-E14-E20b](../spec/obsidian-true-outliner.md#to-e14-e20b)
 
 > enter
 
@@ -21642,7 +23152,7 @@ Body.
 </td></tr>
 </table>
 
-### [Block id moves with its item](../spec/obsidian-true-outliner.md#block-id-moves-with-its-item)
+### [TO-BlockId](../spec/obsidian-true-outliner.md#to-blockid)
 
 > moveSubtreeUp
 
@@ -21675,7 +23185,7 @@ Body.
 </td></tr>
 </table>
 
-### [Block id moves with its paragraph](../spec/obsidian-true-outliner.md#block-id-moves-with-its-paragraph)
+### [TO-BlockIdb](../spec/obsidian-true-outliner.md#to-blockidb)
 
 > moveSubtreeUp
 
@@ -21711,7 +23221,7 @@ para one
 </td></tr>
 </table>
 
-### [Blank line added below a quote](../spec/obsidian-true-outliner.md#blank-line-added-below-a-quote)
+### [TO-Lazy](../spec/obsidian-true-outliner.md#to-lazy)
 
 > moveSubtreeDown
 
@@ -21743,7 +23253,7 @@ para┃
 </td></tr>
 </table>
 
-### [Carried place removed on leaving](../spec/obsidian-true-outliner.md#carried-place-removed-on-leaving)
+### [TO8](../spec/obsidian-true-outliner.md#to8)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -21797,7 +23307,7 @@ para┃
 </td></tr>
 </table>
 
-### [Doubly indented place removed on leaving](../spec/obsidian-true-outliner.md#doubly-indented-place-removed-on-leaving)
+### [TO9](../spec/obsidian-true-outliner.md#to9)
 
 > shiftEnter indent indent cursorDocStart
 
@@ -21865,6 +23375,60 @@ para┃
 - c»
 - d
 ```
+
+</td></tr>
+</table>
+
+### [PasteHtml9](../spec/paste-html.md#pastehtml9)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+let a = 1;
+let b = 2;
+```
+
+</td><td>
+
+```clipboard
+<pre><code class="language-js">let a = 1;
+let b = 2;
+</code></pre>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+````buffer
+```js
+let a = 1;
+let b = 2;
+```┃
+````
+
+</td><td>
+
+````buffer
+```js
+let a = 1;
+let b = 2;┃
+```
+````
 
 </td></tr>
 </table>
@@ -22348,7 +23912,7 @@ b┃
 </td></tr>
 </table>
 
-## Skipped (155)
+## Skipped (169)
 
 | example | why |
 | --- | --- |
@@ -22366,6 +23930,24 @@ b┃
 | [Backspace42b](../spec/backspace.md#backspace42b) | option markup: decorated |
 | [Backspace43c](../spec/backspace.md#backspace43c) | option enterAtTextStart: stay |
 | [Backspace45b](../spec/backspace.md#backspace45b) | option joinWithChildren: refuse |
+| **backtick.md** | |
+| [Backtick7](../spec/backtick.md#backtick7) | option markup: decorated |
+| [Backtick8](../spec/backtick.md#backtick8) | option closeBackticks: none |
+| [Backtick11](../spec/backtick.md#backtick11) | option closeBackticks: none |
+| [Backtick13](../spec/backtick.md#backtick13) | option markup: decorated |
+| [Backtick15](../spec/backtick.md#backtick15) | caret right after a backtick at a line's end (Live Preview moves it before the run) |
+| [Backtick16](../spec/backtick.md#backtick16) | option markup: decorated |
+| [Backtick17](../spec/backtick.md#backtick17) | caret right after a backtick at a line's end (Live Preview moves it before the run) |
+| [Backtick31](../spec/backtick.md#backtick31) | option markup: decorated |
+| [Backtick32](../spec/backtick.md#backtick32) | caret before a code span's closing backticks (Live Preview moves it past them) |
+| **copy.md** | |
+| [Copy4](../spec/copy.md#copy4) | nothing to compare |
+| [Copy5](../spec/copy.md#copy5) | option copySelection: nodes |
+| [Copy6](../spec/copy.md#copy6) | nothing to compare |
+| [Copy7](../spec/copy.md#copy7) | option copySelection: nodes |
+| [Copy8](../spec/copy.md#copy8) | nothing to compare |
+| [Copy9](../spec/copy.md#copy9) | nothing to compare |
+| [Cut3](../spec/copy.md#cut3) | option copySelection: nodes |
 | **cursor.md** | |
 | [CursorLeft2](../spec/cursor.md#cursorleft2) | CR line endings |
 | [CursorHome3](../spec/cursor.md#cursorhome3) | caret before an item's text (true-outliner keeps it on the text) |
@@ -22402,6 +23984,7 @@ b┃
 | [Delete25](../spec/delete.md#delete25) | caret before an item's text (true-outliner keeps it on the text) |
 | [Delete29](../spec/delete.md#delete29) | caret before an item's text (true-outliner keeps it on the text) |
 | [Delete31b](../spec/delete.md#delete31b) | option joinWithChildren: refuse |
+| [Delete34](../spec/delete.md#delete34) | nothing to compare |
 | **duplicate-subtree.md** | |
 | [DuplicateSubtree1](../spec/duplicate-subtree.md#duplicatesubtree1) | action duplicateSubtree |
 | [DuplicateSubtree2](../spec/duplicate-subtree.md#duplicatesubtree2) | action duplicateSubtree |
@@ -22411,6 +23994,7 @@ b┃
 | [DuplicateSubtree6](../spec/duplicate-subtree.md#duplicatesubtree6) | action duplicateSubtree |
 | [DuplicateSubtree7](../spec/duplicate-subtree.md#duplicatesubtree7) | action duplicateSubtree |
 | [DuplicateSubtree8](../spec/duplicate-subtree.md#duplicatesubtree8) | action duplicateSubtree |
+| [DuplicateSubtree9](../spec/duplicate-subtree.md#duplicatesubtree9) | option closeBackticks: none |
 | **enter.md** | |
 | [Enter7b](../spec/enter.md#enter7b) | option enterOnEmptyItem: outdent |
 | [Enter15b](../spec/enter.md#enter15b) | option enterOnEmptyItem: outdent |
@@ -22445,6 +24029,7 @@ b┃
 | [Fence11](../spec/fences.md#fence11) | option handleFenceContents: false |
 | [Fence21](../spec/fences.md#fence21) | nothing to compare |
 | [Fence32b](../spec/fences.md#fence32b) | option markup: decorated |
+| [Fence61](../spec/fences.md#fence61) | caret before an item's text (true-outliner keeps it on the text) |
 | **gaps.md** | |
 | [Gap19](../spec/gaps.md#gap19) | caret in the frontmatter (Live Preview shows it as properties) |
 | **indent.md** | |
@@ -22459,12 +24044,13 @@ b┃
 | **move-subtree-up.md** | |
 | [MoveUp34](../spec/move-subtree-up.md#moveup34) | caret before an item's text (true-outliner keeps it on the text) |
 | [MoveUp36](../spec/move-subtree-up.md#moveup36) | caret before an item's text (true-outliner keeps it on the text) |
+| [MoveUp41](../spec/move-subtree-up.md#moveup41) | option closeBackticks: none |
 | **obsidian-true-outliner.md** | |
-| [S5](../spec/obsidian-true-outliner.md#s5) | caret before an item's text (true-outliner keeps it on the text) |
-| [Backspace before the checkbox](../spec/obsidian-true-outliner.md#backspace-before-the-checkbox) | option markup: decorated |
-| [Outdenting the head of a nested list](../spec/obsidian-true-outliner.md#outdenting-the-head-of-a-nested-list) | option outdent: logical |
-| [Empty paragraph and blank lines removed](../spec/obsidian-true-outliner.md#empty-paragraph-and-blank-lines-removed) | option enterOnEmptyItem: outdent |
-| [Indented list under paragraph restored](../spec/obsidian-true-outliner.md#indented-list-under-paragraph-restored) | option enterOnEmptyItem: outdent |
+| [TO-S5](../spec/obsidian-true-outliner.md#to-s5) | caret before an item's text (true-outliner keeps it on the text) |
+| [TO1](../spec/obsidian-true-outliner.md#to1) | option markup: decorated |
+| [TO7](../spec/obsidian-true-outliner.md#to7) | option outdent: logical |
+| [TO18](../spec/obsidian-true-outliner.md#to18) | option enterOnEmptyItem: outdent |
+| [TO19](../spec/obsidian-true-outliner.md#to19) | option enterOnEmptyItem: outdent |
 | **outdent.md** | |
 | [Outdent14](../spec/outdent.md#outdent14) | caret before an item's text (true-outliner keeps it on the text) |
 | [LogicalOutdent1](../spec/outdent.md#logicaloutdent1) | option outdent: logical |
@@ -22476,30 +24062,27 @@ b┃
 | [Outdent16](../spec/outdent.md#outdent16) | caret before an item's text (true-outliner keeps it on the text) |
 | [Outdent17b](../spec/outdent.md#outdent17b) | option outdent: logical |
 | [Outdent19b](../spec/outdent.md#outdent19b) | option markup: decorated |
+| **paste-list.md** | |
+| [PasteList7b](../spec/paste-list.md#pastelist7b) | option enterTask: plain |
+| [PasteList18](../spec/paste-list.md#pastelist18) | option pasteOnParent: after |
+| [PasteList19](../spec/paste-list.md#pastelist19) | option pasteOnParent: after |
+| [PasteList20](../spec/paste-list.md#pastelist20) | option pasteAtTextStart: before |
+| [PasteList22](../spec/paste-list.md#pastelist22) | option pasteSeams: open |
+| [PasteList23](../spec/paste-list.md#pastelist23) | option pasteSeams: open |
+| [PasteList24](../spec/paste-list.md#pastelist24) | option pasteSeams: open |
+| **paste-plain.md** | |
+| [PastePlain31](../spec/paste-plain.md#pasteplain31) | option pastePlainLines: enter |
+| [PastePlain32](../spec/paste-plain.md#pasteplain32) | option pastePlainLines: items |
+| [PastePlain33](../spec/paste-plain.md#pasteplain33) | option pastePlainLines: items |
+| [PastePlain34](../spec/paste-plain.md#pasteplain34) | nothing to compare |
 | **paste.md** | |
-| [Paste8](../spec/paste.md#paste8) | option pasteStructuredLines: items |
-| [Paste8b](../spec/paste.md#paste8b) | option pasteStructuredLines: items |
-| [Paste8c](../spec/paste.md#paste8c) | option pasteStructuredLines: items |
-| [Paste13b](../spec/paste.md#paste13b) | option pasteStructuredListForm: drop |
-| [Paste13d](../spec/paste.md#paste13d) | option pasteStructuredAtEnd: join |
-| [Paste13e](../spec/paste.md#paste13e) | option pasteStructuredAtEnd: join |
-| [Paste14b](../spec/paste.md#paste14b) | option pasteStructuredOnParent: after |
-| [Paste15b](../spec/paste.md#paste15b) | option pasteStructuredListForm: literal |
-| [Paste15c](../spec/paste.md#paste15c) | option pasteStructuredListForm: drop |
-| [Paste17b](../spec/paste.md#paste17b) | option pasteStructuredListForm: literal |
-| [Paste17c](../spec/paste.md#paste17c) | option pasteStructuredListForm: drop |
-| [Paste17d](../spec/paste.md#paste17d) | option pasteStructuredAtEnd: join |
-| [Paste18b](../spec/paste.md#paste18b) | option pasteStructuredListForm: literal |
-| [Paste19b](../spec/paste.md#paste19b) | option pasteStructuredAtEnd: join |
-| [Paste20b](../spec/paste.md#paste20b) | option pasteStructuredAtEnd: join |
-| [Paste26b](../spec/paste.md#paste26b) | option pasteStructuredAtEnd: join |
-| [Paste27b](../spec/paste.md#paste27b) | option pasteStructuredAtEnd: join |
-| [Paste27c](../spec/paste.md#paste27c) | option pasteStructuredAtEnd: join |
-| [Paste27d](../spec/paste.md#paste27d) | option pasteStructuredOnParent: after |
-| [Paste39](../spec/paste.md#paste39) | option pasteStructuredLines: items |
-| [Paste42b](../spec/paste.md#paste42b) | option pasteStructuredOnParent: after |
-| [Paste56](../spec/paste.md#paste56) | caret in a table (Live Preview edits it in a table of its own) |
-| [Paste59b](../spec/paste.md#paste59b) | option pasteStructuredOnParent: after |
+| [Paste16](../spec/paste.md#paste16) | caret before an item's text (true-outliner keeps it on the text) |
+| [Paste18](../spec/paste.md#paste18) | option pasteLines: items |
+| [Paste19](../spec/paste.md#paste19) | option pasteLines: items |
+| [Paste20](../spec/paste.md#paste20) | option pasteAtTextStart: before |
+| [Paste21](../spec/paste.md#paste21) | option pasteSeams: open |
+| **placeholders.md** | |
+| [Placeholder20](../spec/placeholders.md#placeholder20) | option enterSplitSpace: start |
 | **quotes.md** | |
 | [Quote12b](../spec/quotes.md#quote12b) | option outdent: logical |
 | [Quote20](../spec/quotes.md#quote20) | option outdent: logical |
@@ -22509,7 +24092,7 @@ b┃
 | [Quote86](../spec/quotes.md#quote86) | action duplicateSubtree |
 | **scenarios.md** | |
 | [Scenario10](../spec/scenarios.md#scenario10) | action deleteSubtree |
-| [Scenario17](../spec/scenarios.md#scenario17) | option pasteStructuredLines: items |
+| [Scenario17](../spec/scenarios.md#scenario17) | option pasteLines: items |
 | **shift-enter.md** | |
 | [ShiftEnter16](../spec/shift-enter.md#shiftenter16) | CR line endings |
 | [ShiftEnter22](../spec/shift-enter.md#shiftenter22) | caret before an item's text (true-outliner keeps it on the text) |

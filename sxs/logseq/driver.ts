@@ -180,13 +180,15 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
       moveSubtreeDown: 'Alt+Shift+ArrowDown',
       // "kill line before" (`kill-line-before!`): from the start of the caret's line to the caret, nothing at a line's start
       deleteSoftLineBackward: 'Alt+u',
-      pasteStructured: 'Control+v',
+      copy: 'Control+c',
+      cut: 'Control+x',
+      paste: 'Control+v',
       pastePlain: 'Control+Shift+v',
       undo: 'Control+z',
       redo: 'Control+Shift+z',
       ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
     },
-    emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd', 'deleteSubtree'],
+    emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd', 'selectSubtree', 'deleteSubtree'],
     // quotes and callouts are skipped for every block app (../lib/block.ts); a heading's `#`s, a task's
     // checkbox and a code block's fences are OG's text in a block, edited a character at a time, and
     // the DB version's properties of a block
@@ -194,7 +196,17 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
     ordered: true,
     // Backspace at the first block's start does nothing in both (measured with `--ignore-options`:
     // `backspace.md › Backspace34` agrees; its `unwrap` case needs a paragraph, which no block app runs)
-    behaves: { enterTask: 'plain', outdent: 'direct', enterOnEmptyItem: 'sibling', enterMidItem: 'child', pasteStructuredMidText: 'after', emptyItemWithChildren: 'refuse', joinWithChildren: 'refuse', pasteStructuredListForm: 'drop', backspaceAtTopItem: 'refuse' },
+    behaves: {
+      outdent: 'direct',
+      enterOnEmptyItem: 'sibling',
+      enterMidItem: 'child',
+      enterTask: 'plain',
+      joinWithChildren: 'refuse',
+      backspaceAtTopItem: 'refuse',
+      emptyItemWithChildren: 'refuse',
+      copyAtCaret: 'host',
+      copySelection: 'nodes',
+    },
     ...(flavor.settings && { settings: flavor.settings }),
     holds(doc: Outline) {
       const own = flavor.holds(doc);
@@ -471,12 +483,13 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
     },
 
     async act(page: Page, action: string, settle: () => Promise<void>) {
-      if (action === 'deleteSubtree') {
-        // the block being edited selected, then Backspace deletes the selected blocks with their
-        // children. Escape selects it, but never an OG block whose text has a code fence (Logseq's
-        // editor: `select? (not (string/includes? value "```"))`); there Ctrl+A selects the text, and
-        // once all of it is selected, the block (`select-parent`). From a DB code block's editor, the
-        // first Escape leaves the code for the block, the second selects it
+      if (action === 'selectSubtree' || action === 'deleteSubtree') {
+        // the block being edited selected (a selected block is its subtree: copied, cut or deleted with
+        // its children), then for `deleteSubtree` Backspace deletes it. Escape selects it, but never an
+        // OG block whose text has a code fence (Logseq's editor: `select? (not (string/includes? value
+        // "```"))`); there Ctrl+A selects the text, and once all of it is selected, the block
+        // (`select-parent`). From a DB code block's editor, the first Escape leaves the code for the
+        // block, the second selects it
         const fenced = !db && (await page.evaluate(() => (document.activeElement as HTMLTextAreaElement | null)?.value?.includes('```') ?? false));
         const selected = async (): Promise<boolean> => !!(await page.evaluate(async () => ((await (window as any).logseq.api.get_selected_blocks()) ?? []).length));
         for (let i = 0; i < 2 && !(await selected()); i++) {
@@ -484,6 +497,7 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
           await settle();
           if (!fenced && !db) break;
         }
+        if (action === 'selectSubtree') return;
         await page.keyboard.press('Backspace');
         await settle();
         return;

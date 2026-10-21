@@ -311,8 +311,8 @@ a
 
 > deleteContentBackward
 
-```result
-applied
+```yaml
+result: applied
 ```
 
 ```buffer
@@ -527,8 +527,8 @@ x
 
 > deleteContentBackward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ````buffer
@@ -697,8 +697,8 @@ emptyItemWithChildren: refuse
 
 > deleteContentBackward
 
-```result
-rejected: has-children
+```yaml
+result: rejected has-children
 ```
 
 ```buffer
@@ -725,8 +725,8 @@ emptyItemWithChildren: refuse
 
 > deleteContentBackward
 
-```result
-rejected: has-children
+```yaml
+result: rejected has-children
 ```
 
 ```buffer
@@ -1087,8 +1087,8 @@ lines
 
 > deleteContentBackward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer
@@ -1117,8 +1117,8 @@ x
 
 > deleteContentBackward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ````buffer
@@ -1165,8 +1165,8 @@ tags: common
 
 > deleteContentBackward
 
-```result
-rejected: nothing-above
+```yaml
+result: rejected nothing-above
 ```
 
 ```buffer
@@ -1281,8 +1281,8 @@ tags: common
 - g
 ```
 
-```result
-applied
+```yaml
+result: applied
 ```
 
 ## Backspace32
@@ -1305,8 +1305,8 @@ tags: common
 - g
 ```
 
-```result
-notApplicable
+```yaml
+result: notApplicable
 ```
 
 ## Backspace33
@@ -1349,8 +1349,8 @@ backspaceAtTopItem: refuse
 
 > deleteContentBackward
 
-```result
-rejected: nothing-above
+```yaml
+result: rejected nothing-above
 ```
 
 ```buffer
@@ -1661,8 +1661,8 @@ title
 
 > deleteSoftLineBackward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer
@@ -1744,8 +1744,8 @@ code
 
 > deleteSoftLineBackward
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ````buffer
@@ -1777,6 +1777,32 @@ taskEditing: text
 - ┃def
 ```
 
+### SoftBackspace11
+
+At a space a placeholder holds as text, the caret is at the text's start, so Cmd-Backspace is
+Backspace there: in the first item, the item a paragraph, the text escaped
+([Backspace47](#backspace47)).
+
+```yaml
+tags: rare free-form
+```
+
+```buffer
+- a┃ # b
+```
+
+> deleteContentBackward
+
+```buffer
+- ┃◌ # b
+```
+
+> deleteSoftLineBackward
+
+```buffer
+┃\# b
+```
+
 ## Backspace42
 
 With the caret inside markup, past its line's start and before the text (here between the marker
@@ -1795,8 +1821,8 @@ tags: rare free-form
 
 > deleteContentBackward
 
-```result
-notApplicable
+```yaml
+result: notApplicable
 ```
 
 ```buffer
@@ -2009,8 +2035,8 @@ joinWithChildren: refuse
 
 > deleteContentBackward
 
-```result
-rejected: has-children
+```yaml
+result: rejected has-children
 ```
 
 ```buffer
@@ -2038,4 +2064,86 @@ tags: rare
 
 ```buffer
 - a┃b
+```
+
+## Backspace47
+
+At a space a placeholder holds as text in the document's first item
+([Placeholder17](placeholders.md#placeholder17)), the caret is at the text's start, with nothing
+above: the marker goes (rule 6), the held space with it, as leaving the place takes it, and the
+text, at the paragraph's start now, is escaped: bare, ` # b` would be a heading. SiYuan and
+BlockNote make the item a paragraph too; Logseq, Roam and WorkFlowy do nothing there, as
+`backspaceAtTopItem: refuse` does; bare Obsidian deletes the marker's space, which leaves `- # b`, a
+heading in the item.
+
+```yaml
+tags: rare free-form
+```
+
+```buffer
+- a┃ # b
+```
+
+> deleteContentBackward
+
+```buffer
+- ┃◌ # b
+```
+
+> deleteContentBackward
+
+```buffer
+┃\# b
+```
+
+## Backspace48
+
+Right after a space a placeholder holds as text, the text's first character, Backspace takes the
+space, as Delete before it does ([Delete32](delete.md#delete32)): the text, right after the marker
+now, is escaped. Bare Obsidian, its Outliner, SilverBullet and Emacs delete the space and leave
+`- # b`, a heading in the item; the block apps that run it agree with ourus.
+
+```yaml
+tags: rare
+```
+
+```buffer
+- a┃ # b
+```
+
+> deleteContentBackward
+
+```buffer
+- ┃◌ # b
+```
+
+> cursorCharRight deleteContentBackward
+
+```buffer
+- ┃\# b
+```
+
+## Backspace49
+
+An item's text that continues lazily, at column 0, joins the paragraph above: those lines are the
+paragraph's own then, where `|---|` under `| a |` would make a table, so it is escaped, as outdent
+escapes it ([Outdent20](outdent.md#outdent20)).
+
+```yaml
+tags: rare free-form
+```
+
+```buffer
+para
+- ┃i
+| a |
+|---|
+```
+
+> deleteContentBackward
+
+```buffer
+para┃i
+| a |
+\|---|
 ```

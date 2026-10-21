@@ -5,8 +5,9 @@ import type { OutlineNode } from '../outline/index.ts';
 import { skipSpaces, trimMd, type ChangeSpec } from '../text.ts';
 import { OutlinePlan, type OutlinePlanNode, type PlanTree, type EncodeResult } from '../encoder/index.ts';
 import type { Selection } from './index.ts';
-import { CommandContext, Operands, mapSelection, normText, operands, outOfQuoteOpeningItem } from './context.ts';
+import { CommandContext, Operands, mapSelection, normText, operands, outOfQuoteOpeningItem, lazyLineEscape } from './context.ts';
 import { notApplicable, reject, withPlan, type Outcome } from './plan.ts';
+import { ownsLists, sectionEnd, unownLists } from './place.ts';
 
 /**
  * The run leaves its quote. With `outdent: direct` it stays where it is in the text, the quote split
@@ -48,17 +49,16 @@ function converted(ctx: CommandContext, node: OutlineNode, kind: 'item' | 'parag
   // the same node in another kind: it keeps its id
   const extra = kind === 'item' ? { marker: doc.config.bullet } : kind === 'heading' ? { level: node.head!.level! } : kind === 'atom' ? { blockType: node.head!.type } : {};
   // lines its text continued lazily are text, read as a paragraph's own lines (`|---|---|` under a
-  // row, `===`): escaped where they would start a block there
+  // row, `===`): escaped where they would start a block there; an item's are written as its own too
+  // (in a quote, after its `>`)
   const lazy = doc.ownLines(node).map((line) => line.lazy);
   let escaped = false;
-  if (kind === 'paragraph' && node.head?.type === 'paragraph' && lazy.some(Boolean)) {
+  if ((kind === 'paragraph' || kind === 'item') && node.head?.type === 'paragraph' && lazy.some(Boolean)) {
     lines = lines!.map((line, i) => {
-      if (!lazy[i]) return line;
-      const lead = /^[ \t]*/.exec(line)![0].length;
-      const at = ctx.encoder.escape(line.slice(lead), 'continuation').at;
+      const at = lazy[i] ? lazyLineEscape(ctx, line) : null;
       if (at === null) return line;
       escaped = true;
-      return line.slice(0, lead + at) + '\\' + line.slice(lead + at);
+      return line.slice(0, at) + '\\' + line.slice(at);
     });
   }
   // an atom's text is its lines as written, any other node's trimmed (an item's whose text is code)
@@ -92,8 +92,9 @@ export function indentParagraphs(ctx: CommandContext, ops: Operands): Outcome {
   const prev = ops.prev;
   // into a quote, a paragraph stays a paragraph, and owns no list there: the list it owned follows it
   if (prev?.kind === 'quote') {
-    const moved = ops.nodes.flatMap((node): PlanTree[] => (node.kind === 'paragraph' && node.children.length ? [{ ...OutlinePlan.editable(node), children: [] }, ...node.children] : [node]));
-    return ctx.encode(ctx.plan.remove(ops.nodes).append(prev, 'last', moved));
+    const moved = unownLists(ops.nodes);
+    // last in the quote: in its last section, where it ends with one (a heading owns what follows it)
+    return ctx.encode(ctx.plan.remove(ops.nodes).append(sectionEnd(prev, null)!, 'last', moved));
   }
   const section = parent.kind === 'root' || parent.kind === 'heading';
   // only a section's paragraph owns the list after it; in a quote or an item, a paragraph's list is its sibling
@@ -131,7 +132,10 @@ export function outdent(ctx: CommandContext, ops: Operands): Outcome {
     const block = (node: OutlineNode): boolean => node.kind === 'item' && !!node.head && node.head.type !== 'paragraph' && node.head.type !== 'heading';
     const converts = ops.nodes.map((node) => converted(ctx, node, heading(node) ? 'heading' : block(node) ? 'atom' : 'paragraph'));
     const select = convertedSelection(ctx, ops.nodes, converts);
-    const paragraphs = converts.flatMap((node): PlanTree[] => (node.kind === 'atom' ? [{ ...node, children: [] }, ...node.children] : [node]));
+    // only a section's paragraph owns the list after it: in a quote or an item (a section in one too),
+    // a new paragraph's list follows it
+    const unowned = !ownsLists(parent);
+    const paragraphs = converts.flatMap((node): PlanTree[] => (node.kind === 'atom' || (unowned && node.kind === 'paragraph') ? [{ ...node, children: [] }, ...node.children] : [node]));
     const headings = ops.nodes.filter(heading);
     if (headings.length && parent.kind === 'paragraph') return reject('not-expressible', "a heading can't be in a paragraph's list");
     // in place, the rest of the list becoming theirs, under either value: at the top level there is no
@@ -233,7 +237,7 @@ export function move(ctx: CommandContext, ops: Operands, dir: -1 | 1): Outcome {
     return withPlan(ctx.encode(crossed), { drop: heldIn(ctx, ops) });
   }
   let expected: OutlinePlan;
-  if (dir > 0 && items && other.kind === 'paragraph' && (parent.kind === 'root' || parent.kind === 'heading')) {
+  if (dir > 0 && items && other.kind === 'paragraph' && ownsLists(parent)) {
     // an item below a section's paragraph becomes its first list item (in an item or a quote a
     // paragraph owns no list)
     expected = ctx.plan.remove(ops.nodes).append(other, 'first', ops.nodes);
@@ -320,19 +324,6 @@ function crossDown(ctx: CommandContext, ops: Operands): OutlinePlan | 'reparent'
     if (level <= below.head!.level! || (head && !(head.kind === 'heading' && head.head!.level! <= level))) return 'reparent';
   } else if (!canHold(below, first)) return null;
   return ctx.plan.remove(ops.nodes).append(below, 'first', ops.nodes);
-}
-
-/**
- * The section a run starting with `node` lands at the end of, moved up out of the section after
- * `section`: the deepest of its last sub-headings that can hold it (any, for a node that isn't a
- * heading; one of a higher level, for a heading), or null where not even `section` can.
- */
-function sectionEnd(section: OutlineNode, node: OutlineNode): OutlineNode | null {
-  const holds = (h: OutlineNode): boolean => node.kind !== 'heading' || h.head!.level! < node.head!.level!;
-  if (!holds(section)) return null;
-  let into = section;
-  for (let last = into.children[into.children.length - 1]; last?.kind === 'heading' && holds(last); last = into.children[into.children.length - 1]) into = last;
-  return into;
 }
 
 const siblingAfter = (node: OutlineNode): OutlineNode | undefined => node.parent?.children[node.parent.children.indexOf(node) + 1];

@@ -125,6 +125,8 @@ export const DB: LogseqFlavor = {
         continue;
       }
       if (/^[ \t]*(?:`{3,}|~{3,})/m.test(b.text)) return 'code fence other than a block of ``` alone';
+      // an empty task's space after its checkbox goes as the block loads (PasteList7: `[ ]┃`)
+      if (/^\[[ xX]\] $/.test(b.text)) return "empty task with a space after its checkbox, which Logseq DB drops";
       // Logseq drops a line break at a stored text's edge; the block being edited (its editor) keeps it
       if (doc.sel?.block !== i && /^\n|\n$/.test(split(b.text).rest)) return 'line break at the edge of a block not being edited';
     }

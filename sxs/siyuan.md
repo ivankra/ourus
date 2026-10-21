@@ -5,8 +5,8 @@ version: "3.8.6"
 url: "http://127.0.0.1:6816/stage/build/desktop/"
 model: "block"
 command: "node sxs/run.ts siyuan"
-elapsed_s: 437
-workers: 2
+elapsed_s: 385
+workers: 3
 ---
 
 # SiYuan vs ourus
@@ -15,40 +15,46 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 185 | [7](#caret-7) | [12](#whitespace-12) | [119](#disagree-119) |  |  | **323** |
-| adapted | 111 | [5](#adapted-caret-5) | [11](#adapted-whitespace-11) | [69](#adapted-disagree-69) |  |  | **196** |
-| **total** | **296 (33%)** | **12 (1.3%)** | **23 (2.5%)** | **188 (21%)** | **0 (0%)** | **[388](#skipped-388) (43%)** | **907** |
+| original | 195 | [9](#caret-9) | [11](#whitespace-11) | [124](#disagree-124) |  |  | **339** |
+| adapted | 111 | [11](#adapted-caret-11) | [13](#adapted-whitespace-13) | [80](#adapted-disagree-80) |  |  | **215** |
+| **total** | **306 (32%)** | **20 (2.1%)** | **24 (2.5%)** | **204 (21%)** | **0 (0%)** | **[416](#skipped-416) (43%)** | **970** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total | original | adapted |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [backspace.md](../spec/backspace.md) | 26 | 2 |  | 27 |  | 23 | **78** | 37 | 18 |
+| [backspace.md](../spec/backspace.md) | 27 | 3 |  | 29 |  | 23 | **82** | 39 | 20 |
+| [backtick.md](../spec/backtick.md) | 4 |  |  | 4 |  | 24 | **32** | 1 | 7 |
+| [copy.md](../spec/copy.md) | 1 |  |  | 3 |  | 9 | **13** | 4 |  |
 | [cursor.md](../spec/cursor.md) | 24 | 4 |  |  |  | 8 | **36** | 25 | 3 |
 | [delete-subtree.md](../spec/delete-subtree.md) |  |  |  |  |  | 10 | **10** |  |  |
-| [delete.md](../spec/delete.md) | 11 |  |  | 16 |  | 25 | **52** | 23 | 4 |
-| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  | 1 |  | 7 | **8** | 1 |  |
-| [enter.md](../spec/enter.md) | 25 | 3 | 8 | 24 |  | 29 | **89** | 35 | 25 |
-| [fences.md](../spec/fences.md) | 9 | 1 | 1 | 5 |  | 49 | **65** |  | 16 |
+| [delete.md](../spec/delete.md) | 11 | 1 |  | 17 |  | 26 | **55** | 23 | 6 |
+| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  | 1 |  | 8 | **9** | 1 |  |
+| [enter.md](../spec/enter.md) | 26 | 3 | 8 | 24 |  | 31 | **92** | 35 | 26 |
+| [fences.md](../spec/fences.md) | 9 | 1 | 2 | 5 |  | 51 | **68** |  | 17 |
 | [gaps.md](../spec/gaps.md) | 11 |  |  | 2 |  | 6 | **19** | 9 | 4 |
 | [indent.md](../spec/indent.md) | 17 |  | 1 | 11 |  | 7 | **36** | 21 | 8 |
 | [move-subtree-down.md](../spec/move-subtree-down.md) | 20 |  |  | 12 |  | 7 | **39** | 28 | 4 |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 19 |  |  | 11 |  | 10 | **40** | 25 | 5 |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 19 |  |  | 11 |  | 11 | **41** | 25 | 5 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 36 |  | 3 | 11 |  | 17 | **67** | 37 | 13 |
 | [outdent.md](../spec/outdent.md) | 14 |  |  | 4 |  | 17 | **35** | 15 | 3 |
-| [paste-plain.md](../spec/paste-plain.md) | 6 |  | 2 | 17 |  | 3 | **28** | 14 | 11 |
-| [paste.md](../spec/paste.md) | 30 | 1 | 3 | 22 |  | 39 | **95** | 18 | 38 |
-| [placeholders.md](../spec/placeholders.md) | 8 |  |  | 3 |  | 6 | **17** | 7 | 4 |
-| [quotes.md](../spec/quotes.md) |  |  |  |  |  | 96 | **96** |  |  |
+| [paste-conv.md](../spec/paste-conv.md) | 3 | 1 |  | 2 |  |  | **6** | 5 | 1 |
+| [paste-html.md](../spec/paste-html.md) | 7 | 4 |  | 7 |  | 1 | **19** |  | 18 |
+| [paste-list-form.md](../spec/paste-list-form.md) | 5 |  |  |  |  | 1 | **6** | 4 | 1 |
+| [paste-list.md](../spec/paste-list.md) | 9 | 1 | 2 | 11 |  | 5 | **28** | 8 | 15 |
+| [paste-plain.md](../spec/paste-plain.md) | 6 |  | 2 | 18 |  | 8 | **34** | 14 | 12 |
+| [paste.md](../spec/paste.md) | 8 | 1 |  | 7 |  | 11 | **27** | 9 | 7 |
+| [placeholders.md](../spec/placeholders.md) | 9 |  |  | 3 |  | 8 | **20** | 8 | 4 |
+| [quotes.md](../spec/quotes.md) |  |  |  |  |  | 97 | **97** |  |  |
 | [scenarios.md](../spec/scenarios.md) | 15 |  |  | 9 |  | 2 | **26** | 16 | 8 |
-| [shift-enter.md](../spec/shift-enter.md) | 16 | 1 | 4 | 3 |  | 10 | **34** | 8 | 16 |
+| [shift-enter.md](../spec/shift-enter.md) | 16 | 1 | 5 | 3 |  | 11 | **36** | 8 | 17 |
 | [tasks.md](../spec/tasks.md) | 4 |  | 1 | 9 |  | 14 | **28** |  | 14 |
 | [typing.md](../spec/typing.md) | 1 |  |  | 1 |  | 1 | **3** | 1 | 1 |
 | [undo.md](../spec/undo.md) | 4 |  |  |  |  | 1 | **5** | 3 | 1 |
 | [z-open.md](../spec/z-open.md) |  |  |  |  |  | 1 | **1** |  |  |
-| **total** | **296 (33%)** | **12 (1.3%)** | **23 (2.5%)** | **188 (21%)** | **0 (0%)** | **388 (43%)** | **907** | **323 (36%)** | **196 (22%)** |
+| **total** | **306 (32%)** | **20 (2.1%)** | **24 (2.5%)** | **204 (21%)** | **0 (0%)** | **416 (43%)** | **970** | **339 (35%)** | **215 (22%)** |
 
-## Disagree (119)
+## Disagree (124)
 
 ### [Backspace1](../spec/backspace.md#backspace1)
 
@@ -626,6 +632,51 @@ Per-file:
 </td></tr>
 </table>
 
+### [SoftBackspace11](../spec/backspace.md#softbackspace11)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃ # b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃ # b
+```
+
+</td></tr>
+</table>
+
+> deleteSoftLineBackward
+
+<table>
+<tr><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ┃ # b
+```
+
+</td><td>
+
+```buffer
+¶ ┃\# b
+```
+
+</td></tr>
+</table>
+
 ### [Backspace43b](../spec/backspace.md#backspace43b)
 
 > enter deleteContentBackward
@@ -687,6 +738,118 @@ Per-file:
   - c
   - d
   - e
+```
+
+</td></tr>
+</table>
+
+### [Backspace47](../spec/backspace.md#backspace47)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃ # b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃ # b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ┃ # b
+```
+
+</td><td>
+
+```buffer
+¶ ┃\# b
+```
+
+</td></tr>
+</table>
+
+### [Copy4](../spec/copy.md#copy4)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - k┃id
+    - g
+- b
+```
+
+</td></tr>
+</table>
+
+> copy
+
+### [Copy9](../spec/copy.md#copy9)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b┃
+    - g
+- c
+```
+
+</td></tr>
+</table>
+
+> copy
+
+### [Cut4](../spec/copy.md#cut4)
+
+> cut
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one ┃two
+  - kid
+- three
+```
+
+</td><td>
+
+```buffer
+- 
+  - ┃kid
+- three
+```
+
+</td><td>
+
+```buffer
+- ┃three
 ```
 
 </td></tr>
@@ -3147,7 +3310,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [E10](../spec/obsidian-true-outliner.md#e10)
+### [TO-E10](../spec/obsidian-true-outliner.md#to-e10)
 
 > enter
 
@@ -3179,7 +3342,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [Place inside a multi-line item](../spec/obsidian-true-outliner.md#place-inside-a-multi-line-item)
+### [TO-S11](../spec/obsidian-true-outliner.md#to-s11)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -3237,7 +3400,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [Leaving the place removes it](../spec/obsidian-true-outliner.md#leaving-the-place-removes-it)
+### [TO-S11b](../spec/obsidian-true-outliner.md#to-s11b)
 
 > shiftEnter cursorDocStart
 
@@ -3254,7 +3417,7 @@ Per-file:
 
 ```buffer
 ¶ foo
-¶ bar
+¶ ┃bar
 ```
 
 </td><td>
@@ -3267,7 +3430,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [Emptied middle item removed and renumbered](../spec/obsidian-true-outliner.md#emptied-middle-item-removed-and-renumbered)
+### [TO-Bug269](../spec/obsidian-true-outliner.md#to-bug269)
 
 > deleteContentBackward deleteContentBackward
 
@@ -3299,7 +3462,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [Children move to the joined node](../spec/obsidian-true-outliner.md#children-move-to-the-joined-node)
+### [TO2](../spec/obsidian-true-outliner.md#to2)
 
 > deleteContentBackward
 
@@ -3331,7 +3494,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [Delete forward absorbs child with grandchildren](../spec/obsidian-true-outliner.md#delete-forward-absorbs-child-with-grandchildren)
+### [TO3](../spec/obsidian-true-outliner.md#to3)
 
 > deleteContentForward
 
@@ -3363,7 +3526,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [Joining across ordered runs](../spec/obsidian-true-outliner.md#joining-across-ordered-runs)
+### [TO4](../spec/obsidian-true-outliner.md#to4)
 
 > deleteContentBackward
 
@@ -3398,7 +3561,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [Next item becomes the new 1.](../spec/obsidian-true-outliner.md#next-item-becomes-the-new-1)
+### [TO5](../spec/obsidian-true-outliner.md#to5)
 
 > deleteContentBackward
 
@@ -3430,7 +3593,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [List starting at 3 keeps its start](../spec/obsidian-true-outliner.md#list-starting-at-3-keeps-its-start)
+### [TO6](../spec/obsidian-true-outliner.md#to6)
 
 > deleteContentBackward
 
@@ -3462,7 +3625,7 @@ Per-file:
 </td></tr>
 </table>
 
-### [Enter, then Shift-Enter and Backspace](../spec/obsidian-true-outliner.md#enter-then-shift-enter-and-backspace)
+### [TO13](../spec/obsidian-true-outliner.md#to13)
 
 > enter shiftEnter deleteContentBackward
 
@@ -3680,12 +3843,11 @@ Per-file:
 </td></tr>
 </table>
 
-### [Paste3](../spec/paste-plain.md#paste3)
-
-> pastePlain
+### [PasteConvMD](../spec/paste-conv.md#pasteconvmd)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/markdown</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -3694,6 +3856,291 @@ y
 ```
 
 </td><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+```
+
+</td><td>
+
+```buffer
+- ax
+  y┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- x
+- y┃
+- b
+```
+
+</td></tr>
+</table>
+
+### [PasteConvUS](../spec/paste-conv.md#pasteconvus)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x _b_
+- y
+```
+
+</td><td>
+
+```clipboard
+<!-- ourus --><ul>
+<li>x <em>b</em></li>
+<li>y</li>
+</ul>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- x *b*
+- y┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- x _b_
+- y┃
+- b
+```
+
+</td></tr>
+</table>
+
+### [PasteList9](../spec/paste-list.md#pastelist9)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+1. Introduction
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- see ┃here
+```
+
+</td><td>
+
+```buffer
+- see here
+- Introduction┃
+```
+
+</td><td>
+
+```buffer
+- see 1. Introduction┃here
+```
+
+</td></tr>
+</table>
+
+### [PasteList19](../spec/paste-list.md#pastelist19)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ Notes┃
+  - z
+```
+
+</td><td>
+
+```buffer
+¶ Notes
+  - x
+  - y┃
+  - z
+```
+
+</td><td>
+
+```buffer
+¶ Notes
+  - z
+  - x
+  - y┃
+```
+
+</td></tr>
+</table>
+
+### [PasteList20](../spec/paste-list.md#pastelist20)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+1. ┃ab
+2. c
+```
+
+</td><td>
+
+```buffer
+1. ab
+2. x
+3. y┃
+4. c
+```
+
+</td><td>
+
+```buffer
+1. x
+2. y┃
+3. ab
+4. c
+```
+
+</td></tr>
+</table>
+
+### [PasteList25](../spec/paste-list.md#pastelist25)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+1. Introduction
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃here
+```
+
+</td><td>
+
+```buffer
+- Introduction┃
+- here
+```
+
+</td><td>
+
+```buffer
+- 1\. Introduction┃here
+```
+
+</td></tr>
+</table>
+
+### [PastePlain1](../spec/paste-plain.md#pasteplain1)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+y
+```
+
+</td></tr>
+</table>
+
+> pastePlain
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - a┃b
@@ -3717,55 +4164,26 @@ y
 </td></tr>
 </table>
 
-### [Paste6](../spec/paste-plain.md#paste6)
-
-> pastePlain
+### [PastePlain3](../spec/paste-plain.md#pasteplain3)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
 x
+
 y
-```
-
-</td><td>
-
-```buffer
-¶ # H┃
-```
-
-</td><td>
-
-```buffer
-¶ # Hxy┃
-```
-
-</td><td>
-
-```buffer
-¶ # H┃
 ```
 
 </td></tr>
 </table>
 
-### [Paste40](../spec/paste-plain.md#paste40)
-
 > pastePlain
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
 <tr valign="top"><td>
-
-```clipboard
-x
-
-y
-```
-
-</td><td>
 
 ```buffer
 - a┃b
@@ -3791,49 +4209,10 @@ y
 </td></tr>
 </table>
 
-### [Paste78](../spec/paste-plain.md#paste78)
-
-> pastePlain
+### [PastePlain9](../spec/paste-plain.md#pasteplain9)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-    first
-    second
-```
-
-</td><td>
-
-```buffer
-- ┃a
-```
-
-</td><td>
-
-```buffer
--     first
-      second┃a
-```
-
-</td><td>
-
-```buffer
-- first
-  second
-  ┃a
-```
-
-</td></tr>
-</table>
-
-### [Paste80](../spec/paste-plain.md#paste80)
-
-> pastePlain
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -3841,7 +4220,14 @@ y
 b
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> pastePlain
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 ¶ 1┃
@@ -3865,49 +4251,10 @@ b
 </td></tr>
 </table>
 
-### [Paste82](../spec/paste-plain.md#paste82)
-
-> pastePlain
+### [PastePlain14](../spec/paste-plain.md#pasteplain14)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-
-x
-```
-
-</td><td>
-
-```buffer
-- a
-  ┃b
-```
-
-</td><td>
-
-```buffer
-- a
-  x┃b
-```
-
-</td><td>
-
-```buffer
-- a
-  ¶ x┃b
-```
-
-</td></tr>
-</table>
-
-### [Paste87](../spec/paste-plain.md#paste87)
-
-> pastePlain
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -3915,7 +4262,14 @@ x
  y
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> pastePlain
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 ¶ p┃
@@ -3938,12 +4292,10 @@ x
 </td></tr>
 </table>
 
-### [Paste87b](../spec/paste-plain.md#paste87b)
-
-> pastePlain
+### [PastePlain15](../spec/paste-plain.md#pasteplain15)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -3952,7 +4304,14 @@ x
 y
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> pastePlain
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 ¶ p┃
@@ -3976,12 +4335,52 @@ y
 </td></tr>
 </table>
 
-### [Paste7](../spec/paste.md#paste7)
-
-> pasteStructured
+### [PastePlain19](../spec/paste-plain.md#pasteplain19)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+    first
+    second
+```
+
+</td></tr>
+</table>
+
+> pastePlain
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃a
+```
+
+</td><td>
+
+```buffer
+-     first
+      second┃a
+```
+
+</td><td>
+
+```buffer
+- first
+  second
+  ┃a
+```
+
+</td></tr>
+</table>
+
+### [PastePlain21](../spec/paste-plain.md#pasteplain21)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -3989,7 +4388,95 @@ x
 y
 ```
 
+</td></tr>
+</table>
+
+> pastePlain
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ # H┃
+```
+
 </td><td>
+
+```buffer
+¶ # Hxy┃
+```
+
+</td><td>
+
+```buffer
+¶ # H┃
+```
+
+</td></tr>
+</table>
+
+### [PastePlain24](../spec/paste-plain.md#pasteplain24)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+
+x
+```
+
+</td></tr>
+</table>
+
+> pastePlain
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  ┃b
+```
+
+</td><td>
+
+```buffer
+- a
+  x┃b
+```
+
+</td><td>
+
+```buffer
+- a
+  ¶ x┃b
+```
+
+</td></tr>
+</table>
+
+### [Paste1](../spec/paste.md#paste1)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - a┃b
@@ -4008,273 +4495,6 @@ y
 - ax
   y
   ┃b
-```
-
-</td></tr>
-</table>
-
-### [Paste31](../spec/paste.md#paste31)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-1. Introduction
-```
-
-</td><td>
-
-```buffer
-- see ┃here
-```
-
-</td><td>
-
-```buffer
-- see here
-- Introduction┃
-```
-
-</td><td>
-
-```buffer
-- see 1. Introduction┃here
-```
-
-</td></tr>
-</table>
-
-### [Paste32](../spec/paste.md#paste32)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-# h
-```
-
-</td><td>
-
-```buffer
-¶ para┃
-```
-
-</td><td>
-
-```buffer
-¶ parah┃
-```
-
-</td><td>
-
-```buffer
-¶ para
-¶ # h┃
-```
-
-</td></tr>
-</table>
-
-### [Paste33](../spec/paste.md#paste33)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-## h
-```
-
-</td><td>
-
-```buffer
-¶ ## A
-  ¶ para┃
-```
-
-</td><td>
-
-```buffer
-¶ ## A
-  ¶ parah┃
-```
-
-</td><td>
-
-```buffer
-¶ ## A
-  ¶ para
-¶ ## h┃
-```
-
-</td></tr>
-</table>
-
-### [Paste34](../spec/paste.md#paste34)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-# h
-```
-
-</td><td>
-
-```buffer
-¶ para┃
-¶ next
-```
-
-</td><td>
-
-```buffer
-¶ parah┃
-¶ next
-```
-
-</td><td>
-
-```buffer
-¶ para
-¶ # h┃
-  ¶ next
-```
-
-</td></tr>
-</table>
-
-### [Paste35](../spec/paste.md#paste35)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-## h
-```
-
-</td><td>
-
-```buffer
-¶ ## A
-  ¶ para┃
-  ¶ more
-  ¶ ### C
-¶ ## B
-```
-
-</td><td>
-
-```buffer
-¶ ## A
-  ¶ parah┃
-  ¶ more
-  ¶ ### C
-¶ ## B
-```
-
-</td><td>
-
-```buffer
-¶ ## A
-  ¶ para
-¶ ## h┃
-  ¶ more
-  ¶ ### C
-¶ ## B
-```
-
-</td></tr>
-</table>
-
-### [Paste54](../spec/paste.md#paste54)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-x
-y
-```
-
-</td><td>
-
-```buffer
-¶ # Hel┃lo
-```
-
-</td><td>
-
-```buffer
-¶ # Helxy┃lo
-```
-
-</td><td>
-
-```buffer
-¶ # Hello
-  ¶ x
-    y┃
-```
-
-</td></tr>
-</table>
-
-### [Paste61](../spec/paste.md#paste61)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-# Z
-```
-
-</td><td>
-
-```buffer
-¶ # A
-  ¶ ## B
-    ¶ text┃
-  ¶ ## C
-```
-
-</td><td>
-
-```buffer
-¶ # A
-  ¶ ## B
-    ¶ textZ┃
-  ¶ ## C
-```
-
-</td><td>
-
-```buffer
-¶ # A
-  ¶ ## B
-    ¶ text
-¶ # Z┃
-  ¶ ## C
 ```
 
 </td></tr>
@@ -4376,7 +4596,7 @@ y
 
 ```buffer
 ¶ para
-¶ 
+¶ ┃
 ```
 
 </td><td>
@@ -4871,7 +5091,7 @@ y
 </td></tr>
 </table>
 
-## Whitespace (12)
+## Whitespace (11)
 
 ### [Enter3c](../spec/enter.md#enter3c)
 
@@ -4938,7 +5158,7 @@ y
 </td></tr>
 </table>
 
-### [S4](../spec/obsidian-true-outliner.md#s4)
+### [TO-S4](../spec/obsidian-true-outliner.md#to-s4)
 
 > shiftEnter
 
@@ -4967,7 +5187,7 @@ y
 </td></tr>
 </table>
 
-### [S9](../spec/obsidian-true-outliner.md#s9)
+### [TO-S9](../spec/obsidian-true-outliner.md#to-s9)
 
 > shiftEnter
 
@@ -4999,7 +5219,7 @@ y
 </td></tr>
 </table>
 
-### [S13](../spec/obsidian-true-outliner.md#s13)
+### [TO-S13](../spec/obsidian-true-outliner.md#to-s13)
 
 > shiftEnter
 
@@ -5028,12 +5248,10 @@ y
 </td></tr>
 </table>
 
-### [Paste5](../spec/paste-plain.md#paste5)
-
-> pastePlain
+### [PastePlain2](../spec/paste-plain.md#pasteplain2)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -5041,7 +5259,14 @@ x
 y
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> pastePlain
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - a┃
@@ -5065,12 +5290,10 @@ y
 </td></tr>
 </table>
 
-### [Paste86](../spec/paste-plain.md#paste86)
-
-> pastePlain
+### [PastePlain20](../spec/paste-plain.md#pasteplain20)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -5078,7 +5301,14 @@ a
 b
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> pastePlain
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - ┃
@@ -5096,46 +5326,6 @@ b
 ```buffer
 - a  
   b┃
-```
-
-</td></tr>
-</table>
-
-### [Paste10](../spec/paste.md#paste10)
-
-> pasteStructured
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-x
-y
-```
-
-</td><td>
-
-```buffer
-- a
-- ┃
-```
-
-</td><td>
-
-```buffer
-- a
-- x
-  y┃
-```
-
-</td><td>
-
-```buffer
-- a
-- x
-  y
-  ┃
 ```
 
 </td></tr>
@@ -5287,7 +5477,7 @@ y
 </td></tr>
 </table>
 
-## Caret (7)
+## Caret (9)
 
 ### [Backspace43](../spec/backspace.md#backspace43)
 
@@ -5519,7 +5709,98 @@ y
 </td></tr>
 </table>
 
-## Adapted: disagree (69)
+### [PasteConvPhrase](../spec/paste-conv.md#pasteconvphrase)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x y
+```
+
+</td><td>
+
+```clipboard
+<span>x <b>y</b></span>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃b
+```
+
+</td><td>
+
+```buffer
+- ax **y┃**b
+```
+
+</td><td>
+
+```buffer
+- ax **y**┃b
+```
+
+</td></tr>
+</table>
+
+### [Paste20](../spec/paste.md#paste20)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+## h
+text
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ # A
+  ¶ ┃para
+```
+
+</td><td>
+
+```buffer
+¶ # A
+  ¶ ## h┃
+    ¶ text
+    ¶ para
+```
+
+</td><td>
+
+```buffer
+¶ # A
+  ¶ ## h
+    ¶ text┃
+    ¶ para
+```
+
+</td></tr>
+</table>
+
+## Adapted: disagree (80)
 
 ### [Backspace16](../spec/backspace.md#backspace16)
 
@@ -6092,6 +6373,272 @@ Original:
 </td></tr>
 </table>
 
+### [Backtick4](../spec/backtick.md#backtick4)
+
+> "````"
+
+Adapted: code block, empty document, under closeBackticks: none
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ┃
+```
+
+</td><td>
+
+````buffer
+¶ ```
+  ┃
+  ```
+````
+
+</td><td>
+
+`````buffer
+¶ ````┃
+`````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+`````buffer
+````┃
+`````
+
+</td></tr>
+</table>
+
+### [Backtick9](../spec/backtick.md#backtick9)
+
+> "```"
+
+Adapted: code block
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+¶ ```
+  code
+  ┃
+  ```
+````
+
+</td><td>
+
+````buffer
+¶ ```
+  code
+  ```┃
+  ```
+````
+
+</td><td>
+
+````buffer
+¶ ```
+  code
+  ```┃
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```
+code
+┃
+```
+````
+
+</td><td>
+
+````buffer
+```
+code
+```┃
+````
+
+</td></tr>
+</table>
+
+### [Backtick10](../spec/backtick.md#backtick10)
+
+> "```"
+
+Adapted: code block
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+¶ ```md
+  ┃
+  text
+  ```
+````
+
+</td><td>
+
+````buffer
+¶ ```md
+  ```┃
+  text
+  ```
+````
+
+</td><td>
+
+`````buffer
+¶ ````md
+  ```┃
+  text
+  ````
+`````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```md
+┃
+text
+```
+````
+
+</td><td>
+
+`````buffer
+````md
+```┃
+text
+````
+`````
+
+</td></tr>
+</table>
+
+### [Backtick17](../spec/backtick.md#backtick17)
+
+Adapted: code block, under closeBackticks: none
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ para
+  ``┃
+  more
+```
+
+</td></tr>
+</table>
+
+> "`"
+
+<table>
+<tr><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+¶ para
+¶ ```
+  more┃
+  ```
+````
+
+</td><td>
+
+````buffer
+¶ para
+¶ ```┃
+  more
+````
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+¶ para
+¶ ```
+  mor┃
+  ```
+````
+
+</td><td>
+
+```buffer
+¶ para
+  ``┃
+  more
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>"`"</th><th>deleteContentBackward</th></tr>
+<tr valign="top"><td>
+
+```buffer
+para
+``┃
+more
+```
+
+</td><td>
+
+````buffer
+para
+```┃
+more
+````
+
+</td><td>
+
+```buffer
+para
+``┃
+more
+```
+
+</td></tr>
+</table>
+
 ### [Delete13g](../spec/delete.md#delete13g)
 
 Adapted: heading
@@ -6220,6 +6767,91 @@ Original:
 
 ```buffer
 - \[a]:┃b
+```
+
+</td></tr>
+</table>
+
+### [Delete33](../spec/delete.md#delete33)
+
+Adapted: list as an item's first block
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- 
+  - b
+```
+
+</td></tr>
+</table>
+
+> deleteContentForward
+
+<table>
+<tr><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  ¶ 
+    - b
+```
+
+</td><td>
+
+```buffer
+- a┃
+  - b
+```
+
+</td></tr>
+</table>
+
+> deleteContentForward
+
+<table>
+<tr><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - b
+```
+
+</td><td>
+
+```buffer
+- a┃b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>deleteContentForward</th><th>deleteContentForward</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- - b
+```
+
+</td><td>
+
+```buffer
+- a┃
+  - b
+```
+
+</td><td>
+
+```buffer
+- a┃b
 ```
 
 </td></tr>
@@ -6899,71 +7531,6 @@ p
 </td></tr>
 </table>
 
-### [Fence30](../spec/fences.md#fence30)
-
-> deleteContentForward
-
-Adapted: code block
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````buffer
-- a
-  ¶ ```
-    code
-    ┃
-    ```
-````
-
-</td><td>
-
-````buffer
-- a
-  ¶ ```
-    code
-    ┃
-    ```
-````
-
-</td><td>
-
-````buffer
-- a
-  ¶ ```
-    code┃
-    ```
-````
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````buffer
-- a
-  ```
-  code
-  ┃
-  ```
-````
-
-</td><td>
-
-````buffer
-- a
-  ```
-  code┃
-  ```
-````
-
-</td></tr>
-</table>
-
 ### [Fence36](../spec/fences.md#fence36)
 
 > deleteContentBackward
@@ -7261,6 +7828,68 @@ body
 </td></tr>
 </table>
 
+### [Fence62](../spec/fences.md#fence62)
+
+> deleteContentBackward
+
+Adapted: code block
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+¶ ```
+  x┃```
+  body
+  ```
+````
+
+</td><td>
+
+````buffer
+¶ ```
+  x┃```
+  body
+  ```
+````
+
+</td><td>
+
+`````buffer
+¶ ````
+  ┃```
+  body
+  ````
+`````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```
+x┃```
+body
+```
+````
+
+</td><td>
+
+`````buffer
+````
+┃```
+body
+````
+`````
+
+</td></tr>
+</table>
+
 ### [Indent16](../spec/indent.md#indent16)
 
 > indent
@@ -7544,7 +8173,7 @@ b
 </td></tr>
 </table>
 
-### [Line break in setext title](../spec/obsidian-true-outliner.md#line-break-in-setext-title)
+### [TO-S7-S8](../spec/obsidian-true-outliner.md#to-s7-s8)
 
 > shiftEnter
 
@@ -7596,14 +8225,941 @@ Hello
 </td></tr>
 </table>
 
-### [Paste4](../spec/paste-plain.md#paste4)
-
-> pastePlain
-
-Adapted: escape
+### [PasteHtml3](../spec/paste-html.md#pastehtml3)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x **b**
+	- y
+- z
+```
+
+</td><td>
+
+```clipboard
+<ul><div xmlns="http://www.w3.org/1999/xhtml">This site uses XSLT; that functionality is being <a href="https://chromestatus.com/feature/4709671889534976">removed from this browser very soon</a>.</div>
+  <li>x <b>b</b></li>
+  <ul>
+    <li>y</li>
+  </ul>
+  <li>z</li>
+</ul>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ┃
+```
+
+</td><td>
+
+```buffer
+¶ This site uses XSLT; that functionality is being [removed from this browser very soon](https://chromestatus.com/feature/4709671889534976).┃
+  - x **b**
+    - y
+  - z
+```
+
+</td><td>
+
+```buffer
+- x **b**
+  - y
+- z┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+- x **b**
+  - y
+- z┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml4](../spec/paste-html.md#pastehtml4)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x b
+    y
+z
+```
+
+</td><td>
+
+```clipboard
+<ul><div rem="true" showbullet="true">x <b>b</b><ul><div rem="true" showbullet="true">y</div></ul></div><div rem="true" showbullet="true">z</div></ul>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ┃
+```
+
+</td><td>
+
+```buffer
+¶ x **b**
+  y┃
+¶ z
+```
+
+</td><td>
+
+```buffer
+- x **b**
+  - y
+- z┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+- x **b**
+  - y
+- z┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml9](../spec/paste-html.md#pastehtml9)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+let a = 1;
+let b = 2;
+```
+
+</td><td>
+
+```clipboard
+<pre><code class="language-js">let a = 1;
+let b = 2;
+</code></pre>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: code block, empty document
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ┃
+```
+
+</td><td>
+
+```buffer
+¶ let a = 1;
+  let b = 2;┃
+```
+
+</td><td>
+
+````buffer
+¶ ```js
+  let a = 1;
+  let b = 2;┃
+  ```
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+````buffer
+```js
+let a = 1;
+let b = 2;┃
+```
+````
+
+</td></tr>
+</table>
+
+### [PasteHtml13](../spec/paste-html.md#pastehtml13)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+a	b
+1	2
+```
+
+</td><td>
+
+```clipboard
+<table><thead><tr><th>a</th><th align="right">b</th></tr></thead><tbody><tr><td>1</td><td align="right">2</td></tr></tbody></table>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, table
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ┃
+```
+
+</td><td>
+
+```buffer
+¶ | a | {: style="text-align: right;"}b |
+  | --- | --: |
+  | 1 | {: style="text-align: right;"}2┃ |
+```
+
+</td><td>
+
+```buffer
+¶ | a | b |
+  | --- | ---: |
+  | 1 | 2 |┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+| a | b |
+| --- | ---: |
+| 1 | 2 |┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml15](../spec/paste-html.md#pastehtml15)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+1. not a list, *x* and [y]
+# not a heading
+```
+
+</td><td>
+
+```clipboard
+<ul><li>1. not a list, *x* and [y]</li><li># not a heading</li></ul>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, escape
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ┃
+```
+
+</td><td>
+
+```buffer
+- not a list, \*x\* and [y]
+- # not a heading┃
+```
+
+</td><td>
+
+```buffer
+- 1\. not a list, \*x\* and \[y\]
+- # not a heading┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+- 1\. not a list, \*x\* and \[y\]
+- \# not a heading┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml17](../spec/paste-html.md#pastehtml17)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+Bold start
+nested
+```
+
+</td><td>
+
+```clipboard
+<meta charset="utf-8"><b style="font-weight:normal;" id="docs-internal-guid-6a1b2c3d"><ul style="margin-top:0;"><li dir="ltr" aria-level="1"><p dir="ltr" role="presentation"><span style="font-weight:700;font-style:normal;">Bold</span><span style="font-weight:400;font-style:normal;"> start</span></p></li><ul style="margin-top:0;"><li dir="ltr" aria-level="2"><p dir="ltr" role="presentation"><span style="font-weight:400;font-style:italic;">nested</span></p></li></ul></ul></b>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ┃
+```
+
+</td><td>
+
+```buffer
+¶ ┃
+```
+
+</td><td>
+
+```buffer
+- **Bold** start
+  - *nested*┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+- **Bold** start
+  - *nested*┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml19](../spec/paste-html.md#pastehtml19)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+javascript
+Copy code
+let a = 1;
+```
+
+</td><td>
+
+```clipboard
+<pre class="overflow-visible!"><div class="contain-inline-size"><div class="flex items-center">javascript</div><div class="sticky top-9"><button aria-label="Copy">Copy code</button></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-javascript"><span class="hljs-keyword">let</span> a = <span class="hljs-number">1</span>;</code></div></div></pre>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: code block, empty document
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ┃
+```
+
+</td><td>
+
+```buffer
+¶ javascript
+  Copy code
+  let a = 1;┃
+```
+
+</td><td>
+
+````buffer
+¶ ```javascript
+  let a = 1;┃
+  ```
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+````buffer
+```javascript
+let a = 1;┃
+```
+````
+
+</td></tr>
+</table>
+
+### [PasteList6](../spec/paste-list.md#pastelist6)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: under pasteOnParent: after
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+  - kid
+```
+
+</td><td>
+
+```buffer
+- x
+- y┃
+  - kid
+```
+
+</td><td>
+
+```buffer
+- 
+  - kid
+- x
+- y┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+  - kid
+```
+
+</td><td>
+
+```buffer
+- 
+  - kid
+- x
+- y┃
+```
+
+</td></tr>
+</table>
+
+### [PasteList7](../spec/paste-list.md#pastelist7)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: task
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [ ] ┃
+```
+
+</td><td>
+
+```buffer
+- [ ] x
+- [ ] y┃
+```
+
+</td><td>
+
+```buffer
+- [ ] x
+- y┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [ ] ┃
+```
+
+</td><td>
+
+```buffer
+- [ ] x
+- y┃
+```
+
+</td></tr>
+</table>
+
+### [PasteList10](../spec/paste-list.md#pastelist10)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+Notes:
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: under pasteParagraphList: children
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+  ¶ Notes:
+    - x
+    - y┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- Notes:
+  - x
+  - y┃
+- b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- Notes:
+  - x
+  - y┃
+- b
+```
+
+</td></tr>
+</table>
+
+### [PasteList11](../spec/paste-list.md#pastelist11)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+one
+two
+
+- x
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: under pasteParagraphList: children
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+```
+
+</td><td>
+
+```buffer
+- a
+  ¶ one
+    two
+    - x┃
+```
+
+</td><td>
+
+```buffer
+- a
+- one
+  two
+  - x┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+```
+
+</td><td>
+
+```buffer
+- a
+- one
+  two
+  - x┃
+```
+
+</td></tr>
+</table>
+
+### [PasteList13](../spec/paste-list.md#pastelist13)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+````clipboard
+- x
+
+```
+c
+```
+````
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: code block
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- x┃
+- b
+```
+
+</td><td>
+
+````buffer
+- a
+- x
+  ¶ ```
+    c┃
+    ```
+- b
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+```
+
+</td><td>
+
+````buffer
+- a
+- x
+  ```
+  c┃
+  ```
+- b
+````
+
+</td></tr>
+</table>
+
+### [PasteList16](../spec/paste-list.md#pastelist16)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+# h
+text
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: heading
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+  ¶ # h
+    ¶ text┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- # h
+  ¶ text┃
+- b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- # h
+  text┃
+- b
+```
+
+</td></tr>
+</table>
+
+### [PastePlain5](../spec/paste-plain.md#pasteplain5)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -7611,7 +9167,16 @@ x
 - y
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: escape
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - a┃b
@@ -7654,14 +9219,10 @@ Original:
 </td></tr>
 </table>
 
-### [Paste45](../spec/paste-plain.md#paste45)
-
-> pastePlain
-
-Adapted: escape
+### [PastePlain7](../spec/paste-plain.md#pasteplain7)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -7670,7 +9231,16 @@ x^2
 $$
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: escape
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - a┃b
@@ -7715,14 +9285,10 @@ Original:
 </td></tr>
 </table>
 
-### [Paste64](../spec/paste-plain.md#paste64)
-
-> pastePlain
-
-Adapted: escape
+### [PastePlain8](../spec/paste-plain.md#pasteplain8)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -7730,7 +9296,16 @@ Adapted: escape
 - b
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: escape
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 ¶ ┃words
@@ -7771,124 +9346,10 @@ Original:
 </td></tr>
 </table>
 
-### [Paste68](../spec/paste-plain.md#paste68)
-
-> pastePlain
-
-Adapted: escape
+### [PastePlain10](../spec/paste-plain.md#pasteplain10)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-x
-```
-
-</td><td>
-
-```buffer
-¶ p┃ ---
-```
-
-</td><td>
-
-```buffer
-¶ px┃ ---
-```
-
-</td><td>
-
-```buffer
-¶ px
-  ┃---
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-p┃ ---
-```
-
-</td><td>
-
-```buffer
-px
-┃\---
-```
-
-</td></tr>
-</table>
-
-### [Paste69](../spec/paste-plain.md#paste69)
-
-> pastePlain
-
-Adapted: escape
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-x
-```
-
-</td><td>
-
-```buffer
-¶ [a]: ┃b c
-```
-
-</td><td>
-
-```buffer
-- [x] : x┃b c
-```
-
-</td><td>
-
-```buffer
-¶ [a]: x
-  ┃b c
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-[a]: ┃b c
-```
-
-</td><td>
-
-```buffer
-\[a]: x
-┃b c
-```
-
-</td></tr>
-</table>
-
-### [Paste81](../spec/paste-plain.md#paste81)
-
-> pastePlain
-
-Adapted: escape
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -7896,7 +9357,16 @@ Adapted: escape
 2. b
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: escape
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - 2┃\. y
@@ -7939,14 +9409,193 @@ Original:
 </td></tr>
 </table>
 
-### [Paste85](../spec/paste-plain.md#paste85)
+### [PastePlain11](../spec/paste-plain.md#pasteplain11)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td></tr>
+</table>
 
 > pastePlain
 
 Adapted: escape
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ [a]: ┃b c
+```
+
+</td><td>
+
+```buffer
+- [x] : x┃b c
+```
+
+</td><td>
+
+```buffer
+¶ [a]: x
+  ┃b c
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+[a]: ┃b c
+```
+
+</td><td>
+
+```buffer
+\[a]: x
+┃b c
+```
+
+</td></tr>
+</table>
+
+### [PastePlain12](../spec/paste-plain.md#pasteplain12)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+
+[a]: /u
+```
+
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: escape
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ p┃
+```
+
+</td><td>
+
+```buffer
+¶ px[a]: /u┃
+```
+
+</td><td>
+
+```buffer
+¶ px
+¶ [a]: /u┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+p┃
+```
+
+</td><td>
+
+```buffer
+px
+
+\[a]: /u┃
+```
+
+</td></tr>
+</table>
+
+### [PastePlain13](../spec/paste-plain.md#pasteplain13)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: escape
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ p┃ ---
+```
+
+</td><td>
+
+```buffer
+¶ px┃ ---
+```
+
+</td><td>
+
+```buffer
+¶ px
+  ┃---
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+p┃ ---
+```
+
+</td><td>
+
+```buffer
+px
+ ┃\---
+```
+
+</td></tr>
+</table>
+
+### [PastePlain17](../spec/paste-plain.md#pasteplain17)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -7954,7 +9603,16 @@ x
 - y
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: escape
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 - a«bc
@@ -7997,14 +9655,10 @@ Original:
 </td></tr>
 </table>
 
-### [Paste88](../spec/paste-plain.md#paste88)
-
-> pastePlain
-
-Adapted: setext heading
+### [PastePlain23](../spec/paste-plain.md#pasteplain23)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -8012,7 +9666,16 @@ x
 y
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: setext heading
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
 ¶ ## Title┃more
@@ -8055,14 +9718,10 @@ y┃more
 </td></tr>
 </table>
 
-### [Paste91](../spec/paste-plain.md#paste91)
-
-> pastePlain
-
-Adapted: code block
+### [PastePlain29](../spec/paste-plain.md#pasteplain29)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ````clipboard
@@ -8071,7 +9730,16 @@ x
 y
 ````
 
-</td><td>
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: code block
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ````buffer
 ¶ ```
@@ -8126,169 +9794,47 @@ y┃de
 </td></tr>
 </table>
 
-### [Paste19](../spec/paste.md#paste19)
-
-> pasteStructured
-
-Adapted: heading
+### [Paste2](../spec/paste.md#paste2)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-# h
-text
-```
-
-</td><td>
-
-```buffer
-- a┃
-```
-
-</td><td>
-
-```buffer
-- a
-  ¶ # h
-    ¶ text┃
-```
-
-</td><td>
-
-```buffer
-- a
-- # h
-  ¶ text┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃
-```
-
-</td><td>
-
-```buffer
-- a
-- # h
-  text┃
-```
-
-</td></tr>
-</table>
-
-### [Paste27](../spec/paste.md#paste27)
-
-> pasteStructured
-
-Adapted: task, under pasteStructuredOnParent: after
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-- a
-- b
-```
-
-</td><td>
-
-```buffer
-- [ ] t┃
-  - g
-```
-
-</td><td>
-
-```buffer
-- [ ] t
-  - g
-- [ ] a
-- [ ] b┃
-```
-
-</td><td>
-
-```buffer
-- [ ] t
-  - g
-- a
-- b┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- [ ] t┃
-    - g
-```
-
-</td><td>
-
-```buffer
-- [ ] t
-    - g
-- a
-- b┃
-```
-
-</td></tr>
-</table>
-
-### [Paste36](../spec/paste.md#paste36)
-
-> pasteStructured
-
-Adapted: under pasteStructuredMidText: after
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
 x
-- y
+y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: under pasteOnParent: after
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ # T┃
+  ¶ para
 ```
 
 </td><td>
 
 ```buffer
-- list
-  - See ┃here.
+¶ # Txy┃
+  ¶ para
 ```
 
 </td><td>
 
 ```buffer
-- list
-  - See here.
-    ¶ x
-      - y┃
-```
-
-</td><td>
-
-```buffer
-- list
-  - See here.
-  - x
-  - y┃
+¶ # T
+  ¶ para
+  ¶ x
+    y┃
 ```
 
 </td></tr>
@@ -8300,427 +9846,29 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-- list
-  - See ┃here.
+# T┃
+
+para
 ```
 
 </td><td>
 
 ```buffer
-- list
-  - See here.
-  - x
-  - y┃
-```
+# T
 
-</td></tr>
-</table>
-
-### [Paste51](../spec/paste.md#paste51)
-
-> pasteStructured
-
-Adapted: escape
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-x
-```
-
-</td><td>
-
-```buffer
-- see ┃- below
-```
-
-</td><td>
-
-```buffer
-- see x┃- below
-```
-
-</td><td>
-
-```buffer
-- see x
-  ┃\- below
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- see ┃- below
-```
-
-</td><td>
-
-```buffer
-- see x
-  ┃\- below
-```
-
-</td></tr>
-</table>
-
-### [Paste53](../spec/paste.md#paste53)
-
-> pasteStructured
-
-Adapted: setext heading
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-Title
-=====
-```
-
-</td><td>
-
-```buffer
-¶ para┃
-```
-
-</td><td>
-
-```buffer
-¶ paraTitle┃
-```
-
-</td><td>
-
-```buffer
-¶ para
-¶ # Title┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-para┃
-```
-
-</td><td>
-
-```buffer
 para
 
-Title┃
-=====
+x
+y┃
 ```
 
 </td></tr>
 </table>
 
-### [Paste57](../spec/paste.md#paste57)
-
-> pasteStructured
-
-Adapted: heading
+### [Paste6](../spec/paste.md#paste6)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-## Summary
-
-The fix:
-- parser
-- test
-```
-
-</td><td>
-
-```buffer
-- Notes┃
-- Later
-```
-
-</td><td>
-
-```buffer
-- Notes
-  ¶ ## Summary
-    ¶ The fix:
-      - parser
-      - test┃
-- Later
-```
-
-</td><td>
-
-```buffer
-- Notes
-- ## Summary
-  ¶ The fix:
-  - parser
-  - test┃
-- Later
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- Notes┃
-- Later
-```
-
-</td><td>
-
-```buffer
-- Notes
-- ## Summary
-  The fix:
-  - parser
-  - test┃
-- Later
-```
-
-</td></tr>
-</table>
-
-### [Paste58](../spec/paste.md#paste58)
-
-> pasteStructured
-
-Adapted: setext heading, thematic break
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
----
-title: x
----
-```
-
-</td><td>
-
-```buffer
-¶ Intro
-¶ ┃
-¶ Outro
-```
-
-</td><td>
-
-```buffer
-¶ Intro
-¶ ---
-¶ title: x
-¶ ---
-¶ Outro
-```
-
-</td><td>
-
-```buffer
-¶ Intro
-¶ ---
-¶ ## title: x┃
-  ¶ Outro
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-Intro
-
-┃◌
-
-Outro
-```
-
-</td><td>
-
-```buffer
-Intro
-
----
-title: x┃
----
-
-Outro
-```
-
-</td></tr>
-</table>
-
-### [Paste59](../spec/paste.md#paste59)
-
-> pasteStructured
-
-Adapted: under pasteStructuredOnParent: after
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```clipboard
-- milk
-- eggs
-```
-
-</td><td>
-
-```buffer
-¶ # Groceries┃
-  - bread
-```
-
-</td><td>
-
-```buffer
-¶ # Groceries
-  - milk
-  - eggs┃
-  - bread
-```
-
-</td><td>
-
-```buffer
-¶ # Groceries
-  - bread
-  - milk
-  - eggs┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-# Groceries┃
-
-- bread
-```
-
-</td><td>
-
-```buffer
-# Groceries
-
-- bread
-- milk
-- eggs┃
-```
-
-</td></tr>
-</table>
-
-### [Paste66](../spec/paste.md#paste66)
-
-> pasteStructured
-
-Adapted: code block
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````clipboard
-```js
-      // greet
-        f();
-      ```
-````
-
-</td><td>
-
-```buffer
-- grandchild┃
-```
-
-</td><td>
-
-````buffer
-- grandchild
-  ¶ ```js
-          // greet
-            f();
-          ```┃
-    ```
-````
-
-</td><td>
-
-````buffer
-- grandchild
-  ¶ ```js
-    // greet
-      f();┃
-    ```
-````
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- grandchild┃
-```
-
-</td><td>
-
-````buffer
-- grandchild
-  ```js
-  // greet
-    f();┃
-  ```
-````
-
-</td></tr>
-</table>
-
-### [Paste92](../spec/paste.md#paste92)
-
-> pasteStructured
-
-Adapted: task
-
-<table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
@@ -8728,30 +9876,38 @@ Adapted: task
 - y
 ```
 
-</td><td>
+</td></tr>
+</table>
+
+> paste
+
+Adapted: under pasteOnParent: after
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
 
 ```buffer
-- a
-- [ ] ┃
-- b
+¶ # T┃
+  - z
 ```
 
 </td><td>
 
 ```buffer
-- a
-- [ ] x
-- [ ] y┃
-- b
+¶ # T
+  - x
+  - y┃
+  - z
 ```
 
 </td><td>
 
 ```buffer
-- a
-- [ ] x
-- y┃
-- b
+¶ # T
+  - z
+  - x
+  - y┃
 ```
 
 </td></tr>
@@ -8763,61 +9919,70 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-- a
-- [ ] ┃
-- b
+# T┃
+
+- z
 ```
 
 </td><td>
 
 ```buffer
-- a
-- [ ] x
+# T
+
+- z
+- x
 - y┃
-- b
 ```
 
 </td></tr>
 </table>
 
-### [Paste76](../spec/paste.md#paste76)
-
-> pasteStructured
-
-Adapted: under pasteStructuredOnParent: after
+### [Paste8](../spec/paste.md#paste8)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: blank lines
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
 - a
+  ¶ p┃
 - b
 ```
 
 </td><td>
 
 ```buffer
-¶ # ┃Hello
-  ¶ body
+- a
+  ¶ p
+    - x
+    - y┃
+- b
 ```
 
 </td><td>
 
 ```buffer
 - a
-- b┃
-¶ # Hello
-  ¶ body
-```
-
-</td><td>
-
-```buffer
-¶ # Hello
-  ¶ body
-    - a
-    - b┃
+  ¶ p
+  - x
+  - y┃
+- b
 ```
 
 </td></tr>
@@ -8829,18 +9994,177 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-# ┃Hello
-body
+- a
+
+  p┃
+
+- b
 ```
 
 </td><td>
 
 ```buffer
-# Hello
-body
-
 - a
-- b┃
+
+  p
+
+  - x
+  - y┃
+
+- b
+```
+
+</td></tr>
+</table>
+
+### [Paste11](../spec/paste.md#paste11)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+## h
+text
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: under pasteOnParent: after
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ## A┃
+  ¶ p
+¶ ## B
+```
+
+</td><td>
+
+```buffer
+¶ ## A
+¶ ## h
+  ¶ text┃
+  ¶ p
+¶ ## B
+```
+
+</td><td>
+
+```buffer
+¶ ## A
+  ¶ p
+¶ ## h
+  ¶ text┃
+¶ ## B
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+## A┃
+
+p
+
+## B
+```
+
+</td><td>
+
+```buffer
+## A
+
+p
+
+## h
+text┃
+
+## B
+```
+
+</td></tr>
+</table>
+
+### [Paste12](../spec/paste.md#paste12)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+### h
+text
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: under pasteOnParent: after
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ## A┃
+  ¶ p
+```
+
+</td><td>
+
+```buffer
+¶ ## A
+  ¶ ### h
+    ¶ text┃
+    ¶ p
+```
+
+</td><td>
+
+```buffer
+¶ ## A
+  ¶ p
+  ¶ ### h
+    ¶ text┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+## A┃
+
+p
+```
+
+</td><td>
+
+```buffer
+## A
+
+p
+
+### h
+text┃
 ```
 
 </td></tr>
@@ -10106,7 +11430,7 @@ para
 </td></tr>
 </table>
 
-## Adapted: whitespace (11)
+## Adapted: whitespace (13)
 
 ### [Enter8](../spec/enter.md#enter8)
 
@@ -10537,44 +11861,119 @@ Original:
 </td></tr>
 </table>
 
-### [Paste75](../spec/paste.md#paste75)
+### [Fence30](../spec/fences.md#fence30)
 
-> pasteStructured
+> deleteContentForward
 
-Adapted: task
+Adapted: code block
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
-```clipboard
-x
-y
-```
+````buffer
+- a
+  ¶ ```
+    code
+    ┃
+    ```
+````
 
 </td><td>
 
-```buffer
+````buffer
 - a
-- [ ] ┃
-```
+  ¶ ```
+    code
+    ┃
+    ```
+````
 
 </td><td>
 
-```buffer
+````buffer
 - a
-- [ ] x
-  y┃
-```
+  ¶ ```
+    code┃
+    ```
+````
 
-</td><td>
+</td></tr>
+</table>
 
-```buffer
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
 - a
-- [ ] x
-  y
+  ```
+  code
   ┃
+  ```
+````
+
+</td><td>
+
+````buffer
+- a
+  ```
+  code┃
+  ```
+````
+
+</td></tr>
+</table>
+
+### [PasteList26](../spec/paste-list.md#pastelist26)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+````clipboard
+- ```
+  code
+  ```
+````
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: code block
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
 ```
+
+</td><td>
+
+````buffer
+- a
+- ```
+  code
+  ┃
+  ```
+- b
+````
+
+</td><td>
+
+````buffer
+- a
+- ```
+  code┃
+  ```
+- b
+````
 
 </td></tr>
 </table>
@@ -10585,61 +11984,70 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-- a
-- [ ] ┃
+- a┃
+- b
 ```
 
 </td><td>
 
-```buffer
+````buffer
 - a
-- [ ] x
-  y
-  ┃◌
-```
+- ```
+  code┃
+  ```
+- b
+````
 
 </td></tr>
 </table>
 
-### [Paste79](../spec/paste.md#paste79)
-
-> pasteStructured
-
-Adapted: math
+### [PasteList27](../spec/paste-list.md#pastelist27)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
-```clipboard
-$$
-    x
-    $$
+````clipboard
+- ```
+  code
+````
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: code block
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
 ```
 
 </td><td>
 
-```buffer
-¶ a┃
-```
+````buffer
+- a
+- ```
+  code
+  ┃
+  ```
+- b
+````
 
 </td><td>
 
-```buffer
-¶ a
-¶ $$
-  x
-  $$
-```
-
-</td><td>
-
-```buffer
-¶ a
-¶ $$
-      x┃
-      $$
-```
+````buffer
+- a
+- ```
+  code┃
+  ```
+- b
+````
 
 </td></tr>
 </table>
@@ -10650,17 +12058,90 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-a┃
+- a┃
+- b
+```
+
+</td><td>
+
+````buffer
+- a
+- ```
+  code┃
+  ```
+- b
+````
+
+</td></tr>
+</table>
+
+### [ShiftEnter32](../spec/shift-enter.md#shiftenter32)
+
+Adapted: escape
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃ # b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃ # b
+```
+
+</td></tr>
+</table>
+
+> shiftEnter
+
+<table>
+<tr><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃ # b
 ```
 
 </td><td>
 
 ```buffer
-a
+- ┃# b
+```
 
-$$
-    x┃
-    $$
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>deleteContentBackward</th><th>shiftEnter</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃ # b
+```
+
+</td><td>
+
+```buffer
+- ┃◌ # b
+```
+
+</td><td>
+
+```buffer
+-
+  ┃\# b
 ```
 
 </td></tr>
@@ -10716,7 +12197,7 @@ Original:
 </td></tr>
 </table>
 
-## Adapted: caret (5)
+## Adapted: caret (11)
 
 ### [Backspace24](../spec/backspace.md#backspace24)
 
@@ -10782,6 +12263,77 @@ x
 </td></tr>
 </table>
 
+### [Backspace48](../spec/backspace.md#backspace48)
+
+Adapted: escape
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃ # b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃ # b
+```
+
+</td></tr>
+</table>
+
+> cursorCharRight deleteContentBackward
+
+<table>
+<tr><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # ┃b
+```
+
+</td><td>
+
+```buffer
+- ┃# b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>deleteContentBackward</th><th>cursorCharRight deleteContentBackward</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃ # b
+```
+
+</td><td>
+
+```buffer
+- ┃◌ # b
+```
+
+</td><td>
+
+```buffer
+- ┃\# b
+```
+
+</td></tr>
+</table>
+
 ### [CursorDown5](../spec/cursor.md#cursordown5)
 
 > cursorLineDown
@@ -10829,6 +12381,77 @@ Original:
 ```buffer
 - a
 - [ ] ┃task
+```
+
+</td></tr>
+</table>
+
+### [Delete32](../spec/delete.md#delete32)
+
+Adapted: escape
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃ # b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃ # b
+```
+
+</td></tr>
+</table>
+
+> deleteContentForward
+
+<table>
+<tr><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # ┃b
+```
+
+</td><td>
+
+```buffer
+- ┃# b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>deleteContentBackward</th><th>deleteContentForward</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃ # b
+```
+
+</td><td>
+
+```buffer
+- ┃◌ # b
+```
+
+</td><td>
+
+```buffer
+- ┃\# b
 ```
 
 </td></tr>
@@ -10896,45 +12519,54 @@ Original:
 </td></tr>
 </table>
 
-### [Paste44](../spec/paste.md#paste44)
-
-> pasteStructured
-
-Adapted: math
+### [PasteHtml6](../spec/paste-html.md#pastehtml6)
 
 <table>
-<tr><th>clipboard</th><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
 <tr valign="top"><td>
 
 ```clipboard
-$$
-x^2
-$$
+x
+- y
+z
+```
+
+</td><td>
+
+```clipboard
+<html><body><p>x</p><ul><li><p>y</p></li></ul><p>z</p></body></html>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ┃
 ```
 
 </td><td>
 
 ```buffer
-- a
-- ┃
+¶ x┃
+  - y
+¶ z
 ```
 
 </td><td>
 
 ```buffer
-- a
-- $$
-  x^2
-  $$
-```
-
-</td><td>
-
-```buffer
-- a
-- $$
-  x^2┃
-  $$
+¶ x
+  - y
+¶ z┃
 ```
 
 </td></tr>
@@ -10946,17 +12578,308 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-- a
-- ┃
+┃
 ```
 
 </td><td>
 
 ```buffer
-- a
-- $$
-  x^2┃
-  $$
+x
+
+- y
+
+z┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml10](../spec/paste-html.md#pastehtml10)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+Title
+para bold c
+```
+
+</td><td>
+
+```clipboard
+<h2>Title</h2><p>para <b>bold</b> <code>c</code></p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ┃
+```
+
+</td><td>
+
+```buffer
+¶ ## Title┃
+  ¶ para **bold** `c`
+```
+
+</td><td>
+
+```buffer
+¶ ## Title
+  ¶ para **bold** `c`┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+## Title
+
+para **bold** `c`┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml11](../spec/paste-html.md#pastehtml11)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+line one
+line two
+
+p2
+```
+
+</td><td>
+
+```clipboard
+<p>line one<br>line two</p><p>p2</p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ┃
+```
+
+</td><td>
+
+```buffer
+¶ line one
+  line two┃
+¶ p2
+```
+
+</td><td>
+
+```buffer
+¶ line one
+  line two
+¶ p2┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+line one
+line two
+
+p2┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml16](../spec/paste-html.md#pastehtml16)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+Setup
+npm install
+```
+
+</td><td>
+
+```clipboard
+<div class="markdown-heading"><h2 class="heading-element">Setup</h2><a class="anchor" aria-label="Permalink: Setup" href="#setup"><svg class="octicon octicon-link" viewBox="0 0 16 16"><path d="m7.775 3.275"></path></svg></a></div><div class="highlight highlight-source-shell"><pre>npm install</pre><div class="zeroclipboard-container"><clipboard-copy aria-label="Copy" class="ClipboardButton btn" value="npm install" role="button"><svg class="octicon octicon-copy"><path d="M0 6.75"></path></svg></clipboard-copy></div></div>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: code block, empty document
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ┃
+```
+
+</td><td>
+
+````buffer
+¶ ## Setup┃
+  ¶ ```shell
+    npm install
+    ```
+````
+
+</td><td>
+
+````buffer
+¶ ## Setup
+  ¶ ```shell
+    npm install┃
+    ```
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+````buffer
+## Setup
+
+```shell
+npm install┃
+```
+````
+
+</td></tr>
+</table>
+
+### [PasteList3](../spec/paste-list.md#pastelist3)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: under pasteAtTextStart: before
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃ab
+- c
+```
+
+</td><td>
+
+```buffer
+- x┃
+- y
+- ab
+- c
+```
+
+</td><td>
+
+```buffer
+- x
+- y┃
+- ab
+- c
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃ab
+- c
+```
+
+</td><td>
+
+```buffer
+- x
+- y┃
+- ab
+- c
 ```
 
 </td></tr>
@@ -11012,7 +12935,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (388)
+## Skipped (416)
 
 | example | why |
 | --- | --- |
@@ -11020,7 +12943,6 @@ Original:
 | [Backspace2](../spec/backspace.md#backspace2) | caret in a marker |
 | [Backspace4](../spec/backspace.md#backspace4) | heading's closing #s |
 | [Backspace12e](../spec/backspace.md#backspace12e) | option enterAtTextStart: stay |
-| [Backspace17e](../spec/backspace.md#backspace17e) | no nodes |
 | [Backspace17f](../spec/backspace.md#backspace17f) | option emptyItemWithChildren: refuse |
 | [Backspace17g](../spec/backspace.md#backspace17g) | option emptyItemWithChildren: refuse |
 | [Backspace17h](../spec/backspace.md#backspace17h) | option emptyItemWithChildren: refuse |
@@ -11040,6 +12962,42 @@ Original:
 | [Backspace42b](../spec/backspace.md#backspace42b) | option markup: decorated |
 | [Backspace43c](../spec/backspace.md#backspace43c) | option enterAtTextStart: stay |
 | [Backspace45b](../spec/backspace.md#backspace45b) | option joinWithChildren: refuse |
+| [Backspace49](../spec/backspace.md#backspace49) | table SiYuan writes otherwise (its columns padded to their widest cell) |
+| **backtick.md** | |
+| [Backtick1](../spec/backtick.md#backtick1) | caret on a blank line |
+| [Backtick3](../spec/backtick.md#backtick3) | quote |
+| [Backtick5](../spec/backtick.md#backtick5) | caret on a code block's fence |
+| [Backtick6](../spec/backtick.md#backtick6) | caret on a code block's fence |
+| [Backtick7](../spec/backtick.md#backtick7) | option markup: decorated |
+| [Backtick8](../spec/backtick.md#backtick8) | caret on a blank line |
+| [Backtick11](../spec/backtick.md#backtick11) | block's text ending in a line break |
+| [Backtick13](../spec/backtick.md#backtick13) | option markup: decorated |
+| [Backtick14](../spec/backtick.md#backtick14) | caret on a code block's fence |
+| [Backtick16](../spec/backtick.md#backtick16) | option markup: decorated |
+| [Backtick19](../spec/backtick.md#backtick19) | option closeBackticks: all |
+| [Backtick20](../spec/backtick.md#backtick20) | option closeBackticks: all |
+| [Backtick21](../spec/backtick.md#backtick21) | option closeBackticks: all |
+| [Backtick22](../spec/backtick.md#backtick22) | option closeBackticks: all |
+| [Backtick23](../spec/backtick.md#backtick23) | caret on a code block's fence |
+| [Backtick24](../spec/backtick.md#backtick24) | caret on a code block's fence |
+| [Backtick25](../spec/backtick.md#backtick25) | caret on a code block's fence |
+| [Backtick26](../spec/backtick.md#backtick26) | caret on a code block's fence |
+| [Backtick27](../spec/backtick.md#backtick27) | caret on a code block's fence |
+| [Backtick28](../spec/backtick.md#backtick28) | caret on a code block's fence |
+| [Backtick29](../spec/backtick.md#backtick29) | caret on a code block's fence |
+| [Backtick30](../spec/backtick.md#backtick30) | caret on a blank line |
+| [Backtick31](../spec/backtick.md#backtick31) | option markup: decorated |
+| [Backtick32](../spec/backtick.md#backtick32) | option closeBackticks: all |
+| **copy.md** | |
+| [Copy1](../spec/copy.md#copy1) | strong emphasis, which SiYuan holds as formatting |
+| [Copy2](../spec/copy.md#copy2) | selection across blocks |
+| [Copy3](../spec/copy.md#copy3) | quote |
+| [Copy5](../spec/copy.md#copy5) | option copySelection: nodes |
+| [Copy6](../spec/copy.md#copy6) | option copyAtCaret: host |
+| [Copy7](../spec/copy.md#copy7) | option copySelection: nodes |
+| [Copy8](../spec/copy.md#copy8) | callout |
+| [Cut2](../spec/copy.md#cut2) | selection across blocks |
+| [Cut3](../spec/copy.md#cut3) | option copySelection: nodes |
 | **cursor.md** | |
 | [CursorDown2](../spec/cursor.md#cursordown2) | indented code |
 | [CursorHome3](../spec/cursor.md#cursorhome3) | caret in a marker |
@@ -11086,6 +13044,7 @@ Original:
 | [Delete25](../spec/delete.md#delete25) | caret in a marker |
 | [Delete29](../spec/delete.md#delete29) | caret in a marker |
 | [Delete31b](../spec/delete.md#delete31b) | option joinWithChildren: refuse |
+| [Delete34](../spec/delete.md#delete34) | quote |
 | **duplicate-subtree.md** | |
 | [DuplicateSubtree2](../spec/duplicate-subtree.md#duplicatesubtree2) | action deleteSubtree |
 | [DuplicateSubtree3](../spec/duplicate-subtree.md#duplicatesubtree3) | selection across blocks |
@@ -11094,6 +13053,7 @@ Original:
 | [DuplicateSubtree6](../spec/duplicate-subtree.md#duplicatesubtree6) | selection across blocks |
 | [DuplicateSubtree7](../spec/duplicate-subtree.md#duplicatesubtree7) | caret in a marker |
 | [DuplicateSubtree8](../spec/duplicate-subtree.md#duplicatesubtree8) | caret on a code block's fence |
+| [DuplicateSubtree9](../spec/duplicate-subtree.md#duplicatesubtree9) | unclosed fence, which SiYuan closes |
 | **enter.md** | |
 | [Enter3b](../spec/enter.md#enter3b) | option enterMidItem: child |
 | [Enter7b](../spec/enter.md#enter7b) | option enterOnEmptyItem: outdent |
@@ -11124,6 +13084,8 @@ Original:
 | [Enter61](../spec/enter.md#enter61) | heading's closing #s |
 | [Enter63](../spec/enter.md#enter63) | option enterOnEmptyItem: exit |
 | [Enter63b](../spec/enter.md#enter63b) | option enterOnEmptyItem: exit |
+| [Enter67](../spec/enter.md#enter67) | caret on a thematic break |
+| [Enter68](../spec/enter.md#enter68) | callout |
 | **fences.md** | |
 | [Fence4](../spec/fences.md#fence4) | quote |
 | [Fence6](../spec/fences.md#fence6) | caret on a code block's fence |
@@ -11149,6 +13111,7 @@ Original:
 | [Fence28](../spec/fences.md#fence28) | caret on a code block's fence |
 | [Fence29](../spec/fences.md#fence29) | caret on a code block's fence |
 | [Fence31](../spec/fences.md#fence31) | caret on a code block's fence |
+| [Fence31b](../spec/fences.md#fence31b) | caret on a code block's fence |
 | [Fence32](../spec/fences.md#fence32) | caret on a code block's fence |
 | [Fence32b](../spec/fences.md#fence32b) | option markup: decorated |
 | [Fence33](../spec/fences.md#fence33) | caret on a code block's fence |
@@ -11174,6 +13137,7 @@ Original:
 | [Fence55](../spec/fences.md#fence55) | caret in a math block |
 | [Fence56](../spec/fences.md#fence56) | caret in a math block |
 | [Fence57](../spec/fences.md#fence57) | quote |
+| [Fence61](../spec/fences.md#fence61) | caret in a marker |
 | **gaps.md** | |
 | [Gap14](../spec/gaps.md#gap14) | caret on a blank line |
 | [Gap15](../spec/gaps.md#gap15) | caret on a blank line |
@@ -11208,24 +13172,25 @@ Original:
 | [MoveUp37](../spec/move-subtree-up.md#moveup37) | caret in a math block |
 | [MoveUp38](../spec/move-subtree-up.md#moveup38) | caret in a math block |
 | [MoveUp39](../spec/move-subtree-up.md#moveup39) | caret on a blank line |
+| [MoveUp41](../spec/move-subtree-up.md#moveup41) | unclosed fence, which SiYuan closes |
 | **obsidian-true-outliner.md** | |
-| [Split item becomes first tab-indented child](../spec/obsidian-true-outliner.md#split-item-becomes-first-tab-indented-child) | option enterMidItem: child |
-| [E11](../spec/obsidian-true-outliner.md#e11) | option enterMidItem: child |
-| [E18](../spec/obsidian-true-outliner.md#e18) | caret on a blank line |
-| [#267, E5](../spec/obsidian-true-outliner.md#267-e5) | quote |
-| [S5](../spec/obsidian-true-outliner.md#s5) | caret in a marker |
-| [Line break in setext underline refused](../spec/obsidian-true-outliner.md#line-break-in-setext-underline-refused) | caret on a blank line |
-| [Backspace before the checkbox](../spec/obsidian-true-outliner.md#backspace-before-the-checkbox) | option markup: decorated |
-| [Outdented child leaves quote above alone](../spec/obsidian-true-outliner.md#outdented-child-leaves-quote-above-alone) | quote |
-| [Indented item keeps its quote](../spec/obsidian-true-outliner.md#indented-item-keeps-its-quote) | quote |
-| [Outdented item keeps its quote](../spec/obsidian-true-outliner.md#outdented-item-keeps-its-quote) | quote |
-| [Outdented item keeps its code block](../spec/obsidian-true-outliner.md#outdented-item-keeps-its-code-block) | indented code |
-| [Blank line added below a quote](../spec/obsidian-true-outliner.md#blank-line-added-below-a-quote) | quote |
-| [Outdenting the head of a nested list](../spec/obsidian-true-outliner.md#outdenting-the-head-of-a-nested-list) | option outdent: logical |
-| [Empty paragraph and blank lines removed](../spec/obsidian-true-outliner.md#empty-paragraph-and-blank-lines-removed) | option enterOnEmptyItem: outdent |
-| [Indented list under paragraph restored](../spec/obsidian-true-outliner.md#indented-list-under-paragraph-restored) | option enterOnEmptyItem: outdent |
-| [Pasted quote set off from paragraph](../spec/obsidian-true-outliner.md#pasted-quote-set-off-from-paragraph) | quote |
-| [Pasted list and block become children](../spec/obsidian-true-outliner.md#pasted-list-and-block-become-children) | quote |
+| [TO-E7-E8](../spec/obsidian-true-outliner.md#to-e7-e8) | option enterMidItem: child |
+| [TO-E11](../spec/obsidian-true-outliner.md#to-e11) | option enterMidItem: child |
+| [TO-E18](../spec/obsidian-true-outliner.md#to-e18) | caret on a blank line |
+| [TO-Bug267-E5](../spec/obsidian-true-outliner.md#to-bug267-e5) | quote |
+| [TO-S5](../spec/obsidian-true-outliner.md#to-s5) | caret in a marker |
+| [TO-S7-S8b](../spec/obsidian-true-outliner.md#to-s7-s8b) | caret on a blank line |
+| [TO1](../spec/obsidian-true-outliner.md#to1) | option markup: decorated |
+| [TO-Bug255](../spec/obsidian-true-outliner.md#to-bug255) | quote |
+| [TO-Seams](../spec/obsidian-true-outliner.md#to-seams) | quote |
+| [TO-Seamsb](../spec/obsidian-true-outliner.md#to-seamsb) | quote |
+| [TO-Seamsd](../spec/obsidian-true-outliner.md#to-seamsd) | indented code |
+| [TO-Lazy](../spec/obsidian-true-outliner.md#to-lazy) | quote |
+| [TO7](../spec/obsidian-true-outliner.md#to7) | option outdent: logical |
+| [TO18](../spec/obsidian-true-outliner.md#to18) | option enterOnEmptyItem: outdent |
+| [TO19](../spec/obsidian-true-outliner.md#to19) | option enterOnEmptyItem: outdent |
+| [TO-Bug264](../spec/obsidian-true-outliner.md#to-bug264) | quote |
+| [TO-Bug197](../spec/obsidian-true-outliner.md#to-bug197) | quote |
 | **outdent.md** | |
 | [Outdent8](../spec/outdent.md#outdent8) | selection across blocks |
 | [Outdent10](../spec/outdent.md#outdent10) | selection across blocks |
@@ -11244,50 +13209,37 @@ Original:
 | [Outdent19](../spec/outdent.md#outdent19) | caret on a code block's fence |
 | [Outdent19b](../spec/outdent.md#outdent19b) | option markup: decorated |
 | [Outdent20](../spec/outdent.md#outdent20) | table SiYuan writes otherwise (its columns padded to their widest cell) |
+| **paste-html.md** | |
+| [PasteHtml12](../spec/paste-html.md#pastehtml12) | quote |
+| **paste-list-form.md** | |
+| [PasteListForm6](../spec/paste-list-form.md#pastelistform6) | option pasteListForm: own |
+| **paste-list.md** | |
+| [PasteList7b](../spec/paste-list.md#pastelist7b) | option enterTask: plain |
+| [PasteList17](../spec/paste-list.md#pastelist17) | quote |
+| [PasteList22](../spec/paste-list.md#pastelist22) | option pasteSeams: open |
+| [PasteList23](../spec/paste-list.md#pastelist23) | option pasteSeams: open |
+| [PasteList24](../spec/paste-list.md#pastelist24) | option pasteSeams: open |
 | **paste-plain.md** | |
-| [Paste41](../spec/paste-plain.md#paste41) | quote |
-| [Paste55](../spec/paste-plain.md#paste55) | callout |
-| [Paste85b](../spec/paste-plain.md#paste85b) | quote |
+| [PastePlain4](../spec/paste-plain.md#pasteplain4) | quote |
+| [PastePlain18](../spec/paste-plain.md#pasteplain18) | quote |
+| [PastePlain22](../spec/paste-plain.md#pasteplain22) | callout |
+| [PastePlain30](../spec/paste-plain.md#pasteplain30) | block's text starting with whitespace |
+| [PastePlain31](../spec/paste-plain.md#pasteplain31) | option pastePlainLines: enter |
+| [PastePlain32](../spec/paste-plain.md#pasteplain32) | option pastePlainLines: items |
+| [PastePlain33](../spec/paste-plain.md#pasteplain33) | option pastePlainLines: items |
+| [PastePlain34](../spec/paste-plain.md#pasteplain34) | option pastePlainLines: host |
 | **paste.md** | |
-| [Paste2b](../spec/paste.md#paste2b) | option pasteStructuredListForm: own |
-| [Paste8](../spec/paste.md#paste8) | option pasteStructuredLines: items |
-| [Paste8b](../spec/paste.md#paste8b) | option pasteStructuredLines: items |
-| [Paste8c](../spec/paste.md#paste8c) | option pasteStructuredLines: items |
-| [Paste12](../spec/paste.md#paste12) | quote |
-| [Paste13c](../spec/paste.md#paste13c) | option pasteStructuredListForm: own |
-| [Paste13d](../spec/paste.md#paste13d) | option pasteStructuredAtEnd: join |
-| [Paste13e](../spec/paste.md#paste13e) | option pasteStructuredAtEnd: join |
-| [Paste15b](../spec/paste.md#paste15b) | option pasteStructuredListForm: literal |
-| [Paste15d](../spec/paste.md#paste15d) | option pasteStructuredListForm: own |
-| [Paste16](../spec/paste.md#paste16) | line's trailing whitespace |
-| [Paste16b](../spec/paste.md#paste16b) | option pasteStructuredListForm: own |
-| [Paste17b](../spec/paste.md#paste17b) | option pasteStructuredListForm: literal |
-| [Paste17d](../spec/paste.md#paste17d) | option pasteStructuredAtEnd: join |
-| [Paste18b](../spec/paste.md#paste18b) | option pasteStructuredListForm: literal |
-| [Paste19b](../spec/paste.md#paste19b) | option pasteStructuredAtEnd: join |
-| [Paste20b](../spec/paste.md#paste20b) | option pasteStructuredAtEnd: join |
-| [Paste23](../spec/paste.md#paste23) | quote |
-| [Paste26b](../spec/paste.md#paste26b) | option pasteStructuredAtEnd: join |
-| [Paste27b](../spec/paste.md#paste27b) | option pasteStructuredAtEnd: join |
-| [Paste27c](../spec/paste.md#paste27c) | option pasteStructuredAtEnd: join |
-| [Paste28](../spec/paste.md#paste28) | callout |
-| [Paste29](../spec/paste.md#paste29) | quote |
-| [Paste36b](../spec/paste.md#paste36b) | option pasteStructuredParagraphList: children |
-| [Paste38b](../spec/paste.md#paste38b) | option pasteStructuredParagraphList: children |
-| [Paste39](../spec/paste.md#paste39) | option pasteStructuredLines: items |
-| [Paste43](../spec/paste.md#paste43) | option enterMidItem: child |
-| [Paste46](../spec/paste.md#paste46) | caret on a code block's fence |
-| [Paste47](../spec/paste.md#paste47) | caret on a code block's fence |
-| [Paste50](../spec/paste.md#paste50) | selection across blocks |
-| [Paste56](../spec/paste.md#paste56) | table SiYuan writes otherwise (its columns padded to their widest cell) |
-| [Paste65](../spec/paste.md#paste65) | caret on a blank line |
-| [Paste67](../spec/paste.md#paste67) | caret on a blank line |
-| [Paste70](../spec/paste.md#paste70) | later line starting with a list marker |
-| [Paste71](../spec/paste.md#paste71) | caret on a code block's fence |
-| [Paste72](../spec/paste.md#paste72) | quote |
-| [Paste73](../spec/paste.md#paste73) | block's text starting with whitespace |
-| [Paste77](../spec/paste.md#paste77) | quote |
-| [Paste90](../spec/paste.md#paste90) | quote |
+| [Paste9](../spec/paste.md#paste9) | quote |
+| [Paste13](../spec/paste.md#paste13) | caret on a blank line |
+| [Paste15](../spec/paste.md#paste15) | caret on a code block's fence |
+| [Paste16](../spec/paste.md#paste16) | caret in a marker |
+| [Paste18](../spec/paste.md#paste18) | option pasteLines: items |
+| [Paste19](../spec/paste.md#paste19) | option pasteLines: items |
+| [Paste21](../spec/paste.md#paste21) | option pasteSeams: open |
+| [Paste23](../spec/paste.md#paste23) | callout |
+| [Paste25](../spec/paste.md#paste25) | callout |
+| [Paste26](../spec/paste.md#paste26) | block's text ending in a line break |
+| [Paste27](../spec/paste.md#paste27) | quote |
 | **placeholders.md** | |
 | [Placeholder9](../spec/placeholders.md#placeholder9) | cursorCharLeft after cursorDocEnd |
 | [Placeholder17](../spec/placeholders.md#placeholder17) | cursorCharLeft after cursorDocEnd |
@@ -11295,6 +13247,8 @@ Original:
 | [Placeholder11](../spec/placeholders.md#placeholder11) | cursorCharLeft after cursorDocEnd |
 | [Placeholder12](../spec/placeholders.md#placeholder12) | caret on a blank line |
 | [Placeholder15](../spec/placeholders.md#placeholder15) | cursorCharLeft after cursorDocEnd |
+| [Placeholder18](../spec/placeholders.md#placeholder18) | cursorCharLeft after cursorDocEnd |
+| [Placeholder19](../spec/placeholders.md#placeholder19) | cursorCharLeft after cursorDocEnd |
 | **quotes.md** | |
 | [Quote1](../spec/quotes.md#quote1) | quote |
 | [Quote2](../spec/quotes.md#quote2) | quote |
@@ -11392,9 +13346,10 @@ Original:
 | [Quote93](../spec/quotes.md#quote93) | quote |
 | [Quote69](../spec/quotes.md#quote69) | quote |
 | [Quote70](../spec/quotes.md#quote70) | quote |
+| [Quote94](../spec/quotes.md#quote94) | quote |
 | **scenarios.md** | |
 | [Scenario10](../spec/scenarios.md#scenario10) | action deleteSubtree |
-| [Scenario17](../spec/scenarios.md#scenario17) | option pasteStructuredLines: items |
+| [Scenario17](../spec/scenarios.md#scenario17) | option pasteLines: items |
 | **shift-enter.md** | |
 | [ShiftEnter11](../spec/shift-enter.md#shiftenter11) | block's text ending in a line break |
 | [ShiftEnter12](../spec/shift-enter.md#shiftenter12) | block's text ending in a line break |
@@ -11406,6 +13361,7 @@ Original:
 | [ShiftEnter26](../spec/shift-enter.md#shiftenter26) | caret in a task's checkbox |
 | [ShiftEnter26b](../spec/shift-enter.md#shiftenter26b) | option markup: decorated |
 | [ShiftEnter27](../spec/shift-enter.md#shiftenter27) | selection across blocks |
+| [ShiftEnter33](../spec/shift-enter.md#shiftenter33) | caret in a marker |
 | **tasks.md** | |
 | [TaskEnter9](../spec/tasks.md#taskenter9) | option enterTask: plain |
 | [TaskEnter9b](../spec/tasks.md#taskenter9b) | option enterTask: plain |

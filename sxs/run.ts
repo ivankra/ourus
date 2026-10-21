@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /// <reference lib="dom" />
 // Replays the spec (spec/*.md) in another app, headless, and reports where it agrees with ourus.
 //
@@ -8,8 +9,8 @@
 // <app> is a directory here with a driver.ts (sxs/logseq/), or its two capitals (LO); several,
 // comma-separated, a group (block, text, outliners, free), `-` before one leaving it out
 // (all,-RN,-RB): lib/apps.ts. A selector picks tests: a
-// file (`indent.md`, `indent`), one test (`indent.md#indent3`), or any part of a test's full name
-// (`Indent3`, `enter.md › Enter1`); none runs them all. Several apps, or `all` of them, run side by
+// file (`indent.md`, `indent`), one test (`indent.md#indent3`), or any part of a test's ID
+// (`Indent3`, `Indent`); none runs them all. Several apps, or `all` of them, run side by
 // side, a run of this for each, and their verdicts come out as one table ("several apps", below).
 //
 //   -v, --verbose   print every test's verdict, not only the disagreements, and every URL the proxy saw
@@ -22,6 +23,8 @@
 //                   rest), offline (serve only what it has, reach no network, write nothing: a miss fails),
 //                   refresh (fetch anew, once per proxy run, and keep)
 //   --fresh         load the app anew, rather than take over the page a run that died left loaded
+//   --keep-windows  leave the app's window loaded when the run ends, for the next run to take over
+//                   (probe.ts's); by default it closes
 //   --no-report     don't copy the report into <app>.md (a run of every test does by default)
 //   --json=FILE     write the run as data to FILE too, as .sxs/results/<app>/sxs.json has it
 //   --pace=MS       keys at least MS apart (100, a typist's pace; 0: as fast as the app settles)
@@ -32,10 +35,10 @@
 //   --timing        print how long the app took to settle after each action, and what kept it busy
 //   --probe=FILE    play the cases of a spec-format file anywhere, and write the run to --json's file
 //                   alone, no results kept, no report (sxs/probe.ts runs it so, an app a process)
-//   --plain-clipboard  give the app the clipboard's Markdown as plain text only, without its HTML
-//                   rendering (lib/clipboard.ts)
+//   --plain-clipboard  give the app the clipboard's text/plain alone, without the case's text/html
 //   --compare[=REF] run no app: set the current judgment (each app's sxs.json) beside the one committed
 //                   at REF in .sxs (HEAD by default), case by case (lib/compare.ts); -v lists what got better
+//   -h, --help      print this and stop; an option not listed here is an error, never a run
 //
 //   node sxs/run.ts --stop    stops the shared proxy and browsers, and the servers drivers started
 //
@@ -50,6 +53,8 @@ import { basename, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Browser, Page } from 'playwright-core';
 import { Config } from '../src/config.ts';
+import { OutlineState } from '../src/outline/index.ts';
+import { drawOutline } from '../test/drawing.ts';
 import { appPage, BROWSERS, ensureProxy, launch, lockApp, proxyStats, stopShared, type AppPage } from './lib/browser.ts';
 import { clipboardHtml } from './lib/clipboard.ts';
 import type { Doc, Driver, Session } from './lib/driver.ts';
@@ -57,17 +62,32 @@ import { idleVersion, installIdle, type IdleOptions, type IdleResult } from './l
 import { LOGIN_EXIT, LoginRequired } from './lib/login.ts';
 import { compareOutlines, draw, project, readOutline, sameOutline, type Outline, type Verdict } from './lib/block.ts';
 import { compareTexts, drawTextDoc, readTextDoc, sameText, type TextDoc } from './lib/text.ts';
-import { adapt, allTests, selects, type Plan, type PlanStep } from './lib/plan.ts';
+import { adapt, allTests, fileOf, selects, type Plan, type PlanStep } from './lib/plan.ts';
 import { compareJudgments } from './lib/compare.ts';
 import { appDirs, appNames, resolveApps } from './lib/apps.ts';
-import { passes } from '../test/spec-run.ts';
-import { RANKS, readSpec, TAGS } from '../test/specfile.ts';
+import { canonicalClipboard, passes } from '../test/spec-run.ts';
+import { RANKS, readSpec, TAGS, type Clipboard } from '../test/specfile.ts';
 import { cacheDir, cacheMode } from './proxy.ts';
 
 const started = Date.now();
 const args = process.argv.slice(2);
 const flag = (name: string): boolean => args.includes(name);
 const option = (name: string): string | undefined => args.find((a) => a.startsWith(`${name}=`))?.slice(name.length + 1);
+// --help: the usage at the top of this file; an option it doesn't list stops the run, rather than
+// being taken for nothing (a mistyped option then ran every app on every case)
+if (flag('--help') || flag('-h')) {
+  const lines = readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n');
+  const usage = lines.slice(1, lines.findIndex((line, i) => i > 0 && !line.startsWith('//')));
+  console.log(usage.map((line) => line.replace(/^\/\/ ?/, '')).join('\n'));
+  process.exit(0);
+}
+const FLAGS = ['-v', '--verbose', '--strict', '--ignore-options', '--list', '--headed', '--fresh', '--keep-windows', '--no-report', '--rejudge', '--timing', '--plain-clipboard', '--compare', '--stop'];
+const OPTIONS = ['--repeat', '--slow', '--cache', '--json', '--pace', '--workers', '--probe', '--compare'];
+const unknown = args.filter((a) => a.startsWith('-') && !FLAGS.includes(a) && !OPTIONS.some((o) => a.startsWith(`${o}=`)));
+if (unknown.length) {
+  console.error(`no such option: ${unknown.join(', ')} (--help lists them)`);
+  process.exit(2);
+}
 // no app given: every app (`--rejudge` alone judges them all again); else the apps it names, by
 // directory or two capitals, a group, `-` before one leaving it out (lib/apps.ts)
 const [named = 'all', ...selectors] = args.filter((a) => !a.startsWith('-'));
@@ -170,7 +190,7 @@ type Counts = Record<(typeof VERDICTS)[number] | 'total', number>;
 
 /** An example as it ran. */
 interface RunExample {
-  /** `indent.md › Indent1`: its spec file, the anchor of its heading there, the line of its first block. */
+  /** Its ID, `Indent1`; its spec file, the anchor of its heading there, the line of its first block. */
   name: string;
   file: string;
   anchor: string;
@@ -187,8 +207,12 @@ interface RunExample {
   error?: string;
   /** Actions after which the app didn't settle in time, and what was pending. */
   unsettled?: string[];
-  /** The clipboard it starts with. */
-  clipboard: string | null;
+  /**
+   * The clipboard it starts with, each format the app was given. A run before the clipboard had formats
+   * kept its text alone (a string), the app given its HTML rendering too where it had structure
+   * (lib/clipboard.ts): `startClipboard` reads it back so.
+   */
+  clipboard: Clipboard | string | null;
   /** Its start as the app was given it (onto blocks, for a block app); `written`, the spec's drawing, where that differs. */
   start: string;
   written?: string;
@@ -223,9 +247,9 @@ const VERDICTS = ['agree', 'caret', 'whitespace', 'disagree', 'error'] as const;
 /** A verdict in the table: printed, and in Markdown. */
 const CELL: Record<string, [string, string]> = {
   agree: ['ok', '✓'],
-  caret: ['caret', 'C'],
-  whitespace: ['space', 'S'],
-  disagree: ['DIFF', '✗'],
+  caret: ['C', 'C'],
+  whitespace: ['S', 'S'],
+  disagree: ['D', '✗'],
   error: ['ERROR', 'E'],
   skipped: ['-', ''],
   missing: ['?', '?'],
@@ -234,8 +258,6 @@ const CELL: Record<string, [string, string]> = {
 /** The anchor of an example's heading in its spec file (as run.ts's report links it). */
 const anchor = (name: string): string =>
   name
-    .split(' › ')
-    .pop()!
     .toLowerCase()
     .replace(/[^\p{L}\p{N}\s_-]/gu, '')
     .trim()
@@ -256,7 +278,7 @@ async function workersOf(apps: string[], selectors: string[], pass: string[]): P
         // its examples this run, adapted as its run will adapt them (no browser)
         const examples = new Set(
           tests
-            .map((t) => adapt(d, t, { ignoreOptions: pass.includes('--ignore-options') }))
+            .map((t) => adapt(d, t, { ignoreOptions: pass.includes('--ignore-options'), plainClipboard: pass.includes('--plain-clipboard') }))
             .flatMap((a) => ('plan' in a && !(pass.includes('--strict') && a.plan.notes.length) ? [a.plan.key] : [])),
         ).size;
         const most = Math.min(d.parallel ?? (d.launch ? 1 : BROWSERS), BROWSERS, Math.max(1, examples));
@@ -292,7 +314,8 @@ async function runMany(spec: string, selectors: string[], flags: string[]): Prom
   const drivers = new Map(await Promise.all(apps.map(async (a) => [a, ((await import(`./${a}/driver.ts`)) as { driver: Driver }).driver] as const)));
   if ([...drivers.values()].some((d) => !d.launch)) process.env.OURUS_SXS_OBSIDIANS ??= '2';
   const plan = await workersOf(apps, selectors, pass);
-  say(`${apps.length} apps at once, their workers as the pools have room: ${apps.map((a) => `${a}${plan.get(a)!.workers > 1 ? ` ×${plan.get(a)!.workers}` : ''}`).join(', ')}; logs in ${relative(process.cwd(), cacheDir)}/<app>/sxs.log`);
+  say(`${apps.length} apps at once: ${apps.map((a) => `${a}${plan.get(a)!.workers > 1 ? ` ×${plan.get(a)!.workers}` : ''}`).join(', ')}`);
+  say(`Logs in ${relative(process.cwd(), cacheDir)}/<app>/sxs.log`);
   const one = async (app: string): Promise<void> => {
     const log = lastRun(app, 'log');
     const json = lastRun(app, 'json', partial);
@@ -324,12 +347,12 @@ async function runMany(spec: string, selectors: string[], flags: string[]): Prom
 
   // the table: the examples selected, in the spec's order, and each app's verdict
   const selected = allTests().filter((t) => selectors.length === 0 || selectors.some((s) => selects(s, t)));
-  const names = selected.map((t) => `${t.file} › ${t.name}`);
+  const names = selected.map((t) => t.name);
   // ourus, replayed on every case selected (the table's ourus column): the apps are judged against the
   // spec's drawings, which are what ourus does where it passes them
   const fails = selected.filter((t) => !t.pending && !passes(t));
   const pending = selected.filter((t) => t.pending).length;
-  say(`ourus replayed on ${selected.length} cases: ${selected.length - pending - fails.length} pass${pending ? `, ${pending} pending` : ''}${fails.length ? `; ${fails.length} fail, so the apps are judged there against drawings ourus doesn't meet: ${fails.map((t) => `${t.file} › ${t.name}`).join(', ')}` : ''}`);
+  say(`ourus replayed on ${selected.length} cases: ${selected.length - pending - fails.length} pass${pending ? `, ${pending} pending` : ''}${fails.length ? `; ${fails.length} fail, so the apps are judged there against drawings ourus doesn't meet: ${fails.map((t) => t.name).join(', ')}` : ''}`);
   const byApp = new Map<string, AppRun | null>(apps.map((app) => [app, failed.has(app) ? null : read(lastRun(app, 'json', partial))]));
   // an app with no verdicts (its run failed: behind a login with no session, say; or none to regenerate
   // from) is left out, not a column of `?`
@@ -351,12 +374,19 @@ async function runMany(spec: string, selectors: string[], flags: string[]): Prom
 
   // printed: every row of a few, or with -v; else those where the apps don't all agree
   const shown = verbose || rows.length <= 60 ? rows : rows.filter((r) => r.cells.some((c) => c !== 'agree'));
-  const width = Math.min(60, Math.max(...shown.map((r) => r.name.length), 10));
+  // a row per spec file, then its cases by their ids alone; the apps by their short ids
+  const caseOf = (name: string): string => `  ${name}`;
+  const width = Math.min(60, Math.max(...shown.map((r) => caseOf(r.name).length), 10));
   const clip = (s: string): string => (s.length > width ? `${s.slice(0, width - 1)}…` : s.padEnd(width));
-  const cols = order.map((a) => Math.max(a.length, 5));
+  const heads = order.map((a) => drivers.get(a)!.shortId);
+  const cols = heads.map((h) => Math.max(h.length, 5));
   say('');
-  say(`${''.padEnd(width)}  ${order.map((a, i) => a.padEnd(cols[i]!)).join('  ')}`);
-  for (const r of shown) say(`${clip(r.name)}  ${r.cells.map((c, i) => CELL[c]![0].padEnd(cols[i]!)).join('  ')}`);
+  say(`${''.padEnd(width)}  ${heads.map((h, i) => h.padEnd(cols[i]!)).join('  ')}`.trimEnd());
+  let file = '';
+  for (const r of shown) {
+    if (fileOf(r.name) !== file) say((file = fileOf(r.name)));
+    say(`${clip(caseOf(r.name))}  ${r.cells.map((c, i) => CELL[c]![0].padEnd(cols[i]!)).join('  ')}`.trimEnd());
+  }
   if (shown.length < rows.length) say(`(${rows.length - shown.length} test cases every app agrees on not shown; -v shows them)`);
 
   // written to .sxs/, beside the apps' reports; every app on the whole spec, copied beside the
@@ -440,7 +470,7 @@ function matrix(o: {
   // examples a regenerated report's app hasn't run as the spec has them now, a column if any
   const columns = [...VERDICTS, 'skipped', ...(o.rows.some((r) => r.cells.includes('missing')) ? ['missing'] : [])];
   // the heatmap has ourus too, its verdict its own run of the example (a pending one disagrees)
-  const tests = new Map(allTests().map((t) => [`${t.file} › ${t.name}`, t]));
+  const tests = new Map(allTests().map((t) => [t.name, t]));
   const ours = (name: string): string => (tests.has(name) ? (passes(tests.get(name)!) ? 'agree' : 'disagree') : 'missing');
   const map = heatmap({ apps: [OURUS, ...o.apps], ids: new Map([[OURUS, 'US'], ...o.ids]), ordered: o.ordered, byApp: o.byApp, rows: o.rows.map((r) => ({ name: r.name, cells: [ours(r.name), ...r.cells], adapted: [[], ...r.adapted] })) });
   // per spec file, and per rank and tag, the disagreements: the apps' runs of its examples, the
@@ -453,7 +483,7 @@ function matrix(o: {
     return { key, cases: inGroup.length, runs: o.apps.reduce((n, _, i) => n + ran(i), 0), dis: o.apps.reduce((n, _, i) => n + dis(i), 0), blockDis: o.apps.reduce((n, _, i) => n + (block[i] ? dis(i) : 0), 0), blockRan: o.apps.reduce((n, _, i) => n + (block[i] ? ran(i) : 0), 0), apps: o.apps.map((_, i) => (ran(i) ? String(dis(i)) : '')) };
   };
   const mostFirst = (a: { dis: number; key: string }, b: { dis: number; key: string }): number => b.dis - a.dis || a.key.localeCompare(b.key);
-  const byFile = [...new Set(o.rows.map((r) => r.name.split(' › ')[0]!))].map((f) => group(f, o.rows.filter((r) => r.name.split(' › ')[0] === f))).sort(mostFirst);
+  const byFile = [...new Set(o.rows.map((r) => fileOf(r.name)))].map((f) => group(f, o.rows.filter((r) => fileOf(r.name) === f))).sort(mostFirst);
   // the ranks in their order, then the other tags, the most disagreements first; a case counts under
   // its rank and each of its tags
   const testOf = (r: (typeof o.rows)[number]) => tests.get(r.name);
@@ -505,8 +535,8 @@ function matrix(o: {
   const html = (t: string): string => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const rows: string[] = [];
   const tr = (cells: string[]): void => void rows.push(`<tr>${cells.join('')}</tr>`);
-  for (const f of [...new Set(o.rows.map((r) => r.name.split(' › ')[0]!))]) {
-    const inFile = o.rows.filter((x) => x.name.split(' › ')[0] === f);
+  for (const f of [...new Set(o.rows.map((r) => fileOf(r.name)))]) {
+    const inFile = o.rows.filter((x) => fileOf(x.name) === f);
     const tally = (i: number): string => {
       const ran = inFile.filter((r) => (VERDICTS as readonly string[]).includes(r.cells[i]!)).length;
       return `<td>${ran ? `<b>${inFile.filter((r) => r.cells[i] === 'disagree').length}</b>` : ''}`;
@@ -522,7 +552,7 @@ function matrix(o: {
     for (const r of inFile) {
       const cells = r.cells.map((c, i) => (r.adapted[i]!.length && c !== 'agree' && c !== 'skipped' ? `<td>(${CELL[c]![1]})` : `<td>${CELL[c]![1]}`));
       const rank = tests.get(r.name)?.rank;
-      tr([`<td><a href="../spec/${f}#${anchor(r.name)}">${html(short(r.name.split(' › ').pop()!))}</a>`, ...cells, `<td align="right">${disagree(r)}`, `<td>${html(rank ?? '')}`]);
+      tr([`<td><a href="../spec/${f}#${anchor(r.name)}">${html(short(r.name))}</a>`, ...cells, `<td align="right">${disagree(r)}`, `<td>${html(rank ?? '')}`]);
     }
     tr(['<td><b>total</b>', ...o.apps.map((_, i) => tally(i)), `<td align="right"><b>${inFile.reduce((n, r) => n + disagree(r), 0)}</b>`, '<td>']);
   }
@@ -686,7 +716,7 @@ function heatmap(o: { apps: string[]; ids: Map<string, string>; ordered: Readonl
 
 // the current judgment against one committed in `.sxs` (lib/compare.ts); no app runs
 if (flag('--compare') || option('--compare') !== undefined) {
-  const picked = new Set(allTests().filter((t) => selectors.length === 0 || selectors.some((s) => selects(s, t))).map((t) => `${t.file} › ${t.name}`));
+  const picked = new Set(allTests().filter((t) => selectors.length === 0 || selectors.some((s) => selects(s, t))).map((t) => t.name));
   const named = selectors.length === 0 ? () => true : (name: string) => picked.has(name);
   process.exit(compareJudgments(cacheDir, app === 'all' ? allApps() : app.split(','), option('--compare') ?? 'HEAD', named, (line) => console.log(line), flag('-v') || flag('--verbose')));
 }
@@ -782,10 +812,10 @@ const skipped = new Map<string, string[]>();
 /** A regenerated report's examples that its last run didn't play as they are now, by why: they want a run. */
 const notRun = new Map<string, string[]>();
 for (const t of tests) {
-  const a = adapt(driver, t, { ignoreOptions: flag('--ignore-options') });
+  const a = adapt(driver, t, { ignoreOptions: flag('--ignore-options'), plainClipboard: flag('--plain-clipboard') });
   const why = 'skip' in a ? a.skip : flag('--strict') && a.plan.notes.length ? `adapted (${a.plan.notes.join(', ')})` : null;
   if (why === null && 'plan' in a) plans.push(a.plan);
-  else skipped.set(why!, [...(skipped.get(why!) ?? []), `${t.file} › ${t.name}`]);
+  else skipped.set(why!, [...(skipped.get(why!) ?? []), t.name]);
 }
 /** Tests that adapt to the same plan run once: by key, the plan run and the names it stands for. */
 const unique = new Map<string, { plan: Plan; names: string[] }>();
@@ -803,8 +833,8 @@ if (flag('--list')) {
 }
 /** The run as data (`AppRun`), from its results; a run that ran nothing has none. */
 function runData(results: readonly Result[], version: string | undefined): AppRun {
-  const order = new Map(tests.map((t) => [`${t.file} › ${t.name}`, t]));
-  const where = (name: string): { file: string; anchor: string; line: number } => ({ file: name.split(' › ')[0]!, anchor: anchor(name), line: order.get(name)!.line });
+  const order = new Map(tests.map((t) => [t.name, t]));
+  const where = (name: string): { file: string; anchor: string; line: number } => ({ file: order.get(name)!.file, anchor: anchor(name), line: order.get(name)!.line });
   const inSpecOrder = <T extends { name: string }>(xs: T[]): T[] => {
     const index = new Map([...order.keys()].map((n, i) => [n, i]));
     return xs.sort((a, b) => index.get(a.name)! - index.get(b.name)!);
@@ -880,8 +910,18 @@ function projected(d: TextDoc, plan: Plan): string | null {
 function stepVerdict(step: PlanStep, got: Doc | null, clipboard: string | null | undefined, flavor: Config['flavor']): Verdict {
   let v: Verdict = 'agree';
   if (step.want && got) v = compareDocs(step.caretLost ? { ...step.want, sel: null } : step.want, got, step.sections, flavor);
-  if (step.clipboard !== undefined && clipboard !== step.clipboard) v = 'disagree';
+  // a clipboard written otherwise but reading as the same outline (an app's tabs, no final line break) is whitespace
+  if (step.clipboard !== undefined && clipboard !== step.clipboard) v = clipboard && sameMarkdown(clipboard, step.clipboard, flavor) ? (rank[v] > rank.whitespace ? v : 'whitespace') : 'disagree';
   return v;
+}
+
+/** Whether two Markdown texts read as the same outline: the same nodes, at the same depths, with the same texts, items in lists of the same kind (bullets, numbers). */
+function sameMarkdown(a: string, b: string, flavor: Config['flavor']): boolean {
+  const read = (text: string): string => {
+    const doc = OutlineState.parse(text, { config: { flavor } });
+    return JSON.stringify([drawOutline(doc), doc.nodes.map((n) => (n.kind === 'item' ? n.block.list?.type : null))]);
+  };
+  return read(a) === read(b);
 }
 
 /** The run as data, in `.sxs/results/<app>/sxs.json` (a run of some examples, `sxs.partial.json`), and to `--json`'s file if asked. */
@@ -920,9 +960,9 @@ interface Outcome {
  * What the runner plays the app through: a page's keyboard, Clipboard API and idle script, or the
  * session of an app that isn't a page (`Session`, lib/driver.ts), which settles by returning.
  */
-interface Actor extends Session {
-  /** The clipboard: plain text, with its HTML where it has one (a session's takes the text alone). */
-  clipboard: { write(text: string, html?: string | null): Promise<void>; read(): Promise<string> };
+interface Actor extends Omit<Session, 'clipboard'> {
+  /** The clipboard: every format the case gives (a session's takes the text alone); read back, its text. */
+  clipboard: { write(clipboard: Clipboard): Promise<void>; read(): Promise<string> };
   settle(o: IdleOptions): Promise<IdleResult>;
   /** Brings the app's page to the front, where its Clipboard API works. */
   front(): Promise<void>;
@@ -931,14 +971,26 @@ const pageActor = (page: Page): Actor => ({
   press: (key) => page.keyboard.press(key),
   type: (text) => page.keyboard.type(text),
   clipboard: {
-    write: (text, html) =>
-      page.evaluate(
-        ([t, h]) =>
-          h
-            ? navigator.clipboard.write([new ClipboardItem({ 'text/plain': new Blob([t], { type: 'text/plain' }), 'text/html': new Blob([h], { type: 'text/html' }) })])
-            : navigator.clipboard.writeText(t),
-        [text, html ?? null] as const,
-      ),
+    // through a copy event, whose `setData` takes any format (the Clipboard API's write takes text and
+    // HTML only): Chromium keeps the others as its own, and a paste then has them all, as after a copy
+    // from the app that wrote them. The page's own copy handlers don't see it, nor add to it.
+    write: async (clipboard) => {
+      const copied = await page.evaluate((formats) => {
+        const onCopy = (e: ClipboardEvent): void => {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+          e.clipboardData!.clearData();
+          for (const [type, text] of Object.entries(formats)) e.clipboardData!.setData(type, text);
+        };
+        window.addEventListener('copy', onCopy, { capture: true });
+        try {
+          return document.execCommand('copy');
+        } finally {
+          window.removeEventListener('copy', onCopy, { capture: true });
+        }
+      }, clipboard as Record<string, string>);
+      if (!copied) throw new Error('the clipboard could not be written: the page refused a copy');
+    },
     read: () => page.evaluate(() => navigator.clipboard.readText()),
   },
   settle: (o) => page.evaluate((o) => (window as unknown as { __ourusIdle: { wait(o: IdleOptions): Promise<IdleResult> } }).__ourusIdle.wait(o), o),
@@ -946,6 +998,7 @@ const pageActor = (page: Page): Actor => ({
 });
 const sessionActor = (session: Session): Actor => ({
   ...session,
+  clipboard: { write: (clipboard) => session.clipboard.write(clipboard['text/plain'] ?? ''), read: () => session.clipboard.read() },
   settle: async () => ({ ms: 0, timedOut: false }),
   front: async () => {},
 });
@@ -1058,7 +1111,9 @@ async function runPlan(w: Worker, plan: Plan): Promise<Outcome> {
     // is dropped and a read comes back empty, without an error)
     if (usesClipboard) await w.actor.front();
     await driver.load(page, plan.initial);
-    if (plan.clipboard !== null) await w.actor.clipboard.write(plan.clipboard, args.includes('--plain-clipboard') ? null : clipboardHtml(plan.clipboard, flavorOf(plan)));
+    // a test that starts with none starts with an empty one: a copy that copies nothing reads back as
+    // nothing, not as whatever an earlier test (another app's, in the browser) left there
+    if (plan.clipboard !== null || usesClipboard) await w.actor.clipboard.write(plan.clipboard ?? { 'text/plain': '' });
     await settleAfter('loading');
     // the app holds what the test starts from, or the test means nothing: an app may rewrite what it
     // is given (trimming, normalizing), and that is no behavior of a key
@@ -1146,9 +1201,16 @@ function replay(plan: Plan, e: RunExample): Outcome | string {
   return { ...judge(plan, got, clipboards), got, clipboards, unsettled: e.unsettled ?? [], ms: 0 };
 }
 
+/** The clipboard an example of the last run started with, as the app was given it (`RunExample.clipboard`). */
+function startClipboard(e: RunExample): Clipboard | null {
+  if (typeof e.clipboard !== 'string') return e.clipboard && canonicalClipboard(e.clipboard);
+  const html = clipboardHtml(e.clipboard, (e.options.flavor ?? Config.defaults.flavor) as Config['flavor']);
+  return { 'text/plain': e.clipboard, ...(html !== null && { 'text/html': html }) };
+}
+
 /** Judges every example again from the last run, into `results`, or `notRun` with why; the app's version then. */
 function regenerate(): string | undefined {
-  const key = (start: string, clipboard: string | null, settings: string[]): string => JSON.stringify([start, clipboard, settings]);
+  const key = (start: string, clipboard: Clipboard | null, settings: string[]): string => JSON.stringify([start, clipboard, settings]);
   // a start as it is drawn now: a run's data keeps the drawing of its day
   const redrawn = (drawn: string): string => {
     const d = readDoc(drawn);
@@ -1156,7 +1218,7 @@ function regenerate(): string | undefined {
   };
   const played = new Map<string, RunExample[]>();
   for (const e of previous!.examples) {
-    const k = key(redrawn(e.start), e.clipboard, settingsOf((s) => e.options[s] ?? Config.defaults[s]));
+    const k = key(redrawn(e.start), startClipboard(e), settingsOf((s) => e.options[s] ?? Config.defaults[s]));
     played.set(k, [...(played.get(k) ?? []), e]);
   }
   for (const { plan, names } of unique.values()) {
@@ -1210,8 +1272,9 @@ async function playAll(): Promise<string | undefined> {
   const count = workerCount();
   // one run of the app at a time; each worker holds a browser of the pool besides (or an app it starts,
   // a desktop app, of its own)
+  // a probe waits for another run of the app to end: two probes side by side play in turn
   const unlockApp = !flag('--headed')
-    ? await lockApp(driver.longId).catch((e: Error) => {
+    ? await lockApp(driver.longId, !!probing).catch((e: Error) => {
         console.error(e.message);
         return process.exit(1);
       })
@@ -1239,19 +1302,23 @@ async function playAll(): Promise<string | undefined> {
       if (!app.session) await app.page.addInitScript(installIdle, idleVersion());
       return { app, version: await driver.open(app.page), how: 'started' };
     }
-    let app = await appPage(browser, pooled, driver.scope ?? driver.url, { shared: !flag('--headed'), fresh: flag('--fresh') });
+    let app = await appPage(browser, pooled, driver.scope ?? driver.url, { shared: !flag('--headed'), fresh: flag('--fresh'), keep: flag('--keep-windows') });
     // the window's page in front: its Clipboard API works only there, and a tab behind another can crawl
     await app.page.bringToFront();
     if (app.reused) {
       const probe: Doc = isText ? { text: '- a\n- b\n', sel: { anchor: 7, head: 7 } } : { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } };
+      let why = '';
+      // read once the app settles, as a test's state is (Dynalist puts the caret in after the load returns)
       const works = await driver
         .load(app.page, probe)
+        .then(() => app.page.evaluate(() => (window as { __ourusIdle?: { wait(o: object): Promise<unknown> } }).__ourusIdle?.wait({ shortTimer: 300, quiet: 100, timeout: 5000 })))
         .then(() => driver.read(app.page))
-        .then((o) => sameDoc(o, probe))
-        .catch(() => false);
+        .then((o) => sameDoc(o, probe) || ((why = `it holds ${JSON.stringify(o)}`), false))
+        .catch((e: Error) => ((why = e.message.split('\n')[0]!), false));
       if (works) return { app, version: await app.page.evaluate(() => (window as Marked).__ourusVersion), how: 'reused from an earlier run' };
+      say(`the window an earlier run left doesn't take a document (${why}): loading the app anew`);
       await app.page.close();
-      app = await appPage(browser, pooled, driver.scope ?? driver.url, { shared: !flag('--headed'), fresh: true });
+      app = await appPage(browser, pooled, driver.scope ?? driver.url, { shared: !flag('--headed'), fresh: true, keep: flag('--keep-windows') });
     }
     await app.page.addInitScript(installIdle, idleVersion());
     // a window its app didn't open in closes, not left blank in the shared browser
@@ -1407,10 +1474,10 @@ if (probing) process.exit(0);
 function keep(run: AppRun): void {
   fileRuns(); // a run of the whole spec from before, split first
   const all = allTests();
-  const selected = new Set(tests.map((t) => `${t.file} › ${t.name}`));
+  const selected = new Set(tests.map((t) => t.name));
   for (const file of new Set(run.examples.map((e) => e.file))) {
     const ran = run.examples.filter((e) => e.file === file);
-    const whole = !flag('--strict') && !flag('--ignore-options') && all.filter((t) => t.file === file).every((t) => selected.has(`${t.file} › ${t.name}`));
+    const whole = !flag('--strict') && !flag('--ignore-options') && all.filter((t) => t.file === file).every((t) => selected.has(t.name));
     writeFileRun({ type: 'SxS', app: driver.longId, file, version: run.version, command: run.command, elapsed_s: run.elapsed_s, ran: new Date().toISOString(), examples: ran }, !whole);
   }
 }
@@ -1444,11 +1511,9 @@ if (selectors.length === 0 && !flag('--strict') && !flag('--ignore-options') && 
 function report(): string {
   /** A heading's anchor, as GitHub makes it. */
   const slug = (heading: string): string => heading.toLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu, '').trim().replace(/\s/g, '-');
-  /** An example's spec file, its own heading there (not the headings above it), and that heading's anchor. */
+  /** An example's spec file, its ID (its heading there), and that heading's anchor. */
   const parts = (name: string): { file: string; title: string; anchor: string } => {
-    const [file, ...rest] = name.split(' › ');
-    const title = rest[rest.length - 1]!;
-    return { file: file!, title, anchor: slug(title) };
+    return { file: fileOf(name), title: name, anchor: slug(name) };
   };
   /** A section's heading: the examples that came out a way (adapted ones saying so), or were skipped or not run, and how many. */
   const heading = (what: string, n: number, kind?: string): string => {
@@ -1571,19 +1636,35 @@ function report(): string {
         out.push(`### [${parts(plan.name).title}](${href(plan.name)})`, '');
         // above the buffers: how the example was adapted
         const notesLine = adapted ? `Adapted: ${plan.notes.join(', ')}` : '';
-        const clipboard = plan.clipboard === null ? [] : [{ head: 'clipboard', body: plan.clipboard, kind: 'clipboard' }];
-        // one step: its command, then the clipboard, the start, the app's outcome and ourus's side by side
+        // the clipboard the app was given, a table of its own above the command: headed "clipboard"
+        // across a column per MIME type, each named in a row of its own; one named in the heading
+        const formats = Object.entries(plan.clipboard ?? {});
+        const clipboard = formats.length
+          ? [
+              '<table>',
+              ...(formats.length === 1
+                ? [`<tr><th>clipboard (${formats[0]![0]})</tr>`]
+                : [`<tr><th colspan=${formats.length}>clipboard</tr>`, `<tr>${formats.map(([type]) => `<td>${type}`).join('')}</tr>`]),
+              '<tr valign="top"><td>',
+              ...formats.flatMap(([, body], i) => [...(i ? ['</td><td>'] : []), '', fence('clipboard', body), '']),
+              '</td></tr>',
+              '</table>',
+              '',
+            ]
+          : [];
+        // one step: the clipboard, its command, then the start, the app's outcome and ourus's side by side
         const [only] = plan.steps;
         const once = outcome.got[0];
         if (plan.steps.length === 1 && outcome.verdict !== 'error' && only!.want && once) {
-          out.push(`> ${only!.actions.join(' ')}`, '');
+          out.push(...clipboard, `> ${only!.actions.join(' ')}`, '');
           if (notesLine) out.push(notesLine, '');
-          out.push(...sideBySide([...clipboard, { head: 'buffer', body: drawDoc(plan.initial) }, { head: driver.longId, body: drawDoc(once) }, { head: 'ourus', body: drawDoc(only!.want) }]), '');
+          out.push(...sideBySide([{ head: 'buffer', body: drawDoc(plan.initial) }, { head: driver.longId, body: drawDoc(once) }, { head: 'ourus', body: drawDoc(only!.want) }]), '');
         } else {
           // more steps: the clipboard and the start, then each step's command and the app's outcome,
           // beside ourus's where they differ; a buffer the two agree on stands alone
+          out.push(...clipboard);
           if (notesLine) out.push(notesLine, '');
-          out.push(...sideBySide([...clipboard, { head: 'buffer', body: drawDoc(plan.initial) }]), '');
+          out.push(...sideBySide([{ head: 'buffer', body: drawDoc(plan.initial) }]), '');
           plan.steps.forEach((step, i) => {
             out.push(`> ${step.actions.join(' ')}`, '');
             if (outcome.verdict === 'error' && i >= outcome.step) {
@@ -1606,7 +1687,7 @@ function report(): string {
   }
   // the examples skipped or not run, one table, a row each in the spec's order under a row for its file,
   // so a new one is a row added
-  const index = new Map(tests.map((t, i) => [`${t.file} › ${t.name}`, i]));
+  const index = new Map(tests.map((t, i) => [t.name, i]));
   const table = (what: string, byWhy: Map<string, string[]>): string[] => {
     const rows = [...byWhy].flatMap(([why, names]) => names.map((name) => ({ name, why }))).sort((a, b) => index.get(a.name)! - index.get(b.name)!);
     return [

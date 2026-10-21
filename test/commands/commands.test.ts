@@ -136,7 +136,7 @@ test('every command from an empty document neither throws nor fails to encode', 
   const clipboards = ['- x\n', 'x\n', 'x', '\n', 'a\n\nb\n', '# h\n', '---\ntitle: x\n---\n', '```\ncode\n```\n'];
   const commands: Command[] = [
     ...(['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'deleteSubtree', 'duplicateSubtree', ...CARET_COMMANDS] as const).map((type) => ({ type }) as Command),
-    ...clipboards.flatMap((text) => [{ type: 'pasteStructured', text } as const, { type: 'pastePlain', text } as const]),
+    ...clipboards.flatMap((text) => [{ type: 'paste', clipboard: { 'text/plain': text } } as const, { type: 'pastePlain', text } as const]),
   ];
   const problems: string[] = [];
   for (const flavor of Config.values.flavor) {
@@ -157,10 +157,11 @@ test('every command from an empty document neither throws nor fails to encode', 
     }
   }
   assert.deepEqual(problems, []);
-  // with no line to act on, a structural command is refused, and a paste is the host's
+  // with no line to act on, a structural command is refused; a paste is the document
   const empty = OutlineState.parse('');
   assert.equal(executeCommand(empty, { type: 'indent' }, { anchor: 0, head: 0 }).status, 'rejected');
-  assert.equal(executeCommand(empty, { type: 'pasteStructured', text: '- x\n' }, { anchor: 0, head: 0 }).status, 'notApplicable');
+  const pasted = executeCommand(empty, { type: 'paste', clipboard: { 'text/plain': '- x\n' } }, { anchor: 0, head: 0 });
+  assert.deepEqual(pasted.status === 'applied' && [pasted.state.text, pasted.selection.head], ['- x\n', 3]);
 });
 
 // The document's true end, after its last line ending, is on no line, which the spec's buffers can't
@@ -179,4 +180,39 @@ test('a structural command from the document end leaves the caret in the node it
     // so the next press acts on it again
     if (type === 'moveSubtreeUp') assert.equal(executeCommand(r.state, { type: 'moveSubtreeDown' }, r.selection).status, 'applied');
   }
+});
+
+// Enter at the end of a text without a final line ending holds an empty line that is the text's last,
+// unterminated, which the spec's buffers can't draw: a paste there fills it (it failed to encode).
+test('a paste on the empty line Enter holds at the text end fills it', () => {
+  const entered = executeCommand(OutlineState.parse('# h1'), { type: 'enter' }, { anchor: 4, head: 4 });
+  assert.equal(entered.status, 'applied');
+  if (entered.status !== 'applied') return;
+  assert.equal(entered.state.text, '# h1\n');
+  for (const [clipboard, text] of [['- a\n  - b', '# h1\n- a\n  - b'], ['> q', '# h1\n> q'], ['# h2\ntext', '# h1\n# h2\ntext']] as const) {
+    const r = executeCommand(entered.state, { type: 'paste', clipboard: { 'text/plain': clipboard } }, entered.selection);
+    assert.equal(r.status === 'applied' ? r.state.text : `${r.status} ${r.status === 'rejected' ? r.reason : ''}`, text, clipboard);
+  }
+  // Shift-Enter's the same: its empty line goes, the nodes after the paragraph (Paste26)
+  const broken = executeCommand(OutlineState.parse('p'), { type: 'shiftEnter' }, { anchor: 1, head: 1 });
+  assert.equal(broken.status, 'applied');
+  if (broken.status !== 'applied') return;
+  const pasted = executeCommand(broken.state, { type: 'paste', clipboard: { 'text/plain': '- a\n- b' } }, broken.selection);
+  assert.equal(pasted.status === 'applied' ? pasted.state.text : pasted.status, 'p\n- a\n- b');
+});
+
+test('several characters typed at once are played a character at a time, as keys type them', () => {
+  const typed = (text: string, at: number, insert: string) => {
+    const doc = OutlineState.parse(text);
+    const result = executeCommand(doc, { type: 'insertText', text: insert }, { anchor: at, head: at });
+    if (result.status !== 'applied') return result.status;
+    assert.equal(applyChanges(text, result.changes), result.state.text);
+    return { text: result.state.text, caret: result.selection.head };
+  };
+  // a fence typed whole (a text replacement's) is closed, as typed key by key; its info string after it
+  assert.deepEqual(typed('intro\n\n\n', 7, '```'), { text: 'intro\n\n```\n```\n', caret: 10 });
+  assert.deepEqual(typed('intro\n\n\n', 7, '```js'), { text: 'intro\n\n```js\n```\n', caret: 12 });
+  // a backtick in text, and text without one, the host's
+  assert.equal(typed('- a\n', 3, 'b`c'), 'notApplicable');
+  assert.equal(typed('x\n', 1, 'ab'), 'notApplicable');
 });

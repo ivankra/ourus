@@ -14,6 +14,8 @@
 import type { Config } from '../../src/config.ts';
 import { OutlineState, type OutlineNode } from '../../src/outline/index.ts';
 import { readDrawing } from '../../test/drawing.ts';
+import { micromark } from 'micromark';
+import { gfm, gfmHtml } from 'micromark-extension-gfm';
 
 export interface Block {
   depth: number;
@@ -121,6 +123,11 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
   if (doc.syntaxTree.root.children.some((b) => b.type === 'frontmatter')) throw new Unsupported('frontmatter');
 
   const nodes = doc.nodes.filter((n) => n.kind !== 'root');
+  // an empty document is an app's empty page: one empty block, the caret in it
+  if (!nodes.length && text.trim() === '' && /┃/.test(drawn)) {
+    notes.add('empty document');
+    return { outline: { blocks: [{ depth: 0, text: '', ...(options.freeForm && { free: true as const }) }], sel: { block: 0, anchor: 0, head: 0 } }, notes, sections: [] };
+  }
   if (!nodes.length) throw new Unsupported('no nodes');
   const blocks: Block[] = [];
   const maps: LineMap[][] = [];
@@ -178,9 +185,11 @@ function blockText(doc: OutlineState, node: OutlineNode, notes: Set<string>, ord
     let s = doc.text.slice(from, to);
     // a Markdown escape at a line's start (`\#`, `\-`, `1\.`) only keeps the line from reading as
     // markup in the file; a block's text needs none, but where blocks are numbered, `1\.` starting a
-    // block is text a numbered block's `1. ` isn't, and stays
+    // block is text a numbered block's `1. ` isn't, and stays; so does `\#` starting a paragraph where
+    // blocks are free-form, whose headings are free blocks starting with `# ` (Placeholder18)
     // (after spaces a split kept before the text, `enterSplitSpace: start`, as at its start)
-    const m = !unescape ? null : ordered && !parts.length ? /^[ \t]*\\(?=[!-/:-@[-`{-~])/.exec(s) : /^[ \t]*\\(?=[!-/:-@[-`{-~])|^[ \t]*\d{1,9}\\(?=[.)])/.exec(s);
+    const heading = freeForm && node.kind === 'paragraph' && !parts.length && /^[ \t]*\\#/.test(s);
+    const m = !unescape || heading ? null : ordered && !parts.length ? /^[ \t]*\\(?=[!-/:-@[-`{-~])/.exec(s) : /^[ \t]*\\(?=[!-/:-@[-`{-~])|^[ \t]*\d{1,9}\\(?=[.)])/.exec(s);
     if (m) {
       notes.add('escape');
       const cut = m[0].length - 1;
@@ -388,7 +397,7 @@ export function readOutline(drawn: string, options: Pick<ProjectOptions, 'ordere
   /** Where the text of the last block at each depth starts, as `draw` indents. */
   const cols: number[] = [];
   // no blocks at all draw as one empty line
-  for (const line of drawn === '\n' ? [] : drawn.replace(/\n$/, '').replace(/→/g, '\t').split('\n')) {
+  for (const line of drawn === '\n' ? [] : drawn.replace(/\n$/, '').replace(/→/g, '\t').replace(/␠/g, ' ').split('\n')) {
     const item = /^( *)(?:([-¶])|(\d{1,9}\.)) (▮ )?(.*)$/.exec(line);
     const spaces = item?.[1]!.length ?? 0;
     // a block's depth: where blocks are numbered, it starts where its parent's text does; else two
@@ -451,16 +460,57 @@ const loose = (b: Block): string =>
     .replace(/^((?:\d{1,9}\. )?(?:\[[ xX]\] )?(?:#{1,6} )?)[ \t]+/, '$1')
     .trim()}`;
 
+/**
+ * A block's text without the closing fence of the code it ends with (but blank lines): a block ends its code, so the
+ * fence closing it there says nothing (ourus closes what it writes, to keep the Markdown well
+ * formed; Logseq and Tine leave it open).
+ */
+export function endFenceOptional(text: string): string {
+  const lines = text.split('\n');
+  let open: { char: string; length: number } | null = null;
+  for (const [i, line] of lines.entries()) {
+    const run = /^[ \t]{0,3}(`{3,}|~{3,})/.exec(line);
+    if (!open) {
+      if (run) open = { char: run[1]![0]!, length: run[1]!.length };
+      continue;
+    }
+    const close = /^[ \t]{0,3}(`{3,}|~{3,})[ \t]*$/.exec(line);
+    if (close && close[1]![0] === open.char && close[1]!.length >= open.length) {
+      // (blank lines after it stay, a difference of whitespace)
+      if (lines.slice(i + 1).every((l) => l.trim() === '')) return [...lines.slice(0, i), ...lines.slice(i + 1)].join('\n');
+      open = null;
+    }
+  }
+  return text;
+}
+
 /** How `got` compares with `want`; a selection is compared only where `want` has one. */
 export function compareOutlines(want: Outline, got: Outline, sections: readonly number[] = []): Verdict {
-  [want, got] = [sectioned(want, sections), sectioned(got, sections)];
-  const same = want.blocks.length === got.blocks.length && want.blocks.every((b, i) => b.depth === got.blocks[i]!.depth && !b.free === !got.blocks[i]!.free && b.text === got.blocks[i]!.text);
+  // a code block's closing fence at a block's end is the block's own end
+  const ended = (o: Outline): Outline => ({ ...o, blocks: o.blocks.map((b) => ({ ...b, text: endFenceOptional(b.text) })) });
+  [want, got] = [sectioned(ended(want), sections), sectioned(ended(got), sections)];
+  const same = want.blocks.length === got.blocks.length && want.blocks.every((b, i) => b.depth === got.blocks[i]!.depth && !b.free === !got.blocks[i]!.free && sameText(b.text, got.blocks[i]!.text));
   if (!same) {
     const close = want.blocks.length === got.blocks.length && want.blocks.every((b, i) => loose(b) === loose(got.blocks[i]!));
     return close ? 'whitespace' : 'disagree';
   }
   if (want.sel && (JSON.stringify(want.sel) !== JSON.stringify(got.sel) || got.selected?.length)) return 'caret';
   return 'agree';
+}
+
+/**
+ * Whether two blocks' texts say the same: the same but for escapes, which Markdown's inline content
+ * reads the same (an escape where nothing needs one: `\[y\]` and `[y]`). An escape that keeps markup
+ * text (`\*x\*`, against `*x*` an app made italic) still differs, and so does any other character,
+ * whitespace too (`whitespace` is its own verdict). Each line is read as inline content only: what
+ * would start a block there is the projection's.
+ */
+export function sameText(a: string, b: string): boolean {
+  if (a === b) return true;
+  const unescaped = (text: string): string => text.replace(/\\([!-/:-@[-`{-~])/g, '$1');
+  if (unescaped(a) !== unescaped(b)) return false;
+  const inline = (text: string): string => micromark(text.split('\n').map((line) => `\uFFFD${line}`).join('\n'), { extensions: [gfm()], htmlExtensions: [gfmHtml()] });
+  return inline(a) === inline(b);
 }
 
 /**

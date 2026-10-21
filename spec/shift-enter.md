@@ -592,8 +592,8 @@ tags: rare free-form
 
 > shiftEnter
 
-```result
-notApplicable
+```yaml
+result: notApplicable
 ```
 
 ```buffer
@@ -659,8 +659,8 @@ flavor: gfm
 
 > shiftEnter
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer
@@ -707,8 +707,8 @@ tags: rare free-form markup-task
 
 > shiftEnter
 
-```result
-notApplicable
+```yaml
+result: notApplicable
 ```
 
 ```buffer
@@ -850,4 +850,59 @@ b
 [a]:┃
 
 b
+```
+
+## ShiftEnter32
+
+At a space a placeholder holds as text, before it ([ShiftEnter30](#shiftenter30) is after it), the
+caret is at the text's start too: the line breaks after the marker, the space goes, and the text, on
+its own line at the item's column, is escaped. Bare Obsidian, its Outliner, Logseq, Roam and
+Dynalist break there too, the space kept and nothing escaped (`-␠` / `  ┃ # b`).
+
+```yaml
+tags: rare
+```
+
+```buffer
+- a┃ # b
+```
+
+> deleteContentBackward
+
+```buffer
+- ┃◌ # b
+```
+
+> shiftEnter
+
+```buffer
+-
+  ┃\# b
+```
+
+## ShiftEnter33
+
+Before text alone on the line after its marker ([ShiftEnter13](#shiftenter13) made it so), the line
+can't break again: an item starts with one blank line at most, so a second would end the item and
+leave the text outside the list. Refused, as at a paragraph's text start, from the spaces before the
+text too, which are the text's.
+
+```yaml
+tags: rare
+```
+
+```buffer
+-
+  ┃ three
+```
+
+> shiftEnter
+
+```yaml
+result: rejected not-expressible
+```
+
+```buffer
+-
+  ┃ three
 ```

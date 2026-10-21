@@ -4,7 +4,7 @@
 //
 //   node test/redraw.ts                          # every case: what differs
 //   node test/redraw.ts enter.md Enter28         # a file's cases, a case (its ID, a name's end, file.md#anchor)
-//   node test/redraw.ts enter.md --apply         # and rewrite their buffer and result blocks
+//   node test/redraw.ts enter.md --apply         # and rewrite their buffer blocks and result keys
 //
 // A case plays in every flavor it runs in; where the flavors come out differently, or a step fails to
 // encode, or the text has no final line break (which a buffer can't draw), it is reported and left as
@@ -15,9 +15,9 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Config } from '../src/config.ts';
 import { OutlineState } from '../src/outline/index.ts';
-import { drawState, readDrawing, readText } from './drawing.ts';
+import { drawState, readDrawing } from './drawing.ts';
 import { isAction, play, type Played } from './player.ts';
-import { flavorsOf, normalize, outcome } from './spec-run.ts';
+import { flavorsOf, normalize, outcome, readClipboard } from './spec-run.ts';
 import { readSpec, slug, specConfig, type SpecTest } from './specfile.ts';
 
 const specDir = join(resolve(import.meta.dirname, '..'), 'spec');
@@ -29,13 +29,13 @@ for (const a of args) if (a.startsWith('--') && a !== '--apply') {
   process.exit(2);
 }
 
-/** Whether `t` is one a selector picks: its file, its ID or whole name or a name's end, or `file.md#anchor`. */
+/** Whether `t` is one a selector picks: its file, its ID, or `file.md#anchor`. */
 const picks = (selector: string, t: SpecTest): boolean => {
   if (selector.includes('#')) {
     const [file, anchor] = selector.split('#');
-    return (!file || t.file === file || t.file === `${file}.md`) && slug(t.name.split(' › ').pop()!) === anchor!.toLowerCase();
+    return (!file || t.file === file || t.file === `${file}.md`) && slug(t.name) === anchor!.toLowerCase();
   }
-  return t.file === selector || t.file === `${selector}.md` || t.name === selector || t.name.endsWith(` › ${selector}`) || t.name.split(' › ').pop() === selector;
+  return t.file === selector || t.file === `${selector}.md` || t.name === selector;
 };
 
 /** Spaces ending a line drawn `␠`, so a difference in them shows. */
@@ -56,7 +56,7 @@ function played(t: SpecTest, flavor: Config['flavor']): { buffer: string; result
   let state: Played = {
     doc: OutlineState.parse(start.text, { placeholders: start.placeholders, config: { flavor, ...specConfig(t.options) } }),
     selection: start.selection,
-    clipboard: readText(t.initial.clipboard ?? ''),
+    clipboard: readClipboard(t.initial.clipboard),
   };
   const out: { buffer: string; result: string }[] = [];
   for (const [k, step] of t.steps.entries()) {
@@ -122,8 +122,15 @@ if (apply && redrawn.length) {
     // bottom up: a block rewritten changes the lines after it, never those before
     const edits = redrawn.filter((r) => r.t.file === file).sort((a, b) => b.t.steps[b.step]!.line - a.t.steps[a.step]!.line || (a.kind === 'buffer' ? -1 : 1));
     for (const r of edits) {
-      const block = blockAfter(lines, r.t.steps[r.step]!.line, r.kind);
-      if (!block) throw new Error(`${file}:${r.t.steps[r.step]!.line}: no ${r.kind} block after the step`);
+      const block = blockAfter(lines, r.t.steps[r.step]!.line, r.kind === 'result' ? 'yaml' : r.kind);
+      if (!block) throw new Error(`${file}:${r.t.steps[r.step]!.line}: no ${r.kind === 'result' ? 'yaml' : r.kind} block after the step`);
+      if (r.kind === 'result') {
+        // the state's yaml block: its `result:` key
+        const at = lines.slice(block.open + 1, block.close).findIndex((line) => line.startsWith('result: '));
+        if (at < 0) throw new Error(`${file}:${r.t.steps[r.step]!.line}: no result key after the step`);
+        lines[block.open + 1 + at] = `result: ${r.now}`;
+        continue;
+      }
       const content = r.now.replace(/\n$/, '').split('\n');
       // a fence longer than any backtick run starting a line of the content
       const run = Math.max(0, ...content.map((line) => /^`*/.exec(line)![0].length));

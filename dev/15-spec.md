@@ -27,7 +27,7 @@ app's paragraph block.
 | inverse pairs over the spec's buffers | a probe | `npm run test:inverse`: 58,662 runs on 595 buffers, against a baseline |
 | options | | `markup` for `editInMarkup`; `enterSplitSpace`, `joinWithChildren`, `enterTask` and `enterOnEmptyItem: exit` new; `deleteAtGap` dropped; `flavor: gfm` the default |
 | SxS | 14-sxs's run, apps skipped where a declared value changes ourus's outcome | against that run, on the cases both have: every block app agrees more (+6 to +27), Outliner and true-outliner +2, the line editors less by decision (bare Obsidian and Live Preview −3, SilverBullet −4, Emacs −7; §9.1); apps judged under their declared values; no errors (7 at the first rerun) |
-| bugs found | | 76 (§4), 30 by the review; all fixed but B2, B35, B52 (B14's rest), B76 and B20's structured-paste half (§11) |
+| bugs found | | 76 (§4), 30 by the review; all fixed but B2, B35, B76 and B20's structured-paste half (§11); B52 (B14's rest) the next session's first, fixed (§4.9) |
 
 ## Contents
 
@@ -809,8 +809,8 @@ claims about apps) are §6's.
 - **B14** (P) The held space a deleted first character leaves (`- a┃ x`, Backspace) was markup to the
   dispatch, so under `text` Backspace, Shift-Enter and Delete there were the host's: Backspace deleted
   the marker's padding, Shift-Enter left an empty item. → partly: `inMarkupAt` counts a held space
-  as the text's start, so the dispatch no longer hands those keys over; two other paths still do,
-  under `text` (B52, open).
+  as the text's start, so the dispatch no longer hands those keys over; two other paths still did,
+  under `text` (B52, fixed since).
 
 ### 4.3 Host fallbacks and selections
 
@@ -993,9 +993,20 @@ claims about apps) are §6's.
   host. Fix: the same exemption in both, ideally one shared helper; not `textStart` itself (tried and
   reverted: it moved Shift-Enter's and Backspace's caret onto a stray space). Cases first, per key, in
   a first and a later item, with `#` and `` ``` ``; none existed, and the differential and inverse
-  test count a `notApplicable` as fine. To ask the user: Delete, and Backspace in a first item, could
-  act instead of refusing (delete the space, unwrap, escaping as leaving does: `- ┃\# b`).
-  → open, the next session's first task.
+  test count a `notApplicable` as fine.
+  → fixed in the next session. `heldSpaceAt` (`context.ts`) is the one test, in `inMarkupAt`,
+  `inMarkup` and `lineBreak`. The keys act rather than refuse (the user's call): Delete takes the
+  space as leaving does (`dropHeldSpace`, which the settle now calls), `- ┃\# b`; Backspace and
+  Cmd-Backspace in a first item unwrap it, the held space going and the text escaped (`unwrapItem`),
+  `┃\# b`; Shift-Enter breaks after the marker, `-⏎  ┃\# b`. The caret right after the held space
+  (`- ◌ ┃# b`) had the same bug under both values, Backspace and Cmd-Backspace being the host's
+  there: Backspace takes the space as Delete before it does. Backspace47, Backspace48,
+  SoftBackspace11, Delete32, ShiftEnter32 (one case a key; the other session's drafts had ten, the
+  later-item and fence twins dropped); placeholders.md's transitions. The differential: 150 runs
+  that were the host's apply (108 Shift-Enter, mostly after a selection's delete left a held space;
+  two plain pastes of a line break), and the unwrap of `- ┃◌ b⏎  - c` no longer leaves a stray
+  space; none fails to encode. The inverse groups are unchanged against the commit's code on the
+  same corpus. The probe of all 18 setups is in `.sxs/probe/2026-10-21T06-46-36-678Z`.
 
 ### 4.10 Blocks of lines, and items whose text is one
 
@@ -1115,7 +1126,7 @@ it serves.
   an empty item, what follows the marker is its text; a held space and kept spaces are text. Under
   `markup: text`, the keys of `HOST_IN_MARKUP` (Shift-Enter, Backspace, Delete, Cmd-Backspace) are the
   host's there, and so is a refusal, but never an encoding failure (§3.1; B12, B14). `inMarkup`'s
-  refusal check and `lineBreak` test `textStart` instead, without the held-space exemption (B52).
+  refusal check and `lineBreak` share its held-space exemption (`heldSpaceAt`, B52).
 - **`caretInText`**: under `decorated`, every applied command's caret goes where typing is safe; it
   was for structural commands only (§3.1).
 - **`overSelection`**, generalizing paste's `pasteOverSelection`: Enter, Shift-Enter and plain paste
@@ -1798,9 +1809,7 @@ In order.
    - Enter at a top-level opening fence opens a line above with the caret on the fence (where markup is
      text, where the user had it; `decorated` moves it into the code). Under `into`, an empty paragraph
      above may be better.
-   - B52 first, the next session's first task: keys at a held space under the default `markup: text`
-     can turn an item's text into a heading or code (§4.9 has the repro, cause and plan). Then B35 (a
-     blank line lost after Fence12's round trip).
+   - B35 (a blank line lost after Fence12's round trip); B52, fixed (§4.9).
    - Under `start`, a deleted first character's leading space (`- a┃ x`, Backspace, `-  x`) settles as
      padding past the item above's, so it reads as text too: check it against probe Z4 (15 apps keep
      it).

@@ -6,12 +6,16 @@ import { lineSpan, trimMd } from '../text.ts';
 /** A placeholder stays one while its line holds no text: nothing, or only container markers (a task's checkbox included). */
 const reEmptyPlaceLine = /^(?:[ \t>]|(?:[-+*]|\d{1,9}[.)])[ \t]+(?:\[[ xX]\][ \t]+)?)*$/;
 
-/** A marker and its one padding space, after the line's containers: what precedes a stand-in space. */
-const reMarkerAndSpace = /^[ \t>]*(?:[-+*]|\d{1,9}[.)])[ \t]$/;
+/**
+ * What precedes a stand-in space: the line's containers (a quote's `>`, indentation), and a list
+ * marker with its one padding space where the line has one.
+ */
+const reBeforeHeldSpace = /^[ \t>]*(?:(?:[-+*]|\d{1,9}[.)])[ \t])?$/;
 
 /**
- * Whether `p` can be a placeholder: the end of a line holding no text, or a space right after a list
- * marker's padding space, with text after it (a deleted character's place, read as text).
+ * Whether `p` can be a placeholder: the end of a line holding no text, or a space at the start of a
+ * line's text, after its containers and a list marker's padding space, with text after it (a deleted
+ * character's place, read as text).
  */
 export function isPlace(text: string, p: number): boolean {
   if (p < 0 || p > text.length) return false;
@@ -20,7 +24,7 @@ export function isPlace(text: string, p: number): boolean {
   const c = text.charCodeAt(p);
   if (p === text.length || c === 10 || c === 13) return reEmptyPlaceLine.test(text.slice(start, p));
   if (c !== 32 && c !== 9) return false;
-  return reMarkerAndSpace.test(text.slice(start, p)) && trimMd(text.slice(p, lineSpan(text, p)[1])) !== '';
+  return reBeforeHeldSpace.test(text.slice(start, p)) && trimMd(text.slice(p, lineSpan(text, p)[1])) !== '';
 }
 
 export function validPlaces(text: string, marks: readonly number[]): number[] {

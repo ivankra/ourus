@@ -234,7 +234,14 @@ export const driver: Driver = {
   // items the rest
   freeForm: true,
   // measured: Enter at an item's text start leaves the caret with the text
-  behaves: { enterSplitSpace: 'start', enterAtTextStart: 'stay', pasteStructuredAtEnd: 'join', pasteStructuredListForm: 'own' },
+  // ProseMirror's paste opens both seams, and a list keeps its form
+  behaves: {
+    enterSplitSpace: 'start',
+    enterAtTextStart: 'stay',
+    copyAtCaret: 'host',
+    pasteSeams: 'open',
+    pasteListForm: 'own',
+  },
   keys: {
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
@@ -247,7 +254,9 @@ export const driver: Driver = {
     moveSubtreeDown: 'Control+Shift+ArrowDown',
     // no command: selecting to the line's start, then deleting
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
-    pasteStructured: 'Control+v',
+    copy: 'Control+c',
+    cut: 'Control+x',
+    paste: 'Control+v',
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
     redo: 'Control+Shift+z',

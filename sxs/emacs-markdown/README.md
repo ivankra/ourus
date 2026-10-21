@@ -114,7 +114,7 @@ https://github.com/jrblevin/markdown-mode
   MoveUp7`).
 - **"Kill Element"** kills an item with its children and leaves a blank line (`delete-subtree.md ›
   DeleteSubtree1`).
-- **Yank is plain**: the text goes in as it is (`paste.md › Paste3`, `Paste7`).
+- **Yank is plain**: the text goes in as it is (`paste-old.md › PasteOld3`, `PasteOld7`).
 - **Home is the line's start**, before the marker (`markdown-special-ctrl-a/e` is off by default);
   Up on the first line beeps and stays (`cursor.md › CursorUp1`).
 - **Redo puts point at the line's start** (`undo.md › Undo1`, a caret verdict).

@@ -1,7 +1,7 @@
 // Two judgments of the same apps side by side (`run.ts --compare[=REF]`): the current one, each app's
 // `.sxs/results/<app>/sxs.json`, against one committed in `.sxs` (its HEAD by default), case by case.
-// A case is its name without its file (`Enter1`, `Enter › E17`), so a renamed file (`del.md` to
-// `delete.md`) or a case moved between files (`paste.md` to `paste-plain.md`) is the same case.
+// A case is its ID (`Enter1`), unique across the spec, so a renamed file (`del.md` to `delete.md`) or a
+// case moved between files (`paste.md` to `paste-plain.md`) is the same case.
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
@@ -25,8 +25,8 @@ interface Judgment {
 const ORDER = ['agree', 'caret', 'whitespace', 'disagree', 'error'];
 const SYMBOL: Record<string, string> = { agree: '✓', caret: 'C', whitespace: 'S', disagree: '✗', error: 'E' };
 
-/** A case's name without its file. */
-const caseOf = (name: string): string => name.split(' › ').slice(1).join(' › ');
+/** A case's ID: its name, or in a run recorded before cases were keyed by their ID alone (`file › headings › ID`), its last part. */
+const caseOf = (name: string): string => (name.includes(' › ') ? name.slice(name.lastIndexOf(' › ') + ' › '.length) : name);
 
 /** A verdict as the table draws it: in parentheses where the example was adapted for the app. */
 const cell = (e: Judged): string => (e.adapted?.length && e.verdict !== 'agree' ? `(${SYMBOL[e.verdict] ?? e.verdict})` : (SYMBOL[e.verdict] ?? e.verdict));

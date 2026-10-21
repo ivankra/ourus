@@ -61,6 +61,6 @@ command('outdent (child)', { type: 'outdent' }, doc.headRange(item.children[0]!)
 command('enter (split)', { type: 'enter' }, start + 2);
 command('shiftEnter', { type: 'shiftEnter' }, start + 2);
 command('deleteContentBackward', { type: 'deleteContentBackward' }, start);
-command('pasteStructured (list)', { type: 'pasteStructured', text: '- pasted\n  - nested' }, end);
+command('paste (list)', { type: 'paste', clipboard: { 'text/plain': '- pasted\n  - nested' } }, end);
 command('duplicateSubtree', { type: 'duplicateSubtree' }, end);
 command('deleteSubtree', { type: 'deleteSubtree' }, end);

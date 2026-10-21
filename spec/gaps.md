@@ -369,7 +369,7 @@ clipboard: |
 para
 ```
 
-> pasteStructured
+> paste
 
 ```buffer
 - t
@@ -504,8 +504,8 @@ a
 
 > moveSubtreeDown
 
-```result
-rejected: nothing-above
+```yaml
+result: rejected nothing-above
 ```
 
 ```buffer
@@ -516,8 +516,8 @@ a
 
 > indent
 
-```result
-rejected: nothing-above
+```yaml
+result: rejected nothing-above
 ```
 
 ```buffer

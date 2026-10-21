@@ -41,9 +41,11 @@ as data). Names follow W3C `inputType` where one exists:
 | `deleteContentBackward` | Backspace | At a node's text start: joins it to the node above. |
 | `deleteContentForward` | Delete | At a node's text end: joins the node below to it. |
 | `deleteSoftLineBackward` | Cmd-Backspace | Deletes back to the text start of the line, never into a marker. |
-| `pasteStructured` (`text`) | Ctrl-V | Markdown pasted as nodes, where Enter would put a new node. |
+| `copy`, `cut` | Ctrl-C, Ctrl-X | The selection's Markdown, as the result's `clipboard` (`text/plain`, `text/markdown`, `text/html` marked as ourus's); a cut takes it out (spec/copy.md). |
+| `paste` (`clipboard`) | Ctrl-V | The clipboard, every format the host has of it (`text/plain`, `text/markdown`, `text/html`, …), read as Markdown and placed as nodes. Placed as nodes between nodes (spec/paste.md). |
 | `pastePlain` (`text`) | Ctrl-Shift-V | Text pasted into the node, its line breaks as Shift-Enter's. |
 | `deleteSubtree`, `duplicateSubtree` | | The selected nodes go, or a copy goes below them, with their subtrees. |
+| `insertText` (`text`) | typing | Text typed at the selection, a key's worth: ourus's where Markdown reads it as structure (a backtick: fences opened, closed and kept matched), else the host's. |
 
 `selection` is `{ anchor, head }`, as CM6's `selection.main` is. The selected nodes of a structural
 command are the topmost nodes whose own lines the selection touches; they must be contiguous
@@ -52,7 +54,8 @@ siblings of one kind.
 **`CommandResult`** is one of:
 
 - **`applied`**: `state` (the next `OutlineState`, ids carried), `changes` (`ChangeSpec[]`, in the
-  old text's coordinates), `selection` (in the new text). Every applied command is verified: the
+  old text's coordinates), `selection` (in the new text), and for copy and cut `clipboard`, the
+  formats the host writes (a copy's `changes` are none). Every applied command is verified: the
   re-parsed outline equals what the command meant.
 - **`rejected`**: `reason` (`RejectReason`) and sometimes a `detail`. The key does nothing; the host
   should swallow it.
@@ -101,8 +104,9 @@ next state, or null when nothing changes.
 How commands behave where users disagree is a `Config` option, set when the state is made
 (`OutlineState.parse(text, { config })`): `outdent` (`direct` or `logical`), `bullet`,
 `enterOnEmptyItem`, `enterMidItem`, `enterAtTextStart`, `backspaceAtTopItem`, `emptyItemWithChildren`, `joinWithChildren`, `enterTask`, `enterSplitSpace`,
-`handleFenceContents`, `headingEditing`, `taskEditing`, `pasteStructuredLines`, `pasteStructuredMidText`,
-`pasteStructuredAtEnd`, `pasteStructuredOnParent`, `pasteStructuredParagraphList`, `pasteStructuredListForm`, `markup`, and `flavor`. Each option's choices and default are documented in `src/config.ts`.
+`handleFenceContents`, `closeBackticks`, `headingEditing`, `taskEditing`, `copyAtCaret`, `copySelection`, `pasteSeams`, `pasteLines`, `pasteAtTextStart`,
+`pasteOnParent`, `pasteParagraphList`, `pasteListForm`, `markup`, and
+`flavor`. Each option's choices and default are documented in `src/config.ts`.
 
 ## Inside
 
@@ -114,8 +118,13 @@ One file per family of commands; a host doesn't import them:
 | `structure.ts` | indent, outdent, moves, heading levels, delete, duplicate: the lowest family (the others call it, never the reverse; the boundary test checks) |
 | `enter.ts` | Enter and Shift-Enter |
 | `join.ts` | Backspace, Delete, Cmd-Backspace |
-| `code.ts` | fenced code: Enter, Backspace and Delete on code lines and fences |
-| `paste.ts` | structured and plain paste |
+| `code.ts` | fenced code: Enter, Backspace and Delete on code lines and fences, a fence's run kept matched |
+| `typing.ts` | typed characters Markdown reads as structure: the backtick |
+| `copy.ts` | copy and cut: what the selection takes (`copyTarget`), its Markdown out of its containers (`copiedMarkdown`), the clipboard written (`clipboardOf`) |
+| `paste.ts` | paste: the clipboard's formats read as Markdown (`clipboardMarkdown`, `clipboardSource`), the slot at the caret (`slotAt`), open seams (`pasteOpen`); the nodes placed by `place.ts` |
+| `place.ts` | placement: nodes put between nodes, fitted to where they land (`fit`: an item in a list, a heading's section split) and placed in the plan (`placed`); the rules of what holds what that the structural commands share (`sectionEnd`, `ownsLists`, `unownLists`) |
+| `html.ts` | a clipboard's HTML as Markdown (`htmlToMarkdown`), for paste: a pure function of the HTML's text |
+| `paste-plain.ts` | plain paste: the clipboard's lines into the node's text, each line break Shift-Enter's |
 | `settle.ts` | `settlePlaceholders` |
 | `context.ts` | `CommandContext` (the state, the selection, and what every command needs of them), `Operands`, shared helpers |
 | `plan.ts` | `CommandPlan`, the runner: renumbering, verification by re-parsing, alternatives, refusal diagnosis |

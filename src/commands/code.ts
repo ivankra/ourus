@@ -1,11 +1,11 @@
-// Fenced code: Enter, Backspace and Delete on code lines and fences.
+// Fenced code: Enter, Backspace and Delete on code lines and fences, a fence's run kept matched.
 
 import type { OutlineNode } from '../outline/index.ts';
-import type { LineInfo } from '../parser/index.ts';
+import type { Block, LineInfo } from '../parser/index.ts';
 import { advanceColumns, isSpaceOrTab, mapPos, skipSpaces, trimMd, trimMdEnd, type ChangeSpec } from '../text.ts';
 import { OutlinePlan, type OutlinePlanNode } from '../encoder/index.ts';
-import { CommandContext, blankInQuote, isClosingFence, isCodeLine, normText, removeLines, runsOnto } from './context.ts';
-import { notApplicable, reject, type Outcome } from './plan.ts';
+import { CommandContext, blankInQuote, isClosingFence, isCodeLine, normText, removeLines, runsOnto, textEnd } from './context.ts';
+import { notApplicable, reject, type CommandPlan, type Outcome } from './plan.ts';
 import { insertBefore } from './enter.ts';
 
 /**
@@ -77,14 +77,9 @@ export function codeEdit(ctx: CommandContext, node: OutlineNode, changes: Change
   const block = [doc.lineAt(changes[0]!.from).leaf, doc.lineAt(changes[0]!.to).leaf].find((b) => b?.type === 'code_block' && b.fenced);
   if (block) {
     // the opening fence, and the closing one where the block has it, one character longer at a time
-    const runEnd = (line: LineInfo): number => {
-      let at = skipSpaces(doc.text, line.contentFrom, line.to, 1);
-      while (doc.text[at] === block.fenceChar) at++;
-      return at;
-    };
-    const opening = runEnd(doc.lines[block.startLine]!);
+    const opening = fenceRun(doc.text, doc.lines[block.startLine]!).to;
     const last = doc.lines[block.endLine]!;
-    const closing = block.endLine > block.startLine && isClosingFence(ctx, last) ? runEnd(last) : null;
+    const closing = block.endLine > block.startLine && isClosingFence(ctx, last) ? fenceRun(doc.text, last).to : null;
     for (let more = 1; more <= 8; more++) {
       const grow = block.fenceChar!.repeat(more);
       const fences = [{ from: opening, to: opening, insert: grow }, ...(closing !== null ? [{ from: closing, to: closing, insert: grow }] : [])];
@@ -286,6 +281,10 @@ export function joinCodeLines(ctx: CommandContext, node: OutlineNode | null, pos
   const block = line.leaf;
   if (block?.type !== 'code_block' || !block.fenced) return null;
   const runStart = skipSpaces(doc.text, line.contentFrom, line.to, 1);
+  if (line.index === block.startLine || isClosingFence(ctx, line)) {
+    const run = deleteInFenceRun(ctx, node, line, pos, dir);
+    if (run) return run;
+  }
   if (isClosingFence(ctx, line)) {
     if (dir > 0) {
       if (pos !== line.to || !below || trimMd(doc.text.slice(below.from, below.to)) === '') return null;
@@ -306,6 +305,149 @@ export function joinCodeLines(ctx: CommandContext, node: OutlineNode | null, pos
   }
   if (pos > runStart) return null;
   return atOpening(ctx, node, line, pos, 'code');
+}
+
+/** A fence line's run of backticks or tildes in `text`, from its first to past its last: its block's fence character, or `char`. */
+export function fenceRun(text: string, line: LineInfo, char = line.leaf!.fenceChar!): { from: number; to: number } {
+  const from = skipSpaces(text, line.contentFrom, line.to, 1);
+  let to = from;
+  while (to < line.to && text[to] === char) to++;
+  return { from, to };
+}
+
+/** Whether `block` is a fenced code block closed by a fence of its own (not by its container's or the document's end). */
+/**
+ * Backspace or Delete of a character on a line of a fenced block's code (or a math or comment block's),
+ * not at its ends (where lines join): the host's, but where it would make a fence of code
+ * (`x```` → ```` ``` ````, closing the block early), `codeEdit`'s: the fences grow past it, or, where
+ * they can't (`$$`, `%%`), it is refused.
+ */
+export function deleteInCode(ctx: CommandContext, node: OutlineNode | null, pos: number, dir: -1 | 1): Outcome | null {
+  const { doc } = ctx;
+  const line = doc.lineAt(pos);
+  const leaf = line.leaf;
+  const fenced = leaf?.type === 'code_block' && leaf.fenced;
+  if (!node || !leaf || !(fenced || leaf.type === 'math_block' || leaf.type === 'comment_block') || line.index === leaf.startLine) return null;
+  // a closing fence is markup, as the opening one
+  if (fenced ? line.index === leaf.endLine && closedFence(ctx, leaf) : line.index === leaf.endLine && /^(\$\$|%%)$/.test(trimMd(doc.text.slice(line.contentFrom, line.to)))) return null;
+  const [from, to] = dir < 0 ? [pos - 1, pos] : [pos, pos + 1];
+  // in the line's indentation (its containers', a partly consumed tab), the host's, as before
+  if (from < line.contentFrom || to > line.to || trimMd(doc.text.slice(line.from, to)) === '') return null;
+  const changes = [{ from, to, insert: '' }];
+  const next = doc.update(changes);
+  if (ctx.plan.setText(node, next.nodeText(next.nodeAt(from) ?? node)).differenceFrom(next, doc, 'tree') === null) return null;
+  return codeEdit(ctx, node, changes, from);
+}
+
+export function closedFence(ctx: CommandContext, block: Block): boolean {
+  return block.type === 'code_block' && !!block.fenced && !!block.closed && block.endLine > block.startLine && isClosingFence(ctx, ctx.doc.lines[block.endLine]!);
+}
+
+/**
+ * The changes setting a closed block's two fence runs to `length`, each line keeping its own
+ * indentation and what follows its run: an opening longer than its closing fence would leave the
+ * block unclosed, so the two change together, and match.
+ */
+export function fencesOfLength(ctx: CommandContext, block: Block, length: number): ChangeSpec[] {
+  return [block.startLine, block.endLine].map((index) => {
+    const run = fenceRun(ctx.doc.text, ctx.doc.lines[index]!);
+    return { from: run.from, to: run.to, insert: block.fenceChar!.repeat(length) };
+  });
+}
+
+/**
+ * Backspace and Delete on a character of a closed block's fence run: the run shortens, and the
+ * block's other fence with it, so the two still match. A fence is three or more, so at three: from
+ * the opening fence of an empty pair with no info string, the fences go back to the text they were
+ * typed from (the closing fence goes, the inverse of typing the opening one); any other empty block
+ * goes, as an empty item does, info string and all; a block with code is refused (`fenceRefusal`).
+ * An unclosed block's fence is the host's. Null where the deleted character isn't in a run.
+ */
+function deleteInFenceRun(ctx: CommandContext, node: OutlineNode, line: LineInfo, pos: number, dir: -1 | 1): Outcome | null {
+  const { doc } = ctx;
+  const block = line.leaf!;
+  const run = fenceRun(doc.text, line);
+  const at = dir < 0 ? pos - 1 : pos;
+  if (at < run.from || at >= run.to || !closedFence(ctx, block)) return null;
+  const length = run.to - run.from - 1;
+  if (length >= 3) {
+    const changes = fencesOfLength(ctx, block, length);
+    return codeEdit(ctx, node, changes, mapPos(changes, run.from, -1) + (at - run.from), 'the fences would no longer match');
+  }
+  for (let index = block.startLine + 1; index < block.endLine; index++) {
+    if (!emptyCode(ctx, doc.lines[index]!)) return fenceRefusal(ctx, 'the fence would break: the block has code');
+  }
+  const opening = doc.lines[block.startLine]!;
+  const closing = doc.lines[block.endLine]!;
+  if (line.index !== block.startLine || block.endLine !== line.index + 1 || trimMd(doc.text.slice(run.to, line.to)) !== '') return removeEmptyBlock(ctx, node, opening, closing, dir);
+  const changes = [{ from: at, to: at + 1, insert: '' }, { from: line.to, to: closing.to, insert: '' }];
+  const left = trimMd(doc.text.slice(run.from, line.to).replace(block.fenceChar!, ''));
+  const expected = unfenced(ctx, node, left);
+  if (expected.differenceFrom(doc.update(changes), doc, 'tree') !== null) return reject('not-expressible', 'the fence would break');
+  return ctx.caret(changes, at, expected);
+}
+
+/**
+ * A fence edit that would break its block, which ourus doesn't make: refused where markup is
+ * decorated; where it is text the user edits (`markup: text`), the host's, as any edit in markup
+ * there, the reason as `detail`.
+ */
+export function fenceRefusal(ctx: CommandContext, detail: string): Outcome {
+  return ctx.doc.config.markup === 'text' ? { status: 'notApplicable', detail } : reject('not-expressible', detail);
+}
+
+/**
+ * An empty block going as a unit, its fences, info string and blank lines: an atom goes, with a quote
+ * it is all of, the caret to the end of the text above (from Delete, where the block was); as the
+ * document's only node, the document is empty but for its last line ending. An item whose text it was
+ * is an empty item, the caret in it.
+ */
+function removeEmptyBlock(ctx: CommandContext, node: OutlineNode, opening: LineInfo, closing: LineInfo, dir: -1 | 1): Outcome {
+  const { doc } = ctx;
+  if (node.kind === 'item') {
+    const from = fenceRun(doc.text, opening).from;
+    return ctx.caret([{ from, to: closing.to, insert: '' }], from, ctx.plan.update(node, (n) => ({ id: n.id, kind: 'item', text: '', children: n.children })));
+  }
+  // a quote without text the block is all of goes with it: its `>` alone is no node
+  let gone = node;
+  for (let parent = node.parent; parent?.kind === 'quote' && !parent.head && parent.children.length === 1; parent = parent.parent) gone = parent;
+  const expected = ctx.plan.remove([gone]);
+  const from = doc.lines[gone.startLine]!.from;
+  if (!expected.root.children.length && trimMd(doc.text.slice(0, from)) === '' && trimMd(doc.text.slice(doc.lines[doc.lastDescendant(gone).endLine]!.to)) === '') {
+    const end = /\r?\n$|\r$/.exec(doc.text)?.[0].length ?? 0;
+    return ctx.caret([{ from: 0, to: doc.text.length - end, insert: '' }], 0, expected);
+  }
+  const prev = doc.before(gone);
+  const at = dir < 0 && prev && prev.kind !== 'root' ? textEnd(ctx, prev) : from;
+  return ctx.encode(expected, {}, (written) => {
+    const caret = written.map(at, -1);
+    return { anchor: caret, head: caret };
+  });
+}
+
+/**
+ * The outline once an empty block's fences are text again, `left` the line they leave: an atom a
+ * paragraph, joined by a paragraph right above it and one right after its closing fence, as their
+ * lines then run together; an item whose text was the block, that text, with a first child paragraph
+ * right after the closing fence.
+ */
+function unfenced(ctx: CommandContext, node: OutlineNode, left: string): OutlinePlan {
+  const { doc } = ctx;
+  const siblings = node.kind === 'item' ? node.children : node.parent!.children;
+  const at = node.kind === 'item' ? -1 : siblings.indexOf(node);
+  const above = at > 0 ? siblings[at - 1] : undefined;
+  const below = siblings[at + 1];
+  const isParagraph = (n: OutlineNode | undefined): n is OutlineNode => n?.kind === 'paragraph' && n.head?.type === 'paragraph';
+  const prev = isParagraph(above) && above.head!.endLine === node.startLine - 1 ? above : undefined;
+  const next = isParagraph(below) && below.startLine === node.head!.endLine + 1 ? below : undefined;
+  const text = normText([...(prev ? doc.headLines(prev) : []), left, ...(next ? doc.headLines(next) : [])]);
+  // a new item to verification: its text is a paragraph now, which a copy of the old one can't say
+  if (node.kind === 'item') return ctx.plan.update(node, (n) => ({ id: n.id, kind: 'item', text, children: n.children.filter((c) => c !== next) }));
+  let plan = ctx.plan;
+  if (next) plan = plan.remove([next]);
+  if (prev) plan = plan.remove([prev]);
+  const paragraph = prev ? { ...OutlinePlan.editable(prev), text, children: [] } : OutlinePlan.created('paragraph', text);
+  return plan.place('instead', node, [paragraph, ...(next ? next.children : [])]);
 }
 
 /** Whether a code line has no code on it: only the containers' prefix, or spaces. */
@@ -347,10 +489,26 @@ function joinFencedItem(ctx: CommandContext, node: OutlineNode, keep?: number | 
   const moved = [block, ...node.children];
   const expected = holder === node.parent ? ctx.plan.place('instead', node, moved) : ctx.plan.remove([node]).append(holder, 'last', moved);
   const end = typeof keep === 'number' ? keep : (doc.headRange(prev)?.to ?? doc.lines[prev.headEndLine]!.to);
-  return ctx.encode(expected, {}, (written) => {
-    const caret = keep === 'code' ? written.at(block, 1, 0) : written.map(end, -1);
-    return { anchor: caret, head: caret };
-  });
+  const encoded = (): Outcome =>
+    ctx.encode(expected, {}, (written) => {
+      const caret = keep === 'code' ? written.at(block, 1, 0) : written.map(end, -1);
+      return { anchor: caret, head: caret };
+    });
+  if (holder === node.parent || node.children.length > 0 || prev === holder) return encoded();
+  // a block of the item above, after another of its blocks: its marker becomes that item's
+  // indentation, and the lines around it stay as they are, the blank lines above it too, which were
+  // the block's (Fence31b; right after the item's text they were the list's, and go, as the encoder
+  // writes it); the encoder writes what that doesn't
+  const line = doc.lines[node.startLine]!;
+  const from = doc.markerFrom(node.block);
+  const column = advanceColumns(doc.text, line.from, from, 0);
+  const changes = [{ from, to: line.contentFrom, insert: ' '.repeat(advanceColumns(doc.text, from, line.contentFrom, column) - column) }];
+  const caret = keep === 'code' ? mapPos(changes, ctx.sel.head, 1) : mapPos(changes, end, -1);
+  const fallback = (): CommandPlan | null => {
+    const plan = encoded();
+    return 'changes' in plan ? plan : null;
+  };
+  return { ...ctx.caret(changes, caret, expected), fallback };
 }
 
 /**

@@ -124,7 +124,7 @@ export async function startEmacs(init: string, say: (line: string) => void): Pro
       type: async (text) => void (await evaluate(`(with-current-buffer ${lisp(BUFFER)} ${REDISPLAY} (condition-case nil (execute-kbd-macro ${lisp(text)}) (error nil)) t)`)),
       clipboard: {
         write: async (text) => void (await evaluate(`(progn (kill-new ${lisp(text)}) t)`)),
-        read: () => evaluate('(or (current-kill 0 t) "")'),
+        read: () => evaluate('(substring-no-properties (or (current-kill 0 t) ""))'),
       },
     },
   };

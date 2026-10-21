@@ -606,8 +606,9 @@ const FOOTNOTE: BlockSpec = {
     const from = m.offset;
     const fromColumn = m.column;
     if (m.indent >= 4) m.advanceOffset(4, true);
-    // only a line with nothing on it at all goes on through a blank (cmark-gfm)
-    else if (m.realLength !== 0) return 1;
+    // only a line with nothing on it at all goes on through a blank (cmark-gfm); a placeholder's is
+    // text typed there
+    else if (m.line.length !== 0) return 1;
     m.piece(index, 'indent', from, fromColumn);
     return 0;
   },

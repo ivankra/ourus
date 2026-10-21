@@ -120,6 +120,8 @@ function holds(o: Outline): string | undefined {
     if (/[ \t]$/m.test(b.text.replace(/^\[[ xX]\] /, ''))) return "line's trailing whitespace";
     // an empty last line: trimmed
     if (b.text.endsWith('\n')) return "block's text ending in a line break";
+    // `**b**`: held as bold, read back without its markers (Copy1)
+    if (/(\*\*|__)(?=\S)[^]*?\S\1/.test(b.text)) return 'strong emphasis, which SiYuan holds as formatting';
     // `# Title #`: held as `# Title`
     if (/^#{1,6}(?:[ \t].*)?[ \t]#+[ \t]*$/.test(first) || /^#{1,6}[ \t]+#+[ \t]*$/.test(first)) return "heading's closing #s";
     // `- ---` is a thematic break, not an item holding one
@@ -130,6 +132,9 @@ function holds(o: Outline): string | undefined {
     if (rows.length && rows.some((r) => r.split('|').slice(1, -1).some((c) => (/^\s*:?-+:?\s*$/.test(c) ? c !== ' --- ' : c.trim().length > 2 || c !== ` ${c.trim()} `)))) return 'table SiYuan writes otherwise (its columns padded to their widest cell)';
     // `# first` / `abc`: a heading is one line, the next a paragraph after it
     if (/^#{1,6}(?:[ \t]|$)/.test(first) && b.text.includes('\n')) return 'heading with more lines';
+    // an unclosed fence: SiYuan closes it (DuplicateSubtree9)
+    const fence = /^ {0,3}(`{3,}|~{3,})/.exec(first)?.[1];
+    if (fence && !b.text.split('\n').slice(1).some((l) => new RegExp(`^ {0,3}${fence[0]}{${fence.length},}[ \\t]*$`).test(l))) return 'unclosed fence, which SiYuan closes';
     // `p` / `- g`: a later line of a block's text that starts with a list marker, held otherwise (Paste70)
     if (b.text.split('\n').slice(1).some((l) => /^ {0,3}(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)/.test(l))) return 'later line starting with a list marker';
   }
@@ -139,6 +144,8 @@ function holds(o: Outline): string | undefined {
   const to = Math.max(o.sel.anchor, o.sel.head);
   // a task's checkbox is drawn, not text
   if (/^\[[ xX]\] /.test(text) && from < 4) return "caret in a task's checkbox";
+  // a thematic break is a line drawn, with no text to hold a caret (Enter67)
+  if (/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(text)) return 'caret on a thematic break';
   // a heading's #s are its level, not text
   const hashes = /^(?:\d{1,9}\. )?(?:\[[ xX]\] )?#{1,6} /.exec(text);
   if (hashes && from < hashes[0].length) return "caret in a heading's #s";
@@ -384,8 +391,15 @@ export const driver: Driver = {
   freeForm: true,
   // a kernel for each worker (kernel.ts)
   parallel: 4,
-  // structured paste in the middle of a block's text goes after it
-  behaves: { enterSplitSpace: 'start', pasteStructuredMidText: 'after', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after' },
+  // structured paste in the middle of a block's text goes after it; a typed fence is left open
+  // (Backtick2, Backtick12, Backtick15)
+  behaves: {
+    enterSplitSpace: 'start',
+    closeBackticks: 'none',
+    pasteAtTextStart: 'before',
+    pasteOnParent: 'after',
+    pasteParagraphList: 'children',
+  },
   keys: {
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
@@ -402,7 +416,9 @@ export const driver: Driver = {
     // Backspace empties it, the item and its children staying; an item is selected by its bullet, a click
     // no command: selecting to the line's start, then deleting
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
-    pasteStructured: 'Control+v',
+    copy: 'Control+c',
+    cut: 'Control+x',
+    paste: 'Control+v',
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
     redo: 'Control+y',

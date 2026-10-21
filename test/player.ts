@@ -5,11 +5,13 @@
 //
 // Actions are named for what the user does, not for a key, so the same spec can drive editors
 // with other keymaps: the ourus commands (W3C `inputType` names where one exists), `"text"`
-// typed, and caret motions named as CodeMirror's commands are.
+// typed (a character at a time, each through ourus's `insertText` first, as a host hooked to its
+// keys does), and caret motions named as CodeMirror's commands are.
 
 import { executeCommand, settlePlaceholders, type Command, type CommandResult, type Selection } from '../src/commands/index.ts';
 import { OutlineState } from '../src/outline/index.ts';
 import { advanceColumns, applyChanges, dominantEnding, type ChangeSpec } from '../src/text.ts';
+import type { Clipboard } from './specfile.ts';
 
 const COMMANDS = new Set<string>([
   'indent',
@@ -21,15 +23,18 @@ const COMMANDS = new Set<string>([
   'deleteContentBackward',
   'deleteContentForward',
   'deleteSoftLineBackward',
-  'pasteStructured',
+  'paste',
   'pastePlain',
   'deleteSubtree',
   'duplicateSubtree',
+  'copy',
+  'cut',
 ]);
 
-/** The command an action names (the clipboard is what a paste pastes). */
-function commandOf(action: string, clipboard: string): Command {
-  if (action === 'pasteStructured' || action === 'pastePlain') return { type: action, text: clipboard };
+/** The command an action names: `paste` takes the clipboard's formats, plain paste its text. */
+function commandOf(action: string, clipboard: Clipboard): Command {
+  if (action === 'paste') return { type: 'paste', clipboard };
+  if (action === 'pastePlain') return { type: action, text: clipboard['text/plain'] ?? '' };
   return { type: action } as Command;
 }
 
@@ -72,7 +77,8 @@ export const isAction = (token: string): boolean => /^"[^"]*"$/.test(token) || C
 export interface Played {
   doc: OutlineState;
   selection: Selection;
-  clipboard: string;
+  /** The host's clipboard, each format's text. */
+  clipboard: Clipboard;
   /** The column vertical motion aims for, kept while the caret moves up and down. */
   goal?: number;
   /** The result of the last action, when it was an ourus command. */
@@ -129,7 +135,7 @@ function step(state: Played, action: string): Played {
   const { doc, selection } = state;
   const from = Math.min(selection.anchor, selection.head);
   const to = Math.max(selection.anchor, selection.head);
-  if (action.startsWith('"')) return edit(state, { from, to, insert: action.slice(1, -1) });
+  if (action.startsWith('"')) return typeText(state, action.slice(1, -1));
   if (isMotion(action)) {
     const extend = action.startsWith('select');
     const target = MOTIONS[action.replace(/^(?:cursor|select)/, '')]!(doc, selection);
@@ -152,7 +158,7 @@ function step(state: Played, action: string): Played {
   const last = executeCommand(doc, command, selection);
   if (last.status === 'applied') {
     if (applyChanges(doc.text, last.changes) !== last.state.text) throw new Error(`${type}: its changes don't produce its document`);
-    return { ...state, doc: last.state, selection: last.selection, last };
+    return { ...state, doc: last.state, selection: last.selection, last, ...(last.clipboard && { clipboard: last.clipboard }) };
   }
   if (last.status === 'rejected') return { ...state, last };
   // not ours: the host's default
@@ -166,9 +172,16 @@ function step(state: Played, action: string): Played {
       // one character: a line ending or a surrogate pair is one, as the caret's motions step over it
       return { ...edit(state, { from: charBefore(doc.text, from), to: from, insert: '' }), last };
     }
-    case 'pasteStructured':
+    case 'paste':
     case 'pastePlain':
-      return { ...edit(state, { from, to, insert: state.clipboard }), last };
+      return { ...edit(state, { from, to, insert: state.clipboard['text/plain'] ?? '' }), last };
+    // a textarea's: the selected text, and nothing at a caret (CodeMirror would take the line)
+    case 'copy':
+    case 'cut': {
+      if (from === to) return { ...state, last };
+      const clipboard = { 'text/plain': doc.text.slice(from, to) };
+      return type === 'cut' ? { ...edit(state, { from, to, insert: '' }), clipboard, last } : { ...state, clipboard, last };
+    }
     // to the start of the line, as a line that doesn't wrap has it
     case 'deleteSoftLineBackward':
       return { ...edit(state, from !== to ? { from, to, insert: '' } : { from: doc.lineAt(from).from, to, insert: '' }), last };
@@ -180,6 +193,23 @@ function step(state: Played, action: string): Played {
     default:
       return { ...state, last };
   }
+}
+
+/**
+ * Typed text, a character at a time as keys type it: each goes to ourus's `insertText` first, and
+ * where that doesn't apply the host types it. The last character's result is the action's.
+ */
+function typeText(state: Played, text: string): Played {
+  for (const ch of text) {
+    const { doc, selection } = state;
+    const last = executeCommand(doc, { type: 'insertText', text: ch }, selection);
+    if (last.status === 'applied') {
+      if (applyChanges(doc.text, last.changes) !== last.state.text) throw new Error(`insertText: its changes don't produce its document`);
+      state = { ...state, doc: last.state, selection: last.selection, last };
+    } else if (last.status === 'rejected') state = { ...state, last };
+    else state = { ...edit(state, { from: Math.min(selection.anchor, selection.head), to: Math.max(selection.anchor, selection.head), insert: ch }), last };
+  }
+  return state;
 }
 
 function edit(state: Played, change: ChangeSpec): Played {

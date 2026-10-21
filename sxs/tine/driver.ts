@@ -114,9 +114,13 @@ export const driver: Driver = {
     moveSubtreeDown: 'Alt+Shift+ArrowDown',
     // "kill line before"
     deleteSoftLineBackward: 'Alt+u',
-    // Escape selects the block being edited, and Backspace deletes the selected blocks with their children
+    // Escape selects the block being edited, its subtree: copied, cut, or with Backspace deleted with its
+    // children
+    selectSubtree: 'Escape',
     deleteSubtree: ['Escape', 'Backspace'],
-    pasteStructured: 'Control+v',
+    copy: 'Control+c',
+    cut: 'Control+x',
+    paste: 'Control+v',
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
     redo: 'Control+Shift+z',
@@ -127,7 +131,17 @@ export const driver: Driver = {
   // character at a time
   refuses: ['markup-heading', 'markup-task', 'markup-fence'],
   ordered: true,
-  behaves: { enterSplitSpace: 'start', backspaceAtTopItem: 'refuse', enterTask: 'plain', outdent: 'direct', enterOnEmptyItem: 'sibling', enterMidItem: 'child', pasteStructuredMidText: 'after', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after' },
+  behaves: {
+    outdent: 'direct',
+    enterSplitSpace: 'start',
+    enterOnEmptyItem: 'sibling',
+    enterMidItem: 'child',
+    enterTask: 'plain',
+    backspaceAtTopItem: 'refuse',
+    copyAtCaret: 'host',
+    copySelection: 'nodes',
+    pasteOnParent: 'after',
+  },
   holds(doc) {
     const o = doc as Outline;
     // a run of numbered siblings is numbered from 1, whatever it was written with

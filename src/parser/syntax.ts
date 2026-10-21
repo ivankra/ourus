@@ -154,8 +154,10 @@ export class SyntaxTree {
     } else {
       firstOld = oldN;
       lastOld = oldN - 1;
-      starts = this.starts as number[];
-      ends = this.ends as number[];
+      // copies: a placeholder after the final line ending appends a line to them (`placeSentinels`),
+      // which must not change this snapshot
+      starts = [...this.starts];
+      ends = [...this.ends];
       afterNew = oldN;
     }
     const lineDelta = afterNew - (lastOld + 1);
@@ -533,10 +535,11 @@ function buildTree(syntax: SyntaxTree): Tree {
     b.endLine = last;
   }
 
-  // items end with their last child, lists with their last item; tightness; innermost first
+  // items and footnote definitions end with their last child (the blank lines they go on through
+  // are the gap after them), lists with their last item; tightness; innermost first
   for (let k = containers.length - 1; k >= 0; k--) {
     const b = containers[k]!;
-    if (b.type === 'item') b.endLine = b.children.length ? b.children[b.children.length - 1]!.endLine : b.startLine;
+    if (b.type === 'item' || b.type === 'footnote_definition') b.endLine = b.children.length ? b.children[b.children.length - 1]!.endLine : b.startLine;
     else if (b.type === 'list') {
       b.endLine = b.children[b.children.length - 1]!.endLine;
       b.tight = isTight(b);

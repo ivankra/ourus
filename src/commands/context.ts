@@ -2,7 +2,7 @@
 
 import { OutlineState, type OutlineKind, type OutlineNode } from '../outline/index.ts';
 import type { Flavor, LineInfo, PrefixPiece } from '../parser/index.ts';
-import { advanceColumns, dominantEnding, mapPos, skipSpaces, trimMd, trimMdStart, type ChangeSpec } from '../text.ts';
+import { advanceColumns, dominantEnding, isSpaceOrTab, mapPos, skipSpaces, trimMd, trimMdStart, type ChangeSpec } from '../text.ts';
 import { OutlineEncoder, OutlinePlan, type EncodeOptions, type EncodeResult, type OutlinePlanNode } from '../encoder/index.ts';
 import type { CommandResult, Selection } from './index.ts';
 import { notApplicable, reject, type Outcome, type CommandPlan } from './plan.ts';
@@ -160,6 +160,45 @@ export function isEmptyItem(ctx: CommandContext, node: OutlineNode): boolean {
   return doc.isEmpty(node);
 }
 
+/**
+ * Whether `pos` is a space a placeholder holds as text, a deleted first character's place (`- ┃◌ x`):
+ * the text's start, though `OutlineState.textStart` reads past it, never markup.
+ */
+export function heldSpaceAt(doc: OutlineState, pos: number): boolean {
+  return doc.placeholders.includes(pos) && isSpaceOrTab(doc.text.charCodeAt(pos));
+}
+
+/**
+ * The space a placeholder holds as text at `p` taken out, as leaving it or Delete there takes it: it
+ * goes, the spaces after it too, and the text, at its line's text start now, is escaped where it
+ * would start a block there (`- \``` x`, `\# b`), as a continuation on a later line of the text.
+ * The changes, and `plan` with the node's text where it changes.
+ */
+export function dropHeldSpace(ctx: CommandContext, p: number, plan = ctx.plan): { changes: ChangeSpec[]; plan: OutlinePlan } {
+  const { doc } = ctx;
+  const line = doc.lineAt(p);
+  const to = skipSpaces(doc.text, p, line.to, 1);
+  const node = doc.nodeAt(p);
+  const lines = node ? doc.headLines(node) : [];
+  const k = node?.head ? line.index - node.head.startLine : 0;
+  const rest = doc.text.slice(to, line.to);
+  const escaped = k > 0 ? ctx.encoder.escape(rest, 'continuation') : ctx.encoder.escape(rest, 'start', lines.slice(1).map((l) => trimMdStart(l)));
+  if (!node || escaped.at === null || k < 0 || k >= lines.length) return { changes: [{ from: p, to, insert: '' }], plan };
+  lines[k] = escaped.text;
+  return { changes: [{ from: p, to, insert: '' }, { from: to + escaped.at, to: to + escaped.at, insert: '\\' }], plan: plan.setText(node, normText(lines)) };
+}
+
+/**
+ * Where a line a node's text continued lazily needs a `\\` as a paragraph's own line (`|---|---|`
+ * under a row makes a table, `===` an underline): the offset in `line`, past its leading spaces, or
+ * null where it reads as text there anyway.
+ */
+export function lazyLineEscape(ctx: CommandContext, line: string): number | null {
+  const lead = /^[ \t]*/.exec(line)![0].length;
+  const at = ctx.encoder.escape(line.slice(lead), 'continuation').at;
+  return at === null ? null : lead + at;
+}
+
 /** Changes deleting whole lines (sorted indexes). Each run of adjacent lines goes with one line ending. */
 export function removeLines(ctx: CommandContext, indexes: readonly number[]): ChangeSpec[] {
   const { doc } = ctx;
@@ -175,26 +214,29 @@ export function removeLines(ctx: CommandContext, indexes: readonly number[]): Ch
   return changes;
 }
 
-/**
- * The nodes a structural command acts on: the topmost nodes whose own lines the selection
- * touches. They must be contiguous siblings. Null when the selection is on no node.
- */
-export function operands(ctx: CommandContext): Operands | Extract<CommandResult, { status: 'rejected' }> | null {
-  const { doc } = ctx;
-  const from = ctx.from;
-  let to = ctx.to;
+/** The nodes whose own lines `from`–`to` is on; a selection ending at the very start of a line doesn't include that line. */
+export function nodesOnLines(doc: OutlineState, from: number, to: number): Set<OutlineNode> {
   const lo = doc.lineAt(from).index;
   let hi = doc.lineAt(to).index;
-  // a selection ending at the very start of a line doesn't include that line
   if (to > from && hi > lo && doc.lines[hi]!.from === to) hi--;
   const touched = new Set<OutlineNode>();
   for (let lineNo = lo; lineNo <= hi; lineNo++) {
     const n = doc.nodeAtLine(lineNo);
     if (n) touched.add(n);
   }
+  return touched;
+}
+
+/**
+ * The nodes a structural command acts on: the topmost nodes whose own lines the selection
+ * touches. They must be contiguous siblings. Null when the selection is on no node.
+ */
+export function operands(ctx: CommandContext): Operands | Extract<CommandResult, { status: 'rejected' }> | null {
+  const { doc } = ctx;
+  const touched = nodesOnLines(doc, ctx.from, ctx.to);
   if (touched.size === 0) {
     // blank lines are the trailing gap of the node above them; above the first node, the preamble
-    const owner = gapOwner(ctx, lo);
+    const owner = gapOwner(ctx, doc.lineAt(ctx.from).index);
     if (!owner) return null;
     touched.add(owner);
   }
@@ -280,6 +322,18 @@ export function isClosingFence(ctx: CommandContext, line: LineInfo): boolean {
   if (!block || block.type !== 'code_block' || !block.fenced || line.index === block.startLine || line.index !== block.endLine) return false;
   const rest = trimMd(doc.text.slice(line.contentFrom, line.to));
   return rest.length >= block.fenceLength! && /^(.)\1*$/.test(rest) && rest[0] === block.fenceChar;
+}
+
+/**
+ * Where the text of `node` ends, for a caret sent there: its text's end; in a fenced code block, the
+ * end of its last code line (after the closing fence, anything typed would stop it closing the
+ * block).
+ */
+export function textEnd(ctx: CommandContext, node: OutlineNode): number {
+  const { doc } = ctx;
+  const last = doc.lines[node.headEndLine]!;
+  if (node.kind === 'atom' && node.block.type === 'code_block' && isClosingFence(ctx, last)) return doc.lines[node.headEndLine - 1]!.to;
+  return doc.headRange(node)?.to ?? last.to;
 }
 
 /** Whether `line` is a fence: a fenced code block's opening or closing one, or a math block's `$$` or a comment's `%%` line. */
@@ -374,7 +428,7 @@ export function continuationUnescape(ctx: CommandContext, node: OutlineNode, bef
  * where nothing changes.
  */
 export function referenceFix(ctx: CommandContext, node: OutlineNode, before: readonly string[], after: readonly string[]): { change: ChangeSpec; lines: string[] } | null {
-  const add = referenceEscape(ctx, node, after);
+  const add = referenceEscape(ctx, node, after) ?? calloutEscape(ctx, node, after);
   if (add) return add;
   const range = ctx.doc.headRange(node);
   if (!range || !paragraphText(node)) return null;
@@ -393,6 +447,22 @@ export function referenceFix(ctx: CommandContext, node: OutlineNode, before: rea
 }
 
 /**
+ * A quote's first paragraph whose first line, as `lines` has it, would open a callout (`[!tip]`, in
+ * the Obsidian flavor): escaped at its start, as a joined line written so would otherwise make the
+ * quote a callout. Null where it wouldn't.
+ */
+export function calloutEscape(ctx: CommandContext, node: OutlineNode, lines: readonly string[]): { change: ChangeSpec; lines: string[] } | null {
+  const { doc } = ctx;
+  const quote = node.parent;
+  const range = doc.headRange(node);
+  if (doc.config.flavor !== 'obsidian' || !range || quote?.kind !== 'quote' || quote.head || quote.children[0] !== node || quote.startLine !== node.startLine) return null;
+  const first = lines[0] ?? '';
+  const lead = /^[ \t]*/.exec(first)![0].length;
+  if (!/^\[![^\]\s]+\]/.test(first.slice(lead))) return null;
+  return { change: { from: range.from, to: range.from, insert: '\\' }, lines: [first.slice(0, lead) + '\\' + first.slice(lead), ...lines.slice(1)] };
+}
+
+/**
  * A quote that is an item's first block (`- > q`), its first paragraph `node` leaving it: on the
  * marker's line it can only be the item's text, the rest of the quote staying quoted after it. The
  * plan, with the caret at the text's start; null for any other shape.
@@ -402,12 +472,16 @@ export function outOfQuoteOpeningItem(ctx: CommandContext, node: OutlineNode): O
   const quote = node.parent!;
   const item = quote.parent;
   if (quote.kind !== 'quote' || quote.head || quote.children[0] !== node || node.kind !== 'paragraph') return null;
-  if (item?.kind !== 'item' || item.children[0] !== quote || quote.startLine !== item.startLine || !doc.isEmpty(item)) return null;
+  // on the marker's line, or on the line after an empty item's (`- [ ]` / `  > q`), which its text can start on
+  if (item?.kind !== 'item' || item.children[0] !== quote || (quote.startLine !== item.startLine && quote.startLine !== item.startLine + 1) || !doc.isEmpty(item)) return null;
   let planned: OutlinePlanNode | undefined;
   const lines = doc.headLines(node);
+  // an empty task keeps its checkbox, before the text
+  const box = /^\[[ xX]\]/.exec(trimMd(doc.nodeText(item)))?.[0];
+  if (box) lines[0] = `${box} ${trimMdStart(lines[0]!)}`;
   const expected = (quote.children.length === 1 ? ctx.plan.remove([quote]) : ctx.plan.remove([node])).update(item, (n) => (planned = { ...n, text: normText(lines), lines }));
   return ctx.encode(expected, {}, (written) => {
-    const caret = written.at(planned!, 0, 0);
+    const caret = written.at(planned!, 0, box ? box.length + 1 : 0);
     return { anchor: caret, head: caret };
   });
 }

@@ -53,7 +53,8 @@ The rules, in order; the first that applies wins:
     before it makes it unneeded (Enter62).
 11. **In a table**, at the end of its last row a paragraph after it, set off by a blank line, as in
     GFM a line right after a table is another row (Enter49); elsewhere in a row, refused: a row is a
-    line (Enter50).
+    line (Enter50). At the end of a footnote definition, whose next line would continue its text,
+    and of a thematic break, the same: a paragraph after it (Enter66, Enter67).
 
 Code, math and comment blocks are [fences.md](fences.md)'s.
 
@@ -1205,8 +1206,8 @@ tags: edge free-form
 
 > enter
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer
@@ -1458,8 +1459,8 @@ enterSplitSpace: start
 
 > deleteContentForward
 
-```result
-notApplicable
+```yaml
+result: notApplicable
 ```
 
 ```buffer
@@ -1639,8 +1640,8 @@ enterSplitSpace: start
 
 > deleteContentBackward
 
-```result
-notApplicable
+```yaml
+result: notApplicable
 ```
 
 ```buffer
@@ -1913,8 +1914,8 @@ flavor: gfm
 
 > enter
 
-```result
-rejected: not-expressible
+```yaml
+result: rejected not-expressible
 ```
 
 ```buffer
@@ -2423,4 +2424,77 @@ enterOnEmptyItem: exit
   - 
   - ┃
   - c
+```
+
+## Enter66
+
+Enter at the end of a footnote definition: a paragraph after it, set off by a blank line, since a
+line right under it would continue its text. Backspace on the empty paragraph takes it back.
+
+```yaml
+tags: edge
+flavor: gfm
+```
+
+```buffer
+[^1]: a note┃
+```
+
+> enter
+
+```buffer
+[^1]: a note
+
+┃◌
+```
+
+> deleteContentBackward
+
+```buffer
+[^1]: a note┃
+```
+
+## Enter67
+
+Enter at the end of a thematic break: a paragraph after it, as at a table's end.
+
+```yaml
+tags: edge
+```
+
+```buffer
+---┃
+```
+
+> enter
+
+```buffer
+---
+
+┃◌
+```
+
+## Enter68
+
+Enter at the start of an Obsidian callout's title: its text becomes the callout's first paragraph,
+set off by a quoted blank line from a line right below the callout that would continue it lazily,
+whatever that line holds (a `#` inside it too).
+
+```yaml
+tags: rare
+flavor: obsidian
+```
+
+```buffer
+> [!note] ┃q
+p # h
+```
+
+> enter
+
+```buffer
+> [!note]
+> ┃q
+>
+p # h
 ```

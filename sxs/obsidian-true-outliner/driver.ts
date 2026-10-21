@@ -16,6 +16,14 @@ export const driver = obsidianDriver({
   holds: keepsCaretOnText('true-outliner', { spaces: true }),
   // not measured against ourus's options but two: Enter mid-text keeps the children with the first
   // half (E7); Backspace on a task acts as `taskEditing: block`, an empty task gone in one press, a
-  // task joined into the node above
-  behaves: { enterAtTextStart: undefined, taskEditing: 'block', enterOnEmptyItem: undefined, enterMidItem: 'child', pasteStructuredMidText: 'after', pasteStructuredListForm: 'own', pasteStructuredParagraphList: 'children' },
+  // task joined into the node above; paste, as measured, makes a
+  // paragraph's list its children and keeps a list's form
+  behaves: {
+    enterOnEmptyItem: undefined,
+    enterMidItem: 'child',
+    enterAtTextStart: undefined,
+    taskEditing: 'block',
+    pasteParagraphList: 'children',
+    pasteListForm: 'own',
+  },
 });

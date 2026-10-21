@@ -7,8 +7,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { Config } from '../../src/config.ts';
 import { readText } from '../../test/drawing.ts';
-import { drawnSteps } from '../../test/spec-run.ts';
-import { readSpec, slug, specConfig, type SpecTest } from '../../test/specfile.ts';
+import { drawnSteps, readClipboard } from '../../test/spec-run.ts';
+import { readSpec, slug, specConfig, type Clipboard, type SpecTest } from '../../test/specfile.ts';
 import type { Doc, Driver } from './driver.ts';
 import { draw, project, sameOutline, Unsupported, type Outline } from './block.ts';
 import { readTextDoc } from './text.ts';
@@ -25,16 +25,17 @@ export interface PlanStep {
   readonly caretLost?: string;
   /** Which of the expected blocks are headings owning a section (`sectioned` in block.ts). */
   readonly sections?: readonly number[];
-  /** The expected clipboard. */
+  /** The expected clipboard's text: the harness reads an app's `text/plain` only. */
   readonly clipboard?: string;
 }
 
 export interface Plan {
   readonly test: SpecTest;
-  /** `indent.md › Indent1`. */
+  /** Its ID, `Indent1` (unique across the spec). */
   readonly name: string;
   readonly initial: Doc;
-  readonly clipboard: string | null;
+  /** The clipboard it starts with, every format the case gives the apps. */
+  readonly clipboard: Clipboard | null;
   readonly steps: readonly PlanStep[];
   /** What the projection adapted; empty for an original outline, and for a text app's examples. */
   readonly notes: readonly string[];
@@ -46,6 +47,7 @@ export interface Plan {
 
 export type Adapted = { plan: Plan } | { skip: string };
 
+
 /** Options the spec has besides ourus's config. */
 const SPEC_ONLY = new Set(['status', 'flavor']);
 const isMotion = (a: string): boolean => /^(?:cursor|select)(?:CharLeft|CharRight|LineUp|LineDown|LineBoundaryBackward|LineBoundaryForward|DocStart|DocEnd)$/.test(a);
@@ -53,7 +55,7 @@ const isMotion = (a: string): boolean => /^(?:cursor|select)(?:CharLeft|CharRigh
 /** Whether the app can play an action. */
 export function playable(driver: Driver, action: string): boolean {
   if (/^"[^"]*"$/.test(action)) return true;
-  if (action === 'pasteStructured' || action === 'pastePlain') return action in driver.keys;
+  if (action === 'paste' || action === 'pastePlain') return action in driver.keys;
   return action in driver.keys || !!driver.emulated?.includes(action);
 }
 
@@ -64,10 +66,12 @@ export function playable(driver: Driver, action: string): boolean {
  */
 export interface AdaptOptions {
   readonly ignoreOptions?: boolean;
+  /** The clipboard's text alone, its HTML dropped (`run.ts --plain-clipboard`): what the app is given, and what its run records. */
+  readonly plainClipboard?: boolean;
 }
 
 export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): Adapted {
-  const name = `${test.file} › ${test.name}`;
+  const name = test.name;
   const skip = (why: string): Adapted => ({ skip: why });
   // a `free-form` case, projected onto blocks, tests something else or nothing: no block app runs it
   // but one that tells a free block from an item (`Driver.freeForm`)
@@ -88,26 +92,52 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
   // ourus does in the example, the app is judged against ourus with them, the example replayed so
   // (`under <option>: <value>` among what was adapted), rather than the example's drawings
   const flavor = (test.options.flavor ?? Config.defaults.flavor) as Config['flavor'];
-  const theirs = opts.ignoreOptions ? [] : Object.entries(driver.behaves ?? {}).filter(([k, v]) => v !== undefined && !(k in (driver.settings ?? {})) && String(v) !== String(options[k as keyof Config] ?? Config.defaults[k as keyof Config]));
+  let theirs = opts.ignoreOptions ? [] : Object.entries(driver.behaves ?? {}).filter(([k, v]) => v !== undefined && !(k in (driver.settings ?? {})) && String(v) !== String(options[k as keyof Config] ?? Config.defaults[k as keyof Config]));
+  // a copy or cut at a caret (a step's first action), which ourus takes as the node's and an app that
+  // copies nothing there (`copyAtCaret: host`) can take as it takes a selected block, its subtree:
+  // played on the node selected the app's way (`selectSubtree`), and judged against ourus's copy
+  let played: (readonly string[])[] = test.steps.map((s) => s.actions);
+  const copies = test.steps.some((s) => s.actions[0] === 'copy' || s.actions[0] === 'cut');
+  if (copies && theirs.some(([k, v]) => k === 'copyAtCaret' && v === 'host') && playable(driver, 'selectSubtree')) {
+    const before = [test.initial.buffer, ...drawnSteps(test, flavor).map((s) => s.buffer)];
+    played = test.steps.map((s, i) => ((s.actions[0] === 'copy' || s.actions[0] === 'cut') && !before[i]!.includes('«') ? ['selectSubtree', ...s.actions] : s.actions));
+    if (played.some((a, i) => a !== test.steps[i]!.actions)) theirs = theirs.filter(([k]) => k !== 'copyAtCaret');
+  }
+  // each step's buffer, and where the step checks one, its clipboard's text: what an option can change
   let replayed: (string | undefined)[] | null = null;
+  let replayedClipboards: (string | undefined)[] | null = null;
   const under: string[] = [];
   if (theirs.length) {
-    const ours = drawnSteps(test, flavor).join('\n');
+    const outcome = (config?: Partial<Config>): string => JSON.stringify(drawnSteps(test, flavor, config).map((s, i) => [s.buffer, test.steps[i]!.expect.clipboard ? (s.clipboard ?? null) : null]));
+    const ours = outcome();
     const values = Object.fromEntries(theirs) as Partial<Config>;
-    let theirsPlayed: string[];
+    let theirsPlayed: { buffer: string; clipboard?: string }[];
     try {
       theirsPlayed = drawnSteps(test, flavor, values);
     } catch {
       return skip(`option ${theirs[0]![0]}: the app's ${theirs[0]![1]}, not replayable`);
     }
-    if (theirsPlayed.join('\n') !== ours) {
-      const alone = theirs.filter(([k, v]) => drawnSteps(test, flavor, { [k]: v }).join('\n') !== ours);
+    if (outcome(values) !== ours) {
+      const alone = theirs.filter(([k, v]) => outcome({ [k]: v }) !== ours);
       for (const [k, v] of alone.length ? alone : theirs) under.push(`under ${k}: ${v}`);
-      replayed = test.steps.map((step, i) => (step.expect.buffer === undefined ? undefined : theirsPlayed[i]));
+      replayed = test.steps.map((step, i) => (step.expect.buffer === undefined ? undefined : theirsPlayed[i]!.buffer));
+      // a clipboard ourus doesn't write under them (the host's copy, at a caret) has nothing to compare
+      replayedClipboards = test.steps.map((step, i) => (step.expect.clipboard === undefined ? undefined : theirsPlayed[i]!.clipboard));
     }
   }
-  const clipboard = test.initial.clipboard !== undefined ? readText(test.initial.clipboard) : null;
-  if (driver.model === 'text') return adaptText(driver, test, name, clipboard, settings, replayed, under);
+  /** The clipboard's text a step checks: as drawn, or as ourus replays it under the app's values. */
+  const clipboardAfter = (i: number): string | undefined => {
+    const drawn = test.steps[i]!.expect.clipboard?.['text/plain'];
+    if (replayedClipboards) return replayedClipboards[i];
+    return drawn !== undefined ? readText(drawn) : undefined;
+  };
+  const given = test.initial.clipboard !== undefined ? readClipboard(test.initial.clipboard) : null;
+  const clipboard = given && opts.plainClipboard ? { 'text/plain': given['text/plain'] } : given;
+  // a clipboard checked after a step: its text, which is what the harness reads back
+  const unread = [...new Set(test.steps.flatMap((s) => Object.keys(s.expect.clipboard ?? {}).filter((type) => type !== 'text/plain')))];
+  if (unread.length) under.push(`clipboard's ${unread.join(', ')} not compared`);
+  if (played.some((a, i) => a !== test.steps[i]!.actions)) under.push('the node at the caret selected (selectSubtree)');
+  if (driver.model === 'text') return adaptText(driver, test, name, clipboard, settings, replayed, under, clipboardAfter, played);
   // ourus's document end is past the last line ending, on an empty line no block has: what is typed
   // or moved from there differs from the end of the last block by construction, so it only may leave
   const actions = test.steps.flatMap((s) => s.actions);
@@ -127,11 +157,11 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
     let prev: { outline: Outline; drawn: string } | null = { outline: start.outline, drawn: test.initial.buffer };
     let meaningful = false;
     for (const [i, s] of test.steps.entries()) {
-      const clipboard = s.expect.clipboard !== undefined ? readText(s.expect.clipboard) : undefined;
+      const clipboard = clipboardAfter(i);
       // the step's buffer as drawn, or as ourus replays it under the app's values
       const buffer = replayed ? replayed[i] : s.expect.buffer;
       if (buffer === undefined) {
-        steps.push({ line: s.line, actions: s.actions, want: null, ...(clipboard !== undefined && { clipboard }) });
+        steps.push({ line: s.line, actions: played[i]!, want: null, ...(clipboard !== undefined && { clipboard }) });
         if (clipboard !== undefined) meaningful = true;
         prev = null;
         continue;
@@ -143,7 +173,7 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
       // a step whose buffer changed only in what blocks can't show (blank lines, markers) tests nothing here
       const lost = prev && prev.drawn !== buffer && sameOutline(prev.outline, p.outline) && !p.caretLost;
       if (!lost || clipboard !== undefined) meaningful = true;
-      steps.push({ line: s.line, actions: s.actions, want: p.outline, drawn: buffer, ...(p.caretLost && { caretLost: p.caretLost }), ...(p.sections.length && { sections: p.sections }), ...(clipboard !== undefined && { clipboard }) });
+      steps.push({ line: s.line, actions: played[i]!, want: p.outline, drawn: buffer, ...(p.caretLost && { caretLost: p.caretLost }), ...(p.sections.length && { sections: p.sections }), ...(clipboard !== undefined && { clipboard }) });
       prev = { outline: p.outline, drawn: buffer };
     }
     if (!steps.some((s) => s.want || s.clipboard !== undefined)) return skip('nothing to compare');
@@ -155,7 +185,7 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
       const asBlocks: SpecTest = { ...test, initial: { ...test.initial, buffer: draw(start.outline, { ordered: driver.ordered }) } };
       const played = (config?: Partial<Config>): string | null => {
         try {
-          return drawnSteps(asBlocks, flavor, config).join('\n');
+          return JSON.stringify(drawnSteps(asBlocks, flavor, config));
         } catch {
           return null;
         }
@@ -173,16 +203,16 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
 }
 
 /** A text app's plan: every buffer as written, the caret where drawn. */
-function adaptText(driver: Driver, test: SpecTest, name: string, clipboard: string | null, settings: Partial<Config>, replayed: (string | undefined)[] | null, under: readonly string[]): Adapted {
+function adaptText(driver: Driver, test: SpecTest, name: string, clipboard: Clipboard | null, settings: Partial<Config>, replayed: (string | undefined)[] | null, under: readonly string[], clipboardAfter: (i: number) => string | undefined, played: readonly (readonly string[])[]): Adapted {
   const initial = readTextDoc(test.initial.buffer);
   const no = driver.holds?.(initial);
   if (no) return { skip: no };
   const steps: PlanStep[] = test.steps.map((s, i) => {
-    const clip = s.expect.clipboard !== undefined ? readText(s.expect.clipboard) : undefined;
+    const clip = clipboardAfter(i);
     // as drawn, or as ourus replays it under the app's values
     const buffer = replayed ? replayed[i] : s.expect.buffer;
     const want = buffer !== undefined ? readTextDoc(buffer) : null;
-    return { line: s.line, actions: s.actions, want, ...(buffer !== undefined && { drawn: buffer }), ...(clip !== undefined && { clipboard: clip }) };
+    return { line: s.line, actions: played[i]!, want, ...(buffer !== undefined && { drawn: buffer }), ...(clip !== undefined && { clipboard: clip }) };
   });
   if (!steps.some((s) => s.want || s.clipboard !== undefined)) return { skip: 'nothing to compare' };
   const key = JSON.stringify([initial, clipboard, steps.map((s) => [s.actions, s.want, s.clipboard]), settings]);
@@ -201,16 +231,23 @@ export function allTests(): SpecTest[] {
     .flatMap((f) => readSpec(f, readFileSync(new URL(f, specDir), 'utf8')));
 }
 
+/** The spec file a case's ID is in (IDs are unique across the spec), or `?` for one it no longer has (an old run's). */
+let files: Map<string, string> | null = null;
+export function fileOf(id: string): string {
+  files ??= new Map(allTests().map((t) => [t.name, t.file]));
+  return files.get(id) ?? '?';
+}
+
 /**
  * Whether a test is one a selector names: a file (`indent.md`, or `indent`), a test by its anchor
- * (`indent.md#indent3`), or any part of its full name (`Indent3`, `indent.md › Indent`).
+ * (`indent.md#indent3`), or any part of its ID (`Indent3`, `Indent`).
  */
 export function selects(selector: string, t: SpecTest): boolean {
-  const anchor = slug(t.name.split(' › ').pop()!);
+  const anchor = slug(t.name);
   const hash = selector.indexOf('#');
   if (hash >= 0) {
     const file = selector.slice(0, hash);
     return (file === '' || t.file === file || t.file === `${file}.md`) && anchor === selector.slice(hash + 1).toLowerCase();
   }
-  return t.file === selector || t.file === `${selector}.md` || `${t.file} › ${t.name}`.includes(selector);
+  return t.file === selector || t.file === `${selector}.md` || t.name.includes(selector);
 }

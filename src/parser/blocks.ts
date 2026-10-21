@@ -31,6 +31,12 @@ export interface ParagraphFrame extends Frame {
   readonly last: string;
   /** Where `last` starts on its line. */
   readonly lastFrom: number;
+  /**
+   * The paragraph starts right after its item's task checkbox (GFM): its text isn't a paragraph's
+   * start to the reader, where cmark-gfm reads the checkbox after the blocks, so it holds no link
+   * reference definition (`- [ ] [r]: /u` is a task).
+   */
+  readonly afterTask?: boolean;
 }
 
 export interface FenceFrame extends Frame {
@@ -156,12 +162,14 @@ export const PARAGRAPH: BlockSpec<ParagraphFrame> = {
     m.takeLine();
     const text = m.line.slice(m.offset);
     const lastFrom = p.lines === 0 ? m.offset : m.containerEnd;
+    const afterTask = p.lines === 0 ? m.openedHere(index - 1) && !!m.attrsAt(index - 1)?.task : p.afterTask;
     // content last: equality checks compare the cheap fields first
     m.replace(index, {
       spec: PARAGRAPH,
       lines: p.lines + 1,
       last: m.line.slice(lastFrom),
       lastFrom: m.real(lastFrom),
+      ...(afterTask ? { afterTask } : {}),
       content: p.content + s + text + '\n',
     } as ParagraphFrame);
     m.setLeaf(p.lines === 0 ? PARAGRAPH_FIRST : PARAGRAPH_NEXT);
@@ -180,7 +188,7 @@ export const newParagraph = (): ParagraphFrame => ({ spec: PARAGRAPH, lines: 0, 
 export function extractRefdefs(m: Machine, p: ParagraphFrame, lastLine: number): { content: string; lines: number } | null {
   let content = p.content;
   let lines = p.lines;
-  if (content.charCodeAt(0) !== 91 /* [ */) return lines > 0 ? { content, lines } : null;
+  if (content.charCodeAt(0) !== 91 /* [ */ || p.afterTask) return lines > 0 ? { content, lines } : null;
   let first = lastLine - lines + 1;
   let pos = 0;
   let found = false;

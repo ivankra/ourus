@@ -136,6 +136,16 @@ test('line endings that join or split across a change', () => {
   }
 });
 
+test('an update leaves the snapshot it starts from as it was', () => {
+  // a placeholder after the final line ending adds a line, which an update without changes once
+  // appended to the old snapshot's own lines (a structural command from the text end then threw)
+  const old = SyntaxTree.parse('- a\n- - b\n', gfm);
+  const next = old.update([], { sentinels: [10] });
+  assert.equal(next.lineCount, 3);
+  assert.equal(old.lineCount, 2);
+  assert.deepEqual(old.starts, [0, 4]);
+});
+
 test('an update reads only the changed lines and the paragraph around them', () => {
   const lines = Array.from({ length: 2000 }, (_, i) => (i % 10 === 0 ? `# Section ${i}` : `- item ${i} with some text`));
   const text = lines.join('\n') + '\n';

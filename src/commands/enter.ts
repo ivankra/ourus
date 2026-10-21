@@ -4,7 +4,7 @@ import { OutlineState, type OutlineNode } from '../outline/index.ts';
 import type { Block, LineInfo } from '../parser/index.ts';
 import { advanceColumns, lineSpan, skipSpaces, trimMd, trimMdEnd, trimMdStart, type ChangeSpec } from '../text.ts';
 import { OutlinePlan, type OutlinePlanNode } from '../encoder/index.ts';
-import { CommandContext, Operands, blankInQuote, continuationEscape, interrupts, followsParentText, isEmptyItem, isEmptyWithChildren, normText, paragraphPrefix, reTaskBox, referenceEscape } from './context.ts';
+import { CommandContext, Operands, blankInQuote, continuationEscape, interrupts, followsParentText, heldSpaceAt, isEmptyItem, isEmptyWithChildren, normText, paragraphPrefix, reTaskBox, referenceEscape } from './context.ts';
 import { notApplicable, reject, type Outcome, type CommandPlan } from './plan.ts';
 import { outdent } from './structure.ts';
 import { enterAfterFence, fenceNewline, isPayloadLine, payloadNewline, splitAtFence } from './code.ts';
@@ -116,16 +116,19 @@ function shiftedRight(ctx: CommandContext, item: OutlineNode, columns: number): 
 
 /**
  * Whether new text written right above `line` would run into it: a paragraph's line there continues
- * the new text, unless it starts a block that interrupts a paragraph (a list item does).
+ * the new text, unless it starts a block that interrupts a paragraph (a list item does); so does
+ * indented code, which can't interrupt one.
  */
 function runsInto(ctx: CommandContext, above: LineInfo, line: LineInfo | undefined): boolean {
   const { doc } = ctx;
   // a paragraph's line, or a setext title's (its text as a paragraph's, until its underline)
   const leaf = line?.leaf;
+  if (line && !line.blank && leaf?.type === 'code_block' && !leaf.fenced && line.index === leaf.startLine) return true;
   if (!line || line.blank || blankInQuote(ctx, line) || !(leaf?.type === 'paragraph' || (leaf?.type === 'heading' && leaf.setext && line.index < leaf.endLine))) return false;
   // the line's text after the containers it shares with the line above (a quote's `>` it has of its own
-  // interrupts a paragraph)
-  const text = doc.text.slice(line.from + (above.contentFrom - above.from), line.to);
+  // interrupts a paragraph; a lazy line, outside the quote above, shares fewer)
+  const shared = line.prefix.filter((piece) => above.prefix.some((other) => other.block === piece.block));
+  const text = doc.text.slice(shared.length ? shared[shared.length - 1]!.to : line.from, line.to);
   return !interrupts(ctx, text);
 }
 
@@ -190,6 +193,11 @@ export function split(ctx: CommandContext, keep = true): Outcome {
   if (line.leaf?.type === 'code_block' && line.leaf.fenced) return enterAfterFence(ctx, node, line, selFrom, selTo) ?? splitAtFence(ctx, node, line, selFrom, selTo) ?? fenceNewline(ctx, node, line, selFrom, selTo, true);
   if (isPayloadLine(line)) return splitAtFence(ctx, node, line, selFrom, selTo) ?? payloadNewline(ctx, node, line, selFrom, selTo);
   if (line.leaf?.type === 'table') return tableEnter(ctx, node, line, selFrom, selTo);
+  // at the end of a footnote definition or a thematic break, as at a table's; elsewhere in them, the host's
+  if (node.kind === 'atom' && (node.block.type === 'footnote_definition' || node.block.type === 'thematic_break')) {
+    const last = doc.lines[node.block.type === 'thematic_break' ? node.startLine : doc.lastDescendant(node).endLine]!;
+    return selFrom === selTo && line.index === last.index && selFrom === line.to ? paragraphAfter(ctx, node, line) : notApplicable;
+  }
   if (node.kind !== 'item') return notApplicable;
   const pos = selFrom;
   if (pos < line.contentFrom && line.index !== node.startLine) return notApplicable;
@@ -338,12 +346,25 @@ function tableEnter(ctx: CommandContext, node: OutlineNode, line: LineInfo, selF
   const { doc } = ctx;
   if (selFrom < line.contentFrom) return notApplicable;
   if (selFrom !== selTo || line.index !== line.leaf!.endLine || selFrom !== line.to) return reject('not-expressible', 'a table row is a single line');
+  return paragraphAfter(ctx, node, line);
+}
+
+/**
+ * Enter at the end of a block that ends at its line, whose next line it would take in (a table's
+ * row, a footnote definition's lazy text) or that is markup alone (a thematic break): a paragraph
+ * after it, held by a placeholder and set off by a blank line, in the containers around the block.
+ */
+function paragraphAfter(ctx: CommandContext, node: OutlineNode, line: LineInfo): Outcome {
+  const { doc } = ctx;
   const eol = ctx.ending(line);
-  const prefix = ctx.encoder.continuation(line.prefix);
+  // the containers around the block: a footnote definition's own indentation isn't theirs
+  const own = line.prefix.findIndex((p) => p.block === node.block);
+  const around = own >= 0 ? line.prefix.slice(0, own) : line.prefix;
+  const prefix = ctx.encoder.continuation(around);
   const open = eol + trimMdEnd(prefix) + eol + prefix;
   // text right below would continue the new paragraph: a blank line keeps it apart
   const next = doc.lines[line.index + 1];
-  const same = !!next && next.prefix.length === line.prefix.length && next.prefix.every((p, k) => p.block === line.prefix[k]!.block);
+  const same = !!next && next.prefix.length === around.length && next.prefix.every((p, k) => p.block === around[k]!.block);
   const apart = same && runsInto(ctx, line, next) ? eol + trimMdEnd(prefix) : '';
   const caret = line.to + open.length;
   const expected = ctx.plan.place('after', node, [OutlinePlan.created('paragraph', '')]);
@@ -639,10 +660,14 @@ export function lineBreak(ctx: CommandContext): Outcome {
   const i = line.index - node.head.startLine;
   // a setext underline is markup: a break would cut it
   if (setext && i >= lines.length) return reject('not-expressible', 'a line break would cut the setext underline');
+  // text alone on the line after its marker (ShiftEnter13 made it): no break before it again, from its
+  // line's start on, as an item starts with one blank line at most (ShiftEnter33)
+  if (collapsed && i === 0 && node.kind === 'item' && line.index > node.startLine && pos <= doc.headRange(node)!.from) return reject('not-expressible', 'an item starts with one blank line at most');
   // in an item's marker or a task's checkbox, the break would split it: the host's where markup is
-  // text the user edits, else it acts at the text start
-  if (collapsed && i === 0 && node.kind === 'item' && pos < doc.textStart(pos)) {
-    if (doc.config.markup === 'text') return { status: 'notApplicable', detail: "a line break here would split the item's markup" };
+  // text the user edits, else it acts at the text start; a space a placeholder holds as text is the
+  // text's start, so it acts there under both
+  if (collapsed && i === 0 && node.kind === 'item' && line.index === node.startLine && pos < doc.textStart(pos)) {
+    if (doc.config.markup === 'text' && !heldSpaceAt(doc, pos)) return { status: 'notApplicable', detail: "a line break here would split the item's markup" };
     pos = selTo = doc.textStart(pos);
   }
   // spaces a split kept before an item's text (`enterSplitSpace: start`) are its text: the caret

@@ -25,7 +25,7 @@ cases written to find where the two editing modes part:
   up outside it, and one between a task's marker and its checkbox's end goes to the line's start
   (`inCheckbox`). Source mode keeps both. A caret in a table goes into a cell's editor of the table
   Live Preview draws (the note's editor loses the focus) and the table is padded: skipped too
-  (`inTable`; they were the setups' four errors: Enter49, Enter50, Paste56, ShiftEnter24).
+  (`inTable`; they were the setups' four errors: Enter49, Enter50, PasteOld56, ShiftEnter24).
 - **Up and Down land by what is drawn**: hidden markers and a heading's larger font move the column.
   Up from `abcdef┃ghijk` into `abc**def**ghi` lands at `abc**de┃f**ghi` (Source mode: `abc**d┃ef**ghi`,
   the text's column); Up into `## Title` lands at `## Ti┃tle` (`cursor.md › CursorUp2`; Source mode:

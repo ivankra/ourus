@@ -121,9 +121,12 @@ block), and are cached then. Setting a preference (below) sends nothing.
   (`import_plaintext`, its indentation nesting them), whatever the key: Ctrl+Shift+V only drops the
   clipboard's HTML. The first line joins the item at the caret, the rest are items after it, and the
   last line takes the text after the caret. The spec's clipboards end with a line break, so that last line is
-  empty and the text after the caret becomes an item of its own (`paste.md › Paste7`: `a┃b` with
+  empty and the text after the caret becomes an item of its own (`paste-old.md › PasteOld7`: `a┃b` with
   `x⏎y⏎` gives `ax`, `y`, `┃b`; without the line break it gives `ax`, `y┃b`). List markers stay as
-  text: `- a` pastes as an item `- a` (`obsidian-true-outliner.md › Paste › #216`).
+  text: `- a` pastes as an item `- a` (`obsidian-true-outliner.md › Paste › #216`). Only a note, or the
+  document's title, takes the text as it is (`insert_text`); in an item there is no paste that keeps
+  lines in it, so paste-plain.md's cases measure an item per line. A line's indentation nests it under
+  the line above, and a blank line is an empty item (probes, 2026-10-21).
 - **Enter splits an item by making the first half a new item before it**: the children stay with the
   second half (`enter.md › Enter3`), and the space after the caret stays at its start (`Enter1`).
   Enter on an empty item makes a sibling (`enterOnEmptyItem: sibling`, ourus's default). Inside a
@@ -150,7 +153,7 @@ in six full runs and `agree` in one, and `caret` in 28 repeats on its own and wi
 
 Dynalist bugs met:
 
-- **The caret after an HTML paste of a paragraph and a list** (`paste.md › Paste36b`): `See ┃here.`
+- **The caret after an HTML paste of a paragraph and a list** (`paste-old.md › PasteOld36b`): `See ┃here.`
   with `x`, `- y` (as HTML) gives `See x`, its child `yhere┃.`, the caret at the offset it would have in
   the first item (`See x┃`), set in the last. From plain text, or HTML of a list alone, the caret is
   right.

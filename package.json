@@ -11,15 +11,13 @@
   },
   "scripts": {
     "bench": "node test/bench.ts",
-    "demo:build": "node demos/cm6/build.ts",
-    "demo:serve": "node demos/cm6/build.ts --serve",
-    "demo:smoke": "node demos/cm6/smoke.ts",
+    "demo:cm6": "node demos/cm6/build.ts",
     "demo:textarea": "node demos/textarea/build.ts",
     "demo:gtk": "node demos/gtk/build.ts",
     "probe": "node sxs/probe.ts",
+    "proxy": "node sxs/proxy.ts --cache=offline",
     "redraw": "node test/redraw.ts",
     "sxs": "node sxs/run.ts",
-    "sxs:proxy": "node sxs/proxy.ts --cache=offline",
     "test": "node --test test/*.test.ts test/*/*.test.ts sxs/*/*.test.ts",
     "test:diff": "node test/differential.ts",
     "test:inverse": "node test/inverse.ts",
@@ -64,5 +62,8 @@
     "typescript": "^7.0.2",
     "unified": "^11.0.5",
     "yaml": "^2.8.1"
+  },
+  "dependencies": {
+    "htmlparser2": "12.0.0"
   }
 }

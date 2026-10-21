@@ -23,14 +23,13 @@
 //   node test/differential.ts                 # HEAD against the working tree
 //   node test/differential.ts <old> [<new>]   # two directories that each hold a `src/`
 //   DIFF_DOCS=3000 DIFF_EXAMPLES=8 node test/differential.ts
-//   DIFF_WORKERS=1 node test/differential.ts  # one thread (by default one per core): the same report
 //
 // The documents are played in worker threads, each a share of them; what they report is merged in the
 // documents' order, so the report is the same however many play it.
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { availableParallelism, tmpdir } from 'node:os';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { join, resolve } from 'node:path';
@@ -47,6 +46,8 @@ function headSource(): string {
   const dir = mkdtempSync(join(tmpdir(), 'ourus-head-'));
   const archive = execFileSync('git', ['archive', 'HEAD', 'src'], { cwd: here });
   execFileSync('tar', ['-x', '-C', dir], { input: archive });
+  // its imports of packages (htmlparser2) resolve to the project's, as the tree's do
+  symlinkSync(join(here, 'node_modules'), join(dir, 'node_modules'));
   return dir;
 }
 
@@ -112,17 +113,18 @@ const blocks = [
   // blocks of an item, as users write them under one: a quote as its first block, math, code
   '- > q', '- i\n  $$\n  m\n  $$', '- i\n  ```js\n  x\n  ```', '- i\n\n      code',
 ];
-const commands = ['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'enter', 'shiftEnter', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward', 'pasteStructured', 'pastePlain', 'deleteSubtree', 'duplicateSubtree'];
+const commands = ['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'enter', 'shiftEnter', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward', 'paste', 'pastePlain', 'deleteSubtree', 'duplicateSubtree', 'insertText', 'copy', 'cut'];
 // what users paste: besides Markdown of each kind, a line copied with its line break, and a block
 // copied from inside a list from its fence on (its other lines keep the item's indentation)
-const pastes = ['x', '- a\n- b', '> q', '```\nc\n```', 'one\ntwo', '1. a\n2. b\n', 'x\n', '```js\n    c\n    ```', '# h\ntext\n', '| a |\n| - |\n| 1 |\n', '- [ ] t\n  - c\n'];
+const pastes = ['x', '- a\n- b', '> q', '```\nc\n```', 'one\ntwo', '1. a\n2. b\n', 'x\n', '```js\n    c\n    ```', '# h\ntext\n', '| a |\n| - |\n| 1 |\n', '- [ ] t\n  - c\n', 'p\n- a\n- b\n'];
 /** Every flavor with the defaults, then every other value of every option (in the default flavor), one at a time. */
 const configs: Record<string, unknown>[] = [
   { flavor: 'gfm' }, { flavor: 'commonmark' }, { flavor: 'obsidian' },
   { outdent: 'logical' }, { bullet: '*' }, { enterOnEmptyItem: 'outdent' }, { enterOnEmptyItem: 'exit' }, { enterMidItem: 'child' }, { enterAtTextStart: 'stay' },
   { backspaceAtTopItem: 'refuse' }, { emptyItemWithChildren: 'refuse' }, { joinWithChildren: 'refuse' }, { handleFenceContents: false },
-  { headingEditing: 'block' }, { taskEditing: 'text' }, { taskEditing: 'block' }, { enterTask: 'plain' }, { enterSplitSpace: 'drop' }, { enterSplitSpace: 'start' }, { pasteStructuredLines: 'items' }, { pasteStructuredMidText: 'after' },
-  { markup: 'decorated' },
+  { headingEditing: 'block' }, { taskEditing: 'text' }, { taskEditing: 'block' }, { enterTask: 'plain' }, { enterSplitSpace: 'drop' }, { enterSplitSpace: 'start' }, { pasteLines: 'items' }, { pastePlainLines: 'items' }, { pastePlainLines: 'enter' }, { pasteOnParent: 'after' },
+  { pasteSeams: 'open' }, { pasteAtTextStart: 'before' }, { pasteParagraphList: 'children' }, { pasteListForm: 'own' }, { copyAtCaret: 'host' }, { copySelection: 'nodes' },
+  { markup: 'decorated' }, { closeBackticks: 'all' }, { closeBackticks: 'none' },
 ];
 const documents = Number(process.env.DIFF_DOCS ?? 1500);
 const examples = Number(process.env.DIFF_EXAMPLES ?? 3);
@@ -207,9 +209,9 @@ const specPastes = new Set<string>(pastes);
 const specDocs = new Map<string, Doc>();
 for (const file of isMainThread ? readdirSync(specDir).filter((f) => f.endsWith('.md') && f !== 'README.md').sort() : []) {
   for (const t of readSpec(file, readFileSync(join(specDir, file), 'utf8'))) {
-    if (t.initial.clipboard !== undefined) specPastes.add(readText(t.initial.clipboard));
+    if (t.initial.clipboard?.['text/plain'] !== undefined) specPastes.add(readText(t.initial.clipboard['text/plain']));
     const config: Record<string, unknown> = { ...specConfig(t.options) };
-    config.flavor ??= Config.values.flavor[createHash('sha256').update(t.name.split(' › ').pop()!).digest()[0]! % Config.values.flavor.length];
+    config.flavor ??= Config.values.flavor[createHash('sha256').update(t.name).digest()[0]! % Config.values.flavor.length];
     for (const buffer of [t.initial.buffer, ...t.steps.map((step) => step.expect.buffer)]) {
       if (buffer === undefined) continue;
       const { text, placeholders } = readDrawing(buffer);
@@ -260,7 +262,8 @@ async function play(share: readonly number[]): Promise<Found> {
         const selection = settled ? { anchor: mapPos(settled.changes as ChangeSpec[], drawnSelection.anchor), head: mapPos(settled.changes as ChangeSpec[], drawnSelection.head) } : drawnSelection;
         const [oldAt, newAt] = settled ? [before.parse(runText, config, runPlaceholders), after.parse(runText, config, runPlaceholders)] : [oldDoc, newDoc];
         for (const type of commands) {
-          const command = type === 'pasteStructured' || type === 'pastePlain' ? { type, text: pastes[random(pastes.length)] } : { type };
+          // typing: a code fence's characters, the ones ourus handles
+          const command = type === 'paste' ? { type, clipboard: { 'text/plain': pastes[random(pastes.length)]! } } : type === 'pastePlain' ? { type, text: pastes[random(pastes.length)] } : type === 'insertText' ? { type, text: random(2) ? '~' : '`' } : { type };
           const a = outcome(before, oldAt, attempt(before, oldAt, command, selection));
           const result = attempt(after, newAt, command, selection);
           const b = outcome(after, newAt, result);
@@ -268,8 +271,10 @@ async function play(share: readonly number[]): Promise<Found> {
           const at: [number, number] = [index, run++];
           // encoding-failed is a bug, whether or not the old copy had it too, and a command that throws worse
           if ((result.status === 'rejected' && result.reason === 'encoding-failed') || result.status === 'threw') {
-            note(found.failures, type, at, () => `${drawn(runText, selection)} [${JSON.stringify(config)}]${command.text !== undefined ? ` pasting ${JSON.stringify(command.text)}` : ''}: ${result.detail ?? result.reason ?? ''}`);
-            if (process.env.DIFF_DUMP) found.dump.push({ at, text: JSON.stringify({ type, text: runText, selection, config, placeholders: runPlaceholders, paste: command.text, detail: result.detail ?? result.reason, ...(settled ? { settled: true } : {}) }) });
+            // what was typed or pasted: a paste's is its clipboard's text
+            const given = 'clipboard' in command ? command.clipboard?.['text/plain'] : command.text;
+            note(found.failures, type, at, () => `${drawn(runText, selection)} [${JSON.stringify(config)}]${given !== undefined ? ` ${type === 'insertText' ? 'typing' : 'pasting'} ${JSON.stringify(given)}` : ''}: ${result.detail ?? result.reason ?? ''}`);
+            if (process.env.DIFF_DUMP) found.dump.push({ at, text: JSON.stringify({ type, text: runText, selection, config, placeholders: runPlaceholders, paste: given, detail: result.detail ?? result.reason, ...(settled ? { settled: true } : {}) }) });
           }
           if (a === b) continue;
           const short = (o: string): string => (o.startsWith('[') ? JSON.parse(o)[0] : o);

@@ -1,7 +1,7 @@
-// The clipboard an app is given: the example's Markdown as plain text and, where the Markdown has
-// structure, rendered as HTML too, as a copy from a rendered page carries it (a browser, another
-// outliner, Obsidian's reading view). Most apps read the HTML when there is one (dev/13-align.md);
-// ourus reads the Markdown, as a Markdown host passes it the plain text.
+// The clipboard apps were given before a case said its formats: the example's
+// Markdown as plain text and, where the Markdown has structure, rendered as HTML too. No source copies
+// that; the runner gives a case's formats now, and this reads an old run
+// back as what its app was given (`startClipboard` in run.ts).
 
 import type { Config } from '../../src/config.ts';
 import { clipboardSource } from '../../src/commands/paste.ts';

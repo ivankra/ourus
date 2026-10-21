@@ -679,8 +679,8 @@ tags: common
 - water
 ```
 
-```result
-applied
+```yaml
+result: applied
 ```
 
 > undo
@@ -696,14 +696,14 @@ applied
 
 ### Scenario17
 
-Pasting lines into a list as an outliner pastes them (`pasteStructuredLines: items`, as Roam,
+Pasting lines into a list as an outliner pastes them (`pasteLines: items`, as Roam,
 WorkFlowy and Dynalist): on an empty item, they are items in its place
-([Paste39](paste.md#paste39)); at the end of an item's text, items after it. By default they are
-the item's text instead ([Paste7](paste.md#paste7), [Paste10](paste.md#paste10)).
+([Paste18](paste.md#paste18)); at the end of an item's text, items after it. By default they are
+the item's text instead ([Paste1](paste.md#paste1)).
 
 ```yaml
 tags: core
-pasteStructuredLines: items
+pasteLines: items
 clipboard: |
   bread
   butter
@@ -720,7 +720,7 @@ clipboard: |
 - ┃
 ```
 
-> pasteStructured
+> paste
 
 ```buffer
 - milk
@@ -728,7 +728,7 @@ clipboard: |
 - butter┃
 ```
 
-> cursorDocStart cursorLineBoundaryForward pasteStructured
+> cursorDocStart cursorLineBoundaryForward paste
 
 ```buffer
 - milk
@@ -741,7 +741,7 @@ clipboard: |
 ### Scenario18
 
 Pasting code at the end of an item's text and typing on: the code goes into the item, the caret at
-the end of its last line, and the next item stays where it was ([Paste1](paste.md#paste1)).
+the end of its last line, and the next item stays where it was ([PasteList12](paste-list.md#pastelist12)).
 
 ````yaml
 tags: common
@@ -756,7 +756,7 @@ clipboard: |
 - next
 ````
 
-> pasteStructured "!"
+> paste "!"
 
 ````buffer
 - example

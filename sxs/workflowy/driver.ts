@@ -103,7 +103,9 @@ export const driver: Driver = {
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
     deleteSubtree: 'Control+Shift+Backspace',
     duplicateSubtree: 'Alt+Shift+d',
-    pasteStructured: 'Control+v',
+    copy: 'Control+c',
+    cut: 'Control+x',
+    paste: 'Control+v',
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
     redo: 'Control+y',
@@ -117,8 +119,23 @@ export const driver: Driver = {
   // start (a caret inside the `#`s or the checkbox `holds` declines), and those cases play as any
   refuses: ['html', 'table', 'math', 'thematic break', 'link reference definition', 'comment', 'footnote'],
   ordered: true,
-  // Shift+Tab moves an item past its parent, leaving its later siblings there: logical outdenting
-  behaves: { enterSplitSpace: 'start', backspaceAtTopItem: 'refuse', outdent: 'logical', enterOnEmptyItem: 'sibling', pasteStructuredLines: 'items', emptyItemWithChildren: 'refuse', joinWithChildren: 'refuse', pasteStructuredAtEnd: 'join', pasteStructuredListForm: 'drop', pasteStructuredOnParent: 'after' },
+  // Shift+Tab moves an item past its parent, leaving its later siblings there: logical outdenting;
+  // paste opens the seam (the first pasted text joins), though not on an item with children
+  // (on the paste files, 14 cases better under `open`, 3 worse)
+  behaves: {
+    outdent: 'logical',
+    enterSplitSpace: 'start',
+    enterOnEmptyItem: 'sibling',
+    joinWithChildren: 'refuse',
+    backspaceAtTopItem: 'refuse',
+    emptyItemWithChildren: 'refuse',
+    copyAtCaret: 'host',
+    pasteSeams: 'open',
+    pasteLines: 'items',
+    pastePlainLines: 'items',
+    pasteAtTextStart: 'before',
+    pasteOnParent: 'after',
+  },
   // WorkFlowy counts its animations (an item sliding into place, a zoom) while they run
   idle: { busy: `window.WF?.GuiAnimate?.animationsAreInProgress?.()` },
   holds(doc: Outline) {

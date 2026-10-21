@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { compareOutlines, draw, liftOwned, ownBlocks, project, readOutline, sectioned, unescapeLaterLines, Unsupported, type Outline } from './block.ts';
+import { compareOutlines, draw, endFenceOptional, sameText, liftOwned, ownBlocks, project, readOutline, sectioned, unescapeLaterLines, Unsupported, type Outline } from './block.ts';
 
 const blocks = (o: Outline): string[] => o.blocks.map((b) => `${'  '.repeat(b.depth)}${b.text}`);
 
@@ -35,6 +35,12 @@ test('tasks keep their checkbox, numbered and starred items are plain blocks', (
 test('an empty item, and one with only a checkbox', () => {
   assert.deepEqual(project('- a\n- ┃\n', 'gfm').outline, { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: '' }], sel: { block: 1, anchor: 0, head: 0 } });
   assert.deepEqual(project('- [ ] ┃\n', 'gfm').outline.sel, { block: 0, anchor: 4, head: 4 });
+});
+
+test("an empty document is an app's empty page: one empty block, the caret in it; with no caret, nothing", () => {
+  assert.deepEqual(project('┃\n', 'gfm').outline, { blocks: [{ depth: 0, text: '' }], sel: { block: 0, anchor: 0, head: 0 } });
+  assert.deepEqual(project('┃\n', 'gfm', { freeForm: true }).outline.blocks, [{ depth: 0, text: '', free: true }]);
+  assert.throws(() => project('\n', 'gfm'), Unsupported);
 });
 
 test("an item whose first block is a list has no text, its marker's line the inner item's", () => {
@@ -183,4 +189,26 @@ test("owned blocks lift beside their owner in free form, and own takes them back
     { depth: 1, text: 'x' },
   ];
   assert.deepEqual(blocks({ blocks: ownBlocks(nested, owns), sel: null }), ['a', '  b', '    x']);
+});
+
+test("blocks' texts compare by what they say as inline Markdown: an escape nothing needs is the same text, one that keeps markup text isn't", () => {
+  assert.ok(sameText('not \\[y\\] a\\_b', 'not [y] a_b'));
+  assert.ok(!sameText('a \\*x\\*', 'a *x*'));
+  assert.ok(!sameText('x', 'y'));
+  // whitespace is its own verdict
+  assert.ok(!sameText('a  \\[y\\]', 'a [y]'));
+  const o = (text: string): Outline => ({ blocks: [{ depth: 0, text }], sel: null });
+  assert.equal(compareOutlines(o('1\\. x \\[y\\]'), o('1\\. x [y]')), 'agree');
+});
+
+test('a code block closed at a block\'s end reads as one its block ends', () => {
+  assert.equal(endFenceOptional('```\ncode\n```'), '```\ncode');
+  assert.equal(endFenceOptional('a\n~~~~\ncode\n~~~~~'), 'a\n~~~~\ncode');
+  assert.equal(endFenceOptional('```\ncode\n```\n'), '```\ncode\n');
+  // closed earlier, or by a shorter run, or not at the end: as it is
+  assert.equal(endFenceOptional('```\ncode\n```\nafter'), '```\ncode\n```\nafter');
+  assert.equal(endFenceOptional('````\ncode\n```'), '````\ncode\n```');
+  assert.equal(endFenceOptional('```\na\n```\n```'), '```\na\n```\n```');
+  const want = { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: '```\ncode\n```' }], sel: { block: 1, anchor: 8, head: 8 } };
+  assert.equal(compareOutlines(want, { ...want, blocks: [want.blocks[0]!, { depth: 0, text: '```\ncode' }] }), 'agree');
 });

@@ -68,7 +68,7 @@ let attempts = 0;
  * (so taken atomically) from a file of the call's own beside it (`<name>-<pid>-<n>.lock`, while it
  * waits: a run's workers, one process, take locks at once); one whose run is gone is taken over. While
  * another holds it (another run, or another of the run's workers), `wait` says whether to wait for it
- * (polling, up to ten minutes) or stop. Returns its release.
+ * (polling, up to twenty minutes) or stop. Returns its release.
  */
 export async function takeLock(lock: string, wait: boolean, what: string): Promise<() => void> {
   const mine = lock.replace(/(\.lock)?$/, `-${process.pid}-${++attempts}.lock`);
@@ -86,7 +86,7 @@ export async function takeLock(lock: string, wait: boolean, what: string): Promi
         } catch {}
         if (!holder || !alive(holder)) rmSync(lock, { force: true });
         else if (!wait) throw new Error(`another run has ${what} (pid ${holder}, ${lock})`);
-        else if (Date.now() - t0 > 600000) throw new Error(`another run has held ${what} for ten minutes (pid ${holder}, ${lock})`);
+        else if (Date.now() - t0 > 1200000) throw new Error(`another run has held ${what} for twenty minutes (pid ${holder}, ${lock})`);
         else await sleep(200);
       }
     }

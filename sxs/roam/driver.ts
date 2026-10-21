@@ -102,19 +102,30 @@ export const driver: Driver = {
     moveSubtreeUp: 'Alt+Shift+ArrowUp',
     moveSubtreeDown: 'Alt+Shift+ArrowDown',
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
-    // Escape selects the block being edited with its children (`init-or-cancel-selection`), Backspace
-    // deletes the selected blocks
-    deleteSubtree: ['Escape', 'Backspace'],
-    pasteStructured: 'Control+v',
+    copy: 'Control+c',
+    cut: 'Control+x',
+    paste: 'Control+v',
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
     redo: 'Control+y',
     ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
   },
-  emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd'],
+  emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd', 'selectSubtree', 'deleteSubtree'],
   // Shift+Tab leaves later siblings with the parent (logical outdenting); Enter on an empty nested
   // block outdents it; Backspace on a page's first block does nothing: as ourus's config says of Roam
-  behaves: { enterSplitSpace: 'start', enterTask: 'plain', outdent: 'logical', enterOnEmptyItem: 'outdent', backspaceAtTopItem: 'refuse', pasteStructuredLines: 'items', pasteStructuredMidText: 'after', emptyItemWithChildren: 'refuse', joinWithChildren: 'refuse', pasteStructuredListForm: 'drop', pasteStructuredParagraphList: 'children' },
+  behaves: {
+    outdent: 'logical',
+    enterSplitSpace: 'start',
+    enterOnEmptyItem: 'outdent',
+    enterTask: 'plain',
+    joinWithChildren: 'refuse',
+    backspaceAtTopItem: 'refuse',
+    emptyItemWithChildren: 'refuse',
+    copyAtCaret: 'host',
+    pasteLines: 'items',
+    pasteAtTextStart: 'before',
+    pasteParagraphList: 'children',
+  },
   // Roam's code blocks are a format of its own (not driven yet: a CodeMirror editor in the block); a
   // heading is a block's attribute, with no boundary in its text, and a task's `{{[[TODO]]}}` is text,
   // edited a character at a time, as math's `$$` are. Math, tables and HTML are a block's text, as typed (measured)
@@ -253,6 +264,21 @@ export const driver: Driver = {
   },
 
   async act(page: Page, action: string, settle: () => Promise<void>) {
+    if (action === 'selectSubtree' || action === 'deleteSubtree') {
+      // Escape selects the block being edited with its children (`init-or-cancel-selection`): copied,
+      // cut, or with Backspace deleted with them. It cancels a selection Roam still holds (an earlier
+      // test's copy left one, on a page since deleted), so it is pressed until a block is selected
+      const selected = (): Promise<boolean> => page.evaluate(() => !!document.querySelector('.block-highlight-blue'));
+      for (let i = 0; i < 3 && !(await selected()); i++) {
+        await page.keyboard.press('Escape');
+        await settle();
+      }
+      if (!(await selected())) throw new Error('Escape selected no block');
+      if (action === 'selectSubtree') return;
+      await page.keyboard.press('Backspace');
+      await settle();
+      return;
+    }
     // no key for the document's ends: Up (Down) until the caret stops, then Home (End); Up from the
     // first block goes into the page's title, which is no block of the test, so back down from there
     const up = /DocStart$/.test(action);

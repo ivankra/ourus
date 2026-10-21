@@ -59,8 +59,15 @@ export const driver: Driver = {
   displayName: 'Emacs (markdown-mode)',
   url: 'emacs -Q -nw, on a terminal',
   model: 'text',
-  // Backspace right after a checkbox deletes a character (`taskEditing: text`)
-  behaves: { enterSplitSpace: 'drop', taskEditing: 'text' },
+  // Backspace right after a checkbox deletes a character (`taskEditing: text`); a typed backtick is
+  // only a character (`closeBackticks: none`)
+  behaves: {
+    enterSplitSpace: 'drop',
+    taskEditing: 'text',
+    closeBackticks: 'none',
+    copyAtCaret: 'host',
+    pastePlainLines: 'host',
+  },
   keys: {
     // `markdown-enter-key`: a line break, indented as the line before (no list item is continued)
     enter: 'RET',
@@ -80,7 +87,10 @@ export const driver: Driver = {
     // "Kill Element" (`markdown-kill-thing-at-point`): a list item with its children
     deleteSubtree: 'C-c C-k',
     // the kill ring, yanked: Emacs has one paste
-    pasteStructured: 'C-y',
+    // copy and kill the region (kill-ring-save, kill-region), the kill ring Emacs's clipboard
+    copy: 'M-w',
+    cut: 'C-w',
+    paste: 'C-y',
     pastePlain: 'C-y',
     undo: 'C-/',
     // `undo-redo`

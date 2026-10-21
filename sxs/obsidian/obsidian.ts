@@ -304,6 +304,37 @@ function inTable(d: TextDoc): string | undefined {
 }
 
 /**
+ * Live Preview's `holds` for a caret it moves at inline code's backticks, outside code (a fence's and
+ * its code's backticks it leaves alone): at a line's end right after a backtick (`` `` `` alone on a
+ * line, Backtick15, Backtick17: the caret goes before the run), or right before a code span's closing
+ * run (`a ``x┃`` b`, Backtick32: past it). Text after the run (`` ``┃print(1) ``) it holds.
+ */
+function atInlineCode(d: TextDoc): string | undefined {
+  const lines = d.text.split('\n');
+  // the lines of fenced code, fences included
+  const code = new Set<number>();
+  let fence: string | null = null;
+  lines.forEach((l, i) => {
+    const m = /^[ \t>]*(?:(?:[-*+]|\d+[.)])[ \t]+)?(`{3,}|~{3,})(.*)$/.exec(l);
+    if (fence !== null) {
+      code.add(i);
+      if (m && m[1]![0] === fence[0] && m[1]!.length >= fence.length && !m[2]!.trim()) fence = null;
+    } else if (m && !(m[1]![0] === '`' && m[2]!.includes('`'))) {
+      code.add(i);
+      fence = m[1]!;
+    }
+  });
+  for (const { offset, line, col } of ends(d)) {
+    if (code.has(d.text.slice(0, offset).split('\n').length - 1)) continue;
+    const before = line.slice(0, col);
+    const after = line.slice(col);
+    if (before.endsWith('`') && after === '') return "caret right after a backtick at a line's end (Live Preview moves it before the run)";
+    if (after.startsWith('`') && !before.endsWith('`') && before.includes('`')) return "caret before a code span's closing backticks (Live Preview moves it past them)";
+  }
+  return undefined;
+}
+
+/**
  * Bare Obsidian's `holds` for a caret in a task's checkbox, between the marker and the checkbox's
  * end: Live Preview draws the checkbox, and the caret goes to the line's start (a plugin may keep it).
  */
@@ -639,7 +670,9 @@ export function obsidianDriver(profile: Profile): Driver {
       moveSubtreeDown: 'Alt+ArrowDown',
       // CodeMirror binds "delete line boundary backward" on a Mac only (Cmd-Backspace)
       deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
-      pasteStructured: 'Control+v',
+      copy: 'Control+c',
+      cut: 'Control+x',
+      paste: 'Control+v',
       pastePlain: 'Control+Shift+v',
       undo: 'Control+z',
       redo: 'Control+Shift+z',
@@ -648,13 +681,24 @@ export function obsidianDriver(profile: Profile): Driver {
     },
     // bare Obsidian (measured): the caret stays with the text on Enter at an item's start, Backspace
     // after a checkbox deletes a character, Delete before a blank line deletes it, and Enter on an
-    // empty item outdents it or leaves the list wherever it is
-    behaves: { flavor: 'obsidian', enterSplitSpace: 'drop', enterAtTextStart: 'stay', taskEditing: 'text', enterOnEmptyItem: 'outdent', ...profile.behaves },
+    // empty item outdents it or leaves the list wherever it is; a typed fence is closed, and inline
+    // backticks are paired ("Auto pair Markdown syntax", on by default)
+    behaves: {
+      flavor: 'obsidian',
+      enterSplitSpace: 'drop',
+      enterOnEmptyItem: 'outdent',
+      enterAtTextStart: 'stay',
+      taskEditing: 'text',
+      closeBackticks: 'all',
+      copyAtCaret: 'host',
+      pastePlainLines: 'host',
+      ...profile.behaves,
+    },
     holds(doc) {
       const d = doc as TextDoc;
       // CodeMirror keeps line breaks as LF
       if (d.text.includes('\r')) return 'CR line endings';
-      return splitsIndent(d) ?? (profile.mode === 'live-preview' ? (inFrontmatter(d) ?? inTable(d)) : undefined) ?? profile.holds?.(d);
+      return splitsIndent(d) ?? (profile.mode === 'live-preview' ? (inFrontmatter(d) ?? inTable(d) ?? atInlineCode(d)) : undefined) ?? profile.holds?.(d);
     },
 
     async launch({ headed, say, gone }) {

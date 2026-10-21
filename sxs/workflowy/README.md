@@ -134,6 +134,11 @@ same web app.
 - **Shift+Enter goes between the name and the note.** From the name it opens the note (the text
   stays in the name); from the note it goes back, and an empty note goes away.
 - **Tab in a note types a tab**; it indents only from the name.
+- **Pasted lines are items**, with Ctrl+Shift+V too, which WorkFlowy's paste handles as Ctrl+V's. Only
+  a note, or an item laid out as a code block or a quote block (`multiline` among its classes), takes
+  them as text (`WF.GuiPaste.intoContent`). A name holds no line break, so paste-plain.md's cases
+  measure an item per line: the first joins the text before the caret, the text after it goes to an
+  item of its own, a line's indentation nests it, a blank line is dropped (probes, 2026-10-21).
 - **Enter in a name with a note** makes a new item after it, and the note stays where it was.
 - **The note doesn't join the name**: Delete at the end of a name, or Backspace at the start of a
   note, leave them apart.
@@ -158,7 +163,7 @@ same web app.
    saved with the one typed (`code\n\n`, kept after the caret leaves), one empty line on screen
    (`fences.md › Fence1`, `Fence5`).
 3. **Pasting `1. ` text into an item's middle numbers the item** (with numbered lists on): `see ┃here`
-   with `1. Introduction` gives the numbered item `see Introduction┃here` (`paste.md › Paste31`).
+   with `1. Introduction` gives the numbered item `see Introduction┃here` (`paste-old.md › PasteOld31`).
 
 ## Internals
 

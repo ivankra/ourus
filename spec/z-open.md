@@ -7,9 +7,9 @@ it, what the alternative is, and a recommendation. A settled one moves to its co
 
 Each is the fallback the rules already had, drawn as a case in its command's file; to confirm or
 change: lines pasted in a heading's title go after it rather than being refused
-([Paste54](paste.md#paste54)); a line copied with its line break is two lines, not inline text
-([Paste51](paste.md#paste51)); a paste at a heading's text start goes after it
-([Paste76](paste.md#paste76)).
+([Paste2](paste.md#paste2)); a line copied with its line break is two lines, not inline text
+([PasteList8](paste-list.md#pastelist8)); a paste at a heading's text start goes where it does at its
+end, first in its section ([Paste6](paste.md#paste6)).
 
 ## Open2
 

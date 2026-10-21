@@ -156,9 +156,10 @@ as `` `x` ``.
 ## Paste
 
 Tana decides what a clipboard is before pasting it (`performPaste` in an editor, then `L4`): every
-classifier that recognizes it gives a score, and the highest wins. The format the runner puts on the
-clipboard (the example's Markdown as plain text, and where it has structure the same rendered as HTML,
-as a copy from a rendered page carries it, [`../lib/clipboard.ts`](../lib/clipboard.ts)) decides which:
+classifier that recognizes it gives a score, and the highest wins. The formats on the clipboard decide
+which (the runner gives a case's own; until 2026-10-21 it gave the example's Markdown as plain text and,
+where it had structure, the same rendered as HTML, [`../lib/clipboard.ts`](../lib/clipboard.ts), which
+is what this section measured):
 
 | classifier | score | when | pasted as |
 | --- | ---: | --- | --- |
@@ -184,11 +185,16 @@ pastes, measured and read in its code:
   HTML is **appended to the end of the parent's children** (`T.addChild(...)`, where `T` is the
   caret's node's parent), not put after the caret's node, unless the parent's only child is empty, which
   it replaces; a paragraph and then a list makes the list the paragraph's children; a heading's text is a
-  plain node. So `- a┃` / `- b` and `<ul><li>x</li></ul>` gives `a`, `b`, `x` (`paste.md › Paste26`). The same
+  plain node. So `- a┃` / `- b` and `<ul><li>x</li></ul>` gives `a`, `b`, `x` (`paste-old.md › PasteOld26`). The same
   from a mouse click into the node or after moving the caret with keys: it is Tana's, not the load's. A
   real copy of a list from a page carries a `<meta charset>` before the list too, which the importer
   passes over: the same.
 - The caret goes to the last pasted node's end.
+- **No paste keeps lines in one node**: a node's name holds no line break. The paste options
+  (Ctrl+Alt+V, `nnn`) offer "Paste as plain text" ("Keep text in this node") only for a clipboard
+  without one (`"plaintext-inline": !r && s`, `r` its having a line break); for lines, only "Markdown
+  nodes", "One node per line" and "Code block". So plain paste (paste-plain.md) has no Tana form, and
+  its cases measure a node per line (read in the bundle, 2026-10-21).
 
 ## Results
 
@@ -199,7 +205,7 @@ Tana's code:
 
 - **Paste** (above): a list from HTML lands at the end of the parent; lines and Markdown after the node,
   the node's text never split; a code block (`<pre>`) after the node, its sibling, the caret at the
-  code's start (`paste.md › Paste1`, `Paste66`).
+  code's start (`paste-old.md › PasteOld1`, `PasteOld66`).
 - **Enter at a code block's end** leaves it, a node after it (`fences.md › Fence1`, `Fence5`); Shift+Enter
   anywhere in it too (`Fence8`).
 - **Enter keeps the space** before where it splits, and the text after it keeps its leading space
@@ -227,7 +233,7 @@ Tana's code:
 - **Before a to-do's checkbox** (the checkbox focused) Backspace, Delete and typing do nothing
   (`tasks.md › TaskBackspace1`, `delete.md › Delete19`); Right goes into the text.
 - **A paste over a selection** of more than one line leaves the selected text and adds the nodes after
-  (`paste.md › Paste48`, `Paste49`: a selection made with Shift and the arrows the same); one line
+  (`paste-old.md › PasteOld48`, `PasteOld49`: a selection made with Shift and the arrows the same); one line
   replaces it.
 - **Shift+Enter** is "insert node": an empty node after this one (after its children), the text left
   whole. No key breaks a line in a name.
@@ -255,9 +261,9 @@ its children are in the model, and read, but folded on the screen (the bullet ri
 (above), and the runner puts HTML beside the Markdown where it has structure (a copy from a rendered
 page): played with `--plain-clipboard` (the text alone, as a copy from a Markdown source carries
 it), 7 disagreements and 2 caret verdicts agree (a list pasted as Markdown goes after the node, as
-in ourus: `Paste2`, `Paste16`, `Paste18`, `Paste60`, `Gap13`, the `#216` cases; `# h` as a line:
-`Paste32`, `Paste34`) and 3 caret verdicts disagree (a fenced block pasted as text is no code block:
-`Paste9`, `Paste11`, `Paste74`). Which copy the spec's clipboard stands for is the runner's policy,
+in ourus: `PasteOld2`, `PasteOld16`, `PasteOld18`, `PasteOld60`, `Gap13`, the `#216` cases; `# h` as a line:
+`PasteOld32`, `PasteOld34`) and 3 caret verdicts disagree (a fenced block pasted as text is no code block:
+`PasteOld9`, `PasteOld11`, `PasteOld74`). Which copy the spec's clipboard stands for is the runner's policy,
 not Tana's.
 
 The camps were played with `--ignore-options` (each option-skipped case against its own value): Tana
@@ -275,12 +281,12 @@ The harness's own, found in the first run and fixed:
   (`backspace.md › Backspace30`, an error).
 - **A checkbox with the focus** read as no caret; it is the caret before the to-do's `[ ] `.
 - **A node's fields read as blocks**: a pasted code block's language field (`Code block language:
-  plaintext`) came back as three more blocks under it (`paste.md › Paste1`, `Paste9`).
+  plaintext`) came back as three more blocks under it (`paste-old.md › PasteOld1`, `PasteOld9`).
 - **A clipboard's HTML read otherwise than ourus reads its Markdown** (the runner's, for every app that
   reads HTML): a fenced block copied from inside an item, its later lines keeping the item's indentation,
   was dedented only by what all its lines share, so the closing fence, six columns in, was code, and the
-  HTML's code block held it (`paste.md › Paste66`). The runner renders now what ourus's paste reads
-  (`clipboardSource` in `src/commands/paste.ts`); of the spec's clipboards, only Paste66's HTML changed.
+  HTML's code block held it (`paste-old.md › PasteOld66`). The runner renders now what ourus's paste reads
+  (`clipboardSource` in `src/commands/paste.ts`); of the spec's clipboards, only PasteOld66's HTML changed.
 - **Undo, at the runner's pace.** Tana undoes records less than 50 ms apart together (`C6` in its
   bundle: `Math.abs(a.ts - b.ts) < 50`, records without a group of their own); the runner typed a
   character about every 45 ms (settling alone), so one undo took back a part of a word that depended on

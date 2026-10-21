@@ -72,7 +72,9 @@ function emptyFirstChild(doc: OutlineState, parent: Placed, next: Placed | null)
   if (!next || next.parent !== parent || (parent.kind !== 'item' && parent.kind !== 'paragraph') || next.kind !== 'item') return false;
   const old = next.node ?? next.was;
   const text = next.edited?.text ?? (old ? doc.nodeText(old) : null);
-  return text !== null && OutlineState.isEmptyText(text);
+  if (text !== null && OutlineState.isEmptyText(text)) return true;
+  // so does the bare marker of an item whose text starts on the line after it (`-` / `  three`)
+  return !next.lines && old?.kind === 'item' && !!old.head && old.head.startLine > old.startLine;
 }
 
 /**

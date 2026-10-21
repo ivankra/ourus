@@ -123,7 +123,9 @@ export const driver: Driver = {
     // "delete item", "duplicate"
     deleteSubtree: 'Control+Shift+Backspace',
     duplicateSubtree: 'Shift+Alt+D',
-    pasteStructured: 'Control+v',
+    copy: 'Control+c',
+    cut: 'Control+x',
+    paste: 'Control+v',
     // "cleanpaste"
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
@@ -138,8 +140,19 @@ export const driver: Driver = {
   refuses: ['html', 'table', 'math', 'thematic break', 'link reference definition', 'comment', 'footnote'],
   // Shift+Tab leaves the later siblings with the parent; Enter mid-text in a node with children makes
   // its first child; Backspace at a section's start and Delete before one join its name, the section
-  // gone; a list pasted into a node with children goes after them (played with `--ignore-options`)
-  behaves: { enterSplitSpace: 'start', outdent: 'logical', enterMidItem: 'child', headingEditing: 'block', joinWithChildren: 'refuse', pasteStructuredOnParent: 'after' },
+  // gone; a list pasted into a node with children goes after them (played with `--ignore-options`);
+  // a typed fence is left open (Backtick2, Backtick12, Backtick15)
+  behaves: {
+    outdent: 'logical',
+    enterSplitSpace: 'start',
+    enterMidItem: 'child',
+    joinWithChildren: 'refuse',
+    headingEditing: 'block',
+    closeBackticks: 'none',
+    copySelection: 'nodes',
+    pastePlainLines: 'items',
+    pasteOnParent: 'after',
+  },
   holds(doc) {
     const o = doc as Outline;
     // a no-break space: held as a space

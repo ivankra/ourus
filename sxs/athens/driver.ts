@@ -61,13 +61,15 @@ export const driver: Driver = {
     deleteContentBackward: 'Backspace',
     deleteContentForward: 'Delete',
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
-    pasteStructured: 'Control+v',
+    copy: 'Control+c',
+    cut: 'Control+x',
+    paste: 'Control+v',
     pastePlain: 'Control+Shift+v',
     undo: 'Control+z',
     redo: 'Control+Shift+z',
     ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
   },
-  emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd', 'deleteSubtree'],
+  emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd', 'selectSubtree', 'deleteSubtree'],
   // a heading's `#`s, a task's marker and a code block's fences are text in the block, edited a
   // character at a time
   refuses: ['markup-heading', 'markup-task', 'markup-fence'],
@@ -75,7 +77,18 @@ export const driver: Driver = {
   // block with children isn't joined into or out of, as in Roam. A paste goes after the block, nothing
   // split, lines as blocks, numbers as text, a paragraph's list under it (each measured, playing its
   // examples with `run.ts --ignore-options`)
-  behaves: { enterSplitSpace: 'start', enterTask: 'plain', outdent: 'logical', enterOnEmptyItem: 'outdent', emptyItemWithChildren: 'refuse', joinWithChildren: 'refuse', pasteStructuredLines: 'items', pasteStructuredMidText: 'after', pasteStructuredListForm: 'literal', pasteStructuredParagraphList: 'children' },
+  behaves: {
+    outdent: 'logical',
+    enterSplitSpace: 'start',
+    enterOnEmptyItem: 'outdent',
+    enterTask: 'plain',
+    joinWithChildren: 'refuse',
+    emptyItemWithChildren: 'refuse',
+    copyAtCaret: 'host',
+    copySelection: 'nodes',
+    pasteLines: 'items',
+    pasteParagraphList: 'children',
+  },
 
 
   async open(page: Page) {
@@ -227,13 +240,15 @@ export const driver: Driver = {
   },
 
   async act(page: Page, action: string, settle: () => Promise<void>) {
-    if (action === 'deleteSubtree') {
-      // with blocks selected, Backspace deletes them with their children (`listeners.cljs`); Shift+Up on a
-      // block's first line selects it (`textarea_keydown.cljs`), and on a later line extends the text first
+    if (action === 'selectSubtree' || action === 'deleteSubtree') {
+      // a selected block is its subtree: copied, cut, or with Backspace deleted with its children
+      // (`listeners.cljs`); Shift+Up on a block's first line selects it (`textarea_keydown.cljs`), and on
+      // a later line extends the text first
       for (let i = 0; i < 50 && !((await this.read(page)) as Outline).selected?.length; i++) {
         await page.keyboard.press('Shift+ArrowUp');
         await settle();
       }
+      if (action === 'selectSubtree') return;
       await page.keyboard.press('Backspace');
       await settle();
       return;

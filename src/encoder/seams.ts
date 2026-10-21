@@ -156,8 +156,10 @@ export function seam(units: Units, unit: Placed, next: Placed | null, nextUnit: 
     const nodeAfter = old(unit) ? units.nextUnit.get(units.lastUnit(old(unit)!)) : null;
     if (nodeAfter !== old(next)) return { lines: [], blanks: 1, separable: false, fresh: null };
   }
-  // a paragraph first under an item's text would continue it: a blank line between, where none is
-  if (!prev && next.kind === 'paragraph' && next.parent === unit && unit.kind === 'item' && (unit.lines || old(unit)?.head) && own.length === 0) {
+  // a paragraph first under an item's text would continue it, or under a quote's title where that is
+  // a paragraph (a callout's, outside Obsidian): a blank line between, where none is
+  const textAbove = (unit.kind === 'item' && (unit.lines || old(unit)?.head)) || (unit.kind === 'quote' && old(unit)?.head?.type === 'paragraph');
+  if (!prev && next.kind === 'paragraph' && next.parent === unit && textAbove && own.length === 0) {
     return { lines: [], blanks: 1, separable: false, fresh: null };
   }
   // (a rewritten node that says what its own gap is keeps it before new first children)

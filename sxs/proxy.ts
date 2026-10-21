@@ -1,8 +1,10 @@
+#!/usr/bin/env node
 // A caching forward proxy for the side-by-side runs: the browser fetches every page through it, the
 // first fetch goes to the network and lands on disk, and later runs are served from disk, so a live
 // demo is taxed once per cold cache rather than once per run.
 //
 //   node sxs/proxy.ts [--port=8899] [--host=127.0.0.1] [--cache=use|offline|refresh] [--quiet]
+//   node sxs/proxy.ts --help     # this, and stop; an option not listed here is an error, never a start
 //
 // - HTTP requests (absolute-form URLs) and HTTPS (CONNECT) are both served. HTTPS is intercepted
 //   with one self-signed certificate for every host, generated once with `openssl`; the browser must
@@ -547,6 +549,19 @@ async function sayApps(): Promise<void> {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const args = process.argv.slice(2);
+  // --help: the comment at the top of this file; an argument it doesn't list stops it, rather than
+  // being taken for nothing (`--help` started a proxy, or found the shared one listening)
+  if (args.includes('--help') || args.includes('-h')) {
+    const lines = readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n');
+    const usage = lines.slice(1, lines.findIndex((line, i) => i > 0 && !line.startsWith('//')));
+    console.log(usage.map((line) => line.replace(/^\/\/ ?/, '')).join('\n'));
+    process.exit(0);
+  }
+  const unknown = args.filter((a) => a !== '--quiet' && !['--port', '--host', '--cache'].some((o) => a.startsWith(`${o}=`)));
+  if (unknown.length) {
+    console.error(`no such option: ${unknown.join(', ')} (--help lists them)`);
+    process.exit(2);
+  }
   const port = Number(args.find((a) => a.startsWith('--port='))?.slice(7) ?? process.env.OURUS_PROXY_PORT ?? DEFAULT_PORT);
   const host = args.find((a) => a.startsWith('--host='))?.slice(7) ?? '127.0.0.1';
   // not awaited at the top level: app rules importing from this module (silverbullet's) would wait
@@ -559,7 +574,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     })
     .catch((e) => {
       // the shared proxy a run started (lib/browser.ts) holds the port until stopped
-      if ((e as NodeJS.ErrnoException).code === 'EADDRINUSE') console.error(`a proxy already listens on ${host}:${port}: \`node sxs/run.ts --stop\` stops the shared one, or give another --port=`);
+      if ((e as NodeJS.ErrnoException).code === 'EADDRINUSE') console.error(`Proxy already listens on ${host}:${port}: \`node sxs/run.ts --stop\` stops the shared one, or give another --port=`);
       else console.error(e instanceof Error ? e.message : e);
       process.exit(1);
     });

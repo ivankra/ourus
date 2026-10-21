@@ -21,7 +21,7 @@ const LEGACY: Record<string, string> = {};
 /** Imports that break a rule, as `from → to` (paths relative to `src/`). Shrink only. */
 const ALLOWED: readonly string[] = [];
 
-const FAMILIES = ['enter.ts', 'join.ts', 'code.ts', 'paste.ts', 'settle.ts'];
+const FAMILIES = ['enter.ts', 'join.ts', 'code.ts', 'paste.ts', 'paste-plain.ts', 'settle.ts', 'typing.ts'];
 
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

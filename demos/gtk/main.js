@@ -5,6 +5,7 @@
 // text. A command's edit is one user action, so GTK's own undo keeps working.
 
 import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
 import Gdk from 'gi://Gdk?version=4.0';
 import Gtk from 'gi://Gtk?version=4.0';
 import { OutlineState, executeCommand, mapPos, settlePlaceholders } from '../../src/index.ts';
@@ -45,6 +46,7 @@ Ourus is an editor-agnostic library for outliner editing of plain-text markdown.
   which stays one item
 - Home goes to the start of the text, again to the start of the line
 - Ctrl-V pastes Markdown as nodes, Ctrl-Shift-V as plain text
+- Ctrl-C and Ctrl-X copy and cut the selection as Markdown, at a caret its item with its children
 - [ ] tasks too
 
 ## A section
@@ -61,6 +63,64 @@ function fromChars(text, chars) {
     pos += c.length;
   }
   return pos;
+}
+
+/** The clipboard's formats paste reads, as a `DataTransfer` names them, its text first. */
+const FORMATS = ['text/plain', 'text/markdown', 'text/html', 'vscode-editor-data'];
+
+/** Bytes as text: UTF-16 where a byte order mark says so (a browser's HTML may be), else UTF-8. */
+function decode(bytes) {
+  const le = bytes[0] === 0xff && bytes[1] === 0xfe;
+  const be = bytes[0] === 0xfe && bytes[1] === 0xff;
+  return new TextDecoder(le ? 'utf-16le' : be ? 'utf-16be' : 'utf-8').decode(bytes);
+}
+
+/**
+ * Every format of FORMATS the clipboard holds, each read whole, then `done` with them: the text
+ * through GTK's text reading (whatever its encoding), the rest as their bytes.
+ */
+function readClipboard(clipboard, done) {
+  const held = clipboard.get_formats();
+  const types = FORMATS.slice(1).filter((type) => held.contain_mime_type(type));
+  const got = {};
+  const next = () => {
+    const type = types.shift();
+    if (!type) {
+      clipboard.read_text_async(null, (_source, result) => {
+        const text = clipboard.read_text_finish(result);
+        done(text ? { 'text/plain': text, ...got } : got);
+      });
+      return;
+    }
+    clipboard.read_async([type], GLib.PRIORITY_DEFAULT, null, (_source, result) => {
+      try {
+        const [stream] = clipboard.read_finish(result);
+        const out = Gio.MemoryOutputStream.new_resizable();
+        const flags = Gio.OutputStreamSpliceFlags.CLOSE_SOURCE | Gio.OutputStreamSpliceFlags.CLOSE_TARGET;
+        out.splice_async(stream, flags, GLib.PRIORITY_DEFAULT, null, (_out, spliced) => {
+          try {
+            out.splice_finish(spliced);
+            got[type] = decode(out.steal_as_bytes().toArray());
+          } catch {
+            // a format that can't be read is left out
+          }
+          next();
+        });
+      } catch {
+        next();
+      }
+    });
+  };
+  next();
+}
+
+/** `formats` on the clipboard, each as its MIME type: the text as GTK offers a string (every text target). */
+function writeClipboard(clipboard, formats) {
+  const encoder = new TextEncoder();
+  const providers = Object.entries(formats).map(([type, text]) =>
+    type === 'text/plain' ? Gdk.ContentProvider.new_for_value(text) : Gdk.ContentProvider.new_for_bytes(type, new GLib.Bytes(encoder.encode(text))),
+  );
+  clipboard.set_content(Gdk.ContentProvider.new_union(providers));
 }
 
 function outliner(view, status) {
@@ -111,12 +171,12 @@ function outliner(view, status) {
     return result.status;
   }
 
-  // Ctrl-V places Markdown as nodes, Ctrl-Shift-V puts the text into the node at the caret
+  // Ctrl-V places Markdown as nodes, every format the clipboard has (a page's HTML, a Markdown app's
+  // `text/markdown`), Ctrl-Shift-V puts the text into the node at the caret
   function paste(type) {
-    const clipboard = view.get_clipboard();
-    clipboard.read_text_async(null, (_source, result) => {
-      const text = clipboard.read_text_finish(result);
-      if (!text || run({ type, text }) !== 'notApplicable') return;
+    readClipboard(view.get_clipboard(), (formats) => {
+      const text = formats['text/plain'];
+      if (!text || run(type === 'paste' ? { type, clipboard: formats } : { type, text }) !== 'notApplicable') return;
       // not ours: GTK's paste, read back like typing
       buffer.begin_user_action();
       buffer.delete_selection(true, true);
@@ -136,7 +196,22 @@ function outliner(view, status) {
     const alt = (state & Gdk.ModifierType.ALT_MASK) !== 0;
     const shift = (state & Gdk.ModifierType.SHIFT_MASK) !== 0 || gdkName === 'ISO_Left_Tab';
     if (ctrl && !alt && key.toLowerCase() === 'v') {
-      paste(shift ? 'pastePlain' : 'pasteStructured');
+      paste(shift ? 'pastePlain' : 'paste');
+      return true;
+    }
+    // Ctrl-C and Ctrl-X: the selection's Markdown, every format ourus gives (the node at a caret
+    // alone); a cut takes it out. Where ourus steps aside, GTK's
+    if (ctrl && !alt && !shift && (key.toLowerCase() === 'c' || key.toLowerCase() === 'x')) {
+      const type = key.toLowerCase() === 'c' ? 'copy' : 'cut';
+      const result = executeCommand(doc, { type }, selection());
+      if (result.status === 'notApplicable') return false;
+      status.set_text(`${type}: ${result.status === 'rejected' ? `rejected — ${result.reason}` : result.status}`);
+      if (result.status !== 'applied') return true;
+      writeClipboard(view.get_clipboard(), result.clipboard ?? {});
+      if (type === 'cut') {
+        apply(result.changes, result.state);
+        select(result.selection.anchor, result.selection.head);
+      }
       return true;
     }
     const name = `${ctrl ? 'Mod-' : ''}${alt ? 'Alt-' : ''}${shift ? 'Shift-' : ''}${key}`;
@@ -149,7 +224,19 @@ function outliner(view, status) {
     }
     const type = KEYS[name];
     // not applicable: GTK's default (in code, Tab is a tab)
-    return type ? run({ type }) !== 'notApplicable' : false;
+    if (type) return run({ type }) !== 'notApplicable';
+    // typing: ourus's where Markdown reads the character as structure (a backtick), else GTK's
+    // a dead key (` on US-International) is the input method's, to compose with the next key
+    const char = Gdk.keyval_to_unicode(keyval);
+    if (ctrl || alt || !char || gdkName.startsWith('dead_')) return false;
+    const result = executeCommand(doc, { type: 'insertText', text: String.fromCodePoint(char) }, selection());
+    if (result.status === 'notApplicable') return false;
+    status.set_text(`insertText: ${result.status === 'rejected' ? `rejected — ${result.reason}` : result.status}`);
+    if (result.status === 'applied') {
+      apply(result.changes, result.state);
+      select(result.selection.anchor, result.selection.head);
+    }
+    return true;
   });
   view.add_controller(keys);
   view.connect('preedit-changed', (_view, preedit) => (composing = preedit !== ''));

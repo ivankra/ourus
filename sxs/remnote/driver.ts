@@ -189,7 +189,9 @@ export function remnoteDriver(setup: Setup): Driver {
       deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
       // "Delete Bullet"
       deleteSubtree: 'Control+Shift+Alt+Backspace',
-      pasteStructured: 'Control+v',
+      copy: 'Control+c',
+      cut: 'Control+x',
+      paste: 'Control+v',
       pastePlain: 'Control+Shift+v',
       undo: 'Control+z',
       redo: 'Control+y',
@@ -206,8 +208,21 @@ export function remnoteDriver(setup: Setup): Driver {
     // `SHOW_BULLET` set false, but an empty nested one still a sibling: `enterOnEmptyItem: exit`, with
     // bullets the default, measured on Enter7b and Enter30); Enter at a text's start makes an empty rem
     // above, the caret staying in the text; Backspace at the first rem's start does nothing (the last
-    // two measured, and their examples played with `run.ts --ignore-options`, 2026-10-18)
-    behaves: { enterSplitSpace: 'drop', outdent: 'logical', enterMidItem: 'child', enterAtTextStart: 'stay', backspaceAtTopItem: 'refuse', ...(setup.bulletless ? { enterOnEmptyItem: 'exit' as const } : {}) },
+    // two measured, and their examples played with `run.ts --ignore-options`, 2026-10-18); paste opens
+    // the seam, the first pasted text joining (the caret after it), and a pasted list keeps its form
+    // (`open` measured 8 cases better with bullets, none worse)
+    behaves: {
+      outdent: 'logical',
+      enterSplitSpace: 'drop',
+      enterMidItem: 'child',
+      enterAtTextStart: 'stay',
+      backspaceAtTopItem: 'refuse',
+      copyAtCaret: 'host',
+      copySelection: 'nodes',
+      pasteSeams: 'open',
+      pasteListForm: 'own',
+      ...(setup.bulletless ? { enterOnEmptyItem: 'exit' as const } : {}),
+    },
     idle: { busy: `window.getNumOngoingWriteGuarantees?.() > 0` },
     holds(doc) {
       const o = doc as Outline;

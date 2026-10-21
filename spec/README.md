@@ -21,7 +21,7 @@ npm run probe -- all '- one⏎  ┃two' shiftEnter deleteContentBackward
 
 After a behavior changed on purpose, `npm run redraw` (`test/redraw.ts`) lists every case drawn
 otherwise than ourus now does, each step's drawing beside ourus's, and `--apply` rewrites those
-buffer and result blocks (a file or case named to narrow it: `npm run redraw -- enter.md --apply`).
+buffer blocks and result keys (a file or case named to narrow it: `npm run redraw -- enter.md --apply`).
 Read every difference first; a case whose actions should change is redrawn by hand.
 
 - [Indent (Tab)](indent.md): `indent`.
@@ -32,10 +32,17 @@ Read every difference first; a case whose actions should change is redrawn by ha
 - [Shift-Enter](shift-enter.md): `shiftEnter`.
 - [Backspace](backspace.md): `deleteContentBackward`.
 - [Delete](delete.md): `deleteContentForward`.
-- [Paste](paste.md): `pasteStructured`.
+- [Copy and cut](copy.md): `copy`, `cut`: the selection's Markdown, as the clipboard's formats.
+- [Paste](paste.md): `paste`: where what it pastes goes.
+- [Paste into a list](paste-list.md): where `paste` puts what it pastes into a list.
+- [Paste: the list's form](paste-list-form.md): the form pasted items take in a list.
+- [Paste: which format is read](paste-conv.md): of a clipboard's formats, the one `paste` reads.
+- [Paste HTML](paste-html.md): a clipboard's HTML as the Markdown `paste` reads.
 - [Plain paste](paste-plain.md): `pastePlain`.
 - [Fenced code](fences.md): Enter and Shift-Enter in a fenced code block, and in the other blocks
   of lines (math, comments, indented code).
+- [Backtick](backtick.md): a typed backtick (`insertText`), which opens, closes and changes code
+  fences, and Backspace and Delete in a fence's run.
 - [`scenarios.md`](scenarios.md): longer sequences, as a user would type them.
 - [`cursor.md`](cursor.md): caret motions, for moving the caret between actions in tests.
 - [`undo.md`](undo.md): undo and redo, placeholders included.
@@ -104,7 +111,7 @@ No command breaks these; a case that seems to need to is wrong, or is a refusal.
    later siblings, the section an unwrapped heading releases
    ([Backspace35](backspace.md#backspace35)), the children of an item whose text becomes a block of
    lines, which holds none ([Outdent19](outdent.md#outdent19)), what a pasted heading takes in
-   ([Paste34](paste.md#paste34)), and the list a paragraph that stays takes in when a move leaves it
+   ([Paste10](paste.md#paste10)), and the list a paragraph that stays takes in when a move leaves it
    right above one ([MoveUp35](move-subtree-up.md#moveup35)).
 5. **Inverse pairs invert** (indent and outdent, up and down, Enter and Backspace, Shift-Enter and
    Backspace), or at least their outline where Markdown forces a difference, which the case states.
@@ -165,25 +172,32 @@ The item becomes the last child of the item above.
   and is an error.
 - **Headings are unique in their file** (compared as anchors: case and punctuation aside), since a
   repeated one would give an ambiguous link and an ambiguous name. A repeat is an error.
-- **The blocks before the first quote are where the test starts**: a config block (a `yaml`
-  block), if any, then one `buffer`, and, if the case is about it, its `outline` (below), and
-  nothing else. The clipboard the test starts with is in the config block (see below).
+- **A state is two blocks**: a `buffer`, the drawn editor state, and a `yaml` block, everything
+  else about it, as keys. Each is there if the case is about it, at most one of each, in either
+  order.
+- **The blocks before the first quote are where the test starts**: its config block (the start's
+  `yaml` block, first: its options and tags, and the clipboard and outline it starts with, below),
+  then one `buffer`, and nothing else.
 - **A quote lists actions**, applied in order to the current state.
-- **The blocks after a quote are what must hold then**, and they become the current state:
-  - `buffer`: the drawn editor state;
-  - `clipboard`: the clipboard's text, ending with a line break;
-  - `result`: what ourus made of the last action, which must be one of its commands:
-    `applied`, `notApplicable` (the host's default ran instead) or `rejected: <reason>`. Other
-    editors check buffers only;
+- **The blocks after a quote are what must hold then**, and they become the current state: the
+  `buffer`, and a `yaml` block with any of
+  - `result`: what ourus made of the last action, which must be one of its commands or typed text
+    (its last character's `insertText`): `applied`, `notApplicable` (the host's default ran
+    instead) or `rejected <reason>` (`result: rejected not-expressible`). Other editors check
+    buffers only;
+  - `clipboard`: the clipboard, as a config block's (below); only the formats it names are checked;
   - `outline`: how the buffer reads, where a case's point is a reading its bytes don't show (a
     setext underline against an empty child, a lazy line against an item, a task against `[ ]`
-    text): a line per node in document order, indented two spaces a level, its kind (`heading 2`,
-    `atom code_block`, `item [x]` for a task), then `: ` and its text, line breaks drawn `⏎`.
+    text), a literal block (`outline: |`): a line per node in document order, indented two spaces
+    a level, its kind (`heading 2`, `atom code_block`, `item [x]` for a task), then `: ` and its
+    text, line breaks drawn `⏎`.
 
-  What isn't drawn isn't checked. The blocks of one state can come in any order, at most one of
-  each kind.
-- **A test's name is the headings above it**, below the file's title. Per-command files use short
-  case IDs (`Enter1`, `ShiftEnter1`, `MoveUp1`) and explain the behavior in prose below each ID.
+  What isn't drawn isn't checked. Options and tags go in the config block alone.
+- **A test's name is its own heading, its ID**: short case IDs (`Enter1`, `ShiftEnter1`, `MoveUp1`),
+  or a name for what the case measures after the file's prefix (`PasteConvVSC`), with the behavior
+  explained in prose below each. A heading above cases groups them in the file, and is no part of
+  their names. A case's ID is unique across all the spec files, not only its own (the spec test
+  checks it): reports, the SxS and notes name a case by it alone.
   Keep assigned IDs stable as cases are added. File titles use keys and semantics (Enter, Move
   subtree up); mention the current API name in backticks in the prose (`shiftEnter`,
   `moveSubtreeUp`). Executable actions retain current API names until the command API is renamed.
@@ -199,8 +213,9 @@ The item becomes the last child of the item above.
 | `→` | a tab |
 | `␍` | a carriage return |
 | `⍽` | a no-break space (U+00A0), which Markdown reads as text, not as a space |
+| `␠` | a space, where one would be hard to see (a line's trailing spaces, as `sxs/probe.ts` draws them) |
 
-A clipboard uses `→`, `␍` and `⍽` too. A buffer's last line always ends with a line ending. A buffer
+A clipboard uses `→`, `␍`, `⍽` and `␠` too. A buffer's last line always ends with a line ending. A buffer
 that contains a code fence needs a longer fence of its own (`` ````buffer ``).
 
 ## Actions
@@ -212,8 +227,9 @@ that contains a code fence needs a longer fence of its own (`` ````buffer ``).
 | `enter` | Enter |
 | `shiftEnter` | Shift-Enter |
 | `deleteContentBackward`, `deleteContentForward` | Backspace, Delete |
-| `"text"` | types the text, replacing the selection |
-| `pasteStructured` | Ctrl-V: pastes the clipboard, Markdown as nodes at the end of a node's text, else as plain text |
+| `"text"` | types the text, replacing the selection: a character at a time, each through ourus's `insertText` first, as a host hooked to its keys types it (ourus's for a backtick, the host's otherwise) |
+| `copy`, `cut` | Ctrl-C, Ctrl-X: the selection's Markdown, every format, to the clipboard; a cut takes it out ([copy.md](copy.md)); the host's copies the selected text |
+| `paste` | Ctrl-V: pastes the clipboard, every format it has, read as Markdown, as nodes ([paste.md](paste.md)) |
 | `pastePlain` | Ctrl-Shift-V: pastes the clipboard into the node's text, its line breaks as Shift-Enter's |
 | `deleteSubtree`, `duplicateSubtree` | the commands of the same names |
 | `deleteSoftLineBackward` | Cmd-Backspace: deletes back to the start of the line's text |
@@ -227,7 +243,7 @@ that contains a code fence needs a longer fence of its own (`` ````buffer ``).
 
 Enter and Shift-Enter are named for their keys (`enter`, `shiftEnter`), which hardly ever get
 remapped; the other text edits as the W3C Input Events `inputType`s (`deleteContentBackward`, …);
-structural commands by ourus (`indent`, `outdent`, `moveSubtreeUp`, `pasteStructured`, …); and caret
+structural commands by ourus (`indent`, `outdent`, `moveSubtreeUp`, `paste`, …); and caret
 motions as CodeMirror's commands. The core runner plays them the way an editor host does: an ourus
 command runs, and where it returns `notApplicable` the host's default runs instead (a line break,
 deleting a character). Placeholders the caret leaves are settled after every action.
@@ -267,7 +283,8 @@ b┃
 A test's config block also holds the clipboard it starts with, as a literal block, its lines
 indented two spaces under `clipboard:`. `|` ends its text with a line break, `|-` without one. One
 line without a line break, which paste puts inline as text, is a quoted string instead, and only it
-(`clipboard: "1. Introduction"`):
+(`clipboard: "1. Introduction"`, or in single quotes); a bare one is an error, as YAML would read a
+` #` in it as a comment:
 
 ````md
 ## Paste13
@@ -291,6 +308,49 @@ one, YAML would take those spaces for the block's indentation, so lines indented
 spaces are an error. A clipboard that holds a code fence needs a longer fence for the config block
 (`` ````yaml ``), as a buffer does. A clipboard of line breaks only keeps them with `|+`, followed by
 an empty line for each (`clipboard: |+` and one empty line is a single line break).
+
+That is the clipboard's text (`text/plain`) alone, as a copy from a Markdown source, a terminal or a
+code block has it. A copy from elsewhere holds more formats, each its own text, and the clipboard is
+then those formats under `clipboard:`, named as a `DataTransfer` names them, each written as above,
+indented two spaces more:
+
+| format | what writes it |
+| --- | --- |
+| `text/plain` | every copy: the source of a Markdown editor, a page's text as it shows (`innerText`: no markers, no indentation) |
+| `text/html` | a copy from a rendered page or a rich-text app; a code editor's, a picture of its text |
+| `text/markdown` | a Markdown app's own copy (Obsidian's) |
+| `vscode-editor-data` | VS Code's copy, beside its `text/html` |
+
+The clipboard a test starts with has `text/plain`, as every copy does. A clipboard a step checks
+names only the formats it checks:
+
+````md
+## PasteHtml1
+
+```yaml
+tags: common
+clipboard:
+  text/plain: |-
+    Setup
+    npm install
+  text/html: '<h2>Setup</h2><ul><li>npm install</li></ul>'
+```
+
+```buffer
+┃
+```
+
+> paste
+
+```buffer
+## Setup
+
+- npm install┃
+```
+````
+
+The SxS gives each app exactly the formats a case has (through a copy event, which writes any
+format), and compares a clipboard a step checks by its `text/plain`.
 
 An unknown option, or a value an option doesn't take, is an error. Defined:
 
@@ -355,12 +415,12 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
     default, or `refuse`), `emptyItemWithChildren` (`lift`, the default, or `refuse`),
     `joinWithChildren` (`join`, the default, or `refuse`), `enterTask` (`continue`, the default, or
     `plain`), `enterSplitSpace` (`trim`, the default, `drop` or `start`),
-    `handleFenceContents` (`true`, the default, or `false`), `headingEditing` (`text`, the default, or `block`), `taskEditing` (`checkbox`, the default,
-    `text` or `block`), `pasteStructuredLines` (`text`, the default, or `items`),
-    `pasteStructuredMidText` (`split`, the default, or `after`), `pasteStructuredAtEnd` (`after`,
-    the default, or `join`), `pasteStructuredOnParent` (`children`, the default, or `after`),
-    `pasteStructuredParagraphList` (`siblings`, the default, or `children`),
-    `pasteStructuredListForm` (`text`, the default, `literal`, `drop` or `own`), and `markup`
+    `handleFenceContents` (`true`, the default, or `false`), `closeBackticks` (`fences`, the default, `all` or `none`), `headingEditing` (`text`, the default, or `block`), `taskEditing` (`checkbox`, the default,
+    `text` or `block`), `copyAtCaret` (`node`, the default, or `host`), `copySelection` (`text`, the
+    default, or `nodes`), `pasteSeams` (`closed`, the default, or `open`), `pasteLines` (`text`, the
+    default, or `items`), `pastePlainLines` (`text`, the default, `items`, `enter` or `host`), `pasteAtTextStart` (`after`, the default, or `before`), `pasteOnParent`
+    (`children`, the default, or `after`), `pasteParagraphList` (`siblings`, the default, or
+    `children`), `pasteListForm` (`destination`, the default, or `own`), and `markup`
     (`text`, the default, or `decorated`).
 
 How other outliners do on the same files (Logseq, ...) is measured by replaying them there:
