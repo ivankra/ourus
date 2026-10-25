@@ -6,10 +6,11 @@
 import { ProseText, AtomText, type OutlineNode } from '../doc/index.ts';
 import type { OurusDraft } from '../draft/index.ts';
 import { isSpaceOrTab, lineOf } from '../text/index.ts';
-import { notApplicable, reject, type CommandContext, type CommandOutcome } from './context.ts';
+import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
+import { joinIntoQuote, joinLineInQuote, joinQuoteUp, quoteAtomAt } from './quote.ts';
 import { codeAt, joinInCode, onDelimiterLine } from './code.ts';
 import { deleteEmptyPair } from './typing.ts';
-import { deleteHeldSpace, hiddenSpacesAt, inMarkup, leaveList, pastPrefix, textActedOnAt, textEnd, textStart, withTextlessParents } from './util.ts';
+import { deleteHeldSpace, hiddenSpacesAt, inMarkup, leaveList, pastPrefix, textActedOnAt, textEnd, textStart, unquote, withTextlessParents } from './util.ts';
 
 /**
  * From the caret back to the start of its line's text, past a checkbox or `#`s, the spaces after the
@@ -23,7 +24,7 @@ export function deleteSoftLineBackwardCommand(ctx: CommandContext): CommandOutco
   ctx = pastPrefix(ctx);
   if (!ctx.collapsed) return null;
   const code = codeAt(ctx);
-  if (code) return onDelimiterLine(code.text, code.offset) ? reject('not-expressible', 'a fence has no text') : notApplicable();
+  if (code) return onDelimiterLine(code.text, code.offset) ? reject('not-expressible', 'a fence has no text') : deferToHost();
   const at = ctx.from;
   if (at.zone === 'frame' && at.part === 'underline') return reject('not-expressible', 'a setext underline has no text');
   if (at.zone !== 'text' || !(at.text instanceof ProseText)) return deleteContentBackwardCommand(ctx);
@@ -92,7 +93,7 @@ export function deleteContentBackwardCommand(ctx: CommandContext): CommandOutcom
   // user's whitespace, not markup: past their start the host's, a space a press (Enter65j); at it,
   // the node joins the one above, the spaces with it (Enter65)
   const hidden = hiddenSpacesAt(ctx, head);
-  if (hidden && head > hidden.from) return notApplicable();
+  if (hidden && head > hidden.from) return deferToHost();
   // (on the line after its marker, the line break goes, the spaces staying before the text: ShiftEnter13)
   const breakBelow = hidden?.text.frame.find((p) => p.part === 'below');
   if (hidden && breakBelow && hidden.node.kind === 'item') {
@@ -105,10 +106,16 @@ export function deleteContentBackwardCommand(ctx: CommandContext): CommandOutcom
     return unwrapped ?? joinUp(ctx, hidden.node, hidden.text);
   }
   let at = ctx.from;
+  // at the start of a quote read as an atom, before its `>`: it joins the text above as it is written
+  if (ctx.collapsed && at.zone === 'text' && at.text instanceof AtomText && at.text.type === 'blockquote' && at.offset === 0) return joinQuoteUp(ctx, at.node, at.text);
+  // (right after a later line's `> `: it joins the line above)
+  const inQuote = quoteAtomAt(ctx);
+  const lineBack = inQuote && joinLineInQuote(ctx, inQuote, false);
+  if (lineBack) return lineBack;
   // before a checkbox, in the marker: at the item's start, where the item joins (TO1), not past its checkbox
   const beforeBox = at.zone === 'marker' || (at.zone === 'frame' && at.part === 'task' && at.offset === 0);
   const markup = inMarkup(ctx.doc, at, head);
-  if (markup && config.markup === 'text') return notApplicable('the caret is in markup');
+  if (markup && config.markup === 'text') return deferToHost('the caret is in markup');
   // (at its line's start, before a marker or a heading's `#`s: at the text start, Backspace2)
   if (markup || at.zone === 'marker' || (at.zone === 'frame' && at.part === 'heading')) {
     const text = textActedOnAt(ctx, head);
@@ -126,15 +133,17 @@ export function deleteContentBackwardCommand(ctx: CommandContext): CommandOutcom
   while (first < s.length && isSpaceOrTab(s.charCodeAt(first))) first++;
   // past the line's leading spaces, in the text: the host's (its edit keeps a placeholder where it
   // would empty a node or widen an item's padding), but in an empty pair of backticks
-  if (offset > first) return deleteEmptyPair(ctx, node, text, offset) ?? notApplicable();
+  if (offset > first) return deleteEmptyPair(ctx, node, text, offset) ?? deferToHost();
   const draft = ctx.draft();
   if (lineStart !== text.textStart(0)) {
     // at a later line's start: it joins the line above, its spaces with it, the caret staying before
-    // or past them, where it was (a Shift-Enter's break taken back: ShiftEnter21)
-    const joined = text.splice(lineStart - 1, lineStart);
+    // or past them, where it was (a Shift-Enter's break taken back: ShiftEnter21); a quote's line its
+    // `> ` with the break
+    const begin = s.lastIndexOf('\n', lineStart - 1) + 1;
+    const joined = text.splice(begin - 1, lineStart);
     // a quote's first paragraph that would read as its callout's title: not done yet
     if (node.becomesTitle(joined)) return null;
-    draft.setText(node, joined).setCaret(node, offset - 1, -1);
+    draft.setText(node, joined).setCaret(node, offset - (lineStart - begin + 1), -1);
     return ctx.apply(draft);
   }
   // text alone on the line after its marker (Shift-Enter at the text start made it): the break goes
@@ -166,6 +175,17 @@ export function deleteContentBackwardCommand(ctx: CommandContext): CommandOutcom
     const open = text.frame.find((p) => p.part === 'heading') ?? text.frame.find((p) => p.part === 'underline')!;
     draft.setText(node, (close ? text.splice(close.from, close.to) : text).splice(open.from, open.to)).setCaret(node, open.part === 'heading' ? open.from : 0, -1);
     return ctx.apply(draft);
+  }
+  // a quote's `>`s go, every line's (`quotes: text`): its text a paragraph where it is; first under an
+  // empty item, where no paragraph can follow nothing, joining it (Quote94)
+  if (text.type === 'quote') {
+    const parent = node.index === 0 && node.parent?.kind === 'item' ? node.parent : null;
+    const parentText = parent ? ctx.doc.textOf(parent) : null;
+    if (parent && node.kind === 'paragraph' && !node.children.length && parentText instanceof ProseText && parentText.empty) {
+      // (its checkbox kept: the text the task's)
+      return ctx.apply(draft.setText(parent, parentText.concat(unquote(text))).remove([node]).setCaret(parent, parentText.text.length, -1));
+    }
+    return ctx.apply(draft.setText(node, unquote(text)).setCaret(node, 0, -1));
   }
   // a callout's `[!type]` goes as a unit: a plain quote, its title its first paragraph (Quote57, 58)
   if (text.type === 'title') {
@@ -260,7 +280,7 @@ function blankLineBack(ctx: CommandContext, owner: OutlineNode): CommandOutcome 
   const text = ctx.doc.textOf(owner);
   const k = ctx.doc.lineAt(head).index - owner.textLastLine - 1;
   // (at a line's start, the host's deletes the line break just as well)
-  if (!text || owner.children.length || k < 0 || k >= owner.gap || head === ctx.doc.lineAt(head).from || !ctx.doc.atTextColumn(head, owner)) return notApplicable();
+  if (!text || owner.children.length || k < 0 || k >= owner.gap || head === ctx.doc.lineAt(head).from || !ctx.doc.atTextColumn(head, owner)) return deferToHost();
   // (its text set again: where what follows would then continue it, `done()` keeps the line)
   const draft = ctx.draft().gap(owner, owner.gap - 1).setText(owner, text);
   if (k > 0) return ctx.apply(draft.select({ blank: owner, line: k - 1 }, { blank: owner, line: k - 1 }));
@@ -281,6 +301,8 @@ export function joinUp(ctx: CommandContext, node: OutlineNode, text: ProseText, 
   if (!above || above.kind === 'root' || (above === node.parent && !doc.textOf(above))) return caretAtSeam ? firstInContainer(ctx, node, text) : null;
   const upper = doc.textOf(above);
   if (!upper) return null;
+  // into a quote read as an atom above: as it is written, on its last line (`quotes: atom`)
+  if (upper instanceof AtomText && upper.type === 'blockquote' && above !== node.parent) return joinIntoQuote(ctx, above, upper, node);
   // into a callout's title, which in Obsidian is a line of its own (Quote60, 62)
   if (upper instanceof ProseText && upper.type === 'title' && doc.config.flavor === 'obsidian' && text.body.includes('\n')) return reject('not-expressible', "a callout's title is a single line");
   const draft = ctx.draft();
@@ -429,7 +451,7 @@ export function deleteSelectionAcross(ctx: CommandContext, then?: (draft: OurusD
   const to = ctx.to;
   if (from.zone !== 'text' || to.zone !== 'text' || !(from.text instanceof ProseText) || !(to.text instanceof ProseText)) return null;
   // within one text, the host's (a cut deletes it so too: `deleteSelected`)
-  if (from.node === to.node) return notApplicable();
+  if (from.node === to.node) return deferToHost();
   const upper = from.node;
   const lower = to.node;
   if (lower.kind !== 'item' && lower.kind !== 'paragraph') return null;

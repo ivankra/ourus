@@ -198,6 +198,6 @@ test('several characters typed at once are played a character at a time, as keys
   assert.deepEqual(typed('intro\n\n\n', 7, '```'), { text: 'intro\n\n```\n```\n', caret: 10 });
   assert.deepEqual(typed('intro\n\n\n', 7, '```js'), { text: 'intro\n\n```js\n```\n', caret: 12 });
   // a backtick in text, and text without one, the host's
-  assert.equal(typed('- a\n', 3, 'b`c'), 'notApplicable');
-  assert.equal(typed('x\n', 1, 'ab'), 'notApplicable');
+  assert.equal(typed('- a\n', 3, 'b`c'), 'deferredToHost');
+  assert.equal(typed('x\n', 1, 'ab'), 'deferredToHost');
 });

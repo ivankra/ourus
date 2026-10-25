@@ -154,7 +154,7 @@ tags: common enter-in-fence
 In a quote, the new line keeps the `>`.
 
 ```yaml
-tags: edge quote-container enter-in-fence
+tags: edge enter-in-fence
 ```
 
 ````buffer
@@ -402,7 +402,7 @@ handleFenceContents: false
 > enter
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ## Fence11
@@ -659,7 +659,7 @@ In a quote, a joined code line's `>` goes with its line break. The host's Backsp
 space after the `>` instead, and then the `>`, ending the quote and the block.
 
 ```yaml
-tags: edge quote-container
+tags: edge
 ```
 
 ````buffer
@@ -696,13 +696,13 @@ tags: common
 > indent
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 > outdent
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ## Fence22
@@ -1328,7 +1328,7 @@ body
 The same protection in a quote, and with tilde fences.
 
 ```yaml
-tags: rare markup-fence quote-container
+tags: rare markup-fence
 ```
 
 ````buffer
@@ -1672,7 +1672,7 @@ Shift-Enter in a comment block in a quote, in an item, and Backspace taking the 
 quote's `>` goes with the line break, not as a character of the text.
 
 ```yaml
-tags: rare quote-container
+tags: rare
 flavor: obsidian
 ```
 
@@ -1761,7 +1761,7 @@ Delete at the end of a comment line in a quote joins the next line, the quote's 
 break, as Backspace does from the other side ([Fence43](#fence43)).
 
 ```yaml
-tags: rare quote-container
+tags: rare
 flavor: obsidian
 ```
 
@@ -1970,7 +1970,7 @@ Backspace takes it back, the `>` going with it, as at a code fence. The host's B
 the space after the `>`.
 
 ```yaml
-tags: rare quote-container markup-fence
+tags: rare markup-fence
 flavor: obsidian
 ```
 

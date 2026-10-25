@@ -5,8 +5,8 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { draw, project, readOutline, type Outline } from '../lib/block.ts';
-import { bulletless, lift, own } from './driver.ts';
+import { draw, project, readOutline, type Outline, type Projection } from '../lib/block.ts';
+import { bulletless, driver, lift, own } from './driver.ts';
 
 const outline = (drawn: string): Outline => readOutline(drawn)!;
 
@@ -29,13 +29,15 @@ test("every spec buffer the setup holds goes there and back as it was", () => {
   let held = 0;
   for (const f of readdirSync(spec).filter((f) => f.endsWith('.md'))) {
     for (const m of readFileSync(new URL(f, spec), 'utf8').matchAll(/```buffer\n([\s\S]*?)```/g)) {
-      let o: Outline;
+      let p: Projection;
       try {
-        o = project(m[1]!, 'gfm', { freeForm: true, ordered: true }).outline;
+        p = project(m[1]!, 'gfm', { freeForm: true, ordered: true });
       } catch {
         continue;
       }
-      if (bulletless(o)) continue;
+      // (what the setup refuses, a quote, isn't held)
+      const o = p.outline;
+      if (bulletless(o) || [...p.notes].some((n) => driver.refuses?.includes(n))) continue;
       assert.deepEqual(own(lift(o)).blocks, o.blocks, `${f}:\n${m[1]}`);
       held++;
     }

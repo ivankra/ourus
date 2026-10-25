@@ -66,4 +66,4 @@ export class CommandContext {
 export const reject = (reason: RejectReason, detail?: string): CommandResult =>
   detail === undefined ? { status: 'rejected', reason } : { status: 'rejected', reason, detail };
 
-export const notApplicable = (detail?: string): CommandResult => (detail === undefined ? { status: 'notApplicable' } : { status: 'notApplicable', detail });
+export const deferToHost = (detail?: string): CommandResult => (detail === undefined ? { status: 'deferredToHost' } : { status: 'deferredToHost', detail });

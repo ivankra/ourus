@@ -28,7 +28,7 @@ export interface Config {
    * which decides what ourus does with the caret in it, where only the host puts it:
    * - `text` (the default; raw CodeMirror, a textarea, Obsidian's source mode): markup is text the
    *   user edits by hand. Shift-Enter, Backspace, Delete and Cmd-Backspace there are the host's
-   *   (`notApplicable`), and so is an edit at the caret that ourus would refuse there (the refusal's
+   *   (`deferredToHost`), and so is an edit at the caret that ourus would refuse there (the refusal's
    *   reason as its `detail`), whatever the text then reads as; and a command may leave the caret on
    *   a fence where the user had it: Backspace back to a fence's end, indent and outdent from a fence
    *   line (where Tab and Shift-Tab in the code are the host's).
@@ -62,6 +62,51 @@ export interface Config {
    * `-` (the default), `*` or `+`.
    */
   readonly bullet: '-' | '*' | '+';
+
+  /**
+   * What a quote is in the outline:
+   * - `text` (the default; WorkFlowy's quote, BlockNote's and SiYuan's quote blocks, SilverBullet): a
+   *   quote of one paragraph is that paragraph, its text framed by each line's `> ` as a heading's is
+   *   by its `#`s: `> q` is a paragraph, `- > q` an item whose text is `q`; it moves, indents and joins
+   *   as a paragraph or an item does, and Backspace at its text start takes the `> ` off. A quote
+   *   holding more (two paragraphs, a list, a heading) is a container, as with `container`.
+   * - `atom` (as Logseq, Tine, Roam, Athens and Dynalist hold it, a block's text): every quote is one
+   *   node, its lines as written, `>` included, as code is: a list or a blank `>` line in it is
+   *   characters. An item can have one as its text (`- > q`), as it has code.
+   * - `container`: a quote is a container like an item, its blocks its children, with no text of its
+   *   own: `- > q` is an item with no text holding a quote. Commands act inside it as inside an item.
+   *
+   * A callout is a container with its title as its text, but under `atom`, where it is an atom too (the
+   * text editors edit it as text; the outliners hold `[!note]` as a block's text).
+   */
+  readonly quotes: 'text' | 'atom' | 'container';
+
+  /**
+   * What a list right after a block is the children of, in the document's own sections (the root's, a
+   * heading's; in an item or a quote a list is the container's): Markdown has the list beside the
+   * block, and the outline reads it under the block or beside it.
+   * - `paragraph` (the default): a paragraph's (a quote's of one paragraph too, `quotes: text`): it
+   *   moves with the paragraph, and the paragraph's text is its parent's.
+   * - `block`: any block's but a heading's (which owns its section) and a quote's that is a container
+   *   (whose children are inside it): a paragraph's, code's, a table's, a quote atom's.
+   * - `container` (as SiYuan, BlockNote and RemNote without bullets, a flat sequence of blocks): no
+   *   block's; the list's items are its container's, beside the block before them. How they move
+   *   among the blocks around them, `listMoves` says.
+   */
+  readonly listParent: 'paragraph' | 'block' | 'container';
+
+  /**
+   * Under `listParent: container`, what Alt-Shift-Up and -Down take a list as among the blocks beside
+   * it (spec/lists.md):
+   * - `list` (the default, as SiYuan, whose list is a block holding its items): one block. A block
+   *   moves past the whole list, as far as it goes on (`1. a⏎- b` is two lists); its items move among
+   *   themselves, and all of them, a list of one item, past a block; an item at a longer list's edge
+   *   stays in it.
+   * - `item` (as BlockNote and RemNote without bullets, whose items are blocks): each item a block.
+   *   A block moves past one item, splitting the list; an item at its list's edge past the block
+   *   beside it, joining a list on the other side.
+   */
+  readonly listMoves: 'list' | 'item';
 
   /**
    * The spaces at the caret when Enter splits a node's text (`- one two┃ three`):
@@ -145,6 +190,17 @@ export interface Config {
    * fills it, its checkbox the first pasted item's, or goes after it, the task not being empty.
    */
   readonly enterTask: 'continue' | 'plain';
+
+  /**
+   * Enter in a quote's text (`quotes: text`, a quote of one paragraph) or in a quote read as an atom
+   * (`quotes: atom`):
+   * - `line` (the default, as Obsidian, bare and with its Outliner, SilverBullet and WorkFlowy): a line
+   *   of the quote, its `> ` written, and in a quoted list's item (`atom`) its marker too (`> - `); on
+   *   an empty line it leaves the quote (an empty item's marker going first), a paragraph after it.
+   * - `split` (as Logseq, Tine, Roam, Athens and Dynalist split a block, and BlockNote its quote): the
+   *   rest of the text a paragraph after the quote, unquoted (an item after an item).
+   */
+  readonly enterInQuote: 'line' | 'split';
 
   /**
    * A first child with children joining its parent, by Backspace at its text start or Delete at the
@@ -237,7 +293,7 @@ export interface Config {
    * Enter and Shift-Enter on the code lines of a fenced block:
    * - `true` (the default): ourus makes the new line, in the containers the block is in, with the
    *   line's own indentation.
-   * - `false`: they are the host's (`notApplicable`), for hosts that edit code themselves
+   * - `false`: they are the host's (`deferredToHost`), for hosts that edit code themselves
    *   (language-aware indentation, embedded code editors).
    *
    * The fence lines are ourus's either way.
@@ -428,15 +484,19 @@ const CONFIG_VALUES: { readonly [K in keyof Config]: readonly [Config[K], ...Con
   // how the text reads, and how the host shows its markup: every command
   flavor: ['gfm', 'commonmark', 'obsidian'],
   markup: ['text', 'decorated'],
-  // the outline: what Shift-Tab does, and a new item's bullet
+  // the outline: what Shift-Tab does, a new item's bullet, what a quote is, what a list is under
   outdent: ['direct', 'logical'],
   bullet: ['-', '*', '+'],
+  quotes: ['text', 'atom', 'container'],
+  listParent: ['paragraph', 'block', 'container'],
+  listMoves: ['list', 'item'],
   // Enter, the key pressed most
   enterSplitSpace: ['trim', 'drop', 'start'],
   enterOnEmptyItem: ['sibling', 'outdent', 'exit', 'unwrap'],
   enterMidItem: ['sibling', 'child'],
   enterAtTextStart: ['into', 'stay'],
   enterTask: ['continue', 'plain'],
+  enterInQuote: ['line', 'split'],
   // Backspace and Delete at a node's edge
   joinWithChildren: ['join', 'refuse'],
   backspaceAtTopItem: ['unwrap', 'refuse'],

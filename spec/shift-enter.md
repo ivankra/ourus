@@ -595,7 +595,7 @@ tags: rare free-form
 > shiftEnter
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ```buffer
@@ -710,7 +710,7 @@ tags: rare free-form markup-task
 > shiftEnter
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ```buffer

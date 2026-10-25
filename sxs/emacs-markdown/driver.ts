@@ -62,6 +62,8 @@ export const driver: Driver = {
   // Backspace right after a checkbox deletes a character (`taskEditing: text`); a typed backtick is
   // only a character (`closeBackticks: none`)
   behaves: {
+    // a quote is text, its `>`s characters edited on its lines: of `quotes`' values the one its runs agree with most (166 quote cases a setup, ../../dev/19-quotes.md §1.4.3)
+    quotes: 'atom',
     enterSplitSpace: 'drop',
     taskEditing: 'text',
     closeBackticks: 'none',

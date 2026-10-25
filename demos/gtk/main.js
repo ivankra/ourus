@@ -177,7 +177,7 @@ function outliner(view, status) {
   function paste(type) {
     readClipboard(view.get_clipboard(), (formats) => {
       const text = formats['text/plain'];
-      if (!text || run(type === 'paste' ? { type, clipboard: formats } : { type, text }) !== 'notApplicable') return;
+      if (!text || run(type === 'paste' ? { type, clipboard: formats } : { type, text }) !== 'deferredToHost') return;
       // not ours: GTK's paste, read back like typing
       buffer.begin_user_action();
       buffer.delete_selection(true, true);
@@ -205,7 +205,7 @@ function outliner(view, status) {
     if (ctrl && !alt && !shift && (key.toLowerCase() === 'c' || key.toLowerCase() === 'x')) {
       const type = key.toLowerCase() === 'c' ? 'copy' : 'cut';
       const result = executeCommand(doc, { type }, selection());
-      if (result.status === 'notApplicable') return false;
+      if (result.status === 'deferredToHost') return false;
       status.set_text(`${type}: ${result.status === 'rejected' ? `rejected — ${result.reason}` : result.status}`);
       if (result.status !== 'applied') return true;
       writeClipboard(view.get_clipboard(), result.clipboard ?? {});
@@ -227,13 +227,13 @@ function outliner(view, status) {
     }
     const type = KEYS[name];
     // not applicable: GTK's default (in code, Tab is a tab)
-    if (type) return run({ type }) !== 'notApplicable';
+    if (type) return run({ type }) !== 'deferredToHost';
     // typing: ourus's where Markdown reads the character as structure (a backtick), else GTK's
     // a dead key (` on US-International) is the input method's, to compose with the next key
     const char = Gdk.keyval_to_unicode(keyval);
     if (ctrl || alt || !char || gdkName.startsWith('dead_')) return false;
     const result = executeCommand(doc, { type: 'insertText', text: String.fromCodePoint(char) }, selection());
-    if (result.status === 'notApplicable') return false;
+    if (result.status === 'deferredToHost') return false;
     status.set_text(`insertText: ${result.status === 'rejected' ? `rejected — ${result.reason}` : result.status}`);
     if (result.status === 'applied') {
       apply(result.changes, result.doc);

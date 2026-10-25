@@ -51,6 +51,13 @@ export function textEnd(text: OutlineNodeText): number {
   return tail ? tail.from : text.text.length;
 }
 
+/** A quote's text (`quotes: text`) without its `>`s, every line's: a paragraph's, where it is. */
+export function unquote(text: ProseText): ProseText {
+  let out = text;
+  for (const p of [...text.frame].reverse()) if (p.part === 'quote') out = out.splice(p.from, p.to);
+  return new ProseText('paragraph', out.item, out.text, out.marks);
+}
+
 /**
  * Where typing extends a text: past its frame on its first line (an item's checkbox, a heading's
  * `#`s); in a block between delimiters, at its first line of payload with text, else after its
@@ -215,14 +222,17 @@ export function hiddenSpacesAt(ctx: CommandContext, pos: number): { readonly nod
   return { node: node!, text, ...hidden };
 }
 
-/** Whether `pos` is on a line of fenced code's payload (its containers' prefix too), where Tab and Shift-Tab are the host's. */
+/** Whether `pos` is on a code line, fenced code's payload or any line of indented code (its containers' prefix too), where Tab and Shift-Tab are the host's. */
 export function onCodeLine(ctx: CommandContext, pos: number): boolean {
   const doc = ctx.doc;
   if (!doc.lineCount) return false;
   const line = doc.lineAt(pos).index;
   const node = doc.nodeAtLine(line);
   const text = node ? doc.textOf(node) : null;
-  if (!node || !(text instanceof AtomText) || text.type !== 'fenced_code') return false;
+  if (!node || !(text instanceof AtomText)) return false;
+  // (indented code: every line of it)
+  if (text.type === 'indented_code') return line >= node.textFirstLine;
+  if (text.type !== 'fenced_code') return false;
   const k = line - node.textFirstLine;
   return k >= 0 && !text.delimiterLine(k);
 }

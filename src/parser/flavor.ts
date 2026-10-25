@@ -99,9 +99,10 @@ export interface MdFlavor {
   delimited(block: MdBlock): boolean;
   /**
    * The first of `lines`, written in `context`, that doesn't stay paragraph text, or -1 when every one
-   * does (`readback.ts`); `above`, in `continuation`, the paragraph's line they follow.
+   * does (`readback.ts`); `above`, in `continuation`, the paragraph's line they follow; `lazy`, in
+   * `quoteStart`, the lines written without the quote's `>`.
    */
-  firstNonParagraph(lines: readonly string[], context?: MdLineContext, above?: string): number;
+  firstNonParagraph(lines: readonly string[], context?: MdLineContext, above?: string, lazy?: readonly boolean[]): number;
   /**
    * Whether a backslash at `at` in `line` (a line's content past its containers' prefix) is at one of
    * the flavor's markup-escape positions, where it can break block syntax and means nothing inline
@@ -199,7 +200,7 @@ export function defineFlavor(name: string, extensions: readonly MdExtension[]): 
     has: (extension) => names.has(extension),
     content: (type) => content.get(type) ?? 'none',
     delimited: (block) => delimited.get(block.type)?.(block) ?? false,
-    firstNonParagraph: (lines, context, above) => firstNonParagraph(flavor, lines, context, above),
+    firstNonParagraph: (lines, context, above, lazy) => firstNonParagraph(flavor, lines, context, above, lazy),
     markupEscapeAt: (line, at) => markupEscapeAt(flavor, line, at),
     markupEscapes: (lines, place) => markupEscapes(flavor, lines, place),
     escapeParagraph: (lines, place) => escapeParagraph(flavor, lines, place),

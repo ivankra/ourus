@@ -143,14 +143,14 @@ test('a clipboard is its text, or its formats under it; a state after a step hol
   badStart(['result: applied'], /x\.md:5: a result is a step's/);
 
   const after = (yaml: string[]) => readSpec('x.md', ['## A', '', `${F}yaml`, 'tags: edge', F, '', `${F}buffer`, 'a┃', F, '', '> copy', '', `${F}yaml`, ...yaml, F].join('\n'))[0]!.steps[0]!.expect;
-  assert.deepEqual(after(['result: notApplicable', 'clipboard:', '  text/markdown: |', '    - a', 'outline: |', '  paragraph: a', '    item: b']), {
-    result: 'notApplicable',
+  assert.deepEqual(after(['result: deferredToHost', 'clipboard:', '  text/markdown: |', '    - a', 'outline: |', '  paragraph: a', '    item: b']), {
+    result: 'deferredToHost',
     clipboard: { 'text/markdown': '- a\n' },
     outline: 'paragraph: a\n  item: b',
   });
   assert.deepEqual(after(['result: rejected not-expressible']), { result: 'rejected not-expressible' });
   const badAfter = (yaml: string[], message: RegExp) => assert.throws(() => after(yaml), (e) => e instanceof SpecError && message.test(e.message));
-  badAfter(['result: refused'], /x\.md:14: a result is applied, notApplicable or "rejected <reason>", not "refused"/);
+  badAfter(['result: refused'], /x\.md:14: a result is applied, deferredToHost or "rejected <reason>", not "refused"/);
   badAfter(['result: rejected: not-expressible'], /x\.md:14: not YAML/);
   badAfter(['bullet: "*"'], /x\.md:14: "bullet" in a state after a step/);
   badAfter(['tags: edge'], /x\.md:14: "tags" in a state after a step/);

@@ -149,7 +149,7 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
   try {
     const config = specConfig(test.options);
     // what the app's blocks hold, as the projection reads it
-    const shape = { ordered: driver.ordered, freeForm: driver.freeForm, paragraphsInBlock: driver.paragraphsInBlock };
+    const shape = { ordered: driver.ordered, freeForm: driver.freeForm, paragraphsInBlock: driver.paragraphsInBlock, quotes: driver.behaves?.quotes, listParent: driver.behaves?.listParent };
     const start = project(test.initial.buffer, flavor, { ...shape, config });
     if (start.caretLost) return skip(start.caretLost);
     const no = refused(start.notes) ?? driver.holds?.(start.outline);

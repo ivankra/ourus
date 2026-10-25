@@ -62,7 +62,8 @@ The rules, in order; the first that applies wins:
 11. **In a table**, at the end of its last row a paragraph after it, set off by a blank line, as in
     GFM a line right after a table is another row (Enter49); elsewhere in a row, refused: a row is a
     line (Enter50). At the end of a footnote definition, whose next line would continue its text,
-    and of a thematic break, the same: a paragraph after it (Enter66, Enter67).
+    and of a thematic break, the same: a paragraph after it (Enter66, Enter67). Where the block is an
+    item's text, a new item, as after code (Enter70).
 
 Code, math and comment blocks are [fences.md](fences.md)'s.
 
@@ -1161,7 +1162,7 @@ In a loose list in a quote, the blank line that sets the new item off is quoted:
 would end the quote.
 
 ```yaml
-tags: rare quote-container
+tags: rare
 ```
 
 ```buffer
@@ -1543,7 +1544,7 @@ enterSplitSpace: start
 > deleteContentForward
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ```buffer
@@ -1723,7 +1724,7 @@ enterSplitSpace: start
 > deleteContentBackward
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ```buffer
@@ -1865,7 +1866,8 @@ At the start of a quote's first paragraph, the empty paragraph is the quote's fi
 `>` starts.
 
 ```yaml
-tags: edge quote-container
+tags: edge
+quotes: container
 ```
 
 ```buffer
@@ -2622,4 +2624,33 @@ tags: common
 - # Head
 - ┃
 - next
+```
+
+## Enter70
+
+At the end of a table that is an item's text, a new item, as at the end of any item's text (and of
+code that is one, [Fence rule 3](fences.md)); in a row's middle, refused as at the top level.
+
+```yaml
+tags: edge
+flavor: gfm
+```
+
+```buffer
+- a
+- | x | y |
+  | - | - |
+  | 1 | 2 |┃
+- b
+```
+
+> enter
+
+```buffer
+- a
+- | x | y |
+  | - | - |
+  | 1 | 2 |
+- ┃
+- b
 ```

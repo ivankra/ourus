@@ -22,7 +22,8 @@ export function markdownStart(doc: OurusDoc, node: OutlineNode): number {
 /**
  * The Markdown of `from`–`to` as written, without what the containers holding all of it put on its
  * lines (a quote's `>`, an item's indentation, where the copy starts past the item's marker): it reads
- * as it did, out of them. Lines that are blank there are empty.
+ * as it did, out of them; a quote read as an atom (`quotes: atom`) is the text, its `>`s kept. Lines
+ * that are blank there are empty.
  */
 export function markdownOf(doc: OurusDoc, from: number, to: number): string {
   const tree = doc.mdTree;
@@ -36,7 +37,9 @@ export function markdownOf(doc: OurusDoc, from: number, to: number): string {
   // after its last line
   const first = tree.line(lo);
   const opens = (p: MdPrefixPiece): number => (p.kind === 'marker' ? tree.markerFrom(p.container) : skipSpaces(text, p.from, p.to, 1));
-  const holding = new Set(first.prefix.filter((p) => (p.container.line < lo || opens(p) < from) && p.container.lastLine >= hi).map((p) => p.container.block));
+  // (but a quote that is a node's lines as written, `quotes: atom`: its `>`s are that text's)
+  const own = doc.config.quotes === 'atom' ? doc.nodeAtLine(lo)?.persistentNode.textQuote : null;
+  const holding = new Set(first.prefix.filter((p) => (p.container.line < lo || opens(p) < from) && p.container.lastLine >= hi && p.container.block !== own).map((p) => p.container.block));
   const held = (line: MdLine): number => line.prefix.reduce((start, piece) => (holding.has(piece.container.block) ? Math.max(start, piece.to) : start), line.from);
   // indentation the first line loses past what holds the copy (an item indented past its parent's
   // text, copied from its marker), the lines after it lose too: they keep their columns to it

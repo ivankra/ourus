@@ -35,7 +35,12 @@ test('a task: its marker, its checkbox, its text', () => {
 });
 
 test('a quote\'s prefix, a heading\'s `#`s, text below a marker', () => {
-  assert.deepEqual([0, 2].map((p) => where(parse('> a'), p)), ['prefix 0 0', 'text paragraph 0']);
+  const container = (text: string): OurusDoc => OurusDoc.parse(text, { config: { quotes: 'container' } });
+  assert.deepEqual([0, 2].map((p) => where(container('> a'), p)), ['prefix 0 0', 'text paragraph 0']);
+  // (a quote's text, `quotes: text`: its `>` its frame; `atom`: its characters)
+  assert.deepEqual([0, 1, 2].map((p) => where(parse('> a'), p)), ['frame quote 0', 'frame quote 1', 'text paragraph 2']);
+  assert.deepEqual([2, 4].map((p) => where(parse('- > a'), p)), ['frame quote 0', 'text item 2']);
+  assert.deepEqual([0, 2].map((p) => where(OurusDoc.parse('> a', { config: { quotes: 'atom' } }), p)), ['text atom 0', 'text atom 2']);
   assert.deepEqual([1, 3].map((p) => where(parse('## Title'), p)), ['frame heading 1', 'text heading 3']);
   assert.deepEqual(where(parse('-\n  one'), 1), 'frame below 0');
   assert.deepEqual([2, 3].map((p) => where(parse('S0\n---'), p)), ['text heading 2', 'frame underline 3'], "the title line's end is the text's");

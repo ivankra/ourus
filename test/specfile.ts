@@ -31,7 +31,7 @@ export type Clipboard = Readonly<Partial<Record<ClipboardType, string>>>;
 export interface State {
   buffer?: string;
   clipboard?: Clipboard;
-  /** `applied`, `notApplicable`, or `rejected <reason>`. */
+  /** `applied`, `deferredToHost`, or `rejected <reason>`. */
   result?: string;
   /** How the buffer reads (`drawOutline`), where a case's point is a reading its bytes don't show. */
   outline?: string;
@@ -74,7 +74,7 @@ export type Rank = (typeof RANKS)[number];
  * case on block outliners, whose documents have no form for that structure; a driver lists the
  * `markup-` tags its app can't compare in `refuses`, and the case is skipped there.
  */
-export const TAGS = ['free-form', 'markup-heading', 'markup-task', 'markup-fence', 'enter-in-fence', 'quote-container', 'pending'] as const;
+export const TAGS = ['free-form', 'markup-heading', 'markup-task', 'markup-fence', 'enter-in-fence', 'pending'] as const;
 
 export type Tag = (typeof TAGS)[number];
 
@@ -152,7 +152,7 @@ export function readSpec(file: string, source: string): SpecTest[] {
     if (block.type !== 'code_block' || !block.attrs.fenced) continue;
     const [kind, ...words] = (block.attrs.info ?? '').trim().split(/\s+/);
     if (kind === 'config') fail(start, 'a config block is a `yaml` block');
-    if (kind === 'result') fail(start, 'a result is a key of the state\'s `yaml` block: "result: notApplicable", "result: rejected not-expressible"');
+    if (kind === 'result') fail(start, 'a result is a key of the state\'s `yaml` block: "result: deferredToHost", "result: rejected not-expressible"');
     if (kind === 'outline') fail(start, 'an outline is a key of the state\'s `yaml` block: "outline: |", its lines indented under it');
     if (kind === 'clipboard' || kind === 'clipboard-no-newline') fail(start, 'a clipboard is a key of the state\'s `yaml` block: "clipboard: |", its lines indented under it ("|-" ends it without a line break), or its formats under it ("text/plain: |")');
     if (kind !== 'buffer' && kind !== 'yaml') continue;
@@ -292,7 +292,7 @@ function readConfig(text: string, first: number, fail: (line: number, message: s
     const value = (v as Scalar<string>).value;
     if (key === 'result') {
       if (where !== 'step') fail(at, "a result is a step's: it goes in the `yaml` block after the step's actions");
-      if (!/^(?:applied|notApplicable|rejected [a-z0-9-]+)$/.test(value)) fail(at, `a result is applied, notApplicable or "rejected <reason>", not "${value}"`);
+      if (!/^(?:applied|deferredToHost|rejected [a-z0-9-]+)$/.test(value)) fail(at, `a result is applied, deferredToHost or "rejected <reason>", not "${value}"`);
       read.result = value;
       continue;
     }

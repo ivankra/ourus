@@ -70,6 +70,13 @@ export interface ProjectOptions {
    * item's padding past the item above's is its text, as the app's block starts with the spaces.
    */
   readonly config?: Partial<Config>;
+  /**
+   * How the app's block holds a quote (`Driver.behaves.quotes`): `atom`, any quote, a callout too, its
+   * lines as written (Logseq's block text); else only a quote of one paragraph, `> ` before its text.
+   */
+  readonly quotes?: Config['quotes'];
+  /** What a list after a block is the children of in the app's blocks (`Driver.behaves.listParent`): read so. */
+  readonly listParent?: Config['listParent'];
 }
 
 export interface Projection {
@@ -126,7 +133,10 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
     } else if (c !== undefined) text += c;
   }
   const at = (p: number): number => shift[p]!;
-  const doc = docOf(text, drawing.placeholders.map(at), { ...options.config, flavor });
+  // (quotes read as containers, whatever ourus's `quotes`: which of them a block holds, and how, is
+  // the projection's, `quoted`)
+  // and a list after a block under it or beside it as the app's blocks have it (`listParent`)
+  const doc = docOf(text, drawing.placeholders.map(at), { ...options.config, flavor, quotes: 'container', ...(options.listParent && { listParent: options.listParent }) });
   if (doc.mdTree.root.children.some((b) => b.type === 'frontmatter')) throw new Unsupported('frontmatter');
 
   const nodes = nodesOf(doc);
@@ -145,14 +155,45 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
   const merged = new Set<number>();
   const inBlock = new Set<number>();
   const lift = new Map<number, number>();
+  /** The paragraphs that are a quote's whole text (`quoted`), in its block. */
+  const quotedParagraphs = new Set<number>();
   for (const node of nodes) {
+    if (quotedParagraphs.has(node.id)) continue;
     const parent = node.parent;
     const up = parent ? (lift.get(parent.id) ?? 0) + (merged.has(parent.id) ? 1 : 0) : 0;
     lift.set(node.id, up);
     const prev = parent?.children[node.index - 1];
-    const into = options.paragraphsInBlock && node.kind === 'paragraph' && parent?.kind === 'item' && blockOf.has(parent.id) && (!prev || (merged.has(prev.id) && !prev.children.length));
+    const atom = options.quotes === 'atom';
+    // (under `atom` a callout is one too, its `[!type]` the block's text, as an outliner holds it)
+    const quote = atom ? (node.kind === 'quote' ? node : null) : quoted(doc, node);
+    const bare = (n: OutlineNode): boolean => !n.children.length || (atom ? n.kind === 'quote' : !!quoted(doc, n));
+    const into = options.paragraphsInBlock && (node.kind === 'paragraph' || !!quote) && parent?.kind === 'item' && blockOf.has(parent.id) && (!prev || (merged.has(prev.id) && bare(prev)));
     const own = new Set<string>();
-    const { text, lines } = blockText(doc, node, own, options.ordered ?? false, options.freeForm ?? false);
+    let { text, lines } = quote && atom ? asWritten(doc, node) : blockText(doc, quote ?? node, own, options.ordered ?? false, options.freeForm ?? false);
+    // (an item whose first block is a quote the app holds as its text, `- > a⏎  > - b`: no list there)
+    const first = node.children[0];
+    if (atom && node.kind === 'item' && first?.kind === 'quote' && first.startLine === node.startLine) own.delete("list as an item's first block");
+    if (quote) {
+      // a quote of one paragraph is a block's text, `> ` before the paragraph's, as a heading's is
+      // `# ` before its title; where the app's block holds any quote (`quotes: atom`), its lines as written
+      own.delete('paragraph');
+      own.add('quote');
+      if (!atom) {
+        text = `> ${text}`;
+        lines = lines.map((m) => ({ ...m, at: m.at + 2 }));
+      }
+      for (const d of atom ? descendants(node) : [quote]) quotedParagraphs.add(d.id);
+      // an item whose first block it is, on its marker's line (`- > q`), has no text but it
+      const host = parent?.kind === 'item' && !parent.head && node.index === 0 && node.startLine === parent.startLine ? blockOf.get(parent.id) : undefined;
+      if (host !== undefined) {
+        for (const n of own) notes.add(n);
+        const block = blocks[host]!;
+        maps[host]!.push(...lines.map((m) => ({ ...m, at: m.at + block.text.length })));
+        blocks[host] = { ...block, text: block.text + text };
+        blockOf.set(node.id, host);
+        continue;
+      }
+    }
     // (a paragraph in a block's text is none adapted)
     for (const n of own) if (!into || n !== 'paragraph') notes.add(n);
     if (into) {
@@ -233,6 +274,42 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
   return { outline: { blocks, sel: { block: h.block, anchor: a.offset, head: h.offset } }, notes, sections };
 }
 
+/** Every node under `node`, depth first. */
+function descendants(node: OutlineNode): OutlineNode[] {
+  return node.children.flatMap((c) => [c, ...descendants(c)]);
+}
+
+/**
+ * A quote's lines as written, from its `>` on each (a lazy line's from its content), blank `>` lines
+ * included: a block's text where the app's block holds any quote as Markdown (`quotes: atom`).
+ */
+function asWritten(doc: OurusDoc, node: OutlineNode): { text: string; lines: LineMap[] } {
+  const lines: LineMap[] = [];
+  const parts: string[] = [];
+  let at = 0;
+  for (let l = node.startLine; l <= node.endLine; l++) {
+    const line = doc.mdTree.line(l);
+    const from = line.prefix.find((p) => p.container.block === node.block)?.from ?? line.contentFrom;
+    lines.push({ line: l, from, to: line.to, at });
+    parts.push(doc.text.slice(from, line.to));
+    at += line.to - from + 1;
+  }
+  return { text: parts.join('\n'), lines };
+}
+
+/**
+ * The paragraph that is all of a quote (`> q`, its later lines quoted or lazy), which a block holds as
+ * its text, or null. Any other quote (more blocks, a list, a quoted blank line, nothing) is a
+ * container, which a block can't hold; a callout's title is no paragraph's.
+ */
+function quoted(doc: OurusDoc, node: OutlineNode): OutlineNode | null {
+  if (node.kind !== 'quote') return null;
+  const first = doc.mdTree.line(node.startLine);
+  if (/^\s*>\s*\[!/.test(doc.text.slice(first.from, first.to))) return null;
+  const p = node.children.length === 1 ? node.children[0]! : null;
+  return p?.kind === 'paragraph' && !p.children.length && p.textFirstLine === node.startLine && p.textLastLine === node.endLine ? p : null;
+}
+
 /** A node's own text as a block holds it, and where each of its lines came from. */
 function blockText(doc: OurusDoc, node: OutlineNode, notes: Set<string>, ordered: boolean, freeForm: boolean): { text: string; lines: LineMap[] } {
   const source = doc.text;
@@ -299,8 +376,9 @@ function blockText(doc: OurusDoc, node: OutlineNode, notes: Set<string>, ordered
   if (head?.type === 'code_block' && !head.attrs.fenced) throw new Unsupported('indented code');
   if (!head && node.kind === 'item' && node.block.children.length && node.block.offsets[0] === 0) {
     // an item whose first block is a list (`- - a`): it has no text, and the rest of its marker's line
-    // is the inner item's, a child block
-    notes.add("list as an item's first block");
+    // is the inner item's, a child block; a quote of one paragraph there (`- > q`) is its text
+    // (`project`'s)
+    if (!quoted(doc, node.children[0]!)) notes.add("list as an item's first block");
     return { text: number, lines };
   }
   if (!head) {
@@ -412,8 +490,8 @@ export function liftOwned(blocks: readonly Block[]): Block[] {
 /**
  * An app's free-form blocks nested as ourus's outline is (`liftOwned`'s inverse), among each block's
  * siblings: a heading takes what follows it up to a heading of its level or above, a free block that
- * `ownsList` says owns one (a paragraph) the items right after it. A block's own children (an app may
- * nest any block: BlockNote's Tab nests a paragraph) stay its children.
+ * `ownsList` says owns one (a paragraph) the items right after it. A block's own children stay its
+ * children (`asMarkdownReads` lifts them first, for an app that nests any block).
  */
 export function ownBlocks(blocks: readonly Block[], ownsList: (b: Block, i: number) => boolean): Block[] {
   const scope: { headings: number[]; paragraph: boolean }[] = [];
@@ -439,6 +517,27 @@ export function ownBlocks(blocks: readonly Block[], ownsList: (b: Block, i: numb
     depthOf[b.depth] = depth;
     return depth === b.depth ? b : { ...b, depth };
   });
+}
+
+/**
+ * The free blocks that own the list right after them under `listParent`, as ourus's outline reads
+ * the projection's text (its quotes containers, which own nothing): `paragraph` a paragraph (not a
+ * heading, code, a divider, a quote); `block` any but a heading and a quote; `container` none.
+ */
+export function listOwner(listParent: Config['listParent'] = 'paragraph'): (b: Block) => boolean {
+  if (listParent === 'container') return () => false;
+  const paragraph = listParent === 'paragraph';
+  return (b) => !!b.free && !/^#{1,6} /.test(b.text) && !b.text.startsWith('> ') && (!paragraph || (!/^(`{3,}|~{3,})/.test(b.text) && !/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(b.text) && !/^\|/.test(b.text)));
+}
+
+/**
+ * An app's blocks, any of which may hold children (BlockNote's), as their Markdown reads in ourus's
+ * outline: what a free block holds is beside it, as Markdown has no child of a paragraph (`Intro⏎  -
+ * a` is the list after it, as `Intro⏎- a` is), then owned as `listParent` says (`liftOwned`,
+ * `ownBlocks`).
+ */
+export function asMarkdownReads(blocks: readonly Block[], listParent: Config['listParent'] = 'paragraph'): Block[] {
+  return ownBlocks(liftOwned(blocks), listOwner(listParent));
 }
 
 /**
@@ -487,7 +586,9 @@ export function readOutline(drawn: string, options: Pick<ProjectOptions, 'ordere
     // a block's depth: where blocks are numbered, it starts where its parent's text does; else two
     // spaces a level
     const depth = !item || (item[3] && !options.ordered) ? -1 : !spaces ? 0 : options.ordered ? (cols.includes(spaces) ? cols.indexOf(spaces) + 1 : -1) : spaces % 2 ? -1 : spaces / 2;
-    if (item && depth >= 0) {
+    // (deeper than a child of the block above, it is a line of that block's text: `- > - q⏎      - g`,
+    // its text's `    - g`, as `draw` indents it)
+    if (item && depth >= 0 && depth <= (blocks.at(-1)?.depth ?? -1) + 1) {
       if (item[4]) selected.push(blocks.length);
       blocks.push({ depth, text: '', ...(item[2] === '¶' && { free: true as const }) });
       raw.push([item[3] ? `${item[3]} ${item[5]!}` : item[5]!]);
@@ -541,7 +642,7 @@ export type Verdict = 'agree' | 'whitespace' | 'caret' | 'disagree';
 const loose = (b: Block): string =>
   `${b.depth}${b.free ? '¶' : ''}:${b.text
     .replace(/[ \t]*\n[ \t]*/g, '\n')
-    .replace(/^((?:\d{1,9}\. )?(?:\[[ xX]\] )?(?:#{1,6} )?)[ \t]+/, '$1')
+    .replace(/^((?:\d{1,9}\. )?(?:\[[ xX]\] )?(?:#{1,6} |> )?)[ \t]+/, '$1')
     .trim()}`;
 
 /**
@@ -568,10 +669,47 @@ export function endFenceOptional(text: string): string {
   return text;
 }
 
+/**
+ * An outline with each quote's later lines lazy, as the projection has them (`> a⏎b`): the `>` an app
+ * or ourus writes on them (`> a⏎> b`, SiYuan's, ourus's under `quotes: atom`) taken off, the same quote
+ * to Markdown, wherever in a block the quote starts (after an item's text, with `paragraphsInBlock`),
+ * and a selection after it moved back with it.
+ */
+export function lazyQuotes(o: Outline): Outline {
+  let sel = o.sel;
+  const blocks = o.blocks.map((b, i) => {
+    if (!/(?:^(?:\d{1,9}\. )?(?:\[[ xX]\] )?|\n) {0,3}>/.test(b.text)) return b;
+    // each later line's `>` and its space in a quote: where it was in the text, and how long (a quote
+    // starts at a line starting with `>`, and goes on to a blank line)
+    const cuts: [number, number][] = [];
+    let at = 0;
+    let inQuote = false;
+    const text = b.text
+      .split('\n')
+      .map((line, k) => {
+        const mark = /^ {0,3}> ?/.exec(k ? line : line.replace(/^(?:\d{1,9}\. )?(?:\[[ xX]\] )?/, ''))?.[0];
+        let quoted = 0;
+        if (inQuote && k) quoted = /^ {0,3}> ?/.exec(line)?.[0].length ?? 0;
+        else if (mark) inQuote = true;
+        if (inQuote && !mark && line.trim() === '') inQuote = false;
+        if (quoted) cuts.push([at, quoted]);
+        at += line.length + 1;
+        return line.slice(quoted);
+      })
+      .join('\n');
+    if (sel?.block === i && cuts.length) {
+      const map = (p: number): number => p - cuts.reduce((n, [c, len]) => n + Math.max(0, Math.min(len, p - c)), 0);
+      sel = { ...sel, anchor: map(sel.anchor), head: map(sel.head) };
+    }
+    return text === b.text ? b : { ...b, text };
+  });
+  return { ...o, blocks, sel };
+}
+
 /** How `got` compares with `want`; a selection is compared only where `want` has one. */
 export function compareOutlines(want: Outline, got: Outline, sections: readonly number[] = []): Verdict {
-  // a code block's closing fence at a block's end is the block's own end
-  const ended = (o: Outline): Outline => ({ ...o, blocks: o.blocks.map((b) => ({ ...b, text: endFenceOptional(b.text) })) });
+  // a code block's closing fence at a block's end is the block's own end; a quote's later lines lazy
+  const ended = (o: Outline): Outline => lazyQuotes({ ...o, blocks: o.blocks.map((b) => ({ ...b, text: endFenceOptional(b.text) })) });
   [want, got] = [sectioned(ended(want), sections), sectioned(ended(got), sections)];
   const same = want.blocks.length === got.blocks.length && want.blocks.every((b, i) => b.depth === got.blocks[i]!.depth && !b.free === !got.blocks[i]!.free && sameText(b.text, got.blocks[i]!.text));
   if (!same) {

@@ -12,6 +12,7 @@ import { documentOffset, readText, stringOffset, type ReadText } from './read.ts
 import { escapeParagraph } from './escapes.ts';
 import { markdownOf, markdownStart } from './copy.ts';
 import { ProseText, type AtomText, type OutlineNodeText } from './text.ts';
+import { listAdopters } from './rules.ts';
 
 /**
  * What an update is told besides its changes. The placeholders: a host's edit maps them through its
@@ -42,7 +43,7 @@ export class OurusDoc {
   readonly marks: MarkSet;
   /** The parse, with the placeholders read as sentinels. */
   readonly mdTree: MdTree;
-  /** Carried for the commands; reading uses `config.flavor` only. */
+  /** Carried for the commands; reading uses `config.flavor`, `config.quotes` and `config.listParent` only. */
   readonly config: Config;
   /** The outline, stored: shared with every snapshot whose nodes an edit didn't reach. */
   readonly root: OutlineNodePersistent;
@@ -64,7 +65,7 @@ export class OurusDoc {
     const config = Config.of(options.config);
     const flavor = MdFlavor.named(config.flavor);
     const [marks, tree] = read(MarkSet.of(options.marks ?? []), (sentinels) => MdTree.parse(text, flavor, { sentinels }));
-    const { root, nextId } = readOutline(tree, null, Touched.none);
+    const { root, nextId } = readOutline(tree, null, Touched.none, undefined, config);
     return new OurusDoc(text, marks, tree, config, root, nextId);
   }
 
@@ -86,7 +87,7 @@ export class OurusDoc {
     const old = this.mdTree;
     const [marks, tree] = read(candidates, (sentinels) => old.update(set.changes, { sentinels }));
     const touched = touchedLines(tree, set, this.marks.map(set), marks);
-    const { root, nextId } = readOutline(tree, { tree: old, root: this.root, changes: set.changes, nextId: Math.max(this.nextId, params.nextId ?? 0), startOf: (id) => this.node(id)?.startLine }, touched, params.identity);
+    const { root, nextId } = readOutline(tree, { tree: old, root: this.root, changes: set.changes, nextId: Math.max(this.nextId, params.nextId ?? 0), startOf: (id) => this.node(id)?.startLine }, touched, params.identity, this.config);
     return new OurusDoc(text, marks, tree, this.config, root, nextId);
   }
 
@@ -271,6 +272,14 @@ export class OurusDoc {
     return pos;
   }
 
+  /**
+   * Whether `node` adopts the list right after it (`Config.listParent`): a node of the kinds that do,
+   * in the document's own sections (the root's, a heading's), not in an item or a quote.
+   */
+  adoptsLists(node: OutlineNode): boolean {
+    return listAdopters(this.config.listParent).has(node.kind) && (node.parent?.ownsLists ?? false);
+  }
+
   /** Whether line `i` holds nothing past its containers' prefix (a blank line, in a quote `>`); false past the last line. */
   isBlankLine(i: number): boolean {
     if (i < 0 || i >= this.mdTree.lineCount) return false;
@@ -293,12 +302,15 @@ export class OurusDoc {
     const line = this.mdTree.line(lineIndexAt(this.mdTree.starts, pos));
     const first = this.mdTree.line(node.textFirstLine);
     if (trimMd(this.text.slice(line.from, line.to).replace(/^[ \t>]*/, '')) !== '' || pos !== line.to) return false;
-    // (in the quotes the text is in: as many `>` as they are)
-    let quotes = 0;
+    // (in the quotes the text is in: as many `>` as they are, its own too where it is a quote's)
+    const text = this.textOf(node);
+    const framed = text instanceof ProseText && text.type === 'quote';
+    let quotes = framed ? 1 : 0;
     for (let up: OutlineNode | null = node; up; up = up.parent) if (up.kind === 'quote') quotes++;
     if ((this.text.slice(line.from, line.to).match(/>/g)?.length ?? 0) !== quotes) return false;
     const column = (l: MdLine, at: number): number => advanceColumns(this.text, l.from, at, 0);
-    return column(line, pos) === column(first, this.posOf(node, 0, -1));
+    // (a quote's text past its `> `, where a line of it starts)
+    return column(line, pos) === column(first, this.posOf(node, framed ? text.textStart(0) : 0, -1));
   }
 
   /** Whether line `i` continues a paragraph lazily (without its containers' prefix). */

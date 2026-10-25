@@ -5,8 +5,10 @@
 import { ProseText, AtomText, type OutlineNode } from '../doc/index.ts';
 import { deleteSelectionAcross, joinUp } from './backspace.ts';
 import { codeAt, joinCodeItemUp, joinInCode } from './code.ts';
-import { notApplicable, reject, type CommandContext, type CommandOutcome } from './context.ts';
-import { deleteHeldSpace, hiddenSpacesAt, inMarkup, textEnd, textStart } from './util.ts';
+import { lineOf } from '../text/index.ts';
+import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
+import { joinIntoQuote, joinLineInQuote, joinQuoteUp, quoteAtomAt } from './quote.ts';
+import { deleteHeldSpace, hiddenSpacesAt, inMarkup, textEnd, textStart, unquote } from './util.ts';
 
 /**
  * Delete (spec/delete.md). In the middle of a text it is the host's; at the end of a line inside the
@@ -26,9 +28,9 @@ export function deleteContentForwardCommand(ctx: CommandContext): CommandOutcome
   const at = ctx.from;
   // in the spaces Markdown hides before a text: the user's whitespace, a space a press, the host's (Enter65d)
   const hidden = hiddenSpacesAt(ctx, ctx.selection.head);
-  if (hidden && ctx.selection.head < hidden.to) return notApplicable();
+  if (hidden && ctx.selection.head < hidden.to) return deferToHost();
   if (inMarkup(ctx.doc, at, ctx.selection.head)) {
-    if (config.markup === 'text') return notApplicable('the caret is in markup');
+    if (config.markup === 'text') return deferToHost('the caret is in markup');
     // right before a task's checkbox, it goes, the mirror of Backspace after it (Delete19)
     if (at.zone === 'frame' && at.part === 'task' && at.text instanceof ProseText && config.taskEditing === 'checkbox') {
       const task = at.text.frame.find((p) => p.part === 'task')!;
@@ -38,7 +40,16 @@ export function deleteContentForwardCommand(ctx: CommandContext): CommandOutcome
     return null;
   }
   // before a marker, Delete would take it (Delete23)
-  if (at.zone === 'marker' && at.part !== 'padding') return config.markup === 'text' ? notApplicable("a list marker isn't text") : reject('not-expressible', "a list marker isn't text");
+  if (at.zone === 'marker' && at.part !== 'padding') return config.markup === 'text' ? deferToHost("a list marker isn't text") : reject('not-expressible', "a list marker isn't text");
+  // (at a line's end inside a quote read as an atom: the next line joins as it is written)
+  const inQuote = quoteAtomAt(ctx);
+  const lineJoin = inQuote && joinLineInQuote(ctx, inQuote, true);
+  if (lineJoin) return lineJoin;
+  // at its end, the node below joins it as it is written (`quotes: atom`)
+  if (inQuote && ctx.collapsed && inQuote.offset === inQuote.text.text.length) {
+    const below = inQuote.node.children[0] ?? inQuote.node.afterSubtree;
+    if (below && below.preceding?.persistentNode === inQuote.node.persistentNode) return joinIntoQuote(ctx, inQuote.node, inQuote.text, below);
+  }
   if (at.zone !== 'text' || !(at.text instanceof ProseText)) return null;
   const { node, text } = at;
   const held = deleteHeldSpace(ctx, node, text, at.offset, 1);
@@ -50,16 +61,17 @@ export function deleteContentForwardCommand(ctx: CommandContext): CommandOutcome
   const lineEnd = s.indexOf('\n', offset);
   const draft = ctx.draft();
   if (lineEnd >= 0 && lineEnd < end) {
-    // before a line's end inside the text, the host's; at it, the next line joins it
-    if (offset < lineEnd) return notApplicable();
-    const joined = text.splice(lineEnd, lineEnd + 1);
+    // before a line's end inside the text, the host's; at it, the next line joins it (a quote's, its `> `
+    // going with the break)
+    if (offset < lineEnd) return deferToHost();
+    const joined = text.splice(lineEnd, text.textStart(lineOf(s, lineEnd + 1)));
     // a quote's first paragraph that would read as its callout's title: not done yet
     if (node.becomesTitle(joined)) return null;
     draft.setText(node, joined).setCaret(node, offset, -1);
     return ctx.apply(draft);
   }
   // in the text, the host's; past its end, in a closing frame (a setext underline): not done yet
-  if (offset < end && !text.empty) return notApplicable();
+  if (offset < end && !text.empty) return deferToHost();
   if (offset !== end) return null;
   const below = node.children[0] ?? node.afterSubtree;
   if (!below) return null;
@@ -70,12 +82,14 @@ export function deleteContentForwardCommand(ctx: CommandContext): CommandOutcome
     if (node.kind === 'paragraph' && !node.children.length && lower) return ctx.apply(draft.remove([node]).setCaret(below, textStart(lower), 1));
     if (node.kind !== 'item' || !(lower instanceof ProseText) || lower.empty || below.preceding?.persistentNode !== node.persistentNode) return null;
     // (refused, with spaces after the caret: they are the host's to delete, as an outliner deletes them)
-    const refused = (): CommandOutcome => (ctx.selection.head < ctx.doc.lineAt(ctx.selection.head).to ? notApplicable() : reject('has-children'));
+    const refused = (): CommandOutcome => (ctx.selection.head < ctx.doc.lineAt(ctx.selection.head).to ? deferToHost() : reject('has-children'));
     if (node.children.length && config.emptyItemWithChildren === 'refuse') return refused();
     // (its first child coming up with children of its own: `joinWithChildren`'s too, either refusing)
     if (below.parent?.persistentNode === node.persistentNode && below.children.length && config.joinWithChildren === 'refuse') return refused();
     return joinUp(ctx, below, lower, false);
   }
+  // a quote read as an atom joins as it is written, its `>` text (`quotes: atom`)
+  if (lower instanceof AtomText && lower.type === 'blockquote' && below.preceding?.persistentNode === node.persistentNode) return joinQuoteUp(ctx, below, lower);
   // an item whose text is code below joins this node, as Backspace at its fence's start (Fence34)
   if (lower instanceof AtomText && below.kind === 'item' && below.preceding?.persistentNode === node.persistentNode) return joinCodeItemUp(ctx, below, { node, offset });
   // an item below with an item for its first block (`- - b`): it goes, its children this item's (Delete33)
@@ -95,6 +109,8 @@ export function deleteContentForwardCommand(ctx: CommandContext): CommandOutcome
     draft.setText(below, (close ? lower.splice(close.from, close.to) : lower).splice(open.from, open.to)).setCaret(node, offset, -1);
     return ctx.apply(draft);
   }
+  // before a quote (`quotes: text`), its `>`s first, its text a paragraph where it is
+  if (lower.type === 'quote') return ctx.apply(draft.setText(below, unquote(lower)).setCaret(node, offset, -1));
   // an empty item below goes, this node taking its gap as a join does; with children, as Backspace at
   // its start takes it (Delete33b)
   if (below.kind === 'item' && lower.empty) {

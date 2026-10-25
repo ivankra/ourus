@@ -33,6 +33,8 @@ export const driver: Driver = {
   // measured: Enter at an item's text start leaves the caret with the text; a typed fence is left
   // open (Backtick1 to Backtick4)
   behaves: {
+    // a quote is text, its `>`s characters edited on its lines: of `quotes`' values the one its runs agree with most (166 quote cases a setup, ../../dev/19-quotes.md §1.4.3)
+    quotes: 'atom',
     enterSplitSpace: 'start',
     enterAtTextStart: 'stay',
     closeBackticks: 'none',

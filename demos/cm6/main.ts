@@ -86,7 +86,7 @@ function command(type: Command['type']) {
     const { anchor, head } = view.state.selection.main;
     const result = executeCommand(doc, { type } as Command, { anchor, head });
     onResult(type, result);
-    if (result.status === 'notApplicable') return false; // let CodeMirror do its default
+    if (result.status === 'deferredToHost') return false; // let CodeMirror do its default
     if (result.status === 'rejected') return true; // swallow the key; the status bar says why
     view.dispatch({
       changes: [...result.changes],
@@ -108,7 +108,7 @@ const typingHandler = EditorView.inputHandler.of((view, from, to, text) => {
   const { anchor, head } = view.state.selection.main;
   if (from !== Math.min(anchor, head) || to !== Math.max(anchor, head)) return false;
   const result = executeCommand(view.state.field(ourusDoc), { type: 'insertText', text }, { anchor, head });
-  if (result.status === 'notApplicable') return false;
+  if (result.status === 'deferredToHost') return false;
   onResult('insertText', result);
   if (result.status === 'applied') {
     view.dispatch({
@@ -134,7 +134,7 @@ function copyOrCut(type: 'copy' | 'cut', event: ClipboardEvent, view: EditorView
   const { anchor, head } = view.state.selection.main;
   const result = executeCommand(view.state.field(ourusDoc), { type }, { anchor, head });
   onResult(type, result);
-  if (result.status === 'notApplicable') return false;
+  if (result.status === 'deferredToHost') return false;
   event.preventDefault();
   if (result.status !== 'applied') return true;
   for (const [format, text] of Object.entries(result.clipboard ?? {})) data.setData(format, text);
@@ -171,7 +171,7 @@ const pasteHandler = EditorView.domEventHandlers({
     const { anchor, head } = view.state.selection.main;
     const result = executeCommand(view.state.field(ourusDoc), type === 'paste' ? { type, clipboard } : { type, text }, { anchor, head });
     onResult(type, result);
-    if (result.status === 'notApplicable') return false;
+    if (result.status === 'deferredToHost') return false;
     event.preventDefault();
     if (result.status === 'applied') {
       view.dispatch({
@@ -527,7 +527,7 @@ function main(): void {
         ? `${type}: rejected — ${result.reason}${result.detail && result.reason !== 'write-failed' ? ` (${result.detail.replace(/\.$/, '')})` : ''}`
         : `${type}: ${result.status === 'applied' ? 'applied' : 'not applicable (editor default)'}`;
     clearTimeout(hideStatus);
-    if (result.status === 'notApplicable') return;
+    if (result.status === 'deferredToHost') return;
     status.classList.add('shown');
     hideStatus = window.setTimeout(() => status.classList.remove('shown'), 3000);
   };

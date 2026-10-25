@@ -35,7 +35,10 @@ export function locate(doc: OurusDoc, pos: number): Located {
     const owner = extentOwner(doc.rootNode, line.index);
     return owner ? { zone: 'gap', owner } : { zone: 'preamble' };
   }
-  if (pos < line.contentFrom) {
+  // (a quote that is the node's text, `Config.quotes`: its `>` the text's, frame or characters)
+  const quote = node.persistentNode.textQuote;
+  const own = quote ? line.prefix.find((p) => p.container.block === quote) : undefined;
+  if (pos < line.contentFrom && !(own && pos >= own.from)) {
     const piece = line.prefix.findIndex((p) => p.from <= pos && pos < p.to);
     const at = piece < 0 ? line.prefix.length - 1 : piece;
     const p = line.prefix[at];

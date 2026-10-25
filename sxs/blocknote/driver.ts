@@ -13,11 +13,13 @@
 // block's text as the spec's canonical form has it (`[ ] `, `## `, a fence). In free form: a
 // paragraph, a heading or code is a block outside every list (`free`), as BlockNote's are, and what one
 // owns in ourus's outline (a heading its section, a paragraph the list after it) is beside it in
-// BlockNote, as in Markdown (`liftOwned`, `ownBlocks`).
+// BlockNote, as in Markdown (`liftOwned`). Any block of BlockNote's may hold children (Tab nests a
+// list item under a paragraph), which Markdown can't say of a paragraph: read back, what a free block
+// holds is beside it, as its Markdown reads, then owned as `listParent` says (`asMarkdownReads`).
 
 import type { Page } from 'playwright-core';
 import type { Driver } from '../lib/driver.ts';
-import { liftOwned, ownBlocks, runsAsMarkdown, type Block, type Outline, type Run, type Sel } from '../lib/block.ts';
+import { asMarkdownReads, liftOwned, runsAsMarkdown, type Block, type Outline, type Run, type Sel } from '../lib/block.ts';
 
 /** BlockNote's keys for the spec's motions; the `select…` motions add Shift. */
 const MOTIONS: Record<string, string> = {
@@ -42,7 +44,8 @@ interface BnBlock {
 /**
  * A block's canonical text as BlockNote's: its type, props and text, and how long its prefix is; and
  * where a number that is text has its escape (`1\. x`), which BlockNote's text hasn't (`cut`). A free
- * block (outside every list, `Block.free`) is a paragraph, or by its text a heading or a code block;
+ * block (outside every list, `Block.free`) is a paragraph, or by its text a heading, a code block or a
+ * quote;
  * an item a list item: a task, numbered or a bullet.
  */
 function toBlockNote(text: string, free = false): { block: Omit<BnBlock, 'children'>; prefix: number; cut?: number } {
@@ -50,6 +53,7 @@ function toBlockNote(text: string, free = false): { block: Omit<BnBlock, 'childr
   const fence = /^```([^\n`]*)\n([\s\S]*?)\n?```$/.exec(text);
   if (free && heading) return { block: { type: 'heading', props: { level: heading[1]!.length }, content: text.slice(heading[0].length) }, prefix: heading[0].length };
   if (free && fence) return { block: { type: 'codeBlock', props: { language: fence[1] || 'text' }, content: fence[2] }, prefix: 4 + fence[1]!.length };
+  if (free && text.startsWith('> ')) return { block: { type: 'quote', content: text.slice(2) }, prefix: 2 };
   const task = free ? null : /^\[([ xX])\] /.exec(text);
   if (task) return { block: { type: 'checkListItem', props: { checked: task[1] !== ' ' }, content: text.slice(4) }, prefix: 4 };
   // a numbered block, numbered as its run of them is (`nest` gives the run its first number)
@@ -70,11 +74,12 @@ const appOffset = (offset: number, at: { prefix: number; cut?: number }): number
  * caret where a block's text has no place in BlockNote, its markup being a widget or the block's type.
  */
 function holds(o: Outline): string | undefined {
-  // a list item is a list item's text: BlockNote's headings and code blocks are blocks of their own
+  // a list item is a list item's text: BlockNote's headings, code blocks and quotes are blocks of their own
   for (const b of o.blocks) {
     if (b.free) continue;
     if (/^#{1,6} /.test(b.text)) return 'heading as a list item (a heading is a block of its own)';
     if (/^```/.test(b.text)) return 'code block as a list item (a code block is a block of its own)';
+    if (b.text.startsWith('> ')) return 'quote as a list item (a quote is a block of its own)';
   }
   // numbered siblings that don't count on (`1. a`, `1. b`): BlockNote numbers a run of them on from its
   // first, whose `start` alone it draws (measured)
@@ -94,6 +99,8 @@ function holds(o: Outline): string | undefined {
   // a heading's #s are its level, not text: the caret goes to the title's start (Enter55)
   const hashes = /^#{1,6} /.exec(text);
   if (hashes && from < hashes[0].length) return "caret in a heading's #s";
+  // and a quote's `>` its type
+  if (o.blocks[o.sel.block]!.free && text.startsWith('> ') && from < 2) return "caret in a quote's >";
   // a code block's editor has the code alone, its language a menu
   const fence = /^```[^\n`]*\n([\s\S]*?)\n?```$/.exec(text);
   if (fence) {
@@ -103,9 +110,6 @@ function holds(o: Outline): string | undefined {
   }
   return undefined;
 }
-
-/** A free block that owns the list right after it, as Markdown's paragraph does (not code, a divider, a heading). */
-const ownsList = (b: Block): boolean => !!b.free && !/^#{1,6} /.test(b.text) && !b.text.startsWith('```') && !/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(b.text);
 
 /** The outline's blocks as BlockNote's, nested by depth. */
 function nest(blocks: readonly Block[]): BnBlock[] {
@@ -255,6 +259,15 @@ export const driver: Driver = {
   // measured: Enter at an item's text start leaves the caret with the text
   // ProseMirror's paste opens both seams, and a list keeps its form
   behaves: {
+    // a quote is a style on one block: a quote of one paragraph is that block, its `>` the style (../../dev/19-quotes.md, Part 1)
+    quotes: 'text',
+    // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+    enterInQuote: 'split',
+    // its blocks a flat sequence, each item a block of its own: a list after a paragraph is no block's,
+    // what a paragraph holds in BlockNote (Tab nests one) Markdown's list after it, and a move passes one
+    // block, an item included (Lists1, Lists8: ../../dev/19-quotes.md, Part 2)
+    listParent: 'container',
+    listMoves: 'item',
     enterSplitSpace: 'start',
     // Backspace at an item's text start: a paragraph where it is (Backspace1, Enter38)
     backspaceAtItemStart: 'unwrap',
@@ -333,6 +346,9 @@ export const driver: Driver = {
       return { text: b.prefix + body + b.suffix, at: (p: number) => b.prefix.length + md.at(p) + (b.cut !== undefined && p > b.cut ? 1 : 0) };
     });
     const sel = r.sel && { block: r.sel.block, anchor: texts[r.sel.block]!.at(r.sel.anchor), head: texts[r.sel.block]!.at(r.sel.head) };
-    return { blocks: ownBlocks(r.blocks.map(({ depth, free }, i) => ({ depth, text: texts[i]!.text, ...(free && { free: true as const }) })), ownsList), sel };
+    // (any block may hold children, a paragraph too: what a free block holds read as its Markdown
+    // reads, beside it, then owned as the app's `listParent` says)
+    const blocks: Block[] = r.blocks.map(({ depth, free }, i) => ({ depth, text: texts[i]!.text, ...(free && { free: true as const }) }));
+    return { blocks: asMarkdownReads(blocks, driver.behaves?.listParent), sel };
   },
 };

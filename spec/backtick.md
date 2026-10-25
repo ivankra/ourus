@@ -305,7 +305,7 @@ after
 ````
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ## Backtick9
@@ -384,7 +384,7 @@ code
 ````
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ## Backtick12
@@ -592,7 +592,7 @@ use `┃ here
 ```
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ## Backtick19
@@ -832,7 +832,7 @@ code
 ````
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ## Backtick29

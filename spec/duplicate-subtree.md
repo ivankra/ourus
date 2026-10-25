@@ -134,8 +134,9 @@ as the original's, unquoted. Quoted, `| a |` over `|---|` would be a table, not 
 paragraph.
 
 ```yaml
-tags: rare quote-container
+tags: rare
 flavor: gfm
+quotes: container
 ```
 
 ```buffer

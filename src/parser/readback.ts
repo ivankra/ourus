@@ -16,19 +16,23 @@ export type MdLineContext = 'start' | 'continuation' | 'quoteStart';
  * ends the paragraph, underlines it, or makes it a link reference definition), or -1 when every one
  * does. Blank lines alone are an empty text, which stays one. `above`: in `continuation`, the
  * paragraph's line they follow, as written (what a table's delimiter row is matched against); a
- * one-word line by default.
+ * one-word line by default. `lazy`: in `quoteStart`, the lines written without the quote's `>`, its
+ * paragraph's lazy continuations, which out of the quote may start a block it couldn't interrupt
+ * there (`> q⏎2) x`, a list from 2).
  */
-export function firstNonParagraph(flavor: MdFlavor, lines: readonly string[], context: MdLineContext = 'start', above = 'x'): number {
+export function firstNonParagraph(flavor: MdFlavor, lines: readonly string[], context: MdLineContext = 'start', above = 'x', lazy?: readonly boolean[]): number {
   if (lines.length === 0 || lines.every((l) => l.trim() === '')) return -1;
   const lead = context === 'continuation' ? 1 : 0;
-  const written = context === 'quoteStart' ? lines.map((l) => '> ' + l) : context === 'continuation' ? [above, ...lines] : lines;
+  const written = context === 'quoteStart' ? lines.map((l, k) => (lazy?.[k] ? l : '> ' + l)) : context === 'continuation' ? [above, ...lines] : lines;
   const tree = MdTree.parse(written.join('\n'), flavor);
-  // (a quote's children start where it does, on line 0)
+  // (a quote's children start where it does, on line 0; it ends where a lazy line starts a block)
   let parent = tree.root;
+  let ends = written.length;
   if (context === 'quoteStart') {
     const quote = parent.children[0];
-    if (parent.children.length !== 1 || quote!.type !== 'blockquote' || quote!.attrs.callout) return 0;
-    parent = quote!;
+    if (!quote || quote.type !== 'blockquote' || quote.attrs.callout) return 0;
+    if (parent.children.length > 1) ends = parent.offsets[1]!;
+    parent = quote;
   }
   const first = parent.children[0];
   const start = parent.offsets[0];
@@ -36,7 +40,7 @@ export function firstNonParagraph(flavor: MdFlavor, lines: readonly string[], co
   // a setext heading from the first line: its underline is the line that changed it
   if (first?.type === 'heading' && first.attrs.setext && start === 0) return end - lead;
   if (!first || first.type !== 'paragraph' || start !== 0) return 0;
-  if (end === written.length - 1 && parent.children.length === 1) return -1;
+  if (end === ends - 1 && parent.children.length === 1) return ends === written.length ? -1 : ends;
   // the paragraph stopped early: the line after it is the one
   return Math.max(0, end + 1 - lead);
 }
@@ -85,6 +89,8 @@ export interface MdParagraphPlace {
   readonly context?: MdLineContext;
   readonly above?: string;
   readonly below?: readonly string[];
+  /** In `quoteStart`, the lines written without the quote's `>` (`firstNonParagraph`). */
+  readonly lazy?: readonly boolean[];
 }
 
 /** A backslash in a paragraph's lines: before offset `at` of line `line`. */
@@ -200,7 +206,7 @@ function paragraphEscapes(flavor: MdFlavor, lines: readonly string[], place: MdP
 
 /** The first of `lines` that doesn't stay the paragraph's at `place`, or -1; a line of `below` counts as their last. */
 function firstChanged(flavor: MdFlavor, lines: readonly string[], place: MdParagraphPlace): number {
-  const changed = firstNonParagraph(flavor, [...lines, ...(place.below ?? [])], place.context, place.above);
+  const changed = firstNonParagraph(flavor, [...lines, ...(place.below ?? [])], place.context, place.above, place.lazy);
   return changed < 0 ? -1 : Math.min(changed, lines.length - 1);
 }
 

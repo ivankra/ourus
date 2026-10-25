@@ -4,7 +4,7 @@
 import { clipboardOf } from './clipboard.ts';
 import { ProseText, type OutlineNode } from '../doc/index.ts';
 import { deleteContentBackwardCommand } from './backspace.ts';
-import { CommandContext, notApplicable, type CommandOutcome } from './context.ts';
+import { CommandContext, deferToHost, type CommandOutcome } from './context.ts';
 import { composeChanges, lineOf } from '../text/index.ts';
 import { deleteSubtreeCommand } from './delete-subtree.ts';
 import { operands, operandsRefused } from './util.ts';
@@ -24,10 +24,10 @@ export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): Com
   const to = Math.max(ctx.selection.anchor, ctx.selection.head);
   let nodes: readonly OutlineNode[] | null = null;
   if (from === to) {
-    if (config.copyAtCaret === 'host') return notApplicable();
+    if (config.copyAtCaret === 'host') return deferToHost();
     const line = doc.lineAt(from);
     const node = from <= line.to ? doc.nodeAtLine(line.index) : null;
-    if (!node) return notApplicable();
+    if (!node) return deferToHost();
     nodes = [node];
   } else if (config.copySelection !== 'text' && nodesOnLines(ctx, from, to) > 1) {
     const found = operands(doc, ctx.selection);
@@ -45,7 +45,7 @@ export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): Com
   if (type === 'copy') return { status: 'applied', doc: ctx.doc, changes: [], selection: ctx.selection, clipboard };
   const deleted = nodes ? deleteSubtreeCommand(ctx) : deleteSelected(ctx);
   // the text deleted as the host deletes it, where ourus doesn't: the clipboard is still ourus's
-  if (!nodes && (!deleted || deleted.status === 'notApplicable')) {
+  if (!nodes && (!deleted || deleted.status === 'deferredToHost')) {
     const changes = [{ from, to, insert: '' }];
     return { status: 'applied', doc: ctx.doc.update(changes), changes, selection: { anchor: from, head: from }, clipboard };
   }
@@ -61,7 +61,7 @@ export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): Com
 export function deleteSelected(ctx: CommandContext): CommandOutcome {
   const deleted = deleteContentBackwardCommand(ctx);
   const [a, b] = [ctx.from, ctx.to];
-  if (deleted?.status !== 'notApplicable' || a.zone !== 'text' || b.zone !== 'text' || !(a.text instanceof ProseText) || a.node.persistentNode !== b.node.persistentNode) return deleted;
+  if (deleted?.status !== 'deferredToHost' || a.zone !== 'text' || b.zone !== 'text' || !(a.text instanceof ProseText) || a.node.persistentNode !== b.node.persistentNode) return deleted;
   const s = a.text.text;
   let [from, end] = [a.offset, b.offset];
   const lineStart = s.lastIndexOf('\n', from - 1) + 1;

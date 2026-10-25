@@ -53,6 +53,7 @@ function toItem(depth: number, text: string): Item & { prefix: number; cut?: num
   if (task) return { depth, name: first!.slice(task[0].length), note, layout: 'todo', completed: task[1] !== ' ', prefix: task[0].length };
   const heading = /^(#{1,3}) /.exec(first!);
   if (heading) return { depth, name: first!.slice(heading[0].length), note, layout: `h${heading[1]!.length}` as Item['layout'], completed: false, prefix: heading[0].length };
+  if (first!.startsWith('> ')) return { depth, name: first!.slice(2), note, layout: 'quote-block', completed: false, prefix: 2 };
   // a numbered item: its number its place in its run of numbered siblings
   const numbered = /^\d{1,9}\. /.exec(first!);
   const prefix = numbered?.[0].length ?? 0;
@@ -104,8 +105,8 @@ async function checkExport(page: Page, got: Outline): Promise<void> {
     return out.text as string;
   });
   const items = md.replace(/^[^\n]*\n+/, '');
-  // (no items, or a quote, which the projection has no block form for: nothing to check)
-  if (!items.trim() || /^ *(?:- )?> /m.test(items)) return;
+  // (no items: nothing to check)
+  if (!items.trim()) return;
   let exported: Outline;
   try {
     exported = project(items, 'gfm', { ordered: true }).outline;
@@ -159,6 +160,8 @@ export const driver: Driver = {
   // paste opens the seam (the first pasted text joins), though not on an item with children
   // (on the paste files, 14 cases better under `open`, 3 worse)
   behaves: {
+    // a quote is a style on one block: a quote of one paragraph is that block, its `>` the style (../../dev/19-quotes.md, Part 1)
+    quotes: 'text',
     // Enter mid-heading: the new block above takes the text before the caret, the heading (an
     // attribute) staying with the rest (TO-E13-E16, TO-E14-E20)
     quirkEnterMidHeading: 'workflowy',
@@ -194,10 +197,10 @@ export const driver: Driver = {
       const nameEnd = it.prefix + it.name.length;
       if (it.note !== null && Math.min(doc.sel.anchor, doc.sel.head) <= nameEnd && Math.max(doc.sel.anchor, doc.sel.head) > nameEnd) return "selection across an item's name and its note";
     }
-    // a to-do's checkbox and a heading's level are the item's type, not text: no caret goes there
-    if (doc.sel && Math.min(doc.sel.anchor, doc.sel.head) < toItem(0, doc.blocks[doc.sel.block]!.text).prefix) return "caret in a task's checkbox or a heading's #s";
-    // an item has one layout: numbered, or a task, or a heading
-    if (doc.blocks.some((b) => /^\d{1,9}\. (?:\[[ xX]\]|#{1,6} )/.test(b.text))) return 'numbered task or heading';
+    // a to-do's checkbox, a heading's level and a quote's `>` are the item's type, not text: no caret goes there
+    if (doc.sel && Math.min(doc.sel.anchor, doc.sel.head) < toItem(0, doc.blocks[doc.sel.block]!.text).prefix) return "caret in a task's checkbox, a heading's #s or a quote's >";
+    // an item has one layout: numbered, or a task, or a heading, or a quote
+    if (doc.blocks.some((b) => /^\d{1,9}\. (?:\[[ xX]\]|#{1,6} |> )/.test(b.text))) return 'numbered task, heading or quote';
     // a run of numbered siblings counts on from its first item's number (its `numbered_start`)
     const run: number[] = [];
     for (const b of doc.blocks) {

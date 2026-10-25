@@ -7,7 +7,7 @@ import { clipboardFragment, clipboardMarkdown, type Clipboard } from './clipboar
 import { ProseText, OurusDoc, AtomText, type OutlineNode } from '../doc/index.ts';
 import { lineOf } from '../text/index.ts';
 import type { OurusDraft } from '../draft/index.ts';
-import { notApplicable, type CommandContext, type CommandOutcome } from './context.ts';
+import { deferToHost, type CommandContext, type CommandOutcome } from './context.ts';
 import { afterDeleting } from './copy.ts';
 import { codeAt, onDelimiterLine } from './code.ts';
 import { pastePlainCommand, plainLines } from './paste-plain.ts';
@@ -43,7 +43,7 @@ export function pasteCommand(ctx: CommandContext, clipboard: Clipboard): Command
     return ctx.collapsed ? pastePlainCommand(ctx, plain) : afterDeleting(ctx, (next) => pastePlainCommand(next, plain));
   }
   const read = clipboardMarkdown(clipboard);
-  if (!read) return notApplicable();
+  if (!read) return deferToHost();
   return pasteMarkdown(ctx, { ...read, plain: clipboard['text/plain'] }, config.pasteLines === 'items');
 }
 
@@ -78,29 +78,30 @@ function pasteAt(ctx: CommandContext, read: Read, eachLine: boolean, nodesOnly: 
   const config = ctx.config;
   const asText = (paste: () => CommandOutcome): CommandOutcome | 'text' => (nodesOnly ? 'text' : paste());
   let fragment = clipboardFragment(read.markdown, ctx.config);
-  if (!fragment) return notApplicable();
-  // plain lines (paragraphs only), with `pasteLines: items`: each line a node (Paste18, 19)
-  const plain = (doc: OurusDoc): boolean => doc.rootNode.children.every((r) => r.kind === 'paragraph' && !r.children.length);
+  if (!fragment) return deferToHost();
+  // plain lines (paragraphs only, but a quote's: `quotes: text`), with `pasteLines: items`: each line a node (Paste18, 19)
+  const quoted = (doc: OurusDoc, r: OutlineNode): boolean => { const t = doc.textOf(r); return t instanceof ProseText && t.type === 'quote'; };
+  const plain = (doc: OurusDoc): boolean => doc.rootNode.children.every((r) => r.kind === 'paragraph' && !r.children.length && !quoted(doc, r));
   const byLine = eachLine && plain(fragment.doc);
   if (byLine) {
     const doc = fragment.doc;
     const each = doc.rootNode.children.flatMap((r) => doc.markdownOf(doc.markdownStart(r), doc.rangeOf(r).to).split('\n').map((l) => l.trim()));
     // (ending with a line break where the clipboard does: one line with one is a node, without, inline text)
     fragment = clipboardFragment(each.join('\n\n') + (/[\r\n]$/.test(read.markdown) ? '\n' : ''), ctx.config);
-    if (!fragment) return notApplicable();
+    if (!fragment) return deferToHost();
   }
   const { doc: pasted, inline } = fragment;
   const roots = pasted.rootNode.children;
-  if (!roots.length) return notApplicable();
+  if (!roots.length) return deferToHost();
   if (ctx.doc.blank) return fillDocument(ctx, pasted);
   // a phrase (formatted text from a page) is put in at the caret, where the host's paste would lose its formatting
   // (in code, as plain text: code has no formatting to keep)
-  if (read.phrase) return asText(() => (codeAt(ctx) ? plainLines(ctx, read.plain ?? read.markdown) : (lineAt(ctx, read.markdown) ?? notApplicable())));
+  if (read.phrase) return asText(() => (codeAt(ctx) ? plainLines(ctx, read.plain ?? read.markdown) : (lineAt(ctx, read.markdown) ?? deferToHost())));
   const items = roots.every((r) => r.kind === 'item');
   // one line that is no item is inline text, put in at the caret
-  if (inline && !items && roots[0]!.kind !== 'quote') return asText(() => lineAt(ctx, read.markdown) ?? notApplicable());
+  if (inline && !items && roots[0]!.kind !== 'quote' && !quoted(pasted, roots[0]!)) return asText(() => lineAt(ctx, read.markdown) ?? deferToHost());
   const at = slotAt(ctx, items);
-  if (at === 'host') return notApplicable();
+  if (at === 'host') return deferToHost();
   if (at === null) return null;
   if (at === 'plain') return asText(() => plainLines(ctx, read.markdown));
   let slot = at;
@@ -110,11 +111,12 @@ function pasteAt(ctx: CommandContext, read: Read, eachLine: boolean, nodesOnly: 
   // plain lines go into the text, as plain paste puts them; a heading or a callout's title holds one line, and takes them as nodes
   const lines = plain(pasted);
   const text = ctx.doc.textOf(slot.node);
-  const takesLines = slot.node.kind !== 'heading' && slot.node.kind !== 'atom' && !(text instanceof ProseText && text.type === 'title') && !(text instanceof AtomText);
+  const quoteAtom = text instanceof AtomText && text.type === 'blockquote';
+  const takesLines = slot.node.kind !== 'heading' && (slot.node.kind !== 'atom' || quoteAtom) && !(text instanceof ProseText && text.type === 'title') && !(text instanceof AtomText && !quoteAtom);
   // (from a checkbox, at the text's start)
   if (lines && takesLines && !byLine) return asText(() => plainLines(ctx.from.zone === 'frame' && text instanceof ProseText ? ctx.at(ctx.doc.posOf(slot.node, text.textStart(0), 1)) : ctx, read.markdown));
   // one line, not at the text's end: inline text
-  if (inline && !slot.atEnd) return asText(() => lineAt(ctx, read.markdown) ?? notApplicable());
+  if (inline && !slot.atEnd) return asText(() => lineAt(ctx, read.markdown) ?? deferToHost());
   // what can't be an item before an item (a quote, a table) goes after it
   if (slot.where === 'before' && slot.node.kind === 'item' && !leads(roots[0]!)) slot = { ...endSlot(ctx, slot.node, items), atEnd: false };
   // a quote or a table pasted on an empty item is its first block, on its marker's line (PasteList17)
@@ -212,7 +214,7 @@ function lineAt(ctx: CommandContext, line: string): CommandOutcome {
 
 /** Whether a node can come before an item as one: an item, a paragraph, a heading, a block of lines. */
 function leads(root: OutlineNode): boolean {
-  return root.kind === 'item' || root.kind === 'paragraph' || root.kind === 'heading' || (root.kind === 'atom' && !!root.block.type.match(/code|math|comment|html/));
+  return root.kind === 'item' || root.kind === 'paragraph' || root.kind === 'heading' || (root.kind === 'atom' && !!root.block.type.match(/code|math|comment|html|blockquote/));
 }
 
 /** Whether `node`'s own text is empty (an item's: but its checkbox). */
@@ -259,7 +261,8 @@ function slotAt(ctx: CommandContext, items: boolean): Slot | 'plain' | 'host' | 
   if (text instanceof AtomText) {
     // a block that isn't text: its end is its own, elsewhere its lines are (plain paste's)
     const end = ctx.selection.head === ctx.doc.posOf(node, text.text.length, 1);
-    if (node.kind === 'atom') return end ? { ...endSlot(ctx, node, items), atEnd: true } : 'plain';
+    // (a quote read as an atom, `quotes: atom`, is text: nodes go after it, as after a paragraph)
+    if (node.kind === 'atom') return end || text.type === 'blockquote' ? { ...endSlot(ctx, node, items), atEnd: end } : 'plain';
     return { ...endSlot(ctx, node, items), atEnd: end };
   }
   if (!(text instanceof ProseText) || at.zone !== 'text' || inMarkup(ctx.doc, at, ctx.selection.head)) return 'host';
@@ -298,7 +301,7 @@ function endSlot(ctx: CommandContext, node: OutlineNode, items: boolean): Omit<S
     }
     return { where: 'first', node, list: items ? firstItem : null };
   }
-  if (node.kind === 'paragraph' && node.ownsLists) {
+  if (ctx.doc.adoptsLists(node)) {
     const near = after ? lastItem : firstItem;
     if (items && near) return { where: after ? 'last' : 'first', node, list: near };
     return { where: 'after', node, list: null };

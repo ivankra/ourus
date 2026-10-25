@@ -7,6 +7,7 @@
 // line from its own. After an update, the build reads the containers on the path to the changed lines
 // again and takes every other node whole from the old tree; ids are carried to the nodes made anew.
 
+import { Config } from '../config.ts';
 import type { MdBlock, MdTree } from '../parser/index.ts';
 import { lineIndexAt, mapPos, type ChangeSpec } from '../text/index.ts';
 import { itemHead, nodeKindOf, outlineChildren, quoteHead, type OutlineNodeKind, type OutlineChild } from './rules.ts';
@@ -65,6 +66,18 @@ export class OutlineNodePersistent {
     const node = Object.create(OutlineNodePersistent.prototype) as { -readonly [K in keyof OutlineNodePersistent]: OutlineNodePersistent[K] };
     Object.assign(node, { id, kind, block: null, head: null, gap, lines: 0, offsets: [], children, source, text });
     return node as OutlineNodePersistent;
+  }
+
+  /**
+   * The quote that is a read node's text (`Config.quotes`): `text`'s, a paragraph framed by it, its
+   * head the paragraph inside it; `atom`'s, its head the quote; an item's on its marker's line too
+   * (`- > q`). Null for any other node.
+   */
+  get textQuote(): MdBlock | null {
+    const block = this.block;
+    if (!block || this.kind === 'quote' || this.kind === 'root') return null;
+    const own = this.kind === 'item' ? block.children[0] : block;
+    return own?.type === 'blockquote' && this.head !== null && (this.head === own || this.head === own.children[0]) ? own : null;
   }
 
   /** Whether it was read from a document (it has blocks), not made or changed by a draft. */
@@ -142,12 +155,16 @@ export function readOutline(
   previous: OutlinePrevious | null,
   touched: Touched,
   identity?: ReadonlyMap<number, number>,
+  config: ReadConfig = Config.defaults,
 ): { root: OutlineNodePersistent; nextId: number } {
-  const build = new Build(tree, previous, previous && identity?.size ? touched.with(identityLines(tree, previous, identity)) : touched);
+  const build = new Build(tree, previous, previous && identity?.size ? touched.with(identityLines(tree, previous, identity)) : touched, config);
   const root = build.container('root', tree.root, 0, tree.lineCount, previous ? { node: previous.root, start: 0 } : null);
   const nextId = build.assignIds(root, identity);
   return { root, nextId };
 }
+
+/** What reading the outline asks of the config. */
+export type ReadConfig = Pick<Config, 'quotes' | 'listParent'>;
 
 /** An old node and its first line in the old text. */
 interface Located {
@@ -170,25 +187,30 @@ class Build {
   readonly tree: MdTree;
   readonly previous: OutlinePrevious | null;
   readonly touched: Touched;
+  /** What a quote is and what a list after a block is the children of. */
+  readonly config: ReadConfig;
   /** Old nodes taken whole. */
   readonly reused = new Set<OutlineNodePersistent>();
   /** Nodes made anew, their ids still to give. */
   readonly made = new Set<OutlineNodePersistent>();
 
-  constructor(tree: MdTree, previous: OutlinePrevious | null, touched: Touched) {
+  constructor(tree: MdTree, previous: OutlinePrevious | null, touched: Touched, config: ReadConfig) {
     this.tree = tree;
     this.previous = previous;
     this.touched = touched;
+    this.config = config;
   }
 
   /** A root, an item or a quote on `[start, end)`, from its old node where one is known. */
   container(kind: 'root' | 'item' | 'quote', block: MdBlock, start: number, end: number, old: Located | null): OutlineNodePersistent {
     if (old && old.node.block === block && this.untouched(old.node, start, end)) return this.reuse(old.node);
     let head: MdBlock | null = null;
-    if (kind === 'item') head = itemHead(block, this.tree.flavor);
+    if (kind === 'item') head = itemHead(block, this.tree.flavor, this.config.quotes, () => this.contentOf(start));
     else if (kind === 'quote') head = quoteHead(block, () => this.contentOf(start + block.offsets[0]!));
     // the same stored block holds the same blocks, grouped the same: only the nodes on touched lines change
-    if (old && old.node.block === block && old.node.head === head) return this.copy(old, start, end);
+    // (but a quote that is of another kind now, read anew)
+    const copied = old && old.node.block === block && old.node.head === head ? this.copy(old, start, end) : null;
+    if (copied) return copied;
     const entries: Entry[] = [];
     for (let k = head ? 1 : 0; k < block.children.length; k++) {
       const child = block.children[k]!;
@@ -197,11 +219,11 @@ class Build {
         for (let j = 0; j < child.children.length; j++) entries.push({ block: child.children[j]!, kind: 'item', start: at + child.offsets[j]!, level: 0 });
         continue;
       }
-      const childKind = nodeKindOf(child);
+      const childKind = nodeKindOf(child, this.config.quotes, () => this.contentOf(at));
       if (childKind) entries.push({ block: child, kind: childKind, start: at, level: child.type === 'heading' ? child.attrs.level! : 0 });
     }
     const candidates = old ? this.candidates(old) : null;
-    const { nodes, starts } = this.nodes(outlineChildren(entries, kind === 'root'), end, candidates);
+    const { nodes, starts } = this.nodes(outlineChildren(entries, kind === 'root', this.config), end, candidates);
     return this.make(kind, block, head, start, end, nodes, starts);
   }
 
@@ -224,14 +246,17 @@ class Build {
     if (kind === 'item' || kind === 'quote') return this.container(kind, block, start, end, old);
     if (old && sameBlocks(old.node, shell) && this.untouched(old.node, start, end)) return this.reuse(old.node);
     const { nodes, starts } = this.nodes(shell.children, end, candidates);
-    return this.make(kind, block, block, start, end, nodes, starts);
+    // (a quote read as a paragraph: its text the paragraph in it, the blank lines after that its gap)
+    return this.make(kind, block, kind === 'paragraph' && block.type === 'blockquote' ? block.children[0]! : block, start, end, nodes, starts);
   }
 
   /**
    * `old`, now on `[start, end)`, read from the same stored block: its children taken whole but those
    * on touched lines, which are copied the same way (a quote's read again: its title is its text's).
+   * Null where a quote on a touched line is of another kind now (`quoteKind`: a callout no longer, a
+   * paragraph that is one more): its container is read anew.
    */
-  private copy(old: Located, start: number, end: number): OutlineNodePersistent {
+  private copy(old: Located, start: number, end: number): OutlineNodePersistent | null {
     const { node } = old;
     const n = node.children.length;
     const children = new Array<OutlineNodePersistent>(n);
@@ -242,8 +267,13 @@ class Build {
       const next = i + 1 < n ? start + node.offsets[i + 1]! : end;
       const located = { node: child, start: old.start + node.offsets[i]! };
       if (this.untouched(child, at, next)) children[i] = this.reuse(child);
+      else if (child.block!.type === 'blockquote' && nodeKindOf(child.block!, this.config.quotes, () => this.contentOf(at)) !== child.kind) return null;
       else if (child.kind === 'item' || child.kind === 'quote') children[i] = this.container(child.kind, child.block!, at, next, located);
-      else children[i] = this.copy(located, at, next);
+      else {
+        const copied = this.copy(located, at, next);
+        if (!copied) return null;
+        children[i] = copied;
+      }
     }
     return this.make(node.kind, node.block!, node.head, start, end, children, starts);
   }
@@ -287,7 +317,7 @@ class Build {
           if (!byKey.has(key)) byKey.set(key, located);
         }
         // a section's and an owned list's nodes are the container's blocks too
-        if (child.kind === 'heading' || child.kind === 'paragraph') visit(child, at);
+        if (child.kind === 'heading' || child.kind === 'paragraph' || child.kind === 'atom') visit(child, at);
       }
     };
     visit(container.node, container.start);

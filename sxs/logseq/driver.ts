@@ -193,7 +193,8 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
       ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
     },
     emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd', 'selectSubtree', 'deleteSubtree'],
-    // quotes and callouts are skipped for every block app (../lib/block.ts); a heading's `#`s, a task's
+    // a quote of one paragraph is a block's text (`> q`), others and callouts are skipped for every
+    // block app (../lib/block.ts); a heading's `#`s, a task's
     // checkbox and a code block's fences are OG's text in a block, edited a character at a time, and
     // the DB version's properties of a block
     refuses: ['markup-heading', 'markup-task', 'markup-fence'],
@@ -201,6 +202,10 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
     // Backspace at the first block's start does nothing in both (measured with `--ignore-options`:
     // `backspace.md › Backspace34` agrees; its `unwrap` case needs a paragraph, which no block app runs)
     behaves: {
+      // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+      quotes: 'atom',
+      // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+      enterInQuote: 'split',
       // Backspace at a numbered block's start takes its number first (Backspace29, TO5)
       backspaceAtItemStart: 'logseq',
       // a backtick in text is typed as a pair, the caret between (Backtick18, both setups)

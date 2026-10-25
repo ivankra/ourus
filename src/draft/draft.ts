@@ -10,7 +10,7 @@
 // source.
 
 import { mdCalloutAt, MdTree, type MdBlockAt, type MdLine } from '../parser/index.ts';
-import { advanceColumns, createPlaceholder, emptyNodeAt, isHeldSpacePlaceholder, isPlaceholder, MarkSet, trimMd, type ChangeSpec, type Mark } from '../text/index.ts';
+import { advanceColumns, createPlaceholder, emptyNodeAt, heldSpaceAt, isHeldSpacePlaceholder, isPlaceholder, MarkSet, trimMd, type ChangeSpec, type Mark } from '../text/index.ts';
 import { OutlineNodePersistent, ProseText, escapeParagraph, outlineChildren, AtomText, type OutlineNode, type OutlineNodeText, type OutlineNodeKind, type OurusDoc, type OutlineChild } from '../doc/index.ts';
 import { differenceFrom } from './check.ts';
 import { continuationAsWas, write } from './write.ts';
@@ -667,6 +667,7 @@ class Done {
         // the placeholders first: an empty line they hold reads as typed on, which the escapes depend on;
         // then the escapes, which a text's own lines decide, and which seams read
         this.#movedEmpty();
+        this.#movedLines();
         this.#placeholders();
         this.#escapes();
         this.#atomTexts();
@@ -710,9 +711,13 @@ class Done {
 
   // ---- 1. normal form
 
-  /** A heading whose text no longer reads as one is a paragraph; a quote's title that no longer reads as a callout, its first paragraph. */
+  /**
+   * A heading whose text no longer reads as one is a paragraph; a quote's title that no longer reads as
+   * a callout, its first paragraph. With `quotes: text`, a quote left holding one paragraph and nothing
+   * else is that paragraph, framed (`#quotedParagraphs`).
+   */
   #transitions(): void {
-    for (const w of this.attached) {
+    for (const w of [...this.attached]) {
       if (!(w.text instanceof ProseText)) continue;
       if (w.kind === 'heading' && w.text.type === 'paragraph') w.kind = 'paragraph';
       if (w.kind === 'quote' && w.text.type === 'paragraph') {
@@ -722,12 +727,115 @@ class Done {
         this.attached.add(this.io.byId.get(id)!);
       }
     }
+    if (this.from.config.quotes === 'text') this.#quotedParagraphs();
+    if (this.from.config.quotes === 'atom') this.#quoteAtoms();
+  }
+
+  /**
+   * With `quotes: atom`, a quote left with no title (a callout's `[!type]` gone) is an atom, its
+   * paragraphs' lines as written after `> `s, a blank `>` line between them, an anchor in one moved to
+   * where its line is now; an item with no text whose first block it was (`- > q`) takes it as its
+   * text. Refused where it holds anything but paragraphs (not done yet).
+   */
+  #quoteAtoms(): void {
+    for (const q of [...this.attached]) {
+      if (q.kind !== 'quote' || !q.parent || !q.children.length) continue;
+      if (q.text !== null && (q.text !== undefined || q.source?.head)) continue;
+      const parts: { p: Working; text: ProseText; at: number }[] = [];
+      let out = '';
+      for (let k = 0; k < q.children.length; k++) {
+        const c = q.children[k]!;
+        const p = c instanceof Working ? c : this.io.openChild(q, k);
+        const text = this.io.textOf(p);
+        if (p.kind !== 'paragraph' || p.children.length || !(text instanceof ProseText)) throw new Refused("the quote's blocks would read as its text");
+        if (k) out += '\n>\n';
+        parts.push({ p, text, at: out.length });
+        out += text.text.split('\n').map((l) => `> ${l}`).join('\n');
+      }
+      q.kind = 'atom';
+      q.text = new AtomText('blockquote', false, out);
+      q.children = [];
+      for (const { p } of parts) {
+        p.parent = null;
+        this.attached.delete(p);
+      }
+      const moved = (spec: AnchorSpec | null): AnchorSpec | null => {
+        if (!spec || !('ref' in spec)) return spec;
+        const part = parts.find(({ p }) => (typeof spec.ref === 'number' ? spec.ref === p.id : this.io.current.get(spec.ref.persistentNode) === p));
+        if (!part) return spec;
+        return { ref: q.id, offset: part.at + spec.offset + 2 * part.text.text.slice(0, spec.offset).split('\n').length, ...(spec.assoc !== undefined && { assoc: spec.assoc }) };
+      };
+      const same = this.io.anchor === this.io.caret;
+      this.io.caret = moved(this.io.caret);
+      this.io.anchor = same ? this.io.caret : moved(this.io.anchor);
+      // an item with no text, whose first block that quote was on its marker's line: its text
+      const parent = q.parent;
+      if (parent.kind !== 'item' || parent.children[0] !== q || this.io.textOf(parent) !== null) continue;
+      parent.text = new AtomText('blockquote', true, out);
+      parent.children.shift();
+      q.parent = null;
+      this.attached.delete(q);
+      const toItem = (spec: AnchorSpec | null): AnchorSpec | null => (spec && 'ref' in spec && (typeof spec.ref === 'number' ? spec.ref === q.id : false) ? { ...spec, ref: parent.id } : spec);
+      this.io.caret = toItem(this.io.caret);
+      this.io.anchor = same ? this.io.caret : toItem(this.io.anchor);
+    }
+  }
+
+  /**
+   * With `quotes: text`, each quote with no title left holding one paragraph with nothing under it (a
+   * join, a deletion, a move took the rest) is that paragraph in its place, its text framed by `> ` on
+   * each line, as the document reads it; an anchor in the text moves past the frames.
+   */
+  #quotedParagraphs(): void {
+    for (const q of [...this.attached]) {
+      if (q.kind !== 'quote' || q.children.length !== 1 || !q.parent) continue;
+      if (q.text !== null && (q.text !== undefined || q.source?.head)) continue;
+      const only = q.children[0]!;
+      if (only.kind !== 'paragraph' || only.children.length) continue;
+      const p = only instanceof Working ? only : this.io.openChild(q, 0);
+      const text = this.io.textOf(p);
+      if (!(text instanceof ProseText) || text.type !== 'paragraph') continue;
+      const lines = text.text.split('\n');
+      let framed = text.asItem(false);
+      for (let k = lines.length - 1, at = text.text.length - lines[k]!.length; k >= 0; at -= (lines[--k]?.length ?? 0) + 1) framed = framed.splice(at, at, '> ');
+      p.text = new ProseText('quote', false, framed.text, framed.marks);
+      const parent = q.parent;
+      parent.children[parent.children.indexOf(q)] = p;
+      p.parent = parent;
+      q.parent = null;
+      q.children = [];
+      this.attached.delete(q);
+      // (an offset in the text, past as many `> `s as lines start at or before it)
+      const moved = (spec: AnchorSpec | null): AnchorSpec | null => {
+        if (!spec || !('ref' in spec)) return spec;
+        const named = typeof spec.ref === 'number' ? spec.ref === p.id : this.io.current.get(spec.ref.persistentNode) === p;
+        if (!named) return spec;
+        return { ...spec, offset: spec.offset + 2 * (text.text.slice(0, spec.offset).split('\n').length) };
+      };
+      const same = this.io.anchor === this.io.caret;
+      this.io.caret = moved(this.io.caret);
+      this.io.anchor = same ? this.io.caret : moved(this.io.anchor);
+      // an item with no text, whose first block that quote was on its marker's line (`- > q`): its text
+      const item = parent.kind === 'item' && parent.children[0] === p && this.io.textOf(parent) === null ? parent : null;
+      if (!item) continue;
+      item.text = (p.text as ProseText).asItem(true);
+      item.children.shift();
+      p.parent = null;
+      this.attached.delete(p);
+      const toItem = (spec: AnchorSpec | null): AnchorSpec | null => {
+        if (!spec || !('ref' in spec)) return spec;
+        const named = typeof spec.ref === 'number' ? spec.ref === p.id : this.io.current.get(spec.ref.persistentNode) === p;
+        return named ? { ...spec, ref: item.id } : spec;
+      };
+      this.io.caret = toItem(this.io.caret);
+      this.io.anchor = same ? this.io.caret : toItem(this.io.anchor);
+    }
   }
 
   /**
    * Every container (the root, an item, a quote) holding a node the draft touched, regrouped as the
    * outline reads it (`outlineChildren`): a heading owns what follows it up to one of its level or higher; in
-   * the document's own sections a paragraph owns the items right after it. Regrouping never merges
+   * the document's own sections a node `listParent` says owns the items right after it. Regrouping never merges
    * nodes: one another would absorb as its text is refused.
    */
   #normalForm(): void {
@@ -772,7 +880,8 @@ class Done {
         const o = parent instanceof Working ? this.#under(parent, c) : origin ? childOrigin(origin, c as OutlineNodePersistent) : null;
         const kind = c.kind;
         entries.push({ node: c, kind, level: kind === 'heading' ? this.#level(c, o) : 0, origin: o });
-        if (kind === 'heading' || kind === 'paragraph') flatten(c, o);
+        // (a section's nodes, a list a block adopted: an atom's too, `listParent: block`)
+        if (kind === 'heading' || kind === 'paragraph' || kind === 'atom') flatten(c, o);
       }
     };
     flatten(container, container.origin);
@@ -780,7 +889,7 @@ class Done {
     const build = ({ entry: e, children }: OutlineChild<Entry>, parent: Working): Child => {
       const node = e.node;
       if (!(node instanceof Working) && e.origin) this.io.placed.set(node, e.origin);
-      if (node.kind !== 'heading' && node.kind !== 'paragraph') {
+      if (node.kind !== 'heading' && node.kind !== 'paragraph' && node.kind !== 'atom') {
         if (node instanceof Working) node.parent = parent;
         return node;
       }
@@ -797,7 +906,7 @@ class Done {
       for (const c of kids) if (c instanceof Working) c.parent = w;
       return w;
     };
-    container.children = outlineChildren(entries, container.kind === 'root').map((e) => build(e, container));
+    container.children = outlineChildren(entries, container.kind === 'root', this.from.config).map((e) => build(e, container));
   }
 
   /** A read node opened where `done()` changes it (regrouped, a gap fixed), its place in `from` known. */
@@ -963,8 +1072,11 @@ class Done {
       const k = parent.children.indexOf(first);
       const above = k > 0 ? parent.children[k - 1]! : parent;
       const aboveText = above === parent || above.kind === 'paragraph' ? (above instanceof Working ? this.io.textOf(above) : this.from.textOf(this.#under(parent, above)!)) : null;
-      // (moved, its parent changed, or first now where an item was before it)
-      const cameUnder = !!run[0]!.origin && (run[0]!.origin.parent?.persistentNode !== parent.source || (run[0]!.origin.index > 0 && k === 0 && parent.kind === 'item'));
+      // (moved, its parent changed, or first now where an item was before it; or right under the
+      // paragraph the item above it became, beside it where no paragraph adopts a list, as SiYuan and
+      // BlockNote number it: DirectOutdent6, TO6 under `listParent: container`)
+      const unwrapped = above !== parent && above instanceof Working && above.kind === 'paragraph' && above.source?.kind === 'item';
+      const cameUnder = !!run[0]!.origin && (run[0]!.origin.parent?.persistentNode !== parent.source || (run[0]!.origin.index > 0 && k === 0 && parent.kind === 'item') || unwrapped);
       let inItem = false;
       for (let n: Working | null = parent; n && !inItem; n = n.parent) inItem = n.kind === 'item';
       if ((inItem || !sameItems) && (this.draft.placedIds.has(first.id) || cameUnder) && numbers[0] !== 1 && aboveText instanceof ProseText && aboveText.type === 'paragraph' && !aboveText.empty) numbers = run.map((_, i) => 1 + i);
@@ -1122,15 +1234,18 @@ class Done {
         const obsidianTitle = parent.source?.head?.type === 'callout_title' || (own instanceof ProseText && own.type === 'title' && this.from.config.flavor === 'obsidian');
         if (parent.kind === 'root' || parent.gap !== 0 || own === null || obsidianTitle) continue;
         const first = parent.children[0]!;
-        // a new empty paragraph first under it, but a split's second half, is set off from its text
-        if (made(first) && first.kind === 'paragraph' && first.text instanceof ProseText && first.text.empty && !this.gapLines.has(first.id)) {
+        // an item with no text but its frame (`-`, `- [ ]`) has no paragraph for what follows to continue
+        const empty = parent.kind === 'item' && own instanceof ProseText && trimMd(own.body) === '' && !own.text.includes('\n');
+        // a new empty paragraph first under it, but a split's second half, is set off from its text (not
+        // an item's with none, a checkbox but in CommonMark, where it is text: a blank line after it would
+        // end the item)
+        const textless = empty && (!(own instanceof ProseText) || own.task === null || this.from.config.flavor !== 'commonmark');
+        if (!textless && made(first) && first.kind === 'paragraph' && first.text instanceof ProseText && first.text.empty && !this.gapLines.has(first.id)) {
           parent.gap = 1;
           continue;
         }
         const upper = this.#ownLines(parent, parent.origin, true);
         const lower = this.#firstLines(first, parent);
-        // an item with no text but its frame (`-`, `- [ ]`) has no paragraph for what follows to continue
-        const empty = parent.kind === 'item' && own instanceof ProseText && trimMd(own.body) === '' && !own.text.includes('\n');
         if (this.#apart(upper, lower, empty)) continue;
         if (!this.#apart(upper, ['', ...lower], empty)) throw new Refused(`the ${parent.children[0]!.kind} would be read as part of the ${parent.kind}'s text above it`);
         parent.gap = 1;
@@ -1217,7 +1332,8 @@ class Done {
     const lines = setext ? this.#readLines(containerIn(origin), origin.startLine, origin.textLastLine) : this.#firstLines(node, parent);
     const block = MdTree.parse(lines.join('\n'), this.from.mdTree.flavor).root.children[0];
     const want: Record<string, string> = { paragraph: 'paragraph', heading: 'heading', item: 'list', quote: 'blockquote' };
-    const kind = want[node.kind] ?? origin.persistentNode.block!.type;
+    // (a quote's text, `quotes: text`, a quote's)
+    const kind = node.kind === 'paragraph' && text instanceof ProseText && text.type === 'quote' ? 'blockquote' : (want[node.kind] ?? origin.persistentNode.block!.type);
     if (!block || block.type === kind || trimMd(lines[0]!) === '') return;
     if (node.kind !== 'paragraph' || !(text instanceof ProseText)) throw new Refused(`the ${node.kind} would read as a ${block.type} where it now is`);
     const w = this.io.openChild(parent, k);
@@ -1273,10 +1389,18 @@ class Done {
     for (;;) {
       const n: number = node.children.length;
       if (!n) break;
-      if ((node.kind === 'item' || node.kind === 'quote') && origin) {
+      // (an item the draft made of a paragraph: written as a new one is, its list at its content column)
+      const madeItem = node instanceof Working && node.kind === 'item' && !!node.source && node.source.kind !== 'item';
+      if ((node.kind === 'item' || node.kind === 'quote') && origin && !madeItem) {
         // its own text, and a blank line where one sets it off from what follows in it (in a quote, `>`)
         inQuote ||= node.kind === 'quote';
         push(node instanceof Working && node.text !== undefined ? this.#ownLines(node, readIn) : this.#remarked(node, origin, this.#readLines(readIn, origin.startLine, origin.textLastLine)));
+        // (an item with no text: its first child's first line too, which keeps it open past a blank
+        // line, as an empty item and a blank line end one: `1. ⏎    1. x⏎⏎      - x`)
+        const ownText = node instanceof Working && node.text !== undefined ? this.io.textOf(node) : this.from.textOf(origin);
+        const firstChild = node.children[0]!;
+        const firstOrigin = n > 1 && node.kind === 'item' && (!ownText || (ownText instanceof ProseText && trimMd(ownText.body) === '')) ? (firstChild instanceof Working ? firstChild.origin : childOrigin(origin, firstChild)) : null;
+        if (firstOrigin && firstOrigin.startLine > origin.startLine) push(this.#readLines(readIn, firstOrigin.startLine, firstOrigin.startLine));
         // what a new line in it starts with: its first line's prefix, its markers as spaces
         const first = this.from.mdTree.line(origin.startLine);
         const block = origin.persistentNode.block;
@@ -1284,7 +1408,7 @@ class Done {
         const end = node.kind === 'quote' && piece ? piece.to : first.contentFrom;
         inside = this.#lineIn(first, readIn).slice(0, Math.max(0, end - this.#cut(first, readIn))).replace(/[^>\t ]/g, ' ');
         if (node.gap > 0 || (n > 1 && this.#trailingGapOf(node, n - 2) > 0)) open.push(inQuote ? (movedPrefix ?? '') + '>' : '');
-      } else if ((node.kind === 'item' || node.kind === 'quote') && node instanceof Working && !node.origin) {
+      } else if ((node.kind === 'item' || node.kind === 'quote') && node instanceof Working && (!node.origin || madeItem)) {
         // one the draft made: its own text after its marker, where a new line in it starts at its content column
         inQuote ||= node.kind === 'quote';
         if (node.kind === 'item') open.push(...this.#ownLines(node, null).map((l) => inside + l));
@@ -1294,13 +1418,14 @@ class Done {
         if (node.gap > 0 || (n > 1 && this.#trailingGapOf(node, n - 2) > 0)) open.push(inside.replace(/[ \t]+$/, ''));
       }
       const last: Child = node.children[n - 1]!;
-      const next = last instanceof Working ? last.origin : origin ? childOrigin(origin, last) : null;
+      // (a read node regrouped under it from elsewhere, an item a paragraph adopts: where it was)
+      const next = last instanceof Working ? last.origin : ((node instanceof Working ? this.#under(node, last) : null) ?? (origin ? childOrigin(origin, last) : null));
       // a child on its parent's first line (`- - a`) has that line already
       if (next && origin && next.startLine === origin.startLine && open.length) open.pop();
       // one moved here from elsewhere is written after this node's prefix, as a new one is
       // (or under a container the draft made another kind: an item unwrapped, its children out of it)
       const unwrapped = node instanceof Working && !!node.source && node.kind !== node.source.kind && (node.source.kind === 'item' || node.source.kind === 'quote');
-      if (movedPrefix === null && next && origin && (!isDescendant(next, origin) || unwrapped)) {
+      if (movedPrefix === null && next && origin && (!isDescendant(next, origin) || unwrapped || madeItem)) {
         movedPrefix = inside;
         readIn = containerIn(next);
         dedent = /^ */.exec(this.#readLines(readIn, next.startLine, next.startLine)[0]!)![0].length;
@@ -1365,15 +1490,31 @@ class Done {
     // (an item that had no text, its first block on its line: after its marker and a space)
     const textless = !this.from.textOf(origin);
     const at = textless ? first.from + origin.persistentNode.block!.attrs.markerEnd! : this.from.posOf(origin, 0, -1);
-    const lead = own ? '' : held.slice(0, Math.max(0, at - cut + widened)) + (textless ? ' ' : '');
-    // the later lines' prefix: the first line's pieces past the container's, a quote's `>` as written, an item's as spaces to its text
-    const after = container && container.kind !== 'root' ? first.prefix.findIndex((p) => p.container.block === container.persistentNode.block) + 1 : 0;
+    // (and the padding the writer keeps, under four columns: a paragraph's `  x`)
+    const lead = own ? '' : held.slice(0, Math.max(0, at - cut + widened)) + (textless ? ' ' : this.#padding(origin));
+    // the later lines' prefix: the first line's pieces past the container's, a quote's `>` as written, an
+    // item's as spaces to its text; written as the node itself holds them, none but its own (a paragraph
+    // out of the quote it was in has none: `q⏎    - a`, not `> …`)
+    const piece = container && container.kind !== 'root' ? first.prefix.findIndex((p) => p.container.block === container.persistentNode.block) : -1;
+    const after = piece >= 0 ? piece + 1 : own ? first.prefix.length : 0;
     const ownItem = node.kind === 'item' && !own ? origin.persistentNode.block : null;
+    // (a quote that was the node's text, `> q`: its `>`s are the text's, written with it, or gone with
+    // its frame, not a container's)
+    const textQuote = origin.persistentNode.textQuote;
     const indent = first.prefix
       .slice(after)
+      .filter((p) => p.container.block !== textQuote)
       .map((p) => (p.container.block.type === 'blockquote' ? this.from.text.slice(p.from, p.to) : ' '.repeat((p.container.block === ownItem ? ownItem.attrs.contentColumn! : p.toColumn) - p.fromColumn)))
       .join('');
     return written.map((l, k) => (k === 0 ? lead + l : indent + l));
+  }
+
+  /** The spaces before `origin`'s text that the writer keeps where it spells it: under four columns, none a held space. */
+  #padding(origin: OutlineNode): string {
+    const [p0, p1] = [this.from.posOf(origin, 0, -1), this.from.posOf(origin, 0, 1)];
+    let padding = '';
+    for (let at = p0; at < p1; at++) if ((this.from.text[at] === ' ' || this.from.text[at] === '\t') && !heldSpaceAt(this.from.marks, this.from.text, at)) padding += this.from.text[at];
+    return padding.replace(/\t/g, '    ').length >= 4 ? '' : padding;
   }
 
   /** The first lines of `node`, up to two, as written in its container, from where it starts (an item's marker, a quote's `>`). */
@@ -1489,11 +1630,15 @@ class Done {
     const alone = MdTree.parse(upper.join('\n'), flavor).root;
     const ends = (r: typeof root, i: number): number => r.offsets[i]! + r.children[i]!.lines;
     if (blocks.length <= alone.children.length || alone.children.some((b, i) => blocks[i]!.type !== b.type || ends(root, i) !== ends(alone, i))) return false;
-    // past the blank lines `lower` starts with, its first line starts a block
+    // past the blank lines `lower` starts with, its first line starts a block, the one it starts alone
+    // (not a paragraph where an empty item can't interrupt a definition: `[a]: /u⏎- `)
     let k = n;
     while (k < n + lower.length && trimMd(lower[k - n]!) === '') k++;
     const line = tree.line(Math.min(k, tree.lineCount - 1));
-    return line.leaf?.line === k || line.containers.some((c) => c.line === k);
+    if (!(line.leaf?.line === k || line.containers.some((c) => c.line === k))) return false;
+    const at = root.offsets.indexOf(k);
+    const own = MdTree.parse(lower.slice(k - n).join('\n'), flavor).root.children[0];
+    return at < 0 || !own || blocks[at]!.type === own.type;
   }
 
   // ---- 4. roles and escapes
@@ -1510,45 +1655,55 @@ class Done {
       for (let up = node.parent; up && up.kind !== 'root' && up.startLine === node.startLine; up = up.parent) if (up.kind === 'item') return true;
       return false;
     };
-    // (what it is: placed, which may leave its container; or its lines written anew where they are)
-    const moving = (parent: Working, c: Child, k: number): 'placed' | 'rewritten' | null => {
-      if (!!parent.source && parent.kind !== parent.source.kind) return 'rewritten';
-      if (this.draft.placedIds.has(c.id)) return 'placed';
-      const origin = this.#under(parent, c);
-      return origin && onItemsLine(origin) && (k > 0 || (parent.kind === 'item' && !!this.io.textOf(parent) && !!parent.origin && !this.from.textOf(parent.origin))) ? 'rewritten' : null;
-    };
     const containerId = (node: OutlineNode | null): number | null => {
       let up = node;
       while (up && up.kind !== 'item' && up.kind !== 'quote' && up.kind !== 'root') up = up.parent;
       return up ? up.id : null;
     };
-    const needs = (text: OutlineNodeText | null): text is ProseText => text instanceof ProseText && text.type === 'paragraph' && text.text.split('\n').slice(1).some((l) => /^[ \t]*[-+*>#=|0-9]/.test(l));
+    const inSection = (parent: Working): boolean => {
+      let up: Working | null = parent;
+      while (up && up.kind !== 'item' && up.kind !== 'quote' && up.kind !== 'root') up = up.parent;
+      return !up || up.kind === 'root';
+    };
+    // (what it is: placed, which may leave its container; or its lines written anew where they are)
+    const moving = (parent: Working, c: Child, k: number): 'placed' | 'rewritten' | null => {
+      if (!!parent.source && parent.kind !== parent.source.kind) return 'rewritten';
+      if (this.draft.placedIds.has(c.id)) return 'placed';
+      const origin = this.#under(parent, c);
+      // (regrouped into another container, behind a node placed there: as placed)
+      if (origin && containerId(origin.parent) !== this.#containerOf(parent)) return 'placed';
+      return origin && onItemsLine(origin) && (k > 0 || (parent.kind === 'item' && !!this.io.textOf(parent) && !!parent.origin && !this.from.textOf(parent.origin))) ? 'rewritten' : null;
+    };
+    const needs = (text: OutlineNodeText | null, origin: OutlineNode | null, leaves: boolean): text is ProseText => text instanceof ProseText && text.type === 'paragraph' && !!origin && this.#unmovable(origin, leaves);
     // (the read nodes under one, by where they are in `from`: whether one of them is such a paragraph)
-    const holds = (origin: OutlineNode): boolean => origin.children.some((c) => needs(this.from.textOf(c)) || holds(c));
-    const visit = (parent: Working, inMoved: boolean): void => {
+    const holds = (origin: OutlineNode, leaves: boolean): boolean => origin.children.some((c) => needs(this.from.textOf(c), c, leaves) || holds(c, leaves));
+    // (`moved`: in a subtree that moves, whether it leaves its container, its lines written past
+    // another prefix; or is placed in it, which the writer may line up with the list it joins)
+    const visit = (parent: Working, moved: { leaves: boolean } | null): void => {
       parent.children.forEach((c, k) => {
         // (a copy as its original is written)
         if (c.source && c.source.id !== c.id) return;
-        const how = inMoved ? 'rewritten' : moving(parent, c, k);
+        const how = moved ? 'rewritten' : moving(parent, c, k);
         if (!how) return;
         const origin = c instanceof Working ? c.origin : this.#under(parent, c);
+        // (a paragraph out of the quote or item it was in, into a section: its lazy lines regular ones
+        // there, which may start a block a lazy line couldn't, `|---|` after `| a |` a table)
+        const leaves = c.kind === 'paragraph' && (moved ? moved.leaves : !!origin && containerId(origin.parent) !== this.#containerOf(parent) && inSection(parent));
         const text = c instanceof Working && c.text !== undefined ? null : origin ? this.from.textOf(origin) : null;
-        if (needs(text)) {
+        if (needs(text, origin, leaves)) {
           const w = this.io.openChild(parent, k);
           this.attached.add(w);
           w.text = text;
         }
-        // (in a subtree that leaves its container, whose lines are written past another prefix; opened
-        // only on the way to one)
-        const leaves = how === 'rewritten' || (!!origin && containerId(origin.parent) !== this.#containerOf(parent));
-        if (leaves && (c instanceof Working ? c.children.length > 0 : !!origin && holds(origin))) {
+        // (opened only on the way to one)
+        if (c instanceof Working ? c.children.length > 0 : !!origin && holds(origin, leaves)) {
           const w = this.io.openChild(parent, k);
           this.attached.add(w);
-          visit(w, true);
+          visit(w, { leaves });
         }
       });
     };
-    for (const parent of [...this.attached]) visit(parent, false);
+    for (const parent of [...this.attached]) visit(parent, null);
     for (const w of this.attached) this.#escape(w);
   }
 
@@ -1563,8 +1718,10 @@ class Done {
   #escape(w: Working): void {
     if (!(w.text instanceof ProseText)) return;
     const text = w.text;
+    // (below a checkbox alone on its line, in CommonMark, which has no tasks, the paragraph the
+    // checkbox starts goes on, as the read asks it: `- [ ] ⏎  2) x`, `2)` interrupting nothing)
     const below = text.frame.find((p) => p.part === 'below');
-    const base = below ? below.to : 0;
+    const base = below && !this.#goesOnBelowBox(text) ? below.to : 0;
     const lines = text.text.slice(base).split('\n');
     // where each line starts in the text
     const starts = (ls: readonly string[]): number[] => {
@@ -1579,8 +1736,8 @@ class Done {
     const at = starts(lines);
     // a line a placeholder holds reads as typed on at its end (a checkbox's too)
     const held = lines.map((l, k) => emptyNodeAt(text.marks, text.text, at[k]! + l.length));
-    // (a line starting with a tab: it spans as far as from the column the line is written at)
-    const column = lines.some((l) => /^ *\t/.test(l)) ? this.#textColumn(w) : null;
+    // (a line starting with a tab, past a quote's `>`: it spans as far as from the column the line is written at)
+    const column = lines.some((l) => /^ *\t/.test(text.type === 'quote' ? l.replace(/^ {0,3}>[ \t]?/, '') : l)) ? this.#textColumn(w) : null;
     if (column !== null) this.columns.set(w.id, column);
     const spelled = escapeParagraph(this.from.mdTree.flavor, text.type, text.item, lines, held, column === null ? undefined : lines.map(() => column));
     if (!spelled) throw new Refused(`no escape keeps the text of node ${w.id} where it is`);
@@ -1680,6 +1837,8 @@ class Done {
     for (const w of this.attached) {
       let text = w.text;
       if (!(text instanceof AtomText)) continue;
+      // a rule an item's text, of its bullet's character: the two read as one rule (`- ---`)
+      if (w.kind === 'item' && text.type === 'thematic_break' && this.lists.get(w.id)?.marker === text.text.trim()[0]) throw new Refused("the item's bullet and its rule would read as one rule");
       // code an item's text, on its marker's line: the spaces its fence was indented with would be the
       // item's padding there; they go from every line, as code past its fence's indentation reads
       if (w.kind === 'item' && text.type === 'fenced_code' && /^ +/.test(text.text)) {
@@ -1724,6 +1883,69 @@ class Done {
 
   // ---- 5. placeholders
 
+  /**
+   * Whether `origin`'s text has a later line the writer can't move as it is (`copyLine`): one that
+   * could start a block, not lazy, or lazy where a paragraph `leaves` the container that made it lazy
+   * for a section (out of a quote, `| a |⏎|---|` after `q` a table); or lazy past spaces, which may reach the column
+   * of a container it lands in, there no longer lazy, its spaces read as that container's (`- [x] ⏎
+   * cont` moved to column 0: `cont` the item's, its spaces gone). A lazy one at its line's start, in
+   * its container still, is written as it is, continuing the paragraph. A heading's underline is its
+   * frame, no block (Done escapes no heading's lines).
+   */
+  #unmovable(origin: OutlineNode, leaves: boolean): boolean {
+    const text = this.from.textOf(origin);
+    if (!(text instanceof ProseText) || text.heading) return false;
+    const tree = this.from.mdTree;
+    for (let i = origin.textFirstLine + 1; i <= origin.textLastLine; i++) {
+      const line = tree.line(i);
+      const content = this.from.text.slice(line.contentFrom, line.to);
+      // (a lazy line's spaces as written, some maybe a container's it still matched)
+      if (line.lazy && /^[ \t]/.test(this.from.text.slice(line.from, line.to))) return true;
+      if ((!line.lazy || leaves) && /^[ \t]*[-+*>#=|0-9]/.test(content)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * A node now in another container than it was (moved, or regrouped there: a paragraph's list out
+   * from under it, `listParent: container`) whose text has a later line that could start a block
+   * (`2) y` continuing `x`, a numbered item from 2 interrupting nothing), not lazy or lazy past spaces
+   * (which may reach the new container's column), is spelled again where it lands, its escapes the
+   * draft's, and so is any such node under it, moved with it: the writer moves no such line as it is.
+   */
+  #movedLines(): void {
+    // (only where the regroup takes a list out from under the node it was under: elsewhere the writer's
+    // refusal stands, as before)
+    if (this.from.config.listParent !== 'container') return;
+    const container = (n: { kind: OutlineNodeKind; parent: unknown } | null): unknown => {
+      let at: any = n;
+      while (at && at.kind !== 'root' && at.kind !== 'item' && at.kind !== 'quote') at = at.parent;
+      return at instanceof Working ? (at.source ?? at) : at?.persistentNode;
+    };
+    const inside = (origin: OutlineNode): boolean => this.#unmovable(origin, false) || origin.children.some(inside);
+    // child `k` of `parent`, spelled where it is risky, and its descendants (moved with it): each
+    // stored node on the way opened
+    const spell = (parent: Working, k: number): void => {
+      const c = parent.children[k]!;
+      const origin = this.#under(parent, c);
+      if (!origin || !inside(origin)) return;
+      const w = c instanceof Working ? c : this.#openRead(c, origin);
+      if (w !== c) {
+        parent.children[k] = w;
+        w.parent = parent;
+        this.attached.add(w);
+      }
+      if (w.text === undefined && this.#unmovable(origin, false)) w.text = this.from.textOf(origin);
+      w.children.forEach((_, j) => spell(w, j));
+    };
+    for (const parent of [...this.attached]) {
+      parent.children.forEach((c, k) => {
+        const origin = this.#under(parent, c);
+        if (origin && container(parent) !== container(origin.parent)) spell(parent, k);
+      });
+    }
+  }
+
   /** A moved node with an empty text is written again where it lands: where it is now decides its placeholder (Indent8). */
   #movedEmpty(): void {
     for (const w of this.attached) {
@@ -1746,23 +1968,26 @@ class Done {
       if (!(text instanceof ProseText)) continue;
       const below = text.frame.find((p) => p.part === 'below');
       const base = below ? below.to : 0;
+      // (a quote's line with nothing past its `>` is empty too)
+      const quoted = text.type === 'quote';
+      const blank = (line: string): boolean => trimMd(quoted ? line.replace(/^ {0,3}>[ \t]?/, '') : line) === '';
       // an empty last line (Shift-Enter at the text's end, a paste ending with a line break, a last line
       // emptied): Markdown holds none in a text; it is a blank line after it, the first of the node's
       // gap, an anchor in it on that line
       let cut = text.text.length;
-      for (let k = text.text.lastIndexOf('\n', cut - 1); k >= base && trimMd(text.text.slice(k + 1, cut)) === ''; k = text.text.lastIndexOf('\n', k - 1)) cut = k;
+      for (let k = text.text.lastIndexOf('\n', cut - 1); k >= base && blank(text.text.slice(k + 1, cut)); k = text.text.lastIndexOf('\n', k - 1)) cut = k;
       if (cut < text.text.length && cut > base) {
         w.gap += text.text.slice(cut).split('\n').length - 1;
         this.blankTails.set(w, cut);
         w.text = text = text.slice(0, cut);
       }
       // a text that starts below its marker now (its first line emptied): what its next line starts
-      // with is padding there, not text
-      if (below && /^[ \t]+/.test(text.text.slice(base))) w.text = text = text.splice(base, base + /^[ \t]+/.exec(text.text.slice(base))![0].length);
+      // with is padding there, not text (but past a checkbox in CommonMark: `#goesOnBelowBox`)
+      if (below && !this.#goesOnBelowBox(text) && /^[ \t]+/.test(text.text.slice(base))) w.text = text = text.splice(base, base + /^[ \t]+/.exec(text.text.slice(base))![0].length);
       const s = text.text;
       const lines = s.split('\n');
       // any other empty line has no Markdown in a text, and a text below its marker with nothing left
-      if (s.slice(base).split('\n').some((l, _, all) => (all.length > 1 || !!below) && trimMd(l) === '')) throw new Refused('an empty line inside a text');
+      if (s.slice(base).split('\n').some((l, _, all) => (all.length > 1 || !!below) && blank(l))) throw new Refused('an empty line inside a text');
       const task = text.frame.find((p) => p.part === 'task');
       const boxOnly = !!task && task.from === 0 && task.to === lines[0]!.length;
       const marks: Mark[] = text.marks.marks.filter((m) => !isPlaceholder(m));
@@ -1774,7 +1999,9 @@ class Done {
       if (w.kind === 'item' && s === '' && underText && !atCaret) w.parent!.gap = 1;
       // and an empty item, or a checkbox alone, whose children follow a blank line: `-` and one blank line end an item
       const apartChildren = w.kind === 'item' && w.children.length > 0 && w.gap > 0 && (s === '' || (lines.length === 1 && boxOnly));
-      if ((s === '' && (w.kind !== 'item' || (underText && atCaret))) || apartChildren) marks.push(createPlaceholder(s.length));
+      // (a quote emptied, `> `, is an empty quote to Markdown, no paragraph: held as an empty paragraph is)
+      const emptyQuote = quoted && lines.length === 1 && blank(s);
+      if ((s === '' && (w.kind !== 'item' || (underText && atCaret))) || emptyQuote || apartChildren) marks.push(createPlaceholder(s.length));
       const next = MarkSet.of(marks);
       if (next.size !== text.marks.size || next.marks.some((m, i) => m.kind !== text.marks.marks[i]!.kind || m.from !== text.marks.marks[i]!.from)) {
         w.text = new ProseText(text.type, text.item, s, next);
@@ -1790,22 +2017,42 @@ class Done {
   }
 
   /**
+   * Whether `text`'s lines below a checkbox alone on its line go on the paragraph the checkbox starts:
+   * in CommonMark, which has no tasks (`- [ ] ⏎  2) x`: `2)` interrupting nothing, the line's spaces
+   * text), not in the flavors with tasks, where an empty task's text below it is a paragraph of its own.
+   */
+  #goesOnBelowBox(text: ProseText): boolean {
+    const below = text.frame.find((p) => p.part === 'below');
+    return !!below && below.to - below.from === 1 && text.task !== null && this.from.config.flavor === 'commonmark';
+  }
+
+  /**
    * The spaces a text the draft set starts with (an item's, a paragraph's: a split's second half that
    * kept them, `enterSplitSpace: start`): Markdown reads them as its first line's padding, not text, so
    * they leave the text for its node's padding, three at most (four would make it code: the rest go).
+   * A quoted text's, past its first `> `, go: the quote's paragraph's padding, which the writer has no
+   * place for (a plain paste of indented lines into a quote). A setext title's too, its first line's
+   * (below a checkbox emptied: four columns there would make it code).
    */
   #leadingSpaces(): void {
     for (const w of this.attached) {
       const text = w.text;
-      if (!(text instanceof ProseText) || text.type !== 'paragraph' || (w.kind !== 'item' && w.kind !== 'paragraph')) continue;
-      // (past the line breaks an item's text starts with below its marker: its first line of text's)
+      // (a setext title whose first line is a checkbox alone, a blank after it, and goes on past it, in
+      // a flavor with tasks: an empty task there, its next line no title's, Markdown can't say it; a
+      // checkbox alone is a title, `- [a]⏎  ===`, and with nothing after it no task, `- [x]⏎  a⏎  -`)
+      if (text instanceof ProseText && text.type === 'heading' && w.kind === 'item' && this.from.config.flavor !== 'commonmark' && /^\[[^\n]\][ \t]+\n[^\n]*\n/.test(text.text)) throw new Refused("a setext title can't start with a task's checkbox alone on its line");
+      if (!(text instanceof ProseText) || (text.type !== 'paragraph' && text.type !== 'quote' && text.type !== 'heading') || (w.kind !== 'item' && w.kind !== 'paragraph')) continue;
+      // (past the line breaks an item's text starts with below its marker: its first line of text's;
+      // but below a checkbox, in CommonMark, the paragraph started at the checkbox: its next line's
+      // spaces are text)
+      if (this.#goesOnBelowBox(text)) continue;
       const at = text.textStart(0);
       let end = at;
       while (text.text[end] === ' ') end++;
       if (end === at || end === text.text.length || text.text[end] === '\n') continue;
       w.text = text.splice(at, end);
       this.leading.set(w, { at, n: end - at });
-      this.paddings.set(w.id, Math.min(3, end - at));
+      if (text.type !== 'quote') this.paddings.set(w.id, Math.min(3, end - at));
     }
   }
 

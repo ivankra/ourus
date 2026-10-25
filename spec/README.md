@@ -54,7 +54,10 @@ Read every difference first; a case whose actions should change is redrawn by ha
   they come and go.
 - [`obsidian-true-outliner.md`](obsidian-true-outliner.md): obsidian-true-outliner's measured
   cases and catalogue entries.
-- [`quotes.md`](quotes.md): quotes and callouts as containers.
+- [`quotes.md`](quotes.md): quotes and callouts: as containers (`quotes: container`, and a quote
+  holding more than one paragraph), as text (`quotes: text`) and as atoms (`quotes: atom`).
+- [`lists.md`](lists.md): what a list right after a block is the children of (`listParent`): a
+  paragraph's, any block's, or none's.
 - [`regressions.md`](regressions.md): cases pinning behaviors settled by bug fixes and refactoring.
 - [`quirks.md`](quirks.md): cases of the options and values that model one app's mechanics
   (`quirk…` options, and values named after an app), not a rule.
@@ -186,7 +189,7 @@ The item becomes the last child of the item above.
 - **The blocks after a quote are what must hold then**, and they become the current state: the
   `buffer`, and a `yaml` block with any of
   - `result`: what ourus made of the last action, which must be one of its commands or typed text
-    (its last character's `insertText`): `applied`, `notApplicable` (the host's default ran
+    (its last character's `insertText`): `applied`, `deferredToHost` (the host's default ran
     instead) or `rejected <reason>` (`result: rejected not-expressible`). Other editors check
     buffers only;
   - `clipboard`: the clipboard, as a config block's (below); only the formats it names are checked;
@@ -250,7 +253,7 @@ Enter and Shift-Enter are named for their keys (`enter`, `shiftEnter`), which ha
 remapped; the other text edits as the W3C Input Events `inputType`s (`deleteContentBackward`, …);
 structural commands by ourus (`indent`, `outdent`, `moveSubtreeUp`, `paste`, …); and caret
 motions as CodeMirror's commands. The core runner plays them the way an editor host does: an ourus
-command runs, and where it returns `notApplicable` the host's default runs instead (a line break,
+command runs, and where it returns `deferredToHost` the host's default runs instead (a line break,
 deleting a character). Placeholders the caret leaves are settled after every action.
 
 Caret motions are here so a test can move the caret between actions; [cursor.md](cursor.md) has
@@ -400,11 +403,6 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
       And only where the projection can't play it either: a case whose outliner run, its paragraphs
       blocks (`sxs/`'s `as blocks`), plays faithfully and mostly agrees isn't tagged, whichever of
       these it meets (checked 2026-10-25 by playing every tagged case in the outliners: 56 untagged).
-    - `quote-container`: a quote or callout is a container in the case, as ourus's outline has it
-      (its blocks its children): a buffer has a quote holding more than one node, or anything but a
-      paragraph with nothing under it (a list, a heading, a held empty line), or a callout with a
-      body. An editor whose quote is a style on one block (RemNote's) has no form for it; a quote
-      of one paragraph, all through the case, doesn't count.
     - `markup-heading`, `markup-task`, `markup-fence`: a step at markup that an editor may hold as
       text or as a block's attribute, where ourus has a boundary (a driver opts out of those it
       can't compare):
@@ -422,7 +420,8 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
     - `pending`: no fact about the case but its state: behavior agreed on but not built yet. It is
       reported as a todo, and fails once it passes, so the tag goes then;
   - the other options of ourus's config (`src/config.ts`): `outdent` (`direct`, the default, or
-    `logical`), `bullet` (`-`, the default, `*` or `+`), `enterOnEmptyItem` (`sibling`, the
+    `logical`), `bullet` (`-`, the default, `*` or `+`), `quotes` (`text`, the default, `atom` or
+    `container`: a case whose quote of one paragraph is a node, `container`'s, says so), `enterOnEmptyItem` (`sibling`, the
     default, `outdent`, `exit` or `unwrap`), `enterMidItem` (`sibling`, the default, or `child`),
     `enterAtTextStart` (`into`, the default, or `stay`), `backspaceAtTopItem` (`unwrap`, the
     default, or `refuse`), `backspaceAtItemStart` (`join`, the default, `body`, `unwrap` or `logseq`), `emptyItemWithChildren` (`lift`, the default, or `refuse`),

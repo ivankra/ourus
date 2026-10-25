@@ -19,7 +19,7 @@ if (result.status === 'applied') {
   doc = result.doc;
 } else if (result.status === 'rejected') {
   status.textContent = result.reason;      // swallow the key, say why
-}                                          // 'notApplicable': let the editor do its default
+}                                          // 'deferredToHost': let the editor do its default
 
 const settled = settlePlaceholders(doc, caret);   // after the caret moves
 if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
@@ -29,7 +29,7 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
 
 - **`executeCommand(doc: OurusDoc, command: Command, selection: Selection): CommandResult`**<br>
   Runs a command at the selection. Where ourus doesn't handle a case yet, a key the host has a
-  default for is left to the host (`notApplicable`), and a structural command is refused as
+  default for is left to the host (`deferredToHost`), and a structural command is refused as
   `unsupported`.
 
 - **`Selection`** is `{ anchor, head }`, as in CM6's `selection.main`. A structural command (indent,
@@ -89,7 +89,7 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
   - `{ status: 'rejected', reason: RejectReason, detail? }`<br>
     The command does nothing; the host should swallow the key.
 
-  - `{ status: 'notApplicable', detail? }`<br>
+  - `{ status: 'deferredToHost', detail? }`<br>
     The command has nothing to do here (Backspace inside a text); the host runs its default. With the
     caret in markup, an edit ourus would refuse is also left to the host when the config treats
     markup as text (`markup: text`, the default); `detail` then says why ("a list marker isn't

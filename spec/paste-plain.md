@@ -150,11 +150,12 @@ clipboard: |
 In a quote, the paragraph break keeps its `>`.
 
 ```yaml
-tags: rare free-form quote-container
+tags: rare free-form
 clipboard: |
   x
 
   y
+quotes: container
 ```
 
 ```buffer
@@ -594,7 +595,7 @@ Lines pasted as plain text into a callout's title are refused: in the Obsidian f
 one line, and the host's paste would leave the callout.
 
 ```yaml
-tags: rare free-form quote-container
+tags: rare free-form
 flavor: obsidian
 clipboard: |
   x
@@ -980,5 +981,5 @@ clipboard: |-
 > pastePlain
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```

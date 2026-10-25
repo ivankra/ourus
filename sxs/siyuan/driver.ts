@@ -11,8 +11,8 @@
 // Reading is the editor's DOM (`protyle.wysiwyg`), SiYuan's own tree: list items in order, each
 // block's text its own blocks' Markdown by SiYuan's converter (Lute's `BlockDOM2StdMd`), a task item
 // `[ ] ` / `[x] ` before it. Any block but an item's text is free, and owned as the spec's buffers'
-// blocks are (`ownBlocks`, ../lib/block.ts): a paragraph owns the list right after it, a heading its
-// section. The caret is mapped into a block's Markdown, and back, through a marker character put
+// blocks are (`ownBlocks`, ../lib/block.ts): a heading its section; a list right after a paragraph
+// is no block's, as SiYuan's top-level blocks are a sequence (`listParent: container`). The caret is mapped into a block's Markdown, and back, through a marker character put
 // where it is, so markup the editor draws as no text (`**b**`, a heading's `## `) counts as it does in
 // the text. (The whole document's Markdown, projected as the spec's buffers are, would read SiYuan's
 // tree wrong where its Markdown doesn't say it: `-  b` with a child indented two columns, after a
@@ -20,7 +20,7 @@
 
 import type { Page } from 'playwright-core';
 import { perPage, type Driver } from '../lib/driver.ts';
-import { liftOwned, ownBlocks, type Block, type Outline } from '../lib/block.ts';
+import { lazyQuotes, liftOwned, listOwner, ownBlocks, type Block, type Outline } from '../lib/block.ts';
 import { api, holdKernel, kernelOf, kernelOfPage, leaseKernel, serve, type Kernel } from './kernel.ts';
 
 /** SiYuan's keys for the spec's motions (Linux); the `select…` motions add Shift. */
@@ -37,11 +37,12 @@ const MOTIONS: Record<string, string> = {
 
 /**
  * A free block's text as Markdown's lines: a paragraph's lines escaped where they would read as a
- * list's item or a quote (`- x` is the paragraph's text); a heading, code, math, a table or a thematic
- * break as it is.
+ * list's item or a quote (`- x` is the paragraph's text); a quote's quoted, each (its later lines are
+ * lazy in the block's text); a heading, code, math, a table or a thematic break as it is.
  */
 function freeLines(text: string): string[] {
   const lines = text.split('\n');
+  if (lines[0]!.startsWith('> ')) return lines.map((l, k) => (k ? `> ${l}` : l));
   if (/^(?:#{1,6}(?:[ \t]|$)|`{3,}|~{3,}|\$\$|\||<| {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$)/.test(lines[0]!)) return lines;
   return lines.map((l) => l.replace(/^([-*+>])(?=[ \t]|$)/, '\\$1').replace(/^(\d{1,9})([.)])(?=[ \t]|$)/, '$1\\$2'));
 }
@@ -49,8 +50,7 @@ function freeLines(text: string): string[] {
 /**
  * An outline as Markdown for `createDocWithMd`, in free form: a free block (`Block.free`: a paragraph,
  * a heading, code) a block of its own, set off by blank lines, at the top level or in the item it is
- * under, at its content column; what one owns in ourus's outline (a heading its section, a paragraph
- * the list after it) beside it, as Markdown has them (`liftOwned`). An item a list item, nested by its
+ * under, at its content column; what one owns in ourus's outline (a heading its section) beside it, as Markdown has them (`liftOwned`). An item a list item, nested by its
  * depth, a numbered one (`1. x`) an ordered list's, its children at its content column. A numbered
  * item that doesn't go on from the one before it (`1. a`, `1. b`) starts a list of its own, by the
  * other delimiter (`1)`), which SiYuan keeps as a list apart (drawing it `1.`).
@@ -106,6 +106,15 @@ function codeOf(text: string): { from: number; to: number; start: number; end: n
 }
 
 /**
+ * An offset in a block's text as one in SiYuan's Markdown of it, which quotes a quote's later lines
+ * (`> a⏎> b`) where the block's text has them lazy (`> a⏎b`, `lazyQuotes`).
+ */
+function quotedOffset(text: string, p: number): number {
+  if (!text.startsWith('> ')) return p;
+  return p + 2 * (text.slice(0, p).split('\n').length - 1);
+}
+
+/**
  * What SiYuan can't start from, measured (each was a start it held otherwise): text it trims or
  * reads as structure, markup it drops, and carets in what it draws as no text.
  */
@@ -148,6 +157,8 @@ function holds(o: Outline): string | undefined {
   if (/^\[[ xX]\] /.test(text) && from < 4) return "caret in a task's checkbox";
   // a thematic break is a line drawn, with no text to hold a caret (Enter67)
   if (/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(text)) return 'caret on a thematic break';
+  // a quote's `>` is drawn, not text
+  if (text.startsWith('> ') && from < 2) return "caret in a quote's >";
   // a heading's #s are its level, not text
   const hashes = /^(?:\d{1,9}\. )?(?:\[[ xX]\] )?#{1,6} /.exec(text);
   if (hashes && from < hashes[0].length) return "caret in a heading's #s";
@@ -181,8 +192,6 @@ function holds(o: Outline): string | undefined {
 /** What the page gives back: the blocks in order, the caret in Markdown offsets, the blocks selected. */
 interface Raw {
   blocks: Block[];
-  /** Each block's owning the list right after it, as Markdown's paragraph does (`ownBlocks`). */
-  owns: boolean[];
   sel: { block: number; anchor: number; head: number } | null;
   selected: number[];
 }
@@ -216,7 +225,7 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
   const data = (el: Element): DOMStringMap => (el as HTMLElement).dataset ?? {};
   // a block: a list item's own blocks (not its nested lists), or a block outside every list; free (a
   // paragraph, a heading, code, ...) but an item's text, a paragraph owning the list right after it
-  type Group = { els: HTMLElement[]; depth: number; prefix: string; holder: HTMLElement; free: boolean; owns: boolean };
+  type Group = { els: HTMLElement[]; depth: number; prefix: string; holder: HTMLElement; free: boolean };
   const groups: Group[] = [];
   const items = (list: Element, depth: number): void => {
     [...list.children].filter((c) => data(c).type === 'NodeListItem').forEach((li, k) => {
@@ -231,18 +240,18 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
       // typing there fills it, the read's structure the same
       const first = kids[0] && data(kids[0]).type !== 'NodeList' ? kids[0] : undefined;
       const text = first ? [first] : [];
-      groups.push({ els: text, depth, prefix: number + (task === undefined ? '' : task === ' ' ? '[ ] ' : '[x] '), holder: li as HTMLElement, free: false, owns: false });
+      groups.push({ els: text, depth, prefix: number + (task === undefined ? '' : task === ' ' ? '[ ] ' : '[x] '), holder: li as HTMLElement, free: false });
       for (const kid of kids) {
         if (data(kid).type === 'NodeList') items(kid, depth + 1);
-        else if (!text.includes(kid)) groups.push({ els: [kid], depth: depth + 1, prefix: '', holder: kid, free: true, owns: data(kid).type === 'NodeParagraph' });
+        else if (!text.includes(kid)) groups.push({ els: [kid], depth: depth + 1, prefix: '', holder: kid, free: true });
       }
     });
   };
-  // blocks outside every list, free; owned as ourus owns them (a heading its section, a paragraph the
-  // list right after it) by `ownBlocks`, out of the page
+  // blocks outside every list, free; owned as ourus owns them (a heading its section; a list no
+  // block's) by `ownBlocks`, out of the page
   for (const c of [...wys.children].filter((c) => data(c).nodeId) as HTMLElement[]) {
     if (data(c).type === 'NodeList') items(c, 0);
-    else groups.push({ els: [c], depth: 0, prefix: '', holder: c, free: true, owns: data(c).type === 'NodeParagraph' });
+    else groups.push({ els: [c], depth: 0, prefix: '', holder: c, free: true });
   }
   // a position (node, offset) inside `el`, copied into a clone of it with a marker there
   const path = (root: Node, n: Node): number[] => {
@@ -325,12 +334,11 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
   const [a0, h0] = [anchor as [number, number] | null, head as [number, number] | null];
   const sel: Raw['sel'] = a0 && h0 && a0[0] === h0[0] ? { block: a0[0], anchor: a0[1], head: h0[1] } : null;
   const selected = groups.map((g, k) => (g.holder.classList.contains('protyle-wysiwyg--select') || g.els.some((e) => e.classList.contains('protyle-wysiwyg--select')) ? k : -1)).filter((k) => k >= 0);
-  const owns = groups.map((g) => g.owns);
-  if (!want) return { blocks, owns, sel, selected };
+  if (!want) return { blocks, sel, selected };
 
   // placing: the DOM position whose Markdown offset is the one wanted, in the block's own elements
   const g = groups[want.block];
-  if (!g) return { blocks, owns, sel, selected, placed: `no block ${want.block}` };
+  if (!g) return { blocks, sel, selected, placed: `no block ${want.block}` };
   const find = (offset: number): { node: Node; offset: number; el: HTMLElement } | null => {
     let base = g.prefix.length;
     for (const el of g.els) {
@@ -352,10 +360,10 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
   };
   const a = find(want.anchor);
   const h = want.head === want.anchor ? a : find(want.head);
-  if (!a || !h) return { blocks, owns, sel, selected, placed: `no place for ${!a ? want.anchor : want.head} in "${blocks[want.block]?.text}"` };
+  if (!a || !h) return { blocks, sel, selected, placed: `no place for ${!a ? want.anchor : want.head} in "${blocks[want.block]?.text}"` };
   a.el.focus();
   getSelection()!.setBaseAndExtent(a.node, a.offset, h.node, h.offset);
-  return { blocks, owns, sel, selected, placed: 'placed' };
+  return { blocks, sel, selected, placed: 'placed' };
 }
 
 /** Each kernel's test notebook (by its origin): `ourus sxs`, made if its workspace has none. */
@@ -408,6 +416,10 @@ export const driver: Driver = {
   // structured paste in the middle of a block's text goes after it; a typed fence is left open
   // (Backtick2, Backtick12, Backtick15)
   behaves: {
+    // a quote is a style on one block: a quote of one paragraph is that block, its `>` the style (../../dev/19-quotes.md, Part 1)
+    quotes: 'text',
+    // a list is no block's: SiYuan's blocks are a flat sequence (../../dev/19-quotes.md, Part 2)
+    listParent: 'container',
     enterSplitSpace: 'start',
     // Backspace at an item's text start: a paragraph in the item above (Backspace1, Backspace8)
     backspaceAtItemStart: 'body',
@@ -509,12 +521,15 @@ export const driver: Driver = {
       return;
     }
     // a caret with no place in what SiYuan made of the start is left to the runner's load check, which says what it made
-    await page.evaluate(inPage, o.sel);
+    const text = o.blocks[o.sel.block]!.text;
+    await page.evaluate(inPage, { ...o.sel, anchor: quotedOffset(text, o.sel.anchor), head: quotedOffset(text, o.sel.head) });
     await idle();
   },
 
   async read(page: Page) {
     const r = await page.evaluate(inPage, null);
-    return { blocks: ownBlocks(r.blocks, (_, i) => r.owns[i]!), sel: r.sel, ...(r.selected.length && { selected: r.selected }) };
+    // (a quote's later lines lazy, as the projection has them: SiYuan's Markdown quotes each)
+    // (a heading's section as ourus's outline has it; a list no block's, `listParent: container`)
+    return lazyQuotes({ blocks: ownBlocks(r.blocks, listOwner(driver.behaves?.listParent)), sel: r.sel, ...(r.selected.length && { selected: r.selected }) });
   },
 };

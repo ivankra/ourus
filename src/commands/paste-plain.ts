@@ -6,7 +6,8 @@
 import { ProseText, AtomText, type OutlineNode, type OutlineNodeText } from '../doc/index.ts';
 import { composeChanges, heldSpaceAt, isSpaceOrTab, trimMd, type ChangeSpec } from '../text/index.ts';
 import { clipboardFragment } from './clipboard.ts';
-import { CommandContext, notApplicable, reject, type CommandOutcome } from './context.ts';
+import { CommandContext, deferToHost, reject, type CommandOutcome } from './context.ts';
+import { linesInQuote, quoteAtomAt } from './quote.ts';
 import { enterCommand } from './enter.ts';
 import { pasteMarkdown } from './paste.ts';
 import { textActedOnAt } from './util.ts';
@@ -23,7 +24,7 @@ import { afterDeleting } from './copy.ts';
  * held spaces.
  */
 export function pastePlainCommand(ctx: CommandContext, clipboard: string): CommandOutcome {
-  if (ctx.config.pastePlainLines === 'host') return notApplicable('plain paste is the host\'s');
+  if (ctx.config.pastePlainLines === 'host') return deferToHost('plain paste is the host\'s');
   if (ctx.config.pastePlainLines === 'items') return itemLines(ctx, clipboard);
   if (ctx.config.pastePlainLines === 'enter') return enteredLines(ctx, clipboard);
   return plainLines(ctx, clipboard);
@@ -63,7 +64,7 @@ function enteredLines(ctx: CommandContext, clipboard: string): CommandOutcome {
   let result: CommandOutcome = null;
   for (const [k, line] of lines.entries()) {
     const at = line ? textActedOnAt(next, next.selection.head) : null;
-    if (line && !at) return k === 0 ? notApplicable('the caret is outside a text') : null;
+    if (line && !at) return k === 0 ? deferToHost('the caret is outside a text') : null;
     // (at the text's start, without the spaces it starts with, which would be padding there)
     const typed = at && trimMd(at.text.text.slice(at.text.textStart(0), at.offset)) === '' ? line.replace(/^[ \t]+/, '') : line;
     if (at && typed) {
@@ -83,17 +84,29 @@ function enteredLines(ctx: CommandContext, clipboard: string): CommandOutcome {
 
 /** The lines into the text at the caret (`pastePlainLines: text`, and paste's plain lines). */
 export function plainLines(ctx: CommandContext, clipboard: string): CommandOutcome {
+  // in a quote read as an atom, over a selection in it too: its lines each a line of it (`> `)
+  const quote = quoteAtomAt(ctx);
+  if (quote) {
+    const lines = clipboard.split(/\r\n|\r|\n/);
+    // before its `>`, the line breaks the clipboard starts with go, as at any text's start (PastePlain25);
+    // with nothing else, refused (PastePlain27)
+    if (quote.offset === 0 && lines[0] === '') {
+      while (lines.length && lines[0] === '') lines.shift();
+      if (lines.every((l) => trimMd(l) === '')) return reject('not-expressible', 'nothing but line breaks at the text\'s start');
+    }
+    return linesInQuote(ctx, quote, lines);
+  }
   // over a selection across lines, it goes first, as a cut takes it (PastePlain17)
   if (ctx.doc.lineAt(ctx.selection.anchor).index !== ctx.doc.lineAt(ctx.selection.head).index) return afterDeleting(ctx, (next) => plainLines(next, clipboard));
   const lines = clipboard.split(/\r\n|\r|\n/);
-  if (lines.length < 2) return notApplicable('one line: the host pastes it');
+  if (lines.length < 2) return deferToHost('one line: the host pastes it');
   const code = codeAt(ctx);
   // on a delimiter's line (an opening's info, a closing fence), no code line: the host's
-  if (code && onDelimiterLine(code.text, code.offset)) return notApplicable('a fence line: the host pastes');
+  if (code && onDelimiterLine(code.text, code.offset)) return deferToHost('a fence line: the host pastes');
   // in indented code's four columns, the host's
-  if (code && code.text.frame.some((p) => p.part === 'indent' && p.from <= code.offset && code.offset < p.to)) return ctx.collapsed ? notApplicable('in the code\'s indentation') : reject('not-expressible', 'the selection takes part of the code\'s indentation');
+  if (code && code.text.frame.some((p) => p.part === 'indent' && p.from <= code.offset && code.offset < p.to)) return ctx.collapsed ? deferToHost('in the code\'s indentation') : reject('not-expressible', 'the selection takes part of the code\'s indentation');
   // (a line break first, before the block's text: the host's, as a new line above it)
-  if (code && lines[0] === '' && code.offset === 0) return notApplicable('a line break before the block: the host pastes');
+  if (code && lines[0] === '' && code.offset === 0) return deferToHost('a line break before the block: the host pastes');
   if (code) {
     // in its block's text at its fence's indentation (its first line's)
     const indent = /^[ \t]*/.exec(code.text.text)![0];
@@ -108,8 +121,8 @@ export function plainLines(ctx: CommandContext, clipboard: string): CommandOutco
   // underline, refused as Shift-Enter is there
   if (a.zone === 'frame' && a.text instanceof ProseText && !a.text.empty) {
     const inside = ctx.selection.head > ctx.doc.lineAt(ctx.selection.head).from;
-    if (!inside && a.part !== 'underline') return notApplicable('the caret is before the text');
-    if (inside && ctx.collapsed && ctx.config.markup === 'text') return notApplicable('the caret is in markup');
+    if (!inside && a.part !== 'underline') return deferToHost('the caret is before the text');
+    if (inside && ctx.collapsed && ctx.config.markup === 'text') return deferToHost('the caret is in markup');
     return reject('not-expressible', a.text.heading ? 'the title holds one line' : 'the selection takes part of markup');
   }
   const at =
@@ -117,7 +130,7 @@ export function plainLines(ctx: CommandContext, clipboard: string): CommandOutco
     : a.zone === 'text' ? { node: a.node, text: a.text, offset: a.offset } : null;
   if (!at || !(at.text instanceof ProseText)) {
     // a table's row holds one line; another block's lines are the host's
-    return a.zone === 'text' && at?.text instanceof AtomText && at.text.type === 'table' ? reject('not-expressible', 'a row holds one line') : notApplicable('the caret is outside a text');
+    return a.zone === 'text' && at?.text instanceof AtomText && at.text.type === 'table' ? reject('not-expressible', 'a row holds one line') : deferToHost('the caret is outside a text');
   }
   const { node, text } = at;
   const from = at.offset;
@@ -138,7 +151,12 @@ export function plainLines(ctx: CommandContext, clipboard: string): CommandOutco
   if (/^[ \t]*$/.test(s0.slice(text.textStart(0), from))) lines[0] = lines[0]!.replace(/^[ \t]+/, '');
   // before a held space, the space is text after what is pasted (PastePlain16)
   const held = heldSpaceAt(text.marks, text.text, from) && ctx.selection.head === ctx.doc.posOf(node, from, -1) && ctx.collapsed;
-  const pasted = lines.join('\n') + (held ? ' ' : '');
+  // (in a quote's text a line of it `> ` too, but a blank line, which breaks it into two quotes; the
+  // last one with the text's rest after it is none)
+  const restOfLine = text.text.slice(to, text.text.indexOf('\n', to) < 0 ? text.text.length : text.text.indexOf('\n', to));
+  const blank = (l: string, k: number): boolean => trimMd(l) === '' && (k < lines.length - 1 || trimMd(restOfLine) === '');
+  const quoted = text.type === 'quote' ? lines.map((l, k) => (k === 0 || blank(l, k) ? l : `> ${l}`)) : lines;
+  const pasted = quoted.join('\n') + (held ? ' ' : '');
   let current = text.splice(from, to, pasted);
   // (a setext title, which a blank line in it would end: an ATX one holds one line, above)
   if (text.type === 'heading' && /\n[ \t]*\n/.test(current.body)) return reject('not-expressible', 'a heading has no blank line in its title');
