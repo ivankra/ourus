@@ -566,7 +566,7 @@ tags: edge free-form
 > shiftEnter
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ```buffer
@@ -1759,6 +1759,7 @@ clipboard: |
   - alpha
 
   > note
+quotes: container
 ```
 
 ```buffer

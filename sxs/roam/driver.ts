@@ -118,6 +118,10 @@ export const driver: Driver = {
   // Shift+Tab leaves later siblings with the parent (logical outdenting); Enter on an empty nested
   // block outdents it; Backspace on a page's first block does nothing: as ourus's config says of Roam
   behaves: {
+    // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+    quotes: 'atom',
+    // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+    enterInQuote: 'split',
     // Enter mid-heading: the new block above takes the text before the caret, the heading (an
     // attribute) staying with the rest (TO-E13-E16, TO-E14-E20)
     quirkEnterMidHeading: 'workflowy',

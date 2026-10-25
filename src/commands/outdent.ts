@@ -3,7 +3,7 @@
 // are; `done()` and the writer do the rest.
 
 import { ProseText, AtomText, type OutlineNode } from '../doc/index.ts';
-import { notApplicable, reject, type CommandContext, type CommandOutcome } from './context.ts';
+import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
 import { changeHeadingLevels, onCodeLine, selectionInText, structuralOperands } from './util.ts';
 
 /**
@@ -14,7 +14,7 @@ import { changeHeadingLevels, onCodeLine, selectionInText, structuralOperands } 
  * line Shift-Tab is the host's. Null for other nodes, which ourus doesn't do yet (unsupported).
  */
 export function outdentCommand(ctx: CommandContext): CommandOutcome {
-  if (onCodeLine(ctx, ctx.selection.anchor) && onCodeLine(ctx, ctx.selection.head)) return notApplicable();
+  if (onCodeLine(ctx, ctx.selection.anchor) && onCodeLine(ctx, ctx.selection.head)) return deferToHost();
   const nodes = structuralOperands(ctx);
   if (!Array.isArray(nodes)) return nodes;
   const first = nodes[0]!;

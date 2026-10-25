@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { compareOutlines, draw, endFenceOptional, italicsAsMarkdown, runsAsMarkdown, sameText, liftOwned, ownBlocks, project, readOutline, sectioned, unescapeLaterLines, Unsupported, type Outline } from './block.ts';
+import { compareOutlines, lazyQuotes, draw, endFenceOptional, italicsAsMarkdown, runsAsMarkdown, sameText, asMarkdownReads, liftOwned, ownBlocks, project, readOutline, sectioned, unescapeLaterLines, Unsupported, type Outline } from './block.ts';
 
 const blocks = (o: Outline): string[] => o.blocks.map((b) => `${'  '.repeat(b.depth)}${b.text}`);
 
@@ -83,8 +83,28 @@ test('a caret with no place in a block is lost, with the reason', () => {
   assert.equal(project('- «a\n- b»\n', 'gfm').caretLost, 'selection across blocks');
 });
 
-test('quotes, callouts and frontmatter have no block form', () => {
-  assert.throws(() => project('> q┃\n', 'gfm'), (e) => e instanceof Unsupported && e.message === 'quote');
+test("a quote of one paragraph is a block's text, `> ` before it; an item's where it starts the item", () => {
+  const top = project('> a\n> b┃\n', 'gfm');
+  assert.deepEqual(top.outline.blocks, [{ depth: 0, text: '> a\nb' }]);
+  assert.deepEqual(top.outline.sel, { block: 0, anchor: 5, head: 5 });
+  assert.ok(top.notes.has('quote') && !top.notes.has('paragraph'));
+  assert.deepEqual(project('- > a┃b\n', 'gfm').outline, { blocks: [{ depth: 0, text: '> ab' }], sel: { block: 0, anchor: 3, head: 3 } });
+  assert.ok(!project('- > q┃\n', 'gfm').notes.has("list as an item's first block"));
+  assert.deepEqual(project('- a┃\n  > q\n  - b\n', 'gfm').outline.blocks, [{ depth: 0, text: 'a' }, { depth: 1, text: '> q' }, { depth: 1, text: 'b' }]);
+  // an item's text, then the quote, where blocks hold paragraphs
+  assert.deepEqual(project('- a┃\n  > q\n', 'gfm', { paragraphsInBlock: true }).outline.blocks, [{ depth: 0, text: 'a\n> q' }]);
+  assert.deepEqual(project('> q┃\n', 'gfm', { freeForm: true }).outline.blocks, [{ depth: 0, text: '> q', free: true }]);
+  assert.equal(project('>┃ q\n', 'gfm').caretLost, 'caret in a marker');
+});
+
+test("a quote's later lines compare the same lazy or quoted, the caret moving with them", () => {
+  const want = project('> a\n> b┃\n', 'gfm').outline;
+  assert.equal(compareOutlines(want, { blocks: [{ depth: 0, text: '> a\n> b' }], sel: { block: 0, anchor: 7, head: 7 } }), 'agree');
+  assert.deepEqual(lazyQuotes({ blocks: [{ depth: 0, text: '> a\n> b\n>c' }], sel: { block: 0, anchor: 10, head: 6 } }), { blocks: [{ depth: 0, text: '> a\nb\nc' }], sel: { block: 0, anchor: 7, head: 4 } });
+});
+
+test('quotes as containers, callouts and frontmatter have no block form', () => {
+  for (const drawn of ['> - a┃\n', '> a\n>\n> b┃\n', '> a┃\n>\n', '- > a┃\n  > - b\n']) assert.throws(() => project(drawn, 'gfm'), (e) => e instanceof Unsupported && e.message === 'quote', drawn);
   assert.throws(() => project('> [!note] t\n> q┃\n', 'obsidian'), (e) => e instanceof Unsupported && e.message === 'callout');
   assert.throws(() => project('---\na: 1\n---\n- x┃\n', 'obsidian'), (e) => e instanceof Unsupported && e.message === 'frontmatter');
 });
@@ -169,6 +189,9 @@ test('for an app that numbers blocks, an ordered item is a numbered block and a 
   // a drawing from before, with a numbered block under a bullet, reads as it did
   for (const options of [{}, { ordered: true }]) assert.deepEqual(readOutline('- 1. a\n  - b┃\n', options), { blocks: [{ depth: 0, text: '1. a' }, { depth: 1, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } });
   assert.equal(readOutline('1. a\n  - b\n', { ordered: true }), null);
+  // a line deeper than a child of the block above is a line of its text, as `draw` indents it
+  const lines = { blocks: [{ depth: 0, text: '> - q\n    - g' }], sel: null };
+  assert.deepEqual(readOutline(draw(lines)), lines);
   // else the number goes, an adaptation
   assert.deepEqual(blocks(project('1. a┃\n', 'gfm').outline), ['a']);
   assert.ok(project('1. a┃\n', 'gfm').notes.has('numbered list'));
@@ -189,6 +212,13 @@ test("owned blocks lift beside their owner in free form, and own takes them back
     { depth: 1, text: 'x' },
   ];
   assert.deepEqual(blocks({ blocks: ownBlocks(nested, owns), sel: null }), ['a', '  b', '    x']);
+  // read as their Markdown reads, what a paragraph holds is beside it (`a⏎⏎b⏎- x`), owned as `listParent` says
+  assert.deepEqual(blocks({ blocks: asMarkdownReads(nested), sel: null }), ['a', 'b', '  x']);
+  assert.deepEqual(blocks({ blocks: asMarkdownReads(nested, 'container'), sel: null }), ['a', 'b', 'x']);
+  // an item a paragraph holds (`Intro⏎  - a`) is the list after it; code owns one under `block` alone
+  const code = [{ depth: 0, text: '```\nx\n```', free: true as const }, { depth: 1, text: 'a' }];
+  assert.deepEqual(blocks({ blocks: asMarkdownReads(code), sel: null }), ['```\nx\n```', 'a']);
+  assert.deepEqual(blocks({ blocks: asMarkdownReads(code, 'block'), sel: null }), ['```\nx\n```', '  a']);
 });
 
 test("blocks' texts compare by what they say as inline Markdown: an escape nothing needs is the same text, one that keeps markup text isn't", () => {

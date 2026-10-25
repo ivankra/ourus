@@ -85,6 +85,9 @@ function typingKeepsOutline(doc: OurusDoc, head: number): boolean {
     walk(d.rootNode, 0);
     return out;
   };
+  // (a thematic break has no text to type in: on its line, anything typed makes it a paragraph)
+  const at = doc.nodeAtLine(doc.lineAt(head).index);
+  if (at && (at.kind === 'atom' ? at.block : at.head)?.type === 'thematic_break') return true;
   const [before, after] = [shape(doc), shape(doc.update([{ from: head, to: head, insert: 'x' }], { caret: head + 1 }))];
   if (before.map((n) => n.node).join() !== after.map((n) => n.node).join()) return false;
   return before.filter((n, i) => n.text !== after[i]!.text).length <= 1;

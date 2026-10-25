@@ -699,6 +699,8 @@ export function obsidianDriver(profile: Profile): Driver {
     // empty item outdents it or leaves the list wherever it is; a typed fence is closed, and inline
     // backticks are paired ("Auto pair Markdown syntax", on by default)
     behaves: {
+      // a quote is text, its `>`s characters edited on its lines: of `quotes`' values the one its runs agree with most (166 quote cases a setup, ../../dev/19-quotes.md §1.4.3)
+      quotes: 'atom',
       flavor: 'obsidian',
       enterSplitSpace: 'drop',
       enterOnEmptyItem: 'outdent',

@@ -72,7 +72,7 @@ const oracle = { applied: 0, same: 0, differ: 0, modelRejects: 0 };
 /** A first-cut category from what each side did. */
 function category(ourus: string, model: string, inText: boolean): string {
   if (ourus === 'rejected:write-failed') return 'A the check stepped in (a writer bug)';
-  if (ourus === 'notApplicable') return inText ? 'B raw edit (host default) inside text' : 'C host default at a node boundary';
+  if (ourus === 'deferredToHost') return inText ? 'B raw edit (host default) inside text' : 'C host default at a node boundary';
   if (ourus.startsWith('rejected') && model === 'applied') return 'D ourus refuses, model applies';
   if (ourus === 'applied' && model.startsWith('rejected')) return 'E ourus applies, model refuses';
   return 'F both act, differently';

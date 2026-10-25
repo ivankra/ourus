@@ -111,7 +111,7 @@ export class OutlineNode {
     return null;
   }
 
-  /** Whether a paragraph among its children owns the list right after it: in the document's own sections (the root's, a heading's), not in an item or a quote. */
+  /** Whether a node among its children can own the list right after it: in the document's own sections (the root's, a heading's), not in an item or a quote (which kinds do, `OurusDoc.adoptsLists`). */
   get ownsLists(): boolean {
     let holder: OutlineNode | null = this;
     while (holder && (holder.kind === 'heading' || holder.kind === 'paragraph')) holder = holder.parent;

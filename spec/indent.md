@@ -5,14 +5,18 @@ Command: `indent` (Tab). Its inverse is [`outdent`](outdent.md).
 Indent takes the selected nodes (contiguous siblings of one kind) one level deeper, with their
 subtrees. The rules, in order; the first that applies wins:
 
-1. **On a code line**, Tab is the host's: it indents the code ([Fence21](fences.md#fence21)).
+1. **On a code line**, Tab is the host's: it indents the code ([Fence21](fences.md#fence21)); any line
+   of indented code is one (Indent38). A fence's line is markup: there Tab is the block's (Indent34).
 2. **A heading goes one level deeper**, the headings in its section with it, even past a missing
    level (Indent12, Indent23); a setext heading stays setext where it can say the level (Indent16)
    and becomes ATX where it can't (Indent25); past `######` it is refused (Indent24).
 3. **A paragraph becomes an item**: the first item of the paragraph above (Indent18, Indent21); after
    a list, its next item, one level in as anywhere, with the list's marker (Indent29, Indent29b,
    Indent29c); with nothing above to hold it, an item in place (Indent22). Into a quote above, it is
-   the quote's last child ([quotes.md](quotes.md)).
+   the quote's last child ([quotes.md](quotes.md)). **An atom too**, the item's text (code, math, a
+   table, a quote atom: Indent34, Indent35, Indent36, [QuoteAtom21](quotes.md#quoteatom21)), placed
+   as a paragraph is; a thematic break under a bullet of its own character is refused, `- ---` being
+   one rule (Indent37, Indent37b).
 4. **An item becomes the last child of its previous sibling**, its subtree coming along (Indent1,
    Indent2, Indent9): it lines up with the children there, adopting their marker (Indent3); a new
    ordered list starts at 1, so it can't read as more of the text above (Indent4); one joining an
@@ -1016,4 +1020,193 @@ tags: rare
 - x
 - a┃
    b
+```
+
+## Indent34
+
+Fenced code after a list becomes its next item, the code the item's text, as a paragraph does (rule
+3); Tab on a fence's line, which is markup (on a code line it is the host's, rule 1). The outliners
+that show fences nest the block so (Athens, Dynalist, Logseq). Outdented, it is code again after the
+list: a fence needs no blank line to start.
+
+```yaml
+tags: edge
+```
+
+````buffer
+- a
+
+┃```js
+x
+```
+````
+
+> indent
+
+````buffer
+- a
+- ┃```js
+  x
+  ```
+````
+
+> outdent
+
+````buffer
+- a
+┃```js
+x
+```
+````
+
+## Indent35
+
+Math after a paragraph becomes the first item of its list, the math the item's text, as a paragraph
+does ([Indent21](#indent21)); outdented, it is math again. In math Tab is the outline's, not the
+host's: LaTeX's spaces mean nothing, and every block app acts on the block (Logseq, Tine, Roam,
+Athens and Dynalist nest it, RemNote makes an item of it; BlockNote puts it in the item's body, as it
+does a paragraph).
+
+```yaml
+tags: edge
+flavor: obsidian
+```
+
+```buffer
+Intro
+
+$$
+m┃
+$$
+```
+
+> indent
+
+```buffer
+Intro
+
+- $$
+  m┃
+  $$
+```
+
+> outdent
+
+```buffer
+Intro
+
+$$
+m┃
+$$
+```
+
+## Indent36
+
+A table after a list becomes its next item, the table the item's text: an item whose first block is
+an atom has it as its text, a table as code. Outdented, it is a table again, set off by a blank line
+(right under the item's text its rows would continue it).
+
+```yaml
+tags: edge
+flavor: gfm
+```
+
+```buffer
+- a
+
+| x┃ | y |
+| - | - |
+| 1 | 2 |
+```
+
+> indent
+
+```buffer
+- a
+- | x┃ | y |
+  | - | - |
+  | 1 | 2 |
+```
+
+> outdent
+
+```buffer
+- a
+
+| x┃ | y |
+| - | - |
+| 1 | 2 |
+```
+
+## Indent37
+
+A thematic break can't become an item of a `-` list: `- ---` reads as one rule.
+
+```yaml
+tags: rare
+```
+
+```buffer
+- a
+
+---┃
+```
+
+> indent
+
+```yaml
+result: rejected not-expressible
+```
+
+```buffer
+- a
+
+---┃
+```
+
+## Indent37b
+
+Under another bullet it can: `* ---` is an item whose text is the rule.
+
+```yaml
+tags: rare
+```
+
+```buffer
+* a
+
+---┃
+```
+
+> indent
+
+```buffer
+* a
+* ---┃
+```
+
+## Indent38
+
+Every line of indented code is a code line: Tab is the host's there (rule 1), as on fenced code's.
+
+```yaml
+tags: rare
+```
+
+```buffer
+para
+
+    co┃de
+```
+
+> indent
+
+```yaml
+result: deferredToHost
+```
+
+```buffer
+para
+
+    co┃de
 ```

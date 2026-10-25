@@ -298,7 +298,44 @@ class Writer {
       const withBefore = beforeAt !== null ? beforeAt - indent(at) : beforeMoved !== undefined ? Math.max(beforeMoved, -indent(at)) : undefined;
       // (in a document indented with tabs, at none, a tab past its new parent's marker)
       const tab = target === null && withBefore === undefined && moved && tabs ? this.tabChild(container) : null;
-      delta = realign || (target !== null ? target - indent(at) : withBefore !== undefined ? withBefore : tab !== null ? columns(tab) - (this.markerColumn(at) - column + columns(this.inside(container))) : moved || (this.draft.lists.get(child.id)?.start && parent.children[i - 1]?.kind === 'item') ? -indent(at) : -lift);
+      // (a list of its own after an item, where it was, unless that item would take it in there: copied
+      // beside its original, as its original is; placed in its container, where at its container's
+      // column it, or the items placed with it, would take in the item after them that stays, which
+      // would have to move, and what follows it with it)
+      let after = i + 1;
+      while (parent.children[after]?.kind === 'item' && this.draft.placedIds.has(parent.children[after]!.id)) after++;
+      const stays = parent.children[after]?.kind === 'item' ? this.draft.originOf(parent.children[after]!) : null;
+      const pushes = stays?.kind === 'item' && holds(container, stays) && indent(stays) >= this.markerWidth(child);
+      const keeps = ((!moved && this.draft.placedIds.has(child.id) && pushes) || (isCopy(child) && holds(container, at))) && this.draft.lists.get(child.id)?.start && before?.kind === 'item' && !this.takesIn(before, indent(at), container);
+      delta = realign || (target !== null ? target - indent(at) : withBefore !== undefined ? withBefore : tab !== null ? columns(tab) - (this.markerColumn(at) - column + columns(this.inside(container))) : keeps ? 0 : moved || (this.draft.lists.get(child.id)?.start && parent.children[i - 1]?.kind === 'item') ? -indent(at) : -lift);
+      // never where the item written before it would take it in, past its marker (`* x` written at 0,
+      // `- b` lined up with its list's `  - x`: `* x`'s child): at that one's column, the items of its
+      // list after it lined up with it (`realign`)
+      const beforeColumn = before?.kind === 'item' ? this.writtenColumn(before.id, container) : null;
+      // (where it was, is it that one's child?)
+      const takenIn = beforeColumn !== null && indent(at) >= beforeColumn + this.markerWidth(before!);
+      if ((moved || this.draft.placedIds.has(child.id)) && beforeColumn !== null && indent(at) + delta >= beforeColumn + this.markerWidth(before!)) delta = beforeColumn - indent(at);
+      // (in its container still, and not that one's child where it was: not lined up where the shift
+      // would move a paragraph's line that could start a block, which a copy is written with, or, to
+      // the left, take in the indented block after it)
+      else if ((moved || this.draft.placedIds.has(child.id)) && holds(container, at) && delta !== 0 && !takenIn && (this.startsBlocks(at) || (delta < 0 && this.indentedAfter(parent, i)))) delta = 0;
+      // where it, or the items moved in with it, would take in the item after them that stays (of another
+      // list: `- [x] x` outdented before `  1. `), at that one's column instead, where the one before it doesn't take it in: lining that one
+      // up with it would shift it, and what follows it with it (the code after `  1. `, its child then)
+      // (one moved into its container: past the items moved in with it, the first that stays)
+      const movedIn = (c: OutlineNodePersistent | undefined): boolean => {
+        const o = c?.kind === 'item' ? this.draft.originOf(c) : null;
+        return !!o && !this.draft.placedIds.has(c!.id) && !holds(container, o);
+      };
+      let k = i + 1;
+      if (moved && !this.draft.placedIds.has(child.id)) while (movedIn(parent.children[k])) k++;
+      const next = parent.children[k];
+      const nextAt = next?.kind === 'item' && !this.draft.placedIds.has(next.id) ? this.draft.originOf(next) : null;
+      if ((moved || this.draft.placedIds.has(child.id)) && nextAt?.kind === 'item' && holds(container, nextAt)) {
+        const nextColumn = indent(nextAt);
+        const column = indent(at) + delta;
+        if (nextColumn > column && nextColumn >= column + this.markerWidth(child) && (beforeColumn === null || nextColumn < beforeColumn + this.markerWidth(before!))) delta = nextColumn - indent(at);
+      }
       this.movedDelta.set(child, delta);
     } else if (!moved) return null;
     if (!moved && delta === 0) return null;
@@ -316,25 +353,93 @@ class Writer {
   realign(parent: OutlineNodePersistent, i: number, at: OutlineNode, container: Container): number {
     const child = parent.children[i]!;
     const prev = parent.children[i - 1];
-    if (child.kind !== 'item' || prev?.kind !== 'item' || this.draft.lists.get(child.id)?.start) return 0;
+    if (child.kind !== 'item' || prev?.kind !== 'item') return 0;
     // (columns from where the container's content starts on each line: a quote's `>` takes the space
     // after it on some lines, not others)
     const column = this.markerColumn(at) - this.columnIn(this.tree.line(at.startLine), containerOf(at));
     const placed = this.draft.placedIds.has(prev.id);
+    if (this.draft.lists.get(child.id)?.start) {
+      // a list of its own: where the item before it moved, at its column if it would take it in
+      if (!placed && !this.movedDelta.has(prev)) return 0;
+      const written = this.writtenColumn(prev.id, container);
+      return written !== null && column >= written + this.markerWidth(prev) ? written - column : 0;
+    }
     if (!placed && !this.movedDelta.has(prev)) {
       // two lists that are one now, both where they were: the later one's items lined up with the earlier's
       const was = this.draft.originOf(prev);
       const written = this.writtenColumn(prev.id, container);
       if (was?.kind !== 'item' || !this.draft.lists.has(child.id) || written === null || this.draft.placedIds.has(child.id) || this.listStart(was) === this.listStart(at)) return 0;
+      // (not where the shift would move a paragraph's line that could start a block, or take in the
+      // indented block after it, and needn't: as it is, not that one's child)
+      if ((this.startsBlocks(at) || this.indentedAfter(parent, i)) && column < written + was.block.attrs.contentColumn! - was.block.attrs.markerColumn!) return 0;
       return written - column;
     }
     const written = this.writtenColumn(prev.id, container);
     if (written === null) return 0;
-    if (!placed) {
-      const { markerColumn, contentColumn } = this.draft.originOf(prev)!.block.attrs;
-      if (column < written + contentColumn! - markerColumn!) return 0;
-    }
+    // (as it is, would it be that one's child? A placed one's lined up with all the same, but where
+    // the shift would move a paragraph's line that could start a block, which it can't move)
+    const { markerColumn, contentColumn } = this.draft.originOf(prev)?.block.attrs ?? {};
+    const under = markerColumn !== undefined && column >= written + contentColumn! - markerColumn;
+    if (!under && (!placed || this.startsBlocks(at) || this.indentedAfter(parent, i))) return 0;
     return written - column;
+  }
+
+  /** Whether the node after child `i` of `parent` is a block, not an item, whose first line is indented: where `i`, lined up further left, would take it in (`  1. ⏎    - `, code). */
+  indentedAfter(parent: OutlineNodePersistent, i: number): boolean {
+    // (last under a block that adopts a list, `listParent`, its section's next node, in its container still)
+    let next = parent.children[i + 1];
+    for (let up = parent; !next && up.kind !== 'item' && up.kind !== 'quote' && up.kind !== 'root'; ) {
+      const above = this.parentOf(up);
+      if (!above) break;
+      next = above.children[above.children.indexOf(up) + 1];
+      up = above;
+    }
+    const origin = next && next.kind !== 'item' ? this.draft.originOf(next) : null;
+    if (!origin) return false;
+    const line = this.tree.line(origin.startLine);
+    return /^[ \t]/.test(this.old.slice(line.from, line.to));
+  }
+
+  #parents: Map<OutlineNodePersistent, OutlineNodePersistent> | null = null;
+
+  /** The node `node` is a child of in the draft. */
+  parentOf(node: OutlineNodePersistent): OutlineNodePersistent | null {
+    if (!this.#parents) {
+      this.#parents = new Map();
+      const visit = (n: OutlineNodePersistent): void => n.children.forEach((c) => (this.#parents!.set(c, n), visit(c)));
+      visit(this.draft.root);
+    }
+    return this.#parents.get(node) ?? null;
+  }
+
+  /** Whether item `item`, written before, takes in an item at `column` (in `container`): past its content column. Not written yet: no. */
+  takesIn(item: OutlineNodePersistent, column: number, container: Container): boolean {
+    const written = this.writtenColumn(item.id, container);
+    return written !== null && column >= written + this.markerWidth(item);
+  }
+
+  /** How far item `item`'s content is from its marker as written: its marker as its list gives it, and the spaces after it as they were (one, for a new one). */
+  markerWidth(item: OutlineNodePersistent): number {
+    const was = this.draft.originOf(item);
+    const place = this.draft.lists.get(item.id);
+    const marker = place ? (place.type === 'bullet' ? place.marker : `${place.number ?? 1}${place.marker}`) : null;
+    if (was?.kind !== 'item') return (marker?.length ?? 1) + 1;
+    const { markerStart, markerEnd, contentColumn, markerColumn } = was.block.attrs;
+    return contentColumn! - markerColumn! + (marker ? marker.length - (markerEnd! - markerStart!) : 0);
+  }
+
+  /**
+   * Whether `at`'s subtree has a paragraph's later line a shift can't carry: not lazy, one that could
+   * start a block (`2) x` under `- x`, which `copyLine` refuses); lazy past spaces, which a shift would
+   * put in its container, no longer lazy (`    1. x` continuing `  1. b`, lined up to column 0: `b`'s list).
+   */
+  startsBlocks(at: OutlineNode): boolean {
+    for (let i = at.startLine; i < at.startLine + at.persistentNode.lines; i++) {
+      const line = this.tree.line(i);
+      if (this.draft.escapes.has(this.from.nodeAtLine(i)?.id ?? -1) || line.leaf?.block.type !== 'paragraph' || line.index <= line.leaf.line) continue;
+      if (line.lazy ? /^[ \t]/.test(this.old.slice(line.from, line.to)) : /^[ \t]*[-+*>#=|0-9]/.test(this.old.slice(line.contentFrom, line.to))) return true;
+    }
+    return false;
   }
 
   /**
@@ -560,7 +665,13 @@ class Writer {
         const same = k < i ? !lists.get(parent.children[k + 1]!.id)?.start : !lists.get(sibling?.id ?? -1)?.start;
         if (at && same && holds(container, at)) {
           const line = this.tree.line(at.startLine);
-          indent = this.old.slice(line.from, line.from + at.persistentNode.block!.attrs.markerStart!).replace(/[^>\t ]/g, ' ');
+          const lined = this.old.slice(line.from, line.from + at.persistentNode.block!.attrs.markerStart!).replace(/[^>\t ]/g, ' ');
+          // (never where the item before it, of another list, would take it in: `- a⏎  1. x`; an empty
+          // one a blank line ends takes in nothing)
+          const before = parent.children[i - 1];
+          const ended = before?.kind === 'item' && !before.children.length && before.gap > 0 && (this.draft.textOf(before, this.draft.originOf(before)) as ProseText | null)?.empty;
+          if (before?.kind === 'item' && !ended && this.takesIn(before, columns(lined) - this.columnIn(line, containerOf(at)), container)) break;
+          indent = lined;
           // (a list indented with tabs: new items in it with them, the line's whole prefix as written)
           break;
         }
@@ -654,7 +765,7 @@ class Writer {
     if (node.text === undefined) {
       this.copyNode(node, origin, textEnd);
       // what a line of its text starts with, for a blank line of its gap the caret is on
-      this.continuations.set(node, this.continuation(origin, this.tree.line(node.kind === 'item' ? origin.startLine : origin.textFirstLine)));
+      this.continuations.set(node, this.continuation(origin, this.tree.line(node.kind === 'item' ? origin.startLine : origin.textFirstLine)) + quotedLine(this.from.textOf(origin)));
     } else this.spell(node, origin);
     this.identity.set(this.headStart(node, origin, start), node.id);
     // blank lines moved from another scope end or a split, as they were written there; null: written anew
@@ -781,7 +892,7 @@ class Writer {
    * a split cut it from), whose lazy lines it keeps lazy.
    */
   spellLines(node: OutlineNodePersistent, text: OutlineNodeText, lead: string, continuation: string, origin: OutlineNode | null, tail: OutlineNode | null = text instanceof AtomText ? null : origin, split = false): void {
-    this.continuations.set(node, continuation);
+    this.continuations.set(node, continuation + quotedLine(text));
     const lines = text.text.split('\n');
     const escapes = this.draft.escapes.get(node.id) ?? [];
     // each line ends as the old line it is did, a new one as the line before it
@@ -801,8 +912,9 @@ class Writer {
       // as far from the text's end (lines put in or taken out above it)
       const first = tail ? (tail.kind === 'item' ? tail.startLine : tail.textFirstLine) : -1;
       const lazy = (i: number): MdLine | null => {
-        // (where the node moves, its old prefix is no lazy line's there)
-        if (!tail || i <= first || i > tail.textLastLine || this.shiftAt(i)) return null;
+        // (where the node moves, its old prefix is no lazy line's there, nor where it is of another
+        // kind now: a paragraph an item, its lines past the item's marker)
+        if (!tail || i <= first || i > tail.textLastLine || this.shiftAt(i) || (tail === origin && tail.kind !== node.kind)) return null;
         const was = this.tree.line(i);
         return was.lazy && this.old.slice(was.contentFrom, was.to) === written ? was : null;
       };
@@ -1005,8 +1117,8 @@ class Writer {
     const shift = this.shiftAt(i);
     // a paragraph's later line that could start a block, at another column: its escapes are `done()`'s
     // to give, where it spelled its text (a lazy line is copied as it is, continuing the paragraph
-    // wherever it goes)
-    if (shift && !line.lazy && !this.draft.escapes.has(this.from.nodeAtLine(i)?.id ?? -1) && line.leaf?.block.type === 'paragraph' && line.index > line.leaf.line && /^[ \t]*[-+*>#=|0-9]/.test(this.old.slice(line.contentFrom, line.to))) {
+    // wherever it goes; a copy beside its original, at its column, is written as it is)
+    if (shift && !(shift.copy && shift.delta === 0) && !line.lazy && !this.draft.escapes.has(this.from.nodeAtLine(i)?.id ?? -1) && line.leaf?.block.type === 'paragraph' && line.index > line.leaf.line && /^[ \t]*[-+*>#=|0-9]/.test(this.old.slice(line.contentFrom, line.to))) {
       throw new WriteFailure("a moved paragraph's line that could start a block");
     }
     // a lazy line with the prefix of the container its node leaves (a quote's `>`): past it, after the new one's
@@ -1294,6 +1406,10 @@ const emptyBefore = (text: OutlineNodeText | null): boolean => !text || (text in
  */
 export function continuationAsWas(old: string, origin: OutlineNode, line: MdLine): string {
   const own = origin.kind === 'item' ? origin.persistentNode.block : null;
+  // a quote that is the node's text keeps its `>` on each line: the prefix stops before it
+  const quote = origin.persistentNode.textQuote;
+  const cut = quote ? line.prefix.findIndex((p) => p.container.block === quote) : -1;
+  if (cut >= 0) line = { ...line, prefix: line.prefix.slice(0, cut), contentFrom: line.prefix[cut]!.from };
   // (up to where the pieces asked for end: a container's own prefix, `inside`)
   const last = line.prefix[line.prefix.length - 1];
   const written = old.slice(line.from, last ? Math.min(last.to, line.contentFrom) : line.contentFrom);
@@ -1325,6 +1441,11 @@ export function continuationAsWas(old: string, origin: OutlineNode, line: MdLine
   });
   flush();
   return out;
+}
+
+/** What a line of a quote's text starts with past its containers' prefix (`> `), for a blank line of its gap the caret is on; nothing for any other text. */
+function quotedLine(text: OutlineNodeText | null): string {
+  return text instanceof ProseText && text.type === 'quote' ? '> ' : '';
 }
 
 /** Whether `line`'s prefix has a quote's marker. */

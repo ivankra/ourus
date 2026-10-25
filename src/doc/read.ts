@@ -2,7 +2,7 @@
 // prefixes, the first line's padding left out, markup escapes left out where they are markup, its
 // placeholders as marks; and where each of its offsets is in the document.
 
-import type { MdLine, MdTree } from '../parser/index.ts';
+import type { MdBlock, MdLine, MdTree } from '../parser/index.ts';
 import { emptyNodeAt, heldSpaceAt, isEmptyNodePlaceholder, isHeldSpacePlaceholder, MarkSet, type Mark } from '../text/index.ts';
 import type { OutlineNode } from './node.ts';
 import { markupEscapes } from './escapes.ts';
@@ -27,7 +27,11 @@ export interface ReadText {
   readonly lines: readonly TextLine[];
 }
 
-/** The text of `node` in `tree`, with `marks` (the document's placeholders); null for a node with no text. */
+/**
+ * The text of `node` in `tree`, with `marks` (the document's placeholders); null for a node with no
+ * text. A quote that is a node's text (`Config.quotes`: `text`, a paragraph framed by its `>`s; `atom`, its
+ * lines as written) is read from its own `>` on each line.
+ */
 export function readText(tree: MdTree, marks: MarkSet, node: OutlineNode): ReadText | null {
   const p = node.persistentNode;
   const flavor = tree.flavor;
@@ -37,6 +41,8 @@ export function readText(tree: MdTree, marks: MarkSet, node: OutlineNode): ReadT
   let below = false;
   let first: number;
   let last: number;
+  // a quote that is the node's text, whose `>`s its text keeps
+  const quote = p.textQuote;
   if (p.kind === 'atom') {
     atomText = true;
     first = node.startLine;
@@ -47,8 +53,9 @@ export function readText(tree: MdTree, marks: MarkSet, node: OutlineNode): ReadT
       if (p.block!.children.length && p.block!.offsets[0] === 0) return null;
       first = last = node.startLine;
     } else {
-      atomText = flavor.content(p.head.type) === 'verbatim';
-      type = p.head.type === 'heading' ? 'heading' : 'paragraph';
+      // (an atom's lines as written: code, a table, a rule; a paragraph's or a heading's prose)
+      atomText = quote ? quote === p.head : p.head.type !== 'paragraph' && p.head.type !== 'heading';
+      type = p.head.type === 'heading' ? 'heading' : quote ? 'quote' : 'paragraph';
       first = node.textFirstLine;
       last = node.textLastLine;
       below = first > node.startLine;
@@ -59,7 +66,7 @@ export function readText(tree: MdTree, marks: MarkSet, node: OutlineNode): ReadT
     first = node.textFirstLine;
     last = node.textLastLine;
   } else {
-    type = p.kind === 'heading' ? 'heading' : 'paragraph';
+    type = p.kind === 'heading' ? 'heading' : quote ? 'quote' : 'paragraph';
     first = node.textFirstLine;
     last = node.textLastLine;
   }
@@ -82,14 +89,18 @@ export function readText(tree: MdTree, marks: MarkSet, node: OutlineNode): ReadT
     }
   }
   const textAt = lines.length;
-  for (let i = first; i <= last; i++) lines.push(contentOf(tree, tree.line(i), node, i === first && !atomText, marks));
+  for (let i = first; i <= last; i++) lines.push(contentOf(tree, tree.line(i), node, i === first && !atomText, marks, quote));
   // an empty line a placeholder holds reads as typed on, as the parse read it
   const held = lines.map(({ line }) => emptyNodeAt(marks, tree.text, line.to));
   if (!atomText) {
     // the markup escapes, left out of the string: each where its line has it as read
     const text = lines.slice(textAt);
     // (each line from the column its content starts at: a tab it starts with spans as far as from there)
-    const columns = text.map((_, k) => tree.line(first + k).contentColumn);
+    // (a quote's text from its `>`, where a line has one)
+    const columns = text.map((_, k) => {
+      const line = tree.line(first + k);
+      return (quote && line.prefix.find((p) => p.container.block === quote)?.fromColumn) ?? line.contentColumn;
+    });
     const found = markupEscapes(flavor, type, item, text.map((l) => l.content), held.slice(textAt), columns);
     for (const [k, entry] of text.entries()) {
       const own = found.filter((e) => e.line === k);
@@ -128,15 +139,28 @@ export function stringOffset(line: TextLine, pos: number): number {
 /**
  * Line `line`'s content past its containers' prefix, as its text: a tab they took part of as the
  * spaces left of it; on the text's first line, its padding left out, and a held space; a held space
- * at a later line's start too. A footnote definition's label is its own.
+ * at a later line's start too. A footnote definition's label is its own, and so is the `>` of a quote
+ * that is the node's text (`quote`), its padding past the `> ` left out on the first line.
  */
-function contentOf(tree: MdTree, line: MdLine, node: OutlineNode, first: boolean, marks: MarkSet): { content: string; line: TextLine } {
+function contentOf(tree: MdTree, line: MdLine, node: OutlineNode, first: boolean, marks: MarkSet, quote: MdBlock | null): { content: string; line: TextLine } {
   const text = tree.text;
   let from = line.contentFrom;
   // a footnote definition's label and indentation are its own prefix piece, which its text keeps
   if (node.kind === 'atom' && node.block.type === 'footnote_definition') {
     const piece = line.prefix.find((p) => p.kind === 'footnote');
     if (piece) from = piece.from;
+  }
+  // (a lazy line has none)
+  const own = quote ? line.prefix.find((p) => p.container.block === quote) : undefined;
+  if (own) {
+    from = own.from;
+    if (first) {
+      const omitted: number[] = [];
+      let k = own.to;
+      while (k < line.to && (text[k] === ' ' || text[k] === '\t')) omitted.push(k++);
+      const content = text.slice(from, own.to) + text.slice(k, line.to);
+      return { content, line: { from, to: line.to, omitted, tab: null, length: content.length } };
+    }
   }
   let tab: TextLine['tab'] = null;
   let content = text.slice(from, line.to);

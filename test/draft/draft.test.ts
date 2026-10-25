@@ -175,7 +175,7 @@ test('done: an empty item at the caret right under text is held by a placeholder
 });
 
 test('done: refuses a block an item with no text of its own would read as its text', () => {
-  const doc = parse('- > q\n\n  para\n', 'commonmark');
+  const doc = OurusDoc.parse('- > q\n\n  para\n', { config: { flavor: 'commonmark', quotes: 'container' } });
   const item = doc.rootNode.child(0);
   const refusal = refused(new OurusDraft(doc).remove([item.child(0)]));
   assert.equal(refusal?.reason, 'not-expressible');

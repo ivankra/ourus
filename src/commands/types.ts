@@ -61,10 +61,10 @@ export type CommandResult =
   | { readonly status: 'applied'; readonly doc: OurusDoc; readonly changes: readonly ChangeSpec[]; readonly selection: Selection; readonly clipboard?: Clipboard }
   | { readonly status: 'rejected'; readonly reason: RejectReason; readonly detail?: string }
   /**
-   * The command doesn't apply here; the host should run its default behavior. `detail` says why,
-   * where ourus stepped aside from an edit in markup it would refuse (`markup: text`).
+   * Deferred to the host: ourus doesn't act on the key here, and the host runs its default behavior.
+   * `detail` says why, where ourus stepped aside from an edit in markup it would refuse (`markup: text`).
    */
-  | { readonly status: 'notApplicable'; readonly detail?: string };
+  | { readonly status: 'deferredToHost'; readonly detail?: string };
 
 export type { Clipboard };
 

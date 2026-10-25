@@ -136,8 +136,9 @@ export const driver: Driver = {
   ordered: true,
   // a name is one line of rich text, with nothing of Markdown's blocks but code (a code block, its
   // name the code). A checkbox and a section are a node's attributes, and a code block's fences no
-  // text: a caret in them has no place (`holds`), and a join or split at them is Tana's to show
-  refuses: ['html', 'table', 'math', 'thematic break', 'link reference definition', 'comment', 'footnote'],
+  // text: a caret in them has no place (`holds`), and a join or split at them is Tana's to show. No
+  // quote: `> q` would be a name's text
+  refuses: ['html', 'table', 'math', 'thematic break', 'link reference definition', 'comment', 'footnote', 'quote'],
   // Shift+Tab leaves the later siblings with the parent; Enter mid-text in a node with children makes
   // its first child; Backspace at a section's start and Delete before one join its name, the section
   // gone; a list pasted into a node with children goes after them (played with `--ignore-options`);

@@ -982,6 +982,7 @@ list.
 
 ```yaml
 tags: edge free-form
+quotes: container
 ```
 
 ```buffer

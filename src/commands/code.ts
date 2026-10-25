@@ -5,7 +5,7 @@
 
 import { ProseText, AtomText, type OutlineNode } from '../doc/index.ts';
 import { lineOf, trimMd } from '../text/index.ts';
-import { notApplicable, reject, type CommandContext, type CommandOutcome } from './context.ts';
+import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
 import { textEnd, textStart, withTextlessParents } from './util.ts';
 
 /** The caret in a block of code, and where in its text. */
@@ -58,7 +58,7 @@ export function onDelimiterLine(text: AtomText, offset: number): boolean {
  * Enter and Shift-Enter in code (rules 1–4, 9): a new line of the block, the line's own indentation
  * carrying over; at a closing fence's start an empty last line, the caret on it; in a delimiter
  * refused; Enter at an opening delimiter's start and after a closing fence, as `enterAtOpening` and
- * `nodeAfterCode` say. A code line's is the host's without `handleFenceContents` (for hosts that edit
+ * `nodeAfterBlock` say. A code line's is the host's without `handleFenceContents` (for hosts that edit
  * code themselves). Null (unsupported) where ourus doesn't do it yet: Shift-Enter at an opening delimiter's start or
  * after a closing fence, indented code's four columns, a selection across lines.
  */
@@ -84,12 +84,12 @@ export function newlineInCode(ctx: CommandContext, at: CodeAt, shift: boolean): 
     // typed is a paragraph of the block's container: Fence7b, 32)
     if (closing && fenced) {
       if (!ctx.collapsed) return null;
-      if (!shift) return nodeAfterCode(ctx, node);
+      if (!shift) return nodeAfterBlock(ctx, node);
       return ctx.apply(draft.gap(node, node.gap + 1).select({ blank: node, line: 0 }, { blank: node, line: 0 }));
     }
-  } else if (fenced && !ctx.config.handleFenceContents) return notApplicable('a code line: the host edits code');
+  } else if (fenced && !ctx.config.handleFenceContents) return deferToHost('a code line: the host edits code');
   // in indented code's four columns: the host's
-  if (text.frame.some((p) => p.part === 'indent' && p.from <= at.offset && at.offset < p.to)) return notApplicable('in the code\'s indentation');
+  if (text.frame.some((p) => p.part === 'indent' && p.from <= at.offset && at.offset < p.to)) return deferToHost('in the code\'s indentation');
   // the line's own indentation, up to the caret (a delimiter's line has none to carry)
   const own = delimiter ? '' : /^[ \t]*/.exec(line.text.slice(0, at.offset - line.from))![0];
   draft.setText(node, text.splice(at.offset, at.to, '\n' + own)).setCaret(node, at.offset + 1 + own.length, -1);
@@ -167,13 +167,13 @@ export function joinCodeItemUp(ctx: CommandContext, node: OutlineNode, caret?: {
 }
 
 /**
- * Enter after a closing fence (rule 3): where the block ends an item's content (its text, or its last
- * block before child items), a new item, as at the end of the item's text: its first child where it
- * has child items, else its next sibling; elsewhere an empty paragraph after the block in its
- * container (an item's first child, where the block is its text), taking its blank lines, which
- * `done()` holds with a placeholder.
+ * Enter after a closing fence (rule 3), or at the end of a block of lines (a table, a thematic break:
+ * enter.md rule 11): where the block ends an item's content (its text, or its last block before child
+ * items), a new item, as at the end of the item's text: its first child where it has child items, else
+ * its next sibling; elsewhere an empty paragraph after the block in its container (an item's first
+ * child, where the block is its text), taking its blank lines, which `done()` holds with a placeholder.
  */
-function nodeAfterCode(ctx: CommandContext, node: OutlineNode): CommandOutcome {
+export function nodeAfterBlock(ctx: CommandContext, node: OutlineNode): CommandOutcome {
   const draft = ctx.draft();
   const item = node.kind === 'item' ? node : node.parent?.kind === 'item' ? node.parent : null;
   const after = item ? item.children.slice(node === item ? 0 : node.index + 1) : [];
@@ -288,7 +288,7 @@ function deleteInFenceRun(ctx: CommandContext, at: CodeAt, dir: -1 | 1): Command
     return ctx.apply(draft.setText(node, edited).setCaret(node, caret, dir < 0 ? -1 : 1));
   }
   const detail = 'the fence would break: the block has code';
-  if (trimMd(text.body) !== '') return ctx.config.markup === 'text' ? notApplicable(detail) : reject('not-expressible', detail);
+  if (trimMd(text.body) !== '') return ctx.config.markup === 'text' ? deferToHost(detail) : reject('not-expressible', detail);
   const s = text.text;
   if (run === open && lineOf(text.text, close.from) === lineOf(text.text, open.from) + 1 && text.info.trim() === '') {
     // the paragraphs right above and below run into its line
@@ -366,6 +366,6 @@ function characterInCode(ctx: CommandContext, at: CodeAt, dir: -1 | 1): CommandO
   // in the line's indentation, the host's
   if (from < line.from || to > line.to || trimMd(text.text.slice(line.from, to)) === '') return null;
   const edited = text.splice(from, to);
-  if (ctx.doc.readsAs(edited)) return notApplicable('a character of code: the host deletes it');
+  if (ctx.doc.readsAs(edited)) return deferToHost('a character of code: the host deletes it');
   return ctx.apply(ctx.draft().setText(node, edited).setCaret(node, from, dir < 0 ? -1 : 1));
 }

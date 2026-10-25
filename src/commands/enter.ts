@@ -5,10 +5,12 @@
 
 import { ProseText, AtomText, type OutlineNode } from '../doc/index.ts';
 import { isSpaceOrTab, lineOf, trimMd } from '../text/index.ts';
-import { notApplicable, reject, type CommandContext, type CommandOutcome } from './context.ts';
-import { codeAt, newlineInCode } from './code.ts';
+import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
+import { codeAt, newlineInCode, nodeAfterBlock } from './code.ts';
 import { deleteSelectionAcross } from './backspace.ts';
 import { outdentCommand } from './outdent.ts';
+import { shiftEnterCommand } from './shift-enter.ts';
+import { enterInQuote, quoteAtomAt } from './quote.ts';
 import { leaveList, pastPrefix, textActedOnAt } from './util.ts';
 
 /**
@@ -23,8 +25,11 @@ import { leaveList, pastPrefix, textActedOnAt } from './util.ts';
  * its own lines, a paragraph after it (rule 11); over a selection, it goes first. Null, unsupported,
  * for a selection whose split would have blanks at it, an item whose text is neither a paragraph nor
  * an ATX heading. With `enterSplitSpace: start`, the spaces after the caret start the second half, as
- * its padding. `key`: the Enter key's, where an app's quirk of it applies (`quirkEnterMidHeading`),
- * not another command's split (plain paste's line breaks, Shift-Enter in an ATX title).
+ * its padding. In a quote's text (`quotes: text`) with `enterInQuote: line` Enter makes a line of it,
+ * as Shift-Enter does, and on an empty one, or the blank line after its text where Enter left the
+ * caret, it leaves the quote; with `split` the rest is a paragraph after it.
+ * `key`: the Enter key's, where an app's quirk of it applies (`quirkEnterMidHeading`), not another
+ * command's split (plain paste's line breaks, Shift-Enter in an ATX title).
  */
 export function enterCommand(ctx: CommandContext, key = true): CommandOutcome {
   ctx = pastPrefix(ctx);
@@ -32,11 +37,13 @@ export function enterCommand(ctx: CommandContext, key = true): CommandOutcome {
   const config = doc.config;
   const code = codeAt(ctx);
   if (code) return newlineInCode(ctx, code, false);
+  const quote = quoteAtomAt(ctx);
+  if (quote) return enterInQuote(ctx, quote);
   const block = blockAt(ctx);
   if (block) return block;
   // in the frontmatter, the host's newline (Gap19)
-  if (ctx.from.zone === 'preamble') return notApplicable('the caret is in the preamble');
-  if (ctx.collapsed && ctx.from.zone === 'gap') return leaveItem(ctx, ctx.from.owner);
+  if (ctx.from.zone === 'preamble') return deferToHost('the caret is in the preamble');
+  if (ctx.collapsed && ctx.from.zone === 'gap') return leaveQuote(ctx, ctx.from.owner) ?? leaveItem(ctx, ctx.from.owner);
   // in a callout's `[!type]`, markup: the host's where markup is text (Quote43), else refused, as over
   // a selection from it (Quote79)
   const from = ctx.from;
@@ -45,7 +52,7 @@ export function enterCommand(ctx: CommandContext, key = true): CommandOutcome {
   if (config.enterAtTextStart === 'stay' && ctx.collapsed && from.zone === 'frame' && from.part === 'heading' && from.offset === 0 && from.text instanceof ProseText && canOpenLineAbove(ctx, from.node)) {
     return openLineAbove(ctx, from.node, from.text.textStart(0), from.text, from.text.textStart(0));
   }
-  if (from.zone === 'frame' && from.part === 'callout' && from.offset > 0) return config.markup === 'text' && ctx.collapsed ? notApplicable('the caret is in markup') : reject('not-expressible', "a callout's type is one word");
+  if (from.zone === 'frame' && from.part === 'callout' && from.offset > 0) return config.markup === 'text' && ctx.collapsed ? deferToHost('the caret is in markup') : reject('not-expressible', "a callout's type is one word");
   // in a setext underline, at the end of the title: the underline is markup (TO-E18)
   const underline = ctx.collapsed && from.zone === 'frame' && from.part === 'underline' && from.text instanceof ProseText ? { node: from.node, text: from.text, offset: from.text.frame.find((p) => p.part === 'underline')!.from } : null;
   const at = underline ?? textActedOnAt(ctx, Math.min(ctx.selection.anchor, ctx.selection.head));
@@ -59,9 +66,17 @@ export function enterCommand(ctx: CommandContext, key = true): CommandOutcome {
   // (elsewhere than Obsidian the title is a paragraph's first line: its rest set apart by a blank line)
   const title = node.kind === 'quote' && text.type === 'title';
   if (title && text.frame.some((p) => p.part === 'callout' && offset > p.from && offset < p.to)) return reject('not-expressible', "a callout's type is one word");
+  // a quote's text: an empty one leaves the quote, the `> ` going; with `enterInQuote: line` a line
+  // of it, past the text's start (where a node goes above it, rule 6); with `split` it splits as a
+  // paragraph does, the rest unquoted
+  if (text.type === 'quote' && key) {
+    if (text.empty && ctx.collapsed) return ctx.apply(ctx.draft().setText(node, text.slice(text.textStart(0))).setCaret(node, 0, -1));
+    if (config.enterInQuote === 'line' && trimMd(text.text.slice(text.textStart(0), offset)) !== '') return shiftEnterCommand(ctx);
+  }
   // (an item's text a paragraph, or an ATX heading's, `- # a`: it splits as an item)
   const headingItem = node.kind === 'item' && text.type === 'heading' && text.heading?.form === 'atx';
-  if (node.kind === 'item' ? text.type !== 'paragraph' && !headingItem : node.kind !== 'heading' && node.kind !== 'paragraph' && !title) return null;
+  const prose = text.type === 'paragraph' || text.type === 'quote';
+  if (node.kind === 'item' ? !prose && !headingItem : node.kind !== 'heading' && node.kind !== 'paragraph' && !title) return null;
   if (text.empty && ctx.collapsed) return node.kind === 'item' ? enterInEmptyItem(ctx, node, text, offset) : emptyParagraph(ctx, node);
   const s = text.text;
   const line = lineOf(s, offset);
@@ -134,13 +149,15 @@ const LINE_BLOCKS = new Set(['table', 'thematic_break', 'footnote_definition']);
 
 /**
  * In a table, a thematic break, a footnote definition (rule 11): at its end, an empty paragraph after
- * it, set off from it where a line right after it would be more of it (`done()`); elsewhere in a
- * table's row refused, a row is a line. Undefined where the caret is in none.
+ * it, set off from it where a line right after it would be more of it (`done()`), or where it is an
+ * item's text a new item, as after code (`nodeAfterBlock`); elsewhere in a table's row refused, a row
+ * is a line. Undefined where the caret is in none.
  */
 function blockAt(ctx: CommandContext): CommandOutcome | undefined {
   const at = ctx.from;
-  if (!ctx.collapsed || (at.zone !== 'text' && at.zone !== 'frame') || !(at.text instanceof AtomText) || at.node.kind !== 'atom' || !LINE_BLOCKS.has(at.text.type)) return undefined;
+  if (!ctx.collapsed || (at.zone !== 'text' && at.zone !== 'frame') || !(at.text instanceof AtomText) || !LINE_BLOCKS.has(at.text.type)) return undefined;
   if (at.offset < at.text.text.length) return at.text.type === 'table' ? reject('not-expressible', 'a row is a line') : null;
+  if (at.node.kind === 'item') return nodeAfterBlock(ctx, at.node);
   const draft = ctx.draft();
   const made = draft.create('paragraph', new ProseText('paragraph', false, ''));
   draft.place('after', at.node, [made]).gap(made, at.node.gap).gap(at.node, 1).setCaret(made, 0, -1);
@@ -154,6 +171,22 @@ function blockAt(ctx: CommandContext): CommandOutcome | undefined {
 function emptyParagraph(ctx: CommandContext, node: OutlineNode): CommandOutcome {
   if (node.kind === 'paragraph' && node.parent?.kind === 'quote' && !node.next && !node.children.length) return outdentCommand(ctx);
   return reject('not-expressible', 'an empty paragraph makes no second one');
+}
+
+/**
+ * Enter on the blank line after a quote's text, where Enter or Shift-Enter at its end left the caret
+ * (its first, at the text's column, `> ┃`): the quote is left, an empty paragraph after it (an item,
+ * after an item), as Enter on an empty quote does. Undefined on any other blank line.
+ */
+function leaveQuote(ctx: CommandContext, owner: OutlineNode): CommandOutcome | undefined {
+  const text = ctx.doc.textOf(owner);
+  if (!(text instanceof ProseText) || text.type !== 'quote' || owner.children.length) return undefined;
+  const head = ctx.selection.head;
+  if (ctx.doc.lineAt(head).index !== owner.textLastLine + 1 || !ctx.doc.atTextColumn(head, owner)) return undefined;
+  const draft = ctx.draft();
+  const item = owner.kind === 'item';
+  const id = draft.create(item ? 'item' : 'paragraph', new ProseText('paragraph', item, ''));
+  return ctx.apply(draft.place('after', owner, [id]).gap(id, Math.max(0, owner.gap - 1)).gap(owner, item ? 0 : 1).setCaret(id, 0, -1));
 }
 
 /**

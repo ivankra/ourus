@@ -4,7 +4,8 @@
 
 import { ProseText, AtomText, type OutlineNode } from '../doc/index.ts';
 import { isSpaceOrTab, lineOf, trimMd } from '../text/index.ts';
-import { notApplicable, reject, type CommandContext, type CommandOutcome } from './context.ts';
+import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
+import { breakInQuote } from './quote.ts';
 import { deleteSelectionAcross } from './backspace.ts';
 import { codeAt, newlineInCode } from './code.ts';
 import { enterCommand } from './enter.ts';
@@ -34,12 +35,12 @@ export function shiftEnterCommand(ctx: CommandContext): CommandOutcome {
   // (Enter65k); among them, the host's, as in any text's spaces; before a paragraph's, as at its text's start
   const hidden = ctx.collapsed ? hiddenSpacesAt(ctx, ctx.selection.head) : null;
   if (hidden && ctx.selection.head < hidden.to) {
-    if (ctx.selection.head > hidden.from) return notApplicable();
+    if (ctx.selection.head > hidden.from) return deferToHost();
     if (hidden.node.kind === 'item') return lineBreakAtTextStart(ctx, hidden.node, hidden.text, ' '.repeat(hidden.to - hidden.from));
   }
   if (ctx.collapsed && inMarkup(ctx.doc, from, ctx.selection.head)) {
     // where markup is text the user edits, a line break in it is the host's
-    if (config.markup === 'text') return notApplicable('the caret is in markup');
+    if (config.markup === 'text') return deferToHost('the caret is in markup');
     // else in an item's marker or a task's checkbox it acts at the text's start
     const at = (from.zone === 'marker' || (from.zone === 'frame' && from.part === 'task')) && textActedOnAt(ctx, ctx.selection.head);
     if (at) from = to = { zone: 'text', node: at.node, text: at.text, offset: at.offset };
@@ -53,13 +54,18 @@ export function shiftEnterCommand(ctx: CommandContext): CommandOutcome {
   if (from.zone !== 'text' || (to.zone !== 'text' && to.zone !== 'frame') || from.node !== to.node) return null;
   const node = from.node;
   const text = from.text;
+  // (in a quote read as an atom, a line of it: `> `)
+  if (text instanceof AtomText && text.type === 'blockquote') {
+    if (from.offset === 0) return reject('not-expressible', 'a line break here would leave an empty line inside the text');
+    return breakInQuote(ctx, { node, text, offset: from.offset, to: to.offset });
+  }
   if (text instanceof AtomText) return text.type === 'table' ? reject('not-expressible', 'a table row is a single line') : null;
   if (node.head?.type === 'callout_title') return reject('not-expressible', 'a callout title is a single line');
   if (text.heading?.form === 'atx') return enterCommand(ctx, false);
   const underline = text.frame.find((p) => p.part === 'underline');
   if (underline && to.offset > underline.from) return reject('not-expressible', 'a line break would cut the setext underline');
   // on an empty item the line break is the host's (TO13); on any other empty node, refused
-  if (text.empty) return node.kind === 'item' ? notApplicable('an empty item has no line to break') : reject('not-expressible', 'an empty node has no line to break');
+  if (text.empty) return node.kind === 'item' ? deferToHost('an empty item has no line to break') : reject('not-expressible', 'an empty node has no line to break');
   const s = text.text;
   const line = lineOf(s, from.offset);
   const lineStart = text.textStart(line);
@@ -85,8 +91,9 @@ export function shiftEnterCommand(ctx: CommandContext): CommandOutcome {
     return ctx.apply(split.gap(node, 1).select({ blank: node, line: 0 }, { blank: node, line: 0 }));
   }
   // the text breaks at the caret, the spaces on either side staying where they are, the caret at the
-  // new line's start, before them (and before a backslash it starts with)
-  const draft = ctx.draft().setText(node, text.splice(from.offset, to.offset, '\n')).setCaret(node, from.offset + 1, -1);
+  // new line's start, before them (and before a backslash it starts with); a quote's new line quoted
+  const brk = text.type === 'quote' ? '\n> ' : '\n';
+  const draft = ctx.draft().setText(node, text.splice(from.offset, to.offset, brk)).setCaret(node, from.offset + brk.length, -1);
   return ctx.apply(draft);
 }
 

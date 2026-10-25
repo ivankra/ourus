@@ -154,7 +154,7 @@ Deleting a quote's only node deletes the quote: its `>` alone is no node, and a 
 holding nothing can't be written.
 
 ```yaml
-tags: edge quote-container
+tags: edge
 ```
 
 ```buffer
@@ -276,6 +276,7 @@ content starts (two columns more would move where the item's content starts).
 
 ```yaml
 tags: rare
+quotes: container
 ```
 
 ```buffer

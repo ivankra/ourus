@@ -83,6 +83,10 @@ export const driver: Driver = {
   // split, lines as blocks, numbers as text, a paragraph's list under it (each measured, playing its
   // examples with `run.ts --ignore-options`)
   behaves: {
+    // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+    quotes: 'atom',
+    // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+    enterInQuote: 'split',
     // after a paste of blocks, the caret at the start of the first (checked in a page of its own: `- ┃x`)
     quirkPasteCaret: 'athens',
     outdent: 'logical',

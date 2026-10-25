@@ -33,7 +33,7 @@ const HOST_HAS: ReadonlySet<Command['type']> = new Set(['enter', 'shiftEnter', '
 export function executeCommand(doc: OurusDoc, command: Command, selection: Selection): CommandResult {
   const done = execute(doc, command, selection);
   if (done) return done;
-  return HOST_HAS.has(command.type) ? { status: 'notApplicable', detail: "ourus doesn't do it here yet" } : { status: 'rejected', reason: 'unsupported' };
+  return HOST_HAS.has(command.type) ? { status: 'deferredToHost', detail: "ourus doesn't do it here yet" } : { status: 'rejected', reason: 'unsupported' };
 }
 
 /** The command, or null where ourus doesn't do it yet. */

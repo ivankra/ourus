@@ -9,7 +9,7 @@
 //   blank+, blank-   the same lines but for more, or fewer, blank lines after paste
 //   tree       another outline
 //   text       the same outline, other text
-//   <status>   one of them didn't apply (`duplicate: rejected`, `paste: notApplicable`)
+//   <status>   one of them didn't apply (`duplicate: rejected`, `paste: deferredToHost`)
 //
 // Each group's count is held to a baseline (`copy-paste.baseline.json`) on the same corpus, so a
 // change that moves a run from one group to another fails the run until it is read; items must stay

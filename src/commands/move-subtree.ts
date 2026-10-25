@@ -40,19 +40,28 @@ function moveSubtree(ctx: CommandContext, dir: -1 | 1): CommandOutcome {
     if (crossed === 'reparent') return reject('would-reparent', 'the move would give another node a new parent');
     if (crossed.where === 'before') draft.place('before', crossed.at, nodes);
     else draft.append(crossed.at, crossed.where, nodes);
-  } else if (dir > 0 && ((first.kind === 'item' && other.kind === 'paragraph' && parent.ownsLists) || (other.kind === 'heading' && first.kind !== 'heading'))) {
-    // an item below a section's paragraph becomes its list's first; any node but a heading, down past
+  } else if (dir > 0 && ((first.kind === 'item' && ctx.doc.adoptsLists(other)) || (other.kind === 'heading' && first.kind !== 'heading'))) {
+    // an item below a node that adopts lists (a section's paragraph) becomes its list's first; any node but a heading, down past
     // a sub-heading, its section's first
     draft.append(other, 'first', nodes);
   } else {
     // a quote swaps with any node but a heading (which owns what follows it); blocks swap with
     // blocks, items with items; a heading with a heading of its level, or it would take in or go into
-    // another's section
-    const group = (kind: string): string => (kind === 'paragraph' || kind === 'atom' ? 'leaf' : kind);
+    // another's section. Where no block adopts a list (`listParent: container`), items and blocks
+    // pass each other, as `listMoves` says: a list one block (a block passes the whole list, the items
+    // of a whole list pass a block, at a longer list's edge they stay in it), or each item one
+    const flat = ctx.config.listParent === 'container' && parent.ownsLists;
+    const byList = ctx.config.listMoves === 'list';
+    const list = (n: OutlineNode | null): unknown => (n?.kind === 'item' ? doc.listOf(n)?.block : undefined);
+    const whole = first.kind === 'item' && (!byList || (list(first.prev) !== list(first) && list(last.next) !== list(last)));
+    const group = (n: OutlineNode): string => (n.kind === 'paragraph' || n.kind === 'atom' ? 'leaf' : n.kind);
     const quote = (first.kind === 'quote' || other.kind === 'quote') && first.kind !== 'heading' && other.kind !== 'heading';
+    const across = flat && ((whole && group(other) === 'leaf') || (group(first) === 'leaf' && other.kind === 'item'));
     if (first.kind === 'heading' && (other.kind !== 'heading' || headingLevel(ctx, first) !== headingLevel(ctx, other))) return reject('would-reparent', 'a heading moves among headings of its level');
-    if (!quote && group(other.kind) !== group(first.kind)) return reject('not-expressible', `can't reorder ${first.kind} past ${other.kind}`);
-    draft.place(dir < 0 ? 'before' : 'after', other, nodes);
+    if (!quote && !across && group(other) !== group(first)) return reject('not-expressible', `can't reorder ${first.kind} past ${other.kind}`);
+    let past = other;
+    if (flat && byList && first.kind !== 'item') while (list(past) && list(dir < 0 ? past.prev : past.next) === list(past)) past = (dir < 0 ? past.prev : past.next)!;
+    draft.place(dir < 0 ? 'before' : 'after', past, nodes);
   }
   selectionInText(ctx, draft);
   return ctx.apply(draft);

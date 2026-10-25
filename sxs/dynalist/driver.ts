@@ -116,6 +116,10 @@ export const driver: Driver = {
   ordered: true,
   // a typed fence is left open (Backtick2, Backtick12, Backtick15)
   behaves: {
+    // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+    quotes: 'atom',
+    // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+    enterInQuote: 'split',
     // Enter mid-heading: the new block above takes the text before the caret, the heading (an
     // attribute) staying with the rest (TO-E13-E16, TO-E14-E20)
     quirkEnterMidHeading: 'workflowy',

@@ -32,7 +32,8 @@ export function escapeParagraph(flavor: MdFlavor, type: ProseTextType, item: boo
   const out = [...lines];
   spelled.lines.forEach((l, k) => {
     const own = a.lead[k]!;
-    const line = own ? lines[k + a.from]!.slice(0, own.was) + l.slice(own.now) : l;
+    const cut = a.cut[k]!;
+    const line = lines[k + a.from]!.slice(0, cut) + (own ? lines[k + a.from]!.slice(cut, cut + own.was) + l.slice(own.now) : l);
     out[k + a.from] = held[k + a.from] && line.endsWith(SENTINEL) ? line.slice(0, -SENTINEL.length) : line;
   });
   return { absorbed: spelled.absorbed.map(a.back), lines: out, markup: spelled.markup.map(a.back), gained: spelled.gained.map(a.back) };
@@ -42,14 +43,35 @@ export function escapeParagraph(flavor: MdFlavor, type: ProseTextType, item: boo
  * The lines of a text the parser is asked about, and where: a line a placeholder holds read as typed
  * on; a setext heading's underline left out (its title is the lines above it); past a frame (a
  * checkbox, `#`s, a callout's type), the first line's rest is text whatever it starts with, so only
- * the lines after it are asked, as its continuation. `from`: the first line asked. A line's leading
- * tabs are asked as the spaces they span from its column (the parser reads each line from column 0),
- * `lead` saying how far, and `back` putting an escape where it is in the line as written.
+ * the lines after it are asked, as its continuation; a quote's lines past each one's `>` (`cut`), as
+ * a paragraph at a quote's start. `from`: the first line asked. A line's leading tabs are asked as the
+ * spaces they span from its column (the parser reads each line from column 0), `lead` saying how far,
+ * and `back` putting an escape where it is in the line as written.
  */
-function asked(type: ProseTextType, item: boolean, lines: readonly string[], held: readonly boolean[], columns?: readonly number[]): { from: number; lines: string[]; place: MdParagraphPlace; lead: ({ was: number; now: number } | null)[]; back: (e: MdEscapeAt) => MdEscapeAt } {
+function asked(type: ProseTextType, item: boolean, lines: readonly string[], held: readonly boolean[], columns?: readonly number[]): { from: number; lines: string[]; place: MdParagraphPlace; lead: ({ was: number; now: number } | null)[]; cut: number[]; back: (e: MdEscapeAt) => MdEscapeAt } {
+  if (type === 'quote') {
+    const frame = new ProseText(type, item, lines.join('\n')).frame;
+    let at = 0;
+    const cut = lines.map((l) => {
+      const part = frame.find((p) => p.part === 'quote' && p.from === at);
+      at += l.length + 1;
+      return part ? part.to - part.from : 0;
+    });
+    // (each line past its `>`, from the column there: a tab after it spans by where it is)
+    const inner = asked('paragraph', false, lines.map((l, k) => l.slice(cut[k])), held, lines.map((l, k) => (columns?.[k] ?? 0) + advanceColumns(l, 0, cut[k]!, columns?.[k] ?? 0) - (columns?.[k] ?? 0)));
+    // (a paragraph has no frame: every line asked, `from` 0)
+    const back = (e: MdEscapeAt): MdEscapeAt => {
+      const b = inner.back(e);
+      return { line: b.line, at: b.at + cut[b.line]! };
+    };
+    // (a line with no `>` of its own a lazy continuation: written so, out of the quote)
+    return { ...inner, place: { context: 'quoteStart', lazy: cut.map((c, k) => k > 0 && c === 0) }, cut, back };
+  }
   const written = lines.map((l, k) => (held[k] ? l + SENTINEL : l));
   const end = frameEnd(type, item, written);
-  const to = type === 'heading' && end < 0 ? written.length - 1 : written.length;
+  // (a setext heading's underline isn't asked: its title's lines are; past a checkbox too, `- [x] a⏎  -`)
+  const setext = type === 'heading' && (end < 0 || new ProseText(type, item, lines.join('\n')).frame.some((p) => p.part === 'underline'));
+  const to = setext ? written.length - 1 : written.length;
   const from = end < 0 ? 0 : 1;
   const lead = written.slice(from, to).map((l, k) => {
     const was = /^[ \t]*/.exec(l)![0].length;
@@ -58,11 +80,12 @@ function asked(type: ProseTextType, item: boolean, lines: readonly string[], hel
   });
   const asking = written.slice(from, to).map((l, k) => (lead[k] ? ' '.repeat(lead[k]!.now) + l.slice(lead[k]!.was) : l));
   const back = (e: MdEscapeAt): MdEscapeAt => ({ line: e.line + from, at: lead[e.line] ? e.at - lead[e.line]!.now + lead[e.line]!.was : e.at });
-  if (end < 0) return { from, lines: asking, place: { context: type === 'title' ? 'quoteStart' : 'start' }, lead, back };
+  const cut = asking.map(() => 0);
+  if (end < 0) return { from, lines: asking, place: { context: type === 'title' ? 'quoteStart' : 'start' }, lead, cut, back };
   // the paragraph the lines continue is the first line past its frame (a table's delimiter row is
   // matched against it), or the frame where nothing follows it on its line (`[!note]⏎q0`)
   const rest = written[0]!.slice(end);
-  return { from, lines: asking, place: { context: 'continuation', above: rest.trim() ? rest : written[0]! }, lead, back };
+  return { from, lines: asking, place: { context: 'continuation', above: rest.trim() ? rest : written[0]! }, lead, cut, back };
 }
 
 /** Where a frame at the text's start ends on its first line (a checkbox, an ATX heading's `#`s, a callout's type, and the blanks after them), or -1. */

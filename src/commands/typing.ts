@@ -4,7 +4,7 @@
 
 import { ProseText, AtomText, type OutlineNode } from '../doc/index.ts';
 import { composeChanges, lineOf, type ChangeSpec } from '../text/index.ts';
-import { CommandContext, notApplicable, reject, type CommandOutcome } from './context.ts';
+import { CommandContext, deferToHost, reject, type CommandOutcome } from './context.ts';
 import { codeAt, type CodeAt } from './code.ts';
 import { textEnd, textStart } from './util.ts';
 
@@ -21,21 +21,21 @@ export function insertTextCommand(ctx: CommandContext, typed: string): CommandOu
     // over part of a closed block's fence run, any character breaks the fence (rule 5)
     if (overFence(ctx)) return breaksFence(ctx, 'the fence would break');
     // over a selection in one line of text, the host's but for a backtick wrapping it in code
-    if (ctx.config.closeBackticks !== 'all' || !typed.includes('`') || ctx.doc.lineAt(ctx.selection.anchor).index !== ctx.doc.lineAt(ctx.selection.head).index) return notApplicable();
+    if (ctx.config.closeBackticks !== 'all' || !typed.includes('`') || ctx.doc.lineAt(ctx.selection.anchor).index !== ctx.doc.lineAt(ctx.selection.head).index) return deferToHost();
     return typed === '`' ? wrapInCode(ctx) : null;
   }
-  if ([...typed].length > 1) return fenceChar ? typedOneByOne(ctx, typed) : notApplicable();
-  if (typed !== '`' && typed !== '~') return notApplicable();
+  if ([...typed].length > 1) return fenceChar ? typedOneByOne(ctx, typed) : deferToHost();
+  if (typed !== '`' && typed !== '~') return deferToHost();
   // in a container's prefix or a marker (before a fence's indentation): not done yet
   if (ctx.from.zone === 'prefix' || ctx.from.zone === 'marker') return null;
   const code = codeAt(ctx);
-  if (code) return code.text.type === 'fenced_code' ? fenceCharInCode(ctx, code, typed) : notApplicable();
+  if (code) return code.text.type === 'fenced_code' ? fenceCharInCode(ctx, code, typed) : deferToHost();
   // (`closeBackticks: all`, inside an empty pair: the backtick steps over its closing one, before it
   // could make a fence of the two and itself)
   if (ctx.config.closeBackticks === 'all' && typed === '`' && inEmptyPair(ctx)) return inlinePair(ctx);
   const opened = openFence(ctx, typed);
   if (opened !== undefined) return opened;
-  return ctx.config.closeBackticks === 'all' && typed === '`' ? inlinePair(ctx) : notApplicable();
+  return ctx.config.closeBackticks === 'all' && typed === '`' ? inlinePair(ctx) : deferToHost();
 }
 
 /**
@@ -64,7 +64,7 @@ function typedOneByOne(ctx: CommandContext, typed: string): CommandOutcome {
     }
     changes = composeChanges(ctx.doc.text, changes, step);
   }
-  if (!ours) return notApplicable();
+  if (!ours) return deferToHost();
   return { status: 'applied', doc, changes, selection };
 }
 
@@ -86,20 +86,20 @@ function inEmptyPair(ctx: CommandContext): boolean {
  */
 function inlinePair(ctx: CommandContext): CommandOutcome {
   const at = ctx.from;
-  if (at.zone !== 'text' || !(at.text instanceof ProseText)) return notApplicable();
+  if (at.zone !== 'text' || !(at.text instanceof ProseText)) return deferToHost();
   const { node, text, offset } = at;
   const s = text.text;
   const pos = ctx.selection.head;
   const lineFrom = s.lastIndexOf('\n', offset - 1) + 1;
   const lineTo = s.indexOf('\n', offset) < 0 ? s.length : s.indexOf('\n', offset);
-  if (offset < text.textStart(lineOf(s, offset))) return notApplicable();
+  if (offset < text.textStart(lineOf(s, offset))) return deferToHost();
   const before = offset > lineFrom ? s[offset - 1]! : '';
   const after = offset < lineTo ? s[offset]! : '';
   const span = ctx.doc.codeSpanAt(pos);
   const emptyPair = before === '`' && after === '`' && s[offset - 2] !== '`' && s[offset + 1] !== '`';
   const draft = ctx.draft();
   if (after === '`' && (span ? pos >= span.closer && pos < span.to : emptyPair)) return ctx.apply(draft.setCaret(node, offset + 1, 1));
-  if (span || !atBoundary(before, '([{<\'"') || !atBoundary(after, ')]}>,.;:!?\'"')) return notApplicable();
+  if (span || !atBoundary(before, '([{<\'"') || !atBoundary(after, ')]}>,.;:!?\'"')) return deferToHost();
   return ctx.apply(draft.setText(node, text.splice(offset, offset, '``')).setCaret(node, offset + 1, -1));
 }
 
@@ -122,9 +122,9 @@ export function deleteEmptyPair(ctx: CommandContext, node: OutlineNode, text: Pr
  */
 function wrapInCode(ctx: CommandContext): CommandOutcome {
   const [a, b] = [ctx.from, ctx.to];
-  if (a.zone !== 'text' || b.zone !== 'text' || !(a.text instanceof ProseText) || a.node.persistentNode !== b.node.persistentNode) return notApplicable();
+  if (a.zone !== 'text' || b.zone !== 'text' || !(a.text instanceof ProseText) || a.node.persistentNode !== b.node.persistentNode) return deferToHost();
   const text = a.text;
-  if (a.offset < text.textStart(lineOf(text.text, a.offset))) return notApplicable();
+  if (a.offset < text.textStart(lineOf(text.text, a.offset))) return deferToHost();
   const selected = text.text.slice(a.offset, b.offset);
   const fence = '`'.repeat(Math.max(0, ...(selected.match(/`+/g) ?? []).map((r) => r.length)) + 1);
   const pad = selected.startsWith('`') || selected.endsWith('`') ? ' ' : '';
@@ -137,7 +137,7 @@ function wrapInCode(ctx: CommandContext): CommandOutcome {
 
 /** An edit that would break a fence, which ourus doesn't make: refused where markup is decorated, the host's where it is text. */
 function breaksFence(ctx: CommandContext, detail: string): CommandOutcome {
-  return ctx.config.markup === 'text' ? notApplicable(detail) : reject('not-expressible', detail);
+  return ctx.config.markup === 'text' ? deferToHost(detail) : reject('not-expressible', detail);
 }
 
 /** Whether the selection takes part of a closed fenced block's run, but not the whole block. */
@@ -171,7 +171,7 @@ function overFence(ctx: CommandContext): boolean {
 function fenceCharInCode(ctx: CommandContext, at: CodeAt, char: string): CommandOutcome {
   const { node, text, offset } = at;
   const runs = text.delimiters;
-  if (!runs) return notApplicable();
+  if (!runs) return deferToHost();
   const s = text.text;
   const draft = ctx.draft();
   const lineFrom = s.lastIndexOf('\n', offset - 1) + 1;
@@ -181,7 +181,7 @@ function fenceCharInCode(ctx: CommandContext, at: CodeAt, char: string): Command
   if (onOpen || onClose) {
     const run = onOpen ? runs.open : runs.close!;
     if (s[run.from] === char && offset >= run.from && offset <= run.to) {
-      if (!runs.close) return notApplicable('an unclosed block\'s fence: the host\'s');
+      if (!runs.close) return deferToHost('an unclosed block\'s fence: the host\'s');
       const grown = text.splice(runs.close.to, runs.close.to, char).splice(runs.open.to, runs.open.to, char);
       // where markup is decorated, not in the fence: from the closing one at the code's end, from inside
       // the opening one at its start (after it, the info string, is text)
@@ -191,11 +191,11 @@ function fenceCharInCode(ctx: CommandContext, at: CodeAt, char: string): Command
     }
     // the host's where the fence stays one, closed as it was
     const spliced = text.splice(offset, offset, char);
-    if (ctx.doc.readsAs(spliced) && spliced.closed === text.closed) return notApplicable();
+    if (ctx.doc.readsAs(spliced) && spliced.closed === text.closed) return deferToHost();
     return breaksFence(ctx, `a ${char === '`' ? 'backtick' : 'tilde'} here would break the fence`);
   }
   const typed = text.splice(offset, offset, char);
-  if (ctx.doc.readsAs(typed) || !runs.close) return notApplicable();
+  if (ctx.doc.readsAs(typed) || !runs.close) return deferToHost();
   // right above the closing fence: the fence typed again, which takes the old one's place
   if (s.lastIndexOf('\n') === lineTo) {
     const retyped = typed.splice(lineTo + 1, s.length + 1);
@@ -229,7 +229,7 @@ function openFence(ctx: CommandContext, char: string): CommandOutcome | undefine
   if (!run || line[run.from] !== char || offset - lineFrom > run.to - 1) return undefined;
   const code = new AtomText('fenced_code', node.kind === 'item' && lineFrom === 0, `${line}\n${line.slice(run.from, run.to)}`);
   if (!ctx.doc.readsAs(code)) return undefined;
-  if (ctx.config.closeBackticks === 'none') return notApplicable();
+  if (ctx.config.closeBackticks === 'none') return deferToHost();
   const draft = ctx.draft();
   const container = node.kind === 'item';
   // the lines below, a paragraph of their own

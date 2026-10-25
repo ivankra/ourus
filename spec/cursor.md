@@ -573,7 +573,7 @@ Past a quote's marker and the item's: a quoted item's text starts after both. Ho
 line's start.
 
 ```yaml
-tags: edge quote-container
+tags: edge
 ```
 
 ```buffer

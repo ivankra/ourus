@@ -437,6 +437,7 @@ The quote would merge into the node's text, its `>` text, as bare Obsidian leave
 
 ```yaml
 tags: rare
+quotes: container
 ```
 
 ```buffer
@@ -1103,7 +1104,7 @@ tags: common
 ```
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ## Delete23
@@ -1124,7 +1125,7 @@ tags: rare free-form
 > deleteContentForward
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ```buffer
@@ -1148,7 +1149,7 @@ tags: rare free-form
 > deleteContentForward
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ```buffer
@@ -1173,7 +1174,7 @@ tags: rare free-form
 > deleteContentForward
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ```buffer
@@ -1269,7 +1270,7 @@ tags: rare free-form
 > deleteContentForward
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ```buffer
@@ -1455,6 +1456,7 @@ refused, as before a quote (Delete10).
 
 ```yaml
 tags: rare
+quotes: container
 ```
 
 ```buffer

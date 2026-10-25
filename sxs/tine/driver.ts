@@ -136,6 +136,10 @@ export const driver: Driver = {
   refuses: ['markup-heading', 'markup-task', 'markup-fence'],
   ordered: true,
   behaves: {
+    // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+    quotes: 'atom',
+    // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+    enterInQuote: 'split',
     // Backspace at a numbered block's start takes its number first, as Logseq (Backspace29, TO5)
     backspaceAtItemStart: 'logseq',
     // a backtick in text is typed as a pair, the caret between, as Logseq (Backtick18)

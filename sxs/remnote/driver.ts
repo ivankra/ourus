@@ -26,6 +26,7 @@
 //   (`Driver.freeForm`); and with bullets, RemNote's default, every rem an item (../remnote-bl/).
 
 import type { Page } from 'playwright-core';
+import type { Config } from '../../src/config.ts';
 import type { Driver } from '../lib/driver.ts';
 import { runsAsMarkdown, type Block, type Outline, type Run } from '../lib/block.ts';
 
@@ -125,9 +126,10 @@ export function lift(o: Outline): Outline {
 /**
  * An outline read from a document without bullets, nested as ourus's outline is (`lift`'s inverse): a
  * heading takes what follows it up to a heading of its level or above, a paragraph the items right
- * after it.
+ * after it where `listParent` says it adopts them (a rem without a bullet holds no children, so
+ * nothing is lifted first).
  */
-export function own(o: Outline): Outline {
+export function own(o: Outline, listParent: Config['listParent'] = 'paragraph'): Outline {
   const headings: number[] = [];
   let paragraph = false;
   const blocks = o.blocks.map((b) => {
@@ -137,8 +139,8 @@ export function own(o: Outline): Outline {
       if (level) while (headings.length && headings.at(-1)! >= level) headings.pop();
       const depth = b.depth + headings.length;
       if (level) headings.push(level);
-      // (an atom owns no list: a code block, a thematic break)
-      else paragraph = !FENCE.test(b.text) && !/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(b.text);
+      // (an atom owns no list: a code block, a thematic break; but under `block`; and nothing under `container`)
+      else paragraph = listParent === 'block' || (listParent === 'paragraph' && !FENCE.test(b.text) && !/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(b.text));
       return depth === b.depth ? b : { ...b, depth };
     }
     const depth = b.depth + headings.length + (paragraph ? 1 : 0);
@@ -203,8 +205,8 @@ export function remnoteDriver(setup: Setup): Driver {
     },
     emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd'],
     // headings and to-dos are a rem's attributes, with no boundary in its text; a code rem's fences are
-    // no text either
-    refuses: ['markup-heading', 'markup-task', 'markup-fence'],
+    // no text either; a quote (`> q`) not mapped to RemNote's quote yet
+    refuses: ['markup-heading', 'markup-task', 'markup-fence', 'quote'],
     ordered: true,
     // Shift+Tab leaves the later siblings with the parent (and a Tab right after puts the rem back where it
     // was, `outdentInOriginalLocation`); Enter mid-text in a rem with children makes its first child
@@ -227,7 +229,9 @@ export function remnoteDriver(setup: Setup): Driver {
       copySelection: 'nodes',
       pasteSeams: 'open',
       pasteListForm: 'own',
-      ...(setup.bulletless ? { enterOnEmptyItem: 'exit' as const } : {}),
+      // without bullets a document is a flat run of rems, a paragraph one, each item one: a list after a
+      // paragraph is no rem's, a move passes one rem (Lists1, Lists5, Lists9: ../../dev/19-quotes.md, Part 2)
+      ...(setup.bulletless ? { enterOnEmptyItem: 'exit' as const, listParent: 'container' as const, listMoves: 'item' as const } : {}),
     },
     idle: { busy: `window.getNumOngoingWriteGuarantees?.() > 0` },
     holds(doc) {
@@ -434,7 +438,7 @@ export function remnoteDriver(setup: Setup): Driver {
         sel = { block: raw.sel.block, anchor: at(raw.sel.anchor), head: at(raw.sel.head) };
       }
       const got: Outline = { blocks, sel, ...(raw.selected.length && { selected: raw.selected }) };
-      return setup.bulletless ? own(got) : got;
+      return setup.bulletless ? own(got, this.behaves?.listParent) : got;
     },
 
     async act(page: Page, action: string, settle: () => Promise<void>) {

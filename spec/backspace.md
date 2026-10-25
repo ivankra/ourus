@@ -1311,7 +1311,7 @@ tags: common
 ```
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ## Backspace33
@@ -1707,6 +1707,7 @@ here of a quote that is an item's first block, the caret at the start of the tex
 
 ```yaml
 tags: rare free-form
+quotes: container
 ```
 
 ```buffer
@@ -1845,7 +1846,7 @@ tags: rare free-form
 > deleteContentBackward
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ```buffer

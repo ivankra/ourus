@@ -1,7 +1,8 @@
 // A node's text: its own lines past their containers' prefixes, one string with its placeholders as
 // marks, a type, and a frame computed from its characters, which `body` leaves out. Two kinds: a
-// `ProseText` is a paragraph's, a heading's or a callout title's, text ourus edits as text (its frame
-// a checkbox, a heading's `#`s, a callout's type, an underline; its markup escapes left out); an
+// `ProseText` is a paragraph's, a heading's, a quote's (`Config.quotes: text`) or a callout title's,
+// text ourus edits as text (its frame a checkbox, a heading's `#`s, a quote's `>`s, a callout's type,
+// an underline; its markup escapes left out); an
 // `AtomText` is an atom's lines as written (code, math, a comment, HTML, a table, ...), its frame a
 // fence's runs and info, indented code's columns, a footnote's label.
 
@@ -11,13 +12,16 @@ export type OutlineNodeText = ProseText | AtomText;
 import { mdCalloutAt } from '../parser/index.ts';
 import { emptyNodeAt, lineOf, MarkSet, trimMd } from '../text/index.ts';
 
-/** What a text is: a paragraph's (an item's too), a heading's, or a quote's, its callout's title. */
-export type ProseTextType = 'paragraph' | 'heading' | 'title';
+/**
+ * What a text is: a paragraph's (an item's too), a heading's, a quote's of one paragraph (each line's
+ * `> ` its frame, `Config.quotes: text`), or a callout's title.
+ */
+export type ProseTextType = 'paragraph' | 'heading' | 'quote' | 'title';
 
 /** A piece of a text's frame, in its string's offsets (`text`). */
 export interface FramePart {
-  /** `task`: a checkbox; `heading`: `#`s; `close`: a closing sequence; `callout`: `[!type]` and its fold; `underline`: a setext underline, with the line break before it; `below`: the line breaks before an item's text, which starts below its marker. */
-  readonly part: 'task' | 'heading' | 'close' | 'callout' | 'underline' | 'below';
+  /** `task`: a checkbox; `heading`: `#`s; `quote`: a line's `>` and the space after it; `close`: a closing sequence; `callout`: `[!type]` and its fold; `underline`: a setext underline, with the line break before it; `below`: the line breaks before an item's text, which starts below its marker. */
+  readonly part: 'task' | 'heading' | 'quote' | 'close' | 'callout' | 'underline' | 'below';
   readonly from: number;
   readonly to: number;
 }
@@ -32,6 +36,8 @@ const reCheckbox = /^\[[^\n]\](?:[ \t]+|$)/;
 const reAtxOpen = /^#{1,6}(?:[ \t]+|$)/;
 /** An ATX heading's closing sequence, with the blanks around it. */
 const reAtxClose = /(?:^|[ \t]+)#+[ \t]*$/;
+/** A quote's `>` on a line (its indentation, three columns at most) and the space after it. */
+const reQuote = /^ {0,3}>[ \t]?/;
 /** A setext heading's underline, after its indentation (a heading's type says it is one: the parser has counted the columns). */
 const reUnderline = /^[ \t]*(?:=+|-+)[ \t]*$/;
 
@@ -137,13 +143,14 @@ export class ProseText {
 
   /**
    * The text after an edit, its transitions applied: a heading whose characters no longer read
-   * as one is a paragraph's, as is a title that no longer reads as a callout; a paragraph never
-   * becomes a heading by its characters. A checkbox is read again from the characters with the
+   * as one is a paragraph's, as is a title that no longer reads as a callout and a quote's whose first
+   * line lost its `>`; a paragraph never becomes a heading or a quote by its characters. A checkbox is read again from the characters with the
    * frame, both ways, with nothing to do here.
    */
   normalize(): ProseText {
     if (this.type === 'heading' && !this.frame.some((p) => p.part === 'heading' || p.part === 'underline')) return new ProseText('paragraph', this.item, this.text, this.marks);
     if (this.type === 'title' && !this.frame.some((p) => p.part === 'callout')) return new ProseText('paragraph', this.item, this.text, this.marks);
+    if (this.type === 'quote' && !this.frame.some((p) => p.part === 'quote' && p.from === 0)) return new ProseText('paragraph', this.item, this.text, this.marks);
     return this;
   }
 }
@@ -169,7 +176,14 @@ function frameOf(type: ProseTextType, item: boolean, text: string, held: (at: nu
   }
   const lineEnd = endOf(start);
   const first = text.slice(start, lineEnd);
-  if (type === 'title') {
+  if (type === 'quote') {
+    // each line's `>`, but a lazy line's, which has none
+    for (let at = start; at <= text.length; ) {
+      const quote = reQuote.exec(text.slice(at, endOf(at)));
+      if (quote) parts.push({ part: 'quote', from: at, to: at + quote[0].length });
+      at = endOf(at) + 1;
+    }
+  } else if (type === 'title') {
     // its type and fold (Obsidian's syntax, in every flavor), and the blanks after them
     const callout = mdCalloutAt(first);
     if (callout) {

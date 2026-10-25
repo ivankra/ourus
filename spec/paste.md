@@ -275,6 +275,7 @@ tags: edge
 clipboard: |-
   - x
   - y
+quotes: container
 ```
 
 ```buffer
@@ -499,7 +500,7 @@ clipboard: |
 > paste
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ```buffer

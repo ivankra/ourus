@@ -5,8 +5,8 @@ version: "f6ae813f25"
 url: "https://app.tana.inc/tests"
 model: "block"
 command: "node sxs/run.ts tana"
-elapsed_s: 196
-workers: 3
+elapsed_s: 355
+workers: 4
 ---
 
 # Tana vs ourus
@@ -15,9 +15,9 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 120 | [4](#caret-4) | [1](#whitespace-1) | [27](#disagree-27) |  |  | **152** |
-| adapted | 231 | [9](#adapted-caret-9) | [5](#adapted-whitespace-5) | [67](#adapted-disagree-67) |  |  | **312** |
-| **total** | **351 (34%)** | **13 (1.2%)** | **6 (0.57%)** | **94 (9%)** | **0 (0%)** | **[581](#skipped-581) (56%)** | **1045** |
+| original | 122 | [4](#caret-4) | [2](#whitespace-2) | [27](#disagree-27) |  |  | **155** |
+| adapted | 234 | [9](#adapted-caret-9) | [5](#adapted-whitespace-5) | [68](#adapted-disagree-68) |  |  | **316** |
+| **total** | **356 (31%)** | **13 (1.1%)** | **7 (0.61%)** | **95 (8.3%)** | **0 (0%)** | **[672](#skipped-672) (59%)** | **1143** |
 
 Per-file:
 
@@ -25,15 +25,16 @@ Per-file:
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | [backspace.md](../spec/backspace.md) | 36 |  |  | 11 |  | 38 | **85** | 14 | 33 |
 | [backtick.md](../spec/backtick.md) | 5 |  |  | 2 |  | 26 | **33** |  | 7 |
-| [copy.md](../spec/copy.md) | 1 |  |  | 4 |  | 8 | **13** | 4 | 1 |
+| [copy.md](../spec/copy.md) | 2 |  |  | 3 |  | 8 | **13** | 4 | 1 |
 | [cursor.md](../spec/cursor.md) | 23 | 2 |  |  |  | 11 | **36** | 12 | 13 |
 | [delete-subtree.md](../spec/delete-subtree.md) | 4 | 1 |  |  |  | 8 | **13** | 2 | 3 |
 | [delete.md](../spec/delete.md) | 22 |  |  | 8 |  | 26 | **56** | 10 | 20 |
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) | 3 |  |  |  |  | 7 | **10** | 3 |  |
-| [enter.md](../spec/enter.md) | 49 |  |  | 7 |  | 41 | **97** | 20 | 36 |
+| [enter.md](../spec/enter.md) | 49 |  |  | 7 |  | 42 | **98** | 20 | 36 |
 | [fences.md](../spec/fences.md) | 7 |  | 1 | 5 |  | 57 | **70** |  | 13 |
 | [gaps.md](../spec/gaps.md) | 11 |  |  |  |  | 8 | **19** |  | 11 |
-| [indent.md](../spec/indent.md) | 19 |  |  | 2 |  | 15 | **36** | 13 | 8 |
+| [indent.md](../spec/indent.md) | 19 |  |  | 2 |  | 21 | **42** | 13 | 8 |
+| [lists.md](../spec/lists.md) | 4 |  |  |  |  | 12 | **16** |  | 4 |
 | [move-subtree-down.md](../spec/move-subtree-down.md) | 21 |  |  |  |  | 19 | **40** | 8 | 13 |
 | [move-subtree-up.md](../spec/move-subtree-up.md) | 17 |  |  |  |  | 25 | **42** | 9 | 8 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 27 |  |  | 4 |  | 36 | **67** | 13 | 18 |
@@ -46,15 +47,15 @@ Per-file:
 | [paste.md](../spec/paste.md) | 11 |  |  | 5 |  | 20 | **36** | 4 | 12 |
 | [placeholders.md](../spec/placeholders.md) | 10 | 1 | 4 |  |  | 5 | **20** | 5 | 10 |
 | [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |  |  |
-| [quotes.md](../spec/quotes.md) |  |  |  |  |  | 100 | **100** |  |  |
-| [regressions.md](../spec/regressions.md) | 10 | 1 |  | 5 |  | 16 | **32** | 1 | 15 |
+| [quotes.md](../spec/quotes.md) |  |  |  |  |  | 143 | **143** |  |  |
+| [regressions.md](../spec/regressions.md) | 10 | 1 | 1 | 7 |  | 45 | **64** | 4 | 15 |
 | [scenarios.md](../spec/scenarios.md) | 13 | 2 |  | 4 |  | 7 | **26** | 9 | 10 |
 | [shift-enter.md](../spec/shift-enter.md) |  |  |  |  |  | 36 | **36** |  |  |
 | [tasks.md](../spec/tasks.md) | 5 | 1 |  | 7 |  | 17 | **30** |  | 13 |
 | [typing.md](../spec/typing.md) |  |  |  |  |  | 3 | **3** |  |  |
 | [undo.md](../spec/undo.md) |  | 4 |  |  |  | 1 | **5** | 3 | 1 |
 | [z-open.md](../spec/z-open.md) |  |  |  |  |  | 1 | **1** |  |  |
-| **total** | **351 (34%)** | **13 (1.2%)** | **6 (0.57%)** | **94 (9%)** | **0 (0%)** | **581 (56%)** | **1045** | **152 (15%)** | **312 (30%)** |
+| **total** | **356 (31%)** | **13 (1.1%)** | **7 (0.61%)** | **95 (8.3%)** | **0 (0%)** | **672 (59%)** | **1143** | **155 (14%)** | **316 (28%)** |
 
 ## Disagree (27)
 
@@ -289,36 +290,6 @@ Per-file:
 </table>
 
 > copy
-
-### [Cut1](../spec/copy.md#cut1)
-
-> cut
-
-<table>
-<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one «two»
-- three
-```
-
-</td><td>
-
-```buffer
-- one ┃
-- three
-```
-
-</td><td>
-
-```buffer
-- one ┃
-- three
-```
-
-</td></tr>
-</table>
 
 ### [Cut4](../spec/copy.md#cut4)
 
@@ -1057,6 +1028,42 @@ y
 </td></tr>
 </table>
 
+### [Regression46](../spec/regressions.md#regression46)
+
+> outdent
+
+<table>
+<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- b c
+  - 
+    ┃[ ] 
+    2\) x
+```
+
+</td><td>
+
+```buffer
+- b c
+  - ┃
+    [ ] 
+    2\) x
+```
+
+</td><td>
+
+```buffer
+- b c
+- 
+  [ ] 
+  ┃2\) x
+```
+
+</td></tr>
+</table>
+
 ### [Scenario2](../spec/scenarios.md#scenario2)
 
 > enter indent enter
@@ -1087,7 +1094,7 @@ y
 </td></tr>
 </table>
 
-## Whitespace (1)
+## Whitespace (2)
 
 ### [Placeholder9](../spec/placeholders.md#placeholder9)
 
@@ -1133,6 +1140,37 @@ y
 ```buffer
 - b
   - c
+```
+
+</td></tr>
+</table>
+
+### [Regression44](../spec/regressions.md#regression44)
+
+> deleteSoftLineBackward
+
+<table>
+<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [x] x┃
+       - b
+```
+
+</td><td>
+
+```buffer
+- [x] ┃
+       - b
+```
+
+</td><td>
+
+```buffer
+- 
+  [x] ┃
+       - b
 ```
 
 </td></tr>
@@ -1378,7 +1416,7 @@ y
 </td></tr>
 </table>
 
-## Adapted: disagree (67)
+## Adapted: disagree (68)
 
 ### [Backspace12d](../spec/backspace.md#backspace12d)
 
@@ -5169,6 +5207,82 @@ Original:
 </td></tr>
 </table>
 
+### [Regression55](../spec/regressions.md#regression55)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+# y
+```
+
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: escape, under pastePlainLines: items
+
+<table>
+<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+1. x
+   - 
+     [x] 
+       cont┃
+```
+
+</td><td>
+
+```buffer
+1. x
+   - 
+     [x] 
+       cont┃
+```
+
+</td><td>
+
+```buffer
+1. x
+   - 
+     [x] 
+       cont
+   - x
+   - # y┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+1. x
+    - [x] 
+  cont┃
+```
+
+</td><td>
+
+```buffer
+1. x
+    - [x] 
+  cont
+    - x
+    - \# y┃
+```
+
+</td></tr>
+</table>
+
 ### [Scenario4](../spec/scenarios.md#scenario4)
 
 Adapted: blank lines
@@ -7057,7 +7171,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (581)
+## Skipped (672)
 
 | example | why |
 | --- | --- |
@@ -7155,7 +7269,7 @@ Original:
 | [DeleteSubtree9](../spec/delete-subtree.md#deletesubtree9) | thematic break |
 | [DeleteSubtree10](../spec/delete-subtree.md#deletesubtree10) | thematic break |
 | [DeleteSubtree11](../spec/delete-subtree.md#deletesubtree11) | quote |
-| [DeleteSubtree12](../spec/delete-subtree.md#deletesubtree12) | quote |
+| [DeleteSubtree12](../spec/delete-subtree.md#deletesubtree12) | option quotes: container |
 | [DeleteSubtree13](../spec/delete-subtree.md#deletesubtree13) | list numbered in part, or not from 1 |
 | **delete.md** | |
 | [Delete4](../spec/delete.md#delete4) | heading's closing #s |
@@ -7163,7 +7277,7 @@ Original:
 | [Delete5e](../spec/delete.md#delete5e) | option emptyItemWithChildren: refuse |
 | [Delete5f](../spec/delete.md#delete5f) | option emptyItemWithChildren: refuse |
 | [Delete9](../spec/delete.md#delete9) | tag free-form |
-| [Delete10](../spec/delete.md#delete10) | quote |
+| [Delete10](../spec/delete.md#delete10) | option quotes: container |
 | [Delete11](../spec/delete.md#delete11) | indented code |
 | [Delete13c](../spec/delete.md#delete13c) | tag free-form |
 | [Delete13d](../spec/delete.md#delete13d) | tag free-form |
@@ -7183,11 +7297,11 @@ Original:
 | [Delete24](../spec/delete.md#delete24) | tag free-form |
 | [Delete25](../spec/delete.md#delete25) | tag free-form |
 | [Delete29](../spec/delete.md#delete29) | tag free-form |
-| [Delete34](../spec/delete.md#delete34) | quote |
+| [Delete34](../spec/delete.md#delete34) | option quotes: container |
 | **duplicate-subtree.md** | |
 | [DuplicateSubtree3](../spec/duplicate-subtree.md#duplicatesubtree3) | selection across blocks |
 | [DuplicateSubtree4](../spec/duplicate-subtree.md#duplicatesubtree4) | tag free-form |
-| [DuplicateSubtree5](../spec/duplicate-subtree.md#duplicatesubtree5) | quote |
+| [DuplicateSubtree5](../spec/duplicate-subtree.md#duplicatesubtree5) | option quotes: container |
 | [DuplicateSubtree6](../spec/duplicate-subtree.md#duplicatesubtree6) | tag free-form |
 | [DuplicateSubtree7](../spec/duplicate-subtree.md#duplicatesubtree7) | caret in a marker |
 | [DuplicateSubtree8](../spec/duplicate-subtree.md#duplicatesubtree8) | caret in a number, a task's checkbox, a heading's # or a code block's fences |
@@ -7215,7 +7329,7 @@ Original:
 | [Enter41](../spec/enter.md#enter41) | tag free-form |
 | [Enter64](../spec/enter.md#enter64) | option enterSplitSpace: drop |
 | [Enter65k](../spec/enter.md#enter65k) | action shiftEnter |
-| [Enter46](../spec/enter.md#enter46) | quote |
+| [Enter46](../spec/enter.md#enter46) | option quotes: container |
 | [Enter49](../spec/enter.md#enter49) | table |
 | [Enter50](../spec/enter.md#enter50) | tag free-form |
 | [Enter51](../spec/enter.md#enter51) | heading other than H1: Tana's (a section) has one level |
@@ -7234,6 +7348,7 @@ Original:
 | [Enter66](../spec/enter.md#enter66) | footnote |
 | [Enter67](../spec/enter.md#enter67) | thematic break |
 | [Enter68](../spec/enter.md#enter68) | callout |
+| [Enter70](../spec/enter.md#enter70) | table |
 | **fences.md** | |
 | [Fence4](../spec/fences.md#fence4) | quote |
 | [Fence6](../spec/fences.md#fence6) | caret in a number, a task's checkbox, a heading's # or a code block's fences |
@@ -7317,6 +7432,25 @@ Original:
 | [Indent31](../spec/indent.md#indent31) | caret in a number, a task's checkbox, a heading's # or a code block's fences |
 | [Indent31b](../spec/indent.md#indent31b) | option markup: decorated |
 | [Indent32](../spec/indent.md#indent32) | changes only what blocks can't show |
+| [Indent34](../spec/indent.md#indent34) | caret in a number, a task's checkbox, a heading's # or a code block's fences |
+| [Indent35](../spec/indent.md#indent35) | math |
+| [Indent36](../spec/indent.md#indent36) | table |
+| [Indent37](../spec/indent.md#indent37) | thematic break |
+| [Indent37b](../spec/indent.md#indent37b) | thematic break |
+| [Indent38](../spec/indent.md#indent38) | indented code |
+| **lists.md** | |
+| [Lists2](../spec/lists.md#lists2) | option listParent: container |
+| [Lists3](../spec/lists.md#lists3) | option listParent: container |
+| [Lists4](../spec/lists.md#lists4) | option listParent: block |
+| [Lists6](../spec/lists.md#lists6) | option listParent: container |
+| [Lists8](../spec/lists.md#lists8) | option listParent: container |
+| [Lists8b](../spec/lists.md#lists8b) | option listParent: container |
+| [Lists10](../spec/lists.md#lists10) | option listParent: container |
+| [Lists11](../spec/lists.md#lists11) | quote |
+| [Lists12](../spec/lists.md#lists12) | option listParent: container |
+| [Lists13](../spec/lists.md#lists13) | option listParent: container |
+| [Lists14](../spec/lists.md#lists14) | option listParent: container |
+| [Lists15](../spec/lists.md#lists15) | option listParent: container |
 | **move-subtree-down.md** | |
 | [MoveDown2](../spec/move-subtree-down.md#movedown2) | tag free-form |
 | [MoveDown11](../spec/move-subtree-down.md#movedown11) | selection across blocks |
@@ -7399,7 +7533,7 @@ Original:
 | [TO18](../spec/obsidian-true-outliner.md#to18) | tag free-form |
 | [TO19](../spec/obsidian-true-outliner.md#to19) | option enterOnEmptyItem: outdent |
 | [TO-Bug264](../spec/obsidian-true-outliner.md#to-bug264) | heading other than H1: Tana's (a section) has one level |
-| [TO-Bug197](../spec/obsidian-true-outliner.md#to-bug197) | quote |
+| [TO-Bug197](../spec/obsidian-true-outliner.md#to-bug197) | option quotes: container |
 | **outdent.md** | |
 | [Outdent2](../spec/outdent.md#outdent2) | tag free-form |
 | [Outdent4](../spec/outdent.md#outdent4) | tag free-form |
@@ -7431,8 +7565,8 @@ Original:
 | [PasteListForm6](../spec/paste-list-form.md#pastelistform6) | option pasteListForm: own |
 | **paste-list.md** | |
 | [PasteList7b](../spec/paste-list.md#pastelist7b) | option enterTask: plain |
-| [PasteList17](../spec/paste-list.md#pastelist17) | quote |
-| [PasteList17b](../spec/paste-list.md#pastelist17b) | quote |
+| [PasteList17](../spec/paste-list.md#pastelist17) | quote (expected) |
+| [PasteList17b](../spec/paste-list.md#pastelist17b) | quote (expected) |
 | [PasteList20](../spec/paste-list.md#pastelist20) | option pasteAtTextStart: before |
 | [PasteList21](../spec/paste-list.md#pastelist21) | option pasteParagraphList: children |
 | [PasteList22](../spec/paste-list.md#pastelist22) | option pasteSeams: open |
@@ -7450,7 +7584,7 @@ Original:
 | [PastePlain34](../spec/paste-plain.md#pasteplain34) | option pastePlainLines: host |
 | **paste.md** | |
 | [Paste4b](../spec/paste.md#paste4b) | option pasteSeams: open |
-| [Paste9](../spec/paste.md#paste9) | quote |
+| [Paste9](../spec/paste.md#paste9) | option quotes: container |
 | [Paste10](../spec/paste.md#paste10) | heading other than H1: Tana's (a section) has one level |
 | [Paste11](../spec/paste.md#paste11) | heading other than H1: Tana's (a section) has one level |
 | [Paste12](../spec/paste.md#paste12) | heading other than H1: Tana's (a section) has one level |
@@ -7510,7 +7644,7 @@ Original:
 | [Quote23](../spec/quotes.md#quote23) | quote |
 | [Quote24](../spec/quotes.md#quote24) | quote |
 | [Quote25](../spec/quotes.md#quote25) | quote |
-| [Quote26](../spec/quotes.md#quote26) | quote |
+| [Quote26](../spec/quotes.md#quote26) | option quotes: container |
 | [Quote27](../spec/quotes.md#quote27) | tag free-form |
 | [Quote28](../spec/quotes.md#quote28) | tag free-form |
 | [Quote29](../spec/quotes.md#quote29) | quote |
@@ -7519,8 +7653,8 @@ Original:
 | [Quote32](../spec/quotes.md#quote32) | tag free-form |
 | [Quote33](../spec/quotes.md#quote33) | tag free-form |
 | [Quote34](../spec/quotes.md#quote34) | tag free-form |
-| [Quote35](../spec/quotes.md#quote35) | quote |
-| [Quote36](../spec/quotes.md#quote36) | quote |
+| [Quote35](../spec/quotes.md#quote35) | option quotes: container |
+| [Quote36](../spec/quotes.md#quote36) | option quotes: container |
 | [Quote37](../spec/quotes.md#quote37) | quote |
 | [Quote38](../spec/quotes.md#quote38) | callout |
 | [Quote39](../spec/quotes.md#quote39) | callout |
@@ -7545,14 +7679,14 @@ Original:
 | [Quote57](../spec/quotes.md#quote57) | callout |
 | [Quote58](../spec/quotes.md#quote58) | callout |
 | [Quote59](../spec/quotes.md#quote59) | tag free-form |
-| [Quote89](../spec/quotes.md#quote89) | quote |
+| [Quote89](../spec/quotes.md#quote89) | option quotes: container |
 | [Quote90](../spec/quotes.md#quote90) | quote |
 | [Quote60](../spec/quotes.md#quote60) | callout |
 | [Quote61](../spec/quotes.md#quote61) | callout |
 | [Quote62](../spec/quotes.md#quote62) | callout |
 | [Quote63](../spec/quotes.md#quote63) | quote |
 | [Quote64](../spec/quotes.md#quote64) | quote |
-| [Quote65](../spec/quotes.md#quote65) | quote |
+| [Quote65](../spec/quotes.md#quote65) | option quotes: container |
 | [Quote66](../spec/quotes.md#quote66) | quote |
 | [Quote67](../spec/quotes.md#quote67) | quote |
 | [Quote68](../spec/quotes.md#quote68) | quote |
@@ -7562,14 +7696,14 @@ Original:
 | [Quote74](../spec/quotes.md#quote74) | action shiftEnter |
 | [Quote75](../spec/quotes.md#quote75) | quote |
 | [Quote76](../spec/quotes.md#quote76) | quote |
-| [Quote77](../spec/quotes.md#quote77) | quote |
-| [Quote78](../spec/quotes.md#quote78) | quote |
+| [Quote77](../spec/quotes.md#quote77) | option quotes: container |
+| [Quote78](../spec/quotes.md#quote78) | option quotes: container |
 | [Quote79](../spec/quotes.md#quote79) | callout |
-| [Quote80](../spec/quotes.md#quote80) | quote |
+| [Quote80](../spec/quotes.md#quote80) | option quotes: container |
 | [Quote81](../spec/quotes.md#quote81) | quote |
 | [Quote82](../spec/quotes.md#quote82) | quote |
 | [Quote88](../spec/quotes.md#quote88) | quote |
-| [Quote83](../spec/quotes.md#quote83) | quote |
+| [Quote83](../spec/quotes.md#quote83) | option quotes: container |
 | [Quote84](../spec/quotes.md#quote84) | callout |
 | [Quote85](../spec/quotes.md#quote85) | quote |
 | [Quote86](../spec/quotes.md#quote86) | quote |
@@ -7578,15 +7712,59 @@ Original:
 | [Quote91b](../spec/quotes.md#quote91b) | action shiftEnter |
 | [Quote92](../spec/quotes.md#quote92) | quote |
 | [Quote93](../spec/quotes.md#quote93) | quote |
-| [Quote69](../spec/quotes.md#quote69) | quote |
-| [Quote70](../spec/quotes.md#quote70) | quote |
+| [Quote69](../spec/quotes.md#quote69) | option quotes: container |
+| [Quote70](../spec/quotes.md#quote70) | option quotes: container |
 | [Quote94](../spec/quotes.md#quote94) | quote |
 | [Quote95](../spec/quotes.md#quote95) | quote |
 | [Quote96](../spec/quotes.md#quote96) | quote |
 | [Quote97](../spec/quotes.md#quote97) | tag free-form |
+| [QuoteText1](../spec/quotes.md#quotetext1) | quote |
+| [QuoteText2](../spec/quotes.md#quotetext2) | quote |
+| [QuoteText3](../spec/quotes.md#quotetext3) | quote |
+| [QuoteText4](../spec/quotes.md#quotetext4) | quote |
+| [QuoteText5](../spec/quotes.md#quotetext5) | quote |
+| [QuoteText6](../spec/quotes.md#quotetext6) | quote |
+| [QuoteText7](../spec/quotes.md#quotetext7) | quote |
+| [QuoteText8](../spec/quotes.md#quotetext8) | quote |
+| [QuoteText9](../spec/quotes.md#quotetext9) | quote |
+| [QuoteText10](../spec/quotes.md#quotetext10) | quote |
+| [QuoteText11](../spec/quotes.md#quotetext11) | action shiftEnter |
+| [QuoteText12](../spec/quotes.md#quotetext12) | quote |
+| [QuoteText13](../spec/quotes.md#quotetext13) | quote |
+| [QuoteText14](../spec/quotes.md#quotetext14) | quote (expected) |
+| [QuoteText15](../spec/quotes.md#quotetext15) | quote |
+| [QuoteText16](../spec/quotes.md#quotetext16) | quote |
+| [QuoteText17](../spec/quotes.md#quotetext17) | quote |
+| [QuoteText18](../spec/quotes.md#quotetext18) | quote |
+| [QuoteText19](../spec/quotes.md#quotetext19) | quote |
+| [QuoteText20](../spec/quotes.md#quotetext20) | quote |
+| [QuoteText21](../spec/quotes.md#quotetext21) | option enterInQuote: split |
+| [QuoteText22](../spec/quotes.md#quotetext22) | option enterInQuote: split |
+| [QuoteAtom1](../spec/quotes.md#quoteatom1) | option quotes: atom |
+| [QuoteAtom2](../spec/quotes.md#quoteatom2) | option quotes: atom |
+| [QuoteAtom3](../spec/quotes.md#quoteatom3) | option quotes: atom |
+| [QuoteAtom4](../spec/quotes.md#quoteatom4) | option quotes: atom |
+| [QuoteAtom5](../spec/quotes.md#quoteatom5) | option quotes: atom |
+| [QuoteAtom6](../spec/quotes.md#quoteatom6) | option quotes: atom |
+| [QuoteAtom7](../spec/quotes.md#quoteatom7) | option quotes: atom |
+| [QuoteAtom8](../spec/quotes.md#quoteatom8) | option quotes: atom |
+| [QuoteAtom9](../spec/quotes.md#quoteatom9) | option quotes: atom |
+| [QuoteAtom10](../spec/quotes.md#quoteatom10) | option quotes: atom |
+| [QuoteAtom11](../spec/quotes.md#quoteatom11) | option quotes: atom |
+| [QuoteAtom12](../spec/quotes.md#quoteatom12) | option quotes: atom |
+| [QuoteAtom13](../spec/quotes.md#quoteatom13) | option quotes: atom |
+| [QuoteAtom14](../spec/quotes.md#quoteatom14) | option quotes: atom |
+| [QuoteAtom15](../spec/quotes.md#quoteatom15) | option quotes: atom |
+| [QuoteAtom16](../spec/quotes.md#quoteatom16) | option quotes: atom |
+| [QuoteAtom17](../spec/quotes.md#quoteatom17) | option quotes: atom |
+| [QuoteAtom18](../spec/quotes.md#quoteatom18) | option quotes: atom |
+| [QuoteAtom19](../spec/quotes.md#quoteatom19) | option quotes: atom |
+| [QuoteAtom20](../spec/quotes.md#quoteatom20) | option quotes: atom |
+| [QuoteAtom21](../spec/quotes.md#quoteatom21) | option quotes: atom |
 | **regressions.md** | |
 | [Regression1](../spec/regressions.md#regression1) | list numbered in part, or not from 1 |
 | [Regression3](../spec/regressions.md#regression3) | quote |
+| [Regression5](../spec/regressions.md#regression5) | link reference definition (expected) |
 | [Regression6](../spec/regressions.md#regression6) | code block's fences other than the shortest backticks that hold its code, which Tana's code block reads back with (it keeps no fences), or spaces around its language |
 | [Regression7](../spec/regressions.md#regression7) | code block's fences that don't match |
 | [Regression8](../spec/regressions.md#regression8) | list numbered in part, or not from 1 |
@@ -7598,9 +7776,37 @@ Original:
 | [Regression21](../spec/regressions.md#regression21) | option pasteLines: items |
 | [Regression26](../spec/regressions.md#regression26) | action shiftEnter |
 | [Regression28](../spec/regressions.md#regression28) | callout |
-| [Regression29](../spec/regressions.md#regression29) | callout |
+| [Regression29](../spec/regressions.md#regression29) | option quotes: container |
 | [Regression30](../spec/regressions.md#regression30) | changes only what blocks can't show |
 | [Regression31](../spec/regressions.md#regression31) | tag free-form |
+| [Regression33](../spec/regressions.md#regression33) | quote |
+| [Regression34](../spec/regressions.md#regression34) | thematic break |
+| [Regression35](../spec/regressions.md#regression35) | link reference definition (expected) |
+| [Regression36](../spec/regressions.md#regression36) | quote |
+| [Regression37](../spec/regressions.md#regression37) | quote |
+| [Regression38](../spec/regressions.md#regression38) | option quotes: container |
+| [Regression40](../spec/regressions.md#regression40) | caret in a marker |
+| [Regression41](../spec/regressions.md#regression41) | option quotes: container |
+| [Regression42](../spec/regressions.md#regression42) | selection across blocks |
+| [Regression43](../spec/regressions.md#regression43) | caret in a marker |
+| [Regression45](../spec/regressions.md#regression45) | selection across blocks |
+| [Regression47](../spec/regressions.md#regression47) | action shiftEnter |
+| [Regression48](../spec/regressions.md#regression48) | indented code |
+| [Regression49](../spec/regressions.md#regression49) | list numbered in part, or not from 1 |
+| [Regression50](../spec/regressions.md#regression50) | option quotes: container |
+| [Regression51](../spec/regressions.md#regression51) | selection across blocks |
+| [Regression52](../spec/regressions.md#regression52) | indented code |
+| [Regression53](../spec/regressions.md#regression53) | heading other than H1: Tana's (a section) has one level |
+| [Regression54](../spec/regressions.md#regression54) | indented code |
+| [Regression56](../spec/regressions.md#regression56) | quote |
+| [Regression57](../spec/regressions.md#regression57) | quote |
+| [Regression58](../spec/regressions.md#regression58) | caret in a marker |
+| [Regression59](../spec/regressions.md#regression59) | caret in a marker |
+| [Regression60](../spec/regressions.md#regression60) | option quotes: atom |
+| [Regression61](../spec/regressions.md#regression61) | option quotes: atom |
+| [Regression62](../spec/regressions.md#regression62) | option quotes: atom |
+| [Regression63](../spec/regressions.md#regression63) | list numbered in part, or not from 1 |
+| [Regression64](../spec/regressions.md#regression64) | option quotes: atom |
 | **scenarios.md** | |
 | [Scenario6](../spec/scenarios.md#scenario6) | tag free-form |
 | [Scenario11](../spec/scenarios.md#scenario11) | action shiftEnter |

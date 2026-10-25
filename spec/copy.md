@@ -161,7 +161,7 @@ copyAtCaret: host
 > copy
 
 ```yaml
-result: notApplicable
+result: deferredToHost
 ```
 
 ## Copy7
