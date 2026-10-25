@@ -103,6 +103,10 @@ export const driver: Driver = {
   displayName: 'Tine',
   url: 'https://tine.page/guide/app/',
   model: 'block',
+  // a block's text holds a blank line, its paragraphs apart
+  paragraphsInBlock: true,
+  // after Escape and Backspace delete a block no block is edited (its runs: DeleteSubtree1, 3, 4)
+  noCaretAfter: ['deleteSubtree'],
   keys: {
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
@@ -132,6 +136,10 @@ export const driver: Driver = {
   refuses: ['markup-heading', 'markup-task', 'markup-fence'],
   ordered: true,
   behaves: {
+    // Backspace at a numbered block's start takes its number first, as Logseq (Backspace29, TO5)
+    backspaceAtItemStart: 'logseq',
+    // a backtick in text is typed as a pair, the caret between, as Logseq (Backtick18)
+    closeBackticks: 'all',
     outdent: 'direct',
     enterSplitSpace: 'start',
     enterOnEmptyItem: 'sibling',
@@ -140,6 +148,8 @@ export const driver: Driver = {
     backspaceAtTopItem: 'refuse',
     copyAtCaret: 'host',
     copySelection: 'nodes',
+    // pasted blocks leave a selection's text as it is (Paste17, probed 2026-10-25)
+    pasteOverSelection: 'ignore',
     pasteOnParent: 'after',
   },
   holds(doc) {

@@ -67,7 +67,7 @@ At column 0 the new line would end the item; with the item's indentation, what i
 stays in the code, in the item.
 
 ```yaml
-tags: common
+tags: common enter-in-fence
 ```
 
 ````buffer
@@ -106,7 +106,7 @@ result: applied
 Enter in the middle of a code line splits it.
 
 ```yaml
-tags: common
+tags: common enter-in-fence
 ```
 
 ````buffer
@@ -129,7 +129,7 @@ co
 The code line's own indentation carries over, as in code editors.
 
 ```yaml
-tags: common
+tags: common enter-in-fence
 ```
 
 ````buffer
@@ -154,7 +154,7 @@ tags: common
 In a quote, the new line keeps the `>`.
 
 ```yaml
-tags: edge quote-container
+tags: edge quote-container enter-in-fence
 ```
 
 ````buffer
@@ -177,7 +177,7 @@ tags: edge quote-container
 When the fence is the item's text, the new line takes the item's continuation indentation.
 
 ```yaml
-tags: edge
+tags: edge enter-in-fence
 ```
 
 ````buffer
@@ -388,7 +388,7 @@ code
 With `handleFenceContents: false`, Enter on a code line is the host's.
 
 ```yaml
-tags: rare
+tags: rare enter-in-fence
 handleFenceContents: false
 ```
 
@@ -1303,7 +1303,7 @@ body
 Enter that would leave a closing fence as the first half of a code line: the fences grow.
 
 ```yaml
-tags: rare markup-fence
+tags: rare markup-fence enter-in-fence
 ```
 
 `````buffer
@@ -1626,7 +1626,7 @@ takes back. Bare Obsidian keeps the column too, but its Backspace then deletes t
 indentation, ending the item and the block; its Outliner makes a new item there instead.
 
 ```yaml
-tags: edge
+tags: edge enter-in-fence
 flavor: obsidian
 ```
 

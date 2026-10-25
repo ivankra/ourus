@@ -650,7 +650,7 @@ tags: common free-form
 A level-6 heading can't go deeper (Outdent5's mirror).
 
 ```yaml
-tags: rare free-form
+tags: rare
 ```
 
 ```buffer

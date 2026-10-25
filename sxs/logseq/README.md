@@ -10,7 +10,7 @@ a flavor of its own deciding how a block's text is held (OG's: all of it in the 
 | action | keys |
 | --- | --- |
 | `enter` | Enter |
-| `shiftEnter` | Shift+Enter |
+| `shiftEnter` | Shift+Enter (a line break in the block; twice, a blank line, the block holding paragraphs: an item's paragraphs right after its text are its block's (`paragraphsInBlock`, since 2026-10-25)) |
 | `indent` | Tab |
 | `outdent` | Shift+Tab |
 | `moveSubtreeUp` | Alt+Shift+Up |
@@ -18,7 +18,7 @@ a flavor of its own deciding how a block's text is held (OG's: all of it in the 
 | `deleteContentBackward` | Backspace |
 | `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Alt+U ("kill line before": from the start of the caret's line; nothing at a line's start) |
-| `deleteSubtree` | Escape (selects the block), Backspace (deletes the selection); in a block with a code fence, which Escape never selects, Ctrl+A until the block is (its text, then the block) |
+| `deleteSubtree` | Escape (selects the block), Backspace (deletes the selection); in a block with a code fence, which Escape never selects, Ctrl+A until the block is (its text, then the block); after it no block is edited (when the first block goes): the outline alone is judged (`noCaretAfter`, since 2026-10-25). |
 | `duplicateSubtree` | *missing* |
 | `pasteStructured` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V |
@@ -138,6 +138,13 @@ Repo: https://github.com/logseq/og
   Backspace did nothing).
 - **Backspace at the first block's start does nothing** (`backspaceAtTopItem: refuse`, declared for both
   Logseqs: `backspace.md › Backspace34` agrees with it, played with `--ignore-options`).
+- **Backspace at a numbered block's start takes its number first** (a property here), the block a
+  bulleted one, the blocks after it numbered from 1 again (`backspace.md › Backspace29`,
+  `obsidian-true-outliner.md › TO5`); declared for both, `backspaceAtItemStart: logseq` (since
+  2026-10-25). ourus keeps the later items' numbers, so Backspace29 still differs in them.
+- **A backtick in text is typed as a pair**, the caret between (`backtick.md › Backtick18`, `19`,
+  `21`), in both: declared, `closeBackticks: all` (since 2026-10-25). Typed again before a closing
+  run of two, it types another pair rather than step over it (Backtick32).
 - **The caret moves by pixels**, in a proportional font: after Up or Down it lands at another column
   than the spec's monospace one.
 - The demo doesn't say its version (`get_app_info` answers `1.0.0`, the plugin API's); its bundle's

@@ -139,10 +139,13 @@ Marketplace; a fresh workspace on a desktop or in Docker loads no plugin without
   blocks' Markdown by SiYuan's converter (`protyle.lute.BlockDOM2StdMd`, one block's DOM to
   Markdown), joined by line breaks, a task item's `[ ] ` or `[x] ` before it (`data-task`); any block
   but an item's text free, and nested as ourus's outline has them among each block's siblings
-  (`ownBlocks`: a heading takes its section, a paragraph the list after it, inside items too); a free
+  (`ownBlocks`: a heading takes its section, a paragraph the list after it, but inside an item, where
+  ourus's outline makes that list the paragraph's sibling: since 2026-10-25); a free
   block's escape at its start off (`\- x` is the paragraph `- x`, SiYuan keeping the backslash), as
   the projection has a block's text; a table's caret by its cell (SiYuan pads a column to its widest
-  cell, the caret's marker counted in it). An item's text is its first block; its other blocks are its children, in order with its nested lists, an
+  cell, the caret's marker counted in it); a code block's fences longer than any line of backticks
+  in its code (SiYuan writes three, a zero-width joiner keeping such a line from closing them, which
+  the read takes out: since 2026-10-25, Fence36, 37, 39). An item's text is its first block; its other blocks are its children, in order with its nested lists, an
   empty paragraph too, where it is: SiYuan leaves one where an item's blocks went into the item above
   (Backspace at an empty item's start, Enter on an empty child), a block until it is deleted, and
   typing there fills it. (Read as a line of the item's text, as until 2026-10-18, it made 17 of
@@ -171,6 +174,7 @@ with the reason (`holds`):
 | --- | --- | --- |
 | a block's text starting with whitespace | a tab or an indented line becomes structure, or is trimmed | `cursor.md › CursorDown2`, `delete.md › Delete11` |
 | a line's trailing whitespace | trimmed, a hard break's two spaces too (an empty task's `[ ] ` is its checkbox, and held) | `indent.md › Indent19`, `delete.md › Delete5d` |
+| a line's leading whitespace | a later line's spaces (its text: the projection keeps them since 2026-10-25) trimmed | `regressions.md › Regression32`, `indent.md › Indent33` |
 | a block's text ending in a line break | the empty last line trimmed | `shift-enter.md › ShiftEnter11`, `12` |
 | a heading's closing #s | dropped: `# Title #` is `# Title` | `backspace.md › Backspace4` |
 | a thematic break as an item | `- ---` is a thematic break, not an item holding one, and SiYuan makes it one, outside the list | `move-subtree-up.md › MoveUp19` |
@@ -194,6 +198,12 @@ between items rather than join text: most of SiYuan's disagreements. Each below 
 (a headless Chromium of its own on a kernel of its own) and read in the tree, and the joins and
 splits in the source (`removeBlock`, `removeLi` in `app/src/protyle/wysiwyg/remove.ts`).
 
+- **Backspace at an item's text start makes it a paragraph in the item above** (its last block, after
+  that item's children, its own children with it), unless the item is first in its list; a second
+  press joins. The driver declares it, `backspaceAtItemStart: body` (since 2026-10-25;
+  `backspace.md › Backspace1`, `Backspace8`, `enter.md › Enter38`). A lone first child is outdented
+  instead (`Backspace3`), and an item after an empty one goes into that one's body (`Backspace5`).
+
 - **Backspace at an item's start** with an item above: the item's blocks go into that item, after
   its last block ("列表项合并到前一个列表项的最后一个块末尾"): `- one` / `- ┃two` is `- one` with a
   second paragraph `two`, read as its child (`backspace.md › Backspace1`); a second Backspace joins
@@ -205,8 +215,13 @@ splits in the source (`removeBlock`, `removeLi` in `app/src/protyle/wysiwyg/remo
   `Scenario11`); a child with children is outdented (`Delete1`, `Delete5c`). Delete at a code block's
   end does nothing (`Fence30`).
 - **Enter on an empty item** makes it a paragraph: at the top level outside the list, between the two
-  lists it splits (`Enter7`); nested, in the parent item, where it was (`Enter27`, `Enter28`). None of
-  ourus's `enterOnEmptyItem`.
+  lists it splits (`Enter7`); nested, in the parent item, where it was (`Enter27`, `Enter28`); the
+  last of a nested list outdents (`Enter5`). Declared, `enterOnEmptyItem: unwrap` (since 2026-10-25;
+  "none of ourus's values" before). An empty task outdents, a plain item (`TaskEnter5`, `TaskEnter6`):
+  its own.
+- **Backspace right after a task's checkbox** makes the task a paragraph where it is, its checkbox
+  gone with its marker (`TaskBackspace2`, `TaskBackspace3`, `SoftBackspace1`): declared,
+  `taskEditing: unwrap` (since 2026-10-25).
 - **Shift+Enter** in an empty block does nothing (`Enter, then Shift-Enter and Backspace`); right
   before a line break it makes `\n\n`, which SiYuan's Markdown engine splits into two paragraphs
   (`Place inside a multi-line item`).

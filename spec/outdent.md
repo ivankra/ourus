@@ -143,7 +143,7 @@ tags: common free-form
 H1 cannot outdent further.
 
 ```yaml
-tags: edge free-form
+tags: edge
 ```
 
 ```buffer
@@ -780,7 +780,7 @@ as it would be a paragraph's list. Indent doesn't make it an item again: on a he
 level ([Indent12](indent.md#indent12)).
 
 ```yaml
-tags: rare free-form
+tags: rare
 ```
 
 ```buffer
@@ -801,7 +801,7 @@ With `outdent: logical` the same as with direct ([Outdent17](#outdent17)): at th
 no parent to keep the rest of the list, so the heading takes it in as its section.
 
 ```yaml
-tags: rare free-form
+tags: rare
 outdent: logical
 ```
 
@@ -823,7 +823,7 @@ Where the heading would take in what follows the list, a paragraph or a list of 
 section, outdent is refused; so it is where its level would end the section it is in.
 
 ```yaml
-tags: rare free-form
+tags: rare
 ```
 
 ```buffer

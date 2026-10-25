@@ -219,10 +219,10 @@ Later runs reuse them, so a run of one example takes under a second. Stop them a
    window is some 25 tasks; the browser stays up). One a run that died left loaded, the next run of that
    app takes over instead of loading the app again, if it was loaded from the driver's URL with the
    current `idle.ts` (an older one stays in a page until it reloads) and still loads and reads a
-   document. The pool is fixed (`BROWSERS`, `WINDOWS` in `lib/browser.ts`): six browsers, each with at
-   most three app windows (a run's, or an idle one a dead run left, the longest idle closing for a run
+   document. The pool is fixed (`BROWSERS`, `WINDOWS` in `lib/browser.ts`): four browsers, each with at
+   most five app windows (a run's, or an idle one a dead run left, the longest idle closing for a run
    that needs its place), so that the pool, full, holds under the container's cap on tasks. Runs spread
-   over the browsers (an idle one first, a new one while fewer than six run), and with every browser
+   over the browsers (an idle one first, a new one while fewer than four run), and with every browser
    full a worker waits for room. A driver may keep its workers to the even-numbered browsers or the odd
    ones (`Driver.browsers`: RemNote's two setups, so that each one's knowledge base, in a profile's
    storage, is its own). What a browser has one of is held in turn: its clipboard (a headless browser's own, not
@@ -247,10 +247,15 @@ Later runs reuse them, so a run of one example takes under a second. Stop them a
    at first: a browser is some 110 tasks (processes and threads) before any page, an app's window some
    25, and a container's cap on tasks (`pids.max`, 2048 here) didn't hold 16 browsers. `run.ts all`
    starts every app at once; each worker of a run joins it as it gets a place in a pool (the first waits
-   as long as it takes, the others only while examples are left), so the pools stay full: six
-   Chromiums with three windows each (some 1,100 tasks), and two Obsidians beside them (some 400), four
+   as long as it takes, the others only while examples are left), so the pools stay full: four
+   Chromiums with five windows each (some 950 tasks; six with three each hit the cap, the browsers'
+   threads failing to start: 2026-10-25), and two Obsidians beside them (some 400), four
    in a run of Obsidian's setups only (`OURUS_SXS_OBSIDIANS`, which `run.ts` sets for a run of several
-   apps; `obsidian/README.md`). An Obsidian stops with the last window a run has in it.
+   apps; `obsidian/README.md`). An Obsidian stops with the last window a run has in it. A run
+   watches the cap while its apps play (`watchTasks` in `lib/system.ts`: `pids.max`, `pids.current`,
+   `pids.events` once a second): it warns as the cap refuses tasks, a browser's thread then failing
+   to start and windows, browsers and runs crashing or hanging, and says at the end how often it did
+   and how many tasks ran at most (a run of several apps in the terminal, each app's run in its log).
 4. **Playing** ([`run.ts`](run.ts)). For each example the driver loads the starting state into a
    fresh document (through whatever the app offers: a plugin API, its stores), and the runner checks
    that the app holds it as given, since an app that rewrites its input (trimming, normalizing)
@@ -286,7 +291,12 @@ Later runs reuse them, so a run of one example takes under a second. Stop them a
    spaces next to line breaks only; a text app's text, in spaces before line breaks, or in spaces
    anywhere that leave the document as ourus reads it the same, its code byte for byte); `disagree` (the blocks differ: their text, their nesting, how
    many there are); `error` (the run failed, or the app didn't hold the
-   starting state).
+   starting state). No caret is compared where ourus's has no place in a block, nor after an action
+   that leaves an app no text focus (`Driver.noCaretAfter`: a deleted block selection), where the app
+   has neither a caret nor selected blocks: the outline alone. Where such an action has more after
+   it that needs a caret (typing; undo and redo need none), the app's state is read right after it,
+   and an app left with no focus skips the example there ("no text focus after …"), kept skipped by a
+   rejudge (`skippedPlaying` in the file's run); an app that kept a caret plays on.
 
    A text editor's state is Markdown text ([`lib/text.ts`](lib/text.ts), the `text` model, for SilverBullet
    and the like): the spec's buffers are taken as written, a placeholder (`◌`) dropped since it

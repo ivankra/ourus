@@ -53,6 +53,10 @@ export const driver: Driver = {
   displayName: 'Athens',
   url: 'https://athensresearch.github.io/athens/',
   model: 'block',
+  // a block's text holds a blank line, its paragraphs apart
+  paragraphsInBlock: true,
+  // after deleting a selected block no block is edited (checked by hand, keys only)
+  noCaretAfter: ['deleteSubtree'],
   keys: {
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
@@ -71,13 +75,16 @@ export const driver: Driver = {
   },
   emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd', 'selectSubtree', 'deleteSubtree'],
   // a heading's `#`s, a task's marker and a code block's fences are text in the block, edited a
-  // character at a time
-  refuses: ['markup-heading', 'markup-task', 'markup-fence'],
+  // character at a time; code and math are a block's text, with no editor of their own, so Enter in
+  // them splits the block (`enter-in-fence`)
+  refuses: ['markup-heading', 'markup-task', 'markup-fence', 'enter-in-fence'],
   // Shift+Tab leaves later siblings with the parent; Enter on an empty nested block outdents it; an empty
   // block with children isn't joined into or out of, as in Roam. A paste goes after the block, nothing
   // split, lines as blocks, numbers as text, a paragraph's list under it (each measured, playing its
   // examples with `run.ts --ignore-options`)
   behaves: {
+    // after a paste of blocks, the caret at the start of the first (checked in a page of its own: `- ┃x`)
+    quirkPasteCaret: 'athens',
     outdent: 'logical',
     enterSplitSpace: 'start',
     enterOnEmptyItem: 'outdent',
@@ -87,6 +94,8 @@ export const driver: Driver = {
     copyAtCaret: 'host',
     copySelection: 'nodes',
     pasteLines: 'items',
+    // pasted blocks leave a selection's text as it is (Paste17, probed 2026-10-25)
+    pasteOverSelection: 'ignore',
     pasteParagraphList: 'children',
   },
 

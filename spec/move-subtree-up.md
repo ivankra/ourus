@@ -221,7 +221,7 @@ The remaining items stay with the paragraph.
 bullets and BlockNote move it; SiYuan keeps it in the paragraph's list.
 
 ```yaml
-tags: common free-form
+tags: common
 ```
 
 ```buffer
@@ -588,7 +588,7 @@ the outline comes back, the blank line staying above the list, as a paragraph's 
 ([MoveUp36](#moveup36)).
 
 ```yaml
-tags: edge free-form
+tags: edge
 ```
 
 ```buffer
@@ -650,7 +650,7 @@ sub-heading's section, where the text above it ends. Move subtree down takes it 
 ([MoveDown28](move-subtree-down.md#movedown28)).
 
 ```yaml
-tags: edge free-form
+tags: edge
 ```
 
 ```buffer

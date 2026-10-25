@@ -134,7 +134,7 @@ unfocused, visible"): one in two full runs of the four setups, which then came o
 (the run's pid, linked into place whole, so taken atomically), and a second run of the same setup
 stops with "another run has …"; a lock whose run is gone is taken over. The pool has at most four
 instances (full, some 800 tasks), or as many as `OURUS_SXS_OBSIDIANS` says: `run.ts` says 2 for a run
-of several apps with Chromium's among them, the pool's six browsers some 1,100 tasks beside them under
+of several apps with Chromium's among them, the pool's four browsers some 950 tasks full beside them under
 the container's cap (2048); one past the size is stopped once no run has a window in it. So a run has
 up to four workers, or two (`parallel`,
 `--workers`), each a window in an instance of its own: a run's workers in different instances, runs of

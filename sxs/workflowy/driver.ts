@@ -13,7 +13,7 @@
 
 import type { Page } from 'playwright-core';
 import type { Driver } from '../lib/driver.ts';
-import type { Outline } from '../lib/block.ts';
+import { compareOutlines, draw, project, runsAsMarkdown, type Outline, type Run } from '../lib/block.ts';
 
 const MOTIONS: Record<string, string> = {
   CharLeft: 'ArrowLeft',
@@ -85,15 +85,51 @@ function fromItem(it: Item, number: number | null): { text: string; prefix: numb
 /** The test's item, made once per page. */
 const CONTAINER = 'ourus sxs';
 
+/**
+ * `OURUS_SXS_WF_EXPORT=1`: a read checked against WorkFlowy's own Markdown export of the test's items
+ * (`WF.Export.as`, as its share dialog calls it), projected as a spec buffer is: where the two outlines
+ * differ, both are logged. The blocks only (the export has no caret). The item being edited is saved
+ * first (`WF.Editor.saveFocused`, what WorkFlowy's own timer does half a second after typing stops,
+ * done now: at a step's end, where the runner settles, and before a case's next step undoes it waits
+ * that out anyway), or the export would have its text as it was. The test's item is exported, its
+ * name dropped: WorkFlowy writes a lone exported item as a title, no bullet.
+ */
+async function checkExport(page: Page, got: Outline): Promise<void> {
+  const md: string = await page.evaluate(() => {
+    const WF = (window as any).WF;
+    const box = WF.getItemById((window as any).__ourusBox);
+    WF.Editor.saveFocused();
+    const out = new WF.Format.StringOutput();
+    WF.Export.as(out, 'markdown', [box.data.projectReferenceOrThrow.getItem()], true);
+    return out.text as string;
+  });
+  const items = md.replace(/^[^\n]*\n+/, '');
+  // (no items, or a quote, which the projection has no block form for: nothing to check)
+  if (!items.trim() || /^ *(?:- )?> /m.test(items)) return;
+  let exported: Outline;
+  try {
+    exported = project(items, 'gfm', { ordered: true }).outline;
+  } catch (e) {
+    console.log(`WorkFlowy's export doesn't project (${e instanceof Error ? e.message : e}):\n${items}`);
+    return;
+  }
+  const verdict = compareOutlines({ ...exported, sel: null }, { ...got, sel: null });
+  const show = (s: string): string => s.replace(/\n$/, '').replace(/^/gm, '    ');
+  if (verdict !== 'agree') console.log(`WorkFlowy's export reads otherwise (${verdict}):\n  export:\n${show(items)}\n  as blocks:\n${show(draw({ ...exported, sel: null }, { ordered: true }))}\n  read:\n${show(draw({ ...got, sel: null }, { ordered: true }))}`);
+}
+
 export const driver: Driver = {
   shortId: 'WF',
   longId: 'workflowy',
   displayName: 'WorkFlowy',
   url: 'https://beta.workflowy.com/guide/embed/',
   model: 'block',
+  // after deleting the first item no item is edited (its runs: DeleteSubtree3, 4)
+  noCaretAfter: ['deleteSubtree'],
   keys: {
     enter: 'Enter',
-    shiftEnter: 'Shift+Enter',
+    // no `shiftEnter`: Shift+Enter opens the item's note, another action than a line break in its
+    // text, which a name doesn't hold (its cases skip)
     indent: 'Tab',
     outdent: 'Shift+Tab',
     deleteContentBackward: 'Backspace',
@@ -123,6 +159,9 @@ export const driver: Driver = {
   // paste opens the seam (the first pasted text joins), though not on an item with children
   // (on the paste files, 14 cases better under `open`, 3 worse)
   behaves: {
+    // Enter mid-heading: the new block above takes the text before the caret, the heading (an
+    // attribute) staying with the rest (TO-E13-E16, TO-E14-E20)
+    quirkEnterMidHeading: 'workflowy',
     outdent: 'logical',
     enterSplitSpace: 'start',
     enterOnEmptyItem: 'sibling',
@@ -334,24 +373,50 @@ export const driver: Driver = {
       const content = active?.classList.contains('content') ? active : null;
       const inNote = !!content?.closest('.notes');
       const focusedId = content ? WF.focusedItem()?.getId() : null;
-      const flat: { depth: number; name: string; note: string | null; layout: string; completed: boolean; id: string; shown: number | null; start: number | null }[] = [];
+      const flat: { depth: number; name: string; runs: Run[]; note: string | null; layout: string; completed: boolean; id: string; shown: number | null; start: number | null }[] = [];
+      // a name's rich text (WorkFlowy's HTML: `<b>`, `<i>`, `<s>`, `<code>`, `<a href>`) as runs, each
+      // with its formatting; any other element is its text
+      const runsOf = (root: Node): Run[] => {
+        const out: Run[] = [];
+        const visit = (n: Node, f: Omit<Run, 'text'>): void => {
+          if (n.nodeType === Node.TEXT_NODE) {
+            out.push({ text: n.textContent ?? '', ...f });
+            return;
+          }
+          const tag = n.nodeType === Node.ELEMENT_NODE ? (n as Element).tagName : '';
+          const href = tag === 'A' ? (n as Element).getAttribute('href') : null;
+          const g = { ...f, ...((tag === 'B' || tag === 'STRONG') && { bold: true }), ...((tag === 'I' || tag === 'EM') && { italic: true }), ...((tag === 'S' || tag === 'STRIKE' || tag === 'DEL') && { strike: true }), ...(tag === 'CODE' && { code: true }), ...(href !== null && { href }) };
+          for (const c of n.childNodes) visit(c, g);
+        };
+        visit(root, {});
+        return out;
+      };
+      const html = (s: string): Node => {
+        const t = document.createElement('template');
+        t.innerHTML = s;
+        return t.content;
+      };
       const walk = (it: any, depth: number) => {
         for (const c of it.getChildren()) {
           const internal = c.data.projectReferenceOrThrow.getItem();
           const layout = internal?.layoutMode ?? 'bullets';
           let name = c.getNameInPlainText();
+          let runs = runsOf(html(c.getName()));
           let note: string | null = c.getNoteInPlainText() || null;
           // the name or note being edited: its editor's text, ahead of what WorkFlowy stored (it saves
           // half a second after typing stops); a note being edited is there even when empty
           if (c.getId() === focusedId) {
             const text: string = (content as any).editor?.plainText ?? content!.textContent ?? '';
             if (inNote) note = text;
-            else name = text;
+            else {
+              name = text;
+              runs = runsOf(content!);
+            }
           }
           // a numbered item's number as WorkFlowy draws it: a prefix of the name, outside its text
           const drawn = layout === 'numbered' ? [...(c.getElement()?.querySelectorAll(':scope > .name span') ?? [])].find((sp: any) => !sp.closest('.content') && /^\d+\.$/.test(sp.textContent.trim())) : undefined;
           const start = internal?.metadata?.numbered_start ?? null;
-          flat.push({ depth, name, note, layout, completed: c.isCompleted(), id: c.getId(), shown: drawn ? parseInt(drawn.textContent, 10) : null, start });
+          flat.push({ depth, name, runs, note, layout, completed: c.isCompleted(), id: c.getId(), shown: drawn ? parseInt(drawn.textContent, 10) : null, start });
           walk(c, depth + 1);
         }
       };
@@ -373,18 +438,23 @@ export const driver: Driver = {
       run[f.depth] = f.layout === 'numbered' ? (f.shown ?? (run[f.depth] ? run[f.depth]! + 1 : (f.start ?? 1))) : 0;
       return f.layout === 'numbered' ? run[f.depth]! : null;
     });
-    const texts = raw.flat.map((f, i) => fromItem(f as Item, numbers[i]!));
+    // a name as Markdown, its formatting in markup (a code block's as it is), and where an offset in
+    // the name is in it
+    const mds = raw.flat.map((f) => (f.layout === 'code-block' ? { text: f.name, at: (p: number) => p } : runsAsMarkdown(f.runs)));
+    const texts = raw.flat.map((f, i) => fromItem({ ...f, name: mds[i]!.text } as Item, numbers[i]!));
     const blocks = raw.flat.map((f, i) => ({ depth: f.depth, text: texts[i]!.text }));
     let sel: Outline['sel'] = null;
     if (raw.sel && raw.sel.block >= 0) {
-      const it = raw.flat[raw.sel.block]!;
       const { prefix, cut } = texts[raw.sel.block]!;
       const { fence } = texts[raw.sel.block]!;
-      const base = raw.sel.inNote ? prefix + it.name.length + (cut !== undefined ? 1 : 0) + 1 + (fence ? fence.length + 1 : 0) : prefix;
-      const at = (p: number): number => base + p + (!raw.sel!.inNote && cut !== undefined && p > cut ? 1 : 0);
+      const md = mds[raw.sel.block]!;
+      const base = raw.sel.inNote ? prefix + md.text.length + (cut !== undefined ? 1 : 0) + 1 + (fence ? fence.length + 1 : 0) : prefix;
+      const at = (p: number): number => (raw.sel!.inNote ? base + p : base + md.at(p) + (cut !== undefined && md.at(p) > cut ? 1 : 0));
       sel = { block: raw.sel.block, anchor: at(raw.sel.anchor), head: at(raw.sel.head) };
     }
-    return { blocks, sel, ...(raw.selected.length && { selected: raw.selected }) };
+    const got: Outline = { blocks, sel, ...(raw.selected.length && { selected: raw.selected }) };
+    if (process.env.OURUS_SXS_WF_EXPORT) await checkExport(page, got);
+    return got;
   },
 
   async act(page: Page, action: string, settle: () => Promise<void>) {

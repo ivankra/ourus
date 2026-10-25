@@ -88,6 +88,20 @@ export interface Driver {
    */
   readonly freeForm?: boolean;
   /**
+   * The app's block holds paragraphs, a blank line between them in its text (`foo⏎⏎bar`), which the
+   * driver loads and reads as such: an item's paragraphs right after its text are its block's
+   * (`ProjectOptions.paragraphsInBlock`), not blocks of their own.
+   */
+  readonly paragraphsInBlock?: boolean;
+  /**
+   * Actions after which the app has no text focus, as it ends them (a deleted block selection:
+   * `deleteSubtree`): where a step ends with one and the app has neither a caret nor selected blocks,
+   * its outline alone is judged, there being no caret of the app's to compare ourus's with; where more
+   * that needs a caret follows it (typing), an app left so skips the example as it plays ("no text
+   * focus after …"), and one that kept a caret plays on.
+   */
+  readonly noCaretAfter?: readonly string[];
+  /**
    * How the app behaves where ourus has an option, out of the box. A test that sets an option to
    * another value than ourus's default is run only when the app behaves that way, or can be set to.
    */

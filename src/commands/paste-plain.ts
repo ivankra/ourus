@@ -73,7 +73,7 @@ function enteredLines(ctx: CommandContext, clipboard: string): CommandOutcome {
       next = new CommandContext(result.doc, result.selection);
     }
     if (k === lines.length - 1) break;
-    result = enterCommand(next);
+    result = enterCommand(next, false);
     if (!result || result.status !== 'applied') return result;
     changes = composeChanges(ctx.doc.text, changes, result.changes);
     next = new CommandContext(result.doc, result.selection);
@@ -162,9 +162,8 @@ export function plainLines(ctx: CommandContext, clipboard: string): CommandOutco
     current = current.slice(first, s.length);
     target = rest;
   }
-  // ending with a line break: the caret past the spaces the new line starts with, as Shift-Enter's
-  if (lines[lines.length - 1] === '') while (caret < current.text.length && (current.text[caret] === ' ' || current.text[caret] === '\t')) caret++;
-  // (that line empty, and more of the text after it: two paragraphs, the caret on the blank line
+  // (ending with a line break: the caret before the spaces the new line starts with, as Shift-Enter's;
+  // that line empty, and more of the text after it: two paragraphs, the caret on the blank line
   // between, as Shift-Enter makes them there)
   const after = current.text.indexOf('\n', caret);
   if (lines[lines.length - 1] === '' && caret > 0 && current.text[caret - 1] === '\n' && after >= 0 && trimMd(current.text.slice(caret, after)) === '') {

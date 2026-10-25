@@ -95,9 +95,10 @@ export function deleteContentForwardCommand(ctx: CommandContext): CommandOutcome
     draft.setText(below, (close ? lower.splice(close.from, close.to) : lower).splice(open.from, open.to)).setCaret(node, offset, -1);
     return ctx.apply(draft);
   }
-  // an empty item below goes, this node taking its gap as a join does
+  // an empty item below goes, this node taking its gap as a join does; with children, as Backspace at
+  // its start takes it (Delete33b)
   if (below.kind === 'item' && lower.empty) {
-    if (below.children.length) return null;
+    if (below.children.length) return joinUp(ctx, below, lower, false);
     draft.remove([below]).gap(node, below.gap).setCaret(node, offset, -1);
     return ctx.apply(draft);
   }

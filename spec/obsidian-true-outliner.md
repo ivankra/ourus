@@ -232,7 +232,7 @@ was: a list needs no blank line to start after a paragraph, as a quote needs non
 heading none (Split title above a subheading). Bare Obsidian and Outliner do the same.
 
 ```yaml
-tags: edge free-form
+tags: edge
 ```
 
 ```buffer
@@ -530,8 +530,8 @@ Body.
 *Shift-Enter: S4*
 
 Shift-Enter in a paragraph continues it on a new line: still one paragraph. The space at the break
-starts the new line, where Markdown renders nothing of it, as bare Obsidian and Outliner keep it
-(TO drops it).
+starts the new line, the caret before it, where Markdown renders nothing of it, as bare Obsidian
+and Outliner keep it (TO drops it).
 
 ```yaml
 tags: edge
@@ -545,7 +545,7 @@ one┃ two
 
 ```buffer
 one
- ┃two
+┃ two
 ```
 
 ## TO-S5
@@ -596,7 +596,7 @@ Hello┃ world
 
 ```buffer
 Hello
- ┃world
+┃ world
 ====
 ```
 
@@ -647,7 +647,7 @@ tags: edge
 - item
 
   para
-   ┃text
+  ┃ text
 ```
 
 ## TO-S11
@@ -691,7 +691,7 @@ tags: edge
 Left, the blank line stays: the text is two paragraphs.
 
 ```yaml
-tags: edge free-form
+tags: edge
 ```
 
 ```buffer
@@ -725,7 +725,7 @@ tags: edge
 
 ```buffer
 - a
-   ┃beta
+  ┃ beta
 ```
 
 ## TO-Bug269
@@ -1327,7 +1327,7 @@ node's text; left, it stays as written, and one Backspace on it goes back to whe
 started.
 
 ```yaml
-tags: edge free-form
+tags: edge
 ```
 
 ```buffer
@@ -1359,7 +1359,7 @@ tags: edge free-form
 *Abandoning an empty place, Shift-Enter, Tab, then leave: Doubly indented blank line kept on leaving*
 
 ```yaml
-tags: edge free-form
+tags: edge
 ```
 
 ```buffer
@@ -1631,7 +1631,7 @@ tags: edge free-form
 
 ```yaml
 enterOnEmptyItem: outdent
-tags: edge free-form
+tags: edge
 ```
 
 ```buffer

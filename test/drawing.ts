@@ -7,6 +7,16 @@ import { ProseText, OurusDoc, type OutlineNode } from '../src/doc/index.ts';
 import { createPlaceholder, trimMd } from '../src/text/index.ts';
 
 /**
+ * Whether a drawing draws the caret or a selection. A step's expected buffer may not, where only
+ * what the text becomes matters (the caret left a node, say): the caret is then not checked. A start
+ * always draws it.
+ */
+export const drawsCaret = (drawn: string): boolean => /[┃«»]/.test(drawn);
+
+/** A drawing without its caret and selection, to set beside one that draws none. */
+export const withoutCaret = (drawn: string): string => drawn.replace(/[┃«»]/g, '');
+
+/**
  * Reads a drawn state: text plus caret (`┃`) or selection (`«…»`), placeholders (`◌`),
  * tabs drawn as `→`.
  */

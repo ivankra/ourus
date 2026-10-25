@@ -14,7 +14,7 @@ From Athens's help page (its table in the bundle, `mod` Control):
 | action | keys |
 | --- | --- |
 | `enter` | Enter |
-| `shiftEnter` | Shift+Enter (a line break in the block) |
+| `shiftEnter` | Shift+Enter (a line break in the block; twice, a blank line, the block holding paragraphs: an item's paragraphs right after its text are its block's (`paragraphsInBlock`, since 2026-10-25)) |
 | `indent` | Tab ("Indent selected block") |
 | `outdent` | Shift+Tab ("Unindent selected block") |
 | `moveSubtreeUp` | *missing*: blocks move by drag and drop only (below); its tests are skipped |
@@ -22,7 +22,7 @@ From Athens's help page (its table in the bundle, `mod` Control):
 | `deleteContentBackward` | Backspace |
 | `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Shift+Home, Backspace |
-| `deleteSubtree` | Shift+Up on the block's first line (selects it: `textarea_keydown.cljs`), Backspace (deletes the selected blocks, children and all: `listeners.cljs`) |
+| `deleteSubtree` | Shift+Up on the block's first line (selects it: `textarea_keydown.cljs`), Backspace (deletes the selected blocks, children and all: `listeners.cljs`); after it no block is edited: the outline alone is judged (`noCaretAfter`, since 2026-10-25). |
 | `duplicateSubtree` | *missing* (no command): its tests are skipped |
 | `pasteStructured` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V ("Paste without formatting") |
@@ -92,6 +92,10 @@ says so if the patch found nothing to name.
   one; the `:block/heading` and `:block/header` attributes the bundle names render nothing), a task
   Roam's `{{[[TODO]]}} ` / `{{[[DONE]]}} ` (Ctrl+Enter, "Convert to checkbox", writes it), code its
   fences. So the three `markup-` tags are refused. Athens numbers no blocks.
+- **Code and math have no editor of their own**: a fenced block is shown as one (`<pre><code>`), but
+  editing it is the block's textarea, fences and all, and Enter on a code or math line splits the
+  block as on any text (Shift+Enter makes the new line). The driver refuses `enter-in-fence` (since
+  2026-10-25: Fence1, 2, 3, 5, 42; checked by hand in a headless Chromium of its own).
 - **A block's text is stored right after each change**, not two seconds after: Athens's block editor
   keeps an idle save, `(debounce #(save :idle) 2000)` in its state, and `proxy.ts` makes the 2000 a 0. A
   block the caret has left reads from the store, so for those two seconds it read as it was
@@ -113,7 +117,8 @@ examples skipped for a value declared disagree when played, those of the value a
   (`pasteStructuredLines: items`); a pasted number stays text, nested lists' too
   (`pasteStructuredListForm: literal`: Athens numbers no blocks); a paragraph's list goes under it
   (`pasteStructuredParagraphList: children`). The caret goes to the start of the first pasted block
-  (its `focus-uid`, the first new block of the paste). Declared since 2026-10-18: 14 disagreements
+  (its `focus-uid`, the first new block of the paste; checked in a headless Chromium of its own,
+  typing after it: `- !┃x`), which the driver declares, `quirkPasteCaret: athens` (since 2026-10-25). Declared since 2026-10-18: 14 disagreements
   were these, and 6 examples of the values run instead.
 
 ## Athens bugs met on the way

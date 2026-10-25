@@ -21,8 +21,9 @@ The rules, in order; the first that applies wins:
 4. **On the empty line a Shift-Enter made**, a paragraph break, for the same reason: an empty
    paragraph inside the item, or after the paragraph (ShiftEnter11, ShiftEnter12, ShiftEnter15,
    ShiftEnter16).
-5. **Otherwise the text breaks at the caret**, the new line at the node's content column
-   (ShiftEnter1, ShiftEnter2, ShiftEnter3); at the end of the text the empty new line is held by a
+5. **Otherwise the text breaks at the caret**, the new line at the node's content column, the
+   spaces on either side of the caret staying where they are and the caret at the new line's
+   start, before them (ShiftEnter1, ShiftEnter2, ShiftEnter3, ShiftEnter5); at the end of the text the empty new line is held by a
    placeholder (ShiftEnter4). Text after the caret that would start a block there, or underline the
    paragraph into a heading, is escaped, in every flavor (ShiftEnter5, ShiftEnter6, ShiftEnter7,
    ShiftEnter8, ShiftEnter9, ShiftEnter18, ShiftEnter19), and so is the text's start where its first
@@ -33,16 +34,18 @@ Over a selection across lines, the selection goes first, as Backspace deletes it
 breaks at the caret that leaves (ShiftEnter27).
 
 Backspace takes a Shift-Enter back (ShiftEnter17, ShiftEnter20), the spaces at the break included
-(ShiftEnter21). The spaces at the break start the new line, after its indentation: a continuation
-line's leading spaces render as nothing but are kept in the text, and they change no structure,
-where left before the break two would make a hard break. Spaces before a task's text are its
+(ShiftEnter21). The break moves no space, as Logseq, Roam, Dynalist, RemNote, bare Obsidian and
+its Outliner break the line (and every other app with line breaks in a block, but true-outliner and
+Emacs, which drop the new line's leading space): a continuation line's leading spaces render as
+nothing but are its text, the user's whitespace as an item's padding is, and the caret is before
+them; two spaces or more left at the end of the first line make it a hard break. Spaces before a task's text are its
 checkbox's, and go (ShiftEnter26b). Bare Obsidian and the text editors don't
 escape what follows the caret, which turns `- def` into a list and `===` into a heading underline.
 
 ## ShiftEnter1
 
-Continues at the content column, the space at the break starting the new line, which Backspace
-brings back ([ShiftEnter21](#shiftenter21)).
+Continues at the content column, the space after the caret starting the new line, the caret before
+it, as Backspace finds it ([ShiftEnter21](#shiftenter21)).
 
 ```yaml
 tags: core
@@ -56,7 +59,7 @@ tags: core
 
 ```buffer
 - one two
-   ┃three
+  ┃ three
 ```
 
 ## ShiftEnter2
@@ -77,7 +80,7 @@ tags: common
 ```buffer
 1. a
    - b
-      ┃c
+     ┃ c
 ```
 
 ## ShiftEnter3
@@ -98,7 +101,7 @@ tags: edge
 ```buffer
 - x
 →- a
-→   ┃b
+→  ┃ b
 ```
 
 ## ShiftEnter4
@@ -139,8 +142,8 @@ tags: common
 > shiftEnter
 
 ```buffer
-- abc
-   ┃\- def
+- abc 
+  ┃\- def
 ```
 
 ## ShiftEnter6
@@ -158,8 +161,8 @@ tags: edge
 > shiftEnter
 
 ```buffer
-- abc
-   ┃1\. def
+- abc 
+  ┃1\. def
 ```
 
 ## ShiftEnter7
@@ -178,8 +181,8 @@ Title ┃===
 > shiftEnter
 
 ```buffer
-Title
- ┃\===
+Title 
+┃\===
 ```
 
 ## ShiftEnter8
@@ -197,8 +200,8 @@ Title ┃--
 > shiftEnter
 
 ```buffer
-Title
- ┃\--
+Title 
+┃\--
 ```
 
 ## ShiftEnter9
@@ -216,8 +219,8 @@ tags: rare
 > shiftEnter
 
 ```buffer
-- one
-   ┃\<div>
+- one 
+  ┃\<div>
 ```
 
 ## ShiftEnter10
@@ -227,7 +230,7 @@ the text: the line and the rest become the item's next paragraph, as in Logseq. 
 blank line back, the line break staying ([Backspace19](backspace.md#backspace19)).
 
 ```yaml
-tags: edge free-form
+tags: edge
 ```
 
 ```buffer
@@ -260,7 +263,7 @@ Shift-Enter makes such a paragraph. (After a paragraph that isn't an item's, the
 from Enter, and Backspace takes that back: [ShiftEnter12](#shiftenter12).)
 
 ```yaml
-tags: common free-form
+tags: common
 ```
 
 ```buffer
@@ -292,7 +295,7 @@ it, where what is typed is a paragraph of its own, as after Enter at a paragraph
 takes the breaks back one at a time, to the end of the paragraph.
 
 ```yaml
-tags: common free-form
+tags: common
 ```
 
 ```buffer
@@ -321,7 +324,7 @@ line), as Dynalist, BlockNote, true-outliner and the text editors break the line
 takes the break back, rather than unwrapping or joining the item as at a text start.
 
 ```yaml
-tags: edge free-form
+tags: edge
 ```
 
 ```buffer
@@ -347,7 +350,7 @@ A first child right under its parent's text: the bare `-` would underline that t
 so a blank line sets it off, as above an empty item there.
 
 ```yaml
-tags: rare free-form
+tags: rare
 ```
 
 ```buffer
@@ -418,7 +421,7 @@ tags: common free-form
 Shift-Enter twice at an item's end, then typing: the text is the item's second paragraph.
 
 ```yaml
-tags: common free-form
+tags: common
 ```
 
 ```buffer
@@ -438,7 +441,7 @@ tags: common free-form
 Paragraph break in a CRLF item: new lines take the ending of the line they split.
 
 ```yaml
-tags: rare free-form
+tags: rare
 ```
 
 ```buffer
@@ -495,8 +498,8 @@ tags: rare
 > shiftEnter
 
 ```buffer
-1. abc
-    ┃2. x
+1. abc 
+   ┃2. x
 ```
 
 ## ShiftEnter19
@@ -516,8 +519,8 @@ a | b ┃|---|---|
 > shiftEnter
 
 ```buffer
-a | b
- ┃|\---|---|
+a | b 
+┃|\---|---|
 ```
 
 ## ShiftEnter20
@@ -548,11 +551,11 @@ tags: rare
 
 ## ShiftEnter21
 
-Shift-Enter at a space, then Backspace: the text comes back, the space with it, unlike after Enter,
-which trims it ([Enter44](enter.md#enter44)). The space starts the new line, after its indentation, as bare
-Obsidian keeps it and every app that breaks the line but true-outliner: Markdown renders a
-continuation line without its leading spaces, but keeps them in the text, and the join, which
-concatenates, gives them back; at the end of the first line two would make a hard break.
+Shift-Enter at a space, then Backspace: the text comes back as it was, the space and the caret
+with it, unlike after Enter, which trims it ([Enter44](enter.md#enter44)). The space starts the new
+line, after its indentation, the caret before it, as every app that breaks the line keeps it but
+true-outliner and Emacs: Markdown renders a continuation line without its leading spaces, but
+keeps them in the text, and the join, which concatenates, gives them back.
 
 ```yaml
 tags: edge
@@ -566,13 +569,13 @@ tags: edge
 
 ```buffer
 - one two
-   ┃three
+  ┃ three
 ```
 
 > deleteContentBackward
 
 ```buffer
-- one two ┃three
+- one two┃ three
 ```
 
 ## ShiftEnter22
@@ -637,8 +640,8 @@ tags: rare
 > shiftEnter
 
 ```buffer
-[Note]\: this
- ┃matters a lot
+[Note]\: this 
+┃matters a lot
 ```
 
 ## ShiftEnter24
@@ -674,7 +677,7 @@ Shift-Enter at the start of a continuation line that reads as a link reference d
 own: the new paragraph's start is escaped, so it stays text.
 
 ```yaml
-tags: rare free-form
+tags: rare
 ```
 
 ```buffer

@@ -123,7 +123,7 @@ make one, `y` and the rest of the text the item's second paragraph. Logseq, Logs
 Athens keep the blank line in the block.
 
 ```yaml
-tags: edge free-form
+tags: edge
 clipboard: |
   x
 
@@ -343,7 +343,7 @@ The same where the paste starts a paragraph of its own: after the blank line, `[
 link reference definition, which shows nothing, so it is escaped.
 
 ```yaml
-tags: rare free-form
+tags: rare
 clipboard: |-
   x
 
@@ -365,7 +365,7 @@ px
 ## PastePlain13
 
 Plain paste ending with a line break, before ` ---`: the space at the break starts the new line, as
-Shift-Enter's does ([ShiftEnter21](shift-enter.md#shiftenter21)), the caret after it, and `---` is
+Shift-Enter's does ([ShiftEnter21](shift-enter.md#shiftenter21)), the caret before it, and `---` is
 escaped, which would underline the paragraph into a heading. Logseq, Logseq DB, Tine, Roam and Athens
 keep the space too.
 
@@ -383,7 +383,7 @@ p┃ ---
 
 ```buffer
 px
- ┃\---
+┃ \---
 ```
 
 ## PastePlain14
@@ -649,7 +649,7 @@ Shift-Enter's there, a paragraph break ([ShiftEnter10](shift-enter.md#shiftenter
 pasted text starts the item's new paragraph.
 
 ```yaml
-tags: rare free-form
+tags: rare
 clipboard: |-
 
   x
@@ -697,7 +697,7 @@ x┃abc
 Several leading line breaks, at the start of a paragraph after another, go together.
 
 ```yaml
-tags: rare free-form
+tags: rare
 clipboard: |-
 
 
@@ -903,6 +903,61 @@ clipboard: |-
 - ab
 - x
 - y┃
+```
+
+## PastePlain33b
+
+With `pastePlainLines: items` the lines are nodes, so over a selection they go as `paste`'s nodes do
+(`pasteOverSelection`): by default the selection goes first.
+
+```yaml
+tags: edge
+pastePlainLines: items
+clipboard: |-
+  x
+  y
+```
+
+```buffer
+- a«bc»d
+- e
+```
+
+> pastePlain
+
+```buffer
+- ad
+- x
+- y┃
+- e
+```
+
+## PastePlain33c
+
+With `pastePlainLines: items` and `pasteOverSelection: ignore` (Tana), the lines leave the selected
+text as it is.
+
+```yaml
+tags: edge
+pastePlainLines: items
+pasteOverSelection: ignore
+clipboard: |-
+  x
+  y
+```
+
+```buffer
+- a«bc»d
+- e
+```
+
+> pastePlain
+
+```buffer
+- abcd
+- x
+- y┃
+- e
 ```
 
 ## PastePlain34

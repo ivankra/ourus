@@ -17,7 +17,7 @@
 
 import type { Page } from 'playwright-core';
 import type { Driver } from '../lib/driver.ts';
-import { liftOwned, ownBlocks, type Block, type Outline, type Sel } from '../lib/block.ts';
+import { liftOwned, ownBlocks, runsAsMarkdown, type Block, type Outline, type Run, type Sel } from '../lib/block.ts';
 
 /** BlockNote's keys for the spec's motions; the `select…` motions add Shift. */
 const MOTIONS: Record<string, string> = {
@@ -138,17 +138,36 @@ function find(): boolean {
   return !!(w.__sxsBn && w.__sxsView);
 }
 
-/** In the page: the blocks (canonical text, depth, prefix length) and the caret, by block and offset. */
-function readPage(): { blocks: { depth: number; text: string; prefix: number; free: boolean }[]; sel: Sel | null } {
+/** A block as the page reads it: its canonical text but for its content, which is `runs` (formatted) or `plain`. */
+interface PageBlock {
+  depth: number;
+  prefix: string;
+  suffix: string;
+  /** Its content with its formatting, for a block of text (null: code, its text as it is). */
+  runs: Run[] | null;
+  plain: string;
+  /** Where a number that is text ends, an escape after it in the canonical text. */
+  cut?: number;
+  free: boolean;
+}
+
+/** In the page: the blocks, and the caret, by block and offset in its content. */
+function readPage(): { blocks: PageBlock[]; sel: Sel | null } {
   const w = window as any;
   const view = w.__sxsView;
-  const flat: { depth: number; text: string; prefix: number; cut?: number; id: string; free: boolean }[] = [];
-  const textOf = (b: any): string => (Array.isArray(b.content) ? b.content.map((c: any) => (c.type === 'text' ? c.text : c.type === 'link' ? c.content.map((x: any) => x.text).join('') : '')).join('') : '');
+  const flat: (PageBlock & { id: string })[] = [];
+  // its content as runs of text, each with its formatting (a link's text its own runs)
+  const runsOf = (b: any): Run[] =>
+    (Array.isArray(b.content) ? b.content : []).flatMap((c: any) => {
+      const run = (x: any, href?: string): Run => ({ text: x.text, bold: !!x.styles?.bold, italic: !!x.styles?.italic, strike: !!x.styles?.strike, code: !!x.styles?.code, ...(href !== undefined && { href }) });
+      return c.type === 'text' ? [run(c)] : c.type === 'link' ? c.content.map((x: any) => run(x, c.href)) : [];
+    });
+  const textOf = (b: any): string => runsOf(b).map((r) => r.text).join('');
   const walk = (bs: any[], depth: number): void => {
     // a run of numbered blocks is numbered from its first's `start`
     let number = 0;
     bs.forEach((b, k) => {
-      let t = textOf(b);
+      const t = textOf(b);
       let prefix = '';
       let suffix = '';
       let cut: number | undefined;
@@ -156,23 +175,22 @@ function readPage(): { blocks: { depth: number; text: string; prefix: number; fr
         number = k > 0 && bs[k - 1].type === 'numberedListItem' ? number + 1 : Number(b.props?.start) || 1;
         prefix = `${number}. `;
       }
-      if ((b.type === 'numberedListItem' || b.type === 'bulletListItem' || b.type === 'paragraph') && /^\d{1,9}[.)]/.test(t)) {
-        // a number that is text, escaped in the canonical text
-        cut = /^\d+/.exec(t)![0].length;
-        t = t.slice(0, cut) + '\\' + t.slice(cut);
-      }
+      // a number that is text, escaped in the canonical text
+      if ((b.type === 'numberedListItem' || b.type === 'bulletListItem' || b.type === 'paragraph') && /^\d{1,9}[.)]/.test(t)) cut = /^\d+/.exec(t)![0].length;
       if (b.type === 'checkListItem') prefix = b.props.checked ? '[x] ' : '[ ] ';
       else if (b.type === 'heading') prefix = `${'#'.repeat(b.props.level)} `;
       else if (b.type === 'codeBlock') {
-        prefix = `\`\`\`${b.props.language === 'text' ? '' : b.props.language}\n`;
-        suffix = '\n```';
+        // its fence longer than a run of backticks starting one of its lines, as Markdown needs
+        const ticks = '`'.repeat(Math.max(3, ...[...t.matchAll(/^ {0,3}(`+)/gm)].map((m) => m[1]!.length + 1)));
+        prefix = `${ticks}${b.props.language === 'text' ? '' : b.props.language}\n`;
+        suffix = `\n${ticks}`;
       } else if (b.type === 'quote') prefix = '> ';
       // a divider is a thematic break, as the projection has one
       else if (b.type === 'divider') prefix = '---';
       else if (b.type !== 'bulletListItem' && b.type !== 'numberedListItem' && b.type !== 'paragraph') prefix = `<${b.type}> `;
       // outside every list: a paragraph, a heading, code, a quote, a divider, any block but a list item
       const free = !['bulletListItem', 'numberedListItem', 'checkListItem', 'toggleListItem'].includes(b.type);
-      flat.push({ depth, text: prefix + t + suffix, prefix: prefix.length, ...(cut !== undefined && { cut }), id: b.id, free });
+      flat.push({ depth, prefix, suffix, runs: b.type === 'codeBlock' ? null : runsOf(b), plain: t, ...(cut !== undefined && { cut }), id: b.id, free });
       walk(b.children, depth + 1);
     });
   };
@@ -186,8 +204,7 @@ function readPage(): { blocks: { depth: number; text: string; prefix: number; fr
       const block = flat.findIndex((b) => b.id === id);
       const content = $p.start(d) + 1; // the container's content node, then its text
       if (block < 0 || pos < content) return null;
-      const { prefix, cut } = flat[block]!;
-      return { block, offset: prefix + pos - content + (cut !== undefined && pos - content > cut ? 1 : 0) };
+      return { block, offset: pos - content };
     }
     return null;
   };
@@ -195,7 +212,7 @@ function readPage(): { blocks: { depth: number; text: string; prefix: number; fr
   const a = view.hasFocus() ? at(anchor) : null;
   const h = view.hasFocus() ? at(head) : null;
   const sel = a && h && a.block === h.block ? { block: a.block, anchor: a.offset, head: h.offset } : null;
-  return { blocks: flat.map(({ depth, text, prefix, free }) => ({ depth, text, prefix, free })), sel };
+  return { blocks: flat.map(({ id, ...b }) => b), sel };
 }
 
 /** In the page: the outline loaded, the history made empty, the caret placed (block, offsets past its prefix). */
@@ -230,6 +247,8 @@ export const driver: Driver = {
   displayName: 'BlockNote',
   url: 'https://www.blocknotejs.org/examples/basic/minimal',
   model: 'block',
+  // a block's text holds a blank line, its paragraphs apart
+  paragraphsInBlock: true,
   // paragraphs, headings and code are blocks outside every list, as the spec's buffers have them; list
   // items the rest
   freeForm: true,
@@ -237,6 +256,13 @@ export const driver: Driver = {
   // ProseMirror's paste opens both seams, and a list keeps its form
   behaves: {
     enterSplitSpace: 'start',
+    // Backspace at an item's text start: a paragraph where it is (Backspace1, Enter38)
+    backspaceAtItemStart: 'unwrap',
+    // Enter on an empty item: a paragraph where it is (Enter7, Enter27; the last of a nested list too,
+    // Enter5, which ourus outdents)
+    enterOnEmptyItem: 'unwrap',
+    // Backspace right after a task's checkbox: a paragraph where it is (TaskBackspace2, TaskBackspace3)
+    taskEditing: 'unwrap',
     enterAtTextStart: 'stay',
     copyAtCaret: 'host',
     pasteSeams: 'open',
@@ -298,6 +324,15 @@ export const driver: Driver = {
 
   async read(page: Page) {
     const r = await page.evaluate(readPage);
-    return { blocks: ownBlocks(r.blocks.map(({ depth, text, free }) => ({ depth, text, ...(free && { free: true as const }) })), ownsList), sel: r.sel };
+    // a block's text: its content as Markdown, its formatting in markup, and where an offset in the
+    // content is in it
+    const texts = r.blocks.map((b) => {
+      const md = b.runs ? runsAsMarkdown(b.runs) : { text: b.plain, at: (p: number) => p };
+      const cut = b.cut !== undefined ? md.at(b.cut) : -1;
+      const body = cut >= 0 ? `${md.text.slice(0, cut)}\\${md.text.slice(cut)}` : md.text;
+      return { text: b.prefix + body + b.suffix, at: (p: number) => b.prefix.length + md.at(p) + (b.cut !== undefined && p > b.cut ? 1 : 0) };
+    });
+    const sel = r.sel && { block: r.sel.block, anchor: texts[r.sel.block]!.at(r.sel.anchor), head: texts[r.sel.block]!.at(r.sel.head) };
+    return { blocks: ownBlocks(r.blocks.map(({ depth, free }, i) => ({ depth, text: texts[i]!.text, ...(free && { free: true as const }) })), ownsList), sel };
   },
 };

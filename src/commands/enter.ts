@@ -9,7 +9,7 @@ import { notApplicable, reject, type CommandContext, type CommandOutcome } from 
 import { codeAt, newlineInCode } from './code.ts';
 import { deleteSelectionAcross } from './backspace.ts';
 import { outdentCommand } from './outdent.ts';
-import { pastPrefix, textActedOnAt } from './util.ts';
+import { leaveList, pastPrefix, textActedOnAt } from './util.ts';
 
 /**
  * Enter in a node's text (spec/enter.md's rules 7–10): the node splits at the caret, the spaces there
@@ -21,10 +21,12 @@ import { pastPrefix, textActedOnAt } from './util.ts';
  * its list or outdents (rule 3); at a text's start a new empty node goes above (rule 6), or with
  * `enterAtTextStart: stay` the text splits there, the caret staying with it; at the end of a block of
  * its own lines, a paragraph after it (rule 11); over a selection, it goes first. Null, unsupported,
- * for a selection whose split would have blanks at it, an item whose text is no paragraph. With
- * `enterSplitSpace: start`, the spaces after the caret start the second half, as its padding.
+ * for a selection whose split would have blanks at it, an item whose text is neither a paragraph nor
+ * an ATX heading. With `enterSplitSpace: start`, the spaces after the caret start the second half, as
+ * its padding. `key`: the Enter key's, where an app's quirk of it applies (`quirkEnterMidHeading`),
+ * not another command's split (plain paste's line breaks, Shift-Enter in an ATX title).
  */
-export function enterCommand(ctx: CommandContext): CommandOutcome {
+export function enterCommand(ctx: CommandContext, key = true): CommandOutcome {
   ctx = pastPrefix(ctx);
   const doc = ctx.doc;
   const config = doc.config;
@@ -57,7 +59,9 @@ export function enterCommand(ctx: CommandContext): CommandOutcome {
   // (elsewhere than Obsidian the title is a paragraph's first line: its rest set apart by a blank line)
   const title = node.kind === 'quote' && text.type === 'title';
   if (title && text.frame.some((p) => p.part === 'callout' && offset > p.from && offset < p.to)) return reject('not-expressible', "a callout's type is one word");
-  if (node.kind === 'item' ? text.type !== 'paragraph' : node.kind !== 'heading' && node.kind !== 'paragraph' && !title) return null;
+  // (an item's text a paragraph, or an ATX heading's, `- # a`: it splits as an item)
+  const headingItem = node.kind === 'item' && text.type === 'heading' && text.heading?.form === 'atx';
+  if (node.kind === 'item' ? text.type !== 'paragraph' && !headingItem : node.kind !== 'heading' && node.kind !== 'paragraph' && !title) return null;
   if (text.empty && ctx.collapsed) return node.kind === 'item' ? enterInEmptyItem(ctx, node, text, offset) : emptyParagraph(ctx, node);
   const s = text.text;
   const line = lineOf(s, offset);
@@ -97,6 +101,20 @@ export function enterCommand(ctx: CommandContext): CommandOutcome {
   const draft = ctx.draft();
   // (`enterMidItem` is of an item with children: one without has its rest as its sibling either way)
   const child = node.kind === 'item' && node.children.length > 0 && (atEnd || config.enterMidItem === 'child');
+  // with `quirkEnterMidHeading: workflowy`, the text before the caret a paragraph (an item) above the
+  // heading, which keeps the rest (its `#`s or its underline) and its section (its children)
+  if (key && config.quirkEnterMidHeading === 'workflowy' && (node.kind === 'heading' || headingItem) && text.heading && !atEnd) {
+    const open = text.frame.find((p) => p.part === 'heading');
+    const from = open ? open.to : 0;
+    // (a setext title starts at its text: spaces kept there would be none)
+    let rest = b;
+    if (!open) while (rest < s.length && isSpaceOrTab(s.charCodeAt(rest))) rest++;
+    const [, made] = draft.split(node, a, { to: rest, children: 'follow', into: 'sibling' });
+    draft.convert(made, node.kind).setText(made, text.slice(0, from).concat(text.slice(rest, close ? close.to : s.length)));
+    draft.setText(node, text.slice(from, a).asItem(headingItem));
+    if (!headingItem) draft.convert(node, 'paragraph');
+    return ctx.apply(draft.setCaret(made, from, -1));
+  }
   // a heading's rest is its section's first paragraph, a callout title's the callout's
   const into = child || node.kind === 'heading' || title ? 'child' : 'sibling';
   const [, made] = draft.split(node, a, { to: b, children: node.kind === 'heading' || title ? 'stay' : 'follow', into, ...(title ? { kind: 'paragraph' as const } : {}) });
@@ -136,20 +154,6 @@ function blockAt(ctx: CommandContext): CommandOutcome | undefined {
 function emptyParagraph(ctx: CommandContext, node: OutlineNode): CommandOutcome {
   if (node.kind === 'paragraph' && node.parent?.kind === 'quote' && !node.next && !node.children.length) return outdentCommand(ctx);
   return reject('not-expressible', 'an empty paragraph makes no second one');
-}
-
-/**
- * An empty item leaving its list (rule 3): an empty paragraph where it was, held by a placeholder and
- * set off by blank lines; the items after it a list of their own after it. In a quote it stays in the
- * quote. Its checkbox goes with the marker.
- */
-function leaveList(ctx: CommandContext, node: OutlineNode): CommandOutcome {
-  const draft = ctx.draft().convert(node, 'paragraph').setText(node, new ProseText('paragraph', false, ''));
-  const above = node.preceding;
-  // (a quote with no text above it, nothing to set it off from)
-  if (above && above.kind !== 'root' && above.gap === 0 && ctx.doc.textOf(above)) draft.gap(above, 1);
-  if (node.afterSubtree && node.gap === 0) draft.gap(node, 1);
-  return ctx.apply(draft.setCaret(node, 0, -1));
 }
 
 /**
@@ -254,11 +258,14 @@ function withoutSelection(text: ProseText, to: number): ProseText | null {
  * On an empty item: with children, a new empty first child (rule 4); without, first or in the middle
  * of its list, a new empty item above it, the caret staying in the lower one (rule 3,
  * `enterOnEmptyItem: sibling`; `exit` nested); last in its list, or by `enterOnEmptyItem`, it
- * outdents, or leaves its list (`leaveList`).
+ * outdents, or leaves its list (`leaveList`). With `unwrap`, but last without children, an empty
+ * paragraph where it is (Enter7c, Enter27b, Enter21b).
  */
 function enterInEmptyItem(ctx: CommandContext, node: OutlineNode, text: ProseText, offset: number): CommandOutcome {
   const config = ctx.doc.config;
   const draft = ctx.draft();
+  const last = !node.next || node.next.kind !== 'item';
+  if (config.enterOnEmptyItem === 'unwrap' && (node.children.length || !last)) return leaveList(ctx, node);
   if (node.children.length) {
     const made = newEmptyTextBeside(ctx, text, 'item');
     const id = draft.create('item', made);
@@ -266,7 +273,6 @@ function enterInEmptyItem(ctx: CommandContext, node: OutlineNode, text: ProseTex
     return ctx.apply(draft);
   }
   const nested = node.parent?.kind === 'item';
-  const last = !node.next || node.next.kind !== 'item';
   // as its list's last, or by `enterOnEmptyItem`: a nested item outdents as Shift-Tab does, a top-level
   // one leaves the list, an empty paragraph where it was (with `exit`, a nested one gets a sibling)
   if (last || !(config.enterOnEmptyItem === 'sibling' || (config.enterOnEmptyItem === 'exit' && nested))) {

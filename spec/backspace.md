@@ -41,7 +41,12 @@ applies wins:
    nothing to keep (Backspace38, [Enter47](enter.md#enter47)). A list the join leaves right under
    text it can't interrupt is set apart by a blank line (Backspace40). A first child with children
    joins its parent, they coming up into its place (`joinWithChildren: join`, the default;
-   Backspace45), or nothing happens (`refuse`, Backspace45b).
+   Backspace45), or nothing happens (`refuse`, Backspace45b). An item with text takes its marker
+   first where `backspaceAtItemStart` says so (`join`, the default, joins): with `body` it is a
+   paragraph at the end of the item above it, after that item's children (Backspace50), with
+   `unwrap` a paragraph where it is, the list split there (Backspace50b); a first child is a
+   paragraph where it is with either. With `logseq`, a numbered item's number goes first,
+   the item a bulleted one ([Quirk3](quirks.md#quirk3)).
 6. **With nothing above it in its container, the next layer of markup goes**: an item's marker, the
    item becoming a paragraph where it is (`backspaceAtTopItem: unwrap`, the default; Backspace33),
    or nothing (`refuse`, Backspace34); a quote's `>`, the node leaving the quote, the rest of which
@@ -300,7 +305,7 @@ bare Obsidian among them, delete the blank line only. ourus makes the edit itsel
 between nodes is a boundary, not the host's.
 
 ```yaml
-tags: common free-form
+tags: common
 ```
 
 ```buffer
@@ -324,7 +329,7 @@ a┃b
 Enter in a paragraph, then Backspace: the text is as it was, Enter's inverse in one press.
 
 ```yaml
-tags: common free-form
+tags: common
 ```
 
 ```buffer
@@ -351,7 +356,7 @@ With several blank lines between two paragraphs, all of them go: deleting only o
 paragraphs apart, the key seeming to do nothing.
 
 ```yaml
-tags: rare free-form
+tags: rare
 ```
 
 ```buffer
@@ -372,7 +377,7 @@ a┃b
 The list the joined paragraph owned comes along: it is the list of the paragraph it joins.
 
 ```yaml
-tags: rare free-form
+tags: rare
 ```
 
 ```buffer
@@ -944,7 +949,7 @@ Logseq, Tine, Roam, Athens, Dynalist, RemNote, BlockNote, Obsidian's Outliner an
 back the line break Shift-Enter made; SiYuan joins glued.
 
 ```yaml
-tags: edge free-form
+tags: edge
 ```
 
 ```buffer
@@ -1008,7 +1013,7 @@ paragraph owned stay.
 The empty paragraph owns the list after it; removing it keeps that list, which joins the list above.
 
 ```yaml
-tags: edge free-form
+tags: edge
 ```
 
 ```buffer
@@ -1452,7 +1457,7 @@ Joined to `[a]:`, the text would be a link reference definition, invisible: the 
 start is escaped.
 
 ```yaml
-tags: rare free-form
+tags: rare
 ```
 
 ```buffer
@@ -1512,6 +1517,30 @@ p
 p┃t
 
 2. m
+```
+
+## Backspace40b
+
+The first item of a bullet list becomes a paragraph (`backspaceAtTopItem: unwrap`); the ordered list
+from 3 after it, a list of its own, keeps its numbers, a blank line setting it apart from the
+paragraph it would continue. Only where a blank line would loosen an item's list does it start at 1
+instead ([Regression1](regressions.md#regression1)).
+
+```yaml
+tags: edge
+```
+
+```buffer
+- ┃x
+3. c
+```
+
+> deleteContentBackward
+
+```buffer
+┃x
+
+3. c
 ```
 
 ## Backspace41
@@ -1852,7 +1881,7 @@ blank line with it, the caret at the text below, as Backspace on an empty first 
 ([Backspace17](#backspace17)); Delete there does the same.
 
 ```yaml
-tags: edge free-form
+tags: edge
 ```
 
 ```buffer
@@ -1878,7 +1907,7 @@ para
 The same above the document's first heading.
 
 ```yaml
-tags: rare free-form
+tags: rare
 ```
 
 ```buffer
@@ -2124,7 +2153,7 @@ paragraph's own then, where `|---|` under `| a |` would make a table, so it is e
 escapes it ([Outdent20](outdent.md#outdent20)).
 
 ```yaml
-tags: rare free-form
+tags: rare
 flavor: gfm
 ```
 
@@ -2141,4 +2170,75 @@ para
 para┃i
 | a |
 |\---|
+```
+
+## Backspace50
+
+With `backspaceAtItemStart: body`, Backspace at an item's text start takes its marker first: the item
+is a paragraph at the end of the item above, its children with it, as SiYuan (and Typora) do; the
+items after it stay in the list. A second press joins the paragraph as a line of that item's text
+(rule 4).
+
+```yaml
+tags: edge
+backspaceAtItemStart: body
+```
+
+```buffer
+- one
+- ┃two
+  - kid
+- next
+```
+
+> deleteContentBackward
+
+```buffer
+- one
+
+  ┃two
+  - kid
+- next
+```
+
+> deleteContentBackward
+
+```buffer
+- one
+  ┃two
+  - kid
+- next
+```
+
+## Backspace50b
+
+With `backspaceAtItemStart: unwrap`, the item is a paragraph where it is, the list split there, the
+items after it its list, as BlockNote does (and `backspaceAtTopItem: unwrap` with the first item). A
+second press joins it into the item above.
+
+```yaml
+tags: edge
+backspaceAtItemStart: unwrap
+```
+
+```buffer
+- one
+- ┃two
+- next
+```
+
+> deleteContentBackward
+
+```buffer
+- one
+
+┃two
+- next
+```
+
+> deleteContentBackward
+
+```buffer
+- one┃two
+  - next
 ```

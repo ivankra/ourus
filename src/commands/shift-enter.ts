@@ -12,7 +12,8 @@ import { hiddenSpacesAt, inMarkup, pastPrefix, textActedOnAt } from './util.ts';
 
 /**
  * Shift-Enter (spec/shift-enter.md): the text breaks at the caret (over a selection in one line, in
- * its place), the spaces around the break starting the new line (rule 5). An ATX title splits as with
+ * its place), the spaces on either side staying where they are, the caret before the new line's
+ * (rule 5). An ATX title splits as with
  * Enter; a one-line title or a table row refuses it; at an item's text start the line breaks after
  * its marker (rule 2). At a later line's start, the line and the rest become a paragraph of their
  * own, a blank line above them (rules 3 and 4). Null for code (rule 1) and a selection across lines,
@@ -54,7 +55,7 @@ export function shiftEnterCommand(ctx: CommandContext): CommandOutcome {
   const text = from.text;
   if (text instanceof AtomText) return text.type === 'table' ? reject('not-expressible', 'a table row is a single line') : null;
   if (node.head?.type === 'callout_title') return reject('not-expressible', 'a callout title is a single line');
-  if (text.heading?.form === 'atx') return enterCommand(ctx);
+  if (text.heading?.form === 'atx') return enterCommand(ctx, false);
   const underline = text.frame.find((p) => p.part === 'underline');
   if (underline && to.offset > underline.from) return reject('not-expressible', 'a line break would cut the setext underline');
   // on an empty item the line break is the host's (TO13); on any other empty node, refused
@@ -72,7 +73,6 @@ export function shiftEnterCommand(ctx: CommandContext): CommandOutcome {
   while (a > lineStart && isSpaceOrTab(s.charCodeAt(a - 1))) a--;
   let b = to.offset;
   while (b < lineEnd && isSpaceOrTab(s.charCodeAt(b))) b++;
-  const spaces = s.slice(a, from.offset) + s.slice(to.offset, b);
   // at the end of a line inside the text the new line would be empty, which Markdown holds in no text:
   // the text breaks there into two paragraphs, the caret on the blank line between, at the text's
   // column (TO-S11); typed on, they are one again
@@ -84,8 +84,9 @@ export function shiftEnterCommand(ctx: CommandContext): CommandOutcome {
     split.split(node, a, { to: rest, children: into === 'child' ? 'stay' : 'follow', into, kind: 'paragraph' });
     return ctx.apply(split.gap(node, 1).select({ blank: node, line: 0 }, { blank: node, line: 0 }));
   }
-  // the caret before a backslash the new line starts with
-  const draft = ctx.draft().setText(node, text.splice(a, b, '\n' + spaces)).setCaret(node, a + 1 + spaces.length, -1);
+  // the text breaks at the caret, the spaces on either side staying where they are, the caret at the
+  // new line's start, before them (and before a backslash it starts with)
+  const draft = ctx.draft().setText(node, text.splice(from.offset, to.offset, '\n')).setCaret(node, from.offset + 1, -1);
   return ctx.apply(draft);
 }
 

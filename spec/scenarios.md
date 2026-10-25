@@ -869,7 +869,7 @@ Splitting a paragraph and joining it back, from either side: Enter makes two par
 ([Delete18](delete.md#delete18)).
 
 ```yaml
-tags: core free-form
+tags: core
 ```
 
 ```buffer
@@ -910,7 +910,7 @@ The same at a sentence boundary: the space at the split goes from both paragraph
 glues the sentences, the default's cost ([Enter44](enter.md#enter44)).
 
 ```yaml
-tags: core free-form
+tags: core
 ```
 
 ```buffer
@@ -1000,8 +1000,8 @@ revise ┃2\. draft
 
 ```buffer
 # Plan
-revise
- ┃2\. draft
+revise 
+┃2\. draft
 ```
 
 > undo undo undo

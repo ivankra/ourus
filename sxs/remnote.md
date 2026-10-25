@@ -5,8 +5,8 @@ version: "1.28.50"
 url: "https://www.remnote.com/notes"
 model: "block"
 command: "node sxs/run.ts remnote"
-elapsed_s: 503
-workers: 3
+elapsed_s: 532
+workers: 2
 ---
 
 # RemNote (nbl) vs ourus
@@ -15,162 +15,48 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 197 | [11](#caret-11) | [10](#whitespace-10) | [87](#disagree-87) |  |  | **305** |
-| adapted | 107 | [6](#adapted-caret-6) | [14](#adapted-whitespace-14) | [88](#adapted-disagree-88) |  |  | **215** |
-| **total** | **304 (30%)** | **17 (1.7%)** | **24 (2.4%)** | **175 (17%)** | **0 (0%)** | **[499](#skipped-499) (49%)** | **1019** |
+| original | 214 | [9](#caret-9) | [11](#whitespace-11) | [73](#disagree-73) |  |  | **307** |
+| adapted | 131 | [2](#adapted-caret-2) | [12](#adapted-whitespace-12) | [86](#adapted-disagree-86) |  |  | **231** |
+| **total** | **345 (33%)** | **11 (1.1%)** | **23 (2.2%)** | **159 (15%)** | **0 (0%)** | **[506](#skipped-506) (48%)** | **1045** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total | original | adapted |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [backspace.md](../spec/backspace.md) | 38 | 2 |  | 7 |  | 35 | **82** | 30 | 17 |
+| [backspace.md](../spec/backspace.md) | 39 | 2 | 3 | 5 |  | 36 | **85** | 32 | 17 |
 | [backtick.md](../spec/backtick.md) | 1 |  |  |  |  | 32 | **33** | 1 |  |
 | [copy.md](../spec/copy.md) | 3 |  |  |  |  | 10 | **13** | 1 | 2 |
 | [cursor.md](../spec/cursor.md) | 24 | 3 |  |  |  | 9 | **36** | 24 | 3 |
-| [delete-subtree.md](../spec/delete-subtree.md) | 3 | 3 |  | 2 |  | 5 | **13** | 4 | 4 |
-| [delete.md](../spec/delete.md) | 17 | 1 |  | 5 |  | 32 | **55** | 19 | 4 |
+| [delete-subtree.md](../spec/delete-subtree.md) | 6 |  |  | 1 |  | 6 | **13** | 3 | 4 |
+| [delete.md](../spec/delete.md) | 19 | 1 | 1 | 4 |  | 31 | **56** | 20 | 5 |
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 10 | **10** |  |  |
-| [enter.md](../spec/enter.md) | 47 |  | 2 | 7 |  | 36 | **92** | 21 | 35 |
+| [enter.md](../spec/enter.md) | 49 |  | 4 | 5 |  | 39 | **97** | 21 | 37 |
 | [fences.md](../spec/fences.md) | 1 |  | 1 |  |  | 68 | **70** |  | 2 |
-| [gaps.md](../spec/gaps.md) | 11 |  |  | 3 |  | 5 | **19** | 9 | 5 |
+| [gaps.md](../spec/gaps.md) | 12 |  |  | 3 |  | 4 | **19** | 10 | 5 |
 | [indent.md](../spec/indent.md) | 23 |  |  | 5 |  | 8 | **36** | 22 | 6 |
 | [move-subtree-down.md](../spec/move-subtree-down.md) | 19 |  |  | 9 |  | 12 | **40** | 25 | 3 |
 | [move-subtree-up.md](../spec/move-subtree-up.md) | 19 |  |  | 9 |  | 14 | **42** | 24 | 4 |
-| [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 34 |  | 4 | 7 |  | 22 | **67** | 32 | 13 |
+| [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 37 |  | 3 | 7 |  | 20 | **67** | 34 | 13 |
 | [outdent.md](../spec/outdent.md) | 17 |  |  | 9 |  | 10 | **36** | 16 | 10 |
-| [paste-conv.md](../spec/paste-conv.md) | 1 |  |  | 5 |  |  | **6** | 1 | 5 |
-| [paste-html.md](../spec/paste-html.md) |  |  |  | 18 |  | 1 | **19** |  | 18 |
+| [paste-conv.md](../spec/paste-conv.md) | 2 |  |  | 4 |  |  | **6** | 1 | 5 |
+| [paste-html.md](../spec/paste-html.md) | 2 |  |  | 16 |  | 1 | **19** |  | 18 |
 | [paste-list-form.md](../spec/paste-list-form.md) |  |  |  | 6 |  |  | **6** |  | 6 |
-| [paste-list.md](../spec/paste-list.md) |  |  |  | 22 |  | 7 | **29** | 6 | 16 |
-| [paste-plain.md](../spec/paste-plain.md) | 2 |  |  | 23 |  | 9 | **34** | 16 | 9 |
-| [paste.md](../spec/paste.md) | 1 | 2 |  | 17 |  | 10 | **30** | 8 | 12 |
-| [placeholders.md](../spec/placeholders.md) | 7 |  | 1 | 2 |  | 10 | **20** | 6 | 4 |
+| [paste-list.md](../spec/paste-list.md) |  |  | 2 | 20 |  | 7 | **29** | 4 | 18 |
+| [paste-plain.md](../spec/paste-plain.md) | 2 |  | 1 | 22 |  | 11 | **36** | 16 | 9 |
+| [paste.md](../spec/paste.md) | 3 |  | 1 | 17 |  | 15 | **36** | 3 | 18 |
+| [placeholders.md](../spec/placeholders.md) | 11 |  | 4 | 1 |  | 4 | **20** | 9 | 7 |
+| [quirks.md](../spec/quirks.md) |  |  |  | 1 |  | 6 | **7** |  | 1 |
 | [quotes.md](../spec/quotes.md) |  |  |  |  |  | 100 | **100** |  |  |
-| [regressions.md](../spec/regressions.md) | 12 |  | 1 | 3 |  | 16 | **32** | 5 | 11 |
-| [scenarios.md](../spec/scenarios.md) | 13 | 4 |  | 7 |  | 2 | **26** | 17 | 7 |
-| [shift-enter.md](../spec/shift-enter.md) | 7 |  | 15 | 6 |  | 8 | **36** | 14 | 14 |
-| [tasks.md](../spec/tasks.md) | 2 |  |  |  |  | 26 | **28** |  | 2 |
+| [regressions.md](../spec/regressions.md) | 14 |  |  | 2 |  | 16 | **32** | 5 | 11 |
+| [scenarios.md](../spec/scenarios.md) | 14 | 3 |  | 7 |  | 2 | **26** | 17 | 7 |
+| [shift-enter.md](../spec/shift-enter.md) | 24 |  | 3 | 3 |  | 6 | **36** | 15 | 15 |
+| [tasks.md](../spec/tasks.md) | 2 |  |  |  |  | 28 | **30** |  | 2 |
 | [typing.md](../spec/typing.md) |  |  |  | 3 |  |  | **3** | 1 | 2 |
 | [undo.md](../spec/undo.md) | 2 | 2 |  |  |  | 1 | **5** | 3 | 1 |
 | [z-open.md](../spec/z-open.md) |  |  |  |  |  | 1 | **1** |  |  |
-| **total** | **304 (30%)** | **17 (1.7%)** | **24 (2.4%)** | **175 (17%)** | **0 (0%)** | **499 (49%)** | **1019** | **305 (30%)** | **215 (21%)** |
+| **total** | **345 (33%)** | **11 (1.1%)** | **23 (2.2%)** | **159 (15%)** | **0 (0%)** | **507 (49%)** | **1045** | **307 (29%)** | **231 (22%)** |
 
-## Disagree (87)
-
-### [Backspace12e](../spec/backspace.md#backspace12e)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ a
-¶ ┃b
-```
-
-</td></tr>
-</table>
-
-> enter
-
-<table>
-<tr><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ a
-¶ 
-¶ ┃b
-```
-
-</td><td>
-
-```buffer
-¶ a
-¶ ┃b
-```
-
-</td></tr>
-</table>
-
-> deleteContentBackward
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ a
-¶ ┃b
-```
-
-</td></tr>
-</table>
-
-> deleteContentBackward
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ a┃b
-```
-
-</td></tr>
-</table>
-
-### [Backspace14](../spec/backspace.md#backspace14)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # H1
-  ¶ a┃
-  ¶ ## H2
-```
-
-</td></tr>
-</table>
-
-> deleteContentBackward
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # H1
-  ¶ ┃
-  ¶ ## H2
-```
-
-</td></tr>
-</table>
-
-> cursorDocStart
-
-<table>
-<tr><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # ┃H1
-  ¶ 
-  ¶ ## H2
-```
-
-</td><td>
-
-```buffer
-¶ ┃# H1
-  ¶ ## H2
-```
-
-</td></tr>
-</table>
+## Disagree (73)
 
 ### [Backspace17d](../spec/backspace.md#backspace17d)
 
@@ -201,6 +87,62 @@ Per-file:
 - x┃
   - a
     - b
+```
+
+</td></tr>
+</table>
+
+### [Backspace19b](../spec/backspace.md#backspace19b)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  
+  b┃c
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  
+  b
+- ┃c
+```
+
+</td><td>
+
+```buffer
+- a
+  
+  b
+  
+  ┃c
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  
+  b┃c
 ```
 
 </td></tr>
@@ -337,34 +279,6 @@ Per-file:
 </td></tr>
 </table>
 
-### [DeleteSubtree6](../spec/delete-subtree.md#deletesubtree6)
-
-> deleteSubtree "x"
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃
-  - b
-```
-
-</td><td>
-
-```buffer
-
-```
-
-</td><td>
-
-```buffer
-¶ x┃
-```
-
-</td></tr>
-</table>
-
 ### [Delete5](../spec/delete.md#delete5)
 
 > deleteContentForward
@@ -469,58 +383,6 @@ Per-file:
 </td></tr>
 </table>
 
-### [Delete9](../spec/delete.md#delete9)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # H1
-  ¶ ┃a
-  ¶ ## H2
-```
-
-</td></tr>
-</table>
-
-> deleteContentForward
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # H1
-  ¶ ┃
-  ¶ ## H2
-```
-
-</td></tr>
-</table>
-
-> cursorDocStart
-
-<table>
-<tr><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # ┃H1
-  ¶ 
-  ¶ ## H2
-```
-
-</td><td>
-
-```buffer
-¶ ┃# H1
-  ¶ ## H2
-```
-
-</td></tr>
-</table>
-
 ### [Delete28](../spec/delete.md#delete28)
 
 > deleteContentForward
@@ -584,56 +446,6 @@ Per-file:
   - c
   - d
   - e
-```
-
-</td></tr>
-</table>
-
-### [Enter40](../spec/enter.md#enter40)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-- ┃
-```
-
-</td></tr>
-</table>
-
-> enter
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-¶ ┃
-```
-
-</td></tr>
-</table>
-
-> enter
-
-<table>
-<tr><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-¶ 
-¶ ┃
-```
-
-</td><td>
-
-```buffer
-- a
-¶ ┃
 ```
 
 </td></tr>
@@ -1718,6 +1530,38 @@ Per-file:
 </td></tr>
 </table>
 
+### [TO-E10](../spec/obsidian-true-outliner.md#to-e10)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- item┃
+  
+  para
+```
+
+</td><td>
+
+```buffer
+- item
+- ┃para
+```
+
+</td><td>
+
+```buffer
+- item
+  - ┃
+  ¶ para
+```
+
+</td></tr>
+</table>
+
 ### [TO-E33](../spec/obsidian-true-outliner.md#to-e33)
 
 > enter
@@ -1742,57 +1586,6 @@ Per-file:
 ```buffer
 - al
 - ┃ta
-```
-
-</td></tr>
-</table>
-
-### [TO-S11](../spec/obsidian-true-outliner.md#to-s11)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- foo┃
-  bar
-```
-
-</td></tr>
-</table>
-
-> shiftEnter
-
-<table>
-<tr><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- foo
-  ┃
-  bar
-```
-
-</td><td>
-
-```buffer
-- foo
-  ¶ bar
-```
-
-</td></tr>
-</table>
-
-> "x"
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- foo
-  x┃
-  bar
 ```
 
 </td></tr>
@@ -1852,7 +1645,7 @@ Per-file:
 
 ```buffer
 - a
-  ┃beta
+  ┃ beta
 ```
 
 </td></tr>
@@ -2014,143 +1807,6 @@ Per-file:
 </td></tr>
 </table>
 
-### [PasteConvPhrase](../spec/paste-conv.md#pasteconvphrase)
-
-<table>
-<tr><th colspan=2>clipboard</tr>
-<tr><td>text/plain<td>text/html</tr>
-<tr valign="top"><td>
-
-```clipboard
-x y
-```
-
-</td><td>
-
-```clipboard
-<span>x <b>y</b></span>
-```
-
-</td></tr>
-</table>
-
-> paste
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃b
-```
-
-</td><td>
-
-```buffer
-- ax y┃b
-```
-
-</td><td>
-
-```buffer
-- ax **y**┃b
-```
-
-</td></tr>
-</table>
-
-### [PasteList5](../spec/paste-list.md#pastelist5)
-
-<table>
-<tr><th>clipboard (text/plain)</tr>
-<tr valign="top"><td>
-
-```clipboard
-- x
-- y
-```
-
-</td></tr>
-</table>
-
-> paste
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-- ┃
-- b
-```
-
-</td><td>
-
-```buffer
-- a
-- x┃
-¶ y
-  - b
-```
-
-</td><td>
-
-```buffer
-- a
-- x
-- y┃
-- b
-```
-
-</td></tr>
-</table>
-
-### [PasteList6](../spec/paste-list.md#pastelist6)
-
-<table>
-<tr><th>clipboard (text/plain)</tr>
-<tr valign="top"><td>
-
-```clipboard
-- x
-- y
-```
-
-</td></tr>
-</table>
-
-> paste
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- ┃
-  - kid
-```
-
-</td><td>
-
-```buffer
-- x┃
-  - kid
-¶ y
-```
-
-</td><td>
-
-```buffer
-- 
-  - x
-  - y┃
-  - kid
-```
-
-</td></tr>
-</table>
-
 ### [PasteList9](../spec/paste-list.md#pastelist9)
 
 <table>
@@ -2228,45 +1884,6 @@ x y
 - ax
 - y┃b
   - kid
-```
-
-</td></tr>
-</table>
-
-### [PasteList23](../spec/paste-list.md#pastelist23)
-
-<table>
-<tr><th>clipboard (text/plain)</tr>
-<tr valign="top"><td>
-
-```clipboard
-- x
-```
-
-</td></tr>
-</table>
-
-> paste
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃b
-```
-
-</td><td>
-
-```buffer
-- ax┃b
-¶ 
-```
-
-</td><td>
-
-```buffer
-- ax┃b
 ```
 
 </td></tr>
@@ -2436,8 +2053,9 @@ y
 
 ```buffer
 - ax
-  ¶ y
-    ┃b
+  
+  y
+  ┃b
 - c
 ```
 
@@ -2755,7 +2373,7 @@ y
 
 ```buffer
 - first
-  second
+      second
   ┃a
 ```
 
@@ -2880,7 +2498,8 @@ x
 
 ```buffer
 - a
-  ¶ x┃b
+  
+  x┃b
 ```
 
 </td></tr>
@@ -3018,144 +2637,6 @@ y
 </td></tr>
 </table>
 
-### [Paste6](../spec/paste.md#paste6)
-
-<table>
-<tr><th>clipboard (text/plain)</tr>
-<tr valign="top"><td>
-
-```clipboard
-- x
-- y
-```
-
-</td></tr>
-</table>
-
-> paste
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # T┃
-  - z
-```
-
-</td><td>
-
-```buffer
-¶ # Tx┃
-  ¶ y
-    - z
-```
-
-</td><td>
-
-```buffer
-¶ # T
-  - x
-  - y┃
-  - z
-```
-
-</td></tr>
-</table>
-
-### [Paste11](../spec/paste.md#paste11)
-
-<table>
-<tr><th>clipboard (text/plain)</tr>
-<tr valign="top"><td>
-
-```clipboard
-## h
-text
-```
-
-</td></tr>
-</table>
-
-> paste
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ## A┃
-  ¶ p
-¶ ## B
-```
-
-</td><td>
-
-```buffer
-¶ ## A h┃
-  ¶ text
-  ¶ p
-¶ ## B
-```
-
-</td><td>
-
-```buffer
-¶ ## A
-¶ ## h
-  ¶ text┃
-  ¶ p
-¶ ## B
-```
-
-</td></tr>
-</table>
-
-### [Paste12](../spec/paste.md#paste12)
-
-<table>
-<tr><th>clipboard (text/plain)</tr>
-<tr valign="top"><td>
-
-```clipboard
-### h
-text
-```
-
-</td></tr>
-</table>
-
-> paste
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ## A┃
-  ¶ p
-```
-
-</td><td>
-
-```buffer
-¶ ### A h┃
-  ¶ text
-  ¶ p
-```
-
-</td><td>
-
-```buffer
-¶ ## A
-  ¶ ### h
-    ¶ text┃
-    ¶ p
-```
-
-</td></tr>
-</table>
-
 ### [Paste21](../spec/paste.md#paste21)
 
 <table>
@@ -3197,109 +2678,50 @@ text
 </td></tr>
 </table>
 
-### [Placeholder2](../spec/placeholders.md#placeholder2)
+### [Placeholder18](../spec/placeholders.md#placeholder18)
 
 <table>
 <tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- a┃
+¶ a┃ # b
+¶ after
 ```
 
 </td></tr>
 </table>
 
-> enter
+> deleteContentBackward
 
 <table>
 <tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- a
-- ┃
+¶ ┃ # b
+¶ after
 ```
 
 </td></tr>
 </table>
 
-> enter
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-¶ ┃
-```
-
-</td></tr>
-</table>
-
-> cursorDocStart
+> cursorDocEnd
 
 <table>
 <tr><th>remnote</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- ┃a
-¶ 
+¶ # b
+  ¶ after┃
 ```
 
 </td><td>
 
 ```buffer
-- a
-```
-
-</td></tr>
-</table>
-
-### [Placeholder3](../spec/placeholders.md#placeholder3)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ para┃
-```
-
-</td></tr>
-</table>
-
-> enter
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ para
-¶ ┃
-```
-
-</td></tr>
-</table>
-
-> cursorDocStart
-
-<table>
-<tr><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ┃para
-¶ 
-```
-
-</td><td>
-
-```buffer
-¶ ┃para
+¶ \# b
+¶ after
 ```
 
 </td></tr>
@@ -3316,7 +2738,7 @@ text
 ```buffer
 - ┃a
   1. b
-     \- c
+         - c
 ```
 
 </td><td>
@@ -3324,7 +2746,7 @@ text
 ```buffer
 - ┃a
 1. b
-   \- c
+       - c
 ```
 
 </td><td>
@@ -3332,7 +2754,7 @@ text
 ```buffer
 ¶ ┃a
   1. b
-     \- c
+         - c
 ```
 
 </td></tr>
@@ -3608,64 +3030,6 @@ text
 </td></tr>
 </table>
 
-### [ShiftEnter10](../spec/shift-enter.md#shiftenter10)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-  ┃bc
-```
-
-</td></tr>
-</table>
-
-> shiftEnter
-
-<table>
-<tr><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-  
-  ┃bc
-```
-
-</td><td>
-
-```buffer
-- a
-  ¶ ┃bc
-```
-
-</td></tr>
-</table>
-
-> "x"
-
-<table>
-<tr><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-  
-  x┃bc
-```
-
-</td><td>
-
-```buffer
-- a
-  ¶ x┃bc
-```
-
-</td></tr>
-</table>
-
 ### [ShiftEnter14](../spec/shift-enter.md#shiftenter14)
 
 > shiftEnter
@@ -3690,36 +3054,6 @@ text
 ```buffer
 ¶ # Title
   ¶ ┃more
-```
-
-</td></tr>
-</table>
-
-### [ShiftEnter15](../spec/shift-enter.md#shiftenter15)
-
-> shiftEnter shiftEnter "p"
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one┃
-```
-
-</td><td>
-
-```buffer
-- one
-  
-  p┃
-```
-
-</td><td>
-
-```buffer
-- one
-  ¶ p┃
 ```
 
 </td></tr>
@@ -3755,7 +3089,174 @@ text
 </td></tr>
 </table>
 
-## Whitespace (10)
+## Whitespace (11)
+
+### [Backspace12e](../spec/backspace.md#backspace12e)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ a
+¶ ┃b
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ a
+¶ 
+¶ ┃b
+```
+
+</td><td>
+
+```buffer
+¶ a
+¶ ┃b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ a
+¶ ┃b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ a┃b
+```
+
+</td></tr>
+</table>
+
+### [Backspace14](../spec/backspace.md#backspace14)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ # H1
+  ¶ a┃
+  ¶ ## H2
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ # H1
+  ¶ ┃
+  ¶ ## H2
+```
+
+</td></tr>
+</table>
+
+> cursorDocStart
+
+<table>
+<tr><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ # ┃H1
+  ¶ 
+  ¶ ## H2
+```
+
+</td><td>
+
+```buffer
+¶ ┃# H1
+  ¶ ## H2
+```
+
+</td></tr>
+</table>
+
+### [Delete9](../spec/delete.md#delete9)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ # H1
+  ¶ ┃a
+  ¶ ## H2
+```
+
+</td></tr>
+</table>
+
+> deleteContentForward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ # H1
+  ¶ ┃
+  ¶ ## H2
+```
+
+</td></tr>
+</table>
+
+> cursorDocStart
+
+<table>
+<tr><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ # ┃H1
+  ¶ 
+  ¶ ## H2
+```
+
+</td><td>
+
+```buffer
+¶ ┃# H1
+  ¶ ## H2
+```
+
+</td></tr>
+</table>
 
 ### [Enter37](../spec/enter.md#enter37)
 
@@ -3791,30 +3292,51 @@ text
 </td></tr>
 </table>
 
-### [TO-S4](../spec/obsidian-true-outliner.md#to-s4)
-
-> shiftEnter
+### [Enter40](../spec/enter.md#enter40)
 
 <table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-¶ one┃ two
+- a
+- ┃
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+¶ ┃
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+¶ 
+¶ ┃
 ```
 
 </td><td>
 
 ```buffer
-¶ one
-  ┃ two
-```
-
-</td><td>
-
-```buffer
-¶ one
-  ┃two
+- a
+¶ ┃
 ```
 
 </td></tr>
@@ -3854,6 +3376,153 @@ text
   - foo
   - ┃
 - bar
+```
+
+</td></tr>
+</table>
+
+### [PasteList23](../spec/paste-list.md#pastelist23)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃b
+```
+
+</td><td>
+
+```buffer
+- ax┃b
+¶ 
+```
+
+</td><td>
+
+```buffer
+- ax┃b
+```
+
+</td></tr>
+</table>
+
+### [Placeholder2](../spec/placeholders.md#placeholder2)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- ┃
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+¶ ┃
+```
+
+</td></tr>
+</table>
+
+> cursorDocStart
+
+<table>
+<tr><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃a
+¶ 
+```
+
+</td><td>
+
+```buffer
+- a
+```
+
+</td></tr>
+</table>
+
+### [Placeholder3](../spec/placeholders.md#placeholder3)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ para┃
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ para
+¶ ┃
+```
+
+</td></tr>
+</table>
+
+> cursorDocStart
+
+<table>
+<tr><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ┃para
+¶ 
+```
+
+</td><td>
+
+```buffer
+¶ ┃para
 ```
 
 </td></tr>
@@ -3906,181 +3575,6 @@ text
 </td></tr>
 </table>
 
-### [ShiftEnter1](../spec/shift-enter.md#shiftenter1)
-
-> shiftEnter
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one two┃ three
-```
-
-</td><td>
-
-```buffer
-- one two
-  ┃ three
-```
-
-</td><td>
-
-```buffer
-- one two
-  ┃three
-```
-
-</td></tr>
-</table>
-
-### [ShiftEnter2](../spec/shift-enter.md#shiftenter2)
-
-> shiftEnter
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-1. a
-   - b┃ c
-```
-
-</td><td>
-
-```buffer
-1. a
-   - b
-     ┃ c
-```
-
-</td><td>
-
-```buffer
-1. a
-   - b
-     ┃c
-```
-
-</td></tr>
-</table>
-
-### [ShiftEnter3](../spec/shift-enter.md#shiftenter3)
-
-> shiftEnter
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x
-  - a┃ b
-```
-
-</td><td>
-
-```buffer
-- x
-  - a
-    ┃ b
-```
-
-</td><td>
-
-```buffer
-- x
-  - a
-    ┃b
-```
-
-</td></tr>
-</table>
-
-### [ShiftEnter18](../spec/shift-enter.md#shiftenter18)
-
-> shiftEnter
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-1. abc ┃2. x
-```
-
-</td><td>
-
-```buffer
-1. abc 
-   ┃2\. x
-```
-
-</td><td>
-
-```buffer
-1. abc
-   ┃2\. x
-```
-
-</td></tr>
-</table>
-
-### [ShiftEnter21](../spec/shift-enter.md#shiftenter21)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one two┃ three
-```
-
-</td></tr>
-</table>
-
-> shiftEnter
-
-<table>
-<tr><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one two
-  ┃ three
-```
-
-</td><td>
-
-```buffer
-- one two
-  ┃three
-```
-
-</td></tr>
-</table>
-
-> deleteContentBackward
-
-<table>
-<tr><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one two┃ three
-```
-
-</td><td>
-
-```buffer
-- one two ┃three
-```
-
-</td></tr>
-</table>
-
 ### [ShiftEnter33](../spec/shift-enter.md#shiftenter33)
 
 > shiftEnter
@@ -4090,7 +3584,16 @@ text
 <tr valign="top"><td>
 
 ```buffer
-- ┃ three
+- 
+  ┃ three
+```
+
+</td><td>
+
+```buffer
+- 
+  
+  ┃ three
 ```
 
 </td><td>
@@ -4100,16 +3603,10 @@ text
   ┃ three
 ```
 
-</td><td>
-
-```buffer
-- ┃ three
-```
-
 </td></tr>
 </table>
 
-## Caret (11)
+## Caret (9)
 
 ### [Backspace17](../spec/backspace.md#backspace17)
 
@@ -4286,50 +3783,6 @@ text
 ```buffer
 - ┃a
   - b
-```
-
-</td></tr>
-</table>
-
-### [Paste24](../spec/paste.md#paste24)
-
-<table>
-<tr><th>clipboard (text/plain)</tr>
-<tr valign="top"><td>
-
-```clipboard
-- a
-  - b
-```
-
-</td></tr>
-</table>
-
-> paste
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # h1
-  ¶ ┃
-```
-
-</td><td>
-
-```buffer
-¶ # h1
-  - a┃
-    - b
-```
-
-</td><td>
-
-```buffer
-¶ # h1
-  - a
-    - b┃
 ```
 
 </td></tr>
@@ -4559,146 +4012,7 @@ text
 </td></tr>
 </table>
 
-## Adapted: disagree (88)
-
-### [Backspace17e](../spec/backspace.md#backspace17e)
-
-> deleteContentBackward
-
-Adapted: empty document
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- ┃
-```
-
-</td><td>
-
-```buffer
-
-```
-
-</td><td>
-
-```buffer
-¶ ┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- ┃
-```
-
-</td><td>
-
-```buffer
-┃
-```
-
-</td></tr>
-</table>
-
-### [Enter33](../spec/enter.md#enter33)
-
-Adapted: under enterAtTextStart: stay
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ intro
-¶ ┃hello
-```
-
-</td></tr>
-</table>
-
-> enter
-
-<table>
-<tr><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ intro
-¶ 
-¶ ┃hello
-```
-
-</td><td>
-
-```buffer
-¶ intro
-¶ ┃hello
-```
-
-</td></tr>
-</table>
-
-> "x"
-
-<table>
-<tr><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ intro
-¶ 
-¶ x┃hello
-```
-
-</td><td>
-
-```buffer
-¶ intro
-¶ x┃hello
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>enter</th><th>"x"</th></tr>
-<tr valign="top"><td>
-
-```buffer
-intro
-
-┃hello
-```
-
-</td><td>
-
-```buffer
-intro
-
-
-┃hello
-```
-
-</td><td>
-
-```buffer
-intro
-
-
-x┃hello
-```
-
-</td></tr>
-</table>
+## Adapted: disagree (86)
 
 ### [Enter50](../spec/enter.md#enter50)
 
@@ -4975,7 +4289,7 @@ Original:
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -5184,7 +4498,7 @@ Title┃
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -5256,7 +4570,7 @@ Original:
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -5539,7 +4853,7 @@ y
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -5614,7 +4928,7 @@ y
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -5694,7 +5008,7 @@ Original:
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -5771,7 +5085,7 @@ Original:
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -5785,7 +5099,7 @@ Adapted: under pasteSeams: open
 </td><td>
 
 ```buffer
-- ax  b┃
+- ax  *b*┃
 ¶ y
   - b
 ```
@@ -5846,7 +5160,7 @@ z
 
 > paste
 
-Adapted: empty document
+Adapted: empty document, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -5867,9 +5181,9 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-- x
+- x┃
   - y
-- z┃
+- z
 ```
 
 </td></tr>
@@ -5887,9 +5201,9 @@ Original:
 </td><td>
 
 ```buffer
-- x
+- x┃
   - y
-- z┃
+- z
 ```
 
 </td></tr>
@@ -5926,7 +5240,7 @@ z
 
 > paste
 
-Adapted: empty document
+Adapted: empty document, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -5947,9 +5261,9 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-- x
+- x┃
   - y
-- z┃
+- z
 ```
 
 </td></tr>
@@ -5967,9 +5281,9 @@ Original:
 </td><td>
 
 ```buffer
-- x
+- x┃
   - y
-- z┃
+- z
 ```
 
 </td></tr>
@@ -6005,7 +5319,7 @@ Original:
 
 > paste
 
-Adapted: empty document
+Adapted: empty document, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -6018,8 +5332,8 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-- This site uses XSLT; that functionality is being removed from this browser very soon.┃
-  - x b
+- This site uses XSLT; that functionality is being [removed from this browser very soon](https://chromestatus.com/feature/4709671889534976).┃
+  - x **b**
     - y
   - z
 ```
@@ -6027,84 +5341,11 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-- x **b**
-  - y
-- z┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-┃
-```
-
-</td><td>
-
-```buffer
-- x **b**
-  - y
-- z┃
-```
-
-</td></tr>
-</table>
-
-### [PasteHtml4](../spec/paste-html.md#pastehtml4)
-
-<table>
-<tr><th colspan=2>clipboard</tr>
-<tr><td>text/plain<td>text/html</tr>
-<tr valign="top"><td>
-
-```clipboard
-x b
-    y
-z
-```
-
-</td><td>
-
-```clipboard
-<ul><div rem="true" showbullet="true">x <b>b</b><ul><div rem="true" showbullet="true">y</div></ul></div><div rem="true" showbullet="true">z</div></ul>
-```
-
-</td></tr>
-</table>
-
-> paste
-
-Adapted: empty document
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ┃
-```
-
-</td><td>
-
-```buffer
-- x b┃
+- x **b**┃
   - y
 - z
 ```
 
-</td><td>
-
-```buffer
-- x **b**
-  - y
-- z┃
-```
-
 </td></tr>
 </table>
 
@@ -6120,9 +5361,9 @@ Original:
 </td><td>
 
 ```buffer
-- x **b**
+- x **b**┃
   - y
-- z┃
+- z
 ```
 
 </td></tr>
@@ -6152,7 +5393,7 @@ z
 
 > paste
 
-Adapted: empty document
+Adapted: empty document, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -6173,9 +5414,9 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-- x
+- x┃
   - y
-- z┃
+- z
 ```
 
 </td></tr>
@@ -6193,9 +5434,9 @@ Original:
 </td><td>
 
 ```buffer
-- x
+- x┃
   - y
-- z┃
+- z
 ```
 
 </td></tr>
@@ -6225,7 +5466,7 @@ z
 
 > paste
 
-Adapted: empty document
+Adapted: empty document, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -6246,9 +5487,9 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-¶ x
+¶ x┃
   - y
-¶ z┃
+¶ z
 ```
 
 </td></tr>
@@ -6266,11 +5507,11 @@ Original:
 </td><td>
 
 ```buffer
-x
+x┃
 
 - y
 
-z┃
+z
 ```
 
 </td></tr>
@@ -6299,7 +5540,7 @@ d
 
 > paste
 
-Adapted: empty document
+Adapted: empty document, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -6319,8 +5560,8 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-3. c
-4. d┃
+3. c┃
+4. d
 ```
 
 </td></tr>
@@ -6338,8 +5579,8 @@ Original:
 </td><td>
 
 ```buffer
-3. c
-4. d┃
+3. c┃
+4. d
 ```
 
 </td></tr>
@@ -6368,7 +5609,7 @@ Original:
 
 > paste
 
-Adapted: empty document, task
+Adapted: empty document, task, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -6388,8 +5629,8 @@ Adapted: empty document, task
 </td><td>
 
 ```buffer
-- [x] done
-- [ ] todo┃
+- [x] done┃
+- [ ] todo
 ```
 
 </td></tr>
@@ -6407,8 +5648,8 @@ Original:
 </td><td>
 
 ```buffer
-- [x] done
-- [ ] todo┃
+- [x] done┃
+- [ ] todo
 ```
 
 </td></tr>
@@ -6491,76 +5732,6 @@ let b = 2;┃
 </td></tr>
 </table>
 
-### [PasteHtml10](../spec/paste-html.md#pastehtml10)
-
-<table>
-<tr><th colspan=2>clipboard</tr>
-<tr><td>text/plain<td>text/html</tr>
-<tr valign="top"><td>
-
-```clipboard
-Title
-para bold c
-```
-
-</td><td>
-
-```clipboard
-<h2>Title</h2><p>para <b>bold</b> <code>c</code></p>
-```
-
-</td></tr>
-</table>
-
-> paste
-
-Adapted: empty document
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ┃
-```
-
-</td><td>
-
-```buffer
-¶ ## Title┃
-  ¶ para bold c
-```
-
-</td><td>
-
-```buffer
-¶ ## Title
-  ¶ para **bold** `c`┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-┃
-```
-
-</td><td>
-
-```buffer
-## Title
-
-para **bold** `c`┃
-```
-
-</td></tr>
-</table>
-
 ### [PasteHtml11](../spec/paste-html.md#pastehtml11)
 
 <table>
@@ -6586,7 +5757,7 @@ p2
 
 > paste
 
-Adapted: empty document
+Adapted: empty document, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -6608,8 +5779,8 @@ Adapted: empty document
 
 ```buffer
 ¶ line one
-  line two
-¶ p2┃
+  line two┃
+¶ p2
 ```
 
 </td></tr>
@@ -6628,9 +5799,9 @@ Original:
 
 ```buffer
 line one
-line two
+line two┃
 
-p2┃
+p2
 ```
 
 </td></tr>
@@ -6734,7 +5905,7 @@ z
 
 > paste
 
-Adapted: empty document
+Adapted: empty document, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -6747,15 +5918,15 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-¶ a b  i  c s l┃
+¶ a **b**  *i*  `c` ~~s~~ [l](https://e.x/p)┃
 ¶ z
 ```
 
 </td><td>
 
 ```buffer
-- a **b** *i* `c` ~~s~~ [l](https://e.x/p)
-- z┃
+- a **b** *i* `c` ~~s~~ [l](https://e.x/p)┃
+- z
 ```
 
 </td></tr>
@@ -6773,8 +5944,8 @@ Original:
 </td><td>
 
 ```buffer
-- a **b** *i* `c` ~~s~~ [l](https://e.x/p)
-- z┃
+- a **b** *i* `c` ~~s~~ [l](https://e.x/p)┃
+- z
 ```
 
 </td></tr>
@@ -6803,7 +5974,7 @@ Original:
 
 > paste
 
-Adapted: empty document, escape
+Adapted: empty document, escape, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -6816,15 +5987,15 @@ Adapted: empty document, escape
 </td><td>
 
 ```buffer
-1. not a list, x and [y]┃
+1. not a list, *x* and [y]┃
 ¶ # not a heading
 ```
 
 </td><td>
 
 ```buffer
-- 1\. not a list, \*x\* and \[y\]
-- # not a heading┃
+- 1\. not a list, \*x\* and \[y\]┃
+- # not a heading
 ```
 
 </td></tr>
@@ -6842,8 +6013,8 @@ Original:
 </td><td>
 
 ```buffer
-- 1\. not a list, \*x\* and \[y\]
-- \# not a heading┃
+- 1\. not a list, \*x\* and \[y\]┃
+- \# not a heading
 ```
 
 </td></tr>
@@ -6872,7 +6043,7 @@ npm install
 
 > paste
 
-Adapted: code block, empty document
+Adapted: code block, empty document, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -6894,9 +6065,9 @@ Adapted: code block, empty document
 </td><td>
 
 ````buffer
-¶ ## Setup
+¶ ## Setup┃
   ¶ ```shell
-    npm install┃
+    npm install
     ```
 ````
 
@@ -6915,10 +6086,10 @@ Original:
 </td><td>
 
 ````buffer
-## Setup
+## Setup┃
 
 ```shell
-npm install┃
+npm install
 ```
 ````
 
@@ -6948,7 +6119,7 @@ nested
 
 > paste
 
-Adapted: empty document
+Adapted: empty document, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -6961,15 +6132,15 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-- Bold start┃
+- **Bold** start┃
   - nested
 ```
 
 </td><td>
 
 ```buffer
-- **Bold** start
-  - *nested*┃
+- **Bold** start┃
+  - *nested*
 ```
 
 </td></tr>
@@ -6987,8 +6158,8 @@ Original:
 </td><td>
 
 ```buffer
-- **Bold** start
-  - *nested*┃
+- **Bold** start┃
+  - *nested*
 ```
 
 </td></tr>
@@ -7018,7 +6189,7 @@ o       nested
 
 > paste
 
-Adapted: empty document
+Adapted: empty document, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -7038,8 +6209,8 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-- one
-  - nested┃
+- one┃
+  - nested
 ```
 
 </td></tr>
@@ -7057,8 +6228,8 @@ Original:
 </td><td>
 
 ```buffer
-- one
-  - nested┃
+- one┃
+  - nested
 ```
 
 </td></tr>
@@ -7153,7 +6324,7 @@ let a = 1;┃
 
 > paste
 
-Adapted: under pasteListForm: own, under pasteSeams: open
+Adapted: under pasteListForm: own, under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -7220,7 +6391,7 @@ Original:
 
 > paste
 
-Adapted: under pasteListForm: own, under pasteSeams: open
+Adapted: under pasteListForm: own, under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -7288,7 +6459,7 @@ Original:
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -7354,7 +6525,7 @@ Original:
 
 > paste
 
-Adapted: blank lines, under pasteSeams: open
+Adapted: blank lines, under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -7423,7 +6594,7 @@ Original:
 
 > paste
 
-Adapted: blank lines, under pasteSeams: open
+Adapted: blank lines, under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -7493,7 +6664,7 @@ Original:
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -7560,7 +6731,7 @@ Original:
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -7627,7 +6798,7 @@ Original:
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -7672,6 +6843,147 @@ Original:
 ```buffer
 - ax
 - y┃
+  - kid
+```
+
+</td></tr>
+</table>
+
+### [PasteList5](../spec/paste-list.md#pastelist5)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: under quirkPasteCaret: roam
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- ┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- x┃
+¶ y
+  - b
+```
+
+</td><td>
+
+```buffer
+- a
+- x┃
+- y
+- b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- ┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- x┃
+- y
+- b
+```
+
+</td></tr>
+</table>
+
+### [PasteList6](../spec/paste-list.md#pastelist6)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: under quirkPasteCaret: roam
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+  - kid
+```
+
+</td><td>
+
+```buffer
+- x┃
+  - kid
+¶ y
+```
+
+</td><td>
+
+```buffer
+- 
+  - x┃
+  - y
+  - kid
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+  - kid
+```
+
+</td><td>
+
+```buffer
+- 
+  - x┃
+  - y
   - kid
 ```
 
@@ -7694,7 +7006,7 @@ Original:
 
 > paste
 
-Adapted: task
+Adapted: task, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -7714,8 +7026,8 @@ Adapted: task
 </td><td>
 
 ```buffer
-- [ ] x
-- y┃
+- [ ] x┃
+- y
 ```
 
 </td></tr>
@@ -7733,72 +7045,8 @@ Original:
 </td><td>
 
 ```buffer
-- [ ] x
-- y┃
-```
-
-</td></tr>
-</table>
-
-### [PasteList8](../spec/paste-list.md#pastelist8)
-
-<table>
-<tr><th>clipboard (text/plain)</tr>
-<tr valign="top"><td>
-
-```clipboard
-- x
-```
-
-</td></tr>
-</table>
-
-> paste
-
-Adapted: under pasteSeams: open
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃
-- b
-```
-
-</td><td>
-
-```buffer
-- ax┃
-¶ 
-  - b
-```
-
-</td><td>
-
-```buffer
-- ax┃
-- b
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃
-- b
-```
-
-</td><td>
-
-```buffer
-- ax┃
-- b
+- [ ] x┃
+- y
 ```
 
 </td></tr>
@@ -7821,7 +7069,7 @@ Notes:
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -7893,7 +7141,7 @@ two
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -8035,7 +7283,7 @@ c
 
 > paste
 
-Adapted: code block, under pasteSeams: open
+Adapted: code block, under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -8256,7 +7504,7 @@ text
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -8279,7 +7527,8 @@ Adapted: under pasteSeams: open
 
 ```buffer
 - ah
-  ¶ text┃
+  
+  text┃
 - b
 ```
 
@@ -8789,71 +8038,6 @@ Original:
 </td></tr>
 </table>
 
-### [PastePlain12](../spec/paste-plain.md#pasteplain12)
-
-<table>
-<tr><th>clipboard (text/plain)</tr>
-<tr valign="top"><td>
-
-```clipboard
-x
-
-[a]: /u
-```
-
-</td></tr>
-</table>
-
-> pastePlain
-
-Adapted: escape
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ p┃
-```
-
-</td><td>
-
-```buffer
-¶ px┃
-¶ 
-¶ [a]: /u
-```
-
-</td><td>
-
-```buffer
-¶ px
-¶ [a]: /u┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-p┃
-```
-
-</td><td>
-
-```buffer
-px
-
-[a]\: /u┃
-```
-
-</td></tr>
-</table>
-
 ### [PastePlain13](../spec/paste-plain.md#pasteplain13)
 
 <table>
@@ -8890,7 +8074,7 @@ Adapted: escape
 
 ```buffer
 ¶ px
-  ┃---
+  ┃ ---
 ```
 
 </td></tr>
@@ -8909,7 +8093,7 @@ p┃ ---
 
 ```buffer
 px
- ┃\---
+┃ \---
 ```
 
 </td></tr>
@@ -9131,7 +8315,7 @@ Original:
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -9200,7 +8384,7 @@ more
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -9269,7 +8453,7 @@ Notesx
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -9310,6 +8494,77 @@ See ┃here.
 ```buffer
 See x
 - y┃here.
+```
+
+</td></tr>
+</table>
+
+### [Paste6](../spec/paste.md#paste6)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: under quirkPasteCaret: roam
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ # T┃
+  - z
+```
+
+</td><td>
+
+```buffer
+¶ # Tx┃
+  ¶ y
+    - z
+```
+
+</td><td>
+
+```buffer
+¶ # T
+  - x┃
+  - y
+  - z
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# T┃
+
+- z
+```
+
+</td><td>
+
+```buffer
+# T
+
+- x┃
+- y
+- z
 ```
 
 </td></tr>
@@ -9391,6 +8646,85 @@ q
 </td></tr>
 </table>
 
+### [Paste8](../spec/paste.md#paste8)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: blank lines, under pasteSeams: open, under quirkPasteCaret: roam
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  
+  p┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+  
+  px┃
+¶ y
+  - b
+```
+
+</td><td>
+
+```buffer
+- a
+  
+  px
+  - y┃
+- b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+
+  p┃
+
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+
+  px
+  - y┃
+
+- b
+```
+
+</td></tr>
+</table>
+
 ### [Paste10](../spec/paste.md#paste10)
 
 <table>
@@ -9407,7 +8741,7 @@ text
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -9482,14 +8816,15 @@ r
 </td></tr>
 </table>
 
-### [Paste13](../spec/paste.md#paste13)
+### [Paste11](../spec/paste.md#paste11)
 
 <table>
 <tr><th>clipboard (text/plain)</tr>
 <tr valign="top"><td>
 
 ```clipboard
-- x
+## h
+text
 ```
 
 </td></tr>
@@ -9497,33 +8832,35 @@ r
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-¶ a
-  ┃
-¶ b
+¶ ## A┃
+  ¶ p
+¶ ## B
 ```
 
 </td><td>
 
 ```buffer
-¶ a
-  x┃
-¶ 
-¶ b
+¶ ## A h┃
+  ¶ text
+  ¶ p
+¶ ## B
 ```
 
 </td><td>
 
 ```buffer
-¶ a
-  x┃
-¶ b
+¶ ## A
+¶ ## h┃
+  ¶ text
+  ¶ p
+¶ ## B
 ```
 
 </td></tr>
@@ -9535,19 +8872,96 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-a
-┃
+## A┃
 
-b
+p
+
+## B
 ```
 
 </td><td>
 
 ```buffer
-a
-x┃
+## A
 
-b
+## h┃
+text
+
+p
+
+## B
+```
+
+</td></tr>
+</table>
+
+### [Paste12](../spec/paste.md#paste12)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+### h
+text
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: under quirkPasteCaret: roam
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ## A┃
+  ¶ p
+```
+
+</td><td>
+
+```buffer
+¶ ### A h┃
+  ¶ text
+  ¶ p
+```
+
+</td><td>
+
+```buffer
+¶ ## A
+  ¶ ### h┃
+    ¶ text
+    ¶ p
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+## A┃
+
+p
+```
+
+</td><td>
+
+```buffer
+## A
+
+### h┃
+text
+
+p
 ```
 
 </td></tr>
@@ -9569,7 +8983,7 @@ b
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -9637,7 +9051,7 @@ x
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -9721,7 +9135,7 @@ q
 
 > shiftEnter paste
 
-Adapted: under pasteSeams: open
+Adapted: under pasteSeams: open, under quirkPasteCaret: roam
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -9828,55 +9242,6 @@ para
 
 b┃
 - c
-```
-
-</td></tr>
-</table>
-
-### [Regression32](../spec/regressions.md#regression32)
-
-> deleteContentForward
-
-Adapted: escape
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- para┃
-  \- a
-```
-
-</td><td>
-
-```buffer
-- para┃- a
-```
-
-</td><td>
-
-```buffer
-- para┃→- a
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- para┃
-  →\- a
-```
-
-</td><td>
-
-```buffer
-- para┃→- a
 ```
 
 </td></tr>
@@ -10164,20 +9529,12 @@ Adapted: escape
 > shiftEnter
 
 <table>
-<tr><th>remnote</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
 ¶ # Plan
   ¶ revise 
-    ┃2\. draft
-```
-
-</td><td>
-
-```buffer
-¶ # Plan
-  ¶ revise
     ┃2\. draft
 ```
 
@@ -10224,66 +9581,14 @@ revise ┃2\. draft
 
 ```buffer
 # Plan
-revise
- ┃2\. draft
+revise 
+┃2\. draft
 ```
 
 </td><td>
 
 ```buffer
 # Plan┃2. draft
-```
-
-</td></tr>
-</table>
-
-### [ShiftEnter16](../spec/shift-enter.md#shiftenter16)
-
-> shiftEnter shiftEnter "p"
-
-Adapted: CR line endings
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃
-```
-
-</td><td>
-
-```buffer
-- a
-  
-  p┃
-```
-
-</td><td>
-
-```buffer
-- a
-  ¶ p┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃␍
-```
-
-</td><td>
-
-```buffer
-- a␍
-␍
-  p┃␍
 ```
 
 </td></tr>
@@ -10503,7 +9808,146 @@ para
 </td></tr>
 </table>
 
-## Adapted: whitespace (14)
+## Adapted: whitespace (12)
+
+### [Backspace17e](../spec/backspace.md#backspace17e)
+
+> deleteContentBackward
+
+Adapted: empty document
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+
+```
+
+</td><td>
+
+```buffer
+¶ ┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+┃
+```
+
+</td></tr>
+</table>
+
+### [Enter33](../spec/enter.md#enter33)
+
+Adapted: under enterAtTextStart: stay
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ intro
+¶ ┃hello
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ intro
+¶ 
+¶ ┃hello
+```
+
+</td><td>
+
+```buffer
+¶ intro
+¶ ┃hello
+```
+
+</td></tr>
+</table>
+
+> "x"
+
+<table>
+<tr><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ intro
+¶ 
+¶ x┃hello
+```
+
+</td><td>
+
+```buffer
+¶ intro
+¶ x┃hello
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter</th><th>"x"</th></tr>
+<tr valign="top"><td>
+
+```buffer
+intro
+
+┃hello
+```
+
+</td><td>
+
+```buffer
+intro
+
+
+┃hello
+```
+
+</td><td>
+
+```buffer
+intro
+
+
+x┃hello
+```
+
+</td></tr>
+</table>
 
 ### [Enter52](../spec/enter.md#enter52)
 
@@ -10781,7 +10225,207 @@ Original:
 </td></tr>
 </table>
 
-### [Regression26](../spec/regressions.md#regression26)
+### [PasteList8](../spec/paste-list.md#pastelist8)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: under pasteSeams: open
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+```
+
+</td><td>
+
+```buffer
+- ax┃
+¶ 
+  - b
+```
+
+</td><td>
+
+```buffer
+- ax┃
+- b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+```
+
+</td><td>
+
+```buffer
+- ax┃
+- b
+```
+
+</td></tr>
+</table>
+
+### [PastePlain12](../spec/paste-plain.md#pasteplain12)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+
+[a]: /u
+```
+
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: escape
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ p┃
+```
+
+</td><td>
+
+```buffer
+¶ px┃
+¶ 
+¶ [a]: /u
+```
+
+</td><td>
+
+```buffer
+¶ px
+¶ [a]: /u┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+p┃
+```
+
+</td><td>
+
+```buffer
+px
+
+[a]\: /u┃
+```
+
+</td></tr>
+</table>
+
+### [Paste13](../spec/paste.md#paste13)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: under pasteSeams: open
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ a
+  ┃
+¶ b
+```
+
+</td><td>
+
+```buffer
+¶ a
+  x┃
+¶ 
+¶ b
+```
+
+</td><td>
+
+```buffer
+¶ a
+  x┃
+¶ b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+a
+┃
+
+b
+```
+
+</td><td>
+
+```buffer
+a
+x┃
+
+b
+```
+
+</td></tr>
+</table>
+
+### [Placeholder19](../spec/placeholders.md#placeholder19)
 
 Adapted: escape
 
@@ -10789,30 +10433,11 @@ Adapted: escape
 <tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
-```buffer
-¶ a ┃\- b
-```
-
-</td></tr>
-</table>
-
-> shiftEnter
-
-<table>
-<tr><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ a 
-  ┃\- b
-```
-
-</td><td>
-
-```buffer
-¶ a
-  ┃\- b
-```
+````buffer
+¶ para
+  a┃ ``` x
+¶ after
+````
 
 </td></tr>
 </table>
@@ -10823,284 +10448,67 @@ Adapted: escape
 <tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
-```buffer
-¶ a ┃\- b
-```
+````buffer
+¶ para
+  ┃ ``` x
+¶ after
+````
+
+</td></tr>
+</table>
+
+> cursorDocEnd
+
+<table>
+<tr><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+¶ para
+   ``` x
+¶ after┃
+````
+
+</td><td>
+
+````buffer
+¶ para
+  ``` x
+¶ after
+````
 
 </td></tr>
 </table>
 
 Original:
 <table>
-<tr><th>buffer</th><th>shiftEnter</th><th>deleteContentBackward</th></tr>
+<tr><th>buffer</th><th>deleteContentBackward</th><th>cursorDocEnd</th></tr>
 <tr valign="top"><td>
 
-```buffer
-a ┃\- b
-```
+````buffer
+para
+a┃ ``` x
+
+after
+````
 
 </td><td>
 
-```buffer
-a
- ┃\- b
-```
+````buffer
+para
+┃◌ ``` x
+
+after
+````
 
 </td><td>
 
-```buffer
-a ┃- b
-```
-
-</td></tr>
-</table>
-
-### [ShiftEnter5](../spec/shift-enter.md#shiftenter5)
-
-> shiftEnter
-
-Adapted: escape
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- abc ┃- def
-```
-
-</td><td>
-
-```buffer
-- abc 
-  ┃\- def
-```
-
-</td><td>
-
-```buffer
-- abc
-  ┃\- def
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- abc ┃- def
-```
-
-</td><td>
-
-```buffer
-- abc
-   ┃\- def
-```
-
-</td></tr>
-</table>
-
-### [ShiftEnter6](../spec/shift-enter.md#shiftenter6)
-
-> shiftEnter
-
-Adapted: escape
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- abc ┃1. def
-```
-
-</td><td>
-
-```buffer
-- abc 
-  ┃1\. def
-```
-
-</td><td>
-
-```buffer
-- abc
-  ┃1\. def
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- abc ┃1. def
-```
-
-</td><td>
-
-```buffer
-- abc
-   ┃1\. def
-```
-
-</td></tr>
-</table>
-
-### [ShiftEnter7](../spec/shift-enter.md#shiftenter7)
-
-> shiftEnter
-
-Adapted: escape
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ Title ┃===
-```
-
-</td><td>
-
-```buffer
-¶ Title 
-  ┃===
-```
-
-</td><td>
-
-```buffer
-¶ Title
-  ┃===
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-Title ┃===
-```
-
-</td><td>
-
-```buffer
-Title
- ┃\===
-```
-
-</td></tr>
-</table>
-
-### [ShiftEnter8](../spec/shift-enter.md#shiftenter8)
-
-> shiftEnter
-
-Adapted: escape
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ Title ┃--
-```
-
-</td><td>
-
-```buffer
-¶ Title 
-  ┃--
-```
-
-</td><td>
-
-```buffer
-¶ Title
-  ┃--
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-Title ┃--
-```
-
-</td><td>
-
-```buffer
-Title
- ┃\--
-```
-
-</td></tr>
-</table>
-
-### [ShiftEnter9](../spec/shift-enter.md#shiftenter9)
-
-> shiftEnter
-
-Adapted: escape
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one ┃<div>
-```
-
-</td><td>
-
-```buffer
-- one 
-  ┃<div>
-```
-
-</td><td>
-
-```buffer
-- one
-  ┃<div>
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one ┃<div>
-```
-
-</td><td>
-
-```buffer
-- one
-   ┃\<div>
-```
+````buffer
+para
+\``` x
+
+after
+````
 
 </td></tr>
 </table>
@@ -11147,7 +10555,8 @@ Adapted: escape
 </td><td>
 
 ````buffer
-- ┃``` x
+- 
+  ┃``` x
 ````
 
 </td></tr>
@@ -11174,106 +10583,6 @@ Original:
 -
   ┃\``` x
 ````
-
-</td></tr>
-</table>
-
-### [ShiftEnter19](../spec/shift-enter.md#shiftenter19)
-
-> shiftEnter
-
-Adapted: escape
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ a | b ┃|---|---|
-```
-
-</td><td>
-
-```buffer
-¶ a | b 
-  ┃|---|---|
-```
-
-</td><td>
-
-```buffer
-¶ a | b
-  ┃|---|---|
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-a | b ┃|---|---|
-```
-
-</td><td>
-
-```buffer
-a | b
- ┃|\---|---|
-```
-
-</td></tr>
-</table>
-
-### [ShiftEnter23](../spec/shift-enter.md#shiftenter23)
-
-> shiftEnter
-
-Adapted: escape
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ [Note]: this ┃matters a lot
-```
-
-</td><td>
-
-```buffer
-¶ [Note]: this 
-  ┃matters a lot
-```
-
-</td><td>
-
-```buffer
-¶ [Note]: this
-  ┃matters a lot
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-[Note]: this ┃matters a lot
-```
-
-</td><td>
-
-```buffer
-[Note]\: this
- ┃matters a lot
-```
 
 </td></tr>
 </table>
@@ -11320,7 +10629,8 @@ Adapted: escape
 </td><td>
 
 ```buffer
-- ┃# b
+- 
+  ┃\# b
 ```
 
 </td></tr>
@@ -11351,284 +10661,7 @@ Original:
 </td></tr>
 </table>
 
-## Adapted: caret (6)
-
-### [DeleteSubtree4](../spec/delete-subtree.md#deletesubtree4)
-
-> deleteSubtree
-
-Adapted: task
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃
-  - a1
-- [ ] b
-```
-
-</td><td>
-
-```buffer
-- [ ] b
-```
-
-</td><td>
-
-```buffer
-- [ ] ┃b
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃
-  - a1
-- [ ] b
-```
-
-</td><td>
-
-```buffer
-- [ ] ┃b
-```
-
-</td></tr>
-</table>
-
-### [DeleteSubtree9](../spec/delete-subtree.md#deletesubtree9)
-
-> deleteSubtree
-
-Adapted: setext heading, thematic break
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ┃Intro
-¶ ---
-¶ ## title: x
-```
-
-</td><td>
-
-```buffer
-¶ ---
-¶ ## title: x
-```
-
-</td><td>
-
-```buffer
-¶ ---
-¶ ## ┃title: x
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-┃Intro
-
----
-title: x
----
-```
-
-</td><td>
-
-```buffer
-
----
-┃title: x
----
-```
-
-</td></tr>
-</table>
-
-### [DeleteSubtree10](../spec/delete-subtree.md#deletesubtree10)
-
-> deleteSubtree
-
-Adapted: setext heading, thematic break
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ┃a
-¶ ***
-¶ ## title
-```
-
-</td><td>
-
-```buffer
-¶ ***
-¶ ## title
-```
-
-</td><td>
-
-```buffer
-¶ ***
-¶ ## ┃title
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-┃a
-
-***
-title
----
-```
-
-</td><td>
-
-```buffer
-***
-┃title
----
-```
-
-</td></tr>
-</table>
-
-### [Scenario10](../spec/scenarios.md#scenario10)
-
-Adapted: under outdent: logical
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-  - b┃
-    - b1
-  - c
-```
-
-</td></tr>
-</table>
-
-> outdent
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-  - c
-- b┃
-  - b1
-```
-
-</td></tr>
-</table>
-
-> moveSubtreeUp
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- b┃
-  - b1
-- a
-  - c
-```
-
-</td></tr>
-</table>
-
-> deleteSubtree
-
-<table>
-<tr><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-  - c
-```
-
-</td><td>
-
-```buffer
-- ┃a
-  - c
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>outdent</th><th>moveSubtreeUp</th><th>deleteSubtree</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-  - b┃
-    - b1
-  - c
-```
-
-</td><td>
-
-```buffer
-- a
-  - c
-- b┃
-  - b1
-```
-
-</td><td>
-
-```buffer
-- b┃
-  - b1
-- a
-  - c
-```
-
-</td><td>
-
-```buffer
-- ┃a
-  - c
-```
-
-</td></tr>
-</table>
+## Adapted: caret (2)
 
 ### [Scenario16](../spec/scenarios.md#scenario16)
 
@@ -11872,7 +10905,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (499)
+## Skipped (507)
 
 | example | why |
 | --- | --- |
@@ -11891,14 +10924,13 @@ Original:
 | [Backspace18e](../spec/backspace.md#backspace18e) | tag markup-heading |
 | [Backspace18f](../spec/backspace.md#backspace18f) | tag markup-heading |
 | [Backspace18g](../spec/backspace.md#backspace18g) | tag markup-heading |
-| [Backspace19](../spec/backspace.md#backspace19) | paragraph inside an item (a rem there shows a bullet) |
-| [Backspace19b](../spec/backspace.md#backspace19b) | paragraph inside an item (a rem there shows a bullet) |
 | [Backspace24](../spec/backspace.md#backspace24) | tag markup-fence |
 | [Backspace27](../spec/backspace.md#backspace27) | quote |
 | [Backspace28](../spec/backspace.md#backspace28) | tag markup-fence |
 | [Backspace31](../spec/backspace.md#backspace31) | selection across blocks |
 | [Backspace35](../spec/backspace.md#backspace35) | tag markup-heading |
 | [Backspace40](../spec/backspace.md#backspace40) | numbered list that RemNote would number otherwise |
+| [Backspace40b](../spec/backspace.md#backspace40b) | numbered list that RemNote would number otherwise |
 | [SoftBackspace1](../spec/backspace.md#softbackspace1) | tag markup-task |
 | [SoftBackspace3](../spec/backspace.md#softbackspace3) | tag markup-heading |
 | [SoftBackspace4](../spec/backspace.md#softbackspace4) | tag markup-heading |
@@ -11912,6 +10944,8 @@ Original:
 | [Backspace43](../spec/backspace.md#backspace43) | changes only what blocks can't show |
 | [Backspace43c](../spec/backspace.md#backspace43c) | changes only what blocks can't show |
 | [Backspace45b](../spec/backspace.md#backspace45b) | option joinWithChildren: refuse |
+| [Backspace50](../spec/backspace.md#backspace50) | option backspaceAtItemStart: body |
+| [Backspace50b](../spec/backspace.md#backspace50b) | option backspaceAtItemStart: unwrap |
 | **backtick.md** | |
 | [Backtick1](../spec/backtick.md#backtick1) | tag markup-fence |
 | [Backtick2](../spec/backtick.md#backtick2) | tag markup-fence |
@@ -11968,6 +11002,7 @@ Original:
 | [CursorDocEndLeft1](../spec/cursor.md#cursordocendleft1) | cursorCharLeft after cursorDocEnd |
 | **delete-subtree.md** | |
 | [DeleteSubtree5](../spec/delete-subtree.md#deletesubtree5) | selection across blocks |
+| [DeleteSubtree6](../spec/delete-subtree.md#deletesubtree6) | no text focus after deleteSubtree |
 | [DeleteSubtree7](../spec/delete-subtree.md#deletesubtree7) | quote |
 | [DeleteSubtree8](../spec/delete-subtree.md#deletesubtree8) | paragraph inside an item (a rem there shows a bullet) |
 | [DeleteSubtree11](../spec/delete-subtree.md#deletesubtree11) | quote |
@@ -11994,7 +11029,6 @@ Original:
 | [Delete16d](../spec/delete.md#delete16d) | option markup: decorated |
 | [Delete16e](../spec/delete.md#delete16e) | option markup: decorated |
 | [Delete16f](../spec/delete.md#delete16f) | option markup: decorated |
-| [Delete18b](../spec/delete.md#delete18b) | paragraph inside an item (a rem there shows a bullet) |
 | [Delete18c](../spec/delete.md#delete18c) | changes only what blocks can't show |
 | [Delete18d](../spec/delete.md#delete18d) | changes only what blocks can't show |
 | [Delete19](../spec/delete.md#delete19) | tag markup-task |
@@ -12019,9 +11053,12 @@ Original:
 | **enter.md** | |
 | [Enter3c](../spec/enter.md#enter3c) | numbered list that RemNote would number otherwise |
 | [Enter7b](../spec/enter.md#enter7b) | option enterOnEmptyItem: outdent |
+| [Enter7c](../spec/enter.md#enter7c) | option enterOnEmptyItem: unwrap |
 | [Enter15b](../spec/enter.md#enter15b) | option enterOnEmptyItem: outdent |
+| [Enter21b](../spec/enter.md#enter21b) | option enterOnEmptyItem: unwrap |
 | [Enter23](../spec/enter.md#enter23) | indented code |
 | [Enter25](../spec/enter.md#enter25) | numbered list that RemNote would number otherwise |
+| [Enter27b](../spec/enter.md#enter27b) | option enterOnEmptyItem: unwrap |
 | [Enter30](../spec/enter.md#enter30) | option enterOnEmptyItem: outdent |
 | [Enter32](../spec/enter.md#enter32) | tag markup-heading |
 | [Enter32b](../spec/enter.md#enter32b) | tag markup-heading |
@@ -12125,7 +11162,6 @@ Original:
 | **gaps.md** | |
 | [Gap15](../spec/gaps.md#gap15) | caret on a blank line |
 | [Gap16](../spec/gaps.md#gap16) | caret on a blank line |
-| [Gap17](../spec/gaps.md#gap17) | caret on a blank line |
 | [Gap18](../spec/gaps.md#gap18) | caret on a blank line |
 | [Gap19](../spec/gaps.md#gap19) | frontmatter |
 | **indent.md** | |
@@ -12167,14 +11203,12 @@ Original:
 | [MoveUp42](../spec/move-subtree-up.md#moveup42) | quote |
 | **obsidian-true-outliner.md** | |
 | [TO-Bug228](../spec/obsidian-true-outliner.md#to-bug228) | numbered list that RemNote would number otherwise |
-| [TO-E10](../spec/obsidian-true-outliner.md#to-e10) | paragraph inside an item (a rem there shows a bullet) |
 | [TO-E11](../spec/obsidian-true-outliner.md#to-e11) | paragraph inside an item (a rem there shows a bullet) |
 | [TO-E18](../spec/obsidian-true-outliner.md#to-e18) | tag markup-heading |
 | [TO-Bug267-E5](../spec/obsidian-true-outliner.md#to-bug267-e5) | quote |
 | [TO-S5](../spec/obsidian-true-outliner.md#to-s5) | caret in a marker |
 | [TO-S7-S8](../spec/obsidian-true-outliner.md#to-s7-s8) | tag markup-heading |
 | [TO-S7-S8b](../spec/obsidian-true-outliner.md#to-s7-s8b) | tag markup-heading |
-| [TO-S9](../spec/obsidian-true-outliner.md#to-s9) | paragraph inside an item (a rem there shows a bullet) |
 | [TO1](../spec/obsidian-true-outliner.md#to1) | tag markup-task |
 | [TO4](../spec/obsidian-true-outliner.md#to4) | numbered list that RemNote would number otherwise |
 | [TO6](../spec/obsidian-true-outliner.md#to6) | numbered list that RemNote would number otherwise |
@@ -12218,12 +11252,19 @@ Original:
 | [PastePlain31](../spec/paste-plain.md#pasteplain31) | option pastePlainLines: enter |
 | [PastePlain32](../spec/paste-plain.md#pasteplain32) | option pastePlainLines: items |
 | [PastePlain33](../spec/paste-plain.md#pasteplain33) | option pastePlainLines: items |
+| [PastePlain33b](../spec/paste-plain.md#pasteplain33b) | option pastePlainLines: items |
+| [PastePlain33c](../spec/paste-plain.md#pasteplain33c) | option pastePlainLines: items |
 | [PastePlain34](../spec/paste-plain.md#pasteplain34) | option pastePlainLines: host |
 | **paste.md** | |
-| [Paste8](../spec/paste.md#paste8) | paragraph inside an item (a rem there shows a bullet) |
 | [Paste9](../spec/paste.md#paste9) | quote |
 | [Paste15](../spec/paste.md#paste15) | caret in a task's checkbox, a heading's #s or a code block's fences |
 | [Paste16](../spec/paste.md#paste16) | caret in a marker |
+| [Paste17b](../spec/paste.md#paste17b) | option pasteOverSelection: ignore |
+| [Paste17c](../spec/paste.md#paste17c) | option pasteOverSelection: ignore |
+| [Paste17d](../spec/paste.md#paste17d) | option pasteOverSelection: ignore |
+| [Paste17e](../spec/paste.md#paste17e) | option pasteOverSelection: ignore |
+| [Paste17f](../spec/paste.md#paste17f) | option pasteOverSelection: ignore |
+| [Paste17g](../spec/paste.md#paste17g) | option pasteOverSelection: ignore |
 | [Paste18](../spec/paste.md#paste18) | option pasteLines: items |
 | [Paste19](../spec/paste.md#paste19) | option pasteLines: items |
 | [Paste20](../spec/paste.md#paste20) | option pasteAtTextStart: before |
@@ -12231,16 +11272,17 @@ Original:
 | [Paste25](../spec/paste.md#paste25) | callout |
 | [Paste27](../spec/paste.md#paste27) | quote |
 | **placeholders.md** | |
-| [Placeholder9](../spec/placeholders.md#placeholder9) | cursorCharLeft after cursorDocEnd |
-| [Placeholder17](../spec/placeholders.md#placeholder17) | cursorCharLeft after cursorDocEnd |
 | [Placeholder10](../spec/placeholders.md#placeholder10) | caret on a blank line |
-| [Placeholder11](../spec/placeholders.md#placeholder11) | cursorCharLeft after cursorDocEnd |
 | [Placeholder12](../spec/placeholders.md#placeholder12) | caret on a blank line |
 | [Placeholder13](../spec/placeholders.md#placeholder13) | tag markup-heading |
-| [Placeholder15](../spec/placeholders.md#placeholder15) | cursorCharLeft after cursorDocEnd |
-| [Placeholder18](../spec/placeholders.md#placeholder18) | cursorCharLeft after cursorDocEnd |
-| [Placeholder19](../spec/placeholders.md#placeholder19) | cursorCharLeft after cursorDocEnd |
 | [Placeholder20](../spec/placeholders.md#placeholder20) | option enterSplitSpace: start |
+| **quirks.md** | |
+| [Quirk1](../spec/quirks.md#quirk1) | option quirkEnterMidHeading: workflowy |
+| [Quirk1b](../spec/quirks.md#quirk1b) | option quirkEnterMidHeading: workflowy |
+| [Quirk1c](../spec/quirks.md#quirk1c) | option quirkEnterMidHeading: workflowy |
+| [Quirk2b](../spec/quirks.md#quirk2b) | option quirkPasteCaret: athens |
+| [Quirk3](../spec/quirks.md#quirk3) | option backspaceAtItemStart: logseq |
+| [Quirk4](../spec/quirks.md#quirk4) | option quirkPasteText: dynalist |
 | **quotes.md** | |
 | [Quote1](../spec/quotes.md#quote1) | quote |
 | [Quote2](../spec/quotes.md#quote2) | quote |
@@ -12363,8 +11405,6 @@ Original:
 | [Scenario15](../spec/scenarios.md#scenario15) | tag markup-task |
 | [Scenario17](../spec/scenarios.md#scenario17) | option pasteLines: items |
 | **shift-enter.md** | |
-| [ShiftEnter13](../spec/shift-enter.md#shiftenter13) | changes only what blocks can't show |
-| [ShiftEnter13b](../spec/shift-enter.md#shiftenter13b) | changes only what blocks can't show |
 | [ShiftEnter22](../spec/shift-enter.md#shiftenter22) | caret in a marker |
 | [ShiftEnter22b](../spec/shift-enter.md#shiftenter22b) | option markup: decorated |
 | [ShiftEnter26](../spec/shift-enter.md#shiftenter26) | tag markup-task |
@@ -12385,6 +11425,8 @@ Original:
 | [TaskBackspace1](../spec/tasks.md#taskbackspace1) | tag markup-task |
 | [TaskBackspace2](../spec/tasks.md#taskbackspace2) | tag markup-task |
 | [TaskBackspace3](../spec/tasks.md#taskbackspace3) | tag markup-task |
+| [TaskBackspace3b](../spec/tasks.md#taskbackspace3b) | option taskEditing: unwrap |
+| [TaskBackspace3c](../spec/tasks.md#taskbackspace3c) | option taskEditing: unwrap |
 | [TaskBackspace4](../spec/tasks.md#taskbackspace4) | tag markup-task |
 | [TaskBackspace5](../spec/tasks.md#taskbackspace5) | tag markup-task |
 | [TaskBackspace6](../spec/tasks.md#taskbackspace6) | tag markup-task |
@@ -12399,6 +11441,6 @@ Original:
 | [TaskBackspace11](../spec/tasks.md#taskbackspace11) | tag markup-task |
 | [TaskDelete4](../spec/tasks.md#taskdelete4) | tag markup-task |
 | **undo.md** | |
-| [Undo2](../spec/undo.md#undo2) | cursorCharLeft after cursorDocEnd |
+| [Undo2](../spec/undo.md#undo2) | caret on a blank line |
 | **z-open.md** | |
 | [Open2](../spec/z-open.md#open2) | caret in a task's checkbox, a heading's #s or a code block's fences |

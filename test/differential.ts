@@ -125,10 +125,10 @@ const pastes = ['x', '- a\n- b', '> q', '```\nc\n```', 'one\ntwo', '1. a\n2. b\n
 /** Every flavor with the defaults, then every other value of every option (in the default flavor), one at a time. */
 const configs: Record<string, unknown>[] = [
   { flavor: 'gfm' }, { flavor: 'commonmark' }, { flavor: 'obsidian' },
-  { outdent: 'logical' }, { bullet: '*' }, { enterOnEmptyItem: 'outdent' }, { enterOnEmptyItem: 'exit' }, { enterMidItem: 'child' }, { enterAtTextStart: 'stay' },
-  { backspaceAtTopItem: 'refuse' }, { emptyItemWithChildren: 'refuse' }, { joinWithChildren: 'refuse' }, { handleFenceContents: false },
-  { headingEditing: 'block' }, { taskEditing: 'text' }, { taskEditing: 'block' }, { enterTask: 'plain' }, { enterSplitSpace: 'drop' }, { enterSplitSpace: 'start' }, { pasteLines: 'items' }, { pastePlainLines: 'items' }, { pastePlainLines: 'enter' }, { pasteOnParent: 'after' },
-  { pasteSeams: 'open' }, { pasteAtTextStart: 'before' }, { pasteParagraphList: 'children' }, { pasteListForm: 'own' }, { copyAtCaret: 'host' }, { copySelection: 'nodes' },
+  { outdent: 'logical' }, { bullet: '*' }, { enterOnEmptyItem: 'outdent' }, { enterOnEmptyItem: 'exit' }, { enterOnEmptyItem: 'unwrap' }, { enterMidItem: 'child' }, { enterAtTextStart: 'stay' },
+  { backspaceAtTopItem: 'refuse' }, { backspaceAtItemStart: 'body' }, { backspaceAtItemStart: 'unwrap' }, { backspaceAtItemStart: 'logseq' }, { quirkEnterMidHeading: 'workflowy' }, { quirkPasteCaret: 'roam' }, { quirkPasteCaret: 'athens' }, { quirkPasteText: 'dynalist' }, { emptyItemWithChildren: 'refuse' }, { joinWithChildren: 'refuse' }, { handleFenceContents: false },
+  { headingEditing: 'block' }, { taskEditing: 'text' }, { taskEditing: 'block' }, { taskEditing: 'unwrap' }, { enterTask: 'plain' }, { enterSplitSpace: 'drop' }, { enterSplitSpace: 'start' }, { pasteLines: 'items' }, { pastePlainLines: 'items' }, { pastePlainLines: 'enter' }, { pasteOnParent: 'after' },
+  { pasteSeams: 'open' }, { pasteOverSelection: 'ignore' }, { pasteAtTextStart: 'before' }, { pasteParagraphList: 'children' }, { pasteListForm: 'own' }, { copyAtCaret: 'host' }, { copySelection: 'nodes' },
   { markup: 'decorated' }, { closeBackticks: 'all' }, { closeBackticks: 'none' },
 ];
 const documents = Number(process.env.DIFF_DOCS ?? 1500);

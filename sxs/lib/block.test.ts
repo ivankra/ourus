@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { compareOutlines, draw, endFenceOptional, sameText, liftOwned, ownBlocks, project, readOutline, sectioned, unescapeLaterLines, Unsupported, type Outline } from './block.ts';
+import { compareOutlines, draw, endFenceOptional, italicsAsMarkdown, runsAsMarkdown, sameText, liftOwned, ownBlocks, project, readOutline, sectioned, unescapeLaterLines, Unsupported, type Outline } from './block.ts';
 
 const blocks = (o: Outline): string[] => o.blocks.map((b) => `${'  '.repeat(b.depth)}${b.text}`);
 
@@ -211,4 +211,28 @@ test('a code block closed at a block\'s end reads as one its block ends', () => 
   assert.equal(endFenceOptional('```\na\n```\n```'), '```\na\n```\n```');
   const want = { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: '```\ncode\n```' }], sel: { block: 1, anchor: 8, head: 8 } };
   assert.equal(compareOutlines(want, { ...want, blocks: [want.blocks[0]!, { depth: 0, text: '```\ncode' }] }), 'agree');
+});
+
+test("an app's rich text reads as Markdown, a place in its text where it is in the markup", () => {
+  const md = runsAsMarkdown([{ text: 'ax ' }, { text: 'y', bold: true }, { text: 'b' }]);
+  assert.equal(md.text, 'ax **y**b');
+  // between runs, outside the markup: after the closing one, ahead of the opening one
+  assert.deepEqual([0, 3, 4, 5].map(md.at), [0, 3, 8, 9]);
+  const all = [{ text: 'a ' }, { text: 'b', bold: true }, { text: ' ' }, { text: 'i', italic: true }, { text: ' ' }, { text: 'c', code: true }, { text: ' ' }, { text: 's', strike: true }, { text: ' ' }, { text: 'l', href: 'https://e.x/p' }];
+  assert.equal(runsAsMarkdown(all).text, 'a **b** *i* `c` ~~s~~ [l](https://e.x/p)');
+  // nested, a run's edge spaces out of its emphasis, a link's runs one link, code's backticks
+  const nested = runsAsMarkdown([{ text: 'a', bold: true }, { text: 'b', bold: true, italic: true }, { text: 'c', bold: true }]);
+  assert.equal(nested.text, '**a*b*c**');
+  assert.equal(nested.at(3), 9);
+  assert.equal(runsAsMarkdown([{ text: 'b ', bold: true }, { text: 'x' }]).text, '**b** x');
+  assert.equal(runsAsMarkdown([{ text: 'one ', href: 'u' }, { text: 'two', href: 'u', bold: true }]).text, '[one **two**](u)');
+  assert.equal(runsAsMarkdown([{ text: 'x`y', code: true }]).text, '``x`y``');
+});
+
+test("an italic spelled `__x__` reads as Markdown's `*x*`, the caret moved with it", () => {
+  const o = italicsAsMarkdown({ blocks: [{ depth: 0, text: 'a __it__ b __x y__!' }], sel: { block: 0, anchor: 18, head: 18 } });
+  assert.equal(o.blocks[0]!.text, 'a *it* b *x y*!');
+  assert.equal(o.sel!.anchor, 14);
+  assert.ok(sameText('_i_ ~s~', '*i* ~~s~~'));
+  assert.ok(!sameText('snake_case_x', 'snake*case*x'));
 });

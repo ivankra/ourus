@@ -118,11 +118,13 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
 
 - **`Config`** chooses how commands behave where outliners differ. It is set when the document is
   made (`OurusDoc.parse(text, { config })`): `outdent`, `bullet`, `enterOnEmptyItem`, `enterMidItem`,
-  `enterAtTextStart`, `enterSplitSpace`, `enterTask`, `backspaceAtTopItem`, `emptyItemWithChildren`,
-  `joinWithChildren`, `handleFenceContents`, `closeBackticks`, `headingEditing`, `taskEditing`,
-  `copyAtCaret`, `copySelection`, `pasteSeams`, `pasteLines`, `pastePlainLines`, `pasteAtTextStart`,
-  `pasteOnParent`, `pasteParagraphList`, `pasteListForm`, `markup`, and `flavor` (the only option
-  that affects reading). Each option's choices and default are documented in `src/config.ts`.
+  `enterAtTextStart`, `enterSplitSpace`, `enterTask`, `backspaceAtTopItem`, `backspaceAtItemStart`,
+  `emptyItemWithChildren`, `joinWithChildren`, `handleFenceContents`, `closeBackticks`,
+  `headingEditing`, `taskEditing`, `copyAtCaret`, `copySelection`, `pasteSeams`, `pasteOverSelection`, `pasteLines`,
+  `pastePlainLines`, `pasteAtTextStart`, `pasteOnParent`, `pasteParagraphList`, `pasteListForm`,
+  `markup`, the quirks (`quirkEnterMidHeading`, `quirkPasteCaret`, `quirkPasteText`: one app's mechanics),
+  and `flavor` (the only option that affects reading). Each option's choices and default are
+  documented in `src/config.ts`.
 
 The host's contract:
 

@@ -148,7 +148,7 @@ text to hold it. Left, it goes. Bare Obsidian breaks the line instead, one parag
 which is Shift-Enter's ([Enter12](enter.md#enter12)).
 
 ```yaml
-tags: core free-form
+tags: core
 ```
 
 ```buffer
@@ -174,7 +174,7 @@ para
 Shift-Enter at the end of a paragraph opens an empty line in it.
 
 ```yaml
-tags: common free-form
+tags: common
 ```
 
 ```buffer
@@ -371,13 +371,13 @@ tags: edge
   - c
 ```
 
-> cursorDocEnd cursorCharLeft
+> cursorDocEnd
 
 Leaving, the surplus space goes, and `c` is still a child.
 
 ```buffer
 - b
-  - c┃
+  - c
 ```
 
 ## Placeholder17
@@ -402,11 +402,11 @@ tags: rare
 - b
 ```
 
-> cursorDocEnd cursorCharLeft
+> cursorDocEnd
 
 ```buffer
 - \``` x
-- b┃
+- b
 ```
 
 ## Placeholder10
@@ -461,12 +461,12 @@ tags: common
 - b
 ```
 
-> cursorDocEnd cursorCharLeft
+> cursorDocEnd
 
 ```buffer
 - a
 - 
-- b┃
+- b
 ```
 
 ## Placeholder12
@@ -587,13 +587,13 @@ para
 - a
 ```
 
-> cursorDocEnd cursorCharLeft
+> cursorDocEnd
 
 ```buffer
 para
 
 - 
-- a┃
+- a
 ```
 
 ## Placeholder16
@@ -655,12 +655,12 @@ after
 after
 ```
 
-> cursorDocEnd cursorCharLeft
+> cursorDocEnd
 
 ```buffer
 \# b
 
-after┃
+after
 ```
 
 ## Placeholder19
@@ -688,13 +688,13 @@ para
 after
 ````
 
-> cursorDocEnd cursorCharLeft
+> cursorDocEnd
 
 ````buffer
 para
 \``` x
 
-after┃
+after
 ````
 
 ## Placeholder20

@@ -17,7 +17,7 @@ Tana's own, from its shortcut table (`{"move up": {hotkey: {linuxAndWindows, mac
 | action | keys |
 | --- | --- |
 | `enter` | Enter |
-| `shiftEnter` | Shift+Enter ("insert node": an empty node after this one) |
+| `shiftEnter` | none: Shift+Enter is "insert node", an empty node after this one (below); its cases skip |
 | `indent` | Tab |
 | `outdent` | Shift+Tab |
 | `moveSubtreeUp` | Shift+Alt+Up ("move up") |
@@ -119,7 +119,10 @@ description is the node's later lines to the keys too: Right at the name's end a
 Left at its start and Up back to the name, Home to its start, Up and Down between its own lines;
 Backspace at its start and Delete at the name's end join nothing, Enter in it makes a node after
 (its text not split), Tab in it indents nothing (the focus leaves it), Shift+Tab goes to the name.
-(Refused as "a block of more than one line" until 2026-10-18: 19 more cases run, 11 agree.) `load` writes
+(Refused as "a block of more than one line" until 2026-10-18: 19 more cases run, 11 agree.) No key
+breaks a line in a name, and Shift+Enter is another action ("insert node", without splitting the
+text): no key is the spec's `shiftEnter`, so its cases skip (`action shiftEnter`, since 2026-10-25;
+about 35 disagreements measured only that). `load` writes
 the canonical text as escaped text; `read` turns the HTML back into Markdown (`**`, `*`, `` ` ``, `~~`),
 other markup into its text, a no-break space into a space. The rest are the node's attributes:
 

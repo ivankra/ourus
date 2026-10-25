@@ -11,6 +11,7 @@ import { MdTree } from '../src/parser/syntax.ts';
 
 import { MdBlockAt } from '../src/parser/tree.ts';
 import type { MdBlock, MdLine } from '../src/parser/types.ts';
+import { drawsCaret } from './drawing.ts';
 
 /** A parsed spec file: its text, block tree and line table. */
 type Parsed = { readonly text: string; readonly root: MdBlock; readonly lines: readonly MdLine[] };
@@ -73,7 +74,7 @@ export type Rank = (typeof RANKS)[number];
  * case on block outliners, whose documents have no form for that structure; a driver lists the
  * `markup-` tags its app can't compare in `refuses`, and the case is skipped there.
  */
-export const TAGS = ['free-form', 'markup-heading', 'markup-task', 'markup-fence', 'quote-container', 'pending'] as const;
+export const TAGS = ['free-form', 'markup-heading', 'markup-task', 'markup-fence', 'enter-in-fence', 'quote-container', 'pending'] as const;
 
 export type Tag = (typeof TAGS)[number];
 
@@ -94,6 +95,10 @@ export const specFiles = (): string[] => readdirSync(SPEC_DIR).filter((f) => f.e
 export const readSpecFile = (file: string): SpecTest[] => readSpec(file, readFileSync(SPEC_DIR + file, 'utf8'));
 
 export class SpecError extends Error {}
+
+/** The first line of `drawn` with a `␠` that doesn't end it (`␠` draws a line's trailing spaces, and nothing else), or -1. */
+const strayBlank = (drawn: string): number => drawn.split('\n').findIndex((l) => /␠(?!␠*$)/.test(l));
+const STRAY_BLANK = '`␠` draws a line\'s trailing spaces only: write a space as a space elsewhere';
 
 export function readSpec(file: string, source: string): SpecTest[] {
   const syntax = MdTree.parse(source);
@@ -165,6 +170,7 @@ export function readSpec(file: string, source: string): SpecTest[] {
       const read = readConfig(fenceContent(tree, at), start + 1, (line, m) => fail(line, m), 'step');
       if (read.result !== undefined) group!.result = read.result;
       if (read.clipboard !== undefined) group!.clipboard = read.clipboard;
+      if (read.clipboard && Object.values(read.clipboard).some((c) => strayBlank(c) >= 0)) fail(start, STRAY_BLANK);
       if (read.outline !== undefined) group!.outline = read.outline;
       continue;
     }
@@ -177,6 +183,7 @@ export function readSpec(file: string, source: string): SpecTest[] {
       test = { file, line: config.line + 1, name, pending: !!config.tags?.includes('pending'), options: config.options, rank: config.rank, tags: config.tags ?? [], initial: { buffer: '' }, steps: [] };
       delete (test.initial as State).buffer;
       if (config.clipboard !== undefined) test.initial.clipboard = config.clipboard;
+      if (config.clipboard && Object.values(config.clipboard).some((c) => strayBlank(c) >= 0)) fail(config.line, STRAY_BLANK);
       if (config.outline !== undefined) test.initial.outline = config.outline;
       config = null;
       tests.push(test);
@@ -184,6 +191,10 @@ export function readSpec(file: string, source: string): SpecTest[] {
     }
     if (group!.buffer !== undefined) fail(start, 'a second buffer block for one state (each test needs a heading of its own)');
     group!.buffer = fenceContent(tree, at);
+    // (a step's buffer may leave the caret out, where it isn't checked; a start draws it)
+    if (group === tests[tests.length - 1]?.initial && !drawsCaret(group!.buffer)) fail(start, "a test's start draws its caret (`┃`, or a selection); only a step's buffer may leave it out");
+    const stray = strayBlank(group!.buffer);
+    if (stray >= 0) fail(start + 1 + stray, STRAY_BLANK);
   }
 
   if (config) fail(config.line, 'a config block with no test after it');

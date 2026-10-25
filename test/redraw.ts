@@ -14,7 +14,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Config } from '../src/config.ts';
-import { drawDoc } from './drawing.ts';
+import { drawDoc, drawsCaret, withoutCaret } from './drawing.ts';
 import { isAction, play } from './player.ts';
 import { flavorsOf, normalize, outcome, startOf } from './spec-run.ts';
 import { readSpecFile, slug, specFiles, SPEC_DIR, type SpecTest } from './specfile.ts';
@@ -67,6 +67,8 @@ function played(t: SpecTest, flavor: Config['flavor']): { buffer: string; result
 
 const files = specFiles();
 const redrawn: Redrawn[] = [];
+/** ourus's buffer as a drawing has it: without the caret where the drawing draws none (not checked there). */
+const as = (drawn: string, got: string): string => (drawsCaret(drawn) ? got : withoutCaret(got));
 const unredrawable: string[] = [];
 let checked = 0;
 for (const file of files) {
@@ -78,7 +80,7 @@ for (const file of files) {
     const differs = (k: number): boolean => {
       const step = t.steps[k]!;
       const got = (runs[0]!.steps as { buffer: string; result: string }[])[k]!;
-      return (step.expect.buffer !== undefined && normalize(step.expect.buffer) !== got.buffer) || (step.expect.result !== undefined && step.expect.result !== got.result);
+      return (step.expect.buffer !== undefined && normalize(step.expect.buffer) !== as(step.expect.buffer, got.buffer)) || (step.expect.result !== undefined && step.expect.result !== got.result);
     };
     if (broken) {
       unredrawable.push(`${t.file}:${t.line} ${t.name} (${broken.flavor}): ${broken.steps as string}`);
@@ -94,7 +96,7 @@ for (const file of files) {
     t.steps.forEach((step, k) => {
       const got = first!.steps[k]!;
       if (step.expect.result !== undefined && step.expect.result !== got.result) redrawn.push({ t, step: k, kind: 'result', drawn: step.expect.result, now: got.result });
-      if (step.expect.buffer !== undefined && normalize(step.expect.buffer) !== got.buffer) redrawn.push({ t, step: k, kind: 'buffer', drawn: step.expect.buffer, now: got.buffer });
+      if (step.expect.buffer !== undefined && normalize(step.expect.buffer) !== as(step.expect.buffer, got.buffer)) redrawn.push({ t, step: k, kind: 'buffer', drawn: step.expect.buffer, now: as(step.expect.buffer, got.buffer) });
     });
   }
 }

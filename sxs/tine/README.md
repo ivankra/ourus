@@ -13,7 +13,7 @@ From `src/keybindings.ts` and the block editor's handlers, checked in the app:
 | action | keys |
 | --- | --- |
 | `enter` | Enter (splits; at the text's start, an empty block above) |
-| `shiftEnter` | Shift+Enter (a line break in the block) |
+| `shiftEnter` | Shift+Enter (a line break in the block; twice, a blank line, the block holding paragraphs: an item's paragraphs right after its text are its block's (`paragraphsInBlock`, since 2026-10-25)) |
 | `indent` | Tab |
 | `outdent` | Shift+Tab (outdenting is direct by default; Settings › Editor has logical) |
 | `moveSubtreeUp` | Alt+Shift+Up: the block with its children |
@@ -21,7 +21,7 @@ From `src/keybindings.ts` and the block editor's handlers, checked in the app:
 | `deleteContentBackward` | Backspace (joining at a block's start) |
 | `deleteContentForward` | Delete (joining at a block's end) |
 | `deleteSoftLineBackward` | Alt+U ("kill line before") |
-| `deleteSubtree` | Escape (the block selected), then Backspace |
+| `deleteSubtree` | Escape (the block selected), then Backspace; after it no block is edited: the outline alone is judged (`noCaretAfter`, since 2026-10-25). |
 | `duplicateSubtree` | *missing* (no command): its examples are skipped |
 | `pasteStructured` | Ctrl+V (`- ` outlines become blocks) |
 | `pastePlain` | Ctrl+Shift+V (as it is) |
@@ -118,6 +118,13 @@ registry on raw.githubusercontent.com.
   empty numbered item, on a list line inside the block): an empty last child makes another, where
   OG outdents it (`Block.tsx`'s Enter, then `splitBlock`). The split keeps the spaces at both halves'
   edges (nothing trimmed), and over a selection splits at its start, the selected text kept.
+- **Pasted HTML's emphasis is spelled `_i_` and `~s~`**: the same text as `*i*` and `~~s~~` to the
+  comparison, which goes by the rendering (`sameText` in lib/block.ts, since 2026-10-25).
+- **Backspace at a numbered block's start takes its number first**, as Logseq does, the block a
+  bulleted one (`backspace.md › Backspace29`): declared, `backspaceAtItemStart: logseq` (since
+  2026-10-25).
+- **A backtick in text is typed as a pair**, as Logseq does (`backtick.md › Backtick18`, `19`, `21`,
+  `32`): declared, `closeBackticks: all` (since 2026-10-25).
 - **A join never refuses but at the top**: Backspace at a block's start joins it into the block
   above, Delete at the very end of its text the block below into it (`absorbInto`), their children
   appended to the survivor's; Backspace on a page's first block does nothing. Delete joins only with

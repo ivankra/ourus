@@ -65,12 +65,12 @@ a
 b
 ```
 
-> cursorDocEnd cursorCharLeft
+> cursorDocEnd
 
 ```buffer
 a
 
-b┃
+b
 ```
 
 ## Undo3
@@ -80,7 +80,7 @@ the first undo takes back the indent, the blank line with it, as SiYuan, BlockNo
 its Outliner and SilverBullet do. Left again, the empty item stays, after an item that holds it.
 
 ```yaml
-tags: common free-form
+tags: common
 ```
 
 ```buffer

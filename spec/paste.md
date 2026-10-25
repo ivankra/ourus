@@ -18,6 +18,11 @@ copied with it, plain lines, the host's paste.
   or the quote, and a pasted paragraph's list follows it.
 - Headings: a pasted heading splits the section it lands in, as one typed there would: what follows it, up to a
   heading of its level or above, is its section.
+- Over a selection: it goes first, as a cut takes it, and the paste goes where that leaves the caret
+  (`pasteOverSelection: replace`). With `ignore` (as Logseq, Logseq DB, Tine, Tana, Roam and Athens
+  paste blocks), a paste of nodes (blocks between nodes, not text put into a text) over a selection
+  in one node's text leaves the text as it is, the nodes going where a paste at a caret puts them;
+  what is pasted as text replaces the selection either way, as typing does.
 
 ## Paste1
 
@@ -505,7 +510,8 @@ result: notApplicable
 
 ## Paste17
 
-Over a selection, the selection goes first, then the paste goes where that leaves the caret.
+Over a selection, the selection goes first, then the paste goes where that leaves the caret
+(`pasteOverSelection: replace`).
 
 ```yaml
 tags: common
@@ -523,6 +529,165 @@ clipboard: |-
 
 ```buffer
 - ad
+- x
+- y┃
+- e
+```
+
+## Paste17b
+
+With `pasteOverSelection: ignore`, pasted nodes leave the selected text as it is: they go where a
+paste at a caret puts them, after the item, the caret at the end of the last.
+
+```yaml
+tags: edge
+pasteOverSelection: ignore
+clipboard: |-
+  - x
+  - y
+```
+
+```buffer
+- a«bc»d
+- e
+```
+
+> paste
+
+```buffer
+- abcd
+- x
+- y┃
+- e
+```
+
+## Paste17c
+
+With `pasteOverSelection: ignore`, the selection decides nothing, over the whole text as anywhere
+in it.
+
+```yaml
+tags: edge
+pasteOverSelection: ignore
+clipboard: |-
+  - x
+  - y
+```
+
+```buffer
+- «abcd»
+- e
+```
+
+> paste
+
+```buffer
+- abcd
+- x
+- y┃
+- e
+```
+
+## Paste17d
+
+With `pasteOverSelection: ignore`, in an item with children the nodes go where a paste at a caret
+puts them there, first among its children (`pasteOnParent: children`).
+
+```yaml
+tags: edge
+pasteOverSelection: ignore
+clipboard: |-
+  - x
+  - y
+```
+
+```buffer
+- a«bc»d
+  - kid
+- e
+```
+
+> paste
+
+```buffer
+- abcd
+  - x
+  - y┃
+  - kid
+- e
+```
+
+## Paste17e
+
+With `pasteOverSelection: ignore`, one item copied with its line break is a node, and leaves the
+selected text too.
+
+```yaml
+tags: edge
+pasteOverSelection: ignore
+clipboard: |
+  - x
+```
+
+```buffer
+- a«bc»d
+- e
+```
+
+> paste
+
+```buffer
+- abcd
+- x┃
+- e
+```
+
+## Paste17f
+
+With `pasteOverSelection: ignore`, what is pasted as text replaces the selection, as typing does:
+one line, put in at the caret.
+
+```yaml
+tags: edge
+pasteOverSelection: ignore
+clipboard: "x"
+```
+
+```buffer
+- a«bc»d
+- e
+```
+
+> paste
+
+```buffer
+- ax┃d
+- e
+```
+
+## Paste17g
+
+With `pasteOverSelection: ignore` and `pasteLines: items` (Tana, Roam and Athens), plain lines are
+nodes, and leave the selected text; with `pasteLines: text` they are text, and replace it.
+
+```yaml
+tags: edge
+pasteOverSelection: ignore
+pasteLines: items
+clipboard: |-
+  x
+  y
+```
+
+```buffer
+- a«bc»d
+- e
+```
+
+> paste
+
+```buffer
+- abcd
 - x
 - y┃
 - e

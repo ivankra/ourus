@@ -60,6 +60,12 @@ export interface ProjectOptions {
    */
   readonly freeForm?: boolean;
   /**
+   * The app's block holds paragraphs (`Driver.paragraphsInBlock`): an item's paragraphs right after
+   * its text are its block's text, after their blank lines (`- foo⏎⏎  bar` is the block `foo⏎⏎bar`,
+   * as Logseq holds it), what they own its children; else each is a block of its own, its child.
+   */
+  readonly paragraphsInBlock?: boolean;
+  /**
    * The case's options, where they decide how ourus reads the text: with `enterSplitSpace: start` an
    * item's padding past the item above's is its text, as the app's block starts with the spaces.
    */
@@ -134,11 +140,41 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
   const maps: LineMap[][] = [];
   const sections: number[] = [];
   const blockOf = new Map<number, number>();
+  // paragraphs that are their item's block's text (`paragraphsInBlock`), the blank lines before them
+  // too; what is under one is a level up
+  const merged = new Set<number>();
+  const inBlock = new Set<number>();
+  const lift = new Map<number, number>();
   for (const node of nodes) {
-    const { text, lines } = blockText(doc, node, notes, options.ordered ?? false, options.freeForm ?? false);
+    const parent = node.parent;
+    const up = parent ? (lift.get(parent.id) ?? 0) + (merged.has(parent.id) ? 1 : 0) : 0;
+    lift.set(node.id, up);
+    const prev = parent?.children[node.index - 1];
+    const into = options.paragraphsInBlock && node.kind === 'paragraph' && parent?.kind === 'item' && blockOf.has(parent.id) && (!prev || (merged.has(prev.id) && !prev.children.length));
+    const own = new Set<string>();
+    const { text, lines } = blockText(doc, node, own, options.ordered ?? false, options.freeForm ?? false);
+    // (a paragraph in a block's text is none adapted)
+    for (const n of own) if (!into || n !== 'paragraph') notes.add(n);
+    if (into) {
+      const i = blockOf.get(parent.id)!;
+      const block = blocks[i]!;
+      let joined = block.text;
+      for (let l = (prev ?? parent).textLastLine + 1; l < node.textFirstLine; l++) {
+        const line = doc.mdTree.line(l);
+        joined += '\n';
+        maps[i]!.push({ line: l, from: line.to, to: line.to, at: joined.length });
+        inBlock.add(l);
+      }
+      joined += '\n';
+      maps[i]!.push(...lines.map((m) => ({ ...m, at: m.at + joined.length })));
+      blocks[i] = { ...block, text: joined + text };
+      merged.add(node.id);
+      blockOf.set(node.id, i);
+      continue;
+    }
     if (node.kind === 'heading') sections.push(blocks.length);
     blockOf.set(node.id, blocks.length);
-    blocks.push({ depth: node.depth - 1, text, ...(options.freeForm && node.kind !== 'item' && { free: true as const }) });
+    blocks.push({ depth: node.depth - 1 - up, text, ...(options.freeForm && node.kind !== 'item' && { free: true as const }) });
     maps.push(lines);
   }
   // the caret on a blank line at its node's text column, right after its text (where Shift-Enter
@@ -161,7 +197,7 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
     }
   }
   for (let i = 0; i < doc.lineCount; i++) {
-    if (doc.nodeAtLine(i) || !doc.isEmptyLine(i) || held?.lines.has(i)) continue;
+    if (doc.nodeAtLine(i) || !doc.isEmptyLine(i) || held?.lines.has(i) || inBlock.has(i)) continue;
     if (options.freeForm) {
       // the nodes on either side: a blank line next to a free block is free form's own boundary
       let before = i - 1;
@@ -287,9 +323,14 @@ function blockText(doc: OurusDoc, node: OutlineNode, notes: Set<string>, ordered
   if (node.kind === 'item' && ATOM_NOTES[head.type]) notes.add(ATOM_NOTES[head.type]!);
   // paragraphs and headings lose their lines' leading whitespace; atoms keep theirs
   const trim = head.type === 'paragraph' || head.type === 'heading';
+  // an item's text below its marker (`-⏎  text`, a Shift-Enter at its start): its block's text starts
+  // with an empty line, as an app's block after that Shift-Enter does (ShiftEnter13)
+  const below = node.kind === 'item' && text instanceof ProseText && text.frame.some((p) => p.part === 'below') ? '\n' : '';
   for (let l = headStart; l <= headEnd; l++) {
     const line = lineOf(l);
-    let from = trim ? skipSpaces(line.contentFrom, line.to) : line.contentFrom;
+    // (a later line's spaces past its content column are its text, as ourus's and the apps' are:
+    // ShiftEnter1)
+    let from = trim && l === headStart ? skipSpaces(line.contentFrom, line.to) : line.contentFrom;
     // spaces before it that are the text's are the block's, as the app's block starts with them: a
     // space a placeholder holds as text (`- ◌ x`), what a split kept (`enterSplitSpace: start`: an
     // item's padding, a paragraph's leading spaces, where ourus's text start is before them)
@@ -297,7 +338,7 @@ function blockText(doc: OurusDoc, node: OutlineNode, notes: Set<string>, ordered
       const held = doc.marks.points().find((p) => p >= line.from && p < from && (source[p] === ' ' || source[p] === '\t'));
       from = Math.min(held ?? from, node.kind === 'item' || node.kind === 'paragraph' ? doc.textStart(l) : from);
     }
-    add(l, from, line.to, l === headStart ? number : '', trim);
+    add(l, from, line.to, l === headStart ? number + below : '', trim);
   }
   return { text: parts.join('\n'), lines };
 }
@@ -377,9 +418,14 @@ export function liftOwned(blocks: readonly Block[]): Block[] {
 export function ownBlocks(blocks: readonly Block[], ownsList: (b: Block, i: number) => boolean): Block[] {
   const scope: { headings: number[]; paragraph: boolean }[] = [];
   const depthOf: number[] = [];
+  /** Whether the last block at each depth is an item: a paragraph in an item owns no list there, as in ourus's outline. */
+  const item: boolean[] = [];
   return blocks.map((b, i) => {
     scope.length = b.depth + 1;
     depthOf.length = b.depth;
+    const inItem = b.depth > 0 && !!item[b.depth - 1];
+    item.length = b.depth;
+    item[b.depth] = !b.free;
     const sc = (scope[b.depth] ??= { headings: [], paragraph: false });
     let shift: number;
     if (b.free) {
@@ -387,7 +433,7 @@ export function ownBlocks(blocks: readonly Block[], ownsList: (b: Block, i: numb
       if (level) while (sc.headings.length && sc.headings.at(-1)! >= level) sc.headings.pop();
       shift = sc.headings.length;
       if (level) sc.headings.push(level);
-      sc.paragraph = !level && ownsList(b, i);
+      sc.paragraph = !level && !inItem && ownsList(b, i);
     } else shift = sc.headings.length + (sc.paragraph ? 1 : 0);
     const depth = (b.depth ? depthOf[b.depth - 1]! + 1 : 0) + shift;
     depthOf[b.depth] = depth;
@@ -529,24 +575,142 @@ export function compareOutlines(want: Outline, got: Outline, sections: readonly 
   [want, got] = [sectioned(ended(want), sections), sectioned(ended(got), sections)];
   const same = want.blocks.length === got.blocks.length && want.blocks.every((b, i) => b.depth === got.blocks[i]!.depth && !b.free === !got.blocks[i]!.free && sameText(b.text, got.blocks[i]!.text));
   if (!same) {
-    const close = want.blocks.length === got.blocks.length && want.blocks.every((b, i) => loose(b) === loose(got.blocks[i]!));
+    // (an empty free block is an empty paragraph, which Markdown has only as blank lines: Placeholder3;
+    // what it owns comes up a level with it gone, as the text has it: Backspace17)
+    const shown = (o: Outline): string[] => {
+      const out: string[] = [];
+      const gone: number[] = [];
+      for (const b of o.blocks) {
+        while (gone.length && gone.at(-1)! >= b.depth) gone.pop();
+        if (b.free && b.text.trim() === '') gone.push(b.depth);
+        else out.push(loose({ ...b, depth: b.depth - gone.length }));
+      }
+      return out;
+    };
+    const close = JSON.stringify(shown(want)) === JSON.stringify(shown(got));
     return close ? 'whitespace' : 'disagree';
   }
   if (want.sel && (JSON.stringify(want.sel) !== JSON.stringify(got.sel) || got.selected?.length)) return 'caret';
   return 'agree';
 }
 
+/** A run of a block's text with its inline formatting, as an app with rich text holds it. */
+export interface Run {
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+  strike?: boolean;
+  code?: boolean;
+  /** A link's target. */
+  href?: string;
+}
+
+/**
+ * Rich text as Markdown: each formatted run in its markup (`**b**`, `*i*`, `~~s~~`, `` `c` ``,
+ * `[l](url)`), the text itself as it is (an app's plain text is read unescaped, as before), a run's
+ * spaces at its edges outside its markup, where Markdown has emphasis end; and where a place in the
+ * text is in the Markdown (`at`), between runs after the markup closing the one before and ahead of
+ * the markup opening the next.
+ */
+export function runsAsMarkdown(runs: readonly Run[]): { text: string; at: (p: number) => number } {
+  type Mark = 'link' | 'bold' | 'italic' | 'strike' | 'code';
+  const ORDER: Mark[] = ['link', 'bold', 'italic', 'strike', 'code'];
+  // a formatted run's edge spaces as runs of their own, out of its emphasis (code keeps its own; a
+  // link keeps them)
+  const split: Run[] = [];
+  for (const r of runs) {
+    if (!r.text) continue;
+    const marked = r.bold || r.italic || r.strike || r.href !== undefined;
+    const m = marked && !r.code ? /^(\s*)([\s\S]*?)(\s*)$/.exec(r.text)! : null;
+    if (!m || (!m[1] && !m[3])) split.push(r);
+    else {
+      const space = (text: string): Run => ({ text, ...(r.href !== undefined && { href: r.href }) });
+      if (m[1]) split.push(space(m[1]));
+      if (m[2]) split.push({ ...r, text: m[2] });
+      if (m[3]) split.push(space(m[3]));
+    }
+  }
+  const has = (r: Run, k: Mark): boolean => (k === 'link' ? r.href !== undefined : !!r[k]);
+  const ticks = (r: Run): string => '`'.repeat(Math.max(1, ...[...r.text.matchAll(/`+/g)].map((m) => m[0].length + 1)));
+  let out = '';
+  const open: Mark[] = [];
+  let href: string | undefined;
+  let code = '';
+  const close = (k: Mark): void => {
+    out += k === 'link' ? `](${href})` : k === 'bold' ? '**' : k === 'italic' ? '*' : k === 'strike' ? '~~' : code;
+  };
+  // where each run starts in the plain text and in the Markdown
+  const starts: { plain: number; md: number; boundary: number }[] = [];
+  let plain = 0;
+  for (const r of split) {
+    // close down to the first open mark this run doesn't continue (a link to another target too, and
+    // code always: each code run is a span of its own)
+    const keep = open.findIndex((k) => !has(r, k) || (k === 'link' && r.href !== href) || k === 'code');
+    if (keep >= 0) for (const k of open.splice(keep).reverse()) close(k);
+    const boundary = out.length;
+    for (const k of ORDER) {
+      if (!has(r, k) || open.includes(k)) continue;
+      open.push(k);
+      if (k === 'link') href = r.href;
+      if (k === 'code') code = ticks(r);
+      out += k === 'link' ? '[' : k === 'bold' ? '**' : k === 'italic' ? '*' : k === 'strike' ? '~~' : code + (/^`|`$/.test(r.text) ? ' ' : '');
+    }
+    starts.push({ plain, md: out.length, boundary });
+    out += r.text;
+    if (r.code && /^`|`$/.test(r.text)) out += ' ';
+    plain += r.text.length;
+  }
+  for (const k of open.reverse()) close(k);
+  const end = { plain, md: out.length };
+  return {
+    text: out,
+    at(p) {
+      if (p >= end.plain) return end.md;
+      for (let i = starts.length - 1; i >= 0; i--) {
+        const s = starts[i]!;
+        if (p > s.plain) return s.md + Math.min(p - s.plain, split[i]!.text.length);
+        if (p === s.plain && (i === 0 || p > starts[i - 1]!.plain)) return s.boundary;
+      }
+      return 0;
+    },
+  };
+}
+
+/**
+ * An outline read from an app whose italic is `__x__` (Roam's, Dynalist's), which Markdown reads as
+ * strong: as Markdown's `*x*`, the caret moved with it.
+ */
+export function italicsAsMarkdown(o: Outline): Outline {
+  let sel = o.sel;
+  const blocks = o.blocks.map((b, i) => {
+    // where a character goes: one of each pair of underscores
+    const cuts: number[] = [];
+    const text = b.text.replace(/__(?=[^\s_])([^\n]*?[^\s_])__/g, (_, inner: string, at: number) => {
+      cuts.push(at, at + 2 + inner.length);
+      return `*${inner}*`;
+    });
+    if (sel?.block === i && cuts.length) {
+      const map = (p: number): number => p - cuts.filter((c) => c < p).length;
+      sel = { ...sel, anchor: map(sel.anchor), head: map(sel.head) };
+    }
+    return text === b.text ? b : { ...b, text };
+  });
+  return { ...o, blocks, sel };
+}
+
 /**
  * Whether two blocks' texts say the same: the same but for escapes, which Markdown's inline content
- * reads the same (an escape where nothing needs one: `\[y\]` and `[y]`). An escape that keeps markup
- * text (`\*x\*`, against `*x*` an app made italic) still differs, and so does any other character,
- * whitespace too (`whitespace` is its own verdict). Each line is read as inline content only: what
+ * reads the same (an escape where nothing needs one: `\[y\]` and `[y]`), and for emphasis spelled
+ * otherwise that renders the same (Tine's `_i_` and `~s~` for `*i*` and `~~s~~`). An escape that keeps
+ * markup text (`\*x\*`, against `*x*` an app made italic) still differs, and so does any other
+ * character, whitespace too (`whitespace` is its own verdict). Each line is read as inline content only: what
  * would start a block there is the projection's.
  */
 export function sameText(a: string, b: string): boolean {
   if (a === b) return true;
   const unescaped = (text: string): string => text.replace(/\\([!-/:-@[-`{-~])/g, '$1');
-  if (unescaped(a) !== unescaped(b)) return false;
+  const spelled = (text: string): string => text.replace(/(?<![\w_])_(?=[^\s_])([^_\n]*?[^\s_])_(?![\w_])/g, '*$1*').replace(/(?<!~)~(?=[^\s~])([^~\n]*?[^\s~])~(?!~)/g, '~~$1~~');
+  if (unescaped(spelled(a)) !== unescaped(spelled(b))) return false;
   const inline = (text: string): string => micromark(text.split('\n').map((line) => `\uFFFD${line}`).join('\n'), { extensions: [gfm()], htmlExtensions: [gfmHtml()] });
   return inline(a) === inline(b);
 }

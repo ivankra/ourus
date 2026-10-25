@@ -8,6 +8,10 @@
 // each option's doc names who does what, and some defaults are the block outliners' minority, chosen
 // for Markdown's sake (`outdent`, `enterMidItem`, `joinWithChildren`). Add one when a spec case
 // needs it.
+//
+// Options named `quirk…` model one app's mechanics rather than a rule an editor of Markdown would
+// want (where Roam leaves the caret after a paste); their values are `default` and the apps', by name.
+// A value named after an app in another option is one too (`backspaceAtItemStart: logseq`).
 
 export interface Config {
   /**
@@ -69,7 +73,7 @@ export interface Config {
    *   Obsidian's Outliner): the spaces after the caret start the second half, the caret before
    *   them, where Markdown keeps them unseen: an item's padding past the space after its marker
    *   (`- one two` / `-  three`, its children moved as far right), a paragraph's or a title's
-   *   rest's indentation (`One.` / `␠Two.`). Markdown reads neither as text; ourus keeps them as
+   *   rest's indentation (`One.`, then ` Two.` on the next line). Markdown reads neither as text; ourus keeps them as
    *   the user's whitespace (`OurusDoc.hiddenSpaces`), so a join gives them back, and Backspace or
    *   Delete in them takes a space. Past three columns they go (four would make code); a marker
    *   after them is escaped. Padding written so by hand is the user's whitespace too, whatever the
@@ -88,11 +92,15 @@ export interface Config {
    *   `outdent` option says; at the top level it leaves the list, an empty paragraph.
    * - `exit` (as RemNote nbl): at the top level it leaves the list, as `outdent`;
    *   nested, a new empty item, as `sibling`.
+   * - `unwrap` (as SiYuan and BlockNote, document editors, and word processors): an empty paragraph
+   *   where it is, at any depth, its list split there: its children and the items after it a list
+   *   after it (in an item, the item's next blocks), as `backspaceAtItemStart: unwrap` makes an item.
+   *   An empty item with children too.
    *
-   * The last item of its list outdents, or leaves the list, with every value. (Tine and Tana make a
-   * new empty item there too.)
+   * The last item of its list (without children) outdents, or leaves the list, with every value.
+   * (Tine and Tana make a new empty item there too; BlockNote a paragraph where it is.)
    */
-  readonly enterOnEmptyItem: 'sibling' | 'outdent' | 'exit';
+  readonly enterOnEmptyItem: 'sibling' | 'outdent' | 'exit' | 'unwrap';
 
   /**
    * Enter in the middle of the text of an item with children:
@@ -163,6 +171,25 @@ export interface Config {
   readonly backspaceAtTopItem: 'unwrap' | 'refuse';
 
   /**
+   * Backspace at the start of an item's text with an item or a text above it in its container, once
+   * the markup in front of the text has gone (a checkbox, a heading's `#`s):
+   * - `join` (the default, as every outliner: Logseq, Roam, WorkFlowy, Dynalist, Tana, RemNote): the
+   *   item joins the node above.
+   * - `body` (as SiYuan and Typora): its marker goes, the item a paragraph at the end of the item above
+   *   it, after that item's children, its own children with it; a second press joins it.
+   * - `unwrap` (as BlockNote and a document editor's list): its marker goes, the item a paragraph where
+   *   it is, the items after it its list, as `backspaceAtTopItem: unwrap` makes the first one.
+   *
+   * - `logseq` (a quirk, not a rule: Logseq and Tine, whose numbering is a block's property):
+   *   a numbered item's number goes first, the item a bulleted one where it is, its list split there,
+   *   an empty one too; a bulleted item joins.
+   *
+   * A first child is a paragraph where it is with either, its parent's first after its text. An empty
+   * item goes either way (rule 3).
+   */
+  readonly backspaceAtItemStart: 'join' | 'body' | 'unwrap' | 'logseq';
+
+  /**
    * Backspace or Delete on an empty item with children, where they would move up into its place
    * (Backspace with nothing above it in its parent, Delete, whose first child joins up into it):
    * - `lift` (the default): with Backspace, the item goes, its children taking its place, a level up;
@@ -198,10 +225,13 @@ export interface Config {
    * - `block` (as outliners join any block, true-outliner among them; WorkFlowy and Dynalist on an
    *   empty task): the task joins the node above, its checkbox going with its marker; an empty task
    *   goes as any empty item.
+   * - `unwrap` (as SiYuan and BlockNote, document editors): the task is a paragraph where it is, its
+   *   checkbox going with its marker, its list split there, as `backspaceAtItemStart: unwrap` makes an
+   *   item; an empty task an empty paragraph.
    *
-   * Tana peels the checkbox of an empty task only, SiYuan and BlockNote make it a paragraph.
+   * Tana peels the checkbox of an empty task only.
    */
-  readonly taskEditing: 'checkbox' | 'text' | 'block';
+  readonly taskEditing: 'checkbox' | 'text' | 'block' | 'unwrap';
 
   /**
    * Enter and Shift-Enter on the code lines of a fenced block:
@@ -266,6 +296,21 @@ export interface Config {
    *   heading that takes in what follows it, the caret in a heading's title), the paste is closed.
    */
   readonly pasteSeams: 'closed' | 'open';
+
+  /**
+   * Paste (`paste`, and plain paste as `pastePlainLines: items`) over a selection inside one node's
+   * text, where what is pasted is nodes (blocks: items, paragraphs, headings, code, ... between
+   * nodes, not text put into the node's text) (spec/paste.md):
+   * - `replace` (the default, as SiYuan, BlockNote, Dynalist, WorkFlowy and RemNote paste): the
+   *   selection goes first, as a cut takes it, and the nodes go where that leaves the caret.
+   * - `ignore` (as Logseq, Logseq DB, Tine, Tana, Roam and Athens paste blocks): the selected text
+   *   stays as it is, the selection deciding nothing, and the nodes go where a paste at a caret (the
+   *   selection's end) puts them.
+   * What is pasted as text (one line put in at the caret, plain lines going into the text, code into
+   * code) replaces the selection either way, as typing does; so does anything over a selection
+   * across nodes.
+   */
+  readonly pasteOverSelection: 'replace' | 'ignore';
 
   /**
    * Paste (Ctrl-V, `paste`) of plain lines, a clipboard of paragraphs only (spec/paste.md):
@@ -333,6 +378,33 @@ export interface Config {
    */
   readonly pasteListForm: 'destination' | 'own';
 
+  /**
+   * Enter inside a heading's title, past its start and before its end (a heading's, ATX or setext, or
+   * an item's whose text is an ATX one):
+   * - `default` (as Logseq, Tine, Athens and RemNote): the heading keeps the text before the caret; the
+   *   rest is its section's first paragraph, or an item's, the next item (as `enterMidItem` places one).
+   * - `workflowy` (and Roam and Dynalist, whose heading is a block's attribute and whose Enter makes the
+   *   new block above, the original keeping its attributes): the text before the caret is a paragraph,
+   *   or an item, above; the heading keeps the rest, and its section or the item's children.
+   */
+  readonly quirkEnterMidHeading: 'default' | 'workflowy';
+
+  /**
+   * The caret after a paste that makes nodes:
+   * - `default`: at the end of the last pasted text, where typing goes on after the paste.
+   * - `roam`: at the end of the first pasted text, as Roam leaves it.
+   * - `athens`: at the start of the first pasted text, as Athens leaves it.
+   */
+  readonly quirkPasteCaret: 'default' | 'roam' | 'athens';
+
+  /**
+   * A paste whose clipboard is text alone (no HTML, no Markdown format):
+   * - `default`: the text read as Markdown, as `paste` reads any clipboard.
+   * - `dynalist`: plain text, as `pastePlain` puts it (`pastePlainLines`), list markers staying text:
+   *   Dynalist reads Markdown only from a clipboard's HTML.
+   */
+  readonly quirkPasteText: 'default' | 'dynalist';
+
   // Not built yet: options considered, kept here for later.
   //
   // - renumbering: 'changed' | 'never'. Ordered lists an edit touched are renumbered (today), or
@@ -361,29 +433,35 @@ const CONFIG_VALUES: { readonly [K in keyof Config]: readonly [Config[K], ...Con
   bullet: ['-', '*', '+'],
   // Enter, the key pressed most
   enterSplitSpace: ['trim', 'drop', 'start'],
-  enterOnEmptyItem: ['sibling', 'outdent', 'exit'],
+  enterOnEmptyItem: ['sibling', 'outdent', 'exit', 'unwrap'],
   enterMidItem: ['sibling', 'child'],
   enterAtTextStart: ['into', 'stay'],
   enterTask: ['continue', 'plain'],
   // Backspace and Delete at a node's edge
   joinWithChildren: ['join', 'refuse'],
   backspaceAtTopItem: ['unwrap', 'refuse'],
+  backspaceAtItemStart: ['join', 'body', 'unwrap', 'logseq'],
   emptyItemWithChildren: ['lift', 'refuse'],
   // editing markup: a heading's `#`s, a task's checkbox, a fence's contents, a typed backtick
   headingEditing: ['text', 'block'],
-  taskEditing: ['checkbox', 'text', 'block'],
+  taskEditing: ['checkbox', 'text', 'block', 'unwrap'],
   handleFenceContents: [true, false],
   closeBackticks: ['fences', 'all', 'none'],
   // clipboard
   copyAtCaret: ['node', 'host'],
   copySelection: ['text', 'nodes'],
   pasteSeams: ['closed', 'open'],
+  pasteOverSelection: ['replace', 'ignore'],
   pasteLines: ['text', 'items'],
   pastePlainLines: ['text', 'items', 'enter', 'host'],
   pasteAtTextStart: ['after', 'before'],
   pasteOnParent: ['children', 'after'],
   pasteParagraphList: ['siblings', 'children'],
   pasteListForm: ['destination', 'own'],
+  // Modelling quirks of different apps
+  quirkEnterMidHeading: ['default', 'workflowy'],
+  quirkPasteCaret: ['default', 'roam', 'athens'],
+  quirkPasteText: ['default', 'dynalist'],
 };
 
 /** Every option's default: the first of its values. */

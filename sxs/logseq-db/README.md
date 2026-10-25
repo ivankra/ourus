@@ -63,7 +63,8 @@ The load inserts the text, then sets the properties through `upsert_block_proper
 which Logseq makes one (`standalone-display-block`, `src/main/frontend/format/block.cljs`), its text set
 again after (the insert drops a line's leading whitespace). An editor shows the text alone, every
 property outside it, so a caret's offset shifts by the prefix. The read writes the properties back as
-markup: a code block with ```` ``` ```` and its language, a math block with `$$`.
+markup: a code block with ```` ``` ```` and its language (a longer fence where a line of the code
+starts with a run of backticks, as Markdown needs: `fences.md › Fence62`), a math block with `$$`.
 
 ## Setting up and reading a test
 

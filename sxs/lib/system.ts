@@ -74,3 +74,54 @@ export function ensureAptInstalled(who: string, needs: readonly Need[], say: (li
   const still = missing.filter((need) => !present(need));
   if (still.length) throw new Error(`${what}; apt-get installed ${packages.join(' ')}, but ${still.map((need) => need.command ?? names(need)[0]).join(' and ')} isn't there`);
 }
+
+// ------------------------------------------------------------------ the container's cap on tasks
+
+/**
+ * The container's tasks (processes and threads, cgroup v2): how many run, its cap (`pids.max`), and how
+ * often the cap has refused one (`pids.events`' `max`). Null where there is no cap.
+ */
+function tasks(): { current: number; max: number; hits: number } | null {
+  const read = (f: string): string => readFileSync(`/sys/fs/cgroup/${f}`, 'utf8');
+  try {
+    const max = Number(read('pids.max'));
+    if (!Number.isFinite(max)) return null;
+    return { current: Number(read('pids.current')), max, hits: Number(/^max (\d+)/m.exec(read('pids.events'))?.[1] ?? 0) };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Watches the container's cap on tasks while a run plays (the pools are sized under it:
+ * `lib/browser.ts`): where it refuses a task, a browser's or an app's thread fails to start, which
+ * crashes or hangs windows, browsers and runs, so it says so as it happens (every ten seconds at
+ * most). The stop it returns says how often it was refused during the run and how many tasks ran at
+ * most, or how close they came where that was within a tenth of the cap.
+ */
+export function watchTasks(say: (line: string) => void): () => void {
+  const first = tasks();
+  if (!first) return () => {};
+  let peak = first.current;
+  let told = first.hits;
+  let toldAt = 0;
+  const check = (): void => {
+    const now = tasks();
+    if (!now) return;
+    peak = Math.max(peak, now.current);
+    if (now.hits > told && Date.now() - toldAt >= 10_000) {
+      say(`warning: the container's cap on tasks (${now.max}) refused ${now.hits - told} just now, ${now.current} running: browsers and windows may crash or hang, and the runs in them fail`);
+      [told, toldAt] = [now.hits, Date.now()];
+    }
+  };
+  const timer = setInterval(check, 1000);
+  timer.unref();
+  return () => {
+    clearInterval(timer);
+    check();
+    const last = tasks() ?? first;
+    const refused = last.hits - first.hits;
+    if (refused) say(`warning: the container's cap on tasks (${last.max}) refused ${refused} during the run, ${peak} running at most: a crash or a hang may be that, not the app`);
+    else if (peak >= 0.9 * last.max) say(`tasks: ${peak} running at most, near the container's cap (${last.max})`);
+  };
+}

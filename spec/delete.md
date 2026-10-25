@@ -927,7 +927,7 @@ Delete at the end of a paragraph before another: the blank line goes, the paragr
 this one, glued, and the caret stays (Backspace12's mirror, ourus's edit as there).
 
 ```yaml
-tags: common free-form
+tags: common
 ```
 
 ```buffer
@@ -952,7 +952,7 @@ Inside an item, Delete before a blank line removes it, and the paragraph below c
 on the next line: the mirror of [Backspace19](backspace.md#backspace19).
 
 ```yaml
-tags: edge free-form
+tags: edge
 ```
 
 ```buffer
@@ -973,7 +973,7 @@ tags: edge free-form
 With several blank lines between two paragraphs, all of them go (Backspace12c's mirror).
 
 ```yaml
-tags: rare free-form
+tags: rare
 ```
 
 ```buffer
@@ -1404,6 +1404,35 @@ tags: rare
 ```buffer
 - a┃
 - - b
+```
+
+> deleteContentForward
+
+```buffer
+- a┃
+  - b
+```
+
+> deleteContentForward
+
+```buffer
+- a┃b
+```
+
+## Delete33b
+
+The same empty item written apart, `-` with `  - b` under it: it goes, its children becoming the
+item's, the caret staying, as Logseq, Roam, Dynalist and RemNote do (WorkFlowy too, then refusing
+the second press); a second Delete joins the child.
+
+```yaml
+tags: rare
+```
+
+```buffer
+- a┃
+-
+  - b
 ```
 
 > deleteContentForward

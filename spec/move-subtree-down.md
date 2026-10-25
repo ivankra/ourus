@@ -239,7 +239,7 @@ An item leaves the preceding list and becomes the paragraph's first owned list i
 Items already owned by that paragraph follow it (MoveUp7's mirror).
 
 ```yaml
-tags: common free-form
+tags: common
 ```
 
 ```buffer
@@ -416,7 +416,7 @@ An item with a subtree can move below a paragraph that owns no list yet. The sub
 item; the paragraph becomes the item's owner. Moving the move subtree up restores the original tree.
 
 ```yaml
-tags: edge free-form
+tags: edge
 ```
 
 ```buffer
@@ -1039,7 +1039,7 @@ In an item, a paragraph owns no list: a child item above a paragraph of the item
 with it, and items swap only with items. Refused.
 
 ```yaml
-tags: edge free-form
+tags: edge
 ```
 
 ```buffer
@@ -1124,7 +1124,7 @@ stay at its end, after the item now last, and the item becomes the paragraph's l
 text ([gaps.md](gaps.md)): written on both sides, they would double. Up again, it comes back.
 
 ```yaml
-tags: rare free-form
+tags: rare
 ```
 
 ```buffer

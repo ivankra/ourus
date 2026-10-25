@@ -56,6 +56,7 @@ import { Config } from '../src/config.ts';
 import { OurusDoc } from '../src/doc/index.ts';
 import { drawOutline, nodesOf } from '../test/drawing.ts';
 import { appPage, BROWSERS, ensureProxy, launch, lockApp, proxyStats, stopShared, type AppPage } from './lib/browser.ts';
+import { watchTasks } from './lib/system.ts';
 import { clipboardHtml } from './lib/clipboard.ts';
 import type { Doc, Driver, Session } from './lib/driver.ts';
 import { idleVersion, installIdle, type IdleOptions, type IdleResult } from './lib/idle.ts';
@@ -156,6 +157,8 @@ interface FileRun {
   elapsed_s: number;
   ran: string;
   examples: RunExample[];
+  /** Examples skipped as they played (`NO_FOCUS`), with why: a rejudge keeps them skipped. */
+  skippedPlaying?: { name: string; reason: string }[];
 }
 const fileRun = (app: string, file: string, partial = false): string => join(resultsDir(app), `${file.replace(/\.md$/, '')}${partial ? '.partial' : ''}.json`);
 
@@ -338,7 +341,10 @@ async function runMany(spec: string, selectors: string[], flags: string[]): Prom
     else say(`${app.padEnd(24)} ${VERDICTS.map((v) => `${v} ${r.examples.filter((e) => e.verdict === v).length}`).join(', ')}; skipped ${r.skipped.length}${r.notRun?.length ? `; not run ${r.notRun.length}` : ''}  (${r.elapsed_s}s, done at ${s.toFixed(0)}s)`);
   };
   // every app at once: its workers wait for room in the pools (`lib/browser.ts`, an app's own)
+  // the container's cap on tasks, watched while they play (each run watches it too, into its log)
+  const unwatch = pass.includes('--list') || regenerating ? null : watchTasks(say);
   await Promise.all(apps.map(one));
+  unwatch?.();
   if (pass.includes('--list')) {
     for (const app of apps) say(`\n== ${app}\n${readFileSync(lastRun(app, 'log'), 'utf8').trimEnd()}`);
     return [...exits.values()].some((c) => c !== 0) ? 1 : 0;
@@ -787,11 +793,12 @@ const previous = regenerating
       const report = existsSync(join(here, `${driver.longId}.md`)) ? readFileSync(join(here, `${driver.longId}.md`), 'utf8') : '';
       const field = (name: string): string | undefined => new RegExp(`^${name}: (.*)$`, 'm').exec(report.split(/^---$/m)[1] ?? '')?.[1];
       const examples = runs.flatMap((r) => r.examples);
+      const skippedPlaying = runs.flatMap((r) => r.skippedPlaying ?? []);
       const [version, command, elapsed, workers] = [field('version'), field('command'), field('elapsed_s'), field('workers')];
       // a run that said no version is reported as "unknown"
-      if (command !== undefined && elapsed !== undefined) return { version: version === undefined ? latest.version : version === '"unknown"' ? null : (JSON.parse(version) as string | null), command: JSON.parse(command) as string, elapsed_s: Number(elapsed), workers: Number(workers ?? 1), examples };
+      if (command !== undefined && elapsed !== undefined) return { version: version === undefined ? latest.version : version === '"unknown"' ? null : (JSON.parse(version) as string | null), command: JSON.parse(command) as string, elapsed_s: Number(elapsed), workers: Number(workers ?? 1), examples, skippedPlaying };
       const whole = latestOf(runs.filter((r) => /^node sxs\/run\.ts [\w-]+$/.test(r.command))) ?? latest;
-      return { version: whole.version, command: whole.command, elapsed_s: whole.elapsed_s, workers: 1, examples };
+      return { version: whole.version, command: whole.command, elapsed_s: whole.elapsed_s, workers: 1, examples, skippedPlaying };
     })()
   : null;
 if (regenerating && !previous) {
@@ -916,7 +923,11 @@ function projected(d: TextDoc, plan: Plan): string | null {
 /** How a step came out: its buffer against the spec's (a caret with no place in a block not compared), and its clipboard. */
 function stepVerdict(step: PlanStep, got: Doc | null, clipboard: string | null | undefined, flavor: Config['flavor']): Verdict {
   let v: Verdict = 'agree';
-  if (step.want && got) v = compareDocs(step.caretLost ? { ...step.want, sel: null } : step.want, got, step.sections, flavor);
+  // after an action that leaves the app no text focus (`Driver.noCaretAfter`), an app with neither a
+  // caret nor selected blocks has none to compare: the outline alone
+  const outline = got && driver.model === 'block' ? (got as Outline) : null;
+  const unfocused = !!outline && !outline.sel && !outline.selected?.length && !!driver.noCaretAfter?.includes(step.actions[step.actions.length - 1]!);
+  if (step.want && got) v = compareDocs(step.caretLost || unfocused ? { ...step.want, sel: null } : step.want, got, step.sections, flavor);
   // a clipboard written otherwise but reading as the same outline (an app's tabs, no final line break) is whitespace
   if (step.clipboard !== undefined && clipboard !== step.clipboard) v = clipboard && sameMarkdown(clipboard, step.clipboard, flavor) ? (rank[v] > rank.whitespace ? v : 'whitespace') : 'disagree';
   return v;
@@ -961,7 +972,17 @@ interface Outcome {
   /** Actions after which the app didn't settle in time, with what was pending. */
   unsettled: string[];
   ms: number;
+  /** Why the example wasn't played to its end, as found while playing it (`NO_FOCUS`): skipped, no verdict. */
+  skip?: string;
 }
+
+/**
+ * Why an example is skipped as it plays: after an action that leaves the app no text focus
+ * (`Driver.noCaretAfter`), the app has neither a caret nor selected blocks, and what follows needs one
+ * (typing goes nowhere then). Undo and redo need none.
+ */
+const NO_FOCUS = 'no text focus after';
+const needsFocus = (action: string): boolean => !/^(?:undo|redo)$/.test(action);
 
 /**
  * What the runner plays the app through: a page's keyboard, Clipboard API and idle script, or the
@@ -1139,6 +1160,13 @@ async function runPlan(w: Worker, plan: Plan): Promise<Outcome> {
       for (const [j, action] of step.actions.entries()) {
         if (undoes && j > 0 && isUndo(action) && !isUndo(step.actions[j - 1]!)) await pause();
         await play(w, action, settleAfter);
+        // (an action that may leave the app no focus, with more that needs one after it: where it did,
+        // the rest is unplayable, and the example skipped; where the app kept a caret, it plays on)
+        const rest = [...step.actions.slice(j + 1), ...plan.steps.slice(i + 1).flatMap((s) => s.actions)];
+        if (driver.model === 'block' && driver.noCaretAfter?.includes(action) && rest.some(needsFocus)) {
+          const now = (await driver.read(page)) as Outline;
+          if (!now.sel && !now.selected?.length) return { verdict: 'agree', step: got.length, got, clipboards, unsettled, ms: Date.now() - t0, skip: `${NO_FOCUS} ${action}` };
+        }
       }
       got.push(step.want ? await driver.read(page) : null);
       clipboards.push(step.clipboard !== undefined ? await w.actor.clipboard.read() : null);
@@ -1231,7 +1259,10 @@ function regenerate(): string | undefined {
   for (const { plan, names } of unique.values()) {
     const tries = (played.get(key(drawDoc(plan.initial), plan.clipboard, settingsOf((s) => plan.settings[s]))) ?? []).map((e) => ({ e, outcome: replay(plan, e) }));
     const found = tries.find((t) => typeof t.outcome !== 'string');
+    // (one its last run skipped as it played, `NO_FOCUS`, and has no play of: skipped still)
+    const skippedPlaying = !found && previous!.skippedPlaying.find((s) => names.includes(s.name) && s.reason.startsWith(NO_FOCUS));
     if (found) results.push({ plan, names, outcome: found.outcome as Outcome, ...(found.e.flaky && { flaky: found.e.flaky }) });
+    else if (skippedPlaying) skipped.set(skippedPlaying.reason, [...(skipped.get(skippedPlaying.reason) ?? []), ...names]);
     else {
       const why = (tries[0]?.outcome as string | undefined) ?? 'new, or its start changed since';
       notRun.set(why, [...(notRun.get(why) ?? []), ...names]);
@@ -1255,7 +1286,10 @@ const results: Result[] = [];
 
 /** Errors the app's page threw. */
 const errors: string[] = [];
+// the container's cap on tasks, watched while the app plays: a crash or a hang may be that
+const unwatchTasks = regenerating ? null : watchTasks(say);
 const version = regenerating ? regenerate() : await playAll();
+unwatchTasks?.();
 
 /**
  * How many workers the run has (`--workers`, each in a browser of the pool of its own, or with an app it
@@ -1357,6 +1391,10 @@ async function playAll(): Promise<string | undefined> {
   const show = (): void => {
     for (; done[shown]; shown++) {
       const { plan, names, outcome, flaky } = done[shown]!;
+      if (outcome.skip) {
+        if (verbose) say(`${'skipped'.padEnd(10)} ${names.join(' = ')}: ${outcome.skip}`);
+        continue;
+      }
       const tag = `${outcome.verdict}${flaky ? ' FLAKY' : ''}`;
       if (outcome.verdict !== 'agree' || flaky || verbose) {
         say(`${tag.padEnd(10)} ${names.join(' = ')}${plan.notes.length ? `  [${plan.notes.join(', ')}]` : ''}  ${outcome.ms}ms`);
@@ -1436,7 +1474,11 @@ async function playAll(): Promise<string | undefined> {
     return process.exit(LOGIN_EXIT);
   });
   workersUsed = readied.length;
-  results.push(...(done as Result[]));
+  // examples skipped as they played go with those skipped before
+  for (const d of done as Result[]) {
+    if (d.outcome.skip) skipped.set(d.outcome.skip, [...(skipped.get(d.outcome.skip) ?? []), ...d.names]);
+    else results.push(d);
+  }
   // each worker's window closes, the shared browsers staying up for the next run (an instance of
   // Obsidian's stops with its last window, `obsidian/obsidian.ts`)
   // each worker disconnects holding its browser's clipboard: a connection's end resets the permissions
@@ -1482,10 +1524,13 @@ function keep(run: AppRun): void {
   fileRuns(); // a run of the whole spec from before, split first
   const all = allTests();
   const selected = new Set(tests.map((t) => t.name));
-  for (const file of new Set(run.examples.map((e) => e.file))) {
+  // (those skipped as they played, by file: kept beside the file's examples)
+  const playing = [...skipped].filter(([why]) => why.startsWith(NO_FOCUS)).flatMap(([reason, names]) => names.map((name) => ({ name, reason })));
+  for (const file of new Set([...run.examples.map((e) => e.file), ...playing.map((s) => fileOf(s.name))])) {
     const ran = run.examples.filter((e) => e.file === file);
+    const skippedPlaying = playing.filter((s) => fileOf(s.name) === file);
     const whole = !flag('--strict') && !flag('--ignore-options') && all.filter((t) => t.file === file).every((t) => selected.has(t.name));
-    writeFileRun({ type: 'SxS', app: driver.longId, file, version: run.version, command: run.command, elapsed_s: run.elapsed_s, ran: new Date().toISOString(), examples: ran }, !whole);
+    writeFileRun({ type: 'SxS', app: driver.longId, file, version: run.version, command: run.command, elapsed_s: run.elapsed_s, ran: new Date().toISOString(), examples: ran, ...(skippedPlaying.length && { skippedPlaying }) }, !whole);
   }
 }
 

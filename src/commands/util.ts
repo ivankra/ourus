@@ -329,3 +329,17 @@ export function pastPrefix(ctx: CommandContext): CommandContext {
   const text = ctx.doc.textOf(at.node);
   return text ? ctx.at(ctx.doc.posOf(at.node, textStart(text), 1)) : ctx;
 }
+
+/**
+ * An empty item leaving its list (rule 3): an empty paragraph where it was, held by a placeholder and
+ * set off by blank lines; the items after it a list of their own after it. In a quote it stays in the
+ * quote. Its checkbox goes with the marker.
+ */
+export function leaveList(ctx: CommandContext, node: OutlineNode): CommandOutcome {
+  const draft = ctx.draft().convert(node, 'paragraph').setText(node, new ProseText('paragraph', false, ''));
+  const above = node.preceding;
+  // (a quote with no text above it, nothing to set it off from)
+  if (above && above.kind !== 'root' && above.gap === 0 && ctx.doc.textOf(above)) draft.gap(above, 1);
+  if (node.afterSubtree && node.gap === 0) draft.gap(node, 1);
+  return ctx.apply(draft.setCaret(node, 0, -1));
+}

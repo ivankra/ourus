@@ -111,8 +111,8 @@ export const driver: Driver = {
   model: 'block',
   keys: {
     enter: 'Enter',
-    // "insert node": an empty node after this one (no key breaks a line in a name)
-    shiftEnter: 'Shift+Enter',
+    // no `shiftEnter`: Shift+Enter inserts an empty node after this one, another action than a line
+    // break, which a name doesn't hold (its cases skip)
     indent: 'Tab',
     outdent: 'Shift+Tab',
     deleteContentBackward: 'Backspace',
@@ -150,6 +150,8 @@ export const driver: Driver = {
     headingEditing: 'block',
     closeBackticks: 'none',
     copySelection: 'nodes',
+    // pasted blocks leave a selection's text as it is (Paste17, probed 2026-10-25)
+    pasteOverSelection: 'ignore',
     pastePlainLines: 'items',
     pasteOnParent: 'after',
   },

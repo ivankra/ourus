@@ -169,6 +169,10 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
     displayName: flavor.displayName,
     url: flavor.url,
     model: 'block',
+    // a block's text holds a blank line, its paragraphs apart
+    paragraphsInBlock: true,
+    // after deleting a selected block, the first one, no block is edited (checked by hand, keys only)
+    noCaretAfter: ['deleteSubtree'],
     keys: {
       enter: 'Enter',
       shiftEnter: 'Shift+Enter',
@@ -197,6 +201,10 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
     // Backspace at the first block's start does nothing in both (measured with `--ignore-options`:
     // `backspace.md › Backspace34` agrees; its `unwrap` case needs a paragraph, which no block app runs)
     behaves: {
+      // Backspace at a numbered block's start takes its number first (Backspace29, TO5)
+      backspaceAtItemStart: 'logseq',
+      // a backtick in text is typed as a pair, the caret between (Backtick18, both setups)
+      closeBackticks: 'all',
       outdent: 'direct',
       enterOnEmptyItem: 'sibling',
       enterMidItem: 'child',
@@ -206,6 +214,8 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
       emptyItemWithChildren: 'refuse',
       copyAtCaret: 'host',
       copySelection: 'nodes',
+      // pasted blocks leave a selection's text as it is (Paste17, probed 2026-10-25)
+      pasteOverSelection: 'ignore',
     },
     ...(flavor.settings && { settings: flavor.settings }),
     holds(doc: Outline) {

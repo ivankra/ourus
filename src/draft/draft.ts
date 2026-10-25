@@ -956,13 +956,18 @@ class Done {
         numbers = run.map((_, i) => start + i);
       }
       // moved right under a paragraph's text, which a list from another number can't interrupt: from 1
+      // (a split list's lower part, TO6); but a list of its own, whole, outside every item keeps its
+      // numbers, a blank line setting it apart (Backspace40b), where in an item that blank line would
+      // loosen the item's list (Regression1, Regression8)
       const first = run[0]!.item;
       const k = parent.children.indexOf(first);
       const above = k > 0 ? parent.children[k - 1]! : parent;
       const aboveText = above === parent || above.kind === 'paragraph' ? (above instanceof Working ? this.io.textOf(above) : this.from.textOf(this.#under(parent, above)!)) : null;
       // (moved, its parent changed, or first now where an item was before it)
       const cameUnder = !!run[0]!.origin && (run[0]!.origin.parent?.persistentNode !== parent.source || (run[0]!.origin.index > 0 && k === 0 && parent.kind === 'item'));
-      if ((this.draft.placedIds.has(first.id) || cameUnder) && numbers[0] !== 1 && aboveText instanceof ProseText && aboveText.type === 'paragraph' && !aboveText.empty) numbers = run.map((_, i) => 1 + i);
+      let inItem = false;
+      for (let n: Working | null = parent; n && !inItem; n = n.parent) inItem = n.kind === 'item';
+      if ((inItem || !sameItems) && (this.draft.placedIds.has(first.id) || cameUnder) && numbers[0] !== 1 && aboveText instanceof ProseText && aboveText.type === 'paragraph' && !aboveText.empty) numbers = run.map((_, i) => 1 + i);
     }
     run.forEach((r, i) => this.lists.set(r.item.id, { start: i === 0, type, marker, number: numbers[i] ?? null }));
   }

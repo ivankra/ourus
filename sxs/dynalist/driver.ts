@@ -13,7 +13,7 @@
 
 import type { Page } from 'playwright-core';
 import type { Driver } from '../lib/driver.ts';
-import type { Outline } from '../lib/block.ts';
+import { italicsAsMarkdown, type Outline } from '../lib/block.ts';
 
 const MOTIONS: Record<string, string> = {
   CharLeft: 'ArrowLeft',
@@ -83,6 +83,8 @@ export const driver: Driver = {
   displayName: 'Dynalist',
   url: 'https://dynalist.io/demo',
   model: 'block',
+  // a block's text holds a blank line, its paragraphs apart
+  paragraphsInBlock: true,
   keys: {
     enter: 'Enter',
     shiftEnter: 'Control+Shift+Enter',
@@ -105,13 +107,21 @@ export const driver: Driver = {
     cursorDocEnd: 'Control+End',
     ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
   },
-  // none of the `markup-` tags: a caret at a heading's or a to-do's text start is the item's start
-  // (one inside the `#`s or the checkbox, `holds` declines), a join takes the item's attributes along,
-  // and a code block's fences are text, edited a character at a time: all played, all Dynalist's
-  refuses: [],
+  // a code block's fences are text, edited a character at a time, with no boundary to compare where
+  // ourus has one (`markup-fence`, as for Logseq, Tine, Athens and Roam); the other `markup-` tags are
+  // played: a caret at a heading's or a to-do's text start is the item's start (one inside the `#`s or
+  // the checkbox, `holds` declines), a join takes the item's attributes along. Code and math are an
+  // item's text, with no editor of their own: Enter in them splits the item (`enter-in-fence`)
+  refuses: ['markup-fence', 'enter-in-fence'],
   ordered: true,
   // a typed fence is left open (Backtick2, Backtick12, Backtick15)
   behaves: {
+    // Enter mid-heading: the new block above takes the text before the caret, the heading (an
+    // attribute) staying with the rest (TO-E13-E16, TO-E14-E20)
+    quirkEnterMidHeading: 'workflowy',
+    // a clipboard of text alone pasted as plain text, its markers text (checked by hand: `- x⏎- y` at
+    // `a┃` gives `a- x`, `- y`; with HTML, a list)
+    quirkPasteText: 'dynalist',
     outdent: 'logical',
     enterSplitSpace: 'start',
     joinWithChildren: 'refuse',
@@ -281,6 +291,7 @@ export const driver: Driver = {
       const at = (p: number): number => base + p + (!raw.sel!.inNote && cut !== undefined && p > cut ? 1 : 0);
       sel = { block: raw.sel.block, anchor: at(raw.sel.anchor), head: at(raw.sel.head) };
     }
-    return { blocks, sel, ...(raw.selected.length && { selected: raw.selected }) };
+    // (its italic `__x__` as Markdown's)
+    return italicsAsMarkdown({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) });
   },
 };

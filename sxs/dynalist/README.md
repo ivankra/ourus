@@ -15,7 +15,7 @@ so on, defined by `ra("doc-indent", ...)` calls in `main.min.js`):
 | action | keys |
 | --- | --- |
 | `enter` | Enter |
-| `shiftEnter` | Ctrl+Shift+Enter (`doc-insert-new-line`) |
+| `shiftEnter` | Ctrl+Shift+Enter (`doc-insert-new-line`; twice, a blank line, the block holding paragraphs: an item's paragraphs right after its text are its block's (`paragraphsInBlock`, since 2026-10-25)) |
 | `indent` | Tab |
 | `outdent` | Shift+Tab |
 | `moveSubtreeUp` | Ctrl+Up (`doc-swap-up`) |
@@ -82,7 +82,8 @@ block), and are cached then. Setting a preference (below) sends nothing.
   `has_checkbox`, `is_checked`, `get_heading`), and the selection from `ui.selection().get()` (a node
   with `get_position_start` and `get_position_end`; nodes selected as nodes have only `get_nodes`).
   Its direction is the DOM selection's. The model follows the editor as it types: there is no save
-  to wait for.
+  to wait for. Dynalist's italic, `__i__` (strong to Markdown), is read as `*i*`, the caret moved
+  with it (`italicsAsMarkdown` in lib/block.ts, since 2026-10-25).
 - **A block is an item's content**, which holds line breaks: Ctrl+Shift+Enter ("insert new line")
   makes one, and that is the spec's Shift-Enter. Dynalist's Shift+Enter goes to the item's note,
   which blocks have no place for; no action of the spec's made a note over a full run (a note would
@@ -123,19 +124,25 @@ block), and are cached then. Setting a preference (below) sends nothing.
   last line takes the text after the caret. The spec's clipboards end with a line break, so that last line is
   empty and the text after the caret becomes an item of its own (`paste-old.md › PasteOld7`: `a┃b` with
   `x⏎y⏎` gives `ax`, `y`, `┃b`; without the line break it gives `ax`, `y┃b`). List markers stay as
-  text: `- a` pastes as an item `- a` (`obsidian-true-outliner.md › Paste › #216`). Only a note, or the
+  text: `- a` pastes as an item `- a` (`obsidian-true-outliner.md › Paste › #216`; checked by hand,
+  outside the harness: `- x⏎- y` at `a┃` gives `a- x`, `- y`, the same with HTML a list), which the
+  driver declares, `quirkPasteText: dynalist` (since 2026-10-25: 27 disagreements to agreements). Only a note, or the
   document's title, takes the text as it is (`insert_text`); in an item there is no paste that keeps
   lines in it, so paste-plain.md's cases measure an item per line. A line's indentation nests it under
   the line above, and a blank line is an empty item (probes, 2026-10-21).
 - **Enter splits an item by making the first half a new item before it**: the children stay with the
   second half (`enter.md › Enter3`), and the space after the caret stays at its start (`Enter1`).
   Enter on an empty item makes a sibling (`enterOnEmptyItem: sibling`, ourus's default). Inside a
-  code block Enter splits the item too (`fences.md`).
+  code block or math Enter splits the item too, as on any text (a code line is Ctrl+Shift+Enter's):
+  the driver refuses `enter-in-fence` (since 2026-10-25: Fence1, 2, 3, 5, 42).
 - **Joining**: Backspace at an item's start joins it to the item above, but not a first child to its
   parent (`obsidian-true-outliner.md › Backspace › Children move to the joined node`); Delete doesn't
   pull up the first child of an empty item (`delete.md › Delete5` family).
 - **Empty items stay** when the caret leaves them (`obsidian-true-outliner.md › Abandoning an empty
   place`).
+- **Enter inside a heading's title** gives the text before the caret to a new item above and keeps
+  the heading on the rest: the driver declares `quirkEnterMidHeading: workflowy` (since 2026-10-25;
+  `obsidian-true-outliner.md › TO-E13-E16`, `quirks.md › Quirk1`), as Roam and WorkFlowy do.
 - **Item attributes stay**: Tab doesn't change a heading's level (`indent.md › Indent12`), as in
   Logseq and WorkFlowy.
 - **A join keeps the lower item**: Backspace or Delete between two items puts the upper one's text
@@ -144,7 +151,10 @@ block), and are cached then. Setting a preference (below) sends nothing.
   `markup-` cases, played (2026-10-18; before, the driver refused the three tags): where ourus takes a
   heading's `#`s or a checkbox off at the text start, Dynalist joins the items.
 - **Fences are text**: Backspace, Delete, Enter and Shift+Enter at a fence's edge edit the backticks
-  or split the item (`fences.md`), as in a text editor; ourus keeps the fence whole.
+  or split the item (`fences.md`), as in a text editor; ourus keeps the fence whole. So the driver
+  refuses `markup-fence` again (since 2026-10-25), as Logseq's, Tine's, Athens's and Roam's do: those
+  cases have no boundary to compare where ourus has one (33 disagreed, 20 agreed when played); the
+  heading and task tags stay played.
 
 One example varied: `cursor.md › CursorDown4` (Down from `abc┃` onto an indented `bcd`) gave `caret`
 in six full runs and `agree` in one, and `caret` in 28 repeats on its own and with the rest of

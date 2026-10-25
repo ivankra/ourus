@@ -5,6 +5,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test, type TestContext } from 'node:test';
 import { AtomText, type OutlineNode, type OurusDoc } from '../src/doc/index.ts';
+import { codeAt } from '../src/commands/code.ts';
+import { CommandContext } from '../src/commands/context.ts';
 import { drawDoc, plainText } from './drawing.ts';
 import { isCommand, play } from './player.ts';
 import { textPosition } from './caret.ts';
@@ -98,6 +100,29 @@ function onFenceLine(doc: OurusDoc, head: number): boolean {
   const on = (offset: number): boolean => doc.lineAt(doc.posOf(node, offset)).index === line.index;
   return on(delimiters.open.from) || (!!delimiters.close && on(delimiters.close.from));
 }
+
+// `enter-in-fence` is a fact the spec keeps by hand: a case has it where Enter is pressed on a fenced
+// block's content line, code or math (not a fence's line: `markup-fence`), and only there. A block
+// app whose code and math are a block's text, with no editor of their own, splits the block there
+// (Athens, Dynalist), and its driver refuses the tag
+test('`enter-in-fence` tags exactly the cases with Enter on a fenced code or math line', () => {
+  const problems: string[] = [];
+  for (const file of specFiles()) {
+    for (const t of readSpecFile(file)) {
+      let state = startOf(t, flavorsOf(t)[0]!);
+      let entered = false;
+      for (const action of t.steps.flatMap((s) => s.actions)) {
+        if (action === 'enter') {
+          const code = codeAt(new CommandContext(state.doc, state.selection));
+          if (code && (code.text.type === 'fenced_code' || code.text.type === 'math_block') && !onFenceLine(state.doc, state.selection.head)) entered = true;
+        }
+        state = play(state, [action]);
+      }
+      if (entered !== t.tags.includes('enter-in-fence')) problems.push(`${t.file}:${t.line} ${t.name}: ${entered ? 'Enter on a fenced block\'s line, untagged' : 'tagged, no Enter on a fenced block\'s line'}`);
+    }
+  }
+  assert.deepEqual(problems, []);
+});
 
 for (const markup of ['text', 'decorated'] as const) {
   test(`no applied command leaves the caret in markup (markup: ${markup})`, () => {

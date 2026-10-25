@@ -261,7 +261,9 @@ export class OurusDoc {
     let at = text instanceof ProseText ? text.textStart(k) : (text.frame.find((p) => p.from === from && (p.part === 'indent' || p.part === 'label'))?.to ?? from);
     // (on a marker's line its text starts below: at the line's end)
     at = Math.min(at, from + lines[k]!.length);
-    while (at < from + lines[k]!.length && isSpaceOrTab(text.text.charCodeAt(at))) at++;
+    // (a later line of a text keeps its spaces as text, the user's whitespace, as Markdown hides them
+    // on the first: ShiftEnter1)
+    if (!(k > 0 && text instanceof ProseText)) while (at < from + lines[k]!.length && isSpaceOrTab(text.text.charCodeAt(at))) at++;
     // past the blanks Markdown leaves out of the text there, before an escape's backslash
     let pos = this.posOf(node, at, -1);
     const end = this.posOf(node, at, 1);

@@ -5,7 +5,7 @@ version: "30.2, markdown-mode 2.8"
 url: "emacs -Q -nw, on a terminal"
 model: "text"
 command: "node sxs/run.ts emacs-markdown"
-elapsed_s: 48
+elapsed_s: 46
 ---
 
 # Emacs (markdown-mode) vs ourus
@@ -14,20 +14,20 @@ Summary:
 
 | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- |
-| **170 (17%)** | **[42](#caret-42) (4.1%)** | **[22](#whitespace-22) (2.2%)** | **[635](#disagree-635) (62%)** | **0 (0%)** | **[150](#skipped-150) (15%)** | **1019** |
+| **170 (16%)** | **[42](#caret-42) (4%)** | **[22](#whitespace-22) (2.1%)** | **[639](#disagree-639) (61%)** | **0 (0%)** | **[172](#skipped-172) (16%)** | **1045** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| [backspace.md](../spec/backspace.md) | 6 |  |  | 65 |  | 11 | **82** |
+| [backspace.md](../spec/backspace.md) | 6 |  |  | 66 |  | 13 | **85** |
 | [backtick.md](../spec/backtick.md) | 12 |  |  | 11 |  | 10 | **33** |
 | [copy.md](../spec/copy.md) | 2 | 1 |  | 3 |  | 7 | **13** |
 | [cursor.md](../spec/cursor.md) | 13 | 22 |  |  |  | 1 | **36** |
 | [delete-subtree.md](../spec/delete-subtree.md) | 1 |  |  | 12 |  |  | **13** |
-| [delete.md](../spec/delete.md) | 9 |  |  | 31 |  | 15 | **55** |
+| [delete.md](../spec/delete.md) | 9 |  |  | 32 |  | 15 | **56** |
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 10 | **10** |
-| [enter.md](../spec/enter.md) | 1 |  |  | 64 |  | 27 | **92** |
+| [enter.md](../spec/enter.md) | 1 |  |  | 66 |  | 30 | **97** |
 | [fences.md](../spec/fences.md) | 13 | 2 | 1 | 49 |  | 5 | **70** |
 | [gaps.md](../spec/gaps.md) | 6 | 2 |  | 11 |  |  | **19** |
 | [indent.md](../spec/indent.md) | 12 | 1 | 4 | 15 |  | 4 | **36** |
@@ -39,20 +39,21 @@ Per-file:
 | [paste-html.md](../spec/paste-html.md) | 1 |  | 1 | 17 |  |  | **19** |
 | [paste-list-form.md](../spec/paste-list-form.md) |  |  |  | 5 |  | 1 | **6** |
 | [paste-list.md](../spec/paste-list.md) | 1 |  |  | 20 |  | 8 | **29** |
-| [paste-plain.md](../spec/paste-plain.md) | 26 |  |  | 4 |  | 4 | **34** |
-| [paste.md](../spec/paste.md) | 4 |  | 1 | 18 |  | 7 | **30** |
+| [paste-plain.md](../spec/paste-plain.md) | 26 |  |  | 4 |  | 6 | **36** |
+| [paste.md](../spec/paste.md) | 4 |  | 1 | 18 |  | 13 | **36** |
 | [placeholders.md](../spec/placeholders.md) | 4 |  |  | 15 |  | 1 | **20** |
+| [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |
 | [quotes.md](../spec/quotes.md) | 3 | 1 |  | 90 |  | 6 | **100** |
 | [regressions.md](../spec/regressions.md) | 6 |  |  | 20 |  | 6 | **32** |
 | [scenarios.md](../spec/scenarios.md) | 3 |  |  | 22 |  | 1 | **26** |
 | [shift-enter.md](../spec/shift-enter.md) | 4 |  | 8 | 21 |  | 3 | **36** |
-| [tasks.md](../spec/tasks.md) | 8 |  |  | 11 |  | 9 | **28** |
+| [tasks.md](../spec/tasks.md) | 8 |  |  | 11 |  | 11 | **30** |
 | [typing.md](../spec/typing.md) | 3 |  |  |  |  |  | **3** |
 | [undo.md](../spec/undo.md) | 1 | 1 |  | 3 |  |  | **5** |
 | [z-open.md](../spec/z-open.md) |  |  |  | 1 |  |  | **1** |
-| **total** | **170 (17%)** | **42 (4.1%)** | **22 (2.2%)** | **635 (62%)** | **0 (0%)** | **150 (15%)** | **1019** |
+| **total** | **170 (16%)** | **42 (4%)** | **22 (2.1%)** | **639 (61%)** | **0 (0%)** | **172 (16%)** | **1045** |
 
-## Disagree (635)
+## Disagree (639)
 
 ### [Backspace1](../spec/backspace.md#backspace1)
 
@@ -1683,6 +1684,37 @@ p
 p┃t
 
 2. m
+```
+
+</td></tr>
+</table>
+
+### [Backspace40b](../spec/backspace.md#backspace40b)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃x
+3. c
+```
+
+</td><td>
+
+```buffer
+-┃x
+3. c
+```
+
+</td><td>
+
+```buffer
+┃x
+
+3. c
 ```
 
 </td></tr>
@@ -4432,6 +4464,62 @@ Title┃text
 
 ```buffer
 - a┃ - b
+```
+
+</td><td>
+
+```buffer
+- a┃b
+```
+
+</td></tr>
+</table>
+
+### [Delete33b](../spec/delete.md#delete33b)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+-
+  - b
+```
+
+</td></tr>
+</table>
+
+> deleteContentForward
+
+<table>
+<tr><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃-
+  - b
+```
+
+</td><td>
+
+```buffer
+- a┃
+  - b
+```
+
+</td></tr>
+</table>
+
+> deleteContentForward
+
+<table>
+<tr><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - b
 ```
 
 </td><td>
@@ -7197,6 +7285,70 @@ p # h
 > ┃q
 
 p # h
+```
+
+</td></tr>
+</table>
+
+### [Enter69](../spec/enter.md#enter69)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Hel┃lo
+- next
+```
+
+</td><td>
+
+```buffer
+- # Hel
+┃lo
+- next
+```
+
+</td><td>
+
+```buffer
+- # Hel
+- ┃lo
+- next
+```
+
+</td></tr>
+</table>
+
+### [Enter69d](../spec/enter.md#enter69d)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Head┃
+- next
+```
+
+</td><td>
+
+```buffer
+- # Head
+┃
+- next
+```
+
+</td><td>
+
+```buffer
+- # Head
+- ┃
+- next
 ```
 
 </td></tr>
@@ -13545,7 +13697,7 @@ Hello world
 
 ```buffer
 - a
-   ┃beta
+  ┃ beta
 ```
 
 </td></tr>
@@ -19327,7 +19479,7 @@ x
 </td></tr>
 </table>
 
-> cursorDocEnd cursorCharLeft
+> cursorDocEnd
 
 <table>
 <tr><th>emacs-markdown</th><th>ourus</th></tr>
@@ -19335,14 +19487,15 @@ x
 
 ```buffer
 -  b
-  - c┃
+  - c
+┃
 ```
 
 </td><td>
 
 ```buffer
 - b
-  - c┃
+  - c
 ```
 
 </td></tr>
@@ -19376,7 +19529,7 @@ x
 </td></tr>
 </table>
 
-> cursorDocEnd cursorCharLeft
+> cursorDocEnd
 
 <table>
 <tr><th>emacs-markdown</th><th>ourus</th></tr>
@@ -19384,14 +19537,15 @@ x
 
 ````buffer
 -  ``` x
-- b┃
+- b
+┃
 ````
 
 </td><td>
 
 ````buffer
 - \``` x
-- b┃
+- b
 ````
 
 </td></tr>
@@ -19434,7 +19588,7 @@ x
 </td></tr>
 </table>
 
-> cursorDocEnd cursorCharLeft
+> cursorDocEnd
 
 <table>
 <tr><th>emacs-markdown</th><th>ourus</th></tr>
@@ -19443,7 +19597,8 @@ x
 ```buffer
 - a
 
-- b┃
+- b
+┃
 ```
 
 </td><td>
@@ -19451,7 +19606,7 @@ x
 ```buffer
 - a
 - 
-- b┃
+- b
 ```
 
 </td></tr>
@@ -19610,7 +19765,7 @@ para
 </td></tr>
 </table>
 
-> cursorDocEnd cursorCharLeft
+> cursorDocEnd
 
 <table>
 <tr><th>emacs-markdown</th><th>ourus</th></tr>
@@ -19619,7 +19774,8 @@ para
 ```buffer
 para
 - 
-a┃
+a
+┃
 ```
 
 </td><td>
@@ -19628,7 +19784,7 @@ a┃
 para
 
 - 
-- a┃
+- a
 ```
 
 </td></tr>
@@ -19741,7 +19897,7 @@ after
 </td></tr>
 </table>
 
-> cursorDocEnd cursorCharLeft
+> cursorDocEnd
 
 <table>
 <tr><th>emacs-markdown</th><th>ourus</th></tr>
@@ -19750,7 +19906,8 @@ after
 ```buffer
  # b
 
-after┃
+after
+┃
 ```
 
 </td><td>
@@ -19758,7 +19915,7 @@ after┃
 ```buffer
 \# b
 
-after┃
+after
 ```
 
 </td></tr>
@@ -19796,7 +19953,7 @@ after
 </td></tr>
 </table>
 
-> cursorDocEnd cursorCharLeft
+> cursorDocEnd
 
 <table>
 <tr><th>emacs-markdown</th><th>ourus</th></tr>
@@ -19806,7 +19963,8 @@ after
 para
  ``` x
 
-after┃
+after
+┃
 ````
 
 </td><td>
@@ -19815,7 +19973,7 @@ after┃
 para
 \``` x
 
-after┃
+after
 ````
 
 </td></tr>
@@ -23890,19 +24048,12 @@ a ┃\- b
 > shiftEnter
 
 <table>
-<tr><th>emacs-markdown</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
 a 
 ┃\- b
-```
-
-</td><td>
-
-```buffer
-a
- ┃\- b
 ```
 
 </td></tr>
@@ -25878,8 +26029,8 @@ revise
 
 ```buffer
 # Plan
-revise
- ┃2\. draft
+revise 
+┃2\. draft
 ```
 
 </td></tr>
@@ -25958,8 +26109,8 @@ Shop closes at six.┃
 </td><td>
 
 ```buffer
-- abc
-   ┃\- def
+- abc 
+  ┃\- def
 ```
 
 </td></tr>
@@ -25987,8 +26138,8 @@ Shop closes at six.┃
 </td><td>
 
 ```buffer
-- abc
-   ┃1\. def
+- abc 
+  ┃1\. def
 ```
 
 </td></tr>
@@ -26016,8 +26167,8 @@ Title
 </td><td>
 
 ```buffer
-Title
- ┃\===
+Title 
+┃\===
 ```
 
 </td></tr>
@@ -26045,8 +26196,8 @@ Title
 </td><td>
 
 ```buffer
-Title
- ┃\--
+Title 
+┃\--
 ```
 
 </td></tr>
@@ -26074,8 +26225,8 @@ Title
 </td><td>
 
 ```buffer
-- one
-   ┃\<div>
+- one 
+  ┃\<div>
 ```
 
 </td></tr>
@@ -26261,8 +26412,8 @@ p┃
 </td><td>
 
 ```buffer
-1. abc
-    ┃2. x
+1. abc 
+   ┃2. x
 ```
 
 </td></tr>
@@ -26290,8 +26441,8 @@ a | b
 </td><td>
 
 ```buffer
-a | b
- ┃|\---|---|
+a | b 
+┃|\---|---|
 ```
 
 </td></tr>
@@ -26372,7 +26523,7 @@ a | b
 
 ```buffer
 - one two
-   ┃three
+  ┃ three
 ```
 
 </td></tr>
@@ -26391,7 +26542,7 @@ a | b
 </td><td>
 
 ```buffer
-- one two ┃three
+- one two┃ three
 ```
 
 </td></tr>
@@ -26419,8 +26570,8 @@ a | b
 </td><td>
 
 ```buffer
-[Note]\: this
- ┃matters a lot
+[Note]\: this 
+┃matters a lot
 ```
 
 </td></tr>
@@ -27585,7 +27736,7 @@ one
 
 ```buffer
 one
- ┃two
+┃ two
 ```
 
 </td></tr>
@@ -27645,7 +27796,7 @@ Hello
 
 ```buffer
 Hello
- ┃world
+┃ world
 ====
 ```
 
@@ -27681,7 +27832,7 @@ Hello
 - item
 
   para
-   ┃text
+  ┃ text
 ```
 
 </td></tr>
@@ -27961,7 +28112,7 @@ y
 
 ```buffer
 - one two
-   ┃three
+  ┃ three
 ```
 
 </td></tr>
@@ -27993,7 +28144,7 @@ y
 ```buffer
 1. a
    - b
-      ┃c
+     ┃ c
 ```
 
 </td></tr>
@@ -28025,7 +28176,7 @@ y
 ```buffer
 - x
 →- a
-→   ┃b
+→  ┃ b
 ```
 
 </td></tr>
@@ -29641,7 +29792,7 @@ code
 </td></tr>
 </table>
 
-## Skipped (150)
+## Skipped (172)
 
 | example | why |
 | --- | --- |
@@ -29657,6 +29808,8 @@ code
 | [Backspace43c](../spec/backspace.md#backspace43c) | option enterAtTextStart: stay |
 | [Backspace45b](../spec/backspace.md#backspace45b) | option joinWithChildren: refuse |
 | [Backspace46](../spec/backspace.md#backspace46) | character outside the Basic Multilingual Plane, which the terminal types as its code |
+| [Backspace50](../spec/backspace.md#backspace50) | option backspaceAtItemStart: body |
+| [Backspace50b](../spec/backspace.md#backspace50b) | option backspaceAtItemStart: unwrap |
 | **backtick.md** | |
 | [Backtick2b](../spec/backtick.md#backtick2b) | option closeBackticks: all |
 | [Backtick7](../spec/backtick.md#backtick7) | option markup: decorated |
@@ -29708,10 +29861,13 @@ code
 | **enter.md** | |
 | [Enter3b](../spec/enter.md#enter3b) | option enterMidItem: child |
 | [Enter7b](../spec/enter.md#enter7b) | option enterOnEmptyItem: outdent |
+| [Enter7c](../spec/enter.md#enter7c) | option enterOnEmptyItem: unwrap |
 | [Enter15b](../spec/enter.md#enter15b) | option enterOnEmptyItem: outdent |
 | [Enter17](../spec/enter.md#enter17) | CR line endings |
 | [Enter18](../spec/enter.md#enter18) | CR line endings |
+| [Enter21b](../spec/enter.md#enter21b) | option enterOnEmptyItem: unwrap |
 | [Enter26b](../spec/enter.md#enter26b) | option enterAtTextStart: stay |
+| [Enter27b](../spec/enter.md#enter27b) | option enterOnEmptyItem: unwrap |
 | [Enter29b](../spec/enter.md#enter29b) | option enterAtTextStart: stay |
 | [Enter30](../spec/enter.md#enter30) | option enterOnEmptyItem: outdent |
 | [Enter32b](../spec/enter.md#enter32b) | option enterAtTextStart: stay |
@@ -29775,9 +29931,17 @@ code
 | [PastePlain31](../spec/paste-plain.md#pasteplain31) | option pastePlainLines: enter |
 | [PastePlain32](../spec/paste-plain.md#pasteplain32) | option pastePlainLines: items |
 | [PastePlain33](../spec/paste-plain.md#pasteplain33) | option pastePlainLines: items |
+| [PastePlain33b](../spec/paste-plain.md#pasteplain33b) | option pastePlainLines: items |
+| [PastePlain33c](../spec/paste-plain.md#pasteplain33c) | option pastePlainLines: items |
 | [PastePlain34](../spec/paste-plain.md#pasteplain34) | nothing to compare |
 | **paste.md** | |
 | [Paste4b](../spec/paste.md#paste4b) | option pasteSeams: open |
+| [Paste17b](../spec/paste.md#paste17b) | option pasteOverSelection: ignore |
+| [Paste17c](../spec/paste.md#paste17c) | option pasteOverSelection: ignore |
+| [Paste17d](../spec/paste.md#paste17d) | option pasteOverSelection: ignore |
+| [Paste17e](../spec/paste.md#paste17e) | option pasteOverSelection: ignore |
+| [Paste17f](../spec/paste.md#paste17f) | option pasteOverSelection: ignore |
+| [Paste17g](../spec/paste.md#paste17g) | option pasteOverSelection: ignore |
 | [Paste18](../spec/paste.md#paste18) | option pasteLines: items |
 | [Paste19](../spec/paste.md#paste19) | option pasteLines: items |
 | [Paste20](../spec/paste.md#paste20) | option pasteAtTextStart: before |
@@ -29786,6 +29950,14 @@ code
 | [Paste26b](../spec/paste.md#paste26b) | option pasteSeams: open |
 | **placeholders.md** | |
 | [Placeholder20](../spec/placeholders.md#placeholder20) | option enterSplitSpace: start |
+| **quirks.md** | |
+| [Quirk1](../spec/quirks.md#quirk1) | option quirkEnterMidHeading: workflowy |
+| [Quirk1b](../spec/quirks.md#quirk1b) | option quirkEnterMidHeading: workflowy |
+| [Quirk1c](../spec/quirks.md#quirk1c) | option quirkEnterMidHeading: workflowy |
+| [Quirk2](../spec/quirks.md#quirk2) | option quirkPasteCaret: roam |
+| [Quirk2b](../spec/quirks.md#quirk2b) | option quirkPasteCaret: athens |
+| [Quirk3](../spec/quirks.md#quirk3) | option backspaceAtItemStart: logseq |
+| [Quirk4](../spec/quirks.md#quirk4) | option quirkPasteText: dynalist |
 | **quotes.md** | |
 | [Quote12b](../spec/quotes.md#quote12b) | option outdent: logical |
 | [Quote20](../spec/quotes.md#quote20) | option outdent: logical |
@@ -29812,6 +29984,8 @@ code
 | [TaskEnter9c](../spec/tasks.md#taskenter9c) | option enterTask: plain |
 | [TaskEnter10](../spec/tasks.md#taskenter10) | option enterSplitSpace: start |
 | [TaskBackspace1](../spec/tasks.md#taskbackspace1) | option markup: decorated |
+| [TaskBackspace3b](../spec/tasks.md#taskbackspace3b) | option taskEditing: unwrap |
+| [TaskBackspace3c](../spec/tasks.md#taskbackspace3c) | option taskEditing: unwrap |
 | [TaskBackspace4](../spec/tasks.md#taskbackspace4) | option taskEditing: block |
 | [TaskBackspace6](../spec/tasks.md#taskbackspace6) | option markup: decorated |
 | [TaskBackspace7](../spec/tasks.md#taskbackspace7) | option taskEditing: block |

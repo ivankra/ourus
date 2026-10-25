@@ -588,7 +588,7 @@ mark on the escapes ourus writes (as `AUTO_WHITESPACE_MARK` marks its whitespace
 this one: `revise 2\. draft`.
 
 ```yaml
-tags: rare free-form
+tags: rare
 ```
 
 ```buffer
@@ -614,7 +614,7 @@ revise┃2. draft
 The same in an item.
 
 ```yaml
-tags: rare free-form
+tags: rare
 ```
 
 ```buffer
@@ -640,7 +640,7 @@ Shift-Enter before `\-`: on its own line `- b` would interrupt the paragraph as 
 backslash is the line's escape there, and goes when Backspace joins the line back.
 
 ```yaml
-tags: rare free-form
+tags: rare
 ```
 
 ```buffer
@@ -650,8 +650,8 @@ a ┃\- b
 > shiftEnter
 
 ```buffer
-a
- ┃\- b
+a 
+┃\- b
 ```
 
 > deleteContentBackward
@@ -667,7 +667,7 @@ the escape its line needs, and the second line's stays text, as reading has it (
 paragraph, so nothing needs it): each line's escapes are judged against the lines as written.
 
 ```yaml
-tags: rare free-form
+tags: rare
 ```
 
 ```buffer

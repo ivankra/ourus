@@ -9,7 +9,7 @@ import { isSpaceOrTab, lineOf } from '../text/index.ts';
 import { notApplicable, reject, type CommandContext, type CommandOutcome } from './context.ts';
 import { codeAt, joinInCode, onDelimiterLine } from './code.ts';
 import { deleteEmptyPair } from './typing.ts';
-import { deleteHeldSpace, hiddenSpacesAt, inMarkup, pastPrefix, textActedOnAt, textEnd, textStart, withTextlessParents } from './util.ts';
+import { deleteHeldSpace, hiddenSpacesAt, inMarkup, leaveList, pastPrefix, textActedOnAt, textEnd, textStart, withTextlessParents } from './util.ts';
 
 /**
  * From the caret back to the start of its line's text, past a checkbox or `#`s, the spaces after the
@@ -62,6 +62,14 @@ export function deleteSoftLineBackwardCommand(ctx: CommandContext): CommandOutco
 }
 
 /**
+ * `taskEditing: unwrap` (SiYuan, BlockNote): the task a paragraph where it is, its checkbox gone with
+ * its marker, its list split there; `text`, its text without the checkbox, the caret at its start.
+ */
+function unwrapTask(draft: OurusDraft, node: OutlineNode, text: ProseText): OurusDraft {
+  return draft.convert(node, 'paragraph').setText(node, text).setCaret(node, 0, -1);
+}
+
+/**
  * Backspace (spec/backspace.md). In the middle of a text it is the host's (rule 9); at a later line's
  * start that line joins the one above. At the text's start: the markup in front of it goes first, a
  * checkbox (`taskEditing: checkbox`) or a heading's `#`s and underline (`headingEditing: text`)
@@ -91,7 +99,11 @@ export function deleteContentBackwardCommand(ctx: CommandContext): CommandOutcom
     const spaces = ' '.repeat(hidden.to - hidden.from);
     return ctx.apply(ctx.draft().setText(hidden.node, hidden.text.splice(breakBelow.from, breakBelow.to, spaces)).setCaret(hidden.node, breakBelow.from, -1));
   }
-  if (hidden) return joinUp(ctx, hidden.node, hidden.text);
+  if (hidden) {
+    // (an item's marker first, with `body` and `unwrap`)
+    const unwrapped = hidden.node.kind !== 'item' || config.backspaceAtItemStart === 'join' ? null : config.backspaceAtItemStart === 'logseq' ? unnumberItem(ctx, hidden.node, hidden.text) : unwrapItem(ctx, hidden.node, hidden.text, hidden.to - hidden.from);
+    return unwrapped ?? joinUp(ctx, hidden.node, hidden.text);
+  }
   let at = ctx.from;
   // before a checkbox, in the marker: at the item's start, where the item joins (TO1), not past its checkbox
   const beforeBox = at.zone === 'marker' || (at.zone === 'frame' && at.part === 'task' && at.offset === 0);
@@ -117,11 +129,12 @@ export function deleteContentBackwardCommand(ctx: CommandContext): CommandOutcom
   if (offset > first) return deleteEmptyPair(ctx, node, text, offset) ?? notApplicable();
   const draft = ctx.draft();
   if (lineStart !== text.textStart(0)) {
-    // at a later line's start: it joins the line above, its spaces with it, the caret past them
+    // at a later line's start: it joins the line above, its spaces with it, the caret staying before
+    // or past them, where it was (a Shift-Enter's break taken back: ShiftEnter21)
     const joined = text.splice(lineStart - 1, lineStart);
     // a quote's first paragraph that would read as its callout's title: not done yet
     if (node.becomesTitle(joined)) return null;
-    draft.setText(node, joined).setCaret(node, first - 1, -1);
+    draft.setText(node, joined).setCaret(node, offset - 1, -1);
     return ctx.apply(draft);
   }
   // text alone on the line after its marker (Shift-Enter at the text start made it): the break goes
@@ -133,6 +146,11 @@ export function deleteContentBackwardCommand(ctx: CommandContext): CommandOutcom
   }
   // the markup in front of the text goes first, as a unit
   const task = text.frame.find((p) => p.part === 'task');
+  // (`taskEditing: unwrap`: a paragraph where it is, its checkbox going with its marker, TaskBackspace3b;
+  // an empty one, an empty paragraph set off as an item leaving its list is, TaskBackspace3c)
+  if (task && !beforeBox && config.taskEditing === 'unwrap' && node.kind === 'item') {
+    return text.empty ? leaveList(ctx, node) : ctx.apply(unwrapTask(draft, node, text.asItem(false).splice(task.from, task.to)));
+  }
   // (`taskEditing: block`: the task joins as any item, its checkbox going with its marker)
   if (task && !beforeBox && config.taskEditing !== 'block') {
     // (`text`: one character of it, the text starting with the rest: TaskBackspace5)
@@ -168,7 +186,68 @@ export function deleteContentBackwardCommand(ctx: CommandContext): CommandOutcom
     if (leading) return ctx.apply(draft.leadingBlankLines(leading - 1).setCaret(node, offset, -1));
     if (above && above.kind !== 'root' && above.gap > 1) return ctx.apply(draft.gap(above, above.gap - 1).setCaret(node, offset, -1));
   }
+  // an item's marker first, with `body` and `unwrap`, where it would join the node above
+  // (with `logseq` a numbered item's number, an empty one's too)
+  if (config.backspaceAtItemStart === 'logseq' && node.kind === 'item' && text.type === 'paragraph') {
+    const unnumbered = unnumberItem(ctx, node, text);
+    if (unnumbered) return unnumbered;
+  }
+  if (config.backspaceAtItemStart !== 'join' && config.backspaceAtItemStart !== 'logseq' && node.kind === 'item' && text.type === 'paragraph' && !text.empty) {
+    const unwrapped = unwrapItem(ctx, node, text);
+    if (unwrapped) return unwrapped;
+  }
   return joinUp(ctx, node, text);
+}
+
+/**
+ * `backspaceAtItemStart: logseq`, a quirk (Logseq's and Tine's mechanics, numbering a block's
+ * property there; Quirk3): a numbered item's number goes first, the item a bulleted one where it is
+ * (made anew, a list form being a new item's), its children with it, its list split there. Null for
+ * a bulleted item, which joins.
+ */
+function unnumberItem(ctx: CommandContext, node: OutlineNode, text: ProseText): CommandOutcome | null {
+  if (ctx.doc.listOf(node)?.block.attrs.list?.type !== 'ordered') return null;
+  const draft = ctx.draft();
+  const id = draft.create('item', text);
+  // (a bullet, a list of its own however the list around it is numbered: one no item beside it has,
+  // or it would run into that one's list)
+  const beside = [-1, 1].map((d) => node.parent?.children[node.index + d]).filter((n) => n?.kind === 'item').map((n) => ctx.doc.markerOf(n!));
+  draft.listForm(id, ['-', '*', '+'].find((b) => !beside.includes(b)) ?? '-', true);
+  const children = [...node.children];
+  if (children.length) draft.remove(children).append(id, 'last', children);
+  draft.place('before', node, [id]).remove([node]);
+  return ctx.apply(draft.setCaret(id, textStart(text), -1));
+}
+
+/**
+ * `backspaceAtItemStart`'s `body` and `unwrap` (Backspace50, Backspace50b): the item a paragraph, at
+ * the end of the item above it with `body` (after its children), where it is with `unwrap` and as a
+ * first child, its own children with it, the caret at its start. Null with nothing above it in its
+ * container (`backspaceAtTopItem`'s).
+ */
+function unwrapItem(ctx: CommandContext, node: OutlineNode, text: ProseText, spaces = 0): CommandOutcome | null {
+  const above = node.preceding;
+  if (!above || above.kind === 'root') return null;
+  // (under an item with no text, or an empty one, it joins it: no paragraph can follow nothing there)
+  const parentText = above === node.parent ? ctx.doc.textOf(above) : undefined;
+  if (parentText === null || (parentText instanceof ProseText && parentText.empty)) return null;
+  const draft = ctx.draft();
+  // (`body`: into the item above in its list; one with no text holds no paragraph, and joins)
+  const sibling = node.parent?.children[node.index - 1];
+  const list = (n: OutlineNode): unknown => ctx.doc.listOf(n)?.block;
+  if (ctx.config.backspaceAtItemStart === 'body' && sibling?.kind === 'item' && list(sibling) === list(node)) {
+    const upper = ctx.doc.textOf(sibling);
+    if (!(upper instanceof ProseText) || upper.empty) return null;
+    draft.remove([node]).append(sibling, 'last', [node]);
+  }
+  draft.convert(node, 'paragraph');
+  // with `taskEditing: block` its checkbox goes with its marker; the spaces Markdown hid after the
+  // marker are the paragraph's text, the caret before them
+  const task = text.frame.find((p) => p.part === 'task');
+  let own = task && ctx.config.taskEditing === 'block' ? text.asItem(false).splice(task.from, task.to) : null;
+  if (spaces) own = (own ?? text.asItem(false)).splice(0, 0, ' '.repeat(spaces));
+  if (own) draft.setText(node, own);
+  return ctx.apply(draft.setCaret(node, 0, -1));
 }
 
 /**

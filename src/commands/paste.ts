@@ -10,7 +10,7 @@ import type { OurusDraft } from '../draft/index.ts';
 import { notApplicable, type CommandContext, type CommandOutcome } from './context.ts';
 import { afterDeleting } from './copy.ts';
 import { codeAt, onDelimiterLine } from './code.ts';
-import { plainLines } from './paste-plain.ts';
+import { pastePlainCommand, plainLines } from './paste-plain.ts';
 import { inMarkup, textEnd, textStart } from './util.ts';
 
 /** Where pasted nodes go: in a node's place, before or after it, or first or last among its children. */
@@ -28,25 +28,55 @@ interface Slot {
 /**
  * Paste (`pasteSeams: closed`): plain lines into the text at the caret, as plain paste puts them;
  * anything else as nodes in the slot the caret is in (`slotAt`), fitted to it: in a list each an
- * item or in one (`fitToList`), elsewhere as they are, the caret at the end of the last pasted text.
- * One line without a line break, or the caret in markup, the host's. Over a selection, it goes
- * first. Null (unsupported) for a text with lazy lines at the slot, and an item with no text pasted.
+ * item or in one (`fitToList`), elsewhere as they are, the caret at the end of the last pasted text
+ * (`quirkPasteCaret`).
+ * One line without a line break, or the caret in markup, the host's. Over a selection, as
+ * `pasteOverSelection` says (`pasteMarkdown`). Null (unsupported) for a text with lazy lines at the
+ * slot, and an item with no text pasted.
  */
 export function pasteCommand(ctx: CommandContext, clipboard: Clipboard): CommandOutcome {
   const config = ctx.config;
-  // over a selection, it goes first, as a cut takes it; the paste goes where the caret is then (Paste17)
-  if (!ctx.collapsed) return afterDeleting(ctx, (next) => pasteCommand(next, clipboard));
+  // (`quirkPasteText: dynalist`: text alone is plain text, as plain paste puts it)
+  const plain = clipboard['text/plain'];
+  // (over a selection, it goes first, as a cut takes it)
+  if (config.quirkPasteText === 'dynalist' && plain !== undefined && clipboard['text/html'] === undefined && clipboard['text/markdown'] === undefined) {
+    return ctx.collapsed ? pastePlainCommand(ctx, plain) : afterDeleting(ctx, (next) => pastePlainCommand(next, plain));
+  }
   const read = clipboardMarkdown(clipboard);
   if (!read) return notApplicable();
   return pasteMarkdown(ctx, { ...read, plain: clipboard['text/plain'] }, config.pasteLines === 'items');
 }
 
+/** The clipboard's Markdown, a phrase (formatted text from a page) or not, and its plain text. */
+type Read = { readonly markdown: string; readonly phrase: boolean; readonly plain?: string };
+
 /**
- * `read` (the clipboard's Markdown, a phrase or not) pasted at the caret; `eachLine`: plain lines are a
- * node each (`pasteLines: items`, plain paste's `items`), not text in the text at the caret.
+ * `read` pasted at the caret; `eachLine`: plain lines are a node each (`pasteLines: items`, plain
+ * paste's `items`), not text in the text at the caret. Over a selection, with `pasteOverSelection:
+ * ignore` and the selection in one node's text, nodes go where a paste at its end puts them, the
+ * selected text as it is (Paste17b); else, and where what is pasted is text, the selection goes
+ * first, as a cut takes it, and the paste goes where that leaves the caret (Paste17).
  */
-export function pasteMarkdown(ctx: CommandContext, read: { readonly markdown: string; readonly phrase: boolean; readonly plain?: string }, eachLine: boolean): CommandOutcome {
+export function pasteMarkdown(ctx: CommandContext, read: Read, eachLine: boolean): CommandOutcome {
+  if (ctx.collapsed) return asOutcome(pasteAt(ctx, read, eachLine, false));
+  const { from, to } = ctx;
+  if (ctx.config.pasteOverSelection === 'ignore' && from.zone === 'text' && to.zone === 'text' && from.node === to.node) {
+    const kept = pasteAt(ctx.at(Math.max(ctx.selection.anchor, ctx.selection.head)), read, eachLine, true);
+    if (kept !== 'text') return kept;
+  }
+  return afterDeleting(ctx, (next) => asOutcome(pasteAt(next, read, eachLine, false)));
+}
+
+/** (`pasteAt`'s outcome where it pastes text whatever is asked: never `'text'`.) */
+const asOutcome = (outcome: CommandOutcome | 'text'): CommandOutcome => (outcome === 'text' ? null : outcome);
+
+/**
+ * `pasteMarkdown` at a caret; `nodesOnly`: where what is pasted would be text put in at the caret,
+ * `'text'` rather than the paste.
+ */
+function pasteAt(ctx: CommandContext, read: Read, eachLine: boolean, nodesOnly: boolean): CommandOutcome | 'text' {
   const config = ctx.config;
+  const asText = (paste: () => CommandOutcome): CommandOutcome | 'text' => (nodesOnly ? 'text' : paste());
   let fragment = clipboardFragment(read.markdown, ctx.config);
   if (!fragment) return notApplicable();
   // plain lines (paragraphs only), with `pasteLines: items`: each line a node (Paste18, 19)
@@ -65,14 +95,14 @@ export function pasteMarkdown(ctx: CommandContext, read: { readonly markdown: st
   if (ctx.doc.blank) return fillDocument(ctx, pasted);
   // a phrase (formatted text from a page) is put in at the caret, where the host's paste would lose its formatting
   // (in code, as plain text: code has no formatting to keep)
-  if (read.phrase) return codeAt(ctx) ? plainLines(ctx, read.plain ?? read.markdown) : (lineAt(ctx, read.markdown) ?? notApplicable());
+  if (read.phrase) return asText(() => (codeAt(ctx) ? plainLines(ctx, read.plain ?? read.markdown) : (lineAt(ctx, read.markdown) ?? notApplicable())));
   const items = roots.every((r) => r.kind === 'item');
   // one line that is no item is inline text, put in at the caret
-  if (inline && !items && roots[0]!.kind !== 'quote') return lineAt(ctx, read.markdown) ?? notApplicable();
+  if (inline && !items && roots[0]!.kind !== 'quote') return asText(() => lineAt(ctx, read.markdown) ?? notApplicable());
   const at = slotAt(ctx, items);
   if (at === 'host') return notApplicable();
   if (at === null) return null;
-  if (at === 'plain') return plainLines(ctx, read.markdown);
+  if (at === 'plain') return asText(() => plainLines(ctx, read.markdown));
   let slot = at;
   const empty = (n: OutlineNode): boolean => n.kind === 'item' && emptyText(ctx, n);
   // an empty item with children is a parent; but a block first there would be its text: it fills the item instead
@@ -82,9 +112,9 @@ export function pasteMarkdown(ctx: CommandContext, read: { readonly markdown: st
   const text = ctx.doc.textOf(slot.node);
   const takesLines = slot.node.kind !== 'heading' && slot.node.kind !== 'atom' && !(text instanceof ProseText && text.type === 'title') && !(text instanceof AtomText);
   // (from a checkbox, at the text's start)
-  if (lines && takesLines && !byLine) return plainLines(ctx.from.zone === 'frame' && text instanceof ProseText ? ctx.at(ctx.doc.posOf(slot.node, text.textStart(0), 1)) : ctx, read.markdown);
+  if (lines && takesLines && !byLine) return asText(() => plainLines(ctx.from.zone === 'frame' && text instanceof ProseText ? ctx.at(ctx.doc.posOf(slot.node, text.textStart(0), 1)) : ctx, read.markdown));
   // one line, not at the text's end: inline text
-  if (inline && !slot.atEnd) return lineAt(ctx, read.markdown) ?? notApplicable();
+  if (inline && !slot.atEnd) return asText(() => lineAt(ctx, read.markdown) ?? notApplicable());
   // what can't be an item before an item (a quote, a table) goes after it
   if (slot.where === 'before' && slot.node.kind === 'item' && !leads(roots[0]!)) slot = { ...endSlot(ctx, slot.node, items), atEnd: false };
   // a quote or a table pasted on an empty item is its first block, on its marker's line (PasteList17)
@@ -112,7 +142,7 @@ export function pasteMarkdown(ctx: CommandContext, read: { readonly markdown: st
   const fitted = slot.list !== null || slot.node.kind === 'item' ? fitToList(ctx, draft, pasted, roots, slot) : fitToBlocks(draft, pasted, roots);
   if (fitted === undefined) return null;
   // what can't be a node where it lands is pasted as text
-  if (fitted === null) return plainLines(ctx, read.markdown);
+  if (fitted === null) return asText(() => plainLines(ctx, read.markdown));
   return place(ctx, draft, slot, fitted);
 }
 
@@ -426,7 +456,7 @@ function place(ctx: CommandContext, draft: OurusDraft, slot: Slot, fitted: Fitte
     setSpacing(draft, nodes[nodes.length - 1]!, end.gap, true);
     if (!(list === null && !instead && slot.where === 'after' && apartFrom(ctx, slot))) draft.gap(end, 0);
   }
-  // the caret at the end of the last pasted text
+  // the caret at the end of the last pasted text (`pasteCaret`)
   if (!all.length) return null;
   // on a blank line, the paste fills it: the blank lines above it stay, those below go after the paste (Paste13, 26)
   const blank = slot.onBlank;
@@ -436,10 +466,7 @@ function place(ctx: CommandContext, draft: OurusDraft, slot: Slot, fitted: Fitte
     draft.gap(blank.owner, blank.line);
     setSpacing(draft, all[all.length - 1]!, blank.owner.gap - blank.line - 1);
   }
-  const last = lastMade(draft, all[all.length - 1]!);
-  const text = draft.touched(last).text;
-  if (!text) return null;
-  draft.setCaret(last, textEnd(text), -1);
+  if (!pasteCaret(ctx, draft, all)) return null;
   return ctx.apply(draft);
 }
 
@@ -476,8 +503,21 @@ function fillDocument(ctx: CommandContext, pasted: OurusDoc): CommandOutcome {
   if (!roots) return null;
   if (ctx.doc.rootNode.children.length) draft.remove(ctx.doc.rootNode.children);
   draft.append(0, 'first', roots.nodes);
-  const last = lastMade(draft, roots.nodes[roots.nodes.length - 1]!);
-  const text = draft.touched(last).text;
-  if (!text) return null;
-  return ctx.apply(draft.setCaret(last, textEnd(text), -1));
+  if (!pasteCaret(ctx, draft, roots.nodes)) return null;
+  return ctx.apply(draft);
+}
+
+/**
+ * The caret after a paste of `nodes`: at the end of the last pasted text, or with `quirkPasteCaret`
+ * at the first's end (`roam`) or start (`athens`), a quote's in its first block. False where that
+ * node has no text.
+ */
+function pasteCaret(ctx: CommandContext, draft: OurusDraft, nodes: readonly number[]): boolean {
+  const quirk = ctx.config.quirkPasteCaret;
+  let id = quirk === 'default' ? lastMade(draft, nodes[nodes.length - 1]!) : nodes[0]!;
+  while (!draft.touched(id).text && draft.touched(id).children.length) id = draft.touched(id).children[0]!;
+  const text = draft.touched(id).text;
+  if (!text) return false;
+  draft.setCaret(id, quirk === 'athens' ? textStart(text) : textEnd(text), -1);
+  return true;
 }

@@ -19,7 +19,7 @@ import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, 
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Config } from '../src/config.ts';
-import { docOf, drawDoc, drawOutline, drawText, readDrawing, readText } from '../test/drawing.ts';
+import { docOf, drawDoc, drawOutline, drawsCaret, drawText, readDrawing, readText, withoutCaret } from '../test/drawing.ts';
 import { isAction, play, type Played } from '../test/player.ts';
 import { normalize, outcome, readClipboard } from '../test/spec-run.ts';
 import { readSpec, specConfig, TAGS, tokenize, type Clipboard, type SpecTest } from '../test/specfile.ts';
@@ -466,7 +466,8 @@ async function main(): Promise<void> {
           verbatim(s.buffer);
           if (s.clipboard !== undefined) out(`clipboard: ${JSON.stringify(s.clipboard)}`);
           const drawn = p.drawn?.[k];
-          if (drawn !== undefined && normalize(drawn) !== s.buffer) {
+          // (a drawing without a caret doesn't check it)
+          if (drawn !== undefined && normalize(drawn) !== (drawsCaret(drawn) ? s.buffer : withoutCaret(s.buffer))) {
             out(marked('✗', '✗ the case draws:'));
             verbatim(drawn);
             broken = true;

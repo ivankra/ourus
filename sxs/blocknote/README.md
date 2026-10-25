@@ -85,8 +85,14 @@ Repo: https://github.com/TypeCellOS/BlockNote
 - **The caret** is a ProseMirror selection: a block, by its place in document order, and an offset in
   its content, past the prefix its canonical text has (`[ ] `, `## `, a fence's line).
 - **Reading** is `editor.document`: each block's text as the canonical form has it, a heading as
-  `#`s, a task as `[ ] ` or `[x] `, a code block as a fence, any block but a list item free; and the
-  caret from ProseMirror's selection, when the editor has the focus.
+  `#`s, a task as `[ ] ` or `[x] `, a code block as a fence (longer than any run of backticks
+  starting a line of the code, as Markdown needs: `fences.md › Fence62`), any block but a list item
+  free; and the caret from ProseMirror's selection, when the editor has the focus. A block's text
+  holds a blank line (Shift+Enter twice), so an item's paragraphs right after its text are its
+  block's text (`paragraphsInBlock`, since 2026-10-25: `obsidian-true-outliner.md › TO-S11`). A
+  block's formatting (its content's `styles`: bold, italic, strike, code; its link nodes) is read as
+  Markdown, the caret mapped into it (`runsAsMarkdown` in lib/block.ts, since 2026-10-25: 6
+  disagreements that were the read's to agree).
 - **Free form.** Every block had gone in as a bullet item, and a paragraph read as
   an item's text: BlockNote's commonest move, making an item a paragraph (Backspace at its start,
   Enter or Shift+Enter on an empty one), drew as nothing done, and the spec's paragraphs and
@@ -120,7 +126,8 @@ dot cut together): `paste-old.md › PasteOld81`, an error, now run.
 Each played in a probe and, where it decides, read in BlockNote's source (v0.55.0, `TypeCellOS/BlockNote`):
 
 - **Backspace at a list item's start makes it a paragraph**, keeping it where it is, children and
-  all; a second Backspace joins it to the block before (`backspace.md › Backspace1`, `3`). Delete at
+  all; a second Backspace joins it to the block before (`backspace.md › Backspace1`, `3`). The
+  driver declares it, `backspaceAtItemStart: unwrap` (since 2026-10-25). Delete at
   an item's end joins the next (`delete.md › Delete1` agrees). At a task's start, likewise a paragraph,
   where ourus keeps an item without its checkbox (`tasks.md › TaskBackspace2`).
 - **Backspace at a paragraph's start joins it** to the block before (`backspace.md › Backspace10`
@@ -129,7 +136,12 @@ Each played in a probe and, where it decides, read in BlockNote's source (v0.55.
 - **Enter on an empty list item makes it a paragraph** (`enter.md › Enter28`, `tasks.md ›
   TaskEnter2`), as Enter on an empty task does, and as **Shift+Enter** on one does too; where ourus
   makes a paragraph too, they agree (`tasks.md › TaskEnter1`). On an empty paragraph nested, Enter
-  outdents it (`handleEnter`'s first command, `liftItem`).
+  outdents it (`handleEnter`'s first command, `liftItem`). Declared, `enterOnEmptyItem: unwrap` (since
+  2026-10-25: `Enter7`, `Enter21`, `Enter27`, `Enter28`); the last item of a nested list it makes a
+  paragraph too, where ourus outdents it, with every value (`Enter5`, `TaskEnter2`).
+- **Backspace right after a task's checkbox** makes the task a paragraph where it is, its checkbox
+  gone with its marker (`TaskBackspace2`, `TaskBackspace3`, `SoftBackspace1`): declared,
+  `taskEditing: unwrap` (since 2026-10-25).
 - **A heading and a paragraph are one block each**: a move takes it alone, its section or the list
   after it staying (`move-subtree-down.md › MoveDown19`, `MoveDown24`); Tab nests a paragraph, a
   paragraph still (`indent.md › Indent21`), and Shift+Tab leaves an item under a paragraph an item

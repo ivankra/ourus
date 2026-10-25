@@ -14,10 +14,13 @@ The rules, in order; the first that applies wins:
    `enterOnEmptyItem: outdent` anywhere, a nested item outdents as Shift-Tab does, and a top-level
    one leaves the list: it becomes an empty paragraph, held by a placeholder and set off by blank
    lines. With `exit`, a top-level one leaves the list and a nested one gets a sibling (Enter63,
-   Enter63b). In a quote it stays in the quote. The same at every depth (Enter5, Enter6, Enter7,
-   Enter7b, Enter15, Enter15b, Enter27, Enter30). On that empty paragraph Enter is refused: there is
-   no second one to make (Enter40).
-4. **On an empty item with children**, a new empty first child (Enter21).
+   Enter63b). With `unwrap` (SiYuan, BlockNote), first or in the middle of its list it becomes an
+   empty paragraph where it is, at any depth, its list split there (Enter7c, Enter27b). In a quote it
+   stays in the quote. The same at every depth (Enter5, Enter6, Enter7, Enter7b, Enter15, Enter15b,
+   Enter27, Enter30). On that empty paragraph Enter is refused: there is no second one to make
+   (Enter40).
+4. **On an empty item with children**, a new empty first child (Enter21); with `enterOnEmptyItem:
+   unwrap`, an empty paragraph, its children its list (Enter21b).
 5. **In markup before a node's text**, an item's marker, a task's checkbox or a heading's `#`s,
    Enter acts at the node's text start (Enter34, Enter54, Enter54b, Enter55, Enter55b); with
    `enterAtTextStart: stay`, at a heading's line start, before its `#`s, it opens a line above, the
@@ -32,20 +35,25 @@ The rules, in order; the first that applies wins:
    Enter32b, Enter33b).
 7. **In the middle of an item's text**, the item splits. The text after the caret becomes the next
    sibling, which takes the item's children (`enterMidItem: sibling`, the default), or its first
-   child (`child`) (Enter1, Enter3, Enter3b, Enter3c). The spaces at the caret go from both halves
-   (`enterSplitSpace: trim`, the default), only those after it (`drop`), or they start the second
-   half (`start`): an item's padding past the space after its marker, a paragraph's or a title's
-   rest's indentation, which ourus keeps as the user's whitespace and a join gives back (Enter44,
-   Enter64, Enter65, Enter65b, Enter65c, Enter65d, Enter65e, Enter65f, Enter65g, Enter65h, Enter65i,
-   Enter65j, Enter65k, Enter65l, Enter65m).
+   child (`child`) (Enter1, Enter3, Enter3b, Enter3c). An item whose text is an ATX heading splits
+   so too, the heading staying with the first half, the rest a plain item (Enter69); with
+   `quirkEnterMidHeading: workflowy`, the first half a plain item, the heading going with the rest
+   and its children ([Quirk1](quirks.md#quirk1)); at its end Enter makes an empty item (Enter69d). The spaces at the
+   caret go from both halves (`enterSplitSpace: trim`, the default), only those after it (`drop`),
+   or they start the second half (`start`): an item's padding past the space after its marker, a
+   paragraph's or a title's rest's indentation, which ourus keeps as the user's whitespace and a
+   join gives back (Enter44, Enter64, Enter65, Enter65b, Enter65c, Enter65d, Enter65e, Enter65f,
+   Enter65g, Enter65h, Enter65i, Enter65j, Enter65k, Enter65l, Enter65m).
 8. **At the end of an item's text**, a new empty item: the first child of an item with children,
    else the next sibling, numbered on, set off by a blank line in a loose list (Enter2, Enter4,
    Enter36, Enter36b).
 9. **In a paragraph**, two paragraphs, a blank line between; the second takes the paragraph's list
    (Enter12, Enter22). In a heading, the rest of the title becomes the section's first paragraph
-   (Enter23, Enter41, Enter42), its closing `#`s staying on its line (Enter61); at a line break of
-   a title of several lines, the break goes with neither half, as in a paragraph (Enter51), and the
-   rest is set apart from text below it would run into (Enter52).
+   (Enter23, Enter41, Enter42), its closing `#`s staying on its line (Enter61); with
+   `quirkEnterMidHeading: workflowy`, the text before the caret is a paragraph above the heading,
+   which keeps the rest and its section ([Quirk1b](quirks.md#quirk1b)); at a line break of a title of several lines, the
+   break goes with neither half, as in a paragraph (Enter51), and the rest is set apart from text
+   below it would run into (Enter52).
 10. **Text after the caret that would start a block stays text**: it is escaped, a list marker
     included, in every kind of node (Enter8, Enter9, Enter10, Enter11, Enter22, Enter35, Enter41,
     Enter42); so does the text before it, where, ended there, it would read as a block: a link
@@ -282,8 +290,9 @@ tags: core free-form
 On an empty top-level item in the middle of its list, Enter makes another empty item, as in a
 nested list ([Enter27](#enter27)): only the last empty item of a list leaves it (a user decision).
 Logseq, WorkFlowy, Dynalist and Tana do the same; bare Obsidian leaves the list, which is
-`enterOnEmptyItem: outdent` ([Enter7b](#enter7b)), and SiYuan and RemNote without bullets make the
-item a paragraph (`exit` for RemNote, [Enter63](#enter63)).
+`enterOnEmptyItem: outdent` ([Enter7b](#enter7b)), and SiYuan, BlockNote and RemNote without
+bullets make the item a paragraph (`unwrap` for SiYuan and BlockNote, [Enter7c](#enter7c); `exit` for
+RemNote, [Enter63](#enter63)).
 
 ```yaml
 tags: common
@@ -312,6 +321,32 @@ the list, splitting it in two.
 ```yaml
 tags: edge free-form
 enterOnEmptyItem: outdent
+```
+
+```buffer
+- a
+- ┃
+- b
+```
+
+> enter
+
+```buffer
+- a
+
+┃◌
+
+- b
+```
+
+## Enter7c
+
+With `enterOnEmptyItem: unwrap` (SiYuan, BlockNote, as a word processor), the empty item becomes an
+empty paragraph where it is, the list split there: the items after it a list after it.
+
+```yaml
+tags: edge
+enterOnEmptyItem: unwrap
 ```
 
 ```buffer
@@ -606,6 +641,28 @@ tags: common
   - a
 ```
 
+## Enter21b
+
+With `enterOnEmptyItem: unwrap`, an empty item with children becomes an empty paragraph too, its
+children its list.
+
+```yaml
+tags: edge
+enterOnEmptyItem: unwrap
+```
+
+```buffer
+- ┃
+  - a
+```
+
+> enter
+
+```buffer
+┃◌
+- a
+```
+
 ## Enter22
 
 Enter before a list marker in a paragraph: the rest is a paragraph of its own, the marker escaped,
@@ -733,7 +790,8 @@ enterAtTextStart: stay
 
 In the middle of a nested list, Enter on an empty item makes a new empty sibling, as Logseq,
 WorkFlowy, Dynalist, Tana and RemNote do. Roam and Obsidian's Outliner outdent it logically, the
-caret jumping below `c` ([Enter30](#enter30)); SiYuan makes it a paragraph in the parent.
+caret jumping below `c` ([Enter30](#enter30)); SiYuan and BlockNote make it a paragraph in the
+parent ([Enter27b](#enter27b)).
 
 ```yaml
 tags: common
@@ -753,6 +811,34 @@ tags: common
   - b
   - 
   - ┃
+  - c
+```
+
+## Enter27b
+
+With `enterOnEmptyItem: unwrap`, nested: an empty paragraph in the parent item, where the empty item
+was, the list split there.
+
+```yaml
+tags: edge
+enterOnEmptyItem: unwrap
+```
+
+```buffer
+- a
+  - b
+  - ┃
+  - c
+```
+
+> enter
+
+```buffer
+- a
+  - b
+
+  ┃◌
+
   - c
 ```
 
@@ -1597,7 +1683,7 @@ A paragraph's second half keeps the space as its leading space, which Markdown s
 reads as text, so Backspace gives it back, as SiYuan and BlockNote keep it in the new block.
 
 ```yaml
-tags: edge free-form
+tags: edge
 enterSplitSpace: start
 ```
 
@@ -1801,7 +1887,7 @@ would be one, invisible, so it is escaped and stays a paragraph. Backspace takes
 the escape with it, as a join drops the escape a split wrote ([Enter43](#enter43)).
 
 ```yaml
-tags: rare free-form
+tags: rare
 ```
 
 ```buffer
@@ -2009,7 +2095,7 @@ is escaped, as a link reference definition is ([Enter47](#enter47)); joined back
 as it has nothing left to keep ([Enter43](#enter43)).
 
 ```yaml
-tags: edge free-form
+tags: edge
 ```
 
 ```buffer
@@ -2493,4 +2579,47 @@ p # h
 > ┃q
 
 p # h
+```
+
+## Enter69
+
+Enter inside an item whose text is a heading splits the item as any: the heading stays with the
+first half, the rest is the next item, plain, as Logseq, Tine and Athens do, and RemNote.
+
+```yaml
+tags: common
+```
+
+```buffer
+- # Hel┃lo
+- next
+```
+
+> enter
+
+```buffer
+- # Hel
+- ┃lo
+- next
+```
+
+## Enter69d
+
+At the end of an item's heading, Enter makes an empty item after it, as at any item's end.
+
+```yaml
+tags: common
+```
+
+```buffer
+- # Head┃
+- next
+```
+
+> enter
+
+```buffer
+- # Head
+- ┃
+- next
 ```

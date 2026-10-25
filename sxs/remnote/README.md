@@ -10,7 +10,7 @@ This directory runs it in "no bullet" (nbl) mode; [`remnote-bl`](../remnote-bl/)
 | action | keys |
 | --- | --- |
 | `enter` | Enter ("Add Child", splitting the text) |
-| `shiftEnter` | Shift+Enter ("Add Line Break") |
+| `shiftEnter` | Shift+Enter ("Add Line Break"; twice, a blank line, the block holding paragraphs: an item's paragraphs right after its text are its block's (`paragraphsInBlock`, since 2026-10-25)) |
 | `indent` | Tab |
 | `outdent` | Shift+Tab |
 | `moveSubtreeUp` | Alt+Up ("Swap Up") |
@@ -18,7 +18,7 @@ This directory runs it in "no bullet" (nbl) mode; [`remnote-bl`](../remnote-bl/)
 | `deleteContentBackward` | Backspace |
 | `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Shift+Home, Backspace |
-| `deleteSubtree` | Ctrl+Shift+Alt+Backspace ("Delete Bullet") |
+| `deleteSubtree` | Ctrl+Shift+Alt+Backspace ("Delete Bullet"); after it no block is edited (often): the outline alone is judged (`noCaretAfter`, since 2026-10-25). |
 | `duplicateSubtree` | *missing*: its tests are skipped |
 | `pasteStructured` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V ("Paste Without Formatting": a rem per line; Quirks) |
@@ -124,8 +124,9 @@ joins the text, more go after it.
 ## How a block maps to a rem
 
 A block is a rem's text, its `key`: rich text (strings, and objects for formatted runs and
-references), read as plain text, a formatted run as its text and anything else (a reference, an
-image) as `￼`. It holds line breaks (Shift+Enter). The rest are the rem's attributes, never text:
+references), read as Markdown, a formatted run in its markup (`b` bold, `l` italic, `q` code, `str`
+struck, `iUrl` a link: `runsAsMarkdown` in lib/block.ts, since 2026-10-25; it read as plain text
+before) and anything else (a reference, an image) as `￼`. It holds line breaks (Shift+Enter). The rest are the rem's attributes, never text:
 
 | canonical text | rem |
 | --- | --- |

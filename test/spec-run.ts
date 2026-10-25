@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 import { Config } from '../src/config.ts';
-import { docOf, drawDoc, drawOutline, drawText, readDrawing, readText } from './drawing.ts';
+import { docOf, drawDoc, drawOutline, drawsCaret, drawText, readDrawing, readText, withoutCaret } from './drawing.ts';
 import { isAction, play, type Played } from './player.ts';
 import { CLIPBOARD_TYPES, specConfig, type Clipboard, type ClipboardType, type SpecTest } from './specfile.ts';
 
@@ -59,7 +59,8 @@ export function run(t: SpecTest, flavor: Config['flavor']): void {
     const why = state.last?.status === 'rejected' && state.last.detail ? ` (${state.last.reason}: ${state.last.detail})` : '';
     if (result !== undefined) assert.equal(outcome(state), result, `${at}: result${why}`);
     if (buffer !== undefined) {
-      const got = drawDoc(state.doc, state.selection);
+      // (a buffer that draws no caret doesn't check it)
+      const got = drawsCaret(buffer) ? drawDoc(state.doc, state.selection) : withoutCaret(drawDoc(state.doc, state.selection));
       assert.equal(normalize(got), normalize(buffer), `${at}: buffer${why}`);
     }
     if (clipboard !== undefined) assert.deepEqual(drawnAs(state.clipboard, clipboard), clipboard, `${at}: clipboard`);

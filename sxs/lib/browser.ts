@@ -105,13 +105,16 @@ const browserLogOf = (n: number): string => join(browserDir(n), 'chromium.log');
 /**
  * The pool: at most `BROWSERS` browsers, each with at most `WINDOWS` app windows (a run's, or an idle
  * one a run that died left, the longest idle closed for a run that needs its place), so that the pool,
- * full, holds under a container's cap on tasks (2048 here: a browser is some 110 tasks, a window some
- * 25; the pool, full, some 1,100, two of Obsidian's instances beside it some 400). Runs spread over the
- * browsers before any takes a second (a browser's one main thread serves every run in it); with every
- * browser full, a run waits for room.
+ * full, holds under a container's cap on tasks (2048 here: a browser is some 110 tasks idle, more
+ * with its thread pools busy, a window some 25; the pool, full, some 950, two of Obsidian's
+ * instances beside it some 400). Fewer browsers with more windows each: six of three hit the cap in
+ * full runs (Chromium's `pthread_create` failing, the cgroup's `pids.events` counting 686 at the
+ * cap, windows and browsers dying or hanging under runs, 2026-10-25). Runs spread over the browsers
+ * before any takes a second (a browser's one main thread serves every run in it); with every browser
+ * full, a run waits for room.
  */
-export const BROWSERS = 6;
-const WINDOWS = 3;
+export const BROWSERS = 4;
+const WINDOWS = 5;
 
 /** The pool's browsers by number: those with a directory or a record (`records.ts`), running or not. */
 function poolBrowsers(): number[] {

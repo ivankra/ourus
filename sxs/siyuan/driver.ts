@@ -116,6 +116,8 @@ function holds(o: Outline): string | undefined {
     if (b.text.includes('\u00a0')) return 'no-break space, which SiYuan holds as a space';
     // `- →x` and `-     code`: a tab or an indented line becomes structure, or is trimmed
     if (/^[ \t]/.test(b.text)) return "block's text starting with whitespace";
+    // and a later line's, trimmed (Regression32, Indent33)
+    if (/\n[ \t]/.test(b.text)) return "line's leading whitespace";
     // a hard break's spaces, a space after the text: trimmed (an empty task's `[ ] ` is its checkbox, held)
     if (/[ \t]$/m.test(b.text.replace(/^\[[ xX]\] /, ''))) return "line's trailing whitespace";
     // an empty last line: trimmed
@@ -198,7 +200,19 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
   // the zero-width joiner SiYuan puts before three backticks in code, so that they close no fence
   // (its `removeZWJ` takes it out of what it copies): no character of the code's, the caret's markers
   // (S1, S2) maybe among the backticks
-  const md = (el: Element): string => (p.lute.BlockDOM2StdMd(el.outerHTML) as string).replace(/\n$/, '').replace(/\u200D(?=(?:[\u2063\u2064\u200D]*`){3})/g, '');
+  // (with it gone a code line of backticks would close the fence, which SiYuan writes as three
+  // whatever the code: so a code block's fences are read as Markdown's, longer than any such line,
+  // Fence36, Regression6)
+  const md = (el: Element): string => {
+    const t = (p.lute.BlockDOM2StdMd(el.outerHTML) as string).replace(/\n$/, '').replace(/\u200D(?=(?:[\u2063\u2064\u200D]*`){3})/g, '');
+    if ((el as HTMLElement).dataset?.type !== 'NodeCodeBlock') return t;
+    const lines = t.split('\n');
+    const open = /^`{3,}/.exec(lines[0]!)?.[0];
+    if (!open || lines.length < 2 || lines.at(-1) !== open) return t;
+    const runs = lines.slice(1, -1).map((l) => /^[ \t]*(`+)[ \t]*$/.exec(l.replace(/[\u2063\u2064]/g, ''))?.[1]!.length ?? 0);
+    const fence = '`'.repeat(Math.max(open.length, ...runs.map((n) => n + 1)));
+    return fence === open ? t : [fence + lines[0]!.slice(open.length), ...lines.slice(1, -1), fence].join('\n');
+  };
   const data = (el: Element): DOMStringMap => (el as HTMLElement).dataset ?? {};
   // a block: a list item's own blocks (not its nested lists), or a block outside every list; free (a
   // paragraph, a heading, code, ...) but an item's text, a paragraph owning the list right after it
@@ -395,6 +409,12 @@ export const driver: Driver = {
   // (Backtick2, Backtick12, Backtick15)
   behaves: {
     enterSplitSpace: 'start',
+    // Backspace at an item's text start: a paragraph in the item above (Backspace1, Backspace8)
+    backspaceAtItemStart: 'body',
+    // Enter on an empty item, but the last of its list: a paragraph where it is (Enter7, Enter27)
+    enterOnEmptyItem: 'unwrap',
+    // Backspace right after a task's checkbox: a paragraph where it is (TaskBackspace2, TaskBackspace3)
+    taskEditing: 'unwrap',
     closeBackticks: 'none',
     pasteAtTextStart: 'before',
     pasteOnParent: 'after',

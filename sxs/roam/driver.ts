@@ -10,7 +10,7 @@
 
 import type { Page } from 'playwright-core';
 import { perPage, type Driver } from '../lib/driver.ts';
-import type { Outline } from '../lib/block.ts';
+import { italicsAsMarkdown, type Outline } from '../lib/block.ts';
 
 const MOTIONS: Record<string, string> = {
   CharLeft: 'ArrowLeft',
@@ -92,6 +92,10 @@ export const driver: Driver = {
   displayName: 'Roam',
   url: 'https://roamresearch.com/#/app/help',
   model: 'block',
+  // a block's text holds a blank line, its paragraphs apart
+  paragraphsInBlock: true,
+  // after deleting the page's every block no block is edited (DeleteSubtree6); with a block above, its end
+  noCaretAfter: ['deleteSubtree'],
   keys: {
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
@@ -114,6 +118,11 @@ export const driver: Driver = {
   // Shift+Tab leaves later siblings with the parent (logical outdenting); Enter on an empty nested
   // block outdents it; Backspace on a page's first block does nothing: as ourus's config says of Roam
   behaves: {
+    // Enter mid-heading: the new block above takes the text before the caret, the heading (an
+    // attribute) staying with the rest (TO-E13-E16, TO-E14-E20)
+    quirkEnterMidHeading: 'workflowy',
+    // after a paste of blocks, the caret at the end of the first (checked in a page of its own: `- x┃`)
+    quirkPasteCaret: 'roam',
     outdent: 'logical',
     enterSplitSpace: 'start',
     enterOnEmptyItem: 'outdent',
@@ -123,13 +132,16 @@ export const driver: Driver = {
     emptyItemWithChildren: 'refuse',
     copyAtCaret: 'host',
     pasteLines: 'items',
+    // pasted blocks leave a selection's text as it is (Paste17, probed 2026-10-25)
+    pasteOverSelection: 'ignore',
     pasteAtTextStart: 'before',
     pasteParagraphList: 'children',
   },
   // Roam's code blocks are a format of its own (not driven yet: a CodeMirror editor in the block); a
   // heading is a block's attribute, with no boundary in its text, and a task's `{{[[TODO]]}}` is text,
-  // edited a character at a time, as math's `$$` are. Math, tables and HTML are a block's text, as typed (measured)
-  refuses: ['code block', 'markup-heading', 'markup-task', 'markup-fence'],
+  // edited a character at a time, as math's `$$` are. Math, tables and HTML are a block's text, as typed
+  // (measured), so Enter in math splits the block (`enter-in-fence`)
+  refuses: ['code block', 'markup-heading', 'markup-task', 'markup-fence', 'enter-in-fence'],
   ordered: true,
   holds(doc) {
     const o = doc as Outline;
@@ -260,7 +272,8 @@ export const driver: Driver = {
       const at = (p: number): number => shiftOffset(p, from, to) + (cut !== undefined && shiftOffset(p, from, to) > cut ? 1 : 0);
       sel = { block: sel.block, anchor: at(sel.anchor), head: at(sel.head) };
     }
-    return { blocks, sel };
+    // (its italic `__x__` as Markdown's)
+    return italicsAsMarkdown({ blocks, sel });
   },
 
   async act(page: Page, action: string, settle: () => Promise<void>) {

@@ -14,7 +14,9 @@ whose text is only a checkbox is empty. The rules a task adds to Enter's, Backsp
    (TaskBackspace10). With `taskEditing: text`, one character goes, as a text editor
    and bare Obsidian delete it, ourus making the edit (TaskBackspace5); with `block`, the task joins
    the node above (TaskBackspace4, TaskBackspace7), or, with nothing above it, is a paragraph, its
-   checkbox gone with its marker (TaskBackspace11).
+   checkbox gone with its marker (TaskBackspace11); with `unwrap`, as SiYuan and BlockNote, the task
+   is a paragraph where it is, its checkbox gone with its marker, its list split there
+   (TaskBackspace3b, TaskBackspace3c).
 3. **Delete right before the checkbox removes it too**, where the host decorates markup
    ([Delete19](delete.md#delete19)); where it shows markup as text, the caret there is in markup, and
    the key is the host's.
@@ -374,6 +376,56 @@ taskEditing: checkbox
 ```buffer
 - a
 - ┃b
+```
+
+## TaskBackspace3b
+
+With `taskEditing: unwrap` (SiYuan, BlockNote), Backspace right after a checkbox makes the task a
+paragraph where it is, its checkbox gone with its marker, as `backspaceAtItemStart: unwrap` makes an
+item.
+
+```yaml
+tags: edge
+taskEditing: unwrap
+```
+
+```buffer
+- a
+- [x] ┃b
+```
+
+> deleteContentBackward
+
+```buffer
+- a
+
+┃b
+```
+
+## TaskBackspace3c
+
+With `taskEditing: unwrap`, an empty task is an empty paragraph, and nested, a paragraph in its
+parent item, the list split there.
+
+```yaml
+tags: edge
+taskEditing: unwrap
+```
+
+```buffer
+- a
+  - [ ] ┃
+  - c
+```
+
+> deleteContentBackward
+
+```buffer
+- a
+
+  ┃◌
+
+  - c
 ```
 
 ## TaskBackspace4

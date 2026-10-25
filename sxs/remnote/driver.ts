@@ -27,7 +27,7 @@
 
 import type { Page } from 'playwright-core';
 import type { Driver } from '../lib/driver.ts';
-import type { Block, Outline } from '../lib/block.ts';
+import { runsAsMarkdown, type Block, type Outline, type Run } from '../lib/block.ts';
 
 const MOTIONS: Record<string, string> = {
   CharLeft: 'ArrowLeft',
@@ -175,7 +175,11 @@ export function remnoteDriver(setup: Setup): Driver {
     browsers: setup.bulletless ? 'even' : 'odd',
     parallel: 3,
     model: 'block',
+    // a rem's text holds a blank line, its paragraphs apart
+    paragraphsInBlock: true,
     ...(setup.bulletless && { freeForm: true }),
+    // after deleting a rem no rem is edited, often (its runs: DeleteSubtree3, 4)
+    noCaretAfter: ['deleteSubtree'],
     keys: {
       enter: 'Enter',
       shiftEnter: 'Shift+Enter',
@@ -212,6 +216,8 @@ export function remnoteDriver(setup: Setup): Driver {
     // the seam, the first pasted text joining (the caret after it), and a pasted list keeps its form
     // (`open` measured 8 cases better with bullets, none worse)
     behaves: {
+      // after a paste of rems, the caret at the end of the first, as Roam's (9 caret verdicts, none worse)
+      quirkPasteCaret: 'roam',
       outdent: 'logical',
       enterSplitSpace: 'drop',
       enterMidItem: 'child',
@@ -377,10 +383,18 @@ export function remnoteDriver(setup: Setup): Driver {
         const KB = w.CURRENT_KNOWLEDGE_BASE;
         // rich text as plain text: a formatted run its text, anything else (a reference, an image) a mark
         const plain = (rt: unknown[]): string => (rt ?? []).map((e: any) => (typeof e === 'string' ? e : typeof e?.text === 'string' ? e.text : '￼')).join('');
+        // and as runs, each with its formatting (`b` bold, `l` italic, `q` code, `str` struck, `iUrl` a
+        // link's target), the placeholders out
+        const runs = (rt: unknown[]): Run[] =>
+          (rt ?? []).map((e: any): Run => {
+            if (typeof e === 'string') return { text: e.replace(/\ufeff/g, '') };
+            if (typeof e?.text !== 'string') return { text: '￼' };
+            return { text: e.text.replace(/\ufeff/g, ''), bold: !!e.b, italic: !!e.l, code: !!e.q, strike: !!e.str, ...(typeof e.iUrl === 'string' && { href: e.iUrl }) };
+          });
         const trees = w.__ourusSxsTrees;
         const c = trees && [...Object.values(trees)].flatMap((t: any) => (Array.isArray(t) ? t : [t])).map((t: any) => t?.controller).find((c: any) => c?.rootRem?._id === w.__ourusSxsDoc);
         const focused = c?.currentlyFocusedRemId?.();
-        const flat: { depth: number; content: string; placeholders: number[]; todo: boolean; done: boolean; heading: number; numbered: boolean; code: boolean; free: boolean; number: number | null; id: string }[] = [];
+        const flat: { depth: number; content: string; runs: Run[]; placeholders: number[]; todo: boolean; done: boolean; heading: number; numbered: boolean; code: boolean; free: boolean; number: number | null; id: string }[] = [];
         const walk = async (rem: any, depth: number) => {
           for (const r of await rem.childrenRemAsync()) {
             // the rem being edited: its editor's text, which the caret (getFocusProps) is an offset in; the
@@ -392,7 +406,7 @@ export function remnoteDriver(setup: Setup): Driver {
             // (a rem shows no bullet only in a document without bullets)
             const free = !!r.portalContext(w.__ourusSxsDoc).renderAsNoBullet();
             // (the editor keeps an empty line with a zero-width placeholder, U+FEFF, no text of the rem's)
-            flat.push({ depth, content: plain(editing ?? r.key).replace(/\ufeff/g, ''), placeholders: editing ? [...plain(editing).matchAll(/\ufeff/g)].map((m) => m.index!) : [], todo: !!r.getIsTodo(), done: r.getTodoStatus() === 'Finished', heading: font ? Number(font[1]) : 0, numbered, code: !!r.getIsCode(), free, number: numbered ? r.getListItemIndex() : null, id: r._id });
+            flat.push({ depth, content: plain(editing ?? r.key).replace(/\ufeff/g, ''), runs: runs(editing ?? r.key), placeholders: editing ? [...plain(editing).matchAll(/\ufeff/g)].map((m) => m.index!) : [], todo: !!r.getIsTodo(), done: r.getTodoStatus() === 'Finished', heading: font ? Number(font[1]) : 0, numbered, code: !!r.getIsCode(), free, number: numbered ? r.getListItemIndex() : null, id: r._id });
             await walk(r, depth + 1);
           }
         };
@@ -407,12 +421,16 @@ export function remnoteDriver(setup: Setup): Driver {
         const selected = range.map((id) => flat.findIndex((f) => f.id === id)).filter((i) => i >= 0);
         return { flat, sel, selected, focusType: p?.type };
       });
-      const texts = raw.flat.map((f) => fromItem(f, f.number));
+      // a rem's text as Markdown, its formatting in markup (a code rem's as it is), and where an offset
+      // in its text is in it
+      const mds = raw.flat.map((f) => (f.code ? { text: f.content, at: (p: number) => p } : runsAsMarkdown(f.runs)));
+      const texts = raw.flat.map((f, i) => fromItem({ ...f, content: mds[i]!.text }, f.number));
       const blocks = raw.flat.map((f, i) => ({ depth: f.depth, text: texts[i]!.text, ...(setup.bulletless && f.free && { free: true as const }) }));
       let sel: Outline['sel'] = null;
       if (raw.sel) {
         const { prefix, cut } = texts[raw.sel.block]!;
-        const at = (p: number): number => prefix + p + (cut !== undefined && p > cut ? 1 : 0);
+        const md = mds[raw.sel.block]!;
+        const at = (p: number): number => prefix + md.at(p) + (cut !== undefined && md.at(p) > cut ? 1 : 0);
         sel = { block: raw.sel.block, anchor: at(raw.sel.anchor), head: at(raw.sel.head) };
       }
       const got: Outline = { blocks, sel, ...(raw.selected.length && { selected: raw.selected }) };

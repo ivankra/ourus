@@ -56,8 +56,10 @@ export const DB: LogseqFlavor = {
   },
   fromLogseq(raw: BlockAsRead, number) {
     if (raw.code !== undefined) {
-      const fence = '```' + raw.code;
-      return { text: `${fence}\n${raw.content}\n\`\`\``, from: 0, to: fence.length + 1 };
+      // its fence longer than a run of backticks starting one of its lines, as Markdown needs
+      const ticks = '`'.repeat(Math.max(3, ...[...raw.content.matchAll(/^ {0,3}(`+)/gm)].map((m) => m[1]!.length + 1)));
+      const fence = ticks + raw.code;
+      return { text: `${fence}\n${raw.content}\n${ticks}`, from: 0, to: fence.length + 1 };
     }
     if (raw.math) return { text: `$$\n${raw.content}\n$$`, from: 0, to: 3 };
     const after = !!raw.content || !!raw.heading;
@@ -125,6 +127,9 @@ export const DB: LogseqFlavor = {
         continue;
       }
       if (/^[ \t]*(?:`{3,}|~{3,})/m.test(b.text)) return 'code fence other than a block of ``` alone';
+      // a number, a checkbox and a heading's `#`s are the block's properties, no text: no caret goes
+      // before or inside them (Outdent17: `┃# H` loads as `# ┃H`)
+      if (doc.sel?.block === i && Math.min(doc.sel.anchor, doc.sel.head) < split(b.text).from) return "caret in a number, a checkbox or a heading's #s (the block's properties)";
       // an empty task's space after its checkbox goes as the block loads (PasteList7: `[ ]┃`)
       if (/^\[[ xX]\] $/.test(b.text)) return "empty task with a space after its checkbox, which Logseq DB drops";
       // Logseq drops a line break at a stored text's edge; the block being edited (its editor) keeps it

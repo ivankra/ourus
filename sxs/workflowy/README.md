@@ -34,7 +34,7 @@ ChromeOS.
 | action | keys |
 | --- | --- |
 | `enter` | Enter |
-| `shiftEnter` | Shift+Enter (to the note and back) |
+| `shiftEnter` | none: Shift+Enter goes to the note and back, another action (below); its cases skip |
 | `indent` | Tab |
 | `outdent` | Shift+Tab |
 | `moveSubtreeUp` | Alt+Shift+Up |
@@ -42,7 +42,7 @@ ChromeOS.
 | `deleteContentBackward` | Backspace |
 | `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Shift+Home, Backspace |
-| `deleteSubtree` | Ctrl+Shift+Backspace |
+| `deleteSubtree` | Ctrl+Shift+Backspace; after it no block is edited (when the first item goes): the outline alone is judged (`noCaretAfter`, since 2026-10-25). |
 | `duplicateSubtree` | Alt+Shift+D |
 | `pasteStructured` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V |
@@ -112,10 +112,45 @@ same web app.
   test starting with a block of two lines had its second line invisible).
 - **Reading**: the item tree from `WF`, except the name or note being edited, which is read from its
   editor (`.editor.plainText`, and the caret from `WF.DomEditableText.selectedIn`): WorkFlowy stores
-  what is typed half a second after typing stops (`WF.Editor.saveLater`).
+  what is typed half a second after typing stops (`WF.Editor.saveLater`). A name's formatting (its
+  HTML: `<b>`, `<i>`, `<s>`, `<code>`, `<a href>`; the editor's DOM for the one being edited) is read
+  as Markdown, the caret mapped into it (`runsAsMarkdown` in lib/block.ts, since 2026-10-25: pasted
+  formatting read as plain text disagreed, PasteHtml4, 14, 17, PasteConvPhrase, PasteConvUS).
 
 ## What WorkFlowy does that a driver has to know
 
+- **An outliner whose items can be styled as paragraphs or headings**, not a free-form editor. An
+  item's type (`layoutMode`: `p`, Alt+Ctrl+4, hides its bullet; `h1` to `h3`) is a style on a node
+  of the tree: a paragraph can have children, shown nested under it, or be followed by items as its
+  siblings, and the keys act on the tree and the types: an indented paragraph stays a paragraph, only
+  items of one type join (a bullet doesn't join a paragraph), Shift+Tab on a top-level item does
+  nothing, Enter makes an item of the same type where the tree puts it, a moved paragraph or heading
+  takes its children and leaves its siblings (played by hand in a headless Chromium of its own,
+  2026-10-25). Its Markdown export (`ib1` in `wf-base.js`, Settings › Export) writes a top-level
+  item of those types without a bullet, its children after it at the same level, and anything under
+  an item as an item: a bullet nested under a paragraph and one after it as a sibling both come out
+  as `para⏎⏎- item`, so one Markdown text is two WorkFlowy states, which behave apart. The free-form
+  editors (SiYuan, BlockNote, RemNote without bullets) hold Markdown's shape, one state for one text: a
+  paragraph's list and a heading's section follow it as blocks, and their keys follow a document's
+  rules. Played as one (`freeForm`, its paragraphs `p` items, read back as the export writes them),
+  WorkFlowy agreed on 34% of the `free-form` cases (RemNote without bullets 60%, SiYuan and BlockNote
+  51%) and went from 110 disagreements of 463 to 186 of 543, 21 agreements lost: what the cases
+  measure is a document's rules, which WorkFlowy's keys don't have.
+- **Its own Markdown, beside the read**: `OURUS_SXS_WF_EXPORT=1` checks each read against WorkFlowy's
+  export of the test's items (`WF.Export.as(output, 'markdown', items, true)`, as its share dialog
+  calls it), projected as a spec buffer, and logs where they differ. A lone exported item is written
+  as a title, without a bullet: the check exports the test's item and drops its name. The item being
+  edited is saved first (`WF.Editor.saveFocused`, what WorkFlowy's timer does half a second after
+  typing stops), or the export has its text as it was. A full run with it (2026-10-25) found no
+  error of the read, its verdicts the same: its 136 differences are the export's Markdown. An empty
+  item after a line is a setext underline (`- a⏎  - ` reads `## a`); a numbered item's children are
+  indented two spaces, short of its content's column (`9. a⏎  - x` is two lists), as are a name's
+  leading spaces (`-  three`); a code block in an item has its later lines at no indentation, out of
+  the item, and its fence three backticks whatever its code; names aren't escaped (an item `- def`,
+  `2. y` or `[a]: /url` is Markdown there); a numbered item's number is its stored `numbered_start`,
+  stale after a move in its run (WorkFlowy draws `2.`, the export writes `9.`); an open empty note is
+  left out. And, the driver reading items as items, a top-level heading or `p` item (Markdown
+  pasting makes them of plain lines) is written without a bullet, its children after it.
 - **Outdenting is logical**: Shift+Tab moves an item past its parent, and its later siblings stay with
   the parent (ourus's `outdent: logical`, which the driver declares: those examples run, and the
   direct-outdent ones disagree).
@@ -131,8 +166,15 @@ same web app.
   Ctrl+Home ("focus first") goes there, and so does Up from the first block (`cursorDocStart` is
   emulated so: Ctrl+Home, Down to the first block, Home). That is an artifact of the setup, and two
   examples show it (`cursor.md › CursorUp1`, `zzz.md › H2`: the caret leaves the blocks).
+- **Enter inside a heading's name** gives the text before the caret to a new item above and keeps
+  the heading on the rest: the driver declares `quirkEnterMidHeading: workflowy` (since 2026-10-25;
+  `obsidian-true-outliner.md › TO-E13-E16`, `quirks.md › Quirk1`), as Roam and Dynalist do.
 - **Shift+Enter goes between the name and the note.** From the name it opens the note (the text
-  stays in the name); from the note it goes back, and an empty note goes away.
+  stays in the name); from the note it goes back, and an empty note goes away. A name holds no line
+  break, so no key is the spec's `shiftEnter`, and its cases skip (`action shiftEnter`, since
+  2026-10-25: mid-text, Shift+Enter opened the note without splitting, about 30 disagreements that
+  measured only that; at the text's end, where the note is the block's next line, it agreed). The
+  driver still presses it to put the caret in an empty note.
 - **Tab in a note types a tab**; it indents only from the name.
 - **Pasted lines are items**, with Ctrl+Shift+V too, which WorkFlowy's paste handles as Ctrl+V's. Only
   a note, or an item laid out as a code block or a quote block (`multiline` among its classes), takes

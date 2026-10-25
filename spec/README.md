@@ -56,6 +56,8 @@ Read every difference first; a case whose actions should change is redrawn by ha
   cases and catalogue entries.
 - [`quotes.md`](quotes.md): quotes and callouts as containers.
 - [`regressions.md`](regressions.md): cases pinning behaviors settled by bug fixes and refactoring.
+- [`quirks.md`](quirks.md): cases of the options and values that model one app's mechanics
+  (`quirk…` options, and values named after an app), not a rule.
 - [`z-open.md`](z-open.md): open questions, one each, drawing what ourus does today where no
   command file does, with the alternative and a recommendation; a settled one moves to its
   command's file.
@@ -211,11 +213,12 @@ The item becomes the last child of the item above.
 | --- | --- |
 | `┃` | the caret |
 | `«…»` | a selection; its head is the end `┃` touches, or the end after `»` when no caret is drawn |
+| (neither) | in a step's buffer, the caret isn't checked: only what the text becomes is (a start always draws its caret, which the reader requires) |
 | `◌` | a placeholder: the end of an empty line the document reads as if text had been typed there; right before a space that follows a list marker, that space, read as text (a deleted character's place) |
 | `→` | a tab |
 | `␍` | a carriage return |
 | `⍽` | a no-break space (U+00A0), which Markdown reads as text, not as a space |
-| `␠` | a space, where one would be hard to see (a line's trailing spaces, as `sxs/probe.ts` draws them) |
+| `␠` | a line's trailing space, which would be hard to see (as `sxs/probe.ts` draws them); nowhere else, which the reader refuses |
 
 A clipboard uses `→`, `␍`, `⍽` and `␠` too. A buffer's last line always ends with a line ending. A buffer
 that contains a code fence needs a longer fence of its own (`` ````buffer ``).
@@ -258,7 +261,9 @@ driving one leaves motion to the editor; a test whose outcome depends on exactly
 lands belongs to that editor's own tests.
 
 Cases that only need the caret to leave a placeholder use document and line boundaries instead
-of vertical motion, so they don't prescribe where Up or Down lands relative to node markers.
+of vertical motion, so they don't prescribe where Up or Down lands relative to node markers; where
+the caret's place after that doesn't matter, the buffer draws none (`cursorDocEnd`, the caret past
+the last line ending, where a block editor's document end is the last block's: Placeholder9).
 
 ## Options
 
@@ -392,6 +397,9 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
       - ourus refuses, or puts the text elsewhere, because Markdown can't write the result, though a
         block could hold it: two lines in a title, a split table row, two empty paragraphs in a row,
         adjacent indented code;
+      And only where the projection can't play it either: a case whose outliner run, its paragraphs
+      blocks (`sxs/`'s `as blocks`), plays faithfully and mostly agrees isn't tagged, whichever of
+      these it meets (checked 2026-10-25 by playing every tagged case in the outliners: 56 untagged).
     - `quote-container`: a quote or callout is a container in the case, as ourus's outline has it
       (its blocks its children): a buffer has a quote holding more than one node, or anything but a
       paragraph with nothing under it (a list, a heading, a held empty line), or a callout with a
@@ -407,22 +415,29 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
       - `markup-fence`: on a code, math or comment fence line (or a structural command from one,
         which puts the caret in the code), a join of text into code, or a join or split of code
         lines that would make a fence;
+    - `enter-in-fence`: Enter on a fenced block's content line, code or math (not on a fence's
+      line: `markup-fence`). An editor whose code and math are a block's text, with no editor of
+      their own, splits the block there, as on any text (a driver of such an app refuses the tag);
+      `spec.test.ts` checks every case has it where, and only where, it applies.
     - `pending`: no fact about the case but its state: behavior agreed on but not built yet. It is
       reported as a todo, and fails once it passes, so the tag goes then;
   - the other options of ourus's config (`src/config.ts`): `outdent` (`direct`, the default, or
     `logical`), `bullet` (`-`, the default, `*` or `+`), `enterOnEmptyItem` (`sibling`, the
-    default, `outdent` or `exit`), `enterMidItem` (`sibling`, the default, or `child`),
+    default, `outdent`, `exit` or `unwrap`), `enterMidItem` (`sibling`, the default, or `child`),
     `enterAtTextStart` (`into`, the default, or `stay`), `backspaceAtTopItem` (`unwrap`, the
-    default, or `refuse`), `emptyItemWithChildren` (`lift`, the default, or `refuse`),
+    default, or `refuse`), `backspaceAtItemStart` (`join`, the default, `body`, `unwrap` or `logseq`), `emptyItemWithChildren` (`lift`, the default, or `refuse`),
     `joinWithChildren` (`join`, the default, or `refuse`), `enterTask` (`continue`, the default, or
     `plain`), `enterSplitSpace` (`trim`, the default, `drop` or `start`),
     `handleFenceContents` (`true`, the default, or `false`), `closeBackticks` (`fences`, the default, `all` or `none`), `headingEditing` (`text`, the default, or `block`), `taskEditing` (`checkbox`, the default,
-    `text` or `block`), `copyAtCaret` (`node`, the default, or `host`), `copySelection` (`text`, the
-    default, or `nodes`), `pasteSeams` (`closed`, the default, or `open`), `pasteLines` (`text`, the
+    `text`, `block` or `unwrap`), `copyAtCaret` (`node`, the default, or `host`), `copySelection` (`text`, the
+    default, or `nodes`), `pasteSeams` (`closed`, the default, or `open`), `pasteOverSelection` (`replace`, the default, or
+    `ignore`: a paste of nodes only), `pasteLines` (`text`, the
     default, or `items`), `pastePlainLines` (`text`, the default, `items`, `enter` or `host`), `pasteAtTextStart` (`after`, the default, or `before`), `pasteOnParent`
     (`children`, the default, or `after`), `pasteParagraphList` (`siblings`, the default, or
-    `children`), `pasteListForm` (`destination`, the default, or `own`), and `markup`
-    (`text`, the default, or `decorated`).
+    `children`), `pasteListForm` (`destination`, the default, or `own`), `markup`
+    (`text`, the default, or `decorated`), and the quirks, an app's mechanics rather than a rule,
+    named by the apps: `quirkEnterMidHeading` (`default` or `workflowy`), `quirkPasteCaret`
+    (`default`, `roam` or `athens`), `quirkPasteText` (`default` or `dynalist`).
 
 How other outliners do on the same files (Logseq, ...) is measured by replaying them there:
 [`sxs/`](../sxs/README.md).
