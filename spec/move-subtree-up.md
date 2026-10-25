@@ -610,7 +610,6 @@ para
 
 ```buffer
 para
-
 - a┃
 - b
 ```
@@ -766,6 +765,7 @@ tags: edge
 - x
 
 # B
+
 ## s┃
 - y
 ```
@@ -804,6 +804,7 @@ para
 para
 
 # Home
+
 - ┃review
 ```
 
@@ -975,9 +976,9 @@ tags: rare
 ## MoveUp35
 
 A quote moving up leaves the paragraph right above the list, and the paragraph takes the list in, as
-the text reads it: the paragraph isn't what moves, and the list renders as before. A paragraph that
-moves above a list is still refused ([MoveDown25](move-subtree-down.md#movedown25)). Down again, the
-quote passes the paragraph and its list.
+the text reads it: the list renders as before. A paragraph that moves above a list takes it in too
+([MoveDown25](move-subtree-down.md#movedown25)). Down again, the quote passes the paragraph and its
+list.
 
 ```yaml
 tags: edge free-form
@@ -1040,6 +1041,7 @@ para
 para
 
 - ┃i
+
 2. m
 ```
 
@@ -1171,3 +1173,24 @@ intro
 ```┃
 code
 ````
+
+## MoveUp42
+
+The only block of an item with no text of its own (`- > q`) moves with its item, as one of a
+quote with no title moves with the quote.
+
+```yaml
+tags: edge
+```
+
+```buffer
+- a
+- > q┃
+```
+
+> moveSubtreeUp
+
+```buffer
+- > q┃
+- a
+```

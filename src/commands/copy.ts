@@ -1,98 +1,102 @@
-// Copy and cut (Ctrl-C, Ctrl-X): the selection's Markdown, written as the host's clipboard formats
-// (spec/copy.md); a cut takes it out as Backspace or `deleteSubtree` would.
+// Copy and cut (spec/copy.md): the selection's Markdown, written as the host's
+// clipboard formats; a cut takes it out as Backspace or delete subtree would.
 
-import { OutlineState, type OutlineNode } from '../outline/index.ts';
-import { renderHtml, type LineInfo, type PrefixPiece } from '../parser/index.ts';
-import { advanceColumns, skipSpaces, trimMd } from '../text.ts';
-import { CommandContext, nodesOnLines, operands } from './context.ts';
-import type { CommandResult } from './index.ts';
-import type { Clipboard } from './paste.ts';
-
-/** What ourus's HTML says beside its Markdown: the text is the source (spec/paste-conv.md reads it so). */
-export const OURUS_MARK = '<!-- ourus -->';
-
-/** The clipboard ourus writes for `markdown`: the Markdown as text and as itself, and its rendering, marked as ourus's. */
-export function clipboardOf(doc: OutlineState, markdown: string): Clipboard {
-  const html = renderHtml(OutlineState.parse(markdown, { config: doc.config }).syntaxTree);
-  return { 'text/plain': markdown, 'text/markdown': markdown, 'text/html': OURUS_MARK + html };
-}
+import { clipboardOf } from './clipboard.ts';
+import { ProseText, type OutlineNode } from '../doc/index.ts';
+import { deleteContentBackwardCommand } from './backspace.ts';
+import { CommandContext, notApplicable, type CommandOutcome } from './context.ts';
+import { composeChanges, lineOf } from '../text/index.ts';
+import { deleteSubtreeCommand } from './delete-subtree.ts';
+import { operands, operandsRefused } from './util.ts';
 
 /**
- * What a copy of `from`–`to` takes: what copy and cut act on. The text range (one node's text, or
- * `copySelection: text` across nodes), the whole nodes it touches with their subtrees
- * (`copySelection: nodes`: `deleteSubtree`'s operands, refused where it refuses them), the node at a
- * caret with its subtree (`copyAtCaret: node`); null where the copy is the host's (a caret,
- * `copyAtCaret: host`; a caret on no node).
+ * Copy, or cut: what the selection takes, as Markdown out of its containers. Within one node's text
+ * (or across nodes with `copySelection: text`) the text; across nodes, the whole nodes it touches with
+ * their subtrees, ending with a line break (one pastes as a node, not as a phrase); at a caret, the
+ * node there with its subtree (`copyAtCaret: node`), else the host's. A cut deletes it as delete
+ * subtree (whole nodes) or Backspace (text) does, within one node's text the text going. Null where
+ * ourus doesn't do it yet: nodes delete subtree wouldn't take.
  */
-export function copyTarget(doc: OutlineState, from: number, to: number): CopyTarget | Extract<CommandResult, { status: 'rejected' }> | null {
+export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): CommandOutcome {
+  const doc = ctx.doc;
+  const config = ctx.config;
+  const from = Math.min(ctx.selection.anchor, ctx.selection.head);
+  const to = Math.max(ctx.selection.anchor, ctx.selection.head);
+  let nodes: readonly OutlineNode[] | null = null;
   if (from === to) {
-    if (doc.config.copyAtCaret === 'host') return null;
-    const node = doc.nodeAt(from);
-    return node ? { kind: 'nodes', ...subtreeRange(doc, [node]) } : null;
+    if (config.copyAtCaret === 'host') return notApplicable();
+    const line = doc.lineAt(from);
+    const node = from <= line.to ? doc.nodeAtLine(line.index) : null;
+    if (!node) return notApplicable();
+    nodes = [node];
+  } else if (config.copySelection !== 'text' && nodesOnLines(ctx, from, to) > 1) {
+    const found = operands(doc, ctx.selection);
+    if (!Array.isArray(found)) return operandsRefused(found);
+    nodes = found;
   }
-  if (doc.config.copySelection === 'text' || nodesOnLines(doc, from, to).size < 2) return { kind: 'text', from, to };
-  // the nodes a cut takes out, so that it copies what it deletes
-  const ops = operands(new CommandContext(doc, { anchor: from, head: to }))!;
-  if ('status' in ops) return ops;
-  return { kind: 'nodes', ...subtreeRange(doc, ops.nodes) };
-}
-
-export interface CopyTarget {
-  readonly kind: 'text' | 'nodes';
-  readonly from: number;
-  readonly to: number;
-}
-
-/**
- * From where the first node starts (an item at its marker, a quote at its `>`, a footnote definition
- * at its label, else past its
- * containers' prefix: what holds it isn't copied) to the end of the last's last descendant's line.
- */
-function subtreeRange(doc: OutlineState, nodes: readonly OutlineNode[]): { from: number; to: number } {
-  const first = nodes.reduce((a, n) => (n.startLine < a.startLine ? n : a));
-  const last = nodes.reduce((a, n) => (doc.lastDescendant(n).endLine > doc.lastDescendant(a).endLine ? n : a));
-  const line = doc.lines[first.startLine]!;
-  // a quote's `>` and a footnote definition's `[^1]:` are its own prefix piece, which the copy keeps
-  const quote = first.kind === 'quote' || first.block.type === 'footnote_definition' ? line.prefix.find((piece) => piece.block === first.block) : undefined;
-  const from = first.kind === 'item' ? doc.markerFrom(first.block) : quote ? skipSpaces(doc.text, quote.from, quote.to, 1) : line.contentFrom;
-  return { from, to: doc.lines[doc.lastDescendant(last).endLine]!.to };
+  let markdown: string;
+  if (nodes) {
+    const first = nodes.reduce((a, n) => (n.startLine < a.startLine ? n : a));
+    const last = nodes.reduce((a, n) => (n.endLine > a.endLine ? n : a));
+    markdown = doc.markdownOf(doc.markdownStart(first), doc.rangeOf(last).to);
+    if (!markdown.endsWith('\n')) markdown += '\n';
+  } else markdown = doc.markdownOf(from, to);
+  const clipboard = clipboardOf(markdown, ctx.config);
+  if (type === 'copy') return { status: 'applied', doc: ctx.doc, changes: [], selection: ctx.selection, clipboard };
+  const deleted = nodes ? deleteSubtreeCommand(ctx) : deleteSelected(ctx);
+  // the text deleted as the host deletes it, where ourus doesn't: the clipboard is still ourus's
+  if (!nodes && (!deleted || deleted.status === 'notApplicable')) {
+    const changes = [{ from, to, insert: '' }];
+    return { status: 'applied', doc: ctx.doc.update(changes), changes, selection: { anchor: from, head: from }, clipboard };
+  }
+  if (!deleted) return null;
+  return deleted.status === 'applied' ? { ...deleted, clipboard } : deleted;
 }
 
 /**
- * The Markdown of `from`–`to` as written, without what the containers holding all of it put on its
- * lines (a quote's `>`, an item's indentation, where the copy starts past the item's marker): it reads
- * as it did, out of them. Lines that are blank there are empty.
+ * The selection deleted, as Backspace over it deletes it; within one node's text, the text goes, the
+ * blanks it leaves at a line's text start too (they would be padding), and a line it empties with its
+ * line break. Null (unsupported) where ourus doesn't do it yet.
  */
-export function copiedMarkdown(doc: OutlineState, from: number, to: number): string {
-  const lo = doc.lineAt(from).index;
-  const end = doc.lineAt(to);
-  // a copy ending at a line's start ends with the line break before it
+export function deleteSelected(ctx: CommandContext): CommandOutcome {
+  const deleted = deleteContentBackwardCommand(ctx);
+  const [a, b] = [ctx.from, ctx.to];
+  if (deleted?.status !== 'notApplicable' || a.zone !== 'text' || b.zone !== 'text' || !(a.text instanceof ProseText) || a.node.persistentNode !== b.node.persistentNode) return deleted;
+  const s = a.text.text;
+  let [from, end] = [a.offset, b.offset];
+  const lineStart = s.lastIndexOf('\n', from - 1) + 1;
+  const lineEnd = s.indexOf('\n', end) < 0 ? s.length : s.indexOf('\n', end);
+  if (from <= Math.max(lineStart, a.text.textStart(lineOf(s, from)))) while (end < lineEnd && (s[end] === ' ' || s[end] === '\t')) end++;
+  // (a line emptied: its line break with it, the one after it, or on the last line the one before)
+  if (s.slice(lineStart, from).trim() === '' && s.slice(end, lineEnd).trim() === '' && (lineStart > 0 || lineEnd < s.length)) {
+    if (lineEnd < s.length) [from, end] = [lineStart, lineEnd + 1];
+    else [from, end] = [lineStart - 1, lineEnd];
+  }
+  return ctx.apply(ctx.draft().setText(a.node, a.text.splice(from, end)).setCaret(a.node, from, -1));
+}
+
+/** How many nodes own the lines `from`–`to` touches (a selection ending at a line's start doesn't take that line). */
+function nodesOnLines(ctx: CommandContext, from: number, to: number): number {
+  const lo = ctx.doc.lineAt(from).index;
+  const end = ctx.doc.lineAt(to);
   const hi = end.index > lo && end.from === to ? end.index - 1 : end.index;
-  // the containers holding the whole copy: those started before it (on an earlier line, or with their
-  // marker before it: an item's piece starts at the indentation before its marker) and ending in or
-  // after its last line
-  const first = doc.lines[lo]!;
-  const opens = (p: PrefixPiece): number => (p.kind === 'marker' ? doc.markerFrom(p.block) : skipSpaces(doc.text, p.from, p.to, 1));
-  const holding = new Set(first.prefix.filter((p) => (p.block.startLine < lo || opens(p) < from) && p.block.endLine >= hi).map((p) => p.block));
-  const held = (line: LineInfo): number => line.prefix.reduce((start, piece) => (holding.has(piece.block) ? Math.max(start, piece.to) : start), line.from);
-  // indentation the first line loses past what holds the copy (an item indented past its parent's
-  // text, copied from its marker), the lines after it lose too: they keep their columns to it
-  const column = (line: LineInfo, at: number): number => advanceColumns(doc.text, line.from, at, 0);
-  const lead = /^[ \t]+$/.test(doc.text.slice(held(first), from)) ? column(first, from) - column(first, held(first)) : 0;
-  const out: string[] = [];
+  const nodes = new Set<unknown>();
   for (let i = lo; i <= hi; i++) {
-    const line = doc.lines[i]!;
-    let start = held(line);
-    let text: string;
-    if (i === lo) text = doc.text.slice(Math.max(start, from), i === end.index ? Math.min(to, line.to) : line.to);
-    else {
-      // (a tab partly within the lead leaves spaces for the rest of its width)
-      const base = column(line, start);
-      let col = base;
-      while (start < line.to && col < base + lead && (doc.text[start] === ' ' || doc.text[start] === '\t')) col = advanceColumns(doc.text, start, ++start, col);
-      text = ' '.repeat(Math.max(0, col - base - lead)) + doc.text.slice(start, i === end.index ? Math.min(to, line.to) : line.to);
-    }
-    out.push(trimMd(text) === '' ? '' : text);
+    const node = ctx.doc.nodeAtLine(i);
+    if (node) nodes.add(node.persistentNode);
   }
-  return out.join('\n') + (end.index > lo && end.from === to ? '\n' : '');
+  return nodes.size;
+}
+
+/**
+ * The selection deleted (`deleteSelected`), then `then` from the caret it leaves, both one edit: the
+ * host's where `then` is (the host replaces the selection), refused where either is. Null (unsupported)
+ * where either is.
+ */
+export function afterDeleting(ctx: CommandContext, then: (ctx: CommandContext) => CommandOutcome): CommandOutcome {
+  const deleted = deleteSelected(ctx);
+  if (!deleted || deleted.status !== 'applied') return deleted;
+  const next = then(new CommandContext(deleted.doc, deleted.selection));
+  if (!next || next.status !== 'applied') return next;
+  return { ...next, changes: composeChanges(ctx.doc.text, deleted.changes, next.changes) };
 }

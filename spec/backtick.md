@@ -124,6 +124,29 @@ tags: common markup-fence
   ```
 ````
 
+## Backtick2b
+
+With `closeBackticks: all`, the first backtick types a pair and the second steps over its closing
+one; the third opens the fence, closed, as without pairs ([Backtick2](#backtick2)).
+
+```yaml
+tags: edge markup-fence
+closeBackticks: all
+```
+
+```buffer
+- a
+- ┃
+```
+
+> "```"
+
+````buffer
+- a
+- ```┃
+  ```
+````
+
 ## Backtick3
 
 In a quote, the closing fence goes in the quote.

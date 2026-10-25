@@ -53,8 +53,8 @@ import { basename, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Browser, Page } from 'playwright-core';
 import { Config } from '../src/config.ts';
-import { OutlineState } from '../src/outline/index.ts';
-import { drawOutline } from '../test/drawing.ts';
+import { OurusDoc } from '../src/doc/index.ts';
+import { drawOutline, nodesOf } from '../test/drawing.ts';
 import { appPage, BROWSERS, ensureProxy, launch, lockApp, proxyStats, stopShared, type AppPage } from './lib/browser.ts';
 import { clipboardHtml } from './lib/clipboard.ts';
 import type { Doc, Driver, Session } from './lib/driver.ts';
@@ -315,7 +315,6 @@ async function runMany(spec: string, selectors: string[], flags: string[]): Prom
   if ([...drivers.values()].some((d) => !d.launch)) process.env.OURUS_SXS_OBSIDIANS ??= '2';
   const plan = await workersOf(apps, selectors, pass);
   say(`${apps.length} apps at once: ${apps.map((a) => `${a}${plan.get(a)!.workers > 1 ? ` ×${plan.get(a)!.workers}` : ''}`).join(', ')}`);
-  say(`Logs in ${relative(process.cwd(), cacheDir)}/<app>/sxs.log`);
   const one = async (app: string): Promise<void> => {
     const log = lastRun(app, 'log');
     const json = lastRun(app, 'json', partial);
@@ -364,10 +363,11 @@ async function runMany(spec: string, selectors: string[], flags: string[]): Prom
     if (!r) return 'missing';
     return r.examples.find((e) => e.name === name)?.verdict ?? (r.skipped.some((e) => e.name === name) ? 'skipped' : 'missing');
   };
-  // the apps by how many examples they disagree on, the fewest first (then by how many agree, the most
-  // first): the order of every table
+  // the apps by the share of their runs that agree, the most first (then by how many agree): the order
+  // of every table
   const count = (app: string, verdict: string): number => names.filter((n) => cell(app, n) === verdict).length;
-  const order = [...apps].sort((x, y) => count(x, 'disagree') - count(y, 'disagree') || count(y, 'agree') - count(x, 'agree') || x.localeCompare(y));
+  const agreed = (app: string): number => count(app, 'agree') / Math.max(1, VERDICTS.reduce((n, v) => n + count(app, v), 0));
+  const order = [...apps].sort((x, y) => agreed(y) - agreed(x) || count(y, 'agree') - count(x, 'agree') || x.localeCompare(y));
   // an example an app ran adapted (its buffers projected onto blocks, lib/block.ts), per app
   const adapted = (app: string, name: string): string[] => byApp.get(app)?.examples.find((e) => e.name === name)?.adapted ?? [];
   const rows = names.map((name) => ({ name, cells: order.map((app) => cell(app, name)), adapted: order.map((app) => adapted(app, name)) }));
@@ -492,17 +492,19 @@ function matrix(o: {
     ...TAGS.map((tag) => group(tag, o.rows.filter((r) => testOf(r)?.tags.includes(tag)))).sort(mostFirst),
   ].filter((g) => g.cases);
   const share = (dis: number, runs: number): string => (runs ? `${Math.round((100 * dis) / runs)}%` : '');
-  const sum = { cases: byFile.reduce((n, r) => n + r.cases, 0), runs: byFile.reduce((n, r) => n + r.runs, 0), dis: byFile.reduce((n, r) => n + r.dis, 0), blockDis: byFile.reduce((n, r) => n + r.blockDis, 0) };
+  const sum = { cases: byFile.reduce((n, r) => n + r.cases, 0), runs: byFile.reduce((n, r) => n + r.runs, 0), dis: byFile.reduce((n, r) => n + r.dis, 0), blockDis: byFile.reduce((n, r) => n + r.blockDis, 0), blockRan: byFile.reduce((n, r) => n + r.blockRan, 0) };
+  // disagreements of runs, and their share
+  const tally = (dis: number, runs: number): string => (runs ? `${dis}/${runs} (${share(dis, runs)})` : '');
   const groupTable = (head: string, groups: ReturnType<typeof group>[], name: (key: string) => string): string[] => [
-    `| ${head} | examples | runs | disagree | block apps | ${o.apps.map((a) => `[${o.ids.get(a)}](${toReport(a)} "${o.byApp.get(a)?.title ?? a}")`).join(' | ')} |`,
-    `| --- | ---: | ---: | ---: | ---: | ${o.apps.map(() => '---:').join(' | ')} |`,
-    ...groups.map((r) => `| ${name(r.key)} | ${r.cases} | ${r.runs} | ${r.dis} (${share(r.dis, r.runs)}) | ${r.blockRan ? r.blockDis : ''} | ${r.apps.join(' | ')} |`),
+    `| ${head} | cases | disagree | block apps | ${o.apps.map((a) => `[${o.ids.get(a)}](${toReport(a)} "${o.byApp.get(a)?.title ?? a}")`).join(' | ')} |`,
+    `| --- | ---: | ---: | ---: | ${o.apps.map(() => '---:').join(' | ')} |`,
+    ...groups.map((r) => `| ${name(r.key)} | ${r.cases} | ${tally(r.dis, r.runs)} | ${tally(r.blockDis, r.blockRan)} | ${r.apps.join(' | ')} |`),
   ];
   const byFileLines = [
     'By spec file:',
     '',
     ...groupTable('spec file', byFile, (f) => `[${f}](../spec/${f})`),
-    `| **total** | **${sum.cases}** | **${sum.runs}** | **${sum.dis} (${share(sum.dis, sum.runs)})** | **${sum.blockDis}** | ${o.apps.map((_, i) => `**${o.rows.filter((r) => r.cells[i] === 'disagree').length}**`).join(' | ')} |`,
+    `| **total** | **${sum.cases}** | **${tally(sum.dis, sum.runs)}** | **${tally(sum.blockDis, sum.blockRan)}** | ${o.apps.map((_, i) => `**${o.rows.filter((r) => r.cells[i] === 'disagree').length}**`).join(' | ')} |`,
     '',
     'By tag:',
     '',
@@ -522,7 +524,12 @@ function matrix(o: {
     // column per verdict
     row(['', 'id', 'model', ...columns.map((c) => (c === 'missing' ? 'not run' : c)), 'total']),
     `| --- | --- | --- |${' --- |'.repeat(columns.length + 1)}`,
-    ...o.apps.map((a) => row([`[${o.byApp.get(a)?.title ?? a}](${toReport(a)})`, o.ids.get(a)!, o.byApp.get(a)?.model ?? '', ...columns.map((v) => count(a, v) || ''), `**${o.rows.length}**`])),
+    // (agree and disagree with their share of the app's runs, every verdict's)
+    ...o.apps.map((a) => {
+      const runs = VERDICTS.reduce((n, v) => n + count(a, v), 0);
+      const cell = (v: string): string | number => (count(a, v) && (v === 'agree' || v === 'disagree') ? `${count(a, v)} (${share(count(a, v), runs)})` : count(a, v) || '');
+      return row([`[${o.byApp.get(a)?.title ?? a}](${toReport(a)})`, o.ids.get(a)!, o.byApp.get(a)?.model ?? '', ...columns.map(cell), `**${o.rows.length}**`]);
+    }),
     '',
     ...byFileLines,
     ...map.lines,
@@ -572,7 +579,7 @@ function matrix(o: {
     '',
     'An example\'s **rank** is how often users meet it (`core`, `common`, `edge` or `rare`: [the spec\'s README](../spec/README.md)); a file\'s **disagree** column counts the apps that disagree on the example; its **total** row, the examples each app disagrees on, and all of them. An app is its id in the tables, as the [summary](#summary) has it.',
     '',
-    'By spec file and by tag, under the summary: each one\'s examples, the apps\' runs of them, the disagreements among those runs (and their share), the block apps\' disagreements among them, and each app\'s (blank: it ran none there). A case counts under its rank and under each of its other tags ([the spec\'s README](../spec/README.md)), so the tags\' rows overlap.',
+    'By spec file and by tag, under the summary: each one\'s cases; the apps\' runs of them that disagree, of all the runs (and their share); the block apps\' alike; and each app\'s disagreements (blank: it ran none there). A case counts under its rank and under each of its other tags ([the spec\'s README](../spec/README.md)), so the tags\' rows overlap.',
     '',
   );
   out.push('## Test cases', '', '<table>', ...rows, '</table>', '');
@@ -918,8 +925,8 @@ function stepVerdict(step: PlanStep, got: Doc | null, clipboard: string | null |
 /** Whether two Markdown texts read as the same outline: the same nodes, at the same depths, with the same texts, items in lists of the same kind (bullets, numbers). */
 function sameMarkdown(a: string, b: string, flavor: Config['flavor']): boolean {
   const read = (text: string): string => {
-    const doc = OutlineState.parse(text, { config: { flavor } });
-    return JSON.stringify([drawOutline(doc), doc.nodes.map((n) => (n.kind === 'item' ? n.block.list?.type : null))]);
+    const doc = OurusDoc.parse(text, { config: { flavor } });
+    return JSON.stringify([drawOutline(doc), nodesOf(doc).map((n) => (n.kind === 'item' ? n.block.attrs.list?.type : null))]);
   };
   return read(a) === read(b);
 }

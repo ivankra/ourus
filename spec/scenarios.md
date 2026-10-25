@@ -441,7 +441,7 @@ tags: core
 
 ```buffer
 - a
-  ┃◌
+  ┃
 - b
 ```
 

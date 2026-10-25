@@ -3,10 +3,12 @@
 //
 //   node test/bench.ts            # 10,000 lines
 //   BENCH_LINES=50000 node test/bench.ts
+//   BENCH_RUNS=100 node test/bench.ts   # runs per timing (default 30)
 
 import { performance } from 'node:perf_hooks';
 import { executeCommand, type Command } from '../src/commands/index.ts';
-import { OutlineState } from '../src/outline/index.ts';
+import { OurusDoc, type OutlineNode } from '../src/doc/index.ts';
+import { nodesOf } from './drawing.ts';
 
 const target = Number(process.env.BENCH_LINES ?? 10_000);
 const runs = Number(process.env.BENCH_RUNS ?? 30);
@@ -38,12 +40,14 @@ function measure(name: string, run: () => void): void {
 }
 
 const text = outline(target);
-const doc = OutlineState.parse(text);
-const middle = doc.lines[Math.floor(doc.lines.length / 2)]!;
+const doc = OurusDoc.parse(text);
+const nodes = nodesOf(doc);
+const middle = Math.floor(doc.lineCount / 2);
 // an item near the middle, with children and a sibling above: its text start, and the end of its text
-const item = doc.nodes.find((node) => node.kind === 'item' && node.startLine >= middle.index && node.children.length > 0 && node.parent!.children.indexOf(node) > 0)!;
-const start = doc.headRange(item)!.from;
-const end = doc.headRange(item)!.to;
+const item = nodes.find((node) => node.kind === 'item' && node.startLine >= middle && node.children.length > 0 && node.index > 0)!;
+const textEnd = (node: OutlineNode): number => doc.posOf(node, doc.textOf(node)!.text.length);
+const start = doc.posOf(item, 0);
+const end = textEnd(item);
 const at = (pos: number) => ({ anchor: pos, head: pos });
 const command = (name: string, type: Command, pos: number): void =>
   measure(name, () => {
@@ -51,13 +55,13 @@ const command = (name: string, type: Command, pos: number): void =>
     if (result.status !== 'applied') throw new Error(`${name}: ${result.status} ${'reason' in result ? result.reason : ''}`);
   });
 
-console.log(`${doc.lines.length} lines, ${doc.nodes.length} nodes, ${(text.length / 1024).toFixed(0)} KB; ${runs} runs each`);
+console.log(`${doc.lineCount} lines, ${nodes.length + 1} nodes, ${(text.length / 1024).toFixed(0)} KB; ${runs} runs each`);
 console.log(`${''.padEnd(28)} ${'median'.padStart(8)} ${'p95'.padStart(8)}`);
-measure('full parse', () => OutlineState.parse(text));
-measure('keystroke (OutlineState.apply)', () => doc.update([{ from: end, to: end, insert: 'x' }], { caret: end + 1 }));
+measure('full parse', () => OurusDoc.parse(text));
+measure('keystroke (OurusDoc.update)', () => doc.update([{ from: end, to: end, insert: 'x' }], { caret: end + 1 }));
 command('moveSubtreeDown', { type: 'moveSubtreeDown' }, end);
 command('indent', { type: 'indent' }, end);
-command('outdent (child)', { type: 'outdent' }, doc.headRange(item.children[0]!)!.to);
+command('outdent (child)', { type: 'outdent' }, textEnd(item.children[0]!));
 command('enter (split)', { type: 'enter' }, start + 2);
 command('shiftEnter', { type: 'shiftEnter' }, start + 2);
 command('deleteContentBackward', { type: 'deleteContentBackward' }, start);

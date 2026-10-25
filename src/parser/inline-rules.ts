@@ -3,7 +3,7 @@
 
 import { decodeEntities, decodeReference, ENTITY, isAsciiAlpha, isAsciiPunctuation, normalizeUri } from './chars.ts';
 import { CLOSETAG, OPENTAG } from './blocks.ts';
-import { Node, type BracketRule, type DelimiterRule, type InlineParser, type InlineRule } from './inlines.ts';
+import { Node, type MdBracketRule, type MdDelimiterRule, type MdInlineParser, type MdInlineRule } from './inlines.ts';
 import { scanDestination, scanLabel, scanTitle, skipSpnl } from './refs.ts';
 
 const reEmailAutolink = /<([a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)>/y;
@@ -17,7 +17,7 @@ function stickyMatch(re: RegExp, s: string, pos: number): RegExpExecArray | null
 }
 
 /** A line ending: a soft break, or a hard one after two spaces. The next line's leading spaces go with it. */
-export const newlineRule: InlineRule = {
+export const newlineRule: MdInlineRule = {
   name: 'newline',
   triggers: '\n',
   parse(p) {
@@ -42,7 +42,7 @@ export const newlineRule: InlineRule = {
 };
 
 /** A backslash: an escaped punctuation character, a hard break before a line ending, or itself. */
-export const backslashRule: InlineRule = {
+export const backslashRule: MdInlineRule = {
   name: 'backslash',
   triggers: '\\',
   parse(p) {
@@ -63,7 +63,7 @@ export const backslashRule: InlineRule = {
 };
 
 /** A code span, or a run of backticks as text. */
-export const codeSpanRule: InlineRule = {
+export const codeSpanRule: MdInlineRule = {
   name: 'code',
   triggers: '`',
   parse(p) {
@@ -87,21 +87,21 @@ export const codeSpanRule: InlineRule = {
 };
 
 /** `*` and `_` emphasis. */
-export const asterisk: DelimiterRule = { char: '*', match: emphasis };
-export const underscore: DelimiterRule = { char: '_', strict: true, match: emphasis };
+export const asterisk: MdDelimiterRule = { char: '*', match: emphasis };
+export const underscore: MdDelimiterRule = { char: '_', strict: true, match: emphasis };
 
 function emphasis(opener: { count: number }, closer: { count: number }): { use: number; type: string } {
   const use = closer.count >= 2 && opener.count >= 2 ? 2 : 1;
   return { use, type: use === 1 ? 'emph' : 'strong' };
 }
 
-export const emphasisRule: InlineRule = {
+export const emphasisRule: MdInlineRule = {
   name: 'emphasis',
   triggers: '*_',
   parse: (p) => p.handleDelimiters(p.config.delimiters.get(p.text.charCodeAt(p.pos))!),
 };
 
-export const openBracketRule: InlineRule = {
+export const openBracketRule: MdInlineRule = {
   name: 'openBracket',
   triggers: '[',
   parse(p) {
@@ -112,7 +112,7 @@ export const openBracketRule: InlineRule = {
   },
 };
 
-export const bangRule: InlineRule = {
+export const bangRule: MdInlineRule = {
   name: 'bang',
   triggers: '!',
   parse(p) {
@@ -131,7 +131,7 @@ export const bangRule: InlineRule = {
 const isWhitespaceChar = (c: number): boolean => c === 32 || (c >= 9 && c <= 13);
 
 /** A `]`: a link or image if it closes an opener and a destination or a known reference follows; else text. */
-export const closeBracketRule: InlineRule = {
+export const closeBracketRule: MdInlineRule = {
   name: 'closeBracket',
   triggers: ']',
   parse(p) {
@@ -215,7 +215,7 @@ export const closeBracketRule: InlineRule = {
 };
 
 /** `<`: an autolink (a URI or an email address), or raw HTML. */
-export const angleRule: InlineRule = {
+export const angleRule: MdInlineRule = {
   name: 'angle',
   triggers: '<',
   parse(p) {
@@ -247,7 +247,7 @@ export const angleRule: InlineRule = {
  * CDATA section), or -1. The ones closed by a delimiter far ahead remember when there is none (as
  * cmark does), so `<!--` repeated isn't quadratic.
  */
-function htmlEnd(p: InlineParser, at: number): number {
+function htmlEnd(p: MdInlineParser, at: number): number {
   const { text } = p;
   const c = text.charCodeAt(at + 1);
   const flags = p.flags;
@@ -276,7 +276,7 @@ function htmlEnd(p: InlineParser, at: number): number {
 }
 
 /** `&`: an entity or numeric character reference. */
-export const entityRule: InlineRule = {
+export const entityRule: MdInlineRule = {
   name: 'entity',
   triggers: '&',
   parse(p) {
@@ -291,7 +291,7 @@ export const entityRule: InlineRule = {
   },
 };
 
-export const commonMarkInlines: readonly InlineRule[] = [
+export const commonMarkInlines: readonly MdInlineRule[] = [
   newlineRule,
   backslashRule,
   codeSpanRule,
@@ -303,6 +303,6 @@ export const commonMarkInlines: readonly InlineRule[] = [
   entityRule,
 ];
 
-export const commonMarkDelimiters: readonly DelimiterRule[] = [asterisk, underscore];
+export const commonMarkDelimiters: readonly MdDelimiterRule[] = [asterisk, underscore];
 
-export const commonMarkBrackets: readonly BracketRule[] = [];
+export const commonMarkBrackets: readonly MdBracketRule[] = [];

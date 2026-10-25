@@ -12,31 +12,29 @@
 // Documents are read in every flavor and with every config option; carets and selections both, on
 // every line, blank ones (empty or indented, a node's gap) included, in generated documents and in every
 // buffer the spec draws (settled first where a placeholder is off the caret's line, as a host settles one
-// the caret leaves). Runs the new copy fails to encode are reported apart too, against a baseline
-// (`differential.baseline.json`) they may only fall below: `encoding-failed` is a bug whether or not
-// the old copy had it.
+// the caret leaves). Runs the new copy fails to write are reported apart too, and fail the run:
+// `write-failed` is a bug whether or not the old copy had it.
 //
-//   DIFF_UPDATE=1 node test/differential.ts   # the same, then the failures as the new baseline
 //   DIFF_DUMP=f.jsonl node test/differential.ts  # every failing run as a JSON line: command, text,
 //                                                 # selection, config, placeholders, paste, detail
 //
 //   node test/differential.ts                 # HEAD against the working tree
 //   node test/differential.ts <old> [<new>]   # two directories that each hold a `src/`
-//   DIFF_DOCS=3000 DIFF_EXAMPLES=8 node test/differential.ts
+//   DIFF_DOCS=3000 DIFF_EXAMPLES=8 DIFF_WIDTH=5000 node test/differential.ts
 //
 // The documents are played in worker threads, each a share of them; what they report is merged in the
 // documents' order, so the report is the same however many play it.
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
 import { availableParallelism, tmpdir } from 'node:os';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { join, resolve } from 'node:path';
 import { Config } from '../src/config.ts';
-import { lineSpan, mapPos, type ChangeSpec } from '../src/text.ts';
+import { lineSpan, mapPos, type ChangeSpec } from '../src/text/index.ts';
 import { readDrawing, readText } from './drawing.ts';
-import { readSpec, specConfig } from './specfile.ts';
+import { readSpecFile, specConfig, specFiles } from './specfile.ts';
 
 const here = resolve(import.meta.dirname, '..');
 const [oldArg, newArg] = process.argv.slice(2);
@@ -44,7 +42,7 @@ const [oldArg, newArg] = process.argv.slice(2);
 /** A directory holding the last commit's `src/`. */
 function headSource(): string {
   const dir = mkdtempSync(join(tmpdir(), 'ourus-head-'));
-  const archive = execFileSync('git', ['archive', 'HEAD', 'src'], { cwd: here });
+  const archive = execFileSync('git', ['archive', 'HEAD', 'src'], { cwd: here, maxBuffer: 1 << 28 });
   execFileSync('tar', ['-x', '-C', dir], { input: archive });
   // its imports of packages (htmlparser2) resolve to the project's, as the tree's do
   symlinkSync(join(here, 'node_modules'), join(dir, 'node_modules'));
@@ -55,43 +53,50 @@ function headSource(): string {
 const oldRoot: string = isMainThread ? (oldArg ? resolve(oldArg) : headSource()) : workerData.oldRoot;
 const newRoot: string = isMainThread ? (newArg ? resolve(newArg) : here) : workerData.newRoot;
 
+/** What a host sees of a copy's document, whatever its API: text, placeholders, nodes (the root first), lines; and the document. */
 interface Snapshot {
   readonly text: string;
   readonly placeholders: readonly number[];
   readonly nodes: readonly { readonly id: number; readonly kind: string; readonly startLine: number }[];
   readonly lines: readonly { readonly from: number; readonly to: number; readonly contentFrom: number; readonly blank: boolean }[];
+  readonly doc: any;
 }
 interface Core {
   parse(text: string, config: Record<string, unknown>, placeholders?: readonly number[]): Snapshot;
   execute(doc: Snapshot, command: { type: string; text?: string }, selection: { anchor: number; head: number }): any;
   settle(doc: Snapshot, caret: number): { changes: unknown[]; doc: Snapshot } | null;
-  /** A host's edit (typing, undo), with the caret it leaves, or the whole text replaced. */
-  edit(doc: Snapshot, changes: { from: number; to: number; insert: string }[], params: Record<string, unknown>): Snapshot;
-  replace(doc: Snapshot, text: string, params: Record<string, unknown>): Snapshot;
+  /** A host's edit (typing), with the caret it leaves. */
+  edit(doc: Snapshot, changes: { from: number; to: number; insert: string }[], caret: number): Snapshot;
+  /** The whole text replaced, with these placeholders (undo). */
+  replace(doc: Snapshot, text: string, placeholders: readonly number[]): Snapshot;
 }
 
-/** Commands by their names before they were renamed, for a copy from before. */
-const formerNames: Record<string, string> = { moveSubtreeUp: 'moveBlockUp', moveSubtreeDown: 'moveBlockDown', duplicateSubtree: 'duplicateNode' };
-
-/** The core of a copy, through its package entry, whatever its API's names are at that point. */
+/** The core of a copy, through its package entry. */
 async function load(root: string): Promise<Core> {
   const api = await import(join(root, 'src/index.ts'));
-  const State = api.OutlineState ?? api.OutlineDoc;
-  const execute = api.executeCommand ?? api.execute;
-  const settle = api.settlePlaceholders ?? api.settle;
-  // a copy from before the commands' renaming knows them by their former names
-  const former = !readFileSync(join(root, 'src/commands/index.ts'), 'utf8').includes("'moveSubtreeUp'");
+  const run = (doc: Snapshot, command: { type: string; text?: string }, selection: { anchor: number; head: number }): any => {
+    const result = api.executeCommand(doc.doc, command, selection);
+    return result.status === 'applied' ? { ...result, doc: snap(result.doc) } : result;
+  };
+  const { createPlaceholder } = await import(join(root, 'src/text/index.ts'));
+  const marks = (placeholders: readonly number[]): unknown[] => placeholders.map((p) => createPlaceholder(p));
+  const snap = (doc: any): Snapshot => {
+    const nodes: Snapshot['nodes'][number][] = [];
+    const visit = (node: any): void => {
+      nodes.push({ id: node.id, kind: node.kind, startLine: node.startLine });
+      node.children.forEach(visit);
+    };
+    visit(doc.rootNode);
+    return { text: doc.text, placeholders: doc.marks.points(), nodes, lines: doc.mdTree.lines, doc };
+  };
   return {
-    parse: (text, config, placeholders = []) => State.parse(text, { config, placeholders }),
-    execute: (doc, command, selection) => {
-      const result = execute(doc, former ? { ...command, type: formerNames[command.type] ?? command.type } : command, selection);
-      return result.status === 'applied' ? { ...result, doc: result.state ?? result.doc } : result;
-    },
-    edit: (doc: any, changes, params) => (doc.update ?? doc.apply).call(doc, changes, params),
-    replace: (doc: any, text, params) => doc.replace(text, params),
-    settle: (doc, caret) => {
-      const settled = settle(doc, caret);
-      return settled && { changes: settled.changes, doc: settled.state ?? settled.doc };
+    parse: (text, config, placeholders = []) => snap(api.OurusDoc.parse(text, { config, marks: marks(placeholders) })),
+    execute: run,
+    edit: (s, changes, caret) => snap(s.doc.update(changes, { caret })),
+    replace: (s, text, placeholders) => snap(s.doc.replace(text, marks(placeholders))),
+    settle: (s, caret) => {
+      const settled = api.settlePlaceholders(s.doc, caret);
+      return settled && { changes: settled.changes, doc: snap(settled.doc) };
     },
   };
 }
@@ -128,6 +133,8 @@ const configs: Record<string, unknown>[] = [
 ];
 const documents = Number(process.env.DIFF_DOCS ?? 1500);
 const examples = Number(process.env.DIFF_EXAMPLES ?? 3);
+// how much of each outcome an example shows
+const width = Number(process.env.DIFF_WIDTH ?? 300);
 
 /** An example, at the run it came from: the document's index, then the run's within it, for the merge's order. */
 interface Example {
@@ -140,11 +147,15 @@ type Groups = Map<string, { count: number; examples: Example[] }>;
 interface Found {
   runs: number;
   groups: Groups;
-  /** Runs the new copy fails to encode, by command: bugs whatever the old copy did. */
+  /** Runs the new copy fails to write, by command: bugs whatever the old copy did. */
   failures: Groups;
+  /** The same runs, each by its key (the command, the run drawn, its config), and whether the old copy fails it too. */
+  failing: (Example & { old: boolean })[];
   /** Every failing run, for `DIFF_DUMP`: to cluster the failures by command, the caret line's shape and the detail. */
   dump: Example[];
 }
+/** Whether a run failed to write: a bug, as one that threw is. */
+const failsToWrite = (r: { status: string; reason?: string }): boolean => (r.status === 'rejected' && r.reason === 'write-failed') || r.status === 'threw';
 const label = (r: { status: string; reason?: string }): string => `${r.status}${r.reason ? ' ' + r.reason : ''}`;
 const drawn = (text: string, sel: { anchor: number; head: number }): string => {
   const [from, to] = [Math.min(sel.anchor, sel.head), Math.max(sel.anchor, sel.head)];
@@ -158,9 +169,9 @@ const outcome = (core: Core, start: Snapshot, r: any): string => {
   const settledAway = core.settle(r.doc, 0);
   // the host's lifecycle: type at the caret, leave, then undo to before the command
   const caret = r.selection.head;
-  const typed = core.edit(r.doc, [{ from: caret, to: caret, insert: 'x' }], { caret: caret + 1 });
+  const typed = core.edit(r.doc, [{ from: caret, to: caret, insert: 'x' }], caret + 1);
   const left = core.settle(typed, 0)?.doc ?? typed;
-  const undone = core.replace(left, start.text, { drop: [...left.placeholders], placeholders: start.placeholders });
+  const undone = core.replace(left, start.text, start.placeholders);
   return JSON.stringify([label(r), seen(r.doc), r.selection, r.changes, settledHere && [settledHere.changes, seen(settledHere.doc)], settledAway && [settledAway.changes, seen(settledAway.doc)], seen(typed), seen(left), seen(undone)]);
 };
 /** A command's result, or what it threw (a host would see the exception): an outcome of its own. */
@@ -204,11 +215,10 @@ for (let d = 0; isMainThread && d < documents; d++) {
 // ID, so a case added or a file renamed changes no other case's), and its clipboards among the
 // pastes: a shape a case draws is played by every command, so what users hit, once it is a case,
 // stays in the corpus
-const specDir = join(here, 'spec');
 const specPastes = new Set<string>(pastes);
 const specDocs = new Map<string, Doc>();
-for (const file of isMainThread ? readdirSync(specDir).filter((f) => f.endsWith('.md') && f !== 'README.md').sort() : []) {
-  for (const t of readSpec(file, readFileSync(join(specDir, file), 'utf8'))) {
+for (const file of isMainThread ? specFiles() : []) {
+  for (const t of readSpecFile(file)) {
     if (t.initial.clipboard?.['text/plain'] !== undefined) specPastes.add(readText(t.initial.clipboard['text/plain']));
     const config: Record<string, unknown> = { ...specConfig(t.options) };
     config.flavor ??= Config.values.flavor[createHash('sha256').update(t.name).digest()[0]! % Config.values.flavor.length];
@@ -226,7 +236,7 @@ for (const doc of specDocs.values()) docs.push({ ...doc, pastes: [...specPastes]
 async function play(share: readonly number[]): Promise<Found> {
   const before = await load(oldRoot);
   const after = await load(newRoot);
-  const found: Found = { runs: 0, groups: new Map(), failures: new Map(), dump: [] };
+  const found: Found = { runs: 0, groups: new Map(), failures: new Map(), failing: [], dump: [] };
   const note = (into: Groups, key: string, at: [number, number], example: () => string): void => {
     const group = into.get(key) ?? { count: 0, examples: [] };
     group.count++;
@@ -264,21 +274,24 @@ async function play(share: readonly number[]): Promise<Found> {
         for (const type of commands) {
           // typing: a code fence's characters, the ones ourus handles
           const command = type === 'paste' ? { type, clipboard: { 'text/plain': pastes[random(pastes.length)]! } } : type === 'pastePlain' ? { type, text: pastes[random(pastes.length)] } : type === 'insertText' ? { type, text: random(2) ? '~' : '`' } : { type };
-          const a = outcome(before, oldAt, attempt(before, oldAt, command, selection));
+          const was = attempt(before, oldAt, command, selection);
+          const a = outcome(before, oldAt, was);
           const result = attempt(after, newAt, command, selection);
           const b = outcome(after, newAt, result);
           found.runs++;
           const at: [number, number] = [index, run++];
-          // encoding-failed is a bug, whether or not the old copy had it too, and a command that throws worse
-          if ((result.status === 'rejected' && result.reason === 'encoding-failed') || result.status === 'threw') {
+          // write-failed is a bug, whether or not the old copy had it too, and a command that throws worse
+          if (failsToWrite(result)) {
             // what was typed or pasted: a paste's is its clipboard's text
             const given = 'clipboard' in command ? command.clipboard?.['text/plain'] : command.text;
-            note(found.failures, type, at, () => `${drawn(runText, selection)} [${JSON.stringify(config)}]${given !== undefined ? ` ${type === 'insertText' ? 'typing' : 'pasting'} ${JSON.stringify(given)}` : ''}: ${result.detail ?? result.reason ?? ''}`);
+            const run = `${drawn(runText, selection)}${runPlaceholders.length ? ` ◌${JSON.stringify(runPlaceholders)}` : ''} [${JSON.stringify(config)}]${given !== undefined ? ` ${type === 'insertText' ? 'typing' : 'pasting'} ${JSON.stringify(given)}` : ''}`;
+            note(found.failures, type, at, () => `${run}: ${result.detail ?? result.reason ?? ''}`);
+            found.failing.push({ at, text: `${type} ${run}`, old: failsToWrite(was) });
             if (process.env.DIFF_DUMP) found.dump.push({ at, text: JSON.stringify({ type, text: runText, selection, config, placeholders: runPlaceholders, paste: given, detail: result.detail ?? result.reason, ...(settled ? { settled: true } : {}) }) });
           }
           if (a === b) continue;
           const short = (o: string): string => (o.startsWith('[') ? JSON.parse(o)[0] : o);
-          note(found.groups, `${type} [${JSON.stringify(config)}]: ${short(a)} → ${short(b)}${aspect(a, b)}`, at, () => `${drawn(runText, selection)}\n           was ${a.slice(0, 300)}\n           now ${b.slice(0, 300)}`);
+          note(found.groups, `${type} [${JSON.stringify(config)}]: ${short(a)} → ${short(b)}${aspect(a, b)}`, at, () => `${drawn(runText, selection)}\n           was ${a.slice(0, width)}\n           now ${b.slice(0, width)}`);
         }
       }
     }
@@ -335,44 +348,22 @@ for (const [key, group] of sorted) {
 }
 if (groups.size === 0) console.log('no differences');
 
-// the runs that fail to encode, against the baseline: a ratchet, the count of no command going up.
-// With the default corpus only; `DIFF_UPDATE=1` writes the counts as the new baseline once they fell.
-const baselineFile = join(here, 'test/differential.baseline.json');
-// the corpus the counts are of: generated documents and the spec's, which a new case changes, and how
-// runs start from them (`starts`, to change with it: since 2, settled where a placeholder is off the caret's line;
-// since 3, each document's choices drawn from a generator of its own), whatever order its files are read in
-const starts = 3;
-const corpus = createHash('sha256').update(JSON.stringify([starts, docs.map((d) => JSON.stringify([d.text, d.config, d.placeholders, d.pastes.length])).sort()])).digest('hex').slice(0, 16);
-const baseline: { documents: number; corpus?: string; failures: Record<string, number> } | null = (() => {
-  try {
-    return JSON.parse(readFileSync(baselineFile, 'utf8'));
-  } catch {
-    return null;
-  }
-})();
+// the runs that fail to write: a bug whether or not the old copy fails them too, each by its key (the
+// command, the document drawn with its selection and placeholders, the config, what was typed or pasted)
 if (process.env.DIFF_DUMP) writeFileSync(process.env.DIFF_DUMP, dump.join('\n') + (dump.length ? '\n' : ''));
-const comparable = baseline !== null && baseline.documents === documents;
-// on another corpus (the spec changed) the counts are shown against the baseline, not held to it
-const sameCorpus = comparable && baseline.corpus === corpus;
-const failed = [...failures.values()].reduce((n, f) => n + f.count, 0);
-const was = comparable ? Object.values(baseline.failures).reduce((n, c) => n + c, 0) : null;
-console.log(`\n${failed} runs fail to encode in ${newRoot}${was === null ? '' : ` (baseline ${was})`}${failed ? ':' : ''}`);
-const rose: string[] = [];
-for (const type of [...new Set([...failures.keys(), ...(comparable ? Object.keys(baseline.failures) : [])])].sort((x, y) => (failures.get(y)?.count ?? 0) - (failures.get(x)?.count ?? 0) || (x < y ? -1 : x > y ? 1 : 0))) {
-  const failure = failures.get(type) ?? { count: 0, examples: [] };
-  const before = comparable ? (baseline.failures[type] ?? 0) : null;
-  if (before !== null && sameCorpus && failure.count > before) rose.push(`${type} ${before} → ${failure.count}`);
-  console.log(`${String(failure.count).padStart(6)} ${type}${before === null ? '' : ` (baseline ${before})`}`);
+const failing = parts.flatMap((p) => p.failing).sort(order);
+console.log(`\n${failing.length} runs fail to write in ${newRoot}${failing.length ? ':' : ''}`);
+for (const [type, failure] of [...failures].sort(([x, fx], [y, fy]) => fy.count - fx.count || (x < y ? -1 : x > y ? 1 : 0))) {
+  console.log(`${String(failure.count).padStart(6)} ${type}`);
   for (const example of failure.examples) console.log(`         ${example}`);
 }
-if (rose.length) console.log(`\nmore runs fail to encode than the baseline: ${rose.join(', ')}`);
-if (comparable && !sameCorpus) console.log('\nthe corpus changed since the baseline (the spec): its counts are not held to it; DIFF_UPDATE=1 records them');
-if (process.env.DIFF_UPDATE === '1') {
-  if (rose.length) console.log('baseline not updated: it only goes down');
-  else {
-    writeFileSync(baselineFile, JSON.stringify({ documents, corpus, failures: Object.fromEntries([...failures].map(([type, f]) => [type, f.count]).sort()) }, null, 2) + '\n');
-    console.log(`baseline updated: ${baselineFile}`);
-  }
-}
-// a refactoring must change nothing; a behavior change, each difference judged; failures only fall
-process.exitCode = groups.size === 0 && rose.length === 0 ? 0 : 1;
+const list = (title: string, keys: string[]): void => {
+  if (!keys.length) return;
+  console.log(`\n${keys.length} ${title}:`);
+  for (const key of keys.slice(0, examples * 3)) console.log(`    ${key}`);
+  if (keys.length > examples * 3) console.log(`    … ${keys.length - examples * 3} more`);
+};
+list('runs fail to write that the old copy writes (regressions)', failing.filter((f) => !f.old).map((f) => f.text));
+list('runs fail to write in both copies', failing.filter((f) => f.old).map((f) => f.text));
+// a refactoring must change nothing; a behavior change, each difference judged; no run fails to write
+process.exitCode = groups.size === 0 && failing.length === 0 ? 0 : 1;

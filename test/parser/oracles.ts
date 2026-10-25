@@ -3,13 +3,13 @@
 // needs the oracles, given by path.
 //
 //   COMMONMARK_JS=path/to/commonmark.js/lib/index.js CMARK_GFM=path/to/cmark-gfm \
-//     node test/parser/oracles.ts [documents per vocabulary] [seed]
+//     node test/parser/oracles.ts [documents per vocabulary] [seed]   # SHOW=10: examples per difference (5)
 //
 // commonmark.js should be a revision after 0.31.2 (two fixes ourus follows: blank lines in items
 // keep the spaces past the item's indentation; info strings are trimmed after unescaping).
 //
 // cmark (C) and commonmark.js read some corners of CommonMark differently, and ourus follows
-// commonmark.js and the spec's text there (10-parsing.md lists them). So GFM is compared on the
+// commonmark.js and the spec's text there. So GFM is compared on the
 // documents where cmark-gfm without extensions agrees with commonmark.js: what is left to differ
 // is the extensions. Differences ourus makes on purpose are counted apart (gfm.ts's header).
 
@@ -18,8 +18,7 @@ import fc from 'fast-check';
 import { commonmark } from '../../src/parser/flavor.ts';
 import { defineFlavor } from '../../src/parser/flavor.ts';
 import { autolink, footnotes, gfmCore, strikethrough, table, tagfilter, tasklistExtension } from '../../src/parser/gfm.ts';
-import { renderHtml } from '../../src/parser/html.ts';
-import { SyntaxTree } from '../../src/parser/syntax.ts';
+import { MdTree } from '../../src/parser/syntax.ts';
 import { BLOCKS, INLINES, arbDoc } from './generators.ts';
 
 const count = Number(process.argv[2] ?? 2000);
@@ -51,7 +50,7 @@ interface Check {
 const checks: Check[] = [];
 if (commonmarkJs) {
   const reference = commonmarkJs;
-  checks.push({ name: 'commonmark.js', compare: (md) => ({ want: reference(md), got: renderHtml(SyntaxTree.parse(md, commonmark)) }) });
+  checks.push({ name: 'commonmark.js', compare: (md) => ({ want: reference(md), got: MdTree.parse(md, commonmark).renderHtml() }) });
 }
 if (cmarkCore && cmarkAll && commonmarkJs) {
   const reference = commonmarkJs;
@@ -61,7 +60,7 @@ if (cmarkCore && cmarkAll && commonmarkJs) {
       // cmark-gfm's renderer writes nested <strong> once: not a reading difference
       const core = cmarkCore(md);
       if (core !== reference(md).replace(/<strong>((?:(?!<\/?strong>).)*?)<strong>/gs, '<strong>$1') && core !== reference(md)) return 'cmark and commonmark.js read the document differently';
-      return { want: cmarkAll(md), got: renderHtml(SyntaxTree.parse(md, gfm)) };
+      return { want: cmarkAll(md), got: MdTree.parse(md, gfm).renderHtml() };
     },
   });
 }

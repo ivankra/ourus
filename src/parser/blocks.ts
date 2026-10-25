@@ -3,26 +3,26 @@
 // BSD-2-Clause, see NOTICE).
 
 import { isBlankText, isSpaceOrTab } from './chars.ts';
-import type { BlockSpec, BlockStart, Frame, LeafRole, Machine } from './machine.ts';
+import type { MdBlockSpec, MdBlockStart, MdFrame, MdLeafRole, MdMachine } from './machine.ts';
 import { scanReference } from './refs.ts';
-import type { ListData } from './types.ts';
+import type { MdList } from './types.ts';
 
 // ----------------------------------------------------------------------------------- frames
 
-export interface ListFrame extends Frame {
+export interface ListFrame extends MdFrame {
   readonly ordered: boolean;
   readonly bullet: string | null;
   readonly delimiter: string | null;
 }
 
-export interface ItemFrame extends Frame {
+export interface ItemFrame extends MdFrame {
   readonly markerOffset: number;
   readonly padding: number;
   /** Whether a block has been added to the item (a blank line ends an item that has none). */
   readonly hasChildren: boolean;
 }
 
-export interface ParagraphFrame extends Frame {
+export interface ParagraphFrame extends MdFrame {
   /** The text so far, lines without their indentation joined by `\n` (commonmark.js's string content). */
   readonly content: string;
   /** Lines of the paragraph so far (reference definitions split off at a setext underline excluded). */
@@ -39,29 +39,29 @@ export interface ParagraphFrame extends Frame {
   readonly afterTask?: boolean;
 }
 
-export interface FenceFrame extends Frame {
+export interface FenceFrame extends MdFrame {
   readonly char: string;
   readonly length: number;
   readonly offset: number;
 }
 
-export interface HtmlFrame extends Frame {
+export interface HtmlFrame extends MdFrame {
   readonly htmlType: number;
 }
 
 // ------------------------------------------------------------------------------------ roles
 
-export const PARAGRAPH_FIRST: LeafRole = Object.freeze({ type: 'paragraph', first: true });
-export const PARAGRAPH_NEXT: LeafRole = Object.freeze({ type: 'paragraph', first: false });
-const CODE_NEXT: LeafRole = Object.freeze({ type: 'code_block', first: false });
+export const PARAGRAPH_FIRST: MdLeafRole = Object.freeze({ type: 'paragraph', first: true });
+export const PARAGRAPH_NEXT: MdLeafRole = Object.freeze({ type: 'paragraph', first: false });
+const CODE_NEXT: MdLeafRole = Object.freeze({ type: 'code_block', first: false });
 /** A line of indented code with only whitespace in it: a trailing one isn't part of the block. */
-const ICODE_BLANK: LeafRole = Object.freeze({ type: 'code_block', first: false, blank: true });
-const CODE_CLOSING: LeafRole = Object.freeze({ type: 'code_block', first: false, closed: true });
-const HTML_NEXT: LeafRole = Object.freeze({ type: 'html_block', first: false });
-const HEADING_NEXT: LeafRole = Object.freeze({ type: 'heading', first: false });
-const REFDEF_NEXT: LeafRole = Object.freeze({ type: 'refdef', first: false });
-const THEMATIC_BREAK: LeafRole = Object.freeze({ type: 'thematic_break', first: true });
-const ICODE_FIRST: LeafRole = Object.freeze({ type: 'code_block', first: true, fenced: false });
+const ICODE_BLANK: MdLeafRole = Object.freeze({ type: 'code_block', first: false, blank: true });
+const CODE_CLOSING: MdLeafRole = Object.freeze({ type: 'code_block', first: false, closed: true });
+const HTML_NEXT: MdLeafRole = Object.freeze({ type: 'html_block', first: false });
+const HEADING_NEXT: MdLeafRole = Object.freeze({ type: 'heading', first: false });
+const REFDEF_NEXT: MdLeafRole = Object.freeze({ type: 'refdef', first: false });
+const THEMATIC_BREAK: MdLeafRole = Object.freeze({ type: 'thematic_break', first: true });
+const ICODE_FIRST: MdLeafRole = Object.freeze({ type: 'code_block', first: true, fenced: false });
 const atxRoles = [1, 2, 3, 4, 5, 6].map((level) => Object.freeze({ type: 'heading', first: true, level, setext: false }));
 
 // ----------------------------------------------------------------------------------- regexps
@@ -98,16 +98,16 @@ export const isCommonMarkStartChar = (c: number): boolean =>
 
 // ------------------------------------------------------------------------------------- specs
 
-export const DOCUMENT: BlockSpec = {
+export const DOCUMENT: MdBlockSpec = {
   type: 'document',
   container: true,
   acceptsLines: false,
   continue: () => 0,
 };
 
-export const DOCUMENT_FRAME: Frame = Object.freeze({ spec: DOCUMENT });
+export const DOCUMENT_FRAME: MdFrame = Object.freeze({ spec: DOCUMENT });
 
-export const BLOCKQUOTE: BlockSpec = {
+export const BLOCKQUOTE: MdBlockSpec = {
   type: 'blockquote',
   container: true,
   acceptsLines: false,
@@ -123,9 +123,9 @@ export const BLOCKQUOTE: BlockSpec = {
   },
 };
 
-const BLOCKQUOTE_FRAME: Frame = Object.freeze({ spec: BLOCKQUOTE });
+const BLOCKQUOTE_FRAME: MdFrame = Object.freeze({ spec: BLOCKQUOTE });
 
-export const LIST: BlockSpec<ListFrame> = {
+export const LIST: MdBlockSpec<ListFrame> = {
   type: 'list',
   container: true,
   acceptsLines: false,
@@ -133,7 +133,7 @@ export const LIST: BlockSpec<ListFrame> = {
   canContain: (child) => child.type === 'item',
 };
 
-export const ITEM: BlockSpec<ItemFrame> = {
+export const ITEM: MdBlockSpec<ItemFrame> = {
   type: 'item',
   container: true,
   acceptsLines: false,
@@ -151,7 +151,7 @@ export const ITEM: BlockSpec<ItemFrame> = {
   childAdded: (item) => (item.hasChildren ? item : { ...item, hasChildren: true }),
 };
 
-export const PARAGRAPH: BlockSpec<ParagraphFrame> = {
+export const PARAGRAPH: MdBlockSpec<ParagraphFrame> = {
   type: 'paragraph',
   container: false,
   acceptsLines: true,
@@ -185,7 +185,7 @@ export const newParagraph = (): ParagraphFrame => ({ spec: PARAGRAPH, lines: 0, 
  * Splits link reference definitions off the start of paragraph `p`, whose last line is `lastLine`:
  * their lines become refdef lines. Returns what is left of the paragraph (null if nothing).
  */
-export function extractRefdefs(m: Machine, p: ParagraphFrame, lastLine: number): { content: string; lines: number } | null {
+export function extractRefdefs(m: MdMachine, p: ParagraphFrame, lastLine: number): { content: string; lines: number } | null {
   let content = p.content;
   let lines = p.lines;
   if (content.charCodeAt(0) !== 91 /* [ */ || p.afterTask) return lines > 0 ? { content, lines } : null;
@@ -208,7 +208,7 @@ export function extractRefdefs(m: Machine, p: ParagraphFrame, lastLine: number):
   return lines > 0 && !isBlankText(content) ? { content, lines } : null;
 }
 
-export const FENCE: BlockSpec<FenceFrame> = {
+export const FENCE: MdBlockSpec<FenceFrame> = {
   type: 'code_block',
   container: false,
   acceptsLines: true,
@@ -236,7 +236,7 @@ export const FENCE: BlockSpec<FenceFrame> = {
   },
 };
 
-export const INDENTED_CODE: BlockSpec = {
+export const INDENTED_CODE: MdBlockSpec = {
   type: 'code_block',
   container: false,
   acceptsLines: true,
@@ -257,9 +257,9 @@ function isSpacesOrTabs(s: string, from: number): boolean {
   return true;
 }
 
-const INDENTED_CODE_FRAME: Frame = Object.freeze({ spec: INDENTED_CODE });
+const INDENTED_CODE_FRAME: MdFrame = Object.freeze({ spec: INDENTED_CODE });
 
-export const HTML_BLOCK: BlockSpec<HtmlFrame> = {
+export const HTML_BLOCK: MdBlockSpec<HtmlFrame> = {
   type: 'html_block',
   container: false,
   acceptsLines: true,
@@ -273,7 +273,7 @@ export const HTML_BLOCK: BlockSpec<HtmlFrame> = {
 
 // ------------------------------------------------------------------------------------ starts
 
-export const blockquoteStart: BlockStart = {
+export const blockquoteStart: MdBlockStart = {
   name: 'blockquote',
   start(m) {
     if (m.indented || m.peek(m.nextNonspace) !== 62) return 0;
@@ -289,7 +289,7 @@ export const blockquoteStart: BlockStart = {
   },
 };
 
-export const atxHeadingStart: BlockStart = {
+export const atxHeadingStart: MdBlockStart = {
   name: 'atxHeading',
   start(m) {
     if (m.indented || m.peek(m.nextNonspace) !== 35 /* # */) return 0;
@@ -304,7 +304,7 @@ export const atxHeadingStart: BlockStart = {
   },
 };
 
-export const fencedCodeStart: BlockStart = {
+export const fencedCodeStart: MdBlockStart = {
   name: 'fencedCode',
   start(m) {
     const c = m.peek(m.nextNonspace);
@@ -323,7 +323,7 @@ export const fencedCodeStart: BlockStart = {
   },
 };
 
-export const htmlBlockStart: BlockStart = {
+export const htmlBlockStart: MdBlockStart = {
   name: 'htmlBlock',
   start(m, container) {
     if (m.indented || m.peek(m.nextNonspace) !== 60 /* < */) return 0;
@@ -342,7 +342,7 @@ export const htmlBlockStart: BlockStart = {
   },
 };
 
-export const setextHeadingStart: BlockStart = {
+export const setextHeadingStart: MdBlockStart = {
   name: 'setextHeading',
   start(m, container) {
     const c = m.peek(m.nextNonspace);
@@ -369,7 +369,7 @@ export const setextHeadingStart: BlockStart = {
   },
 };
 
-export const thematicBreakStart: BlockStart = {
+export const thematicBreakStart: MdBlockStart = {
   name: 'thematicBreak',
   start(m) {
     const c = m.peek(m.nextNonspace);
@@ -381,7 +381,7 @@ export const thematicBreakStart: BlockStart = {
   },
 };
 
-export const listItemStart: BlockStart = {
+export const listItemStart: MdBlockStart = {
   name: 'listItem',
   start(m, container) {
     if (m.indented && container.spec !== LIST) return 0;
@@ -407,7 +407,7 @@ export const listItemStart: BlockStart = {
   },
 };
 
-function parseListMarker(m: Machine, container: Frame): { list: ListData; markerFrom: number; markerTo: number; markerColumn: number } | null {
+function parseListMarker(m: MdMachine, container: MdFrame): { list: MdList; markerFrom: number; markerTo: number; markerColumn: number } | null {
   if (m.indent >= 4) return null;
   const ln = m.line;
   const at = m.nextNonspace;
@@ -459,7 +459,7 @@ function parseListMarker(m: Machine, container: Frame): { list: ListData; marker
   return { list: { type, bulletChar, delimiter, start, markerOffset, padding }, markerFrom, markerTo, markerColumn };
 }
 
-export const indentedCodeStart: BlockStart = {
+export const indentedCodeStart: MdBlockStart = {
   name: 'indentedCode',
   start(m) {
     if (!m.indented || m.tip.spec === PARAGRAPH || m.blank) return 0;
@@ -472,7 +472,7 @@ export const indentedCodeStart: BlockStart = {
 };
 
 /** CommonMark's block starts, in order of precedence. */
-export const commonMarkStarts: readonly BlockStart[] = [
+export const commonMarkStarts: readonly MdBlockStart[] = [
   blockquoteStart,
   atxHeadingStart,
   fencedCodeStart,
@@ -483,18 +483,3 @@ export const commonMarkStarts: readonly BlockStart[] = [
   indentedCodeStart,
 ];
 
-/**
- * Whether `text`, written where a line's content starts, opens a CommonMark block instead of being
- * paragraph text: an ATX heading, a fence, a quote, a thematic break or an HTML block. With
- * `inParagraph` the line would otherwise continue an open paragraph: a setext underline also ends it,
- * and so does a list item with text (an ordered one only from 1), while the seventh kind of HTML block
- * can't. Without it, list markers are left to the caller.
- */
-export function startsBlock(text: string, inParagraph: boolean): boolean {
-  if (reAtxHeading.test(text) || reCodeFence.test(text) || text.charCodeAt(0) === 62 || reThematicBreak.test(text)) return true;
-  for (let t = 1; t <= (inParagraph ? 6 : 7); t++) if (reHtmlBlockOpen[t]!.test(text)) return true;
-  if (!inParagraph) return false;
-  if (reSetextUnderline.test(text)) return true;
-  const m = /^(?:[*+-]|(\d{1,9})[.)])(?=[ \t])/.exec(text);
-  return m !== null && (m[1] === undefined || parseInt(m[1], 10) === 1) && !isBlankText(text, m[0].length);
-}

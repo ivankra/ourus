@@ -1,5 +1,5 @@
 // A reference outliner model: a pure tree with a caret, and the commands defined on it the way
-// Logseq and Workflowy behave, with ourus's documented feel decisions (postimpl1a §2.7).
+// Logseq and Workflowy behave, with ourus's own choices where they differ.
 //
 // Two modes. `pure` is a tree outliner: any node can hold children, anything can be indented,
 // moved or joined. `md` adds the rules Markdown forces, each named, so a run can count how often
@@ -143,7 +143,7 @@ const COMMANDS: Record<Cmd, Command> = {
     if (n.kind === 'item' && isEmpty(n)) {
       // Enter on an empty item: a nested one outdents, a top-level one leaves the list
       if (parent.kind === 'item') return COMMANDS.outdent(ctx, n, 0);
-      // ourus's choice (postimpl1a §2.7): leave the list, as an empty paragraph
+      // ourus's choice: leave the list, as an empty paragraph
       const para: MNode = { kind: 'paragraph', text: '', children: [] };
       parent.children[parent.children.indexOf(n)] = para;
       return ctx.ok({ node: para, offset: 0 });
@@ -239,7 +239,7 @@ function joinUp(ctx: Ctx, n: MNode): Outcome {
   if (ctx.md('heading-is-one-line', prev.kind === 'heading' && n.text.includes('\n'))) return reject('not-expressible');
   const at = remove(parent, n);
   const caret = { node: prev, offset: prev.text.length };
-  // joining into an empty item: the text arrives with its checkbox (postimpl1b §17)
+  // joining into an empty item: the text arrives with its checkbox
   if (isEmpty(prev) && prev.kind === 'item' && n.kind === 'item') prev.task = n.task;
   prev.text += n.text;
   if (n.kind === 'heading') {

@@ -8,20 +8,20 @@
 // (an entity's character, a link's decoded destination) are computed once and kept on the node.
 
 import { codePointAt, codePointBefore, isPunctuation, isUnicodeWhitespace, normalizeLabel } from './chars.ts';
-import type { Reference } from './refs.ts';
-import type { InlineNode } from './types.ts';
+import type { MdReference } from './refs.ts';
+import type { MdInline } from './types.ts';
 
 /** Tries to parse something at `p.pos`, whose character is one of `triggers`. True when it consumed input. */
-export interface InlineRule {
+export interface MdInlineRule {
   readonly name: string;
   readonly triggers: string;
   /** Tried before the rule with this name for the same trigger (else after the rules already there). */
   readonly before?: string;
-  parse(p: InlineParser): boolean;
+  parse(p: MdInlineParser): boolean;
 }
 
 /** A kind of emphasis-like delimiter run (`*`, `_`, GFM's `~`, Obsidian's `=`). */
-export interface DelimiterRule {
+export interface MdDelimiterRule {
   readonly char: string;
   /** `_`'s stricter flanking rules: no opening or closing inside a word. */
   readonly strict?: boolean;
@@ -45,31 +45,31 @@ export interface DelimiterRun {
  * Tried at a `]` that has an opener: before CommonMark's link resolution (`phase: 'before'`), or
  * when it found no link (`'after'`). True when the rule handled the bracket.
  */
-export interface BracketRule {
+export interface MdBracketRule {
   readonly name: string;
   readonly phase: 'before' | 'after';
-  resolve(p: InlineParser, opener: Bracket): boolean;
+  resolve(p: MdInlineParser, opener: Bracket): boolean;
 }
 
 /** Runs over the text nodes outside links once parsing is done (GFM's email autolinks). */
-export interface TextRule {
+export interface MdTextRule {
   readonly name: string;
-  process(p: InlineParser, node: Node): void;
+  process(p: MdInlineParser, node: Node): void;
 }
 
 /** The inline rules of a flavor, compiled. */
 export interface InlineConfig {
-  readonly rules: readonly (readonly InlineRule[] | undefined)[];
-  readonly otherRules: ReadonlyMap<number, readonly InlineRule[]>;
-  readonly delimiters: ReadonlyMap<number, DelimiterRule>;
-  readonly brackets: readonly BracketRule[];
-  readonly textRules: readonly TextRule[];
+  readonly rules: readonly (readonly MdInlineRule[] | undefined)[];
+  readonly otherRules: ReadonlyMap<number, readonly MdInlineRule[]>;
+  readonly delimiters: ReadonlyMap<number, MdDelimiterRule>;
+  readonly brackets: readonly MdBracketRule[];
+  readonly textRules: readonly MdTextRule[];
   /** Whether character code `c` (below 128) stops a run of plain text. */
   readonly stops: Uint8Array;
 }
 
-export function compileInlines(rules: readonly InlineRule[], delimiters: readonly DelimiterRule[], brackets: readonly BracketRule[], textRules: readonly TextRule[]): InlineConfig {
-  const byChar = new Map<number, InlineRule[]>();
+export function compileInlines(rules: readonly MdInlineRule[], delimiters: readonly MdDelimiterRule[], brackets: readonly MdBracketRule[], textRules: readonly MdTextRule[]): InlineConfig {
+  const byChar = new Map<number, MdInlineRule[]>();
   for (const rule of rules) {
     for (const ch of rule.triggers) {
       const code = ch.charCodeAt(0);
@@ -81,8 +81,8 @@ export function compileInlines(rules: readonly InlineRule[], delimiters: readonl
     }
   }
   const stops = new Uint8Array(128);
-  const ascii: (readonly InlineRule[] | undefined)[] = new Array(128);
-  const other = new Map<number, readonly InlineRule[]>();
+  const ascii: (readonly MdInlineRule[] | undefined)[] = new Array(128);
+  const other = new Map<number, readonly MdInlineRule[]>();
   for (const [code, list] of byChar) {
     if (code < 128) {
       ascii[code] = list;
@@ -103,7 +103,7 @@ export function compileInlines(rules: readonly InlineRule[], delimiters: readonl
 /** What a leaf's inlines may refer to. */
 export interface InlineContext {
   /** Link reference definitions, by normalized label. */
-  readonly references: ReadonlyMap<string, Reference>;
+  readonly references: ReadonlyMap<string, MdReference>;
   /** Footnote definitions' normalized labels (GFM). */
   readonly footnotes: ReadonlySet<string>;
 }
@@ -172,7 +172,7 @@ export class Node {
 
 interface Delimiter {
   readonly char: number;
-  readonly rule: DelimiterRule;
+  readonly rule: MdDelimiterRule;
   count: number;
   readonly length: number;
   /** The run's text node. */
@@ -203,7 +203,7 @@ export interface Bracket {
 
 // ------------------------------------------------------------------------------------ parser
 
-export class InlineParser {
+export class MdInlineParser {
   readonly config: InlineConfig;
   readonly context: InlineContext;
   readonly text: string;
@@ -230,7 +230,7 @@ export class InlineParser {
   }
 
   /** Parses the whole text. */
-  parse(): InlineNode[] {
+  parse(): MdInline[] {
     const { text, config } = this;
     const n = text.length;
     outer: while (this.pos < n) {
@@ -310,7 +310,7 @@ export class InlineParser {
    * Scans the run of `rule.char` at `pos`: pushes it as a delimiter when it can open or close, and
    * appends it as text either way.
    */
-  handleDelimiters(rule: DelimiterRule): boolean {
+  handleDelimiters(rule: MdDelimiterRule): boolean {
     const { text } = this;
     const char = text.charCodeAt(this.pos);
     const start = this.pos;
@@ -538,18 +538,18 @@ export class InlineParser {
   }
 
   /** Normalized label lookup. */
-  reference(label: string): Reference | undefined {
+  reference(label: string): MdReference | undefined {
     return this.context.references.get(normalizeLabel(label));
   }
 }
 
-const EMPTY: readonly InlineNode[] = Object.freeze([]);
+const EMPTY: readonly MdInline[] = Object.freeze([]);
 
 /** The finished tree: immutable nodes, adjacent text merged. Iterative: nesting can be as deep as the text is long. */
-function freeze(root: Node): InlineNode[] {
+function freeze(root: Node): MdInline[] {
   interface Level {
     readonly node: Node;
-    readonly out: InlineNode[];
+    readonly out: MdInline[];
     child: Node | null;
   }
   const top: Level = { node: root, out: [], child: root.first };
@@ -580,9 +580,9 @@ function freeze(root: Node): InlineNode[] {
   return top.out;
 }
 
-function finish(node: Node, children: readonly InlineNode[] | null): InlineNode {
+function finish(node: Node, children: readonly MdInline[] | null): MdInline {
   const inline: Record<string, unknown> = { type: node.type, from: node.from, to: node.to };
   if (children) inline.children = children;
   if (node.attrs) Object.assign(inline, node.attrs);
-  return inline as unknown as InlineNode;
+  return inline as unknown as MdInline;
 }

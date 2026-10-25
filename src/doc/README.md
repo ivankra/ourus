@@ -1,0 +1,249 @@
+# Doc
+
+A Markdown text read as an outline. `OurusDoc` is the snapshot a host keeps and commands take: the
+text, its placeholders, its parse, and the outline read from it. For each node it gives the node's
+text and that text's frame, and for each position, what is there. Editing a document is `draft/`'s
+job.
+
+Basic usage:
+
+```ts
+import { OurusDoc } from 'ourus';
+
+let doc = OurusDoc.parse(text, { config: { flavor: 'obsidian' }, marks });
+doc = doc.update(changes, { caret });       // after a host's edit: placeholders mapped, untouched nodes shared
+for (const node of doc.rootNode.children) console.log(node.kind, doc.textOf(node)?.body);
+const at = doc.locate(pos);                 // in a text, a frame, a marker, a prefix, a gap, ...
+```
+
+## API
+
+- Positions are offsets into the document's text. A node's text has offsets of its own; `posOf` and
+  `offsetOf` convert between the two.
+
+- **`OurusDoc`** is one immutable snapshot: the text, its placeholders, its parse, its outline, and
+  the config.
+
+  - `static OurusDoc.parse(text: string, { config?: Partial<Config>, marks?: Mark[] }): OurusDoc`<br>
+    Reads a text, with its placeholders (`PLACEHOLDER_MARK`s from `text/`). Reading uses only the
+    config's `flavor`; the rest of the config is for the commands.
+
+  - `OurusDoc.update(changes: ChangeSpec[], params?: DocUpdateParams): OurusDoc`<br>
+    The snapshot after `changes` (in this document's offsets), sharing every node the changes didn't
+    reach. Its placeholders are this one's, mapped through the changes, without `params.dropMarks`
+    (in this document's offsets) and with `params.addMarks` (in the new text's), for a host's edit;
+    or exactly `params.setMarks`, for the writer's or an undo. `params.caret`: on a host's edit, a
+    placeholder is kept at the caret where the deletion would otherwise change the outline there.
+    `params.identity` and `params.nextId`: the ids the writer assigned, keyed by where each node it
+    wrote starts, and the next free id.
+
+  - `OurusDoc.replace(text: string, marks: Mark[]): OurusDoc`<br>
+    The snapshot with a new text in place of this one's (the file changed on disk, an undo), with
+    `marks` as its placeholders. Only the lines that differ are read again.
+
+  - `OurusDoc.text: string`, `OurusDoc.marks: MarkSet`, `OurusDoc.mdTree: MdTree`, `OurusDoc.config: Config`, `OurusDoc.nextId: number`<br>
+    The text; its placeholders (only those that still hold something); its parse; the config; the
+    next id to give a new node.
+
+  - `OurusDoc.root: OutlineNodePersistent`, `get OurusDoc.rootNode: OutlineNode`<br>
+    The outline's root: the stored node, and the same node with its position (see below).
+
+  - `OurusDoc.node(id: number): OutlineNode | undefined`<br>
+    The node with an id. The index of ids is built on the first call, so keep it off hot paths.
+
+  - `OurusDoc.nodeAtLine(line: number): OutlineNode | null`<br>
+    The node whose own text is on a line: the deepest one, where nested items share a line. Null on
+    blank lines and in the preamble.
+
+  - `OurusDoc.textOf(node: OutlineNode): OutlineNodeText | null`<br>
+    A node's text, read once per stored node. Null for a node without one: the root, a quote without
+    a callout title, an item whose first line holds a quote or a list.
+
+  - `OurusDoc.locate(pos: number): Located`<br>
+    What is at `pos`, by zone: `text` (in a node's text, with the offset there), `frame` (a checkbox,
+    `#`s, a fence, ...), `marker` (an item's indentation, marker or padding), `prefix` (a
+    container's, like a quote's `>`), `gap` (a blank line, with the node above it as its owner),
+    `preamble`, or `none`.
+
+  - `OurusDoc.posOf(node: OutlineNode, offset: number, assoc = 1): number`, `OurusDoc.offsetOf(node: OutlineNode, pos: number): number`<br>
+    Converts an offset in a node's text to a position in the document, and back. Where the document
+    has characters the text leaves out (a prefix, an escape), `assoc` picks which side of them.
+
+  - `get OurusDoc.lineCount: number`, `OurusDoc.lineAt(pos: number): { index, from, to }`<br>
+    The number of lines; the line `pos` is on.
+
+  - `OurusDoc.textStart(i: number): number`<br>
+    Where the text starts on line `i` (where Home goes): past its containers' prefixes, an item's
+    marker, the node's frame, and the blanks after them. Hidden spaces (see `hiddenSpaces`) are
+    text, so it stops before them.
+
+  - `OurusDoc.isBlankLine(i: number)`, `OurusDoc.isEmptyLine(i: number)`, `OurusDoc.isLazyLine(i: number)`<br>
+    Whether a line holds nothing past its containers' prefix (a quote's `>` line is blank); whether
+    it holds only whitespace, not even a `>`; whether it continues a paragraph lazily.
+
+  - `OurusDoc.atTextColumn(pos: number, node: OutlineNode): boolean`<br>
+    Whether `pos` is on a blank line, at the column where `node`'s text starts. This is the line
+    Shift-Enter makes at the end of a text.
+
+  - `get OurusDoc.leadingBlankLines: number | null`, `get OurusDoc.blank: boolean`<br>
+    How many blank lines are before the first node (null when something else is there, such as
+    frontmatter); whether the document is nothing but blank lines.
+
+  - `OurusDoc.hiddenSpaces(node: OutlineNode): { from, to } | null`<br>
+    The spaces before a node's text on its first line that Markdown doesn't show: an item's padding
+    beyond the one space after its marker (or after its checkbox), or a paragraph's indentation, at
+    most three columns. They are the user's whitespace, not markup, so a join gives them back as
+    spaces.
+
+  - `OurusDoc.markerOf(item: OutlineNode): string`, `OurusDoc.listOf(item: OutlineNode): MdBlockAt | null`<br>
+    An item's marker as written (`-`, `1.`); the list block the parser puts it in.
+
+  - `OurusDoc.codeSpanAt(pos: number): { closer, to } | null`<br>
+    The code span `pos` is inside: where its closing backtick run starts, and where the span ends.
+
+  - `OurusDoc.readsAs(text: AtomText): boolean`<br>
+    Whether an atom text's lines, parsed alone, read as one block of its type, closed or not as
+    the text is.
+
+  - `OurusDoc.escapeParagraph(lines: string[]): string[] | null`<br>
+    The lines of a paragraph's text, with the backslashes they need to read as a paragraph when
+    written at the start of a block, in this document's flavor. Null where no escaping does it.
+
+  - `OurusDoc.markdownOf(from: number, to: number): string`, `OurusDoc.markdownStart(node: OutlineNode): number`, `OurusDoc.rangeOf(node: OutlineNode): { from, to }`<br>
+    A range's Markdown as written, without the prefixes of the containers that hold all of it (what
+    copy puts on the clipboard); where a node's own Markdown starts (an item at its marker, a quote
+    at its `>`); the range of a node's lines, its descendants' included.
+
+- **`OutlineNodePersistent`** is a node of the outline as stored. Snapshots and drafts share it
+  for as long as it stays the same. It has:
+
+  - `id`, `kind` (`OutlineNodeKind`: `root`, `heading`, `item`, `paragraph`, `quote`, `atom`),
+    `gap` (the blank lines after its own text, before its first child or what follows), and
+    `children`;
+  - for a node read from a document: its parser blocks (`block`, and `head`, the block holding its
+    text), its extent in lines, up to the next node (`lines`), and each child's first line counted
+    from its own (`offsets`).
+
+  It holds no parent and no absolute line number, so an update only makes anew the nodes on the path
+  from the root to the edit.
+
+  - `get OutlineNodePersistent.read: boolean`, `OutlineNodePersistent.source`, `OutlineNodePersistent.text`<br>
+    Whether the node was read from a document. A draft makes its nodes with `static drafted(...)`:
+    for those, `source` is the read node it changes (null for a new one) and `text` is the text the
+    draft set.
+
+  - `OutlineNodePersistent.textLines(): { first, last }`<br>
+    The lines of its text, counted from its first line.
+
+- **`OutlineNode`** is a node of one snapshot's outline, with its position: its lines, its parent and
+  its siblings. It wraps an `OutlineNodePersistent`, which stores none of those so that snapshots can
+  share it. An `OutlineNode` is made when a query reaches it.
+
+  - `OutlineNode.persistentNode`, `get OutlineNode.id`, `get OutlineNode.kind`, `get OutlineNode.block`, `get OutlineNode.head`, `get OutlineNode.gap`
+
+  - `OutlineNode.startLine`, `get OutlineNode.textFirstLine`, `get OutlineNode.textLastLine`, `get OutlineNode.endLine`<br>
+    Its first line; the first and last lines of its text; its last line, counting its descendants
+    and blank lines.
+
+  - `OutlineNode.parent`, `OutlineNode.index`, `OutlineNode.depth`, `get OutlineNode.children`, `OutlineNode.child(i)`, `get OutlineNode.prev`, `get OutlineNode.next`
+
+  - `get OutlineNode.lastDescendant`, `get OutlineNode.preceding`, `get OutlineNode.afterSubtree`<br>
+    Its last descendant; the node before it in document order (its previous sibling's last
+    descendant, or else its parent); the first node after its subtree.
+
+  - `get OutlineNode.ownsLists: boolean`<br>
+    Whether a paragraph among its children owns the list right after it. That happens only in the
+    document's own sections, not in an item or a quote.
+
+  - `OutlineNode.becomesTitle(text: ProseText): boolean`<br>
+    Whether setting `text` on it would make it its quote's callout title: it is a quote's first
+    child, and the text's first line opens a callout.
+
+  - `OutlineNode.nodeAtLine(line: number): OutlineNode | null`<br>
+    The node in its subtree whose own text is on a line.
+
+- **`OutlineNodeText`** is a node's text, of either kind: `ProseText | AtomText`. A prose text is
+  ourus's to edit as text (split, join, escape, normalize); an atom's lines are taken as written,
+  whatever the parser reads inside them (code, math, HTML, a table).
+
+- **`ProseText`** is the text of a paragraph, a heading, or a quote's callout title (an item's too,
+  where its first block is one of those): its lines without their containers' prefixes and without
+  markup escapes, joined by `\n`, with its placeholders. Immutable.
+
+  - `new ProseText(type: ProseTextType, item: boolean, text: string, marks?: MarkSet)`
+
+  - `ProseText.type`, `ProseText.item`, `ProseText.text: string`, `ProseText.marks: MarkSet`<br>
+    The type: `paragraph`, `heading`, or `title` (a quote's callout title). Whether it is an item's
+    text, which can start with a checkbox or below the marker. The whole string, frame and body.
+    Its placeholders, in the text's offsets.
+
+  - `get ProseText.frame: FramePart[]`<br>
+    The markup in the string around the body, computed from its characters: `task` (a checkbox),
+    `heading` and `close` (an ATX heading's `#`s), `callout` (`[!type]` and its fold), `underline`
+    (a setext heading's), `below` (the line breaks before an item's text that starts below its
+    marker).
+
+  - `get ProseText.body: string`<br>
+    The string without its frame: what the user edits, and what the draft's check compares.
+
+  - `get ProseText.task`, `get ProseText.heading`, `get ProseText.callout`, `get ProseText.empty`<br>
+    The checkbox's status; the heading's level and form; the callout's type and fold; whether the
+    text holds nothing but Markdown's whitespace (a no-break space counts as text).
+
+  - `ProseText.textStart(line: number): number`<br>
+    The first offset on a line past the frame.
+
+  - `ProseText.splice(from, to, insert?)`, `ProseText.slice(from?, to?)`, `ProseText.concat(...others)`<br>
+    New texts, with the placeholders carried along.
+
+  - `ProseText.asItem(item: boolean)`, `ProseText.normalize()`<br>
+    The same string read as an item's text or not. The text after an edit, reread as what it now
+    is: a heading that no longer reads as one becomes a paragraph, and so does a title that no
+    longer reads as a callout.
+
+- **`AtomText`** is the text of an atom: code, math, a comment, HTML, a table, a definition, a
+  thematic break, an extension's block (and code that is an item's text): its lines as written,
+  without their containers' prefixes, with its placeholders. Immutable.
+
+  - `new AtomText(type: string, item: boolean, text: string, marks?: MarkSet)`
+
+  - `AtomText.type`, `AtomText.item`, `AtomText.text`, `AtomText.marks`<br>
+    The parser's block type (for code, `fenced_code` or `indented_code`); whether it is an item's;
+    the string; its placeholders.
+
+  - `get AtomText.frame: AtomFramePart[]`<br>
+    Computed from the characters: `open`, `info` and `close` (a fence's, `$$`, `%%`), `indent`
+    (indented code's columns), `label` (a footnote's), `rule`.
+
+  - `get AtomText.body`, `get AtomText.fence`, `get AtomText.info`, `get AtomText.delimiters`, `get AtomText.closed`<br>
+    The content without the frame; the fence's run (or `$$`, `%%`); the fence's info string; where
+    the opening and closing runs are; whether it is closed.
+
+  - `AtomText.delimiterLine(k: number): boolean`, `AtomText.splice(from, to, insert?)`<br>
+    Whether line `k` is a delimiter line; a new text.
+
+- **`outlineChildren(flat: FlatChild[], paragraphsOwnLists: boolean): OutlineChild[]`**<br>
+  Nests a container's children the way the outline has them, from the flat sequence Markdown lays
+  them out in. A heading owns what follows it, up to the next heading of its level or higher. With
+  `paragraphsOwnLists` (true at the root), a paragraph owns the items of a list right after it.
+  Both reading a document and the draft's `done()` nest with it.
+
+- **`escapeParagraph(flavor, type, item, lines, held): MdEscapedParagraph | null`**<br>
+  The parser's `MdFlavor.escapeParagraph`, for a node's text. It passes the parser what it can't
+  know on its own: the text's type and frame, the lines a placeholder holds (`held`), and leaving
+  out a setext underline.
+
+Files:
+
+- `index.ts` (the API); `doc.ts` (`OurusDoc`); `outline.ts` (`OutlineNodePersistent`, and reading the
+  outline from the parse, sharing nodes between snapshots); `node.ts` (`OutlineNode`); `text.ts`
+  (`ProseText`, `AtomText`).
+- `read.ts` (a node's text read from its lines, with its markup escapes left out, and the map
+  between the text's offsets and the document's); `escapes.ts` (`markupEscapes` for reading,
+  `escapeParagraph` for writing); `locate.ts` (what is at a position); `rules.ts` (which node kinds
+  hold which, `outlineChildren`); `placeholders.ts` (which placeholders still hold something);
+  `copy.ts` (a range's Markdown without its containers' prefixes).
+
+Tests, in `test/doc/`: `doc.test.ts` (placeholders, updates), `outline.test.ts` (an update's outline
+equals a fresh parse's), `text.test.ts`, `locate.test.ts`, `escapes.test.ts`; and
+`test/placeholders.test.ts` (the placeholders' lifecycle).

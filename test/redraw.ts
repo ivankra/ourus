@@ -7,20 +7,18 @@
 //   node test/redraw.ts enter.md --apply         # and rewrite their buffer blocks and result keys
 //
 // A case plays in every flavor it runs in; where the flavors come out differently, or a step fails to
-// encode, or the text has no final line break (which a buffer can't draw), it is reported and left as
+// write, or the text has no final line break (which a buffer can't draw), it is reported and left as
 // it is. Pending cases are left out. Blocks are rewritten from the bottom of each file up, so a
 // rewritten block never moves one still to write.
 
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { Config } from '../src/config.ts';
-import { OutlineState } from '../src/outline/index.ts';
-import { drawState, readDrawing } from './drawing.ts';
-import { isAction, play, type Played } from './player.ts';
-import { flavorsOf, normalize, outcome, readClipboard } from './spec-run.ts';
-import { readSpec, slug, specConfig, type SpecTest } from './specfile.ts';
+import { drawDoc } from './drawing.ts';
+import { isAction, play } from './player.ts';
+import { flavorsOf, normalize, outcome, startOf } from './spec-run.ts';
+import { readSpecFile, slug, specFiles, SPEC_DIR, type SpecTest } from './specfile.ts';
 
-const specDir = join(resolve(import.meta.dirname, '..'), 'spec');
 const args = process.argv.slice(2);
 const apply = args.includes('--apply');
 const selectors = args.filter((a) => !a.startsWith('--'));
@@ -52,32 +50,27 @@ interface Redrawn {
 
 /** Each step's buffer and result as ourus has them now, in `flavor`; a string says why it can't be drawn. */
 function played(t: SpecTest, flavor: Config['flavor']): { buffer: string; result: string }[] | string {
-  const start = readDrawing(t.initial.buffer);
-  let state: Played = {
-    doc: OutlineState.parse(start.text, { placeholders: start.placeholders, config: { flavor, ...specConfig(t.options) } }),
-    selection: start.selection,
-    clipboard: readClipboard(t.initial.clipboard),
-  };
+  let state = startOf(t, flavor);
   const out: { buffer: string; result: string }[] = [];
   for (const [k, step] of t.steps.entries()) {
     const unknown = step.actions.filter((a) => !isAction(a));
     if (unknown.length) return `step ${k + 1}: unknown actions ${unknown.join(' ')}`;
     for (const action of step.actions) {
       state = play(state, [action]);
-      if (state.last?.status === 'rejected' && state.last.reason === 'encoding-failed') return `step ${k + 1}: ${action} fails to encode${state.last.detail ? `: ${state.last.detail}` : ''}`;
+      if (state.last?.status === 'rejected' && state.last.reason === 'write-failed') return `step ${k + 1}: ${action} fails to write${state.last.detail ? `: ${state.last.detail}` : ''}`;
     }
     if (state.doc.text !== '' && !/[\r\n]$/.test(state.doc.text)) return `step ${k + 1}: no final line break, which a buffer can't draw`;
-    out.push({ buffer: normalize(drawState(state.doc.text, state.selection, state.doc.placeholders)), result: outcome(state) });
+    out.push({ buffer: normalize(drawDoc(state.doc, state.selection)), result: outcome(state) });
   }
   return out;
 }
 
-const files = readdirSync(specDir).filter((f) => f.endsWith('.md') && f !== 'README.md').sort();
+const files = specFiles();
 const redrawn: Redrawn[] = [];
 const unredrawable: string[] = [];
 let checked = 0;
 for (const file of files) {
-  for (const t of readSpec(file, readFileSync(join(specDir, file), 'utf8'))) {
+  for (const t of readSpecFile(file)) {
     if (t.pending || (selectors.length && !selectors.some((s) => picks(s, t)))) continue;
     checked++;
     const runs = flavorsOf(t).map((flavor) => ({ flavor, steps: played(t, flavor) }));
@@ -117,7 +110,7 @@ console.log(`\n${checked} cases checked: ${cases} drawn otherwise than ourus doe
 
 if (apply && redrawn.length) {
   for (const file of new Set(redrawn.map((r) => r.t.file))) {
-    const path = join(specDir, file);
+    const path = join(SPEC_DIR, file);
     const lines = readFileSync(path, 'utf8').split('\n');
     // bottom up: a block rewritten changes the lines after it, never those before
     const edits = redrawn.filter((r) => r.t.file === file).sort((a, b) => b.t.steps[b.step]!.line - a.t.steps[a.step]!.line || (a.kind === 'buffer' ? -1 : 1));

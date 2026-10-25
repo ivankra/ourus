@@ -1,10 +1,12 @@
 # Placeholders
 
 Some empty nodes have no Markdown of their own: an empty item right under an item's or a paragraph's
-text (`- a` / `  - ` and `para` / `- ` read as setext headings), an empty paragraph, an empty line
-inside a node's text. While the
+text (`- a` / `  - ` and `para` / `- ` read as setext headings), an empty paragraph. While the
 caret is in one, the document reads its line as if a character had been typed at its end, so the
-node exists in the outline: that line end is a **placeholder**, drawn `◌`.
+node exists in the outline: that line end is a **placeholder**, drawn `◌`. An empty line at the end
+of a node's text (Shift-Enter there) is no node and needs none: it is a blank line after the text, the
+caret on it at the text's column, where what is typed continues the text; left empty, it stays a blank
+line.
 
 A placeholder can also stand in a deleted character's place. Deleting the first character of a
 line's text can leave the space after it at the text's start: right after an item's marker (`-  b`),
@@ -26,7 +28,7 @@ Only the editor makes a placeholder, and the document keeps it (each editor view
 - **Leaving it**, the node stays when the text can hold it some other way: an empty item gets a
   blank line above it (`- a` / blank / `  - `), and a deleted character's place gives up its surplus
   space (`- b`), the text escaped where it would start a block there (`- \``` x`). A node no text
-  can hold, an empty paragraph or an empty line inside a node's text, goes. Either way it is one
+  can hold, an empty paragraph, goes. Either way it is one
   edit, verified, part of the undo step before it, which made the empty node: one undo takes both
   back ([Undo3](undo.md#undo3)).
 - **Undo and redo** bring it back with the rest: the host keeps the document, placeholders included,
@@ -183,7 +185,7 @@ para┃
 
 ```buffer
 para
-┃◌
+┃
 ```
 
 > cursorDocStart
@@ -192,6 +194,7 @@ An empty line inside a paragraph has no Markdown: it goes.
 
 ```buffer
 ┃para
+
 ```
 
 ## Placeholder5

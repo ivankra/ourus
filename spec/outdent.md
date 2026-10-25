@@ -430,6 +430,7 @@ b┃
 
 ```buffer
 para
+
 - b┃
 ```
 
@@ -911,6 +912,7 @@ under `| a | b |` would make the two a table, so the item made a paragraph escap
 
 ```yaml
 tags: rare free-form
+flavor: gfm
 ```
 
 ```buffer
@@ -924,7 +926,7 @@ tags: rare free-form
 ```buffer
 t1┃
 | a | b |
-\|---|---|
+|\---|---|
 ```
 
 ## Outdent20b
@@ -945,4 +947,25 @@ tags: rare free-form
 ```buffer
 t1┃
 \===
+```
+
+## Outdent21
+
+Every child of an item with no text of its own (`- - b`) outdented: the item would hold
+nothing, so it goes, its children in its place.
+
+```yaml
+tags: edge
+```
+
+```buffer
+- a
+- - ┃b
+```
+
+> outdent
+
+```buffer
+- a
+- ┃b
 ```

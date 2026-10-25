@@ -497,6 +497,7 @@ b┃
 
 ```buffer
 intro
+
 + b┃
 ```
 
@@ -580,6 +581,7 @@ para b┃
 
 ```buffer
 para a
+
 - para b┃
 ```
 

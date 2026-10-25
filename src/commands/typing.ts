@@ -1,244 +1,249 @@
-// Typing: characters a plain text box types as they are, where Markdown reads them as structure. A
-// code fence's characters, the backtick and the tilde: a fence typed alone takes in everything after
-// it, to the end of its container, and an opening fence lengthened alone leaves its block unclosed.
+// Typing (spec/typing.md, spec/backtick.md): a character is the host's, but a
+// backtick or a tilde where it opens, closes or changes a code fence. The command says what the text
+// becomes; `done()` keeps a fence's runs past the code, or refuses what would unmake the block.
 
-import type { OutlineNode } from '../outline/index.ts';
-import type { Block, InlineNode, LineInfo } from '../parser/index.ts';
-import { isSpaceOrTab, mapPos, type ChangeSpec } from '../text.ts';
-import { OutlinePlan, type OutlinePlanNode } from '../encoder/index.ts';
-import { CommandContext, isClosingFence, normText } from './context.ts';
-import { notApplicable, reject, type CommandPlan, type Outcome } from './plan.ts';
-import { closedFence, codeEdit, fenceRefusal, fenceRun, fencesOfLength } from './code.ts';
+import { ProseText, AtomText, type OutlineNode } from '../doc/index.ts';
+import { composeChanges, lineOf, type ChangeSpec } from '../text/index.ts';
+import { CommandContext, notApplicable, reject, type CommandOutcome } from './context.ts';
+import { codeAt, type CodeAt } from './code.ts';
+import { textEnd, textStart } from './util.ts';
 
 /**
- * Typed text (`insertText`), a key's worth: ourus's where Markdown reads it as structure, else the
- * host's. So far, a code fence's characters, a backtick and a tilde; typed over a selection, any
- * character, where it would take part of a fence's run.
+ * Typed text (`insertText`), a key's worth: a backtick or a tilde on a fence, on a code line, or
+ * making its line open a fence; with `closeBackticks: all`, a backtick in text pairs, steps over a
+ * closing run, or wraps a selection in code; any other character the host's. Null where ourus
+ * doesn't do it yet: several characters with a backtick over a selection, a fence's character in a
+ * container's prefix or a marker.
  */
-export function insertText(ctx: CommandContext, text: string): Outcome {
+export function insertTextCommand(ctx: CommandContext, typed: string): CommandOutcome {
+  const fenceChar = /[`~]/.test(typed);
   if (!ctx.collapsed) {
-    const broken = overFence(ctx);
-    if (broken) return broken;
+    // over part of a closed block's fence run, any character breaks the fence (rule 5)
+    if (overFence(ctx)) return breaksFence(ctx, 'the fence would break');
+    // over a selection in one line of text, the host's but for a backtick wrapping it in code
+    if (ctx.config.closeBackticks !== 'all' || !typed.includes('`') || ctx.doc.lineAt(ctx.selection.anchor).index !== ctx.doc.lineAt(ctx.selection.head).index) return notApplicable();
+    return typed === '`' ? wrapInCode(ctx) : null;
   }
-  return text === '`' || text === '~' ? fenceKey(ctx, text) : notApplicable;
+  if ([...typed].length > 1) return fenceChar ? typedOneByOne(ctx, typed) : notApplicable();
+  if (typed !== '`' && typed !== '~') return notApplicable();
+  // in a container's prefix or a marker (before a fence's indentation): not done yet
+  if (ctx.from.zone === 'prefix' || ctx.from.zone === 'marker') return null;
+  const code = codeAt(ctx);
+  if (code) return code.text.type === 'fenced_code' ? fenceCharInCode(ctx, code, typed) : notApplicable();
+  // (`closeBackticks: all`, inside an empty pair: the backtick steps over its closing one, before it
+  // could make a fence of the two and itself)
+  if (ctx.config.closeBackticks === 'all' && typed === '`' && inEmptyPair(ctx)) return inlinePair(ctx);
+  const opened = openFence(ctx, typed);
+  if (opened !== undefined) return opened;
+  return ctx.config.closeBackticks === 'all' && typed === '`' ? inlinePair(ctx) : notApplicable();
 }
 
 /**
- * Typing over a selection that takes part of a closed block's fence (some of its run, or the whole
- * line, but not the block with it): the fence would break, and the block take in what follows
- * (`fenceRefusal`). Null where the selection takes no fence, or whole blocks.
+ * Several characters typed at once (a text replacement's), a fence's among them: played a character
+ * at a time, as keys type them, the host's typing each other one; one edit. The host's where it types
+ * them all.
  */
-function overFence(ctx: CommandContext): Outcome | null {
-  const { doc } = ctx;
-  const { from, to } = ctx;
-  for (let index = doc.lineAt(from).index; index <= doc.lineAt(to).index; index++) {
-    const line = doc.lines[index]!;
-    const block = line.leaf;
-    if (block?.type !== 'code_block' || !closedFence(ctx, block) || (index !== block.startLine && index !== block.endLine)) continue;
-    const run = fenceRun(doc.text, line);
-    if (from >= run.to || to <= run.from) continue;
-    const whole = from <= doc.lines[block.startLine]!.from && to >= doc.lines[block.endLine]!.to;
-    if (!whole) return fenceRefusal(ctx, 'the fence would break');
-  }
-  return null;
-}
-
-/**
- * A backtick or a tilde, by where it is typed: on a fence line, on a code line, where it makes its
- * line open a fence, and (`closeBackticks: all`, backticks) in text.
- */
-function fenceKey(ctx: CommandContext, char: '`' | '~'): Outcome {
-  const { doc } = ctx;
-  const mode = doc.config.closeBackticks;
-  if (!ctx.collapsed) return mode === 'all' && char === '`' ? wrapInCode(ctx) : notApplicable;
-  const pos = ctx.sel.head;
-  const node = doc.nodeAt(pos);
-  if (!node) return notApplicable;
-  const line = doc.lineAt(pos);
-  const block = line.leaf;
-  if (block?.type === 'code_block' && block.fenced) {
-    return line.index === block.startLine || isClosingFence(ctx, line) ? onFence(ctx, node, line, pos, char) : onCodeLine(ctx, node, line, pos, char);
-  }
-  const typed = doc.update([{ from: pos, to: pos, insert: char }]);
-  const opened = typed.lines[line.index]!.leaf;
-  if (opened?.type === 'code_block' && opened.fenced && opened.startLine === line.index) return mode === 'none' ? notApplicable : closeFence(ctx, node, line, pos, typed.text, char);
-  return mode === 'all' && char === '`' ? inlinePair(ctx, node, line, pos) : notApplicable;
-}
-
-/**
- * On a fence line: in a fence's run of the typed character, or at either end of it, the run grows,
- * and the block's other fence with it (an unclosed block's fence alone is the host's); elsewhere on
- * the line, the host's where the fence stays one (a backtick in a tilde fence's info string), else
- * refused (a backtick fence's info string can't hold one, nor a closing fence text after it:
- * `fenceRefusal`).
- */
-function onFence(ctx: CommandContext, node: OutlineNode, line: LineInfo, pos: number, char: '`' | '~'): Outcome {
-  const block = line.leaf!;
-  const run = fenceRun(ctx.doc.text, line);
-  if (block.fenceChar === char && pos >= run.from && pos <= run.to) {
-    if (!closedFence(ctx, block)) return notApplicable;
-    const changes = fencesOfLength(ctx, block, run.to - run.from + 1);
-    return codeEdit(ctx, node, changes, mapPos(changes, run.from, -1) + (pos - run.from) + 1, 'the fences would no longer match');
-  }
-  // the block must still end where it did: at the document's end, an unclosed block reads as the same outline
-  const refused = fenceRefusal(ctx, `a ${char === '`' ? 'backtick' : 'tilde'} here would break the fence`);
-  const now = ctx.doc.update([{ from: pos, to: pos, insert: char }]).lines[block.startLine]!.leaf;
-  if (now?.type !== 'code_block' || !now.fenced || now.closed !== block.closed || now.endLine !== block.endLine) return refused;
-  const kept = codeEdit(ctx, node, [{ from: pos, to: pos, insert: char }], pos + 1);
-  return 'status' in kept ? refused : notApplicable;
-}
-
-/**
- * On a code line a backtick or a tilde is code, the host's, unless it would close the block there (a
- * run of the fence's character as long as the opening fence, alone on its line). An unclosed block it
- * closes, the host's too. Right above the closing fence it is that fence typed again, as a text
- * editor's user does: it takes the old one's place, the caret after it. Anywhere else both fences
- * grow past it, so it stays code.
- */
-function onCodeLine(ctx: CommandContext, node: OutlineNode, line: LineInfo, pos: number, char: '`' | '~'): Outcome {
-  const { doc } = ctx;
-  const block = line.leaf!;
-  const typed = doc.update([{ from: pos, to: pos, insert: char }]);
-  const now = typed.lines[block.startLine]!.leaf;
-  if (now?.type !== 'code_block' || !now.closed || now.endLine !== line.index || !closedFence(ctx, block)) return notApplicable;
-  const run = fenceRun(typed.text, typed.lines[line.index]!, char);
-  if (block.endLine === line.index + 1) {
-    const closing = doc.lines[block.endLine]!;
-    return codeEdit(ctx, node, [{ from: pos, to: pos, insert: char }, { from: line.to, to: closing.to, insert: '' }], run.to, 'the fence would break');
-  }
-  const changes = [...fencesOfLength(ctx, block, run.to - run.from + 1), { from: pos, to: pos, insert: char }];
-  return codeEdit(ctx, node, changes, mapPos(changes, pos, 1), 'the fences would no longer match');
-}
-
-/**
- * A backtick or a tilde that makes its line open a fenced block (the third at a paragraph's or an
- * item's text start): the closing fence, as long, goes on the line below in the line's containers, so
- * the block takes in nothing after it, and the rest of the line is its info string. The caret goes
- * after the opening run, where the info string is typed. What the line was part of splits around the
- * block: lines of its paragraph above stay that paragraph, those below are one of their own, and its
- * list follows them. `typed` is the text with the character typed.
- */
-function closeFence(ctx: CommandContext, node: OutlineNode, line: LineInfo, pos: number, typed: string, char: '`' | '~'): Outcome {
-  const { doc } = ctx;
-  const run = fenceRun(typed, { ...line, to: line.to + 1 }, char);
-  const close = ctx.ending(line) + ctx.encoder.continuation(line.prefix) + char.repeat(run.to - run.from);
-  const changes: ChangeSpec[] = pos === line.to ? [{ from: pos, to: pos, insert: char + close }] : [{ from: pos, to: pos, insert: char }, { from: line.to, to: line.to, insert: close }];
-  const next = doc.update(changes);
-  const opened = next.lines[line.index]!.leaf;
-  const owner = next.nodeAtLine(line.index);
-  const expected = owner && opened?.closed && opened.endLine === line.index + 1 ? typedFence(ctx, node, line, next.nodeText(owner)) : null;
-  if (!expected || expected.differenceFrom(next, doc, 'tree') !== null) return reject('not-expressible', "the fence can't be closed below it");
-  return ctx.caret(changes, run.to, expected);
-}
-
-/**
- * The outline once line `line` of `node`'s text is a fenced block reading `code`: an item whose text
- * starts there has the block as its text; otherwise the lines above stay the node's text, and the
- * block, then the lines below as a paragraph, follow it (in an item or under a callout's title, as
- * its first children). Null for any other node (a setext title's line).
- */
-function typedFence(ctx: CommandContext, node: OutlineNode, line: LineInfo, code: string): OutlinePlan | null {
-  const { doc } = ctx;
-  if ((node.kind !== 'paragraph' && node.kind !== 'item' && node.kind !== 'quote') || node.head?.type !== 'paragraph') return null;
-  const lines = doc.headLines(node);
-  const k = line.index - node.head.startLine;
-  if (k < 0 || k >= lines.length) return null;
-  const before = lines.slice(0, k);
-  const after = lines.slice(k + 1);
-  const rest = after.length ? [OutlinePlan.created('paragraph', normText(after))] : [];
-  if (node.kind === 'item' && k === 0) return ctx.plan.update(node, (n) => ({ ...n, blockType: 'code_block', text: code, children: [...rest, ...n.children] }));
-  const block: OutlinePlanNode = { ...OutlinePlan.created('atom', code), blockType: 'code_block' };
-  if (node.kind !== 'paragraph') return k === 0 ? null : ctx.plan.update(node, (n) => ({ ...n, text: normText(before), children: [block, ...rest, ...n.children] }));
-  const kept = before.length ? [{ ...OutlinePlan.editable(node), text: normText(before), children: [] }] : [];
-  return ctx.plan.place('instead', node, [...kept, block, ...rest, ...node.children]);
-}
-
-/**
- * A hand-written edit of one node's text, where the outline stays: the plan, with the caret at
- * `caret`; null where the edit would change the outline.
- */
-function inText(ctx: CommandContext, node: OutlineNode, changes: ChangeSpec[], caret: number): CommandPlan | null {
-  const plan = codeEdit(ctx, node, changes, caret);
-  return 'status' in plan ? null : plan;
-}
-
-/** Whether a line's leaf has inline text (a paragraph, a heading, a table row), where a code span can be. */
-const hasInlines = (ctx: CommandContext, leaf: Block | null): leaf is Block => !!leaf && ctx.doc.syntaxTree.inlineText(leaf) !== null;
-
-/**
- * `closeBackticks: all`, a backtick in text: typed right before the closing backtick of an empty pair,
- * or before any of the code span's closing run the caret is in, it steps over it; at a word boundary outside code, it is typed
- * as a pair, the caret between; anywhere else, the host's.
- */
-function inlinePair(ctx: CommandContext, node: OutlineNode, line: LineInfo, pos: number): Outcome {
-  const { doc } = ctx;
-  if (!hasInlines(ctx, line.leaf) || pos < doc.textStart(pos)) return notApplicable;
-  const text = doc.text;
-  const before = pos > doc.textStart(pos) ? text[pos - 1]! : '';
-  const after = pos < line.to ? text[pos]! : '';
-  const span = codeSpanAt(ctx, line.leaf, pos);
-  const emptyPair = before === '`' && after === '`' && text[pos - 2] !== '`' && text[pos + 1] !== '`';
-  if (after === '`' && (span ? pos >= span.closer && pos < span.end : emptyPair)) return ctx.caret([], pos + 1, ctx.plan);
-  if (span) return notApplicable;
-  const boundary = (c: string, punctuation: string): boolean => c === '' || isSpaceOrTab(c.charCodeAt(0)) || punctuation.includes(c);
-  if (!boundary(before, '([{<\'"') || !boundary(after, ')]}>,.;:!?\'"')) return notApplicable;
-  return inText(ctx, node, [{ from: pos, to: pos, insert: '``' }], pos + 1) ?? notApplicable;
-}
-
-/** The code span `pos` is inside (past its first backtick), with where its closing run starts and ends; null outside one. */
-function codeSpanAt(ctx: CommandContext, leaf: Block, pos: number): { closer: number; end: number } | null {
-  const { syntaxTree } = ctx.doc;
-  const inline = syntaxTree.inlineText(leaf)!;
-  const at = inline.textAt(pos);
-  if (at < 0) return null;
-  const find = (nodes: readonly InlineNode[]): InlineNode | null => {
-    for (const n of nodes) {
-      if (n.type === 'code' && n.from < at && at < n.to) return n;
-      const inner = n.children && n.from < at && at < n.to ? find(n.children) : null;
-      if (inner) return inner;
+function typedOneByOne(ctx: CommandContext, typed: string): CommandOutcome {
+  let doc = ctx.doc;
+  let selection = ctx.selection;
+  let changes: readonly ChangeSpec[] = [];
+  let ours = false;
+  for (const char of typed) {
+    const next = new CommandContext(doc, selection);
+    const result = insertTextCommand(next, char);
+    if (!result) return null;
+    if (result.status === 'rejected') return result;
+    const step: readonly ChangeSpec[] = result.status === 'applied' ? result.changes : [{ from: selection.head, to: selection.head, insert: char }];
+    if (result.status === 'applied') {
+      ours = true;
+      doc = result.doc;
+      selection = result.selection;
+    } else {
+      doc = doc.update(step);
+      selection = { anchor: selection.head + char.length, head: selection.head + char.length };
     }
-    return null;
-  };
-  const span = find(syntaxTree.inlines(leaf));
-  if (!span) return null;
-  let closer = span.to;
-  while (closer > span.from && inline.text[closer - 1] === '`') closer--;
-  return { closer: inline.sourceAt(closer), end: inline.sourceAt(span.to) };
+    changes = composeChanges(ctx.doc.text, changes, step);
+  }
+  if (!ours) return notApplicable();
+  return { status: 'applied', doc, changes, selection };
+}
+
+/** Where a backtick may pair: next to nothing, a space or a tab, or the punctuation that opens (`before`) or closes (`after`) a phrase. */
+const atBoundary = (c: string, punctuation: string): boolean => c === '' || c === ' ' || c === '\t' || punctuation.includes(c);
+
+/** Whether the caret is between the two backticks of an empty pair in a text (`` `┃` ``). */
+function inEmptyPair(ctx: CommandContext): boolean {
+  const at = ctx.from;
+  if (at.zone !== 'text' || !(at.text instanceof ProseText)) return false;
+  const s = at.text.text;
+  return s[at.offset - 1] === '`' && s[at.offset] === '`' && s[at.offset - 2] !== '`' && s[at.offset + 1] !== '`';
 }
 
 /**
- * `closeBackticks: all`, a backtick over a selection within one line of a node's text: the selection
+ * `closeBackticks: all`, a backtick in text: right before the closing backtick of an empty pair, or
+ * before any of the closing run of the code span the caret is in, it steps over it; at a word boundary
+ * outside code, it is typed as a pair, the caret between; anywhere else, the host's.
+ */
+function inlinePair(ctx: CommandContext): CommandOutcome {
+  const at = ctx.from;
+  if (at.zone !== 'text' || !(at.text instanceof ProseText)) return notApplicable();
+  const { node, text, offset } = at;
+  const s = text.text;
+  const pos = ctx.selection.head;
+  const lineFrom = s.lastIndexOf('\n', offset - 1) + 1;
+  const lineTo = s.indexOf('\n', offset) < 0 ? s.length : s.indexOf('\n', offset);
+  if (offset < text.textStart(lineOf(s, offset))) return notApplicable();
+  const before = offset > lineFrom ? s[offset - 1]! : '';
+  const after = offset < lineTo ? s[offset]! : '';
+  const span = ctx.doc.codeSpanAt(pos);
+  const emptyPair = before === '`' && after === '`' && s[offset - 2] !== '`' && s[offset + 1] !== '`';
+  const draft = ctx.draft();
+  if (after === '`' && (span ? pos >= span.closer && pos < span.to : emptyPair)) return ctx.apply(draft.setCaret(node, offset + 1, 1));
+  if (span || !atBoundary(before, '([{<\'"') || !atBoundary(after, ')]}>,.;:!?\'"')) return notApplicable();
+  return ctx.apply(draft.setText(node, text.splice(offset, offset, '``')).setCaret(node, offset + 1, -1));
+}
+
+/**
+ * `closeBackticks: all`, Backspace between the two backticks of an empty pair in a text: both go, as
+ * they came (Backtick20). Null anywhere else.
+ */
+export function deleteEmptyPair(ctx: CommandContext, node: OutlineNode, text: ProseText, offset: number): CommandOutcome {
+  const s = text.text;
+  if (ctx.config.closeBackticks !== 'all' || s[offset - 1] !== '`' || s[offset] !== '`' || s[offset - 2] === '`' || s[offset + 1] === '`') return null;
+  if (offset - 1 < text.textStart(lineOf(s, offset))) return null;
+  return ctx.apply(ctx.draft().setText(node, text.splice(offset - 1, offset + 1)).setCaret(node, offset - 1, -1));
+}
+
+
+/**
+ * `closeBackticks: all`, a backtick over a selection in one line of a node's text: the selection
  * becomes code, with a run longer than any inside it on each side (and a space inside where it starts
  * or ends with a backtick), and stays selected.
  */
-function wrapInCode(ctx: CommandContext): Outcome {
-  const { doc } = ctx;
-  const { from, to } = ctx;
-  const line = doc.lineAt(from);
-  const node = doc.nodeAt(from);
-  if (!node || to > line.to || !hasInlines(ctx, line.leaf) || from < doc.textStart(from)) return notApplicable;
-  const selected = doc.text.slice(from, to);
+function wrapInCode(ctx: CommandContext): CommandOutcome {
+  const [a, b] = [ctx.from, ctx.to];
+  if (a.zone !== 'text' || b.zone !== 'text' || !(a.text instanceof ProseText) || a.node.persistentNode !== b.node.persistentNode) return notApplicable();
+  const text = a.text;
+  if (a.offset < text.textStart(lineOf(text.text, a.offset))) return notApplicable();
+  const selected = text.text.slice(a.offset, b.offset);
   const fence = '`'.repeat(Math.max(0, ...(selected.match(/`+/g) ?? []).map((r) => r.length)) + 1);
   const pad = selected.startsWith('`') || selected.endsWith('`') ? ' ' : '';
   const open = fence + pad;
-  const plan = inText(ctx, node, [{ from, to: from, insert: open }, { from: to, to, insert: pad + fence }], to + open.length);
-  if (!plan) return notApplicable;
-  const shift = (p: number): number => p + open.length;
-  return { ...plan, selection: { anchor: shift(ctx.sel.anchor), head: shift(ctx.sel.head) } };
+  const wrapped = text.splice(b.offset, b.offset, pad + fence).splice(a.offset, a.offset, open);
+  const forward = ctx.selection.anchor <= ctx.selection.head;
+  const [from, to] = [{ ref: a.node, offset: a.offset + open.length, assoc: 1 as const }, { ref: a.node, offset: b.offset + open.length, assoc: -1 as const }];
+  return ctx.apply(ctx.draft().setText(a.node, wrapped).select(forward ? from : to, forward ? to : from));
+}
+
+/** An edit that would break a fence, which ourus doesn't make: refused where markup is decorated, the host's where it is text. */
+function breaksFence(ctx: CommandContext, detail: string): CommandOutcome {
+  return ctx.config.markup === 'text' ? notApplicable(detail) : reject('not-expressible', detail);
+}
+
+/** Whether the selection takes part of a closed fenced block's run, but not the whole block. */
+function overFence(ctx: CommandContext): boolean {
+  const ends = [ctx.from, ctx.to] as const;
+  return ends.some((at, k) => {
+    if ((at.zone !== 'text' && at.zone !== 'frame') || !(at.text instanceof AtomText) || at.text.type !== 'fenced_code') return false;
+    const runs = at.text.delimiters;
+    if (!runs?.close) return false;
+    // what of this block's text the selection takes: from its start, or to its end, where the other end is outside it
+    const other = ends[1 - k]!;
+    const same = (other.zone === 'text' || other.zone === 'frame') && other.node.persistentNode === at.node.persistentNode;
+    const [from, to] = same ? [(ctx.from as { offset: number }).offset, (ctx.to as { offset: number }).offset] : k === 0 ? [at.offset, at.text.text.length] : [0, at.offset];
+    // (the whole block, its fences with it, breaks none)
+    if (from === 0 && to === at.text.text.length) return false;
+    return [runs.open, runs.close].some((r) => from < r.to && to > r.from);
+  });
 }
 
 /**
- * `closeBackticks: all`, Backspace between the two backticks of an empty pair in text: both go, as
- * they came. Null anywhere else.
+ * A backtick or a tilde in fenced code (rules 1–3 of backtick.md):
+ * - in a run of its character, or at either end of it, the run grows, and the other fence with it, so
+ *   the two match; an unclosed block's fence is the host's;
+ * - elsewhere on a fence's line, the host's where the fence stays one, else refused where markup is
+ *   decorated (a backtick in a backtick fence's info string, text after a closing fence), the host's
+ *   where it is text;
+ * - on a code line, the host's where it stays code; where it would close the block, right above the
+ *   closing fence it is that fence typed again (the old one goes, the caret after it), elsewhere the
+ *   fences grow past it (`done()`).
  */
-export function deleteEmptyPair(ctx: CommandContext): Outcome | null {
-  const { doc } = ctx;
-  if (doc.config.closeBackticks !== 'all' || !ctx.collapsed) return null;
-  const pos = ctx.sel.head;
-  const text = doc.text;
-  if (text[pos - 1] !== '`' || text[pos] !== '`' || text[pos - 2] === '`' || text[pos + 1] === '`') return null;
-  const node = doc.nodeAt(pos);
-  const line = doc.lineAt(pos);
-  if (!node || !hasInlines(ctx, line.leaf) || pos - 1 < doc.textStart(pos)) return null;
-  return inText(ctx, node, [{ from: pos - 1, to: pos + 1, insert: '' }], pos - 1);
+function fenceCharInCode(ctx: CommandContext, at: CodeAt, char: string): CommandOutcome {
+  const { node, text, offset } = at;
+  const runs = text.delimiters;
+  if (!runs) return notApplicable();
+  const s = text.text;
+  const draft = ctx.draft();
+  const lineFrom = s.lastIndexOf('\n', offset - 1) + 1;
+  const lineTo = s.indexOf('\n', offset) < 0 ? s.length : s.indexOf('\n', offset);
+  const onOpen = runs.open.from >= lineFrom && runs.open.from <= lineTo;
+  const onClose = !!runs.close && runs.close.from >= lineFrom && runs.close.from <= lineTo;
+  if (onOpen || onClose) {
+    const run = onOpen ? runs.open : runs.close!;
+    if (s[run.from] === char && offset >= run.from && offset <= run.to) {
+      if (!runs.close) return notApplicable('an unclosed block\'s fence: the host\'s');
+      const grown = text.splice(runs.close.to, runs.close.to, char).splice(runs.open.to, runs.open.to, char);
+      // where markup is decorated, not in the fence: from the closing one at the code's end, from inside
+      // the opening one at its start (after it, the info string, is text)
+      let caret = offset + (onOpen ? 1 : 2);
+      if (ctx.config.markup === 'decorated' && (onClose || caret <= runs.open.to)) caret = onClose ? textEnd(grown) : textStart(grown);
+      return ctx.apply(draft.setText(node, grown).setCaret(node, caret, -1));
+    }
+    // the host's where the fence stays one, closed as it was
+    const spliced = text.splice(offset, offset, char);
+    if (ctx.doc.readsAs(spliced) && spliced.closed === text.closed) return notApplicable();
+    return breaksFence(ctx, `a ${char === '`' ? 'backtick' : 'tilde'} here would break the fence`);
+  }
+  const typed = text.splice(offset, offset, char);
+  if (ctx.doc.readsAs(typed) || !runs.close) return notApplicable();
+  // right above the closing fence: the fence typed again, which takes the old one's place
+  if (s.lastIndexOf('\n') === lineTo) {
+    const retyped = typed.splice(lineTo + 1, s.length + 1);
+    const close = retyped.delimiters?.close;
+    // the caret after it, but where markup is decorated: at the code's end
+    if (close && ctx.doc.readsAs(retyped)) return ctx.apply(draft.setText(node, retyped).setCaret(node, ctx.config.markup === 'decorated' ? textEnd(retyped) : close.to, -1));
+  }
+  return ctx.apply(draft.setText(node, typed).setCaret(node, offset + 1, -1));
+}
+
+/**
+ * A backtick or a tilde that makes its line of a paragraph's or an item's text open a fence (the
+ * third at its start): a code block on that line, closed by a fence as long on the line below, so it
+ * takes in nothing after it; the rest of the line its info string, the caret after the opening run.
+ * The lines above stay the node's text; those below are a paragraph of their own, its children
+ * following them (an item's: its first child, as the block is, where the item keeps text above it).
+ * With `closeBackticks: none`, the host's. Undefined where the line opens no fence.
+ */
+function openFence(ctx: CommandContext, char: string): CommandOutcome | undefined {
+  const at = ctx.from;
+  if (at.zone !== 'text' || !(at.text instanceof ProseText) || at.text.type !== 'paragraph' || at.text.frame.length) return undefined;
+  const { node, text, offset } = at;
+  if (node.kind !== 'paragraph' && node.kind !== 'item') return undefined;
+  // a held space keeps its line from reading as a fence: not done yet
+  const s = text.text;
+  const lineFrom = s.lastIndexOf('\n', offset - 1) + 1;
+  const lineTo = s.indexOf('\n', offset) < 0 ? s.length : s.indexOf('\n', offset);
+  const line = s.slice(lineFrom, offset) + char + s.slice(offset, lineTo);
+  // the line read as a fence's opening: the typed character in its run, closed by a run as long below it
+  const run = new AtomText('fenced_code', false, line).delimiters?.open;
+  if (!run || line[run.from] !== char || offset - lineFrom > run.to - 1) return undefined;
+  const code = new AtomText('fenced_code', node.kind === 'item' && lineFrom === 0, `${line}\n${line.slice(run.from, run.to)}`);
+  if (!ctx.doc.readsAs(code)) return undefined;
+  if (ctx.config.closeBackticks === 'none') return notApplicable();
+  const draft = ctx.draft();
+  const container = node.kind === 'item';
+  // the lines below, a paragraph of their own
+  if (lineTo < s.length) draft.split(node, lineTo, { to: lineTo + 1, kind: 'paragraph', children: container ? 'stay' : 'follow', into: container ? 'child' : 'sibling' });
+  let block: OutlineNode | number = node;
+  const last = lineTo >= s.length;
+  if (lineFrom > 0) {
+    // the lines above stay the node's text, the block after them
+    const [, rest] = draft.split(node, lineFrom - 1, { to: lineFrom, kind: 'paragraph', children: !container && last ? 'follow' : 'stay', into: container ? 'child' : 'sibling' });
+    block = rest;
+  }
+  if (block !== node || node.kind !== 'item') draft.convert(block, 'atom');
+  // a paragraph's list, where no lines below took it, after the block: an atom holds no children
+  if (!container && last && node.children.length) draft.remove(node.children).place('after', block, node.children);
+  draft.setText(block, code).setCaret(block, run.to, -1);
+  return ctx.apply(draft);
 }

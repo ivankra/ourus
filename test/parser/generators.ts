@@ -3,7 +3,7 @@
 // definitions, footnotes, callouts, frontmatter, math and comment blocks), and edits to them.
 
 import fc from 'fast-check';
-import type { ChangeSpec } from '../../src/text.ts';
+import type { ChangeSpec } from '../../src/text/index.ts';
 
 export interface Vocabulary {
   readonly prefixes: readonly string[];
@@ -23,7 +23,7 @@ export const BLOCKS: Vocabulary = {
   ],
 };
 
-/** InlineNode-heavy text. */
+/** Inline-heavy text. */
 export const INLINES: Vocabulary = {
   prefixes: ['', '', '> '],
   indents: ['', ''],

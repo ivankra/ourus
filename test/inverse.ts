@@ -13,9 +13,9 @@
 // Only pairs whose first command applied count: two no-ops would come back. Some groups are what the
 // spec decides (direct outdent hands the later siblings to the item, which indent then takes along;
 // a heading's section and setext to ATX are Markdown's; an indented paragraph under a paragraph loses
-// its blank line; the blank lines of decision 19's open reach, dev/15-spec.md); each group's count is
+// its blank line; a blank line a join or a move leaves where it no longer separates anything); each group's count is
 // held to a baseline (`inverse.baseline.json`) on the same corpus, so a new kind of round trip that
-// doesn't come back, or more of one, fails the run. An encoding failure or an exception on either
+// doesn't come back, or more of one, fails the run. A write failure or an exception on either
 // step always fails it.
 //
 //   node test/inverse.ts                     # the report, against the baseline
@@ -29,14 +29,14 @@
 // buffers' order, so the report is the same however many play it.
 
 import { createHash } from 'node:crypto';
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
-import { OutlineState } from '../src/outline/index.ts';
-import { drawState, readDrawing } from './drawing.ts';
+import { OurusDoc } from '../src/doc/index.ts';
+import { drawDoc, nodesOf, readDrawing } from './drawing.ts';
 import { play, type Played } from './player.ts';
-import { readSpec, specConfig } from './specfile.ts';
+import { readSpecFile, specConfig, specFiles } from './specfile.ts';
 import { flavorsOf } from './spec-run.ts';
 
 const here = resolve(import.meta.dirname, '..');
@@ -54,11 +54,10 @@ const examples = Number(process.env.INVERSE_EXAMPLES ?? 3);
 
 // every distinct start buffer, with its case's options, in its first flavor; the true-outliner
 // file's are another app's catalogue, and a start with placeholders is a middle state
-const specDir = join(here, 'spec');
 const starts: { text: string; config: Record<string, unknown>; name: string }[] = [];
 const seen = new Set<string>();
-for (const file of isMainThread ? readdirSync(specDir).filter((f) => f.endsWith('.md') && f !== 'README.md' && f !== 'obsidian-true-outliner.md').sort() : []) {
-  for (const t of readSpec(file, readFileSync(join(specDir, file), 'utf8'))) {
+for (const file of isMainThread ? specFiles().filter((f) => f !== 'obsidian-true-outliner.md') : []) {
+  for (const t of readSpecFile(file)) {
     const start = readDrawing(t.initial.buffer);
     if (start.placeholders.length) continue;
     const config = { ...specConfig(t.options), flavor: flavorsOf(t)[0] };
@@ -72,8 +71,8 @@ for (const file of isMainThread ? readdirSync(specDir).filter((f) => f.endsWith(
 const corpus = createHash('sha256').update(JSON.stringify(starts.map((s) => JSON.stringify([s.text, s.config])).sort())).digest('hex').slice(0, 16);
 
 const isBlank = (line: string): boolean => /^[ \t>]*$/.test(line);
-const outline = (doc: OutlineState): string => JSON.stringify(doc.nodes.map((n) => [n.depth, n.kind, n.head?.type ?? null]));
-function classify(start: OutlineState, end: Played, from: number): string {
+const outline = (doc: OurusDoc): string => JSON.stringify(nodesOf(doc).map((n) => [n.depth, n.kind, n.head?.type ?? null]));
+function classify(start: OurusDoc, end: Played, from: number): string {
   const [a, b] = [start.text, end.doc.text];
   if (a === b) return end.selection.head === from && end.selection.anchor === from ? 'same' : 'caret';
   if (outline(start) !== outline(end.doc)) return 'tree';
@@ -98,7 +97,7 @@ interface Found {
   dumped: string[];
 }
 const dumping = !!process.env.INVERSE_DUMP;
-const draw = (p: Played): string => JSON.stringify(drawState(p.doc.text, p.selection, p.doc.placeholders));
+const draw = (p: Played): string => JSON.stringify(drawDoc(p.doc, p.selection));
 
 /** Plays every pair at every caret position of the start buffers `share` names. */
 function playShare(share: readonly number[]): Found {
@@ -107,7 +106,7 @@ function playShare(share: readonly number[]): Found {
   const fail = (index: number, text: string): void => void found.failures.push({ at: index, buffer: '', text });
   for (const index of share) {
     const s = starts[index]!;
-    const doc = OutlineState.parse(s.text, { config: s.config });
+    const doc = OurusDoc.parse(s.text, { config: s.config });
     for (const [first, second] of PAIRS) {
       for (let pos = 0; pos <= s.text.length; pos++) {
         if (s.text[pos - 1] === '\r' && s.text[pos] === '\n') continue;
@@ -117,8 +116,8 @@ function playShare(share: readonly number[]): Found {
         let end: Played;
         try {
           mid = play(at, [first]);
-          if (mid.last?.status === 'rejected' && mid.last.reason === 'encoding-failed') {
-            fail(index, `${first} failed to encode: ${s.name} ${draw(at)}`);
+          if (mid.last?.status === 'rejected' && mid.last.reason === 'write-failed') {
+            fail(index, `${first} failed to write: ${s.name} ${draw(at)}`);
             continue;
           }
           if (mid.last?.status !== 'applied') continue;
@@ -128,8 +127,8 @@ function playShare(share: readonly number[]): Found {
           continue;
         }
         const last = end.last;
-        if (last?.status === 'rejected' && last.reason === 'encoding-failed') {
-          fail(index, `${second} after ${first} failed to encode: ${s.name} ${draw(at)} → ${draw(mid)}`);
+        if (last?.status === 'rejected' && last.reason === 'write-failed') {
+          fail(index, `${second} after ${first} failed to write: ${s.name} ${draw(at)} → ${draw(mid)}`);
           continue;
         }
         const shape = last?.status === 'applied' ? classify(doc, end, pos) : last?.status === 'rejected' ? `rejected ${last.reason}` : (last?.status ?? '-');

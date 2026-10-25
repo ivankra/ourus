@@ -9,7 +9,7 @@ belongs to an editor's own tests.
 
 Two rules here are ourus's, for hosts to follow: Home goes to the start of the line's text, past the
 containers' prefixes, a list marker, a task's checkbox, a heading's `#`s and a callout's `[!type]`
-(`OutlineState.homePosition`), then to the line's start; and Up or Down whose column falls in a
+(`OurusDoc.textStart`), then to the line's start; and Up or Down whose column falls in a
 line's markup lands at the start of its text (`textStart`). So these motions never leave the caret
 in a marker, a checkbox or a heading's `#`s, where typing would break them, as no command does.
 Obsidian's Outliner keeps the caret out of markers and checkboxes too ("stick the cursor to the

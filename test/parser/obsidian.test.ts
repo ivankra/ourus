@@ -3,21 +3,21 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { renderHtml } from '../../src/parser/html.ts';
 import { obsidian } from '../../src/parser/obsidian.ts';
-import { SyntaxTree } from '../../src/parser/syntax.ts';
-import type { Block, InlineNode } from '../../src/parser/types.ts';
+import { MdTree } from '../../src/parser/syntax.ts';
 
-const html = (md: string): string => renderHtml(SyntaxTree.parse(md, obsidian));
-const blocks = (md: string): string[] => SyntaxTree.parse(md, obsidian).root.children.map((b) => b.type);
+import type { MdBlockAt, MdInline } from '../../src/parser/types.ts';
+
+const html = (md: string): string => MdTree.parse(md, obsidian).renderHtml();
+const blocks = (md: string): string[] => MdTree.parse(md, obsidian).root.children.map((b) => b.type);
 
 /** The leaf's inlines as `type` (text nodes as their text), nested in brackets. */
 function inlines(md: string, leaf = 0): string {
-  const syntax = SyntaxTree.parse(md, obsidian);
-  let b: Block = syntax.root;
-  while (!syntax.inlineText(b) && b.children.length) b = b.children[leaf] ?? b.children[0]!;
+  const syntax = MdTree.parse(md, obsidian);
+  let b: MdBlockAt = syntax.rootAt;
+  while (!syntax.inlineText(b) && b.block.children.length) b = b.child(b.block.children[leaf] ? leaf : 0);
   const text = syntax.inlineText(b)!.text;
-  const show = (ns: readonly InlineNode[]): string =>
+  const show = (ns: readonly MdInline[]): string =>
     ns.map((n) => (n.type === 'text' ? JSON.stringify(text.slice(n.from, n.to)) : n.children ? `${n.type}[${show(n.children)}]` : n.type)).join(' ');
   return show(syntax.inlines(b));
 }
@@ -64,22 +64,22 @@ for (const [name, md, want] of cases) test(`obsidian: ${name}`, () => assert.equ
 
 test('obsidian: the tree of a note', () => {
   const md = '---\na: 1\n---\n> [!note]+ T\n> - [?] x ^b1\n';
-  const syntax = SyntaxTree.parse(md, obsidian);
+  const syntax = MdTree.parse(md, obsidian);
   assert.deepEqual(blocks(md), ['frontmatter', 'blockquote']);
   const quote = syntax.root.children[1]!;
-  assert.deepEqual(quote.callout, { kind: 'note', fold: '+' });
+  assert.deepEqual(quote.attrs.callout, { kind: 'note', fold: '+' });
   assert.deepEqual(quote.children.map((c) => c.type), ['callout_title', 'list']);
   const item = quote.children[1]!.children[0]!;
   const lineStart = md.lastIndexOf('\n', md.indexOf('[?]')) + 1;
-  assert.deepEqual(item.task, { checked: true, status: '?', start: md.indexOf('[?]') - lineStart, end: md.indexOf('[?]') + 3 - lineStart });
+  assert.deepEqual(item.attrs.task, { checked: true, status: '?', start: md.indexOf('[?]') - lineStart, end: md.indexOf('[?]') + 3 - lineStart });
   assert.equal(inlines('- [?] x ^b1\n'), '"x " block_id');
-  assert.equal(syntax.lines[0]!.leaf!.type, 'frontmatter');
-  assert.equal(syntax.lines[2]!.leaf!.type, 'frontmatter');
+  assert.equal(syntax.lines[0]!.leaf!.block.type, 'frontmatter');
+  assert.equal(syntax.lines[2]!.leaf!.block.type, 'frontmatter');
 });
 
 test('obsidian: wikilink parts', () => {
-  const syntax = SyntaxTree.parse('[[Note#Heading^block|Shown]]', obsidian);
-  const [link] = syntax.inlines(syntax.root.children[0]!);
+  const syntax = MdTree.parse('[[Note#Heading^block|Shown]]', obsidian);
+  const [link] = syntax.inlines(syntax.rootAt.child(0));
   assert.equal(link!.type, 'wikilink');
   assert.equal(link!.target, 'Note#Heading^block');
   assert.equal(link!.alias, 'Shown');

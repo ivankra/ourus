@@ -8,14 +8,14 @@
 
 import { escapeHtml, isAsciiAlnum, isAsciiAlpha, isSpaceOrTab, isUnicodeWhitespace, normalizeLabel, normalizeUri } from './chars.ts';
 import { ITEM, PARAGRAPH, extractRefdefs, type ParagraphFrame } from './blocks.ts';
-import { defineFlavor, type Extension, type Flavor, type MutableBlock } from './flavor.ts';
-import { coreBlocks, inTightList, type HtmlRenderer } from './html.ts';
-import { InlineTextBuilder } from './inline-text.ts';
-import { Node, type BracketRule, type DelimiterRule, type InlineParser, type InlineRule, type TextRule } from './inlines.ts';
-import type { BlockSpec, Frame, LeafRole, Machine } from './machine.ts';
-import type { SyntaxTree } from './syntax.ts';
-import type { Block, TableAlign } from './types.ts';
-import { inlinePreorder, postorder, preorder } from './walk.ts';
+import { defineFlavor, type MdExtension, type MdFlavor, type MdMutableBlock } from './flavor.ts';
+import { coreBlocks, inTightList, type MdHtmlRenderer } from './html.ts';
+import { MdInlineTextBuilder } from './inline-text.ts';
+import { Node, type MdBracketRule, type MdDelimiterRule, type MdInlineParser, type MdInlineRule, type MdTextRule } from './inlines.ts';
+import type { MdBlockSpec, MdFrame, MdLeafRole, MdMachine } from './machine.ts';
+import type { MdTree } from './syntax.ts';
+import type { MdBlock, MdBlockAt, MdTableAlign } from './types.ts';
+import { inlinePreorder } from './walk.ts';
 
 // --------------------------------------------------------------------------------- the core
 
@@ -23,7 +23,7 @@ import { inlinePreorder, postorder, preorder } from './walk.ts';
  * cmark-gfm's rendering of CommonMark: a `<strong>` directly inside another isn't written, and line
  * endings between blocks are cmark's.
  */
-export const gfmCore: Extension = {
+export const gfmCore: MdExtension = {
   name: 'gfm',
   render: { collapseNestedStrong: true, cmarkLineEnds: true },
 };
@@ -90,7 +90,7 @@ const isCmarkSpace = (c: number): boolean => c === 32 || c === 9 || c === 10 || 
 
 const reDelimiterRow = /^\|?(?:[ \t\v\f]*:?-+:?[ \t\v\f]*)(?:\|[ \t\v\f]*:?-+:?[ \t\v\f]*)*\|?[ \t\v\f]*$/;
 
-interface TableFrame extends Frame {
+interface TableFrame extends MdFrame {
   readonly columns: number;
   /** Cells filled in for short rows so far (cmark-gfm caps them, against blowing up the output). */
   readonly filled: number;
@@ -98,8 +98,8 @@ interface TableFrame extends Frame {
 
 const MAX_FILLED_CELLS = 0x80000;
 
-function makeTableSpec(requirePipe: boolean): BlockSpec<TableFrame> {
-  const spec: BlockSpec<TableFrame> = {
+function makeTableSpec(requirePipe: boolean): MdBlockSpec<TableFrame> {
+  const spec: MdBlockSpec<TableFrame> = {
     type: 'table',
     container: false,
     acceptsLines: true,
@@ -125,10 +125,10 @@ function makeTableSpec(requirePipe: boolean): BlockSpec<TableFrame> {
   return spec;
 }
 
-function makeTableStart(spec: BlockSpec<TableFrame>, requirePipe: boolean) {
+function makeTableStart(spec: MdBlockSpec<TableFrame>, requirePipe: boolean) {
   return {
     name: 'table',
-    start(m: Machine, container: Frame): 0 | 1 | 2 {
+    start(m: MdMachine, container: MdFrame): 0 | 1 | 2 {
       if (m.indented || container.spec !== PARAGRAPH || m.tip.spec !== PARAGRAPH) return 0;
       // the open paragraph as it is now (a setext candidate may have split definitions off it)
       const p = m.tip as ParagraphFrame & { tableVisited?: boolean };
@@ -140,10 +140,10 @@ function makeTableStart(spec: BlockSpec<TableFrame>, requirePipe: boolean) {
       if (!delimiters) return 0;
       const header = rowCells(p.last, 0, p.last.length);
       if (!header || header.length !== delimiters.length || (requirePipe && p.last.indexOf('|') < 0 && rest.indexOf('|') < 0)) {
-        m.replace(m.stack.length - 1, { ...p, tableVisited: true } as Frame);
+        m.replace(m.stack.length - 1, { ...p, tableVisited: true } as MdFrame);
         return 0;
       }
-      const align: TableAlign[] = delimiters.map((c) => {
+      const align: MdTableAlign[] = delimiters.map((c) => {
         const left = line.charCodeAt(c.from) === 58;
         const right = line.charCodeAt(c.to - 1) === 58;
         return left && right ? 'center' : left ? 'left' : right ? 'right' : null;
@@ -151,7 +151,6 @@ function makeTableStart(spec: BlockSpec<TableFrame>, requirePipe: boolean) {
       m.closeUnmatchedBlocks();
       // the paragraph's last line is the header row; the lines above stay a paragraph
       const headerLine = m.lineIndex - 1;
-      const index = m.stack.length - 1;
       if (p.lines > 1) {
         const cut = p.content.lastIndexOf('\n', p.content.length - 2) + 1;
         extractRefdefs(m, { ...p, content: p.content.slice(0, cut), lines: p.lines - 1 }, headerLine - 1);
@@ -172,9 +171,9 @@ function makeTableStart(spec: BlockSpec<TableFrame>, requirePipe: boolean) {
 }
 
 const tableBuilder = {
-  line(block: MutableBlock, role: LeafRole, line: number): void {
+  line(block: MdMutableBlock, role: MdLeafRole, line: number): void {
     const part = role.part as { row: string; cells: { start: number; end: number }[] };
-    const row: MutableBlock = { type: 'table_row', startLine: line, endLine: line, children: [], parent: block, row: part.row };
+    const row: MdMutableBlock = { type: 'table_row', startLine: line, endLine: line, children: [], parent: block, row: part.row };
     if (Object.isFrozen(block.children)) block.children = [row];
     else block.children.push(row);
     part.cells.forEach((c, column) => {
@@ -184,12 +183,12 @@ const tableBuilder = {
 };
 
 /** A table cell's inline text: its text, `\|` read as `|`. */
-function cellInlineText(syntax: SyntaxTree, block: Block) {
-  const b = new InlineTextBuilder(syntax.text);
-  const { text } = syntax;
-  const lineStart = syntax.starts[block.startLine]!;
-  let from = lineStart + block.start!;
-  const to = lineStart + block.end!;
+function cellInlineText(tree: MdTree, cell: MdBlockAt) {
+  const b = new MdInlineTextBuilder(tree.text);
+  const { text } = tree;
+  const lineStart = tree.starts[cell.line]!;
+  let from = lineStart + cell.block.attrs.start!;
+  const to = lineStart + cell.block.attrs.end!;
   for (let i = from; i < to; i++) {
     if (text.charCodeAt(i) === 92 && text.charCodeAt(i + 1) === 124) {
       b.add(from, i);
@@ -202,7 +201,7 @@ function cellInlineText(syntax: SyntaxTree, block: Block) {
 }
 
 const tableRenderers = {
-  table(r: HtmlRenderer, _table: Block, entering: boolean): void {
+  table(r: MdHtmlRenderer, _table: MdBlockAt, entering: boolean): void {
     if (entering) {
       r.cr();
       r.lit('<table>');
@@ -218,9 +217,9 @@ const tableRenderers = {
     r.lit('</table>');
     r.cr();
   },
-  table_row(r: HtmlRenderer, row: Block, entering: boolean): void | boolean {
-    if (row.row === 'delimiter') return false;
-    const header = row.row === 'header';
+  table_row(r: MdHtmlRenderer, row: MdBlockAt, entering: boolean): void | boolean {
+    if (row.block.attrs.row === 'delimiter') return false;
+    const header = row.block.attrs.row === 'header';
     if (entering) {
       r.cr();
       if (header) {
@@ -235,8 +234,8 @@ const tableRenderers = {
       return;
     }
     // a short row gets empty cells
-    const align = row.parent!.align!;
-    for (let i = row.children.length; i < align.length; i++) {
+    const align = r.up()!.block.attrs.align!;
+    for (let i = row.block.children.length; i < align.length; i++) {
       r.cr();
       r.lit(`${cellTag(header, align[i]!)}</${header ? 'th' : 'td'}>`);
     }
@@ -247,20 +246,19 @@ const tableRenderers = {
       r.lit('</thead>');
     }
   },
-  table_cell(r: HtmlRenderer, cell: Block, entering: boolean): void {
-    const row = cell.parent!;
-    const header = row.row === 'header';
+  table_cell(r: MdHtmlRenderer, cell: MdBlockAt, entering: boolean): void {
+    const header = r.up()!.block.attrs.row === 'header';
     if (entering) {
       r.cr();
-      r.lit(cellTag(header, row.parent!.align![cell.column!]!));
+      r.lit(cellTag(header, r.up(2)!.block.attrs.align![cell.block.attrs.column!]!));
     } else r.lit(header ? '</th>' : '</td>');
   },
 };
 
-const cellTag = (header: boolean, align: TableAlign): string => `<${header ? 'th' : 'td'}${align ? ` align="${align}"` : ''}>`;
+const cellTag = (header: boolean, align: MdTableAlign): string => `<${header ? 'th' : 'td'}${align ? ` align="${align}"` : ''}>`;
 
 /** Tables. `requirePipe`: a row needs a `|` (Obsidian's reading; GFM continues a table with any line). */
-export function tableExtension(options: { readonly requirePipe?: boolean } = {}): Extension {
+export function tableExtension(options: { readonly requirePipe?: boolean } = {}): MdExtension {
   const requirePipe = options.requirePipe ?? false;
   const spec = makeTableSpec(requirePipe);
   return {
@@ -269,11 +267,12 @@ export function tableExtension(options: { readonly requirePipe?: boolean } = {})
     blockStartChars: '|:',
     leafBuilders: { table: tableBuilder },
     inlineText: { table_cell: cellInlineText },
+    blockContent: { table: 'none', table_row: 'none', table_cell: 'inline' },
     render: { blocks: tableRenderers },
   };
 }
 
-export const table: Extension = tableExtension();
+export const table: MdExtension = tableExtension();
 
 // ------------------------------------------------------------------------------- task lists
 
@@ -285,7 +284,7 @@ export const table: Extension = tableExtension();
 function makeTaskStart(anyStatus: boolean, cmark: boolean) {
   return {
     name: 'tasklist',
-    start(m: Machine, container: Frame): 0 | 1 | 2 {
+    start(m: MdMachine, container: MdFrame): 0 | 1 | 2 {
       const index = m.stack.length - 1;
       if (container.spec !== ITEM || m.tip !== container || !m.openedHere(index) || m.indented) return 0;
       if (cmark && !reCmarkTask.test(m.line)) return 0;
@@ -313,7 +312,7 @@ const reCmarkTask = /^[ \t\v\f]*(?:[-+*]|[0-9]+.)[ \t\v\f]+\[[ x]\][ \t\v\f]+/;
  * Task list items. `anyStatus`: any character in the brackets. `cmark`: only where cmark-gfm finds
  * them (the line's first marker, `[ ]` or `[x]`), for comparing with it.
  */
-export function tasklistExtension(options: { readonly anyStatus?: boolean; readonly cmark?: boolean } = {}): Extension {
+export function tasklistExtension(options: { readonly anyStatus?: boolean; readonly cmark?: boolean } = {}): MdExtension {
   return {
     name: 'tasklist',
     blockStarts: [makeTaskStart(options.anyStatus ?? false, options.cmark ?? false)],
@@ -324,7 +323,8 @@ export function tasklistExtension(options: { readonly anyStatus?: boolean; reado
           if (entering) {
             r.cr();
             r.lit('<li>');
-            if (b.task) r.lit(`<input type="checkbox"${b.task.checked ? ' checked=""' : ''} disabled="" /> `);
+            const task = b.block.attrs.task;
+            if (task) r.lit(`<input type="checkbox"${task.checked ? ' checked=""' : ''} disabled="" /> `);
           } else {
             r.lit('</li>');
             r.cr();
@@ -335,13 +335,13 @@ export function tasklistExtension(options: { readonly anyStatus?: boolean; reado
   };
 }
 
-export const tasklist: Extension = tasklistExtension();
+export const tasklist: MdExtension = tasklistExtension();
 
 // ---------------------------------------------------------------------------- strikethrough
 
 /** Strikethrough with `~` or `~~` (GFM), or only `~~` (`doubleOnly`, as Obsidian). */
-export function strikethroughExtension(options: { readonly doubleOnly?: boolean } = {}): Extension {
-  const tilde: DelimiterRule = {
+export function strikethroughExtension(options: { readonly doubleOnly?: boolean } = {}): MdExtension {
+  const tilde: MdDelimiterRule = {
     char: '~',
     accepts: options.doubleOnly ? (length) => length === 2 : (length) => length === 1 || length === 2,
     match: (opener, closer) => (opener.length === closer.length ? { use: opener.length, type: 'strikethrough' } : null),
@@ -358,7 +358,7 @@ export function strikethroughExtension(options: { readonly doubleOnly?: boolean 
   };
 }
 
-export const strikethrough: Extension = strikethroughExtension();
+export const strikethrough: MdExtension = strikethroughExtension();
 
 // -------------------------------------------------------------------------------- autolinks
 
@@ -437,7 +437,7 @@ function linkEnd(s: string, at: number): number {
   return at;
 }
 
-const wwwRule: InlineRule = {
+const wwwRule: MdInlineRule = {
   name: 'wwwAutolink',
   triggers: 'w',
   parse(p) {
@@ -462,7 +462,7 @@ const wwwRule: InlineRule = {
 
 const reSafeScheme = /^(?:https?|ftp):\/\//i;
 
-const urlRule: InlineRule = {
+const urlRule: MdInlineRule = {
   name: 'urlAutolink',
   triggers: ':',
   parse(p) {
@@ -491,7 +491,7 @@ const urlRule: InlineRule = {
  * Email addresses in text outside links, `mailto:` and `xmpp:` ones too (cmark-gfm's
  * `postprocess_text`, its quirks kept: the scan restarts at a second `@` with the counts it had).
  */
-const emailRule: TextRule = {
+const emailRule: MdTextRule = {
   name: 'emailAutolink',
   process(p, node) {
     const s = p.text;
@@ -582,7 +582,7 @@ function validProtocol(protocol: string, s: string, at: number, rewind: number, 
   return !isAsciiAlnum(s.charCodeAt(at - rewind - len - 1));
 }
 
-export const autolink: Extension = {
+export const autolink: MdExtension = {
   name: 'autolink',
   inlines: [wwwRule, urlRule],
   textRules: [emailRule],
@@ -590,7 +590,7 @@ export const autolink: Extension = {
 
 // ------------------------------------------------------------------------------- tag filter
 
-export const tagfilter: Extension = {
+export const tagfilter: MdExtension = {
   name: 'tagfilter',
   render: { filteredTags: ['title', 'textarea', 'style', 'xmp', 'iframe', 'noembed', 'noframes', 'script', 'plaintext'] },
 };
@@ -598,7 +598,7 @@ export const tagfilter: Extension = {
 // -------------------------------------------------------------------------------- footnotes
 
 /** `[^label]:` and the spaces after it: a footnote definition, a container whose lines are indented by 4. */
-const FOOTNOTE: BlockSpec = {
+const FOOTNOTE: MdBlockSpec = {
   type: 'footnote_definition',
   container: true,
   acceptsLines: false,
@@ -614,13 +614,13 @@ const FOOTNOTE: BlockSpec = {
   },
 };
 
-const FOOTNOTE_FRAME: Frame = Object.freeze({ spec: FOOTNOTE });
+const FOOTNOTE_FRAME: MdFrame = Object.freeze({ spec: FOOTNOTE });
 const reFootnoteDefinition = /^\[\^([^\] \r\n\0\t]+)\]:[ \t]*/;
 
 const footnoteStart = {
   name: 'footnoteDefinition',
   before: 'listItem',
-  start(m: Machine): 0 | 1 | 2 {
+  start(m: MdMachine): 0 | 1 | 2 {
     if (m.indented || m.peek(m.nextNonspace) !== 91 || m.peek(m.nextNonspace + 1) !== 94) return 0;
     const match = reFootnoteDefinition.exec(m.line.slice(m.nextNonspace));
     if (!match) return 0;
@@ -636,10 +636,10 @@ const footnoteStart = {
 };
 
 /** `[^label]`, which no link took: a footnote reference, or its text when no definition has the label. */
-const footnoteBracket: BracketRule = {
+const footnoteBracket: MdBracketRule = {
   name: 'footnoteReference',
   phase: 'after',
-  resolve(p: InlineParser, opener) {
+  resolve(p: MdInlineParser, opener) {
     const first = opener.node.next;
     if (opener.image || !first || first.type !== 'text' || p.text.charCodeAt(first.from) !== 94) return false;
     if (first.to - first.from <= 1 && !first.next) return false;
@@ -662,26 +662,26 @@ const footnoteBracket: BracketRule = {
 
 interface FootnoteState {
   /** Definitions by normalized label: their number (by first reference), references counted. */
-  readonly defs: Map<string, { block: Block; ix: number; count: number; written: boolean }>;
+  readonly defs: Map<string, { block: MdBlockAt; ix: number; count: number; written: boolean }>;
   /** Per leaf, the reference ordinal of each of its footnote references, in order. */
-  readonly refs: Map<Block, number[]>;
-  readonly cursor: Map<Block, number>;
+  readonly refs: Map<MdBlock, number[]>;
+  readonly cursor: Map<MdBlock, number>;
   next: number;
   /** The footnotes section is being written. */
   section: boolean;
 }
 
-function footnoteState(r: HtmlRenderer): FootnoteState {
+function footnoteState(r: MdHtmlRenderer): FootnoteState {
   return r.state.get('footnotes') as FootnoteState;
 }
 
-const defLabel = (def: Block): string => def.label!.slice(2, -1);
+const defLabel = (def: MdBlock): string => def.attrs.label!.slice(2, -1);
 const escapeHref = (s: string): string => escapeHtml(normalizeUri(s));
 
-function writeBackref(r: HtmlRenderer, def: { block: Block; ix: number; count: number; written: boolean }): boolean {
+function writeBackref(r: MdHtmlRenderer, def: { block: MdBlockAt; ix: number; count: number; written: boolean }): boolean {
   if (def.written) return false;
   def.written = true;
-  const label = escapeHref(defLabel(def.block));
+  const label = escapeHref(defLabel(def.block.block));
   const m = String(def.ix);
   r.lit(`<a href="#fnref-${label}" class="footnote-backref" data-footnote-backref data-footnote-backref-idx="${m}" aria-label="Back to reference ${m}">↩</a>`);
   for (let i = 2; i <= def.count; i++) {
@@ -691,7 +691,7 @@ function writeBackref(r: HtmlRenderer, def: { block: Block; ix: number; count: n
 }
 
 /** `![^`: the `!` is text, and the bracket a footnote reference's, not an image's (cmark-gfm). */
-const bangBeforeFootnote: InlineRule = {
+const bangBeforeFootnote: MdInlineRule = {
   name: 'bangBeforeFootnote',
   triggers: '!',
   before: 'bang',
@@ -703,9 +703,10 @@ const bangBeforeFootnote: InlineRule = {
   },
 };
 
-export const footnotes: Extension = {
+export const footnotes: MdExtension = {
   name: 'footnotes',
   blockStarts: [footnoteStart],
+  blockContent: { footnote_definition: 'blocks' },
   blockStartChars: '[',
   inlines: [bangBeforeFootnote],
   brackets: [footnoteBracket],
@@ -713,24 +714,25 @@ export const footnotes: Extension = {
     start(r) {
       const state: FootnoteState = { defs: new Map(), refs: new Map(), cursor: new Map(), next: 0, section: false };
       r.state.set('footnotes', state);
-      const syntax = r.syntax;
+      const tree = r.tree;
       // the first definition of a label to end wins (cmark-gfm: a definition nested in another wins)
-      for (const b of postorder(syntax.root)) {
-        if (b.type !== 'footnote_definition') continue;
-        const label = normalizeLabel('[' + defLabel(b) + ']');
+      const root = tree.rootAt;
+      for (const b of root.postorder()) {
+        if (b.block.type !== 'footnote_definition') continue;
+        const label = normalizeLabel('[' + defLabel(b.block) + ']');
         if (!state.defs.has(label)) state.defs.set(label, { block: b, ix: 0, count: 0, written: false });
       }
       // number the definitions by their first reference, in document order
-      for (const b of preorder(syntax.root)) {
-        if (!syntax.inlineText(b)) continue;
+      for (const b of root.preorder()) {
+        if (!tree.inlineText(b)) continue;
         const out: number[] = [];
-        for (const n of inlinePreorder(syntax.inlines(b))) {
+        for (const n of inlinePreorder(tree.inlines(b))) {
           if (n.type !== 'footnote_ref') continue;
           const def = state.defs.get(n.label!)!;
           if (!def.ix) def.ix = ++state.next;
           out.push(++def.count);
         }
-        if (out.length) state.refs.set(b, out);
+        if (out.length) state.refs.set(b.block, out);
       }
     },
     end(r) {
@@ -748,8 +750,8 @@ export const footnotes: Extension = {
       footnote_definition(r, b, entering) {
         const state = footnoteState(r);
         if (!state.section) return false;
-        const def = state.defs.get(normalizeLabel('[' + defLabel(b) + ']'))!;
-        if (entering) r.lit(`<li id="fn-${escapeHref(defLabel(b))}">\n`);
+        const def = state.defs.get(normalizeLabel('[' + defLabel(b.block) + ']'))!;
+        if (entering) r.lit(`<li id="fn-${escapeHref(defLabel(b.block))}">\n`);
         else {
           if (writeBackref(r, def)) r.lit('\n');
           r.lit('</li>\n');
@@ -757,8 +759,8 @@ export const footnotes: Extension = {
       },
       // a definition's last paragraph ends with the backreferences
       paragraph(r, b, entering) {
-        const parent = b.parent;
-        if (!entering && parent?.type === 'footnote_definition' && parent.children[parent.children.length - 1] === b && !inTightList(b)) {
+        const parent = r.up()?.block;
+        if (!entering && parent?.type === 'footnote_definition' && parent.children[parent.children.length - 1] === b.block && !inTightList(r)) {
           const state = footnoteState(r);
           if (state.section) {
             r.lit(' ');
@@ -773,11 +775,11 @@ export const footnotes: Extension = {
         if (!entering) return;
         const state = footnoteState(r);
         const def = state.defs.get(node.label!)!;
-        const leaf = r.leaf!;
+        const leaf = r.leaf!.block;
         const k = state.cursor.get(leaf) ?? 0;
         state.cursor.set(leaf, k + 1);
         const refIx = state.refs.get(leaf)?.[k] ?? 1;
-        const label = escapeHref(defLabel(def.block));
+        const label = escapeHref(defLabel(def.block.block));
         r.lit(`<sup class="footnote-ref"><a href="#fn-${label}" id="fnref-${label}${refIx > 1 ? '-' + refIx : ''}" data-footnote-ref>${def.ix}</a></sup>`);
       },
     },
@@ -787,6 +789,6 @@ export const footnotes: Extension = {
 // ---------------------------------------------------------------------------------- flavors
 
 /** All of GFM's extensions, as GitHub renders comments and files. */
-export const gfmExtensions: readonly Extension[] = [gfmCore, table, tasklist, strikethrough, autolink, tagfilter, footnotes];
+export const gfmExtensions: readonly MdExtension[] = [gfmCore, table, tasklist, strikethrough, autolink, tagfilter, footnotes];
 
-export const gfm: Flavor = defineFlavor('gfm', gfmExtensions);
+export const gfm: MdFlavor = defineFlavor('gfm', gfmExtensions);

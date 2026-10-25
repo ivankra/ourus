@@ -8,7 +8,7 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Gdk from 'gi://Gdk?version=4.0';
 import Gtk from 'gi://Gtk?version=4.0';
-import { OutlineState, executeCommand, mapPos, settlePlaceholders } from '../../src/index.ts';
+import { OurusDoc, executeCommand, mapPos, settlePlaceholders } from '../../src/index.ts';
 
 const KEYS = {
   Tab: 'indent',
@@ -126,7 +126,7 @@ function writeClipboard(clipboard, formats) {
 function outliner(view, status) {
   const buffer = view.get_buffer();
   buffer.set_text(SAMPLE, -1);
-  let doc = OutlineState.parse(SAMPLE, { config: { flavor: 'obsidian' } });
+  let doc = OurusDoc.parse(SAMPLE, { config: { flavor: 'obsidian' } });
   /** An edit of ours is being made: what it fires isn't read back. */
   let applying = false;
   /** An input method is composing text: its keys aren't ours. */
@@ -146,10 +146,11 @@ function outliner(view, status) {
   /** Replaces the span the changes cover with what they make of it, as one step of GTK's undo. */
   function apply(changes, next) {
     const old = doc.text;
-    if (old !== next.text) {
+    const text = next.text;
+    if (old !== text) {
       const from = Math.min(...changes.map((c) => c.from));
       const to = Math.max(...changes.map((c) => c.to));
-      const insert = next.text.slice(from, next.text.length - (old.length - to));
+      const insert = text.slice(from, text.length - (old.length - to));
       const start = toChars(old, from);
       applying = true;
       buffer.begin_user_action();
@@ -165,7 +166,7 @@ function outliner(view, status) {
     const result = executeCommand(doc, command, selection());
     status.set_text(`${command.type}: ${result.status === 'rejected' ? `rejected — ${result.reason}` : result.status}`);
     if (result.status === 'applied') {
-      apply(result.changes, result.state);
+      apply(result.changes, result.doc);
       select(result.selection.anchor, result.selection.head);
     }
     return result.status;
@@ -209,7 +210,7 @@ function outliner(view, status) {
       if (result.status !== 'applied') return true;
       writeClipboard(view.get_clipboard(), result.clipboard ?? {});
       if (type === 'cut') {
-        apply(result.changes, result.state);
+        apply(result.changes, result.doc);
         select(result.selection.anchor, result.selection.head);
       }
       return true;
@@ -218,7 +219,9 @@ function outliner(view, status) {
     // Home: the start of the node's text, then the start of the line
     if (name === 'Home' || name === 'Shift-Home') {
       const { anchor, head } = selection();
-      const target = doc.homePosition(head);
+      const line = doc.lineAt(head);
+      const start = doc.textStart(line.index);
+      const target = head === start ? line.from : start;
       select(shift ? anchor : target, target);
       return true;
     }
@@ -233,7 +236,7 @@ function outliner(view, status) {
     if (result.status === 'notApplicable') return false;
     status.set_text(`insertText: ${result.status === 'rejected' ? `rejected — ${result.reason}` : result.status}`);
     if (result.status === 'applied') {
-      apply(result.changes, result.state);
+      apply(result.changes, result.doc);
       select(result.selection.anchor, result.selection.head);
     }
     return true;
@@ -264,7 +267,7 @@ function outliner(view, status) {
     const { anchor, head } = selection();
     const r = settlePlaceholders(doc, head);
     if (r) {
-      apply(r.changes, r.state);
+      apply(r.changes, r.doc);
       select(mapPos(r.changes, anchor), mapPos(r.changes, head));
     }
     return GLib.SOURCE_REMOVE;

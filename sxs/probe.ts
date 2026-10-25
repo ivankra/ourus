@@ -19,8 +19,7 @@ import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, 
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Config } from '../src/config.ts';
-import { OutlineState } from '../src/outline/index.ts';
-import { drawOutline, drawState, drawText, readDrawing, readText } from '../test/drawing.ts';
+import { docOf, drawDoc, drawOutline, drawText, readDrawing, readText } from '../test/drawing.ts';
 import { isAction, play, type Played } from '../test/player.ts';
 import { normalize, outcome, readClipboard } from '../test/spec-run.ts';
 import { readSpec, specConfig, TAGS, tokenize, type Clipboard, type SpecTest } from '../test/specfile.ts';
@@ -59,7 +58,7 @@ const HELP = `usage: node sxs/probe.ts [<apps>] [options] [<buffer> <step>...|<f
   --exact              take the buffer's bytes as given, no final line break added
 
 The apps' runs go to .sxs/probe/<time>/ (the probe as a spec file, each app's log and run as
-data), never into .sxs/results or a report. Exit status 1 where ourus fails to encode or throws, or
+data), never into .sxs/results or a report. Exit status 1 where ourus fails to write or throws, or
 differs from a --case's drawing.`;
 
 // ------------------------------------------------------------------ arguments
@@ -248,7 +247,7 @@ interface OurStep {
   drawable: boolean;
   result: string;
   outline: string;
-  /** An action that failed to encode or threw, with why. */
+  /** An action that failed to write or threw, with why. */
   broken?: string;
   /** The clipboard's text after a step that copies or cuts: what the apps' copy is compared with. */
   clipboard?: string;
@@ -257,7 +256,7 @@ interface OurStep {
 function playOurus(p: Probe, config: Record<string, string>): OurStep[] {
   const start = readDrawing(p.start);
   let state: Played = {
-    doc: OutlineState.parse(start.text, { placeholders: start.placeholders, config: specConfig(config) }),
+    doc: docOf(start.text, start.placeholders, specConfig(config)),
     selection: start.selection,
     clipboard: p.clipboard,
   };
@@ -270,7 +269,7 @@ function playOurus(p: Probe, config: Record<string, string>): OurStep[] {
       for (const action of actions) {
         state = play(state, [action]);
         const last = state.last;
-        if (last?.status === 'rejected' && last.reason === 'encoding-failed') broken ??= `${action} fails to encode${last.detail ? `: ${last.detail}` : ''}`;
+        if (last?.status === 'rejected' && last.reason === 'write-failed') broken ??= `${action} fails to write${last.detail ? `: ${last.detail}` : ''}`;
       }
     } catch (e) {
       broken = `throws: ${e instanceof Error ? e.message : String(e)}`;
@@ -278,7 +277,7 @@ function playOurus(p: Probe, config: Record<string, string>): OurStep[] {
     const text = state.doc.text;
     out.push({
       actions,
-      buffer: normalize(drawState(text, state.selection, state.doc.placeholders)),
+      buffer: normalize(drawDoc(state.doc, state.selection)),
       drawable: text === '' || /[\r\n]$/.test(text),
       result: outcome(state),
       outline: drawOutline(state.doc),

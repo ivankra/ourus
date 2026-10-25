@@ -6,7 +6,7 @@
 // and Backspace as input, not keys, and lack the rest: buttons stand in for those. The Preview box
 // shows the document as ourus renders it, beside the text.
 
-import { OutlineState, executeCommand, mapPos, renderHtml, settlePlaceholders, type ChangeSpec, type Command, type CommandResult } from '../../src/index.ts';
+import { OurusDoc, executeCommand, mapPos, settlePlaceholders, type ChangeSpec, type Command, type CommandResult } from '../../src/index.ts';
 
 const KEYS: Record<string, Command['type']> = {
   Tab: 'indent',
@@ -24,10 +24,10 @@ const area = document.getElementById('editor') as HTMLTextAreaElement;
 const status = document.getElementById('status')!;
 const split = document.getElementById('split') as HTMLInputElement;
 const preview = document.getElementById('preview')!;
-let doc = OutlineState.parse(area.value, { config: { flavor: 'obsidian' } });
+let doc = OurusDoc.parse(area.value, { config: { flavor: 'obsidian' } });
 
 function render() {
-  if (split.checked) preview.innerHTML = renderHtml(doc.syntaxTree, { escapeRawHtml: true });
+  if (split.checked) preview.innerHTML = doc.mdTree.renderHtml({ escapeRawHtml: true });
 }
 
 split.addEventListener('change', () => {
@@ -55,21 +55,22 @@ function select(anchor: number, head: number) {
 let applying = false;
 
 /** Replaces the span the changes cover with what they make of it, as one step of the browser's undo. */
-function apply(changes: readonly ChangeSpec[], next: OutlineState) {
+function apply(changes: readonly ChangeSpec[], next: OurusDoc) {
   doc = next; // before the input event the edit fires, so it isn't read back
   render();
   const old = area.value;
-  if (old === next.text) return;
+  const text = next.text;
+  if (old === text) return;
   const from = Math.min(...changes.map((c) => c.from));
   const to = Math.max(...changes.map((c) => c.to));
-  const insert = next.text.slice(from, next.text.length - (old.length - to));
+  const insert = text.slice(from, text.length - (old.length - to));
   area.setSelectionRange(from, to);
   applying = true;
   const done = document.execCommand(insert ? 'insertText' : 'delete', false, insert);
   applying = false;
-  if (!done || area.value !== next.text) {
+  if (!done || area.value !== text) {
     // the edit didn't come out as planned (and was read back as it did): set the text outright
-    area.value = next.text;
+    area.value = text;
     doc = next;
     render();
   }
@@ -88,7 +89,7 @@ function run(command: Command): CommandResult {
   const result = executeCommand(doc, command, selection());
   say(`${command.type}: ${result.status === 'rejected' ? `rejected — ${result.reason}` : result.status}`);
   if (result.status === 'applied') {
-    apply(result.changes, result.state);
+    apply(result.changes, result.doc);
     select(result.selection.anchor, result.selection.head);
   }
   return result;
@@ -116,7 +117,9 @@ area.addEventListener('keydown', (e) => {
   // Home: the start of the node's text, then the start of the line
   if (name === 'Home' || name === 'Shift-Home') {
     const { anchor, head } = selection();
-    const target = doc.homePosition(head);
+    const line = doc.lineAt(head);
+    const start = doc.textStart(line.index);
+    const target = head === start ? line.from : start;
     select(e.shiftKey ? anchor : target, target);
     e.preventDefault();
     return;
@@ -150,7 +153,7 @@ area.addEventListener('beforeinput', (e) => {
     e.preventDefault();
     say(`insertText: ${result.status === 'rejected' ? `rejected — ${result.reason}` : result.status}`);
     if (result.status === 'applied') {
-      apply(result.changes, result.state);
+      apply(result.changes, result.doc);
       select(result.selection.anchor, result.selection.head);
     }
     return;
@@ -239,6 +242,6 @@ document.addEventListener('selectionchange', () => {
   const { anchor, head } = selection();
   const r = settlePlaceholders(doc, head);
   if (!r) return;
-  apply(r.changes, r.state);
+  apply(r.changes, r.doc);
   select(mapPos(r.changes, anchor), mapPos(r.changes, head));
 });

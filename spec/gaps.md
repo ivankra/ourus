@@ -6,25 +6,23 @@ Blank lines above the document's first node are the **preamble**, which belongs 
 
 Their consequences, drawn below:
 
-- **A node's gap travels with it.** A move carries the blank lines after a node along with the node.
-  The exception is a gap that ends its scope (after the last of a parent's children, a list's last
-  item, or the document's last node). It separates the whole scope from what follows, so it stays
-  at the scope's end, and the two nodes swap around the blank lines between them.
+- **A node's gap is its own, and travels with it** under every command: a move, an indent or an
+  outdent carries it; a split gives it to the second half, a join takes the lower node's, and
+  removing an empty node gives it to the node above. Outliners have no blank lines: a node moves as a
+  unit, its spacing no content.
+- **But the blank lines the user wrote at a boundary stay there**: the end of the document, and the
+  end of each heading's section, keep theirs whatever node now ends them (the node that ended it
+  takes the newcomer's gap); a command doesn't change what wasn't edited.
+- **Then only Markdown's separation**, at the seams a command changes: one blank line where two
+  texts would run together (a paragraph after an item, `-` under text, an ordered list from 2 under
+  a paragraph, code after an item); none where it would loosen a tight list
+  ([Indent29](indent.md#indent29), [Quote18](quotes.md#quote18)), the blank line moving to the end of
+  the list where something follows it, or end an empty item (`-` and a blank line).
 - **A caret on a blank line is in the gap of the node above.** Structural keys there act on that
-  node, and the blank lines are left as they are. The caret stays in the gap where the gap goes with
-  the node (Gap14); where it doesn't (a gap that ends its scope), the caret goes with the node, to
-  the end of its text, so a second press acts on it again
-  ([MoveUp39](move-subtree-up.md#moveup39), [MoveDown38](move-subtree-down.md#movedown38)). In the
-  preamble there is no node above: the keys are refused (`nothing-above`), not left to the host,
-  whose Tab there would start indented code.
-- **A command writes a blank line only where the structure needs one**: to end a list before a
-  paragraph, to keep an empty item from reading as a setext underline, to separate two paragraphs;
-  where a list or a section has none, it adds none (Gap6, Gap13). Joins take the blank lines between
-  the two nodes with them ([Delete17](delete.md#delete17)); other commands leave blank lines where they
-  are, but for one that no longer separates anything: a node that was right after another, set off
-  by a blank line, and is now its first item in a tight list takes none
-  ([Outdent15](outdent.md#outdent15)), nor one that was right after a tight list and is now its
-  last item ([Indent29](indent.md#indent29), [Quote18](quotes.md#quote18)).
+  node; the caret stays on the blank line, which goes with the node (Gap14), and where a seam lowered
+  it, goes to the end of the node's text, so a second press acts on it again
+  ([MoveUp39](move-subtree-up.md#moveup39)). In the preamble there is no node above: the keys are
+  refused (`nothing-above`), not left to the host, whose Tab there would start indented code.
 - **Frontmatter is a preamble too**, in the Obsidian flavor: no node, its lines the host's (Gap19).
 
 A node's span is ourus's model, for blank lines that the block outliners don't have. Bare Obsidian

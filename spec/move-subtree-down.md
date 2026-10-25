@@ -18,9 +18,9 @@ Command: `moveSubtreeDown`, usually bound to Alt-Shift-Down / Alt-Down. Its mirr
    nothing in (MoveDown19, MoveDown27).
 6. **Otherwise it is refused** (`no-next-sibling`, MoveDown3, MoveDown6), as is a move that would
    give another node a new parent (`would-reparent`): a heading past a heading of another level
-   (MoveDown17), a heading into a section it would take in (MoveDown19), a paragraph moved right
-   above a section's list, which it would own (MoveDown25). A paragraph that doesn't move takes in the list a move leaves right after it
-   ([MoveUp35](move-subtree-up.md#moveup35)).
+   (MoveDown17), a heading into a section it would take in (MoveDown19). A paragraph moved right
+   above a list takes it in, as the text reads it (MoveDown25), as does a paragraph that doesn't
+   move, when a move leaves a list right after it ([MoveUp35](move-subtree-up.md#moveup35)).
 7. **What would run together is set apart** by a blank line (MoveDown26, MoveDown31); a renumbered
    list keeps its children at their content column (MoveDown23, MoveDown30). The caret ends in the
    node's text (MoveDown32), in code on its first line with text, not on a fence (MoveDown34,
@@ -622,7 +622,6 @@ tags: edge free-form
 ```buffer
 # Todo
 - one
-
 ## Later
 - two┃
 - three
@@ -728,8 +727,9 @@ para┃
 
 ## MoveDown25
 
-A paragraph doesn't cross into a section that starts with a list: right above it, the paragraph
-would own the section's list (as MoveDown19 for a heading).
+A paragraph crosses into a section that starts with a list, and takes the list in, as the text
+reads it: right above the list, the paragraph owns it. Unlike a heading (MoveDown19), this isn't
+refused.
 
 ```yaml
 tags: edge free-form
@@ -745,15 +745,11 @@ para┃
 
 > moveSubtreeDown
 
-```yaml
-result: rejected would-reparent
-```
-
 ```buffer
 # A
-para┃
 
 # B
+para┃
 - x
 ```
 
@@ -839,7 +835,9 @@ tags: edge free-form
 - s1
 
 # B
+
 ┃para
+
 ```
 
 ## MoveDown29
@@ -1115,6 +1113,7 @@ para
 - a
 
 para
+
 - b┃
 ```
 
@@ -1142,9 +1141,10 @@ para
 ```buffer
 - a
 
-
-
 para
+
+
+
 - b┃
 ```
 
@@ -1157,4 +1157,29 @@ para
 
 
 para
+```
+
+## MoveDown40
+
+Two items of two lists moved past the item after them: both land in its list and are numbered in
+it, the second too (a list of its own there, of the same delimiter, would run into it).
+
+```yaml
+tags: rare
+```
+
+```buffer
+1. a
+2. «
+1) b»
+2) c
+```
+
+> moveSubtreeDown
+
+```buffer
+1. a
+1) c
+2) «
+3) b»
 ```

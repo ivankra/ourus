@@ -2,18 +2,19 @@
 // (as the player runs it, host defaults and settling included) against the reference model.
 //
 //   npm run test:model -- [runs=3000] [mode=md] [gen=all]
+//   SEED=7 SHRINK=500 npm run test:model     # another seed; how many steps shrinking takes at most
 //
 // Prints agreement per command, the Markdown rules the model needed, and one shrunk example per
 // disagreement bucket.
 
 import fc from 'fast-check';
-import { settlePlaceholders, type Command } from '../../src/commands/index.ts';
-import { OutlineState } from '../../src/outline/index.ts';
-import { mapPos } from '../../src/text.ts';
-import { drawState } from '../drawing.ts';
+import { OurusDoc } from '../../src/doc/index.ts';
+import { settlePlaceholders } from '../../src/draft/index.ts';
+import { mapPos } from '../../src/text/index.ts';
+import { drawDoc } from '../drawing.ts';
 import { play } from '../player.ts';
 import { lift } from './lift.ts';
-import { apply, draw, fired, pathOf, shape, type Cmd, type Mode } from './model.ts';
+import { apply, draw, findParent, fired, pathOf, shape, type Caret, type Cmd, type MNode, type Mode } from './model.ts';
 
 const RUNS = Number(process.argv[2] ?? 3000);
 const MODE = (process.argv[3] ?? 'md') as Mode;
@@ -68,9 +69,9 @@ let skipped = 0;
 let mdDecided = 0;
 const oracle = { applied: 0, same: 0, differ: 0, modelRejects: 0 };
 
-/** A first-cut category from what each side did; refined by hand in RESULTS.md. */
-function category(cmd: Cmd, ourus: string, model: string, inText: boolean): string {
-  if (ourus === 'rejected:encoding-failed') return 'A verification stepped in (planner gap)';
+/** A first-cut category from what each side did. */
+function category(ourus: string, model: string, inText: boolean): string {
+  if (ourus === 'rejected:write-failed') return 'A the check stepped in (a writer bug)';
   if (ourus === 'notApplicable') return inText ? 'B raw edit (host default) inside text' : 'C host default at a node boundary';
   if (ourus.startsWith('rejected') && model === 'applied') return 'D ourus refuses, model applies';
   if (ourus === 'applied' && model.startsWith('rejected')) return 'E ourus applies, model refuses';
@@ -84,7 +85,7 @@ interface Disagreement {
 
 /** Runs one case; returns the first disagreement, or null. Tallies into `stats`. */
 function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: Map<string, [number, number]>): Disagreement | null {
-  let doc = OutlineState.parse(text);
+  let doc = OurusDoc.parse(text);
   let pos = -1;
   for (let i = 0; i < steps.length; i++) {
     const [cmd, move] = steps[i]!;
@@ -97,7 +98,7 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
       const settled = settlePlaceholders(doc, pos);
       if (settled) {
         pos = mapPos(settled.changes, pos, 1);
-        doc = settled.state;
+        doc = settled.doc;
         l = lift(doc);
       }
     }
@@ -107,7 +108,7 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
       return null;
     }
     const firedBefore = [...fired.values()].reduce((a, b) => a + b, 0);
-    const before = drawState(doc.text, { anchor: pos, head: pos }, doc.placeholders);
+    const before = drawDoc(doc, { anchor: pos, head: pos });
     const model = apply(l.root, caret, cmd, MODE);
     const state = play({ doc, selection: { anchor: pos, head: pos }, clipboard: {} }, [cmd]);
     const r = state.last!;
@@ -134,10 +135,10 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
     if (treeOk && caretOk) s[1]++;
     stats?.set(cmd, s);
     if (!treeOk || !caretOk) {
-      const parent = findKind(l.root, caret.node);
+      const parent = findParent(l.root, caret.node)?.kind ?? '?';
       const where = `${caret.node.kind}${caret.node.text === '' ? '(empty)' : ''}${caret.offset === 0 ? '@start' : caret.offset === caret.node.text.length ? '@end' : '@mid'} in ${parent}`;
       const inText = (cmd === 'deleteContentBackward' && caret.offset > 0) || (cmd === 'deleteContentForward' && caret.offset < caret.node.text.length);
-      const key = `${category(cmd, ourusStatus, model.status === 'applied' ? 'applied' : 'rejected', inText)} | ${cmd} | ourus ${ourusStatus} | model ${model.status === 'applied' ? 'applied' : 'rejected:' + model.reason} | ${!treeOk ? (caretOk ? 'tree' : 'tree+caret') : 'caret'} | ${where}`;
+      const key = `${category(ourusStatus, model.status === 'applied' ? 'applied' : 'rejected', inText)} | ${cmd} | ourus ${ourusStatus} | model ${model.status === 'applied' ? 'applied' : 'rejected:' + model.reason} | ${!treeOk ? (caretOk ? 'tree' : 'tree+caret') : 'caret'} | ${where}`;
       const report = [
         '```buffer',
         before.replace(/\n$/, ''),
@@ -145,7 +146,7 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
         `> ${cmd}   (step ${i + 1})`,
         'ourus:',
         '```buffer',
-        drawState(state.doc.text, state.selection, state.doc.placeholders).replace(/\n$/, ''),
+        drawDoc(state.doc, state.selection).replace(/\n$/, ''),
         '```',
         ...(treeOk ? [] : ['ourus outline:', ...draw(after.root).map((x) => '    ' + x), 'model outline:', ...draw(model.status === 'applied' ? model.root : l.root).map((x) => '    ' + x)]),
         ...(caretOk ? [] : [`caret: ourus ${got.caret}, model ${want.caret}`]),
@@ -158,21 +159,9 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
   return null;
 }
 
-function caretKey(root: import('./model.ts').MNode, c: import('./model.ts').Caret | null): string {
+function caretKey(root: MNode, c: Caret | null): string {
   if (!c) return 'off-node';
   return `${JSON.stringify(pathOf(root, c.node))}+${c.offset}`;
-}
-
-function findKind(root: import('./model.ts').MNode, n: import('./model.ts').MNode): string {
-  const walk = (p: import('./model.ts').MNode): string | null => {
-    for (const c of p.children) {
-      if (c === n) return p.kind;
-      const r = walk(c);
-      if (r) return r;
-    }
-    return null;
-  };
-  return walk(root) ?? '?';
 }
 
 // ---- survey: collect buckets
@@ -202,7 +191,7 @@ for (const c of CMDS) {
 console.log(`${'all'.padEnd(24)} ${agree}/${total}  ${((100 * agree) / Math.max(total, 1)).toFixed(1)}%`);
 console.log(`\nsteps skipped (caret in whitespace or chrome the model can't address): ${skipped}`);
 console.log(`steps where a Markdown rule decided the model's outcome: ${mdDecided}/${total} (${((100 * mdDecided) / total).toFixed(1)}%)`);
-console.log(`model as the verifier's expected outline: of ${oracle.applied} steps ourus applied, the model's tree matches ${oracle.same}, differs ${oracle.differ}, model rejects ${oracle.modelRejects}`);
+console.log(`model as the check's expected outline: of ${oracle.applied} steps ourus applied, the model's tree matches ${oracle.same}, differs ${oracle.differ}, model rejects ${oracle.modelRejects}`);
 const cats = new Map<string, number>();
 for (const [k, b] of buckets) cats.set(k.split(' | ')[0]!, (cats.get(k.split(' | ')[0]!) ?? 0) + b.count);
 console.log('\n## disagreements by category (cases)');

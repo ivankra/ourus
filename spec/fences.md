@@ -2052,3 +2052,55 @@ body
 body
 ````
 `````
+
+## Fence63
+
+Code indented past its item's text (its fence two columns in), Enter at its start: as at code
+right at the text's column, the code goes to a new item, its fence's indentation gone from each
+line (on the marker's line it would be the item's padding). The code reads as it did.
+
+```yaml
+tags: rare markup-fence
+```
+
+````buffer
+- item text
+    ┃```
+    code
+    ```
+````
+
+> enter
+
+````buffer
+- item text
+- ```
+  ┃code
+  ```
+````
+
+## Fence64
+
+Code in an item indented with a tab the item takes part of: a line break in it keeps the tab, on
+the new line too.
+
+```yaml
+tags: rare markup-fence
+```
+
+````buffer
+- item text
+→```
+→co┃de
+→```
+````
+
+> shiftEnter
+
+````buffer
+- item text
+→```
+→co
+→┃de
+→```
+````

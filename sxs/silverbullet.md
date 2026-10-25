@@ -5,8 +5,8 @@ version: "2.12.0-50-gb2726cd8-2026-10-13T06-53-29Z"
 url: "https://demo.silverbullet.md/personal/"
 model: "text"
 command: "node sxs/run.ts silverbullet"
-elapsed_s: 402
-workers: 6
+elapsed_s: 495
+workers: 5
 ---
 
 # SilverBullet vs ourus
@@ -15,44 +15,45 @@ Summary:
 
 | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- |
-| **234 (24%)** | **[38](#caret-38) (3.9%)** | **[34](#whitespace-34) (3.5%)** | **[536](#disagree-536) (55%)** | **0 (0%)** | **[128](#skipped-128) (13%)** | **970** |
+| **247 (24%)** | **[38](#caret-38) (3.7%)** | **[34](#whitespace-34) (3.3%)** | **[557](#disagree-557) (55%)** | **0 (0%)** | **[143](#skipped-143) (14%)** | **1019** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | [backspace.md](../spec/backspace.md) | 13 |  | 1 | 59 |  | 9 | **82** |
-| [backtick.md](../spec/backtick.md) | 10 |  |  | 13 |  | 9 | **32** |
+| [backtick.md](../spec/backtick.md) | 10 |  |  | 13 |  | 10 | **33** |
 | [copy.md](../spec/copy.md) | 2 |  | 2 | 2 |  | 7 | **13** |
 | [cursor.md](../spec/cursor.md) | 16 | 19 |  |  |  | 1 | **36** |
-| [delete-subtree.md](../spec/delete-subtree.md) |  |  |  |  |  | 10 | **10** |
+| [delete-subtree.md](../spec/delete-subtree.md) |  |  |  |  |  | 13 | **13** |
 | [delete.md](../spec/delete.md) | 11 |  |  | 30 |  | 14 | **55** |
-| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 9 | **9** |
+| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 10 | **10** |
 | [enter.md](../spec/enter.md) | 11 | 2 | 5 | 65 |  | 9 | **92** |
-| [fences.md](../spec/fences.md) | 9 | 4 | 4 | 47 |  | 4 | **68** |
+| [fences.md](../spec/fences.md) | 9 | 4 | 4 | 49 |  | 4 | **70** |
 | [gaps.md](../spec/gaps.md) | 11 | 1 |  | 7 |  |  | **19** |
 | [indent.md](../spec/indent.md) | 17 | 1 | 2 | 12 |  | 4 | **36** |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 15 | 3 |  | 21 |  |  | **39** |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 13 | 4 |  | 24 |  |  | **41** |
-| [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 18 | 2 | 6 | 35 |  | 6 | **67** |
-| [outdent.md](../spec/outdent.md) | 8 | 1 |  | 18 |  | 8 | **35** |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 15 | 3 |  | 22 |  |  | **40** |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 14 | 4 |  | 24 |  |  | **42** |
+| [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 19 | 2 | 6 | 34 |  | 6 | **67** |
+| [outdent.md](../spec/outdent.md) | 8 | 1 |  | 19 |  | 8 | **36** |
 | [paste-conv.md](../spec/paste-conv.md) | 2 |  |  | 4 |  |  | **6** |
 | [paste-html.md](../spec/paste-html.md) | 1 | 1 | 3 | 14 |  |  | **19** |
 | [paste-list-form.md](../spec/paste-list-form.md) |  |  |  | 5 |  | 1 | **6** |
-| [paste-list.md](../spec/paste-list.md) | 1 |  |  | 19 |  | 8 | **28** |
+| [paste-list.md](../spec/paste-list.md) | 1 |  |  | 20 |  | 8 | **29** |
 | [paste-plain.md](../spec/paste-plain.md) | 30 |  |  |  |  | 4 | **34** |
-| [paste.md](../spec/paste.md) | 4 |  | 1 | 18 |  | 4 | **27** |
-| [placeholders.md](../spec/placeholders.md) | 6 |  |  | 14 |  |  | **20** |
-| [quotes.md](../spec/quotes.md) | 12 |  |  | 79 |  | 6 | **97** |
+| [paste.md](../spec/paste.md) | 4 |  | 1 | 18 |  | 7 | **30** |
+| [placeholders.md](../spec/placeholders.md) | 7 |  |  | 13 |  |  | **20** |
+| [quotes.md](../spec/quotes.md) | 12 |  |  | 81 |  | 7 | **100** |
+| [regressions.md](../spec/regressions.md) | 8 |  |  | 18 |  | 6 | **32** |
 | [scenarios.md](../spec/scenarios.md) | 7 |  |  | 17 |  | 2 | **26** |
-| [shift-enter.md](../spec/shift-enter.md) | 4 |  | 8 | 21 |  | 3 | **36** |
+| [shift-enter.md](../spec/shift-enter.md) | 6 |  | 8 | 19 |  | 3 | **36** |
 | [tasks.md](../spec/tasks.md) | 6 |  | 2 | 11 |  | 9 | **28** |
 | [typing.md](../spec/typing.md) | 3 |  |  |  |  |  | **3** |
 | [undo.md](../spec/undo.md) | 4 |  |  | 1 |  |  | **5** |
 | [z-open.md](../spec/z-open.md) |  |  |  |  |  | 1 | **1** |
-| **total** | **234 (24%)** | **38 (3.9%)** | **34 (3.5%)** | **536 (55%)** | **0 (0%)** | **128 (13%)** | **970** |
+| **total** | **247 (24%)** | **38 (3.7%)** | **34 (3.3%)** | **557 (55%)** | **0 (0%)** | **143 (14%)** | **1019** |
 
-## Disagree (536)
+## Disagree (557)
 
 ### [Backspace1](../spec/backspace.md#backspace1)
 
@@ -1591,7 +1592,7 @@ lines
 </td><td>
 
 ```buffer
-\[a]:┃b
+[a]\:┃b
 ```
 
 </td></tr>
@@ -1704,7 +1705,7 @@ abc ┃[a]: tail
 </td><td>
 
 ```buffer
-┃\[a]: tail
+┃[a]\: tail
 ```
 
 </td></tr>
@@ -1832,8 +1833,10 @@ title
 
 ### [SoftBackspace7](../spec/backspace.md#softbackspace7)
 
+> deleteSoftLineBackward
+
 <table>
-<tr><th>buffer</th></tr>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
@@ -1841,39 +1844,11 @@ title
   > m
 ```
 
-</td></tr>
-</table>
-
-> deleteSoftLineBackward
-
-<table>
-<tr><th>silverbullet</th><th>ourus</th></tr>
-<tr valign="top"><td>
+</td><td>
 
 ```buffer
 ┃
   > m
-```
-
-</td><td>
-
-```buffer
-- > ┃
-  > m
-```
-
-</td></tr>
-</table>
-
-> cursorLineDown
-
-<table>
-<tr><th>silverbullet</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-
-┃  > m
 ```
 
 </td><td>
@@ -1934,7 +1909,8 @@ title
 </td><td>
 
 ```buffer
-- [ ] m┃
+- [ ] 
+  m┃
 ```
 
 </td></tr>
@@ -2277,7 +2253,7 @@ para
 ```buffer
 para┃i
 | a |
-\|---|
+|\---|
 ```
 
 </td></tr>
@@ -3706,7 +3682,6 @@ body
 
 ```buffer
 ## A┃
-
 H1
 ```
 
@@ -3879,7 +3854,7 @@ Title┃text
 </td><td>
 
 ```buffer
-- \[a]:┃b
+- [a]\:┃b
 ```
 
 </td></tr>
@@ -4115,6 +4090,8 @@ Original:
 
 > enter
 
+Adapted: under enterSplitSpace: start
+
 <table>
 <tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
 <tr valign="top"><td>
@@ -4138,8 +4115,31 @@ Original:
 
 ```buffer
 9. a
-10. ┃b
-    - c
+10. ┃ b
+     - c
+11. d
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+9. a┃ b
+   - c
+10. d
+```
+
+</td><td>
+
+```buffer
+9. a
+10. ┃ b
+     - c
 11. d
 ```
 
@@ -4470,7 +4470,7 @@ see
 ```buffer
 see 
 
-┃\[a]: /url
+┃[a]\: /url
 ```
 
 </td></tr>
@@ -4490,7 +4490,7 @@ see ┃[a]: /url
 ```buffer
 see 
 
-┃\[a]: /url
+┃[a]\: /url
 ```
 
 </td></tr>
@@ -6186,8 +6186,6 @@ one two┃ three
 
 > enter
 
-Adapted: under enterAtTextStart: stay
-
 <table>
 <tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
 <tr valign="top"><td>
@@ -6206,27 +6204,9 @@ Adapted: under enterAtTextStart: stay
 </td><td>
 
 ```buffer
-
-> ┃quote
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-> ┃quote
-```
-
-</td><td>
-
-```buffer
-
-> ┃quote
+> ┃
+>
+> quote
 ```
 
 </td></tr>
@@ -6261,7 +6241,7 @@ Adapted: under enterSplitSpace: start
 </td><td>
 
 ```buffer
-\[Note]: this 
+[Note]\: this 
 
 ┃matters a lot
 ```
@@ -6294,7 +6274,7 @@ Original:
 </td><td>
 
 ```buffer
-\[Note]: this 
+[Note]\: this 
 
 ┃matters a lot
 ```
@@ -6337,7 +6317,7 @@ Adapted: under enterSplitSpace: start
 </td><td>
 
 ```buffer
-- \[a]: b 
+- [a]\: b 
 - ┃c
 ```
 
@@ -6376,7 +6356,7 @@ Original:
 </td><td>
 
 ```buffer
-- \[a]: b 
+- [a]\: b 
 - ┃c
 ```
 
@@ -7220,8 +7200,6 @@ Original:
 
 > enter
 
-Adapted: under enterSplitSpace: start
-
 <table>
 <tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
 <tr valign="top"><td>
@@ -7242,31 +7220,9 @@ p # h
 </td><td>
 
 ```buffer
-> [!note] 
+> [!note]
 > ┃q
->
-p # h
-```
 
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-> [!note] ┃q
-p # h
-```
-
-</td><td>
-
-```buffer
-> [!note] 
-> ┃q
->
 p # h
 ```
 
@@ -9323,6 +9279,81 @@ body
 </td></tr>
 </table>
 
+### [Fence63](../spec/fences.md#fence63)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- item text
+    ┃```
+    code
+    ```
+````
+
+</td><td>
+
+````buffer
+- item text
+
+  ┃```
+    code
+    ```
+````
+
+</td><td>
+
+````buffer
+- item text
+- ```
+  ┃code
+  ```
+````
+
+</td></tr>
+</table>
+
+### [Fence64](../spec/fences.md#fence64)
+
+> shiftEnter
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- item text
+→```
+→co┃de
+→```
+````
+
+</td><td>
+
+````buffer
+- item text
+→```
+→co
+┃de
+→```
+````
+
+</td><td>
+
+````buffer
+- item text
+→```
+→co
+→┃de
+→```
+````
+
+</td></tr>
+</table>
+
 ### [Gap4](../spec/gaps.md#gap4)
 
 > moveSubtreeUp
@@ -9773,6 +9804,7 @@ para b┃
 
 ```buffer
 para a
+
 - para b┃
 ```
 
@@ -10671,7 +10703,6 @@ intro
 ```buffer
 # Todo
 - one
-
 ## Later
 - two┃
 - three
@@ -10779,9 +10810,9 @@ para┃
 
 ```buffer
 # A
-para┃
 
 # B
+para┃
 - x
 ```
 
@@ -10905,7 +10936,9 @@ para
 - s1
 
 # B
+
 ┃para
+
 ```
 
 </td></tr>
@@ -11087,6 +11120,7 @@ para
 - a
 
 para
+
 - b┃
 ```
 
@@ -11131,9 +11165,10 @@ para
 ```buffer
 - a
 
-
-
 para
+
+
+
 - b┃
 ```
 
@@ -11164,6 +11199,42 @@ para
 
 
 para
+```
+
+</td></tr>
+</table>
+
+### [MoveDown40](../spec/move-subtree-down.md#movedown40)
+
+> moveSubtreeDown
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+1. a
+2. «
+1) b»
+2) c
+```
+
+</td><td>
+
+```buffer
+1. a
+2. «
+1) b»
+2) c
+```
+
+</td><td>
+
+```buffer
+1. a
+1) c
+2) «
+3) b»
 ```
 
 </td></tr>
@@ -11716,7 +11787,6 @@ para
 
 ```buffer
 para
-
 - a┃
 - b
 ```
@@ -11901,7 +11971,7 @@ para
 > moveSubtreeDown
 
 <table>
-<tr><th>buffer</th></tr>
+<tr><th>silverbullet</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
@@ -11909,6 +11979,18 @@ para
 - x
 
 # B
+## s┃
+- y
+```
+
+</td><td>
+
+```buffer
+# A
+- x
+
+# B
+
 ## s┃
 - y
 ```
@@ -11963,7 +12045,7 @@ para
 > moveSubtreeDown
 
 <table>
-<tr><th>buffer</th></tr>
+<tr><th>silverbullet</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
@@ -11971,6 +12053,17 @@ para
 para
 
 # Home
+- ┃review
+```
+
+</td><td>
+
+```buffer
+# Work
+para
+
+# Home
+
 - ┃review
 ```
 
@@ -12162,6 +12255,7 @@ para
 para
 
 - ┃i
+
 2. m
 ```
 
@@ -12691,37 +12785,6 @@ Hello world
 </td></tr>
 </table>
 
-### [TO-S11b](../spec/obsidian-true-outliner.md#to-s11b)
-
-> shiftEnter cursorDocStart
-
-<table>
-<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-foo┃
-bar
-```
-
-</td><td>
-
-```buffer
-┃foo
-
-bar
-```
-
-</td><td>
-
-```buffer
-┃foo
-bar
-```
-
-</td></tr>
-</table>
-
 ### [TO-Bug269](../spec/obsidian-true-outliner.md#to-bug269)
 
 > deleteContentBackward deleteContentBackward
@@ -13132,6 +13195,7 @@ code┃
 ┃- one
   - kid
   - foo
+    
 ```
 
 </td></tr>
@@ -13169,6 +13233,7 @@ code┃
   - kid
   - sib
     - foo
+      
 ```
 
 </td></tr>
@@ -13943,11 +14008,19 @@ b┃
 > indent
 
 <table>
-<tr><th>buffer</th></tr>
+<tr><th>silverbullet</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
 para
+- b┃
+```
+
+</td><td>
+
+```buffer
+para
+
 - b┃
 ```
 
@@ -14249,7 +14322,7 @@ code
 ```buffer
 t1┃
 | a | b |
-\|---|---|
+|\---|---|
 ```
 
 </td></tr>
@@ -14280,6 +14353,36 @@ t1┃
 ```buffer
 t1┃
 \===
+```
+
+</td></tr>
+</table>
+
+### [Outdent21](../spec/outdent.md#outdent21)
+
+> outdent
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- - ┃b
+```
+
+</td><td>
+
+```buffer
+- a
+- - ┃b
+```
+
+</td><td>
+
+```buffer
+- a
+- ┃b
 ```
 
 </td></tr>
@@ -16211,6 +16314,51 @@ text┃
 </td></tr>
 </table>
 
+### [PasteList17b](../spec/paste-list.md#pastelist17b)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+> q
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- ┃
+  - b1
+```
+
+</td><td>
+
+```buffer
+- a
+- > q
+┃
+  - b1
+```
+
+</td><td>
+
+```buffer
+- a
+- > q┃
+  - b1
+```
+
+</td></tr>
+</table>
+
 ### [PasteList25](../spec/paste-list.md#pastelist25)
 
 <table>
@@ -16948,9 +17096,7 @@ b
 
 ```buffer
 a
-
 - x┃
-
 
 b
 ```
@@ -17427,53 +17573,6 @@ para
 ```buffer
 para
 
-┃
-```
-
-</td></tr>
-</table>
-
-> cursorDocStart
-
-<table>
-<tr><th>silverbullet</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-┃para
-
-```
-
-</td><td>
-
-```buffer
-┃para
-```
-
-</td></tr>
-</table>
-
-### [Placeholder4](../spec/placeholders.md#placeholder4)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-para┃
-```
-
-</td></tr>
-</table>
-
-> shiftEnter
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-para
 ┃
 ```
 
@@ -18820,8 +18919,8 @@ c
 
 ```buffer
 > - a
-
 - c
+
   - b┃
 ```
 
@@ -19864,19 +19963,11 @@ c┃
 > deleteContentBackward
 
 <table>
-<tr><th>silverbullet</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
 - a┃b
-> - c
-```
-
-</td><td>
-
-```buffer
-- a┃b
-
 > - c
 ```
 
@@ -20024,8 +20115,6 @@ para
 
 ### [Quote89](../spec/quotes.md#quote89)
 
-Adapted: under enterAtTextStart: stay
-
 <table>
 <tr><th>buffer</th></tr>
 <tr valign="top"><td>
@@ -20051,8 +20140,9 @@ Adapted: under enterAtTextStart: stay
 </td><td>
 
 ```buffer
-
-> ┃q
+> ┃
+>
+> q
 ```
 
 </td></tr>
@@ -20072,34 +20162,7 @@ Adapted: under enterAtTextStart: stay
 </td><td>
 
 ```buffer
-
-┃q
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>enter</th><th>deleteContentBackward</th></tr>
-<tr valign="top"><td>
-
-```buffer
 > ┃q
-```
-
-</td><td>
-
-```buffer
-
-> ┃q
-```
-
-</td><td>
-
-```buffer
-
-┃q
 ```
 
 </td></tr>
@@ -20467,8 +20530,8 @@ para┃
 
 ```buffer
 > [!note] T
-
 - b
+
   - a┃
 ```
 
@@ -20741,8 +20804,6 @@ para┃
 
 ### [Quote80](../spec/quotes.md#quote80)
 
-Adapted: under enterAtTextStart: stay
-
 <table>
 <tr><th>buffer</th></tr>
 <tr valign="top"><td>
@@ -20768,8 +20829,9 @@ Adapted: under enterAtTextStart: stay
 </td><td>
 
 ```buffer
-
-- > ┃q
+- > ┃
+  >
+  > q
 ```
 
 </td></tr>
@@ -20789,34 +20851,9 @@ Adapted: under enterAtTextStart: stay
 </td><td>
 
 ```buffer
-
-- > x┃q
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>enter</th><th>"x"</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- > ┃q
-```
-
-</td><td>
-
-```buffer
-
-- > ┃q
-```
-
-</td><td>
-
-```buffer
-
-- > x┃q
+- > x┃
+  >
+  > q
 ```
 
 </td></tr>
@@ -21043,7 +21080,7 @@ lines
 
 ```buffer
 - ┃q
-    \- g
+      - g
 ```
 
 </td></tr>
@@ -21232,6 +21269,870 @@ lines
 - a
 - [ ] ┃q
 - b
+```
+
+</td></tr>
+</table>
+
+### [Quote95](../spec/quotes.md#quote95)
+
+> outdent
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+>- a
+>   - ┃b
+```
+
+</td><td>
+
+```buffer
+>- a
+>   - ┃b
+```
+
+</td><td>
+
+```buffer
+>- a
+>- ┃b
+```
+
+</td></tr>
+</table>
+
+### [Quote97](../spec/quotes.md#quote97)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+>→- ┃a
+>→- b
+```
+
+</td><td>
+
+```buffer
+>→-┃a
+>→- b
+```
+
+</td><td>
+
+```buffer
+> ┃a
+>→- b
+```
+
+</td></tr>
+</table>
+
+### [Regression1](../spec/regressions.md#regression1)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+* a
+  * ┃b
+  2) x
+```
+
+</td><td>
+
+```buffer
+* a
+  ┃b
+  2) x
+```
+
+</td><td>
+
+```buffer
+* a┃b
+  1) x
+```
+
+</td></tr>
+</table>
+
+### [Regression2](../spec/regressions.md#regression2)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  1. 
+- ┃b
+```
+
+</td><td>
+
+```buffer
+- a
+  1. 
+  ┃b
+```
+
+</td><td>
+
+```buffer
+- a
+  1\. ┃b
+```
+
+</td></tr>
+</table>
+
+### [Regression4](../spec/regressions.md#regression4)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+p0
+2. m1┃
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+p0
+2. m1
+┃
+```
+
+</td><td>
+
+```buffer
+p0
+2. m1
+
+┃
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+p0
+2. m1┃
+```
+
+</td></tr>
+</table>
+
+### [Regression5](../spec/regressions.md#regression5)
+
+> enter
+
+Adapted: under enterSplitSpace: start
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+\[a]: ┃/url
+```
+
+</td><td>
+
+```buffer
+\[a]: 
+┃/url
+```
+
+</td><td>
+
+```buffer
+\[a]: 
+
+┃/url
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+\[a]: ┃/url
+```
+
+</td><td>
+
+```buffer
+\[a]: 
+
+┃/url
+```
+
+</td></tr>
+</table>
+
+### [Regression6](../spec/regressions.md#regression6)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+`````````````buffer
+```
+x┃````````````
+body
+```
+`````````````
+
+</td><td>
+
+`````````````buffer
+```
+┃````````````
+body
+```
+`````````````
+
+</td><td>
+
+``````````````buffer
+`````````````
+┃````````````
+body
+`````````````
+``````````````
+
+</td></tr>
+</table>
+
+### [Regression8](../spec/regressions.md#regression8)
+
+> moveSubtreeUp
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b
+  2) ┃x
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+  2) ┃x
+```
+
+</td><td>
+
+```buffer
+- a
+  1) ┃x
+  - b
+```
+
+</td></tr>
+</table>
+
+### [Regression9](../spec/regressions.md#regression9)
+
+> outdent
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃a
+    1. b
+      - c
+```
+
+</td><td>
+
+```buffer
+- ┃a
+    1. b
+      - c
+```
+
+</td><td>
+
+```buffer
+┃a
+1. b
+       - c
+```
+
+</td></tr>
+</table>
+
+### [Regression10](../spec/regressions.md#regression10)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one┃<div>
+```
+
+</td></tr>
+</table>
+
+> shiftEnter
+
+<table>
+<tr><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one
+┃<div>
+```
+
+</td><td>
+
+```buffer
+- one
+  ┃\<div>
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one┃<div>
+```
+
+</td><td>
+
+```buffer
+- one┃\<div>
+```
+
+</td></tr>
+</table>
+
+### [Regression11](../spec/regressions.md#regression11)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+````buffer
+para┃``` x
+````
+
+</td></tr>
+</table>
+
+> shiftEnter
+
+<table>
+<tr><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+para
+┃``` x
+````
+
+</td><td>
+
+````buffer
+para
+┃\``` x
+````
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+para┃``` x
+````
+
+</td><td>
+
+````buffer
+para┃\``` x
+````
+
+</td></tr>
+</table>
+
+### [Regression14](../spec/regressions.md#regression14)
+
+> outdent
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+para
+  - b┃
+    - c
+  - d
+```
+
+</td><td>
+
+```buffer
+para
+- b┃
+  - c
+  - d
+```
+
+</td><td>
+
+```buffer
+para
+
+b┃
+- c
+- d
+```
+
+</td></tr>
+</table>
+
+### [Regression24](../spec/regressions.md#regression24)
+
+Adapted: under enterSplitSpace: start
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+revise ┃2\. draft
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+revise 
+┃2\. draft
+```
+
+</td><td>
+
+```buffer
+revise 
+
+┃2\. draft
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+revise ┃2\. draft
+```
+
+</td><td>
+
+```buffer
+revise ┃2. draft
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter</th><th>deleteContentBackward</th></tr>
+<tr valign="top"><td>
+
+```buffer
+revise ┃2\. draft
+```
+
+</td><td>
+
+```buffer
+revise 
+
+┃2\. draft
+```
+
+</td><td>
+
+```buffer
+revise ┃2. draft
+```
+
+</td></tr>
+</table>
+
+### [Regression25](../spec/regressions.md#regression25)
+
+Adapted: under enterSplitSpace: start
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- revise ┃2\. draft
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- revise
+- ┃2\. draft
+```
+
+</td><td>
+
+```buffer
+- revise 
+- ┃2\. draft
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- revise
+  ┃2\. draft
+```
+
+</td><td>
+
+```buffer
+- revise ┃2. draft
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter</th><th>deleteContentBackward</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- revise ┃2\. draft
+```
+
+</td><td>
+
+```buffer
+- revise 
+- ┃2\. draft
+```
+
+</td><td>
+
+```buffer
+- revise ┃2. draft
+```
+
+</td></tr>
+</table>
+
+### [Regression26](../spec/regressions.md#regression26)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+a ┃\- b
+```
+
+</td></tr>
+</table>
+
+> shiftEnter
+
+<table>
+<tr><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+a 
+┃\- b
+```
+
+</td><td>
+
+```buffer
+a
+ ┃\- b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+a ┃\- b
+```
+
+</td><td>
+
+```buffer
+a ┃- b
+```
+
+</td></tr>
+</table>
+
+### [Regression27](../spec/regressions.md#regression27)
+
+> enter
+
+Adapted: under enterSplitSpace: start
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+revise ┃2\. a
+3\. b
+```
+
+</td><td>
+
+```buffer
+revise 
+┃2\. a
+3\. b
+```
+
+</td><td>
+
+```buffer
+revise 
+
+┃2\. a
+3\. b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+revise ┃2\. a
+3\. b
+```
+
+</td><td>
+
+```buffer
+revise 
+
+┃2\. a
+3\. b
+```
+
+</td></tr>
+</table>
+
+### [Regression29](../spec/regressions.md#regression29)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> [!a b] x┃
+```
+
+</td><td>
+
+```buffer
+> [!a b] x
+> ┃
+```
+
+</td><td>
+
+```buffer
+> [!a b] x
+>
+> ┃
+```
+
+</td></tr>
+</table>
+
+### [Regression30](../spec/regressions.md#regression30)
+
+> indent
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃para
+→- a
+```
+
+</td><td>
+
+```buffer
+┃para
+→- a
+```
+
+</td><td>
+
+```buffer
+- ┃para
+  →\- a
+```
+
+</td></tr>
+</table>
+
+### [Regression31](../spec/regressions.md#regression31)
+
+> outdent
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃- para
+  →\- a
+```
+
+</td><td>
+
+```buffer
+┃- para
+  →\- a
+```
+
+</td><td>
+
+```buffer
+┃para
+→- a
+```
+
+</td></tr>
+</table>
+
+### [Regression32](../spec/regressions.md#regression32)
+
+> deleteContentForward
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- para┃
+  →\- a
+```
+
+</td><td>
+
+```buffer
+- para┃  →\- a
+```
+
+</td><td>
+
+```buffer
+- para┃→- a
 ```
 
 </td></tr>
@@ -22961,55 +23862,6 @@ x┃bc
 </td></tr>
 </table>
 
-### [ShiftEnter12](../spec/shift-enter.md#shiftenter12)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-para
-┃
-```
-
-</td></tr>
-</table>
-
-> shiftEnter
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-para
-
-┃
-```
-
-</td></tr>
-</table>
-
-> deleteContentBackward
-
-<table>
-<tr><th>silverbullet</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-para
-┃
-```
-
-</td><td>
-
-```buffer
-para┃
-```
-
-</td></tr>
-</table>
-
 ### [ShiftEnter13](../spec/shift-enter.md#shiftenter13)
 
 <table>
@@ -23191,7 +24043,7 @@ p┃
 
 ```buffer
 1. abc
-    ┃2\. x
+    ┃2. x
 ```
 
 </td></tr>
@@ -23220,7 +24072,7 @@ a | b
 
 ```buffer
 a | b
- ┃\|---|---|
+ ┃|\---|---|
 ```
 
 </td></tr>
@@ -23295,7 +24147,7 @@ a | b
 </td><td>
 
 ```buffer
-\[Note]: this
+[Note]\: this
  ┃matters a lot
 ```
 
@@ -23362,7 +24214,7 @@ p
 ```buffer
 p
 
-┃\[r]: /u
+┃[r]\: /u
 ```
 
 </td></tr>
@@ -23414,61 +24266,6 @@ p
 ```buffer
 - p
   -┃a
-```
-
-</td></tr>
-</table>
-
-### [ShiftEnter31](../spec/shift-enter.md#shiftenter31)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-[a]:┃
-
-b
-```
-
-</td></tr>
-</table>
-
-> shiftEnter
-
-<table>
-<tr><th>silverbullet</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-[a]:
-┃
-
-b
-```
-
-</td><td>
-
-```buffer
-\[a]:
-┃
-
-b
-```
-
-</td></tr>
-</table>
-
-> deleteContentBackward
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-[a]:┃
-
-b
 ```
 
 </td></tr>
@@ -25183,15 +25980,14 @@ y
 <tr valign="top"><td>
 
 ```buffer
-- one
-  ┃
+- one┃
 - two
 ```
 
 </td></tr>
 </table>
 
-> shiftEnter
+> shiftEnter shiftEnter
 
 <table>
 <tr><th>silverbullet</th><th>ourus</th></tr>
@@ -25199,7 +25995,7 @@ y
 
 ```buffer
 - one
-  
+
 ┃
 - two
 ```
@@ -25219,8 +26015,16 @@ y
 > deleteContentBackward
 
 <table>
-<tr><th>buffer</th></tr>
+<tr><th>silverbullet</th><th>ourus</th></tr>
 <tr valign="top"><td>
+
+```buffer
+- one
+┃
+- two
+```
+
+</td><td>
 
 ```buffer
 - one
@@ -26709,7 +27513,7 @@ let b = 2;┃
 </td></tr>
 </table>
 
-## Skipped (128)
+## Skipped (143)
 
 | example | why |
 | --- | --- |
@@ -26724,6 +27528,7 @@ let b = 2;┃
 | [Backspace42b](../spec/backspace.md#backspace42b) | option markup: decorated |
 | [Backspace45b](../spec/backspace.md#backspace45b) | option joinWithChildren: refuse |
 | **backtick.md** | |
+| [Backtick2b](../spec/backtick.md#backtick2b) | option closeBackticks: all |
 | [Backtick7](../spec/backtick.md#backtick7) | option markup: decorated |
 | [Backtick13](../spec/backtick.md#backtick13) | option markup: decorated |
 | [Backtick16](../spec/backtick.md#backtick16) | option markup: decorated |
@@ -26754,8 +27559,12 @@ let b = 2;┃
 | [DeleteSubtree8](../spec/delete-subtree.md#deletesubtree8) | action deleteSubtree |
 | [DeleteSubtree9](../spec/delete-subtree.md#deletesubtree9) | action deleteSubtree |
 | [DeleteSubtree10](../spec/delete-subtree.md#deletesubtree10) | action deleteSubtree |
+| [DeleteSubtree11](../spec/delete-subtree.md#deletesubtree11) | action deleteSubtree |
+| [DeleteSubtree12](../spec/delete-subtree.md#deletesubtree12) | action deleteSubtree |
+| [DeleteSubtree13](../spec/delete-subtree.md#deletesubtree13) | action deleteSubtree |
 | **delete.md** | |
 | [Delete5e](../spec/delete.md#delete5e) | option emptyItemWithChildren: refuse |
+| [Delete5f](../spec/delete.md#delete5f) | option emptyItemWithChildren: refuse |
 | [Delete13b](../spec/delete.md#delete13b) | option headingEditing: block |
 | [Delete13d](../spec/delete.md#delete13d) | option headingEditing: block |
 | [Delete13f](../spec/delete.md#delete13f) | option headingEditing: block |
@@ -26765,7 +27574,6 @@ let b = 2;┃
 | [Delete16d](../spec/delete.md#delete16d) | option markup: decorated |
 | [Delete16e](../spec/delete.md#delete16e) | option markup: decorated |
 | [Delete16f](../spec/delete.md#delete16f) | option markup: decorated |
-| [Delete16g](../spec/delete.md#delete16g) | option markup: decorated |
 | [Delete19](../spec/delete.md#delete19) | option markup: decorated |
 | [Delete31b](../spec/delete.md#delete31b) | option joinWithChildren: refuse |
 | [Delete34](../spec/delete.md#delete34) | nothing to compare |
@@ -26779,6 +27587,7 @@ let b = 2;┃
 | [DuplicateSubtree7](../spec/duplicate-subtree.md#duplicatesubtree7) | action duplicateSubtree |
 | [DuplicateSubtree8](../spec/duplicate-subtree.md#duplicatesubtree8) | action duplicateSubtree |
 | [DuplicateSubtree9](../spec/duplicate-subtree.md#duplicatesubtree9) | action duplicateSubtree |
+| [DuplicateSubtree10](../spec/duplicate-subtree.md#duplicatesubtree10) | action duplicateSubtree |
 | **enter.md** | |
 | [Enter3b](../spec/enter.md#enter3b) | option enterMidItem: child |
 | [Enter7b](../spec/enter.md#enter7b) | option enterOnEmptyItem: outdent |
@@ -26832,10 +27641,13 @@ let b = 2;┃
 | [PastePlain33](../spec/paste-plain.md#pasteplain33) | option pastePlainLines: items |
 | [PastePlain34](../spec/paste-plain.md#pasteplain34) | nothing to compare |
 | **paste.md** | |
+| [Paste4b](../spec/paste.md#paste4b) | option pasteSeams: open |
 | [Paste18](../spec/paste.md#paste18) | option pasteLines: items |
 | [Paste19](../spec/paste.md#paste19) | option pasteLines: items |
 | [Paste20](../spec/paste.md#paste20) | option pasteAtTextStart: before |
 | [Paste21](../spec/paste.md#paste21) | option pasteSeams: open |
+| [Paste24b](../spec/paste.md#paste24b) | option pasteSeams: open |
+| [Paste26b](../spec/paste.md#paste26b) | option pasteSeams: open |
 | **quotes.md** | |
 | [Quote12b](../spec/quotes.md#quote12b) | option outdent: logical |
 | [Quote20](../spec/quotes.md#quote20) | option outdent: logical |
@@ -26843,6 +27655,14 @@ let b = 2;┃
 | [Quote55](../spec/quotes.md#quote55) | option backspaceAtTopItem: refuse |
 | [Quote82](../spec/quotes.md#quote82) | action deleteSubtree |
 | [Quote86](../spec/quotes.md#quote86) | action duplicateSubtree |
+| [Quote96](../spec/quotes.md#quote96) | action duplicateSubtree |
+| **regressions.md** | |
+| [Regression16](../spec/regressions.md#regression16) | option enterMidItem: child |
+| [Regression18](../spec/regressions.md#regression18) | option headingEditing: block |
+| [Regression19](../spec/regressions.md#regression19) | option headingEditing: block |
+| [Regression20](../spec/regressions.md#regression20) | option joinWithChildren: refuse |
+| [Regression21](../spec/regressions.md#regression21) | option pasteLines: items |
+| [Regression22](../spec/regressions.md#regression22) | option pastePlainLines: items |
 | **scenarios.md** | |
 | [Scenario10](../spec/scenarios.md#scenario10) | action deleteSubtree |
 | [Scenario17](../spec/scenarios.md#scenario17) | option pasteLines: items |

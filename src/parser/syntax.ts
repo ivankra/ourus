@@ -1,4 +1,4 @@
-// A parsed document: the line machine's records and states for every line, and the views built from
+// A parsed document: the line machine's records and states for every line, and what is built from
 // them when first asked for (the block tree, the line table, each leaf's inlines).
 //
 // Parsing is incremental. After an edit, the machine restarts at the first changed line (or earlier,
@@ -6,19 +6,23 @@
 // reads on until its state equals the old parse's state at the same place in the old text: every
 // line after that reads as before, so the old records are reused (they are relative to their line's
 // start, so they hold wherever the line moved). Equal state includes the open paragraph's content,
-// since the only effects reaching back to earlier lines depend on it.
+// since the only effects reaching back to earlier lines depend on it. The block tree is built again
+// from the records, taking whole every old block outside the lines read again (`tree.ts`).
 
-import { applyChanges, lineEnding, lineIndexAt, normalizeChanges, splitLines, type ChangeSpec } from '../text.ts';
+import { applyChanges, lineEnding, lineIndexAt, normalizeChanges, splitLines, type ChangeSpec } from '../text/index.ts';
 import { isBlankText, isSpaceOrTab, normalizeLabel } from './chars.ts';
 import { PARAGRAPH, PARAGRAPH_FIRST, PARAGRAPH_NEXT, type ParagraphFrame } from './blocks.ts';
-import { commonmark, type Flavor, type MutableBlock } from './flavor.ts';
-import { InlineParser } from './inlines.ts';
-import { frameEquals, Machine, type LineRecord, type LineSource, type State } from './machine.ts';
-import { scanReference, type Reference } from './refs.ts';
-import type { Block, InlineNode, InlineText, LineInfo, PrefixPiece } from './types.ts';
-import { preorder } from './walk.ts';
+import { commonmark, type MdFlavor } from './flavor.ts';
+import { MdInlineParser } from './inlines.ts';
+import { frameEquals, MdMachine, type MdLineRecord, type LineSource, type MdState } from './machine.ts';
+import { scanReference, type MdReference } from './refs.ts';
+import { allLineBlocks, buildTree, lineBlocks, MdBlockAt, type Reuse } from './tree.ts';
+import { plainMarkup } from './markup.ts';
+import { renderHtml, type MdHtmlOptions } from './html.ts';
+import type { MdBlock, MdInline, MdInlineText, MdLine, MdLineMarkup, MdPrefixPiece } from './types.ts';
 
-export interface ParseOptions {
+/** How to read a text, beyond its flavor. */
+export interface MdParseOptions {
   /**
    * Offsets read as if a character had been typed there (an editor's placeholders): at a line's end
    * the character is appended, at a space or tab it is read in place of it. An offset after the
@@ -28,62 +32,92 @@ export interface ParseOptions {
 }
 
 /** Which lines an update read again, in the new document's line numbers (`to` inclusive; empty when `to < from`). */
-export interface Reread {
+export interface MdReread {
   readonly from: number;
   readonly to: number;
   /** Whether everything was parsed afresh. */
   readonly full: boolean;
 }
 
-
-/** InlineNode trees by leaf text, shared by the snapshots of a document while its definitions stay the same. */
+/** Inlines by leaf text, shared by the snapshots of a document while its definitions stay the same. */
 interface InlineCache {
   readonly key: string;
-  readonly map: Map<string, readonly InlineNode[]>;
+  readonly map: Map<string, readonly MdInline[]>;
 }
 
 const EMPTY_SENTINELS: ReadonlyMap<number, readonly number[]> = new Map();
-const NO_INLINES: readonly InlineNode[] = Object.freeze([]);
+const NO_INLINES: readonly MdInline[] = Object.freeze([]);
 
-export class SyntaxTree {
+/**
+ * A Markdown text parsed in a flavor: Markdown's own structure of it, as CommonMark defines it. Not
+ * the outline: there a heading owns the nodes after it and a paragraph the list after it, and that
+ * is built on this one (`doc/`).
+ *
+ * - **Lines** (`line(i)`, `MdLine`): each line's offsets and ending, the prefix its containers took
+ *   (a quote's `>`, an item's marker or indentation), the containers it is in, and its leaf.
+ * - **Blocks** (`root`, `MdBlock`): containers (quotes, lists, items, footnote definitions)
+ *   holding blocks, and leaves (paragraphs, headings, code, HTML, tables, ...) holding lines; stored
+ *   relative to their parent, shared by the snapshots an edit didn't change them in. Where one is in
+ *   this tree is an `MdBlockAt` (a line's containers and leaf are).
+ * - **Markup** (`markup(i)`): what a leaf has on a line besides its text: a heading's `#`s, a fence,
+ *   a checkbox.
+ * - **Inlines** (`inlines(leaf)`, `inlineText(leaf)`): a leaf's text parsed into emphasis, links,
+ *   code, ..., when first asked for.
+ *
+ * Lossless: every character of the text is in a prefix, a leaf's markup or text, or a blank line.
+ * Immutable: `update(changes)` gives the tree of the edited text, reading again only the lines the
+ * edit can affect and sharing every block outside them. Offsets are UTF-16 code units into `text`;
+ * lines count from 0, and a final line ending doesn't start a line.
+ */
+export class MdTree {
   readonly text: string;
-  readonly flavor: Flavor;
-  /** Line starts and ends (before the line ending), for every line the machine read. */
+  readonly flavor: MdFlavor;
+  /** Each line's start, and its end before its line ending. */
   readonly starts: readonly number[];
   readonly ends: readonly number[];
-  readonly records: readonly LineRecord[];
-  readonly states: readonly State[];
-  /** Sentinels by line: offsets within the line. */
-  readonly sentinels: ReadonlyMap<number, readonly number[]>;
-  /** The last line is an empty line after the text's final line ending, there only for a sentinel. */
-  readonly extraLine: boolean;
-  readonly reread: Reread;
+  /** The line machine's record of each line, and its state after it (the incremental tests compare them). */
+  readonly records: readonly MdLineRecord[];
+  readonly states: readonly MdState[];
+  /** The sentinels (`MdParseOptions`), by line: offsets in the line. */
+  private readonly sentinels: ReadonlyMap<number, readonly number[]>;
+  /** Whether the last line is an empty one after the final line ending, there only for a sentinel. */
+  private readonly extraLine: boolean;
+  readonly reread: MdReread;
   /** Lines whose reading looked at lines after them, ascending. */
   private readonly lookaheads: readonly number[];
-  private tree: Tree | null;
-  private readonly lineInfos: LineInfo[] = [];
-  private allLines: LineInfo[] | null = null;
-  private refs: ReadonlyMap<string, Reference> | null = null;
+  private blocks: MdBlock | null;
+  /** What building the tree can take of the previous snapshot's, until it is built. */
+  private reuse: Reuse | null;
+  /** `line(i)` and `markup(i)` of the lines asked for so far, by line: this tree's own, as they hold its offsets. */
+  private readonly linesCache: MdLine[] = [];
+  private readonly lineMarkupsCache: MdLineMarkup[] = [];
+  /** `lines`, once asked for. */
+  private allLines: MdLine[] | null = null;
+  private refs: ReadonlyMap<string, MdReference> | null = null;
   private footnoteLabels: ReadonlySet<string> | null = null;
   private inlineCache: InlineCache | null;
   private cacheChecked = false;
-  private readonly leafInlines = new Map<Block, readonly InlineNode[]>();
-  private readonly leafTexts = new Map<Block, InlineText | null>();
+  /** By leaf: a stored block is in a tree once. */
+  private readonly leafInlines = new Map<MdBlock, readonly MdInline[]>();
+  private readonly leafTexts = new Map<MdBlock, MdInlineText | null>();
 
   private constructor(
     text: string,
-    flavor: Flavor,
+    flavor: MdFlavor,
     starts: number[],
     ends: number[],
-    records: LineRecord[],
-    states: State[],
+    records: MdLineRecord[],
+    states: MdState[],
     sentinels: ReadonlyMap<number, readonly number[]>,
     extraLine: boolean,
-    reread: Reread,
+    reread: MdReread,
     inlineCache: InlineCache | null,
-    tree: Tree | null = null,
+    blocks: MdBlock | null = null,
+    reuse: Reuse | null = null,
+    lookaheads?: readonly number[],
   ) {
-    this.tree = tree;
+    this.blocks = blocks;
+    this.reuse = blocks ? null : reuse;
     this.text = text;
     this.flavor = flavor;
     this.starts = starts;
@@ -94,35 +128,30 @@ export class SyntaxTree {
     this.extraLine = extraLine;
     this.reread = reread;
     this.inlineCache = inlineCache;
-    const lookaheads: number[] = [];
-    for (let i = 0; i < records.length; i++) if (records[i]!.ahead > 0) lookaheads.push(i);
-    this.lookaheads = lookaheads;
+    this.lookaheads = lookaheads ?? records.flatMap((r, i) => (r.ahead > 0 ? [i] : []));
   }
 
-  /** Parses `text`. Never fails: every string is a document. */
-  static parse(text: string, flavor: Flavor = commonmark, options: ParseOptions = {}): SyntaxTree {
+  /** The tree of `text`. Never fails: every string is a document. */
+  static parse(text: string, flavor: MdFlavor = commonmark, options: MdParseOptions = {}): MdTree {
     const { starts, ends } = splitLines(text);
     const s = [...starts];
     const e = [...ends];
     const { sentinels, extraLine } = placeSentinels(text, s, e, options.sentinels);
     const n = s.length;
-    const records: LineRecord[] = new Array(n);
-    const states: State[] = new Array(n);
-    const machine = new Machine(flavor, { text, starts: s, ends: e, sentinels }, records, states, flavor.initialState);
+    const records: MdLineRecord[] = new Array(n);
+    const states: MdState[] = new Array(n);
+    const machine = new MdMachine(flavor, { text, starts: s, ends: e, sentinels }, records, states, flavor.initialState);
     for (let i = 0; i < n; i++) machine.read(i);
     machine.finish(n);
-    return new SyntaxTree(text, flavor, s, e, records, states, sentinels, extraLine, { from: 0, to: n - 1, full: true }, null);
+    return new MdTree(text, flavor, s, e, records, states, sentinels, extraLine, { from: 0, to: n - 1, full: true }, null);
   }
 
-  /**
-   * The syntax of the text after `changes` (in this text's coordinates, CodeMirror's ChangeSpec
-   * semantics), read again only where the changes can have made a difference.
-   */
-  update(changes: readonly ChangeSpec[], options: ParseOptions = {}): SyntaxTree {
+  /** The tree of the text after `changes` (in this text's coordinates), read again only where they can make a difference. */
+  update(changes: readonly ChangeSpec[], options: MdParseOptions = {}): MdTree {
     const list = normalizeChanges(changes);
     const text = list.length ? applyChanges(this.text, list) : this.text;
     const flavor = this.flavor;
-    if (this.extraLine) return SyntaxTree.parse(text, flavor, options);
+    if (this.extraLine) return MdTree.parse(text, flavor, options);
 
     const oldN = this.starts.length;
     let firstOld: number; // the first old line a change touches
@@ -162,7 +191,7 @@ export class SyntaxTree {
     }
     const lineDelta = afterNew - (lastOld + 1);
     const { sentinels, extraLine } = placeSentinels(text, starts, ends, options.sentinels);
-    if (extraLine) return SyntaxTree.parse(text, flavor, options);
+    if (extraLine) return MdTree.parse(text, flavor, options);
     const n = starts.length;
 
     // lines to read again: the changed ones, and those whose sentinels changed
@@ -186,8 +215,8 @@ export class SyntaxTree {
       if (l >= restart) break;
       if (l + this.records[l]!.ahead >= dirtyFrom) restart = l;
     }
-    const records: LineRecord[] = this.records.slice(0, restart) as LineRecord[];
-    const states: State[] = this.states.slice(0, restart) as State[];
+    const records: MdLineRecord[] = this.records.slice(0, restart) as MdLineRecord[];
+    const states: MdState[] = this.states.slice(0, restart) as MdState[];
     records.length = n;
     states.length = n;
     const before = restart > 0 ? states[restart - 1]! : flavor.initialState;
@@ -198,7 +227,7 @@ export class SyntaxTree {
       for (let l = restart - count; l < restart; l++) records[l] = { ...records[l]!, leaf: l === restart - count ? PARAGRAPH_FIRST : PARAGRAPH_NEXT };
     }
     const source: LineSource = { text, starts, ends, sentinels };
-    const machine = new Machine(flavor, source, records, states, before);
+    const machine = new MdMachine(flavor, source, records, states, before);
     const same = sameState();
     let converged = -1;
     for (let i = restart; i < n; i++) {
@@ -221,68 +250,117 @@ export class SyntaxTree {
         states[j] = this.states[j - lineDelta]!;
       }
     } else machine.finish(n);
-    const reread: Reread = { from: restart, to: converged >= 0 ? converged : n - 1, full: restart === 0 && converged < 0 };
-    // the same lines, read the same: the old blocks still hold (they keep no absolute offsets)
-    let tree: Tree | null = null;
-    if (this.tree && lineDelta === 0 && n === oldN) {
-      const from = open.spec === PARAGRAPH ? restart - (open as ParagraphFrame).lines : restart;
+    const reread: MdReread = { from: restart, to: converged >= 0 ? converged : n - 1, full: restart === 0 && converged < 0 };
+    // the first line whose record may differ: the open paragraph's lines before the restart are read again
+    const from = open.spec === PARAGRAPH ? restart - (open as ParagraphFrame).lines : restart;
+    // the same lines, read the same: the old tree holds (it keeps no absolute offsets)
+    let blocks: MdBlock | null = null;
+    if (this.blocks && lineDelta === 0 && n === oldN) {
       let same = true;
       for (let l = from; l <= reread.to && same; l++) same = sameRecord(records[l]!, this.records[l]!);
-      if (same) tree = this.tree;
+      if (same) blocks = this.blocks;
     }
-    return new SyntaxTree(text, flavor, starts, ends, records, states, sentinels, false, reread, this.inlineCache, tree);
+    // else the blocks outside the lines read again are the old ones, where they moved to
+    const reuse: Reuse | null = this.blocks ? { old: this.blocks, from, to: reread.to, delta: lineDelta } : null;
+    // the lines that looked ahead: the old ones before the restart, those read again, the old ones after, moved
+    const lookaheads: number[] = [];
+    for (const l of this.lookaheads) {
+      if (l >= restart) break;
+      lookaheads.push(l);
+    }
+    for (let l = restart; l <= reread.to; l++) if (records[l]!.ahead > 0) lookaheads.push(l);
+    if (converged >= 0) for (const l of this.lookaheads) if (l + lineDelta > reread.to) lookaheads.push(l + lineDelta);
+    return new MdTree(text, flavor, starts, ends, records, states, sentinels, false, reread, this.inlineCache, blocks, reuse, lookaheads);
   }
 
-  // ----------------------------------------------------------------------------- the views
+  // ----------------------------------------------------------------------------- the blocks
 
   /** The number of lines (an empty text has none; a final line ending doesn't start one). */
   get lineCount(): number {
     return this.starts.length;
   }
 
-  /** The block tree's root: the document. */
-  get root(): Block {
-    return this.build().root;
+  /** The block tree's root, the document (on line 0): shared with every snapshot that took it whole. */
+  get root(): MdBlock {
+    return this.build();
   }
 
-  /** Line `i`'s info (made when first asked for). */
-  line(i: number): LineInfo {
-    return (this.lineInfos[i] ??= lineInfo(this, this.build(), i));
+  /** The document's block, where it is: its first line, 0. */
+  get rootAt(): MdBlockAt {
+    return new MdBlockAt(this.root, 0);
   }
 
-  /** The line table: every line's info. */
-  get lines(): readonly LineInfo[] {
+  /** Line `i`. */
+  line(i: number): MdLine {
+    let info = this.linesCache[i];
+    if (!info) {
+      const root = this.build();
+      const { containers, leaf } = lineBlocks(root, i);
+      info = this.linesCache[i] = lineInfo(this, root, i, containers, leaf);
+    }
+    return info;
+  }
+
+  /** Line `i`'s markup past its containers' prefix (a heading's `#`s, a fence, a checkbox, ...) and its text. */
+  markup(i: number): MdLineMarkup {
+    let markup = this.lineMarkupsCache[i];
+    if (!markup) {
+      const line = this.line(i);
+      const of = line.leaf && this.flavor.lineMarkup.get(line.leaf.block.type);
+      markup = of ? of(this, line.leaf!, i) : plainMarkup(this, i);
+      // the checkbox of a task the line starts, before the item's text
+      const item = line.containers[line.containers.length - 1];
+      const task = item?.block.type === 'item' && item.line === i ? item.block.attrs.task : undefined;
+      if (task) {
+        const box = { kind: 'task', from: line.from + task.start, to: line.from + task.end };
+        markup = line.leaf ? { ...markup, marks: [box, ...markup.marks] } : { marks: [box], textFrom: box.to, textTo: box.to };
+      }
+      this.lineMarkupsCache[i] = markup;
+    }
+    return markup;
+  }
+
+  /** Every line. */
+  get lines(): readonly MdLine[] {
     if (this.allLines) return this.allLines;
-    const all: LineInfo[] = new Array(this.starts.length);
-    for (let i = 0; i < all.length; i++) all[i] = this.line(i);
+    const root = this.build();
+    const n = this.starts.length;
+    const { containers, leaves } = allLineBlocks(root, n);
+    const all: MdLine[] = new Array(n);
+    for (let i = 0; i < n; i++) all[i] = this.linesCache[i] ??= lineInfo(this, root, i, containers[i]!, leaves[i]!);
     return (this.allLines = all);
   }
 
-  /** The offset in the text of `offset` from line `line`'s start (blocks hold their offsets that way). */
-  offset(line: number, offset: number): number {
-    return this.starts[line]! + offset;
+  /** HTML exactly as commonmark.js and cmark-gfm write it; extensions render their own blocks and inlines. */
+  renderHtml(options: MdHtmlOptions = {}): string {
+    return renderHtml(this, options);
   }
 
-  /** An item's marker (`-`, `1.`): where it starts and ends in the text. */
-  markerFrom(item: Block): number {
-    return this.starts[item.startLine]! + item.markerStart!;
+  /** Where an item's marker (`-`, `1.`) starts in the text. */
+  markerFrom(item: MdBlockAt): number {
+    return this.starts[item.line]! + item.block.attrs.markerStart!;
   }
 
-  markerTo(item: Block): number {
-    return this.starts[item.startLine]! + item.markerEnd!;
+  /** Where an item's marker ends in the text. */
+  markerTo(item: MdBlockAt): number {
+    return this.starts[item.line]! + item.block.attrs.markerEnd!;
   }
 
-  private build(): Tree {
-    return (this.tree ??= buildTree(this));
+  private build(): MdBlock {
+    if (!this.blocks) {
+      this.blocks = buildTree(this.records, this.flavor, this.reuse);
+      this.reuse = null;
+    }
+    return this.blocks;
   }
 
   /** Link reference definitions by normalized label; the first definition of a label wins. */
-  get references(): ReadonlyMap<string, Reference> {
+  get references(): ReadonlyMap<string, MdReference> {
     if (this.refs) return this.refs;
-    const refs = new Map<string, Reference>();
-    for (const b of preorder(this.root)) {
-      if (b.type !== 'refdef') continue;
-      const ref = scanReference(this.leafLines(b, b.startLine, b.endLine).join('\n') + '\n');
+    const refs = new Map<string, MdReference>();
+    for (const b of this.rootAt.preorder()) {
+      if (b.block.type !== 'refdef') continue;
+      const ref = scanReference(this.leafLines(b).join('\n') + '\n');
       if (ref && !refs.has(ref.normalized)) refs.set(ref.normalized, ref.reference);
     }
     return (this.refs = refs);
@@ -292,34 +370,79 @@ export class SyntaxTree {
   get footnotes(): ReadonlySet<string> {
     if (this.footnoteLabels) return this.footnoteLabels;
     const labels = new Set<string>();
-    if (this.flavor.has('footnotes')) for (const b of preorder(this.root)) if (b.type === 'footnote_definition') labels.add(normalizeLabel('[' + b.label!.slice(2)));
+    if (this.flavor.has('footnotes')) for (const b of this.rootAt.preorder()) if (b.block.type === 'footnote_definition') labels.add(normalizeLabel('[' + b.block.attrs.label!.slice(2)));
     return (this.footnoteLabels = labels);
   }
 
   /** A leaf's inline text (paragraphs, headings, table cells, ...), or null for blocks without inlines. */
-  inlineText(block: Block): InlineText | null {
-    let t = this.leafTexts.get(block);
+  inlineText(leaf: MdBlockAt): MdInlineText | null {
+    let t = this.leafTexts.get(leaf.block);
     if (t === undefined) {
-      const of = this.flavor.inlineText.get(block.type);
-      t = of ? of(this, block) : null;
-      this.leafTexts.set(block, t);
+      const of = this.flavor.inlineText.get(leaf.block.type);
+      t = of ? of(this, leaf) : null;
+      this.leafTexts.set(leaf.block, t);
     }
     return t;
   }
 
-  /** A leaf's inlines. */
-  inlines(block: Block): readonly InlineNode[] {
-    let result = this.leafInlines.get(block);
+  /**
+   * Whether the backslash at offset `pos` is read as an inline escape: in its leaf's inline text, and
+   * not literal (in a code span, which can cross lines; raw HTML; an autolink; math).
+   */
+  inlineEscapeAt(pos: number): boolean {
+    if (this.text[pos] !== '\\' || this.lineCount === 0) return false;
+    const { leaf } = this.line(lineIndexAt(this.starts, pos));
+    const text = leaf && this.inlineText(leaf);
+    if (!text) return false;
+    const at = text.textAt(pos);
+    if (at < 0) return false;
+    const find = (inlines: readonly MdInline[]): boolean => {
+      for (const node of inlines) {
+        if (node.to <= at || node.from > at) continue;
+        if (node.type === 'escape') return node.from === at;
+        return node.children ? find(node.children) : false;
+      }
+      return false;
+    };
+    return find(this.inlines(leaf));
+  }
+
+  /** The code span `pos` is inside (past its opening backtick): where its closing run starts and where the span ends; null outside one. */
+  codeSpanAt(pos: number): { readonly closer: number; readonly to: number } | null {
+    if (this.lineCount === 0) return null;
+    const { leaf } = this.line(lineIndexAt(this.starts, pos));
+    const text = leaf && this.inlineText(leaf);
+    if (!text) return null;
+    const at = text.textAt(pos);
+    if (at < 0) return null;
+    const find = (inlines: readonly MdInline[]): MdInline | null => {
+      for (const node of inlines) {
+        if (node.type === 'code' && node.from < at && at < node.to) return node;
+        const inner = node.children && node.from < at && at < node.to ? find(node.children) : null;
+        if (inner) return inner;
+      }
+      return null;
+    };
+    const span = find(this.inlines(leaf));
+    if (!span) return null;
+    let closer = span.to;
+    while (closer > span.from && text.text[closer - 1] === '`') closer--;
+    return { closer: text.sourceAt(closer), to: text.sourceAt(span.to) };
+  }
+
+  /** A leaf's inlines, parsed when first asked for; none for blocks without inline text. */
+  inlines(leaf: MdBlockAt): readonly MdInline[] {
+    let result = this.leafInlines.get(leaf.block);
     if (result) return result;
-    const t = this.inlineText(block);
+    const t = this.inlineText(leaf);
     if (!t) return NO_INLINES;
     const cache = this.cache();
     result = cache.map.get(t.text);
     if (!result) {
-      result = new InlineParser(this.flavor.inline, { references: this.references, footnotes: this.footnotes }, t.text).parse();
+      result = new MdInlineParser(this.flavor.inline, { references: this.references, footnotes: this.footnotes }, t.text).parse();
       cache.map.set(t.text, result);
     }
-    this.leafInlines.set(block, result);
+    this.leafInlines.set(leaf.block, result);
     return result;
   }
 
@@ -339,7 +462,7 @@ export class SyntaxTree {
    * The text of a leaf's lines `from`..`to` as its leaf reads them: after the containers' prefixes
    * and the leaf's own indentation, a partly taken tab's rest as spaces.
    */
-  leafLines(block: Block, from = block.startLine, to = block.endLine): string[] {
+  leafLines(leaf: MdBlockAt, from = leaf.line, to = leaf.lastLine): string[] {
     const out: string[] = [];
     for (let l = from; l <= to; l++) {
       const rec = this.records[l]!;
@@ -366,7 +489,7 @@ export class SyntaxTree {
  * parses, so the answer can't change while the paragraph goes on (comparing it on every line of a
  * long paragraph would be quadratic).
  */
-function sameState(): (a: State, b: State, i: number) => boolean {
+function sameState(): (a: MdState, b: MdState, i: number) => boolean {
   let start = -1;
   let equal = false;
   return (a, b, i) => {
@@ -429,138 +552,22 @@ function placeSentinels(
   return { sentinels: map, extraLine };
 }
 
-// ---------------------------------------------------------------------------- the tree
+// ---------------------------------------------------------------------------- the lines
 
-/** The block tree, and per line its containers and leaf: what line infos are made from. */
-interface Tree {
-  readonly root: Block;
-  readonly chains: readonly (readonly Block[])[];
-  readonly leaves: readonly (Block | null)[];
-}
-
-const NO_PIECES: readonly PrefixPiece[] = Object.freeze([]);
-
-const keyLists = new WeakMap<object, readonly string[]>();
-
-/** An attribute object's keys that become block attributes; cached, as most lines share their role objects. */
-function attributeKeys(attrs: object): readonly string[] {
-  let keys = keyLists.get(attrs);
-  if (!keys) {
-    // `part`: what the line is within its leaf (a table row), for the leaf's builder; `blank`: a
-    // whitespace line of indented code
-    keys = Object.keys(attrs).filter((k) => k !== 'type' && k !== 'first' && k !== 'part' && k !== 'blank');
-    keyLists.set(attrs, keys);
-  }
-  return keys;
-}
-
-function copyAttributes(attrs: Readonly<Record<string, unknown>>, into: Record<string, unknown>): void {
-  for (const key of attributeKeys(attrs)) into[key] = attrs[key];
-}
-
-function makeBlock(type: string, line: number, parent: MutableBlock | null): MutableBlock {
-  const b: MutableBlock = { type, startLine: line, endLine: line, children: NO_CHILDREN, parent };
-  if (parent) {
-    if (parent.children === NO_CHILDREN) parent.children = [b];
-    else parent.children.push(b);
-  }
-  return b;
-}
-
-/** Until a block gets a child: one frozen empty list, shared. */
-const NO_CHILDREN = Object.freeze([]) as unknown as MutableBlock[];
-
-/** The block tree from the records (and nothing else: so equal records make an equal tree). */
-function buildTree(syntax: SyntaxTree): Tree {
-  const { records, flavor } = syntax;
-  const n = records.length;
-  const root = makeBlock('document', 0, null);
-  const chain: MutableBlock[] = [];
-  let chainView: readonly MutableBlock[] = [];
-  let leaf: MutableBlock | null = null;
-  let leafType = '';
-  const chains: (readonly MutableBlock[])[] = new Array(n);
-  const leaves: (MutableBlock | null)[] = new Array(n);
-  /** Indented code blocks and their last line that isn't only whitespace. */
-  const indentedCode = new Map<MutableBlock, number>();
-  const containers: MutableBlock[] = [];
-
-  for (let i = 0; i < n; i++) {
-    const rec = records[i]!;
-    const keep = rec.depth - rec.opened.length;
-    if (chain.length > keep || rec.opened.length) leaf = null;
-    let changed = false;
-    while (chain.length > keep) {
-      const b = chain.pop()!;
-      if (b.type === 'blockquote' || b.type === 'footnote_definition') b.endLine = i - 1;
-      changed = true;
-    }
-    for (const o of rec.opened) {
-      const parent = chain[chain.length - 1] ?? root;
-      const b = makeBlock(o.type, i, parent);
-      if (o.attrs) copyAttributes(o.attrs, b);
-      if (o.type === 'item' && parent.type === 'list' && parent.children.length === 1) parent.list = b.list;
-      chain.push(b);
-      containers.push(b);
-      changed = true;
-    }
-    if (changed) chainView = chain.slice();
-    chains[i] = chainView;
-    const container = chain[chain.length - 1] ?? root;
-    const role = rec.leaf;
-    if (!role) {
-      leaf = null;
-      leaves[i] = null;
-      continue;
-    }
-    if (role.first || !leaf || leafType !== role.type || leaf.parent !== container) {
-      leaf = makeBlock(role.type, i, container);
-      copyAttributes(role, leaf);
-      leafType = role.type;
-      if (role.type === 'code_block' && role.fenced === false) indentedCode.set(leaf, i);
-    } else {
-      leaf.endLine = i;
-      if (role.closed) leaf.closed = true;
-      if (!role.blank && indentedCode.has(leaf)) indentedCode.set(leaf, i);
-    }
-    flavor.leafBuilders.get(role.type)?.line(leaf, role, i);
-    leaves[i] = leaf;
-  }
-  for (const b of chain) if (b.type === 'blockquote' || b.type === 'footnote_definition') b.endLine = n - 1;
-  root.endLine = n - 1;
-
-  // indented code doesn't end with blank lines
-  for (const [b, last] of indentedCode) {
-    for (let l = last + 1; l <= b.endLine; l++) if (leaves[l] === b) leaves[l] = null;
-    b.endLine = last;
-  }
-
-  // items and footnote definitions end with their last child (the blank lines they go on through
-  // are the gap after them), lists with their last item; tightness; innermost first
-  for (let k = containers.length - 1; k >= 0; k--) {
-    const b = containers[k]!;
-    if (b.type === 'item' || b.type === 'footnote_definition') b.endLine = b.children.length ? b.children[b.children.length - 1]!.endLine : b.startLine;
-    else if (b.type === 'list') {
-      b.endLine = b.children[b.children.length - 1]!.endLine;
-      b.tight = isTight(b);
-    }
-  }
-  return { root: root as unknown as Block, chains: chains as unknown as (readonly Block[])[], leaves: leaves as unknown as (Block | null)[] };
-}
+const NO_PIECES: readonly MdPrefixPiece[] = Object.freeze([]);
 
 /** Line `i`'s info, from the tree and the snapshot's text. */
-function lineInfo(syntax: SyntaxTree, tree: Tree, i: number): LineInfo {
-  const { text } = syntax;
-  const rec = syntax.records[i]!;
-  const from = syntax.starts[i]!;
-  const to = syntax.ends[i]!;
-  const chain = tree.chains[i]!;
+function lineInfo(tree: MdTree, root: MdBlock, i: number, containers: readonly MdBlockAt[], leaf: MdBlockAt | null): MdLine {
+  const { text } = tree;
+  const rec = tree.records[i]!;
+  const from = tree.starts[i]!;
+  const to = tree.ends[i]!;
   let prefix = NO_PIECES;
   if (rec.pieces.length) {
-    const pieces: PrefixPiece[] = new Array(rec.pieces.length);
+    const pieces: MdPrefixPiece[] = new Array(rec.pieces.length);
     for (let k = 0; k < rec.pieces.length; k++) {
       const p = rec.pieces[k]!;
-      pieces[k] = { block: chain[p.depth]!, kind: p.kind, from: from + p.from, to: from + p.to, fromColumn: p.fromColumn, toColumn: p.toColumn, partialTab: p.partialTab };
+      pieces[k] = { container: containers[p.depth]!, kind: p.kind, from: from + p.from, to: from + p.to, fromColumn: p.fromColumn, toColumn: p.toColumn, partialTab: p.partialTab };
     }
     prefix = pieces;
   }
@@ -575,9 +582,9 @@ function lineInfo(syntax: SyntaxTree, tree: Tree, i: number): LineInfo {
     prefix,
     contentFrom,
     contentColumn: last ? last.toColumn : 0,
-    containers: chain,
-    container: chain[chain.length - 1] ?? tree.root,
-    leaf: tree.leaves[i]!,
+    containers,
+    container: containers[containers.length - 1] ?? new MdBlockAt(root, 0),
+    leaf,
     lazy: rec.lazy,
     blank: empty && (contentFrom === from || isBlankText(text, from, contentFrom)),
     empty,
@@ -585,7 +592,7 @@ function lineInfo(syntax: SyntaxTree, tree: Tree, i: number): LineInfo {
 }
 
 /** Whether two records are equal as data (what the tree is made from). */
-function sameRecord(a: LineRecord, b: LineRecord): boolean {
+function sameRecord(a: MdLineRecord, b: MdLineRecord): boolean {
   if (a === b) return true;
   if (a.depth !== b.depth || a.lazy !== b.lazy || a.text !== b.text || a.pad !== b.pad || a.ahead !== b.ahead) return false;
   if (a.leaf !== b.leaf && !sameData(a.leaf, b.leaf)) return false;
@@ -608,19 +615,5 @@ function sameData(a: unknown, b: unknown): boolean {
   const y = b as Record<string, unknown>;
   for (const k in x) if (!sameData(x[k], y[k])) return false;
   for (const k in y) if (!(k in x)) return false;
-  return true;
-}
-
-/**
- * CommonMark list tightness: no blank line between the items, nor between the blocks of an item.
- * Reference definitions count as the paragraph they were written in.
- */
-function isTight(list: MutableBlock): boolean {
-  const separated = (blocks: readonly MutableBlock[]): boolean => {
-    for (let i = 0; i + 1 < blocks.length; i++) if (blocks[i]!.endLine !== blocks[i + 1]!.startLine - 1) return true;
-    return false;
-  };
-  if (separated(list.children)) return false;
-  for (const item of list.children) if (separated(item.children)) return false;
   return true;
 }

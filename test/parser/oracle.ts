@@ -2,12 +2,15 @@
 //
 // A skeleton names every block with its line range and the attributes block structure depends
 // on: `doc[0-2](ul*-tight[0-1](item[0-0](p[0-0])))`. Known, intentional differences from
-// commonmark.js are normalized here and listed in DEVIATIONS.
+// commonmark.js are normalized here (below).
 
 import * as commonmark from 'commonmark';
-import type { Block } from '../../src/parser/types.ts';
 
-/**
+import { MdBlockAt } from '../../src/parser/tree.ts';
+import type { MdBlock } from '../../src/parser/types.ts';
+
+/*
+ * The differences normalized:
  * - commonmark.js keeps an empty paragraph when a setext underline follows only link reference
  *   definitions (`[a]: /u` / `---`); ourus doesn't. Empty paragraphs are dropped.
  * - commonmark.js extracts reference definitions at a setext-underline candidate (`===`, `---`,
@@ -16,8 +19,6 @@ import type { Block } from '../../src/parser/types.ts';
  *   after a definition, are not compared.
  * - Link reference definitions are blocks in ourus and absent from commonmark.js's tree.
  */
-export const DEVIATIONS: Readonly<Record<number, { reason: string; ourus: string }>> = {};
-
 type CmNode = commonmark.Node;
 
 function listAttrs(type: string, bullet: string | null, delim: string | null, start: number | null, tight: boolean): string {
@@ -92,48 +93,49 @@ function isFenced(_markdown: string, node: CmNode): boolean {
   return (node as unknown as { _isFenced: boolean })._isFenced;
 }
 
-
-export function refdefLines(root: Block): Set<number> {
+export function refdefLines(root: MdBlock): Set<number> {
   const out = new Set<number>();
-  const walk = (b: Block): void => {
-    if (b.type === 'refdef') for (let i = b.startLine; i <= b.endLine; i++) out.add(i);
-    b.children.forEach(walk);
+  const walk = (b: MdBlockAt): void => {
+    if (b.block.type === 'refdef') for (let i = b.line; i <= b.lastLine; i++) out.add(i);
+    b.children().forEach(walk);
   };
-  walk(root);
+  walk(new MdBlockAt(root, 0));
   return out;
 }
 
-export function ourusSkeleton(root: Block): string {
+export function ourusSkeleton(root: MdBlock): string {
   const defs = refdefLines(root);
-  const afterRefdef = (b: Block): boolean => defs.has(b.startLine - 1);
-  const walk = (b: Block): string | null => {
-    const children = b.children.map(walk).filter((s): s is string => s !== null);
+  const walk = (at: MdBlockAt): string | null => {
+    const b = at.block;
+    const start = at.line;
+    const end = at.lastLine;
+    const children = at.children().map(walk).filter((s): s is string => s !== null);
     const inner = children.length ? `(${children.join(',')})` : '';
-    const r = (start: number | null) => range(start, b.endLine);
+    const r = (from: number | null) => range(from, end);
     switch (b.type) {
       case 'document':
         return `doc${inner}`;
       case 'blockquote':
-        return `quote${r(b.startLine)}${inner}`;
+        return `quote${r(start)}${inner}`;
       case 'list': {
-        const l = b.list!;
-        return `${listAttrs(l.type, l.bulletChar, l.delimiter, l.start, b.tight!)}${r(b.startLine)}${inner}`;
+        const l = b.attrs.list!;
+        return `${listAttrs(l.type, l.bulletChar, l.delimiter, l.start, b.attrs.tight!)}${r(start)}${inner}`;
       }
       case 'item':
-        return `item${r(b.startLine)}${inner}`;
+        return `item${r(start)}${inner}`;
       case 'paragraph':
-        return `p${r(afterRefdef(b) ? null : b.startLine)}`;
+        return `p${r(defs.has(start - 1) ? null : start)}`;
       case 'heading':
-        return `h${b.level}${r(b.endLine > b.startLine ? null : b.startLine)}`;
+        return `h${b.attrs.level}${r(end > start ? null : start)}`;
       case 'thematic_break':
-        return `hr${r(b.startLine)}`;
+        return `hr${r(start)}`;
       case 'code_block':
-        return `${b.fenced ? 'fence' : 'code'}${r(b.startLine)}`;
+        return `${b.attrs.fenced ? 'fence' : 'code'}${r(start)}`;
       case 'html_block':
-        return `html${r(b.startLine)}`;
+        return `html${r(start)}`;
       default:
         return null;
     }
   };
-  return walk(root)!;
+  return walk(new MdBlockAt(root, 0))!;
 }

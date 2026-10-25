@@ -119,7 +119,7 @@ tags: core
 
 ```buffer
 - one
-  ┃◌
+  ┃
 - two
 ```
 
@@ -253,28 +253,27 @@ tags: edge free-form
 
 ## ShiftEnter11
 
-A second Shift-Enter, on the empty line the first one made, is a paragraph break: the line becomes a
-blank line, and the caret moves to a new empty paragraph inside the item, its first child. Backspace
-takes the second back, as it takes back a fresh Shift-Enter: inside an item only Shift-Enter makes
-such a paragraph. (After a paragraph that isn't an item's, the same state comes from Enter, and
-Backspace takes that back: [ShiftEnter12](#shiftenter12).)
+A second Shift-Enter, on the blank line the first one made, is a paragraph break: another blank line,
+the caret on it, at the item's text: typed on, it is a paragraph inside the item, its first child.
+Backspace takes the second back, as it takes back a fresh Shift-Enter: inside an item only
+Shift-Enter makes such a paragraph. (After a paragraph that isn't an item's, the same state comes
+from Enter, and Backspace takes that back: [ShiftEnter12](#shiftenter12).)
 
 ```yaml
 tags: common free-form
 ```
 
 ```buffer
-- one
-  ┃◌
+- one┃
 - two
 ```
 
-> shiftEnter
+> shiftEnter shiftEnter
 
 ```buffer
 - one
 
-  ┃◌
+  ┃
 - two
 ```
 
@@ -282,34 +281,33 @@ tags: common free-form
 
 ```buffer
 - one
-  ┃◌
+  ┃
 - two
 ```
 
 ## ShiftEnter12
 
-After a paragraph that isn't an item's, the new paragraph follows it. Backspace goes back to the end
-of the paragraph: the same state is Enter's at a paragraph's end, the commoner key, whose inverse
-this is.
+After a paragraph that isn't an item's, a second Shift-Enter is another blank line, the caret on
+it, where what is typed is a paragraph of its own, as after Enter at a paragraph's end. Backspace
+takes the breaks back one at a time, to the end of the paragraph.
 
 ```yaml
 tags: common free-form
 ```
 
 ```buffer
-para
-┃◌
+para┃
 ```
 
-> shiftEnter
+> shiftEnter shiftEnter
 
 ```buffer
 para
 
-┃◌
+┃
 ```
 
-> deleteContentBackward
+> deleteContentBackward deleteContentBackward
 
 ```buffer
 para┃
@@ -482,9 +480,9 @@ tags: common
 
 ## ShiftEnter18
 
-An ordered marker split onto a new line is escaped, though CommonMark reads one item with two lines
-here (`2.` can't interrupt a paragraph): lezer (CodeMirror, Obsidian's Live Preview) reads a nested
-item. The escape keeps every reader agreeing.
+An ordered marker split onto a new line stays as it is: `2.` can't interrupt a paragraph, so the
+item has two lines, as CommonMark reads them. (Lezer, CodeMirror's and Obsidian's Live Preview
+reader, reads a nested item; ourus reads as CommonMark does.)
 
 ```yaml
 tags: rare
@@ -498,16 +496,17 @@ tags: rare
 
 ```buffer
 1. abc
-    ┃2\. x
+    ┃2. x
 ```
 
 ## ShiftEnter19
 
 A table's delimiter row split onto a new line is escaped: under the text it would start a table in
-GFM. It is escaped in every flavor, so the text is the same in each.
+GFM.
 
 ```yaml
 tags: rare
+flavor: gfm
 ```
 
 ```buffer
@@ -518,7 +517,7 @@ a | b ┃|---|---|
 
 ```buffer
 a | b
- ┃\|---|---|
+ ┃|\---|---|
 ```
 
 ## ShiftEnter20
@@ -638,7 +637,7 @@ tags: rare
 > shiftEnter
 
 ```buffer
-\[Note]: this
+[Note]\: this
  ┃matters a lot
 ```
 
@@ -688,7 +687,7 @@ p
 ```buffer
 p
 
-┃\[r]: /u
+┃[r]\: /u
 ```
 
 ## ShiftEnter26
@@ -822,8 +821,8 @@ Title┃more
 ## ShiftEnter31
 
 At the end of a text that is a link reference definition but for its destination (`[a]:`), the new
-line, held by a placeholder, would be read as typed on, and make it one: the start is escaped, and
-Backspace takes the break and the escape back.
+line is a blank line, the caret on it, at the text's column; Backspace takes it back. (What is typed
+there is the text's next line, and may make it a definition: the host's typing.)
 
 ```yaml
 tags: rare
@@ -838,8 +837,8 @@ b
 > shiftEnter
 
 ```buffer
-\[a]:
-┃◌
+[a]:
+┃
 
 b
 ```

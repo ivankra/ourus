@@ -2,8 +2,8 @@
 // character, strikethrough with `~~` only, footnotes, autolinks) plus Obsidian's own syntax.
 //
 // Obsidian has no spec. This is its syntax as its help documents it and as true-outliner measured
-// Obsidian 1.13 (see 05-impl.md and the redesign notes), read the CommonMark way: Live Preview's
-// reading of some outliner shapes differs, and is a reader the encoder must not confuse, not a mode.
+// Obsidian 1.13, read the CommonMark way: Live Preview's
+// reading of some outliner shapes differs, and is a reader the writer must not confuse, not a mode.
 //
 // Blocks:
 // - frontmatter: `---` on the first line, closed by a later `---` line (else the first line is
@@ -18,22 +18,24 @@
 
 import { escapeHtml, isPunctuation, isUnicodeWhitespace } from './chars.ts';
 import { BLOCKQUOTE } from './blocks.ts';
-import { defineFlavor, type Extension, type Flavor } from './flavor.ts';
+import { defineFlavor, type MdExtension, type MdFlavor } from './flavor.ts';
 import { autolink, footnotes, gfmCore, strikethroughExtension, tableExtension, tasklistExtension } from './gfm.ts';
-import { coreBlocks, type HtmlRenderer } from './html.ts';
-import { InlineTextBuilder } from './inline-text.ts';
-import { Node, type BracketRule, type DelimiterRule, type InlineParser, type InlineRule } from './inlines.ts';
-import type { BlockSpec, Frame, LeafRole, Machine } from './machine.ts';
-import type { SyntaxTree } from './syntax.ts';
-import type { Block, InlineNode } from './types.ts';
+import { coreBlocks, type MdHtmlRenderer } from './html.ts';
+import { MdInlineTextBuilder } from './inline-text.ts';
+import { plainMarkup } from './markup.ts';
+import { Node, type MdBracketRule, type MdDelimiterRule, type MdInlineParser, type MdInlineRule } from './inlines.ts';
+import type { MdBlockSpec, MdFrame, MdLeafRole, MdMachine } from './machine.ts';
+import type { MdTree } from './syntax.ts';
+
+import type { MdBlockAt, MdInline, MdMark, MdLineMarkup } from './types.ts';
 
 // ------------------------------------------------------------------------------- frontmatter
 
 const reFrontmatterFence = /^---[ \t]*$/;
-const FRONTMATTER_NEXT: LeafRole = Object.freeze({ type: 'frontmatter', first: false });
-const FRONTMATTER_CLOSING: LeafRole = Object.freeze({ type: 'frontmatter', first: false, closed: true });
+const FRONTMATTER_NEXT: MdLeafRole = Object.freeze({ type: 'frontmatter', first: false });
+const FRONTMATTER_CLOSING: MdLeafRole = Object.freeze({ type: 'frontmatter', first: false, closed: true });
 
-const FRONTMATTER: BlockSpec = {
+const FRONTMATTER: MdBlockSpec = {
   type: 'frontmatter',
   container: false,
   acceptsLines: true,
@@ -52,12 +54,12 @@ const FRONTMATTER: BlockSpec = {
   },
 };
 
-const FRONTMATTER_FRAME: Frame = Object.freeze({ spec: FRONTMATTER });
+const FRONTMATTER_FRAME: MdFrame = Object.freeze({ spec: FRONTMATTER });
 
 const frontmatterStart = {
   name: 'frontmatter',
   before: 'blockquote',
-  start(m: Machine): 0 | 1 | 2 {
+  start(m: MdMachine): 0 | 1 | 2 {
     if (m.lineIndex !== 0 || m.stack.length !== 1 || !reFrontmatterFence.test(m.line)) return 0;
     // only a closed fence makes frontmatter
     let closed = false;
@@ -77,9 +79,10 @@ const frontmatterStart = {
   },
 };
 
-export const frontmatter: Extension = {
+export const frontmatter: MdExtension = {
   name: 'frontmatter',
   blockStarts: [frontmatterStart],
+  blockContent: { frontmatter: 'verbatim' },
   render: { blocks: { frontmatter: () => false } },
 };
 
@@ -87,16 +90,28 @@ export const frontmatter: Extension = {
 
 const reCallout = /^\[!([^\]\s]+)\]([+-]?)/;
 
+/**
+ * A callout's opening at the start of `line` (a quote's first line, past its `>`), after the blanks
+ * it starts with: `[!type]` and a fold sign, from `from` to `to`; null where there is none. Obsidian's
+ * syntax, which the outline reads in every flavor.
+ */
+export function mdCalloutAt(line: string): { readonly kind: string; readonly fold: '+' | '-' | null; readonly from: number; readonly to: number } | null {
+  let from = 0;
+  while (line[from] === ' ' || line[from] === '\t') from++;
+  const match = reCallout.exec(line.slice(from));
+  return match ? { kind: match[1]!, fold: (match[2] || null) as '+' | '-' | null, from, to: from + match[0].length } : null;
+}
+
 const calloutStart = {
   name: 'callout',
   before: 'blockquote',
-  start(m: Machine, container: Frame): 0 | 1 | 2 {
+  start(m: MdMachine, container: MdFrame): 0 | 1 | 2 {
     const index = m.stack.length - 1;
     if (container.spec !== BLOCKQUOTE || m.tip !== container || !m.openedHere(index) || m.indented) return 0;
     if (m.peek(m.nextNonspace) !== 91 || m.peek(m.nextNonspace + 1) !== 33) return 0;
-    const match = reCallout.exec(m.line.slice(m.nextNonspace));
-    if (!match) return 0;
-    m.annotate(index, { callout: { kind: match[1]!, fold: (match[2] || null) as '+' | '-' | null } });
+    const callout = mdCalloutAt(m.line.slice(m.nextNonspace));
+    if (!callout) return 0;
+    m.annotate(index, { callout: { kind: callout.kind, fold: callout.fold } });
     m.advanceNextNonspace();
     m.addSingleLine({ type: 'callout_title', first: true });
     m.takeLine();
@@ -105,30 +120,40 @@ const calloutStart = {
   },
 };
 
+/** A callout title's line: its `[!type]` and fold sign, then the title. */
+function calloutTitleMarkup(tree: MdTree, _leaf: MdBlockAt, line: number): MdLineMarkup {
+  const { text } = tree;
+  const info = tree.line(line);
+  const from = tree.textStart(line);
+  const callout = mdCalloutAt(text.slice(from, info.to));
+  const to = from + (callout?.to ?? 0);
+  let textFrom = to;
+  while (textFrom < info.to && (text.charCodeAt(textFrom) === 32 || text.charCodeAt(textFrom) === 9)) textFrom++;
+  return { marks: [{ kind: 'open', from: from + (callout?.from ?? 0), to }], textFrom, textTo: info.to };
+}
+
 /** A callout title's inline text: after `[!type]` and its fold sign, trimmed. */
-function calloutTitleText(syntax: SyntaxTree, block: Block) {
-  const line = syntax.lines[block.startLine]!;
-  const { text } = syntax;
-  const start = syntax.textStart(block.startLine);
-  let from = start + (reCallout.exec(text.slice(start, line.to))?.[0].length ?? 0);
-  let to = line.to;
-  while (from < to && (text.charCodeAt(from) === 32 || text.charCodeAt(from) === 9)) from++;
-  while (to > from && (text.charCodeAt(to - 1) === 32 || text.charCodeAt(to - 1) === 9)) to--;
-  const b = new InlineTextBuilder(text);
-  b.add(from, to);
+function calloutTitleText(tree: MdTree, leaf: MdBlockAt) {
+  const { text } = tree;
+  const { textFrom, textTo } = tree.markup(leaf.line);
+  let to = textTo;
+  while (to > textFrom && (text.charCodeAt(to - 1) === 32 || text.charCodeAt(to - 1) === 9)) to--;
+  const b = new MdInlineTextBuilder(text);
+  b.add(textFrom, to);
   return b.finish();
 }
 
 /** A callout: `<div class="callout">`, its title, then its content. */
-function renderBlockquote(r: HtmlRenderer, b: Block, entering: boolean): void | boolean {
-  if (!b.callout) return coreBlocks.blockquote!(r, b, entering);
+function renderBlockquote(r: MdHtmlRenderer, b: MdBlockAt, entering: boolean): void | boolean {
+  const { callout } = b.block.attrs;
+  if (!callout) return coreBlocks.blockquote!(r, b, entering);
   if (entering) {
     r.cr();
-    r.lit(`<div class="callout" data-callout="${escapeHtml(b.callout.kind.toLowerCase())}"${b.callout.fold ? ` data-callout-fold="${b.callout.fold}"` : ''}>`);
+    r.lit(`<div class="callout" data-callout="${escapeHtml(callout.kind.toLowerCase())}"${callout.fold ? ` data-callout-fold="${callout.fold}"` : ''}>`);
     r.cr();
     return;
   }
-  if (b.children.length > 1) {
+  if (b.block.children.length > 1) {
     r.cr();
     r.lit('</div>');
   }
@@ -137,12 +162,12 @@ function renderBlockquote(r: HtmlRenderer, b: Block, entering: boolean): void | 
   r.cr();
 }
 
-function renderCalloutTitle(r: HtmlRenderer, b: Block, entering: boolean): void {
-  const quote = b.parent!;
+function renderCalloutTitle(r: MdHtmlRenderer, b: MdBlockAt, entering: boolean): void {
+  const quote = r.up()!.block;
   if (entering) {
     r.lit('<div class="callout-title">');
-    if (r.syntax.inlines(b).length === 0) {
-      const kind = quote.callout!.kind;
+    if (r.tree.inlines(b).length === 0) {
+      const kind = quote.attrs.callout!.kind;
       r.out(kind.charAt(0).toUpperCase() + kind.slice(1).toLowerCase());
     }
     return;
@@ -155,21 +180,23 @@ function renderCalloutTitle(r: HtmlRenderer, b: Block, entering: boolean): void 
   }
 }
 
-export const callouts: Extension = {
+export const callouts: MdExtension = {
   name: 'callouts',
   blockStarts: [calloutStart],
   blockStartChars: '[',
   inlineText: { callout_title: calloutTitleText },
+  lineMarkup: { callout_title: calloutTitleMarkup },
+  blockContent: { callout_title: 'inline' },
   render: { blocks: { blockquote: renderBlockquote, callout_title: renderCalloutTitle } },
 };
 
 // ---------------------------------------------------------------------- math and comment blocks
 
 /** A block fenced by `fence` (`$$`, `%%`): from a line starting with it to a line ending with it. */
-function fencedBlock(type: string, fence: string, name: string): { spec: BlockSpec; start: { name: string; before: string; start(m: Machine): 0 | 1 | 2 } } {
-  const next: LeafRole = Object.freeze({ type, first: false });
-  const closing: LeafRole = Object.freeze({ type, first: false, closed: true });
-  const spec: BlockSpec = {
+function fencedBlock(type: string, fence: string, name: string): { spec: MdBlockSpec; start: { name: string; before: string; start(m: MdMachine): 0 | 1 | 2 } } {
+  const next: MdLeafRole = Object.freeze({ type, first: false });
+  const closing: MdLeafRole = Object.freeze({ type, first: false, closed: true });
+  const spec: MdBlockSpec = {
     type,
     container: false,
     acceptsLines: true,
@@ -187,7 +214,7 @@ function fencedBlock(type: string, fence: string, name: string): { spec: BlockSp
       if (!m.role) m.setLeaf(next);
     },
   };
-  const frame: Frame = Object.freeze({ spec });
+  const frame: MdFrame = Object.freeze({ spec });
   return {
     spec,
     start: {
@@ -219,37 +246,57 @@ function fencedBlock(type: string, fence: string, name: string): { spec: BlockSp
 const mathBlock = fencedBlock('math_block', '$$', 'mathBlock');
 const commentBlock = fencedBlock('comment_block', '%%', 'commentBlock');
 
-/** Whether `text` at a line's content start opens a block fenced by `fence`, as `fencedBlock` starts one. */
-const opensFence =
-  (fence: string) =>
-  (text: string): boolean => {
-    const t = text.trimStart();
-    if (text.length - t.length >= 4 || !t.startsWith(fence)) return false;
-    const rest = t.slice(fence.length).trimEnd();
-    const close = rest.indexOf(fence);
-    return !(close >= 0 && close + fence.length < rest.length);
-  };
+/**
+ * A `$$` or `%%` block's line: the opening delimiter starts its first line, the closing one ends its
+ * last where it closed (after text there, `x$$`, or on its first line too, `$$x$$`); the rest is text.
+ */
+function fencedMarkup(tree: MdTree, leaf: MdBlockAt, line: number): MdLineMarkup {
+  const first = line === leaf.line;
+  const last = leaf.block.attrs.closed && line === leaf.lastLine;
+  if (!first && !last) return plainMarkup(tree, line);
+  const { text } = tree;
+  const info = tree.line(line);
+  const marks: MdMark[] = [];
+  let textFrom = tree.textStart(line);
+  if (textFrom < 0) textFrom = info.contentFrom;
+  let textTo = info.to;
+  if (first) {
+    let from = info.contentFrom;
+    while (from < info.to && (text.charCodeAt(from) === 32 || text.charCodeAt(from) === 9)) from++;
+    marks.push({ kind: 'open', from, to: from + 2 });
+    textFrom = from + 2;
+  }
+  if (last) {
+    let to = info.to;
+    while (to > textFrom && (text.charCodeAt(to - 1) === 32 || text.charCodeAt(to - 1) === 9)) to--;
+    marks.push({ kind: 'close', from: to - 2, to });
+    textTo = to - 2;
+  }
+  return { marks, textFrom, textTo: Math.max(textFrom, textTo) };
+}
 
 /** A math block's TeX: its lines, the `$$` fences off. */
-export function mathContent(syntax: SyntaxTree, b: Block): string {
-  const text = syntax.leafLines(b).join('\n');
+export function mathContent(tree: MdTree, b: MdBlockAt): string {
+  const text = tree.leafLines(b).join('\n');
   let s = text.trimStart().slice(2);
-  if (b.closed) s = s.trimEnd().slice(0, -2);
+  if (b.block.attrs.closed) s = s.trimEnd().slice(0, -2);
   return s.trim();
 }
 
-export const mathBlocks: Extension = {
+export const mathBlocks: MdExtension = {
   name: 'mathBlocks',
   blockStarts: [mathBlock.start],
   blockStartChars: '$',
-  startsBlock: opensFence('$$'),
+  lineMarkup: { math_block: fencedMarkup },
+  blockContent: { math_block: 'verbatim' },
+  delimited: { math_block: () => true },
   render: {
     blocks: {
       math_block(r, b, entering) {
         if (!entering) return;
         r.cr();
         r.lit('<div class="math math-block">');
-        r.out(mathContent(r.syntax, b));
+        r.out(mathContent(r.tree, b));
         r.lit('</div>');
         r.cr();
       },
@@ -257,18 +304,20 @@ export const mathBlocks: Extension = {
   },
 };
 
-export const commentBlocks: Extension = {
+export const commentBlocks: MdExtension = {
   name: 'commentBlocks',
   blockStarts: [commentBlock.start],
   blockStartChars: '%',
-  startsBlock: opensFence('%%'),
+  lineMarkup: { comment_block: fencedMarkup },
+  blockContent: { comment_block: 'verbatim' },
+  delimited: { comment_block: () => true },
   render: { blocks: { comment_block: () => false } },
 };
 
 // --------------------------------------------------------------------------------- wikilinks
 
 /** `[[target]]`, `[[target|alias]]`, `![[target]]` on one line; the target not empty. */
-function wikilinkAt(p: InlineParser, at: number, embed: boolean): boolean {
+function wikilinkAt(p: MdInlineParser, at: number, embed: boolean): boolean {
   const { text } = p;
   const open = embed ? at + 1 : at;
   if (text.charCodeAt(open) !== 91 || text.charCodeAt(open + 1) !== 91) return false;
@@ -291,10 +340,10 @@ function wikilinkAt(p: InlineParser, at: number, embed: boolean): boolean {
   return true;
 }
 
-const wikilinkRule: InlineRule = { name: 'wikilink', triggers: '[', before: 'openBracket', parse: (p) => wikilinkAt(p, p.pos, false) };
-const embedRule: InlineRule = { name: 'embed', triggers: '!', before: 'bang', parse: (p) => wikilinkAt(p, p.pos, true) };
+const wikilinkRule: MdInlineRule = { name: 'wikilink', triggers: '[', before: 'openBracket', parse: (p) => wikilinkAt(p, p.pos, false) };
+const embedRule: MdInlineRule = { name: 'embed', triggers: '!', before: 'bang', parse: (p) => wikilinkAt(p, p.pos, true) };
 
-export const wikilinks: Extension = {
+export const wikilinks: MdExtension = {
   name: 'wikilinks',
   inlines: [wikilinkRule, embedRule],
   render: {
@@ -323,7 +372,7 @@ function isTagChar(cp: number): boolean {
   return !isUnicodeWhitespace(cp) && !isPunctuation(cp) && cp > 32;
 }
 
-const tagRule: InlineRule = {
+const tagRule: MdInlineRule = {
   name: 'tag',
   triggers: '#',
   parse(p) {
@@ -345,7 +394,7 @@ const tagRule: InlineRule = {
   },
 };
 
-export const tags: Extension = {
+export const tags: MdExtension = {
   name: 'tags',
   inlines: [tagRule],
   render: {
@@ -362,13 +411,13 @@ export const tags: Extension = {
 
 // -------------------------------------------------------------------------------- highlights
 
-const equals: DelimiterRule = {
+const equals: MdDelimiterRule = {
   char: '=',
   accepts: (length) => length === 2,
   match: (opener, closer) => (opener.length === closer.length ? { use: 2, type: 'highlight' } : null),
 };
 
-export const highlights: Extension = {
+export const highlights: MdExtension = {
   name: 'highlights',
   inlines: [{ name: 'highlight', triggers: '=', parse: (p) => p.handleDelimiters(equals) }],
   delimiters: [equals],
@@ -387,7 +436,7 @@ const isSpace = (c: number): boolean => c === 32 || c === 9 || c === 10;
  * `$$tex$$` (display) and `$tex$`: the content not starting or ending with whitespace (for `$`), the
  * closing `$` not followed by a digit (as Pandoc reads it), no blank line inside.
  */
-const mathRule: InlineRule = {
+const mathRule: MdInlineRule = {
   name: 'math',
   triggers: '$',
   parse(p) {
@@ -417,7 +466,7 @@ const mathRule: InlineRule = {
 };
 
 /** Where an inline `$` can close: unescaped, not after whitespace, not before a digit. */
-function mathClosers(p: InlineParser): readonly number[] {
+function mathClosers(p: MdInlineParser): readonly number[] {
   let closers = p.memo.get('math closers') as number[] | undefined;
   if (closers) return closers;
   closers = [];
@@ -431,14 +480,14 @@ function mathClosers(p: InlineParser): readonly number[] {
   return closers;
 }
 
-export const math: Extension = {
+export const math: MdExtension = {
   name: 'math',
   inlines: [mathRule],
   render: {
     inlines: {
       math(r, node, entering) {
         if (!entering) return;
-        r.lit(`<span class="math ${(node as InlineNode & { display?: boolean }).display ? 'math-display' : 'math-inline'}">`);
+        r.lit(`<span class="math ${(node as MdInline & { display?: boolean }).display ? 'math-display' : 'math-inline'}">`);
         r.out(node.value!);
         r.lit('</span>');
       },
@@ -447,7 +496,7 @@ export const math: Extension = {
 };
 
 /** `%%comment%%`, hidden. */
-const commentRule: InlineRule = {
+const commentRule: MdInlineRule = {
   name: 'comment',
   triggers: '%',
   parse(p) {
@@ -462,7 +511,7 @@ const commentRule: InlineRule = {
   },
 };
 
-export const comments: Extension = {
+export const comments: MdExtension = {
   name: 'comments',
   inlines: [commentRule],
   render: { inlines: { comment: () => false } },
@@ -473,7 +522,7 @@ export const comments: Extension = {
 const reBlockId = /\^([A-Za-z0-9-]+)[ \t]*$/y;
 
 /** ` ^id` at the very end of a block's text (or the whole text). */
-const blockIdRule: InlineRule = {
+const blockIdRule: MdInlineRule = {
   name: 'blockId',
   triggers: '^',
   parse(p) {
@@ -489,14 +538,14 @@ const blockIdRule: InlineRule = {
   },
 };
 
-export const blockIds: Extension = {
+export const blockIds: MdExtension = {
   name: 'blockIds',
   inlines: [blockIdRule],
   render: { inlines: { block_id: () => false } },
 };
 
 /** `^[note]`: an opener whose `]` closes an inline footnote, whatever follows. */
-const inlineFootnoteOpen: InlineRule = {
+const inlineFootnoteOpen: MdInlineRule = {
   name: 'inlineFootnote',
   triggers: '^',
   parse(p) {
@@ -508,7 +557,7 @@ const inlineFootnoteOpen: InlineRule = {
   },
 };
 
-const inlineFootnoteClose: BracketRule = {
+const inlineFootnoteClose: MdBracketRule = {
   name: 'inlineFootnote',
   phase: 'before',
   resolve(p, opener) {
@@ -518,7 +567,7 @@ const inlineFootnoteClose: BracketRule = {
   },
 };
 
-export const inlineFootnotes: Extension = {
+export const inlineFootnotes: MdExtension = {
   name: 'inlineFootnotes',
   inlines: [inlineFootnoteOpen],
   brackets: [inlineFootnoteClose],
@@ -531,7 +580,7 @@ export const inlineFootnotes: Extension = {
 
 // ----------------------------------------------------------------------------------- flavor
 
-export const obsidianExtensions: readonly Extension[] = [
+export const obsidianExtensions: readonly MdExtension[] = [
   gfmCore,
   frontmatter,
   callouts,
@@ -551,4 +600,4 @@ export const obsidianExtensions: readonly Extension[] = [
   blockIds,
 ];
 
-export const obsidian: Flavor = defineFlavor('obsidian', obsidianExtensions);
+export const obsidian: MdFlavor = defineFlavor('obsidian', obsidianExtensions);

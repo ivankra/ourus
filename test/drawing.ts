@@ -2,7 +2,9 @@
 // place, `→` tab, `␍` carriage return, `⍽` no-break space (U+00A0, which Markdown reads as text).
 
 import type { Selection } from '../src/commands/index.ts';
-import type { OutlineState } from '../src/outline/index.ts';
+import type { Config } from '../src/config.ts';
+import { ProseText, OurusDoc, type OutlineNode } from '../src/doc/index.ts';
+import { createPlaceholder, trimMd } from '../src/text/index.ts';
 
 /**
  * Reads a drawn state: text plus caret (`┃`) or selection (`«…»`), placeholders (`◌`),
@@ -63,16 +65,44 @@ export const drawText = (text: string): string => text.replace(/\t/g, '→').rep
  * text, line breaks drawn `⏎`. For a case whose point is a reading the bytes don't show (a setext
  * underline against an empty child, a lazy line against a paragraph, a task against `[ ]` text).
  */
-export function drawOutline(doc: OutlineState): string {
-  return doc.nodes
-    .filter((node) => node.kind !== 'root')
-    .map((node) => {
-      const kind = node.kind === 'heading' ? `heading ${node.head!.level}` : node.kind === 'atom' ? `atom ${node.block.type}` : node.kind;
-      const task = node.kind === 'item' && node.block.task ? ` [${node.block.task.status}]` : '';
-      // a task's checkbox is its kind's, not its text's
-      const own = task ? doc.nodeText(node).replace(/^\[[^\]]\][ \t]*/, '') : doc.nodeText(node);
-      const text = drawText(own).replace(/\r?\n/g, '⏎');
-      return `${'  '.repeat(node.depth - 1)}${kind}${task}${text ? `: ${text}` : ''}`;
-    })
+export function drawOutline(doc: OurusDoc): string {
+  const out: string[] = [];
+  const visit = (node: OutlineNode): void => {
+    const text = doc.textOf(node);
+    const kind = node.kind === 'heading' ? `heading ${node.head!.attrs.level}` : node.kind === 'atom' ? `atom ${node.block.type}` : node.kind;
+    const task = node.kind === 'item' && text instanceof ProseText && text.task ? ` [${text.task.status}]` : '';
+    const own = drawText(plainText(doc, node)).replace(/\r?\n/g, '⏎');
+    out.push(`${'  '.repeat(node.depth - 1)}${kind}${task}${own ? `: ${own}` : ''}`);
+    node.children.forEach(visit);
+  };
+  doc.rootNode.children.forEach(visit);
+  return out.join('\n');
+}
+
+/** A node's text without its frame (a checkbox, `#`s, a callout's `[!type]`), each line trimmed; code's as it is. */
+export function plainText(doc: OurusDoc, node: OutlineNode): string {
+  const text = doc.textOf(node);
+  if (!(text instanceof ProseText)) return text?.text ?? '';
+  return text.body
+    .split('\n')
+    .map((line) => trimMd(line))
     .join('\n');
 }
+
+/** Every node of `doc` but the root, in document order. */
+export function nodesOf(doc: OurusDoc): OutlineNode[] {
+  const out: OutlineNode[] = [];
+  const visit = (node: OutlineNode): void => {
+    out.push(node);
+    node.children.forEach(visit);
+  };
+  doc.rootNode.children.forEach(visit);
+  return out;
+}
+
+/** The document a drawn state reads as: its text and placeholders, read with `config`. */
+export const docOf = (text: string, placeholders: readonly number[] = [], config: Partial<Config> = {}): OurusDoc =>
+  OurusDoc.parse(text, { config, marks: placeholders.map((p) => createPlaceholder(p)) });
+
+/** A document and a selection in it, drawn. */
+export const drawDoc = (doc: OurusDoc, sel: Selection): string => drawState(doc.text, sel, doc.marks.points());

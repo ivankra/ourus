@@ -1,6 +1,6 @@
-// Config: behavior users disagree on, as options with documented defaults. An `OutlineState` holds its
+// Config: behavior users disagree on, as options with documented defaults. An `OurusDoc` holds its
 // config and every snapshot after it carries it. Spec files set options by the same keys
-// (`outdent: logical` in frontmatter, or in one test's `config` block).
+// (`outdent: logical` in a test's config block).
 //
 // Grammar correctness is never configurable, and neither are invariants other parts depend on:
 // what "empty" means, which node keeps its id. An option is not a way to postpone a decision: its
@@ -66,14 +66,14 @@ export interface Config {
    * - `drop` (as bare Obsidian, its Live Preview, true-outliner, RemNote and Emacs): the spaces after
    *   the caret go, those before it end the first half (`- one two ┃three` keeps `two␠`).
    * - `start` (as Tine, Roam, Athens, Tana, Dynalist, WorkFlowy, SiYuan, BlockNote, SilverBullet and
-   *   Obsidian's Outliner): the spaces after the caret start the second half, the caret before them,
-   *   where Markdown keeps them unseen: an item's padding (`- one two` / `-  three`, its children
-   *   moved as far right), a paragraph's or a title's rest's leading spaces (`One.` / `␠Two.`).
-   *   Markdown reads neither as text; ourus does (an item's padding past the item above's, a
-   *   paragraph's leading spaces), so a join gives them back. Four columns would make code: there
-   *   they go, as with `drop`; a marker after them is escaped. A list padded unevenly by hand, or a
-   *   paragraph indented, reads those extra spaces as text too. SiYuan and SilverBullet also trim
-   *   the first half's end.
+   *   Obsidian's Outliner): the spaces after the caret start the second half, the caret before
+   *   them, where Markdown keeps them unseen: an item's padding past the space after its marker
+   *   (`- one two` / `-  three`, its children moved as far right), a paragraph's or a title's
+   *   rest's indentation (`One.` / `␠Two.`). Markdown reads neither as text; ourus keeps them as
+   *   the user's whitespace (`OurusDoc.hiddenSpaces`), so a join gives them back, and Backspace or
+   *   Delete in them takes a space. Past three columns they go (four would make code); a marker
+   *   after them is escaped. Padding written so by hand is the user's whitespace too, whatever the
+   *   value. SiYuan and SilverBullet also trim the first half's end.
    *
    * Shift-Enter isn't this option's: its line keeps the spaces at its start, as every app but
    * true-outliner does.
@@ -112,7 +112,8 @@ export interface Config {
    *   above a paragraph or a heading.
    * - `stay` (as in Obsidian, bare and with its Outliner, and RemNote): Enter splits there as anywhere
    *   in the text, the caret staying with it: an empty item above an item, a blank line above a
-   *   paragraph, and an empty heading above a heading's title, which becomes a paragraph.
+   *   paragraph, and an empty heading above a heading's title, which becomes a paragraph. Backspace
+   *   and Delete then take blank lines between paragraphs one a press while more than one is there.
    *
    * SiYuan goes `into` at an item and stays at a paragraph or a heading; Logseq and Tine split a
    * heading; at a heading SiYuan and BlockNote put an empty block above and keep the caret in the
@@ -340,11 +341,11 @@ export interface Config {
   //   (today). CommonMark mostly decides this already (children nest at the parent's content column).
   // - homeAtTask: 'after' | 'before'. Whether Home stops after a task's checkbox or before it.
   // - pastedNumbering: 'continue' | 'restart'. Whether a pasted ordered run takes the list's numbers,
-  //   and whether the items after a list of its own (`pasteListForm: own`, to come) restart at 1, as
+  //   and whether the items after a list of its own (`pasteListForm: own`) restart at 1, as
   //   BlockNote, Tine, WorkFlowy and true-outliner number them.
   // - emptyNodeLeft: 'keep' | 'remove'. Leaving an empty node the text can't hold. Decided instead
   //   (spec/placeholders.md): an empty item stays, set off by a blank line; an empty paragraph goes.
-  //   It is tied into placeholders and `settlePlaceholders`, so it stays a decision, not an option.
+  //   It is tied into placeholders and their settling (`settlePlaceholders`), so it stays a decision, not an option.
   // - readers: host parsers (lezer in CodeMirror 6, Obsidian's Live Preview) that verification
   //   also checks a result against, so other tools read the text as ourus does. Opt-in: lezer
   //   misreads lists in a tab-indented quote. A host's objects, not a value a file can set.

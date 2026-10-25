@@ -1464,7 +1464,7 @@ tags: rare free-form
 > deleteContentBackward
 
 ```buffer
-\[a]:┃b
+[a]\:┃b
 ```
 
 ## Backspace39
@@ -1582,7 +1582,7 @@ abc ┃[a]: tail
 > deleteSoftLineBackward
 
 ```buffer
-┃\[a]: tail
+┃[a]\: tail
 ```
 
 ### SoftBackspace3
@@ -1672,10 +1672,9 @@ title
 
 ### SoftBackspace7
 
-Cmd-Backspace emptying the first line of a paragraph of several lines: the empty line is held by a
-placeholder, as an emptied line is anywhere, here on the marker's line of a quote that is an
-item's first block. Left, it goes, the line below coming up onto the marker's line, the caret
-keeping its place in the text.
+Cmd-Backspace emptying the first line of a paragraph of several lines: Markdown holds no empty line
+in a text, so the line goes with its line break, the line below coming up onto the marker's line,
+here of a quote that is an item's first block, the caret at the start of the text.
 
 ```yaml
 tags: rare free-form
@@ -1689,20 +1688,14 @@ tags: rare free-form
 > deleteSoftLineBackward
 
 ```buffer
-- > ┃◌
-  > m
-```
-
-> cursorLineDown
-
-```buffer
 - > ┃m
 ```
 
 ### SoftBackspace8
 
-As [SoftBackspace7](#softbackspace7), in a task: the emptied first line keeps the checkbox, and
-left, the line below comes up after it.
+In a task, the emptied first line keeps the checkbox: the text starts below it, on the next line,
+and stays there when the caret leaves (unlike a paragraph's, [SoftBackspace7](#softbackspace7): an
+item's text may start below its marker).
 
 ```yaml
 tags: rare free-form markup-task
@@ -1717,14 +1710,15 @@ flavor: gfm
 > deleteSoftLineBackward
 
 ```buffer
-- [ ] ┃◌
+- [ ] ┃
   m
 ```
 
 > cursorLineDown
 
 ```buffer
-- [ ] m┃
+- [ ] 
+  m┃
 ```
 
 ### SoftBackspace9
@@ -1901,8 +1895,8 @@ tags: rare free-form
 
 With `enterAtTextStart: stay`, Enter there leaves a blank line above the paragraph, the caret staying
 with its text; Backspace takes it back, as the blank lines between two paragraphs go
-([Backspace12](#backspace12)): at the document's start, with nothing to join, only the blank lines
-go. Bare Obsidian, its Outliner and SilverBullet do the same.
+([Backspace12](#backspace12)): at the document's start, with nothing to join, only the
+blank lines go. Bare Obsidian, its Outliner and SilverBullet do the same.
 
 ```yaml
 tags: rare free-form
@@ -2131,6 +2125,7 @@ escapes it ([Outdent20](outdent.md#outdent20)).
 
 ```yaml
 tags: rare free-form
+flavor: gfm
 ```
 
 ```buffer
@@ -2145,5 +2140,5 @@ para
 ```buffer
 para┃i
 | a |
-\|---|
+|\---|
 ```

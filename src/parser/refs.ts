@@ -64,7 +64,7 @@ export function scanTitle(s: string, pos: number): { end: number; value: string 
 
 const isEscapable = (c: number): boolean => (c >= 33 && c <= 47) || (c >= 58 && c <= 64) || (c >= 91 && c <= 96) || (c >= 123 && c <= 126);
 
-export interface Reference {
+export interface MdReference {
   /** The label as written, brackets included. */
   readonly label: string;
   readonly destination: string;
@@ -76,7 +76,7 @@ export interface Reference {
  * it ends (after its line ending) and what it defines, or null. A definition always ends at a line
  * end.
  */
-export function scanReference(s: string, pos = 0): { end: number; reference: Reference; normalized: string } | null {
+export function scanReference(s: string, pos = 0): { end: number; reference: MdReference; normalized: string } | null {
   const labelEnd = scanLabel(s, pos);
   if (labelEnd < 0 || s.charCodeAt(labelEnd) !== 58 /* : */) return null;
   const label = s.slice(pos, labelEnd);

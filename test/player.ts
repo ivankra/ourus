@@ -8,9 +8,10 @@
 // typed (a character at a time, each through ourus's `insertText` first, as a host hooked to its
 // keys does), and caret motions named as CodeMirror's commands are.
 
-import { executeCommand, settlePlaceholders, type Command, type CommandResult, type Selection } from '../src/commands/index.ts';
-import { OutlineState } from '../src/outline/index.ts';
-import { advanceColumns, applyChanges, dominantEnding, type ChangeSpec } from '../src/text.ts';
+import { executeCommand, type Command, type CommandResult, type Selection } from '../src/commands/index.ts';
+import type { OurusDoc } from '../src/doc/index.ts';
+import { settlePlaceholders } from '../src/draft/index.ts';
+import { advanceColumns, applyChanges, dominantEnding, type ChangeSpec, type MarkSet } from '../src/text/index.ts';
 import type { Clipboard } from './specfile.ts';
 
 const COMMANDS = new Set<string>([
@@ -46,7 +47,7 @@ function commandOf(action: string, clipboard: Clipboard): Command {
  * monospace font's, with tab stops of 4. Returns the new head, or for a vertical motion the line
  * it reaches, placed at the goal column.
  */
-type Motion = (doc: OutlineState, sel: Selection) => number | { line: number };
+type Motion = (doc: OurusDoc, sel: Selection) => number | { line: number };
 
 const MOTIONS: Record<string, Motion> = {
   // with a selection, left and right collapse it to its start or end
@@ -54,7 +55,13 @@ const MOTIONS: Record<string, Motion> = {
   CharRight: (doc, s) => (s.anchor !== s.head ? Math.max(s.anchor, s.head) : charAfter(doc.text, s.head)),
   LineUp: (doc, s) => ({ line: doc.lineAt(s.head).index - 1 }),
   LineDown: (doc, s) => ({ line: doc.lineAt(s.head).index + 1 }),
-  LineBoundaryBackward: (doc, s) => doc.homePosition(s.head),
+  // the start of the line's text; from there, of the line (past the final line ending, where it is)
+  LineBoundaryBackward: (doc, s) => {
+    const line = doc.lineAt(s.head);
+    if (s.head > line.to) return s.head;
+    const start = doc.textStart(line.index);
+    return s.head === start ? line.from : start;
+  },
   LineBoundaryForward: (doc, s) => Math.max(s.head, doc.lineAt(s.head).to),
   DocStart: () => 0,
   DocEnd: (doc) => doc.text.length,
@@ -75,7 +82,7 @@ export const isCommand = (token: string): boolean => COMMANDS.has(token);
 export const isAction = (token: string): boolean => /^"[^"]*"$/.test(token) || COMMANDS.has(token) || HOST_ACTIONS.has(token) || isMotion(token);
 
 export interface Played {
-  doc: OutlineState;
+  doc: OurusDoc;
   selection: Selection;
   /** The host's clipboard, each format's text. */
   clipboard: Clipboard;
@@ -88,14 +95,14 @@ export interface Played {
   redone?: Snapshot[];
 }
 
-/** A state the host's history returns to: text, placeholders and selection. */
+/** A state the host's history returns to: the text with its placeholders, and the selection. */
 interface Snapshot {
   readonly text: string;
-  readonly placeholders: readonly number[];
+  readonly marks: MarkSet;
   readonly selection: Selection;
 }
 
-const snapshot = (state: Played, selection = state.selection): Snapshot => ({ text: state.doc.text, placeholders: state.doc.placeholders, selection });
+const snapshot = (state: Played, selection = state.selection): Snapshot => ({ text: state.doc.text, marks: state.doc.marks, selection });
 
 export function play(state: Played, actions: readonly string[]): Played {
   for (const action of actions) {
@@ -108,7 +115,7 @@ export function play(state: Played, actions: readonly string[]): Played {
     if (state.doc.text !== before.text) state = { ...state, undone: [...(state.undone ?? []), before], redone: [] };
     const settled = settlePlaceholders(state.doc, state.selection.head);
     // leaving a placeholder joins the step before it, which made the empty node: one undo takes both back
-    if (settled) state = { ...state, doc: settled.state, selection: mapSel(settled.changes, state.selection), redone: [] };
+    if (settled) state = { ...state, doc: settled.doc, selection: mapSel(settled.changes, state.selection), redone: [] };
   }
   return state;
 }
@@ -125,7 +132,7 @@ function history(state: Played, action: 'undo' | 'redo'): Played {
     ...state,
     last: undefined,
     goal: undefined,
-    doc: state.doc.replace(entry.text, { drop: [...state.doc.placeholders], placeholders: entry.placeholders }),
+    doc: state.doc.replace(entry.text, entry.marks.marks),
     selection: entry.selection,
     ...(action === 'undo' ? { undone: rest, redone: other } : { redone: rest, undone: other }),
   };
@@ -133,6 +140,7 @@ function history(state: Played, action: 'undo' | 'redo'): Played {
 
 function step(state: Played, action: string): Played {
   const { doc, selection } = state;
+  const text = doc.text;
   const from = Math.min(selection.anchor, selection.head);
   const to = Math.max(selection.anchor, selection.head);
   if (action.startsWith('"')) return typeText(state, action.slice(1, -1));
@@ -144,11 +152,11 @@ function step(state: Played, action: string): Played {
     if (typeof target === 'number') head = target;
     else {
       const line = doc.lineAt(selection.head);
-      goal ??= column(doc.text, line.from, selection.head);
-      const dest = doc.lines[target.line];
+      goal ??= column(text, line.from, selection.head);
+      const dest = target.line >= 0 && target.line < doc.lineCount ? doc.mdTree.line(target.line) : null;
       // past the first or last line, the caret goes to that end of the text; a column in the line's
       // markers or indentation lands at the start of its text
-      head = dest ? Math.max(atColumn(doc.text, dest.from, dest.to, goal), doc.textStart(dest.from)) : target.line < 0 ? 0 : doc.text.length;
+      head = dest ? Math.max(atColumn(text, dest.from, dest.to, goal), doc.textStart(dest.index)) : target.line < 0 ? 0 : text.length;
     }
     return { ...state, goal, selection: { anchor: extend ? selection.anchor : head, head } };
   }
@@ -157,20 +165,20 @@ function step(state: Played, action: string): Played {
   const type = command.type;
   const last = executeCommand(doc, command, selection);
   if (last.status === 'applied') {
-    if (applyChanges(doc.text, last.changes) !== last.state.text) throw new Error(`${type}: its changes don't produce its document`);
-    return { ...state, doc: last.state, selection: last.selection, last, ...(last.clipboard && { clipboard: last.clipboard }) };
+    if (applyChanges(text, last.changes) !== last.doc.text) throw new Error(`${type}: its changes don't produce its document`);
+    return { ...state, doc: last.doc, selection: last.selection, last, ...(last.clipboard && { clipboard: last.clipboard }) };
   }
   if (last.status === 'rejected') return { ...state, last };
   // not ours: the host's default
   switch (type) {
     case 'enter':
     case 'shiftEnter':
-      return { ...edit(state, { from, to, insert: dominantEnding(doc.text) }), last };
+      return { ...edit(state, { from, to, insert: dominantEnding(text) }), last };
     case 'deleteContentBackward': {
       if (from !== to) return { ...edit(state, { from, to, insert: '' }), last };
       if (from === 0) return { ...state, last };
       // one character: a line ending or a surrogate pair is one, as the caret's motions step over it
-      return { ...edit(state, { from: charBefore(doc.text, from), to: from, insert: '' }), last };
+      return { ...edit(state, { from: charBefore(text, from), to: from, insert: '' }), last };
     }
     case 'paste':
     case 'pastePlain':
@@ -179,7 +187,7 @@ function step(state: Played, action: string): Played {
     case 'copy':
     case 'cut': {
       if (from === to) return { ...state, last };
-      const clipboard = { 'text/plain': doc.text.slice(from, to) };
+      const clipboard = { 'text/plain': text.slice(from, to) };
       return type === 'cut' ? { ...edit(state, { from, to, insert: '' }), clipboard, last } : { ...state, clipboard, last };
     }
     // to the start of the line, as a line that doesn't wrap has it
@@ -187,8 +195,8 @@ function step(state: Played, action: string): Played {
       return { ...edit(state, from !== to ? { from, to, insert: '' } : { from: doc.lineAt(from).from, to, insert: '' }), last };
     case 'deleteContentForward': {
       if (from !== to) return { ...edit(state, { from, to, insert: '' }), last };
-      if (to === doc.text.length) return { ...state, last };
-      return { ...edit(state, { from: to, to: charAfter(doc.text, to), insert: '' }), last };
+      if (to === text.length) return { ...state, last };
+      return { ...edit(state, { from: to, to: charAfter(text, to), insert: '' }), last };
     }
     default:
       return { ...state, last };
@@ -204,8 +212,8 @@ function typeText(state: Played, text: string): Played {
     const { doc, selection } = state;
     const last = executeCommand(doc, { type: 'insertText', text: ch }, selection);
     if (last.status === 'applied') {
-      if (applyChanges(doc.text, last.changes) !== last.state.text) throw new Error(`insertText: its changes don't produce its document`);
-      state = { ...state, doc: last.state, selection: last.selection, last };
+      if (applyChanges(doc.text, last.changes) !== last.doc.text) throw new Error(`insertText: its changes don't produce its document`);
+      state = { ...state, doc: last.doc, selection: last.selection, last };
     } else if (last.status === 'rejected') state = { ...state, last };
     else state = { ...edit(state, { from: Math.min(selection.anchor, selection.head), to: Math.max(selection.anchor, selection.head), insert: ch }), last };
   }

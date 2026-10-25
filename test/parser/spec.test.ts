@@ -6,10 +6,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { commonmark, defineFlavor, type Extension, type Flavor } from '../../src/parser/flavor.ts';
+import { commonmark, defineFlavor, type MdExtension, type MdFlavor } from '../../src/parser/flavor.ts';
 import { autolink, footnotes, gfmCore, strikethrough, table, tagfilter, tasklist } from '../../src/parser/gfm.ts';
-import { renderHtml } from '../../src/parser/html.ts';
-import { SyntaxTree } from '../../src/parser/syntax.ts';
+import { MdTree } from '../../src/parser/syntax.ts';
 
 interface Example {
   example: number;
@@ -21,9 +20,9 @@ interface Example {
 
 const load = (name: string): Example[] => JSON.parse(readFileSync(new URL(`../fixtures/${name}.json`, import.meta.url), 'utf8'));
 
-const gfmExtensions: Record<string, Extension> = { table, strikethrough, autolink, tagfilter, footnotes, tasklist };
-const flavors = new Map<string, Flavor>();
-function gfmWith(names: readonly string[]): Flavor {
+const gfmExtensions: Record<string, MdExtension> = { table, strikethrough, autolink, tagfilter, footnotes, tasklist };
+const flavors = new Map<string, MdFlavor>();
+function gfmWith(names: readonly string[]): MdFlavor {
   const key = [...new Set(names)].sort().join(' ');
   let f = flavors.get(key);
   if (!f) flavors.set(key, (f = defineFlavor(`gfm (${key})`, [gfmCore, ...key.split(' ').filter(Boolean).map((n) => gfmExtensions[n]!)])));
@@ -38,13 +37,13 @@ function normalize(html: string): string {
   });
 }
 
-function run(examples: readonly Example[], flavorOf: (ex: Example) => Flavor): string[] {
+function run(examples: readonly Example[], flavorOf: (ex: Example) => MdFlavor): string[] {
   const failures: string[] = [];
   for (const ex of examples) {
     const disabled = ex.extensions?.includes('disabled') ?? false;
     let got: string;
     try {
-      got = renderHtml(SyntaxTree.parse(ex.markdown, flavorOf(ex)));
+      got = MdTree.parse(ex.markdown, flavorOf(ex)).renderHtml();
     } catch (e) {
       got = `threw ${(e as Error).stack}`;
     }
@@ -54,7 +53,7 @@ function run(examples: readonly Example[], flavorOf: (ex: Example) => Flavor): s
   return failures;
 }
 
-function check(name: string, examples: readonly Example[], flavorOf: (ex: Example) => Flavor): void {
+function check(name: string, examples: readonly Example[], flavorOf: (ex: Example) => MdFlavor): void {
   test(`${name}: ${examples.length} examples`, () => {
     const failures = run(examples, flavorOf);
     assert.equal(failures.length, 0, `${failures.length} of ${examples.length} fail:\n${failures.slice(0, 10).join('\n')}`);

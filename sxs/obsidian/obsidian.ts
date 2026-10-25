@@ -14,7 +14,8 @@
 // Obsidian indents with a tab, or with four spaces when told not to use tabs; never two, which the
 // spec draws. It runs with tabs, and a test indented with spaces as drawn has each two spaces of
 // its lines' indentation loaded as a tab and read back as two spaces (`asTabs`, `asSpaces`). A test
-// whose starting buffer is already indented with tabs is taken as written.
+// whose starting buffer is already indented with tabs, or that tabs wouldn't give back as written
+// (`retabs`), is taken as written.
 
 import { spawn } from 'node:child_process';
 import { appendFileSync, closeSync, copyFileSync, linkSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -249,6 +250,17 @@ export const asSpaces = (d: TextDoc): TextDoc =>
 /** Whether a document is indented with tabs already, and so is taken as written. */
 export const tabbed = (text: string): boolean => /^ *\t/m.test(text);
 
+/**
+ * Whether a document indented with spaces is loaded as tabs: where tabs give it back as written,
+ * caret and all; else it is loaded as written (a lazy line indented short of an item's text, which
+ * the tabs would line up with it, `- a⏎    1. b⏎      - c`).
+ */
+export function retabs(d: TextDoc): boolean {
+  if (tabbed(d.text)) return false;
+  const back = asSpaces(asTabs(d));
+  return back.text === d.text && JSON.stringify(back.sel) === JSON.stringify(d.sel);
+}
+
 /** Each end of a document's selection: its offset, and its line and column. */
 function ends(d: TextDoc): { offset: number; line: string; col: number }[] {
   if (!d.sel) return [];
@@ -274,8 +286,11 @@ function item(line: string, spaces = false): { marker: number; text: number } | 
 function splitsIndent(d: TextDoc): string | undefined {
   if (tabbed(d.text)) return undefined;
   const there = asTabs(d);
+  const back = asSpaces(there);
+  // (a text the tabs don't give back is loaded as written: `retabs`)
+  if (back.text !== d.text) return undefined;
   // a caret inside a tab's spaces lands at its start: loaded and read back, it moved
-  if (d.sel && JSON.stringify(asSpaces(there).sel) !== JSON.stringify(d.sel)) return 'caret inside the spaces of a tab of indentation';
+  if (d.sel && JSON.stringify(back.sel) !== JSON.stringify(d.sel)) return 'caret inside the spaces of a tab of indentation';
   return undefined;
 }
 
@@ -776,7 +791,7 @@ export function obsidianDriver(profile: Profile): Driver {
     async load(page: Page, doc) {
       const d = doc as TextDoc;
       const state = pageState(page);
-      state.retabbed = !tabbed(d.text);
+      state.retabbed = retabs(d);
       const { text, sel } = state.retabbed ? asTabs(d) : d;
       await page.evaluate(
         async ({ path, text, sel }) => {

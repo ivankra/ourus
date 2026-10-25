@@ -113,7 +113,7 @@ clipboard: |
 ```buffer
 - ax
   y
-  ┃◌
+  ┃
 ```
 
 ## PastePlain3
@@ -195,9 +195,8 @@ clipboard: |
 
 ## PastePlain6
 
-Plain paste escapes a line that would start a block as Shift-Enter does
-([ShiftEnter18](shift-enter.md#shiftenter18)): an ordered marker on a continuation line is escaped
-even when its number isn't 1.
+Plain paste breaks lines as Shift-Enter does ([ShiftEnter18](shift-enter.md#shiftenter18)): an
+ordered marker other than 1 on a continuation line can't start a list there, and stays as it is.
 
 ```yaml
 tags: rare
@@ -214,7 +213,7 @@ clipboard: |-
 
 ```buffer
 - ax
-  2\. y┃
+  2. y┃
 ```
 
 ## PastePlain7
@@ -288,13 +287,13 @@ clipboard: |
 ```buffer
 1\. a
 b
-┃◌
+┃
 ```
 
 ## PastePlain10
 
 The same at an item's text start: `2` and the pasted `1. a` would read as a nested list, `21.`, so
-the joined line is escaped after its number.
+the joined line is escaped after its number; `2. b`, continuing the text, stays as it is.
 
 ```yaml
 tags: rare
@@ -311,8 +310,8 @@ clipboard: |
 
 ```buffer
 - 21\. a
-  2\. b
-  ┃\. y
+  2. b
+  ┃. y
 ```
 
 ## PastePlain11
@@ -334,7 +333,7 @@ clipboard: |
 > pastePlain
 
 ```buffer
-\[a]: x
+[a]\: x
 ┃b c
 ```
 
@@ -360,7 +359,7 @@ p┃
 ```buffer
 px
 
-\[a]: /u┃
+[a]\: /u┃
 ```
 
 ## PastePlain13

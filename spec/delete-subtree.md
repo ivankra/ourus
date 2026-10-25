@@ -247,3 +247,72 @@ title
 ┃title
 ---
 ```
+
+## DeleteSubtree11
+
+An item with no text of its own (`- > q`), its only block deleted: the item goes with it, as a
+quote with no title does; it would hold nothing.
+
+```yaml
+tags: edge
+```
+
+```buffer
+- a
+- > q┃
+```
+
+> deleteSubtree
+
+```buffer
+- a┃
+```
+
+## DeleteSubtree12
+
+An item with no text of its own whose first block, on its marker's line, is deleted: the block
+after it moves up onto that line, past the item's marker (`- - g`), as far left as the item's
+content starts (two columns more would move where the item's content starts).
+
+```yaml
+tags: rare
+```
+
+```buffer
+- a
+- > q┃
+    - g
+- b
+```
+
+> deleteSubtree
+
+```buffer
+- a┃
+- - g
+- b
+```
+
+## DeleteSubtree13
+
+The list between two lists of one marker deleted: the two are one now, Markdown having no seam
+between them, and the later one's items line up with the earlier's (at its column, `- c` would
+be `a`'s child).
+
+```yaml
+tags: edge
+```
+
+```buffer
+- a
+1. n┃
+
+  - c
+```
+
+> deleteSubtree
+
+```buffer
+- a┃
+- c
+```

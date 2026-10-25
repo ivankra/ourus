@@ -4,15 +4,14 @@
 // report, not a gate.
 //
 //   node test/parser/bench.ts [corpus.md ...]
+//   BENCH_RUNS=50 node test/parser/bench.ts   # runs per timing (default 20)
 
 import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
-import { commonmark, type Flavor } from '../../src/parser/flavor.ts';
+import { commonmark, type MdFlavor } from '../../src/parser/flavor.ts';
 import { gfm } from '../../src/parser/gfm.ts';
-import { renderHtml } from '../../src/parser/html.ts';
 import { obsidian } from '../../src/parser/obsidian.ts';
-import { SyntaxTree } from '../../src/parser/syntax.ts';
-import { preorder } from '../../src/parser/walk.ts';
+import { MdTree } from '../../src/parser/syntax.ts';
 
 const runs = Number(process.env.BENCH_RUNS ?? 20);
 
@@ -62,21 +61,21 @@ for (const [name, text] of documents) {
   const lines = text.split('\n').length;
   console.log(`\n${name}: ${lines} lines, ${(text.length / 1024).toFixed(0)} KB, ${runs} runs`);
   console.log(`  ${''.padEnd(34)} ${'median'.padStart(9)} ${'p95'.padStart(9)}`);
-  for (const [flavorName, flavor] of [['commonmark', commonmark], ['gfm', gfm], ['obsidian', obsidian]] as [string, Flavor][]) {
-    measure(`${flavorName}: parse`, () => SyntaxTree.parse(text, flavor));
-    measure(`${flavorName}: parse + tree + lines`, () => void SyntaxTree.parse(text, flavor).lines);
+  for (const [flavorName, flavor] of [['commonmark', commonmark], ['gfm', gfm], ['obsidian', obsidian]] as [string, MdFlavor][]) {
+    measure(`${flavorName}: parse`, () => MdTree.parse(text, flavor));
+    measure(`${flavorName}: parse + tree + lines`, () => void MdTree.parse(text, flavor).lines);
     measure(`${flavorName}: + all inlines`, () => {
-      const s = SyntaxTree.parse(text, flavor);
-      for (const b of preorder(s.root)) s.inlines(b);
+      const s = MdTree.parse(text, flavor);
+      for (const b of s.rootAt.preorder()) s.inlines(b);
     });
-    measure(`${flavorName}: + HTML`, () => renderHtml(SyntaxTree.parse(text, flavor)));
+    measure(`${flavorName}: + HTML`, () => MdTree.parse(text, flavor).renderHtml());
   }
   if (cm) {
     const parser = new cm.Parser();
     const renderer = new cm.HtmlRenderer();
     measure('commonmark.js: parse + HTML', () => renderer.render(parser.parse(text)));
   }
-  const base = SyntaxTree.parse(text, gfm);
+  const base = MdTree.parse(text, gfm);
   void base.lines;
   const middle = base.lines[Math.floor(base.lines.length / 2)]!;
   const at = middle.to;

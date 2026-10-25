@@ -260,3 +260,26 @@ result: rejected not-expressible
 ```
 code┃
 ````
+
+## DuplicateSubtree10
+
+An empty item with children duplicated: the copy is written as its original is, its empty text
+and its children.
+
+```yaml
+tags: edge
+```
+
+```buffer
+- ┃
+  - a
+```
+
+> duplicateSubtree
+
+```buffer
+-␠
+  - a
+- ┃
+  - a
+```

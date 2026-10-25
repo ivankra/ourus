@@ -1,145 +1,174 @@
-# `commands/`: what the keys of an outliner do
+# Commands
 
-The top layer, and the one a host calls. A command takes an `OutlineState` and a selection, and
-returns either the changes that do what the key means (verified), a refusal that says why, or
-"not mine": the host runs its own default. Commands are pure: they never touch editor state; the
-host commits what they return.
+What an outliner's keys do to Markdown text: the layer a host calls. A command takes a document and
+a selection, and returns one of three things: the changes that do what the key means (checked
+before they are returned), a refusal with the reason, or "not applicable", in which case the host
+runs its own default. Commands are pure: they never touch editor state, and the host commits what
+they return. Their behavior is specified case by case in `spec/`, as drawn editor states and the
+keys pressed between them.
 
-The layer's place among the others: [`11-api.md`](../../11-api.md). Behavior is specified, case by
-case, in [`spec/`](../../spec/): drawn editor states and the actions between them.
-
-## The API
-
-Two functions and their types:
+Basic usage:
 
 ```ts
-import { executeCommand, settlePlaceholders } from 'ourus';
+import { OurusDoc, executeCommand, settlePlaceholders } from 'ourus';
 
-const result = executeCommand(state, { type: 'indent' }, { anchor, head });
+let doc = OurusDoc.parse(text, { config: { flavor: 'obsidian' } });
+const result = executeCommand(doc, { type: 'indent' }, { anchor, head });
 if (result.status === 'applied') {
   view.dispatch({ changes: result.changes, selection: result.selection });   // CM6 takes them as they are
-  state = result.state;
+  doc = result.doc;
 } else if (result.status === 'rejected') {
   status.textContent = result.reason;      // swallow the key, say why
 }                                          // 'notApplicable': let the editor do its default
 
-const settled = settlePlaceholders(state, caret);   // after the caret moves
-if (settled) { view.dispatch({ changes: settled.changes }); state = settled.state; }
+const settled = settlePlaceholders(doc, caret);   // after the caret moves
+if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
 ```
 
-### `executeCommand(state, command, selection): CommandResult`
+## API
 
-`command` is a `Command`, a value (spec files, the test player and the Logseq runner name commands
-as data). Names follow W3C `inputType` where one exists:
+- **`executeCommand(doc: OurusDoc, command: Command, selection: Selection): CommandResult`**<br>
+  Runs a command at the selection. Where ourus doesn't handle a case yet, a key the host has a
+  default for is left to the host (`notApplicable`), and a structural command is refused as
+  `unsupported`.
 
-| `type` | Key | What it does |
-| --- | --- | --- |
-| `indent`, `outdent` | Tab, Shift-Tab | The selected nodes go under the node above, or out of their parent. Heading levels change; paragraphs become items and back. |
-| `moveSubtreeUp`, `moveSubtreeDown` | Alt-↑, Alt-↓ | The selected nodes swap with the sibling above or below, crossing into the parent's sibling at an edge. |
-| `enter` | Enter | Splits the node at the caret: a new item, paragraph or section paragraph. |
-| `shiftEnter` | Shift-Enter | A line break inside the node's text, which stays one node. |
-| `deleteContentBackward` | Backspace | At a node's text start: joins it to the node above. |
-| `deleteContentForward` | Delete | At a node's text end: joins the node below to it. |
-| `deleteSoftLineBackward` | Cmd-Backspace | Deletes back to the text start of the line, never into a marker. |
-| `copy`, `cut` | Ctrl-C, Ctrl-X | The selection's Markdown, as the result's `clipboard` (`text/plain`, `text/markdown`, `text/html` marked as ourus's); a cut takes it out (spec/copy.md). |
-| `paste` (`clipboard`) | Ctrl-V | The clipboard, every format the host has of it (`text/plain`, `text/markdown`, `text/html`, …), read as Markdown and placed as nodes. Placed as nodes between nodes (spec/paste.md). |
-| `pastePlain` (`text`) | Ctrl-Shift-V | Text pasted into the node, its line breaks as Shift-Enter's. |
-| `deleteSubtree`, `duplicateSubtree` | | The selected nodes go, or a copy goes below them, with their subtrees. |
-| `insertText` (`text`) | typing | Text typed at the selection, a key's worth: ourus's where Markdown reads it as structure (a backtick: fences opened, closed and kept matched), else the host's. |
+- **`Selection`** is `{ anchor, head }`, as in CM6's `selection.main`. A structural command (indent,
+  move, ...) acts on the topmost nodes whose own lines the selection touches. They must be
+  contiguous siblings of the same kind.
 
-`selection` is `{ anchor, head }`, as CM6's `selection.main` is. The selected nodes of a structural
-command are the topmost nodes whose own lines the selection touches; they must be contiguous
-siblings of one kind.
+- **`Command`** is `{ type, ... }`. Types are named after W3C's `inputType` where there is one:
 
-**`CommandResult`** is one of:
+  - `indent`, `outdent` (Tab, Shift-Tab)<br>
+    The selected nodes move under the node above, or out of their parent. For headings, the level
+    changes; paragraphs become items, and items paragraphs.
 
-- **`applied`**: `state` (the next `OutlineState`, ids carried), `changes` (`ChangeSpec[]`, in the
-  old text's coordinates), `selection` (in the new text), and for copy and cut `clipboard`, the
-  formats the host writes (a copy's `changes` are none). Every applied command is verified: the
-  re-parsed outline equals what the command meant.
-- **`rejected`**: `reason` (`RejectReason`) and sometimes a `detail`. The key does nothing; the host
-  should swallow it.
-- **`notApplicable`**: the command has nothing to do here (Enter in the middle of a code line, with
-  `handleFenceContents: false`; Backspace inside text). The host runs its default. With the caret in
-  markup, where only the host puts it, an edit ourus would refuse is the host's too
-  (`markup: text`, the default), and `detail` says why ("a list marker isn't text"): an
-  advisory the host may show.
+  - `moveSubtreeUp`, `moveSubtreeDown` (Alt-↑, Alt-↓)<br>
+    The selected nodes swap with the sibling above or below. At the first or last child, they move
+    into the parent's previous or next sibling.
 
-**`RejectReason`:**
+  - `enter` (Enter)<br>
+    Splits the node at the caret into two: a new item, or a new paragraph.
 
-| Reason | When |
-| --- | --- |
-| `no-previous-sibling`, `no-next-sibling` | Indent or move with nothing above or below to go to. |
-| `at-top-level` | Outdent of a node that has no parent item to leave. |
-| `at-h1-bound`, `at-h6-bound` | A heading level would go past 1 or 6. |
-| `non-contiguous`, `mixed-kinds` | The selected nodes aren't contiguous siblings, or not of one kind. |
-| `nothing-above` | Backspace at the first node, with nothing to join into. |
-| `has-children` | A join that would have to drop children. |
-| `not-expressible` | Markdown can't say what the command means here (an empty node away from the caret, a heading that would span lines, ...); `detail` says what. |
-| `would-reparent` | A move would give another node a new parent (a heading taking in what follows it, a paragraph owning a list). |
-| `encoding-failed` | The changes didn't re-parse as intended. A bug to fix, never a tolerated rate. |
+  - `shiftEnter` (Shift-Enter)<br>
+    Inserts a line break inside the node's text; it stays one node.
 
-### `settlePlaceholders(state, caret)`
+  - `deleteContentBackward` (Backspace), `deleteContentForward` (Delete)<br>
+    At the start of a node's text, Backspace joins the node into the one above; at the end of its
+    text, Delete joins the node below into it. They also delete a selection across nodes. Inside a
+    text, deleting a character is the host's default.
 
-Placeholders hold empty nodes the text can't express yet (see `outline/`). When the caret leaves
-one, call this: a placeholder the text can do without is dropped; one it can't is resolved (an
-empty item set off by a blank line, an empty paragraph's line removed). Returns the changes and the
-next state, or null when nothing changes.
+  - `deleteSoftLineBackward` (Cmd-Backspace)<br>
+    Deletes back to the start of the line's text, never into a marker.
 
-### The host's contract
+  - `copy`, `cut` (Ctrl-C, Ctrl-X)<br>
+    Puts the selection's Markdown in the result's `clipboard`, as `text/plain`, `text/markdown` and
+    `text/html` (marked as coming from ourus). Cut also removes it.
 
-1. Keep one `OutlineState` per document. On every edit that isn't a command (typing, the editor's
-   own paste, undo), `state = state.update(changes, { caret })` with the caret where it lands.
-2. On a command key, `executeCommand`; commit an applied result's changes and selection together,
-   and take its `state` (no need to re-parse).
-3. When the caret moves, `settlePlaceholders`; commit its changes as an edit of its own.
-4. Keep placeholders in the history: undo and redo restore the placeholders of the state they
-   return to (`state.update(changes, { drop, placeholders })`). CM6 can carry them with
-   `invertedEffects`; the demo does.
+  - `paste` (Ctrl-V), `{ clipboard: Clipboard }`<br>
+    Pastes the clipboard, given in every format the host has (`text/plain`, `text/markdown`,
+    `text/html`, ...). It is read as Markdown and inserted as nodes.
+
+  - `pastePlain` (Ctrl-Shift-V), `{ text: string }`<br>
+    Pastes text into the node at the caret, its line breaks inserted as Shift-Enter does.
+
+  - `deleteSubtree`, `duplicateSubtree`<br>
+    Deletes the selected nodes, or inserts a copy of them below them, with their subtrees.
+
+  - `insertText` (typing), `{ text: string }`<br>
+    Text typed at the selection, one key's worth. Ourus handles it where Markdown reads it as
+    structure (a backtick: fences opened, closed and kept matched); otherwise it is the host's.
+
+- **`CommandResult`** is one of:
+
+  - `{ status: 'applied', doc, changes, selection, clipboard? }`<br>
+    The new `OurusDoc` (node ids carried over), the changes (`ChangeSpec[]`, in the old text's
+    coordinates), the selection (in the new text), and for copy and cut the clipboard formats (copy
+    has no changes). Every applied command is checked: the new text, parsed, reads as the outline
+    the command meant.
+
+  - `{ status: 'rejected', reason: RejectReason, detail? }`<br>
+    The command does nothing; the host should swallow the key.
+
+  - `{ status: 'notApplicable', detail? }`<br>
+    The command has nothing to do here (Backspace inside a text); the host runs its default. With the
+    caret in markup, an edit ourus would refuse is also left to the host when the config treats
+    markup as text (`markup: text`, the default); `detail` then says why ("a list marker isn't
+    text").
+
+- **`RejectReason`** is one of:
+
+  - `no-previous-sibling`, `no-next-sibling`: indent or a move with nothing above or below to go to.
+  - `at-top-level`: outdent of a node with no parent item to leave.
+  - `at-h1-bound`, `at-h6-bound`: a heading level would go past 1 or 6.
+  - `non-contiguous`, `mixed-kinds`: the selected nodes aren't contiguous siblings, or not of one kind.
+  - `nothing-above`: Backspace at the first node, with nothing to join into.
+  - `has-children`: a join that would have to drop children.
+  - `not-expressible`: Markdown can't express the result (an empty node away from the caret, a
+    heading that would span lines, ...); `detail` says what.
+  - `would-reparent`: a move would give another node a new parent (a heading taking in what follows
+    it).
+  - `unsupported`: a structural command ourus doesn't do here yet (a case no command covers).
+  - `write-failed`: the writer failed, on a layout it has no rule for or a text that didn't read back
+    as the command meant. This is always a bug in ourus, to fix.
+
+- **`settlePlaceholders(doc: OurusDoc, caret: number): { doc, changes } | null`** (from `draft/`)<br>
+  Settles the placeholders the caret has left: a node with a held space is written again without
+  it; an empty item is written again so it holds without a placeholder; any other empty node is
+  removed. Null when no placeholder is off the caret's line. See `draft/`'s README.
+
+- **`Config`** chooses how commands behave where outliners differ. It is set when the document is
+  made (`OurusDoc.parse(text, { config })`): `outdent`, `bullet`, `enterOnEmptyItem`, `enterMidItem`,
+  `enterAtTextStart`, `enterSplitSpace`, `enterTask`, `backspaceAtTopItem`, `emptyItemWithChildren`,
+  `joinWithChildren`, `handleFenceContents`, `closeBackticks`, `headingEditing`, `taskEditing`,
+  `copyAtCaret`, `copySelection`, `pasteSeams`, `pasteLines`, `pastePlainLines`, `pasteAtTextStart`,
+  `pasteOnParent`, `pasteParagraphList`, `pasteListForm`, `markup`, and `flavor` (the only option
+  that affects reading). Each option's choices and default are documented in `src/config.ts`.
+
+The host's contract:
+
+1. Keep one `OurusDoc` per document. After every edit that isn't a command (typing, the editor's
+   own paste, undo), call `doc = doc.update(changes, { caret })`, with the caret where the edit
+   leaves it.
+2. On a command key, call `executeCommand`. Commit an applied result's changes and selection
+   together, and keep its `doc` (no need to parse again).
+3. When the caret moves, call `settlePlaceholders(doc, caret)`, and commit its changes as a
+   separate edit.
+4. Keep placeholders in the undo history: undo and redo must restore the placeholders of the state
+   they return to. Save `doc.marks.points()` with each state, and restore with
+   `doc.update(changes, { setMarks: positions.map((pos) => createPlaceholder(pos)) })`. In CM6,
+   `invertedEffects` can carry them; the demo does this.
+5. Home goes to `doc.textStart(line)`, the start of the line's text, and pressed again, to the
+   line's start.
 
 `demos/cm6/main.ts` is a complete CM6 host; `test/player.ts` plays the same contract for the spec.
 
-### Config
+Inside, a command works in three steps. It looks at what is at the selection (`ctx.from`,
+`ctx.to`: `locate`'s zones). It describes the outline it wants in a draft (`ctx.draft()`: remove,
+place, split, join, set a text, a gap, the caret). Then it applies the draft (`ctx.apply`): the draft's
+`done()` puts it in normal form, writes the changes, and checks the new text against it (see
+`draft/`). For
+what a line, a marker or a fence is, commands ask `doc/`, or the parser when `doc/` doesn't say.
 
-How commands behave where users disagree is a `Config` option, set when the state is made
-(`OutlineState.parse(text, { config })`): `outdent` (`direct` or `logical`), `bullet`,
-`enterOnEmptyItem`, `enterMidItem`, `enterAtTextStart`, `backspaceAtTopItem`, `emptyItemWithChildren`, `joinWithChildren`, `enterTask`, `enterSplitSpace`,
-`handleFenceContents`, `closeBackticks`, `headingEditing`, `taskEditing`, `copyAtCaret`, `copySelection`, `pasteSeams`, `pasteLines`, `pasteAtTextStart`,
-`pasteOnParent`, `pasteParagraphList`, `pasteListForm`, `markup`, and
-`flavor`. Each option's choices and default are documented in `src/config.ts`.
+Files:
 
-## Inside
+- `index.ts` (`executeCommand`, the dispatch on `command.type`); `types.ts` (`Command`, `Selection`,
+  `CommandResult`, `RejectReason`); `context.ts` (`CommandContext`: the document, the selection
+  located, `apply`); `util.ts` (shared helpers: the nodes a structural command acts on, the caret it
+  leaves, markup at the caret, heading levels, deleting a held space, hidden spaces).
+- `indent.ts`, `outdent.ts`, `move-subtree.ts` (Tab, Shift-Tab, Alt-↑, Alt-↓); `delete-subtree.ts`,
+  `duplicate-subtree.ts`; `enter.ts`, `shift-enter.ts`; `backspace.ts`, `delete.ts` (Backspace and
+  Cmd-Backspace, Delete: at a node's boundary, or a selection across nodes); `code.ts` (keys inside
+  code blocks, keeping a fence's run matched); `typing.ts` (typed characters Markdown reads as
+  structure: a backtick, a tilde).
+- `copy.ts` (copy and cut); `clipboard.ts` (reading a clipboard for paste: which format holds
+  the Markdown, HTML converted by `MdHtmlParser`, lines read as they were where they were copied
+  from; and writing one for copy); `paste.ts` (paste: where the nodes go at the caret, and fitting
+  them there), `paste-plain.ts`.
 
-One file per family of commands; a host doesn't import them:
-
-| File | What |
-| --- | --- |
-| `index.ts` | `executeCommand`, the dispatch on `command.type`, the types |
-| `structure.ts` | indent, outdent, moves, heading levels, delete, duplicate: the lowest family (the others call it, never the reverse; the boundary test checks) |
-| `enter.ts` | Enter and Shift-Enter |
-| `join.ts` | Backspace, Delete, Cmd-Backspace |
-| `code.ts` | fenced code: Enter, Backspace and Delete on code lines and fences, a fence's run kept matched |
-| `typing.ts` | typed characters Markdown reads as structure: the backtick |
-| `copy.ts` | copy and cut: what the selection takes (`copyTarget`), its Markdown out of its containers (`copiedMarkdown`), the clipboard written (`clipboardOf`) |
-| `paste.ts` | paste: the clipboard's formats read as Markdown (`clipboardMarkdown`, `clipboardSource`), the slot at the caret (`slotAt`), open seams (`pasteOpen`); the nodes placed by `place.ts` |
-| `place.ts` | placement: nodes put between nodes, fitted to where they land (`fit`: an item in a list, a heading's section split) and placed in the plan (`placed`); the rules of what holds what that the structural commands share (`sectionEnd`, `ownsLists`, `unownLists`) |
-| `html.ts` | a clipboard's HTML as Markdown (`htmlToMarkdown`), for paste: a pure function of the HTML's text |
-| `paste-plain.ts` | plain paste: the clipboard's lines into the node's text, each line break Shift-Enter's |
-| `settle.ts` | `settlePlaceholders` |
-| `context.ts` | `CommandContext` (the state, the selection, and what every command needs of them), `Operands`, shared helpers |
-| `plan.ts` | `CommandPlan`, the runner: renumbering, verification by re-parsing, alternatives, refusal diagnosis |
-
-A command describes its result as an `OutlinePlan` (`encoder/`) and either has the encoder write it
-(structural edits: `ctx.encode(plan)`), or writes the changes itself, using the encoder's prefix,
-marker and escape helpers (local edits: `ctx.caret(changes, caret, plan)`). Both go through the same
-runner, which applies the changes to a new state and checks it against the plan.
-
-## Tests
-
-`test/commands/commands.test.ts` (changes, text and selection agree; round trips; ids), the spec
-(`test/spec.test.ts` over `spec/*.md`, every example in every flavor), the placeholder lifecycle
-(`test/placeholders.test.ts`), the differential (`npm run test:diff`), which compares every
-command's outcome with the last commit's, and the inverse pairs (`npm run test:inverse`), which play
-every pair of commands that undo each other at every caret position of the spec's buffers. To look
-at one case by hand: `npm run probe` (`sxs/probe.ts --help`), on ourus alone, or the SxS's apps
-beside it (`npm run probe -- all ...`).
+Tests: the spec (`test/spec.test.ts` over `spec/*.md`, every example in every flavor);
+`test/commands/commands.test.ts` (changes, text and selection agree; round trips; ids);
+`test/placeholders.test.ts` (the placeholders' lifecycle); the differential (`npm run test:diff`),
+which compares every command's outcome with the last commit's; the inverse pairs (`npm run
+test:inverse`), which run every pair of commands that undo each other at every caret position of the
+spec's buffers. To look at one case by hand: `npm run probe` (`sxs/probe.ts --help`), on ourus alone
+or side by side with the SxS apps.

@@ -14,7 +14,7 @@ test('each test has a heading of its own; the blocks after each action are check
       `${F}buffer`, '- a', '- b┃', F, '', '> indent "c"', '', `${F}buffer`, '- a', '  - bc┃', F, '',
       `${F}yaml`, 'clipboard: |', '  x', F, '',
       '> moveSubtreeUp', '', `${F}yaml`, 'result: rejected no-previous-sibling', F, '', `${F}buffer`, '- a', '  - bc┃', F, '',
-      '### Pending one', '', `${F}yaml`, 'status: pending', 'tags: rare', F, '', `${F}buffer`, '- z┃', F, '', '> outdent', '',
+      '### Pending one', '', `${F}yaml`, 'tags: rare pending', F, '', `${F}buffer`, '- z┃', F, '', '> outdent', '',
       '### Own', '', `${F}yaml`, 'tags: edge', 'clipboard: |', '  c', F, '', `${F}buffer`, '- y┃', F, '', '> paste',
       '', `${F}js`, 'ignored', F,
     ].join('\n'),
@@ -27,7 +27,7 @@ test('each test has a heading of its own; the blocks after each action are check
         [['moveSubtreeUp'], { result: 'rejected no-previous-sibling', buffer: '- a\n  - bc┃\n' }],
       ]],
       ['Pending one', 41, true, 'rare', { buffer: '- z┃\n' }, [[['outdent'], {}]]],
-      ['Own', 54, false, 'edge', { clipboard: { 'text/plain': 'c\n' }, buffer: '- y┃\n' }, [[['paste'], {}]]],
+      ['Own', 53, false, 'edge', { clipboard: { 'text/plain': 'c\n' }, buffer: '- y┃\n' }, [[['paste'], {}]]],
     ],
   );
 });
@@ -60,28 +60,28 @@ test('misplaced blocks and unknown options are errors', () => {
   bad([...h, `${F}buffer`, 'a', F, '', '> indent', '', `${F}buffer`, 'b', F, '', `${F}buffer`, 'c', F], /a second buffer block for one state \(each test needs a heading of its own\)/);
   bad([...h, `${F}buffer`, 'a', F, '', '> copy', '', `${F}yaml`, 'result: applied', F, '', `${F}yaml`, 'clipboard: "b"', F], /x\.md:17: a second yaml block for one state/);
   bad([...h, `${F}buffer pending`, 'a', F, '', '> indent'], /x\.md:7: "pending" after "buffer": options go in a config block/);
-  bad(['---', 'policy: logseq', '---', '', '## A', '', `${F}buffer`, 'a', F, '', '> indent'], /x\.md:2: unknown option "policy"/);
+  bad(['---', 'flavor: gfm', '---', '', '## A', '', `${F}buffer`, 'a', F, '', '> indent'], /x\.md:1: no frontmatter/);
+  bad(['## A', '', `${F}yaml`, 'tags: edge', 'policy: logseq', F, '', `${F}buffer`, 'a', F, '', '> indent'], /x\.md:5: unknown option "policy"/);
   bad(['## A', '', `${F}yaml`, 'tags: edge', 'outdent: sideways', F, '', `${F}buffer`, 'a', F, '', '> indent'], /x\.md:5: option "outdent" takes direct, logical/);
-  bad(['## A', '', `${F}yaml`, 'tags: edge', 'status: later', F, '', `${F}buffer`, 'a', F, '', '> indent'], /x\.md:5: option "status" takes ready, pending/);
-  bad([...h, `${F}buffer`, 'a', F, '', `${F}yaml`, 'status: pending', F, '', '> indent'], /x\.md:11: a config block goes before a test's first block/);
+  bad(['## A', '', `${F}yaml`, 'tags: edge', 'status: pending', F, '', `${F}buffer`, 'a', F, '', '> indent'], /x\.md:5: unknown option "status"/);
+  bad([...h, `${F}buffer`, 'a', F, '', `${F}yaml`, 'outdent: direct', F, '', '> indent'], /x\.md:11: a config block goes before a test's first block/);
   bad([...h, '## B', ''], /x\.md:3: a config block with no test after it/);
   bad(['## A', '', `${F}config`, 'tags: edge', F, '', `${F}buffer`, 'a', F, '', '> indent'], /x\.md:3: a config block is a `yaml` block/);
 });
 
-test("a test's config block is combined with the frontmatter, and wins", () => {
+test("a test's options are its config block's, and pending is a tag", () => {
   const tests = readSpec(
     'x.md',
     [
-      '---', 'outdent: logical', 'status: pending', '---', '',
-      '## A', '', `${F}yaml`, 'tags: edge', F, '', `${F}buffer`, 'a', F, '', '> outdent', '',
-      '## B', '', `${F}yaml`, 'tags: edge', 'outdent: direct', 'bullet: "*"', 'status: ready', F, '', `${F}buffer`, 'a', F, '', '> outdent',
+      '## A', '', `${F}yaml`, 'tags: edge pending', 'outdent: logical', F, '', `${F}buffer`, 'a', F, '', '> outdent', '',
+      '## B', '', `${F}yaml`, 'tags: edge', 'outdent: direct', 'bullet: "*"', F, '', `${F}buffer`, 'a', F, '', '> outdent',
     ].join('\n'),
   );
   assert.deepEqual(
-    tests.map((t) => [t.name, t.pending, t.options]),
+    tests.map((t) => [t.name, t.pending, t.tags, t.options]),
     [
-      ['A', true, { outdent: 'logical', status: 'pending' }],
-      ['B', false, { outdent: 'direct', status: 'ready', bullet: '*' }],
+      ['A', true, ['pending'], { outdent: 'logical' }],
+      ['B', false, [], { outdent: 'direct', bullet: '*' }],
     ],
   );
 });
@@ -92,7 +92,7 @@ test("a test's rank is its first tag: always there, one of four, review metadata
   assert.deepEqual([t.rank, t.tags, t.options], ['core', [], {}]);
   assert.deepEqual(specConfig(t.options), {});
   const bad = (config: string[], message: RegExp) => assert.throws(() => read(config), (e) => e instanceof SpecError && message.test(e.message));
-  bad(['status: pending'], /x\.md:3: a test is ranked/);
+  bad(['outdent: direct'], /x\.md:3: a test is ranked/);
   bad(['tags: urgent'], /x\.md:4: the first tag is the rank: core, common, edge, rare, not "urgent"/);
   bad(['tags: free-form edge'], /x\.md:4: the first tag is the rank/);
   bad(['tags: edge core'], /x\.md:4: no tag "core"/);
@@ -125,7 +125,6 @@ test("a config block is YAML: every value a string, and the clipboard a test sta
   bad(['tags: rare', 'tags: edge'], /x\.md:5: not YAML: Map keys must be unique/);
   bad(['bullet: *'], /x\.md:4: not YAML/);
   bad(['outdent: [direct]'], /x\.md:4: option "outdent" takes one value/);
-  assert.throws(() => readSpec('x.md', ['---', 'clipboard: |', '  x', '---', '', '## A', '', `${F}buffer`, 'a', F, '', '> indent'].join('\n')), /x\.md:2: a clipboard is a test's/);
   assert.throws(() => readSpec('x.md', ['## A', '', `${F}clipboard-no-newline`, 'x', F, '', `${F}buffer`, 'a', F, '', '> indent'].join('\n')), /x\.md:3: a clipboard is a key of the state's `yaml` block/);
 });
 
@@ -166,5 +165,4 @@ test("a test's tags after its rank are words from the closed list, in its config
   bad(['tags: rare free-form sideways'], /x\.md:4: no tag "sideways"/);
   bad(['tags: rare free-form free-form'], /x\.md:4: tag "free-form" given twice/);
   bad(['tags: [free-form]'], /x\.md:4: option "tags" takes one value/);
-  assert.throws(() => readSpec('x.md', ['---', 'tags: edge', '---', '', '## A', '', `${F}buffer`, 'a', F, '', '> indent'].join('\n')), /x\.md:2: tags are a test's/);
 });

@@ -652,12 +652,12 @@ tags: edge
 
 ## TO-S11
 
-*Shift-Enter, S11: Place inside a multi-line item*
+*Shift-Enter, S11: A blank line inside a multi-line item*
 
-At the end of a line that isn't the node's last, the new line is a place inside the node, which
-stays one node; typing fills it, and leaving removes it: left empty, the line would split the
-paragraph in two, as it does in bare Obsidian and Outliner (TO's blank line split the node too when
-measured; it now agrees).
+At the end of a line that isn't the node's last, the new line would be an empty line inside the
+text, which Markdown holds in none: the text breaks into two paragraphs there, the caret on the
+blank line between, at the text's column, and typing on it joins them again. Bare Obsidian and
+Outliner split the paragraph too, as TO's blank line did when measured.
 
 ```yaml
 tags: edge
@@ -672,7 +672,7 @@ tags: edge
 
 ```buffer
 - foo
-  ┃◌
+  ┃
   bar
 ```
 
@@ -686,7 +686,9 @@ tags: edge
 
 ## TO-S11b
 
-*Shift-Enter, S11: Leaving the place removes it*
+*Shift-Enter, S11: Leaving the blank line*
+
+Left, the blank line stays: the text is two paragraphs.
 
 ```yaml
 tags: edge free-form
@@ -701,6 +703,7 @@ bar
 
 ```buffer
 ┃foo
+
 bar
 ```
 
@@ -773,7 +776,7 @@ tags: edge
 - one
   - kid
 - foo
-  ┃◌
+  ┃
 ```
 
 > deleteContentBackward
@@ -1309,18 +1312,19 @@ outdent: logical
 
 ## TO8
 
-*Abandoning an empty place, Shift-Enter, Tab, then leave: Carried place removed on leaving*
+*Abandoning an empty place, Shift-Enter, Tab, then leave: Carried blank line kept on leaving*
 
 From TO's `carried-place-removal.md` (#249): an empty node a key made, then left without typing,
 possibly after Tab or Shift-Tab carried it. An empty item stays, as Logseq, WorkFlowy, Roam and
 Dynalist keep an empty bullet the caret leaves: after another item as it is, and right under its
 parent's text, where Markdown would read it as a setext underline, set off by a blank line above it.
-What Markdown can't hold at all (an empty paragraph, an empty line inside a node) goes, with the
-lines that were written for it. TO instead restores the document from before the key that made it.
+What Markdown can't hold at all (an empty paragraph) goes, with the lines that were written for it.
+TO instead restores the document from before the key that made it.
 
-The place moves with the node it is in, to the node's new content column, as every line of an
-indented node does (indent-unit-on-every-line), so typing there continues the node's text; leaving
-it removes it, and one Backspace on it goes back to where Shift-Enter started.
+The blank line Shift-Enter makes moves with the node it ends, to the node's new content column, as
+every line of an indented node does (indent-unit-on-every-line), so typing there continues the
+node's text; left, it stays as written, and one Backspace on it goes back to where Shift-Enter
+started.
 
 ```yaml
 tags: edge free-form
@@ -1338,7 +1342,7 @@ tags: edge free-form
 - one
   - kid
   - foo
-    ┃◌
+    ┃
 ```
 
 > cursorDocStart
@@ -1347,11 +1351,12 @@ tags: edge free-form
 ┃- one
   - kid
   - foo
+    
 ```
 
 ## TO9
 
-*Abandoning an empty place, Shift-Enter, Tab, then leave: Doubly indented place removed on leaving*
+*Abandoning an empty place, Shift-Enter, Tab, then leave: Doubly indented blank line kept on leaving*
 
 ```yaml
 tags: edge free-form
@@ -1371,6 +1376,7 @@ tags: edge free-form
   - kid
   - sib
     - foo
+      
 ```
 
 ## TO10
@@ -1421,8 +1427,8 @@ tags: edge
 
 *Abandoning an empty place: Shift-Enter, Tab, then Enter*
 
-Enter on the place splits there: a new item after the node (TO dropped the place and moved
-to the next item).
+Enter on Shift-Enter's blank line, at the node's text column, is a new item after the node (TO
+dropped the place and moved to the next item).
 
 ```yaml
 tags: edge

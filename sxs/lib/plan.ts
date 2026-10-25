@@ -48,8 +48,6 @@ export interface Plan {
 export type Adapted = { plan: Plan } | { skip: string };
 
 
-/** Options the spec has besides ourus's config. */
-const SPEC_ONLY = new Set(['status', 'flavor']);
 const isMotion = (a: string): boolean => /^(?:cursor|select)(?:CharLeft|CharRight|LineUp|LineDown|LineBoundaryBackward|LineBoundaryForward|DocStart|DocEnd)$/.test(a);
 
 /** Whether the app can play an action. */
@@ -78,7 +76,8 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
   const tag = test.tags.find((t) => (driver.model === 'block' && !driver.freeForm && t === 'free-form') || driver.refuses?.includes(t));
   if (tag) return skip(`tag ${tag}`);
   for (const [key, value] of opts.ignoreOptions ? [] : Object.entries(test.options)) {
-    if (SPEC_ONLY.has(key)) continue;
+    // the flavor the case is read in, which an app has no setting for
+    if (key === 'flavor') continue;
     // the marker ourus writes for an item, which a block has none of
     if (key === 'bullet' && driver.model === 'block') continue;
     const k = key as keyof Config;

@@ -468,6 +468,31 @@ clipboard: |
 - > q┃
 ```
 
+## PasteList17b
+
+On an empty item with children, the quote is its first block too, and the children stay the
+item's, after it.
+
+```yaml
+tags: edge
+clipboard: |
+  > q
+```
+
+```buffer
+- a
+- ┃
+  - b1
+```
+
+> paste
+
+```buffer
+- a
+- > q┃
+  - b1
+```
+
 ## PasteList18
 
 With `pasteOnParent: after` (Tine, Tana, SiYuan, WorkFlowy, Dynalist), on an item with children the
@@ -652,6 +677,7 @@ clipboard: |-
 
 ````buffer
 - ax
+
   ```
   c┃
   ```

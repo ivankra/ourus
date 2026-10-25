@@ -34,8 +34,8 @@ The rules, in order; the first that applies wins:
    sibling, which takes the item's children (`enterMidItem: sibling`, the default), or its first
    child (`child`) (Enter1, Enter3, Enter3b, Enter3c). The spaces at the caret go from both halves
    (`enterSplitSpace: trim`, the default), only those after it (`drop`), or they start the second
-   half (`start`): an item's padding, which ourus reads as text past the item above's, a
-   paragraph's or a title's rest's leading spaces, which it reads as text too (Enter44,
+   half (`start`): an item's padding past the space after its marker, a paragraph's or a title's
+   rest's indentation, which ourus keeps as the user's whitespace and a join gives back (Enter44,
    Enter64, Enter65, Enter65b, Enter65c, Enter65d, Enter65e, Enter65f, Enter65g, Enter65h, Enter65i,
    Enter65j, Enter65k, Enter65l, Enter65m).
 8. **At the end of an item's text**, a new empty item: the first child of an item with children,
@@ -408,7 +408,7 @@ see ┃[a]: /url
 ```buffer
 see
 
-┃\[a]: /url
+┃[a]\: /url
 ```
 
 ## Enter12
@@ -1348,8 +1348,8 @@ enterSplitSpace: drop
 With `enterSplitSpace: start`, as Roam, WorkFlowy, Dynalist, Tana and Obsidian's Outliner keep the
 space in the new block: the spaces after the caret start the second half, the caret before them,
 and Backspace gives the text back as it was. They are the new item's padding (`-  three`), which
-Markdown reads as the item `three`; ourus reads an item's padding past the item above's as its
-text, wherever the caret is.
+Markdown reads as the item `three`; ourus keeps an item's padding past the space after its marker as
+the user's whitespace, which a join gives back.
 
 ```yaml
 tags: edge
@@ -1375,7 +1375,6 @@ enterSplitSpace: start
 - one two┃ three
 - next
 ```
-
 
 ## Enter65b
 
@@ -1407,7 +1406,6 @@ enterSplitSpace: start
 - next
 ```
 
-
 ## Enter65c
 
 Typed at the second half's start, before the space it keeps, text goes in front of it, as in a
@@ -1435,7 +1433,6 @@ enterSplitSpace: start
 - one two
 - x┃ three
 ```
-
 
 ## Enter65d
 
@@ -1624,9 +1621,8 @@ one two┃ three
 
 ## Enter65j
 
-The cost: padding written unevenly by hand reads the wider item's extra spaces as text, so Backspace
-past them deletes one, and at their start joins them in (`-   a` over `-   b` is the list's padding,
-and joins glued).
+Padding written by hand past the space after a marker is the user's whitespace too, whatever
+`enterSplitSpace` says: Backspace past it deletes a space, and at its start joins it in.
 
 ```yaml
 tags: edge
@@ -1815,7 +1811,7 @@ tags: rare free-form
 > enter
 
 ```buffer
-\[Note]: this
+[Note]\: this
 
 ┃matters a lot
 ```
@@ -1842,14 +1838,14 @@ tags: rare
 > enter
 
 ```buffer
-- \[a]: b
+- [a]\: b
 - ┃c
 ```
 
 > deleteContentBackward
 
 ```buffer
-- \[a]: b┃c
+- [a]\: b┃c
 ```
 
 ## Enter49
@@ -2477,7 +2473,7 @@ tags: edge
 ## Enter68
 
 Enter at the start of an Obsidian callout's title: its text becomes the callout's first paragraph,
-set off by a quoted blank line from a line right below the callout that would continue it lazily,
+set off by a blank line from a line right below the callout that would continue it lazily,
 whatever that line holds (a `#` inside it too).
 
 ```yaml
@@ -2495,6 +2491,6 @@ p # h
 ```buffer
 > [!note]
 > ┃q
->
+
 p # h
 ```

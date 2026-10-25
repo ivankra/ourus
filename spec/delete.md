@@ -13,9 +13,8 @@ the text it is the host's. The rules, in order; the first that applies wins:
    it decorates markup (`decorated`), ourus makes the edit: the checkbox goes, as Backspace right
    after it takes it (Delete19); in the marker, the space goes and the item is a paragraph, keeping
    its children, set off by a blank line where it needs one (Delete16, Delete16d, Delete16e); the
-   items after a first item become its list (Delete16f). Of two spaces, one goes and the item stays
-   (Delete16g). What it can't make exactly there (before the marker or inside it, or where the
-   paragraph would run into its parent's text) is refused (Delete16b, Delete16c). Inside the
+   items after a first item become its list (Delete16f). What it can't make exactly there (before
+   the marker or inside it, or where the paragraph would run into its parent's text) is refused (Delete16b, Delete16c). Inside the
    checkbox its character goes, either way ([TaskDelete4](tasks.md#taskdelete4)).
 3. **On an empty item**, the item goes, the caret moving on to the node below (Delete6); a paragraph
    below joins it instead, as Backspace at its start would (Delete28); with
@@ -304,6 +303,30 @@ result: rejected has-children
     - b
   - c
 - d
+```
+
+## Delete5f
+
+With `emptyItemWithChildren: refuse`, Delete on an empty item with spaces after the caret deletes
+one of them, the host's: the join is refused, the space isn't structure.
+
+```yaml
+tags: rare
+emptyItemWithChildren: refuse
+```
+
+```buffer
+- ┃␠
+  - a
+    - b
+```
+
+> deleteContentForward
+
+```buffer
+- ┃
+  - a
+    - b
 ```
 
 ## Delete6
@@ -708,7 +731,6 @@ tags: rare markup-heading
 
 ```buffer
 ## A┃
-
 H1
 ```
 
@@ -746,7 +768,7 @@ result: applied
 
 ```buffer
 -┃a
-  - b
+- b
 ```
 
 ## Delete16b
@@ -871,29 +893,6 @@ markup: decorated
 ```buffer
 -┃a
 - b
-```
-
-## Delete16g
-
-Of two spaces after a marker, one goes, and the item stays; the caret goes to its text.
-
-```yaml
-tags: rare
-markup: decorated
-```
-
-```buffer
--┃  a
-```
-
-> deleteContentForward
-
-```yaml
-result: applied
-```
-
-```buffer
-- ┃a
 ```
 
 ## Delete17
@@ -1223,7 +1222,7 @@ tags: rare
 > deleteContentForward
 
 ```buffer
-- \[a]:┃b
+- [a]\:┃b
 ```
 
 ## Delete28

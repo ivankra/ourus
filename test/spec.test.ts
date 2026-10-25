@@ -2,21 +2,19 @@
 // Markdown flavor, or in the one an example names.
 
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { test, type TestContext } from 'node:test';
-import { OutlineState } from '../src/outline/index.ts';
-import { drawState, readDrawing } from './drawing.ts';
-import { isCommand, play, type Played } from './player.ts';
-import { textPosition } from '../src/commands/index.ts';
-import { flavorsOf, readClipboard, run } from './spec-run.ts';
-import { readSpec, slug, specConfig, type SpecTest } from './specfile.ts';
+import { AtomText, type OutlineNode, type OurusDoc } from '../src/doc/index.ts';
+import { drawDoc, plainText } from './drawing.ts';
+import { isCommand, play } from './player.ts';
+import { textPosition } from './caret.ts';
+import { flavorsOf, run, startOf } from './spec-run.ts';
+import { readSpecFile, slug, specConfig, specFiles, SPEC_DIR, type SpecTest } from './specfile.ts';
 
-const specDir = new URL('../spec/', import.meta.url);
-
-for (const file of readdirSync(specDir).filter((f) => f.endsWith('.md') && f !== 'README.md')) {
+for (const file of specFiles()) {
   let tests: SpecTest[];
   try {
-    tests = readSpec(file, readFileSync(new URL(file, specDir), 'utf8'));
+    tests = readSpecFile(file);
   } catch (e) {
     test(`${file}: reads`, () => {
       throw e;
@@ -36,34 +34,29 @@ for (const file of readdirSync(specDir).filter((f) => f.endsWith('.md') && f !==
         ctx.todo('pending');
         throw e;
       }
-      assert.fail(`${t.file}:${t.line}: a pending example passes now; drop "pending"`);
+      assert.fail(`${t.file}:${t.line}: a pending example passes now; drop its tag`);
     });
   }
 }
 
-const specFiles = (): string[] => readdirSync(specDir).filter((f) => f.endsWith('.md') && f !== 'README.md');
 
 // a case's name (its own heading) is unique across the spec, not only in its file: reports, the SxS
 // and notes name a case by it alone
 test('every case name is unique across the spec files', () => {
   const files = new Map<string, string[]>();
   for (const file of specFiles()) {
-    for (const t of readSpec(file, readFileSync(new URL(file, specDir), 'utf8'))) {
-      const id = t.name;
-      files.set(id, [...(files.get(id) ?? []), file]);
-    }
+    for (const t of readSpecFile(file)) files.set(t.name, [...(files.get(t.name) ?? []), file]);
   }
   assert.deepEqual([...files].filter(([, in_]) => in_.length > 1).map(([id, in_]) => `${id}: ${in_.join(', ')}`), []);
 });
 
 // every core case (the reader requires every case's rank) is walked through in a daily flow of scenarios.md
 test('every core case appears in scenarios.md', () => {
-  const scenarios = readFileSync(new URL('scenarios.md', specDir), 'utf8');
+  const scenarios = readFileSync(SPEC_DIR + 'scenarios.md', 'utf8');
   const problems: string[] = [];
   for (const file of specFiles()) {
-    for (const t of readSpec(file, readFileSync(new URL(file, specDir), 'utf8'))) {
-      const id = t.name;
-      if (t.rank === 'core' && file !== 'scenarios.md' && !scenarios.includes(`${file}#${slug(id)})`)) problems.push(`${t.name} (${file}): core, but in no scenario`);
+    for (const t of readSpecFile(file)) {
+      if (t.rank === 'core' && file !== 'scenarios.md' && !scenarios.includes(`${file}#${slug(t.name)})`)) problems.push(`${t.name} (${file}): core, but in no scenario`);
     }
   }
   assert.deepEqual(problems, []);
@@ -77,17 +70,17 @@ test('every core case appears in scenarios.md', () => {
 // (`markup: decorated`), every case played again: no applied command leaves it on a fence either.
 const STRUCTURAL = ['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'duplicateSubtree', 'deleteSubtree'];
 /** Whether typing a character at `head` leaves the outline's nodes as they are, one node's text aside. */
-function typingKeepsOutline(doc: OutlineState, head: number): boolean {
-  const shape = (d: OutlineState): { node: string; text: string }[] => {
+function typingKeepsOutline(doc: OurusDoc, head: number): boolean {
+  const shape = (d: OurusDoc): { node: string; text: string }[] => {
     const out: { node: string; text: string }[] = [];
-    const walk = (n: OutlineState['root'], depth: number): void => {
+    const walk = (n: OutlineNode, depth: number): void => {
       for (const c of n.children) {
         // what a node's text is (an empty item's is a paragraph, once typed into), and a heading's level
-        out.push({ node: `${depth}:${c.kind}:${c.kind === 'atom' ? c.block.type : (c.head?.type ?? 'paragraph')}:${c.head?.level ?? ''}`, text: d.nodeText(c) });
+        out.push({ node: `${depth}:${c.kind}:${c.kind === 'atom' ? c.block.type : (c.head?.type ?? 'paragraph')}:${c.head?.attrs.level ?? ''}`, text: plainText(d, c) });
         walk(c, depth + 1);
       }
     };
-    walk(d.root, 0);
+    walk(d.rootNode, 0);
     return out;
   };
   const [before, after] = [shape(doc), shape(doc.update([{ from: head, to: head, insert: 'x' }], { caret: head + 1 }))];
@@ -95,31 +88,28 @@ function typingKeepsOutline(doc: OutlineState, head: number): boolean {
   return before.filter((n, i) => n.text !== after[i]!.text).length <= 1;
 }
 
-/** Whether `line` of `doc` is a fence's: a fenced block's opening or closing one, a `$$` or `%%` line. */
-function onFenceLine(doc: OutlineState, head: number): boolean {
+/** Whether `head`'s line is a fence's: a fenced block's opening or closing one, a `$$` or `%%` line. */
+function onFenceLine(doc: OurusDoc, head: number): boolean {
   const line = doc.lineAt(head);
-  const leaf = line.leaf;
-  if (!leaf || head > line.to) return false;
-  if (leaf.type === 'code_block' && leaf.fenced) return line.index === leaf.startLine || (line.index === leaf.endLine && !!leaf.closed);
-  return (leaf.type === 'math_block' || leaf.type === 'comment_block') && (line.index === leaf.startLine || line.index === leaf.endLine);
+  const node = head <= line.to ? doc.nodeAtLine(line.index) : null;
+  const text = node && doc.textOf(node);
+  const delimiters = text instanceof AtomText ? text.delimiters : null;
+  if (!node || !delimiters) return false;
+  const on = (offset: number): boolean => doc.lineAt(doc.posOf(node, offset)).index === line.index;
+  return on(delimiters.open.from) || (!!delimiters.close && on(delimiters.close.from));
 }
 
 for (const markup of ['text', 'decorated'] as const) {
   test(`no applied command leaves the caret in markup (markup: ${markup})`, () => {
     const problems: string[] = [];
     for (const file of specFiles()) {
-      for (const t of readSpec(file, readFileSync(new URL(file, specDir), 'utf8'))) {
+      for (const t of readSpecFile(file)) {
         if (t.pending) continue;
         // decorated: every case, its own config with the host's kind set over it
         const options = markup === 'decorated' ? { ...specConfig(t.options), markup } : specConfig(t.options);
         if (markup === 'text' && options.markup === 'decorated') continue;
         for (const flavor of flavorsOf(t)) {
-          const start = readDrawing(t.initial.buffer);
-          let state: Played = {
-            doc: OutlineState.parse(start.text, { placeholders: start.placeholders, config: { flavor, ...options } }),
-            selection: start.selection,
-            clipboard: readClipboard(t.initial.clipboard),
-          };
+          let state = startOf(t, flavor, options);
           for (const step of t.steps) {
             for (const action of step.actions) {
               const before = state;
@@ -129,15 +119,17 @@ for (const markup of ['text', 'decorated'] as const) {
               if (!(isCommand(action) || action.startsWith('"')) || state.last?.status !== 'applied' || anchor !== head) continue;
               const doc = state.doc;
               // a space a placeholder holds as text (`- ┃◌ x`) starts the text
-              const held = doc.placeholders.includes(head) && /[ \t]/.test(doc.text[head] ?? '');
-              const markupAt = head <= doc.lineAt(head).to && doc.nodeAt(head) && head < doc.textStart(head) && !held;
+              const held = doc.marks.points().includes(head) && /[ \t]/.test(doc.text[head] ?? '');
+              const line = doc.lineAt(head);
+              const inNode = head <= line.to && !!doc.nodeAtLine(line.index);
+              const markupAt = inNode && head < doc.textStart(line.index) && !held;
               // where markup is text, indent and outdent from a fence line may keep the caret on one
               const keptOnFence = markup === 'text' && (action === 'indent' || action === 'outdent') && onFenceLine(before.doc, before.selection.head);
               const checked = markup === 'decorated' || (STRUCTURAL.includes(action) && !keptOnFence);
-              if (markupAt || (checked && textPosition(doc, head) !== head)) problems.push(`${file}:${step.line} (${flavor}) ${action}: ${drawState(doc.text, state.selection, doc.placeholders)}`);
+              if (markupAt || (checked && textPosition(doc, head) !== head)) problems.push(`${file}:${step.line} (${flavor}) ${action}: ${drawDoc(doc, state.selection)}`);
               // and, apart from that helper, typing there after a structural command, in a node, keeps the
               // outline: the same nodes, only one of them with other text
-              else if (STRUCTURAL.includes(action) && !keptOnFence && doc.nodeAt(head) && !typingKeepsOutline(doc, head)) problems.push(`${file}:${step.line} (${flavor}) ${action}, then typing: ${drawState(doc.text, state.selection, doc.placeholders)}`);
+              else if (STRUCTURAL.includes(action) && !keptOnFence && inNode && !typingKeepsOutline(doc, head)) problems.push(`${file}:${step.line} (${flavor}) ${action}, then typing: ${drawDoc(doc, state.selection)}`);
             }
           }
         }

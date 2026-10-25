@@ -4,8 +4,8 @@
 // back as what its app was given (`startClipboard` in run.ts).
 
 import type { Config } from '../../src/config.ts';
-import { clipboardSource } from '../../src/commands/paste.ts';
-import { Flavor, renderHtml, SyntaxTree, type Block } from '../../src/parser/index.ts';
+import { clipboardSource } from '../../src/commands/clipboard.ts';
+import { MdFlavor, MdTree, type MdBlock } from '../../src/parser/index.ts';
 
 /**
  * The clipboard's HTML: its Markdown as structured paste reads it (`clipboardSource`: without the
@@ -22,10 +22,10 @@ export function clipboardHtml(markdown: string, flavor: Config['flavor']): strin
   while (lines.length && lines[lines.length - 1]!.trim() === '') lines.pop();
   if (!lines.length) return null;
   const text = clipboardSource(lines, { flavor }).join('\n');
-  const tree = SyntaxTree.parse(text, Flavor.named(flavor));
+  const tree = MdTree.parse(text, MdFlavor.named(flavor));
   if (tree.root.children.every((b) => b.type === 'paragraph')) return null;
-  const noElement = (b: Block): boolean => ['math_block', 'comment_block', 'frontmatter'].includes(b.type) || !!b.callout || b.children.some(noElement);
+  const noElement = (b: MdBlock): boolean => ['math_block', 'comment_block', 'frontmatter'].includes(b.type) || !!b.attrs.callout || b.children.some(noElement);
   if (noElement(tree.root)) return null;
-  const html = renderHtml(tree).trim();
+  const html = tree.renderHtml().trim();
   return html === '' ? null : html;
 }

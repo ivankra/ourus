@@ -4,11 +4,10 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { commonmark, type Flavor } from '../../src/parser/flavor.ts';
+import { commonmark, type MdFlavor } from '../../src/parser/flavor.ts';
 import { gfm } from '../../src/parser/gfm.ts';
-import { renderHtml } from '../../src/parser/html.ts';
 import { obsidian } from '../../src/parser/obsidian.ts';
-import { SyntaxTree } from '../../src/parser/syntax.ts';
+import { MdTree } from '../../src/parser/syntax.ts';
 
 /** Generous: these take tens of milliseconds when linear, and seconds or forever when not. */
 const BUDGET_MS = Number(process.env.OURUS_PATHOLOGICAL_MS ?? 3000);
@@ -23,7 +22,7 @@ const r = (s: string, n: number): string => s.repeat(n);
 const p = (s: string): string => `<p>${s}</p>\n`;
 
 /** Name, input, the HTML expected (or a check of its start, for long outputs not worth spelling out), flavor. */
-const cases: [string, string, string | ((html: string) => boolean), Flavor?][] = [
+const cases: [string, string, string | ((html: string) => boolean), MdFlavor?][] = [
   ['nested strong emph', r('*a **a ', 65000) + 'b' + r(' a** a*', 65000), p(r('<em>a <strong>a ', 65000) + 'b' + r(' a</strong> a</em>', 65000))],
   ['many emph closers with no openers', r('a_ ', 65000), p(r('a_ ', 64999) + 'a_')],
   ['many emph openers with no closers', r('_a ', 65000), p(r('_a ', 64999) + '_a')],
@@ -50,7 +49,7 @@ const cases: [string, string, string | ((html: string) => boolean), Flavor?][] =
 
 for (const [name, input, expected, flavor] of cases) {
   test(`pathological: ${name}`, () => {
-    const { value: html, ms } = timed(() => renderHtml(SyntaxTree.parse(input, flavor ?? commonmark)));
+    const { value: html, ms } = timed(() => MdTree.parse(input, flavor ?? commonmark).renderHtml());
     assert.ok(ms < BUDGET_MS, `${name}: ${ms.toFixed(0)} ms`);
     if (typeof expected === 'string') assert.ok(html === expected, `${name}: unexpected output ${JSON.stringify(html.slice(0, 200))}`);
     else assert.ok(expected(html), `${name}: unexpected output ${JSON.stringify(html.slice(0, 200))}`);
@@ -60,7 +59,7 @@ for (const [name, input, expected, flavor] of cases) {
 test('pathological: an edit at the top of a long document that changes all of it', () => {
   const lines = Array.from({ length: 50000 }, (_, i) => `line ${i} *with* text`);
   const text = lines.join('\n') + '\n';
-  const syntax = SyntaxTree.parse(text, gfm);
+  const syntax = MdTree.parse(text, gfm);
   const { value: fenced, ms } = timed(() => syntax.update([{ from: 0, to: 0, insert: '```\n' }]));
   assert.ok(ms < BUDGET_MS, `fence: ${ms.toFixed(0)} ms`);
   assert.equal(fenced.root.children[0]!.type, 'code_block');
@@ -71,7 +70,7 @@ test('pathological: an edit at the top of a long document that changes all of it
 
 test('pathological: editing a very long paragraph', () => {
   const text = Array.from({ length: 30000 }, (_, i) => `word ${i} more words`).join('\n') + '\n';
-  let syntax = SyntaxTree.parse(text, commonmark);
+  let syntax = MdTree.parse(text, commonmark);
   const { ms } = timed(() => {
     // same-length replacements near the start: the paragraph's content differs early on every line after
     for (let k = 0; k < 20; k++) syntax = syntax.update([{ from: 1, to: 2, insert: k % 2 ? 'o' : 'x' }]);
@@ -81,7 +80,7 @@ test('pathological: editing a very long paragraph', () => {
 
 test('pathological: frontmatter that never closes, edited', () => {
   const text = '---\n' + Array.from({ length: 20000 }, (_, i) => `key${i}: value`).join('\n') + '\n';
-  let syntax = SyntaxTree.parse(text, obsidian);
+  let syntax = MdTree.parse(text, obsidian);
   const { ms } = timed(() => {
     for (let k = 0; k < 10; k++) syntax = syntax.update([{ from: text.length - 2, to: text.length - 2, insert: 'x' }]);
   });

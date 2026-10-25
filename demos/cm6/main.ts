@@ -2,7 +2,7 @@
 //
 // The ourus snapshot lives in a StateField. Structural keys run ourus commands and dispatch
 // the changes they return, with the planned snapshot attached so it isn't parsed again.
-// Every other edit (typing, paste, undo) goes through OutlineState.apply, with the caret, so an edit that
+// Every other edit (typing, paste, undo) goes through OurusDoc.update, with the caret, so an edit that
 // empties a node keeps it as a placeholder. The history keeps each step's placeholders, so undo
 // and redo bring them back.
 //
@@ -40,7 +40,7 @@ import { unified, type PluggableList } from 'unified';
 import './hljs.css';
 import 'katex/dist/katex.min.css';
 import { Mirror } from './mirror.ts';
-import { OutlineState, executeCommand, mapPos, renderHtml, settlePlaceholders, type Config, type ChangeSpec, type Command, type OutlineNode, type CommandResult } from '../../src/index.ts';
+import { ProseText, OurusDoc, createPlaceholder, executeCommand, mapPos, settlePlaceholders, type Config, type ChangeSpec, type Command, type OutlineNode, type CommandResult } from '../../src/index.ts';
 
 type Flavor = Config['flavor'];
 
@@ -48,32 +48,35 @@ type Flavor = Config['flavor'];
 let initialFlavor: Flavor = 'obsidian';
 
 /** The snapshot an ourus command planned, attached to the transaction that applies it. */
-const planned = Annotation.define<OutlineState>();
+const planned = Annotation.define<OurusDoc>();
 /** Replaces the snapshot outright (settling placeholders can change no text at all). */
-const setDoc = StateEffect.define<OutlineState>();
+const setDoc = StateEffect.define<OurusDoc>();
 /** The placeholders a step of history returns to (positions in the text after the step), mapped along later edits. */
 const setPlaceholders = StateEffect.define<readonly number[]>({ map: (value, mapping) => value.map((pos) => mapping.mapPos(pos, 1)) });
 
-const ourusDoc = StateField.define<OutlineState>({
-  create: (state) => OutlineState.parse(state.doc.toString(), { config: { flavor: initialFlavor } }),
+/** The placeholders at `points` of `text`. */
+const marksAt = (text: string, points: readonly number[]) => ({ setMarks: points.map((p) => createPlaceholder(p)) });
+
+const ourusDoc = StateField.define<OurusDoc>({
+  create: (state) => OurusDoc.parse(state.doc.toString(), { config: { flavor: initialFlavor } }),
   update(doc, tr) {
     for (const e of tr.effects) if (e.is(setDoc)) return e.value;
     const restored = tr.effects.find((e) => e.is(setPlaceholders))?.value as readonly number[] | undefined;
-    if (!tr.docChanged) return restored ? doc.update([], { drop: [...doc.placeholders], placeholders: restored }) : doc;
+    if (!tr.docChanged) return restored ? doc.update([], marksAt(doc.text, restored)) : doc;
     const next = tr.annotation(planned);
     // another extension may have added changes to the transaction: then parse what committed
     if (!restored && next && next.text.length === tr.newDoc.length && next.text === tr.newDoc.toString()) return next;
     const changes: ChangeSpec[] = [];
     tr.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => changes.push({ from: fromA, to: toA, insert: inserted.toString() }));
     // undo and redo restore the placeholders of the state they return to
-    if (restored) return doc.update(changes, { drop: [...doc.placeholders], placeholders: restored });
+    if (restored) return doc.update(changes, marksAt(tr.newDoc.toString(), restored));
     const caret = tr.newSelection.main;
     return doc.update(changes, caret.empty ? { caret: caret.head } : {});
   },
 });
 
 /** Each step of history keeps the placeholders it replaced, so undoing it brings them back. */
-const placeholderHistory = invertedEffects.of((tr) => (tr.docChanged ? [setPlaceholders.of(tr.startState.field(ourusDoc).placeholders)] : []));
+const placeholderHistory = invertedEffects.of((tr) => (tr.docChanged ? [setPlaceholders.of(tr.startState.field(ourusDoc).marks.points())] : []));
 
 let onResult: (type: Command['type'], result: CommandResult) => void = () => {};
 
@@ -88,7 +91,7 @@ function command(type: Command['type']) {
     view.dispatch({
       changes: [...result.changes],
       selection: result.selection,
-      annotations: [planned.of(result.state), Transaction.userEvent.of(`ourus.${type}`)],
+      annotations: [planned.of(result.doc), Transaction.userEvent.of(`ourus.${type}`)],
       scrollIntoView: true,
     });
     return true;
@@ -111,7 +114,7 @@ const typingHandler = EditorView.inputHandler.of((view, from, to, text) => {
     view.dispatch({
       changes: [...result.changes],
       selection: result.selection,
-      annotations: [planned.of(result.state), Transaction.userEvent.of('ourus.insertText')],
+      annotations: [planned.of(result.doc), Transaction.userEvent.of('ourus.insertText')],
       scrollIntoView: true,
     });
   }
@@ -139,7 +142,7 @@ function copyOrCut(type: 'copy' | 'cut', event: ClipboardEvent, view: EditorView
     view.dispatch({
       changes: [...result.changes],
       selection: result.selection,
-      annotations: [planned.of(result.state), Transaction.userEvent.of('ourus.cut')],
+      annotations: [planned.of(result.doc), Transaction.userEvent.of('ourus.cut')],
       scrollIntoView: true,
     });
   }
@@ -174,7 +177,7 @@ const pasteHandler = EditorView.domEventHandlers({
       view.dispatch({
         changes: [...result.changes],
         selection: result.selection,
-        annotations: [planned.of(result.state), Transaction.userEvent.of(`ourus.${type}`)],
+        annotations: [planned.of(result.doc), Transaction.userEvent.of(`ourus.${type}`)],
         scrollIntoView: true,
       });
     }
@@ -187,7 +190,9 @@ function home(extend: boolean) {
   return (view: EditorView): boolean => {
     const range = view.state.selection.main;
     const line = view.state.doc.lineAt(range.head);
-    const target = view.state.field(ourusDoc).homePosition(range.head);
+    const doc = view.state.field(ourusDoc);
+    const start = doc.textStart(doc.lineAt(range.head).index);
+    const target = range.head === start ? line.from : start;
     const rowStart = view.moveToLineBoundary(range, false, true).head;
     if (rowStart > line.from && rowStart > target) return false;
     view.dispatch({
@@ -209,7 +214,7 @@ function vertical(motion: (view: EditorView) => boolean) {
     const { state } = view;
     const doc = state.field(ourusDoc);
     const ranges = state.selection.ranges.map((range) => {
-      const start = doc.textStart(state.doc.lineAt(range.head).from);
+      const start = doc.textStart(doc.lineAt(range.head).index);
       if (range.head >= start) return range;
       return range.empty ? EditorSelection.cursor(start, 0, undefined, range.goalColumn) : EditorSelection.range(range.anchor, start, range.goalColumn);
     });
@@ -249,12 +254,12 @@ const currentNode = ViewPlugin.fromClass(
     }
     build(view: EditorView): DecorationSet {
       const doc = view.state.field(ourusDoc);
-      const node = doc.nodeAt(view.state.selection.main.head);
+      const node = nodeAt(doc, view.state.selection.main.head);
       const builder = new RangeSetBuilder<Decoration>();
       if (!node) return builder.finish();
       for (let l = node.startLine; l <= node.endLine; l++) {
-        const line = doc.line(l);
-        builder.add(line.from, line.from, Decoration.line({ class: l <= node.headEndLine ? 'ourus-head' : 'ourus-subtree' }));
+        const line = doc.mdTree.line(l);
+        builder.add(line.from, line.from, Decoration.line({ class: l <= node.textLastLine ? 'ourus-head' : 'ourus-subtree' }));
       }
       return builder.finish();
     }
@@ -302,31 +307,42 @@ const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '
 
 const ATOM_LABELS: Record<string, string> = { thematic_break: 'hr', footnote_definition: 'note', refdef: 'ref' };
 
+/** How many nodes are under `node`. */
+const countNodes = (node: OutlineNode): number => node.children.reduce((n, c) => n + 1 + countNodes(c), 0);
+
+/** The node whose own text holds `pos`, or null. */
+function nodeAt(doc: OurusDoc, pos: number): OutlineNode | null {
+  const line = doc.lineAt(pos);
+  return pos <= line.to ? doc.nodeAtLine(line.index) : null;
+}
+
 /** A node's kind as the outline shows it: tasks, callouts and atoms as the flavor reads them. */
 function label(n: OutlineNode): string {
-  if (n.kind === 'heading') return `H${n.head!.level}`;
-  if (n.kind === 'item') return n.block.task ? (n.block.task.checked ? '☑' : '☐') : n.block.list!.type === 'ordered' ? '1.' : '•';
+  const attrs = n.block.attrs;
+  if (n.kind === 'heading') return `H${n.head!.attrs.level}`;
+  if (n.kind === 'item') return attrs.task ? (attrs.task.checked ? '☑' : '☐') : attrs.list!.type === 'ordered' ? '1.' : '•';
   if (n.kind === 'paragraph') return '¶';
-  if (n.kind === 'quote') return n.block.callout ? n.block.callout.kind : 'quote';
+  if (n.kind === 'quote') return attrs.callout ? attrs.callout.kind : 'quote';
   return ATOM_LABELS[n.block.type] ?? n.block.type.replace('_block', '');
 }
 
-function renderOutline(panel: HTMLElement, doc: OutlineState, current: OutlineNode | null): void {
+function renderOutline(panel: HTMLElement, doc: OurusDoc, current: OutlineNode | null): void {
+  const points = doc.marks.points();
   const list = (nodes: readonly OutlineNode[]): string =>
     nodes.length === 0
       ? ''
       : `<ul>${nodes
           .map((n) => {
-            const lines = doc.headLines(n).map((l) => l.trim());
-            // an atom shows its first line of content: past a fence, without quote markers
-            const text = n.kind === 'atom' ? (lines.find((l) => l !== '' && !/^(`{3,}|~{3,})|^(\$\$|%%)$/.test(l)) ?? '').replace(/^>\s?/, '') : lines.join(' ');
-            const range = doc.headRange(n);
-            const pos = range ? range.from : doc.line(n.startLine).to;
-            const placeholders = doc.placeholders.some((p) => p >= doc.line(n.startLine).from && p <= doc.line(n.headEndLine).to);
-            return `<li><div class="node${n === current ? ' current' : ''}${placeholders ? ' placeholders' : ''}" data-pos="${pos}"><span class="kind kind-${n.kind}">${escapeHtml(label(n))}</span><span class="text">${escapeHtml(text) || '<i>empty</i>'}</span><span class="id">#${n.id}</span></div>${list(n.children)}</li>`;
+            const own = doc.textOf(n);
+            const lines = (own instanceof ProseText ? own.body : (own?.text ?? '')).split('\n').map((l) => l.trim());
+            // an atom shows its first line of content: past a fence
+            const text = n.kind === 'atom' ? (lines.find((l) => l !== '' && !/^(`{3,}|~{3,})|^(\$\$|%%)$/.test(l)) ?? '') : lines.join(' ');
+            const pos = own instanceof ProseText ? doc.posOf(n, own.textStart(0)) : own ? doc.posOf(n, 0) : doc.mdTree.line(n.startLine).to;
+            const placeholders = points.some((p) => p >= doc.mdTree.line(n.startLine).from && p <= doc.mdTree.line(n.textLastLine).to);
+            return `<li><div class="node${n.persistentNode === current?.persistentNode ? ' current' : ''}${placeholders ? ' placeholders' : ''}" data-pos="${pos}"><span class="kind kind-${n.kind}">${escapeHtml(label(n))}</span><span class="text">${escapeHtml(text) || '<i>empty</i>'}</span><span class="id">#${n.id}</span></div>${list(n.children)}</li>`;
           })
           .join('')}</ul>`;
-  panel.innerHTML = list(doc.root.children);
+  panel.innerHTML = list(doc.rootNode.children);
 }
 
 // ------------------------------------------------------------------ page
@@ -398,7 +414,7 @@ $$
 interface Rendering {
   readonly reads: string;
   /** The document as HTML, raw HTML in it escaped, left out or sanitized. */
-  render(doc: OutlineState): string;
+  render(doc: OurusDoc): string;
 }
 
 interface Renderer {
@@ -413,7 +429,7 @@ const pick = <T,>(flavor: Flavor, commonmark: T, gfm: T, obsidian: T): T => (fla
 
 const RENDERERS: Record<string, Renderer> = {
   // from the snapshot's own parse: the blocks are already read, incrementally, as the text changed
-  ourus: { name: 'ourus', setup: (flavor) => ({ reads: FLAVOR_NAMES[flavor], render: (doc) => renderHtml(doc.syntaxTree, { escapeRawHtml: true }) }) },
+  ourus: { name: 'ourus', setup: (flavor) => ({ reads: FLAVOR_NAMES[flavor], render: (doc) => doc.mdTree.renderHtml({ escapeRawHtml: true }) }) },
   commonmark: {
     name: 'commonmark.js',
     setup: () => {
@@ -497,7 +513,7 @@ function main(): void {
   const rendererSelect = document.getElementById('renderer') as HTMLSelectElement;
   flavorSelect.value = initialFlavor;
   /** What the pane shows: the snapshot and renderer it was rendered from. */
-  let rendered: { doc: OutlineState; renderer: Rendering } | null = null;
+  let rendered: { doc: OurusDoc; renderer: Rendering } | null = null;
   const status = document.getElementById('status')!;
   const stats = document.getElementById('stats')!;
 
@@ -508,7 +524,7 @@ function main(): void {
     status.className = result.status;
     status.textContent =
       result.status === 'rejected'
-        ? `${type}: rejected — ${result.reason}${result.detail && result.reason !== 'encoding-failed' ? ` (${result.detail.replace(/\.$/, '')})` : ''}`
+        ? `${type}: rejected — ${result.reason}${result.detail && result.reason !== 'write-failed' ? ` (${result.detail.replace(/\.$/, '')})` : ''}`
         : `${type}: ${result.status === 'applied' ? 'applied' : 'not applicable (editor default)'}`;
     clearTimeout(hideStatus);
     if (result.status === 'notApplicable') return;
@@ -523,14 +539,14 @@ function main(): void {
     cancelAnimationFrame(frame);
     frame = requestAnimationFrame(() => {
       const doc = view.state.field(ourusDoc);
-      renderOutline(panel, doc, doc.nodeAt(view.state.selection.main.head));
-      stats.textContent = `${doc.syntaxTree.lineCount} lines · ${doc.nodes.length - 1} nodes · ${FLAVOR_NAMES[doc.config.flavor]}`;
+      renderOutline(panel, doc, nodeAt(doc, view.state.selection.main.head));
+      stats.textContent = `${doc.lineCount} lines · ${countNodes(doc.rootNode)} nodes · ${FLAVOR_NAMES[doc.config.flavor]}`;
       // the renderer 'none': the pane hidden, nothing rendered
       previewPane.hidden = rendererSelect.value === 'none';
       if (previewPane.hidden) return;
       const renderer = rendering(rendererSelect.value, doc.config.flavor);
       // an external renderer reads the text alone; ours, the snapshot's parse
-      if (!rendered || rendered.renderer !== renderer || rendered.doc.syntaxTree !== doc.syntaxTree) {
+      if (!rendered || rendered.renderer !== renderer || rendered.doc.mdTree !== doc.mdTree) {
         const t0 = performance.now();
         preview.innerHTML = renderer.render(doc);
         const ms = performance.now() - t0;
@@ -584,7 +600,7 @@ function main(): void {
               u.view.dispatch({
                 changes: r.changes,
                 selection: EditorSelection.range(mapPos(r.changes, to.anchor), mapPos(r.changes, to.head)),
-                effects: setDoc.of(r.state),
+                effects: setDoc.of(r.doc),
                 annotations: Transaction.userEvent.of('ourus.settle'),
               });
             });
@@ -605,7 +621,7 @@ function main(): void {
   flavorSelect.addEventListener('change', () => {
     initialFlavor = flavorSelect.value as Flavor;
     const doc = view.state.field(ourusDoc);
-    const next = OutlineState.parse(doc.text, { placeholders: doc.placeholders, config: { ...doc.config, flavor: initialFlavor } });
+    const next = OurusDoc.parse(doc.text, { marks: doc.marks.marks, config: { ...doc.config, flavor: initialFlavor } });
     view.dispatch({ effects: setDoc.of(next) });
     refresh(view);
     view.focus();

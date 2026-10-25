@@ -124,6 +124,34 @@ Notes
 - z
 ```
 
+## Paste4b
+
+With `pasteSeams: open`, the first item's text joins the paragraph's; the rest go first in its
+list, beside its items, the list written apart from the paragraph as it was.
+
+```yaml
+tags: edge
+pasteSeams: open
+clipboard: |-
+  - x
+  - y
+```
+
+```buffer
+Notes┃
+
+- z
+```
+
+> paste
+
+```buffer
+Notesx
+
+- y┃
+- z
+```
+
 ## Paste5
 
 In the middle of a paragraph, the paste goes after it, the paragraph whole.
@@ -364,8 +392,8 @@ p
 
 ## Paste13
 
-On a blank line, the paste goes where Enter at the end of the node above would put a new one, as
-nodes, the blank lines staying.
+On a blank line, the paste fills it: the nodes go after the node above, the blank lines below the
+caret's after them.
 
 ```yaml
 tags: edge
@@ -384,9 +412,7 @@ b
 
 ```buffer
 a
-
 - x┃
-
 
 b
 ```
@@ -685,11 +711,36 @@ after
 ## Paste24
 
 On the empty line Enter holds (a placeholder), the paste takes its place, as it fills an empty item.
-(At the end of a text without a final line ending, which a buffer can't draw, it failed to encode: an
+(At the end of a text without a final line ending, which a buffer can't draw, it failed to write: an
 API test, `test/commands/commands.test.ts`.)
 
 ```yaml
 tags: common
+clipboard: |-
+  - a
+    - b
+```
+
+```buffer
+# h1
+┃◌
+```
+
+> paste
+
+```buffer
+# h1
+- a
+  - b┃
+```
+
+## Paste24b
+
+With `pasteSeams: open`, the same: an empty line has no text for a seam to join, and is filled.
+
+```yaml
+tags: edge
+pasteSeams: open
 clipboard: |-
   - a
     - b
@@ -739,9 +790,9 @@ clipboard: |-
 
 ## Paste26
 
-On the empty line Shift-Enter leaves at the end of a node's text (held by a placeholder), pasted
-nodes take its place: the line goes, and they follow the node with no blank line where Markdown needs
-none, as the text editors paste them there. Text pasted there stays on it.
+On the blank line Shift-Enter leaves at the end of a node's text, pasted nodes fill it: they follow
+the node with no blank line where Markdown needs none, as the text editors paste them there. Text
+pasted there stays on it.
 
 ```yaml
 tags: edge
@@ -751,15 +802,39 @@ clipboard: |-
 ```
 
 ```buffer
-p
-┃◌
+p┃
 ```
 
-> paste
+> shiftEnter paste
 
 ```buffer
 p
 - a
+- b┃
+```
+
+## Paste26b
+
+With `pasteSeams: open`, the blank line Shift-Enter leaves is the text's next line: the first
+pasted text joins the text there, after a line break, and the rest follow it, the paragraph's list.
+
+```yaml
+tags: edge
+pasteSeams: open
+clipboard: |-
+  - a
+  - b
+```
+
+```buffer
+p┃
+```
+
+> shiftEnter paste
+
+```buffer
+p
+a
 - b┃
 ```
 

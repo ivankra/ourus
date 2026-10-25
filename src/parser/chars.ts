@@ -3,7 +3,7 @@
 
 import { ENTITY_DATA } from './entities-data.ts';
 
-export { isSpaceOrTab } from '../text.ts';
+export { isSpaceOrTab } from '../text/index.ts';
 
 /** Space, tab, line feed, line tabulation, form feed or carriage return: what the spec calls a blank. */
 export const isBlankChar = (c: number): boolean => c === 32 || c === 9 || c === 10 || c === 11 || c === 12 || c === 13;

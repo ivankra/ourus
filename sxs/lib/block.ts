@@ -12,8 +12,8 @@
 // outline example from an adapted one, and a driver can refuse what its app can't hold.
 
 import type { Config } from '../../src/config.ts';
-import { OutlineState, type OutlineNode } from '../../src/outline/index.ts';
-import { readDrawing } from '../../test/drawing.ts';
+import { ProseText, OurusDoc, type OutlineNode } from '../../src/doc/index.ts';
+import { docOf, nodesOf, readDrawing } from '../../test/drawing.ts';
 import { micromark } from 'micromark';
 import { gfm, gfmHtml } from 'micromark-extension-gfm';
 
@@ -85,7 +85,8 @@ interface LineMap {
   from: number;
   to: number;
   at: number;
-  cut?: number;
+  /** Where a backslash the block's text leaves out was, in the document. */
+  cuts?: readonly number[];
 }
 
 const ATOM_NOTES: Readonly<Record<string, string>> = {
@@ -119,10 +120,10 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
     } else if (c !== undefined) text += c;
   }
   const at = (p: number): number => shift[p]!;
-  const doc = OutlineState.parse(text, { placeholders: drawing.placeholders.map(at), config: { ...options.config, flavor } });
-  if (doc.syntaxTree.root.children.some((b) => b.type === 'frontmatter')) throw new Unsupported('frontmatter');
+  const doc = docOf(text, drawing.placeholders.map(at), { ...options.config, flavor });
+  if (doc.mdTree.root.children.some((b) => b.type === 'frontmatter')) throw new Unsupported('frontmatter');
 
-  const nodes = doc.nodes.filter((n) => n.kind !== 'root');
+  const nodes = nodesOf(doc);
   // an empty document is an app's empty page: one empty block, the caret in it
   if (!nodes.length && text.trim() === '' && /┃/.test(drawn)) {
     notes.add('empty document');
@@ -132,41 +133,62 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
   const blocks: Block[] = [];
   const maps: LineMap[][] = [];
   const sections: number[] = [];
+  const blockOf = new Map<number, number>();
   for (const node of nodes) {
     const { text, lines } = blockText(doc, node, notes, options.ordered ?? false, options.freeForm ?? false);
     if (node.kind === 'heading') sections.push(blocks.length);
+    blockOf.set(node.id, blocks.length);
     blocks.push({ depth: node.depth - 1, text, ...(options.freeForm && node.kind !== 'item' && { free: true as const }) });
     maps.push(lines);
   }
-  doc.lines.forEach((line, i) => {
-    if (doc.nodeAtLine(i) || !line.blank) return;
+  // the caret on a blank line at its node's text column, right after its text (where Shift-Enter
+  // leaves it at a text's end): in a block, that text's next line, empty, the caret on it
+  const { anchor, head } = drawing.selection;
+  let held: { block: number; offset: number; lines: Set<number> } | null = null;
+  if (/┃/.test(drawn) && anchor === head) {
+    const p = at(head);
+    const where = doc.locate(p);
+    const i = where.zone === 'gap' && !where.owner.children.length && doc.atTextColumn(p, where.owner) ? blockOf.get(where.owner.id) : undefined;
+    const line = doc.lineAt(p).index;
+    // (but the gap's last line where a paragraph is on either side of it: the blank line setting them apart)
+    const next = where.zone === 'gap' ? where.owner.afterSubtree : null;
+    const apart = where.zone === 'gap' && !!next && line === where.owner.textLastLine + where.owner.gap && (where.owner.kind === 'paragraph' || next.kind === 'paragraph');
+    if (where.zone === 'gap' && i !== undefined && !apart) {
+      const lines = new Set<number>();
+      for (let k = where.owner.textLastLine + 1; k <= line; k++) lines.add(k);
+      blocks[i] = { ...blocks[i]!, text: blocks[i]!.text + '\n'.repeat(lines.size) };
+      held = { block: i, offset: blocks[i]!.text.length, lines };
+    }
+  }
+  for (let i = 0; i < doc.lineCount; i++) {
+    if (doc.nodeAtLine(i) || !doc.isEmptyLine(i) || held?.lines.has(i)) continue;
     if (options.freeForm) {
       // the nodes on either side: a blank line next to a free block is free form's own boundary
       let before = i - 1;
       while (before >= 0 && !doc.nodeAtLine(before)) before--;
       let after = i + 1;
-      while (after < doc.lines.length && !doc.nodeAtLine(after)) after++;
-      const near = [before >= 0 ? doc.nodeAtLine(before) : null, after < doc.lines.length ? doc.nodeAtLine(after) : null];
-      if (near.some((n) => n && n.kind !== 'item')) return;
+      while (after < doc.lineCount && !doc.nodeAtLine(after)) after++;
+      const near = [before >= 0 ? doc.nodeAtLine(before) : null, after < doc.lineCount ? doc.nodeAtLine(after) : null];
+      if (near.some((n) => n && n.kind !== 'item')) continue;
     }
     notes.add('blank lines');
-  });
+  }
 
   const locate = (p: number): { block: number; offset: number } | string => {
     const line = doc.lineAt(p);
+    if (held?.lines.has(line.index)) return { block: held.block, offset: held.offset };
     if (p > line.to) return 'caret after the last line';
     for (let i = 0; i < maps.length; i++) {
       for (const m of maps[i]!) {
         if (m.line !== line.index) continue;
         if (p < m.from) return 'caret in a marker';
-        return { block: i, offset: m.at + (p - m.from) - (m.cut !== undefined && p > m.cut ? 1 : 0) };
+        return { block: i, offset: m.at + (p - m.from) - (m.cuts ?? []).filter((c) => p > c).length };
       }
     }
     return 'caret on a blank line';
   };
   const hasCaret = /┃|«/.test(drawn);
   if (!hasCaret) return { outline: { blocks, sel: null }, notes, sections };
-  const { anchor, head } = drawing.selection;
   const h = locate(at(head));
   const a = anchor === head ? h : locate(at(anchor));
   if (typeof h === 'string') return { outline: { blocks, sel: null }, notes, caretLost: h, sections };
@@ -176,13 +198,15 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
 }
 
 /** A node's own text as a block holds it, and where each of its lines came from. */
-function blockText(doc: OutlineState, node: OutlineNode, notes: Set<string>, ordered: boolean, freeForm: boolean): { text: string; lines: LineMap[] } {
-  if (node.kind === 'quote') throw new Unsupported(doc.syntaxTree.line(node.startLine) && /^\s*>\s*\[!/.test(doc.text.slice(doc.line(node.startLine).from, doc.line(node.startLine).to)) ? 'callout' : 'quote');
+function blockText(doc: OurusDoc, node: OutlineNode, notes: Set<string>, ordered: boolean, freeForm: boolean): { text: string; lines: LineMap[] } {
+  const source = doc.text;
+  const lineOf = (l: number) => doc.mdTree.line(l);
+  if (node.kind === 'quote') throw new Unsupported(/^\s*>\s*\[!/.test(source.slice(lineOf(node.startLine).from, lineOf(node.startLine).to)) ? 'callout' : 'quote');
   const lines: LineMap[] = [];
   const parts: string[] = [];
   const add = (line: number, from: number, to: number, prefix = '', unescape = false): void => {
     const at = parts.reduce((k, p) => k + p.length + 1, 0) + prefix.length;
-    let s = doc.text.slice(from, to);
+    let s = source.slice(from, to);
     // a Markdown escape at a line's start (`\#`, `\-`, `1\.`) only keeps the line from reading as
     // markup in the file; a block's text needs none, but where blocks are numbered, `1\.` starting a
     // block is text a numbered block's `1. ` isn't, and stays; so does `\#` starting a paragraph where
@@ -190,28 +214,39 @@ function blockText(doc: OutlineState, node: OutlineNode, notes: Set<string>, ord
     // (after spaces a split kept before the text, `enterSplitSpace: start`, as at its start)
     const heading = freeForm && node.kind === 'paragraph' && !parts.length && /^[ \t]*\\#/.test(s);
     const m = !unescape || heading ? null : ordered && !parts.length ? /^[ \t]*\\(?=[!-/:-@[-`{-~])/.exec(s) : /^[ \t]*\\(?=[!-/:-@[-`{-~])|^[ \t]*\d{1,9}\\(?=[.)])/.exec(s);
+    const cuts: number[] = [];
     if (m) {
       notes.add('escape');
-      const cut = m[0].length - 1;
-      s = s.slice(0, cut) + s.slice(cut + 1);
-      lines.push({ line, from, to, at, cut: from + cut });
-    } else lines.push({ line, from, to, at });
+      cuts.push(from + m[0].length - 1);
+    }
+    // and the other markup escapes, which ourus's text leaves out (a definition's label's `\:`): only
+    // the file's, as at a line's start
+    if (unescape) {
+      for (let p = from; p < to; p++) {
+        // (one at the line's start is the rule above's, its exceptions kept)
+        if (source[p] !== '\\' || cuts.includes(p) || /^[ \t]*\d{0,9}$/.test(source.slice(from, p)) || doc.offsetOf(node, p) !== doc.offsetOf(node, p + 1)) continue;
+        notes.add('escape');
+        cuts.push(p);
+      }
+    }
+    for (const c of [...cuts].sort((a, b) => b - a)) s = s.slice(0, c - from) + s.slice(c - from + 1);
+    lines.push(cuts.length ? { line, from, to, at, cuts } : { line, from, to, at });
     parts.push(prefix + s);
   };
   const skipSpaces = (from: number, to: number): number => {
-    while (from < to && (doc.text[from] === ' ' || doc.text[from] === '\t')) from++;
+    while (from < to && (source[from] === ' ' || source[from] === '\t')) from++;
     return from;
   };
 
   // an ordered item, where blocks are numbered: its number as a reader sees it (the list's start,
   // counted on), canonical `1. ` before its text
-  const listBlock = node.kind === 'item' ? node.block.parent : null;
-  const number = ordered && listBlock?.list?.type === 'ordered' ? `${(listBlock.list.start ?? 1) + listBlock.children.indexOf(node.block)}. ` : '';
+  const inList = doc.listOf(node)?.block;
+  const number = ordered && inList?.attrs.list?.type === 'ordered' ? `${(inList.attrs.list.start ?? 1) + inList.children.indexOf(node.block)}. ` : '';
   if (node.kind === 'item') {
-    const list = node.block.parent?.list ?? node.block.list;
+    const list = inList?.attrs.list ?? node.block.attrs.list;
     if (list?.type === 'ordered' && !ordered) notes.add('numbered list');
     else if (list?.bulletChar && list.bulletChar !== '-') notes.add(`bullet ${list.bulletChar}`);
-    if (node.block.task) notes.add('task');
+    if (node.block.attrs.task) notes.add('task');
   } else if (node.kind === 'paragraph') {
     if (!freeForm) notes.add('paragraph');
   } else if (node.kind === 'heading') {
@@ -219,11 +254,14 @@ function blockText(doc: OutlineState, node: OutlineNode, notes: Set<string>, ord
   } else if (node.kind === 'atom') notes.add(ATOM_NOTES[node.block.type] ?? node.block.type);
 
   const head = node.kind === 'atom' ? node.block : node.head;
+  // where its own text starts, and ends
+  const headStart = node.kind === 'atom' ? node.startLine : node.textFirstLine;
+  const headEnd = head ? headStart + head.lines - 1 : headStart;
   // markup no block has a form for: a block would hold it as text, and edit it so
-  const title = head?.type === 'heading' && !head.setext ? doc.headRange(node) : null;
-  if (title && /^[ \t]*#/.test(doc.text.slice(title.to, doc.line(head!.startLine).to))) throw new Unsupported("heading's closing #s");
-  if (head?.type === 'code_block' && !head.fenced) throw new Unsupported('indented code');
-  if (!head && node.kind === 'item' && node.block.children[0]?.startLine === node.block.startLine) {
+  const text = doc.textOf(node);
+  if (head?.type === 'heading' && text instanceof ProseText && text.frame.some((p) => p.part === 'close')) throw new Unsupported("heading's closing #s");
+  if (head?.type === 'code_block' && !head.attrs.fenced) throw new Unsupported('indented code');
+  if (!head && node.kind === 'item' && node.block.children.length && node.block.offsets[0] === 0) {
     // an item whose first block is a list (`- - a`): it has no text, and the rest of its marker's line
     // is the inner item's, a child block
     notes.add("list as an item's first block");
@@ -231,17 +269,17 @@ function blockText(doc: OutlineState, node: OutlineNode, notes: Set<string>, ord
   }
   if (!head) {
     // an empty item, or one holding only a task's checkbox
-    const line = doc.line(node.block.startLine);
-    const task = node.block.task;
-    const from = task ? line.from + task.start : Math.min(doc.markerTo(node.block) + 1, line.to);
+    const line = lineOf(node.startLine);
+    const task = node.block.attrs.task;
+    const from = task ? line.from + task.start : Math.min(line.from + node.block.attrs.markerEnd! + 1, line.to);
     add(line.index, from, line.to, number);
     return { text: parts.join(''), lines };
   }
-  if (head.type === 'heading' && head.setext) {
+  if (head.type === 'heading' && head.attrs.setext) {
     notes.add('setext heading');
-    for (let l = head.startLine; l < head.endLine; l++) {
-      const line = doc.line(l);
-      add(l, skipSpaces(line.contentFrom, line.to), line.to, l === head.startLine ? number + '#'.repeat(head.level!) + ' ' : '', true);
+    for (let l = headStart; l < headEnd; l++) {
+      const line = lineOf(l);
+      add(l, skipSpaces(line.contentFrom, line.to), line.to, l === headStart ? number + '#'.repeat(head.attrs.level!) + ' ' : '', true);
     }
     return { text: parts.join('\n'), lines };
   }
@@ -249,17 +287,17 @@ function blockText(doc: OutlineState, node: OutlineNode, notes: Set<string>, ord
   if (node.kind === 'item' && ATOM_NOTES[head.type]) notes.add(ATOM_NOTES[head.type]!);
   // paragraphs and headings lose their lines' leading whitespace; atoms keep theirs
   const trim = head.type === 'paragraph' || head.type === 'heading';
-  for (let l = head.startLine; l <= head.endLine; l++) {
-    const line = doc.line(l);
+  for (let l = headStart; l <= headEnd; l++) {
+    const line = lineOf(l);
     let from = trim ? skipSpaces(line.contentFrom, line.to) : line.contentFrom;
     // spaces before it that are the text's are the block's, as the app's block starts with them: a
     // space a placeholder holds as text (`- ◌ x`), what a split kept (`enterSplitSpace: start`: an
     // item's padding, a paragraph's leading spaces, where ourus's text start is before them)
-    if (l === head.startLine) {
-      const held = doc.placeholders.find((p) => p >= line.from && p < from && (doc.text[p] === ' ' || doc.text[p] === '\t'));
-      from = Math.min(held ?? from, node.kind === 'item' || node.kind === 'paragraph' ? doc.textStart(from) : from);
+    if (l === headStart) {
+      const held = doc.marks.points().find((p) => p >= line.from && p < from && (source[p] === ' ' || source[p] === '\t'));
+      from = Math.min(held ?? from, node.kind === 'item' || node.kind === 'paragraph' ? doc.textStart(l) : from);
     }
-    add(l, from, line.to, l === head.startLine ? number : '', trim);
+    add(l, from, line.to, l === headStart ? number : '', trim);
   }
   return { text: parts.join('\n'), lines };
 }

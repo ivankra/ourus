@@ -2,14 +2,15 @@
 // between offsets in the joined text and offsets in the document.
 
 import { isSpaceOrTab } from './chars.ts';
-import type { SyntaxTree } from './syntax.ts';
-import type { Block, InlineText } from './types.ts';
+import type { MdTree } from './syntax.ts';
+
+import type { MdBlockAt, MdInlineText } from './types.ts';
 
 /** NUL reads as the replacement character. */
 const clean = (s: string): string => (s.indexOf('\0') < 0 ? s : s.replace(/\0/g, '\uFFFD'));
 
-/** Builds an InlineText from source ranges. */
-export class InlineTextBuilder {
+/** Builds an `MdInlineText` from source ranges. */
+export class MdInlineTextBuilder {
   private text = '';
   private readonly textStarts: number[] = [];
   private readonly sourceStarts: number[] = [];
@@ -20,11 +21,17 @@ export class InlineTextBuilder {
     this.source = source;
   }
 
-  /** Appends the source text `[from, to)`. */
+  /**
+   * Appends the source text `[from, to)`. An empty part still marks its place: the text there (an
+   * empty line a placeholder holds, an empty heading) maps to it.
+   */
   add(from: number, to: number): void {
-    if (to <= from) return;
     this.textStarts.push(this.text.length);
     this.sourceStarts.push(from);
+    if (to <= from) {
+      this.lengths.push(0);
+      return;
+    }
     this.lengths.push(to - from);
     this.text += clean(this.source.slice(from, to));
   }
@@ -37,7 +44,7 @@ export class InlineTextBuilder {
     this.text += '\n';
   }
 
-  finish(): InlineText {
+  finish(): MdInlineText {
     const { text, textStarts, sourceStarts, lengths } = this;
     const find = (keys: readonly number[], x: number): number => {
       let lo = 0;
@@ -72,16 +79,16 @@ export class InlineTextBuilder {
  * A paragraph's (or setext heading's) inline text: its lines from where their text starts, joined
  * by line breaks, trailing whitespace off the end. `startAt` overrides where the first line starts.
  */
-export function paragraphText(syntax: SyntaxTree, block: Block, endLine = block.endLine, startAt = -1): InlineText {
-  const b = new InlineTextBuilder(syntax.text);
-  const { text } = syntax;
-  for (let l = block.startLine; l <= endLine; l++) {
-    let from = l === block.startLine && startAt >= 0 ? startAt : syntax.textStart(l);
-    let to = syntax.ends[l]!;
+export function paragraphText(tree: MdTree, leaf: MdBlockAt, endLine = leaf.lastLine, startAt = -1): MdInlineText {
+  const b = new MdInlineTextBuilder(tree.text);
+  const { text } = tree;
+  for (let l = leaf.line; l <= endLine; l++) {
+    let from = l === leaf.line && startAt >= 0 ? startAt : tree.textStart(l);
+    let to = tree.ends[l]!;
     if (from < 0) from = to;
-    if (l === block.startLine) while (from < to && isSpaceOrTab(text.charCodeAt(from))) from++;
+    if (l === leaf.line) while (from < to && isSpaceOrTab(text.charCodeAt(from))) from++;
     if (l === endLine) while (to > from && isTrimmable(text.charCodeAt(to - 1))) to--;
-    if (l > block.startLine) b.newline(syntax.ends[l - 1]!);
+    if (l > leaf.line) b.newline(tree.ends[l - 1]!);
     b.add(from, to);
   }
   return b.finish();
@@ -90,28 +97,17 @@ export function paragraphText(syntax: SyntaxTree, block: Block, endLine = block.
 const isTrimmable = (c: number): boolean => c === 32 || c === 9 || c === 10 || c === 13;
 
 /** An ATX heading's inline text: between its `#`s and its closing sequence, trimmed. */
-export function atxHeadingText(syntax: SyntaxTree, block: Block): InlineText {
-  const { text } = syntax;
-  const line = syntax.lines[block.startLine]!;
-  let from = line.contentFrom;
-  let to = line.to;
-  while (from < to && isSpaceOrTab(text.charCodeAt(from))) from++;
-  while (from < to && text.charCodeAt(from) === 35) from++;
-  while (from < to && isSpaceOrTab(text.charCodeAt(from))) from++;
-  // a closing sequence: `#`s alone, or after a space
-  let end = to;
-  while (end > from && isSpaceOrTab(text.charCodeAt(end - 1))) end--;
-  let hashes = end;
-  while (hashes > from && text.charCodeAt(hashes - 1) === 35) hashes--;
-  if (hashes < end && (hashes === from || isSpaceOrTab(text.charCodeAt(hashes - 1)))) end = hashes;
-  while (end > from && isSpaceOrTab(text.charCodeAt(end - 1))) end--;
-  to = end;
-  const b = new InlineTextBuilder(text);
-  b.add(from, to);
+export function atxHeadingText(tree: MdTree, leaf: MdBlockAt): MdInlineText {
+  const { text } = tree;
+  const { textFrom, textTo } = tree.markup(leaf.line);
+  let to = textTo;
+  while (to > textFrom && isSpaceOrTab(text.charCodeAt(to - 1))) to--;
+  const b = new MdInlineTextBuilder(text);
+  b.add(textFrom, to);
   return b.finish();
 }
 
 export const coreInlineText = {
-  paragraph: (syntax: SyntaxTree, block: Block): InlineText => paragraphText(syntax, block),
-  heading: (syntax: SyntaxTree, block: Block): InlineText => (block.setext ? paragraphText(syntax, block, block.endLine - 1) : atxHeadingText(syntax, block)),
+  paragraph: (tree: MdTree, leaf: MdBlockAt): MdInlineText => paragraphText(tree, leaf),
+  heading: (tree: MdTree, leaf: MdBlockAt): MdInlineText => (leaf.block.attrs.setext ? paragraphText(tree, leaf, leaf.lastLine - 1) : atxHeadingText(tree, leaf)),
 };

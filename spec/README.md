@@ -55,6 +55,7 @@ Read every difference first; a case whose actions should change is redrawn by ha
 - [`obsidian-true-outliner.md`](obsidian-true-outliner.md): obsidian-true-outliner's measured
   cases and catalogue entries.
 - [`quotes.md`](quotes.md): quotes and callouts as containers.
+- [`regressions.md`](regressions.md): cases pinning behaviors settled by bug fixes and refactoring.
 - [`z-open.md`](z-open.md): open questions, one each, drawing what ourus does today where no
   command file does, with the alternative and a recommendation; a settled one moves to its
   command's file.
@@ -91,7 +92,7 @@ from breaking the node through it. Guarantees 3 and 6 say what each kind gets.
 No command breaks these; a case that seems to need to is wrong, or is a refusal.
 
 1. **Exactly the intended structure, or a clean refusal**, with a reason Markdown imposes
-   (`not-expressible`, `nothing-above`, ...). `encoding-failed` is a bug, never an outcome.
+   (`not-expressible`, `nothing-above`, ...). `write-failed` is a bug, never an outcome.
 2. **Lossless and minimal.** Nothing the user wrote is lost, but the spaces an Enter split trims
    (`enterSplitSpace: trim`, the default, and `drop`: [Enter44](enter.md#enter44)); text the edit
    isn't about stays byte for byte (other lines, the node's own text, hard-break spaces, code, tabs,
@@ -111,8 +112,9 @@ No command breaks these; a case that seems to need to is wrong, or is a refusal.
    later siblings, the section an unwrapped heading releases
    ([Backspace35](backspace.md#backspace35)), the children of an item whose text becomes a block of
    lines, which holds none ([Outdent19](outdent.md#outdent19)), what a pasted heading takes in
-   ([Paste10](paste.md#paste10)), and the list a paragraph that stays takes in when a move leaves it
-   right above one ([MoveUp35](move-subtree-up.md#moveup35)).
+   ([Paste10](paste.md#paste10)), and a list a move leaves right after a paragraph, which the
+   paragraph takes in, whether the paragraph moved or not ([MoveUp35](move-subtree-up.md#moveup35),
+   [MoveDown25](move-subtree-down.md#movedown25)).
 5. **Inverse pairs invert** (indent and outdent, up and down, Enter and Backspace, Shift-Enter and
    Backspace), or at least their outline where Markdown forces a difference, which the case states.
    One difference is by design: a split at a line break inside a node's text joins back glued, as a
@@ -261,15 +263,15 @@ of vertical motion, so they don't prescribe where Up or Down lands relative to n
 ## Options
 
 Options are YAML, `key: value` lines, every value read as a string (YAML's failsafe schema:
-`false` is the word; a value YAML reads otherwise, like `*`, is quoted: `bullet: "*"`). Options
-for a whole file go in frontmatter; options for one test go in a config block, a `yaml` block
-before its first block, combined with the frontmatter, and they win over it:
+`false` is the word; a value YAML reads otherwise, like `*`, is quoted: `bullet: "*"`). A test's
+options go in its config block, a `yaml` block before its first block; a spec file has no
+frontmatter (the reader refuses one):
 
 ````md
 ## Indent18
 
 ```yaml
-status: pending
+tags: edge
 bullet: +
 ```
 
@@ -354,9 +356,6 @@ format), and compares a clipboard a step checks by its `text/plain`.
 
 An unknown option, or a value an option doesn't take, is an error. Defined:
 
-  - `status`: `pending` marks behavior agreed on but not built yet. It is reported as a todo, and
-    fails once it passes, so it gets promoted. `ready` (the default) is the rest; a test can set it
-    over a file's `status: pending`;
   - `flavor`: the Markdown flavor the text is read in, `gfm` (the default), `commonmark` or
     `obsidian`. An example that names none runs in each of them, with the same expectations;
   - `tags`: words separated by spaces, in a test's config block only, every test having it. The
@@ -408,6 +407,8 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
       - `markup-fence`: on a code, math or comment fence line (or a structural command from one,
         which puts the caret in the code), a join of text into code, or a join or split of code
         lines that would make a fence;
+    - `pending`: no fact about the case but its state: behavior agreed on but not built yet. It is
+      reported as a todo, and fails once it passes, so the tag goes then;
   - the other options of ourus's config (`src/config.ts`): `outdent` (`direct`, the default, or
     `logical`), `bullet` (`-`, the default, `*` or `+`), `enterOnEmptyItem` (`sibling`, the
     default, `outdent` or `exit`), `enterMidItem` (`sibling`, the default, or `child`),

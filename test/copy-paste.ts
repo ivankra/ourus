@@ -22,13 +22,14 @@
 //   COPYPASTE_DUMP=f.txt node test/copy-paste.ts  # every run that isn't `same`, a line each, sorted
 
 import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { OutlineState, type OutlineNode } from '../src/outline/index.ts';
-import { drawState, readDrawing } from './drawing.ts';
+import { textEnd } from '../src/commands/util.ts';
+import { ProseText, OurusDoc, AtomText, type OutlineNode } from '../src/doc/index.ts';
+import { drawState, nodesOf, plainText, readDrawing } from './drawing.ts';
 import { play, type Played } from './player.ts';
-import { readSpec, specConfig } from './specfile.ts';
+import { readSpecFile, specConfig, specFiles } from './specfile.ts';
 import { flavorsOf } from './spec-run.ts';
 
 // --help: the comment at the top of this file; an argument it doesn't list is an error, never a run
@@ -40,9 +41,8 @@ import { flavorsOf } from './spec-run.ts';
     console.log(usage.map((line) => line.replace(/^\/\/ ?/, '')).join('\n'));
     process.exit(0);
   }
-  const unknown = args;
-  if (unknown.length) {
-    console.error(`no such option: ${unknown.join(', ')} (--help lists them)`);
+  if (args.length) {
+    console.error(`no such option: ${args.join(', ')} (--help lists them)`);
     process.exit(2);
   }
 }
@@ -52,11 +52,10 @@ const baselineFile = join(here, 'test/copy-paste.baseline.json');
 const examples = Number(process.env.COPYPASTE_EXAMPLES ?? 3);
 
 // every distinct start buffer, with its case's options, in its first flavor (as the inverse test's)
-const specDir = join(here, 'spec');
 const starts: { text: string; config: Record<string, unknown> }[] = [];
 const seen = new Set<string>();
-for (const file of readdirSync(specDir).filter((f) => f.endsWith('.md') && f !== 'README.md' && f !== 'obsidian-true-outliner.md').sort()) {
-  for (const t of readSpec(file, readFileSync(join(specDir, file), 'utf8'))) {
+for (const file of specFiles().filter((f) => f !== 'obsidian-true-outliner.md')) {
+  for (const t of readSpecFile(file)) {
     const start = readDrawing(t.initial.buffer);
     if (start.placeholders.length) continue;
     // (open seams join the paste's ends to the text around it: no duplicate)
@@ -70,7 +69,7 @@ for (const file of readdirSync(specDir).filter((f) => f.endsWith('.md') && f !==
 const corpus = createHash('sha256').update(JSON.stringify(starts.map((s) => JSON.stringify([s.text, s.config])).sort())).digest('hex').slice(0, 16);
 
 const isBlank = (line: string): boolean => /^[ \t>]*$/.test(line);
-const outline = (doc: OutlineState): string => JSON.stringify(doc.nodes.map((n) => [n.depth, n.kind, n.head?.type ?? null]));
+const outline = (doc: OurusDoc): string => JSON.stringify(nodesOf(doc).map((n) => [n.depth, n.kind, n.head?.type ?? null]));
 function classify(duplicated: Played, pasted: Played): string {
   const [a, b] = [duplicated.doc.text, pasted.doc.text];
   if (a === b) return 'same';
@@ -80,9 +79,11 @@ function classify(duplicated: Played, pasted: Played): string {
   return 'text';
 }
 
-/** Where the caret is at `node`'s text end: its head's end, or its block's last line's. */
-function textEnd(doc: OutlineState, node: OutlineNode): number {
-  return doc.headRange(node)?.to ?? doc.lines[node.block.endLine]!.to;
+/** Where the caret is at `node`'s text end: its text's, or code's last line's. */
+function endOf(doc: OurusDoc, node: OutlineNode): number {
+  const text = doc.textOf(node);
+  if (!text) return doc.rangeOf(node).to;
+  return doc.posOf(node, text instanceof ProseText ? textEnd(text) : text.text.length, -1);
 }
 
 const counts = new Map<string, number>();
@@ -90,10 +91,10 @@ const noted = new Map<string, string[]>();
 const dump: string[] = [];
 let runs = 0;
 for (const start of starts) {
-  const doc = OutlineState.parse(start.text, { config: start.config });
-  for (const node of doc.nodes) {
-    if (node.kind === 'root' || node.children.length) continue;
-    const at = textEnd(doc, node);
+  const doc = OurusDoc.parse(start.text, { config: start.config });
+  for (const node of nodesOf(doc)) {
+    if (node.children.length) continue;
+    const at = endOf(doc, node);
     const state: Played = { doc, selection: { anchor: at, head: at }, clipboard: {} };
     const duplicated = play(state, ['duplicateSubtree']);
     const copied = play(state, ['copy']);
@@ -104,11 +105,12 @@ for (const start of starts) {
     const shape = statuses.every((s) => s === 'applied') ? classify(duplicated, pasted) : `duplicate: ${statuses[0]}, paste: ${statuses[1]}`;
     // by design, apart: an empty node (an empty task too) copied fills the one it is pasted on; an
     // unclosed fence copied is closed where the copy ends
-    const block = node.kind === 'atom' ? node.block : node.head;
-    const unclosed = !!block && ((block.type === 'code_block' && block.fenced) || block.type === 'math_block' || block.type === 'comment_block') && !block.closed;
+    const text = doc.textOf(node);
+    const unclosed = text instanceof AtomText && !!text.delimiters && !text.closed;
     // (and lazy lines, which out of their quote may read otherwise: `> - q` / `    - g`)
-    const lazy = doc.ownLines(node).some((line) => line.lazy);
-    const what = /^(?:\[[ xX]\])?$/.test(doc.nodeText(node).trim()) ? 'empty' : unclosed ? 'unclosed' : lazy ? 'lazy' : node.head && node.head.type !== 'paragraph' ? node.head.type : null;
+    let lazy = false;
+    for (let i = node.startLine; i <= node.endLine; i++) lazy ||= doc.nodeAtLine(i)?.persistentNode === node.persistentNode && doc.isLazyLine(i);
+    const what = plainText(doc, node) === '' ? 'empty' : unclosed ? 'unclosed' : lazy ? 'lazy' : node.head && node.head.type !== 'paragraph' ? node.head.type : null;
     const group = `${node.kind}${what ? ` (${what})` : ''} ${shape}`;
     counts.set(group, (counts.get(group) ?? 0) + 1);
     if (shape === 'same') continue;

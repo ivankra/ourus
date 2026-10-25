@@ -132,7 +132,7 @@ tags: rare quote-container
 >→→- b┃
 ```
 
-### Quote5
+## Quote5
 
 Indent in a quote inside an item.
 
@@ -509,8 +509,8 @@ result: applied
 ### Quote20
 
 Out of one quote, past another, into it, with `outdent: logical`, where the item leaves below the
-quote's other children; outdent copies the separator its new neighbors use, and indent, the item
-the last of the quote's tight list, drops it.
+quote's other children; the item keeps its own blank lines as it goes, none, the blank line after
+`x` staying `x`'s, and indent makes it the last of the quote's tight list.
 
 ```yaml
 tags: edge quote-container
@@ -530,7 +530,6 @@ outdent: logical
 > - x
 
 - a┃
-
 > - b
 ```
 
@@ -540,7 +539,6 @@ outdent: logical
 > - x
 
 > - b
-
 - a┃
 ```
 
@@ -598,8 +596,8 @@ tags: edge quote-container
 
 ```buffer
 > - a
-
 - c
+
   - b┃
 ```
 
@@ -1042,6 +1040,7 @@ At the end of a lone title: an empty body line to type into.
 
 ```yaml
 tags: common quote-container
+flavor: obsidian
 ```
 
 ```buffer
@@ -1102,6 +1101,7 @@ item ([Enter8](enter.md#enter8)).
 
 ```yaml
 tags: edge quote-container
+flavor: obsidian
 ```
 
 ```buffer
@@ -1227,7 +1227,7 @@ tags: edge
 
 ```buffer
 > ab
-> ┃◌
+> ┃
 ```
 
 > "c"
@@ -1451,7 +1451,6 @@ tags: common free-form quote-container
 
 ```buffer
 - a┃b
-
 > - c
 ```
 
@@ -1872,8 +1871,8 @@ tags: rare quote-container
 
 ```buffer
 > [!note] T
-
 - b
+
   - a┃
 ```
 
@@ -2295,7 +2294,7 @@ outline: |
 
 ```buffer
 - ┃q
-    \- g
+      - g
 ```
 
 ## Quote91
@@ -2470,4 +2469,67 @@ tags: rare markup-task
 - a
 - [ ] ┃q
 - b
+```
+
+## Quote95
+
+A quote written `>` without its space on its first line (`>- a`): an item outdented out of the
+item above it is written in the quote's way, `>-`.
+
+```yaml
+tags: rare quote-container
+```
+
+```buffer
+>- a
+>   - ┃b
+```
+
+> outdent
+
+```buffer
+>- a
+>- ┃b
+```
+
+## Quote96
+
+Tab-indented items in a quote, its `>` taking part of the tab: a copy is written as its original
+is.
+
+```yaml
+tags: rare quote-container
+```
+
+```buffer
+┃>→- a
+>→- b
+```
+
+> duplicateSubtree
+
+```buffer
+>→- a
+>→- ┃a
+>→- b
+```
+
+## Quote97
+
+Tab-indented items in a quote: the first unwrapped into a paragraph of the quote, after `> `.
+
+```yaml
+tags: rare quote-container free-form
+```
+
+```buffer
+>→- ┃a
+>→- b
+```
+
+> deleteContentBackward
+
+```buffer
+> ┃a
+>→- b
 ```

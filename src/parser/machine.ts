@@ -4,8 +4,8 @@
 // state agrees with an earlier parse (see syntax.ts).
 //
 // The algorithm is commonmark.js 0.31.2's block phase (lib/blocks.js, BSD-2-Clause, see NOTICE),
-// generalized: what the open blocks do with a line (`BlockSpec`) and which blocks a line can start
-// (`BlockStart`) come from the flavor, CommonMark's own blocks included (blocks.ts). The machine
+// generalized: what the open blocks do with a line (`MdBlockSpec`) and which blocks a line can start
+// (`MdBlockStart`) come from the flavor, CommonMark's own blocks included (blocks.ts). The machine
 // itself knows only the loop: match the open containers, try block starts, lazy continuation, and
 // hand the rest of the line to the open leaf.
 //
@@ -15,17 +15,17 @@
 // lines (a setext underline, a table's delimiter row, reference definitions split off when it
 // closes), and lookahead, which the record notes (`ahead`).
 
-import type { Flavor } from './flavor.ts';
+import type { MdFlavor } from './flavor.ts';
 
 export const CODE_INDENT = 4;
 
 /** An open block. Frames are immutable, and hold only primitive fields besides `spec`, so states compare by value. */
-export interface Frame {
-  readonly spec: BlockSpec;
+export interface MdFrame {
+  readonly spec: MdBlockSpec;
 }
 
 /** What an open block does with a line. `F` is the block's frame. */
-export interface BlockSpec<F extends Frame = any> {
+export interface MdBlockSpec<F extends MdFrame = any> {
   /** The block's type in the syntax tree. */
   readonly type: string;
   /** Holds other blocks (the document, quotes, lists, items). */
@@ -38,32 +38,32 @@ export interface BlockSpec<F extends Frame = any> {
    * Whether the block goes on at this line: 0 = it does (a container has consumed its prefix
    * piece), 1 = it doesn't, 2 = it does and the line is fully handled (a closing fence).
    */
-  continue(m: Machine, frame: F, index: number): 0 | 1 | 2;
+  continue(m: MdMachine, frame: F, index: number): 0 | 1 | 2;
   /** Containers: whether a block of `child`'s kind can go inside. Default: anything but list items. */
-  canContain?(child: BlockSpec): boolean;
+  canContain?(child: MdBlockSpec): boolean;
   /** Containers: the frame after a child block was added (an item counts its children). */
   childAdded?(frame: F): F;
   /** Leaves that accept lines: the rest of the line, from `m.offset`, goes to this block. Sets the line's role. */
-  addLine?(m: Machine, frame: F, index: number): void;
+  addLine?(m: MdMachine, frame: F, index: number): void;
   /** The block closes; its last line is `m.lineIndex - 1`. */
-  close?(m: Machine, frame: F): void;
+  close?(m: MdMachine, frame: F): void;
 }
 
 /** A block start: 0 = no match, 1 = a container opened (keep looking), 2 = a leaf (stop). */
-export interface BlockStart {
+export interface MdBlockStart {
   readonly name: string;
-  start(m: Machine, container: Frame): 0 | 1 | 2;
+  start(m: MdMachine, container: MdFrame): 0 | 1 | 2;
 }
 
 /** What a line is in its leaf block. `first`: the line starts a new block. Other fields are the block's attributes. */
-export interface LeafRole {
+export interface MdLeafRole {
   readonly type: string;
   readonly first: boolean;
   readonly [attribute: string]: unknown;
 }
 
 /** The part of a line one container consumed, in offsets from the line's start. */
-export interface Piece {
+export interface MdPiece {
   /** The container's index in the line's chain of containers (0 = outermost; the document excluded). */
   readonly depth: number;
   /** `quote`, `marker` (an item's first line), `indent` (its continuation), or an extension's. */
@@ -82,13 +82,13 @@ export interface Opened {
   readonly attrs: Readonly<Record<string, unknown>> | null;
 }
 
-export interface LineRecord {
+export interface MdLineRecord {
   /** Containers (the document excluded) open after the line. */
   readonly depth: number;
   /** The innermost of them that this line opened, outermost first. */
   readonly opened: readonly Opened[];
-  readonly pieces: readonly Piece[];
-  readonly leaf: LeafRole | null;
+  readonly pieces: readonly MdPiece[];
+  readonly leaf: MdLeafRole | null;
   /** A paragraph continued through containers that didn't match the line. */
   readonly lazy: boolean;
   /** How many lines after this one the machine looked at to read it (0 for most lines). */
@@ -100,7 +100,7 @@ export interface LineRecord {
 }
 
 /** The machine's state between two lines: the open blocks, the document first. */
-export type State = readonly Frame[];
+export type MdState = readonly MdFrame[];
 
 /** The lines the machine reads. */
 export interface LineSource {
@@ -114,11 +114,11 @@ export interface LineSource {
 /** The character a sentinel reads as. Object replacement: text no block start begins with. */
 export const SENTINEL = '￼';
 
-const EMPTY_PIECES: readonly Piece[] = Object.freeze([]);
+const EMPTY_PIECES: readonly MdPiece[] = Object.freeze([]);
 const EMPTY_OPENED: readonly Opened[] = Object.freeze([]);
 
 /** Frames are equal when all their fields are (`except` one, which the caller compares itself). */
-export function frameEquals(a: Frame, b: Frame, except?: string): boolean {
+export function frameEquals(a: MdFrame, b: MdFrame, except?: string): boolean {
   if (a === b) return true;
   if (a.spec !== b.spec) return false;
   const x = a as unknown as Record<string, unknown>;
@@ -128,7 +128,7 @@ export function frameEquals(a: Frame, b: Frame, except?: string): boolean {
   return true;
 }
 
-export function stateEquals(a: State, b: State): boolean {
+export function stateEquals(a: MdState, b: MdState): boolean {
   if (a === b) return true;
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) if (!frameEquals(a[i]!, b[i]!)) return false;
@@ -139,13 +139,13 @@ export function stateEquals(a: State, b: State): boolean {
  * Reads lines. `records[i]` and `states[i]` receive line i's record and the state after it; records of
  * the open paragraph's earlier lines may be rewritten (backward effects).
  */
-export class Machine {
-  readonly flavor: Flavor;
+export class MdMachine {
+  readonly flavor: MdFlavor;
   readonly source: LineSource;
-  readonly records: LineRecord[];
-  readonly states: State[];
+  readonly records: MdLineRecord[];
+  readonly states: MdState[];
   /** The open blocks. Rules change it only through the methods below. */
-  stack: Frame[];
+  stack: MdFrame[];
 
   // the line being read
   /** The line as read: NUL replaced, sentinels in. */
@@ -174,8 +174,8 @@ export class Machine {
   allClosed = true;
 
   private oldTip = 0;
-  private pieces: Piece[] = [];
-  private leaf: LeafRole | null = null;
+  private pieces: MdPiece[] = [];
+  private leaf: MdLeafRole | null = null;
   private lazy = false;
   private changed = false;
   /** Stack index of the first container pushed while reading this line. */
@@ -186,7 +186,7 @@ export class Machine {
   private textAt = -1;
   private pad = 0;
 
-  constructor(flavor: Flavor, source: LineSource, records: LineRecord[], states: State[], state: State) {
+  constructor(flavor: MdFlavor, source: LineSource, records: MdLineRecord[], states: MdState[], state: MdState) {
     this.flavor = flavor;
     this.source = source;
     this.records = records;
@@ -420,12 +420,12 @@ export class Machine {
 
   // --------------------------------------------------------------------------- stack helpers
 
-  get tip(): Frame {
+  get tip(): MdFrame {
     return this.stack[this.stack.length - 1]!;
   }
 
   /** Replaces the frame at stack `index` (a block's state changed). */
-  replace(index: number, frame: Frame): void {
+  replace(index: number, frame: MdFrame): void {
     this.stack[index] = frame;
     this.changed = true;
   }
@@ -446,7 +446,7 @@ export class Machine {
   }
 
   /** Opens a block, closing the open blocks that can't contain it. `attrs` go to a container's block. */
-  addChild(frame: Frame, attrs: Readonly<Record<string, unknown>> | null = null): void {
+  addChild(frame: MdFrame, attrs: Readonly<Record<string, unknown>> | null = null): void {
     this.makeRoomFor(frame.spec);
     this.stack.push(frame);
     this.changed = true;
@@ -458,13 +458,13 @@ export class Machine {
   }
 
   /** Records a leaf block made of this line alone (an ATX heading, a thematic break). */
-  addSingleLine(role: LeafRole, spec: BlockSpec = this.flavor.paragraph): void {
+  addSingleLine(role: MdLeafRole, spec: MdBlockSpec = this.flavor.paragraph): void {
     this.makeRoomFor(spec);
     this.leaf = role;
   }
 
   /** Closes open blocks until the tip can contain a `spec` block, and tells the tip it gets a child. */
-  private makeRoomFor(spec: BlockSpec): void {
+  private makeRoomFor(spec: MdBlockSpec): void {
     while (!canContain(this.tip, spec)) this.closeTop();
     const index = this.stack.length - 1;
     const parent = this.stack[index]!;
@@ -487,17 +487,17 @@ export class Machine {
   }
 
   /** Sets this line's leaf role. */
-  setLeaf(role: LeafRole): void {
+  setLeaf(role: MdLeafRole): void {
     this.leaf = role;
   }
 
   /** The leaf role of this line so far. */
-  get role(): LeafRole | null {
+  get role(): MdLeafRole | null {
     return this.leaf;
   }
 
   /** Rewrites the leaf role of earlier line `index` (a backward effect on the open paragraph's lines). */
-  rewriteRole(index: number, role: LeafRole): void {
+  rewriteRole(index: number, role: MdLeafRole): void {
     this.records[index] = { ...this.records[index]!, leaf: role };
   }
 
@@ -523,7 +523,7 @@ export class Machine {
   }
 }
 
-function canContain(parent: Frame, child: BlockSpec): boolean {
+function canContain(parent: MdFrame, child: MdBlockSpec): boolean {
   const spec = parent.spec;
   if (!spec.container) return false;
   return spec.canContain ? spec.canContain(child) : child.type !== 'item';

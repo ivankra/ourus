@@ -3,8 +3,8 @@
 // compared with the spec's as drawn. A placeholder (`◌`) is a place, not text: it is dropped.
 
 import type { Config } from '../../src/config.ts';
-import { OutlineState } from '../../src/outline/index.ts';
-import { drawState, drawText, readDrawing } from '../../test/drawing.ts';
+import { OurusDoc } from '../../src/doc/index.ts';
+import { drawState, drawText, nodesOf, plainText, readDrawing } from '../../test/drawing.ts';
 import type { Verdict } from './block.ts';
 
 export interface TextDoc {
@@ -27,8 +27,8 @@ const loose = (text: string): string => text.replace(/[ \t]+$/gm, '');
 
 /** A document's nodes as ourus verifies them: kind, depth, what the head is, and the text (an atom's as written, other nodes' lines trimmed). */
 const nodes = (text: string, flavor: Config['flavor']): string => {
-  const doc = OutlineState.parse(text, { config: { flavor } });
-  return JSON.stringify(doc.nodes.map((n) => [n.kind, n.depth, n.head?.type, n.head?.level, doc.nodeText(n)]));
+  const doc = OurusDoc.parse(text, { config: { flavor } });
+  return JSON.stringify(nodesOf(doc).map((n) => [n.kind, n.depth, n.head?.type, n.head?.attrs.level, plainText(doc, n)]));
 };
 
 /**
