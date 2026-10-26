@@ -106,9 +106,13 @@ export const BLOCKED_HOSTS: readonly string[] = [
   '.plausible.io',
   // Cloudflare's Web Analytics beacon, on Dynalist's and SilverBullet's pages
   '.cloudflareinsights.com',
+  // Baidu's analytics, on Mubu's pages
+  'hm.baidu.com',
   '.clarity.ms',
   '.facebook.net',
   '.bugsnag.com',
+  // Rollbar's error reports, from Moo.do's app
+  'api.rollbar.com',
   '.logrocket.io',
   '.datadoghq.com',
   '.browser-intake-datadoghq.com',

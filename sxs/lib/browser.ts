@@ -30,7 +30,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 import type { Session } from './driver.ts';
 import { takeLock } from './desktop.ts';
 import { record, recordDir, runDir } from './records.ts';
-import { idleVersion } from './idle.ts';
+import { idleVersion, installIdle } from './idle.ts';
 import { ensureAptInstalled } from './system.ts';
 import { cacheDir, DEFAULT_PORT, httpDir, proxyVersion, type CacheMode } from '../proxy.ts';
 
@@ -584,6 +584,27 @@ export interface AppPage {
    * example that uses it. None where the browser is the run's own.
    */
   clipboard?(): Promise<() => void>;
+}
+
+/** The pages whose settling script this process has added (`reloadPage`). */
+const idleAdded = new WeakSet<Page>();
+
+/**
+ * Loads a driver's page anew (an app left in a state its next test can't start from), as a run's own
+ * load leaves it: with this run's settling script, which a window taken over from an earlier run has
+ * only until it reloads (a page's init scripts are its connection's), and the marks a run reuses a
+ * window by (`window.__ourusApp`, `__ourusVersion`).
+ */
+export async function reloadPage(page: Page): Promise<void> {
+  type Marked = { __ourusApp?: string; __ourusVersion?: string };
+  const marks = await page.evaluate(() => ({ app: (window as Marked).__ourusApp, version: (window as Marked).__ourusVersion })).catch(() => ({ app: undefined, version: undefined }));
+  if (!idleAdded.has(page)) {
+    // (twice is harmless: the script stops where a page has one)
+    await page.addInitScript(installIdle, idleVersion());
+    idleAdded.add(page);
+  }
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 120000 });
+  await page.evaluate(([app, version]) => Object.assign(window as Marked, { __ourusApp: app, __ourusVersion: version }), [marks.app, marks.version] as const);
 }
 
 /**

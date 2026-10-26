@@ -401,9 +401,15 @@ test kept per page (`perPage` in `lib/driver.ts`: the page it made for the test,
 as each worker has a page of its own; for an app behind a login,
 `login`, the environment variable a signed-in session is given in (`open` throws `LoginRequired` from
 [`lib/login.ts`](lib/login.ts) without one, and the run stops with exit code 3, saying how to give it; the
-app's browser profile keeps it for later runs; a run of several apps leaves such an app out). Keep notes on
+app's browser profile keeps it for later runs; a run of several apps leaves such an app out). A driver
+whose app a test can leave unable to start the next (Moo.do's, with a confirmation dialog a key left open)
+loads its page anew with `reloadPage` from [`lib/browser.ts`](lib/browser.ts), which keeps the run's
+settling script and the window's marks (a bare `page.reload()` in a window taken over from an earlier
+run loses the script); an app whose animation library keeps a frame loop running settles with
+`idle: { frames: false }`. Keep notes on
 the app's quirks in its `README.md`. Free live demos are used where there are any; a copy on disk is
-for apps behind a login.
+for apps behind a login. To tell an app's behavior from state a test left behind, run a spec file
+alone (`--workers=1 --json=FILE`) and compare its verdicts with the full run's: they should be the same.
 
 ## Files
 
@@ -438,7 +444,11 @@ for apps behind a login.
 | `remnote/` | RemNote's driver for either setup of it (its guest mode, in the test mode RemNote's own Playwright tests use: no backend, rems made as its fixtures make them), its own setup with documents that hide their bullets (free-form Markdown's paragraphs and lists), mapped to and from ourus's outline tested offline (`remnote.test.ts`), notes |
 | `remnote-bl/` | RemNote with its documents' bullets, every rem an item: its setup, notes |
 | `tana/` | Tana Outliner's driver (its UI-test page, `/tests`: no account, no server, nodes made through its model), proxy rules (its telemetry answered), notes |
+| `mubu/` | Mubu's driver (an outline shared on its site, made editable in the page: Mubu's editor found through React, its sign-in dialog closed by its own action), proxy rules (its API's POSTs cached by body, its reports and CORS preflights answered), notes |
+| `moodo/` | Moo.do's driver (its demo, the app's own page in demo mode: items made and read through its modules, reached through its webpack runtime; the page anew after a cut), notes |
 | `blocknote/` | BlockNote's driver (its site's minimal example, the editor found through React), proxy rules (its error reports answered), notes |
+| `affine/` | AFFiNE's driver (its web app's demo workspace, kept in the browser: blocks made and read through the editor's BlockSuite store, `window.currentEditor`), proxy rules (its GraphQL queries cached by body, its telemetry and Cloudflare's bot check answered), notes |
+| `lexical/` | Lexical's driver (its playground, opened empty: the editor on its root element, a test loaded as a serialized editor state, the history cleared by the playground's command), proxy rules (Vercel's analytics answered), notes |
 | `emacs-markdown/` | Emacs with markdown-mode: its driver, Emacs on a terminal of tmux's driven through its server (`emacs.ts`, a session), notes |
 | `obsidian/` | Obsidian's driver for any setup of it (`obsidian.ts`: the desktop app, started by the driver), the bare one in Source mode, its indentation as tabs and back tested offline (`obsidian.test.ts`, part of `npm test`), notes |
 | `obsidian-lp/` | bare Obsidian in Live Preview (`obsidian/` is Source mode): its setup, notes |

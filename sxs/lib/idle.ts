@@ -23,6 +23,11 @@ export interface IdleOptions {
   stuck?: number;
   /** A JavaScript expression that is true while the app says it is busy (a driver's own signal). */
   busy?: string;
+  /**
+   * Whether a pending animation frame is work (true by default): false for an app whose animation
+   * library keeps a frame loop running whatever happens (Moo.do's), where settling is timers and quiet.
+   */
+  frames?: boolean;
 }
 
 export interface IdleResult {
@@ -180,7 +185,7 @@ export function installIdle(version: string): void {
           } catch {
             appBusy = false;
           }
-          const quiet = timers.size === 0 && frames.size === 0 && reading === 0;
+          const quiet = timers.size === 0 && (o.frames === false || frames.size === 0) && reading === 0;
           if (quiet && !appBusy && now - lastChange >= o.quiet) return resolve({ ms: Math.round(now - start), timedOut: false, busiest: last });
           if (!quiet) last = `timers ${[...timers.values()].join(',') || '-'}, frames ${frames.size}${reading ? `, clipboard reads ${reading}` : ''}`;
           else if (appBusy) last = 'app busy';
