@@ -405,6 +405,35 @@ app's browser profile keeps it for later runs; a run of several apps leaves such
 the app's quirks in its `README.md`. Free live demos are used where there are any; a copy on disk is
 for apps behind a login.
 
+### Drops
+
+A drop ([`drag.md`](../spec/drag.md): `move ②`, `move`, `pasteAt`) is one action, played as one
+gesture: a held button doesn't survive the end of a driver's call, so a pickup in one step and a drop
+in the next couldn't be played. The plan resolves it from ourus's own state where the case starts
+(`resolveDrop` in [`lib/drag.ts`](lib/drag.ts): its `▸`, the run it names by the cover rule), into rows
+(`Drop` in [`lib/driver.ts`](lib/driver.ts)): the row pressed, the rows in flight, the rows the drop
+line sits between, the place's depth and list depth, and the place as rows. A case whose drop isn't
+its first action, or whose pickup ourus refuses, is skipped. A driver that drags lists the drops it
+plays (`drops`) and plays each (`drop`): it measures where the rows and its place's column are on its
+own screen, as the app's own drag measures them, and plays `gesture` (a press, a move past the app's
+threshold, along to the place in steps, two frames, a release; from off the page, or with `here`
+from a handle the driver brought the pointer to, one shown only on hover); a place its gesture can't reach (no
+mark to press on that row, a drop of the selection where it drags only a pressed node) it throws
+`Unsupported` for, and the example is skipped as it played (`drop: …`). A pickup alone (`drag ②`) has
+no driver: no app shows what it offers. In a block app the rows are blocks: each node's the block the
+start projected it onto (`Projection.rows`, `inBlocks`), the depth the parent block's plus one. A
+selection drawn over whole nodes, from a node's text start to another's end, is in a block app a
+selection of blocks (`Outline.selected`, the topmost), where the driver says it makes one
+(`selectsBlocks`: its `load` selects the blocks as the app's keys or its own selecting do, its `read`
+reports them); elsewhere such a case skips as "selection across blocks". A drop of the selection (no
+press) presses its first block's handle; one pressed outside it shows whether the app's drag follows
+the cover rule. An app
+that edits no block after a drop lists `move` in `noCaretAfter` (it stands for every `move ②`). Every
+app that drags a node has a `drop`: the Obsidian setups with a plugin that does (`outlinerDrop`,
+`trueOutlinerDrop` in [`obsidian/obsidian.ts`](obsidian/obsidian.ts)) and every block app, each aimed
+where its own drag code puts a place (each README's "Drag and drop"); bare Obsidian, Live Preview,
+SilverBullet and Emacs drag no node.
+
 ## Files
 
 | | |

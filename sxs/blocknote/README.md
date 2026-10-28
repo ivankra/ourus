@@ -24,6 +24,7 @@ BlockNote's defaults (its block keyboard shortcuts, and ProseMirror's and Tiptap
 | `outdent` | Shift+Tab: unnests it |
 | `moveSubtreeUp` | Ctrl+Shift+Up ("move block up": the block with its children) |
 | `moveSubtreeDown` | Ctrl+Shift+Down ("move block down") |
+| `move ②` | the mouse: the block hovered, its side menu's drag handle dragged (HTML5 drag and drop, ProseMirror's `drop`) to the place (`blockNoteDrop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
 | `deleteContentBackward` | Backspace (at a list item's start, makes it a paragraph first) |
 | `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Shift+Home, then Backspace (no command for it) |
@@ -120,6 +121,32 @@ Measured (each was a start the load check found held otherwise), and skipped wit
 
 A number that is text (`2\. y`) loaded without its `.` until 2026-10-18 (the escape's backslash and the
 dot cut together): `paste-old.md › PasteOld81`, an error, now run.
+
+## Drag and drop
+
+A block is dragged by its side menu's handle, shown while the block is hovered (`blockDragStart`), an
+HTML5 drag that Playwright's mouse makes in Chromium; the drop is ProseMirror's (`dropPoint`): beside
+the block whose text the pointer is over, before it in the text's first half, after it in the second
+(before it always where it has children), and below the last block, last at the top level. x picks no
+depth. The driver hovers the block, waits for its menu (not one fading out, which keeps its handle
+where the next is drawn), then presses the handle and drops at the place's block.
+
+- **A drop beside a block lands where ourus's does** (Drag1, Drag2, Drag13 agree, stable over three
+  runs).
+- **No place inside a block with no children**: a drop into a leaf (Drag3, Drag8, Scenario8c) has no
+  gesture here, and skips as it plays.
+- **A heading moves alone**, its level kept: a heading owns no blocks in BlockNote, so what is under it
+  in ourus's section stays where it was (Drag15: `### D` moved, `#### E` left under `# C`; Drag16).
+- **No caret after a drop**: Scenario8b, which types after it, skips as it plays.
+- **The cover rule is ourus's**: with text selected across blocks, a press on the handle of a block
+  in it drags the blocks the selection is in (a node selection of them, `blockDragStart`), any other
+  press the block alone. Drag4, Drag20, Drag5 and Drag5b land as ourus's, nothing selected after (the
+  editor blurred, a collapsed selection: `caret`). There is no selection of blocks apart from text: the
+  driver selects from the first block's content start to the end of the last one's subtree, and
+  `read` reports a selection from a block's start to another's end, or a node selection, as blocks.
+- **Tab on text selected across blocks goes to the formatting toolbar**, which a selection of text
+  shows, nesting nothing, and Shift+Tab back out of the editor, unnesting nothing (Indent9, Indent27,
+  Outdent8, Outdent10, Outdent12 disagree; its `nestBlock` would nest them).
 
 ## What BlockNote does
 

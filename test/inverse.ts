@@ -1,7 +1,8 @@
 // Inverse pairs: every pair of commands that undo each other (Enter and Backspace, Shift-Enter and
 // Backspace, indent and outdent, up and down, both ways) at every caret position of every distinct
-// start buffer the spec draws, through the spec's player, and a report of the round trips that don't
-// give the text back, grouped by the pair and the shape of the difference:
+// start buffer the spec draws, through the spec's player; and every drop a pickup offers there (each
+// node pressed, the caret at its text's start), then the drop back to where the run was. A report of
+// the round trips that don't give the text back, grouped by the pair and the shape of the difference:
 //
 //   blank+, blank-  the same lines but for more, or fewer, blank lines
 //   space           the same text but for spaces and tabs
@@ -33,11 +34,14 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
+import { executeCommand, type InsertionPoint } from '../src/commands/index.ts';
 import { OurusDoc } from '../src/doc/index.ts';
+import { textStart } from '../src/commands/util.ts';
 import { drawDoc, nodesOf, readDrawing } from './drawing.ts';
 import { play, type Played } from './player.ts';
 import { readSpecFile, specConfig, specFiles } from './specfile.ts';
 import { flavorsOf } from './spec-run.ts';
+import { KNOWN } from './drops.ts';
 
 const here = resolve(import.meta.dirname, '..');
 const PAIRS: readonly [string, string][] = [
@@ -93,6 +97,8 @@ interface Found {
   runs: number;
   groups: Map<string, { runs: number; buffers: string[]; examples: Noted[] }>;
   failures: Noted[];
+  /** Write failures at the starts the drop pass knows (`drops.ts`'s `KNOWN`): reported, not failed. */
+  known: string[];
   /** Every round trip that doesn't come back, with `INVERSE_DUMP`. */
   dumped: string[];
 }
@@ -101,7 +107,8 @@ const draw = (p: Played): string => JSON.stringify(drawDoc(p.doc, p.selection));
 
 /** Plays every pair at every caret position of the start buffers `share` names. */
 function playShare(share: readonly number[]): Found {
-  const found: Found = { runs: 0, groups: new Map(), failures: [], dumped: [] };
+  const found: Found = { runs: 0, groups: new Map(), failures: [], known: [], dumped: [] };
+  const known = found.known;
   const groups = new Map<string, { runs: number; buffers: Set<string>; examples: Noted[] }>();
   const fail = (index: number, text: string): void => void found.failures.push({ at: index, buffer: '', text });
   for (const index of share) {
@@ -138,6 +145,58 @@ function playShare(share: readonly number[]): Found {
         const group = groups.get(key) ?? { runs: 0, buffers: new Set<string>(), examples: [] };
         group.runs++;
         if (!group.buffers.has(s.text) && group.examples.length < examples) group.examples.push({ at: index, buffer: s.text, text: `${s.name}\n           ${draw(at)}\n         → ${draw(mid)}\n         → ${draw(end)}` });
+        group.buffers.add(s.text);
+        groups.set(key, group);
+      }
+    }
+    // drops: each node pressed, every place offered dropped at, then back where it was
+    for (const node of nodesOf(doc)) {
+      // (the caret in the first text in the node: a quote's is its first child's)
+      let held = node;
+      while (!doc.textOf(held) && held.children.length) held = held.children[0]!;
+      const text = doc.textOf(held);
+      const pos = text ? doc.posOf(held, textStart(text), 1) : doc.rangeOf(node).from;
+      const caret = { anchor: pos, head: pos };
+      const picked = executeCommand(doc, { type: 'drag', pressed: node.id }, caret);
+      if (picked.status !== 'applied' || !picked.dropMap) continue;
+      const nodes = picked.dropMap.nodes;
+      const root = doc.node(nodes[0]!)!;
+      const back: InsertionPoint = { parent: root.parent!.kind === 'root' ? 'root' : root.parent!.id, after: root.prev?.id ?? null };
+      for (const point of picked.dropMap.seams.flatMap((seam) => seam.points)) {
+        if (point.current) continue;
+        found.runs++;
+        const at: Played = { doc, selection: caret, clipboard: {} };
+        const where = `${s.name} ${draw(at)} → depth ${point.depth} under ${point.parent === 'root' ? 'the root' : `line ${doc.node(point.parent)!.startLine + 1}`}`;
+        let mid: Played;
+        let end: Played;
+        try {
+          const dropped = executeCommand(doc, point.drop, caret);
+          if (dropped.status === 'rejected' && dropped.reason === 'write-failed') {
+            // (at a start the drop pass knows, reported, not failed: its list says why)
+            if (s.name in KNOWN) known.push(`moveSubtreeTo failed to write, known (drops.ts): ${where}`);
+            else fail(index, `moveSubtreeTo failed to write: ${where}`);
+            continue;
+          }
+          if (dropped.status !== 'applied' || !dropped.changes.length) continue;
+          mid = { doc: dropped.doc, selection: dropped.selection, clipboard: {}, last: dropped };
+          const returned = executeCommand(mid.doc, { type: 'moveSubtreeTo', nodes, to: back }, mid.selection);
+          end = { doc: returned.status === 'applied' ? returned.doc : mid.doc, selection: returned.status === 'applied' ? returned.selection : mid.selection, clipboard: {}, last: returned };
+        } catch (e) {
+          fail(index, `moveSubtreeTo threw: ${where}: ${(e as Error).message.split('\n')[0]}`);
+          continue;
+        }
+        const last = end.last!;
+        if (last.status === 'rejected' && last.reason === 'write-failed') {
+          fail(index, `moveSubtreeTo back failed to write: ${where} → ${draw(mid)}`);
+          continue;
+        }
+        const shape = last.status === 'applied' ? classify(doc, end, pos) : last.status === 'rejected' ? `rejected ${last.reason}` : last.status;
+        if (shape === 'same') continue;
+        const key = `moveSubtreeTo, back: ${shape}`;
+        if (dumping) found.dumped.push(`${key}\t${where}\t${draw(mid)}\t${draw(end)}`);
+        const group = groups.get(key) ?? { runs: 0, buffers: new Set<string>(), examples: [] };
+        group.runs++;
+        if (!group.buffers.has(s.text) && group.examples.length < examples) group.examples.push({ at: index, buffer: s.text, text: `${where}\n         → ${draw(mid)}\n         → ${draw(end)}` });
         group.buffers.add(s.text);
         groups.set(key, group);
       }
@@ -203,6 +262,7 @@ for (const [key, group] of [...groups].sort((x, y) => y[1].buffers.size - x[1].b
   for (const example of group.examples) console.log(`         ${example}`);
 }
 for (const failure of failures) console.log(`FAIL ${failure}`);
+for (const line of parts.flatMap((p) => p.known)) console.log(`known ${line}`);
 if (dumping) writeFileSync(process.env.INVERSE_DUMP!, parts.flatMap((p) => p.dumped).sort().join('\n') + '\n');
 if (rose.length) console.log(`\nmore round trips than the baseline don't come back: ${rose.join('; ')}`);
 if (baseline && !sameCorpus) console.log('\nthe corpus changed since the baseline (the spec): its counts are not held to it; INVERSE_UPDATE=1 records them');

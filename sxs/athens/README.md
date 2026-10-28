@@ -19,10 +19,11 @@ From Athens's help page (its table in the bundle, `mod` Control):
 | `outdent` | Shift+Tab ("Unindent selected block") |
 | `moveSubtreeUp` | *missing*: blocks move by drag and drop only (below); its tests are skipped |
 | `moveSubtreeDown` | *missing*, as `moveSubtreeUp` |
+| `move ②` | the mouse | a block dragged by its bullet, dropped where its drop line is (`athensDrop`, below) |
 | `deleteContentBackward` | Backspace |
 | `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Shift+Home, Backspace |
-| `deleteSubtree` | Shift+Up on the block's first line (selects it: `textarea_keydown.cljs`), Backspace (deletes the selected blocks, children and all: `listeners.cljs`); after it no block is edited: the outline alone is judged (`noCaretAfter`, since 2026-10-25). |
+| `deleteSubtree` | Shift+Up on the block's first line (selects it: `textarea_keydown.cljs`), Backspace (deletes the selected blocks, children and all: `listeners.cljs`); after it no block is edited: the outline alone is judged (`noCaretAfter`). |
 | `duplicateSubtree` | *missing* (no command): its tests are skipped |
 | `pasteStructured` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V ("Paste without formatting") |
@@ -56,6 +57,34 @@ Other shortcuts:
 | Toggle Search | Ctrl+K | |
 | Toggle Left Sidebar, Right Sidebar | Ctrl+\\, Ctrl+Shift+\\ | |
 | Open Node in Sidebar | Shift+click | |
+
+## Drag and drop
+
+[`drag.md`](../../spec/drag.md), played with the real mouse (`athensDrop` in [`driver.ts`](driver.ts),
+[`../lib/drag.ts`](../lib/drag.ts)), aimed where Athens's own drag puts each place (its block's
+`on-drag-over` and `on-drop`, read in the bundle):
+
+- **HTML5 drag and drop**, from a block's bullet (its anchor, `draggable`), which Playwright's mouse
+  plays in Chromium. The place is read off the block whose container (its subtree's box) is
+  innermost under the pointer: its upper half is before it; its lower half after it, left of 50 px
+  from its left, and right of that its first child, where it has none (or is folded). So after a
+  block is its container's bottom, left of its children (a level is 32 px); first under a parent the
+  top of its first child, or a childless parent's lower half, right. Over the block dragged nothing
+  moves (its own place).
+- **A drop moves the blocks there** as ourus does (`Drag1`, `Drag2`, `Drag3`, `Drag8`, `Drag13` agree,
+  the outline alone judged: below), checked besides by hand on places no case draws (out past a
+  parent, after a nested block with children, down past siblings, first child before another).
+- **No caret after a drop**: editing ends as the drag starts (the bullet takes the focus), and no
+  block is edited after it. The outline alone is judged (`noCaretAfter`); where typing follows
+  (`scenarios.md › Scenario8b`, `Scenario8c`) the example is skipped, its drop landing as ourus's
+  does (played apart).
+- **A heading keeps its `#`s**: a heading is text in its block, so a drop re-levels nothing (`Drag15`:
+  `### D` / `#### E` after `## B`, ourus's `## D` / `### E`; `Drag16`).
+- **It drags the block pressed, or the selected blocks whatever is pressed**: a press on one of them
+  moves them all (Drag4, Drag20 land as ourus's, the selection gone: `caret`), and so does a press on
+  another block, which stays where it is (`a`, `b` selected, `c` pressed: nothing moves; Drag5,
+  Drag5b disagree). The driver selects blocks with Shift+Up on the first's first line, then
+  Shift+Down.
 
 ## Reaching the graph
 
@@ -127,6 +156,10 @@ examples skipped for a value declared disagree when played, those of the value a
    Backspace26`: `┃para` and the page is empty). For a page's first block, the block before it is
    the page (`db/prev-block-uid`), and `:backspace/delete-merge-block` merges the text into it: the page
    has a title and no string, so the text goes nowhere, the title unchanged (measured).
+2. **A block dropped into its own subtree leaves the page**, with its children (`- a⏎  - b⏎- c`, `a`
+   dropped as `b`'s child: `- c`). The drag skips a target inside `.dragging`, but the block dragged
+   is `.is-dragging`, so nothing is skipped but the block itself, and `:block/move` makes a cycle.
+   Unplayed: ourus refuses it (`drag.md › Drag12`), and the case has nothing to compare.
 
 ## Quirks
 

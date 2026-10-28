@@ -64,3 +64,29 @@ test('a replaced text brings its own placeholders, the ones that hold', () => {
   assert.equal(next.text, '- a\n- \n- b');
   assert.deepEqual(kept(next), ['empty-node@6'], 'the one at the end of `- b` expires; the old one is gone');
 });
+
+test('withConfig: a writer\'s option shares the snapshot\'s outline; a reading option reads it again, ids carried; a flavor parses anew', () => {
+  const doc = OurusDoc.parse('- a\n  - b\n\n> q\n>\n> r\n', { marks: [] });
+  const ids = (d: OurusDoc): string[] => {
+    const out: string[] = [];
+    const visit = (n: ReturnType<OurusDoc['node']> & object): void => {
+      for (const c of n.children) {
+        out.push(`${c.kind}#${c.id}`);
+        visit(c);
+      }
+    };
+    visit(d.rootNode);
+    return out;
+  };
+  const tabbed = doc.withConfig({ indentUnit: 'tab' });
+  assert.equal(tabbed.config.indentUnit, 'tab');
+  assert.equal(tabbed.root, doc.root, 'the same outline, its ids and all');
+  assert.equal(tabbed.mdTree, doc.mdTree);
+  const atoms = doc.withConfig({ quotes: 'atom' });
+  assert.deepEqual(ids(atoms).map((n) => n.replace(/#\d+$/, '')), ids(OurusDoc.parse(doc.text, { config: { quotes: 'atom' } })).map((n) => n.replace(/#\d+$/, '')), 'read as a parse in that config reads it');
+  assert.deepEqual(ids(atoms).slice(0, 2), ids(doc).slice(0, 2), 'the items keep their ids');
+  assert.equal(atoms.mdTree, doc.mdTree, 'from the same parse');
+  const obsidian = doc.withConfig({ flavor: 'obsidian' });
+  assert.equal(obsidian.config.flavor, 'obsidian');
+  assert.deepEqual(ids(obsidian), ids(OurusDoc.parse(doc.text, { config: { flavor: 'obsidian' } })));
+});

@@ -27,8 +27,9 @@
 
 import type { Page } from 'playwright-core';
 import type { Config } from '../../src/config.ts';
-import type { Driver } from '../lib/driver.ts';
-import { runsAsMarkdown, type Block, type Outline, type Run } from '../lib/block.ts';
+import type { Driver, Drop } from '../lib/driver.ts';
+import { runsAsMarkdown, Unsupported, type Block, type Outline, type Run } from '../lib/block.ts';
+import { gesture } from '../lib/drag.ts';
 
 const MOTIONS: Record<string, string> = {
   CharLeft: 'ArrowLeft',
@@ -111,6 +112,13 @@ const freeLevel = (b: Block): number => (b.free ? (/^(?:\d{1,9}\. )?(?:\[[ xX]\]
  * shows no bullet only as the document's child (its `hideBulletsInDoc`), so every free block is one.
  * `own` is the way back.
  */
+/** The last block of a block's subtree. */
+function subtreeEnd(blocks: readonly Block[], i: number): number {
+  let j = i;
+  while (j + 1 < blocks.length && blocks[j + 1]!.depth > blocks[i]!.depth) j++;
+  return j;
+}
+
 export function lift(o: Outline): Outline {
   // the free blocks the blocks so far are under, by depth
   const path: Block[] = [];
@@ -182,6 +190,8 @@ export function remnoteDriver(setup: Setup): Driver {
     ...(setup.bulletless && { freeForm: true }),
     // after deleting a rem no rem is edited, often (its runs: DeleteSubtree3, 4)
     noCaretAfter: ['deleteSubtree'],
+    // its `load` selects rems whole, as `read` reports them
+    selectsBlocks: true,
     keys: {
       enter: 'Enter',
       shiftEnter: 'Shift+Enter',
@@ -193,8 +203,6 @@ export function remnoteDriver(setup: Setup): Driver {
       moveSubtreeUp: 'Alt+ArrowUp',
       moveSubtreeDown: 'Alt+ArrowDown',
       deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
-      // "Delete Bullet"
-      deleteSubtree: 'Control+Shift+Alt+Backspace',
       copy: 'Control+c',
       cut: 'Control+x',
       paste: 'Control+v',
@@ -203,7 +211,7 @@ export function remnoteDriver(setup: Setup): Driver {
       redo: 'Control+y',
       ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
     },
-    emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd'],
+    emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd', 'deleteSubtree'],
     // headings and to-dos are a rem's attributes, with no boundary in its text; a code rem's fences are
     // no text either; a quote (`> q`) not mapped to RemNote's quote yet
     refuses: ['markup-heading', 'markup-task', 'markup-fence', 'quote'],
@@ -234,6 +242,7 @@ export function remnoteDriver(setup: Setup): Driver {
       ...(setup.bulletless ? { enterOnEmptyItem: 'exit' as const, listParent: 'container' as const, listMoves: 'item' as const } : {}),
     },
     idle: { busy: `window.getNumOngoingWriteGuarantees?.() > 0` },
+    drops: ['move'],
     holds(doc) {
       const o = doc as Outline;
       if (setup.bulletless) {
@@ -301,10 +310,17 @@ export function remnoteDriver(setup: Setup): Driver {
     },
 
     async load(page: Page, doc) {
+      // (what the last test left open closed first: a key typed on a selection of rems, after a drop,
+      // is a shortcut of the selection's, and a menu it opens takes the caret this load places)
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('Escape');
       const o = setup.bulletless ? lift(doc as Outline) : (doc as Outline);
       const items = o.blocks.map((b) => toItem(b.depth, b.text, !!b.free));
       const local = (p: number, it: (typeof items)[number]): number => p - it.prefix - (it.cut !== undefined && p > it.cut ? 1 : 0);
-      const sel = o.sel && { block: o.sel.block, anchor: local(o.sel.anchor, items[o.sel.block]!), head: local(o.sel.head, items[o.sel.block]!) };
+      // a selection of rems: the caret at the first one's start, then Shift+Down past the last one's
+      // subtree, ourus's (without bullets, its rems are the last one's siblings) (`selectsBlocks`)
+      const selected = !o.sel && o.selected?.length ? o.selected : null;
+      const sel = o.sel ? { block: o.sel.block, anchor: local(o.sel.anchor, items[o.sel.block]!), head: local(o.sel.head, items[o.sel.block]!) } : selected && { block: selected[0]!, anchor: 0, head: 0 };
       await page.evaluate(
         async ({ items, sel, bulletless }) => {
           const w = window as any;
@@ -379,6 +395,15 @@ export function remnoteDriver(setup: Setup): Driver {
         },
         { items, sel, bulletless: !!setup.bulletless },
       );
+      if (!selected) return;
+      const nested = (doc as Outline).blocks;
+      const last = subtreeEnd(nested, selected[selected.length - 1]!);
+      const reached = async (): Promise<number> => {
+        await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 }));
+        const got = (await this.read(page)) as Outline;
+        return Math.max(-1, ...(got.selected ?? []).map((i) => subtreeEnd(got.blocks, i)));
+      };
+      for (let k = 0; k <= nested.length + nested[selected[0]!]!.text.split('\n').length && (await reached()) < last; k++) await page.keyboard.press('Shift+ArrowDown');
     },
 
     async read(page: Page) {
@@ -438,10 +463,20 @@ export function remnoteDriver(setup: Setup): Driver {
         sel = { block: raw.sel.block, anchor: at(raw.sel.anchor), head: at(raw.sel.head) };
       }
       const got: Outline = { blocks, sel, ...(raw.selected.length && { selected: raw.selected }) };
-      return setup.bulletless ? own(got, this.behaves?.listParent) : got;
+      if (!setup.bulletless) return got;
+      // (without bullets, a selection's rems the topmost of ourus's nesting)
+      const owned = own(got, this.behaves?.listParent);
+      const selected = owned.selected?.filter((i) => !owned.selected!.some((j) => j < i && subtreeEnd(owned.blocks, j) >= i));
+      return { ...owned, ...(selected && { selected }) };
     },
 
     async act(page: Page, action: string, settle: () => Promise<void>) {
+      // deleting a subtree: "Delete Bullet" on the rem being edited; rems selected, Backspace (the
+      // shortcut leaves a selection as it is)
+      if (action === 'deleteSubtree') {
+        await page.keyboard.press(((await this.read(page)) as Outline).selected?.length ? 'Backspace' : 'Control+Shift+Alt+Backspace');
+        return settle();
+      }
       // RemNote has no key for the document's ends: Up (Down) until the caret is on the first rem's first
       // line (the last rem's last), then Home (End). Up from the first rem goes to the document's title, no
       // rem of the test. With Shift, a caret crossing a rem's edge makes a selection of rems, as a user's
@@ -466,8 +501,120 @@ export function remnoteDriver(setup: Setup): Driver {
       await page.keyboard.press(`${shift}${up ? 'Home' : 'End'}`);
       await settle();
     },
+
+    async drop(page: Page, drop: Drop, settle: () => Promise<void>) {
+      await remnoteDrop(page, drop, settle, (await this.read(page)) as Outline);
+    },
   };
 }
 
 // documents without bullets, RemNote's free form; with bullets, ../remnote-bl/
 export const driver = remnoteDriver({ shortId: 'RN', longId: 'remnote', displayName: 'RemNote (nbl)', bulletless: true });
+
+/** Where RemNote's drop regions for a rem are (`getRectsInfoForDropRegion`), aimed at: each null where the rem has none. */
+interface Regions {
+  depth: number;
+  bullet: { x: number; y: number } | null;
+  above: { x: number; y: number };
+  below: { x: number; y: number };
+  child: { x: number; y: number };
+  side: { x: number; y: number } | null;
+}
+
+/**
+ * A drop in RemNote (`startDragging`, `onBulletPointerLeave` and its drop regions in its bundle): the
+ * pressed rem's bullet held, left (the drag starts as the pointer leaves the bullet), moved to the drop
+ * region of the place, and released (the region is the one the release is in, of the smallest rem
+ * that holds it). Each rem's row, three pixels taller above and fourteen wider at the left, splits in
+ * halves: the top half drops above it; the bottom half, its first 84 pixels below it (above it, where
+ * it has children), past them as its first child; beside its children, their bottom half drops below
+ * it. A place is a rem's region: below the rem it goes after, among the rem's siblings; else above the
+ * rem it goes before at the top, or as its parent's first child. It drags the rem pressed, or the
+ * selection's rems where it is one of them (a drop of the selection presses its first), and a rem
+ * without a bullet it doesn't.
+ * Without bullets, ourus's place is a rem's: under the nearest item it is in, after the last of that
+ * item's rems before it.
+ */
+async function remnoteDrop(page: Page, drop: Drop, settle: () => Promise<void>, outline: Outline): Promise<void> {
+  const press = drop.press ?? drop.rows[0]!;
+  const rems = await page.evaluate(async () => {
+    const w = window as any;
+    const c = [...Object.values(w.__ourusSxsTrees)].flatMap((t: any) => (Array.isArray(t) ? t : [t])).map((t: any) => t?.controller).find((c: any) => c?.rootRem?._id === w.__ourusSxsDoc);
+    const m = c.hierarchyEditor.mounterModule;
+    // the rems in document order, as `read` walks them
+    const all: { rem: any; depth: number }[] = [];
+    const walk = async (rem: any, depth: number) => {
+      for (const r of await rem.childrenRemAsync()) {
+        all.push({ rem: r, depth });
+        await walk(r, depth + 1);
+      }
+    };
+    await walk(w.Rem(w.CURRENT_KNOWLEDGE_BASE).findOne(w.__ourusSxsDoc), 0);
+    return all.map(({ rem, depth }): Regions | null => {
+      const node = c.nodesAsList.find((n: any) => n.nodeType === 'REM' && n.rem?._id === rem._id);
+      const content = node && m.nodeIdToContentDiv.get(node._id);
+      const container = node && m.nodeIdToContainerDiv.get(node._id);
+      if (!content || !container) return null;
+      const box = container.getBoundingClientRect();
+      const row = content.getBoundingClientRect();
+      // (its regions: the row from 3 pixels above the rem to its children, 14 pixels left of it; its
+      // children's, 23 pixels in; each region aimed at its middle)
+      const left = box.left - 14;
+      const top = box.top - 3;
+      const mid = (top + row.bottom) / 2;
+      const split = left + 84;
+      const bottom = box.bottom + 3;
+      const side = (row.bottom + bottom) / 2;
+      const dot = content.querySelector('[data-test="Rem Bullet"]')?.getBoundingClientRect();
+      return {
+        depth,
+        bullet: dot && dot.width ? { x: dot.left + dot.width / 2, y: dot.top + dot.height / 2 } : null,
+        above: { x: left + 42, y: (top + mid) / 2 },
+        below: { x: left + 42, y: (mid + row.bottom) / 2 },
+        child: { x: split + Math.min(40, (box.right - split) / 2), y: (mid + row.bottom) / 2 },
+        side: box.bottom > row.bottom ? { x: left + 23 / 2, y: (side + bottom) / 2 } : null,
+      };
+    });
+  });
+  const { blocks } = outline;
+  if (rems.length !== blocks.length) throw new Error(`the page has ${rems.length} rems, its outline ${blocks.length} blocks`);
+  const regions = rems.map((r, i) => {
+    if (!r) throw new Error(`rem ${i} isn't on screen`);
+    return r;
+  });
+  const pressed = regions[press]!;
+  if (!pressed.bullet) throw new Unsupported("the pressed rem has no bullet: RemNote drags a rem by its bullet");
+  // (past a block's subtree, in an outline's depths; a block's parent)
+  const end = (i: number, depth: (j: number) => number): number => {
+    let j = i + 1;
+    while (j < blocks.length && depth(j) > depth(i)) j++;
+    return j;
+  };
+  const parent = (i: number, depth: (j: number) => number): number | 'root' => {
+    for (let j = i - 1; j >= 0; j--) if (depth(j) < depth(i)) return j;
+    return 'root';
+  };
+  const ours = (j: number): number => blocks[j]!.depth;
+  const theirs = (j: number): number => regions[j]!.depth;
+  const dragged = (j: number): boolean => drop.rows.some((r) => j >= r && j < end(r, theirs));
+  // the place as rems: under the nearest item (a rem without a bullet holds none), after the last of its
+  // rems before where ourus's place is
+  let under = drop.to.parent;
+  while (under !== 'root' && blocks[under]!.free) under = parent(under, ours);
+  const at = drop.to.after !== null ? end(drop.to.after, ours) : drop.to.parent === 'root' ? 0 : drop.to.parent + 1;
+  let after: number | null = null;
+  for (let j = under === 'root' ? 0 : under + 1; j < at; j++) if (!dragged(j) && parent(j, theirs) === under) after = j;
+  let to: { x: number; y: number };
+  if (after !== null) to = regions[after]!.side ?? regions[after]!.below;
+  else if (under !== 'root') to = regions[under]!.child;
+  else {
+    const first = regions.findIndex((r, j) => r.depth === 0 && !dragged(j));
+    if (first < 0) throw new Unsupported('no rem to drop above');
+    to = regions[first]!.above;
+  }
+  await gesture(page, pressed.bullet, to, settle);
+  // (the pointer off the rems: left resting where the drop was, it is over the next test's, which
+  // RemNote's pointer handlers take, the caret placed there lost)
+  await page.mouse.move(1, 1);
+  await settle();
+}

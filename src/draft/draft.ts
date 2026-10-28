@@ -1246,8 +1246,13 @@ class Done {
         }
         const upper = this.#ownLines(parent, parent.origin, true);
         const lower = this.#firstLines(first, parent);
-        if (this.#apart(upper, lower, empty)) continue;
-        if (!this.#apart(upper, ['', ...lower], empty)) throw new Refused(`the ${parent.children[0]!.kind} would be read as part of the ${parent.kind}'s text above it`);
+        // (a text with lazy lines, where as the parent holds them they read as more than its paragraph,
+        // `| a |⏎|---|` a table: read by its first line alone, the paragraph it is, which is what what
+        // follows would continue or not)
+        const lazy = parent.text === undefined && !!parent.origin && lazyLines(this.from, parent.origin) && !onePara(upper, this.from.mdTree.flavor);
+        const held = lazy ? upper.slice(0, 1) : upper;
+        if (this.#apart(held, lower, empty)) continue;
+        if (!this.#apart(held, ['', ...lower], empty)) throw new Refused(`the ${parent.children[0]!.kind} would be read as part of the ${parent.kind}'s text above it`);
         parent.gap = 1;
         continue;
       }
@@ -1407,7 +1412,9 @@ class Done {
         const piece = first.prefix.find((p) => p.container.block === block);
         const end = node.kind === 'quote' && piece ? piece.to : first.contentFrom;
         inside = this.#lineIn(first, readIn).slice(0, Math.max(0, end - this.#cut(first, readIn))).replace(/[^>\t ]/g, ' ');
-        if (node.gap > 0 || (n > 1 && this.#trailingGapOf(node, n - 2) > 0)) open.push(inQuote ? (movedPrefix ?? '') + '>' : '');
+        // (in a quote, `>`; past the prefix of where a subtree moved, that prefix, its `>`s the quotes
+        // above it, and a `>` more for one in the subtree)
+        if (node.gap > 0 || (n > 1 && this.#trailingGapOf(node, n - 2) > 0)) open.push(inQuote ? (movedPrefix ?? '') + '>' : (movedPrefix ?? '').replace(/[ \t]+$/, ''));
       } else if ((node.kind === 'item' || node.kind === 'quote') && node instanceof Working && (!node.origin || madeItem)) {
         // one the draft made: its own text after its marker, where a new line in it starts at its content column
         inQuote ||= node.kind === 'quote';
@@ -1427,6 +1434,7 @@ class Done {
       const unwrapped = node instanceof Working && !!node.source && node.kind !== node.source.kind && (node.source.kind === 'item' || node.source.kind === 'quote');
       if (movedPrefix === null && next && origin && (!isDescendant(next, origin) || unwrapped || madeItem)) {
         movedPrefix = inside;
+        inQuote = false;
         readIn = containerIn(next);
         dedent = /^ */.exec(this.#readLines(readIn, next.startLine, next.startLine)[0]!)![0].length;
       }
@@ -1674,7 +1682,9 @@ class Done {
       if (origin && containerId(origin.parent) !== this.#containerOf(parent)) return 'placed';
       return origin && onItemsLine(origin) && (k > 0 || (parent.kind === 'item' && !!this.io.textOf(parent) && !!parent.origin && !this.from.textOf(parent.origin))) ? 'rewritten' : null;
     };
-    const needs = (text: OutlineNodeText | null, origin: OutlineNode | null, leaves: boolean): text is ProseText => text instanceof ProseText && text.type === 'paragraph' && !!origin && this.#unmovable(origin, leaves);
+    // (a quote of one paragraph, `quotes: text`, is that paragraph, its lines framed; a callout's title
+    // is a paragraph's lines too)
+    const needs = (text: OutlineNodeText | null, origin: OutlineNode | null, leaves: boolean): text is ProseText => text instanceof ProseText && (text.type === 'paragraph' || text.type === 'quote' || text.type === 'title') && !!origin && this.#unmovable(origin, leaves);
     // (the read nodes under one, by where they are in `from`: whether one of them is such a paragraph)
     const holds = (origin: OutlineNode, leaves: boolean): boolean => origin.children.some((c) => needs(this.from.textOf(c), c, leaves) || holds(c, leaves));
     // (`moved`: in a subtree that moves, whether it leaves its container, its lines written past
@@ -2164,4 +2174,16 @@ function isDescendant(node: OutlineNode, ancestor: OutlineNode): boolean {
 function formKey(marker: string): string {
   const ordered = /^\d{1,9}([.)])$/.exec(marker);
   return ordered ? `ordered ${ordered[1]}` : `bullet ${marker}`;
+}
+
+/** Whether `node`'s own text has a lazy line, past its first. */
+function lazyLines(doc: OurusDoc, node: OutlineNode): boolean {
+  for (let i = node.textFirstLine + 1; i <= node.textLastLine; i++) if (doc.mdTree.line(i).lazy) return true;
+  return false;
+}
+
+/** Whether `lines` read alone as one paragraph, every line of it. */
+function onePara(lines: readonly string[], flavor: MdTree['flavor']): boolean {
+  const root = MdTree.parse(lines.join('\n'), flavor).root;
+  return root.children.length === 1 && root.children[0]!.type === 'paragraph' && root.children[0]!.lines === lines.length;
 }

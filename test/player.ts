@@ -9,9 +9,12 @@
 // keys does), and caret motions named as CodeMirror's commands are.
 
 import { executeCommand, type Command, type CommandResult, type Selection } from '../src/commands/index.ts';
+import { CommandContext } from '../src/commands/context.ts';
+import { dragRun, placeAtSeam } from '../src/commands/drag.ts';
 import type { OurusDoc } from '../src/doc/index.ts';
 import { settlePlaceholders } from '../src/draft/index.ts';
 import { advanceColumns, applyChanges, dominantEnding, type ChangeSpec, type MarkSet } from '../src/text/index.ts';
+import { labelNumber, type DropLine } from './drawing.ts';
 import type { Clipboard } from './specfile.ts';
 
 const COMMANDS = new Set<string>([
@@ -30,6 +33,7 @@ const COMMANDS = new Set<string>([
   'duplicateSubtree',
   'copy',
   'cut',
+  'deleteByDrag',
 ]);
 
 /** The command an action names: `paste` takes the clipboard's formats, plain paste its text. */
@@ -67,6 +71,12 @@ const MOTIONS: Record<string, Motion> = {
   DocEnd: (doc) => doc.text.length,
 };
 
+/** A drop (spec/drag.md): `move`, the selection's nodes, or `move ②`, a press on a node's mark; `pasteAt`, the clipboard dragged in. */
+const DROP = /^(?:move(?: ([\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]))?|pasteAt)$/u;
+
+/** A pickup held for a step to check (spec/drag.md): `drag`, the selection's nodes, or `drag ②`. */
+const PICKUP = /^drag(?: ([\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]))?$/u;
+
 const isMotion = (action: string): boolean => /^(?:cursor|select)/.test(action) && action.replace(/^(?:cursor|select)/, '') in MOTIONS;
 
 /**
@@ -79,7 +89,10 @@ const HOST_ACTIONS = new Set<string>(['undo', 'redo']);
 /** Whether an action is an ourus command (the rest are typing, motions and the host's undo). */
 export const isCommand = (token: string): boolean => COMMANDS.has(token);
 
-export const isAction = (token: string): boolean => /^"[^"]*"$/.test(token) || COMMANDS.has(token) || HOST_ACTIONS.has(token) || isMotion(token);
+export const isAction = (token: string): boolean => /^"[^"]*"$/.test(token) || COMMANDS.has(token) || HOST_ACTIONS.has(token) || isMotion(token) || DROP.test(token) || PICKUP.test(token);
+
+/** Whether an action is a drop, which plays at the start's drop line. */
+export const isDrop = (token: string): boolean => DROP.test(token);
 
 export interface Played {
   doc: OurusDoc;
@@ -93,6 +106,13 @@ export interface Played {
   /** The host's history: the document (placeholders included) and selection before each step that changed the text. */
   undone?: Snapshot[];
   redone?: Snapshot[];
+  /** Where the start's drop line drops, until a drop plays it. */
+  drop?: DropLine | null;
+  /** The node labels bound so far (`①`'s number to its node's id), for the actions that name one. */
+  labels?: ReadonlyMap<number, number>;
+  /** The host's view, for a drag: the nodes whose children it hides, and the one it is zoomed into. */
+  folded?: readonly number[];
+  zoom?: number;
 }
 
 /** A state the host's history returns to: the text with its placeholders, and the selection. */
@@ -141,8 +161,6 @@ function history(state: Played, action: 'undo' | 'redo'): Played {
 function step(state: Played, action: string): Played {
   const { doc, selection } = state;
   const text = doc.text;
-  const from = Math.min(selection.anchor, selection.head);
-  const to = Math.max(selection.anchor, selection.head);
   if (action.startsWith('"')) return typeText(state, action.slice(1, -1));
   if (isMotion(action)) {
     const extend = action.startsWith('select');
@@ -160,8 +178,55 @@ function step(state: Played, action: string): Played {
     }
     return { ...state, goal, selection: { anchor: extend ? selection.anchor : head, head } };
   }
+  const dropped = DROP.exec(action);
+  if (dropped) return { ...run(state, action === 'pasteAt' ? pasteAtCommand(state) : dropCommand(state, dropped[1])), drop: null };
+  const picked = PICKUP.exec(action);
+  if (picked) {
+    const pressed = pressedOf(state, picked[1]);
+    return run(state, { type: 'drag', ...(pressed !== undefined && { pressed }), ...(state.folded && { folded: state.folded }), ...(state.zoom !== undefined && { zoom: state.zoom }) });
+  }
   if (!COMMANDS.has(action)) throw new Error(`unknown action "${action}"`);
-  const command = commandOf(action, state.clipboard);
+  return run(state, commandOf(action, state.clipboard));
+}
+
+/**
+ * A drop as the user makes it (spec/drag.md): the run picked up (`pressed`, a label: the cover rule;
+ * else the selection's nodes), then `moveSubtreeTo` the place the start's drop line names. A refused
+ * pickup is the drop's result.
+ */
+function dropCommand(state: Played, label: string | undefined): Command | CommandResult {
+  if (!state.drop) throw new Error('a drop with no drop line (`▸`) in the start, or a second drop: a case drops once');
+  const pressed = pressedOf(state, label);
+  const run = dragRun(new CommandContext(state.doc, state.selection), pressed);
+  if (!Array.isArray(run)) return run;
+  const to = placeAtSeam(state.doc, run, state.drop.line, state.drop.depth, new Set(state.folded));
+  if (typeof to === 'string') throw new Error(`the drop line: ${to}`);
+  return pressed === undefined ? { type: 'moveSubtreeTo', to } : { type: 'moveSubtreeTo', nodes: run.map((n) => n.id), to };
+}
+
+/** A drop from outside: the clipboard, at the place the start's drop line names. */
+function pasteAtCommand(state: Played): Command {
+  if (!state.drop) throw new Error('a drop with no drop line (`▸`) in the start, or a second drop: a case drops once');
+  const at = placeAtSeam(state.doc, null, state.drop.line, state.drop.depth, new Set(state.folded));
+  if (typeof at === 'string') throw new Error(`the drop line: ${at}`);
+  return { type: 'pasteAt', at, clipboard: state.clipboard };
+}
+
+/** The node a label names, as pressed; none without a label. */
+function pressedOf(state: Played, label: string | undefined): number | undefined {
+  if (label === undefined) return undefined;
+  const pressed = state.labels?.get(labelNumber(label));
+  if (pressed === undefined) throw new Error(`${label} labels no node in the start`);
+  return pressed;
+}
+
+/** `command` run as the host runs it: applied, refused, or the host's default. */
+function run(state: Played, command: Command | CommandResult): Played {
+  if ('status' in command) return { ...state, last: command };
+  const { doc, selection } = state;
+  const text = doc.text;
+  const from = Math.min(selection.anchor, selection.head);
+  const to = Math.max(selection.anchor, selection.head);
   const type = command.type;
   const last = executeCommand(doc, command, selection);
   if (last.status === 'applied') {
@@ -184,6 +249,9 @@ function step(state: Played, action: string): Played {
     case 'pastePlain':
       return { ...edit(state, { from, to, insert: state.clipboard['text/plain'] ?? '' }), last };
     // a textarea's: the selected text, and nothing at a caret (CodeMirror would take the line)
+    // a text drag's first half: the selected text, as the host deletes it
+    case 'deleteByDrag':
+      return { ...edit(state, { from, to, insert: '' }), last };
     case 'copy':
     case 'cut': {
       if (from === to) return { ...state, last };

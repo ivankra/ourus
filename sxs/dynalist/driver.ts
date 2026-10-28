@@ -12,8 +12,9 @@
 // - The model follows the editor as it types: what is read is what Dynalist holds.
 
 import type { Page } from 'playwright-core';
-import type { Driver } from '../lib/driver.ts';
+import type { Driver, Drop } from '../lib/driver.ts';
 import { italicsAsMarkdown, type Outline } from '../lib/block.ts';
+import { gesture } from '../lib/drag.ts';
 
 const MOTIONS: Record<string, string> = {
   CharLeft: 'ArrowLeft',
@@ -114,6 +115,10 @@ export const driver: Driver = {
   // item's text, with no editor of their own: Enter in them splits the item (`enter-in-fence`)
   refuses: ['markup-fence', 'enter-in-fence'],
   ordered: true,
+  // a drop leaves the dropped item selected as an item, the caret gone (README.md, "Drag and drop")
+  noCaretAfter: ['move'],
+  // its `load` selects items as items, as `read` reports them
+  selectsBlocks: true,
   // a typed fence is left open (Backtick2, Backtick12, Backtick15)
   behaves: {
     // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
@@ -184,7 +189,9 @@ export const driver: Driver = {
     const o = doc as Outline;
     const items = o.blocks.map((b) => toItem(b.depth, b.text));
     const local = (p: number, it: (typeof items)[number]): number => p - it.prefix - (it.cut !== undefined && p > it.cut ? 1 : 0);
-    const sel = o.sel && { block: o.sel.block, anchor: local(o.sel.anchor, items[o.sel.block]!), head: local(o.sel.head, items[o.sel.block]!) };
+    // a selection of items: the caret at the first one's start, then Shift+Down (`selectsBlocks`)
+    const selected = !o.sel && o.selected?.length ? o.selected : null;
+    const sel = o.sel ? { block: o.sel.block, anchor: local(o.sel.anchor, items[o.sel.block]!), head: local(o.sel.head, items[o.sel.block]!) } : selected && { block: selected[0]!, anchor: 0, head: 0 };
     // a numbered list is its parent's list style (the root's for the top level): `holds` saw to it
     // that a parent's children are all numbered or none
     const numbers = new Set([...siblings(o)].filter(([, list]) => items[list[0]!]!.numbered).map(([parent]) => parent));
@@ -244,6 +251,14 @@ export const driver: Driver = {
       },
       { items, lists, topNumbered: numbers.has(-1), sel },
     );
+    if (!selected) return;
+    // past the first item's text, Shift+Down selects it as an item, then each next one
+    const last = selected[selected.length - 1]!;
+    const reached = async (): Promise<number> => {
+      await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 }));
+      return Math.max(-1, ...(((await this.read(page)) as Outline).selected ?? []));
+    };
+    for (let k = 0; k <= o.blocks.length + o.blocks[selected[0]!]!.text.split('\n').length && (await reached()) < last; k++) await page.keyboard.press('Shift+ArrowDown');
   },
 
   async read(page: Page) {
@@ -298,4 +313,63 @@ export const driver: Driver = {
     // (its italic `__x__` as Markdown's)
     return italicsAsMarkdown({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) });
   },
+
+  drops: ['move'],
+  drop,
 };
+
+/**
+ * A drop in Dynalist (its `DocumentDragManager`, mouse events, not HTML5's): the pressed item's
+ * bullet held, moved past its threshold, to where `node_drop_location` puts the place, and released.
+ * That reads the pointer's y against the items' rows, the dragged ones left out: the upper half of an
+ * item's line is before it, the lower half of a leaf's after it, the lower half of a parent's before
+ * its first child, the strip of padding under an item's last child after it; x only says "into" a leaf,
+ * past a column 30 pixels and a fifth of its line right of its bullet (`cursor_hit_inner_children`).
+ * It drags the item pressed, or the selection's items where it is one of them (a drop of the
+ * selection presses its first). Where the items already are, a line it refuses as no move keeps the
+ * place last shown, one the way there passed: the pointer goes on the first's own line, where there
+ * is no place, and nothing moves.
+ */
+async function drop(page: Page, drop: Drop, settle: () => Promise<void>): Promise<void> {
+  const at = await page.evaluate(({ press, rows, to }) => {
+    const ad = (window as any).DYNALIST.app.app_document;
+    // the items in document order, as `read` has them
+    const flat: any[] = [];
+    const walk = (node: any) => node.children.each((c: any) => (flat.push(c), walk(c)));
+    const root = ad.document.get_node_collection().get_root();
+    walk(root);
+    const pressed = flat[press ?? rows[0]!];
+    const dragged = new Set(rows.map((r) => flat[r]));
+    const first = flat[rows[0]!];
+    const parent = to.parent === 'root' ? root : flat[to.parent];
+    const after = to.after === null ? null : flat[to.after];
+    const dom = (n: any) => ad.ui.get_node_state(n).dom;
+    const box = (el: HTMLElement) => el.getBoundingClientRect();
+    const bullet = box(dom(pressed).bullet_el);
+    const from = { x: bullet.left + bullet.width / 2, y: bullet.top + bullet.height / 2 };
+    // a point on an item's line, `f` of the way down, at its bullet's column
+    const on = (n: any, f: number) => {
+      const self = box(dom(n).self_el);
+      const b = box(dom(n).bullet_el);
+      return { x: b.left + b.width / 2, y: self.top + self.height * f };
+    };
+    const kids = (n: any) => n.children.array().filter((c: any) => !dragged.has(c));
+    // where they are: on the first's own line
+    if (first.get_parent() === parent && (first.prev() ?? null) === after) return { from, to: on(first, 0.5) };
+    if (after === null) {
+      const top = kids(parent)[0];
+      if (top) return { from, to: on(top, 0.25) };
+      // into a leaf: its line's lower half, past its "inner" column (its line starts 100 pixels left of its bullet)
+      const self = box(dom(parent).self_el);
+      return { from, to: { x: self.left + 100 + 0.2 * (self.width - 100) + 30 + 40, y: self.top + self.height * 0.75 } };
+    }
+    const next = kids(parent)[kids(parent).indexOf(after) + 1];
+    if (next) return { from, to: on(next, 0.25) };
+    if (!after.children.length()) return { from, to: on(after, 0.75) };
+    // after a parent, the last of its own parent's: the padding under its children
+    const outer = box(dom(after).node_outer_el);
+    const children = box(dom(after).children_el);
+    return { from, to: { x: on(after, 0.5).x, y: (children.bottom + outer.bottom) / 2 } };
+  }, drop);
+  await gesture(page, at.from, at.to, settle);
+}

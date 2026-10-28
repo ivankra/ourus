@@ -18,8 +18,9 @@
 // holds is beside it, as its Markdown reads, then owned as `listParent` says (`asMarkdownReads`).
 
 import type { Page } from 'playwright-core';
-import type { Driver } from '../lib/driver.ts';
-import { asMarkdownReads, liftOwned, runsAsMarkdown, type Block, type Outline, type Run, type Sel } from '../lib/block.ts';
+import type { Driver, Drop } from '../lib/driver.ts';
+import { asMarkdownReads, liftOwned, runsAsMarkdown, Unsupported, type Block, type Outline, type Run, type Sel } from '../lib/block.ts';
+import { gesture, type Point } from '../lib/drag.ts';
 
 /** BlockNote's keys for the spec's motions; the `select…` motions add Shift. */
 const MOTIONS: Record<string, string> = {
@@ -156,7 +157,7 @@ interface PageBlock {
 }
 
 /** In the page: the blocks, and the caret, by block and offset in its content. */
-function readPage(): { blocks: PageBlock[]; sel: Sel | null } {
+function readPage(): { blocks: PageBlock[]; sel: Sel | null; selected: number[] } {
   const w = window as any;
   const view = w.__sxsView;
   const flat: (PageBlock & { id: string })[] = [];
@@ -216,11 +217,28 @@ function readPage(): { blocks: PageBlock[]; sel: Sel | null } {
   const a = view.hasFocus() ? at(anchor) : null;
   const h = view.hasFocus() ? at(head) : null;
   const sel = a && h && a.block === h.block ? { block: a.block, anchor: a.offset, head: h.offset } : null;
-  return { blocks: flat.map(({ id, ...b }) => b), sel };
+  // blocks selected whole: a node selection's (a drop's), or a text selection's from a block's content
+  // start to another's end, as the drag takes it (its blocks, all of them, in document order)
+  const selected: number[] = [];
+  const { from, to } = view.state.selection;
+  const type = view.state.selection.toJSON().type;
+  const node = type !== 'text' && type !== 'all';
+  const [f, t] = [at(from), at(to)];
+  const whole = f && t && f.block !== t.block && f.offset === 0 && to === view.state.doc.resolve(to).end();
+  if (view.hasFocus() && (whole || node)) {
+    let k = -1;
+    view.state.doc.descendants((n: any, pos: number) => {
+      if (n.type.name !== 'blockContainer') return true;
+      k++;
+      if (whole ? k >= f!.block && k <= t!.block : pos >= from && pos + n.nodeSize <= to) selected.push(k);
+      return true;
+    });
+  }
+  return { blocks: flat.map(({ id, ...b }) => b), sel, selected };
 }
 
 /** In the page: the outline loaded, the history made empty, the caret placed (block, offsets past its prefix). */
-function loadPage({ blocks, at }: { blocks: BnBlock[]; at: { block: number; anchor: number; head: number } | null }): string {
+function loadPage({ blocks, at }: { blocks: BnBlock[]; at: { block: number; anchor: number; head: number; to?: number } | null }): string {
   const w = window as any;
   const bn = w.__sxsBn;
   const view = w.__sxsView;
@@ -231,18 +249,94 @@ function loadPage({ blocks, at }: { blocks: BnBlock[]; at: { block: number; anch
     (document.activeElement as HTMLElement | null)?.blur();
     return 'no caret';
   }
-  let n = -1;
-  let content = -1;
+  // each block's content's start, inside its container, and end
+  const contents: { start: number; end: number }[] = [];
   view.state.doc.descendants((node: any, pos: number) => {
-    if (content >= 0) return false;
-    if (node.type.name === 'blockContainer' && ++n === at.block) content = pos + 2; // inside the container, inside its content
-    return content < 0;
+    if (node.type.name === 'blockContainer') contents.push({ start: pos + 2, end: pos + 2 + node.firstChild.content.size });
+    return true;
   });
-  if (content < 0) return `no block ${at.block}`;
+  const content = contents[at.block]?.start;
+  if (content === undefined || (at.to !== undefined && !contents[at.to])) return `no block ${at.block}`;
   const TextSelection = view.state.selection.constructor;
-  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, content + at.anchor, content + at.head)));
+  // (a selection of blocks: from the first's content start to the last's end, `at.to`)
+  const head = at.to !== undefined ? contents[at.to]!.end : content + at.head;
+  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, content + at.anchor, head)));
   view.focus();
   return 'placed';
+}
+
+/**
+ * In the page: where a drop's gesture goes, aimed where ProseMirror's `drop` (its `dropPoint`) puts a
+ * block, else why it has none. It drops beside the block whose text the pointer is over, as its
+ * sibling: before it with the pointer in its text's first half, after it in the second, but before it
+ * always where it has children (the half is of the block with them); x picks no depth, and below the
+ * last block it lands last at the top level. The run's parent in BlockNote is `to.parent`, or for a
+ * paragraph's or a heading's (beside it in BlockNote, `liftOwned`) that block's own; the run goes where
+ * the drop line is, before `seam.below`. So: the start of the first block from there (the dragged
+ * ones skipped) if it is that parent's, else past the end of the parent's last block before there,
+ * childless and with text, else below the document if the parent is its top level.
+ */
+function dropAt({ press, rows, below, parent }: { press: number; rows: readonly number[]; below: number | null; parent: number | 'root' }): { hover: Point; to: Point } | string {
+  const outers = [...document.querySelectorAll<HTMLElement>('.bn-block-outer')];
+  const up = (i: number): number | null => {
+    const p = outers[i]!.parentElement!.closest('.bn-block-outer');
+    return p ? outers.indexOf(p as HTMLElement) : null;
+  };
+  const text = (i: number) => outers[i]!.querySelector('.bn-block-content')!;
+  const free = (i: number): boolean => !/ListItem$/.test(text(i).getAttribute('data-content-type') ?? '');
+  // the dragged: the run's blocks, their children with them
+  const dragged = (i: number): boolean => rows.some((r) => outers[r]!.contains(outers[i]!));
+  const to = parent === 'root' ? null : free(parent) ? up(parent) : parent;
+  let next = below ?? outers.length;
+  while (next < outers.length && dragged(next)) next++;
+  const inline = (i: number) => (outers[i]!.querySelector('.bn-inline-content') ?? text(i)).getBoundingClientRect();
+  const first = inline(press);
+  const hover = { x: first.left + 2, y: first.top + Math.min(first.height / 2, 10) };
+  if (next < outers.length && up(next) === to) {
+    const r = inline(next);
+    return { hover, to: { x: r.left + 1, y: r.top + Math.min(r.height / 2, 10) } };
+  }
+  let prev = next - 1;
+  while (prev >= 0 && (dragged(prev) || up(prev) !== to)) prev--;
+  if (prev < 0) return "as a childless block's first child: BlockNote drops a block beside one, never into it";
+  const childless = outers.slice(prev + 1, next).every((_, k) => dragged(prev + 1 + k));
+  if (to === null && next === outers.length) {
+    const last = outers[0]!.parentElement!.getBoundingClientRect();
+    return { hover, to: { x: outers[0]!.getBoundingClientRect().left + 2, y: last.bottom + 12 } };
+  }
+  if (!childless) return 'after a block with children, last: BlockNote drops there before the block, or in its children';
+  if (!(text(prev).textContent ?? '')) return 'after an empty block, last: BlockNote drops there before it';
+  const r = inline(prev);
+  return { hover, to: { x: text(prev).getBoundingClientRect().right - 4, y: r.bottom - 4 } };
+}
+
+/**
+ * A drop in BlockNote (its side menu's `blockDragStart`, ProseMirror's `drop`): the pressed block
+ * hovered, which shows its side menu, the menu's drag handle measured; the pointer away until the menu
+ * is gone (a menu fading out keeps its handle where the next is drawn, and takes the press); then the
+ * handle held, moved to the place (`dropAt`) and released, Playwright's mouse making Chromium's HTML5
+ * drag of it (`dragstart`, `dragover`, `drop`, `dragend`). It drags the block whose handle is pressed,
+ * with its children, or the blocks a selection across blocks is in where it is one of them, as a
+ * selection of nodes (a drop of the selection presses its first).
+ */
+async function blockNoteDrop(page: Page, drop: Drop, settle: () => Promise<void>): Promise<void> {
+  const press = drop.press ?? drop.rows[0]!;
+  const at = await page.evaluate(dropAt, { press, rows: drop.rows, below: drop.seam.below, parent: drop.to.parent });
+  if (typeof at === 'string') throw new Unsupported(at);
+  await page.mouse.move(at.hover.x, at.hover.y, { steps: 3 });
+  // the menu at the pressed block, drawn by React (not one fading out)
+  const shown = (press: number): Point | null => {
+    const handle = document.querySelector('.bn-side-menu [draggable=true]');
+    if (!handle || !Object.keys(handle).some((k) => k.startsWith('__reactProps$'))) return null;
+    const h = handle.getBoundingClientRect();
+    const b = document.querySelectorAll('.bn-block-outer')[press]!.querySelector('.bn-block-content')!.getBoundingClientRect();
+    const y = h.top + h.height / 2;
+    return y >= b.top && y <= b.bottom ? { x: h.left + h.width / 2, y } : null;
+  };
+  const from = await (await page.waitForFunction(shown, press, { timeout: 5000 })).jsonValue();
+  await page.mouse.move(1, 1);
+  await page.waitForFunction(() => !document.querySelector('.bn-side-menu'), null, { timeout: 5000 });
+  await gesture(page, from!, at.to, settle);
 }
 
 export const driver: Driver = {
@@ -306,6 +400,12 @@ export const driver: Driver = {
   refuses: ['markup-fence'],
   ordered: true,
   holds: (doc) => holds(doc as Outline),
+  // by the side menu's drag handle (`blockNoteDrop`); after a drop its editor is blurred (`blockDragEnd`)
+  drops: ['move'],
+  drop: blockNoteDrop,
+  noCaretAfter: ['move'],
+  // its `load` selects text across whole blocks, which its drag takes as the blocks, as `read` reports them
+  selectsBlocks: true,
 
   async open(page: Page) {
     await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
@@ -328,9 +428,14 @@ export const driver: Driver = {
     const o = doc as Outline;
     if (!(await page.evaluate(find))) throw new Error("BlockNote's editor isn't on the page");
     const at = o.sel && toBlockNote(o.blocks[o.sel.block]!.text, !!o.blocks[o.sel.block]!.free);
+    // a selection of blocks (`selectsBlocks`): text from the first's start to the end of the last's
+    // subtree, which the drag takes as those blocks
+    const selected = !o.sel && o.selected?.length ? o.selected : null;
+    let last = selected?.at(-1);
+    if (last !== undefined) for (const d = o.blocks[last]!.depth; last + 1 < o.blocks.length && o.blocks[last + 1]!.depth > d; ) last++;
     const placed = await page.evaluate(loadPage, {
       blocks: nest(liftOwned(o.blocks)),
-      at: o.sel && at ? { block: o.sel.block, anchor: appOffset(o.sel.anchor, at), head: appOffset(o.sel.head, at) } : null,
+      at: o.sel && at ? { block: o.sel.block, anchor: appOffset(o.sel.anchor, at), head: appOffset(o.sel.head, at) } : selected ? { block: selected[0]!, anchor: 0, head: 0, to: last! } : null,
     });
     if (placed !== 'placed' && placed !== 'no caret') throw new Error(`the caret has no place: ${placed}`);
   },
@@ -349,6 +454,10 @@ export const driver: Driver = {
     // (any block may hold children, a paragraph too: what a free block holds read as its Markdown
     // reads, beside it, then owned as the app's `listParent` says)
     const blocks: Block[] = r.blocks.map(({ depth, free }, i) => ({ depth, text: texts[i]!.text, ...(free && { free: true as const }) }));
-    return { blocks: asMarkdownReads(blocks, driver.behaves?.listParent), sel };
+    const outline = asMarkdownReads(blocks, driver.behaves?.listParent);
+    // (the topmost of the selected, in the outline's nesting)
+    const under = (i: number): boolean => r.selected.some((j) => j < i && outline.slice(j + 1, i + 1).every((b) => b.depth > outline[j]!.depth));
+    const selected = r.selected.filter((i) => !under(i));
+    return { blocks: outline, sel, ...(selected.length && { selected }) };
   },
 };

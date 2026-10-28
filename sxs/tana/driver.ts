@@ -17,8 +17,9 @@
 // - The keys are Tana's on Linux, from its shortcut table.
 
 import type { Page } from 'playwright-core';
-import type { Driver } from '../lib/driver.ts';
-import type { Outline } from '../lib/block.ts';
+import { gesture } from '../lib/drag.ts';
+import type { Driver, Drop } from '../lib/driver.ts';
+import { Unsupported, type Outline } from '../lib/block.ts';
 
 const MOTIONS: Record<string, string> = {
   CharLeft: 'ArrowLeft',
@@ -133,6 +134,10 @@ export const driver: Driver = {
     ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
   },
   emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd'],
+  // a press on a bullet takes the focus from the name being edited, and a drop selects nothing
+  noCaretAfter: ['move'],
+  // its `load` selects nodes whole, as `read` reports them
+  selectsBlocks: true,
   ordered: true,
   // a name is one line of rich text, with nothing of Markdown's blocks but code (a code block, its
   // name the code). A checkbox and a section are a node's attributes, and a code block's fences no
@@ -233,7 +238,9 @@ export const driver: Driver = {
     const items = o.blocks.map((b) => toItem(b.depth, b.text));
     // a caret in the name (its text's offset), or past the first line in the description
     const local = (p: number, it: (typeof items)[number], b: string): number => (it.description !== undefined && p > b.indexOf('\n') ? p - b.indexOf('\n') - 1 : p - it.prefix - (it.cut !== undefined && p > it.cut ? 1 : 0));
-    const sel = o.sel && (() => {
+    // a selection of nodes: the caret at the first one's start, then Escape and Shift+Down (`selectsBlocks`)
+    const selected = !o.sel && o.selected?.length ? o.selected : null;
+    const sel = selected ? { block: selected[0]!, anchor: 0, head: 0, inDescription: false, onCheckbox: false } : o.sel && (() => {
       const b = o.blocks[o.sel!.block]!.text;
       const it = items[o.sel!.block]!;
       const inDescription = it.description !== undefined && Math.min(o.sel!.anchor, o.sel!.head) > b.indexOf('\n');
@@ -351,6 +358,14 @@ export const driver: Driver = {
       },
       { items, sel, home: HOME, SECTION, NUMBERED, LANGUAGE },
     );
+    if (!selected) return;
+    const last = selected[selected.length - 1]!;
+    const reached = async (): Promise<number> => {
+      await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 40, timeout: 3000 }));
+      return Math.max(-1, ...(((await this.read(page)) as Outline).selected ?? []));
+    };
+    for (let k = 0; k < 3 && (await reached()) < 0; k++) await page.keyboard.press('Escape');
+    for (let k = 0; k <= o.blocks.length && (await reached()) < last; k++) await page.keyboard.press('Shift+ArrowDown');
   },
 
   async read(page: Page) {
@@ -440,11 +455,20 @@ export const driver: Driver = {
           };
           sel = { block, anchor: offset(s.anchorNode!, s.anchorOffset), head: offset(s.focusNode!, s.focusOffset) };
         }
-        // nodes selected whole
+        // nodes selected whole, the topmost of them (Tana's has their descendants too); the editor
+        // keeps the focus, on the node the selection's head is on, no caret drawn
         const panel = w.appState.layoutManager.currentPanelUIState?.firstPanel;
         const selectedIds: string[] = (panel?.selectedNodes ?? []).map((n: any) => n?.id ?? n);
-        const selected = selectedIds.map((id) => flat.findIndex((f) => f.id === id)).filter((i) => i >= 0);
-        return { flat, sel, selected };
+        const all = new Set(selectedIds.map((id) => flat.findIndex((f) => f.id === id)).filter((i) => i >= 0));
+        const under = (i: number): boolean => {
+          for (let j = i - 1, d = flat[i]!.depth; j >= 0 && d > 0; j--) if (flat[j]!.depth < d) {
+            if (all.has(j)) return true;
+            d = flat[j]!.depth;
+          }
+          return false;
+        };
+        const selected = [...all].filter((i) => !under(i)).sort((a, b) => a - b);
+        return { flat, sel: selected.length ? null : sel, selected };
       },
       { SECTION, NUMBERED, LANGUAGE },
     );
@@ -461,6 +485,9 @@ export const driver: Driver = {
     }
     return { blocks, sel, ...(raw.selected.length && { selected: raw.selected }) };
   },
+
+  drops: ['move'],
+  drop,
 
   async act(page: Page, action: string, settle: () => Promise<void>) {
     // Tana has no key for the document's ends: Up (Down) until the caret is in the first node (the
@@ -495,3 +522,63 @@ export const driver: Driver = {
     await settle();
   },
 };
+
+/**
+ * A drop in Tana (its list element's drop target, `rm` in its bundle; react-dnd's HTML5 backend, which
+ * Playwright's mouse drives): the pressed node's bullet (`.bulletSide`, draggable) held, moved past
+ * it, to where the place's node takes it, and released. A node's element, its row with its children
+ * under it, is a drop target where no child's is: in its top half the place is before the node, in its
+ * bottom half after it, in its parent; nothing is inside a node (its middle is a native file's). So
+ * a node with no children has no place in it, and after one with children is beside them, in its
+ * bullet's column. The place is taken before the node below the drop line where that is the next
+ * sibling, else after the one it follows, else before the parent's first child; the point is in the
+ * node's bullet column, checked to be its own (a child's chevron hangs left of the child). It drags
+ * the pressed node, or the selection's nodes where it is one of them (a drop of the selection presses its first).
+ */
+async function drop(page: Page, drop: Drop, settle: () => Promise<void>): Promise<void> {
+  // (the mouse off the nodes: one resting on a bullet, from the last case's drop, has a popover open
+  // over the rows, the node's name and when it was edited)
+  await page.mouse.move(1, 1);
+  await settle();
+  const at = await page.evaluate(({ press, rows, seam, to }) => {
+    const w = window as any;
+    const ns = w.appState.nodeSpace;
+    // the blocks as `read` has them: each node's path in the panel, its parent's block
+    const flat: { path: string; parent: number | 'root' }[] = [];
+    const walk = (node: any, path: string, parent: number | 'root') => {
+      for (const c of node.children.filter((c: any) => !c.isTuple)) {
+        const k = flat.push({ path: `${path}|${c.id}`, parent }) - 1;
+        walk(c, `${path}|${c.id}`, k);
+      }
+    };
+    walk(ns.getNodeOrPlaceholder(w.__ourusTana), w.__ourusTana, 'root');
+    // a node's element (the drop target), its row the first child
+    const element = (i: number): HTMLElement | null => document.getElementById(flat[i]!.path)?.closest('[data-containing-block]') ?? null;
+    const centre = (e: Element) => {
+      const r = e.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    };
+    const pressed = element(press ?? rows[0]!)?.firstElementChild?.querySelector('.bulletSide');
+    if (!pressed) return 'the pressed node has no bullet on screen';
+    // the parent's children, those in flight taken out
+    const kids = flat.flatMap((f, i) => (f.parent === to.parent && !rows.includes(i) ? [i] : []));
+    const next = kids[to.after === null ? 0 : kids.indexOf(to.after) + 1];
+    const [target, before] = next !== undefined && (next === seam.below || to.after === null) ? [next, true] : to.after !== null ? [to.after, false] : [null, false];
+    if (target === null) return 'a place inside a node with no children: Tana drops before or after a node';
+    const el = element(target)!;
+    const r = el.getBoundingClientRect();
+    const row = el.firstElementChild!.getBoundingClientRect();
+    const x = centre(el.firstElementChild!.querySelector('.bulletSide')!).x;
+    // a quarter of the row in from the element's edge, else nearer its middle, at its own; in the
+    // bullet's column, else further right (a selection's toolbar, under it once the mouse passed over
+    // it, hides the row below's left)
+    for (const at of [x, row.right - 40])
+      for (let d = row.height / 4; d < r.height / 2; d += 2) {
+        const y = before ? r.top + d : r.bottom - d;
+        if (document.elementFromPoint(at, y)?.closest('[data-containing-block]') === el) return { from: centre(pressed), to: { x: at, y } };
+      }
+    return `no point of the ${before ? 'top' : 'bottom'} half of the node's element that is its own`;
+  }, { press: drop.press, rows: drop.rows, seam: drop.seam, to: drop.to });
+  if (typeof at === 'string') throw new Unsupported(at);
+  await gesture(page, at.from, at.to, settle);
+}

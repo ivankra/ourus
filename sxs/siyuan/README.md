@@ -21,6 +21,7 @@ checked in the app:
 | `outdent` | Shift+Tab: the item with its children (outdenting is direct) |
 | `moveSubtreeUp` | Ctrl+Shift+Up ("Move up", ⇧⌘↑) |
 | `moveSubtreeDown` | Ctrl+Shift+Down ("Move down", ⇧⌘↓) |
+| `move ②` | the mouse: an item's bullet, or a free block's gutter icon, dragged (HTML5 drag and drop) to where its dragover reads the place (`siyuanDrop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
 | `deleteContentBackward` | Backspace |
 | `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Shift+Home, then Backspace (no command for it) |
@@ -190,6 +191,29 @@ The driver refuses no tag. `markup-fence` was refused until 2026-10-18 ("code li
 fence are only text there"); played, the cases `holds` lets through are SiYuan's to show (a join
 into code is a join of blocks; a join of code lines into ```` ``` ```` is text, escaped, below): 12
 run.
+
+## Drag and drop
+
+An HTML5 drag, which Chromium plays from Playwright's mouse: an item is pressed by its bullet
+(`protyle-action`), a free block by its gutter icon, shown while the pointer is over the block; the
+drop is where its dragover reads the place over the block under the pointer (before or after it, into
+an item as a child). The driver aims at the place's block (`aim`).
+
+- **Every drop the cases play lands where ourus's does but three** (Drag1, Drag2, Drag3, Drag13,
+  Scenario8c: the outline agrees), stable over three runs.
+- **The block dropped is selected after it, the caret at its text's start** (`caret` verdicts), so a
+  key typed then goes there (Scenario8b: `sHome`).
+- **A paragraph dropped into an item stays a paragraph**: an item holds blocks (Drag8: `¶ para` under
+  `- a`, where ourus makes it an item).
+- **A heading moves alone**, its level kept: a heading owns no blocks in SiYuan's tree (Drag15, Drag16:
+  `#### E` left under `# C`).
+- **An item's bullet drags the item alone, selected or not; a free block's gutter icon drags the
+  selection where the block is in it**: Drag4, Drag20 disagree (the pressed item moved alone, the rest
+  of the selection left); Drag5, Drag5b land as ourus's (`caret`). While blocks are selected, a free
+  block outside them shows no gutter icon (such a drop skips as it plays). The driver selects blocks
+  as SiYuan does, its `protyle-wysiwyg--select` class on each, the editor focused with no range in
+  it (its keys act on a selection only there: Tab, the moves); `read` reports no caret while blocks
+  are selected (SiYuan keeps a range in one, drawing none).
 
 ## What SiYuan does
 

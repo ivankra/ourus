@@ -15,10 +15,11 @@ This directory runs it in "no bullet" (nbl) mode; [`remnote-bl`](../remnote-bl/)
 | `outdent` | Shift+Tab |
 | `moveSubtreeUp` | Alt+Up ("Swap Up") |
 | `moveSubtreeDown` | Alt+Down ("Swap Down") |
+| `move ②` | the mouse: the rem's bullet dragged to its drop region (`remnoteDrop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
 | `deleteContentBackward` | Backspace |
 | `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Shift+Home, Backspace |
-| `deleteSubtree` | Ctrl+Shift+Alt+Backspace ("Delete Bullet"); after it no block is edited (often): the outline alone is judged (`noCaretAfter`, since 2026-10-25). |
+| `deleteSubtree` | Ctrl+Shift+Alt+Backspace ("Delete Bullet"); rems selected, Backspace (the shortcut leaves a selection as it is); after it no block is edited (often): the outline alone is judged (`noCaretAfter`). |
 | `duplicateSubtree` | *missing*: its tests are skipped |
 | `pasteStructured` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V ("Paste Without Formatting": a rem per line; Quirks) |
@@ -60,6 +61,33 @@ Other shortcuts:
 | Bold, Italic, Underline, Strikethrough | Ctrl+B, Ctrl+I, Ctrl+U, Ctrl+Shift+K | |
 | Inline code | `` ` `` twice, or Ctrl+Alt+Shift+I | |
 | Reference, Tag selected text | `[`, `#` | |
+
+## Drag and drop
+
+Read in its bundle (`startDragging`, `onBulletPointerLeave`, `getRectsInfoForDropRegion`) and played
+with the real mouse: a press on a rem's bullet starts a drag as the pointer leaves the bullet. Each
+rem's row, 3 pixels taller above and 14 wider at the left, is split in halves: the top half drops above
+it; the bottom half drops below it in its first 84 pixels (above its first child, where it has
+children), past them as its first child; beside its children, their bottom half drops below it. The
+release is in the smallest rem's region that holds it. The driver aims at the middle of the place's
+region.
+
+- **Every drop the cases play lands where ourus's does**, in both setups (Drag1, Drag2, Drag3, Drag13,
+  Scenario8, Scenario8c; without bullets Drag8 too), stable over three runs.
+- **The rem dropped is selected after it, as a rem**, the caret gone (`caret` verdicts), and a key
+  typed then is the selection's (Scenario8b disagrees: the `s` isn't typed).
+- **The cover rule is ourus's**: a press on a selected rem drags the selection, any other the rem
+  alone (Drag4 agrees; Drag5, Drag5b land as ourus's, the dropped rem alone selected after: `caret`;
+  Drag20's numbered rems have no bullet to press). The driver selects rems as a user does, Shift+Down
+  from the first one's start past its edge, past the last one's subtree (without bullets, its rems
+  are siblings: `read` reports the topmost in ourus's nesting).
+- **A heading keeps its level** (Drag15, Drag16 without bullets: `### D` where ourus re-levels it to
+  `## D`). With bullets a heading rem has none to press: those cases skip.
+- **Its drag code is a chunk loaded on the first drag**: a cache of an older build serves an app whose
+  chunk the site no longer has (a 404, `ChunkLoadError`, the app reloading); `--cache=refresh` once
+  after RemNote ships a build.
+- After a drop, the driver moves the pointer off the rems, and `load` closes with Escape what a key
+  typed on a selection opened: left so, the next test's caret is lost.
 
 ## RemNote's test mode
 
@@ -200,7 +228,7 @@ Measured by hand in the test mode before the setup was written:
 | key | in a document without bullets |
 | --- | --- |
 | Enter on an empty item | the rem stops being an item: a paragraph (Markdown's empty last item) |
-| Shift+Tab on a top-level item | a paragraph |
+| Shift+Tab on a top-level item | a paragraph; one with children stays an item, its children moved out to the top level (`outdent.md › Outdent8`) |
 | Enter mid-paragraph | two paragraphs |
 | Backspace at a paragraph's start, after a paragraph | one paragraph, the texts joined (`ab`, where ourus keeps a line break) |
 | Tab on a paragraph after a paragraph | an item at its depth (a paragraph can't have children) |

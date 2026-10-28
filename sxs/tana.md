@@ -5,7 +5,7 @@ version: "f6ae813f25"
 url: "https://app.tana.inc/tests"
 model: "block"
 command: "node sxs/run.ts tana"
-elapsed_s: 355
+elapsed_s: 128
 workers: 4
 ---
 
@@ -15,9 +15,9 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 122 | [4](#caret-4) | [2](#whitespace-2) | [27](#disagree-27) |  |  | **155** |
-| adapted | 234 | [9](#adapted-caret-9) | [5](#adapted-whitespace-5) | [68](#adapted-disagree-68) |  |  | **316** |
-| **total** | **356 (31%)** | **13 (1.1%)** | **7 (0.61%)** | **95 (8.3%)** | **0 (0%)** | **[672](#skipped-672) (59%)** | **1143** |
+| original | 136 | [6](#caret-6) | [2](#whitespace-2) | [29](#disagree-29) |  |  | **173** |
+| adapted | 241 | [9](#adapted-caret-9) | [5](#adapted-whitespace-5) | [68](#adapted-disagree-68) |  |  | **323** |
+| **total** | **377 (32%)** | **15 (1.3%)** | **7 (0.59%)** | **97 (8.1%)** | **0 (0%)** | **[693](#skipped-693) (58%)** | **1194** |
 
 Per-file:
 
@@ -27,18 +27,19 @@ Per-file:
 | [backtick.md](../spec/backtick.md) | 5 |  |  | 2 |  | 26 | **33** |  | 7 |
 | [copy.md](../spec/copy.md) | 2 |  |  | 3 |  | 8 | **13** | 4 | 1 |
 | [cursor.md](../spec/cursor.md) | 23 | 2 |  |  |  | 11 | **36** | 12 | 13 |
-| [delete-subtree.md](../spec/delete-subtree.md) | 4 | 1 |  |  |  | 8 | **13** | 2 | 3 |
+| [delete-subtree.md](../spec/delete-subtree.md) | 4 | 2 |  |  |  | 7 | **13** | 3 | 3 |
 | [delete.md](../spec/delete.md) | 22 |  |  | 8 |  | 26 | **56** | 10 | 20 |
-| [duplicate-subtree.md](../spec/duplicate-subtree.md) | 3 |  |  |  |  | 7 | **10** | 3 |  |
+| [drag.md](../spec/drag.md) | 7 |  |  | 2 |  | 28 | **37** | 6 | 3 |
+| [duplicate-subtree.md](../spec/duplicate-subtree.md) | 3 | 1 |  |  |  | 6 | **10** | 4 |  |
 | [enter.md](../spec/enter.md) | 49 |  |  | 7 |  | 42 | **98** | 20 | 36 |
 | [fences.md](../spec/fences.md) | 7 |  | 1 | 5 |  | 57 | **70** |  | 13 |
 | [gaps.md](../spec/gaps.md) | 11 |  |  |  |  | 8 | **19** |  | 11 |
-| [indent.md](../spec/indent.md) | 19 |  |  | 2 |  | 21 | **42** | 13 | 8 |
+| [indent.md](../spec/indent.md) | 24 |  |  | 2 |  | 24 | **50** | 16 | 10 |
 | [lists.md](../spec/lists.md) | 4 |  |  |  |  | 12 | **16** |  | 4 |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 21 |  |  |  |  | 19 | **40** | 8 | 13 |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 17 |  |  |  |  | 25 | **42** | 9 | 8 |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 24 |  |  |  |  | 16 | **40** | 11 | 13 |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 20 |  |  |  |  | 23 | **43** | 12 | 8 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 27 |  |  | 4 |  | 36 | **67** | 13 | 18 |
-| [outdent.md](../spec/outdent.md) | 13 |  |  |  |  | 23 | **36** | 3 | 10 |
+| [outdent.md](../spec/outdent.md) | 16 |  |  |  |  | 22 | **38** | 4 | 12 |
 | [paste-conv.md](../spec/paste-conv.md) | 3 |  |  | 3 |  |  | **6** | 5 | 1 |
 | [paste-html.md](../spec/paste-html.md) | 4 | 1 |  | 12 |  | 2 | **19** |  | 17 |
 | [paste-list-form.md](../spec/paste-list-form.md) | 4 |  |  | 1 |  | 1 | **6** | 4 | 1 |
@@ -49,15 +50,15 @@ Per-file:
 | [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |  |  |
 | [quotes.md](../spec/quotes.md) |  |  |  |  |  | 143 | **143** |  |  |
 | [regressions.md](../spec/regressions.md) | 10 | 1 | 1 | 7 |  | 45 | **64** | 4 | 15 |
-| [scenarios.md](../spec/scenarios.md) | 13 | 2 |  | 4 |  | 7 | **26** | 9 | 10 |
+| [scenarios.md](../spec/scenarios.md) | 13 | 2 |  | 4 |  | 10 | **29** | 9 | 10 |
 | [shift-enter.md](../spec/shift-enter.md) |  |  |  |  |  | 36 | **36** |  |  |
 | [tasks.md](../spec/tasks.md) | 5 | 1 |  | 7 |  | 17 | **30** |  | 13 |
 | [typing.md](../spec/typing.md) |  |  |  |  |  | 3 | **3** |  |  |
 | [undo.md](../spec/undo.md) |  | 4 |  |  |  | 1 | **5** | 3 | 1 |
 | [z-open.md](../spec/z-open.md) |  |  |  |  |  | 1 | **1** |  |  |
-| **total** | **356 (31%)** | **13 (1.1%)** | **7 (0.61%)** | **95 (8.3%)** | **0 (0%)** | **672 (59%)** | **1143** | **155 (14%)** | **316 (28%)** |
+| **total** | **377 (32%)** | **15 (1.3%)** | **7 (0.59%)** | **97 (8.1%)** | **0 (0%)** | **698 (58%)** | **1194** | **173 (14%)** | **323 (27%)** |
 
-## Disagree (27)
+## Disagree (29)
 
 ### [Backspace8](../spec/backspace.md#backspace8)
 
@@ -411,6 +412,72 @@ Per-file:
 - a
 - b┃c
   - d
+```
+
+</td></tr>
+</table>
+
+### [Drag5](../spec/drag.md#drag5)
+
+> move ③
+
+<table>
+<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ▮ a
+- ▮ b
+- c
+```
+
+</td><td>
+
+```buffer
+- ▮ a
+- ▮ b
+- c
+```
+
+</td><td>
+
+```buffer
+- c
+- ▮ a
+- ▮ b
+```
+
+</td></tr>
+</table>
+
+### [Drag5b](../spec/drag.md#drag5b)
+
+> move ③
+
+<table>
+<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ▮ a
+- ▮ b
+- c
+```
+
+</td><td>
+
+```buffer
+- ▮ a
+- ▮ b
+- c
+```
+
+</td><td>
+
+```buffer
+- ▮ a
+- ▮ c
+- ▮ b
 ```
 
 </td></tr>
@@ -1176,7 +1243,7 @@ y
 </td></tr>
 </table>
 
-## Caret (4)
+## Caret (6)
 
 ### [CursorDown4](../spec/cursor.md#cursordown4)
 
@@ -1203,6 +1270,78 @@ y
 ```buffer
 - abc
 - abc┃d
+```
+
+</td></tr>
+</table>
+
+### [DeleteSubtree5](../spec/delete-subtree.md#deletesubtree5)
+
+> deleteSubtree
+
+<table>
+<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- ▮ b
+- ▮ c
+- d
+```
+
+</td><td>
+
+```buffer
+- a
+- d
+```
+
+</td><td>
+
+```buffer
+- a┃
+- d
+```
+
+</td></tr>
+</table>
+
+### [DuplicateSubtree3](../spec/duplicate-subtree.md#duplicatesubtree3)
+
+> duplicateSubtree
+
+<table>
+<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- ▮ b
+- ▮ c
+- d
+```
+
+</td><td>
+
+```buffer
+- a
+- ▮ b
+- ▮ c
+- b
+- c
+- d
+```
+
+</td><td>
+
+```buffer
+- a
+- b
+- c
+- ▮ b
+- ▮ c
+- d
 ```
 
 </td></tr>
@@ -7171,7 +7310,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (672)
+## Skipped (698)
 
 | example | why |
 | --- | --- |
@@ -7263,7 +7402,6 @@ Original:
 | [CursorHome17](../spec/cursor.md#cursorhome17) | callout |
 | [CursorDocEndLeft1](../spec/cursor.md#cursordocendleft1) | cursorCharLeft after cursorDocEnd |
 | **delete-subtree.md** | |
-| [DeleteSubtree5](../spec/delete-subtree.md#deletesubtree5) | selection across blocks |
 | [DeleteSubtree7](../spec/delete-subtree.md#deletesubtree7) | quote |
 | [DeleteSubtree8](../spec/delete-subtree.md#deletesubtree8) | caret in a number, a task's checkbox, a heading's # or a code block's fences |
 | [DeleteSubtree9](../spec/delete-subtree.md#deletesubtree9) | thematic break |
@@ -7298,8 +7436,36 @@ Original:
 | [Delete25](../spec/delete.md#delete25) | tag free-form |
 | [Delete29](../spec/delete.md#delete29) | tag free-form |
 | [Delete34](../spec/delete.md#delete34) | option quotes: container |
+| **drag.md** | |
+| [Drag3](../spec/drag.md#drag3) | drop: a place inside a node with no children: Tana drops before or after a node |
+| [Drag5c](../spec/drag.md#drag5c) | changes only what blocks can't show |
+| [Drag6](../spec/drag.md#drag6) | action drag ② |
+| [Drag6b](../spec/drag.md#drag6b) | changes only what blocks can't show |
+| [Drag6c](../spec/drag.md#drag6c) | action drag ② |
+| [Drag7](../spec/drag.md#drag7) | action drag ④ |
+| [Drag8](../spec/drag.md#drag8) | drop: a place inside a node with no children: Tana drops before or after a node |
+| [Drag9](../spec/drag.md#drag9) | nothing to compare |
+| [Drag12](../spec/drag.md#drag12) | nothing to compare |
+| [Drag14](../spec/drag.md#drag14) | nothing to compare |
+| [Drag15](../spec/drag.md#drag15) | heading other than H1: Tana's (a section) has one level |
+| [Drag16](../spec/drag.md#drag16) | heading other than H1: Tana's (a section) has one level |
+| [Drag17](../spec/drag.md#drag17) | heading other than H1: Tana's (a section) has one level |
+| [Drag18](../spec/drag.md#drag18) | drop: the pickup is refused (non-contiguous) |
+| [Drag19](../spec/drag.md#drag19) | nothing to compare |
+| [Drag21](../spec/drag.md#drag21) | quote |
+| [Drag22](../spec/drag.md#drag22) | action drag ② |
+| [Drag23](../spec/drag.md#drag23) | action drag ② |
+| [Drag24](../spec/drag.md#drag24) | action drag ③ |
+| [Drag25](../spec/drag.md#drag25) | action drag ③ |
+| [Drag26](../spec/drag.md#drag26) | action drag ③ |
+| [Drag30](../spec/drag.md#drag30) | list numbered in part, or not from 1 |
+| [Drag32](../spec/drag.md#drag32) | drop: a place inside a node with no children: Tana drops before or after a node |
+| [Drag10](../spec/drag.md#drag10) | action pasteAt |
+| [Drag11](../spec/drag.md#drag11) | action pasteAt |
+| [Drag27](../spec/drag.md#drag27) | action pasteAt |
+| [Drag28](../spec/drag.md#drag28) | action pasteAt |
+| [Drag29](../spec/drag.md#drag29) | action deleteByDrag |
 | **duplicate-subtree.md** | |
-| [DuplicateSubtree3](../spec/duplicate-subtree.md#duplicatesubtree3) | selection across blocks |
 | [DuplicateSubtree4](../spec/duplicate-subtree.md#duplicatesubtree4) | tag free-form |
 | [DuplicateSubtree5](../spec/duplicate-subtree.md#duplicatesubtree5) | option quotes: container |
 | [DuplicateSubtree6](../spec/duplicate-subtree.md#duplicatesubtree6) | tag free-form |
@@ -7417,7 +7583,6 @@ Original:
 | [Gap18](../spec/gaps.md#gap18) | caret on a blank line |
 | [Gap19](../spec/gaps.md#gap19) | frontmatter |
 | **indent.md** | |
-| [Indent9](../spec/indent.md#indent9) | selection across blocks |
 | [Indent11](../spec/indent.md#indent11) | changes only what blocks can't show |
 | [Indent12](../spec/indent.md#indent12) | tag free-form |
 | [Indent16](../spec/indent.md#indent16) | tag free-form |
@@ -7425,7 +7590,6 @@ Original:
 | [Indent23](../spec/indent.md#indent23) | tag free-form |
 | [Indent24](../spec/indent.md#indent24) | heading other than H1: Tana's (a section) has one level |
 | [Indent25](../spec/indent.md#indent25) | tag free-form |
-| [Indent27](../spec/indent.md#indent27) | selection across blocks |
 | [Indent28](../spec/indent.md#indent28) | caret in a marker |
 | [Indent29b](../spec/indent.md#indent29b) | list numbered in part, or not from 1 |
 | [Indent30](../spec/indent.md#indent30) | caret in a marker |
@@ -7438,6 +7602,11 @@ Original:
 | [Indent37](../spec/indent.md#indent37) | thematic break |
 | [Indent37b](../spec/indent.md#indent37b) | thematic break |
 | [Indent38](../spec/indent.md#indent38) | indented code |
+| [Indent39](../spec/indent.md#indent39) | option indentUnit: tab |
+| [Indent40](../spec/indent.md#indent40) | option indentUnit: 2 |
+| [Indent41](../spec/indent.md#indent41) | option indentUnit: tab |
+| [Indent42](../spec/indent.md#indent42) | option indentUnit: tab |
+| [Indent45b](../spec/indent.md#indent45b) | indented code |
 | **lists.md** | |
 | [Lists2](../spec/lists.md#lists2) | option listParent: container |
 | [Lists3](../spec/lists.md#lists3) | option listParent: container |
@@ -7453,9 +7622,6 @@ Original:
 | [Lists15](../spec/lists.md#lists15) | option listParent: container |
 | **move-subtree-down.md** | |
 | [MoveDown2](../spec/move-subtree-down.md#movedown2) | tag free-form |
-| [MoveDown11](../spec/move-subtree-down.md#movedown11) | selection across blocks |
-| [MoveDown12](../spec/move-subtree-down.md#movedown12) | selection across blocks |
-| [MoveDown14](../spec/move-subtree-down.md#movedown14) | selection across blocks |
 | [MoveDown17](../spec/move-subtree-down.md#movedown17) | tag free-form |
 | [MoveDown19](../spec/move-subtree-down.md#movedown19) | tag free-form |
 | [MoveDown20](../spec/move-subtree-down.md#movedown20) | tag free-form |
@@ -7470,10 +7636,8 @@ Original:
 | [MoveDown34](../spec/move-subtree-down.md#movedown34) | caret in a number, a task's checkbox, a heading's # or a code block's fences |
 | [MoveDown37](../spec/move-subtree-down.md#movedown37) | caret in a number, a task's checkbox, a heading's # or a code block's fences |
 | [MoveDown38](../spec/move-subtree-down.md#movedown38) | tag free-form |
-| [MoveDown40](../spec/move-subtree-down.md#movedown40) | selection across blocks |
+| [MoveDown40](../spec/move-subtree-down.md#movedown40) | list numbered in part, or not from 1 |
 | **move-subtree-up.md** | |
-| [MoveUp10](../spec/move-subtree-up.md#moveup10) | selection across blocks |
-| [MoveUp11](../spec/move-subtree-up.md#moveup11) | selection across blocks |
 | [MoveUp12](../spec/move-subtree-up.md#moveup12) | tag free-form |
 | [MoveUp15](../spec/move-subtree-up.md#moveup15) | list numbered in part, or not from 1 |
 | [MoveUp16](../spec/move-subtree-up.md#moveup16) | heading other than H1: Tana's (a section) has one level |
@@ -7487,7 +7651,6 @@ Original:
 | [MoveUp28](../spec/move-subtree-up.md#moveup28) | tag free-form |
 | [MoveUp29](../spec/move-subtree-up.md#moveup29) | tag free-form |
 | [MoveUp30](../spec/move-subtree-up.md#moveup30) | link reference definition |
-| [MoveUp31](../spec/move-subtree-up.md#moveup31) | selection across blocks |
 | [MoveUp33](../spec/move-subtree-up.md#moveup33) | tag free-form |
 | [MoveUp34](../spec/move-subtree-up.md#moveup34) | caret in a marker |
 | [MoveUp35](../spec/move-subtree-up.md#moveup35) | tag free-form |
@@ -7497,6 +7660,7 @@ Original:
 | [MoveUp39](../spec/move-subtree-up.md#moveup39) | caret on a blank line |
 | [MoveUp41](../spec/move-subtree-up.md#moveup41) | code block's fences that don't match |
 | [MoveUp42](../spec/move-subtree-up.md#moveup42) | quote |
+| [MoveUp43](../spec/move-subtree-up.md#moveup43) | option indentUnit: tab |
 | **obsidian-true-outliner.md** | |
 | [TO-Bug228](../spec/obsidian-true-outliner.md#to-bug228) | list numbered in part, or not from 1 |
 | [TO-E11](../spec/obsidian-true-outliner.md#to-e11) | indented code |
@@ -7537,8 +7701,6 @@ Original:
 | **outdent.md** | |
 | [Outdent2](../spec/outdent.md#outdent2) | tag free-form |
 | [Outdent4](../spec/outdent.md#outdent4) | tag free-form |
-| [Outdent8](../spec/outdent.md#outdent8) | selection across blocks |
-| [Outdent10](../spec/outdent.md#outdent10) | selection across blocks |
 | [Outdent11](../spec/outdent.md#outdent11) | tag free-form |
 | [Outdent12](../spec/outdent.md#outdent12) | tag free-form |
 | [Outdent14](../spec/outdent.md#outdent14) | caret in a marker |
@@ -7558,6 +7720,7 @@ Original:
 | [Outdent19b](../spec/outdent.md#outdent19b) | tag free-form |
 | [Outdent20](../spec/outdent.md#outdent20) | tag free-form |
 | [Outdent20b](../spec/outdent.md#outdent20b) | tag free-form |
+| [Outdent22b](../spec/outdent.md#outdent22b) | indented code |
 | **paste-html.md** | |
 | [PasteHtml12](../spec/paste-html.md#pastehtml12) | quote |
 | [PasteHtml13](../spec/paste-html.md#pastehtml13) | table (expected) |
@@ -7809,6 +7972,9 @@ Original:
 | [Regression64](../spec/regressions.md#regression64) | option quotes: atom |
 | **scenarios.md** | |
 | [Scenario6](../spec/scenarios.md#scenario6) | tag free-form |
+| [Scenario8b](../spec/scenarios.md#scenario8b) | no text focus after move ③ |
+| [Scenario8c](../spec/scenarios.md#scenario8c) | drop: a place inside a node with no children: Tana drops before or after a node |
+| [Scenario8d](../spec/scenarios.md#scenario8d) | action drag ② |
 | [Scenario11](../spec/scenarios.md#scenario11) | action shiftEnter |
 | [Scenario17](../spec/scenarios.md#scenario17) | option pasteLines: items |
 | [Scenario20](../spec/scenarios.md#scenario20) | action shiftEnter |

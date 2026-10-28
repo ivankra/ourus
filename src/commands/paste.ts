@@ -7,11 +7,13 @@ import { clipboardFragment, clipboardMarkdown, type Clipboard } from './clipboar
 import { ProseText, OurusDoc, AtomText, type OutlineNode } from '../doc/index.ts';
 import { lineOf } from '../text/index.ts';
 import type { OurusDraft } from '../draft/index.ts';
-import { deferToHost, type CommandContext, type CommandOutcome } from './context.ts';
+import { CommandContext, deferToHost, reject, type CommandOutcome } from './context.ts';
 import { afterDeleting } from './copy.ts';
 import { codeAt, onDelimiterLine } from './code.ts';
 import { pastePlainCommand, plainLines } from './paste-plain.ts';
-import { inMarkup, textEnd, textStart } from './util.ts';
+import { becomesAt, headingTarget, placeOf, resultCheck, takesIn, unholdable } from './move-subtree-to.ts';
+import type { InsertionPoint } from './types.ts';
+import { changeHeadingLevels, headingLevel, inMarkup, selectionInText, textEnd, textStart } from './util.ts';
 
 /** Where pasted nodes go: in a node's place, before or after it, or first or last among its children. */
 interface Slot {
@@ -363,9 +365,11 @@ function fitToBlocks(draft: OurusDraft, pasted: OurusDoc, roots: readonly Outlin
  * the item's children; a block that would end the list goes into the item before it, the last pasted,
  * or before any, the item at the slot (`into`); among an item's children it stays where it is; first
  * in an empty item's place or before an item, where it can be an item's text (a block of lines), it
- * is. Null where a block can't fill an empty item; undefined where a node has no text.
+ * is. Null where a block can't fill an empty item; undefined where a node has no text. `blocks`, for
+ * a drop at a place: `stay`, a block stays where it is among the nodes, in no item; `items`, where
+ * only items can be (a paragraph's list), it is one, or null where it can't be an item's text.
  */
-function fitToList(ctx: CommandContext, draft: OurusDraft, pasted: OurusDoc, roots: readonly OutlineNode[], slot: Slot): Fitted | null | undefined {
+function fitToList(ctx: CommandContext, draft: OurusDraft, pasted: OurusDoc, roots: readonly OutlineNode[], slot: Slot, blocks: 'into' | 'stay' | 'items' = 'into'): Fitted | null | undefined {
   const children = ctx.config.pasteParagraphList === 'children';
   const nodes: number[] = [];
   const into: number[] = [];
@@ -388,7 +392,7 @@ function fitToList(ctx: CommandContext, draft: OurusDraft, pasted: OurusDoc, roo
       }
       continue;
     }
-    if ((slot.where === 'instead' || slot.where === 'before') && !nodes.length) {
+    if (((slot.where === 'instead' || slot.where === 'before') && !nodes.length) || blocks === 'items') {
       // a block of lines is an item's text; anything else isn't
       if (!(pasted.textOf(root) instanceof AtomText) || !leads(root)) return null;
       const id = made(draft, pasted, root, 'item');
@@ -398,7 +402,7 @@ function fitToList(ctx: CommandContext, draft: OurusDraft, pasted: OurusDoc, roo
     }
     const id = made(draft, pasted, root);
     if (id === null) return undefined;
-    if (slot.where === 'first' || slot.where === 'last') nodes.push(id);
+    if (blocks === 'stay' || slot.where === 'first' || slot.where === 'last') nodes.push(id);
     else if (prev !== null && draft.touched(prev).kind === 'item') draft.append(prev, 'last', [id]);
     else if (prev !== null) nodes.push(id);
     else into.push(id);
@@ -523,4 +527,84 @@ function pasteCaret(ctx: CommandContext, draft: OurusDraft, nodes: readonly numb
   if (!text) return false;
   draft.setCaret(id, quirk === 'athens' ? textStart(text) : textEnd(text), -1);
   return true;
+}
+
+/**
+ * A drop from outside (`pasteAt`, spec/drag.md): the clipboard read as paste reads it, its nodes
+ * fitted at the place `to` as paste fits them: in a list each an item, a block staying at the place;
+ * elsewhere as they are, items right after a block that adopts lists made paragraphs, as a move makes
+ * them. A heading first is re-levelled to its new siblings; one last whose section would take in what
+ * follows the place is refused. The caret stays with the text it is in. Then the result is checked,
+ * as a move's is.
+ */
+export function pasteAtCommand(ctx: CommandContext, clipboard: Clipboard, to: InsertionPoint): CommandOutcome {
+  const doc = ctx.doc;
+  const read = clipboardMarkdown(clipboard);
+  const fragment = read ? clipboardFragment(read.markdown, ctx.config) : null;
+  if (!fragment?.doc.rootNode.children.length) return reject('not-expressible', 'nothing to paste');
+  let pasted = fragment.doc;
+  const place = placeOf(doc, to);
+  if ('status' in place) return place;
+  const { parent, after } = place;
+  const next = after ? after.next : (parent.children[0] ?? null);
+  const first = pasted.rootNode.children[0]!;
+  const unheld = unholdable(doc, first.kind, parent, after);
+  if (unheld) return reject('not-expressible', unheld);
+  const inList = inListAt(parent, after);
+  if (first.kind === 'heading' && !inList) {
+    // re-levelled to its new siblings, and with it its section and the headings after it
+    const own = headingLevel(new CommandContext(pasted, { anchor: 0, head: 0 }), first);
+    const delta = headingTarget(ctx, parent, after, next, own) - own;
+    if (delta) {
+      const shifted = changeHeadingLevels(new CommandContext(pasted, { anchor: 0, head: 0 }), pasted.rootNode.children, delta);
+      if (shifted?.status !== 'applied') return shifted;
+      pasted = shifted.doc;
+    }
+  }
+  const roots = pasted.rootNode.children;
+  const last = roots[roots.length - 1]!;
+  if (last.kind === 'heading' && !inList && takesIn(ctx, next, headingLevel(new CommandContext(pasted, { anchor: 0, head: 0 }), last))) return reject('would-reparent', 'the heading would take in what follows it');
+  const draft = ctx.draft();
+  const list = after?.kind === 'item' ? after : next?.kind === 'item' ? next : null;
+  const slot: Slot = after ? { where: 'after', node: after, list, atEnd: true } : { where: 'first', node: parent, list, atEnd: true };
+  const itemsOnly = parent.kind === 'paragraph' || parent.kind === 'atom';
+  const fitted = inList ? fitToList(ctx, draft, pasted, roots, slot, itemsOnly ? 'items' : 'stay') : fitToBlocks(draft, pasted, roots);
+  if (fitted === null) return reject('not-expressible', `a ${parent.kind}'s list holds only items, and a block there can't be one`);
+  if (!fitted) return null;
+  if (!inList && becomesAt(doc, 'item', parent, after, new Set()) === 'paragraph') {
+    for (const id of fitted.nodes) {
+      const node = draft.touched(id);
+      if (node.kind !== 'item') continue;
+      if (node.text instanceof ProseText && node.text.task) return reject('not-expressible', "a task can't be a paragraph: its checkbox would be text");
+      // (one whose text is a block of lines, that block)
+      draft.convert(id, node.text instanceof AtomText && !node.children.length ? 'atom' : 'paragraph');
+    }
+  }
+  if (after) draft.place('after', after, fitted.nodes);
+  else draft.append(parent, 'first', fitted.nodes);
+  // in a list, spaced as the list is
+  const tight = list ? ctx.doc.listOf(list)?.block.attrs.tight !== false : true;
+  if (list) for (const id of fitted.nodes) setSpacing(draft, id, tight ? 0 : 1);
+  selectionInText(ctx, draft);
+  const applied = ctx.apply(draft);
+  if (applied?.status !== 'applied') return applied;
+  const wrong = resultCheck(doc, applied.doc, fitted.nodes, new Set(), to);
+  if (wrong) return reject(wrong.reason, `result check: ${wrong.why}`);
+  return { ...applied, placed: fitted.nodes };
+}
+
+/** Whether a place under `parent`, after `after`, is in a list: under an item or in a paragraph's list, or beside an item. */
+function inListAt(parent: OutlineNode, after: OutlineNode | null): boolean {
+  const next = after ? after.next : (parent.children[0] ?? null);
+  return parent.kind === 'item' || parent.kind === 'paragraph' || parent.kind === 'atom' || after?.kind === 'item' || next?.kind === 'item';
+}
+
+/**
+ * What a pasted node of `kind`, first, becomes at the place under `parent`, after `after`: in a list, a
+ * heading or a paragraph an item, and in a paragraph's list a block too; elsewhere, an item right after a block that adopts lists a
+ * paragraph; else null, its own kind (`pasteAtCommand`'s fitting).
+ */
+export function pastedBecomesAt(doc: OurusDoc, kind: OutlineNode['kind'], parent: OutlineNode, after: OutlineNode | null): 'item' | 'paragraph' | null {
+  if (inListAt(parent, after)) return kind === 'heading' || kind === 'paragraph' || ((parent.kind === 'paragraph' || parent.kind === 'atom') && kind === 'atom') ? 'item' : null;
+  return kind === 'item' && becomesAt(doc, 'item', parent, after, new Set()) === 'paragraph' ? 'paragraph' : null;
 }

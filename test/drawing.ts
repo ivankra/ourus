@@ -16,18 +16,91 @@ export const drawsCaret = (drawn: string): boolean => /[┃«»]/.test(drawn);
 /** A drawing without its caret and selection, to set beside one that draws none. */
 export const withoutCaret = (drawn: string): string => drawn.replace(/[┃«»]/g, '');
 
+/** A node label's glyph: `①` to `⑳`, `㉑` to `㉟`, `㊱` to `㊿` (spec/README.md). */
+const LABEL = /[\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]/u;
+const LABELS = /[\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]+(?=␍?$)/u;
+
+/** A label glyph's number, 1 to 50. */
+export function labelNumber(glyph: string): number {
+  const c = glyph.codePointAt(0)!;
+  return c <= 0x2473 ? c - 0x2460 + 1 : c <= 0x325f ? c - 0x3251 + 21 : c - 0x32b1 + 36;
+}
+
+/** Label `n`'s glyph. */
+export function labelGlyph(n: number): string {
+  return String.fromCodePoint(n <= 20 ? 0x2460 + n - 1 : n <= 35 ? 0x3251 + n - 21 : 0x32b1 + n - 36);
+}
+
+/**
+ * A drawing's node labels (`①`), taken out: each line's, by its index, in the order drawn (the
+ * outermost of the nodes starting there first). A label is last on its line, before a `␍`; one
+ * anywhere else is an error.
+ */
+export function readLabels(drawn: string): { drawn: string; labels: Map<number, number[]> } {
+  const labels = new Map<number, number[]>();
+  const lines = drawn.split('\n').map((line, i) => {
+    const m = LABELS.exec(line);
+    const rest = m ? line.slice(0, m.index) + line.slice(m.index + m[0].length) : line;
+    if (LABEL.test(rest)) throw new Error(`line ${i + 1}: a label is last on its line: ${JSON.stringify(line)}`);
+    if (m) labels.set(i, [...m[0]].map(labelNumber));
+    return rest;
+  });
+  return { drawn: lines.join('\n'), labels };
+}
+
+/** A drawing with `labels` (each line's, as `readLabels` gives them) drawn last on their lines. */
+export function drawLabels(drawn: string, labels: ReadonlyMap<number, readonly number[]>): string {
+  if (!labels.size) return drawn;
+  return drawn
+    .split('\n')
+    .map((line, i) => {
+      const own = labels.get(i);
+      if (!own?.length) return line;
+      const glyphs = own.map(labelGlyph).join('');
+      return line.endsWith('␍') ? line.slice(0, -1) + glyphs + '␍' : line + glyphs;
+    })
+    .join('\n');
+}
+
+/** Where a drawing drops (spec/README.md): the gap before line `line` of its text (the line count at its end), at `depth`. */
+export interface DropLine {
+  readonly line: number;
+  readonly depth: number;
+}
+
+/**
+ * A drawing's drop line (`▸` alone on a line, at twice the depth the run lands at), taken out: the
+ * gap and the depth it names, or none. A second one, a `▸` anywhere else, or one at an odd column is
+ * an error.
+ */
+export function readDropLine(drawn: string): { drawn: string; drop: DropLine | null } {
+  const lines = drawn.split('\n');
+  const at = lines.flatMap((line, i) => (/^ *▸ *$/.test(line) ? [i] : []));
+  const stray = lines.findIndex((line, i) => /[▸▹]/.test(line) && !at.includes(i));
+  if (stray >= 0) throw new Error(`line ${stray + 1}: a drop line holds a \`▸\` and spaces only: ${JSON.stringify(lines[stray])}`);
+  if (at.length > 1) throw new Error(`line ${at[1]! + 1}: a second drop line: a case drops once`);
+  if (!at.length) return { drawn, drop: null };
+  const line = at[0]!;
+  const column = lines[line]!.indexOf('▸');
+  if (column % 2) throw new Error(`line ${line + 1}: a drop line's \`▸\` is at an even column, twice the depth (column ${column})`);
+  return { drawn: lines.filter((_, i) => i !== line).join('\n'), drop: { line, depth: column / 2 } };
+}
+
 /**
  * Reads a drawn state: text plus caret (`┃`) or selection (`«…»`), placeholders (`◌`),
- * tabs drawn as `→`.
+ * tabs drawn as `→`; node labels (`①`) are taken out, and given by line; so is a drop line (`▸`).
  */
-export function readDrawing(drawn: string): { text: string; selection: Selection; placeholders: number[] } {
+export function readDrawing(drawn: string): { text: string; selection: Selection; placeholders: number[]; labels: Map<number, number[]>; drop: DropLine | null } {
   let text = '';
   const placeholders: number[] = [];
   let caret = -1;
   let open = -1;
   let close = -1;
   let headAtStart = false;
-  const s = readText(drawn);
+  const { drawn: unmarked, drop } = readDropLine(drawn);
+  const read = readLabels(unmarked);
+  const labels = read.labels;
+  const s = readText(read.drawn);
   for (let i = 0; i < s.length; i++) {
     const c = s[i]!;
     if (c === '┃') {
@@ -39,10 +112,10 @@ export function readDrawing(drawn: string): { text: string; selection: Selection
     else text += c;
   }
   if (open >= 0 && close >= 0) {
-    return { text, selection: headAtStart ? { anchor: close, head: open } : { anchor: open, head: close }, placeholders };
+    return { text, selection: headAtStart ? { anchor: close, head: open } : { anchor: open, head: close }, placeholders, labels, drop };
   }
   const pos = caret >= 0 ? caret : 0;
-  return { text, selection: { anchor: pos, head: pos }, placeholders };
+  return { text, selection: { anchor: pos, head: pos }, placeholders, labels, drop };
 }
 
 export function drawState(text: string, sel: Selection, placeholders: readonly number[] = []): string {

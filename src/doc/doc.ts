@@ -92,6 +92,26 @@ export class OurusDoc {
   }
 
   /**
+   * The same document under other options (a host's setting changed): `config` over this one's. An
+   * option that says only how commands write (`indentUnit`, `markup`, ...) changes on the same
+   * snapshot, its outline and ids shared; `quotes` and `listParent`, which change how the text reads,
+   * have the outline read again from the same parse, ids carried as an update carries them; `flavor`,
+   * which changes the parse, reads the text anew, its ids anew too.
+   */
+  withConfig(config: Partial<Config>): OurusDoc {
+    const next = Config.of({ ...this.config, ...config });
+    if (next.flavor !== this.config.flavor) {
+      const marks: Mark[] = [];
+      this.marks.between(0, this.text.length, (m) => void marks.push(m));
+      return OurusDoc.parse(this.text, { config: next, marks });
+    }
+    if (next.quotes === this.config.quotes && next.listParent === this.config.listParent) return new OurusDoc(this.text, this.marks, this.mdTree, next, this.root, this.nextId);
+    const previous = { tree: this.mdTree, root: this.root, changes: [], nextId: this.nextId, startOf: (id: number) => this.node(id)?.startLine };
+    const { root, nextId } = readOutline(this.mdTree, previous, Touched.of([[0, this.mdTree.lineCount]]), undefined, next);
+    return new OurusDoc(this.text, this.marks, this.mdTree, next, root, nextId);
+  }
+
+  /**
    * The snapshot with `text` in place of this one's (the file changed elsewhere), `marks` its
    * placeholders: the lines that differ read again, as changes.
    */

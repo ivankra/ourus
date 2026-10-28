@@ -18,8 +18,9 @@ a flavor of its own deciding how a block's text is held (OG's: all of it in the 
 | `deleteContentBackward` | Backspace |
 | `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Alt+U ("kill line before": from the start of the caret's line; nothing at a line's start) |
-| `deleteSubtree` | Escape (selects the block), Backspace (deletes the selection); in a block with a code fence, which Escape never selects, Ctrl+A until the block is (its text, then the block); after it no block is edited (when the first block goes): the outline alone is judged (`noCaretAfter`, since 2026-10-25). |
+| `deleteSubtree` | Escape (selects the block), Backspace (deletes the selection); in a block with a code fence, which Escape never selects, Ctrl+A until the block is (its text, then the block); after it no block is edited (when the first block goes): the outline alone is judged (`noCaretAfter`). |
 | `duplicateSubtree` | *missing* |
+| `move ②` | the mouse: a block dragged by its bullet and dropped (`logseqDrop` in [`driver.ts`](driver.ts), below) |
 | `pasteStructured` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V |
 | `undo` | Ctrl+Z |
@@ -149,6 +150,31 @@ Repo: https://github.com/logseq/og
   than the spec's monospace one.
 - The demo doesn't say its version (`get_app_info` answers `1.0.0`, the plugin API's); its bundle's
   ETag stands in (`build b8f87af5`).
+
+## Drag and drop, measured
+
+[`drag.md`](../../spec/drag.md) and the scenarios' drops, played with the real mouse
+(`logseqDrop`, [`../lib/drag.ts`](../lib/drag.ts)), aimed where Logseq's own geometry puts each place
+(`block-drag-over` in `frontend/components/block.cljs`, read in the bundle):
+
+- **A block is dragged by its bullet**, an HTML5 drag (`draggable` on `.bullet-container`;
+  `dragover` and `drop` on each `.ls-block`), which Playwright's mouse plays. The innermost block under
+  the pointer is the target, and where on it says the place: within 16 pixels of its top, before it
+  (only the page's first block offers that); else more than 50 pixels right of the block's left, its
+  first child; else its next sibling, after its children. Every place a case names is one of those:
+  first under a block is its first child, first at the top level before the first block, after a
+  block its next sibling. Drag1, Drag2, Drag3, Drag8, Drag13 and Scenario8 agree.
+- **Headings keep their level**: a heading is its block's text, and a drop moves the block as it is,
+  `### D` dropped after `## B` staying `### D`, its child `#### E` too (Drag15, Drag16; ourus
+  re-levels it to its new siblings).
+- **No block is edited after a drop**, and none is selected, even where the block dragged was the
+  one being edited: the outline alone is judged (`noCaretAfter`), and a case that types after its drop
+  skips (Scenario8b, Scenario8c). The DB version keeps the editor of the block dragged.
+- **A selection of blocks is dragged whatever bullet is pressed**: a press on one of them takes them
+  all, and they stay selected (the cover rule: Drag4, Drag20 agree), but so does a press on another
+  block, which stays where it is (`a`, `b` selected, `c` pressed and dropped at the top: nothing
+  moves; ourus moves `c` alone: Drag5, Drag5b disagree). The driver selects blocks as a user does,
+  Escape then Shift+Down until the last is in (`selectsBlocks`).
 
 ## Logseq bugs met on the way
 

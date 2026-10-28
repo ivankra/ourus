@@ -40,7 +40,8 @@ Obsidian's Outliner plugin moves an item with its children, as the outliners and
 
 ## MoveUp1
 
-Moving up carries the subtree; move subtree down takes it back.
+Moving up carries the subtree, its nodes the same nodes (①, ②, ③); move subtree down takes it
+back.
 
 Bare Obsidian moves the line, and `b1` becomes `a`'s child.
 
@@ -49,27 +50,27 @@ tags: core
 ```
 
 ```buffer
-- a
-- b┃
-  - b1
+- a①
+- b┃②
+  - b1③
 - c
 ```
 
 > moveSubtreeUp
 
 ```buffer
-- b┃
-  - b1
-- a
+- b┃②
+  - b1③
+- a①
 - c
 ```
 
 > moveSubtreeDown
 
 ```buffer
-- a
-- b┃
-  - b1
+- a①
+- b┃②
+  - b1③
 - c
 ```
 
@@ -1194,4 +1195,27 @@ tags: edge
 ```buffer
 - > q┃
 - a
+```
+
+## MoveUp43
+
+Crossing into a childless item, the item nests anew there, by the unit (`indentUnit`).
+
+```yaml
+tags: edge
+indentUnit: tab
+```
+
+```buffer
+- a
+- b
+  - y┃
+```
+
+> moveSubtreeUp
+
+```buffer
+- a
+→- y┃
+- b
 ```

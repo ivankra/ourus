@@ -44,6 +44,24 @@ export interface Config {
   readonly markup: 'text' | 'decorated';
 
   /**
+   * How an item is indented where it nests anew and no item of its list beside it gives a column (the
+   * first child of a childless item: by Tab, a move, a paste, Enter):
+   * - `detect` (the default): as the document nests already, the unit most of its nested items have,
+   *   each by its indentation past its parent's marker: any tab in that, `tab`; else one at both its
+   *   parent's content column and four past its marker (under `10. `), or at neither, none; else the
+   *   content column, `2`, or four past the marker, `4`. Code isn't read. With none, or a tie, `2`.
+   * - `tab`: a tab past the parent's marker (Obsidian's "Use tabs", on by default there).
+   * - `2`: the parent's content column (2 under `- `, 3 under `1. `), as Prettier and GitHub nest.
+   * - `4`: four columns past the parent's marker (Obsidian's "Tab size" 4 with tabs off).
+   *
+   * Whatever the unit, the item lands where CommonMark reads it as a child: at least its parent's
+   * content column (a unit short of it is made up to it with spaces), and never at indented code (no
+   * unit reaches four past the content column). The unit also spells the indentation of lines a
+   * command moves: with tabs where it is `tab` (or `detect` reads `tab`), else with spaces.
+   */
+  readonly indentUnit: 'detect' | 'tab' | 2 | 4;
+
+  /**
    * Shift-Tab's later siblings:
    * - `direct` (the default, as in Logseq): they become the item's children, after its own, so the
    *   document order stays the same. Out of a quote, the item leaves where it is, the quote split
@@ -465,8 +483,6 @@ export interface Config {
   //
   // - renumbering: 'changed' | 'never'. Ordered lists an edit touched are renumbered (today), or
   //   numbers are left as written.
-  // - indentUnit: 'detect' | 'tab' | number. New nesting follows a sibling, then the document
-  //   (today). CommonMark mostly decides this already (children nest at the parent's content column).
   // - homeAtTask: 'after' | 'before'. Whether Home stops after a task's checkbox or before it.
   // - pastedNumbering: 'continue' | 'restart'. Whether a pasted ordered run takes the list's numbers,
   //   and whether the items after a list of its own (`pasteListForm: own`) restart at 1, as
@@ -481,10 +497,11 @@ export interface Config {
 
 /** The values each option takes, its default first, for readers of string settings (spec files, frontmatter). */
 const CONFIG_VALUES: { readonly [K in keyof Config]: readonly [Config[K], ...Config[K][]] } = {
-  // how the text reads, and how the host shows its markup: every command
+  // How the text reads, and how the host shows its markup: every command
   flavor: ['gfm', 'commonmark', 'obsidian'],
   markup: ['text', 'decorated'],
-  // the outline: what Shift-Tab does, a new item's bullet, what a quote is, what a list is under
+  // The outline: what Shift-Tab does, a new item's bullet, what a quote is, what a list is under
+  indentUnit: ['detect', 'tab', 2, 4],
   outdent: ['direct', 'logical'],
   bullet: ['-', '*', '+'],
   quotes: ['text', 'atom', 'container'],
@@ -502,12 +519,12 @@ const CONFIG_VALUES: { readonly [K in keyof Config]: readonly [Config[K], ...Con
   backspaceAtTopItem: ['unwrap', 'refuse'],
   backspaceAtItemStart: ['join', 'body', 'unwrap', 'logseq'],
   emptyItemWithChildren: ['lift', 'refuse'],
-  // editing markup: a heading's `#`s, a task's checkbox, a fence's contents, a typed backtick
+  // Editing markup: a heading's `#`s, a task's checkbox, a fence's contents, a typed backtick
   headingEditing: ['text', 'block'],
   taskEditing: ['checkbox', 'text', 'block', 'unwrap'],
   handleFenceContents: [true, false],
   closeBackticks: ['fences', 'all', 'none'],
-  // clipboard
+  // Clipboard
   copyAtCaret: ['node', 'host'],
   copySelection: ['text', 'nodes'],
   pasteSeams: ['closed', 'open'],
@@ -518,7 +535,7 @@ const CONFIG_VALUES: { readonly [K in keyof Config]: readonly [Config[K], ...Con
   pasteOnParent: ['children', 'after'],
   pasteParagraphList: ['siblings', 'children'],
   pasteListForm: ['destination', 'own'],
-  // Modelling quirks of different apps
+  // Options to model quirks of different apps (for testing)
   quirkEnterMidHeading: ['default', 'workflowy'],
   quirkPasteCaret: ['default', 'roam', 'athens'],
   quirkPasteText: ['default', 'dynalist'],

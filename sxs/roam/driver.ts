@@ -9,8 +9,9 @@
 // - The block being edited is read from its textarea.
 
 import type { Page } from 'playwright-core';
-import { perPage, type Driver } from '../lib/driver.ts';
-import { italicsAsMarkdown, type Outline } from '../lib/block.ts';
+import { perPage, type Driver, type Drop } from '../lib/driver.ts';
+import { italicsAsMarkdown, Unsupported, type Outline } from '../lib/block.ts';
+import { gesture } from '../lib/drag.ts';
 
 const MOTIONS: Record<string, string> = {
   CharLeft: 'ArrowLeft',
@@ -94,8 +95,11 @@ export const driver: Driver = {
   model: 'block',
   // a block's text holds a blank line, its paragraphs apart
   paragraphsInBlock: true,
-  // after deleting the page's every block no block is edited (DeleteSubtree6); with a block above, its end
-  noCaretAfter: ['deleteSubtree'],
+  // after deleting the page's every block no block is edited (DeleteSubtree6); with a block above, its end.
+  // A drop leaves the focus on the pressed bullet, a block's caret lost but for the dragged block's (Drag2)
+  noCaretAfter: ['deleteSubtree', 'move'],
+  // a selection of whole blocks: loaded with Escape and Shift+Down, read from their highlight
+  selectsBlocks: true,
   keys: {
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
@@ -114,6 +118,8 @@ export const driver: Driver = {
     redo: 'Control+y',
     ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
   },
+  drops: ['move'],
+  drop,
   emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd', 'selectSubtree', 'deleteSubtree'],
   // Shift+Tab leaves later siblings with the parent (logical outdenting); Enter on an empty nested
   // block outdents it; Backspace on a page's first block does nothing: as ourus's config says of Roam
@@ -195,7 +201,9 @@ export const driver: Driver = {
     const o = doc as Outline;
     const blocks = o.blocks.map((b) => toRoam(b.depth, b.text));
     const at = (p: number, { from, to, cut }: { from: number; to: number; cut?: number }): number => shiftOffset(p - (cut !== undefined && p > cut ? 1 : 0), from, to);
-    const sel = o.sel && { block: o.sel.block, anchor: at(o.sel.anchor, blocks[o.sel.block]!), head: at(o.sel.head, blocks[o.sel.block]!) };
+    // (blocks selected whole: the first opened at its start, to select from with the keys below)
+    const selected = o.selected?.length ? o.selected : null;
+    const sel = o.sel ? { block: o.sel.block, anchor: at(o.sel.anchor, blocks[o.sel.block]!), head: at(o.sel.head, blocks[o.sel.block]!) } : selected && { block: selected[0]!, anchor: 0, head: 0 };
     pageState(page).current = await page.evaluate(
       async ({ blocks, sel, previous }) => {
         const api = (window as any).roamAlphaAPI;
@@ -244,6 +252,18 @@ export const driver: Driver = {
       },
       { blocks: blocks.map(({ depth, string, heading, numbered }) => ({ depth, string, heading, numbered })), sel, previous: pageState(page).current },
     );
+    // blocks selected whole, as a user selects them: Escape selects the block being edited, each
+    // Shift+Down the next on screen, till the last is (`read` reports the topmost)
+    if (selected) {
+      const last = selected[selected.length - 1]!;
+      // (read once Roam has drawn the key's selection: its highlight comes a moment after)
+      const reached = async (): Promise<number> => {
+        await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 50, timeout: 3000 }));
+        return Math.max(-1, ...(((await this.read(page)) as Outline).selected ?? []));
+      };
+      for (let i = 0; i < 3 && (await reached()) < 0; i++) await page.keyboard.press('Escape');
+      for (let k = 0; k <= o.blocks.length && (await reached()) < last; k++) await page.keyboard.press('Shift+ArrowDown');
+    }
   },
 
   async read(page: Page) {
@@ -266,7 +286,14 @@ export const driver: Driver = {
       // the block being edited: its textarea, ahead of what Roam stored
       if (i >= 0) flat[i]!.string = ta!.value;
       const back = ta?.selectionDirection === 'backward';
-      return { flat, sel: i >= 0 ? { block: i, anchor: back ? ta!.selectionEnd : ta!.selectionStart, head: back ? ta!.selectionStart : ta!.selectionEnd } : null };
+      // the blocks selected whole (highlighted), the topmost: a block's children are selected with it
+      const lit = new Set([...document.querySelectorAll('.roam-article .block-highlight-blue')].map((e) => flat.findIndex((b) => b.uid === e.closest('.roam-block-container')?.getAttribute('data-block-uid'))).filter((k) => k >= 0));
+      const under = (k: number): boolean => {
+        for (let j = k - 1, d = flat[k]!.depth; j >= 0 && d > 0; j--) if (flat[j]!.depth < d && ((d = flat[j]!.depth), lit.has(j))) return true;
+        return false;
+      };
+      const selected = i >= 0 ? [] : [...lit].filter((k) => !under(k)).sort((a, b) => a - b);
+      return { flat, sel: i >= 0 ? { block: i, anchor: back ? ta!.selectionEnd : ta!.selectionStart, head: back ? ta!.selectionStart : ta!.selectionEnd } : null, selected };
     }, pageState(page).current);
     const texts = raw.flat.map((b) => fromRoam(b, b.number));
     const blocks = raw.flat.map((b, i) => ({ depth: b.depth, text: texts[i]!.text }));
@@ -277,7 +304,7 @@ export const driver: Driver = {
       sel = { block: sel.block, anchor: at(sel.anchor), head: at(sel.head) };
     }
     // (its italic `__x__` as Markdown's)
-    return italicsAsMarkdown({ blocks, sel });
+    return italicsAsMarkdown({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) });
   },
 
   async act(page: Page, action: string, settle: () => Promise<void>) {
@@ -317,3 +344,58 @@ export const driver: Driver = {
     await settle();
   },
 };
+
+/**
+ * A drop in Roam: the pressed block's bullet (`.rm-bullet`, an HTML5 drag source) held, moved past it,
+ * to the drop area of the place, and released. While a block is dragged Roam puts a separator in each
+ * list of children (the page's, a block's) before its first child, or in an empty one, and after each
+ * child, the dragged block's own not counted: a line of no height, its drop area (`.dnd-drop-area`) a
+ * band from 11px above it to 17px below, from its list's left (20px in, below the top level) to the
+ * right, a deeper list's on top. So the place is aimed at its separator, a few pixels below it, at
+ * the column the pressed bullet would land: its list's left, plus the bullet's own offset in its list.
+ * It drags the pressed block, or the selected blocks where it is one of them; a drop of the selection
+ * presses its first block's bullet.
+ *
+ * While dragging, Roam runs a frame loop (its scrolling at the window's edges, `requestAnimationFrame`
+ * each frame till the drag ends), so the page never settles mid-drag: there the drag has settled once
+ * Roam shows its drop bar at the place.
+ */
+async function drop(page: Page, drop: Drop, settle: () => Promise<void>): Promise<void> {
+  // (a drop of the selection: a press on its first block's bullet)
+  const press = drop.press ?? drop.rows[0];
+  if (press === undefined) throw new Unsupported('a drop of nothing pressed or selected');
+  const at = await page.evaluate(
+    ({ pageUid, press, to }) => {
+      const api = (window as any).roamAlphaAPI;
+      // the blocks as `read` has them, in document order
+      const uids: string[] = [];
+      const walk = (b: any) => [...(b?.[':block/children'] ?? [])].sort((x, y) => x[':block/order'] - y[':block/order']).forEach((k) => (uids.push(k[':block/uid']), walk(k)));
+      walk(api.pull('[:block/uid :block/order {:block/children ...}]', [':block/uid', pageUid]));
+      const block = (i: number) => document.querySelector(`.roam-article .roam-block-container[data-block-uid="${uids[i]}"]`) as HTMLElement | null;
+      const pressed = block(press!);
+      const bullet = pressed?.querySelector(':scope > .rm-block-main .rm-bullet');
+      if (!pressed || !bullet) return null;
+      // the list the place is in: the page's (a top-level block's), or the parent's children
+      const list = (to.parent === 'root' ? block(0)?.parentElement : block(to.parent)?.querySelector(':scope > .rm-block-children')) as HTMLElement | null | undefined;
+      const after = to.after === null ? null : block(to.after);
+      if (!list || after === undefined) return null;
+      const y = after ? after.getBoundingClientRect().bottom : list.getBoundingClientRect().top;
+      const b = bullet.getBoundingClientRect();
+      const x = list.getBoundingClientRect().left + (b.left + b.width / 2 - pressed.parentElement!.getBoundingClientRect().left);
+      return { from: { x: b.left + b.width / 2, y: b.top + b.height / 2 }, to: { x, y: y + 4 }, line: y };
+    },
+    { pageUid: pageState(page).current, press, to: drop.to },
+  );
+  if (!at) throw new Unsupported("the pressed block's bullet, or the place's list, isn't on the page");
+  let dragging = true;
+  const shown = async (): Promise<void> => {
+    if (!dragging) return settle();
+    dragging = false;
+    // (the bar: 4px high, its bottom on the separator; the place's area hovered)
+    await page
+      .waitForFunction((line) => [...document.querySelectorAll('.dnd-drop-bar')].some((e) => Math.abs(e.getBoundingClientRect().bottom - line) < 2), at.line, { timeout: 2000 })
+      // (no bar: released all the same, as a hand would, and judged by what it did)
+      .catch(() => {});
+  };
+  await gesture(page, at.from, at.to, shown);
+}

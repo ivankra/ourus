@@ -2,8 +2,10 @@
 // doesn't do what the example draws: for the spec's tests, and for the SxS, whose heatmap has ourus.
 
 import assert from 'node:assert/strict';
+import { executeCommand, type DropMap, type Selection } from '../src/commands/index.ts';
 import { Config } from '../src/config.ts';
-import { docOf, drawDoc, drawOutline, drawsCaret, drawText, readDrawing, readText, withoutCaret } from './drawing.ts';
+import type { OurusDoc, OutlineNode } from '../src/doc/index.ts';
+import { docOf, drawDoc, drawOutline, drawsCaret, drawText, labelGlyph, labelNumber, nodesOf, readDrawing, readLabels, readText, withoutCaret } from './drawing.ts';
 import { isAction, play, type Played } from './player.ts';
 import { CLIPBOARD_TYPES, specConfig, type Clipboard, type ClipboardType, type SpecTest } from './specfile.ts';
 
@@ -32,40 +34,144 @@ export const normalize = (drawn: string): string => drawn.replace(/»┃/g, '»'
 /** The flavors an example runs in: the one it names, or all (most behavior doesn't depend on it). */
 export const flavorsOf = (t: SpecTest): readonly Config['flavor'][] => (t.options.flavor ? [t.options.flavor as Config['flavor']] : Config.values.flavor);
 
+/** The nodes that start on line `i` of `doc`, the outermost first. */
+const startingOn = (doc: OurusDoc, i: number): OutlineNode[] => nodesOf(doc).filter((n) => n.startLine === i).sort((a, b) => a.depth - b.depth);
+
+/**
+ * A case's node labels (`①`, spec/README.md), bound to ids as its steps go: a start's label names the
+ * node there; a step's names the node with the id bound to it, or, new, one the step made (its id at
+ * least the document's next id before the step), bound then. One label on a line names the innermost
+ * node starting there, a second before it the one outside it.
+ */
+export class Labels {
+  readonly #bound = new Map<number, number>();
+
+  /** The labels a drawing has (`readLabels`), checked against `doc` and bound; `before`, the next id before the step (null at the start). A problem, or null. */
+  check(doc: OurusDoc, labels: ReadonlyMap<number, readonly number[]>, before: number | null): string | null {
+    for (const [line, own] of labels) {
+      const nodes = startingOn(doc, line);
+      if (nodes.length < own.length) return `line ${line + 1}: ${own.map(labelGlyph).join('')}, ${own.length} label${own.length > 1 ? 's' : ''} for ${nodes.length} node${nodes.length === 1 ? '' : 's'} starting there`;
+      for (const [k, label] of own.entries()) {
+        const node = nodes[nodes.length - own.length + k]!;
+        const bound = this.#bound.get(label);
+        if (bound !== undefined) {
+          if (bound !== node.id) return `line ${line + 1}: ${labelGlyph(label)} is node ${bound}, and this is node ${node.id} (a ${node.kind})`;
+          continue;
+        }
+        if ([...this.#bound.values()].includes(node.id)) return `line ${line + 1}: ${labelGlyph(label)} names a node another label has`;
+        if (before !== null && node.id < before) return `line ${line + 1}: ${labelGlyph(label)}, new, names a node the step didn't make (node ${node.id}, a ${node.kind})`;
+        this.#bound.set(label, node.id);
+      }
+    }
+    return null;
+  }
+
+  /** The labels bound so far: each label's number to its node's id. */
+  get ids(): ReadonlyMap<number, number> {
+    return this.#bound;
+  }
+
+  /** The labels to draw on `doc`, by line (`drawLabels`): those of `only`, where their nodes are. */
+  drawn(doc: OurusDoc, only: ReadonlySet<number>): Map<number, number[]> {
+    const lines = new Map<number, { depth: number; label: number }[]>();
+    for (const [label, id] of this.#bound) {
+      if (!only.has(label)) continue;
+      const node = doc.node(id);
+      if (!node) continue;
+      lines.set(node.startLine, [...(lines.get(node.startLine) ?? []), { depth: node.depth, label }]);
+    }
+    return new Map([...lines].map(([line, own]) => [line, own.sort((a, b) => a.depth - b.depth).map((l) => l.label)]));
+  }
+}
+
 /** Where example `t` starts, in `flavor`, with `config` over the example's options. */
 export function startOf(t: SpecTest, flavor: Config['flavor'], config: Partial<Config> = {}): Played {
   const start = readDrawing(t.initial.buffer);
-  return {
-    doc: docOf(start.text, start.placeholders, { flavor, ...specConfig(t.options), ...config }),
-    selection: start.selection,
-    clipboard: readClipboard(t.initial.clipboard),
-  };
+  const doc = docOf(start.text, start.placeholders, { flavor, ...specConfig(t.options), ...config });
+  // (the start's labels, for a drop that names one)
+  const labels = new Labels();
+  labels.check(doc, start.labels, null);
+  // the host's view, by label
+  const ids = (drawn: string): number[] =>
+    [...drawn.replace(/\s/g, '')].map((glyph) => {
+      const id = labels.ids.get(labelNumber(glyph));
+      if (id === undefined) throw new Error(`${t.file}:${t.line}: ${glyph}, in the view, labels no node in the start`);
+      return id;
+    });
+  const folded = t.view.folded === undefined ? undefined : ids(t.view.folded);
+  const zoom = t.view.zoom === undefined ? undefined : ids(t.view.zoom)[0];
+  return { doc, selection: start.selection, clipboard: readClipboard(t.initial.clipboard), drop: start.drop, labels: labels.ids, ...(folded && { folded }), ...(zoom !== undefined && { zoom }) };
 }
 
 /** Plays example `t` in `flavor`, asserting each step's buffer, clipboard and result as drawn. */
 export function run(t: SpecTest, flavor: Config['flavor']): void {
   let state = startOf(t, flavor);
+  const labels = new Labels();
+  const named = labels.check(state.doc, readDrawing(t.initial.buffer).labels, null);
+  assert.equal(named, null, `${t.file}:${t.line} (${flavor}): the start's labels`);
+  state = { ...state, labels: labels.ids };
   if (t.initial.outline !== undefined) assert.equal(drawOutline(state.doc), t.initial.outline, `${t.file}:${t.line} (${flavor}): the start's outline`);
   for (const step of t.steps) {
     const at = `${t.file}:${step.line} (${flavor})`;
     const unknown = step.actions.filter((a) => !isAction(a));
     assert.deepEqual(unknown, [], `${at}: unknown actions`);
+    const before = state.doc.nextId;
     for (const action of step.actions) {
       state = play(state, [action]);
       // write-failed is a bug, never an outcome: a later action can't hide one
       assert.ok(state.last?.status !== 'rejected' || state.last.reason !== 'write-failed', `${at}: ${action} failed to write${state.last?.status === 'rejected' && state.last.detail ? `: ${state.last.detail}` : ''}`);
     }
-    const { buffer, clipboard, result } = step.expect;
+    const { clipboard, result } = step.expect;
     const why = state.last?.status === 'rejected' && state.last.detail ? ` (${state.last.reason}: ${state.last.detail})` : '';
     if (result !== undefined) assert.equal(outcome(state), result, `${at}: result${why}`);
-    if (buffer !== undefined) {
+    if (step.expect.buffer !== undefined) {
+      const { drawn: buffer, labels: own } = readLabels(step.expect.buffer);
       // (a buffer that draws no caret doesn't check it)
       const got = drawsCaret(buffer) ? drawDoc(state.doc, state.selection) : withoutCaret(drawDoc(state.doc, state.selection));
       assert.equal(normalize(got), normalize(buffer), `${at}: buffer${why}`);
+      assert.equal(labels.check(state.doc, own, before), null, `${at}: labels`);
     }
     if (clipboard !== undefined) assert.deepEqual(drawnAs(state.clipboard, clipboard), clipboard, `${at}: clipboard`);
     if (step.expect.outline !== undefined) assert.equal(drawOutline(state.doc), step.expect.outline, `${at}: outline`);
+    const { dragNodes, dropPoints } = step.expect;
+    if (dragNodes === undefined && dropPoints === undefined) continue;
+    const dropMap = state.last?.status === 'applied' ? state.last.dropMap : undefined;
+    assert.ok(dropMap, `${at}: dragNodes and dropPoints are a pickup's, and the last action picked up nothing (${outcome(state)})`);
+    if (dragNodes !== undefined) {
+      const named = new Map([...labels.ids].map(([label, id]) => [id, label]));
+      assert.equal(dropMap.nodes.map((id) => (named.has(id) ? labelGlyph(named.get(id)!) : `node ${id}`)).join(' '), dragNodes.trim().split(/\s+/).join(' '), `${at}: dragNodes`);
+    }
+    if (dropPoints !== undefined) assert.equal(drawDropPoints(state.doc, dropMap, state.selection), readLabels(dropPoints).drawn.replace(/ +$/gm, ''), `${at}: dropPoints`);
   }
+}
+
+/**
+ * The places a pickup offers, drawn (spec/drag.md): the buffer's lines, no caret, and in each gap
+ * whose drop line has an accepted place a line of markers, right after the node above's last line, at
+ * twice each place's depth: `▸` a place, `▹` the run's own, which a place sharing its column with it
+ * doesn't show over. Each place's drop is run, and only those applied are drawn.
+ */
+export function drawDropPoints(doc: OurusDoc, dropMap: DropMap, selection: Selection): string {
+  const lines = doc.text.split('\n');
+  if (lines[lines.length - 1] === '') lines.pop();
+  const markers = new Map<number, string>();
+  for (const seam of dropMap.seams) {
+    const accepted = seam.points.filter((point) => point.current || executeCommand(doc, point.drop, selection).status === 'applied');
+    if (!accepted.length) continue;
+    const row: string[] = [];
+    for (const point of [...accepted].sort((a, b) => +a.current - +b.current)) {
+      const column = point.depth * 2;
+      while (row.length <= column) row.push(' ');
+      row[column] = point.current ? '▹' : '▸';
+    }
+    markers.set(seam.beforeLine - seam.gapLines, row.join(''));
+  }
+  const out: string[] = [];
+  for (let i = 0; i <= lines.length; i++) {
+    if (markers.has(i)) out.push(markers.get(i)!);
+    if (i < lines.length) out.push(drawText(lines[i]!));
+  }
+  return out.join('\n') + '\n';
 }
 
 /**

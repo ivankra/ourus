@@ -49,6 +49,7 @@ Read every difference first; a case whose actions should change is redrawn by ha
 - [`gaps.md`](gaps.md): blank lines as the trailing gap of the node above, and the preamble.
 - [Delete subtree](delete-subtree.md): `deleteSubtree`.
 - [Duplicate subtree](duplicate-subtree.md): `duplicateSubtree`.
+- [Drag and drop](drag.md): `moveSubtreeTo`, a drop of the document's own nodes at a place.
 - [Tasks](tasks.md): Enter and Backspace on tasks.
 - [`placeholders.md`](placeholders.md): empty nodes the text can't hold, kept at the caret: when
   they come and go.
@@ -183,7 +184,9 @@ The item becomes the last child of the item above.
   else about it, as keys. Each is there if the case is about it, at most one of each, in either
   order.
 - **The blocks before the first quote are where the test starts**: its config block (the start's
-  `yaml` block, first: its options and tags, and the clipboard and outline it starts with, below),
+  `yaml` block, first: its options and tags, the clipboard and outline it starts with, below, and
+  for a drag the host's view: `folded: ①` the nodes whose children it hides, `zoom: ①` the one it
+  is zoomed into),
   then one `buffer`, and nothing else.
 - **A quote lists actions**, applied in order to the current state.
 - **The blocks after a quote are what must hold then**, and they become the current state: the
@@ -197,7 +200,9 @@ The item becomes the last child of the item above.
     setext underline against an empty child, a lazy line against an item, a task against `[ ]`
     text), a literal block (`outline: |`): a line per node in document order, indented two spaces
     a level, its kind (`heading 2`, `atom code_block`, `item [x]` for a task), then `: ` and its
-    text, line breaks drawn `⏎`.
+    text, line breaks drawn `⏎`;
+  - after a pickup (`drag`), `dragNodes`, the labels of the nodes it takes (`dragNodes: ① ②`), and
+    `dropPoints`, every place it offers, drawn ([drag.md](drag.md)).
 
   What isn't drawn isn't checked. Options and tags go in the config block alone.
 - **A test's name is its own heading, its ID**: short case IDs (`Enter1`, `ShiftEnter1`, `MoveUp1`),
@@ -222,9 +227,24 @@ The item becomes the last child of the item above.
 | `␍` | a carriage return |
 | `⍽` | a no-break space (U+00A0), which Markdown reads as text, not as a space |
 | `␠` | a line's trailing space, which would be hard to see (as `sxs/probe.ts` draws them); nowhere else, which the reader refuses |
+| `①` … `㊿` | a node's label, last on its first line: no part of the text (below) |
+| `▸` | alone on a line of a start, a drop line: where a drop lands, at twice the depth (no part of the text; [drag.md](drag.md)) |
 
 A clipboard uses `→`, `␍`, `⍽` and `␠` too. A buffer's last line always ends with a line ending. A buffer
 that contains a code fence needs a longer fence of its own (`` ````buffer ``).
+
+A node's **label**, `①` to `⑳`, then `㉑` to `㊿`, names that node, so a case can say which node is
+which, as a command keeps them: Enter's first half keeps the item's node (Enter1), a join the upper
+one's (Backspace1), a move every node it moves (MoveUp1). It is last on the node's first line, after
+everything else drawn there (the text, a `␠`, the caret, a selection's end, a placeholder), before a
+`␍`; anywhere else the reader refuses it. Where two nodes start on one line (a quote and its first
+item), one label names the innermost, and a second before it the one outside it (`> - a①②`: ① the
+quote, ② the item). In a start a label names the node there; in a step's buffer, a label the case
+has seen checks that the node on that line has the same id, and a new one that the step made it,
+then names it for the steps after. An undo is the host's: the text back, the nodes' ids as an update
+carries them, so a node an undo writes again is a new one. A node drawn without a label isn't
+checked, nor is a label not drawn; labels are optional everywhere. `npm run probe -- --labels`
+labels every node of a start, and each new one after them, to see which nodes a command keeps.
 
 ## Actions
 
@@ -241,6 +261,10 @@ that contains a code fence needs a longer fence of its own (`` ````buffer ``).
 | `pastePlain` | Ctrl-Shift-V: pastes the clipboard into the node's text, its line breaks as Shift-Enter's |
 | `deleteSubtree`, `duplicateSubtree` | the commands of the same names |
 | `deleteSoftLineBackward` | Cmd-Backspace: deletes back to the start of the line's text |
+| `drag ②`, `drag` | presses ②'s mark (or picks up the selection's nodes) and holds it, for the step to check what it takes and where it can go (`dragNodes`, `dropPoints`); nothing changes |
+| `pasteAt` | drops the clipboard, dragged in from outside, at the start's `▸` ([drag.md](drag.md)) |
+| `deleteByDrag` | a text drag's first half: the selection deleted as a cut deletes it ([drag.md](drag.md)) |
+| `move ②`, `move` | presses ②'s mark and drops it at the start's `▸`: ② with its subtree, or the selection's nodes where ② is one of them; `move` drops the selection's nodes, as a keyboard drag does ([drag.md](drag.md)). A case drops once |
 | `cursorCharLeft`, `cursorCharRight` | moves the caret a character; a selection collapses to that end |
 | `cursorLineUp`, `cursorLineDown` | moves the caret a line, keeping a goal column while it keeps moving up and down |
 | `cursorLineBoundaryBackward` | Home: to the start of the text, then of the line |
@@ -420,7 +444,8 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
     - `pending`: no fact about the case but its state: behavior agreed on but not built yet. It is
       reported as a todo, and fails once it passes, so the tag goes then;
   - the other options of ourus's config (`src/config.ts`): `outdent` (`direct`, the default, or
-    `logical`), `bullet` (`-`, the default, `*` or `+`), `quotes` (`text`, the default, `atom` or
+    `logical`), `bullet` (`-`, the default, `*` or `+`), `indentUnit` (`detect`, the
+    default, `tab`, `2` or `4`: how an item nesting anew is indented), `quotes` (`text`, the default, `atom` or
     `container`: a case whose quote of one paragraph is a node, `container`'s, says so), `enterOnEmptyItem` (`sibling`, the
     default, `outdent`, `exit` or `unwrap`), `enterMidItem` (`sibling`, the default, or `child`),
     `enterAtTextStart` (`into`, the default, or `stay`), `backspaceAtTopItem` (`unwrap`, the

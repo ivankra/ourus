@@ -74,7 +74,7 @@ without saying so. Obsidian's Outliner plugin joins as ourus does on plain lists
 
 ## Backspace1
 
-Joins text to the item above.
+Joins text to the item above, which keeps its node (①); the joined item's goes (②).
 
 Bare Obsidian deletes the space after the marker instead: `-two` is a lazy line of `one`.
 
@@ -83,14 +83,14 @@ tags: core
 ```
 
 ```buffer
-- one
-- ┃two
+- one①
+- ┃two②
 ```
 
 > deleteContentBackward
 
 ```buffer
-- one┃two
+- one┃two①
 ```
 
 ## Backspace2

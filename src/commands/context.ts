@@ -16,12 +16,15 @@ export type CommandOutcome = CommandResult | null;
 export class CommandContext {
   readonly doc: OurusDoc;
   readonly selection: Selection;
+  /** The nodes the command acts on, by id, where it was given them (`Command.nodes`): else the selection's. */
+  readonly nodes: readonly number[] | undefined;
   #from: Located | undefined;
   #to: Located | undefined;
 
-  constructor(doc: OurusDoc, selection: Selection) {
+  constructor(doc: OurusDoc, selection: Selection, nodes?: readonly number[]) {
     this.doc = doc;
     this.selection = selection;
+    this.nodes = nodes;
   }
 
   /** The same document with a caret at `pos`: a command acting from there. */

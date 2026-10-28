@@ -333,6 +333,126 @@ tags: core
   - plants
 ```
 
+### Scenario8b
+
+Reorganizing by dragging: `Home`, pressed by its bullet, goes to the top with its child
+([Drag1](drag.md#drag1)), and the caret stays in the text it is in, where typing goes on
+([Drag2](drag.md#drag2)).
+
+```yaml
+tags: core
+```
+
+```buffer
+▸
+- Inbox
+- Work
+  - email┃
+- Home③
+  - plants
+```
+
+> move ③
+
+```buffer
+- Home③
+  - plants
+- Inbox
+- Work
+  - email┃
+```
+
+> "s"
+
+```buffer
+- Home
+  - plants
+- Inbox
+- Work
+  - emails┃
+```
+
+### Scenario8c
+
+Dragged into the item above as its child ([Drag3](drag.md#drag3)), its own child with it, then
+taken back out with Shift-Tab ([Outdent1](outdent.md#outdent1)).
+
+```yaml
+tags: core
+```
+
+```buffer
+- Inbox
+  ▸
+- Work┃②
+  - email
+```
+
+> move ②
+
+```buffer
+- Inbox
+  - Work┃②
+    - email
+```
+
+> outdent
+
+```buffer
+- Inbox
+- Work┃
+  - email
+```
+
+### Scenario8d
+
+A drag shows where it can go, its own place among them ([Drag6](drag.md#drag6)); set down where it
+started, it changes nothing ([Drag6b](drag.md#drag6b)), and the keys go on from there
+([MoveDown1](move-subtree-down.md#movedown1)).
+
+```yaml
+tags: core
+```
+
+```buffer
+- Inbox
+▸
+- Work┃②
+- Home
+```
+
+> drag ②
+
+```yaml
+dropPoints: |
+  ▸
+  - Inbox
+  ▹ ▸
+  - Work
+  - Home
+  ▸ ▸
+```
+
+> move ②
+
+```yaml
+result: applied
+```
+
+```buffer
+- Inbox
+- Work┃②
+- Home
+```
+
+> moveSubtreeDown
+
+```buffer
+- Inbox
+- Home
+- Work┃
+```
+
 ### Scenario9
 
 Reorganizing across parents: an item moved down past its parent's end becomes the next item's first

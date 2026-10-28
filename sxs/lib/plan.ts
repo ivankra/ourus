@@ -7,9 +7,11 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { Config } from '../../src/config.ts';
 import { drawsCaret, readText, withoutCaret } from '../../test/drawing.ts';
+import { isDrop } from '../../test/player.ts';
 import { drawnSteps, readClipboard } from '../../test/spec-run.ts';
 import { readSpec, slug, specConfig, type Clipboard, type SpecTest } from '../../test/specfile.ts';
-import type { Doc, Driver } from './driver.ts';
+import type { Doc, Driver, Drop } from './driver.ts';
+import { inBlocks, resolveDrop } from './drag.ts';
 import { draw, project, sameOutline, Unsupported, type Outline } from './block.ts';
 import { readTextDoc } from './text.ts';
 
@@ -43,6 +45,8 @@ export interface Plan {
   readonly settings: Partial<Config>;
   /** The same for tests that adapt to the same plan, which then run once. */
   readonly key: string;
+  /** Its drop, as rows (`resolveDrop`), where it makes one. */
+  readonly drop?: Drop;
 }
 
 export type Adapted = { plan: Plan } | { skip: string };
@@ -53,6 +57,8 @@ const isMotion = (a: string): boolean => /^(?:cursor|select)(?:CharLeft|CharRigh
 /** Whether the app can play an action. */
 export function playable(driver: Driver, action: string): boolean {
   if (/^"[^"]*"$/.test(action)) return true;
+  // a drop: a gesture the driver plays (`Driver.drop`), by its action (`move ②` is a `move`)
+  if (isDrop(action)) return !!driver.drop && !!driver.drops?.includes(action.split(' ')[0] as Drop['action']);
   if (action === 'paste' || action === 'pastePlain') return action in driver.keys;
   return action in driver.keys || !!driver.emulated?.includes(action);
 }
@@ -149,11 +155,19 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
   try {
     const config = specConfig(test.options);
     // what the app's blocks hold, as the projection reads it
-    const shape = { ordered: driver.ordered, freeForm: driver.freeForm, paragraphsInBlock: driver.paragraphsInBlock, quotes: driver.behaves?.quotes, listParent: driver.behaves?.listParent };
+    const shape = { ordered: driver.ordered, freeForm: driver.freeForm, paragraphsInBlock: driver.paragraphsInBlock, quotes: driver.behaves?.quotes, listParent: driver.behaves?.listParent, blockSelection: driver.selectsBlocks };
     const start = project(test.initial.buffer, flavor, { ...shape, config });
     if (start.caretLost) return skip(start.caretLost);
     const no = refused(start.notes) ?? driver.holds?.(start.outline);
     if (no) return skip(no);
+    // a drop, resolved from where the case starts, its rows the blocks they became
+    let drop: Drop | undefined;
+    if (test.steps.some((s) => s.actions.some(isDrop))) {
+      const resolved = resolveDrop(test, flavor);
+      const blocks = typeof resolved === 'string' ? resolved : inBlocks(resolved, start.rows ?? new Map(), start.outline);
+      if (typeof blocks === 'string') return skip(`drop: ${blocks}`);
+      drop = blocks;
+    }
     start.notes.forEach((n) => notes.add(n));
     // an adapted start is another document than the example's (`Notes⏎⏎more`, a paragraph each, is
     // `- Notes⏎- more` to the app): where its blocks drawn as items read back as the same blocks, the
@@ -215,8 +229,8 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
       const by = ours === null ? undefined : theirs.find(([k, v]) => played({ [k]: v }) !== ours);
       if (by) return skip(`option ${by[0]}: the app's ${by[1]}, as blocks`);
     }
-    const key = JSON.stringify([start.outline, clipboard, steps.map((s) => [s.actions, s.want, s.clipboard]), settings]);
-    return { plan: { test, name, initial: start.outline, clipboard, steps, notes: [...notes].sort(), settings, key } };
+    const key = JSON.stringify([start.outline, clipboard, steps.map((s) => [s.actions, s.want, s.clipboard]), settings, ...(drop ? [drop] : [])]);
+    return { plan: { test, name, initial: start.outline, clipboard, steps, notes: [...notes].sort(), settings, key, ...(drop && { drop }) } };
   } catch (e) {
     if (e instanceof Unsupported) return skip(e.message);
     throw e;
@@ -242,8 +256,15 @@ function adaptText(driver: Driver, test: SpecTest, name: string, clipboard: Clip
     return { line: s.line, actions: played[i]!, want, ...(buffer !== undefined && { drawn: buffer }), ...(clip !== undefined && { clipboard: clip }) };
   });
   if (!steps.some((s) => s.want || s.clipboard !== undefined)) return { skip: 'nothing to compare' };
-  const key = JSON.stringify([initial, clipboard, steps.map((s) => [s.actions, s.want, s.clipboard]), settings]);
-  return { plan: { test, name, initial, clipboard, steps, notes: [...under], settings, key } };
+  // a drop, resolved from where the case starts: rows the driver finds on screen
+  let drop: Drop | undefined;
+  if (test.steps.some((s) => s.actions.some(isDrop))) {
+    const resolved = resolveDrop(test, (test.options.flavor ?? Config.defaults.flavor) as Config['flavor']);
+    if (typeof resolved === 'string') return { skip: `drop: ${resolved}` };
+    drop = resolved;
+  }
+  const key = JSON.stringify([initial, clipboard, steps.map((s) => [s.actions, s.want, s.clipboard]), settings, ...(drop ? [drop] : [])]);
+  return { plan: { test, name, initial, clipboard, steps, notes: [...under], settings, key, ...(drop && { drop }) } };
 }
 
 // ------------------------------------------------------------------ choosing tests

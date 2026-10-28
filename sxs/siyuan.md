@@ -5,7 +5,7 @@ version: "3.8.6"
 url: "http://127.0.0.1:6816/stage/build/desktop/"
 model: "block"
 command: "node sxs/run.ts siyuan"
-elapsed_s: 502
+elapsed_s: 736
 workers: 4
 ---
 
@@ -15,9 +15,9 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 211 | [10](#caret-10) | [19](#whitespace-19) | [87](#disagree-87) |  |  | **327** |
-| adapted | 185 | [10](#adapted-caret-10) | [30](#adapted-whitespace-30) | [84](#adapted-disagree-84) |  |  | **309** |
-| **total** | **396 (35%)** | **20 (1.7%)** | **49 (4.3%)** | **171 (15%)** | **0 (0%)** | **[507](#skipped-507) (44%)** | **1143** |
+| original | 224 | [19](#caret-19) | [19](#whitespace-19) | [92](#disagree-92) |  |  | **354** |
+| adapted | 185 | [12](#adapted-caret-12) | [30](#adapted-whitespace-30) | [86](#adapted-disagree-86) |  |  | **313** |
+| **total** | **409 (34%)** | **31 (2.6%)** | **49 (4.1%)** | **178 (15%)** | **0 (0%)** | **[526](#skipped-526) (44%)** | **1194** |
 
 Per-file:
 
@@ -29,16 +29,17 @@ Per-file:
 | [cursor.md](../spec/cursor.md) | 25 | 4 |  |  |  | 7 | **36** | 25 | 4 |
 | [delete-subtree.md](../spec/delete-subtree.md) |  |  |  |  |  | 13 | **13** |  |  |
 | [delete.md](../spec/delete.md) | 11 | 1 | 2 | 16 |  | 26 | **56** | 23 | 7 |
-| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  | 2 |  | 8 | **10** | 2 |  |
+| [drag.md](../spec/drag.md) |  | 8 |  | 6 |  | 23 | **37** | 10 | 4 |
+| [duplicate-subtree.md](../spec/duplicate-subtree.md) | 1 |  |  | 2 |  | 7 | **10** | 3 |  |
 | [enter.md](../spec/enter.md) | 43 | 3 | 11 | 9 |  | 32 | **98** | 24 | 42 |
 | [fences.md](../spec/fences.md) | 12 | 1 | 1 | 2 |  | 54 | **70** |  | 16 |
 | [gaps.md](../spec/gaps.md) | 11 |  |  | 2 |  | 6 | **19** | 9 | 4 |
-| [indent.md](../spec/indent.md) | 14 |  | 1 | 11 |  | 16 | **42** | 20 | 6 |
+| [indent.md](../spec/indent.md) | 18 |  | 1 | 11 |  | 20 | **50** | 24 | 6 |
 | [lists.md](../spec/lists.md) | 10 |  |  |  |  | 6 | **16** | 3 | 7 |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 25 |  |  | 7 |  | 8 | **40** | 25 | 7 |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 22 |  |  | 8 |  | 12 | **42** | 21 | 9 |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 28 |  |  | 7 |  | 5 | **40** | 28 | 7 |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 25 |  |  | 8 |  | 10 | **43** | 24 | 9 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 46 | 1 | 1 | 7 |  | 12 | **67** | 30 | 25 |
-| [outdent.md](../spec/outdent.md) | 14 |  |  | 5 |  | 17 | **36** | 15 | 4 |
+| [outdent.md](../spec/outdent.md) | 16 | 2 |  | 5 |  | 15 | **38** | 19 | 4 |
 | [paste-conv.md](../spec/paste-conv.md) | 4 | 1 |  | 1 |  |  | **6** | 5 | 1 |
 | [paste-html.md](../spec/paste-html.md) | 7 | 4 |  | 7 |  | 1 | **19** |  | 18 |
 | [paste-list-form.md](../spec/paste-list-form.md) | 5 |  |  |  |  | 1 | **6** | 4 | 1 |
@@ -49,15 +50,15 @@ Per-file:
 | [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |  |  |
 | [quotes.md](../spec/quotes.md) | 12 |  |  | 10 |  | 121 | **143** |  | 22 |
 | [regressions.md](../spec/regressions.md) | 8 |  | 2 | 10 |  | 44 | **64** | 3 | 17 |
-| [scenarios.md](../spec/scenarios.md) | 15 |  |  | 9 |  | 2 | **26** | 15 | 9 |
+| [scenarios.md](../spec/scenarios.md) | 15 | 1 |  | 10 |  | 3 | **29** | 17 | 9 |
 | [shift-enter.md](../spec/shift-enter.md) | 15 |  | 10 | 4 |  | 7 | **36** | 13 | 16 |
 | [tasks.md](../spec/tasks.md) | 7 |  | 2 | 7 |  | 14 | **30** |  | 16 |
 | [typing.md](../spec/typing.md) | 1 |  |  | 1 |  | 1 | **3** | 1 | 1 |
 | [undo.md](../spec/undo.md) | 4 |  |  |  |  | 1 | **5** | 3 | 1 |
 | [z-open.md](../spec/z-open.md) |  |  |  |  |  | 1 | **1** |  |  |
-| **total** | **396 (35%)** | **20 (1.7%)** | **49 (4.3%)** | **171 (15%)** | **0 (0%)** | **507 (44%)** | **1143** | **327 (29%)** | **309 (27%)** |
+| **total** | **409 (34%)** | **31 (2.6%)** | **49 (4.1%)** | **178 (15%)** | **0 (0%)** | **527 (44%)** | **1194** | **354 (30%)** | **313 (26%)** |
 
-## Disagree (87)
+## Disagree (92)
 
 ### [Backspace5](../spec/backspace.md#backspace5)
 
@@ -839,6 +840,150 @@ Per-file:
 </td></tr>
 </table>
 
+### [Drag4](../spec/drag.md#drag4)
+
+> move ②
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ▮ a
+- ▮ b
+- c
+```
+
+</td><td>
+
+```buffer
+- a
+- c
+- ▮ b
+```
+
+</td><td>
+
+```buffer
+- c
+- ▮ a
+- ▮ b
+```
+
+</td></tr>
+</table>
+
+### [Drag15](../spec/drag.md#drag15)
+
+> move ②
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ # A
+  ¶ ## B
+¶ # C
+  ¶ ### D┃
+    ¶ #### E
+```
+
+</td><td>
+
+```buffer
+¶ # A
+  ¶ ## B
+    ¶ ▮ ### D
+¶ # C
+  ¶ #### E
+```
+
+</td><td>
+
+```buffer
+¶ # A
+  ¶ ## B
+  ¶ ## D┃
+    ¶ ### E
+¶ # C
+```
+
+</td></tr>
+</table>
+
+### [Drag16](../spec/drag.md#drag16)
+
+> move ②
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ # A
+  ¶ x
+¶ # C
+  ¶ ##### D┃
+    ¶ ###### E
+```
+
+</td><td>
+
+```buffer
+¶ # A
+  ¶ x
+  ¶ ▮ ##### D
+¶ # C
+  ¶ ###### E
+```
+
+</td><td>
+
+```buffer
+¶ # A
+  ¶ x
+  ¶ ## D┃
+    ¶ ### E
+¶ # C
+```
+
+</td></tr>
+</table>
+
+### [Drag20](../spec/drag.md#drag20)
+
+> move
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+1. a
+2. ▮ b
+3. ▮ c
+```
+
+</td><td>
+
+```buffer
+1. ▮ b
+2. a
+3. c
+```
+
+</td><td>
+
+```buffer
+1. ▮ b
+2. ▮ c
+3. a
+```
+
+</td></tr>
+</table>
+
 ### [DuplicateSubtree1](../spec/duplicate-subtree.md#duplicatesubtree1)
 
 > duplicateSubtree
@@ -857,7 +1002,7 @@ Per-file:
 
 ```buffer
 - a
-  ¶ ▮ ┃a
+  ¶ ▮ a
   - b
 - c
 ```
@@ -892,7 +1037,7 @@ Per-file:
 
 ```buffer
 - 
-  ¶ ▮ ┃
+  ¶ ▮ 
   - a
 ```
 
@@ -3184,6 +3329,77 @@ y
 </td></tr>
 </table>
 
+### [Scenario8b](../spec/scenarios.md#scenario8b)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Inbox
+- Work
+  - email┃
+- Home
+  - plants
+```
+
+</td></tr>
+</table>
+
+> move ③
+
+<table>
+<tr><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ▮ Home
+  - plants
+- Inbox
+- Work
+  - email
+```
+
+</td><td>
+
+```buffer
+- Home
+  - plants
+- Inbox
+- Work
+  - email┃
+```
+
+</td></tr>
+</table>
+
+> "s"
+
+<table>
+<tr><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- s┃Home
+  - plants
+- Inbox
+- Work
+  - email
+```
+
+</td><td>
+
+```buffer
+- Home
+  - plants
+- Inbox
+- Work
+  - emails┃
+```
+
+</td></tr>
+</table>
+
 ### [Scenario11](../spec/scenarios.md#scenario11)
 
 <table>
@@ -4300,7 +4516,7 @@ b
 
 ```buffer
 ¶ para
-¶ 
+¶ ┃
 ```
 
 </td><td>
@@ -4390,7 +4606,7 @@ b
 </td></tr>
 </table>
 
-## Caret (10)
+## Caret (19)
 
 ### [Backspace43](../spec/backspace.md#backspace43)
 
@@ -4526,6 +4742,204 @@ b
 </td></tr>
 </table>
 
+### [Drag1](../spec/drag.md#drag1)
+
+> move ③
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one
+  - two
+- three┃
+```
+
+</td><td>
+
+```buffer
+- ▮ three
+- one
+  - two
+```
+
+</td><td>
+
+```buffer
+- three┃
+- one
+  - two
+```
+
+</td></tr>
+</table>
+
+### [Drag2](../spec/drag.md#drag2)
+
+> move ③
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one
+  - two┃
+- three
+```
+
+</td><td>
+
+```buffer
+- ▮ three
+- one
+  - two
+```
+
+</td><td>
+
+```buffer
+- three
+- one
+  - two┃
+```
+
+</td></tr>
+</table>
+
+### [Drag3](../spec/drag.md#drag3)
+
+> move ①
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one┃
+- two
+- three
+```
+
+</td><td>
+
+```buffer
+- two
+  - ▮ one
+- three
+```
+
+</td><td>
+
+```buffer
+- two
+  - one┃
+- three
+```
+
+</td></tr>
+</table>
+
+### [Drag5](../spec/drag.md#drag5)
+
+> move ③
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ▮ a
+- ▮ b
+- c
+```
+
+</td><td>
+
+```buffer
+- ▮ c
+- a
+- b
+```
+
+</td><td>
+
+```buffer
+- c
+- ▮ a
+- ▮ b
+```
+
+</td></tr>
+</table>
+
+### [Drag5b](../spec/drag.md#drag5b)
+
+> move ③
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ▮ a
+- ▮ b
+- c
+```
+
+</td><td>
+
+```buffer
+- a
+- ▮ c
+- b
+```
+
+</td><td>
+
+```buffer
+- ▮ a
+- ▮ c
+- ▮ b
+```
+
+</td></tr>
+</table>
+
+### [Drag32](../spec/drag.md#drag32)
+
+> move ②
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - a1┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- b
+  - ▮ a1
+```
+
+</td><td>
+
+```buffer
+- a
+- b
+  - a1┃
+```
+
+</td></tr>
+</table>
+
 ### [Enter32](../spec/enter.md#enter32)
 
 > enter
@@ -4652,6 +5066,72 @@ b
 </td></tr>
 </table>
 
+### [Outdent8](../spec/outdent.md#outdent8)
+
+> outdent
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ para
+- ▮ a
+  - b
+- ▮ c
+```
+
+</td><td>
+
+```buffer
+¶ ┃para
+¶ a
+- b
+¶ c
+```
+
+</td><td>
+
+```buffer
+¶ para
+¶ ▮ a
+- ▮ b
+¶ ▮ c
+```
+
+</td></tr>
+</table>
+
+### [Outdent12](../spec/outdent.md#outdent12)
+
+> outdent
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ▮ a
+- ▮ b
+```
+
+</td><td>
+
+```buffer
+¶ ┃a
+¶ b
+```
+
+</td><td>
+
+```buffer
+¶ ▮ a
+¶ ▮ b
+```
+
+</td></tr>
+</table>
+
 ### [PasteConvPhrase](../spec/paste-conv.md#pasteconvphrase)
 
 <table>
@@ -4743,7 +5223,68 @@ text
 </td></tr>
 </table>
 
-## Adapted: disagree (84)
+### [Scenario8c](../spec/scenarios.md#scenario8c)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Inbox
+- Work┃
+  - email
+```
+
+</td></tr>
+</table>
+
+> move ②
+
+<table>
+<tr><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Inbox
+  - ▮ Work
+    - email
+```
+
+</td><td>
+
+```buffer
+- Inbox
+  - Work┃
+    - email
+```
+
+</td></tr>
+</table>
+
+> outdent
+
+<table>
+<tr><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Inbox
+- ▮ Work
+  - email
+```
+
+</td><td>
+
+```buffer
+- Inbox
+- Work┃
+  - email
+```
+
+</td></tr>
+</table>
+
+## Adapted: disagree (86)
 
 ### [Backspace3](../spec/backspace.md#backspace3)
 
@@ -5407,6 +5948,121 @@ Original:
 
 ```buffer
 - a┃b
+```
+
+</td></tr>
+</table>
+
+### [Drag8](../spec/drag.md#drag8)
+
+> move ②
+
+Adapted: blank lines
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+¶ para┃
+```
+
+</td><td>
+
+```buffer
+- a
+  ¶ ▮ para
+```
+
+</td><td>
+
+```buffer
+- a
+  - para┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  ▸
+
+para┃②
+```
+
+</td><td>
+
+```buffer
+- a
+
+  - para┃②
+```
+
+</td></tr>
+</table>
+
+### [Drag30](../spec/drag.md#drag30)
+
+> move ①
+
+Adapted: blank lines
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃
+1. a
+2. b
+```
+
+</td><td>
+
+```buffer
+1. a
+2. ▮ x
+3. b
+```
+
+</td><td>
+
+```buffer
+1. a
+- x┃
+2. b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃①
+
+1. a
+▸
+2. b
+```
+
+</td><td>
+
+```buffer
+1. a
+- x┃①
+
+2. b
 ```
 
 </td></tr>
@@ -12422,7 +13078,7 @@ Original:
 </td></tr>
 </table>
 
-## Adapted: caret (10)
+## Adapted: caret (12)
 
 ### [Backspace24](../spec/backspace.md#backspace24)
 
@@ -12677,6 +13333,123 @@ Original:
 
 ```buffer
 - ┃\# b
+```
+
+</td></tr>
+</table>
+
+### [Drag13](../spec/drag.md#drag13)
+
+> move ②
+
+Adapted: under listParent: container
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃
+¶ p
+```
+
+</td><td>
+
+```buffer
+¶ p
+- ▮ x
+```
+
+</td><td>
+
+```buffer
+¶ p
+- x┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃②
+
+p
+▸
+```
+
+</td><td>
+
+```buffer
+p
+
+- x┃
+```
+
+</td></tr>
+</table>
+
+### [Drag33](../spec/drag.md#drag33)
+
+> move ①
+
+Adapted: blank lines
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+- c
+```
+
+</td><td>
+
+```buffer
+- b
+- c
+- ▮ a
+```
+
+</td><td>
+
+```buffer
+- b
+- c
+- a┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃①
+
+- b
+
+- c
+▸
+```
+
+</td><td>
+
+```buffer
+- b
+
+- c
+
+- a┃①
 ```
 
 </td></tr>
@@ -13110,7 +13883,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (507)
+## Skipped (527)
 
 | example | why |
 | --- | --- |
@@ -13222,9 +13995,32 @@ Original:
 | [Delete29](../spec/delete.md#delete29) | caret in a marker |
 | [Delete31b](../spec/delete.md#delete31b) | option joinWithChildren: refuse |
 | [Delete34](../spec/delete.md#delete34) | option quotes: container |
+| **drag.md** | |
+| [Drag5c](../spec/drag.md#drag5c) | changes only what blocks can't show |
+| [Drag6](../spec/drag.md#drag6) | action drag ② |
+| [Drag6b](../spec/drag.md#drag6b) | changes only what blocks can't show |
+| [Drag6c](../spec/drag.md#drag6c) | action drag ② |
+| [Drag7](../spec/drag.md#drag7) | action drag ④ |
+| [Drag9](../spec/drag.md#drag9) | nothing to compare |
+| [Drag12](../spec/drag.md#drag12) | nothing to compare |
+| [Drag14](../spec/drag.md#drag14) | nothing to compare |
+| [Drag17](../spec/drag.md#drag17) | nothing to compare |
+| [Drag18](../spec/drag.md#drag18) | drop: the pickup is refused (non-contiguous) |
+| [Drag19](../spec/drag.md#drag19) | nothing to compare |
+| [Drag21](../spec/drag.md#drag21) | quote |
+| [Drag22](../spec/drag.md#drag22) | action drag ② |
+| [Drag23](../spec/drag.md#drag23) | action drag ② |
+| [Drag24](../spec/drag.md#drag24) | action drag ③ |
+| [Drag25](../spec/drag.md#drag25) | action drag ③ |
+| [Drag26](../spec/drag.md#drag26) | action drag ③ |
+| [Drag31](../spec/drag.md#drag31) | drop: a free block's place beside an item: SiYuan's drag of one puts it in the item or beside the item's whole list |
+| [Drag10](../spec/drag.md#drag10) | action pasteAt |
+| [Drag11](../spec/drag.md#drag11) | action pasteAt |
+| [Drag27](../spec/drag.md#drag27) | action pasteAt |
+| [Drag28](../spec/drag.md#drag28) | action pasteAt |
+| [Drag29](../spec/drag.md#drag29) | action deleteByDrag |
 | **duplicate-subtree.md** | |
 | [DuplicateSubtree2](../spec/duplicate-subtree.md#duplicatesubtree2) | action deleteSubtree |
-| [DuplicateSubtree3](../spec/duplicate-subtree.md#duplicatesubtree3) | selection across blocks |
 | [DuplicateSubtree4](../spec/duplicate-subtree.md#duplicatesubtree4) | indented code |
 | [DuplicateSubtree5](../spec/duplicate-subtree.md#duplicatesubtree5) | option quotes: container |
 | [DuplicateSubtree6](../spec/duplicate-subtree.md#duplicatesubtree6) | selection across blocks |
@@ -13327,11 +14123,9 @@ Original:
 | [Gap18](../spec/gaps.md#gap18) | caret on a blank line |
 | [Gap19](../spec/gaps.md#gap19) | frontmatter |
 | **indent.md** | |
-| [Indent9](../spec/indent.md#indent9) | selection across blocks |
 | [Indent13](../spec/indent.md#indent13) | line's leading whitespace |
 | [Indent19](../spec/indent.md#indent19) | line's trailing whitespace |
 | [Indent20](../spec/indent.md#indent20) | line's leading whitespace |
-| [Indent27](../spec/indent.md#indent27) | selection across blocks |
 | [Indent28](../spec/indent.md#indent28) | caret in a marker |
 | [Indent30](../spec/indent.md#indent30) | caret in a marker |
 | [Indent31](../spec/indent.md#indent31) | caret on a code block's fence |
@@ -13343,6 +14137,12 @@ Original:
 | [Indent37](../spec/indent.md#indent37) | caret on a thematic break |
 | [Indent37b](../spec/indent.md#indent37b) | caret on a thematic break |
 | [Indent38](../spec/indent.md#indent38) | indented code |
+| [Indent39](../spec/indent.md#indent39) | option indentUnit: tab |
+| [Indent40](../spec/indent.md#indent40) | option indentUnit: 2 |
+| [Indent41](../spec/indent.md#indent41) | option indentUnit: tab |
+| [Indent42](../spec/indent.md#indent42) | option indentUnit: tab |
+| [Indent44](../spec/indent.md#indent44) | line's leading whitespace |
+| [Indent45b](../spec/indent.md#indent45b) | indented code |
 | **lists.md** | |
 | [Lists4](../spec/lists.md#lists4) | option listParent: block |
 | [Lists9](../spec/lists.md#lists9) | action deleteSubtree |
@@ -13351,19 +14151,13 @@ Original:
 | [Lists14](../spec/lists.md#lists14) | option listMoves: item |
 | [Lists15](../spec/lists.md#lists15) | option listMoves: item |
 | **move-subtree-down.md** | |
-| [MoveDown11](../spec/move-subtree-down.md#movedown11) | selection across blocks |
-| [MoveDown12](../spec/move-subtree-down.md#movedown12) | selection across blocks |
-| [MoveDown14](../spec/move-subtree-down.md#movedown14) | selection across blocks |
 | [MoveDown32](../spec/move-subtree-down.md#movedown32) | caret in a marker |
 | [MoveDown34](../spec/move-subtree-down.md#movedown34) | caret on a code block's fence |
 | [MoveDown37](../spec/move-subtree-down.md#movedown37) | caret on a code block's fence |
 | [MoveDown38](../spec/move-subtree-down.md#movedown38) | caret on a blank line |
-| [MoveDown40](../spec/move-subtree-down.md#movedown40) | selection across blocks |
+| [MoveDown40](../spec/move-subtree-down.md#movedown40) | line's trailing whitespace |
 | **move-subtree-up.md** | |
-| [MoveUp10](../spec/move-subtree-up.md#moveup10) | selection across blocks |
-| [MoveUp11](../spec/move-subtree-up.md#moveup11) | selection across blocks |
 | [MoveUp18](../spec/move-subtree-up.md#moveup18) | indented code |
-| [MoveUp31](../spec/move-subtree-up.md#moveup31) | selection across blocks |
 | [MoveUp34](../spec/move-subtree-up.md#moveup34) | caret in a marker |
 | [MoveUp35](../spec/move-subtree-up.md#moveup35) | option quotes: container |
 | [MoveUp36](../spec/move-subtree-up.md#moveup36) | caret in a marker |
@@ -13372,6 +14166,7 @@ Original:
 | [MoveUp39](../spec/move-subtree-up.md#moveup39) | caret on a blank line |
 | [MoveUp40](../spec/move-subtree-up.md#moveup40) | line's leading whitespace |
 | [MoveUp41](../spec/move-subtree-up.md#moveup41) | unclosed fence, which SiYuan closes |
+| [MoveUp43](../spec/move-subtree-up.md#moveup43) | option indentUnit: tab |
 | **obsidian-true-outliner.md** | |
 | [TO-E7-E8](../spec/obsidian-true-outliner.md#to-e7-e8) | option enterMidItem: child |
 | [TO-E11](../spec/obsidian-true-outliner.md#to-e11) | option enterMidItem: child |
@@ -13386,9 +14181,6 @@ Original:
 | [TO19](../spec/obsidian-true-outliner.md#to19) | option enterOnEmptyItem: outdent |
 | [TO-Bug197](../spec/obsidian-true-outliner.md#to-bug197) | option quotes: container |
 | **outdent.md** | |
-| [Outdent8](../spec/outdent.md#outdent8) | selection across blocks |
-| [Outdent10](../spec/outdent.md#outdent10) | selection across blocks |
-| [Outdent12](../spec/outdent.md#outdent12) | selection across blocks |
 | [Outdent14](../spec/outdent.md#outdent14) | caret in a marker |
 | [LogicalOutdent1](../spec/outdent.md#logicaloutdent1) | option outdent: logical |
 | [LogicalOutdent2](../spec/outdent.md#logicaloutdent2) | option outdent: logical |
@@ -13403,6 +14195,7 @@ Original:
 | [Outdent19](../spec/outdent.md#outdent19) | caret on a code block's fence |
 | [Outdent19b](../spec/outdent.md#outdent19b) | option markup: decorated |
 | [Outdent20](../spec/outdent.md#outdent20) | table SiYuan writes otherwise (its columns padded to their widest cell) |
+| [Outdent22b](../spec/outdent.md#outdent22b) | indented code |
 | **paste-html.md** | |
 | [PasteHtml12](../spec/paste-html.md#pastehtml12) | quote |
 | **paste-list-form.md** | |
@@ -13621,6 +14414,7 @@ Original:
 | [Regression62](../spec/regressions.md#regression62) | option quotes: atom |
 | [Regression64](../spec/regressions.md#regression64) | option quotes: atom |
 | **scenarios.md** | |
+| [Scenario8d](../spec/scenarios.md#scenario8d) | action drag ② |
 | [Scenario10](../spec/scenarios.md#scenario10) | action deleteSubtree |
 | [Scenario17](../spec/scenarios.md#scenario17) | option pasteLines: items |
 | **shift-enter.md** | |

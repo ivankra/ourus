@@ -14,8 +14,9 @@
 //   and a `TODO` for no task until its text changed.
 
 import type { Page } from 'playwright-core';
-import { perPage, type Driver } from '../lib/driver.ts';
-import { unescapeLaterLines, type Outline } from '../lib/block.ts';
+import { perPage, type Driver, type Drop } from '../lib/driver.ts';
+import { unescapeLaterLines, Unsupported, type Outline } from '../lib/block.ts';
+import { gesture } from '../lib/drag.ts';
 
 /** Tine's keys for the spec's actions (Linux); the `select…` motions add Shift. */
 const MOTIONS: Record<string, string> = {
@@ -105,8 +106,11 @@ export const driver: Driver = {
   model: 'block',
   // a block's text holds a blank line, its paragraphs apart
   paragraphsInBlock: true,
-  // after Escape and Backspace delete a block no block is edited (its runs: DeleteSubtree1, 3, 4)
-  noCaretAfter: ['deleteSubtree'],
+  // after Escape and Backspace delete a block no block is edited (its runs: DeleteSubtree1, 3, 4), nor
+  // after a drop: the drag ends the editing as it starts (Drag1, Drag8)
+  noCaretAfter: ['deleteSubtree', 'move'],
+  // a selection of whole blocks: loaded with Escape and Shift+Down, read from `.block-main.selected`
+  selectsBlocks: true,
   keys: {
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
@@ -119,9 +123,8 @@ export const driver: Driver = {
     // "kill line before"
     deleteSoftLineBackward: 'Alt+u',
     // Escape selects the block being edited, its subtree: copied, cut, or with Backspace deleted with its
-    // children
+    // children (`deleteSubtree` in `act`: Escape on blocks selected already clears them)
     selectSubtree: 'Escape',
-    deleteSubtree: ['Escape', 'Backspace'],
     copy: 'Control+c',
     cut: 'Control+x',
     paste: 'Control+v',
@@ -130,7 +133,7 @@ export const driver: Driver = {
     redo: 'Control+Shift+z',
     ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
   },
-  emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd'],
+  emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd', 'deleteSubtree'],
   // a heading's `#`s, a task's `TODO` and a code block's fences are text in a block, edited a
   // character at a time
   refuses: ['markup-heading', 'markup-task', 'markup-fence'],
@@ -217,7 +220,9 @@ export const driver: Driver = {
     const o = doc as Outline;
     const blocks = o.blocks.map((b) => ({ depth: b.depth, ...toTine(b.text) }));
     const swapped = o.sel && blocks[o.sel.block]!;
-    const sel = o.sel && { block: o.sel.block, anchor: shiftOffset(o.sel.anchor, swapped!.from, swapped!.to), head: shiftOffset(o.sel.head, swapped!.from, swapped!.to) };
+    // (blocks selected whole: the first opened at its start, to select from with the keys below)
+    const selected = o.selected?.length ? o.selected : null;
+    const sel = o.sel ? { block: o.sel.block, anchor: shiftOffset(o.sel.anchor, swapped!.from, swapped!.to), head: shiftOffset(o.sel.head, swapped!.from, swapped!.to) } : selected && { block: selected[0]!, anchor: 0, head: 0 };
     const current = (pageState(page).current = `sxs-${run}-${String(++pages).padStart(5, '0')}`);
     await page.evaluate(
       ({ name, blocks }) => {
@@ -273,6 +278,14 @@ export const driver: Driver = {
       if (state === 'not editing') throw new Error(`the block didn't open for editing (${at.id})`);
       if (state === 'set') await idle();
     }
+    // blocks selected whole, as a user selects them: Escape selects the block being edited, each
+    // Shift+Down the next on screen, till the last is (`read` reports the topmost)
+    if (selected) {
+      const last = selected[selected.length - 1]!;
+      const reached = async (): Promise<number> => (await idle(), Math.max(-1, ...(((await this.read(page)) as Outline).selected ?? [])));
+      for (let i = 0; i < 3 && (await reached()) < 0; i++) await page.keyboard.press('Escape');
+      for (let k = 0; k <= o.blocks.length && (await reached()) < last; k++) await page.keyboard.press('Shift+ArrowDown');
+    }
   },
 
   async read(page: Page) {
@@ -295,9 +308,13 @@ export const driver: Driver = {
       const editing = ta?.tagName === 'TEXTAREA' ? ta.closest('.ls-block')?.getAttribute('data-block-id') : null;
       const i = editing ? flat.findIndex((b) => b.id === editing) : -1;
       const back = ta?.selectionDirection === 'backward';
-      const selected = [...document.querySelectorAll('.block-main.selected')]
-        .map((e) => flat.findIndex((b) => b.id === e.closest('.ls-block')?.getAttribute('data-block-id')))
-        .filter((k) => k >= 0);
+      // the blocks selected whole, the topmost: a block's children are selected with it
+      const lit = new Set([...document.querySelectorAll('.block-main.selected')].map((e) => flat.findIndex((b) => b.id === e.closest('.ls-block')?.getAttribute('data-block-id'))).filter((k) => k >= 0));
+      const under = (k: number): boolean => {
+        for (let j = k - 1, d = flat[k]!.depth; j >= 0 && d > 0; j--) if (flat[j]!.depth < d && ((d = flat[j]!.depth), lit.has(j))) return true;
+        return false;
+      };
+      const selected = [...lit].filter((k) => !under(k)).sort((a, b) => a - b);
       return {
         blocks: flat.map(({ depth, text }) => ({ depth, text })),
         numbers: flat.map(({ number }) => number),
@@ -323,7 +340,63 @@ export const driver: Driver = {
     return unescapeLaterLines({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) });
   },
 
+  drops: ['move'],
+  /**
+   * A drop as Tine's bullet drag takes it (its `mousedown` on `.bullet-container`, then the document's
+   * `mousemove`, past 4 pixels): the block under the pointer is the target, and where on it the place:
+   * more than 50 pixels right of the block's left, its last child; else before it in the top half of
+   * its row (`.block-main`), after it in the bottom half. So a place after a sibling is after it, a
+   * first child before the first of the parent's other children, or with none, the parent's child.
+   */
+  async drop(page: Page, drop: Drop, settle: () => Promise<void>) {
+    // (a drop of the selection: a press on its first block's bullet)
+    const press = drop.press ?? drop.rows[0];
+    if (press === undefined) throw new Unsupported('a drop of nothing pressed or selected');
+    const at = await page.evaluate(
+      ({ name, press, rows, to }) => {
+        const [doc] = (globalThis as any).__sxsDoc;
+        const p = doc.pages.find((q: any) => q.name === name);
+        // the blocks in document order, as `read` has them
+        const ids: string[] = [];
+        const walk = (list: string[]) => list.forEach((id) => (ids.push(id), walk(doc.byId[id].children)));
+        walk(p.roots);
+        const el = (k: number) => document.querySelector(`.ls-block[data-block-id="${ids[k]}"]`) as HTMLElement | null;
+        const bullet = el(press)?.querySelector(':scope > .block-main .bullet-container');
+        if (!bullet) return null;
+        const b = bullet.getBoundingClientRect();
+        let target: number;
+        let position: 'before' | 'after' | 'child';
+        if (to.after !== null) [target, position] = [to.after, 'after'];
+        else {
+          const moving = new Set(rows.map((k) => ids[k]));
+          const first = (to.parent === 'root' ? p.roots : doc.byId[ids[to.parent]!].children).find((id: string) => !moving.has(id));
+          if (first) [target, position] = [ids.indexOf(first), 'before'];
+          else if (to.parent !== 'root') [target, position] = [to.parent, 'child'];
+          else return null;
+        }
+        const block = el(target)!.getBoundingClientRect();
+        const row = el(target)!.querySelector(':scope > .block-main')!.getBoundingClientRect();
+        return {
+          from: { x: b.left + b.width / 2, y: b.top + b.height / 2 },
+          to: { x: block.left + (position === 'child' ? 70 : 20), y: row.top + row.height * (position === 'before' ? 0.25 : 0.75) },
+        };
+      },
+      { name: pageState(page).current, press, rows: drop.rows, to: drop.to },
+    );
+    if (!at) throw new Unsupported('the pressed block has no bullet, or the place no block to drop on');
+    await gesture(page, at.from, at.to, settle);
+  },
+
   async act(page: Page, action: string, settle: () => Promise<void>) {
+    // deleting a subtree: Escape selects the block being edited, Backspace deletes what is selected
+    if (action === 'deleteSubtree') {
+      if (!((await this.read(page)) as Outline).selected?.length) {
+        await page.keyboard.press('Escape');
+        await settle();
+      }
+      await page.keyboard.press('Backspace');
+      return settle();
+    }
     // no key for the document's ends: Up (Down) until the caret stops, then the block's start (end)
     const up = /DocStart$/.test(action);
     const shift = action.startsWith('select') ? 'Shift+' : '';

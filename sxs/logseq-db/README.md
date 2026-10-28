@@ -130,6 +130,23 @@ Against OG, example by example, most come out the same; most of the rest are the
 caret verdicts the DB version agrees on (Home, Up and Down in `cursor.md`, the caret after some
 pastes), and the points above.
 
+## Drag and drop, measured
+
+As OG's ([`../logseq/README.md`](../logseq/README.md#drag-and-drop-measured): its bullet dragged,
+HTML5 drag and drop, the same `block-drag-over` geometry, played by the same `logseqDrop`), and the
+same verdicts: Drag1, Drag2, Drag3, Drag8, Drag13, Scenario8 agree; Drag15 and Drag16 keep a heading's
+level (here a property of its block). But:
+
+- **"Before it" is offered at every block first among its siblings**, not only the page's first
+  (measured: a drop within 16 pixels of a first child's top lands before it). The driver aims below
+  that band, as for OG.
+- **The block being edited, dragged, stays edited**, its caret where it was: Scenario8c drops `Work┃`
+  into `Inbox` and plays on, Shift+Tab taking it back out (agrees). A block dragged while another is
+  edited leaves none edited, as in OG (Scenario8b skips).
+- **A press on a block outside the selection drags it alone**, the selection gone (the cover rule,
+  OG drags the selection: Drag5, Drag5b `caret`, the outline ourus's). Its Escape selects the block
+  being edited (OG's leaves it), so the driver's Shift+Down stops once the last block is in.
+
 ## Logseq DB bugs met on the way
 
 Seen on the test channel's build 9a10307e (2.0.2); source references are to

@@ -61,9 +61,11 @@ interface Snapshot {
   readonly lines: readonly { readonly from: number; readonly to: number; readonly contentFrom: number; readonly blank: boolean }[];
   readonly doc: any;
 }
+/** A command as given: its type, and what it carries (a text, a clipboard, a drop's nodes and place). */
+type Given = { readonly type: string; readonly text?: string; readonly clipboard?: Record<string, string>; readonly [key: string]: unknown };
 interface Core {
   parse(text: string, config: Record<string, unknown>, placeholders?: readonly number[]): Snapshot;
-  execute(doc: Snapshot, command: { type: string; text?: string }, selection: { anchor: number; head: number }): any;
+  execute(doc: Snapshot, command: Given, selection: { anchor: number; head: number }): any;
   settle(doc: Snapshot, caret: number): { changes: unknown[]; doc: Snapshot } | null;
   /** A host's edit (typing), with the caret it leaves. */
   edit(doc: Snapshot, changes: { from: number; to: number; insert: string }[], caret: number): Snapshot;
@@ -74,7 +76,7 @@ interface Core {
 /** The core of a copy, through its package entry. */
 async function load(root: string): Promise<Core> {
   const api = await import(join(root, 'src/index.ts'));
-  const run = (doc: Snapshot, command: { type: string; text?: string }, selection: { anchor: number; head: number }): any => {
+  const run = (doc: Snapshot, command: Given, selection: { anchor: number; head: number }): any => {
     const result = api.executeCommand(doc.doc, command, selection);
     return result.status === 'applied' ? { ...result, doc: snap(result.doc) } : result;
   };
@@ -175,7 +177,7 @@ const outcome = (core: Core, start: Snapshot, r: any): string => {
   return JSON.stringify([label(r), seen(r.doc), r.selection, r.changes, settledHere && [settledHere.changes, seen(settledHere.doc)], settledAway && [settledAway.changes, seen(settledAway.doc)], seen(typed), seen(left), seen(undone)]);
 };
 /** A command's result, or what it threw (a host would see the exception): an outcome of its own. */
-const attempt = (core: Core, doc: Snapshot, command: { type: string; text?: string }, selection: { anchor: number; head: number }): any => {
+const attempt = (core: Core, doc: Snapshot, command: Given, selection: { anchor: number; head: number }): any => {
   try {
     return core.execute(doc, command, selection);
   } catch (e) {
@@ -274,26 +276,42 @@ async function play(share: readonly number[]): Promise<Found> {
         for (const type of commands) {
           // typing: a code fence's characters, the ones ourus handles
           const command = type === 'paste' ? { type, clipboard: { 'text/plain': pastes[random(pastes.length)]! } } : type === 'pastePlain' ? { type, text: pastes[random(pastes.length)] } : type === 'insertText' ? { type, text: random(2) ? '~' : '`' } : { type };
-          const was = attempt(before, oldAt, command, selection);
-          const a = outcome(before, oldAt, was);
-          const result = attempt(after, newAt, command, selection);
-          const b = outcome(after, newAt, result);
-          found.runs++;
-          const at: [number, number] = [index, run++];
-          // write-failed is a bug, whether or not the old copy had it too, and a command that throws worse
-          if (failsToWrite(result)) {
-            // what was typed or pasted: a paste's is its clipboard's text
-            const given = 'clipboard' in command ? command.clipboard?.['text/plain'] : command.text;
-            const run = `${drawn(runText, selection)}${runPlaceholders.length ? ` ◌${JSON.stringify(runPlaceholders)}` : ''} [${JSON.stringify(config)}]${given !== undefined ? ` ${type === 'insertText' ? 'typing' : 'pasting'} ${JSON.stringify(given)}` : ''}`;
-            note(found.failures, type, at, () => `${run}: ${result.detail ?? result.reason ?? ''}`);
-            found.failing.push({ at, text: `${type} ${run}`, old: failsToWrite(was) });
-            if (process.env.DIFF_DUMP) found.dump.push({ at, text: JSON.stringify({ type, text: runText, selection, config, placeholders: runPlaceholders, paste: given, detail: result.detail ?? result.reason, ...(settled ? { settled: true } : {}) }) });
-          }
-          if (a === b) continue;
-          const short = (o: string): string => (o.startsWith('[') ? JSON.parse(o)[0] : o);
-          note(found.groups, `${type} [${JSON.stringify(config)}]: ${short(a)} → ${short(b)}${aspect(a, b)}`, at, () => `${drawn(runText, selection)}\n           was ${a.slice(0, width)}\n           now ${b.slice(0, width)}`);
+          compare(command, oldAt, newAt, selection, runText, runPlaceholders, !!settled);
         }
       }
+    }
+    // drops: each node pressed, and a paste dragged in, the caret at the document's start; every place
+    // the new copy's pickup lists, dropped in both
+    const caret = { anchor: 0, head: 0 };
+    const pickups = [...newDoc.nodes.filter((n) => n.kind !== 'root').map((n): Given => ({ type: 'drag', pressed: n.id })), { type: 'drag', clipboard: { 'text/plain': pastes[random(pastes.length)]! } }];
+    for (const pickup of pickups) {
+      const picked = attempt(after, newDoc, pickup, caret);
+      if (picked.status !== 'applied' || !picked.dropMap) continue;
+      for (const seam of picked.dropMap.seams) for (const point of seam.points) compare(point.drop, oldDoc, newDoc, caret, text, placeholders, false);
+    }
+
+    /** `command` in both copies, its outcomes compared: a group where they differ, a failure where the new one fails to write. */
+    function compare(command: Given, oldAt: Snapshot, newAt: Snapshot, selection: { anchor: number; head: number }, runText: string, runPlaceholders: readonly number[], settled: boolean): void {
+      const type = command.type;
+      const was = attempt(before, oldAt, command, selection);
+      const a = outcome(before, oldAt, was);
+      const result = attempt(after, newAt, command, selection);
+      const b = outcome(after, newAt, result);
+      found.runs++;
+      const at: [number, number] = [index, run++];
+      // write-failed is a bug, whether or not the old copy had it too, and a command that throws worse
+      if (failsToWrite(result)) {
+        // what was typed or pasted: a paste's is its clipboard's text; a drop's, its place
+        const given = command.clipboard?.['text/plain'] ?? command.text;
+        const place = 'to' in command || 'at' in command ? ` to ${JSON.stringify(command.to ?? command.at)}${'nodes' in command ? ` moving ${JSON.stringify(command.nodes)}` : ''}` : '';
+        const shown = `${drawn(runText, selection)}${runPlaceholders.length ? ` ◌${JSON.stringify(runPlaceholders)}` : ''} [${JSON.stringify(config)}]${given !== undefined ? ` ${type === 'insertText' ? 'typing' : 'pasting'} ${JSON.stringify(given)}` : ''}${place}`;
+        note(found.failures, type, at, () => `${shown}: ${result.detail ?? result.reason ?? ''}`);
+        found.failing.push({ at, text: `${type} ${shown}`, old: failsToWrite(was) });
+        if (process.env.DIFF_DUMP) found.dump.push({ at, text: JSON.stringify({ type, text: runText, selection, config, placeholders: runPlaceholders, paste: given, ...(place && { command }), detail: result.detail ?? result.reason, ...(settled ? { settled: true } : {}) }) });
+      }
+      if (a === b) return;
+      const short = (o: string): string => (o.startsWith('[') ? JSON.parse(o)[0] : o);
+      note(found.groups, `${type} [${JSON.stringify(config)}]: ${short(a)} → ${short(b)}${aspect(a, b)}`, at, () => `${drawn(runText, selection)}\n           was ${a.slice(0, width)}\n           now ${b.slice(0, width)}`);
     }
   }
   return found;

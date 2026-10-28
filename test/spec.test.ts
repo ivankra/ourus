@@ -8,7 +8,7 @@ import { AtomText, type OutlineNode, type OurusDoc } from '../src/doc/index.ts';
 import { codeAt } from '../src/commands/code.ts';
 import { CommandContext } from '../src/commands/context.ts';
 import { drawDoc, plainText } from './drawing.ts';
-import { isCommand, play } from './player.ts';
+import { isCommand, isDrop, play } from './player.ts';
 import { textPosition } from './caret.ts';
 import { flavorsOf, run, startOf } from './spec-run.ts';
 import { readSpecFile, slug, specConfig, specFiles, SPEC_DIR, type SpecTest } from './specfile.ts';
@@ -144,7 +144,7 @@ for (const markup of ['text', 'decorated'] as const) {
               state = play(state, [action]);
               const { anchor, head } = state.selection;
               // typed text too, where ourus's `insertText` applied
-              if (!(isCommand(action) || action.startsWith('"')) || state.last?.status !== 'applied' || anchor !== head) continue;
+              if (!(isCommand(action) || isDrop(action) || action.startsWith('"')) || state.last?.status !== 'applied' || anchor !== head) continue;
               const doc = state.doc;
               // a space a placeholder holds as text (`- ┃◌ x`) starts the text
               const held = doc.marks.points().includes(head) && /[ \t]/.test(doc.text[head] ?? '');

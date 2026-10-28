@@ -22,11 +22,12 @@ Tana's own, from its shortcut table (`{"move up": {hotkey: {linuxAndWindows, mac
 | `outdent` | Shift+Tab |
 | `moveSubtreeUp` | Shift+Alt+Up ("move up") |
 | `moveSubtreeDown` | Shift+Alt+Down ("move down") |
+| `move ②` | the mouse: the node's bullet (`.bulletSide`) dragged, react-dnd's HTML5 backend (`drop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
 | `deleteContentBackward` | Backspace |
 | `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Shift+Home, Backspace |
 | `deleteSubtree` | Ctrl+Shift+Backspace ("delete item") |
-| `duplicateSubtree` | Shift+Alt+D ("duplicate") |
+| `duplicateSubtree` | Shift+Alt+D ("duplicate"); of nodes selected, the originals stay selected, where ourus selects the copies (`duplicate-subtree.md › DuplicateSubtree3`: `caret`) |
 | `pasteStructured` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V ("cleanpaste") |
 | `undo` | Ctrl+Z |
@@ -296,6 +297,31 @@ The harness's own, found in the first run and fixed:
   the machine (`scenarios.md › Scenario20`, `Scenario23`), and a move typed right after the last
   character went with it. The runner now types at a typist's pace (`PACE`, 100 ms between keys, in
   `run.ts`), for every app.
+
+## Drag and drop
+
+A node's bullet is a react-dnd drag source (its HTML5 backend, which Playwright's mouse drives). A
+node's element, its row and its children under it, is the drop target where no child's is, as its
+bundle has it (`rm`): in its top half the place is before the node, in its bottom half after it, in
+its parent; no place is inside a node. The driver aims a quarter of a row into the target node's
+element, in its bullet's column, checked to be that node's own point (a child's chevron hangs left of
+it).
+
+- **Every drop it can make lands where ourus's does** (Drag1, Drag2, Drag13, Scenario8 agree, stable
+  over three runs).
+- **No place inside a node with no children**: a drop into a leaf (Drag3, Drag8, Scenario8c) has no
+  gesture here, and skips as it plays. A node is nested by Tab, not by a drop.
+- **No caret after a drop**: Scenario8b, which types after it, skips as it plays.
+- **A press on a selected node drags the selection; with nodes selected, a press on another drags
+  nothing**: Drag4, Drag20 agree; Drag5, Drag5b disagree (`c` pressed with `a`, `b` selected: nothing
+  moves; ourus moves `c` alone). Measured by hand too: the same gesture with no selection moves `c`.
+  The driver selects nodes as a user does, Escape then Shift+Down; Tana keeps the editor's focus on the
+  node the selection's head is on, drawing no caret, so `read` reports none while nodes are selected,
+  and the topmost of them (its own list has their descendants too).
+- **The pointer goes off the nodes before a drop is aimed**: one left on a bullet by the last drop has
+  a popover open over the rows, and once it has passed over a selection, the selection's toolbar
+  (Tag, Move, AI chat) stays under it, over the next row's left; the driver aims further right where
+  the bullet's column is covered.
 
 ## Quirks
 

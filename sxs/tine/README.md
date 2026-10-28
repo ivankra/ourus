@@ -21,12 +21,13 @@ From `src/keybindings.ts` and the block editor's handlers, checked in the app:
 | `deleteContentBackward` | Backspace (joining at a block's start) |
 | `deleteContentForward` | Delete (joining at a block's end) |
 | `deleteSoftLineBackward` | Alt+U ("kill line before") |
-| `deleteSubtree` | Escape (the block selected), then Backspace; after it no block is edited: the outline alone is judged (`noCaretAfter`, since 2026-10-25). |
+| `deleteSubtree` | Escape (the block selected), then Backspace; blocks selected already, Backspace alone (Escape would clear them); after it no block is edited: the outline alone is judged (`noCaretAfter`). |
 | `duplicateSubtree` | *missing* (no command): its examples are skipped |
 | `pasteStructured` | Ctrl+V (`- ` outlines become blocks) |
 | `pastePlain` | Ctrl+Shift+V (as it is) |
 | `undo` | Ctrl+Z |
 | `redo` | Ctrl+Shift+Z |
+| `move ②` | the mouse: a block's bullet dragged to the place (`drop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)); after it no block is edited (`noCaretAfter`) |
 
 Other shortcuts:
 
@@ -139,6 +140,28 @@ registry on raw.githubusercontent.com.
   never refuse) and Logseq's (a join refused where both blocks have children, the hidden property of
   a numbered block). Where a near-clone differs from its original, the driver is the first place to
   look.
+
+## Drag and drop
+
+Drag and drop ([`drag.md`](../../spec/drag.md), played with the real mouse, aimed where its own
+geometry puts each place: `Block.tsx`'s bullet drag, read in the guide's bundle, measured in the guide):
+
+- **A bullet is dragged with mouse events**, not HTML5 drag: a press on `.bullet-container`, a move of
+  4 pixels starts it, the block under the pointer is the target and the place is on it: more than 50
+  pixels right of the block's left (a level is 30), its last child; else before it in the top half of
+  its row, after it in the bottom half. A first child is dropped before the parent's first other
+  child, or as the child of a parent with none (`Drag3`, `Drag8`); a place inside the dragged
+  blocks is refused, nothing moved. The places agree (`Drag1`, `Drag2`, `Drag3`, `Drag8`, `Drag13`,
+  `Scenario8`).
+- **The drag ends the editing**: after a drop no block is edited, the caret gone, so the outline
+  alone is judged (`Drag1`, `Drag2`, `Drag8`, `Drag13`), and a case typing after it is skipped
+  (`Scenario8b`, `Scenario8c`: "no text focus").
+- **A heading keeps its level**: the text moves as it is, its section's headings with it (`Drag15`:
+  `### D` and `#### E` under `## B`, ourus's `## D`, `### E`; `Drag16`: `##### D`, ourus's `## D`).
+- **No cover rule**: with blocks selected, a drag from any bullet carries the selection, the pressed
+  block in it or not; with none, the pressed block with its children. A press on a selected block
+  agrees (Drag4, Drag20, the selection kept); one on `c` with `a`, `b` selected moves them to where
+  they are, nothing changing (Drag5, Drag5b disagree; ourus moves `c` alone).
 
 ## Tine bugs met on the way
 

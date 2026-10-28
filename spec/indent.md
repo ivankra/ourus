@@ -31,7 +31,10 @@ subtrees. The rules, in order; the first that applies wins:
 6. **Indentation follows the document**: tabs where the list has tabs (Indent6, Indent7). What the
    command isn't about stays byte for byte: code payload, hard-break spaces, a tab after a marker,
    CRLF, the numbers of untouched lists (Indent13, Indent14, Indent15, Indent17, Indent19,
-   Indent20).
+   Indent20). An item that nests anew, under a childless item, is indented by the unit
+   (`indentUnit`): as the document nests under `detect`, the default (Indent43, Indent44), or a
+   host's tab, 2 or 4, made up to the parent's content column (Indent39, Indent40, Indent42); an item
+   of its list beside it gives the column first (Indent41).
 
 Bare Obsidian's Tab indents the caret's line by a tab (Live Preview the same): an item's children
 stay where they are (they become siblings), a heading gets spaces in front of its `#`s, and a
@@ -1209,4 +1212,200 @@ result: deferredToHost
 para
 
     co┃de
+```
+
+## The indent unit
+
+Where an item nests anew, as the first child of a childless item, no item of its list gives it a
+column: the unit (`indentUnit`) does. `detect`, the default, reads how the document nests already;
+`tab`, `2` and `4` are a host's setting (Obsidian's "Use tabs" and "Tab size"). Whatever the unit, the
+item lands where CommonMark reads it as a child: at least its parent's content column, short of
+indented code.
+
+## Indent39
+
+Under a childless item, Tab nests the item a tab in, where the host indents with tabs.
+
+```yaml
+tags: common
+indentUnit: tab
+```
+
+```buffer
+- a
+- b┃
+```
+
+> indent
+
+```buffer
+- a
+→- b┃
+```
+
+## Indent40
+
+A unit short of an ordered item's content column is made up to it: `1. a`'s child at column 3, a new
+ordered list at 1 (Indent4).
+
+```yaml
+tags: edge
+indentUnit: 2
+```
+
+```buffer
+1. a
+2. b┃
+```
+
+> indent
+
+```buffer
+1. a
+   1. b┃
+```
+
+## Indent41
+
+An item of the list gives the column, whatever the unit: the unit says only where a list starts.
+
+```yaml
+tags: edge
+indentUnit: tab
+```
+
+```buffer
+- a
+  - x
+- b┃
+```
+
+> indent
+
+```buffer
+- a
+  - x
+  - b┃
+```
+
+## Indent42
+
+A tab falls short of `100. a`'s content column, 5: a space makes it up, so a document nested with
+tabs keeps its tab.
+
+```yaml
+tags: rare
+indentUnit: tab
+```
+
+```buffer
+100. a
+101. b┃
+```
+
+> indent
+
+```buffer
+100. a
+→ 1. b┃
+```
+
+## Indent43
+
+`detect` reads how the document's items nest, here four columns past their parent's marker.
+
+```yaml
+tags: common
+```
+
+```buffer
+- a
+    - x
+- b
+- c┃
+```
+
+> indent
+
+```buffer
+- a
+    - x
+- b
+    - c┃
+```
+
+## Indent44
+
+A tab in code is code's, not the document's indentation: `detect` reads none, and nests at the
+content column.
+
+```yaml
+tags: edge
+```
+
+````buffer
+```
+→x
+```
+- a
+- b┃
+````
+
+> indent
+
+````buffer
+```
+→x
+```
+- a
+  - b┃
+````
+
+## Indent45
+
+A child after a blank line, in a document indented with tabs, goes with its item: its tabs one stop
+more, as the item's are. Outdent22's inverse.
+
+```yaml
+tags: edge
+```
+
+```buffer
+- a
+- b┃
+
+→para
+```
+
+> indent
+
+```buffer
+- a
+→- b┃
+
+→→para
+```
+
+## Indent45b
+
+The same with indented code as the child: its spaces past the tabs are the code's.
+
+```yaml
+tags: edge
+```
+
+```buffer
+- a
+- b┃
+
+→  code
+```
+
+> indent
+
+```buffer
+- a
+→- b┃
+
+→→  code
 ```

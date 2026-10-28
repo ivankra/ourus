@@ -20,8 +20,9 @@
 //   clearing it. README.md has the rest of what Logseq does that a driver has to know.
 
 import type { Page } from 'playwright-core';
-import { perPage, type Driver } from '../lib/driver.ts';
-import { unescapeLaterLines, type Outline } from '../lib/block.ts';
+import { perPage, type Driver, type Drop } from '../lib/driver.ts';
+import { unescapeLaterLines, Unsupported, type Outline } from '../lib/block.ts';
+import { gesture } from '../lib/drag.ts';
 
 /** Logseq's keys for the spec's actions (Linux); the `select…` motions add Shift. */
 const MOTIONS: Record<string, string> = {
@@ -171,8 +172,11 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
     model: 'block',
     // a block's text holds a blank line, its paragraphs apart
     paragraphsInBlock: true,
-    // after deleting a selected block, the first one, no block is edited (checked by hand, keys only)
-    noCaretAfter: ['deleteSubtree'],
+    // after deleting a selected block, the first one, no block is edited (checked by hand, keys only);
+    // after a drop, neither a block is edited nor any selected
+    noCaretAfter: ['deleteSubtree', 'move'],
+    // a selection of whole blocks: loaded with Escape and Shift+Down, read from `get_selected_blocks`
+    selectsBlocks: true,
     keys: {
       enter: 'Enter',
       shiftEnter: 'Shift+Enter',
@@ -285,7 +289,9 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
     async load(page: Page, doc: Outline) {
       const blocks = doc.blocks.map((b) => ({ depth: b.depth, ...flavor.toLogseq(b.text) }));
       const swapped = doc.sel && blocks[doc.sel.block]!;
-      const sel = doc.sel && { block: doc.sel.block, anchor: shiftOffset(doc.sel.anchor, swapped!.from, swapped!.to), head: shiftOffset(doc.sel.head, swapped!.from, swapped!.to) };
+      // (blocks selected whole: the first opened, at its start, to select from with the keys below)
+      const selected = doc.selected?.length ? doc.selected : null;
+      const sel = doc.sel ? { block: doc.sel.block, anchor: shiftOffset(doc.sel.anchor, swapped!.from, swapped!.to), head: shiftOffset(doc.sel.head, swapped!.from, swapped!.to) } : selected && { block: selected[0]!, anchor: 0, head: 0 };
       pageState(page).current = await page.evaluate(
         async ({ blocks, sel, previous, db }) => {
           const api = (window as any).logseq.api;
@@ -395,6 +401,23 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
         },
         { blocks: blocks.map(({ depth, content, props, edit }) => ({ depth, content, props, edit })), sel, previous: pageState(page).current, db },
       );
+      // blocks selected whole, as a user selects them: Escape ends the editing (the DB version's selects
+      // the block, OG's none), and each Shift+Down selects the next block on screen, the first's
+      // children too, till the last is (`read` reports the topmost)
+      if (selected) {
+        const last = selected[selected.length - 1]!;
+        const reached = (): Promise<number> =>
+          page.evaluate(async (name) => {
+            const api = (window as any).logseq.api;
+            await (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 });
+            const flat: string[] = [];
+            const walk = (bs: any[]) => bs.forEach((x) => (flat.push(x.uuid), walk(x.children ?? [])));
+            walk(await api.get_page_blocks_tree(name));
+            return Math.max(-1, ...((await api.get_selected_blocks()) ?? []).map((b: any) => flat.indexOf(b.uuid)));
+          }, pageState(page).current);
+        await page.keyboard.press('Escape');
+        for (let k = 0; k <= doc.blocks.length && (await reached()) < last; k++) await page.keyboard.press('Shift+ArrowDown');
+      }
     },
 
     async read(page: Page) {
@@ -460,7 +483,13 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
             const back = active!.selectionDirection === 'backward';
             sel = { block: i, anchor: back ? active!.selectionEnd : active!.selectionStart, head: back ? active!.selectionStart : active!.selectionEnd };
           }
-          const selected = ((await api.get_selected_blocks()) ?? []).map((b: any) => flat.findIndex((f) => f.uuid === b.uuid)).filter((k: number) => k >= 0);
+          // the blocks selected whole, the topmost: a selected block's children are selected with it
+          const all = new Set<number>(((await api.get_selected_blocks()) ?? []).map((b: any) => flat.findIndex((f) => f.uuid === b.uuid)).filter((k: number) => k >= 0));
+          const under = (k: number): boolean => {
+            for (let j = k - 1, d = flat[k]!.depth; j >= 0 && d > 0; j--) if (flat[j]!.depth < d && ((d = flat[j]!.depth), all.has(j))) return true;
+            return false;
+          };
+          const selected = [...all].filter((k) => !under(k)).sort((a, b) => a - b);
           return { blocks: flat.map(({ depth, raw }) => ({ depth, raw })), sel, selected };
         },
         { name: pageState(page).current, db },
@@ -496,6 +525,9 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
         if (!!api.get_current_graph_configs('editor/logical-outdenting?') !== logical) throw new Error(`Logseq's logical outdenting didn't change to ${logical}`);
       }, settings.outdent === 'logical');
     },
+
+    drops: ['move'],
+    drop: (page: Page, drop: Drop, settle: () => Promise<void>) => logseqDrop(page, drop, settle),
 
     async act(page: Page, action: string, settle: () => Promise<void>) {
       if (action === 'selectSubtree' || action === 'deleteSubtree') {
@@ -540,6 +572,49 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
       await settle();
     },
   };
+}
+
+/**
+ * A drop in Logseq (both: `frontend/components/block.cljs`, `block-drag-over`): the pressed block's
+ * bullet dragged, an HTML5 drag (which Playwright's mouse plays), to a point over the block the place
+ * is told by, and released. The innermost block under the pointer says where the drop goes: within 16
+ * pixels of its top, before it (`:top`; OG's only for the page's first block, the DB version's for any
+ * block first among its siblings); else more than 50 pixels right of its left, its first child
+ * (`:nested`); else its next sibling, after its children (`:sibling`). So a place first under a block
+ * is `:nested` on it, first at the top level `:top` on the first block, and one after a block
+ * `:sibling` on it, every place reachable. It drags the pressed block, or the selected blocks; a drop of
+ * the selection presses its first block's bullet.
+ */
+async function logseqDrop(page: Page, drop: Drop, settle: () => Promise<void>): Promise<void> {
+  // (a drop of the selection: a press on its first block's bullet)
+  const pressed = drop.press ?? drop.rows[0];
+  if (pressed === undefined) throw new Unsupported('a drop of nothing pressed or selected');
+  const at = await page.evaluate(
+    async ({ name, press, to }) => {
+      const api = (window as any).logseq.api;
+      const uuids: string[] = [];
+      const walk = (bs: any[]) => bs.forEach((x) => (uuids.push(x.uuid), walk(x.children ?? [])));
+      walk(await api.get_page_blocks_tree(name));
+      const block = (i: number) => document.querySelector(`#main-content-container .ls-block[blockid="${uuids[i]}"]`)!;
+      const bullet = block(press).querySelector(':scope > .block-main-container .bullet-container')?.getBoundingClientRect();
+      if (!bullet) return null;
+      const from = { x: bullet.left + bullet.width / 2, y: bullet.top + bullet.height / 2 };
+      // (the page's first block's top: a few pixels in, the block's own padding above its row not taking the drag)
+      if (to.parent === 'root' && to.after === null) {
+        const b = block(0).getBoundingClientRect();
+        return { from, to: { x: b.left + 20, y: b.top + 8 } };
+      }
+      const target = to.after ?? (to.parent as number);
+      const b = block(target).getBoundingClientRect();
+      const r = block(target).querySelector(':scope > .block-main-container')!.getBoundingClientRect();
+      // (on the block's own row, past its top's 16 pixels)
+      const y = Math.min(Math.max((r.top + r.bottom) / 2, b.top + 19), r.bottom - 2);
+      return { from, to: { x: b.left + (to.after === null ? 70 : 20), y } };
+    },
+    { name: pageState(page).current, press: pressed, to: drop.to },
+  );
+  if (!at) throw new Unsupported('the pressed block has no bullet');
+  await gesture(page, at.from, at.to, settle);
 }
 
 export const driver: Driver = logseqDriver(OG);

@@ -18,10 +18,11 @@ From Roam's bundle (`CV(isPC ? "alt-shift-up" : "cmd-shift-up", ...)`):
 | `outdent` | Shift+Tab (also Alt+Shift+Left) |
 | `moveSubtreeUp` | Alt+Shift+Up (Cmd+Shift+Up on a Mac) |
 | `moveSubtreeDown` | Alt+Shift+Down (Cmd+Shift+Down on a Mac) |
+| `move ②` | the mouse: the block's bullet dragged (HTML5 drag and drop) to its drop bar (`drop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
 | `deleteContentBackward` | Backspace |
 | `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Shift+Home, Backspace |
-| `deleteSubtree` | Escape (the block selected with its children: Roam's `init-or-cancel-selection`, of its bindings for selected blocks, `multiselect`), Backspace (the selection deleted); skipped, for want of a key, until 2026-10-18; after it, the page's every block deleted, no block is edited: the outline alone is judged (`noCaretAfter`, since 2026-10-25) |
+| `deleteSubtree` | Escape (the block selected with its children: Roam's `init-or-cancel-selection`, of its bindings for selected blocks, `multiselect`), Backspace (the selection deleted); skipped, for want of a key, until 2026-10-18; after it, the page's every block deleted, no block is edited: the outline alone is judged (`noCaretAfter`) |
 | `duplicateSubtree` | *missing*: its tests are skipped |
 | `pasteStructured` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V |
@@ -87,6 +88,23 @@ that with the same 401, so tests send Roam nothing. Analytics, Intercom and Stri
   Enter inside a heading's title gives the text before the caret to a new block above and keeps the
   heading on the rest (the block keeping its attributes): the driver declares
   `quirkEnterMidHeading: workflowy` (since 2026-10-25; `obsidian-true-outliner.md › TO-E13-E16`, `quirks.md › Quirk1`).
+
+## Drag and drop, measured
+
+A block's bullet (`.rm-bullet`) is an HTML5 drag source. While a block is dragged, every list of
+children (the page's, a block's) gets a separator before its first child and after each child: a
+band 11 pixels above it to 17 below, from its list's left, a deeper list's on top, where Roam draws its
+drop bar. The driver aims a few pixels under the place's separator, at its list's column; Roam runs a
+frame loop while dragging, so the drag has settled when the bar is at the place.
+
+- **Every drop the cases play lands where ourus puts it** (Drag1, Drag2, Drag3, Drag8, Drag13,
+  Scenario8, Scenario8c agree, stable over three runs).
+- **No caret after a drop**: the block's editing ends with the drag; Scenario8b, which types after it,
+  skips as it plays.
+- **It drags the selected blocks where the pressed one is among them**, else the block pressed alone:
+  the cover rule (Drag4, Drag5, Drag5b, Drag20 land as ourus's), the selection gone after the drop
+  (each `caret`). The driver selects blocks with Escape and Shift+Down, reading the highlight once
+  Roam is idle (it is drawn late).
 
 ## What Roam does that a driver has to know
 

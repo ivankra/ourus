@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { asSpaces, asTabs, tabbed } from './obsidian.ts';
+import { asSpaces, asTabs, tabbed } from '../lib/tabs.ts';
 import { readTextDoc, drawTextDoc } from '../lib/text.ts';
 
 const tabs = (drawn: string): string => drawTextDoc(asTabs(readTextDoc(drawn)));

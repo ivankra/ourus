@@ -95,6 +95,9 @@ https://github.com/jrblevin/markdown-mode
 
 ## What markdown-mode does
 
+- **No drag**: played on a terminal, with keys alone; markdown-mode's subtree moves are its keys
+  (`M-up`, `M-down`), so the drop cases (`drag.md`) don't play here.
+
 - **RET continues no list**: a line break, indented or not (`enter.md › Enter1`, `Enter3`), and on an
   empty item, a line break after its marker (`Enter28`). M-RET is the list command. Most of Enter's
   disagreements are this (125 of 143, where bare Obsidian's Enter disagrees in 76 of 117); `enter`

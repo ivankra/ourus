@@ -9,6 +9,8 @@ export const driver = obsidianDriver({
   displayName: 'Obsidian (Outliner)',
   mode: 'live-preview',
   plugins: [{ id: 'obsidian-outliner', version: '4.10.2' }],
+  // its drag and drop (`dnd`, on by default): an item by its bullet
+  drag: 'outliner',
   // "Move list item up" and "Move list item down": the item with its children
   keys: { moveSubtreeUp: 'Control+Shift+ArrowUp', moveSubtreeDown: 'Control+Shift+ArrowDown' },
   // "stick the cursor to the content" (`stickCursor`)

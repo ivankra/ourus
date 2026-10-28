@@ -41,6 +41,12 @@ const at = doc.locate(pos);                 // in a text, a frame, a marker, a p
     The snapshot with a new text in place of this one's (the file changed on disk, an undo), with
     `marks` as its placeholders. Only the lines that differ are read again.
 
+  - `OurusDoc.withConfig(config: Partial<Config>): OurusDoc`<br>
+    The same document under other options (a host's setting changed). An option that says only how
+    commands write (`indentUnit`, `markup`, ...) changes on the same snapshot, its outline and ids
+    shared; `quotes` and `listParent` have the outline read again from the same parse, ids carried as
+    an update carries them; `flavor` parses the text anew.
+
   - `OurusDoc.text: string`, `OurusDoc.marks: MarkSet`, `OurusDoc.mdTree: MdTree`, `OurusDoc.config: Config`, `OurusDoc.nextId: number`<br>
     The text; its placeholders (only those that still hold something); its parse; the config; the
     next id to give a new node.

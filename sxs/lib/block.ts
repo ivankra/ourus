@@ -13,6 +13,7 @@
 
 import type { Config } from '../../src/config.ts';
 import { ProseText, OurusDoc, type OutlineNode } from '../../src/doc/index.ts';
+import { textEnd, textStart, topmostNodes } from '../../src/commands/util.ts';
 import { docOf, nodesOf, readDrawing } from '../../test/drawing.ts';
 import { micromark } from 'micromark';
 import { gfm, gfmHtml } from 'micromark-extension-gfm';
@@ -77,6 +78,12 @@ export interface ProjectOptions {
   readonly quotes?: Config['quotes'];
   /** What a list after a block is the children of in the app's blocks (`Driver.behaves.listParent`): read so. */
   readonly listParent?: Config['listParent'];
+  /**
+   * The app holds a selection of whole blocks (`Driver.selectsBlocks`): a drawn selection from one
+   * block's text start to another's text end is those blocks selected (`Outline.selected`), the
+   * topmost the selection touches, as ourus's structural commands take them; else it has no block form.
+   */
+  readonly blockSelection?: boolean;
 }
 
 export interface Projection {
@@ -87,6 +94,8 @@ export interface Projection {
   caretLost?: string;
   /** The blocks that are headings owning a section (not an item whose text is a heading), by index. */
   sections: number[];
+  /** The block each node became, by the line the node starts on (a drop's rows, `drag.ts`). */
+  rows?: ReadonlyMap<number, number>;
 }
 
 /**
@@ -265,13 +274,27 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
     return 'caret on a blank line';
   };
   const hasCaret = /┃|«/.test(drawn);
-  if (!hasCaret) return { outline: { blocks, sel: null }, notes, sections };
+  const rows = new Map<number, number>();
+  for (const node of nodes) if (blockOf.has(node.id) && !rows.has(node.startLine)) rows.set(node.startLine, blockOf.get(node.id)!);
+  if (!hasCaret) return { outline: { blocks, sel: null }, notes, sections, rows };
   const h = locate(at(head));
   const a = anchor === head ? h : locate(at(anchor));
-  if (typeof h === 'string') return { outline: { blocks, sel: null }, notes, caretLost: h, sections };
-  if (typeof a === 'string') return { outline: { blocks, sel: null }, notes, caretLost: a, sections };
-  if (a.block !== h.block) return { outline: { blocks, sel: null }, notes, caretLost: 'selection across blocks', sections };
-  return { outline: { blocks, sel: { block: h.block, anchor: a.offset, head: h.offset } }, notes, sections };
+  if (typeof h === 'string') return { outline: { blocks, sel: null }, notes, caretLost: h, sections, rows };
+  if (typeof a === 'string') return { outline: { blocks, sel: null }, notes, caretLost: a, sections, rows };
+  if (a.block !== h.block) {
+    // over whole blocks, from one's text start to another's end: those blocks selected
+    // (as ourus reads the nodes: from a node's text start, a number or a checkbox before it, to another's end)
+    const [from, to] = [Math.min(at(anchor), at(head)), Math.max(at(anchor), at(head))];
+    const edge = (p: number, end: boolean): boolean => {
+      const where = doc.locate(p);
+      if (where.zone !== 'text' && where.zone !== 'frame') return false;
+      return p === doc.posOf(where.node, end ? textEnd(where.text) : textStart(where.text), end ? -1 : 1);
+    };
+    if (!options.blockSelection || !edge(from, false) || !edge(to, true)) return { outline: { blocks, sel: null }, notes, caretLost: 'selection across blocks', sections, rows };
+    const selected = [...new Set(topmostNodes(doc, { anchor: at(anchor), head: at(head) }).flatMap((n) => (blockOf.has(n.id) ? [blockOf.get(n.id)!] : [])))].sort((x, y) => x - y);
+    return { outline: { blocks, sel: null, selected }, notes, sections, rows };
+  }
+  return { outline: { blocks, sel: { block: h.block, anchor: a.offset, head: h.offset } }, notes, sections, rows };
 }
 
 /** Every node under `node`, depth first. */
@@ -729,6 +752,8 @@ export function compareOutlines(want: Outline, got: Outline, sections: readonly 
     return close ? 'whitespace' : 'disagree';
   }
   if (want.sel && (JSON.stringify(want.sel) !== JSON.stringify(got.sel) || got.selected?.length)) return 'caret';
+  // blocks selected whole, as a caret: other blocks, or a caret instead
+  if (want.selected?.length && (JSON.stringify(want.selected) !== JSON.stringify(got.selected ?? []) || got.sel)) return 'caret';
   return 'agree';
 }
 

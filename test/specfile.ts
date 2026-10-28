@@ -11,7 +11,7 @@ import { MdTree } from '../src/parser/syntax.ts';
 
 import { MdBlockAt } from '../src/parser/tree.ts';
 import type { MdBlock, MdLine } from '../src/parser/types.ts';
-import { drawsCaret } from './drawing.ts';
+import { drawsCaret, readDropLine } from './drawing.ts';
 
 /** A parsed spec file: its text, block tree and line table. */
 type Parsed = { readonly text: string; readonly root: MdBlock; readonly lines: readonly MdLine[] };
@@ -35,6 +35,15 @@ export interface State {
   result?: string;
   /** How the buffer reads (`drawOutline`), where a case's point is a reading its bytes don't show. */
   outline?: string;
+  /** After a pickup (`drag`): the labels of the nodes it takes, and every place it offers, drawn (spec/drag.md). */
+  dragNodes?: string;
+  dropPoints?: string;
+}
+
+/** The host's view a test starts in (its config block's), for a drag: the folded nodes and the one zoomed into, by label. */
+export interface View {
+  readonly folded?: string;
+  readonly zoom?: string;
 }
 
 export interface Step {
@@ -60,6 +69,7 @@ export interface SpecTest {
   readonly rank: Rank;
   readonly tags: readonly Tag[];
   readonly initial: State & { buffer: string };
+  readonly view: View;
   readonly steps: Step[];
 }
 
@@ -172,6 +182,8 @@ export function readSpec(file: string, source: string): SpecTest[] {
       if (read.clipboard !== undefined) group!.clipboard = read.clipboard;
       if (read.clipboard && Object.values(read.clipboard).some((c) => strayBlank(c) >= 0)) fail(start, STRAY_BLANK);
       if (read.outline !== undefined) group!.outline = read.outline;
+      if (read.dragNodes !== undefined) group!.dragNodes = read.dragNodes;
+      if (read.dropPoints !== undefined) group!.dropPoints = read.dropPoints;
       continue;
     }
     if (!test) {
@@ -180,7 +192,7 @@ export function readSpec(file: string, source: string): SpecTest[] {
       if (!name) fail(start, "a test needs a heading of its own, below the file's title");
       sectionHasTest = true;
       if (!config?.rank) return fail(config?.line ?? start, 'a test is ranked: its config block has "tags:", its rank first (core, common, edge or rare)');
-      test = { file, line: config.line + 1, name, pending: !!config.tags?.includes('pending'), options: config.options, rank: config.rank, tags: config.tags ?? [], initial: { buffer: '' }, steps: [] };
+      test = { file, line: config.line + 1, name, pending: !!config.tags?.includes('pending'), options: config.options, rank: config.rank, tags: config.tags ?? [], initial: { buffer: '' }, view: config.view, steps: [] };
       delete (test.initial as State).buffer;
       if (config.clipboard !== undefined) test.initial.clipboard = config.clipboard;
       if (config.clipboard && Object.values(config.clipboard).some((c) => strayBlank(c) >= 0)) fail(config.line, STRAY_BLANK);
@@ -200,7 +212,28 @@ export function readSpec(file: string, source: string): SpecTest[] {
   if (config) fail(config.line, 'a config block with no test after it');
   for (const t of tests) if (t.initial.buffer === undefined) fail(t.line - 1, 'a test with no buffer to start from');
   for (const t of tests) if (t.steps.length === 0) fail(t.line - 1, 'a test with no actions');
+  for (const t of tests) checkDrop(t, (line, m) => fail(line, m));
   return tests;
+}
+
+/**
+ * A case's drop (spec/README.md): a drop line in its start and one drop action, or neither; never a
+ * drop line in a step's buffer.
+ */
+function checkDrop(t: SpecTest, fail: (line: number, message: string) => never): void {
+  const read = (drawn: string, line: number): boolean => {
+    try {
+      return readDropLine(drawn).drop !== null;
+    } catch (e) {
+      return fail(line, (e as Error).message);
+    }
+  };
+  const drawn = read(t.initial.buffer, t.line - 1);
+  for (const step of t.steps) if (step.expect.buffer !== undefined && read(step.expect.buffer, step.line - 1)) fail(step.line - 1, "a drop line (`▸`) is a start's: a step's buffer draws the state, not where a drop goes");
+  const drops = t.steps.flatMap((step) => step.actions.filter((a) => /^(?:move(?:\s|$)|pasteAt$)/.test(a)).map(() => step.line));
+  if (drops.length > 1) fail(drops[1]! - 1, 'a second drop: a case drops once, at its start\'s drop line');
+  if (drops.length && !drawn) fail(drops[0]! - 1, 'a drop with no drop line (`▸`) in the start to say where it lands');
+  if (!drops.length && drawn) fail(t.line - 1, 'a drop line (`▸`) in the start with no drop');
 }
 
 /** A heading's anchor, as GitHub makes it: lower case, punctuation dropped, spaces as hyphens. */
@@ -211,11 +244,11 @@ export const slug = (text: string): string =>
     .trim()
     .replace(/\s/g, '-');
 
-/** Actions are words, or quoted text (`"some text"`) that is typed. */
-export const tokenize = (s: string): string[] => s.match(/"[^"]*"|\S+/g) ?? [];
+/** Actions are words, or quoted text (`"some text"`) that is typed; a word may name a node by its label (`move ②`). */
+export const tokenize = (s: string): string[] => s.match(/"[^"]*"|\S+(?:\s+[\u2460-\u2473\u3251-\u325f\u32b1-\u32bf](?!\S))?/gu) ?? [];
 
 /** What a state's `yaml` block says: options, tags and the rank (the config block's), the clipboard and the outline, the result (a step's). */
-type Read = { options: Record<string, string>; clipboard?: Clipboard; outline?: string; result?: string; rank?: Rank; tags?: Tag[] };
+type Read = { options: Record<string, string>; clipboard?: Clipboard; outline?: string; result?: string; rank?: Rank; tags?: Tag[]; dragNodes?: string; dropPoints?: string; view: { folded?: string; zoom?: string } };
 
 /** Where a `yaml` block is: a test's config block (its first state's), or a state after a step. */
 type Where = 'start' | 'step';
@@ -241,7 +274,7 @@ function readConfig(text: string, first: number, fail: (line: number, message: s
   const doc = parseDocument(text, { schema: 'failsafe' });
   const error = doc.errors[0];
   if (error) fail(lineAt(error.pos[0]), `not YAML: ${error.message.split('\n')[0]!.replace(/ at line \d+, column \d+:?$/, '')}`);
-  const read: Read = { options: {} };
+  const read: Read = { options: {}, view: {} };
   if (doc.contents === null) return read;
   if (!isMap(doc.contents)) fail(first, 'options are "key: value" lines');
   /** A text: a literal block of lines under its key, at `keyColumn`, or one quoted line without a line break. */
@@ -288,8 +321,23 @@ function readConfig(text: string, first: number, fail: (line: number, message: s
       read.outline = textOf(v, 'outline', keyColumn, at).trim();
       continue;
     }
+    if (key === 'dropPoints') {
+      if (where !== 'step') fail(at, "dropPoints are a pickup's: they go in the `yaml` block after a `drag`");
+      read.dropPoints = textOf(v, 'dropPoints drawing', keyColumn, at);
+      continue;
+    }
     if (!isScalar(v) || typeof v.value !== 'string') fail(at, `option "${key}" takes one value`);
     const value = (v as Scalar<string>).value;
+    if (key === 'dragNodes') {
+      if (where !== 'step') fail(at, "dragNodes are a pickup's: they go in the `yaml` block after a `drag`");
+      read.dragNodes = value;
+      continue;
+    }
+    if (key === 'folded' || key === 'zoom') {
+      if (where !== 'start') fail(at, `"${key}" is the host's view a test starts in: it goes in the config block`);
+      read.view[key] = value;
+      continue;
+    }
     if (key === 'result') {
       if (where !== 'step') fail(at, "a result is a step's: it goes in the `yaml` block after the step's actions");
       if (!/^(?:applied|deferredToHost|rejected [a-z0-9-]+)$/.test(value)) fail(at, `a result is applied, deferredToHost or "rejected <reason>", not "${value}"`);

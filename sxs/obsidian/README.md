@@ -188,6 +188,11 @@ Enter25, E4, list-marker-content-column: now agree).
 
 What the four setups share (every key the plugins leave to Obsidian):
 
+- **No node is dragged**: Obsidian's own drag moves selected text (CodeMirror's), not a list item or a
+  section, so the drop cases (`drag.md`) don't play in bare Obsidian or Live Preview; Outliner and
+  true-outliner add one ([`../obsidian-outliner/`](../obsidian-outliner/README.md),
+  [`../obsidian-true-outliner/`](../obsidian-true-outliner/README.md)).
+
 - **Up from the first line goes to the note's title** (Obsidian's inline title, shown by default): the
   editor loses the focus, the read has no caret (`cursor.md › CursorUp1`: `caret`), and later keys go
   to the title (`scenarios.md › Scenario21`). true-outliner's Up stays in the editor.

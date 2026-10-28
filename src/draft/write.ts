@@ -12,7 +12,7 @@
 import type { MdLine, MdTree } from '../parser/index.ts';
 import { ProseText, AtomText, type OutlineNode, type OutlineNodeText, type OutlineNodePersistent, type OurusDoc } from '../doc/index.ts';
 import type { Anchor, OurusDraft, Refusal } from './draft.ts';
-import { advanceColumns, diffLines, emptyNodeAt, heldSpaceAt, isHeldSpacePlaceholder, isPlaceholder, dominantEnding, trimMd, type ChangeSpec, type Mark } from '../text/index.ts';
+import { advanceColumns, diffLines, mapPos, emptyNodeAt, heldSpaceAt, isHeldSpacePlaceholder, isPlaceholder, dominantEnding, trimMd, type ChangeSpec, type Mark } from '../text/index.ts';
 
 /** The draft written: the changes to its document, and what the document after them is told. */
 export interface WriterOutput {
@@ -250,8 +250,8 @@ class Writer {
     const realign = moved ? 0 : this.realign(parent, i, at, container);
     const lift = moved ? 0 : (this.lifted.get(child) ?? 0);
     if (!moved && !realign && !lift && !(child.kind === 'item' && this.draft.placedIds.has(child.id))) return null;
-    // indentation follows the document, tabs where it has them
-    const tabs = /(?:^|\n)[ >]*\t/.test(this.old);
+    // indentation spelled by the unit (`indentUnit`): with tabs where it is `tab`, else with spaces
+    const tabs = indentUnitOf(this.from) === 'tab';
     if (lift && !(child.kind === 'item' && this.draft.placedIds.has(child.id))) {
       // (the items of its list after it lined up with it: `realign`)
       if (child.kind === 'item') this.movedDelta.set(child, -lift);
@@ -279,9 +279,7 @@ class Writer {
           if (this.draft.placedIds.has(sibling.id)) continue;
           const other = this.draft.originOf(sibling);
           if (other && holds(container, other)) {
-            // a list indented with tabs: re-indenting with them isn't written yet
-            const l = this.tree.line(other.startLine);
-            if (!tabs && (this.old.slice(l.from, l.from + other.persistentNode.block!.attrs.markerStart!).includes('\t') || l.prefix.some((p) => p.partialTab))) throw new WriteFailure('a list indented with tabs');
+            // (lined up by columns: in a list indented with tabs, under a unit of spaces, at its column in spaces)
             target = indent(other);
             break search;
           }
@@ -296,8 +294,8 @@ class Writer {
       const beforeAt = beforeMoved !== undefined && !this.draft.lists.get(child.id)?.start ? this.writtenColumn(before!.id, container) : null;
       // (a list of its own after it: as far as that one moved, never past its container's column)
       const withBefore = beforeAt !== null ? beforeAt - indent(at) : beforeMoved !== undefined ? Math.max(beforeMoved, -indent(at)) : undefined;
-      // (in a document indented with tabs, at none, a tab past its new parent's marker)
-      const tab = target === null && withBefore === undefined && moved && tabs ? this.tabChild(container) : null;
+      // (at none, where the unit isn't the content column: as the unit has it past its new parent's marker)
+      const tab = target === null && withBefore === undefined && moved ? this.unitChild(container) : null;
       // (a list of its own after an item, where it was, unless that item would take it in there: copied
       // beside its original, as its original is; placed in its container, where at its container's
       // column it, or the items placed with it, would take in the item after them that stays, which
@@ -336,6 +334,9 @@ class Writer {
         const column = indent(at) + delta;
         if (nextColumn > column && nextColumn >= column + this.markerWidth(child) && (beforeColumn === null || nextColumn < beforeColumn + this.markerWidth(before!))) delta = nextColumn - indent(at);
       }
+      // (never four past its container's content column, which would make it code: an item there moved
+      // by what it lines up with, its container narrower now, at three past it)
+      if ((moved || this.draft.placedIds.has(child.id)) && indent(at) + delta > 3) delta = 3 - indent(at);
       this.movedDelta.set(child, delta);
     } else if (!moved) return null;
     if (!moved && delta === 0) return null;
@@ -527,11 +528,12 @@ class Writer {
       const prefix = /^(.*>)\t$/.exec(shift.prefix)?.[1] ?? shift.prefix;
       // (whitespace is written after it to the line's column: a `>`'s space among it)
       const start = contentStart(prefix, ' ');
-      const to = start + end - column + delta;
+      // (a blank line, written without its whitespace, needs none)
+      const to = blank ? Math.max(start, start + end - column + delta) : start + end - column + delta;
       if (to < start || (end < column && !blank)) throw new WriteFailure("a moved node's lines aren't indented as far as its first");
-      const rest = s.slice(k + lead.length);
-      // a tab after the marker spans by where it is: only as far from a tab stop as it was
-      if (rest.includes('\t') && (to - end) % 4 !== 0) throw new WriteFailure('tabs in a moved node, at another column');
+      // a tab after a quote's `>` spans by where it is: where the shift moves it off its stop, spelled
+      // again as the spaces it spanned (`padded`; one after an item's marker, in the text, or in code, stays)
+      const rest = (to - end) % 4 === 0 ? s.slice(k + lead.length) : padded(s.slice(k + lead.length), end, this.from.config.quotes === 'atom');
       // (the prefix's `>`s as written, every column after the last one by tabs)
       const quotes = prefix.slice(0, prefix.lastIndexOf('>') + 1);
       const out = quotes + whitespace(columns(quotes), to, true) + rest;
@@ -540,10 +542,15 @@ class Writer {
     let col = 0;
     let k = 0;
     while (k < s.length && col < column) col = s[k++] === '\t' ? col + 4 - (col % 4) : col + 1;
-    if (col > column) throw new WriteFailure("a tab across a moved node's container's edge");
-    let rest = s.slice(k);
-    // (a tab its indentation has spans by where it is; one past it, after a marker or in text, is the line's own)
-    if (/^[ ]*\t/.test(rest) && (delta !== 0 || columns(shift.prefix) !== shift.column)) throw new WriteFailure('tabs in a moved node, at another column');
+    // (a tab across the container's edge: the part of it past the edge, the spaces it spans there)
+    let rest = ' '.repeat(Math.max(0, col - column)) + s.slice(k);
+    // a tab in its indentation, or after a quote's `>`, spans by where it is: where the line moves,
+    // spelled again as the spaces it spanned (one after an item's marker, in the text, or in code, stays)
+    if (delta !== 0 || columns(shift.prefix) !== shift.column) {
+      const lead = /^[ \t]*/.exec(rest)![0];
+      const end = advanceColumns(rest, 0, lead.length, column);
+      rest = ' '.repeat(end - column) + padded(rest.slice(lead.length), end, this.from.config.quotes === 'atom');
+    }
     if (delta > 0 && !(blank && trimMd(rest) === '')) rest = ' '.repeat(delta) + rest;
     else if (delta < 0) {
       let j = 0;
@@ -586,6 +593,8 @@ class Writer {
     const line = this.tree.line(origin.startLine);
     const widened = this.widen(origin.startLine, this.old.slice(line.from, pos));
     if (start === undefined || (!shift && widened === null)) return this.mapOld(pos, 1, within);
+    const head = shift ? this.partialTabHead(line, pos, widened ?? this.old.slice(line.from, pos), shift, origin.startLine) : null;
+    if (head !== null) return start + head;
     if (pos >= line.contentFrom) return this.mapOld(pos, 1, within);
     const prefix = widened ?? this.old.slice(line.from, pos);
     return start + (shift ? this.shifted(prefix, false, shift, origin.startLine) : prefix).length;
@@ -603,8 +612,9 @@ class Writer {
     for (const w of [...over].sort((x, y) => y.column - x.column)) {
       let col = 0;
       let k = 0;
+      // (indentation with tabs, as the columns it spans: a tab past the widening would span otherwise)
+      if (out.slice(0, w.column).includes('\t')) out = spacesOf(out);
       while (k < out.length && col < w.column) {
-        if (out[k] === '\t') throw new WriteFailure("an item's marker changes width over a line indented with tabs");
         col++;
         k++;
       }
@@ -639,7 +649,8 @@ class Writer {
     // of another kind on its container's first line (`- > - a`): its first line starts with the
     // markers it was written after there, its later lines after its container's prefix
     let markers: string | null = null;
-    if (origin && onItemsLine(origin)) {
+    // (one the draft placed elsewhere starts on a line of its own)
+    if (origin && onItemsLine(origin) && !this.draft.placedIds.has(node.id)) {
       if (node.kind === 'item') throw new WriteFailure(`node ${node.id}, an item now, on a line it doesn't start`);
       const line = this.tree.line(origin.startLine);
       markers = this.old.slice(line.from, origin.kind === 'item' ? line.from + origin.persistentNode.block!.attrs.markerStart! : line.contentFrom);
@@ -657,8 +668,8 @@ class Writer {
         while (parent.children[k]?.kind === 'item' && !this.draft.originOf(parent.children[k]!) && !lists.get((step < 0 ? parent.children[k + 1] : parent.children[k])!.id)?.start) k += step;
         return k;
       };
-      // (with none, in a document indented with tabs, a tab past its parent's marker)
-      indent = this.tabChild(container) ?? indent;
+      // (with none, where the unit isn't the content column, as the unit has it past its parent's marker)
+      indent = this.unitChild(container) ?? indent;
       for (const k of [near(1), near(-1)]) {
         const sibling = parent.children[k];
         const at = sibling?.kind === 'item' ? this.draft.originOf(sibling) : null;
@@ -733,15 +744,20 @@ class Writer {
         if (!first) throw new WriteFailure(`node ${node.id}'s marker is on its first child's line, which goes`);
         const line = this.tree.line(origin.startLine);
         const piece = line.prefix.find((p) => p.container.block === origin.persistentNode.block);
-        // (under the shift it is moved by, past the prefix it leaves: no marker of an item it isn't first in now)
-        const shift = this.shiftAt(origin.startLine);
+        // (under the shift it is moved by, past the prefix it leaves: no marker of an item it isn't first in
+        // now; not one of a node moved off its line, which it doesn't go with)
+        const lineShift = this.shiftAt(origin.startLine);
+        const shift = lineShift && within(origin, lineShift.origin) ? lineShift : null;
         const lead = piece ? (shift ? this.shifted(this.old.slice(line.from, piece.to), false, shift, origin.startLine) : this.old.slice(line.from, piece.to)) : '';
         if (!piece || lead.includes('\t')) throw new WriteFailure(`node ${node.id}'s marker is on its first child's line, which goes`);
         // (that block's line indented past the item's content column: the block lifted to it)
         const at = this.draft.originOf(first);
         if (at) {
           const own = this.tree.line(at.startLine).prefix.find((p) => p.container.block === origin.persistentNode.block);
-          const extra = own ? /^ */.exec(this.old.slice(own.to, this.tree.line(at.startLine).to))![0].length : 0;
+          // (in columns: a tab the item's content column falls inside counts past it)
+          const l = this.tree.line(at.startLine);
+          const rest = own ? /^[ \t]*/.exec(this.old.slice(own.to, l.to))![0] : '';
+          const extra = own ? advanceColumns(this.old, own.to, own.to + rest.length, advanceColumns(this.old, l.from, own.to, 0)) - own.toColumn : 0;
           if (extra) this.lifted.set(first, extra);
         }
         this.ensureLineStart();
@@ -854,8 +870,11 @@ class Writer {
       const held = (at: number): boolean => heldSpaceAt(this.from.marks, this.old, at);
       let padding = '';
       for (let at = p0; at < p1; at++) if ((this.old[at] === ' ' || this.old[at] === '\t') && !held(at)) padding += this.old[at];
-      // four columns of it would make the text code
-      if (padding.replace(/\t/g, '    ').length >= 4) padding = '';
+      // four columns of it would make the text code (past its containers' content column: a tab they
+      // took part of counts only its rest)
+      const from = advanceColumns(this.old, line.from, p0, 0);
+      const content = Math.max(from, line.prefix[line.prefix.length - 1]?.toColumn ?? 0);
+      if (advanceColumns(padding, 0, padding.length, from) - content >= 4) padding = '';
       lead = this.old.slice(line.from, p0) + padding;
     }
     // an item empty before (`-`) with text now: a space after its marker
@@ -983,17 +1002,23 @@ class Writer {
   }
 
   /**
-   * In a document indented with tabs, where a child item of item `container` starts that lines up with
-   * no sibling: a tab past its marker, as tabs (null elsewhere, and under quotes).
+   * Where a child item of item `container` starts that lines up with no sibling, by the unit
+   * (`indentUnit`): under `tab`, a tab past its marker, written by columns with tabs; under `4`, its
+   * container's prefix as written and spaces to four past its marker; either made up to its content
+   * column, where it falls short. Null under `2`, which is the content column, and where `container`
+   * is no item.
    */
-  tabChild(container: Container): string | null {
-    if (!/(?:^|\n)[ >]*\t/.test(this.old)) return null;
+  unitChild(container: Container): string | null {
+    const unit = indentUnitOf(this.from);
+    if (unit === 2) return null;
     const column = 'persistentNode' in container ? (container.kind === 'item' ? (this.writtenColumn(container.id) ?? this.markerColumn(container)) : null) : (container.markerColumn ?? null);
     if (column === null) return null;
-    // (in a quote, after its `>`s)
     const inside = this.inside(container);
+    const content = columns(inside);
+    if (unit === 4) return inside + ' '.repeat(Math.max(0, column + 4 - content));
+    // (in a quote, after its `>`s)
     const quotes = inside.slice(0, inside.lastIndexOf('>') + 1);
-    return quotes + whitespace(columns(quotes), column + 4 - (column % 4), true);
+    return quotes + whitespace(columns(quotes), Math.max(column + 4 - (column % 4), content), true);
   }
 
   /** An item's marker's column on its line. */
@@ -1025,9 +1050,36 @@ class Writer {
       const block = origin.persistentNode.block;
       at = line.prefix.find((piece) => piece.container.block === block)?.from ?? line.contentFrom;
     }
+    // (the shift of a node moved off this line is no shift of one that stays on it)
+    const lineShift = shifted && !line.lazy ? this.shiftAt(origin.startLine) : null;
+    const shift = lineShift && within(origin, lineShift.origin) ? lineShift : null;
     const prefix = (shifted && !line.lazy ? this.widen(origin.startLine, this.old.slice(line.from, at)) : null) ?? this.old.slice(line.from, at);
-    const shift = shifted && !line.lazy ? this.shiftAt(origin.startLine) : null;
+    const head = shift ? this.partialTabHead(line, at, prefix, shift, origin.startLine) : null;
+    if (head !== null) return start + head;
     return start + (shift ? this.shifted(prefix, false, shift, origin.startLine).length : prefix.length);
+  }
+
+  /**
+   * Where the content of old line `line` starts in what a shift writes for it, where it starts at
+   * `pos` on a tab its containers took part of (null elsewhere): that tab is written anew, not copied,
+   * so the content starts where its column is in what was written, at the tab that crosses it.
+   * `prefix`: the line up to `pos`, as the writer has it.
+   */
+  partialTabHead(line: MdLine, pos: number, prefix: string, shift: Shift, i: number): number | null {
+    const piece = line.prefix[line.prefix.length - 1];
+    if (pos !== line.contentFrom || !piece?.partialTab || this.old[pos] !== '\t') return null;
+    const old = prefix + '\t';
+    const out = this.shifted(old, false, shift, i);
+    const column = columns(out) - (columns(old) - piece.toColumn);
+    let col = 0;
+    let k = 0;
+    while (k < out.length && col < column) {
+      const next = out[k] === '\t' ? col + 4 - (col % 4) : col + 1;
+      if (next > column) break;
+      col = next;
+      k++;
+    }
+    return k;
   }
 
   /**
@@ -1127,7 +1179,7 @@ class Writer {
       this.shiftedStarts.set(i, this.length);
       this.text(shift!.prefix);
       this.copyRange(skipBlanks(this.old, left.to, line.contentFrom), end);
-    } else if (!shift || line.lazy) {
+    } else if (!shift || (line.lazy && !prefixedIn(line, shift.origin))) {
       const prefix = line.lazy || line.blank ? null : this.widen(i, this.old.slice(line.from, line.contentFrom));
       if (prefix !== null) {
         this.shiftedStarts.set(i, this.length);
@@ -1156,18 +1208,29 @@ class Writer {
         const written = this.old.slice(line.from, line.to);
         // in code, never wider (any number of spaces keeps it in its item: Indent13), narrower where
         // its container is (its spaces past the column are the code's: Fence48), and short of the
-        // container's column as it was
+        // container's column as it was, but where that is past the new column: there its spaces would
+        // be the code's, and it is cut to the new prefix, an empty line of the code as it was
         const code = !!line.leaf && line.leaf.block.type !== 'paragraph' && !written.includes('>') && !shift.prefix.includes('>');
-        if (code && (columns(shift.prefix) + shift.delta >= shift.column || columns(written) < shift.column)) this.copyRange(line.from, end);
+        const to = columns(shift.prefix) + shift.delta;
+        const short = columns(written) < shift.column;
+        if (code && (to >= shift.column || (short && columns(written) <= to))) this.copyRange(line.from, end);
         else {
-          this.text(this.shifted(written, !code, shift, i));
+          this.text(this.shifted(written, !code || short, shift, i));
           this.blankAt.set(i, this.length);
           this.copyRange(line.to, end);
         }
       } else {
-        if (!shift.tabs && line.prefix.some((p) => p.partialTab)) throw new WriteFailure('a moved line starting inside a tab');
         // (a tab its containers took part of, re-indented whole: the rest of it is the line's indentation)
-        const from = line.prefix[line.prefix.length - 1]?.partialTab && this.old[line.contentFrom] === '\t' ? line.contentFrom + 1 : line.contentFrom;
+        let from = line.prefix[line.prefix.length - 1]?.partialTab && this.old[line.contentFrom] === '\t' ? line.contentFrom + 1 : line.contentFrom;
+        // (an indented code block's four columns are its indentation, not its text: where a tab in them
+        // would span otherwise, re-indented with the line, the code's text past them as it is)
+        if (line.leaf?.block.type === 'code_block' && !line.leaf.block.attrs.fenced && (shift.delta % 4 !== 0 || (columns(shift.prefix) - shift.column) % 4 !== 0)) {
+          let col = advanceColumns(this.old, line.from, from, 0);
+          const stop = line.contentColumn + 4;
+          let k = from;
+          while (k < line.to && col < stop && (this.old[k] === ' ' || this.old[k] === '\t')) col = advanceColumns(this.old, k, ++k, col);
+          if (this.old.slice(from, k).includes('\t')) from = k;
+        }
         this.text(this.shifted(this.widen(i, withMarker(line.from, from)) ?? withMarker(line.from, from), false, shift, i));
         this.copyRange(from, end);
       }
@@ -1375,8 +1438,11 @@ class Writer {
       if (c.insert) inserted.push([at, at + c.insert.length]);
       delta += (c.insert?.length ?? 0) - ((c.to ?? c.from) - c.from);
     }
+    // and so is one the changes don't carry to where it was written (two equal subtrees, the changes
+    // made line by line: the lines left alone can be the other one's)
     for (const copy of this.copied) {
-      if (inserted.some(([a, b]) => a < copy.to && b > copy.from)) this.nameDescendants(copy.origin);
+      const carried = mapPos(changes, this.from.rangeOf(copy.origin).from, 1) === copy.from;
+      if (!carried || inserted.some(([a, b]) => a < copy.to && b > copy.from)) this.nameDescendants(copy.origin);
     }
     // the old placeholders in what was copied, where they were
     if (root !== this.from.root) {
@@ -1394,6 +1460,26 @@ class Writer {
   inCopy(pos: number): boolean {
     return this.pieces.some((p) => 'old' in p && pos >= p.old[0] && (pos < p.old[1] || (pos === p.old[1] && p.old[1] === this.old.length)));
   }
+}
+
+/** Whether `node` is `root` or inside it. */
+function within(node: OutlineNode, root: OutlineNode): boolean {
+  for (let n: OutlineNode | null = node; n; n = n.parent) if (n.persistentNode === root.persistentNode && n.startLine === root.startLine) return true;
+  return false;
+}
+
+/**
+ * Whether `line` carries the prefix of a container in `origin`'s subtree (a moved quote's `>`): lazy
+ * for a paragraph in it, the line is still the moved node's, written where it goes.
+ */
+function prefixedIn(line: MdLine, origin: OutlineNode): boolean {
+  const blocks = new Set<unknown>();
+  const visit = (n: OutlineNode): void => {
+    if (n.kind === 'quote' || n.kind === 'item') blocks.add(n.persistentNode.block);
+    n.children.forEach(visit);
+  };
+  visit(origin);
+  return line.prefix.some((p) => blocks.has(p.container.block));
 }
 
 /** Whether a text was empty, or none (an item whose first block is on its marker's line). */
@@ -1415,7 +1501,7 @@ export function continuationAsWas(old: string, origin: OutlineNode, line: MdLine
   const written = old.slice(line.from, last ? Math.min(last.to, line.contentFrom) : line.contentFrom);
   // with tabs after a quote's `>`, the line's own prefix: its markers as spaces, its `>`s and tabs as written
   if (written.includes('\t') && inQuote(line)) return written.replace(/[^>\t ]/g, ' ');
-  const tabs = line.prefix.some((p) => p.container.block.type === 'item' && (/^[ \t]*/.exec(old.slice(p.from, p.to))![0].includes('\t') || (p.partialTab && /^[ \t]*$/.test(old.slice(p.from, p.to)))));
+  const tabs = itemTabs(line, old);
   const pieces = line.prefix;
   let out = '';
   let column = 0;
@@ -1497,6 +1583,128 @@ function outerOf(container: Container): OutlineNode {
 }
 
 /** The columns `prefix` spans. */
+/**
+ * A line's text from its markers on (`rest`, starting at column `at`), the whitespace after each quote's
+ * `>` that has a tab as the spaces it spanned: that tab gives the `>` its space, and what is left of it
+ * is the quote's content's indentation, which would change with where the line goes. A tab after a
+ * list item's marker stays (Indent14: it moves where the text starts by no more than to its stop), and
+ * where quotes are atoms (`atoms`), a `>` and what follows it are the atom's own text. Anything else,
+ * `rest` as it is.
+ */
+function padded(rest: string, at: number, atoms: boolean): string {
+  let out = '';
+  let col = at;
+  let k = 0;
+  for (;;) {
+    const m = /^(?:>|(?:[-*+]|\d{1,9}[.)])(?=[ \t]|$))/.exec(rest.slice(k));
+    // (a quote that is an atom, `quotes: atom`: its `>`s and what follows them are its text, as written)
+    if (!m || (atoms && m[0] === '>')) break;
+    out += m[0];
+    col += m[0].length;
+    k += m[0].length;
+    const space = /^[ \t]*/.exec(rest.slice(k))![0];
+    const to = advanceColumns(rest, k, k + space.length, col);
+    out += m[0] === '>' && space.includes('\t') ? ' '.repeat(to - col) : space;
+    col = to;
+    k += space.length;
+  }
+  return k ? out + rest.slice(k) : rest;
+}
+
+/** A line's leading indentation (between its quotes' `>`s too) with its tabs the spaces they span. */
+function spacesOf(s: string): string {
+  const lead = /^[ \t>]*/.exec(s)![0];
+  let out = '';
+  let col = 0;
+  for (const c of lead) {
+    if (c === '\t') {
+      const to = col + 4 - (col % 4);
+      out += ' '.repeat(to - col);
+      col = to;
+    } else {
+      out += c;
+      col++;
+    }
+  }
+  return out + s.slice(lead.length);
+}
+
+const units = new WeakMap<OurusDoc, 'tab' | 2 | 4>();
+const tabbed = new WeakMap<OurusDoc, boolean>();
+
+/**
+ * The unit a new nesting in `doc` takes (`indentUnit`): its config's, or under `detect` the one most of
+ * its nested items have, each by its indentation past its parent's marker (a tab in it, `tab`; at both
+ * its parent's content column and four past its marker, as under `10. `, or at neither, none; else
+ * `2` at the content column, `4` four past the marker); with none, a tab where the document indents
+ * with tabs outside code (`tabbedOf`), else `2`, and `2` on a tie.
+ */
+export function indentUnitOf(doc: OurusDoc): 'tab' | 2 | 4 {
+  const set = doc.config.indentUnit;
+  if (set !== 'detect') return set;
+  let unit = units.get(doc);
+  if (unit !== undefined) return unit;
+  const votes = { tab: 0, 2: 0, 4: 0 };
+  const visit = (node: OutlineNode): void => {
+    for (const child of node.children) {
+      if (child.kind === 'item' && node.kind === 'item' && child.startLine !== node.startLine) {
+        const vote = nestingOf(doc, node, child);
+        if (vote !== null) votes[vote]++;
+      }
+      visit(child);
+    }
+  };
+  visit(doc.rootNode);
+  const most = Math.max(votes.tab, votes[2], votes[4]);
+  const top = (['tab', 2, 4] as const).filter((u) => votes[u] === most);
+  unit = most === 0 ? (tabbedOf(doc) ? 'tab' : 2) : top.length > 1 ? 2 : top[0]!;
+  units.set(doc, unit);
+  return unit;
+}
+
+/** How item `child` nests under item `parent`, by its indentation past `parent`'s marker; null for none. */
+function nestingOf(doc: OurusDoc, parent: OutlineNode, child: OutlineNode): 'tab' | 2 | 4 | null {
+  const outer = parent.block.attrs;
+  const own = child.block.attrs;
+  if (outer.markerColumn === undefined || outer.contentColumn === undefined || own.markerColumn === undefined || own.markerStart === undefined) return null;
+  // a tab in its indentation past the parent's marker (one that starts before it and reaches past it too)
+  const line = doc.mdTree.line(child.startLine);
+  let column = 0;
+  for (let k = line.from; k < line.from + own.markerStart; k++) {
+    const next = doc.text[k] === '\t' ? column + 4 - (column % 4) : column + 1;
+    if (doc.text[k] === '\t' && next > outer.markerColumn) return 'tab';
+    column = next;
+  }
+  const content = own.markerColumn === outer.contentColumn;
+  const four = own.markerColumn === outer.markerColumn + 4;
+  return content && four ? null : content ? 2 : four ? 4 : null;
+}
+
+/** Whether `doc` indents with tabs outside code: the unit `detect` reads where no nested item says one. */
+function tabbedOf(doc: OurusDoc): boolean {
+  let found = tabbed.get(doc);
+  if (found !== undefined) return found;
+  found = false;
+  for (let i = 0; i < doc.lineCount && !found; i++) {
+    const line = doc.mdTree.line(i);
+    // (an item's indentation with a tab, a tab it takes part of before code in it too)
+    if (itemTabs(line, doc.text)) found = true;
+    // (a code block's lines past its fence are its own, as an indented one's all are)
+    const leaf = line.leaf;
+    if (leaf && CODE.has(leaf.block.type) && (!leaf.block.attrs.fenced || i !== leaf.line)) continue;
+    if (/^[ >]*\t/.test(doc.text.slice(line.from, line.to))) found = true;
+  }
+  tabbed.set(doc, found);
+  return found;
+}
+
+/** Whether an item's indentation on `line` has a tab: in its prefix, or one it takes part of. */
+const itemTabs = (line: MdLine, old: string): boolean =>
+  line.prefix.some((p) => p.container.block.type === 'item' && (/^[ \t]*/.exec(old.slice(p.from, p.to))![0].includes('\t') || (p.partialTab && /^[ \t]*$/.test(old.slice(p.from, p.to)))));
+
+/** Blocks of lines whose indentation past their first line is their own. */
+const CODE = new Set(['code_block', 'math_block', 'comment_block', 'html_block']);
+
 function columns(prefix: string): number {
   let column = 0;
   for (const c of prefix) column = c === '\t' ? column + 4 - (column % 4) : column + 1;

@@ -15,10 +15,12 @@
 // - Its keys are those of its help page and its source (Linux: `mod` is Control). Deleting a block with
 //   its children is selecting it (Shift+Up on its first line) and Backspace; none moves a block (that is
 //   drag and drop, whose drop is the behavior under test) or duplicates one: those tests are skipped.
+// - A drop (spec/drag.md) is the mouse's: a block's bullet dragged (`athensDrop`).
 
 import type { Page } from 'playwright-core';
-import type { Driver } from '../lib/driver.ts';
-import type { Outline } from '../lib/block.ts';
+import type { Driver, Drop } from '../lib/driver.ts';
+import { Unsupported, type Outline } from '../lib/block.ts';
+import { gesture } from '../lib/drag.ts';
 
 const MOTIONS: Record<string, string> = {
   CharLeft: 'ArrowLeft',
@@ -56,7 +58,10 @@ export const driver: Driver = {
   // a block's text holds a blank line, its paragraphs apart
   paragraphsInBlock: true,
   // after deleting a selected block no block is edited (checked by hand, keys only)
-  noCaretAfter: ['deleteSubtree'],
+  // nor after a drop: editing ends as a drag starts (measured)
+  noCaretAfter: ['deleteSubtree', 'move'],
+  // a selection of whole blocks: loaded with Shift+Up and Shift+Down, read from `.is-selected`
+  selectsBlocks: true,
   keys: {
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
@@ -103,6 +108,8 @@ export const driver: Driver = {
     pasteParagraphList: 'children',
   },
 
+  drops: ['move'],
+  drop: athensDrop,
 
   async open(page: Page) {
     // Athens's own opt-out of error reporting, read as it starts: else every transaction sends Sentry a trace
@@ -147,7 +154,9 @@ export const driver: Driver = {
   async load(page: Page, doc) {
     const o = doc as Outline;
     const blocks = o.blocks.map((b) => ({ depth: b.depth, ...toAthens(b.text) }));
-    const sel = o.sel && { block: o.sel.block, anchor: shiftOffset(o.sel.anchor, blocks[o.sel.block]!.from, blocks[o.sel.block]!.to), head: shiftOffset(o.sel.head, blocks[o.sel.block]!.from, blocks[o.sel.block]!.to) };
+    // (blocks selected whole: the first opened at its start, to select from with the keys below)
+    const selected = o.selected?.length ? o.selected : null;
+    const sel = o.sel ? { block: o.sel.block, anchor: shiftOffset(o.sel.anchor, blocks[o.sel.block]!.from, blocks[o.sel.block]!.to), head: shiftOffset(o.sel.head, blocks[o.sel.block]!.from, blocks[o.sel.block]!.to) } : selected && { block: selected[0]!, anchor: 0, head: 0 };
     const target = await page.evaluate(
       async ({ blocks, sel }) => {
         const w = window as any;
@@ -214,6 +223,17 @@ export const driver: Driver = {
       const ta = document.activeElement as HTMLTextAreaElement;
       ta.setSelectionRange(Math.min(sel.anchor, sel.head), Math.max(sel.anchor, sel.head), sel.head < sel.anchor ? 'backward' : 'forward');
     }, sel);
+    // blocks selected whole, as a user selects them: Shift+Up on the first block's first line selects
+    // it, each Shift+Down the next on screen, till the last is (`read` reports the topmost)
+    if (selected) {
+      const last = selected[selected.length - 1]!;
+      const reached = async (): Promise<number> => {
+        await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 }));
+        return Math.max(-1, ...(((await this.read(page)) as Outline).selected ?? []));
+      };
+      for (let i = 0; i < 3 && (await reached()) < 0; i++) await page.keyboard.press('Shift+ArrowUp');
+      for (let k = 0; k <= o.blocks.length && (await reached()) < last; k++) await page.keyboard.press('Shift+ArrowDown');
+    }
   },
 
   async read(page: Page) {
@@ -238,8 +258,13 @@ export const driver: Driver = {
       walk(pageEntity, 0);
       const i = editingUid ? flat.findIndex((b) => b.uid === editingUid) : -1;
       const back = ta?.selectionDirection === 'backward';
-      // blocks selected whole (Shift+Up at a block's edge)
-      const selected = [...document.querySelectorAll('.block-container.is-selected')].map((el) => flat.findIndex((b) => b.uid === el.getAttribute('data-uid'))).filter((k) => k >= 0);
+      // blocks selected whole (Shift+Up at a block's edge), the topmost: a block's children go with it
+      const lit = new Set([...document.querySelectorAll('.block-container.is-selected')].map((el) => flat.findIndex((b) => b.uid === el.getAttribute('data-uid'))).filter((k) => k >= 0));
+      const under = (k: number): boolean => {
+        for (let j = k - 1, d = flat[k]!.depth; j >= 0 && d > 0; j--) if (flat[j]!.depth < d && ((d = flat[j]!.depth), lit.has(j))) return true;
+        return false;
+      };
+      const selected = [...lit].filter((k) => !under(k)).sort((a, b) => a - b);
       return { flat, sel: i >= 0 ? { block: i, anchor: back ? ta!.selectionEnd : ta!.selectionStart, head: back ? ta!.selectionStart : ta!.selectionEnd } : null, selected };
     });
     const texts = raw.flat.map((b) => fromAthens(b.string));
@@ -290,3 +315,52 @@ export const driver: Driver = {
     await settle();
   },
 };
+
+/**
+ * A drop in Athens (its block's `on-drag-over` and `on-drop`): HTML5 drag and drop, which Playwright's
+ * mouse plays in Chromium. The pressed block's bullet (its anchor, `draggable`) is carried to the block
+ * whose container is innermost under the pointer, and the place read off where in that container (its
+ * subtree's box) it is: in its upper half, before it; in its lower half, after it left of 50 px from
+ * its left, and right of that its first child, where it has none. So after a block is its container's
+ * bottom, left of its children's; first under a parent, the top of its first child, or a childless
+ * parent's lower half, right. Over the block dragged, nothing moves (its own place). It drags the
+ * block pressed, or the blocks selected whole: a drop of a run or of the selection it has no gesture
+ * for.
+ */
+async function athensDrop(page: Page, drop: Drop, settle: () => Promise<void>): Promise<void> {
+  // (a drop of the selection: a press on its first block's bullet)
+  const press = drop.press ?? drop.rows[0];
+  if (press === undefined) throw new Unsupported('a drop of nothing pressed or selected');
+  const at = await page.evaluate(({ press, to }) => {
+    const w = window as any;
+    // (a drop is a case's first action: block i is the one `load` made i-th)
+    const el = (i: number) => document.querySelector(`.block-container[data-uid="sxs${w.__ourusSxsPage}-${i}"]`) as HTMLElement | null;
+    const index = (e: Element | null | undefined): number | 'root' => (e ? Number(e.getAttribute('data-uid')!.split('-').pop()) : 'root');
+    const container = (e: Element) => e.parentElement?.closest(`.block-container[data-uid^="sxs${w.__ourusSxsPage}-"]`);
+    const kids = (parent: number | 'root'): number[] => {
+      const all = [...document.querySelectorAll(`.block-container[data-uid^="sxs${w.__ourusSxsPage}-"]`)];
+      return all.filter((e) => index(container(e)) === parent).map(index) as number[];
+    };
+    const pressed = el(press);
+    const anchor = pressed?.querySelector(':scope > .block-body > .anchor')?.getBoundingClientRect();
+    if (!pressed || !anchor) return null;
+    const from = { x: anchor.left + anchor.width / 2, y: anchor.top + anchor.height / 2 };
+    const box = (i: number) => el(i)!.getBoundingClientRect();
+    const siblings = kids(index(container(pressed))).filter((i) => i !== press);
+    const before = kids(to.parent).filter((i) => i !== press)[0];
+    const own = index(container(pressed)) === to.parent && (siblings.filter((i) => i < press).pop() ?? null) === to.after;
+    let target: { x: number; y: number };
+    // its own place: over itself
+    if (own) target = { x: box(press).left + 60, y: box(press).top + 8 };
+    // after a block: its bottom, left of its children (a level is 32 px)
+    else if (to.after !== null) target = { x: box(to.after).left + 16, y: box(to.after).bottom - 4 };
+    // first: before the first child, at its top
+    else if (before !== undefined) target = { x: box(before).left + 16, y: box(before).top + 4 };
+    // in a childless block, its lower half, right
+    else if (to.parent !== 'root') target = { x: box(to.parent).left + 60, y: box(to.parent).bottom - 4 };
+    else return null;
+    return { from, to: target };
+  }, { press, to: drop.to });
+  if (!at) throw new Unsupported('the pressed block has no bullet on screen');
+  await gesture(page, at.from, at.to, settle);
+}

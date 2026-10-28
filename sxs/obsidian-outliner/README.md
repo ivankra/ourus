@@ -25,6 +25,7 @@ while an IME is composing, the key is Obsidian's.
 | `outdent` | Shift+Tab | "better Tab", as `indent` |
 | `moveSubtreeUp` | Ctrl+Shift+Up | "Move list item up" (`move-list-item-up`): the item with its children, into the neighboring item at a list's edge; an ordered list is renumbered |
 | `moveSubtreeDown` | Ctrl+Shift+Down | "Move list item down" (`move-list-item-down`), as `moveSubtreeUp` |
+| `move ②` | the mouse | drag and drop (`dnd`, on): an item pressed by its bullet (or checkbox), dropped where its drop line is (`outlinerDrop` in [`../obsidian/obsidian.ts`](../obsidian/obsidian.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
 | `deleteContentBackward` | Backspace | "stick the cursor to the content" (`stickCursor: bullet-and-checkbox`): at an item's start, it joins the previous item only where children allow, and otherwise does nothing |
 | `deleteContentForward` | Delete | the same setting, as `deleteContentBackward` |
 
@@ -57,6 +58,15 @@ under it) and `- e`, then `- d`, indented with tabs; bare Obsidian's are in
 | Show system info (`system-info`) | Ctrl+Shift+Alt+I | a dialog of the plugins' versions and settings (from the source) |
 
 ## What it does, measured
+
+Drag and drop ([`drag.md`](../../spec/drag.md), played with the real mouse, aimed where its own
+geometry puts each place: `DragAndDrop.ts`'s variants):
+
+- **The places are items among items**: before an item, after it, inside an empty one. A drop where
+  ourus has a place it hasn't (after a paragraph, `drag.md › Drag13`) lands at its nearest, here its
+  own: nothing moves. A paragraph or a heading has no bullet to press: those cases skip.
+- **No cover rule**: a press on a selected item drags it alone (`Drag4`: `- a⏎- c⏎- b`, ourus's `- c⏎-
+  a⏎- b`), and the selection goes (`Drag5`, `Drag5b`: the text agrees, `caret`).
 
 Against bare Obsidian in Live Preview, each read in
 Outliner's source (cloned at 4.10.2: `src/operations/`, `src/services/Parser.ts`) and played by hand:

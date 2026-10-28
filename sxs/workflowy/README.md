@@ -42,12 +42,13 @@ ChromeOS.
 | `deleteContentBackward` | Backspace |
 | `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Shift+Home, Backspace |
-| `deleteSubtree` | Ctrl+Shift+Backspace; after it no block is edited (when the first item goes): the outline alone is judged (`noCaretAfter`, since 2026-10-25). |
-| `duplicateSubtree` | Alt+Shift+D |
+| `deleteSubtree` | Ctrl+Shift+Backspace; after it no block is edited (when the first item goes): the outline alone is judged (`noCaretAfter`). |
+| `duplicateSubtree` | Alt+Shift+D; of items selected, the originals stay selected, where ourus selects the copies (`duplicate-subtree.md › DuplicateSubtree3`: `caret`) |
 | `pasteStructured` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V |
 | `undo` | Ctrl+Z |
 | `redo` | Ctrl+Y |
+| `move ②` | the mouse: the item's bullet dragged, dropped where its drop line is (`workflowyDrop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)); after it no block is edited (`noCaretAfter`) |
 
 Other shortcuts (from the keymap, `n2[...]` in `wf-base`, the PC side; "measured" where played in the
 demo, 2026-10-18):
@@ -194,6 +195,29 @@ same web app.
   keys came. Between 2026-10-18's full runs, `scenarios.md › Scenario16` and `Scenario23` came back with
   their undone text cut in other places (disagreeing either way), and one verdict flipped once; the
   rest of the verdicts were the same to the example.
+
+## Drag and drop
+
+Read in `wf-base.js` (the bullet's `onMouseDown`, the `Moving` module's `getDropPosition`) and played
+with the real mouse, aimed where its own geometry puts each place ([`drag.md`](../../spec/drag.md),
+2026-10-28):
+
+- **Mouse events, not HTML5 drag**: a press on the bullet, a drag from 3 pixels on; Alt drags a
+  duplicate, Shift a mirror. The item goes after the item whose row (name or note) the ghost's top is
+  on: the pointer's y less what it was below the item's top when pressed. On the zoomed item's title
+  it goes first.
+- **Its depth is the pointer's x**: a child of that item where x is past the item's left by 0.7 of an
+  indentation (36 pixels), else of its parent, on up to the zoomed item, a container. Between an item
+  and its first child the drop is that child's place whatever x is. Every place the cases make is
+  reachable: `Drag1`, `Drag2`, `Drag3`, `Drag8`, `Drag13` and seven shapes probed (to the end, out of
+  two levels, into a nested item) land where ourus does.
+- **The drag ends the editing as it starts** (it blurs the item edited), and the drop puts no caret
+  back: the outlines agree, the carets aren't compared (`Drag1`, `Drag2`), and a case that types or
+  presses keys after the drop has nothing to play them in (`scenarios.md › Scenario8b`, `Scenario8c`:
+  skipped, "no text focus after move").
+- **A press on a selected item drags the selection's items**, any other the item alone, as ourus's
+  cover rule does: Drag4, Drag20 agree; Drag5, Drag5b land as ourus's, nothing selected after
+  (`caret`). The driver selects items with WorkFlowy's own `WF.setSelection`.
 
 ## WorkFlowy bugs met on the way
 

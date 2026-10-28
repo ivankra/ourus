@@ -29,6 +29,7 @@ so on, defined by `ra("doc-indent", ...)` calls in `main.min.js`):
 | `pastePlain` | Ctrl+Shift+V (but see below) |
 | `undo` | Ctrl+Z |
 | `redo` | Ctrl+Y (also Ctrl+Shift+Z) |
+| `move ②` | the mouse: an item's bullet pressed, dropped where its place is (`drop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
 
 Other shortcuts (the rest of the table with a default key that an outliner would want; each measured
 in the demo, 2026-10-18):
@@ -167,6 +168,34 @@ Dynalist bugs met:
   with `x`, `- y` (as HTML) gives `See x`, its child `yhere┃.`, the caret at the offset it would have in
   the first item (`See x┃`), set in the last. From plain text, or HTML of a list alone, the caret is
   right.
+
+## Drag and drop
+
+Read in `main.min.js` (`DocumentDragManager`) and played with the real mouse, aimed where its own
+geometry puts each place. A mousedown on an item's bullet (`.Node-bullet`) starts it, mouse events
+on the document carry it past a 3-pixel threshold to the release: no HTML5 drag (its `dragstart` is
+text dragged out of an item). The place is `node_drop_location(x, y)`, the dragged items left out:
+the upper half of an item's line is before it, the lower half of a leaf's after it, the lower half
+of a parent's before its first child, the 3-pixel padding under an item's last child after the item;
+x only says "into" a leaf, past a column 30 pixels and a fifth of its line's width right of its bullet.
+
+- **Every place ourus has is one of its own**: before an item, after a leaf or a parent at its
+  depth, first among a parent's children, into a leaf (`drag.md › Drag1`, `Drag3`, `Drag8`,
+  `Drag13`, `scenarios.md › Scenario8c`: the outline agrees; and in probes, after a parent that is
+  the last of its own parent's, at either depth).
+- **The drop selects the dropped item, as an item, and the caret goes**: the drag selects the items
+  it carries at its first move and leaves them selected (`Drag1`: `▮ three`, ourus's `three┃`;
+  `Drag2`: the caret in `two` goes too). So typing after a drop types nothing (`Scenario8b`: `s`
+  goes nowhere, `email` where ourus has `emails┃`).
+- **The cover rule is ourus's**: a press on an item of the item selection drags the selection, any
+  other press the item alone (`start_drag_node`): Drag4, Drag20 agree; Drag5, Drag5b land as
+  ourus's, only the dropped item selected after (`caret`). The driver selects items as a user does,
+  Shift+Down from the first one's start past its edge.
+- **A drop where the item already is, is a drop on its last place shown**: on a line that would
+  leave it where it is (after its previous sibling, before its next) no divider shows, but the place
+  last shown is kept, and the drop lands there (probed: `c` pressed in `a`, `b`, `c`, moved over
+  `a`'s line and back to `b`'s lower half, lands after `a`). The driver aims such a drop at the
+  item's own line, where there is no place at all: nothing moves.
 
 ## Markdown in an item
 

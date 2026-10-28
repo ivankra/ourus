@@ -39,6 +39,7 @@ hotkey settings; out of it, every key is Obsidian's.
 | `outdent` | Shift+Tab | as `indent` |
 | `moveSubtreeUp` | Ctrl+Shift+Up | "Move node up" (`move-node-up`): the node with its children, the caret at its text's start; Alt+Up is Obsidian's (unbound out of the box; the vault binds it to "Move line", which moves the line here too) |
 | `moveSubtreeDown` | Ctrl+Shift+Down | "Move node down" (`move-node-down`), as `moveSubtreeUp` (Alt+Down likewise) |
+| `move ②` | the mouse | drag and drop: any node pressed by its mark (a press below 4 pixels zooms), dropped at its seam and depth (`trueOutlinerDrop` in [`../obsidian/obsidian.ts`](../obsidian/obsidian.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
 | `deleteContentBackward` | Backspace | takes back a place a structural key just made, refuses to join a block id's line; else Obsidian's |
 | `deleteContentForward` | Delete | as `deleteContentBackward` |
 | `deleteSubtree` | *missing* | nothing deletes a node with its children by a key: its examples are skipped |
@@ -78,6 +79,19 @@ level less", "Zoom in to node" (the node and its children alone in the editor), 
 "Zoom out fully", "Toggle outline mode" and "Delete to content start" have no key.
 
 ## What it does, measured
+
+Drag and drop ([`drag.md`](../../spec/drag.md), played with the real mouse, aimed at its own
+geometry: `drag-geometry.ts`'s seams and columns):
+
+- **The moved nodes are selected after the drop** (its design's D-series): drops agree on the text and
+  give `caret`, and typing right after one replaces them (`scenarios.md › Scenario8b`).
+- **Blank lines**: a node dropped into an item goes in without the blank line above it, which ourus
+  keeps with the node above (`drag.md › Drag8`); a heading dropped among headings is set apart by blank
+  lines (`Drag15`, `Drag16`).
+- **A drop at the document's end after an earlier drop in the same view names no place**: its drop
+  indicator isn't drawn, and the release cancels (`Drag13` run after `Drag1`; alone, it agrees on the
+  text, `p⏎⏎x`, an item dropped after a paragraph a paragraph, as ourus). The pointer's coordinates and
+  events are the same both times: state the view keeps from one note to the next, read 2026-10-28.
 
 Against bare Obsidian in Live Preview:
 

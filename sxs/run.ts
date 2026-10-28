@@ -61,9 +61,10 @@ import { clipboardHtml } from './lib/clipboard.ts';
 import type { Doc, Driver, Session } from './lib/driver.ts';
 import { idleVersion, installIdle, type IdleOptions, type IdleResult } from './lib/idle.ts';
 import { LOGIN_EXIT, LoginRequired } from './lib/login.ts';
-import { compareOutlines, draw, project, readOutline, sameOutline, type Outline, type Verdict } from './lib/block.ts';
+import { compareOutlines, draw, project, readOutline, sameOutline, Unsupported, type Outline, type Verdict } from './lib/block.ts';
 import { compareTexts, drawTextDoc, readTextDoc, sameText, type TextDoc } from './lib/text.ts';
 import { adapt, allTests, fileOf, selects, type Plan, type PlanStep } from './lib/plan.ts';
+import { isDrop } from '../test/player.ts';
 import { compareJudgments } from './lib/compare.ts';
 import { appDirs, appNames, resolveApps } from './lib/apps.ts';
 import { canonicalClipboard, passes } from '../test/spec-run.ts';
@@ -926,7 +927,7 @@ function stepVerdict(step: PlanStep, got: Doc | null, clipboard: string | null |
   // after an action that leaves the app no text focus (`Driver.noCaretAfter`), an app with neither a
   // caret nor selected blocks has none to compare: the outline alone
   const outline = got && driver.model === 'block' ? (got as Outline) : null;
-  const unfocused = !!outline && !outline.sel && !outline.selected?.length && !!driver.noCaretAfter?.includes(step.actions[step.actions.length - 1]!);
+  const unfocused = !!outline && !outline.sel && !outline.selected?.length && leavesNoCaret(step.actions[step.actions.length - 1]!);
   if (step.want && got) v = compareDocs(step.caretLost || unfocused ? { ...step.want, sel: null } : step.want, got, step.sections, flavor);
   // a clipboard written otherwise but reading as the same outline (an app's tabs, no final line break) is whitespace
   if (step.clipboard !== undefined && clipboard !== step.clipboard) v = clipboard && sameMarkdown(clipboard, step.clipboard, flavor) ? (rank[v] > rank.whitespace ? v : 'whitespace') : 'disagree';
@@ -982,6 +983,11 @@ interface Outcome {
  * (typing goes nowhere then). Undo and redo need none.
  */
 const NO_FOCUS = 'no text focus after';
+/** An action as `Driver.noCaretAfter` names it: a drop by its action alone (`move ②` is `move`). */
+const leavesNoCaret = (action: string): boolean => !!driver.noCaretAfter?.includes(/^move .$/u.test(action) ? 'move' : action);
+/** A drop whose place the app's gesture can't reach (its driver's `Unsupported`): skipped as it played, as `NO_FOCUS`. */
+const UNREACHED = 'drop:';
+const skippedAsPlayed = (why: string): boolean => why.startsWith(NO_FOCUS) || why.startsWith(UNREACHED);
 const needsFocus = (action: string): boolean => !/^(?:undo|redo)$/.test(action);
 
 /**
@@ -1159,11 +1165,13 @@ async function runPlan(w: Worker, plan: Plan): Promise<Outcome> {
       if (undoes && i > 0) await pause();
       for (const [j, action] of step.actions.entries()) {
         if (undoes && j > 0 && isUndo(action) && !isUndo(step.actions[j - 1]!)) await pause();
-        await play(w, action, settleAfter);
+        // a drop: the gesture, at the place the plan resolved from ourus's state (lib/drag.ts)
+        if (plan.drop && isDrop(action)) await driver.drop!(page, plan.drop, () => settleAfter(action));
+        else await play(w, action, settleAfter);
         // (an action that may leave the app no focus, with more that needs one after it: where it did,
         // the rest is unplayable, and the example skipped; where the app kept a caret, it plays on)
         const rest = [...step.actions.slice(j + 1), ...plan.steps.slice(i + 1).flatMap((s) => s.actions)];
-        if (driver.model === 'block' && driver.noCaretAfter?.includes(action) && rest.some(needsFocus)) {
+        if (driver.model === 'block' && leavesNoCaret(action) && rest.some(needsFocus)) {
           const now = (await driver.read(page)) as Outline;
           if (!now.sel && !now.selected?.length) return { verdict: 'agree', step: got.length, got, clipboards, unsettled, ms: Date.now() - t0, skip: `${NO_FOCUS} ${action}` };
         }
@@ -1172,6 +1180,8 @@ async function runPlan(w: Worker, plan: Plan): Promise<Outcome> {
       clipboards.push(step.clipboard !== undefined ? await w.actor.clipboard.read() : null);
     }
   } catch (e) {
+    // a drop the app's gesture can't reach: skipped, as it played
+    if (e instanceof Unsupported && plan.drop) return { verdict: 'agree', step: got.length, got, clipboards, unsettled, ms: Date.now() - t0, skip: `${UNREACHED} ${e.message}` };
     const message = String(e instanceof Error ? e.message : e);
     // `OURUS_SXS_DEBUG=1`: an error's whole stack in the log, the driver's line among it (the report
     // keeps its first line)
@@ -1204,8 +1214,9 @@ function judge(plan: Plan, got: readonly (Doc | null)[], clipboards: readonly (s
 //
 // A regenerated report (--rejudge) runs no app: each example is judged again, against the spec
 // as it is now, from what the app did in it in its last run (`.sxs/results/<app>/sxs.json` draws every state the
-// app reached), where that run played it as the spec has it now: the same start, clipboard and settings,
-// and the same actions in each step (of an example since grown more steps, in its first ones). The
+// app reached), where that run played it as the spec has it now: the same start, clipboard and settings
+// (a drop's start as drawn, its `▸` too), and the same actions in each step (of an example since grown
+// more steps, in its first ones). The
 // rest want a run of the app: they are left out (`?` in the table of several apps), and say why.
 
 /** A state as the last run drew it, read back as the app's model has it; null where it doesn't read back. */
@@ -1221,6 +1232,9 @@ const settingsOf = (get: (k: keyof Config) => unknown): string[] => Object.keys(
 /** A plan's outcome in the last run's example, if that played it as it is now; else why not. */
 function replay(plan: Plan, e: RunExample): Outcome | string {
   if (e.steps.length < plan.steps.length) return 'step added since';
+  // (a drop's line is in the drawing alone: two cases from one start with one action, `move ③`, drop
+  // in different places)
+  if (plan.drop && (e.written ?? e.start) !== plan.test.initial.buffer) return 'its drop changed since';
   const got: (Doc | null)[] = [];
   const clipboards: (string | null)[] = [];
   for (const [i, step] of plan.steps.entries()) {
@@ -1260,7 +1274,7 @@ function regenerate(): string | undefined {
     const tries = (played.get(key(drawDoc(plan.initial), plan.clipboard, settingsOf((s) => plan.settings[s]))) ?? []).map((e) => ({ e, outcome: replay(plan, e) }));
     const found = tries.find((t) => typeof t.outcome !== 'string');
     // (one its last run skipped as it played, `NO_FOCUS`, and has no play of: skipped still)
-    const skippedPlaying = !found && previous!.skippedPlaying.find((s) => names.includes(s.name) && s.reason.startsWith(NO_FOCUS));
+    const skippedPlaying = !found && previous!.skippedPlaying.find((s) => names.includes(s.name) && skippedAsPlayed(s.reason));
     if (found) results.push({ plan, names, outcome: found.outcome as Outcome, ...(found.e.flaky && { flaky: found.e.flaky }) });
     else if (skippedPlaying) skipped.set(skippedPlaying.reason, [...(skipped.get(skippedPlaying.reason) ?? []), ...names]);
     else {
@@ -1525,7 +1539,7 @@ function keep(run: AppRun): void {
   const all = allTests();
   const selected = new Set(tests.map((t) => t.name));
   // (those skipped as they played, by file: kept beside the file's examples)
-  const playing = [...skipped].filter(([why]) => why.startsWith(NO_FOCUS)).flatMap(([reason, names]) => names.map((name) => ({ name, reason })));
+  const playing = [...skipped].filter(([why]) => skippedAsPlayed(why)).flatMap(([reason, names]) => names.map((name) => ({ name, reason })));
   for (const file of new Set([...run.examples.map((e) => e.file), ...playing.map((s) => fileOf(s.name))])) {
     const ran = run.examples.filter((e) => e.file === file);
     const skippedPlaying = playing.filter((s) => fileOf(s.name) === file);

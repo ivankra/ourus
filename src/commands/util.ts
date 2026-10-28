@@ -95,7 +95,17 @@ export function withTextlessParents(doc: OurusDoc, nodes: readonly OutlineNode[]
  * blank lines before the first node), or they aren't contiguous siblings.
  */
 export function operands(doc: OurusDoc, selection: Selection): OutlineNode[] | 'none' | 'non-contiguous' {
-  if (doc.lineCount === 0) return 'none';
+  const tops = topmostNodes(doc, selection);
+  return tops.length ? siblingRun(tops) : 'none';
+}
+
+/**
+ * The topmost nodes whose own lines the selection touches (a blank line is the gap of the node above
+ * it), in document order, whether or not they are contiguous siblings; none on the blank lines before
+ * the first node.
+ */
+export function topmostNodes(doc: OurusDoc, selection: Selection): OutlineNode[] {
+  if (doc.lineCount === 0) return [];
   const from = Math.min(selection.anchor, selection.head);
   const to = Math.max(selection.anchor, selection.head);
   const lo = doc.lineAt(from).index;
@@ -115,16 +125,36 @@ export function operands(doc: OurusDoc, selection: Selection): OutlineNode[] | '
       break;
     }
   }
-  if (!touched.size) return 'none';
-  const tops = [...touched].filter((n) => {
+  return [...touched].filter((n) => {
     for (let p = n.parent; p; p = p.parent) if (touched.has(p)) return false;
     return true;
   });
-  const parent = tops[0]!.parent;
-  if (!parent || tops.some((n) => n.parent !== parent)) return 'non-contiguous';
-  const sorted = tops.sort((a, b) => a.index - b.index);
+}
+
+/** `nodes`, sorted, where they are contiguous siblings. */
+export function siblingRun(nodes: readonly OutlineNode[]): OutlineNode[] | 'non-contiguous' {
+  const parent = nodes[0]!.parent;
+  if (!parent || nodes.some((n) => n.parent !== parent)) return 'non-contiguous';
+  const sorted = [...nodes].sort((a, b) => a.index - b.index);
   for (let i = 1; i < sorted.length; i++) if (sorted[i]!.index !== sorted[i - 1]!.index + 1) return 'non-contiguous';
   return sorted;
+}
+
+/** Why a command has no operands: none selected, not contiguous siblings, or an id the document lacks. */
+export type NoOperands = 'none' | 'non-contiguous' | 'no-such-node';
+
+/** The nodes a command acts on: those it was given by id (`ctx.nodes`), else the selection's (`operands`). */
+export function operandsOf(ctx: CommandContext): OutlineNode[] | NoOperands {
+  if (!ctx.nodes) return operands(ctx.doc, ctx.selection);
+  if (!ctx.nodes.length) return 'none';
+  const nodes: OutlineNode[] = [];
+  for (const id of ctx.nodes) {
+    const node = ctx.doc.node(id);
+    // (the root is no node to act on)
+    if (!node || node.kind === 'root') return 'no-such-node';
+    nodes.push(node);
+  }
+  return siblingRun([...new Set(nodes)]);
 }
 
 /**
@@ -148,7 +178,7 @@ export function textActedOnAt(ctx: CommandContext, head: number): { node: Outlin
  * instead: refused, as mixed, or as `operands` finds none.
  */
 export function structuralOperands(ctx: CommandContext): OutlineNode[] | CommandOutcome {
-  const nodes = operands(ctx.doc, ctx.selection);
+  const nodes = operandsOf(ctx);
   if (!Array.isArray(nodes)) return operandsRefused(nodes);
   if (nodes.some((n) => n.kind !== nodes[0]!.kind)) return reject('mixed-kinds');
   return nodes;
@@ -160,9 +190,10 @@ export function structuralOperands(ctx: CommandContext): OutlineNode[] | Command
  * on a blank line, there, where it goes with its node (the node it acted on), else at the end of that
  * node's text; in code, math or a comment
  * between its delimiters (MoveUp37, MoveUp38). `keepOnFence`: Tab's and Shift-Tab's, which leave a
- * caret on a fence's line there where markup is text.
+ * caret on a fence's line there where markup is text. `shifts`: where titles the command re-levelled
+ * moved their characters.
  */
-export function selectionInText(ctx: CommandContext, draft: OurusDraft, keepOnFence = false): void {
+export function selectionInText(ctx: CommandContext, draft: OurusDraft, keepOnFence = false, shifts: HeadingShifts = new Map()): void {
   const { anchor, head } = ctx.selection;
   const at = ctx.from;
   // on a fence's line, where markup is text: Tab and Shift-Tab leave it there, for the next one (Indent31)
@@ -177,7 +208,7 @@ export function selectionInText(ctx: CommandContext, draft: OurusDraft, keepOnFe
     // line ending, at the end of the node's text
     const text = ctx.doc.textOf(owner);
     if (text) {
-      const otherwise = { ref: owner, offset: textEnd(text), assoc: -1 } as const;
+      const otherwise = { ref: owner, offset: headingOffset(shifts, owner, textEnd(text)), assoc: -1 } as const;
       // on a blank line at its text's column (Shift-Enter's): there still, at the column it has now (TO12)
       const k = ctx.doc.lineAt(head).index - owner.textLastLine - 1;
       if (at.zone === 'gap' && !owner.children.length && k >= 0 && k < owner.gap && ctx.doc.atTextColumn(head, owner)) draft.select({ blank: owner, line: k, old: anchor }, { blank: owner, line: k, old: head });
@@ -196,14 +227,14 @@ export function selectionInText(ctx: CommandContext, draft: OurusDraft, keepOnFe
   if (ctx.collapsed && (at.zone === 'frame' || at.zone === 'marker' || at.zone === 'prefix' || at.zone === 'text')) {
     const text = at.zone === 'frame' || at.zone === 'text' ? at.text : ctx.doc.textOf(at.node);
     if (text) {
-      draft.setCaret(at.node, caretOffset(at, text), 1);
+      draft.setCaret(at.node, headingOffset(shifts, at.node, caretOffset(at, text)), 1);
       return;
     }
   }
   // each end in its text where it is in one (a text written again keeps its offsets), else where it was
   const end = (pos: number): AnchorSpec => {
     const at = ctx.doc.locate(pos);
-    return at.zone === 'text' && at.text instanceof ProseText ? { ref: at.node, offset: at.offset } : { old: pos };
+    return at.zone === 'text' && at.text instanceof ProseText ? { ref: at.node, offset: headingOffset(shifts, at.node, at.offset) } : { old: pos };
   };
   draft.select(end(anchor), end(head));
 }
@@ -256,6 +287,33 @@ export function headingLevel(ctx: CommandContext, node: OutlineNode): number {
  * run of `#`s), which ourus doesn't escape yet (unsupported).
  */
 export function changeHeadingLevels(ctx: CommandContext, nodes: readonly OutlineNode[], delta: number): CommandOutcome {
+  const draft = ctx.draft();
+  const shifted = shiftHeadingLevels(ctx, draft, nodes, delta);
+  if (!shifted || 'status' in shifted) return shifted;
+  const end = (pos: number): AnchorSpec => {
+    const at = ctx.doc.locate(pos);
+    if (at.zone !== 'text' && at.zone !== 'frame') return { old: pos };
+    if (!(at.text instanceof ProseText)) return { old: pos };
+    return { ref: at.node, offset: headingOffset(shifted, at.node, at.offset) };
+  };
+  draft.select(end(ctx.selection.anchor), end(ctx.selection.head));
+  return ctx.apply(draft);
+}
+
+/** Where each title `shiftHeadingLevels` changed has its offsets go: past `at`, `by` further, up to its new `length`. */
+export type HeadingShifts = ReadonlyMap<number, { readonly at: number; readonly by: number; readonly length: number }>;
+
+/** Offset `offset` of `node`'s title, where `shifts` moved its characters. */
+export function headingOffset(shifts: HeadingShifts, node: OutlineNode, offset: number): number {
+  const shift = shifts.get(node.id);
+  return shift ? Math.min(offset >= shift.at ? offset + shift.by : offset, shift.length) : offset;
+}
+
+/**
+ * `changeHeadingLevels`'s texts, set in `draft`: the headings among `nodes` and in their sections,
+ * `delta` levels deeper; where each title's characters went, or the refusal (null: unsupported).
+ */
+export function shiftHeadingLevels(ctx: CommandContext, draft: OurusDraft, nodes: readonly OutlineNode[], delta: number): HeadingShifts | CommandOutcome {
   const doc = ctx.doc;
   const headings: OutlineNode[] = [];
   const walk = (n: OutlineNode): void => {
@@ -263,7 +321,6 @@ export function changeHeadingLevels(ctx: CommandContext, nodes: readonly Outline
     n.children.forEach(walk);
   };
   nodes.forEach(walk);
-  const draft = ctx.draft();
   // where each changed text's offsets go: past the change, by how much the text before them grew
   const shifts = new Map<number, { at: number; by: number; length: number }>();
   for (const h of headings) {
@@ -273,6 +330,7 @@ export function changeHeadingLevels(ctx: CommandContext, nodes: readonly Outline
     const next = level + delta;
     if (next < 1) return reject('at-h1-bound');
     if (next > 6) return reject('at-h6-bound');
+    if (delta === 0) continue;
     const s = text.text;
     if (form === 'atx') {
       const open = text.frame.find((p) => p.part === 'heading')!;
@@ -296,16 +354,7 @@ export function changeHeadingLevels(ctx: CommandContext, nodes: readonly Outline
       shifts.set(h.id, { at: 0, by: lead.length, length: lead.length + underline.from });
     }
   }
-  // the selection on the same characters of each title
-  const end = (pos: number): AnchorSpec => {
-    const at = doc.locate(pos);
-    if (at.zone !== 'text' && at.zone !== 'frame') return { old: pos };
-    const shift = shifts.get(at.node.id);
-    if (!(at.text instanceof ProseText)) return { old: pos };
-    return { ref: at.node, offset: shift ? Math.min(at.offset >= shift.at ? at.offset + shift.by : at.offset, shift.length) : at.offset };
-  };
-  draft.select(end(ctx.selection.anchor), end(ctx.selection.head));
-  return ctx.apply(draft);
+  return shifts;
 }
 
 /**
@@ -323,9 +372,9 @@ export function deleteHeldSpace(ctx: CommandContext, node: OutlineNode, text: Pr
   return ctx.apply(ctx.draft().setText(node, settled).setCaret(node, offset, -1));
 }
 
-/** What a structural command says where `operands` found none it can act on. */
-export function operandsRefused(why: 'none' | 'non-contiguous'): CommandOutcome {
-  return why === 'none' ? reject('nothing-above', 'no node is selected') : reject('non-contiguous');
+/** What a structural command says where `operandsOf` found none it can act on. */
+export function operandsRefused(why: NoOperands): CommandOutcome {
+  return why === 'none' ? reject('nothing-above', 'no node is selected') : reject(why);
 }
 
 /**

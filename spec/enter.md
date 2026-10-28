@@ -77,22 +77,23 @@ paragraph, and continues a list without the blank line a loose list or a paragra
 ## Enter1
 
 Splits item at the caret. The space at the split goes with neither half, as in Logseq, and Backspace
-doesn't bring it back ([Enter44](#enter44)).
+doesn't bring it back ([Enter44](#enter44)). The item keeps its node with the text before the caret
+(①); the text after it is a new node (②).
 
 ```yaml
 tags: core
 ```
 
 ```buffer
-- one two┃ three
+- one two┃ three①
 - next
 ```
 
 > enter
 
 ```buffer
-- one two
-- ┃three
+- one two①
+- ┃three②
 - next
 ```
 
@@ -107,14 +108,14 @@ tags: core
 ```
 
 ```buffer
-1. one┃
+1. one┃①
 ```
 
 > enter
 
 ```buffer
-1. one
-2. ┃
+1. one①
+2. ┃②
 ```
 
 ## Enter3

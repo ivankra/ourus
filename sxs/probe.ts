@@ -19,9 +19,10 @@ import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, 
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Config } from '../src/config.ts';
-import { docOf, drawDoc, drawOutline, drawsCaret, drawText, readDrawing, readText, withoutCaret } from '../test/drawing.ts';
+import { docOf, drawDoc, drawLabels, drawOutline, drawsCaret, drawText, nodesOf, readDrawing, readText, withoutCaret } from '../test/drawing.ts';
+import type { OurusDoc } from '../src/doc/index.ts';
 import { isAction, play, type Played } from '../test/player.ts';
-import { normalize, outcome, readClipboard } from '../test/spec-run.ts';
+import { drawDropPoints, Labels, normalize, outcome, readClipboard } from '../test/spec-run.ts';
 import { readSpec, specConfig, TAGS, tokenize, type Clipboard, type SpecTest } from '../test/specfile.ts';
 import { appNames, drivers, resolveApps } from './lib/apps.ts';
 import { ensureProxy } from './lib/browser.ts';
@@ -53,6 +54,8 @@ const HELP = `usage: node sxs/probe.ts [<apps>] [options] [<buffer> <step>...|<f
   --tags=<tags>        the case's tags (free-form, markup-task, ...): which apps skip it
   --each=<option>      ourus alone: play under every value of an option (repeat for combinations)
   --outline            also print how ourus reads each state (the spec's outline block)
+  --labels             label every node of the start (①, in document order) and each step's new
+                       nodes after them, drawn on every state: which nodes a command keeps
   --spec               print each probe as a spec case's blocks, ourus's states drawn
   --json               print the probes and every app's states as JSON
   --exact              take the buffer's bytes as given, no final line break added
@@ -88,6 +91,7 @@ interface Args {
   file?: string;
   caseName?: string;
   outline: boolean;
+  labels: boolean;
   format: 'human' | 'spec' | 'json';
   exact: boolean;
   positional: string[];
@@ -103,7 +107,7 @@ function fail(message: string): never {
 const breaks = (s: string): string => s.replace(/\\n|⏎/g, '\n');
 
 function parseArgs(argv: readonly string[]): Args {
-  const o: Args = { apps: '', config: {}, each: [], clip: '', tags: [], outline: false, format: 'human', exact: false, positional: [], pass: [] };
+  const o: Args = { apps: '', config: {}, each: [], clip: '', tags: [], outline: false, labels: false, format: 'human', exact: false, positional: [], pass: [] };
   if (argv.length === 0) {
     console.log(HELP);
     process.exit(0);
@@ -120,6 +124,7 @@ function parseArgs(argv: readonly string[]): Args {
     }
     const [, key, value = ''] = m as unknown as [string, string, string | undefined];
     if (key === 'outline') o.outline = true;
+    else if (key === 'labels') o.labels = true;
     else if (key === 'spec' || key === 'json') o.format = key;
     else if (key === 'exact') o.exact = true;
     else if (key === 'each') o.each.push(...value.split(','));
@@ -251,15 +256,53 @@ interface OurStep {
   broken?: string;
   /** The clipboard's text after a step that copies or cuts: what the apps' copy is compared with. */
   clipboard?: string;
+  /** After a pickup (`drag`): the places it offers, drawn as `dropPoints:` draws them. */
+  dropPoints?: string;
 }
 
-function playOurus(p: Probe, config: Record<string, string>): OurStep[] {
+/** `--labels`: the nodes of a drawn start labelled in document order, where it labels none itself. */
+function labelled(start: string, config: Record<string, string>): string {
+  const d = readDrawing(start);
+  if (d.labels.size) return start;
+  const lines = new Map<number, number[]>();
+  nodesOf(docOf(d.text, d.placeholders, specConfig(config))).slice(0, 50).forEach((n, k) => lines.set(n.startLine, [...(lines.get(n.startLine) ?? []), k + 1]));
+  return drawLabels(start, lines);
+}
+
+/** Node labels as `--labels` draws them: the start's, then each new node's, the next free one. */
+class Labelling {
+  readonly #ids = new Map<number, number>();
+  #next = 1;
+  constructor(doc: OurusDoc, lines: ReadonlyMap<number, readonly number[]>) {
+    for (const [line, own] of lines) {
+      const nodes = nodesOf(doc).filter((n) => n.startLine === line).sort((a, b) => a.depth - b.depth);
+      own.forEach((label, k) => {
+        const node = nodes[nodes.length - own.length + k];
+        if (node) this.#ids.set(node.id, label);
+        this.#next = Math.max(this.#next, label + 1);
+      });
+    }
+  }
+  /** `drawn`, `doc`'s drawing, with its nodes' labels, new nodes given the next ones. */
+  draw(drawn: string, doc: OurusDoc): string {
+    const lines = new Map<number, number[]>();
+    for (const n of nodesOf(doc)) {
+      if (!this.#ids.has(n.id) && this.#next <= 50) this.#ids.set(n.id, this.#next++);
+      const label = this.#ids.get(n.id);
+      if (label !== undefined) lines.set(n.startLine, [...(lines.get(n.startLine) ?? []), label]);
+    }
+    return drawLabels(drawn, lines);
+  }
+}
+
+function playOurus(p: Probe, config: Record<string, string>, labels = false): OurStep[] {
   const start = readDrawing(p.start);
-  let state: Played = {
-    doc: docOf(start.text, start.placeholders, specConfig(config)),
-    selection: start.selection,
-    clipboard: p.clipboard,
-  };
+  const doc = docOf(start.text, start.placeholders, specConfig(config));
+  // (the start's labels, for a drop that names one)
+  const named = new Labels();
+  named.check(doc, start.labels, null);
+  let state: Played = { doc, selection: start.selection, clipboard: p.clipboard, drop: start.drop, labels: named.ids };
+  const labelling = labels ? new Labelling(state.doc, start.labels) : null;
   const out: OurStep[] = [];
   for (const actions of p.steps) {
     const unknown = actions.filter((a) => !isAction(a));
@@ -277,12 +320,13 @@ function playOurus(p: Probe, config: Record<string, string>): OurStep[] {
     const text = state.doc.text;
     out.push({
       actions,
-      buffer: normalize(drawDoc(state.doc, state.selection)),
+      buffer: normalize(labelling ? labelling.draw(drawDoc(state.doc, state.selection), state.doc) : drawDoc(state.doc, state.selection)),
       drawable: text === '' || /[\r\n]$/.test(text),
       result: outcome(state),
       outline: drawOutline(state.doc),
       ...(broken ? { broken } : {}),
       ...(actions.some((a) => a === 'copy' || a === 'cut') && state.clipboard['text/plain'] !== undefined ? { clipboard: state.clipboard['text/plain'] } : {}),
+      ...(state.last?.status === 'applied' && state.last.dropMap ? { dropPoints: drawDropPoints(state.doc, state.last.dropMap, state.selection) } : {}),
     });
     if (broken) break;
   }
@@ -414,7 +458,8 @@ async function main(): Promise<void> {
   const say = (line: string): void => console.error(line);
 
   // ourus first: what the apps are compared with, and the probe file's drawings
-  const ours = probes.map((p) => combinations(p.options, o.each).map((config) => ({ config, steps: playOurus(p, config) })));
+  if (o.labels) for (const p of probes) p.start = labelled(p.start, p.options);
+  const ours = probes.map((p) => combinations(p.options, o.each).map((config) => ({ config, steps: playOurus(p, config, o.labels) })));
   for (const runs of ours) for (const r of runs) if (r.steps.some((s) => s.broken)) broken = true;
 
   const text = o.format !== 'spec' && o.format !== 'json';
@@ -465,6 +510,10 @@ async function main(): Promise<void> {
           out(cyan(`> ${s.actions.join(' ')}${s.result === 'applied' ? '' : `  (ourus: ${s.result})`}${s.broken ? `  !! ${s.broken}` : ''}`));
           verbatim(s.buffer);
           if (s.clipboard !== undefined) out(`clipboard: ${JSON.stringify(s.clipboard)}`);
+          if (s.dropPoints !== undefined) {
+            out('dropPoints:');
+            verbatim(s.dropPoints);
+          }
           const drawn = p.drawn?.[k];
           // (a drawing without a caret doesn't check it)
           if (drawn !== undefined && normalize(drawn) !== (drawsCaret(drawn) ? s.buffer : withoutCaret(s.buffer))) {

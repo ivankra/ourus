@@ -12,8 +12,9 @@
 //   WorkFlowy stores what is typed half a second after typing stops (`WF.Editor.saveLater`).
 
 import type { Page } from 'playwright-core';
-import type { Driver } from '../lib/driver.ts';
-import { compareOutlines, draw, project, runsAsMarkdown, type Outline, type Run } from '../lib/block.ts';
+import type { Driver, Drop } from '../lib/driver.ts';
+import { gesture } from '../lib/drag.ts';
+import { compareOutlines, draw, project, runsAsMarkdown, Unsupported, type Outline, type Run } from '../lib/block.ts';
 
 const MOTIONS: Record<string, string> = {
   CharLeft: 'ArrowLeft',
@@ -125,8 +126,11 @@ export const driver: Driver = {
   displayName: 'WorkFlowy',
   url: 'https://beta.workflowy.com/guide/embed/',
   model: 'block',
-  // after deleting the first item no item is edited (its runs: DeleteSubtree3, 4)
-  noCaretAfter: ['deleteSubtree'],
+  // after deleting the first item no item is edited (its runs: DeleteSubtree3, 4), nor after a drop:
+  // the drag blurs the item being edited as it starts (Drag1, Drag2)
+  noCaretAfter: ['deleteSubtree', 'move'],
+  // its `load` selects items as items, as `read` reports them
+  selectsBlocks: true,
   keys: {
     enter: 'Enter',
     // no `shiftEnter`: Shift+Enter opens the item's note, another action than a line break in its
@@ -262,7 +266,7 @@ export const driver: Driver = {
       }
     }
     await page.evaluate(
-      async ({ items, sel, container }) => {
+      async ({ items, sel, selected, container }) => {
         const WF = (window as any).WF;
         const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         (document.activeElement as HTMLElement | null)?.blur();
@@ -327,6 +331,13 @@ export const driver: Driver = {
         if (!made.every(drawn)) throw new Error("the test's notes weren't drawn");
         if (!made.every(rendered)) throw new Error("the test's items didn't render");
         await (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 });
+        // a selection of items, as Shift+Up or Down past an item's edge makes one (`selectsBlocks`)
+        if (selected) {
+          (document.activeElement as HTMLElement | null)?.blur();
+          WF.setSelection(selected.map((i: number) => made[i]));
+          await (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 });
+          return;
+        }
         if (!sel) return;
         // the caret, placed in the item's name or note by plain-text offsets
         const el = made[sel.block].getElement() as HTMLElement;
@@ -360,7 +371,7 @@ export const driver: Driver = {
           s.extend(an, ao);
         } else s.addRange(range);
       },
-      { items, sel, container: CONTAINER },
+      { items, sel, selected: !doc.sel && doc.selected?.length ? doc.selected : null, container: CONTAINER },
     );
     if (openNote) {
       await page.keyboard.press('Shift+Enter');
@@ -476,4 +487,56 @@ export const driver: Driver = {
     await page.keyboard.press('Home');
     await settle();
   },
+
+  drops: ['move'],
+  drop: workflowyDrop,
 };
+
+/**
+ * A drop as WorkFlowy's drag places it (its `Moving` module: the bullet's mousedown, a drag from 3
+ * pixels on, mouse events, no HTML5 drag). The pressed item's bullet held and moved to where its ghost
+ * puts the place: the ghost's top (the pointer less what it was below the item's top when pressed)
+ * on the row of the item above the drop line, the item it goes after, or on the title for the first
+ * place; the pointer's x the depth: a child of an item where x is past its left by 0.7 of an
+ * indentation (36 pixels), else on up its ancestors, to the zoomed item (a container: inside it). It
+ * drags the item whose bullet is pressed, or the selection's items where it is one of them (a drop of
+ * the selection presses its first).
+ */
+async function workflowyDrop(page: Page, drop: Drop, settle: () => Promise<void>): Promise<void> {
+  const at = await page.evaluate(({ press, rows, seam, depth }) => {
+    const WF = (window as any).WF;
+    const box = WF.getItemById((window as any).__ourusBox);
+    // the blocks' items, in the order `read` gives them
+    const flat: any[] = [];
+    const walk = (it: any) => {
+      for (const c of it.getChildren()) {
+        flat.push(c);
+        walk(c);
+      }
+    };
+    walk(box);
+    const el = (it: any): HTMLElement => it.getElement();
+    const rect = (e: Element) => e.getBoundingClientRect();
+    const item = el(flat[press ?? rows[0]!]!);
+    const bullet = item.querySelector(':scope > .name > .bullet');
+    if (!bullet) return null;
+    const b = rect(bullet);
+    const from = { x: b.left + b.width / 2, y: b.top + b.height / 2 };
+    // the row the ghost's top goes on: the name of the item above the line, else the zoomed item's title
+    const above = seam.above === null ? box : flat[seam.above]!;
+    const name = rect(el(above).querySelector(':scope > .name')!);
+    const offset = from.y - rect(item).top + 1;
+    // (the pointer below the window's top 15%, where WorkFlowy scrolls on, frame after frame, while a
+    // drag is held there: the ghost's top lower on the row, the title's for the first place)
+    const y = Math.min(Math.max(name.top + name.height / 2 + offset, innerHeight * 0.15 + 2), name.bottom - 2 + offset);
+    if (seam.above === null) return { from, to: { x: from.x, y } };
+    // the column: 7 pixels past the left of the item at the depth on the chain up from the item above
+    // (an indentation past its own for its child), inside the 0.7 indentation either way
+    const chain: any[] = [];
+    for (let it = above; !it.equals(box); it = it.getParent()) chain.unshift(it);
+    const left = depth < chain.length ? rect(el(chain[depth])).left : rect(el(above)).left + 36 * (depth - chain.length + 1);
+    return { from, to: { x: left + 7, y } };
+  }, drop);
+  if (!at) throw new Unsupported('the pressed item has no bullet');
+  await gesture(page, at.from, at.to, settle);
+}

@@ -14,9 +14,9 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Config } from '../src/config.ts';
-import { drawDoc, drawsCaret, withoutCaret } from './drawing.ts';
+import { drawDoc, drawLabels, drawsCaret, readDrawing, readLabels, withoutCaret } from './drawing.ts';
 import { isAction, play } from './player.ts';
-import { flavorsOf, normalize, outcome, startOf } from './spec-run.ts';
+import { flavorsOf, Labels, normalize, outcome, startOf } from './spec-run.ts';
 import { readSpecFile, slug, specFiles, SPEC_DIR, type SpecTest } from './specfile.ts';
 
 const args = process.argv.slice(2);
@@ -51,16 +51,24 @@ interface Redrawn {
 /** Each step's buffer and result as ourus has them now, in `flavor`; a string says why it can't be drawn. */
 function played(t: SpecTest, flavor: Config['flavor']): { buffer: string; result: string }[] | string {
   let state = startOf(t, flavor);
+  // (the labels a step's buffer draws, drawn again where their nodes are: a redrawn buffer keeps them)
+  const labels = new Labels();
+  const named = labels.check(state.doc, readDrawing(t.initial.buffer).labels, null);
+  if (named) return `the start's labels: ${named}`;
   const out: { buffer: string; result: string }[] = [];
   for (const [k, step] of t.steps.entries()) {
     const unknown = step.actions.filter((a) => !isAction(a));
     if (unknown.length) return `step ${k + 1}: unknown actions ${unknown.join(' ')}`;
+    const before = state.doc.nextId;
     for (const action of step.actions) {
       state = play(state, [action]);
       if (state.last?.status === 'rejected' && state.last.reason === 'write-failed') return `step ${k + 1}: ${action} fails to write${state.last.detail ? `: ${state.last.detail}` : ''}`;
     }
     if (state.doc.text !== '' && !/[\r\n]$/.test(state.doc.text)) return `step ${k + 1}: no final line break, which a buffer can't draw`;
-    out.push({ buffer: normalize(drawDoc(state.doc, state.selection)), result: outcome(state) });
+    const own = readLabels(step.expect.buffer ?? '').labels;
+    labels.check(state.doc, own, before);
+    const drawn = drawLabels(drawDoc(state.doc, state.selection), labels.drawn(state.doc, new Set([...own.values()].flat())));
+    out.push({ buffer: normalize(drawn), result: outcome(state) });
   }
   return out;
 }

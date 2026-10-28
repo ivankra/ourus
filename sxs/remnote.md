@@ -1,11 +1,11 @@
 ---
 type: "SxS"
 app: "remnote"
-version: "1.28.50"
+version: "1.28.62"
 url: "https://www.remnote.com/notes"
 model: "block"
 command: "node sxs/run.ts remnote"
-elapsed_s: 735
+elapsed_s: 524
 workers: 2
 ---
 
@@ -15,9 +15,9 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 224 | [9](#caret-9) | [11](#whitespace-11) | [69](#disagree-69) |  |  | **313** |
-| adapted | 147 | [2](#adapted-caret-2) | [12](#adapted-whitespace-12) | [87](#adapted-disagree-87) |  |  | **248** |
-| **total** | **371 (32%)** | **11 (0.96%)** | **23 (2%)** | **156 (14%)** | **0 (0%)** | **[581](#skipped-581) (51%)** | **1143** |
+| original | 237 | [16](#caret-16) | [11](#whitespace-11) | [73](#disagree-73) |  |  | **337** |
+| adapted | 148 | [4](#adapted-caret-4) | [12](#adapted-whitespace-12) | [88](#adapted-disagree-88) |  |  | **252** |
+| **total** | **385 (32%)** | **20 (1.7%)** | **23 (1.9%)** | **161 (13%)** | **0 (0%)** | **[600](#skipped-600) (50%)** | **1194** |
 
 Per-file:
 
@@ -27,18 +27,19 @@ Per-file:
 | [backtick.md](../spec/backtick.md) | 1 |  |  |  |  | 32 | **33** | 1 |  |
 | [copy.md](../spec/copy.md) | 3 |  |  |  |  | 10 | **13** | 1 | 2 |
 | [cursor.md](../spec/cursor.md) | 24 | 3 |  |  |  | 9 | **36** | 24 | 3 |
-| [delete-subtree.md](../spec/delete-subtree.md) | 7 |  |  |  |  | 6 | **13** | 2 | 5 |
+| [delete-subtree.md](../spec/delete-subtree.md) | 8 |  |  |  |  | 5 | **13** | 3 | 5 |
 | [delete.md](../spec/delete.md) | 19 | 1 | 1 | 4 |  | 31 | **56** | 20 | 5 |
+| [drag.md](../spec/drag.md) | 1 | 8 |  | 1 |  | 27 | **37** | 7 | 3 |
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 10 | **10** |  |  |
 | [enter.md](../spec/enter.md) | 50 |  | 4 | 5 |  | 39 | **98** | 21 | 38 |
 | [fences.md](../spec/fences.md) | 1 |  | 1 |  |  | 68 | **70** |  | 2 |
 | [gaps.md](../spec/gaps.md) | 12 |  |  | 3 |  | 4 | **19** | 10 | 5 |
-| [indent.md](../spec/indent.md) | 26 |  |  | 6 |  | 10 | **42** | 22 | 10 |
+| [indent.md](../spec/indent.md) | 31 |  |  | 6 |  | 13 | **50** | 26 | 11 |
 | [lists.md](../spec/lists.md) | 13 |  |  |  |  | 3 | **16** | 6 | 7 |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 21 |  |  | 7 |  | 12 | **40** | 24 | 4 |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 20 |  |  | 8 |  | 14 | **42** | 23 | 5 |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 23 |  |  | 8 |  | 9 | **40** | 27 | 4 |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 22 |  |  | 9 |  | 12 | **43** | 26 | 5 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 37 |  | 3 | 7 |  | 20 | **67** | 34 | 13 |
-| [outdent.md](../spec/outdent.md) | 19 |  |  | 7 |  | 10 | **36** | 18 | 8 |
+| [outdent.md](../spec/outdent.md) | 22 |  |  | 8 |  | 8 | **38** | 22 | 8 |
 | [paste-conv.md](../spec/paste-conv.md) | 2 |  |  | 4 |  |  | **6** | 1 | 5 |
 | [paste-html.md](../spec/paste-html.md) | 2 |  |  | 16 |  | 1 | **19** |  | 18 |
 | [paste-list-form.md](../spec/paste-list-form.md) |  |  |  | 6 |  |  | **6** |  | 6 |
@@ -49,15 +50,15 @@ Per-file:
 | [quirks.md](../spec/quirks.md) |  |  |  | 1 |  | 6 | **7** |  | 1 |
 | [quotes.md](../spec/quotes.md) |  |  |  |  |  | 143 | **143** |  |  |
 | [regressions.md](../spec/regressions.md) | 17 |  |  | 4 |  | 43 | **64** | 6 | 15 |
-| [scenarios.md](../spec/scenarios.md) | 14 | 3 |  | 7 |  | 2 | **26** | 17 | 7 |
+| [scenarios.md](../spec/scenarios.md) | 14 | 4 |  | 8 |  | 3 | **29** | 19 | 7 |
 | [shift-enter.md](../spec/shift-enter.md) | 24 |  | 3 | 3 |  | 6 | **36** | 15 | 15 |
 | [tasks.md](../spec/tasks.md) | 2 |  |  |  |  | 28 | **30** |  | 2 |
 | [typing.md](../spec/typing.md) |  |  |  | 3 |  |  | **3** | 1 | 2 |
 | [undo.md](../spec/undo.md) | 2 | 2 |  |  |  | 1 | **5** | 3 | 1 |
 | [z-open.md](../spec/z-open.md) |  |  |  |  |  | 1 | **1** |  |  |
-| **total** | **371 (32%)** | **11 (0.96%)** | **23 (2%)** | **156 (14%)** | **0 (0%)** | **582 (51%)** | **1143** | **313 (27%)** | **248 (22%)** |
+| **total** | **385 (32%)** | **20 (1.7%)** | **23 (1.9%)** | **161 (13%)** | **0 (0%)** | **605 (51%)** | **1194** | **337 (28%)** | **252 (21%)** |
 
-## Disagree (69)
+## Disagree (73)
 
 ### [Backspace17d](../spec/backspace.md#backspace17d)
 
@@ -927,6 +928,87 @@ Per-file:
 </td></tr>
 </table>
 
+### [MoveDown12](../spec/move-subtree-down.md#movedown12)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b
+  - ▮ c
+    - c1
+  - ▮ d
+- e
+  - e1
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeDown
+
+<table>
+<tr><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b
+  - ▮ c
+    - c1
+  - ▮ d
+- e
+  - e1
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+- e
+  - ▮ c
+    - c1
+  - ▮ d
+  - e1
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeDown
+
+<table>
+<tr><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b
+  - ▮ c
+    - c1
+  - ▮ d
+- e
+  - e1
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+- e
+  - e1
+  - ▮ c
+    - c1
+  - ▮ d
+```
+
+</td></tr>
+</table>
+
 ### [MoveDown16](../spec/move-subtree-down.md#movedown16)
 
 > moveSubtreeDown
@@ -1231,6 +1313,51 @@ Per-file:
     - c1
 - b
   - d
+```
+
+</td></tr>
+</table>
+
+### [MoveUp11](../spec/move-subtree-up.md#moveup11)
+
+> moveSubtreeUp
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - a1
+- b
+  - ▮ c
+    - c1
+  - ▮ d
+  - e
+```
+
+</td><td>
+
+```buffer
+- a
+  - a1
+- b
+  - ▮ c
+    - c1
+  - ▮ d
+  - e
+```
+
+</td><td>
+
+```buffer
+- a
+  - a1
+  - ▮ c
+    - c1
+  - ▮ d
+- b
+  - e
 ```
 
 </td></tr>
@@ -1577,6 +1704,42 @@ Per-file:
 ```buffer
 ¶ # A┃
   ¶ ## B
+```
+
+</td></tr>
+</table>
+
+### [Outdent8](../spec/outdent.md#outdent8)
+
+> outdent
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ para
+- ▮ a
+  - b
+- ▮ c
+```
+
+</td><td>
+
+```buffer
+¶ para
+- ▮ a
+- b
+- ▮ c
+```
+
+</td><td>
+
+```buffer
+¶ para
+¶ ▮ a
+- ▮ b
+¶ ▮ c
 ```
 
 </td></tr>
@@ -2629,6 +2792,77 @@ text
 </td></tr>
 </table>
 
+### [Scenario8b](../spec/scenarios.md#scenario8b)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Inbox
+- Work
+  - email┃
+- Home
+  - plants
+```
+
+</td></tr>
+</table>
+
+> move ③
+
+<table>
+<tr><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ▮ Home
+  - plants
+- Inbox
+- Work
+  - email
+```
+
+</td><td>
+
+```buffer
+- Home
+  - plants
+- Inbox
+- Work
+  - email┃
+```
+
+</td></tr>
+</table>
+
+> "s"
+
+<table>
+<tr><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Home
+  - plants
+- Inbox
+- Work
+  - email
+```
+
+</td><td>
+
+```buffer
+- Home
+  - plants
+- Inbox
+- Work
+  - emails┃
+```
+
+</td></tr>
+</table>
+
 ### [Scenario9](../spec/scenarios.md#scenario9)
 
 <table>
@@ -3475,7 +3709,7 @@ text
 </td></tr>
 </table>
 
-## Caret (9)
+## Caret (16)
 
 ### [Backspace17](../spec/backspace.md#backspace17)
 
@@ -3657,6 +3891,204 @@ text
 </td></tr>
 </table>
 
+### [Drag1](../spec/drag.md#drag1)
+
+> move ③
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one
+  - two
+- three┃
+```
+
+</td><td>
+
+```buffer
+- ▮ three
+- one
+  - two
+```
+
+</td><td>
+
+```buffer
+- three┃
+- one
+  - two
+```
+
+</td></tr>
+</table>
+
+### [Drag2](../spec/drag.md#drag2)
+
+> move ③
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one
+  - two┃
+- three
+```
+
+</td><td>
+
+```buffer
+- ▮ three
+- one
+  - two
+```
+
+</td><td>
+
+```buffer
+- three
+- one
+  - two┃
+```
+
+</td></tr>
+</table>
+
+### [Drag3](../spec/drag.md#drag3)
+
+> move ①
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one┃
+- two
+- three
+```
+
+</td><td>
+
+```buffer
+- two
+  - ▮ one
+- three
+```
+
+</td><td>
+
+```buffer
+- two
+  - one┃
+- three
+```
+
+</td></tr>
+</table>
+
+### [Drag5](../spec/drag.md#drag5)
+
+> move ③
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ▮ a
+- ▮ b
+- c
+```
+
+</td><td>
+
+```buffer
+- ▮ c
+- a
+- b
+```
+
+</td><td>
+
+```buffer
+- c
+- ▮ a
+- ▮ b
+```
+
+</td></tr>
+</table>
+
+### [Drag5b](../spec/drag.md#drag5b)
+
+> move ③
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ▮ a
+- ▮ b
+- c
+```
+
+</td><td>
+
+```buffer
+- a
+- ▮ c
+- b
+```
+
+</td><td>
+
+```buffer
+- ▮ a
+- ▮ c
+- ▮ b
+```
+
+</td></tr>
+</table>
+
+### [Drag32](../spec/drag.md#drag32)
+
+> move ②
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - a1┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- b
+  - ▮ a1
+```
+
+</td><td>
+
+```buffer
+- a
+- b
+  - a1┃
+```
+
+</td></tr>
+</table>
+
 ### [Scenario5](../spec/scenarios.md#scenario5)
 
 <table>
@@ -3722,6 +4154,67 @@ text
   - b
   - c
 - d
+```
+
+</td></tr>
+</table>
+
+### [Scenario8c](../spec/scenarios.md#scenario8c)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Inbox
+- Work┃
+  - email
+```
+
+</td></tr>
+</table>
+
+> move ②
+
+<table>
+<tr><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Inbox
+  - ▮ Work
+    - email
+```
+
+</td><td>
+
+```buffer
+- Inbox
+  - Work┃
+    - email
+```
+
+</td></tr>
+</table>
+
+> outdent
+
+<table>
+<tr><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Inbox
+- ▮ Work
+  - email
+```
+
+</td><td>
+
+```buffer
+- Inbox
+- Work┃
+  - email
 ```
 
 </td></tr>
@@ -3881,7 +4374,67 @@ text
 </td></tr>
 </table>
 
-## Adapted: disagree (87)
+## Adapted: disagree (88)
+
+### [Drag30](../spec/drag.md#drag30)
+
+> move ①
+
+Adapted: blank lines
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃
+1. a
+2. b
+```
+
+</td><td>
+
+```buffer
+1. a
+2. ▮ x
+3. b
+```
+
+</td><td>
+
+```buffer
+1. a
+- x┃
+2. b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃①
+
+1. a
+▸
+2. b
+```
+
+</td><td>
+
+```buffer
+1. a
+- x┃①
+
+2. b
+```
+
+</td></tr>
+</table>
 
 ### [Enter50](../spec/enter.md#enter50)
 
@@ -10676,7 +11229,124 @@ Original:
 </td></tr>
 </table>
 
-## Adapted: caret (2)
+## Adapted: caret (4)
+
+### [Drag13](../spec/drag.md#drag13)
+
+> move ②
+
+Adapted: under listParent: container
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃
+¶ p
+```
+
+</td><td>
+
+```buffer
+¶ p
+- ▮ x
+```
+
+</td><td>
+
+```buffer
+¶ p
+- x┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃②
+
+p
+▸
+```
+
+</td><td>
+
+```buffer
+p
+
+- x┃
+```
+
+</td></tr>
+</table>
+
+### [Drag33](../spec/drag.md#drag33)
+
+> move ①
+
+Adapted: blank lines
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+- c
+```
+
+</td><td>
+
+```buffer
+- b
+- c
+- ▮ a
+```
+
+</td><td>
+
+```buffer
+- b
+- c
+- a┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃①
+
+- b
+
+- c
+▸
+```
+
+</td><td>
+
+```buffer
+- b
+
+- c
+
+- a┃①
+```
+
+</td></tr>
+</table>
 
 ### [Scenario16](../spec/scenarios.md#scenario16)
 
@@ -10920,7 +11590,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (582)
+## Skipped (605)
 
 | example | why |
 | --- | --- |
@@ -11016,7 +11686,6 @@ Original:
 | [CursorHome17](../spec/cursor.md#cursorhome17) | callout |
 | [CursorDocEndLeft1](../spec/cursor.md#cursordocendleft1) | cursorCharLeft after cursorDocEnd |
 | **delete-subtree.md** | |
-| [DeleteSubtree5](../spec/delete-subtree.md#deletesubtree5) | selection across blocks |
 | [DeleteSubtree6](../spec/delete-subtree.md#deletesubtree6) | no text focus after deleteSubtree |
 | [DeleteSubtree7](../spec/delete-subtree.md#deletesubtree7) | quote |
 | [DeleteSubtree8](../spec/delete-subtree.md#deletesubtree8) | paragraph inside an item (a rem there shows a bullet) |
@@ -11054,6 +11723,34 @@ Original:
 | [Delete29](../spec/delete.md#delete29) | caret in a marker |
 | [Delete31b](../spec/delete.md#delete31b) | option joinWithChildren: refuse |
 | [Delete34](../spec/delete.md#delete34) | option quotes: container |
+| **drag.md** | |
+| [Drag5c](../spec/drag.md#drag5c) | changes only what blocks can't show |
+| [Drag6](../spec/drag.md#drag6) | action drag ② |
+| [Drag6b](../spec/drag.md#drag6b) | changes only what blocks can't show |
+| [Drag6c](../spec/drag.md#drag6c) | action drag ② |
+| [Drag7](../spec/drag.md#drag7) | action drag ④ |
+| [Drag8](../spec/drag.md#drag8) | drop: the pressed rem has no bullet: RemNote drags a rem by its bullet |
+| [Drag9](../spec/drag.md#drag9) | nothing to compare |
+| [Drag12](../spec/drag.md#drag12) | nothing to compare |
+| [Drag14](../spec/drag.md#drag14) | nothing to compare |
+| [Drag15](../spec/drag.md#drag15) | drop: the pressed rem has no bullet: RemNote drags a rem by its bullet |
+| [Drag16](../spec/drag.md#drag16) | drop: the pressed rem has no bullet: RemNote drags a rem by its bullet |
+| [Drag17](../spec/drag.md#drag17) | nothing to compare |
+| [Drag18](../spec/drag.md#drag18) | drop: the pickup is refused (non-contiguous) |
+| [Drag19](../spec/drag.md#drag19) | nothing to compare |
+| [Drag20](../spec/drag.md#drag20) | drop: the pressed rem has no bullet: RemNote drags a rem by its bullet |
+| [Drag21](../spec/drag.md#drag21) | quote |
+| [Drag22](../spec/drag.md#drag22) | action drag ② |
+| [Drag23](../spec/drag.md#drag23) | action drag ② |
+| [Drag24](../spec/drag.md#drag24) | action drag ③ |
+| [Drag25](../spec/drag.md#drag25) | action drag ③ |
+| [Drag26](../spec/drag.md#drag26) | action drag ③ |
+| [Drag31](../spec/drag.md#drag31) | paragraph inside an item (a rem there shows a bullet) |
+| [Drag10](../spec/drag.md#drag10) | action pasteAt |
+| [Drag11](../spec/drag.md#drag11) | action pasteAt |
+| [Drag27](../spec/drag.md#drag27) | action pasteAt |
+| [Drag28](../spec/drag.md#drag28) | action pasteAt |
+| [Drag29](../spec/drag.md#drag29) | action deleteByDrag |
 | **duplicate-subtree.md** | |
 | [DuplicateSubtree1](../spec/duplicate-subtree.md#duplicatesubtree1) | action duplicateSubtree |
 | [DuplicateSubtree2](../spec/duplicate-subtree.md#duplicatesubtree2) | action duplicateSubtree |
@@ -11180,24 +11877,24 @@ Original:
 | [Gap18](../spec/gaps.md#gap18) | caret on a blank line |
 | [Gap19](../spec/gaps.md#gap19) | frontmatter |
 | **indent.md** | |
-| [Indent9](../spec/indent.md#indent9) | selection across blocks |
 | [Indent13](../spec/indent.md#indent13) | paragraph inside an item (a rem there shows a bullet) |
 | [Indent20](../spec/indent.md#indent20) | paragraph inside an item (a rem there shows a bullet) |
-| [Indent27](../spec/indent.md#indent27) | selection across blocks |
 | [Indent28](../spec/indent.md#indent28) | caret in a marker |
 | [Indent30](../spec/indent.md#indent30) | caret in a marker |
 | [Indent31](../spec/indent.md#indent31) | tag markup-fence |
 | [Indent31b](../spec/indent.md#indent31b) | tag markup-fence |
 | [Indent34](../spec/indent.md#indent34) | code block's language |
 | [Indent38](../spec/indent.md#indent38) | indented code |
+| [Indent39](../spec/indent.md#indent39) | option indentUnit: tab |
+| [Indent40](../spec/indent.md#indent40) | option indentUnit: 2 |
+| [Indent41](../spec/indent.md#indent41) | option indentUnit: tab |
+| [Indent42](../spec/indent.md#indent42) | option indentUnit: tab |
+| [Indent45b](../spec/indent.md#indent45b) | indented code |
 | **lists.md** | |
 | [Lists4](../spec/lists.md#lists4) | option listParent: block |
 | [Lists11](../spec/lists.md#lists11) | quote |
 | [Lists12](../spec/lists.md#lists12) | quote |
 | **move-subtree-down.md** | |
-| [MoveDown11](../spec/move-subtree-down.md#movedown11) | selection across blocks |
-| [MoveDown12](../spec/move-subtree-down.md#movedown12) | selection across blocks |
-| [MoveDown14](../spec/move-subtree-down.md#movedown14) | selection across blocks |
 | [MoveDown21](../spec/move-subtree-down.md#movedown21) | paragraph inside an item (a rem there shows a bullet) |
 | [MoveDown23](../spec/move-subtree-down.md#movedown23) | numbered list that RemNote would number otherwise |
 | [MoveDown30](../spec/move-subtree-down.md#movedown30) | numbered list that RemNote would number otherwise |
@@ -11206,14 +11903,11 @@ Original:
 | [MoveDown36](../spec/move-subtree-down.md#movedown36) | paragraph inside an item (a rem there shows a bullet) |
 | [MoveDown37](../spec/move-subtree-down.md#movedown37) | tag markup-fence |
 | [MoveDown38](../spec/move-subtree-down.md#movedown38) | caret on a blank line |
-| [MoveDown40](../spec/move-subtree-down.md#movedown40) | selection across blocks |
+| [MoveDown40](../spec/move-subtree-down.md#movedown40) | numbered list that RemNote would number otherwise |
 | **move-subtree-up.md** | |
-| [MoveUp10](../spec/move-subtree-up.md#moveup10) | selection across blocks |
-| [MoveUp11](../spec/move-subtree-up.md#moveup11) | selection across blocks |
 | [MoveUp13](../spec/move-subtree-up.md#moveup13) | paragraph inside an item (a rem there shows a bullet) |
 | [MoveUp15](../spec/move-subtree-up.md#moveup15) | numbered list that RemNote would number otherwise |
 | [MoveUp18](../spec/move-subtree-up.md#moveup18) | indented code |
-| [MoveUp31](../spec/move-subtree-up.md#moveup31) | selection across blocks |
 | [MoveUp34](../spec/move-subtree-up.md#moveup34) | caret in a marker |
 | [MoveUp35](../spec/move-subtree-up.md#moveup35) | option quotes: container |
 | [MoveUp36](../spec/move-subtree-up.md#moveup36) | caret in a marker |
@@ -11222,6 +11916,7 @@ Original:
 | [MoveUp39](../spec/move-subtree-up.md#moveup39) | caret on a blank line |
 | [MoveUp41](../spec/move-subtree-up.md#moveup41) | tag markup-fence |
 | [MoveUp42](../spec/move-subtree-up.md#moveup42) | quote |
+| [MoveUp43](../spec/move-subtree-up.md#moveup43) | option indentUnit: tab |
 | **obsidian-true-outliner.md** | |
 | [TO-Bug228](../spec/obsidian-true-outliner.md#to-bug228) | numbered list that RemNote would number otherwise |
 | [TO-E11](../spec/obsidian-true-outliner.md#to-e11) | paragraph inside an item (a rem there shows a bullet) |
@@ -11244,9 +11939,6 @@ Original:
 | [TO-Bug264](../spec/obsidian-true-outliner.md#to-bug264) | quote (expected) |
 | [TO-Bug197](../spec/obsidian-true-outliner.md#to-bug197) | option quotes: container |
 | **outdent.md** | |
-| [Outdent8](../spec/outdent.md#outdent8) | selection across blocks |
-| [Outdent10](../spec/outdent.md#outdent10) | selection across blocks |
-| [Outdent12](../spec/outdent.md#outdent12) | selection across blocks |
 | [Outdent14](../spec/outdent.md#outdent14) | caret in a marker |
 | [Outdent16](../spec/outdent.md#outdent16) | caret in a marker |
 | [Outdent17](../spec/outdent.md#outdent17) | caret in a task's checkbox, a heading's #s or a code block's fences |
@@ -11254,6 +11946,7 @@ Original:
 | [Outdent18](../spec/outdent.md#outdent18) | caret in a task's checkbox, a heading's #s or a code block's fences |
 | [Outdent19](../spec/outdent.md#outdent19) | tag markup-fence |
 | [Outdent19b](../spec/outdent.md#outdent19b) | tag markup-fence |
+| [Outdent22b](../spec/outdent.md#outdent22b) | indented code |
 | **paste-html.md** | |
 | [PasteHtml12](../spec/paste-html.md#pastehtml12) | quote |
 | **paste-list.md** | |
@@ -11493,6 +12186,7 @@ Original:
 | [Regression62](../spec/regressions.md#regression62) | option quotes: atom |
 | [Regression64](../spec/regressions.md#regression64) | option quotes: atom |
 | **scenarios.md** | |
+| [Scenario8d](../spec/scenarios.md#scenario8d) | action drag ② |
 | [Scenario15](../spec/scenarios.md#scenario15) | tag markup-task |
 | [Scenario17](../spec/scenarios.md#scenario17) | option pasteLines: items |
 | **shift-enter.md** | |

@@ -120,6 +120,9 @@ starts cold, as above: about 23 s in all.
 
 ## What SilverBullet does
 
+- **No node is dragged**: its editor's drag moves selected text (CodeMirror's), and its outline
+  commands are keys alone, so the drop cases (`drag.md`) don't play here.
+
 - The outline commands work on list items (bullet and ordered), headings (a whole section), table
   rows and top-level paragraphs, per SilverBullet's own docs (`docs/Outlines.md` in its source,
   https://github.com/silverbulletmd/silverbullet).

@@ -34,7 +34,13 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
 
 - **`Selection`** is `{ anchor, head }`, as in CM6's `selection.main`. A structural command (indent,
   move, ...) acts on the topmost nodes whose own lines the selection touches. They must be
-  contiguous siblings of the same kind.
+  contiguous siblings of the same kind. Given `nodes`, ids of contiguous siblings, it acts on those
+  instead (a context menu, a tree pane, a "move to" dialog), the selection elsewhere staying in its
+  text.
+
+- **`InsertionPoint`** is `{ parent, after }`: a place in the outline, under the node `parent` (or
+  `'root'`), right after its child `after` (null: first). It names nodes, so it survives edits
+  elsewhere.
 
 - **`Command`** is `{ type, ... }`. Types are named after W3C's `inputType` where there is one:
 
@@ -45,6 +51,26 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
   - `moveSubtreeUp`, `moveSubtreeDown` (Alt-↑, Alt-↓)<br>
     The selected nodes swap with the sibling above or below. At the first or last child, they move
     into the parent's previous or next sibling.
+
+  - `drag`, `{ pressed?, nodes?, folded?, zoom? }` (a pickup)<br>
+    What a drag takes (the pressed node, or the selection's nodes where it is one of them) and every
+    place it can drop them: the result's `dropMap` (below) and the nodes' `clipboard`, the document
+    unchanged. `folded` and `zoom` are the host's view: the nodes whose children it hides, the node
+    it is zoomed into. With `{ clipboard }` instead, a drag from outside: the places for it, each
+    point's drop a `pasteAt`.
+
+  - `pasteAt`, `{ at: InsertionPoint, clipboard }` (a drop from outside)<br>
+    The clipboard, read as paste reads it, fitted at the place as paste fits it there; the caret
+    stays where it is.
+
+  - `deleteByDrag` (a text drag's first half)<br>
+    The selection deleted as a cut deletes it; the host's where ourus doesn't do it. The drop is a
+    `paste` at the position the drop maps to, the two committed as one transaction.
+
+  - `moveSubtreeTo`, `{ to: InsertionPoint, nodes? }` (a drop)<br>
+    The nodes, with their subtrees, move to `to`, converting where the place can't hold their kind
+    (a paragraph under an item becomes an item, a heading is re-levelled); at their own place,
+    applied with no changes (spec/drag.md).
 
   - `enter` (Enter)<br>
     Splits the node at the caret into two: a new item, or a new paragraph.
@@ -73,17 +99,34 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
 
   - `deleteSubtree`, `duplicateSubtree`<br>
     Deletes the selected nodes, or inserts a copy of them below them, with their subtrees.
+    `deleteSubtree`'s `expectMarkdown`: only if a copy of the nodes still gives that text, for the
+    source of a drag out to another document (its `drag`'s clipboard's `text/plain`).
 
   - `insertText` (typing), `{ text: string }`<br>
     Text typed at the selection, one key's worth. Ourus handles it where Markdown reads it as
     structure (a backtick: fences opened, closed and kept matched); otherwise it is the host's.
 
+- **`DropMap`** is `{ nodes, lines, seams }`: the run's roots, each one's lines (`[from, to)`), and
+  its `DropSeam`s in document order, each a gap between two nodes (`beforeLine`, the first line of
+  the node below; `gapLines`, the blank lines before it; `nodeAbove`, `nodeBelow`) with its
+  `DropPoint`s, shallowest first: an `InsertionPoint` with its `depth` (0 the top level), its
+  `listDepth` (the list items it is inside, for a host that indents only lists), `current` (the
+  run's own place), `converts` (the run changes kind there) and `drop`, the `moveSubtreeTo` to run.
+  A seam's y and a point's x are the host's pixels; a point's result is the drop's, which the host
+  runs for the point under the pointer and draws, and commits on release.
+
+- **`nearestDropPoint(seam, x, columnX, accepts): DropPoint | null`**<br>
+  The point of a seam nearest the pointer's x (`columnX` the host's pixels for a point) that
+  `accepts` takes (its drop applied, say), trying outwards; where columns tie, the run's own place,
+  then one that keeps its kind, then the deeper.
+
 - **`CommandResult`** is one of:
 
-  - `{ status: 'applied', doc, changes, selection, clipboard? }`<br>
+  - `{ status: 'applied', doc, changes, selection, clipboard?, placed?, dropMap? }`<br>
     The new `OurusDoc` (node ids carried over), the changes (`ChangeSpec[]`, in the old text's
-    coordinates), the selection (in the new text), and for copy and cut the clipboard formats (copy
-    has no changes). Every applied command is checked: the new text, parsed, reads as the outline
+    coordinates), the selection (in the new text), for copy and cut the clipboard formats (copy
+    has no changes), and for a drop the ids of the nodes it put in place, for a host that selects
+    them. Every applied command is checked: the new text, parsed, reads as the outline
     the command meant.
 
   - `{ status: 'rejected', reason: RejectReason, detail? }`<br>
@@ -107,6 +150,11 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
     heading that would span lines, ...); `detail` says what.
   - `would-reparent`: a move would give another node a new parent (a heading taking in what follows
     it).
+  - `no-such-node`: an id the document doesn't have (it changed since the id was read).
+  - `invalid-insertion-point`: a place whose `after` isn't a child of its `parent`, or is one of the
+    nodes moved.
+  - `into-itself`: a drop at a place inside the nodes moved.
+  - `content-changed`: `deleteSubtree`'s nodes no longer give its `expectMarkdown`.
   - `unsupported`: a structural command ourus doesn't do here yet (a case no command covers).
   - `write-failed`: the writer failed, on a layout it has no rule for or a text that didn't read back
     as the command meant. This is always a bug in ourus, to fix.
@@ -154,10 +202,14 @@ what a line, a marker or a fence is, commands ask `doc/`, or the parser when `do
 Files:
 
 - `index.ts` (`executeCommand`, the dispatch on `command.type`); `types.ts` (`Command`, `Selection`,
-  `CommandResult`, `RejectReason`); `context.ts` (`CommandContext`: the document, the selection
-  located, `apply`); `util.ts` (shared helpers: the nodes a structural command acts on, the caret it
-  leaves, markup at the caret, heading levels, deleting a held space, hidden spaces).
-- `indent.ts`, `outdent.ts`, `move-subtree.ts` (Tab, Shift-Tab, Alt-↑, Alt-↓); `delete-subtree.ts`,
+  `CommandResult`, `RejectReason`, `InsertionPoint`); `context.ts` (`CommandContext`: the document,
+  the selection located, the nodes given, `apply`); `util.ts` (shared helpers: the nodes a structural
+  command acts on, the caret it leaves, markup at the caret, heading levels, deleting a held space,
+  hidden spaces).
+- `indent.ts`, `outdent.ts`, `move-subtree.ts` (Tab, Shift-Tab, Alt-↑, Alt-↓); `drag.ts` (the pickup:
+  what a drag takes, by the cover rule, its seams and places, the place one drop line names,
+  `nearestDropPoint`), `move-subtree-to.ts` (the drop: the place checked, the run converted, the
+  result checked); `delete-subtree.ts`,
   `duplicate-subtree.ts`; `enter.ts`, `shift-enter.ts`; `backspace.ts`, `delete.ts` (Backspace and
   Cmd-Backspace, Delete: at a node's boundary, or a selection across nodes); `code.ts` (keys inside
   code blocks, keeping a fence's run matched); `typing.ts` (typed characters Markdown reads as
@@ -169,7 +221,9 @@ Files:
 
 Tests: the spec (`test/spec.test.ts` over `spec/*.md`, every example in every flavor);
 `test/commands/commands.test.ts` (changes, text and selection agree; round trips; ids);
-`test/placeholders.test.ts` (the placeholders' lifecycle); the differential (`npm run test:diff`),
+`test/placeholders.test.ts` (the placeholders' lifecycle); `test/drops.test.ts` (every place a
+pickup lists, dropped: a refusal or a result, at the known starts aside); `test/moves.test.ts` (every
+node moved to every place, those only a tree pane or a dialog names too); the differential (`npm run test:diff`),
 which compares every command's outcome with the last commit's; the inverse pairs (`npm run
 test:inverse`), which run every pair of commands that undo each other at every caret position of the
 spec's buffers. To look at one case by hand: `npm run probe` (`sxs/probe.ts --help`), on ourus alone

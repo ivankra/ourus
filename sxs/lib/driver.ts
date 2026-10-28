@@ -32,6 +32,28 @@ export interface Session {
   clipboard: { write(text: string): Promise<void>; read(): Promise<string> };
 }
 
+/**
+ * A drop, resolved by the runner from ourus's state before it (the case's `▸` and the run it names):
+ * in rows, a text app's lines (a row is a node's first line), a block app's blocks (a node's the block
+ * the start projected it onto, `inBlocks`; `depth` then its parent block's plus one).
+ */
+export interface Drop {
+  /** The spec's action. */
+  readonly action: 'move' | 'pasteAt';
+  /** The row whose mark is pressed; null for a drop from outside (`pasteAt`), or a `move` of the selection. */
+  readonly press: number | null;
+  /** The rows in flight, after the cover rule: their roots' first lines. */
+  readonly rows: readonly number[];
+  /** The rows flanking the drop line: the last line above it, the first below it (null at the document's ends). */
+  readonly seam: { readonly above: number | null; readonly below: number | null };
+  /** The depth the run lands at, every kind of parent counted (0 the top level). */
+  readonly depth: number;
+  /** How many list items the place is inside: the column of an app that indents only lists. */
+  readonly listDepth: number;
+  /** The place, as rows: the parent's first line (or the root) and the first line of the node it goes after (null: first). */
+  readonly to: { readonly parent: number | 'root'; readonly after: number | null };
+}
+
 export interface Driver {
   /** Two capitals that stand for the app where its name is too wide (the tables' columns), and on the command line: `LO`. */
   readonly shortId: string;
@@ -98,9 +120,16 @@ export interface Driver {
    * `deleteSubtree`): where a step ends with one and the app has neither a caret nor selected blocks,
    * its outline alone is judged, there being no caret of the app's to compare ourus's with; where more
    * that needs a caret follows it (typing), an app left so skips the example as it plays ("no text
-   * focus after …"), and one that kept a caret plays on.
+   * focus after …"), and one that kept a caret plays on. A drop is named by its action alone:
+   * `move` stands for `move ②` too.
    */
   readonly noCaretAfter?: readonly string[];
+  /**
+   * Its `load` makes a selection of whole blocks (`Outline.selected`) and its `read` reports one: a case
+   * that starts with a selection over whole nodes plays there (`ProjectOptions.blockSelection`), else
+   * it is skipped ("selection across blocks").
+   */
+  readonly selectsBlocks?: boolean;
   /**
    * How the app behaves where ourus has an option, out of the box. A test that sets an option to
    * another value than ourus's default is run only when the app behaves that way, or can be set to.
@@ -159,6 +188,14 @@ export interface Driver {
   configure?(page: Page, settings: Partial<Config>): Promise<void>;
   /** Plays an action in `emulated`. */
   act?(page: Page, action: string, settle: () => Promise<void>): Promise<void>;
+  /** The drops it plays (spec/drag.md: `move`, `pasteAt`); a case with another is skipped. */
+  readonly drops?: readonly Drop['action'][];
+  /**
+   * Plays a drop as its user would, with the real mouse (`drag.ts`'s gesture): presses `press`'s
+   * mark, moves to the drop line between `seam`'s rows at the place's column, releases. Throws
+   * `Unsupported` for a place its gesture can't reach.
+   */
+  drop?(page: Page, drop: Drop, settle: () => Promise<void>): Promise<void>;
   /** Ends a test. */
   unload?(page: Page): Promise<void>;
 }

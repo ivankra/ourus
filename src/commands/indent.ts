@@ -14,7 +14,7 @@ import { changeHeadingLevels, onCodeLine, selectionInText, structuralOperands } 
  * the host's (rule 1).
  */
 export function indentCommand(ctx: CommandContext): CommandOutcome {
-  if (onCodeLine(ctx, ctx.selection.anchor) && onCodeLine(ctx, ctx.selection.head)) return deferToHost();
+  if (!ctx.nodes && onCodeLine(ctx, ctx.selection.anchor) && onCodeLine(ctx, ctx.selection.head)) return deferToHost();
   const nodes = structuralOperands(ctx);
   if (!Array.isArray(nodes)) return nodes;
   const first = nodes[0]!;
@@ -31,6 +31,22 @@ export function indentCommand(ctx: CommandContext): CommandOutcome {
 }
 
 /**
+ * Why paragraphs or atoms can't become the texts of items, or null where they can: indented code is
+ * its lines' indentation (under a marker it would be other code, or none), and a quote's lazy line led
+ * by a tab would span other columns after a marker (the writer re-indents spaces, not tabs:
+ * dev/19-quotes.md §5).
+ */
+export function itemTextsRefused(ctx: CommandContext, nodes: readonly OutlineNode[]): CommandOutcome {
+  for (const n of nodes) {
+    const t = ctx.doc.textOf(n);
+    if (!(t instanceof AtomText)) continue;
+    if (t.type === 'indented_code') return reject('not-expressible', "indented code can't be an item's text");
+    if (t.type === 'blockquote' && t.text.split('\n').some((l, k) => k > 0 && /^[ ]*\t/.test(l) && !/^ {0,3}>/.test(l))) return reject('not-expressible', "a quote's lazy line led by a tab can't follow a marker");
+  }
+  return null;
+}
+
+/**
  * Paragraphs or atoms become list items whose text they are, one level in: the last items of the
  * node above, where it owns a list (in a section); else in place, after a list its next items, with
  * nothing above an item where it is (Indent22). Into a quote above, a block stays one: the quote's
@@ -40,15 +56,8 @@ function blocksIntoItems(ctx: CommandContext, nodes: readonly OutlineNode[]): Co
   const first = nodes[0]!;
   const parent = first.parent!;
   const above = first.prev;
-  // (indented code is its lines' indentation: under a marker it would be other code, or none)
-  // and a quote's lazy line led by a tab would span other columns after a marker (the writer re-indents
-  // spaces, not tabs: dev/19-quotes.md §5)
-  for (const n of nodes) {
-    const t = ctx.doc.textOf(n);
-    if (!(t instanceof AtomText)) continue;
-    if (t.type === 'indented_code') return reject('not-expressible', "indented code can't be an item's text");
-    if (t.type === 'blockquote' && t.text.split('\n').some((l, k) => k > 0 && /^[ ]*\t/.test(l) && !/^ {0,3}>/.test(l))) return reject('not-expressible', "a quote's lazy line led by a tab can't follow a marker");
-  }
+  const refused = itemTextsRefused(ctx, nodes);
+  if (refused) return refused;
   // into a quote above, a block stays one, the quote's last, in its last section (a heading owns
   // what follows it); the list it owned follows it, as a block in a quote owns none
   if (above?.kind === 'quote') {

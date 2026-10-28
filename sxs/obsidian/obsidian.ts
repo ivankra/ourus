@@ -25,9 +25,12 @@ import { chromium, type BrowserContext, type Page } from 'playwright-core';
 import { recordServer, serverPid, stopServer } from '../lib/browser.ts';
 import { alive, freePort, sleep, startXvfb, takeLock } from '../lib/desktop.ts';
 import { record, recordDir } from '../lib/records.ts';
-import { perPage, type Driver } from '../lib/driver.ts';
+import { perPage, type Driver, type Drop } from '../lib/driver.ts';
+import { gesture } from '../lib/drag.ts';
+import { Unsupported } from '../lib/block.ts';
 import { ensureAptInstalled, type Need } from '../lib/system.ts';
 import { cacheDir } from '../proxy.ts';
+import { asSpaces, asTabs, retabs, tabbed } from '../lib/tabs.ts';
 import type { TextDoc } from '../lib/text.ts';
 
 /** Electron's libraries (they bring the rest), by their names from Debian 13 on (`t64`: 64-bit time) and before. */
@@ -95,171 +98,14 @@ export interface Profile {
   readonly holds?: (doc: TextDoc) => string | undefined;
   /** How the setup behaves where ourus has an option, over bare Obsidian's. */
   readonly behaves?: Driver['behaves'];
+  /**
+   * How a node is dragged, where a plugin drags one: Outliner's drag of an item by its bullet
+   * (`outlinerDrop`), true-outliner's of any node by its mark (`trueOutlinerDrop`).
+   */
+  readonly drag?: 'outliner' | 'true-outliner';
 }
 
 // ------------------------------------------------------------------ indentation
-
-/**
- * A line's indentation rewritten: pieces of the new indentation, each with how many characters of the
- * old it stands for (a tab for two spaces: 2; a space for a space: 1), so that a caret at a piece's
- * edge keeps its place.
- */
-type Pieces = [string, number][];
-
-/**
- * A document with each line's indentation rewritten (`lead`, given every line, and the columns where
- * the selection's ends are on each), and its selection carried along.
- */
-function reindent(d: TextDoc, lead: (lines: string[], ends: number[][]) => Pieces[]): TextDoc {
-  const lines = d.text.split('\n');
-  const ends: number[][] = lines.map(() => []);
-  for (const { offset } of d.sel ? [{ offset: d.sel.anchor }, { offset: d.sel.head }] : []) {
-    const line = d.text.slice(0, offset).split('\n').length - 1;
-    ends[line]!.push(offset - (d.text.lastIndexOf('\n', offset - 1) + 1));
-  }
-  const pieces = lead(lines, ends);
-  const out: string[] = [];
-  /** Old offset of each line's start, and new. */
-  let from = 0;
-  let to = 0;
-  const starts: [number, number, number, Pieces][] = [];
-  lines.forEach((line, i) => {
-    const ws = /^[ \t]*/.exec(line)![0];
-    const now = pieces[i]!.map(([s]) => s).join('');
-    starts.push([from, to, ws.length, pieces[i]!]);
-    out.push(now + line.slice(ws.length));
-    from += line.length + 1;
-    to += now.length + line.length - ws.length + 1;
-  });
-  const map = (offset: number): number => {
-    let i = starts.length - 1;
-    while (i > 0 && starts[i]![0] > offset) i--;
-    const [old, now, wsLength, ps] = starts[i]!;
-    const col = offset - old;
-    let o = 0;
-    let n = 0;
-    for (const [s, k] of ps) {
-      // inside a piece (a caret between a tab's two spaces: `splitsIndent` declines it), its start
-      if (col < o + k) break;
-      o += k;
-      n += s.length;
-    }
-    return now + (col <= wsLength ? n : n + col - wsLength);
-  };
-  return { text: out.join('\n'), sel: d.sel && { anchor: map(d.sel.anchor), head: map(d.sel.head) } };
-}
-
-/**
- * A list item's line: its indentation, and its text's column from the indentation: its marker and the
- * spaces after it (CommonMark's), but where a caret is after the marker's first space (`carets`), the
- * spaces after the caret are the text's (ourus's `- ┃ b`, a place before ` b`).
- */
-function listItem(line: string, carets: number[] = []): { ws: string; width: number } | null {
-  const m = /^([ \t]*)([-*+]|\d{1,9}[.)])( *)(\S?)/.exec(line);
-  if (!m || (m[3] === '' && m[4] !== '')) return null;
-  const spaces = m[3]!.length;
-  const placed = spaces > 1 && carets.includes(m[1]!.length + m[2]!.length + 1);
-  return { ws: m[1]!, width: m[2]!.length + (m[4] === '' || spaces > 4 || placed ? 1 : spaces) };
-}
-
-/**
- * Each line of a document with what is in a fenced code block (its fences not included) marked, to be
- * left out of the list structure.
- */
-function inFences(lines: string[]): boolean[] {
-  let fence: string | null = null;
-  return lines.map((line) => {
-    const m = /^[ \t]*(`{3,}|~{3,})/.exec(line);
-    if (fence === null) {
-      if (m) fence = m[1]!;
-      return false;
-    }
-    if (m && m[1]![0] === fence[0] && m[1]!.length >= fence.length && !line.trim().slice(m[1]!.length)) fence = null;
-    return fence !== null;
-  });
-}
-
-/** Spaces of indentation as Obsidian's tabs beyond what the list structure says: each two a tab, an odd one a space. */
-const paired = (n: number): Pieces => [...Array.from({ length: n >> 1 }, (): [string, number] => ['\t', 2]), ...(n & 1 ? [[' ', 1] as [string, number]] : [])];
-const spaced = (n: number): Pieces => Array.from({ length: n }, (): [string, number] => [' ', 1]);
-
-/**
- * A test's spaces as Obsidian writes them: an item nested in another is indented by the parent's
- * indentation and a tab (Tab's, whatever the parent's marker: `1. a` / `\t- b`, not three spaces), any
- * other line in an item by the item's indentation and spaces to its text (Shift+Enter's: `1. a` /
- * `   text`, `\t- b` / `\t  text`), and indentation past that by the old rule (`paired`: two spaces a tab)
- * for an item, as spaces for any other line (a code block's own indentation). Indentation outside any
- * item, each two spaces a tab.
- */
-export const asTabs = (d: TextDoc): TextDoc =>
-  reindent(d, (lines, ends) => {
-    const fenced = inFences(lines);
-    /** The items the line may be in: their indentation in spaces, their text's column, their new indentation. */
-    const open: { at: number; text: number; now: Pieces }[] = [];
-    return lines.map((line, i) => {
-      const w = /^ */.exec(line)![0].length;
-      const blank = line.trim() === '';
-      const it = fenced[i] ? null : listItem(line, ends[i]);
-      if (!blank && !fenced[i]) while (open.length && open.at(-1)!.text > w) open.pop();
-      // a blank line or a code block's ends no item
-      const parent = blank || fenced[i] ? [...open].reverse().find((o) => o.text <= w) : open.at(-1);
-      if (it) {
-        const now: Pieces = parent ? [...parent.now, ['\t', parent.text - parent.at], ...paired(w - parent.text)] : paired(w);
-        open.push({ at: w, text: w + it.width, now });
-        return now;
-      }
-      return parent ? [...parent.now, ...spaced(w - parent.at)] : paired(w);
-    });
-  });
-
-/**
- * Obsidian's indentation read back as the spec's spaces (`asTabs`'s rule the other way): a tab into an
- * item is its text's column (`1. a` / `\t- b` is `1. a` / `   - b`), spaces stay spaces, and a tab
- * with no item to go into two spaces.
- */
-export const asSpaces = (d: TextDoc): TextDoc =>
-  reindent(d, (lines, ends) => {
-    const fenced = inFences(lines);
-    /** The items a line may be in: their indentation's tabs and spaces (after the tabs), their marker's width, their new indentation and text's column. */
-    const open: { tabs: number; spaces: number; width: number; now: number }[] = [];
-    const within = (o: (typeof open)[number], tabs: number, spaces: number): boolean => tabs > o.tabs || (tabs === o.tabs && spaces >= o.spaces + o.width);
-    return lines.map((line, i) => {
-      const ws = /^[ \t]*/.exec(line)![0];
-      // tabs, then spaces, as Obsidian writes them; any other mix, each tab two spaces
-      const m = /^(\t*)( *)$/.exec(ws)!;
-      const plain = (): Pieces => [...ws].map((c): [string, number] => [c === '\t' ? '  ' : ' ', 1]);
-      if (!m) return plain();
-      const tabs = m[1]!.length;
-      const spaces = m[2]!.length;
-      const blank = line.trim() === '';
-      const it = fenced[i] ? null : listItem(line, ends[i]);
-      if (!blank && !fenced[i]) while (open.length && !within(open.at(-1)!, tabs, spaces)) open.pop();
-      const parent = blank || fenced[i] ? [...open].reverse().find((o) => within(o, tabs, spaces)) : open.at(-1);
-      let now: Pieces;
-      if (!parent) now = plain();
-      else if (tabs > parent.tabs) {
-        // the parent's own indentation, the tab into it, then the rest
-        const into = parent.now + parent.width;
-        now = [[' '.repeat(into), parent.tabs + 1], ...Array.from({ length: tabs - parent.tabs - 1 }, (): [string, number] => ['  ', 1]), ...spaced(spaces)];
-      } else now = [[' '.repeat(parent.now + parent.width), tabs + parent.spaces + parent.width], ...spaced(spaces - parent.spaces - parent.width)];
-      if (it) open.push({ tabs, spaces, width: it.width, now: now.reduce((n, [s]) => n + s.length, 0) });
-      return now;
-    });
-  });
-
-/** Whether a document is indented with tabs already, and so is taken as written. */
-export const tabbed = (text: string): boolean => /^ *\t/m.test(text);
-
-/**
- * Whether a document indented with spaces is loaded as tabs: where tabs give it back as written,
- * caret and all; else it is loaded as written (a lazy line indented short of an item's text, which
- * the tabs would line up with it, `- a⏎    1. b⏎      - c`).
- */
-export function retabs(d: TextDoc): boolean {
-  if (tabbed(d.text)) return false;
-  const back = asSpaces(asTabs(d));
-  return back.text === d.text && JSON.stringify(back.sel) === JSON.stringify(d.sel);
-}
 
 /** Each end of a document's selection: its offset, and its line and column. */
 function ends(d: TextDoc): { offset: number; line: string; col: number }[] {
@@ -815,6 +661,8 @@ export function obsidianDriver(profile: Profile): Driver {
       );
     },
 
+    ...(profile.drag && { drops: ['move'] as const, drop: profile.drag === 'outliner' ? outlinerDrop : trueOutlinerDrop }),
+
     async read(page: Page) {
       const { doc: got, lost } = await page.evaluate(() => {
         const cm = (window as any).app.workspace.activeEditor.editor.cm;
@@ -834,4 +682,82 @@ export function obsidianDriver(profile: Profile): Driver {
       return pageState(page).retabbed ? asSpaces(got) : got;
     },
   };
+}
+
+/**
+ * A drop in Outliner (its `DragAndDrop.ts`): the pressed item's bullet held, moved past it, to where
+ * its drop variant for the place is (its top the bottom of the row above the drop line, or the top of
+ * the row below, eight pixels up; its left the editor's first line's, a tab's width a list level), and
+ * released. It drags one item, the one pressed: a drop of the selection it has no gesture for.
+ */
+async function outlinerDrop(page: Page, drop: Drop, settle: () => Promise<void>): Promise<void> {
+  if (drop.press === null) throw new Unsupported('a drop of the selection: Outliner drags the item whose bullet is pressed');
+  const at = await page.evaluate(({ press, seam, listDepth }) => {
+    const cm = (window as any).app.workspace.activeEditor.editor.cm;
+    const lineOf = (i: number) => cm.state.doc.line(i + 1);
+    const lineEl = (i: number): HTMLElement | null => {
+      const { node } = cm.domAtPos(lineOf(i).from);
+      return ((node.nodeType === 1 ? node : node.parentElement) as HTMLElement | null)?.closest('.cm-line') ?? null;
+    };
+    const bullet = lineEl(press!)?.querySelector('.cm-formatting-list, .task-list-item-checkbox');
+    if (!bullet) return null;
+    const b = bullet.getBoundingClientRect();
+    const bottom = (i: number): number => {
+      const from = lineOf(i).from;
+      return cm.coordsAtPos(from, -1).top + cm.lineBlockAt(from).height;
+    };
+    const y = (seam.above !== null ? bottom(seam.above) : cm.coordsAtPos(lineOf(seam.below!).from, -1).top) - 8;
+    // (its tab width as it measures it: an indentation's element, or a line that starts with one)
+    const left = cm.dom.querySelector('div.cm-line').getBoundingClientRect().left;
+    const indent = cm.dom.querySelector('.cm-indent') as HTMLElement | null;
+    let tab = indent?.offsetWidth ?? 0;
+    for (let i = 1; !tab && i <= cm.state.doc.lines; i++) {
+      const line = cm.state.doc.line(i);
+      const lead = /^(\t| {2,4})/.exec(line.text)?.[0];
+      if (lead) tab = cm.coordsAtPos(line.from + lead.length, -1).left - cm.coordsAtPos(line.from, -1).left;
+    }
+    tab ||= cm.defaultCharacterWidth * 4;
+    return { from: { x: b.left + b.width / 2, y: b.top + b.height / 2 }, to: { x: left + listDepth * tab, y } };
+  }, drop);
+  if (!at) throw new Unsupported("the pressed row has no bullet Outliner drags by");
+  await gesture(page, at.from, at.to, settle);
+}
+
+/**
+ * A drop in true-outliner (its `zoom-click.ts` and `drag-geometry.ts`): the pressed node's mark held,
+ * moved past its threshold, to its seam's y (the top of the row below the drop line, or past the last
+ * row the bottom of the last line with text) and its depth's column (the content's left past its
+ * padding, a unit a depth, measured as it measures it, off its probe), and released. It drags the
+ * node whose mark is pressed, or the selection's nodes where it is one of them; a drop of the
+ * selection with no press it has no gesture for.
+ */
+async function trueOutlinerDrop(page: Page, drop: Drop, settle: () => Promise<void>): Promise<void> {
+  if (drop.press === null) throw new Unsupported('a drop of the selection: true-outliner drags the node whose mark is pressed');
+  const at = await page.evaluate(({ press, seam, depth }) => {
+    const cm = (window as any).app.workspace.activeEditor.editor.cm;
+    const doc = cm.state.doc;
+    const lineOf = (i: number) => doc.line(i + 1);
+    const { node } = cm.domAtPos(lineOf(press!).from);
+    const lineEl = ((node.nodeType === 1 ? node : node.parentElement) as HTMLElement | null)?.closest('.cm-line');
+    const mark = lineEl?.querySelector('.to-decor-marker-icon, .list-bullet, .list-number, .to-decor-ol-digits, .task-list-item-checkbox');
+    if (!mark) return null;
+    const b = mark.getBoundingClientRect();
+    let y: number;
+    if (seam.below !== null) y = cm.documentTop + cm.lineBlockAt(lineOf(seam.below).from).top;
+    else {
+      let last = doc.lines;
+      while (last > 1 && doc.line(last).text.trim() === '') last--;
+      y = cm.documentTop + cm.lineBlockAt(doc.line(last).from).bottom;
+    }
+    const probe = document.createElement('div');
+    probe.className = 'to-drag-unit-probe';
+    cm.dom.appendChild(probe);
+    const unit = probe.getBoundingClientRect().width;
+    probe.remove();
+    const content = cm.contentDOM.getBoundingClientRect();
+    const origin = content.left + parseFloat(getComputedStyle(cm.contentDOM).paddingLeft || '0');
+    return { from: { x: b.left + b.width / 2, y: b.top + b.height / 2 }, to: { x: origin + depth * unit, y: y + 1 } };
+  }, drop);
+  if (!at) throw new Unsupported('the pressed row has no mark true-outliner drags by');
+  await gesture(page, at.from, at.to, settle);
 }

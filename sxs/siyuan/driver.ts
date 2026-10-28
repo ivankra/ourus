@@ -19,8 +19,9 @@
 // deletion at the text's start, isn't the child's parent in CommonMark.)
 
 import type { Page } from 'playwright-core';
-import { perPage, type Driver } from '../lib/driver.ts';
-import { lazyQuotes, liftOwned, listOwner, ownBlocks, type Block, type Outline } from '../lib/block.ts';
+import { perPage, type Driver, type Drop } from '../lib/driver.ts';
+import { gesture } from '../lib/drag.ts';
+import { lazyQuotes, liftOwned, listOwner, ownBlocks, Unsupported, type Block, type Outline } from '../lib/block.ts';
 import { api, holdKernel, kernelOf, kernelOfPage, leaseKernel, serve, type Kernel } from './kernel.ts';
 
 /** SiYuan's keys for the spec's motions (Linux); the `select…` motions add Shift. */
@@ -400,6 +401,134 @@ async function kernelFor(page: Page): Promise<Kernel> {
   return state.kernel;
 }
 
+/**
+ * Where SiYuan's drag of an item puts a place, as its dragover has it (its `editorCommonEvent.ts`,
+ * the list item's indicator): over an item, after it (`after`, the pointer left of its text, in its
+ * bullet's column), its only child (`child`, the pointer over its text, an item with no list of its
+ * own), or before it (`before`, the upper half of its text, the first item of its list alone); over a
+ * block outside every list, above or below it (`above`, `below`). Else why not.
+ */
+type Aim = { mode: 'after' | 'child' | 'before' | 'above' | 'below'; block: number };
+function aim(blocks: readonly Block[], drop: Drop): Aim | string {
+  // the blocks in flight, each with its subtree
+  const flying = blocks.map(() => false);
+  for (const r of drop.rows) for (let i = r; i === r || (i < blocks.length && blocks[i]!.depth > blocks[r]!.depth); i++) flying[i] = true;
+  const end = (i: number): number => {
+    let j = i + 1;
+    while (j < blocks.length && blocks[j]!.depth > blocks[i]!.depth) j++;
+    return j;
+  };
+  const { parent, after } = drop.to;
+  if (after !== null) {
+    if (!blocks[after]!.free) return { mode: 'after', block: after };
+    // after a free block's subtree (a heading's section): below its last block not in flight, or after
+    // the outermost item that block is in, a top-level item
+    let last = after;
+    for (let i = after + 1; i < end(after); i++) if (!flying[i]) last = i;
+    if (blocks[last]!.free) return { mode: 'below', block: last };
+    let outer = last;
+    for (let i = last - 1, d = blocks[last]!.depth; i > after; i--) if (blocks[i]!.depth < d) (d = blocks[i]!.depth), !blocks[i]!.free && (outer = i);
+    return { mode: 'after', block: outer };
+  }
+  if (parent !== 'root' && blocks[parent]!.free) return { mode: 'below', block: parent };
+  // first under the parent: its first child, or the document's first block
+  const first = parent === 'root' ? 0 : parent + 1;
+  if (parent !== 'root' && (first >= end(parent))) return { mode: 'child', block: parent };
+  if (flying[first]) return 'a place before the first item of a list, which is the one dragged: SiYuan drops before an item only before the first of its list';
+  return blocks[first]!.free ? (parent === 'root' ? { mode: 'above', block: first } : 'a place before the free block an item starts with') : { mode: 'before', block: first };
+}
+
+/**
+ * In the page: blocks selected whole (`selectsBlocks`), as SiYuan's own selecting does it, its class on
+ * each block's element (an item's, its list item's), no caret in the text, the editor focused (its
+ * keys act on the selection only there).
+ */
+function selectInPage(selected: number[]): void {
+  const wys = (window as any).__ourusSxs.editor().protyle.wysiwyg.element as HTMLElement;
+  const data = (el: Element): DOMStringMap => (el as HTMLElement).dataset ?? {};
+  // the blocks as `inPage` reads them: an item its list item, a free block its element
+  const holders: HTMLElement[] = [];
+  const items = (list: Element): void => {
+    for (const li of [...list.children].filter((c) => data(c).type === 'NodeListItem') as HTMLElement[]) {
+      holders.push(li);
+      const kids = [...li.children].filter((c) => data(c).nodeId) as HTMLElement[];
+      kids.forEach((kid, k) => (data(kid).type === 'NodeList' ? items(kid) : k > 0 && holders.push(kid)));
+    }
+  };
+  for (const c of [...wys.children].filter((c) => data(c).nodeId) as HTMLElement[]) (data(c).type === 'NodeList' ? items(c) : holders.push(c));
+  getSelection()?.removeAllRanges();
+  wys.focus();
+  for (const k of selected) holders[k]?.classList.add('protyle-wysiwyg--select');
+}
+
+/**
+ * A drop in SiYuan, an HTML5 drag, which Chromium plays from the real mouse: an item's bullet held
+ * (its `protyle-action`), or a free block's gutter icon (shown while the pointer is over the block),
+ * moved to where its dragover reads the place (`aim`), released. A bullet drags its item alone, the
+ * selection's or not; a gutter icon its block, or the selection's blocks where it is one of them (a
+ * drop of the selection presses its first).
+ */
+async function siyuanDrop(page: Page, drop: Drop, settle: () => Promise<void>): Promise<void> {
+  const { blocks } = (await driver.read(page)) as Outline;
+  const to = aim(blocks, drop);
+  if (typeof to === 'string') throw new Unsupported(to);
+  const at = await page.evaluate(
+    ({ press, to }) => {
+      const wys = (window as any).__ourusSxs.editor().protyle.wysiwyg.element as HTMLElement;
+      const data = (el: Element): DOMStringMap => (el as HTMLElement).dataset ?? {};
+      // the blocks as `inPage` reads them: an item its list item, a free block its element
+      const holders: HTMLElement[] = [];
+      const items = (list: Element): void => {
+        for (const li of [...list.children].filter((c) => data(c).type === 'NodeListItem') as HTMLElement[]) {
+          holders.push(li);
+          const kids = [...li.children].filter((c) => data(c).nodeId) as HTMLElement[];
+          kids.forEach((kid, k) => (data(kid).type === 'NodeList' ? items(kid) : k > 0 && holders.push(kid)));
+        }
+      };
+      for (const c of [...wys.children].filter((c) => data(c).nodeId) as HTMLElement[]) (data(c).type === 'NodeList' ? items(c) : holders.push(c));
+      const isItem = (el: HTMLElement): boolean => data(el).type === 'NodeListItem';
+      // an item's text: its first block
+      const textOf = (el: HTMLElement): DOMRect => (isItem(el) ? el.querySelector(':scope > [data-node-id]')! : el).getBoundingClientRect();
+      const pressed = holders[press]!;
+      const free = !isItem(pressed);
+      const el = holders[to.block]!;
+      const item = isItem(el);
+      if (item !== ['after', 'child', 'before'].includes(to.mode)) return `no ${to.mode} place on ${item ? 'an item' : 'a free block'}`;
+      if (!item && el.parentElement !== wys) return 'a place beside a block in an item, which SiYuan reads as at the item';
+      // a free block's drag over an item: beside its text, in it, or beside its whole list
+      if (free && item && to.mode !== 'child') return "a free block's place beside an item: SiYuan's drag of one puts it in the item or beside the item's whole list";
+      const text = textOf(el);
+      const left = el.getBoundingClientRect().left;
+      // (an item's after its text's left edge, its child's past it; anything else mid-text: a block's
+      // drag within 32 pixels of an edge is a column beside it)
+      const x = to.mode === 'after' ? left + (text.left - left) / 2 : !free && (to.mode === 'child' || to.mode === 'before') ? text.left + 10 : text.left + text.width / 2;
+      const y = text.top + text.height * (to.mode === 'before' || to.mode === 'above' ? 0.25 : 0.75);
+      const r = (free ? pressed : pressed.querySelector(':scope > .protyle-action')!).getBoundingClientRect();
+      const t = textOf(pressed);
+      // a free block's press: its gutter icon, found once the pointer is over the block (its id)
+      return { id: free ? pressed.dataset.nodeId! : null, from: free ? { x: t.left + 20, y: t.top + Math.min(t.height / 2, 12) } : { x: r.left + r.width / 2, y: r.top + r.height / 2 }, to: { x, y } };
+    },
+    { press: drop.press ?? drop.rows[0]!, to },
+  );
+  if (typeof at === 'string') throw new Unsupported(at);
+  if (at.id === null) return gesture(page, at.from, at.to, settle);
+  // the gutter icon shows only while the pointer is over its block, and goes as it crosses the
+  // editor's margin: the hand comes onto the block, then along its row to the icon, and the gesture
+  // goes on from there (`here`: from off the page, it would find none)
+  await page.mouse.move(1, 1);
+  await page.mouse.move(at.from.x, at.from.y, { steps: 4 });
+  await settle();
+  const icon = await page.evaluate((id) => {
+    const b = document.querySelector(`.protyle-gutters button[data-node-id="${id}"]`)?.getBoundingClientRect();
+    return b?.width ? { x: b.left + b.width / 2, y: b.top + b.height / 2 } : null;
+  }, at.id);
+  // (while blocks are selected, one outside them shows none: a user's press goes elsewhere first)
+  if (!icon && ((await driver.read(page)) as Outline).selected?.length) throw new Unsupported('no gutter icon for a block outside the selection: SiYuan shows none while blocks are selected');
+  if (!icon) throw new Error('no gutter icon for the pressed block');
+  await page.mouse.move(icon.x, icon.y, { steps: 4 });
+  await gesture(page, icon, at.to, settle, { here: true });
+}
+
 export const driver: Driver = {
   shortId: 'SY',
   longId: 'siyuan',
@@ -518,6 +647,10 @@ export const driver: Driver = {
     await idle();
     if (!o.sel) {
       await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+      if (o.selected?.length) {
+        await page.evaluate(selectInPage, o.selected);
+        await idle();
+      }
       return;
     }
     // a caret with no place in what SiYuan made of the start is left to the runner's load check, which says what it made
@@ -526,10 +659,20 @@ export const driver: Driver = {
     await idle();
   },
 
+  drops: ['move'],
+  // its `load` selects blocks whole, as `read` reports them
+  selectsBlocks: true,
+  drop: siyuanDrop,
+
   async read(page: Page) {
     const r = await page.evaluate(inPage, null);
-    // (a quote's later lines lazy, as the projection has them: SiYuan's Markdown quotes each)
     // (a heading's section as ourus's outline has it; a list no block's, `listParent: container`)
-    return lazyQuotes({ blocks: ownBlocks(r.blocks, listOwner(driver.behaves?.listParent)), sel: r.sel, ...(r.selected.length && { selected: r.selected }) });
+    const blocks = ownBlocks(r.blocks, listOwner(driver.behaves?.listParent));
+    // the topmost of the selected, in the outline's nesting; blocks selected, the range SiYuan keeps in
+    // one of them is no caret (it draws none)
+    const under = (i: number): boolean => r.selected.some((j) => j < i && blocks.slice(j + 1, i + 1).every((b) => b.depth > blocks[j]!.depth));
+    const selected = r.selected.filter((i) => !under(i));
+    // (a quote's later lines lazy, as the projection has them: SiYuan's Markdown quotes each)
+    return lazyQuotes({ blocks, sel: selected.length ? null : r.sel, ...(selected.length && { selected }) });
   },
 };

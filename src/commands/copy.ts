@@ -7,7 +7,7 @@ import { deleteContentBackwardCommand } from './backspace.ts';
 import { CommandContext, deferToHost, type CommandOutcome } from './context.ts';
 import { composeChanges, lineOf } from '../text/index.ts';
 import { deleteSubtreeCommand } from './delete-subtree.ts';
-import { operands, operandsRefused } from './util.ts';
+import { operands, operandsOf, operandsRefused } from './util.ts';
 
 /**
  * Copy, or cut: what the selection takes, as Markdown out of its containers. Within one node's text
@@ -15,7 +15,7 @@ import { operands, operandsRefused } from './util.ts';
  * their subtrees, ending with a line break (one pastes as a node, not as a phrase); at a caret, the
  * node there with its subtree (`copyAtCaret: node`), else the host's. A cut deletes it as delete
  * subtree (whole nodes) or Backspace (text) does, within one node's text the text going. Null where
- * ourus doesn't do it yet: nodes delete subtree wouldn't take.
+ * ourus doesn't do it yet: nodes delete subtree wouldn't take. Given nodes by id, those nodes, whole.
  */
 export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): CommandOutcome {
   const doc = ctx.doc;
@@ -23,7 +23,11 @@ export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): Com
   const from = Math.min(ctx.selection.anchor, ctx.selection.head);
   const to = Math.max(ctx.selection.anchor, ctx.selection.head);
   let nodes: readonly OutlineNode[] | null = null;
-  if (from === to) {
+  if (ctx.nodes) {
+    const found = operandsOf(ctx);
+    if (!Array.isArray(found)) return operandsRefused(found);
+    nodes = found;
+  } else if (from === to) {
     if (config.copyAtCaret === 'host') return deferToHost();
     const line = doc.lineAt(from);
     const node = from <= line.to ? doc.nodeAtLine(line.index) : null;

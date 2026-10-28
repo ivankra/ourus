@@ -969,3 +969,52 @@ tags: edge
 - a
 - ┃b
 ```
+
+## Outdent22
+
+A child after a blank line, in a document indented with tabs, goes with its item: its tabs one stop
+less, as the item's are. Indent45's inverse.
+
+```yaml
+tags: edge
+```
+
+```buffer
+- a
+→- b┃
+
+→→para
+```
+
+> outdent
+
+```buffer
+- a
+- b┃
+
+→para
+```
+
+## Outdent22b
+
+The same with indented code as the child: its spaces past the tabs are the code's.
+
+```yaml
+tags: edge
+```
+
+```buffer
+- a
+→- b┃
+
+→→  code
+```
+
+> outdent
+
+```buffer
+- a
+- b┃
+
+→  code
+```
