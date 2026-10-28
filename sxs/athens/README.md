@@ -19,16 +19,22 @@ From Athens's help page (its table in the bundle, `mod` Control):
 | `outdent` | Shift+Tab ("Unindent selected block") |
 | `moveSubtreeUp` | *missing*: blocks move by drag and drop only (below); its tests are skipped |
 | `moveSubtreeDown` | *missing*, as `moveSubtreeUp` |
-| `move ②` | the mouse | a block dragged by its bullet, dropped where its drop line is (`athensDrop`, below) |
+| `moveSubtree` | mouse | a block dragged by its bullet, dropped where its drop line is (`athensDrop`, below) |
 | `deleteContentBackward` | Backspace |
 | `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Shift+Home, Backspace |
 | `deleteSubtree` | Shift+Up on the block's first line (selects it: `textarea_keydown.cljs`), Backspace (deletes the selected blocks, children and all: `listeners.cljs`); after it no block is edited: the outline alone is judged (`noCaretAfter`). |
 | `duplicateSubtree` | *missing* (no command): its tests are skipped |
-| `pasteStructured` | Ctrl+V |
+| `paste` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V ("Paste without formatting") |
 | `undo` | Ctrl+Z |
 | `redo` | Ctrl+Shift+Z |
+| `fold` | Ctrl+Up ("Fold block") |
+| `unfold` | Ctrl+Down ("Unfold block") |
+| `toggleFold` | *missing* |
+| `zoomIn` | Ctrl+O ("Zoom into current block"): the block as the page, its text the title, the caret into its first child |
+| `zoomOut` | Ctrl+Alt+O ("Zoom out of current block"): back to the page |
+| `clearZoom` | *missing*: Ctrl+Alt+O |
 
 The moves: Athens's source has no move key (Alt+Shift+Up and Ctrl+Shift+Up select blocks, Ctrl+Up and
 Down fold and unfold). A drag's drop is where the block goes, the behavior a move is tested for, so
@@ -47,9 +53,6 @@ Other shortcuts:
 | Select previous block | Shift+Up | at a block's edge, the block selected whole, then the ones before |
 | on selected blocks | Tab, Shift+Tab; Enter; Shift+Up, Shift+Down; Up, Down | indent or outdent them; edit the first; extend the selection; back to editing (`listeners.cljs`) |
 | Select all blocks | Ctrl+A | |
-| Fold block, Unfold block | Ctrl+Up, Ctrl+Down | |
-| Zoom into current block | Ctrl+O | the block as the page |
-| Zoom out of current block | Ctrl+Alt+O | |
 | Open page or block link | Ctrl+O | |
 | Autocomplete Menu | / | |
 | Copy | Ctrl+C | |
@@ -58,9 +61,26 @@ Other shortcuts:
 | Toggle Left Sidebar, Right Sidebar | Ctrl+\\, Ctrl+Shift+\\ | |
 | Open Node in Sidebar | Shift+click | |
 
+## Folds and the zoom, measured
+
+[`fold.md`](../../spec/fold.md) and [`zoom.md`](../../spec/zoom.md), measured 2026-10-28. A block's
+fold is `:block/open false`, transacted once every block is on screen and read from the database; a
+zoom is the block's own route (`#/page/<uid>`), the test's page standing for none. Zoomed, the root
+is the page's title, no block on screen: a case with its caret there is skipped (`holds`), which is
+most of `zoom.md`. What is compared is what the reader sees: the folds in effect, and the zoom root.
+
+- **Around a closed block it agrees**: Enter at its end, mid-text and on an empty one with children
+  (`Fold1`, `Fold2`, `Fold5`), Backspace after it (`Fold3`), an indent under it (`Fold6`), unfold
+  (`Fold12`).
+- **Delete at a closed block's end does nothing** (`Fold7`), as ourus, which refuses it (`folded`).
+- **Backspace right after a closed block joins into its text**, not its hidden last child's, still
+  closed (`Fold15`), as ourus.
+- **Zoomed in, the caret goes to the first child's start** (`Zoom6`: `caret`); a child of the root
+  can't be outdented out of it (`Zoom11`), as ourus.
+
 ## Drag and drop
 
-[`drag.md`](../../spec/drag.md), played with the real mouse (`athensDrop` in [`driver.ts`](driver.ts),
+[`move-subtree.md`](../../spec/move-subtree.md), played with the real mouse (`athensDrop` in [`driver.ts`](driver.ts),
 [`../lib/drag.ts`](../lib/drag.ts)), aimed where Athens's own drag puts each place (its block's
 `on-drag-over` and `on-drop`, read in the bundle):
 
@@ -71,19 +91,19 @@ Other shortcuts:
   block is its container's bottom, left of its children (a level is 32 px); first under a parent the
   top of its first child, or a childless parent's lower half, right. Over the block dragged nothing
   moves (its own place).
-- **A drop moves the blocks there** as ourus does (`Drag1`, `Drag2`, `Drag3`, `Drag8`, `Drag13` agree,
+- **A drop moves the blocks there** as ourus does (`MoveSubtree1`, `MoveSubtree2`, `MoveSubtree3`, `MoveSubtree9`, `MoveSubtree12` agree,
   the outline alone judged: below), checked besides by hand on places no case draws (out past a
   parent, after a nested block with children, down past siblings, first child before another).
 - **No caret after a drop**: editing ends as the drag starts (the bullet takes the focus), and no
   block is edited after it. The outline alone is judged (`noCaretAfter`); where typing follows
   (`scenarios.md › Scenario8b`, `Scenario8c`) the example is skipped, its drop landing as ourus's
   does (played apart).
-- **A heading keeps its `#`s**: a heading is text in its block, so a drop re-levels nothing (`Drag15`:
-  `### D` / `#### E` after `## B`, ourus's `## D` / `### E`; `Drag16`).
+- **A heading keeps its `#`s**: a heading is text in its block, so a drop re-levels nothing (`MoveSubtree14`:
+  `### D` / `#### E` after `## B`, ourus's `## D` / `### E`; `MoveSubtree15`).
 - **It drags the block pressed, or the selected blocks whatever is pressed**: a press on one of them
-  moves them all (Drag4, Drag20 land as ourus's, the selection gone: `caret`), and so does a press on
-  another block, which stays where it is (`a`, `b` selected, `c` pressed: nothing moves; Drag5,
-  Drag5b disagree). The driver selects blocks with Shift+Up on the first's first line, then
+  moves them all (MoveSubtree4, MoveSubtree19 land as ourus's, the selection gone: `caret`), and so does a press on
+  another block, which stays where it is (`a`, `b` selected, `c` pressed: nothing moves; MoveSubtree5,
+  MoveSubtree6 disagree). The driver selects blocks with Shift+Up on the first's first line, then
   Shift+Down.
 
 ## Reaching the graph
@@ -142,10 +162,9 @@ examples skipped for a value declared disagree when played, those of the value a
 - `outdent: logical`, `enterOnEmptyItem: outdent`, `emptyItemWithChildren: refuse`, as Roam. (An empty
   block at the top level makes a sibling, `enter.md › Enter7`, `Enter15`: an option has one value.)
 - **Paste** (`:paste-internal`, Athens's paste of anything but one line): what is pasted goes after
-  the block, nothing split (`pasteStructuredMidText: after`); lines become blocks
-  (`pasteStructuredLines: items`); a pasted number stays text, nested lists' too
-  (`pasteStructuredListForm: literal`: Athens numbers no blocks); a paragraph's list goes under it
-  (`pasteStructuredParagraphList: children`). The caret goes to the start of the first pasted block
+  the block, nothing split (`pasteSeams: closed`, the default); lines become blocks
+  (`pasteLines: items`); a pasted number stays text, nested lists' too (Athens numbers no
+  blocks); a paragraph's list goes under it (`pasteParagraphList: children`). The caret goes to the start of the first pasted block
   (its `focus-uid`, the first new block of the paste; checked in a headless Chromium of its own,
   typing after it: `- !┃x`), which the driver declares, `quirkPasteCaret: athens` (since 2026-10-25). Declared since 2026-10-18: 14 disagreements
   were these, and 6 examples of the values run instead.
@@ -159,7 +178,7 @@ examples skipped for a value declared disagree when played, those of the value a
 2. **A block dropped into its own subtree leaves the page**, with its children (`- a⏎  - b⏎- c`, `a`
    dropped as `b`'s child: `- c`). The drag skips a target inside `.dragging`, but the block dragged
    is `.is-dragging`, so nothing is skipped but the block itself, and `:block/move` makes a cycle.
-   Unplayed: ourus refuses it (`drag.md › Drag12`), and the case has nothing to compare.
+   Unplayed: ourus refuses it (`move-subtree.md › MoveSubtree11`), and the case has nothing to compare.
 
 ## Quirks
 

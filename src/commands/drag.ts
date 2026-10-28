@@ -1,12 +1,12 @@
 // A drag (spec/drag.md): what a pickup takes, by the cover rule, and every place it can drop it, as
 // seams and depths; the place one drop line names; and the host's helper that resolves a pointer to
-// one of them. The drop is `moveSubtreeTo` (move-subtree-to.ts).
+// one of them. The drop is `moveSubtree` (move-subtree.ts).
 
 import type { OurusDoc, OutlineNode } from '../doc/index.ts';
 import { CommandContext, reject, type CommandOutcome } from './context.ts';
 import { clipboardFragment, clipboardMarkdown, type Clipboard } from './clipboard.ts';
 import { copyOrCutCommand } from './copy.ts';
-import { becomesAt, unholdable } from './move-subtree-to.ts';
+import { becomesAt, unholdable } from './move-subtree.ts';
 import { pastedBecomesAt } from './paste.ts';
 import type { Command, CommandResult, DropMap, DropPoint, DropSeam, InsertionPoint } from './types.ts';
 import { operandsOf, operandsRefused, siblingRun, topmostNodes, withTextlessParents } from './util.ts';
@@ -17,10 +17,10 @@ import { operandsOf, operandsRefused, siblingRun, topmostNodes, withTextlessPare
  * carrying a clipboard: every seam of the document as it is, the clipboard's first node deciding what
  * a place can hold, each place's drop a `pasteAt`. The document unchanged.
  */
-export function dragCommand(ctx: CommandContext, options: { readonly pressed?: number; readonly clipboard?: Clipboard; readonly folded?: readonly number[]; readonly zoom?: number }): CommandOutcome {
-  const zoom = options.zoom === undefined ? null : ctx.doc.node(options.zoom);
-  if (options.zoom !== undefined && (!zoom || zoom.kind === 'root')) return reject('no-such-node', `no node ${options.zoom} to zoom into`);
-  const folded = new Set(options.folded);
+export function dragCommand(ctx: CommandContext, options: { readonly pressed?: number; readonly clipboard?: Clipboard }): CommandOutcome {
+  // the view's, the snapshot's: the folds in effect within the zoom, and the node zoomed into
+  const zoom = ctx.doc.zoom === null ? null : ctx.doc.node(ctx.doc.zoom)!;
+  const folded = ctx.doc.zoomFolded;
   if (options.clipboard) {
     const clipboard = options.clipboard;
     const read = clipboardMarkdown(clipboard);
@@ -33,7 +33,7 @@ export function dragCommand(ctx: CommandContext, options: { readonly pressed?: n
   const run = dragRun(ctx, options.pressed);
   if (!Array.isArray(run)) return run;
   const nodes = run.map((n) => n.id);
-  const dropMap: DropMap = { nodes, lines: run.map((n) => [n.startLine, n.endLine + 1] as const), seams: seamsOf(ctx.doc, run, run[0]!.kind, folded, zoom ?? null, (to) => ({ type: 'moveSubtreeTo', nodes, to })) };
+  const dropMap: DropMap = { nodes, lines: run.map((n) => [n.startLine, n.endLine + 1] as const), seams: seamsOf(ctx.doc, run, run[0]!.kind, folded, zoom ?? null, (to) => ({ type: 'moveSubtree', nodes, to })) };
   const copied = copyOrCutCommand(new CommandContext(ctx.doc, ctx.selection, nodes), 'copy');
   const clipboard = copied?.status === 'applied' ? copied.clipboard : undefined;
   return { status: 'applied', doc: ctx.doc, changes: [], selection: ctx.selection, ...(clipboard && { clipboard }), dropMap };
@@ -166,12 +166,13 @@ export function nearestDropPoint(seam: DropSeam, x: number, columnX: (point: Dro
 /**
  * The place a drop line names: the gap before line `line` (the line count at the document's end), at
  * `depth` (0 the top level), read with `run` taken out where it is a move's, and the children of the
- * `folded` nodes hidden. A string where no place is there: the gap isn't a seam (inside a node's
+ * view's folded nodes hidden (`OurusDoc.zoomFolded`). A string where no place is there: the gap isn't a seam (inside a node's
  * lines, after its blank lines rather than before them), or no parent is at that depth. Inside the
  * run, a place at its depth is its own; a deeper one is inside it (`into-itself`, for the drop to
  * refuse).
  */
-export function placeAtSeam(doc: OurusDoc, run: readonly OutlineNode[] | null, line: number, depth: number, folded: ReadonlySet<number> = new Set()): InsertionPoint | string {
+export function placeAtSeam(doc: OurusDoc, run: readonly OutlineNode[] | null, line: number, depth: number): InsertionPoint | string {
+  const folded = doc.zoomFolded;
   const all = inOrder(doc);
   const hidden = hider(folded);
   for (const n of all) {
@@ -197,7 +198,7 @@ export function placeAtSeam(doc: OurusDoc, run: readonly OutlineNode[] | null, l
   return at(runIds(all, run));
 }
 
-/** §5.2's steps: the node above the gap and the node below it, outside `out`, and the parent at `depth` between them. */
+/** A seam's place, in steps: the node above the gap and the node below it, outside `out`, and the parent at `depth` between them. */
 function seamPlace(root: OutlineNode, all: readonly OutlineNode[], out: ReadonlySet<number>, line: number, depth: number, hidden: (n: OutlineNode) => boolean): InsertionPoint | string {
   const shown = all.filter((n) => !out.has(n.id) && !hidden(n));
   const above = shown.filter((n) => n.startLine < line).pop() ?? null;

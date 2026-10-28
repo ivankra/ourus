@@ -12,8 +12,25 @@ export const driver = obsidianDriver({
   pluginData: { 'true-outliner': { outlineByDefault: true } },
   // its drag and drop: any node by its mark
   drag: 'true-outliner',
-  // "Move node up" and "Move node down": the item with its children
-  keys: { moveSubtreeUp: 'Control+Shift+ArrowUp', moveSubtreeDown: 'Control+Shift+ArrowDown' },
+  // "Move node up" and "Move node down": the item with its children; "Fold node", "Unfold node" and
+  // "Toggle fold" at their default hotkeys; its zoom's three, which have none, bound here
+  keys: {
+    moveSubtreeUp: 'Control+Shift+ArrowUp',
+    moveSubtreeDown: 'Control+Shift+ArrowDown',
+    fold: 'Control+Alt+ArrowUp',
+    unfold: 'Control+Alt+ArrowDown',
+    toggleFold: 'Control+Alt+Period',
+    zoomIn: 'Control+Alt+i',
+    zoomOut: 'Control+Alt+o',
+    clearZoom: 'Control+Alt+Shift+o',
+  },
+  hotkeys: {
+    'true-outliner:toggle-fold': [{ modifiers: ['Mod', 'Alt'], key: '.' }],
+    'true-outliner:zoom-in': [{ modifiers: ['Mod', 'Alt'], key: 'I' }],
+    'true-outliner:zoom-out': [{ modifiers: ['Mod', 'Alt'], key: 'O' }],
+    'true-outliner:zoom-clear': [{ modifiers: ['Mod', 'Alt', 'Shift'], key: 'O' }],
+  },
+  zoom: 'true-outliner',
   // its caret is outline-aware: an item's text starts after every space following its marker
   holds: keepsCaretOnText('true-outliner', { spaces: true }),
   // not measured against ourus's options but two: Enter mid-text keeps the children with the first

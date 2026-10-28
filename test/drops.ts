@@ -1,4 +1,4 @@
-// The drop pass (dev/20-drag.md §6): at every start of the spec, every node picked up and dropped at
+// The drop pass: at every start of the spec, every node picked up and dropped at
 // every place its pickup lists, offered or not, and a few clipboards dragged in from outside, each
 // dropped at every place its drag lists. A refusal is an outcome; a drop that fails to write,
 // is `unsupported`, or is refused by the result check alone (a node moved that no rule names) is a gap,
@@ -18,17 +18,7 @@ import { readSpecFile, specConfig, specFiles, type SpecTest } from './specfile.t
  * (`drops.test.ts`) fails on a new one and on one with none now, so the list only shrinks; the inverse
  * pairs report a write failure at one without failing on it.
  */
-export const KNOWN: Readonly<Record<string, string>> = {
-  // an indented code block, under `listParent: block`, adopting a list whose items aren't lined up: a
-  // nested task moved first, where the code would be the task's (the seam check reads the task as
-  // indented where it was)
-  Regression60: 'a moved item read at its old indentation, the code after it its',
-  // a heading dropped in between an item and its child, indented code a tab its item takes part of
-  // starts: the draft lets it through, the writer's text reads otherwise (with spaces, refused as the
-  // code joining the item, `not-expressible`)
-  Indent45b: "a heading before a tab-indented code child, refused with spaces, written otherwise with tabs",
-  Outdent22b: "a heading before a tab-indented code child, refused with spaces, written otherwise with tabs",
-};
+export const KNOWN: Readonly<Record<string, string>> = {};
 
 /** The clipboards dragged in at every start, each with the kind of its first node. */
 const CLIPBOARDS: readonly (readonly [string, string])[] = [

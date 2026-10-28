@@ -21,6 +21,7 @@
     "test": "node --test test/*.test.ts test/*/*.test.ts sxs/*/*.test.ts",
     "test:diff": "node test/differential.ts",
     "test:inverse": "node test/inverse.ts",
+    "test:view": "node test/view-exhaustive.ts",
     "test:model": "node test/model/run.ts",
     "typecheck": "tsc -p . && tsc -p demos/cm6 && tsc -p demos/textarea"
   },

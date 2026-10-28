@@ -18,7 +18,7 @@
 
 import type { Page } from 'playwright-core';
 import { gesture } from '../lib/drag.ts';
-import type { Driver, Drop } from '../lib/driver.ts';
+import { perPage, type Driver, type Drop } from '../lib/driver.ts';
 import { Unsupported, type Outline } from '../lib/block.ts';
 
 const MOTIONS: Record<string, string> = {
@@ -102,6 +102,9 @@ function fromItem(it: Item, number: number | null): { text: string; prefix: numb
 
 const HOME = 'SXS_HOME';
 
+/** A worker's: whether its test was loaded with a view (folds, a zoom), which is read back then alone. */
+const viewed = perPage(() => ({ on: false }));
+
 export const driver: Driver = {
   shortId: 'TA',
   longId: 'tana',
@@ -110,7 +113,15 @@ export const driver: Driver = {
   // for `bootTest`, as `open` calls it)
   url: 'https://app.tana.inc/tests',
   model: 'block',
+  // a node collapsed in the panel (its expansion, the panel's, by path), and a zoom, a node as the
+  // panel's root, the test's own standing for none
+  folds: true,
+  zooms: true,
   keys: {
+    fold: 'Control+Shift+Space',
+    unfold: 'Control+Space',
+    zoomIn: 'Alt+ArrowRight',
+    zoomOut: 'Alt+ArrowLeft',
     enter: 'Enter',
     // no `shiftEnter`: Shift+Enter inserts an empty node after this one, another action than a line
     // break, which a name doesn't hold (its cases skip)
@@ -135,7 +146,7 @@ export const driver: Driver = {
   },
   emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd'],
   // a press on a bullet takes the focus from the name being edited, and a drop selects nothing
-  noCaretAfter: ['move'],
+  noCaretAfter: ['moveSubtree'],
   // its `load` selects nodes whole, as `read` reports them
   selectsBlocks: true,
   ordered: true,
@@ -248,14 +259,16 @@ export const driver: Driver = {
       return { block: o.sel!.block, anchor: local(o.sel!.anchor, it, b), head: local(o.sel!.head, it, b), inDescription, onCheckbox };
     })();
     await page.evaluate(
-      async ({ items, sel, home, SECTION, NUMBERED, LANGUAGE }) => {
+      async ({ items, sel, home, SECTION, NUMBERED, LANGUAGE, view }) => {
         const w = window as any;
         const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const ns = w.appState.nodeSpace;
         (document.activeElement as HTMLElement | null)?.blur();
         const homeNode = ns.getNodeOrPlaceholder(home);
-        const paths: string[] = [];
+        let paths: string[] = [];
+        /** Each node's ids from the test's own, its path in the panel unzoomed. */
+        const chains: string[][] = [];
         /** Each node with children, as the panel names a path: its nodes from the test's own. */
         const parents: any[][] = [];
         ns.withoutUndoRecording(() => {
@@ -285,6 +298,7 @@ export const driver: Driver = {
             chain[it.depth + 1] = n;
             chain.length = it.depth + 2;
             paths.push(chain.map((c) => c.id).join('|'));
+            chains.push(chain.map((c) => c.id));
           }
           w.__ourusTana = docNode.id;
         });
@@ -298,6 +312,21 @@ export const driver: Driver = {
         const rendered = () => paths.every((p) => document.getElementById(p));
         for (let i = 0; i < 300 && !rendered(); i++) await sleep(10);
         if (!rendered()) throw new Error("the test's nodes didn't render");
+        // its view, every node on screen: the zoom root opened in the panel, paths from it (its nodes
+        // with children expanded there, as above), then the folded nodes collapsed (a path the panel
+        // takes as its nodes)
+        const nodes = (path: string): any[] => path.split('|').map((id) => ns.getNodeOrPlaceholder(id));
+        if (view) {
+          if (view.zoom !== null) {
+            const root = chains[view.zoom]!.at(-1)!;
+            panel().setRootNode(root);
+            for (let i = 0; i < 300 && panel().rootNode?.id !== root; i++) await sleep(10);
+            paths = chains.map((c) => (c.includes(root) ? c.slice(c.indexOf(root)).join('|') : ''));
+            for (const [i, c] of chains.entries()) if (c.includes(root) && c.at(-1) !== root && items[i + 1] && items[i + 1]!.depth > items[i]!.depth) panel().expand(nodes(paths[i]!));
+          }
+          for (const i of view.folded) if (paths[i]) panel().collapse(nodes(paths[i]!));
+          await w.__ourusIdle.wait({ shortTimer: 300, quiet: 40, timeout: 3000 });
+        }
         // what the earlier test did, undone by nothing in this one
         ns.undoService.undoStack.length = 0;
         ns.undoService.redoStack.length = 0;
@@ -356,8 +385,9 @@ export const driver: Driver = {
         }
         if (!placed()) throw new Error(`the caret didn't land (focus: ${document.activeElement?.parentElement?.id})`);
       },
-      { items, sel, home: HOME, SECTION, NUMBERED, LANGUAGE },
+      { items, sel, home: HOME, SECTION, NUMBERED, LANGUAGE, view: o.view ?? null },
     );
+    viewed(page).on = !!o.view;
     if (!selected) return;
     const last = selected[selected.length - 1]!;
     const reached = async (): Promise<number> => {
@@ -370,7 +400,7 @@ export const driver: Driver = {
 
   async read(page: Page) {
     const raw = await page.evaluate(
-      ({ SECTION, NUMBERED, LANGUAGE }) => {
+      ({ SECTION, NUMBERED, LANGUAGE, viewed }) => {
         const w = window as any;
         const ns = w.appState.nodeSpace;
         const docId: string = w.__ourusTana;
@@ -416,8 +446,10 @@ export const driver: Driver = {
         // the node being edited: one of the test's (the panel's title is the test's own node; Tana's
         // placeholder row, the empty row under an expanded node without children or at a panel's end, is
         // none of them)
-        const focused = path.startsWith(`${docId}|`) ? path.slice(path.lastIndexOf('|') + 1) : null;
-        const flat: { depth: number; content: string; todo: boolean; done: boolean; section: boolean; numbered: boolean; number: number | null; code: boolean; language?: string; description?: string; id: string; at: number[]; descAt?: number[] }[] = [];
+        // (zoomed, paths start at the zoom root, the panel's title its own node's editor)
+        const focused = path ? path.slice(path.lastIndexOf('|') + 1) : null;
+        const flat: { depth: number; content: string; todo: boolean; done: boolean; section: boolean; numbered: boolean; number: number | null; code: boolean; language?: string; description?: string; id: string; at: number[]; descAt?: number[]; chain: string[] }[] = [];
+        const chain: string[] = [docId];
         const walk = (node: any, depth: number) => {
           const numbered = !!(node.hasView && node.metaNode.userOrDefaultView?.tupleNodeMap.get(NUMBERED));
           // a node's fields (tuples, a code block's language among them) are no children of the outline:
@@ -432,7 +464,9 @@ export const driver: Driver = {
             // its description, the lines after its name: one being edited, empty or not, from its editor
             const editing = c.id === focused && inDescription;
             const desc = editing ? markdown(span!) : c.description ? markdown(parsed(c.description)) : null;
-            flat.push({ depth, content: text, todo: !!c.hasOwnDoneStateAsCheckboxSetting, done: !!c.isDone, section: ((c.getOwnNodeFlags?.() ?? 0) & SECTION) !== 0, numbered, number: numbered ? k + 1 : null, code: !!c.isCodeBlock, ...(language && { language }), ...(desc && { description: desc.text, descAt: desc.at }), id: c.id, at });
+            chain.length = depth + 1;
+            chain.push(c.id);
+            flat.push({ depth, content: text, todo: !!c.hasOwnDoneStateAsCheckboxSetting, done: !!c.isDone, section: ((c.getOwnNodeFlags?.() ?? 0) & SECTION) !== 0, numbered, number: numbered ? k + 1 : null, code: !!c.isCodeBlock, ...(language && { language }), ...(desc && { description: desc.text, descAt: desc.at }), id: c.id, at, chain: [...chain] });
             walk(c, depth + 1);
           }
         };
@@ -468,9 +502,15 @@ export const driver: Driver = {
           return false;
         };
         const selected = [...all].filter((i) => !under(i)).sort((a, b) => a - b);
-        return { flat, sel: selected.length ? null : sel, selected };
+        // the view: the panel's root, if one of the test's nodes (the test's own: none), and each node
+        // with children not expanded, by its path from the panel's root (from the test's own where outside it)
+        const root: string | undefined = panel?.rootNode?.id;
+        const zoom = flat.findIndex((f) => f.id === root);
+        const pathOf = (f: (typeof flat)[number]): string[] => (root && f.chain.includes(root) ? f.chain.slice(f.chain.indexOf(root)) : f.chain);
+        const view = viewed ? { folded: flat.flatMap((f, k) => ((flat[k + 1]?.depth ?? -1) > f.depth && !panel.isExpanded(pathOf(f).map((id) => ns.getNodeOrPlaceholder(id))) ? [k] : [])), zoom: zoom >= 0 ? zoom : null } : undefined;
+        return { flat, sel: selected.length ? null : sel, selected, view };
       },
-      { SECTION, NUMBERED, LANGUAGE },
+      { SECTION, NUMBERED, LANGUAGE, viewed: viewed(page).on },
     );
     const texts = raw.flat.map((f) => fromItem(f, f.number));
     const blocks = raw.flat.map((f, i) => ({ depth: f.depth, text: texts[i]!.text }));
@@ -483,10 +523,10 @@ export const driver: Driver = {
       const at = (p: number): number => (p <= -2 ? nameEnd + 1 + (-2 - p) : p < 0 ? 0 : prefix + p + (cut !== undefined && p > cut ? 1 : 0));
       sel = { block: raw.sel.block, anchor: at(raw.sel.anchor), head: at(raw.sel.head) };
     }
-    return { blocks, sel, ...(raw.selected.length && { selected: raw.selected }) };
+    return { blocks, sel, ...(raw.selected.length && { selected: raw.selected }), ...(raw.view && { view: raw.view }) };
   },
 
-  drops: ['move'],
+  drops: ['moveSubtree'],
   drop,
 
   async act(page: Page, action: string, settle: () => Promise<void>) {

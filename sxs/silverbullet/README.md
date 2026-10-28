@@ -20,10 +20,16 @@ caret included (the `text` model, [`../lib/text.ts`](../lib/text.ts)), and almos
 | `deleteSoftLineBackward` | Shift+Home, Backspace ("Delete Line Boundary Backward" is bound on a Mac only) |
 | `deleteSubtree` | *missing* (no command): its tests are skipped |
 | `duplicateSubtree` | *missing* (no command): its tests are skipped |
-| `pasteStructured` | Ctrl+V |
+| `paste` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V |
 | `undo` | Ctrl+Z |
 | `redo` | Ctrl+Y |
+| `fold` | *missing*: "Outline: Fold" has no key (the driver loads folds by it) |
+| `unfold` | *missing*: "Outline: Unfold" has no key |
+| `toggleFold` | Ctrl+. then Ctrl+. ("Outline: Toggle Fold"): the item's children folded or unfolded, CodeMirror's fold |
+| `zoomIn` | *missing*: SilverBullet has no zoom; the zoom's cases skip |
+| `zoomOut` | *missing*, as `zoomIn` |
+| `clearZoom` | *missing*, as `zoomIn` |
 
 The outline commands (the `editor` plug's, `plugs/editor/outline.ts`; documented on its
 [Outlines](https://docs.silverbullet.md/Outlines) page) act on what the caret is in: a list item with its
@@ -38,7 +44,6 @@ but Fold, which changes no text):
 | shortcut | keys | what it does |
 | --- | --- | --- |
 | Outline: Move Up, Move Down | Ctrl+. then K, Ctrl+. then J | as Alt+Up and Alt+Down |
-| Outline: Toggle Fold | Ctrl+. then Ctrl+. | fold or unfold the item's children; "Fold", "Unfold", "Fold All", "Unfold All" have no key |
 | Task: Cycle State | Ctrl+. then T | `[ ]` to `[x]` and on, through the task states, with the caret at or in the `[ ]` (at the line's end, nothing) |
 | Text: Listify Selection | Ctrl+Shift+8 | the selected lines as list items |
 | Text: Quote Selection | Ctrl+Shift+. | the selected lines as a quote (the key `>` on the `.` key; a `.` with Shift and Ctrl held, as a test may send it, is the `Ctrl+.` chord's start instead, and takes the next key) |
@@ -121,7 +126,7 @@ starts cold, as above: about 23 s in all.
 ## What SilverBullet does
 
 - **No node is dragged**: its editor's drag moves selected text (CodeMirror's), and its outline
-  commands are keys alone, so the drop cases (`drag.md`) don't play here.
+  commands are keys alone, so the drop cases (`move-subtree.md`) don't play here.
 
 - The outline commands work on list items (bullet and ordered), headings (a whole section), table
   rows and top-level paragraphs, per SilverBullet's own docs (`docs/Outlines.md` in its source,
@@ -148,6 +153,26 @@ starts cold, as above: about 23 s in all.
   (`--plain-clipboard`), the 85 paste cases' verdicts were the same; 52 buffers differed.
 - **Undo groups edits less than 500 ms apart** (CodeMirror's history): at a slower pace, an undo
   scenario's later buffers differ (`scenarios.md › Scenario23`), its verdict, decided earlier, not.
+
+## Folds, measured
+
+[`fold.md`](../../spec/fold.md), measured 2026-10-28 (no zoom: [`zoom.md`](../../spec/zoom.md)'s
+cases skip). Folds are CodeMirror's: loaded by "Outline: Fold" at each folded row
+(`client.runCommandByName`), read from the placeholders CodeMirror draws, each at its row's end. What
+is compared is what the reader sees, the folds in effect.
+
+- **Keys are a text editor's, through a fold**, as bare Obsidian's: Enter at a folded item's end
+  puts the new item between it and its hidden children, the fold moving to the new row (`Fold1`);
+  Backspace on an empty item after one deletes its marker, left as a blank line under the fold
+  (`Fold3`); Enter on an empty folded item with children takes its marker off (`Fold5`); an item
+  indented under a folded one stays shown, the fold kept (`Fold6`).
+- **Delete at a folded item's end joins the next line as text**, its indentation and marker kept in
+  the item's text (`Fold7`: `- a┃  - b`), the fold gone; ourus refuses it (`folded`), as the block
+  apps.
+- **Backspace right after a folded item takes its marker off**, the text a continuation line
+  (`Fold15`: `  ┃c`); ourus joins it into the folded item's text, as the block apps.
+- **Toggle at an item without children folds its parent**, as ourus's, but the caret stays where it
+  was, now hidden (`Fold11`: `caret`); ourus moves it to the parent's text end.
 
 ## Internals
 

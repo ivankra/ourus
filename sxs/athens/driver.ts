@@ -18,7 +18,7 @@
 // - A drop (spec/drag.md) is the mouse's: a block's bullet dragged (`athensDrop`).
 
 import type { Page } from 'playwright-core';
-import type { Driver, Drop } from '../lib/driver.ts';
+import { perPage, type Driver, type Drop } from '../lib/driver.ts';
 import { Unsupported, type Outline } from '../lib/block.ts';
 import { gesture } from '../lib/drag.ts';
 
@@ -49,6 +49,9 @@ function fromAthens(string: string): { text: string; from: number; to: number } 
 /** An offset in a text whose prefix of `from` characters became `to` characters: past it, shifted; inside it, clamped. */
 const shiftOffset = (p: number, from: number, to: number): number => (p >= from ? p - from + to : Math.min(p, to));
 
+/** A worker's: whether its test was loaded with a view (folds, a zoom), which is read back then alone. */
+const viewed = perPage(() => ({ on: false }));
+
 export const driver: Driver = {
   shortId: 'AR', // Athens Research
   longId: 'athens',
@@ -59,10 +62,24 @@ export const driver: Driver = {
   paragraphsInBlock: true,
   // after deleting a selected block no block is edited (checked by hand, keys only)
   // nor after a drop: editing ends as a drag starts (measured)
-  noCaretAfter: ['deleteSubtree', 'move'],
+  noCaretAfter: ['deleteSubtree', 'moveSubtree'],
   // a selection of whole blocks: loaded with Shift+Up and Shift+Down, read from `.is-selected`
   selectsBlocks: true,
+  // a block closed (`:block/open false`, transacted once every block is on screen, read from the
+  // database), and a zoom, the block's own route (`#/page/<uid>`), the test's page standing for none
+  folds: true,
+  zooms: true,
+  // zoomed, the root is the page's title, no block on screen to put a caret in
+  holds(doc) {
+    const o = doc as Outline;
+    return o.view && o.view.zoom !== null && o.sel?.block === o.view.zoom ? "the caret in the zoom root, the page's title" : undefined;
+  },
   keys: {
+    // "Fold block", "Unfold block"; "Zoom into current block", "Zoom out of current block"
+    fold: 'Control+ArrowUp',
+    unfold: 'Control+ArrowDown',
+    zoomIn: 'Control+o',
+    zoomOut: 'Control+Alt+o',
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
     indent: 'Tab',
@@ -88,9 +105,9 @@ export const driver: Driver = {
   // split, lines as blocks, numbers as text, a paragraph's list under it (each measured, playing its
   // examples with `run.ts --ignore-options`)
   behaves: {
-    // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+    // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25)
     quotes: 'atom',
-    // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+    // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25)
     enterInQuote: 'split',
     // after a paste of blocks, the caret at the start of the first (checked in a page of its own: `- ┃x`)
     quirkPasteCaret: 'athens',
@@ -108,7 +125,7 @@ export const driver: Driver = {
     pasteParagraphList: 'children',
   },
 
-  drops: ['move'],
+  drops: ['moveSubtree'],
   drop: athensDrop,
 
   async open(page: Page) {
@@ -158,7 +175,7 @@ export const driver: Driver = {
     const selected = o.selected?.length ? o.selected : null;
     const sel = o.sel ? { block: o.sel.block, anchor: shiftOffset(o.sel.anchor, blocks[o.sel.block]!.from, blocks[o.sel.block]!.to), head: shiftOffset(o.sel.head, blocks[o.sel.block]!.from, blocks[o.sel.block]!.to) } : selected && { block: selected[0]!, anchor: 0, head: 0 };
     const target = await page.evaluate(
-      async ({ blocks, sel }) => {
+      async ({ blocks, sel, view }) => {
         const w = window as any;
         const A = w.__ourusAthens;
         // the page's entity id, the driver's: above any Athens makes, one per test, counted in the page
@@ -202,6 +219,18 @@ export const driver: Driver = {
         for (let i = 0; i < 300 && !rendered(); i++) await wait(10);
         if (!rendered()) throw new Error(`the test page didn't render (at ${location.hash})`);
         await w.__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 });
+        // its view, every block on screen: the folded ones closed, then the zoom root's route
+        if (view) {
+          if (view.folded.length) A.transact(A.conn(), A.read(JSON.stringify(view.folded.map((i: number) => ['~:db/add', ['~:block/uid', uids[i]], '~:block/open', false]))));
+          if (view.zoom !== null) {
+            const root = uids[view.zoom]!;
+            location.hash = `#/page/${root}`;
+            const shown = () => !!document.querySelector(`.block-container[data-uid="${root}"]`) && location.hash === `#/page/${root}`;
+            for (let i = 0; i < 300 && !shown(); i++) await wait(10);
+            if (!shown()) throw new Error(`the zoom root's route didn't render (at ${location.hash})`);
+          }
+          await w.__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 });
+        }
         (document.activeElement as HTMLElement | null)?.blur();
         if (!sel) return null;
         // where a click opens the block for editing, as a user's does
@@ -209,8 +238,9 @@ export const driver: Driver = {
         const r = document.querySelector(`.block-container[data-uid="${uid}"] > .block-body .block-content`)?.getBoundingClientRect();
         return r ? { uid, x: r.left + 2, y: r.top + Math.min(r.height / 2, 10) } : null;
       },
-      { blocks: blocks.map(({ depth, string }) => ({ depth, string })), sel },
+      { blocks: blocks.map(({ depth, string }) => ({ depth, string })), sel, view: o.view ?? null },
     );
+    viewed(page).on = !!o.view;
     if (!sel) return;
     if (!target) throw new Error("the block to edit isn't on screen");
     const editing = (): Promise<boolean> => page.evaluate((uid) => document.activeElement?.id === `editable-uid-${uid}`, target.uid);
@@ -237,7 +267,7 @@ export const driver: Driver = {
   },
 
   async read(page: Page) {
-    const raw = await page.evaluate(() => {
+    const raw = await page.evaluate((viewed) => {
       const w = window as any;
       const A = w.__ourusAthens;
       const kw = (s: string) => A.read(JSON.stringify(`~:${s}`));
@@ -245,13 +275,14 @@ export const driver: Driver = {
       const pageEntity = new w.datascript.impl.entity.Entity(db, w.__ourusSxsPage, A.volatile(false), A.volatile(A.read('["^ "]')));
       const ta = document.activeElement as HTMLTextAreaElement | null;
       const editingUid = ta?.tagName === 'TEXTAREA' && ta.id.startsWith('editable-uid-') ? ta.id.slice('editable-uid-'.length) : null;
-      const flat: { depth: number; string: string; uid: string }[] = [];
+      const flat: { depth: number; string: string; uid: string; closed: boolean }[] = [];
       const walk = (e: any, depth: number): void => {
         const kids = [...(e.get(kw('block/children')) ?? [])].sort((a: any, b: any) => a.get(kw('block/order')) - b.get(kw('block/order')));
         for (const k of kids) {
           const uid = k.get(kw('block/uid'));
           // the block being edited: its textarea, ahead of what Athens stored
-          flat.push({ depth, string: uid === editingUid ? ta!.value : (k.get(kw('block/string')) ?? ''), uid });
+          const closed = k.get(kw('block/open')) === false && !!(k.get(kw('block/children')) ?? []).length;
+          flat.push({ depth, string: uid === editingUid ? ta!.value : (k.get(kw('block/string')) ?? ''), uid, closed });
           walk(k, depth + 1);
         }
       };
@@ -265,8 +296,12 @@ export const driver: Driver = {
         return false;
       };
       const selected = [...lit].filter((k) => !under(k)).sort((a, b) => a - b);
-      return { flat, sel: i >= 0 ? { block: i, anchor: back ? ta!.selectionEnd : ta!.selectionStart, head: back ? ta!.selectionStart : ta!.selectionEnd } : null, selected };
-    });
+      // the view: the closed blocks, and the block whose route is shown, if one of the test's
+      const route = /^#\/page\/(.+)$/.exec(location.hash)?.[1];
+      const zoom = flat.findIndex((b) => b.uid === route);
+      const view = viewed ? { folded: flat.flatMap((b, k) => (b.closed ? [k] : [])), zoom: zoom >= 0 ? zoom : null } : undefined;
+      return { flat, sel: i >= 0 ? { block: i, anchor: back ? ta!.selectionEnd : ta!.selectionStart, head: back ? ta!.selectionStart : ta!.selectionEnd } : null, selected, view };
+    }, viewed(page).on);
     const texts = raw.flat.map((b) => fromAthens(b.string));
     const blocks = raw.flat.map((b, i) => ({ depth: b.depth, text: texts[i]!.text }));
     let sel = raw.sel;
@@ -274,7 +309,7 @@ export const driver: Driver = {
       const { from, to } = texts[sel.block]!;
       sel = { block: sel.block, anchor: shiftOffset(sel.anchor, from, to), head: shiftOffset(sel.head, from, to) };
     }
-    return { blocks, sel, ...(raw.selected.length && { selected: raw.selected }) };
+    return { blocks, sel, ...(raw.selected.length && { selected: raw.selected }), ...(raw.view && { view: raw.view }) };
   },
 
   async act(page: Page, action: string, settle: () => Promise<void>) {

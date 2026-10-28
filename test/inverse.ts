@@ -173,26 +173,26 @@ function playShare(share: readonly number[]): Found {
           const dropped = executeCommand(doc, point.drop, caret);
           if (dropped.status === 'rejected' && dropped.reason === 'write-failed') {
             // (at a start the drop pass knows, reported, not failed: its list says why)
-            if (s.name in KNOWN) known.push(`moveSubtreeTo failed to write, known (drops.ts): ${where}`);
-            else fail(index, `moveSubtreeTo failed to write: ${where}`);
+            if (s.name in KNOWN) known.push(`moveSubtree failed to write, known (drops.ts): ${where}`);
+            else fail(index, `moveSubtree failed to write: ${where}`);
             continue;
           }
           if (dropped.status !== 'applied' || !dropped.changes.length) continue;
           mid = { doc: dropped.doc, selection: dropped.selection, clipboard: {}, last: dropped };
-          const returned = executeCommand(mid.doc, { type: 'moveSubtreeTo', nodes, to: back }, mid.selection);
+          const returned = executeCommand(mid.doc, { type: 'moveSubtree', nodes, to: back }, mid.selection);
           end = { doc: returned.status === 'applied' ? returned.doc : mid.doc, selection: returned.status === 'applied' ? returned.selection : mid.selection, clipboard: {}, last: returned };
         } catch (e) {
-          fail(index, `moveSubtreeTo threw: ${where}: ${(e as Error).message.split('\n')[0]}`);
+          fail(index, `moveSubtree threw: ${where}: ${(e as Error).message.split('\n')[0]}`);
           continue;
         }
         const last = end.last!;
         if (last.status === 'rejected' && last.reason === 'write-failed') {
-          fail(index, `moveSubtreeTo back failed to write: ${where} → ${draw(mid)}`);
+          fail(index, `moveSubtree back failed to write: ${where} → ${draw(mid)}`);
           continue;
         }
         const shape = last.status === 'applied' ? classify(doc, end, pos) : last.status === 'rejected' ? `rejected ${last.reason}` : last.status;
         if (shape === 'same') continue;
-        const key = `moveSubtreeTo, back: ${shape}`;
+        const key = `moveSubtree, back: ${shape}`;
         if (dumping) found.dumped.push(`${key}\t${where}\t${draw(mid)}\t${draw(end)}`);
         const group = groups.get(key) ?? { runs: 0, buffers: new Set<string>(), examples: [] };
         group.runs++;

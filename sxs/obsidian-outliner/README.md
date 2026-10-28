@@ -1,8 +1,12 @@
-# Obsidian with Outliner
+# Obsidian with Outliner and Zoom
 
-[`driver.ts`](driver.ts) drives Obsidian (1.14.4) with [Outliner](https://github.com/vslinko/obsidian-outliner)
-(`obsidian-outliner` 4.10.2, the community plugin), at its default settings, in Live Preview,
-Obsidian's default editing mode ([`../obsidian-lp/`](../obsidian-lp/) is the same without the plugin).
+[`driver.ts`](driver.ts) drives Obsidian (1.14.5) with [Outliner](https://github.com/vslinko/obsidian-outliner)
+(`obsidian-outliner` 4.10.2) and its author's [Zoom](https://github.com/vslinko/obsidian-zoom)
+(`obsidian-zoom` 1.1.2), both community plugins, both always installed and enabled, at their default
+settings, in Live Preview, Obsidian's default editing mode ([`../obsidian-lp/`](../obsidian-lp/) is the
+same without the plugins). Outliner reads Zoom's state where it is there (`window.ObsidianZoomPlugin`:
+Enter at the end of the zoomed item makes its first child, and it refreshes the zoom after an edit),
+so the two are measured together, every case with both.
 The rest (how it runs, indentation, keys) is as for [bare Obsidian](../obsidian/README.md); what
 differs is here.
 
@@ -11,7 +15,9 @@ differs is here.
 A TypeScript plugin (built with Rollup, tested with Jest), its keys CodeMirror 6 keymaps registered
 through Obsidian's editor extensions, its operations on a parse of the list around the caret.
 
-Repo: https://github.com/vslinko/obsidian-outliner
+Repos: https://github.com/vslinko/obsidian-outliner, https://github.com/vslinko/obsidian-zoom (Zoom: a
+zoom is two block-replace decorations around the zoomed range, CodeMirror's fold ranges at the line;
+an edit crossing the range's edge ends it; its API to other plugins on `window.ObsidianZoomPlugin`)
 
 ## What Outliner changes
 
@@ -25,9 +31,15 @@ while an IME is composing, the key is Obsidian's.
 | `outdent` | Shift+Tab | "better Tab", as `indent` |
 | `moveSubtreeUp` | Ctrl+Shift+Up | "Move list item up" (`move-list-item-up`): the item with its children, into the neighboring item at a list's edge; an ordered list is renumbered |
 | `moveSubtreeDown` | Ctrl+Shift+Down | "Move list item down" (`move-list-item-down`), as `moveSubtreeUp` |
-| `move ②` | the mouse | drag and drop (`dnd`, on): an item pressed by its bullet (or checkbox), dropped where its drop line is (`outlinerDrop` in [`../obsidian/obsidian.ts`](../obsidian/obsidian.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
+| `moveSubtree` | mouse | drag and drop (`dnd`, on): an item pressed by its bullet (or checkbox), dropped where its drop line is (`outlinerDrop` in [`../obsidian/obsidian.ts`](../obsidian/obsidian.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
 | `deleteContentBackward` | Backspace | "stick the cursor to the content" (`stickCursor: bullet-and-checkbox`): at an item's start, it joins the previous item only where children allow, and otherwise does nothing |
 | `deleteContentForward` | Delete | the same setting, as `deleteContentBackward` |
+| `fold` | Ctrl+Up | "Fold the list" (`fold`), its default hotkey: the item's children hidden (`- a…`) |
+| `unfold` | Ctrl+Down | "Unfold the list" (`unfold`), as `fold`: the children shown |
+| `toggleFold` | Ctrl+Alt+F | Obsidian's "Toggle fold", bound by the vault ([`../obsidian/README.md`](../obsidian/README.md)) |
+| `zoomIn` | Ctrl+. | Zoom's "Zoom in" (`obsidian-zoom:zoom-in`), its default hotkey: the item at the caret, its children, alone in the editor (a heading, its section); a click on a bullet does the same (`ZoomOnClickFeature`) |
+| `zoomOut` | *missing* | no command (Zoom registers two, `zoom-in` and `zoom-out`, the latter the whole document's): a level out is a click on the parent's breadcrumb in the header Zoom draws (`HeaderNavigationFeature`), a mouse gesture the driver doesn't play |
+| `clearZoom` | Ctrl+Shift+. | Zoom's "Zoom out the entire document" (`obsidian-zoom:zoom-out`), its default hotkey |
 
 The same setting keeps the caret off bullets and checkboxes after any caret move (arrows, Home, End),
 and from the start: one placed before an item's text, at the line's start, in the marker or before a
@@ -43,7 +55,6 @@ under it) and `- e`, then `- d`, indented with tabs; bare Obsidian's are in
 
 | shortcut | keys | what it does |
 | --- | --- | --- |
-| Fold the list, Unfold the list (`fold`, `unfold`) | Ctrl+Up, Ctrl+Down | the item's children hidden (`- a…`) or shown |
 | Select all (`selectAll`) | Ctrl+A | `b`'s text, then `b` with its children (from its text: `b` / `c`), then the document |
 | Left, Ctrl+Left at an item's text start | ArrowLeft, Ctrl+ArrowLeft | to the end of the line above (`- a┃`), never onto the bullet |
 | Home; Shift+Home | Home, Shift+Home | to the text's start (after `- `), and select to it |
@@ -59,14 +70,52 @@ under it) and `- e`, then `- d`, indented with tabs; bare Obsidian's are in
 
 ## What it does, measured
 
-Drag and drop ([`drag.md`](../../spec/drag.md), played with the real mouse, aimed where its own
+Folds ([`fold.md`](../../spec/fold.md), measured 2026-10-28 with Outliner 4.10.2; loaded and read as
+bare Obsidian's, [`../obsidian/README.md`](../obsidian/README.md)): Outliner's own keys around a fold
+agree with ourus's (Enter after the hidden children `Fold1`, Backspace's caret at the folded item's
+end `Fold3`, a move taking the fold `Fold4`, a fold opened by Enter at a heading's end `Fold13`).
+Where they don't:
+
+- **A fold stays through an edit inside it**: an item indented under a folded one goes into the fold,
+  the caret to the folded item's end (`Fold6`), where ourus opens the fold, what it hides having
+  changed; Delete at a folded item's end joins its first child and the fold stays on (`Fold7`),
+  where ourus refuses it (`folded`), as the block apps.
+- **Backspace right after a folded item joins into its hidden last child** and opens the fold
+  (`Fold15`); ourus joins into the folded item's text, the fold kept, as the block apps.
+- **An undo of a folded item's move or indent loses the fold** (`Fold16`, `Fold17`): the lines
+  written back are unfolded; ourus keeps it, as every block app, true-outliner and SilverBullet.
+- **A split loses the fold**: Enter mid-text in a folded item (as `enterMidItem: child`) splits it as
+  ourus does, but neither half is folded (`Fold2`); ourus folds the half that took the children.
+- **Enter on an empty folded item with children** takes its marker off, as bare Obsidian (`Fold5`).
+- **Toggle** is bare Obsidian's ("Toggle fold": nothing at a leaf, `Fold11`).
+
+The zoom ([`zoom.md`](../../spec/zoom.md), measured 2026-10-28 with Zoom 1.1.2): loaded by Zoom's
+"Zoom in" at the root's row, read from its API (`ObsidianZoomPlugin.getZoomRange`, the zoomed range's
+first line). Zoom zooms only into a list item or a line CodeMirror's `foldable` has a range for
+(`CalculateRangeForZooming`), which here a heading isn't (Obsidian folds headings otherwise: Zoom's own
+`zoomIn` on `## A` zooms nothing), nor a code block's fence: a zoom into a line that is no list item
+is a start the setup can't hold, skipped (`Zoom3`, `Zoom13`). With Zoom in the vault, every other case
+plays as it did without it: its full run, compared case by case with the one before (`run.ts
+--compare`), moved no verdict.
+
+- **Enter at the end of the root makes its first child** (`Zoom1`, Outliner's `listIsZoomingRoot`),
+  and so does a split of its text (`Zoom10`); in and out keep the folds, the root's hiding nothing
+  (`Zoom5`, `Zoom6`), as ourus.
+- **An edit across the zoom's edge is made, then the zoom ends or holds the wrong range**: Backspace
+  at the root's start joins it to the hidden item above, and Zoom leaves the zoom (`Zoom2`:
+  `- a⏎- ┃b` comes out `- a┃b`, no zoom); a child of the root outdented goes out beside it, the zoom
+  staying on the root without it (`Zoom11`); Delete at the end of the root's trailing blank line
+  takes the line, the list with the hidden `c` made tight, and the caret goes into `c`, outside the
+  zoom (`Zoom12`). ourus refuses all three.
+
+Drag and drop ([`move-subtree.md`](../../spec/move-subtree.md), played with the real mouse, aimed where its own
 geometry puts each place: `DragAndDrop.ts`'s variants):
 
 - **The places are items among items**: before an item, after it, inside an empty one. A drop where
-  ourus has a place it hasn't (after a paragraph, `drag.md › Drag13`) lands at its nearest, here its
+  ourus has a place it hasn't (after a paragraph, `move-subtree.md › MoveSubtree12`) lands at its nearest, here its
   own: nothing moves. A paragraph or a heading has no bullet to press: those cases skip.
-- **No cover rule**: a press on a selected item drags it alone (`Drag4`: `- a⏎- c⏎- b`, ourus's `- c⏎-
-  a⏎- b`), and the selection goes (`Drag5`, `Drag5b`: the text agrees, `caret`).
+- **No cover rule**: a press on a selected item drags it alone (`MoveSubtree4`: `- a⏎- c⏎- b`, ourus's `- c⏎-
+  a⏎- b`), and the selection goes (`MoveSubtree5`, `MoveSubtree6`: the text agrees, `caret`).
 
 Against bare Obsidian in Live Preview, each read in
 Outliner's source (cloned at 4.10.2: `src/operations/`, `src/services/Parser.ts`) and played by hand:

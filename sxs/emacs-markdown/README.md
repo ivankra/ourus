@@ -25,10 +25,16 @@ Emacs's and markdown-mode's own, in Emacs's notation, from markdown-mode's keyma
 | `deleteSoftLineBackward` | C-0 C-k (`kill-line` with 0: the text before point on its line) |
 | `deleteSubtree` | C-c C-k ("Kill Element", `markdown-kill-thing-at-point`: a list item with its children) |
 | `duplicateSubtree` | *missing* (Emacs 29's `duplicate-dwim` is unbound): its examples are skipped |
-| `pasteStructured` | C-y (`yank`): Emacs has one paste, from the kill ring |
+| `paste` | C-y (`yank`): Emacs has one paste, from the kill ring |
 | `pastePlain` | C-y, the same |
 | `undo` | C-/ (`undo`) |
 | `redo` | C-M-_ (`undo-redo`) |
+| `fold` | *missing*: markdown-mode's outline is its headings' (TAB on one cycles it, `markdown-cycle`); a list item doesn't fold. Not driven yet (a heading's fold, `Fold13`, would play): the fold's cases skip |
+| `unfold` | *missing*, as `fold` |
+| `toggleFold` | *missing*, as `fold` |
+| `zoomIn` | *missing*: narrowing (`markdown-narrow-to-subtree`) is a heading's subtree only. Not driven yet (`Zoom3` would play): the zoom's cases skip |
+| `zoomOut` | *missing*, as `zoomIn` (`widen` would be `clearZoom`'s) |
+| `clearZoom` | *missing*, as `zoomIn` |
 
 TAB isn't `indent`: in markdown-mode it is `markdown-cycle`, which on a list item cycles the line's
 indentation through the positions it allows (two spaces, then a tab), the line alone; Shift+Tab
@@ -96,7 +102,7 @@ https://github.com/jrblevin/markdown-mode
 ## What markdown-mode does
 
 - **No drag**: played on a terminal, with keys alone; markdown-mode's subtree moves are its keys
-  (`M-up`, `M-down`), so the drop cases (`drag.md`) don't play here.
+  (`M-up`, `M-down`), so the drop cases (`move-subtree.md`) don't play here.
 
 - **RET continues no list**: a line break, indented or not (`enter.md › Enter1`, `Enter3`), and on an
   empty item, a line break after its marker (`Enter28`). M-RET is the list command. Most of Enter's

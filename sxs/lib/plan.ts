@@ -8,12 +8,19 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { Config } from '../../src/config.ts';
 import { drawsCaret, readText, withoutCaret } from '../../test/drawing.ts';
 import { isDrop } from '../../test/player.ts';
-import { drawnSteps, readClipboard } from '../../test/spec-run.ts';
+import { drawnSteps, readClipboard, rowView, startOf, type RowView } from '../../test/spec-run.ts';
 import { readSpec, slug, specConfig, type Clipboard, type SpecTest } from '../../test/specfile.ts';
 import type { Doc, Driver, Drop } from './driver.ts';
 import { inBlocks, resolveDrop } from './drag.ts';
 import { draw, project, sameOutline, Unsupported, type Outline } from './block.ts';
 import { readTextDoc } from './text.ts';
+import { inBlockRows } from './view.ts';
+
+/** A case's view as ourus plays it: at its start, and after each step with its buffer. */
+interface Views {
+  readonly start: RowView;
+  readonly steps: readonly { readonly view: RowView; readonly buffer: string }[];
+}
 
 export interface PlanStep {
   /** Line of the step's quote in the spec file. */
@@ -57,7 +64,7 @@ const isMotion = (a: string): boolean => /^(?:cursor|select)(?:CharLeft|CharRigh
 /** Whether the app can play an action. */
 export function playable(driver: Driver, action: string): boolean {
   if (/^"[^"]*"$/.test(action)) return true;
-  // a drop: a gesture the driver plays (`Driver.drop`), by its action (`move ②` is a `move`)
+  // a drop: a gesture the driver plays (`Driver.drop`), by its action (`moveSubtree ②` is a `moveSubtree`)
   if (isDrop(action)) return !!driver.drop && !!driver.drops?.includes(action.split(' ')[0] as Drop['action']);
   if (action === 'paste' || action === 'pastePlain') return action in driver.keys;
   return action in driver.keys || !!driver.emulated?.includes(action);
@@ -81,6 +88,10 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
   // but one that tells a free block from an item (`Driver.freeForm`)
   const tag = test.tags.find((t) => (driver.model === 'block' && !driver.freeForm && t === 'free-form') || driver.refuses?.includes(t));
   if (tag) return skip(`tag ${tag}`);
+  // folds or a zoom, at the start or after a step: only where the app has them
+  // and the driver loads and reads them (`Driver.folds`, `Driver.zooms`), never played without them
+  if ((test.view.folded !== undefined || test.steps.some((s) => s.expect.folded !== undefined)) && !driver.folds) return skip('no folds');
+  if ((test.view.zoom !== undefined || test.steps.some((s) => s.expect.zoom !== undefined)) && !driver.zooms) return skip('no zoom');
   for (const [key, value] of opts.ignoreOptions ? [] : Object.entries(test.options)) {
     // the flavor the case is read in, which an app has no setting for
     if (key === 'flavor') continue;
@@ -142,7 +153,18 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
   const unread = [...new Set(test.steps.flatMap((s) => Object.keys(s.expect.clipboard ?? {}).filter((type) => type !== 'text/plain')))];
   if (unread.length) under.push(`clipboard's ${unread.join(', ')} not compared`);
   if (played.some((a, i) => a !== test.steps[i]!.actions)) under.push('the node at the caret selected (selectSubtree)');
-  if (driver.model === 'text') return adaptText(driver, test, name, clipboard, settings, replayed, under, clipboardAfter, played);
+  // a case with a view: its start's and each step's, as ourus plays it (under the app's values where
+  // those change the case), every step's checked, one that draws no buffer on ourus's without its caret
+  let views: Views | null = null;
+  if (test.view.folded !== undefined || test.view.zoom !== undefined || test.steps.some((s) => s.expect.folded !== undefined || s.expect.zoom !== undefined)) {
+    const values = (replayed ? Object.fromEntries(theirs) : {}) as Partial<Config>;
+    try {
+      views = { start: rowView(startOf(test, flavor, values).doc), steps: drawnSteps(test, flavor, values) };
+    } catch {
+      return skip('its view, not replayable');
+    }
+  }
+  if (driver.model === 'text') return adaptText(driver, test, name, clipboard, settings, replayed, under, clipboardAfter, played, views);
   // ourus's document end is past the last line ending, on an empty line no block has: what is typed
   // or moved from there differs from the end of the last block by construction, so it only may leave
   // (a step that only needs the caret to leave draws none: Placeholder9)
@@ -158,6 +180,12 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
     const shape = { ordered: driver.ordered, freeForm: driver.freeForm, paragraphsInBlock: driver.paragraphsInBlock, quotes: driver.behaves?.quotes, listParent: driver.behaves?.listParent, blockSelection: driver.selectsBlocks };
     const start = project(test.initial.buffer, flavor, { ...shape, config });
     if (start.caretLost) return skip(start.caretLost);
+    // (its view first, which the app may not hold either)
+    if (views) {
+      const view = inBlockRows(views.start, start.rows ?? new Map());
+      if (!view) return skip('its view: a row no block holds');
+      start.outline.view = view;
+    }
     const no = refused(start.notes) ?? driver.holds?.(start.outline);
     if (no) return skip(no);
     // a drop, resolved from where the case starts, its rows the blocks they became
@@ -176,6 +204,8 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
     // being one, its empty block no item. Else (a heading's section, a thematic break, a link reference
     // definition, which items don't spell) the drawings, projected
     if (start.notes.size && !driver.freeForm && !start.notes.has('empty document')) {
+      // (a view's labels name the drawn start's nodes, not the items')
+      if (views) return skip('its view, on an adapted start');
       const items = draw(start.outline, { ordered: driver.ordered });
       const back = project(items, flavor, { ...shape, config });
       if (sameOutline(back.outline, start.outline) && String(back.sections) === String(start.sections)) {
@@ -193,8 +223,9 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
     let meaningful = false;
     for (const [i, s] of test.steps.entries()) {
       const clipboard = clipboardAfter(i);
-      // the step's buffer as drawn, or as ourus replays it under the app's values
-      const buffer = replayed ? replayed[i] : s.expect.buffer;
+      // the step's buffer as drawn, or as ourus replays it under the app's values; with a view and none
+      // drawn, ourus's, its caret not compared
+      const buffer = (replayed ? replayed[i] : s.expect.buffer) ?? (views ? withoutCaret(views.steps[i]!.buffer) : undefined);
       if (buffer === undefined) {
         steps.push({ line: s.line, actions: played[i]!, want: null, ...(clipboard !== undefined && { clipboard }) });
         if (clipboard !== undefined) meaningful = true;
@@ -204,6 +235,11 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
       const p = project(caretAsDrawn(buffer, s.expect.buffer), flavor, { ...shape, config: { ...config, ...(replayed ? Object.fromEntries(theirs) : {}) } });
       const no = refused(p.notes);
       if (no) return skip(`${no} (expected)`);
+      if (views) {
+        const view = inBlockRows(views.steps[i]!.view, p.rows ?? new Map());
+        if (!view) return skip('its view: a row no block holds (expected)');
+        p.outline.view = view;
+      }
       p.notes.forEach((n) => notes.add(n));
       // a step whose buffer changed only in what blocks can't show (blank lines, markers) tests nothing here
       const lost = prev && prev.drawn !== buffer && sameOutline(prev.outline, p.outline) && !p.caretLost;
@@ -244,15 +280,16 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
 const caretAsDrawn = (buffer: string, drawn: string | undefined): string => (drawn !== undefined && !drawsCaret(drawn) ? withoutCaret(buffer) : buffer);
 
 /** A text app's plan: every buffer as written, the caret where drawn. */
-function adaptText(driver: Driver, test: SpecTest, name: string, clipboard: Clipboard | null, settings: Partial<Config>, replayed: (string | undefined)[] | null, under: readonly string[], clipboardAfter: (i: number) => string | undefined, played: readonly (readonly string[])[]): Adapted {
-  const initial = readTextDoc(test.initial.buffer);
+function adaptText(driver: Driver, test: SpecTest, name: string, clipboard: Clipboard | null, settings: Partial<Config>, replayed: (string | undefined)[] | null, under: readonly string[], clipboardAfter: (i: number) => string | undefined, played: readonly (readonly string[])[], views: Views | null): Adapted {
+  const initial = { ...readTextDoc(test.initial.buffer), ...(views && { view: views.start }) };
   const no = driver.holds?.(initial);
   if (no) return { skip: no };
   const steps: PlanStep[] = test.steps.map((s, i) => {
     const clip = clipboardAfter(i);
-    // as drawn, or as ourus replays it under the app's values
-    const buffer = replayed ? replayed[i] : s.expect.buffer;
-    const want = buffer !== undefined ? readTextDoc(caretAsDrawn(buffer, s.expect.buffer)) : null;
+    // as drawn, or as ourus replays it under the app's values; with a view and none drawn, ourus's, its
+    // caret not compared
+    const buffer = (replayed ? replayed[i] : s.expect.buffer) ?? (views ? withoutCaret(views.steps[i]!.buffer) : undefined);
+    const want = buffer !== undefined ? { ...readTextDoc(caretAsDrawn(buffer, s.expect.buffer)), ...(views && { view: views.steps[i]!.view }) } : null;
     return { line: s.line, actions: played[i]!, want, ...(buffer !== undefined && { drawn: buffer }), ...(clip !== undefined && { clipboard: clip }) };
   });
   if (!steps.some((s) => s.want || s.clipboard !== undefined)) return { skip: 'nothing to compare' };

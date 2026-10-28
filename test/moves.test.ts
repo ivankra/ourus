@@ -13,13 +13,7 @@ import { docOf, nodesOf, readDrawing } from './drawing.ts';
 import { readSpecFile, specConfig, specFiles } from './specfile.ts';
 
 /** The starts where some move fails to write, and why. */
-const KNOWN: Readonly<Record<string, string>> = {
-  // first in an item whose first block, a quote, is on its marker's line (`- > q`): a place with no
-  // line of its own, which no drag offers, the API's alone; its marker's line not written over
-  DeleteSubtree12: "first in an item whose quote is on its marker's line",
-  // as in the drop pass (`drops.ts`)
-  Regression60: 'a moved item read at its old indentation, the code after it its',
-};
+const KNOWN: Readonly<Record<string, string>> = {};
 
 /** A start's first lines of failures, by example; each start's text played once per flavor and config. */
 function moveGaps(): Map<string, string[]> {
@@ -45,7 +39,7 @@ function moveGaps(): Map<string, string[]> {
               const to = { parent: parent === 'root' ? ('root' as const) : parent.id, after: after === null ? null : after.id };
               let failure: string | null = null;
               try {
-                const r = executeCommand(doc, { type: 'moveSubtreeTo', nodes: [node.id], to }, { anchor: end, head: end });
+                const r = executeCommand(doc, { type: 'moveSubtree', nodes: [node.id], to }, { anchor: end, head: end });
                 if (r.status === 'rejected' && r.reason === 'write-failed') failure = r.detail ?? 'write-failed';
               } catch (e) {
                 failure = `throws: ${(e as Error).message}`;

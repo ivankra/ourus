@@ -5,7 +5,7 @@ version: "3.8.6"
 url: "http://127.0.0.1:6816/stage/build/desktop/"
 model: "block"
 command: "node sxs/run.ts siyuan"
-elapsed_s: 736
+elapsed_s: 634
 workers: 4
 ---
 
@@ -15,31 +15,34 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 224 | [19](#caret-19) | [19](#whitespace-19) | [92](#disagree-92) |  |  | **354** |
-| adapted | 185 | [12](#adapted-caret-12) | [30](#adapted-whitespace-30) | [86](#adapted-disagree-86) |  |  | **313** |
-| **total** | **409 (34%)** | **31 (2.6%)** | **49 (4.1%)** | **178 (15%)** | **0 (0%)** | **[526](#skipped-526) (44%)** | **1194** |
+| original | 231 | [19](#caret-19) | [19](#whitespace-19) | [97](#disagree-97) |  |  | **366** |
+| adapted | 185 | [12](#adapted-caret-12) | [30](#adapted-whitespace-30) | [88](#adapted-disagree-88) |  |  | **315** |
+| **total** | **416 (34%)** | **31 (2.5%)** | **49 (4%)** | **185 (15%)** | **0 (0%)** | **[546](#skipped-546) (44%)** | **1228** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total | original | adapted |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [backspace.md](../spec/backspace.md) | 37 | 3 | 10 | 12 |  | 23 | **85** | 35 | 27 |
+| [backspace.md](../spec/backspace.md) | 37 | 3 | 10 | 12 |  | 24 | **86** | 35 | 27 |
 | [backtick.md](../spec/backtick.md) | 5 |  |  | 3 |  | 25 | **33** | 1 | 7 |
 | [copy.md](../spec/copy.md) | 2 |  |  | 3 |  | 8 | **13** | 4 | 1 |
 | [cursor.md](../spec/cursor.md) | 25 | 4 |  |  |  | 7 | **36** | 25 | 4 |
 | [delete-subtree.md](../spec/delete-subtree.md) |  |  |  |  |  | 13 | **13** |  |  |
 | [delete.md](../spec/delete.md) | 11 | 1 | 2 | 16 |  | 26 | **56** | 23 | 7 |
-| [drag.md](../spec/drag.md) |  | 8 |  | 6 |  | 23 | **37** | 10 | 4 |
+| [drag.md](../spec/drag.md) |  |  |  |  |  | 8 | **8** |  |  |
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) | 1 |  |  | 2 |  | 7 | **10** | 3 |  |
 | [enter.md](../spec/enter.md) | 43 | 3 | 11 | 9 |  | 32 | **98** | 24 | 42 |
 | [fences.md](../spec/fences.md) | 12 | 1 | 1 | 2 |  | 54 | **70** |  | 16 |
+| [fold.md](../spec/fold.md) | 7 |  |  | 7 |  | 5 | **19** | 12 | 2 |
 | [gaps.md](../spec/gaps.md) | 11 |  |  | 2 |  | 6 | **19** | 9 | 4 |
 | [indent.md](../spec/indent.md) | 18 |  | 1 | 11 |  | 20 | **50** | 24 | 6 |
 | [lists.md](../spec/lists.md) | 10 |  |  |  |  | 6 | **16** | 3 | 7 |
 | [move-subtree-down.md](../spec/move-subtree-down.md) | 28 |  |  | 7 |  | 5 | **40** | 28 | 7 |
 | [move-subtree-up.md](../spec/move-subtree-up.md) | 25 |  |  | 8 |  | 10 | **43** | 24 | 9 |
+| [move-subtree.md](../spec/move-subtree.md) |  | 8 |  | 6 |  | 10 | **24** | 10 | 4 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 46 | 1 | 1 | 7 |  | 12 | **67** | 30 | 25 |
 | [outdent.md](../spec/outdent.md) | 16 | 2 |  | 5 |  | 15 | **38** | 19 | 4 |
+| [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |  |  |
 | [paste-conv.md](../spec/paste-conv.md) | 4 | 1 |  | 1 |  |  | **6** | 5 | 1 |
 | [paste-html.md](../spec/paste-html.md) | 7 | 4 |  | 7 |  | 1 | **19** |  | 18 |
 | [paste-list-form.md](../spec/paste-list-form.md) | 5 |  |  |  |  | 1 | **6** | 4 | 1 |
@@ -56,9 +59,10 @@ Per-file:
 | [typing.md](../spec/typing.md) | 1 |  |  | 1 |  | 1 | **3** | 1 | 1 |
 | [undo.md](../spec/undo.md) | 4 |  |  |  |  | 1 | **5** | 3 | 1 |
 | [z-open.md](../spec/z-open.md) |  |  |  |  |  | 1 | **1** |  |  |
-| **total** | **409 (34%)** | **31 (2.6%)** | **49 (4.1%)** | **178 (15%)** | **0 (0%)** | **527 (44%)** | **1194** | **354 (30%)** | **313 (26%)** |
+| [zoom.md](../spec/zoom.md) |  |  |  |  |  | 14 | **14** |  |  |
+| **total** | **416 (34%)** | **31 (2.5%)** | **49 (4%)** | **185 (15%)** | **0 (0%)** | **547 (45%)** | **1228** | **366 (30%)** | **315 (26%)** |
 
-## Disagree (92)
+## Disagree (97)
 
 ### [Backspace5](../spec/backspace.md#backspace5)
 
@@ -840,150 +844,6 @@ Per-file:
 </td></tr>
 </table>
 
-### [Drag4](../spec/drag.md#drag4)
-
-> move ②
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- ▮ a
-- ▮ b
-- c
-```
-
-</td><td>
-
-```buffer
-- a
-- c
-- ▮ b
-```
-
-</td><td>
-
-```buffer
-- c
-- ▮ a
-- ▮ b
-```
-
-</td></tr>
-</table>
-
-### [Drag15](../spec/drag.md#drag15)
-
-> move ②
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # A
-  ¶ ## B
-¶ # C
-  ¶ ### D┃
-    ¶ #### E
-```
-
-</td><td>
-
-```buffer
-¶ # A
-  ¶ ## B
-    ¶ ▮ ### D
-¶ # C
-  ¶ #### E
-```
-
-</td><td>
-
-```buffer
-¶ # A
-  ¶ ## B
-  ¶ ## D┃
-    ¶ ### E
-¶ # C
-```
-
-</td></tr>
-</table>
-
-### [Drag16](../spec/drag.md#drag16)
-
-> move ②
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # A
-  ¶ x
-¶ # C
-  ¶ ##### D┃
-    ¶ ###### E
-```
-
-</td><td>
-
-```buffer
-¶ # A
-  ¶ x
-  ¶ ▮ ##### D
-¶ # C
-  ¶ ###### E
-```
-
-</td><td>
-
-```buffer
-¶ # A
-  ¶ x
-  ¶ ## D┃
-    ¶ ### E
-¶ # C
-```
-
-</td></tr>
-</table>
-
-### [Drag20](../spec/drag.md#drag20)
-
-> move
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-1. a
-2. ▮ b
-3. ▮ c
-```
-
-</td><td>
-
-```buffer
-1. ▮ b
-2. a
-3. c
-```
-
-</td><td>
-
-```buffer
-1. ▮ b
-2. ▮ c
-3. a
-```
-
-</td></tr>
-</table>
-
 ### [DuplicateSubtree1](../spec/duplicate-subtree.md#duplicatesubtree1)
 
 > duplicateSubtree
@@ -1208,6 +1068,201 @@ Per-file:
 ```buffer
 - Plan
 - revise ┃2\. draft
+```
+
+</td></tr>
+</table>
+
+### [Fold2](../spec/fold.md#fold2)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃b
+  - c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - c
+- ┃b
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+- ┃b
+  - c
+
+⟦folded 2; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold5](../spec/fold.md#fold5)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+  - b
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+¶ ┃
+- b
+- c
+
+⟦folded none; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- 
+  - b
+- ┃
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold6](../spec/fold.md#fold6)
+
+> indent
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b
+- c┃
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+  - c┃
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+  - c┃
+
+⟦folded none; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold7](../spec/fold.md#fold7)
+
+> deleteContentForward
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - b
+  - c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a┃
+  ¶ b
+  - c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a┃
+  - b
+  - c
+
+⟦folded 1; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold8](../spec/fold.md#fold8)
+
+> duplicateSubtree
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - b
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  ¶ ▮ a
+  - b
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+- a┃
+  - b
+
+⟦folded 1 3; zoom none⟧
 ```
 
 </td></tr>
@@ -2138,6 +2193,150 @@ Per-file:
 ¶ # H
   - a
   ¶ ## ┃H
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree4](../spec/move-subtree.md#movesubtree4)
+
+> moveSubtree ②
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ▮ a
+- ▮ b
+- c
+```
+
+</td><td>
+
+```buffer
+- a
+- c
+- ▮ b
+```
+
+</td><td>
+
+```buffer
+- c
+- ▮ a
+- ▮ b
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree14](../spec/move-subtree.md#movesubtree14)
+
+> moveSubtree ②
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ # A
+  ¶ ## B
+¶ # C
+  ¶ ### D┃
+    ¶ #### E
+```
+
+</td><td>
+
+```buffer
+¶ # A
+  ¶ ## B
+    ¶ ▮ ### D
+¶ # C
+  ¶ #### E
+```
+
+</td><td>
+
+```buffer
+¶ # A
+  ¶ ## B
+  ¶ ## D┃
+    ¶ ### E
+¶ # C
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree15](../spec/move-subtree.md#movesubtree15)
+
+> moveSubtree ②
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ # A
+  ¶ x
+¶ # C
+  ¶ ##### D┃
+    ¶ ###### E
+```
+
+</td><td>
+
+```buffer
+¶ # A
+  ¶ x
+  ¶ ▮ ##### D
+¶ # C
+  ¶ ###### E
+```
+
+</td><td>
+
+```buffer
+¶ # A
+  ¶ x
+  ¶ ## D┃
+    ¶ ### E
+¶ # C
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree19](../spec/move-subtree.md#movesubtree19)
+
+> moveSubtree
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+1. a
+2. ▮ b
+3. ▮ c
+```
+
+</td><td>
+
+```buffer
+1. ▮ b
+2. a
+3. c
+```
+
+</td><td>
+
+```buffer
+1. ▮ b
+2. ▮ c
+3. a
 ```
 
 </td></tr>
@@ -3346,7 +3545,7 @@ y
 </td></tr>
 </table>
 
-> move ③
+> moveSubtree ③
 
 <table>
 <tr><th>siyuan</th><th>ourus</th></tr>
@@ -4742,204 +4941,6 @@ b
 </td></tr>
 </table>
 
-### [Drag1](../spec/drag.md#drag1)
-
-> move ③
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one
-  - two
-- three┃
-```
-
-</td><td>
-
-```buffer
-- ▮ three
-- one
-  - two
-```
-
-</td><td>
-
-```buffer
-- three┃
-- one
-  - two
-```
-
-</td></tr>
-</table>
-
-### [Drag2](../spec/drag.md#drag2)
-
-> move ③
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one
-  - two┃
-- three
-```
-
-</td><td>
-
-```buffer
-- ▮ three
-- one
-  - two
-```
-
-</td><td>
-
-```buffer
-- three
-- one
-  - two┃
-```
-
-</td></tr>
-</table>
-
-### [Drag3](../spec/drag.md#drag3)
-
-> move ①
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one┃
-- two
-- three
-```
-
-</td><td>
-
-```buffer
-- two
-  - ▮ one
-- three
-```
-
-</td><td>
-
-```buffer
-- two
-  - one┃
-- three
-```
-
-</td></tr>
-</table>
-
-### [Drag5](../spec/drag.md#drag5)
-
-> move ③
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- ▮ a
-- ▮ b
-- c
-```
-
-</td><td>
-
-```buffer
-- ▮ c
-- a
-- b
-```
-
-</td><td>
-
-```buffer
-- c
-- ▮ a
-- ▮ b
-```
-
-</td></tr>
-</table>
-
-### [Drag5b](../spec/drag.md#drag5b)
-
-> move ③
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- ▮ a
-- ▮ b
-- c
-```
-
-</td><td>
-
-```buffer
-- a
-- ▮ c
-- b
-```
-
-</td><td>
-
-```buffer
-- ▮ a
-- ▮ c
-- ▮ b
-```
-
-</td></tr>
-</table>
-
-### [Drag32](../spec/drag.md#drag32)
-
-> move ②
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-  - a1┃
-- b
-```
-
-</td><td>
-
-```buffer
-- a
-- b
-  - ▮ a1
-```
-
-</td><td>
-
-```buffer
-- a
-- b
-  - a1┃
-```
-
-</td></tr>
-</table>
-
 ### [Enter32](../spec/enter.md#enter32)
 
 > enter
@@ -5031,6 +5032,204 @@ b
 ```buffer
 ¶ ┃
 ¶ cd
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree1](../spec/move-subtree.md#movesubtree1)
+
+> moveSubtree ③
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one
+  - two
+- three┃
+```
+
+</td><td>
+
+```buffer
+- ▮ three
+- one
+  - two
+```
+
+</td><td>
+
+```buffer
+- three┃
+- one
+  - two
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree2](../spec/move-subtree.md#movesubtree2)
+
+> moveSubtree ③
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one
+  - two┃
+- three
+```
+
+</td><td>
+
+```buffer
+- ▮ three
+- one
+  - two
+```
+
+</td><td>
+
+```buffer
+- three
+- one
+  - two┃
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree3](../spec/move-subtree.md#movesubtree3)
+
+> moveSubtree ①
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one┃
+- two
+- three
+```
+
+</td><td>
+
+```buffer
+- two
+  - ▮ one
+- three
+```
+
+</td><td>
+
+```buffer
+- two
+  - one┃
+- three
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree5](../spec/move-subtree.md#movesubtree5)
+
+> moveSubtree ③
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ▮ a
+- ▮ b
+- c
+```
+
+</td><td>
+
+```buffer
+- ▮ c
+- a
+- b
+```
+
+</td><td>
+
+```buffer
+- c
+- ▮ a
+- ▮ b
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree6](../spec/move-subtree.md#movesubtree6)
+
+> moveSubtree ③
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ▮ a
+- ▮ b
+- c
+```
+
+</td><td>
+
+```buffer
+- a
+- ▮ c
+- b
+```
+
+</td><td>
+
+```buffer
+- ▮ a
+- ▮ c
+- ▮ b
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree23](../spec/move-subtree.md#movesubtree23)
+
+> moveSubtree ②
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - a1┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- b
+  - ▮ a1
+```
+
+</td><td>
+
+```buffer
+- a
+- b
+  - a1┃
 ```
 
 </td></tr>
@@ -5238,7 +5437,7 @@ text
 </td></tr>
 </table>
 
-> move ②
+> moveSubtree ②
 
 <table>
 <tr><th>siyuan</th><th>ourus</th></tr>
@@ -5284,7 +5483,7 @@ text
 </td></tr>
 </table>
 
-## Adapted: disagree (86)
+## Adapted: disagree (88)
 
 ### [Backspace3](../spec/backspace.md#backspace3)
 
@@ -5953,121 +6152,6 @@ Original:
 </td></tr>
 </table>
 
-### [Drag8](../spec/drag.md#drag8)
-
-> move ②
-
-Adapted: blank lines
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-¶ para┃
-```
-
-</td><td>
-
-```buffer
-- a
-  ¶ ▮ para
-```
-
-</td><td>
-
-```buffer
-- a
-  - para┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-  ▸
-
-para┃②
-```
-
-</td><td>
-
-```buffer
-- a
-
-  - para┃②
-```
-
-</td></tr>
-</table>
-
-### [Drag30](../spec/drag.md#drag30)
-
-> move ①
-
-Adapted: blank lines
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x┃
-1. a
-2. b
-```
-
-</td><td>
-
-```buffer
-1. a
-2. ▮ x
-3. b
-```
-
-</td><td>
-
-```buffer
-1. a
-- x┃
-2. b
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x┃①
-
-1. a
-▸
-2. b
-```
-
-</td><td>
-
-```buffer
-1. a
-- x┃①
-
-2. b
-```
-
-</td></tr>
-</table>
-
 ### [Enter35](../spec/enter.md#enter35)
 
 > enter
@@ -6687,6 +6771,139 @@ body
 </td></tr>
 </table>
 
+### [Fold15](../spec/fold.md#fold15)
+
+> deleteContentBackward
+
+Adapted: under backspaceAtItemStart: body
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b
+- ┃c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a┃
+  - b
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+  ¶ ┃c
+
+⟦folded none; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a①
+  - b
+- ┃c
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+
+  ┃c
+```
+
+</td></tr>
+</table>
+
+### [Fold15b](../spec/fold.md#fold15b)
+
+> deleteContentBackward
+
+Adapted: under backspaceAtItemStart: body
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b
+- ┃c
+  - d
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a┃
+  - b
+- c
+  - d
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+  ¶ ┃c
+  - d
+
+⟦folded none; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a①
+  - b
+- ┃c
+  - d
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+
+  ┃c
+  - d
+```
+
+</td></tr>
+</table>
+
 ### [Indent16](../spec/indent.md#indent16)
 
 > indent
@@ -6966,6 +7183,121 @@ b
 ```buffer
 a┃␍
 b
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree9](../spec/move-subtree.md#movesubtree9)
+
+> moveSubtree ②
+
+Adapted: blank lines
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+¶ para┃
+```
+
+</td><td>
+
+```buffer
+- a
+  ¶ ▮ para
+```
+
+</td><td>
+
+```buffer
+- a
+  - para┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  ▸
+
+para┃②
+```
+
+</td><td>
+
+```buffer
+- a
+
+  - para┃②
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree21](../spec/move-subtree.md#movesubtree21)
+
+> moveSubtree ①
+
+Adapted: blank lines
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃
+1. a
+2. b
+```
+
+</td><td>
+
+```buffer
+1. a
+2. ▮ x
+3. b
+```
+
+</td><td>
+
+```buffer
+1. a
+- x┃
+2. b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃①
+
+1. a
+▸
+2. b
+```
+
+</td><td>
+
+```buffer
+1. a
+- x┃①
+
+2. b
 ```
 
 </td></tr>
@@ -13338,123 +13670,6 @@ Original:
 </td></tr>
 </table>
 
-### [Drag13](../spec/drag.md#drag13)
-
-> move ②
-
-Adapted: under listParent: container
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x┃
-¶ p
-```
-
-</td><td>
-
-```buffer
-¶ p
-- ▮ x
-```
-
-</td><td>
-
-```buffer
-¶ p
-- x┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x┃②
-
-p
-▸
-```
-
-</td><td>
-
-```buffer
-p
-
-- x┃
-```
-
-</td></tr>
-</table>
-
-### [Drag33](../spec/drag.md#drag33)
-
-> move ①
-
-Adapted: blank lines
-
-<table>
-<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃
-- b
-- c
-```
-
-</td><td>
-
-```buffer
-- b
-- c
-- ▮ a
-```
-
-</td><td>
-
-```buffer
-- b
-- c
-- a┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃①
-
-- b
-
-- c
-▸
-```
-
-</td><td>
-
-```buffer
-- b
-
-- c
-
-- a┃①
-```
-
-</td></tr>
-</table>
-
 ### [Fence17](../spec/fences.md#fence17)
 
 > deleteContentBackward
@@ -13513,6 +13728,123 @@ Original:
   ┃one
   ```
 ````
+
+</td></tr>
+</table>
+
+### [MoveSubtree12](../spec/move-subtree.md#movesubtree12)
+
+> moveSubtree ②
+
+Adapted: under listParent: container
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃
+¶ p
+```
+
+</td><td>
+
+```buffer
+¶ p
+- ▮ x
+```
+
+</td><td>
+
+```buffer
+¶ p
+- x┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃②
+
+p
+▸
+```
+
+</td><td>
+
+```buffer
+p
+
+- x┃
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree24](../spec/move-subtree.md#movesubtree24)
+
+> moveSubtree ①
+
+Adapted: blank lines
+
+<table>
+<tr><th>buffer</th><th>siyuan</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+- b
+- c
+```
+
+</td><td>
+
+```buffer
+- b
+- c
+- ▮ a
+```
+
+</td><td>
+
+```buffer
+- b
+- c
+- a┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃①
+
+- b
+
+- c
+▸
+```
+
+</td><td>
+
+```buffer
+- b
+
+- c
+
+- a┃①
+```
 
 </td></tr>
 </table>
@@ -13883,7 +14215,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (527)
+## Skipped (547)
 
 | example | why |
 | --- | --- |
@@ -13909,6 +14241,7 @@ Original:
 | [Backspace42b](../spec/backspace.md#backspace42b) | option markup: decorated |
 | [Backspace43c](../spec/backspace.md#backspace43c) | option enterAtTextStart: stay |
 | [Backspace45b](../spec/backspace.md#backspace45b) | option joinWithChildren: refuse |
+| [Backspace45c](../spec/backspace.md#backspace45c) | option joinWithChildren: refuse |
 | [Backspace49](../spec/backspace.md#backspace49) | table SiYuan writes otherwise (its columns padded to their widest cell) |
 | [Backspace50b](../spec/backspace.md#backspace50b) | option backspaceAtItemStart: unwrap |
 | **backtick.md** | |
@@ -13996,29 +14329,14 @@ Original:
 | [Delete31b](../spec/delete.md#delete31b) | option joinWithChildren: refuse |
 | [Delete34](../spec/delete.md#delete34) | option quotes: container |
 | **drag.md** | |
-| [Drag5c](../spec/drag.md#drag5c) | changes only what blocks can't show |
-| [Drag6](../spec/drag.md#drag6) | action drag ② |
-| [Drag6b](../spec/drag.md#drag6b) | changes only what blocks can't show |
-| [Drag6c](../spec/drag.md#drag6c) | action drag ② |
-| [Drag7](../spec/drag.md#drag7) | action drag ④ |
-| [Drag9](../spec/drag.md#drag9) | nothing to compare |
-| [Drag12](../spec/drag.md#drag12) | nothing to compare |
-| [Drag14](../spec/drag.md#drag14) | nothing to compare |
-| [Drag17](../spec/drag.md#drag17) | nothing to compare |
-| [Drag18](../spec/drag.md#drag18) | drop: the pickup is refused (non-contiguous) |
-| [Drag19](../spec/drag.md#drag19) | nothing to compare |
-| [Drag21](../spec/drag.md#drag21) | quote |
-| [Drag22](../spec/drag.md#drag22) | action drag ② |
-| [Drag23](../spec/drag.md#drag23) | action drag ② |
-| [Drag24](../spec/drag.md#drag24) | action drag ③ |
-| [Drag25](../spec/drag.md#drag25) | action drag ③ |
-| [Drag26](../spec/drag.md#drag26) | action drag ③ |
-| [Drag31](../spec/drag.md#drag31) | drop: a free block's place beside an item: SiYuan's drag of one puts it in the item or beside the item's whole list |
-| [Drag10](../spec/drag.md#drag10) | action pasteAt |
-| [Drag11](../spec/drag.md#drag11) | action pasteAt |
-| [Drag27](../spec/drag.md#drag27) | action pasteAt |
-| [Drag28](../spec/drag.md#drag28) | action pasteAt |
-| [Drag29](../spec/drag.md#drag29) | action deleteByDrag |
+| [Drag1](../spec/drag.md#drag1) | action drag ② |
+| [Drag2](../spec/drag.md#drag2) | action drag ② |
+| [Drag3](../spec/drag.md#drag3) | action drag ④ |
+| [Drag4](../spec/drag.md#drag4) | action drag ② |
+| [Drag5](../spec/drag.md#drag5) | action drag ② |
+| [Drag6](../spec/drag.md#drag6) | action drag ③ |
+| [Drag7](../spec/drag.md#drag7) | action drag ③ |
+| [Drag8](../spec/drag.md#drag8) | no zoom |
 | **duplicate-subtree.md** | |
 | [DuplicateSubtree2](../spec/duplicate-subtree.md#duplicatesubtree2) | action deleteSubtree |
 | [DuplicateSubtree4](../spec/duplicate-subtree.md#duplicatesubtree4) | indented code |
@@ -14115,6 +14433,12 @@ Original:
 | [Fence61](../spec/fences.md#fence61) | caret in a marker |
 | [Fence63](../spec/fences.md#fence63) | block's text starting with whitespace |
 | [Fence64](../spec/fences.md#fence64) | block's text starting with whitespace |
+| **fold.md** | |
+| [Fold2b](../spec/fold.md#fold2b) | option enterMidItem: child |
+| [Fold9](../spec/fold.md#fold9) | action fold ② |
+| [Fold10](../spec/fold.md#fold10) | action fold ① |
+| [Fold11](../spec/fold.md#fold11) | action toggleFold |
+| [Fold13](../spec/fold.md#fold13) | a fold on a free block, its section out of the editor |
 | **gaps.md** | |
 | [Gap14](../spec/gaps.md#gap14) | block's text ending in a line break |
 | [Gap15](../spec/gaps.md#gap15) | caret on a blank line |
@@ -14167,6 +14491,17 @@ Original:
 | [MoveUp40](../spec/move-subtree-up.md#moveup40) | line's leading whitespace |
 | [MoveUp41](../spec/move-subtree-up.md#moveup41) | unclosed fence, which SiYuan closes |
 | [MoveUp43](../spec/move-subtree-up.md#moveup43) | option indentUnit: tab |
+| **move-subtree.md** | |
+| [MoveSubtree7](../spec/move-subtree.md#movesubtree7) | changes only what blocks can't show |
+| [MoveSubtree8](../spec/move-subtree.md#movesubtree8) | changes only what blocks can't show |
+| [MoveSubtree10](../spec/move-subtree.md#movesubtree10) | nothing to compare |
+| [MoveSubtree11](../spec/move-subtree.md#movesubtree11) | nothing to compare |
+| [MoveSubtree13](../spec/move-subtree.md#movesubtree13) | nothing to compare |
+| [MoveSubtree16](../spec/move-subtree.md#movesubtree16) | nothing to compare |
+| [MoveSubtree17](../spec/move-subtree.md#movesubtree17) | drop: the pickup is refused (non-contiguous) |
+| [MoveSubtree18](../spec/move-subtree.md#movesubtree18) | nothing to compare |
+| [MoveSubtree20](../spec/move-subtree.md#movesubtree20) | quote |
+| [MoveSubtree22](../spec/move-subtree.md#movesubtree22) | drop: a free block's place beside an item: SiYuan's drag of one puts it in the item or beside the item's whole list |
 | **obsidian-true-outliner.md** | |
 | [TO-E7-E8](../spec/obsidian-true-outliner.md#to-e7-e8) | option enterMidItem: child |
 | [TO-E11](../spec/obsidian-true-outliner.md#to-e11) | option enterMidItem: child |
@@ -14196,6 +14531,12 @@ Original:
 | [Outdent19b](../spec/outdent.md#outdent19b) | option markup: decorated |
 | [Outdent20](../spec/outdent.md#outdent20) | table SiYuan writes otherwise (its columns padded to their widest cell) |
 | [Outdent22b](../spec/outdent.md#outdent22b) | indented code |
+| **paste-at.md** | |
+| [PasteAt1](../spec/paste-at.md#pasteat1) | action pasteAt |
+| [PasteAt2](../spec/paste-at.md#pasteat2) | action pasteAt |
+| [PasteAt3](../spec/paste-at.md#pasteat3) | action pasteAt |
+| [PasteAt4](../spec/paste-at.md#pasteat4) | action pasteAt |
+| [PasteAt5](../spec/paste-at.md#pasteat5) | action deleteByDrag |
 | **paste-html.md** | |
 | [PasteHtml12](../spec/paste-html.md#pastehtml12) | quote |
 | **paste-list-form.md** | |
@@ -14446,3 +14787,18 @@ Original:
 | [Undo2](../spec/undo.md#undo2) | caret on a blank line |
 | **z-open.md** | |
 | [Open2](../spec/z-open.md#open2) | action deleteSubtree |
+| **zoom.md** | |
+| [Zoom1](../spec/zoom.md#zoom1) | no zoom |
+| [Zoom2](../spec/zoom.md#zoom2) | no zoom |
+| [Zoom3](../spec/zoom.md#zoom3) | no zoom |
+| [Zoom4](../spec/zoom.md#zoom4) | no zoom |
+| [Zoom5](../spec/zoom.md#zoom5) | no zoom |
+| [Zoom6](../spec/zoom.md#zoom6) | no zoom |
+| [Zoom7](../spec/zoom.md#zoom7) | no zoom |
+| [Zoom8](../spec/zoom.md#zoom8) | no zoom |
+| [Zoom9](../spec/zoom.md#zoom9) | no zoom |
+| [Zoom10](../spec/zoom.md#zoom10) | no zoom |
+| [Zoom11](../spec/zoom.md#zoom11) | no zoom |
+| [Zoom12](../spec/zoom.md#zoom12) | no zoom |
+| [Zoom13](../spec/zoom.md#zoom13) | no zoom |
+| [Zoom14](../spec/zoom.md#zoom14) | no zoom |

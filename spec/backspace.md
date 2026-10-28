@@ -41,7 +41,8 @@ applies wins:
    nothing to keep (Backspace38, [Enter47](enter.md#enter47)). A list the join leaves right under
    text it can't interrupt is set apart by a blank line (Backspace40). A first child with children
    joins its parent, they coming up into its place (`joinWithChildren: join`, the default;
-   Backspace45), or nothing happens (`refuse`, Backspace45b). An item with text takes its marker
+   Backspace45), or nothing happens (`refuse`, Backspace45b); under `refuse`, an item with children
+   joins the item above only where that one is childless at its depth (Backspace45c). An item with text takes its marker
    first where `backspaceAtItemStart` says so (`join`, the default, joins): with `body` it is a
    paragraph at the end of the item above it, after that item's children (Backspace50), with
    `unwrap` a paragraph where it is, the list split there (Backspace50b); a first child is a
@@ -2069,6 +2070,38 @@ result: rejected has-children
     - c
     - d
   - e
+```
+
+## Backspace45c
+
+With `joinWithChildren: refuse`, an item with children joins the item above only where that one has
+no children and is at its depth: here it would join `b`, its children going down a level, so
+nothing happens, as in Logseq and Roam. Joining `a` alone, it joins ([Fold15b](fold.md#fold15b) for
+a folded one).
+
+```yaml
+tags: edge
+joinWithChildren: refuse
+```
+
+```buffer
+- a
+  - b
+- ┃c
+  - d
+```
+
+> deleteContentBackward
+
+```yaml
+result: rejected has-children
+```
+
+```buffer
+- a
+  - b
+- ┃c
+  - d
 ```
 
 ## Backspace46

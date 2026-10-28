@@ -30,7 +30,21 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
 - **`executeCommand(doc: OurusDoc, command: Command, selection: Selection): CommandResult`**<br>
   Runs a command at the selection. Where ourus doesn't handle a case yet, a key the host has a
   default for is left to the host (`deferredToHost`), and a structural command is refused as
-  `unsupported`.
+  `unsupported`. Every command runs within the snapshot's view (`OurusDoc.folded`, `OurusDoc.zoom`,
+  dev/21-zoom.md): its result's selection is out of what the view hides (a caret in a fold's hidden
+  lines at the fold's start); a fold whose hidden nodes it changed opens; zoomed, a command whose
+  selection or `nodes` are outside the zoom root's subtree, whose result would change, make or move
+  a node outside it, or that would defer to the host at the root's edges (its markup, its text's
+  start for Backspace, its subtree's end for Delete), is refused (`outside-zoom`).
+
+- **`leavesZoom(doc: OurusDoc, next: OurusDoc): boolean`**<br>
+  For a host's own edit (a deferred command's default, typing, an editor's own commands): whether
+  `next`, the snapshot the host would commit (`doc.update(changes, params)` with the caret and marks
+  it will give), leaves `doc`'s zoom; the host refuses the edit where it does, before committing.
+  The same invariant the commands keep; the zoom root removed whole is accepted only as
+  `deleteSubtree` of it writes it. False where not zoomed. An edit that can't be refused (an undo,
+  a sync, another view's) goes through `doc.update` or `withViewOf`, which end the zoom only where its
+  root's subtree lost a node or its root went (to its nearest ancestor left).
 
 - **`Selection`** is `{ anchor, head }`, as in CM6's `selection.main`. A structural command (indent,
   move, ...) acts on the topmost nodes whose own lines the selection touches. They must be
@@ -52,11 +66,11 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
     The selected nodes swap with the sibling above or below. At the first or last child, they move
     into the parent's previous or next sibling.
 
-  - `drag`, `{ pressed?, nodes?, folded?, zoom? }` (a pickup)<br>
+  - `drag`, `{ pressed?, nodes? }` (a pickup)<br>
     What a drag takes (the pressed node, or the selection's nodes where it is one of them) and every
     place it can drop them: the result's `dropMap` (below) and the nodes' `clipboard`, the document
-    unchanged. `folded` and `zoom` are the host's view: the nodes whose children it hides, the node
-    it is zoomed into. With `{ clipboard }` instead, a drag from outside: the places for it, each
+    unchanged. The view's folds and zoom are the snapshot's (`OurusDoc.zoomFolded`, `OurusDoc.zoom`):
+    none among a folded node's hidden children, none outside the zoom. With `{ clipboard }` instead, a drag from outside: the places for it, each
     point's drop a `pasteAt`.
 
   - `pasteAt`, `{ at: InsertionPoint, clipboard }` (a drop from outside)<br>
@@ -67,10 +81,10 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
     The selection deleted as a cut deletes it; the host's where ourus doesn't do it. The drop is a
     `paste` at the position the drop maps to, the two committed as one transaction.
 
-  - `moveSubtreeTo`, `{ to: InsertionPoint, nodes? }` (a drop)<br>
+  - `moveSubtree`, `{ to: InsertionPoint, nodes? }` (a drop)<br>
     The nodes, with their subtrees, move to `to`, converting where the place can't hold their kind
     (a paragraph under an item becomes an item, a heading is re-levelled); at their own place,
-    applied with no changes (spec/drag.md).
+    applied with no changes (spec/move-subtree.md).
 
   - `enter` (Enter)<br>
     Splits the node at the caret into two: a new item, or a new paragraph.
@@ -106,12 +120,25 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
     Text typed at the selection, one key's worth. Ourus handles it where Markdown reads it as
     structure (a backtick: fences opened, closed and kept matched); otherwise it is the host's.
 
+  - `fold`, `unfold`, `toggleFold`, `{ nodes? }` (a guide's click with `nodes`)<br>
+    The view's (spec/fold.md): the nodes at the selection (each the outermost node starting on its
+    row), or `nodes`, folded, unfolded, or toggled: unfolded where any is folded within the zoom, else
+    folded; a toggle at a node with nothing to hide toggles its parent.
+    Zoomed, the root's and its ancestors' folds are left alone. Applied with no changes, the
+    selection moved out of what is now hidden.
+
+  - `zoomIn`, `{ nodes? }`; `zoomOut`; `clearZoom`<br>
+    The view's (spec/zoom.md): into `nodes[0]` (a click on its mark) or the selection's first root in
+    document order; out one level (none from a top-level root); out of the zoom, whatever its depth.
+    No fold changes; applied with no changes (not zoomed, the zoom-outs too), the selection moved into
+    the zoom.
+
 - **`DropMap`** is `{ nodes, lines, seams }`: the run's roots, each one's lines (`[from, to)`), and
   its `DropSeam`s in document order, each a gap between two nodes (`beforeLine`, the first line of
   the node below; `gapLines`, the blank lines before it; `nodeAbove`, `nodeBelow`) with its
   `DropPoint`s, shallowest first: an `InsertionPoint` with its `depth` (0 the top level), its
   `listDepth` (the list items it is inside, for a host that indents only lists), `current` (the
-  run's own place), `converts` (the run changes kind there) and `drop`, the `moveSubtreeTo` to run.
+  run's own place), `converts` (the run changes kind there) and `drop`, the `moveSubtree` to run.
   A seam's y and a point's x are the host's pixels; a point's result is the drop's, which the host
   runs for the point under the pointer and draws, and commits on release.
 
@@ -155,6 +182,10 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
     nodes moved.
   - `into-itself`: a drop at a place inside the nodes moved.
   - `content-changed`: `deleteSubtree`'s nodes no longer give its `expectMarkdown`.
+  - `folded`: a join with a node a fold hides (Delete at the end of a folded node's text).
+  - `outside-zoom`: zoomed, the selection or nodes are outside the zoom root's subtree, the result
+    would reach outside it, or a deferral would: in the root's markup, or where the key's plain
+    default (typing, Backspace, Delete) would leave the zoom (dev/21-zoom.md §4).
   - `unsupported`: a structural command ourus doesn't do here yet (a case no command covers).
   - `write-failed`: the writer failed, on a layout it has no rule for or a text that didn't read back
     as the command meant. This is always a bug in ourus, to fix.
@@ -206,10 +237,9 @@ Files:
   the selection located, the nodes given, `apply`); `util.ts` (shared helpers: the nodes a structural
   command acts on, the caret it leaves, markup at the caret, heading levels, deleting a held space,
   hidden spaces).
-- `indent.ts`, `outdent.ts`, `move-subtree.ts` (Tab, Shift-Tab, Alt-↑, Alt-↓); `drag.ts` (the pickup:
-  what a drag takes, by the cover rule, its seams and places, the place one drop line names,
-  `nearestDropPoint`), `move-subtree-to.ts` (the drop: the place checked, the run converted, the
-  result checked); `delete-subtree.ts`,
+- `indent.ts`, `outdent.ts`, `move-subtree-by.ts` (Tab, Shift-Tab, Alt-↑, Alt-↓); `move-subtree.ts`
+  (the drop: the place checked, the run converted, the result checked); `drag.ts` (the pickup: what a drag takes,
+  by the cover rule, its seams and places, the place one drop line names, `nearestDropPoint`); `delete-subtree.ts`,
   `duplicate-subtree.ts`; `enter.ts`, `shift-enter.ts`; `backspace.ts`, `delete.ts` (Backspace and
   Cmd-Backspace, Delete: at a node's boundary, or a selection across nodes); `code.ts` (keys inside
   code blocks, keeping a fence's run matched); `typing.ts` (typed characters Markdown reads as

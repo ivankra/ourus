@@ -38,9 +38,12 @@ export interface State {
   /** After a pickup (`drag`): the labels of the nodes it takes, and every place it offers, drawn (spec/drag.md). */
   dragNodes?: string;
   dropPoints?: string;
+  /** The view after the step, by label: the folded nodes (none: `folded: none`), the node zoomed into (`zoom: none`). */
+  folded?: string;
+  zoom?: string;
 }
 
-/** The host's view a test starts in (its config block's), for a drag: the folded nodes and the one zoomed into, by label. */
+/** The view a test starts in (its config block's): the folded nodes and the one zoomed into, by label, as the start's snapshot holds them (`OurusDoc.folded`, `OurusDoc.zoom`). */
 export interface View {
   readonly folded?: string;
   readonly zoom?: string;
@@ -184,6 +187,8 @@ export function readSpec(file: string, source: string): SpecTest[] {
       if (read.outline !== undefined) group!.outline = read.outline;
       if (read.dragNodes !== undefined) group!.dragNodes = read.dragNodes;
       if (read.dropPoints !== undefined) group!.dropPoints = read.dropPoints;
+      if (read.view.folded !== undefined) group!.folded = read.view.folded;
+      if (read.view.zoom !== undefined) group!.zoom = read.view.zoom;
       continue;
     }
     if (!test) {
@@ -230,7 +235,7 @@ function checkDrop(t: SpecTest, fail: (line: number, message: string) => never):
   };
   const drawn = read(t.initial.buffer, t.line - 1);
   for (const step of t.steps) if (step.expect.buffer !== undefined && read(step.expect.buffer, step.line - 1)) fail(step.line - 1, "a drop line (`▸`) is a start's: a step's buffer draws the state, not where a drop goes");
-  const drops = t.steps.flatMap((step) => step.actions.filter((a) => /^(?:move(?:\s|$)|pasteAt$)/.test(a)).map(() => step.line));
+  const drops = t.steps.flatMap((step) => step.actions.filter((a) => /^(?:moveSubtree(?:\s|$)|pasteAt$)/.test(a)).map(() => step.line));
   if (drops.length > 1) fail(drops[1]! - 1, 'a second drop: a case drops once, at its start\'s drop line');
   if (drops.length && !drawn) fail(drops[0]! - 1, 'a drop with no drop line (`▸`) in the start to say where it lands');
   if (!drops.length && drawn) fail(t.line - 1, 'a drop line (`▸`) in the start with no drop');
@@ -244,7 +249,7 @@ export const slug = (text: string): string =>
     .trim()
     .replace(/\s/g, '-');
 
-/** Actions are words, or quoted text (`"some text"`) that is typed; a word may name a node by its label (`move ②`). */
+/** Actions are words, or quoted text (`"some text"`) that is typed; a word may name a node by its label (`moveSubtree ②`). */
 export const tokenize = (s: string): string[] => s.match(/"[^"]*"|\S+(?:\s+[\u2460-\u2473\u3251-\u325f\u32b1-\u32bf](?!\S))?/gu) ?? [];
 
 /** What a state's `yaml` block says: options, tags and the rank (the config block's), the clipboard and the outline, the result (a step's). */
@@ -334,7 +339,8 @@ function readConfig(text: string, first: number, fail: (line: number, message: s
       continue;
     }
     if (key === 'folded' || key === 'zoom') {
-      if (where !== 'start') fail(at, `"${key}" is the host's view a test starts in: it goes in the config block`);
+      // the view a test starts in (its config block), or the one a step leaves (its state's)
+      if (where === 'start' && value.trim() === 'none') fail(at, `"${key}: none" is a step's: a test with no ${key} leaves the key out`);
       read.view[key] = value;
       continue;
     }

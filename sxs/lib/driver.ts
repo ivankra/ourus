@@ -39,8 +39,8 @@ export interface Session {
  */
 export interface Drop {
   /** The spec's action. */
-  readonly action: 'move' | 'pasteAt';
-  /** The row whose mark is pressed; null for a drop from outside (`pasteAt`), or a `move` of the selection. */
+  readonly action: 'moveSubtree' | 'pasteAt';
+  /** The row whose mark is pressed; null for a drop from outside (`pasteAt`), or a `moveSubtree` of the selection. */
   readonly press: number | null;
   /** The rows in flight, after the cover rule: their roots' first lines. */
   readonly rows: readonly number[];
@@ -121,7 +121,7 @@ export interface Driver {
    * its outline alone is judged, there being no caret of the app's to compare ourus's with; where more
    * that needs a caret follows it (typing), an app left so skips the example as it plays ("no text
    * focus after …"), and one that kept a caret plays on. A drop is named by its action alone:
-   * `move` stands for `move ②` too.
+   * `moveSubtree` stands for `moveSubtree ②` too.
    */
   readonly noCaretAfter?: readonly string[];
   /**
@@ -130,6 +130,14 @@ export interface Driver {
    * it is skipped ("selection across blocks").
    */
   readonly selectsBlocks?: boolean;
+  /**
+   * The app folds nodes and zooms into one, and the driver loads a case's `folded:` and `zoom:` and
+   * reads them back: a case with either, at its start or after a step, plays only
+   * where the app has it, else it is skipped ("no folds", "no zoom"). A doc's `view`, by the app's rows
+   * (`view.ts`), carries them both ways; a driver reports one only for a test loaded with one.
+   */
+  readonly folds?: boolean;
+  readonly zooms?: boolean;
   /**
    * How the app behaves where ourus has an option, out of the box. A test that sets an option to
    * another value than ourus's default is run only when the app behaves that way, or can be set to.
@@ -188,7 +196,7 @@ export interface Driver {
   configure?(page: Page, settings: Partial<Config>): Promise<void>;
   /** Plays an action in `emulated`. */
   act?(page: Page, action: string, settle: () => Promise<void>): Promise<void>;
-  /** The drops it plays (spec/drag.md: `move`, `pasteAt`); a case with another is skipped. */
+  /** The drops it plays (spec/move-subtree.md, paste-at.md: `moveSubtree`, `pasteAt`); a case with another is skipped. */
   readonly drops?: readonly Drop['action'][];
   /**
    * Plays a drop as its user would, with the real mouse (`drag.ts`'s gesture): presses `press`'s

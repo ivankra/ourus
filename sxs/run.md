@@ -282,7 +282,15 @@ Later runs reuse them, so a run of one example takes under a second. Stop them a
    until the timers the app had pending have fired (the idle script's `drain`, up to 2 s: a save the
    app put off, Logseq's 500 ms after the last input, WorkFlowy's), then settled; else what an undo
    took back was the machine's load (Logseq's late save stored the undone text again).
-5. **Comparing** ([`lib/block.ts`](lib/block.ts)). A block app's state is an outline: blocks with a
+5. **Comparing** ([`lib/block.ts`](lib/block.ts); a view, [`lib/view.ts`](lib/view.ts)). A case with
+   folds or a zoom (`folded:`, `zoom:`) gives its start's view to `load` and wants each step's, both as
+   ourus plays the case, by the app's rows (a block app's blocks, a text app's lines, a node's row its
+   first line); a step that draws no buffer but checks a view is compared on ourus's buffer without its
+   caret. What is compared is what the reader sees: the folds in effect (a fold of the zoom root or an
+   ancestor's hides nothing, nor does one on a block without children) and the zoom root; another is a
+   `disagree`. A state's drawing carries its view as a last line, `⟦folded 2 4; zoom 1⟧`, rows from 1,
+   which reports show and a rejudge reads back.
+    A block app's state is an outline: blocks with a
    depth and a text, the caret's block and offsets. The spec's buffers are projected onto the same
    form with ourus's own parser (every outline node a block holding its own text, in canonical
    Markdown: `[ ] ` for a task, `## ` for a heading, `\n` between lines), and compared block for
@@ -407,7 +415,7 @@ for apps behind a login.
 
 ### Drops
 
-A drop ([`drag.md`](../spec/drag.md): `move ②`, `move`, `pasteAt`) is one action, played as one
+A drop ([`move-subtree.md`](../spec/move-subtree.md): `moveSubtree ②`, `moveSubtree`; [`paste-at.md`](../spec/paste-at.md): `pasteAt`) is one action, played as one
 gesture: a held button doesn't survive the end of a driver's call, so a pickup in one step and a drop
 in the next couldn't be played. The plan resolves it from ourus's own state where the case starts
 (`resolveDrop` in [`lib/drag.ts`](lib/drag.ts): its `▸`, the run it names by the cover rule), into rows
@@ -428,7 +436,7 @@ selection of blocks (`Outline.selected`, the topmost), where the driver says it 
 reports them); elsewhere such a case skips as "selection across blocks". A drop of the selection (no
 press) presses its first block's handle; one pressed outside it shows whether the app's drag follows
 the cover rule. An app
-that edits no block after a drop lists `move` in `noCaretAfter` (it stands for every `move ②`). Every
+that edits no block after a drop lists `moveSubtree` in `noCaretAfter` (it stands for every `moveSubtree ②`). Every
 app that drags a node has a `drop`: the Obsidian setups with a plugin that does (`outlinerDrop`,
 `trueOutlinerDrop` in [`obsidian/obsidian.ts`](obsidian/obsidian.ts)) and every block app, each aimed
 where its own drag code puts a place (each README's "Drag and drop"); bare Obsidian, Live Preview,

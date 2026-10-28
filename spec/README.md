@@ -49,7 +49,11 @@ Read every difference first; a case whose actions should change is redrawn by ha
 - [`gaps.md`](gaps.md): blank lines as the trailing gap of the node above, and the preamble.
 - [Delete subtree](delete-subtree.md): `deleteSubtree`.
 - [Duplicate subtree](duplicate-subtree.md): `duplicateSubtree`.
-- [Drag and drop](drag.md): `moveSubtreeTo`, a drop of the document's own nodes at a place.
+- [Drag](drag.md): `drag`, a pickup: what a drag takes, and every place it can drop it.
+- [Move subtree](move-subtree.md): `moveSubtree`, a drop of the document's own nodes at a place.
+- [Paste at](paste-at.md): `pasteAt` and `deleteByDrag`, drops from outside.
+- [Folding](fold.md): `fold`, `unfold`, `toggleFold`, and every command where a node is folded.
+- [Zoom](zoom.md): `zoomIn`, `zoomOut`, `clearZoom`, and every command while zoomed.
 - [Tasks](tasks.md): Enter and Backspace on tasks.
 - [`placeholders.md`](placeholders.md): empty nodes the text can't hold, kept at the caret: when
   they come and go.
@@ -185,8 +189,9 @@ The item becomes the last child of the item above.
   order.
 - **The blocks before the first quote are where the test starts**: its config block (the start's
   `yaml` block, first: its options and tags, the clipboard and outline it starts with, below, and
-  for a drag the host's view: `folded: ①` the nodes whose children it hides, `zoom: ①` the one it
-  is zoomed into),
+  the view the start's snapshot carries, for every action: `folded: ①` the nodes whose children it
+  hides, `zoom: ①` the one it is zoomed into; a folded label on a node with nothing to fold is an
+  error),
   then one `buffer`, and nothing else.
 - **A quote lists actions**, applied in order to the current state.
 - **The blocks after a quote are what must hold then**, and they become the current state: the
@@ -202,7 +207,12 @@ The item becomes the last child of the item above.
     a level, its kind (`heading 2`, `atom code_block`, `item [x]` for a task), then `: ` and its
     text, line breaks drawn `⏎`;
   - after a pickup (`drag`), `dragNodes`, the labels of the nodes it takes (`dragNodes: ① ②`), and
-    `dropPoints`, every place it offers, drawn ([drag.md](drag.md)).
+    `dropPoints`, every place it offers, drawn ([drag.md](drag.md));
+  - `folded` and `zoom`: the view after the step, by label (`folded: ① ②`, `zoom: ①`; `none` for
+    none), labels a buffer of the case has bound ([fold.md](fold.md), [zoom.md](zoom.md)).
+
+  Every step also checks the view: the selection in no line it hides, every fold on a node with
+  something to hide, and, zoomed, an applied command keeping the zoom's invariant.
 
   What isn't drawn isn't checked. Options and tags go in the config block alone.
 - **A test's name is its own heading, its ID**: short case IDs (`Enter1`, `ShiftEnter1`, `MoveUp1`),
@@ -228,7 +238,7 @@ The item becomes the last child of the item above.
 | `⍽` | a no-break space (U+00A0), which Markdown reads as text, not as a space |
 | `␠` | a line's trailing space, which would be hard to see (as `sxs/probe.ts` draws them); nowhere else, which the reader refuses |
 | `①` … `㊿` | a node's label, last on its first line: no part of the text (below) |
-| `▸` | alone on a line of a start, a drop line: where a drop lands, at twice the depth (no part of the text; [drag.md](drag.md)) |
+| `▸` | alone on a line of a start, a drop line: where a drop lands, at twice the depth (no part of the text; [move-subtree.md](move-subtree.md)) |
 
 A clipboard uses `→`, `␍`, `⍽` and `␠` too. A buffer's last line always ends with a line ending. A buffer
 that contains a code fence needs a longer fence of its own (`` ````buffer ``).
@@ -241,8 +251,11 @@ everything else drawn there (the text, a `␠`, the caret, a selection's end, a 
 item), one label names the innermost, and a second before it the one outside it (`> - a①②`: ① the
 quote, ② the item). In a start a label names the node there; in a step's buffer, a label the case
 has seen checks that the node on that line has the same id, and a new one that the step made it,
-then names it for the steps after. An undo is the host's: the text back, the nodes' ids as an update
-carries them, so a node an undo writes again is a new one. A node drawn without a label isn't
+then names it for the steps after. An undo is the host's: the text back, and the nodes of the state it
+returns to, ids and all (the host gives `replace` that snapshot, its `like`), so a node an undo
+writes anew is the one it was there (undoing a move: the moved node, Fold16; undoing a split, `- a①`
+written over with `- ab`: ①). A node
+drawn without a label isn't
 checked, nor is a label not drawn; labels are optional everywhere. `npm run probe -- --labels`
 labels every node of a start, and each new one after them, to see which nodes a command keeps.
 
@@ -262,16 +275,22 @@ labels every node of a start, and each new one after them, to see which nodes a 
 | `deleteSubtree`, `duplicateSubtree` | the commands of the same names |
 | `deleteSoftLineBackward` | Cmd-Backspace: deletes back to the start of the line's text |
 | `drag ②`, `drag` | presses ②'s mark (or picks up the selection's nodes) and holds it, for the step to check what it takes and where it can go (`dragNodes`, `dropPoints`); nothing changes |
-| `pasteAt` | drops the clipboard, dragged in from outside, at the start's `▸` ([drag.md](drag.md)) |
-| `deleteByDrag` | a text drag's first half: the selection deleted as a cut deletes it ([drag.md](drag.md)) |
-| `move ②`, `move` | presses ②'s mark and drops it at the start's `▸`: ② with its subtree, or the selection's nodes where ② is one of them; `move` drops the selection's nodes, as a keyboard drag does ([drag.md](drag.md)). A case drops once |
+| `pasteAt` | drops the clipboard, dragged in from outside, at the start's `▸` ([paste-at.md](paste-at.md)) |
+| `deleteByDrag` | a text drag's first half: the selection deleted as a cut deletes it ([paste-at.md](paste-at.md)) |
+| `moveSubtree ②`, `moveSubtree` | presses ②'s mark and drops it at the start's `▸`: ② with its subtree, or the selection's nodes where ② is one of them; `moveSubtree` drops the selection's nodes, as a keyboard drag does ([move-subtree.md](move-subtree.md)). A case drops once |
+| `fold`, `fold ②` | folds the nodes at the selection, or ② (a guide's or a gutter's click); the text unchanged ([fold.md](fold.md)) |
+| `unfold`, `unfold ②` | unfolds them, as `fold` |
+| `toggleFold`, `toggleFold ②` | unfolds them where any is folded, else folds them, as `fold` |
+| `zoomIn`, `zoomIn ②` | zooms into the selection's first node, or ② (a click on its mark) ([zoom.md](zoom.md)) |
+| `zoomOut` | zooms out one level |
+| `clearZoom` | zooms out of the zoom |
 | `cursorCharLeft`, `cursorCharRight` | moves the caret a character; a selection collapses to that end |
 | `cursorLineUp`, `cursorLineDown` | moves the caret a line, keeping a goal column while it keeps moving up and down |
 | `cursorLineBoundaryBackward` | Home: to the start of the text, then of the line |
 | `cursorLineBoundaryForward` | End: to the end of the line |
 | `cursorDocStart`, `cursorDocEnd` | to the start or end of the document |
 | `select…` (`selectCharLeft`, `selectLineUp`, …) | the same motion, extending the selection |
-| `undo`, `redo` | the host's undo and redo: each action that changed the text is one step; a step restores the text and the caret, nothing else ([undo.md](undo.md)) |
+| `undo`, `redo` | the host's undo and redo: each action that changed the text is one step; a step restores the text and the caret, and the nodes of the state it returns to: a fold carried onto them by id ([undo.md](undo.md), Fold16) |
 
 Enter and Shift-Enter are named for their keys (`enter`, `shiftEnter`), which hardly ever get
 remapped; the other text edits as the W3C Input Events `inputType`s (`deleteContentBackward`, …);

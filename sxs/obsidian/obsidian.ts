@@ -103,6 +103,12 @@ export interface Profile {
    * (`outlinerDrop`), true-outliner's of any node by its mark (`trueOutlinerDrop`).
    */
   readonly drag?: 'outliner' | 'true-outliner';
+  /**
+   * Zooms into a node, where a plugin does (`Driver.zooms`), loaded by the plugin's own zoom-in command at
+   * the root's row: true-outliner's, read from its anchor (`zoomAnchor`); obsidian-zoom's, read from
+   * its API (`ObsidianZoomPlugin.getZoomRange`, the zoomed range's first line).
+   */
+  readonly zoom?: 'true-outliner' | 'obsidian-zoom';
 }
 
 // ------------------------------------------------------------------ indentation
@@ -500,14 +506,43 @@ async function openVault(context: BrowserContext, vault: string, version: string
 
 /** Notes are numbered in the run, so each test's note is new (each worker has a vault of its own). */
 let notes = 0;
-/** A worker's: its instance's log, and whether its test's buffer was loaded with its spaces as tabs, to be read back so. */
-const pageState = perPage(() => ({ log: '', retabbed: false }));
+/**
+ * A worker's: its instance's log, whether its test's buffer was loaded with its spaces as tabs, to be
+ * read back so, and whether it was loaded with a view (folds, a zoom), which is read back then alone.
+ */
+const pageState = perPage(() => ({ log: '', retabbed: false, viewed: false }));
+
+/**
+ * The line true-outliner's zoom root starts on, or null where it isn't zoomed, read in the page: its
+ * anchor's state field (`zoomAnchorField`, the root's first line's offset), found among the editor
+ * state's fields by its update, the plugin's modules being its own.
+ */
+function zoomAnchor(cm: any): number | null {
+  const fields: any[] = [];
+  const seen = new Set<unknown>();
+  const walk = (e: any): void => {
+    if (!e || typeof e !== 'object' || seen.has(e)) return;
+    seen.add(e);
+    if (Array.isArray(e)) return e.forEach(walk);
+    if ('createF' in e && 'updateF' in e) return void fields.push(e);
+    if ('inner' in e) walk(e.inner);
+    if ('extension' in e && e.extension !== e) walk(e.extension);
+  };
+  walk(cm.state.config.base);
+  for (const inner of cm.state.config.compartments?.values?.() ?? []) walk(inner);
+  const field = fields.find((f) => /effect\.is\(zoomTo\)\) return effect\.value/.test(String(f.updateF)));
+  if (!field) throw new Error("true-outliner's zoom anchor field isn't in the editor's state");
+  const anchor = cm.state.field(field, false);
+  return anchor === null || anchor === undefined ? null : cm.state.doc.lineAt(anchor).number - 1;
+}
 
 export function obsidianDriver(profile: Profile): Driver {
   const hotkeys: Record<string, readonly Hotkey[]> = {
     // "Move line up" and "Move line down" have no hotkey out of the box
     'editor:swap-line-up': [{ modifiers: ['Alt'], key: 'ArrowUp' }],
     'editor:swap-line-down': [{ modifiers: ['Alt'], key: 'ArrowDown' }],
+    // "Toggle fold" has no hotkey out of the box
+    'editor:toggle-fold': [{ modifiers: ['Mod', 'Alt'], key: 'F' }],
     ...profile.hotkeys,
   };
   return {
@@ -520,7 +555,12 @@ export function obsidianDriver(profile: Profile): Driver {
       return obsidians();
     },
     model: 'text',
+    // CodeMirror's folds, Obsidian's own (by indentation and headings, or a plugin's), loaded and read
+    // through its edit view (`getFoldInfo`), by line
+    folds: true,
+    ...(profile.zoom && { zooms: true }),
     keys: {
+      toggleFold: 'Control+Alt+f',
       enter: 'Enter',
       shiftEnter: 'Shift+Enter',
       indent: 'Tab',
@@ -545,7 +585,7 @@ export function obsidianDriver(profile: Profile): Driver {
     // empty item outdents it or leaves the list wherever it is; a typed fence is closed, and inline
     // backticks are paired ("Auto pair Markdown syntax", on by default)
     behaves: {
-      // a quote is text, its `>`s characters edited on its lines: of `quotes`' values the one its runs agree with most (166 quote cases a setup, ../../dev/19-quotes.md §1.4.3)
+      // a quote is text, its `>`s characters edited on its lines: of `quotes`' values the one its runs agree with most (166 quote cases a setup)
       quotes: 'atom',
       flavor: 'obsidian',
       enterSplitSpace: 'drop',
@@ -642,7 +682,7 @@ export function obsidianDriver(profile: Profile): Driver {
       state.retabbed = retabs(d);
       const { text, sel } = state.retabbed ? asTabs(d) : d;
       await page.evaluate(
-        async ({ path, text, sel }) => {
+        async ({ path, text, sel, view, zoom }) => {
           const app = (window as any).app;
           const before = app.workspace.getActiveFile();
           const file = await app.vault.create(path, text);
@@ -654,18 +694,45 @@ export function obsidianDriver(profile: Profile): Driver {
           // the last test's note goes once this one is open in its place
           if (before && before.path !== path) await app.vault.delete(before, true);
           const cm = editor().cm;
+          // its folds, each folded as Obsidian folds the row at the caret (the last first: a fold inside
+          // another before it), then its zoom by the plugin's own command at the root's row
+          const settle = (): Promise<unknown> => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 50, timeout: 3000 });
+          for (const row of [...(view?.folded ?? [])].sort((a, b) => b - a)) {
+            cm.dispatch({ selection: { anchor: cm.state.doc.line(row + 1).to } });
+            app.commands.executeCommandById('editor:toggle-fold');
+            await settle();
+          }
+          if (view && view.zoom !== null) {
+            cm.dispatch({ selection: { anchor: cm.state.doc.line(view.zoom + 1).to } });
+            if (!app.commands.executeCommandById(`${zoom}:zoom-in`)) throw new Error(`${zoom} has no zoom-in command`);
+            await settle();
+          }
           cm.dispatch({ selection: sel ?? { anchor: 0 } });
           cm.focus();
         },
-        { path: `ourus-${++notes}.md`, text, sel },
+        { path: `ourus-${++notes}.md`, text, sel, view: d.view ?? null, zoom: profile.zoom ?? null },
       );
+      state.viewed = !!d.view;
     },
 
-    ...(profile.drag && { drops: ['move'] as const, drop: profile.drag === 'outliner' ? outlinerDrop : trueOutlinerDrop }),
+    ...(profile.drag && { drops: ['moveSubtree'] as const, drop: profile.drag === 'outliner' ? outlinerDrop : trueOutlinerDrop }),
 
     async read(page: Page) {
-      const { doc: got, lost } = await page.evaluate(() => {
+      const { viewed } = pageState(page);
+      const { doc: got, lost } = await page.evaluate(({ viewed, zoomAnchor, zoom }) => {
         const cm = (window as any).app.workspace.activeEditor.editor.cm;
+        // the folds by their rows, Obsidian's (its edit view's), and the zoom: a case loaded with a view
+        const view = viewed
+          ? {
+              folded: ((window as any).app.workspace.activeLeaf.view.currentMode.getFoldInfo()?.folds ?? []).map((f: { from: number }) => f.from) as number[],
+              zoom:
+                zoom === 'obsidian-zoom'
+                  ? ((window as any).ObsidianZoomPlugin.getZoomRange((window as any).app.workspace.activeEditor.editor)?.from.line ?? null)
+                  : zoom
+                    ? (new Function(`return ${zoomAnchor}`)() as (cm: unknown) => number | null)(cm)
+                    : null,
+            }
+          : undefined;
         const { anchor, head } = cm.state.selection.main;
         // the caret is the editor's where its content has the page's focus, whether or not the
         // window has the system's (CodeMirror's `hasFocus` wants both: a window of the shared
@@ -673,13 +740,14 @@ export function obsidianDriver(profile: Profile): Driver {
         const active = document.activeElement;
         const focused = cm.hasFocus || (!!active && cm.contentDOM.contains(active));
         return {
-          doc: { text: cm.state.doc.toString() as string, sel: focused ? { anchor, head } : null },
+          doc: { text: cm.state.doc.toString() as string, sel: focused ? { anchor, head } : null, ...(view && { view }) },
           lost: !cm.hasFocus && focused ? `window ${document.hasFocus() ? 'focused' : 'unfocused'}, ${document.visibilityState}` : null,
         };
-      });
+      }, { viewed, zoomAnchor: zoomAnchor.toString(), zoom: profile.zoom ?? null });
       // a record of each read that only the page's focus kept a caret in: what took the window's
       if (lost) appendFileSync(join(dirname(pageState(page).log), 'focus.log'), `${new Date().toISOString()} ${profile.longId}: ${lost}\n`);
-      return pageState(page).retabbed ? asSpaces(got) : got;
+      // (a tab for an indentation moves no line: the view's rows stand)
+      return pageState(page).retabbed ? { ...asSpaces(got), ...(got.view && { view: got.view }) } : got;
     },
   };
 }

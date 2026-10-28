@@ -120,6 +120,8 @@ function quotedOffset(text: string, p: number): number {
  * reads as structure, markup it drops, and carets in what it draws as no text.
  */
 function holds(o: Outline): string | undefined {
+  // a fold on a heading (a free block) takes its section out of the editor, which `read` reads
+  if (o.view?.folded.some((i) => o.blocks[i]!.free)) return 'a fold on a free block, its section out of the editor';
   for (const b of o.blocks) {
     const first = b.text.split('\n')[0]!;
     // a no-break space: held as a space
@@ -195,6 +197,8 @@ interface Raw {
   blocks: Block[];
   sel: { block: number; anchor: number; head: number } | null;
   selected: number[];
+  /** The blocks folded (SiYuan's `fold="1"`, a folded block's children still in the DOM). */
+  folded: number[];
 }
 
 /**
@@ -335,11 +339,12 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
   const [a0, h0] = [anchor as [number, number] | null, head as [number, number] | null];
   const sel: Raw['sel'] = a0 && h0 && a0[0] === h0[0] ? { block: a0[0], anchor: a0[1], head: h0[1] } : null;
   const selected = groups.map((g, k) => (g.holder.classList.contains('protyle-wysiwyg--select') || g.els.some((e) => e.classList.contains('protyle-wysiwyg--select')) ? k : -1)).filter((k) => k >= 0);
-  if (!want) return { blocks, sel, selected };
+  const folded = groups.map((g, k) => (g.holder.getAttribute('fold') === '1' || g.els.some((e) => e.getAttribute('fold') === '1') ? k : -1)).filter((k) => k >= 0);
+  if (!want) return { blocks, sel, selected, folded };
 
   // placing: the DOM position whose Markdown offset is the one wanted, in the block's own elements
   const g = groups[want.block];
-  if (!g) return { blocks, sel, selected, placed: `no block ${want.block}` };
+  if (!g) return { blocks, sel, selected, folded, placed: `no block ${want.block}` };
   const find = (offset: number): { node: Node; offset: number; el: HTMLElement } | null => {
     let base = g.prefix.length;
     for (const el of g.els) {
@@ -361,10 +366,10 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
   };
   const a = find(want.anchor);
   const h = want.head === want.anchor ? a : find(want.head);
-  if (!a || !h) return { blocks, sel, selected, placed: `no place for ${!a ? want.anchor : want.head} in "${blocks[want.block]?.text}"` };
+  if (!a || !h) return { blocks, sel, selected, folded, placed: `no place for ${!a ? want.anchor : want.head} in "${blocks[want.block]?.text}"` };
   a.el.focus();
   getSelection()!.setBaseAndExtent(a.node, a.offset, h.node, h.offset);
-  return { blocks, sel, selected, placed: 'placed' };
+  return { blocks, sel, selected, folded, placed: 'placed' };
 }
 
 /** Each kernel's test notebook (by its origin): `ourus sxs`, made if its workspace has none. */
@@ -383,6 +388,9 @@ const run = Date.now().toString(36);
 let docs = 0;
 /** A worker's (`perPage`): its kernel, and its current test's document ('' before its first). */
 const pageState = perPage(() => ({ kernel: null as Kernel | null, current: '' }));
+
+/** A worker's: whether its test was loaded with folds, which are read back then alone. */
+const viewed = perPage(() => ({ on: false }));
 /** The kernels whose earlier runs' documents are gone (by origin): removed by the run's first test on each. */
 const swept = new Set<string>();
 
@@ -545,9 +553,9 @@ export const driver: Driver = {
   // structured paste in the middle of a block's text goes after it; a typed fence is left open
   // (Backtick2, Backtick12, Backtick15)
   behaves: {
-    // a quote is a style on one block: a quote of one paragraph is that block, its `>` the style (../../dev/19-quotes.md, Part 1)
+    // a quote is a style on one block: a quote of one paragraph is that block, its `>` the style
     quotes: 'text',
-    // a list is no block's: SiYuan's blocks are a flat sequence (../../dev/19-quotes.md, Part 2)
+    // a list is no block's: SiYuan's blocks are a flat sequence
     listParent: 'container',
     enterSplitSpace: 'start',
     // Backspace at an item's text start: a paragraph in the item above (Backspace1, Backspace8)
@@ -561,7 +569,13 @@ export const driver: Driver = {
     pasteOnParent: 'after',
     pasteParagraphList: 'children',
   },
+  // a block folded (SiYuan's `fold`, set by its own Ctrl+Up and read from the DOM, where a folded
+  // block's children stay); no zoom: zoomed, the editor holds only the subtree, which `read` reads
+  folds: true,
   keys: {
+    // "Collapse", "Expand"
+    fold: 'Control+ArrowUp',
+    unfold: 'Control+ArrowDown',
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
     indent: 'Tab',
@@ -645,6 +659,17 @@ export const driver: Driver = {
     state.current = id;
     const idle = () => page.evaluate((busy) => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 60, timeout: 5000, busy }), this.idle!.busy!);
     await idle();
+    // its folds, each by SiYuan's own Ctrl+Up at the block's end (the last first: a fold inside another
+    // before it)
+    for (const i of [...(o.view?.folded ?? [])].sort((a, b) => b - a)) {
+      const end = quotedOffset(o.blocks[i]!.text, o.blocks[i]!.text.length);
+      const placed = await page.evaluate(inPage, { block: i, anchor: end, head: end });
+      if (placed.placed !== 'placed') throw new Error(`no caret to fold block ${i} at: ${placed.placed}`);
+      await idle();
+      await page.keyboard.press('Control+ArrowUp');
+      await idle();
+    }
+    viewed(page).on = !!o.view;
     if (!o.sel) {
       await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
       if (o.selected?.length) {
@@ -659,7 +684,7 @@ export const driver: Driver = {
     await idle();
   },
 
-  drops: ['move'],
+  drops: ['moveSubtree'],
   // its `load` selects blocks whole, as `read` reports them
   selectsBlocks: true,
   drop: siyuanDrop,
@@ -672,7 +697,8 @@ export const driver: Driver = {
     // one of them is no caret (it draws none)
     const under = (i: number): boolean => r.selected.some((j) => j < i && blocks.slice(j + 1, i + 1).every((b) => b.depth > blocks[j]!.depth));
     const selected = r.selected.filter((i) => !under(i));
-    // (a quote's later lines lazy, as the projection has them: SiYuan's Markdown quotes each)
-    return lazyQuotes({ blocks, sel: selected.length ? null : r.sel, ...(selected.length && { selected }) });
+    // (a quote's later lines lazy, as the projection has them: SiYuan's Markdown quotes each); its folds,
+    // no zoom here
+    return { ...lazyQuotes({ blocks, sel: selected.length ? null : r.sel, ...(selected.length && { selected }) }), ...(viewed(page).on && { view: { folded: r.folded, zoom: null } }) };
   },
 };

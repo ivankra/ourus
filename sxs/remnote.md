@@ -5,7 +5,7 @@ version: "1.28.62"
 url: "https://www.remnote.com/notes"
 model: "block"
 command: "node sxs/run.ts remnote"
-elapsed_s: 524
+elapsed_s: 789
 workers: 2
 ---
 
@@ -15,31 +15,34 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 237 | [16](#caret-16) | [11](#whitespace-11) | [73](#disagree-73) |  |  | **337** |
-| adapted | 148 | [4](#adapted-caret-4) | [12](#adapted-whitespace-12) | [88](#adapted-disagree-88) |  |  | **252** |
-| **total** | **385 (32%)** | **20 (1.7%)** | **23 (1.9%)** | **161 (13%)** | **0 (0%)** | **[600](#skipped-600) (50%)** | **1194** |
+| original | 246 | [18](#caret-18) | [11](#whitespace-11) | [74](#disagree-74) |  |  | **349** |
+| adapted | 150 | [4](#adapted-caret-4) | [13](#adapted-whitespace-13) | [88](#adapted-disagree-88) |  |  | **255** |
+| **total** | **396 (32%)** | **22 (1.8%)** | **24 (2%)** | **162 (13%)** | **0 (0%)** | **[619](#skipped-619) (50%)** | **1228** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total | original | adapted |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [backspace.md](../spec/backspace.md) | 39 | 2 | 3 | 5 |  | 36 | **85** | 32 | 17 |
+| [backspace.md](../spec/backspace.md) | 39 | 2 | 3 | 5 |  | 37 | **86** | 32 | 17 |
 | [backtick.md](../spec/backtick.md) | 1 |  |  |  |  | 32 | **33** | 1 |  |
 | [copy.md](../spec/copy.md) | 3 |  |  |  |  | 10 | **13** | 1 | 2 |
 | [cursor.md](../spec/cursor.md) | 24 | 3 |  |  |  | 9 | **36** | 24 | 3 |
 | [delete-subtree.md](../spec/delete-subtree.md) | 8 |  |  |  |  | 5 | **13** | 3 | 5 |
 | [delete.md](../spec/delete.md) | 19 | 1 | 1 | 4 |  | 31 | **56** | 20 | 5 |
-| [drag.md](../spec/drag.md) | 1 | 8 |  | 1 |  | 27 | **37** | 7 | 3 |
+| [drag.md](../spec/drag.md) |  |  |  |  |  | 8 | **8** |  |  |
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 10 | **10** |  |  |
 | [enter.md](../spec/enter.md) | 50 |  | 4 | 5 |  | 39 | **98** | 21 | 38 |
 | [fences.md](../spec/fences.md) | 1 |  | 1 |  |  | 68 | **70** |  | 2 |
+| [fold.md](../spec/fold.md) | 10 | 2 | 1 | 1 |  | 5 | **19** | 11 | 3 |
 | [gaps.md](../spec/gaps.md) | 12 |  |  | 3 |  | 4 | **19** | 10 | 5 |
 | [indent.md](../spec/indent.md) | 31 |  |  | 6 |  | 13 | **50** | 26 | 11 |
 | [lists.md](../spec/lists.md) | 13 |  |  |  |  | 3 | **16** | 6 | 7 |
 | [move-subtree-down.md](../spec/move-subtree-down.md) | 23 |  |  | 8 |  | 9 | **40** | 27 | 4 |
 | [move-subtree-up.md](../spec/move-subtree-up.md) | 22 |  |  | 9 |  | 12 | **43** | 26 | 5 |
+| [move-subtree.md](../spec/move-subtree.md) | 1 | 8 |  | 1 |  | 14 | **24** | 7 | 3 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 37 |  | 3 | 7 |  | 20 | **67** | 34 | 13 |
 | [outdent.md](../spec/outdent.md) | 22 |  |  | 8 |  | 8 | **38** | 22 | 8 |
+| [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |  |  |
 | [paste-conv.md](../spec/paste-conv.md) | 2 |  |  | 4 |  |  | **6** | 1 | 5 |
 | [paste-html.md](../spec/paste-html.md) | 2 |  |  | 16 |  | 1 | **19** |  | 18 |
 | [paste-list-form.md](../spec/paste-list-form.md) |  |  |  | 6 |  |  | **6** |  | 6 |
@@ -56,9 +59,10 @@ Per-file:
 | [typing.md](../spec/typing.md) |  |  |  | 3 |  |  | **3** | 1 | 2 |
 | [undo.md](../spec/undo.md) | 2 | 2 |  |  |  | 1 | **5** | 3 | 1 |
 | [z-open.md](../spec/z-open.md) |  |  |  |  |  | 1 | **1** |  |  |
-| **total** | **385 (32%)** | **20 (1.7%)** | **23 (1.9%)** | **161 (13%)** | **0 (0%)** | **605 (51%)** | **1194** | **337 (28%)** | **252 (21%)** |
+| [zoom.md](../spec/zoom.md) | 1 |  |  |  |  | 13 | **14** | 1 |  |
+| **total** | **396 (32%)** | **22 (1.8%)** | **24 (2%)** | **162 (13%)** | **0 (0%)** | **624 (51%)** | **1228** | **349 (28%)** | **255 (21%)** |
 
-## Disagree (73)
+## Disagree (74)
 
 ### [Backspace17d](../spec/backspace.md#backspace17d)
 
@@ -480,6 +484,46 @@ Per-file:
 - a
 -  
 - ┃
+```
+
+</td></tr>
+</table>
+
+### [Fold15b](../spec/fold.md#fold15b)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b
+- ┃c
+  - d
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a┃c
+  - b
+  - d
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a┃c
+  - b
+  - d
+
+⟦folded none; zoom none⟧
 ```
 
 </td></tr>
@@ -2809,7 +2853,7 @@ text
 </td></tr>
 </table>
 
-> move ③
+> moveSubtree ③
 
 <table>
 <tr><th>remnote</th><th>ourus</th></tr>
@@ -3709,7 +3753,7 @@ text
 </td></tr>
 </table>
 
-## Caret (16)
+## Caret (18)
 
 ### [Backspace17](../spec/backspace.md#backspace17)
 
@@ -3891,9 +3935,148 @@ text
 </td></tr>
 </table>
 
-### [Drag1](../spec/drag.md#drag1)
+### [Fold16](../spec/fold.md#fold16)
 
-> move ③
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - b
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeDown
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- c
+- a┃
+  - b
+
+⟦folded 2; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+> undo
+
+<table>
+<tr><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a┃
+  - b
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+> redo
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- c
+- a┃
+  - b
+
+⟦folded 2; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold17](../spec/fold.md#fold17)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x
+- a┃
+  - b
+
+⟦folded 2; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+> indent
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x
+  - a┃
+    - b
+
+⟦folded 2; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+> undo
+
+<table>
+<tr><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x
+- a
+  - b
+
+⟦folded 2; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- x
+- a┃
+  - b
+
+⟦folded 2; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree1](../spec/move-subtree.md#movesubtree1)
+
+> moveSubtree ③
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -3924,9 +4107,9 @@ text
 </td></tr>
 </table>
 
-### [Drag2](../spec/drag.md#drag2)
+### [MoveSubtree2](../spec/move-subtree.md#movesubtree2)
 
-> move ③
+> moveSubtree ③
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -3957,9 +4140,9 @@ text
 </td></tr>
 </table>
 
-### [Drag3](../spec/drag.md#drag3)
+### [MoveSubtree3](../spec/move-subtree.md#movesubtree3)
 
-> move ①
+> moveSubtree ①
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -3990,9 +4173,9 @@ text
 </td></tr>
 </table>
 
-### [Drag5](../spec/drag.md#drag5)
+### [MoveSubtree5](../spec/move-subtree.md#movesubtree5)
 
-> move ③
+> moveSubtree ③
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -4023,9 +4206,9 @@ text
 </td></tr>
 </table>
 
-### [Drag5b](../spec/drag.md#drag5b)
+### [MoveSubtree6](../spec/move-subtree.md#movesubtree6)
 
-> move ③
+> moveSubtree ③
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -4056,9 +4239,9 @@ text
 </td></tr>
 </table>
 
-### [Drag32](../spec/drag.md#drag32)
+### [MoveSubtree23](../spec/move-subtree.md#movesubtree23)
 
-> move ②
+> moveSubtree ②
 
 <table>
 <tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
@@ -4174,7 +4357,7 @@ text
 </td></tr>
 </table>
 
-> move ②
+> moveSubtree ②
 
 <table>
 <tr><th>remnote</th><th>ourus</th></tr>
@@ -4375,66 +4558,6 @@ text
 </table>
 
 ## Adapted: disagree (88)
-
-### [Drag30](../spec/drag.md#drag30)
-
-> move ①
-
-Adapted: blank lines
-
-<table>
-<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x┃
-1. a
-2. b
-```
-
-</td><td>
-
-```buffer
-1. a
-2. ▮ x
-3. b
-```
-
-</td><td>
-
-```buffer
-1. a
-- x┃
-2. b
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x┃①
-
-1. a
-▸
-2. b
-```
-
-</td><td>
-
-```buffer
-1. a
-- x┃①
-
-2. b
-```
-
-</td></tr>
-</table>
 
 ### [Enter50](../spec/enter.md#enter50)
 
@@ -4952,6 +5075,66 @@ Original:
 - a
 
 ---┃
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree21](../spec/move-subtree.md#movesubtree21)
+
+> moveSubtree ①
+
+Adapted: blank lines
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃
+1. a
+2. b
+```
+
+</td><td>
+
+```buffer
+1. a
+2. ▮ x
+3. b
+```
+
+</td><td>
+
+```buffer
+1. a
+- x┃
+2. b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃①
+
+1. a
+▸
+2. b
+```
+
+</td><td>
+
+```buffer
+1. a
+- x┃①
+
+2. b
 ```
 
 </td></tr>
@@ -10376,7 +10559,7 @@ para
 </td></tr>
 </table>
 
-## Adapted: whitespace (12)
+## Adapted: whitespace (13)
 
 ### [Backspace17e](../spec/backspace.md#backspace17e)
 
@@ -10636,6 +10819,81 @@ Original:
   ┃
   ```
 ````
+
+</td></tr>
+</table>
+
+### [Fold14](../spec/fold.md#fold14)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: under pasteSeams: open
+
+<table>
+<tr><th>buffer</th><th>remnote</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - b
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- ax┃
+  - b
+¶ 
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- ax┃
+  - b
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃①
+  - b
+- c
+```
+
+</td><td>
+
+```buffer
+- ax┃
+  - b
+- c
+```
 
 </td></tr>
 </table>
@@ -11231,9 +11489,9 @@ Original:
 
 ## Adapted: caret (4)
 
-### [Drag13](../spec/drag.md#drag13)
+### [MoveSubtree12](../spec/move-subtree.md#movesubtree12)
 
-> move ②
+> moveSubtree ②
 
 Adapted: under listParent: container
 
@@ -11286,9 +11544,9 @@ p
 </td></tr>
 </table>
 
-### [Drag33](../spec/drag.md#drag33)
+### [MoveSubtree24](../spec/move-subtree.md#movesubtree24)
 
-> move ①
+> moveSubtree ①
 
 Adapted: blank lines
 
@@ -11590,7 +11848,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (605)
+## Skipped (624)
 
 | example | why |
 | --- | --- |
@@ -11629,6 +11887,7 @@ Original:
 | [Backspace43](../spec/backspace.md#backspace43) | changes only what blocks can't show |
 | [Backspace43c](../spec/backspace.md#backspace43c) | changes only what blocks can't show |
 | [Backspace45b](../spec/backspace.md#backspace45b) | option joinWithChildren: refuse |
+| [Backspace45c](../spec/backspace.md#backspace45c) | option joinWithChildren: refuse |
 | [Backspace50](../spec/backspace.md#backspace50) | option backspaceAtItemStart: body |
 | [Backspace50b](../spec/backspace.md#backspace50b) | option backspaceAtItemStart: unwrap |
 | **backtick.md** | |
@@ -11724,33 +11983,14 @@ Original:
 | [Delete31b](../spec/delete.md#delete31b) | option joinWithChildren: refuse |
 | [Delete34](../spec/delete.md#delete34) | option quotes: container |
 | **drag.md** | |
-| [Drag5c](../spec/drag.md#drag5c) | changes only what blocks can't show |
-| [Drag6](../spec/drag.md#drag6) | action drag ② |
-| [Drag6b](../spec/drag.md#drag6b) | changes only what blocks can't show |
-| [Drag6c](../spec/drag.md#drag6c) | action drag ② |
-| [Drag7](../spec/drag.md#drag7) | action drag ④ |
-| [Drag8](../spec/drag.md#drag8) | drop: the pressed rem has no bullet: RemNote drags a rem by its bullet |
-| [Drag9](../spec/drag.md#drag9) | nothing to compare |
-| [Drag12](../spec/drag.md#drag12) | nothing to compare |
-| [Drag14](../spec/drag.md#drag14) | nothing to compare |
-| [Drag15](../spec/drag.md#drag15) | drop: the pressed rem has no bullet: RemNote drags a rem by its bullet |
-| [Drag16](../spec/drag.md#drag16) | drop: the pressed rem has no bullet: RemNote drags a rem by its bullet |
-| [Drag17](../spec/drag.md#drag17) | nothing to compare |
-| [Drag18](../spec/drag.md#drag18) | drop: the pickup is refused (non-contiguous) |
-| [Drag19](../spec/drag.md#drag19) | nothing to compare |
-| [Drag20](../spec/drag.md#drag20) | drop: the pressed rem has no bullet: RemNote drags a rem by its bullet |
-| [Drag21](../spec/drag.md#drag21) | quote |
-| [Drag22](../spec/drag.md#drag22) | action drag ② |
-| [Drag23](../spec/drag.md#drag23) | action drag ② |
-| [Drag24](../spec/drag.md#drag24) | action drag ③ |
-| [Drag25](../spec/drag.md#drag25) | action drag ③ |
-| [Drag26](../spec/drag.md#drag26) | action drag ③ |
-| [Drag31](../spec/drag.md#drag31) | paragraph inside an item (a rem there shows a bullet) |
-| [Drag10](../spec/drag.md#drag10) | action pasteAt |
-| [Drag11](../spec/drag.md#drag11) | action pasteAt |
-| [Drag27](../spec/drag.md#drag27) | action pasteAt |
-| [Drag28](../spec/drag.md#drag28) | action pasteAt |
-| [Drag29](../spec/drag.md#drag29) | action deleteByDrag |
+| [Drag1](../spec/drag.md#drag1) | action drag ② |
+| [Drag2](../spec/drag.md#drag2) | action drag ② |
+| [Drag3](../spec/drag.md#drag3) | action drag ④ |
+| [Drag4](../spec/drag.md#drag4) | action drag ② |
+| [Drag5](../spec/drag.md#drag5) | action drag ② |
+| [Drag6](../spec/drag.md#drag6) | action drag ③ |
+| [Drag7](../spec/drag.md#drag7) | action drag ③ |
+| [Drag8](../spec/drag.md#drag8) | action drag ③ |
 | **duplicate-subtree.md** | |
 | [DuplicateSubtree1](../spec/duplicate-subtree.md#duplicatesubtree1) | action duplicateSubtree |
 | [DuplicateSubtree2](../spec/duplicate-subtree.md#duplicatesubtree2) | action duplicateSubtree |
@@ -11871,6 +12111,12 @@ Original:
 | [Fence62](../spec/fences.md#fence62) | code block's fences other than the shortest backticks that hold its code, which a code rem reads back with (it keeps no fences) |
 | [Fence63](../spec/fences.md#fence63) | tag markup-fence |
 | [Fence64](../spec/fences.md#fence64) | tag markup-fence |
+| **fold.md** | |
+| [Fold8](../spec/fold.md#fold8) | action duplicateSubtree |
+| [Fold9](../spec/fold.md#fold9) | action fold ② |
+| [Fold10](../spec/fold.md#fold10) | action fold ① |
+| [Fold11](../spec/fold.md#fold11) | action toggleFold |
+| [Fold13](../spec/fold.md#fold13) | a fold on a rem without a bullet |
 | **gaps.md** | |
 | [Gap15](../spec/gaps.md#gap15) | caret on a blank line |
 | [Gap16](../spec/gaps.md#gap16) | caret on a blank line |
@@ -11917,6 +12163,21 @@ Original:
 | [MoveUp41](../spec/move-subtree-up.md#moveup41) | tag markup-fence |
 | [MoveUp42](../spec/move-subtree-up.md#moveup42) | quote |
 | [MoveUp43](../spec/move-subtree-up.md#moveup43) | option indentUnit: tab |
+| **move-subtree.md** | |
+| [MoveSubtree7](../spec/move-subtree.md#movesubtree7) | changes only what blocks can't show |
+| [MoveSubtree8](../spec/move-subtree.md#movesubtree8) | changes only what blocks can't show |
+| [MoveSubtree9](../spec/move-subtree.md#movesubtree9) | drop: the pressed rem has no bullet: RemNote drags a rem by its bullet |
+| [MoveSubtree10](../spec/move-subtree.md#movesubtree10) | nothing to compare |
+| [MoveSubtree11](../spec/move-subtree.md#movesubtree11) | nothing to compare |
+| [MoveSubtree13](../spec/move-subtree.md#movesubtree13) | nothing to compare |
+| [MoveSubtree14](../spec/move-subtree.md#movesubtree14) | drop: the pressed rem has no bullet: RemNote drags a rem by its bullet |
+| [MoveSubtree15](../spec/move-subtree.md#movesubtree15) | drop: the pressed rem has no bullet: RemNote drags a rem by its bullet |
+| [MoveSubtree16](../spec/move-subtree.md#movesubtree16) | nothing to compare |
+| [MoveSubtree17](../spec/move-subtree.md#movesubtree17) | drop: the pickup is refused (non-contiguous) |
+| [MoveSubtree18](../spec/move-subtree.md#movesubtree18) | nothing to compare |
+| [MoveSubtree19](../spec/move-subtree.md#movesubtree19) | drop: the pressed rem has no bullet: RemNote drags a rem by its bullet |
+| [MoveSubtree20](../spec/move-subtree.md#movesubtree20) | quote |
+| [MoveSubtree22](../spec/move-subtree.md#movesubtree22) | paragraph inside an item (a rem there shows a bullet) |
 | **obsidian-true-outliner.md** | |
 | [TO-Bug228](../spec/obsidian-true-outliner.md#to-bug228) | numbered list that RemNote would number otherwise |
 | [TO-E11](../spec/obsidian-true-outliner.md#to-e11) | paragraph inside an item (a rem there shows a bullet) |
@@ -11947,6 +12208,12 @@ Original:
 | [Outdent19](../spec/outdent.md#outdent19) | tag markup-fence |
 | [Outdent19b](../spec/outdent.md#outdent19b) | tag markup-fence |
 | [Outdent22b](../spec/outdent.md#outdent22b) | indented code |
+| **paste-at.md** | |
+| [PasteAt1](../spec/paste-at.md#pasteat1) | action pasteAt |
+| [PasteAt2](../spec/paste-at.md#pasteat2) | action pasteAt |
+| [PasteAt3](../spec/paste-at.md#pasteat3) | action pasteAt |
+| [PasteAt4](../spec/paste-at.md#pasteat4) | action pasteAt |
+| [PasteAt5](../spec/paste-at.md#pasteat5) | action deleteByDrag |
 | **paste-html.md** | |
 | [PasteHtml12](../spec/paste-html.md#pastehtml12) | quote |
 | **paste-list.md** | |
@@ -12229,3 +12496,17 @@ Original:
 | [Undo2](../spec/undo.md#undo2) | caret on a blank line |
 | **z-open.md** | |
 | [Open2](../spec/z-open.md#open2) | caret in a task's checkbox, a heading's #s or a code block's fences |
+| **zoom.md** | |
+| [Zoom1](../spec/zoom.md#zoom1) | the caret in the zoom root, the page's title |
+| [Zoom2](../spec/zoom.md#zoom2) | the caret in the zoom root, the page's title |
+| [Zoom3](../spec/zoom.md#zoom3) | a zoom into a rem without a bullet, what it owns its siblings |
+| [Zoom4](../spec/zoom.md#zoom4) | caret in a marker |
+| [Zoom5](../spec/zoom.md#zoom5) | the caret in the zoom root, the page's title |
+| [Zoom6](../spec/zoom.md#zoom6) | action zoomIn |
+| [Zoom7](../spec/zoom.md#zoom7) | the caret in the zoom root, the page's title |
+| [Zoom8](../spec/zoom.md#zoom8) | action clearZoom |
+| [Zoom9](../spec/zoom.md#zoom9) | the caret in the zoom root, the page's title |
+| [Zoom10](../spec/zoom.md#zoom10) | the caret in the zoom root, the page's title |
+| [Zoom12](../spec/zoom.md#zoom12) | caret on a blank line |
+| [Zoom13](../spec/zoom.md#zoom13) | the caret in the zoom root, the page's title |
+| [Zoom14](../spec/zoom.md#zoom14) | option enterOnEmptyItem: unwrap |

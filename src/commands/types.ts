@@ -22,14 +22,14 @@ export type Command =
   /**
    * A pickup (spec/drag.md): the nodes a drag takes, the places it can drop them, and their clipboard;
    * the document unchanged. `pressed`: the node whose mark was pressed, for the cover rule; else
-   * `nodes`, else the selection's. `folded`: the nodes whose children the host hides; `zoom`: the node
-   * the host's view is zoomed into.
+   * `nodes`, else the selection's. The view's folds and zoom are the document's (`OurusDoc.zoomFolded`,
+   * `OurusDoc.zoom`).
    */
-  | ({ readonly type: 'drag'; readonly pressed?: number; readonly folded?: readonly number[]; readonly zoom?: number } & Nodes)
+  | ({ readonly type: 'drag'; readonly pressed?: number } & Nodes)
   /** A drag from outside, carrying `clipboard`: the places it can be dropped, the document as it is. */
-  | { readonly type: 'drag'; readonly clipboard: Clipboard; readonly folded?: readonly number[]; readonly zoom?: number }
-  /** A drop of the document's own nodes: moved, with their subtrees, to the place `to` (spec/drag.md). */
-  | ({ readonly type: 'moveSubtreeTo'; readonly to: InsertionPoint } & Nodes)
+  | { readonly type: 'drag'; readonly clipboard: Clipboard }
+  /** A drop of the document's own nodes: moved, with their subtrees, to the place `to` (spec/move-subtree.md). */
+  | ({ readonly type: 'moveSubtree'; readonly to: InsertionPoint } & Nodes)
   /** A drop from outside: the clipboard, every format the host has of it, read as paste reads it and fitted at `at`. */
   | { readonly type: 'pasteAt'; readonly at: InsertionPoint; readonly clipboard: Clipboard }
   /** A text drag's first half: the selection deleted as a cut deletes it; the drop is a `paste` at the position it maps to. */
@@ -60,7 +60,25 @@ export type Command =
   /** Copy (Ctrl-C): the selection's Markdown, as the result's `clipboard`; the document unchanged. */
   | ({ readonly type: 'copy' } & Nodes)
   /** Cut (Ctrl-X): copy, then what was copied taken out. */
-  | ({ readonly type: 'cut' } & Nodes);
+  | ({ readonly type: 'cut' } & Nodes)
+  /**
+   * The view's: the nodes at the selection, or `nodes`, folded. While zoomed the root's and its
+   * ancestors' folds are left alone. The text unchanged, the selection out of what is hidden.
+   */
+  | ({ readonly type: 'fold' } & Nodes)
+  /** The nodes at the selection, or `nodes`, unfolded, as `fold`. */
+  | ({ readonly type: 'unfold' } & Nodes)
+  /**
+   * The folds of the nodes at the selection, or `nodes`, toggled, as `fold`: unfolded where any of
+   * them is folded within the zoom, else folded; at a node that doesn't fold, its parent's.
+   */
+  | ({ readonly type: 'toggleFold' } & Nodes)
+  /** Zoom into `nodes[0]` (a click on its mark), else the selection's first root in document order. */
+  | ({ readonly type: 'zoomIn' } & Nodes)
+  /** Zoom out one level, to the root's parent, or out of the zoom from a top-level root. */
+  | { readonly type: 'zoomOut' }
+  /** Zoom out of the zoom, whatever its depth. */
+  | { readonly type: 'clearZoom' };
 
 export interface Selection {
   readonly anchor: number;
@@ -87,6 +105,10 @@ export type RejectReason =
   | 'into-itself'
   /** `deleteSubtree`'s nodes are no longer the Markdown it expected: they changed since they were dragged out. */
   | 'content-changed'
+  /** A join with a node a fold hides: Delete at the end of a folded node's text, its first child hidden. */
+  | 'folded'
+  /** Zoomed: the result would change, make or move a node outside the zoom root's subtree, or its operands are outside it. */
+  | 'outside-zoom'
   /** A structural command ourus doesn't do here yet: a case it doesn't cover. (A key with a host's default is the host's there.) */
   | 'unsupported'
   /** The writer failed: a layout it has no rule for, or a text written that doesn't read as the draft. A bug, never an outcome. */

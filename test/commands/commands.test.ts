@@ -202,13 +202,13 @@ test('several characters typed at once are played a character at a time, as keys
   assert.equal(typed('x\n', 1, 'ab'), 'deferredToHost');
 });
 
-// moveSubtreeTo by the API (spec/drag.md): the places a drawing can't name, and `nodes` on the
+// moveSubtree by the API (spec/move-subtree.md): the places a drawing can't name, and `nodes` on the
 // structural commands, acting on nodes the caret isn't in
 test('a drop checks its ids and its place', () => {
   const doc = OurusDoc.parse('- a\n- b\n  - c\n- d\n\npara\n');
   const id = (text: string): number => nodesOf(doc).find((n) => plainText(doc, n) === text)!.id;
   const caret = { anchor: 0, head: 0 };
-  const drop = (nodes: number[], parent: number | 'root', after: number | null) => executeCommand(doc, { type: 'moveSubtreeTo', nodes, to: { parent, after } }, caret);
+  const drop = (nodes: number[], parent: number | 'root', after: number | null) => executeCommand(doc, { type: 'moveSubtree', nodes, to: { parent, after } }, caret);
   const reason = (r: ReturnType<typeof drop>) => (r.status === 'rejected' ? r.reason : r.status);
   assert.equal(reason(drop([999], 'root', null)), 'no-such-node');
   assert.equal(reason(drop([id('b')], 999, null)), 'no-such-node');
@@ -223,7 +223,7 @@ test('a drop checks its ids and its place', () => {
   // a paragraph that adopts no list holds none (`listParent: container`)
   const flat = OurusDoc.parse('- a\n\npara\n', { config: { listParent: 'container' } });
   const flatId = (text: string): number => nodesOf(flat).find((n) => plainText(flat, n) === text)!.id;
-  const r = executeCommand(flat, { type: 'moveSubtreeTo', nodes: [flatId('a')], to: { parent: flatId('para'), after: null } }, caret);
+  const r = executeCommand(flat, { type: 'moveSubtree', nodes: [flatId('a')], to: { parent: flatId('para'), after: null } }, caret);
   assert.equal(reason(r), 'not-expressible');
 });
 
@@ -231,9 +231,9 @@ test('a drop at its own place changes nothing, and one elsewhere says what it pl
   const doc = OurusDoc.parse('- a\n- b\n  - c\n- d\n');
   const id = (text: string): number => nodesOf(doc).find((n) => plainText(doc, n) === text)!.id;
   const caret = { anchor: 2, head: 2 };
-  const own = executeCommand(doc, { type: 'moveSubtreeTo', nodes: [id('b')], to: { parent: 'root', after: id('a') } }, caret);
+  const own = executeCommand(doc, { type: 'moveSubtree', nodes: [id('b')], to: { parent: 'root', after: id('a') } }, caret);
   assert.ok(own.status === 'applied' && own.changes.length === 0 && own.doc === doc);
-  const r = executeCommand(doc, { type: 'moveSubtreeTo', nodes: [id('b')], to: { parent: id('d'), after: null } }, caret);
+  const r = executeCommand(doc, { type: 'moveSubtree', nodes: [id('b')], to: { parent: id('d'), after: null } }, caret);
   assert.equal(r.status, 'applied');
   if (r.status !== 'applied') return;
   assert.equal(r.doc.text, '- a\n- d\n  - b\n    - c\n');
@@ -247,7 +247,7 @@ test('a place named by ids survives an edit elsewhere', () => {
   const id = (text: string): number => nodesOf(doc).find((n) => plainText(doc, n) === text)!.id;
   const [b, c] = [id('b'), id('c')];
   const edited = doc.update([{ from: 3, to: 3, insert: 'x' }]);
-  const r = executeCommand(edited, { type: 'moveSubtreeTo', nodes: [c], to: { parent: 'root', after: null } }, { anchor: 0, head: 0 });
+  const r = executeCommand(edited, { type: 'moveSubtree', nodes: [c], to: { parent: 'root', after: null } }, { anchor: 0, head: 0 });
   assert.ok(r.status === 'applied');
   assert.equal(r.status === 'applied' && r.doc.text, '- c\n- ax\n- b\n');
   assert.equal(r.status === 'applied' && r.doc.node(b)?.prev?.id, id('a'));
@@ -290,7 +290,7 @@ test('a pickup takes the pressed node, its lines and its clipboard, and changes 
   assert.deepEqual(r.dropMap.lines, [[1, 3]]);
   assert.equal(r.clipboard?.['text/plain'], '- b\n  - c\n');
   // every point's drop is ready to run, and names the run
-  for (const seam of r.dropMap.seams) for (const point of seam.points) assert.deepEqual(point.drop, { type: 'moveSubtreeTo', nodes: [id('b')], to: { parent: point.parent, after: point.after } });
+  for (const seam of r.dropMap.seams) for (const point of seam.points) assert.deepEqual(point.drop, { type: 'moveSubtree', nodes: [id('b')], to: { parent: point.parent, after: point.after } });
   const stale = executeCommand(doc, { type: 'drag', pressed: 999 }, { anchor: 2, head: 2 });
   assert.equal(stale.status === 'rejected' && stale.reason, 'no-such-node');
 });

@@ -353,13 +353,13 @@ export const driver: Driver = {
   // measured: Enter at an item's text start leaves the caret with the text
   // ProseMirror's paste opens both seams, and a list keeps its form
   behaves: {
-    // a quote is a style on one block: a quote of one paragraph is that block, its `>` the style (../../dev/19-quotes.md, Part 1)
+    // a quote is a style on one block: a quote of one paragraph is that block, its `>` the style
     quotes: 'text',
-    // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+    // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25)
     enterInQuote: 'split',
     // its blocks a flat sequence, each item a block of its own: a list after a paragraph is no block's,
     // what a paragraph holds in BlockNote (Tab nests one) Markdown's list after it, and a move passes one
-    // block, an item included (Lists1, Lists8: ../../dev/19-quotes.md, Part 2)
+    // block, an item included (Lists1, Lists8)
     listParent: 'container',
     listMoves: 'item',
     enterSplitSpace: 'start',
@@ -401,9 +401,9 @@ export const driver: Driver = {
   ordered: true,
   holds: (doc) => holds(doc as Outline),
   // by the side menu's drag handle (`blockNoteDrop`); after a drop its editor is blurred (`blockDragEnd`)
-  drops: ['move'],
+  drops: ['moveSubtree'],
   drop: blockNoteDrop,
-  noCaretAfter: ['move'],
+  noCaretAfter: ['moveSubtree'],
   // its `load` selects text across whole blocks, which its drag takes as the blocks, as `read` reports them
   selectsBlocks: true,
 

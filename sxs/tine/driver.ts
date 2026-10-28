@@ -69,7 +69,8 @@ function toTine(text: string): { text: string; from: number; to: number } {
  * escape at `cut`); a task's marker as its checkbox.
  */
 function fromTine(raw: string, number: number | null): { text: string; from: number; to: number; cut?: number } {
-  const task = swapPrefix(raw.replace(/\n?logseq\.order-list-type:: number[ \t]*(?=\n|$)/, ''), FROM_TINE);
+  // (a numbered block's property, and a collapsed one's, which its fold reports: `read`'s view)
+  const task = swapPrefix(raw.replace(/\n?logseq\.order-list-type:: number[ \t]*(?=\n|$)/, '').replace(/\n?collapsed:: true[ \t]*(?=\n|$)/, ''), FROM_TINE);
   // a number that is text, escaped also after a numbered block's own number (`2. 2\. x`)
   const pre = number !== null ? `${number}. ` : '';
   const literal = /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(task.text);
@@ -95,8 +96,8 @@ function codeOf(text: string): { start: number; end: number } | null {
  */
 const run = Date.now().toString(36);
 let pages = 0;
-/** The current test's page, a worker's (`perPage`). */
-const pageState = perPage(() => ({ current: '' }));
+/** The current test's page, a worker's (`perPage`), and whether it was loaded with folds, which are read back then alone. */
+const pageState = perPage(() => ({ current: '', viewed: false }));
 
 export const driver: Driver = {
   shortId: 'TI',
@@ -107,11 +108,16 @@ export const driver: Driver = {
   // a block's text holds a blank line, its paragraphs apart
   paragraphsInBlock: true,
   // after Escape and Backspace delete a block no block is edited (its runs: DeleteSubtree1, 3, 4), nor
-  // after a drop: the drag ends the editing as it starts (Drag1, Drag8)
-  noCaretAfter: ['deleteSubtree', 'move'],
+  // after a drop: the drag ends the editing as it starts (MoveSubtree1, MoveSubtree9)
+  noCaretAfter: ['deleteSubtree', 'moveSubtree'],
   // a selection of whole blocks: loaded with Escape and Shift+Down, read from `.block-main.selected`
   selectsBlocks: true,
+  // a block collapsed (its `collapsed`, seeded with the page and read from the store); no zoom but by
+  // a click on a bullet
+  folds: true,
   keys: {
+    fold: 'Control+ArrowUp',
+    unfold: 'Control+ArrowDown',
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
     indent: 'Tab',
@@ -139,9 +145,9 @@ export const driver: Driver = {
   refuses: ['markup-heading', 'markup-task', 'markup-fence'],
   ordered: true,
   behaves: {
-    // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+    // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25)
     quotes: 'atom',
-    // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+    // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25)
     enterInQuote: 'split',
     // Backspace at a numbered block's start takes its number first, as Logseq (Backspace29, TO5)
     backspaceAtItemStart: 'logseq',
@@ -225,7 +231,7 @@ export const driver: Driver = {
     const sel = o.sel ? { block: o.sel.block, anchor: shiftOffset(o.sel.anchor, swapped!.from, swapped!.to), head: shiftOffset(o.sel.head, swapped!.from, swapped!.to) } : selected && { block: selected[0]!, anchor: 0, head: 0 };
     const current = (pageState(page).current = `sxs-${run}-${String(++pages).padStart(5, '0')}`);
     await page.evaluate(
-      ({ name, blocks }) => {
+      ({ name, blocks, folded }) => {
         const roots: any[] = [];
         const stack: any[] = [];
         // a block's header facets as the backend ships them (Tine takes them as they are, `seedFacets`):
@@ -235,7 +241,7 @@ export const driver: Driver = {
           return { marker: f.marker ?? undefined, priority: f.priority ?? undefined, heading_level: f.headingLevel ?? undefined, scheduled: f.scheduled ?? undefined, deadline: f.deadline ?? undefined, tags: f.tags, properties: f.properties };
         };
         blocks.forEach((b, k) => {
-          const dto = { id: `${name}-${k}`, raw: b.text, collapsed: false, children: [], ...facets(b.text) };
+          const dto = { id: `${name}-${k}`, raw: b.text, collapsed: folded.includes(k), children: [], ...facets(b.text) };
           stack.length = b.depth;
           (b.depth === 0 ? roots : stack[b.depth - 1].children).push(dto);
           stack[b.depth] = dto;
@@ -243,8 +249,9 @@ export const driver: Driver = {
         (globalThis as any).__sxsPages.push({ name, kind: 'page', title: name, pre_block: null, format: 'md', read_only: false, guide: false, blocks: roots });
         (document.activeElement as HTMLElement | null)?.blur();
       },
-      { name: current, blocks: blocks.map(({ depth, text }) => ({ depth, text })) },
+      { name: current, blocks: blocks.map(({ depth, text }) => ({ depth, text })), folded: o.view?.folded ?? [] },
     );
+    pageState(page).viewed = !!o.view;
     const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 60, timeout: 5000 }));
     // opened as a user would: the search, its name, Enter (the app has no route to a page)
     await page.keyboard.press('Escape');
@@ -289,7 +296,7 @@ export const driver: Driver = {
   },
 
   async read(page: Page) {
-    const raw = await page.evaluate((name) => {
+    const raw = await page.evaluate(({ name, viewed }) => {
       const [doc] = (globalThis as any).__sxsDoc;
       const p = doc.pages.find((q: any) => q.name === name);
       const flat: { depth: number; text: string; id: string; number: number | null }[] = [];
@@ -321,8 +328,10 @@ export const driver: Driver = {
         sel: i >= 0 ? { block: i, anchor: back ? ta!.selectionEnd : ta!.selectionStart, head: back ? ta!.selectionStart : ta!.selectionEnd } : null,
         code: i >= 0 && ta!.classList.contains('code-edit'),
         selected,
+        // the view: the collapsed blocks with children (no zoom here)
+        view: viewed ? { folded: flat.flatMap((b, k) => (doc.byId[b.id].collapsed && doc.byId[b.id].children.length ? [k] : [])), zoom: null } : undefined,
       };
-    }, pageState(page).current);
+    }, { name: pageState(page).current, viewed: pageState(page).viewed });
     // in a code block's editor, the offsets are the code's
     if (raw.sel && raw.code) {
       const start = codeOf(raw.blocks[raw.sel.block]!.text)?.start ?? 0;
@@ -337,10 +346,10 @@ export const driver: Driver = {
       sel = { block: sel.block, anchor: at(sel.anchor), head: at(sel.head) };
     }
     // the block's later lines keep the escapes Markdown source has at their start; a block's text needs none
-    return unescapeLaterLines({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) });
+    return { ...unescapeLaterLines({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) }), ...(raw.view && { view: raw.view }) };
   },
 
-  drops: ['move'],
+  drops: ['moveSubtree'],
   /**
    * A drop as Tine's bullet drag takes it (its `mousedown` on `.bullet-container`, then the document's
    * `mousemove`, past 4 pixels): the block under the pointer is the target, and where on it the place:

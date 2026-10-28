@@ -25,11 +25,17 @@ so on, defined by `ra("doc-indent", ...)` calls in `main.min.js`):
 | `deleteSoftLineBackward` | Shift+Home, Backspace |
 | `deleteSubtree` | Ctrl+Shift+Backspace (`doc-delete-left`: the item and its children) |
 | `duplicateSubtree` | *missing* (`doc-duplicate` has no key by default): its tests are skipped |
-| `pasteStructured` | Ctrl+V (but see below) |
+| `paste` | Ctrl+V (but see below) |
 | `pastePlain` | Ctrl+Shift+V (but see below) |
 | `undo` | Ctrl+Z |
 | `redo` | Ctrl+Y (also Ctrl+Shift+Z) |
-| `move ②` | the mouse: an item's bullet pressed, dropped where its place is (`drop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
+| `fold` | *missing*: `doc-collapse` toggles |
+| `unfold` | *missing*, as `fold` |
+| `toggleFold` | Ctrl+. (`doc-collapse`): the item's children hidden or shown |
+| `zoomIn` | Ctrl+] (`doc-zoom-in`) |
+| `zoomOut` | Ctrl+[ (`doc-zoom-out`): to its parent |
+| `clearZoom` | *missing*: Ctrl+[ a level at a time |
+| `moveSubtree` | mouse: an item's bullet pressed, dropped where its place is (`drop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
 
 Other shortcuts (the rest of the table with a default key that an outliner would want; each measured
 in the demo, 2026-10-18):
@@ -42,8 +48,7 @@ in the demo, 2026-10-18):
 | `doc-cycle-heading` | Ctrl+Shift+H | the item's heading: H1, H2, H3, none |
 | `doc-cycle-color-label` | Ctrl+Shift+L | the item's color label, in turn |
 | `doc-delete-right` | Ctrl+Shift+Delete | deletes the item with its children (as Ctrl+Shift+Backspace), the caret to the next item |
-| `doc-collapse`, `doc-collapse-all` | Ctrl+., Ctrl+Shift+. | folds or unfolds the item; the item and every item below it with children |
-| `doc-zoom-in`, `doc-zoom-out` | Ctrl+], Ctrl+[ | zooms into the item, out to its parent |
+| `doc-collapse-all` | Ctrl+Shift+. | folds or unfolds the item and every item below it with children |
 | `doc-zoom-prev-sibling`, `doc-zoom-next-sibling` | Ctrl+Shift+[, Ctrl+Shift+] | while zoomed, into the previous, next sibling of the item zoomed into |
 | `doc-goto-notes` | Shift+Enter | into the item's note |
 | `doc-select-all`, `doc-select-all-force` | Ctrl+A, Ctrl+Shift+A | the item's text, then (again) the item as an item; every top-level item |
@@ -169,6 +174,28 @@ Dynalist bugs met:
   the first item (`See x┃`), set in the last. From plain text, or HTML of a list alone, the caret is
   right.
 
+## Folds and the zoom, measured
+
+[`fold.md`](../../spec/fold.md) and [`zoom.md`](../../spec/zoom.md), measured 2026-10-28. An item's
+fold is its own: loaded by `view.set_node_collapse` once every item is on screen, read as
+`is_collapsed` of an item with children. A zoom is `view.zoom_node` the item, read as
+`ui.current_root`: the document's root, zoomed into for every test, stands for none. What is compared
+is what the reader sees: the folds in effect, and the zoom root.
+
+- **Around a collapsed item it agrees**: Enter at its end (`Fold1`), mid-text (`Fold2`), on an empty
+  one with children (`Fold5`), Backspace after it (`Fold3`), a move (`Fold4`), an indent under it
+  (`Fold6`).
+- **Delete at a collapsed item's end does nothing** (`Fold7`), as ourus, which refuses it (`folded`).
+- **Backspace right after a collapsed item joins into its text**, not its hidden last child's, still
+  collapsed (`Fold15`), as ourus.
+- **Toggle at an item without children does nothing** (`Fold11`); ourus toggles its parent's.
+- **Zoomed, Enter at the root's end and mid-text makes its first child** (`Zoom1`, `Zoom10`), the
+  zoom goes in and out a level at a time (`Zoom6`, `Zoom7`), and the root deleted, it goes to its
+  parent (`Zoom9`), as ourus.
+- **The zoom doesn't hold its edges**: Backspace at the root's start joins it to the hidden item
+  above and ends the zoom (`Zoom2`: `- a⏎- ┃b` comes out `- ab`); a child of the root outdented goes
+  out beside it, and the zoom ends (`Zoom11`). ourus refuses both.
+
 ## Drag and drop
 
 Read in `main.min.js` (`DocumentDragManager`) and played with the real mouse, aimed where its own
@@ -180,15 +207,15 @@ of a parent's before its first child, the 3-pixel padding under an item's last c
 x only says "into" a leaf, past a column 30 pixels and a fifth of its line's width right of its bullet.
 
 - **Every place ourus has is one of its own**: before an item, after a leaf or a parent at its
-  depth, first among a parent's children, into a leaf (`drag.md › Drag1`, `Drag3`, `Drag8`,
-  `Drag13`, `scenarios.md › Scenario8c`: the outline agrees; and in probes, after a parent that is
+  depth, first among a parent's children, into a leaf (`move-subtree.md › MoveSubtree1`, `MoveSubtree3`, `MoveSubtree9`,
+  `MoveSubtree12`, `scenarios.md › Scenario8c`: the outline agrees; and in probes, after a parent that is
   the last of its own parent's, at either depth).
 - **The drop selects the dropped item, as an item, and the caret goes**: the drag selects the items
-  it carries at its first move and leaves them selected (`Drag1`: `▮ three`, ourus's `three┃`;
-  `Drag2`: the caret in `two` goes too). So typing after a drop types nothing (`Scenario8b`: `s`
+  it carries at its first move and leaves them selected (`MoveSubtree1`: `▮ three`, ourus's `three┃`;
+  `MoveSubtree2`: the caret in `two` goes too). So typing after a drop types nothing (`Scenario8b`: `s`
   goes nowhere, `email` where ourus has `emails┃`).
 - **The cover rule is ourus's**: a press on an item of the item selection drags the selection, any
-  other press the item alone (`start_drag_node`): Drag4, Drag20 agree; Drag5, Drag5b land as
+  other press the item alone (`start_drag_node`): MoveSubtree4, MoveSubtree19 agree; MoveSubtree5, MoveSubtree6 land as
   ourus's, only the dropped item selected after (`caret`). The driver selects items as a user does,
   Shift+Down from the first one's start past its edge.
 - **A drop where the item already is, is a drop on its last place shown**: on a line that would

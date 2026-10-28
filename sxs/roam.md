@@ -5,7 +5,7 @@ version: "0.13.12 (39a714f3; API 1.1.5)"
 url: "https://roamresearch.com/#/app/help"
 model: "block"
 command: "node sxs/run.ts roam"
-elapsed_s: 99
+elapsed_s: 139
 workers: 4
 ---
 
@@ -15,31 +15,34 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 172 | [5](#caret-5) | [6](#whitespace-6) | [4](#disagree-4) | [1](#error-1) |  | **188** |
+| original | 190 | [7](#caret-7) | [6](#whitespace-6) | [7](#disagree-7) |  |  | **210** |
 | adapted | 393 | [7](#adapted-caret-7) | [24](#adapted-whitespace-24) | [42](#adapted-disagree-42) |  |  | **466** |
-| **total** | **565 (47%)** | **12 (1%)** | **30 (2.5%)** | **46 (3.9%)** | **1 (0.084%)** | **[538](#skipped-538) (45%)** | **1194** |
+| **total** | **583 (47%)** | **14 (1.1%)** | **30 (2.4%)** | **49 (4%)** | **0 (0%)** | **[550](#skipped-550) (45%)** | **1228** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total | original | adapted |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [backspace.md](../spec/backspace.md) | 42 |  |  | 3 |  | 40 | **85** | 17 | 28 |
+| [backspace.md](../spec/backspace.md) | 43 |  |  | 3 |  | 40 | **86** | 18 | 28 |
 | [backtick.md](../spec/backtick.md) | 1 |  |  |  |  | 32 | **33** |  | 1 |
 | [copy.md](../spec/copy.md) | 3 |  | 3 | 1 |  | 6 | **13** | 1 | 6 |
 | [cursor.md](../spec/cursor.md) | 25 | 5 |  |  |  | 6 | **36** | 12 | 18 |
 | [delete-subtree.md](../spec/delete-subtree.md) | 6 | 3 |  |  |  | 4 | **13** | 3 | 6 |
 | [delete.md](../spec/delete.md) | 28 |  |  |  |  | 28 | **56** | 11 | 17 |
-| [drag.md](../spec/drag.md) | 7 | 3 |  |  | 1 | 26 | **37** | 8 | 3 |
+| [drag.md](../spec/drag.md) |  |  |  |  |  | 8 | **8** |  |  |
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 10 | **10** |  |  |
 | [enter.md](../spec/enter.md) | 52 | 1 | 4 | 4 |  | 37 | **98** | 23 | 38 |
 | [fences.md](../spec/fences.md) | 3 |  |  |  |  | 67 | **70** |  | 3 |
+| [fold.md](../spec/fold.md) | 11 |  |  | 2 |  | 6 | **19** | 13 |  |
 | [gaps.md](../spec/gaps.md) | 14 |  |  |  |  | 5 | **19** | 1 | 13 |
 | [indent.md](../spec/indent.md) | 24 |  |  | 2 |  | 24 | **50** | 17 | 9 |
 | [lists.md](../spec/lists.md) | 4 |  |  |  |  | 12 | **16** |  | 4 |
 | [move-subtree-down.md](../spec/move-subtree-down.md) | 25 |  |  |  |  | 15 | **40** | 11 | 14 |
 | [move-subtree-up.md](../spec/move-subtree-up.md) | 26 |  |  |  |  | 17 | **43** | 12 | 14 |
+| [move-subtree.md](../spec/move-subtree.md) | 7 | 4 |  |  |  | 13 | **24** | 8 | 3 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 45 |  | 4 | 2 |  | 16 | **67** | 19 | 32 |
 | [outdent.md](../spec/outdent.md) | 16 |  |  |  |  | 22 | **38** | 5 | 11 |
+| [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |  |  |
 | [paste-conv.md](../spec/paste-conv.md) | 4 |  |  | 1 |  | 1 | **6** | 1 | 4 |
 | [paste-html.md](../spec/paste-html.md) | 9 |  |  | 7 |  | 3 | **19** |  | 16 |
 | [paste-list-form.md](../spec/paste-list-form.md) | 3 |  |  | 2 |  | 1 | **6** |  | 5 |
@@ -56,9 +59,10 @@ Per-file:
 | [typing.md](../spec/typing.md) |  |  |  |  |  | 3 | **3** |  |  |
 | [undo.md](../spec/undo.md) | 4 |  |  |  |  | 1 | **5** | 3 | 1 |
 | [z-open.md](../spec/z-open.md) |  |  |  |  |  | 1 | **1** |  |  |
-| **total** | **565 (47%)** | **12 (1%)** | **30 (2.5%)** | **46 (3.9%)** | **1 (0.084%)** | **540 (45%)** | **1194** | **188 (16%)** | **466 (39%)** |
+| [zoom.md](../spec/zoom.md) | 6 | 1 |  | 1 |  | 6 | **14** | 8 |  |
+| **total** | **583 (47%)** | **14 (1.1%)** | **30 (2.4%)** | **49 (4%)** | **0 (0%)** | **552 (45%)** | **1228** | **210 (17%)** | **466 (38%)** |
 
-## Disagree (4)
+## Disagree (7)
 
 ### [Backspace17](../spec/backspace.md#backspace17)
 
@@ -87,6 +91,115 @@ Per-file:
 ```buffer
 - ┃b
 - c
+```
+
+</td></tr>
+</table>
+
+### [Fold11](../spec/fold.md#fold11)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b┃
+
+⟦folded none; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+> toggleFold
+
+<table>
+<tr><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b┃
+
+⟦folded none; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a┃
+  - b
+
+⟦folded 1; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+> toggleFold
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b┃
+
+⟦folded none; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold14](../spec/fold.md#fold14)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - b
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a- x
+  ┃
+  - b
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+- x┃
+- c
+
+⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -206,6 +319,43 @@ Per-file:
 - abcd
 - x┃
 - e
+```
+
+</td></tr>
+</table>
+
+### [Zoom9](../spec/zoom.md#zoom9)
+
+> deleteSubtree
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b┃
+  - c
+
+⟦folded none; zoom 2⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - c
+
+⟦folded none; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - c
+
+⟦folded none; zoom 1⟧
 ```
 
 </td></tr>
@@ -440,7 +590,7 @@ Per-file:
 </td></tr>
 </table>
 
-## Caret (5)
+## Caret (7)
 
 ### [CursorUp3](../spec/cursor.md#cursorup3)
 
@@ -505,9 +655,9 @@ Per-file:
 </td></tr>
 </table>
 
-### [Drag4](../spec/drag.md#drag4)
+### [MoveSubtree4](../spec/move-subtree.md#movesubtree4)
 
-> move ②
+> moveSubtree ②
 
 <table>
 <tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
@@ -538,9 +688,42 @@ Per-file:
 </td></tr>
 </table>
 
-### [Drag5b](../spec/drag.md#drag5b)
+### [MoveSubtree5](../spec/move-subtree.md#movesubtree5)
 
-> move ③
+> moveSubtree ③
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ▮ a
+- ▮ b
+- c
+```
+
+</td><td>
+
+```buffer
+- c
+- a
+- b
+```
+
+</td><td>
+
+```buffer
+- c
+- ▮ a
+- ▮ b
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree6](../spec/move-subtree.md#movesubtree6)
+
+> moveSubtree ③
 
 <table>
 <tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
@@ -571,9 +754,9 @@ Per-file:
 </td></tr>
 </table>
 
-### [Drag20](../spec/drag.md#drag20)
+### [MoveSubtree19](../spec/move-subtree.md#movesubtree19)
 
-> move
+> moveSubtree
 
 <table>
 <tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
@@ -604,34 +787,44 @@ Per-file:
 </td></tr>
 </table>
 
-## Error (1)
+### [Zoom6](../spec/zoom.md#zoom6)
 
-### [Drag5](../spec/drag.md#drag5)
+> zoomIn
 
 <table>
-<tr><th>buffer</th></tr>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- ▮ a
-- ▮ b
-- c
+- a
+- b┃
+  - c
+
+⟦folded none; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+- b
+  - c┃
+
+⟦folded none; zoom 2⟧
+```
+
+</td><td>
+
+```buffer
+- a
+- b┃
+  - c
+
+⟦folded none; zoom 2⟧
 ```
 
 </td></tr>
 </table>
-
-> move ③
-
-Error: Roam holds the starting state differently:
-  meant:
-    - ▮ a
-    - ▮ b
-    - c
-  holds:
-    - ┃a
-    - b
-    - c
 
 ## Adapted: disagree (42)
 
@@ -1003,8 +1196,16 @@ Adapted: blank lines, heading, paragraph, setext heading, under quirkEnterMidHea
 > undo undo
 
 <table>
-<tr><th>buffer</th></tr>
+<tr><th>roam</th><th>ourus</th></tr>
 <tr valign="top"><td>
+
+```buffer
+- ## ┃one
+  two
+  three
+```
+
+</td><td>
 
 ```buffer
 - ## one
@@ -1023,8 +1224,8 @@ Adapted: blank lines, heading, paragraph, setext heading, under quirkEnterMidHea
 
 ```buffer
 - one
-  two
 - ## ┃
+  two
   three
 ```
 
@@ -5351,7 +5552,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (540)
+## Skipped (552)
 
 | example | why |
 | --- | --- |
@@ -5478,32 +5679,14 @@ Original:
 | [Delete29](../spec/delete.md#delete29) | tag free-form |
 | [Delete34](../spec/delete.md#delete34) | option quotes: container |
 | **drag.md** | |
-| [Drag5c](../spec/drag.md#drag5c) | changes only what blocks can't show |
-| [Drag6](../spec/drag.md#drag6) | action drag ② |
-| [Drag6b](../spec/drag.md#drag6b) | changes only what blocks can't show |
-| [Drag6c](../spec/drag.md#drag6c) | action drag ② |
-| [Drag7](../spec/drag.md#drag7) | action drag ④ |
-| [Drag9](../spec/drag.md#drag9) | nothing to compare |
-| [Drag12](../spec/drag.md#drag12) | nothing to compare |
-| [Drag14](../spec/drag.md#drag14) | nothing to compare |
-| [Drag15](../spec/drag.md#drag15) | heading deeper than H3 |
-| [Drag16](../spec/drag.md#drag16) | heading deeper than H3 |
-| [Drag17](../spec/drag.md#drag17) | heading deeper than H3 |
-| [Drag18](../spec/drag.md#drag18) | drop: the pickup is refused (non-contiguous) |
-| [Drag19](../spec/drag.md#drag19) | nothing to compare |
-| [Drag21](../spec/drag.md#drag21) | option quotes: the app's atom, not replayable |
-| [Drag22](../spec/drag.md#drag22) | action drag ② |
-| [Drag23](../spec/drag.md#drag23) | action drag ② |
-| [Drag24](../spec/drag.md#drag24) | action drag ③ |
-| [Drag25](../spec/drag.md#drag25) | action drag ③ |
-| [Drag26](../spec/drag.md#drag26) | action drag ③ |
-| [Drag30](../spec/drag.md#drag30) | list numbered in part, or not from 1 |
-| [Drag31](../spec/drag.md#drag31) | code block |
-| [Drag10](../spec/drag.md#drag10) | action pasteAt |
-| [Drag11](../spec/drag.md#drag11) | action pasteAt |
-| [Drag27](../spec/drag.md#drag27) | action pasteAt |
-| [Drag28](../spec/drag.md#drag28) | action pasteAt |
-| [Drag29](../spec/drag.md#drag29) | action deleteByDrag |
+| [Drag1](../spec/drag.md#drag1) | action drag ② |
+| [Drag2](../spec/drag.md#drag2) | action drag ② |
+| [Drag3](../spec/drag.md#drag3) | action drag ④ |
+| [Drag4](../spec/drag.md#drag4) | action drag ② |
+| [Drag5](../spec/drag.md#drag5) | action drag ② |
+| [Drag6](../spec/drag.md#drag6) | action drag ③ |
+| [Drag7](../spec/drag.md#drag7) | action drag ③ |
+| [Drag8](../spec/drag.md#drag8) | action drag ③ |
 | **duplicate-subtree.md** | |
 | [DuplicateSubtree1](../spec/duplicate-subtree.md#duplicatesubtree1) | action duplicateSubtree |
 | [DuplicateSubtree2](../spec/duplicate-subtree.md#duplicatesubtree2) | action duplicateSubtree |
@@ -5621,6 +5804,13 @@ Original:
 | [Fence62](../spec/fences.md#fence62) | code block |
 | [Fence63](../spec/fences.md#fence63) | tag markup-fence |
 | [Fence64](../spec/fences.md#fence64) | tag markup-fence |
+| **fold.md** | |
+| [Fold2b](../spec/fold.md#fold2b) | option enterMidItem: child |
+| [Fold8](../spec/fold.md#fold8) | action duplicateSubtree |
+| [Fold9](../spec/fold.md#fold9) | action fold ② |
+| [Fold10](../spec/fold.md#fold10) | action fold ① |
+| [Fold13](../spec/fold.md#fold13) | its view, on an adapted start |
+| [Fold15b](../spec/fold.md#fold15b) | changes only what blocks can't show |
 | **gaps.md** | |
 | [Gap7](../spec/gaps.md#gap7) | code block |
 | [Gap15](../spec/gaps.md#gap15) | caret on a blank line |
@@ -5699,6 +5889,20 @@ Original:
 | [MoveUp39](../spec/move-subtree-up.md#moveup39) | caret on a blank line |
 | [MoveUp41](../spec/move-subtree-up.md#moveup41) | tag markup-fence |
 | [MoveUp43](../spec/move-subtree-up.md#moveup43) | option indentUnit: tab |
+| **move-subtree.md** | |
+| [MoveSubtree7](../spec/move-subtree.md#movesubtree7) | changes only what blocks can't show |
+| [MoveSubtree8](../spec/move-subtree.md#movesubtree8) | changes only what blocks can't show |
+| [MoveSubtree10](../spec/move-subtree.md#movesubtree10) | nothing to compare |
+| [MoveSubtree11](../spec/move-subtree.md#movesubtree11) | nothing to compare |
+| [MoveSubtree13](../spec/move-subtree.md#movesubtree13) | nothing to compare |
+| [MoveSubtree14](../spec/move-subtree.md#movesubtree14) | heading deeper than H3 |
+| [MoveSubtree15](../spec/move-subtree.md#movesubtree15) | heading deeper than H3 |
+| [MoveSubtree16](../spec/move-subtree.md#movesubtree16) | heading deeper than H3 |
+| [MoveSubtree17](../spec/move-subtree.md#movesubtree17) | drop: the pickup is refused (non-contiguous) |
+| [MoveSubtree18](../spec/move-subtree.md#movesubtree18) | nothing to compare |
+| [MoveSubtree20](../spec/move-subtree.md#movesubtree20) | option quotes: the app's atom, not replayable |
+| [MoveSubtree21](../spec/move-subtree.md#movesubtree21) | list numbered in part, or not from 1 |
+| [MoveSubtree22](../spec/move-subtree.md#movesubtree22) | code block |
 | **obsidian-true-outliner.md** | |
 | [TO-Bug228](../spec/obsidian-true-outliner.md#to-bug228) | list numbered in part, or not from 1 |
 | [TO-E7-E8](../spec/obsidian-true-outliner.md#to-e7-e8) | option enterMidItem: child |
@@ -5739,6 +5943,12 @@ Original:
 | [Outdent20](../spec/outdent.md#outdent20) | tag free-form |
 | [Outdent20b](../spec/outdent.md#outdent20b) | tag free-form |
 | [Outdent22b](../spec/outdent.md#outdent22b) | indented code |
+| **paste-at.md** | |
+| [PasteAt1](../spec/paste-at.md#pasteat1) | action pasteAt |
+| [PasteAt2](../spec/paste-at.md#pasteat2) | action pasteAt |
+| [PasteAt3](../spec/paste-at.md#pasteat3) | action pasteAt |
+| [PasteAt4](../spec/paste-at.md#pasteat4) | action pasteAt |
+| [PasteAt5](../spec/paste-at.md#pasteat5) | action deleteByDrag |
 | **paste-conv.md** | |
 | [PasteConvPhraseInCode](../spec/paste-conv.md#pasteconvphraseincode) | code block |
 | **paste-html.md** | |
@@ -5876,7 +6086,7 @@ Original:
 | [Regression63](../spec/regressions.md#regression63) | list numbered in part, or not from 1 |
 | **scenarios.md** | |
 | [Scenario6](../spec/scenarios.md#scenario6) | tag free-form |
-| [Scenario8b](../spec/scenarios.md#scenario8b) | no text focus after move ③ |
+| [Scenario8b](../spec/scenarios.md#scenario8b) | no text focus after moveSubtree ③ |
 | [Scenario8d](../spec/scenarios.md#scenario8d) | action drag ② |
 | [Scenario15](../spec/scenarios.md#scenario15) | tag markup-task |
 | [Scenario18](../spec/scenarios.md#scenario18) | code block (expected) |
@@ -5928,3 +6138,10 @@ Original:
 | [Undo2](../spec/undo.md#undo2) | tag free-form |
 | **z-open.md** | |
 | [Open2](../spec/z-open.md#open2) | code block |
+| **zoom.md** | |
+| [Zoom3](../spec/zoom.md#zoom3) | its view, on an adapted start |
+| [Zoom4](../spec/zoom.md#zoom4) | caret in a marker |
+| [Zoom8](../spec/zoom.md#zoom8) | action clearZoom |
+| [Zoom12](../spec/zoom.md#zoom12) | caret on a blank line |
+| [Zoom13](../spec/zoom.md#zoom13) | code block |
+| [Zoom14](../spec/zoom.md#zoom14) | option enterOnEmptyItem: unwrap |

@@ -6,6 +6,7 @@ import { ProseText, type OutlineNode, type OutlineNodePersistent } from '../doc/
 import type { AnchorSpec } from '../draft/index.ts';
 import { reject, type CommandContext, type CommandOutcome } from './context.ts';
 import { caretOffset, headingLevel, operandsOf, operandsRefused, textEnd } from './util.ts';
+import { withFolds } from './view.ts';
 
 /**
  * The selected nodes copied right below them, each copy written as its original is (rules 1, 4, 6),
@@ -28,7 +29,25 @@ export function duplicateSubtreeCommand(ctx: CommandContext): CommandOutcome {
   if (nodes.some((n) => ctx.doc.marks.marks.some((m) => m.from >= ctx.doc.rangeOf(n).from && m.from <= ctx.doc.rangeOf(n).to))) return null;
   const draft = ctx.draft();
   const ids = new Map<OutlineNodePersistent, number>();
-  draft.place('after', nodes[nodes.length - 1]!, nodes.map((n) => draft.copy(n, ids)));
+  const copies = nodes.map((n) => draft.copy(n, ids));
+  const original = nodes[nodes.length - 1]!;
+  draft.place('after', original, copies);
+  // each item copy lined up with its original, as its line is written (a quote's `>` as it is)
+  nodes.forEach((n, k) => n.kind === 'item' && draft.lineUp(copies[k]!, n));
+  // in a loose list, spaced as its items are, as paste places them: the original apart from its copy,
+  // each copy apart from what follows it in the list, the last one taking the original's blank lines
+  // where nothing in the list follows
+  const list = original.kind === 'item' ? ctx.doc.listOf(original) : null;
+  if (list && list.block.attrs.tight === false) {
+    const lastOf = (id: number): number => {
+      const kids = draft.touched(id).children;
+      return kids.length ? lastOf(kids[kids.length - 1]!) : id;
+    };
+    const gap = original.lastDescendant.gap;
+    const next = !!original.next && original.next.kind === 'item' && ctx.doc.listOf(original.next)?.block === list.block;
+    draft.gap(original.lastDescendant, Math.max(gap, 1));
+    copies.forEach((id, k) => draft.gap(lastOf(id), k < copies.length - 1 || next ? Math.max(1, k === copies.length - 1 ? gap : 1) : gap));
+  }
   // each end in the copy of the node it is in
   const end = (pos: number): AnchorSpec | null => {
     const at = ctx.doc.locate(pos);
@@ -54,5 +73,12 @@ export function duplicateSubtreeCommand(ctx: CommandContext): CommandOutcome {
     [anchor, head] = [kept(ctx.selection.anchor), kept(ctx.selection.head)];
   }
   if (!head || !anchor) return null;
-  return ctx.apply(draft.select(anchor, head));
+  // a folded node's copy is folded too, and every fold inside it
+  const folds: number[] = [];
+  const visit = (n: OutlineNode): void => {
+    if (ctx.doc.folded.has(n.id) && ids.has(n.persistentNode)) folds.push(ids.get(n.persistentNode)!);
+    n.children.forEach(visit);
+  };
+  nodes.forEach(visit);
+  return withFolds(ctx.apply(draft.select(anchor, head)), folds);
 }

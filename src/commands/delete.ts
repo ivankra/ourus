@@ -75,6 +75,8 @@ export function deleteContentForwardCommand(ctx: CommandContext): CommandOutcome
   if (offset !== end) return null;
   const below = node.children[0] ?? node.afterSubtree;
   if (!below) return null;
+  // a folded node's first child is hidden: it doesn't join, nothing hidden changing (Fold7)
+  if (below === node.children[0] && ctx.doc.zoomFolded.has(node.id)) return reject('folded', 'the node below is hidden in its fold');
   const lower = ctx.doc.textOf(below);
   // on an empty item, the node below moves up into it, as Backspace at its start takes it (Delete5, 6)
   if (text.empty) {

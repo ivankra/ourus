@@ -13,17 +13,20 @@ import { duplicateSubtreeCommand } from './duplicate-subtree.ts';
 import { deleteContentForwardCommand } from './delete.ts';
 import { enterCommand } from './enter.ts';
 import { indentCommand } from './indent.ts';
-import { moveSubtreeDownCommand, moveSubtreeUpCommand } from './move-subtree.ts';
-import { moveSubtreeToCommand } from './move-subtree-to.ts';
+import { moveSubtreeCommand } from './move-subtree.ts';
+import { moveSubtreeDownCommand, moveSubtreeUpCommand } from './move-subtree-by.ts';
 import { outdentCommand } from './outdent.ts';
 import { pasteAtCommand, pasteCommand } from './paste.ts';
 import { pastePlainCommand } from './paste-plain.ts';
 import { shiftEnterCommand } from './shift-enter.ts';
 import type { Command, CommandResult, Selection } from './types.ts';
 import { insertTextCommand } from './typing.ts';
+import { clearZoomCommand, foldCommand, toggleFoldCommand, unfoldCommand, zoomInCommand, zoomOutCommand } from './view.ts';
+import { zoomed } from './zoom.ts';
 
 export type { Clipboard, Command, CommandResult, DropMap, DropPoint, DropSeam, InsertionPoint, RejectReason, Selection } from './types.ts';
 export { nearestDropPoint } from './drag.ts';
+export { leavesZoom } from './zoom.ts';
 
 /** The commands a host has a default for (an editor's key, its clipboard): where ourus doesn't do them, the host does. */
 const HOST_HAS: ReadonlySet<Command['type']> = new Set(['enter', 'shiftEnter', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward', 'copy', 'cut', 'paste', 'pastePlain', 'insertText', 'deleteByDrag']);
@@ -34,9 +37,9 @@ const HOST_HAS: ReadonlySet<Command['type']> = new Set(['enter', 'shiftEnter', '
  * refused as `unsupported`.
  */
 export function executeCommand(doc: OurusDoc, command: Command, selection: Selection): CommandResult {
-  const done = execute(doc, command, selection);
-  if (done) return done;
-  return HOST_HAS.has(command.type) ? { status: 'deferredToHost', detail: "ourus doesn't do it here yet" } : { status: 'rejected', reason: 'unsupported' };
+  // within the snapshot's view: confined to its zoom, its selection out of what it hides (a deferral
+  // where ourus doesn't do it yet included: at the zoom root's edges it would reach outside)
+  return zoomed(doc, command, selection, () => execute(doc, command, selection) ?? (HOST_HAS.has(command.type) ? { status: 'deferredToHost', detail: "ourus doesn't do it here yet" } : { status: 'rejected', reason: 'unsupported' }));
 }
 
 /** The command, or null where ourus doesn't do it yet. */
@@ -57,8 +60,8 @@ function execute(doc: OurusDoc, command: Command, selection: Selection): Command
       return moveSubtreeDownCommand(ctx);
     case 'drag':
       return dragCommand(ctx, command);
-    case 'moveSubtreeTo':
-      return moveSubtreeToCommand(ctx, command.to);
+    case 'moveSubtree':
+      return moveSubtreeCommand(ctx, command.to);
     case 'pasteAt':
       return pasteAtCommand(ctx, command.clipboard, command.at);
     case 'deleteByDrag':
@@ -82,6 +85,18 @@ function execute(doc: OurusDoc, command: Command, selection: Selection): Command
       return pastePlainCommand(ctx, command.text);
     case 'insertText':
       return insertTextCommand(ctx, command.text);
+    case 'fold':
+      return foldCommand(ctx);
+    case 'unfold':
+      return unfoldCommand(ctx);
+    case 'toggleFold':
+      return toggleFoldCommand(ctx);
+    case 'zoomIn':
+      return zoomInCommand(ctx);
+    case 'zoomOut':
+      return zoomOutCommand(ctx);
+    case 'clearZoom':
+      return clearZoomCommand(ctx);
     default:
       return null;
   }

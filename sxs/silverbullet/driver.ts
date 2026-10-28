@@ -7,7 +7,7 @@
 // CodeMirror, and the actions are SilverBullet's keys on Linux.
 
 import type { Page } from 'playwright-core';
-import type { Driver } from '../lib/driver.ts';
+import { perPage, type Driver } from '../lib/driver.ts';
 import type { TextDoc } from '../lib/text.ts';
 
 const MOTIONS: Record<string, string> = {
@@ -24,6 +24,9 @@ const MOTIONS: Record<string, string> = {
 /** Pages are numbered within a page load, so each test's page is new. */
 let pages = 0;
 
+/** A worker's: whether its test was loaded with folds, which are read back then alone. */
+const viewed = perPage(() => ({ on: false }));
+
 export const driver: Driver = {
   shortId: 'SB',
   longId: 'silverbullet',
@@ -33,7 +36,7 @@ export const driver: Driver = {
   // measured: Enter at an item's text start leaves the caret with the text; a typed fence is left
   // open (Backtick1 to Backtick4)
   behaves: {
-    // a quote is text, its `>`s characters edited on its lines: of `quotes`' values the one its runs agree with most (166 quote cases a setup, ../../dev/19-quotes.md §1.4.3)
+    // a quote is text, its `>`s characters edited on its lines: of `quotes`' values the one its runs agree with most (166 quote cases a setup)
     quotes: 'atom',
     enterSplitSpace: 'start',
     enterAtTextStart: 'stay',
@@ -41,7 +44,10 @@ export const driver: Driver = {
     copyAtCaret: 'host',
     pastePlainLines: 'host',
   },
+  // CodeMirror's folds, by "Outline: Fold" and "Outline: Toggle Fold", read from what it draws; no zoom
+  folds: true,
   keys: {
+    toggleFold: ['Control+Period', 'Control+Period'],
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
     // "Outline: Move Right" and "Move Left": an item with its children, a heading's level (Tab is
@@ -118,7 +124,7 @@ export const driver: Driver = {
     const { text, sel } = doc as TextDoc;
     const name = `ourus-sxs-${Date.now().toString(36)}-${++pages}`;
     await page.evaluate(
-      async ({ name, text, sel }) => {
+      async ({ name, text, sel, view }) => {
         const w = window as any;
         // the page as stored, then opened: its editor starts with it, and with no history to undo
         await w.syscall('space.writePage', name, text);
@@ -127,18 +133,27 @@ export const driver: Driver = {
         for (let i = 0; i < 300 && !opened(); i++) await new Promise((r) => setTimeout(r, 10));
         if (!opened()) throw new Error(`the test page didn't open (at ${w.client.currentName()})`);
         const v = w.client.editorView;
+        // its folds, each by "Outline: Fold" at its row (the last first: a fold inside another before it)
+        for (const row of [...(view?.folded ?? [])].sort((a: number, b: number) => b - a)) {
+          v.dispatch({ selection: { anchor: v.state.doc.line(row + 1).to } });
+          await w.client.runCommandByName('Outline: Fold');
+          await w.__ourusIdle.wait({ shortTimer: 300, quiet: 50, timeout: 3000 });
+        }
         v.dispatch({ selection: sel ?? { anchor: 0 } });
         v.focus();
       },
-      { name, text, sel },
+      { name, text, sel, view: (doc as TextDoc).view ?? null },
     );
+    viewed(page).on = !!(doc as TextDoc).view;
   },
 
   async read(page: Page) {
-    return page.evaluate(() => {
+    return page.evaluate((viewed) => {
       const v = (window as any).client.editorView;
       const { anchor, head } = v.state.selection.main;
-      return { text: v.state.doc.toString() as string, sel: v.hasFocus ? { anchor, head } : null };
-    });
+      // the folds by their rows: each placeholder CodeMirror draws for one, at its row's end
+      const folded = [...v.contentDOM.querySelectorAll('.cm-foldPlaceholder')].map((el: Element) => v.state.doc.lineAt(v.posAtDOM(el)).number - 1);
+      return { text: v.state.doc.toString() as string, sel: v.hasFocus ? { anchor, head } : null, ...(viewed && { view: { folded, zoom: null } }) };
+    }, viewed(page).on);
   },
 };

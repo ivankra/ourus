@@ -15,16 +15,22 @@ This directory runs it in "no bullet" (nbl) mode; [`remnote-bl`](../remnote-bl/)
 | `outdent` | Shift+Tab |
 | `moveSubtreeUp` | Alt+Up ("Swap Up") |
 | `moveSubtreeDown` | Alt+Down ("Swap Down") |
-| `move ②` | the mouse: the rem's bullet dragged to its drop region (`remnoteDrop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
+| `moveSubtree` | mouse: the rem's bullet dragged to its drop region (`remnoteDrop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
 | `deleteContentBackward` | Backspace |
 | `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Shift+Home, Backspace |
 | `deleteSubtree` | Ctrl+Shift+Alt+Backspace ("Delete Bullet"); rems selected, Backspace (the shortcut leaves a selection as it is); after it no block is edited (often): the outline alone is judged (`noCaretAfter`). |
 | `duplicateSubtree` | *missing*: its tests are skipped |
-| `pasteStructured` | Ctrl+V |
+| `paste` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V ("Paste Without Formatting": a rem per line; Quirks) |
 | `undo` | Ctrl+Z |
 | `redo` | Ctrl+Y |
+| `fold` | Ctrl+Up ("Collapse"): the rem's children hidden, in the page's root (its portal's) |
+| `unfold` | Ctrl+Down ("Expand") |
+| `toggleFold` | *missing* |
+| `zoomIn` | *missing*: "Zoom Into Bullet" (Ctrl+') goes to `/database_error` here, where the route to the rem shows it (`load` zooms so) |
+| `zoomOut` | Ctrl+; ("Zoom Out of Bullet"): the parent as the page, or the document |
+| `clearZoom` | *missing*: Ctrl+; a level at a time |
 
 Other shortcuts:
 
@@ -39,12 +45,10 @@ Other shortcuts:
 | Clear Heading | Ctrl+Alt+` | |
 | Insert Block Code | Ctrl+Shift+0 | a code rem |
 | Toggle Callout | Ctrl+Alt+V | |
-| Expand, Collapse | Ctrl+Down, Ctrl+Up | a rem's children shown or folded |
 | Collapse All Descendants | Ctrl+Shift+Up | |
 | Collapse Children to 1st Level | Ctrl+Shift+Alt+Up | |
 | Include All Descendants | Ctrl+Shift+Down | (in a selection, its descendants too) |
 | Include All Hidden Children | Ctrl+Shift+Alt+A | |
-| Zoom Into Bullet, Zoom Out of Bullet | Ctrl+', Ctrl+; | zoom: the rem as the document |
 | Zoom Out of Bullet & Open in Other Pane | Ctrl+Shift+; | |
 | Go to Parent | Ctrl+\ | the caret to the parent rem |
 | Go Backward, Go Forward | Alt+Left, Alt+Right | navigation history |
@@ -62,6 +66,31 @@ Other shortcuts:
 | Inline code | `` ` `` twice, or Ctrl+Alt+Shift+I | |
 | Reference, Tag selected text | `[`, `#` | |
 
+## Folds and the zoom, measured
+
+[`fold.md`](../../spec/fold.md) and [`zoom.md`](../../spec/zoom.md), measured 2026-10-28 in both
+setups (their results the same). A rem's collapse is its portal's, the root the page shows: loaded by
+`portalContext(root).setIsCollapsed(true)` once every rem is on screen, read as `getIsCollapsed` of a
+rem with children under the root it shows in. A zoom is the rem as the page, its route
+(`/w/null/<id>`, the document's slugged `ourus-sxs-<id>`), read from the route. Zoomed, the root is
+the page's title, which the editor tree doesn't focus as a rem: a case with its caret there is
+skipped (`holds`), as is, without bullets, a fold on a rem without one (it doesn't keep it) and a
+zoom into one (what it owns is beside it). What is compared is what the reader sees: the folds in
+effect, and the zoom root.
+
+- **Around a collapsed rem it agrees**, as Logseq does: Enter at its end and on an empty one with
+  children (`Fold1`, `Fold5`), Backspace after it (`Fold3`), a move (`Fold4`), an indent under it
+  (`Fold6`), unfold (`Fold12`).
+- **Enter mid-text in a collapsed rem** (split as `enterMidItem: child`) puts the rest after its
+  children, the rem still collapsed (`Fold2`, `Fold2b`), as ourus under `child`.
+- **Delete at a collapsed rem's end does nothing** (`Fold7`), as ourus, which refuses it (`folded`).
+- **Backspace right after a collapsed rem joins into its text**, not its hidden last child's, still
+  collapsed (`Fold15`), as ourus.
+- **The block joined into a collapsed rem keeps its children hidden**: they go after its own, still
+  collapsed (`Fold15b`); ourus puts them there and opens it, so none it moved is hidden.
+- **Zoomed, a child of the root can't be outdented out of it** (`Zoom11`), as ourus. The other zoom
+  cases start with the caret in the root, its title, and skip.
+
 ## Drag and drop
 
 Read in its bundle (`startDragging`, `onBulletPointerLeave`, `getRectsInfoForDropRegion`) and played
@@ -72,16 +101,16 @@ children), past them as its first child; beside its children, their bottom half 
 release is in the smallest rem's region that holds it. The driver aims at the middle of the place's
 region.
 
-- **Every drop the cases play lands where ourus's does**, in both setups (Drag1, Drag2, Drag3, Drag13,
-  Scenario8, Scenario8c; without bullets Drag8 too), stable over three runs.
+- **Every drop the cases play lands where ourus's does**, in both setups (MoveSubtree1, MoveSubtree2, MoveSubtree3, MoveSubtree12,
+  Scenario8, Scenario8c; without bullets MoveSubtree9 too), stable over three runs.
 - **The rem dropped is selected after it, as a rem**, the caret gone (`caret` verdicts), and a key
   typed then is the selection's (Scenario8b disagrees: the `s` isn't typed).
 - **The cover rule is ourus's**: a press on a selected rem drags the selection, any other the rem
-  alone (Drag4 agrees; Drag5, Drag5b land as ourus's, the dropped rem alone selected after: `caret`;
-  Drag20's numbered rems have no bullet to press). The driver selects rems as a user does, Shift+Down
+  alone (MoveSubtree4 agrees; MoveSubtree5, MoveSubtree6 land as ourus's, the dropped rem alone selected after: `caret`;
+  MoveSubtree19's numbered rems have no bullet to press). The driver selects rems as a user does, Shift+Down
   from the first one's start past its edge, past the last one's subtree (without bullets, its rems
   are siblings: `read` reports the topmost in ourus's nesting).
-- **A heading keeps its level** (Drag15, Drag16 without bullets: `### D` where ourus re-levels it to
+- **A heading keeps its level** (MoveSubtree14, MoveSubtree15 without bullets: `### D` where ourus re-levels it to
   `## D`). With bullets a heading rem has none to press: those cases skip.
 - **Its drag code is a chunk loaded on the first drag**: a cache of an older build serves an app whose
   chunk the site no longer has (a 404, `ChunkLoadError`, the app reloading); `--cache=refresh` once

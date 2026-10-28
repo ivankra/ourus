@@ -19,7 +19,7 @@ import { asTabs, retabs } from '../sxs/lib/tabs.ts';
 import type { TextDoc } from '../sxs/lib/text.ts';
 import { docOf, drawDoc, drawOutline, drawsCaret, readDrawing } from './drawing.ts';
 import { play, type Played } from './player.ts';
-import { flavorsOf, Labels, normalize, outcome, readClipboard } from './spec-run.ts';
+import { flavorsOf, Labels, normalize, outcome, readClipboard, viewOf } from './spec-run.ts';
 import { readSpecFile, specConfig, specFiles, type SpecTest } from './specfile.ts';
 
 /** A drawn buffer's document, and its start loaded as tabs (placeholders carried as carets are). */
@@ -31,9 +31,9 @@ function tabbedStart(t: SpecTest, config: Partial<Config>): { spaces: OurusDoc; 
   const labels = new Labels();
   labels.check(docOf(start.text, start.placeholders, config), start.labels, null);
   return {
-    spaces: docOf(start.text, start.placeholders, config),
+    spaces: viewOf(t, docOf(start.text, start.placeholders, config), labels.ids),
     // (tabs change no line: a label names the same line's node)
-    tabs: { doc: docOf(d.text, start.placeholders.map(at), config), selection: d.sel!, clipboard: readClipboard(t.initial.clipboard), labels: labels.ids, drop: start.drop },
+    tabs: { doc: viewOf(t, docOf(d.text, start.placeholders.map(at), config), labels.ids), selection: d.sel!, clipboard: readClipboard(t.initial.clipboard), labels: labels.ids, drop: start.drop },
   };
 }
 

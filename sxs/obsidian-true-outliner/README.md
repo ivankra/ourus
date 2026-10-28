@@ -39,11 +39,17 @@ hotkey settings; out of it, every key is Obsidian's.
 | `outdent` | Shift+Tab | as `indent` |
 | `moveSubtreeUp` | Ctrl+Shift+Up | "Move node up" (`move-node-up`): the node with its children, the caret at its text's start; Alt+Up is Obsidian's (unbound out of the box; the vault binds it to "Move line", which moves the line here too) |
 | `moveSubtreeDown` | Ctrl+Shift+Down | "Move node down" (`move-node-down`), as `moveSubtreeUp` (Alt+Down likewise) |
-| `move ②` | the mouse | drag and drop: any node pressed by its mark (a press below 4 pixels zooms), dropped at its seam and depth (`trueOutlinerDrop` in [`../obsidian/obsidian.ts`](../obsidian/obsidian.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
+| `moveSubtree` | mouse | drag and drop: any node pressed by its mark (a press below 4 pixels zooms), dropped at its seam and depth (`trueOutlinerDrop` in [`../obsidian/obsidian.ts`](../obsidian/obsidian.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
 | `deleteContentBackward` | Backspace | takes back a place a structural key just made, refuses to join a block id's line; else Obsidian's |
 | `deleteContentForward` | Delete | as `deleteContentBackward` |
 | `deleteSubtree` | *missing* | nothing deletes a node with its children by a key: its examples are skipped |
-| `pasteStructured` | Ctrl+V | a paste of several blocks is made a structural one (a transaction filter) |
+| `fold` | Ctrl+Alt+Up | "Fold node" (`fold-node`), its default hotkey: the node's children hidden (`- a`, a count of 3 beside it); Obsidian's "add cursor above" taken over |
+| `unfold` | Ctrl+Alt+Down | "Unfold node" (`unfold-node`), as `fold`: the children shown; Obsidian's "add cursor below" taken over |
+| `toggleFold` | Ctrl+Alt+. | "Toggle fold" (`toggle-fold`), bound by the vault: its declared default, Ctrl+Alt+Period, never fires (Obsidian takes it as `.`; below) |
+| `zoomIn` | Ctrl+Alt+I | "Zoom in to node" (`zoom-in`), which has no hotkey out of the box: bound by the vault; a click on a node's bullet or marker does the same (from the source: `zoom-click.ts`): the node and its children alone in the editor |
+| `zoomOut` | Ctrl+Alt+O | "Zoom out one level" (`zoom-out`), as `zoomIn` |
+| `clearZoom` | Ctrl+Alt+Shift+O | "Zoom out fully" (`zoom-clear`), as `zoomIn` |
+| `paste` | Ctrl+V | a paste of several blocks is made a structural one (a transaction filter) |
 | `undo` | Ctrl+Z | CodeMirror's history, the caret restored with it |
 | `redo` | Ctrl+Shift+Z | as `undo` |
 
@@ -60,8 +66,6 @@ Other shortcuts (measured in 1.14.4 with true-outliner 0.14.4, in outline mode, 
 
 | shortcut | keys | what it does |
 | --- | --- | --- |
-| Fold node, Unfold node (`fold-node`, `unfold-node`) | Ctrl+Alt+Up, Ctrl+Alt+Down | the node's children hidden (`- a`, a count of 3 beside it) or shown; Obsidian's "add cursor above, below" taken over |
-| Toggle fold (`toggle-fold`) | Ctrl+Alt+Period, as declared | nothing: the key doesn't fire (Obsidian takes it as `.`); the command folds |
 | Select all | Ctrl+A | by structure: `b`'s text, `b` with its children, its siblings with theirs (`b` to `e`), the parent with all of it, the document |
 | Extend the selection by node | Shift+Up, Shift+Down | whole nodes, with their children (from `b`: `b` with `c`, then with `e`); the note's editor then has no DOM focus (the page's body has it), and true-outliner takes the next key anyway |
 | Left, Right at a node's text edges | ArrowLeft, ArrowRight | over the marker: from `b`'s start to `a`'s end, from `a`'s end to `b`'s start |
@@ -72,7 +76,6 @@ Other shortcuts (measured in 1.14.4 with true-outliner 0.14.4, in outline mode, 
 | Toggle checkbox, Indent more and less (Obsidian's) | Ctrl+L, Ctrl+], Ctrl+[ | the line: `- [ ] b`; `\t\t- b`, its children left; `- b` |
 | Delete paragraph (Obsidian's) | Ctrl+D (and CodeMirror's Ctrl+Shift+K) | not the caret's line alone: from `c`, `b` with it; from `e`, `c` with it; from `b`, all of `a`; from `a`, its line (likely its transaction filter taking the deletion for a structural one) |
 | Outdent a top-level node | Shift+Tab | nothing |
-| Zoom in (`zoom-in`) | a click on a node's bullet or marker | the node and its children alone in the editor (from the source: `zoom-click.ts`) |
 
 "Indent node", "Outdent node", "Fold all nodes", "Unfold all nodes", "Fold one level more", "Fold one
 level less", "Zoom in to node" (the node and its children alone in the editor), "Zoom out one level",
@@ -80,16 +83,50 @@ level less", "Zoom in to node" (the node and its children alone in the editor), 
 
 ## What it does, measured
 
-Drag and drop ([`drag.md`](../../spec/drag.md), played with the real mouse, aimed at its own
+Folds and the zoom ([`fold.md`](../../spec/fold.md), [`zoom.md`](../../spec/zoom.md), measured
+2026-10-28 with true-outliner 0.14.4). Its folds are CodeMirror's, loaded and read as bare
+Obsidian's ([`../obsidian/README.md`](../obsidian/README.md)); its zoom is its own, loaded by its
+"Zoom in to node" at the root's row and read from the editor state's field holding the root's
+offset (`zoomAnchor` in [`../obsidian/obsidian.ts`](../obsidian/obsidian.ts), found by its update,
+the plugin's modules being out of reach). What is compared is what the reader sees: the folds in
+effect, and the zoom root.
+
+- **Its declared "Toggle fold" key never fires**: `Mod+Alt+Period`, as Obsidian matches a hotkey by
+  the character (`.`), not the key's name; the command folds, and the vault binds it as `.`. Toggled
+  so, a leaf folds its parent, as ourus's (`Fold11`).
+- **Around a fold it agrees mostly**: Enter after the hidden children (`Fold1`), a split carrying the
+  fold to the half with the children (`Fold2`), Backspace and a move (`Fold3`, `Fold4`: the caret at
+  the text's start, as its moves put it, `caret`). Where it doesn't:
+  - **Delete at a folded item's end deletes the whole document** (`Fold7`: `- a┃` over `b` and `c`
+    comes out empty, by hand too); ourus refuses it (`folded`), as the block apps.
+  - **Backspace right after a folded item joins into its hidden last child** and opens the fold
+    (`Fold15`); ourus joins into the folded item's text, the fold kept, as the block apps.
+  - **Enter mid-text in a folded item under `enterMidItem: child`** makes the rest the first child
+    and opens the fold (`Fold2b`); ourus puts it after the subtree, the fold kept, as the block apps.
+  - **An item indented under a folded one stays shown**, the fold kept on its old range (`Fold6`).
+  - **Enter on an empty folded item with children does nothing** (`Fold5`); ourus makes an item after
+    its subtree.
+  - **Enter at a folded heading's end** opens the fold as ourus does, the new paragraph set apart by
+    a blank line on each side (`Fold13`).
+- **The zoom holds** where ourus's does: Backspace at the root's start refused (`Zoom2`), a heading
+  outdented out of a section refused (`Zoom3`), the root's folds hiding nothing (`Zoom5`), in, out
+  one level and out of it (`Zoom6`, `Zoom7`), a child outdented out of the root refused (`Zoom11`), a
+  code block root indented into the list beside it refused (`Zoom13`). Where it doesn't:
+  - **Enter in an item root does nothing**, at its end (`Zoom1`) or mid-text (`Zoom10`); ourus makes
+    the root's first child.
+  - **Delete at the end of the root's trailing blank line takes it** (`Zoom12`), the outer list made
+    tight with its hidden next item; ourus refuses it, the list rendered otherwise outside the zoom.
+
+Drag and drop ([`move-subtree.md`](../../spec/move-subtree.md), played with the real mouse, aimed at its own
 geometry: `drag-geometry.ts`'s seams and columns):
 
 - **The moved nodes are selected after the drop** (its design's D-series): drops agree on the text and
   give `caret`, and typing right after one replaces them (`scenarios.md › Scenario8b`).
 - **Blank lines**: a node dropped into an item goes in without the blank line above it, which ourus
-  keeps with the node above (`drag.md › Drag8`); a heading dropped among headings is set apart by blank
-  lines (`Drag15`, `Drag16`).
+  keeps with the node above (`move-subtree.md › MoveSubtree9`); a heading dropped among headings is set apart by blank
+  lines (`MoveSubtree14`, `MoveSubtree15`).
 - **A drop at the document's end after an earlier drop in the same view names no place**: its drop
-  indicator isn't drawn, and the release cancels (`Drag13` run after `Drag1`; alone, it agrees on the
+  indicator isn't drawn, and the release cancels (`MoveSubtree12` run after `MoveSubtree1`; alone, it agrees on the
   text, `p⏎⏎x`, an item dropped after a paragraph a paragraph, as ourus). The pointer's coordinates and
   events are the same both times: state the view keeps from one note to the next, read 2026-10-28.
 

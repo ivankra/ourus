@@ -1,4 +1,4 @@
-// Drops (spec/drag.md) in the apps: the runner resolves a case's drop from ourus's own state, its `▸`
+// Drops (spec/move-subtree.md, paste-at.md) in the apps: the runner resolves a case's drop from ourus's own state, its `▸`
 // and the run it names, into rows a driver can find on screen (`resolveDrop`); the driver measures
 // where those rows and its place's column are, and plays the gesture a user makes (`gesture`).
 
@@ -31,7 +31,7 @@ export function resolveDrop(test: SpecTest, flavor: Config['flavor']): Drop | st
   let run: OutlineNode[] = [];
   let press: number | null = null;
   if (action !== 'pasteAt') {
-    const label = /^move (.)$/u.exec(action)?.[1];
+    const label = /^moveSubtree (.)$/u.exec(action)?.[1];
     const pressed = label === undefined ? undefined : state.labels?.get(labelNumber(label));
     if (label !== undefined && pressed === undefined) return `${label} labels no node`;
     const picked = dragRun(new CommandContext(doc, state.selection), pressed);
@@ -39,7 +39,7 @@ export function resolveDrop(test: SpecTest, flavor: Config['flavor']): Drop | st
     run = picked;
     press = pressed === undefined ? null : doc.node(pressed)!.startLine;
   }
-  const place = placeAtSeam(doc, run.length ? run : null, drop.line, drop.depth, new Set(state.folded));
+  const place = placeAtSeam(doc, run.length ? run : null, drop.line, drop.depth);
   if (typeof place === 'string') return place;
   const parent = place.parent === 'root' ? doc.rootNode : doc.node(place.parent)!;
   let listDepth = 0;
@@ -48,7 +48,7 @@ export function resolveDrop(test: SpecTest, flavor: Config['flavor']): Drop | st
   while (below < doc.lineCount && doc.isBlankLine(below)) below++;
   if (below >= doc.lineCount) below = null;
   return {
-    action: action === 'pasteAt' ? 'pasteAt' : 'move',
+    action: action === 'pasteAt' ? 'pasteAt' : 'moveSubtree',
     press,
     rows: run.map((n) => n.startLine),
     seam: { above: drop.line > 0 ? drop.line - 1 : null, below },

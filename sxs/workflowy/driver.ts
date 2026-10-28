@@ -15,6 +15,7 @@ import type { Page } from 'playwright-core';
 import type { Driver, Drop } from '../lib/driver.ts';
 import { gesture } from '../lib/drag.ts';
 import { compareOutlines, draw, project, runsAsMarkdown, Unsupported, type Outline, type Run } from '../lib/block.ts';
+import { perPage } from '../lib/driver.ts';
 
 const MOTIONS: Record<string, string> = {
   CharLeft: 'ArrowLeft',
@@ -87,6 +88,9 @@ function fromItem(it: Item, number: number | null): { text: string; prefix: numb
 /** The test's item, made once per page. */
 const CONTAINER = 'ourus sxs';
 
+/** A worker's: whether its test was loaded with a view (folds, a zoom), which is read back then alone. */
+const viewed = perPage(() => ({ on: false }));
+
 /**
  * `OURUS_SXS_WF_EXPORT=1`: a read checked against WorkFlowy's own Markdown export of the test's items
  * (`WF.Export.as`, as its share dialog calls it), projected as a spec buffer is: where the two outlines
@@ -127,11 +131,23 @@ export const driver: Driver = {
   url: 'https://beta.workflowy.com/guide/embed/',
   model: 'block',
   // after deleting the first item no item is edited (its runs: DeleteSubtree3, 4), nor after a drop:
-  // the drag blurs the item being edited as it starts (Drag1, Drag2)
-  noCaretAfter: ['deleteSubtree', 'move'],
+  // the drag blurs the item being edited as it starts (MoveSubtree1, MoveSubtree2)
+  noCaretAfter: ['deleteSubtree', 'moveSubtree'],
   // its `load` selects items as items, as `read` reports them
   selectsBlocks: true,
+  // an item collapsed (`WF.collapseItem`, read as `isExpanded`), and a zoom into one (`WF.zoomTo`, read
+  // as `WF.currentItem`), the test's container, zoomed into for every test, standing for none
+  folds: true,
+  zooms: true,
   keys: {
+    // `collapse`, `expand`, `expand_or_collapse`; `zoom_in`, `zoom_out` by their second keys (measured:
+    // Ctrl+. does nothing here); no key goes back to the container at once (`navigate_home` is
+    // WorkFlowy's root)
+    fold: 'Control+ArrowUp',
+    unfold: 'Control+ArrowDown',
+    toggleFold: 'Control+Space',
+    zoomIn: 'Alt+ArrowDown',
+    zoomOut: 'Alt+ArrowUp',
     enter: 'Enter',
     // no `shiftEnter`: Shift+Enter opens the item's note, another action than a line break in its
     // text, which a name doesn't hold (its cases skip)
@@ -164,7 +180,7 @@ export const driver: Driver = {
   // paste opens the seam (the first pasted text joins), though not on an item with children
   // (on the paste files, 14 cases better under `open`, 3 worse)
   behaves: {
-    // a quote is a style on one block: a quote of one paragraph is that block, its `>` the style (../../dev/19-quotes.md, Part 1)
+    // a quote is a style on one block: a quote of one paragraph is that block, its `>` the style
     quotes: 'text',
     // Enter mid-heading: the new block above takes the text before the caret, the heading (an
     // attribute) staying with the rest (TO-E13-E16, TO-E14-E20)
@@ -266,7 +282,7 @@ export const driver: Driver = {
       }
     }
     await page.evaluate(
-      async ({ items, sel, selected, container }) => {
+      async ({ items, sel, selected, container, view }) => {
         const WF = (window as any).WF;
         const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         (document.activeElement as HTMLElement | null)?.blur();
@@ -331,6 +347,13 @@ export const driver: Driver = {
         if (!made.every(drawn)) throw new Error("the test's notes weren't drawn");
         if (!made.every(rendered)) throw new Error("the test's items didn't render");
         await (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 });
+        // its view, every item on screen: the folded ones collapsed, then the zoom root zoomed into
+        if (view) {
+          for (const i of view.folded) WF.collapseItem(made[i]);
+          if (view.zoom !== null) WF.zoomTo(made[view.zoom]);
+          await (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 });
+          if (view.zoom !== null && !WF.currentItem().equals(made[view.zoom])) throw new Error("the zoom root wasn't zoomed into");
+        }
         // a selection of items, as Shift+Up or Down past an item's edge makes one (`selectsBlocks`)
         if (selected) {
           (document.activeElement as HTMLElement | null)?.blur();
@@ -371,8 +394,9 @@ export const driver: Driver = {
           s.extend(an, ao);
         } else s.addRange(range);
       },
-      { items, sel, selected: !doc.sel && doc.selected?.length ? doc.selected : null, container: CONTAINER },
+      { items, sel, selected: !doc.sel && doc.selected?.length ? doc.selected : null, container: CONTAINER, view: doc.view ?? null },
     );
+    viewed(page).on = !!doc.view;
     if (openNote) {
       await page.keyboard.press('Shift+Enter');
       await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 40, timeout: 3000 }));
@@ -380,14 +404,14 @@ export const driver: Driver = {
   },
 
   async read(page: Page) {
-    const raw = await page.evaluate((container) => {
+    const raw = await page.evaluate(({ container, viewed }) => {
       const WF = (window as any).WF;
       const box = (window as any).__ourusBox ? WF.getItemById((window as any).__ourusBox) : null;
       const active = document.activeElement as HTMLElement | null;
       const content = active?.classList.contains('content') ? active : null;
       const inNote = !!content?.closest('.notes');
       const focusedId = content ? WF.focusedItem()?.getId() : null;
-      const flat: { depth: number; name: string; runs: Run[]; note: string | null; layout: string; completed: boolean; id: string; shown: number | null; start: number | null }[] = [];
+      const flat: { depth: number; name: string; runs: Run[]; note: string | null; layout: string; completed: boolean; id: string; shown: number | null; start: number | null; collapsed: boolean }[] = [];
       // a name's rich text (WorkFlowy's HTML: `<b>`, `<i>`, `<s>`, `<code>`, `<a href>`) as runs, each
       // with its formatting; any other element is its text
       const runsOf = (root: Node): Run[] => {
@@ -430,7 +454,7 @@ export const driver: Driver = {
           // a numbered item's number as WorkFlowy draws it: a prefix of the name, outside its text
           const drawn = layout === 'numbered' ? [...(c.getElement()?.querySelectorAll(':scope > .name span') ?? [])].find((sp: any) => !sp.closest('.content') && /^\d+\.$/.test(sp.textContent.trim())) : undefined;
           const start = internal?.metadata?.numbered_start ?? null;
-          flat.push({ depth, name, runs, note, layout, completed: c.isCompleted(), id: c.getId(), shown: drawn ? parseInt(drawn.textContent, 10) : null, start });
+          flat.push({ depth, name, runs, note, layout, completed: c.isCompleted(), id: c.getId(), shown: drawn ? parseInt(drawn.textContent, 10) : null, start, collapsed: c.getChildren().length > 0 && !c.isExpanded() });
           walk(c, depth + 1);
         }
       };
@@ -442,8 +466,12 @@ export const driver: Driver = {
         sel = { block: flat.findIndex((f) => f.id === focusedId), anchor: reversed ? end : start, head: reversed ? start : end, inNote };
       }
       const selected = WF.getSelection().map((it: any) => flat.findIndex((f) => f.id === it.getId())).filter((i: number) => i >= 0);
-      return { flat, sel, selected };
-    }, CONTAINER);
+      // the view: the collapsed items, and the item zoomed into, if one of the test's (the container: none)
+      const current = WF.currentItem().getId();
+      const zoom = flat.findIndex((f) => f.id === current);
+      const view = viewed ? { folded: flat.flatMap((f, k) => (f.collapsed ? [k] : [])), zoom: zoom >= 0 ? zoom : null } : undefined;
+      return { flat, sel, selected, view };
+    }, { container: CONTAINER, viewed: viewed(page).on });
     // a numbered item's number: as drawn, else as WorkFlowy counts it (the run's start, then one more
     // than the numbered sibling before)
     const run: number[] = [];
@@ -466,7 +494,7 @@ export const driver: Driver = {
       const at = (p: number): number => (raw.sel!.inNote ? base + p : base + md.at(p) + (cut !== undefined && md.at(p) > cut ? 1 : 0));
       sel = { block: raw.sel.block, anchor: at(raw.sel.anchor), head: at(raw.sel.head) };
     }
-    const got: Outline = { blocks, sel, ...(raw.selected.length && { selected: raw.selected }) };
+    const got: Outline = { blocks, sel, ...(raw.selected.length && { selected: raw.selected }), ...(raw.view && { view: raw.view }) };
     if (process.env.OURUS_SXS_WF_EXPORT) await checkExport(page, got);
     return got;
   },
@@ -488,7 +516,7 @@ export const driver: Driver = {
     await settle();
   },
 
-  drops: ['move'],
+  drops: ['moveSubtree'],
   drop: workflowyDrop,
 };
 

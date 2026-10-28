@@ -295,7 +295,9 @@ class Writer {
       // (a list of its own after it: as far as that one moved, never past its container's column)
       const withBefore = beforeAt !== null ? beforeAt - indent(at) : beforeMoved !== undefined ? Math.max(beforeMoved, -indent(at)) : undefined;
       // (at none, where the unit isn't the content column: as the unit has it past its new parent's marker)
-      const tab = target === null && withBefore === undefined && moved ? this.unitChild(container) : null;
+      // (not first in an item with no text: its line is that item's marker's, at its content column)
+      const onMarkersLine = i === 0 && parent.kind === 'item' && !this.draft.textOf(parent, this.draft.originOf(parent));
+      const tab = target === null && withBefore === undefined && moved && !onMarkersLine ? this.unitChild(container) : null;
       // (a list of its own after an item, where it was, unless that item would take it in there: copied
       // beside its original, as its original is; placed in its container, where at its container's
       // column it, or the items placed with it, would take in the item after them that stays, which
@@ -504,6 +506,20 @@ class Writer {
     return piece.toColumn;
   }
 
+  /** Whether every line of `node`'s subtree with a `>` has no space after its last one (`>- a`, `>- b`). */
+  unspacedLines(node: OutlineNode): boolean {
+    let any = false;
+    for (let i = node.startLine; i <= node.endLine; i++) {
+      const line = this.tree.line(i);
+      const s = this.old.slice(line.from, line.to);
+      const at = s.lastIndexOf('>', line.contentFrom - line.from);
+      if (at < 0 || line.blank) continue;
+      if (/^[ \t]/.test(s.slice(at + 1))) return false;
+      any = true;
+    }
+    return any;
+  }
+
   /**
    * An old line's text from its start (`s`), as written under the shift: the new container's prefix,
    * then the rest past the old one's, re-indented. `line`, the old line it is: cut where the old
@@ -558,8 +574,11 @@ class Writer {
       if (j < -delta && !blank) throw new WriteFailure("a moved node's lines aren't indented as far as its first");
       rest = rest.slice(j);
     }
-    // (after a `>` with no space, a space the rest starts with would be the `>`'s own: written as one)
-    const space = shift.prefix.endsWith('>') && (spacedIn(shift.prefix, containerOf(shift.origin)) || /^[ \t]/.test(rest)) ? ' ' : '';
+    // (after a `>` with no space, a space the rest starts with would be the `>`'s own: written as one; a
+    // copy in its original's quote as its original's lines are, where none of them has the space, `>- a`;
+    // one has it on its later lines, the quote's own, and its copy has it too: Quote86)
+    const unspaced = shift.copy && this.unspacedLines(shift.origin);
+    const space = shift.prefix.endsWith('>') && ((spacedIn(shift.prefix, containerOf(shift.origin)) && !unspaced) || /^[ \t]/.test(rest)) ? ' ' : '';
     const out = shift.prefix + space + rest;
     return blank ? out.replace(/[ \t]+$/, '') : out;
   }
@@ -658,6 +677,8 @@ class Writer {
     // what its first line starts with, up to its marker; and its later lines
     let indent = this.inside(container);
     let marker = '';
+    // (lined up with the read item a command named, its line's prefix as written: a `>` as it is)
+    let verbatim = false;
     if (node.kind === 'item') {
       // as wide as an item of its list beside it, where there is one: below it unless that one starts a
       // list (an item put in before another lines up with it), else above it unless it starts the list
@@ -670,7 +691,14 @@ class Writer {
       };
       // (with none, where the unit isn't the content column, as the unit has it past its parent's marker)
       indent = this.unitChild(container) ?? indent;
-      for (const k of [near(1), near(-1)]) {
+      // lined up with the item a command named (a paste's: the item it is pasted at), as its line is written
+      const up = this.draft.lineUps.get(node.id);
+      if (up) {
+        const line = this.tree.line(up.startLine);
+        indent = this.old.slice(line.from, line.from + up.persistentNode.block!.attrs.markerStart!).replace(/[^>\t ]/g, ' ');
+        verbatim = true;
+      }
+      for (const k of up ? [] : [near(1), near(-1)]) {
         const sibling = parent.children[k];
         const at = sibling?.kind === 'item' ? this.draft.originOf(sibling) : null;
         const same = k < i ? !lists.get(parent.children[k + 1]!.id)?.start : !lists.get(sibling?.id ?? -1)?.start;
@@ -691,7 +719,11 @@ class Writer {
       marker = this.draft.hints.get(node.id) ?? (place?.type === 'ordered' ? `${place.number ?? 1}${place.marker}` : (place?.marker ?? '-'));
     }
     // a quote's `>` takes a space after it where there is one: written with it, a new line's columns hold
+    // (an item lined up with one in an unspaced quote, `>- a`: its marker's line as that one's, and its
+    // later lines past the space the quote's `>` takes there)
+    let lined = indent;
     if (indent.endsWith('>')) indent += ' ';
+    if (!verbatim) lined = indent;
     // (a new quote with a title, a callout's: its `>` before it, and before each line in it)
     const head = indent.length;
     if (node.kind === 'quote' && !origin) indent += '> ';
@@ -699,18 +731,22 @@ class Writer {
     // (a text starting below its marker has them on its first line of text: `spellLines`)
     const below = text instanceof ProseText && text.frame.some((p) => p.part === 'below');
     const padding = below ? '' : ' '.repeat(this.draft.paddings.get(node.id) ?? 0);
-    const lead = marker ? `${indent}${marker} ${padding}` : (markers ?? indent) + padding;
-    const continuation = marker ? indent.replace(/[^>\t ]/g, ' ') + ' '.repeat(marker.length + 1) + padding : indent;
+    // (between its marker and its text: a space and its padding, or what a command asked, a pasted item's own)
+    // (a text starting below its marker: what its marker's line ends with, its columns the marker's own)
+    const separator = !origin && marker ? (below ? this.draft.separators.get(node.id) : this.draft.separatorAt(node.id, columns(lined + marker))) : undefined;
+    const spaced = below ? undefined : separator;
+    const lead = marker ? `${lined}${marker}${separator ?? ` ${padding}`}` : (markers ?? indent) + padding;
+    const continuation = marker ? indent.replace(/[^>\t ]/g, ' ') + ' '.repeat(spaced !== undefined ? columns(`${indent}${marker}${spaced}`) - columns(indent) : marker.length + 1) + (spaced !== undefined ? '' : padding) : indent;
     this.ensureLineStart();
     // (named by its marker, a quote by its `>`)
-    this.identity.set(this.length + (node.kind === 'quote' ? head : indent.length), node.id);
+    this.identity.set(this.length + (node.kind === 'quote' ? head : lined.length), node.id);
     if (!text) {
       // its marker written over its first block's first line, as wide as that line's indentation
       this.leads.push({ at: this.length, text: lead });
-      return { outer: outerOf(container), column: columns(continuation), prefix: continuation, markerColumn: columns(indent) };
+      return { outer: outerOf(container), column: columns(continuation), prefix: continuation, markerColumn: columns(lined) };
     }
     this.spellLines(node, text, lead, continuation, origin, text instanceof AtomText ? null : (origin ?? this.draft.splitFrom.get(node.id) ?? null));
-    const inside = node.kind === 'item' || (node.kind === 'quote' && !origin) ? { outer: outerOf(container), column: columns(continuation), prefix: continuation, markerColumn: columns(indent) } : null;
+    const inside = node.kind === 'item' || (node.kind === 'quote' && !origin) ? { outer: outerOf(container), column: columns(continuation), prefix: continuation, markerColumn: columns(lined) } : null;
     // (the blank lines between a new quote's title and its children are the quote's: `>`)
     const own = inside && node.kind === 'quote' && node.children.length ? inside : gapIn;
     const moved = this.draft.gapLines.get(node.id);
@@ -922,6 +958,22 @@ class Writer {
     const perLine: number[][] = [];
     const belowPart = text instanceof ProseText ? text.frame.find((p) => p.part === 'below') : undefined;
     const belowLines = belowPart ? belowPart.to - belowPart.from : -1;
+    // an empty line that was in the old text: matched by the lines before it, and by those after it,
+    // as they were (where both match, the same old line or two alike: one of two blank lines gone)
+    const oldLines = origin ? (this.from.textOf(origin)?.text.split('\n') ?? []) : [];
+    let same = 0;
+    while (same < lines.length && same < oldLines.length && lines[same] === oldLines[same]) same++;
+    let sameEnd = 0;
+    while (sameEnd < lines.length && sameEnd < oldLines.length && lines[lines.length - 1 - sameEnd] === oldLines[oldLines.length - 1 - sameEnd]) sameEnd++;
+    const spacedAt = (i: number): boolean => {
+      if (!origin || old + i > origin.textLastLine) return false;
+      const l = this.tree.line(old + i);
+      return /^[ \t>]*[ \t]$/.test(this.old.slice(l.from, l.to));
+    };
+    const spaced = (k: number): boolean => {
+      const matches = [k < same ? k : -1, lines.length - 1 - k < sameEnd ? oldLines.length - lines.length + k : -1].filter((i) => i >= 0);
+      return matches.length > 0 && matches.every(spacedAt);
+    };
     let offset = 0;
     lines.forEach((l, k) => {
       const own = escapes.filter((e) => e >= offset && e <= offset + l.length).map((e) => e - offset);
@@ -955,6 +1007,11 @@ class Writer {
         out = whitespace(0, columns(prefix) + merged, true);
         if (k === 0) this.splitHeads.set(node, this.length + out.length - 1);
       }
+      // (an empty line after the first ends at its prefix's last mark, no spaces after it, which mean
+      // nothing there; but the line the caret or the selection's other end is on, where they are its
+      // column: Enter's new line in a fence, `> ┃`; and one the old text had with them, as it was)
+      const held = [this.draft.caret, this.draft.anchor].some((a) => !!a && 'node' in a && a.node === node && a.offset === offset);
+      if (k > 0 && !was && written === '' && !held && !spaced(k)) out = out.replace(/[ \t]+$/, '');
       this.ensureLineStart();
       starts.push(this.length + out.length - merged);
       offsets.push(offset);

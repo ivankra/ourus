@@ -13,6 +13,7 @@ import { escapeParagraph } from './escapes.ts';
 import { markdownOf, markdownStart } from './copy.ts';
 import { ProseText, type AtomText, type OutlineNodeText } from './text.ts';
 import { listAdopters } from './rules.ts';
+import { NO_VIEW, carryView, coverEnd, foldRange, isHidden, startingAt, viewByLine, viewIn, zoomEscape, zoomFolded, zoomRange, type ViewState } from './view.ts';
 
 /**
  * What an update is told besides its changes. The placeholders: a host's edit maps them through its
@@ -49,16 +50,23 @@ export class OurusDoc {
   readonly root: OutlineNodePersistent;
   /** The next id to give in this lineage. */
   readonly nextId: number;
+  /** The nodes whose children the view hides: a view's, not the text's. */
+  readonly folded: ReadonlySet<number>;
+  /** The node the view is zoomed into; null: the whole document. */
+  readonly zoom: number | null;
   #rootNode: OutlineNode | null = null;
   #byId: Map<number, OutlineNode> | null = null;
+  #zoomFolded: ReadonlySet<number> | null = null;
 
-  private constructor(text: string, marks: MarkSet, mdTree: MdTree, config: Config, root: OutlineNodePersistent, nextId: number) {
+  private constructor(text: string, marks: MarkSet, mdTree: MdTree, config: Config, root: OutlineNodePersistent, nextId: number, view: ViewState = NO_VIEW) {
     this.text = text;
     this.marks = marks;
     this.mdTree = mdTree;
     this.config = config;
     this.root = root;
     this.nextId = nextId;
+    this.folded = view.folded;
+    this.zoom = view.zoom;
   }
 
   static parse(text: string, options: { readonly config?: Partial<Config>; readonly marks?: readonly Mark[] } = {}): OurusDoc {
@@ -88,7 +96,20 @@ export class OurusDoc {
     const [marks, tree] = read(candidates, (sentinels) => old.update(set.changes, { sentinels }));
     const touched = touchedLines(tree, set, this.marks.map(set), marks);
     const { root, nextId } = readOutline(tree, { tree: old, root: this.root, changes: set.changes, nextId: Math.max(this.nextId, params.nextId ?? 0), startOf: (id) => this.node(id)?.startLine }, touched, params.identity, this.config);
-    return new OurusDoc(text, marks, tree, this.config, root, nextId);
+    const next = new OurusDoc(text, marks, tree, this.config, root, nextId);
+    // the view carried, a writer's edit as any: a fold opened where what it hides changed, the zoom
+    // ended where a node left it
+    return next.#withView(viewIn(next, carryView(this, next, set.changes)));
+  }
+
+  /**
+   * For another view of this lineage: this snapshot (its text, ids and marks) with `view`'s folds and
+   * zoom carried onto it by id, through `changes` (`view`'s text to this one's), as an update carries
+   * them. A second pane takes the snapshot a first made rather than replaying its changes, whose
+   * replay would give the nodes the writer moved new ids.
+   */
+  withViewOf(view: OurusDoc, changes: readonly ChangeSpec[]): OurusDoc {
+    return this.#withView(viewIn(this, carryView(view, this, changes)));
   }
 
   /**
@@ -103,19 +124,90 @@ export class OurusDoc {
     if (next.flavor !== this.config.flavor) {
       const marks: Mark[] = [];
       this.marks.between(0, this.text.length, (m) => void marks.push(m));
-      return OurusDoc.parse(this.text, { config: next, marks });
+      // read anew, the ids anew: the folds and the zoom go by line
+      const parsed = OurusDoc.parse(this.text, { config: next, marks });
+      return parsed.#withView(viewByLine(this, parsed, this));
     }
-    if (next.quotes === this.config.quotes && next.listParent === this.config.listParent) return new OurusDoc(this.text, this.marks, this.mdTree, next, this.root, this.nextId);
+    if (next.quotes === this.config.quotes && next.listParent === this.config.listParent) return new OurusDoc(this.text, this.marks, this.mdTree, next, this.root, this.nextId, this);
     const previous = { tree: this.mdTree, root: this.root, changes: [], nextId: this.nextId, startOf: (id: number) => this.node(id)?.startLine };
     const { root, nextId } = readOutline(this.mdTree, previous, Touched.of([[0, this.mdTree.lineCount]]), undefined, next);
-    return new OurusDoc(this.text, this.marks, this.mdTree, next, root, nextId);
+    const read = new OurusDoc(this.text, this.marks, this.mdTree, next, root, nextId);
+    return read.#withView(viewIn(read, this));
+  }
+
+  /** The same document with these folds (an id that isn't a node here, or has no children to hide, dropped). */
+  withFolded(ids: Iterable<number>): OurusDoc {
+    return this.#withView(viewIn(this, { folded: new Set(ids), zoom: this.zoom }));
+  }
+
+  /** The same document zoomed into node `id`, or not zoomed (null); no fold changes. Throws where `id` is no node here, or the root. */
+  withZoom(id: number | null): OurusDoc {
+    if (id !== null && (id === 0 || !this.node(id))) throw new Error(`no node ${id} to zoom into`);
+    return this.#withView({ folded: this.folded, zoom: id });
+  }
+
+  /** The folds in effect within the zoom: those of the nodes strictly inside its root; all of `folded` where not zoomed. */
+  get zoomFolded(): ReadonlySet<number> {
+    return (this.#zoomFolded ??= zoomFolded(this));
+  }
+
+  /** What folding `node` hides, in offsets: from the end of its text to the end of its subtree's last line; null where it doesn't fold. */
+  foldRange(node: OutlineNode): { from: number; to: number } | null {
+    return foldRange(this, node);
+  }
+
+  /** The node a row's fold is: the outermost starting on `line`; null where none starts there. */
+  rowOwner(line: number): OutlineNode | null {
+    return startingAt(this, line)[0] ?? null;
+  }
+
+  /** What the zoom shows, in offsets: its root's lines, its descendants' and its trailing gap; null where not zoomed. */
+  zoomRange(): { from: number; to: number } | null {
+    return zoomRange(this);
+  }
+
+  /** A node's last line with its descendants' and the blank lines after them, up to the next node not its own. */
+  coverEnd(node: OutlineNode): number {
+    return coverEnd(this, node);
+  }
+
+  /** Whether the view hides `node`: under a fold in effect (`zoomFolded`), or outside the zoom. */
+  isHidden(node: OutlineNode): boolean {
+    return isHidden(this, node);
+  }
+
+  /**
+   * Where `next`, a later snapshot of this lineage, leaves this one's zoom: what went outside it, or
+   * null where it keeps it (or isn't zoomed). `removed`: the zoom root went whole, its subtree with it.
+   */
+  zoomEscape(next: OurusDoc, removed = false): string | null {
+    return zoomEscape(this, next, removed);
+  }
+
+  /** This snapshot with another view: the text, parse, outline and their indexes shared. */
+  #withView(view: ViewState): OurusDoc {
+    if (view.folded === this.folded && view.zoom === this.zoom) return this;
+    const doc = new OurusDoc(this.text, this.marks, this.mdTree, this.config, this.root, this.nextId, view);
+    doc.#rootNode = this.#rootNode;
+    doc.#byId = this.#byId;
+    return doc;
   }
 
   /**
    * The snapshot with `text` in place of this one's (the file changed elsewhere), `marks` its
-   * placeholders: the lines that differ read again, as changes.
+   * placeholders: the lines that differ read again, as changes, their nodes new. With `like`, a
+   * snapshot of this lineage with that text and those placeholders (an undo's: the one from before
+   * the step it takes back), its nodes, ids and all, instead, and this one's folds and zoom carried
+   * onto them by id, as an update carries them: an undone move keeps the moved node's fold.
    */
-  replace(text: string, marks: readonly Mark[]): OurusDoc {
+  replace(text: string, marks: readonly Mark[], options: { readonly like?: OurusDoc } = {}): OurusDoc {
+    const like = options.like;
+    const same = (a: readonly Mark[], b: readonly Mark[]): boolean => a.length === b.length && a.every((m, i) => m.kind === b[i]!.kind && m.from === b[i]!.from && m.to === b[i]!.to);
+    if (like && like.text === text && like.config === this.config && same(like.marks.marks, marks)) {
+      // (the lineage's next id past both: ids made after `like` are never given again)
+      const next = new OurusDoc(like.text, like.marks, like.mdTree, like.config, like.root, Math.max(this.nextId, like.nextId));
+      return next.withViewOf(this, diffLines(this.text, text));
+    }
     return this.update(diffLines(this.text, text), { setMarks: marks });
   }
 

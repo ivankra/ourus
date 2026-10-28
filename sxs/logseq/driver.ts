@@ -160,7 +160,8 @@ export const OG: LogseqFlavor = {
 };
 
 /** The page the current test runs on, a worker's (`perPage`), to delete once the next test has moved on. */
-const pageState = perPage(() => ({ current: null as string | null }));
+/** A worker's: its test's page, and whether it was loaded with a view (folds, a zoom), which is read back then alone. */
+const pageState = perPage(() => ({ current: null as string | null, viewed: false }));
 
 export function logseqDriver(flavor: LogseqFlavor): Driver {
   const { db } = flavor;
@@ -174,10 +175,22 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
     paragraphsInBlock: true,
     // after deleting a selected block, the first one, no block is edited (checked by hand, keys only);
     // after a drop, neither a block is edited nor any selected
-    noCaretAfter: ['deleteSubtree', 'move'],
+    noCaretAfter: ['deleteSubtree', 'moveSubtree'],
     // a selection of whole blocks: loaded with Escape and Shift+Down, read from `get_selected_blocks`
     selectsBlocks: true,
+    // a block collapsed (`set_block_collapsed`, read from the block), and a zoom, the block's own page
+    // (its uuid the route's), loaded and read through the API
+    folds: true,
+    zooms: true,
     keys: {
+      // the caret's block collapsed, expanded, toggled (`editor/collapse-block-children`,
+      // `editor/expand-block-children`, `editor/toggle-block-children`); zoomed into and out of
+      // (`editor/zoom-in`, `editor/zoom-out`: Mod+. and Mod+, on a Mac only)
+      fold: 'Control+ArrowUp',
+      unfold: 'Control+ArrowDown',
+      toggleFold: 'Control+Semicolon',
+      zoomIn: 'Alt+ArrowRight',
+      zoomOut: 'Alt+ArrowLeft',
       enter: 'Enter',
       shiftEnter: 'Shift+Enter',
       indent: 'Tab',
@@ -206,9 +219,9 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
     // Backspace at the first block's start does nothing in both (measured with `--ignore-options`:
     // `backspace.md › Backspace34` agrees; its `unwrap` case needs a paragraph, which no block app runs)
     behaves: {
-      // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+      // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25)
       quotes: 'atom',
-      // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+      // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25)
       enterInQuote: 'split',
       // Backspace at a numbered block's start takes its number first (Backspace29, TO5)
       backspaceAtItemStart: 'logseq',
@@ -293,7 +306,7 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
       const selected = doc.selected?.length ? doc.selected : null;
       const sel = doc.sel ? { block: doc.sel.block, anchor: shiftOffset(doc.sel.anchor, swapped!.from, swapped!.to), head: shiftOffset(doc.sel.head, swapped!.from, swapped!.to) } : selected && { block: selected[0]!, anchor: 0, head: 0 };
       pageState(page).current = await page.evaluate(
-        async ({ blocks, sel, previous, db }) => {
+        async ({ blocks, sel, previous, db, view }) => {
           const api = (window as any).logseq.api;
           const wait = (quiet: number) => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet, timeout: 3000 });
           // a flag an exception left set would read as busy all through this test
@@ -349,6 +362,19 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
           if (!rendered()) throw new Error(`the test page didn't render (at ${location.hash})`);
           // inserting opens a block for editing, later: let that pass before choosing the block
           await wait(30);
+          // its view, once every block is on screen: the folded blocks collapsed, then the zoom root's
+          // page shown (the root and what is under it)
+          if (view) {
+            for (const i of view.folded) await api.set_block_collapsed(flat[i].uuid, true);
+            if (view.zoom !== null) {
+              const root = flat[view.zoom].uuid;
+              api.push_state('page', { name: root });
+              const shown = () => location.hash.includes(root) && !!document.querySelector(`#main-content-container .ls-block[blockid="${root}"]`);
+              for (let i = 0; i < 300 && !shown(); i++) await new Promise((r) => setTimeout(r, 10));
+              if (!shown()) throw new Error(`the zoom root's page didn't render (at ${location.hash})`);
+            }
+            await wait(30);
+          }
           if (sel) {
             const { anchor, head } = sel;
             const target = flat[sel.block].uuid;
@@ -399,8 +425,9 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
           await ours.clearHistory(api.get_state_from_store('git/current-repo'));
           return name;
         },
-        { blocks: blocks.map(({ depth, content, props, edit }) => ({ depth, content, props, edit })), sel, previous: pageState(page).current, db },
+        { blocks: blocks.map(({ depth, content, props, edit }) => ({ depth, content, props, edit })), sel, previous: pageState(page).current, db, view: doc.view ?? null },
       );
+      pageState(page).viewed = !!doc.view;
       // blocks selected whole, as a user selects them: Escape ends the editing (the DB version's selects
       // the block, OG's none), and each Shift+Down selects the next block on screen, the first's
       // children too, till the last is (`read` reports the topmost)
@@ -422,7 +449,7 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
 
     async read(page: Page) {
       const raw = await page.evaluate(
-        async ({ name, db }) => {
+        async ({ name, db, viewed }) => {
           const api = (window as any).logseq.api;
           const prop = (x: any, k: string) => x[`:${k}`] ?? x[k];
           // the DB version's task statuses, by the id a block's property refers to
@@ -431,13 +458,14 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
                 ((await api.datascript_query('[:find ?e ?i :where [?p :db/ident :logseq.property/status] [?e :block/closed-value-property ?p] [?e :db/ident ?i]]')) ?? []).map(([e, i]: [number, string]) => [e, String(i).replace(/^:?logseq\.property\/status\./, '')]),
               )
             : {};
-          const flat: { depth: number; uuid: string; raw: any }[] = [];
+          const flat: { depth: number; uuid: string; collapsed: boolean; raw: any }[] = [];
           const walk = (bs: any[], d: number) =>
             bs.forEach((x) => {
               const status = db ? prop(x, 'logseq.property/status') : undefined;
               flat.push({
                 depth: d,
                 uuid: x.uuid,
+                collapsed: !!(x['collapsed?'] ?? prop(x, 'block/collapsed?')),
                 raw: db
                   ? {
                       content: x.content ?? '',
@@ -490,9 +518,13 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
             return false;
           };
           const selected = [...all].filter((k) => !under(k)).sort((a, b) => a - b);
-          return { blocks: flat.map(({ depth, raw }) => ({ depth, raw })), sel, selected };
+          // the view: the collapsed blocks, and the block whose page is shown, if one of the test's is
+          const route = api.get_state_from_store('route-match')?.['path-params']?.name;
+          const zoom = flat.findIndex((b) => b.uuid === route);
+          const view = viewed ? { folded: flat.flatMap((b, k) => (b.collapsed ? [k] : [])), zoom: zoom >= 0 ? zoom : null } : undefined;
+          return { blocks: flat.map(({ depth, raw }) => ({ depth, raw })), sel, selected, view };
         },
-        { name: pageState(page).current, db },
+        { name: pageState(page).current, db, viewed: pageState(page).viewed },
       );
       // a numbered block's place in its run of numbered siblings, from 1
       const run: number[] = [];
@@ -511,7 +543,7 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
         sel = { block: sel.block, anchor: at(sel.anchor), head: at(sel.head) };
       }
       // the block's later lines keep the escapes Markdown source has at their start; a block's text needs none
-      return unescapeLaterLines({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) });
+      return { ...unescapeLaterLines({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) }), ...(raw.view && { view: raw.view }) };
     },
 
     async configure(page: Page, settings) {
@@ -526,7 +558,7 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
       }, settings.outdent === 'logical');
     },
 
-    drops: ['move'],
+    drops: ['moveSubtree'],
     drop: (page: Page, drop: Drop, settle: () => Promise<void>) => logseqDrop(page, drop, settle),
 
     async act(page: Page, action: string, settle: () => Promise<void>) {

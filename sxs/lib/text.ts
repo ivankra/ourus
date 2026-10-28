@@ -6,21 +6,25 @@ import type { Config } from '../../src/config.ts';
 import { OurusDoc } from '../../src/doc/index.ts';
 import { drawState, drawText, nodesOf, plainText, readDrawing } from '../../test/drawing.ts';
 import type { Verdict } from './block.ts';
+import { drawView, sameView, splitView, type RowView } from './view.ts';
 
 export interface TextDoc {
   text: string;
   /** The caret or selection, as offsets into the text; null when the buffer draws none. */
   sel: { anchor: number; head: number } | null;
+  /** Its folds and zoom, by line (`view.ts`), where the case has a view. */
+  view?: RowView;
 }
 
-/** A drawn buffer as a text document. */
-export function readTextDoc(drawn: string): TextDoc {
+/** A drawn buffer as a text document (its view, `view.ts`, read off its last line). */
+export function readTextDoc(drawing: string): TextDoc {
+  const { drawn, view } = splitView(drawing);
   const { text, selection } = readDrawing(drawn);
-  return { text, sel: /┃|«/.test(drawn) ? selection : null };
+  return { text, sel: /┃|«/.test(drawn) ? selection : null, ...(view && { view }) };
 }
 
-/** A text document drawn as a spec buffer. */
-export const drawTextDoc = (d: TextDoc): string => (d.sel ? drawState(d.text, d.sel) : drawText(d.text));
+/** A text document drawn as a spec buffer, its view a last line. */
+export const drawTextDoc = (d: TextDoc): string => (d.sel ? drawState(d.text, d.sel) : drawText(d.text)) + (d.view ? drawView(d.view) : '');
 
 /** Text compared without the spaces and tabs that end lines, where editors differ in trimming. */
 const loose = (text: string): string => text.replace(/[ \t]+$/gm, '');
@@ -47,4 +51,4 @@ export function compareTexts(want: TextDoc, got: TextDoc, flavor: Config['flavor
   return 'agree';
 }
 
-export const sameText = (a: TextDoc, b: TextDoc): boolean => a.text === b.text && JSON.stringify(a.sel) === JSON.stringify(b.sel);
+export const sameText = (a: TextDoc, b: TextDoc): boolean => a.text === b.text && JSON.stringify(a.sel) === JSON.stringify(b.sel) && sameView(a.view, b.view);

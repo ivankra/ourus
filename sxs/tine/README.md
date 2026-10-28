@@ -23,11 +23,17 @@ From `src/keybindings.ts` and the block editor's handlers, checked in the app:
 | `deleteSoftLineBackward` | Alt+U ("kill line before") |
 | `deleteSubtree` | Escape (the block selected), then Backspace; blocks selected already, Backspace alone (Escape would clear them); after it no block is edited: the outline alone is judged (`noCaretAfter`). |
 | `duplicateSubtree` | *missing* (no command): its examples are skipped |
-| `pasteStructured` | Ctrl+V (`- ` outlines become blocks) |
+| `paste` | Ctrl+V (`- ` outlines become blocks) |
 | `pastePlain` | Ctrl+Shift+V (as it is) |
 | `undo` | Ctrl+Z |
 | `redo` | Ctrl+Shift+Z |
-| `move ②` | the mouse: a block's bullet dragged to the place (`drop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)); after it no block is edited (`noCaretAfter`) |
+| `fold` | Ctrl+Up: the block's children hidden, `collapsed:: true` written into its text (read as its fold, the line left out) |
+| `unfold` | Ctrl+Down |
+| `toggleFold` | *missing* |
+| `zoomIn` | *missing*: a click on the block's bullet only (below); the zoom's cases skip |
+| `zoomOut` | *missing*, as `zoomIn` |
+| `clearZoom` | *missing*, as `zoomIn` |
+| `moveSubtree` | mouse: a block's bullet dragged to the place (`drop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)); after it no block is edited (`noCaretAfter`) |
 
 Other shortcuts:
 
@@ -42,7 +48,6 @@ Other shortcuts:
 | select all | Ctrl+A | the text, then the block with its children, then its parent's |
 | edit the selected block | Enter | the caret at its end |
 | indent, outdent selected blocks | Tab, Shift+Tab | all of them |
-| fold, unfold | Ctrl+Up, Ctrl+Down | a block's children hidden (its `collapsed:: true`) or shown |
 | copy embed | Ctrl+Shift+C (no text selected) | `{{embed ((<uuid>))}}`, the block given an `id::` |
 | numbered list | typing `1. ` in an empty block | numbered (`logseq.order-list-type:: number`) |
 | quick capture | Ctrl+Shift+Enter | the block filed to today's journal |
@@ -143,25 +148,43 @@ registry on raw.githubusercontent.com.
 
 ## Drag and drop
 
-Drag and drop ([`drag.md`](../../spec/drag.md), played with the real mouse, aimed where its own
+Drag and drop ([`move-subtree.md`](../../spec/move-subtree.md), played with the real mouse, aimed where its own
 geometry puts each place: `Block.tsx`'s bullet drag, read in the guide's bundle, measured in the guide):
 
 - **A bullet is dragged with mouse events**, not HTML5 drag: a press on `.bullet-container`, a move of
   4 pixels starts it, the block under the pointer is the target and the place is on it: more than 50
   pixels right of the block's left (a level is 30), its last child; else before it in the top half of
   its row, after it in the bottom half. A first child is dropped before the parent's first other
-  child, or as the child of a parent with none (`Drag3`, `Drag8`); a place inside the dragged
-  blocks is refused, nothing moved. The places agree (`Drag1`, `Drag2`, `Drag3`, `Drag8`, `Drag13`,
+  child, or as the child of a parent with none (`MoveSubtree3`, `MoveSubtree9`); a place inside the dragged
+  blocks is refused, nothing moved. The places agree (`MoveSubtree1`, `MoveSubtree2`, `MoveSubtree3`, `MoveSubtree9`, `MoveSubtree12`,
   `Scenario8`).
 - **The drag ends the editing**: after a drop no block is edited, the caret gone, so the outline
-  alone is judged (`Drag1`, `Drag2`, `Drag8`, `Drag13`), and a case typing after it is skipped
+  alone is judged (`MoveSubtree1`, `MoveSubtree2`, `MoveSubtree9`, `MoveSubtree12`), and a case typing after it is skipped
   (`Scenario8b`, `Scenario8c`: "no text focus").
-- **A heading keeps its level**: the text moves as it is, its section's headings with it (`Drag15`:
-  `### D` and `#### E` under `## B`, ourus's `## D`, `### E`; `Drag16`: `##### D`, ourus's `## D`).
+- **A heading keeps its level**: the text moves as it is, its section's headings with it (`MoveSubtree14`:
+  `### D` and `#### E` under `## B`, ourus's `## D`, `### E`; `MoveSubtree15`: `##### D`, ourus's `## D`).
 - **No cover rule**: with blocks selected, a drag from any bullet carries the selection, the pressed
   block in it or not; with none, the pressed block with its children. A press on a selected block
-  agrees (Drag4, Drag20, the selection kept); one on `c` with `a`, `b` selected moves them to where
-  they are, nothing changing (Drag5, Drag5b disagree; ourus moves `c` alone).
+  agrees (MoveSubtree4, MoveSubtree19, the selection kept); one on `c` with `a`, `b` selected moves them to where
+  they are, nothing changing (MoveSubtree5, MoveSubtree6 disagree; ourus moves `c` alone).
+
+## Folds, measured
+
+[`fold.md`](../../spec/fold.md), measured 2026-10-28 (no zoom: [`zoom.md`](../../spec/zoom.md)'s
+cases skip). A block's fold is its `collapsed`, seeded with the page as the rest is, and read from
+the store; what Ctrl+Up writes into the text, `collapsed:: true`, is left out of the block's text,
+its fold being what the step reports. What is compared is what the reader sees, the folds in effect.
+
+- **Around a collapsed block it agrees**, as Logseq OG does: Enter at its end and on an empty one
+  with children (`Fold1`, `Fold5`), Backspace after it (`Fold3`), a move (`Fold4`), an indent under it
+  (`Fold6`), unfold (`Fold12`).
+- **Enter mid-text in a collapsed block** (split as `enterMidItem: child`) puts the rest after its
+  children, the block still collapsed (`Fold2`, `Fold2b`), as ourus under `child`.
+- **Delete at a collapsed block's end does nothing** (`Fold7`), as ourus, which refuses it (`folded`).
+- **Backspace right after a collapsed block joins into its text**, not its hidden last child's, still
+  collapsed (`Fold15`), as ourus.
+- **The block joined into a collapsed block keeps its children hidden**: they go after its own, still
+  collapsed (`Fold15b`); ourus puts them there and opens it, so none it moved is hidden.
 
 ## Tine bugs met on the way
 
@@ -172,6 +195,9 @@ Seen in the guide's export of 2026-09-28; source references to Tine's repository
    survivor's (`children.push(...node.children)`), so where the survivor has other children after
    the absorbed one, the outline's order changes: Delete at the end of an empty block whose first
    child `a` has a child `b` and a sibling `c` reads `a`, `c`, `b` after.
+2. **Backspace on an empty block after a collapsed one throws** (`fold.md › Fold3`, 2026-10-28):
+   `TypeError: Cannot read properties of undefined (reading 'page')` in the page, the block gone and
+   the caret at the collapsed block's end all the same, as ourus.
 
 ## Internals
 

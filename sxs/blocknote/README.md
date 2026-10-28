@@ -24,16 +24,22 @@ BlockNote's defaults (its block keyboard shortcuts, and ProseMirror's and Tiptap
 | `outdent` | Shift+Tab: unnests it |
 | `moveSubtreeUp` | Ctrl+Shift+Up ("move block up": the block with its children) |
 | `moveSubtreeDown` | Ctrl+Shift+Down ("move block down") |
-| `move ②` | the mouse: the block hovered, its side menu's drag handle dragged (HTML5 drag and drop, ProseMirror's `drop`) to the place (`blockNoteDrop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
+| `moveSubtree` | mouse: the block hovered, its side menu's drag handle dragged (HTML5 drag and drop, ProseMirror's `drop`) to the place (`blockNoteDrop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
 | `deleteContentBackward` | Backspace (at a list item's start, makes it a paragraph first) |
 | `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Shift+Home, then Backspace (no command for it) |
 | `deleteSubtree` | *missing*: a block is deleted through its side menu (its drag handle), with the mouse; its examples are skipped |
 | `duplicateSubtree` | *missing*: duplicated through the same menu; its examples are skipped |
-| `pasteStructured` | Ctrl+V |
+| `paste` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V |
 | `undo` | Ctrl+Z |
 | `redo` | Ctrl+Shift+Z |
+| `fold` | *missing*: a block's children don't fold (only a toggle list item's, a block of its own kind); the fold's cases skip |
+| `unfold` | *missing*, as `fold` |
+| `toggleFold` | *missing*, as `fold` |
+| `zoomIn` | *missing*: BlockNote has no zoom; the zoom's cases skip |
+| `zoomOut` | *missing*, as `zoomIn` |
+| `clearZoom` | *missing*, as `zoomIn` |
 
 Other shortcuts (each block type's `keyboardShortcuts` in `@blocknote/core`, Tiptap's marks; each
 pressed in the example, 2026-10-18):
@@ -131,16 +137,16 @@ the block whose text the pointer is over, before it in the text's first half, af
 depth. The driver hovers the block, waits for its menu (not one fading out, which keeps its handle
 where the next is drawn), then presses the handle and drops at the place's block.
 
-- **A drop beside a block lands where ourus's does** (Drag1, Drag2, Drag13 agree, stable over three
+- **A drop beside a block lands where ourus's does** (MoveSubtree1, MoveSubtree2, MoveSubtree12 agree, stable over three
   runs).
-- **No place inside a block with no children**: a drop into a leaf (Drag3, Drag8, Scenario8c) has no
+- **No place inside a block with no children**: a drop into a leaf (MoveSubtree3, MoveSubtree9, Scenario8c) has no
   gesture here, and skips as it plays.
 - **A heading moves alone**, its level kept: a heading owns no blocks in BlockNote, so what is under it
-  in ourus's section stays where it was (Drag15: `### D` moved, `#### E` left under `# C`; Drag16).
+  in ourus's section stays where it was (MoveSubtree14: `### D` moved, `#### E` left under `# C`; MoveSubtree15).
 - **No caret after a drop**: Scenario8b, which types after it, skips as it plays.
 - **The cover rule is ourus's**: with text selected across blocks, a press on the handle of a block
   in it drags the blocks the selection is in (a node selection of them, `blockDragStart`), any other
-  press the block alone. Drag4, Drag20, Drag5 and Drag5b land as ourus's, nothing selected after (the
+  press the block alone. MoveSubtree4, MoveSubtree19, MoveSubtree5 and MoveSubtree6 land as ourus's, nothing selected after (the
   editor blurred, a collapsed selection: `caret`). There is no selection of blocks apart from text: the
   driver selects from the first block's content start to the end of the last one's subtree, and
   `read` reports a selection from a block's start to another's end, or a node selection, as blocks.

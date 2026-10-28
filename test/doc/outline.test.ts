@@ -146,6 +146,25 @@ test('ids: carried by where a node\'s first line went, named by `identity`, swap
   assert.equal(swapped.rootNode.children[2]!.persistentNode, doc.rootNode.children[2]!.persistentNode, 'the third item is the same node');
 });
 
+test('ids: a line written over from its start keeps its node, of its kind; a line deleted whole does not', () => {
+  const doc = OurusDoc.parse('# H\n\nabc\n\nd\ne\n');
+  const [h] = doc.rootNode.children.map((n) => n.id);
+  const [abc, de] = doc.rootNode.children[0]!.children.map((n) => n.id);
+  // a paragraph's whole text typed over, a caret given or not
+  const typed = doc.update([{ from: 5, to: 8, insert: 'xyz' }], { caret: 8 });
+  assert.deepEqual(typed.rootNode.children[0]!.children.map((n) => n.id), [abc, de]);
+  assert.equal(typed.rootNode.children[0]!.id, h);
+  // a paragraph of two lines, both written over by one line: the first line's node
+  const both = doc.update([{ from: 10, to: 13, insert: 'x' }]);
+  assert.equal(both.rootNode.children[0]!.children[1]!.id, de);
+  // written over with another kind: a new node
+  const item = doc.update([{ from: 5, to: 8, insert: '- x' }]);
+  assert.notEqual(item.rootNode.children[0]!.children[0]!.id, abc);
+  // the text deleted, its line with it: the node goes
+  const gone = doc.update([{ from: 5, to: 10, insert: '' }]);
+  assert.deepEqual(gone.rootNode.children[0]!.children.map((n) => n.id), [de]);
+});
+
 test('gaps: the blank lines after a node\'s own text, a subtree\'s after its last descendant', () => {
   const doc = OurusDoc.parse('- [ ] foo\n  bar\n\n  # hello\n\n  - baz\n\n\npara\n');
   const lines = (node: OutlineNode): string[] => [`${node.kind}:${node.gap}`, ...node.children.flatMap(lines)];

@@ -11,7 +11,7 @@ With an outliner plugin, in Live Preview: [`../obsidian-outliner/`](../obsidian-
 
 ## Keys (Linux)
 
-Obsidian's defaults, and CodeMirror's beneath them, but for two the vault binds (`hotkeys.json`):
+Obsidian's defaults, and CodeMirror's beneath them, but for three the vault binds (`hotkeys.json`):
 
 | action | keys |
 | --- | --- |
@@ -26,7 +26,13 @@ Obsidian's defaults, and CodeMirror's beneath them, but for two the vault binds 
 | `deleteSoftLineBackward` | Shift+Home, Backspace ("delete line boundary backward" is bound on a Mac only) |
 | `deleteSubtree` | *missing* (no command): its tests are skipped |
 | `duplicateSubtree` | *missing* (no command): its tests are skipped |
-| `pasteStructured` | Ctrl+V |
+| `toggleFold` | Ctrl+Alt+F: "Toggle fold" (`editor:toggle-fold`), which has no hotkey out of the box: the row at the caret folded or unfolded, CodeMirror's range for it (an item's children, a heading's section); at a row with nothing to fold, nothing |
+| `fold` | *missing*: nothing folds the caret's row alone ("Fold more" goes by levels): its tests are skipped |
+| `unfold` | *missing*: nothing unfolds the caret's row alone ("Fold less" goes by levels): its tests are skipped |
+| `zoomIn` | *missing*: Obsidian has no zoom (plugins': Zoom in [`../obsidian-outliner/`](../obsidian-outliner/README.md), true-outliner's): its tests are skipped |
+| `zoomOut` | *missing*, as `zoomIn` |
+| `clearZoom` | *missing*, as `zoomIn` |
+| `paste` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V |
 | `undo` | Ctrl+Z |
 | `redo` | Ctrl+Shift+Z |
@@ -44,8 +50,8 @@ Other shortcuts (measured in 1.14.4 on `- a`, its children `- b` (with `- c` und
 | Bold, italics, comment, insert link | Ctrl+B, Ctrl+I, Ctrl+/, Ctrl+K | |
 | Follow link, open link in a new tab | Alt+Enter, Ctrl+Enter | nothing off a link |
 
-"Toggle fold", "Fold all", "Unfold all", "Fold more" and "Fold less" (`editor:toggle-fold`, ...; an
-item's children, or a heading's section, hidden or shown) have no key; nor have "Toggle bullet list"
+"Fold all", "Unfold all", "Fold more" and "Fold less" (`editor:fold-all`, ...; an item's children,
+or a heading's section, hidden or shown) have no key; nor have "Toggle bullet list"
 (`- b` to `b`), "Toggle numbered list" (`- b` to `1. b`), "Set heading" 1 to 6 (in an item, the `## `
 goes before its marker: `## - b`), or "Move line up" and "down" (bound by the vault, above).
 CodeMirror's Alt+L (select line), Shift+Alt+Up and Down (copy line) and Ctrl+Alt+[ and ] (fold all,
@@ -189,7 +195,7 @@ Enter25, E4, list-marker-content-column: now agree).
 What the four setups share (every key the plugins leave to Obsidian):
 
 - **No node is dragged**: Obsidian's own drag moves selected text (CodeMirror's), not a list item or a
-  section, so the drop cases (`drag.md`) don't play in bare Obsidian or Live Preview; Outliner and
+  section, so the drop cases (`move-subtree.md`) don't play in bare Obsidian or Live Preview; Outliner and
   true-outliner add one ([`../obsidian-outliner/`](../obsidian-outliner/README.md),
   [`../obsidian-true-outliner/`](../obsidian-true-outliner/README.md)).
 
@@ -199,6 +205,26 @@ What the four setups share (every key the plugins leave to Obsidian):
 - **It is a text editor**: Enter and Backspace keep spaces and blank lines a structural editor would
   drop (most `whitespace` verdicts); a paste is Markdown inserted where the caret is, the clipboard's
   HTML converted (`paste-old.md`).
+
+Folds ([`fold.md`](../../spec/fold.md), measured 2026-10-28 in 1.14.5): CodeMirror's, by Obsidian's
+fold ranges (an item's children, a heading's section). A case's folds are loaded by "Toggle fold" at
+each folded row and read back through the edit view (`getFoldInfo`, by line); what is compared is
+what the reader sees, the folds in effect. The same in Live Preview.
+
+- **Keys are the text editor's, through a fold**: Enter at a folded item's end puts the new item
+  between it and its hidden children, the fold moving to the new row (`Fold1`); Backspace on an
+  empty item after a folded one deletes a character (`Fold3`); Alt+Up moves the folded item's line
+  alone, its child left under the item above (`Fold4`); Enter on an empty folded item with children
+  takes its marker off, unfolding it (`Fold5`).
+- **An edit next to a fold keeps it, CodeMirror's range mapped**: an item indented under a folded
+  one stays shown, the fold hiding what it did before (`Fold6`), where ourus opens it.
+- **Delete at a folded item's end deletes what the fold hides**, its children gone with the line
+  ending (`Fold7`: `- a┃` over `b` and `c` comes out `- a┃`); ourus refuses it (`folded`), as the
+  block apps.
+- **Backspace right after a folded item deletes the space after its marker** (`Fold15`: `-┃c`), the
+  fold kept; ourus joins the item into the folded one's text, as the block apps.
+- **"Toggle fold" at a row with nothing to fold does nothing** (`Fold11`), where ourus folds the
+  parent.
 
 ## Settings
 

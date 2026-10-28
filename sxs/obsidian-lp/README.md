@@ -17,7 +17,8 @@ widgets show (a callout, a table, math) is drawn by reading view's pipeline, fro
 
 ## What Live Preview changes
 
-What a key does to the text is the same as in Source mode; where the caret goes by the layout is
+What a key does to the text is the same as in Source mode, and so are folds (`fold.md`, every case
+as Source mode's: [`../obsidian/README.md`](../obsidian/README.md)); where the caret goes by the layout is
 not. Measured outcome for outcome against Source mode's, and by
 cases written to find where the two editing modes part:
 

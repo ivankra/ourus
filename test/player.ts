@@ -8,7 +8,7 @@
 // typed (a character at a time, each through ourus's `insertText` first, as a host hooked to its
 // keys does), and caret motions named as CodeMirror's commands are.
 
-import { executeCommand, type Command, type CommandResult, type Selection } from '../src/commands/index.ts';
+import { executeCommand, leavesZoom, type Command, type CommandResult, type Selection } from '../src/commands/index.ts';
 import { CommandContext } from '../src/commands/context.ts';
 import { dragRun, placeAtSeam } from '../src/commands/drag.ts';
 import type { OurusDoc } from '../src/doc/index.ts';
@@ -71,11 +71,13 @@ const MOTIONS: Record<string, Motion> = {
   DocEnd: (doc) => doc.text.length,
 };
 
-/** A drop (spec/drag.md): `move`, the selection's nodes, or `move ②`, a press on a node's mark; `pasteAt`, the clipboard dragged in. */
-const DROP = /^(?:move(?: ([\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]))?|pasteAt)$/u;
+/** A drop (spec/move-subtree.md, paste-at.md): `moveSubtree`, the selection's nodes, or `moveSubtree ②`, a press on a node's mark; `pasteAt`, the clipboard dragged in. */
+const DROP = /^(?:moveSubtree(?: ([\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]))?|pasteAt)$/u;
 
 /** A pickup held for a step to check (spec/drag.md): `drag`, the selection's nodes, or `drag ②`. */
 const PICKUP = /^drag(?: ([\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]))?$/u;
+/** The view's commands, a label naming the node a click would (`fold ①`): else the selection's. */
+const VIEW = /^(fold|unfold|toggleFold|zoomIn)(?: ([\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]))?$|^(zoomOut|clearZoom)$/u;
 
 const isMotion = (action: string): boolean => /^(?:cursor|select)/.test(action) && action.replace(/^(?:cursor|select)/, '') in MOTIONS;
 
@@ -89,7 +91,7 @@ const HOST_ACTIONS = new Set<string>(['undo', 'redo']);
 /** Whether an action is an ourus command (the rest are typing, motions and the host's undo). */
 export const isCommand = (token: string): boolean => COMMANDS.has(token);
 
-export const isAction = (token: string): boolean => /^"[^"]*"$/.test(token) || COMMANDS.has(token) || HOST_ACTIONS.has(token) || isMotion(token) || DROP.test(token) || PICKUP.test(token);
+export const isAction = (token: string): boolean => /^"[^"]*"$/.test(token) || COMMANDS.has(token) || HOST_ACTIONS.has(token) || isMotion(token) || DROP.test(token) || PICKUP.test(token) || VIEW.test(token);
 
 /** Whether an action is a drop, which plays at the start's drop line. */
 export const isDrop = (token: string): boolean => DROP.test(token);
@@ -110,19 +112,17 @@ export interface Played {
   drop?: DropLine | null;
   /** The node labels bound so far (`①`'s number to its node's id), for the actions that name one. */
   labels?: ReadonlyMap<number, number>;
-  /** The host's view, for a drag: the nodes whose children it hides, and the one it is zoomed into. */
-  folded?: readonly number[];
-  zoom?: number;
 }
 
-/** A state the host's history returns to: the text with its placeholders, and the selection. */
+/** A state the host's history returns to: the text with its placeholders, and the selection; the snapshot it was, whose nodes an undo takes back (`replace`'s `like`). */
 interface Snapshot {
   readonly text: string;
   readonly marks: MarkSet;
   readonly selection: Selection;
+  readonly doc: OurusDoc;
 }
 
-const snapshot = (state: Played, selection = state.selection): Snapshot => ({ text: state.doc.text, marks: state.doc.marks, selection });
+const snapshot = (state: Played, selection = state.selection): Snapshot => ({ text: state.doc.text, marks: state.doc.marks, selection, doc: state.doc });
 
 export function play(state: Played, actions: readonly string[]): Played {
   for (const action of actions) {
@@ -140,7 +140,7 @@ export function play(state: Played, actions: readonly string[]): Played {
   return state;
 }
 
-/** Undo or redo one step of the host's history: the text and the caret come back, nothing else. */
+/** Undo or redo one step of the host's history: the text and the caret come back, and the nodes of the snapshot it returns to (`replace`'s `like`), the view carried onto them. */
 function history(state: Played, action: 'undo' | 'redo'): Played {
   const from = action === 'undo' ? (state.undone ?? []) : (state.redone ?? []);
   const entry = from[from.length - 1];
@@ -152,7 +152,7 @@ function history(state: Played, action: 'undo' | 'redo'): Played {
     ...state,
     last: undefined,
     goal: undefined,
-    doc: state.doc.replace(entry.text, entry.marks.marks),
+    doc: state.doc.replace(entry.text, entry.marks.marks, { like: entry.doc }),
     selection: entry.selection,
     ...(action === 'undo' ? { undone: rest, redone: other } : { redone: rest, undone: other }),
   };
@@ -180,18 +180,26 @@ function step(state: Played, action: string): Played {
   }
   const dropped = DROP.exec(action);
   if (dropped) return { ...run(state, action === 'pasteAt' ? pasteAtCommand(state) : dropCommand(state, dropped[1])), drop: null };
+  const view = VIEW.exec(action);
+  if (view) {
+    if (view[3]) return run(state, { type: view[3] as 'zoomOut' | 'clearZoom' });
+    const pressed = pressedOf(state, view[2]);
+    const nodes = pressed === undefined ? {} : { nodes: [pressed] };
+    if (view[1] === 'zoomIn') return run(state, { type: 'zoomIn', ...nodes });
+    return run(state, { type: view[1] as 'fold' | 'unfold' | 'toggleFold', ...nodes });
+  }
   const picked = PICKUP.exec(action);
   if (picked) {
     const pressed = pressedOf(state, picked[1]);
-    return run(state, { type: 'drag', ...(pressed !== undefined && { pressed }), ...(state.folded && { folded: state.folded }), ...(state.zoom !== undefined && { zoom: state.zoom }) });
+    return run(state, { type: 'drag', ...(pressed !== undefined && { pressed }) });
   }
   if (!COMMANDS.has(action)) throw new Error(`unknown action "${action}"`);
   return run(state, commandOf(action, state.clipboard));
 }
 
 /**
- * A drop as the user makes it (spec/drag.md): the run picked up (`pressed`, a label: the cover rule;
- * else the selection's nodes), then `moveSubtreeTo` the place the start's drop line names. A refused
+ * A drop as the user makes it (spec/move-subtree.md): the run picked up (`pressed`, a label: the cover rule;
+ * else the selection's nodes), then `moveSubtree` the place the start's drop line names. A refused
  * pickup is the drop's result.
  */
 function dropCommand(state: Played, label: string | undefined): Command | CommandResult {
@@ -199,15 +207,15 @@ function dropCommand(state: Played, label: string | undefined): Command | Comman
   const pressed = pressedOf(state, label);
   const run = dragRun(new CommandContext(state.doc, state.selection), pressed);
   if (!Array.isArray(run)) return run;
-  const to = placeAtSeam(state.doc, run, state.drop.line, state.drop.depth, new Set(state.folded));
+  const to = placeAtSeam(state.doc, run, state.drop.line, state.drop.depth);
   if (typeof to === 'string') throw new Error(`the drop line: ${to}`);
-  return pressed === undefined ? { type: 'moveSubtreeTo', to } : { type: 'moveSubtreeTo', nodes: run.map((n) => n.id), to };
+  return pressed === undefined ? { type: 'moveSubtree', to } : { type: 'moveSubtree', nodes: run.map((n) => n.id), to };
 }
 
 /** A drop from outside: the clipboard, at the place the start's drop line names. */
 function pasteAtCommand(state: Played): Command {
   if (!state.drop) throw new Error('a drop with no drop line (`▸`) in the start, or a second drop: a case drops once');
-  const at = placeAtSeam(state.doc, null, state.drop.line, state.drop.depth, new Set(state.folded));
+  const at = placeAtSeam(state.doc, null, state.drop.line, state.drop.depth);
   if (typeof at === 'string') throw new Error(`the drop line: ${at}`);
   return { type: 'pasteAt', at, clipboard: state.clipboard };
 }
@@ -220,8 +228,22 @@ function pressedOf(state: Played, label: string | undefined): number | undefined
   return pressed;
 }
 
-/** `command` run as the host runs it: applied, refused, or the host's default. */
+/**
+ * `command` run as the host runs it: applied, refused, or the host's default, which a zoomed host
+ * checks before committing (`leavesZoom`), refusing the edit where it would leave the zoom.
+ */
 function run(state: Played, command: Command | CommandResult): Played {
+  return guarded(state, hostRun(state, command));
+}
+
+/** `next`, a step of the host's own: refused where it leaves `state`'s zoom, as a host checks its own edits (`leavesZoom`). */
+function guarded(state: Played, next: Played): Played {
+  if (next.last?.status !== 'deferredToHost' || state.doc.zoom === null || next.doc === state.doc) return next;
+  if (!leavesZoom(state.doc, next.doc)) return next;
+  return { ...state, last: { status: 'rejected', reason: 'outside-zoom', detail: "the host's own edit would leave the zoom" } };
+}
+
+function hostRun(state: Played, command: Command | CommandResult): Played {
   if ('status' in command) return { ...state, last: command };
   const { doc, selection } = state;
   const text = doc.text;
@@ -283,7 +305,7 @@ function typeText(state: Played, text: string): Played {
       if (applyChanges(doc.text, last.changes) !== last.doc.text) throw new Error(`insertText: its changes don't produce its document`);
       state = { ...state, doc: last.doc, selection: last.selection, last };
     } else if (last.status === 'rejected') state = { ...state, last };
-    else state = { ...edit(state, { from: Math.min(selection.anchor, selection.head), to: Math.max(selection.anchor, selection.head), insert: ch }), last };
+    else state = guarded(state, { ...edit(state, { from: Math.min(selection.anchor, selection.head), to: Math.max(selection.anchor, selection.head), insert: ch }), last });
   }
   return state;
 }

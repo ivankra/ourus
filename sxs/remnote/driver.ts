@@ -27,7 +27,7 @@
 
 import type { Page } from 'playwright-core';
 import type { Config } from '../../src/config.ts';
-import type { Driver, Drop } from '../lib/driver.ts';
+import { perPage, type Driver, type Drop } from '../lib/driver.ts';
 import { runsAsMarkdown, Unsupported, type Block, type Outline, type Run } from '../lib/block.ts';
 import { gesture } from '../lib/drag.ts';
 
@@ -171,6 +171,9 @@ export function bulletless(outline: Outline): string | undefined {
   return undefined;
 }
 
+/** A worker's: whether its test was loaded with a view (folds, a zoom), which is read back then alone. */
+const viewed = perPage(() => ({ on: false }));
+
 export function remnoteDriver(setup: Setup): Driver {
   return {
     shortId: setup.shortId,
@@ -192,7 +195,16 @@ export function remnoteDriver(setup: Setup): Driver {
     noCaretAfter: ['deleteSubtree'],
     // its `load` selects rems whole, as `read` reports them
     selectsBlocks: true,
+    // a rem collapsed in the page's root (its portal's `setIsCollapsed`, read as `getIsCollapsed`),
+    // and a zoom, the rem as the page (its route), the test's document standing for none
+    folds: true,
+    zooms: true,
     keys: {
+      // "Collapse", "Expand", "Zoom Out of Bullet"; no `zoomIn`: "Zoom Into Bullet" (Ctrl+') goes to
+      // `/database_error` here, where the route to the rem (`load`'s) shows it
+      fold: 'Control+ArrowUp',
+      unfold: 'Control+ArrowDown',
+      zoomOut: 'Control+Semicolon',
       enter: 'Enter',
       shiftEnter: 'Shift+Enter',
       indent: 'Tab',
@@ -238,17 +250,23 @@ export function remnoteDriver(setup: Setup): Driver {
       pasteSeams: 'open',
       pasteListForm: 'own',
       // without bullets a document is a flat run of rems, a paragraph one, each item one: a list after a
-      // paragraph is no rem's, a move passes one rem (Lists1, Lists5, Lists9: ../../dev/19-quotes.md, Part 2)
+      // paragraph is no rem's, a move passes one rem (Lists1, Lists5, Lists9)
       ...(setup.bulletless ? { enterOnEmptyItem: 'exit' as const, listParent: 'container' as const, listMoves: 'item' as const } : {}),
     },
     idle: { busy: `window.getNumOngoingWriteGuarantees?.() > 0` },
-    drops: ['move'],
+    drops: ['moveSubtree'],
     holds(doc) {
       const o = doc as Outline;
       if (setup.bulletless) {
         const no = bulletless(o);
         if (no) return no;
       }
+      // zoomed, the root is the page's title, which the editor tree doesn't focus as a rem of its own;
+      // and a rem without a bullet doesn't keep a collapse
+      if (o.view && o.view.zoom !== null && o.sel?.block === o.view.zoom) return 'the caret in the zoom root, the page\'s title';
+      if (o.view?.folded.some((i) => o.blocks[i]!.free)) return 'a fold on a rem without a bullet';
+      // (without bullets, what a free block owns is beside it: zoomed into, it shows none of it)
+      if (setup.bulletless && o.view && o.view.zoom !== null && o.blocks[o.view.zoom]!.free) return 'a zoom into a rem without a bullet, what it owns its siblings';
       const fenced = o.blocks.map((b) => /^(`{3,}|~{3,})/.test(b.text) && b.text.includes('\n'));
       if (o.blocks.some((b, i) => fenced[i] && !FENCE.test(b.text))) return "code block's fences that don't match";
       const fences = o.blocks.map((b) => FENCE.exec(b.text));
@@ -322,7 +340,7 @@ export function remnoteDriver(setup: Setup): Driver {
       const selected = !o.sel && o.selected?.length ? o.selected : null;
       const sel = o.sel ? { block: o.sel.block, anchor: local(o.sel.anchor, items[o.sel.block]!), head: local(o.sel.head, items[o.sel.block]!) } : selected && { block: selected[0]!, anchor: 0, head: 0 };
       await page.evaluate(
-        async ({ items, sel, bulletless }) => {
+        async ({ items, sel, bulletless, view }) => {
           const w = window as any;
           const KB = w.CURRENT_KNOWLEDGE_BASE;
           const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -375,10 +393,26 @@ export function remnoteDriver(setup: Setup): Driver {
             return req(new RegExp(`\\b${v}=\\w\\((\\d+)\\)`).exec(src)![1]);
           })();
           const trees = w.__ourusSxsTrees;
-          const controller = (): any => [...Object.values(trees)].flatMap((t: any) => (Array.isArray(t) ? t : [t])).map((t: any) => t?.controller).find((c: any) => c?.rootRem?._id === docRem._id);
-          const rendered = () => controller() && made.every((id) => document.querySelector(`[data-rem-id="${id}"]`));
-          for (let i = 0; i < 400 && !rendered(); i++) await sleep(10);
-          if (!rendered()) throw new Error("the test's rems didn't render");
+          // the editor tree of the rem the page shows: the document, or the rem zoomed into
+          let root: string = docRem._id;
+          const controller = (): any => [...Object.values(trees)].flatMap((t: any) => (Array.isArray(t) ? t : [t])).map((t: any) => t?.controller).find((c: any) => c?.rootRem?._id === root);
+          const rendered = (ids: string[]) => controller() && ids.every((id) => document.querySelector(`[data-rem-id="${id}"]`));
+          for (let i = 0; i < 400 && !rendered(made); i++) await sleep(10);
+          if (!rendered(made)) throw new Error("the test's rems didn't render");
+          // its view, every rem on screen: the zoom root's page shown, then the folded rems collapsed in
+          // what it shows (a rem's collapse is its portal's, the root the page shows)
+          if (view) {
+            if (view.zoom !== null) {
+              root = made[view.zoom]!;
+              w.FlowRouter.go(`/w/null/${root}`);
+              const inside = made.filter((_, k) => k > view.zoom! && items.slice(view.zoom! + 1, k + 1).every((it) => it.depth > items[view.zoom!]!.depth));
+              for (let i = 0; i < 400 && !rendered(inside); i++) await sleep(10);
+              if (!rendered(inside)) throw new Error("the zoom root's rems didn't render");
+            }
+            for (const k of view.folded) await w.Rem(KB).findOne(made[k]).portalContext(root).setIsCollapsed(true);
+            await flush('ourusSxsView');
+            await w.__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 });
+          }
           if (!sel) return;
           const c = controller();
           const id = made[sel.block]!;
@@ -393,8 +427,9 @@ export function remnoteDriver(setup: Setup): Driver {
           for (let i = 0; i < 200 && !placed(); i++) await sleep(10);
           if (!placed()) throw new Error(`the caret didn't land: ${JSON.stringify(w.getFocusProps())}`);
         },
-        { items, sel, bulletless: !!setup.bulletless },
+        { items, sel, bulletless: !!setup.bulletless, view: o.view ?? null },
       );
+      viewed(page).on = !!o.view;
       if (!selected) return;
       const nested = (doc as Outline).blocks;
       const last = subtreeEnd(nested, selected[selected.length - 1]!);
@@ -407,7 +442,7 @@ export function remnoteDriver(setup: Setup): Driver {
     },
 
     async read(page: Page) {
-      const raw = await page.evaluate(async () => {
+      const raw = await page.evaluate(async (viewed) => {
         const w = window as any;
         const KB = w.CURRENT_KNOWLEDGE_BASE;
         // rich text as plain text: a formatted run its text, anything else (a reference, an image) a mark
@@ -421,11 +456,16 @@ export function remnoteDriver(setup: Setup): Driver {
             return { text: e.text.replace(/\ufeff/g, ''), bold: !!e.b, italic: !!e.l, code: !!e.q, strike: !!e.str, ...(typeof e.iUrl === 'string' && { href: e.iUrl }) };
           });
         const trees = w.__ourusSxsTrees;
-        const c = trees && [...Object.values(trees)].flatMap((t: any) => (Array.isArray(t) ? t : [t])).map((t: any) => t?.controller).find((c: any) => c?.rootRem?._id === w.__ourusSxsDoc);
+        // the rem the page shows: the document, or one zoomed into (its id last in the route, after a
+        // slug of its text where RemNote puts one: `/w/null/ourus-sxs-<id>`)
+        const root: string = /\/w\/null\/(?:[^/?#]*-)?([A-Za-z0-9]+)(?:[/?#]|$)/.exec(w.FlowRouter.current().path)?.[1] ?? w.__ourusSxsDoc;
+        const c = trees && [...Object.values(trees)].flatMap((t: any) => (Array.isArray(t) ? t : [t])).map((t: any) => t?.controller).find((c: any) => c?.rootRem?._id === root);
         const focused = c?.currentlyFocusedRemId?.();
-        const flat: { depth: number; content: string; runs: Run[]; placeholders: number[]; todo: boolean; done: boolean; heading: number; numbered: boolean; code: boolean; free: boolean; number: number | null; id: string }[] = [];
-        const walk = async (rem: any, depth: number) => {
+        const flat: { depth: number; content: string; runs: Run[]; placeholders: number[]; todo: boolean; done: boolean; heading: number; numbered: boolean; code: boolean; free: boolean; number: number | null; id: string; collapsed: boolean }[] = [];
+        // (`under`: the portal a rem shows in, the root the page shows where it is in it)
+        const walk = async (rem: any, depth: number, under = w.__ourusSxsDoc) => {
           for (const r of await rem.childrenRemAsync()) {
+            const portal = r._id === root || under === root ? root : under;
             // the rem being edited: its editor's text, which the caret (getFocusProps) is an offset in; the
             // text cache and the model can hold less (Shift+Enter at a rem's start: `\none` in the editor,
             // `one` in both)
@@ -435,8 +475,8 @@ export function remnoteDriver(setup: Setup): Driver {
             // (a rem shows no bullet only in a document without bullets)
             const free = !!r.portalContext(w.__ourusSxsDoc).renderAsNoBullet();
             // (the editor keeps an empty line with a zero-width placeholder, U+FEFF, no text of the rem's)
-            flat.push({ depth, content: plain(editing ?? r.key).replace(/\ufeff/g, ''), runs: runs(editing ?? r.key), placeholders: editing ? [...plain(editing).matchAll(/\ufeff/g)].map((m) => m.index!) : [], todo: !!r.getIsTodo(), done: r.getTodoStatus() === 'Finished', heading: font ? Number(font[1]) : 0, numbered, code: !!r.getIsCode(), free, number: numbered ? r.getListItemIndex() : null, id: r._id });
-            await walk(r, depth + 1);
+            flat.push({ depth, content: plain(editing ?? r.key).replace(/\ufeff/g, ''), runs: runs(editing ?? r.key), placeholders: editing ? [...plain(editing).matchAll(/\ufeff/g)].map((m) => m.index!) : [], todo: !!r.getIsTodo(), done: r.getTodoStatus() === 'Finished', heading: font ? Number(font[1]) : 0, numbered, code: !!r.getIsCode(), free, number: numbered ? r.getListItemIndex() : null, id: r._id, collapsed: viewed && !!r.portalContext(portal).getIsCollapsed() });
+            await walk(r, depth + 1, portal);
           }
         };
         const docRem = w.Rem(KB).findOne(w.__ourusSxsDoc);
@@ -448,8 +488,11 @@ export function remnoteDriver(setup: Setup): Driver {
         const sel = p?.type === 'text' && block >= 0 ? { block, anchor: off(p.anchor), head: off(p.focus) } : null;
         const range: string[] = p?.type !== 'text' && Array.isArray(p?.selectedRange) ? p.selectedRange : [];
         const selected = range.map((id) => flat.findIndex((f) => f.id === id)).filter((i) => i >= 0);
-        return { flat, sel, selected, focusType: p?.type };
-      });
+        // the view: the collapsed rems, and the rem zoomed into, if one of the test's (the document: none)
+        const zoom = flat.findIndex((f) => f.id === root);
+        const view = viewed ? { folded: flat.flatMap((f, k) => (f.collapsed && (flat[k + 1]?.depth ?? -1) > f.depth ? [k] : [])), zoom: zoom >= 0 ? zoom : null } : undefined;
+        return { flat, sel, selected, focusType: p?.type, view };
+      }, viewed(page).on);
       // a rem's text as Markdown, its formatting in markup (a code rem's as it is), and where an offset
       // in its text is in it
       const mds = raw.flat.map((f) => (f.code ? { text: f.content, at: (p: number) => p } : runsAsMarkdown(f.runs)));
@@ -462,7 +505,7 @@ export function remnoteDriver(setup: Setup): Driver {
         const at = (p: number): number => prefix + md.at(p) + (cut !== undefined && md.at(p) > cut ? 1 : 0);
         sel = { block: raw.sel.block, anchor: at(raw.sel.anchor), head: at(raw.sel.head) };
       }
-      const got: Outline = { blocks, sel, ...(raw.selected.length && { selected: raw.selected }) };
+      const got: Outline = { blocks, sel, ...(raw.selected.length && { selected: raw.selected }), ...(raw.view && { view: raw.view }) };
       if (!setup.bulletless) return got;
       // (without bullets, a selection's rems the topmost of ourus's nesting)
       const owned = own(got, this.behaves?.listParent);

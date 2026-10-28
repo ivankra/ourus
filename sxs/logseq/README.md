@@ -20,8 +20,14 @@ a flavor of its own deciding how a block's text is held (OG's: all of it in the 
 | `deleteSoftLineBackward` | Alt+U ("kill line before": from the start of the caret's line; nothing at a line's start) |
 | `deleteSubtree` | Escape (selects the block), Backspace (deletes the selection); in a block with a code fence, which Escape never selects, Ctrl+A until the block is (its text, then the block); after it no block is edited (when the first block goes): the outline alone is judged (`noCaretAfter`). |
 | `duplicateSubtree` | *missing* |
-| `move ②` | the mouse: a block dragged by its bullet and dropped (`logseqDrop` in [`driver.ts`](driver.ts), below) |
-| `pasteStructured` | Ctrl+V |
+| `moveSubtree` | mouse: a block dragged by its bullet and dropped (`logseqDrop` in [`driver.ts`](driver.ts), below) |
+| `fold` | Ctrl+Up: the caret's block collapsed, its children hidden |
+| `unfold` | Ctrl+Down: expanded |
+| `toggleFold` | Ctrl+;: collapsed or expanded |
+| `zoomIn` | Alt+Right: the caret's block as the page, its children under it (Mod+. on a Mac) |
+| `zoomOut` | Alt+Left: back to its parent's, or the page (Mod+, on a Mac) |
+| `clearZoom` | *missing*: Alt+Left a level at a time |
+| `paste` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V |
 | `undo` | Ctrl+Z |
 | `redo` | Ctrl+Shift+Z |
@@ -39,9 +45,7 @@ Other shortcuts:
 | select block up, down | Alt+Up, Alt+Down | the block being edited selected, then the selection extended; Shift+Up and Shift+Down too, from a block's first or last line |
 | select parent, select all | Ctrl+A, Ctrl+Shift+A | Ctrl+A: the text, then (all of it selected) the block, then its parent (at the top, every block); Ctrl+Shift+A: every block |
 | edit the selected block | Enter | the caret at its end |
-| fold, unfold, toggle | Ctrl+Up, Ctrl+Down, Ctrl+; | a block's children hidden or shown |
 | fold or unfold all | `t o` (not editing) | |
-| zoom in, zoom out | Alt+Right, Alt+Left | a block as the page, and back |
 | numbered list | `t n` (blocks selected) | toggled on the selected blocks (their `logseq.order-list-type` property); typing `1. ` in an empty block makes it numbered |
 | copy, cut | Ctrl+C, Ctrl+X | selected blocks, in three formats (below) |
 | copy as text | Ctrl+Shift+C | selected blocks as Markdown (`- a\n\t- b`) |
@@ -151,9 +155,42 @@ Repo: https://github.com/logseq/og
 - The demo doesn't say its version (`get_app_info` answers `1.0.0`, the plugin API's); its bundle's
   ETag stands in (`build b8f87af5`).
 
+## Folds and the zoom, measured
+
+[`fold.md`](../../spec/fold.md) and [`zoom.md`](../../spec/zoom.md), measured 2026-10-28 in OG and
+the DB version (their results the same but where said). A block's fold is its own, `collapsed?`:
+loaded by `set_block_collapsed` once every block is on screen, read from the page's tree, whose
+collapsed blocks' children it still has. A zoom is the block's own page, its uuid the route's: loaded
+by `push_state` to it, read from the route. What is compared is what the reader sees: the folds in
+effect, and the zoom root. Neither writes into the text: OG keeps `collapsed:: true` off the block's
+content.
+
+- **Enter at a collapsed block's end** makes a sibling after its children, as ourus (`Fold1`); so does
+  Enter on an empty collapsed block with children (`Fold5`). Backspace after one (`Fold3`), a move
+  (`Fold4`) and an indent under one (`Fold6`) agree, the indent opening it.
+- **Enter mid-text in a collapsed block** (Logseq splits as `enterMidItem: child`) puts the rest after
+  its children, the block still collapsed (`Fold2`, `Fold2b`), as ourus under `child`.
+- **Paste at a collapsed block's end** puts the item first among its children, hidden, the block
+  still collapsed, the caret staying (`Fold14`); ourus puts it after the subtree, as Enter's, which
+  no block shown hides.
+- **Delete at a collapsed block's end does nothing** (`Fold7`), as ourus, which refuses it (`folded`).
+- **Backspace right after a collapsed block joins into its text**, not its hidden last child's, still
+  collapsed (`Fold15`), as ourus.
+- **A block with children right after a collapsed one** doesn't join it, nor the last block above
+  unfolded (`Backspace45c`), as ourus under `joinWithChildren: refuse`; Logseq DB joins it into the
+  collapsed block's text, its children first among that one's, still collapsed (`Fold15b`).
+- **Toggle (Ctrl+;) at a block without children does nothing** (`Fold11`); ourus toggles its
+  parent's.
+- **Zoomed, Enter at the root's end makes its first child** (`Zoom1`), and so does a split of its
+  text (`Zoom10`); Backspace at its start is
+  refused (`Zoom2`), and the zoom goes in and out a level at a time (`Zoom6`, `Zoom7`), as ourus.
+- **The zoom root deleted ends the zoom** (`Zoom9`); ourus zooms out to its parent.
+- **A child of the root outdented** leaves the zoom in OG, shown no more (`Zoom11`); the DB version
+  refuses it, as ourus.
+
 ## Drag and drop, measured
 
-[`drag.md`](../../spec/drag.md) and the scenarios' drops, played with the real mouse
+[`move-subtree.md`](../../spec/move-subtree.md) and the scenarios' drops, played with the real mouse
 (`logseqDrop`, [`../lib/drag.ts`](../lib/drag.ts)), aimed where Logseq's own geometry puts each place
 (`block-drag-over` in `frontend/components/block.cljs`, read in the bundle):
 
@@ -163,17 +200,17 @@ Repo: https://github.com/logseq/og
   (only the page's first block offers that); else more than 50 pixels right of the block's left, its
   first child; else its next sibling, after its children. Every place a case names is one of those:
   first under a block is its first child, first at the top level before the first block, after a
-  block its next sibling. Drag1, Drag2, Drag3, Drag8, Drag13 and Scenario8 agree.
+  block its next sibling. MoveSubtree1, MoveSubtree2, MoveSubtree3, MoveSubtree9, MoveSubtree12 and Scenario8 agree.
 - **Headings keep their level**: a heading is its block's text, and a drop moves the block as it is,
-  `### D` dropped after `## B` staying `### D`, its child `#### E` too (Drag15, Drag16; ourus
+  `### D` dropped after `## B` staying `### D`, its child `#### E` too (MoveSubtree14, MoveSubtree15; ourus
   re-levels it to its new siblings).
 - **No block is edited after a drop**, and none is selected, even where the block dragged was the
   one being edited: the outline alone is judged (`noCaretAfter`), and a case that types after its drop
   skips (Scenario8b, Scenario8c). The DB version keeps the editor of the block dragged.
 - **A selection of blocks is dragged whatever bullet is pressed**: a press on one of them takes them
-  all, and they stay selected (the cover rule: Drag4, Drag20 agree), but so does a press on another
+  all, and they stay selected (the cover rule: MoveSubtree4, MoveSubtree19 agree), but so does a press on another
   block, which stays where it is (`a`, `b` selected, `c` pressed and dropped at the top: nothing
-  moves; ourus moves `c` alone: Drag5, Drag5b disagree). The driver selects blocks as a user does,
+  moves; ourus moves `c` alone: MoveSubtree5, MoveSubtree6 disagree). The driver selects blocks as a user does,
   Escape then Shift+Down until the last is in (`selectsBlocks`).
 
 ## Logseq bugs met on the way

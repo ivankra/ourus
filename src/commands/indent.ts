@@ -33,8 +33,7 @@ export function indentCommand(ctx: CommandContext): CommandOutcome {
 /**
  * Why paragraphs or atoms can't become the texts of items, or null where they can: indented code is
  * its lines' indentation (under a marker it would be other code, or none), and a quote's lazy line led
- * by a tab would span other columns after a marker (the writer re-indents spaces, not tabs:
- * dev/19-quotes.md §5).
+ * by a tab would span other columns after a marker (the writer re-indents spaces, not tabs).
  */
 export function itemTextsRefused(ctx: CommandContext, nodes: readonly OutlineNode[]): CommandOutcome {
   for (const n of nodes) {

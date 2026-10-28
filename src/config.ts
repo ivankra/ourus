@@ -228,7 +228,8 @@ export interface Config {
    *   nothing): `has-children`.
    *
    * A sibling with children joining the sibling above keeps them at their depth, and joins either
-   * way (Tana alone refuses it). An empty item's own children are `emptyItemWithChildren`'s; where
+   * way (Tana alone refuses it); under `refuse`, only where that sibling has no children of its own
+   * (a folded one's included) and the join is into it, not into its last descendant. An empty item's own children are `emptyItemWithChildren`'s; where
    * both options apply (Delete on an empty item whose first child has children), either refuses.
    */
   readonly joinWithChildren: 'join' | 'refuse';
@@ -425,6 +426,7 @@ export interface Config {
    *   them, an item's, a heading's section's, a paragraph's list's.
    * - `after` (as Tine, Tana, SiYuan, WorkFlowy and Dynalist paste): after them: after an item and its
    *   children, as its next siblings; last in a heading's section; last in a paragraph's list.
+   * On a folded item, after it either way, its children hidden (spec/fold.md).
    */
   readonly pasteOnParent: 'children' | 'after';
 

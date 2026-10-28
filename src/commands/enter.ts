@@ -12,6 +12,7 @@ import { outdentCommand } from './outdent.ts';
 import { shiftEnterCommand } from './shift-enter.ts';
 import { enterInQuote, quoteAtomAt } from './quote.ts';
 import { leaveList, pastPrefix, textActedOnAt } from './util.ts';
+import { withFolds } from './view.ts';
 
 /**
  * Enter in a node's text (spec/enter.md's rules 7–10): the node splits at the caret, the spaces there
@@ -114,8 +115,14 @@ export function enterCommand(ctx: CommandContext, key = true): CommandOutcome {
   }
   const atEnd = trimMd(s.slice(b, close ? close.from : s.length)) === '';
   const draft = ctx.draft();
+  // folded (within the zoom), at its end a new item goes after its subtree, not among its hidden
+  // children, and so does the rest split mid-text where it would be the first child
+  // (`enterMidItem: child`), the fold kept; zoomed into it, the rest is its first child, inside the zoom
+  const folded = doc.zoomFolded.has(node.id);
+  const after = folded && (atEnd || config.enterMidItem === 'child');
+  const zoomRoot = doc.zoom === node.id && node.kind === 'item';
   // (`enterMidItem` is of an item with children: one without has its rest as its sibling either way)
-  const child = node.kind === 'item' && node.children.length > 0 && (atEnd || config.enterMidItem === 'child');
+  const child = zoomRoot || (node.kind === 'item' && node.children.length > 0 && !folded && (atEnd || config.enterMidItem === 'child'));
   // with `quirkEnterMidHeading: workflowy`, the text before the caret a paragraph (an item) above the
   // heading, which keeps the rest (its `#`s or its underline) and its section (its children)
   if (key && config.quirkEnterMidHeading === 'workflowy' && (node.kind === 'heading' || headingItem) && text.heading && !atEnd) {
@@ -132,7 +139,8 @@ export function enterCommand(ctx: CommandContext, key = true): CommandOutcome {
   }
   // a heading's rest is its section's first paragraph, a callout title's the callout's
   const into = child || node.kind === 'heading' || title ? 'child' : 'sibling';
-  const [, made] = draft.split(node, a, { to: b, children: node.kind === 'heading' || title ? 'stay' : 'follow', into, ...(title ? { kind: 'paragraph' as const } : {}) });
+  const stay = node.kind === 'heading' || title || after;
+  const [, made] = draft.split(node, a, { to: b, children: stay ? 'stay' : 'follow', into, ...(title ? { kind: 'paragraph' as const } : {}) });
   // a task's new item is a task too
   let rest = text.slice(b, close ? close.from : s.length).asItem(node.kind === 'item');
   if (node.kind === 'item' && text.task && config.enterTask === 'continue') {
@@ -141,7 +149,8 @@ export function enterCommand(ctx: CommandContext, key = true): CommandOutcome {
   }
   // the caret at the new text's start, before a backslash it starts with, and the spaces it keeps
   draft.setCaret(made, Math.max(0, rest.textStart(0) - kept), -1);
-  return ctx.apply(draft);
+  // split mid-text, a folded item's children go with its second half, and its fold with them
+  return withFolds(ctx.apply(draft), folded && !stay && into === 'sibling' ? [made] : []);
 }
 
 /** The blocks whose lines are a block's own (rule 11): at their end Enter makes a paragraph after them. */
@@ -297,6 +306,18 @@ function withoutSelection(text: ProseText, to: number): ProseText | null {
 function enterInEmptyItem(ctx: CommandContext, node: OutlineNode, text: ProseText, offset: number): CommandOutcome {
   const config = ctx.doc.config;
   const draft = ctx.draft();
+  // folded (within the zoom), with children: a new item after its subtree, not among its hidden
+  // children; zoomed into it, a new first child, inside the zoom, whatever `enterOnEmptyItem` says
+  if (node.children.length && ctx.doc.zoomFolded.has(node.id)) {
+    const made = newEmptyTextBeside(ctx, text, 'item');
+    const id = draft.create('item', made);
+    return ctx.apply(draft.place('after', node, [id]).setCaret(id, made.textStart(0), -1));
+  }
+  if (ctx.doc.zoom === node.id) {
+    const made = newEmptyTextBeside(ctx, text, 'item');
+    const id = draft.create('item', made);
+    return ctx.apply(draft.append(node, 'first', [id]).setCaret(id, made.textStart(0), -1));
+  }
   const last = !node.next || node.next.kind !== 'item';
   if (config.enterOnEmptyItem === 'unwrap' && (node.children.length || !last)) return leaveList(ctx, node);
   if (node.children.length) {

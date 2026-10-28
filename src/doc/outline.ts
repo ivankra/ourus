@@ -329,12 +329,17 @@ class Build {
     };
   }
 
-  /** Where old line `line` went in the new text, or -1 where the changes deleted it whole. */
-  private mapLine(line: number): number {
+  /**
+   * Where old line `line` went in the new text, or -1 where the changes deleted it whole. With
+   * `writtenOver`, a line a change replaces from its start with text of its own (`abc` typed over
+   * with `xyz`) is the same line, written over: it went where that text starts.
+   */
+  private mapLine(line: number, writtenOver = false): number {
     const { tree, changes } = this.previous!;
     const from = tree.starts[line]!;
     const to = tree.ends[line]!;
-    if (changes.some((c) => c.from < c.to && c.from <= from && c.to >= to)) return -1;
+    const over = changes.find((c) => c.from < c.to && c.from <= from && c.to >= to);
+    if (over) return writtenOver && over.from === from && over.insert ? lineIndexAt(this.tree.starts, mapPos(changes, from, -1)) : -1;
     return lineIndexAt(this.tree.starts, mapPos(changes, from, 1));
   }
 
@@ -342,7 +347,8 @@ class Build {
    * Gives the nodes made anew their ids and returns the lineage's next one. Read whole, nodes are
    * numbered in document order, the root 0. After an update, a node keeps the id `identity` gives it
    * (by where it starts), or else the id of an old node, not taken whole, whose first line went to
-   * its first line, of its kind (the same one of them, where nested items share a line); else a new one.
+   * its first line, of its kind (the same one of them, where nested items share a line), a line
+   * written over from its start included; else a new one.
    */
   assignIds(root: OutlineNodePersistent, identity: ReadonlyMap<number, number> | undefined): number {
     const made: Located[] = [];
@@ -368,7 +374,7 @@ class Build {
     const visit = (node: OutlineNodePersistent, start: number): void => {
       if (this.reused.has(node)) return;
       if (node.kind !== 'root') {
-        const line = this.mapLine(start);
+        const line = this.mapLine(start, true);
         // a node `identity` names keeps its rank among those nested on its line, but carries nothing
         if (line >= 0) {
           const key = ranked(oldRanks, `${node.kind}@${line}`);

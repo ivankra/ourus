@@ -68,7 +68,8 @@ import { isDrop } from '../test/player.ts';
 import { compareJudgments } from './lib/compare.ts';
 import { appDirs, appNames, resolveApps } from './lib/apps.ts';
 import { canonicalClipboard, passes } from '../test/spec-run.ts';
-import { RANKS, readSpec, TAGS, type Clipboard } from '../test/specfile.ts';
+import { RANKS, readSpec, specConfig, TAGS, type Clipboard } from '../test/specfile.ts';
+import { sameView, shownInBlocks, shownInText, type RowView } from './lib/view.ts';
 import { cacheDir, cacheMode } from './proxy.ts';
 
 const started = Date.now();
@@ -457,6 +458,9 @@ const withIntro = (md: string, intro: string): string => {
  * links are from `README.md` (here or in `.sxs/`): each app's report, `<app>.md`, the spec, `../spec/`,
  * and the heatmap beside it, `heatmap.svg`, an SVG (GitHub keeps no colors in a table's cells).
  */
+/** The anchor of a spec file's rows in the README's table of test cases (`matrix`), which the summary's table by file links to: its name. */
+const fileAnchor = (file: string): string => file;
+
 function matrix(o: {
   apps: string[];
   /** Each app's two capitals (`Driver.id`), its column's heading where the summary's row has named it. */
@@ -510,7 +514,8 @@ function matrix(o: {
   const byFileLines = [
     'By spec file:',
     '',
-    ...groupTable('spec file', byFile, (f) => `[${f}](../spec/${f})`),
+    // (each file its rows in the table of test cases below, by the anchor its header row has there)
+    ...groupTable('spec file', byFile, (f) => `[${f}](#${fileAnchor(f)})`),
     `| **total** | **${sum.cases}** | **${tally(sum.dis, sum.runs)}** | **${tally(sum.blockDis, sum.blockRan)}** | ${o.apps.map((_, i) => `**${o.rows.filter((r) => r.cells[i] === 'disagree').length}**`).join(' | ')} |`,
     '',
     'By tag:',
@@ -562,7 +567,7 @@ function matrix(o: {
       gap();
       if (rows.length % 2 === 0) gap();
     }
-    tr([`<td><b>${html(f)}</b>`, ...o.apps.map((a) => `<td><b><a href="${toReport(a)}" title="${html(a)}">${html(o.ids.get(a)!)}</a></b>`), '<td><b>disagree</b>', '<td><b>rank</b>']);
+    tr([`<td><b><a name="${fileAnchor(f)}"></a>${html(f)}</b>`, ...o.apps.map((a) => `<td><b><a href="${toReport(a)}" title="${html(a)}">${html(o.ids.get(a)!)}</a></b>`), '<td><b>disagree</b>', '<td><b>rank</b>']);
     for (const r of inFile) {
       const cells = r.cells.map((c, i) => (r.adapted[i]!.length && c !== 'agree' && c !== 'skipped' ? `<td>(${CELL[c]![1]})` : `<td>${CELL[c]![1]}`));
       const rank = tests.get(r.name)?.rank;
@@ -859,7 +864,7 @@ function runData(results: readonly Result[], version: string | undefined): AppRu
       const reached = outcome.verdict !== 'error' || i < outcome.step;
       const got = reached ? (outcome.got[i] ?? null) : null;
       const ourus = step.want ? drawDoc(step.want) : null;
-      const s: RunStep = { line: step.line, actions: [...step.actions], ...(reached && (step.want || step.clipboard !== undefined) && { verdict: stepVerdict(step, got, outcome.clipboards[i], flavorOf(plan)) }), ourus, app: got ? drawDoc(got) : null };
+      const s: RunStep = { line: step.line, actions: [...step.actions], ...(reached && (step.want || step.clipboard !== undefined) && { verdict: stepVerdict(step, got, outcome.clipboards[i], plan) }), ourus, app: got ? drawDoc(got) : null };
       if (isText) s.blocks = got ? projected(got as TextDoc, plan) : null;
       if (step.drawn !== undefined && step.drawn !== ourus) s.written = step.drawn;
       if (step.caretLost) s.caretLost = step.caretLost;
@@ -921,17 +926,26 @@ function projected(d: TextDoc, plan: Plan): string | null {
   }
 }
 
-/** How a step came out: its buffer against the spec's (a caret with no place in a block not compared), and its clipboard. */
-function stepVerdict(step: PlanStep, got: Doc | null, clipboard: string | null | undefined, flavor: Config['flavor']): Verdict {
+/** How a step came out: its buffer against the spec's (a caret with no place in a block not compared), its view, and its clipboard. */
+function stepVerdict(step: PlanStep, got: Doc | null, clipboard: string | null | undefined, plan: Plan): Verdict {
+  const flavor = flavorOf(plan);
   let v: Verdict = 'agree';
   // after an action that leaves the app no text focus (`Driver.noCaretAfter`), an app with neither a
   // caret nor selected blocks has none to compare: the outline alone
   const outline = got && driver.model === 'block' ? (got as Outline) : null;
   const unfocused = !!outline && !outline.sel && !outline.selected?.length && leavesNoCaret(step.actions[step.actions.length - 1]!);
   if (step.want && got) v = compareDocs(step.caretLost || unfocused ? { ...step.want, sel: null } : step.want, got, step.sections, flavor);
+  // the folds in effect and the zoom, as the reader sees them: another view is another state
+  if (step.want?.view && got && !sameView(shownView(got, plan), step.want.view)) v = 'disagree';
   // a clipboard written otherwise but reading as the same outline (an app's tabs, no final line break) is whitespace
   if (step.clipboard !== undefined && clipboard !== step.clipboard) v = clipboard && sameMarkdown(clipboard, step.clipboard, flavor) ? (rank[v] > rank.whitespace ? v : 'whitespace') : 'disagree';
   return v;
+}
+
+/** The view an app's state shows its reader (`view.ts`): its folds in effect, its zoom; none where it reported none. */
+function shownView(d: Doc, plan: Plan): RowView | undefined {
+  if (!d.view) return undefined;
+  return isText ? shownInText((d as TextDoc).text, { ...specConfig(plan.test.options), flavor: flavorOf(plan) }, d.view) : shownInBlocks((d as Outline).blocks, d.view);
 }
 
 /** Whether two Markdown texts read as the same outline: the same nodes, at the same depths, with the same texts, items in lists of the same kind (bullets, numbers). */
@@ -983,8 +997,8 @@ interface Outcome {
  * (typing goes nowhere then). Undo and redo need none.
  */
 const NO_FOCUS = 'no text focus after';
-/** An action as `Driver.noCaretAfter` names it: a drop by its action alone (`move ②` is `move`). */
-const leavesNoCaret = (action: string): boolean => !!driver.noCaretAfter?.includes(/^move .$/u.test(action) ? 'move' : action);
+/** An action as `Driver.noCaretAfter` names it: a drop by its action alone (`moveSubtree ②` is `moveSubtree`). */
+const leavesNoCaret = (action: string): boolean => !!driver.noCaretAfter?.includes(/^moveSubtree .$/u.test(action) ? 'moveSubtree' : action);
 /** A drop whose place the app's gesture can't reach (its driver's `Unsupported`): skipped as it played, as `NO_FOCUS`. */
 const UNREACHED = 'drop:';
 const skippedAsPlayed = (why: string): boolean => why.startsWith(NO_FOCUS) || why.startsWith(UNREACHED);
@@ -1154,12 +1168,14 @@ async function runPlan(w: Worker, plan: Plan): Promise<Outcome> {
     let loaded = await driver.read(page);
     // once more before calling it the app's: a load can race the app (a run on a machine busy with
     // others), and an app that rewrites what it is given rewrites it again
-    if (!sameDoc(loaded, plan.initial)) {
+    // (and its view, as its reader sees it: an app that folds other rows, or none, starts elsewhere)
+    const holds = (d: Doc): boolean => sameDoc({ ...d, view: undefined }, { ...plan.initial, view: undefined }) && (!plan.initial.view || sameView(shownView(d, plan), plan.initial.view));
+    if (!holds(loaded)) {
       await driver.load(page, plan.initial);
       await settleAfter('loading again');
       loaded = await driver.read(page);
     }
-    if (!sameDoc(loaded, plan.initial)) throw new Error(`${driver.displayName} holds the starting state differently:\n  meant:\n${indent(drawDoc(plan.initial))}\n  holds:\n${indent(drawDoc(loaded))}`);
+    if (!holds(loaded)) throw new Error(`${driver.displayName} holds the starting state differently:\n  meant:\n${indent(drawDoc(plan.initial))}\n  holds:\n${indent(drawDoc(loaded))}`);
     const undoes = plan.steps.some((s) => s.actions.some(isUndo));
     for (const [i, step] of plan.steps.entries()) {
       if (undoes && i > 0) await pause();
@@ -1201,7 +1217,7 @@ function judge(plan: Plan, got: readonly (Doc | null)[], clipboards: readonly (s
   let verdict: Verdict = 'agree';
   let at = -1;
   plan.steps.forEach((step, i) => {
-    const v = stepVerdict(step, got[i] ?? null, clipboards[i], flavorOf(plan));
+    const v = stepVerdict(step, got[i] ?? null, clipboards[i], plan);
     if (rank[v] > rank[verdict]) {
       verdict = v;
       at = i;
@@ -1232,7 +1248,7 @@ const settingsOf = (get: (k: keyof Config) => unknown): string[] => Object.keys(
 /** A plan's outcome in the last run's example, if that played it as it is now; else why not. */
 function replay(plan: Plan, e: RunExample): Outcome | string {
   if (e.steps.length < plan.steps.length) return 'step added since';
-  // (a drop's line is in the drawing alone: two cases from one start with one action, `move ③`, drop
+  // (a drop's line is in the drawing alone: two cases from one start with one action, `moveSubtree ③`, drop
   // in different places)
   if (plan.drop && (e.written ?? e.start) !== plan.test.initial.buffer) return 'its drop changed since';
   const got: (Doc | null)[] = [];

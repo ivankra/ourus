@@ -1658,3 +1658,56 @@ result: rejected not-expressible
 > ┃q
 →2) long text
 ```
+
+## Regression65
+
+A pasted item keeps the tab after its marker where it spans the same there; after a nested marker
+it would span to five columns past it, its text indented code: written with a space instead.
+
+```yaml
+tags: rare
+clipboard: |
+  - →b
+```
+
+```buffer
+- a┃
+  - c
+```
+
+> paste
+
+```buffer
+- a
+  - b┃
+  - c
+```
+
+## Regression66
+
+A pasted item whose text starts below its marker is written one column past the marker, `101.`'s
+text at five, as the writer writes it: the paragraph after it, at two, is set apart by a blank line,
+not taken in.
+
+```yaml
+tags: rare
+clipboard: |
+  -
+    x
+```
+
+```buffer
+100. a
+┃
+  b
+```
+
+> paste
+
+```buffer
+100. a
+101.
+     x┃
+
+  b
+```

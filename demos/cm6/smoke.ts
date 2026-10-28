@@ -55,6 +55,12 @@ async function scenario(name: string, before: string, keys: string[], after: str
         data.setData('text/plain', text as string);
         content.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
       }, [k.slice(k.indexOf(':') + 1), plain] as const);
+    } else if (k.startsWith('click:')) {
+      // a click on the page (a breadcrumb), which leaves the editor its focus
+      await page.click(k.slice(6));
+    } else if (k === 'focus') {
+      // the editor's focus back, its selection as it was (after a click on its gutter)
+      await page.focus('.cm-content');
     }
     else await page.keyboard.press(k);
   }
@@ -117,6 +123,18 @@ const results = [
   await scenario('Backspace joins text into an empty item above', '- \n- ┃b\n', ['Backspace', 'type:X'], '- Xb\n'),
   await scenario('Delete on an empty item with children pulls its first child up', '- x\n- ┃\n  - a\n', ['Delete', 'type:X'], '- x\n- Xa\n'),
   await scenario('Mod-Backspace stops at the text start', '- alpha beta┃\n', ['Control+Backspace', 'type:x'], '- x\n'),
+  // folds and the zoom (view.ts): the snapshot's, drawn by CodeMirror
+  await scenario('Mod-Up folds an item; Enter at its end makes a sibling after its children', '- a┃\n  - b\n- c\n', ['Control+ArrowUp', 'Enter', 'type:x'], '- a\n  - b\n- x\n- c\n'),
+  await scenario('A folded item moved and the move undone is folded still: Enter after its children', '- a┃\n  - b\n- c\n', ['Control+ArrowUp', 'Alt+ArrowDown', 'Control+z', 'Enter', 'type:x'], '- a\n  - b\n- x\n- c\n'),
+  await scenario('Done again, it is folded still: Up from the end skips its children', '- a┃\n  - b\n- c\n', ['Control+ArrowUp', 'Alt+ArrowDown', 'Control+z', 'Control+y', 'ArrowUp', 'type:X'], '- c\n- Xa\n  - b\n'),
+  await scenario("A text of several lines folds from its last: CodeMirror's gutter folds ourus's node", '- alpha\n  beta┃\n  - child\n', ['click:.cm-foldGutter span[title="Fold line"]', 'focus', 'Enter', 'type:x'], '- alpha\n  beta\n  - child\n- x\n'),
+  await scenario('Its placeholder clicked unfolds it, in ourus too: Enter makes a first child', '- alpha\n  beta┃\n  - child\n', ['Control+ArrowUp', 'click:.cm-foldPlaceholder', 'Enter', 'type:x'], '- alpha\n  beta\n  - x\n  - child\n'),
+  await scenario('A move and the typing after it, one step of history, undone: folded still', '- a┃\n  - b\n- c\n', ['Control+ArrowUp', 'Alt+ArrowDown', 'type:X', 'Control+z', 'Enter', 'type:x'], '- a\n  - b\n- x\n- c\n'),
+  await scenario("CodeMirror's fold key folds ourus's node: Enter after it, too", '- a┃\n  - b\n', ['Control+Shift+BracketLeft', 'Enter', 'type:x'], '- a\n  - b\n- x\n'),
+  await scenario('Mod-. zooms in; Enter at the root\'s end makes its first child', '- a\n- b┃\n- c\n', ['Control+Period', 'Enter', 'type:x'], '- a\n- b\n  - x\n- c\n'),
+  await scenario('Zoomed, Backspace at the root\'s start changes nothing', '- a\n- ┃b\n', ['Control+Period', 'Backspace', 'type:x'], '- a\n- xb\n'),
+  await scenario('Zoomed out again, Backspace joins', '- a\n- ┃b\n', ['Control+Period', 'Control+Comma', 'Backspace'], '- ab\n'),
+  await scenario("A breadcrumb zooms out as the command does: the caret leaves the fold back in effect", '- A┃\n  - B\n', ['Control+ArrowUp', 'Control+Period', 'ArrowDown', 'Control+Period', 'click:.ourus-breadcrumbs a', 'type:x'], '- Ax\n  - B\n'),
 ];
 
 /** Every renderer renders the sample in every flavor: tables and math where it reads them, code highlighted. */

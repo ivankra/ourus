@@ -21,16 +21,22 @@ checked in the app:
 | `outdent` | Shift+Tab: the item with its children (outdenting is direct) |
 | `moveSubtreeUp` | Ctrl+Shift+Up ("Move up", ⇧⌘↑) |
 | `moveSubtreeDown` | Ctrl+Shift+Down ("Move down", ⇧⌘↓) |
-| `move ②` | the mouse: an item's bullet, or a free block's gutter icon, dragged (HTML5 drag and drop) to where its dragover reads the place (`siyuanDrop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
+| `moveSubtree` | mouse: an item's bullet, or a free block's gutter icon, dragged (HTML5 drag and drop) to where its dragover reads the place (`siyuanDrop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
 | `deleteContentBackward` | Backspace |
 | `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Shift+Home, then Backspace (no command for it) |
 | `deleteSubtree` | *missing* (below): its examples are skipped |
 | `duplicateSubtree` | Ctrl+D ("Duplicate", ⌘D): the block being edited, which in an item is its paragraph, copied inside the item (`DuplicateSubtree1`); the item with its children is duplicated from its block menu |
-| `pasteStructured` | Ctrl+V |
+| `paste` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V |
 | `undo` | Ctrl+Z |
 | `redo` | Ctrl+Y |
+| `fold` | Ctrl+Up ("Collapse"): the block's children hidden |
+| `unfold` | Ctrl+Down ("Expand") |
+| `toggleFold` | *missing* |
+| `zoomIn` | *missing* for the run: Alt+Right ("Enter") shows the item as the page, the editor then holding only its subtree, which the driver reads; the zoom's cases skip |
+| `zoomOut` | *missing*, as `zoomIn` (Alt+Left, "Back") |
+| `clearZoom` | *missing*, as `zoomIn` |
 
 No key deletes an item with its children, nor selects one whole: Shift+Up at a block's first line
 selects its paragraph (not the item), and Backspace then empties the paragraph, the item and its
@@ -42,9 +48,7 @@ Other shortcuts (the keymap's, `window.siyuan.config.keymap`, Linux; ⌘ is Ctrl
 
 | shortcut | keys | what it does |
 | --- | --- | --- |
-| Expand, Collapse | Ctrl+Down, Ctrl+Up | unfold, fold the block's children |
 | Fold recursively | Alt+Ctrl+Up | the block and every block under it |
-| Enter, Back (zoom) | Alt+Right, Alt+Left | the item as the page (as a click on its bullet), and back |
 | Jump to parent, its previous, its next | Ctrl+Shift+J, Ctrl+Shift+M, Ctrl+Shift+N | the caret to the parent block, or to the parent's sibling |
 | Insert before, after | Ctrl+Shift+B, Ctrl+Shift+A | an empty block before or after the block |
 | Expand selection up, down | Alt+Shift+Up, Alt+Shift+Down | select the block, then more above or below (Shift+Up and Down at a block's edge too) |
@@ -199,17 +203,17 @@ An HTML5 drag, which Chromium plays from Playwright's mouse: an item is pressed 
 drop is where its dragover reads the place over the block under the pointer (before or after it, into
 an item as a child). The driver aims at the place's block (`aim`).
 
-- **Every drop the cases play lands where ourus's does but three** (Drag1, Drag2, Drag3, Drag13,
+- **Every drop the cases play lands where ourus's does but three** (MoveSubtree1, MoveSubtree2, MoveSubtree3, MoveSubtree12,
   Scenario8c: the outline agrees), stable over three runs.
 - **The block dropped is selected after it, the caret at its text's start** (`caret` verdicts), so a
   key typed then goes there (Scenario8b: `sHome`).
-- **A paragraph dropped into an item stays a paragraph**: an item holds blocks (Drag8: `¶ para` under
+- **A paragraph dropped into an item stays a paragraph**: an item holds blocks (MoveSubtree9: `¶ para` under
   `- a`, where ourus makes it an item).
-- **A heading moves alone**, its level kept: a heading owns no blocks in SiYuan's tree (Drag15, Drag16:
+- **A heading moves alone**, its level kept: a heading owns no blocks in SiYuan's tree (MoveSubtree14, MoveSubtree15:
   `#### E` left under `# C`).
 - **An item's bullet drags the item alone, selected or not; a free block's gutter icon drags the
-  selection where the block is in it**: Drag4, Drag20 disagree (the pressed item moved alone, the rest
-  of the selection left); Drag5, Drag5b land as ourus's (`caret`). While blocks are selected, a free
+  selection where the block is in it**: MoveSubtree4, MoveSubtree19 disagree (the pressed item moved alone, the rest
+  of the selection left); MoveSubtree5, MoveSubtree6 land as ourus's (`caret`). While blocks are selected, a free
   block outside them shows no gutter icon (such a drop skips as it plays). The driver selects blocks
   as SiYuan does, its `protyle-wysiwyg--select` class on each, the editor focused with no range in
   it (its keys act on a selection only there: Tab, the moves); `read` reports no caret while blocks
@@ -293,6 +297,31 @@ and SiYuan's converter writes a paragraph's text unescaped, so a paragraph `# de
 `def` read the same: where SiYuan makes a heading of text ourus keeps as text (`Enter9`,
 `TaskEnter3`), the verdict is `caret` where it is a disagreement. A projection option keeping the
 escape, with a read that escapes a paragraph's markup-like start, would tell them apart.
+
+## Folds, measured
+
+[`fold.md`](../../spec/fold.md), measured 2026-10-28 in 3.8.6 (no zoom: [`zoom.md`](../../spec/zoom.md)'s
+cases skip). A block's fold is SiYuan's `fold="1"`, made by its own Ctrl+Up at the block's end and
+read from the DOM, where a folded item's children stay. A folded heading takes its section out of the
+editor, so a fold on a free block is a start the driver can't read, skipped (`holds`). What is
+compared is what the reader sees, the folds in effect.
+
+- **Around a folded item it agrees** on Enter at its end (`Fold1`), Backspace after it (`Fold3`), a
+  move (`Fold4`) and unfold (`Fold12`).
+- **Enter mid-text in a folded item** puts the rest after its children, the item still folded
+  (`Fold2`); ourus gives the rest its children and its fold.
+- **Enter on an empty folded item with children** makes it a paragraph and outdents its children
+  (`Fold5`); ourus makes an item after its subtree.
+- **An item indented under a folded one** stays shown, the fold kept (`Fold6`), as bare Obsidian;
+  ourus opens it.
+- **Delete at a folded item's end** makes its first child a paragraph of the item, the fold kept
+  (`Fold7`: `- a┃` over `¶ b`, `- c`); ourus refuses it (`folded`), as the other block apps.
+- **Backspace right after a folded item** (as `backspaceAtItemStart: body`) moves the caret to the
+  folded item's end, the item below kept (`Fold15`); ourus joins it into the folded item's text, as
+  the other block apps.
+- **Duplicate (Ctrl+D) on a folded item** copies its paragraph into it, selected, not the item
+  (`Fold8`: `- a` over `¶ ▮ a`, `- b`), as read; ourus copies the item with its subtree, folded too.
+  Measured once; not yet checked by hand.
 
 ## Invisible characters
 

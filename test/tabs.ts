@@ -12,9 +12,9 @@
 
 import { indentUnitOf } from '../src/draft/write.ts';
 import { compareTexts, readTextDoc } from '../sxs/lib/text.ts';
-import { docOf, drawDoc, drawsCaret, readDrawing, withoutCaret } from './drawing.ts';
+import { docOf, drawDoc, drawsCaret, readDrawing, readLabels, withoutCaret } from './drawing.ts';
 import { play, type Played } from './player.ts';
-import { Labels, readClipboard, normalize, outcome, flavorsOf } from './spec-run.ts';
+import { Labels, readClipboard, normalize, outcome, flavorsOf, viewOf } from './spec-run.ts';
 import { readSpecFile, specConfig, specFiles, type SpecTest } from './specfile.ts';
 
 /** A drawn buffer with each line's leading spaces (between its quotes' `>`s too) tabs to the stops they reach; a drop line (`▸`) as it is, no part of the text. */
@@ -71,15 +71,17 @@ export function tabPass(t: SpecTest): string | null {
   const doc = docOf(start.text, start.placeholders, { ...config, indentUnit: unit });
   const labels = new Labels();
   labels.check(doc, start.labels, null);
-  let state: Played = { doc, selection: start.selection, clipboard: readClipboard(t.initial.clipboard), drop: start.drop, labels: labels.ids };
+  let state: Played = { doc: viewOf(t, doc, labels.ids), selection: start.selection, clipboard: readClipboard(t.initial.clipboard), drop: start.drop, labels: labels.ids };
   for (const step of t.steps) {
     for (const action of step.actions) {
       state = play(state, [action]);
       if (state.last?.status === 'rejected' && state.last.reason === 'write-failed') return `write-failed at line ${step.line}: ${action}: ${state.last.detail ?? ''}`;
     }
-    const { buffer, result } = step.expect;
+    const { result } = step.expect;
     if (result !== undefined && outcome(state) !== result) return `result at line ${step.line}: ${outcome(state)}, not ${result}`;
-    if (buffer === undefined || /→/.test(buffer)) continue;
+    if (step.expect.buffer === undefined || /→/.test(step.expect.buffer)) continue;
+    // (labels are no text: drawn before the caret, they would move it)
+    const buffer = readLabels(step.expect.buffer).drawn;
     const drawn = drawDoc(state.doc, state.selection);
     const got = withSpaces(drawsCaret(buffer) ? drawn : withoutCaret(drawn));
     // (spelled otherwise but read the same, as a tab after a quote's `>` is: the same document)

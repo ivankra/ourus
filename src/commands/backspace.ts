@@ -296,7 +296,14 @@ function blankLineBack(ctx: CommandContext, owner: OutlineNode): CommandOutcome 
 export function joinUp(ctx: CommandContext, node: OutlineNode, text: ProseText, caretAtSeam = true): CommandOutcome {
   const doc = ctx.doc;
   const config = ctx.config;
-  const above = node.preceding;
+  let above = node.preceding;
+  // right after a folded node, what is above is its text, not its hidden descendants' (Fold15)
+  // (where the node isn't in that fold itself)
+  const outside = (fold: OutlineNode): boolean => {
+    for (let up = node.parent; up; up = up.parent) if (up.id === fold.id) return false;
+    return true;
+  };
+  for (let up = above?.parent; up && up.kind !== 'root'; up = up.parent) if (doc.zoomFolded.has(up.id) && outside(up)) above = up;
   // first in its container: the next layer of markup goes (rule 6)
   if (!above || above.kind === 'root' || (above === node.parent && !doc.textOf(above))) return caretAtSeam ? firstInContainer(ctx, node, text) : null;
   const upper = doc.textOf(above);
@@ -352,6 +359,9 @@ export function joinUp(ctx: CommandContext, node: OutlineNode, text: ProseText, 
   // (a heading's title alone: its section stays where it is)
   const adopt = above.kind === 'item' && above !== node.parent && node.kind !== 'heading';
   if (!adopt && node.kind !== 'heading' && node.children.length && config.joinWithChildren === 'refuse') return reject('has-children');
+  // (and where they'd go into an item that isn't childless at their parent's depth: down a level, into
+  // the last descendant above, or among the children it has, a folded one's: Backspace45c, Fold15b)
+  if (adopt && node.children.length && config.joinWithChildren === 'refuse' && (above.children.length || above.depth !== node.depth)) return reject('has-children');
   // (a heading's closing marks go too: an ATX title's `#`s, a setext underline)
   const close = node.kind === 'heading' ? text.frame.find((p) => p.part === 'close' || p.part === 'underline') : undefined;
   if (close) draft.setText(node, text.splice(close.from, close.to));

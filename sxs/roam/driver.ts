@@ -84,8 +84,8 @@ function fromRoamText(b: RoamBlock): { text: string; from: number; to: number } 
 /** An offset in a text whose prefix of `from` characters became `to` characters: past it, shifted; inside it, clamped. */
 const shiftOffset = (p: number, from: number, to: number): number => (p >= from ? p - from + to : Math.min(p, to));
 
-/** The page the current test runs on, a worker's (`perPage`), to delete when the next test starts. */
-const pageState = perPage(() => ({ current: null as string | null }));
+/** The page the current test runs on, a worker's (`perPage`), to delete when the next test starts, and whether it was loaded with a view (folds, a zoom), which is read back then alone. */
+const pageState = perPage(() => ({ current: null as string | null, viewed: false }));
 
 export const driver: Driver = {
   shortId: 'RR', // Roam Research
@@ -96,11 +96,21 @@ export const driver: Driver = {
   // a block's text holds a blank line, its paragraphs apart
   paragraphsInBlock: true,
   // after deleting the page's every block no block is edited (DeleteSubtree6); with a block above, its end.
-  // A drop leaves the focus on the pressed bullet, a block's caret lost but for the dragged block's (Drag2)
-  noCaretAfter: ['deleteSubtree', 'move'],
+  // A drop leaves the focus on the pressed bullet, a block's caret lost but for the dragged block's (MoveSubtree2)
+  noCaretAfter: ['deleteSubtree', 'moveSubtree'],
   // a selection of whole blocks: loaded with Escape and Shift+Down, read from their highlight
   selectsBlocks: true,
+  // a block closed (`open: false`; read on screen, a shown block's children not drawn: a key's fold
+  // here is the view's, `:block/open` left as it was), and a zoom, the block opened in the main window
+  // (read as its open uid), the test's page standing for none
+  folds: true,
+  zooms: true,
   keys: {
+    fold: 'Control+ArrowUp',
+    unfold: 'Control+ArrowDown',
+    toggleFold: 'Control+Space',
+    zoomIn: 'Alt+ArrowRight',
+    zoomOut: 'Alt+ArrowLeft',
     enter: 'Enter',
     shiftEnter: 'Shift+Enter',
     indent: 'Tab',
@@ -118,15 +128,15 @@ export const driver: Driver = {
     redo: 'Control+y',
     ...Object.fromEntries(Object.entries(MOTIONS).flatMap(([m, k]) => [[`cursor${m}`, k], [`select${m}`, `Shift+${k}`]])),
   },
-  drops: ['move'],
+  drops: ['moveSubtree'],
   drop,
   emulated: ['cursorDocStart', 'cursorDocEnd', 'selectDocStart', 'selectDocEnd', 'selectSubtree', 'deleteSubtree'],
   // Shift+Tab leaves later siblings with the parent (logical outdenting); Enter on an empty nested
   // block outdents it; Backspace on a page's first block does nothing: as ourus's config says of Roam
   behaves: {
-    // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+    // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25)
     quotes: 'atom',
-    // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+    // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25)
     enterInQuote: 'split',
     // Enter mid-heading: the new block above takes the text before the caret, the heading (an
     // attribute) staying with the rest (TO-E13-E16, TO-E14-E20)
@@ -205,7 +215,7 @@ export const driver: Driver = {
     const selected = o.selected?.length ? o.selected : null;
     const sel = o.sel ? { block: o.sel.block, anchor: at(o.sel.anchor, blocks[o.sel.block]!), head: at(o.sel.head, blocks[o.sel.block]!) } : selected && { block: selected[0]!, anchor: 0, head: 0 };
     pageState(page).current = await page.evaluate(
-      async ({ blocks, sel, previous }) => {
+      async ({ blocks, sel, previous, view }) => {
         const api = (window as any).roamAlphaAPI;
         const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
         (document.activeElement as HTMLElement | null)?.blur();
@@ -237,6 +247,18 @@ export const driver: Driver = {
         for (let i = 0; i < 300 && !rendered(); i++) await wait(10);
         if (!rendered()) throw new Error(`the test page didn't render (at ${location.hash})`);
         await (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 });
+        // its view, every block on screen: the folded ones closed, then the zoom root opened
+        if (view) {
+          for (const i of view.folded) await api.data.block.update({ block: { uid: uids[i], open: false } });
+          if (view.zoom !== null) {
+            const root = uids[view.zoom]!;
+            await api.ui.mainWindow.openBlock({ block: { uid: root } });
+            const shown = async () => (await api.ui.mainWindow.getOpenPageOrBlockUid()) === root && !!document.querySelector(`.roam-article [id$="${root}"]`);
+            for (let i = 0; i < 300 && !(await shown()); i++) await wait(10);
+            if (!(await shown())) throw new Error(`the zoom root didn't open (at ${location.hash})`);
+          }
+          await (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 });
+        }
         if (sel) {
           const uid = uids[sel.block]!;
           const editing = () => (document.activeElement as HTMLElement | null)?.tagName === 'TEXTAREA' && api.ui.getFocusedBlock()?.['block-uid'] === uid;
@@ -250,8 +272,9 @@ export const driver: Driver = {
         }
         return pageUid;
       },
-      { blocks: blocks.map(({ depth, string, heading, numbered }) => ({ depth, string, heading, numbered })), sel, previous: pageState(page).current },
+      { blocks: blocks.map(({ depth, string, heading, numbered }) => ({ depth, string, heading, numbered })), sel, previous: pageState(page).current, view: o.view ?? null },
     );
+    pageState(page).viewed = !!o.view;
     // blocks selected whole, as a user selects them: Escape selects the block being edited, each
     // Shift+Down the next on screen, till the last is (`read` reports the topmost)
     if (selected) {
@@ -267,15 +290,19 @@ export const driver: Driver = {
   },
 
   async read(page: Page) {
-    const raw = await page.evaluate((pageUid) => {
+    const raw = await page.evaluate(async ({ pageUid, viewed }) => {
       const api = (window as any).roamAlphaAPI;
-      const tree = api.pull('[:block/uid :block/string :block/heading :block/order :children/view-type {:block/children ...}]', [':block/uid', pageUid]);
-      const flat: { depth: number; string: string; heading: number; uid: string; number: number | null }[] = [];
+      const tree = api.pull('[:block/uid :block/string :block/heading :block/order :block/open :children/view-type {:block/children ...}]', [':block/uid', pageUid]);
+      const flat: { depth: number; string: string; heading: number; uid: string; number: number | null; closed: boolean }[] = [];
       // a parent viewing its children as numbered numbers them from 1
       const numbers = (x: any): boolean => String(x?.[':children/view-type'] ?? '').replace(/^:/, '') === 'numbered';
       const walk = (parent: any, depth: number) => {
         [...(parent?.[':block/children'] ?? [])].sort((a, b) => a[':block/order'] - b[':block/order']).forEach((k, n) => {
-          flat.push({ depth, string: k[':block/string'] ?? '', heading: k[':block/heading'] ?? 0, uid: k[':block/uid'], number: numbers(parent) ? n + 1 : null });
+          // closed: a block drawn without its children drawn; one not drawn itself, as stored
+          const kids = [...(k[':block/children'] ?? [])].sort((a: any, b: any) => a[':block/order'] - b[':block/order']);
+          const drawn = (uid: string): boolean => !!document.querySelector(`.roam-article [id$="${uid}"]`);
+          const closed = kids.length > 0 && (drawn(k[':block/uid']) ? !drawn(kids[0][':block/uid']) : k[':block/open'] === false);
+          flat.push({ depth, string: k[':block/string'] ?? '', heading: k[':block/heading'] ?? 0, uid: k[':block/uid'], number: numbers(parent) ? n + 1 : null, closed });
           walk(k, depth + 1);
         });
       };
@@ -293,8 +320,13 @@ export const driver: Driver = {
         return false;
       };
       const selected = i >= 0 ? [] : [...lit].filter((k) => !under(k)).sort((a, b) => a - b);
-      return { flat, sel: i >= 0 ? { block: i, anchor: back ? ta!.selectionEnd : ta!.selectionStart, head: back ? ta!.selectionStart : ta!.selectionEnd } : null, selected };
-    }, pageState(page).current);
+      // the view: the closed blocks, and the block open in the main window, if one of the test's (its
+      // page: none)
+      const open = viewed ? await api.ui.mainWindow.getOpenPageOrBlockUid() : null;
+      const zoom = flat.findIndex((b) => b.uid === open);
+      const view = viewed ? { folded: flat.flatMap((b, k) => (b.closed ? [k] : [])), zoom: zoom >= 0 ? zoom : null } : undefined;
+      return { flat, sel: i >= 0 ? { block: i, anchor: back ? ta!.selectionEnd : ta!.selectionStart, head: back ? ta!.selectionStart : ta!.selectionEnd } : null, selected, view };
+    }, { pageUid: pageState(page).current, viewed: pageState(page).viewed });
     const texts = raw.flat.map((b) => fromRoam(b, b.number));
     const blocks = raw.flat.map((b, i) => ({ depth: b.depth, text: texts[i]!.text }));
     let sel = raw.sel;
@@ -304,7 +336,7 @@ export const driver: Driver = {
       sel = { block: sel.block, anchor: at(sel.anchor), head: at(sel.head) };
     }
     // (its italic `__x__` as Markdown's)
-    return italicsAsMarkdown({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) });
+    return { ...italicsAsMarkdown({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) }), ...(raw.view && { view: raw.view }) };
   },
 
   async act(page: Page, action: string, settle: () => Promise<void>) {

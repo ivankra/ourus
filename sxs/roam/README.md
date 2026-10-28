@@ -18,25 +18,29 @@ From Roam's bundle (`CV(isPC ? "alt-shift-up" : "cmd-shift-up", ...)`):
 | `outdent` | Shift+Tab (also Alt+Shift+Left) |
 | `moveSubtreeUp` | Alt+Shift+Up (Cmd+Shift+Up on a Mac) |
 | `moveSubtreeDown` | Alt+Shift+Down (Cmd+Shift+Down on a Mac) |
-| `move ②` | the mouse: the block's bullet dragged (HTML5 drag and drop) to its drop bar (`drop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
+| `moveSubtree` | mouse: the block's bullet dragged (HTML5 drag and drop) to its drop bar (`drop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
 | `deleteContentBackward` | Backspace |
 | `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Shift+Home, Backspace |
 | `deleteSubtree` | Escape (the block selected with its children: Roam's `init-or-cancel-selection`, of its bindings for selected blocks, `multiselect`), Backspace (the selection deleted); skipped, for want of a key, until 2026-10-18; after it, the page's every block deleted, no block is edited: the outline alone is judged (`noCaretAfter`) |
 | `duplicateSubtree` | *missing*: its tests are skipped |
-| `pasteStructured` | Ctrl+V |
+| `paste` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V |
 | `undo` | Ctrl+Z |
 | `redo` | Ctrl+Y (Cmd+Shift+Z on a Mac) |
+| `fold` | Ctrl+Up: the block's children hidden |
+| `unfold` | Ctrl+Down |
+| `toggleFold` | Ctrl+Space |
+| `zoomIn` | Alt+Right: the block as the page |
+| `zoomOut` | Alt+Left: back to its parent's, or the page |
+| `clearZoom` | *missing*: Alt+Left a level at a time |
 
 Other shortcuts (Roam's Settings › Hotkeys, every default editable there; measured in the help graph):
 
 | shortcut | keys | what it does |
 | --- | --- | --- |
 | toggle TODO | Ctrl+Enter | none, then `{{[[TODO]]}}`, `{{[[DONE]]}}`, none; on selected blocks, each of them |
-| fold, unfold, toggle | Ctrl+Up, Ctrl+Down, Ctrl+Space | a block's children hidden or shown |
 | heading 1, 2, 3; none | Ctrl+Alt+1, 2, 3; Ctrl+Alt+0 | the block's heading attribute |
-| zoom in, zoom out | Alt+Right, Alt+Left | a block as the page, and back |
 | select blocks | Escape; then Shift+Up, Shift+Down | the block being edited, with its children; then more |
 | select all | Ctrl+A, Ctrl+Shift+A | Ctrl+A: the text, then every block on the page; Ctrl+Shift+A: every block |
 | on selected blocks | Tab, Shift+Tab, Alt+Shift+Up/Down, Backspace, Ctrl+C | indented, outdented, moved, deleted, copied |
@@ -89,6 +93,29 @@ that with the same 401, so tests send Roam nothing. Analytics, Intercom and Stri
   heading on the rest (the block keeping its attributes): the driver declares
   `quirkEnterMidHeading: workflowy` (since 2026-10-25; `obsidian-true-outliner.md › TO-E13-E16`, `quirks.md › Quirk1`).
 
+## Folds and the zoom, measured
+
+[`fold.md`](../../spec/fold.md) and [`zoom.md`](../../spec/zoom.md), measured 2026-10-28 in the help
+graph. A block's fold is loaded as `open: false` (`data.block.update`) once every block is on screen,
+and read on screen: a drawn block with children whose first child isn't drawn. A key's fold here is
+the view's, `:block/open` left `true` (in the help graph, at least), so the attribute is read only
+for a block not drawn itself. A zoom is the block opened in the main window
+(`ui.mainWindow.openBlock`, read as `getOpenPageOrBlockUid`), the test's page standing for none.
+What is compared is what the reader sees: the folds in effect, and the zoom root.
+
+- **Around a closed block it agrees**: Enter at its end, mid-text, on an empty one with children
+  (`Fold1`, `Fold2`, `Fold5`), Backspace after it (`Fold3`), a move (`Fold4`), an indent under it
+  (`Fold6`), unfold (`Fold12`).
+- **Delete at a closed block's end does nothing** (`Fold7`), as ourus, which refuses it (`folded`).
+- **Backspace right after a closed block joins into its text**, not its hidden last child's, still
+  closed (`Fold15`), as ourus.
+- **Toggle at a block without children does nothing** (`Fold11`); ourus toggles its parent's.
+- **Zoomed, its edges hold as ourus's**: Enter at the root's end and mid-text makes its first child
+  (`Zoom1`, `Zoom10`), Backspace at its start and an outdent out of it are refused (`Zoom2`,
+  `Zoom11`), out a level at a time (`Zoom7`). Zoomed in, the caret goes to the end of the root's last
+  child (`Zoom6`: `caret`).
+- **The zoom root deleted ends the zoom** (`Zoom9`); ourus zooms out to its parent.
+
 ## Drag and drop, measured
 
 A block's bullet (`.rm-bullet`) is an HTML5 drag source. While a block is dragged, every list of
@@ -97,12 +124,12 @@ band 11 pixels above it to 17 below, from its list's left, a deeper list's on to
 drop bar. The driver aims a few pixels under the place's separator, at its list's column; Roam runs a
 frame loop while dragging, so the drag has settled when the bar is at the place.
 
-- **Every drop the cases play lands where ourus puts it** (Drag1, Drag2, Drag3, Drag8, Drag13,
+- **Every drop the cases play lands where ourus puts it** (MoveSubtree1, MoveSubtree2, MoveSubtree3, MoveSubtree9, MoveSubtree12,
   Scenario8, Scenario8c agree, stable over three runs).
 - **No caret after a drop**: the block's editing ends with the drag; Scenario8b, which types after it,
   skips as it plays.
 - **It drags the selected blocks where the pressed one is among them**, else the block pressed alone:
-  the cover rule (Drag4, Drag5, Drag5b, Drag20 land as ourus's), the selection gone after the drop
+  the cover rule (MoveSubtree4, MoveSubtree5, MoveSubtree6, MoveSubtree19 land as ourus's), the selection gone after the drop
   (each `caret`). The driver selects blocks with Escape and Shift+Down, reading the highlight once
   Roam is idle (it is drawn late).
 

@@ -44,11 +44,17 @@ ChromeOS.
 | `deleteSoftLineBackward` | Shift+Home, Backspace |
 | `deleteSubtree` | Ctrl+Shift+Backspace; after it no block is edited (when the first item goes): the outline alone is judged (`noCaretAfter`). |
 | `duplicateSubtree` | Alt+Shift+D; of items selected, the originals stay selected, where ourus selects the copies (`duplicate-subtree.md › DuplicateSubtree3`: `caret`) |
-| `pasteStructured` | Ctrl+V |
+| `paste` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V |
 | `undo` | Ctrl+Z |
 | `redo` | Ctrl+Y |
-| `move ②` | the mouse: the item's bullet dragged, dropped where its drop line is (`workflowyDrop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)); after it no block is edited (`noCaretAfter`) |
+| `fold` | Ctrl+Up (`collapse`): the item's children hidden |
+| `unfold` | Ctrl+Down (`expand`) |
+| `toggleFold` | Ctrl+Space (`expand_or_collapse`) |
+| `zoomIn` | Alt+Down (`zoom_in`; its first key, Ctrl+., does nothing here, measured): the item as the page's title, its children under it, the caret in the first |
+| `zoomOut` | Alt+Up (`zoom_out`): to its parent, or the test's item (none, to a case) |
+| `clearZoom` | *missing*: Alt+Up a level at a time (`navigate_home`, Ctrl+', goes to WorkFlowy's root, past the test's item) |
+| `moveSubtree` | mouse: the item's bullet dragged, dropped where its drop line is (`workflowyDrop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)); after it no block is edited (`noCaretAfter`) |
 
 Other shortcuts (from the keymap, `n2[...]` in `wf-base`, the PC side; "measured" where played in the
 demo, 2026-10-18):
@@ -59,12 +65,10 @@ demo, 2026-10-18):
 | `toggle_h1`, `_h2`, `_h3`, `toggle_paragraph` | Alt+Ctrl+1, 2, 3, 4 | the item's type: a heading, a paragraph (measured: 1, 4) |
 | `toggle_code_block`, `toggle_quote_block` | Alt+Ctrl+6, 7 | a code block (its name the code, Enter a new line), a quote (measured) |
 | `toggle_bullet`, `toggle_todo`, `toggle_numbered` | Alt+Ctrl+8, 9, 0 | a bullet, a to-do, numbered (measured: 9, 0) |
-| `expand`, `collapse`, `expand_or_collapse` | Ctrl+Down, Ctrl+Up, Ctrl+Space | unfold, fold (measured: Ctrl+Up) |
 | `move_up`, `move_down` | Ctrl+Shift+Up, Down | as Alt+Shift+Up and Down |
 | `indent`, `outdent` | Alt+Shift+Right, Left | as Tab and Shift+Tab (measured: Left outdents logically) |
 | `focus_next_sibling`, `focus_prev_sibling` | Alt+Ctrl+Down, Up | to the next or previous sibling (measured: Down) |
 | `select_all` | Ctrl+A | the text, then (again) every item (measured) |
-| `zoom_in`, `zoom_out` | Ctrl+., Ctrl+, (also Alt+Down, Alt+Up) | zoom into the item, out to its parent (Ctrl+Right and Left too, but in text they move by word) |
 | `mirror`, `move_to`, `teleport` | Alt+Shift+M, Alt+Ctrl+M, Alt+; | a mirror of the item, move it by search |
 | `toggle_bold`, `_italic`, `_underline`, `_strikethrough`, `_code`, `highlight_selected` | Ctrl+B, I, U, Ctrl+Shift+X, Ctrl+Shift+C, Ctrl+Shift+H | formats the selection |
 | `navigate_home`, `navigate_to_today`, `show_or_hide_completed` | Ctrl+', Alt+T, Ctrl+O | |
@@ -196,10 +200,33 @@ same web app.
   their undone text cut in other places (disagreeing either way), and one verdict flipped once; the
   rest of the verdicts were the same to the example.
 
+## Folds and the zoom, measured
+
+[`fold.md`](../../spec/fold.md) and [`zoom.md`](../../spec/zoom.md), measured 2026-10-28. An item's
+fold is its own: loaded by `WF.collapseItem` once every item is on screen (a new item's children are
+expanded first, above), read as `isExpanded` of an item with children. A zoom is `WF.zoomTo` the
+item, read as `WF.currentItem()`: the test's item, zoomed into for every test, stands for none, and a
+case's zoom is one level inside it. What is compared is what the reader sees: the folds in effect,
+and the zoom root.
+
+- **Around a collapsed item it agrees**: Enter at its end (`Fold1`), mid-text (`Fold2`), on an empty
+  one with children (`Fold5`), Backspace after it (`Fold3`), a move (`Fold4`), an indent under it
+  (`Fold6`), a duplicate (`Fold8`: the copy collapsed too; the caret stays on the original, `caret`).
+- **Delete at a collapsed item's end does nothing** (`Fold7`), as ourus, which refuses it (`folded`).
+- **Backspace right after a collapsed item does nothing** (`Fold15`); ourus joins the item into the
+  collapsed one's text, as the other block apps.
+- **Toggle at an item without children does nothing** (`Fold11`); ourus toggles its parent's.
+- **Zoomed in, the caret goes into the first child** (`Zoom6`: `caret`); in and out a level at a time
+  otherwise as ourus (`Zoom7`). Enter at the root's end makes its first child (`Zoom1`), Backspace at
+  its start is refused (`Zoom2`), a child can't be outdented out of it (`Zoom11`), and the root
+  deleted, the zoom goes to its parent (`Zoom9`).
+- **Enter mid-text in the zoom root**, the page's title, makes an empty first child and leaves the
+  title whole (`Zoom10`: `a┃b` stays `ab`); ourus splits it, the rest the first child.
+
 ## Drag and drop
 
 Read in `wf-base.js` (the bullet's `onMouseDown`, the `Moving` module's `getDropPosition`) and played
-with the real mouse, aimed where its own geometry puts each place ([`drag.md`](../../spec/drag.md),
+with the real mouse, aimed where its own geometry puts each place ([`move-subtree.md`](../../spec/move-subtree.md),
 2026-10-28):
 
 - **Mouse events, not HTML5 drag**: a press on the bullet, a drag from 3 pixels on; Alt drags a
@@ -209,14 +236,14 @@ with the real mouse, aimed where its own geometry puts each place ([`drag.md`](.
 - **Its depth is the pointer's x**: a child of that item where x is past the item's left by 0.7 of an
   indentation (36 pixels), else of its parent, on up to the zoomed item, a container. Between an item
   and its first child the drop is that child's place whatever x is. Every place the cases make is
-  reachable: `Drag1`, `Drag2`, `Drag3`, `Drag8`, `Drag13` and seven shapes probed (to the end, out of
+  reachable: `MoveSubtree1`, `MoveSubtree2`, `MoveSubtree3`, `MoveSubtree9`, `MoveSubtree12` and seven shapes probed (to the end, out of
   two levels, into a nested item) land where ourus does.
 - **The drag ends the editing as it starts** (it blurs the item edited), and the drop puts no caret
-  back: the outlines agree, the carets aren't compared (`Drag1`, `Drag2`), and a case that types or
+  back: the outlines agree, the carets aren't compared (`MoveSubtree1`, `MoveSubtree2`), and a case that types or
   presses keys after the drop has nothing to play them in (`scenarios.md › Scenario8b`, `Scenario8c`:
   skipped, "no text focus after move").
 - **A press on a selected item drags the selection's items**, any other the item alone, as ourus's
-  cover rule does: Drag4, Drag20 agree; Drag5, Drag5b land as ourus's, nothing selected after
+  cover rule does: MoveSubtree4, MoveSubtree19 agree; MoveSubtree5, MoveSubtree6 land as ourus's, nothing selected after
   (`caret`). The driver selects items with WorkFlowy's own `WF.setSelection`.
 
 ## WorkFlowy bugs met on the way

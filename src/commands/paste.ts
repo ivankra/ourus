@@ -11,7 +11,7 @@ import { CommandContext, deferToHost, reject, type CommandOutcome } from './cont
 import { afterDeleting } from './copy.ts';
 import { codeAt, onDelimiterLine } from './code.ts';
 import { pastePlainCommand, plainLines } from './paste-plain.ts';
-import { becomesAt, headingTarget, placeOf, resultCheck, takesIn, unholdable } from './move-subtree-to.ts';
+import { becomesAt, headingTarget, placeOf, resultCheck, takesIn, unholdable } from './move-subtree.ts';
 import type { InsertionPoint } from './types.ts';
 import { changeHeadingLevels, headingLevel, inMarkup, selectionInText, textEnd, textStart } from './util.ts';
 
@@ -233,9 +233,12 @@ function emptyText(ctx: CommandContext, node: OutlineNode): boolean {
  * Null (unsupported) where ourus doesn't do it yet.
  */
 function slotAt(ctx: CommandContext, items: boolean): Slot | 'plain' | 'host' | null {
-  // on a code line, what is pasted is code (on a fence's line, the block is a block: after its closing one, its end)
+  // on a code line, what is pasted is code (on a fence's line, the block is a block: after its closing
+  // one, its end; and past any closed block's closing delimiter, math's `$$` too, which pasted code
+  // would unclose)
   const code = codeAt(ctx);
-  if (code && !onDelimiterLine(code.text, code.offset)) return 'plain';
+  const pastClose = !!code && code.text.closed && ctx.collapsed && code.offset === code.text.text.length;
+  if (code && !onDelimiterLine(code.text, code.offset) && !pastClose) return 'plain';
   const at = ctx.from;
   if (at.zone === 'gap') {
     const owner = at.owner;
@@ -283,14 +286,15 @@ function slotAt(ctx: CommandContext, items: boolean): Slot | 'plain' | 'host' | 
 /**
  * Where nodes go from the end of `node`'s text: first among a node's children, where it has some
  * (`pasteOnParent: children`): an item's, a heading's section, a paragraph's list where the nodes are
- * items; else after the node, joining a list right after it.
+ * items; else after the node, joining a list right after it. A folded item's children are hidden:
+ * after it, its subtree, as Enter's new item.
  */
 function endSlot(ctx: CommandContext, node: OutlineNode, items: boolean): Omit<Slot, 'atEnd'> {
   const after = ctx.config.pasteOnParent === 'after';
   const firstItem = node.children[0]?.kind === 'item' ? node.children[0] : null;
   const lastItem = node.children[node.children.length - 1]?.kind === 'item' ? node.children[node.children.length - 1]! : null;
   if (node.kind === 'item') {
-    if (!node.children.length || after) return { where: 'after', node, list: node };
+    if (!node.children.length || after || ctx.doc.zoomFolded.has(node.id)) return { where: 'after', node, list: node };
     return { where: 'first', node, list: firstItem };
   }
   if (node.kind === 'heading' || node.kind === 'quote') {
@@ -329,6 +333,38 @@ function lastMade(draft: OurusDraft, id: number): number {
   return id;
 }
 
+/** Whether `node`'s text starts on a line below its marker (`-⏎  three`). */
+const startsBelow = (doc: OurusDoc, node: OutlineNode): boolean => {
+  const text = doc.textOf(node);
+  return text instanceof ProseText && text.frame.some((p) => p.part === 'below');
+};
+
+/**
+ * What item `node` of `doc` has between its marker and its text, where it isn't a plain space; null
+ * where it is, or where it starts code (four columns or more) or there is no text on the line; for a
+ * text starting below its marker, what the marker's line ends with (`-` alone: nothing).
+ */
+function separatorOf(doc: OurusDoc, node: OutlineNode): string | null {
+  const line = doc.mdTree.line(node.startLine);
+  const end = line.from + node.block.attrs.markerEnd!;
+  const separator = /^[ \t]*/.exec(doc.text.slice(end, line.to))![0];
+  if (startsBelow(doc, node)) return separator === ' ' ? null : separator;
+  if (separator === ' ' || !separator || end + separator.length >= line.to) return null;
+  let columns = 0;
+  for (const c of separator) columns = c === '\t' ? columns + 4 - (columns % 4) : columns + 1;
+  return columns > 4 ? null : separator;
+}
+
+/** For a text starting below its marker, the columns its first line of text is past the item's content column (padding, under four); else 0. */
+function belowPadding(doc: OurusDoc, node: OutlineNode): number {
+  if (!startsBelow(doc, node)) return 0;
+  const line = doc.mdTree.line(node.textFirstLine);
+  let columns = 0;
+  for (const c of /^[ \t]*/.exec(doc.text.slice(line.from, line.to))![0]) columns = c === '\t' ? columns + 4 - (columns % 4) : columns + 1;
+  const extra = columns - node.block.attrs.contentColumn!;
+  return extra > 0 && extra < 4 ? extra : 0;
+}
+
 /** A node of the fragment made in the draft, with its subtree; its list's form its own. Null for a node with no text (but a quote with children). */
 function made(draft: OurusDraft, pasted: OurusDoc, node: OutlineNode, kind = node.kind, children: readonly OutlineNode[] = node.children): number | null {
   const text = pasted.textOf(node);
@@ -338,6 +374,14 @@ function made(draft: OurusDraft, pasted: OurusDoc, node: OutlineNode, kind = nod
   if (!madeIds.has(draft)) madeIds.set(draft, new Set());
   madeIds.get(draft)!.add(id);
   if (node.kind === 'item') draft.listForm(id, pasted.markerOf(node), pasted.config.pasteListForm === 'own');
+  // an item keeps its own form, what its marker is followed by (`-   b`'s spaces, `-→b`'s tab), as a
+  // text editor's paste keeps it; but four columns or more, which would start code, and an empty one's
+  const separator = node.kind === 'item' && kind === 'item' ? separatorOf(pasted, node) : null;
+  if (separator !== null) draft.separator(id, separator);
+  // (a text starting below its marker, its first line further in than its content column: as many
+  // columns of padding)
+  const padding = node.kind === 'item' && kind === 'item' ? belowPadding(pasted, node) : 0;
+  if (padding > 0) draft.padding(id, padding);
   draft.gap(id, node.gap);
   for (const child of children) {
     const c = made(draft, pasted, child);
@@ -438,6 +482,9 @@ function place(ctx: CommandContext, draft: OurusDraft, slot: Slot, fitted: Fitte
     if (slot.where === 'before' || slot.where === 'after') draft.place(slot.where, node, nodes);
     else draft.append(node, slot.where, nodes);
   }
+  // beside the item at the slot, items line up with it, as its line is written (its indentation, a
+  // quote's `>` as it is): where the paste lands, not where the writer would put a new item
+  if (node.kind === 'item' && (slot.where === 'before' || slot.where === 'after')) for (const id of nodes) if (draft.touched(id).kind === 'item') draft.lineUp(id, node);
   if (into.length) draft.append(node, 'first', into);
   // spacing: in a list as the list is; elsewhere apart where the node at the slot is
   const list = slot.list ? ctx.doc.listOf(slot.list) : null;
@@ -458,11 +505,18 @@ function place(ctx: CommandContext, draft: OurusDraft, slot: Slot, fitted: Fitte
   }
   // the blank lines after the node at the slot go with the end of the paste, as a split's (Gap13, Paste23)
   const end = slot.where === 'after' ? node.lastDescendant : slot.where === 'first' && !node.children.length ? node : null;
-  // (in a loose list each item is apart, the one at the slot too)
+  // (in a loose list each item is apart, the one at the slot too: its blank lines stay, and where
+  // nothing follows in the list, the paste's end takes them too, what comes after kept apart)
   if (end && end.gap > 0 && nodes.length && !(list && !tight)) {
-    setSpacing(draft, nodes[nodes.length - 1]!, end.gap, true);
-    if (!(list === null && !instead && slot.where === 'after' && apartFrom(ctx, slot))) draft.gap(end, 0);
-  }
+    // (they go, as written, where the paste's end takes no more of its own)
+    const last = lastMade(draft, nodes[nodes.length - 1]!);
+    const moves = !(list === null && !instead && slot.where === 'after' && apartFrom(ctx, slot));
+    if (moves && draft.touched(last).gap <= end.gap) draft.moveGap(end, last);
+    else {
+      setSpacing(draft, nodes[nodes.length - 1]!, end.gap, true);
+      if (moves) draft.gap(end, 0);
+    }
+  } else if (end && end.gap > 0 && nodes.length && list && !tight && !node.next) setSpacing(draft, nodes[nodes.length - 1]!, end.gap, true);
   // the caret at the end of the last pasted text (`pasteCaret`)
   if (!all.length) return null;
   // on a blank line, the paste fills it: the blank lines above it stay, those below go after the paste (Paste13, 26)
@@ -530,7 +584,7 @@ function pasteCaret(ctx: CommandContext, draft: OurusDraft, nodes: readonly numb
 }
 
 /**
- * A drop from outside (`pasteAt`, spec/drag.md): the clipboard read as paste reads it, its nodes
+ * A drop from outside (`pasteAt`, spec/paste-at.md): the clipboard read as paste reads it, its nodes
  * fitted at the place `to` as paste fits them: in a list each an item, a block staying at the place;
  * elsewhere as they are, items right after a block that adopts lists made paragraphs, as a move makes
  * them. A heading first is re-levelled to its new siblings; one last whose section would take in what

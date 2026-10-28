@@ -336,8 +336,8 @@ tags: core
 ### Scenario8b
 
 Reorganizing by dragging: `Home`, pressed by its bullet, goes to the top with its child
-([Drag1](drag.md#drag1)), and the caret stays in the text it is in, where typing goes on
-([Drag2](drag.md#drag2)).
+([MoveSubtree1](move-subtree.md#movesubtree1)), and the caret stays in the text it is in, where typing goes on
+([MoveSubtree2](move-subtree.md#movesubtree2)).
 
 ```yaml
 tags: core
@@ -352,7 +352,7 @@ tags: core
   - plants
 ```
 
-> move ③
+> moveSubtree ③
 
 ```buffer
 - Home③
@@ -374,7 +374,7 @@ tags: core
 
 ### Scenario8c
 
-Dragged into the item above as its child ([Drag3](drag.md#drag3)), its own child with it, then
+Dragged into the item above as its child ([MoveSubtree3](move-subtree.md#movesubtree3)), its own child with it, then
 taken back out with Shift-Tab ([Outdent1](outdent.md#outdent1)).
 
 ```yaml
@@ -388,7 +388,7 @@ tags: core
   - email
 ```
 
-> move ②
+> moveSubtree ②
 
 ```buffer
 - Inbox
@@ -406,8 +406,8 @@ tags: core
 
 ### Scenario8d
 
-A drag shows where it can go, its own place among them ([Drag6](drag.md#drag6)); set down where it
-started, it changes nothing ([Drag6b](drag.md#drag6b)), and the keys go on from there
+A drag shows where it can go, its own place among them ([Drag1](drag.md#drag1)); set down where it
+started, it changes nothing ([MoveSubtree8](move-subtree.md#movesubtree8)), and the keys go on from there
 ([MoveDown1](move-subtree-down.md#movedown1)).
 
 ```yaml
@@ -433,7 +433,7 @@ dropPoints: |
   ▸ ▸
 ```
 
-> move ②
+> moveSubtree ②
 
 ```yaml
 result: applied

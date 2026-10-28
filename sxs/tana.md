@@ -5,8 +5,8 @@ version: "f6ae813f25"
 url: "https://app.tana.inc/tests"
 model: "block"
 command: "node sxs/run.ts tana"
-elapsed_s: 128
-workers: 4
+elapsed_s: 264
+workers: 3
 ---
 
 # Tana vs ourus
@@ -15,31 +15,34 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 136 | [6](#caret-6) | [2](#whitespace-2) | [29](#disagree-29) |  |  | **173** |
-| adapted | 241 | [9](#adapted-caret-9) | [5](#adapted-whitespace-5) | [68](#adapted-disagree-68) |  |  | **323** |
-| **total** | **377 (32%)** | **15 (1.3%)** | **7 (0.59%)** | **97 (8.1%)** | **0 (0%)** | **[693](#skipped-693) (58%)** | **1194** |
+| original | 150 | [9](#caret-9) | [2](#whitespace-2) | [33](#disagree-33) |  |  | **194** |
+| adapted | 243 | [9](#adapted-caret-9) | [5](#adapted-whitespace-5) | [68](#adapted-disagree-68) |  |  | **325** |
+| **total** | **393 (32%)** | **18 (1.5%)** | **7 (0.57%)** | **101 (8.2%)** | **0 (0%)** | **[704](#skipped-704) (57%)** | **1228** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total | original | adapted |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [backspace.md](../spec/backspace.md) | 36 |  |  | 11 |  | 38 | **85** | 14 | 33 |
+| [backspace.md](../spec/backspace.md) | 37 |  |  | 11 |  | 38 | **86** | 15 | 33 |
 | [backtick.md](../spec/backtick.md) | 5 |  |  | 2 |  | 26 | **33** |  | 7 |
 | [copy.md](../spec/copy.md) | 2 |  |  | 3 |  | 8 | **13** | 4 | 1 |
 | [cursor.md](../spec/cursor.md) | 23 | 2 |  |  |  | 11 | **36** | 12 | 13 |
 | [delete-subtree.md](../spec/delete-subtree.md) | 4 | 2 |  |  |  | 7 | **13** | 3 | 3 |
 | [delete.md](../spec/delete.md) | 22 |  |  | 8 |  | 26 | **56** | 10 | 20 |
-| [drag.md](../spec/drag.md) | 7 |  |  | 2 |  | 28 | **37** | 6 | 3 |
+| [drag.md](../spec/drag.md) |  |  |  |  |  | 8 | **8** |  |  |
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) | 3 | 1 |  |  |  | 6 | **10** | 4 |  |
 | [enter.md](../spec/enter.md) | 49 |  |  | 7 |  | 42 | **98** | 20 | 36 |
 | [fences.md](../spec/fences.md) | 7 |  | 1 | 5 |  | 57 | **70** |  | 13 |
+| [fold.md](../spec/fold.md) | 11 | 2 |  | 1 |  | 5 | **19** | 12 | 2 |
 | [gaps.md](../spec/gaps.md) | 11 |  |  |  |  | 8 | **19** |  | 11 |
 | [indent.md](../spec/indent.md) | 24 |  |  | 2 |  | 24 | **50** | 16 | 10 |
 | [lists.md](../spec/lists.md) | 4 |  |  |  |  | 12 | **16** |  | 4 |
 | [move-subtree-down.md](../spec/move-subtree-down.md) | 24 |  |  |  |  | 16 | **40** | 11 | 13 |
 | [move-subtree-up.md](../spec/move-subtree-up.md) | 20 |  |  |  |  | 23 | **43** | 12 | 8 |
+| [move-subtree.md](../spec/move-subtree.md) | 7 |  |  | 2 |  | 15 | **24** | 6 | 3 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 27 |  |  | 4 |  | 36 | **67** | 13 | 18 |
 | [outdent.md](../spec/outdent.md) | 16 |  |  |  |  | 22 | **38** | 4 | 12 |
+| [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |  |  |
 | [paste-conv.md](../spec/paste-conv.md) | 3 |  |  | 3 |  |  | **6** | 5 | 1 |
 | [paste-html.md](../spec/paste-html.md) | 4 | 1 |  | 12 |  | 2 | **19** |  | 17 |
 | [paste-list-form.md](../spec/paste-list-form.md) | 4 |  |  | 1 |  | 1 | **6** | 4 | 1 |
@@ -56,9 +59,10 @@ Per-file:
 | [typing.md](../spec/typing.md) |  |  |  |  |  | 3 | **3** |  |  |
 | [undo.md](../spec/undo.md) |  | 4 |  |  |  | 1 | **5** | 3 | 1 |
 | [z-open.md](../spec/z-open.md) |  |  |  |  |  | 1 | **1** |  |  |
-| **total** | **377 (32%)** | **15 (1.3%)** | **7 (0.59%)** | **97 (8.1%)** | **0 (0%)** | **698 (58%)** | **1194** | **173 (14%)** | **323 (27%)** |
+| [zoom.md](../spec/zoom.md) | 4 | 1 |  | 3 |  | 6 | **14** | 8 |  |
+| **total** | **393 (32%)** | **18 (1.5%)** | **7 (0.57%)** | **101 (8.2%)** | **0 (0%)** | **709 (58%)** | **1228** | **194 (16%)** | **325 (26%)** |
 
-## Disagree (29)
+## Disagree (33)
 
 ### [Backspace8](../spec/backspace.md#backspace8)
 
@@ -417,72 +421,6 @@ Per-file:
 </td></tr>
 </table>
 
-### [Drag5](../spec/drag.md#drag5)
-
-> move ③
-
-<table>
-<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- ▮ a
-- ▮ b
-- c
-```
-
-</td><td>
-
-```buffer
-- ▮ a
-- ▮ b
-- c
-```
-
-</td><td>
-
-```buffer
-- c
-- ▮ a
-- ▮ b
-```
-
-</td></tr>
-</table>
-
-### [Drag5b](../spec/drag.md#drag5b)
-
-> move ③
-
-<table>
-<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- ▮ a
-- ▮ b
-- c
-```
-
-</td><td>
-
-```buffer
-- ▮ a
-- ▮ b
-- c
-```
-
-</td><td>
-
-```buffer
-- ▮ a
-- ▮ c
-- ▮ b
-```
-
-</td></tr>
-</table>
-
 ### [Enter5](../spec/enter.md#enter5)
 
 > enter
@@ -543,6 +481,58 @@ Per-file:
 ```buffer
 - a
 - ┃lazy
+```
+
+</td></tr>
+</table>
+
+### [Fold14](../spec/fold.md#fold14)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - b
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+- - x┃
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+- x┃
+- c
+
+⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -637,6 +627,72 @@ Per-file:
 - a
 - b  
   c┃
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree5](../spec/move-subtree.md#movesubtree5)
+
+> moveSubtree ③
+
+<table>
+<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ▮ a
+- ▮ b
+- c
+```
+
+</td><td>
+
+```buffer
+- ▮ a
+- ▮ b
+- c
+```
+
+</td><td>
+
+```buffer
+- c
+- ▮ a
+- ▮ b
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree6](../spec/move-subtree.md#movesubtree6)
+
+> moveSubtree ③
+
+<table>
+<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ▮ a
+- ▮ b
+- c
+```
+
+</td><td>
+
+```buffer
+- ▮ a
+- ▮ b
+- c
+```
+
+</td><td>
+
+```buffer
+- ▮ a
+- ▮ c
+- ▮ b
 ```
 
 </td></tr>
@@ -1161,6 +1217,131 @@ y
 </td></tr>
 </table>
 
+### [Zoom7](../spec/zoom.md#zoom7)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b
+    - c┃
+
+⟦folded none; zoom 3⟧
+```
+
+</td></tr>
+</table>
+
+> zoomOut
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b┃
+    - c
+
+⟦folded 1 2; zoom 2⟧
+```
+
+</td></tr>
+</table>
+
+> zoomOut zoomOut
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b
+    - c
+
+⟦folded 1 2; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Zoom9](../spec/zoom.md#zoom9)
+
+> deleteSubtree
+
+<table>
+<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b┃
+  - c
+
+⟦folded none; zoom 2⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - c
+
+⟦folded none; zoom 1⟧
+```
+
+</td></tr>
+</table>
+
+### [Zoom10](../spec/zoom.md#zoom10)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃b
+- c
+
+⟦folded none; zoom 1⟧
+```
+
+</td><td>
+
+```buffer
+- a┃b
+- c
+
+⟦folded none; zoom 1⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - ┃b
+- c
+
+⟦folded none; zoom 1⟧
+```
+
+</td></tr>
+</table>
+
 ## Whitespace (2)
 
 ### [Placeholder9](../spec/placeholders.md#placeholder9)
@@ -1243,7 +1424,7 @@ y
 </td></tr>
 </table>
 
-## Caret (6)
+## Caret (9)
 
 ### [CursorDown4](../spec/cursor.md#cursordown4)
 
@@ -1342,6 +1523,145 @@ y
 - ▮ b
 - ▮ c
 - d
+```
+
+</td></tr>
+</table>
+
+### [Fold16](../spec/fold.md#fold16)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - b
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeDown
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- c
+- a┃
+  - b
+
+⟦folded 2; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+> undo
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - b
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+> redo
+
+<table>
+<tr><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃c
+- a
+  - b
+
+⟦folded 2; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- c
+- a┃
+  - b
+
+⟦folded 2; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold17](../spec/fold.md#fold17)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x
+- a┃
+  - b
+
+⟦folded 2; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+> indent
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x
+  - a┃
+    - b
+
+⟦folded 2; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+> undo
+
+<table>
+<tr><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x
+- a
+  - b
+
+⟦folded 2; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- x
+- a┃
+  - b
+
+⟦folded 2; zoom none⟧
 ```
 
 </td></tr>
@@ -1550,6 +1870,45 @@ y
 ```buffer
 - a
   - ┃
+```
+
+</td></tr>
+</table>
+
+### [Zoom6](../spec/zoom.md#zoom6)
+
+> zoomIn
+
+<table>
+<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- b┃
+  - c
+
+⟦folded none; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+- ┃b
+  - c
+
+⟦folded none; zoom 2⟧
+```
+
+</td><td>
+
+```buffer
+- a
+- b┃
+  - c
+
+⟦folded none; zoom 2⟧
 ```
 
 </td></tr>
@@ -7310,7 +7669,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (698)
+## Skipped (709)
 
 | example | why |
 | --- | --- |
@@ -7437,34 +7796,14 @@ Original:
 | [Delete29](../spec/delete.md#delete29) | tag free-form |
 | [Delete34](../spec/delete.md#delete34) | option quotes: container |
 | **drag.md** | |
-| [Drag3](../spec/drag.md#drag3) | drop: a place inside a node with no children: Tana drops before or after a node |
-| [Drag5c](../spec/drag.md#drag5c) | changes only what blocks can't show |
-| [Drag6](../spec/drag.md#drag6) | action drag ② |
-| [Drag6b](../spec/drag.md#drag6b) | changes only what blocks can't show |
-| [Drag6c](../spec/drag.md#drag6c) | action drag ② |
-| [Drag7](../spec/drag.md#drag7) | action drag ④ |
-| [Drag8](../spec/drag.md#drag8) | drop: a place inside a node with no children: Tana drops before or after a node |
-| [Drag9](../spec/drag.md#drag9) | nothing to compare |
-| [Drag12](../spec/drag.md#drag12) | nothing to compare |
-| [Drag14](../spec/drag.md#drag14) | nothing to compare |
-| [Drag15](../spec/drag.md#drag15) | heading other than H1: Tana's (a section) has one level |
-| [Drag16](../spec/drag.md#drag16) | heading other than H1: Tana's (a section) has one level |
-| [Drag17](../spec/drag.md#drag17) | heading other than H1: Tana's (a section) has one level |
-| [Drag18](../spec/drag.md#drag18) | drop: the pickup is refused (non-contiguous) |
-| [Drag19](../spec/drag.md#drag19) | nothing to compare |
-| [Drag21](../spec/drag.md#drag21) | quote |
-| [Drag22](../spec/drag.md#drag22) | action drag ② |
-| [Drag23](../spec/drag.md#drag23) | action drag ② |
-| [Drag24](../spec/drag.md#drag24) | action drag ③ |
-| [Drag25](../spec/drag.md#drag25) | action drag ③ |
-| [Drag26](../spec/drag.md#drag26) | action drag ③ |
-| [Drag30](../spec/drag.md#drag30) | list numbered in part, or not from 1 |
-| [Drag32](../spec/drag.md#drag32) | drop: a place inside a node with no children: Tana drops before or after a node |
-| [Drag10](../spec/drag.md#drag10) | action pasteAt |
-| [Drag11](../spec/drag.md#drag11) | action pasteAt |
-| [Drag27](../spec/drag.md#drag27) | action pasteAt |
-| [Drag28](../spec/drag.md#drag28) | action pasteAt |
-| [Drag29](../spec/drag.md#drag29) | action deleteByDrag |
+| [Drag1](../spec/drag.md#drag1) | action drag ② |
+| [Drag2](../spec/drag.md#drag2) | action drag ② |
+| [Drag3](../spec/drag.md#drag3) | action drag ④ |
+| [Drag4](../spec/drag.md#drag4) | action drag ② |
+| [Drag5](../spec/drag.md#drag5) | action drag ② |
+| [Drag6](../spec/drag.md#drag6) | action drag ③ |
+| [Drag7](../spec/drag.md#drag7) | action drag ③ |
+| [Drag8](../spec/drag.md#drag8) | action drag ③ |
 | **duplicate-subtree.md** | |
 | [DuplicateSubtree4](../spec/duplicate-subtree.md#duplicatesubtree4) | tag free-form |
 | [DuplicateSubtree5](../spec/duplicate-subtree.md#duplicatesubtree5) | option quotes: container |
@@ -7573,6 +7912,12 @@ Original:
 | [Fence61](../spec/fences.md#fence61) | caret in a marker |
 | [Fence62](../spec/fences.md#fence62) | code block's fences other than the shortest backticks that hold its code, which Tana's code block reads back with (it keeps no fences), or spaces around its language |
 | [Fence64](../spec/fences.md#fence64) | action shiftEnter |
+| **fold.md** | |
+| [Fold9](../spec/fold.md#fold9) | action fold ② |
+| [Fold10](../spec/fold.md#fold10) | action fold ① |
+| [Fold11](../spec/fold.md#fold11) | action toggleFold |
+| [Fold13](../spec/fold.md#fold13) | its view, on an adapted start |
+| [Fold15b](../spec/fold.md#fold15b) | changes only what blocks can't show |
 | **gaps.md** | |
 | [Gap6](../spec/gaps.md#gap6) | heading other than H1: Tana's (a section) has one level |
 | [Gap12](../spec/gaps.md#gap12) | heading other than H1: Tana's (a section) has one level |
@@ -7661,6 +8006,22 @@ Original:
 | [MoveUp41](../spec/move-subtree-up.md#moveup41) | code block's fences that don't match |
 | [MoveUp42](../spec/move-subtree-up.md#moveup42) | quote |
 | [MoveUp43](../spec/move-subtree-up.md#moveup43) | option indentUnit: tab |
+| **move-subtree.md** | |
+| [MoveSubtree3](../spec/move-subtree.md#movesubtree3) | drop: a place inside a node with no children: Tana drops before or after a node |
+| [MoveSubtree7](../spec/move-subtree.md#movesubtree7) | changes only what blocks can't show |
+| [MoveSubtree8](../spec/move-subtree.md#movesubtree8) | changes only what blocks can't show |
+| [MoveSubtree9](../spec/move-subtree.md#movesubtree9) | drop: a place inside a node with no children: Tana drops before or after a node |
+| [MoveSubtree10](../spec/move-subtree.md#movesubtree10) | nothing to compare |
+| [MoveSubtree11](../spec/move-subtree.md#movesubtree11) | nothing to compare |
+| [MoveSubtree13](../spec/move-subtree.md#movesubtree13) | nothing to compare |
+| [MoveSubtree14](../spec/move-subtree.md#movesubtree14) | heading other than H1: Tana's (a section) has one level |
+| [MoveSubtree15](../spec/move-subtree.md#movesubtree15) | heading other than H1: Tana's (a section) has one level |
+| [MoveSubtree16](../spec/move-subtree.md#movesubtree16) | heading other than H1: Tana's (a section) has one level |
+| [MoveSubtree17](../spec/move-subtree.md#movesubtree17) | drop: the pickup is refused (non-contiguous) |
+| [MoveSubtree18](../spec/move-subtree.md#movesubtree18) | nothing to compare |
+| [MoveSubtree20](../spec/move-subtree.md#movesubtree20) | quote |
+| [MoveSubtree21](../spec/move-subtree.md#movesubtree21) | list numbered in part, or not from 1 |
+| [MoveSubtree23](../spec/move-subtree.md#movesubtree23) | drop: a place inside a node with no children: Tana drops before or after a node |
 | **obsidian-true-outliner.md** | |
 | [TO-Bug228](../spec/obsidian-true-outliner.md#to-bug228) | list numbered in part, or not from 1 |
 | [TO-E11](../spec/obsidian-true-outliner.md#to-e11) | indented code |
@@ -7721,6 +8082,12 @@ Original:
 | [Outdent20](../spec/outdent.md#outdent20) | tag free-form |
 | [Outdent20b](../spec/outdent.md#outdent20b) | tag free-form |
 | [Outdent22b](../spec/outdent.md#outdent22b) | indented code |
+| **paste-at.md** | |
+| [PasteAt1](../spec/paste-at.md#pasteat1) | action pasteAt |
+| [PasteAt2](../spec/paste-at.md#pasteat2) | action pasteAt |
+| [PasteAt3](../spec/paste-at.md#pasteat3) | action pasteAt |
+| [PasteAt4](../spec/paste-at.md#pasteat4) | action pasteAt |
+| [PasteAt5](../spec/paste-at.md#pasteat5) | action deleteByDrag |
 | **paste-html.md** | |
 | [PasteHtml12](../spec/paste-html.md#pastehtml12) | quote |
 | [PasteHtml13](../spec/paste-html.md#pastehtml13) | table (expected) |
@@ -7972,7 +8339,7 @@ Original:
 | [Regression64](../spec/regressions.md#regression64) | option quotes: atom |
 | **scenarios.md** | |
 | [Scenario6](../spec/scenarios.md#scenario6) | tag free-form |
-| [Scenario8b](../spec/scenarios.md#scenario8b) | no text focus after move ③ |
+| [Scenario8b](../spec/scenarios.md#scenario8b) | no text focus after moveSubtree ③ |
 | [Scenario8c](../spec/scenarios.md#scenario8c) | drop: a place inside a node with no children: Tana drops before or after a node |
 | [Scenario8d](../spec/scenarios.md#scenario8d) | action drag ② |
 | [Scenario11](../spec/scenarios.md#scenario11) | action shiftEnter |
@@ -8044,3 +8411,10 @@ Original:
 | [Undo2](../spec/undo.md#undo2) | tag free-form |
 | **z-open.md** | |
 | [Open2](../spec/z-open.md#open2) | caret in a number, a task's checkbox, a heading's # or a code block's fences |
+| **zoom.md** | |
+| [Zoom3](../spec/zoom.md#zoom3) | heading other than H1: Tana's (a section) has one level |
+| [Zoom4](../spec/zoom.md#zoom4) | caret in a marker |
+| [Zoom8](../spec/zoom.md#zoom8) | action clearZoom |
+| [Zoom12](../spec/zoom.md#zoom12) | caret on a blank line |
+| [Zoom13](../spec/zoom.md#zoom13) | caret in a number, a task's checkbox, a heading's # or a code block's fences |
+| [Zoom14](../spec/zoom.md#zoom14) | option enterOnEmptyItem: unwrap |

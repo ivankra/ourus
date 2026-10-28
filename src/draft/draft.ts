@@ -131,6 +131,9 @@ export class OurusDraft {
   #caret: AnchorSpec | null = null;
   #anchor: AnchorSpec | null = null;
   #hints = new Map<number, string>();
+  #separators = new Map<number, string>();
+  #paddingsAsked = new Map<number, number>();
+  #lineUps = new Map<number, OutlineNode>();
   /** Markers new items would rather have where they join no list there is: a list's form (`listForm`). */
   #listForms = new Map<number, string>();
   #ownForms = new Set<number>();
@@ -478,6 +481,70 @@ export class OurusDraft {
     return this.#hints;
   }
 
+  /** What a command asked of the writer: what goes between a new item's marker and its text (`-   b`'s spaces, `-→b`'s tab), by node id. */
+  get separators(): ReadonlyMap<number, string> {
+    return this.#separators;
+  }
+
+  /** What a command asked of the writer: the read item of `from` a new item lines up with, its line's indentation and prefixes as written, by node id. */
+  get lineUps(): ReadonlyMap<number, OutlineNode> {
+    return this.#lineUps;
+  }
+
+  /**
+   * `from`'s blank lines after `to` instead, as they were written (a paste's end takes the ones after
+   * the node it was pasted at, as a split's second half takes its text's).
+   */
+  moveGap(from: NodeRef, to: number): this {
+    this.#building();
+    const w = this.#node(from);
+    const b = this.#node(to);
+    // (both stated, as `gap` states them: the writer writes them as set)
+    const gap = w.gap;
+    this.gap(b.id, gap).gap(w.id, 0);
+    const lines = w.origin && w.source ? ownGapLines(w.origin) : null;
+    if (lines && lines[1] - lines[0] === gap) this.#gapLines.set(b.id, lines);
+    if (w.origin) this.#gapLines.set(w.id, null);
+    return this;
+  }
+
+  /**
+   * New item `id`'s text, starting on the line below its marker, written `n` columns past its content
+   * column (under four: Markdown reads them as padding, not text), as a pasted item's own lines are.
+   */
+  padding(id: number, n: number): this {
+    this.#building();
+    this.#paddingsAsked.set(id, Math.min(3, n));
+    return this;
+  }
+
+  /**
+   * New item `id` written with `separator` after its marker, rather than a space (a pasted item's own
+   * form); for a text starting on the line below its marker, what its marker's line ends with.
+   */
+  separator(id: number, separator: string): this {
+    this.#building();
+    this.#separators.set(id, separator);
+    return this;
+  }
+  /**
+   * Item `id`'s separator where its marker ends at `column`: the one asked, but a space where a tab
+   * in it would span there to more than four columns past the marker, which would make its text code.
+   */
+  separatorAt(id: number, column: number): string | undefined {
+    const separator = this.#separators.get(id);
+    if (separator === undefined || !separator.includes('\t')) return separator;
+    return advanceColumns(separator, 0, separator.length, column) - column > 4 ? ' ' : separator;
+  }
+
+
+  /** New item `id` lined up with `with`, a read item it goes beside: its indentation and its containers' prefixes as `with`'s line has them. */
+  lineUp(id: number, item: OutlineNode): this {
+    this.#building();
+    this.#lineUps.set(id, item);
+    return this;
+  }
+
   /** The next id after those the draft reserved. */
   get nextId(): number {
     return this.#nextId;
@@ -597,6 +664,7 @@ export class OurusDraft {
       listForms: draft.#listForms,
       ownForms: draft.#ownForms,
       statedGaps: draft.#statedGaps,
+      paddingsAsked: draft.#paddingsAsked,
       leading: draft.#leading,
       caret: draft.#caret,
       anchor: draft.#anchor,
@@ -651,6 +719,7 @@ class Done {
     this.io = OurusDraft.internals(draft);
     this.gapLines = new Map(this.io.gapLines);
     this.preamble = this.io.leading;
+    for (const [id, n] of this.io.paddingsAsked) this.paddings.set(id, n);
   }
 
   run(): Fixed | Refusal {
@@ -1386,6 +1455,11 @@ class Done {
     let movedPrefix: string | null = null;
     let readIn = container;
     let dedent = 0;
+    // (an item moved here from another container: at this one's column, as the writer sets it)
+    if (this.#movedIn(parent, node, origin)) {
+      movedPrefix = '';
+      dedent = /^ */.exec(this.#readLines(readIn, origin!.startLine, origin!.startLine)[0]!)![0].length;
+    }
     const moved = (lines: readonly string[]): string[] =>
       movedPrefix === null ? [...lines] : lines.map((l) => movedPrefix + l.slice(Math.min(dedent, /^ */.exec(l)![0].length)));
     const push = (lines: readonly string[]): void => {
@@ -1412,6 +1486,9 @@ class Done {
         const piece = first.prefix.find((p) => p.container.block === block);
         const end = node.kind === 'quote' && piece ? piece.to : first.contentFrom;
         inside = this.#lineIn(first, readIn).slice(0, Math.max(0, end - this.#cut(first, readIn))).replace(/[^>\t ]/g, ' ');
+        // (an item whose text starts below its marker, its line ending there: its content column, one
+        // past the marker, as the writer writes its children)
+        if (node.kind === 'item' && end === first.to) inside += ' '.repeat(Math.max(0, block!.attrs.contentColumn! - advanceColumns(this.from.text, first.from, first.to, 0)));
         // (in a quote, `>`; past the prefix of where a subtree moved, that prefix, its `>`s the quotes
         // above it, and a `>` more for one in the subtree)
         if (node.gap > 0 || (n > 1 && this.#trailingGapOf(node, n - 2) > 0)) open.push(inQuote ? (movedPrefix ?? '') + '>' : (movedPrefix ?? '').replace(/[ \t]+$/, ''));
@@ -1419,9 +1496,12 @@ class Done {
         // one the draft made: its own text after its marker, where a new line in it starts at its content column
         inQuote ||= node.kind === 'quote';
         if (node.kind === 'item') open.push(...this.#ownLines(node, null).map((l) => inside + l));
-        const place = this.lists.get(node.id);
-        const marker = place?.type === 'ordered' ? `${place.number ?? 1}${place.marker}` : (place?.marker ?? '-');
-        inside += node.kind === 'quote' ? '> ' : ' '.repeat(marker.length + 1);
+        // (its children at its text's column: its indentation, its marker and what follows it)
+        if (node.kind === 'quote') inside += '> ';
+        else {
+          const { indent, width } = this.#madeItem(node, null);
+          inside += indent + ' '.repeat(width);
+        }
         if (node.gap > 0 || (n > 1 && this.#trailingGapOf(node, n - 2) > 0)) open.push(inside.replace(/[ \t]+$/, ''));
       }
       const last: Child = node.children[n - 1]!;
@@ -1482,11 +1562,8 @@ class Done {
     if (!origin || node.kind !== node.source?.kind) {
       // a node the draft made, or of another kind (written whole, as a new one): an item after its marker, its list's
       if (node.kind !== 'item' || own) return written;
-      const place = this.lists.get(node.id);
-      const marker = place?.type === 'ordered' ? `${place.number ?? 1}${place.marker}` : (place?.marker ?? '-');
-      // (in a document indented with tabs, a new item first in an item a tab past its marker, as the writer puts it)
-      const indent = ' '.repeat(this.#tabChild(node, container));
-      return written.map((l, k) => (k === 0 ? `${indent}${marker} ${l}` : `${indent}${' '.repeat(marker.length + 1)}${l}`));
+      const { indent, marker, separator, width } = this.#madeItem(node, container);
+      return written.map((l, k) => (k === 0 ? `${indent}${marker}${separator}${l}` : `${indent}${' '.repeat(width)}${l}`));
     }
     // after the prefix its first line had in the container, the rest at its content column
     const tree = this.from.mdTree;
@@ -1517,6 +1594,25 @@ class Done {
     return written.map((l, k) => (k === 0 ? lead + l : indent + l));
   }
 
+  /**
+   * How an item the draft made is laid out in its container, as the writer writes it: its indentation
+   * (in a document indented with tabs, first in an item, a tab past its marker; lined up with an item
+   * a command named, at its column), its marker, what follows it (a space, or what a command asked, a
+   * pasted item's own), and the columns from its marker to its text.
+   */
+  #madeItem(node: Working, container: OutlineNode | null): { indent: string; marker: string; separator: string; width: number } {
+    const place = this.lists.get(node.id);
+    const marker = place?.type === 'ordered' ? `${place.number ?? 1}${place.marker}` : (place?.marker ?? '-');
+    const up = this.draft.lineUps.get(node.id);
+    const indent = ' '.repeat(up ? Math.max(0, up.block.attrs.markerColumn! - this.#containerColumn(node.parent)) : this.#tabChild(node, container));
+    const start = this.#containerColumn(node.parent) + indent.length;
+    // (a text starting below its marker: one column past the marker, whatever its line ends with)
+    const below = node.text instanceof ProseText && node.text.frame.some((p) => p.part === 'below');
+    const separator = (below ? this.draft.separators.get(node.id) : this.draft.separatorAt(node.id, start + marker.length)) ?? ' ';
+    const width = below ? marker.length + 1 : advanceColumns(marker + separator, 0, marker.length + separator.length, start) - start;
+    return { indent, marker, separator, width };
+  }
+
   /** The spaces before `origin`'s text that the writer keeps where it spells it: under four columns, none a held space. */
   #padding(origin: OutlineNode): string {
     const [p0, p1] = [this.from.posOf(origin, 0, -1), this.from.posOf(origin, 0, 1)];
@@ -1535,7 +1631,22 @@ class Done {
     if (node instanceof Working && node.text !== undefined) lines = this.#ownLines(node, container).slice(0, 2);
     else if (!origin) return [''];
     else lines = this.#readLines(container, origin.startLine, Math.min(origin.startLine + 1, Math.max(origin.startLine, origin.textLastLine)));
+    // (an item moved here from another container: at this one's column, as the writer sets it)
+    if (this.#movedIn(parent, node, origin)) {
+      const dedent = /^ */.exec(lines[0]!)![0].length;
+      lines = lines.map((l) => l.slice(Math.min(dedent, /^ */.exec(l)![0].length)));
+    }
     return this.#remarked(node, origin, lines);
+  }
+
+  /** Whether `node`, a read item with no item beside it, is in `parent` out of another container than the one it was in. */
+  #movedIn(parent: Working, node: Child, origin: OutlineNode | null): boolean {
+    if (node.kind !== 'item' || !origin || !parent.origin) return false;
+    // (beside an item, it lines up with that one's list instead)
+    const k = parent.children.indexOf(node);
+    if (parent.children[k - 1]?.kind === 'item' || parent.children[k + 1]?.kind === 'item') return false;
+    const now = parent.origin.kind === 'item' || parent.origin.kind === 'quote' || parent.origin.kind === 'root' ? parent.origin : containerIn(parent.origin);
+    return containerIn(origin).persistentNode !== now.persistentNode;
   }
 
   /** `lines`, the first `node`'s first line as read in its container, with the marker its list gives it now: renumbered, another bullet. */
@@ -1782,8 +1893,14 @@ class Done {
     const place = this.lists.get(w.id);
     const marker = this.draft.hints.get(w.id) ?? (place?.type === 'ordered' ? `${place.number ?? 1}${place.marker}` : (place?.marker ?? '-'));
     // (a read item moved keeps its marker and what follows it to its text)
+    const column = this.#markerColumn(w);
+    const startsBelow = w.text instanceof ProseText && w.text.frame.some((p) => p.part === 'below');
+    if (!(origin?.kind === 'item' && w.kind === origin.kind) && this.draft.separators.has(w.id) && !startsBelow) {
+      const lead = marker + this.draft.separatorAt(w.id, column + marker.length)!;
+      return advanceColumns(lead, 0, lead.length, column);
+    }
     const width = origin?.kind === 'item' && w.kind === origin.kind ? origin.block.attrs.contentColumn! - origin.block.attrs.markerColumn! : marker.length + 1 + (this.paddings.get(w.id) ?? 0);
-    return this.#markerColumn(w) + width;
+    return column + width;
   }
 
   /**
@@ -1794,6 +1911,8 @@ class Done {
   #markerColumn(w: Working): number {
     const origin = w.origin;
     if (origin?.kind === 'item' && !this.draft.placedIds.has(w.id) && origin.parent?.id === w.parent?.id) return origin.block.attrs.markerColumn!;
+    const up = this.draft.lineUps.get(w.id);
+    if (up) return up.block.attrs.markerColumn!;
     const parent = w.parent;
     if (parent) {
       const k = parent.children.indexOf(w);

@@ -395,6 +395,10 @@ export function pastPrefix(ctx: CommandContext): CommandContext {
  * quote. Its checkbox goes with the marker.
  */
 export function leaveList(ctx: CommandContext, node: OutlineNode): CommandOutcome {
+  // (first in an item with no text, the empty paragraph would be the item's first block: an item starts
+  // with one blank line at most and goes on, so it can't, `-⏎⏎  b` an empty item and a paragraph)
+  const parent = node.parent;
+  if (parent?.kind === 'item' && parent.children[0] === node && (ctx.doc.textOf(parent) as ProseText | null)?.empty) return reject('not-expressible', "an empty paragraph can't be the first block of an item with no text");
   const draft = ctx.draft().convert(node, 'paragraph').setText(node, new ProseText('paragraph', false, ''));
   const above = node.preceding;
   // (a quote with no text above it, nothing to set it off from)

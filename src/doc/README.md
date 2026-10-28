@@ -37,15 +37,60 @@ const at = doc.locate(pos);                 // in a text, a frame, a marker, a p
     `params.identity` and `params.nextId`: the ids the writer assigned, keyed by where each node it
     wrote starts, and the next free id.
 
-  - `OurusDoc.replace(text: string, marks: Mark[]): OurusDoc`<br>
+  - `OurusDoc.replace(text: string, marks: Mark[], { like? }): OurusDoc`<br>
     The snapshot with a new text in place of this one's (the file changed on disk, an undo), with
-    `marks` as its placeholders. Only the lines that differ are read again.
+    `marks` as its placeholders. Only the lines that differ are read again, their nodes new. With
+    `like`, a snapshot of this lineage with that text and those placeholders (an undo's: the one
+    before the step it takes back), its nodes, ids and all, instead, and this snapshot's folds and
+    zoom carried onto them by id: an undone move keeps the moved node's fold. A `like` of another
+    text is ignored.
 
   - `OurusDoc.withConfig(config: Partial<Config>): OurusDoc`<br>
     The same document under other options (a host's setting changed). An option that says only how
     commands write (`indentUnit`, `markup`, ...) changes on the same snapshot, its outline and ids
     shared; `quotes` and `listParent` have the outline read again from the same parse, ids carried as
-    an update carries them; `flavor` parses the text anew.
+    an update carries them; `flavor` parses the text anew, the folds and the zoom carried by line.
+
+  - `OurusDoc.folded: ReadonlySet<number>`, `OurusDoc.zoom: number | null`, `get OurusDoc.zoomFolded: ReadonlySet<number>`<br>
+    The view's state, not the text's (dev/21-zoom.md): the nodes whose children it hides, the node
+    it is zoomed into, and the folds in effect within the zoom (those of nodes strictly inside its
+    root; all of `folded` where not zoomed). An update carries them by id, a writer's edit as any: a
+    fold goes with its node, and opens where what it hides changed or it has nothing left to hide;
+    the zoom goes with its root, to its nearest ancestor left where the root went, and ends where a
+    node left its subtree.
+
+  - `OurusDoc.withFolded(ids: Iterable<number>): OurusDoc`, `OurusDoc.withZoom(id: number | null): OurusDoc`<br>
+    The same snapshot with other folds (an id with nothing to hide dropped), or another zoom (no fold
+    changed; throws for an id that is no node here, or the root).
+
+  - `OurusDoc.foldRange(node: OutlineNode)`, `OurusDoc.zoomRange()`: `{ from, to } | null`<br>
+    What folding a node hides: from the end of its text to the end of its subtree's last line, the
+    blank lines after it shown; null where it doesn't fold. What the zoom shows: its root's lines,
+    its descendants' and its trailing gap (`coverEnd(node)`, the last of them); null where not zoomed.
+
+  - `OurusDoc.rowOwner(line: number): OutlineNode | null`, `OurusDoc.isHidden(node: OutlineNode): boolean`<br>
+    The node a row's fold is, the outermost starting on the line (`nodeAtLine` gives the innermost);
+    whether the view hides a node, under a fold of `zoomFolded` or outside the zoom.
+
+  - `OurusDoc.withViewOf(view: OurusDoc, changes: ChangeSpec[]): OurusDoc`<br>
+    For another view of this lineage (a second pane): this snapshot, made by one view (a command's
+    `doc`, its `update`), with `view`'s folds and zoom carried onto it by id through `changes`, as an
+    update carries them. A second pane takes the snapshot rather than replaying the changes, whose
+    replay gives the nodes the writer moved new ids, their folds lost.
+
+  - `OurusDoc.zoomEscape(next: OurusDoc, removed?: boolean): string | null`<br>
+    Where `next`, a later snapshot of this lineage, leaves this one's zoom, or null where it keeps
+    it: the root keeps its id, parent and place; every node outside its subtree its id, parent, kind
+    and text, none made outside it, none inside leaving it; the text before the root's Markdown and
+    after its cover the same; the lists the root and its ancestors are items of the same items, and
+    as tight. `removed`: the root went whole, which only `deleteSubtree` and `cut` may do. The
+    commands check their results by it, and `leavesZoom` a host's edit.
+
+  An update carries the view by id: a fold stays where its node has something to hide and, but for
+  the zoom root's and its ancestors', where what it hides is the same nodes with the same texts (read
+  only for a fold a change comes near: what it hides, or right after it); else it opens. The zoom
+  stays where its root is there and none of its subtree left it; its root gone, it goes to the
+  nearest ancestor left; a node gone out of it, it ends.
 
   - `OurusDoc.text: string`, `OurusDoc.marks: MarkSet`, `OurusDoc.mdTree: MdTree`, `OurusDoc.config: Config`, `OurusDoc.nextId: number`<br>
     The text; its placeholders (only those that still hold something); its parse; the config; the

@@ -12,7 +12,7 @@
 // - The model follows the editor as it types: what is read is what Dynalist holds.
 
 import type { Page } from 'playwright-core';
-import type { Driver, Drop } from '../lib/driver.ts';
+import { perPage, type Driver, type Drop } from '../lib/driver.ts';
 import { italicsAsMarkdown, type Outline } from '../lib/block.ts';
 import { gesture } from '../lib/drag.ts';
 
@@ -78,6 +78,9 @@ function fromItem(it: Item, number: number | null): { text: string; prefix: numb
   return { text: prefix + content + (it.note ? '\n' + it.note : ''), prefix: prefix.length, ...(literal && { cut: literal[0].length }) };
 }
 
+/** A worker's: whether its test was loaded with a view (folds, a zoom), which is read back then alone. */
+const viewed = perPage(() => ({ on: false }));
+
 export const driver: Driver = {
   shortId: 'DL',
   longId: 'dynalist',
@@ -86,7 +89,16 @@ export const driver: Driver = {
   model: 'block',
   // a block's text holds a blank line, its paragraphs apart
   paragraphsInBlock: true,
+  // an item collapsed (`view.set_node_collapse`, read as `is_collapsed`), and a zoom into one
+  // (`view.zoom_node`, read as `ui.current_root`), the document's root, zoomed into for every test,
+  // standing for none
+  folds: true,
+  zooms: true,
   keys: {
+    // `doc-collapse` toggles (no key folds or unfolds alone); `doc-zoom-in`, `doc-zoom-out`
+    toggleFold: 'Control+Period',
+    zoomIn: 'Control+BracketRight',
+    zoomOut: 'Control+BracketLeft',
     enter: 'Enter',
     shiftEnter: 'Control+Shift+Enter',
     indent: 'Tab',
@@ -116,14 +128,14 @@ export const driver: Driver = {
   refuses: ['markup-fence', 'enter-in-fence'],
   ordered: true,
   // a drop leaves the dropped item selected as an item, the caret gone (README.md, "Drag and drop")
-  noCaretAfter: ['move'],
+  noCaretAfter: ['moveSubtree'],
   // its `load` selects items as items, as `read` reports them
   selectsBlocks: true,
   // a typed fence is left open (Backtick2, Backtick12, Backtick15)
   behaves: {
-    // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+    // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25)
     quotes: 'atom',
-    // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25, ../../dev/19-quotes.md, Part 1)
+    // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25)
     enterInQuote: 'split',
     // Enter mid-heading: the new block above takes the text before the caret, the heading (an
     // attribute) staying with the rest (TO-E13-E16, TO-E14-E20)
@@ -197,7 +209,7 @@ export const driver: Driver = {
     const numbers = new Set([...siblings(o)].filter(([, list]) => items[list[0]!]!.numbered).map(([parent]) => parent));
     const lists = items.map((_, i) => numbers.has(i));
     await page.evaluate(
-      async ({ items, lists, topNumbered, sel }) => {
+      async ({ items, lists, topNumbered, sel, view }) => {
         const ad = (window as any).DYNALIST.app.app_document;
         // a popup the last test opened (`!` at a word's start opens the date picker) is a scope over
         // the editor's, and outlives the test: under it, the paste handler leaves a paste to the browser
@@ -242,6 +254,12 @@ export const driver: Driver = {
         for (let i = 0; i < 300 && !rendered(); i++) await new Promise((r) => setTimeout(r, 10));
         if (!rendered()) throw new Error("the test's items didn't render");
         await (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 });
+        // its view, every item on screen: the folded ones collapsed, then the zoom root zoomed into
+        if (view) {
+          for (const i of view.folded) ad.view.set_node_collapse(made[i], true);
+          if (view.zoom !== null) ad.view.zoom_node(made[view.zoom]);
+          await (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 30, timeout: 3000 });
+        }
         if (!sel) return;
         // the caret, from anchor to head in the item's content
         ad.ui.set_selection(made[sel.block], sel.anchor, sel.head);
@@ -249,8 +267,9 @@ export const driver: Driver = {
         for (let i = 0; i < 100 && document.activeElement !== el; i++) await new Promise((r) => setTimeout(r, 10));
         if (document.activeElement !== el) throw new Error(`the item didn't take the caret (focus: ${(document.activeElement as HTMLElement | null)?.className})`);
       },
-      { items, lists, topNumbered: numbers.has(-1), sel },
+      { items, lists, topNumbered: numbers.has(-1), sel, view: o.view ?? null },
     );
+    viewed(page).on = !!o.view;
     if (!selected) return;
     // past the first item's text, Shift+Down selects it as an item, then each next one
     const last = selected[selected.length - 1]!;
@@ -262,10 +281,10 @@ export const driver: Driver = {
   },
 
   async read(page: Page) {
-    const raw = await page.evaluate(() => {
+    const raw = await page.evaluate((viewed) => {
       const ad = (window as any).DYNALIST.app.app_document;
       const root = ad.document.get_node_collection().get_root();
-      const flat: { depth: number; content: string; note: string; checkbox: boolean; checked: boolean; heading: number; numbered: boolean; number: number | null; id: string }[] = [];
+      const flat: { depth: number; content: string; note: string; checkbox: boolean; checked: boolean; heading: number; numbered: boolean; number: number | null; id: string; collapsed: boolean }[] = [];
       const walk = (node: any, depth: number) => {
         // a parent's list style numbers all its children, from 1 (a CSS counter per parent)
         const numbered = node.get_meta_object().is_numbered_list();
@@ -273,7 +292,7 @@ export const driver: Driver = {
         node.children.each((c: any) => {
           const m = c.get_meta_object();
           n++;
-          flat.push({ depth, content: m.get_content(), note: m.get_note(), checkbox: m.has_checkbox(), checked: m.is_checked(), heading: m.get_heading() || 0, numbered, number: numbered ? n : null, id: c.get_id() });
+          flat.push({ depth, content: m.get_content(), note: m.get_note(), checkbox: m.has_checkbox(), checked: m.is_checked(), heading: m.get_heading() || 0, numbered, number: numbered ? n : null, id: c.get_id(), collapsed: c.children.length() > 0 && c.is_collapsed() });
           walk(c, depth + 1);
         });
       };
@@ -298,8 +317,11 @@ export const driver: Driver = {
       }
       // items selected as items (Shift+Up or Down past an item's edge)
       const selected = !editing && s?.get_nodes ? s.get_nodes().map(index).filter((i: number) => i >= 0) : [];
-      return { flat, sel, selected };
-    });
+      // the view: the collapsed items, and the item zoomed into, if one of the test's (the root: none)
+      const zoom = index(ad.ui.current_root.is_root() ? null : ad.ui.current_root);
+      const view = viewed ? { folded: flat.flatMap((f, k) => (f.collapsed ? [k] : [])), zoom: zoom >= 0 ? zoom : null } : undefined;
+      return { flat, sel, selected, view };
+    }, viewed(page).on);
     const texts = raw.flat.map((f) => fromItem(f, f.number));
     const blocks = raw.flat.map((f, i) => ({ depth: f.depth, text: texts[i]!.text }));
     let sel: Outline['sel'] = null;
@@ -311,10 +333,10 @@ export const driver: Driver = {
       sel = { block: raw.sel.block, anchor: at(raw.sel.anchor), head: at(raw.sel.head) };
     }
     // (its italic `__x__` as Markdown's)
-    return italicsAsMarkdown({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) });
+    return { ...italicsAsMarkdown({ blocks, sel, ...(raw.selected.length && { selected: raw.selected }) }), ...(raw.view && { view: raw.view }) };
   },
 
-  drops: ['move'],
+  drops: ['moveSubtree'],
   drop,
 };
 

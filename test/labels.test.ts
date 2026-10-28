@@ -37,10 +37,10 @@ test('one label names the innermost node starting on its line, a second the one 
   assert.throws(() => one('> - a┃①', 'shiftEnter', '> - a②\n>   ┃'), /labels/);
 });
 
-test("an undo is the host's: the text back, its nodes' ids as an update carries them, so a line it rewrites is a new node", () => {
+test("an undo is the host's: the text back, its nodes' ids as an update carries them, so a line it writes over from its start is the same node", () => {
   const steps = (undone: string): string[] => ['## X1', '', '```yaml', 'tags: rare', '```', '', '```buffer', '- a┃b①', '```', '', '> enter', '', '```buffer', '- a①', '- ┃b②', '```', '', '> undo', '', '```buffer', undone, '```', ''];
-  const [t] = readSpec('x.md', steps('- a┃b③').join('\n'));
+  const [t] = readSpec('x.md', steps('- a┃b①').join('\n'));
   run(t!, 'gfm');
-  const [kept] = readSpec('x.md', steps('- a┃b①').join('\n'));
-  assert.throws(() => run(kept!, 'gfm'), /labels/, "the split's undo writes `- ab` again: no longer node ①");
+  const [made] = readSpec('x.md', steps('- a┃b③').join('\n'));
+  assert.throws(() => run(made!, 'gfm'), /labels/, "the split's undo writes `- a` over with `- ab`: still node ①, not a new one");
 });

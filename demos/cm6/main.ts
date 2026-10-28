@@ -3,8 +3,8 @@
 // The ourus snapshot lives in a StateField. Structural keys run ourus commands and dispatch
 // the changes they return, with the planned snapshot attached so it isn't parsed again.
 // Every other edit (typing, paste, undo) goes through OurusDoc.update, with the caret, so an edit that
-// empties a node keeps it as a placeholder. The history keeps each step's placeholders, so undo
-// and redo bring them back.
+// empties a node keeps it as a placeholder. The history keeps each step's placeholders, and the
+// snapshot it left, so undo and redo bring them back, and its nodes: an undone move keeps its fold.
 //
 // The header picks the flavor ourus reads the text in, and the renderer of the middle pane: ourus's
 // own (from the snapshot's parse) or a popular external one, set up for the flavor as far as it goes.
@@ -14,7 +14,7 @@
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { cursorLineDown, cursorLineUp, invertedEffects, redo, selectLineDown, selectLineUp, undo } from '@codemirror/commands';
-import { Annotation, Compartment, EditorSelection, EditorState, Prec, RangeSetBuilder, StateEffect, StateField, Transaction } from '@codemirror/state';
+import { Annotation, Compartment, EditorSelection, EditorState, Prec, RangeSetBuilder, StateEffect, StateField, Transaction, type StateEffectType } from '@codemirror/state';
 import { Decoration, EditorView, keymap, ViewPlugin, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
 import { tags } from '@lezer/highlight';
@@ -40,6 +40,7 @@ import { unified, type PluggableList } from 'unified';
 import './hljs.css';
 import 'katex/dist/katex.min.css';
 import { Mirror } from './mirror.ts';
+import { outlineView } from './view.ts';
 import { ProseText, OurusDoc, createPlaceholder, executeCommand, mapPos, settlePlaceholders, type Config, type ChangeSpec, type Command, type OutlineNode, type CommandResult } from '../../src/index.ts';
 
 type Flavor = Config['flavor'];
@@ -53,30 +54,44 @@ const planned = Annotation.define<OurusDoc>();
 const setDoc = StateEffect.define<OurusDoc>();
 /** The placeholders a step of history returns to (positions in the text after the step), mapped along later edits. */
 const setPlaceholders = StateEffect.define<readonly number[]>({ map: (value, mapping) => value.map((pos) => mapping.mapPos(pos, 1)) });
+/** The snapshot a step of history returns to, whose nodes (ids and all) it takes back where its text is the one returned to. */
+const returnTo = StateEffect.define<OurusDoc>();
 
 /** The placeholders at `points` of `text`. */
 const marksAt = (text: string, points: readonly number[]) => ({ setMarks: points.map((p) => createPlaceholder(p)) });
+
+/** The value of a transaction's last effect of `type`. */
+function lastOf<T>(tr: Transaction, type: StateEffectType<T>): T | undefined {
+  let value: T | undefined;
+  for (const e of tr.effects) if (e.is(type)) value = e.value;
+  return value;
+}
 
 const ourusDoc = StateField.define<OurusDoc>({
   create: (state) => OurusDoc.parse(state.doc.toString(), { config: { flavor: initialFlavor } }),
   update(doc, tr) {
     for (const e of tr.effects) if (e.is(setDoc)) return e.value;
-    const restored = tr.effects.find((e) => e.is(setPlaceholders))?.value as readonly number[] | undefined;
+    // (a step of history that grouped several edits has each one's effects, the latest edit's first:
+    // the state it returns to is the earliest's, the last)
+    const restored = lastOf(tr, setPlaceholders);
     if (!tr.docChanged) return restored ? doc.update([], marksAt(doc.text, restored)) : doc;
     const next = tr.annotation(planned);
     // another extension may have added changes to the transaction: then parse what committed
     if (!restored && next && next.text.length === tr.newDoc.length && next.text === tr.newDoc.toString()) return next;
     const changes: ChangeSpec[] = [];
     tr.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => changes.push({ from: fromA, to: toA, insert: inserted.toString() }));
-    // undo and redo restore the placeholders of the state they return to
+    // undo and redo restore the placeholders of the state they return to, and its nodes: an undone
+    // move's node is the one it was, its fold kept (`replace`'s `like`)
+    const like = lastOf(tr, returnTo);
+    if (restored && like && like.text === tr.newDoc.toString()) return doc.replace(like.text, like.marks.marks, { like });
     if (restored) return doc.update(changes, marksAt(tr.newDoc.toString(), restored));
     const caret = tr.newSelection.main;
     return doc.update(changes, caret.empty ? { caret: caret.head } : {});
   },
 });
 
-/** Each step of history keeps the placeholders it replaced, so undoing it brings them back. */
-const placeholderHistory = invertedEffects.of((tr) => (tr.docChanged ? [setPlaceholders.of(tr.startState.field(ourusDoc).marks.points())] : []));
+/** Each step of history keeps the placeholders it replaced, and the snapshot it left, so undoing it brings them back. */
+const placeholderHistory = invertedEffects.of((tr) => (tr.docChanged ? [setPlaceholders.of(tr.startState.field(ourusDoc).marks.points()), returnTo.of(tr.startState.field(ourusDoc))] : []));
 
 let onResult: (type: Command['type'], result: CommandResult) => void = () => {};
 
@@ -574,6 +589,7 @@ function main(): void {
         basicSetup,
         markdown({ base: markdownLanguage }),
         ourusDoc,
+        outlineView({ field: ourusDoc, setDoc, planned }),
         placeholderHistory,
         currentNode,
         theme.of(themeFor(darkScheme.matches)),
@@ -671,8 +687,11 @@ function main(): void {
   (window as unknown as { ourusDemo: unknown }).ourusDemo = {
     view,
     text: () => view.state.doc.toString(),
-    setText: (text: string, caret = 0) =>
-      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text }, selection: { anchor: caret } }),
+    // a new document: no folds, no zoom, as a reload has
+    setText: (text: string, caret = 0) => {
+      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text }, selection: { anchor: caret } });
+      view.dispatch({ effects: setDoc.of(view.state.field(ourusDoc).withFolded([]).withZoom(null)) });
+    },
     doc: () => view.state.field(ourusDoc),
   };
   view.focus();

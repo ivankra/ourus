@@ -22,16 +22,22 @@ Tana's own, from its shortcut table (`{"move up": {hotkey: {linuxAndWindows, mac
 | `outdent` | Shift+Tab |
 | `moveSubtreeUp` | Shift+Alt+Up ("move up") |
 | `moveSubtreeDown` | Shift+Alt+Down ("move down") |
-| `move ②` | the mouse: the node's bullet (`.bulletSide`) dragged, react-dnd's HTML5 backend (`drop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
+| `moveSubtree` | mouse: the node's bullet (`.bulletSide`) dragged, react-dnd's HTML5 backend (`drop` in [`driver.ts`](driver.ts), [`../lib/drag.ts`](../lib/drag.ts)) |
 | `deleteContentBackward` | Backspace |
 | `deleteContentForward` | Delete |
 | `deleteSoftLineBackward` | Shift+Home, Backspace |
 | `deleteSubtree` | Ctrl+Shift+Backspace ("delete item") |
 | `duplicateSubtree` | Shift+Alt+D ("duplicate"); of nodes selected, the originals stay selected, where ourus selects the copies (`duplicate-subtree.md › DuplicateSubtree3`: `caret`) |
-| `pasteStructured` | Ctrl+V |
+| `paste` | Ctrl+V |
 | `pastePlain` | Ctrl+Shift+V ("cleanpaste") |
 | `undo` | Ctrl+Z |
 | `redo` | Ctrl+Shift+Z |
+| `fold` | Ctrl+Shift+Space: the node's children folded (the panel's, by its path) |
+| `unfold` | Ctrl+Space |
+| `toggleFold` | *missing* |
+| `zoomIn` | Alt+Right: the node as the panel, its name the panel's title |
+| `zoomOut` | Alt+Left: its parent as the panel, or the test's node (none, to a case) |
+| `clearZoom` | *missing*: Alt+Left a level at a time |
 
 Other shortcuts:
 
@@ -43,9 +49,7 @@ Other shortcuts:
 | create field, add reference, add tag | `>`, `@`, `#` | |
 | code | `` ` `` | inline code |
 | bold, italic, underline, highlight | Ctrl+B, Ctrl+I, Ctrl+U, Ctrl+H | |
-| expand, collapse | Ctrl+Space, Ctrl+Shift+Space | a node's children shown or folded |
 | expand all, collapse all | Ctrl+Shift+PageDown, Ctrl+Shift+PageUp | (Ctrl+Down and Ctrl+Up too, in a panel) |
-| zoom in, zoom out | Alt+Right, Alt+Left | a node as the panel |
 | select all, toggle select | Ctrl+A, Ctrl+Shift+S | |
 | clone, paste options | Ctrl+Shift+C, Ctrl+Alt+V | paste options: the classifiers (Paste, below), to choose from |
 | delete | Ctrl+D | |
@@ -221,7 +225,7 @@ Tana's code:
 - **Joins at a section** are of its name (`headingEditing: block`, declared): Backspace at a section's
   start joins its name into the node above, and Delete before one takes its name, the section gone
   (`backspace.md › Backspace18f`, `delete.md › Delete13b`); ourus's default takes the `# ` off first.
-- **A list pasted into a node with children** goes after them (`pasteStructuredOnParent: after`,
+- **A list pasted into a node with children** goes after them (`pasteOnParent: after`,
   declared; at the end of the parent's children, as above).
 - **Joins into code**: Backspace at the start of the node after a code block joins its text into the
   code (`backspace.md › Backspace16`); Delete before one, and Delete at the code's last empty line, do
@@ -271,7 +275,7 @@ in ourus: `PasteOld2`, `PasteOld16`, `PasteOld18`, `PasteOld60`, `Gap13`, the `#
 not Tana's.
 
 The camps were played with `--ignore-options` (each option-skipped case against its own value): Tana
-agrees with every `headingEditing: block` and `pasteStructuredOnParent: after` case (3 and 4), now
+agrees with every `headingEditing: block` and `pasteOnParent: after` case (3 and 4), now
 declared, and with none for the values it was declared against (`enterMidItem: sibling`, `outdent:
 direct`); the rest it agrees with in part or not at all, and those skips stand.
 
@@ -298,6 +302,33 @@ The harness's own, found in the first run and fixed:
   character went with it. The runner now types at a typist's pace (`PACE`, 100 ms between keys, in
   `run.ts`), for every app.
 
+## Folds and the zoom, measured
+
+[`fold.md`](../../spec/fold.md) and [`zoom.md`](../../spec/zoom.md), measured 2026-10-28. A node's
+fold is the panel's, by its path, as ourus's is the view's: loaded by `panel.collapse(path)` once
+every node is on screen, read as `isExpanded(path)` of a node with children (a path the panel takes
+as its nodes, from the panel's root). A zoom is a node as the panel's root (`setRootNode`, read as
+`rootNode`), the paths then from it, its descendants with children expanded there; the test's own
+node stands for none. What is compared is what the reader sees: the folds in effect, and the zoom
+root.
+
+- **Around a collapsed node it agrees**: Enter at its end and on an empty one with children (`Fold1`,
+  `Fold5`), Backspace after it (`Fold3`), a move (`Fold4`), an indent under it (`Fold6`), unfold
+  (`Fold12`).
+- **Enter mid-text in a collapsed node** (split as `enterMidItem: child`) puts the rest after its
+  children, the node still collapsed (`Fold2`, `Fold2b`), as Logseq and as ourus under `child`.
+- **Delete at a collapsed node's end does nothing** (`Fold7`), as ourus, which refuses it (`folded`).
+- **Backspace right after a collapsed node joins into its text**, not its hidden last child's, still
+  collapsed (`Fold15`), as ourus.
+- **Zoomed, the root is the panel's title**: zoomed in, the caret goes to its start (`Zoom6`:
+  `caret`); Enter mid-text in it does nothing (`Zoom10`), where ourus splits it, the rest its first
+  child. Enter at its end makes its first child (`Zoom1`), Backspace at its start and an outdent out
+  of it do nothing (`Zoom2`, `Zoom11`), as ourus.
+- **Zoomed out, the expansion is the paths'**: back at the test's node, a node expanded before the
+  zoom shows collapsed (`Zoom7`: `a` and `b`, after two zoom-outs from `c`), and the root deleted
+  ends the zoom, its parent shown collapsed (`Zoom9`); ourus keeps the folds as they were and zooms
+  out to the parent.
+
 ## Drag and drop
 
 A node's bullet is a react-dnd drag source (its HTML5 backend, which Playwright's mouse drives). A
@@ -307,13 +338,13 @@ its parent; no place is inside a node. The driver aims a quarter of a row into t
 element, in its bullet's column, checked to be that node's own point (a child's chevron hangs left of
 it).
 
-- **Every drop it can make lands where ourus's does** (Drag1, Drag2, Drag13, Scenario8 agree, stable
+- **Every drop it can make lands where ourus's does** (MoveSubtree1, MoveSubtree2, MoveSubtree12, Scenario8 agree, stable
   over three runs).
-- **No place inside a node with no children**: a drop into a leaf (Drag3, Drag8, Scenario8c) has no
+- **No place inside a node with no children**: a drop into a leaf (MoveSubtree3, MoveSubtree9, Scenario8c) has no
   gesture here, and skips as it plays. A node is nested by Tab, not by a drop.
 - **No caret after a drop**: Scenario8b, which types after it, skips as it plays.
 - **A press on a selected node drags the selection; with nodes selected, a press on another drags
-  nothing**: Drag4, Drag20 agree; Drag5, Drag5b disagree (`c` pressed with `a`, `b` selected: nothing
+  nothing**: MoveSubtree4, MoveSubtree19 agree; MoveSubtree5, MoveSubtree6 disagree (`c` pressed with `a`, `b` selected: nothing
   moves; ourus moves `c` alone). Measured by hand too: the same gesture with no selection moves `c`.
   The driver selects nodes as a user does, Escape then Shift+Down; Tana keeps the editor's focus on the
   node the selection's head is on, drawing no caret, so `read` reports none while nodes are selected,

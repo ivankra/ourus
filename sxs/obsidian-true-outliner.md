@@ -5,7 +5,7 @@ version: "1.14.5, true-outliner 0.14.4"
 url: "app://obsidian.md/"
 model: "text"
 command: "node sxs/run.ts obsidian-true-outliner"
-elapsed_s: 557
+elapsed_s: 567
 workers: 2
 ---
 
@@ -15,29 +15,32 @@ Summary:
 
 | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- |
-| **357 (30%)** | **[73](#caret-73) (6.1%)** | **[28](#whitespace-28) (2.3%)** | **[446](#disagree-446) (37%)** | **0 (0%)** | **[287](#skipped-287) (24%)** | **1194** |
+| **368 (30%)** | **[76](#caret-76) (6.2%)** | **[28](#whitespace-28) (2.3%)** | **[458](#disagree-458) (37%)** | **0 (0%)** | **[295](#skipped-295) (24%)** | **1228** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| [backspace.md](../spec/backspace.md) | 30 | 1 | 1 | 37 |  | 16 | **85** |
+| [backspace.md](../spec/backspace.md) | 30 | 1 | 1 | 37 |  | 17 | **86** |
 | [backtick.md](../spec/backtick.md) | 5 |  |  | 19 |  | 9 | **33** |
 | [copy.md](../spec/copy.md) | 3 |  |  | 3 |  | 7 | **13** |
 | [cursor.md](../spec/cursor.md) | 23 | 9 |  |  |  | 4 | **36** |
 | [delete-subtree.md](../spec/delete-subtree.md) |  |  |  |  |  | 13 | **13** |
 | [delete.md](../spec/delete.md) | 15 |  | 1 | 19 |  | 21 | **56** |
-| [drag.md](../spec/drag.md) |  | 6 |  | 8 |  | 23 | **37** |
+| [drag.md](../spec/drag.md) |  |  |  |  |  | 8 | **8** |
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 10 | **10** |
 | [enter.md](../spec/enter.md) | 25 |  | 1 | 39 |  | 33 | **98** |
 | [fences.md](../spec/fences.md) | 18 | 3 | 1 | 43 |  | 5 | **70** |
+| [fold.md](../spec/fold.md) | 4 | 3 |  | 9 |  | 3 | **19** |
 | [gaps.md](../spec/gaps.md) |  | 11 | 1 | 6 |  | 1 | **19** |
 | [indent.md](../spec/indent.md) | 23 | 1 | 3 | 12 |  | 11 | **50** |
 | [lists.md](../spec/lists.md) |  | 1 |  | 3 |  | 12 | **16** |
 | [move-subtree-down.md](../spec/move-subtree-down.md) | 6 | 12 | 1 | 20 |  | 1 | **40** |
 | [move-subtree-up.md](../spec/move-subtree-up.md) | 5 | 15 | 1 | 17 |  | 5 | **43** |
+| [move-subtree.md](../spec/move-subtree.md) |  | 6 |  | 8 |  | 10 | **24** |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 25 | 4 | 4 | 28 |  | 6 | **67** |
 | [outdent.md](../spec/outdent.md) | 12 | 1 |  | 15 |  | 10 | **38** |
+| [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |
 | [paste-conv.md](../spec/paste-conv.md) | 4 |  |  | 2 |  |  | **6** |
 | [paste-html.md](../spec/paste-html.md) | 3 | 1 | 3 | 12 |  |  | **19** |
 | [paste-list-form.md](../spec/paste-list-form.md) | 4 |  |  | 2 |  |  | **6** |
@@ -54,9 +57,10 @@ Per-file:
 | [typing.md](../spec/typing.md) | 3 |  |  |  |  |  | **3** |
 | [undo.md](../spec/undo.md) | 2 |  |  | 3 |  |  | **5** |
 | [z-open.md](../spec/z-open.md) |  |  |  |  |  | 1 | **1** |
-| **total** | **357 (30%)** | **73 (6.1%)** | **28 (2.3%)** | **446 (37%)** | **0 (0%)** | **290 (24%)** | **1194** |
+| [zoom.md](../spec/zoom.md) | 7 |  |  | 3 |  | 4 | **14** |
+| **total** | **368 (30%)** | **76 (6.2%)** | **28 (2.3%)** | **458 (37%)** | **0 (0%)** | **298 (24%)** | **1228** |
 
-## Disagree (446)
+## Disagree (458)
 
 ### [Backspace4](../spec/backspace.md#backspace4)
 
@@ -3036,301 +3040,6 @@ Title┃text
 
 ```buffer
 - a┃b
-```
-
-</td></tr>
-</table>
-
-### [Drag1](../spec/drag.md#drag1)
-
-> move ③
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one
-  - two
-- three┃
-```
-
-</td><td>
-
-```buffer
-- one
-  - two
-- three┃
-```
-
-</td><td>
-
-```buffer
-- three┃
-- one
-  - two
-```
-
-</td></tr>
-</table>
-
-### [Drag8](../spec/drag.md#drag8)
-
-> move ②
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-
-para┃
-```
-
-</td><td>
-
-```buffer
-- a
-  - para
-```
-
-</td><td>
-
-```buffer
-- a
-
-  - para┃
-```
-
-</td></tr>
-</table>
-
-### [Drag15](../spec/drag.md#drag15)
-
-> move ②
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-# A
-## B
-# C
-### D┃
-#### E
-```
-
-</td><td>
-
-```buffer
-# A
-## B
-
-## D
-### E
-
-# C
-```
-
-</td><td>
-
-```buffer
-# A
-## B
-## D┃
-### E
-# C
-```
-
-</td></tr>
-</table>
-
-### [Drag16](../spec/drag.md#drag16)
-
-> move ②
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-# A
-x
-# C
-##### D┃
-###### E
-```
-
-</td><td>
-
-```buffer
-# A
-x
-
-## D
-### E
-
-# C
-```
-
-</td><td>
-
-```buffer
-# A
-x
-## D┃
-### E
-# C
-```
-
-</td></tr>
-</table>
-
-### [Drag30](../spec/drag.md#drag30)
-
-> move ①
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x┃
-
-1. a
-2. b
-```
-
-</td><td>
-
-```buffer
-1. ┃a
-
-- x
-2. b
-```
-
-</td><td>
-
-```buffer
-1. a
-- x┃
-
-2. b
-```
-
-</td></tr>
-</table>
-
-### [Drag31](../spec/drag.md#drag31)
-
-> move ②
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````buffer
-- a
-  ```
-  x┃
-  ```
-- b
-````
-
-</td><td>
-
-````buffer
-- a
-- b
-
-```
-x
-```
-````
-
-</td><td>
-
-````buffer
-- a
-- b
-```
-x┃
-```
-````
-
-</td></tr>
-</table>
-
-### [Drag32](../spec/drag.md#drag32)
-
-> move ②
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-  - a1┃
-- b
-```
-
-</td><td>
-
-```buffer
-- a
-  - a1
-- b
-```
-
-</td><td>
-
-```buffer
-- a
-- b
-  - a1┃
-```
-
-</td></tr>
-</table>
-
-### [Drag33](../spec/drag.md#drag33)
-
-> move ①
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃
-
-- b
-
-- c
-```
-
-</td><td>
-
-```buffer
-- a
-
-- b
-
-- c
-```
-
-</td><td>
-
-```buffer
-- b
-
-- c
-
-- a┃
 ```
 
 </td></tr>
@@ -7199,6 +6908,353 @@ Original:
 </td></tr>
 </table>
 
+### [Fold2](../spec/fold.md#fold2)
+
+> enter
+
+Adapted: under enterMidItem: child
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃b
+  - c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - ┃b
+  - c
+
+⟦folded none; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - c
+- ┃b
+
+⟦folded 1; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃b①
+  - c
+```
+
+</td><td>
+
+```buffer
+- a
+  - c
+- ┃b
+```
+
+</td></tr>
+</table>
+
+### [Fold5](../spec/fold.md#fold5)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+  - b
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- ┃
+  - b
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- 
+  - b
+- ┃
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold6](../spec/fold.md#fold6)
+
+> indent
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b
+- c┃
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+  - c┃
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+  - c┃
+
+⟦folded none; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold7](../spec/fold.md#fold7)
+
+> deleteContentForward
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - b
+  - c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+┃
+⟦folded none; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a┃
+  - b
+  - c
+
+⟦folded 1; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold13](../spec/fold.md#fold13)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# H┃
+
+p
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+# H
+
+┃
+
+p
+
+⟦folded none; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+# H
+┃
+
+p
+
+⟦folded none; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold14](../spec/fold.md#fold14)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - b
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a- x
+┃
+  - b
+- c
+
+⟦folded 2; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+- x┃
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold15](../spec/fold.md#fold15)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b
+- ┃c
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - b┃c
+
+⟦folded none; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a┃c
+  - b
+
+⟦folded 1; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold15b](../spec/fold.md#fold15b)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b
+- ┃c
+  - d
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - b┃c
+    - d
+
+⟦folded none; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a┃c
+  - b
+  - d
+
+⟦folded none; zoom none⟧
+```
+
+</td></tr>
+</table>
+
 ### [Gap4](../spec/gaps.md#gap4)
 
 > moveSubtreeUp
@@ -9803,6 +9859,301 @@ para
 ┃code
 
 [a]: /u
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree9](../spec/move-subtree.md#movesubtree9)
+
+> moveSubtree ②
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+
+para┃
+```
+
+</td><td>
+
+```buffer
+- a
+  - para
+```
+
+</td><td>
+
+```buffer
+- a
+
+  - para┃
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree12](../spec/move-subtree.md#movesubtree12)
+
+> moveSubtree ②
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃
+
+p
+```
+
+</td><td>
+
+```buffer
+- x
+
+p
+```
+
+</td><td>
+
+```buffer
+p
+
+x┃
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree14](../spec/move-subtree.md#movesubtree14)
+
+> moveSubtree ②
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# A
+## B
+# C
+### D┃
+#### E
+```
+
+</td><td>
+
+```buffer
+# A
+## B
+
+## D
+### E
+
+# C
+```
+
+</td><td>
+
+```buffer
+# A
+## B
+## D┃
+### E
+# C
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree15](../spec/move-subtree.md#movesubtree15)
+
+> moveSubtree ②
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# A
+x
+# C
+##### D┃
+###### E
+```
+
+</td><td>
+
+```buffer
+# A
+x
+
+## D
+### E
+
+# C
+```
+
+</td><td>
+
+```buffer
+# A
+x
+## D┃
+### E
+# C
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree21](../spec/move-subtree.md#movesubtree21)
+
+> moveSubtree ①
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃
+
+1. a
+2. b
+```
+
+</td><td>
+
+```buffer
+«1. a»
+
+- x
+2. b
+```
+
+</td><td>
+
+```buffer
+1. a
+- x┃
+
+2. b
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree22](../spec/move-subtree.md#movesubtree22)
+
+> moveSubtree ②
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a
+  ```
+  x┃
+  ```
+- b
+````
+
+</td><td>
+
+````buffer
+- a
+- b
+
+```
+x
+```
+````
+
+</td><td>
+
+````buffer
+- a
+- b
+```
+x┃
+```
+````
+
+</td></tr>
+</table>
+
+### [MoveSubtree23](../spec/move-subtree.md#movesubtree23)
+
+> moveSubtree ②
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - a1┃
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+  - a1
+- b
+```
+
+</td><td>
+
+```buffer
+- a
+- b
+  - a1┃
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree24](../spec/move-subtree.md#movesubtree24)
+
+> moveSubtree ①
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+
+- b
+
+- c
+```
+
+</td><td>
+
+```buffer
+- a
+
+- b
+
+- c
+```
+
+</td><td>
+
+```buffer
+- b
+
+- c
+
+- a┃
 ```
 
 </td></tr>
@@ -18737,7 +19088,7 @@ Done.┃
 </td></tr>
 </table>
 
-> move ③
+> moveSubtree ③
 
 <table>
 <tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
@@ -18746,10 +19097,10 @@ Done.┃
 ```buffer
 - Home
   - plants
-- Inbox
+- Inbox«
 - Work
   - email
-┃
+»
 ```
 
 </td><td>
@@ -18774,10 +19125,7 @@ Done.┃
 ```buffer
 - Home
   - plants
-- Inbox
-- Work
-  - email
-s┃
+- s┃
 ```
 
 </td><td>
@@ -20927,6 +21275,124 @@ Original:
 </td></tr>
 </table>
 
+### [Zoom1](../spec/zoom.md#zoom1)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- b┃
+- c
+
+⟦folded none; zoom 2⟧
+```
+
+</td><td>
+
+```buffer
+- a
+- b┃
+- c
+
+⟦folded none; zoom 2⟧
+```
+
+</td><td>
+
+```buffer
+- a
+- b
+  - ┃
+- c
+
+⟦folded none; zoom 2⟧
+```
+
+</td></tr>
+</table>
+
+### [Zoom10](../spec/zoom.md#zoom10)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃b
+- c
+
+⟦folded none; zoom 1⟧
+```
+
+</td><td>
+
+```buffer
+- a┃b
+- c
+
+⟦folded none; zoom 1⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - ┃b
+- c
+
+⟦folded none; zoom 1⟧
+```
+
+</td></tr>
+</table>
+
+### [Zoom12](../spec/zoom.md#zoom12)
+
+> deleteContentForward
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b
+┃
+- c
+
+⟦folded none; zoom 1⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+┃- c
+
+⟦folded none; zoom 1⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+
+- c
+
+⟦folded none; zoom 1⟧
+```
+
+</td></tr>
+</table>
+
 ## Whitespace (28)
 
 ### [Backspace17d](../spec/backspace.md#backspace17d)
@@ -22088,7 +22554,7 @@ p0
 </td></tr>
 </table>
 
-## Caret (73)
+## Caret (76)
 
 ### [SoftBackspace8](../spec/backspace.md#softbackspace8)
 
@@ -22406,204 +22872,6 @@ abcde┃fg
 </td></tr>
 </table>
 
-### [Drag2](../spec/drag.md#drag2)
-
-> move ③
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one
-  - two┃
-- three
-```
-
-</td><td>
-
-```buffer
-- three
-- one
-  - two
-```
-
-</td><td>
-
-```buffer
-- three
-- one
-  - two┃
-```
-
-</td></tr>
-</table>
-
-### [Drag3](../spec/drag.md#drag3)
-
-> move ①
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one┃
-- two
-- three
-```
-
-</td><td>
-
-```buffer
-- two
-  - one
-- three
-```
-
-</td><td>
-
-```buffer
-- two
-  - one┃
-- three
-```
-
-</td></tr>
-</table>
-
-### [Drag5](../spec/drag.md#drag5)
-
-> move ③
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- «a
-- b»
-- c
-```
-
-</td><td>
-
-```buffer
-- c
-- a
-- b
-```
-
-</td><td>
-
-```buffer
-- c
-- «a
-- b»
-```
-
-</td></tr>
-</table>
-
-### [Drag5b](../spec/drag.md#drag5b)
-
-> move ③
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- «a
-- b»
-- c
-```
-
-</td><td>
-
-```buffer
-- a
-- c
-- b
-```
-
-</td><td>
-
-```buffer
-- «a
-- c
-- b»
-```
-
-</td></tr>
-</table>
-
-### [Drag6b](../spec/drag.md#drag6b)
-
-> move ②
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-- b┃
-- c
-```
-
-</td><td>
-
-```buffer
-- a
-- b
-- c
-```
-
-</td><td>
-
-```buffer
-- a
-- b┃
-- c
-```
-
-</td></tr>
-</table>
-
-### [Drag13](../spec/drag.md#drag13)
-
-> move ②
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x┃
-
-p
-```
-
-</td><td>
-
-```buffer
-p
-
-x
-```
-
-</td><td>
-
-```buffer
-p
-
-x┃
-```
-
-</td></tr>
-</table>
-
 ### [Fence13](../spec/fences.md#fence13)
 
 > enter
@@ -22710,6 +22978,170 @@ x┃
   ┃code
   ```
 ````
+
+</td></tr>
+</table>
+
+### [Fold3](../spec/fold.md#fold3)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b
+- ┃
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - b┃
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a┃
+  - b
+
+⟦folded 1; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold4](../spec/fold.md#fold4)
+
+> moveSubtreeUp
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- b┃
+  - c
+
+⟦folded 2; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- ┃b
+  - c
+- a
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- b┃
+  - c
+- a
+
+⟦folded 1; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold16](../spec/fold.md#fold16)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - b
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeDown
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- c
+- ┃a
+  - b
+
+⟦folded 2; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- c
+- a┃
+  - b
+
+⟦folded 2; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+> undo
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - b
+- c
+
+⟦folded 1; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+> redo
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- c
+- ┃a
+  - b
+
+⟦folded 2; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- c
+- a┃
+  - b
+
+⟦folded 2; zoom none⟧
+```
 
 </td></tr>
 </table>
@@ -24296,6 +24728,204 @@ para┃
 </td></tr>
 </table>
 
+### [MoveSubtree1](../spec/move-subtree.md#movesubtree1)
+
+> moveSubtree ③
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one
+  - two
+- three┃
+```
+
+</td><td>
+
+```buffer
+- three
+- one
+  - two
+```
+
+</td><td>
+
+```buffer
+- three┃
+- one
+  - two
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree2](../spec/move-subtree.md#movesubtree2)
+
+> moveSubtree ③
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one
+  - two┃
+- three
+```
+
+</td><td>
+
+```buffer
+- three
+- one
+  - two
+```
+
+</td><td>
+
+```buffer
+- three
+- one
+  - two┃
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree3](../spec/move-subtree.md#movesubtree3)
+
+> moveSubtree ①
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one┃
+- two
+- three
+```
+
+</td><td>
+
+```buffer
+- ┃two
+  - one
+- three
+```
+
+</td><td>
+
+```buffer
+- two
+  - one┃
+- three
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree5](../spec/move-subtree.md#movesubtree5)
+
+> moveSubtree ③
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- «a
+- b»
+- c
+```
+
+</td><td>
+
+```buffer
+- c
+- a
+- b
+```
+
+</td><td>
+
+```buffer
+- c
+- «a
+- b»
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree6](../spec/move-subtree.md#movesubtree6)
+
+> moveSubtree ③
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- «a
+- b»
+- c
+```
+
+</td><td>
+
+```buffer
+- a
+- c
+- b
+```
+
+</td><td>
+
+```buffer
+- «a
+- c
+- b»
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree8](../spec/move-subtree.md#movesubtree8)
+
+> moveSubtree ②
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- b┃
+- c
+```
+
+</td><td>
+
+```buffer
+- a
+- b
+- c
+```
+
+</td><td>
+
+```buffer
+- a
+- b┃
+- c
+```
+
+</td></tr>
+</table>
+
 ### [TO-E14-E20b](../spec/obsidian-true-outliner.md#to-e14-e20b)
 
 > enter
@@ -24860,7 +25490,7 @@ Original:
 </td></tr>
 </table>
 
-> move ②
+> moveSubtree ②
 
 <table>
 <tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
@@ -25048,7 +25678,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (290)
+## Skipped (298)
 
 | example | why |
 | --- | --- |
@@ -25067,6 +25697,7 @@ Original:
 | [Backspace42b](../spec/backspace.md#backspace42b) | option markup: decorated |
 | [Backspace43c](../spec/backspace.md#backspace43c) | option enterAtTextStart: stay |
 | [Backspace45b](../spec/backspace.md#backspace45b) | option joinWithChildren: refuse |
+| [Backspace45c](../spec/backspace.md#backspace45c) | option joinWithChildren: refuse |
 | [Backspace50](../spec/backspace.md#backspace50) | option backspaceAtItemStart: body |
 | [Backspace50b](../spec/backspace.md#backspace50b) | option backspaceAtItemStart: unwrap |
 | **backtick.md** | |
@@ -25129,29 +25760,14 @@ Original:
 | [Delete31b](../spec/delete.md#delete31b) | option joinWithChildren: refuse |
 | [Delete34](../spec/delete.md#delete34) | option quotes: container |
 | **drag.md** | |
-| [Drag4](../spec/drag.md#drag4) | drop: the pressed row has no mark true-outliner drags by |
-| [Drag5c](../spec/drag.md#drag5c) | drop: the pressed row has no mark true-outliner drags by |
-| [Drag6](../spec/drag.md#drag6) | action drag ② |
-| [Drag6c](../spec/drag.md#drag6c) | action drag ② |
-| [Drag7](../spec/drag.md#drag7) | action drag ④ |
-| [Drag9](../spec/drag.md#drag9) | nothing to compare |
-| [Drag12](../spec/drag.md#drag12) | nothing to compare |
-| [Drag14](../spec/drag.md#drag14) | nothing to compare |
-| [Drag17](../spec/drag.md#drag17) | nothing to compare |
-| [Drag18](../spec/drag.md#drag18) | nothing to compare |
-| [Drag19](../spec/drag.md#drag19) | nothing to compare |
-| [Drag20](../spec/drag.md#drag20) | drop: a drop of the selection: true-outliner drags the node whose mark is pressed |
-| [Drag21](../spec/drag.md#drag21) | option quotes: the app's atom, not replayable |
-| [Drag22](../spec/drag.md#drag22) | action drag ② |
-| [Drag23](../spec/drag.md#drag23) | action drag ② |
-| [Drag24](../spec/drag.md#drag24) | action drag ③ |
-| [Drag25](../spec/drag.md#drag25) | action drag ③ |
-| [Drag26](../spec/drag.md#drag26) | action drag ③ |
-| [Drag10](../spec/drag.md#drag10) | action pasteAt |
-| [Drag11](../spec/drag.md#drag11) | action pasteAt |
-| [Drag27](../spec/drag.md#drag27) | action pasteAt |
-| [Drag28](../spec/drag.md#drag28) | action pasteAt |
-| [Drag29](../spec/drag.md#drag29) | action deleteByDrag |
+| [Drag1](../spec/drag.md#drag1) | action drag ② |
+| [Drag2](../spec/drag.md#drag2) | action drag ② |
+| [Drag3](../spec/drag.md#drag3) | action drag ④ |
+| [Drag4](../spec/drag.md#drag4) | action drag ② |
+| [Drag5](../spec/drag.md#drag5) | action drag ② |
+| [Drag6](../spec/drag.md#drag6) | action drag ③ |
+| [Drag7](../spec/drag.md#drag7) | action drag ③ |
+| [Drag8](../spec/drag.md#drag8) | action drag ③ |
 | **duplicate-subtree.md** | |
 | [DuplicateSubtree1](../spec/duplicate-subtree.md#duplicatesubtree1) | action duplicateSubtree |
 | [DuplicateSubtree2](../spec/duplicate-subtree.md#duplicatesubtree2) | action duplicateSubtree |
@@ -25203,6 +25819,10 @@ Original:
 | [Fence21](../spec/fences.md#fence21) | nothing to compare |
 | [Fence32b](../spec/fences.md#fence32b) | option markup: decorated |
 | [Fence61](../spec/fences.md#fence61) | caret before an item's text (true-outliner keeps it on the text) |
+| **fold.md** | |
+| [Fold8](../spec/fold.md#fold8) | action duplicateSubtree |
+| [Fold9](../spec/fold.md#fold9) | action fold ② |
+| [Fold10](../spec/fold.md#fold10) | action fold ① |
 | **gaps.md** | |
 | [Gap19](../spec/gaps.md#gap19) | caret in the frontmatter (Live Preview shows it as properties) |
 | **indent.md** | |
@@ -25238,6 +25858,17 @@ Original:
 | [MoveUp36](../spec/move-subtree-up.md#moveup36) | caret before an item's text (true-outliner keeps it on the text) |
 | [MoveUp41](../spec/move-subtree-up.md#moveup41) | option closeBackticks: none |
 | [MoveUp43](../spec/move-subtree-up.md#moveup43) | option indentUnit: tab |
+| **move-subtree.md** | |
+| [MoveSubtree4](../spec/move-subtree.md#movesubtree4) | drop: the pressed row has no mark true-outliner drags by |
+| [MoveSubtree7](../spec/move-subtree.md#movesubtree7) | drop: the pressed row has no mark true-outliner drags by |
+| [MoveSubtree10](../spec/move-subtree.md#movesubtree10) | nothing to compare |
+| [MoveSubtree11](../spec/move-subtree.md#movesubtree11) | nothing to compare |
+| [MoveSubtree13](../spec/move-subtree.md#movesubtree13) | nothing to compare |
+| [MoveSubtree16](../spec/move-subtree.md#movesubtree16) | nothing to compare |
+| [MoveSubtree17](../spec/move-subtree.md#movesubtree17) | nothing to compare |
+| [MoveSubtree18](../spec/move-subtree.md#movesubtree18) | nothing to compare |
+| [MoveSubtree19](../spec/move-subtree.md#movesubtree19) | drop: a drop of the selection: true-outliner drags the node whose mark is pressed |
+| [MoveSubtree20](../spec/move-subtree.md#movesubtree20) | option quotes: the app's atom, not replayable |
 | **obsidian-true-outliner.md** | |
 | [TO-S5](../spec/obsidian-true-outliner.md#to-s5) | caret before an item's text (true-outliner keeps it on the text) |
 | [TO1](../spec/obsidian-true-outliner.md#to1) | option markup: decorated |
@@ -25256,6 +25887,12 @@ Original:
 | [Outdent16](../spec/outdent.md#outdent16) | caret before an item's text (true-outliner keeps it on the text) |
 | [Outdent17b](../spec/outdent.md#outdent17b) | option outdent: logical |
 | [Outdent19b](../spec/outdent.md#outdent19b) | option markup: decorated |
+| **paste-at.md** | |
+| [PasteAt1](../spec/paste-at.md#pasteat1) | action pasteAt |
+| [PasteAt2](../spec/paste-at.md#pasteat2) | action pasteAt |
+| [PasteAt3](../spec/paste-at.md#pasteat3) | action pasteAt |
+| [PasteAt4](../spec/paste-at.md#pasteat4) | action pasteAt |
+| [PasteAt5](../spec/paste-at.md#pasteat5) | action deleteByDrag |
 | **paste-list.md** | |
 | [PasteList7b](../spec/paste-list.md#pastelist7b) | option enterTask: plain |
 | [PasteList18](../spec/paste-list.md#pastelist18) | option pasteOnParent: after |
@@ -25370,3 +26007,8 @@ Original:
 | [TaskBackspace6](../spec/tasks.md#taskbackspace6) | option markup: decorated |
 | **z-open.md** | |
 | [Open2](../spec/z-open.md#open2) | action deleteSubtree |
+| **zoom.md** | |
+| [Zoom4](../spec/zoom.md#zoom4) | caret before an item's text (true-outliner keeps it on the text) |
+| [Zoom8](../spec/zoom.md#zoom8) | action zoomIn ③ |
+| [Zoom9](../spec/zoom.md#zoom9) | action deleteSubtree |
+| [Zoom14](../spec/zoom.md#zoom14) | option enterOnEmptyItem: unwrap |

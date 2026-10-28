@@ -5,7 +5,7 @@ version: "30.2, markdown-mode 2.8"
 url: "emacs -Q -nw, on a terminal"
 model: "text"
 command: "node sxs/run.ts emacs-markdown"
-elapsed_s: 57
+elapsed_s: 43
 ---
 
 # Emacs (markdown-mode) vs ourus
@@ -14,29 +14,32 @@ Summary:
 
 | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- |
-| **229 (19%)** | **[49](#caret-49) (4.1%)** | **[31](#whitespace-31) (2.6%)** | **[621](#disagree-621) (52%)** | **0 (0%)** | **[264](#skipped-264) (22%)** | **1194** |
+| **229 (19%)** | **[49](#caret-49) (4%)** | **[31](#whitespace-31) (2.5%)** | **[621](#disagree-621) (51%)** | **0 (0%)** | **[298](#skipped-298) (24%)** | **1228** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| [backspace.md](../spec/backspace.md) | 6 |  |  | 65 |  | 14 | **85** |
+| [backspace.md](../spec/backspace.md) | 6 |  |  | 65 |  | 15 | **86** |
 | [backtick.md](../spec/backtick.md) | 12 |  |  | 11 |  | 10 | **33** |
 | [copy.md](../spec/copy.md) | 2 | 1 |  | 3 |  | 7 | **13** |
 | [cursor.md](../spec/cursor.md) | 16 | 19 |  |  |  | 1 | **36** |
 | [delete-subtree.md](../spec/delete-subtree.md) | 1 |  |  | 11 |  | 1 | **13** |
 | [delete.md](../spec/delete.md) | 9 |  |  | 31 |  | 16 | **56** |
-| [drag.md](../spec/drag.md) |  |  |  |  |  | 37 | **37** |
+| [drag.md](../spec/drag.md) |  |  |  |  |  | 8 | **8** |
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 10 | **10** |
 | [enter.md](../spec/enter.md) | 1 |  |  | 66 |  | 31 | **98** |
 | [fences.md](../spec/fences.md) | 16 | 2 | 1 | 46 |  | 5 | **70** |
+| [fold.md](../spec/fold.md) |  |  |  |  |  | 19 | **19** |
 | [gaps.md](../spec/gaps.md) | 6 | 2 |  | 11 |  |  | **19** |
 | [indent.md](../spec/indent.md) | 14 | 1 | 6 | 21 |  | 8 | **50** |
 | [lists.md](../spec/lists.md) |  | 2 |  | 3 |  | 11 | **16** |
 | [move-subtree-down.md](../spec/move-subtree-down.md) | 6 | 5 |  | 29 |  |  | **40** |
 | [move-subtree-up.md](../spec/move-subtree-up.md) | 7 | 6 |  | 28 |  | 2 | **43** |
+| [move-subtree.md](../spec/move-subtree.md) |  |  |  |  |  | 24 | **24** |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 12 |  | 7 | 41 |  | 7 | **67** |
 | [outdent.md](../spec/outdent.md) | 5 | 1 |  | 24 |  | 8 | **38** |
+| [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |
 | [paste-conv.md](../spec/paste-conv.md) | 1 |  |  | 5 |  |  | **6** |
 | [paste-html.md](../spec/paste-html.md) | 1 |  | 1 | 17 |  |  | **19** |
 | [paste-list-form.md](../spec/paste-list-form.md) |  |  |  | 5 |  | 1 | **6** |
@@ -53,7 +56,8 @@ Per-file:
 | [typing.md](../spec/typing.md) | 3 |  |  |  |  |  | **3** |
 | [undo.md](../spec/undo.md) | 1 | 1 |  | 3 |  |  | **5** |
 | [z-open.md](../spec/z-open.md) |  |  |  | 1 |  |  | **1** |
-| **total** | **229 (19%)** | **49 (4.1%)** | **31 (2.6%)** | **621 (52%)** | **0 (0%)** | **264 (22%)** | **1194** |
+| [zoom.md](../spec/zoom.md) |  |  |  |  |  | 14 | **14** |
+| **total** | **229 (19%)** | **49 (4%)** | **31 (2.5%)** | **621 (51%)** | **0 (0%)** | **298 (24%)** | **1228** |
 
 ## Disagree (621)
 
@@ -30992,7 +30996,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (264)
+## Skipped (298)
 
 | example | why |
 | --- | --- |
@@ -31008,6 +31012,7 @@ Original:
 | [Backspace42b](../spec/backspace.md#backspace42b) | option markup: decorated |
 | [Backspace43c](../spec/backspace.md#backspace43c) | option enterAtTextStart: stay |
 | [Backspace45b](../spec/backspace.md#backspace45b) | option joinWithChildren: refuse |
+| [Backspace45c](../spec/backspace.md#backspace45c) | option joinWithChildren: refuse |
 | [Backspace46](../spec/backspace.md#backspace46) | character outside the Basic Multilingual Plane, which the terminal types as its code |
 | [Backspace50](../spec/backspace.md#backspace50) | option backspaceAtItemStart: body |
 | [Backspace50b](../spec/backspace.md#backspace50b) | option backspaceAtItemStart: unwrap |
@@ -31052,43 +31057,14 @@ Original:
 | [Delete31b](../spec/delete.md#delete31b) | option joinWithChildren: refuse |
 | [Delete34](../spec/delete.md#delete34) | option quotes: container |
 | **drag.md** | |
-| [Drag1](../spec/drag.md#drag1) | action move ③ |
-| [Drag2](../spec/drag.md#drag2) | action move ③ |
-| [Drag3](../spec/drag.md#drag3) | action move ① |
-| [Drag4](../spec/drag.md#drag4) | action move ② |
-| [Drag5](../spec/drag.md#drag5) | action move ③ |
-| [Drag5b](../spec/drag.md#drag5b) | action move ③ |
-| [Drag5c](../spec/drag.md#drag5c) | action move ② |
-| [Drag6](../spec/drag.md#drag6) | action drag ② |
-| [Drag6b](../spec/drag.md#drag6b) | action move ② |
-| [Drag6c](../spec/drag.md#drag6c) | action drag ② |
-| [Drag7](../spec/drag.md#drag7) | action drag ④ |
-| [Drag8](../spec/drag.md#drag8) | action move ② |
-| [Drag9](../spec/drag.md#drag9) | action move ② |
-| [Drag12](../spec/drag.md#drag12) | action move ② |
-| [Drag13](../spec/drag.md#drag13) | action move ② |
-| [Drag14](../spec/drag.md#drag14) | action move ② |
-| [Drag15](../spec/drag.md#drag15) | action move ② |
-| [Drag16](../spec/drag.md#drag16) | action move ② |
-| [Drag17](../spec/drag.md#drag17) | action move ② |
-| [Drag18](../spec/drag.md#drag18) | action move ③ |
-| [Drag19](../spec/drag.md#drag19) | action move ② |
-| [Drag20](../spec/drag.md#drag20) | action move |
-| [Drag21](../spec/drag.md#drag21) | action move ② |
-| [Drag22](../spec/drag.md#drag22) | action drag ② |
-| [Drag23](../spec/drag.md#drag23) | action drag ② |
-| [Drag24](../spec/drag.md#drag24) | action drag ③ |
-| [Drag25](../spec/drag.md#drag25) | action drag ③ |
-| [Drag26](../spec/drag.md#drag26) | action drag ③ |
-| [Drag30](../spec/drag.md#drag30) | action move ① |
-| [Drag31](../spec/drag.md#drag31) | action move ② |
-| [Drag32](../spec/drag.md#drag32) | action move ② |
-| [Drag33](../spec/drag.md#drag33) | action move ① |
-| [Drag10](../spec/drag.md#drag10) | action pasteAt |
-| [Drag11](../spec/drag.md#drag11) | action pasteAt |
-| [Drag27](../spec/drag.md#drag27) | action pasteAt |
-| [Drag28](../spec/drag.md#drag28) | action pasteAt |
-| [Drag29](../spec/drag.md#drag29) | action deleteByDrag |
+| [Drag1](../spec/drag.md#drag1) | action drag ② |
+| [Drag2](../spec/drag.md#drag2) | action drag ② |
+| [Drag3](../spec/drag.md#drag3) | action drag ④ |
+| [Drag4](../spec/drag.md#drag4) | action drag ② |
+| [Drag5](../spec/drag.md#drag5) | action drag ② |
+| [Drag6](../spec/drag.md#drag6) | action drag ③ |
+| [Drag7](../spec/drag.md#drag7) | no folds |
+| [Drag8](../spec/drag.md#drag8) | no zoom |
 | **duplicate-subtree.md** | |
 | [DuplicateSubtree1](../spec/duplicate-subtree.md#duplicatesubtree1) | action duplicateSubtree |
 | [DuplicateSubtree2](../spec/duplicate-subtree.md#duplicatesubtree2) | action duplicateSubtree |
@@ -31138,6 +31114,26 @@ Original:
 | [Fence21](../spec/fences.md#fence21) | nothing to compare |
 | [Fence32b](../spec/fences.md#fence32b) | option markup: decorated |
 | [Fence58](../spec/fences.md#fence58) | no-break space, which the terminal types as its code |
+| **fold.md** | |
+| [Fold1](../spec/fold.md#fold1) | no folds |
+| [Fold2](../spec/fold.md#fold2) | no folds |
+| [Fold2b](../spec/fold.md#fold2b) | no folds |
+| [Fold3](../spec/fold.md#fold3) | no folds |
+| [Fold4](../spec/fold.md#fold4) | no folds |
+| [Fold5](../spec/fold.md#fold5) | no folds |
+| [Fold6](../spec/fold.md#fold6) | no folds |
+| [Fold7](../spec/fold.md#fold7) | no folds |
+| [Fold8](../spec/fold.md#fold8) | no folds |
+| [Fold9](../spec/fold.md#fold9) | no folds |
+| [Fold10](../spec/fold.md#fold10) | no folds |
+| [Fold11](../spec/fold.md#fold11) | no folds |
+| [Fold12](../spec/fold.md#fold12) | no folds |
+| [Fold13](../spec/fold.md#fold13) | no folds |
+| [Fold14](../spec/fold.md#fold14) | no folds |
+| [Fold15](../spec/fold.md#fold15) | no folds |
+| [Fold15b](../spec/fold.md#fold15b) | no folds |
+| [Fold16](../spec/fold.md#fold16) | no folds |
+| [Fold17](../spec/fold.md#fold17) | no folds |
 | **indent.md** | |
 | [Indent17](../spec/indent.md#indent17) | CR line endings |
 | [Indent18](../spec/indent.md#indent18) | option bullet: + |
@@ -31162,6 +31158,31 @@ Original:
 | **move-subtree-up.md** | |
 | [MoveUp35](../spec/move-subtree-up.md#moveup35) | option quotes: container |
 | [MoveUp43](../spec/move-subtree-up.md#moveup43) | option indentUnit: tab |
+| **move-subtree.md** | |
+| [MoveSubtree1](../spec/move-subtree.md#movesubtree1) | action moveSubtree ③ |
+| [MoveSubtree2](../spec/move-subtree.md#movesubtree2) | action moveSubtree ③ |
+| [MoveSubtree3](../spec/move-subtree.md#movesubtree3) | action moveSubtree ① |
+| [MoveSubtree4](../spec/move-subtree.md#movesubtree4) | action moveSubtree ② |
+| [MoveSubtree5](../spec/move-subtree.md#movesubtree5) | action moveSubtree ③ |
+| [MoveSubtree6](../spec/move-subtree.md#movesubtree6) | action moveSubtree ③ |
+| [MoveSubtree7](../spec/move-subtree.md#movesubtree7) | action moveSubtree ② |
+| [MoveSubtree8](../spec/move-subtree.md#movesubtree8) | action moveSubtree ② |
+| [MoveSubtree9](../spec/move-subtree.md#movesubtree9) | action moveSubtree ② |
+| [MoveSubtree10](../spec/move-subtree.md#movesubtree10) | action moveSubtree ② |
+| [MoveSubtree11](../spec/move-subtree.md#movesubtree11) | action moveSubtree ② |
+| [MoveSubtree12](../spec/move-subtree.md#movesubtree12) | action moveSubtree ② |
+| [MoveSubtree13](../spec/move-subtree.md#movesubtree13) | action moveSubtree ② |
+| [MoveSubtree14](../spec/move-subtree.md#movesubtree14) | action moveSubtree ② |
+| [MoveSubtree15](../spec/move-subtree.md#movesubtree15) | action moveSubtree ② |
+| [MoveSubtree16](../spec/move-subtree.md#movesubtree16) | action moveSubtree ② |
+| [MoveSubtree17](../spec/move-subtree.md#movesubtree17) | action moveSubtree ③ |
+| [MoveSubtree18](../spec/move-subtree.md#movesubtree18) | action moveSubtree ② |
+| [MoveSubtree19](../spec/move-subtree.md#movesubtree19) | action moveSubtree |
+| [MoveSubtree20](../spec/move-subtree.md#movesubtree20) | action moveSubtree ② |
+| [MoveSubtree21](../spec/move-subtree.md#movesubtree21) | action moveSubtree ① |
+| [MoveSubtree22](../spec/move-subtree.md#movesubtree22) | action moveSubtree ② |
+| [MoveSubtree23](../spec/move-subtree.md#movesubtree23) | action moveSubtree ② |
+| [MoveSubtree24](../spec/move-subtree.md#movesubtree24) | action moveSubtree ① |
 | **obsidian-true-outliner.md** | |
 | [TO-E7-E8](../spec/obsidian-true-outliner.md#to-e7-e8) | option enterMidItem: child |
 | [TO-E11](../spec/obsidian-true-outliner.md#to-e11) | option enterMidItem: child |
@@ -31179,6 +31200,12 @@ Original:
 | [LogicalOutdent5](../spec/outdent.md#logicaloutdent5) | option outdent: logical |
 | [Outdent17b](../spec/outdent.md#outdent17b) | option outdent: logical |
 | [Outdent19b](../spec/outdent.md#outdent19b) | option markup: decorated |
+| **paste-at.md** | |
+| [PasteAt1](../spec/paste-at.md#pasteat1) | action pasteAt |
+| [PasteAt2](../spec/paste-at.md#pasteat2) | action pasteAt |
+| [PasteAt3](../spec/paste-at.md#pasteat3) | action pasteAt |
+| [PasteAt4](../spec/paste-at.md#pasteat4) | action pasteAt |
+| [PasteAt5](../spec/paste-at.md#pasteat5) | action deleteByDrag |
 | **paste-list-form.md** | |
 | [PasteListForm6](../spec/paste-list-form.md#pastelistform6) | option pasteListForm: own |
 | **paste-list.md** | |
@@ -31266,8 +31293,8 @@ Original:
 | [Regression61](../spec/regressions.md#regression61) | option listParent: container |
 | [Regression62](../spec/regressions.md#regression62) | option enterInQuote: split |
 | **scenarios.md** | |
-| [Scenario8b](../spec/scenarios.md#scenario8b) | action move ③ |
-| [Scenario8c](../spec/scenarios.md#scenario8c) | action move ② |
+| [Scenario8b](../spec/scenarios.md#scenario8b) | action moveSubtree ③ |
+| [Scenario8c](../spec/scenarios.md#scenario8c) | action moveSubtree ② |
 | [Scenario8d](../spec/scenarios.md#scenario8d) | action drag ② |
 | [Scenario17](../spec/scenarios.md#scenario17) | option pasteLines: items |
 | **shift-enter.md** | |
@@ -31286,3 +31313,18 @@ Original:
 | [TaskBackspace6](../spec/tasks.md#taskbackspace6) | option markup: decorated |
 | [TaskBackspace7](../spec/tasks.md#taskbackspace7) | option taskEditing: block |
 | [TaskBackspace11](../spec/tasks.md#taskbackspace11) | option taskEditing: block |
+| **zoom.md** | |
+| [Zoom1](../spec/zoom.md#zoom1) | no zoom |
+| [Zoom2](../spec/zoom.md#zoom2) | no zoom |
+| [Zoom3](../spec/zoom.md#zoom3) | no zoom |
+| [Zoom4](../spec/zoom.md#zoom4) | no zoom |
+| [Zoom5](../spec/zoom.md#zoom5) | no folds |
+| [Zoom6](../spec/zoom.md#zoom6) | no zoom |
+| [Zoom7](../spec/zoom.md#zoom7) | no zoom |
+| [Zoom8](../spec/zoom.md#zoom8) | no zoom |
+| [Zoom9](../spec/zoom.md#zoom9) | no zoom |
+| [Zoom10](../spec/zoom.md#zoom10) | no zoom |
+| [Zoom11](../spec/zoom.md#zoom11) | no zoom |
+| [Zoom12](../spec/zoom.md#zoom12) | no zoom |
+| [Zoom13](../spec/zoom.md#zoom13) | no zoom |
+| [Zoom14](../spec/zoom.md#zoom14) | no zoom |

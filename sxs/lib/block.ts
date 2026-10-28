@@ -17,6 +17,7 @@ import { textEnd, textStart, topmostNodes } from '../../src/commands/util.ts';
 import { docOf, nodesOf, readDrawing } from '../../test/drawing.ts';
 import { micromark } from 'micromark';
 import { gfm, gfmHtml } from 'micromark-extension-gfm';
+import { drawView, splitView, type RowView } from './view.ts';
 
 export interface Block {
   depth: number;
@@ -41,6 +42,8 @@ export interface Outline {
   sel: Sel | null;
   /** Blocks selected whole (an app's block selection), by index. */
   selected?: number[];
+  /** Its folds and zoom, by block (`view.ts`), where the case has a view. */
+  view?: RowView;
 }
 
 /** Why a buffer can't be an outline of blocks. */
@@ -492,7 +495,7 @@ export function draw(o: Outline, options: Pick<ProjectOptions, 'ordered'> = {}):
     cols[b.depth] = at + marker.length + 1;
     t.split('\n').forEach((line, k) => out.push(k === 0 ? `${' '.repeat(at)}${marker} ${mark}${line}` : `${' '.repeat(cols[b.depth]!)}${line}`));
   });
-  return out.join('\n').replace(/\t/g, '→') + '\n';
+  return out.join('\n').replace(/\t/g, '→') + '\n' + (o.view ? drawView(o.view) : '');
 }
 
 /**
@@ -596,7 +599,8 @@ export function unescapeLaterLines(o: Outline): Outline {
  * numbered block, and a drawing from before numbers took the bullet's place (`- 1. a`) reads too;
  * elsewhere a line starting with a number is no block's.
  */
-export function readOutline(drawn: string, options: Pick<ProjectOptions, 'ordered'> = {}): Outline | null {
+export function readOutline(drawing: string, options: Pick<ProjectOptions, 'ordered'> = {}): Outline | null {
+  const { drawn, view } = splitView(drawing);
   const blocks: Block[] = [];
   const raw: string[][] = [];
   const selected: number[] = [];
@@ -652,8 +656,8 @@ export function readOutline(drawn: string, options: Pick<ProjectOptions, 'ordere
       .join('\n');
     blocks[i]!.text = t;
   });
-  const o: Outline = { blocks, sel, ...(selected.length && { selected }) };
-  return draw(o) === drawn || (options.ordered && draw(o, options) === drawn) ? o : null;
+  const o: Outline = { blocks, sel, ...(selected.length && { selected }), ...(view && { view }) };
+  return draw(o) === drawing || (options.ordered && draw(o, options) === drawing) ? o : null;
 }
 
 export type Verdict = 'agree' | 'whitespace' | 'caret' | 'disagree';
@@ -925,4 +929,4 @@ export function sectioned(o: Outline, sections: readonly number[]): Outline {
 }
 
 /** Whether two outlines are the same, selection included. */
-export const sameOutline = (a: Outline, b: Outline): boolean => JSON.stringify([a.blocks, a.sel, a.selected ?? []]) === JSON.stringify([b.blocks, b.sel, b.selected ?? []]);
+export const sameOutline = (a: Outline, b: Outline): boolean => JSON.stringify([a.blocks, a.sel, a.selected ?? [], a.view ?? null]) === JSON.stringify([b.blocks, b.sel, b.selected ?? [], b.view ?? null]);
