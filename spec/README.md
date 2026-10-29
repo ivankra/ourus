@@ -39,6 +39,9 @@ Read every difference first; a case whose actions should change is redrawn by ha
 - [Paste: which format is read](paste-conv.md): of a clipboard's formats, the one `paste` reads.
 - [Paste HTML](paste-html.md): a clipboard's HTML as the Markdown `paste` reads.
 - [Plain paste](paste-plain.md): `pastePlain`.
+- [Selecting nodes](select.md): `selectNode`, `expandSelection`, `selectNodeDown`, `selectNodeUp`.
+- [Editing a subtree selection](subtree-selection.md): the keys that edit text, over nodes selected
+  whole (`««…»»`).
 - [Fenced code](fences.md): Enter and Shift-Enter in a fenced code block, and in the other blocks
   of lines (math, comments, indented code).
 - [Backtick](backtick.md): a typed backtick (`insertText`), which opens, closes and changes code
@@ -231,6 +234,7 @@ The item becomes the last child of the item above.
 | --- | --- |
 | `┃` | the caret |
 | `«…»` | a selection; its head is the end `┃` touches, or the end after `»` when no caret is drawn |
+| `««…»»` | a subtree selection: the nodes the span touches, each with its subtree, selected as whole lines, from the first's line's column 0 to the start of the line after the last's subtree (`OurusDoc.selectionOf`); downward, or upward with `┃` before it (`┃««`). Drawn from the first root's text start to the last root's own text end (`- ««two»»` takes `two`'s children without drawing them); a whole-line selection of another shape is drawn `«…»` at its offsets. The SxS draws an app's blocks selected whole so, a span to each run of them with nothing unselected between |
 | (neither) | in a step's buffer, the caret isn't checked: only what the text becomes is (a start always draws its caret, which the reader requires) |
 | `◌` | a placeholder: the end of an empty line the document reads as if text had been typed there; right before a space that follows a list marker, that space, read as text (a deleted character's place) |
 | `→` | a tab |
@@ -273,6 +277,7 @@ labels every node of a start, and each new one after them, to see which nodes a 
 | `paste` | Ctrl-V: pastes the clipboard, every format it has, read as Markdown, as nodes ([paste.md](paste.md)) |
 | `pastePlain` | Ctrl-Shift-V: pastes the clipboard into the node's text, its line breaks as Shift-Enter's |
 | `deleteSubtree`, `duplicateSubtree` | the commands of the same names |
+| `selectNode`, `expandSelection`, `selectNodeDown`, `selectNodeUp` | Escape, Ctrl-A, Shift-Down, Shift-Up as outliners have them: nodes selected whole, a ladder outward, a node a press ([select.md](select.md)); where they are the host's, its select all for Ctrl-A and its `selectLineDown`/`Up` for the Shift-arrows |
 | `deleteSoftLineBackward` | Cmd-Backspace: deletes back to the start of the line's text |
 | `drag ②`, `drag` | presses ②'s mark (or picks up the selection's nodes) and holds it, for the step to check what it takes and where it can go (`dragNodes`, `dropPoints`); nothing changes |
 | `pasteAt` | drops the clipboard, dragged in from outside, at the start's `▸` ([paste-at.md](paste-at.md)) |

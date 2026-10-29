@@ -107,6 +107,10 @@ export const driver: Driver = {
     deleteContentForward: 'Delete',
     moveSubtreeUp: 'Control+ArrowUp',
     moveSubtreeDown: 'Control+ArrowDown',
+    // the selection commands (spec/select.md): Ctrl-A, Shift-Down and Shift-Up as the app has them
+    expandSelection: 'Control+a',
+    selectNodeDown: 'Shift+ArrowDown',
+    selectNodeUp: 'Shift+ArrowUp',
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
     deleteSubtree: 'Control+Shift+Backspace',
     copy: 'Control+c',
@@ -133,6 +137,8 @@ export const driver: Driver = {
   selectsBlocks: true,
   // a typed fence is left open (Backtick2, Backtick12, Backtick15)
   behaves: {
+    // Shift-Up takes the sibling above with its subtree
+    selectNodeUp: 'sibling',
     // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25)
     quotes: 'atom',
     // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25)

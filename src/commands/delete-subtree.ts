@@ -4,11 +4,11 @@
 import type { OutlineNode } from '../doc/index.ts';
 import { CommandContext, reject, type CommandOutcome } from './context.ts';
 import { copyOrCutCommand } from './copy.ts';
-import { operandsOf, operandsRefused, selectionInText, textEnd, textStart, withTextlessParents } from './util.ts';
+import { goneWithTextlessParents, operandsOf, operandsRefused, selectionInText, textEnd, textStart } from './util.ts';
 
 /**
- * The selected nodes go, with their subtrees (spec/delete-subtree.md), and a quote without text they
- * are all of with them. The caret goes to the end of the text above, or where the first goes, to the
+ * The selected nodes go, with their subtrees (spec/delete-subtree.md), at whatever depths, and a
+ * quote without text they are all of with them. The caret goes to the end of the text above, or where the first goes, to the
  * start of the text after them. Given the nodes by id, a selection outside them stays where it is.
  * With `expectMarkdown`, refused (`content-changed`) unless a copy of the nodes gives that text: the
  * source's half of a drag out, whose payload it was, which mustn't delete what wasn't carried.
@@ -21,7 +21,7 @@ export function deleteSubtreeCommand(ctx: CommandContext, expectMarkdown?: strin
     const copied = copyOrCutCommand(new CommandContext(doc, ctx.selection, nodes.map((n) => n.id)), 'copy');
     if (copied?.status !== 'applied' || copied.clipboard?.['text/plain'] !== expectMarkdown) return reject('content-changed', 'the nodes are no longer the Markdown dragged out');
   }
-  const gone = withTextlessParents(doc, nodes);
+  const gone = goneWithTextlessParents(doc, nodes);
   const draft = ctx.draft().remove(gone);
   if (ctx.nodes) {
     const from = doc.rangeOf(gone[0]!).from;

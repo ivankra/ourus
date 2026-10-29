@@ -240,6 +240,25 @@ function vertical(motion: (view: EditorView) => boolean) {
   };
 }
 
+/**
+ * Shift-Down and Shift-Up by node. Over a subtree selection, ourus's wherever the head is; otherwise a
+ * wrapped line is CodeMirror's a row at a time until the head is on its last row (its first going
+ * up), then ourus's, which is the host's line too inside a node's text but from its edge.
+ */
+function selectByNode(dir: 1 | -1) {
+  const native = vertical(dir > 0 ? selectLineDown : selectLineUp);
+  const run = command(dir > 0 ? 'selectNodeDown' : 'selectNodeUp');
+  return (view: EditorView): boolean => {
+    const range = view.state.selection.main;
+    if (!view.state.field(ourusDoc).selectedSubtrees(range)) {
+      const line = view.state.doc.lineAt(range.head);
+      const rowEdge = view.moveToLineBoundary(range, dir > 0, true).head;
+      if (dir > 0 ? rowEdge < line.to : rowEdge > line.from) return native(view);
+    }
+    return run(view) || native(view);
+  };
+}
+
 const outlinerKeymap = Prec.highest(
   keymap.of([
     { key: 'Tab', run: command('indent') },
@@ -249,13 +268,58 @@ const outlinerKeymap = Prec.highest(
     { key: 'Enter', run: command('enter') },
     { key: 'Shift-Enter', run: command('shiftEnter') },
     { key: 'Home', run: home(false), shift: home(true) },
-    { key: 'ArrowUp', run: vertical(cursorLineUp), shift: vertical(selectLineUp) },
-    { key: 'ArrowDown', run: vertical(cursorLineDown), shift: vertical(selectLineDown) },
+    { key: 'ArrowUp', run: vertical(cursorLineUp), shift: selectByNode(-1) },
+    { key: 'ArrowDown', run: vertical(cursorLineDown), shift: selectByNode(1) },
+    { key: 'Escape', run: command('selectNode') },
+    { key: 'Mod-a', run: command('expandSelection') },
     { key: 'Backspace', run: command('deleteContentBackward') },
     { key: 'Delete', run: command('deleteContentForward') },
     { key: 'Mod-Backspace', run: command('deleteSoftLineBackward') },
   ]),
 );
+
+/**
+ * Blocks selected whole: a subtree selection's roots (`selectedSubtrees`), each root's lines
+ * (`rangeOf`) drawn as blocks, the native highlight hidden (`ourus-blocks` on the editor).
+ */
+const blockSelection = [
+  EditorView.decorations.compute([ourusDoc, 'selection'], (state) => {
+    const doc = state.field(ourusDoc);
+    const roots = doc.selectedNodes(state.selection.main);
+    if (!roots) return Decoration.none;
+    const builder = new RangeSetBuilder<Decoration>();
+    for (const root of roots) for (let l = root.startLine; l <= root.endLine; l++) builder.add(doc.mdTree.starts[l]!, doc.mdTree.starts[l]!, Decoration.line({ class: 'ourus-block' }));
+    return builder.finish();
+  }),
+  EditorView.editorAttributes.compute([ourusDoc, 'selection'], (state): Record<string, string> => (state.field(ourusDoc).selectedNodes(state.selection.main) ? { class: 'ourus-blocks' } : {})),
+];
+
+/**
+ * A drag that reaches past a node's text, its ends on different nodes' own lines or one on a blank
+ * line (an end at a line's start on the line before), selects the subtrees it touches whole: the
+ * union of the drag and their selection, never less than the drag. Behind the header's toggle.
+ */
+const escalation = new Compartment();
+const escalateDrags = EditorState.transactionFilter.of((tr) => {
+  if (!tr.isUserEvent('select.pointer') || tr.docChanged) return tr;
+  const sel = tr.newSelection.main;
+  if (sel.empty) return tr;
+  const doc = tr.startState.field(ourusDoc);
+  const where = (pos: number): unknown => {
+    const line = doc.lineAt(pos);
+    const at = doc.locate(pos === line.from && pos > 0 && pos === sel.to ? pos - 1 : pos);
+    return at.zone === 'gap' ? 'gap' : 'node' in at ? at.node.persistentNode : at.zone;
+  };
+  const [a, b] = [where(sel.from), where(sel.to)];
+  if (a === b && a !== 'gap') return tr;
+  try {
+    const cover = doc.selectionOf(doc.touchedSubtrees(sel));
+    const [from, to] = [Math.min(sel.from, cover.anchor), Math.max(sel.to, cover.head)];
+    return [tr, { selection: sel.head < sel.anchor ? EditorSelection.single(to, from) : EditorSelection.single(from, to), sequential: true }];
+  } catch {
+    return tr;
+  }
+});
 
 /** Highlights the node at the caret: its own lines, and its descendants more faintly. */
 const currentNode = ViewPlugin.fromClass(
@@ -381,6 +445,8 @@ A paragraph at the top level. Headings and list items hold children, and so does
 - Shift-Enter breaks a line inside an item,
   which stays one item
 - Home goes to the start of the text, again to the start of the line
+- Escape selects the item at the caret with its children; Ctrl-A climbs: the text, the item, its siblings, its parent, everything
+- Shift-Down and Shift-Up select a node a press, growing from where they started and shrinking back
 - Ctrl-V pastes Markdown as nodes, Ctrl-Shift-V as plain text
 - Ctrl-C and Ctrl-X copy and cut the selection as Markdown, at a caret its item with its children
 - Enter on an empty item outdents it, or leaves the list (Enter twice ends a list)
@@ -592,6 +658,8 @@ function main(): void {
         outlineView({ field: ourusDoc, setDoc, planned }),
         placeholderHistory,
         currentNode,
+        blockSelection,
+        escalation.of(escalateDrags),
         theme.of(themeFor(darkScheme.matches)),
         EditorView.lineWrapping,
         EditorView.updateListener.of((u) => {
@@ -640,6 +708,12 @@ function main(): void {
     const next = OurusDoc.parse(doc.text, { marks: doc.marks.marks, config: { ...doc.config, flavor: initialFlavor } });
     view.dispatch({ effects: setDoc.of(next) });
     refresh(view);
+    view.focus();
+  });
+  // drags selecting whole nodes where they reach past a node's text
+  const escalateToggle = document.getElementById('escalate') as HTMLInputElement;
+  escalateToggle.addEventListener('change', () => {
+    view.dispatch({ effects: escalation.reconfigure(escalateToggle.checked ? escalateDrags : []) });
     view.focus();
   });
   rendererSelect.addEventListener('change', () => {

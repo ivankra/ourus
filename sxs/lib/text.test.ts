@@ -19,3 +19,12 @@ test('spaces that leave the document as ourus reads it the same are spaces; othe
   // and a space inside a line's text
   assert.equal(compare('one two┃\n', 'onetwo┃\n'), 'disagree');
 });
+
+test('a subtree selection in another whole-line shape or direction is the same selection: the same nodes selected whole', () => {
+  // true-outliner's cover ends before the last line's break, ourus's at the next line's start
+  assert.equal(compare('- a\n«- b\n  - c\n»- d\n', '- a\n«- b\n  - c»\n- d\n'), 'agree');
+  assert.equal(compare('- a\n┃«- b\n  - c\n»- d\n', '- a\n«- b\n  - c»\n- d\n'), 'agree');
+  // other nodes, or text: the caret's verdict still
+  assert.equal(compare('- a\n«- b\n  - c\n»- d\n', '- a\n«- b»\n  - c\n- d\n'), 'caret');
+  assert.equal(compare('- «a»\n- b\n', '- «a\n»- b\n'), 'caret');
+});

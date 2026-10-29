@@ -9,7 +9,7 @@ import { copyOrCutCommand } from './copy.ts';
 import { becomesAt, unholdable } from './move-subtree.ts';
 import { pastedBecomesAt } from './paste.ts';
 import type { Command, CommandResult, DropMap, DropPoint, DropSeam, InsertionPoint } from './types.ts';
-import { operandsOf, operandsRefused, siblingRun, topmostNodes, withTextlessParents } from './util.ts';
+import { oneRun, operandsRefused, runsOf, selectionRoots, withTextlessParents } from './util.ts';
 
 /**
  * A pickup: the run (`dragRun`), each root's lines, every seam it can be dropped at with the places
@@ -50,14 +50,16 @@ export function dragRun(ctx: CommandContext, pressed?: number): OutlineNode[] | 
   if (pressed !== undefined) {
     const node = ctx.doc.node(pressed);
     if (!node || node.kind === 'root') return reject('no-such-node');
-    const tops = topmostNodes(ctx.doc, ctx.selection);
-    if (tops.some((n) => n.id === node.id)) {
-      const run = siblingRun(tops);
-      if (!Array.isArray(run)) return reject(run);
-      nodes = run;
+    // (one of the selection's roots, or of the nodes it touches: on a line nodes share, a subtree
+    // selection's root is the outer one, the mark pressed the inner one's)
+    const roots = selectionRoots(ctx.doc, ctx.selection);
+    if (roots.includes(node) || ctx.doc.touchedNodes(ctx.selection).includes(node)) {
+      const runs = runsOf(roots);
+      if (runs.length > 1) return reject('non-contiguous');
+      nodes = runs[0]!;
     } else nodes = [node];
   } else {
-    const found = operandsOf(ctx);
+    const found = oneRun(ctx);
     if (!Array.isArray(found)) return operandsRefused(found)!;
     nodes = found;
   }

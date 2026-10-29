@@ -7,7 +7,7 @@ import type { OurusDoc } from '../doc/index.ts';
 import { CommandContext } from './context.ts';
 import { deleteSubtreeCommand } from './delete-subtree.ts';
 import type { ChangeSpec } from '../text/index.ts';
-import type { Command, CommandResult, Selection } from './types.ts';
+import type { Command, CommandResult, TextSelection } from './types.ts';
 import { visibleSelection } from './view.ts';
 
 /** The view's commands and those that write nothing: no operands to confine, no result to check. */
@@ -15,6 +15,9 @@ const UNCONFINED: ReadonlySet<Command['type']> = new Set(['fold', 'unfold', 'tog
 
 /** The commands whose removal of the zoom root whole is allowed (clause 0), the zoom going to its nearest ancestor left. */
 const REMOVES: ReadonlySet<Command['type']> = new Set(['deleteSubtree', 'cut']);
+
+/** The selection commands: a deferral is the host's own selection (a line, a select all), no edit to keep inside the zoom. */
+const SELECTS: ReadonlySet<Command['type']> = new Set(['selectNode', 'expandSelection', 'selectNodeDown', 'selectNodeUp']);
 
 /** The keys that break the line: whatever else their default does, a line break at the caret. */
 const NEWLINE: ReadonlySet<Command['type']> = new Set(['enter', 'shiftEnter']);
@@ -27,7 +30,7 @@ const outside = (detail: string): CommandResult => ({ status: 'rejected', reason
  * the key's plain default would leave the zoom, or where its result leaves the zoom; applied, the
  * selection out of what the view hides.
  */
-export function zoomed(doc: OurusDoc, command: Command, selection: Selection, run: () => CommandResult): CommandResult {
+export function zoomed(doc: OurusDoc, command: Command, selection: TextSelection, run: () => CommandResult): CommandResult {
   if (doc.zoom === null && !doc.zoomFolded.size) return run();
   if (UNCONFINED.has(command.type)) return run();
   const root = doc.zoom === null ? null : doc.node(doc.zoom)!;
@@ -40,6 +43,7 @@ export function zoomed(doc: OurusDoc, command: Command, selection: Selection, ru
   const result = run();
   if (!root) return settled(result);
   if (result.status === 'deferredToHost') {
+    if (SELECTS.has(command.type)) return result;
     if ([selection.anchor, selection.head].some((p) => inRootMarkup(doc, p, NEWLINE.has(command.type)))) return outside("in the zoom root's markup, where the host's default would reach outside it");
     const plain = plainDefault(doc, command, selection);
     if (plain && leavesZoom(doc, doc.update([plain.change], { caret: plain.caret }))) return outside("the host's default would leave the zoom");
@@ -81,7 +85,7 @@ function inRootMarkup(doc: OurusDoc, pos: number, newline: boolean): boolean {
  * Delete, a soft line's Backspace): the change and the caret after; null for the others (Enter's
  * default continues the markup in one host and not another: the host's own guard, `leavesZoom`).
  */
-function plainDefault(doc: OurusDoc, command: Command, selection: Selection): { change: ChangeSpec; caret: number } | null {
+function plainDefault(doc: OurusDoc, command: Command, selection: TextSelection): { change: ChangeSpec; caret: number } | null {
   const [from, to] = [Math.min(selection.anchor, selection.head), Math.max(selection.anchor, selection.head)];
   const edit = (from: number, to: number, insert = ''): { change: ChangeSpec; caret: number } => ({ change: { from, to, insert }, caret: from + insert.length });
   switch (command.type) {

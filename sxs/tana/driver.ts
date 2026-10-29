@@ -131,6 +131,12 @@ export const driver: Driver = {
     deleteContentForward: 'Delete',
     moveSubtreeUp: 'Shift+Alt+ArrowUp',
     moveSubtreeDown: 'Shift+Alt+ArrowDown',
+    // the selection commands (spec/select.md): Ctrl-A, Shift-Down and Shift-Up as the app has them
+    expandSelection: 'Control+a',
+    selectNodeDown: 'Shift+ArrowDown',
+    selectNodeUp: 'Shift+ArrowUp',
+    // Escape selects the node being edited
+    selectNode: 'Escape',
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
     // "delete item", "duplicate"
     deleteSubtree: 'Control+Shift+Backspace',
@@ -160,6 +166,10 @@ export const driver: Driver = {
   // gone; a list pasted into a node with children goes after them (played with `--ignore-options`);
   // a typed fence is left open (Backtick2, Backtick12, Backtick15)
   behaves: {
+    // indent and outdent over roots at two depths: each run as alone
+    mixedDepths: 'each',
+    // Ctrl-A goes from the text straight to everything
+    selectionLadder: 'top',
     outdent: 'logical',
     enterSplitSpace: 'start',
     enterMidItem: 'child',

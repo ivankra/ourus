@@ -11,5 +11,5 @@ export { OutlineNode } from './node.ts';
 export { OutlineNodePersistent } from './outline.ts';
 export type { Located } from './locate.ts';
 export { escapeParagraph } from './escapes.ts';
-export { ProseText, AtomText, type OutlineNodeText, type ProseTextType, type FramePart, type AtomFramePart } from './text.ts';
+export { ProseText, AtomText, textEnd, textStart, type OutlineNodeText, type ProseTextType, type FramePart, type AtomFramePart } from './text.ts';
 export { outlineChildren, type OutlineNodeKind, type FlatChild, type OutlineChild } from './rules.ts';

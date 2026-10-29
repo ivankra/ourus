@@ -4,13 +4,13 @@
 
 import type { OurusDoc, OutlineNode } from '../doc/index.ts';
 import type { CommandContext, CommandOutcome } from './context.ts';
-import type { Selection } from './types.ts';
-import { topmostNodes } from './util.ts';
+import type { TextSelection } from './types.ts';
+import { selectionRoots } from './util.ts';
 
-/** The nodes a view command means: `nodes` given, else the topmost the selection touches, each as its row's fold (the outermost node starting on its line). */
+/** The nodes a view command means: `nodes` given, else the selection's roots, each as its row's fold (the outermost node starting on its line). */
 function targets(ctx: CommandContext): OutlineNode[] {
   if (ctx.nodes) return ctx.nodes.map((id) => ctx.doc.node(id)).filter((n): n is OutlineNode => !!n && n.kind !== 'root');
-  return topmostNodes(ctx.doc, ctx.selection).map((n) => ctx.doc.rowOwner(n.startLine) ?? n);
+  return selectionRoots(ctx.doc, ctx.selection).map((n) => ctx.doc.rowOwner(n.startLine) ?? n);
 }
 
 /** The zoom root and its ancestors, whose folds a zoom suppresses. */
@@ -62,7 +62,7 @@ function setFolds(ctx: CommandContext, fold: boolean | undefined): CommandOutcom
 
 /** Zoom into node `nodes[0]` (a click on its mark), else the selection's first root in document order, whichever way it was drawn. */
 export function zoomInCommand(ctx: CommandContext): CommandOutcome {
-  const target = ctx.nodes ? ctx.doc.node(ctx.nodes[0] ?? -1) : topmostNodes(ctx.doc, ctx.selection)[0];
+  const target = ctx.nodes ? ctx.doc.node(ctx.nodes[0] ?? -1) : selectionRoots(ctx.doc, ctx.selection)[0];
   if (!target || target.kind === 'root') return { status: 'rejected', reason: 'no-such-node', detail: 'no node to zoom into' };
   return viewed(ctx, ctx.doc.withZoom(target.id));
 }
@@ -87,10 +87,12 @@ function viewed(ctx: CommandContext, doc: OurusDoc): CommandOutcome {
 
 /**
  * `selection` moved out of what the view hides: an end in a fold's hidden lines to the fold's start
- * (the end of the folded node's text); an end outside the zoom into it, before it to its root's text
- * start, after it to its end.
+ * (the end of the folded node's text), but a non-empty selection's end at the fold's end where that
+ * is the document's (a subtree selection of the folded node there, which has no line after it); an
+ * end outside the zoom into it, before it to its root's text start, after it to its end.
  */
-export function visibleSelection(doc: OurusDoc, selection: Selection): Selection {
+export function visibleSelection(doc: OurusDoc, selection: TextSelection): TextSelection {
+  const empty = selection.anchor === selection.head;
   const at = (pos: number): number => {
     const zoom = doc.zoomRange();
     if (zoom) {
@@ -102,7 +104,7 @@ export function visibleSelection(doc: OurusDoc, selection: Selection): Selection
     let start = pos;
     for (const id of doc.zoomFolded) {
       const range = doc.foldRange(doc.node(id)!);
-      if (range && pos > range.from && pos <= range.to && range.from < start) start = range.from;
+      if (range && pos > range.from && pos <= range.to && range.from < start && (empty || pos !== range.to || pos !== doc.text.length)) start = range.from;
     }
     return start;
   };

@@ -211,7 +211,7 @@ x only says "into" a leaf, past a column 30 pixels and a fifth of its line's wid
   `MoveSubtree12`, `scenarios.md › Scenario8c`: the outline agrees; and in probes, after a parent that is
   the last of its own parent's, at either depth).
 - **The drop selects the dropped item, as an item, and the caret goes**: the drag selects the items
-  it carries at its first move and leaves them selected (`MoveSubtree1`: `▮ three`, ourus's `three┃`;
+  it carries at its first move and leaves them selected (`MoveSubtree1`: `««three»»`, ourus's `three┃`;
   `MoveSubtree2`: the caret in `two` goes too). So typing after a drop types nothing (`Scenario8b`: `s`
   goes nowhere, `email` where ourus has `emails┃`).
 - **The cover rule is ourus's**: a press on an item of the item selection drags the selection, any

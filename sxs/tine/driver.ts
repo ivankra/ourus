@@ -126,6 +126,12 @@ export const driver: Driver = {
     deleteContentForward: 'Delete',
     moveSubtreeUp: 'Alt+Shift+ArrowUp',
     moveSubtreeDown: 'Alt+Shift+ArrowDown',
+    // the selection commands (spec/select.md): Ctrl-A, Shift-Down and Shift-Up as the app has them
+    expandSelection: 'Control+a',
+    selectNodeDown: 'Shift+ArrowDown',
+    selectNodeUp: 'Shift+ArrowUp',
+    // Escape selects the block being edited
+    selectNode: 'Escape',
     // "kill line before"
     deleteSoftLineBackward: 'Alt+u',
     // Escape selects the block being edited, its subtree: copied, cut, or with Backspace deleted with its
@@ -145,6 +151,8 @@ export const driver: Driver = {
   refuses: ['markup-heading', 'markup-task', 'markup-fence'],
   ordered: true,
   behaves: {
+    // Ctrl-A climbs from a block to its parent, its siblings skipped
+    selectionLadder: 'parents',
     // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25)
     quotes: 'atom',
     // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25)

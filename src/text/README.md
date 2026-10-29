@@ -12,6 +12,9 @@ other layers import it through `index.ts`.
   In `ChangeSpec[]`, *every* offset is in the coordinates of
   the original unchanged text and the changes don't overlap.
 
+- **`TextSelection`** is CodeMirror 6's selection spec, `{ anchor, head }`: one range, `head` the
+  caret. The commands take one and return one.
+
 - **`ChangeSet`** is a wrapper around a normalized `ChangeSpec[]` (sorted, empty changes dropped)
   plus the length of the text it applies to.
 

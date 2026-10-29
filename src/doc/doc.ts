@@ -3,7 +3,7 @@
 
 import { Config } from '../config.ts';
 import { MdBlockAt, MdFlavor, MdTree, type MdLine } from '../parser/index.ts';
-import { ChangeSet, MarkSet, advanceColumns, createPlaceholder, diffLines, heldSpaceAt, isSpaceOrTab, lineIndexAt, trimMd, type ChangeSpec, type Mark } from '../text/index.ts';
+import { ChangeSet, MarkSet, advanceColumns, createPlaceholder, diffLines, heldSpaceAt, isSpaceOrTab, lineIndexAt, trimMd, type ChangeSpec, type Mark, type TextSelection } from '../text/index.ts';
 import { OutlineNode } from './node.ts';
 import { Touched, readOutline, type OutlineNodePersistent } from './outline.ts';
 import { validPlaceholder } from './placeholders.ts';
@@ -13,6 +13,7 @@ import { escapeParagraph } from './escapes.ts';
 import { markdownOf, markdownStart } from './copy.ts';
 import { ProseText, type AtomText, type OutlineNodeText } from './text.ts';
 import { listAdopters } from './rules.ts';
+import { selectedNodes, subtreesSelection, touchedNodes } from './select.ts';
 import { NO_VIEW, carryView, coverEnd, foldRange, isHidden, startingAt, viewByLine, viewIn, zoomEscape, zoomFolded, zoomRange, type ViewState } from './view.ts';
 
 /**
@@ -57,6 +58,7 @@ export class OurusDoc {
   #rootNode: OutlineNode | null = null;
   #byId: Map<number, OutlineNode> | null = null;
   #zoomFolded: ReadonlySet<number> | null = null;
+  #lastRead: SelectionRead | null = null;
 
   private constructor(text: string, marks: MarkSet, mdTree: MdTree, config: Config, root: OutlineNodePersistent, nextId: number, view: ViewState = NO_VIEW) {
     this.text = text;
@@ -182,6 +184,63 @@ export class OurusDoc {
    */
   zoomEscape(next: OurusDoc, removed = false): string | null {
     return zoomEscape(this, next, removed);
+  }
+
+  /**
+   * The subtrees a selection touches: the topmost nodes whose own lines it touches, in document order,
+   * at whatever depths, a caret's node too (the innermost where nodes share a line, `- - a`); a blank
+   * line the gap of the node above it. What a key acts on (Tab with a caret indents its item). None
+   * only where there is no node to touch (the blank lines before the first, an empty document).
+   */
+  touchedSubtrees(selection: TextSelection): readonly number[] {
+    return this.touchedNodes(selection).map((n) => n.id);
+  }
+
+  /**
+   * The roots of a subtree selection, the selection that is exactly their subtrees as whole lines:
+   * from column 0 of the first's first line to the start of the line after the last's subtree (the
+   * canonical shape, `selectionOf`'s), its last line's end, or the end of the blank lines after it;
+   * where nodes share those lines, the outermost inside the zoom, wherever they are (a select all of a
+   * document that is its nodes only is them). Null for any other selection: a caret, text, one node's
+   * own text (but at the document's end, where it is the node too). What a host draws as blocks.
+   */
+  selectedSubtrees(selection: TextSelection): readonly number[] | null {
+    return this.selectedNodes(selection)?.map((n) => n.id) ?? null;
+  }
+
+  /**
+   * The selection of the subtrees of `ids` as whole lines: from column 0 of the first's first line to
+   * the start of the line after the last line of any of them (or the document's end), everything
+   * between included; the anchor at the top unless `direction` is `up`. Throws for no ids, an id the
+   * document doesn't have, the root, an id outside the zoom or one a fold hides.
+   */
+  selectionOf(ids: readonly number[], direction: 'down' | 'up' = 'down'): TextSelection {
+    const nodes = ids.map((id) => {
+      const node = this.node(id);
+      if (!node) throw new Error(`no node ${id} to select`);
+      return node;
+    });
+    return subtreesSelection(this, nodes, direction);
+  }
+
+  /** `touchedSubtrees`, as nodes. */
+  touchedNodes(selection: TextSelection): readonly OutlineNode[] {
+    const read = this.#readOf(selection);
+    return (read.touched ??= touchedNodes(this, selection));
+  }
+
+  /** `selectedSubtrees`, as nodes. */
+  selectedNodes(selection: TextSelection): readonly OutlineNode[] | null {
+    const read = this.#readOf(selection);
+    if (read.selected === undefined) read.selected = selectedNodes(this, selection);
+    return read.selected;
+  }
+
+  /** What this snapshot read of `selection` (the last selection asked about only). */
+  #readOf(selection: TextSelection): SelectionRead {
+    const last = this.#lastRead;
+    if (last && last.anchor === selection.anchor && last.head === selection.head) return last;
+    return (this.#lastRead = { anchor: selection.anchor, head: selection.head });
   }
 
   /** This snapshot with another view: the text, parse, outline and their indexes shared. */
@@ -495,6 +554,14 @@ export class OurusDoc {
     const before = shape(this.root);
     return shape(this.update(changes.changes, { setMarks: [] }).root) !== before && shape(held.root) === before;
   }
+}
+
+/** What a snapshot read of a selection: its touched and selected subtrees, each once asked for. */
+interface SelectionRead {
+  readonly anchor: number;
+  readonly head: number;
+  touched?: readonly OutlineNode[];
+  selected?: readonly OutlineNode[] | null;
 }
 
 /** Each stored node's text, read once: valid in every snapshot that shares the node, whose lines are the same. */

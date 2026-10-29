@@ -8,7 +8,7 @@
 // typed (a character at a time, each through ourus's `insertText` first, as a host hooked to its
 // keys does), and caret motions named as CodeMirror's commands are.
 
-import { executeCommand, leavesZoom, type Command, type CommandResult, type Selection } from '../src/commands/index.ts';
+import { executeCommand, leavesZoom, type Command, type CommandResult, type TextSelection } from '../src/commands/index.ts';
 import { CommandContext } from '../src/commands/context.ts';
 import { dragRun, placeAtSeam } from '../src/commands/drag.ts';
 import type { OurusDoc } from '../src/doc/index.ts';
@@ -34,6 +34,10 @@ const COMMANDS = new Set<string>([
   'copy',
   'cut',
   'deleteByDrag',
+  'selectNode',
+  'expandSelection',
+  'selectNodeDown',
+  'selectNodeUp',
 ]);
 
 /** The command an action names: `paste` takes the clipboard's formats, plain paste its text. */
@@ -51,7 +55,7 @@ function commandOf(action: string, clipboard: Clipboard): Command {
  * monospace font's, with tab stops of 4. Returns the new head, or for a vertical motion the line
  * it reaches, placed at the goal column.
  */
-type Motion = (doc: OurusDoc, sel: Selection) => number | { line: number };
+type Motion = (doc: OurusDoc, sel: TextSelection) => number | { line: number };
 
 const MOTIONS: Record<string, Motion> = {
   // with a selection, left and right collapse it to its start or end
@@ -91,14 +95,17 @@ const HOST_ACTIONS = new Set<string>(['undo', 'redo']);
 /** Whether an action is an ourus command (the rest are typing, motions and the host's undo). */
 export const isCommand = (token: string): boolean => COMMANDS.has(token);
 
-export const isAction = (token: string): boolean => /^"[^"]*"$/.test(token) || COMMANDS.has(token) || HOST_ACTIONS.has(token) || isMotion(token) || DROP.test(token) || PICKUP.test(token) || VIEW.test(token);
+/** A key pressed as is in an app (`key:Control+a`, Playwright's notation), for probing a key no action names: ourus does nothing at it. */
+const isRawKey = (token: string): boolean => /^key:\S+$/.test(token);
+
+export const isAction = (token: string): boolean => /^"[^"]*"$/.test(token) || isRawKey(token) || COMMANDS.has(token) || HOST_ACTIONS.has(token) || isMotion(token) || DROP.test(token) || PICKUP.test(token) || VIEW.test(token);
 
 /** Whether an action is a drop, which plays at the start's drop line. */
 export const isDrop = (token: string): boolean => DROP.test(token);
 
 export interface Played {
   doc: OurusDoc;
-  selection: Selection;
+  selection: TextSelection;
   /** The host's clipboard, each format's text. */
   clipboard: Clipboard;
   /** The column vertical motion aims for, kept while the caret moves up and down. */
@@ -118,7 +125,7 @@ export interface Played {
 interface Snapshot {
   readonly text: string;
   readonly marks: MarkSet;
-  readonly selection: Selection;
+  readonly selection: TextSelection;
   readonly doc: OurusDoc;
 }
 
@@ -162,6 +169,7 @@ function step(state: Played, action: string): Played {
   const { doc, selection } = state;
   const text = doc.text;
   if (action.startsWith('"')) return typeText(state, action.slice(1, -1));
+  if (isRawKey(action)) return state;
   if (isMotion(action)) {
     const extend = action.startsWith('select');
     const target = MOTIONS[action.replace(/^(?:cursor|select)/, '')]!(doc, selection);
@@ -288,6 +296,12 @@ function hostRun(state: Played, command: Command | CommandResult): Played {
       if (to === text.length) return { ...state, last };
       return { ...edit(state, { from: to, to: charAfter(text, to), insert: '' }), last };
     }
+    // the selection commands: a select all, a line's selection (CodeMirror's `selectLineDown`)
+    case 'expandSelection':
+      return { ...state, selection: { anchor: 0, head: text.length }, last };
+    case 'selectNodeDown':
+    case 'selectNodeUp':
+      return { ...step(state, type === 'selectNodeDown' ? 'selectLineDown' : 'selectLineUp'), last };
     default:
       return { ...state, last };
   }
@@ -346,7 +360,7 @@ function charAfter(text: string, pos: number): number {
   return c >= 0xd800 && c < 0xdc00 && pos + 1 < text.length && text.charCodeAt(pos + 1) >= 0xdc00 && text.charCodeAt(pos + 1) < 0xe000 ? pos + 2 : pos + 1;
 }
 
-function mapSel(changes: readonly ChangeSpec[], sel: Selection): Selection {
+function mapSel(changes: readonly ChangeSpec[], sel: TextSelection): TextSelection {
   let { anchor, head } = sel;
   for (const c of [...changes].sort((a, b) => b.from - a.from)) {
     const shift = c.insert.length - (c.to - c.from);

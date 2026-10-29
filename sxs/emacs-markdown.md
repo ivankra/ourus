@@ -14,7 +14,7 @@ Summary:
 
 | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- |
-| **229 (19%)** | **[49](#caret-49) (4%)** | **[31](#whitespace-31) (2.5%)** | **[621](#disagree-621) (51%)** | **0 (0%)** | **[298](#skipped-298) (24%)** | **1228** |
+| **229 (18%)** | **[53](#caret-53) (4.1%)** | **[31](#whitespace-31) (2.4%)** | **[645](#disagree-645) (50%)** | **0 (0%)** | **[330](#skipped-330) (26%)** | **1288** |
 
 Per-file:
 
@@ -27,18 +27,18 @@ Per-file:
 | [delete-subtree.md](../spec/delete-subtree.md) | 1 |  |  | 11 |  | 1 | **13** |
 | [delete.md](../spec/delete.md) | 9 |  |  | 31 |  | 16 | **56** |
 | [drag.md](../spec/drag.md) |  |  |  |  |  | 8 | **8** |
-| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 10 | **10** |
+| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 12 | **12** |
 | [enter.md](../spec/enter.md) | 1 |  |  | 66 |  | 31 | **98** |
 | [fences.md](../spec/fences.md) | 16 | 2 | 1 | 46 |  | 5 | **70** |
 | [fold.md](../spec/fold.md) |  |  |  |  |  | 19 | **19** |
 | [gaps.md](../spec/gaps.md) | 6 | 2 |  | 11 |  |  | **19** |
-| [indent.md](../spec/indent.md) | 14 | 1 | 6 | 21 |  | 8 | **50** |
+| [indent.md](../spec/indent.md) | 14 | 1 | 6 | 23 |  | 11 | **55** |
 | [lists.md](../spec/lists.md) |  | 2 |  | 3 |  | 11 | **16** |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 6 | 5 |  | 29 |  |  | **40** |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 7 | 6 |  | 28 |  | 2 | **43** |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 6 | 7 |  | 31 |  |  | **44** |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 7 | 6 |  | 31 |  | 2 | **46** |
 | [move-subtree.md](../spec/move-subtree.md) |  |  |  |  |  | 24 | **24** |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 12 |  | 7 | 41 |  | 7 | **67** |
-| [outdent.md](../spec/outdent.md) | 5 | 1 |  | 24 |  | 8 | **38** |
+| [outdent.md](../spec/outdent.md) | 5 | 1 |  | 25 |  | 11 | **42** |
 | [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |
 | [paste-conv.md](../spec/paste-conv.md) | 1 |  |  | 5 |  |  | **6** |
 | [paste-html.md](../spec/paste-html.md) | 1 |  | 1 | 17 |  |  | **19** |
@@ -49,17 +49,19 @@ Per-file:
 | [placeholders.md](../spec/placeholders.md) | 4 |  |  | 15 |  | 1 | **20** |
 | [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |
 | [quotes.md](../spec/quotes.md) | 49 | 8 | 6 | 55 |  | 25 | **143** |
-| [regressions.md](../spec/regressions.md) | 12 | 1 | 1 | 35 |  | 15 | **64** |
+| [regressions.md](../spec/regressions.md) | 12 | 1 | 1 | 37 |  | 15 | **66** |
 | [scenarios.md](../spec/scenarios.md) | 3 |  |  | 22 |  | 4 | **29** |
+| [select.md](../spec/select.md) |  |  |  |  |  | 23 | **23** |
 | [shift-enter.md](../spec/shift-enter.md) | 4 |  | 8 | 21 |  | 3 | **36** |
+| [subtree-selection.md](../spec/subtree-selection.md) |  | 2 |  | 14 |  | 1 | **17** |
 | [tasks.md](../spec/tasks.md) | 8 |  |  | 11 |  | 11 | **30** |
 | [typing.md](../spec/typing.md) | 3 |  |  |  |  |  | **3** |
 | [undo.md](../spec/undo.md) | 1 | 1 |  | 3 |  |  | **5** |
 | [z-open.md](../spec/z-open.md) |  |  |  | 1 |  |  | **1** |
 | [zoom.md](../spec/zoom.md) |  |  |  |  |  | 14 | **14** |
-| **total** | **229 (19%)** | **49 (4%)** | **31 (2.5%)** | **621 (51%)** | **0 (0%)** | **298 (24%)** | **1228** |
+| **total** | **229 (18%)** | **53 (4.1%)** | **31 (2.4%)** | **645 (50%)** | **0 (0%)** | **330 (26%)** | **1288** |
 
-## Disagree (621)
+## Disagree (645)
 
 ### [Backspace1](../spec/backspace.md#backspace1)
 
@@ -3032,9 +3034,9 @@ para┃
 
 ```buffer
 - a
-- «b
-- c»
-- d
+«- b
+- c
+»- d
 ```
 
 </td><td>
@@ -3042,8 +3044,8 @@ para┃
 ```buffer
 - a
 - b
+- c
 ┃
-- d
 ```
 
 </td><td>
@@ -9995,9 +9997,9 @@ c
 
 ```buffer
 - a
-- «b
-- c»
-- d
+«- b
+- c
+»- d
 ```
 
 </td><td>
@@ -10005,17 +10007,17 @@ c
 ```buffer
 - a
 - b
-  - c┃
-- d
+- c
+┃  - d
 ```
 
 </td><td>
 
 ```buffer
 - a
-  - «b
-  - c»
-- d
+«  - b
+  - c
+»- d
 ```
 
 </td></tr>
@@ -10300,9 +10302,9 @@ Title┃
 
 ```buffer
 - a
-- «b
-- c»
-- d
+«- b
+- c
+»- d
 ```
 
 </td></tr>
@@ -10317,17 +10319,17 @@ Title┃
 ```buffer
 - a
 - b
-  - c┃
-- d
+- c
+┃  - d
 ```
 
 </td><td>
 
 ```buffer
 - a
-  - «b
-  - c»
-- d
+«  - b
+  - c
+»- d
 ```
 
 </td></tr>
@@ -10342,17 +10344,17 @@ Title┃
 ```buffer
 - a
 - b
-- c┃
-- d
+- c
+┃- d
 ```
 
 </td><td>
 
 ```buffer
 - a
-- «b
-- c»
-- d
+«- b
+- c
+»- d
 ```
 
 </td></tr>
@@ -10817,6 +10819,117 @@ $$
 →- b┃
 
 →→  code
+```
+
+</td></tr>
+</table>
+
+### [Indent46](../spec/indent.md#indent46)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+«- b
+  - c
+»- d
+```
+
+</td></tr>
+</table>
+
+> indent
+
+<table>
+<tr><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- b
+  - c
+┃  - d
+```
+
+</td><td>
+
+```buffer
+- a
+«  - b
+    - c
+»- d
+```
+
+</td></tr>
+</table>
+
+> outdent
+
+<table>
+<tr><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- b
+  - c
+┃- d
+```
+
+</td><td>
+
+```buffer
+- a
+«- b
+  - c
+»- d
+```
+
+</td></tr>
+</table>
+
+### [Indent49](../spec/indent.md#indent49)
+
+> indent
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one
+  - two
+    - d0
+«    - deep
+  - three
+»  - five
+- four
+```
+
+</td><td>
+
+```buffer
+- one
+  - two
+    - d0
+    - deep
+  - three
+┃    - five
+- four
+```
+
+</td><td>
+
+```buffer
+- one
+  - two
+    - d0
+«      - deep
+      - three
+»  - five
+- four
 ```
 
 </td></tr>
@@ -11310,20 +11423,20 @@ one┃
 
 ```buffer
 - a
-- «b
+«- b
   - b1
-- c»
-- d
+- c
+»- d
 ```
 
 </td><td>
 
 ```buffer
 - a
-- b
+«- b
   - b1
-- d
-- c┃
+- c
+»- d
 ```
 
 </td><td>
@@ -11331,9 +11444,10 @@ one┃
 ```buffer
 - a
 - d
-- «b
+«- b
   - b1
-- c»
+- c
+»
 ```
 
 </td></tr>
@@ -11348,10 +11462,10 @@ one┃
 ```buffer
 - a
   - b
-  - «c
+«  - c
     - c1
-  - d»
-- e
+  - d
+»- e
   - e1
 ```
 
@@ -11367,10 +11481,10 @@ one┃
 ```buffer
 - a
   - b
-  - «c
+«  - c
     - c1
-  - d»
-- e
+  - d
+»- e
   - e1
 ```
 
@@ -11380,10 +11494,10 @@ one┃
 - a
   - b
 - e
-  - «c
+«  - c
     - c1
-  - d»
-  - e1
+  - d
+»  - e1
 ```
 
 </td></tr>
@@ -11398,10 +11512,10 @@ one┃
 ```buffer
 - a
   - b
-  - «c
+«  - c
     - c1
-  - d»
-- e
+  - d
+»- e
   - e1
 ```
 
@@ -11412,9 +11526,10 @@ one┃
   - b
 - e
   - e1
-  - «c
+«  - c
     - c1
-  - d»
+  - d
+»
 ```
 
 </td></tr>
@@ -12260,18 +12375,18 @@ para
 
 ```buffer
 1. a
-2. «
-1) b»
-2) c
+«2. 
+1) b
+»2) c
 ```
 
 </td><td>
 
 ```buffer
 1. a
-2. «
-1) b»
-2) c
+«2. 
+1) b
+»2) c
 ```
 
 </td><td>
@@ -12279,8 +12394,82 @@ para
 ```buffer
 1. a
 1) c
-2) «
-3) b»
+«2) 
+3) b
+»
+```
+
+</td></tr>
+</table>
+
+### [MoveDown41](../spec/move-subtree-down.md#movedown41)
+
+> moveSubtreeDown
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+«- b
+  - c
+»- d
+```
+
+</td><td>
+
+```buffer
+- a
+«- b
+  - c
+»- d
+```
+
+</td><td>
+
+```buffer
+- a
+- d
+«- b
+  - c
+»
+```
+
+</td></tr>
+</table>
+
+### [MoveDown43](../spec/move-subtree-down.md#movedown43)
+
+> moveSubtreeDown
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+«- b
+  - c»
+- d
+```
+
+</td><td>
+
+```buffer
+- a
+«- b
+  - c»
+- d
+```
+
+</td><td>
+
+```buffer
+- a
+- d
+«- b
+  - c»
 ```
 
 </td></tr>
@@ -12584,29 +12773,29 @@ para
 
 ```buffer
 - a
-- «b
+«- b
   - b1
-- c»
-- d
+- c
+»- d
 ```
 
 </td><td>
 
 ```buffer
 - a
-- c┃
 - b
   - b1
-- d
+┃- d
+- c
 ```
 
 </td><td>
 
 ```buffer
-- «b
+«- b
   - b1
-- c»
-- a
+- c
+»- a
 - d
 ```
 
@@ -12625,10 +12814,10 @@ para
 - a
   - a1
 - b
-  - «c
+«  - c
     - c1
-  - d»
-  - e
+  - d
+»  - e
 ```
 
 </td><td>
@@ -12637,10 +12826,10 @@ para
 - a
   - a1
 - b
-  - d┃
   - c
     - c1
-  - e
+┃  - e
+  - d
 ```
 
 </td><td>
@@ -12648,10 +12837,10 @@ para
 ```buffer
 - a
   - a1
-  - «c
+«  - c
     - c1
-  - d»
-- b
+  - d
+»- b
   - e
 ```
 
@@ -13480,6 +13669,119 @@ para
 - two┃
 - one
 
+```
+
+</td></tr>
+</table>
+
+### [MoveUp44](../spec/move-subtree-up.md#moveup44)
+
+> moveSubtreeUp
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+«- b
+  - c
+»- d
+```
+
+</td><td>
+
+```buffer
+- a
+┃- d
+- b
+  - c
+```
+
+</td><td>
+
+```buffer
+«- b
+  - c
+»- a
+- d
+```
+
+</td></tr>
+</table>
+
+### [MoveUp45](../spec/move-subtree-up.md#moveup45)
+
+> moveSubtreeUp
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+
+«- b
+  - c
+»
+- d
+```
+
+</td><td>
+
+```buffer
+- a
+
+«- b
+  - c
+»
+- d
+```
+
+</td><td>
+
+```buffer
+«- b
+  - c
+»
+- a
+
+- d
+```
+
+</td></tr>
+</table>
+
+### [MoveUp46](../spec/move-subtree-up.md#moveup46)
+
+> moveSubtreeUp
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- b
+«  - c
+»
+```
+
+</td><td>
+
+```buffer
+- a
+- b
+«  - c
+»
+```
+
+</td><td>
+
+```buffer
+- a
+«  - c
+»- b
 ```
 
 </td></tr>
@@ -15185,18 +15487,20 @@ A┃
 
 ```buffer
 para
-- «a
+«- a
   - b
-- c»
+- c
+»
 ```
 
 </td><td>
 
 ```buffer
 para
-- «a
+«- a
   - b
-- c»
+- c
+»
 ```
 
 </td><td>
@@ -15207,7 +15511,8 @@ para
 «a
 - b
 
-c»
+c
+»
 ```
 
 </td></tr>
@@ -15256,27 +15561,27 @@ c»
 
 ```buffer
 - a
-  - «b
-  - c»
-- d
+«  - b
+  - c
+»- d
 ```
 
 </td><td>
 
 ```buffer
 - a
-  - b
-- c┃
-- d
+«  - b
+  - c
+»- d
 ```
 
 </td><td>
 
 ```buffer
 - a
-- «b
-- c»
-- d
+«- b
+- c
+»- d
 ```
 
 </td></tr>
@@ -15356,15 +15661,17 @@ c»
 <tr valign="top"><td>
 
 ```buffer
-- «a
-- b»
+«- a
+- b
+»
 ```
 
 </td><td>
 
 ```buffer
-- «a
-- b»
+«- a
+- b
+»
 ```
 
 </td><td>
@@ -15372,7 +15679,8 @@ c»
 ```buffer
 «a
 
-b»
+b
+»
 ```
 
 </td></tr>
@@ -15864,6 +16172,51 @@ t1┃
 - b┃
 
 →  code
+```
+
+</td></tr>
+</table>
+
+### [Outdent25](../spec/outdent.md#outdent25)
+
+> outdent
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - b
+    - c
+«      - d
+  - e
+»  - f
+- g
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+    - c
+      - d
+  - e
+┃- f
+- g
+```
+
+</td><td>
+
+```buffer
+- a
+  - b
+    - c
+«    - d
+    - e
+»  - f
+- g
 ```
 
 </td></tr>
@@ -24631,6 +24984,98 @@ Original:
 </td></tr>
 </table>
 
+### [Regression65](../spec/regressions.md#regression65)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- 	b
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - c
+```
+
+</td><td>
+
+```buffer
+- a- →b
+┃
+  - c
+```
+
+</td><td>
+
+```buffer
+- a
+  - b┃
+  - c
+```
+
+</td></tr>
+</table>
+
+### [Regression66](../spec/regressions.md#regression66)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+-
+  x
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+100. a
+┃
+  b
+```
+
+</td><td>
+
+```buffer
+100. a
+-
+  x
+┃
+  b
+```
+
+</td><td>
+
+```buffer
+100. a
+101.
+     x┃
+
+  b
+```
+
+</td></tr>
+</table>
+
 ### [Scenario1](../spec/scenarios.md#scenario1)
 
 > enter indent "x"
@@ -27188,6 +27633,520 @@ p
 </td></tr>
 </table>
 
+### [SubtreeEdit3](../spec/subtree-selection.md#subtreeedit3)
+
+> deleteSoftLineBackward
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one
+  - two
+«    - deep
+  - three
+»  - five
+- four
+```
+
+</td><td>
+
+```buffer
+- one
+  - two
+    - deep
+  - three
+┃  - five
+- four
+```
+
+</td><td>
+
+```buffer
+- one
+  - two┃
+  - five
+- four
+```
+
+</td></tr>
+</table>
+
+### [SubtreeEdit4](../spec/subtree-selection.md#subtreeedit4)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+
+«- b
+»
+- c
+```
+
+</td><td>
+
+```buffer
+- a
+
+┃
+- c
+```
+
+</td><td>
+
+```buffer
+- a┃
+
+- c
+```
+
+</td></tr>
+</table>
+
+### [SubtreeEdit5](../spec/subtree-selection.md#subtreeedit5)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one
+  - two
+«    - deep
+  - three
+»  - five
+- four
+```
+
+</td></tr>
+</table>
+
+> copy
+
+### [SubtreeEdit6](../spec/subtree-selection.md#subtreeedit6)
+
+> cut
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+«- b
+  - b1
+»- c
+```
+
+</td><td>
+
+```buffer
+- a
+┃- c
+```
+
+</td><td>
+
+```buffer
+- a┃
+- c
+```
+
+</td></tr>
+</table>
+
+### [SubtreeEdit7](../spec/subtree-selection.md#subtreeedit7)
+
+> "xy"
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+«- b
+»- c
+```
+
+</td><td>
+
+```buffer
+- a
+- b
+xy┃- c
+```
+
+</td><td>
+
+```buffer
+- a
+«- b
+»- c
+```
+
+</td></tr>
+</table>
+
+### [SubtreeEdit8](../spec/subtree-selection.md#subtreeedit8)
+
+> "x"
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+«- b
+  - b1
+»- c
+```
+
+</td><td>
+
+```buffer
+- a
+- b
+  - b1
+x┃- c
+```
+
+</td><td>
+
+```buffer
+- a
+«- b
+  - b1
+»- c
+```
+
+</td></tr>
+</table>
+
+### [SubtreeEdit9](../spec/subtree-selection.md#subtreeedit9)
+
+> "x"
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+«- [ ] task
+  - sub
+»- c
+```
+
+</td><td>
+
+```buffer
+- [ ] task
+  - sub
+x┃- c
+```
+
+</td><td>
+
+```buffer
+«- [ ] task
+  - sub
+»- c
+```
+
+</td></tr>
+</table>
+
+### [SubtreeEdit10](../spec/subtree-selection.md#subtreeedit10)
+
+> "x"
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+para
+
+«***
+»
+next
+```
+
+</td><td>
+
+```buffer
+para
+
+***
+x┃
+next
+```
+
+</td><td>
+
+```buffer
+para
+
+«***
+»
+next
+```
+
+</td></tr>
+</table>
+
+### [SubtreeEdit11](../spec/subtree-selection.md#subtreeedit11)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+y
+```
+
+</td></tr>
+</table>
+
+> pastePlain
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one
+  - two
+«    - deep
+  - three
+»  - five
+- four
+```
+
+</td><td>
+
+```buffer
+- one
+  - two
+    - deep
+  - three
+y┃  - five
+- four
+```
+
+</td><td>
+
+```buffer
+- one
+  - two
+    - y┃
+  - five
+- four
+```
+
+</td></tr>
+</table>
+
+### [SubtreeEdit12](../spec/subtree-selection.md#subtreeedit12)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+«- b
+  - b1
+»- c
+```
+
+</td><td>
+
+```buffer
+- a
+- b
+  - b1
+
+┃- c
+```
+
+</td><td>
+
+```buffer
+- a
+- b┃
+  - b1
+- c
+```
+
+</td></tr>
+</table>
+
+### [SubtreeEdit13](../spec/subtree-selection.md#subtreeedit13)
+
+> shiftEnter
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one
+  - two
+«    - deep
+  - three
+»  - five
+- four
+```
+
+</td><td>
+
+```buffer
+- one
+  - two
+    - deep
+  - three
+
+┃- five
+- four
+```
+
+</td><td>
+
+```buffer
+- one
+  - two
+    - deep
+  - three┃
+  - five
+- four
+```
+
+</td></tr>
+</table>
+
+### [SubtreeEdit14](../spec/subtree-selection.md#subtreeedit14)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- p
+- q
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+«- b
+  - b1
+»- c
+```
+
+</td><td>
+
+```buffer
+- a
+- b
+  - b1
+- p
+- q
+┃- c
+```
+
+</td><td>
+
+```buffer
+- a
+- p
+- q┃
+- c
+```
+
+</td></tr>
+</table>
+
+### [SubtreeEdit15](../spec/subtree-selection.md#subtreeedit15)
+
+> "x"
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+«- b
+»- c
+```
+
+</td><td>
+
+```buffer
+- a
+- b
+x┃- c
+```
+
+</td><td>
+
+```buffer
+- a
+«- b
+»- c
+```
+
+</td></tr>
+</table>
+
+### [SubtreeEdit16](../spec/subtree-selection.md#subtreeedit16)
+
+> deleteContentForward "x"
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+«- a
+  - a1
+- b
+»
+```
+
+</td><td>
+
+```buffer
+x┃
+```
+
+</td><td>
+
+```buffer
+x┃
+```
+
+</td></tr>
+</table>
+
 ### [TaskEnter1](../spec/tasks.md#taskenter1)
 
 > enter
@@ -29225,7 +30184,7 @@ Original:
 </td></tr>
 </table>
 
-## Caret (49)
+## Caret (53)
 
 ### [Copy1](../spec/copy.md#copy1)
 
@@ -30282,6 +31241,79 @@ Next
 </td></tr>
 </table>
 
+### [MoveDown42](../spec/move-subtree-down.md#movedown42)
+
+> moveSubtreeDown
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+┃«- b
+  - c
+»- d
+```
+
+</td><td>
+
+```buffer
+- a
+- d
+┃- b
+  - c
+```
+
+</td><td>
+
+```buffer
+- a
+- d
+┃«- b
+  - c
+»
+```
+
+</td></tr>
+</table>
+
+### [MoveDown44](../spec/move-subtree-down.md#movedown44)
+
+> moveSubtreeDown
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+«- b»
+  - c
+- d
+```
+
+</td><td>
+
+```buffer
+- a
+- d
+- b┃
+  - c
+```
+
+</td><td>
+
+```buffer
+- a
+- d
+«- b»
+  - c
+```
+
+</td></tr>
+</table>
+
 ### [MoveUp16](../spec/move-subtree-up.md#moveup16)
 
 > moveSubtreeUp
@@ -30947,6 +31979,69 @@ Original:
 </td></tr>
 </table>
 
+### [SubtreeEdit1](../spec/subtree-selection.md#subtreeedit1)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+«- b
+»- c
+```
+
+</td><td>
+
+```buffer
+- a
+┃- c
+```
+
+</td><td>
+
+```buffer
+- a┃
+- c
+```
+
+</td></tr>
+</table>
+
+### [SubtreeEdit2](../spec/subtree-selection.md#subtreeedit2)
+
+> deleteContentForward
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+«- b
+  - b1
+»- c
+```
+
+</td><td>
+
+```buffer
+- a
+┃- c
+```
+
+</td><td>
+
+```buffer
+- a┃
+- c
+```
+
+</td></tr>
+</table>
+
 ### [Undo1](../spec/undo.md#undo1)
 
 <table>
@@ -30996,7 +32091,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (298)
+## Skipped (330)
 
 | example | why |
 | --- | --- |
@@ -31076,6 +32171,8 @@ Original:
 | [DuplicateSubtree8](../spec/duplicate-subtree.md#duplicatesubtree8) | action duplicateSubtree |
 | [DuplicateSubtree9](../spec/duplicate-subtree.md#duplicatesubtree9) | action duplicateSubtree |
 | [DuplicateSubtree10](../spec/duplicate-subtree.md#duplicatesubtree10) | action duplicateSubtree |
+| [DuplicateSubtree11](../spec/duplicate-subtree.md#duplicatesubtree11) | action duplicateSubtree |
+| [DuplicateSubtree12](../spec/duplicate-subtree.md#duplicatesubtree12) | action duplicateSubtree |
 | **enter.md** | |
 | [Enter3b](../spec/enter.md#enter3b) | option enterMidItem: child |
 | [Enter7b](../spec/enter.md#enter7b) | option enterOnEmptyItem: outdent |
@@ -31143,6 +32240,9 @@ Original:
 | [Indent40](../spec/indent.md#indent40) | option indentUnit: 2 |
 | [Indent41](../spec/indent.md#indent41) | option indentUnit: tab |
 | [Indent42](../spec/indent.md#indent42) | option indentUnit: tab |
+| [Indent47](../spec/indent.md#indent47) | option mixedDepths: each |
+| [Indent48](../spec/indent.md#indent48) | option mixedDepths: each |
+| [Indent50](../spec/indent.md#indent50) | option mixedDepths: refuse |
 | **lists.md** | |
 | [Lists2](../spec/lists.md#lists2) | option listParent: container |
 | [Lists3](../spec/lists.md#lists3) | option listParent: container |
@@ -31200,6 +32300,9 @@ Original:
 | [LogicalOutdent5](../spec/outdent.md#logicaloutdent5) | option outdent: logical |
 | [Outdent17b](../spec/outdent.md#outdent17b) | option outdent: logical |
 | [Outdent19b](../spec/outdent.md#outdent19b) | option markup: decorated |
+| [Outdent23](../spec/outdent.md#outdent23) | option mixedDepths: each |
+| [Outdent24](../spec/outdent.md#outdent24) | option outdent: logical |
+| [Outdent26](../spec/outdent.md#outdent26) | option mixedDepths: refuse |
 | **paste-at.md** | |
 | [PasteAt1](../spec/paste-at.md#pasteat1) | action pasteAt |
 | [PasteAt2](../spec/paste-at.md#pasteat2) | action pasteAt |
@@ -31297,10 +32400,36 @@ Original:
 | [Scenario8c](../spec/scenarios.md#scenario8c) | action moveSubtree ② |
 | [Scenario8d](../spec/scenarios.md#scenario8d) | action drag ② |
 | [Scenario17](../spec/scenarios.md#scenario17) | option pasteLines: items |
+| **select.md** | |
+| [Select1](../spec/select.md#select1) | action selectNode |
+| [Select2](../spec/select.md#select2) | action expandSelection |
+| [Select3](../spec/select.md#select3) | action expandSelection |
+| [Select4](../spec/select.md#select4) | action expandSelection |
+| [Select5](../spec/select.md#select5) | option selectionLadder: parents |
+| [Select6](../spec/select.md#select6) | action expandSelection |
+| [Select7](../spec/select.md#select7) | action expandSelection |
+| [Select8](../spec/select.md#select8) | action expandSelection |
+| [Select9](../spec/select.md#select9) | action expandSelection |
+| [Select10](../spec/select.md#select10) | no zoom |
+| [Select11](../spec/select.md#select11) | action selectNodeDown |
+| [Select12](../spec/select.md#select12) | action selectNodeUp |
+| [Select13](../spec/select.md#select13) | action selectNodeUp |
+| [Select14](../spec/select.md#select14) | action selectNodeUp |
+| [Select15](../spec/select.md#select15) | action selectNodeDown |
+| [Select16](../spec/select.md#select16) | action selectNodeUp |
+| [Select17](../spec/select.md#select17) | action selectNodeDown |
+| [Select18](../spec/select.md#select18) | action selectNodeDown |
+| [Select19](../spec/select.md#select19) | no folds |
+| [Select20](../spec/select.md#select20) | action expandSelection |
+| [Select21](../spec/select.md#select21) | action expandSelection |
+| [Select22](../spec/select.md#select22) | option selectionLadder: top |
+| [Select23](../spec/select.md#select23) | option selectNodeUp: sibling |
 | **shift-enter.md** | |
 | [ShiftEnter16](../spec/shift-enter.md#shiftenter16) | CR line endings |
 | [ShiftEnter22b](../spec/shift-enter.md#shiftenter22b) | option markup: decorated |
 | [ShiftEnter26b](../spec/shift-enter.md#shiftenter26b) | option markup: decorated |
+| **subtree-selection.md** | |
+| [SubtreeEdit17](../spec/subtree-selection.md#subtreeedit17) | option pasteOverSelection: ignore |
 | **tasks.md** | |
 | [TaskEnter9](../spec/tasks.md#taskenter9) | option enterTask: plain |
 | [TaskEnter9b](../spec/tasks.md#taskenter9b) | option enterTask: plain |

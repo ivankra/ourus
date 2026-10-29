@@ -21,6 +21,16 @@ export interface ChangeSpec {
   readonly insert: string;
 }
 
+/**
+ * A selection of one range: `anchor` where it started, `head` where it is (the caret when empty).
+ * CodeMirror 6's selection spec, so a host passes `state.selection.main` in and dispatches a result's
+ * as it is. Offsets are UTF-16 code units.
+ */
+export interface TextSelection {
+  readonly anchor: number;
+  readonly head: number;
+}
+
 /** Changes to a text of a known length: sorted, not overlapping, none empty. Immutable. */
 export class ChangeSet {
   /** The changes, in the coordinates of the text before them. */

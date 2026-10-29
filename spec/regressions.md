@@ -1564,8 +1564,8 @@ listParent: container
 > outdent
 
 ```buffer
-x
-   - «x
+«x
+   - x
    1. »
    - a
          - x

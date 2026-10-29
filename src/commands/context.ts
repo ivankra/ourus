@@ -5,7 +5,7 @@
 import type { Config } from '../config.ts';
 import type { Located, OurusDoc } from '../doc/index.ts';
 import { OurusDraft } from '../draft/index.ts';
-import type { CommandResult, RejectReason, Selection } from './types.ts';
+import type { CommandResult, RejectReason, TextSelection } from './types.ts';
 
 /**
  * A command's outcome; null where ourus doesn't do it yet (a case of a command): `executeCommand`
@@ -15,13 +15,13 @@ export type CommandOutcome = CommandResult | null;
 
 export class CommandContext {
   readonly doc: OurusDoc;
-  readonly selection: Selection;
+  readonly selection: TextSelection;
   /** The nodes the command acts on, by id, where it was given them (`Command.nodes`): else the selection's. */
   readonly nodes: readonly number[] | undefined;
   #from: Located | undefined;
   #to: Located | undefined;
 
-  constructor(doc: OurusDoc, selection: Selection, nodes?: readonly number[]) {
+  constructor(doc: OurusDoc, selection: TextSelection, nodes?: readonly number[]) {
     this.doc = doc;
     this.selection = selection;
     this.nodes = nodes;

@@ -199,6 +199,12 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
       deleteContentForward: 'Delete',
       moveSubtreeUp: 'Alt+Shift+ArrowUp',
       moveSubtreeDown: 'Alt+Shift+ArrowDown',
+      // the selection commands (spec/select.md): Ctrl-A, Shift-Down and Shift-Up as the app has them
+      expandSelection: 'Control+a',
+      selectNodeDown: 'Shift+ArrowDown',
+      selectNodeUp: 'Shift+ArrowUp',
+      // Escape ends the editing and selects the block (Logseq, Logseq DB)
+      selectNode: 'Escape',
       // "kill line before" (`kill-line-before!`): from the start of the caret's line to the caret, nothing at a line's start
       deleteSoftLineBackward: 'Alt+u',
       copy: 'Control+c',
@@ -219,6 +225,11 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
     // Backspace at the first block's start does nothing in both (measured with `--ignore-options`:
     // `backspace.md › Backspace34` agrees; its `unwrap` case needs a paragraph, which no block app runs)
     behaves: {
+      // OG's Ctrl-A climbs from a block to its parent, its siblings skipped; the DB version's stops at
+      // the block, neither value (Select5)
+      ...(!flavor.db && { selectionLadder: 'parents' as const }),
+      // indent and outdent over roots at two depths: the DB version lines them up first, the default
+      // `level`; OG levels on outdent but indents the roots that can, neither value
       // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25)
       quotes: 'atom',
       // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25)

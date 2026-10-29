@@ -75,6 +75,10 @@ export const driver: Driver = {
     return o.view && o.view.zoom !== null && o.sel?.block === o.view.zoom ? "the caret in the zoom root, the page's title" : undefined;
   },
   keys: {
+    // the selection commands (spec/select.md): Ctrl-A, Shift-Down and Shift-Up as the app has them
+    expandSelection: 'Control+a',
+    selectNodeDown: 'Shift+ArrowDown',
+    selectNodeUp: 'Shift+ArrowUp',
     // "Fold block", "Unfold block"; "Zoom into current block", "Zoom out of current block"
     fold: 'Control+ArrowUp',
     unfold: 'Control+ArrowDown',
@@ -105,6 +109,8 @@ export const driver: Driver = {
   // split, lines as blocks, numbers as text, a paragraph's list under it (each measured, playing its
   // examples with `run.ts --ignore-options`)
   behaves: {
+    // indent and outdent over roots at two depths
+    mixedDepths: 'refuse',
     // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25)
     quotes: 'atom',
     // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25)

@@ -2,11 +2,11 @@
 // doesn't do what the example draws: for the spec's tests, and for the SxS, whose heatmap has ourus.
 
 import assert from 'node:assert/strict';
-import { executeCommand, type DropMap, type Selection } from '../src/commands/index.ts';
+import { executeCommand, type DropMap, type TextSelection } from '../src/commands/index.ts';
 import { Config } from '../src/config.ts';
 import type { OurusDoc, OutlineNode } from '../src/doc/index.ts';
 import { visibleSelection } from '../src/commands/view.ts';
-import { docOf, drawDoc, drawOutline, drawsCaret, drawText, labelGlyph, labelNumber, nodesOf, readDrawing, readLabels, readText, withoutCaret } from './drawing.ts';
+import { docOf, drawDoc, drawnSelection, drawOutline, drawsCaret, drawText, labelGlyph, labelNumber, nodesOf, readDrawing, readLabels, readText, withoutCaret } from './drawing.ts';
 import { isAction, play, type Played } from './player.ts';
 import { CLIPBOARD_TYPES, specConfig, type Clipboard, type ClipboardType, type SpecTest } from './specfile.ts';
 
@@ -92,7 +92,8 @@ export function startOf(t: SpecTest, flavor: Config['flavor'], config: Partial<C
   // (the start's labels, for a drop that names one)
   const labels = new Labels();
   labels.check(doc, start.labels, null);
-  return { doc: viewOf(t, doc, labels.ids), selection: start.selection, clipboard: readClipboard(t.initial.clipboard), drop: start.drop, labels: labels.ids };
+  const viewed = viewOf(t, doc, labels.ids);
+  return { doc: viewed, selection: drawnSelection(viewed, start), clipboard: readClipboard(t.initial.clipboard), drop: start.drop, labels: labels.ids };
 }
 
 /** `doc`, a start of example `t`, with the view its config block gives (`folded:`, `zoom:`), by the start's labels (`labels`: a label's number to its node's id). */
@@ -183,7 +184,7 @@ export function run(t: SpecTest, flavor: Config['flavor']): void {
  * twice each place's depth: `▸` a place, `▹` the run's own, which a place sharing its column with it
  * doesn't show over. Each place's drop is run, and only those applied are drawn.
  */
-export function drawDropPoints(doc: OurusDoc, dropMap: DropMap, selection: Selection): string {
+export function drawDropPoints(doc: OurusDoc, dropMap: DropMap, selection: TextSelection): string {
   const lines = doc.text.split('\n');
   if (lines[lines.length - 1] === '') lines.pop();
   const markers = new Map<number, string>();

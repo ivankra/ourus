@@ -12,7 +12,7 @@
 
 import { indentUnitOf } from '../src/draft/write.ts';
 import { compareTexts, readTextDoc } from '../sxs/lib/text.ts';
-import { docOf, drawDoc, drawsCaret, readDrawing, readLabels, withoutCaret } from './drawing.ts';
+import { docOf, drawDoc, drawnSelection, drawsCaret, readDrawing, readLabels, withoutCaret } from './drawing.ts';
 import { play, type Played } from './player.ts';
 import { Labels, readClipboard, normalize, outcome, flavorsOf, viewOf } from './spec-run.ts';
 import { readSpecFile, specConfig, specFiles, type SpecTest } from './specfile.ts';
@@ -71,7 +71,8 @@ export function tabPass(t: SpecTest): string | null {
   const doc = docOf(start.text, start.placeholders, { ...config, indentUnit: unit });
   const labels = new Labels();
   labels.check(doc, start.labels, null);
-  let state: Played = { doc: viewOf(t, doc, labels.ids), selection: start.selection, clipboard: readClipboard(t.initial.clipboard), drop: start.drop, labels: labels.ids };
+  const viewed = viewOf(t, doc, labels.ids);
+  let state: Played = { doc: viewed, selection: drawnSelection(viewed, start), clipboard: readClipboard(t.initial.clipboard), drop: start.drop, labels: labels.ids };
   for (const step of t.steps) {
     for (const action of step.actions) {
       state = play(state, [action]);

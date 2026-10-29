@@ -120,8 +120,8 @@ tags: common
 ```
 
 ```buffer
-- «a
-- b»②
+- ««a
+- b»»②
 - c
 ▸
 ```
@@ -130,8 +130,8 @@ tags: common
 
 ```buffer
 - c
-- «a
-- b»②
+- ««a
+- b»»②
 ```
 
 ## MoveSubtree5
@@ -144,8 +144,8 @@ tags: common
 
 ```buffer
 ▸
-- «a
-- b»
+- ««a
+- b»»
 - c③
 ```
 
@@ -153,8 +153,8 @@ tags: common
 
 ```buffer
 - c③
-- «a
-- b»
+- ««a
+- b»»
 ```
 
 ## MoveSubtree6
@@ -191,9 +191,9 @@ tags: edge
 ```
 
 ```buffer
-- «a
+- ««a
 ▸
-- b»②
+- b»»②
 - c
 ```
 
@@ -204,8 +204,8 @@ result: applied
 ```
 
 ```buffer
-- «a
-- b»②
+- ««a
+- b»»②
 - c
 ```
 
@@ -437,8 +437,8 @@ tags: edge
 
 ```buffer
 - a
-  - «b
-- c»③
+  - ««b
+- c»»③
 ▸
 ```
 
@@ -481,15 +481,15 @@ tags: common
 ```buffer
 ▸
 1. a
-2. «b
-3. c»
+2. ««b
+3. c»»
 ```
 
 > moveSubtree
 
 ```buffer
-1. «b
-2. c»
+1. ««b
+2. c»»
 3. a
 ```
 

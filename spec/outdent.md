@@ -36,6 +36,12 @@ subtrees. The rules, in order; the first that applies wins:
    paragraph's (Outdent16); a paragraph needs one before it,
    not before its own list (Outdent8).
 
+A subtree selection stays on the nodes, in the shape it was given
+([Indent46](indent.md#indent46)). Over roots at two depths they are lined up after the first, one
+run (`mixedDepths: level`, Outdent25); with `each`, each run of sibling roots is outdented as one,
+all or nothing (Outdent23), under `logical` refused where the nodes would no longer be one range
+(Outdent24); `refuse`, nothing (Outdent26).
+
 Indent and outdent invert (Outdent9, Outdent10), except where direct outdent gave the item its later
 siblings: indent takes them along (Outdent13). The caret ends in the item's text, even from before
 its marker (Outdent14).
@@ -231,9 +237,9 @@ tags: edge
 
 ```buffer
 para
-- «a
+- ««a
   - b
-- c»
+- c»»
 ```
 
 > outdent
@@ -241,10 +247,10 @@ para
 ```buffer
 para
 
-«a
+««a
 - b
 
-c»
+c»»
 ```
 
 ## Outdent9
@@ -280,8 +286,8 @@ tags: common
 
 ```buffer
 - a
-  - «b
-  - c»
+  - ««b
+  - c»»
 - d
 ```
 
@@ -289,8 +295,8 @@ tags: common
 
 ```buffer
 - a
-- «b
-- c»
+- ««b
+- c»»
 - d
 ```
 
@@ -336,16 +342,16 @@ tags: edge free-form
 ```
 
 ```buffer
-- «a
-- b»
+- ««a
+- b»»
 ```
 
 > outdent
 
 ```buffer
-«a
+««a
 
-b»
+b»»
 ```
 
 ## Outdent13
@@ -1017,4 +1023,117 @@ tags: edge
 - b┃
 
 →  code
+```
+
+## Outdent23
+
+Roots at two depths (`outdent: direct`): each run of sibling roots out a level, as one alone,
+`deep` after `two` and `three` after `one`, `five` after it now its child; the selection kept on
+them.
+
+```yaml
+tags: edge
+mixedDepths: each
+```
+
+```buffer
+- one
+  - two
+    - ««deep
+  - three»»
+  - five
+- four
+```
+
+> outdent
+
+```buffer
+- one
+  - two
+  - ««deep
+- three»»
+  - five
+- four
+```
+
+## Outdent24
+
+The same under `outdent: logical`: `five` would stay under `one` between `deep` and `three`, which
+one selection can't hold: refused.
+
+```yaml
+tags: edge
+outdent: logical
+mixedDepths: each
+```
+
+```buffer
+- one
+  - two
+    - ««deep
+  - three»»
+  - five
+- four
+```
+
+> outdent
+
+```yaml
+result: rejected non-contiguous
+```
+
+## Outdent25
+
+Roots two levels apart (`mixedDepths: level`, the default): the first out a level and the other after it as its
+sibling, `e` going deeper to join `d`: one run, which the next press outdents whole (Logseq DB,
+Tine).
+
+```yaml
+tags: edge
+```
+
+```buffer
+- a
+  - b
+    - c
+      - ««d
+  - e»»
+  - f
+- g
+```
+
+> outdent
+
+```buffer
+- a
+  - b
+    - c
+    - ««d
+    - e»»
+  - f
+- g
+```
+
+## Outdent26
+
+`mixedDepths: refuse`: roots at two depths are refused (Athens, SiYuan).
+
+```yaml
+tags: edge
+mixedDepths: refuse
+```
+
+```buffer
+- one
+  - two
+    - ««deep
+  - three»»
+  - five
+- four
+```
+
+> outdent
+
+```yaml
+result: rejected non-contiguous
 ```

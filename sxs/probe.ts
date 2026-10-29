@@ -19,7 +19,7 @@ import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, 
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Config } from '../src/config.ts';
-import { docOf, drawDoc, drawLabels, drawOutline, drawsCaret, drawText, nodesOf, readDrawing, readText, withoutCaret } from '../test/drawing.ts';
+import { docOf, drawDoc, drawLabels, drawnSelection, drawOutline, drawsCaret, drawText, nodesOf, readDrawing, readText, withoutCaret } from '../test/drawing.ts';
 import type { OurusDoc } from '../src/doc/index.ts';
 import { isAction, play, type Played } from '../test/player.ts';
 import { drawDropPoints, Labels, normalize, outcome, readClipboard } from '../test/spec-run.ts';
@@ -301,7 +301,7 @@ function playOurus(p: Probe, config: Record<string, string>, labels = false): Ou
   // (the start's labels, for a drop that names one)
   const named = new Labels();
   named.check(doc, start.labels, null);
-  let state: Played = { doc, selection: start.selection, clipboard: p.clipboard, drop: start.drop, labels: named.ids };
+  let state: Played = { doc, selection: drawnSelection(doc, start), clipboard: p.clipboard, drop: start.drop, labels: named.ids };
   const labelling = labels ? new Labelling(state.doc, start.labels) : null;
   const out: OurStep[] = [];
   for (const actions of p.steps) {

@@ -13,7 +13,7 @@
 
 import type { Config } from '../../src/config.ts';
 import { ProseText, OurusDoc, type OutlineNode } from '../../src/doc/index.ts';
-import { textEnd, textStart, topmostNodes } from '../../src/commands/util.ts';
+import { textEnd, textStart } from '../../src/doc/index.ts';
 import { docOf, nodesOf, readDrawing } from '../../test/drawing.ts';
 import { micromark } from 'micromark';
 import { gfm, gfmHtml } from 'micromark-extension-gfm';
@@ -280,6 +280,13 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
   const rows = new Map<number, number>();
   for (const node of nodes) if (blockOf.has(node.id) && !rows.has(node.startLine)) rows.set(node.startLine, blockOf.get(node.id)!);
   if (!hasCaret) return { outline: { blocks, sel: null }, notes, sections, rows };
+  // a subtree selection (`««…»»`): the nodes its span touches selected whole (a selection drawn
+  // `«…»`, whole lines or not, is the text drawn)
+  if (options.blockSelection && drawing.subtrees) {
+    const roots = doc.touchedNodes({ anchor: at(anchor), head: at(head) });
+    const selected = [...new Set(roots.flatMap((n) => (blockOf.has(n.id) ? [blockOf.get(n.id)!] : [])))].sort((x, y) => x - y);
+    return { outline: { blocks, sel: null, selected }, notes, sections, rows };
+  }
   const h = locate(at(head));
   const a = anchor === head ? h : locate(at(anchor));
   if (typeof h === 'string') return { outline: { blocks, sel: null }, notes, caretLost: h, sections, rows };
@@ -294,7 +301,7 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
       return p === doc.posOf(where.node, end ? textEnd(where.text) : textStart(where.text), end ? -1 : 1);
     };
     if (!options.blockSelection || !edge(from, false) || !edge(to, true)) return { outline: { blocks, sel: null }, notes, caretLost: 'selection across blocks', sections, rows };
-    const selected = [...new Set(topmostNodes(doc, { anchor: at(anchor), head: at(head) }).flatMap((n) => (blockOf.has(n.id) ? [blockOf.get(n.id)!] : [])))].sort((x, y) => x - y);
+    const selected = [...new Set(doc.touchedNodes({ anchor: at(anchor), head: at(head) }).flatMap((n) => (blockOf.has(n.id) ? [blockOf.get(n.id)!] : [])))].sort((x, y) => x - y);
     return { outline: { blocks, sel: null, selected }, notes, sections, rows };
   }
   return { outline: { blocks, sel: { block: h.block, anchor: a.offset, head: h.offset } }, notes, sections, rows };
@@ -460,12 +467,16 @@ const escapeLine = (s: string): string =>
  * Draws an outline as a spec buffer: `-` items (`¶` a free block), the caret or selection. Where blocks
  * are numbered (`ordered`, `ProjectOptions.ordered`), a numbered block has its number in its bullet's
  * place (`1. a`), as the apps show it. A block's later lines and its children start where its text does:
- * two spaces a level under bullets, the number's width under a number.
+ * two spaces a level under bullets, the number's width under a number. Blocks selected whole are drawn
+ * as the spec draws a subtree selection, `««` before the first's text and `»»` after the last's own,
+ * a span to each run of them with nothing unselected between; `bars`, as runs stored before that drew
+ * them, `▮` before each one's text.
  */
-export function draw(o: Outline, options: Pick<ProjectOptions, 'ordered'> = {}): string {
+export function draw(o: Outline, options: Pick<ProjectOptions, 'ordered'> & { readonly bars?: boolean } = {}): string {
   const out: string[] = [];
   /** Where the text of the last block at each depth starts: its children's indentation. */
   const cols: number[] = [];
+  const spans = options.bars ? { open: new Set<number>(), close: new Set<number>() } : selectedSpans(o);
   o.blocks.forEach((b, i) => {
     let sel = o.sel?.block === i ? { ...o.sel } : null;
     let t = '';
@@ -485,10 +496,11 @@ export function draw(o: Outline, options: Pick<ProjectOptions, 'ordered'> = {}):
       const to = Math.max(sel.anchor, sel.head);
       t = from === to ? t.slice(0, from) + '┃' + t.slice(from) : t.slice(0, from) + (sel.head === from ? '┃«' : '«') + t.slice(from, to) + '»' + t.slice(to);
     }
-    const mark = o.selected?.includes(i) ? '▮ ' : '';
+    const mark = options.bars && o.selected?.includes(i) ? '▮ ' : '';
     // a caret or selection inside the number leaves it text, under a bullet
     const number = options.ordered && !b.free ? /^\d{1,9}\. /.exec(t)?.[0] : undefined;
     if (number) t = t.slice(number.length);
+    t = (spans.open.has(i) ? '««' : '') + t + (spans.close.has(i) ? '»»' : '');
     const marker = number ? number.slice(0, -1) : b.free ? '¶' : '-';
     const at = b.depth ? (cols[b.depth - 1] ?? 2 * b.depth) : 0;
     cols.length = b.depth;
@@ -496,6 +508,25 @@ export function draw(o: Outline, options: Pick<ProjectOptions, 'ordered'> = {}):
     t.split('\n').forEach((line, k) => out.push(k === 0 ? `${' '.repeat(at)}${marker} ${mark}${line}` : `${' '.repeat(cols[b.depth]!)}${line}`));
   });
   return out.join('\n').replace(/\t/g, '→') + '\n' + (o.view ? drawView(o.view) : '');
+}
+
+/** The end of block `i`'s subtree: the index of its last descendant, itself where it has none. */
+function subtreeEnd(blocks: readonly Block[], i: number): number {
+  let j = i;
+  while (j + 1 < blocks.length && blocks[j + 1]!.depth > blocks[i]!.depth) j++;
+  return j;
+}
+
+/** Where `draw` opens and closes a span of blocks selected whole: a run of them with nothing unselected between. */
+function selectedSpans(o: Outline): { open: Set<number>; close: Set<number> } {
+  const open = new Set<number>();
+  const close = new Set<number>();
+  const roots = [...(o.selected ?? [])].sort((a, b) => a - b);
+  roots.forEach((r, k) => {
+    if (k === 0 || subtreeEnd(o.blocks, roots[k - 1]!) + 1 !== r) open.add(r);
+    if (k === roots.length - 1 || subtreeEnd(o.blocks, r) + 1 !== roots[k + 1]) close.add(r);
+  });
+  return { open, close };
 }
 
 /**
@@ -603,6 +634,8 @@ export function readOutline(drawing: string, options: Pick<ProjectOptions, 'orde
   const { drawn, view } = splitView(drawing);
   const blocks: Block[] = [];
   const raw: string[][] = [];
+  /** The length of the number drawn in each block's bullet's place (`1. `), before a span's `««`. */
+  const numbers: number[] = [];
   const selected: number[] = [];
   /** Where the text of the last block at each depth starts, as `draw` indents. */
   const cols: number[] = [];
@@ -619,6 +652,7 @@ export function readOutline(drawing: string, options: Pick<ProjectOptions, 'orde
       if (item[4]) selected.push(blocks.length);
       blocks.push({ depth, text: '', ...(item[2] === '¶' && { free: true as const }) });
       raw.push([item[3] ? `${item[3]} ${item[5]!}` : item[5]!]);
+      numbers.push(item[3] ? item[3].length + 1 : 0);
       cols.length = depth;
       cols[depth] = spaces + (item[2] ?? item[3]!).length + 1;
       continue;
@@ -628,9 +662,15 @@ export function readOutline(drawing: string, options: Pick<ProjectOptions, 'orde
     raw.at(-1)!.push(line.slice(ind.length));
   }
   let sel: Sel | null = null;
+  const bars = selected.length > 0;
+  /** The spans of blocks selected whole (`««…»»`), by the blocks they open and close at. */
+  const spans: [number, number][] = [];
   raw.forEach((lines, i) => {
     // the caret or selection out first, then the backslashes `draw` escaped continuation lines with
     let t = lines.join('\n');
+    const n = numbers[i]!;
+    if (t.startsWith('««', n)) [t, spans[spans.length]] = [t.slice(0, n) + t.slice(n + 2), [i, -1]];
+    if (t.endsWith('»»') && spans.at(-1)?.[1] === -1) [t, spans.at(-1)![1]] = [t.slice(0, -2), i];
     const caret = t.indexOf('┃');
     const open = t.indexOf('«');
     if (caret >= 0 || open >= 0) {
@@ -656,8 +696,16 @@ export function readOutline(drawing: string, options: Pick<ProjectOptions, 'orde
       .join('\n');
     blocks[i]!.text = t;
   });
+  // a span's roots: the blocks in it not under another block in it
+  for (const [from, to] of spans) {
+    if (to < 0) return null;
+    let root = -1;
+    for (let k = from; k <= to; k++) {
+      if (root < 0 || blocks[k]!.depth <= blocks[root]!.depth) selected.push((root = k));
+    }
+  }
   const o: Outline = { blocks, sel, ...(selected.length && { selected }), ...(view && { view }) };
-  return draw(o) === drawing || (options.ordered && draw(o, options) === drawing) ? o : null;
+  return draw(o, { bars }) === drawing || (options.ordered && draw(o, { ...options, bars }) === drawing) ? o : null;
 }
 
 export type Verdict = 'agree' | 'whitespace' | 'caret' | 'disagree';

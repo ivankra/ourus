@@ -214,6 +214,10 @@ export function remnoteDriver(setup: Setup): Driver {
       // "Swap Up" and "Swap Down"
       moveSubtreeUp: 'Alt+ArrowUp',
       moveSubtreeDown: 'Alt+ArrowDown',
+      // the selection commands (spec/select.md): Ctrl-A, Shift-Down and Shift-Up as the app has them
+      expandSelection: 'Control+a',
+      selectNodeDown: 'Shift+ArrowDown',
+      selectNodeUp: 'Shift+ArrowUp',
       deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
       copy: 'Control+c',
       cut: 'Control+x',
@@ -238,6 +242,8 @@ export function remnoteDriver(setup: Setup): Driver {
     // the seam, the first pasted text joining (the caret after it), and a pasted list keeps its form
     // (`open` measured 8 cases better with bullets, none worse)
     behaves: {
+      // Shift-Up takes the sibling above with its subtree
+      selectNodeUp: 'sibling',
       // after a paste of rems, the caret at the end of the first, as Roam's (9 caret verdicts, none worse)
       quirkPasteCaret: 'roam',
       outdent: 'logical',

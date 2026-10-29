@@ -382,8 +382,10 @@ export interface Config {
    *   stays as it is, the selection deciding nothing, and the nodes go where a paste at a caret (the
    *   selection's end) puts them.
    * What is pasted as text (one line put in at the caret, plain lines going into the text, code into
-   * code) replaces the selection either way, as typing does; so does anything over a selection
-   * across nodes.
+   * code) replaces the selection either way, as typing does; so does anything over a partial
+   * selection across nodes. Over nodes selected whole (a subtree selection): `replace` puts the
+   * clipboard's nodes in their place; `ignore` keeps them and puts the clipboard's nodes right after
+   * the last, as Tana does (the other block apps measured paste nothing there).
    */
   readonly pasteOverSelection: 'replace' | 'ignore';
 
@@ -453,6 +455,39 @@ export interface Config {
    * no form, the list's.
    */
   readonly pasteListForm: 'destination' | 'own';
+
+  /**
+   * The selection ladder (`expandSelection`, Ctrl-A in outliners), past a node's subtree:
+   * - `siblings` (the default, as true-outliner and Dynalist climb): its siblings' run, then its
+   *   parent's subtree, and so on outward.
+   * - `parents` (as Logseq and Tine climb): its parent's subtree, the siblings' run skipped (the top
+   *   level's run, everything, still the top).
+   * - `top` (as Roam, Tana, WorkFlowy and SiYuan climb): from the node's text straight to the top
+   *   level's run, everything (inside a zoom, the zoom root's subtree).
+   */
+  readonly selectionLadder: 'siblings' | 'parents' | 'top';
+
+  /**
+   * Shift-Up by node (`selectNodeUp`) from a node with a sibling above that has children:
+   * - `line` (the default, as Logseq, Logseq DB, Tana, Athens, Tine and true-outliner): the node on
+   *   the line above, the sibling's last descendant (`deep` and `three`, then `two` and `three`), as
+   *   from a first child its parent; Shift-Down's exact inverse.
+   * - `sibling` (as Dynalist, RemNote, WorkFlowy and SiYuan): the sibling above with its subtree
+   *   (`two` and `three`), a first child's parent next.
+   */
+  readonly selectNodeUp: 'line' | 'sibling';
+
+  /**
+   * Indent and outdent over roots at several depths (`deep` and `three`, a forest: Shift-Down's, a
+   * drag's):
+   * - `level` (the default, as Logseq DB and Tine): the roots lined up after the first as its
+   *   siblings, one run (a root may go deeper: `e` after `d`), then indented or outdented as that run:
+   *   the selection one run of siblings after, which the next press moves whole.
+   * - `each` (as WorkFlowy, Roam and Tana; true-outliner): each run of sibling roots as it would go
+   *   alone, all or nothing; refused where the result is no one range (`outdent: logical`).
+   * - `refuse` (as Athens and SiYuan): nothing, refused (`non-contiguous`).
+   */
+  readonly mixedDepths: 'level' | 'each' | 'refuse';
 
   /**
    * Enter inside a heading's title, past its start and before its end (a heading's, ATX or setext, or
@@ -537,6 +572,10 @@ const CONFIG_VALUES: { readonly [K in keyof Config]: readonly [Config[K], ...Con
   pasteOnParent: ['children', 'after'],
   pasteParagraphList: ['siblings', 'children'],
   pasteListForm: ['destination', 'own'],
+  // Selection
+  selectionLadder: ['siblings', 'parents', 'top'],
+  selectNodeUp: ['line', 'sibling'],
+  mixedDepths: ['level', 'each', 'refuse'],
   // Options to model quirks of different apps (for testing)
   quirkEnterMidHeading: ['default', 'workflowy'],
   quirkPasteCaret: ['default', 'roam', 'athens'],

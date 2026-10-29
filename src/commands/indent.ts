@@ -5,7 +5,7 @@
 
 import { AtomText, type OutlineNode } from '../doc/index.ts';
 import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
-import { changeHeadingLevels, onCodeLine, selectionInText, structuralOperands } from './util.ts';
+import { changeHeadingLevels, onCodeLine, oneRun, operandsRefused, selectionInText } from './util.ts';
 
 /**
  * Items become the last children of their previous sibling, an item or a quote, with their subtrees
@@ -15,8 +15,8 @@ import { changeHeadingLevels, onCodeLine, selectionInText, structuralOperands } 
  */
 export function indentCommand(ctx: CommandContext): CommandOutcome {
   if (!ctx.nodes && onCodeLine(ctx, ctx.selection.anchor) && onCodeLine(ctx, ctx.selection.head)) return deferToHost();
-  const nodes = structuralOperands(ctx);
-  if (!Array.isArray(nodes)) return nodes;
+  const nodes = oneRun(ctx, true);
+  if (!Array.isArray(nodes)) return operandsRefused(nodes);
   const first = nodes[0]!;
   if (first.kind === 'heading') return changeHeadingLevels(ctx, nodes, 1);
   if (first.kind === 'paragraph' || first.kind === 'atom') return blocksIntoItems(ctx, nodes);

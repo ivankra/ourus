@@ -69,6 +69,8 @@ main:has(> #preview-pane[hidden]) { grid-template-columns: minmax(0, 1fr) minmax
 #editor .cm-scroller { font: 14px/1.6 ui-monospace, 'SF Mono', Menlo, monospace; }
 .ourus-head { background: var(--head); }
 .ourus-subtree { background: var(--sub); }
+.ourus-block { background: var(--selection-focused); box-shadow: inset 3px 0 0 var(--accent); }
+.ourus-blocks .cm-selectionBackground { background: transparent !important; }
 aside { overflow: auto; padding: 8px 12px; }
 #preview-pane { position: relative; overflow: auto; padding: 8px 16px; border-right: 1px solid var(--line); background: var(--pane); }
 /* the editor's caret and selection, as CodeMirror draws them */

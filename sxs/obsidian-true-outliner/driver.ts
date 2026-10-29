@@ -38,6 +38,8 @@ export const driver = obsidianDriver({
   // task joined into the node above; paste, as measured, makes a
   // paragraph's list its children and keeps a list's form
   behaves: {
+    // indent and outdent over roots at two depths: each run as alone, all or nothing
+    mixedDepths: 'each',
     enterOnEmptyItem: undefined,
     enterMidItem: 'child',
     enterAtTextStart: undefined,

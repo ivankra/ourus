@@ -221,9 +221,11 @@ export function inCheckbox(d: TextDoc): string | undefined {
 export const keepsCaretOnText =
   (plugin: string, { spaces = false, checkbox = false } = {}) =>
   (doc: TextDoc): string | undefined => {
+    // (a selection's end at a line's start is whole lines, which it keeps: true-outliner's covers)
+    const whole = !!doc.sel && doc.sel.anchor !== doc.sel.head;
     for (const { line, col } of ends(doc)) {
       const it = item(line, spaces);
-      if (it && col < (checkbox ? it.text : it.marker)) return `caret before an item's text (${plugin} keeps it on the text)`;
+      if (it && col < (checkbox ? it.text : it.marker) && !(whole && col === 0)) return `caret before an item's text (${plugin} keeps it on the text)`;
     }
     return undefined;
   };
@@ -569,6 +571,10 @@ export function obsidianDriver(profile: Profile): Driver {
       deleteContentForward: 'Delete',
       moveSubtreeUp: 'Alt+ArrowUp',
       moveSubtreeDown: 'Alt+ArrowDown',
+      // the selection commands (spec/select.md): Ctrl-A, Shift-Down and Shift-Up as the app has them
+      expandSelection: 'Control+a',
+      selectNodeDown: 'Shift+ArrowDown',
+      selectNodeUp: 'Shift+ArrowUp',
       // CodeMirror binds "delete line boundary backward" on a Mac only (Cmd-Backspace)
       deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
       copy: 'Control+c',
@@ -736,9 +742,11 @@ export function obsidianDriver(profile: Profile): Driver {
         const { anchor, head } = cm.state.selection.main;
         // the caret is the editor's where its content has the page's focus, whether or not the
         // window has the system's (CodeMirror's `hasFocus` wants both: a window of the shared
-        // instance can lose it a moment under load); another element's focus (the note's title) is no caret
+        // instance can lose it a moment under load); another element's focus (the note's title) is no caret.
+        // true-outliner blurs the editor while its selection covers whole nodes (its block selection,
+        // marked by a class on the editor), the selection still the editor's.
         const active = document.activeElement;
-        const focused = cm.hasFocus || (!!active && cm.contentDOM.contains(active));
+        const focused = cm.hasFocus || (!!active && cm.contentDOM.contains(active)) || cm.dom.classList.contains('to-decor-block-selecting');
         return {
           doc: { text: cm.state.doc.toString() as string, sel: focused ? { anchor, head } : null, ...(view && { view }) },
           lost: !cm.hasFocus && focused ? `window ${document.hasFocus() ? 'focused' : 'unfocused'}, ${document.visibilityState}` : null,

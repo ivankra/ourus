@@ -59,6 +59,10 @@ export const driver: Driver = {
     // "Outline: Move Up" and "Move Down"
     moveSubtreeUp: 'Alt+ArrowUp',
     moveSubtreeDown: 'Alt+ArrowDown',
+    // the selection commands (spec/select.md): Ctrl-A, Shift-Down and Shift-Up as the app has them
+    expandSelection: 'Control+a',
+    selectNodeDown: 'Shift+ArrowDown',
+    selectNodeUp: 'Shift+ArrowUp',
     // "Delete Line Boundary Backward" is bound on a Mac only (Cmd-Backspace)
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
     copy: 'Control+c',

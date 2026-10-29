@@ -2,7 +2,9 @@
 
 import type { Clipboard } from './clipboard.ts';
 import type { OurusDoc } from '../doc/index.ts';
-import type { ChangeSpec } from '../text/index.ts';
+import type { ChangeSpec, TextSelection } from '../text/index.ts';
+
+export type { TextSelection };
 
 /** A place in the outline: under `parent`, right after its child `after` (null: first). */
 export type InsertionPoint = { readonly parent: number | 'root'; readonly after: number | null };
@@ -73,17 +75,22 @@ export type Command =
    * them is folded within the zoom, else folded; at a node that doesn't fold, its parent's.
    */
   | ({ readonly type: 'toggleFold' } & Nodes)
+  /**
+   * Select the node at the caret with its subtree, as whole lines (Escape in Logseq, Tine, Tana); over
+   * text across nodes, its roots. Over a subtree selection, a caret at its first node's text start.
+   */
+  | { readonly type: 'selectNode' }
+  /** The next rung of the selection ladder (Ctrl-A in outliners, Shift-Alt-Right in code editors): the node's text, its subtree, its siblings, its parent, ..., everything; then the host's select all. */
+  | { readonly type: 'expandSelection' }
+  /** Shift-Down and Shift-Up by node: one node a press, a subtree selection growing away from its anchor's node and shrinking towards it; inside a node's text, but from its edge, the host's. */
+  | { readonly type: 'selectNodeDown' }
+  | { readonly type: 'selectNodeUp' }
   /** Zoom into `nodes[0]` (a click on its mark), else the selection's first root in document order. */
   | ({ readonly type: 'zoomIn' } & Nodes)
   /** Zoom out one level, to the root's parent, or out of the zoom from a top-level root. */
   | { readonly type: 'zoomOut' }
   /** Zoom out of the zoom, whatever its depth. */
   | { readonly type: 'clearZoom' };
-
-export interface Selection {
-  readonly anchor: number;
-  readonly head: number;
-}
 
 export type RejectReason =
   | 'no-previous-sibling'
@@ -120,7 +127,7 @@ export type CommandResult =
    * drop, the topmost nodes it put in place, in document order, for a host that selects them.
    * `dropMap`: for a pickup (`drag`), what it takes and where it can drop it.
    */
-  | { readonly status: 'applied'; readonly doc: OurusDoc; readonly changes: readonly ChangeSpec[]; readonly selection: Selection; readonly clipboard?: Clipboard; readonly placed?: readonly number[]; readonly dropMap?: DropMap }
+  | { readonly status: 'applied'; readonly doc: OurusDoc; readonly changes: readonly ChangeSpec[]; readonly selection: TextSelection; readonly clipboard?: Clipboard; readonly placed?: readonly number[]; readonly dropMap?: DropMap }
   | { readonly status: 'rejected'; readonly reason: RejectReason; readonly detail?: string }
   /**
    * Deferred to the host: ourus doesn't act on the key here, and the host runs its default behavior.

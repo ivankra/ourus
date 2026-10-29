@@ -5,18 +5,20 @@
 import { ProseText, type OutlineNode, type OutlineNodePersistent } from '../doc/index.ts';
 import type { AnchorSpec } from '../draft/index.ts';
 import { reject, type CommandContext, type CommandOutcome } from './context.ts';
-import { caretOffset, headingLevel, operandsOf, operandsRefused, textEnd } from './util.ts';
+import { reshaped, shapeOf } from './shape.ts';
+import { caretOffset, headingLevel, oneRun, operandsRefused, textEnd } from './util.ts';
 import { withFolds } from './view.ts';
 
 /**
  * The selected nodes copied right below them, each copy written as its original is (rules 1, 4, 6),
  * the caret going along into the copy where it was in the original, but in code between its
  * delimiters (rules 2, 9). Refused where copies before a heading would land in its section (rule 7).
- * Null (unsupported) where ourus doesn't do it yet: a selection end outside the copied nodes' texts.
+ * Over a subtree selection, the copies selected so, in the shape it was given. Null (unsupported)
+ * where ourus doesn't do it yet: another selection with an end outside the copied nodes' texts.
  * Given the nodes by id, a selection not all in them stays where it is.
  */
 export function duplicateSubtreeCommand(ctx: CommandContext): CommandOutcome {
-  const nodes = operandsOf(ctx);
+  const nodes = oneRun(ctx);
   if (!Array.isArray(nodes)) return operandsRefused(nodes);
   // the copies go after the last heading's section: those before it that it would take in (any node
   // but a heading of its level or above) would land under another parent than their originals
@@ -62,8 +64,11 @@ export function duplicateSubtreeCommand(ctx: CommandContext): CommandOutcome {
     if (id === undefined || !text) return null;
     return { ref: id, offset: caretOffset(at, text), assoc: 1 };
   };
-  let head = end(ctx.selection.head);
-  let anchor = ctx.collapsed ? head : end(ctx.selection.anchor);
+  // a subtree selection: the copies, in its shape (`reshaped`, from a caret in the first)
+  const shape = ctx.nodes ? null : shapeOf(ctx.doc, ctx.selection);
+  const copied = shape?.kind === 'subtrees' ? ({ ref: copies[0]!, offset: 0 } as const) : null;
+  let head = copied ?? end(ctx.selection.head);
+  let anchor = copied ?? (ctx.collapsed ? head : end(ctx.selection.anchor));
   if ((!head || !anchor) && ctx.nodes) {
     // each end in its text, where it is in one
     const kept = (pos: number): AnchorSpec => {
@@ -80,5 +85,6 @@ export function duplicateSubtreeCommand(ctx: CommandContext): CommandOutcome {
     n.children.forEach(visit);
   };
   nodes.forEach(visit);
-  return withFolds(ctx.apply(draft.select(anchor, head)), folds);
+  const applied = withFolds(ctx.apply(draft.select(anchor, head)), folds);
+  return copied ? reshaped(applied, shape, (id) => ids.get(ctx.doc.node(id)!.persistentNode)) : applied;
 }

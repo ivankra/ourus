@@ -338,7 +338,9 @@ function inPage(want: { block: number; anchor: number; head: number } | null): R
   // a caret or selection within one block (one across blocks has no place in the model)
   const [a0, h0] = [anchor as [number, number] | null, head as [number, number] | null];
   const sel: Raw['sel'] = a0 && h0 && a0[0] === h0[0] ? { block: a0[0], anchor: a0[1], head: h0[1] } : null;
-  const selected = groups.map((g, k) => (g.holder.classList.contains('protyle-wysiwyg--select') || g.els.some((e) => e.classList.contains('protyle-wysiwyg--select')) ? k : -1)).filter((k) => k >= 0);
+  // blocks selected whole: their own element marked, or one holding them (a select all, Ctrl-A again,
+  // marks the list, `NodeList`, not its items)
+  const selected = groups.map((g, k) => (g.holder.closest('.protyle-wysiwyg--select') || g.els.some((e) => e.closest('.protyle-wysiwyg--select')) ? k : -1)).filter((k) => k >= 0);
   const folded = groups.map((g, k) => (g.holder.getAttribute('fold') === '1' || g.els.some((e) => e.getAttribute('fold') === '1') ? k : -1)).filter((k) => k >= 0);
   if (!want) return { blocks, sel, selected, folded };
 
@@ -553,6 +555,12 @@ export const driver: Driver = {
   // structured paste in the middle of a block's text goes after it; a typed fence is left open
   // (Backtick2, Backtick12, Backtick15)
   behaves: {
+    // indent and outdent over roots at two depths
+    mixedDepths: 'refuse',
+    // Shift-Up takes the sibling above with its subtree
+    selectNodeUp: 'sibling',
+    // Ctrl-A goes from the text straight to everything
+    selectionLadder: 'top',
     // a quote is a style on one block: a quote of one paragraph is that block, its `>` the style
     quotes: 'text',
     // a list is no block's: SiYuan's blocks are a flat sequence
@@ -585,6 +593,10 @@ export const driver: Driver = {
     // "Move up", "Move down" (⇧⌘↑, ⇧⌘↓)
     moveSubtreeUp: 'Control+Shift+ArrowUp',
     moveSubtreeDown: 'Control+Shift+ArrowDown',
+    // the selection commands (spec/select.md): Ctrl-A, Shift-Down and Shift-Up as the app has them
+    expandSelection: 'Control+a',
+    selectNodeDown: 'Shift+ArrowDown',
+    selectNodeUp: 'Shift+ArrowUp',
     // "Duplicate" (⌘D): the block being edited, which in an item is its paragraph, not the item
     duplicateSubtree: 'Control+d',
     // no `deleteSubtree`: Escape puts the item's paragraph in block selection, Space selects it, and

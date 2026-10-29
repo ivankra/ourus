@@ -35,6 +35,10 @@ subtrees. The rules, in order; the first that applies wins:
    (`indentUnit`): as the document nests under `detect`, the default (Indent43, Indent44), or a
    host's tab, 2 or 4, made up to the parent's content column (Indent39, Indent40, Indent42); an item
    of its list beside it gives the column first (Indent41).
+7. **A subtree selection stays on the nodes**, in the shape it was given (Indent46). Over roots at
+   two depths they are lined up after the first as one run (`mixedDepths: level`, Indent49); with
+   `each`, each run of sibling roots as one, all or nothing (Indent47, Indent48); `refuse`, nothing
+   (Indent50).
 
 Bare Obsidian's Tab indents the caret's line by a tab (Live Preview the same): an item's children
 stay where they are (they become siblings), a heading gets spaces in front of its `#`s, and a
@@ -245,8 +249,8 @@ tags: common
 
 ```buffer
 - a
-- «b
-- c»
+- ««b
+- c»»
 - d
 ```
 
@@ -254,8 +258,8 @@ tags: common
 
 ```buffer
 - a
-  - «b
-  - c»
+  - ««b
+  - c»»
 - d
 ```
 
@@ -751,8 +755,8 @@ tags: common
 
 ```buffer
 - a
-- «b
-- c»
+- ««b
+- c»»
 - d
 ```
 
@@ -760,8 +764,8 @@ tags: common
 
 ```buffer
 - a
-  - «b
-  - c»
+  - ««b
+  - c»»
 - d
 ```
 
@@ -773,8 +777,8 @@ result: applied
 
 ```buffer
 - a
-- «b
-- c»
+- ««b
+- c»»
 - d
 ```
 
@@ -1408,4 +1412,152 @@ tags: edge
 →- b┃
 
 →→  code
+```
+
+## Indent46
+
+A subtree selection stays on the indented nodes, as whole lines.
+
+```yaml
+tags: common
+```
+
+```buffer
+- a
+- ««b»»
+  - c
+- d
+```
+
+> indent
+
+```buffer
+- a
+  - ««b»»
+    - c
+- d
+```
+
+> outdent
+
+```buffer
+- a
+- ««b»»
+  - c
+- d
+```
+
+## Indent47
+
+Roots at two depths, each with a previous sibling: each run of sibling roots goes under its own
+previous sibling, `deep` under `d0` and `three` under `two`, the selection kept on them.
+
+```yaml
+tags: edge
+mixedDepths: each
+```
+
+```buffer
+- one
+  - two
+    - d0
+    - ««deep
+  - three»»
+  - five
+- four
+```
+
+> indent
+
+```buffer
+- one
+  - two
+    - d0
+      - ««deep
+    - three»»
+  - five
+- four
+```
+
+## Indent48
+
+Roots at two depths, the first with no previous sibling: all or nothing, refused with its reason,
+`three` not indented alone (WorkFlowy's and true-outliner's; Logseq, Roam and Tana indent the
+roots that can).
+
+```yaml
+tags: edge
+mixedDepths: each
+```
+
+```buffer
+- one
+  - two
+    - ««deep
+  - three»»
+  - five
+- four
+```
+
+> indent
+
+```yaml
+result: rejected no-previous-sibling
+```
+
+## Indent49
+
+Roots at two depths (`mixedDepths: level`, the default): lined up after the first as its siblings,
+then indented as that run, both under `d0` (Logseq DB, Tine).
+
+```yaml
+tags: edge
+```
+
+```buffer
+- one
+  - two
+    - d0
+    - ««deep
+  - three»»
+  - five
+- four
+```
+
+> indent
+
+```buffer
+- one
+  - two
+    - d0
+      - ««deep
+      - three»»
+  - five
+- four
+```
+
+## Indent50
+
+`mixedDepths: refuse`: roots at two depths are refused, whether each could go or not (Athens,
+SiYuan).
+
+```yaml
+tags: edge
+mixedDepths: refuse
+```
+
+```buffer
+- one
+  - two
+    - d0
+    - ««deep
+  - three»»
+  - five
+- four
+```
+
+> indent
+
+```yaml
+result: rejected non-contiguous
 ```

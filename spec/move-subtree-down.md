@@ -28,7 +28,9 @@ Command: `moveSubtreeDown`, usually bound to Alt-Shift-Down / Alt-Down. Its mirr
    keeps its marker on its first line, whichever block is first (MoveDown33,
    [Quote81](quotes.md#quote81)), the block now first at the item's content column (Quote83). A
    paragraph that comes right under an item's text is set apart from it by a blank line, which it
-   would otherwise continue (MoveDown34).
+   would otherwise continue (MoveDown34). A subtree selection stays on the moved nodes, in the
+   shape it was given (MoveDown41 to MoveDown43); a selection from a line's column 0 keeps
+   that end at its line's node (MoveDown44).
 
 Bare Obsidian's Alt-Down moves the caret's line, not its node (see
 [move-subtree-up.md](move-subtree-up.md)).
@@ -351,9 +353,9 @@ tags: common
 
 ```buffer
 - a
-- «b
+- ««b
   - b1
-- c»
+- c»»
 - d
 ```
 
@@ -362,9 +364,9 @@ tags: common
 ```buffer
 - a
 - d
-- «b
+- ««b
   - b1
-- c»
+- c»»
 ```
 
 ## MoveDown12
@@ -379,9 +381,9 @@ tags: edge
 ```buffer
 - a
   - b
-  - «c
+  - ««c
     - c1
-  - d»
+  - d»»
 - e
   - e1
 ```
@@ -392,9 +394,9 @@ tags: edge
 - a
   - b
 - e
-  - «c
+  - ««c
     - c1
-  - d»
+  - d»»
   - e1
 ```
 
@@ -405,9 +407,9 @@ tags: edge
   - b
 - e
   - e1
-  - «c
+  - ««c
     - c1
-  - d»
+  - d»»
 ```
 
 ## MoveDown13
@@ -1170,8 +1172,8 @@ tags: rare
 
 ```buffer
 1. a
-2. «
-1) b»
+2. ««
+1) b»»
 2) c
 ```
 
@@ -1180,6 +1182,105 @@ tags: rare
 ```buffer
 1. a
 1) c
-2) «
-3) b»
+2) ««
+3) b»»
+```
+
+## MoveDown41
+
+A subtree selection (`b` with its child, as whole lines, to the start of the next line) stays on
+the moved nodes, as whole lines: not on `d`, the node they moved past, whose line the selection's
+end was at the start of.
+
+```yaml
+tags: common
+```
+
+```buffer
+- a
+- ««b»»
+  - c
+- d
+```
+
+> moveSubtreeDown
+
+```buffer
+- a
+- d
+- ««b»»
+  - c
+```
+
+## MoveDown42
+
+The same upward, the head at the top.
+
+```yaml
+tags: edge
+```
+
+```buffer
+- a
+- ┃««b»»
+  - c
+- d
+```
+
+> moveSubtreeDown
+
+```buffer
+- a
+- d
+- ┃««b»»
+  - c
+```
+
+## MoveDown43
+
+Whole lines from column 0 to the last line's end, before its line break: the same shape after.
+
+```yaml
+tags: edge
+```
+
+```buffer
+- a
+«- b
+  - c»
+- d
+```
+
+> moveSubtreeDown
+
+```buffer
+- a
+- d
+«- b
+  - c»
+```
+
+## MoveDown44
+
+A selection from column 0 into a node's own text, no subtree selection (`b`'s child is left out):
+its start stays at the start of its node's line, its end in the text.
+
+```yaml
+tags: edge
+```
+
+```buffer
+- a
+«- b»
+  - c
+- d
+```
+
+> moveSubtreeDown
+
+```buffer
+- a
+- d
+«- b»
+  - c
 ```

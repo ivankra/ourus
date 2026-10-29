@@ -17,7 +17,7 @@ import type { OurusDoc, OutlineNode } from '../src/doc/index.ts';
 import type { Config } from '../src/config.ts';
 import { asTabs, retabs } from '../sxs/lib/tabs.ts';
 import type { TextDoc } from '../sxs/lib/text.ts';
-import { docOf, drawDoc, drawOutline, drawsCaret, readDrawing } from './drawing.ts';
+import { docOf, drawDoc, drawnSelection, drawOutline, drawsCaret, readDrawing } from './drawing.ts';
 import { play, type Played } from './player.ts';
 import { flavorsOf, Labels, normalize, outcome, readClipboard, viewOf } from './spec-run.ts';
 import { readSpecFile, specConfig, specFiles, type SpecTest } from './specfile.ts';
@@ -26,7 +26,8 @@ import { readSpecFile, specConfig, specFiles, type SpecTest } from './specfile.t
 function tabbedStart(t: SpecTest, config: Partial<Config>): { spaces: OurusDoc; tabs: Played } {
   const start = readDrawing(t.initial.buffer);
   const at = (p: number): number => asTabs({ text: start.text, sel: { anchor: p, head: p } }).sel!.anchor;
-  const d: TextDoc = asTabs({ text: start.text, sel: start.selection });
+  // (a subtree selection as the whole lines it is, carried to tabs as any selection)
+  const d: TextDoc = asTabs({ text: start.text, sel: drawnSelection(docOf(start.text, start.placeholders, config), start) });
   // (the start's labels, and its drop line: a line, which the tabs keep)
   const labels = new Labels();
   labels.check(docOf(start.text, start.placeholders, config), start.labels, null);
@@ -52,6 +53,9 @@ function place(doc: OurusDoc, pos: number): string {
     return `${at.zone} of node ${order.findIndex((n) => n.persistentNode === at.node.persistentNode)}, line ${k} at ${column}`;
   }
   if (at.zone === 'gap') return `gap of node ${order.findIndex((n) => n.persistentNode === at.owner.persistentNode)}`;
+  // (a line's start, a whole-line selection's end: in its parent's prefix by spaces, in its own
+  // marker's indentation by a tab; tabs change no line)
+  if ((at.zone === 'marker' || at.zone === 'prefix') && pos === doc.lineAt(pos).from) return `start of line ${doc.lineAt(pos).index}`;
   return at.zone;
 }
 
@@ -78,7 +82,12 @@ function runTabbed(t: SpecTest, flavor: Config['flavor']): void {
     // wider column may not: a child past a padding widened by a deleted first character)
     if (buffer === undefined || state.last?.status === 'deferredToHost' || buffer.includes('◌')) continue;
     const drawn = readDrawing(normalize(buffer));
-    const expected = reading(docOf(drawn.text, drawn.placeholders, config), drawn.selection, drawsCaret(buffer));
+    // (with the view the state has, by line, which tabs keep: a subtree selection ends at a zoom's end)
+    const byLine = (id: number | null): number | null => (id === null ? null : (state.doc.node(id)?.startLine ?? null));
+    const plain = docOf(drawn.text, drawn.placeholders, config);
+    const zoomLine = byLine(state.doc.zoom);
+    const expectedDoc = plain.withFolded([...state.doc.folded].flatMap((id) => plain.rowOwner(byLine(id) ?? -1)?.id ?? [])).withZoom(zoomLine === null ? null : (plain.rowOwner(zoomLine)?.id ?? null));
+    const expected = reading(expectedDoc, drawnSelection(expectedDoc, drawn), drawsCaret(buffer));
     const got = reading(state.doc, state.selection, drawsCaret(buffer));
     assert.equal(got, expected, `${at}: reads otherwise, as tabs ${JSON.stringify(from)} → ${JSON.stringify(drawDoc(state.doc, state.selection))}`);
   }

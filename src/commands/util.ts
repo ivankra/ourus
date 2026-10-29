@@ -2,11 +2,13 @@
 // (where typing extends it) and of the selection (the nodes it acts on); and what Tab and Shift-Tab
 // share: a heading's level, one up or down.
 
-import { ProseText, AtomText, type OutlineNode, type OutlineNodeText, type Located, type OurusDoc } from '../doc/index.ts';
+import { ProseText, AtomText, textEnd, textStart, type OutlineNode, type OutlineNodeText, type Located, type OurusDoc } from '../doc/index.ts';
 import type { AnchorSpec, OurusDraft } from '../draft/index.ts';
 import { reject, type CommandContext, type CommandOutcome } from './context.ts';
-import type { Selection } from './types.ts';
-import { heldSpaceAt, isHeldSpacePlaceholder, lineOf, trimMd } from '../text/index.ts';
+import type { TextSelection } from './types.ts';
+import { heldSpaceAt, isHeldSpacePlaceholder, lineOf } from '../text/index.ts';
+
+export { textEnd, textStart } from '../doc/index.ts';
 
 /**
  * Whether a caret at `pos` (located `at`) is in markup before a text: past its line's start, in an
@@ -26,56 +28,11 @@ export function inMarkup(doc: OurusDoc, at: Located, pos: number): boolean {
   return (at.part === 'task' && !at.text.empty) || at.part === 'heading' || at.part === 'callout';
 }
 
-/**
- * Where a text ends, before a closing frame (an ATX closing sequence, a setext underline); in a block
- * between delimiters, a fence's at the end of its last line with text, or of its opening; `$$` and
- * `%%` before the closing delimiter.
- */
-export function textEnd(text: OutlineNodeText): number {
-  if (!(text instanceof ProseText)) {
-    const s = text.text;
-    const close = text.frame.find((p) => p.part === 'close');
-    if (!close) return s.length;
-    // math and comments close after text on their line (`x$$`): typing before the delimiter is payload
-    if (text.type === 'math_block' || text.type === 'comment_block') return close.from;
-    const lines = s.split('\n');
-    let at = 0;
-    let end = lines[0]!.length;
-    for (let k = 0; k < lines.length - 1; k++) {
-      if (k > 0 && trimMd(lines[k]!) !== '') end = at + lines[k]!.length;
-      at += lines[k]!.length + 1;
-    }
-    return end;
-  }
-  const tail = text.frame.find((p) => p.to === text.text.length && (p.part === 'close' || p.part === 'underline'));
-  return tail ? tail.from : text.text.length;
-}
-
 /** A quote's text (`quotes: text`) without its `>`s, every line's: a paragraph's, where it is. */
 export function unquote(text: ProseText): ProseText {
   let out = text;
   for (const p of [...text.frame].reverse()) if (p.part === 'quote') out = out.splice(p.from, p.to);
   return new ProseText('paragraph', out.item, out.text, out.marks);
-}
-
-/**
- * Where typing extends a text: past its frame on its first line (an item's checkbox, a heading's
- * `#`s); in a block between delimiters, at its first line of payload with text, else after its
- * opening (a fence's whole line: after it, typing would be its info string).
- */
-export function textStart(text: OutlineNodeText): number {
-  if (text instanceof ProseText) return text.textStart(0);
-  const open = text.frame.find((p) => p.part === 'open');
-  // indented code: past its first line's four columns
-  if (!open) return text.frame.find((p) => p.part === 'indent' && p.from === 0)?.to ?? 0;
-  const lines = text.text.split('\n');
-  const closed = text.frame.some((p) => p.part === 'close');
-  let at = lines[0]!.length + 1;
-  for (let k = 1; k < lines.length - (closed ? 1 : 0); k++) {
-    if (trimMd(lines[k]!) !== '') return at;
-    at += lines[k]!.length + 1;
-  }
-  return text.type === 'fenced_code' ? lines[0]!.length : open.to;
 }
 
 /**
@@ -90,72 +47,84 @@ export function withTextlessParents(doc: OurusDoc, nodes: readonly OutlineNode[]
 }
 
 /**
- * The nodes a structural command acts on: the topmost nodes whose own lines the selection touches (a
- * blank line is the gap of the node above it), contiguous siblings; else what is wrong: none (on the
- * blank lines before the first node), or they aren't contiguous siblings.
+ * `nodes` (whole subtrees, at whatever depths) going, with the nodes with no text of their own all of
+ * whose children go: a quote without a title, an item whose first block is on its marker's line
+ * (`- > q`), whose children are those nodes, or go with them (outward, `withTextlessParents` over
+ * every run together). In document order.
  */
-export function operands(doc: OurusDoc, selection: Selection): OutlineNode[] | 'none' | 'non-contiguous' {
-  const tops = topmostNodes(doc, selection);
-  return tops.length ? siblingRun(tops) : 'none';
+export function goneWithTextlessParents(doc: OurusDoc, nodes: readonly OutlineNode[]): OutlineNode[] {
+  const gone = new Set(nodes);
+  for (let lifted = true; lifted; ) {
+    lifted = false;
+    for (const n of [...gone]) {
+      const p = n.parent;
+      if (!p || (p.kind !== 'quote' && p.kind !== 'item') || doc.textOf(p) || gone.has(p) || !p.children.every((c) => gone.has(c))) continue;
+      for (const c of p.children) gone.delete(c);
+      gone.add(p);
+      lifted = true;
+    }
+  }
+  return [...gone].sort((a, b) => a.startLine - b.startLine || a.depth - b.depth);
 }
 
 /**
- * The topmost nodes whose own lines the selection touches (a blank line is the gap of the node above
- * it), in document order, whether or not they are contiguous siblings; none on the blank lines before
- * the first node.
+ * The nodes a command acts on, each with its subtree, at whatever depths: those it was given by id
+ * (`ctx.nodes`, in document order), else the selection's (`selectionRoots`); else why none: none
+ * selected (the blank lines before the first node), or an id the document lacks.
  */
-export function topmostNodes(doc: OurusDoc, selection: Selection): OutlineNode[] {
-  if (doc.lineCount === 0) return [];
-  const from = Math.min(selection.anchor, selection.head);
-  const to = Math.max(selection.anchor, selection.head);
-  const lo = doc.lineAt(from).index;
-  const end = doc.lineAt(to);
-  // a selection ending at a line's very start doesn't take that line
-  const hi = to > from && end.index > lo && end.from === to ? end.index - 1 : end.index;
-  const touched = new Set<OutlineNode>();
-  for (let i = lo; i <= hi; i++) {
-    const n = doc.nodeAtLine(i);
-    if (n) touched.add(n);
-  }
-  if (!touched.size) {
-    for (let i = lo; i >= 0; i--) {
-      if (doc.isEmptyLine(i)) continue;
-      const owner = doc.nodeAtLine(i);
-      if (owner) touched.add(owner);
-      break;
-    }
-  }
-  return [...touched].filter((n) => {
-    for (let p = n.parent; p; p = p.parent) if (touched.has(p)) return false;
-    return true;
-  });
-}
-
-/** `nodes`, sorted, where they are contiguous siblings. */
-export function siblingRun(nodes: readonly OutlineNode[]): OutlineNode[] | 'non-contiguous' {
-  const parent = nodes[0]!.parent;
-  if (!parent || nodes.some((n) => n.parent !== parent)) return 'non-contiguous';
-  const sorted = [...nodes].sort((a, b) => a.index - b.index);
-  for (let i = 1; i < sorted.length; i++) if (sorted[i]!.index !== sorted[i - 1]!.index + 1) return 'non-contiguous';
-  return sorted;
-}
-
-/** Why a command has no operands: none selected, not contiguous siblings, or an id the document lacks. */
-export type NoOperands = 'none' | 'non-contiguous' | 'no-such-node';
-
-/** The nodes a command acts on: those it was given by id (`ctx.nodes`), else the selection's (`operands`). */
 export function operandsOf(ctx: CommandContext): OutlineNode[] | NoOperands {
-  if (!ctx.nodes) return operands(ctx.doc, ctx.selection);
+  if (!ctx.nodes) {
+    const roots = selectionRoots(ctx.doc, ctx.selection);
+    return roots.length ? roots : 'none';
+  }
   if (!ctx.nodes.length) return 'none';
-  const nodes: OutlineNode[] = [];
+  const nodes = new Set<OutlineNode>();
   for (const id of ctx.nodes) {
     const node = ctx.doc.node(id);
     // (the root is no node to act on)
     if (!node || node.kind === 'root') return 'no-such-node';
-    nodes.push(node);
+    nodes.add(node);
   }
-  return siblingRun([...new Set(nodes)]);
+  return [...nodes].sort((a, b) => a.startLine - b.startLine || a.depth - b.depth);
 }
+
+/**
+ * The roots of the selection: those of a subtree selection (`OurusDoc.selectedNodes`: on a line nodes
+ * share, the outermost), else the subtrees it touches (`OurusDoc.touchedNodes`: a caret's node, the
+ * innermost there). The blocks a host draws and the nodes acted on are the same.
+ */
+export function selectionRoots(doc: OurusDoc, selection: TextSelection): OutlineNode[] {
+  return [...(doc.selectedNodes(selection) ?? doc.touchedNodes(selection))];
+}
+
+/** `nodes` as runs of contiguous siblings, in document order. */
+export function runsOf(nodes: readonly OutlineNode[]): OutlineNode[][] {
+  const sorted = [...nodes].sort((a, b) => a.startLine - b.startLine || a.depth - b.depth);
+  const runs: OutlineNode[][] = [];
+  for (const n of sorted) {
+    const run = runs.at(-1);
+    const last = run?.at(-1);
+    if (run && last && last.parent === n.parent && last.index + 1 === n.index) run.push(n);
+    else runs.push([n]);
+  }
+  return runs;
+}
+
+/**
+ * The nodes a command that moves one run acts on (`operandsOf`): contiguous siblings, of one kind
+ * where `sameKind`; else why not.
+ */
+export function oneRun(ctx: CommandContext, sameKind = false): OutlineNode[] | NoOperands | 'mixed-kinds' {
+  const nodes = operandsOf(ctx);
+  if (!Array.isArray(nodes)) return nodes;
+  const runs = runsOf(nodes);
+  if (runs.length > 1) return 'non-contiguous';
+  const run = runs[0]!;
+  return sameKind && run.some((n) => n.kind !== run[0]!.kind) ? 'mixed-kinds' : run;
+}
+
+/** Why a command has no operands: none selected, not contiguous siblings, or an id the document lacks. */
+export type NoOperands = 'none' | 'non-contiguous' | 'no-such-node';
 
 /**
  * Where Enter at `head` acts: in a node's text; in an item's marker, a task's checkbox or a heading's
@@ -171,17 +140,6 @@ export function textActedOnAt(ctx: CommandContext, head: number): { node: Outlin
     return text instanceof ProseText ? { node: at.node, text, offset: text.textStart(0) } : null;
   }
   return null;
-}
-
-/**
- * The nodes a structural command acts on (`operands`), of one kind; else what the command does
- * instead: refused, as mixed, or as `operands` finds none.
- */
-export function structuralOperands(ctx: CommandContext): OutlineNode[] | CommandOutcome {
-  const nodes = operandsOf(ctx);
-  if (!Array.isArray(nodes)) return operandsRefused(nodes);
-  if (nodes.some((n) => n.kind !== nodes[0]!.kind)) return reject('mixed-kinds');
-  return nodes;
 }
 
 /**
@@ -372,8 +330,8 @@ export function deleteHeldSpace(ctx: CommandContext, node: OutlineNode, text: Pr
   return ctx.apply(ctx.draft().setText(node, settled).setCaret(node, offset, -1));
 }
 
-/** What a structural command says where `operandsOf` found none it can act on. */
-export function operandsRefused(why: NoOperands): CommandOutcome {
+/** What a command says where `operandsOf` or `oneRun` found none it can act on. */
+export function operandsRefused(why: NoOperands | 'mixed-kinds'): CommandOutcome {
   return why === 'none' ? reject('nothing-above', 'no node is selected') : reject(why);
 }
 

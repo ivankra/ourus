@@ -4,7 +4,7 @@
 
 import type { OutlineNode } from '../doc/index.ts';
 import { reject, type CommandContext, type CommandOutcome } from './context.ts';
-import { headingLevel, selectionInText, structuralOperands, withTextlessParents } from './util.ts';
+import { headingLevel, oneRun, operandsRefused, selectionInText, withTextlessParents } from './util.ts';
 
 /** Alt-Shift-Up (spec/move-subtree-up.md). */
 export function moveSubtreeUpCommand(ctx: CommandContext): CommandOutcome {
@@ -25,8 +25,8 @@ export function moveSubtreeDownCommand(ctx: CommandContext): CommandOutcome {
  */
 function moveSubtreeBy(ctx: CommandContext, dir: -1 | 1): CommandOutcome {
   const doc = ctx.doc;
-  const found = structuralOperands(ctx);
-  if (!Array.isArray(found)) return found;
+  const found = oneRun(ctx, true);
+  if (!Array.isArray(found)) return operandsRefused(found);
   let nodes = found;
   nodes = withTextlessParents(doc, nodes);
   const first = nodes[0]!;

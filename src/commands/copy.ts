@@ -7,10 +7,12 @@ import { deleteContentBackwardCommand } from './backspace.ts';
 import { CommandContext, deferToHost, type CommandOutcome } from './context.ts';
 import { composeChanges, lineOf } from '../text/index.ts';
 import { deleteSubtreeCommand } from './delete-subtree.ts';
-import { operands, operandsOf, operandsRefused } from './util.ts';
+import { oneRun, operandsRefused, runsOf } from './util.ts';
 
 /**
- * Copy, or cut: what the selection takes, as Markdown out of its containers. Within one node's text
+ * Copy, or cut: what the selection takes, as Markdown out of its containers. A subtree selection's
+ * roots, whatever `copySelection` says, each run of siblings out of its own containers, so roots at two
+ * depths are copied as siblings. Within one node's text
  * (or across nodes with `copySelection: text`) the text; across nodes, the whole nodes it touches with
  * their subtrees, ending with a line break (one pastes as a node, not as a phrase); at a caret, the
  * node there with its subtree (`copyAtCaret: node`), else the host's. A cut deletes it as delete
@@ -23,8 +25,10 @@ export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): Com
   const from = Math.min(ctx.selection.anchor, ctx.selection.head);
   const to = Math.max(ctx.selection.anchor, ctx.selection.head);
   let nodes: readonly OutlineNode[] | null = null;
-  if (ctx.nodes) {
-    const found = operandsOf(ctx);
+  const subtrees = ctx.nodes ? null : doc.selectedNodes(ctx.selection);
+  if (subtrees) nodes = subtrees;
+  else if (ctx.nodes) {
+    const found = oneRun(ctx);
     if (!Array.isArray(found)) return operandsRefused(found);
     nodes = found;
   } else if (from === to) {
@@ -34,15 +38,22 @@ export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): Com
     if (!node) return deferToHost();
     nodes = [node];
   } else if (config.copySelection !== 'text' && nodesOnLines(ctx, from, to) > 1) {
-    const found = operands(doc, ctx.selection);
+    const found = oneRun(ctx);
     if (!Array.isArray(found)) return operandsRefused(found);
     nodes = found;
   }
   let markdown: string;
   if (nodes) {
-    const first = nodes.reduce((a, n) => (n.startLine < a.startLine ? n : a));
-    const last = nodes.reduce((a, n) => (n.endLine > a.endLine ? n : a));
-    markdown = doc.markdownOf(doc.markdownStart(first), doc.rangeOf(last).to);
+    // each run of siblings out of its own containers: roots at two depths copied as siblings (a
+    // deeper one before a shallower has no Markdown form), the blank lines between them kept
+    const runs = runsOf(nodes);
+    markdown = runs
+      .map((run, k) => {
+        const last = run.reduce((a, n) => (n.endLine > a.endLine ? n : a));
+        const before = k ? run[0]!.startLine - runs[k - 1]!.reduce((a, n) => Math.max(a, n.endLine), 0) - 1 : 0;
+        return '\n'.repeat(Math.max(0, before)) + doc.markdownOf(doc.markdownStart(run[0]!), doc.rangeOf(last).to);
+      })
+      .join('\n');
     if (!markdown.endsWith('\n')) markdown += '\n';
   } else markdown = doc.markdownOf(from, to);
   const clipboard = clipboardOf(markdown, ctx.config);

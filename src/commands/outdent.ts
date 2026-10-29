@@ -4,7 +4,7 @@
 
 import { ProseText, AtomText, type OutlineNode } from '../doc/index.ts';
 import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
-import { changeHeadingLevels, onCodeLine, selectionInText, structuralOperands } from './util.ts';
+import { changeHeadingLevels, onCodeLine, oneRun, operandsRefused, selectionInText } from './util.ts';
 
 /**
  * Items leave their parent item, to follow it, with their subtrees. The siblings after them follow
@@ -15,8 +15,8 @@ import { changeHeadingLevels, onCodeLine, selectionInText, structuralOperands } 
  */
 export function outdentCommand(ctx: CommandContext): CommandOutcome {
   if (!ctx.nodes && onCodeLine(ctx, ctx.selection.anchor) && onCodeLine(ctx, ctx.selection.head)) return deferToHost();
-  const nodes = structuralOperands(ctx);
-  if (!Array.isArray(nodes)) return nodes;
+  const nodes = oneRun(ctx, true);
+  if (!Array.isArray(nodes)) return operandsRefused(nodes);
   const first = nodes[0]!;
   const last = nodes[nodes.length - 1]!;
   const parent = first.parent!;

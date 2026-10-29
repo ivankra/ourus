@@ -385,6 +385,10 @@ export const driver: Driver = {
     // "Move block up", "down" (Mod-Shift-ArrowUp, -ArrowDown): the block with its children
     moveSubtreeUp: 'Control+Shift+ArrowUp',
     moveSubtreeDown: 'Control+Shift+ArrowDown',
+    // the selection commands (spec/select.md): Ctrl-A, Shift-Down and Shift-Up as the app has them
+    expandSelection: 'Control+a',
+    selectNodeDown: 'Shift+ArrowDown',
+    selectNodeUp: 'Shift+ArrowUp',
     // no command: selecting to the line's start, then deleting
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
     copy: 'Control+c',

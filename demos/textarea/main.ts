@@ -18,6 +18,12 @@ const KEYS: Record<string, Command['type']> = {
   Backspace: 'deleteContentBackward',
   Delete: 'deleteContentForward',
   'Mod-Backspace': 'deleteSoftLineBackward',
+  // selection by node: Escape, Ctrl-A's ladder, Shift-Down and Shift-Up a node a press (a textarea
+  // can't tell a wrapped line's rows: a wrapped paragraph is selected whole at the first press)
+  Escape: 'selectNode',
+  'Mod-a': 'expandSelection',
+  'Shift-ArrowDown': 'selectNodeDown',
+  'Shift-ArrowUp': 'selectNodeUp',
 };
 
 const area = document.getElementById('editor') as HTMLTextAreaElement;

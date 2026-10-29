@@ -157,6 +157,10 @@ export const driver: Driver = {
     deleteContentForward: 'Delete',
     moveSubtreeUp: 'Alt+Shift+ArrowUp',
     moveSubtreeDown: 'Alt+Shift+ArrowDown',
+    // the selection commands (spec/select.md): Ctrl-A, Shift-Down and Shift-Up as the app has them
+    expandSelection: 'Control+a',
+    selectNodeDown: 'Shift+ArrowDown',
+    selectNodeUp: 'Shift+ArrowUp',
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
     deleteSubtree: 'Control+Shift+Backspace',
     duplicateSubtree: 'Alt+Shift+d',
@@ -180,6 +184,12 @@ export const driver: Driver = {
   // paste opens the seam (the first pasted text joins), though not on an item with children
   // (on the paste files, 14 cases better under `open`, 3 worse)
   behaves: {
+    // indent and outdent over roots at two depths: each run as alone
+    mixedDepths: 'each',
+    // Shift-Up takes the sibling above with its subtree
+    selectNodeUp: 'sibling',
+    // Ctrl-A goes from the text straight to everything
+    selectionLadder: 'top',
     // a quote is a style on one block: a quote of one paragraph is that block, its `>` the style
     quotes: 'text',
     // Enter mid-heading: the new block above takes the text before the caret, the heading (an
@@ -465,7 +475,9 @@ export const driver: Driver = {
         const { start, end, reversed } = WF.DomEditableText.selectedIn(content);
         sel = { block: flat.findIndex((f) => f.id === focusedId), anchor: reversed ? end : start, head: reversed ? start : end, inNote };
       }
-      const selected = WF.getSelection().map((it: any) => flat.findIndex((f) => f.id === it.getId())).filter((i: number) => i >= 0);
+      // items selected whole; a select all (Ctrl-A again) selects the container itself: every item in it
+      const chosen: any[] = WF.getSelection();
+      const selected = box && chosen.some((it) => it.getId() === box.getId()) ? flat.flatMap((f, k) => (f.depth === 0 ? [k] : [])) : chosen.map((it: any) => flat.findIndex((f) => f.id === it.getId())).filter((i: number) => i >= 0);
       // the view: the collapsed items, and the item zoomed into, if one of the test's (the container: none)
       const current = WF.currentItem().getId();
       const zoom = flat.findIndex((f) => f.id === current);

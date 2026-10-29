@@ -64,6 +64,8 @@ const isMotion = (a: string): boolean => /^(?:cursor|select)(?:CharLeft|CharRigh
 /** Whether the app can play an action. */
 export function playable(driver: Driver, action: string): boolean {
   if (/^"[^"]*"$/.test(action)) return true;
+  // a key pressed as is (`key:Control+a`), for a probe
+  if (action.startsWith('key:')) return true;
   // a drop: a gesture the driver plays (`Driver.drop`), by its action (`moveSubtree ②` is a `moveSubtree`)
   if (isDrop(action)) return !!driver.drop && !!driver.drops?.includes(action.split(' ')[0] as Drop['action']);
   if (action === 'paste' || action === 'pastePlain') return action in driver.keys;

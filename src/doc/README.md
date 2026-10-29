@@ -52,7 +52,7 @@ const at = doc.locate(pos);                 // in a text, a frame, a marker, a p
     an update carries them; `flavor` parses the text anew, the folds and the zoom carried by line.
 
   - `OurusDoc.folded: ReadonlySet<number>`, `OurusDoc.zoom: number | null`, `get OurusDoc.zoomFolded: ReadonlySet<number>`<br>
-    The view's state, not the text's (dev/21-zoom.md): the nodes whose children it hides, the node
+    The view's state, not the text's: the nodes whose children it hides, the node
     it is zoomed into, and the folds in effect within the zoom (those of nodes strictly inside its
     root; all of `folded` where not zoomed). An update carries them by id, a writer's edit as any: a
     fold goes with its node, and opens where what it hides changed or it has nothing left to hide;
@@ -115,6 +115,28 @@ const at = doc.locate(pos);                 // in a text, a frame, a marker, a p
     `#`s, a fence, ...), `marker` (an item's indentation, marker or padding), `prefix` (a
     container's, like a quote's `>`), `gap` (a blank line, with the node above it as its owner),
     `preamble`, or `none`.
+
+  - `OurusDoc.touchedSubtrees(sel: TextSelection): readonly number[]`<br>
+    The subtrees a selection touches: the topmost nodes whose own lines it touches, in document
+    order, at whatever depths; a caret's node, the innermost where nodes share a line (`- - a`); a
+    blank line the gap of the node above it; a selection ending at a line's very start not touching
+    that line. What a key acts on. `[]` only where there is no node (the blank lines before the
+    first, an empty document).
+
+  - `OurusDoc.selectedSubtrees(sel: TextSelection): readonly number[] | null`<br>
+    The roots of a subtree selection, a selection that is exactly their subtrees as whole lines: from
+    column 0 of the first's first line to the start of the line after the last's subtree, or its last
+    line's end, or anywhere in the blank lines after it; where nodes share those lines, the outermost
+    inside the zoom. Null for a caret, text, and a node's own text (but at the document's end, where
+    it is the node too). What a host draws as blocks selected whole.
+
+  - `OurusDoc.selectionOf(ids: readonly number[], direction?: 'down' | 'up'): TextSelection`<br>
+    The subtrees of `ids` as whole lines, their closure (every node the span touches, whole): the
+    canonical subtree selection, the anchor at the top unless `up`. Throws for no ids, an unknown id,
+    the root, an id outside the zoom or one a fold hides.
+
+  - `OurusDoc.touchedNodes(sel)`, `OurusDoc.selectedNodes(sel)`<br>
+    The same two answers as nodes. A snapshot keeps its last selection's answers.
 
   - `OurusDoc.posOf(node: OutlineNode, offset: number, assoc = 1): number`, `OurusDoc.offsetOf(node: OutlineNode, pos: number): number`<br>
     Converts an offset in a node's text to a position in the document, and back. Where the document
@@ -288,12 +310,13 @@ Files:
 
 - `index.ts` (the API); `doc.ts` (`OurusDoc`); `outline.ts` (`OutlineNodePersistent`, and reading the
   outline from the parse, sharing nodes between snapshots); `node.ts` (`OutlineNode`); `text.ts`
-  (`ProseText`, `AtomText`).
+  (`ProseText`, `AtomText`, and where a text starts and ends, `textStart` and `textEnd`).
 - `read.ts` (a node's text read from its lines, with its markup escapes left out, and the map
   between the text's offsets and the document's); `escapes.ts` (`markupEscapes` for reading,
-  `escapeParagraph` for writing); `locate.ts` (what is at a position); `rules.ts` (which node kinds
-  hold which, `outlineChildren`); `placeholders.ts` (which placeholders still hold something);
-  `copy.ts` (a range's Markdown without its containers' prefixes).
+  `escapeParagraph` for writing); `locate.ts` (what is at a position); `select.ts` (what a
+  selection is of the outline: the subtrees it touches, the subtrees it is); `rules.ts` (which
+  node kinds hold which, `outlineChildren`); `placeholders.ts` (which placeholders still hold
+  something); `copy.ts` (a range's Markdown without its containers' prefixes).
 
 Tests, in `test/doc/`: `doc.test.ts` (placeholders, updates), `outline.test.ts` (an update's outline
 equals a fresh parse's), `text.test.ts`, `locate.test.ts`, `escapes.test.ts`; and

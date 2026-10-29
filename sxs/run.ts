@@ -1115,6 +1115,12 @@ async function play(w: Worker, action: string, settleAfter: (what: string) => Pr
     }
     return;
   }
+  // a key pressed as is (`key:Control+a`), for a probe of a key no action names
+  if (action.startsWith('key:')) {
+    await w.actor.press(action.slice(4));
+    await settleAfter(action);
+    return;
+  }
   const keys = driver.keys[action];
   if (keys !== undefined) {
     for (const key of typeof keys === 'string' ? [keys] : keys) {

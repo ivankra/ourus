@@ -119,6 +119,12 @@ export const driver: Driver = {
     deleteContentForward: 'Delete',
     moveSubtreeUp: 'Alt+Shift+ArrowUp',
     moveSubtreeDown: 'Alt+Shift+ArrowDown',
+    // the selection commands (spec/select.md): Ctrl-A, Shift-Down and Shift-Up as the app has them
+    expandSelection: 'Control+a',
+    selectNodeDown: 'Shift+ArrowDown',
+    selectNodeUp: 'Shift+ArrowUp',
+    // the first Escape does nothing, the second selects the block
+    selectNode: ['Escape', 'Escape'],
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
     copy: 'Control+c',
     cut: 'Control+x',
@@ -134,6 +140,10 @@ export const driver: Driver = {
   // Shift+Tab leaves later siblings with the parent (logical outdenting); Enter on an empty nested
   // block outdents it; Backspace on a page's first block does nothing: as ourus's config says of Roam
   behaves: {
+    // indent and outdent over roots at two depths: each run as alone
+    mixedDepths: 'each',
+    // Ctrl-A goes from the text straight to everything
+    selectionLadder: 'top',
     // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25)
     quotes: 'atom',
     // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25)

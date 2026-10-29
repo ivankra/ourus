@@ -4,7 +4,7 @@
 
 import type { Config } from '../../src/config.ts';
 import { OurusDoc } from '../../src/doc/index.ts';
-import { drawState, drawText, nodesOf, plainText, readDrawing } from '../../test/drawing.ts';
+import { drawState, drawText, drawnSelection, nodesOf, plainText, readDrawing } from '../../test/drawing.ts';
 import type { Verdict } from './block.ts';
 import { drawView, sameView, splitView, type RowView } from './view.ts';
 
@@ -16,14 +16,15 @@ export interface TextDoc {
   view?: RowView;
 }
 
-/** A drawn buffer as a text document (its view, `view.ts`, read off its last line). */
+/** A drawn buffer as a text document (its view, `view.ts`, read off its last line); a subtree selection (`««…»»`) as the whole lines it is. */
 export function readTextDoc(drawing: string): TextDoc {
   const { drawn, view } = splitView(drawing);
-  const { text, selection } = readDrawing(drawn);
-  return { text, sel: /┃|«/.test(drawn) ? selection : null, ...(view && { view }) };
+  const read = readDrawing(drawn);
+  const selection = read.subtrees ? drawnSelection(OurusDoc.parse(read.text, { marks: [] }), read) : read.selection;
+  return { text: read.text, sel: /┃|«/.test(drawn) ? selection : null, ...(view && { view }) };
 }
 
-/** A text document drawn as a spec buffer, its view a last line. */
+/** A text document drawn as a spec buffer, its view a last line: its selection at its offsets, as a text editor has it (`«…»`, whole lines or not; the stored runs are keyed so). */
 export const drawTextDoc = (d: TextDoc): string => (d.sel ? drawState(d.text, d.sel) : drawText(d.text)) + (d.view ? drawView(d.view) : '');
 
 /** Text compared without the spaces and tabs that end lines, where editors differ in trimming. */
@@ -47,8 +48,20 @@ export function compareTexts(want: TextDoc, got: TextDoc, flavor: Config['flavor
     const bare = (t: string): string => t.replace(/[ \t]+/g, '');
     return bare(want.text) === bare(got.text) && nodes(want.text, flavor) === nodes(got.text, flavor) ? 'whitespace' : 'disagree';
   }
-  if (want.sel && JSON.stringify(want.sel) !== JSON.stringify(got.sel)) return 'caret';
+  if (want.sel && JSON.stringify(want.sel) !== JSON.stringify(got.sel) && !sameSubtrees(want.text, want.sel, got.sel, flavor)) return 'caret';
   return 'agree';
+}
+
+/**
+ * Whether two selections of `text` are the same subtree selection, whatever their whole-line shape
+ * (to the next line's start, to the last line's end, with the blank lines after) or direction: the
+ * same nodes selected whole, as a host draws them (true-outliner's covers end before the break).
+ */
+function sameSubtrees(text: string, a: TextDoc['sel'], b: TextDoc['sel'], flavor: Config['flavor']): boolean {
+  if (!a || !b) return false;
+  const doc = OurusDoc.parse(text, { config: { flavor } });
+  const roots = doc.selectedSubtrees(a);
+  return !!roots && roots.join() === doc.selectedSubtrees(b)?.join();
 }
 
 export const sameText = (a: TextDoc, b: TextDoc): boolean => a.text === b.text && JSON.stringify(a.sel) === JSON.stringify(b.sel) && sameView(a.view, b.view);

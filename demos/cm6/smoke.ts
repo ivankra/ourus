@@ -135,6 +135,12 @@ const results = [
   await scenario('Zoomed, Backspace at the root\'s start changes nothing', '- a\n- ┃b\n', ['Control+Period', 'Backspace', 'type:x'], '- a\n- xb\n'),
   await scenario('Zoomed out again, Backspace joins', '- a\n- ┃b\n', ['Control+Period', 'Control+Comma', 'Backspace'], '- ab\n'),
   await scenario("A breadcrumb zooms out as the command does: the caret leaves the fold back in effect", '- A┃\n  - B\n', ['Control+ArrowUp', 'Control+Period', 'ArrowDown', 'Control+Period', 'click:.ourus-breadcrumbs a', 'type:x'], '- Ax\n  - B\n'),
+  await scenario('Escape selects the item with its child; Backspace deletes them', '- a\n- b┃\n  - c\n- d\n', ['Escape', 'Backspace'], '- a\n- d\n'),
+  await scenario('Typing over selected items does nothing, as in the outliners', '- a\n- b┃\n  - c\n- d\n', ['Escape', 'type:x'], '- a\n- b\n  - c\n- d\n'),
+  await scenario('Shift-Down twice selects two items; Backspace deletes them', '- a┃\n- b\n- c\n', ['Shift+ArrowDown', 'Shift+ArrowDown', 'Backspace'], '- c\n'),
+  await scenario('Ctrl-A climbs from the text to the item; Backspace deletes it', '- one\n  - t┃wo\n- four\n', ['Control+a', 'Control+a', 'Backspace'], '- one\n- four\n'),
+  await scenario('Tab and Shift-Tab keep two selected items selected', '- a\n- b┃\n- c\n', ['Shift+ArrowDown', 'Shift+ArrowDown', 'Tab', 'Shift+Tab', 'Tab'], '- a\n  - b\n  - c\n'),
+  await scenario('Shift-Up from a node with a sibling above takes the node on the line above, then their parent', '- one\n  - two\n    - deep\n  - th┃ree\n', ['Shift+ArrowUp', 'Shift+ArrowUp', 'Shift+ArrowUp', 'Backspace'], '- one\n'),
 ];
 
 /** Every renderer renders the sample in every flavor: tables and math where it reads them, code highlighted. */
@@ -172,6 +178,14 @@ async function renderers(): Promise<boolean[]> {
   return out;
 }
 results.push(...(await renderers()));
+
+// blocks selected whole are drawn as blocks, a line each
+await page.evaluate(() => (window as unknown as { ourusDemo: Demo }).ourusDemo.setText('- a\n- b\n  - c\n- d\n', 6));
+await page.focus('.cm-content');
+await page.keyboard.press('Escape');
+const blocks = await page.locator('.cm-line.ourus-block').count();
+console.log(`${blocks === 2 ? 'ok  ' : 'FAIL'} Escape draws the item and its child as blocks${blocks === 2 ? '' : ` (${blocks} lines)`}`);
+results.push(blocks === 2);
 
 if (screenshot) {
   await page.reload();

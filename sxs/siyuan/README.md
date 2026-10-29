@@ -320,7 +320,7 @@ compared is what the reader sees, the folds in effect.
   folded item's end, the item below kept (`Fold15`); ourus joins it into the folded item's text, as
   the other block apps.
 - **Duplicate (Ctrl+D) on a folded item** copies its paragraph into it, selected, not the item
-  (`Fold8`: `- a` over `¶ ▮ a`, `- b`), as read; ourus copies the item with its subtree, folded too.
+  (`Fold8`: `- a` over `¶ ««a»»`, `- b`), as read; ourus copies the item with its subtree, folded too.
   Measured once; not yet checked by hand.
 
 ## Invisible characters

@@ -30,7 +30,8 @@ wins:
    MoveUp36); a paragraph's leading indentation, not part of its text, is rewritten where it would
    make code (MoveUp30); a renumbered list keeps its children at their content column (MoveUp15).
    The caret ends in the node's text (MoveUp34); in a math block, after its opening `$$` and before
-   its closing one, wherever that is (MoveUp37, MoveUp38).
+   its closing one, wherever that is (MoveUp37, MoveUp38). A subtree selection stays on the moved
+   nodes, in the shape it was given (MoveUp44 to MoveUp46).
 
 [Move subtree down](move-subtree-down.md) mirrors each case and takes each move back.
 
@@ -323,18 +324,18 @@ tags: common
 
 ```buffer
 - a
-- «b
+- ««b
   - b1
-- c»
+- c»»
 - d
 ```
 
 > moveSubtreeUp
 
 ```buffer
-- «b
+- ««b
   - b1
-- c»
+- c»»
 - a
 - d
 ```
@@ -352,9 +353,9 @@ tags: edge
 - a
   - a1
 - b
-  - «c
+  - ««c
     - c1
-  - d»
+  - d»»
   - e
 ```
 
@@ -363,9 +364,9 @@ tags: edge
 ```buffer
 - a
   - a1
-  - «c
+  - ««c
     - c1
-  - d»
+  - d»»
 - b
   - e
 ```
@@ -1217,5 +1218,81 @@ indentUnit: tab
 ```buffer
 - a
 →- y┃
+- b
+```
+
+## MoveUp44
+
+A subtree selection stays on the moved nodes, as whole lines: not stretched over `a`, which the
+selection's end, at the start of `d`'s line, would otherwise still be after.
+
+```yaml
+tags: common
+```
+
+```buffer
+- a
+- ««b»»
+  - c
+- d
+```
+
+> moveSubtreeUp
+
+```buffer
+- ««b»»
+  - c
+- a
+- d
+```
+
+## MoveUp45
+
+With blank lines around it, which go with their nodes: the selection's end at the start of the
+blank line after its nodes, still.
+
+```yaml
+tags: edge
+```
+
+```buffer
+- a
+
+- ««b»»
+  - c
+
+- d
+```
+
+> moveSubtreeUp
+
+```buffer
+- ««b»»
+  - c
+
+- a
+
+- d
+```
+
+## MoveUp46
+
+Crossing into the item above: the same node selected, not the one it moved past.
+
+```yaml
+tags: edge
+```
+
+```buffer
+- a
+- b
+  - ««c»»
+```
+
+> moveSubtreeUp
+
+```buffer
+- a
+  - ««c»»
 - b
 ```

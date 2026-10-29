@@ -21,6 +21,8 @@ The rules:
    (DuplicateSubtree8).
 10. **An unclosed fence is refused**: it reads to the end of its container, so its copy would be
     more of its code (DuplicateSubtree9).
+11. **A subtree selection selects the copies**, in the shape it was given (DuplicateSubtree11,
+    DuplicateSubtree12).
 
 ## DuplicateSubtree1
 
@@ -84,8 +86,8 @@ tags: common
 
 ```buffer
 - a
-- «b
-- c»
+- ««b
+- c»»
 - d
 ```
 
@@ -95,8 +97,8 @@ tags: common
 - a
 - b
 - c
-- «b
-- c»
+- ««b
+- c»»
 - d
 ```
 
@@ -283,4 +285,57 @@ tags: edge
   - a
 - ┃
   - a
+```
+
+## DuplicateSubtree11
+
+A subtree selection (whole lines, to the start of the next line): the copies selected so.
+
+```yaml
+tags: common
+```
+
+```buffer
+- a
+- ««b»»
+  - c
+- d
+```
+
+> duplicateSubtree
+
+```buffer
+- a
+- b
+  - c
+- ««b»»
+  - c
+- d
+```
+
+## DuplicateSubtree12
+
+Whole lines from column 0 to the last line's end, before its line break: the copies, in the same
+shape.
+
+```yaml
+tags: edge
+```
+
+```buffer
+- a
+«- b
+  - c»
+- d
+```
+
+> duplicateSubtree
+
+```buffer
+- a
+- b
+  - c
+«- b
+  - c»
+- d
 ```

@@ -375,3 +375,48 @@ function columnsOf(blanks: string): number {
   for (const c of blanks) column = c === '\t' ? column + 4 - (column % 4) : column + 1;
   return column;
 }
+
+/**
+ * Where a text ends, before a closing frame (an ATX closing sequence, a setext underline); in a block
+ * between delimiters, a fence's at the end of its last line with text, or of its opening; `$$` and
+ * `%%` before the closing delimiter.
+ */
+export function textEnd(text: OutlineNodeText): number {
+  if (!(text instanceof ProseText)) {
+    const s = text.text;
+    const close = text.frame.find((p) => p.part === 'close');
+    if (!close) return s.length;
+    // math and comments close after text on their line (`x$$`): typing before the delimiter is payload
+    if (text.type === 'math_block' || text.type === 'comment_block') return close.from;
+    const lines = s.split('\n');
+    let at = 0;
+    let end = lines[0]!.length;
+    for (let k = 0; k < lines.length - 1; k++) {
+      if (k > 0 && trimMd(lines[k]!) !== '') end = at + lines[k]!.length;
+      at += lines[k]!.length + 1;
+    }
+    return end;
+  }
+  const tail = text.frame.find((p) => p.to === text.text.length && (p.part === 'close' || p.part === 'underline'));
+  return tail ? tail.from : text.text.length;
+}
+
+/**
+ * Where typing extends a text: past its frame on its first line (an item's checkbox, a heading's
+ * `#`s); in a block between delimiters, at its first line of payload with text, else after its
+ * opening (a fence's whole line: after it, typing would be its info string).
+ */
+export function textStart(text: OutlineNodeText): number {
+  if (text instanceof ProseText) return text.textStart(0);
+  const open = text.frame.find((p) => p.part === 'open');
+  // indented code: past its first line's four columns
+  if (!open) return text.frame.find((p) => p.part === 'indent' && p.from === 0)?.to ?? 0;
+  const lines = text.text.split('\n');
+  const closed = text.frame.some((p) => p.part === 'close');
+  let at = lines[0]!.length + 1;
+  for (let k = 1; k < lines.length - (closed ? 1 : 0); k++) {
+    if (trimMd(lines[k]!) !== '') return at;
+    at += lines[k]!.length + 1;
+  }
+  return text.type === 'fenced_code' ? lines[0]!.length : open.to;
+}
