@@ -10,7 +10,7 @@
 //
 // Left out: an example that draws tabs itself, and one that sets `indentUnit`, whose unit is its point.
 
-import { indentUnitOf } from '../src/draft/write.ts';
+import { indentUnitOf } from '../src/writer/write.ts';
 import { compareTexts, readTextDoc } from '../sxs/lib/text.ts';
 import { docOf, drawDoc, drawnSelection, drawsCaret, readDrawing, readLabels, withoutCaret } from './drawing.ts';
 import { play, type Played } from './player.ts';

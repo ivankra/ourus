@@ -317,3 +317,26 @@ tags: edge
 - a┃
 - c
 ```
+
+## DeleteSubtree14
+
+A block of lines (code, math, a table) owns no list after it under `listParent: paragraph`, the
+default, as a paragraph does: the list is its sibling, and deleting the block leaves it. Under
+`listParent: block` it would be the block's children and go with it.
+
+```yaml
+tags: rare
+```
+
+````buffer
+┃```
+code
+```
+- c
+````
+
+> deleteSubtree
+
+```buffer
+- ┃c
+```

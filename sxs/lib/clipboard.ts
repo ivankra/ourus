@@ -3,7 +3,7 @@
 // that; the runner gives a case's formats now, and this reads an old run
 // back as what its app was given (`startClipboard` in run.ts).
 
-import type { Config } from '../../src/config.ts';
+import type { OurusConfig } from '../../src/config.ts';
 import { clipboardSource } from '../../src/commands/clipboard.ts';
 import { MdFlavor, MdTree, type MdBlock } from '../../src/parser/index.ts';
 
@@ -15,7 +15,7 @@ import { MdFlavor, MdTree, type MdBlock } from '../../src/parser/index.ts';
  * is no list there, and paste puts it inline), plain lines (paragraphs only), and blocks HTML has no
  * element for (math, comments, callouts, frontmatter: their rendering gives an app bare text).
  */
-export function clipboardHtml(markdown: string, flavor: Config['flavor']): string | null {
+export function clipboardHtml(markdown: string, flavor: OurusConfig['flavor']): string | null {
   if (!/[\r\n]/.test(markdown)) return null;
   const lines = markdown.split(/\r\n|\n|\r/);
   while (lines.length && lines[0]!.trim() === '') lines.shift();

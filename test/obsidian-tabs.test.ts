@@ -13,8 +13,8 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import type { OurusDoc, OutlineNode } from '../src/doc/index.ts';
-import type { Config } from '../src/config.ts';
+import type { OurusDoc, OurusNode } from '../src/doc/index.ts';
+import type { OurusConfig } from '../src/config.ts';
 import { asTabs, retabs } from '../sxs/lib/tabs.ts';
 import type { TextDoc } from '../sxs/lib/text.ts';
 import { docOf, drawDoc, drawnSelection, drawOutline, drawsCaret, readDrawing } from './drawing.ts';
@@ -23,16 +23,18 @@ import { flavorsOf, Labels, normalize, outcome, readClipboard, viewOf } from './
 import { readSpecFile, specConfig, specFiles, type SpecTest } from './specfile.ts';
 
 /** A drawn buffer's document, and its start loaded as tabs (placeholders carried as carets are). */
-function tabbedStart(t: SpecTest, config: Partial<Config>): { spaces: OurusDoc; tabs: Played } {
+function tabbedStart(t: SpecTest, config: Partial<OurusConfig>): { spaces: OurusDoc; tabs: Played } {
   const start = readDrawing(t.initial.buffer);
   const at = (p: number): number => asTabs({ text: start.text, sel: { anchor: p, head: p } }).sel!.anchor;
-  // (a subtree selection as the whole lines it is, carried to tabs as any selection)
-  const d: TextDoc = asTabs({ text: start.text, sel: drawnSelection(docOf(start.text, start.placeholders, config), start) });
   // (the start's labels, and its drop line: a line, which the tabs keep)
   const labels = new Labels();
   labels.check(docOf(start.text, start.placeholders, config), start.labels, null);
+  const spaces = viewOf(t, docOf(start.text, start.placeholders, config), labels.ids);
+  // (a subtree selection as the whole lines it is, in the start's view (zoomed, it ends at the zoom's
+  // end), carried to tabs as any selection)
+  const d: TextDoc = asTabs({ text: start.text, sel: drawnSelection(spaces, start) });
   return {
-    spaces: viewOf(t, docOf(start.text, start.placeholders, config), labels.ids),
+    spaces,
     // (tabs change no line: a label names the same line's node)
     tabs: { doc: viewOf(t, docOf(d.text, start.placeholders.map(at), config), labels.ids), selection: d.sel!, clipboard: readClipboard(t.initial.clipboard), labels: labels.ids, drop: start.drop },
   };
@@ -40,8 +42,8 @@ function tabbedStart(t: SpecTest, config: Partial<Config>): { spaces: OurusDoc; 
 
 /** Where `pos` is, by what the document reads as: in a node's text (the node in document order, the offset), else its zone. */
 function place(doc: OurusDoc, pos: number): string {
-  const order: OutlineNode[] = [];
-  const visit = (n: OutlineNode): void => (order.push(n), n.children.forEach(visit));
+  const order: OurusNode[] = [];
+  const visit = (n: OurusNode): void => (order.push(n), n.children.forEach(visit));
   doc.rootNode.children.forEach(visit);
   const at = doc.locate(pos);
   if (at.zone === 'text' || at.zone === 'frame') {
@@ -66,7 +68,7 @@ const reading = (doc: OurusDoc, sel: { anchor: number; head: number }, caret: bo
 const columnMotion = (action: string): boolean => /^(?:cursor|select)(?:Line|Page)(?:Up|Down)$/.test(action);
 
 /** Plays example `t` in `flavor` from its start loaded as tabs; throws where a step fails to write, or reads otherwise than its drawing. */
-function runTabbed(t: SpecTest, flavor: Config['flavor']): void {
+function runTabbed(t: SpecTest, flavor: OurusConfig['flavor']): void {
   const config = { flavor, ...specConfig(t.options) };
   let { tabs: state } = tabbedStart(t, config);
   const from = drawDoc(state.doc, state.selection);

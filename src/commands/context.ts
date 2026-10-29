@@ -2,26 +2,26 @@
 // fixed by `done()`, spelled by `write()`, read back by the document, and checked against what the
 // draft meant.
 
-import type { Config } from '../config.ts';
+import type { OurusConfig } from '../config.ts';
 import type { Located, OurusDoc } from '../doc/index.ts';
-import { OurusDraft } from '../draft/index.ts';
-import type { CommandResult, RejectReason, TextSelection } from './types.ts';
+import { OurusDraft } from '../writer/index.ts';
+import type { OurusCommandResult, RejectReason, OurusSelection } from './types.ts';
 
 /**
  * A command's outcome; null where ourus doesn't do it yet (a case of a command): `executeCommand`
  * leaves a key with a host's default to the host there, and refuses a structural command (`unsupported`).
  */
-export type CommandOutcome = CommandResult | null;
+export type CommandOutcome = OurusCommandResult | null;
 
 export class CommandContext {
   readonly doc: OurusDoc;
-  readonly selection: TextSelection;
-  /** The nodes the command acts on, by id, where it was given them (`Command.nodes`): else the selection's. */
+  readonly selection: OurusSelection;
+  /** The nodes the command acts on, by id, where it was given them (`OurusCommand.nodes`): else the selection's. */
   readonly nodes: readonly number[] | undefined;
   #from: Located | undefined;
   #to: Located | undefined;
 
-  constructor(doc: OurusDoc, selection: TextSelection, nodes?: readonly number[]) {
+  constructor(doc: OurusDoc, selection: OurusSelection, nodes?: readonly number[]) {
     this.doc = doc;
     this.selection = selection;
     this.nodes = nodes;
@@ -32,7 +32,7 @@ export class CommandContext {
     return new CommandContext(this.doc, { anchor: pos, head: pos });
   }
 
-  get config(): Config {
+  get config(): OurusConfig {
     return this.doc.config;
   }
 
@@ -66,7 +66,7 @@ export class CommandContext {
   }
 }
 
-export const reject = (reason: RejectReason, detail?: string): CommandResult =>
+export const reject = (reason: RejectReason, detail?: string): OurusCommandResult =>
   detail === undefined ? { status: 'rejected', reason } : { status: 'rejected', reason, detail };
 
-export const deferToHost = (detail?: string): CommandResult => (detail === undefined ? { status: 'deferredToHost' } : { status: 'deferredToHost', detail });
+export const deferToHost = (detail?: string): OurusCommandResult => (detail === undefined ? { status: 'deferredToHost' } : { status: 'deferredToHost', detail });

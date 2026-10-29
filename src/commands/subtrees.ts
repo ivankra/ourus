@@ -5,24 +5,24 @@
 // in their place; Enter puts the caret at the end of the last one's own text; a paste puts the
 // clipboard's nodes in their place.
 
-import { AtomText, ProseText, type OutlineNode } from '../doc/index.ts';
+import { OurusAtom, OurusProse, type OurusNode } from '../doc/index.ts';
 import { composeChanges } from '../text/index.ts';
 import { CommandContext, type CommandOutcome } from './context.ts';
 import { copyOrCutCommand } from './copy.ts';
 import { deleteSubtreeCommand } from './delete-subtree.ts';
 import { pasteAtCommand } from './paste.ts';
 import { pastePlainCommand } from './paste-plain.ts';
-import type { Command } from './types.ts';
+import type { OurusCommand } from './types.ts';
 import { goneWithTextlessParents, textEnd, textStart } from './util.ts';
 
 /** The commands routed over a subtree selection. */
-const ROUTED: ReadonlySet<Command['type']> = new Set(['deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward', 'cut', 'copy', 'insertText', 'enter', 'shiftEnter', 'paste', 'pastePlain']);
+const ROUTED: ReadonlySet<OurusCommand['type']> = new Set(['deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward', 'cut', 'copy', 'insertText', 'enter', 'shiftEnter', 'paste', 'pastePlain']);
 
 /**
  * `command` over the subtree selection `ctx.selection` is (a command given `nodes` acts on those, not
  * on the selection); undefined where it isn't one, or the command isn't routed.
  */
-export function editSubtrees(ctx: CommandContext, command: Command): CommandOutcome | undefined {
+export function editSubtrees(ctx: CommandContext, command: OurusCommand): CommandOutcome | undefined {
   if (!ROUTED.has(command.type) || ('nodes' in command && command.nodes)) return undefined;
   const roots = ctx.doc.selectedNodes(ctx.selection);
   if (!roots) return undefined;
@@ -41,7 +41,7 @@ export function editSubtrees(ctx: CommandContext, command: Command): CommandOutc
     case 'enter':
     case 'shiftEnter': {
       // (a node with no text of its own, a quote's or an item's whose first block is on its line: its last child's)
-      let last: OutlineNode = roots[roots.length - 1]!;
+      let last: OurusNode = roots[roots.length - 1]!;
       while (!ctx.doc.textOf(last) && last.children.length) last = last.children[last.children.length - 1]!;
       const text = ctx.doc.textOf(last);
       if (!text) return null;
@@ -55,7 +55,7 @@ export function editSubtrees(ctx: CommandContext, command: Command): CommandOutc
     case 'pastePlain':
       return inPlace(ctx, roots, (next) => pastePlainCommand(next, command.text), command.text);
     case 'paste': {
-      const parentOf = (n: OutlineNode) => (n.parent!.kind === 'root' ? ('root' as const) : n.parent!.id);
+      const parentOf = (n: OurusNode) => (n.parent!.kind === 'root' ? ('root' as const) : n.parent!.id);
       // `pasteOverSelection: ignore`: the roots kept, the clipboard's nodes right after the last
       // (where a caret at the selection's end pastes them, Tana's); else the roots out, the nodes
       // where the first was
@@ -83,18 +83,24 @@ export function editSubtrees(ctx: CommandContext, command: Command): CommandOutc
  * The roots replaced by one node, the first, its text what `then` makes of it from its whole text
  * selected (its prefix kept: its list marker, a checkbox, a heading's `#`s); the other roots and the
  * first's children gone, as delete subtree takes them. An atom, whose text isn't typed into as words
- * (code, a table, a thematic break), is a paragraph first, empty. Null where the first has no text of
- * its own (a quote's).
+ * (code, a table, a thematic break), is a paragraph first, empty. A first root with no text of its own
+ * (a quote without a title, an item whose first block is on its marker's line) is its first child's
+ * prefix: that child is the node, the rest of the root's subtree gone.
  */
-function inPlace(ctx: CommandContext, roots: readonly OutlineNode[], then: (ctx: CommandContext) => CommandOutcome, typed: string): CommandOutcome {
+function inPlace(ctx: CommandContext, roots: readonly OurusNode[], then: (ctx: CommandContext) => CommandOutcome, typed: string): CommandOutcome {
   const doc = ctx.doc;
-  const first = roots[0]!;
+  const others: OurusNode[] = [...roots.slice(1)];
+  let first = roots[0]!;
+  while (!doc.textOf(first) && first.children.length) {
+    others.push(...first.children.slice(1));
+    first = first.children[0]!;
+  }
   const text = doc.textOf(first);
   if (!text) return null;
   const draft = ctx.draft();
-  const gone = goneWithTextlessParents(doc, [...roots.slice(1), ...first.children]);
+  const gone = goneWithTextlessParents(doc, [...others, ...first.children]);
   if (gone.length) draft.remove(gone);
-  if (text instanceof AtomText) draft.convert(first, 'paragraph').setText(first, new ProseText('paragraph', false, '')).setCaret(first, 0, -1);
+  if (text instanceof OurusAtom) draft.convert(first, 'paragraph').setText(first, new OurusProse('paragraph', false, '')).setCaret(first, 0, -1);
   else draft.select({ ref: first, offset: textStart(text), assoc: 1 }, { ref: first, offset: textEnd(text), assoc: -1 });
   return composed(ctx, ctx.apply(draft), then, typed);
 }
@@ -112,7 +118,7 @@ function composed(ctx: CommandContext, first: CommandOutcome, then: (ctx: Comman
     const to = Math.max(first.selection.anchor, first.selection.head);
     const changes = [{ from, to, insert: typed }];
     const caret = from + typed.length;
-    next = { status: 'applied', doc: first.doc.update(changes, { caret }), changes, selection: { anchor: caret, head: caret } };
+    next = { status: 'applied', doc: first.doc.update({ changes, caret }), changes, selection: { anchor: caret, head: caret } };
   }
   if (!next || next.status !== 'applied') return next?.status === 'deferredToHost' ? null : next;
   return { ...next, changes: composeChanges(ctx.doc.text, first.changes, next.changes) };

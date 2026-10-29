@@ -1,4 +1,4 @@
-// The browser side of a run: a proxy, and a pool of headless Chromiums (`.sxs/chromium/<n>/`) that
+// The browser side of a run: a proxy, and a pool of headless Chromiums (`chromium/<n>/` in `stateDir`, this container's) that
 // reach every site through it. Both are shared between runs: a run reuses the ones running (the proxy
 // if its sources are current, a browser if its flags are), or starts them detached and leaves them
 // running for the next run. Each app's page is a window of its own in a browser, one in a browser,
@@ -32,7 +32,7 @@ import { takeLock } from './desktop.ts';
 import { record, recordDir, runDir } from './records.ts';
 import { idleVersion } from './idle.ts';
 import { ensureAptInstalled } from './system.ts';
-import { cacheDir, DEFAULT_PORT, httpDir, proxyVersion, type CacheMode } from '../proxy.ts';
+import { cacheDir, DEFAULT_PORT, httpDir, proxyVersion, stateDir, type CacheMode } from '../proxy.ts';
 
 export const proxyPort = Number(process.env.OURUS_PROXY_PORT ?? DEFAULT_PORT);
 const proxyUrl = `http://127.0.0.1:${proxyPort}`;
@@ -94,8 +94,8 @@ export async function proxyStats(): Promise<ProxyStats> {
 }
 
 const executablePath = process.env.CHROMIUM ?? '/usr/bin/chromium';
-/** The pool: each browser's directory (`.sxs/chromium/<n>/`) has its profile, its log and its locks. */
-const poolDir = join(cacheDir, 'chromium');
+/** The pool: each browser's directory (`chromium/<n>/`, this container's, `stateDir`) has its profile, its log and its locks. */
+const poolDir = join(stateDir, 'chromium');
 const browserDir = (n: number): string => join(poolDir, String(n));
 /** A browser's profile; Chromium writes the port it listens on into it (DevToolsActivePort). */
 const profileOf = (n: number): string => join(browserDir(n), 'profile');
@@ -294,7 +294,7 @@ function profileHolder(profile: string): number {
     const [, host, pid] = /^(.*)-(\d+)$/.exec(readlinkSync(join(profile, 'SingletonLock'))) ?? [];
     if (host === hostname() && alive(Number(pid))) return Number(pid);
   } catch {}
-  // its record: the profile may be gone from under it (`.sxs/` cleaned)
+  // its record: Chromium's lock may be gone from its profile
   return holderOf(pidRecordOf(profile));
 }
 
@@ -482,15 +482,15 @@ export async function launch(headed: boolean, say: (line: string) => void, app: 
   return lease(app, say, gone, parity);
 }
 
-/** Where a server a driver starts is recorded, its pid: `<name>/server.pid` (a worker's `<app>/<n>`), among the records (`records.ts`). */
-const serverFile = (name: string): string => record(join(cacheDir, name, 'server.pid'));
+/** Where a server a driver starts is recorded, its pid: `<name>/server.pid` (a worker's `<app>/<n>`), among the records (`records.ts`); its data is this container's (`stateDir`). */
+const serverFile = (name: string): string => record(join(stateDir, name, 'server.pid'));
 
 /**
  * Records a server a driver started for its app (its process group's leader, started detached), so
  * that `stopShared` stops it.
  */
 export function recordServer(name: string, pid: number): void {
-  mkdirSync(join(cacheDir, name), { recursive: true });
+  mkdirSync(join(stateDir, name), { recursive: true });
   writeFileSync(serverFile(name), `${pid}\n`);
 }
 

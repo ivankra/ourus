@@ -84,9 +84,9 @@ Repo: https://github.com/siyuan-note/siyuan
   once take turns, `files.lock`). `SIYUAN_VERSION` picks the release, 3.8.6 by default: pinned, so a
   report changes when the app does, not when SiYuan releases.
 - **A kernel for each worker**, as the pool's browsers are numbered: kernel n is
-  `resources/kernel/SiYuan-Kernel serve --workspace=.sxs/siyuan/<n>/workspace --port=<6816+n>
-  --wd=<resources> --lang=en`, its log `.sxs/siyuan/<n>/kernel.log` and pid `.sxs/siyuan/<n>/server.pid`.
-  A worker leases the first kernel no other worker holds (`.sxs/siyuan/<n>/kernel.lock`, held until
+  `resources/kernel/SiYuan-Kernel serve --workspace=<state>/siyuan/<n>/workspace --port=<6816+n>
+  --wd=<resources> --lang=en`, its log `<state>/siyuan/<n>/kernel.log` and pid `<state>/siyuan/<n>/server.pid`.
+  A worker leases the first kernel no other worker holds (`<state>/siyuan/<n>/kernel.lock`, held until
   the run ends), starting it if it isn't running; a window an earlier run left is on its kernel's port,
   and the worker reusing it holds that kernel (or, held already, opens a new window on another). Each
   is started detached and left running for the next run, as the browsers are, while its workspace has

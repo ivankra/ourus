@@ -6,7 +6,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { isMap, isScalar, parseDocument, Scalar } from 'yaml';
-import { Config } from '../src/config.ts';
+import { OurusConfig } from '../src/config.ts';
 import { MdTree } from '../src/parser/syntax.ts';
 
 import { MdBlockAt } from '../src/parser/tree.ts';
@@ -92,8 +92,8 @@ export const TAGS = ['free-form', 'markup-heading', 'markup-task', 'markup-fence
 export type Tag = (typeof TAGS)[number];
 
 /** The ourus config a test's options set, as values. */
-export function specConfig(options: Readonly<Record<string, string>>): Partial<Config> {
-  const set = Config.read(options);
+export function specConfig(options: Readonly<Record<string, string>>): Partial<OurusConfig> {
+  const set = OurusConfig.read(options);
   if (typeof set === 'string') throw new SpecError(set);
   return set;
 }
@@ -364,7 +364,7 @@ function readConfig(text: string, first: number, fail: (line: number, message: s
       read.tags = tags as Tag[];
       continue;
     }
-    const set = Config.read({ [key]: value });
+    const set = OurusConfig.read({ [key]: value });
     if (typeof set === 'string') fail(at, set);
     read.options[key] = value;
   }

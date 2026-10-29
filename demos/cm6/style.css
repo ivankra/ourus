@@ -125,6 +125,8 @@ aside h2, #preview-pane > h2 { font-size: 12px; text-transform: uppercase; lette
 #outline .node { display: flex; gap: 6px; align-items: baseline; padding: 1px 6px; border-radius: 4px; cursor: pointer; }
 #outline .node:hover { background: var(--sub); }
 #outline .node.current { background: var(--head); outline: 1px solid var(--current); }
+/* the nodes a subtree selection holds, as the editor draws them (`.ourus-block`) */
+#outline .node.selected { background: var(--selection-focused); box-shadow: inset 3px 0 0 var(--accent); }
 #outline .kind { font: 11px ui-monospace, monospace; color: var(--accent); min-width: 2.2em; }
 #outline .kind-atom { color: var(--muted); }
 #outline .text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -7,22 +7,25 @@ import type { OurusDoc } from '../doc/index.ts';
 import { CommandContext } from './context.ts';
 import { deleteSubtreeCommand } from './delete-subtree.ts';
 import type { ChangeSpec } from '../text/index.ts';
-import type { Command, CommandResult, TextSelection } from './types.ts';
+import type { OurusCommand, OurusCommandResult, OurusSelection } from './types.ts';
 import { visibleSelection } from './view.ts';
 
 /** The view's commands and those that write nothing: no operands to confine, no result to check. */
-const UNCONFINED: ReadonlySet<Command['type']> = new Set(['fold', 'unfold', 'toggleFold', 'zoomIn', 'zoomOut', 'clearZoom', 'copy', 'drag']);
+const UNCONFINED: ReadonlySet<OurusCommand['type']> = new Set(['fold', 'unfold', 'toggleFold', 'zoomIn', 'zoomOut', 'clearZoom', 'copy', 'drag']);
 
 /** The commands whose removal of the zoom root whole is allowed (clause 0), the zoom going to its nearest ancestor left. */
-const REMOVES: ReadonlySet<Command['type']> = new Set(['deleteSubtree', 'cut']);
+const REMOVES: ReadonlySet<OurusCommand['type']> = new Set(['deleteSubtree', 'cut']);
+
+/** The deletion keys a subtree selection routes to `deleteSubtree` (`subtrees.ts`). */
+const ROUTED_REMOVES: ReadonlySet<OurusCommand['type']> = new Set(['deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward']);
 
 /** The selection commands: a deferral is the host's own selection (a line, a select all), no edit to keep inside the zoom. */
-const SELECTS: ReadonlySet<Command['type']> = new Set(['selectNode', 'expandSelection', 'selectNodeDown', 'selectNodeUp']);
+const SELECTS: ReadonlySet<OurusCommand['type']> = new Set(['selectNode', 'expandSelection', 'selectNodeDown', 'selectNodeUp']);
 
 /** The keys that break the line: whatever else their default does, a line break at the caret. */
-const NEWLINE: ReadonlySet<Command['type']> = new Set(['enter', 'shiftEnter']);
+const NEWLINE: ReadonlySet<OurusCommand['type']> = new Set(['enter', 'shiftEnter']);
 
-const outside = (detail: string): CommandResult => ({ status: 'rejected', reason: 'outside-zoom', detail });
+const outside = (detail: string): OurusCommandResult => ({ status: 'rejected', reason: 'outside-zoom', detail });
 
 /**
  * `run`, the command, within the view of `doc`: zoomed, refused (`outside-zoom`) where its operands
@@ -30,7 +33,7 @@ const outside = (detail: string): CommandResult => ({ status: 'rejected', reason
  * the key's plain default would leave the zoom, or where its result leaves the zoom; applied, the
  * selection out of what the view hides.
  */
-export function zoomed(doc: OurusDoc, command: Command, selection: TextSelection, run: () => CommandResult): CommandResult {
+export function zoomed(doc: OurusDoc, command: OurusCommand, selection: OurusSelection, run: () => OurusCommandResult): OurusCommandResult {
   if (doc.zoom === null && !doc.zoomFolded.size) return run();
   if (UNCONFINED.has(command.type)) return run();
   const root = doc.zoom === null ? null : doc.node(doc.zoom)!;
@@ -46,18 +49,20 @@ export function zoomed(doc: OurusDoc, command: Command, selection: TextSelection
     if (SELECTS.has(command.type)) return result;
     if ([selection.anchor, selection.head].some((p) => inRootMarkup(doc, p, NEWLINE.has(command.type)))) return outside("in the zoom root's markup, where the host's default would reach outside it");
     const plain = plainDefault(doc, command, selection);
-    if (plain && leavesZoom(doc, doc.update([plain.change], { caret: plain.caret }))) return outside("the host's default would leave the zoom");
+    if (plain && leavesZoom(doc, doc.update({ changes: [plain.change], caret: plain.caret }))) return outside("the host's default would leave the zoom");
     return result;
   }
   if (result.status !== 'applied' || !result.changes.length) return settled(result);
   const removed = !result.doc.node(root.id);
-  if (removed && !REMOVES.has(command.type)) return outside('the zoom root went');
+  // (a deletion key over a subtree selection is `deleteSubtree` of its roots, `editSubtrees`: as cut, it may take the root)
+  const routed = ROUTED_REMOVES.has(command.type) && !('nodes' in command && command.nodes) && doc.selectedNodes(selection) !== null;
+  if (removed && !REMOVES.has(command.type) && !routed) return outside('the zoom root went');
   const escape = doc.zoomEscape(result.doc, removed);
   return escape ? outside(escape) : settled(result);
 }
 
 /** An applied result, its selection out of what its view hides. */
-function settled(result: CommandResult): CommandResult {
+function settled(result: OurusCommandResult): OurusCommandResult {
   if (result.status !== 'applied') return result;
   const selection = visibleSelection(result.doc, result.selection);
   return selection === result.selection ? result : { ...result, selection };
@@ -85,7 +90,7 @@ function inRootMarkup(doc: OurusDoc, pos: number, newline: boolean): boolean {
  * Delete, a soft line's Backspace): the change and the caret after; null for the others (Enter's
  * default continues the markup in one host and not another: the host's own guard, `leavesZoom`).
  */
-function plainDefault(doc: OurusDoc, command: Command, selection: TextSelection): { change: ChangeSpec; caret: number } | null {
+function plainDefault(doc: OurusDoc, command: OurusCommand, selection: OurusSelection): { change: ChangeSpec; caret: number } | null {
   const [from, to] = [Math.min(selection.anchor, selection.head), Math.max(selection.anchor, selection.head)];
   const edit = (from: number, to: number, insert = ''): { change: ChangeSpec; caret: number } => ({ change: { from, to, insert }, caret: from + insert.length });
   switch (command.type) {
@@ -105,8 +110,8 @@ function plainDefault(doc: OurusDoc, command: Command, selection: TextSelection)
 }
 
 /**
- * Whether `next`, the snapshot a host's own edit would commit (`doc.update(changes, params)` with the
- * caret and marks it will give), leaves `doc`'s zoom, for the host to refuse the edit (a deferred
+ * Whether `next`, the snapshot a host's own edit would commit (`doc.update({ changes, ... })` with
+ * the caret and marks it will give), leaves `doc`'s zoom, for the host to refuse the edit (a deferred
  * command's default, typing, an editor's own commands); false where not zoomed. The root removed whole
  * keeps it only as ourus's own `deleteSubtree` of it writes it, since a host's edit has no operands to
  * check and no writer behind it.

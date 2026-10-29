@@ -126,6 +126,8 @@ function holds(o: Outline): string | undefined {
     const first = b.text.split('\n')[0]!;
     // a no-break space: held as a space
     if (b.text.includes('\u00a0')) return 'no-break space, which SiYuan holds as a space';
+    // a thematic break of another spelling: held as `---` (SubtreeEdit10)
+    if (b.free && /^ {0,3}([*_])(?:[ \t]*\1){2,}[ \t]*$/.test(b.text)) return 'a thematic break other than ---, which SiYuan holds as ---';
     // `- →x` and `-     code`: a tab or an indented line becomes structure, or is trimmed
     if (/^[ \t]/.test(b.text)) return "block's text starting with whitespace";
     // and a later line's, trimmed (Regression32, Indent33)

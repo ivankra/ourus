@@ -13,7 +13,7 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Config } from '../src/config.ts';
+import type { OurusConfig } from '../src/config.ts';
 import { drawDoc, drawLabels, drawsCaret, readDrawing, readLabels, withoutCaret } from './drawing.ts';
 import { isAction, play } from './player.ts';
 import { flavorsOf, Labels, normalize, outcome, startOf } from './spec-run.ts';
@@ -49,7 +49,7 @@ interface Redrawn {
 }
 
 /** Each step's buffer and result as ourus has them now, in `flavor`; a string says why it can't be drawn. */
-function played(t: SpecTest, flavor: Config['flavor']): { buffer: string; result: string }[] | string {
+function played(t: SpecTest, flavor: OurusConfig['flavor']): { buffer: string; result: string }[] | string {
   let state = startOf(t, flavor);
   // (the labels a step's buffer draws, drawn again where their nodes are: a redrawn buffer keeps them)
   const labels = new Labels();

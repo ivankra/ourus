@@ -334,11 +334,11 @@ A code rem is otherwise: its text keeps a trailing space after a line break, in 
   makes the other set a database error ("Need to refresh tabs broadcast"), go to `/database_error` and
   reload, every couple of seconds, for good. `open` closes any other RemNote tab in its browser.
 - The guest's knowledge base outlives the page, in the profile of the pool's browser its window is
-  in (`.sxs/chromium/<n>/profile/`): a test's document is deleted by the next one; one left by a run
+  in (`<state>/chromium/<n>/profile/`): a test's document is deleted by the next one; one left by a run
   that died stays until the profile goes.
 - **A broken knowledge base**: a browser killed while RemNote wrote (the harness restarted) left the
   profile's guest database broken, every window booting into `/database_error` ("Something went
   wrong"), the open taking minutes (183.7 s) and a run ten minutes and more. With the pool's profiles
-  deleted (`run.ts --stop`, then `.sxs/chromium/`), RemNote opened in 4.4 s and a full run of this setup
+  deleted (`run.ts --stop`, then `<state>/chromium/`), RemNote opened in 4.4 s and a full run of this setup
   took 192 s. `open` could clear RemNote's site data itself at a database error
   (`Storage.clearDataForOrigin`: the guest's knowledge base holds nothing to keep); not done.

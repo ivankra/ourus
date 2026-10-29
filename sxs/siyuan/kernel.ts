@@ -3,7 +3,7 @@
 // the release's SHA256SUMS.txt), its `resources/` unpacked there (`siyuan-<version>-linux-<arch>/`) and
 // the archive deleted. A kernel (`resources/kernel/SiYuan-Kernel serve`) runs for each of a run's
 // workers, numbered as the pool's browsers are: kernel n on a workspace of its own,
-// `.sxs/siyuan/<n>/workspace/`, on port 6816 + n, its log and pid beside it; a worker takes the first no
+// `siyuan/<n>/workspace/` in `stateDir` (this container's: another's kernel holds its own workspace's lock), on port 6816 + n, its log and pid beside it; a worker takes the first no
 // other worker holds (`kernel.lock`, `leaseKernel`). Each serves the web UI its worker's window loads
 // and the API (`/api/...`) the driver loads and reads through. It listens on 127.0.0.1 only (the
 // workspace's `system.networkServe` is off), needs no auth code there
@@ -26,16 +26,18 @@ import { fileURLToPath } from 'node:url';
 import { recordServer, serverPid, stopServer } from '../lib/browser.ts';
 import { takeLock } from '../lib/desktop.ts';
 import { record } from '../lib/records.ts';
-import { cacheDir } from '../proxy.ts';
+import { cacheDir, stateDir } from '../proxy.ts';
 
 /** The release to run: pinned, so a report changes when the app does, not when SiYuan releases. */
 export const VERSION = process.env.SIYUAN_VERSION ?? '3.8.6';
 /** Kernel 0's port; kernel n listens on the n-th after it. */
 const BASE_PORT = Number(process.env.OURUS_SIYUAN_PORT ?? 6816);
-const root = join(cacheDir, 'siyuan');
+/** The release, shared by containers on one checkout (`.sxs/siyuan/files/`); the kernels, each container's own (`siyuan/<n>/` in `stateDir`). */
+const files = join(cacheDir, 'siyuan', 'files');
+const kernels = join(stateDir, 'siyuan');
 const PLUGIN = 'ourus-sxs';
 
-/** A kernel: its number, directory (`.sxs/siyuan/<n>/`: workspace, log, server.pid), port and origin. */
+/** A kernel: its number, directory (`siyuan/<n>/` in `stateDir`: workspace, log, server.pid), port and origin. */
 export interface Kernel {
   n: number;
   dir: string;
@@ -48,7 +50,7 @@ export interface Kernel {
 }
 
 export function kernelOf(n: number): Kernel {
-  const dir = join(root, String(n));
+  const dir = join(kernels, String(n));
   return { n, dir, workspace: join(dir, 'workspace'), log: join(dir, 'kernel.log'), port: BASE_PORT + n, origin: `http://127.0.0.1:${BASE_PORT + n}`, server: `siyuan/${n}` };
 }
 
@@ -103,7 +105,6 @@ async function resources(say: (line: string) => void): Promise<string> {
   const suffix = { arm64: '-arm64', x64: '' }[arch() as string];
   if (suffix === undefined) throw new Error(`no SiYuan release for ${arch()}`);
   const name = `siyuan-${VERSION}-linux${suffix}`;
-  const files = join(root, 'files');
   const res = join(files, name, 'resources');
   if (existsSync(join(res, 'kernel', 'SiYuan-Kernel'))) return res;
   const base = `https://github.com/siyuan-note/siyuan/releases/download/v${VERSION}`;
@@ -156,7 +157,7 @@ export async function serve(k: Kernel, say: (line: string) => void): Promise<voi
   if (v || serverPid(k.server)) await stopServer(k.server, say);
   if (await running(origin)) throw new Error(`a SiYuan kernel on 127.0.0.1:${port} isn't recorded (${record(join(k.dir, 'server.pid'))}), so not stopped: stop it`);
   // the release downloaded and unpacked once, kernels starting at once taking turns
-  const unlock = await takeLock(record(join(root, 'files.lock')), true, "SiYuan's download");
+  const unlock = await takeLock(record(`${files}.lock`), true, "SiYuan's download");
   const res = await resources(say).finally(unlock);
   mkdirSync(workspace, { recursive: true });
   installPlugin(workspace);

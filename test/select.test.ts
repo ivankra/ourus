@@ -3,9 +3,9 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import type { Config } from '../src/config.ts';
-import { textEnd, textStart, type OurusDoc, type OutlineNode } from '../src/doc/index.ts';
-import type { TextSelection } from '../src/text/index.ts';
+import type { OurusConfig } from '../src/config.ts';
+import { Lineage, textEnd, textStart, type OurusDoc, type OurusNode } from '../src/doc/index.ts';
+import type { OurusSelection } from '../src/text/index.ts';
 import { executeCommand } from '../src/commands/index.ts';
 import { docOf, drawDoc, drawnSelection, nodesOf, readDrawing } from './drawing.ts';
 import { readSpecFile, specConfig, specFiles } from './specfile.ts';
@@ -18,7 +18,7 @@ function starts(): OurusDoc[] {
     for (const t of readSpecFile(file)) {
       const { text, placeholders } = readDrawing(t.initial.buffer);
       for (const flavor of ['gfm', 'obsidian'] as const) {
-        const config: Partial<Config> = { flavor, ...specConfig(t.options) };
+        const config: Partial<OurusConfig> = { flavor, ...specConfig(t.options) };
         const key = `${JSON.stringify(config)} ${text} ${placeholders}`;
         if (seen.has(key)) continue;
         seen.add(key);
@@ -29,17 +29,17 @@ function starts(): OurusDoc[] {
   return out;
 }
 
-const range = (s: TextSelection): [number, number] => [Math.min(s.anchor, s.head), Math.max(s.anchor, s.head)];
-const show = (doc: OurusDoc, s: TextSelection): string => JSON.stringify(doc.text.slice(0, range(s)[0]) + '«' + doc.text.slice(...range(s)) + '»' + doc.text.slice(range(s)[1]));
+const range = (s: OurusSelection): [number, number] => [Math.min(s.anchor, s.head), Math.max(s.anchor, s.head)];
+const show = (doc: OurusDoc, s: OurusSelection): string => JSON.stringify(doc.text.slice(0, range(s)[0]) + '«' + doc.text.slice(...range(s)) + '»' + doc.text.slice(range(s)[1]));
 
 /** Whether `a` is `b` or one of its ancestors. */
-const holds = (a: OutlineNode, b: OutlineNode): boolean => {
-  for (let p: OutlineNode | null = b; p; p = p.parent) if (p === a) return true;
+const holds = (a: OurusNode, b: OurusNode): boolean => {
+  for (let p: OurusNode | null = b; p; p = p.parent) if (p === a) return true;
   return false;
 };
 
 /** A node's own text, from its text's start to its end, in offsets; null where it has none or it is empty. */
-function ownText(doc: OurusDoc, node: OutlineNode): [number, number] | null {
+function ownText(doc: OurusDoc, node: OurusNode): [number, number] | null {
   const text = doc.textOf(node);
   if (!text) return null;
   const [from, to] = [doc.posOf(node, textStart(text), 1), doc.posOf(node, textEnd(text), -1)];
@@ -87,7 +87,7 @@ test('selectionOf reads back as the closure of its ids, the outermost of nodes s
         assert.deepEqual(doc.selectedSubtrees(up), read.map((n) => n.id), `${where}, upward`);
         // drawn `««…»»` (`┃««…»»` upward), and read back as it
         // (but where no span names it: an empty last node, on an empty line, is touched by none)
-        const tail: OutlineNode = read[read.length - 1]!.lastDescendant;
+        const tail: OurusNode = read[read.length - 1]!.lastDescendant;
         const empty: boolean = doc.isEmptyLine(tail.startLine);
         for (const s of [sel, up]) {
           const drawn = drawDoc(doc, s);
@@ -198,7 +198,7 @@ test('selectionOf throws for no ids, an unknown id, the root, an id outside the 
   const a = p!.children[0]!;
   assert.throws(() => doc.selectionOf([]), Error);
   assert.throws(() => doc.selectionOf([999]), /no node 999/);
-  assert.throws(() => doc.selectionOf([0]), /root/);
+  assert.throws(() => doc.selectionOf([Lineage.ROOT]), /root/);
   assert.throws(() => doc.withZoom(p!.id).selectionOf([q!.id]), /zoom/);
   assert.throws(() => doc.withFolded([p!.id]).selectionOf([a.id]), /fold/);
   // the zoom root and a folded node itself are there to select
@@ -303,7 +303,7 @@ test('a command given nodes acts on them, not on the subtree selection', () => {
 
 test('selectNodeDown then as many selectNodeUp is the identity; the roots never get deeper along a selection', () => {
   let walks = 0;
-  const shallowing = (doc: OurusDoc, sel: TextSelection, where: string): void => {
+  const shallowing = (doc: OurusDoc, sel: OurusSelection, where: string): void => {
     const roots = doc.selectedNodes(sel);
     if (!roots) return;
     // (but a root on its parent's first line, `- > q`'s quote: the parent has no line of its own to touch)

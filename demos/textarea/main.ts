@@ -6,9 +6,9 @@
 // and Backspace as input, not keys, and lack the rest: buttons stand in for those. The Preview box
 // shows the document as ourus renders it, beside the text.
 
-import { OurusDoc, executeCommand, mapPos, settlePlaceholders, type ChangeSpec, type Command, type CommandResult } from '../../src/index.ts';
+import { OurusDoc, executeCommand, mapPos, settlePlaceholders, type ChangeSpec, type OurusCommand, type OurusCommandResult } from '../../src/index.ts';
 
-const KEYS: Record<string, Command['type']> = {
+const KEYS: Record<string, OurusCommand['type']> = {
   Tab: 'indent',
   'Shift-Tab': 'outdent',
   'Alt-ArrowUp': 'moveSubtreeUp',
@@ -91,7 +91,7 @@ function say(text: string) {
   hideStatus = window.setTimeout(() => status.classList.remove('shown'), 3000);
 }
 
-function run(command: Command): CommandResult {
+function run(command: OurusCommand): OurusCommandResult {
   const result = executeCommand(doc, command, selection());
   say(`${command.type}: ${result.status === 'rejected' ? `rejected — ${result.reason}` : result.status}`);
   if (result.status === 'applied') {
@@ -124,8 +124,10 @@ area.addEventListener('keydown', (e) => {
   if (name === 'Home' || name === 'Shift-Home') {
     const { anchor, head } = selection();
     const line = doc.lineAt(head);
-    const start = doc.textStart(line.index);
-    const target = head === start ? line.from : start;
+    // (past a final line ending, the empty last line, which ourus's lines end before)
+    const past = head > line.to;
+    const start = past ? head : doc.textStart(line.index);
+    const target = head === start ? (past ? head : line.from) : start;
     select(e.shiftKey ? anchor : target, target);
     e.preventDefault();
     return;
@@ -133,7 +135,7 @@ area.addEventListener('keydown', (e) => {
   const type = KEYS[name];
   if (!type) return;
   keyed = true;
-  const status = run({ type } as Command).status;
+  const status = run({ type } as OurusCommand).status;
   if (status !== 'deferredToHost') e.preventDefault();
   else if (type === 'indent' || type === 'outdent') {
     // in code, Tab is a tab; never the browser's move to the next control
@@ -143,7 +145,7 @@ area.addEventListener('keydown', (e) => {
 });
 
 // touch keyboards send Enter and Backspace as input (their keydown is key 229)
-const INPUTS: Record<string, Command['type']> = {
+const INPUTS: Record<string, OurusCommand['type']> = {
   insertParagraph: 'enter',
   insertLineBreak: 'enter',
   deleteContentBackward: 'deleteContentBackward',
@@ -166,7 +168,7 @@ area.addEventListener('beforeinput', (e) => {
   }
   const type = INPUTS[e.inputType];
   if (!type || keyed || composing || e.isComposing || !e.cancelable) return;
-  if (run({ type } as Command).status !== 'deferredToHost') e.preventDefault();
+  if (run({ type } as OurusCommand).status !== 'deferredToHost') e.preventDefault();
 });
 
 /**
@@ -184,7 +186,7 @@ for (const button of keys.querySelectorAll('button')) {
   button.addEventListener('mousedown', (e) => e.preventDefault());
   button.addEventListener('click', () => {
     if (button.dataset.history) history(button.dataset.history as 'undo' | 'redo');
-    else run({ type: button.dataset.command } as Command);
+    else run({ type: button.dataset.command } as OurusCommand);
   });
   // pressed, as :active isn't on touch screens (iOS) or sticks (Chrome)
   button.addEventListener('pointerdown', () => button.classList.add('pressed'));
@@ -231,7 +233,7 @@ function readBack() {
   let end = 0;
   while (end < old.length - from && end < text.length - from && old[old.length - 1 - end] === text[text.length - 1 - end]) end++;
   const { head, anchor } = selection();
-  doc = doc.update([{ from, to: old.length - end, insert: text.slice(from, text.length - end) }], head === anchor ? { caret: head } : {});
+  doc = doc.update({ changes: [{ from, to: old.length - end, insert: text.slice(from, text.length - end) }], ...(head === anchor ? { caret: head } : {}) });
   render();
 }
 

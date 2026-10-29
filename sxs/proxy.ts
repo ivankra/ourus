@@ -29,14 +29,16 @@
 //   `/__proxy/health` reports its pid and version; `/__proxy/stop` stops it.
 //
 // The cache is `.sxs/http/<host>/` in the ourus checkout (git-ignored; `OURUS_SXS_DIR` moves
-// `.sxs/`, `OURUS_SXS_HTTP` the cache alone), one `.json` (status, headers, URL) and one `.body` per
+// `.sxs/`, `OURUS_SXS_HTTP` the cache alone; shared by containers on one checkout, as their profiles,
+// in `stateDir`, aren't), one `.json` (status, headers, URL) and one `.body` per
 // response, named for the path; delete a file to refetch it.
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { accessSync, constants, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import net from 'node:net';
+import { hostname, tmpdir, userInfo } from 'node:os';
 import { extname, join, resolve, sep } from 'node:path';
 import type { Duplex } from 'node:stream';
 import tls from 'node:tls';
@@ -192,8 +194,28 @@ export function withBody(res: ProxyResponse, body: string | Buffer): ProxyRespon
 
 
 export const DEFAULT_PORT = 8899;
-/** Where the side-by-side runs keep their state: the HTTP cache, the certificate, the shared browser's profile, logs. */
+/** Where the side-by-side runs keep what containers on one checkout can share: the HTTP cache, the certificate, the apps' downloads, the results, logs. */
 export const cacheDir = process.env.OURUS_SXS_DIR || fileURLToPath(new URL('../.sxs/', import.meta.url));
+/**
+ * Where they keep what is this container's alone, laid out as `cacheDir` is: the pool's browsers'
+ * profiles (`chromium/<n>/`), Obsidian's instances (`obsidian/<n>/`), SiYuan's kernels' workspaces
+ * (`siyuan/<n>/`), Emacs's server sockets. Two containers on one checkout share its `.sxs/` but not
+ * their process tables or hostnames, so a profile or a workspace in it would be taken by both, each
+ * reading the other's locks as stale. `OURUS_SXS_STATE`, else `/var/tmp/ourus-sxs-<uid>/<id>`, kept
+ * across reboots as the profiles were (`<id>` of `cacheDir` and the hostname: a `/var/tmp` shared
+ * after all still parts them), else the system's temporary directory's.
+ */
+export const stateDir = ((): string => {
+  if (process.env.OURUS_SXS_STATE) return resolve(process.env.OURUS_SXS_STATE);
+  const id = createHash('sha1').update(`${resolve(cacheDir)}\0${hostname()}`).digest('hex').slice(0, 8);
+  let base = '/var/tmp';
+  try {
+    accessSync(base, constants.W_OK);
+  } catch {
+    base = tmpdir();
+  }
+  return join(base, `ourus-sxs-${userInfo().uid}`, id);
+})();
 /** The HTTP cache: in `cacheDir`, or wherever `OURUS_SXS_HTTP` says (a read-only copy, for `--cache=offline`). */
 export const httpDir = process.env.OURUS_SXS_HTTP || join(cacheDir, 'http');
 
@@ -544,7 +566,7 @@ async function sayApps(): Promise<void> {
   console.log(table.map((r) => `  ${r[0].padEnd(width(0))}  ${r[1]}`).join('\n'));
   // a profile of its own: Chromium handed a profile another one holds ignores the flags
   log('start chromium to browse them as:');
-  console.log(`  ${process.env.CHROMIUM ?? 'chromium'} --proxy-server=http://127.0.0.1:${options.port} --ignore-certificate-errors --user-data-dir=${join(cacheDir, 'browse')} --no-first-run`);
+  console.log(`  ${process.env.CHROMIUM ?? 'chromium'} --proxy-server=http://127.0.0.1:${options.port} --ignore-certificate-errors --user-data-dir=${join(stateDir, 'browse')} --no-first-run`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

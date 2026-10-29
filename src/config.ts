@@ -1,5 +1,5 @@
-// Config: behavior users disagree on, as options with documented defaults. An `OurusDoc` holds its
-// config and every snapshot after it carries it. Spec files set options by the same keys
+// OurusConfig: behavior users disagree on, as options with documented defaults. An `OurusDoc` holds
+// its config and every snapshot after it carries it. Spec files set options by the same keys
 // (`outdent: logical` in a test's config block).
 //
 // Grammar correctness is never configurable, and neither are invariants other parts depend on:
@@ -13,7 +13,8 @@
 // want (where Roam leaves the caret after a paste); their values are `default` and the apps', by name.
 // A value named after an app in another option is one too (`backspaceAtItemStart: logseq`).
 
-export interface Config {
+/** How a document is read and how the commands edit it. */
+export interface OurusConfig {
   /**
    * The Markdown dialect the document is read as (see src/parser/):
    * - `gfm` (the default): GitHub Flavored Markdown, CommonMark with tables, tasks, strikethrough and
@@ -533,7 +534,7 @@ export interface Config {
 }
 
 /** The values each option takes, its default first, for readers of string settings (spec files, frontmatter). */
-const CONFIG_VALUES: { readonly [K in keyof Config]: readonly [Config[K], ...Config[K][]] } = {
+const CONFIG_VALUES: { readonly [K in keyof OurusConfig]: readonly [OurusConfig[K], ...OurusConfig[K][]] } = {
   // How the text reads, and how the host shows its markup: every command
   flavor: ['gfm', 'commonmark', 'obsidian'],
   markup: ['text', 'decorated'],
@@ -583,32 +584,52 @@ const CONFIG_VALUES: { readonly [K in keyof Config]: readonly [Config[K], ...Con
 };
 
 /** Every option's default: the first of its values. */
-const CONFIG_DEFAULTS = Object.fromEntries(Object.entries(CONFIG_VALUES).map(([key, values]) => [key, values[0]])) as unknown as Config;
+const CONFIG_DEFAULTS = Object.fromEntries(Object.entries(CONFIG_VALUES).map(([key, values]) => [key, values[0]])) as unknown as OurusConfig;
 
-export const Config = {
+/** The options' defaults and values, and a config made, compared and read from settings. */
+export const OurusConfig = {
   /** Every option's default: the value the spec argues for. */
   defaults: CONFIG_DEFAULTS,
   /** The values each option takes, its default first. */
   values: CONFIG_VALUES,
 
-  /** `partial` over the defaults. */
-  of(partial: Partial<Config> = {}): Config {
-    return { ...CONFIG_DEFAULTS, ...partial };
+  /**
+   * `partial` over the defaults, an option given as `undefined` absent. Throws for an unknown
+   * option and for a value an option doesn't take (`OurusConfig.values`), which would read and
+   * write otherwise than any host means: an unknown flavor as CommonMark, an indentation unit of 3
+   * as 4.
+   */
+  of(partial: Partial<OurusConfig> = {}): OurusConfig {
+    const config: Record<string, unknown> = { ...CONFIG_DEFAULTS };
+    for (const [key, value] of Object.entries(partial)) {
+      if (value === undefined) continue;
+      const allowed = Object.hasOwn(CONFIG_VALUES, key) ? (CONFIG_VALUES as Record<string, readonly unknown[]>)[key] : undefined;
+      if (!allowed) throw new TypeError(`unknown option "${key}"`);
+      if (!allowed.includes(value)) throw new TypeError(`option "${key}" takes ${allowed.join(', ')}, not ${JSON.stringify(value)}`);
+      config[key] = value;
+    }
+    return config as unknown as OurusConfig;
+  },
+
+  /** Whether two configs give every option the same value. */
+  same(a: OurusConfig, b: OurusConfig): boolean {
+    return a === b || Object.keys(CONFIG_VALUES).every((key) => a[key as keyof OurusConfig] === b[key as keyof OurusConfig]);
   },
 
   /**
    * The options string settings (`key: value`) set, as values (`true` for a flag's `true`), or the
    * first problem with them: an unknown key, or a value the option doesn't take.
    */
-  read(settings: Readonly<Record<string, string>>): Partial<Config> | string {
+  read(settings: Readonly<Record<string, string>>): Partial<OurusConfig> | string {
     const config: Record<string, unknown> = {};
     for (const [key, text] of Object.entries(settings)) {
-      const allowed = (CONFIG_VALUES as Record<string, readonly unknown[]>)[key];
+      // (an option of its own, not a property every object has: `constructor`, `toString`)
+      const allowed = Object.hasOwn(CONFIG_VALUES, key) ? (CONFIG_VALUES as Record<string, readonly unknown[]>)[key] : undefined;
       if (!allowed) return `unknown option "${key}"`;
       const value = allowed.find((v) => String(v) === text);
       if (value === undefined) return `option "${key}" takes ${allowed.join(', ')}, not "${text}"`;
       config[key] = value;
     }
-    return config as Partial<Config>;
+    return config as Partial<OurusConfig>;
   },
 } as const;

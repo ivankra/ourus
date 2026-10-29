@@ -1,10 +1,10 @@
 // The commands' API types: a command, the selection it acts on, and what it does.
 
-import type { Clipboard } from './clipboard.ts';
+import type { OurusClipboard } from './clipboard.ts';
 import type { OurusDoc } from '../doc/index.ts';
-import type { ChangeSpec, TextSelection } from '../text/index.ts';
+import type { ChangeSpec, OurusSelection } from '../text/index.ts';
 
-export type { TextSelection };
+export type { OurusSelection };
 
 /** A place in the outline: under `parent`, right after its child `after` (null: first). */
 export type InsertionPoint = { readonly parent: number | 'root'; readonly after: number | null };
@@ -16,7 +16,8 @@ export type InsertionPoint = { readonly parent: number | 'root'; readonly after:
  */
 type Nodes = { readonly nodes?: readonly number[] };
 
-export type Command =
+/** What `executeCommand` runs. */
+export type OurusCommand =
   | ({ readonly type: 'indent' } & Nodes)
   | ({ readonly type: 'outdent' } & Nodes)
   | ({ readonly type: 'moveSubtreeUp' } & Nodes)
@@ -29,11 +30,11 @@ export type Command =
    */
   | ({ readonly type: 'drag'; readonly pressed?: number } & Nodes)
   /** A drag from outside, carrying `clipboard`: the places it can be dropped, the document as it is. */
-  | { readonly type: 'drag'; readonly clipboard: Clipboard }
+  | { readonly type: 'drag'; readonly clipboard: OurusClipboard }
   /** A drop of the document's own nodes: moved, with their subtrees, to the place `to` (spec/move-subtree.md). */
   | ({ readonly type: 'moveSubtree'; readonly to: InsertionPoint } & Nodes)
   /** A drop from outside: the clipboard, every format the host has of it, read as paste reads it and fitted at `at`. */
-  | { readonly type: 'pasteAt'; readonly at: InsertionPoint; readonly clipboard: Clipboard }
+  | { readonly type: 'pasteAt'; readonly at: InsertionPoint; readonly clipboard: OurusClipboard }
   /** A text drag's first half: the selection deleted as a cut deletes it; the drop is a `paste` at the position it maps to. */
   | { readonly type: 'deleteByDrag' }
   /** Enter: split the node at the caret. */
@@ -47,7 +48,7 @@ export type Command =
   /** Cmd-Backspace: delete back to the start of the line's text, never into a marker. */
   | { readonly type: 'deleteSoftLineBackward' }
   /** Paste (Ctrl-V): the clipboard, every format the host has of it, read as Markdown and placed as nodes. */
-  | { readonly type: 'paste'; readonly clipboard: Clipboard }
+  | { readonly type: 'paste'; readonly clipboard: OurusClipboard }
   /** Paste as plain text (Ctrl-Shift-V): the text goes into the node at the caret, its line breaks as Shift-Enter's. */
   | { readonly type: 'pastePlain'; readonly text: string }
   /**
@@ -92,6 +93,7 @@ export type Command =
   /** Zoom out of the zoom, whatever its depth. */
   | { readonly type: 'clearZoom' };
 
+/** Why a command was rejected. */
 export type RejectReason =
   | 'no-previous-sibling'
   | 'no-next-sibling'
@@ -106,6 +108,8 @@ export type RejectReason =
   | 'nothing-above'
   /** An id the document doesn't have (it changed since the id was read). */
   | 'no-such-node'
+  /** A selection whose ends aren't positions in the text: integers from 0 to its length (it changed since the selection was read). */
+  | 'invalid-selection'
   /** A place whose `after` isn't a child of its `parent`, or is one of the nodes moved. */
   | 'invalid-insertion-point'
   /** A move to a place inside the nodes moved. */
@@ -121,13 +125,14 @@ export type RejectReason =
   /** The writer failed: a layout it has no rule for, or a text written that doesn't read as the draft. A bug, never an outcome. */
   | 'write-failed';
 
-export type CommandResult =
+/** What `executeCommand` returns. */
+export type OurusCommandResult =
   /**
    * `clipboard`: what the host writes to the clipboard, every format (copy and cut). `placed`: for a
    * drop, the topmost nodes it put in place, in document order, for a host that selects them.
    * `dropMap`: for a pickup (`drag`), what it takes and where it can drop it.
    */
-  | { readonly status: 'applied'; readonly doc: OurusDoc; readonly changes: readonly ChangeSpec[]; readonly selection: TextSelection; readonly clipboard?: Clipboard; readonly placed?: readonly number[]; readonly dropMap?: DropMap }
+  | { readonly status: 'applied'; readonly doc: OurusDoc; readonly changes: readonly ChangeSpec[]; readonly selection: OurusSelection; readonly clipboard?: OurusClipboard; readonly placed?: readonly number[]; readonly dropMap?: DropMap }
   | { readonly status: 'rejected'; readonly reason: RejectReason; readonly detail?: string }
   /**
    * Deferred to the host: ourus doesn't act on the key here, and the host runs its default behavior.
@@ -135,7 +140,7 @@ export type CommandResult =
    */
   | { readonly status: 'deferredToHost'; readonly detail?: string };
 
-export type { Clipboard };
+export type { OurusClipboard };
 
 
 /** What a pickup returns: the nodes in flight, their lines, and every seam they can be dropped at. */
@@ -172,5 +177,5 @@ export interface DropPoint extends InsertionPoint {
   /** Whether the run's first root changes kind there (a paragraph becoming an item), read from the rules, not a check. */
   readonly converts: boolean;
   /** The drop there, ready to run. */
-  readonly drop: Command;
+  readonly drop: OurusCommand;
 }

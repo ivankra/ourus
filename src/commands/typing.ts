@@ -2,10 +2,10 @@
 // backtick or a tilde where it opens, closes or changes a code fence. The command says what the text
 // becomes; `done()` keeps a fence's runs past the code, or refuses what would unmake the block.
 
-import { ProseText, AtomText, type OutlineNode } from '../doc/index.ts';
+import { OurusProse, OurusAtom, type OurusNode } from '../doc/index.ts';
 import { composeChanges, lineOf, type ChangeSpec } from '../text/index.ts';
-import { CommandContext, deferToHost, reject, type CommandOutcome } from './context.ts';
-import { codeAt, type CodeAt } from './code.ts';
+import { CommandContext, deferToHost, type CommandOutcome } from './context.ts';
+import { breaksFence, codeAt, editInCode, type CodeAt } from './code.ts';
 import { textEnd, textStart } from './util.ts';
 
 /**
@@ -17,19 +17,24 @@ import { textEnd, textStart } from './util.ts';
  */
 export function insertTextCommand(ctx: CommandContext, typed: string): CommandOutcome {
   const fenceChar = /[`~]/.test(typed);
+  const code = codeAt(ctx);
   if (!ctx.collapsed) {
     // over part of a closed block's fence run, any character breaks the fence (rule 5)
     if (overFence(ctx)) return breaksFence(ctx, 'the fence would break');
+    // over a selection in code, what it leaves may make a fence (`X```` → ```` ``` ````)
+    if (code) return editInCode(ctx, code, code.offset, code.to, typed);
     // over a selection in one line of text, the host's but for a backtick wrapping it in code
     if (ctx.config.closeBackticks !== 'all' || !typed.includes('`') || ctx.doc.lineAt(ctx.selection.anchor).index !== ctx.doc.lineAt(ctx.selection.head).index) return deferToHost();
     return typed === '`' ? wrapInCode(ctx) : null;
   }
-  if ([...typed].length > 1) return fenceChar ? typedOneByOne(ctx, typed) : deferToHost();
+  if ([...typed].length > 1 && fenceChar) return typedOneByOne(ctx, typed);
+  // in code, the host's where it keeps the block (a line break in a container's code is ourus's, the
+  // containers' prefix with it), a fence's character a fence's
+  if (code && (!fenceChar || code.text.type !== 'fenced_code')) return editInCode(ctx, code, code.offset, code.offset, typed);
   if (typed !== '`' && typed !== '~') return deferToHost();
   // in a container's prefix or a marker (before a fence's indentation): not done yet
   if (ctx.from.zone === 'prefix' || ctx.from.zone === 'marker') return null;
-  const code = codeAt(ctx);
-  if (code) return code.text.type === 'fenced_code' ? fenceCharInCode(ctx, code, typed) : deferToHost();
+  if (code) return fenceCharInCode(ctx, code, typed);
   // (`closeBackticks: all`, inside an empty pair: the backtick steps over its closing one, before it
   // could make a fence of the two and itself)
   if (ctx.config.closeBackticks === 'all' && typed === '`' && inEmptyPair(ctx)) return inlinePair(ctx);
@@ -59,7 +64,7 @@ function typedOneByOne(ctx: CommandContext, typed: string): CommandOutcome {
       doc = result.doc;
       selection = result.selection;
     } else {
-      doc = doc.update(step);
+      doc = doc.update({ changes: step });
       selection = { anchor: selection.head + char.length, head: selection.head + char.length };
     }
     changes = composeChanges(ctx.doc.text, changes, step);
@@ -74,9 +79,18 @@ const atBoundary = (c: string, punctuation: string): boolean => c === '' || c ==
 /** Whether the caret is between the two backticks of an empty pair in a text (`` `┃` ``). */
 function inEmptyPair(ctx: CommandContext): boolean {
   const at = ctx.from;
-  if (at.zone !== 'text' || !(at.text instanceof ProseText)) return false;
-  const s = at.text.text;
-  return s[at.offset - 1] === '`' && s[at.offset] === '`' && s[at.offset - 2] !== '`' && s[at.offset + 1] !== '`';
+  return at.zone === 'text' && at.text instanceof OurusProse && emptyPairAt(ctx, at.text.text, at.offset);
+}
+
+/**
+ * Whether `offset` in text `s`, the caret, is between the two backticks of an empty pair: two alone,
+ * the first not escaped (`\``), and no code's (`` ```x `┃` y``` ``).
+ */
+function emptyPairAt(ctx: CommandContext, s: string, offset: number): boolean {
+  if (s[offset - 1] !== '`' || s[offset] !== '`' || s[offset - 2] === '`' || s[offset + 1] === '`') return false;
+  let slashes = 0;
+  while (s[offset - 2 - slashes] === '\\') slashes++;
+  return slashes % 2 === 0 && !ctx.doc.codeSpanAt(ctx.selection.head);
 }
 
 /**
@@ -86,7 +100,7 @@ function inEmptyPair(ctx: CommandContext): boolean {
  */
 function inlinePair(ctx: CommandContext): CommandOutcome {
   const at = ctx.from;
-  if (at.zone !== 'text' || !(at.text instanceof ProseText)) return deferToHost();
+  if (at.zone !== 'text' || !(at.text instanceof OurusProse)) return deferToHost();
   const { node, text, offset } = at;
   const s = text.text;
   const pos = ctx.selection.head;
@@ -96,7 +110,7 @@ function inlinePair(ctx: CommandContext): CommandOutcome {
   const before = offset > lineFrom ? s[offset - 1]! : '';
   const after = offset < lineTo ? s[offset]! : '';
   const span = ctx.doc.codeSpanAt(pos);
-  const emptyPair = before === '`' && after === '`' && s[offset - 2] !== '`' && s[offset + 1] !== '`';
+  const emptyPair = emptyPairAt(ctx, s, offset);
   const draft = ctx.draft();
   if (after === '`' && (span ? pos >= span.closer && pos < span.to : emptyPair)) return ctx.apply(draft.setCaret(node, offset + 1, 1));
   if (span || !atBoundary(before, '([{<\'"') || !atBoundary(after, ')]}>,.;:!?\'"')) return deferToHost();
@@ -107,9 +121,9 @@ function inlinePair(ctx: CommandContext): CommandOutcome {
  * `closeBackticks: all`, Backspace between the two backticks of an empty pair in a text: both go, as
  * they came (Backtick20). Null anywhere else.
  */
-export function deleteEmptyPair(ctx: CommandContext, node: OutlineNode, text: ProseText, offset: number): CommandOutcome {
+export function deleteEmptyPair(ctx: CommandContext, node: OurusNode, text: OurusProse, offset: number): CommandOutcome {
   const s = text.text;
-  if (ctx.config.closeBackticks !== 'all' || s[offset - 1] !== '`' || s[offset] !== '`' || s[offset - 2] === '`' || s[offset + 1] === '`') return null;
+  if (ctx.config.closeBackticks !== 'all' || !emptyPairAt(ctx, s, offset)) return null;
   if (offset - 1 < text.textStart(lineOf(s, offset))) return null;
   return ctx.apply(ctx.draft().setText(node, text.splice(offset - 1, offset + 1)).setCaret(node, offset - 1, -1));
 }
@@ -122,12 +136,14 @@ export function deleteEmptyPair(ctx: CommandContext, node: OutlineNode, text: Pr
  */
 function wrapInCode(ctx: CommandContext): CommandOutcome {
   const [a, b] = [ctx.from, ctx.to];
-  if (a.zone !== 'text' || b.zone !== 'text' || !(a.text instanceof ProseText) || a.node.persistentNode !== b.node.persistentNode) return deferToHost();
+  if (a.zone !== 'text' || b.zone !== 'text' || !(a.text instanceof OurusProse) || a.node.persistentNode !== b.node.persistentNode) return deferToHost();
   const text = a.text;
   if (a.offset < text.textStart(lineOf(text.text, a.offset))) return deferToHost();
   const selected = text.text.slice(a.offset, b.offset);
-  const fence = '`'.repeat(Math.max(0, ...(selected.match(/`+/g) ?? []).map((r) => r.length)) + 1);
-  const pad = selected.startsWith('`') || selected.endsWith('`') ? ' ' : '';
+  const fence = '`'.repeat((selected.match(/`+/g) ?? []).reduce((m, r) => Math.max(m, r.length), 0) + 1);
+  // (a space each side where a backtick ends it, or where it starts and ends with a space, which a code
+  // span would strip, one each side: ` b ` written `  b  `)
+  const pad = selected.startsWith('`') || selected.endsWith('`') || (/^[ \n][^]*[ \n]$/.test(selected) && /[^ \n]/.test(selected)) ? ' ' : '';
   const open = fence + pad;
   const wrapped = text.splice(b.offset, b.offset, pad + fence).splice(a.offset, a.offset, open);
   const forward = ctx.selection.anchor <= ctx.selection.head;
@@ -135,16 +151,11 @@ function wrapInCode(ctx: CommandContext): CommandOutcome {
   return ctx.apply(ctx.draft().setText(a.node, wrapped).select(forward ? from : to, forward ? to : from));
 }
 
-/** An edit that would break a fence, which ourus doesn't make: refused where markup is decorated, the host's where it is text. */
-function breaksFence(ctx: CommandContext, detail: string): CommandOutcome {
-  return ctx.config.markup === 'text' ? deferToHost(detail) : reject('not-expressible', detail);
-}
-
 /** Whether the selection takes part of a closed fenced block's run, but not the whole block. */
 function overFence(ctx: CommandContext): boolean {
   const ends = [ctx.from, ctx.to] as const;
   return ends.some((at, k) => {
-    if ((at.zone !== 'text' && at.zone !== 'frame') || !(at.text instanceof AtomText) || at.text.type !== 'fenced_code') return false;
+    if ((at.zone !== 'text' && at.zone !== 'frame') || !(at.text instanceof OurusAtom) || at.text.type !== 'fenced_code') return false;
     const runs = at.text.delimiters;
     if (!runs?.close) return false;
     // what of this block's text the selection takes: from its start, or to its end, where the other end is outside it
@@ -216,7 +227,7 @@ function fenceCharInCode(ctx: CommandContext, at: CodeAt, char: string): Command
  */
 function openFence(ctx: CommandContext, char: string): CommandOutcome | undefined {
   const at = ctx.from;
-  if (at.zone !== 'text' || !(at.text instanceof ProseText) || at.text.type !== 'paragraph' || at.text.frame.length) return undefined;
+  if (at.zone !== 'text' || !(at.text instanceof OurusProse) || at.text.type !== 'paragraph' || at.text.frame.length) return undefined;
   const { node, text, offset } = at;
   if (node.kind !== 'paragraph' && node.kind !== 'item') return undefined;
   // a held space keeps its line from reading as a fence: not done yet
@@ -225,16 +236,16 @@ function openFence(ctx: CommandContext, char: string): CommandOutcome | undefine
   const lineTo = s.indexOf('\n', offset) < 0 ? s.length : s.indexOf('\n', offset);
   const line = s.slice(lineFrom, offset) + char + s.slice(offset, lineTo);
   // the line read as a fence's opening: the typed character in its run, closed by a run as long below it
-  const run = new AtomText('fenced_code', false, line).delimiters?.open;
+  const run = new OurusAtom('fenced_code', false, line).delimiters?.open;
   if (!run || line[run.from] !== char || offset - lineFrom > run.to - 1) return undefined;
-  const code = new AtomText('fenced_code', node.kind === 'item' && lineFrom === 0, `${line}\n${line.slice(run.from, run.to)}`);
+  const code = new OurusAtom('fenced_code', node.kind === 'item' && lineFrom === 0, `${line}\n${line.slice(run.from, run.to)}`);
   if (!ctx.doc.readsAs(code)) return undefined;
   if (ctx.config.closeBackticks === 'none') return deferToHost();
   const draft = ctx.draft();
   const container = node.kind === 'item';
   // the lines below, a paragraph of their own
   if (lineTo < s.length) draft.split(node, lineTo, { to: lineTo + 1, kind: 'paragraph', children: container ? 'stay' : 'follow', into: container ? 'child' : 'sibling' });
-  let block: OutlineNode | number = node;
+  let block: OurusNode | number = node;
   const last = lineTo >= s.length;
   if (lineFrom > 0) {
     // the lines above stay the node's text, the block after them

@@ -5,8 +5,8 @@
 import type { Page } from 'playwright-core';
 import { CommandContext } from '../../src/commands/context.ts';
 import { dragRun, placeAtSeam } from '../../src/commands/drag.ts';
-import type { Config } from '../../src/config.ts';
-import type { OutlineNode } from '../../src/doc/index.ts';
+import type { OurusConfig } from '../../src/config.ts';
+import type { OurusNode } from '../../src/doc/index.ts';
 import { labelNumber } from '../../test/drawing.ts';
 import { isDrop } from '../../test/player.ts';
 import { startOf } from '../../test/spec-run.ts';
@@ -19,7 +19,7 @@ import type { Drop } from './driver.ts';
  * where the case starts, which is where the runner knows it holds what ourus does (its first action),
  * and only one ourus picks up (a pickup ourus refuses has no run to press).
  */
-export function resolveDrop(test: SpecTest, flavor: Config['flavor']): Drop | string {
+export function resolveDrop(test: SpecTest, flavor: OurusConfig['flavor']): Drop | string {
   const actions = test.steps.flatMap((s) => s.actions);
   const k = actions.findIndex(isDrop);
   if (k < 0) return 'no drop';
@@ -28,7 +28,7 @@ export function resolveDrop(test: SpecTest, flavor: Config['flavor']): Drop | st
   const { doc, drop } = state;
   if (!drop) return 'no drop line';
   const action = actions[0]!;
-  let run: OutlineNode[] = [];
+  let run: OurusNode[] = [];
   let press: number | null = null;
   if (action !== 'pasteAt') {
     const label = /^moveSubtree (.)$/u.exec(action)?.[1];
@@ -43,7 +43,7 @@ export function resolveDrop(test: SpecTest, flavor: Config['flavor']): Drop | st
   if (typeof place === 'string') return place;
   const parent = place.parent === 'root' ? doc.rootNode : doc.node(place.parent)!;
   let listDepth = 0;
-  for (let p: OutlineNode | null = parent; p; p = p.parent) if (p.kind === 'item') listDepth++;
+  for (let p: OurusNode | null = parent; p; p = p.parent) if (p.kind === 'item') listDepth++;
   let below: number | null = drop.line;
   while (below < doc.lineCount && doc.isBlankLine(below)) below++;
   if (below >= doc.lineCount) below = null;

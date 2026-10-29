@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { executeCommand } from '../src/commands/index.ts';
 import { OurusDoc } from '../src/doc/index.ts';
-import { settlePlaceholders } from '../src/draft/index.ts';
+import { settlePlaceholders } from '../src/writer/index.ts';
 import { docOf, nodesOf, plainText } from './drawing.ts';
 
 const shape = (d: OurusDoc) => nodesOf(d).map((n) => `${'  '.repeat(n.depth - 1)}${n.kind}:${plainText(d, n).replace(/\n/g, '|')}`).join('\n');
@@ -26,10 +26,10 @@ test('an indented empty item is a placeholder under its parent', () => {
 
 test('typing into a place fills it; typing a space keeps it open', () => {
   const doc = indentNewItem();
-  const spaced = doc.update([{ from: 8, to: 8, insert: ' ' }]);
+  const spaced = doc.update({ changes: [{ from: 8, to: 8, insert: ' ' }] });
   assert.deepEqual(placeholders(spaced), [9]);
   assert.equal(shape(spaced), 'item:a\n  item:');
-  const typed = doc.update([{ from: 8, to: 8, insert: 'x' }]);
+  const typed = doc.update({ changes: [{ from: 8, to: 8, insert: 'x' }] });
   assert.deepEqual(placeholders(typed), []);
   assert.equal(shape(typed), 'item:a\n  item:x');
 });
@@ -79,7 +79,7 @@ test('Enter twice leaves a list, and typing makes the paragraph', () => {
   }
   assert.equal(doc.text, '- a\n\n');
   assert.equal(shape(doc), 'item:a\nparagraph:');
-  const typed = doc.update([{ from: sel.head, to: sel.head, insert: 'text' }]);
+  const typed = doc.update({ changes: [{ from: sel.head, to: sel.head, insert: 'text' }] });
   assert.equal(typed.text, '- a\n\ntext');
   assert.equal(shape(typed), 'item:a\nparagraph:text');
 });

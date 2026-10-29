@@ -7,7 +7,7 @@
 //
 //   node test/drops.ts          # the report: each case's gaps
 
-import { executeCommand, type CommandResult, type DropMap } from '../src/commands/index.ts';
+import { executeCommand, type OurusCommandResult, type DropMap } from '../src/commands/index.ts';
 import type { OurusDoc } from '../src/doc/index.ts';
 import { docOf, nodesOf, readDrawing } from './drawing.ts';
 import { flavorsOf } from './spec-run.ts';
@@ -56,7 +56,7 @@ export function dropGaps(t: SpecTest): string[] {
     for (const seam of dropMap.seams) {
       for (const point of seam.points) {
         const where = `${what} to ${point.parent === 'root' ? 'the root' : `${doc.node(point.parent)!.kind} at line ${doc.node(point.parent)!.startLine + 1}`}, depth ${point.depth}`;
-        let r: CommandResult;
+        let r: OurusCommandResult;
         try {
           r = executeCommand(doc, point.drop, start.selection);
         } catch (e) {

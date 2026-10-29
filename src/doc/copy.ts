@@ -4,13 +4,13 @@
 import { MdBlockAt, type MdLine, type MdPrefixPiece } from '../parser/index.ts';
 import { advanceColumns, lineIndexAt, skipSpaces, trimMd } from '../text/index.ts';
 import type { OurusDoc } from './doc.ts';
-import type { OutlineNode } from './node.ts';
+import type { OurusNode } from './node.ts';
 
 /**
  * Where `node`'s own Markdown starts: an item at its marker, a quote at its `>`, a footnote definition
  * at its label, else past its containers' prefix (what holds it isn't its own).
  */
-export function markdownStart(doc: OurusDoc, node: OutlineNode): number {
+export function markdownStart(doc: OurusDoc, node: OurusNode): number {
   const tree = doc.mdTree;
   const line = tree.line(node.startLine);
   if (node.kind === 'item') return tree.markerFrom(new MdBlockAt(node.block, node.startLine));
@@ -28,6 +28,8 @@ export function markdownStart(doc: OurusDoc, node: OutlineNode): number {
 export function markdownOf(doc: OurusDoc, from: number, to: number): string {
   const tree = doc.mdTree;
   const text = doc.text;
+  // (an empty text has no lines to copy out of)
+  if (!tree.lineCount) return '';
   const lo = lineIndexAt(tree.starts, from);
   const end = tree.line(lineIndexAt(tree.starts, to));
   // a copy ending at a line's start ends with the line break before it
@@ -58,7 +60,10 @@ export function markdownOf(doc: OurusDoc, from: number, to: number): string {
       while (start < line.to && col < base + lead && (text[start] === ' ' || text[start] === '\t')) col = advanceColumns(text, start, ++start, col);
       piece = ' '.repeat(Math.max(0, col - base - lead)) + text.slice(start, i === end.index ? Math.min(to, line.to) : line.to);
     }
-    out.push(trimMd(piece) === '' ? '' : piece);
+    // (a line the copy takes whole, blank there, is empty; part of one, spaces between words, is as it is)
+    const whole = (i !== lo || from <= held(line)) && (i !== end.index || to >= line.to);
+    out.push(whole && trimMd(piece) === '' ? '' : piece);
   }
-  return out.join('\n') + (end.index > lo && end.from === to ? '\n' : '');
+  // (ending at a line's start, or past its last line's end, in its line ending: the final one too)
+  return out.join('\n') + ((end.index > lo && end.from === to) || to > end.to ? '\n' : '');
 }

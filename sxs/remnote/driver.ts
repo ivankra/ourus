@@ -26,7 +26,7 @@
 //   (`Driver.freeForm`); and with bullets, RemNote's default, every rem an item (../remnote-bl/).
 
 import type { Page } from 'playwright-core';
-import type { Config } from '../../src/config.ts';
+import type { OurusConfig } from '../../src/config.ts';
 import { perPage, type Driver, type Drop } from '../lib/driver.ts';
 import { runsAsMarkdown, Unsupported, type Block, type Outline, type Run } from '../lib/block.ts';
 import { gesture } from '../lib/drag.ts';
@@ -137,7 +137,7 @@ export function lift(o: Outline): Outline {
  * after it where `listParent` says it adopts them (a rem without a bullet holds no children, so
  * nothing is lifted first).
  */
-export function own(o: Outline, listParent: Config['listParent'] = 'paragraph'): Outline {
+export function own(o: Outline, listParent: OurusConfig['listParent'] = 'paragraph'): Outline {
   const headings: number[] = [];
   let paragraph = false;
   const blocks = o.blocks.map((b) => {
@@ -263,6 +263,8 @@ export function remnoteDriver(setup: Setup): Driver {
     drops: ['moveSubtree'],
     holds(doc) {
       const o = doc as Outline;
+      // (blocks are selected by Shift-Down from the first, which takes the parent in past a deeper one)
+      if (o.selected && new Set(o.selected.map((i) => o.blocks[i]!.depth)).size > 1) return 'blocks selected at two depths: Shift-Down takes their parent in';
       if (setup.bulletless) {
         const no = bulletless(o);
         if (no) return no;
@@ -270,6 +272,7 @@ export function remnoteDriver(setup: Setup): Driver {
       // zoomed, the root is the page's title, which the editor tree doesn't focus as a rem of its own;
       // and a rem without a bullet doesn't keep a collapse
       if (o.view && o.view.zoom !== null && o.sel?.block === o.view.zoom) return 'the caret in the zoom root, the page\'s title';
+      if (o.view && o.view.zoom !== null && o.selected?.includes(o.view.zoom)) return 'the zoom root selected as a block, the page\'s title';
       if (o.view?.folded.some((i) => o.blocks[i]!.free)) return 'a fold on a rem without a bullet';
       // (without bullets, what a free block owns is beside it: zoomed into, it shows none of it)
       if (setup.bulletless && o.view && o.view.zoom !== null && o.blocks[o.view.zoom]!.free) return 'a zoom into a rem without a bullet, what it owns its siblings';

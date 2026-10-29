@@ -2,7 +2,7 @@
 // out of a section's list into a paragraph. The command says where the nodes go and what kind they
 // are; `done()` and the writer do the rest.
 
-import { ProseText, AtomText, type OutlineNode } from '../doc/index.ts';
+import { OurusProse, OurusAtom, type OurusNode } from '../doc/index.ts';
 import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
 import { changeHeadingLevels, onCodeLine, oneRun, operandsRefused, selectionInText } from './util.ts';
 
@@ -52,24 +52,24 @@ export function outdentCommand(ctx: CommandContext): CommandOutcome {
  * joining the last one's list, or (`logical`) staying in the paragraph's, which the new paragraphs
  * pass. An item whose text is a heading becomes that heading; one whose text is code, that block.
  */
-function unwrapItems(ctx: CommandContext, nodes: readonly OutlineNode[], parent: OutlineNode, later: readonly OutlineNode[]): CommandOutcome {
+function unwrapItems(ctx: CommandContext, nodes: readonly OurusNode[], parent: OurusNode, later: readonly OurusNode[]): CommandOutcome {
   const doc = ctx.doc;
   const texts = nodes.map((node) => doc.textOf(node));
   if (texts.some((text) => !text)) return null;
   // an item whose text is a heading becomes that heading, the rest of the list its section: which may
   // take in the rest of the list, nothing after it, and must stay in the section it is in
-  const levels = texts.map((text) => (text instanceof ProseText ? (text.heading?.level ?? null) : null));
+  const levels = texts.map((text) => (text instanceof OurusProse ? (text.heading?.level ?? null) : null));
   if (levels.some((level) => level !== null)) {
     if (parent.kind === 'paragraph') return reject('not-expressible', "a heading can't be in a paragraph's list");
     if (later.some((node) => node.kind !== 'item')) return reject('not-expressible', 'the heading would take in what follows the list');
-    const own = parent.kind === 'heading' ? (doc.textOf(parent) as ProseText).heading!.level : 0;
+    const own = parent.kind === 'heading' ? (doc.textOf(parent) as OurusProse).heading!.level : 0;
     if (levels.some((level) => level !== null && level <= own)) return reject('not-expressible', 'the heading would end the section it is in');
   }
   const draft = ctx.draft();
   // (an item whose text is code becomes that block, its children after it)
   nodes.forEach((node, k) => {
-    draft.convert(node, texts[k] instanceof AtomText ? 'atom' : levels[k] !== null ? 'heading' : 'paragraph');
-    if (texts[k] instanceof AtomText && node.children.length) draft.remove(node.children).place('after', node, node.children);
+    draft.convert(node, texts[k] instanceof OurusAtom ? 'atom' : levels[k] !== null ? 'heading' : 'paragraph');
+    if (texts[k] instanceof OurusAtom && node.children.length) draft.remove(node.children).place('after', node, node.children);
   });
   if (parent.kind === 'paragraph') {
     const moved = ctx.config.outdent === 'direct' ? [...nodes, ...later] : [...nodes];
@@ -84,7 +84,7 @@ function unwrapItems(ctx: CommandContext, nodes: readonly OutlineNode[], parent:
  * they take its place. With `outdent: logical`, or last in it, they follow it; first in a quote
  * without a title, they go before it; in its middle (`direct`), the quote splits around them.
  */
-function leaveQuote(ctx: CommandContext, nodes: readonly OutlineNode[]): CommandOutcome {
+function leaveQuote(ctx: CommandContext, nodes: readonly OurusNode[]): CommandOutcome {
   const doc = ctx.doc;
   const first = nodes[0]!;
   const last = nodes[nodes.length - 1]!;
@@ -96,9 +96,16 @@ function leaveQuote(ctx: CommandContext, nodes: readonly OutlineNode[]): Command
   // one line, its first, is the item's text then (Quote77)
   const item = quote.parent?.kind === 'item' && quote.index === 0 && !doc.textOf(quote.parent) ? quote.parent : null;
   const text = doc.textOf(first);
-  if (item && nodes.length === 1 && first.index === 0 && first.kind === 'paragraph' && !first.children.length && text instanceof ProseText && !text.body.includes('\n') && !titled) {
-    draft.setText(item, text.asItem(true)).setCaret(item, ctx.from.zone === 'text' ? ctx.from.offset : 0, -1);
+  if (item && nodes.length === 1 && first.index === 0 && first.kind === 'paragraph' && !first.children.length && text instanceof OurusProse && !text.body.includes('\n') && !titled) {
+    draft.setText(item, text.asItem(true));
     if (quote.children.length === 1) draft.remove([quote]);
+    // (a selection in the paragraph, its blank lines too, a caret where it was in its text; anywhere
+    // else, where it is)
+    // (past the final line ending, the last node's: Shift-Tab's caret there)
+    const end = ctx.selection.head === doc.text.length ? doc.rootNode.lastDescendant : null;
+    const inFirst = (at: typeof ctx.from): boolean => ('node' in at ? at.node : at.zone === 'gap' ? at.owner : end) === first;
+    if (inFirst(ctx.from) || inFirst(ctx.to)) draft.setCaret(item, ctx.from.zone === 'text' && ctx.from.node === first ? ctx.from.offset : 0, -1);
+    else selectionInText(ctx, draft, true);
     return ctx.apply(draft);
   }
   if (nodes.length === quote.children.length && !titled) draft.place('before', quote, nodes).remove([quote]);

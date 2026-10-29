@@ -11,8 +11,8 @@
 // block, blank lines dropped, a numbered item made a plain block, ... so a report can tell an original
 // outline example from an adapted one, and a driver can refuse what its app can't hold.
 
-import type { Config } from '../../src/config.ts';
-import { ProseText, OurusDoc, type OutlineNode } from '../../src/doc/index.ts';
+import type { OurusConfig } from '../../src/config.ts';
+import { OurusProse, OurusDoc, type OurusNode } from '../../src/doc/index.ts';
 import { textEnd, textStart } from '../../src/doc/index.ts';
 import { docOf, nodesOf, readDrawing } from '../../test/drawing.ts';
 import { micromark } from 'micromark';
@@ -73,14 +73,14 @@ export interface ProjectOptions {
    * The case's options, where they decide how ourus reads the text: with `enterSplitSpace: start` an
    * item's padding past the item above's is its text, as the app's block starts with the spaces.
    */
-  readonly config?: Partial<Config>;
+  readonly config?: Partial<OurusConfig>;
   /**
    * How the app's block holds a quote (`Driver.behaves.quotes`): `atom`, any quote, a callout too, its
    * lines as written (Logseq's block text); else only a quote of one paragraph, `> ` before its text.
    */
-  readonly quotes?: Config['quotes'];
+  readonly quotes?: OurusConfig['quotes'];
   /** What a list after a block is the children of in the app's blocks (`Driver.behaves.listParent`): read so. */
-  readonly listParent?: Config['listParent'];
+  readonly listParent?: OurusConfig['listParent'];
   /**
    * The app holds a selection of whole blocks (`Driver.selectsBlocks`): a drawn selection from one
    * block's text start to another's text end is those blocks selected (`Outline.selected`), the
@@ -130,7 +130,7 @@ const ATOM_NOTES: Readonly<Record<string, string>> = {
  * and callouts (containers to ourus, a block's text to block apps), frontmatter, a heading's closing
  * `#`s and indented code (markup to ourus, text a block app edits as text, or drops).
  */
-export function project(drawn: string, flavor: Config['flavor'], options: ProjectOptions = {}): Projection {
+export function project(drawn: string, flavor: OurusConfig['flavor'], options: ProjectOptions = {}): Projection {
   const notes = new Set<string>();
   const drawing = readDrawing(drawn);
   // CR line endings become LF; a CRLF's CR goes, and positions after it shift
@@ -178,7 +178,7 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
     const atom = options.quotes === 'atom';
     // (under `atom` a callout is one too, its `[!type]` the block's text, as an outliner holds it)
     const quote = atom ? (node.kind === 'quote' ? node : null) : quoted(doc, node);
-    const bare = (n: OutlineNode): boolean => !n.children.length || (atom ? n.kind === 'quote' : !!quoted(doc, n));
+    const bare = (n: OurusNode): boolean => !n.children.length || (atom ? n.kind === 'quote' : !!quoted(doc, n));
     const into = options.paragraphsInBlock && (node.kind === 'paragraph' || !!quote) && parent?.kind === 'item' && blockOf.has(parent.id) && (!prev || (merged.has(prev.id) && bare(prev)));
     const own = new Set<string>();
     let { text, lines } = quote && atom ? asWritten(doc, node) : blockText(doc, quote ?? node, own, options.ordered ?? false, options.freeForm ?? false);
@@ -308,7 +308,7 @@ export function project(drawn: string, flavor: Config['flavor'], options: Projec
 }
 
 /** Every node under `node`, depth first. */
-function descendants(node: OutlineNode): OutlineNode[] {
+function descendants(node: OurusNode): OurusNode[] {
   return node.children.flatMap((c) => [c, ...descendants(c)]);
 }
 
@@ -316,7 +316,7 @@ function descendants(node: OutlineNode): OutlineNode[] {
  * A quote's lines as written, from its `>` on each (a lazy line's from its content), blank `>` lines
  * included: a block's text where the app's block holds any quote as Markdown (`quotes: atom`).
  */
-function asWritten(doc: OurusDoc, node: OutlineNode): { text: string; lines: LineMap[] } {
+function asWritten(doc: OurusDoc, node: OurusNode): { text: string; lines: LineMap[] } {
   const lines: LineMap[] = [];
   const parts: string[] = [];
   let at = 0;
@@ -335,7 +335,7 @@ function asWritten(doc: OurusDoc, node: OutlineNode): { text: string; lines: Lin
  * its text, or null. Any other quote (more blocks, a list, a quoted blank line, nothing) is a
  * container, which a block can't hold; a callout's title is no paragraph's.
  */
-function quoted(doc: OurusDoc, node: OutlineNode): OutlineNode | null {
+function quoted(doc: OurusDoc, node: OurusNode): OurusNode | null {
   if (node.kind !== 'quote') return null;
   const first = doc.mdTree.line(node.startLine);
   if (/^\s*>\s*\[!/.test(doc.text.slice(first.from, first.to))) return null;
@@ -344,7 +344,7 @@ function quoted(doc: OurusDoc, node: OutlineNode): OutlineNode | null {
 }
 
 /** A node's own text as a block holds it, and where each of its lines came from. */
-function blockText(doc: OurusDoc, node: OutlineNode, notes: Set<string>, ordered: boolean, freeForm: boolean): { text: string; lines: LineMap[] } {
+function blockText(doc: OurusDoc, node: OurusNode, notes: Set<string>, ordered: boolean, freeForm: boolean): { text: string; lines: LineMap[] } {
   const source = doc.text;
   const lineOf = (l: number) => doc.mdTree.line(l);
   if (node.kind === 'quote') throw new Unsupported(/^\s*>\s*\[!/.test(source.slice(lineOf(node.startLine).from, lineOf(node.startLine).to)) ? 'callout' : 'quote');
@@ -405,7 +405,7 @@ function blockText(doc: OurusDoc, node: OutlineNode, notes: Set<string>, ordered
   const headEnd = head ? headStart + head.lines - 1 : headStart;
   // markup no block has a form for: a block would hold it as text, and edit it so
   const text = doc.textOf(node);
-  if (head?.type === 'heading' && text instanceof ProseText && text.frame.some((p) => p.part === 'close')) throw new Unsupported("heading's closing #s");
+  if (head?.type === 'heading' && text instanceof OurusProse && text.frame.some((p) => p.part === 'close')) throw new Unsupported("heading's closing #s");
   if (head?.type === 'code_block' && !head.attrs.fenced) throw new Unsupported('indented code');
   if (!head && node.kind === 'item' && node.block.children.length && node.block.offsets[0] === 0) {
     // an item whose first block is a list (`- - a`): it has no text, and the rest of its marker's line
@@ -436,7 +436,7 @@ function blockText(doc: OurusDoc, node: OutlineNode, notes: Set<string>, ordered
   const trim = head.type === 'paragraph' || head.type === 'heading';
   // an item's text below its marker (`-⏎  text`, a Shift-Enter at its start): its block's text starts
   // with an empty line, as an app's block after that Shift-Enter does (ShiftEnter13)
-  const below = node.kind === 'item' && text instanceof ProseText && text.frame.some((p) => p.part === 'below') ? '\n' : '';
+  const below = node.kind === 'item' && text instanceof OurusProse && text.frame.some((p) => p.part === 'below') ? '\n' : '';
   for (let l = headStart; l <= headEnd; l++) {
     const line = lineOf(l);
     // (a later line's spaces past its content column are its text, as ourus's and the apps' are:
@@ -581,7 +581,7 @@ export function ownBlocks(blocks: readonly Block[], ownsList: (b: Block, i: numb
  * the projection's text (its quotes containers, which own nothing): `paragraph` a paragraph (not a
  * heading, code, a divider, a quote); `block` any but a heading and a quote; `container` none.
  */
-export function listOwner(listParent: Config['listParent'] = 'paragraph'): (b: Block) => boolean {
+export function listOwner(listParent: OurusConfig['listParent'] = 'paragraph'): (b: Block) => boolean {
   if (listParent === 'container') return () => false;
   const paragraph = listParent === 'paragraph';
   return (b) => !!b.free && !/^#{1,6} /.test(b.text) && !b.text.startsWith('> ') && (!paragraph || (!/^(`{3,}|~{3,})/.test(b.text) && !/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(b.text) && !/^\|/.test(b.text)));
@@ -593,7 +593,7 @@ export function listOwner(listParent: Config['listParent'] = 'paragraph'): (b: B
  * a` is the list after it, as `Intro⏎- a` is), then owned as `listParent` says (`liftOwned`,
  * `ownBlocks`).
  */
-export function asMarkdownReads(blocks: readonly Block[], listParent: Config['listParent'] = 'paragraph'): Block[] {
+export function asMarkdownReads(blocks: readonly Block[], listParent: OurusConfig['listParent'] = 'paragraph'): Block[] {
   return ownBlocks(liftOwned(blocks), listOwner(listParent));
 }
 

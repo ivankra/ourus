@@ -27,7 +27,7 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
 
 ## API
 
-- **`executeCommand(doc: OurusDoc, command: Command, selection: TextSelection): CommandResult`**<br>
+- **`executeCommand(doc: OurusDoc, command: OurusCommand, selection: OurusSelection): OurusCommandResult`**<br>
   Runs a command at the selection. Where ourus doesn't handle a case yet, a key the host has a
   default for is left to the host (`deferredToHost`), and a structural command is refused as
   `unsupported`. Every command runs within the snapshot's view (`OurusDoc.folded`, `OurusDoc.zoom`):
@@ -39,14 +39,14 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
 
 - **`leavesZoom(doc: OurusDoc, next: OurusDoc): boolean`**<br>
   For a host's own edit (a deferred command's default, typing, an editor's own commands): whether
-  `next`, the snapshot the host would commit (`doc.update(changes, params)` with the caret and marks
+  `next`, the snapshot the host would commit (`doc.update({ changes, ... })` with the caret and marks
   it will give), leaves `doc`'s zoom; the host refuses the edit where it does, before committing.
   The same invariant the commands keep; the zoom root removed whole is accepted only as
   `deleteSubtree` of it writes it. False where not zoomed. An edit that can't be refused (an undo,
   a sync, another view's) goes through `doc.update` or `withViewOf`, which end the zoom only where its
   root's subtree lost a node or its root went (to its nearest ancestor left).
 
-- **`TextSelection`** is `{ anchor, head }`, as in CM6's `selection.main` (defined in `src/text`;
+- **`OurusSelection`** is `{ anchor, head }`, as in CM6's `selection.main` (defined in `src/text`;
   `Selection` before, still exported under that name, deprecated). A structural command (indent,
   move, ...) acts on the selection's roots: a subtree selection's (`OurusDoc.selectedSubtrees`, on
   a line nodes share the outer node), else the subtrees it touches (`OurusDoc.touchedSubtrees`, a
@@ -59,7 +59,7 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
   `'root'`), right after its child `after` (null: first). It names nodes, so it survives edits
   elsewhere.
 
-- **`Command`** is `{ type, ... }`. Types are named after W3C's `inputType` where there is one:
+- **`OurusCommand`** is `{ type, ... }`. Types are named after W3C's `inputType` where there is one:
 
   - `indent`, `outdent` (Tab, Shift-Tab)<br>
     The selected nodes move under the node above, or out of their parent. For headings, the level
@@ -107,7 +107,7 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
     Puts the selection's Markdown in the result's `clipboard`, as `text/plain`, `text/markdown` and
     `text/html` (marked as coming from ourus). Cut also removes it.
 
-  - `paste` (Ctrl-V), `{ clipboard: Clipboard }`<br>
+  - `paste` (Ctrl-V), `{ clipboard: OurusClipboard }`<br>
     Pastes the clipboard, given in every format the host has (`text/plain`, `text/markdown`,
     `text/html`, ...). It is read as Markdown and inserted as nodes.
 
@@ -168,7 +168,7 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
   `accepts` takes (its drop applied, say), trying outwards; where columns tie, the run's own place,
   then one that keeps its kind, then the deeper.
 
-- **`CommandResult`** is one of:
+- **`OurusCommandResult`** is one of:
 
   - `{ status: 'applied', doc, changes, selection, clipboard?, placed?, dropMap? }`<br>
     The new `OurusDoc` (node ids carried over), the changes (`ChangeSpec[]`, in the old text's
@@ -199,6 +199,8 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
   - `would-reparent`: a move would give another node a new parent (a heading taking in what follows
     it).
   - `no-such-node`: an id the document doesn't have (it changed since the id was read).
+  - `invalid-selection`: a selection whose ends aren't positions in the text, integers from 0 to its
+    length (it changed since the selection was read).
   - `invalid-insertion-point`: a place whose `after` isn't a child of its `parent`, or is one of the
     nodes moved.
   - `into-itself`: a drop at a place inside the nodes moved.
@@ -211,12 +213,12 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
   - `write-failed`: the writer failed, on a layout it has no rule for or a text that didn't read back
     as the command meant. This is always a bug in ourus, to fix.
 
-- **`settlePlaceholders(doc: OurusDoc, caret: number): { doc, changes } | null`** (from `draft/`)<br>
+- **`settlePlaceholders(doc: OurusDoc, caret: number): { doc, changes } | null`** (from `writer/`)<br>
   Settles the placeholders the caret has left: a node with a held space is written again without
   it; an empty item is written again so it holds without a placeholder; any other empty node is
-  removed. Null when no placeholder is off the caret's line. See `draft/`'s README.
+  removed. Null when no placeholder is off the caret's line. See `writer/`'s README.
 
-- **`Config`** chooses how commands behave where outliners differ. It is set when the document is
+- **`OurusConfig`** chooses how commands behave where outliners differ. It is set when the document is
   made (`OurusDoc.parse(text, { config })`): `outdent`, `bullet`, `enterOnEmptyItem`, `enterMidItem`,
   `enterAtTextStart`, `enterSplitSpace`, `enterTask`, `backspaceAtTopItem`, `backspaceAtItemStart`,
   `emptyItemWithChildren`, `joinWithChildren`, `handleFenceContents`, `closeBackticks`,
@@ -229,7 +231,7 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
 The host's contract:
 
 1. Keep one `OurusDoc` per document. After every edit that isn't a command (typing, the editor's
-   own paste, undo), call `doc = doc.update(changes, { caret })`, with the caret where the edit
+   own paste, undo), call `doc = doc.update({ changes, caret })`, with the caret where the edit
    leaves it.
 2. On a command key, call `executeCommand`. Commit an applied result's changes and selection
    together, and keep its `doc` (no need to parse again).
@@ -237,7 +239,7 @@ The host's contract:
    separate edit.
 4. Keep placeholders in the undo history: undo and redo must restore the placeholders of the state
    they return to. Save `doc.marks.points()` with each state, and restore with
-   `doc.update(changes, { setMarks: positions.map((pos) => createPlaceholder(pos)) })`. In CM6,
+   `doc.update({ changes, setMarks: positions.map((pos) => createPlaceholder(pos)) })`. In CM6,
    `invertedEffects` can carry them; the demo does this.
 5. Home goes to `doc.textStart(line)`, the start of the line's text, and pressed again, to the
    line's start.
@@ -248,13 +250,13 @@ Inside, a command works in three steps. It looks at what is at the selection (`c
 `ctx.to`: `locate`'s zones). It describes the outline it wants in a draft (`ctx.draft()`: remove,
 place, split, join, set a text, a gap, the caret). Then it applies the draft (`ctx.apply`): the draft's
 `done()` puts it in normal form, writes the changes, and checks the new text against it (see
-`draft/`). For
+`writer/`). For
 what a line, a marker or a fence is, commands ask `doc/`, or the parser when `doc/` doesn't say.
 
 Files:
 
-- `index.ts` (`executeCommand`, the dispatch on `command.type`); `types.ts` (`Command`,
-  `TextSelection`, `CommandResult`, `RejectReason`, `InsertionPoint`); `context.ts`
+- `index.ts` (`executeCommand`, the dispatch on `command.type`); `types.ts` (`OurusCommand`,
+  `OurusSelection`, `OurusCommandResult`, `RejectReason`, `InsertionPoint`); `context.ts`
   (`CommandContext`: the document, the selection located, the nodes given, `apply`); `util.ts`
   (shared helpers: the nodes a command acts on and their runs of siblings, the caret it leaves,
   markup at the caret, heading levels, deleting a held space, hidden spaces); `shape.ts` (the
@@ -277,8 +279,10 @@ Tests: the spec (`test/spec.test.ts` over `spec/*.md`, every example in every fl
 `test/commands/commands.test.ts` (changes, text and selection agree; round trips; ids);
 `test/placeholders.test.ts` (the placeholders' lifecycle); `test/drops.test.ts` (every place a
 pickup lists, dropped: a refusal or a result, at the known starts aside); `test/moves.test.ts` (every
-node moved to every place, those only a tree pane or a dialog names too); the differential (`npm run test:diff`),
-which compares every command's outcome with the last commit's; the inverse pairs (`npm run
-test:inverse`), which run every pair of commands that undo each other at every caret position of the
-spec's buffers. To look at one case by hand: `npm run probe` (`sxs/probe.ts --help`), on ourus alone
+node moved to every place, those only a tree pane or a dialog names too). The heavy suites, `npm run
+test:heavy` (`test/heavy.ts`), on a frozen copy of the tree: the differential (`test/differential.ts`),
+which compares every command's outcome with the last commit's; the inverse pairs (`test/inverse.ts`),
+which run every pair of commands that undo each other at every caret position of the spec's
+buffers, beside the last commit's code on the same buffers; and the view pass
+(`test/view-exhaustive.ts`). Each runs alone with `node`. To look at one case by hand: `npm run probe` (`sxs/probe.ts --help`), on ourus alone
 or side by side with the SxS apps.

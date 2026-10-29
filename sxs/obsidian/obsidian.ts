@@ -3,7 +3,7 @@
 // itself (`Driver.launch`): obsidian-launcher downloads the version asked for into
 // `.sxs/obsidian/files/`, and a worker opens a vault written for the run (its plugins installed) as a
 // window of an Obsidian of the driver's pool, which every setup shares as apps share the pool's
-// browsers (`.sxs/obsidian/<n>/`, `leaseInstance`); the runner drives the window over the DevTools
+// browsers (`obsidian/<n>/` in `stateDir`, `leaseInstance`); the runner drives the window over the DevTools
 // protocol. Under Linux without a display an instance gets an Xvfb of its own; it runs offline.
 //
 // A Markdown editor (CodeMirror 6): the `text` model. Each test gets a note of its
@@ -29,7 +29,7 @@ import { perPage, type Driver, type Drop } from '../lib/driver.ts';
 import { gesture } from '../lib/drag.ts';
 import { Unsupported } from '../lib/block.ts';
 import { ensureAptInstalled, type Need } from '../lib/system.ts';
-import { cacheDir } from '../proxy.ts';
+import { cacheDir, stateDir } from '../proxy.ts';
 import { asSpaces, asTabs, retabs, tabbed } from '../lib/tabs.ts';
 import type { TextDoc } from '../lib/text.ts';
 
@@ -256,7 +256,7 @@ const versions = (): NonNullable<typeof resolved> =>
 
 /**
  * Obsidian's instances, shared by every setup's runs as the pool's browsers are by apps': instance n in
- * `.sxs/obsidian/<n>/`. One Obsidian opens any number of vaults, each in a window of its own (its own
+ * `obsidian/<n>/` in `stateDir` (this container's; its downloads, `files/`, stay in `.sxs/`). One Obsidian opens any number of vaults, each in a window of its own (its own
  * `app`, settings and plugins); an instance has at most one window of each setup (its vault
  * `<n>/<setup>/`, written anew for each run), a run's at a time (`<setup>.lock`), and one clipboard its
  * windows share (`clipboard.lock`). Beside them its configuration directory (`config/`, Electron's
@@ -265,7 +265,7 @@ const versions = (): NonNullable<typeof resolved> =>
  * in it (`release`: an idle instance is some 95 tasks); its starter window (the vault chooser, which it
  * opens with no vault) keeps it up between one setup's window and the next.
  */
-const pool = join(cacheDir, 'obsidian');
+const pool = join(stateDir, 'obsidian');
 const instanceDir = (n: number | string): string => join(pool, String(n));
 /**
  * At most this many instances, each with a window of each setup at most: a setup's run has as many

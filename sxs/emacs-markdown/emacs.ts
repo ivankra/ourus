@@ -23,7 +23,7 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import type { Session } from '../lib/driver.ts';
 import { ensureAptInstalled } from '../lib/system.ts';
-import { cacheDir } from '../proxy.ts';
+import { stateDir } from '../proxy.ts';
 
 const run = promisify(execFile);
 
@@ -74,7 +74,8 @@ export const SELECT = (anchor: number, head: number): string =>
 /** Starts Emacs on a terminal of its own (installing both first if missing), and loads `init` (Lisp) into it. */
 export async function startEmacs(init: string, say: (line: string) => void): Promise<Emacs> {
   ensureAptInstalled("Emacs's driver", [{ pkg: 'emacs-nox', command: 'emacs' }, { pkg: 'emacs-nox', command: 'emacsclient' }, { pkg: 'tmux', command: 'tmux' }], say);
-  const dir = join(cacheDir, 'emacs-markdown', `server-${process.pid}`);
+  // (this container's: a pid is unique in one container only)
+  const dir = join(stateDir, 'emacs-markdown', `server-${process.pid}`);
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   chmodSync(dir, 0o700);
   const socket = join(dir, 'socket');

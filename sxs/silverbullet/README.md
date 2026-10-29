@@ -94,7 +94,7 @@ found" itself (a GET of `/.fs/ourus-sxs…` gets a 404), and a full run fetches 
 after a first full sync: until then the service worker passes every request to the server, writes
 too (its `fullSyncConfirmed`; "First full sync confirmed, will now start serving requests locally" in
 its log), while a profile with a snapshot from before is served locally at once. So on a fresh
-profile (`.sxs/` new, or the pool's browser profiles, `.sxs/chromium/`, gone) the first test page's write reached the
+profile (`.sxs/` new, or the pool's browser profiles, `<state>/chromium/`, gone) the first test page's write reached the
 proxy, got its 503, and `space.writePage` threw `Offline` (the client's error for a 5xx), and the run
 died in `open`. Every run before had a synced profile. `open` now waits until the worker controls
 the page and the client has had its `space-sync-complete` (`client.fullSyncCompleted`, the syscall

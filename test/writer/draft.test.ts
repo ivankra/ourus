@@ -4,16 +4,16 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { ProseText, OurusDoc, type OutlineNode, type OutlineNodePersistent } from '../../src/doc/index.ts';
-import { OurusDraft, type Refusal } from '../../src/draft/index.ts';
-import { differenceFrom } from '../../src/draft/check.ts';
+import { OurusProse, OurusDoc, type OurusNode, type PersistentNode } from '../../src/doc/index.ts';
+import { OurusDraft, type Refusal } from '../../src/writer/index.ts';
+import { differenceFrom } from '../../src/writer/check.ts';
 import { createPlaceholder } from '../../src/text/index.ts';
 
 const parse = (text: string, flavor: 'gfm' | 'commonmark' | 'obsidian' = 'gfm'): OurusDoc => OurusDoc.parse(text, { config: { flavor } });
 
 /** The node whose text is `text`, searched depth first. */
-function find(doc: OurusDoc, text: string): OutlineNode {
-  const visit = (node: OutlineNode): OutlineNode | null => {
+function find(doc: OurusDoc, text: string): OurusNode {
+  const visit = (node: OurusNode): OurusNode | null => {
     const t = node.kind === 'root' ? null : doc.textOf(node);
     if (t && t.body === text) return node;
     for (const c of node.children) {
@@ -28,11 +28,11 @@ function find(doc: OurusDoc, text: string): OutlineNode {
 }
 
 /** The draft's outline as `kind text gap`, one node a line, indented by depth. */
-function outline(root: OutlineNodePersistent, origin: OutlineNode | null, draft: { textOf: (n: OutlineNodePersistent, o: OutlineNode | null) => unknown; originOf: (n: OutlineNodePersistent) => OutlineNode | null }): string {
+function outline(root: PersistentNode, origin: OurusNode | null, draft: { textOf: (n: PersistentNode, o: OurusNode | null) => unknown; originOf: (n: PersistentNode) => OurusNode | null }): string {
   const out: string[] = [];
-  const visit = (node: OutlineNodePersistent, at: OutlineNode | null, depth: number): void => {
+  const visit = (node: PersistentNode, at: OurusNode | null, depth: number): void => {
     if (node.kind !== 'root') {
-      const text = draft.textOf(node, at) as ProseText | null;
+      const text = draft.textOf(node, at) as OurusProse | null;
       out.push(`${'  '.repeat(depth - 1)}${node.kind} ${JSON.stringify(text?.body ?? null)} ${node.gap}`);
     }
     node.children.forEach((c, i) => visit(c, node.read && at?.persistentNode === node ? at.child(i) : draft.originOf(c), depth + 1));
@@ -69,8 +69,8 @@ test('references resolve through what the draft touched: a descendant of a moved
   const a1 = find(doc, 'a1');
   const b = find(doc, 'b');
   const draft = new OurusDraft(doc).remove([a]).place('after', b, [a.id]);
-  // a1's OutlineNode still names it: through its moved parent
-  draft.setText(a1, new ProseText('paragraph', true, 'A1'));
+  // a1's OurusNode still names it: through its moved parent
+  draft.setText(a1, new OurusProse('paragraph', true, 'A1'));
   applied(draft);
   assert.equal(drawn(doc, draft), ['item "b" 0', 'item "a" 0', '  item "A1" 0'].join('\n'));
 });
@@ -82,12 +82,12 @@ test('a node is placed once, never under itself', () => {
   assert.throws(() => new OurusDraft(doc).remove([a]).append(a1, 'last', [a.id]), /under itself/);
 });
 
-test('new nodes reserve ids from the document', () => {
+test('new nodes take ids from the document\'s lineage', () => {
   const doc = parse('a\n');
   const draft = new OurusDraft(doc);
-  const id = draft.create('paragraph', new ProseText('paragraph', false, 'b'));
+  const id = draft.create('paragraph', new OurusProse('paragraph', false, 'b'));
   assert.equal(id, doc.nextId);
-  assert.equal(draft.nextId, doc.nextId + 1);
+  assert.equal(doc.lineage.next, doc.nextId + 1);
   draft.place('after', find(doc, 'a'), [id]);
   applied(draft);
   // two paragraphs one under the other would run together: a blank line
@@ -144,33 +144,33 @@ test('done: a changed ordered list is numbered from its start', () => {
 test('done: escapes, markup kept apart, others gained by the text, the caret mapped (examples 18, 20)', () => {
   const doc = parse('one\n');
   const p = find(doc, 'one');
-  const draft = new OurusDraft(doc).setText(p, new ProseText('paragraph', false, 'one\n- two')).setCaret(p, 4, -1);
+  const draft = new OurusDraft(doc).setText(p, new OurusProse('paragraph', false, 'one\n- two')).setCaret(p, 4, -1);
   applied(draft);
   assert.deepEqual(draft.escapes.get(p.id), [4]);
-  const gained = new OurusDraft(doc).setText(p, new ProseText('paragraph', false, '<div>')).setCaret(p, 3);
+  const gained = new OurusDraft(doc).setText(p, new OurusProse('paragraph', false, '<div>')).setCaret(p, 3);
   applied(gained);
   const node = gained.root.children[0]!;
-  assert.equal((node.text as ProseText).text, '\\<div>');
+  assert.equal((node.text as OurusProse).text, '\\<div>');
   assert.deepEqual(gained.caret, { node, offset: 4, assoc: 1 });
 });
 
 test('done: a text\'s empty last line is a blank line after it, the caret on it; another empty line has no Markdown', () => {
   const doc = parse('- one\n- two\n');
-  const draft = new OurusDraft(doc).setText(find(doc, 'one'), new ProseText('paragraph', true, 'one\n')).setCaret(find(doc, 'one'), 4);
+  const draft = new OurusDraft(doc).setText(find(doc, 'one'), new OurusProse('paragraph', true, 'one\n')).setCaret(find(doc, 'one'), 4);
   applied(draft);
   assert.equal(drawn(doc, draft), ['item "one" 1', 'item "two" 0'].join('\n'));
   assert.deepEqual(draft.caret, { blank: draft.root.children[0], line: 0 });
-  const inside = new OurusDraft(doc).setText(find(doc, 'one'), new ProseText('paragraph', true, 'one\n\ntwo'));
+  const inside = new OurusDraft(doc).setText(find(doc, 'one'), new OurusProse('paragraph', true, 'one\n\ntwo'));
   assert.equal(refused(inside).detail, 'an empty line inside a text');
 });
 
 test('done: an empty item at the caret right under text is held by a placeholder', () => {
   const doc = parse('para\n');
   const draft = new OurusDraft(doc);
-  const id = draft.create('item', new ProseText('paragraph', true, ''));
+  const id = draft.create('item', new OurusProse('paragraph', true, ''));
   draft.append(find(doc, 'para'), 'first', [id]).setCaret(id, 0);
   applied(draft);
-  const text = draft.root.children[0]!.children[0]!.text as ProseText;
+  const text = draft.root.children[0]!.children[0]!.text as OurusProse;
   assert.deepEqual(text.marks.marks, [createPlaceholder(0)]);
 });
 
@@ -185,7 +185,7 @@ test('reads: a document says where it differs from the draft', () => {
   const doc = parse('- a\n- b\n');
   const draft = new OurusDraft(doc).remove([find(doc, 'b')]);
   applied(draft);
-  assert.equal(differenceFrom(doc.update([{ from: 3, to: 7, insert: '' }]), draft), null);
+  assert.equal(differenceFrom(doc.update({ changes: [{ from: 3, to: 7, insert: '' }] }), draft), null);
   assert.match(differenceFrom(doc, draft) ?? '', /1 children, read as 2/);
 });
 
@@ -204,7 +204,7 @@ test('setText: a quote\'s title goes (null); no other node loses its text', () =
   const doc = parse('> [!note] Title\n> body\n', 'obsidian');
   const quote = doc.rootNode.child(0);
   const draft = new OurusDraft(doc);
-  const id = draft.create('paragraph', new ProseText('paragraph', false, 'Title'));
+  const id = draft.create('paragraph', new OurusProse('paragraph', false, 'Title'));
   draft.setText(quote, null).append(quote, 'first', [id]);
   applied(draft);
   assert.equal(drawn(doc, draft), ['quote null 0', '  paragraph "Title" 1', '  paragraph "body" 0'].join('\n'));

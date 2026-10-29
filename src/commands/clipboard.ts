@@ -1,14 +1,14 @@
 // The clipboard as paste reads it: which of its formats is the Markdown (spec/paste-conv.md), HTML
 // converted (spec/paste-html.md), and its lines as they read out of what they were copied from.
 
-import type { Config } from '../config.ts';
+import type { OurusConfig } from '../config.ts';
 import { OurusDoc } from '../doc/index.ts';
 import { MdHtmlParser } from '../parser/index.ts';
 import { advanceColumns, dropColumns, trimMd } from '../text/index.ts';
 
 
 /** A clipboard as the host reads it: each format it holds, named as a `DataTransfer` names them. */
-export interface Clipboard {
+export interface OurusClipboard {
   /** Every copy's: a Markdown source's text, or a page's as it shows (`innerText`: no markers). */
   readonly 'text/plain'?: string;
   /** A Markdown app's own copy (Obsidian's, and ourus's). */
@@ -28,13 +28,15 @@ const SOURCE_MARK = /<!--\s*(?:ourus\s*-->|data-siyuan=)/;
  * VS Code's marked so); else HTML with structure, converted; else HTML with inline formatting,
  * converted, a phrase (`phrase`: one line of text, which keeps its formatting); else the text.
  */
-export function clipboardMarkdown(clipboard: Clipboard): { markdown: string; phrase: boolean } | null {
+export function clipboardMarkdown(clipboard: OurusClipboard): { markdown: string; phrase: boolean } | null {
   if (clipboard['text/markdown'] !== undefined) return { markdown: clipboard['text/markdown'], phrase: false };
   const text = clipboard['text/plain'];
   const html = clipboard['text/html'];
   if (html !== undefined && clipboard['vscode-editor-data'] === undefined && !(text !== undefined && SOURCE_MARK.test(html))) {
     const converted = MdHtmlParser.parse(html);
-    if (converted.structured || text === undefined) return { markdown: converted.markdown, phrase: false };
+    // (one block of one line, a heading or a rule, ends with a line break: a node, not inline text)
+    if (converted.structured) return { markdown: converted.markdown.includes('\n') ? converted.markdown : `${converted.markdown}\n`, phrase: false };
+    if (text === undefined) return { markdown: converted.markdown, phrase: false };
     if (converted.formatted && converted.markdown !== '') return { markdown: converted.markdown, phrase: true };
   }
   return text === undefined ? null : { markdown: text, phrase: false };
@@ -48,13 +50,14 @@ export function clipboardMarkdown(clipboard: Clipboard): { markdown: string; phr
  * fence and gives the code its own indentation back. A block that closes as it is reads as it is, its
  * code's indentation kept (so do other clipboards).
  */
-export function clipboardSource(lines: readonly string[], config: Partial<Config>): string[] {
+export function clipboardSource(lines: readonly string[], config: Partial<OurusConfig>): string[] {
   const indentOf = (text: string): number => advanceColumns(text, 0, /^[ \t]*/.exec(text)![0].length, 0);
-  const common = Math.min(...lines.filter((text) => trimMd(text) !== '').map(indentOf));
+  // (by a reduction, not a spread: a clipboard of a hundred thousand lines is past the arguments a call takes)
+  const common = lines.filter((text) => trimMd(text) !== '').reduce((m, text) => Math.min(m, indentOf(text)), Infinity);
   const source = lines.map((text) => (trimMd(text) === '' ? '' : dropColumns(text, common)));
   const fence = /^(`{3,}|~{3,}|\$\$|%%)/.exec(source[0]!);
   const rest = source.slice(1).filter((text) => text !== '');
-  const inner = rest.length ? Math.min(...rest.map(indentOf)) : 0;
+  const inner = rest.length ? rest.reduce((m, text) => Math.min(m, indentOf(text)), Infinity) : 0;
   const closes = (): boolean => !!OurusDoc.parse(source.join('\n'), { config }).mdTree.root.children[0]?.attrs.closed;
   if (fence && inner > 0 && indentOf(source[source.length - 1]!) === inner && !closes() && new RegExp(`^[ \\t]*\\${fence[1]![0]}{${Math.min(fence[1]!.length, 3)},}[ \\t]*$`).test(source[source.length - 1]!)) {
     return [source[0]!, ...source.slice(1).map((text) => (text === '' ? '' : dropColumns(text, inner)))];
@@ -66,7 +69,7 @@ export function clipboardSource(lines: readonly string[], config: Partial<Config
 const OURUS_MARK = '<!-- ourus -->';
 
 /** The clipboard ourus writes for `markdown`: the Markdown as text and as itself, and its rendering, marked as ourus's. */
-export function clipboardOf(markdown: string, config: Partial<Config>): Clipboard {
+export function clipboardOf(markdown: string, config: Partial<OurusConfig>): OurusClipboard {
   const html = OurusDoc.parse(markdown, { config }).mdTree.renderHtml();
   return { 'text/plain': markdown, 'text/markdown': markdown, 'text/html': OURUS_MARK + html };
 }
@@ -77,7 +80,7 @@ export function clipboardOf(markdown: string, config: Partial<Config>): Clipboar
  * without a line break (inline text): frontmatter read after a blank line, a block it leaves open
  * (a fence it doesn't close) closed where it ends. Null where it holds nothing.
  */
-export function clipboardFragment(markdown: string, config: Partial<Config>): { readonly doc: OurusDoc; readonly inline: boolean } | null {
+export function clipboardFragment(markdown: string, config: Partial<OurusConfig>): { readonly doc: OurusDoc; readonly inline: boolean } | null {
   const lines = markdown.split(/\r\n|\n|\r/);
   while (lines.length && trimMd(lines[0]!) === '') lines.shift();
   while (lines.length && trimMd(lines[lines.length - 1]!) === '') lines.pop();

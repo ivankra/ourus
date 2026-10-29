@@ -3,24 +3,25 @@
 
 import type { MdLine } from '../parser/index.ts';
 import { lineIndexAt } from '../text/index.ts';
-import type { OutlineNode } from './node.ts';
+import type { OurusNode } from './node.ts';
 import type { OurusDoc } from './doc.ts';
-import type { OutlineNodeText } from './text.ts';
+import { foldOwner } from './view.ts';
+import type { OurusText } from './text.ts';
 
 export type Located =
   /** In a node's text: `offset` in its string (`text.text`, the frame included). */
-  | { readonly zone: 'text'; readonly node: OutlineNode; readonly text: OutlineNodeText; readonly offset: number }
+  | { readonly zone: 'text'; readonly node: OurusNode; readonly text: OurusText; readonly offset: number }
   /** In a frame part (a checkbox, `#`s, a fence, ...): `offset` in the text's string. */
-  | { readonly zone: 'frame'; readonly node: OutlineNode; readonly text: OutlineNodeText; readonly part: string; readonly offset: number }
+  | { readonly zone: 'frame'; readonly node: OurusNode; readonly text: OurusText; readonly part: string; readonly offset: number }
   /**
    * In an item's marker piece (`marker`): its indentation, its marker's characters, or the padding
    * after them (`part`, a position right after the marker its padding's); or in another container's
    * prefix piece (`prefix`): which piece of the line, and where in it.
    */
-  | { readonly zone: 'marker'; readonly node: OutlineNode; readonly line: MdLine; readonly piece: number; readonly offset: number; readonly part: 'indent' | 'marker' | 'padding' }
-  | { readonly zone: 'prefix'; readonly node: OutlineNode; readonly line: MdLine; readonly piece: number; readonly offset: number }
+  | { readonly zone: 'marker'; readonly node: OurusNode; readonly line: MdLine; readonly piece: number; readonly offset: number; readonly part: 'indent' | 'marker' | 'padding' }
+  | { readonly zone: 'prefix'; readonly node: OurusNode; readonly line: MdLine; readonly piece: number; readonly offset: number }
   /** On a blank line: the node above's, whose gap it is. */
-  | { readonly zone: 'gap'; readonly owner: OutlineNode }
+  | { readonly zone: 'gap'; readonly owner: OurusNode }
   /** Before the first node (frontmatter, blank lines), or past the last line. */
   | { readonly zone: 'preamble' | 'none' };
 
@@ -32,10 +33,12 @@ export function locate(doc: OurusDoc, pos: number): Located {
   if (pos > line.to) return { zone: 'none' };
   const node = doc.nodeAtLine(line.index);
   if (!node) {
+    // (after a folded subtree, the folded node's gap: its last descendant is hidden)
     const owner = extentOwner(doc.rootNode, line.index);
-    return owner ? { zone: 'gap', owner } : { zone: 'preamble' };
+    return owner ? { zone: 'gap', owner: foldOwner(doc, owner) } : { zone: 'preamble' };
   }
-  // (a quote that is the node's text, `Config.quotes`: its `>` the text's, frame or characters)
+  // (a quote that is the node's text, `OurusConfig.quotes`: its `>` the text's, frame or
+  // characters)
   const quote = node.persistentNode.textQuote;
   const own = quote ? line.prefix.find((p) => p.container.block === quote) : undefined;
   if (pos < line.contentFrom && !(own && pos >= own.from)) {
@@ -50,6 +53,11 @@ export function locate(doc: OurusDoc, pos: number): Located {
   }
   const text = doc.textOf(node);
   if (!text) return { zone: 'none' };
+  // (a line of the node before its text, a quote's `>` above its callout title, `>⏎> [!note] T`: its prefix)
+  if (node.kind === 'quote' && line.index < node.textFirstLine && line.prefix.length) {
+    const at = line.prefix.length - 1;
+    return { zone: 'prefix', node, line, piece: at, offset: pos - line.prefix[at]!.from };
+  }
   const offset = doc.offsetOf(node, pos);
   // a closing frame's start is the end of the text: an underline starts with the line break after the
   // title, an ATX title's closing `#`s with the blanks before them
@@ -58,7 +66,7 @@ export function locate(doc: OurusDoc, pos: number): Located {
 }
 
 /** The deepest node whose extent holds `line` (its text, its children or its blank lines), or null before the first node. */
-function extentOwner(root: OutlineNode, line: number): OutlineNode | null {
+function extentOwner(root: OurusNode, line: number): OurusNode | null {
   let node = root;
   for (;;) {
     const { offsets, children } = node.persistentNode;

@@ -9,7 +9,7 @@
 
 import fc from 'fast-check';
 import { OurusDoc } from '../../src/doc/index.ts';
-import { settlePlaceholders } from '../../src/draft/index.ts';
+import { settlePlaceholders } from '../../src/writer/index.ts';
 import { mapPos } from '../../src/text/index.ts';
 import { drawDoc } from '../drawing.ts';
 import { play } from '../player.ts';

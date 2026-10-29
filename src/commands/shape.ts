@@ -3,10 +3,10 @@
 // was given; a selection from a line's column 0 keeps that end at its line's node. And a structural
 // command over roots at several depths (indent, outdent): each run of sibling roots in turn.
 
-import type { OurusDoc, OutlineNode } from '../doc/index.ts';
+import type { OurusDoc, OurusNode } from '../doc/index.ts';
 import { composeChanges, type ChangeSpec } from '../text/index.ts';
 import { CommandContext, reject, type CommandOutcome } from './context.ts';
-import type { TextSelection } from './types.ts';
+import type { OurusSelection } from './types.ts';
 import { goneWithTextlessParents, operandsOf, runsOf } from './util.ts';
 
 /** Where a whole-line selection's last end is: the next line's start (the canonical shape), its last line's end, its gap's end, past its gap. */
@@ -20,7 +20,7 @@ export type SelectionShape =
   | { readonly kind: 'line'; readonly id: number; readonly up: boolean };
 
 /** The shape of `selection` in `doc` a change keeps; null where it follows its text (a caret, text, a start past column 0). */
-export function shapeOf(doc: OurusDoc, selection: TextSelection): SelectionShape | null {
+export function shapeOf(doc: OurusDoc, selection: OurusSelection): SelectionShape | null {
   const from = Math.min(selection.anchor, selection.head);
   const to = Math.max(selection.anchor, selection.head);
   if (from === to) return null;
@@ -55,7 +55,7 @@ export function reshaped(outcome: CommandOutcome, shape: SelectionShape | null, 
     if (to <= from) return outcome;
     return { ...outcome, selection: shape.up ? { anchor: to, head: from } : { anchor: from, head: to } };
   }
-  const nodes: OutlineNode[] = [];
+  const nodes: OurusNode[] = [];
   for (const id of shape.ids) {
     const mapped = map(id);
     const node = mapped === undefined ? undefined : doc.node(mapped);

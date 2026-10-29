@@ -2,8 +2,8 @@
 // their subtrees, below them. The command says what is copied and where the caret goes; `done()`
 // numbers the list, keeps the copies apart from what is around them, or refuses where it can't.
 
-import { ProseText, type OutlineNode, type OutlineNodePersistent } from '../doc/index.ts';
-import type { AnchorSpec } from '../draft/index.ts';
+import { OurusProse, type OurusNode, type PersistentNode } from '../doc/index.ts';
+import type { AnchorSpec } from '../writer/index.ts';
 import { reject, type CommandContext, type CommandOutcome } from './context.ts';
 import { reshaped, shapeOf } from './shape.ts';
 import { caretOffset, headingLevel, oneRun, operandsRefused, textEnd } from './util.ts';
@@ -22,15 +22,19 @@ export function duplicateSubtreeCommand(ctx: CommandContext): CommandOutcome {
   if (!Array.isArray(nodes)) return operandsRefused(nodes);
   // the copies go after the last heading's section: those before it that it would take in (any node
   // but a heading of its level or above) would land under another parent than their originals
-  const level = (n: OutlineNode): number => headingLevel(ctx, n);
+  const level = (n: OurusNode): number => headingLevel(ctx, n);
   const last = nodes.map((n) => n.kind).lastIndexOf('heading');
   if (last > 0 && nodes.slice(0, last).some((n) => n.kind !== 'heading' || level(n) > level(nodes[last]!))) {
     return reject('not-expressible', 'the copies before the heading would land in its section');
   }
-  // a placeholder in what is copied: not done yet (a copy's are written anew where it lands)
-  if (nodes.some((n) => ctx.doc.marks.marks.some((m) => m.from >= ctx.doc.rangeOf(n).from && m.from <= ctx.doc.rangeOf(n).to))) return null;
+  // a placeholder in what is copied: not done yet (a copy's are written anew where it lands: a held
+  // space, an empty node with children, an empty paragraph, which holds only with one), but in the
+  // item Enter just made, empty and alone, its copy as empty, an empty item without a placeholder
+  const held = nodes.some((n) => ctx.doc.marks.marks.some((m) => m.from >= ctx.doc.rangeOf(n).from && m.from <= ctx.doc.rangeOf(n).to));
+  const fresh = nodes.length === 1 && nodes[0]!.kind === 'item' && !nodes[0]!.children.length && (ctx.doc.textOf(nodes[0]!) as OurusProse | null)?.empty === true;
+  if (held && !fresh) return null;
   const draft = ctx.draft();
-  const ids = new Map<OutlineNodePersistent, number>();
+  const ids = new Map<PersistentNode, number>();
   const copies = nodes.map((n) => draft.copy(n, ids));
   const original = nodes[nodes.length - 1]!;
   draft.place('after', original, copies);
@@ -64,23 +68,26 @@ export function duplicateSubtreeCommand(ctx: CommandContext): CommandOutcome {
     if (id === undefined || !text) return null;
     return { ref: id, offset: caretOffset(at, text), assoc: 1 };
   };
-  // a subtree selection: the copies, in its shape (`reshaped`, from a caret in the first)
+  // a subtree selection: the copies, in its shape (`reshaped`, from a caret in the first copy with
+  // text: a first root with none of its own, `- - a` or a quote without a title, has its child's)
   const shape = ctx.nodes ? null : shapeOf(ctx.doc, ctx.selection);
-  const copied = shape?.kind === 'subtrees' ? ({ ref: copies[0]!, offset: 0 } as const) : null;
+  const texted = (n: OurusNode): OurusNode | undefined => (ctx.doc.textOf(n) ? n : n.children.map(texted).find(Boolean));
+  const first = shape?.kind === 'subtrees' ? nodes.map(texted).find(Boolean) : undefined;
+  const copied = first ? ({ ref: ids.get(first.persistentNode)!, offset: 0 } as const) : null;
   let head = copied ?? end(ctx.selection.head);
   let anchor = copied ?? (ctx.collapsed ? head : end(ctx.selection.anchor));
   if ((!head || !anchor) && ctx.nodes) {
     // each end in its text, where it is in one
     const kept = (pos: number): AnchorSpec => {
       const at = ctx.doc.locate(pos);
-      return at.zone === 'text' && at.text instanceof ProseText ? { ref: at.node, offset: at.offset } : { old: pos };
+      return at.zone === 'text' && at.text instanceof OurusProse ? { ref: at.node, offset: at.offset } : { old: pos };
     };
     [anchor, head] = [kept(ctx.selection.anchor), kept(ctx.selection.head)];
   }
   if (!head || !anchor) return null;
   // a folded node's copy is folded too, and every fold inside it
   const folds: number[] = [];
-  const visit = (n: OutlineNode): void => {
+  const visit = (n: OurusNode): void => {
     if (ctx.doc.folded.has(n.id) && ids.has(n.persistentNode)) folds.push(ids.get(n.persistentNode)!);
     n.children.forEach(visit);
   };

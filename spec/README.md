@@ -69,9 +69,6 @@ Read every difference first; a case whose actions should change is redrawn by ha
 - [`regressions.md`](regressions.md): cases pinning behaviors settled by bug fixes and refactoring.
 - [`quirks.md`](quirks.md): cases of the options and values that model one app's mechanics
   (`quirk…` options, and values named after an app), not a rule.
-- [`z-open.md`](z-open.md): open questions, one each, drawing what ourus does today where no
-  command file does, with the alternative and a recommendation; a settled one moves to its
-  command's file.
 - [Typing](typing.md): what the host types, with no ourus command, and what it then reads as.
 
 Each command has its own spec, named for its key or editing behavior. Its intro lists the

@@ -2,10 +2,10 @@
 // (where typing extends it) and of the selection (the nodes it acts on); and what Tab and Shift-Tab
 // share: a heading's level, one up or down.
 
-import { ProseText, AtomText, textEnd, textStart, type OutlineNode, type OutlineNodeText, type Located, type OurusDoc } from '../doc/index.ts';
-import type { AnchorSpec, OurusDraft } from '../draft/index.ts';
+import { OurusProse, OurusAtom, textEnd, textStart, type OurusNode, type OurusText, type Located, type OurusDoc } from '../doc/index.ts';
+import type { AnchorSpec, OurusDraft } from '../writer/index.ts';
 import { reject, type CommandContext, type CommandOutcome } from './context.ts';
-import type { TextSelection } from './types.ts';
+import type { OurusSelection } from './types.ts';
 import { heldSpaceAt, isHeldSpacePlaceholder, lineOf } from '../text/index.ts';
 
 export { textEnd, textStart } from '../doc/index.ts';
@@ -23,16 +23,16 @@ export function inMarkup(doc: OurusDoc, at: Located, pos: number): boolean {
   if (at.zone === 'text' && at.offset === 0 && pos < doc.posOf(at.node, 0, -1)) {
     return pos > doc.lineAt(pos).from && !heldSpaceAt(doc.marks, doc.text, pos);
   }
-  if (at.zone !== 'frame' || !(at.text instanceof ProseText)) return false;
+  if (at.zone !== 'frame' || !(at.text instanceof OurusProse)) return false;
   if (pos === doc.lineAt(pos).from) return false;
   return (at.part === 'task' && !at.text.empty) || at.part === 'heading' || at.part === 'callout';
 }
 
 /** A quote's text (`quotes: text`) without its `>`s, every line's: a paragraph's, where it is. */
-export function unquote(text: ProseText): ProseText {
+export function unquote(text: OurusProse): OurusProse {
   let out = text;
   for (const p of [...text.frame].reverse()) if (p.part === 'quote') out = out.splice(p.from, p.to);
-  return new ProseText('paragraph', out.item, out.text, out.marks);
+  return new OurusProse('paragraph', out.item, out.text, out.marks);
 }
 
 /**
@@ -40,7 +40,7 @@ export function unquote(text: ProseText): ProseText {
  * quote without a title, an item whose first block is on its marker's line (`- > q`). Where they go,
  * those go with them, which would hold nothing.
  */
-export function withTextlessParents(doc: OurusDoc, nodes: readonly OutlineNode[]): OutlineNode[] {
+export function withTextlessParents(doc: OurusDoc, nodes: readonly OurusNode[]): OurusNode[] {
   let out = [...nodes];
   for (let p = out[0]!.parent; p && (p.kind === 'quote' || p.kind === 'item') && !doc.textOf(p) && p.children.length === out.length; p = p.parent) out = [p];
   return out;
@@ -52,7 +52,7 @@ export function withTextlessParents(doc: OurusDoc, nodes: readonly OutlineNode[]
  * (`- > q`), whose children are those nodes, or go with them (outward, `withTextlessParents` over
  * every run together). In document order.
  */
-export function goneWithTextlessParents(doc: OurusDoc, nodes: readonly OutlineNode[]): OutlineNode[] {
+export function goneWithTextlessParents(doc: OurusDoc, nodes: readonly OurusNode[]): OurusNode[] {
   const gone = new Set(nodes);
   for (let lifted = true; lifted; ) {
     lifted = false;
@@ -72,13 +72,13 @@ export function goneWithTextlessParents(doc: OurusDoc, nodes: readonly OutlineNo
  * (`ctx.nodes`, in document order), else the selection's (`selectionRoots`); else why none: none
  * selected (the blank lines before the first node), or an id the document lacks.
  */
-export function operandsOf(ctx: CommandContext): OutlineNode[] | NoOperands {
+export function operandsOf(ctx: CommandContext): OurusNode[] | NoOperands {
   if (!ctx.nodes) {
     const roots = selectionRoots(ctx.doc, ctx.selection);
     return roots.length ? roots : 'none';
   }
   if (!ctx.nodes.length) return 'none';
-  const nodes = new Set<OutlineNode>();
+  const nodes = new Set<OurusNode>();
   for (const id of ctx.nodes) {
     const node = ctx.doc.node(id);
     // (the root is no node to act on)
@@ -93,14 +93,14 @@ export function operandsOf(ctx: CommandContext): OutlineNode[] | NoOperands {
  * share, the outermost), else the subtrees it touches (`OurusDoc.touchedNodes`: a caret's node, the
  * innermost there). The blocks a host draws and the nodes acted on are the same.
  */
-export function selectionRoots(doc: OurusDoc, selection: TextSelection): OutlineNode[] {
+export function selectionRoots(doc: OurusDoc, selection: OurusSelection): OurusNode[] {
   return [...(doc.selectedNodes(selection) ?? doc.touchedNodes(selection))];
 }
 
 /** `nodes` as runs of contiguous siblings, in document order. */
-export function runsOf(nodes: readonly OutlineNode[]): OutlineNode[][] {
+export function runsOf(nodes: readonly OurusNode[]): OurusNode[][] {
   const sorted = [...nodes].sort((a, b) => a.startLine - b.startLine || a.depth - b.depth);
-  const runs: OutlineNode[][] = [];
+  const runs: OurusNode[][] = [];
   for (const n of sorted) {
     const run = runs.at(-1);
     const last = run?.at(-1);
@@ -114,7 +114,7 @@ export function runsOf(nodes: readonly OutlineNode[]): OutlineNode[][] {
  * The nodes a command that moves one run acts on (`operandsOf`): contiguous siblings, of one kind
  * where `sameKind`; else why not.
  */
-export function oneRun(ctx: CommandContext, sameKind = false): OutlineNode[] | NoOperands | 'mixed-kinds' {
+export function oneRun(ctx: CommandContext, sameKind = false): OurusNode[] | NoOperands | 'mixed-kinds' {
   const nodes = operandsOf(ctx);
   if (!Array.isArray(nodes)) return nodes;
   const runs = runsOf(nodes);
@@ -130,14 +130,14 @@ export type NoOperands = 'none' | 'non-contiguous' | 'no-such-node';
  * Where Enter at `head` acts: in a node's text; in an item's marker, a task's checkbox or a heading's
  * `#`s, at the text's start (rule 5). Null anywhere else.
  */
-export function textActedOnAt(ctx: CommandContext, head: number): { node: OutlineNode; text: ProseText; offset: number } | null {
+export function textActedOnAt(ctx: CommandContext, head: number): { node: OurusNode; text: OurusProse; offset: number } | null {
   const doc = ctx.doc;
   const at = doc.locate(head);
-  if (at.zone === 'text') return at.text instanceof ProseText ? { node: at.node, text: at.text, offset: at.offset } : null;
-  if (at.zone === 'frame' && at.text instanceof ProseText && (at.part === 'task' || at.part === 'heading')) return { node: at.node, text: at.text, offset: at.text.textStart(0) };
+  if (at.zone === 'text') return at.text instanceof OurusProse ? { node: at.node, text: at.text, offset: at.offset } : null;
+  if (at.zone === 'frame' && at.text instanceof OurusProse && (at.part === 'task' || at.part === 'heading')) return { node: at.node, text: at.text, offset: at.text.textStart(0) };
   if (at.zone === 'marker' && at.node.kind === 'item' && at.line.index === at.node.startLine) {
     const text = doc.textOf(at.node);
-    return text instanceof ProseText ? { node: at.node, text, offset: text.textStart(0) } : null;
+    return text instanceof OurusProse ? { node: at.node, text, offset: text.textStart(0) } : null;
   }
   return null;
 }
@@ -155,7 +155,7 @@ export function selectionInText(ctx: CommandContext, draft: OurusDraft, keepOnFe
   const { anchor, head } = ctx.selection;
   const at = ctx.from;
   // on a fence's line, where markup is text: Tab and Shift-Tab leave it there, for the next one (Indent31)
-  if (keepOnFence && ctx.config.markup === 'text' && ctx.collapsed && (at.zone === 'frame' || at.zone === 'text') && at.text instanceof AtomText && at.text.fence && at.text.delimiterLine(lineOf(at.text.text, at.offset))) {
+  if (keepOnFence && ctx.config.markup === 'text' && ctx.collapsed && (at.zone === 'frame' || at.zone === 'text') && at.text instanceof OurusAtom && at.text.fence && at.text.delimiterLine(lineOf(at.text.text, at.offset))) {
     draft.setCaret(at.node, at.offset, 1);
     return;
   }
@@ -192,7 +192,7 @@ export function selectionInText(ctx: CommandContext, draft: OurusDraft, keepOnFe
   // each end in its text where it is in one (a text written again keeps its offsets), else where it was
   const end = (pos: number): AnchorSpec => {
     const at = ctx.doc.locate(pos);
-    return at.zone === 'text' && at.text instanceof ProseText ? { ref: at.node, offset: headingOffset(shifts, at.node, at.offset) } : { old: pos };
+    return at.zone === 'text' && at.text instanceof OurusProse ? { ref: at.node, offset: headingOffset(shifts, at.node, at.offset) } : { old: pos };
   };
   draft.select(end(anchor), end(head));
 }
@@ -201,13 +201,13 @@ export function selectionInText(ctx: CommandContext, draft: OurusDraft, keepOnFe
  * The spaces Markdown hides before a text (`OurusDoc.hiddenSpaces`) that `pos` is in or at either end
  * of, with their node and its text: the user's whitespace there, not markup.
  */
-export function hiddenSpacesAt(ctx: CommandContext, pos: number): { readonly node: OutlineNode; readonly text: ProseText; readonly from: number; readonly to: number } | null {
+export function hiddenSpacesAt(ctx: CommandContext, pos: number): { readonly node: OurusNode; readonly text: OurusProse; readonly from: number; readonly to: number } | null {
   const doc = ctx.doc;
   if (!doc.lineCount) return null;
   const node = doc.nodeAtLine(doc.lineAt(pos).index);
   const hidden = node && doc.hiddenSpaces(node);
   const text = node && doc.textOf(node);
-  if (!hidden || !(text instanceof ProseText) || pos < hidden.from || pos > hidden.to) return null;
+  if (!hidden || !(text instanceof OurusProse) || pos < hidden.from || pos > hidden.to) return null;
   return { node: node!, text, ...hidden };
 }
 
@@ -218,24 +218,25 @@ export function onCodeLine(ctx: CommandContext, pos: number): boolean {
   const line = doc.lineAt(pos).index;
   const node = doc.nodeAtLine(line);
   const text = node ? doc.textOf(node) : null;
-  if (!node || !(text instanceof AtomText)) return false;
+  if (!node || !(text instanceof OurusAtom)) return false;
   // (indented code: every line of it)
   if (text.type === 'indented_code') return line >= node.textFirstLine;
   if (text.type !== 'fenced_code') return false;
-  const k = line - node.textFirstLine;
+  // (the text's line: where its string starts, an item's marker's line where its code starts below it)
+  const k = line - doc.lineAt(doc.posOf(node, 0)).index;
   return k >= 0 && !text.delimiterLine(k);
 }
 
 /** Where a caret at `at` goes in `text`, its node's: from markup before the text at its start; in code between its delimiters. */
-export function caretOffset(at: Located, text: OutlineNodeText): number {
+export function caretOffset(at: Located, text: OurusText): number {
   if (at.zone !== 'text') return textStart(text);
-  return text instanceof AtomText ? Math.min(Math.max(at.offset, textStart(text)), textEnd(text)) : at.offset;
+  return text instanceof OurusAtom ? Math.min(Math.max(at.offset, textStart(text)), textEnd(text)) : at.offset;
 }
 
 /** A node's heading level, 7 for a node that isn't a heading (below every level). */
-export function headingLevel(ctx: CommandContext, node: OutlineNode): number {
+export function headingLevel(ctx: CommandContext, node: OurusNode): number {
   const text = ctx.doc.textOf(node);
-  return text instanceof ProseText ? (text.heading?.level ?? 7) : 7;
+  return text instanceof OurusProse ? (text.heading?.level ?? 7) : 7;
 }
 
 /**
@@ -244,14 +245,14 @@ export function headingLevel(ctx: CommandContext, node: OutlineNode): number {
  * most); refused past `#` or `######`. Null for a title the ATX form would read otherwise (a closing
  * run of `#`s), which ourus doesn't escape yet (unsupported).
  */
-export function changeHeadingLevels(ctx: CommandContext, nodes: readonly OutlineNode[], delta: number): CommandOutcome {
+export function changeHeadingLevels(ctx: CommandContext, nodes: readonly OurusNode[], delta: number): CommandOutcome {
   const draft = ctx.draft();
   const shifted = shiftHeadingLevels(ctx, draft, nodes, delta);
   if (!shifted || 'status' in shifted) return shifted;
   const end = (pos: number): AnchorSpec => {
     const at = ctx.doc.locate(pos);
     if (at.zone !== 'text' && at.zone !== 'frame') return { old: pos };
-    if (!(at.text instanceof ProseText)) return { old: pos };
+    if (!(at.text instanceof OurusProse)) return { old: pos };
     return { ref: at.node, offset: headingOffset(shifted, at.node, at.offset) };
   };
   draft.select(end(ctx.selection.anchor), end(ctx.selection.head));
@@ -262,7 +263,7 @@ export function changeHeadingLevels(ctx: CommandContext, nodes: readonly Outline
 export type HeadingShifts = ReadonlyMap<number, { readonly at: number; readonly by: number; readonly length: number }>;
 
 /** Offset `offset` of `node`'s title, where `shifts` moved its characters. */
-export function headingOffset(shifts: HeadingShifts, node: OutlineNode, offset: number): number {
+export function headingOffset(shifts: HeadingShifts, node: OurusNode, offset: number): number {
   const shift = shifts.get(node.id);
   return shift ? Math.min(offset >= shift.at ? offset + shift.by : offset, shift.length) : offset;
 }
@@ -271,10 +272,10 @@ export function headingOffset(shifts: HeadingShifts, node: OutlineNode, offset: 
  * `changeHeadingLevels`'s texts, set in `draft`: the headings among `nodes` and in their sections,
  * `delta` levels deeper; where each title's characters went, or the refusal (null: unsupported).
  */
-export function shiftHeadingLevels(ctx: CommandContext, draft: OurusDraft, nodes: readonly OutlineNode[], delta: number): HeadingShifts | CommandOutcome {
+export function shiftHeadingLevels(ctx: CommandContext, draft: OurusDraft, nodes: readonly OurusNode[], delta: number): HeadingShifts | CommandOutcome {
   const doc = ctx.doc;
-  const headings: OutlineNode[] = [];
-  const walk = (n: OutlineNode): void => {
+  const headings: OurusNode[] = [];
+  const walk = (n: OurusNode): void => {
     if (n.kind === 'heading') headings.push(n);
     n.children.forEach(walk);
   };
@@ -283,7 +284,7 @@ export function shiftHeadingLevels(ctx: CommandContext, draft: OurusDraft, nodes
   const shifts = new Map<number, { at: number; by: number; length: number }>();
   for (const h of headings) {
     const text = doc.textOf(h);
-    if (!(text instanceof ProseText) || !text.heading) return null;
+    if (!(text instanceof OurusProse) || !text.heading) return null;
     const { level, form } = text.heading;
     const next = level + delta;
     if (next < 1) return reject('at-h1-bound');
@@ -304,7 +305,7 @@ export function shiftHeadingLevels(ctx: CommandContext, draft: OurusDraft, nodes
       if (s.slice(0, underline.from).includes('\n')) return reject('not-expressible', 'a setext title of several lines has no ATX form');
       const lead = `${'#'.repeat(next)} `;
       const kept = text.slice(0, underline.from);
-      const atx = new ProseText('heading', text.item, kept.text, kept.marks).splice(0, 0, lead);
+      const atx = new OurusProse('heading', text.item, kept.text, kept.marks).splice(0, 0, lead);
       // a title ending in `#`s would read them as its closing sequence
       if (atx.frame.some((p) => p.part === 'close')) return null;
       draft.setText(h, atx);
@@ -320,13 +321,13 @@ export function shiftHeadingLevels(ctx: CommandContext, draft: OurusDraft, nodes
  * starting where it was, escaped where it would read as markup (Backspace48, Delete32). Null where
  * no held space is on that side of the caret.
  */
-export function deleteHeldSpace(ctx: CommandContext, node: OutlineNode, text: ProseText, offset: number, dir: -1 | 1): CommandOutcome {
+export function deleteHeldSpace(ctx: CommandContext, node: OurusNode, text: OurusProse, offset: number, dir: -1 | 1): CommandOutcome {
   if (!heldSpaceAt(text.marks, text.text, offset)) return null;
   const head = ctx.selection.head;
   const [before, after] = [ctx.doc.posOf(node, offset, -1), ctx.doc.posOf(node, offset, 1)];
   if (before === after || head !== (dir < 0 ? after : before)) return null;
   const marks = text.marks.update({ filter: (m) => m.from !== offset || !isHeldSpacePlaceholder(m, text.text) });
-  const settled = new ProseText(text.type, text.item, text.text, marks);
+  const settled = new OurusProse(text.type, text.item, text.text, marks);
   return ctx.apply(ctx.draft().setText(node, settled).setCaret(node, offset, -1));
 }
 
@@ -342,7 +343,8 @@ export function operandsRefused(why: NoOperands | 'mixed-kinds'): CommandOutcome
  */
 export function pastPrefix(ctx: CommandContext): CommandContext {
   const at = ctx.from;
-  if (!ctx.collapsed || at.zone !== 'prefix' || at.line.index !== at.node.startLine) return ctx;
+  // (not on a line before the text, a quote's `>` above its callout title: no line of its text)
+  if (!ctx.collapsed || at.zone !== 'prefix' || at.line.index !== at.node.startLine || (at.node.kind === 'quote' && at.line.index < at.node.textFirstLine)) return ctx;
   const text = ctx.doc.textOf(at.node);
   return text ? ctx.at(ctx.doc.posOf(at.node, textStart(text), 1)) : ctx;
 }
@@ -352,12 +354,12 @@ export function pastPrefix(ctx: CommandContext): CommandContext {
  * set off by blank lines; the items after it a list of their own after it. In a quote it stays in the
  * quote. Its checkbox goes with the marker.
  */
-export function leaveList(ctx: CommandContext, node: OutlineNode): CommandOutcome {
+export function leaveList(ctx: CommandContext, node: OurusNode): CommandOutcome {
   // (first in an item with no text, the empty paragraph would be the item's first block: an item starts
   // with one blank line at most and goes on, so it can't, `-⏎⏎  b` an empty item and a paragraph)
   const parent = node.parent;
-  if (parent?.kind === 'item' && parent.children[0] === node && (ctx.doc.textOf(parent) as ProseText | null)?.empty) return reject('not-expressible', "an empty paragraph can't be the first block of an item with no text");
-  const draft = ctx.draft().convert(node, 'paragraph').setText(node, new ProseText('paragraph', false, ''));
+  if (parent?.kind === 'item' && parent.children[0] === node && (ctx.doc.textOf(parent) as OurusProse | null)?.empty) return reject('not-expressible', "an empty paragraph can't be the first block of an item with no text");
+  const draft = ctx.draft().convert(node, 'paragraph').setText(node, new OurusProse('paragraph', false, ''));
   const above = node.preceding;
   // (a quote with no text above it, nothing to set it off from)
   if (above && above.kind !== 'root' && above.gap === 0 && ctx.doc.textOf(above)) draft.gap(above, 1);

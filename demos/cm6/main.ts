@@ -41,9 +41,9 @@ import './hljs.css';
 import 'katex/dist/katex.min.css';
 import { Mirror } from './mirror.ts';
 import { outlineView } from './view.ts';
-import { ProseText, OurusDoc, createPlaceholder, executeCommand, mapPos, settlePlaceholders, type Config, type ChangeSpec, type Command, type OutlineNode, type CommandResult } from '../../src/index.ts';
+import { OurusProse, OurusDoc, createPlaceholder, executeCommand, mapPos, settlePlaceholders, type OurusConfig, type ChangeSpec, type OurusCommand, type OurusNode, type OurusCommandResult } from '../../src/index.ts';
 
-type Flavor = Config['flavor'];
+type Flavor = OurusConfig['flavor'];
 
 /** The flavor a new editor reads its text in; the header's select changes it. */
 let initialFlavor: Flavor = 'obsidian';
@@ -74,32 +74,32 @@ const ourusDoc = StateField.define<OurusDoc>({
     // (a step of history that grouped several edits has each one's effects, the latest edit's first:
     // the state it returns to is the earliest's, the last)
     const restored = lastOf(tr, setPlaceholders);
-    if (!tr.docChanged) return restored ? doc.update([], marksAt(doc.text, restored)) : doc;
+    if (!tr.docChanged) return restored ? doc.update(marksAt(doc.text, restored)) : doc;
     const next = tr.annotation(planned);
     // another extension may have added changes to the transaction: then parse what committed
     if (!restored && next && next.text.length === tr.newDoc.length && next.text === tr.newDoc.toString()) return next;
     const changes: ChangeSpec[] = [];
     tr.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => changes.push({ from: fromA, to: toA, insert: inserted.toString() }));
     // undo and redo restore the placeholders of the state they return to, and its nodes: an undone
-    // move's node is the one it was, its fold kept (`replace`'s `like`)
+    // move's node is the one it was, its fold kept (`withViewOf`)
     const like = lastOf(tr, returnTo);
-    if (restored && like && like.text === tr.newDoc.toString()) return doc.replace(like.text, like.marks.marks, { like });
-    if (restored) return doc.update(changes, marksAt(tr.newDoc.toString(), restored));
+    if (restored && like && like.text === tr.newDoc.toString() && like.isSameLineage(doc)) return like.withConfig(doc.config).withViewOf(doc);
+    if (restored) return doc.update({ changes, ...marksAt(tr.newDoc.toString(), restored) });
     const caret = tr.newSelection.main;
-    return doc.update(changes, caret.empty ? { caret: caret.head } : {});
+    return doc.update({ changes, caret: caret.empty ? caret.head : undefined });
   },
 });
 
 /** Each step of history keeps the placeholders it replaced, and the snapshot it left, so undoing it brings them back. */
 const placeholderHistory = invertedEffects.of((tr) => (tr.docChanged ? [setPlaceholders.of(tr.startState.field(ourusDoc).marks.points()), returnTo.of(tr.startState.field(ourusDoc))] : []));
 
-let onResult: (type: Command['type'], result: CommandResult) => void = () => {};
+let onResult: (type: OurusCommand['type'], result: OurusCommandResult) => void = () => {};
 
-function command(type: Command['type']) {
+function command(type: OurusCommand['type']) {
   return (view: EditorView): boolean => {
     const doc = view.state.field(ourusDoc);
     const { anchor, head } = view.state.selection.main;
-    const result = executeCommand(doc, { type } as Command, { anchor, head });
+    const result = executeCommand(doc, { type } as OurusCommand, { anchor, head });
     onResult(type, result);
     if (result.status === 'deferredToHost') return false; // let CodeMirror do its default
     if (result.status === 'rejected') return true; // swallow the key; the status bar says why
@@ -180,8 +180,9 @@ const pasteHandler = EditorView.domEventHandlers({
     plainPaste = false;
     // Ctrl-V reads every format the clipboard has (a page's HTML, a Markdown app's `text/markdown`), Ctrl-Shift-V its text
     const data = event.clipboardData;
-    const text = data?.getData('text/plain');
-    if (!data || !text) return false;
+    const text = data?.getData('text/plain') ?? '';
+    // (a clipboard of HTML or Markdown alone, an app's: ourus reads it, where CodeMirror pastes nothing)
+    if (!data || (!text && !(type === 'paste' && (data.types.includes('text/html') || data.types.includes('text/markdown'))))) return false;
     const clipboard = Object.fromEntries(['text/plain', 'text/markdown', 'text/html', 'vscode-editor-data'].flatMap((t) => (data.types.includes(t) ? [[t, data.getData(t)]] : [])));
     const { anchor, head } = view.state.selection.main;
     const result = executeCommand(view.state.field(ourusDoc), type === 'paste' ? { type, clipboard } : { type, text }, { anchor, head });
@@ -206,7 +207,9 @@ function home(extend: boolean) {
     const range = view.state.selection.main;
     const line = view.state.doc.lineAt(range.head);
     const doc = view.state.field(ourusDoc);
-    const start = doc.textStart(doc.lineAt(range.head).index);
+    // (past a final line ending, the empty last line, which ourus's lines end before)
+    const own = doc.lineAt(range.head);
+    const start = range.head > own.to ? line.from : doc.textStart(own.index);
     const target = range.head === start ? line.from : start;
     const rowStart = view.moveToLineBoundary(range, false, true).head;
     if (rowStart > line.from && rowStart > target) return false;
@@ -229,7 +232,8 @@ function vertical(motion: (view: EditorView) => boolean) {
     const { state } = view;
     const doc = state.field(ourusDoc);
     const ranges = state.selection.ranges.map((range) => {
-      const start = doc.textStart(doc.lineAt(range.head).index);
+      const own = doc.lineAt(range.head);
+      const start = range.head > own.to ? range.head : doc.textStart(own.index);
       if (range.head >= start) return range;
       return range.empty ? EditorSelection.cursor(start, 0, undefined, range.goalColumn) : EditorSelection.range(range.anchor, start, range.goalColumn);
     });
@@ -387,16 +391,16 @@ const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '
 const ATOM_LABELS: Record<string, string> = { thematic_break: 'hr', footnote_definition: 'note', refdef: 'ref' };
 
 /** How many nodes are under `node`. */
-const countNodes = (node: OutlineNode): number => node.children.reduce((n, c) => n + 1 + countNodes(c), 0);
+const countNodes = (node: OurusNode): number => node.children.reduce((n, c) => n + 1 + countNodes(c), 0);
 
 /** The node whose own text holds `pos`, or null. */
-function nodeAt(doc: OurusDoc, pos: number): OutlineNode | null {
+function nodeAt(doc: OurusDoc, pos: number): OurusNode | null {
   const line = doc.lineAt(pos);
   return pos <= line.to ? doc.nodeAtLine(line.index) : null;
 }
 
 /** A node's kind as the outline shows it: tasks, callouts and atoms as the flavor reads them. */
-function label(n: OutlineNode): string {
+function label(n: OurusNode): string {
   const attrs = n.block.attrs;
   if (n.kind === 'heading') return `H${n.head!.attrs.level}`;
   if (n.kind === 'item') return attrs.task ? (attrs.task.checked ? '☑' : '☐') : attrs.list!.type === 'ordered' ? '1.' : '•';
@@ -405,20 +409,30 @@ function label(n: OutlineNode): string {
   return ATOM_LABELS[n.block.type] ?? n.block.type.replace('_block', '');
 }
 
-function renderOutline(panel: HTMLElement, doc: OurusDoc, current: OutlineNode | null): void {
+/**
+ * The outline in `panel`: the node the caret's text is in `current`, and, where the selection is a
+ * subtree selection, its roots and everything under them `selected`, as the editor draws them.
+ */
+function renderOutline(panel: HTMLElement, doc: OurusDoc, current: OurusNode | null, selected: readonly OurusNode[] | null): void {
   const points = doc.marks.points();
-  const list = (nodes: readonly OutlineNode[]): string =>
+  const inSelection = new Set<number>();
+  const add = (n: OurusNode): void => {
+    inSelection.add(n.id);
+    n.children.forEach(add);
+  };
+  selected?.forEach(add);
+  const list = (nodes: readonly OurusNode[]): string =>
     nodes.length === 0
       ? ''
       : `<ul>${nodes
           .map((n) => {
             const own = doc.textOf(n);
-            const lines = (own instanceof ProseText ? own.body : (own?.text ?? '')).split('\n').map((l) => l.trim());
+            const lines = (own instanceof OurusProse ? own.body : (own?.text ?? '')).split('\n').map((l) => l.trim());
             // an atom shows its first line of content: past a fence
             const text = n.kind === 'atom' ? (lines.find((l) => l !== '' && !/^(`{3,}|~{3,})|^(\$\$|%%)$/.test(l)) ?? '') : lines.join(' ');
-            const pos = own instanceof ProseText ? doc.posOf(n, own.textStart(0)) : own ? doc.posOf(n, 0) : doc.mdTree.line(n.startLine).to;
+            const pos = own instanceof OurusProse ? doc.posOf(n, own.textStart(0)) : own ? doc.posOf(n, 0) : doc.mdTree.line(n.startLine).to;
             const placeholders = points.some((p) => p >= doc.mdTree.line(n.startLine).from && p <= doc.mdTree.line(n.textLastLine).to);
-            return `<li><div class="node${n.persistentNode === current?.persistentNode ? ' current' : ''}${placeholders ? ' placeholders' : ''}" data-pos="${pos}"><span class="kind kind-${n.kind}">${escapeHtml(label(n))}</span><span class="text">${escapeHtml(text) || '<i>empty</i>'}</span><span class="id">#${n.id}</span></div>${list(n.children)}</li>`;
+            return `<li><div class="node${n.persistentNode === current?.persistentNode && !selected ? ' current' : ''}${inSelection.has(n.id) ? ' selected' : ''}${placeholders ? ' placeholders' : ''}" data-pos="${pos}"><span class="kind kind-${n.kind}">${escapeHtml(label(n))}</span><span class="text">${escapeHtml(text) || '<i>empty</i>'}</span><span class="id">#${n.id}</span></div>${list(n.children)}</li>`;
           })
           .join('')}</ul>`;
   panel.innerHTML = list(doc.rootNode.children);
@@ -620,7 +634,7 @@ function main(): void {
     cancelAnimationFrame(frame);
     frame = requestAnimationFrame(() => {
       const doc = view.state.field(ourusDoc);
-      renderOutline(panel, doc, nodeAt(doc, view.state.selection.main.head));
+      renderOutline(panel, doc, nodeAt(doc, view.state.selection.main.head), doc.selectedNodes(view.state.selection.main));
       stats.textContent = `${doc.lineCount} lines · ${countNodes(doc.rootNode)} nodes · ${FLAVOR_NAMES[doc.config.flavor]}`;
       // the renderer 'none': the pane hidden, nothing rendered
       previewPane.hidden = rendererSelect.value === 'none';
@@ -701,11 +715,10 @@ function main(): void {
   new ResizeObserver(() => refresh(view)).observe(preview);
   refresh(view);
 
-  // the flavor: the text read again, keeping its placeholders (node ids start over)
+  // the flavor: the text read again, keeping its placeholders, and its folds and zoom by line (node ids start over)
   flavorSelect.addEventListener('change', () => {
     initialFlavor = flavorSelect.value as Flavor;
-    const doc = view.state.field(ourusDoc);
-    const next = OurusDoc.parse(doc.text, { marks: doc.marks.marks, config: { ...doc.config, flavor: initialFlavor } });
+    const next = view.state.field(ourusDoc).withConfig({ flavor: initialFlavor });
     view.dispatch({ effects: setDoc.of(next) });
     refresh(view);
     view.focus();
@@ -745,7 +758,7 @@ function main(): void {
     button.addEventListener('click', () => {
       const { history } = button.dataset;
       if (history) (history === 'redo' ? redo : undo)(view);
-      else command(button.dataset.command as Command['type'])(view);
+      else command(button.dataset.command as OurusCommand['type'])(view);
     });
     // pressed, as :active isn't on touch screens (iOS) or sticks (Chrome)
     button.addEventListener('pointerdown', () => button.classList.add('pressed'));

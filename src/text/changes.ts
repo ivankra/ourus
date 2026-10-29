@@ -26,7 +26,7 @@ export interface ChangeSpec {
  * CodeMirror 6's selection spec, so a host passes `state.selection.main` in and dispatches a result's
  * as it is. Offsets are UTF-16 code units.
  */
-export interface TextSelection {
+export interface OurusSelection {
   readonly anchor: number;
   readonly head: number;
 }
@@ -203,18 +203,25 @@ class Builder {
   }
 }
 
-/** Sorts changes and checks that they don't overlap. Adjacent insertions at one point keep their order. */
+/**
+ * Sorts changes and checks that they don't overlap, each a range of whole offsets from its start to
+ * its end; one that changes nothing (empty, inserting nothing) dropped first, wherever it is.
+ * Adjacent insertions at one point keep their order.
+ */
 export function normalizeChanges(changes: readonly ChangeSpec[]): ChangeSpec[] {
+  for (const c of changes) if (!Number.isSafeInteger(c.from) || !Number.isSafeInteger(c.to) || c.from < 0 || c.to < c.from) throw new RangeError(`invalid change range ${c.from}–${c.to}`);
   const sorted = changes
+    .filter((c) => c.from !== c.to || c.insert !== '')
     .map((c, i) => ({ c, i }))
     .sort((a, b) => a.c.from - b.c.from || a.c.to - b.c.to || a.i - b.i)
     .map(({ c }) => c);
   for (let i = 1; i < sorted.length; i++) {
     if (sorted[i]!.from < sorted[i - 1]!.to) throw new RangeError('overlapping changes');
   }
-  return sorted.filter((c) => c.from !== c.to || c.insert !== '');
+  return sorted;
 }
 
+/** `text` with `changes` applied. */
 export function applyChanges(text: string, changes: readonly ChangeSpec[]): string {
   return applySorted(text, normalizeChanges(changes));
 }
@@ -253,6 +260,61 @@ function invertSorted(text: string, changes: readonly ChangeSpec[]): ChangeSpec[
  */
 export function mapPos(changes: readonly ChangeSpec[], pos: number, assoc: -1 | 1 = -1): number {
   return mapSorted(normalizeChanges(changes), pos, assoc);
+}
+
+/**
+ * Changes indexed for many lookups, normalized once: `mapPos` and the change that covers a range, each
+ * a binary search, where `mapPos` and a scan would take every change each time (an update of many
+ * changes maps every line).
+ */
+export class ChangeIndex {
+  readonly #changes: readonly ChangeSpec[];
+  /** The length each change adds, summed over the ones before it. */
+  readonly #shifts: number[];
+
+  constructor(changes: readonly ChangeSpec[]) {
+    this.#changes = normalizeChanges(changes);
+    this.#shifts = [0];
+    for (const c of this.#changes) this.#shifts.push(this.#shifts[this.#shifts.length - 1]! + c.insert.length - (c.to - c.from));
+  }
+
+  /** How many changes start before `pos` (`strict`), or at it or before. */
+  #before(pos: number, strict: boolean): number {
+    let [lo, hi] = [0, this.#changes.length];
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      const from = this.#changes[mid]!.from;
+      if (strict ? from < pos : from <= pos) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  }
+
+  /** Where `pos` goes, as `mapPos` maps it. */
+  mapPos(pos: number, assoc: -1 | 1 = -1): number {
+    const k = this.#before(pos, true);
+    const prev = this.#changes[k - 1];
+    // inside a range replaced
+    if (prev && prev.to > pos) return prev.from + this.#shifts[k - 1]! + (assoc < 0 ? 0 : prev.insert.length);
+    let shift = this.#shifts[k]!;
+    for (let j = k; j < this.#changes.length && this.#changes[j]!.from === pos; j++) {
+      const c = this.#changes[j]!;
+      if (c.from !== c.to) return pos + shift + (assoc < 0 ? 0 : c.insert.length);
+      if (assoc < 0) break;
+      shift += c.insert.length;
+    }
+    return pos + shift;
+  }
+
+  /** The first change that replaces a range holding `from` to `to` whole, if one does (an empty range at a seam: two). */
+  covering(from: number, to: number): ChangeSpec | undefined {
+    let found: ChangeSpec | undefined;
+    for (let j = this.#before(from, false) - 1; j >= 0 && this.#changes[j]!.to >= from; j--) {
+      const c = this.#changes[j]!;
+      if (c.from < c.to && c.from <= from && c.to >= to) found = c;
+    }
+    return found;
+  }
 }
 
 /** `mapPos` over changes already normalized (the text layer's own: its entry doesn't export it). */
@@ -296,15 +358,20 @@ export function composeChanges(text: string, a: readonly ChangeSpec[], b: readon
  */
 export function diffLines(before: string, after: string): ChangeSpec[] {
   if (before === after) return [];
-  const isBreak = (c: number): boolean => c === 10 || c === 13;
+  // (where a line starts in `s`: after a line break, but not between a CRLF's two halves)
+  const lineStart = (s: string, at: number): boolean => {
+    const c = s.charCodeAt(at - 1);
+    return at === 0 || c === 10 || (c === 13 && s.charCodeAt(at) !== 10);
+  };
   let start = 0;
   const shorter = Math.min(before.length, after.length);
   while (start < shorter && before.charCodeAt(start) === after.charCodeAt(start)) start++;
-  while (start > 0 && !isBreak(before.charCodeAt(start - 1))) start--;
-  // the length of the common ending, then back to where a line starts
+  while (start > 0 && !lineStart(before, start)) start--;
+  // the length of the common ending, then back to where a line starts in the old text (in the new
+  // one it may not: what is kept after the change, an old line's rest, keeps its node)
   let end = 0;
   while (end < shorter - start && before.charCodeAt(before.length - 1 - end) === after.charCodeAt(after.length - 1 - end)) end++;
-  while (end > 0 && before.length - end > start && !isBreak(before.charCodeAt(before.length - end - 1))) end--;
+  while (end > 0 && before.length - end > start && !lineStart(before, before.length - end)) end--;
   return [{ from: start, to: before.length - end, insert: after.slice(start, after.length - end) }];
 }
 

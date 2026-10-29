@@ -6,9 +6,9 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import type { Config } from '../src/config.ts';
+import type { OurusConfig } from '../src/config.ts';
 import { executeCommand } from '../src/commands/index.ts';
-import type { OutlineNode } from '../src/doc/index.ts';
+import type { OurusNode } from '../src/doc/index.ts';
 import { docOf, nodesOf, readDrawing } from './drawing.ts';
 import { readSpecFile, specConfig, specFiles } from './specfile.ts';
 
@@ -23,13 +23,13 @@ function moveGaps(): Map<string, string[]> {
     for (const t of readSpecFile(file)) {
       const { text } = readDrawing(t.initial.buffer);
       for (const flavor of ['gfm', 'obsidian'] as const) {
-        const config: Partial<Config> = { flavor, ...specConfig(t.options) };
+        const config: Partial<OurusConfig> = { flavor, ...specConfig(t.options) };
         const key = `${JSON.stringify(config)} ${text}`;
         if (seen.has(key)) continue;
         seen.add(key);
         const doc = docOf(text, [], config);
         const nodes = nodesOf(doc);
-        const parents: (OutlineNode | 'root')[] = ['root', ...nodes];
+        const parents: (OurusNode | 'root')[] = ['root', ...nodes];
         for (const node of nodes) {
           // (the caret in it, to go with it)
           const end = doc.mdTree.line(node.textFirstLine).to;

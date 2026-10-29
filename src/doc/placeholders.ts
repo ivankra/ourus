@@ -5,8 +5,8 @@
 import type { MdTree } from '../parser/index.ts';
 import { isEmptyNodePlaceholder, isPlaceholder, isSpaceOrTab, lineIndexAt, trimMd, type Mark } from '../text/index.ts';
 
-/** A task's checkbox and the blanks after it, which an empty item's first line may hold (in every flavor). */
-const reCheckbox = /^\[[ xX]\][ \t]+$/;
+/** A task's checkbox of any status and the blanks after it, which an empty item's first line may hold (in every flavor, as its text reads one). */
+const reCheckbox = /^\[[^\r\n]\][ \t]+$/;
 
 const blank = (text: string): boolean => trimMd(text) === '';
 

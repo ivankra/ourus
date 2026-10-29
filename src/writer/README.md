@@ -14,7 +14,7 @@ the edit:
 Basic usage:
 
 ```ts
-import { OurusDraft, settlePlaceholders } from '../draft/index.ts';   // inside ourus; a host has `settlePlaceholders` from 'ourus'
+import { OurusDraft, settlePlaceholders } from '../writer/index.ts';   // inside ourus; a host has `settlePlaceholders` from 'ourus'
 
 const draft = new OurusDraft(doc).split(node, offset, { children: 'follow' });   // the outline it wants (a command's `ctx.draft()`)
 draft.setCaret(made, 0);
@@ -24,16 +24,16 @@ const settled = settlePlaceholders(doc, caret);   // the placeholders the caret 
 
 ## API
 
-- **`NodeRef`** is `OutlineNode | number`: a node of the draft's document, as a command holds it,
+- **`NodeRef`** is `OurusNode | number`: a node of the draft's document, as a command holds it,
   or the id of a node the draft touched (made, changed, moved or removed). `split`, `join` and
   `create` return ids.
 
 - **`OurusDraft`** is one edit. Its operations change the draft and return it (or the ids they
   make). After `done()` it is frozen.
 
-  - `new OurusDraft(from: OurusDoc, nextId?: number)`, `OurusDraft.from: OurusDoc`<br>
-    A draft of the document `from`. New nodes take ids from `nextId` on (by default, the document's
-    next id).
+  - `new OurusDraft(from: OurusDoc)`, `OurusDraft.from: OurusDoc`<br>
+    A draft of the document `from`. New nodes take ids from its lineage (`OurusDoc.isSameLineage`),
+    each once: a draft thrown away leaves its ids unused.
 
   - `OurusDraft.remove(refs: NodeRef[])`<br>
     Takes nodes out, each with its subtree. They are detached: place them again, or `done()` drops
@@ -49,7 +49,7 @@ const settled = settlePlaceholders(doc, caret);   // the placeholders the caret 
     Changes a node's kind, keeping its id (an item unwrapped to a paragraph). Its text is read again
     as the new kind's.
 
-  - `OurusDraft.setText(ref: NodeRef, text: OutlineNodeText | null)`<br>
+  - `OurusDraft.setText(ref: NodeRef, text: OurusText | null)`<br>
     Sets a node's text. The text is read as the node's kind's, with its transitions applied (a
     heading that no longer reads as one becomes a paragraph). Null removes a quote's title.
 
@@ -57,7 +57,7 @@ const settled = settlePlaceholders(doc, caret);   // the placeholders the caret 
     A new detached node (place it), with a real id. `hint` is the marker the writer should use for a
     new item.
 
-  - `OurusDraft.copy(node: OutlineNode, ids?): number`<br>
+  - `OurusDraft.copy(node: OurusNode, ids?): number`<br>
     A detached copy of a node and its subtree, with new ids. The writer writes the copy exactly as
     the original is written.
 
@@ -123,7 +123,6 @@ const settled = settlePlaceholders(doc, caret);   // the placeholders the caret 
     - `get placedIds`: the nodes the draft placed (moved or made);
     - `get splitFrom`: the original node each split's new node comes from;
     - `get hints`: the marker asked for each new item;
-    - `get nextId`: the next free id;
     - `originOf(node)`: where a node of `root` is in the original document;
     - `textOf(node, origin)`: a node's text in the draft.
 
@@ -140,5 +139,5 @@ Files:
   (the writer); `check.ts` (whether a document reads as the draft meant, node by node; nodes the
   two share are equal without comparing); `settle.ts` (`settlePlaceholders`).
 
-Tests: `test/draft/draft.test.ts` (the operations, how node references resolve through them, what
+Tests: `test/writer/draft.test.ts` (the operations, how node references resolve through them, what
 `done()` fixes, the check), and the spec, through every command.

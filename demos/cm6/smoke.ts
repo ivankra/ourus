@@ -186,6 +186,11 @@ await page.keyboard.press('Escape');
 const blocks = await page.locator('.cm-line.ourus-block').count();
 console.log(`${blocks === 2 ? 'ok  ' : 'FAIL'} Escape draws the item and its child as blocks${blocks === 2 ? '' : ` (${blocks} lines)`}`);
 results.push(blocks === 2);
+// and the outline pane shows them selected, the item and its child (it renders in the next frame)
+await page.waitForFunction(() => document.querySelectorAll('#outline .node.selected').length > 0, undefined, { timeout: 2000 }).catch(() => {});
+const listed = await page.locator('#outline .node.selected').count();
+console.log(`${listed === 2 ? 'ok  ' : 'FAIL'} the outline pane shows the selected item and its child${listed === 2 ? '' : ` (${listed} nodes)`}`);
+results.push(listed === 2);
 
 if (screenshot) {
   await page.reload();

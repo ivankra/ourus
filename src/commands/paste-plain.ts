@@ -3,7 +3,7 @@
 // the text becomes; `done()` escapes each line where it would read as a block, holds an empty line, and
 // sets the paragraphs apart.
 
-import { ProseText, AtomText, type OutlineNode, type OutlineNodeText } from '../doc/index.ts';
+import { OurusProse, OurusAtom, type OurusNode, type OurusText } from '../doc/index.ts';
 import { composeChanges, heldSpaceAt, isSpaceOrTab, trimMd, type ChangeSpec } from '../text/index.ts';
 import { clipboardFragment } from './clipboard.ts';
 import { CommandContext, deferToHost, reject, type CommandOutcome } from './context.ts';
@@ -11,7 +11,7 @@ import { linesInQuote, quoteAtomAt } from './quote.ts';
 import { enterCommand } from './enter.ts';
 import { pasteMarkdown } from './paste.ts';
 import { textActedOnAt } from './util.ts';
-import { codeAt, onDelimiterLine } from './code.ts';
+import { breaksFence, codeAt, editInCode, onDelimiterLine } from './code.ts';
 import { afterDeleting } from './copy.ts';
 
 /**
@@ -26,7 +26,8 @@ import { afterDeleting } from './copy.ts';
 export function pastePlainCommand(ctx: CommandContext, clipboard: string): CommandOutcome {
   if (ctx.config.pastePlainLines === 'host') return deferToHost('plain paste is the host\'s');
   if (ctx.config.pastePlainLines === 'items') return itemLines(ctx, clipboard);
-  if (ctx.config.pastePlainLines === 'enter') return enteredLines(ctx, clipboard);
+  // (in code, lines are code, whatever pastes them)
+  if (ctx.config.pastePlainLines === 'enter' && !codeAt(ctx)) return enteredLines(ctx, clipboard);
   return plainLines(ctx, clipboard);
 }
 
@@ -43,6 +44,8 @@ function itemLines(ctx: CommandContext, clipboard: string): CommandOutcome {
   if (fragment?.doc.rootNode.children.every((r) => r.kind === 'item') && fragment.doc.rootNode.children.length === lines.length) return pasteMarkdown(ctx, { markdown: lines.join('\n') + '\n', phrase: false }, true);
   const escaped: string[] = [];
   for (const line of lines) {
+    // (each line's text without the spaces around it, the Unicode ones too, a no-break space: as the
+    // block apps that paste lines as blocks trim them, Tana and WorkFlowy, PastePlain14 and 15)
     const text = line.trim();
     const written = ctx.doc.escapeParagraph([text]);
     if (!written) return reject('not-expressible', `no escape keeps "${text}" text`);
@@ -64,17 +67,33 @@ function enteredLines(ctx: CommandContext, clipboard: string): CommandOutcome {
   let result: CommandOutcome = null;
   for (const [k, line] of lines.entries()) {
     const at = line ? textActedOnAt(next, next.selection.head) : null;
-    if (line && !at) return k === 0 ? deferToHost('the caret is outside a text') : null;
+    if (line && !at && (k === 0 || next.doc.locate(next.selection.head).zone !== 'gap')) return k === 0 ? deferToHost('the caret is outside a text') : null;
+    if (line && !at) {
+      // (on the blank line an Enter left, a quote's `> ` under `enterInQuote: line`: typed as the host types it)
+      const head = next.selection.head;
+      const typed = [{ from: head, to: head, insert: line }];
+      const caret = head + line.length;
+      result = { status: 'applied', doc: next.doc.update({ changes: typed, caret }), changes: typed, selection: { anchor: caret, head: caret } };
+      changes = composeChanges(ctx.doc.text, changes, typed);
+      next = new CommandContext(result.doc, result.selection);
+    }
     // (at the text's start, without the spaces it starts with, which would be padding there)
     const typed = at && trimMd(at.text.text.slice(at.text.textStart(0), at.offset)) === '' ? line.replace(/^[ \t]+/, '') : line;
     if (at && typed) {
-      result = next.apply(next.draft().setText(at.node, at.text.splice(at.offset, at.offset, typed)).setCaret(at.node, at.offset + typed.length, -1));
+      // (before the spaces a text starts with, its padding (an Enter's second half under
+      // `enterSplitSpace: start`), where the caret is: what is typed goes before them, as a host types
+      // it, and they are text after it)
+      const hidden = at.offset === 0 && ctx.collapsed ? next.doc.hiddenSpaces(at.node) : null;
+      const before = hidden && next.selection.head === hidden.from && hidden.to > hidden.from ? next.doc.text.slice(hidden.from, hidden.to) : '';
+      const draft = next.draft().setText(at.node, at.text.splice(at.offset, at.offset, typed + before)).setCaret(at.node, at.offset + typed.length, -1);
+      result = next.apply(before ? draft.padding(at.node.id, 0) : draft);
       if (!result || result.status !== 'applied') return result;
       changes = composeChanges(ctx.doc.text, changes, result.changes);
       next = new CommandContext(result.doc, result.selection);
     }
     if (k === lines.length - 1) break;
-    result = enterCommand(next, false);
+    // (an Enter as typed, in a quote too, but not the key's quirks: the text typed, each line break an Enter)
+    result = enterCommand(next, false, true);
     if (!result || result.status !== 'applied') return result;
     changes = composeChanges(ctx.doc.text, changes, result.changes);
     next = new CommandContext(result.doc, result.selection);
@@ -96,41 +115,43 @@ export function plainLines(ctx: CommandContext, clipboard: string): CommandOutco
     }
     return linesInQuote(ctx, quote, lines);
   }
-  // over a selection across lines, it goes first, as a cut takes it (PastePlain17)
-  if (ctx.doc.lineAt(ctx.selection.anchor).index !== ctx.doc.lineAt(ctx.selection.head).index) return afterDeleting(ctx, (next) => plainLines(next, clipboard));
-  const lines = clipboard.split(/\r\n|\r|\n/);
-  if (lines.length < 2) return deferToHost('one line: the host pastes it');
   const code = codeAt(ctx);
-  // on a delimiter's line (an opening's info, a closing fence), no code line: the host's
-  if (code && onDelimiterLine(code.text, code.offset)) return deferToHost('a fence line: the host pastes');
-  // in indented code's four columns, the host's
-  if (code && code.text.frame.some((p) => p.part === 'indent' && p.from <= code.offset && code.offset < p.to)) return ctx.collapsed ? deferToHost('in the code\'s indentation') : reject('not-expressible', 'the selection takes part of the code\'s indentation');
+  // over a selection across lines, it goes first, as a cut takes it (PastePlain17); in code it is code
+  if (!code && ctx.doc.lineAt(ctx.selection.anchor).index !== ctx.doc.lineAt(ctx.selection.head).index) return afterDeleting(ctx, (next) => plainLines(next, clipboard));
+  const lines = clipboard.split(/\r\n|\r|\n/);
+  // one line: the host's, but in code where it would make a fence, and starting with a blank, which at
+  // a text's start would be padding (an item's moving its children's column): it goes, as below
+  if (code && lines.length < 2) return editInCode(ctx, code, code.offset, code.to, clipboard);
+  if (lines.length < 2 && !/^[ \t]/.test(clipboard)) return deferToHost('one line: the host pastes it');
   // (a line break first, before the block's text: the host's, as a new line above it)
   if (code && lines[0] === '' && code.offset === 0) return deferToHost('a line break before the block: the host pastes');
+  // on a delimiter's line (an opening's info, a closing fence), no code line: as they are
+  if (code && onDelimiterLine(code.text, code.offset)) return editInCode(ctx, code, code.offset, code.to, lines.join('\n'));
+  // in indented code's four columns, the host's
+  if (code && code.text.frame.some((p) => p.part === 'indent' && p.from <= code.offset && code.offset < p.to)) return ctx.collapsed ? deferToHost('in the code\'s indentation') : breaksFence(ctx, 'the selection takes part of the code\'s indentation');
   if (code) {
     // in its block's text at its fence's indentation (its first line's)
     const indent = /^[ \t]*/.exec(code.text.text)![0];
     const pasted = lines.map((l, k) => (k === 0 || l === '' ? l : indent + l)).join('\n');
-    const draft = ctx.draft().setText(code.node, code.text.splice(code.offset, code.to, pasted));
-    return ctx.apply(draft.setCaret(code.node, code.offset + pasted.length, -1));
+    return editInCode(ctx, code, code.offset, code.to, pasted, { host: false });
   }
   const [a, b] = [ctx.from, ctx.to];
   // on an empty item, past its marker or in its checkbox, where its text starts (before its marker, the host's);
   // in markup: where markup is text the user edits, the host's, else refused (a title holds one line,
   // a selection takes part of markup); at a line's very start, before it, the host's, but on a setext
   // underline, refused as Shift-Enter is there
-  if (a.zone === 'frame' && a.text instanceof ProseText && !a.text.empty) {
+  if (a.zone === 'frame' && a.text instanceof OurusProse && !a.text.empty) {
     const inside = ctx.selection.head > ctx.doc.lineAt(ctx.selection.head).from;
     if (!inside && a.part !== 'underline') return deferToHost('the caret is before the text');
     if (inside && ctx.collapsed && ctx.config.markup === 'text') return deferToHost('the caret is in markup');
     return reject('not-expressible', a.text.heading ? 'the title holds one line' : 'the selection takes part of markup');
   }
   const at =
-    (a.zone === 'marker' && a.part === 'padding') || (a.zone === 'frame' && a.text instanceof ProseText && a.text.empty) ? emptyTextAt(ctx, a.node)
+    (a.zone === 'marker' && a.part === 'padding') || (a.zone === 'frame' && a.text instanceof OurusProse && a.text.empty) ? emptyTextAt(ctx, a.node)
     : a.zone === 'text' ? { node: a.node, text: a.text, offset: a.offset } : null;
-  if (!at || !(at.text instanceof ProseText)) {
+  if (!at || !(at.text instanceof OurusProse)) {
     // a table's row holds one line; another block's lines are the host's
-    return a.zone === 'text' && at?.text instanceof AtomText && at.text.type === 'table' ? reject('not-expressible', 'a row holds one line') : deferToHost('the caret is outside a text');
+    return a.zone === 'text' && at?.text instanceof OurusAtom && at.text.type === 'table' ? reject('not-expressible', 'a row holds one line') : deferToHost('the caret is outside a text');
   }
   const { node, text } = at;
   const from = at.offset;
@@ -144,7 +165,7 @@ export function plainLines(ctx: CommandContext, clipboard: string): CommandOutco
     if (lines.length === 1) return ctx.apply(ctx.draft().setText(node, text.splice(from, to, lines[0]!)).setCaret(node, from + lines[0]!.length, -1));
   }
   // a node holding one line: an ATX title, an Obsidian callout's
-  if (text.heading?.form === 'atx' || (text.type === 'title' && ctx.config.flavor === 'obsidian')) return reject('not-expressible', 'the title holds one line');
+  if (lines.length > 1 && (text.heading?.form === 'atx' || (text.type === 'title' && ctx.config.flavor === 'obsidian'))) return reject('not-expressible', 'the title holds one line');
   // the text with the paste in it; then each run of blank lines a paragraph break. A first line
   // starting the text loses its leading spaces, which would make it code
   const s0 = text.text;
@@ -162,7 +183,7 @@ export function plainLines(ctx: CommandContext, clipboard: string): CommandOutco
   if (text.type === 'heading' && /\n[ \t]*\n/.test(current.body)) return reject('not-expressible', 'a heading has no blank line in its title');
   let caret = from + pasted.length - (held ? 1 : 0);
   const draft = ctx.draft();
-  let target: OutlineNode | number = node;
+  let target: OurusNode | number = node;
   const container = node.kind === 'item' || node.kind === 'quote';
   for (;;) {
     const s = current.text;
@@ -199,8 +220,8 @@ export function plainLines(ctx: CommandContext, clipboard: string): CommandOutco
 }
 
 /** An empty item's text, the caret where it starts (after its marker's space and a checkbox). */
-function emptyTextAt(ctx: CommandContext, node: OutlineNode): { node: OutlineNode; text: OutlineNodeText | null; offset: number } | null {
+function emptyTextAt(ctx: CommandContext, node: OurusNode): { node: OurusNode; text: OurusText | null; offset: number } | null {
   const text = ctx.doc.textOf(node);
-  if (node.kind !== 'item' || !(text instanceof ProseText) || !text.empty) return null;
+  if (node.kind !== 'item' || !(text instanceof OurusProse) || !text.empty) return null;
   return { node, text, offset: text.text.length };
 }

@@ -18,11 +18,12 @@ import { spawn } from 'node:child_process';
 import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Config } from '../src/config.ts';
+import { OurusConfig } from '../src/config.ts';
 import { docOf, drawDoc, drawLabels, drawnSelection, drawOutline, drawsCaret, drawText, nodesOf, readDrawing, readText, withoutCaret } from '../test/drawing.ts';
 import type { OurusDoc } from '../src/doc/index.ts';
 import { isAction, play, type Played } from '../test/player.ts';
-import { drawDropPoints, Labels, normalize, outcome, readClipboard } from '../test/spec-run.ts';
+import { drawDropPoints, Labels, normalize, outcome, readClipboard, rowView } from '../test/spec-run.ts';
+import { drawView } from './lib/view.ts';
 import { readSpec, specConfig, TAGS, tokenize, type Clipboard, type SpecTest } from '../test/specfile.ts';
 import { appNames, drivers, resolveApps } from './lib/apps.ts';
 import { ensureProxy } from './lib/browser.ts';
@@ -135,8 +136,8 @@ function parseArgs(argv: readonly string[]): Args {
     else if (key === 'case') o.caseName = value;
     // the SxS's own (`--cache=offline`, `--plain-clipboard`, `--pace=`, `--headed`, ...), for each app's run
     else if (['cache', 'pace', 'slow', 'plain-clipboard', 'headed', 'fresh', 'timing'].includes(key)) o.pass.push(arg);
-    else if (key in Config.values) o.config[key] = value;
-    else fail(`unknown option --${key}; the config's are ${Object.keys(Config.values).join(', ')} (node sxs/probe.ts --help)`);
+    else if (key in OurusConfig.values) o.config[key] = value;
+    else fail(`unknown option --${key}; the config's are ${Object.keys(OurusConfig.values).join(', ')} (node sxs/probe.ts --help)`);
   }
   for (const tag of o.tags) if (!(TAGS as readonly string[]).includes(tag)) fail(`unknown tag ${tag}: the tags are ${TAGS.join(', ')}`);
   // `|` for the caret, in the buffer's argument alone (the first, or the one after the apps)
@@ -258,6 +259,8 @@ interface OurStep {
   clipboard?: string;
   /** After a pickup (`drag`): the places it offers, drawn as `dropPoints:` draws them. */
   dropPoints?: string;
+  /** The folds in effect and the zoom after the step, where there are any (`⟦folded 2; zoom 1⟧`, rows from 1). */
+  view?: string;
 }
 
 /** `--labels`: the nodes of a drawn start labelled in document order, where it labels none itself. */
@@ -327,6 +330,7 @@ function playOurus(p: Probe, config: Record<string, string>, labels = false): Ou
       ...(broken ? { broken } : {}),
       ...(actions.some((a) => a === 'copy' || a === 'cut') && state.clipboard['text/plain'] !== undefined ? { clipboard: state.clipboard['text/plain'] } : {}),
       ...(state.last?.status === 'applied' && state.last.dropMap ? { dropPoints: drawDropPoints(state.doc, state.last.dropMap, state.selection) } : {}),
+      ...(state.doc.zoomFolded.size || state.doc.zoom !== null ? { view: drawView(rowView(state.doc)).trim() } : {}),
     });
     if (broken) break;
   }
@@ -337,7 +341,7 @@ function playOurus(p: Probe, config: Record<string, string>, labels = false): Ou
 function combinations(base: Record<string, string>, each: readonly string[]): Record<string, string>[] {
   let runs = [base];
   for (const key of each) {
-    const values = (Config.values as Record<string, readonly unknown[]>)[key];
+    const values = (OurusConfig.values as Record<string, readonly unknown[]>)[key];
     if (!values) fail(`--each=${key}: no such option`);
     runs = runs.flatMap((r) => values.map((v) => ({ ...r, [key]: String(v) })));
   }
@@ -509,6 +513,7 @@ async function main(): Promise<void> {
           // ourus's result where it didn't apply (a refusal, the host's), on the actions' line
           out(cyan(`> ${s.actions.join(' ')}${s.result === 'applied' ? '' : `  (ourus: ${s.result})`}${s.broken ? `  !! ${s.broken}` : ''}`));
           verbatim(s.buffer);
+          if (s.view !== undefined) out(s.view);
           if (s.clipboard !== undefined) out(`clipboard: ${JSON.stringify(s.clipboard)}`);
           if (s.dropPoints !== undefined) {
             out('dropPoints:');

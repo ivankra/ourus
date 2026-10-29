@@ -1,7 +1,7 @@
 // Apps behind a login (none driven now: Tana's meeting product, home.tana.inc, would be one): a driver
 // finds the wall as it opens the app and stops the run, saying which environment variable to give a
 // signed-in session in (`Driver.login`). Given, the session's cookies go into the profile of the pool's
-// browser the run is in (`.sxs/chromium/<n>/profile/`), which keeps them: a later run in it needs the
+// browser the run is in (`<state>/chromium/<n>/profile/`), which keeps them: a later run in it needs the
 // variable again only once the session expires or the profile goes; one in another browser asks again.
 
 import type { BrowserContext } from 'playwright-core';

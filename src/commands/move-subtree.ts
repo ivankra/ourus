@@ -2,8 +2,9 @@
 // converted where the place can't hold its kind; `done()` and the writer do the rest (blank lines,
 // numbers, indentation, escapes). Then the result is checked against the place asked for.
 
-import { AtomText, ProseText, type OurusDoc, type OutlineNode } from '../doc/index.ts';
-import type { CommandResult } from './types.ts';
+import { OurusAtom, OurusProse, type OurusDoc, type OurusNode, type OurusText } from '../doc/index.ts';
+import { trimMd } from '../text/index.ts';
+import type { OurusCommandResult } from './types.ts';
 import { reject, type CommandContext, type CommandOutcome } from './context.ts';
 import { dragRun } from './drag.ts';
 import { itemTextsRefused } from './indent.ts';
@@ -29,7 +30,7 @@ export function moveSubtreeCommand(ctx: CommandContext, to: InsertionPoint): Com
   if ('status' in place) return place;
   const { parent, after } = place;
   if (after && ids.has(after.id)) return reject('invalid-insertion-point', 'the place is anchored on a node moved');
-  for (let p: OutlineNode | null = parent; p; p = p.parent) if (ids.has(p.id)) return reject('into-itself');
+  for (let p: OurusNode | null = parent; p; p = p.parent) if (ids.has(p.id)) return reject('into-itself');
   const placed = run.map((n) => n.id);
   if (parent.id === first.parent!.id && (after?.id ?? null) === (first.prev?.id ?? null)) return { status: 'applied', doc, changes: [], selection: ctx.selection, placed };
 
@@ -42,39 +43,31 @@ export function moveSubtreeCommand(ctx: CommandContext, to: InsertionPoint): Com
   const siblings = parent.children.filter((c) => !ids.has(c.id));
   const next = siblings[after ? siblings.findIndex((c) => c.id === after.id) + 1 : 0] ?? null;
   const kind = first.kind;
-  const unheld = unholdable(doc, kind, parent, after);
-  if (unheld) return reject('not-expressible', unheld);
+  const refused = moveRefused(ctx, run, parent, after);
+  if (refused) return reject(refused.reason, refused.why);
   const block = parent.kind === 'paragraph' || parent.kind === 'atom';
   const becomes = becomesAt(doc, kind, parent, after, ids);
   const draft = ctx.draft();
   let delta = 0;
   if (parent.kind === 'item' || block) {
     // under an item, or in a paragraph's list: items; a paragraph or an atom becomes one, as indent makes it
-    if (kind === 'heading') return reject('not-expressible', `a heading can't be under ${block ? `a ${parent.kind}` : 'an item'}`);
     if (becomes === 'item') {
       const refused = itemTextsRefused(ctx, run);
       if (refused) return refused;
       for (const n of run) draft.convert(n, 'item');
-    } else if (block && kind !== 'item') return reject('not-expressible', `a ${kind} can't be in a ${parent.kind}'s list`);
+    }
   } else if (becomes === 'paragraph') {
     // right after a block that adopts lists, an item would be in its list: a paragraph, as outdent makes
     // it; one whose text is a block of lines, that block, where it holds no children
     for (const n of run) {
       const text = doc.textOf(n);
-      if (text instanceof AtomText && !n.children.length) {
-        draft.convert(n, 'atom');
-        continue;
-      }
-      if (!(text instanceof ProseText) || text.heading) return reject('not-expressible', `an item can't be a paragraph after a ${after!.kind} there`);
-      if (text.task) return reject('not-expressible', "a task can't be a paragraph: its checkbox would be text");
-      draft.convert(n, 'paragraph');
+      draft.convert(n, text instanceof OurusAtom && !n.children.length ? 'atom' : 'paragraph');
     }
   } else if (kind === 'heading') {
     // re-levelled to its new siblings: the nearest heading's level; else one inside a heading parent;
-    // in a quote or the document, its own. A section that would take in what follows is refused
-    const level = (n: OutlineNode): number => headingLevel(ctx, n);
+    // in a quote or the document, its own
+    const level = (n: OurusNode): number => headingLevel(ctx, n);
     delta = headingTarget(ctx, parent, after, next, level(first)) - level(first);
-    if (takesIn(ctx, next, level(last) + delta)) return reject('would-reparent', 'the heading would take in what follows it');
   }
   draft.remove(run);
   if (after) draft.place('after', after, run);
@@ -89,8 +82,57 @@ export function moveSubtreeCommand(ctx: CommandContext, to: InsertionPoint): Com
   return { ...applied, placed };
 }
 
+/**
+ * Why moving `run` to the place under `parent`, after `after`, is refused before anything is written,
+ * or null: a place Markdown can't hold (`unholdable`); a heading under an item or in a paragraph's
+ * list, or a quote in a paragraph's list, which no node there can be; a heading whose section would
+ * take in what follows it there, re-levelled to its new siblings. What a pickup leaves out of its
+ * places too.
+ */
+export function moveRefused(ctx: CommandContext, run: readonly OurusNode[], parent: OurusNode, after: OurusNode | null): { reason: 'not-expressible' | 'would-reparent'; why: string } | null {
+  const first = run[0]!;
+  const kind = first.kind;
+  const unheld = unholdable(ctx.doc, kind, parent, after);
+  if (unheld) return { reason: 'not-expressible', why: unheld };
+  const block = parent.kind === 'paragraph' || parent.kind === 'atom';
+  if (kind === 'heading' && (parent.kind === 'item' || block)) return { reason: 'not-expressible', why: `a heading can't be under ${block ? `a ${parent.kind}` : 'an item'}` };
+  if (block && kind === 'quote') return { reason: 'not-expressible', why: `a quote can't be in a ${parent.kind}'s list` };
+  const ids = new Set(run.map((n) => n.id));
+  const siblings = parent.children.filter((c) => !ids.has(c.id));
+  const next = siblings[after ? siblings.findIndex((c) => c.id === after.id) + 1 : 0] ?? null;
+  const last = run[run.length - 1]!;
+  // (items there: a rule one, of a list of its character's bullet, reads as one rule with it, `- ---`)
+  const becomes = becomesAt(ctx.doc, kind, parent, after, ids);
+  const items = becomes === 'item' || (kind === 'item' && becomes !== 'paragraph');
+  if (items) {
+    const list = [after, next].find((n) => n?.kind === 'item');
+    const bullet = list ? ctx.doc.listOf(list)?.block.attrs.list?.bulletChar : undefined;
+    const rule = (n: OurusNode): boolean => {
+      const text = ctx.doc.textOf(n);
+      return text instanceof OurusAtom && text.type === 'thematic_break' && trimMd(text.text)[0] === bullet;
+    };
+    if (bullet && run.some(rule)) return { reason: 'not-expressible', why: "the item's bullet and its rule would read as one rule" };
+  }
+  const joins = joinsAround(ctx.doc, run.map((n) => ctx.doc.textOf(n)), items, parent, after, next);
+  if (joins) return { reason: 'not-expressible', why: joins };
+  if (next && unclosed(ctx.doc, last)) return { reason: 'not-expressible', why: `what follows would be in the moved ${ctx.doc.textOf(last)!.type === 'fenced_code' ? 'code' : 'block'}, which nothing closes` };
+  // (an item becoming a paragraph: its text one, or an atom's lines with nothing under them)
+  if (!block && parent.kind !== 'item' && becomes === 'paragraph') {
+    for (const n of run) {
+      const text = ctx.doc.textOf(n);
+      if (text instanceof OurusAtom && !n.children.length) continue;
+      if (!(text instanceof OurusProse) || text.heading) return { reason: 'not-expressible', why: `an item can't be a paragraph after a ${after!.kind} there` };
+      if (text.task) return { reason: 'not-expressible', why: "a task can't be a paragraph: its checkbox would be text" };
+    }
+  }
+  if (kind !== 'heading' || parent.kind === 'item' || block) return null;
+  const level = (n: OurusNode): number => headingLevel(ctx, n);
+  const delta = headingTarget(ctx, parent, after, next, level(first)) - level(first);
+  return takesIn(ctx, next, level(run[run.length - 1]!) + delta) ? { reason: 'would-reparent', why: 'the heading would take in what follows it' } : null;
+}
+
 /** The place `to` names in `doc`: its parent and the node it goes after; else why not. */
-export function placeOf(doc: OurusDoc, to: InsertionPoint): { readonly parent: OutlineNode; readonly after: OutlineNode | null } | CommandResult {
+export function placeOf(doc: OurusDoc, to: InsertionPoint): { readonly parent: OurusNode; readonly after: OurusNode | null } | OurusCommandResult {
   const parent = to.parent === 'root' ? doc.rootNode : doc.node(to.parent);
   if (!parent || (to.parent !== 'root' && parent.kind === 'root')) return reject('no-such-node', `no node ${to.parent}`);
   const after = to.after === null ? null : (doc.node(to.after) ?? null);
@@ -104,26 +146,54 @@ export function placeOf(doc: OurusDoc, to: InsertionPoint): { readonly parent: O
  * beside it, after or else before; else one inside a heading parent; in a quote or the document, its
  * own, `level`.
  */
-export function headingTarget(ctx: CommandContext, parent: OutlineNode, after: OutlineNode | null, next: OutlineNode | null, level: number): number {
-  const of = (n: OutlineNode): number => headingLevel(ctx, n);
+export function headingTarget(ctx: CommandContext, parent: OurusNode, after: OurusNode | null, next: OurusNode | null, level: number): number {
+  const of = (n: OurusNode): number => headingLevel(ctx, n);
   return after?.kind === 'heading' ? of(after) : next?.kind === 'heading' ? of(next) : parent.kind === 'heading' ? of(parent) + 1 : level;
 }
 
 /** Whether a heading of `level` last at a place would take `next`, what follows it there, into its section. */
-export function takesIn(ctx: CommandContext, next: OutlineNode | null, level: number): boolean {
+export function takesIn(ctx: CommandContext, next: OurusNode | null, level: number): boolean {
   return !!next && (next.kind !== 'heading' || headingLevel(ctx, next) > level);
 }
 
 /**
  * Why Markdown can't hold a run whose first root is a `kind` at the place under `parent`, after
  * `after`, or null: inside a node that holds none, or after a heading, for a node that isn't one (it
- * would be in its section). What a pickup leaves out of its places, and a drop there refuses.
+ * would be in its section), or right after a block that nothing closes in the same container (a fence
+ * with no closing one: its lines would be the block's). What a pickup leaves out of its places, and a
+ * drop there refuses.
  */
-export function unholdable(doc: OurusDoc, kind: OutlineNode['kind'], parent: OutlineNode, after: OutlineNode | null): string | null {
+export function unholdable(doc: OurusDoc, kind: OurusNode['kind'], parent: OurusNode, after: OurusNode | null): string | null {
   const block = parent.kind === 'paragraph' || parent.kind === 'atom';
   if (block && !doc.adoptsLists(parent)) return `a ${parent.kind} holds no nodes`;
   if (after?.kind === 'heading' && kind !== 'heading') return `after a heading, a ${kind} would be in its section`;
+  const above = after?.lastDescendant;
+  if (above?.parent === parent && unclosed(doc, above)) return `the ${kind} would be in the ${doc.textOf(above)!.type === 'fenced_code' ? 'code' : 'block'} above it, which nothing closes`;
   return null;
+}
+
+/**
+ * Why nodes placed under `parent`, after `after`, before `next`, would read otherwise with what is
+ * around them, or null: the last an item (`lastItem`) right above indented code, which would be its
+ * lines; at the top level, in a flavor with front matter, a `---` line of theirs closing a `---` the
+ * document starts with, or theirs first, the document's later one closing it (`texts`: their texts).
+ */
+export function joinsAround(doc: OurusDoc, texts: readonly (OurusText | null)[], lastItem: boolean, parent: OurusNode, after: OurusNode | null, next: OurusNode | null): string | null {
+  if (lastItem && next && (doc.textOf(next) as OurusAtom | null)?.type === 'indented_code') return 'the indented code below would be the item\'s';
+  if (parent.kind !== 'root' || !doc.mdTree.flavor.blockStarts.some((b) => b.name === 'frontmatter')) return null;
+  const fence = /^---[ \t]*$/;
+  const lines = (from: number, to: number): string[] => Array.from({ length: to - from }, (_, k) => doc.text.slice(doc.mdTree.starts[from + k]!, doc.mdTree.ends[from + k]!));
+  const theirs = texts.flatMap((t) => (t ? t.text.split('\n') : []));
+  const opened = after !== null && doc.lineCount > 0 && fence.test(lines(0, 1)[0]!);
+  const first = after === null && (parent.children[0]?.startLine ?? 0) === 0 && fence.test(theirs[0] ?? '');
+  if ((opened && theirs.some((l) => fence.test(l))) || (first && (theirs.slice(1).some((l) => fence.test(l)) || lines(0, doc.lineCount).some((l) => fence.test(l))))) return 'a `---` line would close front matter the document would start with';
+  return null;
+}
+
+/** Whether `node`'s text is a block of lines its delimiter opens and none closes (a fence with no closing one). */
+function unclosed(doc: OurusDoc, node: OurusNode): boolean {
+  const text = doc.textOf(node);
+  return text instanceof OurusAtom && !!text.delimiters && !text.closed;
 }
 
 /**
@@ -131,7 +201,7 @@ export function unholdable(doc: OurusDoc, kind: OutlineNode['kind'], parent: Out
  * the nodes `out` taken out: an item, for a paragraph or an atom under an item or in a paragraph's
  * list; a paragraph, for an item right after a block that adopts lists; else null, its own kind.
  */
-export function becomesAt(doc: OurusDoc, kind: OutlineNode['kind'], parent: OutlineNode, after: OutlineNode | null, out: ReadonlySet<number>): 'item' | 'paragraph' | null {
+export function becomesAt(doc: OurusDoc, kind: OurusNode['kind'], parent: OurusNode, after: OurusNode | null, out: ReadonlySet<number>): 'item' | 'paragraph' | null {
   const block = parent.kind === 'paragraph' || parent.kind === 'atom';
   if ((parent.kind === 'item' || block) && (kind === 'paragraph' || kind === 'atom')) return 'item';
   if (kind === 'item' && !block && parent.kind !== 'item' && after && (doc.adoptsLists(after) || (dissolves(doc, after, out) && doc.config.listParent !== 'container' && parent.ownsLists))) return 'paragraph';
@@ -142,7 +212,7 @@ export function becomesAt(doc: OurusDoc, kind: OutlineNode['kind'], parent: Outl
  * Whether `quote`, with the nodes `out` taken out, is left a quote of one paragraph, which under
  * `quotes: text` is that paragraph.
  */
-function dissolves(doc: OurusDoc, quote: OutlineNode, out: ReadonlySet<number>): boolean {
+function dissolves(doc: OurusDoc, quote: OurusNode, out: ReadonlySet<number>): boolean {
   if (quote.kind !== 'quote' || doc.config.quotes !== 'text' || doc.textOf(quote)) return false;
   const left = quote.children.filter((c) => !out.has(c.id));
   return left.length === 1 && left[0]!.kind === 'paragraph' && !left[0]!.children.length;
@@ -155,10 +225,10 @@ function dissolves(doc: OurusDoc, quote: OutlineNode, out: ReadonlySet<number>):
  * which under `quotes: text` is that paragraph: what is wrong, or null.
  */
 export function resultCheck(before: OurusDoc, after: OurusDoc, roots: readonly number[], moved: ReadonlySet<number>, to: InsertionPoint): { reason: 'not-expressible' | 'would-reparent'; why: string } | null {
-  const parentOf = (n: OutlineNode): number | 'root' | null => (!n.parent ? null : n.parent.kind === 'root' ? 'root' : n.parent.id);
+  const parentOf = (n: OurusNode): number | 'root' | null => (!n.parent ? null : n.parent.kind === 'root' ? 'root' : n.parent.id);
   // the quotes gone, each the paragraph it was left holding
-  const dissolved = new Map<number, OutlineNode>();
-  const quotes = (n: OutlineNode): void => {
+  const dissolved = new Map<number, OurusNode>();
+  const quotes = (n: OurusNode): void => {
     for (const c of n.children) {
       const left = c.children.filter((k) => !moved.has(k.id));
       if (c.kind === 'quote' && !after.node(c.id) && left.length === 1 && left[0]!.kind === 'paragraph') dissolved.set(c.id, left[0]!);
@@ -176,7 +246,7 @@ export function resultCheck(before: OurusDoc, after: OurusDoc, roots: readonly n
     while (anchor?.parent && anchor.parent.id !== n.parent!.id) anchor = anchor.parent;
     if ((n.prev?.id ?? null) !== (anchor?.id ?? prev)) return { reason: 'not-expressible', why: `node ${id} isn't at the place asked` };
   }
-  const walk = (n: OutlineNode): string | null => {
+  const walk = (n: OurusNode): string | null => {
     for (const c of n.children) {
       if (!moved.has(c.id) && !dissolved.has(c.id)) {
         const now = after.node(c.id);

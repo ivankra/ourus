@@ -3,7 +3,7 @@
 // and what kind they are; `done()` and the writer do the rest (the column it lines up at, its list's
 // marker and numbers, blank lines, sections).
 
-import { AtomText, type OutlineNode } from '../doc/index.ts';
+import { OurusAtom, type OurusNode } from '../doc/index.ts';
 import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
 import { changeHeadingLevels, onCodeLine, oneRun, operandsRefused, selectionInText } from './util.ts';
 
@@ -35,10 +35,10 @@ export function indentCommand(ctx: CommandContext): CommandOutcome {
  * its lines' indentation (under a marker it would be other code, or none), and a quote's lazy line led
  * by a tab would span other columns after a marker (the writer re-indents spaces, not tabs).
  */
-export function itemTextsRefused(ctx: CommandContext, nodes: readonly OutlineNode[]): CommandOutcome {
+export function itemTextsRefused(ctx: CommandContext, nodes: readonly OurusNode[]): CommandOutcome {
   for (const n of nodes) {
     const t = ctx.doc.textOf(n);
-    if (!(t instanceof AtomText)) continue;
+    if (!(t instanceof OurusAtom)) continue;
     if (t.type === 'indented_code') return reject('not-expressible', "indented code can't be an item's text");
     if (t.type === 'blockquote' && t.text.split('\n').some((l, k) => k > 0 && /^[ ]*\t/.test(l) && !/^ {0,3}>/.test(l))) return reject('not-expressible', "a quote's lazy line led by a tab can't follow a marker");
   }
@@ -51,7 +51,7 @@ export function itemTextsRefused(ctx: CommandContext, nodes: readonly OutlineNod
  * nothing above an item where it is (Indent22). Into a quote above, a block stays one: the quote's
  * last.
  */
-function blocksIntoItems(ctx: CommandContext, nodes: readonly OutlineNode[]): CommandOutcome {
+function blocksIntoItems(ctx: CommandContext, nodes: readonly OurusNode[]): CommandOutcome {
   const first = nodes[0]!;
   const parent = first.parent!;
   const above = first.prev;

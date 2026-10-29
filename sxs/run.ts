@@ -52,7 +52,7 @@ import { closeSync, copyFileSync, existsSync, mkdirSync, openSync, readdirSync, 
 import { basename, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Browser, Page } from 'playwright-core';
-import { Config } from '../src/config.ts';
+import { OurusConfig } from '../src/config.ts';
 import { OurusDoc } from '../src/doc/index.ts';
 import { drawOutline, nodesOf } from '../test/drawing.ts';
 import { appPage, BROWSERS, ensureProxy, launch, lockApp, proxyStats, stopShared, type AppPage } from './lib/browser.ts';
@@ -816,10 +816,10 @@ if (regenerating && !previous) {
 // the app's kind of document (`Driver.model`): how one is drawn, compared, and told apart from another
 const isText = driver.model === 'text';
 const drawDoc = (d: Doc): string => (isText ? drawTextDoc(d as TextDoc) : draw(d as Outline, { ordered: driver.ordered }));
-const compareDocs = (want: Doc, got: Doc, sections?: readonly number[], flavor?: Config['flavor']): Verdict =>
+const compareDocs = (want: Doc, got: Doc, sections?: readonly number[], flavor?: OurusConfig['flavor']): Verdict =>
   isText ? compareTexts(want as TextDoc, got as TextDoc, flavor) : compareOutlines(want as Outline, got as Outline, sections);
 /** The flavor a plan's example is read in. */
-const flavorOf = (plan: Plan): Config['flavor'] => (plan.test.options.flavor ?? Config.defaults.flavor) as Config['flavor'];
+const flavorOf = (plan: Plan): OurusConfig['flavor'] => (plan.test.options.flavor ?? OurusConfig.defaults.flavor) as OurusConfig['flavor'];
 const sameDoc = (a: Doc, b: Doc): boolean => (isText ? sameText(a as TextDoc, b as TextDoc) : sameOutline(a as Outline, b as Outline));
 
 // ------------------------------------------------------------------ choosing and adapting
@@ -949,7 +949,7 @@ function shownView(d: Doc, plan: Plan): RowView | undefined {
 }
 
 /** Whether two Markdown texts read as the same outline: the same nodes, at the same depths, with the same texts, items in lists of the same kind (bullets, numbers). */
-function sameMarkdown(a: string, b: string, flavor: Config['flavor']): boolean {
+function sameMarkdown(a: string, b: string, flavor: OurusConfig['flavor']): boolean {
   const read = (text: string): string => {
     const doc = OurusDoc.parse(text, { config: { flavor } });
     return JSON.stringify([drawOutline(doc), nodesOf(doc).map((n) => (n.kind === 'item' ? n.block.attrs.list?.type : null))]);
@@ -1249,7 +1249,7 @@ function readDoc(drawn: string): Doc | null {
 }
 
 /** The app's settings (`Driver.settings`) as strings, each as `get` has it. */
-const settingsOf = (get: (k: keyof Config) => unknown): string[] => Object.keys(driver.settings ?? {}).map((k) => String(get(k as keyof Config)));
+const settingsOf = (get: (k: keyof OurusConfig) => unknown): string[] => Object.keys(driver.settings ?? {}).map((k) => String(get(k as keyof OurusConfig)));
 
 /** A plan's outcome in the last run's example, if that played it as it is now; else why not. */
 function replay(plan: Plan, e: RunExample): Outcome | string {
@@ -1275,7 +1275,7 @@ function replay(plan: Plan, e: RunExample): Outcome | string {
 /** The clipboard an example of the last run started with, as the app was given it (`RunExample.clipboard`). */
 function startClipboard(e: RunExample): Clipboard | null {
   if (typeof e.clipboard !== 'string') return e.clipboard && canonicalClipboard(e.clipboard);
-  const html = clipboardHtml(e.clipboard, (e.options.flavor ?? Config.defaults.flavor) as Config['flavor']);
+  const html = clipboardHtml(e.clipboard, (e.options.flavor ?? OurusConfig.defaults.flavor) as OurusConfig['flavor']);
   return { 'text/plain': e.clipboard, ...(html !== null && { 'text/html': html }) };
 }
 
@@ -1289,7 +1289,7 @@ function regenerate(): string | undefined {
   };
   const played = new Map<string, RunExample[]>();
   for (const e of previous!.examples) {
-    const k = key(redrawn(e.start), startClipboard(e), settingsOf((s) => e.options[s] ?? Config.defaults[s]));
+    const k = key(redrawn(e.start), startClipboard(e), settingsOf((s) => e.options[s] ?? OurusConfig.defaults[s]));
     played.set(k, [...(played.get(k) ?? []), e]);
   }
   for (const { plan, names } of unique.values()) {

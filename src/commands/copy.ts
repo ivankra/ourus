@@ -2,12 +2,12 @@
 // clipboard formats; a cut takes it out as Backspace or delete subtree would.
 
 import { clipboardOf } from './clipboard.ts';
-import { ProseText, type OutlineNode } from '../doc/index.ts';
+import { OurusProse, type OurusNode } from '../doc/index.ts';
 import { deleteContentBackwardCommand } from './backspace.ts';
 import { CommandContext, deferToHost, type CommandOutcome } from './context.ts';
-import { composeChanges, lineOf } from '../text/index.ts';
+import { composeChanges, lineOf, trimMd } from '../text/index.ts';
 import { deleteSubtreeCommand } from './delete-subtree.ts';
-import { oneRun, operandsRefused, runsOf } from './util.ts';
+import { oneRun, operandsRefused, runsOf, selectionRoots } from './util.ts';
 
 /**
  * Copy, or cut: what the selection takes, as Markdown out of its containers. A subtree selection's
@@ -24,7 +24,7 @@ export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): Com
   const config = ctx.config;
   const from = Math.min(ctx.selection.anchor, ctx.selection.head);
   const to = Math.max(ctx.selection.anchor, ctx.selection.head);
-  let nodes: readonly OutlineNode[] | null = null;
+  let nodes: readonly OurusNode[] | null = null;
   const subtrees = ctx.nodes ? null : doc.selectedNodes(ctx.selection);
   if (subtrees) nodes = subtrees;
   else if (ctx.nodes) {
@@ -33,10 +33,11 @@ export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): Com
     nodes = found;
   } else if (from === to) {
     if (config.copyAtCaret === 'host') return deferToHost();
+    // (the nodes delete subtree takes there: a folded row's owner, with what it hides)
     const line = doc.lineAt(from);
-    const node = from <= line.to ? doc.nodeAtLine(line.index) : null;
-    if (!node) return deferToHost();
-    nodes = [node];
+    const at = from <= line.to && doc.nodeAtLine(line.index) ? selectionRoots(doc, ctx.selection) : [];
+    if (!at.length) return deferToHost();
+    nodes = at;
   } else if (config.copySelection !== 'text' && nodesOnLines(ctx, from, to) > 1) {
     const found = oneRun(ctx);
     if (!Array.isArray(found)) return operandsRefused(found);
@@ -62,7 +63,7 @@ export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): Com
   // the text deleted as the host deletes it, where ourus doesn't: the clipboard is still ourus's
   if (!nodes && (!deleted || deleted.status === 'deferredToHost')) {
     const changes = [{ from, to, insert: '' }];
-    return { status: 'applied', doc: ctx.doc.update(changes), changes, selection: { anchor: from, head: from }, clipboard };
+    return { status: 'applied', doc: ctx.doc.update({ changes }), changes, selection: { anchor: from, head: from }, clipboard };
   }
   if (!deleted) return null;
   return deleted.status === 'applied' ? { ...deleted, clipboard } : deleted;
@@ -76,14 +77,14 @@ export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): Com
 export function deleteSelected(ctx: CommandContext): CommandOutcome {
   const deleted = deleteContentBackwardCommand(ctx);
   const [a, b] = [ctx.from, ctx.to];
-  if (deleted?.status !== 'deferredToHost' || a.zone !== 'text' || b.zone !== 'text' || !(a.text instanceof ProseText) || a.node.persistentNode !== b.node.persistentNode) return deleted;
+  if (deleted?.status !== 'deferredToHost' || a.zone !== 'text' || b.zone !== 'text' || !(a.text instanceof OurusProse) || a.node.persistentNode !== b.node.persistentNode) return deleted;
   const s = a.text.text;
   let [from, end] = [a.offset, b.offset];
   const lineStart = s.lastIndexOf('\n', from - 1) + 1;
   const lineEnd = s.indexOf('\n', end) < 0 ? s.length : s.indexOf('\n', end);
   if (from <= Math.max(lineStart, a.text.textStart(lineOf(s, from)))) while (end < lineEnd && (s[end] === ' ' || s[end] === '\t')) end++;
   // (a line emptied: its line break with it, the one after it, or on the last line the one before)
-  if (s.slice(lineStart, from).trim() === '' && s.slice(end, lineEnd).trim() === '' && (lineStart > 0 || lineEnd < s.length)) {
+  if (trimMd(s.slice(lineStart, from)) === '' && trimMd(s.slice(end, lineEnd)) === '' && (lineStart > 0 || lineEnd < s.length)) {
     if (lineEnd < s.length) [from, end] = [lineStart, lineEnd + 1];
     else [from, end] = [lineStart - 1, lineEnd];
   }

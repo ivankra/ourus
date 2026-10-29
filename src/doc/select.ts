@@ -2,10 +2,11 @@
 // them as whole lines (a subtree selection, a host's block selection), and the selection that is a set
 // of subtrees.
 
-import type { TextSelection } from '../text/index.ts';
+import type { OurusSelection } from '../text/index.ts';
 import type { OurusDoc } from './doc.ts';
-import type { OutlineNode } from './node.ts';
+import type { OurusNode } from './node.ts';
 import { textEnd, textStart } from './text.ts';
+import { foldOwner } from './view.ts';
 
 /**
  * The topmost nodes whose own lines the selection touches, in document order, at whatever depths: a
@@ -13,7 +14,7 @@ import { textEnd, textStart } from './text.ts';
  * gap of the node above it; a selection ending at a line's very start doesn't touch that line. None
  * where no node is touched (the blank lines before the first, an empty document).
  */
-export function touchedNodes(doc: OurusDoc, selection: TextSelection): OutlineNode[] {
+export function touchedNodes(doc: OurusDoc, selection: OurusSelection): OurusNode[] {
   if (doc.lineCount === 0) return [];
   const from = Math.min(selection.anchor, selection.head);
   const to = Math.max(selection.anchor, selection.head);
@@ -21,21 +22,23 @@ export function touchedNodes(doc: OurusDoc, selection: TextSelection): OutlineNo
   const end = doc.lineAt(to);
   // a selection ending at a line's very start doesn't take that line
   const hi = to > from && end.index > lo && end.from === to ? end.index - 1 : end.index;
-  const touched = new Set<OutlineNode>();
+  const touched = new Set<OurusNode>();
   for (let i = lo; i <= hi; i++) {
     const n = doc.nodeAtLine(i);
     if (n) touched.add(n);
   }
   if (!touched.size) {
+    // (a placeholder's empty paragraph is on a line the tree reads as blank: its node is there)
     for (let i = lo; i >= 0; i--) {
-      if (doc.isEmptyLine(i)) continue;
       const owner = doc.nodeAtLine(i);
       if (owner) touched.add(owner);
-      break;
+      if (owner || !doc.isEmptyLine(i)) break;
     }
   }
-  return [...touched].filter((n) => {
-    for (let p = n.parent; p; p = p.parent) if (touched.has(p)) return false;
+  // a node a fold hides is its folded row's: the gap after a folded subtree, a folded row two nodes share
+  const shown = new Set([...touched].map((n) => foldOwner(doc, n)));
+  return [...shown].filter((n) => {
+    for (let p = n.parent; p; p = p.parent) if (shown.has(p)) return false;
     return true;
   });
 }
@@ -47,7 +50,7 @@ export function touchedNodes(doc: OurusDoc, selection: TextSelection): OutlineNo
  * outermost inside the zoom. Null for any other selection, for a caret, and for one node's own text,
  * which is text but at the document's end.
  */
-export function selectedNodes(doc: OurusDoc, selection: TextSelection): OutlineNode[] | null {
+export function selectedNodes(doc: OurusDoc, selection: OurusSelection): OurusNode[] | null {
   const from = Math.min(selection.anchor, selection.head);
   const to = Math.max(selection.anchor, selection.head);
   if (from === to) return null;
@@ -74,7 +77,7 @@ export function selectedNodes(doc: OurusDoc, selection: TextSelection): OutlineN
  * owns the list the last is in, `listParent`, with its whole list); zoomed, at the zoom's end where
  * they end it. The anchor at the top unless `direction` is `up`. Throws for no nodes, the root, a node outside the zoom or one a fold hides.
  */
-export function subtreesSelection(doc: OurusDoc, nodes: readonly OutlineNode[], direction: 'down' | 'up' = 'down'): TextSelection {
+export function subtreesSelection(doc: OurusDoc, nodes: readonly OurusNode[], direction: 'down' | 'up' = 'down'): OurusSelection {
   if (!nodes.length) throw new Error('no nodes to select');
   let start = Infinity;
   let end = -1;
@@ -85,8 +88,8 @@ export function subtreesSelection(doc: OurusDoc, nodes: readonly OutlineNode[], 
     end = Math.max(end, node.endLine);
   }
   const from = doc.mdTree.starts[start]!;
-  // (the nodes touched between, each whole)
-  for (const n of touchedNodes(doc, { anchor: from, head: subtreeEnd(doc, end) })) end = Math.max(end, n.endLine);
+  // (the nodes touched between, each whole, and the nodes whose lines theirs are)
+  for (const n of outermost(doc, touchedNodes(doc, { anchor: from, head: subtreeEnd(doc, end) }))) end = Math.max(end, n.endLine);
   // (zoomed, not past the zoom: the line break after it is out of the view)
   const zoom = doc.zoomRange();
   const to = Math.min(subtreeEnd(doc, end), zoom ? zoom.to : Infinity);
@@ -99,21 +102,25 @@ function subtreeEnd(doc: OurusDoc, line: number): number {
 }
 
 /**
- * `roots`, each run of them that is all of a node's children, where that node's lines are theirs (an
- * item whose first child starts on its line, `- - a`; a quote without a title), that node instead,
+ * `roots`, each run of them that is all of a node's children, where that node's lines are theirs and
+ * the blank lines after them (an item whose first child starts on its line, `- - a`; a quote
+ * without a title), that node instead,
  * outward, but not past the zoom's root.
  */
-function outermost(doc: OurusDoc, roots: OutlineNode[]): OutlineNode[] {
-  let out = roots;
+function outermost(doc: OurusDoc, roots: readonly OurusNode[]): OurusNode[] {
+  let out = [...roots];
   for (let lifted = true; lifted; ) {
     lifted = false;
-    const next: OutlineNode[] = [];
+    const next: OurusNode[] = [];
     for (let i = 0; i < out.length; ) {
       const parent = out[i]!.parent!;
       let j = i;
       while (j < out.length && out[j]!.parent === parent) j++;
       const run = out.slice(i, j);
-      const whole = parent.kind !== 'root' && run.length === parent.children.length && parent.startLine === run[0]!.startLine && parent.endLine === run[run.length - 1]!.endLine;
+      // (the parent's last lines the blank lines after them: a quote's `>` after its last item)
+      const last = run[run.length - 1]!;
+      const ends = parent.endLine >= last.endLine && parent.endLine <= last.endLine + last.lastDescendant.gap;
+      const whole = parent.kind !== 'root' && run.length === parent.children.length && parent.startLine === run[0]!.startLine && ends;
       if (whole && !outsideZoom(doc, parent)) {
         next.push(parent);
         lifted = true;
@@ -126,8 +133,8 @@ function outermost(doc: OurusDoc, roots: OutlineNode[]): OutlineNode[] {
 }
 
 /** Whether `node` is outside the zoom's root's subtree (false where not zoomed). */
-function outsideZoom(doc: OurusDoc, node: OutlineNode): boolean {
+function outsideZoom(doc: OurusDoc, node: OurusNode): boolean {
   if (doc.zoom === null) return false;
-  for (let p: OutlineNode | null = node; p; p = p.parent) if (p.id === doc.zoom) return false;
+  for (let p: OurusNode | null = node; p; p = p.parent) if (p.id === doc.zoom) return false;
   return true;
 }

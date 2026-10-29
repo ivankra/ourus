@@ -1,7 +1,7 @@
 // Where a caret can be typed at without breaking its node: the spec's check that no applied command
 // leaves the caret in markup (spec.test.ts).
 
-import { AtomText, type OurusDoc } from '../src/doc/index.ts';
+import { OurusAtom, type OurusDoc } from '../src/doc/index.ts';
 import { isSpaceOrTab, trimMd } from '../src/text/index.ts';
 
 /**
@@ -15,8 +15,8 @@ export function textPosition(doc: OurusDoc, head: number): number {
   const node = head <= line.to ? doc.nodeAtLine(line.index) : null;
   if (!node) return head;
   const text = doc.textOf(node);
-  const delimiters = text instanceof AtomText ? text.delimiters : null;
-  if (text instanceof AtomText && delimiters) {
+  const delimiters = text instanceof OurusAtom ? text.delimiters : null;
+  if (text instanceof OurusAtom && delimiters) {
     const lines = text.text.split('\n');
     const starts = lines.map((_, j) => lines.slice(0, j).reduce((n, l) => n + l.length + 1, 0));
     const lineOf = (offset: number): number => text.text.slice(0, offset).split('\n').length - 1;

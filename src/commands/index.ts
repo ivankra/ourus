@@ -22,31 +22,33 @@ import { expandSelectionCommand, selectNodeByCommand, selectNodeCommand } from '
 import { mixedDepthsRun, reshaped, shapeOf } from './shape.ts';
 import { editSubtrees } from './subtrees.ts';
 import { shiftEnterCommand } from './shift-enter.ts';
-import type { Command, CommandResult, TextSelection } from './types.ts';
+import type { OurusCommand, OurusCommandResult, OurusSelection } from './types.ts';
 import { insertTextCommand } from './typing.ts';
 import { clearZoomCommand, foldCommand, toggleFoldCommand, unfoldCommand, zoomInCommand, zoomOutCommand } from './view.ts';
 import { zoomed } from './zoom.ts';
 
-export type { Clipboard, Command, CommandResult, DropMap, DropPoint, DropSeam, InsertionPoint, RejectReason, TextSelection } from './types.ts';
+export type { OurusClipboard, OurusCommand, OurusCommandResult, DropMap, DropPoint, DropSeam, InsertionPoint, RejectReason, OurusSelection } from './types.ts';
 export { nearestDropPoint } from './drag.ts';
 export { leavesZoom } from './zoom.ts';
 
 /** The commands a host has a default for (an editor's key, its clipboard): where ourus doesn't do them, the host does. */
-const HOST_HAS: ReadonlySet<Command['type']> = new Set(['enter', 'shiftEnter', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward', 'copy', 'cut', 'paste', 'pastePlain', 'insertText', 'deleteByDrag']);
+const HOST_HAS: ReadonlySet<OurusCommand['type']> = new Set(['enter', 'shiftEnter', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward', 'copy', 'cut', 'paste', 'pastePlain', 'insertText', 'deleteByDrag']);
 
 /**
  * `command` at `selection`: applied, refused, or the host's. Where ourus doesn't do it yet (a case
  * the commands don't cover), a key with a host's default is the host's; a structural command is
  * refused as `unsupported`.
  */
-export function executeCommand(doc: OurusDoc, command: Command, selection: TextSelection): CommandResult {
+export function executeCommand(doc: OurusDoc, command: OurusCommand, selection: OurusSelection): OurusCommandResult {
+  const validPosition = (pos: number): boolean => Number.isInteger(pos) && pos >= 0 && pos <= doc.text.length;
+  if (!validPosition(selection.anchor) || !validPosition(selection.head)) return { status: 'rejected', reason: 'invalid-selection' };
   // within the snapshot's view: confined to its zoom, its selection out of what it hides (a deferral
   // where ourus doesn't do it yet included: at the zoom root's edges it would reach outside)
   return zoomed(doc, command, selection, () => execute(doc, command, selection) ?? (HOST_HAS.has(command.type) ? { status: 'deferredToHost', detail: "ourus doesn't do it here yet" } : { status: 'rejected', reason: 'unsupported' }));
 }
 
 /** The command, or null where ourus doesn't do it yet. */
-function execute(doc: OurusDoc, command: Command, selection: TextSelection): CommandResult | null {
+function execute(doc: OurusDoc, command: OurusCommand, selection: OurusSelection): OurusCommandResult | null {
   const ctx = new CommandContext(doc, selection, 'nodes' in command ? command.nodes : undefined);
   // the keys that edit text, over a subtree selection: over its nodes
   const routed = editSubtrees(ctx, command);
@@ -71,8 +73,9 @@ function execute(doc: OurusDoc, command: Command, selection: TextSelection): Com
       return reshaped(moveSubtreeCommand(ctx, command.to), shapeOf(doc, selection));
     case 'pasteAt':
       return pasteAtCommand(ctx, command.clipboard, command.at);
+    // (a drag of no text deletes none)
     case 'deleteByDrag':
-      return deleteSelected(ctx);
+      return ctx.collapsed ? { status: 'applied', doc, changes: [], selection } : deleteSelected(ctx);
     case 'shiftEnter':
       return shiftEnterCommand(ctx);
     case 'enter':

@@ -146,7 +146,6 @@ export const commonMarkExtension: MdExtension = {
 /** Compiles extensions into a flavor. CommonMark comes first unless the list starts with it already. */
 export function defineFlavor(name: string, extensions: readonly MdExtension[]): MdFlavor {
   const all = extensions[0] === commonMarkExtension ? extensions : [commonMarkExtension, ...extensions];
-  const removed = new Set(all.flatMap((e) => e.remove ?? []));
 
   const starts: MdBlockStart[] = [];
   const extraChars = new Set<number>();
@@ -160,9 +159,19 @@ export function defineFlavor(name: string, extensions: readonly MdExtension[]): 
   const brackets: MdBracketRule[] = [];
   const textRules: MdTextRule[] = [];
   let render: MdRenderRules = {};
+  // (in order: an extension's `remove` takes the rules of the ones before it, not a later one's of the same name)
+  const drop = <T extends { readonly name: string }>(rules: T[], names: ReadonlySet<string>): void => {
+    for (let i = rules.length - 1; i >= 0; i--) if (names.has(rules[i]!.name)) rules.splice(i, 1);
+  };
   for (const ext of all) {
+    if (ext.remove?.length) {
+      const names = new Set(ext.remove);
+      drop(starts, names);
+      drop(inlines, names);
+      drop(brackets, names);
+      drop(textRules, names);
+    }
     for (const s of ext.blockStarts ?? []) {
-      if (removed.has(s.name)) continue;
       const anchor = s.before ?? s.after;
       const at = anchor ? starts.findIndex((x) => x.name === anchor) : -1;
       if (at < 0) starts.push(s);
@@ -174,10 +183,10 @@ export function defineFlavor(name: string, extensions: readonly MdExtension[]): 
     for (const [type, m] of Object.entries(ext.lineMarkup ?? {})) lineMarkup.set(type, m);
     for (const [type, c] of Object.entries(ext.blockContent ?? {})) content.set(type, c);
     for (const [type, d] of Object.entries(ext.delimited ?? {})) delimited.set(type, d);
-    for (const r of ext.inlines ?? []) if (!removed.has(r.name)) inlines.push(r);
+    for (const r of ext.inlines ?? []) inlines.push(r);
     for (const d of ext.delimiters ?? []) delimiters.push(d);
-    for (const b of ext.brackets ?? []) if (!removed.has(b.name)) brackets.push(b);
-    for (const t of ext.textRules ?? []) if (!removed.has(t.name)) textRules.push(t);
+    for (const b of ext.brackets ?? []) brackets.push(b);
+    for (const t of ext.textRules ?? []) textRules.push(t);
     if (ext.render) render = mergeRender(render, ext.render);
   }
   const names = new Set(all.map((e) => e.name));

@@ -32,11 +32,17 @@ continuation indentation, a quote's `>`), their own indentation kept, and no edi
    block of it, its code as written, from either side (Fence26, Fence34, Fence49), and so does
    Backspace at its code's start, which takes Enter's split back (Fence31); into an empty item above,
    it takes the item's place (Fence51). Delete at a closing fence's end before text is refused (Fence35).
-7. **No split or join may assemble a fence from code**: where one would close the block early, the
-   block's fences grow past it, as WorkFlowy and Tana write them (Fence36, Fence37, Fence38,
-   Fence39, Fence40; a pasted line too, [PastePlain29](paste-plain.md#pasteplain29); a character
-   Backspace or Delete takes, Fence62), and stay longer once it is gone; nor may Cmd-Backspace delete a fence
-   ([SoftBackspace9](backspace.md#softbackspace9)).
+7. **No edit may assemble a fence from code**: where a split, a join or any edit of code would close
+   the block early, the block's fences grow past it, as WorkFlowy and Tana write them (Fence36,
+   Fence37, Fence38, Fence39, Fence40; a pasted line too, [PastePlain29](paste-plain.md#pasteplain29);
+   a character Backspace or Delete takes, Fence62, of the line's indentation too; a cut, text typed
+   or pasted over a selection, Cmd-Backspace: [Regression115](regressions.md#regression115),
+   [Regression116](regressions.md#regression116), [Regression117](regressions.md#regression117),
+   [Regression118](regressions.md#regression118), [Regression120](regressions.md#regression120),
+   [Regression121](regressions.md#regression121), [Regression122](regressions.md#regression122)),
+   and stay longer once it is gone; nor may Cmd-Backspace delete a fence
+   ([SoftBackspace9](backspace.md#softbackspace9)), or a code line's containers' prefix
+   ([Regression119](regressions.md#regression119)).
 8. **Tab and Shift-Tab on a code line are the host's**: they indent the code (Fence21). **Pasted
    text on a code line is code** ([PastePlain28](paste-plain.md#pasteplain28)).
 9. **The other blocks of lines, math (`$$`), comments (`%%`) and indented code, take the same**:

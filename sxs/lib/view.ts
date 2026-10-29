@@ -6,8 +6,8 @@
 // A state's drawing carries its view as a last line of its own, `⟦folded 2 4; zoom 1⟧` (rows from 1,
 // as a reader counts them), so a report shows it and a rejudge reads it back with the state.
 
-import type { Config } from '../../src/config.ts';
-import { OurusDoc, type OutlineNode } from '../../src/doc/index.ts';
+import type { OurusConfig } from '../../src/config.ts';
+import { OurusDoc, type OurusNode } from '../../src/doc/index.ts';
 import type { RowView } from '../../test/spec-run.ts';
 
 export type { RowView };
@@ -46,10 +46,10 @@ export function shownInBlocks(blocks: readonly { readonly depth: number }[], v: 
  * outermost starting there) has something to fold, strictly inside the zoom root's where zoomed, and
  * the zoom.
  */
-export function shownInText(text: string, config: Partial<Config>, v: RowView): RowView {
+export function shownInText(text: string, config: Partial<OurusConfig>, v: RowView): RowView {
   const doc = OurusDoc.parse(text, { config });
   const root = v.zoom === null ? null : doc.rowOwner(v.zoom);
-  const inside = (n: OutlineNode): boolean => {
+  const inside = (n: OurusNode): boolean => {
     for (let p = n.parent; p; p = p.parent) if (p === root) return true;
     return false;
   };

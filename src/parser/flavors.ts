@@ -1,6 +1,6 @@
 // The flavors ourus ships, by name: what a config's `flavor` option names.
 
-import { commonmark, type MdFlavor as FlavorRules } from './flavor.ts';
+import { commonmark, defineFlavor, type MdFlavor as FlavorRules } from './flavor.ts';
 import { gfm } from './gfm.ts';
 import { obsidian } from './obsidian.ts';
 
@@ -19,4 +19,18 @@ export const MdFlavor = {
   named(name: 'commonmark' | 'gfm' | 'obsidian'): MdFlavor {
     return name === 'gfm' ? gfm : name === 'obsidian' ? obsidian : commonmark;
   },
+  /** `flavor` without its extension `name` (itself where it has none), built once. */
+  without(flavor: MdFlavor, name: string): MdFlavor {
+    if (!flavor.has(name)) return flavor;
+    const key = `${flavor.name} without ${name}`;
+    let built = withouts.get(flavor)?.get(key);
+    if (!built) {
+      built = defineFlavor(key, flavor.extensions.filter((e) => e.name !== name));
+      if (!withouts.has(flavor)) withouts.set(flavor, new Map());
+      withouts.get(flavor)!.set(key, built);
+    }
+    return built;
+  },
 } as const;
+
+const withouts = new WeakMap<MdFlavor, Map<string, MdFlavor>>();

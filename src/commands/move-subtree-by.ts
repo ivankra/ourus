@@ -2,7 +2,7 @@
 // their sibling above or below. The command says which nodes go where; `done()` and the writer do the
 // rest (blank lines, lists, escapes, the caret's place in the text).
 
-import type { OutlineNode } from '../doc/index.ts';
+import type { OurusNode } from '../doc/index.ts';
 import { reject, type CommandContext, type CommandOutcome } from './context.ts';
 import { headingLevel, oneRun, operandsRefused, selectionInText, withTextlessParents } from './util.ts';
 
@@ -35,6 +35,8 @@ function moveSubtreeBy(ctx: CommandContext, dir: -1 | 1): CommandOutcome {
   const other = dir < 0 ? first.prev : last.next;
   const draft = ctx.draft().remove(nodes);
   if (!other) {
+    // (the zoom root's first or last children: nothing past them in the view, as at the document's edge)
+    if (parent.id === doc.zoom) return reject(dir < 0 ? 'no-previous-sibling' : 'no-next-sibling');
     const crossed = dir < 0 ? crossUpOutOfParent(ctx, nodes) : crossDownOutOfParent(ctx, nodes);
     if (!crossed) return reject(dir < 0 ? 'no-previous-sibling' : 'no-next-sibling');
     if (crossed === 'reparent') return reject('would-reparent', 'the move would give another node a new parent');
@@ -52,9 +54,9 @@ function moveSubtreeBy(ctx: CommandContext, dir: -1 | 1): CommandOutcome {
     // of a whole list pass a block, at a longer list's edge they stay in it), or each item one
     const flat = ctx.config.listParent === 'container' && parent.ownsLists;
     const byList = ctx.config.listMoves === 'list';
-    const list = (n: OutlineNode | null): unknown => (n?.kind === 'item' ? doc.listOf(n)?.block : undefined);
+    const list = (n: OurusNode | null): unknown => (n?.kind === 'item' ? doc.listOf(n)?.block : undefined);
     const whole = first.kind === 'item' && (!byList || (list(first.prev) !== list(first) && list(last.next) !== list(last)));
-    const group = (n: OutlineNode): string => (n.kind === 'paragraph' || n.kind === 'atom' ? 'leaf' : n.kind);
+    const group = (n: OurusNode): string => (n.kind === 'paragraph' || n.kind === 'atom' ? 'leaf' : n.kind);
     const quote = (first.kind === 'quote' || other.kind === 'quote') && first.kind !== 'heading' && other.kind !== 'heading';
     const across = flat && ((whole && group(other) === 'leaf') || (group(first) === 'leaf' && other.kind === 'item'));
     if (first.kind === 'heading' && (other.kind !== 'heading' || headingLevel(ctx, first) !== headingLevel(ctx, other))) return reject('would-reparent', 'a heading moves among headings of its level');
@@ -68,7 +70,7 @@ function moveSubtreeBy(ctx: CommandContext, dir: -1 | 1): CommandOutcome {
 }
 
 /** A heading's level. */
-type Crossing = { readonly at: OutlineNode; readonly where: 'before' | 'first' | 'last' };
+type Crossing = { readonly at: OurusNode; readonly where: 'before' | 'first' | 'last' };
 
 /**
  * The run, first in its parent, moved up past the line above it: out of a paragraph's list, above
@@ -76,7 +78,7 @@ type Crossing = { readonly at: OutlineNode; readonly where: 'before' | 'first' |
  * the section above, inside the last sub-headings that can hold it, or else right before the
  * heading); out of an item, as the last child of the item above. Null where it can't go.
  */
-function crossUpOutOfParent(ctx: CommandContext, nodes: readonly OutlineNode[]): Crossing | null {
+function crossUpOutOfParent(ctx: CommandContext, nodes: readonly OurusNode[]): Crossing | null {
   const first = nodes[0]!;
   const parent = first.parent!;
   if (first.kind === 'item' && parent.kind === 'paragraph') return { at: parent, where: 'before' };
@@ -97,7 +99,7 @@ function crossUpOutOfParent(ctx: CommandContext, nodes: readonly OutlineNode[]):
  * take in that section's nodes; out of an item, as the first child of the item below. Null where it
  * can't go; `reparent` where a heading would take in the section's nodes, or end it.
  */
-function crossDownOutOfParent(ctx: CommandContext, nodes: readonly OutlineNode[]): Crossing | 'reparent' | null {
+function crossDownOutOfParent(ctx: CommandContext, nodes: readonly OurusNode[]): Crossing | 'reparent' | null {
   const first = nodes[0]!;
   let from = first.parent!;
   let below = from.next;
@@ -119,8 +121,8 @@ function crossDownOutOfParent(ctx: CommandContext, nodes: readonly OutlineNode[]
 }
 
 /** The last section, `section` or a sub-heading at its end, that can hold `node` (a heading only under a heading of a higher level), or null. */
-function lastSectionHolding(ctx: CommandContext, section: OutlineNode, node: OutlineNode): OutlineNode | null {
-  const holds = (h: OutlineNode): boolean => node.kind !== 'heading' || headingLevel(ctx, h) < headingLevel(ctx, node);
+function lastSectionHolding(ctx: CommandContext, section: OurusNode, node: OurusNode): OurusNode | null {
+  const holds = (h: OurusNode): boolean => node.kind !== 'heading' || headingLevel(ctx, h) < headingLevel(ctx, node);
   if (!holds(section)) return null;
   let into = section;
   for (let last = into.children[into.children.length - 1]; last?.kind === 'heading' && holds(last); last = into.children[into.children.length - 1]) into = last;
@@ -132,7 +134,7 @@ function lastSectionHolding(ctx: CommandContext, section: OutlineNode, node: Out
  * item, a paragraph's list or a quote (which it can cross out of), anything but a heading into a
  * heading's section.
  */
-function canCrossInto(into: OutlineNode, node: OutlineNode): boolean {
+function canCrossInto(into: OurusNode, node: OurusNode): boolean {
   if (into.kind === 'heading') return node.kind !== 'heading';
   if (node.kind === 'item') return into.kind === 'item' || into.kind === 'paragraph' || into.kind === 'quote';
   return false;

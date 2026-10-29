@@ -2,9 +2,9 @@
 // selection (the subtrees of the nodes it touches, as whole lines: `drawnSelection`), `◌` placeholders
 // place, `→` tab, `␍` carriage return, `⍽` no-break space (U+00A0, which Markdown reads as text).
 
-import type { TextSelection } from '../src/commands/index.ts';
-import type { Config } from '../src/config.ts';
-import { ProseText, OurusDoc, textEnd, textStart, type OutlineNode } from '../src/doc/index.ts';
+import type { OurusSelection } from '../src/commands/index.ts';
+import type { OurusConfig } from '../src/config.ts';
+import { OurusProse, OurusDoc, textEnd, textStart, type OurusNode } from '../src/doc/index.ts';
 import { createPlaceholder, trimMd } from '../src/text/index.ts';
 
 /**
@@ -92,7 +92,7 @@ export function readDropLine(drawn: string): { drawn: string; drop: DropLine | n
  * `subtrees`, its direction, its offsets those drawn: `drawnSelection` makes it), placeholders (`◌`), tabs drawn as
  * `→`; node labels (`①`) are taken out, and given by line; so is a drop line (`▸`).
  */
-export function readDrawing(drawn: string): { text: string; selection: TextSelection; subtrees: 'down' | 'up' | null; placeholders: number[]; labels: Map<number, number[]>; drop: DropLine | null } {
+export function readDrawing(drawn: string): { text: string; selection: OurusSelection; subtrees: 'down' | 'up' | null; placeholders: number[]; labels: Map<number, number[]>; drop: DropLine | null } {
   let text = '';
   const placeholders: number[] = [];
   let caret = -1;
@@ -129,46 +129,51 @@ export function readDrawing(drawn: string): { text: string; selection: TextSelec
  * A drawing's selection in `doc`, its text's: a subtree selection (`««…»»`) the canonical selection of
  * the nodes its span touches (`OurusDoc.selectionOf`), upward where `┃` is before it; else as drawn.
  */
-export function drawnSelection(doc: OurusDoc, drawing: { readonly selection: TextSelection; readonly subtrees: 'down' | 'up' | null }): TextSelection {
+export function drawnSelection(doc: OurusDoc, drawing: { readonly selection: OurusSelection; readonly subtrees: 'down' | 'up' | null }): OurusSelection {
   if (!drawing.subtrees) return drawing.selection;
   return doc.selectionOf(doc.touchedSubtrees(drawing.selection), drawing.subtrees);
 }
 
 /**
  * Where `sel`, a subtree selection of the canonical shape (`OurusDoc.selectionOf`'s), is drawn: `««`
- * where the first root's text starts (its first descendant's with text, where it has none), `»»`
+ * where the first root's text starts (its first descendant's with text, where it has none; its line's
+ * start where that text alone reads as the descendant's), `»»`
  * where the last's own text ends (its last child's, where it has none), the shortest span that reads
  * back as it; null for any other selection, drawn as it is, and where no span reads back as it (an
  * empty last node on an empty line: any offset there is the line's start, which touches nothing).
  */
-export function subtreeSpan(doc: OurusDoc, sel: TextSelection): { from: number; to: number } | null {
+export function subtreeSpan(doc: OurusDoc, sel: OurusSelection): { from: number; to: number } | null {
   const roots = doc.selectedNodes(sel);
   if (!roots) return null;
   const up = sel.head < sel.anchor;
   const canonical = doc.selectionOf(roots.map((n) => n.id), up ? 'up' : 'down');
   if (canonical.anchor !== sel.anchor || canonical.head !== sel.head) return null;
-  let first: OutlineNode = roots[0]!;
+  let first: OurusNode = roots[0]!;
   while (!doc.textOf(first) && first.children.length) first = first.children[0]!;
-  let last: OutlineNode = roots[roots.length - 1]!;
+  let last: OurusNode = roots[roots.length - 1]!;
   while (!doc.textOf(last) && last.children.length) last = last.children[last.children.length - 1]!;
   const start = doc.textOf(first);
   if (!start) return null;
-  const from = doc.posOf(first, textStart(start), 1);
+  // (where that text starts below the first root's line, a quote's blank `>` first, the root's line
+  // start: the text alone is the child's)
+  const froms = [doc.posOf(first, textStart(start), 1), doc.mdTree.starts[roots[0]!.startLine]!];
   // the last's own text end; where that touches nothing (an empty text on an empty line), its last
   // descendant's
-  for (const node of [last, last.lastDescendant]) {
-    const text = doc.textOf(node);
-    if (!text) continue;
-    // (an empty text's end, the side left of what isn't text, can be before its start: one point)
-    const span = { from, to: Math.max(from, doc.posOf(node, textEnd(text), -1)) };
-    const back = drawnSelection(doc, { selection: { anchor: span.from, head: span.to }, subtrees: up ? 'up' : 'down' });
-    if (back.anchor === sel.anchor && back.head === sel.head) return span;
+  for (const from of froms) {
+    for (const node of [last, last.lastDescendant]) {
+      const text = doc.textOf(node);
+      if (!text) continue;
+      // (an empty text's end, the side left of what isn't text, can be before its start: one point)
+      const span = { from, to: Math.max(from, doc.posOf(node, textEnd(text), -1)) };
+      const back = drawnSelection(doc, { selection: { anchor: span.from, head: span.to }, subtrees: up ? 'up' : 'down' });
+      if (back.anchor === sel.anchor && back.head === sel.head) return span;
+    }
   }
   return null;
 }
 
 /** A text and a selection in it drawn; `span`, where the selection is a subtree selection, where it draws it (`subtreeSpan`). */
-export function drawState(text: string, sel: TextSelection, placeholders: readonly number[] = [], span: { from: number; to: number } | null = null): string {
+export function drawState(text: string, sel: OurusSelection, placeholders: readonly number[] = [], span: { from: number; to: number } | null = null): string {
   const from = Math.min(sel.anchor, sel.head);
   const to = Math.max(sel.anchor, sel.head);
   const marks = new Map<number, string>();
@@ -203,10 +208,10 @@ export const drawText = (text: string): string => text.replace(/\t/g, '→').rep
  */
 export function drawOutline(doc: OurusDoc): string {
   const out: string[] = [];
-  const visit = (node: OutlineNode): void => {
+  const visit = (node: OurusNode): void => {
     const text = doc.textOf(node);
     const kind = node.kind === 'heading' ? `heading ${node.head!.attrs.level}` : node.kind === 'atom' ? `atom ${node.block.type}` : node.kind;
-    const task = node.kind === 'item' && text instanceof ProseText && text.task ? ` [${text.task.status}]` : '';
+    const task = node.kind === 'item' && text instanceof OurusProse && text.task ? ` [${text.task.status}]` : '';
     const own = drawText(plainText(doc, node)).replace(/\r?\n/g, '⏎');
     out.push(`${'  '.repeat(node.depth - 1)}${kind}${task}${own ? `: ${own}` : ''}`);
     node.children.forEach(visit);
@@ -216,9 +221,9 @@ export function drawOutline(doc: OurusDoc): string {
 }
 
 /** A node's text without its frame (a checkbox, `#`s, a callout's `[!type]`), each line trimmed; code's as it is. */
-export function plainText(doc: OurusDoc, node: OutlineNode): string {
+export function plainText(doc: OurusDoc, node: OurusNode): string {
   const text = doc.textOf(node);
-  if (!(text instanceof ProseText)) return text?.text ?? '';
+  if (!(text instanceof OurusProse)) return text?.text ?? '';
   return text.body
     .split('\n')
     .map((line) => trimMd(line))
@@ -226,9 +231,9 @@ export function plainText(doc: OurusDoc, node: OutlineNode): string {
 }
 
 /** Every node of `doc` but the root, in document order. */
-export function nodesOf(doc: OurusDoc): OutlineNode[] {
-  const out: OutlineNode[] = [];
-  const visit = (node: OutlineNode): void => {
+export function nodesOf(doc: OurusDoc): OurusNode[] {
+  const out: OurusNode[] = [];
+  const visit = (node: OurusNode): void => {
     out.push(node);
     node.children.forEach(visit);
   };
@@ -237,8 +242,8 @@ export function nodesOf(doc: OurusDoc): OutlineNode[] {
 }
 
 /** The document a drawn state reads as: its text and placeholders, read with `config`. */
-export const docOf = (text: string, placeholders: readonly number[] = [], config: Partial<Config> = {}): OurusDoc =>
+export const docOf = (text: string, placeholders: readonly number[] = [], config: Partial<OurusConfig> = {}): OurusDoc =>
   OurusDoc.parse(text, { config, marks: placeholders.map((p) => createPlaceholder(p)) });
 
 /** A document and a selection in it, drawn. */
-export const drawDoc = (doc: OurusDoc, sel: TextSelection): string => drawState(doc.text, sel, doc.marks.points(), subtreeSpan(doc, sel));
+export const drawDoc = (doc: OurusDoc, sel: OurusSelection): string => drawState(doc.text, sel, doc.marks.points(), subtreeSpan(doc, sel));

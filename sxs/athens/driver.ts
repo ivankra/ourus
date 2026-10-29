@@ -72,7 +72,8 @@ export const driver: Driver = {
   // zoomed, the root is the page's title, no block on screen to put a caret in
   holds(doc) {
     const o = doc as Outline;
-    return o.view && o.view.zoom !== null && o.sel?.block === o.view.zoom ? "the caret in the zoom root, the page's title" : undefined;
+    if (o.view && o.view.zoom !== null && o.sel?.block === o.view.zoom) return "the caret in the zoom root, the page's title";
+    return o.view && o.view.zoom !== null && o.selected?.includes(o.view.zoom) ? "the zoom root selected as a block, the page's title" : undefined;
   },
   keys: {
     // the selection commands (spec/select.md): Ctrl-A, Shift-Down and Shift-Up as the app has them
@@ -239,10 +240,11 @@ export const driver: Driver = {
         }
         (document.activeElement as HTMLElement | null)?.blur();
         if (!sel) return null;
-        // where a click opens the block for editing, as a user's does
+        // where a click opens the block for editing, as a user's does: at its right end, past its text
+        // (at its left a task's checkbox, which a click toggles: SubtreeEdit9); the caret set after
         const uid = uids[sel.block]!;
         const r = document.querySelector(`.block-container[data-uid="${uid}"] > .block-body .block-content`)?.getBoundingClientRect();
-        return r ? { uid, x: r.left + 2, y: r.top + Math.min(r.height / 2, 10) } : null;
+        return r ? { uid, x: r.right - 4, y: r.top + Math.min(r.height / 2, 10) } : null;
       },
       { blocks: blocks.map(({ depth, string }) => ({ depth, string })), sel, view: o.view ?? null },
     );

@@ -3,7 +3,7 @@
 // a block, sets apart what would run together, numbers the lists, and holds an empty node with a
 // placeholder.
 
-import { ProseText, AtomText, type OutlineNode } from '../doc/index.ts';
+import { OurusProse, OurusAtom, type OurusNode } from '../doc/index.ts';
 import { isSpaceOrTab, lineOf, trimMd } from '../text/index.ts';
 import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
 import { codeAt, newlineInCode, nodeAfterBlock } from './code.ts';
@@ -30,9 +30,11 @@ import { withFolds } from './view.ts';
  * as Shift-Enter does, and on an empty one, or the blank line after its text where Enter left the
  * caret, it leaves the quote; with `split` the rest is a paragraph after it.
  * `key`: the Enter key's, where an app's quirk of it applies (`quirkEnterMidHeading`), not another
- * command's split (plain paste's line breaks, Shift-Enter in an ATX title).
+ * command's split (plain paste's line breaks, Shift-Enter in an ATX title). `typed`: an Enter as typed,
+ * the key's or a plain paste's typed lines' (`pastePlainLines: enter`), where a quote's text makes a
+ * line of it (`enterInQuote: line`).
  */
-export function enterCommand(ctx: CommandContext, key = true): CommandOutcome {
+export function enterCommand(ctx: CommandContext, key = true, typed = key): CommandOutcome {
   ctx = pastPrefix(ctx);
   const doc = ctx.doc;
   const config = doc.config;
@@ -50,12 +52,12 @@ export function enterCommand(ctx: CommandContext, key = true): CommandOutcome {
   const from = ctx.from;
   // with `enterAtTextStart: stay`, at a heading's line start, before its `#`s: a blank line above it, the
   // heading whole, the caret to its title (Enter55c)
-  if (config.enterAtTextStart === 'stay' && ctx.collapsed && from.zone === 'frame' && from.part === 'heading' && from.offset === 0 && from.text instanceof ProseText && canOpenLineAbove(ctx, from.node)) {
+  if (config.enterAtTextStart === 'stay' && ctx.collapsed && from.zone === 'frame' && from.part === 'heading' && from.offset === 0 && from.text instanceof OurusProse && canOpenLineAbove(ctx, from.node)) {
     return openLineAbove(ctx, from.node, from.text.textStart(0), from.text, from.text.textStart(0));
   }
   if (from.zone === 'frame' && from.part === 'callout' && from.offset > 0) return config.markup === 'text' && ctx.collapsed ? deferToHost('the caret is in markup') : reject('not-expressible', "a callout's type is one word");
   // in a setext underline, at the end of the title: the underline is markup (TO-E18)
-  const underline = ctx.collapsed && from.zone === 'frame' && from.part === 'underline' && from.text instanceof ProseText ? { node: from.node, text: from.text, offset: from.text.frame.find((p) => p.part === 'underline')!.from } : null;
+  const underline = ctx.collapsed && from.zone === 'frame' && from.part === 'underline' && from.text instanceof OurusProse ? { node: from.node, text: from.text, offset: from.text.frame.find((p) => p.part === 'underline')!.from } : null;
   const at = underline ?? textActedOnAt(ctx, Math.min(ctx.selection.anchor, ctx.selection.head));
   if (!at) return null;
   const { node, text, offset } = at;
@@ -70,7 +72,7 @@ export function enterCommand(ctx: CommandContext, key = true): CommandOutcome {
   // a quote's text: an empty one leaves the quote, the `> ` going; with `enterInQuote: line` a line
   // of it, past the text's start (where a node goes above it, rule 6); with `split` it splits as a
   // paragraph does, the rest unquoted
-  if (text.type === 'quote' && key) {
+  if (text.type === 'quote' && typed) {
     if (text.empty && ctx.collapsed) return ctx.apply(ctx.draft().setText(node, text.slice(text.textStart(0))).setCaret(node, 0, -1));
     if (config.enterInQuote === 'line' && trimMd(text.text.slice(text.textStart(0), offset)) !== '') return shiftEnterCommand(ctx);
   }
@@ -104,7 +106,9 @@ export function enterCommand(ctx: CommandContext, key = true): CommandOutcome {
   let kept = 0;
   if (config.enterSplitSpace === 'start') while (s[b + kept] === ' ') kept++;
   if (b + kept === s.length || s[b + kept] === '\n') kept = 0;
-  if (!kept) while (b < s.length && isSpaceOrTab(s.charCodeAt(b))) b++;
+  // (not into an ATX title's closing `#`s, whose blanks are theirs)
+  const stop = close?.part === 'close' ? Math.max(b, close.from) : s.length;
+  if (!kept) while (b < stop && isSpaceOrTab(s.charCodeAt(b))) b++;
   // (a title left with its `[!type]` alone, the space after it goes)
   if (title && a === lineStart) while (a > 0 && isSpaceOrTab(s.charCodeAt(a - 1))) a--;
   if (a > 0 && s[a - 1] === '\n' && a === lineStart) a--;
@@ -144,7 +148,7 @@ export function enterCommand(ctx: CommandContext, key = true): CommandOutcome {
   // a task's new item is a task too
   let rest = text.slice(b, close ? close.from : s.length).asItem(node.kind === 'item');
   if (node.kind === 'item' && text.task && config.enterTask === 'continue') {
-    rest = new ProseText('paragraph', true, '[ ] ').concat(rest);
+    rest = new OurusProse('paragraph', true, '[ ] ').concat(rest);
     draft.setText(made, rest);
   }
   // the caret at the new text's start, before a backslash it starts with, and the spaces it keeps
@@ -164,11 +168,11 @@ const LINE_BLOCKS = new Set(['table', 'thematic_break', 'footnote_definition']);
  */
 function blockAt(ctx: CommandContext): CommandOutcome | undefined {
   const at = ctx.from;
-  if (!ctx.collapsed || (at.zone !== 'text' && at.zone !== 'frame') || !(at.text instanceof AtomText) || !LINE_BLOCKS.has(at.text.type)) return undefined;
+  if (!ctx.collapsed || (at.zone !== 'text' && at.zone !== 'frame') || !(at.text instanceof OurusAtom) || !LINE_BLOCKS.has(at.text.type)) return undefined;
   if (at.offset < at.text.text.length) return at.text.type === 'table' ? reject('not-expressible', 'a row is a line') : null;
   if (at.node.kind === 'item') return nodeAfterBlock(ctx, at.node);
   const draft = ctx.draft();
-  const made = draft.create('paragraph', new ProseText('paragraph', false, ''));
+  const made = draft.create('paragraph', new OurusProse('paragraph', false, ''));
   draft.place('after', at.node, [made]).gap(made, at.node.gap).gap(at.node, 1).setCaret(made, 0, -1);
   return ctx.apply(draft);
 }
@@ -177,7 +181,7 @@ function blockAt(ctx: CommandContext): CommandOutcome | undefined {
  * Enter on an empty paragraph: the quote's last node leaves the quote, as Shift-Tab takes it out
  * (Quote35); anywhere else refused, there is no second one to make (Enter40).
  */
-function emptyParagraph(ctx: CommandContext, node: OutlineNode): CommandOutcome {
+function emptyParagraph(ctx: CommandContext, node: OurusNode): CommandOutcome {
   if (node.kind === 'paragraph' && node.parent?.kind === 'quote' && !node.next && !node.children.length) return outdentCommand(ctx);
   return reject('not-expressible', 'an empty paragraph makes no second one');
 }
@@ -187,14 +191,14 @@ function emptyParagraph(ctx: CommandContext, node: OutlineNode): CommandOutcome 
  * (its first, at the text's column, `> ┃`): the quote is left, an empty paragraph after it (an item,
  * after an item), as Enter on an empty quote does. Undefined on any other blank line.
  */
-function leaveQuote(ctx: CommandContext, owner: OutlineNode): CommandOutcome | undefined {
+function leaveQuote(ctx: CommandContext, owner: OurusNode): CommandOutcome | undefined {
   const text = ctx.doc.textOf(owner);
-  if (!(text instanceof ProseText) || text.type !== 'quote' || owner.children.length) return undefined;
+  if (!(text instanceof OurusProse) || text.type !== 'quote' || owner.children.length) return undefined;
   const head = ctx.selection.head;
   if (ctx.doc.lineAt(head).index !== owner.textLastLine + 1 || !ctx.doc.atTextColumn(head, owner)) return undefined;
   const draft = ctx.draft();
   const item = owner.kind === 'item';
-  const id = draft.create(item ? 'item' : 'paragraph', new ProseText('paragraph', item, ''));
+  const id = draft.create(item ? 'item' : 'paragraph', new OurusProse('paragraph', item, ''));
   return ctx.apply(draft.place('after', owner, [id]).gap(id, Math.max(0, owner.gap - 1)).gap(owner, item ? 0 : 1).setCaret(id, 0, -1));
 }
 
@@ -203,15 +207,15 @@ function leaveQuote(ctx: CommandContext, owner: OutlineNode): CommandOutcome | u
  * Fence22): the line is the item's next sibling, as Enter on an empty nested item outdents it. The
  * blank lines above it stay the item's, those below go with the new item. Null on any other blank line.
  */
-function leaveItem(ctx: CommandContext, owner: OutlineNode): CommandOutcome {
+function leaveItem(ctx: CommandContext, owner: OurusNode): CommandOutcome {
   const k = ctx.doc.lineAt(ctx.selection.head).index - owner.textLastLine - 1;
   if (owner.children.length || k < 0 || k >= owner.gap) return null;
   // the item whose last node the line is after
-  let item: OutlineNode | null = owner;
+  let item: OurusNode | null = owner;
   while (item && !(item.kind === 'item' && ctx.doc.atTextColumn(ctx.selection.head, item))) item = item.next ? null : item.parent;
   if (!item) return null;
   const draft = ctx.draft();
-  const id = draft.create('item', newEmptyTextBeside(ctx, ctx.doc.textOf(item) as ProseText, 'item'));
+  const id = draft.create('item', newEmptyTextBeside(ctx, ctx.doc.textOf(item) as OurusProse, 'item'));
   return ctx.apply(draft.place('after', item, [id]).gap(owner, k).gap(id, owner.gap - k - 1).setCaret(id, 0, -1));
 }
 
@@ -232,9 +236,9 @@ function splitAcross(ctx: CommandContext): CommandOutcome {
 }
 
 /** A new empty text for a node of `kind` made beside one whose text is `text`: a task's item is a task too (`enterTask: continue`). */
-function newEmptyTextBeside(ctx: CommandContext, text: ProseText, kind: 'item' | 'paragraph'): ProseText {
+function newEmptyTextBeside(ctx: CommandContext, text: OurusProse, kind: 'item' | 'paragraph'): OurusProse {
   const task = kind === 'item' && !!text.task && ctx.doc.config.enterTask === 'continue';
-  return new ProseText('paragraph', kind === 'item', task ? '[ ] ' : '');
+  return new OurusProse('paragraph', kind === 'item', task ? '[ ] ' : '');
 }
 
 /**
@@ -242,7 +246,7 @@ function newEmptyTextBeside(ctx: CommandContext, text: ProseText, kind: 'item' |
  * caret going into it: an empty item above an item, an empty paragraph above a paragraph or a heading.
  * `stays`: the caret staying in the node's text instead (`stay`, an item).
  */
-function newEmptyNodeAbove(ctx: CommandContext, node: OutlineNode, text: ProseText, to: number, stays = false): CommandOutcome {
+function newEmptyNodeAbove(ctx: CommandContext, node: OurusNode, text: OurusProse, to: number, stays = false): CommandOutcome {
   const kind = node.kind === 'item' ? 'item' : 'paragraph';
   const draft = ctx.draft();
   const rest = withoutSelection(text, to);
@@ -261,7 +265,7 @@ function newEmptyNodeAbove(ctx: CommandContext, node: OutlineNode, text: ProseTe
  * own text's (a quote without a title has none), or at the document's start, where only blank lines
  * are above it (no frontmatter).
  */
-function canOpenLineAbove(ctx: CommandContext, node: OutlineNode): boolean {
+function canOpenLineAbove(ctx: CommandContext, node: OurusNode): boolean {
   const above = node.preceding;
   if (!above || above.kind === 'root') return ctx.doc.leadingBlankLines !== null;
   return above.kind !== 'quote' || ctx.doc.textOf(above) !== null || above !== node.parent;
@@ -271,7 +275,7 @@ function canOpenLineAbove(ctx: CommandContext, node: OutlineNode): boolean {
  * A blank line above `node`, the caret at `offset` of its text, which keeps its text but a selection
  * from its start to `to` (`enterAtTextStart: stay`).
  */
-function openLineAbove(ctx: CommandContext, node: OutlineNode, offset: number, text: ProseText, to: number): CommandOutcome {
+function openLineAbove(ctx: CommandContext, node: OurusNode, offset: number, text: OurusProse, to: number): CommandOutcome {
   const rest = withoutSelection(text, to);
   if (!rest) return null;
   const draft = ctx.draft();
@@ -287,7 +291,7 @@ function openLineAbove(ctx: CommandContext, node: OutlineNode, offset: number, t
  * `text` without a selection from its start to `to`, and the blanks after it (they would be padding
  * there); `text` itself where there is none; null where a line break follows it (not done yet).
  */
-function withoutSelection(text: ProseText, to: number): ProseText | null {
+function withoutSelection(text: OurusProse, to: number): OurusProse | null {
   if (to <= text.textStart(0)) return text;
   const s = text.text;
   let end = to;
@@ -303,7 +307,7 @@ function withoutSelection(text: ProseText, to: number): ProseText | null {
  * outdents, or leaves its list (`leaveList`). With `unwrap`, but last without children, an empty
  * paragraph where it is (Enter7c, Enter27b, Enter21b).
  */
-function enterInEmptyItem(ctx: CommandContext, node: OutlineNode, text: ProseText, offset: number): CommandOutcome {
+function enterInEmptyItem(ctx: CommandContext, node: OurusNode, text: OurusProse, offset: number): CommandOutcome {
   const config = ctx.doc.config;
   const draft = ctx.draft();
   // folded (within the zoom), with children: a new item after its subtree, not among its hidden

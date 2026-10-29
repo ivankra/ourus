@@ -3,8 +3,8 @@
 // can't know is the text's: its type and frame, the lines a placeholder holds, a setext underline.
 
 import type { MdEscapeAt, MdEscapedParagraph, MdFlavor, MdParagraphPlace } from '../parser/index.ts';
-import { advanceColumns } from '../text/index.ts';
-import { ProseText, type ProseTextType } from './text.ts';
+import { advanceColumns, trimMd } from '../text/index.ts';
+import { OurusProse, type OurusProseType } from './text.ts';
 
 /** The character the parser reads a placeholder as. */
 export const SENTINEL = '￼';
@@ -14,7 +14,7 @@ export const SENTINEL = '￼';
  * `columns`: the column each line starts at, by default 0), read where they are, that are markup
  * escapes: out of its string. In the lines' own offsets.
  */
-export function markupEscapes(flavor: MdFlavor, type: ProseTextType, item: boolean, lines: readonly string[], held: readonly boolean[], columns?: readonly number[]): MdEscapeAt[] {
+export function markupEscapes(flavor: MdFlavor, type: OurusProseType, item: boolean, lines: readonly string[], held: readonly boolean[], columns?: readonly number[]): MdEscapeAt[] {
   const a = asked(type, item, lines, held, columns);
   return flavor.markupEscapes(a.lines, a.place).map(a.back);
 }
@@ -25,7 +25,7 @@ export function markupEscapes(flavor: MdFlavor, type: ProseTextType, item: boole
  * there absorbed, and the escapes that keep each line the text's, markup ones or backslashes it gains
  * (`MdFlavor.escapeParagraph`); null where none does.
  */
-export function escapeParagraph(flavor: MdFlavor, type: ProseTextType, item: boolean, lines: readonly string[], held: readonly boolean[], columns?: readonly number[]): MdEscapedParagraph | null {
+export function escapeParagraph(flavor: MdFlavor, type: OurusProseType, item: boolean, lines: readonly string[], held: readonly boolean[], columns?: readonly number[]): MdEscapedParagraph | null {
   const a = asked(type, item, lines, held, columns);
   const spelled = flavor.escapeParagraph(a.lines, a.place);
   if (!spelled) return null;
@@ -48,14 +48,15 @@ export function escapeParagraph(flavor: MdFlavor, type: ProseTextType, item: boo
  * spaces they span from its column (the parser reads each line from column 0), `lead` saying how far,
  * and `back` putting an escape where it is in the line as written.
  */
-function asked(type: ProseTextType, item: boolean, lines: readonly string[], held: readonly boolean[], columns?: readonly number[]): { from: number; lines: string[]; place: MdParagraphPlace; lead: ({ was: number; now: number } | null)[]; cut: number[]; back: (e: MdEscapeAt) => MdEscapeAt } {
+function asked(type: OurusProseType, item: boolean, lines: readonly string[], held: readonly boolean[], columns?: readonly number[]): { from: number; lines: string[]; place: MdParagraphPlace; lead: ({ was: number; now: number } | null)[]; cut: number[]; back: (e: MdEscapeAt) => MdEscapeAt } {
   if (type === 'quote') {
-    const frame = new ProseText(type, item, lines.join('\n')).frame;
+    // (each line's `>`, by where it starts)
+    const quotes = new Map(new OurusProse(type, item, lines.join('\n')).frame.filter((p) => p.part === 'quote').map((p) => [p.from, p.to - p.from]));
     let at = 0;
     const cut = lines.map((l) => {
-      const part = frame.find((p) => p.part === 'quote' && p.from === at);
+      const width = quotes.get(at) ?? 0;
       at += l.length + 1;
-      return part ? part.to - part.from : 0;
+      return width;
     });
     // (each line past its `>`, from the column there: a tab after it spans by where it is)
     const inner = asked('paragraph', false, lines.map((l, k) => l.slice(cut[k])), held, lines.map((l, k) => (columns?.[k] ?? 0) + advanceColumns(l, 0, cut[k]!, columns?.[k] ?? 0) - (columns?.[k] ?? 0)));
@@ -70,7 +71,7 @@ function asked(type: ProseTextType, item: boolean, lines: readonly string[], hel
   const written = lines.map((l, k) => (held[k] ? l + SENTINEL : l));
   const end = frameEnd(type, item, written);
   // (a setext heading's underline isn't asked: its title's lines are; past a checkbox too, `- [x] a⏎  -`)
-  const setext = type === 'heading' && (end < 0 || new ProseText(type, item, lines.join('\n')).frame.some((p) => p.part === 'underline'));
+  const setext = type === 'heading' && (end < 0 || new OurusProse(type, item, lines.join('\n')).frame.some((p) => p.part === 'underline'));
   const to = setext ? written.length - 1 : written.length;
   const from = end < 0 ? 0 : 1;
   const lead = written.slice(from, to).map((l, k) => {
@@ -85,12 +86,12 @@ function asked(type: ProseTextType, item: boolean, lines: readonly string[], hel
   // the paragraph the lines continue is the first line past its frame (a table's delimiter row is
   // matched against it), or the frame where nothing follows it on its line (`[!note]⏎q0`)
   const rest = written[0]!.slice(end);
-  return { from, lines: asking, place: { context: 'continuation', above: rest.trim() ? rest : written[0]! }, lead, cut, back };
+  return { from, lines: asking, place: { context: 'continuation', above: trimMd(rest) ? rest : written[0]! }, lead, cut, back };
 }
 
 /** Where a frame at the text's start ends on its first line (a checkbox, an ATX heading's `#`s, a callout's type, and the blanks after them), or -1. */
-function frameEnd(type: ProseTextType, item: boolean, lines: readonly string[]): number {
+function frameEnd(type: OurusProseType, item: boolean, lines: readonly string[]): number {
   const first = (lines[0] ?? '').length;
-  const parts = new ProseText(type, item, lines.join('\n')).frame.filter((p) => (p.part === 'task' || p.part === 'heading' || p.part === 'callout') && p.from <= first);
+  const parts = new OurusProse(type, item, lines.join('\n')).frame.filter((p) => (p.part === 'task' || p.part === 'heading' || p.part === 'callout') && p.from <= first);
   return parts.length ? Math.min(first, Math.max(...parts.map((p) => p.to))) : -1;
 }

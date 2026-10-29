@@ -56,9 +56,10 @@ https://github.com/jrblevin/markdown-mode
 - **Emacs**, the system's (`apt install emacs-nox`: Debian's 30.2 here; installed with tmux when
   either is missing, as every run's packages are: [`lib/system.ts`](../lib/system.ts)), started `emacs -Q -nw` on a
   terminal: a tmux server of the run's own (`-L ourus-sxs-<pid>`), one session 80 by 24, and Emacs's
-  server started in it on a socket in `.sxs/emacs-markdown/server-<pid>/` (Emacs refuses a socket directory
+  server started in it on a socket in `emacs-markdown/server-<pid>/` in the container's own state
+  directory (`stateDir`, `/var/tmp/ourus-sxs-<uid>/<id>/`; Emacs refuses a socket directory
   others can read: it is made 700; a Unix socket's path is at most about 108 bytes, so an
-  `OURUS_SXS_DIR` with a long path fails to start it, with "Service name too long"). Calls are `emacsclient --eval`. Started in 0.1 s; stopped (Emacs
+  `OURUS_SXS_STATE` with a long path fails to start it, with "Service name too long"). Calls are `emacsclient --eval`. Started in 0.1 s; stopped (Emacs
   killed, then the tmux server) when the run ends.
 - **A terminal, not a daemon**: a daemon's window is on no display, and what goes by the display goes
   wrong there: Up and Down move by screen lines (`line-move-visual`), taking their column from the

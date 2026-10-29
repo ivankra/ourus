@@ -8,11 +8,11 @@
 // typed (a character at a time, each through ourus's `insertText` first, as a host hooked to its
 // keys does), and caret motions named as CodeMirror's commands are.
 
-import { executeCommand, leavesZoom, type Command, type CommandResult, type TextSelection } from '../src/commands/index.ts';
+import { executeCommand, leavesZoom, type OurusCommand, type OurusCommandResult, type OurusSelection } from '../src/commands/index.ts';
 import { CommandContext } from '../src/commands/context.ts';
 import { dragRun, placeAtSeam } from '../src/commands/drag.ts';
 import type { OurusDoc } from '../src/doc/index.ts';
-import { settlePlaceholders } from '../src/draft/index.ts';
+import { settlePlaceholders } from '../src/writer/index.ts';
 import { advanceColumns, applyChanges, dominantEnding, type ChangeSpec, type MarkSet } from '../src/text/index.ts';
 import { labelNumber, type DropLine } from './drawing.ts';
 import type { Clipboard } from './specfile.ts';
@@ -41,10 +41,10 @@ const COMMANDS = new Set<string>([
 ]);
 
 /** The command an action names: `paste` takes the clipboard's formats, plain paste its text. */
-function commandOf(action: string, clipboard: Clipboard): Command {
+function commandOf(action: string, clipboard: Clipboard): OurusCommand {
   if (action === 'paste') return { type: 'paste', clipboard };
   if (action === 'pastePlain') return { type: action, text: clipboard['text/plain'] ?? '' };
-  return { type: action } as Command;
+  return { type: action } as OurusCommand;
 }
 
 /**
@@ -55,7 +55,7 @@ function commandOf(action: string, clipboard: Clipboard): Command {
  * monospace font's, with tab stops of 4. Returns the new head, or for a vertical motion the line
  * it reaches, placed at the goal column.
  */
-type Motion = (doc: OurusDoc, sel: TextSelection) => number | { line: number };
+type Motion = (doc: OurusDoc, sel: OurusSelection) => number | { line: number };
 
 const MOTIONS: Record<string, Motion> = {
   // with a selection, left and right collapse it to its start or end
@@ -105,13 +105,13 @@ export const isDrop = (token: string): boolean => DROP.test(token);
 
 export interface Played {
   doc: OurusDoc;
-  selection: TextSelection;
+  selection: OurusSelection;
   /** The host's clipboard, each format's text. */
   clipboard: Clipboard;
   /** The column vertical motion aims for, kept while the caret moves up and down. */
   goal?: number;
   /** The result of the last action, when it was an ourus command. */
-  last?: CommandResult;
+  last?: OurusCommandResult;
   /** The host's history: the document (placeholders included) and selection before each step that changed the text. */
   undone?: Snapshot[];
   redone?: Snapshot[];
@@ -121,11 +121,11 @@ export interface Played {
   labels?: ReadonlyMap<number, number>;
 }
 
-/** A state the host's history returns to: the text with its placeholders, and the selection; the snapshot it was, whose nodes an undo takes back (`replace`'s `like`). */
+/** A state the host's history returns to: the text with its placeholders, and the selection; the snapshot it was, whose nodes an undo takes back (`withViewOf`). */
 interface Snapshot {
   readonly text: string;
   readonly marks: MarkSet;
-  readonly selection: TextSelection;
+  readonly selection: OurusSelection;
   readonly doc: OurusDoc;
 }
 
@@ -147,7 +147,7 @@ export function play(state: Played, actions: readonly string[]): Played {
   return state;
 }
 
-/** Undo or redo one step of the host's history: the text and the caret come back, and the nodes of the snapshot it returns to (`replace`'s `like`), the view carried onto them. */
+/** Undo or redo one step of the host's history: the text and the caret come back, and the nodes of the snapshot it returns to (`withViewOf`), the view carried onto them. */
 function history(state: Played, action: 'undo' | 'redo'): Played {
   const from = action === 'undo' ? (state.undone ?? []) : (state.redone ?? []);
   const entry = from[from.length - 1];
@@ -159,7 +159,7 @@ function history(state: Played, action: 'undo' | 'redo'): Played {
     ...state,
     last: undefined,
     goal: undefined,
-    doc: state.doc.replace(entry.text, entry.marks.marks, { like: entry.doc }),
+    doc: entry.doc.withConfig(state.doc.config).withViewOf(state.doc),
     selection: entry.selection,
     ...(action === 'undo' ? { undone: rest, redone: other } : { redone: rest, undone: other }),
   };
@@ -184,6 +184,10 @@ function step(state: Played, action: string): Played {
       // markers or indentation lands at the start of its text
       head = dest ? Math.max(atColumn(text, dest.from, dest.to, goal), doc.textStart(dest.index)) : target.line < 0 ? 0 : text.length;
     }
+    // zoomed, kept in the zoom, as a host keeps its user's selection there (obsidian-zoom's
+    // `LimitSelectionWhenZoomedIn`)
+    const zoom = doc.zoomRange();
+    if (zoom) head = Math.min(Math.max(head, zoom.from), zoom.to);
     return { ...state, goal, selection: { anchor: extend ? selection.anchor : head, head } };
   }
   const dropped = DROP.exec(action);
@@ -210,7 +214,7 @@ function step(state: Played, action: string): Played {
  * else the selection's nodes), then `moveSubtree` the place the start's drop line names. A refused
  * pickup is the drop's result.
  */
-function dropCommand(state: Played, label: string | undefined): Command | CommandResult {
+function dropCommand(state: Played, label: string | undefined): OurusCommand | OurusCommandResult {
   if (!state.drop) throw new Error('a drop with no drop line (`▸`) in the start, or a second drop: a case drops once');
   const pressed = pressedOf(state, label);
   const run = dragRun(new CommandContext(state.doc, state.selection), pressed);
@@ -221,7 +225,7 @@ function dropCommand(state: Played, label: string | undefined): Command | Comman
 }
 
 /** A drop from outside: the clipboard, at the place the start's drop line names. */
-function pasteAtCommand(state: Played): Command {
+function pasteAtCommand(state: Played): OurusCommand {
   if (!state.drop) throw new Error('a drop with no drop line (`▸`) in the start, or a second drop: a case drops once');
   const at = placeAtSeam(state.doc, null, state.drop.line, state.drop.depth);
   if (typeof at === 'string') throw new Error(`the drop line: ${at}`);
@@ -240,7 +244,7 @@ function pressedOf(state: Played, label: string | undefined): number | undefined
  * `command` run as the host runs it: applied, refused, or the host's default, which a zoomed host
  * checks before committing (`leavesZoom`), refusing the edit where it would leave the zoom.
  */
-function run(state: Played, command: Command | CommandResult): Played {
+function run(state: Played, command: OurusCommand | OurusCommandResult): Played {
   return guarded(state, hostRun(state, command));
 }
 
@@ -251,7 +255,7 @@ function guarded(state: Played, next: Played): Played {
   return { ...state, last: { status: 'rejected', reason: 'outside-zoom', detail: "the host's own edit would leave the zoom" } };
 }
 
-function hostRun(state: Played, command: Command | CommandResult): Played {
+function hostRun(state: Played, command: OurusCommand | OurusCommandResult): Played {
   if ('status' in command) return { ...state, last: command };
   const { doc, selection } = state;
   const text = doc.text;
@@ -327,7 +331,7 @@ function typeText(state: Played, text: string): Played {
 function edit(state: Played, change: ChangeSpec): Played {
   const caret = change.from + change.insert.length;
   // the host tells where the caret lands, so an emptied node stays as a placeholder
-  const doc = state.doc.update([change], { caret });
+  const doc = state.doc.update({ changes: [change], caret });
   return { ...state, doc, selection: { anchor: caret, head: caret } };
 }
 
@@ -353,14 +357,16 @@ function charBefore(text: string, pos: number): number {
   return c >= 0xdc00 && c < 0xe000 && pos >= 2 && text.charCodeAt(pos - 2) >= 0xd800 && text.charCodeAt(pos - 2) < 0xdc00 ? pos - 2 : pos - 1;
 }
 
+/** One character on: a grapheme, as a host's Delete takes it (`👍🏽` whole, a line ending's `\r\n`). */
 function charAfter(text: string, pos: number): number {
   if (pos >= text.length) return text.length;
-  if (text.slice(pos, pos + 2) === '\r\n') return pos + 2;
-  const c = text.charCodeAt(pos);
-  return c >= 0xd800 && c < 0xdc00 && pos + 1 < text.length && text.charCodeAt(pos + 1) >= 0xdc00 && text.charCodeAt(pos + 1) < 0xe000 ? pos + 2 : pos + 1;
+  const first = graphemes.segment(text.slice(pos, pos + 64))[Symbol.iterator]().next().value;
+  return pos + (first?.segment.length ?? 1);
 }
 
-function mapSel(changes: readonly ChangeSpec[], sel: TextSelection): TextSelection {
+const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+
+function mapSel(changes: readonly ChangeSpec[], sel: OurusSelection): OurusSelection {
   let { anchor, head } = sel;
   for (const c of [...changes].sort((a, b) => b.from - a.from)) {
     const shift = c.insert.length - (c.to - c.from);

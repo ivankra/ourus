@@ -1,7 +1,7 @@
 // Reads an ourus document as a model tree, and maps carets between document positions and
 // (node, offset in the node's model text).
 
-import { ProseText, type OutlineNode, type OurusDoc } from '../../src/doc/index.ts';
+import { OurusProse, type OurusNode, type OurusDoc } from '../../src/doc/index.ts';
 import type { Caret, MNode } from './model.ts';
 
 const isSpace = (c: number) => c === 32 || c === 9;
@@ -26,7 +26,7 @@ export function lift(doc: OurusDoc): Lifted {
   const editable: MNode[] = [];
   const source = doc.text;
 
-  const make = (n: OutlineNode): MNode => {
+  const make = (n: OurusNode): MNode => {
     const m: MNode = { kind: n.kind, text: '', children: [] };
     byOutline.set(n.persistentNode, m);
     const text = doc.textOf(n);
@@ -44,7 +44,7 @@ export function lift(doc: OurusDoc): Lifted {
         .map((l) => l.trim())
         .join('\n');
     } else if (n.kind !== 'root') {
-      if (n.kind === 'item') m.task = text instanceof ProseText && text.task ? (text.task.status === ' ' ? ' ' : 'x') : null;
+      if (n.kind === 'item') m.task = text instanceof OurusProse && text.task ? (text.task.status === ' ' ? ' ' : 'x') : null;
       const s = segments(doc, n);
       m.text = s.map((g) => source.slice(g.from, g.to)).join('\n');
       segs.set(m, s);
@@ -91,9 +91,9 @@ export function lift(doc: OurusDoc): Lifted {
 }
 
 /** The ranges holding a node's own text, line by line, past its frame (a checkbox, `#`s, a callout's type), trimmed; a heading's title only. */
-function segments(doc: OurusDoc, n: OutlineNode): Seg[] {
+function segments(doc: OurusDoc, n: OurusNode): Seg[] {
   const text = doc.textOf(n);
-  if (!(text instanceof ProseText)) {
+  if (!(text instanceof OurusProse)) {
     // an item whose first block is a quote or a list: its text would go at the end of the marker line
     const line = doc.mdTree.line(n.startLine);
     return [{ line: line.index, from: line.to, to: line.to }];

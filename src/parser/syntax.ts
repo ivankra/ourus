@@ -386,12 +386,31 @@ export class MdTree {
   }
 
   /**
+   * The leaf whose inline text holds `pos`: its line's leaf, or the part of it there that has the
+   * text (a table's cell, `start`–`end` of its row's line).
+   */
+  #inlineLeafAt(pos: number): MdBlockAt | null {
+    const line = this.line(lineIndexAt(this.starts, pos));
+    let at = line.leaf;
+    if (!at || this.inlineText(at)) return at;
+    const col = pos - line.from;
+    for (let parts = at.children(); parts.length; ) {
+      const part = parts.find((p) => p.line === line.index && (p.block.attrs.start === undefined || (p.block.attrs.start <= col && col <= p.block.attrs.end!)));
+      if (!part) return at;
+      at = part;
+      if (this.inlineText(at)) return at;
+      parts = at.children();
+    }
+    return at;
+  }
+
+  /**
    * Whether the backslash at offset `pos` is read as an inline escape: in its leaf's inline text, and
    * not literal (in a code span, which can cross lines; raw HTML; an autolink; math).
    */
   inlineEscapeAt(pos: number): boolean {
     if (this.text[pos] !== '\\' || this.lineCount === 0) return false;
-    const { leaf } = this.line(lineIndexAt(this.starts, pos));
+    const leaf = this.#inlineLeafAt(pos);
     const text = leaf && this.inlineText(leaf);
     if (!text) return false;
     const at = text.textAt(pos);
@@ -410,7 +429,7 @@ export class MdTree {
   /** The code span `pos` is inside (past its opening backtick): where its closing run starts and where the span ends; null outside one. */
   codeSpanAt(pos: number): { readonly closer: number; readonly to: number } | null {
     if (this.lineCount === 0) return null;
-    const { leaf } = this.line(lineIndexAt(this.starts, pos));
+    const leaf = this.#inlineLeafAt(pos);
     const text = leaf && this.inlineText(leaf);
     if (!text) return null;
     const at = text.textAt(pos);

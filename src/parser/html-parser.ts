@@ -6,6 +6,7 @@
 // code block among labels and buttons (GitHub's, an LLM's).
 
 import { parseDocument } from 'htmlparser2';
+import { isPunctuation } from './chars.ts';
 
 /** A node of htmlparser2's document, as far as it is read here. */
 interface DomNode {
@@ -59,6 +60,10 @@ export interface MdHtmlParsed {
 export class MdHtmlParser {
   /** Whether this conversion has written inline formatting. */
   #formatted = false;
+  /** The code spans written, each held out of the text's whitespace collapsing by a placeholder (and the placeholders' characters in the text, `#held`). */
+  readonly #codes: string[] = [];
+  /** Each formatting written by `#wrap`, and the text it holds: where its delimiters can't open or close, that text. */
+  readonly #wraps = new Map<string, { readonly open: string; readonly close: string; readonly plain: string }>();
 
   private constructor() {}
 
@@ -122,25 +127,24 @@ export class MdHtmlParser {
       walk(p);
       return found;
     };
-    const build = (from: number, level: number): { block: HtmlBlock; next: number } => {
-      const number = /^(\d+)[.)]/.exec(glyph(paragraphs[from]!));
-      const items: HtmlBlock[][] = [];
-      let k = from;
-      while (k < paragraphs.length) {
-        const at = wordLevel(paragraphs[k]!)!;
-        if (at < level) break;
-        if (at > level && items.length) {
-          const nested = build(k, at);
-          items[items.length - 1]!.push(nested.block);
-          k = nested.next;
-          continue;
-        }
-        items.push(this.#blocksOf(paragraphs[k]!.children ?? []));
-        k++;
-      }
-      return { block: { kind: 'list', ordered: !!number, start: number ? Number(number[1]) : 1, items }, next: k };
+    // each paragraph under the nearest one before it at a shallower level, else at the top: a run
+    // starting deeper than it goes on (a selection from a nested item into the next top-level one)
+    // loses nothing, its first items the list's first
+    interface Item { readonly level: number; readonly paragraph: DomNode; readonly children: Item[] }
+    const roots: Item[] = [];
+    const stack: Item[] = [];
+    for (const paragraph of paragraphs) {
+      const item: Item = { level: wordLevel(paragraph)!, paragraph, children: [] };
+      while (stack.length && stack[stack.length - 1]!.level >= item.level) stack.pop();
+      (stack.length ? stack[stack.length - 1]!.children : roots).push(item);
+      stack.push(item);
+    }
+    const list = (items: readonly Item[]): HtmlBlock => {
+      const number = /^(\d+)[.)]/.exec(glyph(items[0]!.paragraph));
+      const blocks = items.map((i) => [...this.#blocksOf(i.paragraph.children ?? []), ...(i.children.length ? [list(i.children)] : [])]);
+      return { kind: 'list', ordered: !!number, start: number ? Number(number[1]) : 1, items: blocks };
     };
-    return build(0, wordLevel(paragraphs[0]!)!).block;
+    return list(roots);
   }
 
   #blockOf(node: DomNode): HtmlBlock[] {
@@ -210,29 +214,63 @@ export class MdHtmlParser {
 
   /** Inline content as Markdown: its text escaped, its formatting as Markdown's, a `<br>` a line break; trimmed. */
   #inlineText(nodes: readonly DomNode[]): string {
-    const text = nodes.map((n) => this.#inline(n)).join('');
+    const text = this.#joined(nodes);
     return text
       .replace(/ +/g, ' ')
       .replace(/ ?\n ?/g, '\n')
       .replace(/^[ \n]+|[ \n]+$/g, '')
-      // a checkbox starts a task's text, a space after it
-      .replace(/^(\[[ x]\])(?=\S)/, '$1 ');
+      // (code spans as written, their padding spaces too)
+      .replace(/\uE000(\d+)\uE001/g, (_, k: string) => this.#codes[Number(k)]!);
+  }
+
+  /**
+   * Inline nodes as Markdown, joined: elements of one formatting side by side one element
+   * (`<em>a</em><em>b</em>`, whose delimiters would run together, `*a**b*`); a formatting whose
+   * delimiter can't close before what follows it, or open after what precedes it (`*foo!*bar`:
+   * punctuation inside, a letter outside), its text alone, which is what it shows.
+   */
+  #joined(nodes: readonly DomNode[]): string {
+    const pieces = merged(nodes).map((n) => this.#inline(n));
+    const word = (c: string | undefined): boolean => !!c && /[\p{L}\p{N}]/u.test(c);
+    const punct = (c: string | undefined): boolean => !!c && isPunctuation(c.codePointAt(0)!);
+    for (let i = 0; i < pieces.length; i++) {
+      const p = pieces[i]!;
+      const w = this.#wraps.get(p);
+      if (!w || !/^[*~]/.test(w.open)) continue;
+      const inner = p.slice(p.indexOf(w.open) + w.open.length, p.lastIndexOf(w.close));
+      const closes = p.endsWith(w.close) && punct(inner.slice(-1)) && word(pieces[i + 1]?.[0]);
+      const opens = p.startsWith(w.open) && punct(inner[0]) && word(pieces[i - 1]?.slice(-1));
+      if (closes || opens) pieces[i] = w.plain;
+    }
+    return pieces.join('');
   }
 
   /** Inline Markdown, wrapped in `mark` around what it holds: its spaces at either end outside it, nothing where it holds nothing. */
   #wrap(mark: string, inner: string, close = mark): string {
+    // (formatting doesn't span a paragraph break: each paragraph's part wrapped on its own)
+    if (/\n[ \t]*\n/.test(inner)) return inner.split(/(\n[ \t]*\n\s*)/).map((part, k) => (k % 2 ? part : this.#wrap(mark, part, close))).join('');
     const m = /^( *)(.*?)( *)$/s.exec(inner)!;
     if (m[2] === '') return inner;
     this.#formatted = true;
-    return `${m[1]}${mark}${m[2]}${close}${m[3]}`;
+    const out = `${m[1]}${mark}${m[2]}${close}${m[3]}`;
+    this.#wraps.set(out, { open: mark, close, plain: inner });
+    return out;
+  }
+
+  /** `text` with the placeholders' own characters held as placeholders too, so the text's come back as they are. */
+  #held(text: string): string {
+    return text.replace(/[\uE000\uE001]/g, (c) => {
+      this.#codes.push(c);
+      return `\uE000${this.#codes.length - 1}\uE001`;
+    });
   }
 
   #inline(node: DomNode): string {
-    if (node.type === 'text') return escapeText(collapse(node.data!));
+    if (node.type === 'text') return this.#held(escapeText(collapse(node.data!)));
     if (!isElement(node) || SKIPPED.has(node.name!)) return '';
     // Word's bullet or number, written as text in its list paragraphs
     if (/mso-list:\s*Ignore/i.test(node.attribs?.style ?? '')) return '';
-    const inner = (): string => (node.children ?? []).map((n) => this.#inline(n)).join('');
+    const inner = (): string => this.#joined(node.children ?? []);
     // formatting as styles (Google Docs' spans; its wrapper `<b style="font-weight:normal">`, no bold)
     const style = node.attribs?.style ?? '';
     const weight = /font-weight:\s*(\w+)/.exec(style)?.[1];
@@ -262,11 +300,12 @@ export class MdHtmlParser {
       case 'samp': {
         const text = collapse(textContent(node));
         if (text.trim() === '') return text;
-        const run = Math.max(0, ...(text.match(/`+/g) ?? []).map((r) => r.length)) + 1;
+        const run = (text.match(/`+/g) ?? []).reduce((m, r) => Math.max(m, r.length), 0) + 1;
         const fence = '`'.repeat(run);
         const pad = /^`|`$/.test(text) || /^ .* $/.test(text) ? ' ' : '';
         this.#formatted = true;
-        return `${fence}${pad}${text}${pad}${fence}`;
+        this.#codes.push(`${fence}${pad}${text}${pad}${fence}`);
+        return `\uE000${this.#codes.length - 1}\uE001`;
       }
       case 'a': {
         const text = inner();
@@ -274,15 +313,16 @@ export class MdHtmlParser {
         // a link with no text (a heading's permalink) is nothing to read
         if (text.trim() === '') return '';
         if (!href || href.startsWith('javascript:')) return text;
-        return this.#wrap('[', text, `](${/[\s()<>]/.test(href) ? `<${href}>` : href})`);
+        return this.#wrap('[', text, `](${this.#held(destination(href))})`);
       }
       case 'img': {
         const src = node.attribs?.src;
         if (src) this.#formatted = true;
-        return src ? `![${escapeText(node.attribs?.alt ?? '')}](${/[\s()<>]/.test(src) ? `<${src}>` : src})` : '';
+        return src ? `![${this.#held(escapeText(node.attribs?.alt ?? ''))}](${this.#held(destination(src))})` : '';
       }
       case 'input':
-        return node.attribs?.type === 'checkbox' ? (node.attribs.checked !== undefined ? '[x]' : '[ ]') : '';
+        // (a checkbox starts a task's text, a space after it)
+        return node.attribs?.type === 'checkbox' ? (node.attribs.checked !== undefined ? '[x] ' : '[ ] ') : '';
       default:
         return styled(inner());
     }
@@ -320,10 +360,43 @@ function textContent(node: DomNode): string {
   return (node.children ?? []).map(textContent).join('');
 }
 
-/** Text as Markdown reads it as text: the characters that would start inline markup escaped. */
+/**
+ * A link's or an image's destination as Markdown reads it: as it is where it can be (no blanks or
+ * controls, its parentheses balanced, not starting `<`; a backslash before punctuation doubled, which
+ * would escape it), as the apps write one; else in angle brackets, the backslashes and brackets in it
+ * escaped (`a>b` would end them).
+ */
+function destination(url: string): string {
+  let depth = 0;
+  for (const c of url) if ((depth += c === '(' ? 1 : c === ')' ? -1 : 0) < 0) break;
+  if (url !== '' && depth === 0 && !url.startsWith('<') && !/[\s\x00-\x1f]/.test(url)) return url.replace(/\\(?=[!-/:-@[-`{-~])/g, '\\\\');
+  return `<${url.replace(/[\\<>]/g, '\\$&')}>`;
+}
+
+/** The inline elements of one formatting, by name. */
+const FORMATS: Readonly<Record<string, string>> = { b: 'strong', strong: 'strong', i: 'em', em: 'em', s: 'del', del: 'del', strike: 'del', code: 'code', kbd: 'code', samp: 'code' };
+
+/** `nodes` with each run of elements side by side of one formatting, and no style (Google Docs'), one element holding their children. */
+function merged(nodes: readonly DomNode[]): DomNode[] {
+  const out: DomNode[] = [];
+  for (const n of nodes) {
+    const prev = out[out.length - 1];
+    const format = isElement(n) && !n.attribs?.style ? FORMATS[n.name!] : undefined;
+    if (format && prev && isElement(prev) && !prev.attribs?.style && FORMATS[prev.name!] === format) out[out.length - 1] = { ...prev, children: [...(prev.children ?? []), ...(n.children ?? [])] };
+    else out.push(n);
+  }
+  return out;
+}
+
+/**
+ * Text as Markdown reads it as text: the characters that would start inline markup escaped, the
+ * extensions' too, whatever the flavor it lands in (a backslash escapes any ASCII punctuation in all
+ * of them): GFM's `~` strikethrough, Obsidian's `==` highlight, `%%` comment and `$` math.
+ */
 function escapeText(text: string): string {
   return text
-    .replace(/[\\`*[\]]/g, '\\$&')
+    .replace(/[\\`*[\]~$]/g, '\\$&')
+    .replace(/([=%])(?=\1)/g, '$1\\')
     .replace(/(^|[^\p{L}\p{N}])_|_(?=$|[^\p{L}\p{N}])/gu, (m) => m.replace('_', '\\_'))
     .replace(/<(?=[A-Za-z/!?])/g, '\\<')
     .replace(/&(?=#?\w+;)/g, '\\&');
@@ -347,11 +420,12 @@ function write(block: HtmlBlock): string {
     case 'paragraph':
       return block.text.split('\n').map(escapeStart).join('\n');
     case 'heading':
-      return `${'#'.repeat(block.level)} ${block.text}`;
+      // (a run of `#`s ending the text, after a space or all of it, would be the heading's closing sequence)
+      return `${'#'.repeat(block.level)} ${block.text.replace(/(^|[ \t])(#+[ \t]*)$/, '$1\\$2')}`;
     case 'rule':
       return '---';
     case 'code': {
-      const run = Math.max(2, ...(block.text.match(/^ {0,3}`+/gm) ?? []).map((r) => r.trim().length));
+      const run = (block.text.match(/^ {0,3}`+/gm) ?? []).reduce((m, r) => Math.max(m, r.trim().length), 2);
       const fence = '`'.repeat(run + 1);
       return `${fence}${block.info}\n${block.text}${block.text === '' ? '' : '\n'}${fence}`;
     }
@@ -379,7 +453,7 @@ function write(block: HtmlBlock): string {
         .join(loose ? '\n\n' : '\n');
     }
     case 'table': {
-      const width = Math.max(...block.rows.map((r) => r.length));
+      const width = block.rows.reduce((m, r) => Math.max(m, r.length), -Infinity);
       const row = (cells: readonly string[]): string => `| ${Array.from({ length: width }, (_, k) => cells[k] ?? '').join(' | ')} |`;
       const rule = Array.from({ length: width }, (_, k) => {
         const a = block.align[k];

@@ -75,6 +75,10 @@ const appOffset = (offset: number, at: { prefix: number; cut?: number }): number
  * caret where a block's text has no place in BlockNote, its markup being a widget or the block's type.
  */
 function holds(o: Outline): string | undefined {
+  // (blocks are selected as text from one's start to another's end: one block alone, no children, is
+  // its text selected, which BlockNote reads as text)
+  const one = o.selected?.length === 1 ? o.selected[0]! : -1;
+  if (one >= 0 && !(o.blocks[one + 1] && o.blocks[one + 1]!.depth > o.blocks[one]!.depth)) return 'one block selected alone: BlockNote selects it as its text';
   // a list item is a list item's text: BlockNote's headings, code blocks and quotes are blocks of their own
   for (const b of o.blocks) {
     if (b.free) continue;
@@ -257,10 +261,10 @@ function loadPage({ blocks, at }: { blocks: BnBlock[]; at: { block: number; anch
   });
   const content = contents[at.block]?.start;
   if (content === undefined || (at.to !== undefined && !contents[at.to])) return `no block ${at.block}`;
-  const TextSelection = view.state.selection.constructor;
+  const OurusSelection = view.state.selection.constructor;
   // (a selection of blocks: from the first's content start to the last's end, `at.to`)
   const head = at.to !== undefined ? contents[at.to]!.end : content + at.head;
-  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, content + at.anchor, head)));
+  view.dispatch(view.state.tr.setSelection(OurusSelection.create(view.state.doc, content + at.anchor, head)));
   view.focus();
   return 'placed';
 }

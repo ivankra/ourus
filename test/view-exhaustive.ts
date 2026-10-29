@@ -29,14 +29,14 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { executeCommand, leavesZoom, type Command } from '../src/commands/index.ts';
+import { executeCommand, leavesZoom, type OurusCommand } from '../src/commands/index.ts';
 import { visibleSelection } from '../src/commands/view.ts';
-import type { OurusDoc, OutlineNode } from '../src/doc/index.ts';
+import type { OurusDoc, OurusNode } from '../src/doc/index.ts';
 import type { ChangeSpec } from '../src/text/index.ts';
 import { docOf, drawDoc, readDrawing } from './drawing.ts';
 import { readSpecFile, specConfig, specFiles } from './specfile.ts';
 
-const COMMANDS: readonly Command[] = [
+const COMMANDS: readonly OurusCommand[] = [
   { type: 'enter' },
   { type: 'shiftEnter' },
   { type: 'deleteContentBackward' },
@@ -65,9 +65,9 @@ const fail = (group: string, example: () => string): void => {
 };
 
 /** Every node but the root, in document order. */
-function nodes(doc: OurusDoc): OutlineNode[] {
-  const out: OutlineNode[] = [];
-  const visit = (n: OutlineNode): void => {
+function nodes(doc: OurusDoc): OurusNode[] {
+  const out: OurusNode[] = [];
+  const visit = (n: OurusNode): void => {
     if (n.kind !== 'root') out.push(n);
     n.children.forEach(visit);
   };
@@ -76,7 +76,7 @@ function nodes(doc: OurusDoc): OutlineNode[] {
 }
 
 /** Whether `n` is `root` or inside it. */
-const inside = (n: OutlineNode | null, root: OutlineNode): boolean => !!n && (n === root || inside(n.parent, root));
+const inside = (n: OurusNode | null, root: OurusNode): boolean => !!n && (n === root || inside(n.parent, root));
 
 /**
  * The outline outside `root`'s subtree as a reader sees it, ids aside: each node's depth, kind and
@@ -84,11 +84,11 @@ const inside = (n: OutlineNode | null, root: OutlineNode): boolean => !!n && (n 
  * (one whose items are all on it renders nothing else differently); the root's subtree
  * one line.
  */
-function outsideShape(doc: OurusDoc, root: OutlineNode): string {
-  const path = new Set<OutlineNode>();
-  for (let p: OutlineNode | null = root; p; p = p.parent) path.add(p);
+function outsideShape(doc: OurusDoc, root: OurusNode): string {
+  const path = new Set<OurusNode>();
+  for (let p: OurusNode | null = root; p; p = p.parent) path.add(p);
   const out: string[] = [];
-  const visit = (n: OutlineNode, depth: number): void => {
+  const visit = (n: OurusNode, depth: number): void => {
     if (n === root) return void out.push(`${depth} the zoom root`);
     if (n.kind !== 'root') {
       let line = `${depth} ${n.kind} ${JSON.stringify(doc.textOf(n)?.text ?? null)}`;
@@ -116,7 +116,7 @@ function outsideChange(doc: OurusDoc, next: OurusDoc): string | null {
 }
 
 /** The default of a key at a caret where every host's is a plain edit: the change and the caret after. */
-function hostDefault(doc: OurusDoc, type: Command['type'], pos: number): { change: ChangeSpec; caret: number } | null {
+function hostDefault(doc: OurusDoc, type: OurusCommand['type'], pos: number): { change: ChangeSpec; caret: number } | null {
   switch (type) {
     case 'insertText':
       return { change: { from: pos, to: pos, insert: 'x' }, caret: pos + 1 };
@@ -157,7 +157,7 @@ function play(doc: OurusDoc, view: string): number {
       if (result.status === 'rejected' && result.reason === 'write-failed') fail('write-failed', where);
       if (result.status === 'deferredToHost' && doc.zoom !== null) {
         const host = hostDefault(doc, command.type, pos);
-        if (host && leavesZoom(doc, doc.update([host.change], { caret: host.caret }))) fail(`deferred ${command.type}`, where);
+        if (host && leavesZoom(doc, doc.update({ changes: [host.change], caret: host.caret }))) fail(`deferred ${command.type}`, where);
       }
       if (result.status !== 'applied') continue;
       const next = result.doc;
@@ -185,7 +185,7 @@ function confined(doc: OurusDoc, view: string): number {
       const result = executeCommand(doc, { type, nodes: [n.id] }, selection);
       if (result.status !== 'rejected' || result.reason !== 'outside-zoom') fail('confined', () => `${view}, ${type} of ${n.kind} ${n.id}: ${result.status}`);
     }
-    for (const command of [{ type: 'zoomIn', nodes: [n.id] }, ...(doc.foldRange(n) ? [{ type: 'fold', nodes: [n.id] }] : [])] as Command[]) {
+    for (const command of [{ type: 'zoomIn', nodes: [n.id] }, ...(doc.foldRange(n) ? [{ type: 'fold', nodes: [n.id] }] : [])] as OurusCommand[]) {
       runs++;
       const result = executeCommand(doc, command, selection);
       // (an ancestor of the root: its fold suppressed while zoomed, left alone)

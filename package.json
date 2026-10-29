@@ -19,9 +19,7 @@
     "redraw": "node test/redraw.ts",
     "sxs": "node sxs/run.ts",
     "test": "node --test test/*.test.ts test/*/*.test.ts sxs/*/*.test.ts",
-    "test:diff": "node test/differential.ts",
-    "test:inverse": "node test/inverse.ts",
-    "test:view": "node test/view-exhaustive.ts",
+    "test:heavy": "node test/heavy.ts",
     "test:model": "node test/model/run.ts",
     "typecheck": "tsc -p . && tsc -p demos/cm6 && tsc -p demos/textarea"
   },

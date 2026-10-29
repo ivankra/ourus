@@ -80,7 +80,7 @@ window of its own (its own `app`, settings and plugins), so every setup's runs s
   JavaScript, an `.asar`) and the installer (Electron, an AppImage, unpacked: no FUSE needed).
   `OBSIDIAN_VERSION` picks the app's version (`latest` by default); the installer is the latest one
   that runs it.
-- **The pool.** Instance n is `.sxs/obsidian/<n>/`: its configuration directory (`config/`, Electron's
+- **The pool.** Instance n is `<state>/obsidian/<n>/`: its configuration directory (`config/`, Electron's
   `--user-data-dir`: auto-update off, no vault, the app's `.asar` linked in), its log
   (`obsidian.log`), debugging port (`port`, a free one), versions (`version`) and pid (`server.pid`), so
   it never touches an Obsidian installed on the machine. Started with no vault, it opens its starter
@@ -92,7 +92,7 @@ window of its own (its own `app`, settings and plugins), so every setup's runs s
   size run, else waits for room (`pool.lock` around each look). Starting takes
   about 2.5 s once downloaded; a vault's window opens in about 0.35 s. An instance is some 95 tasks, and
   a window some 25 more (the old way, an Obsidian per worker: some 105 each).
-- **The vault**, `.sxs/obsidian/<n>/<setup>/`, is written anew for each run: its `.obsidian/app.json`
+- **The vault**, `<state>/obsidian/<n>/<setup>/`, is written anew for each run: its `.obsidian/app.json`
   (`useTab`, `livePreview` for the setup's editing mode), `hotkeys.json`, and each plugin's
   `data.json` (a setup's `pluginData`). It is opened from the starter window (Obsidian's `vault-open`
   message, as the chooser does), and its window is closed when the run releases it (a window a run left

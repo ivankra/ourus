@@ -192,7 +192,10 @@ export const callouts: MdExtension = {
 
 // ---------------------------------------------------------------------- math and comment blocks
 
-/** A block fenced by `fence` (`$$`, `%%`): from a line starting with it to a line ending with it. */
+/** `s` without the spaces and tabs it ends with: Markdown's blanks, not a no-break space, which is text. */
+const trimBlanksEnd = (s: string): string => s.replace(/[ \t]+$/, '');
+
+/** A block fenced by `fence` (`$$`, `%%`): from a line starting with it to a line ending with it (but blanks). */
 function fencedBlock(type: string, fence: string, name: string): { spec: MdBlockSpec; start: { name: string; before: string; start(m: MdMachine): 0 | 1 | 2 } } {
   const next: MdLeafRole = Object.freeze({ type, first: false });
   const closing: MdLeafRole = Object.freeze({ type, first: false, closed: true });
@@ -201,7 +204,7 @@ function fencedBlock(type: string, fence: string, name: string): { spec: MdBlock
     container: false,
     acceptsLines: true,
     continue(m) {
-      if (m.line.slice(m.offset).trimEnd().endsWith(fence)) {
+      if (trimBlanksEnd(m.line.slice(m.offset)).endsWith(fence)) {
         m.setLeaf(closing);
         m.takeLine();
         m.popTop();
@@ -222,7 +225,7 @@ function fencedBlock(type: string, fence: string, name: string): { spec: MdBlock
       before: 'htmlBlock',
       start(m) {
         if (m.indented || !m.line.startsWith(fence, m.nextNonspace)) return 0;
-        const rest = m.line.slice(m.nextNonspace + fence.length).trimEnd();
+        const rest = trimBlanksEnd(m.line.slice(m.nextNonspace + fence.length));
         // closed on the line with text after it: inline syntax in a paragraph
         const close = rest.indexOf(fence);
         if (close >= 0 && close + fence.length < rest.length) return 0;
@@ -279,7 +282,7 @@ function fencedMarkup(tree: MdTree, leaf: MdBlockAt, line: number): MdLineMarkup
 export function mathContent(tree: MdTree, b: MdBlockAt): string {
   const text = tree.leafLines(b).join('\n');
   let s = text.trimStart().slice(2);
-  if (b.block.attrs.closed) s = s.trimEnd().slice(0, -2);
+  if (b.block.attrs.closed) s = trimBlanksEnd(s).slice(0, -2);
   return s.trim();
 }
 
@@ -351,14 +354,14 @@ export const wikilinks: MdExtension = {
       wikilink(r, node, entering) {
         if (!entering) return;
         const href = escapeHtml(node.target!);
-        r.lit(`<a data-href="${href}" href="${href}" class="internal-link">`);
+        r.markup(`<a data-href="${href}" href="${href}" class="internal-link">`);
         r.out(node.alias ?? node.target!);
-        r.lit('</a>');
+        r.markup('</a>');
       },
       embed(r, node, entering) {
         if (!entering) return;
         const src = escapeHtml(node.target!);
-        r.lit(`<span class="internal-embed" src="${src}"${node.alias !== undefined ? ` alt="${escapeHtml(node.alias)}"` : ''}></span>`);
+        r.markup(`<span class="internal-embed" src="${src}"${node.alias !== undefined ? ` alt="${escapeHtml(node.alias)}"` : ''}></span>`);
       },
     },
   },
@@ -401,9 +404,9 @@ export const tags: MdExtension = {
     inlines: {
       tag(r, node, entering) {
         if (!entering) return;
-        r.lit(`<a href="#${escapeHtml(node.value!)}" class="tag">#`);
-        r.out(node.value!);
-        r.lit('</a>');
+        r.markup(`<a href="#${escapeHtml(node.value!)}" class="tag">`);
+        r.out(`#${node.value!}`);
+        r.markup('</a>');
       },
     },
   },
@@ -487,9 +490,9 @@ export const math: MdExtension = {
     inlines: {
       math(r, node, entering) {
         if (!entering) return;
-        r.lit(`<span class="math ${(node as MdInline & { display?: boolean }).display ? 'math-display' : 'math-inline'}">`);
+        r.markup(`<span class="math ${(node as MdInline & { display?: boolean }).display ? 'math-display' : 'math-inline'}">`);
         r.out(node.value!);
-        r.lit('</span>');
+        r.markup('</span>');
       },
     },
   },
@@ -573,7 +576,7 @@ export const inlineFootnotes: MdExtension = {
   brackets: [inlineFootnoteClose],
   render: {
     inlines: {
-      inline_footnote: (r, _node, entering) => r.lit(entering ? '<sup class="footnote-inline">' : '</sup>'),
+      inline_footnote: (r, _node, entering) => r.markup(entering ? '<sup class="footnote-inline">' : '</sup>'),
     },
   },
 };

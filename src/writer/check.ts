@@ -3,7 +3,7 @@
 // contract, exactly: kinds and nesting, ids, each text's type, its frame's meaning and its text, its
 // placeholders, gaps, and the lists `done()` fixed.
 
-import { ProseText, AtomText, type OutlineNode, type OutlineNodeText, type OutlineNodePersistent, type OurusDoc } from '../doc/index.ts';
+import { OurusProse, OurusAtom, type OurusNode, type OurusText, type PersistentNode, type OurusDoc } from '../doc/index.ts';
 import type { ListPlace, OurusDraft } from './draft.ts';
 import { isEmptyNodePlaceholder, isPlaceholder } from '../text/index.ts';
 
@@ -12,7 +12,7 @@ export function differenceFrom(doc: OurusDoc, draft: OurusDraft): string | null 
   return node(doc, draft, draft.root, draft.from.rootNode, doc.rootNode, 'root');
 }
 
-function node(doc: OurusDoc, draft: OurusDraft, expected: OutlineNodePersistent, origin: OutlineNode | null, actual: OutlineNode, at: string): string | null {
+function node(doc: OurusDoc, draft: OurusDraft, expected: PersistentNode, origin: OurusNode | null, actual: OurusNode, at: string): string | null {
   if (expected === actual.persistentNode) return null;
   if (expected.kind !== actual.kind) return `${at}: a ${expected.kind}, read as a ${actual.kind}`;
   if (expected.id !== actual.id) return `${at}: id ${expected.id}, read as ${actual.id}`;
@@ -39,15 +39,15 @@ function node(doc: OurusDoc, draft: OurusDraft, expected: OutlineNodePersistent,
 }
 
 /** Where two texts differ in what the check compares, or null. */
-function texts(want: OutlineNodeText | null, got: OutlineNodeText | null): string | null {
+function texts(want: OurusText | null, got: OurusText | null): string | null {
   if (!want || !got) return want === got ? null : want ? 'its text missing' : `a text ${JSON.stringify(got!.text)} it shouldn't have`;
-  if (want instanceof ProseText !== got instanceof ProseText || want.type !== got.type) return `a ${want.type} text, read as a ${got.type} one`;
+  if (want instanceof OurusProse !== got instanceof OurusProse || want.type !== got.type) return `a ${want.type} text, read as a ${got.type} one`;
   if (want.body !== got.body) return `text ${JSON.stringify(want.body)}, read as ${JSON.stringify(got.body)}`;
-  if (want instanceof ProseText && got instanceof ProseText) {
+  if (want instanceof OurusProse && got instanceof OurusProse) {
     const w = JSON.stringify([want.task, want.heading?.level, want.callout]);
     const g = JSON.stringify([got.task, got.heading?.level, got.callout]);
     if (w !== g) return `frame ${w}, read as ${g}`;
-  } else if (want instanceof AtomText && got instanceof AtomText) {
+  } else if (want instanceof OurusAtom && got instanceof OurusAtom) {
     const w = JSON.stringify([want.fence?.[0] ?? null, want.info, want.closed]);
     const g = JSON.stringify([got.fence?.[0] ?? null, got.info, got.closed]);
     if (w !== g) return `frame ${w}, read as ${g}`;
@@ -58,8 +58,8 @@ function texts(want: OutlineNodeText | null, got: OutlineNodeText | null): strin
 }
 
 /** A text's placeholders, by kind and offset in its text without its frame. */
-function placeholders(text: OutlineNodeText): string {
-  const frame = text instanceof ProseText ? text.frame : [];
+function placeholders(text: OurusText): string {
+  const frame = text instanceof OurusProse ? text.frame : [];
   const offset = (at: number): number => at - frame.filter((p) => p.to <= at).reduce((n, p) => n + p.to - p.from, 0);
   return text.marks.marks
     .filter(isPlaceholder)
@@ -68,7 +68,7 @@ function placeholders(text: OutlineNodeText): string {
 }
 
 /** Where item `item` of `doc` is in its list, as the parser reads it. */
-function listPlace(doc: OurusDoc, item: OutlineNode): ListPlace {
+function listPlace(doc: OurusDoc, item: OurusNode): ListPlace {
   const list = item.block.attrs.list;
   const type = list?.type === 'ordered' ? 'ordered' : 'bullet';
   return {

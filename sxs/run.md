@@ -54,8 +54,8 @@ node sxs/run.ts --stop                    # stop the proxy, browsers and servers
 ```
 
 The first run starts a caching proxy and a pool of headless browsers and leaves them running, so the
-next run of a case takes under a second. One machine per `.sxs/`: two containers on one checkout
-break each other's browsers, so `--stop` first if another session left them running. The stored
+next run of a case takes under a second. They are the container's own (its state directory, below),
+so containers on one checkout run side by side, and `--stop` stops this container's alone. The stored
 runs, `.sxs/results/<app>/<file>.json`, have each step's buffers, ourus's and the app's, as data.
 
 ## Probing
@@ -184,8 +184,8 @@ of its tags): each one's examples, the apps' runs of them, the disagreements amo
 their share), the block apps' disagreements among them, and each app's.
 
 The first run of an app starts the proxy and a headless Chromium of a pool, and leaves them running
-for the next runs, with the app loaded in a window (`.sxs/proxy.log` and `.sxs/chromium/<n>/chromium.log`
-say what they did).
+for the next runs, with the app loaded in a window (`.sxs/proxy.log` and `chromium/<n>/chromium.log` in
+the state directory say what they did).
 Later runs reuse them, so a run of one example takes under a second. Stop them all with `--stop`.
 
 ## What happens in a run
@@ -213,7 +213,7 @@ Later runs reuse them, so a run of one example takes under a second. Stop them a
    ones too; a run ends with what it fetched, passed through live, and blocked, per
    host, and with `-v`, every URL.
 3. **The browser and the app** ([`lib/browser.ts`](lib/browser.ts)). The proxy, and a pool of headless
-   Chromiums (`.sxs/chromium/<n>/`: its profile, its log, its locks), are shared between runs: started
+   Chromiums (`chromium/<n>/` in the state directory: its profile, its log, its locks), are shared between runs: started
    by the first run that needs them, left running, and restarted when their code or flags change. Each
    app's page is a window of its own in one of them, one in a browser, closed at the run's end (a
    window is some 25 tasks; the browser stays up). One a run that died left loaded, the next run of that
@@ -234,14 +234,15 @@ Later runs reuse them, so a run of one example takes under a second. Stop them a
    and reads nothing, without an error), and has the focus, emulated. A window is made at the
    viewport's size (1280×900: `Target.createTarget` takes it), and a reused one has the viewport set
    again: an emulated viewport ends with the DevTools connection that set it, and every reused window
-   had run at headless Chromium's 780 pixels, Dynalist laying itself out for a phone there. **One
-   machine per `.sxs/`**: two containers on one checkout share the profiles but not their process
-   tables, `/run` (the records) or hostnames, so one's Chromium takes the other's profile lock for a
-   stale one and starts on a profile in use, and the browser's storage hangs (IndexedDB, Web Locks,
-   service workers); a SiYuan kernel of the other's holds its workspace's lock, and every kernel here
-   exits 24. Run the pool from one container, or give each its own directory and proxy
-   (`OURUS_SXS_DIR`, `OURUS_PROXY_PORT`). One run of an app at a time
-   (`.sxs/<app>/<app>.lock`): another run of it while one goes fails. A run's workers (`--workers`)
+   had run at headless Chromium's 780 pixels, Dynalist laying itself out for a phone there. **Each
+   container its own pool**: two containers on one checkout share `.sxs/` but not their process
+   tables or hostnames, so the profiles, Obsidian's instances, SiYuan's workspaces and the records of
+   what runs are in a state directory of each container's (below), never in `.sxs/`. Shared there,
+   one's Chromium took the other's profile lock for a stale one and started on a profile in use, and
+   the browser's storage hung (IndexedDB, Web Locks, service workers); a SiYuan kernel of the other's
+   held its workspace's lock, and every kernel here exited 24. Where containers share a network as
+   well, give each its own proxy port (`OURUS_PROXY_PORT`). One run of an app at a time in a container
+   (`<app>/<app>.lock` among its records): another run of it while one goes fails. A run's workers (`--workers`)
    are each in a browser of their own (`<app>.lock` among the browser's records), an app's storage
    (localStorage, IndexedDB) being its origin's in a profile. A pool, not a browser per app as
    at first: a browser is some 110 tasks (processes and threads) before any page, an app's window some
@@ -392,7 +393,7 @@ over its window, instead of a tab in the shared browser: Obsidian's), or for an 
 at all, a `session` the runner plays its keys, typing and clipboard through (Emacs's: a call returns
 once the app is done, so there is nothing to settle); `open` (load it, wait until it takes keys, return its version; for an app served from this machine,
 its server started first, left running for the next run and recorded, `recordServer`, so that `--stop`
-stops it: SiYuan's kernels, one for each worker, in `.sxs/siyuan/<n>/`); `load` (a fresh
+stops it: SiYuan's kernels, one for each worker, in `siyuan/<n>/` in the state directory); `load` (a fresh
 document with the starting state, the caret placed); `read` (the state back, in canonical form);
 the keys for each action (`select…` motions are the same keys with Shift), and `act` for those
 emulated with keys (Logseq has no key for the document's start: Up until the caret stops, then
@@ -488,15 +489,17 @@ certificate and log, the results (`results/`, as `sxs/` has its own: the last ta
 `heatmap.svg`, and each app's last run, `<app>.md` and `<app>/sxs.json`, and what it did in each spec
 file's examples, `<app>/<file>.json`; a partial run's beside them, `.partial`; their links one directory
 deeper), and a directory per app (`<app>/`): its last run's output (`sxs.log`), what
-the app needs fetched (`files/`: SiYuan's release, Obsidian's app and plugins, markdown-mode), and the
-app's own state; SiYuan's kernels (`siyuan/<n>/`: a worker's workspace and log); Obsidian's pool
-(`obsidian/<n>/`: an Obsidian every setup shares, its configuration, log, and a vault for each setup it
-has a window of); and the pool of browsers (`chromium/<n>/`: each one's profile and log).
+the app needs fetched (`files/`: SiYuan's release, Obsidian's app and plugins, markdown-mode).
 
-What runs is recorded elsewhere ([`lib/records.ts`](lib/records.ts)), so that cleaning `.sxs/` never
-loses it: a runtime directory, `/run/ourus-sxs/<id>/` where it can be written (`<id>` a hash of
-`.sxs/`'s path; else `$XDG_RUNTIME_DIR/ourus-sxs/<id>/`, the system's temporary directory's, or
-`OURUS_SXS_RUN`), laid out as `.sxs/` is: a browser's pid, port and flags and the locks of the runs in it
+What is a container's own is in its state directory (`<state>/` in the apps' READMEs; `stateDir` in [`proxy.ts`](proxy.ts):
+`/var/tmp/ourus-sxs-<uid>/<id>/`, `<id>` a hash of `.sxs/`'s path and the hostname; the system's
+temporary directory's where `/var/tmp` can't be written; or `OURUS_SXS_STATE`), laid out as `.sxs/`
+is: SiYuan's kernels (`siyuan/<n>/`: a worker's workspace and log); Obsidian's pool (`obsidian/<n>/`:
+an Obsidian every setup shares, its configuration, log, and a vault for each setup it has a window
+of); the pool of browsers (`chromium/<n>/`: each one's profile and log); Emacs's server sockets.
+
+What runs is recorded there too ([`lib/records.ts`](lib/records.ts)), beside what it is of: a
+browser's pid, port and flags and the locks of the runs in it
 (`chromium/<n>/`: `<app>.lock`, `clipboard.lock`; `chromium/pool.lock`), an Obsidian's (`obsidian/<n>/`:
 `server.pid`, `port`, `version`, `<setup>.lock`, `clipboard.lock`), a SiYuan kernel's (`siyuan/<n>/`:
 `server.pid`, `kernel.lock`), the lock of an app's run (`<app>/<app>.lock`) and when a run last took its

@@ -3,15 +3,15 @@
 // are structure: a command says what the block's lines become and where the caret goes; `done()`
 // grows a fence past code that would close it early, or refuses what would unmake the block.
 
-import { ProseText, AtomText, type OutlineNode } from '../doc/index.ts';
-import { lineOf, trimMd } from '../text/index.ts';
+import { OurusProse, OurusAtom, type OurusNode } from '../doc/index.ts';
+import { advanceColumns, lineOf, trimMd } from '../text/index.ts';
 import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
 import { textEnd, textStart, withTextlessParents } from './util.ts';
 
 /** The caret in a block of code, and where in its text. */
 export interface CodeAt {
-  readonly node: OutlineNode;
-  readonly text: AtomText;
+  readonly node: OurusNode;
+  readonly text: OurusAtom;
   readonly offset: number;
   /** The selection's other end, in the same text (the caret's own where nothing is selected). */
   readonly to: number;
@@ -25,12 +25,12 @@ export function codeAt(ctx: CommandContext): CodeAt | null {
   const a = ctx.from;
   const b = ctx.to;
   if ((a.zone !== 'text' && a.zone !== 'frame') || (b.zone !== 'text' && b.zone !== 'frame')) return null;
-  if (!(a.text instanceof AtomText) || !CODE.has(a.text.type) || a.node.persistentNode !== b.node.persistentNode) return null;
+  if (!(a.text instanceof OurusAtom) || !CODE.has(a.text.type) || a.node.persistentNode !== b.node.persistentNode) return null;
   return { node: a.node, text: a.text, offset: a.offset, to: b.offset };
 }
 
 /** A text's lines, with where each starts in its string. */
-function linesOf(text: AtomText): { readonly text: string; readonly from: number; readonly to: number }[] {
+function linesOf(text: OurusAtom): { readonly text: string; readonly from: number; readonly to: number }[] {
   let at = 0;
   return text.text.split('\n').map((l) => {
     const line = { text: l, from: at, to: at + l.length };
@@ -40,14 +40,14 @@ function linesOf(text: AtomText): { readonly text: string; readonly from: number
 }
 
 /** Where a delimiter's run is on line `k` (a fence's backticks or tildes, a `$$` or `%%`): null on a line of payload. */
-function delimiterOn(text: AtomText, k: number): { readonly from: number; readonly to: number } | null {
+function delimiterOn(text: OurusAtom, k: number): { readonly from: number; readonly to: number } | null {
   const line = linesOf(text)[k]!;
   const runs = text.delimiters;
   return [runs?.open, runs?.close].find((r) => !!r && r.from >= line.from && r.from <= line.to) ?? null;
 }
 
 /** Whether `offset` is on a line of a fence's delimiter (its opening, info and all, or its closing one); math's and a comment's `$$` and `%%` lines are the block's, as its code lines are. */
-export function onDelimiterLine(text: AtomText, offset: number): boolean {
+export function onDelimiterLine(text: OurusAtom, offset: number): boolean {
   if (text.type !== 'fenced_code') return false;
   const k = lineOf(text.text, offset);
   return delimiterOn(text, k) !== null;
@@ -104,10 +104,10 @@ export function newlineInCode(ctx: CommandContext, at: CodeAt, shift: boolean): 
  * among the item's children (`child`), the caret at the code's first character. Elsewhere a blank
  * line opens above the block, the caret staying with it (Fence57): the node above's gap.
  */
-function enterAtOpening(ctx: CommandContext, node: OutlineNode, text: AtomText): CommandOutcome {
+function enterAtOpening(ctx: CommandContext, node: OurusNode, text: OurusAtom): CommandOutcome {
   const draft = ctx.draft();
   if (node.kind === 'item') {
-    const id = draft.create('item', new ProseText('paragraph', true, ''));
+    const id = draft.create('item', new OurusProse('paragraph', true, ''));
     return ctx.apply(draft.place('before', node, [id]).setCaret(id, 0, -1));
   }
   const item = node.parent;
@@ -127,7 +127,7 @@ function enterAtOpening(ctx: CommandContext, node: OutlineNode, text: AtomText):
 }
 
 /** The code's first character: past its first line's indentation; after the opening where it has no line. */
-function codeStart(text: AtomText): number {
+function codeStart(text: OurusAtom): number {
   const lines = linesOf(text);
   const first = lines.length > 1 && !delimiterOn(text, 1) ? lines[1]! : null;
   return first ? first.from + /^[ \t]*/.exec(first.text)![0].length : lines[0]!.to;
@@ -141,17 +141,17 @@ function codeStart(text: AtomText): number {
  * takes that item's place, the caret at the code's start (Fence51). Refused with no item above to
  * hold a block.
  */
-export function joinCodeItemUp(ctx: CommandContext, node: OutlineNode, caret?: { readonly node: OutlineNode; readonly offset: number }): CommandOutcome {
+export function joinCodeItemUp(ctx: CommandContext, node: OurusNode, caret?: { readonly node: OurusNode; readonly offset: number }): CommandOutcome {
   const prev = node.preceding;
   if (!prev || prev.kind === 'root') return reject('nothing-above');
   const text = ctx.doc.textOf(node);
   const upper = ctx.doc.textOf(prev);
-  if (!(text instanceof AtomText) || !upper) return null;
+  if (!(text instanceof OurusAtom) || !upper) return null;
   const draft = ctx.draft();
-  if (prev.kind === 'item' && !prev.children.length && upper instanceof ProseText && upper.empty && caret?.node !== prev) {
+  if (prev.kind === 'item' && !prev.children.length && upper instanceof OurusProse && upper.empty && caret?.node !== prev) {
     return ctx.apply(draft.remove([prev]).setCaret(node, codeStart(text), -1));
   }
-  let holder: OutlineNode | null = prev;
+  let holder: OurusNode | null = prev;
   while (holder && holder.kind !== 'item') holder = holder.parent;
   let inside = false;
   for (let up = node.parent?.parent; up && holder; up = up.parent) if (up.persistentNode === holder.persistentNode) inside = true;
@@ -173,17 +173,17 @@ export function joinCodeItemUp(ctx: CommandContext, node: OutlineNode, caret?: {
  * its next sibling; elsewhere an empty paragraph after the block in its container (an item's first
  * child, where the block is its text), taking its blank lines, which `done()` holds with a placeholder.
  */
-export function nodeAfterBlock(ctx: CommandContext, node: OutlineNode): CommandOutcome {
+export function nodeAfterBlock(ctx: CommandContext, node: OurusNode): CommandOutcome {
   const draft = ctx.draft();
   const item = node.kind === 'item' ? node : node.parent?.kind === 'item' ? node.parent : null;
   const after = item ? item.children.slice(node === item ? 0 : node.index + 1) : [];
   if (item && after.every((c) => c.kind === 'item')) {
-    const id = draft.create('item', new ProseText('paragraph', true, ''));
+    const id = draft.create('item', new OurusProse('paragraph', true, ''));
     if (after[0]) draft.place('before', after[0], [id]);
     else draft.place('after', item, [id]);
     return ctx.apply(draft.setCaret(id, 0, -1));
   }
-  const id = draft.create('paragraph', new ProseText('paragraph', false, ''));
+  const id = draft.create('paragraph', new OurusProse('paragraph', false, ''));
   if (node.kind === 'item') draft.append(node, 'first', [id]);
   else if (node.kind === 'atom') draft.place('after', node, [id]);
   else return null;
@@ -233,6 +233,12 @@ export function joinInCode(ctx: CommandContext, at: CodeAt, dir: -1 | 1): Comman
     if (delimiter) {
       if (aboveDelimiter) return reject('not-expressible', 'the fence would join the opening fence');
       if (!empty(above)) return reject('not-expressible', 'the fence would join the last code line');
+      // (the empty line above an opening fence is an item's marker's: the code goes up onto it; where
+      // markup is decorated, the caret not on the fence: at the code's start)
+      if (k === 1 && ctx.config.markup === 'decorated') {
+        const joined = text.splice(above.from, line.from);
+        return ctx.apply(draft.setText(node, joined).setCaret(node, codeStart(joined), 1));
+      }
       return apply(above.from, line.from, offset - (line.from - above.from));
     }
     if (!aboveDelimiter) return apply(above.to, line.from, above.to);
@@ -249,7 +255,7 @@ export function joinInCode(ctx: CommandContext, at: CodeAt, dir: -1 | 1): Comman
     const i = node.textLastLine + 1;
     const owner = i < ctx.doc.lineCount ? ctx.doc.nodeAtLine(i) : null;
     const ownText = owner ? ctx.doc.textOf(owner) : null;
-    if (!delimiter || i >= ctx.doc.lineCount || ctx.doc.isBlankLine(i) || (ownText instanceof ProseText && ownText.empty)) return null;
+    if (!delimiter || i >= ctx.doc.lineCount || ctx.doc.isBlankLine(i) || (ownText instanceof OurusProse && ownText.empty)) return null;
     return reject('not-expressible', 'the line below would join the closing fence');
   }
   const belowDelimiter = delimiterOn(text, k + 1);
@@ -259,6 +265,12 @@ export function joinInCode(ctx: CommandContext, at: CodeAt, dir: -1 | 1): Comman
     return apply(line.to, below.to, offset);
   }
   if (!belowDelimiter) return apply(line.to, below.from, offset);
+  // (an item's code that starts below its marker, from the marker's line: the code goes up onto it,
+  // the caret where it was; where markup is decorated, not on the fence: at the code's start)
+  if (k === 0 && empty(line)) {
+    const joined = text.splice(line.to, below.from);
+    return ctx.apply(draft.setText(node, joined).setCaret(node, ctx.config.markup === 'decorated' ? codeStart(joined) : offset, 1));
+  }
   if (!empty(line)) return reject('not-expressible', 'the closing fence would join the code');
   // the caret to the end of the line above: before the closing fence, typing would unmake the block
   const above = lines[k - 1]!;
@@ -290,9 +302,9 @@ function deleteInFenceRun(ctx: CommandContext, at: CodeAt, dir: -1 | 1): Command
   const detail = 'the fence would break: the block has code';
   if (trimMd(text.body) !== '') return ctx.config.markup === 'text' ? deferToHost(detail) : reject('not-expressible', detail);
   const s = text.text;
-  if (run === open && lineOf(text.text, close.from) === lineOf(text.text, open.from) + 1 && text.info.trim() === '') {
+  if (run === open && lineOf(text.text, close.from) === lineOf(text.text, open.from) + 1 && trimMd(text.info) === '') {
     // the paragraphs right above and below run into its line
-    const left = new ProseText('paragraph', text.item, s.slice(open.from, open.to - 1));
+    const left = new OurusProse('paragraph', text.item, s.slice(open.from, open.to - 1));
     let target = node;
     let caret = char - open.from;
     if (node.kind === 'item') draft.setText(node, left);
@@ -300,14 +312,14 @@ function deleteInFenceRun(ctx: CommandContext, at: CodeAt, dir: -1 | 1): Command
       draft.convert(node, 'paragraph').setText(node, left);
       const above = node.index > 0 ? node.parent!.child(node.index - 1) : null;
       const upper = above && ctx.doc.textOf(above);
-      if (above?.kind === 'paragraph' && above.gap === 0 && !above.children.length && upper instanceof ProseText) {
+      if (above?.kind === 'paragraph' && above.gap === 0 && !above.children.length && upper instanceof OurusProse) {
         target = above;
         caret += upper.text.length + 1;
         draft.join(above, node, { separator: '\n' });
       }
     }
     const below = node.kind === 'item' ? node.children[0] : node.next;
-    if (below?.kind === 'paragraph' && node.gap === 0 && ctx.doc.textOf(below) instanceof ProseText) draft.join(target, below, { separator: '\n' });
+    if (below?.kind === 'paragraph' && node.gap === 0 && ctx.doc.textOf(below) instanceof OurusProse) draft.join(target, below, { separator: '\n' });
     return ctx.apply(draft.setCaret(target, caret, -1));
   }
   return removeEmptyBlock(ctx, node, dir);
@@ -319,9 +331,9 @@ function deleteInFenceRun(ctx: CommandContext, at: CodeAt, dir: -1 | 1): Command
  * below, the paragraphs on either side running together as their lines now do. Null where it is the
  * document's only node.
  */
-function removeEmptyBlock(ctx: CommandContext, node: OutlineNode, dir: -1 | 1): CommandOutcome {
+function removeEmptyBlock(ctx: CommandContext, node: OurusNode, dir: -1 | 1): CommandOutcome {
   const draft = ctx.draft();
-  if (node.kind === 'item') return ctx.apply(draft.setText(node, new ProseText('paragraph', true, '')).setCaret(node, 0, -1));
+  if (node.kind === 'item') return ctx.apply(draft.setText(node, new OurusProse('paragraph', true, '')).setCaret(node, 0, -1));
   const gone = withTextlessParents(ctx.doc, [node])[0]!;
   const above = gone.preceding && gone.preceding.kind !== 'root' ? gone.preceding : null;
   const below = gone.afterSubtree;
@@ -329,11 +341,15 @@ function removeEmptyBlock(ctx: CommandContext, node: OutlineNode, dir: -1 | 1): 
   const lower = below && ctx.doc.textOf(below);
   draft.remove([gone]);
   const together = above?.kind === 'paragraph' && below?.kind === 'paragraph' && above.next === gone && gone.next === below && above.gap === 0 && gone.gap === 0 && !above.children.length;
-  if (together && upper instanceof ProseText && lower instanceof ProseText) {
+  if (together && upper instanceof OurusProse && lower instanceof OurusProse) {
     draft.join(above, below, { separator: '\n' });
     return ctx.apply(draft.setCaret(above, dir < 0 ? upper.text.length : upper.text.length + 1, -1));
   }
-  if (upper && (dir < 0 || !lower)) return ctx.apply(draft.gap(above!, Math.max(above!.gap, gone.gap)).setCaret(above!, upper instanceof ProseText ? textEnd(upper) : upper.text.length, -1));
+  if (upper && (dir < 0 || !lower)) {
+    // (the blank lines to what follows: where nothing does, the text's end keeps its own)
+    if (lower) draft.gap(above!, Math.max(above!.gap, gone.gap));
+    return ctx.apply(draft.setCaret(above!, upper instanceof OurusProse ? textEnd(upper) : upper.text.length, -1));
+  }
   if (lower) return ctx.apply(draft.setCaret(below!, textStart(lower), 1));
   return null;
 }
@@ -355,17 +371,63 @@ function atOpeningStart(ctx: CommandContext, at: CodeAt): CommandOutcome {
 }
 
 /**
- * Backspace or Delete of a character on a code line: the host's, but where it would make a fence of
- * code (`x```` → ```` ``` ````, closing the block early): then ourus's, and `done()` grows the fences
- * past it, or refuses where they can't (`$$`, `%%`).
+ * Backspace or Delete of a character on a code line (its indentation's too): the host's, but where it
+ * would make a fence of code (`x```` → ```` ``` ````, closing the block early): `editInCode`.
  */
 function characterInCode(ctx: CommandContext, at: CodeAt, dir: -1 | 1): CommandOutcome {
-  const { node, text, offset } = at;
-  const [from, to] = dir < 0 ? [offset - 1, offset] : [offset, offset + 1];
+  const { text, offset } = at;
   const line = linesOf(text)[lineOf(text.text, offset)]!;
-  // in the line's indentation, the host's
-  if (from < line.from || to > line.to || trimMd(text.text.slice(line.from, to)) === '') return null;
-  const edited = text.splice(from, to);
-  if (ctx.doc.readsAs(edited)) return deferToHost('a character of code: the host deletes it');
-  return ctx.apply(ctx.draft().setText(node, edited).setCaret(node, from, dir < 0 ? -1 : 1));
+  // (the character the host deletes: a grapheme, as CodeMirror's `findClusterBreak` steps, `😀` whole)
+  const [from, to] = dir < 0 ? [graphemeBefore(text.text, offset, line.from), offset] : [offset, graphemeAfter(text.text, offset, line.to)];
+  if (from < line.from || to > line.to) return null;
+  return editInCode(ctx, at, from, to, '', { caret: dir < 0 ? -1 : 1 });
+}
+
+/** An edit that would break a fence, which ourus doesn't make: refused where markup is decorated, the host's where it is text. */
+export function breaksFence(ctx: CommandContext, detail: string): CommandOutcome {
+  return ctx.config.markup === 'text' ? deferToHost(detail) : reject('not-expressible', detail);
+}
+
+/**
+ * `from`–`to` of a block of code's text replaced with `insert`, the caret after it: the host's where
+ * the block reads as it did, closed as it was, and the host's edit is the same (`host`; a line break
+ * in a container's code the host would write without the containers' prefix); else ourus's, `done()` growing the
+ * fences past code that would close the block early. An edit of a delimiter's line, or of indented
+ * code's four columns, that would unmake its block is `breaksFence`.
+ */
+export function editInCode(ctx: CommandContext, at: CodeAt, from: number, to: number, insert: string, { host = true, caret = -1 }: { host?: boolean; caret?: -1 | 1 } = {}): CommandOutcome {
+  const { node, text } = at;
+  const k = lineOf(text.text, from);
+  const n = lineOf(text.text, to);
+  // (a delimiter's line, or indented code's four columns: markup)
+  let delimiter = text.frame.some((p) => p.part === 'indent' && from < p.to && to >= p.from);
+  for (let i = k; i <= n && !delimiter; i++) delimiter = delimiterOn(text, i) !== null;
+  // (a line break the host writes as ours where the block is in no container)
+  const simple = !/[\r\n]/.test(insert) || (node.kind === 'atom' && node.parent?.kind === 'root');
+  // (typing on a code line: what has no delimiter's character in it makes no delimiter of the line)
+  if (host && simple && from === to && !delimiter && !/[`~$%]/.test(insert)) return deferToHost('code: the host types it');
+  const edited = text.splice(from, to, insert);
+  // (a line starting with a tab spans from the column the block's lines start at: its second line's)
+  const second = text.text.indexOf('\n') + 1;
+  const pos = second > 0 && /(?:^|\n) *\t/.test(edited.text) ? ctx.doc.posOf(node, second) : -1;
+  const column = pos < 0 ? 0 : advanceColumns(ctx.doc.text, ctx.doc.lineAt(pos).from, pos, 0);
+  const kept = ctx.doc.readsAs(edited, column) && edited.closed === text.closed;
+  if (kept && host && simple) return deferToHost('code: the host edits it');
+  if (!kept && delimiter) return breaksFence(ctx, 'the fence would break');
+  return ctx.apply(ctx.draft().setText(node, edited).setCaret(node, from + insert.length, caret));
+}
+
+const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+
+/** Where the grapheme before `pos` in `s` starts, the line from `lineFrom`. */
+function graphemeBefore(s: string, pos: number, lineFrom: number): number {
+  let start = pos - 1;
+  for (const g of graphemes.segment(s.slice(lineFrom, pos))) start = lineFrom + g.index;
+  return Math.min(start, pos - 1);
+}
+
+/** Where the grapheme at `pos` in `s` ends, the line to `lineTo`. */
+function graphemeAfter(s: string, pos: number, lineTo: number): number {
+  const first = graphemes.segment(s.slice(pos, Math.max(pos + 1, lineTo)))[Symbol.iterator]().next().value;
+  return pos + (first?.segment.length ?? 1);
 }

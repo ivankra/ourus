@@ -2,7 +2,7 @@
 // the drawn buffer is the document as it is, with its caret or selection, and an app's text is
 // compared with the spec's as drawn. A placeholder (`◌`) is a place, not text: it is dropped.
 
-import type { Config } from '../../src/config.ts';
+import type { OurusConfig } from '../../src/config.ts';
 import { OurusDoc } from '../../src/doc/index.ts';
 import { drawState, drawText, drawnSelection, nodesOf, plainText, readDrawing } from '../../test/drawing.ts';
 import type { Verdict } from './block.ts';
@@ -31,7 +31,7 @@ export const drawTextDoc = (d: TextDoc): string => (d.sel ? drawState(d.text, d.
 const loose = (text: string): string => text.replace(/[ \t]+$/gm, '');
 
 /** A document's nodes as ourus verifies them: kind, depth, what the head is, and the text (an atom's as written, other nodes' lines trimmed). */
-const nodes = (text: string, flavor: Config['flavor']): string => {
+const nodes = (text: string, flavor: OurusConfig['flavor']): string => {
   const doc = OurusDoc.parse(text, { config: { flavor } });
   return JSON.stringify(nodesOf(doc).map((n) => [n.kind, n.depth, n.head?.type, n.head?.attrs.level, plainText(doc, n)]));
 };
@@ -42,7 +42,7 @@ const nodes = (text: string, flavor: Config['flavor']): string => {
  * from both (a continuation line's indentation, a lazy line, a marker's padding), differ in spaces;
  * a space that changes what the text is (nesting, a code line's indentation) is a difference.
  */
-export function compareTexts(want: TextDoc, got: TextDoc, flavor: Config['flavor'] = 'gfm'): Verdict {
+export function compareTexts(want: TextDoc, got: TextDoc, flavor: OurusConfig['flavor'] = 'gfm'): Verdict {
   if (want.text !== got.text) {
     if (loose(want.text) === loose(got.text)) return 'whitespace';
     const bare = (t: string): string => t.replace(/[ \t]+/g, '');
@@ -57,7 +57,7 @@ export function compareTexts(want: TextDoc, got: TextDoc, flavor: Config['flavor
  * (to the next line's start, to the last line's end, with the blank lines after) or direction: the
  * same nodes selected whole, as a host draws them (true-outliner's covers end before the break).
  */
-function sameSubtrees(text: string, a: TextDoc['sel'], b: TextDoc['sel'], flavor: Config['flavor']): boolean {
+function sameSubtrees(text: string, a: TextDoc['sel'], b: TextDoc['sel'], flavor: OurusConfig['flavor']): boolean {
   if (!a || !b) return false;
   const doc = OurusDoc.parse(text, { config: { flavor } });
   const roots = doc.selectedSubtrees(a);

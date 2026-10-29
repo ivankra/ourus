@@ -166,6 +166,8 @@ export const driver: Driver = {
   holds(doc) {
     const o = doc as Outline;
     if (o.blocks.some((b) => /^(\[[ xX]\] )?#{4,6} /.test(b.text))) return 'heading deeper than H3';
+    // (blocks are selected by Shift-Down from the first, which takes the parent in past a deeper one)
+    if (o.selected && new Set(o.selected.map((i) => o.blocks[i]!.depth)).size > 1) return 'blocks selected at two depths: Shift-Down takes their parent in';
     // a checkbox and a heading level are the item's attributes, not text: no caret goes there
     if (o.sel && Math.min(o.sel.anchor, o.sel.head) < toItem(0, o.blocks[o.sel.block]!.text).prefix) return "caret in a task's checkbox or a heading's #s";
     // numbering is a parent's list style: all its children numbered, from 1, or none

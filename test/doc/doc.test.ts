@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { OurusDoc } from '../../src/doc/index.ts';
+import { OurusDoc, type OurusNode } from '../../src/doc/index.ts';
+import { OurusConfig } from '../../src/config.ts';
+import { executeCommand } from '../../src/commands/index.ts';
 import { createPlaceholder, isEmptyNodePlaceholder, type Mark } from '../../src/text/index.ts';
 
 // (one kind of mark: an empty node's or a held space's by where it is)
@@ -33,19 +35,19 @@ test('a held space holds on a space that starts its line\'s text, with text afte
 
 test('a mark moves through changes, and expires where it no longer holds', () => {
   const doc = OurusDoc.parse('- a\n- ', { marks: [empty(6)] });
-  assert.deepEqual(kept(doc.update([{ from: 6, to: 6, insert: ' ' }])), ['empty-node@7'], 'a space typed keeps the line empty');
-  assert.deepEqual(kept(doc.update([{ from: 6, to: 6, insert: 'x' }])), [], 'text typed fills it');
+  assert.deepEqual(kept(doc.update({ changes: [{ from: 6, to: 6, insert: ' ' }] })), ['empty-node@7'], 'a space typed keeps the line empty');
+  assert.deepEqual(kept(doc.update({ changes: [{ from: 6, to: 6, insert: 'x' }] })), [], 'text typed fills it');
   // an empty line's mark, moved past what is typed there, holds nothing: the line has text
-  const spaced = OurusDoc.parse('- \n', { marks: [empty(2)] }).update([{ from: 2, to: 2, insert: ' x' }]);
+  const spaced = OurusDoc.parse('- \n', { marks: [empty(2)] }).update({ changes: [{ from: 2, to: 2, insert: ' x' }] });
   assert.deepEqual(kept(spaced), []);
 });
 
 test('an update drops and adds marks, or sets them whole', () => {
   const doc = OurusDoc.parse('- a\n- \n- ', { marks: [empty(6), empty(9)] });
-  assert.deepEqual(kept(doc.update([], { dropMarks: [empty(6)] })), ['empty-node@9']);
-  assert.deepEqual(kept(doc.update([{ from: 0, to: 0, insert: 'x\n\n' }], { dropMarks: [empty(9)], addMarks: [empty(2), empty(1)] })), ['empty-node@9'], 'the one added at the end of `x` expires, as does the one on the line below it, inside its text');
-  assert.deepEqual(kept(doc.update([], { setMarks: [] })), []);
-  assert.deepEqual(kept(doc.update([], { setMarks: [empty(9)] })), ['empty-node@9']);
+  assert.deepEqual(kept(doc.update({ dropMarks: [empty(6)] })), ['empty-node@9']);
+  assert.deepEqual(kept(doc.update({ changes: [{ from: 0, to: 0, insert: 'x\n\n' }], dropMarks: [empty(9)], addMarks: [empty(2), empty(1)] })), ['empty-node@9'], 'the one added at the end of `x` expires, as does the one on the line below it, inside its text');
+  assert.deepEqual(kept(doc.update({ setMarks: [] })), []);
+  assert.deepEqual(kept(doc.update({ setMarks: [empty(9)] })), ['empty-node@9']);
 });
 
 test('a mark that expires is read out of the parse too', () => {
@@ -53,14 +55,14 @@ test('a mark that expires is read out of the parse too', () => {
   const doc = OurusDoc.parse('a\n- ', { marks: [empty(4)] });
   assert.equal(doc.mdTree.root.children[0]!.type, 'paragraph');
   // (one at the end of `a`, a line with text, expires)
-  const without = doc.update([], { setMarks: [empty(1)] });
+  const without = doc.update({ setMarks: [empty(1)] });
   assert.deepEqual(kept(without), []);
   assert.equal(without.mdTree.root.children[0]!.type, 'heading');
 });
 
-test('a replaced text brings its own placeholders, the ones that hold', () => {
+test('a text given whole brings its own placeholders, the ones that hold', () => {
   const doc = OurusDoc.parse('- a\n', { marks: [empty(4)] });
-  const next = doc.replace('- a\n- \n- b', [empty(6), empty(10)]);
+  const next = doc.update({ text: '- a\n- \n- b', setMarks: [empty(6), empty(10)] });
   assert.equal(next.text, '- a\n- \n- b');
   assert.deepEqual(kept(next), ['empty-node@6'], 'the one at the end of `- b` expires; the old one is gone');
 });
@@ -88,5 +90,63 @@ test('withConfig: a writer\'s option shares the snapshot\'s outline; a reading o
   assert.equal(atoms.mdTree, doc.mdTree, 'from the same parse');
   const obsidian = doc.withConfig({ flavor: 'obsidian' });
   assert.equal(obsidian.config.flavor, 'obsidian');
-  assert.deepEqual(ids(obsidian), ids(OurusDoc.parse(doc.text, { config: { flavor: 'obsidian' } })));
+  const bare = (d: OurusDoc): string[] => ids(d).map((n) => n.replace(/#\d+$/, ''));
+  assert.deepEqual(bare(obsidian), bare(OurusDoc.parse(doc.text, { config: { flavor: 'obsidian' } })), 'read as a parse in that flavor reads it');
+  // its ids anew, but the lineage's: none a node of an earlier snapshot had
+  assert.ok(obsidian.isSameLineage(doc));
+  assert.ok(ids(obsidian).every((n) => Number(/#(\d+)$/.exec(n)![1]) >= atoms.nextId), 'no id given again');
+});
+
+test('an empty text has one line, 0, at 0, which its line methods answer for', () => {
+  const doc = OurusDoc.parse('');
+  assert.deepEqual(doc.lineAt(0), { index: 0, from: 0, to: 0 });
+  assert.equal(doc.textStart(0), 0);
+  assert.equal(doc.markdownOf(0, 0), '');
+});
+
+test('past a final line ending is the line before it, which ends before the position', () => {
+  const doc = OurusDoc.parse('- a\n');
+  assert.deepEqual(doc.lineAt(4), { index: 0, from: 0, to: 3 });
+});
+
+test('settings applied again unchanged keep the snapshot, so an undo given the one before still takes its nodes', () => {
+  const doc = OurusDoc.parse('- a\n  - a1\n- b\n').withFolded([1]);
+  assert.equal(doc.withConfig({}), doc);
+  const moved = executeCommand(doc, { type: 'moveSubtreeDown' }, { anchor: 2, head: 2 });
+  assert.equal(moved.status, 'applied');
+  if (moved.status !== 'applied') return;
+  const current = moved.doc.withConfig({ markup: 'text' });
+  const undone = doc.withConfig(current.config).withViewOf(current);
+  assert.equal(undone.node(1)?.kind, 'item');
+  assert.ok(undone.folded.has(1));
+});
+
+test('a setting for what owns what, changed, reads the outline as a fresh parse under it does', async () => {
+  const { readDrawing } = await import('../drawing.ts');
+  const { readSpecFile, specFiles } = await import('../specfile.ts');
+  const shape = (doc: OurusDoc): string => {
+    const out: string[] = [];
+    const visit = (n: OurusNode, d: number): void => {
+      out.push(`${' '.repeat(d)}${n.kind} ${n.startLine} ${doc.textOf(n)?.text ?? ''}`);
+      n.children.forEach((c) => visit(c, d + 1));
+    };
+    visit(doc.rootNode, 0);
+    return out.join('\n');
+  };
+  const texts = new Set<string>();
+  for (const file of specFiles()) for (const t of readSpecFile(file)) texts.add(readDrawing(t.initial.buffer).text);
+  for (const option of ['listParent', 'quotes'] as const) {
+    for (const text of texts) {
+      for (const from of OurusConfig.values[option]) {
+        const doc = OurusDoc.parse(text, { config: { [option]: from } });
+        for (const to of OurusConfig.values[option]) {
+          assert.equal(shape(doc.withConfig({ [option]: to })), shape(OurusDoc.parse(text, { config: { [option]: to } })), `${JSON.stringify(text)}: ${option} ${from} → ${to}`);
+        }
+      }
+    }
+  }
+});
+
+test('an unknown option is a reading problem, whatever its name', () => {
+  for (const key of ['constructor', 'toString', '__proto__', 'nope']) assert.equal(OurusConfig.read({ [key]: 'x' }), `unknown option "${key}"`);
 });

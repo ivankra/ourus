@@ -2,21 +2,21 @@
 // into one, zoom out. Each changes the snapshot's view only, never its text: an applied result with
 // no changes, whose selection is moved out of what the view now hides.
 
-import type { OurusDoc, OutlineNode } from '../doc/index.ts';
+import type { OurusDoc, OurusNode } from '../doc/index.ts';
 import type { CommandContext, CommandOutcome } from './context.ts';
-import type { TextSelection } from './types.ts';
+import type { OurusSelection } from './types.ts';
 import { selectionRoots } from './util.ts';
 
 /** The nodes a view command means: `nodes` given, else the selection's roots, each as its row's fold (the outermost node starting on its line). */
-function targets(ctx: CommandContext): OutlineNode[] {
-  if (ctx.nodes) return ctx.nodes.map((id) => ctx.doc.node(id)).filter((n): n is OutlineNode => !!n && n.kind !== 'root');
+function targets(ctx: CommandContext): OurusNode[] {
+  if (ctx.nodes) return ctx.nodes.map((id) => ctx.doc.node(id)).filter((n): n is OurusNode => !!n && n.kind !== 'root');
   return selectionRoots(ctx.doc, ctx.selection).map((n) => ctx.doc.rowOwner(n.startLine) ?? n);
 }
 
 /** The zoom root and its ancestors, whose folds a zoom suppresses. */
 function suppressed(doc: OurusDoc): Set<number> {
   const ids = new Set<number>();
-  for (let p: OutlineNode | null = doc.zoom === null ? null : (doc.node(doc.zoom) ?? null); p && p.kind !== 'root'; p = p.parent) ids.add(p.id);
+  for (let p: OurusNode | null = doc.zoom === null ? null : (doc.node(doc.zoom) ?? null); p && p.kind !== 'root'; p = p.parent) ids.add(p.id);
   return ids;
 }
 
@@ -47,7 +47,7 @@ export function toggleFoldCommand(ctx: CommandContext): CommandOutcome {
 function setFolds(ctx: CommandContext, fold: boolean | undefined): CommandOutcome {
   const doc = ctx.doc;
   const kept = suppressed(doc);
-  const foldable = (n: OutlineNode | null): n is OutlineNode => !!n && n.kind !== 'root' && !!doc.foldRange(n) && !kept.has(n.id);
+  const foldable = (n: OurusNode | null): n is OurusNode => !!n && n.kind !== 'root' && !!doc.foldRange(n) && !kept.has(n.id);
   let nodes = targets(ctx);
   if (fold === undefined) nodes = nodes.map((n) => (doc.foldRange(n) ? n : n.parent!)).filter((n) => n.kind !== 'root');
   nodes = nodes.filter(foldable);
@@ -91,7 +91,7 @@ function viewed(ctx: CommandContext, doc: OurusDoc): CommandOutcome {
  * is the document's (a subtree selection of the folded node there, which has no line after it); an
  * end outside the zoom into it, before it to its root's text start, after it to its end.
  */
-export function visibleSelection(doc: OurusDoc, selection: TextSelection): TextSelection {
+export function visibleSelection(doc: OurusDoc, selection: OurusSelection): OurusSelection {
   const empty = selection.anchor === selection.head;
   const at = (pos: number): number => {
     const zoom = doc.zoomRange();

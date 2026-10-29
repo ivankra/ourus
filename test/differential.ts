@@ -31,7 +31,7 @@ import { mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
 import { availableParallelism, tmpdir } from 'node:os';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { join, resolve } from 'node:path';
-import { Config } from '../src/config.ts';
+import { OurusConfig } from '../src/config.ts';
 import { lineSpan, mapPos, type ChangeSpec } from '../src/text/index.ts';
 import { readDrawing, readText } from './drawing.ts';
 import { readSpecFile, specConfig, specFiles } from './specfile.ts';
@@ -94,8 +94,10 @@ async function load(root: string): Promise<Core> {
   return {
     parse: (text, config, placeholders = []) => snap(api.OurusDoc.parse(text, { config, marks: marks(placeholders) })),
     execute: run,
-    edit: (s, changes, caret) => snap(s.doc.update(changes, { caret })),
-    replace: (s, text, placeholders) => snap(s.doc.replace(text, marks(placeholders))),
+    // (a tree before `OurusDocUpdate` takes the changes apart: `update(changes, params)`)
+    edit: (s, changes, caret) => snap(s.doc.update.length ? s.doc.update(changes, { caret }) : s.doc.update({ changes, caret })),
+    // (a tree before `update`'s `text`: `replace(text, marks)`)
+    replace: (s, text, placeholders) => snap(s.doc.replace ? s.doc.replace(text, marks(placeholders)) : s.doc.update({ text, setMarks: marks(placeholders) })),
     settle: (s, caret) => {
       const settled = api.settlePlaceholders(s.doc, caret);
       return settled && { changes: settled.changes, doc: snap(settled.doc) };
@@ -211,7 +213,7 @@ for (let d = 0; isMainThread && d < documents; d++) {
     text += blocks[random(blocks.length)]!.replace(/(p|i|c|g|t|H|S|q|n|m)$/m, (x) => x + k) + '\n' + Array.from({ length: random(3) === 0 ? 1 + random(2) : 0 }, () => blank() + '\n').join('');
   }
   // the flavor named, so a copy from before, whose default may be another, reads it the same
-  docs.push({ text, config: { flavor: Config.defaults.flavor, ...configs[d % configs.length]! }, placeholders: [], pastes });
+  docs.push({ text, config: { flavor: OurusConfig.defaults.flavor, ...configs[d % configs.length]! }, placeholders: [], pastes });
 }
 // every buffer the spec draws, with its case's options (a case of every flavor in one, chosen by its
 // ID, so a case added or a file renamed changes no other case's), and its clipboards among the
@@ -223,7 +225,7 @@ for (const file of isMainThread ? specFiles() : []) {
   for (const t of readSpecFile(file)) {
     if (t.initial.clipboard?.['text/plain'] !== undefined) specPastes.add(readText(t.initial.clipboard['text/plain']));
     const config: Record<string, unknown> = { ...specConfig(t.options) };
-    config.flavor ??= Config.values.flavor[createHash('sha256').update(t.name).digest()[0]! % Config.values.flavor.length];
+    config.flavor ??= OurusConfig.values.flavor[createHash('sha256').update(t.name).digest()[0]! % OurusConfig.values.flavor.length];
     for (const buffer of [t.initial.buffer, ...t.steps.map((step) => step.expect.buffer)]) {
       if (buffer === undefined) continue;
       const { text, placeholders } = readDrawing(buffer);

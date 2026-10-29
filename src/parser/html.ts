@@ -102,6 +102,11 @@ export class MdHtmlRenderer {
     if (this.lastOut !== '\n') this.lit('\n');
   }
 
+  /** Literal markup an extension writes (`<sup class=…>`): none where tags are off, an image's alt text. */
+  markup(s: string): void {
+    if (this.disableTags === 0) this.lit(s);
+  }
+
   tag(name: string, attrs?: readonly (readonly [string, string])[], selfClosing = false): void {
     if (this.disableTags > 0) return;
     let s = '<' + name;

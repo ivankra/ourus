@@ -1,22 +1,22 @@
 // A node's text: its own lines past their containers' prefixes, one string with its placeholders as
 // marks, a type, and a frame computed from its characters, which `body` leaves out. Two kinds: a
-// `ProseText` is a paragraph's, a heading's, a quote's (`Config.quotes: text`) or a callout title's,
-// text ourus edits as text (its frame a checkbox, a heading's `#`s, a quote's `>`s, a callout's type,
-// an underline; its markup escapes left out); an
-// `AtomText` is an atom's lines as written (code, math, a comment, HTML, a table, ...), its frame a
-// fence's runs and info, indented code's columns, a footnote's label.
+// `OurusProse` is a paragraph's, a heading's, a quote's (`OurusConfig.quotes: text`) or a callout
+// title's, text ourus edits as text (its frame a checkbox, a heading's `#`s, a quote's `>`s, a
+// callout's type, an underline; its markup escapes left out); an `OurusAtom` is an atom's lines as
+// written (code, math, a comment, HTML, a table, ...), its frame a fence's runs and info, indented
+// code's columns, a footnote's label.
 
 /** A node's text, of either kind. */
-export type OutlineNodeText = ProseText | AtomText;
+export type OurusText = OurusProse | OurusAtom;
 
 import { mdCalloutAt } from '../parser/index.ts';
 import { emptyNodeAt, lineOf, MarkSet, trimMd } from '../text/index.ts';
 
 /**
  * What a text is: a paragraph's (an item's too), a heading's, a quote's of one paragraph (each line's
- * `> ` its frame, `Config.quotes: text`), or a callout's title.
+ * `> ` its frame, `OurusConfig.quotes: text`), or a callout's title.
  */
-export type ProseTextType = 'paragraph' | 'heading' | 'quote' | 'title';
+export type OurusProseType = 'paragraph' | 'heading' | 'quote' | 'title';
 
 /** A piece of a text's frame, in its string's offsets (`text`). */
 export interface FramePart {
@@ -41,8 +41,17 @@ const reQuote = /^ {0,3}>[ \t]?/;
 /** A setext heading's underline, after its indentation (a heading's type says it is one: the parser has counted the columns). */
 const reUnderline = /^[ \t]*(?:=+|-+)[ \t]*$/;
 
-export class ProseText {
-  readonly type: ProseTextType;
+/**
+ * The text of a paragraph, a heading, a quote (`OurusConfig.quotes: text`) or a callout title: text
+ * ourus edits as text. `body` is what the user edits; `frame` is the markup around it (a
+ * checkbox, a heading's `#`s, a quote's `>`s, a callout's `[!type]`, a setext underline).
+ *
+ * Internally, `text` is the node's lines past their containers' prefixes, without markup escapes,
+ * with its placeholders as `marks`; the frame is computed lazily from its characters.
+ */
+export class OurusProse {
+  /** What the text is of (`OurusProseType`). */
+  readonly type: OurusProseType;
   /** An item's text, which can start with a checkbox, or on the line after its marker. */
   readonly item: boolean;
   /** The lines past their prefixes, without markup escapes, `\n` between them: the frame and the body. */
@@ -51,7 +60,8 @@ export class ProseText {
   readonly marks: MarkSet;
   #frame: readonly FramePart[] | undefined;
 
-  constructor(type: ProseTextType, item: boolean, text: string, marks: MarkSet = MarkSet.empty) {
+  /** `text` includes the frame; `marks` are in its offsets. */
+  constructor(type: OurusProseType, item: boolean, text: string, marks: MarkSet = MarkSet.empty) {
     this.type = type;
     this.item = item;
     this.text = text;
@@ -80,6 +90,7 @@ export class ProseText {
     return part ? { status: this.text[part.from + 1]! } : null;
   }
 
+  /** A heading's level and form; null for any other text. */
   get heading(): { readonly level: number; readonly form: 'atx' | 'setext' } | null {
     const open = this.frame.find((p) => p.part === 'heading');
     if (open) return { level: /^#+/.exec(this.text.slice(open.from, open.to))![0].length, form: 'atx' };
@@ -87,6 +98,7 @@ export class ProseText {
     return underline ? { level: this.text.slice(underline.from, underline.to).includes('=') ? 1 : 2, form: 'setext' } : null;
   }
 
+  /** A callout's type and fold (`+`, `-` or none); null for any other text. */
   get callout(): { readonly type: string; readonly fold: '+' | '-' | null } | null {
     const part = this.frame.find((p) => p.part === 'callout');
     if (!part) return null;
@@ -112,23 +124,23 @@ export class ProseText {
   }
 
   /** The same string read as an item's text, or not. */
-  asItem(item: boolean): ProseText {
-    return item === this.item ? this : new ProseText(this.type, item, this.text, this.marks);
+  asItem(item: boolean): OurusProse {
+    return item === this.item ? this : new OurusProse(this.type, item, this.text, this.marks);
   }
 
   /** `[from, to)` replaced by `insert`: the marks around move by their policies, the insertion's come with it. */
-  splice(from: number, to: number, insert: ProseText | string = ''): ProseText {
+  splice(from: number, to: number, insert: OurusProse | string = ''): OurusProse {
     const [text, marks] = typeof insert === 'string' ? [insert, MarkSet.empty] : [insert.text, insert.marks];
-    return new ProseText(this.type, this.item, this.text.slice(0, from) + text + this.text.slice(to), this.marks.splice(from, to, text, marks));
+    return new OurusProse(this.type, this.item, this.text.slice(0, from) + text + this.text.slice(to), this.marks.splice(from, to, text, marks));
   }
 
   /** `[from, to)` with its marks: a point at `to` only at the text's end (`MarkSet.slice`). */
-  slice(from = 0, to = this.text.length): ProseText {
-    return new ProseText(this.type, this.item, this.text.slice(from, to), this.marks.slice(from, to, to === this.text.length));
+  slice(from = 0, to = this.text.length): OurusProse {
+    return new OurusProse(this.type, this.item, this.text.slice(from, to), this.marks.slice(from, to, to === this.text.length));
   }
 
   /** The texts after this one, their marks with them. */
-  concat(...others: readonly (ProseText | string)[]): ProseText {
+  concat(...others: readonly (OurusProse | string)[]): OurusProse {
     let text = this.text;
     let marks = this.marks;
     for (const o of others) {
@@ -138,7 +150,7 @@ export class ProseText {
         text += o.text;
       }
     }
-    return new ProseText(this.type, this.item, text, marks);
+    return new OurusProse(this.type, this.item, text, marks);
   }
 
   /**
@@ -147,16 +159,16 @@ export class ProseText {
    * line lost its `>`; a paragraph never becomes a heading or a quote by its characters. A checkbox is read again from the characters with the
    * frame, both ways, with nothing to do here.
    */
-  normalize(): ProseText {
-    if (this.type === 'heading' && !this.frame.some((p) => p.part === 'heading' || p.part === 'underline')) return new ProseText('paragraph', this.item, this.text, this.marks);
-    if (this.type === 'title' && !this.frame.some((p) => p.part === 'callout')) return new ProseText('paragraph', this.item, this.text, this.marks);
-    if (this.type === 'quote' && !this.frame.some((p) => p.part === 'quote' && p.from === 0)) return new ProseText('paragraph', this.item, this.text, this.marks);
+  normalize(): OurusProse {
+    if (this.type === 'heading' && !this.frame.some((p) => p.part === 'heading' || p.part === 'underline')) return new OurusProse('paragraph', this.item, this.text, this.marks);
+    if (this.type === 'title' && !this.frame.some((p) => p.part === 'callout')) return new OurusProse('paragraph', this.item, this.text, this.marks);
+    if (this.type === 'quote' && !this.frame.some((p) => p.part === 'quote' && p.from === 0)) return new OurusProse('paragraph', this.item, this.text, this.marks);
     return this;
   }
 }
 
 /** The frame of `text`, typed `type`, an item's or not; `held`: whether a placeholder holds an empty line ending at an offset. */
-function frameOf(type: ProseTextType, item: boolean, text: string, held: (at: number) => boolean = () => false): FramePart[] {
+function frameOf(type: OurusProseType, item: boolean, text: string, held: (at: number) => boolean = () => false): FramePart[] {
   const parts: FramePart[] = [];
   const endOf = (from: number): number => (text.indexOf('\n', from) < 0 ? text.length : text.indexOf('\n', from));
   // a checkbox at an item's text start: a paragraph's, or a setext title's (`- [x] a⏎  -`; an ATX
@@ -221,13 +233,18 @@ export interface AtomFramePart {
 }
 
 /**
- * The text of code, math, a comment and every other atom: its lines as written past their
- * containers' prefixes (a partly taken tab as its spaces), one string with its placeholders as
- * marks, and a frame computed from its characters by its type: the parser's block type, but code's,
- * which is `fenced_code` or `indented_code`.
+ * The text of an atom: code, math, a comment, HTML, a table and any other block ourus moves whole
+ * rather than edits as text. `body` is its content; `frame` its delimiters (a fence's runs and
+ * info, indented code's columns, a footnote's label).
+ *
+ * Internally, `text` is its lines as written past their containers' prefixes (a partly taken tab
+ * as its spaces), with its placeholders as `marks`; the frame is computed lazily from its
+ * characters, by `type`.
  */
-export class AtomText {
+export class OurusAtom {
+  /** The parser's block type, but code's: `fenced_code` or `indented_code`. */
   readonly type: string;
+  /** An item's text. */
   readonly item: boolean;
   /** The lines past their prefixes, `\n` between them: the frame and the body. */
   readonly text: string;
@@ -235,6 +252,7 @@ export class AtomText {
   readonly marks: MarkSet;
   #frame: readonly AtomFramePart[] | undefined;
 
+  /** `text` includes the frame; `marks` are in its offsets. */
   constructor(type: string, item: boolean, text: string, marks: MarkSet = MarkSet.empty) {
     this.type = type;
     this.item = item;
@@ -242,6 +260,7 @@ export class AtomText {
     this.marks = marks;
   }
 
+  /** The delimiters, computed from the characters by `type`. */
   get frame(): readonly AtomFramePart[] {
     return (this.#frame ??= atomFrameOf(this.type, this.text));
   }
@@ -251,6 +270,14 @@ export class AtomText {
     const s = this.text;
     const frame = this.frame;
     const open = frame.find((p) => p.part === 'open');
+    // math's and a comment's: what is between their delimiters, beside them too (`$$x⏎y$$`), but the
+    // line breaks right after the opening and before the closing
+    if (open && (this.type === 'math_block' || this.type === 'comment_block')) {
+      const close = frame.find((p) => p.part === 'close');
+      let body = s.slice(open.to, close ? close.from : s.length);
+      if (body.startsWith('\n')) body = body.slice(1);
+      return close && body.endsWith('\n') ? body.slice(0, -1) : body;
+    }
     if (open) {
       const first = s.indexOf('\n', open.from);
       if (first < 0) return '';
@@ -269,7 +296,7 @@ export class AtomText {
   /** A fence's character and length, `$$` or `%%`; null for a text with no delimiters. */
   get fence(): string | null {
     const open = this.frame.find((p) => p.part === 'open');
-    return open ? this.text.slice(open.from, open.to).trim() : null;
+    return open ? trimMd(this.text.slice(open.from, open.to)) : null;
   }
 
   /** A fence's info string. */
@@ -308,8 +335,8 @@ export class AtomText {
   }
 
   /** `[from, to)` replaced by `insert`, the marks around moving by their policies. */
-  splice(from: number, to: number, insert = ''): AtomText {
-    return new AtomText(this.type, this.item, this.text.slice(0, from) + insert + this.text.slice(to), this.marks.splice(from, to, insert));
+  splice(from: number, to: number, insert = ''): OurusAtom {
+    return new OurusAtom(this.type, this.item, this.text.slice(0, from) + insert + this.text.slice(to), this.marks.splice(from, to, insert));
   }
 }
 
@@ -321,14 +348,14 @@ function atomFrameOf(type: string, text: string): AtomFramePart[] {
   if (type === 'fenced_code') {
     // an item's code can start on the line after its marker (`+⏎  ~~~`)
     let f = 0;
-    while (f < lines.length - 1 && lines[f]!.trim() === '') f++;
+    while (f < lines.length - 1 && trimMd(lines[f]!) === '') f++;
     const base = lines.slice(0, f).reduce((n, l) => n + l.length + 1, 0);
     const open = lines[f]!;
     const fence = reFenceOpen.exec(open);
     if (fence) {
       const runFrom = fence[0].length - fence[1]!.length;
       parts.push({ part: 'open', from: base + runFrom, to: base + fence[0].length });
-      const info = open.slice(fence[0].length).trim();
+      const info = trimMd(open.slice(fence[0].length));
       if (info) {
         const from = open.indexOf(info, fence[0].length);
         parts.push({ part: 'info', from: base + from, to: base + from + info.length });
@@ -354,11 +381,17 @@ function atomFrameOf(type: string, text: string): AtomFramePart[] {
   }
   if (type === 'math_block' || type === 'comment_block') {
     const delimiter = type === 'math_block' ? '$$' : '%%';
-    const lead = lines[0]!.indexOf(delimiter);
-    if (lead >= 0) parts.push({ part: 'open', from: lead, to: lead + 2 });
-    // `$$` and `%%` close after text too (`x$$`)
-    const end = text.trimEnd();
-    if (lines.length > 1 && end.endsWith(delimiter) && end.length - 2 >= lastStart) parts.push({ part: 'close', from: end.length - 2, to: end.length });
+    // (an item's block can start on the line after its marker, as a fence)
+    let f = 0;
+    while (f < lines.length - 1 && trimMd(lines[f]!) === '') f++;
+    const base = lines.slice(0, f).reduce((n, l) => n + l.length + 1, 0);
+    const lead = base + /^[ \t]*/.exec(lines[f]!)![0].length;
+    if (!text.startsWith(delimiter, lead)) return parts;
+    parts.push({ part: 'open', from: lead, to: lead + 2 });
+    // `$$` and `%%` close after text too (`x$$`), on the opening's line too (`$$x$$`), blanks after
+    // them, a no-break space not one
+    const end = text.replace(/[ \t\r\n]+$/, '').length;
+    if (text.endsWith(delimiter, end) && end - 2 >= (lines.length > f + 1 ? lastStart : lead + 2)) parts.push({ part: 'close', from: end - 2, to: end });
     return parts;
   }
   if (type === 'thematic_break') return [{ part: 'rule', from: 0, to: firstEnd }];
@@ -381,8 +414,8 @@ function columnsOf(blanks: string): number {
  * between delimiters, a fence's at the end of its last line with text, or of its opening; `$$` and
  * `%%` before the closing delimiter.
  */
-export function textEnd(text: OutlineNodeText): number {
-  if (!(text instanceof ProseText)) {
+export function textEnd(text: OurusText): number {
+  if (!(text instanceof OurusProse)) {
     const s = text.text;
     const close = text.frame.find((p) => p.part === 'close');
     if (!close) return s.length;
@@ -406,17 +439,20 @@ export function textEnd(text: OutlineNodeText): number {
  * `#`s); in a block between delimiters, at its first line of payload with text, else after its
  * opening (a fence's whole line: after it, typing would be its info string).
  */
-export function textStart(text: OutlineNodeText): number {
-  if (text instanceof ProseText) return text.textStart(0);
+export function textStart(text: OurusText): number {
+  if (text instanceof OurusProse) return text.textStart(0);
   const open = text.frame.find((p) => p.part === 'open');
-  // indented code: past its first line's four columns
-  if (!open) return text.frame.find((p) => p.part === 'indent' && p.from === 0)?.to ?? 0;
+  // indented code: past its first line's four columns; a footnote: past its label
+  if (!open) return text.frame.find((p) => (p.part === 'indent' || p.part === 'label') && p.from === 0)?.to ?? 0;
   const lines = text.text.split('\n');
   const closed = text.frame.some((p) => p.part === 'close');
-  let at = lines[0]!.length + 1;
-  for (let k = 1; k < lines.length - (closed ? 1 : 0); k++) {
+  // (from the opening's line, an item's below its marker's)
+  const first = lineOf(text.text, open.from);
+  const openEnd = lines.slice(0, first).reduce((n, l) => n + l.length + 1, 0) + lines[first]!.length;
+  let at = openEnd + 1;
+  for (let k = first + 1; k < lines.length - (closed ? 1 : 0); k++) {
     if (trimMd(lines[k]!) !== '') return at;
     at += lines[k]!.length + 1;
   }
-  return text.type === 'fenced_code' ? lines[0]!.length : open.to;
+  return text.type === 'fenced_code' ? openEnd : open.to;
 }

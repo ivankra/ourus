@@ -13,7 +13,7 @@
 import { foldEffect, foldService, foldedRanges, unfoldEffect } from '@codemirror/language';
 import { Annotation, EditorSelection, EditorState, Prec, Transaction, type StateEffect, type StateEffectType, type StateField, type AnnotationType } from '@codemirror/state';
 import { Decoration, EditorView, keymap, showPanel, type DecorationSet, type Panel } from '@codemirror/view';
-import { executeCommand, leavesZoom, type Command, type OurusDoc, type OutlineNode } from '../../src/index.ts';
+import { executeCommand, leavesZoom, type OurusCommand, type OurusDoc, type OurusNode } from '../../src/index.ts';
 
 /** Marks the transactions this module makes to bring CodeMirror's folds in line with the snapshot's. */
 const syncing = Annotation.define<boolean>();
@@ -30,7 +30,7 @@ interface Wiring {
 /** The zoom root and its ancestors: their folds hide nothing while zoomed, and offer none. */
 function suppressed(doc: OurusDoc): Set<number> {
   const ids = new Set<number>();
-  for (let p: OutlineNode | null = doc.zoom === null ? null : (doc.node(doc.zoom) ?? null); p && p.kind !== 'root'; p = p.parent) ids.add(p.id);
+  for (let p: OurusNode | null = doc.zoom === null ? null : (doc.node(doc.zoom) ?? null); p && p.kind !== 'root'; p = p.parent) ids.add(p.id);
   return ids;
 }
 
@@ -39,12 +39,12 @@ function suppressed(doc: OurusDoc): Set<number> {
  * ending its text there (a text of several lines folds from its last), the one folded already where
  * two are, else the row's.
  */
-function nodeOfFold(doc: OurusDoc, range: { from: number; to: number }): OutlineNode | null {
+function nodeOfFold(doc: OurusDoc, range: { from: number; to: number }): OurusNode | null {
   const line = doc.lineAt(range.from).index;
-  const row: OutlineNode[] = [];
-  for (let n: OutlineNode | null = doc.rowOwner(line); n && n.startLine === line; n = n.children[0] ?? null) row.push(n);
-  const ending: OutlineNode[] = [];
-  for (let n: OutlineNode | null = doc.nodeAtLine(line) ?? null; n && n.kind !== 'root'; n = n.parent) if (n.textLastLine === line) ending.push(n);
+  const row: OurusNode[] = [];
+  for (let n: OurusNode | null = doc.rowOwner(line); n && n.startLine === line; n = n.children[0] ?? null) row.push(n);
+  const ending: OurusNode[] = [];
+  for (let n: OurusNode | null = doc.nodeAtLine(line) ?? null; n && n.kind !== 'root'; n = n.parent) if (n.textLastLine === line) ending.push(n);
   const exact = [...row, ...ending].filter((n) => {
     const r = doc.foldRange(n);
     return r && r.from === range.from && r.to === range.to;
@@ -57,7 +57,8 @@ export function outlineView({ field, setDoc, planned }: Wiring) {
   const service = Prec.highest(
     foldService.of((state, lineStart) => {
       const doc = state.field(field);
-      const node = doc.rowOwner(doc.lineAt(lineStart).index);
+      const line = doc.lineAt(lineStart);
+      const node = lineStart > line.to ? null : doc.rowOwner(line.index);
       if (!node || suppressed(doc).has(node.id)) return null;
       return doc.foldRange(node);
     }),
@@ -127,7 +128,7 @@ export function outlineView({ field, setDoc, planned }: Wiring) {
       const changes: { from: number; to: number; insert: string }[] = [];
       tr.changes.iterChanges((fromA, toA, _b, _e, inserted) => changes.push({ from: fromA, to: toA, insert: inserted.toString() }));
       const caret = tr.newSelection.main;
-      if (leavesZoom(doc, doc.update(changes, caret.empty ? { caret: caret.head } : {}))) return [];
+      if (leavesZoom(doc, doc.update({ changes, caret: caret.empty ? caret.head : undefined }))) return [];
     }
     if (!tr.selection || tr.docChanged) return tr;
     // into the zoom the transaction leaves (a view command's changes it: its selection is already the
@@ -141,7 +142,7 @@ export function outlineView({ field, setDoc, planned }: Wiring) {
   });
 
   /** A view command: its result's snapshot and selection, no text changed. */
-  const view = (command: Command) => (editor: EditorView): boolean => {
+  const view = (command: OurusCommand) => (editor: EditorView): boolean => {
     const { anchor, head } = editor.state.selection.main;
     const result = executeCommand(editor.state.field(field), command, { anchor, head });
     if (result.status !== 'applied') return true;
@@ -165,7 +166,7 @@ export function outlineView({ field, setDoc, planned }: Wiring) {
     return (editor: EditorView): Panel => {
       const dom = document.createElement('nav');
       dom.className = 'ourus-breadcrumbs';
-      const path: OutlineNode[] = [];
+      const path: OurusNode[] = [];
       for (let p = doc.node(doc.zoom!) ?? null; p && p.kind !== 'root'; p = p.parent) path.unshift(p);
       const link = (label: string, zoom: number | null): void => {
         const a = document.createElement('a');
@@ -191,7 +192,7 @@ export function outlineView({ field, setDoc, planned }: Wiring) {
 }
 
 /** A node's text as a title: its first line, markup aside. */
-function titleOf(doc: OurusDoc, node: OutlineNode): string {
+function titleOf(doc: OurusDoc, node: OurusNode): string {
   const text = doc.textOf(node)?.text ?? '';
   return text.split('\n')[0]!.replace(/^#+\s*|^\[.\]\s*/, '').trim() || node.kind;
 }

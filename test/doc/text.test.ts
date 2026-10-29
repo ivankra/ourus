@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { OurusDoc, type OutlineNode, type OutlineNodeText, type AtomText } from '../../src/doc/index.ts';
+import { OurusDoc, type OurusNode, type OurusText, type OurusAtom } from '../../src/doc/index.ts';
 import { createPlaceholder } from '../../src/text/index.ts';
 
 type Flavor = 'commonmark' | 'gfm' | 'obsidian';
@@ -13,7 +13,7 @@ function parse(text: string, flavor: Flavor = 'gfm', placeholders: number[] = []
 }
 
 /** A text in the notation: its frame parts bracketed, its placeholders as `◌`, line breaks as `⏎`. */
-function notation(text: OutlineNodeText | null): string | null {
+function notation(text: OurusText | null): string | null {
   if (!text) return null;
   const s = text.text;
   const opens = new Map<number, string>();
@@ -37,7 +37,7 @@ function notation(text: OutlineNodeText | null): string | null {
 /** Every node's kind and text in the notation, in document order. */
 function texts(doc: OurusDoc): string[] {
   const out: string[] = [];
-  const visit = (node: OutlineNode): void => {
+  const visit = (node: OurusNode): void => {
     if (node.kind !== 'root') out.push(`${node.kind} ${notation(doc.textOf(node))}`);
     node.children.forEach(visit);
   };
@@ -106,7 +106,7 @@ test('9. callouts by flavor', () => {
 test('10. code', () => {
   const doc = parse('- ```js\n  x = 1\n  ```');
   assert.deepEqual(texts(doc), ['item ⟦open:```⟧⟦info:js⟧⏎x = 1⏎⟦close:```⟧']);
-  const code = doc.textOf(doc.rootNode.children[0]!) as AtomText;
+  const code = doc.textOf(doc.rootNode.children[0]!) as OurusAtom;
   assert.equal(code.body, 'x = 1');
   assert.equal(code.info, 'js');
   assert.ok(code.closed);
@@ -142,7 +142,7 @@ const RUNS = Number(process.env.OURUS_FUZZ_RUNS ?? 300);
 
 /** For every node with a text: its frame agrees with the parser's reading, and its offsets map back to the document's characters. */
 function assertReadsAsParser(doc: OurusDoc): void {
-  const visit = (node: OutlineNode): void => {
+  const visit = (node: OurusNode): void => {
     const text = doc.textOf(node);
     const head = node.kind === 'atom' ? node.block : node.head;
     const context = `${JSON.stringify(doc.text)}: the ${node.kind} at ${node.startLine}`;
@@ -187,7 +187,7 @@ for (const flavor of ['commonmark', 'gfm', 'obsidian'] as const) {
   });
 }
 
-import { ProseText as Text } from '../../src/doc/index.ts';
+import { OurusProse as Text } from '../../src/doc/index.ts';
 import { MarkSet } from '../../src/text/index.ts';
 
 const itemText = (s: string): Text => new Text('paragraph', true, s);
@@ -248,4 +248,21 @@ test('slices that tile a text concat back to it, its placeholders each once', ()
     assert.deepEqual(back.marks.marks, text.marks.marks);
   }
   assert.deepEqual(text.splice(0, 1, text.slice(2, 3)).marks.points(), [0, 2, 5], 'the insertion\'s mark at its place, the others where they were');
+});
+
+test('math and comments: closed on their opening\'s line too, past an item\'s marker line, their payload beside the delimiters, a no-break space no blank', () => {
+  const read = (s: string, line = 0): OurusAtom => {
+    const doc = OurusDoc.parse(s, { config: { flavor: 'obsidian' } });
+    return doc.textOf(doc.nodeAtLine(line)!) as OurusAtom;
+  };
+  for (const d of ['$$', '%%']) {
+    const one = read(`${d}x${d}`);
+    assert.deepEqual([one.closed, one.body, one.delimiters?.close], [true, 'x', { from: 3, to: 5 }]);
+    assert.equal(read(`${d}abc\ndef${d}`).body, 'abc\ndef');
+    assert.equal(read(`${d}abc\ndef\n${d}`).body, 'abc\ndef');
+    const below = read(`-\n  ${d}X\n  Y${d}`, 1);
+    assert.deepEqual([below.delimiters?.open, below.body], [{ from: 1, to: 3 }, 'X\nY']);
+    assert.equal(read(`${d}\nx${d} `).closed, true);
+    assert.equal(read(`${d}\nx${d}\u00a0`).closed, false);
+  }
 });

@@ -26,7 +26,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { textEnd } from '../src/commands/util.ts';
-import { ProseText, OurusDoc, AtomText, type OutlineNode } from '../src/doc/index.ts';
+import { OurusProse, OurusDoc, OurusAtom, type OurusNode } from '../src/doc/index.ts';
 import { drawState, nodesOf, plainText, readDrawing } from './drawing.ts';
 import { play, type Played } from './player.ts';
 import { readSpecFile, specConfig, specFiles } from './specfile.ts';
@@ -80,10 +80,10 @@ function classify(duplicated: Played, pasted: Played): string {
 }
 
 /** Where the caret is at `node`'s text end: its text's, or code's last line's. */
-function endOf(doc: OurusDoc, node: OutlineNode): number {
+function endOf(doc: OurusDoc, node: OurusNode): number {
   const text = doc.textOf(node);
   if (!text) return doc.rangeOf(node).to;
-  return doc.posOf(node, text instanceof ProseText ? textEnd(text) : text.text.length, -1);
+  return doc.posOf(node, text instanceof OurusProse ? textEnd(text) : text.text.length, -1);
 }
 
 const counts = new Map<string, number>();
@@ -106,7 +106,7 @@ for (const start of starts) {
     // by design, apart: an empty node (an empty task too) copied fills the one it is pasted on; an
     // unclosed fence copied is closed where the copy ends
     const text = doc.textOf(node);
-    const unclosed = text instanceof AtomText && !!text.delimiters && !text.closed;
+    const unclosed = text instanceof OurusAtom && !!text.delimiters && !text.closed;
     // (and lazy lines, which out of their quote may read otherwise: `> - q` / `    - g`)
     let lazy = false;
     for (let i = node.startLine; i <= node.endLine; i++) lazy ||= doc.nodeAtLine(i)?.persistentNode === node.persistentNode && doc.isLazyLine(i);

@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test, type TestContext } from 'node:test';
-import { AtomText, type OutlineNode, type OurusDoc } from '../src/doc/index.ts';
+import { OurusAtom, type OurusNode, type OurusDoc } from '../src/doc/index.ts';
 import { codeAt } from '../src/commands/code.ts';
 import { CommandContext } from '../src/commands/context.ts';
 import { drawDoc, plainText } from './drawing.ts';
@@ -75,7 +75,7 @@ const STRUCTURAL = ['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'du
 function typingKeepsOutline(doc: OurusDoc, head: number): boolean {
   const shape = (d: OurusDoc): { node: string; text: string }[] => {
     const out: { node: string; text: string }[] = [];
-    const walk = (n: OutlineNode, depth: number): void => {
+    const walk = (n: OurusNode, depth: number): void => {
       for (const c of n.children) {
         // what a node's text is (an empty item's is a paragraph, once typed into), and a heading's level
         out.push({ node: `${depth}:${c.kind}:${c.kind === 'atom' ? c.block.type : (c.head?.type ?? 'paragraph')}:${c.head?.attrs.level ?? ''}`, text: plainText(d, c) });
@@ -85,10 +85,12 @@ function typingKeepsOutline(doc: OurusDoc, head: number): boolean {
     walk(d.rootNode, 0);
     return out;
   };
-  // (a thematic break has no text to type in: on its line, anything typed makes it a paragraph)
+  // (a thematic break has no text to type in: on its line, anything typed makes it a paragraph; nor
+  // has a definition at its start, before its `[`)
   const at = doc.nodeAtLine(doc.lineAt(head).index);
-  if (at && (at.kind === 'atom' ? at.block : at.head)?.type === 'thematic_break') return true;
-  const [before, after] = [shape(doc), shape(doc.update([{ from: head, to: head, insert: 'x' }], { caret: head + 1 }))];
+  const type = at && (at.kind === 'atom' ? at.block : at.head)?.type;
+  if (type === 'thematic_break' || (type === 'refdef' && head === doc.textStart(doc.lineAt(head).index))) return true;
+  const [before, after] = [shape(doc), shape(doc.update({ changes: [{ from: head, to: head, insert: 'x' }], caret: head + 1 }))];
   if (before.map((n) => n.node).join() !== after.map((n) => n.node).join()) return false;
   return before.filter((n, i) => n.text !== after[i]!.text).length <= 1;
 }
@@ -98,7 +100,7 @@ function onFenceLine(doc: OurusDoc, head: number): boolean {
   const line = doc.lineAt(head);
   const node = head <= line.to ? doc.nodeAtLine(line.index) : null;
   const text = node && doc.textOf(node);
-  const delimiters = text instanceof AtomText ? text.delimiters : null;
+  const delimiters = text instanceof OurusAtom ? text.delimiters : null;
   if (!node || !delimiters) return false;
   const on = (offset: number): boolean => doc.lineAt(doc.posOf(node, offset)).index === line.index;
   return on(delimiters.open.from) || (!!delimiters.close && on(delimiters.close.from));

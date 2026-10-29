@@ -4,15 +4,15 @@
 // Shift-Enter and plain paste put in lines of the quote; Backspace at its start and Delete before it
 // join it to the text above as it is written.
 
-import { AtomText, ProseText, type OutlineNode } from '../doc/index.ts';
+import { OurusAtom, OurusProse, type OurusNode } from '../doc/index.ts';
 import { MdTree } from '../parser/index.ts';
-import { isSpaceOrTab } from '../text/index.ts';
-import type { CommandContext, CommandOutcome } from './context.ts';
+import { isSpaceOrTab, trimMd } from '../text/index.ts';
+import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
 
 /** Where the caret, or a selection in one text, is in a quote read as an atom; null elsewhere. */
 export interface QuoteAt {
-  readonly node: OutlineNode;
-  readonly text: AtomText;
+  readonly node: OurusNode;
+  readonly text: OurusAtom;
   readonly offset: number;
   readonly to: number;
 }
@@ -20,13 +20,13 @@ export interface QuoteAt {
 export function quoteAtomAt(ctx: CommandContext): QuoteAt | null {
   const a = ctx.from;
   const b = ctx.to;
-  if (a.zone !== 'text' || b.zone !== 'text' || !(a.text instanceof AtomText) || a.text.type !== 'blockquote' || a.node.persistentNode !== b.node.persistentNode) return null;
+  if (a.zone !== 'text' || b.zone !== 'text' || !(a.text instanceof OurusAtom) || a.text.type !== 'blockquote' || a.node.persistentNode !== b.node.persistentNode) return null;
   return { node: a.node, text: a.text, offset: a.offset, to: b.offset };
 }
 
 /** A quote atom's text as a paragraph's, its `>`s characters of it: what a join puts into the text above. */
-export function quoteAsProse(text: AtomText): ProseText {
-  return new ProseText('paragraph', text.item, text.text, text.marks);
+export function quoteAsProse(text: OurusAtom): OurusProse {
+  return new OurusProse('paragraph', text.item, text.text, text.marks);
 }
 
 /**
@@ -34,6 +34,14 @@ export function quoteAsProse(text: AtomText): ProseText {
  * `split`, it splits (`splitQuote`).
  */
 export function enterInQuote(ctx: CommandContext, at: QuoteAt): CommandOutcome {
+  // a selection from inside a line's `>`, part of the quote's markup: the host's where markup is text
+  // the user edits, else refused, as over any selection taking part of markup
+  if (!ctx.collapsed) {
+    const s = at.text.text;
+    const lineStart = s.lastIndexOf('\n', at.offset - 1) + 1;
+    const mark = /^ {0,3}>/.exec(s.slice(lineStart))?.[0].length ?? 0;
+    if (at.offset < lineStart + mark) return ctx.config.markup === 'text' ? deferToHost('the selection takes part of markup') : reject('not-expressible', 'the selection takes part of markup');
+  }
   return ctx.config.enterInQuote === 'line' ? lineInQuote(ctx, at) : splitQuote(ctx, at);
 }
 
@@ -65,17 +73,17 @@ function lineInQuote(ctx: CommandContext, at: QuoteAt): CommandOutcome {
   const mark = /^ {0,3}>[ \t]?/.exec(line)?.[0] ?? '';
   const list = mark ? /^([ \t]*)(?:([-*+])|(\d{1,9})([.)]))([ \t]+|$)/.exec(line.slice(mark.length)) : null;
   const prefix = mark.length + (list ? list[0].length : 0);
-  if (ctx.collapsed && offset >= lineStart + prefix && line.slice(prefix).trim() === '') {
+  if (ctx.collapsed && offset >= lineStart + prefix && trimMd(line.slice(prefix)) === '') {
     // an empty item: its marker goes
     if (list) return ctx.apply(draft.setText(node, text.splice(lineStart + mark.length, lineEnd)).setCaret(node, lineStart + mark.length, -1));
     // a quote of one empty line: the quote goes
     if (lineStart === 0 && lineEnd === s.length) {
       if (!item) draft.convert(node, 'paragraph');
-      return ctx.apply(draft.setText(node, new ProseText('paragraph', item, '')).setCaret(node, 0, -1));
+      return ctx.apply(draft.setText(node, new OurusProse('paragraph', item, '')).setCaret(node, 0, -1));
     }
     // its empty last line: it leaves the quote
     if (lineEnd === s.length) {
-      const id = draft.create(item ? 'item' : 'paragraph', new ProseText('paragraph', item, ''));
+      const id = draft.create(item ? 'item' : 'paragraph', new OurusProse('paragraph', item, ''));
       draft.setText(node, text.splice(lineStart - 1, s.length)).place('after', node, [id]);
       if (!item) draft.gap(id, node.gap).gap(node, Math.max(1, node.gap));
       return ctx.apply(draft.setCaret(id, 0, -1));
@@ -102,7 +110,7 @@ function splitQuote(ctx: CommandContext, at: QuoteAt): CommandOutcome {
   const kind = item ? 'item' : 'paragraph';
   const draft = ctx.draft();
   if (offset === 0 && to === 0) {
-    const id = draft.create(kind, new ProseText('paragraph', item, ''));
+    const id = draft.create(kind, new OurusProse('paragraph', item, ''));
     return ctx.apply(draft.place('before', node, [id]).setCaret(id, 0, -1));
   }
   const lineEnd = s.indexOf('\n', to) < 0 ? s.length : s.indexOf('\n', to);
@@ -113,7 +121,7 @@ function splitQuote(ctx: CommandContext, at: QuoteAt): CommandOutcome {
   let b = to;
   while (b < lineEnd && isSpaceOrTab(s.charCodeAt(b))) b++;
   draft.setText(node, text.splice(a, s.length));
-  const id = draft.create(kind, new ProseText('paragraph', item, s.slice(b, lineEnd)));
+  const id = draft.create(kind, new OurusProse('paragraph', item, s.slice(b, lineEnd)));
   const children = [...node.children];
   if (item && children.length && (ctx.config.enterMidItem === 'child' || b === s.length)) draft.append(node, 'first', [id]);
   else {
@@ -125,7 +133,7 @@ function splitQuote(ctx: CommandContext, at: QuoteAt): CommandOutcome {
   if (lineEnd < s.length) {
     // (a lazy line first: its `> `, which a quote's first line needs)
     const lines = s.slice(lineEnd + 1);
-    const rest = draft.create('atom', new AtomText('blockquote', false, /^ {0,3}>/.test(lines) ? lines : `> ${lines}`));
+    const rest = draft.create('atom', new OurusAtom('blockquote', false, /^ {0,3}>/.test(lines) ? lines : `> ${lines}`));
     if (item) draft.append(id, 'first', [rest]);
     else draft.place('after', id, [rest]);
   }
@@ -153,7 +161,7 @@ export function joinLineInQuote(ctx: CommandContext, at: QuoteAt, forward: boole
   // the line, lazy: Fence43); on an empty line right after its `> `, the line goes
   const mark = /^ {0,3}>[ \t]?/.exec(s.slice(start, end))?.[0].length ?? 0;
   if (offset === start) return ctx.apply(ctx.draft().setText(node, text.splice(start - 1, start + mark)).setCaret(node, start - 1, -1));
-  if (offset !== start + mark || !mark || s.slice(offset, end).trim() !== '') return null;
+  if (offset !== start + mark || !mark || trimMd(s.slice(offset, end)) !== '') return null;
   return ctx.apply(ctx.draft().setText(node, text.splice(start - 1, offset)).setCaret(node, start - 1, -1));
 }
 
@@ -168,7 +176,7 @@ export function breakInQuote(ctx: CommandContext, at: QuoteAt): CommandOutcome {
   const { text, offset, to } = at;
   const s = text.text;
   const rest = s.slice(to, s.indexOf('\n', to) < 0 ? s.length : s.indexOf('\n', to));
-  const lazy = rest.trim() !== '' && oneQuote(ctx, text.splice(offset, to, '\n').text);
+  const lazy = trimMd(rest) !== '' && oneQuote(ctx, text.splice(offset, to, '\n').text);
   return linesInQuote(ctx, at, ['', ''], lazy);
 }
 
@@ -191,11 +199,11 @@ export function linesInQuote(ctx: CommandContext, at: QuoteAt, lines: readonly s
  * is written, its `>`s characters of that text, the caret at the seam; its children go to that node
  * (its last, where it is an item), else where it was. Null where nothing with a text is above it.
  */
-export function joinQuoteUp(ctx: CommandContext, node: OutlineNode, text: AtomText): CommandOutcome {
+export function joinQuoteUp(ctx: CommandContext, node: OurusNode, text: OurusAtom): CommandOutcome {
   const above = node.preceding;
   if (!above || above.kind === 'root') return null;
   const upper = ctx.doc.textOf(above);
-  if (!(upper instanceof ProseText)) return null;
+  if (!(upper instanceof OurusProse)) return null;
   const draft = ctx.draft().setText(above, upper.concat(quoteAsProse(text).asItem(upper.item)));
   const children = [...node.children];
   if (children.length) {
@@ -212,9 +220,9 @@ export function joinQuoteUp(ctx: CommandContext, node: OutlineNode, text: AtomTe
  * are written, the caret at the seam; its children go to the quote's node where it is an item, else
  * where it was. Null for a node with no text, or code.
  */
-export function joinIntoQuote(ctx: CommandContext, above: OutlineNode, quote: AtomText, node: OutlineNode): CommandOutcome {
+export function joinIntoQuote(ctx: CommandContext, above: OurusNode, quote: OurusAtom, node: OurusNode): CommandOutcome {
   const lower = ctx.doc.textOf(node);
-  if (!(lower instanceof ProseText)) return null;
+  if (!(lower instanceof OurusProse)) return null;
   const at = quote.text.length;
   const draft = ctx.draft().setText(above, quote.splice(at, at, lower.text));
   const children = [...node.children];

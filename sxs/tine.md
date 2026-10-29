@@ -13,58 +13,57 @@ workers: 4
 
 Summary:
 
-|  | agree | caret | whitespace | disagree | error | skipped | total |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 210 | [15](#caret-15) | [4](#whitespace-4) | [25](#disagree-25) |  |  | **254** |
-| adapted | 381 | [18](#adapted-caret-18) | [24](#adapted-whitespace-24) | [58](#adapted-disagree-58) |  |  | **481** |
-| **total** | **591 (46%)** | **33 (2.6%)** | **28 (2.2%)** | **83 (6.4%)** | **0 (0%)** | **[550](#skipped-550) (43%)** | **1288** |
+|  | agree | caret | whitespace | disagree | error | skipped | not run | total |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| original | 216 | [15](#caret-15) | [8](#whitespace-8) | [27](#disagree-27) |  |  |  | **266** |
+| adapted | 402 | [24](#adapted-caret-24) | [31](#adapted-whitespace-31) | [83](#adapted-disagree-83) | [1](#adapted-error-1) |  |  | **541** |
+| **total** | **618 (44%)** | **39 (2.8%)** | **39 (2.8%)** | **110 (7.8%)** | **1 (0.071%)** | **[596](#skipped-596) (42%)** | **[5](#not-run-5) (0.35%)** | **1411** |
 
 Per-file:
 
-|  | agree | caret | whitespace | disagree | error | skipped | total | original | adapted |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [backspace.md](../spec/backspace.md) | 38 |  |  | 4 |  | 44 | **86** | 17 | 25 |
-| [backtick.md](../spec/backtick.md) | 4 |  |  |  |  | 29 | **33** |  | 4 |
-| [copy.md](../spec/copy.md) | 3 |  |  | 4 |  | 6 | **13** | 1 | 6 |
-| [cursor.md](../spec/cursor.md) | 24 | 6 |  |  |  | 6 | **36** | 12 | 18 |
-| [delete-subtree.md](../spec/delete-subtree.md) | 3 | 7 |  |  |  | 3 | **13** | 3 | 7 |
-| [delete.md](../spec/delete.md) | 21 |  |  | 4 |  | 31 | **56** | 16 | 9 |
-| [drag.md](../spec/drag.md) |  |  |  |  |  | 8 | **8** |  |  |
-| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 12 | **12** |  |  |
-| [enter.md](../spec/enter.md) | 57 |  | 1 | 3 |  | 37 | **98** | 23 | 38 |
-| [fences.md](../spec/fences.md) | 11 |  | 2 | 1 |  | 56 | **70** |  | 14 |
-| [fold.md](../spec/fold.md) | 13 |  |  | 1 |  | 5 | **19** | 12 | 2 |
-| [gaps.md](../spec/gaps.md) | 15 |  |  |  |  | 4 | **19** | 1 | 14 |
-| [indent.md](../spec/indent.md) | 32 |  |  | 1 |  | 22 | **55** | 19 | 14 |
-| [lists.md](../spec/lists.md) | 5 |  |  |  |  | 11 | **16** |  | 5 |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 28 |  |  | 1 |  | 15 | **44** | 13 | 16 |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 28 |  |  | 2 |  | 16 | **46** | 15 | 15 |
-| [move-subtree.md](../spec/move-subtree.md) | 10 |  |  | 5 |  | 9 | **24** | 8 | 7 |
-| [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 41 | 2 | 2 | 4 |  | 18 | **67** | 20 | 29 |
-| [outdent.md](../spec/outdent.md) | 15 | 2 |  |  |  | 25 | **42** | 8 | 9 |
-| [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |  |  |
-| [paste-conv.md](../spec/paste-conv.md) | 4 |  |  | 2 |  |  | **6** | 5 | 1 |
-| [paste-html.md](../spec/paste-html.md) | 5 |  |  | 14 |  |  | **19** |  | 19 |
-| [paste-list-form.md](../spec/paste-list-form.md) | 3 |  |  | 2 |  | 1 | **6** | 4 | 1 |
-| [paste-list.md](../spec/paste-list.md) | 15 | 1 | 2 | 6 |  | 5 | **29** | 9 | 15 |
-| [paste-plain.md](../spec/paste-plain.md) | 21 |  | 4 |  |  | 11 | **36** | 9 | 16 |
-| [paste.md](../spec/paste.md) | 17 | 1 | 2 | 5 |  | 11 | **36** | 4 | 21 |
-| [placeholders.md](../spec/placeholders.md) | 11 |  | 5 |  |  | 4 | **20** | 5 | 11 |
-| [quirks.md](../spec/quirks.md) | 1 |  |  |  |  | 6 | **7** | 1 |  |
-| [quotes.md](../spec/quotes.md) | 85 | 1 | 5 | 9 |  | 43 | **143** |  | 100 |
-| [regressions.md](../spec/regressions.md) | 19 |  | 1 | 7 |  | 39 | **66** | 1 | 26 |
-| [scenarios.md](../spec/scenarios.md) | 19 |  |  | 2 |  | 8 | **29** | 11 | 10 |
-| [select.md](../spec/select.md) | 7 | 10 |  |  |  | 6 | **23** | 11 | 6 |
-| [shift-enter.md](../spec/shift-enter.md) | 25 |  | 3 |  |  | 8 | **36** | 12 | 16 |
-| [subtree-selection.md](../spec/subtree-selection.md) | 5 | 3 | 1 | 6 |  | 2 | **17** | 11 | 4 |
-| [tasks.md](../spec/tasks.md) | 2 |  |  |  |  | 28 | **30** |  | 2 |
-| [typing.md](../spec/typing.md) |  |  |  |  |  | 3 | **3** |  |  |
-| [undo.md](../spec/undo.md) | 4 |  |  |  |  | 1 | **5** | 3 | 1 |
-| [z-open.md](../spec/z-open.md) |  |  |  |  |  | 1 | **1** |  |  |
-| [zoom.md](../spec/zoom.md) |  |  |  |  |  | 14 | **14** |  |  |
-| **total** | **591 (46%)** | **33 (2.6%)** | **28 (2.2%)** | **83 (6.4%)** | **0 (0%)** | **553 (43%)** | **1288** | **254 (20%)** | **481 (37%)** |
+|  | agree | caret | whitespace | disagree | error | skipped | not run | total | original | adapted |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [backspace.md](../spec/backspace.md) | 38 |  |  | 4 |  | 44 |  | **86** | 17 | 25 |
+| [backtick.md](../spec/backtick.md) | 4 |  |  |  |  | 29 |  | **33** |  | 4 |
+| [copy.md](../spec/copy.md) | 3 |  |  | 4 |  | 6 |  | **13** | 1 | 6 |
+| [cursor.md](../spec/cursor.md) | 24 | 6 |  |  |  | 6 |  | **36** | 12 | 18 |
+| [delete-subtree.md](../spec/delete-subtree.md) | 3 | 7 |  |  |  | 4 |  | **14** | 3 | 7 |
+| [delete.md](../spec/delete.md) | 21 |  |  | 4 |  | 31 |  | **56** | 16 | 9 |
+| [drag.md](../spec/drag.md) |  |  |  |  |  | 8 |  | **8** |  |  |
+| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 12 |  | **12** |  |  |
+| [enter.md](../spec/enter.md) | 57 |  | 1 | 3 |  | 37 |  | **98** | 23 | 38 |
+| [fences.md](../spec/fences.md) | 11 |  | 2 | 1 |  | 56 |  | **70** |  | 14 |
+| [fold.md](../spec/fold.md) | 13 |  |  | 1 |  | 5 |  | **19** | 12 | 2 |
+| [gaps.md](../spec/gaps.md) | 15 |  |  |  |  | 4 |  | **19** | 1 | 14 |
+| [indent.md](../spec/indent.md) | 32 |  |  | 1 |  | 22 |  | **55** | 19 | 14 |
+| [lists.md](../spec/lists.md) | 5 |  |  |  |  | 11 |  | **16** |  | 5 |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 28 |  |  | 1 |  | 15 |  | **44** | 13 | 16 |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 28 |  |  | 2 |  | 16 |  | **46** | 15 | 15 |
+| [move-subtree.md](../spec/move-subtree.md) | 10 |  |  | 5 |  | 9 |  | **24** | 8 | 7 |
+| [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 41 | 2 | 2 | 4 |  | 18 |  | **67** | 20 | 29 |
+| [outdent.md](../spec/outdent.md) | 15 | 2 |  |  |  | 25 |  | **42** | 8 | 9 |
+| [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 |  | **5** |  |  |
+| [paste-conv.md](../spec/paste-conv.md) | 4 |  |  | 2 |  |  |  | **6** | 5 | 1 |
+| [paste-html.md](../spec/paste-html.md) | 5 |  |  | 14 |  |  |  | **19** |  | 19 |
+| [paste-list-form.md](../spec/paste-list-form.md) | 3 |  |  | 2 |  | 1 |  | **6** | 4 | 1 |
+| [paste-list.md](../spec/paste-list.md) | 15 | 1 | 2 | 6 |  | 5 |  | **29** | 9 | 15 |
+| [paste-plain.md](../spec/paste-plain.md) | 21 |  | 4 |  |  | 11 |  | **36** | 9 | 16 |
+| [paste.md](../spec/paste.md) | 17 | 1 | 2 | 5 |  | 11 |  | **36** | 4 | 21 |
+| [placeholders.md](../spec/placeholders.md) | 11 |  | 5 |  |  | 4 |  | **20** | 5 | 11 |
+| [quirks.md](../spec/quirks.md) | 1 |  |  |  |  | 6 |  | **7** | 1 |  |
+| [quotes.md](../spec/quotes.md) | 85 | 1 | 5 | 9 |  | 43 |  | **143** |  | 100 |
+| [regressions.md](../spec/regressions.md) | 46 | 6 | 12 | 34 | 1 | 85 | 5 | **189** | 13 | 86 |
+| [scenarios.md](../spec/scenarios.md) | 19 |  |  | 2 |  | 8 |  | **29** | 11 | 10 |
+| [select.md](../spec/select.md) | 7 | 10 |  |  |  | 6 |  | **23** | 11 | 6 |
+| [shift-enter.md](../spec/shift-enter.md) | 25 |  | 3 |  |  | 8 |  | **36** | 12 | 16 |
+| [subtree-selection.md](../spec/subtree-selection.md) | 5 | 3 | 1 | 6 |  | 2 |  | **17** | 11 | 4 |
+| [tasks.md](../spec/tasks.md) | 2 |  |  |  |  | 28 |  | **30** |  | 2 |
+| [typing.md](../spec/typing.md) |  |  |  |  |  | 3 |  | **3** |  |  |
+| [undo.md](../spec/undo.md) | 4 |  |  |  |  | 1 |  | **5** | 3 | 1 |
+| [zoom.md](../spec/zoom.md) |  |  |  |  |  | 14 |  | **14** |  |  |
+| **total** | **618 (44%)** | **39 (2.8%)** | **39 (2.8%)** | **110 (7.8%)** | **1 (0.071%)** | **599 (42%)** | **5 (0.35%)** | **1411** | **266 (19%)** | **541 (38%)** |
 
-## Disagree (25)
+## Disagree (27)
 
 ### [Backspace17b](../spec/backspace.md#backspace17b)
 
@@ -973,6 +972,111 @@ two
 </td></tr>
 </table>
 
+### [Regression83](../spec/regressions.md#regression83)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+Draft announcement
+Send update
+Archive notes
+```
+
+</td><td>
+
+```clipboard
+<p style="mso-list:l0 level2 lfo1"><span style="mso-list:Ignore">o </span>Draft announcement</p><p style="mso-list:l0 level1 lfo1"><span style="mso-list:Ignore">· </span>Send update</p><p style="mso-list:l0 level1 lfo1"><span style="mso-list:Ignore">· </span>Archive notes</p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Inbox┃
+```
+
+</td><td>
+
+```buffer
+- Inbox
+- o Draft announcement
+- · Send update
+- · Archive notes┃
+```
+
+</td><td>
+
+```buffer
+- Inbox
+- Draft announcement
+- Send update
+- Archive notes┃
+```
+
+</td></tr>
+</table>
+
+### [Regression157](../spec/regressions.md#regression157)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+line one
+line two
+
+p2
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Project
+  - ┃
+- Inbox
+```
+
+</td><td>
+
+```buffer
+- Project
+  - line one
+    line two
+  - p2┃
+- Inbox
+```
+
+</td><td>
+
+```buffer
+- Project
+  - line one
+    line two
+    
+    p2┃
+- Inbox
+```
+
+</td></tr>
+</table>
+
 ### [Scenario2](../spec/scenarios.md#scenario2)
 
 > enter indent enter
@@ -1127,7 +1231,7 @@ y
 </td></tr>
 </table>
 
-## Whitespace (4)
+## Whitespace (8)
 
 ### [PastePlain19](../spec/paste-plain.md#pasteplain19)
 
@@ -1216,6 +1320,158 @@ y
 ```buffer
 - b
   - c
+```
+
+</td></tr>
+</table>
+
+### [Regression81](../spec/regressions.md#regression81)
+
+> shiftEnter
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- Earlier
+-  ┃Review
+- Detail
+- Later
+```
+
+</td><td>
+
+```buffer
+- Earlier
+-  
+  ┃Review
+- Detail
+- Later
+```
+
+</td><td>
+
+```buffer
+- Earlier
+- 
+  ┃Review
+- Detail
+- Later
+```
+
+</td></tr>
+</table>
+
+### [Regression102](../spec/regressions.md#regression102)
+
+> shiftEnter
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-   ┃a
+  b
+```
+
+</td><td>
+
+```buffer
+-   
+  ┃a
+  b
+```
+
+</td><td>
+
+```buffer
+- 
+  ┃a
+  b
+```
+
+</td></tr>
+</table>
+
+### [Regression140](../spec/regressions.md#regression140)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+ x
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃bravo
+  - charlie
+```
+
+</td><td>
+
+```buffer
+-  x┃bravo
+  - charlie
+```
+
+</td><td>
+
+```buffer
+- x┃bravo
+  - charlie
+```
+
+</td></tr>
+</table>
+
+### [Regression141](../spec/regressions.md#regression141)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+ x
+```
+
+</td></tr>
+</table>
+
+> pastePlain
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃bravo
+  - charlie
+```
+
+</td><td>
+
+```buffer
+-  x┃bravo
+  - charlie
+```
+
+</td><td>
+
+```buffer
+- x┃bravo
+  - charlie
 ```
 
 </td></tr>
@@ -2264,7 +2520,7 @@ y
 </td></tr>
 </table>
 
-## Adapted: disagree (58)
+## Adapted: disagree (83)
 
 ### [Backspace29](../spec/backspace.md#backspace29)
 
@@ -5813,6 +6069,1635 @@ Original:
 </td></tr>
 </table>
 
+### [Regression72](../spec/regressions.md#regression72)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+z
+```
+
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: as blocks, list as an item's first block
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x
+- 
+  - ««a
+  - b»»
+- y
+```
+
+</td><td>
+
+```buffer
+- x
+- 
+  - ««a
+  - b»»
+- y
+```
+
+</td><td>
+
+```buffer
+- x
+- 
+  - z┃
+- y
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x
+- - ««a
+  - b»»
+- y
+```
+
+</td><td>
+
+```buffer
+- x
+- 
+  - z┃
+- y
+```
+
+</td></tr>
+</table>
+
+### [Regression84](../spec/regressions.md#regression84)
+
+> outdent
+
+Adapted: blank lines, paragraph, quote, under quotes: atom
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃
+  > - a
+  >
+  > - →b
+  
+  
+  
+  y
+```
+
+</td><td>
+
+```buffer
+- x┃
+  > - a
+  >
+  > - →b
+  
+  
+  
+  y
+```
+
+</td><td>
+
+```buffer
+- x┃
+- > - a
+  >
+  > - →b
+- y
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃
+  > - a
+  >
+  > - →b
+
+  y
+```
+
+</td><td>
+
+```buffer
+x┃
+> - a
+>
+> - →b
+
+y
+```
+
+</td></tr>
+</table>
+
+### [Regression86](../spec/regressions.md#regression86)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+before a after
+```
+
+</td><td>
+
+```clipboard
+<p>before<code> a </code>after</p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, paragraph
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- before `a` after┃
+```
+
+</td><td>
+
+```buffer
+- before`  a  `after┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+before`  a  `after┃
+```
+
+</td></tr>
+</table>
+
+### [Regression87](../spec/regressions.md#regression87)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+ab foo!bar
+```
+
+</td><td>
+
+```clipboard
+<p><em>a</em><em>b</em> <em>foo!</em>bar</p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, paragraph
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- _a__b_ _foo!_bar┃
+```
+
+</td><td>
+
+```buffer
+- *ab* foo!bar┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+*ab* foo!bar┃
+```
+
+</td></tr>
+</table>
+
+### [Regression89](../spec/regressions.md#regression89)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+Keep ~~draft~~ and %%this%% literal
+```
+
+</td><td>
+
+```clipboard
+<ul><li>Keep ~~draft~~ and %%this%% literal</li></ul>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- Keep ~~draft~~ and %%this%% literal┃
+```
+
+</td><td>
+
+```buffer
+- Keep \~\~draft\~\~ and %\%this%\% literal┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+- Keep \~\~draft\~\~ and %\%this%\% literal┃
+```
+
+</td></tr>
+</table>
+
+### [Regression90](../spec/regressions.md#regression90)
+
+> "`"
+
+Adapted: as blocks, paragraph
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a« b »c
+```
+
+</td><td>
+
+```buffer
+- a`« b »`c
+```
+
+</td><td>
+
+```buffer
+- a` « b » `c
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+a« b »c
+```
+
+</td><td>
+
+```buffer
+- a` « b » `c
+```
+
+</td></tr>
+</table>
+
+### [Regression96](../spec/regressions.md#regression96)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+a
+
+b
+```
+
+</td><td>
+
+```clipboard
+<p><em>a<br><br>b</em></p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: blank lines, empty document, paragraph
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- _a
+- b_┃
+```
+
+</td><td>
+
+```buffer
+- *a*
+- *b*┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+*a*
+
+*b*┃
+```
+
+</td></tr>
+</table>
+
+### [Regression104](../spec/regressions.md#regression104)
+
+> deleteContentBackward
+
+Adapted: as blocks, code block
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ```
+  😀┃```
+  payload
+  ```
+````
+
+</td><td>
+
+````buffer
+- ```
+  ```
+  payload
+  ```┃
+````
+
+</td><td>
+
+`````buffer
+- ````
+  ┃```
+  payload
+  ````
+`````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```
+😀┃```
+payload
+```
+````
+
+</td><td>
+
+`````buffer
+- ````
+  ┃```
+  payload
+  ````
+`````
+
+</td></tr>
+</table>
+
+### [Regression115](../spec/regressions.md#regression115)
+
+> cut
+
+Adapted: as blocks, code block, paragraph
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ```
+  «X»```
+  PAYLOAD
+  ```
+- AFTER
+````
+
+</td><td>
+
+````buffer
+- ```
+  ```
+  PAYLOAD
+  ```┃
+- AFTER
+````
+
+</td><td>
+
+`````buffer
+- ````
+  ┃```
+  PAYLOAD
+  ````
+- AFTER
+`````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```
+«X»```
+PAYLOAD
+```
+AFTER
+````
+
+</td><td>
+
+`````buffer
+- ````
+  ┃```
+  PAYLOAD
+  ````
+- AFTER
+`````
+
+</td></tr>
+</table>
+
+### [Regression118](../spec/regressions.md#regression118)
+
+> deleteSoftLineBackward
+
+Adapted: as blocks, code block, paragraph
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ```
+  X┃```
+  PAYLOAD
+  ```
+- AFTER
+````
+
+</td><td>
+
+````buffer
+- ┃```
+  ```
+  PAYLOAD
+  ```
+- AFTER
+````
+
+</td><td>
+
+`````buffer
+- ````
+  ┃```
+  PAYLOAD
+  ````
+- AFTER
+`````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```
+X┃```
+PAYLOAD
+```
+AFTER
+````
+
+</td><td>
+
+`````buffer
+- ````
+  ┃```
+  PAYLOAD
+  ````
+- AFTER
+`````
+
+</td></tr>
+</table>
+
+### [Regression119](../spec/regressions.md#regression119)
+
+> deleteSoftLineBackward
+
+Adapted: as blocks, blank lines, quote, under quotes: atom
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- > ```
+  > PAYLOAD┃
+  > ```
+  > AFTER
+````
+
+</td><td>
+
+````buffer
+- > ```
+  ┃
+  > ```
+  > AFTER
+````
+
+</td><td>
+
+````buffer
+- > ```
+  - > ```
+    > AFTER
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+> ```
+> PAYLOAD┃
+> ```
+> AFTER
+````
+
+</td><td>
+
+````buffer
+- > ```
+┃
+  > ```
+  > AFTER
+````
+
+</td></tr>
+</table>
+
+### [Regression120](../spec/regressions.md#regression120)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+````clipboard
+```
+````
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: as blocks, code block, paragraph
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ```
+  BEFORE
+  ┃
+  PAYLOAD
+  ```
+- AFTER
+````
+
+</td><td>
+
+````buffer
+- ```
+  BEFORE
+  ```
+  PAYLOAD
+  ```┃
+- AFTER
+````
+
+</td><td>
+
+`````buffer
+- ````
+  BEFORE
+  ```┃
+  PAYLOAD
+  ````
+- AFTER
+`````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```
+BEFORE
+┃
+PAYLOAD
+```
+AFTER
+````
+
+</td><td>
+
+`````buffer
+- ````
+  BEFORE
+  ```┃
+  PAYLOAD
+  ````
+- AFTER
+`````
+
+</td></tr>
+</table>
+
+### [Regression121](../spec/regressions.md#regression121)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+````clipboard
+```
+INJECTED
+````
+
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: as blocks, code block, paragraph
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ```
+  BEFORE
+  «START
+  END»
+  PAYLOAD
+  ```
+- AFTER
+````
+
+</td><td>
+
+````buffer
+- ```
+  BEFORE
+  ```
+  INJE┃CTED
+  PAYLOAD
+  ```
+- AFTER
+````
+
+</td><td>
+
+`````buffer
+- ````
+  BEFORE
+  ```
+  INJECTED┃
+  PAYLOAD
+  ````
+- AFTER
+`````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```
+BEFORE
+«START
+END»
+PAYLOAD
+```
+AFTER
+````
+
+</td><td>
+
+`````buffer
+- ````
+  BEFORE
+  ```
+  INJECTED┃
+  PAYLOAD
+  ````
+- AFTER
+`````
+
+</td></tr>
+</table>
+
+### [Regression122](../spec/regressions.md#regression122)
+
+> " "
+
+Adapted: as blocks, code block, paragraph
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ```
+  «X»```
+  PAYLOAD
+  ```
+- AFTER
+````
+
+</td><td>
+
+````buffer
+- ```
+   ```
+  PAYLOAD
+  ```┃
+- AFTER
+````
+
+</td><td>
+
+`````buffer
+- ````
+   ┃```
+  PAYLOAD
+  ````
+- AFTER
+`````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```
+«X»```
+PAYLOAD
+```
+AFTER
+````
+
+</td><td>
+
+`````buffer
+- ````
+   ┃```
+  PAYLOAD
+  ````
+- AFTER
+`````
+
+</td></tr>
+</table>
+
+### [Regression129](../spec/regressions.md#regression129)
+
+Adapted: as blocks, quote
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- >- [x] >
+   ┃   -
+```
+
+</td></tr>
+</table>
+
+> deleteContentForward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- >- [x] >
+   ┃  -
+```
+
+</td></tr>
+</table>
+
+> cursorDocStart
+
+<table>
+<tr><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃>- [x] >
+     -
+```
+
+</td><td>
+
+```buffer
+- >- [x] >
+  - 
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>deleteContentForward</th><th>cursorDocStart</th></tr>
+<tr valign="top"><td>
+
+```buffer
+>- [x] >
+ ┃   -
+```
+
+</td><td>
+
+```buffer
+- >- [x] >
+   ┃◌  -
+```
+
+</td><td>
+
+```buffer
+┃- >- [x] >
+     -
+```
+
+</td></tr>
+</table>
+
+### [Regression133](../spec/regressions.md#regression133)
+
+> deleteContentBackward
+
+Adapted: as blocks, paragraph
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a ```x `┃` y``` b
+````
+
+</td><td>
+
+````buffer
+- a ```x ┃ y``` b
+````
+
+</td><td>
+
+````buffer
+- a ```x ┃` y``` b
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+a ```x `┃` y``` b
+````
+
+</td><td>
+
+````buffer
+- a ```x ┃` y``` b
+````
+
+</td></tr>
+</table>
+
+### [Regression134](../spec/regressions.md#regression134)
+
+Adapted: as blocks, paragraph
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a \`┃` b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a \┃ b
+```
+
+</td><td>
+
+```buffer
+- a \┃` b
+```
+
+</td></tr>
+</table>
+
+> "``"
+
+<table>
+<tr><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a \``┃ b
+```
+
+</td><td>
+
+```buffer
+- a \``┃` b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>deleteContentBackward</th><th>"``"</th></tr>
+<tr valign="top"><td>
+
+```buffer
+a \`┃` b
+```
+
+</td><td>
+
+```buffer
+- a \┃` b
+```
+
+</td><td>
+
+```buffer
+- a \``┃` b
+```
+
+</td></tr>
+</table>
+
+### [Regression135](../spec/regressions.md#regression135)
+
+> deleteSoftLineBackward
+
+Adapted: blank lines, heading, paragraph, setext heading
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## Title┃
+  - para
+```
+
+</td><td>
+
+```buffer
+- ┃
+  - para
+```
+
+</td><td>
+
+```buffer
+- ## ┃
+  - para
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+Title┃
+---
+
+para
+```
+
+</td><td>
+
+```buffer
+## ┃
+
+para
+```
+
+</td></tr>
+</table>
+
+### [Regression144](../spec/regressions.md#regression144)
+
+> indent
+
+Adapted: blank lines, heading
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## B
+- ## ┃C
+```
+
+</td><td>
+
+```buffer
+- ## B
+  - ## ┃C
+```
+
+</td><td>
+
+```buffer
+- ## B
+  - ### ┃C
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+## B
+
+## ┃C
+```
+
+</td><td>
+
+```buffer
+## B
+
+### ┃C
+```
+
+</td></tr>
+</table>
+
+### [Regression145](../spec/regressions.md#regression145)
+
+> outdent
+
+Adapted: blank lines, heading
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # A
+  - ## B
+    - ### ┃C
+```
+
+</td><td>
+
+```buffer
+- # A
+  - ## B
+  - ### ┃C
+```
+
+</td><td>
+
+```buffer
+- # A
+  - ## B
+  - ## ┃C
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# A
+
+## B
+
+### ┃C
+```
+
+</td><td>
+
+```buffer
+# A
+
+## B
+
+## ┃C
+```
+
+</td></tr>
+</table>
+
+### [Regression146](../spec/regressions.md#regression146)
+
+> deleteContentBackward
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # h
+- # ┃n
+```
+
+</td><td>
+
+```buffer
+- # h
+- #┃n
+```
+
+</td><td>
+
+```buffer
+- # h
+  - ┃n
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# h
+
+# ┃n
+```
+
+</td><td>
+
+```buffer
+# h
+
+┃n
+```
+
+</td></tr>
+</table>
+
+### [Regression168](../spec/regressions.md#regression168)
+
+> moveSubtreeDown
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # ┃g
+  e
+- #
+  -   y
+```
+
+</td><td>
+
+```buffer
+- #
+  -   y
+- # ┃g
+  e
+```
+
+</td><td>
+
+```buffer
+- #
+  - # ┃g
+    e
+  - y
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # ┃g
+  e
+#
+  y
+```
+
+</td><td>
+
+```buffer
+#
+- # ┃g
+  e
+
+y
+```
+
+</td></tr>
+</table>
+
+### [Regression169](../spec/regressions.md#regression169)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: as blocks, link reference definition, under pasteOnParent: after
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [a]:u┃
+  T
+```
+
+</td><td>
+
+```buffer
+- [a]:ux
+  ┃
+  T
+```
+
+</td><td>
+
+```buffer
+- [a]:u
+  T
+- x┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [a]:u┃
+T
+```
+
+</td><td>
+
+```buffer
+- [a]:u
+  T
+- x┃
+```
+
+</td></tr>
+</table>
+
+### [Regression175](../spec/regressions.md#regression175)
+
+> moveSubtreeUp
+
+Adapted: as blocks, list as an item's first block
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+1. a
+2. 
+   - ┃b
+```
+
+</td><td>
+
+```buffer
+1. a
+   1. ┃b
+2. 
+```
+
+</td><td>
+
+```buffer
+1. a
+   - ┃b
+2. 
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+1. a
+2. - ┃b
+```
+
+</td><td>
+
+```buffer
+1. a
+   - ┃b
+2. 
+```
+
+</td></tr>
+</table>
+
+### [Regression177](../spec/regressions.md#regression177)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: as blocks, blank lines, paragraph
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- «« b»»
+```
+
+</td><td>
+
+```buffer
+- «« b»»
+```
+
+</td><td>
+
+```buffer
+- x┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+ ««b»»
+␠
+```
+
+</td><td>
+
+```buffer
+x┃
+```
+
+</td></tr>
+</table>
+
 ### [Scenario18](../spec/scenarios.md#scenario18)
 
 <table>
@@ -6016,7 +7901,7 @@ x┃
 </td></tr>
 </table>
 
-## Adapted: whitespace (24)
+## Adapted: whitespace (31)
 
 ### [Enter68](../spec/enter.md#enter68)
 
@@ -7409,6 +9294,385 @@ Original:
 </td></tr>
 </table>
 
+### [Regression85](../spec/regressions.md#regression85)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+-
+  x
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: under enterTask: plain, under pasteOverSelection: ignore
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- 
+  [x] 
+   «    - b»
+```
+
+</td><td>
+
+```buffer
+- 
+  [x] 
+       - b
+- 
+   x┃
+```
+
+</td><td>
+
+```buffer
+- 
+  [x] 
+       - b
+- 
+  x┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [x]␠
+   «    - b»
+```
+
+</td><td>
+
+```buffer
+- [x] 
+       - b
+-
+  x┃
+```
+
+</td></tr>
+</table>
+
+### [Regression110](../spec/regressions.md#regression110)
+
+> indent
+
+Adapted: link reference definition
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃ [a]: /url
+```
+
+</td><td>
+
+```buffer
+- ┃ [a]: /url
+```
+
+</td><td>
+
+```buffer
+- ┃[a]: /url
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃ [a]: /url
+```
+
+</td><td>
+
+```buffer
+- ┃[a]: /url
+```
+
+</td></tr>
+</table>
+
+### [Regression136](../spec/regressions.md#regression136)
+
+> deleteSoftLineBackward
+
+Adapted: heading, setext heading
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Ti
+  tle┃
+```
+
+</td><td>
+
+```buffer
+- # Ti
+  ┃
+```
+
+</td><td>
+
+```buffer
+- # Ti┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+Ti
+tle┃
+===
+```
+
+</td><td>
+
+```buffer
+Ti┃
+===
+```
+
+</td></tr>
+</table>
+
+### [Regression162](../spec/regressions.md#regression162)
+
+> indent
+
+Adapted: quote
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  >┃a
+  >b
+```
+
+</td><td>
+
+```buffer
+-  >┃a
+  >b
+```
+
+</td><td>
+
+```buffer
+- >┃a
+  >b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+ >┃a
+>b
+```
+
+</td><td>
+
+```buffer
+- >┃a
+  >b
+```
+
+</td></tr>
+</table>
+
+### [Regression173](../spec/regressions.md#regression173)
+
+> shiftEnter
+
+Adapted: quote, under quotes: atom
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃ > +→]
+  `
+```
+
+</td><td>
+
+```buffer
+- 
+  ┃ > +→]
+  `
+```
+
+</td><td>
+
+```buffer
+- ┃ > +→]
+  `
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃ > +→]
+`
+```
+
+</td><td>
+
+```buffer
+┃ > +→]
+`
+```
+
+</td></tr>
+</table>
+
+### [Regression178](../spec/regressions.md#regression178)
+
+> "```"
+
+Adapted: as blocks, code block, paragraph
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  ┃`
+```
+
+</td><td>
+
+````buffer
+-  ```┃
+````
+
+</td><td>
+
+````buffer
+- ```┃
+  ```
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+ ┃`
+```
+
+</td><td>
+
+````buffer
+-  ```┃
+   ```
+````
+
+</td></tr>
+</table>
+
+### [Regression181](../spec/regressions.md#regression181)
+
+> indent
+
+Adapted: paragraph
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [a]
+  [a]:s┃
+```
+
+</td><td>
+
+```buffer
+- [a]
+  [a]:s┃
+```
+
+</td><td>
+
+```buffer
+- 
+  [a]
+  [a]:s┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+[a]
+[a]:s┃
+```
+
+</td><td>
+
+```buffer
+- [a]
+  [a]:s┃
+```
+
+</td></tr>
+</table>
+
 ### [ShiftEnter30](../spec/shift-enter.md#shiftenter30)
 
 Adapted: escape
@@ -7557,7 +9821,7 @@ Original:
 </td></tr>
 </table>
 
-## Adapted: caret (18)
+## Adapted: caret (24)
 
 ### [CursorUp2](../spec/cursor.md#cursorup2)
 
@@ -8385,6 +10649,361 @@ Original:
 </td></tr>
 </table>
 
+### [Regression74](../spec/regressions.md#regression74)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- a
+- b
+```
+
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: as blocks, escape, paragraph
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- \┃
+```
+
+</td><td>
+
+```buffer
+- \- a
+  \- b┃
+```
+
+</td><td>
+
+```buffer
+- - a
+  \- b┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+\┃
+```
+
+</td><td>
+
+```buffer
+- \- a
+  \- b┃
+```
+
+</td></tr>
+</table>
+
+### [Regression88](../spec/regressions.md#regression88)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x y
+```
+
+</td><td>
+
+```clipboard
+<p><a href="/u">x</a> <a href="https://example.com/a&gt;b">y</a></p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, paragraph
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- [x](/u) [y](https://example.com/a\>b)┃
+```
+
+</td><td>
+
+```buffer
+- [x](/u) [y](https://example.com/a>b)┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+[x](/u) [y](https://example.com/a>b)┃
+```
+
+</td></tr>
+</table>
+
+### [Regression95](../spec/regressions.md#regression95)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+Issue #
+```
+
+</td><td>
+
+```clipboard
+<h2>Issue #</h2>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, heading
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- ## Issue #┃
+```
+
+</td><td>
+
+```buffer
+- ## Issue \#┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+## Issue \#┃
+```
+
+</td></tr>
+</table>
+
+### [Regression113](../spec/regressions.md#regression113)
+
+> deleteContentBackward
+
+Adapted: as blocks, blank lines, paragraph
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ««a»»
+- 
+```
+
+</td><td>
+
+```buffer
+- ««»»
+```
+
+</td><td>
+
+```buffer
+- ┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+«a
+
+◌»
+```
+
+</td><td>
+
+```buffer
+- ┃
+```
+
+</td></tr>
+</table>
+
+### [Regression139](../spec/regressions.md#regression139)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+b #
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: heading
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # a┃
+```
+
+</td><td>
+
+```buffer
+- # ab #┃
+```
+
+</td><td>
+
+```buffer
+- # ab \#┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# a┃
+```
+
+</td><td>
+
+```buffer
+# ab \#┃
+```
+
+</td></tr>
+</table>
+
+### [Regression180](../spec/regressions.md#regression180)
+
+> selectSubtree cut
+
+Adapted: as blocks, blank lines, paragraph, the node at the caret selected (selectSubtree)
+
+<table>
+<tr><th>buffer</th><th>tine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+1. a┃
+2. b
+-    c
+```
+
+</td><td>
+
+```buffer
+1. ««b»»
+-    c
+```
+
+</td><td>
+
+```buffer
+1. ┃b
+-    c
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+1. a┃
+10. b
+
+   c
+```
+
+</td><td>
+
+```buffer
+1. ┃b
+-    c
+```
+
+</td></tr>
+</table>
+
 ### [Select6](../spec/select.md#select6)
 
 Adapted: under selectionLadder: parents
@@ -8666,7 +11285,70 @@ beta
 </td></tr>
 </table>
 
-## Skipped (553)
+## Adapted: error (1)
+
+### [Regression116](../spec/regressions.md#regression116)
+
+Adapted: code block, paragraph
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ```
+  →┃```
+  PAYLOAD
+  ```
+- AFTER
+````
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+Error: Tine holds the starting state differently:
+  meant:
+    - ```
+      →┃```
+      PAYLOAD
+      ```
+    - AFTER
+  holds:
+    - `┃``
+      →```
+      PAYLOAD
+      ```
+    - AFTER
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```
+→┃```
+PAYLOAD
+```
+AFTER
+````
+
+</td><td>
+
+`````buffer
+````
+┃```
+PAYLOAD
+````
+AFTER
+`````
+
+</td></tr>
+</table>
+
+## Skipped (599)
 
 | example | why |
 | --- | --- |
@@ -8763,6 +11445,7 @@ beta
 | [DeleteSubtree6](../spec/delete-subtree.md#deletesubtree6) | no text focus after deleteSubtree |
 | [DeleteSubtree8](../spec/delete-subtree.md#deletesubtree8) | caret on a code block's fence |
 | [DeleteSubtree12](../spec/delete-subtree.md#deletesubtree12) | option quotes: container |
+| [DeleteSubtree14](../spec/delete-subtree.md#deletesubtree14) | caret on a code block's fence |
 | **delete.md** | |
 | [Delete4](../spec/delete.md#delete4) | tag markup-heading |
 | [Delete4b](../spec/delete.md#delete4b) | tag markup-heading |
@@ -9180,6 +11863,52 @@ beta
 | [Regression61](../spec/regressions.md#regression61) | option listParent: container |
 | [Regression62](../spec/regressions.md#regression62) | changes only what blocks can't show |
 | [Regression66](../spec/regressions.md#regression66) | caret on a blank line |
+| [Regression67](../spec/regressions.md#regression67) | caret on a blank line |
+| [Regression68](../spec/regressions.md#regression68) | caret on a blank line |
+| [Regression69](../spec/regressions.md#regression69) | the caret in a block a fold hides |
+| [Regression70](../spec/regressions.md#regression70) | caret on a blank line |
+| [Regression71](../spec/regressions.md#regression71) | action duplicateSubtree |
+| [Regression78](../spec/regressions.md#regression78) | nothing to compare |
+| [Regression79](../spec/regressions.md#regression79) | action duplicateSubtree |
+| [Regression80](../spec/regressions.md#regression80) | action pasteAt |
+| [Regression91](../spec/regressions.md#regression91) | option pastePlainLines: enter |
+| [Regression92](../spec/regressions.md#regression92) | caret in a marker |
+| [Regression93](../spec/regressions.md#regression93) | action duplicateSubtree |
+| [Regression94](../spec/regressions.md#regression94) | no zoom |
+| [Regression97](../spec/regressions.md#regression97) | no zoom |
+| [Regression100](../spec/regressions.md#regression100) | caret on a blank line |
+| [Regression105](../spec/regressions.md#regression105) | option pasteSeams: open |
+| [Regression106](../spec/regressions.md#regression106) | caret on a blank line |
+| [Regression107](../spec/regressions.md#regression107) | caret on a code block's fence |
+| [Regression108](../spec/regressions.md#regression108) | nothing to compare |
+| [Regression109](../spec/regressions.md#regression109) | action duplicateSubtree |
+| [Regression112](../spec/regressions.md#regression112) | nothing to compare |
+| [Regression114](../spec/regressions.md#regression114) | option pastePlainLines: enter |
+| [Regression123](../spec/regressions.md#regression123) | option markup: decorated |
+| [Regression124](../spec/regressions.md#regression124) | the caret in a block a fold hides |
+| [Regression126](../spec/regressions.md#regression126) | caret on a code block's fence |
+| [Regression128](../spec/regressions.md#regression128) | action pasteAt |
+| [Regression130](../spec/regressions.md#regression130) | selection across blocks |
+| [Regression131](../spec/regressions.md#regression131) | changes only what blocks can't show |
+| [Regression132](../spec/regressions.md#regression132) | action deleteByDrag |
+| [Regression137](../spec/regressions.md#regression137) | heading's closing #s |
+| [Regression142](../spec/regressions.md#regression142) | numbered list from another number than 1 |
+| [Regression143](../spec/regressions.md#regression143) | numbered list from another number than 1 |
+| [Regression147](../spec/regressions.md#regression147) | caret on a code block's fence |
+| [Regression149](../spec/regressions.md#regression149) | changes only what blocks can't show |
+| [Regression151](../spec/regressions.md#regression151) | nothing to compare |
+| [Regression152](../spec/regressions.md#regression152) | option markup: decorated |
+| [Regression153](../spec/regressions.md#regression153) | changes only what blocks can't show |
+| [Regression154](../spec/regressions.md#regression154) | indented code |
+| [Regression159](../spec/regressions.md#regression159) | caret in a marker |
+| [Regression160](../spec/regressions.md#regression160) | option pastePlainLines: enter |
+| [Regression161](../spec/regressions.md#regression161) | selection across blocks |
+| [Regression163](../spec/regressions.md#regression163) | action duplicateSubtree |
+| [Regression164](../spec/regressions.md#regression164) | caret on a code block's fence |
+| [Regression165](../spec/regressions.md#regression165) | caret in a marker |
+| [Regression166](../spec/regressions.md#regression166) | option quotes: container |
+| [Regression167](../spec/regressions.md#regression167) | action duplicateSubtree |
+| [Regression187](../spec/regressions.md#regression187) | caret on a blank line |
 | **scenarios.md** | |
 | [Scenario6](../spec/scenarios.md#scenario6) | tag free-form |
 | [Scenario8b](../spec/scenarios.md#scenario8b) | no text focus after moveSubtree ③ |
@@ -9243,8 +11972,6 @@ beta
 | [Typing3](../spec/typing.md#typing3) | tag free-form |
 | **undo.md** | |
 | [Undo2](../spec/undo.md#undo2) | tag free-form |
-| **z-open.md** | |
-| [Open2](../spec/z-open.md#open2) | caret on a code block's fence |
 | **zoom.md** | |
 | [Zoom1](../spec/zoom.md#zoom1) | no zoom |
 | [Zoom2](../spec/zoom.md#zoom2) | no zoom |
@@ -9260,3 +11987,14 @@ beta
 | [Zoom12](../spec/zoom.md#zoom12) | no zoom |
 | [Zoom13](../spec/zoom.md#zoom13) | no zoom |
 | [Zoom14](../spec/zoom.md#zoom14) | no zoom |
+
+## Not run (5)
+
+| example | why |
+| --- | --- |
+| **regressions.md** | |
+| [Regression184](../spec/regressions.md#regression184) | step added since |
+| [Regression185](../spec/regressions.md#regression185) | its actions changed since |
+| [Regression186](../spec/regressions.md#regression186) | new, or its start changed since |
+| [Regression188](../spec/regressions.md#regression188) | new, or its start changed since |
+| [Regression189](../spec/regressions.md#regression189) | new, or its start changed since |

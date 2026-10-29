@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import fc from 'fast-check';
-import { executeCommand, nearestDropPoint, type Command, type DropPoint, type DropSeam } from '../../src/commands/index.ts';
-import { Config } from '../../src/config.ts';
+import { executeCommand, nearestDropPoint, type OurusCommand, type DropPoint, type DropSeam } from '../../src/commands/index.ts';
+import { OurusConfig } from '../../src/config.ts';
 import { OurusDoc } from '../../src/doc/index.ts';
 import { docOf, nodesOf, plainText } from '../drawing.ts';
 import { applyChanges } from '../../src/text/index.ts';
@@ -13,7 +13,7 @@ const RUNS = Number(process.env.OURUS_FUZZ_RUNS ?? 2000);
 const SEED = Number(process.env.OURUS_FUZZ_SEED ?? 1);
 
 /** The flavor a document is read in: commands behave alike in all, but read tasks and callouts apart. */
-const arbFlavor = fc.constantFrom(...Config.values.flavor);
+const arbFlavor = fc.constantFrom(...OurusConfig.values.flavor);
 
 /** Outline-shaped documents: headings, paragraphs and nested lists in tidy and untidy styles. */
 const arbOutlineDoc = fc
@@ -44,10 +44,10 @@ const arbTidyOutline = fc
   })
   .chain((items) => fc.constantFrom('  ', '\t').map((unit) => items.map(([d, m, t]) => unit.repeat(d) + m + t).join('\n') + '\n'));
 
-const COMMANDS: Command['type'][] = ['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'enter', 'shiftEnter', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward'];
+const COMMANDS: OurusCommand['type'][] = ['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'enter', 'shiftEnter', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward'];
 
 /** Commands that act at a caret; the others take a selection. */
-const CARET_COMMANDS = new Set<Command['type']>(['enter', 'shiftEnter', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward']);
+const CARET_COMMANDS = new Set<OurusCommand['type']>(['enter', 'shiftEnter', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward']);
 
 test('commands keep text, changes and selection consistent', () => {
   const failing: string[] = [];
@@ -56,7 +56,7 @@ test('commands keep text, changes and selection consistent', () => {
       const doc = OurusDoc.parse(text, { config: { flavor } });
       const anchor = a % (text.length + 1);
       const head = CARET_COMMANDS.has(type) ? anchor : b % (text.length + 1);
-      const r = executeCommand(doc, { type } as Command, { anchor, head });
+      const r = executeCommand(doc, { type } as OurusCommand, { anchor, head });
       if (r.status === 'rejected' && r.reason === 'write-failed') failing.push(JSON.stringify([type, flavor, text, anchor, head]));
       if (r.status !== 'applied') return;
       assert.equal(applyChanges(text, r.changes), r.doc.text);
@@ -100,9 +100,9 @@ test('ids follow nodes through structural commands', () => {
 
 test('ids stay with nodes that a command indents or opens a line above', () => {
   const ids = (d: OurusDoc) => nodesOf(d).map((n) => `${n.id}:${plainText(d, n).replace(/\n/g, '')}`);
-  const run = (text: string, type: Command['type'], pos: number, config = {}) => {
+  const run = (text: string, type: OurusCommand['type'], pos: number, config = {}) => {
     const doc = OurusDoc.parse(text, { config });
-    const r = executeCommand(doc, { type } as Command, { anchor: pos, head: pos });
+    const r = executeCommand(doc, { type } as OurusCommand, { anchor: pos, head: pos });
     assert.equal(r.status, 'applied');
     return r.status === 'applied' ? [ids(doc), ids(r.doc)] : [];
   };
@@ -119,12 +119,12 @@ test('ids stay with nodes that a command indents or opens a line above', () => {
 test('every command from an empty document neither throws nor fails to write', () => {
   const starts: [string, string, number[]][] = [['nothing', '', []], ['a line break', '\n', []], ['a held empty paragraph', '\n', [0]]];
   const clipboards = ['- x\n', 'x\n', 'x', '\n', 'a\n\nb\n', '# h\n', '---\ntitle: x\n---\n', '```\ncode\n```\n'];
-  const commands: Command[] = [
-    ...(['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'deleteSubtree', 'duplicateSubtree', ...CARET_COMMANDS] as const).map((type) => ({ type }) as Command),
+  const commands: OurusCommand[] = [
+    ...(['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'deleteSubtree', 'duplicateSubtree', ...CARET_COMMANDS] as const).map((type) => ({ type }) as OurusCommand),
     ...clipboards.flatMap((text) => [{ type: 'paste', clipboard: { 'text/plain': text } } as const, { type: 'pastePlain', text } as const]),
   ];
   const problems: string[] = [];
-  for (const flavor of Config.values.flavor) {
+  for (const flavor of OurusConfig.values.flavor) {
     for (const [name, text, placeholders] of starts) {
       const doc = docOf(text, placeholders, { flavor });
       for (let pos = 0; pos <= text.length; pos++) {
@@ -246,7 +246,7 @@ test('a place named by ids survives an edit elsewhere', () => {
   const doc = OurusDoc.parse('- a\n- b\n- c\n');
   const id = (text: string): number => nodesOf(doc).find((n) => plainText(doc, n) === text)!.id;
   const [b, c] = [id('b'), id('c')];
-  const edited = doc.update([{ from: 3, to: 3, insert: 'x' }]);
+  const edited = doc.update({ changes: [{ from: 3, to: 3, insert: 'x' }] });
   const r = executeCommand(edited, { type: 'moveSubtree', nodes: [c], to: { parent: 'root', after: null } }, { anchor: 0, head: 0 });
   assert.ok(r.status === 'applied');
   assert.equal(r.status === 'applied' && r.doc.text, '- c\n- ax\n- b\n');
@@ -257,7 +257,7 @@ test('a structural command given nodes acts on them, the caret elsewhere staying
   const doc = OurusDoc.parse('- a\n- b\n- c\n- d\n');
   const id = (text: string): number => nodesOf(doc).find((n) => plainText(doc, n) === text)!.id;
   const caret = { anchor: 2, head: 2 };
-  const run = (command: Command) => {
+  const run = (command: OurusCommand) => {
     const r = executeCommand(doc, command, caret);
     assert.equal(r.status, 'applied', command.type);
     return r.status === 'applied' ? r : null!;
@@ -293,6 +293,50 @@ test('a pickup takes the pressed node, its lines and its clipboard, and changes 
   for (const seam of r.dropMap.seams) for (const point of seam.points) assert.deepEqual(point.drop, { type: 'moveSubtree', nodes: [id('b')], to: { parent: point.parent, after: point.after } });
   const stale = executeCommand(doc, { type: 'drag', pressed: 999 }, { anchor: 2, head: 2 });
   assert.equal(stale.status === 'rejected' && stale.reason, 'no-such-node');
+});
+
+test('a pickup leaves out the places its drop refuses before writing', () => {
+  // each drop it offers applies: below a fence nothing closes, the fence itself with something after
+  // it, a heading under an item or as a heading's first child, a quote in a paragraph's list, an item
+  // with no text of its own a paragraph, a rule in a list of its character's bullet
+  const cases: [string, number][] = [
+    ['charlie\n```', 1],
+    ['1. alpha\n```', 1],
+    ['# a\n```', 2],
+    ['alpha\n\n```\nx', 1],
+    ['## b\n## c\n- d', 1],
+    ['alpha\n> - charlie', 2],
+    ['- - charlie\n> delta', 1],
+    ['- a\n  - x\n---', 3],
+  ];
+  // and from outside: a block in a paragraph's list, an item above indented code, a task a paragraph,
+  // a `---` closing the one the document starts with into front matter
+  const clipboards: [string, string, OurusConfig['flavor']?][] = [
+    ['p\n\n- a', '---'],
+    ['    code\n- a', '- g'],
+    ['> alpha\n1. bravo', '- [ ] gt'],
+    ['---\n\n- alpha\n', '---', 'obsidian'],
+  ];
+  const pickups = [
+    ...cases.map(([text, node]) => ({ text, command: { type: 'drag', nodes: [node] } as OurusCommand, flavor: undefined as OurusConfig['flavor'] | undefined })),
+    ...clipboards.map(([text, c, flavor]) => ({ text, command: { type: 'drag', clipboard: { 'text/markdown': c, 'text/plain': c } } as OurusCommand, flavor })),
+  ];
+  for (const { text, command, flavor } of pickups) {
+    const doc = OurusDoc.parse(text, { config: { flavor } });
+    const r = executeCommand(doc, command, { anchor: 0, head: 0 });
+    assert.ok(r.status === 'applied' && r.dropMap, text);
+    if (r.status !== 'applied' || !r.dropMap) continue;
+    for (const seam of r.dropMap.seams) {
+      for (const point of seam.points) {
+        const dropped = executeCommand(doc, point.drop, { anchor: 0, head: 0 });
+        assert.equal(dropped.status, 'applied', `${JSON.stringify(text)} at ${point.parent}, ${point.after}: ${dropped.status === 'rejected' ? dropped.detail : ''}`);
+      }
+    }
+  }
+  // and a drop there still refuses
+  const doc = OurusDoc.parse('## b\n## c\n- d');
+  const r = executeCommand(doc, { type: 'moveSubtree', nodes: [1], to: { parent: 3, after: null } }, { anchor: 0, head: 0 });
+  assert.equal(r.status === 'rejected' && r.reason, 'not-expressible');
 });
 
 test('the nearest drop point: by column, then the own place, one that keeps the kind, the deeper', () => {
@@ -363,7 +407,7 @@ test('the source of a drag out deletes its nodes only while they are what was dr
   const removed = executeCommand(doc, { type: 'deleteSubtree', nodes: [id('b')], expectMarkdown }, caret);
   assert.equal(removed.status === 'applied' && removed.doc.text, '- a\n- d\n');
   // a child added to the run during the drag: it wasn't carried, so the run stays
-  const edited = doc.update([{ from: doc.text.indexOf('- d'), to: doc.text.indexOf('- d'), insert: '  - new\n' }]);
+  const edited = doc.update({ changes: [{ from: doc.text.indexOf('- d'), to: doc.text.indexOf('- d'), insert: '  - new\n' }] });
   const refused = executeCommand(edited, { type: 'deleteSubtree', nodes: [id('b')], expectMarkdown }, caret);
   assert.equal(refused.status === 'rejected' && refused.reason, 'content-changed');
 });
@@ -372,4 +416,182 @@ test("a text drag's deletion is a cut's, and the host's where ourus doesn't do i
   const doc = OurusDoc.parse('```\nx\n```\n');
   const r = executeCommand(doc, { type: 'deleteByDrag' }, { anchor: 4, head: 5 });
   assert.equal(r.status, 'deferredToHost');
+});
+
+test('the empty paragraph Enter makes after a title at a text\'s end, with no line ending, goes again', () => {
+  // (it spans no characters, past the final line ending: its placeholder goes with it, or moves)
+  for (const start of ['# x', 'x\n===']) {
+    const entered = executeCommand(OurusDoc.parse(start), { type: 'enter' }, { anchor: start.length, head: start.length });
+    assert.equal(entered.status, 'applied');
+    if (entered.status !== 'applied') continue;
+    for (const type of ['deleteContentBackward', 'deleteSoftLineBackward', 'cut', 'moveSubtreeUp'] as const) {
+      const r = executeCommand(entered.doc, { type }, entered.selection);
+      assert.equal(r.status, 'applied', `${type} after Enter in ${JSON.stringify(start)}: ${r.status === 'rejected' ? r.detail : ''}`);
+    }
+    const back = executeCommand(entered.doc, { type: 'deleteContentBackward' }, entered.selection);
+    if (back.status === 'applied') assert.equal(back.doc.rootNode.child(0).children.length, 0);
+  }
+});
+
+test('Enter at the end of an unclosed fence at a text\'s end, with no line ending, makes an empty code line', () => {
+  const r = executeCommand(OurusDoc.parse('```\ncode'), { type: 'enter' }, { anchor: 8, head: 8 });
+  assert.equal(r.status, 'applied');
+  if (r.status === 'applied') assert.deepEqual([r.doc.text, r.selection.head], ['```\ncode\n\n', 9]);
+});
+
+test('a text whose lines end with a lone CR is edited as with LF', () => {
+  for (const [type, text] of [['duplicateSubtree', '- a\r- a\r- b'], ['enter', '- a\r- \r- b']] as const) {
+    const r = executeCommand(OurusDoc.parse('- a\r- b'), { type }, { anchor: 3, head: 3 });
+    assert.equal(r.status === 'applied' && r.doc.text, text, type);
+  }
+});
+
+test('a duplicate of a node whose blank line ends the text, with no line ending, keeps the copy\'s', () => {
+  const r = executeCommand(OurusDoc.parse('> a\n>'), { type: 'duplicateSubtree' }, { anchor: 2, head: 2 });
+  assert.equal(r.status === 'applied' && r.doc.text, '> a\n\n> a\n\n');
+});
+
+test('a paste of a hundred thousand lines and more applies, as plain text and as Markdown', () => {
+  const lines = 'x\n'.repeat(150000);
+  for (const command of [{ type: 'paste', clipboard: { 'text/plain': lines } }, { type: 'pastePlain', text: lines }] as const) {
+    assert.equal(executeCommand(OurusDoc.parse('- a\n'), command, { anchor: 3, head: 3 }).status, 'applied', command.type);
+  }
+});
+
+test('HTML whose text holds the characters a code span is held by in conversion keeps them', async () => {
+  const { MdHtmlParser } = await import('../../src/index.ts');
+  assert.equal(MdHtmlParser.parse('<p>a0b</p>').markdown, 'a0b');
+  assert.equal(MdHtmlParser.parse('<p><code>x</code> 0</p>').markdown, '`x` 0');
+});
+
+test('text typed at once with a line break in quoted code keeps the quote, its fences grown past a typed one', () => {
+  const r = executeCommand(OurusDoc.parse('> ```\n> PAYLOAD\n> ```\n> AFTER'), { type: 'insertText', text: '`\nX' }, { anchor: 5, head: 5 });
+  assert.equal(r.status === 'applied' && r.doc.text, '> ````\n> X\n> PAYLOAD\n> ````\n> AFTER');
+});
+
+test('delete subtree given a node, the caret on its blank line, takes the caret with it', () => {
+  const r = executeCommand(OurusDoc.parse('a\n '), { type: 'deleteSubtree', nodes: [1] }, { anchor: 3, head: 3 });
+  assert.deepEqual(r.status === 'applied' && [r.doc.text, r.selection.head], ['', 0]);
+});
+
+test('delete subtree given a node and its child takes the node, the child with it', () => {
+  const r = executeCommand(OurusDoc.parse('- a\n  - b\n  - c\n- d\n'), { type: 'deleteSubtree', nodes: [1, 2] }, { anchor: 0, head: 0 });
+  assert.deepEqual(r.status === 'applied' && [r.doc.text, r.selection.head], ['- d\n', 2]);
+});
+
+test('outdent given a quote\'s paragraph, an item\'s text then, keeps a caret elsewhere where it is', () => {
+  const doc = OurusDoc.parse('- z\n- > q\n- w\n', { config: { quotes: 'container' } });
+  const r = executeCommand(doc, { type: 'outdent', nodes: [4] }, { anchor: 12, head: 12 });
+  assert.deepEqual(r.status === 'applied' && [r.doc.text, r.selection.head], ['- z\n- q\n- w\n', 10]);
+  const code = executeCommand(OurusDoc.parse('    - bravo\n- > bravo', { config: { quotes: 'container' } }), { type: 'outdent', nodes: [4] }, { anchor: 9, head: 9 });
+  assert.deepEqual(code.status === 'applied' && [code.doc.text, code.selection.head], ['    - bravo\n- bravo', 9]);
+});
+
+test('a selection whose ends aren\'t positions in the text is refused, whatever the command', () => {
+  const doc = OurusDoc.parse('- a\n  - b\n');
+  for (const selection of [{ anchor: -1, head: -1 }, { anchor: 11, head: 11 }, { anchor: 0, head: NaN }, { anchor: 1.5, head: 2 }, { anchor: Infinity, head: Infinity }]) {
+    for (const type of ['indent', 'cut', 'copy', 'fold', 'enter'] as const) {
+      const r = executeCommand(doc, { type }, selection);
+      assert.equal(r.status === 'rejected' && r.reason, 'invalid-selection', `${type} at ${JSON.stringify(selection)}`);
+    }
+  }
+});
+
+test('a text ending in a blank line with no line ending keeps it a blank line where a command writes it again', () => {
+  const cases: [string, OurusCommand, number, number, string, Partial<OurusConfig>?][] = [
+    ['>>\n\t', { type: 'outdent' }, 4, 4, '>\n\t'],
+    ['+\n ', { type: 'duplicateSubtree' }, 3, 3, '+\n+ \n\n'],
+    ['x\n- y\n ', { type: 'indent' }, 0, 2, '- x\n  - y\n '],
+    ['> a\n>', { type: 'duplicateSubtree' }, 2, 2, '> a\n>\n> a\n>', { quotes: 'container' }],
+    ['-\t```\nc\n\t', { type: 'moveSubtreeDown' }, 0, 0, 'c\n-\t```'],
+  ];
+  for (const [text, command, anchor, head, want, config] of cases) {
+    const r = executeCommand(OurusDoc.parse(text, { config: config ?? {} }), command, { anchor, head });
+    assert.equal(r.status === 'applied' ? r.doc.text : `${r.status} ${'detail' in r ? r.detail : ''}`, want, JSON.stringify(text));
+  }
+});
+
+test('a list pasted after an unclosed fence that would own it is refused: it would be a line of the code', () => {
+  const r = executeCommand(OurusDoc.parse('```', { config: { listParent: 'block' } }), { type: 'paste', clipboard: { 'text/plain': '- x\n- y' } }, { anchor: 3, head: 3 });
+  assert.equal(r.status === 'rejected' && r.reason, 'not-expressible');
+});
+
+test('an empty line written after a lone CR, an old LF line after it, keeps three line breaks', () => {
+  const r = executeCommand(OurusDoc.parse('a\r\rc\n\nc\n', { config: { flavor: 'obsidian' } }), { type: 'deleteSoftLineBackward' }, { anchor: 4, head: 4 });
+  assert.equal(r.status === 'applied' && r.doc.text, 'a\r\r\r\n\nc\n');
+  const code = executeCommand(OurusDoc.parse('- ```\n\n\n```b\n```'), { type: 'deleteContentForward' }, { anchor: 10, head: 10 });
+  assert.equal(code.status === 'applied' && code.doc.text, '- ```\n\n\n');
+});
+
+test('indented code moved into a quote with no space after its `>` keeps its four columns past the space the `>` takes', () => {
+  const r = executeCommand(OurusDoc.parse('    x\n>', { config: { flavor: 'obsidian' } }), { type: 'moveSubtree', nodes: [1], to: { parent: 2, after: null } }, { anchor: 0, head: 0 });
+  assert.equal(r.status === 'applied' && r.doc.text, '>\n>     x');
+});
+
+test('a footnote definition dropped first under an empty item is refused, as code there is: it would be read as the item\'s text', () => {
+  const r = executeCommand(OurusDoc.parse('0.'), { type: 'pasteAt', clipboard: { 'text/plain': '[^b]: x' }, at: { parent: 1, after: null } }, { anchor: 2, head: 2 });
+  assert.equal(r.status === 'rejected' && r.reason, 'not-expressible');
+});
+
+test('a heading pasted into an item of a tab-indented text under `indentUnit: 2`: where its item would take in the paragraph after it, refused', () => {
+  const r = executeCommand(OurusDoc.parse('-\n\ta\n\n\te', { config: { indentUnit: 2 } }), { type: 'paste', clipboard: { 'text/plain': '# X\n' } }, { anchor: 4, head: 4 });
+  assert.equal(r.status === 'rejected' && r.reason, 'not-expressible');
+  const tabs = executeCommand(OurusDoc.parse('-\n\ta\n\n\te'), { type: 'paste', clipboard: { 'text/plain': '# X\n' } }, { anchor: 4, head: 4 });
+  assert.equal(tabs.status, 'applied');
+});
+
+test('a paragraph `[!e]` moved into an empty quote, its first line, would read as its callout title: refused', () => {
+  const r = executeCommand(OurusDoc.parse('>\n[!e]\n'), { type: 'indent' }, { anchor: 6, head: 6 });
+  assert.equal(r.status === 'rejected' && r.reason, 'not-expressible');
+});
+
+test('the differential\'s last write failures, in HEAD too: each writes', () => {
+  const cases: [string, OurusCommand, number, number, Partial<OurusConfig>?][] = [
+    ['- [a]:u\nT\n', { type: 'pastePlain', text: '1. a\n2. b\n' }, 9, 9, { flavor: 'commonmark' }],
+    ['- - a\n  - b\n', { type: 'paste', clipboard: { 'text/plain': '> # q\n' } }, 4, 11],
+    ['\t\n1. -', { type: 'paste', clipboard: { 'text/plain': 'x\n- ' } }, 6, 6],
+    ['- -', { type: 'paste', clipboard: { 'text/plain': '>y' } }, 3, 3, { quotes: 'container' }],
+    ['>a\n>\n>z\n>  e\n', { type: 'pastePlain', text: '- x **b**\n\t- y\n- z' }, 11, 12, { flavor: 'obsidian' }],
+  ];
+  for (const [text, command, anchor, head, config] of cases) {
+    const r = executeCommand(OurusDoc.parse(text, { config: config ?? {} }), command, { anchor, head });
+    assert.equal(r.status, 'applied', `${JSON.stringify(text)}: ${'detail' in r ? r.detail : ''}`);
+  }
+});
+
+test('ledger cases a later fix took along write: each applies', () => {
+  const cases: [string, OurusCommand, number, number, string, Partial<OurusConfig>?][] = [
+    ['>\t  k', { type: 'pastePlain', text: 'x\ny' }, 5, 5, '>     kx\n>     y'],
+    ['>\t  a\n a', { type: 'indent' }, 6, 6, '>\t  a\n>  a'],
+    ['>- e\n\t>', { type: 'outdent' }, 0, 0, '- e\n  \t\\>'],
+    ['0. -', { type: 'duplicateSubtree' }, 0, 4, '0. -\n1. -'],
+    ['2) 0.\r+\r0.', { type: 'moveSubtreeDown' }, 3, 3, '+\r0. 0.\r1.'],
+    ['- a\n\n  b\n# H\n  c', { type: 'moveSubtreeDown' }, 2, 2, '# H\n- a\n\n  b\n\nc'],
+  ];
+  for (const [text, command, anchor, head, want, config] of cases) {
+    const r = executeCommand(OurusDoc.parse(text, { config: config ?? {} }), command, { anchor, head });
+    assert.equal(r.status === 'applied' ? r.doc.text : `${r.status} ${'detail' in r ? r.detail : ''}`, want, JSON.stringify(text));
+  }
+});
+
+test('a write in a long list or quote takes time in proportion to its length, not to its square', () => {
+  // (the fastest of three, from 2,000 lines to 8,000: four times as long where it is linear, sixteen
+  // where it is quadratic; Enter mid a list, and mid a quote's text, where it breaks it in two)
+  for (const line of ['- item', '> line']) {
+    const ratio = time(line, 8000) / time(line, 2000);
+    assert.ok(ratio < 9, `${line}: 8,000 lines take ${ratio.toFixed(1)} times as long as 2,000`);
+  }
+  function time(line: string, n: number): number {
+    const text = Array.from({ length: n }, (_, i) => `${line} ${i}`).join('\n');
+    const doc = OurusDoc.parse(text);
+    const at = text.indexOf(`${line} ${n / 2}`) + `${line} ${n / 2}`.length;
+    let best = Infinity;
+    for (let k = 0; k < 3; k++) {
+      const start = performance.now();
+      const r = executeCommand(doc, { type: 'enter' }, { anchor: at, head: at });
+      best = Math.min(best, performance.now() - start);
+      assert.equal(r.status, 'applied');
+    }
+    return best;
+  }
 });

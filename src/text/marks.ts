@@ -11,6 +11,7 @@
 
 import { ChangeSet, mapSorted, normalizeChanges, type ChangeSpec } from './changes.ts';
 
+/** A point or range on a text, carried through its changes. */
 export interface Mark {
   readonly kind: string;
   readonly from: number;

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import fc from 'fast-check';
-import { applyChanges, AUTO_CLOSED_MARK, AUTO_WHITESPACE_MARK, ChangeSet, composeChanges, PLACEHOLDER_MARK, invertChanges, mapPos, MarkSet, normalizeChanges, type ChangeSpec, type Mark } from '../src/text/index.ts';
+import { applyChanges, AUTO_CLOSED_MARK, ChangeIndex, AUTO_WHITESPACE_MARK, ChangeSet, composeChanges, diffLines, PLACEHOLDER_MARK, invertChanges, mapPos, MarkSet, normalizeChanges, type ChangeSpec, type Mark } from '../src/text/index.ts';
 // the text layer's own test: its kinds are defined in it, and the entry doesn't export `defineMarkKind`
 import { defineMarkKind } from '../src/text/marks.ts';
 
@@ -187,4 +187,41 @@ test('a range that goes when typed in goes when text inside it is replaced too, 
   assert.deepEqual(set.map([{ from: 2, to: 4, insert: 'x' }]).marks, []);
   assert.deepEqual(set.map([{ from: 3, to: 4, insert: '' }]).marks, [at(AUTO_WHITESPACE_MARK, 2, 4)]);
   assert.deepEqual(set.map([{ from: 5, to: 6, insert: 'x' }]).marks, [at(AUTO_WHITESPACE_MARK, 2, 5)]);
+});
+
+test('a change is a range of whole offsets, start to end; one that changes nothing is dropped before the overlap check', () => {
+  for (const c of [{ from: 2, to: 1, insert: 'X' }, { from: Number.NaN, to: 1, insert: 'X' }, { from: 1.5, to: 2, insert: '' }, { from: -1, to: 0, insert: '' }]) {
+    assert.throws(() => applyChanges('abcd', [c]), RangeError);
+  }
+  assert.equal(applyChanges('abcd', [{ from: 1, to: 4, insert: 'X' }, { from: 2, to: 2, insert: '' }]), 'aX');
+});
+
+test('an index of changes maps every position as `mapPos` does, and finds the change covering a range as a scan does', () => {
+  const arbChanges = fc.array(fc.record({ from: fc.nat(20), len: fc.nat(3), insert: fc.constantFrom('', 'x', 'yz') }), { maxLength: 6 }).map((cs) => {
+    // non-overlapping: each from past the last change's end
+    const out: ChangeSpec[] = [];
+    let at = 0;
+    for (const c of cs) {
+      const from = at + c.from % 5;
+      out.push({ from, to: from + c.len, insert: c.insert });
+      at = from + c.len;
+    }
+    return out;
+  });
+  fc.assert(
+    fc.property(arbChanges, (changes) => {
+      const index = new ChangeIndex(changes);
+      for (let pos = 0; pos <= 40; pos++) {
+        for (const assoc of [-1, 1] as const) assert.equal(index.mapPos(pos, assoc), mapPos(changes, pos, assoc), `${JSON.stringify(changes)} ${pos} ${assoc}`);
+        for (let to = pos; to <= pos + 3; to++) assert.equal(index.covering(pos, to), changes.find((c) => c.from < c.to && c.from <= pos && c.to >= to), `${JSON.stringify(changes)} ${pos}–${to}`);
+      }
+    }),
+    { numRuns: 500 },
+  );
+});
+
+test('diffLines changes whole lines of the old text, a CRLF never split', () => {
+  assert.deepEqual(diffLines('a\r\nb\r\n', 'a\r\nc\r\n'), [{ from: 3, to: 6, insert: 'c\r\n' }]);
+  assert.deepEqual(diffLines('a\nb\n', 'a\nc\n'), [{ from: 2, to: 4, insert: 'c\n' }]);
+  assert.deepEqual(diffLines('x\ny', 'x\nz\ny'), [{ from: 2, to: 2, insert: 'z\n' }]);
 });

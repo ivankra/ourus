@@ -2,9 +2,9 @@
 // doesn't do what the example draws: for the spec's tests, and for the SxS, whose heatmap has ourus.
 
 import assert from 'node:assert/strict';
-import { executeCommand, type DropMap, type TextSelection } from '../src/commands/index.ts';
-import { Config } from '../src/config.ts';
-import type { OurusDoc, OutlineNode } from '../src/doc/index.ts';
+import { executeCommand, type DropMap, type OurusSelection } from '../src/commands/index.ts';
+import { OurusConfig } from '../src/config.ts';
+import type { OurusDoc, OurusNode } from '../src/doc/index.ts';
 import { visibleSelection } from '../src/commands/view.ts';
 import { docOf, drawDoc, drawnSelection, drawOutline, drawsCaret, drawText, labelGlyph, labelNumber, nodesOf, readDrawing, readLabels, readText, withoutCaret } from './drawing.ts';
 import { isAction, play, type Played } from './player.ts';
@@ -33,10 +33,10 @@ const drawnAs = (clipboard: Clipboard, drawn: Clipboard): Record<string, string 
 export const normalize = (drawn: string): string => drawn.replace(/»┃/g, '»').replace(/␠/g, ' ');
 
 /** The flavors an example runs in: the one it names, or all (most behavior doesn't depend on it). */
-export const flavorsOf = (t: SpecTest): readonly Config['flavor'][] => (t.options.flavor ? [t.options.flavor as Config['flavor']] : Config.values.flavor);
+export const flavorsOf = (t: SpecTest): readonly OurusConfig['flavor'][] => (t.options.flavor ? [t.options.flavor as OurusConfig['flavor']] : OurusConfig.values.flavor);
 
 /** The nodes that start on line `i` of `doc`, the outermost first. */
-const startingOn = (doc: OurusDoc, i: number): OutlineNode[] => nodesOf(doc).filter((n) => n.startLine === i).sort((a, b) => a.depth - b.depth);
+const startingOn = (doc: OurusDoc, i: number): OurusNode[] => nodesOf(doc).filter((n) => n.startLine === i).sort((a, b) => a.depth - b.depth);
 
 /**
  * A case's node labels (`①`, spec/README.md), bound to ids as its steps go: a start's label names the
@@ -86,7 +86,7 @@ export class Labels {
 }
 
 /** Where example `t` starts, in `flavor`, with `config` over the example's options. */
-export function startOf(t: SpecTest, flavor: Config['flavor'], config: Partial<Config> = {}): Played {
+export function startOf(t: SpecTest, flavor: OurusConfig['flavor'], config: Partial<OurusConfig> = {}): Played {
   const start = readDrawing(t.initial.buffer);
   const doc = docOf(start.text, start.placeholders, { flavor, ...specConfig(t.options), ...config });
   // (the start's labels, for a drop that names one)
@@ -128,7 +128,7 @@ export function viewHolds(prior: OurusDoc, state: Played, at: string): void {
 }
 
 /** Plays example `t` in `flavor`, asserting each step's buffer, clipboard and result as drawn. */
-export function run(t: SpecTest, flavor: Config['flavor']): void {
+export function run(t: SpecTest, flavor: OurusConfig['flavor']): void {
   let state = startOf(t, flavor);
   const labels = new Labels();
   const named = labels.check(state.doc, readDrawing(t.initial.buffer).labels, null);
@@ -184,7 +184,7 @@ export function run(t: SpecTest, flavor: Config['flavor']): void {
  * twice each place's depth: `▸` a place, `▹` the run's own, which a place sharing its column with it
  * doesn't show over. Each place's drop is run, and only those applied are drawn.
  */
-export function drawDropPoints(doc: OurusDoc, dropMap: DropMap, selection: TextSelection): string {
+export function drawDropPoints(doc: OurusDoc, dropMap: DropMap, selection: OurusSelection): string {
   const lines = doc.text.split('\n');
   if (lines[lines.length - 1] === '') lines.pop();
   const markers = new Map<number, string>();
@@ -212,7 +212,7 @@ export function drawDropPoints(doc: OurusDoc, dropMap: DropMap, selection: TextS
  * step's buffer drawn, as the example would draw it (no checks), and the clipboard's text after it
  * (a copy's). For the SxS, to tell whether an app's own option values change the example's outcome.
  */
-export function drawnSteps(t: SpecTest, flavor: Config['flavor'], config: Partial<Config> = {}): { buffer: string; clipboard?: string; view: RowView }[] {
+export function drawnSteps(t: SpecTest, flavor: OurusConfig['flavor'], config: Partial<OurusConfig> = {}): { buffer: string; clipboard?: string; view: RowView }[] {
   let state = startOf(t, flavor, config);
   return t.steps.map((step) => {
     state = play(state, step.actions);

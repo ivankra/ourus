@@ -61,3 +61,23 @@ test("text right after a task's checkbox is no link reference definition (GFM: c
   // a definition starting a later paragraph of the item is one
   assert.equal(MdTree.parse('- [ ] x\n\n  [r]: /u\n', gfm).root.children[0]!.children[0]!.children.map((b) => b.type).join(' '), 'paragraph refdef');
 });
+
+test("a position's code span and escape are found in a table's cells too", () => {
+  const s = 'p\n\n| a | b |\n|---|---|\n| `x` | \\* |';
+  const t = MdTree.parse(s, gfm);
+  assert.deepEqual(t.codeSpanAt(s.indexOf('x')), { closer: s.indexOf('x') + 1, to: s.indexOf('x') + 2 });
+  assert.equal(t.inlineEscapeAt(s.indexOf('\\')), true);
+});
+
+test("an extension's `remove` takes the rules of the extensions before it, not a later one's of that name", async () => {
+  const { defineFlavor } = await import('../../src/parser/extend.ts');
+  let called = 0;
+  const flavor = defineFlavor('replacement', [
+    { name: 'remove-old', remove: ['atxHeading'] },
+    { name: 'new', blockStarts: [{ name: 'atxHeading', start: () => (called++, 0) }] },
+  ]);
+  assert.equal(flavor.blockStarts.filter((s) => s.name === 'atxHeading').length, 1);
+  MdTree.parse('# a', flavor);
+  assert.ok(called > 0);
+  assert.equal(MdTree.parse('# a', defineFlavor('without', [{ name: 'remove-old', remove: ['atxHeading'] }])).root.children[0]!.type, 'paragraph');
+});

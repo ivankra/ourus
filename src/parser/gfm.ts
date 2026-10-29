@@ -138,7 +138,10 @@ function makeTableStart(spec: MdBlockSpec<TableFrame>, requirePipe: boolean) {
       if (!reDelimiterRow.test(rest)) return 0;
       const delimiters = rowCells(line, m.nextNonspace, line.length);
       if (!delimiters) return 0;
-      const header = rowCells(p.last, 0, p.last.length);
+      // (the header row past its line's blanks: a paragraph's line is its text without them)
+      let lead = 0;
+      while (lead < p.last.length && isSpaceOrTab(p.last.charCodeAt(lead))) lead++;
+      const header = rowCells(p.last, lead, p.last.length);
       if (!header || header.length !== delimiters.length || (requirePipe && p.last.indexOf('|') < 0 && rest.indexOf('|') < 0)) {
         m.replace(m.stack.length - 1, { ...p, tableVisited: true } as MdFrame);
         return 0;
@@ -669,6 +672,8 @@ interface FootnoteState {
   next: number;
   /** The footnotes section is being written. */
   section: boolean;
+  /** The definition the section is writing: one nested in it is written as its own, not in it. */
+  writing: MdBlock | null;
 }
 
 function footnoteState(r: MdHtmlRenderer): FootnoteState {
@@ -712,7 +717,7 @@ export const footnotes: MdExtension = {
   brackets: [footnoteBracket],
   render: {
     start(r) {
-      const state: FootnoteState = { defs: new Map(), refs: new Map(), cursor: new Map(), next: 0, section: false };
+      const state: FootnoteState = { defs: new Map(), refs: new Map(), cursor: new Map(), next: 0, section: false, writing: null };
       r.state.set('footnotes', state);
       const tree = r.tree;
       // the first definition of a label to end wins (cmark-gfm: a definition nested in another wins)
@@ -741,7 +746,11 @@ export const footnotes: MdExtension = {
       if (!used.length) return;
       r.lit('<section class="footnotes" data-footnotes>\n<ol>\n');
       state.section = true;
-      for (const def of used) r.render(def.block);
+      for (const def of used) {
+        state.writing = def.block.block;
+        r.render(def.block);
+      }
+      state.writing = null;
       state.section = false;
       r.lit('</ol>\n</section>\n');
     },
@@ -749,7 +758,7 @@ export const footnotes: MdExtension = {
       // definitions are written at the end, in the order of their first reference
       footnote_definition(r, b, entering) {
         const state = footnoteState(r);
-        if (!state.section) return false;
+        if (!state.section || b.block !== state.writing) return false;
         const def = state.defs.get(normalizeLabel('[' + defLabel(b.block) + ']'))!;
         if (entering) r.lit(`<li id="fn-${escapeHref(defLabel(b.block))}">\n`);
         else {
@@ -760,7 +769,9 @@ export const footnotes: MdExtension = {
       // a definition's last paragraph ends with the backreferences
       paragraph(r, b, entering) {
         const parent = r.up()?.block;
-        if (!entering && parent?.type === 'footnote_definition' && parent.children[parent.children.length - 1] === b.block && !inTightList(r)) {
+        // (a definition nested in it is no block of it: written as its own)
+        const own = parent?.type === 'footnote_definition' ? parent.children.filter((c) => c.type !== 'footnote_definition') : [];
+        if (!entering && parent?.type === 'footnote_definition' && own[own.length - 1] === b.block && !inTightList(r)) {
           const state = footnoteState(r);
           if (state.section) {
             r.lit(' ');
@@ -780,7 +791,8 @@ export const footnotes: MdExtension = {
         state.cursor.set(leaf, k + 1);
         const refIx = state.refs.get(leaf)?.[k] ?? 1;
         const label = escapeHref(defLabel(def.block.block));
-        r.lit(`<sup class="footnote-ref"><a href="#fn-${label}" id="fnref-${label}${refIx > 1 ? '-' + refIx : ''}" data-footnote-ref>${def.ix}</a></sup>`);
+        // (in an image's alt text, nothing, as micromark's GFM writes it)
+        if (!r.disableTags) r.lit(`<sup class="footnote-ref"><a href="#fn-${label}" id="fnref-${label}${refIx > 1 ? '-' + refIx : ''}" data-footnote-ref>${def.ix}</a></sup>`);
       },
     },
   },

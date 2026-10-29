@@ -4,17 +4,17 @@
 // Stateless: each reads what to do from the selection alone, a subtree selection (whole lines,
 // `OurusDoc.selectedNodes`) or text.
 
-import { textEnd, textStart, type OurusDoc, type OutlineNode } from '../doc/index.ts';
+import { textEnd, textStart, type OurusDoc, type OurusNode } from '../doc/index.ts';
 import { deferToHost, type CommandContext, type CommandOutcome } from './context.ts';
-import type { TextSelection } from './types.ts';
+import type { OurusSelection } from './types.ts';
 
 /** `selection`, applied with no change to the text. */
-function selected(ctx: CommandContext, selection: TextSelection): CommandOutcome {
+function selected(ctx: CommandContext, selection: OurusSelection): CommandOutcome {
   return { status: 'applied', doc: ctx.doc, changes: [], selection };
 }
 
 /** The ids of a selection's roots as `selectedNodes` reads them, to compare two selections as nodes; null for text. */
-function rootsOf(doc: OurusDoc, selection: TextSelection): string | null {
+function rootsOf(doc: OurusDoc, selection: OurusSelection): string | null {
   return doc.selectedNodes(selection)?.map((n) => n.id).join() ?? null;
 }
 
@@ -26,7 +26,7 @@ export function selectNodeCommand(ctx: CommandContext): CommandOutcome {
   const doc = ctx.doc;
   const roots = doc.selectedNodes(ctx.selection);
   if (roots) {
-    let first: OutlineNode = roots[0]!;
+    let first: OurusNode = roots[0]!;
     while (!doc.textOf(first) && first.children.length) first = first.children[0]!;
     const text = doc.textOf(first);
     if (!text) return deferToHost();
@@ -55,7 +55,7 @@ export function expandSelectionCommand(ctx: CommandContext): CommandOutcome {
   const current = rootsOf(doc, sel);
   // what the selection touches: the nodes a subtree rung must hold
   const held = doc.selectedNodes(sel) ?? doc.touchedNodes(sel);
-  const holds = (rung: readonly OutlineNode[]): boolean => held.every((n) => rung.some((r) => isWithin(n, r)));
+  const holds = (rung: readonly OurusNode[]): boolean => held.every((n) => rung.some((r) => isWithin(n, r)));
   // 1. the node's own text, unless the selection is already the node (its text and its lines the same)
   const text = doc.textOf(node);
   if (text && current === null) {
@@ -75,13 +75,13 @@ export function expandSelectionCommand(ctx: CommandContext): CommandOutcome {
  * (`selectionLadder: siblings`) and its parent's subtree; the top level's run last, or the zoom root's
  * subtree inside a zoom. With `selectionLadder: top`, the top alone.
  */
-function rungsOf(doc: OurusDoc, node: OutlineNode): OutlineNode[][] {
+function rungsOf(doc: OurusDoc, node: OurusNode): OurusNode[][] {
   // (`top`: the node's text, then the top alone)
   if (doc.config.selectionLadder === 'top') {
     const top = doc.zoom === null ? null : doc.node(doc.zoom);
     return [top ? [top] : [...doc.rootNode.children]];
   }
-  const rungs: OutlineNode[][] = [[node]];
+  const rungs: OurusNode[][] = [[node]];
   for (let at = node; at.id !== doc.zoom; ) {
     const parent = at.parent!;
     // (the top level's run: every node, whatever the option)
@@ -94,8 +94,8 @@ function rungsOf(doc: OurusDoc, node: OutlineNode): OutlineNode[][] {
 }
 
 /** Whether `node` is `root` or in its subtree. */
-function isWithin(node: OutlineNode, root: OutlineNode): boolean {
-  for (let p: OutlineNode | null = node; p; p = p.parent) if (p === root) return true;
+function isWithin(node: OurusNode, root: OurusNode): boolean {
+  for (let p: OurusNode | null = node; p; p = p.parent) if (p === root) return true;
   return false;
 }
 
@@ -105,7 +105,7 @@ function isWithin(node: OutlineNode, root: OutlineNode): boolean {
  * caret or text, the node the anchor is in (a blank line's, the node above's). Null where there is
  * none (the blank lines before the first node).
  */
-function anchorNode(doc: OurusDoc, sel: TextSelection): OutlineNode | null {
+function anchorNode(doc: OurusDoc, sel: OurusSelection): OurusNode | null {
   const roots = doc.selectedNodes(sel);
   if (roots) return roots.length === 1 || sel.head > sel.anchor ? roots[0]! : roots[roots.length - 1]!;
   return doc.touchedNodes({ anchor: sel.anchor, head: sel.anchor })[0] ?? null;
@@ -143,7 +143,7 @@ export function selectNodeByCommand(ctx: CommandContext, dir: -1 | 1): CommandOu
   }
   const up = sel.head < sel.anchor;
   const anchor = roots.length === 1 || !up ? roots[0]! : roots[roots.length - 1]!;
-  let candidate: OutlineNode | null = roots.length === 1 ? roots[0]! : up ? roots[0]! : roots[roots.length - 1]!;
+  let candidate: OurusNode | null = roots.length === 1 ? roots[0]! : up ? roots[0]! : roots[roots.length - 1]!;
   const current = roots.map((n) => n.id).join();
   // (`selectNodeUp: sibling`: above the anchor's node, the candidate goes by siblings, both ways)
   const bySibling = doc.config.selectNodeUp === 'sibling';
@@ -160,14 +160,14 @@ export function selectNodeByCommand(ctx: CommandContext, dir: -1 | 1): CommandOu
 }
 
 /** The node shown next after `node` in document order (`dir` 1) or before it (-1); null at the document's or the zoom's edge. */
-function step(doc: OurusDoc, node: OutlineNode, dir: -1 | 1): OutlineNode | null {
-  for (let at: OutlineNode | null = node; ; ) {
+function step(doc: OurusDoc, node: OurusNode, dir: -1 | 1): OurusNode | null {
+  for (let at: OurusNode | null = node; ; ) {
     at = dir > 0 ? (at.children[0] ?? at.afterSubtree) : at.preceding;
     if (!at || at.kind === 'root') return null;
     if (!doc.isHidden(at)) return at;
     // (a hidden node's subtree is hidden too: past it going down)
     if (dir > 0) {
-      const after: OutlineNode | null = at.afterSubtree;
+      const after: OurusNode | null = at.afterSubtree;
       if (!after) return null;
       if (!doc.isHidden(after)) return after;
       at = after;
@@ -176,13 +176,13 @@ function step(doc: OurusDoc, node: OutlineNode, dir: -1 | 1): OutlineNode | null
 }
 
 /** The sibling above `node` (`dir` -1), else its parent; or the node after its subtree (1). Null at the document's or the zoom's edge. */
-function siblingStep(doc: OurusDoc, node: OutlineNode, dir: -1 | 1): OutlineNode | null {
+function siblingStep(doc: OurusDoc, node: OurusNode, dir: -1 | 1): OurusNode | null {
   const at = dir < 0 ? (node.prev ?? node.parent) : node.afterSubtree;
   return at && at.kind !== 'root' && !doc.isHidden(at) ? at : null;
 }
 
 /** The first node shown that starts after line `line`, or null. */
-function visibleAfterLine(doc: OurusDoc, line: number): OutlineNode | null {
+function visibleAfterLine(doc: OurusDoc, line: number): OurusNode | null {
   for (let i = line + 1; i < doc.lineCount; i++) {
     const node = doc.rowOwner(i) ?? doc.nodeAtLine(i);
     if (node && node.startLine === i && !doc.isHidden(node)) return node;

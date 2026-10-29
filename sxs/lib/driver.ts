@@ -8,7 +8,7 @@
 // either emulated with keys (`act`) or not supported, and the tests using it are skipped.
 
 import type { Page } from 'playwright-core';
-import type { Config } from '../../src/config.ts';
+import type { OurusConfig } from '../../src/config.ts';
 import type { AppPage } from './browser.ts';
 import type { IdleOptions } from './idle.ts';
 import type { Outline } from './block.ts';
@@ -142,12 +142,12 @@ export interface Driver {
    * How the app behaves where ourus has an option, out of the box. A test that sets an option to
    * another value than ourus's default is run only when the app behaves that way, or can be set to.
    */
-  readonly behaves?: Partial<Config>;
+  readonly behaves?: Partial<OurusConfig>;
   /**
    * ourus's options the app has a setting for, and the values it can be set to (`configure`). Each
    * test runs with them set to its own options, or to ourus's defaults.
    */
-  readonly settings?: { readonly [K in keyof Config]?: readonly Config[K][] };
+  readonly settings?: { readonly [K in keyof OurusConfig]?: readonly OurusConfig[K][] };
   /**
    * Why the app can't start from `doc`, if it can't (it trims a block's whitespace, say): the test is
    * skipped. Only starting states need holding; what a key makes is whatever the app makes.
@@ -193,7 +193,7 @@ export interface Driver {
   /** The document and the caret or selection now. */
   read(page: Page): Promise<Doc>;
   /** Sets the app's settings (the keys of `settings`) before a test that needs others than the last one. */
-  configure?(page: Page, settings: Partial<Config>): Promise<void>;
+  configure?(page: Page, settings: Partial<OurusConfig>): Promise<void>;
   /** Plays an action in `emulated`. */
   act?(page: Page, action: string, settle: () => Promise<void>): Promise<void>;
   /** The drops it plays (spec/move-subtree.md, paste-at.md: `moveSubtree`, `pasteAt`); a case with another is skipped. */
