@@ -35,6 +35,7 @@ import { OurusConfig } from '../src/config.ts';
 import { lineSpan, mapPos, type ChangeSpec } from '../src/text/index.ts';
 import { readDrawing, readText } from './drawing.ts';
 import { readSpecFile, specConfig, specFiles } from './specfile.ts';
+import { OurusRejected, OurusSuccess } from '../src/commands/index.ts';
 
 const here = resolve(import.meta.dirname, '..');
 const [oldArg, newArg] = process.argv.slice(2);
@@ -76,9 +77,15 @@ interface Core {
 /** The core of a copy, through its package entry. */
 async function load(root: string): Promise<Core> {
   const api = await import(join(root, 'src/index.ts'));
+  // (a tree with `OurusView`: commands take a view and give one; before it, a document)
+  const viewOf = (doc: any): any => (api.OurusView ? api.OurusView.of(doc) : doc);
+  const docOf = (result: any): any => (api.OurusView ? result.view.doc : result.doc);
   const run = (doc: Snapshot, command: Given, selection: { anchor: number; head: number }): any => {
-    const result = api.executeCommand(doc.doc, command, selection);
-    return result.status === 'applied' ? { ...result, doc: snap(result.doc) } : result;
+    const result = api.executeCommand(viewOf(doc.doc), command, selection);
+    // (the status as a plain field, whatever the tree's API: classes, or a `status` of its own, whose
+    // 'applied' is 'success' now)
+    const status = api.OurusSuccess ? (result instanceof api.OurusSuccess ? 'success' : result instanceof api.OurusRejected ? 'rejected' : 'deferredToHost') : result.status === 'applied' ? 'success' : result.status;
+    return status === 'success' ? { ...result, status, doc: snap(docOf(result)) } : { ...result, status };
   };
   const { createPlaceholder } = await import(join(root, 'src/text/index.ts'));
   const marks = (placeholders: readonly number[]): unknown[] => placeholders.map((p) => createPlaceholder(p));
@@ -99,8 +106,8 @@ async function load(root: string): Promise<Core> {
     // (a tree before `update`'s `text`: `replace(text, marks)`)
     replace: (s, text, placeholders) => snap(s.doc.replace ? s.doc.replace(text, marks(placeholders)) : s.doc.update({ text, setMarks: marks(placeholders) })),
     settle: (s, caret) => {
-      const settled = api.settlePlaceholders(s.doc, caret);
-      return settled && { changes: settled.changes, doc: snap(settled.doc) };
+      const settled = api.settlePlaceholders(viewOf(s.doc), caret);
+      return settled && { changes: settled.changes, doc: snap(docOf(settled)) };
     },
   };
 }
@@ -165,10 +172,13 @@ const drawn = (text: string, sel: { anchor: number; head: number }): string => {
   const [from, to] = [Math.min(sel.anchor, sel.head), Math.max(sel.anchor, sel.head)];
   return JSON.stringify(from === to ? text.slice(0, from) + '┃' + text.slice(from) : text.slice(0, from) + '«' + text.slice(from, to) + '»' + text.slice(to));
 };
-/** What a host sees of a snapshot: text, placeholders, and the ids of the outline's nodes. */
-const seen = (doc: Snapshot): string => JSON.stringify([doc.text, doc.placeholders, doc.nodes.map((n) => `${n.kind}@${n.startLine}#${n.id}`)]);
+/**
+ * What a host sees of a snapshot: text, placeholders, and the outline's nodes, each id as `number`
+ * gives it (an outcome's renumbering: `outcome`).
+ */
+const seen = (doc: Snapshot, number: (id: number) => number): string => JSON.stringify([doc.text, doc.placeholders, doc.nodes.map((n) => `${n.kind}@${n.startLine}#${number(n.id)}`)]);
 const outcome = (core: Core, start: Snapshot, r: any): string => {
-  if (r.status !== 'applied') return label(r);
+  if (r.status !== 'success') return label(r);
   const settledHere = core.settle(r.doc, r.selection.head);
   const settledAway = core.settle(r.doc, 0);
   // the host's lifecycle: type at the caret, leave, then undo to before the command
@@ -176,7 +186,14 @@ const outcome = (core: Core, start: Snapshot, r: any): string => {
   const typed = core.edit(r.doc, [{ from: caret, to: caret, insert: 'x' }], caret + 1);
   const left = core.settle(typed, 0)?.doc ?? typed;
   const undone = core.replace(left, start.text, start.placeholders);
-  return JSON.stringify([label(r), seen(r.doc), r.selection, r.changes, settledHere && [settledHere.changes, seen(settledHere.doc)], settledAway && [settledAway.changes, seen(settledAway.doc)], seen(typed), seen(left), seen(undone)]);
+  // (the nodes' ids renumbered, the start's first, then in order of first appearance: which node is
+  // which compared, not the numbers, which depend on how many ids the runs before took, and differ
+  // between two runs of one tree; the texts as they are)
+  // (the start's nodes numbered first: a node kept from it and one made anew stay apart)
+  const ids = new Map<number, number>();
+  const number = (id: number): number => ids.get(id) ?? (ids.set(id, ids.size), ids.size - 1);
+  for (const n of start.nodes) number(n.id);
+  return JSON.stringify([label(r), seen(r.doc, number), r.selection, r.changes, settledHere && [settledHere.changes, seen(settledHere.doc, number)], settledAway && [settledAway.changes, seen(settledAway.doc, number)], seen(typed, number), seen(left, number), seen(undone, number)]);
 };
 /** A command's result, or what it threw (a host would see the exception): an outcome of its own. */
 const attempt = (core: Core, doc: Snapshot, command: Given, selection: { anchor: number; head: number }): any => {
@@ -288,7 +305,7 @@ async function play(share: readonly number[]): Promise<Found> {
     const pickups = [...newDoc.nodes.filter((n) => n.kind !== 'root').map((n): Given => ({ type: 'drag', pressed: n.id })), { type: 'drag', clipboard: { 'text/plain': pastes[random(pastes.length)]! } }];
     for (const pickup of pickups) {
       const picked = attempt(after, newDoc, pickup, caret);
-      if (picked.status !== 'applied' || !picked.dropMap) continue;
+      if (picked.status !== 'success' || !picked.dropMap) continue;
       for (const seam of picked.dropMap.seams) for (const point of seam.points) compare(point.drop, oldDoc, newDoc, caret, text, placeholders, false);
     }
 

@@ -5,10 +5,12 @@
 import { OurusAtom, OurusProse, withoutBlockIds, type OurusNode, type PersistentNode } from '../doc/index.ts';
 import { trimMd } from '../text/index.ts';
 import type { AnchorSpec } from '../writer/index.ts';
-import { reject, type CommandContext, type CommandOutcome } from './context.ts';
+import { type CommandContext } from './context.ts';
 import { reshaped, shapeOf } from './shape.ts';
 import { caretOffset, headingLevel, oneRun, operandsRefused, textEnd } from './util.ts';
 import { withFolds } from './view.ts';
+import type { OurusResult } from './types.ts';
+import { OurusRejected } from './types.ts';
 
 /**
  * The selected nodes copied right below them, each copy written as its original is (rules 1, 4, 6),
@@ -18,7 +20,7 @@ import { withFolds } from './view.ts';
  * where ourus doesn't do it yet: another selection with an end outside the copied nodes' texts.
  * Given the nodes by id, a selection not all in them stays where it is.
  */
-export function duplicateSubtreeCommand(ctx: CommandContext): CommandOutcome {
+export function duplicateSubtreeCommand(ctx: CommandContext): OurusResult | null {
   const nodes = oneRun(ctx);
   if (!Array.isArray(nodes)) return operandsRefused(nodes);
   // the copies go after the last heading's section: those before it that it would take in (any node
@@ -26,7 +28,7 @@ export function duplicateSubtreeCommand(ctx: CommandContext): CommandOutcome {
   const level = (n: OurusNode): number => headingLevel(ctx, n);
   const last = nodes.map((n) => n.kind).lastIndexOf('heading');
   if (last > 0 && nodes.slice(0, last).some((n) => n.kind !== 'heading' || level(n) > level(nodes[last]!))) {
-    return reject('not-expressible', 'the copies before the heading would land in its section');
+    return new OurusRejected('not-expressible', 'the copies before the heading would land in its section');
   }
   // a placeholder in what is copied: not done yet (a copy's are written anew where it lands: a held
   // space, an empty node with children, an empty paragraph, which holds only with one), but in the
@@ -98,7 +100,7 @@ export function duplicateSubtreeCommand(ctx: CommandContext): CommandOutcome {
   // each end in the copy of the node it is in (in its original where it has none, a block id alone;
   // at most at the end of a copy without its block ids)
   const end = (pos: number): AnchorSpec | null => {
-    const at = ctx.doc.locate(pos);
+    const at = ctx.view.locate(pos);
     const node = at.zone === 'gap' ? at.owner : 'node' in at ? at.node : null;
     if (node && uncopied.has(node.persistentNode)) return { old: pos, assoc: 1 };
     if (at.zone === 'gap' || at.zone === 'blockIdLine') {
@@ -115,7 +117,7 @@ export function duplicateSubtreeCommand(ctx: CommandContext): CommandOutcome {
   };
   // a subtree selection: the copies, in its shape (`reshaped`, from a caret in the first copy with
   // text: a first root with none of its own, `- - a` or a quote without a title, has its child's)
-  const shape = ctx.nodes ? null : shapeOf(ctx.doc, ctx.selection);
+  const shape = ctx.nodes ? null : shapeOf(ctx.view, ctx.selection);
   const texted = (n: OurusNode): OurusNode | undefined => (ctx.doc.textOf(n) ? n : n.children.map(texted).find(Boolean));
   const first = shape?.kind === 'subtrees' ? nodes.map(texted).find((n) => n && !uncopied.has(n.persistentNode)) : undefined;
   const copied = first ? ({ ref: ids.get(first.persistentNode)!, offset: 0 } as const) : null;
@@ -124,7 +126,7 @@ export function duplicateSubtreeCommand(ctx: CommandContext): CommandOutcome {
   if ((!head || !anchor) && ctx.nodes) {
     // each end in its text, where it is in one
     const kept = (pos: number): AnchorSpec => {
-      const at = ctx.doc.locate(pos);
+      const at = ctx.view.locate(pos);
       return at.zone === 'text' && at.text instanceof OurusProse ? { ref: at.node, offset: at.offset } : { old: pos };
     };
     [anchor, head] = [kept(ctx.selection.anchor), kept(ctx.selection.head)];
@@ -133,7 +135,7 @@ export function duplicateSubtreeCommand(ctx: CommandContext): CommandOutcome {
   // a folded node's copy is folded too, and every fold inside it
   const folds: number[] = [];
   const visit = (n: OurusNode): void => {
-    if (ctx.doc.folded.has(n.id) && ids.has(n.persistentNode)) folds.push(ids.get(n.persistentNode)!);
+    if (ctx.view.folded.has(n.id) && ids.has(n.persistentNode)) folds.push(ids.get(n.persistentNode)!);
     n.children.forEach(visit);
   };
   nodes.forEach(visit);

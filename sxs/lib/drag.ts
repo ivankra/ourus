@@ -13,6 +13,8 @@ import { startOf } from '../../test/spec-run.ts';
 import type { SpecTest } from '../../test/specfile.ts';
 import type { Outline } from './block.ts';
 import type { Drop } from './driver.ts';
+import { OurusRejected } from '../../src/commands/index.ts';
+import { statusOf } from '../../test/drawing.ts';
 
 /**
  * The drop a case makes, as rows (`Drop`); else why it can't be played: an app plays a drop only from
@@ -25,7 +27,8 @@ export function resolveDrop(test: SpecTest, flavor: OurusConfig['flavor']): Drop
   if (k < 0) return 'no drop';
   if (k > 0) return 'a drop after other actions';
   const state = startOf(test, flavor);
-  const { doc, drop } = state;
+  const { view, drop } = state;
+  const doc = view.doc;
   if (!drop) return 'no drop line';
   const action = actions[0]!;
   let run: OurusNode[] = [];
@@ -34,12 +37,12 @@ export function resolveDrop(test: SpecTest, flavor: OurusConfig['flavor']): Drop
     const label = /^moveSubtree (.)$/u.exec(action)?.[1];
     const pressed = label === undefined ? undefined : state.labels?.get(labelNumber(label));
     if (label !== undefined && pressed === undefined) return `${label} labels no node`;
-    const picked = dragRun(new CommandContext(doc, state.selection), pressed);
-    if (!Array.isArray(picked)) return `the pickup is refused (${picked.status === 'rejected' ? picked.reason : picked.status})`;
+    const picked = dragRun(new CommandContext(view, state.selection), pressed);
+    if (!Array.isArray(picked)) return `the pickup is refused (${picked instanceof OurusRejected ? picked.reason : statusOf(picked)})`;
     run = picked;
     press = pressed === undefined ? null : doc.node(pressed)!.startLine;
   }
-  const place = placeAtSeam(doc, run.length ? run : null, drop.line, drop.depth);
+  const place = placeAtSeam(view, run.length ? run : null, drop.line, drop.depth);
   if (typeof place === 'string') return place;
   const parent = place.parent === 'root' ? doc.rootNode : doc.node(place.parent)!;
   let listDepth = 0;

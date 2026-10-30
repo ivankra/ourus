@@ -1283,3 +1283,28 @@ tags: edge
 «- b»
   - c
 ```
+
+## MoveDown45
+
+Two items written the same, the first moved down: no character changes, but the nodes trade places,
+the moved one second, the caret with it (dev/25-view.md §5.1).
+
+```yaml
+tags: rare
+```
+
+```buffer
+- a┃①
+- a②
+```
+
+> moveSubtreeDown
+
+```buffer
+- a②
+- a┃①
+```
+
+```yaml
+result: success
+```

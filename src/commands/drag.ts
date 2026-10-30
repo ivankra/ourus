@@ -3,13 +3,15 @@
 // one of them. The drop is `moveSubtree` (move-subtree.ts).
 
 import type { OurusDoc, OurusNode } from '../doc/index.ts';
-import { CommandContext, reject, type CommandOutcome } from './context.ts';
+import type { OurusView } from '../view/index.ts';
+import { CommandContext } from './context.ts';
 import { clipboardFragment, clipboardMarkdown, type OurusClipboard } from './clipboard.ts';
 import { copyOrCutCommand } from './copy.ts';
 import { becomesAt, moveRefused, unholdable } from './move-subtree.ts';
 import { pasteRefused, pastedBecomesAt } from './paste.ts';
-import type { OurusCommand, OurusCommandResult, DropMap, DropPoint, DropSeam, InsertionPoint } from './types.ts';
+import type { OurusCommand, OurusResult, DropMap, DropPoint, DropSeam, InsertionPoint } from './types.ts';
 import { oneRun, operandsRefused, runsOf, selectionRoots, withTextlessParents } from './util.ts';
+import { OurusSuccess, OurusRejected } from './types.ts';
 
 /**
  * A pickup: the run (`dragRun`), each root's lines, every seam it can be dropped at with the places
@@ -17,28 +19,28 @@ import { oneRun, operandsRefused, runsOf, selectionRoots, withTextlessParents } 
  * carrying a clipboard: every seam of the document as it is, the clipboard's first node deciding what
  * a place can hold, each place's drop a `pasteAt`. The document unchanged.
  */
-export function dragCommand(ctx: CommandContext, options: { readonly pressed?: number; readonly clipboard?: OurusClipboard }): CommandOutcome {
+export function dragCommand(ctx: CommandContext, options: { readonly pressed?: number; readonly clipboard?: OurusClipboard }): OurusResult | null {
   // the view's, the snapshot's: the folds in effect within the zoom, and the node zoomed into
-  const zoom = ctx.doc.zoom === null ? null : ctx.doc.node(ctx.doc.zoom)!;
-  const folded = ctx.doc.zoomFolded;
+  const zoom = ctx.view.zoom === null ? null : ctx.doc.node(ctx.view.zoom)!;
+  const folded = ctx.view.zoomFolded;
   if (options.clipboard) {
     const clipboard = options.clipboard;
     const read = clipboardMarkdown(clipboard);
     const pasted = read ? clipboardFragment(read.markdown, ctx.config)?.doc : undefined;
     const first = pasted?.rootNode.children[0];
-    if (!pasted || !first) return reject('not-expressible', 'nothing to paste');
+    if (!pasted || !first) return new OurusRejected('not-expressible', 'nothing to paste');
     const converts = (parent: OurusNode, after: OurusNode | null): boolean => pastedBecomesAt(ctx.doc, first.kind, parent, after) !== null;
     const refused = (parent: OurusNode, after: OurusNode | null): boolean => !!pasteRefused(ctx, pasted, parent, after);
     const seams = seamsOf(ctx.doc, [], first.kind, folded, zoom ?? null, (at) => ({ type: 'pasteAt', at, clipboard }), converts, refused);
-    return { status: 'applied', doc: ctx.doc, changes: [], selection: ctx.selection, dropMap: { nodes: [], lines: [], seams } };
+    return new OurusSuccess({ view: ctx.view, changes: [], selection: ctx.selection, dropMap: { nodes: [], lines: [], seams } });
   }
   const run = dragRun(ctx, options.pressed);
   if (!Array.isArray(run)) return run;
   const nodes = run.map((n) => n.id);
   const dropMap: DropMap = { nodes, lines: run.map((n) => [n.startLine, n.endLine + 1] as const), seams: seamsOf(ctx.doc, run, run[0]!.kind, folded, zoom ?? null, (to) => ({ type: 'moveSubtree', nodes, to }), undefined, (parent, after) => !!moveRefused(ctx, run, parent, after)) };
-  const copied = copyOrCutCommand(new CommandContext(ctx.doc, ctx.selection, nodes), 'copy');
-  const clipboard = copied?.status === 'applied' ? copied.clipboard : undefined;
-  return { status: 'applied', doc: ctx.doc, changes: [], selection: ctx.selection, ...(clipboard && { clipboard }), dropMap };
+  const copied = copyOrCutCommand(new CommandContext(ctx.view, ctx.selection, nodes), 'copy');
+  const clipboard = copied instanceof OurusSuccess ? copied.clipboard : undefined;
+  return new OurusSuccess({ view: ctx.view, changes: [], selection: ctx.selection, ...(clipboard && { clipboard }), dropMap });
 }
 
 /**
@@ -47,17 +49,17 @@ export function dragCommand(ctx: CommandContext, options: { readonly pressed?: n
  * alone; with no press, the command's nodes (`ctx.nodes`, else the selection's). Then promoted
  * through the parents with no text of their own they are all of, and refused where of mixed kinds.
  */
-export function dragRun(ctx: CommandContext, pressed?: number): OurusNode[] | OurusCommandResult {
+export function dragRun(ctx: CommandContext, pressed?: number): OurusNode[] | OurusResult {
   let nodes: OurusNode[];
   if (pressed !== undefined) {
     const node = ctx.doc.node(pressed);
-    if (!node || node.kind === 'root') return reject('no-such-node');
+    if (!node || node.kind === 'root') return new OurusRejected('no-such-node');
     // (one of the selection's roots, or of the nodes it touches: on a line nodes share, a subtree
     // selection's root is the outer one, the mark pressed the inner one's)
-    const roots = selectionRoots(ctx.doc, ctx.selection);
-    if (roots.includes(node) || ctx.doc.touchedNodes(ctx.selection).includes(node)) {
+    const roots = selectionRoots(ctx.view, ctx.selection);
+    if (roots.includes(node) || ctx.view.touchedSubtrees(ctx.selection).includes(node)) {
       const runs = runsOf(roots);
-      if (runs.length > 1) return reject('non-contiguous');
+      if (runs.length > 1) return new OurusRejected('non-contiguous');
       nodes = runs[0]!;
     } else nodes = [node];
   } else {
@@ -65,7 +67,7 @@ export function dragRun(ctx: CommandContext, pressed?: number): OurusNode[] | Ou
     if (!Array.isArray(found)) return operandsRefused(found)!;
     nodes = found;
   }
-  if (nodes.some((n) => n.kind !== nodes[0]!.kind)) return reject('mixed-kinds');
+  if (nodes.some((n) => n.kind !== nodes[0]!.kind)) return new OurusRejected('mixed-kinds');
   return withTextlessParents(ctx.doc, nodes);
 }
 
@@ -121,10 +123,7 @@ function seamsOf(
     } else if (!above || !below || below.startLine > above.startLine) raw.push({ beforeLine, above, below, at: null });
     above = below;
   }
-  const inZoom = (n: OurusNode): boolean => {
-    for (let p: OurusNode | null = n; p; p = p.parent) if (zoom && p.id === zoom.id) return true;
-    return !zoom;
-  };
+  const inZoom = (n: OurusNode): boolean => !zoom || n.isWithin(zoom);
   return raw.flatMap((s, k) => {
     const gapLines = blanks(s.beforeLine);
     const line = s.beforeLine - gapLines;
@@ -173,13 +172,14 @@ export function nearestDropPoint(seam: DropSeam, x: number, columnX: (point: Dro
 /**
  * The place a drop line names: the gap before line `line` (the line count at the document's end), at
  * `depth` (0 the top level), read with `run` taken out where it is a move's, and the children of the
- * view's folded nodes hidden (`OurusDoc.zoomFolded`). A string where no place is there: the gap isn't a seam (inside a node's
+ * view's folded nodes hidden (`OurusView.zoomFolded`). A string where no place is there: the gap isn't a seam (inside a node's
  * lines, after its blank lines rather than before them), or no parent is at that depth. Inside the
  * run, a place at its depth is its own; a deeper one is inside it (`into-itself`, for the drop to
  * refuse).
  */
-export function placeAtSeam(doc: OurusDoc, run: readonly OurusNode[] | null, line: number, depth: number): InsertionPoint | string {
-  const folded = doc.zoomFolded;
+export function placeAtSeam(view: OurusView, run: readonly OurusNode[] | null, line: number, depth: number): InsertionPoint | string {
+  const doc = view.doc;
+  const folded = view.zoomFolded;
   const all = inOrder(doc);
   const hidden = hider(folded);
   for (const n of all) {
@@ -249,7 +249,7 @@ function runIds(all: readonly OurusNode[], run: readonly OurusNode[]): Set<numbe
 const hider =
   (folded: ReadonlySet<number>) =>
   (n: OurusNode): boolean => {
-    for (let p = n.parent; p; p = p.parent) if (folded.has(p.id)) return true;
+    for (const p of n.ancestors()) if (folded.has(p.id)) return true;
     return false;
   };
 

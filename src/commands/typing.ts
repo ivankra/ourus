@@ -4,9 +4,11 @@
 
 import { OurusProse, OurusAtom, blockIdsOf, type OurusNode, type OurusText } from '../doc/index.ts';
 import { composeChanges, lineOf, trimMd, type ChangeSpec } from '../text/index.ts';
-import { CommandContext, deferToHost, type CommandOutcome } from './context.ts';
+import { CommandContext } from './context.ts';
 import { breaksFence, codeAt, editInCode, type CodeAt } from './code.ts';
 import { textEnd, textStart } from './util.ts';
+import type { OurusResult } from './types.ts';
+import { OurusRejected, OurusSuccess, OurusDeferred } from './types.ts';
 
 /**
  * Typed text (`insertText`), a key's worth: a backtick or a tilde on a fence, on a code line, or
@@ -15,7 +17,7 @@ import { textEnd, textStart } from './util.ts';
  * doesn't do it yet: several characters with a backtick over a selection, a fence's character in a
  * container's prefix or a marker.
  */
-export function insertTextCommand(ctx: CommandContext, typed: string): CommandOutcome {
+export function insertTextCommand(ctx: CommandContext, typed: string): OurusResult | null {
   const fenceChar = /[`~]/.test(typed);
   const code = codeAt(ctx);
   if (!ctx.collapsed) {
@@ -24,7 +26,7 @@ export function insertTextCommand(ctx: CommandContext, typed: string): CommandOu
     // over a selection in code, what it leaves may make a fence (`X```` → ```` ``` ````)
     if (code) return editInCode(ctx, code, code.offset, code.to, typed);
     // over a selection in one line of text, the host's but for a backtick wrapping it in code
-    if (ctx.config.closeBackticks !== 'all' || !typed.includes('`') || ctx.doc.lineAt(ctx.selection.anchor).index !== ctx.doc.lineAt(ctx.selection.head).index) return deferToHost();
+    if (ctx.config.closeBackticks !== 'all' || !typed.includes('`') || ctx.doc.lineAt(ctx.selection.anchor).index !== ctx.doc.lineAt(ctx.selection.head).index) return new OurusDeferred();
     return typed === '`' ? wrapInCode(ctx) : null;
   }
   if ([...typed].length > 1 && fenceChar) return typedOneByOne(ctx, typed);
@@ -33,7 +35,7 @@ export function insertTextCommand(ctx: CommandContext, typed: string): CommandOu
   if (code && (!fenceChar || code.text.type !== 'fenced_code')) return editInCode(ctx, code, code.offset, code.offset, typed);
   const placed = placedText(ctx, typed);
   if (placed) return placed;
-  if (typed !== '`' && typed !== '~') return deferToHost();
+  if (typed !== '`' && typed !== '~') return new OurusDeferred();
   // in a container's prefix or a marker (before a fence's indentation): not done yet
   if (ctx.from.zone === 'prefix' || ctx.from.zone === 'marker') return null;
   if (code) return fenceCharInCode(ctx, code, typed);
@@ -42,7 +44,7 @@ export function insertTextCommand(ctx: CommandContext, typed: string): CommandOu
   if (ctx.config.closeBackticks === 'all' && typed === '`' && inEmptyPair(ctx)) return inlinePair(ctx);
   const opened = openFence(ctx, typed);
   if (opened !== undefined) return opened;
-  return ctx.config.closeBackticks === 'all' && typed === '`' ? inlinePair(ctx) : deferToHost();
+  return ctx.config.closeBackticks === 'all' && typed === '`' ? inlinePair(ctx) : new OurusDeferred();
 }
 
 /**
@@ -52,7 +54,7 @@ export function insertTextCommand(ctx: CommandContext, typed: string): CommandOu
  * carries, or a paragraph that is only one, a paragraph of its own, a blank line between. Null
  * elsewhere.
  */
-function afterBlockIdLine(ctx: CommandContext, typed: string): CommandOutcome {
+function afterBlockIdLine(ctx: CommandContext, typed: string): OurusResult | null {
   if (!ctx.collapsed || ctx.from.zone !== 'gap' || /\n/.test(typed)) return null;
   const doc = ctx.doc;
   const head = ctx.selection.head;
@@ -74,7 +76,7 @@ function afterBlockIdLine(ctx: CommandContext, typed: string): CommandOutcome {
   const lead = doc.text.slice(line.from, head);
   const changes = [{ from: head, to: head, insert: `\n${lead}${typed}` }];
   const caret = head + 1 + lead.length + typed.length;
-  return { status: 'applied', doc: doc.update({ changes, caret }), changes, selection: { anchor: caret, head: caret } };
+  return new OurusSuccess({ view: ctx.update({ changes, caret }), changes, selection: { anchor: caret, head: caret } });
 }
 
 /**
@@ -83,7 +85,7 @@ function afterBlockIdLine(ctx: CommandContext, typed: string): CommandOutcome {
  * block id any more); on the blank line after one; at the end of a marker's line whose text starts
  * below it. Null where the host's insert is right.
  */
-export function placedText(ctx: CommandContext, typed: string): CommandOutcome | null {
+export function placedText(ctx: CommandContext, typed: string): OurusResult | null {
   // right before a block id with nothing before it (a text that is only one, `- ┃^x`): what is typed
   // goes before it with a blank between, or it would end in it, no block id any more
   const glued = gluedBlockId(ctx);
@@ -116,29 +118,30 @@ function gluedBlockId(ctx: CommandContext): { node: OurusNode; text: OurusText; 
  * at a time, as keys type them, the host's typing each other one; one edit. The host's where it types
  * them all.
  */
-function typedOneByOne(ctx: CommandContext, typed: string): CommandOutcome {
-  let doc = ctx.doc;
+function typedOneByOne(ctx: CommandContext, typed: string): OurusResult | null {
+  // (each character on the last's view, the view carried through each)
+  let view = ctx.view;
   let selection = ctx.selection;
   let changes: readonly ChangeSpec[] = [];
   let ours = false;
   for (const char of typed) {
-    const next = new CommandContext(doc, selection);
+    const next = new CommandContext(view, selection);
     const result = insertTextCommand(next, char);
     if (!result) return null;
-    if (result.status === 'rejected') return result;
-    const step: readonly ChangeSpec[] = result.status === 'applied' ? result.changes : [{ from: selection.head, to: selection.head, insert: char }];
-    if (result.status === 'applied') {
+    if (result instanceof OurusRejected) return result;
+    const step: readonly ChangeSpec[] = result instanceof OurusSuccess ? result.changes : [{ from: selection.head, to: selection.head, insert: char }];
+    if (result instanceof OurusSuccess) {
       ours = true;
-      doc = result.doc;
+      view = result.view;
       selection = result.selection;
     } else {
-      doc = doc.update({ changes: step });
+      view = view.update({ changes: step });
       selection = { anchor: selection.head + char.length, head: selection.head + char.length };
     }
     changes = composeChanges(ctx.doc.text, changes, step);
   }
-  if (!ours) return deferToHost();
-  return { status: 'applied', doc, changes, selection };
+  if (!ours) return new OurusDeferred();
+  return new OurusSuccess({ view, changes, selection });
 }
 
 /** Where a backtick may pair: next to nothing, a space or a tab, or the punctuation that opens (`before`) or closes (`after`) a phrase. */
@@ -166,22 +169,22 @@ function emptyPairAt(ctx: CommandContext, s: string, offset: number): boolean {
  * before any of the closing run of the code span the caret is in, it steps over it; at a word boundary
  * outside code, it is typed as a pair, the caret between; anywhere else, the host's.
  */
-function inlinePair(ctx: CommandContext): CommandOutcome {
+function inlinePair(ctx: CommandContext): OurusResult | null {
   const at = ctx.from;
-  if (at.zone !== 'text' || !(at.text instanceof OurusProse)) return deferToHost();
+  if (at.zone !== 'text' || !(at.text instanceof OurusProse)) return new OurusDeferred();
   const { node, text, offset } = at;
   const s = text.text;
   const pos = ctx.selection.head;
   const lineFrom = s.lastIndexOf('\n', offset - 1) + 1;
   const lineTo = s.indexOf('\n', offset) < 0 ? s.length : s.indexOf('\n', offset);
-  if (offset < text.textStart(lineOf(s, offset))) return deferToHost();
+  if (offset < text.textStart(lineOf(s, offset))) return new OurusDeferred();
   const before = offset > lineFrom ? s[offset - 1]! : '';
   const after = offset < lineTo ? s[offset]! : '';
   const span = ctx.doc.codeSpanAt(pos);
   const emptyPair = emptyPairAt(ctx, s, offset);
   const draft = ctx.draft();
   if (after === '`' && (span ? pos >= span.closer && pos < span.to : emptyPair)) return ctx.apply(draft.setCaret(node, offset + 1, 1));
-  if (span || !atBoundary(before, '([{<\'"') || !atBoundary(after, ')]}>,.;:!?\'"')) return deferToHost();
+  if (span || !atBoundary(before, '([{<\'"') || !atBoundary(after, ')]}>,.;:!?\'"')) return new OurusDeferred();
   return ctx.apply(draft.setText(node, text.splice(offset, offset, '``')).setCaret(node, offset + 1, -1));
 }
 
@@ -189,7 +192,7 @@ function inlinePair(ctx: CommandContext): CommandOutcome {
  * `closeBackticks: all`, Backspace between the two backticks of an empty pair in a text: both go, as
  * they came (Backtick20). Null anywhere else.
  */
-export function deleteEmptyPair(ctx: CommandContext, node: OurusNode, text: OurusProse, offset: number): CommandOutcome {
+export function deleteEmptyPair(ctx: CommandContext, node: OurusNode, text: OurusProse, offset: number): OurusResult | null {
   const s = text.text;
   if (ctx.config.closeBackticks !== 'all' || !emptyPairAt(ctx, s, offset)) return null;
   if (offset - 1 < text.textStart(lineOf(s, offset))) return null;
@@ -202,11 +205,11 @@ export function deleteEmptyPair(ctx: CommandContext, node: OurusNode, text: Ouru
  * becomes code, with a run longer than any inside it on each side (and a space inside where it starts
  * or ends with a backtick), and stays selected.
  */
-function wrapInCode(ctx: CommandContext): CommandOutcome {
+function wrapInCode(ctx: CommandContext): OurusResult | null {
   const [a, b] = [ctx.from, ctx.to];
-  if (a.zone !== 'text' || b.zone !== 'text' || !(a.text instanceof OurusProse) || a.node.persistentNode !== b.node.persistentNode) return deferToHost();
+  if (a.zone !== 'text' || b.zone !== 'text' || !(a.text instanceof OurusProse) || a.node.persistentNode !== b.node.persistentNode) return new OurusDeferred();
   const text = a.text;
-  if (a.offset < text.textStart(lineOf(text.text, a.offset))) return deferToHost();
+  if (a.offset < text.textStart(lineOf(text.text, a.offset))) return new OurusDeferred();
   const selected = text.text.slice(a.offset, b.offset);
   const fence = '`'.repeat((selected.match(/`+/g) ?? []).reduce((m, r) => Math.max(m, r.length), 0) + 1);
   // (a space each side where a backtick ends it, or where it starts and ends with a space, which a code
@@ -247,10 +250,10 @@ function overFence(ctx: CommandContext): boolean {
  *   closing fence it is that fence typed again (the old one goes, the caret after it), elsewhere the
  *   fences grow past it (`done()`).
  */
-function fenceCharInCode(ctx: CommandContext, at: CodeAt, char: string): CommandOutcome {
+function fenceCharInCode(ctx: CommandContext, at: CodeAt, char: string): OurusResult | null {
   const { node, text, offset } = at;
   const runs = text.delimiters;
-  if (!runs) return deferToHost();
+  if (!runs) return new OurusDeferred();
   const s = text.text;
   const draft = ctx.draft();
   const lineFrom = s.lastIndexOf('\n', offset - 1) + 1;
@@ -260,7 +263,7 @@ function fenceCharInCode(ctx: CommandContext, at: CodeAt, char: string): Command
   if (onOpen || onClose) {
     const run = onOpen ? runs.open : runs.close!;
     if (s[run.from] === char && offset >= run.from && offset <= run.to) {
-      if (!runs.close) return deferToHost('an unclosed block\'s fence: the host\'s');
+      if (!runs.close) return new OurusDeferred('an unclosed block\'s fence: the host\'s');
       const grown = text.splice(runs.close.to, runs.close.to, char).splice(runs.open.to, runs.open.to, char);
       // where markup is decorated, not in the fence: from the closing one at the code's end, from inside
       // the opening one at its start (after it, the info string, is text)
@@ -270,11 +273,11 @@ function fenceCharInCode(ctx: CommandContext, at: CodeAt, char: string): Command
     }
     // the host's where the fence stays one, closed as it was
     const spliced = text.splice(offset, offset, char);
-    if (ctx.doc.readsAs(spliced) && spliced.closed === text.closed) return deferToHost();
+    if (ctx.doc.readsAs(spliced) && spliced.closed === text.closed) return new OurusDeferred();
     return breaksFence(ctx, `a ${char === '`' ? 'backtick' : 'tilde'} here would break the fence`);
   }
   const typed = text.splice(offset, offset, char);
-  if (ctx.doc.readsAs(typed) || !runs.close) return deferToHost();
+  if (ctx.doc.readsAs(typed) || !runs.close) return new OurusDeferred();
   // right above the closing fence: the fence typed again, which takes the old one's place
   if (s.lastIndexOf('\n') === lineTo) {
     const retyped = typed.splice(lineTo + 1, s.length + 1);
@@ -293,7 +296,7 @@ function fenceCharInCode(ctx: CommandContext, at: CodeAt, char: string): Command
  * following them (an item's: its first child, as the block is, where the item keeps text above it).
  * With `closeBackticks: none`, the host's. Undefined where the line opens no fence.
  */
-function openFence(ctx: CommandContext, char: string): CommandOutcome | undefined {
+function openFence(ctx: CommandContext, char: string): OurusResult | null | undefined {
   const at = ctx.from;
   if (at.zone !== 'text' || !(at.text instanceof OurusProse) || at.text.type !== 'paragraph' || at.text.frame.length) return undefined;
   const { node, text, offset } = at;
@@ -308,7 +311,7 @@ function openFence(ctx: CommandContext, char: string): CommandOutcome | undefine
   if (!run || line[run.from] !== char || offset - lineFrom > run.to - 1) return undefined;
   const code = new OurusAtom('fenced_code', node.kind === 'item' && lineFrom === 0, `${line}\n${line.slice(run.from, run.to)}`);
   if (!ctx.doc.readsAs(code)) return undefined;
-  if (ctx.config.closeBackticks === 'none') return deferToHost();
+  if (ctx.config.closeBackticks === 'none') return new OurusDeferred();
   const draft = ctx.draft();
   const container = node.kind === 'item';
   // the lines below, a paragraph of their own

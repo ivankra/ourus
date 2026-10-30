@@ -13,7 +13,7 @@ const parse = (text: string, flavor: Flavor = 'gfm', placeholders: number[] = []
 
 /** A position's zone, briefly: `text 4`, `frame task 0`, `marker 1`, `gap paragraph@0`, ... */
 function where(doc: OurusDoc, pos: number): string {
-  const at: Located = doc.locate(pos);
+  const at: Located = doc.locateRaw(pos);
   switch (at.zone) {
     case 'text':
       return `text ${at.node.kind} ${at.offset}`;
@@ -65,7 +65,7 @@ for (const flavor of ['commonmark', 'gfm', 'obsidian'] as const) {
       fc.property(arbDoc(BLOCKS, { frontmatter: flavor === 'obsidian' }), (text) => {
         const doc = parse(text, flavor);
         for (let pos = 0; pos <= text.length; pos++) {
-          const at = doc.locate(pos);
+          const at = doc.locateRaw(pos);
           if (at.zone !== 'text' && at.zone !== 'frame') continue;
           // the offset's two sides hold the position between them (characters left out of the text lie between)
           const before = doc.posOf(at.node, at.offset, -1);

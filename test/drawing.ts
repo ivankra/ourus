@@ -2,10 +2,11 @@
 // selection (the subtrees of the nodes it touches, as whole lines: `drawnSelection`), `◌` placeholders
 // place, `→` tab, `␍` carriage return, `⍽` no-break space (U+00A0, which Markdown reads as text).
 
-import type { OurusSelection } from '../src/commands/index.ts';
+import { OurusRejected, OurusSuccess, type OurusResult, type OurusSelection } from '../src/commands/index.ts';
 import type { OurusConfig } from '../src/config.ts';
 import { OurusProse, OurusDoc, textEnd, textStart, type OurusNode } from '../src/doc/index.ts';
 import { createPlaceholder, trimMd } from '../src/text/index.ts';
+import { OurusView } from '../src/view/index.ts';
 
 /**
  * Whether a drawing draws the caret or a selection. A step's expected buffer may not, where only
@@ -22,6 +23,11 @@ const LABEL = /[\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]/u;
 const LABELS = /[\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]+(?=␍?$)/u;
 
 /** A label glyph's number, 1 to 50. */
+/** A result's status as the spec writes it (`result:`): `success`, `rejected`, `deferredToHost`. */
+export function statusOf(r: OurusResult): 'success' | 'rejected' | 'deferredToHost' {
+  return r instanceof OurusSuccess ? 'success' : r instanceof OurusRejected ? 'rejected' : 'deferredToHost';
+}
+
 export function labelNumber(glyph: string): number {
   const c = glyph.codePointAt(0)!;
   return c <= 0x2473 ? c - 0x2460 + 1 : c <= 0x325f ? c - 0x3251 + 21 : c - 0x32b1 + 36;
@@ -126,27 +132,28 @@ export function readDrawing(drawn: string): { text: string; selection: OurusSele
 }
 
 /**
- * A drawing's selection in `doc`, its text's: a subtree selection (`««…»»`) the canonical selection of
- * the nodes its span touches (`OurusDoc.selectionOf`), upward where `┃` is before it; else as drawn.
+ * A drawing's selection in `view`, its text's: a subtree selection (`««…»»`) the canonical selection of
+ * the nodes its span touches (`OurusView.selectionOf`), upward where `┃` is before it; else as drawn.
  */
-export function drawnSelection(doc: OurusDoc, drawing: { readonly selection: OurusSelection; readonly subtrees: 'down' | 'up' | null }): OurusSelection {
+export function drawnSelection(view: OurusView, drawing: { readonly selection: OurusSelection; readonly subtrees: 'down' | 'up' | null }): OurusSelection {
   if (!drawing.subtrees) return drawing.selection;
-  return doc.selectionOf(doc.touchedSubtrees(drawing.selection), drawing.subtrees);
+  return view.selectionOf(view.touchedSubtrees(drawing.selection), drawing.subtrees);
 }
 
 /**
- * Where `sel`, a subtree selection of the canonical shape (`OurusDoc.selectionOf`'s), is drawn: `««`
+ * Where `sel`, a subtree selection of the canonical shape (`OurusView.selectionOf`'s), is drawn: `««`
  * where the first root's text starts (its first descendant's with text, where it has none; its line's
  * start where that text alone reads as the descendant's), `»»`
  * where the last's own text ends (its last child's, where it has none), the shortest span that reads
  * back as it; null for any other selection, drawn as it is, and where no span reads back as it (an
  * empty last node on an empty line: any offset there is the line's start, which touches nothing).
  */
-export function subtreeSpan(doc: OurusDoc, sel: OurusSelection): { from: number; to: number } | null {
-  const roots = doc.selectedNodes(sel);
+export function subtreeSpan(view: OurusView, sel: OurusSelection): { from: number; to: number } | null {
+  const doc = view.doc;
+  const roots = view.selectedSubtrees(sel);
   if (!roots) return null;
   const up = sel.head < sel.anchor;
-  const canonical = doc.selectionOf(roots.map((n) => n.id), up ? 'up' : 'down');
+  const canonical = view.selectionOf(roots, up ? 'up' : 'down');
   if (canonical.anchor !== sel.anchor || canonical.head !== sel.head) return null;
   let first: OurusNode = roots[0]!;
   while (!doc.textOf(first) && first.children.length) first = first.children[0]!;
@@ -165,7 +172,7 @@ export function subtreeSpan(doc: OurusDoc, sel: OurusSelection): { from: number;
       if (!text) continue;
       // (an empty text's end, the side left of what isn't text, can be before its start: one point)
       const span = { from, to: Math.max(from, doc.posOf(node, textEnd(text), -1)) };
-      const back = drawnSelection(doc, { selection: { anchor: span.from, head: span.to }, subtrees: up ? 'up' : 'down' });
+      const back = drawnSelection(view, { selection: { anchor: span.from, head: span.to }, subtrees: up ? 'up' : 'down' });
       if (back.anchor === sel.anchor && back.head === sel.head) return span;
     }
   }
@@ -245,5 +252,8 @@ export function nodesOf(doc: OurusDoc): OurusNode[] {
 export const docOf = (text: string, placeholders: readonly number[] = [], config: Partial<OurusConfig> = {}): OurusDoc =>
   OurusDoc.parse(text, { config, marks: placeholders.map((p) => createPlaceholder(p)) });
 
-/** A document and a selection in it, drawn. */
-export const drawDoc = (doc: OurusDoc, sel: OurusSelection): string => drawState(doc.text, sel, doc.marks.points(), subtreeSpan(doc, sel));
+/** `text` read with `config`, in a view of nothing folded and no zoom. */
+export const parseView = (text: string, config: Partial<OurusConfig> = {}): OurusView => OurusView.of(OurusDoc.parse(text, { config }));
+
+/** A view's document and a selection in it, drawn (a subtree selection as the view reads it). */
+export const drawDoc = (view: OurusView, sel: OurusSelection): string => drawState(view.doc.text, sel, view.doc.marks.points(), subtreeSpan(view, sel));

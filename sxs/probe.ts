@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { OurusConfig } from '../src/config.ts';
 import { docOf, drawDoc, drawLabels, drawnSelection, drawOutline, drawsCaret, drawText, nodesOf, readDrawing, readText, withoutCaret } from '../test/drawing.ts';
 import type { OurusDoc } from '../src/doc/index.ts';
+import { OurusView } from '../src/view/index.ts';
 import { isAction, play, type Played } from '../test/player.ts';
 import { drawDropPoints, Labels, normalize, outcome, readClipboard, rowView } from '../test/spec-run.ts';
 import { drawView } from './lib/view.ts';
@@ -30,6 +31,7 @@ import { ensureProxy } from './lib/browser.ts';
 import type { Driver } from './lib/driver.ts';
 import { LOGIN_EXIT } from './lib/login.ts';
 import { cacheDir, cacheMode } from './proxy.ts';
+import { OurusRejected, OurusSuccess } from '../src/commands/index.ts';
 
 const HELP = `usage: node sxs/probe.ts [<apps>] [options] [<buffer> <step>...|<file.md>|<case>]
 
@@ -304,8 +306,9 @@ function playOurus(p: Probe, config: Record<string, string>, labels = false): Ou
   // (the start's labels, for a drop that names one)
   const named = new Labels();
   named.check(doc, start.labels, null);
-  let state: Played = { doc, selection: drawnSelection(doc, start), clipboard: p.clipboard, drop: start.drop, labels: named.ids };
-  const labelling = labels ? new Labelling(state.doc, start.labels) : null;
+  const view = OurusView.of(doc);
+  let state: Played = { view, selection: drawnSelection(view, start), clipboard: p.clipboard, drop: start.drop, labels: named.ids };
+  const labelling = labels ? new Labelling(state.view.doc, start.labels) : null;
   const out: OurStep[] = [];
   for (const actions of p.steps) {
     const unknown = actions.filter((a) => !isAction(a));
@@ -315,22 +318,22 @@ function playOurus(p: Probe, config: Record<string, string>, labels = false): Ou
       for (const action of actions) {
         state = play(state, [action]);
         const last = state.last;
-        if (last?.status === 'rejected' && last.reason === 'write-failed') broken ??= `${action} fails to write${last.detail ? `: ${last.detail}` : ''}`;
+        if (last instanceof OurusRejected && last.reason === 'write-failed') broken ??= `${action} fails to write${last.detail ? `: ${last.detail}` : ''}`;
       }
     } catch (e) {
       broken = `throws: ${e instanceof Error ? e.message : String(e)}`;
     }
-    const text = state.doc.text;
+    const text = state.view.doc.text;
     out.push({
       actions,
-      buffer: normalize(labelling ? labelling.draw(drawDoc(state.doc, state.selection), state.doc) : drawDoc(state.doc, state.selection)),
+      buffer: normalize(labelling ? labelling.draw(drawDoc(state.view, state.selection), state.view.doc) : drawDoc(state.view, state.selection)),
       drawable: text === '' || /[\r\n]$/.test(text),
       result: outcome(state),
-      outline: drawOutline(state.doc),
+      outline: drawOutline(state.view.doc),
       ...(broken ? { broken } : {}),
       ...(actions.some((a) => a === 'copy' || a === 'cut') && state.clipboard['text/plain'] !== undefined ? { clipboard: state.clipboard['text/plain'] } : {}),
-      ...(state.last?.status === 'applied' && state.last.dropMap ? { dropPoints: drawDropPoints(state.doc, state.last.dropMap, state.selection) } : {}),
-      ...(state.doc.zoomFolded.size || state.doc.zoom !== null ? { view: drawView(rowView(state.doc)).trim() } : {}),
+      ...(state.last instanceof OurusSuccess && state.last.dropMap ? { dropPoints: drawDropPoints(state.view, state.last.dropMap, state.selection) } : {}),
+      ...(state.view.zoomFolded.size || state.view.zoom !== null ? { view: drawView(rowView(state.view)).trim() } : {}),
     });
     if (broken) break;
   }
@@ -511,7 +514,7 @@ async function main(): Promise<void> {
         verbatim(p.start);
         for (const [k, s] of run.steps.entries()) {
           // ourus's result where it didn't apply (a refusal, the host's), on the actions' line
-          out(cyan(`> ${s.actions.join(' ')}${s.result === 'applied' ? '' : `  (ourus: ${s.result})`}${s.broken ? `  !! ${s.broken}` : ''}`));
+          out(cyan(`> ${s.actions.join(' ')}${s.result === 'success' ? '' : `  (ourus: ${s.result})`}${s.broken ? `  !! ${s.broken}` : ''}`));
           verbatim(s.buffer);
           if (s.view !== undefined) out(s.view);
           if (s.clipboard !== undefined) out(`clipboard: ${JSON.stringify(s.clipboard)}`);

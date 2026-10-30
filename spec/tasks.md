@@ -467,7 +467,7 @@ taskEditing: text
 > deleteContentBackward
 
 ```yaml
-result: applied
+result: success
 ```
 
 ```buffer

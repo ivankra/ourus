@@ -5,7 +5,7 @@ version: "2.0.2 build 9a10307e"
 url: "https://test.logseq.com/"
 model: "block"
 command: "node sxs/run.ts logseq-db"
-elapsed_s: 106
+elapsed_s: 277
 workers: 4
 ---
 
@@ -15,9 +15,9 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 244 | [13](#caret-13) | [9](#whitespace-9) | [19](#disagree-19) |  |  | **285** |
-| adapted | 432 | [12](#adapted-caret-12) | [22](#adapted-whitespace-22) | [78](#adapted-disagree-78) | [1](#adapted-error-1) |  | **545** |
-| **total** | **676 (47%)** | **25 (1.7%)** | **31 (2.2%)** | **97 (6.7%)** | **1 (0.069%)** | **[609](#skipped-609) (42%)** | **1441** |
+| original | 248 | [13](#caret-13) | [9](#whitespace-9) | [19](#disagree-19) |  |  | **289** |
+| adapted | 432 | [12](#adapted-caret-12) | [22](#adapted-whitespace-22) | [79](#adapted-disagree-79) | [1](#adapted-error-1) |  | **546** |
+| **total** | **680 (47%)** | **25 (1.7%)** | **31 (2.1%)** | **98 (6.8%)** | **1 (0.069%)** | **[610](#skipped-610) (42%)** | **1447** |
 
 Per-file:
 
@@ -34,12 +34,12 @@ Per-file:
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 12 | **12** |  |  |
 | [enter.md](../spec/enter.md) | 50 | 1 |  |  |  | 47 | **98** | 19 | 32 |
 | [fences.md](../spec/fences.md) | 10 |  | 1 | 2 |  | 57 | **70** |  | 13 |
-| [fold.md](../spec/fold.md) | 12 |  |  | 2 |  | 5 | **19** | 12 | 2 |
+| [fold.md](../spec/fold.md) | 14 |  |  | 2 |  | 6 | **22** | 14 | 2 |
 | [gaps.md](../spec/gaps.md) | 15 |  |  |  |  | 4 | **19** | 1 | 14 |
 | [indent.md](../spec/indent.md) | 30 |  |  | 1 |  | 24 | **55** | 19 | 12 |
 | [lists.md](../spec/lists.md) | 4 |  |  | 1 |  | 11 | **16** |  | 5 |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 29 |  |  |  |  | 15 | **44** | 13 | 16 |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 30 |  |  |  |  | 16 | **46** | 15 | 15 |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 30 |  |  |  |  | 15 | **45** | 14 | 16 |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 31 |  |  |  |  | 16 | **47** | 16 | 15 |
 | [move-subtree.md](../spec/move-subtree.md) | 10 | 2 |  | 3 |  | 9 | **24** | 8 | 7 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 41 |  | 2 | 5 |  | 19 | **67** | 20 | 28 |
 | [outdent.md](../spec/outdent.md) | 14 |  |  | 1 |  | 27 | **42** | 8 | 7 |
@@ -53,7 +53,7 @@ Per-file:
 | [placeholders.md](../spec/placeholders.md) | 14 |  | 1 |  |  | 5 | **20** | 4 | 11 |
 | [quirks.md](../spec/quirks.md) |  |  |  | 1 |  | 6 | **7** | 1 |  |
 | [quotes.md](../spec/quotes.md) | 88 |  | 3 | 9 |  | 43 | **143** |  | 100 |
-| [regressions.md](../spec/regressions.md) | 63 | 7 | 10 | 29 | 1 | 88 | **198** | 18 | 92 |
+| [regressions.md](../spec/regressions.md) | 63 | 7 | 10 | 30 | 1 | 88 | **199** | 18 | 93 |
 | [scenarios.md](../spec/scenarios.md) | 20 | 1 |  | 1 |  | 7 | **29** | 13 | 9 |
 | [select.md](../spec/select.md) | 10 | 7 |  |  |  | 6 | **23** | 14 | 3 |
 | [shift-enter.md](../spec/shift-enter.md) | 25 |  | 3 |  |  | 8 | **36** | 12 | 16 |
@@ -62,7 +62,7 @@ Per-file:
 | [typing.md](../spec/typing.md) |  |  |  |  |  | 3 | **3** |  |  |
 | [undo.md](../spec/undo.md) | 4 |  |  |  |  | 1 | **5** | 3 | 1 |
 | [zoom.md](../spec/zoom.md) | 7 |  |  | 1 |  | 6 | **14** | 8 |  |
-| **total** | **676 (47%)** | **25 (1.7%)** | **31 (2.2%)** | **97 (6.7%)** | **1 (0.069%)** | **611 (42%)** | **1441** | **285 (20%)** | **545 (38%)** |
+| **total** | **680 (47%)** | **25 (1.7%)** | **31 (2.1%)** | **98 (6.8%)** | **1 (0.069%)** | **612 (42%)** | **1447** | **289 (20%)** | **546 (38%)** |
 
 ## Disagree (19)
 
@@ -2132,7 +2132,7 @@ y
 </td></tr>
 </table>
 
-## Adapted: disagree (78)
+## Adapted: disagree (79)
 
 ### [Backspace29](../spec/backspace.md#backspace29)
 
@@ -4100,7 +4100,7 @@ Adapted: code block
 ````buffer
 - a
 - ```
-  c┃
+  c
   ```
 - b
 ````
@@ -7235,6 +7235,65 @@ Original:
 </td></tr>
 </table>
 
+### [Regression199](../spec/regressions.md#regression199)
+
+> deleteSoftLineBackward
+
+Adapted: blank lines, heading, paragraph, quote, under quotes: atom
+
+<table>
+<tr><th>buffer</th><th>logseq-db</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- 
+- # h
+  - > - 
+    > ^x┃
+```
+
+</td><td>
+
+```buffer
+- 
+- # h
+  - > - 
+    ┃
+```
+
+</td><td>
+
+```buffer
+- # h
+  - > - 
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+◌
+# h
+> - ◌
+> ^x┃
+```
+
+</td><td>
+
+```buffer
+# h
+> - 
+┃
+```
+
+</td></tr>
+</table>
+
 ### [Scenario18](../spec/scenarios.md#scenario18)
 
 <table>
@@ -9571,7 +9630,7 @@ y
 </td></tr>
 </table>
 
-## Skipped (611)
+## Skipped (612)
 
 | example | why |
 | --- | --- |
@@ -9832,6 +9891,7 @@ y
 | [Fold10](../spec/fold.md#fold10) | action fold ① |
 | [Fold13](../spec/fold.md#fold13) | its view, on an adapted start |
 | [Fold15b](../spec/fold.md#fold15b) | changes only what blocks can't show |
+| [Fold20](../spec/fold.md#fold20) | caret in a number, a checkbox or a heading's #s (the block's properties) |
 | **gaps.md** | |
 | [Gap15](../spec/gaps.md#gap15) | caret on a blank line |
 | [Gap16](../spec/gaps.md#gap16) | caret on a blank line |

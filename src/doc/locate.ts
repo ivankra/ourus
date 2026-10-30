@@ -6,7 +6,6 @@ import type { MdLine } from '../parser/index.ts';
 import { lineIndexAt } from '../text/index.ts';
 import type { OurusNode } from './node.ts';
 import type { OurusDoc } from './doc.ts';
-import { foldOwner } from './view.ts';
 import type { OurusText } from './text.ts';
 
 export type Located =
@@ -40,9 +39,10 @@ export function locate(doc: OurusDoc, pos: number): Located {
   if (pos > line.to) return { zone: 'none' };
   const node = doc.nodeAtLine(line.index);
   if (!node) {
-    // (after a folded subtree, the folded node's gap: its last descendant is hidden)
+    // (the node whose extent the line is in: after a subtree, its last descendant; the view's
+    // `locate` gives the node the reader sees there, a folded one's)
     const owner = extentOwner(doc.rootNode, line.index);
-    return owner ? { zone: 'gap', owner: foldOwner(doc, owner) } : { zone: 'preamble' };
+    return owner ? { zone: 'gap', owner } : { zone: 'preamble' };
   }
   // (past its text, on the lines it carries: no offset in its string there)
   if (line.index > node.textLastLine) {

@@ -7,8 +7,9 @@
 //
 //   node test/drops.ts          # the report: each case's gaps
 
-import { executeCommand, type OurusCommandResult, type DropMap } from '../src/commands/index.ts';
+import { executeCommand, type OurusResult, type DropMap, OurusRejected, OurusSuccess } from '../src/commands/index.ts';
 import type { OurusDoc } from '../src/doc/index.ts';
+import { OurusView } from '../src/view/index.ts';
 import { docOf, nodesOf, readDrawing } from './drawing.ts';
 import { flavorsOf } from './spec-run.ts';
 import { readSpecFile, specConfig, specFiles, type SpecTest } from './specfile.ts';
@@ -33,17 +34,18 @@ export function dropGaps(t: SpecTest): string[] {
   const start = readDrawing(t.initial.buffer);
   const flavor = flavorsOf(t)[0]!;
   const doc = docOf(start.text, start.placeholders, { flavor, ...specConfig(t.options) });
+  const view = OurusView.of(doc);
   const gaps: string[] = [];
   const pickups: { what: string; dropMap: DropMap; kind: (r: OurusDoc) => string | undefined; was: string }[] = [];
   for (const node of nodesOf(doc)) {
-    const picked = executeCommand(doc, { type: 'drag', pressed: node.id }, start.selection);
-    if (picked.status !== 'applied' || !picked.dropMap) continue;
+    const picked = executeCommand(view, { type: 'drag', pressed: node.id }, start.selection);
+    if (!(picked instanceof OurusSuccess) || !picked.dropMap) continue;
     const first = doc.node(picked.dropMap.nodes[0]!)!;
     pickups.push({ what: `${first.kind} at line ${first.startLine + 1}`, dropMap: picked.dropMap, kind: (r) => r.node(first.id)?.kind, was: first.kind });
   }
   for (const [text, was] of CLIPBOARDS) {
-    const picked = executeCommand(doc, { type: 'drag', clipboard: { 'text/plain': text } }, start.selection);
-    if (picked.status !== 'applied' || !picked.dropMap) continue;
+    const picked = executeCommand(view, { type: 'drag', clipboard: { 'text/plain': text } }, start.selection);
+    if (!(picked instanceof OurusSuccess) || !picked.dropMap) continue;
     // (the first node a drop placed, by its place: the node after `after`, or its parent's first)
     const kind = (r: OurusDoc, at: { parent: number | 'root'; after: number | null }): string | undefined => {
       const parent = at.parent === 'root' ? r.rootNode : r.node(at.parent);
@@ -56,20 +58,20 @@ export function dropGaps(t: SpecTest): string[] {
     for (const seam of dropMap.seams) {
       for (const point of seam.points) {
         const where = `${what} to ${point.parent === 'root' ? 'the root' : `${doc.node(point.parent)!.kind} at line ${doc.node(point.parent)!.startLine + 1}`}, depth ${point.depth}`;
-        let r: OurusCommandResult;
+        let r: OurusResult;
         try {
-          r = executeCommand(doc, point.drop, start.selection);
+          r = executeCommand(view, point.drop, start.selection);
         } catch (e) {
           gaps.push(`${where}: throws ${(e as Error).message}`);
           continue;
         }
-        if (r.status === 'rejected') {
+        if (r instanceof OurusRejected) {
           if (r.reason === 'write-failed' || r.reason === 'unsupported' || r.detail?.startsWith('result check')) gaps.push(`${where}: ${r.reason}${r.detail ? ` (${r.detail})` : ''}`);
           continue;
         }
-        if (r.status !== 'applied') continue;
+        if (!(r instanceof OurusSuccess)) continue;
         if (point.current && r.changes.length) gaps.push(`${where}: its own place changes the text`);
-        const landed = kind(r.doc);
+        const landed = kind(r.view.doc);
         if (point.converts !== (landed !== was)) gaps.push(`${where}: converts says ${point.converts}, and it lands a ${landed}`);
       }
     }

@@ -1,4 +1,4 @@
-// The keys that edit text, over a subtree selection (the roots it is, `OurusDoc.selectedNodes`): what
+// The keys that edit text, over a subtree selection (the roots it is, `OurusView.selectedSubtrees`): what
 // they mean over whole nodes, rather than over the lines' characters, markers and all. One routing
 // step, before the commands: Backspace, Delete and cut take the roots out as delete subtree does;
 // copy writes them (`copy.ts`); typing does nothing, as in the outliners; a plain paste makes one node
@@ -7,13 +7,14 @@
 
 import { OurusAtom, OurusProse, type OurusNode } from '../doc/index.ts';
 import { composeChanges } from '../text/index.ts';
-import { CommandContext, blockIdsDeclaredBy, type CommandOutcome } from './context.ts';
+import { CommandContext, blockIdsDeclaredBy } from './context.ts';
 import { copyOrCutCommand } from './copy.ts';
 import { deleteSubtreeCommand } from './delete-subtree.ts';
 import { pasteAtCommand } from './paste.ts';
 import { pastePlainCommand } from './paste-plain.ts';
-import type { OurusCommand } from './types.ts';
+import type { OurusCommand, OurusResult } from './types.ts';
 import { goneWithTextlessParents, textEnd, textStart } from './util.ts';
+import { OurusDeferred, OurusSuccess } from './types.ts';
 
 /** The commands routed over a subtree selection. */
 const ROUTED: ReadonlySet<OurusCommand['type']> = new Set(['deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward', 'cut', 'copy', 'insertText', 'enter', 'shiftEnter', 'paste', 'pastePlain']);
@@ -22,9 +23,9 @@ const ROUTED: ReadonlySet<OurusCommand['type']> = new Set(['deleteContentBackwar
  * `command` over the subtree selection `ctx.selection` is (a command given `nodes` acts on those, not
  * on the selection); undefined where it isn't one, or the command isn't routed.
  */
-export function editSubtrees(ctx: CommandContext, command: OurusCommand): CommandOutcome | undefined {
+export function editSubtrees(ctx: CommandContext, command: OurusCommand): OurusResult | null | undefined {
   if (!ROUTED.has(command.type) || ('nodes' in command && command.nodes)) return undefined;
-  const roots = ctx.doc.selectedNodes(ctx.selection);
+  const roots = ctx.view.selectedSubtrees(ctx.selection);
   if (!roots) return undefined;
   // typing over the whole document (a select all) replaces it as text, as every text editor does,
   // rather than keeping the first node's prefix (`- x`, `# x`)
@@ -46,12 +47,12 @@ export function editSubtrees(ctx: CommandContext, command: OurusCommand): Comman
       const text = ctx.doc.textOf(last);
       if (!text) return null;
       const at = ctx.doc.posOf(last, textEnd(text), -1);
-      return { status: 'applied', doc: ctx.doc, changes: [], selection: { anchor: at, head: at } };
+      return new OurusSuccess({ view: ctx.view, changes: [], selection: { anchor: at, head: at } });
     }
     // the key taken, nothing typed, the nodes still selected: Logseq, Logseq DB, Tine, Roam, Athens,
     // Dynalist, RemNote and WorkFlowy ignore typing over a block selection
     case 'insertText':
-      return { status: 'applied', doc: ctx.doc, changes: [], selection: ctx.selection };
+      return new OurusSuccess({ view: ctx.view, changes: [], selection: ctx.selection });
     case 'pastePlain':
       return inPlace(ctx, roots, (next) => pastePlainCommand(next, command.text), command.text);
     case 'paste': {
@@ -65,14 +66,14 @@ export function editSubtrees(ctx: CommandContext, command: OurusCommand): Comman
         ctx.config.pasteOverSelection === 'ignore'
           ? pasteAtCommand(ctx, command.clipboard, { parent: parentOf(last), after: last.id })
           : composed(ctx, deleteSubtreeCommand(ctx), (next) => pasteAtCommand(next, command.clipboard, { parent: parentOf(first), after: first.prev?.id ?? null }));
-      if (pasted?.status !== 'applied') return pasted;
+      if (!(pasted instanceof OurusSuccess)) return pasted;
       // the caret at the end of what was pasted, as a paste leaves it
       const placed = pasted.placed?.at(-1);
-      const end = placed === undefined ? undefined : pasted.doc.node(placed)?.lastDescendant;
-      const text = end && pasted.doc.textOf(end);
+      const end = placed === undefined ? undefined : pasted.view.doc.node(placed)?.lastDescendant;
+      const text = end && pasted.view.doc.textOf(end);
       if (!end || !text) return pasted;
-      const at = pasted.doc.posOf(end, textEnd(text), -1);
-      return { ...pasted, selection: { anchor: at, head: at } };
+      const at = pasted.view.doc.posOf(end, textEnd(text), -1);
+      return new OurusSuccess({ ...pasted, selection: { anchor: at, head: at } });
     }
     default:
       return undefined;
@@ -87,7 +88,7 @@ export function editSubtrees(ctx: CommandContext, command: OurusCommand): Comman
  * (a quote without a title, an item whose first block is on its marker's line) is its first child's
  * prefix: that child is the node, the rest of the root's subtree gone.
  */
-function inPlace(ctx: CommandContext, roots: readonly OurusNode[], then: (ctx: CommandContext) => CommandOutcome, typed: string): CommandOutcome {
+function inPlace(ctx: CommandContext, roots: readonly OurusNode[], then: (ctx: CommandContext) => OurusResult | null, typed: string): OurusResult | null {
   const doc = ctx.doc;
   const others: OurusNode[] = [...roots.slice(1)];
   let first = roots[0]!;
@@ -110,16 +111,16 @@ function inPlace(ctx: CommandContext, roots: readonly OurusNode[], then: (ctx: C
  * is. Where `then` is the host's, its default done here, on the document `first` left (the host has
  * only this one's): the selection replaced by `typed`, the caret after it; without `typed`, the host's.
  */
-function composed(ctx: CommandContext, first: CommandOutcome, then: (ctx: CommandContext) => CommandOutcome, typed?: string): CommandOutcome {
-  if (!first || first.status !== 'applied') return first;
-  let next = then(new CommandContext(first.doc, first.selection));
-  if (next?.status === 'deferredToHost' && typed !== undefined) {
+function composed(ctx: CommandContext, first: OurusResult | null, then: (ctx: CommandContext) => OurusResult | null, typed?: string): OurusResult | null {
+  if (!first || !(first instanceof OurusSuccess)) return first;
+  let next = then(new CommandContext(first.view, first.selection));
+  if (next instanceof OurusDeferred && typed !== undefined) {
     const from = Math.min(first.selection.anchor, first.selection.head);
     const to = Math.max(first.selection.anchor, first.selection.head);
     const changes = [{ from, to, insert: typed }];
     const caret = from + typed.length;
-    next = { status: 'applied', doc: first.doc.update({ changes, caret }), changes, selection: { anchor: caret, head: caret } };
+    next = new OurusSuccess({ view: first.view.update({ changes, caret }), changes, selection: { anchor: caret, head: caret } });
   }
-  if (!next || next.status !== 'applied') return next?.status === 'deferredToHost' ? null : next;
-  return { ...next, ...blockIdsDeclaredBy([first, next]), changes: composeChanges(ctx.doc.text, first.changes, next.changes) };
+  if (!next || !(next instanceof OurusSuccess)) return next instanceof OurusDeferred ? null : next;
+  return new OurusSuccess({ ...next, ...blockIdsDeclaredBy([first, next]), changes: composeChanges(ctx.doc.text, first.changes, next.changes) });
 }

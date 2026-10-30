@@ -34,14 +34,16 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
-import { executeCommand, type InsertionPoint } from '../src/commands/index.ts';
+import { executeCommand, type InsertionPoint, OurusRejected, OurusSuccess } from '../src/commands/index.ts';
 import { OurusDoc } from '../src/doc/index.ts';
+import { OurusView } from '../src/view/index.ts';
 import { textStart } from '../src/commands/util.ts';
 import { drawDoc, nodesOf, readDrawing } from './drawing.ts';
 import { play, type Played } from './player.ts';
 import { readSpecFile, specConfig, specFiles } from './specfile.ts';
 import { flavorsOf } from './spec-run.ts';
 import { KNOWN } from './drops.ts';
+import { statusOf } from './drawing.ts';
 
 const here = resolve(import.meta.dirname, '..');
 const PAIRS: readonly [string, string][] = [
@@ -77,9 +79,9 @@ const corpus = createHash('sha256').update(JSON.stringify(starts.map((s) => JSON
 const isBlank = (line: string): boolean => /^[ \t>]*$/.test(line);
 const outline = (doc: OurusDoc): string => JSON.stringify(nodesOf(doc).map((n) => [n.depth, n.kind, n.head?.type ?? null]));
 function classify(start: OurusDoc, end: Played, from: number): string {
-  const [a, b] = [start.text, end.doc.text];
+  const [a, b] = [start.text, end.view.doc.text];
   if (a === b) return end.selection.head === from && end.selection.anchor === from ? 'same' : 'caret';
-  if (outline(start) !== outline(end.doc)) return 'tree';
+  if (outline(start) !== outline(end.view.doc)) return 'tree';
   const solid = (s: string): string => s.split('\n').filter((l) => !isBlank(l)).join('\n');
   if (solid(a) === solid(b)) return a.split('\n').filter(isBlank).length < b.split('\n').filter(isBlank).length ? 'blank+' : 'blank-';
   if (a.replace(/[ \t]/g, '') === b.replace(/[ \t]/g, '')) return 'space';
@@ -103,7 +105,7 @@ interface Found {
   dumped: string[];
 }
 const dumping = !!process.env.INVERSE_DUMP;
-const draw = (p: Played): string => JSON.stringify(drawDoc(p.doc, p.selection));
+const draw = (p: Played): string => JSON.stringify(drawDoc(p.view, p.selection));
 
 /** Plays every pair at every caret position of the start buffers `share` names. */
 function playShare(share: readonly number[]): Found {
@@ -114,31 +116,32 @@ function playShare(share: readonly number[]): Found {
   for (const index of share) {
     const s = starts[index]!;
     const doc = OurusDoc.parse(s.text, { config: s.config });
+    const view = OurusView.of(doc);
     for (const [first, second] of PAIRS) {
       for (let pos = 0; pos <= s.text.length; pos++) {
         if (s.text[pos - 1] === '\r' && s.text[pos] === '\n') continue;
-        const at: Played = { doc, selection: { anchor: pos, head: pos }, clipboard: {} };
+        const at: Played = { view, selection: { anchor: pos, head: pos }, clipboard: {} };
         found.runs++;
         let mid: Played;
         let end: Played;
         try {
           mid = play(at, [first]);
-          if (mid.last?.status === 'rejected' && mid.last.reason === 'write-failed') {
+          if (mid.last instanceof OurusRejected && mid.last.reason === 'write-failed') {
             fail(index, `${first} failed to write: ${s.name} ${draw(at)}`);
             continue;
           }
-          if (mid.last?.status !== 'applied') continue;
+          if (!(mid.last instanceof OurusSuccess)) continue;
           end = play(mid, [second]);
         } catch (e) {
           fail(index, `${first}, ${second} threw: ${s.name} ${draw(at)}: ${(e as Error).message.split('\n')[0]}`);
           continue;
         }
         const last = end.last;
-        if (last?.status === 'rejected' && last.reason === 'write-failed') {
+        if (last instanceof OurusRejected && last.reason === 'write-failed') {
           fail(index, `${second} after ${first} failed to write: ${s.name} ${draw(at)} → ${draw(mid)}`);
           continue;
         }
-        const shape = last?.status === 'applied' ? classify(doc, end, pos) : last?.status === 'rejected' ? `rejected ${last.reason}` : (last?.status ?? '-');
+        const shape = last instanceof OurusSuccess ? classify(doc, end, pos) : last instanceof OurusRejected ? `rejected ${last.reason}` : (last ? statusOf(last) : '-');
         if (shape === 'same') continue;
         const key = `${first}, ${second}: ${shape}`;
         if (dumping) found.dumped.push(`${key}\t${s.name}\t${draw(at)}\t${draw(mid)}\t${draw(end)}`);
@@ -157,40 +160,40 @@ function playShare(share: readonly number[]): Found {
       const text = doc.textOf(held);
       const pos = text ? doc.posOf(held, textStart(text), 1) : doc.rangeOf(node).from;
       const caret = { anchor: pos, head: pos };
-      const picked = executeCommand(doc, { type: 'drag', pressed: node.id }, caret);
-      if (picked.status !== 'applied' || !picked.dropMap) continue;
+      const picked = executeCommand(view, { type: 'drag', pressed: node.id }, caret);
+      if (!(picked instanceof OurusSuccess) || !picked.dropMap) continue;
       const nodes = picked.dropMap.nodes;
       const root = doc.node(nodes[0]!)!;
       const back: InsertionPoint = { parent: root.parent!.kind === 'root' ? 'root' : root.parent!.id, after: root.prev?.id ?? null };
       for (const point of picked.dropMap.seams.flatMap((seam) => seam.points)) {
         if (point.current) continue;
         found.runs++;
-        const at: Played = { doc, selection: caret, clipboard: {} };
+        const at: Played = { view, selection: caret, clipboard: {} };
         const where = `${s.name} ${draw(at)} → depth ${point.depth} under ${point.parent === 'root' ? 'the root' : `line ${doc.node(point.parent)!.startLine + 1}`}`;
         let mid: Played;
         let end: Played;
         try {
-          const dropped = executeCommand(doc, point.drop, caret);
-          if (dropped.status === 'rejected' && dropped.reason === 'write-failed') {
+          const dropped = executeCommand(view, point.drop, caret);
+          if (dropped instanceof OurusRejected && dropped.reason === 'write-failed') {
             // (at a start the drop pass knows, reported, not failed: its list says why)
             if (s.name in KNOWN) known.push(`moveSubtree failed to write, known (drops.ts): ${where}`);
             else fail(index, `moveSubtree failed to write: ${where}`);
             continue;
           }
-          if (dropped.status !== 'applied' || !dropped.changes.length) continue;
-          mid = { doc: dropped.doc, selection: dropped.selection, clipboard: {}, last: dropped };
-          const returned = executeCommand(mid.doc, { type: 'moveSubtree', nodes, to: back }, mid.selection);
-          end = { doc: returned.status === 'applied' ? returned.doc : mid.doc, selection: returned.status === 'applied' ? returned.selection : mid.selection, clipboard: {}, last: returned };
+          if (!(dropped instanceof OurusSuccess) || !dropped.changes.length) continue;
+          mid = { view: dropped.view, selection: dropped.selection, clipboard: {}, last: dropped };
+          const returned = executeCommand(mid.view, { type: 'moveSubtree', nodes, to: back }, mid.selection);
+          end = { view: returned instanceof OurusSuccess ? returned.view : mid.view, selection: returned instanceof OurusSuccess ? returned.selection : mid.selection, clipboard: {}, last: returned };
         } catch (e) {
           fail(index, `moveSubtree threw: ${where}: ${(e as Error).message.split('\n')[0]}`);
           continue;
         }
         const last = end.last!;
-        if (last.status === 'rejected' && last.reason === 'write-failed') {
+        if (last instanceof OurusRejected && last.reason === 'write-failed') {
           fail(index, `moveSubtree back failed to write: ${where} → ${draw(mid)}`);
           continue;
         }
-        const shape = last.status === 'applied' ? classify(doc, end, pos) : last.status === 'rejected' ? `rejected ${last.reason}` : last.status;
+        const shape = last instanceof OurusSuccess ? classify(doc, end, pos) : last instanceof OurusRejected ? `rejected ${last.reason}` : statusOf(last);
         if (shape === 'same') continue;
         const key = `moveSubtree, back: ${shape}`;
         if (dumping) found.dumped.push(`${key}\t${where}\t${draw(mid)}\t${draw(end)}`);

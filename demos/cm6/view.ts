@@ -1,10 +1,10 @@
-// Folds and the zoom, a CodeMirror host's side of them. The snapshot holds the
-// view (`OurusDoc.folded`, `OurusDoc.zoom`); CodeMirror draws it:
+// Folds and the zoom, a CodeMirror host's side of them. The field holds the ourus view
+// (`OurusView.folded`, `OurusView.zoom`); CodeMirror draws it:
 //
 // - a `foldService` answering from ourus's outline (`rowOwner`, `foldRange`), so CodeMirror's own
 //   gutter and keys fold ourus's nodes, a heading's section, a paragraph's list, a quote;
-// - CodeMirror's folds into the snapshot (a fold or unfold effect, by the row's node), and the
-//   snapshot's into CodeMirror after a transaction (only `zoomFolded`, each fold's range exactly:
+// - CodeMirror's folds into the view (a fold or unfold effect, by the row's node), and the
+//   view's into CodeMirror after a transaction (only `zoomFolded`, each fold's range exactly:
 //   a range CodeMirror mapped through a rewrite is replaced), the one sync the commands need;
 // - the zoom as two block-replace decorations around `zoomRange()`, atomic, a transaction filter
 //   keeping the selection in it, and refusing an edit of CodeMirror's own that `leavesZoom`;
@@ -13,25 +13,24 @@
 import { foldEffect, foldService, foldedRanges, unfoldEffect } from '@codemirror/language';
 import { Annotation, EditorSelection, EditorState, Prec, Transaction, type StateEffect, type StateEffectType, type StateField, type AnnotationType } from '@codemirror/state';
 import { Decoration, EditorView, keymap, showPanel, type DecorationSet, type Panel } from '@codemirror/view';
-import { executeCommand, leavesZoom, type OurusCommand, type OurusDoc, type OurusNode } from '../../src/index.ts';
+import { executeCommand, leavesZoom, type OurusCommand, type OurusDoc, type OurusNode, type OurusView, OurusSuccess } from '../../src/index.ts';
 
-/** Marks the transactions this module makes to bring CodeMirror's folds in line with the snapshot's. */
+/** Marks the transactions this module makes to bring CodeMirror's folds in line with the view's. */
 const syncing = Annotation.define<boolean>();
 
 interface Wiring {
-  /** The snapshot's field. */
-  readonly field: StateField<OurusDoc>;
-  /** Replaces the snapshot outright (a view command's result, a fold read from CodeMirror). */
-  readonly setDoc: StateEffectType<OurusDoc>;
-  /** The snapshot an ourus command planned, on the transaction that applies it. */
-  readonly planned: AnnotationType<OurusDoc>;
+  /** The ourus view's field. */
+  readonly field: StateField<OurusView>;
+  /** Replaces the view outright (a view command's result, a fold read from CodeMirror). */
+  readonly setView: StateEffectType<OurusView>;
+  /** The view an ourus command planned, on the transaction that applies it. */
+  readonly planned: AnnotationType<OurusView>;
 }
 
 /** The zoom root and its ancestors: their folds hide nothing while zoomed, and offer none. */
-function suppressed(doc: OurusDoc): Set<number> {
-  const ids = new Set<number>();
-  for (let p: OurusNode | null = doc.zoom === null ? null : (doc.node(doc.zoom) ?? null); p && p.kind !== 'root'; p = p.parent) ids.add(p.id);
-  return ids;
+function suppressed(view: OurusView): Set<number> {
+  const root = view.zoomRoot;
+  return new Set(root ? [root, ...root.ancestors()].filter((p) => p.kind !== 'root').map((p) => p.id) : []);
 }
 
 /**
@@ -39,7 +38,8 @@ function suppressed(doc: OurusDoc): Set<number> {
  * ending its text there (a text of several lines folds from its last), the one folded already where
  * two are, else the row's.
  */
-function nodeOfFold(doc: OurusDoc, range: { from: number; to: number }): OurusNode | null {
+function nodeOfFold(view: OurusView, range: { from: number; to: number }): OurusNode | null {
+  const doc = view.doc;
   const line = doc.lineAt(range.from).index;
   const row: OurusNode[] = [];
   for (let n: OurusNode | null = doc.rowOwner(line); n && n.startLine === line; n = n.children[0] ?? null) row.push(n);
@@ -49,45 +49,46 @@ function nodeOfFold(doc: OurusDoc, range: { from: number; to: number }): OurusNo
     const r = doc.foldRange(n);
     return r && r.from === range.from && r.to === range.to;
   });
-  return exact.find((n) => doc.folded.has(n.id)) ?? exact[0] ?? row[0] ?? null;
+  return exact.find((n) => view.folded.has(n.id)) ?? exact[0] ?? row[0] ?? null;
 }
 
-export function outlineView({ field, setDoc, planned }: Wiring) {
+export function outlineView({ field, setView, planned }: Wiring) {
   // ourus's folds, ahead of the Markdown language's (which folds headings by indentation)
   const service = Prec.highest(
     foldService.of((state, lineStart) => {
-      const doc = state.field(field);
+      const view = state.field(field);
+      const doc = view.doc;
       const line = doc.lineAt(lineStart);
       const node = lineStart > line.to ? null : doc.rowOwner(line.index);
-      if (!node || suppressed(doc).has(node.id)) return null;
+      if (!node || suppressed(view).has(node.id)) return null;
       return doc.foldRange(node);
     }),
   );
 
-  // CodeMirror's fold and unfold effects, from its gutter or keys, into the snapshot
+  // CodeMirror's fold and unfold effects, from its gutter or keys, into the view
   const fromEditor = EditorState.transactionExtender.of((tr) => {
-    // (a fold with text changed in the same transaction: the snapshot after it is the update's)
+    // (a fold with text changed in the same transaction: the view after it is the update's)
     if (tr.annotation(syncing) || tr.docChanged) return null;
     const folds = tr.effects.filter((e) => e.is(foldEffect) || e.is(unfoldEffect));
     if (!folds.length) return null;
-    let doc = tr.startState.field(field);
-    const folded = new Set(doc.folded);
+    const view = tr.startState.field(field);
+    const folded = new Set(view.folded);
     for (const e of folds) {
-      const node = nodeOfFold(doc, e.value as { from: number; to: number });
+      const node = nodeOfFold(view, e.value as { from: number; to: number });
       if (!node) continue;
       if (e.is(foldEffect)) folded.add(node.id);
       else folded.delete(node.id);
     }
-    doc = doc.withFolded(folded);
-    return { effects: setDoc.of(doc) };
+    return { effects: setView.of(view.withFolded(folded)) };
   });
 
-  // the snapshot's folds into CodeMirror, after every transaction that changed the snapshot
+  // the view's folds into CodeMirror, after every transaction that changed the view
   const toEditor = EditorView.updateListener.of((u) => {
     if (u.startState.field(field) === u.state.field(field) || u.transactions.some((tr) => tr.annotation(syncing))) return;
-    const doc = u.state.field(field);
+    const view = u.state.field(field);
+    const doc = view.doc;
     const want = new Map<string, { from: number; to: number }>();
-    for (const id of doc.zoomFolded) {
+    for (const id of view.zoomFolded) {
       const range = doc.foldRange(doc.node(id)!);
       if (range) want.set(`${range.from}:${range.to}`, range);
     }
@@ -118,17 +119,17 @@ export function outlineView({ field, setDoc, planned }: Wiring) {
   // the selection kept in the zoom; an edit of the user's through CodeMirror (typing, its commands,
   // a default ourus deferred to: a transaction with a user event) refused where it would leave the
   // zoom. Let through: an undo, a redo, ourus's own command (its result keeps the zoom already), and
-  // a change with no user event (a reload, a sync: nothing can refuse it, `doc.update` carries the
+  // a change with no user event (a reload, a sync: nothing can refuse it, `view.update` carries the
   // zoom or ends it)
   const confine = EditorState.transactionFilter.of((tr: Transaction) => {
-    const doc = tr.startState.field(field);
-    if (doc.zoom === null && !tr.effects.some((e) => e.is(setDoc))) return tr;
+    const view = tr.startState.field(field);
+    if (view.zoom === null && !tr.effects.some((e) => e.is(setView))) return tr;
     const user = tr.annotation(Transaction.userEvent);
-    if (doc.zoom !== null && tr.docChanged && user && !tr.annotation(planned) && !tr.isUserEvent('undo') && !tr.isUserEvent('redo')) {
+    if (view.zoom !== null && tr.docChanged && user && !tr.annotation(planned) && !tr.isUserEvent('undo') && !tr.isUserEvent('redo')) {
       const changes: { from: number; to: number; insert: string }[] = [];
       tr.changes.iterChanges((fromA, toA, _b, _e, inserted) => changes.push({ from: fromA, to: toA, insert: inserted.toString() }));
       const caret = tr.newSelection.main;
-      if (leavesZoom(doc, doc.update({ changes, caret: caret.empty ? caret.head : undefined }))) return [];
+      if (leavesZoom(view, view.doc.update({ changes, caret: caret.empty ? caret.head : undefined }))) return [];
     }
     if (!tr.selection || tr.docChanged) return tr;
     // into the zoom the transaction leaves (a view command's changes it: its selection is already the
@@ -141,33 +142,34 @@ export function outlineView({ field, setDoc, planned }: Wiring) {
     return [tr, { selection: EditorSelection.single(clamp(sel.anchor), clamp(sel.head)) }];
   });
 
-  /** A view command: its result's snapshot and selection, no text changed. */
-  const view = (command: OurusCommand) => (editor: EditorView): boolean => {
+  /** A view command: its result's view and selection, no text changed. */
+  const viewCommand = (command: OurusCommand) => (editor: EditorView): boolean => {
     const { anchor, head } = editor.state.selection.main;
     const result = executeCommand(editor.state.field(field), command, { anchor, head });
-    if (result.status !== 'applied') return true;
-    editor.dispatch({ effects: [setDoc.of(result.doc), EditorView.scrollIntoView(result.selection.head, { y: 'start' })], selection: result.selection });
+    if (!(result instanceof OurusSuccess)) return true;
+    editor.dispatch({ effects: [setView.of(result.view), EditorView.scrollIntoView(result.selection.head, { y: 'start' })], selection: result.selection });
     return true;
   };
   const keys = Prec.high(
     keymap.of([
-      { key: 'Mod-ArrowUp', run: view({ type: 'fold' }) },
-      { key: 'Mod-ArrowDown', run: view({ type: 'unfold' }) },
-      { key: 'Mod-.', run: view({ type: 'zoomIn' }) },
-      { key: 'Mod-,', run: view({ type: 'zoomOut' }) },
-      { key: 'Mod-Shift-,', run: view({ type: 'clearZoom' }) },
+      { key: 'Mod-ArrowUp', run: viewCommand({ type: 'fold' }) },
+      { key: 'Mod-ArrowDown', run: viewCommand({ type: 'unfold' }) },
+      { key: 'Mod-.', run: viewCommand({ type: 'zoomIn' }) },
+      { key: 'Mod-,', run: viewCommand({ type: 'zoomOut' }) },
+      { key: 'Mod-Shift-,', run: viewCommand({ type: 'clearZoom' }) },
     ]),
   );
 
   // the zoom root's ancestors, each a link zooming out to it, the document first
   const crumbs = showPanel.compute([field], (state) => {
-    const doc = state.field(field);
-    if (doc.zoom === null) return null;
+    const view = state.field(field);
+    const doc = view.doc;
+    const root = view.zoomRoot;
+    if (!root) return null;
     return (editor: EditorView): Panel => {
       const dom = document.createElement('nav');
       dom.className = 'ourus-breadcrumbs';
-      const path: OurusNode[] = [];
-      for (let p = doc.node(doc.zoom!) ?? null; p && p.kind !== 'root'; p = p.parent) path.unshift(p);
+      const path = [root, ...root.ancestors()].filter((p) => p.kind !== 'root').reverse();
       const link = (label: string, zoom: number | null): void => {
         const a = document.createElement('a');
         a.textContent = label;
@@ -177,7 +179,7 @@ export function outlineView({ field, setDoc, planned }: Wiring) {
         a.onmousedown = (e) => e.preventDefault();
         a.onclick = (e) => {
           e.preventDefault();
-          view(zoom === null ? { type: 'clearZoom' } : { type: 'zoomIn', nodes: [zoom] })(editor);
+          viewCommand(zoom === null ? { type: 'clearZoom' } : { type: 'zoomIn', nodes: [zoom] })(editor);
         };
         dom.append(a, ' › ');
       };

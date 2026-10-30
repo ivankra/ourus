@@ -6,25 +6,29 @@ import { isHeldSpacePlaceholder, isPlaceholder, type ChangeSpec, type Mark } fro
 import { OurusProse, checkBlockIds, type OurusNode, type OurusDoc } from '../doc/index.ts';
 import { OurusDraft } from './draft.ts';
 
-type Settled = { readonly doc: OurusDoc; readonly changes: readonly ChangeSpec[] };
+/** A step of settling: the document after it, and its changes from the step before's. */
+export type Settled = { readonly doc: OurusDoc; readonly changes: readonly ChangeSpec[] };
 
 /**
  * The placeholders off the caret's line settled: a held space's node written again without it (the
  * text escaped where it would read as markup); an empty item written again, which an empty item
  * alone needs no placeholder for, but right under its parent's text a blank line above it; any other
  * empty node gone, its children in its place. One that can't be written so goes as it is, the text
- * read without it, as it is saved. Null where none is off the caret's line.
+ * read without it, as it is saved: in steps, each on the one before's document (one, or, where not
+ * all settle at once, those that can't dropped and then the rest), so that a view is carried through
+ * each (`settlePlaceholders` in `commands/`). None where none is off the caret's line.
  */
-export function settlePlaceholders(doc: OurusDoc, caret: number): Settled | null {
+export function settleSteps(doc: OurusDoc, caret: number): readonly Settled[] {
   const line = doc.lineAt(caret);
   const abandoned = doc.marks.marks.filter((m) => isPlaceholder(m) && (m.from < line.from || m.from > line.to));
-  if (!abandoned.length) return null;
+  if (!abandoned.length) return [];
   const all = settled(doc, caret, abandoned);
-  if (all) return all;
-  // (each alone, those that can't be written dropped, the rest settled)
+  if (all) return [all];
+  // (each alone, those that can't be written dropped, the rest settled: two steps, each the one before's)
   const writable = abandoned.filter((m) => settled(doc, caret, [m]));
   const without = doc.update({ setMarks: doc.marks.marks.filter((m) => !abandoned.includes(m) || writable.includes(m)) });
-  return (writable.length ? settled(without, caret, without.marks.marks.filter((m) => writable.some((w) => w.from === m.from && w.kind === m.kind))) : null) ?? { doc: without, changes: [] };
+  const rest = writable.length ? settled(without, caret, without.marks.marks.filter((m) => writable.some((w) => w.from === m.from && w.kind === m.kind))) : null;
+  return [{ doc: without, changes: [] }, ...(rest ? [rest] : [])];
 }
 
 /** `marks` settled, or null where the outline can't be written so (a mark on no prose text's line too), or a block id would be lost. */

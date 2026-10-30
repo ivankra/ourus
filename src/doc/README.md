@@ -1,9 +1,9 @@
 # Doc
 
-A Markdown text read as an outline. `OurusDoc` is the snapshot a host keeps and commands take: the
-text, its placeholders, its parse, and the outline read from it. For each node it gives the node's
-text and that text's frame, and for each position, what is there. Editing a document is `writer/`'s
-job.
+A Markdown text read as an outline. `OurusDoc` is the snapshot of a text: the text, its
+placeholders, its parse, and the outline read from it. For each node it gives the node's text and
+that text's frame, and for each position, what is there. Editing a document is `writer/`'s job; what
+a reader sees of it, folded and zoomed, `view/`'s (`OurusView`, which commands take).
 
 Basic usage:
 
@@ -13,7 +13,7 @@ import { OurusDoc } from 'ourus';
 let doc = OurusDoc.parse(text, { config: { flavor: 'obsidian' }, marks });
 doc = doc.update({ changes, caret });       // after a host's edit: placeholders mapped, untouched nodes shared
 for (const node of doc.rootNode.children) console.log(node.kind, doc.textOf(node)?.body);
-const at = doc.locate(pos);                 // in a text, a frame, a marker, a prefix, a gap, ...
+const at = doc.locateRaw(pos);              // in a text, a frame, a marker, a prefix, a gap, ...
 ```
 
 ## API
@@ -36,7 +36,10 @@ const at = doc.locate(pos);                 // in a text, a frame, a marker, a p
     for a host's edit; or exactly `params.setMarks`, for the writer's or an undo. `params.caret`: on
     a host's edit, a placeholder is kept at the caret where the deletion would otherwise change the
     outline there. `params.identity`: the ids the writer assigned, keyed by where each node it wrote
-    starts.
+    starts. This snapshot where it is given nothing to do (no change, no placeholders to set, add or
+    drop, no `identity`): another snapshot is another document, its text, placeholders, config or
+    outline maybe changed, its ids too (a move of `- a⏎- a⏎`'s first item changes no character and
+    swaps the two ids).
 
   - `OurusDoc.isSameLineage(other: OurusDoc): boolean`<br>
     Whether `other` is a snapshot of the same document: the same `parse`'s, through any updates,
@@ -47,51 +50,15 @@ const at = doc.locate(pos);                 // in a text, a frame, a marker, a p
     The same document under other options (a host's setting changed). An option that says only how
     commands write (`indentUnit`, `markup`, ...) changes on the same snapshot, its outline and ids
     shared; `quotes` and `listParent` have the outline read again from the same parse, ids carried as
-    an update carries them; `flavor` parses the text anew, the folds and the zoom carried by line.
+    an update carries them; `flavor` parses the text anew, its ids anew.
 
-  - `OurusDoc.folded: ReadonlySet<number>`, `OurusDoc.zoom: number | null`, `get OurusDoc.zoomFolded: ReadonlySet<number>`<br>
-    The view's state, not the text's: the nodes whose children it hides, the node
-    it is zoomed into, and the folds in effect within the zoom (those of nodes strictly inside its
-    root; all of `folded` where not zoomed). An update carries them by id, a writer's edit as any: a
-    fold goes with its node, and opens where what it hides changed or it has nothing left to hide;
-    the zoom goes with its root, to its nearest ancestor left where the root went, and ends where a
-    node left its subtree.
-
-  - `OurusDoc.withFolded(ids: Iterable<number>): OurusDoc`, `OurusDoc.withZoom(id: number | null): OurusDoc`<br>
-    The same snapshot with other folds (an id with nothing to hide dropped), or another zoom (no fold
-    changed; throws for an id that is no node here, or the root).
-
-  - `OurusDoc.foldRange(node: OurusNode)`, `OurusDoc.zoomRange()`: `{ from, to } | null`<br>
-    What folding a node hides: from the end of its text to the end of its subtree's last line, the
-    blank lines after it shown; null where it doesn't fold. What the zoom shows: its root's lines,
-    its descendants' and its trailing gap (`coverEnd(node)`, the last of them); null where not zoomed.
-
-  - `OurusDoc.rowOwner(line: number): OurusNode | null`, `OurusDoc.isHidden(node: OurusNode): boolean`<br>
-    The node a row's fold is, the outermost starting on the line (`nodeAtLine` gives the innermost);
-    whether the view hides a node, under a fold of `zoomFolded` or outside the zoom.
-
-  - `OurusDoc.withViewOf(view: OurusDoc, changes?: ChangeSpec[]): OurusDoc`<br>
-    This snapshot with the folds and zoom of `view`, another snapshot of its lineage, carried onto it
-    by id through `changes` (`view`'s text to this one's; by default, the lines that differ), as an
-    update carries them. A second pane takes the snapshot one view made (a command's `doc`, its
-    `update`) rather than replaying the changes, whose replay gives the nodes the writer moved new
-    ids, their folds lost. An undo takes back the snapshot from before the step, its nodes, ids and
-    all: `like.withConfig(doc.config).withViewOf(doc)`, an undone move's node with its fold. Throws
-    for a snapshot of another lineage.
-
-  - `OurusDoc.zoomEscape(next: OurusDoc, removed?: boolean): string | null`<br>
-    Where `next`, a later snapshot of this lineage, leaves this one's zoom, or null where it keeps
-    it: the root keeps its id, parent and place; every node outside its subtree its id, parent, kind
-    and text, none made outside it, none inside leaving it; the text before the root's Markdown and
-    after its cover the same; the lists the root and its ancestors are items of the same items, and
-    as tight. `removed`: the root went whole, which only `deleteSubtree` and `cut` may do. The
-    commands check their results by it, and `leavesZoom` a host's edit.
-
-  An update carries the view by id: a fold stays where its node has something to hide and, but for
-  the zoom root's and its ancestors', where what it hides is the same nodes with the same texts (read
-  only for a fold a change comes near: what it hides, or right after it); else it opens. The zoom
-  stays where its root is there and none of its subtree left it; its root gone, it goes to the
-  nearest ancestor left; a node gone out of it, it ends.
+  - `OurusDoc.foldRange(node: OurusNode)`: `{ from, to } | null`, `OurusDoc.coverEnd(node)`, `OurusDoc.coverRange(node)`: `{ from, to }`, `OurusDoc.rowOwner(line: number): OurusNode | null`<br>
+    What folding a node would hide: from the end of its own lines to the end of its subtree's last
+    line, the blank lines after it shown; null where it doesn't fold (`OurusNode.foldable`). A
+    node's last line with its descendants' and the blank lines after them; what zooming into it
+    would show, its lines through that one. The node a row's fold is, the outermost starting on the
+    line (`nodeAtLine` gives the innermost). The outline's, whatever is folded: which folds are on
+    is a view's.
 
   - `OurusDoc.text: string`, `OurusDoc.marks: MarkSet`, `OurusDoc.mdTree: MdTree`, `OurusDoc.config: OurusConfig`, `OurusDoc.nextId: number`<br>
     The text; its placeholders (only those that still hold something); its parse; the config; the
@@ -126,34 +93,13 @@ const at = doc.locate(pos);                 // in a text, a frame, a marker, a p
     A node's text, read once per stored node. Null for a node without one: the root, a quote without
     a callout title, an item whose first line holds a quote or a list.
 
-  - `OurusDoc.locate(pos: number): Located`<br>
+  - `OurusDoc.locateRaw(pos: number): Located`<br>
     What is at `pos`, by zone: `text` (in a node's text, with the offset there), `frame` (a checkbox,
     `#`s, a fence, a block id ending the text, ...), `marker` (an item's indentation, marker or
     padding), `prefix` (a container's, like a quote's `>`), `blockIdLine` (a block-id line a text
     carries, or a blank line before one: which of them, `blank`, and the offset in it past its
-    indentation), `gap` (a blank line, with the node above it as its owner), `preamble`, or `none`.
-
-  - `OurusDoc.touchedSubtrees(sel: OurusSelection): readonly number[]`<br>
-    The subtrees a selection touches: the topmost nodes whose own lines it touches, in document
-    order, at whatever depths; a caret's node, the innermost where nodes share a line (`- - a`); a
-    blank line the gap of the node above it; a selection ending at a line's very start not touching
-    that line. What a key acts on. `[]` only where there is no node (the blank lines before the
-    first, an empty document).
-
-  - `OurusDoc.selectedSubtrees(sel: OurusSelection): readonly number[] | null`<br>
-    The roots of a subtree selection, a selection that is exactly their subtrees as whole lines: from
-    column 0 of the first's first line to the start of the line after the last's subtree, or its last
-    line's end, or anywhere in the blank lines after it; where nodes share those lines, the outermost
-    inside the zoom. Null for a caret, text, and a node's own text (but at the document's end, where
-    it is the node too). What a host draws as blocks selected whole.
-
-  - `OurusDoc.selectionOf(ids: readonly number[], direction?: 'down' | 'up'): OurusSelection`<br>
-    The subtrees of `ids` as whole lines, their closure (every node the span touches, whole): the
-    canonical subtree selection, the anchor at the top unless `up`. Throws for no ids, an unknown id,
-    the root, an id outside the zoom or one a fold hides.
-
-  - `OurusDoc.touchedNodes(sel)`, `OurusDoc.selectedNodes(sel)`<br>
-    The same two answers as nodes. A snapshot keeps its last selection's answers.
+    indentation), `gap` (a blank line, with the node above it as its owner, whatever is folded: the
+    view's `locate` gives the node the reader sees there), `preamble`, or `none`.
 
   - `OurusDoc.posOf(node: OurusNode, offset: number, assoc = 1): number`, `OurusDoc.offsetOf(node: OurusNode, pos: number): number`<br>
     Converts an offset in a node's text to a position in the document, and back. Where the document
@@ -239,6 +185,10 @@ const at = doc.locate(pos);                 // in a text, a frame, a marker, a p
     its last block-id line); its last line, counting its descendants and blank lines.
 
   - `OurusNode.parent`, `OurusNode.index`, `OurusNode.depth`, `get OurusNode.children`, `OurusNode.child(i)`, `get OurusNode.prev`, `get OurusNode.next`
+
+  - `OurusNode.ancestors()`, `OurusNode.isWithin(ancestor: OurusNode | number)`, `OurusNode.subtreeIds()`, `get OurusNode.foldable`<br>
+    Its ancestors, its parent outward; whether it is `ancestor` or a descendant of it; its
+    subtree's ids, its own included; whether it can fold, children on lines after its own.
 
   - `get OurusNode.lastDescendant`, `get OurusNode.preceding`, `get OurusNode.afterSubtree`<br>
     Its last descendant; the node before it in document order (its previous sibling's last
@@ -346,7 +296,8 @@ const at = doc.locate(pos);                 // in a text, a frame, a marker, a p
 Files:
 
 - `index.ts` (the API); `doc.ts` (`OurusDoc`); `node.ts` (`PersistentNode`, the node
-  as stored, and `OurusNode`, a snapshot's, with its position); `outline.ts` (reading the outline
+  as stored, and `OurusNode`, a snapshot's, with its position); `extent.ts` (what a fold of a node
+  would hide, a zoom into it show, the nodes a row starts); `outline.ts` (reading the outline
   from the parse, sharing nodes between snapshots, a block-id paragraph that names the block before
   it carried by that block); `text.ts` (`OurusProse`, `OurusAtom`, where a text starts and ends,
   `textStart` and `textEnd`, and a text's block ids); `block-ids.ts` (`OurusDoc.blockIds`, and
@@ -354,8 +305,7 @@ Files:
   command's changes reached, down to where the outline is the nodes it was).
 - `read.ts` (a node's text read from its lines, with its markup escapes left out, and the map
   between the text's offsets and the document's); `escapes.ts` (`markupEscapes` for reading,
-  `escapeParagraph` for writing); `locate.ts` (what is at a position); `select.ts` (what a
-  selection is of the outline: the subtrees it touches, the subtrees it is); `rules.ts` (which
+  `escapeParagraph` for writing); `locate.ts` (what is at a position); `rules.ts` (which
   node kinds hold which, `outlineChildren`); `placeholders.ts` (which placeholders still hold
   something); `copy.ts` (a range's Markdown without its containers' prefixes).
 

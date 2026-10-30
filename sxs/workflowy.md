@@ -5,7 +5,7 @@ version: "4.3.2610140850"
 url: "https://beta.workflowy.com/guide/embed/"
 model: "block"
 command: "node sxs/run.ts workflowy"
-elapsed_s: 203
+elapsed_s: 342
 workers: 4
 ---
 
@@ -15,9 +15,9 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 184 | [19](#caret-19) | [4](#whitespace-4) | [31](#disagree-31) |  |  | **238** |
+| original | 188 | [19](#caret-19) | [4](#whitespace-4) | [31](#disagree-31) |  |  | **242** |
 | adapted | 313 | [13](#adapted-caret-13) | [17](#adapted-whitespace-17) | [131](#adapted-disagree-131) |  |  | **474** |
-| **total** | **497 (34%)** | **32 (2.2%)** | **21 (1.5%)** | **162 (11%)** | **0 (0%)** | **[726](#skipped-726) (50%)** | **1441** |
+| **total** | **501 (35%)** | **32 (2.2%)** | **21 (1.5%)** | **162 (11%)** | **0 (0%)** | **[728](#skipped-728) (50%)** | **1447** |
 
 Per-file:
 
@@ -34,12 +34,12 @@ Per-file:
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  | 5 |  |  |  | 7 | **12** | 5 |  |
 | [enter.md](../spec/enter.md) | 49 | 1 | 3 | 8 |  | 37 | **98** | 26 | 35 |
 | [fences.md](../spec/fences.md) | 7 |  | 4 | 2 |  | 57 | **70** |  | 13 |
-| [fold.md](../spec/fold.md) | 11 | 1 |  | 2 |  | 5 | **19** | 13 | 1 |
+| [fold.md](../spec/fold.md) | 13 | 1 |  | 2 |  | 6 | **22** | 15 | 1 |
 | [gaps.md](../spec/gaps.md) | 14 |  |  |  |  | 5 | **19** |  | 14 |
 | [indent.md](../spec/indent.md) | 29 |  |  | 1 |  | 25 | **55** | 19 | 11 |
 | [lists.md](../spec/lists.md) | 5 |  |  |  |  | 11 | **16** |  | 5 |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 28 |  |  | 2 |  | 14 | **44** | 15 | 15 |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 27 |  |  | 1 |  | 18 | **46** | 16 | 12 |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 29 |  |  | 2 |  | 14 | **45** | 16 | 15 |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 28 |  |  | 1 |  | 18 | **47** | 17 | 12 |
 | [move-subtree.md](../spec/move-subtree.md) | 10 | 2 |  | 1 |  | 11 | **24** | 8 | 5 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 34 | 2 | 1 | 4 |  | 26 | **67** | 13 | 28 |
 | [outdent.md](../spec/outdent.md) | 16 |  |  | 2 |  | 24 | **42** | 4 | 14 |
@@ -53,7 +53,7 @@ Per-file:
 | [placeholders.md](../spec/placeholders.md) | 10 |  | 4 | 1 |  | 5 | **20** | 5 | 10 |
 | [quirks.md](../spec/quirks.md) | 3 |  |  |  |  | 4 | **7** |  | 3 |
 | [quotes.md](../spec/quotes.md) | 8 |  |  | 10 |  | 125 | **143** |  | 18 |
-| [regressions.md](../spec/regressions.md) | 36 | 5 | 7 | 28 |  | 122 | **198** | 16 | 60 |
+| [regressions.md](../spec/regressions.md) | 36 | 5 | 7 | 28 |  | 123 | **199** | 16 | 60 |
 | [scenarios.md](../spec/scenarios.md) | 17 |  |  | 3 |  | 9 | **29** | 9 | 11 |
 | [select.md](../spec/select.md) | 12 | 6 |  |  |  | 5 | **23** | 9 | 9 |
 | [shift-enter.md](../spec/shift-enter.md) |  |  |  |  |  | 36 | **36** |  |  |
@@ -62,7 +62,7 @@ Per-file:
 | [typing.md](../spec/typing.md) |  |  |  |  |  | 3 | **3** |  |  |
 | [undo.md](../spec/undo.md) | 4 |  |  |  |  | 1 | **5** | 3 | 1 |
 | [zoom.md](../spec/zoom.md) | 6 | 1 |  | 1 |  | 6 | **14** | 8 |  |
-| **total** | **497 (34%)** | **32 (2.2%)** | **21 (1.5%)** | **162 (11%)** | **0 (0%)** | **729 (51%)** | **1441** | **238 (17%)** | **474 (33%)** |
+| **total** | **501 (35%)** | **32 (2.2%)** | **21 (1.5%)** | **162 (11%)** | **0 (0%)** | **731 (51%)** | **1447** | **242 (17%)** | **474 (33%)** |
 
 ## Disagree (31)
 
@@ -13178,7 +13178,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (729)
+## Skipped (731)
 
 | example | why |
 | --- | --- |
@@ -13420,6 +13420,7 @@ Original:
 | [Fold10](../spec/fold.md#fold10) | action fold ① |
 | [Fold13](../spec/fold.md#fold13) | its view, on an adapted start |
 | [Fold15b](../spec/fold.md#fold15b) | changes only what blocks can't show |
+| [Fold20](../spec/fold.md#fold20) | quote |
 | **gaps.md** | |
 | [Gap15](../spec/gaps.md#gap15) | caret on a blank line |
 | [Gap16](../spec/gaps.md#gap16) | caret on a blank line |
@@ -13861,6 +13862,7 @@ Original:
 | [Regression195](../spec/regressions.md#regression195) | quote |
 | [Regression196](../spec/regressions.md#regression196) | quote |
 | [Regression198](../spec/regressions.md#regression198) | quote |
+| [Regression199](../spec/regressions.md#regression199) | quote |
 | **scenarios.md** | |
 | [Scenario6](../spec/scenarios.md#scenario6) | tag free-form |
 | [Scenario8b](../spec/scenarios.md#scenario8b) | no text focus after moveSubtree ③ |

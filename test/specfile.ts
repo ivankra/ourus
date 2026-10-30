@@ -31,7 +31,7 @@ export type Clipboard = Readonly<Partial<Record<ClipboardType, string>>>;
 export interface State {
   buffer?: string;
   clipboard?: Clipboard;
-  /** `applied`, `deferredToHost`, or `rejected <reason>`. */
+  /** `success`, `deferredToHost`, or `rejected <reason>`. */
   result?: string;
   /** How the buffer reads (`drawOutline`), where a case's point is a reading its bytes don't show. */
   outline?: string;
@@ -346,7 +346,7 @@ function readConfig(text: string, first: number, fail: (line: number, message: s
     }
     if (key === 'result') {
       if (where !== 'step') fail(at, "a result is a step's: it goes in the `yaml` block after the step's actions");
-      if (!/^(?:applied|deferredToHost|rejected [a-z0-9-]+)$/.test(value)) fail(at, `a result is applied, deferredToHost or "rejected <reason>", not "${value}"`);
+      if (!/^(?:success|deferredToHost|rejected [a-z0-9-]+)$/.test(value)) fail(at, `a result is success, deferredToHost or "rejected <reason>", not "${value}"`);
       read.result = value;
       continue;
     }

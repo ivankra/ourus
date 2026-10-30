@@ -25,16 +25,24 @@
 //   node test/view-exhaustive.ts                 # the report, against the baseline
 //   VIEW_UPDATE=1 node test/view-exhaustive.ts   # the same, then its counts as the new baseline
 //   VIEW_EXAMPLES=8 node test/view-exhaustive.ts # examples per group (default 3)
+//   VIEW_BUFFERS=40 node test/view-exhaustive.ts # the first 40 start buffers alone (a timing, not a check: the baseline is the corpus's)
+//   VIEW_WORKERS=1 node test/view-exhaustive.ts  # workers (default: one per core): the buffers dealt among them, the report the same
+//
+// A buffer that takes over a second is named on stderr (`slow:`): the corpus's are small, and one that
+// takes long is a command looping, or close to it.
 
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
+import { availableParallelism } from 'node:os';
 import { join, resolve } from 'node:path';
-import { executeCommand, leavesZoom, type OurusCommand } from '../src/commands/index.ts';
-import { visibleSelection } from '../src/commands/view.ts';
+import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
+import { executeCommand, leavesZoom, type OurusCommand, OurusDeferred, OurusRejected, OurusSuccess } from '../src/commands/index.ts';
 import type { OurusDoc, OurusNode } from '../src/doc/index.ts';
+import { OurusView } from '../src/view/index.ts';
 import type { ChangeSpec } from '../src/text/index.ts';
 import { docOf, drawDoc, readDrawing } from './drawing.ts';
 import { readSpecFile, specConfig, specFiles } from './specfile.ts';
+import { statusOf } from './drawing.ts';
 
 const COMMANDS: readonly OurusCommand[] = [
   { type: 'enter' },
@@ -56,7 +64,10 @@ const COMMANDS: readonly OurusCommand[] = [
 const WITH_NODES = ['indent', 'outdent', 'moveSubtreeUp', 'moveSubtreeDown', 'duplicateSubtree', 'deleteSubtree', 'cut'] as const;
 
 const examples = Number(process.env.VIEW_EXAMPLES ?? 3);
-const groups = new Map<string, { runs: number; examples: string[] }>();
+/** The start buffers played, the first so many (`VIEW_BUFFERS`); all by default. */
+const limit = Number(process.env.VIEW_BUFFERS ?? Infinity);
+/** What the buffer being played failed, by group: how many runs, and the first examples. */
+let groups = new Map<string, { runs: number; examples: string[] }>();
 const fail = (group: string, example: () => string): void => {
   const g = groups.get(group) ?? { runs: 0, examples: [] };
   g.runs++;
@@ -106,9 +117,10 @@ function outsideShape(doc: OurusDoc, root: OurusNode): string {
   return out.join('\n');
 }
 
-/** What `next` changed outside `doc`'s zoom root (kept, not removed), or null. */
-function outsideChange(doc: OurusDoc, next: OurusDoc): string | null {
-  const root = doc.node(doc.zoom!)!;
+/** What `next` changed outside `view`'s zoom root (kept, not removed), or null. */
+function outsideChange(view: OurusView, next: OurusDoc): string | null {
+  const doc = view.doc;
+  const root = view.zoomRoot!;
   const now = next.node(root.id)!;
   if (doc.text.slice(0, doc.markdownStart(root)) !== next.text.slice(0, next.markdownStart(now))) return 'the text before the root';
   if (doc.text.slice(doc.mdTree.ends[doc.coverEnd(root)]!) !== next.text.slice(next.mdTree.ends[next.coverEnd(now)]!)) return 'the text after the cover';
@@ -133,7 +145,8 @@ function hostDefault(doc: OurusDoc, type: OurusCommand['type'], pos: number): { 
   }
 }
 
-function play(doc: OurusDoc, view: string): number {
+function play(viewed: OurusView, view: string): number {
+  const doc = viewed.doc;
   let runs = 0;
   const positions = new Set<number>();
   for (let i = 0; i < doc.lineCount; i++) {
@@ -143,102 +156,169 @@ function play(doc: OurusDoc, view: string): number {
   }
   for (const pos of positions) {
     const selection = { anchor: pos, head: pos };
-    if (visibleSelection(doc, selection) !== selection) continue;
+    if (viewed.visibleSelection(selection) !== selection) continue;
     for (const command of COMMANDS) {
       runs++;
-      const where = (): string => `${view}, ${command.type} at ${JSON.stringify(drawDoc(doc, selection))}`;
+      const where = (): string => `${view}, ${command.type} at ${JSON.stringify(drawDoc(viewed, selection))}`;
       let result;
       try {
-        result = executeCommand(doc, command, selection);
+        result = executeCommand(viewed, command, selection);
       } catch (e) {
         fail('exception', () => `${where()}: ${(e as Error).message}`);
         continue;
       }
-      if (result.status === 'rejected' && result.reason === 'write-failed') fail('write-failed', where);
-      if (result.status === 'deferredToHost' && doc.zoom !== null) {
+      if (result instanceof OurusRejected && result.reason === 'write-failed') fail('write-failed', where);
+      if (result instanceof OurusDeferred && viewed.zoom !== null) {
         const host = hostDefault(doc, command.type, pos);
-        if (host && leavesZoom(doc, doc.update({ changes: [host.change], caret: host.caret }))) fail(`deferred ${command.type}`, where);
+        if (host && leavesZoom(viewed, doc.update({ changes: [host.change], caret: host.caret }))) fail(`deferred ${command.type}`, where);
       }
-      if (result.status !== 'applied') continue;
-      const next = result.doc;
-      if (visibleSelection(next, result.selection) !== result.selection) fail('hidden', () => `${where()} → ${JSON.stringify(drawDoc(next, result.selection))}`);
-      if ([...next.folded].some((id) => !next.node(id) || !next.foldRange(next.node(id)!))) fail('folded', where);
-      if (doc.zoom !== null && result.changes.length && next.node(doc.zoom)) {
-        const changed = outsideChange(doc, next);
-        if (changed) fail('escape', () => `${where()} → ${JSON.stringify(drawDoc(next, result.selection))}: ${changed}`);
+      if (!(result instanceof OurusSuccess)) continue;
+      const nextView = result.view;
+      const next = nextView.doc;
+      if (nextView.visibleSelection(result.selection) !== result.selection) fail('hidden', () => `${where()} → ${JSON.stringify(drawDoc(nextView, result.selection))}`);
+      if ([...nextView.folded].some((id) => !next.node(id) || !next.foldRange(next.node(id)!))) fail('folded', where);
+      if (viewed.zoom !== null && result.changes.length && next.node(viewed.zoom)) {
+        const changed = outsideChange(viewed, next);
+        if (changed) fail('escape', () => `${where()} → ${JSON.stringify(drawDoc(nextView, result.selection))}: ${changed}`);
       }
     }
   }
-  if (doc.zoom !== null) runs += confined(doc, view);
+  if (viewed.zoom !== null) runs += confined(viewed, view);
   return runs;
 }
 
 /** Zoomed: the editing commands refuse a node outside the zoom; zoom in and fold take one, as a view's. */
-function confined(doc: OurusDoc, view: string): number {
+function confined(viewed: OurusView, view: string): number {
+  const doc = viewed.doc;
   let runs = 0;
-  const root = doc.node(doc.zoom!)!;
+  const root = viewed.zoomRoot!;
   const caret = doc.textStart(root.startLine);
   const selection = { anchor: caret, head: caret };
   for (const n of nodes(doc).filter((m) => !inside(m, root))) {
     for (const type of WITH_NODES) {
       runs++;
-      const result = executeCommand(doc, { type, nodes: [n.id] }, selection);
-      if (result.status !== 'rejected' || result.reason !== 'outside-zoom') fail('confined', () => `${view}, ${type} of ${n.kind} ${n.id}: ${result.status}`);
+      const result = executeCommand(viewed, { type, nodes: [n.id] }, selection);
+      if (!(result instanceof OurusRejected) || result.reason !== 'outside-zoom') fail('confined', () => `${view}, ${type} of ${n.kind} ${n.id}: ${statusOf(result)}`);
     }
     for (const command of [{ type: 'zoomIn', nodes: [n.id] }, ...(doc.foldRange(n) ? [{ type: 'fold', nodes: [n.id] }] : [])] as OurusCommand[]) {
       runs++;
-      const result = executeCommand(doc, command, selection);
+      const result = executeCommand(viewed, command, selection);
       // (an ancestor of the root: its fold suppressed while zoomed, left alone)
-      const folds = inside(root, n) ? doc.folded.has(n.id) : true;
-      const ok = result.status === 'applied' && result.doc.text === doc.text && !result.changes.length && (command.type === 'zoomIn' ? result.doc.zoom === n.id : result.doc.folded.has(n.id) === folds);
-      if (!ok) fail('confined', () => `${view}, ${command.type} at ${n.kind} ${n.id}: ${result.status}`);
+      const folds = inside(root, n) ? viewed.folded.has(n.id) : true;
+      const ok = result instanceof OurusSuccess && result.view.doc.text === doc.text && !result.changes.length && (command.type === 'zoomIn' ? result.view.zoom === n.id : result.view.folded.has(n.id) === folds);
+      if (!ok) fail('confined', () => `${view}, ${command.type} at ${n.kind} ${n.id}: ${statusOf(result)}`);
     }
   }
   return runs;
 }
 
-const seen = new Set<string>();
-let runs = 0;
-let buffers = 0;
-for (const file of specFiles()) {
-  for (const t of readSpecFile(file)) {
-    const start = readDrawing(t.initial.buffer);
-    const config = { flavor: 'gfm' as const, ...specConfig(t.options) };
-    const key = JSON.stringify([start.text, start.placeholders, config]);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    buffers++;
-    const doc = docOf(start.text, start.placeholders, config);
-    const foldable = nodes(doc).filter((n) => doc.foldRange(n)).map((n) => n.id);
-    for (const n of nodes(doc)) {
-      if (doc.foldRange(n)) runs += play(doc.withFolded([n.id]), `${t.name}, ${n.kind} ${n.id} folded`);
-      runs += play(doc.withZoom(n.id), `${t.name}, zoomed into ${n.kind} ${n.id}`);
-      if (foldable.length) runs += play(doc.withFolded(foldable).withZoom(n.id), `${t.name}, zoomed into ${n.kind} ${n.id}, every node folded`);
-    }
-  }
+/** A distinct start buffer of the spec: its test's name, text, placeholders and config. */
+interface Start {
+  readonly name: string;
+  readonly text: string;
+  readonly placeholders: readonly number[];
+  readonly config: Record<string, unknown>;
 }
 
-const here = resolve(import.meta.dirname, '..');
-const corpus = createHash('sha256').update([...seen].join('\n')).digest('hex').slice(0, 16);
-const baselineFile = join(here, 'test/view-exhaustive.baseline.json');
-const baseline: { corpus: string; groups: Record<string, number> } | null = (() => {
-  try {
-    return JSON.parse(readFileSync(baselineFile, 'utf8'));
-  } catch {
-    return null;
+/** What playing one buffer gives: its runs, and its failures by group, the first examples each. */
+type Played = { readonly runs: number; readonly groups: [string, { runs: number; examples: string[] }][] };
+
+/** Every view of `start` played: each node that folds folded alone, each node the zoom root, alone and with every node folded. */
+function playStart(start: Start): Played {
+  groups = new Map();
+  let runs = 0;
+  const doc = docOf(start.text, start.placeholders, start.config);
+  const foldable = nodes(doc).filter((n) => doc.foldRange(n)).map((n) => n.id);
+  for (const n of nodes(doc)) {
+    if (doc.foldRange(n)) runs += play(OurusView.of(doc).withFolded([n.id]), `${start.name}, ${n.kind} ${n.id} folded`);
+    runs += play(OurusView.of(doc).withZoom(n.id), `${start.name}, zoomed into ${n.kind} ${n.id}`);
+    if (foldable.length) runs += play(OurusView.of(doc).withFolded(foldable).withZoom(n.id), `${start.name}, zoomed into ${n.kind} ${n.id}, every node folded`);
   }
-})();
-console.log(`${buffers} buffers, ${runs} runs`);
-const rose: string[] = [];
-for (const [key, group] of [...groups].sort()) {
-  const before = baseline?.corpus === corpus ? (baseline.groups[key] ?? 0) : null;
-  console.log(`${String(group.runs).padStart(6)} runs  ${key}${before === null ? '' : ` (baseline ${before})`}`);
-  for (const e of group.examples) console.log(`    ${e}`);
-  if (before !== null && group.runs > before) rose.push(`${key} ${before} → ${group.runs}`);
-  if (key === 'write-failed' || key === 'exception') rose.push(`${key}: always a failure`);
+  return { runs, groups: [...groups] };
 }
-if (process.env.VIEW_UPDATE) writeFileSync(baselineFile, JSON.stringify({ corpus, groups: Object.fromEntries([...groups].map(([k, g]) => [k, g.runs])) }, null, 2) + '\n');
-if (rose.length) {
-  console.log(`\nmore than the baseline: ${rose.join('; ')}`);
-  process.exitCode = 1;
+
+// a worker plays the buffers it is dealt, by index, and gives back what each gave
+if (!isMainThread) {
+  const { starts, share } = workerData as { starts: Start[]; share: number[] };
+  parentPort!.postMessage(
+    share.map((k) => {
+      const t0 = performance.now();
+      const played = playStart(starts[k]!);
+      // (a buffer that takes long is one to look at: the corpus's are small)
+      const ms = performance.now() - t0;
+      if (ms > 1000) console.error(`slow: ${starts[k]!.name}, ${Math.round(ms)} ms`);
+      return played;
+    }),
+  );
+} else {
+  const seen = new Set<string>();
+  const starts: Start[] = [];
+  for (const file of specFiles()) {
+    for (const t of readSpecFile(file)) {
+      const start = readDrawing(t.initial.buffer);
+      const config = { flavor: 'gfm' as const, ...specConfig(t.options) };
+      const key = JSON.stringify([start.text, start.placeholders, config]);
+      if (seen.has(key) || starts.length >= limit) continue;
+      seen.add(key);
+      starts.push({ name: t.name, text: start.text, placeholders: start.placeholders, config });
+    }
+  }
+  // (the buffers dealt round, so each worker has a share of the long ones; what each gave put back
+  // in the corpus's order, so the examples are the first ones whatever the workers)
+  const count = Math.max(1, Math.min(Number(process.env.VIEW_WORKERS ?? availableParallelism()), starts.length));
+  const shares = Array.from({ length: count }, (_, w) => starts.map((_, k) => k).filter((k) => k % count === w));
+  const played: Played[] = new Array(starts.length);
+  await Promise.all(
+    shares.map(
+      (share) =>
+        new Promise<void>((done, failed) => {
+          const worker = new Worker(new URL(import.meta.url), { workerData: { starts, share } });
+          worker.once('message', (results: Played[]) => {
+            results.forEach((r, i) => (played[share[i]!] = r));
+            done();
+          });
+          worker.once('error', failed);
+        }),
+    ),
+  );
+  groups = new Map();
+  let runs = 0;
+  for (const p of played) {
+    runs += p.runs;
+    for (const [key, g] of p.groups) {
+      const all = groups.get(key) ?? { runs: 0, examples: [] };
+      all.runs += g.runs;
+      all.examples.push(...g.examples.slice(0, examples - all.examples.length));
+      groups.set(key, all);
+    }
+  }
+  report([...seen], starts.length, runs);
+}
+
+/** The report, the groups against the baseline: a run fails where a group has more than it. */
+function report(seen: readonly string[], buffers: number, runs: number): void {
+  const here = resolve(import.meta.dirname, '..');
+  const corpus = createHash('sha256').update(seen.join('\n')).digest('hex').slice(0, 16);
+  const baselineFile = join(here, 'test/view-exhaustive.baseline.json');
+  const baseline: { corpus: string; groups: Record<string, number> } | null = (() => {
+    try {
+      return JSON.parse(readFileSync(baselineFile, 'utf8'));
+    } catch {
+      return null;
+    }
+  })();
+  console.log(`${buffers} buffers, ${runs} runs`);
+  const rose: string[] = [];
+  for (const [key, group] of [...groups].sort()) {
+    const before = baseline?.corpus === corpus ? (baseline.groups[key] ?? 0) : null;
+    console.log(`${String(group.runs).padStart(6)} runs  ${key}${before === null ? '' : ` (baseline ${before})`}`);
+    for (const e of group.examples) console.log(`    ${e}`);
+    if (before !== null && group.runs > before) rose.push(`${key} ${before} → ${group.runs}`);
+    if (key === 'write-failed' || key === 'exception') rose.push(`${key}: always a failure`);
+  }
+  if (process.env.VIEW_UPDATE) writeFileSync(baselineFile, JSON.stringify({ corpus, groups: Object.fromEntries([...groups].map(([k, g]) => [k, g.runs])) }, null, 2) + '\n');
+  if (rose.length) {
+    console.log(`\nmore than the baseline: ${rose.join('; ')}`);
+    process.exitCode = 1;
+  }
 }

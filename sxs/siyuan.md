@@ -5,7 +5,7 @@ version: "3.8.6"
 url: "http://127.0.0.1:6816/stage/build/desktop/"
 model: "block"
 command: "node sxs/run.ts siyuan"
-elapsed_s: 288
+elapsed_s: 586
 workers: 4
 ---
 
@@ -15,9 +15,9 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 262 | [28](#caret-28) | [22](#whitespace-22) | [112](#disagree-112) |  |  | **424** |
+| original | 266 | [28](#caret-28) | [22](#whitespace-22) | [112](#disagree-112) |  |  | **428** |
 | adapted | 210 | [14](#adapted-caret-14) | [30](#adapted-whitespace-30) | [108](#adapted-disagree-108) | [1](#adapted-error-1) |  | **363** |
-| **total** | **472 (33%)** | **42 (2.9%)** | **52 (3.6%)** | **220 (15%)** | **1 (0.069%)** | **[653](#skipped-653) (45%)** | **1441** |
+| **total** | **476 (33%)** | **42 (2.9%)** | **52 (3.6%)** | **220 (15%)** | **1 (0.069%)** | **[655](#skipped-655) (45%)** | **1447** |
 
 Per-file:
 
@@ -34,12 +34,12 @@ Per-file:
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) | 2 |  |  | 2 |  | 8 | **12** | 4 |  |
 | [enter.md](../spec/enter.md) | 43 | 3 | 11 | 9 |  | 32 | **98** | 24 | 42 |
 | [fences.md](../spec/fences.md) | 12 | 1 | 1 | 2 |  | 54 | **70** |  | 16 |
-| [fold.md](../spec/fold.md) | 7 |  |  | 7 |  | 5 | **19** | 12 | 2 |
+| [fold.md](../spec/fold.md) | 9 |  |  | 7 |  | 6 | **22** | 14 | 2 |
 | [gaps.md](../spec/gaps.md) | 11 |  |  | 2 |  | 6 | **19** | 9 | 4 |
 | [indent.md](../spec/indent.md) | 20 |  | 1 | 11 |  | 23 | **55** | 25 | 7 |
 | [lists.md](../spec/lists.md) | 10 |  |  |  |  | 6 | **16** | 3 | 7 |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 30 |  |  | 7 |  | 7 | **44** | 30 | 7 |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 28 |  |  | 8 |  | 10 | **46** | 27 | 9 |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 31 |  |  | 7 |  | 7 | **45** | 31 | 7 |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 29 |  |  | 8 |  | 10 | **47** | 28 | 9 |
 | [move-subtree.md](../spec/move-subtree.md) |  | 8 |  | 6 |  | 10 | **24** | 10 | 4 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 46 | 1 | 1 | 7 |  | 12 | **67** | 30 | 25 |
 | [outdent.md](../spec/outdent.md) | 17 | 2 |  | 5 |  | 18 | **42** | 19 | 5 |
@@ -53,7 +53,7 @@ Per-file:
 | [placeholders.md](../spec/placeholders.md) | 11 |  | 5 | 2 |  | 2 | **20** | 11 | 7 |
 | [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |  |  |
 | [quotes.md](../spec/quotes.md) | 12 |  |  | 10 |  | 121 | **143** |  | 22 |
-| [regressions.md](../spec/regressions.md) | 31 | 2 | 3 | 31 | 1 | 130 | **198** | 21 | 47 |
+| [regressions.md](../spec/regressions.md) | 31 | 2 | 3 | 31 | 1 | 131 | **199** | 21 | 47 |
 | [scenarios.md](../spec/scenarios.md) | 15 | 1 |  | 10 |  | 3 | **29** | 17 | 9 |
 | [select.md](../spec/select.md) | 10 | 7 |  |  |  | 6 | **23** | 10 | 7 |
 | [shift-enter.md](../spec/shift-enter.md) | 15 |  | 10 | 4 |  | 7 | **36** | 13 | 16 |
@@ -62,7 +62,7 @@ Per-file:
 | [typing.md](../spec/typing.md) | 1 |  |  | 1 |  | 1 | **3** | 1 | 1 |
 | [undo.md](../spec/undo.md) | 4 |  |  |  |  | 1 | **5** | 3 | 1 |
 | [zoom.md](../spec/zoom.md) |  |  |  |  |  | 14 | **14** |  |  |
-| **total** | **472 (33%)** | **42 (2.9%)** | **52 (3.6%)** | **220 (15%)** | **1 (0.069%)** | **654 (45%)** | **1441** | **424 (29%)** | **363 (25%)** |
+| **total** | **476 (33%)** | **42 (2.9%)** | **52 (3.6%)** | **220 (15%)** | **1 (0.069%)** | **656 (45%)** | **1447** | **428 (30%)** | **363 (25%)** |
 
 ## Disagree (112)
 
@@ -17157,7 +17157,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (654)
+## Skipped (656)
 
 | example | why |
 | --- | --- |
@@ -17387,6 +17387,7 @@ Original:
 | [Fold10](../spec/fold.md#fold10) | action fold ① |
 | [Fold11](../spec/fold.md#fold11) | action toggleFold |
 | [Fold13](../spec/fold.md#fold13) | a fold on a free block, its section out of the editor |
+| [Fold20](../spec/fold.md#fold20) | quote |
 | **gaps.md** | |
 | [Gap14](../spec/gaps.md#gap14) | block's text ending in a line break |
 | [Gap15](../spec/gaps.md#gap15) | caret on a blank line |
@@ -17796,6 +17797,7 @@ Original:
 | [Regression195](../spec/regressions.md#regression195) | quote |
 | [Regression196](../spec/regressions.md#regression196) | action deleteSubtree |
 | [Regression198](../spec/regressions.md#regression198) | quote |
+| [Regression199](../spec/regressions.md#regression199) | quote |
 | **scenarios.md** | |
 | [Scenario8d](../spec/scenarios.md#scenario8d) | action drag ② |
 | [Scenario10](../spec/scenarios.md#scenario10) | action deleteSubtree |

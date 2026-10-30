@@ -10,46 +10,50 @@ keys pressed between them.
 Basic usage:
 
 ```ts
-import { OurusDoc, executeCommand, settlePlaceholders } from 'ourus';
+import { OurusDoc, OurusView, OurusDeferred, OurusRejected, executeCommand, settlePlaceholders } from 'ourus';
 
-let doc = OurusDoc.parse(text, { config: { flavor: 'obsidian' } });
-const result = executeCommand(doc, { type: 'indent' }, { anchor, head });
-if (result.status === 'applied') {
-  view.dispatch({ changes: result.changes, selection: result.selection });   // CM6 takes them as they are
-  doc = result.doc;
-} else if (result.status === 'rejected') {
+let ourus = OurusView.of(OurusDoc.parse(text, { config: { flavor: 'obsidian' } }));
+const result = executeCommand(ourus, { type: 'indent' }, { anchor, head });
+if (result instanceof OurusDeferred) {
+  // let the editor do its default
+} else if (result instanceof OurusRejected) {
   status.textContent = result.reason;      // swallow the key, say why
-}                                          // 'deferredToHost': let the editor do its default
+} else {
+  view.dispatch({ changes: result.changes, selection: result.selection });   // CM6 takes them as they are
+  ourus = result.view;                     // its text: result.view.doc
+}
 
-const settled = settlePlaceholders(doc, caret);   // after the caret moves
-if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
+const settled = settlePlaceholders(ourus, caret);   // after the caret moves
+if (settled) { view.dispatch({ changes: settled.changes }); ourus = settled.view; }
 ```
 
 ## API
 
-- **`executeCommand(doc: OurusDoc, command: OurusCommand, selection: OurusSelection): OurusCommandResult`**<br>
+- **`executeCommand(view: OurusView, command: OurusCommand, selection: OurusSelection): OurusResult`**<br>
   Runs a command at the selection. Where ourus doesn't handle a case yet, a key the host has a
   default for is left to the host (`deferredToHost`), and a structural command is refused as
-  `unsupported`. Every command runs within the snapshot's view (`OurusDoc.folded`, `OurusDoc.zoom`):
+  `unsupported`. An applied result carries the view after (`view`: the document after, the folds
+  and zoom carried onto it, at each step of the command as its document was updated). Every command
+  runs within the view's folds and zoom (`OurusView.folded`, `OurusView.zoom`):
   its result's selection is out of what the view hides (a caret in a fold's hidden lines at the
   fold's start); a fold whose hidden nodes it changed opens; zoomed, a command whose selection or
   `nodes` are outside the zoom root's subtree, whose result would change, make or move a node
   outside it, or that would defer to the host at the root's edges (its markup, its text's start for
   Backspace, its subtree's end for Delete), is refused (`outside-zoom`).
 
-- **`leavesZoom(doc: OurusDoc, next: OurusDoc): boolean`**<br>
+- **`leavesZoom(view: OurusView, next: OurusDoc): boolean`**<br>
   For a host's own edit (a deferred command's default, typing, an editor's own commands): whether
-  `next`, the snapshot the host would commit (`doc.update({ changes, ... })` with the caret and marks
-  it will give), leaves `doc`'s zoom; the host refuses the edit where it does, before committing.
+  `next`, the snapshot the host would commit (`view.doc.update({ changes, ... })` with the caret and marks
+  it will give), leaves `view`'s zoom; the host refuses the edit where it does, before committing.
   The same invariant the commands keep; the zoom root removed whole is accepted only as
   `deleteSubtree` of it writes it. False where not zoomed. An edit that can't be refused (an undo,
-  a sync, another view's) goes through `doc.update` or `withViewOf`, which end the zoom only where its
+  a sync, another view's) goes through `view.update` or `withDoc`, which end the zoom only where its
   root's subtree lost a node or its root went (to its nearest ancestor left).
 
 - **`OurusSelection`** is `{ anchor, head }`, as in CM6's `selection.main` (defined in `src/text`;
   `Selection` before, still exported under that name, deprecated). A structural command (indent,
-  move, ...) acts on the selection's roots: a subtree selection's (`OurusDoc.selectedSubtrees`, on
-  a line nodes share the outer node), else the subtrees it touches (`OurusDoc.touchedSubtrees`, a
+  move, ...) acts on the selection's roots: a subtree selection's (`OurusView.selectedSubtrees`, on
+  a line nodes share the outer node), else the subtrees it touches (`OurusView.touchedSubtrees`, a
   caret's node). They must be contiguous siblings of the same kind. Given `nodes`, ids of contiguous
   siblings, it acts on those instead (a context menu, a tree pane, a "move to" dialog), the
   selection elsewhere staying in its text. Fold and zoom take the same roots, each as its row's
@@ -72,7 +76,7 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
   - `drag`, `{ pressed?, nodes? }` (a pickup)<br>
     What a drag takes (the pressed node, or the selection's nodes where it is one of them) and every
     place it can drop them: the result's `dropMap` (below) and the nodes' `clipboard`, the document
-    unchanged. The view's folds and zoom are the snapshot's (`OurusDoc.zoomFolded`, `OurusDoc.zoom`):
+    unchanged. The folds and zoom are the view's (`OurusView.zoomFolded`, `OurusView.zoom`):
     none among a folded node's hidden children, none outside the zoom. With `{ clipboard }` instead, a drag from outside: the places for it, each
     point's drop a `pasteAt`.
 
@@ -157,7 +161,7 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
     `node` owns), or without `name` the one a link to the selection's node uses. Each checks its own
     result: what it wrote names the node, what it removed is gone, no other block id lost anything.
 
-  Over a subtree selection (`OurusDoc.selectedSubtrees`), the keys that edit text act on its nodes
+  Over a subtree selection (`OurusView.selectedSubtrees`), the keys that edit text act on its nodes
   (spec/subtree-selection.md): Backspace, Delete, Cmd-Backspace and cut delete them as
   `deleteSubtree` does; copy writes them, roots at two depths as siblings, whatever `copySelection`
   says; typing and a plain paste make one node in their place, under the first one's prefix; Enter
@@ -178,23 +182,25 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
   `accepts` takes (its drop applied, say), trying outwards; where columns tie, the run's own place,
   then one that keeps its kind, then the deeper.
 
-- **`OurusCommandResult`** is one of:
+- **`OurusResult`** is one of three classes, told apart with `instanceof`:
 
-  - `{ status: 'applied', doc, changes, selection, clipboard?, placed?, dropMap?, movedBlockIds?, mergedBlockIds? }`<br>
-    The new `OurusDoc` (node ids carried over), the changes (`ChangeSpec[]`, in the old text's
-    coordinates), the selection (in the new text), for copy and cut the clipboard formats (copy
-    has no changes), and for a drop the ids of the nodes it put in place, for a host that selects
-    them. Every applied command is checked: the new text, parsed, reads as the outline
+  - `OurusSuccess`: `view`, `changes`, `selection`, and `clipboard?`, `placed?`, `dropMap?`, `movedBlockIds?`, `mergedBlockIds?`, `removedNodes?`<br>
+    The view after (its document the new one, node ids carried over, the folds and zoom carried
+    onto it), the changes (`ChangeSpec[]`, in the old text's coordinates), the selection (in the
+    new text), for copy and cut the clipboard formats (copy has no changes), for a pickup the drop
+    map, and for a drop the ids of the nodes it put in place, for a host that selects them. Built
+    `new OurusSuccess({ view, changes, selection, ... })`; adjusted, as a new one over the other's
+    fields (`new OurusSuccess({ ...result, selection })`: a spread is a plain object, no success). Every applied command is checked: the new text, parsed, reads as the outline
     the command meant; and it keeps every block id (below). `movedBlockIds`: the block ids it wrote
     on another node on purpose (`{ name, to }`: a merge's node that stays taking the other's);
     `mergedBlockIds`: those a merge dropped for the other's (`{ from, into }`, `joinBlockIds:
     merge`), for a host that redirects the links to them. What else a command did to block ids, a
     host reads by comparing `OurusDoc.blockIds()` before and after.
 
-  - `{ status: 'rejected', reason: RejectReason, detail? }`<br>
+  - `OurusRejected`: `reason: RejectReason`, `detail?` (`new OurusRejected(reason, detail)`)<br>
     The command does nothing; the host should swallow the key.
 
-  - `{ status: 'deferredToHost', detail? }`<br>
+  - `OurusDeferred`: `detail?` (`new OurusDeferred(detail)`)<br>
     The command has nothing to do here (Backspace inside a text); the host runs its default. With the
     caret in markup, an edit ourus would refuse is also left to the host when the config treats
     markup as text (`markup: text`, the default); `detail` then says why ("a list marker isn't
@@ -231,10 +237,11 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
   - `write-failed`: the writer failed, on a layout it has no rule for or a text that didn't read back
     as the command meant. This is always a bug in ourus, to fix.
 
-- **`settlePlaceholders(doc: OurusDoc, caret: number): { doc, changes } | null`** (from `writer/`)<br>
+- **`settlePlaceholders(view: OurusView, caret: number): { view, changes } | null`**<br>
   Settles the placeholders the caret has left: a node with a held space is written again without
   it; an empty item is written again so it holds without a placeholder; any other empty node is
-  removed. Null when no placeholder is off the caret's line. See `writer/`'s README.
+  removed. The writer's steps (`settleSteps`, `writer/`'s README), the view carried through each;
+  `changes` composed, for the host. Null when no placeholder is off the caret's line.
 
 - **`OurusConfig`** chooses how commands behave where outliners differ. It is set when the document is
   made (`OurusDoc.parse(text, { config })`): `outdent`, `bullet`, `enterOnEmptyItem`, `enterMidItem`,
@@ -248,17 +255,18 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
 
 The host's contract:
 
-1. Keep one `OurusDoc` per document. After every edit that isn't a command (typing, the editor's
-   own paste, undo), call `doc = doc.update({ changes, caret })`, with the caret where the edit
-   leaves it.
+1. Keep one `OurusView` per editor (`OurusView.of(OurusDoc.parse(...))`). After every edit that
+   isn't a command (typing, the editor's own paste), call `view = view.update({ changes, caret })`,
+   with the caret where the edit leaves it.
 2. On a command key, call `executeCommand`. Commit an applied result's changes and selection
-   together, and keep its `doc` (no need to parse again).
-3. When the caret moves, call `settlePlaceholders(doc, caret)`, and commit its changes as a
+   together, and keep its `view` (no need to parse again).
+3. When the caret moves, call `settlePlaceholders(view, caret)`, and commit its changes as a
    separate edit.
 4. Keep placeholders in the undo history: undo and redo must restore the placeholders of the state
-   they return to. Save `doc.marks.points()` with each state, and restore with
-   `doc.update({ changes, setMarks: positions.map((pos) => createPlaceholder(pos)) })`. In CM6,
-   `invertedEffects` can carry them; the demo does this.
+   they return to. Save `view.doc.marks.points()` with each state, and restore with
+   `view.update({ changes, setMarks: positions.map((pos) => createPlaceholder(pos)) })`; where the
+   state's document is kept too, its nodes come back with it, `view.withDoc(like.withConfig(view.doc.config))`
+   (an undone move keeps its fold). In CM6, `invertedEffects` can carry them; the demo does this.
 5. Home goes to `doc.textStart(line)`, the start of the line's text, and pressed again, to the
    line's start.
 6. Where the flavor has block ids, a link to a node uses the block id in `doc.blockIds()` that isn't
@@ -299,13 +307,17 @@ what a line, a marker or a fence is, commands ask `doc/`, or the parser when `do
 Files:
 
 - `index.ts` (`executeCommand`, the dispatch on `command.type`); `types.ts` (`OurusCommand`,
-  `OurusSelection`, `OurusCommandResult`, `RejectReason`, `InsertionPoint`); `context.ts`
-  (`CommandContext`: the document, the selection located, the nodes given, `apply`); `util.ts`
+  `OurusSelection`, `OurusResult` and its classes, `RejectReason`, `InsertionPoint`); `context.ts`
+  (`CommandContext`: the view and its document, the selection located, the nodes given, `apply` and
+  `update`, which carry the view); `util.ts`
   (shared helpers: the nodes a command acts on and their runs of siblings, the caret it leaves,
   markup at the caret, heading levels, deleting a held space, hidden spaces); `shape.ts` (the
   selection a structural command leaves where it follows the nodes: a subtree selection on the same
   roots, in the shape given); `select.ts` (the selection commands); `subtrees.ts` (the keys that
-  edit text, over a subtree selection: on its nodes, one routing step before the commands).
+  edit text, over a subtree selection: on its nodes, one routing step before the commands); `view.ts`
+  (the view's commands: fold, unfold, toggle, zoom in and out); `zoom.ts` (the zoom's guard around
+  every command, and `leavesZoom`); `settle.ts` (`settlePlaceholders`, the view carried through the
+  writer's steps).
 - `indent.ts`, `outdent.ts`, `move-subtree-by.ts` (Tab, Shift-Tab, Alt-↑, Alt-↓); `move-subtree.ts`
   (the drop: the place checked, the run converted, the result checked); `drag.ts` (the pickup: what a drag takes,
   by the cover rule, its seams and places, the place one drop line names, `nearestDropPoint`); `delete-subtree.ts`,

@@ -3,8 +3,10 @@
 // are; `done()` and the writer do the rest.
 
 import { OurusProse, OurusAtom, type OurusNode } from '../doc/index.ts';
-import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
+import { type CommandContext } from './context.ts';
 import { changeHeadingLevels, onCodeLine, oneRun, operandsRefused, selectionInText } from './util.ts';
+import type { OurusResult } from './types.ts';
+import { OurusDeferred, OurusRejected } from './types.ts';
 
 /**
  * Items leave their parent item, to follow it, with their subtrees. The siblings after them follow
@@ -13,8 +15,8 @@ import { changeHeadingLevels, onCodeLine, oneRun, operandsRefused, selectionInTe
  * Headings go a level up, with the headings in their sections; any node leaves a quote. On a code
  * line Shift-Tab is the host's. Null for other nodes, which ourus doesn't do yet (unsupported).
  */
-export function outdentCommand(ctx: CommandContext): CommandOutcome {
-  if (!ctx.nodes && onCodeLine(ctx, ctx.selection.anchor) && onCodeLine(ctx, ctx.selection.head)) return deferToHost();
+export function outdentCommand(ctx: CommandContext): OurusResult | null {
+  if (!ctx.nodes && onCodeLine(ctx, ctx.selection.anchor) && onCodeLine(ctx, ctx.selection.head)) return new OurusDeferred();
   const nodes = oneRun(ctx, true);
   if (!Array.isArray(nodes)) return operandsRefused(nodes);
   const first = nodes[0]!;
@@ -24,7 +26,7 @@ export function outdentCommand(ctx: CommandContext): CommandOutcome {
   if (parent.kind === 'quote') return leaveQuote(ctx, nodes);
   if (first.kind === 'heading') return changeHeadingLevels(ctx, nodes, -1);
   // (a paragraph or a block of a section: it has no level to leave)
-  if (first.kind !== 'item') return reject('not-expressible', `a ${first.kind} has no level to leave`);
+  if (first.kind !== 'item') return new OurusRejected('not-expressible', `a ${first.kind} has no level to leave`);
   const later = parent.children.slice(last.index + 1);
   const direct = ctx.config.outdent === 'direct';
   if (parent.kind === 'paragraph' || parent.kind === 'root' || parent.kind === 'heading') return unwrapItems(ctx, nodes, parent, later);
@@ -52,7 +54,7 @@ export function outdentCommand(ctx: CommandContext): CommandOutcome {
  * joining the last one's list, or (`logical`) staying in the paragraph's, which the new paragraphs
  * pass. An item whose text is a heading becomes that heading; one whose text is code, that block.
  */
-function unwrapItems(ctx: CommandContext, nodes: readonly OurusNode[], parent: OurusNode, later: readonly OurusNode[]): CommandOutcome {
+function unwrapItems(ctx: CommandContext, nodes: readonly OurusNode[], parent: OurusNode, later: readonly OurusNode[]): OurusResult | null {
   const doc = ctx.doc;
   const texts = nodes.map((node) => doc.textOf(node));
   if (texts.some((text) => !text)) return null;
@@ -60,10 +62,10 @@ function unwrapItems(ctx: CommandContext, nodes: readonly OurusNode[], parent: O
   // take in the rest of the list, nothing after it, and must stay in the section it is in
   const levels = texts.map((text) => (text instanceof OurusProse ? (text.heading?.level ?? null) : null));
   if (levels.some((level) => level !== null)) {
-    if (parent.kind === 'paragraph') return reject('not-expressible', "a heading can't be in a paragraph's list");
-    if (later.some((node) => node.kind !== 'item')) return reject('not-expressible', 'the heading would take in what follows the list');
+    if (parent.kind === 'paragraph') return new OurusRejected('not-expressible', "a heading can't be in a paragraph's list");
+    if (later.some((node) => node.kind !== 'item')) return new OurusRejected('not-expressible', 'the heading would take in what follows the list');
     const own = parent.kind === 'heading' ? (doc.textOf(parent) as OurusProse).heading!.level : 0;
-    if (levels.some((level) => level !== null && level <= own)) return reject('not-expressible', 'the heading would end the section it is in');
+    if (levels.some((level) => level !== null && level <= own)) return new OurusRejected('not-expressible', 'the heading would end the section it is in');
   }
   const draft = ctx.draft();
   // (an item whose text is code becomes that block, its children after it)
@@ -84,7 +86,7 @@ function unwrapItems(ctx: CommandContext, nodes: readonly OurusNode[], parent: O
  * they take its place. With `outdent: logical`, or last in it, they follow it; first in a quote
  * without a title, they go before it; in its middle (`direct`), the quote splits around them.
  */
-function leaveQuote(ctx: CommandContext, nodes: readonly OurusNode[]): CommandOutcome {
+function leaveQuote(ctx: CommandContext, nodes: readonly OurusNode[]): OurusResult | null {
   const doc = ctx.doc;
   const first = nodes[0]!;
   const last = nodes[nodes.length - 1]!;

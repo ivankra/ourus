@@ -9,12 +9,14 @@
 
 import fc from 'fast-check';
 import { OurusDoc } from '../../src/doc/index.ts';
-import { settlePlaceholders } from '../../src/writer/index.ts';
+import { settlePlaceholders, OurusRejected, OurusSuccess } from '../../src/commands/index.ts';
+import { OurusView } from '../../src/view/index.ts';
 import { mapPos } from '../../src/text/index.ts';
 import { drawDoc } from '../drawing.ts';
 import { play } from '../player.ts';
 import { lift } from './lift.ts';
 import { apply, draw, findParent, fired, pathOf, shape, type Caret, type Cmd, type MNode, type Mode } from './model.ts';
+import { statusOf } from '../drawing.ts';
 
 const RUNS = Number(process.argv[2] ?? 3000);
 const MODE = (process.argv[3] ?? 'md') as Mode;
@@ -73,8 +75,8 @@ const oracle = { applied: 0, same: 0, differ: 0, modelRejects: 0 };
 function category(ourus: string, model: string, inText: boolean): string {
   if (ourus === 'rejected:write-failed') return 'A the check stepped in (a writer bug)';
   if (ourus === 'deferredToHost') return inText ? 'B raw edit (host default) inside text' : 'C host default at a node boundary';
-  if (ourus.startsWith('rejected') && model === 'applied') return 'D ourus refuses, model applies';
-  if (ourus === 'applied' && model.startsWith('rejected')) return 'E ourus applies, model refuses';
+  if (ourus.startsWith('rejected') && model === 'success') return 'D ourus refuses, model applies';
+  if (ourus === 'success' && model.startsWith('rejected')) return 'E ourus applies, model refuses';
   return 'F both act, differently';
 }
 
@@ -85,21 +87,21 @@ interface Disagreement {
 
 /** Runs one case; returns the first disagreement, or null. Tallies into `stats`. */
 function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: Map<string, [number, number]>): Disagreement | null {
-  let doc = OurusDoc.parse(text);
+  let view = OurusView.of(OurusDoc.parse(text));
   let pos = -1;
   for (let i = 0; i < steps.length; i++) {
     const [cmd, move] = steps[i]!;
-    let l = lift(doc);
+    let l = lift(view.doc);
     if (move || pos < 0) {
       const [ni, off] = move ?? [0, 0];
       if (l.editable.length === 0) return null;
       const node = l.editable[ni % l.editable.length]!;
       pos = l.toPos({ node, offset: off % (node.text.length + 1) });
-      const settled = settlePlaceholders(doc, pos);
+      const settled = settlePlaceholders(view, pos);
       if (settled) {
         pos = mapPos(settled.changes, pos, 1);
-        doc = settled.doc;
-        l = lift(doc);
+        view = settled.view;
+        l = lift(view.doc);
       }
     }
     const caret = l.toCaret(pos, true);
@@ -108,25 +110,25 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
       return null;
     }
     const firedBefore = [...fired.values()].reduce((a, b) => a + b, 0);
-    const before = drawDoc(doc, { anchor: pos, head: pos });
+    const before = drawDoc(view, { anchor: pos, head: pos });
     const model = apply(l.root, caret, cmd, MODE);
-    const state = play({ doc, selection: { anchor: pos, head: pos }, clipboard: {} }, [cmd]);
+    const state = play({ view, selection: { anchor: pos, head: pos }, clipboard: {} }, [cmd]);
     const r = state.last!;
-    const ourusStatus = r.status === 'rejected' ? `rejected:${r.reason}` : r.status;
-    const after = lift(state.doc);
+    const ourusStatus = r instanceof OurusRejected ? `rejected:${r.reason}` : statusOf(r);
+    const after = lift(state.view.doc);
     const got = { tree: JSON.stringify(shape(after.root)), caret: caretKey(after.root, after.toCaret(state.selection.head)) };
     const want =
-      model.status === 'applied'
+      model.status === 'success'
         ? { tree: JSON.stringify(shape(model.root)), caret: caretKey(model.root, model.caret) }
         : { tree: JSON.stringify(shape(l.root)), caret: caretKey(l.root, caret) };
     const treeOk = got.tree === want.tree;
     const caretOk = got.caret === want.caret;
     if (stats) {
       if ([...fired.values()].reduce((a, b) => a + b, 0) > firedBefore) mdDecided++;
-      if (r.status === 'applied') {
+      if (r instanceof OurusSuccess) {
         oracle.applied++;
-        if (model.status === 'applied' && treeOk) oracle.same++;
-        else if (model.status === 'applied') oracle.differ++;
+        if (model.status === 'success' && treeOk) oracle.same++;
+        else if (model.status === 'success') oracle.differ++;
         else oracle.modelRejects++;
       }
     }
@@ -138,7 +140,7 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
       const parent = findParent(l.root, caret.node)?.kind ?? '?';
       const where = `${caret.node.kind}${caret.node.text === '' ? '(empty)' : ''}${caret.offset === 0 ? '@start' : caret.offset === caret.node.text.length ? '@end' : '@mid'} in ${parent}`;
       const inText = (cmd === 'deleteContentBackward' && caret.offset > 0) || (cmd === 'deleteContentForward' && caret.offset < caret.node.text.length);
-      const key = `${category(ourusStatus, model.status === 'applied' ? 'applied' : 'rejected', inText)} | ${cmd} | ourus ${ourusStatus} | model ${model.status === 'applied' ? 'applied' : 'rejected:' + model.reason} | ${!treeOk ? (caretOk ? 'tree' : 'tree+caret') : 'caret'} | ${where}`;
+      const key = `${category(ourusStatus, model.status === 'success' ? 'success' : 'rejected', inText)} | ${cmd} | ourus ${ourusStatus} | model ${model.status === 'success' ? 'success' : 'rejected:' + model.reason} | ${!treeOk ? (caretOk ? 'tree' : 'tree+caret') : 'caret'} | ${where}`;
       const report = [
         '```buffer',
         before.replace(/\n$/, ''),
@@ -146,14 +148,14 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
         `> ${cmd}   (step ${i + 1})`,
         'ourus:',
         '```buffer',
-        drawDoc(state.doc, state.selection).replace(/\n$/, ''),
+        drawDoc(state.view, state.selection).replace(/\n$/, ''),
         '```',
-        ...(treeOk ? [] : ['ourus outline:', ...draw(after.root).map((x) => '    ' + x), 'model outline:', ...draw(model.status === 'applied' ? model.root : l.root).map((x) => '    ' + x)]),
+        ...(treeOk ? [] : ['ourus outline:', ...draw(after.root).map((x) => '    ' + x), 'model outline:', ...draw(model.status === 'success' ? model.root : l.root).map((x) => '    ' + x)]),
         ...(caretOk ? [] : [`caret: ourus ${got.caret}, model ${want.caret}`]),
       ].join('\n');
       return { key, report };
     }
-    doc = state.doc;
+    view = state.view;
     pos = state.selection.head;
   }
   return null;

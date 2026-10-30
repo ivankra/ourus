@@ -125,6 +125,7 @@ const results = [
   await scenario('Mod-Backspace stops at the text start', '- alpha beta┃\n', ['Control+Backspace', 'type:x'], '- x\n'),
   // folds and the zoom (view.ts): the snapshot's, drawn by CodeMirror
   await scenario('Mod-Up folds an item; Enter at its end makes a sibling after its children', '- a┃\n  - b\n- c\n', ['Control+ArrowUp', 'Enter', 'type:x'], '- a\n  - b\n- x\n- c\n'),
+  await scenario('A folded item moved past one written the same, no character changed: the fold goes with it, Enter after its children', '- a┃\n  - x\n- a\n  - x\n', ['Control+ArrowUp', 'Alt+ArrowDown', 'Enter', 'type:y'], '- a\n  - x\n- a\n  - x\n- y\n'),
   await scenario('A folded item moved and the move undone is folded still: Enter after its children', '- a┃\n  - b\n- c\n', ['Control+ArrowUp', 'Alt+ArrowDown', 'Control+z', 'Enter', 'type:x'], '- a\n  - b\n- x\n- c\n'),
   await scenario('Done again, it is folded still: Up from the end skips its children', '- a┃\n  - b\n- c\n', ['Control+ArrowUp', 'Alt+ArrowDown', 'Control+z', 'Control+y', 'ArrowUp', 'type:X'], '- c\n- Xa\n  - b\n'),
   await scenario("A text of several lines folds from its last: CodeMirror's gutter folds ourus's node", '- alpha\n  beta┃\n  - child\n', ['click:.cm-foldGutter span[title="Fold line"]', 'focus', 'Enter', 'type:x'], '- alpha\n  beta\n  - child\n- x\n'),

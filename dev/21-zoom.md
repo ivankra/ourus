@@ -1,5 +1,10 @@
 # Zoom and folding (2026-10-28)
 
+> **Since 25-view (2026-10-30):** the folds and the zoom live on a view, `OurusView` (`src/view/`),
+> not on the snapshot: `executeCommand(view, …)`, `result.view`, `view.withDoc(…)` for
+> `withViewOf`, `view.escape(…)` for `zoomEscape`. The model and the rules below hold as written;
+> the API (§5) and §11's decided 1 are 25-view's §5 and §9.
+
 Folds and the zoom are the view's state, kept on the document snapshot (`OurusDoc.folded`,
 `OurusDoc.zoom`) as its placeholders are. Every command reads them and carries them through what it
 writes; the view has six commands of its own; a zoom is a boundary no edit crosses. This is the

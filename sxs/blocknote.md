@@ -5,8 +5,8 @@ version: "unknown"
 url: "https://www.blocknotejs.org/examples/basic/minimal"
 model: "block"
 command: "node sxs/run.ts blocknote"
-elapsed_s: 160
-workers: 2
+elapsed_s: 146
+workers: 4
 ---
 
 # BlockNote vs ourus
@@ -15,9 +15,9 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 231 | [23](#caret-23) | [32](#whitespace-32) | [112](#disagree-112) |  |  | **398** |
+| original | 233 | [23](#caret-23) | [32](#whitespace-32) | [112](#disagree-112) |  |  | **400** |
 | adapted | 250 | [4](#adapted-caret-4) | [22](#adapted-whitespace-22) | [114](#adapted-disagree-114) |  |  | **390** |
-| **total** | **481 (33%)** | **27 (1.9%)** | **54 (3.7%)** | **226 (16%)** | **0 (0%)** | **[647](#skipped-647) (45%)** | **1441** |
+| **total** | **483 (33%)** | **27 (1.9%)** | **54 (3.7%)** | **226 (16%)** | **0 (0%)** | **[651](#skipped-651) (45%)** | **1447** |
 
 Per-file:
 
@@ -34,12 +34,12 @@ Per-file:
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 12 | **12** |  |  |
 | [enter.md](../spec/enter.md) | 58 |  | 7 | 11 |  | 22 | **98** | 20 | 56 |
 | [fences.md](../spec/fences.md) | 6 |  | 2 | 1 |  | 61 | **70** |  | 9 |
-| [fold.md](../spec/fold.md) |  |  |  |  |  | 19 | **19** |  |  |
+| [fold.md](../spec/fold.md) |  |  |  |  |  | 22 | **22** |  |  |
 | [gaps.md](../spec/gaps.md) | 12 |  |  | 3 |  | 4 | **19** | 10 | 5 |
 | [indent.md](../spec/indent.md) | 21 | 1 |  | 19 |  | 14 | **55** | 28 | 13 |
 | [lists.md](../spec/lists.md) | 12 |  |  | 1 |  | 3 | **16** | 6 | 7 |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 26 |  |  | 11 |  | 7 | **44** | 32 | 5 |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 24 |  |  | 11 |  | 11 | **46** | 29 | 6 |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 27 |  |  | 11 |  | 7 | **45** | 33 | 5 |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 25 |  |  | 11 |  | 11 | **47** | 30 | 6 |
 | [move-subtree.md](../spec/move-subtree.md) | 5 | 4 |  | 3 |  | 12 | **24** | 8 | 4 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 40 |  | 4 | 11 |  | 12 | **67** | 28 | 27 |
 | [outdent.md](../spec/outdent.md) | 8 | 1 |  | 16 |  | 17 | **42** | 20 | 5 |
@@ -53,7 +53,7 @@ Per-file:
 | [placeholders.md](../spec/placeholders.md) | 10 |  | 6 | 2 |  | 2 | **20** | 11 | 7 |
 | [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |  |  |
 | [quotes.md](../spec/quotes.md) | 8 |  | 1 | 7 |  | 127 | **143** |  | 16 |
-| [regressions.md](../spec/regressions.md) | 47 | 3 | 6 | 34 |  | 108 | **198** | 29 | 61 |
+| [regressions.md](../spec/regressions.md) | 47 | 3 | 6 | 34 |  | 109 | **199** | 29 | 61 |
 | [scenarios.md](../spec/scenarios.md) | 12 |  | 1 | 11 |  | 5 | **29** | 15 | 9 |
 | [select.md](../spec/select.md) |  | 14 |  |  |  | 9 | **23** | 12 | 2 |
 | [shift-enter.md](../spec/shift-enter.md) | 25 |  | 3 | 3 |  | 5 | **36** | 14 | 17 |
@@ -62,7 +62,7 @@ Per-file:
 | [typing.md](../spec/typing.md) |  |  |  | 3 |  |  | **3** | 1 | 2 |
 | [undo.md](../spec/undo.md) | 3 |  |  | 1 |  | 1 | **5** | 3 | 1 |
 | [zoom.md](../spec/zoom.md) |  |  |  |  |  | 14 | **14** |  |  |
-| **total** | **481 (33%)** | **27 (1.9%)** | **54 (3.7%)** | **226 (16%)** | **0 (0%)** | **653 (45%)** | **1441** | **398 (28%)** | **390 (27%)** |
+| **total** | **483 (33%)** | **27 (1.9%)** | **54 (3.7%)** | **226 (16%)** | **0 (0%)** | **657 (45%)** | **1447** | **400 (28%)** | **390 (27%)** |
 
 ## Disagree (112)
 
@@ -17387,7 +17387,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (653)
+## Skipped (657)
 
 | example | why |
 | --- | --- |
@@ -17644,6 +17644,9 @@ Original:
 | [Fold15b](../spec/fold.md#fold15b) | no folds |
 | [Fold16](../spec/fold.md#fold16) | no folds |
 | [Fold17](../spec/fold.md#fold17) | no folds |
+| [Fold18](../spec/fold.md#fold18) | no folds |
+| [Fold19](../spec/fold.md#fold19) | no folds |
+| [Fold20](../spec/fold.md#fold20) | no folds |
 | **gaps.md** | |
 | [Gap15](../spec/gaps.md#gap15) | caret on a blank line |
 | [Gap16](../spec/gaps.md#gap16) | caret on a blank line |
@@ -18020,6 +18023,7 @@ Original:
 | [Regression195](../spec/regressions.md#regression195) | action duplicateSubtree |
 | [Regression196](../spec/regressions.md#regression196) | action deleteSubtree |
 | [Regression198](../spec/regressions.md#regression198) | quote |
+| [Regression199](../spec/regressions.md#regression199) | quote |
 | **scenarios.md** | |
 | [Scenario8b](../spec/scenarios.md#scenario8b) | no text focus after moveSubtree ③ |
 | [Scenario8c](../spec/scenarios.md#scenario8c) | drop: as a childless block's first child: BlockNote drops a block beside one, never into it |

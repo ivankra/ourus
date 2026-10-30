@@ -29,7 +29,7 @@ export interface Caret {
 
 export type Cmd = 'indent' | 'outdent' | 'moveSubtreeUp' | 'moveSubtreeDown' | 'enter' | 'deleteContentBackward' | 'deleteContentForward';
 
-export type Outcome = { status: 'applied'; root: MNode; caret: Caret } | { status: 'rejected'; reason: string };
+export type Outcome = { status: 'success'; root: MNode; caret: Caret } | { status: 'rejected'; reason: string };
 
 export type Mode = 'pure' | 'md';
 
@@ -48,7 +48,7 @@ export function apply(root0: MNode, caret0: Caret, cmd: Cmd, mode: Mode): Outcom
   const node = copies.get(caret0.node)!;
   const ctx = new Ctx(root, mode);
   const out = COMMANDS[cmd](ctx, node, caret0.offset);
-  if (out.status === 'applied' && mode === 'md' && ctx.resection) {
+  if (out.status === 'success' && mode === 'md' && ctx.resection) {
     ctx.rule('headings-own-sections');
     normalizeSections(root);
   }
@@ -82,7 +82,7 @@ class Ctx {
     return out;
   }
   ok(caret: Caret): Outcome {
-    return { status: 'applied', root: this.root, caret };
+    return { status: 'success', root: this.root, caret };
   }
 }
 

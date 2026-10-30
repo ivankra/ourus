@@ -4919,3 +4919,35 @@ b
 > # h┃
 >b
 ```
+
+## Regression199
+
+Cmd-Backspace at the end of a block-id line under a quote's empty item, the item's text a line
+break and blank lines after it, hung: the writer's walk back over the text's blank last lines,
+`lastIndexOf` from the line break at its start, found it again and again. Now refused, as an empty
+line inside a text is (found by the view's exhaustive pass on Fold20's start); the caret having
+left them, the placeholders settle after it, as in Fold20.
+
+```yaml
+flavor: obsidian
+tags: rare
+```
+
+```buffer
+◌
+# h
+> - ◌
+> ^x┃
+```
+
+> deleteSoftLineBackward
+
+```buffer
+# h
+> -␠
+> ^x
+```
+
+```yaml
+result: rejected not-expressible
+```

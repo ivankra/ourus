@@ -770,7 +770,7 @@ tags: common
 ```
 
 ```yaml
-result: applied
+result: success
 ```
 
 > outdent

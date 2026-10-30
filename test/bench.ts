@@ -6,9 +6,11 @@
 //   BENCH_RUNS=100 node test/bench.ts   # runs per timing (default 30)
 
 import { performance } from 'node:perf_hooks';
-import { executeCommand, type OurusCommand } from '../src/commands/index.ts';
+import { executeCommand, type OurusCommand, OurusSuccess, OurusRejected } from '../src/commands/index.ts';
 import { OurusDoc, type OurusNode } from '../src/doc/index.ts';
+import { OurusView } from '../src/view/index.ts';
 import { nodesOf } from './drawing.ts';
+import { statusOf } from './drawing.ts';
 
 const target = Number(process.env.BENCH_LINES ?? 10_000);
 const runs = Number(process.env.BENCH_RUNS ?? 30);
@@ -42,6 +44,7 @@ function measure(name: string, run: () => void): void {
 const text = outline(target);
 const doc = OurusDoc.parse(text);
 const nodes = nodesOf(doc);
+const view = OurusView.of(doc);
 const middle = Math.floor(doc.lineCount / 2);
 // an item near the middle, with children and a sibling above: its text start, and the end of its text
 const item = nodes.find((node) => node.kind === 'item' && node.startLine >= middle && node.children.length > 0 && node.index > 0)!;
@@ -51,8 +54,8 @@ const end = textEnd(item);
 const at = (pos: number) => ({ anchor: pos, head: pos });
 const command = (name: string, type: OurusCommand, pos: number): void =>
   measure(name, () => {
-    const result = executeCommand(doc, type, at(pos));
-    if (result.status !== 'applied') throw new Error(`${name}: ${result.status} ${'reason' in result ? result.reason : ''}`);
+    const result = executeCommand(view, type, at(pos));
+    if (!(result instanceof OurusSuccess)) throw new Error(`${name}: ${statusOf(result)} ${result instanceof OurusRejected ? result.reason : ''}`);
   });
 
 console.log(`${doc.lineCount} lines, ${nodes.length + 1} nodes, ${(text.length / 1024).toFixed(0)} KB; ${runs} runs each`);

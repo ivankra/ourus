@@ -27,10 +27,13 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { textEnd } from '../src/commands/util.ts';
 import { OurusProse, OurusDoc, OurusAtom, type OurusNode } from '../src/doc/index.ts';
+import { OurusView } from '../src/view/index.ts';
 import { drawState, nodesOf, plainText, readDrawing } from './drawing.ts';
 import { play, type Played } from './player.ts';
 import { readSpecFile, specConfig, specFiles } from './specfile.ts';
 import { flavorsOf } from './spec-run.ts';
+import { OurusSuccess } from '../src/commands/index.ts';
+import { statusOf } from './drawing.ts';
 
 // --help: the comment at the top of this file; an argument it doesn't list is an error, never a run
 {
@@ -71,9 +74,9 @@ const corpus = createHash('sha256').update(JSON.stringify(starts.map((s) => JSON
 const isBlank = (line: string): boolean => /^[ \t>]*$/.test(line);
 const outline = (doc: OurusDoc): string => JSON.stringify(nodesOf(doc).map((n) => [n.depth, n.kind, n.head?.type ?? null]));
 function classify(duplicated: Played, pasted: Played): string {
-  const [a, b] = [duplicated.doc.text, pasted.doc.text];
+  const [a, b] = [duplicated.view.doc.text, pasted.view.doc.text];
   if (a === b) return 'same';
-  if (outline(duplicated.doc) !== outline(pasted.doc)) return 'tree';
+  if (outline(duplicated.view.doc) !== outline(pasted.view.doc)) return 'tree';
   const solid = (s: string): string => s.split('\n').filter((l) => !isBlank(l)).join('\n');
   if (solid(a) === solid(b)) return a.split('\n').filter(isBlank).length < b.split('\n').filter(isBlank).length ? 'blank+' : 'blank-';
   return 'text';
@@ -95,14 +98,14 @@ for (const start of starts) {
   for (const node of nodesOf(doc)) {
     if (node.children.length) continue;
     const at = endOf(doc, node);
-    const state: Played = { doc, selection: { anchor: at, head: at }, clipboard: {} };
+    const state: Played = { view: OurusView.of(doc), selection: { anchor: at, head: at }, clipboard: {} };
     const duplicated = play(state, ['duplicateSubtree']);
     const copied = play(state, ['copy']);
-    if (copied.last?.status !== 'applied') continue;
+    if (!(copied.last instanceof OurusSuccess)) continue;
     const pasted = play({ ...state, clipboard: copied.clipboard }, ['paste']);
     runs++;
-    const statuses = [duplicated.last?.status, pasted.last?.status];
-    const shape = statuses.every((s) => s === 'applied') ? classify(duplicated, pasted) : `duplicate: ${statuses[0]}, paste: ${statuses[1]}`;
+    const statuses = [duplicated.last && statusOf(duplicated.last), pasted.last && statusOf(pasted.last)];
+    const shape = statuses.every((s) => s === 'success') ? classify(duplicated, pasted) : `duplicate: ${statuses[0]}, paste: ${statuses[1]}`;
     // by design, apart: an empty node (an empty task too) copied fills the one it is pasted on; an
     // unclosed fence copied is closed where the copy ends
     const text = doc.textOf(node);
@@ -114,10 +117,10 @@ for (const start of starts) {
     const group = `${node.kind}${what ? ` (${what})` : ''} ${shape}`;
     counts.set(group, (counts.get(group) ?? 0) + 1);
     if (shape === 'same') continue;
-    const line = `${group}: ${JSON.stringify(drawState(doc.text, state.selection))} → duplicate ${JSON.stringify(duplicated.doc.text)}, paste ${JSON.stringify(pasted.doc.text)}`;
+    const line = `${group}: ${JSON.stringify(drawState(doc.text, state.selection))} → duplicate ${JSON.stringify(duplicated.view.doc.text)}, paste ${JSON.stringify(pasted.view.doc.text)}`;
     dump.push(line);
     const list = noted.get(group) ?? [];
-    if (list.length < examples) noted.set(group, [...list, `    ${drawState(doc.text, state.selection).replace(/\n/g, '⏎')}\n      duplicate ${duplicated.doc.text.replace(/\n/g, '⏎')}\n      paste     ${pasted.doc.text.replace(/\n/g, '⏎')}`]);
+    if (list.length < examples) noted.set(group, [...list, `    ${drawState(doc.text, state.selection).replace(/\n/g, '⏎')}\n      duplicate ${duplicated.view.doc.text.replace(/\n/g, '⏎')}\n      paste     ${pasted.view.doc.text.replace(/\n/g, '⏎')}`]);
   }
 }
 

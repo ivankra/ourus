@@ -3,7 +3,7 @@
 
 import { OurusConfig } from '../config.ts';
 import { MdBlockAt, MdFlavor, MdTree, type MdLine } from '../parser/index.ts';
-import { ChangeSet, MarkSet, advanceColumns, createPlaceholder, diffLines, heldSpaceAt, isSpaceOrTab, lineIndexAt, trimMd, type ChangeSpec, type Mark, type OurusSelection } from '../text/index.ts';
+import { ChangeSet, MarkSet, advanceColumns, createPlaceholder, diffLines, heldSpaceAt, isSpaceOrTab, lineIndexAt, trimMd, type ChangeSpec, type Mark } from '../text/index.ts';
 import { OurusNode, type PersistentNode } from './node.ts';
 import { Touched, readOutline } from './outline.ts';
 import { validPlaceholder } from './placeholders.ts';
@@ -14,8 +14,7 @@ import { markdownOf, markdownStart } from './copy.ts';
 import { OurusProse, textEnd, type OurusAtom, type OurusText } from './text.ts';
 import { readBlockIds, type BlockId } from './block-ids.ts';
 import { listAdopters } from './rules.ts';
-import { selectedNodes, subtreesSelection, touchedNodes } from './select.ts';
-import { NO_VIEW, carryView, coverEnd, foldRange, isHidden, startingAt, viewByLine, viewIn, zoomEscape, zoomFolded, zoomRange, type ViewState } from './view.ts';
+import { coverEnd, coverRange, foldRange, startingAt } from './extent.ts';
 
 /**
  * An update (`OurusDoc.update`): its changes, and its placeholders. A host's edit maps them through
@@ -68,10 +67,10 @@ export class Lineage {
 }
 
 /**
- * A Markdown document read as an outline: its text, placeholders, parse, outline and config, and
- * the view's folds and zoom. Make one with `parse`; it is immutable, and `update` returns the
- * next snapshot. Get its nodes from `rootNode`, `node(id)` and `nodeAtLine`, and a node's text
- * from `textOf`.
+ * A Markdown document read as an outline: its text, placeholders, parse, outline and config. Make
+ * one with `parse`; it is immutable, and `update` returns the next snapshot. Get its nodes from
+ * `rootNode`, `node(id)` and `nodeAtLine`, and a node's text from `textOf`. What a reader sees of
+ * it, folded and zoomed, is a view's (`OurusView`).
  *
  * Internally, `update` reads again only the blocks the changes reach and shares the rest of the
  * outline (`PersistentNode`s) with the snapshot before; node ids carry over. Snapshots of one
@@ -92,17 +91,11 @@ export class OurusDoc {
   readonly lineage: Lineage;
   /** The lineage's next id when this outline was read: a node with an id past it was made since. */
   readonly nextId: number;
-  /** The nodes whose children the view hides: a view's, not the text's. */
-  readonly folded: ReadonlySet<number>;
-  /** The node the view is zoomed into; null: the whole document. */
-  readonly zoom: number | null;
   #rootNode: OurusNode | null = null;
   #byId: Map<number, OurusNode> | null = null;
   #blockIds: readonly BlockId[] | null = null;
-  #zoomFolded: ReadonlySet<number> | null = null;
-  #lastRead: SelectionRead | null = null;
 
-  private constructor(text: string, marks: MarkSet, mdTree: MdTree, config: OurusConfig, root: PersistentNode, lineage: Lineage, nextId: number, view: ViewState = NO_VIEW) {
+  private constructor(text: string, marks: MarkSet, mdTree: MdTree, config: OurusConfig, root: PersistentNode, lineage: Lineage, nextId: number) {
     this.text = text;
     this.marks = marks;
     this.mdTree = mdTree;
@@ -110,8 +103,6 @@ export class OurusDoc {
     this.root = root;
     this.lineage = lineage;
     this.nextId = nextId;
-    this.folded = view.folded;
-    this.zoom = view.zoom;
   }
 
   /** Parses `text`. Options missing from `config` take defaults; `marks` are its placeholders. */
@@ -131,10 +122,16 @@ export class OurusDoc {
     return other.lineage === this.lineage;
   }
 
-  /** The snapshot after `params.changes`, its placeholders changed as `params` says. */
+  /**
+   * The snapshot after `params.changes`, its placeholders changed as `params` says. This one where it
+   * is given nothing to do: no change, no placeholders to set, add or drop, no `identity` (a caret
+   * alone keeps none: a placeholder is kept only for a deletion). A writer's edit that changes no
+   * character but the nodes' order (`identity`) is another snapshot.
+   */
   update(params: OurusDocUpdate = {}): OurusDoc {
     if (params.text !== undefined && params.changes) throw new Error('text gives the changes: no changes with it');
     const set = ChangeSet.of(params.text !== undefined ? diffLines(this.text, params.text) : (params.changes ?? []), this.text.length);
+    if (!set.changes.length && !params.setMarks && !params.addMarks?.length && !params.dropMarks?.length && !params.identity?.size) return this;
     const text = set.apply(this.text);
     let candidates: MarkSet;
     if (params.setMarks) {
@@ -151,24 +148,7 @@ export class OurusDoc {
     const [marks, tree] = read(candidates, (sentinels) => old.update(set.changes, { sentinels }));
     const touched = touchedLines(tree, set, this.marks.map(set), marks);
     const root = readOutline(tree, this.lineage, { tree: old, root: this.root, changes: set.changes, startOf: (id) => this.node(id)?.startLine }, touched, params.identity, this.config);
-    const next = new OurusDoc(text, marks, tree, this.config, root, this.lineage, this.lineage.next);
-    // the view carried, a writer's edit as any: a fold opened where what it hides changed, the zoom
-    // ended where a node left it
-    return next.#withView(viewIn(next, carryView(this, next, set.changes)));
-  }
-
-  /**
-   * This snapshot (its text, nodes, ids and marks) with the folds and zoom of `view`, another
-   * snapshot of its lineage, carried onto it by id through `changes` (`view`'s text to this one's;
-   * by default, the lines that differ), as an update carries them. A second pane takes the snapshot
-   * a first made, rather than replaying its changes, whose replay would give the nodes the writer
-   * moved new ids; an undo takes back the snapshot from before the step, its nodes and all, an undone
-   * move's node with its fold (`like.withConfig(doc.config).withViewOf(doc)`). Throws for a
-   * snapshot of another lineage.
-   */
-  withViewOf(view: OurusDoc, changes: readonly ChangeSpec[] = diffLines(view.text, this.text)): OurusDoc {
-    if (!this.isSameLineage(view)) throw new Error('withViewOf: a snapshot of another lineage');
-    return this.#withView(viewIn(this, carryView(view, this, changes)));
+    return new OurusDoc(text, marks, tree, this.config, root, this.lineage, this.lineage.next);
   }
 
   /**
@@ -185,34 +165,23 @@ export class OurusDoc {
     if (next.flavor !== this.config.flavor) {
       const marks: Mark[] = [];
       this.marks.between(0, this.text.length, (m) => void marks.push(m));
-      // read anew, the ids anew (the lineage's still): the folds and the zoom go by line
-      const parsed = OurusDoc.#readWhole(this.text, next, marks, this.lineage);
-      return parsed.#withView(viewByLine(this, parsed, this));
+      // read anew, the ids anew (the lineage's still)
+      return OurusDoc.#readWhole(this.text, next, marks, this.lineage);
     }
-    if (next.quotes === this.config.quotes && next.listParent === this.config.listParent) return new OurusDoc(this.text, this.marks, this.mdTree, next, this.root, this.lineage, this.nextId, this);
+    if (next.quotes === this.config.quotes && next.listParent === this.config.listParent) {
+      const doc = new OurusDoc(this.text, this.marks, this.mdTree, next, this.root, this.lineage, this.nextId);
+      // (the same outline: its indexes shared)
+      doc.#rootNode = this.#rootNode;
+      doc.#byId = this.#byId;
+      doc.#blockIds = this.#blockIds;
+      return doc;
+    }
     const previous = { tree: this.mdTree, root: this.root, changes: [], startOf: (id: number) => this.node(id)?.startLine, regroup: true };
     const root = readOutline(this.mdTree, this.lineage, previous, Touched.of([[0, this.mdTree.lineCount]]), undefined, next);
-    const read = new OurusDoc(this.text, this.marks, this.mdTree, next, root, this.lineage, this.lineage.next);
-    return read.#withView(viewIn(read, this));
+    return new OurusDoc(this.text, this.marks, this.mdTree, next, root, this.lineage, this.lineage.next);
   }
 
-  /** The same document with these folds (an id that isn't a node here, or has no children to hide, dropped). */
-  withFolded(ids: Iterable<number>): OurusDoc {
-    return this.#withView(viewIn(this, { folded: new Set(ids), zoom: this.zoom }));
-  }
-
-  /** The same document zoomed into node `id`, or not zoomed (null); no fold changes. Throws where `id` is no node here, or the root. */
-  withZoom(id: number | null): OurusDoc {
-    if (id !== null && (this.node(id)?.kind ?? 'root') === 'root') throw new Error(`no node ${id} to zoom into`);
-    return this.#withView({ folded: this.folded, zoom: id });
-  }
-
-  /** The folds in effect within the zoom: those of the nodes strictly inside its root; all of `folded` where not zoomed. */
-  get zoomFolded(): ReadonlySet<number> {
-    return (this.#zoomFolded ??= zoomFolded(this));
-  }
-
-  /** What folding `node` hides, in offsets: from the end of its text to the end of its subtree's last line; null where it doesn't fold. */
+  /** What folding `node` would hide, in offsets: from the end of its text to the end of its subtree's last line; null where it doesn't fold. */
   foldRange(node: OurusNode): { from: number; to: number } | null {
     return foldRange(this, node);
   }
@@ -222,94 +191,14 @@ export class OurusDoc {
     return startingAt(this, line)[0] ?? null;
   }
 
-  /** What the zoom shows, in offsets: its root's lines, its descendants' and its trailing gap; null where not zoomed. */
-  zoomRange(): { from: number; to: number } | null {
-    return zoomRange(this);
-  }
-
   /** A node's last line with its descendants' and the blank lines after them, up to the next node not its own. */
   coverEnd(node: OurusNode): number {
     return coverEnd(this, node);
   }
 
-  /** Whether the view hides `node`: under a fold in effect (`zoomFolded`), or outside the zoom. */
-  isHidden(node: OurusNode): boolean {
-    return isHidden(this, node);
-  }
-
-  /**
-   * Where `next`, a later snapshot of this lineage, leaves this one's zoom: what went outside it, or
-   * null where it keeps it (or isn't zoomed). `removed`: the zoom root went whole, its subtree with it.
-   */
-  zoomEscape(next: OurusDoc, removed = false): string | null {
-    return zoomEscape(this, next, removed);
-  }
-
-  /**
-   * The subtrees a selection touches: the topmost nodes whose own lines it touches, in document order,
-   * at whatever depths, a caret's node too (the innermost where nodes share a line, `- - a`); a blank
-   * line the gap of the node above it. What a key acts on (Tab with a caret indents its item). None
-   * only where there is no node to touch (the blank lines before the first, an empty document).
-   */
-  touchedSubtrees(selection: OurusSelection): readonly number[] {
-    return this.touchedNodes(selection).map((n) => n.id);
-  }
-
-  /**
-   * The roots of a subtree selection, the selection that is exactly their subtrees as whole lines:
-   * from column 0 of the first's first line to the start of the line after the last's subtree (the
-   * canonical shape, `selectionOf`'s), its last line's end, or the end of the blank lines after it;
-   * where nodes share those lines, the outermost inside the zoom, wherever they are (a select all of a
-   * document that is its nodes only is them). Null for any other selection: a caret, text, one node's
-   * own text (but at the document's end, where it is the node too). What a host draws as blocks.
-   */
-  selectedSubtrees(selection: OurusSelection): readonly number[] | null {
-    return this.selectedNodes(selection)?.map((n) => n.id) ?? null;
-  }
-
-  /**
-   * The selection of the subtrees of `ids` as whole lines: from column 0 of the first's first line to
-   * the start of the line after the last line of any of them (or the document's end), everything
-   * between included; the anchor at the top unless `direction` is `up`. Throws for no ids, an id the
-   * document doesn't have, the root, an id outside the zoom or one a fold hides.
-   */
-  selectionOf(ids: readonly number[], direction: 'down' | 'up' = 'down'): OurusSelection {
-    const nodes = ids.map((id) => {
-      const node = this.node(id);
-      if (!node) throw new Error(`no node ${id} to select`);
-      return node;
-    });
-    return subtreesSelection(this, nodes, direction);
-  }
-
-  /** `touchedSubtrees`, as nodes. */
-  touchedNodes(selection: OurusSelection): readonly OurusNode[] {
-    const read = this.#readOf(selection);
-    return (read.touched ??= touchedNodes(this, selection));
-  }
-
-  /** `selectedSubtrees`, as nodes. */
-  selectedNodes(selection: OurusSelection): readonly OurusNode[] | null {
-    const read = this.#readOf(selection);
-    if (read.selected === undefined) read.selected = selectedNodes(this, selection);
-    return read.selected;
-  }
-
-  /** What this snapshot read of `selection` (the last selection asked about only). */
-  #readOf(selection: OurusSelection): SelectionRead {
-    const last = this.#lastRead;
-    if (last && last.anchor === selection.anchor && last.head === selection.head) return last;
-    return (this.#lastRead = { anchor: selection.anchor, head: selection.head });
-  }
-
-  /** This snapshot with another view: the text, parse, outline and their indexes shared. */
-  #withView(view: ViewState): OurusDoc {
-    if (view.folded === this.folded && view.zoom === this.zoom) return this;
-    const doc = new OurusDoc(this.text, this.marks, this.mdTree, this.config, this.root, this.lineage, this.nextId, view);
-    doc.#rootNode = this.#rootNode;
-    doc.#byId = this.#byId;
-    doc.#blockIds = this.#blockIds;
-    return doc;
+  /** What zooming into `node` would show, in offsets: its lines, its descendants' and its trailing gap (`coverEnd`). */
+  coverRange(node: OurusNode): { from: number; to: number } {
+    return coverRange(this, node);
   }
 
   /** The blank lines before the first node (all of the document's, where it has none): how many; null where another line is there (frontmatter). */
@@ -387,7 +276,7 @@ export class OurusDoc {
   }
 
   /** Where `pos` is: in a node's text or its frame, in a marker or a prefix, a blank line's gap, the preamble, or no line (`locate.ts`). */
-  locate(pos: number): Located {
+  locateRaw(pos: number): Located {
     return locate(this, pos);
   }
 
@@ -632,14 +521,6 @@ export class OurusDoc {
     const before = shape(this.root);
     return shape(this.update({ changes: changes.changes, setMarks: [] }).root) !== before && shape(held.root) === before;
   }
-}
-
-/** What a snapshot read of a selection: its touched and selected subtrees, each once asked for. */
-interface SelectionRead {
-  readonly anchor: number;
-  readonly head: number;
-  touched?: readonly OurusNode[];
-  selected?: readonly OurusNode[] | null;
 }
 
 /** Each stored node's text, read once: valid in every snapshot that shares the node, whose lines are the same. */

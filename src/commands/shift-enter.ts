@@ -4,12 +4,14 @@
 
 import { OurusProse, OurusAtom, type OurusNode } from '../doc/index.ts';
 import { isSpaceOrTab, lineOf, trimMd } from '../text/index.ts';
-import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
+import { type CommandContext } from './context.ts';
 import { breakInQuote } from './quote.ts';
 import { deleteSelectionAcross } from './backspace.ts';
 import { codeAt, newlineInCode } from './code.ts';
 import { enterCommand } from './enter.ts';
 import { hiddenSpacesAt, inMarkup, pastPrefix, textActedOnAt, unquote } from './util.ts';
+import type { OurusResult } from './types.ts';
+import { OurusDeferred, OurusRejected } from './types.ts';
 
 /**
  * Shift-Enter (spec/shift-enter.md): the text breaks at the caret (over a selection in one line, in
@@ -20,7 +22,7 @@ import { hiddenSpacesAt, inMarkup, pastPrefix, textActedOnAt, unquote } from './
  * own, a blank line above them (rules 3 and 4). Null for code (rule 1) and a selection across lines,
  * which ourus doesn't do yet (unsupported).
  */
-export function shiftEnterCommand(ctx: CommandContext): CommandOutcome {
+export function shiftEnterCommand(ctx: CommandContext): OurusResult | null {
   ctx = pastPrefix(ctx);
   const config = ctx.config;
   const code = codeAt(ctx);
@@ -35,12 +37,12 @@ export function shiftEnterCommand(ctx: CommandContext): CommandOutcome {
   // (Enter65k); among them, the host's, as in any text's spaces; before a paragraph's, as at its text's start
   const hidden = ctx.collapsed ? hiddenSpacesAt(ctx, ctx.selection.head) : null;
   if (hidden && ctx.selection.head < hidden.to) {
-    if (ctx.selection.head > hidden.from) return deferToHost();
+    if (ctx.selection.head > hidden.from) return new OurusDeferred();
     if (hidden.node.kind === 'item') return lineBreakAtTextStart(ctx, hidden.node, hidden.text, ' '.repeat(hidden.to - hidden.from));
   }
   if (ctx.collapsed && inMarkup(ctx.doc, from, ctx.selection.head)) {
     // where markup is text the user edits, a line break in it is the host's
-    if (config.markup === 'text') return deferToHost('the caret is in markup');
+    if (config.markup === 'text') return new OurusDeferred('the caret is in markup');
     // else in an item's marker or a task's checkbox it acts at the text's start
     const at = (from.zone === 'marker' || (from.zone === 'frame' && from.part === 'task')) && textActedOnAt(ctx, ctx.selection.head);
     if (at) from = to = { zone: 'text', node: at.node, text: at.text, offset: at.offset };
@@ -55,23 +57,23 @@ export function shiftEnterCommand(ctx: CommandContext): CommandOutcome {
     const id = from.text.frame.find((p) => p.part === 'blockId');
     if (id && from.offset > id.from) from = to = { zone: 'text', node: from.node, text: from.text, offset: id.from };
   }
-  if (from.zone === 'frame' && from.part === 'callout') return reject('not-expressible', "a line break would split the callout's type");
-  if (from.zone === 'frame' && from.part === 'underline') return reject('not-expressible', 'a line break would cut the setext underline');
+  if (from.zone === 'frame' && from.part === 'callout') return new OurusRejected('not-expressible', "a line break would split the callout's type");
+  if (from.zone === 'frame' && from.part === 'underline') return new OurusRejected('not-expressible', 'a line break would cut the setext underline');
   if (from.zone !== 'text' || (to.zone !== 'text' && to.zone !== 'frame') || from.node !== to.node) return null;
   const node = from.node;
   const text = from.text;
   // (in a quote read as an atom, a line of it: `> `)
   if (text instanceof OurusAtom && text.type === 'blockquote') {
-    if (from.offset === 0) return reject('not-expressible', 'a line break here would leave an empty line inside the text');
+    if (from.offset === 0) return new OurusRejected('not-expressible', 'a line break here would leave an empty line inside the text');
     return breakInQuote(ctx, { node, text, offset: from.offset, to: to.offset });
   }
-  if (text instanceof OurusAtom) return text.type === 'table' ? reject('not-expressible', 'a table row is a single line') : null;
-  if (node.head?.type === 'callout_title') return reject('not-expressible', 'a callout title is a single line');
+  if (text instanceof OurusAtom) return text.type === 'table' ? new OurusRejected('not-expressible', 'a table row is a single line') : null;
+  if (node.head?.type === 'callout_title') return new OurusRejected('not-expressible', 'a callout title is a single line');
   if (text.heading?.form === 'atx') return enterCommand(ctx, false);
   const underline = text.frame.find((p) => p.part === 'underline');
-  if (underline && to.offset > underline.from) return reject('not-expressible', 'a line break would cut the setext underline');
+  if (underline && to.offset > underline.from) return new OurusRejected('not-expressible', 'a line break would cut the setext underline');
   // on an empty item the line break is the host's (TO13); on any other empty node, refused
-  if (text.empty) return node.kind === 'item' ? deferToHost('an empty item has no line to break') : reject('not-expressible', 'an empty node has no line to break');
+  if (text.empty) return node.kind === 'item' ? new OurusDeferred('an empty item has no line to break') : new OurusRejected('not-expressible', 'an empty node has no line to break');
   const s = text.text;
   const line = lineOf(s, from.offset);
   const lineStart = text.textStart(line);
@@ -123,11 +125,11 @@ export function shiftEnterCommand(ctx: CommandContext): CommandOutcome {
  * would be its first block on its marker's line, an item with no text of its own, which ourus doesn't
  * write yet.
  */
-function quoteSplit(ctx: CommandContext, node: OurusNode, text: OurusProse, at: number, to: number): CommandOutcome | undefined {
+function quoteSplit(ctx: CommandContext, node: OurusNode, text: OurusProse, at: number, to: number): OurusResult | null | undefined {
   // (a rest of lazy lines alone, no `>` of theirs to keep: split as any text, a paragraph after it)
   if (!/(?:^|\n) {0,3}>/.test(text.text.slice(to))) return undefined;
-  // (a quote of two paragraphs carries no block-id lines, §4.3: the one after it would name the quote)
-  if (text.blockIdLines.length) return reject('block-id', 'a quote of several paragraphs carries no block-id lines: the one after it would name the quote, not its text');
+  // (a quote of two paragraphs carries no block-id lines: the one after it would name the quote)
+  if (text.blockIdLines.length) return new OurusRejected('block-id', 'a quote of several paragraphs carries no block-id lines: the one after it would name the quote, not its text');
   const draft = ctx.draft();
   const lines = (from: number, end: number): OurusProse => {
     const part = text.slice(from, end);
@@ -155,7 +157,7 @@ function quoteSplit(ctx: CommandContext, node: OurusNode, text: OurusProse, at: 
  * Over a selection across nodes: deleted as Backspace deletes it, the line breaking where it was. Null
  * where the break would have blanks at it, or within one node's text (not done yet).
  */
-function breakAcross(ctx: CommandContext): CommandOutcome {
+function breakAcross(ctx: CommandContext): OurusResult | null {
   const { from, to } = ctx;
   if (from.zone !== 'text' || to.zone !== 'text' || !(from.text instanceof OurusProse) || from.node === to.node) return null;
   const [before, after] = [from.text.text[from.offset - 1], to.text.text[to.offset]];
@@ -173,7 +175,7 @@ function breakAcross(ctx: CommandContext): CommandOutcome {
  * one (ShiftEnter15). Null (unsupported) where ourus doesn't do it yet: a node with no text of its own, a blank line
  * not at the text's column (the host's).
  */
-function breakOnBlankLine(ctx: CommandContext, owner: OurusNode): CommandOutcome {
+function breakOnBlankLine(ctx: CommandContext, owner: OurusNode): OurusResult | null {
   const text = ctx.doc.textOf(owner);
   if (!(text instanceof OurusProse) || text.type === 'heading') return null;
   const k = ctx.doc.lineAt(ctx.selection.head).index - owner.ownLastLine - 1;
@@ -187,9 +189,9 @@ function breakOnBlankLine(ctx: CommandContext, owner: OurusNode): CommandOutcome
  * text on the next line, which an item may start with; a callout's after its type. Refused for any
  * other text, and where the text already starts there: an item starts with one blank line at most.
  */
-function lineBreakAtTextStart(ctx: CommandContext, node: OurusNode, text: OurusProse, kept = ''): CommandOutcome {
+function lineBreakAtTextStart(ctx: CommandContext, node: OurusNode, text: OurusProse, kept = ''): OurusResult | null {
   if (!(text.type === 'title' && text.callout) && (node.kind !== 'item' || text.frame.some((p) => p.part === 'below'))) {
-    return reject('not-expressible', node.kind === 'item' ? 'an item starts with one blank line at most' : 'a line break here would leave an empty line inside the text');
+    return new OurusRejected('not-expressible', node.kind === 'item' ? 'an item starts with one blank line at most' : 'a line break here would leave an empty line inside the text');
   }
   const s = text.text;
   const start = text.textStart(0);
@@ -208,8 +210,8 @@ function lineBreakAtTextStart(ctx: CommandContext, node: OurusNode, text: OurusP
  * their own: an item's or a callout's first child, or the paragraph after this one, taking its list.
  * A setext title has none.
  */
-function paragraphBreakAtLineStart(ctx: CommandContext, node: OurusNode, text: OurusProse, lineStart: number): CommandOutcome {
-  if (text.type === 'heading') return reject('not-expressible', 'a heading has no blank line in its title');
+function paragraphBreakAtLineStart(ctx: CommandContext, node: OurusNode, text: OurusProse, lineStart: number): OurusResult | null {
+  if (text.type === 'heading') return new OurusRejected('not-expressible', 'a heading has no blank line in its title');
   const s = text.text;
   let b = lineStart;
   while (b < s.length && isSpaceOrTab(s.charCodeAt(b))) b++;

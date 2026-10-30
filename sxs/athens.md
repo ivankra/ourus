@@ -5,8 +5,8 @@ version: "2022-05-18"
 url: "https://athensresearch.github.io/athens/"
 model: "block"
 command: "node sxs/run.ts athens"
-elapsed_s: 310
-workers: 3
+elapsed_s: 268
+workers: 4
 ---
 
 # Athens vs ourus
@@ -15,9 +15,9 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 142 | [26](#caret-26) | [10](#whitespace-10) | [8](#disagree-8) | [2](#error-2) |  | **188** |
-| adapted | 407 | [20](#adapted-caret-20) | [27](#adapted-whitespace-27) | [100](#adapted-disagree-100) |  |  | **554** |
-| **total** | **549 (38%)** | **46 (3.2%)** | **37 (2.6%)** | **108 (7.5%)** | **2 (0.14%)** | **[696](#skipped-696) (48%)** | **1441** |
+| original | 143 | [25](#caret-25) | [10](#whitespace-10) | [8](#disagree-8) | [2](#error-2) |  | **188** |
+| adapted | 407 | [20](#adapted-caret-20) | [27](#adapted-whitespace-27) | [101](#adapted-disagree-101) |  |  | **555** |
+| **total** | **550 (38%)** | **45 (3.1%)** | **37 (2.6%)** | **109 (7.5%)** | **2 (0.14%)** | **[701](#skipped-701) (48%)** | **1447** |
 
 Per-file:
 
@@ -25,7 +25,7 @@ Per-file:
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | [backspace.md](../spec/backspace.md) | 44 | 2 |  | 2 |  | 38 | **86** | 16 | 32 |
 | [backtick.md](../spec/backtick.md) | 1 |  |  |  |  | 32 | **33** |  | 1 |
-| [block-ids.md](../spec/block-ids.md) | 5 | 1 |  | 4 | 2 | 9 | **21** | 7 | 5 |
+| [block-ids.md](../spec/block-ids.md) | 6 |  |  | 4 | 2 | 9 | **21** | 7 | 5 |
 | [copy.md](../spec/copy.md) | 3 |  | 3 | 1 |  | 6 | **13** | 1 | 6 |
 | [cursor.md](../spec/cursor.md) | 24 | 7 |  |  |  | 5 | **36** | 12 | 19 |
 | [delete-subtree.md](../spec/delete-subtree.md) | 12 |  |  |  |  | 2 | **14** | 2 | 10 |
@@ -34,12 +34,12 @@ Per-file:
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 12 | **12** |  |  |
 | [enter.md](../spec/enter.md) | 53 |  | 4 | 6 |  | 35 | **98** | 21 | 42 |
 | [fences.md](../spec/fences.md) | 7 |  |  | 1 |  | 62 | **70** |  | 8 |
-| [fold.md](../spec/fold.md) | 9 | 1 |  |  |  | 9 | **19** | 9 | 1 |
+| [fold.md](../spec/fold.md) | 9 | 1 |  |  |  | 12 | **22** | 9 | 1 |
 | [gaps.md](../spec/gaps.md) | 2 |  |  |  |  | 17 | **19** |  | 2 |
 | [indent.md](../spec/indent.md) | 33 |  |  | 1 |  | 21 | **55** | 15 | 19 |
 | [lists.md](../spec/lists.md) | 1 |  |  |  |  | 15 | **16** |  | 1 |
-| [move-subtree-down.md](../spec/move-subtree-down.md) |  |  |  |  |  | 44 | **44** |  |  |
-| [move-subtree-up.md](../spec/move-subtree-up.md) |  |  |  |  |  | 46 | **46** |  |  |
+| [move-subtree-down.md](../spec/move-subtree-down.md) |  |  |  |  |  | 45 | **45** |  |  |
+| [move-subtree-up.md](../spec/move-subtree-up.md) |  |  |  |  |  | 47 | **47** |  |  |
 | [move-subtree.md](../spec/move-subtree.md) | 9 | 2 |  | 4 |  | 9 | **24** | 7 | 8 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 44 |  | 3 | 4 |  | 16 | **67** | 14 | 37 |
 | [outdent.md](../spec/outdent.md) | 17 | 3 |  |  |  | 22 | **42** | 4 | 16 |
@@ -53,7 +53,7 @@ Per-file:
 | [placeholders.md](../spec/placeholders.md) | 11 |  | 5 |  |  | 4 | **20** | 5 | 11 |
 | [quirks.md](../spec/quirks.md) | 1 |  |  |  |  | 6 | **7** |  | 1 |
 | [quotes.md](../spec/quotes.md) | 80 |  | 3 | 9 |  | 51 | **143** |  | 92 |
-| [regressions.md](../spec/regressions.md) | 53 | 5 | 9 | 37 |  | 94 | **198** | 9 | 95 |
+| [regressions.md](../spec/regressions.md) | 53 | 5 | 9 | 38 |  | 94 | **199** | 9 | 96 |
 | [scenarios.md](../spec/scenarios.md) | 9 | 1 |  | 2 |  | 17 | **29** | 5 | 7 |
 | [select.md](../spec/select.md) | 7 | 9 |  |  |  | 7 | **23** | 13 | 3 |
 | [shift-enter.md](../spec/shift-enter.md) | 25 |  | 3 |  |  | 8 | **36** | 10 | 18 |
@@ -62,7 +62,7 @@ Per-file:
 | [typing.md](../spec/typing.md) |  |  |  |  |  | 3 | **3** |  |  |
 | [undo.md](../spec/undo.md) |  | 4 |  |  |  | 1 | **5** | 3 | 1 |
 | [zoom.md](../spec/zoom.md) | 1 | 1 |  |  |  | 12 | **14** | 2 |  |
-| **total** | **549 (38%)** | **46 (3.2%)** | **37 (2.6%)** | **108 (7.5%)** | **2 (0.14%)** | **699 (49%)** | **1441** | **188 (13%)** | **554 (38%)** |
+| **total** | **550 (38%)** | **45 (3.1%)** | **37 (2.6%)** | **109 (7.5%)** | **2 (0.14%)** | **704 (49%)** | **1447** | **188 (13%)** | **555 (38%)** |
 
 ## Disagree (8)
 
@@ -726,7 +726,7 @@ y
 </td></tr>
 </table>
 
-## Caret (26)
+## Caret (25)
 
 ### [Backspace17](../spec/backspace.md#backspace17)
 
@@ -754,34 +754,6 @@ y
 ```buffer
 - ┃b
 - c
-```
-
-</td></tr>
-</table>
-
-### [BlockIds11](../spec/block-ids.md#blockids11)
-
-> deleteContentBackward
-
-<table>
-<tr><th>buffer</th><th>athens</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-- ┃b ^y
-```
-
-</td><td>
-
-```buffer
-- ab ^y
-```
-
-</td><td>
-
-```buffer
-- a┃b ^y
 ```
 
 </td></tr>
@@ -2394,7 +2366,7 @@ Error: page.evaluate: ol
 
 Error: page.evaluate: ol
 
-## Adapted: disagree (100)
+## Adapted: disagree (101)
 
 ### [Backspace26](../spec/backspace.md#backspace26)
 
@@ -8783,6 +8755,65 @@ Original:
 </td></tr>
 </table>
 
+### [Regression199](../spec/regressions.md#regression199)
+
+> deleteSoftLineBackward
+
+Adapted: blank lines, heading, paragraph, quote, under quotes: atom
+
+<table>
+<tr><th>buffer</th><th>athens</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- 
+- # h
+  - > - 
+    > ^x┃
+```
+
+</td><td>
+
+```buffer
+- 
+- # h
+  - > - 
+    ┃
+```
+
+</td><td>
+
+```buffer
+- # h
+  - > - 
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+◌
+# h
+> - ◌
+> ^x┃
+```
+
+</td><td>
+
+```buffer
+# h
+> - 
+┃
+```
+
+</td></tr>
+</table>
+
 ### [Scenario18](../spec/scenarios.md#scenario18)
 
 <table>
@@ -12122,7 +12153,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (699)
+## Skipped (704)
 
 | example | why |
 | --- | --- |
@@ -12384,6 +12415,9 @@ Original:
 | [Fold13](../spec/fold.md#fold13) | its view, on an adapted start |
 | [Fold15b](../spec/fold.md#fold15b) | changes only what blocks can't show |
 | [Fold16](../spec/fold.md#fold16) | action moveSubtreeDown |
+| [Fold18](../spec/fold.md#fold18) | action moveSubtreeDown |
+| [Fold19](../spec/fold.md#fold19) | action moveSubtreeUp |
+| [Fold20](../spec/fold.md#fold20) | its view, on an adapted start |
 | **gaps.md** | |
 | [Gap1](../spec/gaps.md#gap1) | action moveSubtreeUp |
 | [Gap2](../spec/gaps.md#gap2) | action moveSubtreeDown |
@@ -12485,6 +12519,7 @@ Original:
 | [MoveDown42](../spec/move-subtree-down.md#movedown42) | action moveSubtreeDown |
 | [MoveDown43](../spec/move-subtree-down.md#movedown43) | action moveSubtreeDown |
 | [MoveDown44](../spec/move-subtree-down.md#movedown44) | action moveSubtreeDown |
+| [MoveDown45](../spec/move-subtree-down.md#movedown45) | action moveSubtreeDown |
 | **move-subtree-up.md** | |
 | [MoveUp1](../spec/move-subtree-up.md#moveup1) | action moveSubtreeUp |
 | [MoveUp2](../spec/move-subtree-up.md#moveup2) | action moveSubtreeUp |
@@ -12532,6 +12567,7 @@ Original:
 | [MoveUp44](../spec/move-subtree-up.md#moveup44) | action moveSubtreeUp |
 | [MoveUp45](../spec/move-subtree-up.md#moveup45) | action moveSubtreeUp |
 | [MoveUp46](../spec/move-subtree-up.md#moveup46) | action moveSubtreeUp |
+| [MoveUp47](../spec/move-subtree-up.md#moveup47) | action moveSubtreeUp |
 | **move-subtree.md** | |
 | [MoveSubtree7](../spec/move-subtree.md#movesubtree7) | changes only what blocks can't show |
 | [MoveSubtree8](../spec/move-subtree.md#movesubtree8) | changes only what blocks can't show |

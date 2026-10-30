@@ -1296,3 +1296,29 @@ tags: edge
   - ««c»»
 - b
 ```
+
+## MoveUp47
+
+Two items written the same, the second moved up: no character changes, but the nodes trade places,
+the moved one first, the caret with it. A host that sees no change in the text still takes the
+result: the document is another one, its nodes in another order (dev/25-view.md §5.1).
+
+```yaml
+tags: rare
+```
+
+```buffer
+- a①
+- a┃②
+```
+
+> moveSubtreeUp
+
+```buffer
+- a┃②
+- a①
+```
+
+```yaml
+result: success
+```

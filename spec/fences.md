@@ -94,7 +94,7 @@ tags: common enter-in-fence
 ````
 
 ```yaml
-result: applied
+result: success
 ```
 
 > "x"
@@ -438,7 +438,7 @@ handleFenceContents: false
 ````
 
 ```yaml
-result: applied
+result: success
 ```
 
 ## Fence12
