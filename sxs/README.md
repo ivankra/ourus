@@ -27,32 +27,32 @@ Running it, adding an app, and how it works: [`run.md`](run.md).
 
 ## Summary
 
-|  | id | model | agree | caret | whitespace | disagree | error | skipped | not run | total |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [Logseq (DB)](logseq-db.md) | LD | block | 657 (82%) | 25 | 31 | 89 (11%) | 1 | 603 | 5 | **1411** |
-| [Roam](roam.md) | RR | block | 631 (81%) | 34 | 40 | 71 (9%) |  | 626 | 9 | **1411** |
-| [Logseq (OG)](logseq.md) | LO | block | 654 (80%) | 27 | 35 | 104 (13%) |  | 586 | 5 | **1411** |
-| [Dynalist](dynalist.md) | DL | block | 644 (77%) | 21 | 29 | 145 (17%) |  | 567 | 5 | **1411** |
-| [Tine](tine.md) | TI | block | 618 (77%) | 39 | 39 | 110 (14%) | 1 | 599 | 5 | **1411** |
-| [Athens](athens.md) | AR | block | 538 (75%) | 45 | 37 | 100 (14%) |  | 686 | 5 | **1411** |
-| [Tana](tana.md) | TA | block | 431 (71%) | 34 | 11 | 128 (21%) |  | 806 | 1 | **1411** |
-| [WorkFlowy](workflowy.md) | WF | block | 483 (70%) | 32 | 21 | 157 (23%) |  | 717 | 1 | **1411** |
-| [RemNote (bl)](remnote-bl.md) | RB | block | 417 (66%) | 41 | 19 | 151 (24%) |  | 782 | 1 | **1411** |
-| [RemNote (nbl)](remnote.md) | RN | block | 435 (63%) | 33 | 33 | 188 (27%) | 1 | 720 | 1 | **1411** |
-| [BlockNote](blocknote.md) | BN | block | 466 (61%) | 27 | 53 | 222 (29%) |  | 642 | 1 | **1411** |
-| [SiYuan](siyuan.md) | SY | block | 460 (60%) | 42 | 52 | 212 (28%) | 1 | 643 | 1 | **1411** |
-| [Obsidian (Outliner)](obsidian-outliner.md) | OO | text | 434 (40%) | 58 | 30 | 565 (52%) |  | 318 | 6 | **1411** |
-| [Obsidian (true-outliner)](obsidian-true-outliner.md) | TO | text | 409 (38%) | 78 | 32 | 544 (51%) |  | 342 | 6 | **1411** |
-| [SilverBullet](silverbullet.md) | SB | text | 338 (31%) | 67 | 47 | 628 (58%) |  | 325 | 6 | **1411** |
-| [Obsidian](obsidian.md) | OB | text | 330 (31%) | 50 | 35 | 661 (61%) |  | 329 | 6 | **1411** |
-| [Obsidian (Live Preview)](obsidian-lp.md) | LP | text | 323 (31%) | 50 | 34 | 650 (61%) |  | 348 | 6 | **1411** |
-| [Emacs (markdown-mode)](emacs-markdown.md) | EM | text | 249 (24%) | 53 | 31 | 703 (68%) |  | 369 | 6 | **1411** |
+|  | id | model | agree | caret | whitespace | disagree | error | skipped | total |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [Logseq (DB)](logseq-db.md) | LD | block | 676 (81%) | 25 | 31 | 97 (12%) | 1 | 611 | **1441** |
+| [Roam](roam.md) | RR | block | 651 (81%) | 35 | 41 | 79 (10%) |  | 635 | **1441** |
+| [Logseq (OG)](logseq.md) | LO | block | 673 (79%) | 27 | 35 | 113 (13%) |  | 593 | **1441** |
+| [Dynalist](dynalist.md) | DL | block | 661 (76%) | 22 | 29 | 154 (18%) |  | 575 | **1441** |
+| [Tine](tine.md) | TI | block | 636 (76%) | 40 | 39 | 119 (14%) | 1 | 606 | **1441** |
+| [Athens](athens.md) | AR | block | 549 (74%) | 46 | 37 | 108 (15%) | 2 | 699 | **1441** |
+| [Tana](tana.md) | TA | block | 443 (71%) | 34 | 11 | 134 (22%) |  | 819 | **1441** |
+| [WorkFlowy](workflowy.md) | WF | block | 497 (70%) | 32 | 21 | 162 (23%) |  | 729 | **1441** |
+| [RemNote (bl)](remnote-bl.md) | RB | block | 432 (67%) | 41 | 19 | 157 (24%) |  | 792 | **1441** |
+| [RemNote (nbl)](remnote.md) | RN | block | 449 (63%) | 33 | 33 | 194 (27%) | 1 | 731 | **1441** |
+| [BlockNote](blocknote.md) | BN | block | 481 (61%) | 27 | 54 | 226 (29%) |  | 653 | **1441** |
+| [SiYuan](siyuan.md) | SY | block | 472 (60%) | 42 | 52 | 220 (28%) | 1 | 654 | **1441** |
+| [Obsidian (Outliner)](obsidian-outliner.md) | OO | text | 441 (39%) | 58 | 30 | 589 (53%) |  | 323 | **1441** |
+| [Obsidian (true-outliner)](obsidian-true-outliner.md) | TO | text | 421 (38%) | 82 | 32 | 559 (51%) |  | 347 | **1441** |
+| [SilverBullet](silverbullet.md) | SB | text | 346 (31%) | 67 | 47 | 650 (59%) |  | 331 | **1441** |
+| [Obsidian](obsidian.md) | OB | text | 336 (30%) | 50 | 35 | 685 (62%) |  | 335 | **1441** |
+| [Obsidian (Live Preview)](obsidian-lp.md) | LP | text | 329 (30%) | 50 | 34 | 674 (62%) |  | 354 | **1441** |
+| [Emacs (markdown-mode)](emacs-markdown.md) | EM | text | 254 (24%) | 53 | 31 | 729 (68%) |  | 374 | **1441** |
 
 By spec file:
 
 | spec file | cases | disagree | block apps | [LD](logseq-db.md "Logseq (DB)") | [RR](roam.md "Roam") | [LO](logseq.md "Logseq (OG)") | [DL](dynalist.md "Dynalist") | [TI](tine.md "Tine") | [AR](athens.md "Athens") | [TA](tana.md "Tana") | [WF](workflowy.md "WorkFlowy") | [RB](remnote-bl.md "RemNote (bl)") | [RN](remnote.md "RemNote (nbl)") | [BN](blocknote.md "BlockNote") | [SY](siyuan.md "SiYuan") | [OO](obsidian-outliner.md "Obsidian (Outliner)") | [TO](obsidian-true-outliner.md "Obsidian (true-outliner)") | [SB](silverbullet.md "SilverBullet") | [OB](obsidian.md "Obsidian") | [LP](obsidian-lp.md "Obsidian (Live Preview)") | [EM](emacs-markdown.md "Emacs (markdown-mode)") |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| [regressions.md](#regressions.md) | 189 | 899/1802 (50%) | 360/1015 (35%) | 26 | 22 | 36 | 39 | 34 | 33 | 25 | 28 | 27 | 25 | 34 | 31 | 85 | 85 | 90 | 93 | 91 | 95 |
+| [regressions.md](#regressions.md) | 198 | 962/1941 (50%) | 383/1091 (35%) | 29 | 25 | 40 | 43 | 38 | 37 | 25 | 28 | 28 | 25 | 34 | 31 | 92 | 92 | 96 | 99 | 97 | 103 |
 | [backspace.md](#backspace.md) | 86 | 407/1028 (40%) | 70/590 (12%) | 1 | 3 | 2 | 4 | 4 | 2 | 11 | 12 | 3 | 5 | 11 | 12 | 50 | 37 | 59 | 63 | 63 | 65 |
 | [enter.md](#enter.md) | 98 | 374/1167 (32%) | 60/723 (8%) | 0 | 4 | 0 | 5 | 3 | 6 | 7 | 8 | 2 | 5 | 11 | 9 | 48 | 39 | 65 | 50 | 46 | 66 |
 | [quotes.md](#quotes.md) | 143 | 364/1359 (27%) | 89/655 (14%) | 9 | 9 | 10 | 16 | 9 | 9 |  | 10 |  |  | 7 | 10 | 33 | 37 | 54 | 48 | 48 | 55 |
@@ -66,6 +66,7 @@ By spec file:
 | [paste.md](#paste.md) | 36 | 205/403 (51%) | 101/273 (37%) | 7 | 5 | 7 | 14 | 5 | 4 | 5 | 10 | 15 | 17 | 7 | 5 | 17 | 19 | 17 | 17 | 17 | 17 |
 | [indent.md](#indent.md) | 55 | 180/652 (28%) | 50/394 (13%) | 1 | 2 | 2 | 2 | 1 | 1 | 2 | 1 | 2 | 6 | 19 | 11 | 20 | 16 | 18 | 27 | 26 | 23 |
 | [outdent.md](#outdent.md) | 42 | 174/427 (41%) | 38/237 (16%) | 1 | 2 | 1 | 0 | 0 | 0 | 2 | 2 | 1 | 8 | 16 | 5 | 27 | 18 | 22 | 22 | 22 | 25 |
+| [block-ids.md](#block-ids.md) | 21 | 158/324 (49%) | 63/204 (31%) | 5 | 5 | 5 | 5 | 5 | 4 | 6 | 5 | 5 | 6 | 4 | 8 | 17 | 8 | 16 | 18 | 18 | 18 |
 | [scenarios.md](#scenarios.md) | 29 | 154/410 (38%) | 53/261 (20%) | 1 | 1 | 1 | 3 | 2 | 2 | 4 | 3 | 7 | 8 | 11 | 10 | 12 | 12 | 17 | 19 | 19 | 22 |
 | [subtree-selection.md](#subtree-selection.md) | 17 | 129/254 (51%) | 57/158 (36%) | 5 | 3 | 5 | 4 | 6 | 4 | 7 | 5 | 4 | 4 | 4 | 6 | 11 | 14 | 11 | 11 | 11 | 14 |
 | [shift-enter.md](#shift-enter.md) | 36 | 123/478 (26%) | 10/287 (3%) | 0 | 0 | 0 | 0 | 0 | 0 |  |  | 0 | 3 | 3 | 4 | 15 | 21 | 19 | 19 | 18 | 21 |
@@ -90,16 +91,16 @@ By spec file:
 | [cursor.md](#cursor.md) | 36 | 0/551 (0%) | 0/347 (0%) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | [drag.md](#drag.md) | 8 |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
 | [paste-at.md](#paste-at.md) | 5 |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| **total** | **1411** | **5428/15314 (35%)** | **1677/8915 (19%)** | **89** | **71** | **104** | **145** | **110** | **100** | **128** | **157** | **151** | **188** | **222** | **212** | **565** | **544** | **628** | **661** | **650** | **703** |
+| **total** | **1441** | **5649/15777 (36%)** | **1763/9195 (19%)** | **97** | **79** | **113** | **154** | **119** | **108** | **134** | **162** | **157** | **194** | **226** | **220** | **589** | **559** | **650** | **685** | **674** | **729** |
 
 By tag:
 
 | tag | cases | disagree | block apps | [LD](logseq-db.md "Logseq (DB)") | [RR](roam.md "Roam") | [LO](logseq.md "Logseq (OG)") | [DL](dynalist.md "Dynalist") | [TI](tine.md "Tine") | [AR](athens.md "Athens") | [TA](tana.md "Tana") | [WF](workflowy.md "WorkFlowy") | [RB](remnote-bl.md "RemNote (bl)") | [RN](remnote.md "RemNote (nbl)") | [BN](blocknote.md "BlockNote") | [SY](siyuan.md "SiYuan") | [OO](obsidian-outliner.md "Obsidian (Outliner)") | [TO](obsidian-true-outliner.md "Obsidian (true-outliner)") | [SB](silverbullet.md "SilverBullet") | [OB](obsidian.md "Obsidian") | [LP](obsidian-lp.md "Obsidian (Live Preview)") | [EM](emacs-markdown.md "Emacs (markdown-mode)") |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `core` | 69 | 238/1071 (22%) | 57/699 (8%) | 0 | 0 | 0 | 2 | 2 | 0 | 4 | 4 | 6 | 9 | 16 | 14 | 19 | 14 | 28 | 38 | 38 | 44 |
-| `common` | 299 | 1141/4050 (28%) | 374/2570 (15%) | 20 | 11 | 22 | 30 | 21 | 22 | 36 | 37 | 39 | 49 | 41 | 46 | 115 | 113 | 129 | 129 | 127 | 154 |
-| `edge` | 558 | 2133/5787 (37%) | 690/3327 (21%) | 39 | 35 | 43 | 66 | 50 | 40 | 49 | 62 | 58 | 74 | 95 | 79 | 214 | 208 | 242 | 258 | 252 | 269 |
-| `rare` | 485 | 1916/4406 (43%) | 556/2319 (24%) | 30 | 25 | 39 | 47 | 37 | 38 | 39 | 54 | 48 | 56 | 70 | 73 | 217 | 209 | 229 | 236 | 233 | 236 |
+| `common` | 307 | 1215/4162 (29%) | 412/2640 (16%) | 23 | 14 | 25 | 33 | 24 | 25 | 40 | 41 | 42 | 52 | 42 | 51 | 121 | 117 | 135 | 136 | 134 | 160 |
+| `edge` | 571 | 2217/5999 (37%) | 715/3461 (21%) | 41 | 37 | 45 | 68 | 52 | 41 | 51 | 63 | 60 | 77 | 98 | 82 | 225 | 212 | 252 | 269 | 263 | 281 |
+| `rare` | 494 | 1979/4545 (44%) | 579/2395 (24%) | 33 | 28 | 43 | 51 | 41 | 42 | 39 | 54 | 49 | 56 | 70 | 73 | 224 | 216 | 235 | 242 | 239 | 244 |
 | `free-form` | 116 | 432/703 (61%) | 84/181 (46%) |  |  |  |  |  |  |  |  |  | 23 | 37 | 24 | 59 | 49 | 55 | 63 | 60 | 62 |
 | `markup-fence` | 98 | 373/552 (68%) | 18/49 (37%) |  |  |  |  |  |  | 6 | 8 |  |  |  | 4 | 54 | 59 | 58 | 65 | 63 | 56 |
 | `markup-heading` | 43 | 184/289 (64%) | 29/85 (34%) |  |  |  | 8 |  |  | 1 | 7 |  |  | 9 | 4 | 26 | 30 | 26 | 23 | 23 | 27 |
@@ -128,7 +129,6 @@ The apps are in the table's order, by how many examples they disagree on, the fe
 | S | spaces: the same but for spaces next to line breaks, or (a text app) spaces that leave the document as ourus reads it the same |
 | E | error: the run failed, or the app didn't hold the starting state |
 | blank | skipped: the app can't run the example as written (its report says why) |
-| ? | not run: the app's last run didn't play the example as the spec has it now |
 | (✗) | in brackets, a difference in an example adapted for the app: its buffers projected onto blocks, so it compares those |
 
 An example's **rank** is how often users meet it (`core`, `common`, `edge` or `rare`: [the spec's README](../spec/README.md)); a file's **disagree** column counts the apps that disagree on the example; its **total** row, the examples each app disagrees on, and all of them. An app is its id in the tables, as the [summary](#summary) has it.
@@ -262,6 +262,30 @@ By spec file and by tag, under the summary: each one's cases; the apps' runs of 
 <tr><td><a href="../spec/backtick.md#backtick31">Backtick31</a><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td align="right">0<td>rare</tr>
 <tr><td><a href="../spec/backtick.md#backtick32">Backtick32</a><td>(✗)<td><td>(✗)<td><td>✓<td><td><td><td><td><td><td><td><td><td><td>✗<td><td><td align="right">3<td>rare</tr>
 <tr><td><b>total</b><td><b>1</b><td><b>0</b><td><b>1</b><td><b>0</b><td><b>0</b><td><b>0</b><td><b>2</b><td><b>6</b><td><b>0</b><td><b>0</b><td><b>0</b><td><b>3</b><td><b>15</b><td><b>19</b><td><b>13</b><td><b>18</b><td><b>15</b><td><b>11</b><td align="right"><b>104</b><td></tr>
+<tr><td colspan="21"></tr>
+<tr><td><b><a name="block-ids.md"></a>block-ids.md</b><td><b><a href="logseq-db.md" title="logseq-db">LD</a></b><td><b><a href="roam.md" title="roam">RR</a></b><td><b><a href="logseq.md" title="logseq">LO</a></b><td><b><a href="dynalist.md" title="dynalist">DL</a></b><td><b><a href="tine.md" title="tine">TI</a></b><td><b><a href="athens.md" title="athens">AR</a></b><td><b><a href="tana.md" title="tana">TA</a></b><td><b><a href="workflowy.md" title="workflowy">WF</a></b><td><b><a href="remnote-bl.md" title="remnote-bl">RB</a></b><td><b><a href="remnote.md" title="remnote">RN</a></b><td><b><a href="blocknote.md" title="blocknote">BN</a></b><td><b><a href="siyuan.md" title="siyuan">SY</a></b><td><b><a href="obsidian-outliner.md" title="obsidian-outliner">OO</a></b><td><b><a href="obsidian-true-outliner.md" title="obsidian-true-outliner">TO</a></b><td><b><a href="silverbullet.md" title="silverbullet">SB</a></b><td><b><a href="obsidian.md" title="obsidian">OB</a></b><td><b><a href="obsidian-lp.md" title="obsidian-lp">LP</a></b><td><b><a href="emacs-markdown.md" title="emacs-markdown">EM</a></b><td><b>disagree</b><td><b>rank</b></tr>
+<tr><td><a href="../spec/block-ids.md#blockids1">BlockIds1</a><td>✓<td>✓<td>✓<td>✓<td>✓<td><td><td><td>✓<td>✓<td>✓<td><td>✗<td>C<td>✗<td>✗<td>✗<td>✗<td align="right">5<td>common</tr>
+<tr><td><a href="../spec/block-ids.md#blockids2">BlockIds2</a><td>✓<td><td>✓<td>✓<td>✓<td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✓<td>✗<td>✗<td>✗<td>✗<td align="right">5<td>edge</tr>
+<tr><td><a href="../spec/block-ids.md#blockids3">BlockIds3</a><td>✓<td>✓<td>✓<td>✓<td>✓<td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✓<td>✓<td>✗<td>✗<td>✓<td align="right">3<td>common</tr>
+<tr><td><a href="../spec/block-ids.md#blockids4">BlockIds4</a><td>✓<td>✓<td>✓<td>✓<td>✓<td><td><td>✓<td>✓<td>✗<td>✗<td>✗<td>✗<td>C<td>✓<td>✗<td>✗<td>✗<td align="right">7<td>edge</tr>
+<tr><td><a href="../spec/block-ids.md#blockids5">BlockIds5</a><td>✓<td>✓<td>✓<td>✓<td>✓<td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>C<td>✗<td>✗<td>✗<td>✗<td align="right">5<td>edge</tr>
+<tr><td><a href="../spec/block-ids.md#blockids6">BlockIds6</a><td>✓<td>✓<td>✓<td>✓<td>✓<td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✓<td>✗<td>✗<td>✗<td>✗<td align="right">5<td>edge</tr>
+<tr><td><a href="../spec/block-ids.md#blockids7">BlockIds7</a><td>✗<td>(✗)<td>✗<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td align="right">18<td>common</tr>
+<tr><td><a href="../spec/block-ids.md#blockids8">BlockIds8</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✓<td>✗<td>✗<td>✗<td>✗<td align="right">5<td>edge</tr>
+<tr><td><a href="../spec/block-ids.md#blockids9">BlockIds9</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✓<td>✗<td>✗<td>✗<td>✗<td align="right">5<td>edge</tr>
+<tr><td><a href="../spec/block-ids.md#blockids10">BlockIds10</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>(✗)<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">7<td>edge</tr>
+<tr><td><a href="../spec/block-ids.md#blockids11">BlockIds11</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>C<td>✓<td>✓<td>✓<td>✓<td>✓<td>(✗)<td>✓<td>✓<td>✗<td>✗<td>✗<td>✗<td align="right">5<td>common</tr>
+<tr><td><a href="../spec/block-ids.md#blockids12">BlockIds12</a><td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✓<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">17<td>common</tr>
+<tr><td><a href="../spec/block-ids.md#blockids13">BlockIds13</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✓<td>✗<td>✗<td>✗<td>✗<td align="right">5<td>edge</tr>
+<tr><td><a href="../spec/block-ids.md#blockids14">BlockIds14</a><td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✓<td>(✗)<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">17<td>common</tr>
+<tr><td><a href="../spec/block-ids.md#blockids15">BlockIds15</a><td>✗<td>✗<td>✗<td>✗<td>✗<td>E<td>✗<td>✗<td>✗<td>✗<td>(✗)<td>(✗)<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">17<td>edge</tr>
+<tr><td><a href="../spec/block-ids.md#blockids16">BlockIds16</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>E<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td align="right">1<td>edge</tr>
+<tr><td><a href="../spec/block-ids.md#blockids17">BlockIds17</a><td><td><td><td><td><td><td><td><td><td><td><td><td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">6<td>common</tr>
+<tr><td><a href="../spec/block-ids.md#blockids18">BlockIds18</a><td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td><td><td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">16<td>edge</tr>
+<tr><td><a href="../spec/block-ids.md#blockids19">BlockIds19</a><td><td><td><td><td><td><td><td><td><td><td><td><td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">6<td>edge</tr>
+<tr><td><a href="../spec/block-ids.md#blockids20">BlockIds20</a><td><td><td><td><td><td><td>✗<td>✗<td><td><td><td>✗<td><td><td><td><td><td><td align="right">3<td>common</tr>
+<tr><td><a href="../spec/block-ids.md#blockids21">BlockIds21</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>S<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td align="right">0<td>edge</tr>
+<tr><td><b>total</b><td><b>5</b><td><b>5</b><td><b>5</b><td><b>5</b><td><b>5</b><td><b>4</b><td><b>6</b><td><b>5</b><td><b>5</b><td><b>6</b><td><b>4</b><td><b>8</b><td><b>17</b><td><b>8</b><td><b>16</b><td><b>18</b><td><b>18</b><td><b>18</b><td align="right"><b>158</b><td></tr>
 <tr><td colspan="21"></tr>
 <tr><td><b><a name="copy.md"></a>copy.md</b><td><b><a href="logseq-db.md" title="logseq-db">LD</a></b><td><b><a href="roam.md" title="roam">RR</a></b><td><b><a href="logseq.md" title="logseq">LO</a></b><td><b><a href="dynalist.md" title="dynalist">DL</a></b><td><b><a href="tine.md" title="tine">TI</a></b><td><b><a href="athens.md" title="athens">AR</a></b><td><b><a href="tana.md" title="tana">TA</a></b><td><b><a href="workflowy.md" title="workflowy">WF</a></b><td><b><a href="remnote-bl.md" title="remnote-bl">RB</a></b><td><b><a href="remnote.md" title="remnote">RN</a></b><td><b><a href="blocknote.md" title="blocknote">BN</a></b><td><b><a href="siyuan.md" title="siyuan">SY</a></b><td><b><a href="obsidian-outliner.md" title="obsidian-outliner">OO</a></b><td><b><a href="obsidian-true-outliner.md" title="obsidian-true-outliner">TO</a></b><td><b><a href="silverbullet.md" title="silverbullet">SB</a></b><td><b><a href="obsidian.md" title="obsidian">OB</a></b><td><b><a href="obsidian-lp.md" title="obsidian-lp">LP</a></b><td><b><a href="emacs-markdown.md" title="emacs-markdown">EM</a></b><td><b>disagree</b><td><b>rank</b></tr>
 <tr><td><a href="../spec/copy.md#copy1">Copy1</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>(S)<td><td>✓<td>✓<td>✓<td>✓<td>✓<td>(C)<td align="right">0<td>common</tr>
@@ -1392,7 +1416,7 @@ By spec file and by tag, under the summary: each one's cases; the apps' runs of 
 <tr><td><a href="../spec/regressions.md#regression82">Regression82</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td><td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">6<td>rare</tr>
 <tr><td><a href="../spec/regressions.md#regression83">Regression83</a><td>✗<td>(✗)<td>✗<td>✗<td>✗<td>✓<td>✗<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">17<td>rare</tr>
 <tr><td><a href="../spec/regressions.md#regression84">Regression84</a><td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td><td><td><td><td><td><td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td align="right">12<td>rare</tr>
-<tr><td><a href="../spec/regressions.md#regression85">Regression85</a><td>(S)<td>(✗)<td>(S)<td>(✗)<td>(S)<td>(✗)<td>(✗)<td>✗<td>✗<td>✗<td>✗<td><td><td><td>✗<td><td><td>✗<td align="right">10<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression85">Regression85</a><td>(S)<td>(✗)<td>(S)<td>(✗)<td>(S)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td><td><td><td>✗<td><td><td>✗<td align="right">10<td>rare</tr>
 <tr><td><a href="../spec/regressions.md#regression86">Regression86</a><td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">18<td>rare</tr>
 <tr><td><a href="../spec/regressions.md#regression87">Regression87</a><td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">18<td>rare</tr>
 <tr><td><a href="../spec/regressions.md#regression88">Regression88</a><td>✓<td>✓<td>✓<td>✓<td>(C)<td>(✗)<td>(✗)<td>✓<td>(✗)<td>(✗)<td>✓<td>(✗)<td>✓<td>✓<td>✗<td>✓<td>✓<td>✗<td align="right">7<td>rare</tr>
@@ -1486,18 +1510,28 @@ By spec file and by tag, under the summary: each one's cases; the apps' runs of 
 <tr><td><a href="../spec/regressions.md#regression176">Regression176</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td><td><td><td><td><td><td>(✗)<td>(✗)<td>✓<td>(✗)<td>(✗)<td>✓<td align="right">4<td>rare</tr>
 <tr><td><a href="../spec/regressions.md#regression177">Regression177</a><td>(✗)<td>(C)<td><td>✓<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>✗<td><td><td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">13<td>rare</tr>
 <tr><td><a href="../spec/regressions.md#regression178">Regression178</a><td>(✗)<td><td>(✗)<td><td>(S)<td><td><td><td><td><td><td><td>✗<td>✗<td><td>✗<td>✗<td><td align="right">6<td>rare</tr>
-<tr><td><a href="../spec/regressions.md#regression179">Regression179</a><td>✓<td>?<td>✓<td>(C)<td>✓<td>✓<td><td><td>(C)<td><td><td><td><td><td><td><td><td><td align="right">0<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression179">Regression179</a><td>✓<td>✓<td>✓<td>(C)<td>✓<td>✓<td><td><td>(C)<td><td><td><td><td><td><td><td><td><td align="right">0<td>rare</tr>
 <tr><td><a href="../spec/regressions.md#regression180">Regression180</a><td>(C)<td><td><td><td>(C)<td>(C)<td><td><td><td>✓<td>✓<td><td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>✓<td align="right">5<td>rare</tr>
-<tr><td><a href="../spec/regressions.md#regression181">Regression181</a><td>(S)<td>?<td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td>S<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">8<td>rare</tr>
-<tr><td><a href="../spec/regressions.md#regression182">Regression182</a><td>✓<td>?<td>✓<td>✓<td>✓<td>✓<td><td><td>✓<td>✓<td>(✗)<td>✓<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">7<td>rare</tr>
-<tr><td><a href="../spec/regressions.md#regression183">Regression183</a><td>✓<td>?<td>✓<td>✓<td>✓<td>✓<td><td><td><td><td><td><td>(S)<td>(S)<td>✓<td>(S)<td>(S)<td>✓<td align="right">0<td>rare</tr>
-<tr><td><a href="../spec/regressions.md#regression184">Regression184</a><td>?<td>?<td>?<td>?<td>?<td>?<td><td><td><td><td><td><td>?<td>?<td>?<td>?<td>?<td>?<td align="right">0<td>rare</tr>
-<tr><td><a href="../spec/regressions.md#regression185">Regression185</a><td>?<td>?<td>?<td>?<td>?<td>?<td><td><td><td><td><td><td>?<td>?<td>?<td>?<td>?<td>?<td align="right">0<td>rare</tr>
-<tr><td><a href="../spec/regressions.md#regression186">Regression186</a><td>?<td>?<td>?<td>?<td>?<td>?<td><td><td><td><td><td><td>?<td>?<td>?<td>?<td>?<td>?<td align="right">0<td>rare</tr>
-<tr><td><a href="../spec/regressions.md#regression187">Regression187</a><td><td><td><td><td><td><td><td><td><td><td><td><td>?<td>?<td>?<td>?<td>?<td>?<td align="right">0<td>rare</tr>
-<tr><td><a href="../spec/regressions.md#regression188">Regression188</a><td>?<td>?<td>?<td>?<td>?<td>?<td><td><td><td><td><td><td>?<td>?<td>?<td>?<td>?<td>?<td align="right">0<td>rare</tr>
-<tr><td><a href="../spec/regressions.md#regression189">Regression189</a><td>?<td>?<td>?<td>?<td>?<td>?<td>?<td>?<td>?<td>?<td>?<td>?<td>?<td>?<td>?<td>?<td>?<td>?<td align="right">0<td>rare</tr>
-<tr><td><b>total</b><td><b>26</b><td><b>22</b><td><b>36</b><td><b>39</b><td><b>34</b><td><b>33</b><td><b>25</b><td><b>28</b><td><b>27</b><td><b>25</b><td><b>34</b><td><b>31</b><td><b>85</b><td><b>85</b><td><b>90</b><td><b>93</b><td><b>91</b><td><b>95</b><td align="right"><b>899</b><td></tr>
+<tr><td><a href="../spec/regressions.md#regression181">Regression181</a><td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td>S<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">8<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression182">Regression182</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td><td><td>✓<td>✓<td>(✗)<td>✓<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">7<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression183">Regression183</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td><td><td><td><td><td><td>(S)<td>(S)<td>✓<td>(S)<td>(S)<td>✓<td align="right">0<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression184">Regression184</a><td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td><td><td><td><td><td><td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">12<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression185">Regression185</a><td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td><td><td><td><td><td><td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">12<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression186">Regression186</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td><td><td><td><td><td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td align="right">0<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression187">Regression187</a><td><td><td><td><td><td><td><td><td><td><td><td><td>✓<td>(C)<td>✓<td>✓<td>✓<td>✓<td align="right">0<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression188">Regression188</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td><td><td><td><td><td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td align="right">0<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression189">Regression189</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>(✗)<td>✗<td>(✗)<td>(✗)<td>(✗)<td>✗<td align="right">6<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression190">Regression190</a><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td align="right">0<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression191">Regression191</a><td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td><td><td><td><td><td><td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td align="right">12<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression192">Regression192</a><td><td><td><td><td><td><td>✓<td><td><td><td><td><td><td><td><td><td><td><td align="right">0<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression193">Regression193</a><td><td><td><td><td><td><td><td><td><td><td><td><td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">6<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression194">Regression194</a><td><td><td>(✗)<td><td>(✗)<td>(✗)<td>✓<td><td>(✗)<td><td><td><td>✗<td>✗<td><td><td><td><td align="right">6<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression195">Regression195</a><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td align="right">0<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression196">Regression196</a><td>✓<td>(C)<td>✓<td>(C)<td>(C)<td>✓<td><td><td><td><td><td><td><td><td><td><td><td>(✗)<td align="right">1<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression197">Regression197</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td align="right">1<td>rare</tr>
+<tr><td><a href="../spec/regressions.md#regression198">Regression198</a><td>✓<td>✓<td>✓<td>(✗)<td>✓<td>✓<td><td><td><td><td><td><td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td align="right">7<td>rare</tr>
+<tr><td><b>total</b><td><b>29</b><td><b>25</b><td><b>40</b><td><b>43</b><td><b>38</b><td><b>37</b><td><b>25</b><td><b>28</b><td><b>28</b><td><b>25</b><td><b>34</b><td><b>31</b><td><b>92</b><td><b>92</b><td><b>96</b><td><b>99</b><td><b>97</b><td><b>103</b><td align="right"><b>962</b><td></tr>
+<tr><td colspan="21"></tr>
 <tr><td colspan="21"></tr>
 <tr><td><b><a name="scenarios.md"></a>scenarios.md</b><td><b><a href="logseq-db.md" title="logseq-db">LD</a></b><td><b><a href="roam.md" title="roam">RR</a></b><td><b><a href="logseq.md" title="logseq">LO</a></b><td><b><a href="dynalist.md" title="dynalist">DL</a></b><td><b><a href="tine.md" title="tine">TI</a></b><td><b><a href="athens.md" title="athens">AR</a></b><td><b><a href="tana.md" title="tana">TA</a></b><td><b><a href="workflowy.md" title="workflowy">WF</a></b><td><b><a href="remnote-bl.md" title="remnote-bl">RB</a></b><td><b><a href="remnote.md" title="remnote">RN</a></b><td><b><a href="blocknote.md" title="blocknote">BN</a></b><td><b><a href="siyuan.md" title="siyuan">SY</a></b><td><b><a href="obsidian-outliner.md" title="obsidian-outliner">OO</a></b><td><b><a href="obsidian-true-outliner.md" title="obsidian-true-outliner">TO</a></b><td><b><a href="silverbullet.md" title="silverbullet">SB</a></b><td><b><a href="obsidian.md" title="obsidian">OB</a></b><td><b><a href="obsidian-lp.md" title="obsidian-lp">LP</a></b><td><b><a href="emacs-markdown.md" title="emacs-markdown">EM</a></b><td><b>disagree</b><td><b>rank</b></tr>
 <tr><td><a href="../spec/scenarios.md#scenario1">Scenario1</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td align="right">1<td>core</tr>

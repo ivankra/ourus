@@ -1,5 +1,6 @@
 // Where a position is: in a node's text, in its frame, in a marker or a container's
-// prefix, on a blank line (whose gap it is), in the preamble, or on no line.
+// prefix, on a block-id line a text carries, on a blank line (whose gap it is), in the preamble, or on
+// no line.
 
 import type { MdLine } from '../parser/index.ts';
 import { lineIndexAt } from '../text/index.ts';
@@ -20,6 +21,12 @@ export type Located =
    */
   | { readonly zone: 'marker'; readonly node: OurusNode; readonly line: MdLine; readonly piece: number; readonly offset: number; readonly part: 'indent' | 'marker' | 'padding' }
   | { readonly zone: 'prefix'; readonly node: OurusNode; readonly line: MdLine; readonly piece: number; readonly offset: number }
+  /**
+   * On a block-id line a node's text carries after it (`OurusText.blockIdLines`), or a blank line
+   * before one: which of them (`line`; on a blank line, the one after it, `blank`), and `offset` in
+   * it, past its indentation (0 on a blank line and in the indentation).
+   */
+  | { readonly zone: 'blockIdLine'; readonly node: OurusNode; readonly text: OurusText; readonly line: number; readonly blank: boolean; readonly offset: number }
   /** On a blank line: the node above's, whose gap it is. */
   | { readonly zone: 'gap'; readonly owner: OurusNode }
   /** Before the first node (frontmatter, blank lines), or past the last line. */
@@ -36,6 +43,11 @@ export function locate(doc: OurusDoc, pos: number): Located {
     // (after a folded subtree, the folded node's gap: its last descendant is hidden)
     const owner = extentOwner(doc.rootNode, line.index);
     return owner ? { zone: 'gap', owner: foldOwner(doc, owner) } : { zone: 'preamble' };
+  }
+  // (past its text, on the lines it carries: no offset in its string there)
+  if (line.index > node.textLastLine) {
+    const text = doc.textOf(node);
+    return text ? blockIdLineAt(node, text, line, pos) : { zone: 'none' };
   }
   // (a quote that is the node's text, `OurusConfig.quotes`: its `>` the text's, frame or
   // characters)
@@ -60,9 +72,20 @@ export function locate(doc: OurusDoc, pos: number): Located {
   }
   const offset = doc.offsetOf(node, pos);
   // a closing frame's start is the end of the text: an underline starts with the line break after the
-  // title, an ATX title's closing `#`s with the blanks before them
-  const part = text.frame.find((p) => p.from <= offset && offset < p.to && !((p.part === 'underline' || (p.part === 'close' && text.type === 'heading')) && offset === p.from));
+  // title, an ATX title's closing `#`s and a block id with the blanks before them
+  const part = text.frame.find((p) => p.from <= offset && offset < p.to && !((p.part === 'underline' || p.part === 'blockId' || (p.part === 'close' && text.type === 'heading')) && offset === p.from));
   return part ? { zone: 'frame', node, text, part: part.part, offset } : { zone: 'text', node, text, offset };
+}
+
+/** Where `pos`, on `line` past `node`'s text, is among the block-id lines the text carries. */
+function blockIdLineAt(node: OurusNode, text: OurusText, line: MdLine, pos: number): Located {
+  let at = node.textLastLine;
+  for (const [k, carried] of text.blockIdLines.entries()) {
+    at += carried.blankLines + 1;
+    if (line.index < at) return { zone: 'blockIdLine', node, text, line: k, blank: true, offset: 0 };
+    if (line.index === at) return { zone: 'blockIdLine', node, text, line: k, blank: false, offset: Math.max(0, pos - (line.to - carried.line.length)) };
+  }
+  return { zone: 'none' };
 }
 
 /** The deepest node whose extent holds `line` (its text, its children or its blank lines), or null before the first node. */

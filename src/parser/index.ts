@@ -11,7 +11,7 @@
 
 export { MdTree, type MdParseOptions, type MdReread } from './syntax.ts';
 export { MdFlavor } from './flavors.ts';
-export { mdCalloutAt } from './obsidian.ts';
+export { MD_BLOCK_ID_NAME, mdBlockIdEnd, mdCalloutAt } from './obsidian.ts';
 export type { MdHtmlOptions } from './html.ts';
 export { MdHtmlParser, type MdHtmlParsed } from './html-parser.ts';
 export { MdBlockAt } from './tree.ts';

@@ -1,9 +1,9 @@
 // The check: whether a document reads as a draft meant, node by node. A node the
 // document shares with the draft is equal by construction and skipped with its subtree; elsewhere the
 // contract, exactly: kinds and nesting, ids, each text's type, its frame's meaning and its text, its
-// placeholders, gaps, and the lists `done()` fixed.
+// block ids, its placeholders, gaps, and the lists `done()` fixed.
 
-import { OurusProse, OurusAtom, type OurusNode, type OurusText, type PersistentNode, type OurusDoc } from '../doc/index.ts';
+import { OurusProse, OurusAtom, blockIdsOf, type OurusNode, type OurusText, type PersistentNode, type OurusDoc } from '../doc/index.ts';
 import type { ListPlace, OurusDraft } from './draft.ts';
 import { isEmptyNodePlaceholder, isPlaceholder } from '../text/index.ts';
 
@@ -41,6 +41,11 @@ function node(doc: OurusDoc, draft: OurusDraft, expected: PersistentNode, origin
 /** Where two texts differ in what the check compares, or null. */
 function texts(want: OurusText | null, got: OurusText | null): string | null {
   if (!want || !got) return want === got ? null : want ? 'its text missing' : `a text ${JSON.stringify(got!.text)} it shouldn't have`;
+  // (a text a command made from nothing, read in the document's flavor as the text written is)
+  if (want instanceof OurusProse && got instanceof OurusProse) want = want.withBlockIds(got.blockIds);
+  const wb = JSON.stringify(blockIdsOf(want).map((b) => [b.name, b.carried]));
+  const gb = JSON.stringify(blockIdsOf(got).map((b) => [b.name, b.carried]));
+  if (wb !== gb) return `block ids ${wb}, read as ${gb}`;
   if (want instanceof OurusProse !== got instanceof OurusProse || want.type !== got.type) return `a ${want.type} text, read as a ${got.type} one`;
   if (want.body !== got.body) return `text ${JSON.stringify(want.body)}, read as ${JSON.stringify(got.body)}`;
   if (want instanceof OurusProse && got instanceof OurusProse) {

@@ -147,6 +147,16 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
     head is; otherwise, where the head isn't on its line's last row (first going up), its own
     Shift-↓ without asking ourus.
 
+  - `addBlockId`, `{ name?, node? }`; `removeBlockId`, `{ name?, node? }`<br>
+    Block ids, where the flavor has them (spec/block-ids.md): a block id for `node` (else the
+    selection's node), `name` or six random characters, in the form its kind takes (` ^id` ending a
+    text; a line after an atom, a blank line between; a line under a quote of several blocks, its
+    last paragraph's), on the item for a block inside one, which is what Obsidian names by it; with
+    `node`, the caret after it. Refused (`block-id`) where one already names it, or the note has
+    `name`. And block id `name` deleted, attached or stray (where the note has it twice, the one
+    `node` owns), or without `name` the one a link to the selection's node uses. Each checks its own
+    result: what it wrote names the node, what it removed is gone, no other block id lost anything.
+
   Over a subtree selection (`OurusDoc.selectedSubtrees`), the keys that edit text act on its nodes
   (spec/subtree-selection.md): Backspace, Delete, Cmd-Backspace and cut delete them as
   `deleteSubtree` does; copy writes them, roots at two depths as siblings, whatever `copySelection`
@@ -170,12 +180,16 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
 
 - **`OurusCommandResult`** is one of:
 
-  - `{ status: 'applied', doc, changes, selection, clipboard?, placed?, dropMap? }`<br>
+  - `{ status: 'applied', doc, changes, selection, clipboard?, placed?, dropMap?, movedBlockIds?, mergedBlockIds? }`<br>
     The new `OurusDoc` (node ids carried over), the changes (`ChangeSpec[]`, in the old text's
     coordinates), the selection (in the new text), for copy and cut the clipboard formats (copy
     has no changes), and for a drop the ids of the nodes it put in place, for a host that selects
     them. Every applied command is checked: the new text, parsed, reads as the outline
-    the command meant.
+    the command meant; and it keeps every block id (below). `movedBlockIds`: the block ids it wrote
+    on another node on purpose (`{ name, to }`: a merge's node that stays taking the other's);
+    `mergedBlockIds`: those a merge dropped for the other's (`{ from, into }`, `joinBlockIds:
+    merge`), for a host that redirects the links to them. What else a command did to block ids, a
+    host reads by comparing `OurusDoc.blockIds()` before and after.
 
   - `{ status: 'rejected', reason: RejectReason, detail? }`<br>
     The command does nothing; the host should swallow the key.
@@ -209,6 +223,10 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
   - `outside-zoom`: zoomed, the selection or nodes are outside the zoom root's subtree, the result
     would reach outside it, or a deferral would: in the root's markup, or where the key's plain
     default (typing, Backspace, Delete) would leave the zoom.
+  - `block-id`: the result would lose a block id: written off the node it is on, naming another node
+    or nothing, shadowed by another for what it names, or a name written twice; a merge of two nodes
+    that both have one (`joinBlockIds: refuse`); `addBlockId` or `removeBlockId` with nothing to do.
+    `detail` names the block id.
   - `unsupported`: a structural command ourus doesn't do here yet (a case no command covers).
   - `write-failed`: the writer failed, on a layout it has no rule for or a text that didn't read back
     as the command meant. This is always a bug in ourus, to fix.
@@ -221,7 +239,7 @@ if (settled) { view.dispatch({ changes: settled.changes }); doc = settled.doc; }
 - **`OurusConfig`** chooses how commands behave where outliners differ. It is set when the document is
   made (`OurusDoc.parse(text, { config })`): `outdent`, `bullet`, `enterOnEmptyItem`, `enterMidItem`,
   `enterAtTextStart`, `enterSplitSpace`, `enterTask`, `backspaceAtTopItem`, `backspaceAtItemStart`,
-  `emptyItemWithChildren`, `joinWithChildren`, `handleFenceContents`, `closeBackticks`,
+  `emptyItemWithChildren`, `joinWithChildren`, `joinBlockIds`, `handleFenceContents`, `closeBackticks`,
   `headingEditing`, `taskEditing`, `copyAtCaret`, `copySelection`, `pasteSeams`, `pasteOverSelection`, `pasteLines`,
   `pastePlainLines`, `pasteAtTextStart`, `pasteOnParent`, `pasteParagraphList`, `pasteListForm`,
   `markup`, the quirks (`quirkEnterMidHeading`, `quirkPasteCaret`, `quirkPasteText`: one app's mechanics),
@@ -243,8 +261,33 @@ The host's contract:
    `invertedEffects` can carry them; the demo does this.
 5. Home goes to `doc.textStart(line)`, the start of the line's text, and pressed again, to the
    line's start.
+6. Where the flavor has block ids, a link to a node uses the block id in `doc.blockIds()` that isn't
+   shadowed and whose `target` is the node; "copy link to block" runs `addBlockId` where there is
+   none. Links in other notes are the host's to keep: after a merge, redirect those to each
+   `mergedBlockIds` pair.
 
 `demos/cm6/main.ts` is a complete CM6 host; `test/player.ts` plays the same contract for the spec.
+
+Every applied result is checked for block ids too, after the command (`checkBlockIds`, `doc/`):
+each block id of the document before is on the node it was on, names what it named, and counts
+where it counted, but where the command declared otherwise (`movedBlockIds`, `mergedBlockIds`:
+claims the check holds it to, a block id moved still naming something, one merged into one that is
+written and names something), one gone with a node the command says it removed (`removedNodes`) or
+with the text it took (a selection typed over, cut), and every gain (one coming to name a node where
+it named nothing). Else the command is refused as `block-id`. The check reads only the lines the
+command reached, so a note without block ids pays nothing. A deferral is checked as well: the host's
+default edit for the key (a character deleted, the selection replaced, a line break) is played, and
+the key refused as `block-id` where that would lose one, but under `markup: text` the block id an
+edit inside its own markup edits, which is the user's there (every other still checked). Where the
+host's edit would lose one, ourus does the key itself if its own way keeps them all (a paste with
+the duplicates dropped, typing over a selection across nodes as a deletion then the text), else
+refuses. A paste keeps the block ids it brings only where new, read where they land
+(`pasteKeepingNewBlockIds`: run with their names marked, two ways, so the result says which it
+wrote): a `^x`
+is one only where it ends a text. A caret on a
+block-id line acts at the end of the text that carries it, and one in or right after a block id
+ending a text, before it; under `markup: text`, the keys that edit the line or the id itself are
+the host's.
 
 Inside, a command works in three steps. It looks at what is at the selection (`ctx.from`,
 `ctx.to`: `locate`'s zones). It describes the outline it wants in a draft (`ctx.draft()`: remove,
@@ -269,7 +312,8 @@ Files:
   `duplicate-subtree.ts`; `enter.ts`, `shift-enter.ts`; `backspace.ts`, `delete.ts` (Backspace and
   Cmd-Backspace, Delete: at a node's boundary, or a selection across nodes); `code.ts` (keys inside
   code blocks, keeping a fence's run matched); `typing.ts` (typed characters Markdown reads as
-  structure: a backtick, a tilde).
+  structure: a backtick, a tilde); `block-ids.ts` (`addBlockId`, `removeBlockId`, and the block ids a
+  paste keeps: only new ones).
 - `copy.ts` (copy and cut); `clipboard.ts` (reading a clipboard for paste: which format holds
   the Markdown, HTML converted by `MdHtmlParser`, lines read as they were where they were copied
   from; and writing one for copy); `paste.ts` (paste: where the nodes go at the caret, and fitting
@@ -277,7 +321,10 @@ Files:
 
 Tests: the spec (`test/spec.test.ts` over `spec/*.md`, every example in every flavor);
 `test/commands/commands.test.ts` (changes, text and selection agree; round trips; ids);
-`test/placeholders.test.ts` (the placeholders' lifecycle); `test/drops.test.ts` (every place a
+`test/commands/block-ids.test.ts` (the block-id commands, the check's refusals, merges, paste and
+duplicate; and, over generated documents, the check where an edit reached agreeing with the check
+of the whole document, and no command losing a block id); `test/placeholders.test.ts` (the
+placeholders' lifecycle); `test/drops.test.ts` (every place a
 pickup lists, dropped: a refusal or a result, at the known starts aside); `test/moves.test.ts` (every
 node moved to every place, those only a tree pane or a dialog names too). The heavy suites, `npm run
 test:heavy` (`test/heavy.ts`), on a frozen copy of the tree: the differential (`test/differential.ts`),

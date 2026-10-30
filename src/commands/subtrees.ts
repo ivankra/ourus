@@ -7,7 +7,7 @@
 
 import { OurusAtom, OurusProse, type OurusNode } from '../doc/index.ts';
 import { composeChanges } from '../text/index.ts';
-import { CommandContext, type CommandOutcome } from './context.ts';
+import { CommandContext, blockIdsDeclaredBy, type CommandOutcome } from './context.ts';
 import { copyOrCutCommand } from './copy.ts';
 import { deleteSubtreeCommand } from './delete-subtree.ts';
 import { pasteAtCommand } from './paste.ts';
@@ -121,5 +121,5 @@ function composed(ctx: CommandContext, first: CommandOutcome, then: (ctx: Comman
     next = { status: 'applied', doc: first.doc.update({ changes, caret }), changes, selection: { anchor: caret, head: caret } };
   }
   if (!next || next.status !== 'applied') return next?.status === 'deferredToHost' ? null : next;
-  return { ...next, changes: composeChanges(ctx.doc.text, first.changes, next.changes) };
+  return { ...next, ...blockIdsDeclaredBy([first, next]), changes: composeChanges(ctx.doc.text, first.changes, next.changes) };
 }

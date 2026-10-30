@@ -3,7 +3,7 @@
 // which nodes go; `done()` escapes what then starts a line, sets apart what would run together, and
 // holds a line it empties with a placeholder.
 
-import { OurusProse, OurusAtom, type OurusNode } from '../doc/index.ts';
+import { OurusProse, OurusAtom, blockIdsOf, type OurusNode } from '../doc/index.ts';
 import type { OurusDraft } from '../writer/index.ts';
 import { isSpaceOrTab, lineOf } from '../text/index.ts';
 import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
@@ -60,7 +60,7 @@ export function deleteSoftLineBackwardCommand(ctx: CommandContext): CommandOutco
   if (to === end && underline && end + 1 >= underline.from) {
     if (line > 0) return ctx.apply(draft.setText(node, text.splice(start - 1, end)).setCaret(node, start - 1, -1));
     const lead = `${'#'.repeat(text.heading?.level ?? 1)} `;
-    return ctx.apply(draft.setText(node, new OurusProse('heading', text.item, lead)).setCaret(node, lead.length, -1));
+    return ctx.apply(draft.setText(node, text.slice(0, 0).withBlockIdLines(text.blockIdLines).splice(0, 0, lead)).setCaret(node, lead.length, -1));
   }
   if (to === end && end < s.length) {
     let rest = end + 1;
@@ -217,7 +217,7 @@ export function deleteContentBackwardCommand(ctx: CommandContext): CommandOutcom
   if (text.type === 'title') {
     const callout = text.frame.find((p) => p.part === 'callout')!;
     const rest = text.slice(callout.to);
-    const title = new OurusProse('paragraph', false, rest.text, rest.marks);
+    const title = rest.retyped('paragraph', false);
     if (title.empty) return null;
     const id = draft.create('paragraph', title);
     // (the blank lines after the title, the paragraph's now)
@@ -304,7 +304,7 @@ function unwrapItem(ctx: CommandContext, node: OurusNode, text: OurusProse, spac
 function blankLineBack(ctx: CommandContext, owner: OurusNode): CommandOutcome {
   const head = ctx.selection.head;
   const text = ctx.doc.textOf(owner);
-  const k = ctx.doc.lineAt(head).index - owner.textLastLine - 1;
+  const k = ctx.doc.lineAt(head).index - owner.ownLastLine - 1;
   // (at a line's start, the host's deletes the line break just as well)
   if (!text || owner.children.length || k < 0 || k >= owner.gap || head === ctx.doc.lineAt(head).from || !ctx.doc.atTextColumn(head, owner)) return deferToHost();
   // the one quoted blank line between two paragraphs of a quote, `quotes: text` (Shift-Enter's at a
@@ -370,7 +370,8 @@ export function joinUp(ctx: CommandContext, node: OurusNode, text: OurusProse, c
       else draft.append(above, 'last', node.children);
     }
     draft.remove([node]);
-    draft.setText(above, moved).setCaret(above, moved.textStart(0), -1);
+    // (its block ids with it, on the item now)
+    draft.setText(above, moved).movedBlockIds(blockIdsOf(text).map((b) => b.name), above).setCaret(above, moved.textStart(0), -1);
     return ctx.apply(draft);
   }
   if (above.kind === 'item' && upper instanceof OurusProse && upper.empty) return null;
@@ -532,11 +533,21 @@ export function deleteSelectionAcross(ctx: CommandContext, then?: (draft: OurusD
   }
   // (a callout's title holds one line, as a join into it refuses)
   if (from.text.type === 'title' && ctx.config.flavor === 'obsidian' && rest.text.includes('\n')) return reject('not-expressible', "a callout's title is a single line");
-  draft.setText(upper, from.text.slice(0, from.offset)).setText(lower, rest);
+  // each node's block ids stay its own, the selection covering them or not: the first node stays, and
+  // covering the end of its text is no choice of its block id; the last's go to the join, which takes
+  // them or refuses
+  const kept = (text: OurusProse, cut: number): OurusProse => {
+    const id = text.frame.find((p) => p.part === 'blockId');
+    return id && id.to > cut ? text.slice(0, Math.min(cut, id.from)).concat(text.slice(id.from, id.to)) : text.slice(0, cut);
+  };
+  const id = to.text.frame.find((p) => p.part === 'blockId');
+  if (id && to.offset > id.from) rest = to.text.slice(id.from, id.to);
+  const at = Math.min(from.offset, from.text.frame.find((p) => p.part === 'blockId')?.from ?? from.offset);
+  draft.setText(upper, kept(from.text, from.offset).withBlockIdLines(from.text.blockIdLines)).setText(lower, rest.withBlockIdLines(to.text.blockIdLines));
   const adopt = upper.kind === 'item' && upper !== lower.parent;
   draft.join(upper, lower, { children: adopt ? 'adopt' : 'place' });
-  if (!then) return ctx.apply(draft.setCaret(upper, from.offset, -1));
-  const next = then(draft, upper, from.offset);
+  if (!then) return ctx.apply(draft.setCaret(upper, at, -1));
+  const next = then(draft, upper, at);
   return next && ctx.apply(next);
 }
 

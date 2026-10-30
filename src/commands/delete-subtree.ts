@@ -25,6 +25,8 @@ export function deleteSubtreeCommand(ctx: CommandContext, expectMarkdown?: strin
   }
   const gone = goneWithTextlessParents(doc, nodes);
   const draft = ctx.draft().remove(gone);
+  // (what went, on purpose: their block ids with them)
+  const removed = (outcome: CommandOutcome): CommandOutcome => (outcome?.status === 'applied' ? { ...outcome, removedNodes: gone.map((n) => n.id) } : outcome);
   if (ctx.nodes) {
     const from = doc.rangeOf(gone[0]!).from;
     const to = doc.rangeOf(gone[gone.length - 1]!).to;
@@ -36,7 +38,7 @@ export function deleteSubtreeCommand(ctx: CommandContext, expectMarkdown?: strin
     const out = (pos: number): boolean => (pos < from || pos > to) && !theirs(pos);
     if (out(ctx.selection.anchor) && out(ctx.selection.head)) {
       selectionInText(ctx, draft);
-      return ctx.apply(draft);
+      return removed(ctx.apply(draft));
     }
   }
   let above = gone[0]!.preceding;
@@ -52,7 +54,7 @@ export function deleteSubtreeCommand(ctx: CommandContext, expectMarkdown?: strin
     if (!at || !text) return null;
     draft.setCaret(at, textStart(text), 1);
   } else draft.setCaretAt(0);
-  return ctx.apply(draft);
+  return removed(ctx.apply(draft));
 }
 
 /** Whether `a` is an ancestor of `b`. */

@@ -522,21 +522,34 @@ export const comments: MdExtension = {
 
 // ----------------------------------------------------------------- block ids, inline footnotes
 
-const reBlockId = /\^([A-Za-z0-9-]+)[ \t]*$/y;
+/** A block id's name, as Obsidian has them: the pattern. */
+export const MD_BLOCK_ID_NAME = '[A-Za-z0-9-]+';
+const reBlockId = new RegExp(`\\^(${MD_BLOCK_ID_NAME})[ \\t]*$`, 'y');
+
+/**
+ * The block id ending `text` (a block's text, or its last line), as every reader of block ids takes
+ * one: `^name` at the start or after a blank or a line break, nothing but blanks after it. Where its
+ * `^` is, and its name; or null.
+ */
+export function mdBlockIdEnd(text: string): { readonly at: number; readonly name: string } | null {
+  // (a name has no `^`, nor do the blanks after it: the last is the one)
+  const at = text.lastIndexOf('^');
+  if (at < 0 || (at > 0 && !' \t\n'.includes(text[at - 1]!))) return null;
+  reBlockId.lastIndex = at;
+  const m = reBlockId.exec(text);
+  return m ? { at, name: m[1]! } : null;
+}
 
 /** ` ^id` at the very end of a block's text (or the whole text). */
 const blockIdRule: MdInlineRule = {
   name: 'blockId',
   triggers: '^',
   parse(p) {
-    const { text } = p;
     const at = p.pos;
-    if (at > 0 && !isUnicodeWhitespace(text.charCodeAt(at - 1))) return false;
-    reBlockId.lastIndex = at;
-    const m = reBlockId.exec(text);
-    if (!m) return false;
-    p.pos = text.length;
-    p.add(new Node('block_id', at, at + 1 + m[1]!.length, { value: m[1] }));
+    const found = mdBlockIdEnd(p.text);
+    if (found?.at !== at) return false;
+    p.pos = p.text.length;
+    p.add(new Node('block_id', at, at + 1 + found.name.length, { value: found.name }));
     return true;
   },
 };

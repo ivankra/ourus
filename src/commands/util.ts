@@ -2,7 +2,7 @@
 // (where typing extends it) and of the selection (the nodes it acts on); and what Tab and Shift-Tab
 // share: a heading's level, one up or down.
 
-import { OurusProse, OurusAtom, textEnd, textStart, type OurusNode, type OurusText, type Located, type OurusDoc } from '../doc/index.ts';
+import { OurusProse, OurusAtom, closingFrameStart, textEnd, textStart, type OurusNode, type OurusText, type Located, type OurusDoc } from '../doc/index.ts';
 import type { AnchorSpec, OurusDraft } from '../writer/index.ts';
 import { reject, type CommandContext, type CommandOutcome } from './context.ts';
 import type { OurusSelection } from './types.ts';
@@ -31,8 +31,14 @@ export function inMarkup(doc: OurusDoc, at: Located, pos: number): boolean {
 /** A quote's text (`quotes: text`) without its `>`s, every line's: a paragraph's, where it is. */
 export function unquote(text: OurusProse): OurusProse {
   let out = text;
-  for (const p of [...text.frame].reverse()) if (p.part === 'quote') out = out.splice(p.from, p.to);
-  return new OurusProse('paragraph', out.item, out.text, out.marks);
+  for (const p of [...text.frame].reverse()) {
+    if (p.part === 'quote') out = out.splice(p.from, p.to);
+    // (a block id on a line of its own takes that line's `>` with it: `> q⏎> ^x`)
+    if (p.part !== 'blockId') continue;
+    const prefixes = [...text.text.slice(p.from, p.to).matchAll(/\n([ \t]*>[ \t]?)/g)].reverse();
+    for (const m of prefixes) out = out.splice(p.from + m.index + 1, p.from + m.index + m[0].length);
+  }
+  return out.retyped('paragraph');
 }
 
 /**
@@ -168,7 +174,7 @@ export function selectionInText(ctx: CommandContext, draft: OurusDraft, keepOnFe
     if (text) {
       const otherwise = { ref: owner, offset: headingOffset(shifts, owner, textEnd(text)), assoc: -1 } as const;
       // on a blank line at its text's column (Shift-Enter's): there still, at the column it has now (TO12)
-      const k = ctx.doc.lineAt(head).index - owner.textLastLine - 1;
+      const k = ctx.doc.lineAt(head).index - owner.ownLastLine - 1;
       if (at.zone === 'gap' && !owner.children.length && k >= 0 && k < owner.gap && ctx.doc.atTextColumn(head, owner)) draft.select({ blank: owner, line: k, old: anchor }, { blank: owner, line: k, old: head });
       else if (at.zone === 'gap') draft.select({ old: anchor, otherwise }, { old: head, otherwise });
       else draft.setCaret(owner, otherwise.offset, -1);
@@ -304,13 +310,12 @@ export function shiftHeadingLevels(ctx: CommandContext, draft: OurusDraft, nodes
       const underline = text.frame.find((p) => p.part === 'underline')!;
       if (s.slice(0, underline.from).includes('\n')) return reject('not-expressible', 'a setext title of several lines has no ATX form');
       const lead = `${'#'.repeat(next)} `;
-      const kept = text.slice(0, underline.from);
-      const atx = new OurusProse('heading', text.item, kept.text, kept.marks).splice(0, 0, lead);
+      const atx = text.slice(0, underline.from).withBlockIdLines(text.blockIdLines).splice(0, 0, lead);
       // a title ending in `#`s would read them as its closing sequence
       if (atx.frame.some((p) => p.part === 'close')) return null;
       draft.setText(h, atx);
-      // the underline goes: a caret on it at the title's end
-      shifts.set(h.id, { at: 0, by: lead.length, length: lead.length + underline.from });
+      // the underline goes: a caret on it at the title's end (before a block id ending it)
+      shifts.set(h.id, { at: 0, by: lead.length, length: closingFrameStart(atx) });
     }
   }
   return shifts;
@@ -327,7 +332,7 @@ export function deleteHeldSpace(ctx: CommandContext, node: OurusNode, text: Ouru
   const [before, after] = [ctx.doc.posOf(node, offset, -1), ctx.doc.posOf(node, offset, 1)];
   if (before === after || head !== (dir < 0 ? after : before)) return null;
   const marks = text.marks.update({ filter: (m) => m.from !== offset || !isHeldSpacePlaceholder(m, text.text) });
-  const settled = new OurusProse(text.type, text.item, text.text, marks);
+  const settled = text.withMarks(marks);
   return ctx.apply(ctx.draft().setText(node, settled).setCaret(node, offset, -1));
 }
 

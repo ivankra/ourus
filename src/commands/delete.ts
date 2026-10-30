@@ -2,7 +2,7 @@
 // the other side. The command says what the texts become and which nodes go; `done()` and the writer
 // do the rest.
 
-import { OurusProse, OurusAtom, type OurusNode } from '../doc/index.ts';
+import { OurusProse, isClosingPart, OurusAtom, type OurusNode } from '../doc/index.ts';
 import { deleteSelectionAcross, joinUp } from './backspace.ts';
 import { codeAt, joinCodeItemUp, joinInCode } from './code.ts';
 import { lineOf } from '../text/index.ts';
@@ -56,8 +56,8 @@ export function deleteContentForwardCommand(ctx: CommandContext): CommandOutcome
   if (held) return held;
   const s = text.text;
   const end = textEnd(text);
-  // past an ATX title's closing `#`s, at the title's end (Delete4b)
-  const offset = text.frame.some((p) => p.part === 'close' && p.from <= end && p.to === at.offset) ? end : at.offset;
+  // past an ATX title's closing `#`s (or a block id before them), at the title's end (Delete4b)
+  const offset = text.frame.some((p) => isClosingPart(p) && p.from >= end && p.to === at.offset) ? end : at.offset;
   const lineEnd = s.indexOf('\n', offset);
   const draft = ctx.draft();
   if (lineEnd >= 0 && lineEnd < end) {
@@ -145,6 +145,6 @@ function markerSpace(ctx: CommandContext, node: OurusNode): CommandOutcome {
   const parent = node.parent!;
   if (parent.kind === 'item' || parent.kind === 'quote') return reject('not-expressible', 'without its marker the item would run into the text above');
   const marker = doc.markerOf(node);
-  const draft = ctx.draft().convert(node, 'paragraph').setText(node, new OurusProse('paragraph', false, marker).concat(text));
+  const draft = ctx.draft().convert(node, 'paragraph').setText(node, text.retyped('paragraph', false).splice(0, 0, marker));
   return ctx.apply(draft.setCaret(node, marker.length, -1));
 }

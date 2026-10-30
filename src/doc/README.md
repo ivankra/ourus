@@ -104,8 +104,23 @@ const at = doc.locate(pos);                 // in a text, a frame, a marker, a p
     The node with an id. The index of ids is built on the first call, so keep it off hot paths.
 
   - `OurusDoc.nodeAtLine(line: number): OurusNode | null`<br>
-    The node whose own text is on a line: the deepest one, where nested items share a line. Null on
-    blank lines and in the preamble.
+    The node whose own lines are on a line (its text's, its block-id lines' and the blank lines
+    between them): the deepest one, where nested items share a line. Null on other blank lines and in
+    the preamble.
+
+  - `OurusDoc.blockIds(): readonly BlockId[]`<br>
+    Every block id written in the document, in order, stray ones included, where the flavor has them
+    (Obsidian's ` ^id`, and `^id` on a line of its own after a block); read on the first call. Each
+    `BlockId` has its `name`; where it is (`from`, `to`: `^` through the name; `partFrom`, `partTo`:
+    all of it, the blank or line break before it, a carried line's blank lines); `ownLine` and
+    `carried` (on a line of its own; carried by its owner's text, outside its string); `owner`, the
+    node it is written on; `target`, what Obsidian names by it: a node (an item for any block id
+    inside one), a whole list (`{ list }`, by its first item), or nothing; `shadowed`, another block id
+    for the same target being the one Obsidian counts (inside an item the first, else the last), so a
+    link to this one finds nothing; `stray`, why the target is no node it is written on (`whole-list`,
+    `item`, `quote`, `nothing-above`, `block-below`, `trailing-space`), else null; `syntax` (`caret`)
+    and `implicit` (false). A link to a node uses the one not shadowed whose `target` is it; a host
+    that keeps links in other notes right compares `blockIds()` before and after an edit.
 
   - `OurusDoc.textOf(node: OurusNode): OurusText | null`<br>
     A node's text, read once per stored node. Null for a node without one: the root, a quote without
@@ -113,9 +128,10 @@ const at = doc.locate(pos);                 // in a text, a frame, a marker, a p
 
   - `OurusDoc.locate(pos: number): Located`<br>
     What is at `pos`, by zone: `text` (in a node's text, with the offset there), `frame` (a checkbox,
-    `#`s, a fence, ...), `marker` (an item's indentation, marker or padding), `prefix` (a
-    container's, like a quote's `>`), `gap` (a blank line, with the node above it as its owner),
-    `preamble`, or `none`.
+    `#`s, a fence, a block id ending the text, ...), `marker` (an item's indentation, marker or
+    padding), `prefix` (a container's, like a quote's `>`), `blockIdLine` (a block-id line a text
+    carries, or a blank line before one: which of them, `blank`, and the offset in it past its
+    indentation), `gap` (a blank line, with the node above it as its owner), `preamble`, or `none`.
 
   - `OurusDoc.touchedSubtrees(sel: OurusSelection): readonly number[]`<br>
     The subtrees a selection touches: the topmost nodes whose own lines it touches, in document
@@ -149,7 +165,8 @@ const at = doc.locate(pos);                 // in a text, a frame, a marker, a p
   - `OurusDoc.textStart(i: number): number`<br>
     Where the text starts on line `i` (where Home goes): past its containers' prefixes, an item's
     marker, the node's frame, and the blanks after them. Hidden spaces (see `hiddenSpaces`) are
-    text, so it stops before them.
+    text, so it stops before them. On a block-id line a text carries: under `markup: decorated`,
+    the end of that text (the caret stays out of it); else past its indentation.
 
   - `OurusDoc.isBlankLine(i: number)`, `OurusDoc.isEmptyLine(i: number)`, `OurusDoc.isLazyLine(i: number)`<br>
     Whether a line holds nothing past its containers' prefix (a quote's `>` line is blank); whether
@@ -192,7 +209,7 @@ const at = doc.locate(pos);                 // in a text, a frame, a marker, a p
   for as long as it stays the same. It has:
 
   - `id`, `kind` (`OurusNodeKind`: `root`, `heading`, `item`, `paragraph`, `quote`, `atom`),
-    `gap` (the blank lines after its own text, before its first child or what follows), and
+    `gap` (the blank lines after its own lines, before its first child or what follows), and
     `children`;
   - for a node read from a document: its parser blocks (`block`, and `head`, the block holding its
     text), its extent in lines, up to the next node (`lines`), and each child's first line counted
@@ -206,8 +223,10 @@ const at = doc.locate(pos);                 // in a text, a frame, a marker, a p
     for those, `source` is the read node it changes (null for a new one) and `text` is the text the
     draft set.
 
-  - `PersistentNode.textLines(): { first, last }`<br>
-    The lines of its text, counted from its first line.
+  - `PersistentNode.textLines(): { first, last }`, `PersistentNode.ownLines(): { first, last }`, `PersistentNode.blockIdCount`<br>
+    The lines of its text, counted from its first line; its own lines, its text's and the block-id
+    lines its text carries after them; how many lines those take, blank lines between included (0
+    where it carries none). Reading a text uses its text's lines; the node's geometry its own.
 
 - **`OurusNode`** is a node of one snapshot's outline, with its position: its lines, its parent and
   its siblings. It wraps a `PersistentNode`, which stores none of those so that snapshots can
@@ -215,9 +234,9 @@ const at = doc.locate(pos);                 // in a text, a frame, a marker, a p
 
   - `OurusNode.persistentNode`, `get OurusNode.id`, `get OurusNode.kind`, `get OurusNode.block`, `get OurusNode.head`, `get OurusNode.gap`
 
-  - `OurusNode.startLine`, `get OurusNode.textFirstLine`, `get OurusNode.textLastLine`, `get OurusNode.endLine`<br>
-    Its first line; the first and last lines of its text; its last line, counting its descendants
-    and blank lines.
+  - `OurusNode.startLine`, `get OurusNode.textFirstLine`, `get OurusNode.textLastLine`, `get OurusNode.ownLastLine`, `get OurusNode.endLine`<br>
+    Its first line; the first and last lines of its text; the last of its own lines (its text's, or
+    its last block-id line); its last line, counting its descendants and blank lines.
 
   - `OurusNode.parent`, `OurusNode.index`, `OurusNode.depth`, `get OurusNode.children`, `OurusNode.child(i)`, `get OurusNode.prev`, `get OurusNode.next`
 
@@ -238,13 +257,20 @@ const at = doc.locate(pos);                 // in a text, a frame, a marker, a p
 
 - **`OurusText`** is a node's text, of either kind: `OurusProse | OurusAtom`. A prose text is
   ourus's to edit as text (split, join, escape, normalize); an atom's lines are taken as written,
-  whatever the parser reads inside them (code, math, HTML, a table).
+  whatever the parser reads inside them (code, math, HTML, a table). Either carries `blockIdLines`:
+  the block-id lines after its string that its flavor names its node by (`{ blankLines, line }`, a
+  table's `⏎⏎^t1`), which aren't in its string; `withBlockIdLines(lines)` gives the same text
+  carrying others. `blockIdsOf(text)` reads a text's block ids (the one ending its string, then the
+  carried ones); `withoutBlockIds(text, which?)` drops them all, or those `which` says (by where they are in
+  `blockIdsOf`).
 
 - **`OurusProse`** is the text of a paragraph, a heading, or a quote's callout title (an item's too,
   where its first block is one of those): its lines without their containers' prefixes and without
   markup escapes, joined by `\n`, with its placeholders. Immutable.
 
-  - `new OurusProse(type: OurusProseType, item: boolean, text: string, marks?: MarkSet)`
+  - `new OurusProse(type: OurusProseType, item: boolean, text: string, marks?: MarkSet, blockIds?: 'caret' | null, blockIdLines?)`<br>
+    `blockIds`: how its flavor writes a block id in it (Obsidian's ` ^id`), which its frame reads; a
+    text a command makes from nothing has none, and is read in the document's (`withBlockIds`).
 
   - `OurusProse.type`, `OurusProse.item`, `OurusProse.text: string`, `OurusProse.marks: MarkSet`<br>
     The type: `paragraph`, `heading`, or `title` (a quote's callout title). Whether it is an item's
@@ -255,25 +281,35 @@ const at = doc.locate(pos);                 // in a text, a frame, a marker, a p
     The markup in the string around the body, computed from its characters: `task` (a checkbox),
     `heading` and `close` (an ATX heading's `#`s), `callout` (`[!type]` and its fold), `underline`
     (a setext heading's), `below` (the line breaks before an item's text that starts below its
-    marker).
+    marker), `blockId` (a block id ending the text, with the blanks or the line break before it,
+    before what else closes it: `## H ^x ##`, `Title ^x⏎===`).
 
   - `get OurusProse.body: string`<br>
     The string without its frame: what the user edits, and what the draft's check compares.
 
   - `get OurusProse.task`, `get OurusProse.heading`, `get OurusProse.callout`, `get OurusProse.empty`<br>
     The checkbox's status; the heading's level and form; the callout's type and fold; whether the
-    text holds nothing but Markdown's whitespace (a no-break space counts as text).
+    text holds nothing but Markdown's whitespace (a no-break space counts as text, and so does a
+    block id: `- ^x` is no empty item).
 
   - `OurusProse.textStart(line: number): number`<br>
     The first offset on a line past the frame.
 
   - `OurusProse.splice(from, to, insert?)`, `OurusProse.slice(from?, to?)`, `OurusProse.concat(...others)`<br>
-    New texts, with the placeholders carried along.
+    New texts, with the placeholders carried along, and the block-id lines but by `slice`, whose
+    result is a `fragment`: it says nothing of them, and the draft refuses it as the text of a node
+    that carries some until `withBlockIdLines` says what they are (a split or a join gives them to
+    one node explicitly).
 
   - `OurusProse.asItem(item: boolean)`, `OurusProse.normalize()`<br>
     The same string read as an item's text or not. The text after an edit, reread as what it now
     is: a heading that no longer reads as one becomes a paragraph, and so does a title that no
-    longer reads as a callout.
+    longer reads as a callout; a paragraph's block-id line right under it is a line of its string.
+
+  - `closingFrameStart(text)`, `isClosingPart(part)`<br>
+    Where a text's closing frame starts: the run of closing parts that ends it (a block id, an ATX
+    closing sequence, a setext underline). A split keeps it with the first half, a join puts what it
+    appends before it, and `textEnd` is there.
 
 - **`OurusAtom`** is the text of an atom: code, math, a comment, HTML, a table, a definition, a
   thematic break, an extension's block (and code that is an item's text): its lines as written,
@@ -311,8 +347,11 @@ Files:
 
 - `index.ts` (the API); `doc.ts` (`OurusDoc`); `node.ts` (`PersistentNode`, the node
   as stored, and `OurusNode`, a snapshot's, with its position); `outline.ts` (reading the outline
-  from the parse, sharing nodes between snapshots); `text.ts` (`OurusProse`, `OurusAtom`, and where
-  a text starts and ends, `textStart` and `textEnd`).
+  from the parse, sharing nodes between snapshots, a block-id paragraph that names the block before
+  it carried by that block); `text.ts` (`OurusProse`, `OurusAtom`, where a text starts and ends,
+  `textStart` and `textEnd`, and a text's block ids); `block-ids.ts` (`OurusDoc.blockIds`, and
+  `checkBlockIds`, the rule every command keeps: no block id loses what it names, read where the
+  command's changes reached, down to where the outline is the nodes it was).
 - `read.ts` (a node's text read from its lines, with its markup escapes left out, and the map
   between the text's offsets and the document's); `escapes.ts` (`markupEscapes` for reading,
   `escapeParagraph` for writing); `locate.ts` (what is at a position); `select.ts` (what a
@@ -321,5 +360,8 @@ Files:
   something); `copy.ts` (a range's Markdown without its containers' prefixes).
 
 Tests, in `test/doc/`: `doc.test.ts` (placeholders, updates), `outline.test.ts` (an update's outline
-equals a fresh parse's), `text.test.ts`, `locate.test.ts`, `escapes.test.ts`; and
+equals a fresh parse's), `text.test.ts`, `locate.test.ts`, `escapes.test.ts`, `block-ids.test.ts`
+(each shape's frame parts, carried lines and own lines, strays, `locate` on a block-id line),
+`block-id-shapes.test.ts` (obsidian-true-outliner's shapes measured in Obsidian: each block id's
+owner, target, shadowing and stray reading); and
 `test/placeholders.test.ts` (the placeholders' lifecycle).

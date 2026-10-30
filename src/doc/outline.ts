@@ -1,12 +1,15 @@
 // The outline tree read from the parse: nodes stored with positions relative to their parent, as the
 // parser's blocks are (`PersistentNode`), so snapshots share every node an edit didn't reach. After an
 // update, the build reads the containers on the path to the changed lines again and takes every other
-// node whole from the old tree; ids are carried to the nodes made anew.
+// node whole from the old tree; ids are carried to the nodes made anew. In a flavor with block ids, a
+// paragraph of nothing but a block id that names the block before it (or the item it is under) is no
+// node: that block's node carries it (`blockIdCount`), and its text the lines.
 
 import { OurusConfig } from '../config.ts';
 import type { MdBlock, MdTree } from '../parser/index.ts';
-import { ChangeIndex, lineIndexAt, type ChangeSpec } from '../text/index.ts';
+import { ChangeIndex, lineIndexAt, trimMd, type ChangeSpec } from '../text/index.ts';
 import { itemHead, nodeKindOf, outlineChildren, quoteHead, type OurusNodeKind, type OutlineChild } from './rules.ts';
+import { reBlockIdLine } from './text.ts';
 import { Lineage } from './doc.ts';
 import { PersistentNode } from './node.ts';
 
@@ -90,12 +93,16 @@ interface Located {
   readonly start: number;
 }
 
-/** A block of a container, as the node it will be: its first line in the new text; a heading's level. */
+/**
+ * A block of a container, as the node it will be: its first line in the new text; a heading's level;
+ * the lines after its text it carries (`PersistentNode.blockIdCount`).
+ */
 interface Entry {
   readonly block: MdBlock;
   readonly kind: Exclude<OurusNodeKind, 'root'>;
   readonly start: number;
   readonly level: number;
+  carried: number;
 }
 
 /** A container's nodes as the outline has them (`outlineChildren`: sections, owned lists), before they are made. */
@@ -159,22 +166,72 @@ class Build {
     // the same stored block holds the same blocks, grouped the same: only the nodes on touched lines change
     // (but a quote that is of another kind now, read anew)
     // (and not where the old one was grouped under other settings: `listParent`, `quotes`)
-    const copied = old && !this.previous?.regroup && old.node.block === block && old.node.head === head ? yield this.copy(old, start, end) : null;
+    // (nor where a block-id paragraph may attach otherwise now: blocks are stored by their shapes, and
+    // what a one-line paragraph says, and the line after it, aren't theirs)
+    const copied = old && !this.previous?.regroup && old.node.block === block && old.node.head === head && !this.blockIdsTouched(block, start) ? yield this.copy(old, start, end) : null;
     if (copied) return copied;
     const entries: Entry[] = [];
+    // what a block-id paragraph next would attach to: this item (`self`), the entry before, or nothing
+    const blockIds = this.tree.flavor.has('blockIds');
+    // (an item whose text is nothing, `-`, carries no line: `-` and a blank line end it)
+    let host: Entry | 'self' | null = kind === 'item' && head && trimMd(this.contentOf(start + block.offsets[0]!)) !== '' ? 'self' : null;
+    let own = 0;
     for (let k = head ? 1 : 0; k < block.children.length; k++) {
       const child = block.children[k]!;
       const at = start + block.offsets[k]!;
       if (child.type === 'list') {
-        for (let j = 0; j < child.children.length; j++) entries.push({ block: child.children[j]!, kind: 'item', start: at + child.offsets[j]!, level: 0 });
+        for (let j = 0; j < child.children.length; j++) entries.push({ block: child.children[j]!, kind: 'item', start: at + child.offsets[j]!, level: 0, carried: 0 });
+        host = null;
         continue;
       }
       const childKind = nodeKindOf(child, this.config.quotes, () => this.contentOf(at));
-      if (childKind) entries.push({ block: child, kind: childKind, start: at, level: child.type === 'heading' ? child.attrs.level! : 0 });
+      const lone = blockIds && childKind === 'paragraph' && this.blockIdParagraph(child, at);
+      if (lone && host && this.attaches(block, at, end, host)) {
+        // (its lines from the host's text's end: the blank lines before it, and the line)
+        if (host === 'self') own = at - (start + block.offsets[0]! + head!.lines - 1);
+        else host.carried = at - (host.start + textHead(host).lines - 1);
+        continue;
+      }
+      const entry: Entry | null = childKind ? { block: child, kind: childKind, start: at, level: child.type === 'heading' ? child.attrs.level! : 0, carried: 0 } : null;
+      if (entry) entries.push(entry);
+      // (a quote that is a container ends with its children, and carries nothing; nor does a block-id
+      // paragraph left alone, nor an empty paragraph a placeholder holds, which is nothing on disk)
+      const held = childKind === 'paragraph' && child.type === 'paragraph' && trimMd(this.contentOf(at)) === '';
+      host = entry && entry.kind !== 'quote' && !lone && !held ? entry : null;
     }
     const candidates = old ? this.candidates(old) : null;
     const { nodes, starts } = yield* this.nodes(outlineChildren(entries, kind === 'root', this.config), end, candidates);
-    return this.make(kind, block, head, start, end, nodes, starts);
+    return this.make(kind, block, head, start, end, nodes, starts, own);
+  }
+
+  /** Whether the flavor has block ids and a touched line is a one-line paragraph of `block` (at line `start`), or the line after one: what attaches may differ. */
+  private blockIdsTouched(block: MdBlock, start: number): boolean {
+    if (!this.tree.flavor.has('blockIds')) return false;
+    return block.children.some((child, k) => child.type === 'paragraph' && child.lines === 1 && this.touched.any(start + block.offsets[k]!, start + block.offsets[k]! + 1));
+  }
+
+  /** Whether `block`, at line `at`, is a paragraph of nothing but a block id, written exactly (past its indentation). */
+  private blockIdParagraph(block: MdBlock, at: number): boolean {
+    return block.type === 'paragraph' && block.lines === 1 && reBlockIdLine.test(this.contentOf(at).replace(/^[ \t]+/, ''));
+  }
+
+  /**
+   * Whether the block-id paragraph at line `at`, in `container` (ending at line `end`), names `host`
+   * in Obsidian, as measured there: the item whose text it is under (`self`), or the
+   * block before it. Inside a list item, only the item's own: one after another block in it names the
+   * item, not that block, and stays a paragraph. Outside one, the block before it, blank lines between
+   * or none, with a blank line after it or the container's end: with a block right under it, it names
+   * only its own line.
+   */
+  private attaches(container: MdBlock, at: number, end: number, host: Entry | 'self'): boolean {
+    if (this.tree.line(at).containers.some((c) => c.block.type === 'item')) return host === 'self';
+    if (host === 'self') return false;
+    const next = at + 1;
+    if (next >= end || next >= this.tree.lineCount) return true;
+    // (blank in its container: a line opening another, `>`, is a block under it)
+    const line = this.tree.line(next);
+    if (line.empty && line.containers.length <= this.tree.line(at).containers.length) return true;
+    return container !== this.tree.root && !line.containers.some((c) => c.block === container);
   }
 
   /** Nodes for `shells`, which tile `[their first start, end)`. */
@@ -196,8 +253,7 @@ class Build {
     if (kind === 'item' || kind === 'quote') return yield this.containerOf(kind, block, start, end, old);
     if (old && sameBlocks(old.node, shell) && this.untouched(old.node, start, end)) return this.reuse(old.node);
     const { nodes, starts } = yield* this.nodes(shell.children, end, candidates);
-    // (a quote read as a paragraph: its text the paragraph in it, the blank lines after that its gap)
-    return this.make(kind, block, kind === 'paragraph' && block.type === 'blockquote' ? block.children[0]! : block, start, end, nodes, starts);
+    return this.make(kind, block, textHead(shell.entry), start, end, nodes, starts, shell.entry.carried);
   }
 
   /**
@@ -225,7 +281,7 @@ class Build {
         children[i] = copied;
       }
     }
-    return this.make(node.kind, node.block!, node.head, start, end, children, starts);
+    return this.make(node.kind, node.block!, node.head, start, end, children, starts, node.blockIdCount);
   }
 
   /** Whether `node`, now on `[start, end)`, has the same extent and no touched line in it or on the line after it. */
@@ -238,9 +294,9 @@ class Build {
     return node;
   }
 
-  private make(kind: OurusNodeKind, block: MdBlock, head: MdBlock | null, start: number, end: number, children: PersistentNode[], starts: readonly number[]): PersistentNode {
+  private make(kind: OurusNodeKind, block: MdBlock, head: MdBlock | null, start: number, end: number, children: PersistentNode[], starts: readonly number[], blockIdCount = 0): PersistentNode {
     const offsets = starts.map((s) => s - start);
-    const node = new PersistentNode(kind, block, head, end - start, offsets, children);
+    const node = new PersistentNode(kind, block, head, end - start, offsets, children, blockIdCount);
     this.made.add(node);
     return node;
   }
@@ -379,14 +435,21 @@ class Build {
   }
 }
 
+/** The block holding an entry's text: a quote read as a paragraph's, the paragraph in it (the blank lines after that its gap); else its own. */
+function textHead(entry: Entry): MdBlock {
+  return entry.kind === 'paragraph' && entry.block.type === 'blockquote' ? entry.block.children[0]! : entry.block;
+}
+
 interface Candidates {
   find(block: MdBlock, kind: OurusNodeKind, start: number): Located | undefined;
 }
 
-/** Whether old `node` was read from the same blocks as `shell`, its section's or owned lists' included. */
+/** Whether old `node` was read from the same blocks as `shell`, its section's or owned lists' included, carrying the same lines. */
 function sameBlocks(node: PersistentNode, shell: Shell): boolean {
   if (node.block !== shell.entry.block || node.kind !== shell.entry.kind) return false;
+  // (a container's block-id lines are read with it, `containerOf`)
   if (node.kind === 'item' || node.kind === 'quote') return true;
+  if (node.blockIdCount !== shell.entry.carried) return false;
   if (node.children.length !== shell.children.length) return false;
   for (let i = 0; i < node.children.length; i++) if (!sameBlocks(node.children[i]!, shell.children[i]!)) return false;
   return true;

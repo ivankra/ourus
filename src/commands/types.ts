@@ -91,7 +91,20 @@ export type OurusCommand =
   /** Zoom out one level, to the root's parent, or out of the zoom from a top-level root. */
   | { readonly type: 'zoomOut' }
   /** Zoom out of the zoom, whatever its depth. */
-  | { readonly type: 'clearZoom' };
+  | { readonly type: 'clearZoom' }
+  /**
+   * A block id for node `node` (by id; else the selection's node), `name` or one made up, in the form
+   * the node's kind takes (spec/block-ids.md); for a block inside a list item, on the item,
+   * which is what Obsidian names by it. Refused (`block-id`) where one already names the node, or the
+   * note has `name`. With `node`, the caret goes after it.
+   */
+  | { readonly type: 'addBlockId'; readonly name?: string; readonly node?: number }
+  /**
+   * Block id `name` deleted, attached or stray (where the note has it twice, the one node `node`
+   * owns; refused as `block-id` without it); without `name`, the one a link to the selection's node
+   * uses.
+   */
+  | { readonly type: 'removeBlockId'; readonly name?: string; readonly node?: number };
 
 /** Why a command was rejected. */
 export type RejectReason =
@@ -120,6 +133,12 @@ export type RejectReason =
   | 'folded'
   /** Zoomed: the result would change, make or move a node outside the zoom root's subtree, or its operands are outside it. */
   | 'outside-zoom'
+  /**
+   * The result would lose a block id: written off its node, naming another or nothing, shadowed, or
+   * a name written twice; a merge of two nodes that both have one
+   * (`joinBlockIds: refuse`); an `addBlockId` or `removeBlockId` that has nothing to do.
+   */
+  | 'block-id'
   /** A structural command ourus doesn't do here yet: a case it doesn't cover. (A key with a host's default is the host's there.) */
   | 'unsupported'
   /** The writer failed: a layout it has no rule for, or a text written that doesn't read as the draft. A bug, never an outcome. */
@@ -130,9 +149,25 @@ export type OurusCommandResult =
   /**
    * `clipboard`: what the host writes to the clipboard, every format (copy and cut). `placed`: for a
    * drop, the topmost nodes it put in place, in document order, for a host that selects them.
-   * `dropMap`: for a pickup (`drag`), what it takes and where it can drop it.
+   * `dropMap`: for a pickup (`drag`), what it takes and where it can drop it. `movedBlockIds`: the
+   * block ids it wrote on another node on purpose (a merge's node that stays taking the other's), by
+   * name, to the node's id; `mergedBlockIds`: those it dropped for the other's (`joinBlockIds:
+   * merge`), for a host that redirects the links to them. `removedNodes`: the nodes it removed on
+   * purpose, each with its subtree, by id (delete subtree, a cut of nodes): their block ids went with
+   * them. What else it did to block ids a host reads by comparing `blockIds()` before and after.
    */
-  | { readonly status: 'applied'; readonly doc: OurusDoc; readonly changes: readonly ChangeSpec[]; readonly selection: OurusSelection; readonly clipboard?: OurusClipboard; readonly placed?: readonly number[]; readonly dropMap?: DropMap }
+  | {
+      readonly status: 'applied';
+      readonly doc: OurusDoc;
+      readonly changes: readonly ChangeSpec[];
+      readonly selection: OurusSelection;
+      readonly clipboard?: OurusClipboard;
+      readonly placed?: readonly number[];
+      readonly dropMap?: DropMap;
+      readonly movedBlockIds?: readonly { readonly name: string; readonly to: number }[];
+      readonly mergedBlockIds?: readonly { readonly from: string; readonly into: string }[];
+      readonly removedNodes?: readonly number[];
+    }
   | { readonly status: 'rejected'; readonly reason: RejectReason; readonly detail?: string }
   /**
    * Deferred to the host: ourus doesn't act on the key here, and the host runs its default behavior.

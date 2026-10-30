@@ -4,7 +4,7 @@
 // Shift-Enter and plain paste put in lines of the quote; Backspace at its start and Delete before it
 // join it to the text above as it is written.
 
-import { OurusAtom, OurusProse, type OurusNode } from '../doc/index.ts';
+import { OurusAtom, OurusProse, blockIdsOf, closingFrameStart, withoutBlockIds, type OurusNode } from '../doc/index.ts';
 import { MdTree } from '../parser/index.ts';
 import { isSpaceOrTab, trimMd } from '../text/index.ts';
 import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
@@ -26,7 +26,7 @@ export function quoteAtomAt(ctx: CommandContext): QuoteAt | null {
 
 /** A quote atom's text as a paragraph's, its `>`s characters of it: what a join puts into the text above. */
 export function quoteAsProse(text: OurusAtom): OurusProse {
-  return new OurusProse('paragraph', text.item, text.text, text.marks);
+  return new OurusProse('paragraph', text.item, text.text, text.marks, null, text.blockIdLines);
 }
 
 /**
@@ -204,14 +204,21 @@ export function joinQuoteUp(ctx: CommandContext, node: OurusNode, text: OurusAto
   if (!above || above.kind === 'root') return null;
   const upper = ctx.doc.textOf(above);
   if (!(upper instanceof OurusProse)) return null;
-  const draft = ctx.draft().setText(above, upper.concat(quoteAsProse(text).asItem(upper.item)));
+  const draft = ctx.draft();
+  // (its block ids as a join takes them: moved to the text above, or merged into its; the quote's
+  // characters before that text's closing frame, which ends it still)
+  const moved = draft.joinBlockIds(above, upper, node, text);
+  const quote = quoteAsProse(moved ? text : (withoutBlockIds(text) as OurusAtom)).asItem(upper.item);
+  const end = closingFrameStart(upper);
+  draft.setText(above, upper.splice(end, end, quote).withBlockIdLines(moved && quote.blockIdLines.length ? quote.blockIdLines : upper.blockIdLines));
   const children = [...node.children];
   if (children.length) {
     draft.remove(children);
     if (above.kind === 'item') draft.append(above, 'last', children);
     else draft.place('before', node, children);
   }
-  return ctx.apply(draft.remove([node]).setCaret(above, upper.text.length, -1));
+  // (the caret at the seam: before the closing frame the quote's characters went in front of)
+  return ctx.apply(draft.remove([node]).setCaret(above, end, -1));
 }
 
 /**
@@ -223,8 +230,14 @@ export function joinQuoteUp(ctx: CommandContext, node: OurusNode, text: OurusAto
 export function joinIntoQuote(ctx: CommandContext, above: OurusNode, quote: OurusAtom, node: OurusNode): CommandOutcome {
   const lower = ctx.doc.textOf(node);
   if (!(lower instanceof OurusProse)) return null;
-  const at = quote.text.length;
-  const draft = ctx.draft().setText(above, quote.splice(at, at, lower.text));
+  // (before the block id that ends the quote, which ends it still)
+  const end = blockIdsOf(quote).find((b) => !b.carried && b.partTo === quote.text.length);
+  const at = end && !end.carried ? end.partFrom : quote.text.length;
+  const draft = ctx.draft();
+  // (its block ids as a join takes them: moved to the quote, or merged into its)
+  const moved = draft.joinBlockIds(above, quote, node, lower);
+  const rest = moved ? lower : (withoutBlockIds(lower) as OurusProse);
+  draft.setText(above, quote.splice(at, at, rest.text).withBlockIdLines(moved && rest.blockIdLines.length ? rest.blockIdLines : quote.blockIdLines));
   const children = [...node.children];
   if (children.length) {
     draft.remove(children);

@@ -62,8 +62,21 @@ export class CommandContext {
   apply(draft: OurusDraft): CommandOutcome {
     const applied = draft.done();
     if ('reason' in applied) return reject(applied.reason, applied.detail);
-    return { status: 'applied', doc: applied.doc, changes: applied.changes, selection: applied.selection };
+    const { moved, merged } = applied.blockIds;
+    return { status: 'applied', doc: applied.doc, changes: applied.changes, selection: applied.selection, ...(moved.length && { movedBlockIds: moved }), ...(merged.length && { mergedBlockIds: merged }) };
   }
+}
+
+/**
+ * What the steps of one edit (a command made of others: a selection deleted, then a paste) declared
+ * about block ids, together: every step's moves and merges, in order, and the nodes they removed on
+ * purpose, as the applied result has them.
+ */
+export function blockIdsDeclaredBy(steps: readonly OurusCommandResult[]): Pick<Extract<OurusCommandResult, { status: 'applied' }>, 'movedBlockIds' | 'mergedBlockIds' | 'removedNodes'> {
+  const moved = steps.flatMap((r) => (r.status === 'applied' ? (r.movedBlockIds ?? []) : []));
+  const merged = steps.flatMap((r) => (r.status === 'applied' ? (r.mergedBlockIds ?? []) : []));
+  const removed = steps.flatMap((r) => (r.status === 'applied' ? (r.removedNodes ?? []) : []));
+  return { ...(moved.length && { movedBlockIds: moved }), ...(merged.length && { mergedBlockIds: merged }), ...(removed.length && { removedNodes: removed }) };
 }
 
 export const reject = (reason: RejectReason, detail?: string): OurusCommandResult =>

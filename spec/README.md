@@ -64,6 +64,8 @@ Read every difference first; a case whose actions should change is redrawn by ha
   cases and catalogue entries.
 - [`quotes.md`](quotes.md): quotes and callouts: as containers (`quotes: container`, and a quote
   holding more than one paragraph), as text (`quotes: text`) and as atoms (`quotes: atom`).
+- [`block-ids.md`](block-ids.md): Obsidian's block ids, ` ^id` and `^id` on a line of its own:
+  carried by the node they name through moves, Enter and merges (`dev/24-block-ids.md`).
 - [`lists.md`](lists.md): what a list right after a block is the children of (`listParent`): a
   paragraph's, any block's, or none's.
 - [`regressions.md`](regressions.md): cases pinning behaviors settled by bug fixes and refactoring.

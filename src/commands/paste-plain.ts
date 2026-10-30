@@ -3,16 +3,18 @@
 // the text becomes; `done()` escapes each line where it would read as a block, holds an empty line, and
 // sets the paragraphs apart.
 
-import { OurusProse, OurusAtom, type OurusNode, type OurusText } from '../doc/index.ts';
+import { OurusProse, OurusAtom, blockIdsOf, closingFrameStart, type OurusDoc, type OurusNode, type OurusText } from '../doc/index.ts';
 import { composeChanges, heldSpaceAt, isSpaceOrTab, trimMd, type ChangeSpec } from '../text/index.ts';
 import { clipboardFragment } from './clipboard.ts';
-import { CommandContext, deferToHost, reject, type CommandOutcome } from './context.ts';
+import { CommandContext, blockIdsDeclaredBy, deferToHost, reject, type CommandOutcome } from './context.ts';
 import { linesInQuote, quoteAtomAt } from './quote.ts';
 import { enterCommand } from './enter.ts';
 import { pasteMarkdown } from './paste.ts';
 import { textActedOnAt } from './util.ts';
 import { breaksFence, codeAt, editInCode, onDelimiterLine } from './code.ts';
 import { afterDeleting } from './copy.ts';
+import { placedText } from './typing.ts';
+import type { OurusCommandResult } from './types.ts';
 
 /**
  * Plain paste (`pastePlainLines: text`): on a code line the lines are code, at the fence's indentation
@@ -65,6 +67,8 @@ function enteredLines(ctx: CommandContext, clipboard: string): CommandOutcome {
   let next: CommandContext = ctx;
   let changes: readonly ChangeSpec[] = [];
   let result: CommandOutcome = null;
+  // (each step's result, for what they declared about block ids together)
+  const steps: OurusCommandResult[] = [];
   for (const [k, line] of lines.entries()) {
     const at = line ? textActedOnAt(next, next.selection.head) : null;
     if (line && !at && (k === 0 || next.doc.locate(next.selection.head).zone !== 'gap')) return k === 0 ? deferToHost('the caret is outside a text') : null;
@@ -84,10 +88,15 @@ function enteredLines(ctx: CommandContext, clipboard: string): CommandOutcome {
       // `enterSplitSpace: start`), where the caret is: what is typed goes before them, as a host types
       // it, and they are text after it)
       const hidden = at.offset === 0 && ctx.collapsed ? next.doc.hiddenSpaces(at.node) : null;
-      const before = hidden && next.selection.head === hidden.from && hidden.to > hidden.from ? next.doc.text.slice(hidden.from, hidden.to) : '';
+      const hiddenBefore = hidden && next.selection.head === hidden.from && hidden.to > hidden.from ? next.doc.text.slice(hidden.from, hidden.to) : '';
+      // (right before a block id with no blank before it, `- ┃^x` after a selection went: a blank
+      // between, as typing puts one, so that it ends the text still, the caret before it)
+      const glued = at.text instanceof OurusProse && at.text.text[at.offset] === '^' && at.text.frame.some((p) => p.part === 'blockId' && p.from === at.offset);
+      const before = hiddenBefore || (glued ? ' ' : '');
       const draft = next.draft().setText(at.node, at.text.splice(at.offset, at.offset, typed + before)).setCaret(at.node, at.offset + typed.length, -1);
-      result = next.apply(before ? draft.padding(at.node.id, 0) : draft);
+      result = next.apply(hiddenBefore ? draft.padding(at.node.id, 0) : draft);
       if (!result || result.status !== 'applied') return result;
+      steps.push(result);
       changes = composeChanges(ctx.doc.text, changes, result.changes);
       next = new CommandContext(result.doc, result.selection);
     }
@@ -95,10 +104,11 @@ function enteredLines(ctx: CommandContext, clipboard: string): CommandOutcome {
     // (an Enter as typed, in a quote too, but not the key's quirks: the text typed, each line break an Enter)
     result = enterCommand(next, false, true);
     if (!result || result.status !== 'applied') return result;
+    steps.push(result);
     changes = composeChanges(ctx.doc.text, changes, result.changes);
     next = new CommandContext(result.doc, result.selection);
   }
-  return result && result.status === 'applied' ? { ...result, changes } : result;
+  return result && result.status === 'applied' ? { ...result, ...blockIdsDeclaredBy(steps), changes } : result;
 }
 
 /** The lines into the text at the caret (`pastePlainLines: text`, and paste's plain lines). */
@@ -122,6 +132,11 @@ export function plainLines(ctx: CommandContext, clipboard: string): CommandOutco
   // one line: the host's, but in code where it would make a fence, and starting with a blank, which at
   // a text's start would be padding (an item's moving its children's column): it goes, as below
   if (code && lines.length < 2) return editInCode(ctx, code, code.offset, code.to, clipboard);
+  // (as typing it would be placed, where the host's would break what is there: before a block id)
+  if (lines.length < 2 && ctx.collapsed && !code) {
+    const placed = placedText(ctx, clipboard);
+    if (placed) return placed;
+  }
   if (lines.length < 2 && !/^[ \t]/.test(clipboard)) return deferToHost('one line: the host pastes it');
   // (a line break first, before the block's text: the host's, as a new line above it)
   if (code && lines[0] === '' && code.offset === 0) return deferToHost('a line break before the block: the host pastes');
@@ -182,6 +197,10 @@ export function plainLines(ctx: CommandContext, clipboard: string): CommandOutco
   // (a setext title, which a blank line in it would end: an ATX one holds one line, above)
   if (text.type === 'heading' && /\n[ \t]*\n/.test(current.body)) return reject('not-expressible', 'a heading has no blank line in its title');
   let caret = from + pasted.length - (held ? 1 : 0);
+  // (a block id ending the text whose `^` is in what was pasted is the pasted text's: it goes with the
+  // last of it, not with the node the caret was in)
+  const ending = blockIdsOf(current).find((b) => !b.carried);
+  const closing = ending && !ending.carried && ending.from >= from && ending.from < from + pasted.length ? 'lower' : 'upper';
   const draft = ctx.draft();
   let target: OurusNode | number = node;
   const container = node.kind === 'item' || node.kind === 'quote';
@@ -196,9 +215,12 @@ export function plainLines(ctx: CommandContext, clipboard: string): CommandOutco
     let first = end;
     while (first < s.length && (s[first] === ' ' || s[first] === '\t')) first++;
     draft.setText(target, current);
-    const [, rest] = draft.split(target, m.index, { to: first, kind: 'paragraph', children: container && target === node ? 'stay' : 'follow', into: container && target === node ? 'child' : 'sibling' });
+    const [, rest] = draft.split(target, m.index, { to: first, kind: 'paragraph', children: container && target === node ? 'stay' : 'follow', into: container && target === node ? 'child' : 'sibling', closing });
     caret -= first;
-    current = current.slice(first, s.length);
+    // (the rest without the closing frame, a block id ending the text, where the split kept it with
+    // the first node, the one the caret was in)
+    const close = current instanceof OurusProse && closing === 'upper' ? closingFrameStart(current) : s.length;
+    current = current.slice(first, close >= first ? close : s.length);
     target = rest;
   }
   // (ending with a line break: the caret before the spaces the new line starts with, as Shift-Enter's;

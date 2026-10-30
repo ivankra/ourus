@@ -4687,3 +4687,235 @@ tags: rare
 -→- ┃
     - ->
 ```
+
+## Regression190
+
+A duplicate of an item whose first block is a callout on its marker's line, renumbered: the copy's
+quote is named where its `>` is written, after the new number.
+
+```yaml
+flavor: obsidian
+tags: rare
+```
+
+```buffer
+1. > [!note] ««T»»
+```
+
+> duplicateSubtree
+
+```buffer
+1. > [!note] T
+2. > [!note] ««T»»
+```
+
+## Regression191
+
+Tab with the caret on the blank line after a node, the last of a quote's children now: the blank
+line, before the next quote, is written outside the quote, which would take that quote in.
+
+```yaml
+flavor: obsidian
+quotes: text
+tags: rare
+```
+
+```buffer
+> ## h
+  ---
+┃
+> ## h
+```
+
+> indent
+
+```buffer
+> ## h
+>
+>   ---
+┃
+> ## h
+```
+
+## Regression192
+
+A duplicate of an item in a loose list whose subtree ends in a fence nothing closes: no blank line
+after the original, which would be a line of its code, nor after the copy; the copy's item ends the
+code.
+
+```yaml
+tags: rare
+```
+
+````buffer
+- a┃
+
+  b
+  ```
+````
+
+> duplicateSubtree
+
+````buffer
+- a
+
+  b
+  ```
+- a┃
+
+  b
+  ```
+````
+
+## Regression193
+
+Typing at the end of a marker's line, the item's text starting on the line below: on the marker's
+line, after a space, the text's first line (right after the marker, the line would be no item).
+
+```yaml
+tags: rare
+```
+
+```buffer
+1.┃
+   b
+```
+
+> "z"
+
+```buffer
+1. z┃
+   b
+```
+
+## Regression194
+
+Enter at the end of a folded item whose subtree ends in a fence nothing closes: the new item after
+the subtree, the fence taking no blank line from it, which would be a line of its code.
+
+```yaml
+tags: rare
+```
+
+````buffer
+- a┃
+
+  b
+  ```
+````
+
+> fold
+
+> enter
+
+````buffer
+- a
+
+  b
+  ```
+- ┃
+````
+
+## Regression195
+
+A duplicate of a quote's last child that has children, another quote after the quote: the blank
+line after the copy's subtree is written where what follows it is, outside the quote, which would
+take the next quote in.
+
+```yaml
+flavor: obsidian
+quotes: text
+tags: rare
+```
+
+```buffer
+> ┃## h
+>
+> p
+
+> q
+```
+
+> duplicateSubtree
+
+```buffer
+> ## h
+>
+> p
+>
+> ## ┃h
+>␠
+> p
+
+> q
+```
+
+## Regression196
+
+Deleting the first of two items whose first block is a callout on its marker's line: the item left,
+renumbered, its quote named where its `>` is written, after the new number.
+
+```yaml
+flavor: obsidian
+tags: rare
+```
+
+```buffer
+1. > [!note] ┃T
+2. > [!note] U
+```
+
+> deleteSubtree
+
+```buffer
+1. > [!note] ┃U
+```
+
+## Regression197
+
+A paste of one line over a text's first word: the blank after the word stays, the pasted line in
+the word's place (deleting the word alone takes the blank, a text starting with none).
+
+```yaml
+tags: rare
+clipboard: "Q"
+```
+
+```buffer
+«p» qx
+```
+
+> paste
+
+```buffer
+Q┃ qx
+```
+
+## Regression198
+
+A paste that puts a heading above a quote's lazy line: the line, now under the heading, is written
+with the quote's `>` (after a heading a line isn't lazy: it would leave the quote).
+
+```yaml
+flavor: obsidian
+tags: rare
+clipboard: |-
+  x
+
+  # h
+```
+
+```buffer
+>[a]:u┃
+b
+```
+
+> paste
+
+```buffer
+>[a]:u
+> x
+>
+> # h┃
+>b
+```

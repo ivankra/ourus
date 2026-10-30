@@ -2,8 +2,8 @@
 // backtick or a tilde where it opens, closes or changes a code fence. The command says what the text
 // becomes; `done()` keeps a fence's runs past the code, or refuses what would unmake the block.
 
-import { OurusProse, OurusAtom, type OurusNode } from '../doc/index.ts';
-import { composeChanges, lineOf, type ChangeSpec } from '../text/index.ts';
+import { OurusProse, OurusAtom, blockIdsOf, type OurusNode, type OurusText } from '../doc/index.ts';
+import { composeChanges, lineOf, trimMd, type ChangeSpec } from '../text/index.ts';
 import { CommandContext, deferToHost, type CommandOutcome } from './context.ts';
 import { breaksFence, codeAt, editInCode, type CodeAt } from './code.ts';
 import { textEnd, textStart } from './util.ts';
@@ -31,6 +31,8 @@ export function insertTextCommand(ctx: CommandContext, typed: string): CommandOu
   // in code, the host's where it keeps the block (a line break in a container's code is ourus's, the
   // containers' prefix with it), a fence's character a fence's
   if (code && (!fenceChar || code.text.type !== 'fenced_code')) return editInCode(ctx, code, code.offset, code.offset, typed);
+  const placed = placedText(ctx, typed);
+  if (placed) return placed;
   if (typed !== '`' && typed !== '~') return deferToHost();
   // in a container's prefix or a marker (before a fence's indentation): not done yet
   if (ctx.from.zone === 'prefix' || ctx.from.zone === 'marker') return null;
@@ -41,6 +43,72 @@ export function insertTextCommand(ctx: CommandContext, typed: string): CommandOu
   const opened = openFence(ctx, typed);
   if (opened !== undefined) return opened;
   return ctx.config.closeBackticks === 'all' && typed === '`' ? inlinePair(ctx) : deferToHost();
+}
+
+/**
+ * Typing on the blank line right after a line ending with a block id, which it would join, no block
+ * id at its end then: on the line after a text whose string ends with one, at its column, a line of
+ * the text, the block id at its end again (as Shift-Enter puts it); after a block-id line a text
+ * carries, or a paragraph that is only one, a paragraph of its own, a blank line between. Null
+ * elsewhere.
+ */
+function afterBlockIdLine(ctx: CommandContext, typed: string): CommandOutcome {
+  if (!ctx.collapsed || ctx.from.zone !== 'gap' || /\n/.test(typed)) return null;
+  const doc = ctx.doc;
+  const head = ctx.selection.head;
+  const line = doc.lineAt(head);
+  const owner = line.index > 0 ? doc.nodeAtLine(line.index - 1) : null;
+  if (!owner || owner.ownLastLine !== line.index - 1) return null;
+  const ids = doc.blockIds().filter((b) => b.owner === owner && doc.lineAt(b.from).index === line.index - 1);
+  if (!ids.length) return null;
+  const text = doc.textOf(owner);
+  const part = text instanceof OurusProse ? text.frame.find((p) => p.part === 'blockId') : undefined;
+  // (a text with more than the block id: one that is only one, `- ^x`, has nothing to go on with)
+  const more = text instanceof OurusProse && !!part && trimMd(text.text.slice(text.textStart(0), part.from)) !== '';
+  if (part && more && !ids[0]!.carried && text instanceof OurusProse && doc.atTextColumn(head, owner) && !text.blockIdLines.length) {
+    const id = text.text.slice(text.text.indexOf('^', part.from), part.to);
+    // (the line typed on the text's now, the blank lines after it one fewer)
+    return ctx.apply(ctx.draft().setText(owner, text.splice(part.from, part.to, `\n${typed} ${id}`)).gap(owner, Math.max(0, owner.gap - 1)).setCaret(owner, part.from + 1 + typed.length, -1));
+  }
+  // (a paragraph of its own: the line as written up to the caret, its prefix, again after a blank line)
+  const lead = doc.text.slice(line.from, head);
+  const changes = [{ from: head, to: head, insert: `\n${lead}${typed}` }];
+  const caret = head + 1 + lead.length + typed.length;
+  return { status: 'applied', doc: doc.update({ changes, caret }), changes, selection: { anchor: caret, head: caret } };
+}
+
+/**
+ * Text typed or pasted at a caret, one line, where the host's insert would break what is there: right
+ * before a block id (what is typed goes before it with a blank between, or the text would end in it, no
+ * block id any more); on the blank line after one; at the end of a marker's line whose text starts
+ * below it. Null where the host's insert is right.
+ */
+export function placedText(ctx: CommandContext, typed: string): CommandOutcome | null {
+  // right before a block id with nothing before it (a text that is only one, `- ┃^x`): what is typed
+  // goes before it with a blank between, or it would end in it, no block id any more
+  const glued = gluedBlockId(ctx);
+  if (glued && !/\s$/.test(typed)) return ctx.apply(ctx.draft().setText(glued.node, glued.text.splice(glued.offset, glued.offset, `${typed} `) as OurusText).setCaret(glued.node, glued.offset + typed.length, -1));
+  // on the blank line right after one that ends with a block id, which what is typed would join
+  const after = afterBlockIdLine(ctx, typed);
+  if (after) return after;
+  // at the end of a marker's line, an item's text starting below it (`-┃⏎  a`): on that line, after a
+  // space, the text's first line (typed right after the marker, it would be no item: `-z`)
+  const at = ctx.from;
+  if (at.zone === 'frame' && at.offset === 0 && at.text instanceof OurusProse && at.text.frame[0]?.part === 'below' && !/^\s/.test(typed)) {
+    return ctx.apply(ctx.draft().setText(at.node, at.text.splice(0, 0, typed) as OurusText).setCaret(at.node, typed.length, -1));
+  }
+  return null;
+}
+
+/**
+ * The caret right at the `^` of a block id in a text's string (`- ┃^x`, `p ┃^x`, `a⏎┃^x`, a quote
+ * atom's `> ┃^x`), where what is typed would end in it: the text, and where.
+ */
+function gluedBlockId(ctx: CommandContext): { node: OurusNode; text: OurusText; offset: number } | null {
+  const at = ctx.from;
+  if ((at.zone !== 'text' && at.zone !== 'frame') || (at.zone === 'frame' && at.part !== 'blockId')) return null;
+  const glued = blockIdsOf(at.text).some((b) => !b.carried && b.from === at.offset);
+  return glued ? { node: at.node, text: at.text, offset: at.offset } : null;
 }
 
 /**

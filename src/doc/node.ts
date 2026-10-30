@@ -2,7 +2,8 @@
 // with its position. A stored node holds no absolute line and no parent: its kind and id, the
 // blocks it was read from, its extent (`lines`: from its first line to the next node's, its
 // descendants and blank lines included, so siblings tile their parent), its blank lines after its
-// own text (`gap`), and each child's first line from its own; snapshots share it.
+// own lines (`gap`), and each child's first line from its own; snapshots share it. A node's own lines
+// are its text's and the block-id lines its text carries after them (`blockIdCount`).
 
 import { mdCalloutAt, type MdBlock } from '../parser/index.ts';
 import type { OurusNodeKind } from './rules.ts';
@@ -23,12 +24,17 @@ export class PersistentNode {
   readonly block: MdBlock | null;
   /** The parser's block holding its own text, if it has one; null for a drafted node. */
   readonly head: MdBlock | null;
-  /** Blank lines after its own text, before its first child or what follows it. */
+  /** Blank lines after its own lines (its text's, the block-id lines it carries), before its first child or what follows it. */
   readonly gap: number;
   /** A read node's extent: from its first line to the next node's (or the document's end). */
   readonly lines: number;
   /** A read node's children's first lines, from its own. */
   readonly offsets: readonly number[];
+  /**
+   * The lines after a read node's text that it carries: its block-id lines (`^t1` after a table),
+   * with the blank lines before them; 0 where it carries none, and for a drafted node.
+   */
+  readonly blockIdCount: number;
   readonly children: readonly PersistentNode[];
   /** A drafted node's: the read node it was, or null for one the draft made. Undefined for a read node. */
   readonly source: PersistentNode | null | undefined;
@@ -38,15 +44,16 @@ export class PersistentNode {
    */
   readonly text: OurusText | null | undefined;
 
-  constructor(kind: OurusNodeKind, block: MdBlock, head: MdBlock | null, lines: number, offsets: readonly number[], children: readonly PersistentNode[]) {
+  constructor(kind: OurusNodeKind, block: MdBlock, head: MdBlock | null, lines: number, offsets: readonly number[], children: readonly PersistentNode[], blockIdCount = 0) {
     this.kind = kind;
     this.block = block;
     this.head = head;
     this.lines = lines;
     this.offsets = offsets;
     this.children = children;
+    this.blockIdCount = blockIdCount;
     const next = children.length ? offsets[0]! : lines;
-    this.gap = kind === 'root' ? 0 : Math.max(0, next - this.textLines().last - 1);
+    this.gap = kind === 'root' ? 0 : Math.max(0, next - this.ownLines().last - 1);
   }
 
   /** A drafted node: `id`, `kind`, its text (undefined: `source`'s), gap and children. */
@@ -59,7 +66,7 @@ export class PersistentNode {
     children: readonly PersistentNode[],
   ): PersistentNode {
     const node = Object.create(PersistentNode.prototype) as { -readonly [K in keyof PersistentNode]: PersistentNode[K] };
-    Object.assign(node, { id, kind, block: null, head: null, gap, lines: 0, offsets: [], children, source, text });
+    Object.assign(node, { id, kind, block: null, head: null, gap, lines: 0, offsets: [], blockIdCount: 0, children, source, text });
     return node as PersistentNode;
   }
 
@@ -89,6 +96,12 @@ export class PersistentNode {
     if (!this.head) return { first: 0, last: 0 };
     const first = this.kind === 'item' || this.kind === 'quote' ? this.block!.offsets[0]! : 0;
     return { first, last: first + this.head.lines - 1 };
+  }
+
+  /** The lines of a read node's own, counted from its first line: its text's and the block-id lines it carries after them. */
+  ownLines(): { readonly first: number; readonly last: number } {
+    const text = this.textLines();
+    return this.blockIdCount ? { first: text.first, last: text.last + this.blockIdCount } : text;
   }
 }
 
@@ -154,18 +167,23 @@ export class OurusNode {
     return this.startLine + this.persistentNode.textLines().last;
   }
 
+  /** The last of its own lines: its text's, or the last block-id line its text carries after them. */
+  get ownLastLine(): number {
+    return this.startLine + this.persistentNode.ownLines().last;
+  }
+
   /** Its last line with its descendants', blank lines after them not included. */
   get endLine(): number {
     if (this.#endLine < 0) {
       const node = this.persistentNode;
-      const own = node.kind === 'item' || node.kind === 'quote' ? this.startLine + node.block!.lines - 1 : this.textLastLine;
+      const own = node.kind === 'item' || node.kind === 'quote' ? this.startLine + node.block!.lines - 1 : this.ownLastLine;
       const n = node.children.length;
       this.#endLine = n ? Math.max(own, this.child(n - 1).endLine) : own;
     }
     return this.#endLine;
   }
 
-  /** Blank lines after its own text, before its first child or what follows it. */
+  /** Blank lines after its own lines, before its first child or what follows it. */
   get gap(): number {
     return this.persistentNode.gap;
   }
@@ -225,11 +243,11 @@ export class OurusNode {
     return this.parent?.kind === 'quote' && this.index === 0 && mdCalloutAt(text.body.split('\n')[0]!) !== null;
   }
 
-  /** The node whose own text holds line `line`, below this one: the deepest, where nested items share a line; or null. */
+  /** The node whose own lines hold line `line` (its text's, its block-id lines'), below this one: the deepest, where nested items share a line; or null. */
   nodeAtLine(line: number): OurusNode | null {
     let best: OurusNode | null = null;
     for (let node: OurusNode = this; ; ) {
-      if (node.kind !== 'root' && line >= node.startLine && line <= node.textLastLine) best = node;
+      if (node.kind !== 'root' && line >= node.startLine && line <= node.ownLastLine) best = node;
       const { offsets, children } = node.persistentNode;
       const rel = line - node.startLine;
       // the last child starting at or before the line

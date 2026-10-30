@@ -3,7 +3,7 @@
 // character's place; away from it, the node is written again (`done()` says how), or goes.
 
 import { isHeldSpacePlaceholder, isPlaceholder, type ChangeSpec, type Mark } from '../text/index.ts';
-import { OurusProse, type OurusNode, type OurusDoc } from '../doc/index.ts';
+import { OurusProse, checkBlockIds, type OurusNode, type OurusDoc } from '../doc/index.ts';
 import { OurusDraft } from './draft.ts';
 
 type Settled = { readonly doc: OurusDoc; readonly changes: readonly ChangeSpec[] };
@@ -27,7 +27,7 @@ export function settlePlaceholders(doc: OurusDoc, caret: number): Settled | null
   return (writable.length ? settled(without, caret, without.marks.marks.filter((m) => writable.some((w) => w.from === m.from && w.kind === m.kind))) : null) ?? { doc: without, changes: [] };
 }
 
-/** `marks` settled, or null where the outline can't be written so (a mark on no prose text's line too). */
+/** `marks` settled, or null where the outline can't be written so (a mark on no prose text's line too), or a block id would be lost. */
 function settled(doc: OurusDoc, caret: number, marks: readonly Mark[]): Settled | null {
   const draft = new OurusDraft(doc);
   const gone = new Set<number>();
@@ -39,7 +39,7 @@ function settled(doc: OurusDoc, caret: number, marks: readonly Mark[]): Settled 
     if (isHeldSpacePlaceholder(mark, doc.text) || node.kind === 'item') {
       // written again: without the held space, which writing settles; an empty item as `done()` holds it
       const kept = text.marks.update({ filter: (m) => !isHeldSpacePlaceholder(m, text.text) });
-      draft.setText(node, new OurusProse(text.type, text.item, text.text, kept));
+      draft.setText(node, text.withMarks(kept));
     } else if (text.empty) {
       // (with the blank lines that set it off between two items: their list as tight as it was, TO18)
       // (the list after it its own, in a section: Enter7b)
@@ -51,5 +51,7 @@ function settled(doc: OurusDoc, caret: number, marks: readonly Mark[]): Settled 
     }
   }
   const applied = draft.select({ old: caret }, { old: caret }).done();
-  return 'doc' in applied ? { doc: applied.doc, changes: applied.changes } : null;
+  // (and none that would lose a block id, as no command may: settled so, it isn't)
+  if (!('doc' in applied) || checkBlockIds(doc, applied.doc, applied.changes)) return null;
+  return { doc: applied.doc, changes: applied.changes };
 }

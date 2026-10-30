@@ -128,7 +128,7 @@ function seamsOf(
   return raw.flatMap((s, k) => {
     const gapLines = blanks(s.beforeLine);
     const line = s.beforeLine - gapLines;
-    if (zoom && !(line > zoom.textLastLine && line <= zoom.endLine + 1)) return [];
+    if (zoom && !(line > zoom.ownLastLine && line <= zoom.endLine + 1)) return [];
     const seam = { beforeLine: s.beforeLine, nodeAbove: s.above?.id ?? null, nodeBelow: s.below?.id ?? null, gapLines };
     if (s.at === 'dead') return [{ ...seam, points: [] }];
     const points: DropPoint[] = [];
@@ -183,8 +183,8 @@ export function placeAtSeam(doc: OurusDoc, run: readonly OurusNode[] | null, lin
   const all = inOrder(doc);
   const hidden = hider(folded);
   for (const n of all) {
-    if (n.startLine < line && line <= n.textLastLine) return `line ${line + 1} is inside a ${n.kind}'s lines: no seam is there`;
-    if (folded.has(n.id) && n.textLastLine < line && line <= n.endLine) return `line ${line + 1} is inside a folded ${n.kind}'s hidden lines`;
+    if (n.startLine < line && line <= n.ownLastLine) return `line ${line + 1} is inside a ${n.kind}'s lines: no seam is there`;
+    if (folded.has(n.id) && n.ownLastLine < line && line <= n.endLine) return `line ${line + 1} is inside a folded ${n.kind}'s hidden lines`;
   }
   if (line > 0 && (doc.isEmptyLine(line - 1) || doc.isBlankLine(line - 1))) return `a drop line goes right after the node above's last line, before its blank lines (line ${line})`;
   const at = (out: ReadonlySet<number>): InsertionPoint | string => seamPlace(doc.rootNode, all.filter((n) => !out.has(n.id) && !hidden(n)), out, line, depth);

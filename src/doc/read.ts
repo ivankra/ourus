@@ -1,12 +1,13 @@
 // A node's text read from the document: its own lines past their containers'
 // prefixes, the first line's padding left out, markup escapes left out where they are markup, its
-// placeholders as marks; and where each of its offsets is in the document.
+// placeholders as marks, the block-id lines it carries after it; and where each of its offsets is in
+// the document.
 
 import type { MdBlock, MdLine, MdTree } from '../parser/index.ts';
 import { emptyNodeAt, heldSpaceAt, isEmptyNodePlaceholder, isHeldSpacePlaceholder, MarkSet, trimMd, type Mark } from '../text/index.ts';
 import type { OurusNode } from './node.ts';
 import { markupEscapes } from './escapes.ts';
-import { OurusProse, OurusAtom, type OurusText, type OurusProseType } from './text.ts';
+import { OurusProse, OurusAtom, type BlockIdLine, type OurusText, type OurusProseType } from './text.ts';
 
 /** Where a text's line is in the document: its first character's offset, and the offsets left out of it (a markup escape, a held space). */
 export interface TextLine {
@@ -128,7 +129,28 @@ export function readText(tree: MdTree, marks: MarkSet, node: OurusNode): ReadTex
   const placeholders = MarkSet.of(points);
   const block = p.kind === 'item' ? p.head : p.block;
   const kind = !atomText ? null : block!.type === 'code_block' ? (block!.attrs.fenced ? 'fenced_code' : 'indented_code') : block!.type;
-  return { text: kind ? new OurusAtom(kind, item, string, placeholders) : new OurusProse(type, item, string, placeholders), lines: lines.map((l) => ({ ...l.line, length: l.content.length })) };
+  const carried = blockIdLinesOf(tree, last, p.blockIdCount);
+  const text = kind ? new OurusAtom(kind, item, string, placeholders, carried) : new OurusProse(type, item, string, placeholders, flavor.has('blockIds') ? 'caret' : null, carried);
+  return { text, lines: lines.map((l) => ({ ...l.line, length: l.content.length })) };
+}
+
+/**
+ * The block-id lines a text whose last line is `last` carries on the `count` lines after it
+ * (`PersistentNode.blockIdCount`): each past its containers' prefix and its indentation, after the
+ * blank lines before it.
+ */
+function blockIdLinesOf(tree: MdTree, last: number, count: number): BlockIdLine[] {
+  const out: BlockIdLine[] = [];
+  let blankLines = 0;
+  for (let i = last + 1; i <= last + count; i++) {
+    const line = tree.line(i);
+    if (line.empty) blankLines++;
+    else {
+      out.push({ blankLines, line: tree.text.slice(line.contentFrom, line.to).replace(/^[ \t]+/, '') });
+      blankLines = 0;
+    }
+  }
+  return out;
 }
 
 /** The offset in a line's string of document offset `pos` on it. */

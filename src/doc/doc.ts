@@ -11,7 +11,8 @@ import { locate, type Located } from './locate.ts';
 import { documentOffset, readText, stringOffset, type ReadText } from './read.ts';
 import { escapeParagraph } from './escapes.ts';
 import { markdownOf, markdownStart } from './copy.ts';
-import { OurusProse, type OurusAtom, type OurusText } from './text.ts';
+import { OurusProse, textEnd, type OurusAtom, type OurusText } from './text.ts';
+import { readBlockIds, type BlockId } from './block-ids.ts';
 import { listAdopters } from './rules.ts';
 import { selectedNodes, subtreesSelection, touchedNodes } from './select.ts';
 import { NO_VIEW, carryView, coverEnd, foldRange, isHidden, startingAt, viewByLine, viewIn, zoomEscape, zoomFolded, zoomRange, type ViewState } from './view.ts';
@@ -97,6 +98,7 @@ export class OurusDoc {
   readonly zoom: number | null;
   #rootNode: OurusNode | null = null;
   #byId: Map<number, OurusNode> | null = null;
+  #blockIds: readonly BlockId[] | null = null;
   #zoomFolded: ReadonlySet<number> | null = null;
   #lastRead: SelectionRead | null = null;
 
@@ -306,6 +308,7 @@ export class OurusDoc {
     const doc = new OurusDoc(this.text, this.marks, this.mdTree, this.config, this.root, this.lineage, this.nextId, view);
     doc.#rootNode = this.#rootNode;
     doc.#byId = this.#byId;
+    doc.#blockIds = this.#blockIds;
     return doc;
   }
 
@@ -332,6 +335,16 @@ export class OurusDoc {
       visit(this.rootNode);
     }
     return this.#byId.get(id);
+  }
+
+  /**
+   * Every block id written in the document, in order, stray ones included (`block-ids.ts`): the node
+   * it is written on, what its flavor names by it, whether another one for the same is the one that
+   * counts, and why a stray one's target is no node it is written on. Read on the first call. A link
+   * to a node uses the one not shadowed whose target is that node.
+   */
+  blockIds(): readonly BlockId[] {
+    return (this.#blockIds ??= readBlockIds(this));
   }
 
   /**
@@ -467,6 +480,9 @@ export class OurusDoc {
     const node = this.nodeAtLine(i);
     const text = node && this.textOf(node);
     if (!node || !text) return line.contentFrom;
+    // (a block-id line its text carries: under `decorated`, where the caret stays out of it, the end
+    // of the text; else past its indentation)
+    if (i > node.textLastLine) return this.config.markup === 'decorated' ? this.posOf(node, textEnd(text), -1) : line.contentFrom + /^[ \t]*/.exec(this.text.slice(line.contentFrom, line.to))![0].length;
     const hidden = this.hiddenSpaces(node);
     if (hidden && this.lineAt(hidden.from).index === i) return hidden.from;
     const k = i - this.lineAt(this.posOf(node, 0)).index;

@@ -2,14 +2,15 @@
 // marks, a type, and a frame computed from its characters, which `body` leaves out. Two kinds: a
 // `OurusProse` is a paragraph's, a heading's, a quote's (`OurusConfig.quotes: text`) or a callout
 // title's, text ourus edits as text (its frame a checkbox, a heading's `#`s, a quote's `>`s, a
-// callout's type, an underline; its markup escapes left out); an `OurusAtom` is an atom's lines as
-// written (code, math, a comment, HTML, a table, ...), its frame a fence's runs and info, indented
-// code's columns, a footnote's label.
+// callout's type, an underline, a block id ending it; its markup escapes left out); an `OurusAtom` is
+// an atom's lines as written (code, math, a comment, HTML, a table, ...), its frame a fence's runs and
+// info, indented code's columns, a footnote's label. Either can carry block-id lines after its string
+// (`blockIdLines`): blocks of their own in the document, which its flavor names the text's node by.
 
 /** A node's text, of either kind. */
 export type OurusText = OurusProse | OurusAtom;
 
-import { mdCalloutAt } from '../parser/index.ts';
+import { MD_BLOCK_ID_NAME, MdFlavor, MdTree, mdBlockIdEnd, mdCalloutAt } from '../parser/index.ts';
 import { emptyNodeAt, lineOf, MarkSet, trimMd } from '../text/index.ts';
 
 /**
@@ -20,11 +21,29 @@ export type OurusProseType = 'paragraph' | 'heading' | 'quote' | 'title';
 
 /** A piece of a text's frame, in its string's offsets (`text`). */
 export interface FramePart {
-  /** `task`: a checkbox; `heading`: `#`s; `quote`: a line's `>` and the space after it; `close`: a closing sequence; `callout`: `[!type]` and its fold; `underline`: a setext underline, with the line break before it; `below`: the line breaks before an item's text, which starts below its marker. */
-  readonly part: 'task' | 'heading' | 'quote' | 'close' | 'callout' | 'underline' | 'below';
+  /** `task`: a checkbox; `heading`: `#`s; `quote`: a line's `>` and the space after it; `close`: a closing sequence; `callout`: `[!type]` and its fold; `underline`: a setext underline, with the line break before it; `below`: the line breaks before an item's text, which starts below its marker; `blockId`: a block id ending the text, with the blank or line break before it (` ^id`, `⏎^id`). */
+  readonly part: 'task' | 'heading' | 'quote' | 'close' | 'callout' | 'underline' | 'below' | 'blockId';
   readonly from: number;
   readonly to: number;
 }
+
+/** How a flavor writes block ids in a text (`MdFlavor.has('blockIds')`): Obsidian's ` ^id`. */
+export type BlockIdSyntax = 'caret';
+
+/**
+ * A block-id line a text carries after its string: a block of its own in the document, which its
+ * flavor names the text's node by (`Intro.`, a table, `⏎⏎^t1`). `blankLines`: the blank lines before
+ * it; `line`: the line as written, past its containers' prefix and its indentation.
+ */
+export interface BlockIdLine {
+  readonly blankLines: number;
+  readonly line: string;
+}
+
+/** A block id's name, as Obsidian has them: the pattern, the parser's. */
+export const BLOCK_ID_NAME = MD_BLOCK_ID_NAME;
+/** A line that is a block id and nothing else, exactly: with trailing blanks, Obsidian registers none. */
+export const reBlockIdLine = new RegExp(`^\\^(${BLOCK_ID_NAME})$`);
 
 /**
  * A checkbox at an item's text start, and the blanks after it; or alone (`- [ ]`). In every flavor,
@@ -58,19 +77,62 @@ export class OurusProse {
   readonly text: string;
   /** The placeholders, in `text`'s offsets. */
   readonly marks: MarkSet;
+  /** How its flavor writes a block id in it; null: a flavor without them, or a text a command made from nothing. */
+  readonly blockIds: BlockIdSyntax | null;
+  /** The block-id lines it carries after its string. */
+  readonly blockIdLines: readonly BlockIdLine[];
+  /**
+   * A piece of a text (`slice`, and what is built on one), which says nothing of the block-id lines
+   * the text it was cut from carries: set as the text of a node that carries some, the draft refuses
+   * it, unless it says what they are (`withBlockIdLines`).
+   */
+  readonly fragment: boolean;
   #frame: readonly FramePart[] | undefined;
 
   /** `text` includes the frame; `marks` are in its offsets. */
-  constructor(type: OurusProseType, item: boolean, text: string, marks: MarkSet = MarkSet.empty) {
+  constructor(type: OurusProseType, item: boolean, text: string, marks: MarkSet = MarkSet.empty, blockIds: BlockIdSyntax | null = null, blockIdLines: readonly BlockIdLine[] = NO_LINES, fragment = false) {
     this.type = type;
     this.item = item;
     this.text = text;
     this.marks = marks;
+    this.blockIds = blockIds;
+    this.blockIdLines = blockIdLines;
+    this.fragment = fragment;
   }
 
-  /** The frame, computed from the characters, the type and `item`. */
+  /** The frame, computed from the characters, the type, `item` and `blockIds`. */
   get frame(): readonly FramePart[] {
-    return (this.#frame ??= frameOf(this.type, this.item, this.text, (at) => emptyNodeAt(this.marks, this.text, at)));
+    return (this.#frame ??= frameOf(this.type, this.item, this.text, (at) => emptyNodeAt(this.marks, this.text, at), this.blockIds));
+  }
+
+  /** The same text read in a flavor that writes block ids so, or has none. */
+  withBlockIds(blockIds: BlockIdSyntax | null): OurusProse {
+    return blockIds === this.blockIds ? this : this.#with({ blockIds });
+  }
+
+  /**
+   * The same string as a text of another type (and an item's or not: `item`), its placeholders, its
+   * flavor's syntax and the block-id lines it carries kept: a quote's lines unquoted a paragraph's, a
+   * setext title an ATX one's. Read as that type, but no transition (`normalize`).
+   */
+  retyped(type: OurusProseType, item = this.item): OurusProse {
+    return type === this.type && item === this.item ? this : this.#with({ type, item });
+  }
+
+  /** The same text with other placeholders, in its offsets. */
+  withMarks(marks: MarkSet): OurusProse {
+    return marks === this.marks ? this : this.#with({ marks });
+  }
+
+  /** The same text carrying other block-id lines (none: `[]`); a whole text, a fragment's lines said. */
+  withBlockIdLines(lines: readonly BlockIdLine[]): OurusProse {
+    return !this.fragment && (lines === this.blockIdLines || (!lines.length && !this.blockIdLines.length)) ? this : this.#with({ blockIdLines: lines, fragment: false });
+  }
+
+  /** A text like this one, but for what `changes` says, its block ids' syntax and lines carried, a fragment or not. */
+  #with(changes: { type?: OurusProseType; item?: boolean; text?: string; marks?: MarkSet; blockIds?: BlockIdSyntax | null; blockIdLines?: readonly BlockIdLine[]; fragment?: boolean }): OurusProse {
+    const { type = this.type, item = this.item, text = this.text, marks = this.marks, blockIds = this.blockIds, blockIdLines = this.blockIdLines, fragment = this.fragment } = changes;
+    return new OurusProse(type, item, text, marks, blockIds, blockIdLines, fragment);
   }
 
   /** The string without its frame: what the user edits, and the check compares. */
@@ -106,9 +168,12 @@ export class OurusProse {
     return { type: callout.kind, fold: callout.fold };
   }
 
-  /** Whether the text holds nothing but Markdown's whitespace (a no-break space is text). */
+  /**
+   * Whether the text holds nothing but Markdown's whitespace (a no-break space is text). A text that
+   * is only a block id (`- ^x`) isn't empty: its node is named, and goes as no empty one does.
+   */
   get empty(): boolean {
-    return trimMd(this.body) === '';
+    return trimMd(this.body) === '' && !this.frame.some((p) => p.part === 'blockId');
   }
 
   /** The first offset of line `line` past its frame. */
@@ -119,27 +184,31 @@ export class OurusProse {
       if (next < 0) return this.text.length;
       at = next + 1;
     }
-    for (const part of this.frame) if (part.from <= at && part.to > at && part.part !== 'underline') at = part.to;
+    for (const part of this.frame) if (part.from <= at && part.to > at && part.part !== 'underline' && part.part !== 'blockId') at = part.to;
     return at;
   }
 
   /** The same string read as an item's text, or not. */
   asItem(item: boolean): OurusProse {
-    return item === this.item ? this : new OurusProse(this.type, item, this.text, this.marks);
+    return item === this.item ? this : this.#with({ item });
   }
 
   /** `[from, to)` replaced by `insert`: the marks around move by their policies, the insertion's come with it. */
   splice(from: number, to: number, insert: OurusProse | string = ''): OurusProse {
     const [text, marks] = typeof insert === 'string' ? [insert, MarkSet.empty] : [insert.text, insert.marks];
-    return new OurusProse(this.type, this.item, this.text.slice(0, from) + text + this.text.slice(to), this.marks.splice(from, to, text, marks));
+    return this.#with({ text: this.text.slice(0, from) + text + this.text.slice(to), marks: this.marks.splice(from, to, text, marks) });
   }
 
-  /** `[from, to)` with its marks: a point at `to` only at the text's end (`MarkSet.slice`). */
+  /**
+   * `[from, to)` with its marks: a point at `to` only at the text's end (`MarkSet.slice`). A
+   * fragment, without the block-id lines: a split or a join gives them to one node explicitly
+   * (`withBlockIdLines`).
+   */
   slice(from = 0, to = this.text.length): OurusProse {
-    return new OurusProse(this.type, this.item, this.text.slice(from, to), this.marks.slice(from, to, to === this.text.length));
+    return this.#with({ text: this.text.slice(from, to), marks: this.marks.slice(from, to, to === this.text.length), blockIdLines: NO_LINES, fragment: true });
   }
 
-  /** The texts after this one, their marks with them. */
+  /** The texts after this one, their marks with them; this one's block-id lines, a fragment where it is one. */
   concat(...others: readonly (OurusProse | string)[]): OurusProse {
     let text = this.text;
     let marks = this.marks;
@@ -150,25 +219,34 @@ export class OurusProse {
         text += o.text;
       }
     }
-    return new OurusProse(this.type, this.item, text, marks);
+    return this.#with({ text, marks });
   }
 
   /**
    * The text after an edit, its transitions applied: a heading whose characters no longer read
    * as one is a paragraph's, as is a title that no longer reads as a callout and a quote's whose first
    * line lost its `>`; a paragraph never becomes a heading or a quote by its characters. A checkbox is read again from the characters with the
-   * frame, both ways, with nothing to do here.
+   * frame, both ways, with nothing to do here. A paragraph's block-id line right under it is a line of its text.
    */
   normalize(): OurusProse {
-    if (this.type === 'heading' && !this.frame.some((p) => p.part === 'heading' || p.part === 'underline')) return new OurusProse('paragraph', this.item, this.text, this.marks);
-    if (this.type === 'title' && !this.frame.some((p) => p.part === 'callout')) return new OurusProse('paragraph', this.item, this.text, this.marks);
-    if (this.type === 'quote' && !this.frame.some((p) => p.part === 'quote' && p.from === 0)) return new OurusProse('paragraph', this.item, this.text, this.marks);
-    return this;
+    let text: OurusProse = this;
+    if (this.type === 'heading' && !this.frame.some((p) => p.part === 'heading' || p.part === 'underline')) text = this.#with({ type: 'paragraph' });
+    else if (this.type === 'title' && !this.frame.some((p) => p.part === 'callout')) text = this.#with({ type: 'paragraph' });
+    else if (this.type === 'quote' && !this.frame.some((p) => p.part === 'quote' && p.from === 0)) text = this.#with({ type: 'paragraph' });
+    // (a block-id line right under a paragraph is its text's last line, which Markdown reads it as)
+    const [first, ...rest] = text.blockIdLines;
+    if ((text.type === 'paragraph' || text.type === 'quote') && first?.blankLines === 0) text = text.#with({ text: `${text.text}\n${first.line}`, blockIdLines: rest });
+    return text;
   }
 }
 
-/** The frame of `text`, typed `type`, an item's or not; `held`: whether a placeholder holds an empty line ending at an offset. */
-function frameOf(type: OurusProseType, item: boolean, text: string, held: (at: number) => boolean = () => false): FramePart[] {
+const NO_LINES: readonly BlockIdLine[] = [];
+
+/**
+ * The frame of `text`, typed `type`, an item's or not; `held`: whether a placeholder holds an empty
+ * line ending at an offset; `blockIds`: how a block id ending it is written, where its flavor has them.
+ */
+function frameOf(type: OurusProseType, item: boolean, text: string, held: (at: number) => boolean = () => false, blockIds: BlockIdSyntax | null = null): FramePart[] {
   const parts: FramePart[] = [];
   const endOf = (from: number): number => (text.indexOf('\n', from) < 0 ? text.length : text.indexOf('\n', from));
   // a checkbox at an item's text start: a paragraph's, or a setext title's (`- [x] a⏎  -`; an ATX
@@ -216,6 +294,32 @@ function frameOf(type: OurusProseType, item: boolean, text: string, held: (at: n
       if (last >= start && reUnderline.test(text.slice(last + 1))) parts.push({ part: 'underline', from: last, to: text.length });
     }
   }
+  // a block id ends the text, before what else closes it (`## H ^x ##`, `Title ^x⏎===`), past what
+  // opens it (`- [ ] ^x`, `## ^h`); not a callout title's, where it would end the quote's first line
+  if (blockIds && type !== 'title') {
+    const end = parts.find((p) => p.part === 'close' || p.part === 'underline')?.from ?? text.length;
+    const found = mdBlockIdEnd(text.slice(0, end));
+    if (found) {
+      // (the blanks before it, and the line break where it is alone on its line; but what another part
+      // has: a quote's `> ` on its line, a heading's `#`s)
+      const at = found.at;
+      let from = at;
+      while (from > 0 && (text[from - 1] === ' ' || text[from - 1] === '\t')) from--;
+      // (in a quote's text, alone on a line but for its `> `: the line whole, that `> ` the block id's)
+      const lineStart = text.lastIndexOf('\n', at - 1) + 1;
+      const own = type === 'quote' && lineStart > 0 ? parts.findIndex((p) => p.part === 'quote' && p.from === lineStart && /^[ \t]*$/.test(text.slice(p.to, at))) : -1;
+      if (own >= 0) {
+        parts.splice(own, 1);
+        from = lineStart;
+      }
+      if (text[from - 1] === '\n') from--;
+      for (const p of parts) if (p.from <= from && from < p.to) from = p.to;
+      if (from <= at) {
+        parts.push({ part: 'blockId', from, to: end });
+        parts.sort((a, b) => a.from - b.from);
+      }
+    }
+  }
   return parts;
 }
 
@@ -250,14 +354,39 @@ export class OurusAtom {
   readonly text: string;
   /** The placeholders, in `text`'s offsets. */
   readonly marks: MarkSet;
+  /** The block-id lines it carries after its string (a table's, a fence's `^id`). */
+  readonly blockIdLines: readonly BlockIdLine[];
   #frame: readonly AtomFramePart[] | undefined;
 
   /** `text` includes the frame; `marks` are in its offsets. */
-  constructor(type: string, item: boolean, text: string, marks: MarkSet = MarkSet.empty) {
+  constructor(type: string, item: boolean, text: string, marks: MarkSet = MarkSet.empty, blockIdLines: readonly BlockIdLine[] = NO_LINES) {
     this.type = type;
     this.item = item;
     this.text = text;
     this.marks = marks;
+    this.blockIdLines = blockIdLines;
+  }
+
+  /** The same text carrying other block-id lines. */
+  withBlockIdLines(lines: readonly BlockIdLine[]): OurusAtom {
+    return lines === this.blockIdLines || (!lines.length && !this.blockIdLines.length) ? this : new OurusAtom(this.type, this.item, this.text, this.marks, lines);
+  }
+
+  /**
+   * As Markdown reads it: a block-id line right under a quote that ends in a paragraph is that
+   * paragraph's lazy last line, in the string (`> a⏎^x`); under one that doesn't, carried (`> ## h⏎^x`).
+   */
+  normalize(): OurusAtom {
+    const [first, ...rest] = this.blockIdLines;
+    if (this.type !== 'blockquote' || first?.blankLines !== 0) return this;
+    const text = `${this.text}\n${first.line}`;
+    const last = MdTree.parse(text, MdFlavor.named('obsidian')).line(text.split('\n').length - 1);
+    return last.containers.some((c) => c.block.type === 'blockquote') ? new OurusAtom(this.type, this.item, text, this.marks, rest) : this;
+  }
+
+  /** The same lines read as an item's text, or not. */
+  asItem(item: boolean): OurusAtom {
+    return item === this.item ? this : new OurusAtom(this.type, item, this.text, this.marks, this.blockIdLines);
   }
 
   /** The delimiters, computed from the characters by `type`. */
@@ -336,7 +465,7 @@ export class OurusAtom {
 
   /** `[from, to)` replaced by `insert`, the marks around moving by their policies. */
   splice(from: number, to: number, insert = ''): OurusAtom {
-    return new OurusAtom(this.type, this.item, this.text.slice(0, from) + insert + this.text.slice(to), this.marks.splice(from, to, insert));
+    return new OurusAtom(this.type, this.item, this.text.slice(0, from) + insert + this.text.slice(to), this.marks.splice(from, to, insert), this.blockIdLines);
   }
 }
 
@@ -409,8 +538,108 @@ function columnsOf(blanks: string): number {
   return column;
 }
 
+/** Whether a frame part closes its text: a block id ending it, an ATX closing sequence, a setext underline. */
+export function isClosingPart(part: FramePart): boolean {
+  return part.part === 'blockId' || part.part === 'close' || part.part === 'underline';
+}
+
 /**
- * Where a text ends, before a closing frame (an ATX closing sequence, a setext underline); in a block
+ * Where a prose text's closing frame starts: the run of closing parts that ends it (` ^x` before
+ * `===` or ` ##`, which the inline text leaves out too); its length where it has none.
+ */
+export function closingFrameStart(text: OurusProse): number {
+  let at = text.text.length;
+  for (let k = text.frame.length - 1; k >= 0; k--) {
+    const part = text.frame[k]!;
+    if (part.to !== at || !isClosingPart(part)) break;
+    at = part.from;
+  }
+  return at;
+}
+
+/** Whether `name` is a valid block id's name. */
+export function isBlockIdName(name: string): boolean {
+  return new RegExp(`^${BLOCK_ID_NAME}$`).test(name);
+}
+
+/**
+ * A block id written in a text: its name, and in its string, where it is (`^` through the name's
+ * end) and the part of the string it takes (the blank or line break before it too); or carried
+ * (`k`, which of its `blockIdLines`).
+ */
+export type TextBlockId =
+  | { readonly name: string; readonly carried: false; readonly from: number; readonly to: number; readonly partFrom: number; readonly partTo: number }
+  | { readonly name: string; readonly carried: true; readonly k: number };
+
+/**
+ * The block ids a text holds, in order: one ending its string (a `blockId` frame part; a quote
+ * atom's, ending its last line), then the lines it carries.
+ */
+export function blockIdsOf(text: OurusText): TextBlockId[] {
+  const out: TextBlockId[] = [];
+  for (const b of stringBlockIds(text)) out.push({ name: b.name, carried: false, from: b.at, to: b.at + 1 + b.name.length, partFrom: b.from, partTo: b.to });
+  text.blockIdLines.forEach((l, k) => {
+    const name = reBlockIdLine.exec(l.line)?.[1];
+    if (name) out.push({ name, carried: true, k });
+  });
+  return out;
+}
+
+/**
+ * The block ids in a text's string, in order: the one ending it (its `blockId` frame part); in a
+ * quote read as an atom, the one ending each paragraph in it, past its `>`s (`> q⏎^q2`, `> a ^x⏎>⏎>
+ * b`), but in code (`> ```⏎> code ^x`). Each with its name, where its `^` is, and the part of the
+ * string it takes (the blanks or line break before it; a quote atom's line that is only it, whole).
+ */
+function stringBlockIds(text: OurusText): { name: string; at: number; from: number; to: number }[] {
+  if (text instanceof OurusProse) {
+    const part = text.frame.find((p) => p.part === 'blockId');
+    if (!part) return [];
+    const at = text.text.indexOf('^', part.from);
+    return [{ name: new RegExp(`^\\^(${BLOCK_ID_NAME})`).exec(text.text.slice(at))![1]!, at, from: part.from, to: part.to }];
+  }
+  const s = text.text;
+  if (text.type !== 'blockquote' || !s.includes('^')) return [];
+  const tree = MdTree.parse(s, MdFlavor.named('obsidian'));
+  const out: { name: string; at: number; from: number; to: number }[] = [];
+  let lineFrom = 0;
+  s.split('\n').forEach((line, i) => {
+    const leaf = tree.line(i).leaf;
+    // (a paragraph's last line)
+    const last = leaf?.block.type === 'paragraph' && leaf.line + leaf.block.lines - 1 === i;
+    const found = last ? mdBlockIdEnd(line.replace(/^[ \t>]*/, (m) => ' '.repeat(m.length))) : null;
+    if (found) {
+      const at = lineFrom + found.at;
+      // (a line that is only the block id goes whole, with the line break before it)
+      const alone = lineFrom > 0 && trimMd(s.slice(lineFrom, at).replace(/>/g, '')) === '';
+      out.push({ name: found.name, at, from: alone ? lineFrom - 1 : at - (found.at > 0 ? 1 : 0), to: lineFrom + line.length });
+    }
+    lineFrom += line.length + 1;
+  });
+  return out;
+}
+
+/**
+ * `text` without its block ids (a copy's: a block id names one block), or without those `which`
+ * says, by where they are in `blockIdsOf(text)` (one of a name written twice, the other kept): those
+ * in its string, the lines it carries (each with the blank lines before it, but the first left's,
+ * which keeps its own). Without `which`, none is left: what ended before one that went goes too,
+ * where it reads as one then (`^a ^b`). A text that is only block ids comes out empty.
+ */
+export function withoutBlockIds(text: OurusText, which?: ReadonlySet<number>): OurusText {
+  const strings = stringBlockIds(text);
+  const dropped = (k: number): boolean => !which || which.has(k);
+  let spliced = text;
+  // (from the last, the earlier ones' places as they are)
+  for (let k = strings.length - 1; k >= 0; k--) if (dropped(k)) spliced = spliced.splice(strings[k]!.from, strings[k]!.to);
+  if (!which) for (let more = stringBlockIds(spliced); more.length; more = stringBlockIds(spliced)) for (const b of [...more].reverse()) spliced = spliced.splice(b.from, b.to);
+  // (a carried line's place among the block ids: past those in the string)
+  const lines = text.blockIdLines.filter((_, k) => !dropped(k + strings.length));
+  return spliced.withBlockIdLines(lines.length === text.blockIdLines.length ? text.blockIdLines : lines);
+}
+
+/**
+ * Where a text ends, before a closing frame (a block id, an ATX closing sequence, a setext underline); in a block
  * between delimiters, a fence's at the end of its last line with text, or of its opening; `$$` and
  * `%%` before the closing delimiter.
  */
@@ -430,8 +659,7 @@ export function textEnd(text: OurusText): number {
     }
     return end;
   }
-  const tail = text.frame.find((p) => p.to === text.text.length && (p.part === 'close' || p.part === 'underline'));
-  return tail ? tail.from : text.text.length;
+  return closingFrameStart(text);
 }
 
 /**

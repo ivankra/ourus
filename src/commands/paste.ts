@@ -8,11 +8,13 @@ import { OurusProse, OurusDoc, OurusAtom, Lineage, type OurusNode } from '../doc
 import { lineOf, trimMd } from '../text/index.ts';
 import type { OurusDraft } from '../writer/index.ts';
 import { CommandContext, deferToHost, reject, type CommandOutcome } from './context.ts';
+import { placedText } from './typing.ts';
 import { afterDeleting } from './copy.ts';
 import { codeAt, onDelimiterLine } from './code.ts';
 import { pastePlainCommand, plainLines } from './paste-plain.ts';
 import { becomesAt, headingTarget, joinsAround, placeOf, resultCheck, takesIn, unholdable } from './move-subtree.ts';
 import type { InsertionPoint } from './types.ts';
+import { pastedBlockIds } from './block-ids.ts';
 import { changeHeadingLevels, headingLevel, inMarkup, selectionInText, textEnd, textStart } from './util.ts';
 
 /** Where pasted nodes go: in a node's place, before or after it, or first or last among its children. */
@@ -81,6 +83,7 @@ const asOutcome = (outcome: CommandOutcome | 'text'): CommandOutcome => (outcome
 function pasteAt(ctx: CommandContext, read: Read, eachLine: boolean, nodesOnly: boolean): CommandOutcome | 'text' {
   const config = ctx.config;
   const asText = (paste: () => CommandOutcome): CommandOutcome | 'text' => (nodesOnly ? 'text' : paste());
+  // (its block ids kept only where new: `pasteKeepingNewBlockIds`, around the command)
   let fragment = clipboardFragment(read.markdown, ctx.config);
   if (!fragment) return deferToHost();
   // plain lines (paragraphs only, but a quote's: `quotes: text`), with `pasteLines: items`: each line a node (Paste18, 19)
@@ -166,7 +169,7 @@ function openSeams(ctx: CommandContext, pasted: OurusDoc, roots: readonly OurusN
   const head = ctx.selection.head;
   // (but the gap's last line between paragraphs, which sets them apart: a slot the paste fills)
   const apart = (n: OurusNode): boolean => n.gap === 1 && !!n.afterSubtree && (n.kind === 'paragraph' || n.afterSubtree.kind === 'paragraph');
-  const owner = at.zone === 'gap' && !at.owner.children.length && ctx.doc.lineAt(head).index === at.owner.textLastLine + 1 && ctx.doc.atTextColumn(head, at.owner) && !apart(at.owner) ? at.owner : null;
+  const owner = at.zone === 'gap' && !at.owner.children.length && ctx.doc.lineAt(head).index === at.owner.ownLastLine + 1 && ctx.doc.atTextColumn(head, at.owner) && !apart(at.owner) ? at.owner : null;
   const line = owner ? ctx.doc.textOf(owner) : null;
   const here = owner && line instanceof OurusProse ? { node: owner, text: line, offset: textEnd(line) } : at.zone === 'text' && at.text instanceof OurusProse ? { node: at.node, text: at.text, offset: at.offset } : null;
   if (!here || (here.node.kind !== 'item' && here.node.kind !== 'paragraph')) return undefined;
@@ -207,6 +210,9 @@ function openSeams(ctx: CommandContext, pasted: OurusDoc, roots: readonly OurusN
  */
 function lineAt(ctx: CommandContext, line: string): CommandOutcome {
   const at = ctx.from;
+  // (where typing it would be placed so, the host's insert breaking what is there: before a block id)
+  const placed = !/[\r\n]/.test(line) && ctx.collapsed ? placedText(ctx, line) : null;
+  if (placed) return placed;
   // (an empty item's, the host types: it is its text)
   if (/[\r\n]/.test(line) || at.zone !== 'text' || !(at.text instanceof OurusProse) || at.text.empty) return null;
   // past the text's end (a setext underline, closing `#`s), in the padding before it: markup
@@ -251,7 +257,7 @@ function slotAt(ctx: CommandContext, items: boolean): Slot | 'plain' | 'host' | 
     const owner = at.owner;
     if (owner.kind === 'root') return 'host';
     // below an empty item, it is filled, as from its end
-    const onBlank = { owner, line: ctx.doc.lineAt(ctx.selection.head).index - owner.textLastLine - 1 };
+    const onBlank = { owner, line: ctx.doc.lineAt(ctx.selection.head).index - owner.ownLastLine - 1 };
     if (emptyText(ctx, owner) && owner.kind === 'item' && !owner.children.length) return { where: 'instead', node: owner, list: owner, atEnd: true, onBlank };
     return { ...endSlot(ctx, owner, items), atEnd: true, onBlank };
   }
@@ -477,8 +483,8 @@ function place(ctx: CommandContext, draft: OurusDraft, slot: Slot, fitted: Fitte
     const task = text instanceof OurusProse ? text.frame.find((p) => p.part === 'task') : undefined;
     const first = nodes[0] !== undefined ? draft.touched(nodes[0]) : null;
     if (task && first?.kind === 'item' && first.text instanceof OurusProse && !first.text.task) {
-      const boxed = (text as OurusProse).slice(task.from, task.to).concat(first.text);
-      draft.setText(nodes[0]!, new OurusProse('paragraph', true, boxed.text, boxed.marks));
+      // (the pasted text's, its block-id lines too, the checkbox before it)
+      draft.setText(nodes[0]!, first.text.retyped('paragraph', true).splice(0, 0, (text as OurusProse).slice(task.from, task.to)));
     }
     if (nodes.length) {
       draft.place('before', node, nodes);
@@ -545,7 +551,7 @@ function place(ctx: CommandContext, draft: OurusDraft, slot: Slot, fitted: Fitte
  */
 function apartFrom(ctx: CommandContext, slot: Slot): boolean {
   const { node } = slot;
-  const below = node.textLastLine + 1;
+  const below = node.ownLastLine + 1;
   const tightAfter = node.kind !== 'heading' && slot.where !== 'before' && below < ctx.doc.lineCount && !ctx.doc.isBlankLine(below);
   return !tightAfter && !(slot.where === 'first' && node.kind !== 'heading' && node.gap === 0);
 }
@@ -601,7 +607,7 @@ function pasteCaret(ctx: CommandContext, draft: OurusDraft, nodes: readonly numb
 export function pasteAtCommand(ctx: CommandContext, clipboard: OurusClipboard, to: InsertionPoint): CommandOutcome {
   const doc = ctx.doc;
   const read = clipboardMarkdown(clipboard);
-  const fragment = read ? clipboardFragment(read.markdown, ctx.config) : null;
+  const fragment = read ? clipboardFragment(pastedBlockIds(doc, read.markdown, { from: 0, to: 0 }), ctx.config) : null;
   if (!fragment?.doc.rootNode.children.length) return reject('not-expressible', 'nothing to paste');
   let pasted = fragment.doc;
   const place = placeOf(doc, to);

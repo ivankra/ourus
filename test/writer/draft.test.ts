@@ -4,7 +4,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { OurusProse, OurusDoc, type OurusNode, type PersistentNode } from '../../src/doc/index.ts';
+import { OurusProse, OurusAtom, OurusDoc, type OurusNode, type PersistentNode } from '../../src/doc/index.ts';
 import { OurusDraft, type Refusal } from '../../src/writer/index.ts';
 import { differenceFrom } from '../../src/writer/check.ts';
 import { createPlaceholder } from '../../src/text/index.ts';
@@ -209,4 +209,89 @@ test('setText: a quote\'s title goes (null); no other node loses its text', () =
   applied(draft);
   assert.equal(drawn(doc, draft), ['quote null 0', '  paragraph "Title" 1', '  paragraph "body" 0'].join('\n'));
   assert.throws(() => new OurusDraft(doc).setText(quote.child(0), null), /only a quote's title/);
+});
+
+test('copy: an item whose first child is on its line, the child\'s text set, keeps its marker there', () => {
+  const doc = parse('- - x\n');
+  const draft = new OurusDraft(doc);
+  const ids = new Map<PersistentNode, number>();
+  const outer = doc.rootNode.children[0]!;
+  draft.place('after', outer, [draft.copy(outer, ids)]);
+  draft.setText(ids.get(outer.children[0]!.persistentNode)!, new OurusProse('paragraph', true, 'y'));
+  const result = draft.done();
+  assert.ok(!('reason' in result), 'reason' in result ? result.detail : '');
+  assert.equal(result.doc.text, '- - x\n- - y\n');
+});
+
+test('copy: an item whose first child is on its line, with another child dropped from the copy, keeps its marker there', () => {
+  const doc = parse('- - x\n  - y\n');
+  const draft = new OurusDraft(doc);
+  const ids = new Map<PersistentNode, number>();
+  const outer = doc.rootNode.children[0]!;
+  draft.place('after', outer, [draft.copy(outer, ids)]);
+  draft.remove([ids.get(outer.children[1]!.persistentNode)!]);
+  const result = draft.done();
+  assert.ok(!('reason' in result), 'reason' in result ? result.detail : '');
+  assert.equal(result.doc.text, '- - x\n  - y\n- - x\n');
+});
+
+test('copy: an item lined up at another column keeps a lazy line of its text lazy', () => {
+  const doc = parse('p\n  - a\n  ===\n- b\n');
+  const draft = new OurusDraft(doc);
+  const items = doc.rootNode.children[0]!.children;
+  draft.place('after', items[1]!, [draft.copy(items[0]!)]);
+  const result = draft.done();
+  assert.ok(!('reason' in result), 'reason' in result ? result.detail : '');
+  assert.equal(result.doc.text, 'p\n  - a\n  ===\n- b\n- a\n    \\===\n');
+});
+
+test('done: an atom moved under a list item, indented, is written without its indentation, which would put it in the item', () => {
+  const doc = parse('  ---\n\nP\n- a\n  > q\n');
+  const [rule, p] = doc.rootNode.children as [OurusNode, OurusNode];
+  const draft = new OurusDraft(doc).remove([rule]).place('after', p, [rule]);
+  const result = draft.done();
+  assert.ok(!('reason' in result), 'reason' in result ? result.detail : '');
+  assert.equal(result.doc.text, 'P\n- a\n  > q\n\n---\n');
+});
+
+test('done: HTML moved under a list item loses its first line\'s indentation only, its lines after it the block\'s as they are', () => {
+  const doc = parse('  <pre>\n  a\n     b\n  </pre>\n\nP\n- a\n  > q\n');
+  const [html, p] = doc.rootNode.children as [OurusNode, OurusNode];
+  const result = new OurusDraft(doc).remove([html]).place('after', p, [html]).done();
+  assert.ok(!('reason' in result), 'reason' in result ? result.detail : '');
+  assert.equal(result.doc.text, 'P\n- a\n  > q\n\n<pre>\n  a\n     b\n  </pre>\n');
+});
+
+test('copy: a table whose header is a lazy line, first in a quote now, is written inside it', () => {
+  const doc = parse('> a\nb\n> |---|\n');
+  const quote = doc.rootNode.children[0]!;
+  const draft = new OurusDraft(doc);
+  const ids = new Map<PersistentNode, number>();
+  draft.place('after', quote, [draft.copy(quote, ids)]);
+  draft.remove([ids.get(quote.children[0]!.persistentNode)!]);
+  const result = draft.done();
+  assert.ok(!('reason' in result), 'reason' in result ? result.detail : '');
+  assert.equal(result.doc.text, '> a\nb\n> |---|\n\n> b\n> |---|\n');
+});
+
+test('done: code past a tab its item takes part of keeps a tab in a line\'s blanks as the spaces it spans, as it reads', () => {
+  const doc = parse('- item text\n\t```\n\tco\n\t```\n');
+  const code = doc.rootNode.children[0]!.children[0]!;
+  const text = doc.textOf(code) as OurusAtom;
+  const at = text.text.indexOf('co') + 2;
+  const draft = new OurusDraft(doc).setText(code, text.splice(at, at, '\n  \t- b'));
+  const result = draft.done();
+  assert.ok(!('reason' in result), 'reason' in result ? result.detail : '');
+  assert.equal(result.doc.text, '- item text\n\t```\n\tco\n\t    - b\n\t```\n');
+});
+
+test('copy: an item lined up with the item of its list that stays, at its own column, keeps a lazy line as it is written', () => {
+  // (`b`'s copy lines up with `b`, past `a`'s copy, placed: as its original, its lazy line too)
+  const doc = parse('1. x\n- a\n2. a\n  1. b\n    1. x\n', 'commonmark');
+  const [, , a, b] = doc.rootNode.children as OurusNode[];
+  const draft = new OurusDraft(doc);
+  draft.place('after', b!, [draft.copy(a!), draft.copy(b!)]);
+  const result = draft.done();
+  assert.ok(!('reason' in result), 'reason' in result ? result.detail : '');
+  assert.equal(result.doc.text, '1. x\n- a\n2. a\n  3. b\n    1. x\n  4. a\n  5. b\n    1. x\n');
 });

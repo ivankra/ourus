@@ -62,10 +62,12 @@ export function selectedNodes(doc: OurusDoc, selection: OurusSelection): OurusNo
   const { starts, ends } = doc.mdTree;
   if (from !== starts[first.startLine]) return null;
   if (to < ends[last.endLine]! || to > subtreeEnd(doc, doc.coverEnd(last))) return null;
-  // one node's own text, from its text's start to its end: text, unless that is its subtree's end too
+  // one node's own text, from its text's start to its end, or into the frame closing it on that line
+  // (a block id, closing `#`s; not a setext underline): text, unless that is its subtree's end too
   if (roots.length === 1 && to !== subtreeEnd(doc, last.endLine)) {
     const text = doc.textOf(first);
-    if (text && from === doc.posOf(first, textStart(text), 1) && to === doc.posOf(first, textEnd(text), -1)) return null;
+    const end = text ? doc.posOf(first, textEnd(text), -1) : -1;
+    if (text && from === doc.posOf(first, textStart(text), 1) && to >= end && to <= doc.posOf(first, text.text.length, -1) && !doc.text.slice(end, to).includes('\n')) return null;
   }
   return roots;
 }

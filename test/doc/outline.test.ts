@@ -27,8 +27,8 @@ function snapshot(doc: OurusDoc): string {
     assert.ok(node.kind === 'root' ? block === doc.mdTree.root : holds(block, node.startLine), `the ${node.kind} at ${node.startLine} holds a block of another snapshot`);
     assert.ok(!head || holds(head, node.textFirstLine), `the ${node.kind} at ${node.startLine} holds a head of another snapshot`);
     const text = doc.textOf(node);
-    const read = text && JSON.stringify([text.type, text.item, text.text, text.marks.marks.map((m) => `${m.kind}@${m.from}`), text.frame.map((p) => `${p.part}@${p.from}-${p.to}`)]);
-    out.push(`${'  '.repeat(node.depth)}${node.kind} ${node.startLine}-${node.textLastLine}-${node.endLine} gap ${node.gap} ${block.type}${head ? ` head ${head.type}@${node.textFirstLine}` : ''} lines ${node.persistentNode.lines} text ${read}`);
+    const read = text && JSON.stringify([text.type, text.item, text.text, text.marks.marks.map((m) => `${m.kind}@${m.from}`), text.frame.map((p) => `${p.part}@${p.from}-${p.to}`), text.blockIdLines]);
+    out.push(`${'  '.repeat(node.depth)}${node.kind} ${node.startLine}-${node.textLastLine}-${node.ownLastLine}-${node.endLine} gap ${node.gap} ${block.type}${head ? ` head ${head.type}@${node.textFirstLine}` : ''} lines ${node.persistentNode.lines} text ${read}`);
     node.children.forEach(visit);
   };
   visit(doc.rootNode);
@@ -99,6 +99,36 @@ for (const flavor of FLAVORS) {
     );
   });
 }
+
+/**
+ * Documents of blocks and block-id lines, as Obsidian writes them (exactly or not), at the top level,
+ * in items and in quotes, with or without blank lines between.
+ */
+const arbBlockIdDoc = fc
+  .array(
+    fc.tuple(
+      fc.constantFrom('', '', '', '- ', '  ', '  - ', '> ', '1. '),
+      fc.constantFrom('^id', '^id', '^id', '^id', '^b-2', '^b-2', '^id ', 'x ^id', 'a', 'b c', '## h', 'Title', '===', '| a |', '|---|', '```', 'code', '---', '[!note] T', '> q', '- x'),
+      fc.constantFrom('\n', '\n', '\n\n', '\n\n'),
+    ),
+    { maxLength: 12 },
+  )
+  .map((lines) => lines.map(([prefix, content, end]) => prefix + content + end).join(''));
+
+test("obsidian: an update's outline equals a fresh parse's, block-id lines attaching and coming loose", () => {
+  fc.assert(
+    fc.property(arbBlockIdDoc, fc.array(arbEdit, { minLength: 1, maxLength: 4 }), (text, edits) => {
+      let doc = OurusDoc.parse(text, { config: { flavor: 'obsidian' } });
+      for (const edit of edits) {
+        const change = changeOf(doc.text, edit);
+        const next = doc.update({ changes: [change] });
+        assertSameOutline(next, `${JSON.stringify(doc.text)} + ${JSON.stringify(change)}`);
+        doc = next;
+      }
+    }),
+    { numRuns: RUNS * 3 },
+  );
+});
 
 /** The nodes of `next` that aren't nodes of `old`: what the update made anew. */
 function madeAnew(old: OurusDoc, next: OurusDoc): number {

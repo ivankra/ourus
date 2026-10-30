@@ -236,6 +236,18 @@ export interface OurusConfig {
   readonly joinWithChildren: 'join' | 'refuse';
 
   /**
+   * A merge (Backspace at a text's start, Delete at its end, a selection across nodes typed over or
+   * deleted) of two nodes that both have a block id (spec/block-ids.md). Where only the
+   * lower one has one, the node that stays takes it, whatever this says.
+   * - `refuse` (the default): refused as `block-id`. A node keeps one block id: links to the other
+   *   would find nothing.
+   * - `merge`: the node that stays keeps its own, the other's goes, and the result says which went
+   *   into which (`mergedBlockIds`), for a host that redirects the links to it (Obsidian's metadata
+   *   cache finds them in every note). Logseq OG keeps one and redirects references to the other.
+   */
+  readonly joinBlockIds: 'refuse' | 'merge';
+
+  /**
    * Backspace at the start of an item with nothing above it in its container (the document's first
    * item, a quote's first item; a callout's joins its title):
    * - `unwrap` (the default, where bare Obsidian ends up in two presses): the marker goes and the item
@@ -554,6 +566,7 @@ const CONFIG_VALUES: { readonly [K in keyof OurusConfig]: readonly [OurusConfig[
   enterInQuote: ['line', 'split'],
   // Backspace and Delete at a node's edge
   joinWithChildren: ['join', 'refuse'],
+  joinBlockIds: ['refuse', 'merge'],
   backspaceAtTopItem: ['unwrap', 'refuse'],
   backspaceAtItemStart: ['join', 'body', 'unwrap', 'logseq'],
   emptyItemWithChildren: ['lift', 'refuse'],

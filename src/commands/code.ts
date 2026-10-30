@@ -252,6 +252,7 @@ export function joinInCode(ctx: CommandContext, at: CodeAt, dir: -1 | 1): Comman
   if (!below) {
     // at a closing fence's end before a line with text: it would join the fence (Fence35)
     // (an empty item there goes, as Delete takes one anywhere: not done yet)
+    // (the line right after its text: a block-id line it carries, which would join the fence too)
     const i = node.textLastLine + 1;
     const owner = i < ctx.doc.lineCount ? ctx.doc.nodeAtLine(i) : null;
     const ownText = owner ? ctx.doc.textOf(owner) : null;

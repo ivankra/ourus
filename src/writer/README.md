@@ -61,17 +61,29 @@ const settled = settlePlaceholders(doc, caret);   // the placeholders the caret 
     A detached copy of a node and its subtree, with new ids. The writer writes the copy exactly as
     the original is written.
 
-  - `OurusDraft.split(ref: NodeRef, at: number, { children, to?, into?, kind? }): [number, number]`<br>
+  - `OurusDraft.split(ref: NodeRef, at: number, { children, to?, into?, kind?, closing? }): [number, number]`<br>
     Cuts a node's text at `at`. The node keeps what is before; a new node of its kind (a paragraph,
     for a heading) gets what is from `to` on (by default `at`; the characters between are dropped).
     The new node is the next sibling, or the first child with `into: 'child'`. The children `stay`
-    with the node or `follow` the new one. The blank lines after the text go with the new node.
-    Returns both ids.
+    with the node or `follow` the new one. The blank lines after the text go with the new node. The
+    text's closing frame (a block id, an ATX heading's `#`s, a setext underline) and the block-id
+    lines it carries stay with the node: a block id stays with the node the caret was in (the closing
+    frame goes with the new node under `closing: 'lower'`, where the command put it in after the cut,
+    a pasted ` ^x`). Returns
+    both ids.
 
   - `OurusDraft.join(upper: NodeRef, lower: NodeRef, { children?, separator? }): number`<br>
     Appends `lower`'s text (without its frame) to `upper`'s, after `separator` (a line break makes
-    it the text's next line), and removes `lower`. `upper` takes `lower`'s gap. `lower`'s children
-    go after `upper`'s (`adopt`), or into `lower`'s place (`place`). Returns `upper`'s id.
+    it the text's next line), before `upper`'s closing frame, and removes `lower`. `upper` takes
+    `lower`'s gap. `lower`'s children go after `upper`'s (`adopt`), or into `lower`'s place (`place`).
+    `lower`'s block ids: where `upper` has none, it takes them (a carried line alone as ` ^id` at
+    its text's end), as moved; where both have one, `joinBlockIds` says: the draft refused
+    (`block-id`), or `upper`'s kept and `lower`'s merged into it. Returns `upper`'s id.
+
+  - `OurusDraft.movedBlockIds(names: readonly string[], to: NodeRef)`<br>
+    Says the block ids `names` go to node `to` on purpose (workflowy's split giving it the heading's),
+    so the check of block ids takes them as moved, not lost; `done()`'s result gives them with the
+    join's (`blockIds: { moved, merged }`).
 
   - `OurusDraft.listForm(id: number, marker: string, own?: boolean)`<br>
     The list marker a new item prefers (`-`, `*`, `1.`, `3)`) when it doesn't join an existing
@@ -103,10 +115,18 @@ const settled = settlePlaceholders(doc, caret);   // the placeholders the caret 
     2. It writes the result as changes to the document's text (`write.ts`). The writer only writes
        what step 1 decided.
     3. It parses the new text and checks it against the draft (`check.ts`), and returns `{ doc,
-       changes, selection }`.
+       changes, selection, blockIds }`: `blockIds`, what the draft moved and merged on purpose.
 
-    Where the writer fails, on a layout it has no rule for or a text that doesn't read back as the
-    draft, `done()` returns `{ reason: 'write-failed', detail }`. That is a bug in ourus, never an
+    Where the flavor has block ids, step 1 also reads them as the document will: a node carrying
+    block-id lines outside a list item gets a blank line after them, whatever follows (else Obsidian
+    reads one as naming its own line); a paragraph that is only a block id and that Obsidian reads as
+    naming the block before it (or the item it is under) is taken out, that block's text carrying the
+    line, decided once the blank lines are fixed; an item whose text the draft emptied can't carry
+    block-id lines, and is refused.
+
+    A join of two nodes that both have a block id, under `joinBlockIds: refuse`, returns `{ reason:
+    'block-id', detail }`. Where the writer fails, on a layout it has no rule for or a text that
+    doesn't read back as the draft, `done()` returns `{ reason: 'write-failed', detail }`. That is a bug in ourus, never an
     outcome: a host reports it, as any refusal, and it is fixed.
 
   - After `done()`, for the writer and the check:
@@ -136,8 +156,9 @@ const settled = settlePlaceholders(doc, caret);   // the placeholders the caret 
 Files:
 
 - `index.ts` (the API); `draft.ts` (`OurusDraft`: its operations and `done()`); `write.ts`
-  (the writer); `check.ts` (whether a document reads as the draft meant, node by node; nodes the
-  two share are equal without comparing); `settle.ts` (`settlePlaceholders`).
+  (the writer); `check.ts` (whether a document reads as the draft meant, node by node, each text's
+  block ids by name too; nodes the two share are equal without comparing); `settle.ts`
+  (`settlePlaceholders`).
 
 Tests: `test/writer/draft.test.ts` (the operations, how node references resolve through them, what
 `done()` fixes, the check), and the spec, through every command.

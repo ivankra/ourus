@@ -14,14 +14,15 @@ export interface ViewState {
 export const NO_VIEW: ViewState = { folded: new Set(), zoom: null };
 
 /**
- * What folding `node` hides, in offsets: from the end of its text to the end of its subtree's last
+ * What folding `node` hides, in offsets: from the end of its own lines to the end of its subtree's last
  * line, the blank lines after it not included; null where it has no children, or they hide nothing
  * (all on its own last line of text).
  */
 export function foldRange(doc: OurusDoc, node: OurusNode): { from: number; to: number } | null {
   if (node.kind === 'root' || !node.children.length) return null;
   const { ends } = doc.mdTree;
-  const from = ends[node.textLastLine]!;
+  // (after its own lines: a heading's block-id lines show, as its text does)
+  const from = ends[node.ownLastLine]!;
   const to = ends[node.endLine]!;
   return to > from ? { from, to } : null;
 }

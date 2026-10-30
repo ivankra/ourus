@@ -2,10 +2,10 @@
 // clipboard formats; a cut takes it out as Backspace or delete subtree would.
 
 import { clipboardOf } from './clipboard.ts';
-import { OurusProse, type OurusNode } from '../doc/index.ts';
+import { OurusProse, checkBlockIds, type OurusNode } from '../doc/index.ts';
 import { deleteContentBackwardCommand } from './backspace.ts';
-import { CommandContext, deferToHost, type CommandOutcome } from './context.ts';
-import { composeChanges, lineOf, trimMd } from '../text/index.ts';
+import { CommandContext, blockIdsDeclaredBy, deferToHost, reject, type CommandOutcome } from './context.ts';
+import { composeChanges, lineOf, mapPos, trimMd } from '../text/index.ts';
 import { deleteSubtreeCommand } from './delete-subtree.ts';
 import { oneRun, operandsRefused, runsOf, selectionRoots } from './util.ts';
 
@@ -110,9 +110,45 @@ function nodesOnLines(ctx: CommandContext, from: number, to: number): number {
  * where either is.
  */
 export function afterDeleting(ctx: CommandContext, then: (ctx: CommandContext) => CommandOutcome): CommandOutcome {
+  const from = Math.min(ctx.selection.anchor, ctx.selection.head);
+  const to = Math.max(ctx.selection.anchor, ctx.selection.head);
+  // within one text, what `then` puts in one line of it: the other way round, `then` at the
+  // selection's end and the selection deleted after (the deletion alone would take the blank after a
+  // selection from the text's start, `[p] q`, or empty a text a block id ends: `p` of `p ^x`)
+  const oneText = ctx.from.zone === 'text' && ctx.to.zone === 'text' && ctx.from.node === ctx.to.node;
+  if (oneText) {
+    const reversed = thenDeleting(ctx, from, to, then, true);
+    if (reversed) return reversed;
+  }
   const deleted = deleteSelected(ctx);
-  if (!deleted || deleted.status !== 'applied') return deleted;
-  const next = then(new CommandContext(deleted.doc, deleted.selection));
-  if (!next || next.status !== 'applied') return next;
-  return { ...next, changes: composeChanges(ctx.doc.text, deleted.changes, next.changes) };
+  const forward = ((): CommandOutcome => {
+    if (!deleted || deleted.status !== 'applied') return deleted;
+    const next = then(new CommandContext(deleted.doc, deleted.selection));
+    if (!next || next.status !== 'applied') return next;
+    return { ...next, ...blockIdsDeclaredBy([deleted, next]), changes: composeChanges(ctx.doc.text, deleted.changes, next.changes) };
+  })();
+  // (and so where, the other way, a block id the selection doesn't take is lost: its text emptied
+  // between the two, or the text then glued to it)
+  if (!oneText || !ctx.doc.text.includes('^')) return forward;
+  const loses = (r: CommandOutcome): boolean => r?.status === 'rejected' || (r?.status === 'applied' && !!checkBlockIds(ctx.doc, r.doc, r.changes, { declared: { moved: r.movedBlockIds ?? [], merged: r.mergedBlockIds ?? [] }, taken: { from, to } }));
+  if (!loses(forward)) return forward;
+  const reversed = thenDeleting(ctx, from, to, then, false);
+  return reversed && (reversed.status === 'deferredToHost' || !loses(reversed)) ? reversed : forward;
+}
+
+/**
+ * `then` at `to`, then `[from, to)` deleted (`afterDeleting`'s other order); `inline`: only where
+ * `then` puts text in the line `to` is on. Null where `then` changes the text before `to`, or the
+ * deletion isn't applied.
+ */
+function thenDeleting(ctx: CommandContext, from: number, to: number, then: (ctx: CommandContext) => CommandOutcome, inline: boolean): CommandOutcome {
+  const first = then(ctx.at(to));
+  if (!first || first.status !== 'applied') return !inline && first?.status === 'deferredToHost' ? first : null;
+  if (first.changes.some((c) => c.from < to)) return null;
+  if (inline && first.changes.some((c) => /[\r\n]/.test(c.insert ?? '') || /[\r\n]/.test(ctx.doc.text.slice(c.from, c.to ?? c.from)))) return null;
+  const deleted = deleteSelected(new CommandContext(first.doc, { anchor: from, head: to }));
+  if (!deleted || deleted.status !== 'applied') return null;
+  const map = (pos: number): number => mapPos(deleted.changes, pos, 1);
+  const selection = { anchor: map(first.selection.anchor), head: map(first.selection.head) };
+  return { ...deleted, ...blockIdsDeclaredBy([first, deleted]), selection, changes: composeChanges(ctx.doc.text, first.changes, deleted.changes) };
 }

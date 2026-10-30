@@ -49,6 +49,12 @@ export function shiftEnterCommand(ctx: CommandContext): CommandOutcome {
     const at = textActedOnAt(ctx, ctx.selection.head);
     if (at) from = to = { zone: 'text', node: at.node, text: at.text, offset: at.offset };
   }
+  // right after a block id ending the text, or in it (where markup isn't text): at the text's end,
+  // before it
+  if (ctx.collapsed && (from.zone === 'text' || (from.zone === 'frame' && from.part === 'blockId')) && from.text instanceof OurusProse) {
+    const id = from.text.frame.find((p) => p.part === 'blockId');
+    if (id && from.offset > id.from) from = to = { zone: 'text', node: from.node, text: from.text, offset: id.from };
+  }
   if (from.zone === 'frame' && from.part === 'callout') return reject('not-expressible', "a line break would split the callout's type");
   if (from.zone === 'frame' && from.part === 'underline') return reject('not-expressible', 'a line break would cut the setext underline');
   if (from.zone !== 'text' || (to.zone !== 'text' && to.zone !== 'frame') || from.node !== to.node) return null;
@@ -70,6 +76,15 @@ export function shiftEnterCommand(ctx: CommandContext): CommandOutcome {
   const line = lineOf(s, from.offset);
   const lineStart = text.textStart(line);
   const lineEnd = s.indexOf('\n', to.offset) < 0 ? s.length : s.indexOf('\n', to.offset);
+  // a quote's new line quoted
+  const brk = text.type === 'quote' ? '\n> ' : '\n';
+  // at the text's end before a block id ending it: the new line holds the caret, then the block id,
+  // which stays at the end of the last line (`- foo` / `  ┃ ^id`); typing goes before it
+  const id = text.frame.find((p) => p.part === 'blockId');
+  if (ctx.collapsed && id && from.offset === id.from && trimMd(s.slice(lineStart, from.offset)) !== '') {
+    const written = `${brk} ${s.slice(s.indexOf('^', id.from), id.to)}`;
+    return ctx.apply(ctx.draft().setText(node, text.splice(id.from, id.to, written)).setCaret(node, id.from + brk.length, -1));
+  }
   if (trimMd(s.slice(lineStart, from.offset)) === '') {
     if (!ctx.collapsed) return null;
     if (lineStart === text.textStart(0)) return lineBreakAtTextStart(ctx, node, text);
@@ -95,8 +110,7 @@ export function shiftEnterCommand(ctx: CommandContext): CommandOutcome {
     return ctx.apply(split.gap(node, 1).select({ blank: node, line: 0 }, { blank: node, line: 0 }));
   }
   // the text breaks at the caret, the spaces on either side staying where they are, the caret at the
-  // new line's start, before them (and before a backslash it starts with); a quote's new line quoted
-  const brk = text.type === 'quote' ? '\n> ' : '\n';
+  // new line's start, before them (and before a backslash it starts with)
   const draft = ctx.draft().setText(node, text.splice(from.offset, to.offset, brk)).setCaret(node, from.offset + brk.length, -1);
   return ctx.apply(draft);
 }
@@ -112,10 +126,12 @@ export function shiftEnterCommand(ctx: CommandContext): CommandOutcome {
 function quoteSplit(ctx: CommandContext, node: OurusNode, text: OurusProse, at: number, to: number): CommandOutcome | undefined {
   // (a rest of lazy lines alone, no `>` of theirs to keep: split as any text, a paragraph after it)
   if (!/(?:^|\n) {0,3}>/.test(text.text.slice(to))) return undefined;
+  // (a quote of two paragraphs carries no block-id lines, §4.3: the one after it would name the quote)
+  if (text.blockIdLines.length) return reject('block-id', 'a quote of several paragraphs carries no block-id lines: the one after it would name the quote, not its text');
   const draft = ctx.draft();
   const lines = (from: number, end: number): OurusProse => {
     const part = text.slice(from, end);
-    return unquote(new OurusProse('quote', false, part.text, part.marks));
+    return unquote(part.retyped('quote', false));
   };
   if (node.kind === 'item') {
     // (the item's text the quote, its first block, its two paragraphs new)
@@ -160,7 +176,7 @@ function breakAcross(ctx: CommandContext): CommandOutcome {
 function breakOnBlankLine(ctx: CommandContext, owner: OurusNode): CommandOutcome {
   const text = ctx.doc.textOf(owner);
   if (!(text instanceof OurusProse) || text.type === 'heading') return null;
-  const k = ctx.doc.lineAt(ctx.selection.head).index - owner.textLastLine - 1;
+  const k = ctx.doc.lineAt(ctx.selection.head).index - owner.ownLastLine - 1;
   // (any other blank line, the host's)
   if (k < 0 || k >= owner.gap || !ctx.doc.atTextColumn(ctx.selection.head, owner)) return null;
   return ctx.apply(ctx.draft().gap(owner, owner.gap + 1).select({ blank: owner, line: k + 1 }, { blank: owner, line: k + 1 }));
