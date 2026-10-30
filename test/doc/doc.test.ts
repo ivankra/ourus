@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { OurusDoc, type OurusNode } from '../../src/doc/index.ts';
 import { OurusConfig } from '../../src/config.ts';
-import { executeCommand } from '../../src/commands/index.ts';
+import { executeCommand, OurusSuccess } from '../../src/commands/index.ts';
+import { OurusView } from '../../src/view/index.ts';
 import { createPlaceholder, isEmptyNodePlaceholder, type Mark } from '../../src/text/index.ts';
 
 // (one kind of mark: an empty node's or a held space's by where it is)
@@ -110,14 +111,15 @@ test('past a final line ending is the line before it, which ends before the posi
 });
 
 test('settings applied again unchanged keep the snapshot, so an undo given the one before still takes its nodes', () => {
-  const doc = OurusDoc.parse('- a\n  - a1\n- b\n').withFolded([1]);
+  const view = OurusView.of(OurusDoc.parse('- a\n  - a1\n- b\n'), { folded: [1] });
+  const doc = view.doc;
   assert.equal(doc.withConfig({}), doc);
-  const moved = executeCommand(doc, { type: 'moveSubtreeDown' }, { anchor: 2, head: 2 });
-  assert.equal(moved.status, 'applied');
-  if (moved.status !== 'applied') return;
-  const current = moved.doc.withConfig({ markup: 'text' });
-  const undone = doc.withConfig(current.config).withViewOf(current);
-  assert.equal(undone.node(1)?.kind, 'item');
+  const moved = executeCommand(view, { type: 'moveSubtreeDown' }, { anchor: 2, head: 2 });
+  assert.ok(moved instanceof OurusSuccess);
+  if (!(moved instanceof OurusSuccess)) return;
+  const current = moved.view.withConfig({ markup: 'text' });
+  const undone = current.withDoc(doc.withConfig(current.doc.config));
+  assert.equal(undone.doc.node(1)?.kind, 'item');
   assert.ok(undone.folded.has(1));
 });
 

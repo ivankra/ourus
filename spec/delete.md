@@ -764,7 +764,7 @@ markup: decorated
 > deleteContentForward
 
 ```yaml
-result: applied
+result: success
 ```
 
 ```buffer
@@ -940,7 +940,7 @@ b
 > deleteContentForward
 
 ```yaml
-result: applied
+result: success
 ```
 
 ```buffer
@@ -1080,7 +1080,7 @@ tags: common
 ```
 
 ```yaml
-result: applied
+result: success
 ```
 
 ## Delete22

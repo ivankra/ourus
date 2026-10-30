@@ -2679,7 +2679,8 @@ class Done {
       // emptied): Markdown holds none in a text; it is a blank line after it, the first of the node's
       // gap, an anchor in it on that line
       let cut = text.text.length;
-      for (let k = text.text.lastIndexOf('\n', cut - 1); k >= base && blank(text.text.slice(k + 1, cut)); k = text.text.lastIndexOf('\n', k - 1)) cut = k;
+      // (`lastIndexOf` from -1 searches from 0: at a line break first, stop there)
+      for (let k = text.text.lastIndexOf('\n', cut - 1); k >= base && blank(text.text.slice(k + 1, cut)); k = k > 0 ? text.text.lastIndexOf('\n', k - 1) : -1) cut = k;
       // (but a text carrying block-id lines, whose gap is after them: blank lines before the first of
       // them, an anchor in it on the first, where what is typed goes on with the text)
       if (cut < text.text.length && cut > base && text.blockIdLines.length) {

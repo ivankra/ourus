@@ -199,7 +199,7 @@ The item becomes the last child of the item above.
 - **The blocks after a quote are what must hold then**, and they become the current state: the
   `buffer`, and a `yaml` block with any of
   - `result`: what ourus made of the last action, which must be one of its commands or typed text
-    (its last character's `insertText`): `applied`, `deferredToHost` (the host's default ran
+    (its last character's `insertText`): `success`, `deferredToHost` (the host's default ran
     instead) or `rejected <reason>` (`result: rejected not-expressible`). Other editors check
     buffers only;
   - `clipboard`: the clipboard, as a config block's (below); only the formats it names are checked;

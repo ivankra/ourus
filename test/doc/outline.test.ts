@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import fc from 'fast-check';
 import { OurusDoc, Lineage, type OurusNode, type PersistentNode } from '../../src/doc/index.ts';
-import { executeCommand } from '../../src/commands/index.ts';
+import { executeCommand, OurusRejected, OurusSuccess } from '../../src/commands/index.ts';
+import { OurusView } from '../../src/view/index.ts';
 import type { MdBlock } from '../../src/parser/index.ts';
 import { createPlaceholder } from '../../src/text/index.ts';
 import { BLOCKS, INLINES, arbDoc, arbEdit, changeOf, changesOf, sentinelSpots } from '../parser/generators.ts';
@@ -209,7 +210,7 @@ test('a document nested deeper than the call stack goes is read, and a command o
     assert.equal(doc.rootNode.children.length, 1);
     const typed = doc.update({ changes: [{ from: text.length, to: text.length, insert: 'x' }] });
     assert.equal(typed.text, text + 'x');
-    const r = executeCommand(doc, { type: 'enter' }, { anchor: text.length, head: text.length });
-    assert.ok(r.status === 'applied' || r.status === 'rejected');
+    const r = executeCommand(OurusView.of(doc), { type: 'enter' }, { anchor: text.length, head: text.length });
+    assert.ok(r instanceof OurusSuccess || r instanceof OurusRejected);
   }
 });

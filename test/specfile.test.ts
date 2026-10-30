@@ -55,10 +55,10 @@ test('misplaced blocks and unknown options are errors', () => {
   bad([...h, `${F}buffer`, 'a┃', F], /a test with no actions/);
   bad(['## A', '', `${F}yaml`, 'tags: edge', 'clipboard: |', '  a', F, '', '> paste'], /actions before any buffer/);
   bad([...h, `${F}clipboard`, 'a', F, '', `${F}buffer`, 'a┃', F, '', '> paste'], /x\.md:7: a clipboard is a key of the state's `yaml` block/);
-  bad([...h, `${F}buffer`, 'a┃', F, '', '> indent', '', `${F}result`, 'applied', F], /x\.md:13: a result is a key of the state's `yaml` block/);
+  bad([...h, `${F}buffer`, 'a┃', F, '', '> indent', '', `${F}result`, 'success', F], /x\.md:13: a result is a key of the state's `yaml` block/);
   bad([...h, `${F}buffer`, 'a┃', F, '', '> indent', '', `${F}outline`, 'paragraph: a', F], /x\.md:13: an outline is a key of the state's `yaml` block/);
   bad([...h, `${F}buffer`, 'a┃', F, '', '> indent', '', `${F}buffer`, 'b┃', F, '', `${F}buffer`, 'c┃', F], /a second buffer block for one state \(each test needs a heading of its own\)/);
-  bad([...h, `${F}buffer`, 'a┃', F, '', '> copy', '', `${F}yaml`, 'result: applied', F, '', `${F}yaml`, 'clipboard: "b"', F], /x\.md:17: a second yaml block for one state/);
+  bad([...h, `${F}buffer`, 'a┃', F, '', '> copy', '', `${F}yaml`, 'result: success', F, '', `${F}yaml`, 'clipboard: "b"', F], /x\.md:17: a second yaml block for one state/);
   bad([...h, `${F}buffer pending`, 'a', F, '', '> indent'], /x\.md:7: "pending" after "buffer": options go in a config block/);
   bad(['---', 'flavor: gfm', '---', '', '## A', '', `${F}buffer`, 'a┃', F, '', '> indent'], /x\.md:1: no frontmatter/);
   bad(['## A', '', `${F}yaml`, 'tags: edge', 'policy: logseq', F, '', `${F}buffer`, 'a┃', F, '', '> indent'], /x\.md:5: unknown option "policy"/);
@@ -140,7 +140,7 @@ test('a clipboard is its text, or its formats under it; a state after a step hol
   badStart(['clipboard:', '  text/plain: "x"', '  text/html: <p>a #b</p>'], /x\.md:7: a clipboard's text\/html is a literal block/);
   badStart(['clipboard:', '  text/plain: |', '  x'], /not YAML|indented two spaces/);
   badStart(['clipboard:', '  text/plain: |', '      x'], /x\.md:7: a clipboard's text\/plain's lines are indented two spaces under it/);
-  badStart(['result: applied'], /x\.md:5: a result is a step's/);
+  badStart(['result: success'], /x\.md:5: a result is a step's/);
 
   const after = (yaml: string[]) => readSpec('x.md', ['## A', '', `${F}yaml`, 'tags: edge', F, '', `${F}buffer`, 'a┃', F, '', '> copy', '', `${F}yaml`, ...yaml, F].join('\n'))[0]!.steps[0]!.expect;
   assert.deepEqual(after(['result: deferredToHost', 'clipboard:', '  text/markdown: |', '    - a', 'outline: |', '  paragraph: a', '    item: b']), {
@@ -150,7 +150,7 @@ test('a clipboard is its text, or its formats under it; a state after a step hol
   });
   assert.deepEqual(after(['result: rejected not-expressible']), { result: 'rejected not-expressible' });
   const badAfter = (yaml: string[], message: RegExp) => assert.throws(() => after(yaml), (e) => e instanceof SpecError && message.test(e.message));
-  badAfter(['result: refused'], /x\.md:14: a result is applied, deferredToHost or "rejected <reason>", not "refused"/);
+  badAfter(['result: refused'], /x\.md:14: a result is success, deferredToHost or "rejected <reason>", not "refused"/);
   badAfter(['result: rejected: not-expressible'], /x\.md:14: not YAML/);
   badAfter(['bullet: "*"'], /x\.md:14: "bullet" in a state after a step/);
   badAfter(['tags: edge'], /x\.md:14: "tags" in a state after a step/);

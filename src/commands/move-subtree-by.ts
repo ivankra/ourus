@@ -3,16 +3,18 @@
 // rest (blank lines, lists, escapes, the caret's place in the text).
 
 import type { OurusNode } from '../doc/index.ts';
-import { reject, type CommandContext, type CommandOutcome } from './context.ts';
+import { type CommandContext } from './context.ts';
 import { headingLevel, oneRun, operandsRefused, selectionInText, withTextlessParents } from './util.ts';
+import type { OurusResult } from './types.ts';
+import { OurusRejected } from './types.ts';
 
 /** Alt-Shift-Up (spec/move-subtree-up.md). */
-export function moveSubtreeUpCommand(ctx: CommandContext): CommandOutcome {
+export function moveSubtreeUpCommand(ctx: CommandContext): OurusResult | null {
   return moveSubtreeBy(ctx, -1);
 }
 
 /** Alt-Shift-Down (spec/move-subtree-down.md). */
-export function moveSubtreeDownCommand(ctx: CommandContext): CommandOutcome {
+export function moveSubtreeDownCommand(ctx: CommandContext): OurusResult | null {
   return moveSubtreeBy(ctx, 1);
 }
 
@@ -23,8 +25,9 @@ export function moveSubtreeDownCommand(ctx: CommandContext): CommandOutcome {
  * before or after it (rules 3 and 4). Refused where it would give another node a new parent. The
  * caret and the selection go with the text they are in.
  */
-function moveSubtreeBy(ctx: CommandContext, dir: -1 | 1): CommandOutcome {
+function moveSubtreeBy(ctx: CommandContext, dir: -1 | 1): OurusResult | null {
   const doc = ctx.doc;
+  const view = ctx.view;
   const found = oneRun(ctx, true);
   if (!Array.isArray(found)) return operandsRefused(found);
   let nodes = found;
@@ -36,10 +39,10 @@ function moveSubtreeBy(ctx: CommandContext, dir: -1 | 1): CommandOutcome {
   const draft = ctx.draft().remove(nodes);
   if (!other) {
     // (the zoom root's first or last children: nothing past them in the view, as at the document's edge)
-    if (parent.id === doc.zoom) return reject(dir < 0 ? 'no-previous-sibling' : 'no-next-sibling');
+    if (parent.id === view.zoom) return new OurusRejected(dir < 0 ? 'no-previous-sibling' : 'no-next-sibling');
     const crossed = dir < 0 ? crossUpOutOfParent(ctx, nodes) : crossDownOutOfParent(ctx, nodes);
-    if (!crossed) return reject(dir < 0 ? 'no-previous-sibling' : 'no-next-sibling');
-    if (crossed === 'reparent') return reject('would-reparent', 'the move would give another node a new parent');
+    if (!crossed) return new OurusRejected(dir < 0 ? 'no-previous-sibling' : 'no-next-sibling');
+    if (crossed === 'reparent') return new OurusRejected('would-reparent', 'the move would give another node a new parent');
     if (crossed.where === 'before') draft.place('before', crossed.at, nodes);
     else draft.append(crossed.at, crossed.where, nodes);
   } else if (dir > 0 && ((first.kind === 'item' && ctx.doc.adoptsLists(other)) || (other.kind === 'heading' && first.kind !== 'heading'))) {
@@ -59,8 +62,8 @@ function moveSubtreeBy(ctx: CommandContext, dir: -1 | 1): CommandOutcome {
     const group = (n: OurusNode): string => (n.kind === 'paragraph' || n.kind === 'atom' ? 'leaf' : n.kind);
     const quote = (first.kind === 'quote' || other.kind === 'quote') && first.kind !== 'heading' && other.kind !== 'heading';
     const across = flat && ((whole && group(other) === 'leaf') || (group(first) === 'leaf' && other.kind === 'item'));
-    if (first.kind === 'heading' && (other.kind !== 'heading' || headingLevel(ctx, first) !== headingLevel(ctx, other))) return reject('would-reparent', 'a heading moves among headings of its level');
-    if (!quote && !across && group(other) !== group(first)) return reject('not-expressible', `can't reorder ${first.kind} past ${other.kind}`);
+    if (first.kind === 'heading' && (other.kind !== 'heading' || headingLevel(ctx, first) !== headingLevel(ctx, other))) return new OurusRejected('would-reparent', 'a heading moves among headings of its level');
+    if (!quote && !across && group(other) !== group(first)) return new OurusRejected('not-expressible', `can't reorder ${first.kind} past ${other.kind}`);
     let past = other;
     if (flat && byList && first.kind !== 'item') while (list(past) && list(dir < 0 ? past.prev : past.next) === list(past)) past = (dir < 0 ? past.prev : past.next)!;
     draft.place(dir < 0 ? 'before' : 'after', past, nodes);

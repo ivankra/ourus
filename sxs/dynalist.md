@@ -5,8 +5,8 @@ version: "9 (build 20260830132109, 5cc489d)"
 url: "https://dynalist.io/demo"
 model: "block"
 command: "node sxs/run.ts dynalist"
-elapsed_s: 407
-workers: 3
+elapsed_s: 329
+workers: 4
 ---
 
 # Dynalist vs ourus
@@ -15,9 +15,9 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 220 | [12](#caret-12) | [8](#whitespace-8) | [17](#disagree-17) |  |  | **257** |
-| adapted | 441 | [10](#adapted-caret-10) | [21](#adapted-whitespace-21) | [137](#adapted-disagree-137) |  |  | **609** |
-| **total** | **661 (46%)** | **22 (1.5%)** | **29 (2%)** | **154 (11%)** | **0 (0%)** | **[575](#skipped-575) (40%)** | **1441** |
+| original | 224 | [12](#caret-12) | [8](#whitespace-8) | [17](#disagree-17) |  |  | **261** |
+| adapted | 441 | [10](#adapted-caret-10) | [21](#adapted-whitespace-21) | [138](#adapted-disagree-138) |  |  | **610** |
+| **total** | **665 (46%)** | **22 (1.5%)** | **29 (2%)** | **155 (11%)** | **0 (0%)** | **[576](#skipped-576) (40%)** | **1447** |
 
 Per-file:
 
@@ -34,12 +34,12 @@ Per-file:
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 12 | **12** |  |  |
 | [enter.md](../spec/enter.md) | 58 |  | 4 | 5 |  | 31 | **98** | 26 | 41 |
 | [fences.md](../spec/fences.md) | 7 |  |  | 1 |  | 62 | **70** |  | 8 |
-| [fold.md](../spec/fold.md) | 11 |  |  | 1 |  | 7 | **19** | 11 | 1 |
+| [fold.md](../spec/fold.md) | 13 |  |  | 1 |  | 8 | **22** | 13 | 1 |
 | [gaps.md](../spec/gaps.md) | 15 |  |  |  |  | 4 | **19** | 1 | 14 |
 | [indent.md](../spec/indent.md) | 29 |  |  | 2 |  | 24 | **55** | 18 | 13 |
 | [lists.md](../spec/lists.md) | 5 |  |  |  |  | 11 | **16** |  | 5 |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 27 |  |  | 1 |  | 16 | **44** | 13 | 15 |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 28 |  |  | 2 |  | 16 | **46** | 15 | 15 |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 28 |  |  | 1 |  | 16 | **45** | 14 | 15 |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 29 |  |  | 2 |  | 16 | **47** | 16 | 15 |
 | [move-subtree.md](../spec/move-subtree.md) | 2 | 9 |  | 1 |  | 12 | **24** | 8 | 4 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 43 |  | 4 | 5 |  | 15 | **67** | 19 | 33 |
 | [outdent.md](../spec/outdent.md) | 16 |  |  |  |  | 26 | **42** | 8 | 8 |
@@ -53,7 +53,7 @@ Per-file:
 | [placeholders.md](../spec/placeholders.md) | 11 |  | 5 |  |  | 4 | **20** | 5 | 11 |
 | [quirks.md](../spec/quirks.md) | 4 |  |  |  |  | 3 | **7** |  | 4 |
 | [quotes.md](../spec/quotes.md) | 84 |  | 3 | 16 |  | 40 | **143** |  | 103 |
-| [regressions.md](../spec/regressions.md) | 59 | 4 | 9 | 43 |  | 83 | **198** | 17 | 98 |
+| [regressions.md](../spec/regressions.md) | 59 | 4 | 9 | 44 |  | 83 | **199** | 17 | 99 |
 | [scenarios.md](../spec/scenarios.md) | 21 | 1 |  | 3 |  | 4 | **29** | 13 | 12 |
 | [select.md](../spec/select.md) | 14 | 2 |  |  |  | 7 | **23** | 12 | 4 |
 | [shift-enter.md](../spec/shift-enter.md) | 26 |  | 3 |  |  | 7 | **36** | 12 | 17 |
@@ -62,7 +62,7 @@ Per-file:
 | [typing.md](../spec/typing.md) |  |  |  |  |  | 3 | **3** |  |  |
 | [undo.md](../spec/undo.md) | 4 |  |  |  |  | 1 | **5** | 3 | 1 |
 | [zoom.md](../spec/zoom.md) | 6 |  |  | 2 |  | 6 | **14** | 8 |  |
-| **total** | **661 (46%)** | **22 (1.5%)** | **29 (2%)** | **154 (11%)** | **0 (0%)** | **575 (40%)** | **1441** | **257 (18%)** | **609 (42%)** |
+| **total** | **665 (46%)** | **22 (1.5%)** | **29 (2%)** | **155 (11%)** | **0 (0%)** | **576 (40%)** | **1447** | **261 (18%)** | **610 (42%)** |
 
 ## Disagree (17)
 
@@ -1684,7 +1684,7 @@ Archive notes
 </td></tr>
 </table>
 
-## Adapted: disagree (137)
+## Adapted: disagree (138)
 
 ### [Backspace18e](../spec/backspace.md#backspace18e)
 
@@ -10532,6 +10532,65 @@ b
 </td></tr>
 </table>
 
+### [Regression199](../spec/regressions.md#regression199)
+
+> deleteSoftLineBackward
+
+Adapted: blank lines, heading, paragraph, quote, under quotes: atom
+
+<table>
+<tr><th>buffer</th><th>dynalist</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- 
+- # h
+  - > - 
+    > ^x┃
+```
+
+</td><td>
+
+```buffer
+- 
+- # h
+  - > - 
+    ┃
+```
+
+</td><td>
+
+```buffer
+- # h
+  - > - 
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+◌
+# h
+> - ◌
+> ^x┃
+```
+
+</td><td>
+
+```buffer
+# h
+> - 
+┃
+```
+
+</td></tr>
+</table>
+
 ### [Scenario15](../spec/scenarios.md#scenario15)
 
 Adapted: as blocks, task
@@ -12973,7 +13032,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (575)
+## Skipped (576)
 
 | example | why |
 | --- | --- |
@@ -13223,6 +13282,7 @@ Original:
 | [Fold12](../spec/fold.md#fold12) | action unfold |
 | [Fold13](../spec/fold.md#fold13) | its view, on an adapted start |
 | [Fold15b](../spec/fold.md#fold15b) | changes only what blocks can't show |
+| [Fold20](../spec/fold.md#fold20) | caret in a task's checkbox or a heading's #s |
 | **gaps.md** | |
 | [Gap15](../spec/gaps.md#gap15) | caret on a blank line |
 | [Gap16](../spec/gaps.md#gap16) | caret on a blank line |

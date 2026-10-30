@@ -481,6 +481,9 @@ shape itself stay so.
 
 ### 4.2 Reading a selection: `touchedSubtrees`, `selectedSubtrees`
 
+> **Since 25-view:** both are `OurusView`'s and give nodes; `touchedNodes` and `selectedNodes` are
+> gone, and `selectionOf` takes nodes or ids (`dev/25-view.md` §5.2).
+
 A node in a selection always comes with its subtree, as the commands' `nodes` do ("each with its
 subtree"): selecting a block selects its children, in every app (§2.7). So the API says subtrees.
 Three methods on `OurusDoc`, and one it has; they take and give ids, as `nodes` does, and `rangeOf`

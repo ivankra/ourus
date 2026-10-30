@@ -7,7 +7,9 @@
 import { OurusAtom, OurusProse, blockIdsOf, closingFrameStart, withoutBlockIds, type OurusNode } from '../doc/index.ts';
 import { MdTree } from '../parser/index.ts';
 import { isSpaceOrTab, trimMd } from '../text/index.ts';
-import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
+import { type CommandContext } from './context.ts';
+import type { OurusResult } from './types.ts';
+import { OurusDeferred, OurusRejected } from './types.ts';
 
 /** Where the caret, or a selection in one text, is in a quote read as an atom; null elsewhere. */
 export interface QuoteAt {
@@ -33,14 +35,14 @@ export function quoteAsProse(text: OurusAtom): OurusProse {
  * Enter in a quote read as an atom, as `enterInQuote` says: `line`, a line of it (`lineInQuote`);
  * `split`, it splits (`splitQuote`).
  */
-export function enterInQuote(ctx: CommandContext, at: QuoteAt): CommandOutcome {
+export function enterInQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
   // a selection from inside a line's `>`, part of the quote's markup: the host's where markup is text
   // the user edits, else refused, as over any selection taking part of markup
   if (!ctx.collapsed) {
     const s = at.text.text;
     const lineStart = s.lastIndexOf('\n', at.offset - 1) + 1;
     const mark = /^ {0,3}>/.exec(s.slice(lineStart))?.[0].length ?? 0;
-    if (at.offset < lineStart + mark) return ctx.config.markup === 'text' ? deferToHost('the selection takes part of markup') : reject('not-expressible', 'the selection takes part of markup');
+    if (at.offset < lineStart + mark) return ctx.config.markup === 'text' ? new OurusDeferred('the selection takes part of markup') : new OurusRejected('not-expressible', 'the selection takes part of markup');
   }
   return ctx.config.enterInQuote === 'line' ? lineInQuote(ctx, at) : splitQuote(ctx, at);
 }
@@ -53,7 +55,7 @@ export function enterInQuote(ctx: CommandContext, at: QuoteAt): CommandOutcome {
  * paragraph (an empty item). Before its `>`, with `enterAtTextStart: stay`, a blank line above it, the
  * caret staying; else an empty node above (rule 6).
  */
-function lineInQuote(ctx: CommandContext, at: QuoteAt): CommandOutcome {
+function lineInQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
   const { node, text, offset, to } = at;
   const s = text.text;
   const item = node.kind === 'item';
@@ -103,7 +105,7 @@ function lineInQuote(ctx: CommandContext, at: QuoteAt): CommandOutcome {
  * a quote of their own after the rest, as written (the new item's first child), as an outliner's new
  * block holds them after its first line.
  */
-function splitQuote(ctx: CommandContext, at: QuoteAt): CommandOutcome {
+function splitQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
   const { node, text, offset, to } = at;
   const s = text.text;
   const item = node.kind === 'item';
@@ -146,7 +148,7 @@ function splitQuote(ctx: CommandContext, at: QuoteAt): CommandOutcome {
  * `> ` going with the break) or on an empty one right after its `> `. Null elsewhere: past a line's
  * `> ` with text after it, the host deletes a character, as the apps do.
  */
-export function joinLineInQuote(ctx: CommandContext, at: QuoteAt, forward: boolean): CommandOutcome | null {
+export function joinLineInQuote(ctx: CommandContext, at: QuoteAt, forward: boolean): OurusResult | null {
   const { node, text, offset, to } = at;
   if (offset !== to) return null;
   const s = text.text;
@@ -172,7 +174,7 @@ export function joinLineInQuote(ctx: CommandContext, at: QuoteAt, forward: boole
  * (`> ⏎b`: the quote's paragraph ended), nor one that would start a block out of the quote (a list's
  * marker, a heading, a fence, HTML, a thematic break).
  */
-export function breakInQuote(ctx: CommandContext, at: QuoteAt): CommandOutcome {
+export function breakInQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
   const { text, offset, to } = at;
   const s = text.text;
   const rest = s.slice(to, s.indexOf('\n', to) < 0 ? s.length : s.indexOf('\n', to));
@@ -188,7 +190,7 @@ function oneQuote(ctx: CommandContext, quote: string): boolean {
 }
 
 /** Lines put into a quote read as an atom at the caret (Shift-Enter's empty one, plain paste's), each after a `>`, as the quote's. */
-export function linesInQuote(ctx: CommandContext, at: QuoteAt, lines: readonly string[], lazy = false): CommandOutcome {
+export function linesInQuote(ctx: CommandContext, at: QuoteAt, lines: readonly string[], lazy = false): OurusResult | null {
   const { node, text, offset, to } = at;
   const inserted = lines.map((l, k) => (k === 0 || lazy ? l : `> ${l}`)).join('\n');
   return ctx.apply(ctx.draft().setText(node, text.splice(offset, to, inserted)).setCaret(node, offset + inserted.length, -1));
@@ -199,7 +201,7 @@ export function linesInQuote(ctx: CommandContext, at: QuoteAt, lines: readonly s
  * is written, its `>`s characters of that text, the caret at the seam; its children go to that node
  * (its last, where it is an item), else where it was. Null where nothing with a text is above it.
  */
-export function joinQuoteUp(ctx: CommandContext, node: OurusNode, text: OurusAtom): CommandOutcome {
+export function joinQuoteUp(ctx: CommandContext, node: OurusNode, text: OurusAtom): OurusResult | null {
   const above = node.preceding;
   if (!above || above.kind === 'root') return null;
   const upper = ctx.doc.textOf(above);
@@ -227,7 +229,7 @@ export function joinQuoteUp(ctx: CommandContext, node: OurusNode, text: OurusAto
  * are written, the caret at the seam; its children go to the quote's node where it is an item, else
  * where it was. Null for a node with no text, or code.
  */
-export function joinIntoQuote(ctx: CommandContext, above: OurusNode, quote: OurusAtom, node: OurusNode): CommandOutcome {
+export function joinIntoQuote(ctx: CommandContext, above: OurusNode, quote: OurusAtom, node: OurusNode): OurusResult | null {
   const lower = ctx.doc.textOf(node);
   if (!(lower instanceof OurusProse)) return null;
   // (before the block id that ends the quote, which ends it still)

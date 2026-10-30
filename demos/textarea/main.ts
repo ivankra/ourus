@@ -6,7 +6,7 @@
 // and Backspace as input, not keys, and lack the rest: buttons stand in for those. The Preview box
 // shows the document as ourus renders it, beside the text.
 
-import { OurusDoc, executeCommand, mapPos, settlePlaceholders, type ChangeSpec, type OurusCommand, type OurusCommandResult } from '../../src/index.ts';
+import { OurusDoc, OurusView, executeCommand, mapPos, settlePlaceholders, type ChangeSpec, type OurusCommand, type OurusResult, OurusDeferred, OurusRejected, OurusSuccess } from '../../src/index.ts';
 
 const KEYS: Record<string, OurusCommand['type']> = {
   Tab: 'indent',
@@ -91,11 +91,11 @@ function say(text: string) {
   hideStatus = window.setTimeout(() => status.classList.remove('shown'), 3000);
 }
 
-function run(command: OurusCommand): OurusCommandResult {
-  const result = executeCommand(doc, command, selection());
-  say(`${command.type}: ${result.status === 'rejected' ? `rejected — ${result.reason}` : result.status}`);
-  if (result.status === 'applied') {
-    apply(result.changes, result.doc);
+function run(command: OurusCommand): OurusResult {
+  const result = executeCommand(OurusView.of(doc), command, selection());
+  say(`${command.type}: ${result instanceof OurusRejected ? `rejected — ${result.reason}` : result instanceof OurusSuccess ? 'success' : 'deferred'}`);
+  if (result instanceof OurusSuccess) {
+    apply(result.changes, result.view.doc);
     select(result.selection.anchor, result.selection.head);
   }
   return result;
@@ -135,8 +135,8 @@ area.addEventListener('keydown', (e) => {
   const type = KEYS[name];
   if (!type) return;
   keyed = true;
-  const status = run({ type } as OurusCommand).status;
-  if (status !== 'deferredToHost') e.preventDefault();
+  const result = run({ type } as OurusCommand);
+  if (!(result instanceof OurusDeferred)) e.preventDefault();
   else if (type === 'indent' || type === 'outdent') {
     // in code, Tab is a tab; never the browser's move to the next control
     e.preventDefault();
@@ -156,19 +156,19 @@ const INPUTS: Record<string, OurusCommand['type']> = {
 area.addEventListener('beforeinput', (e) => {
   // typing: ourus's where Markdown reads the character as structure (a backtick), else the browser's
   if (e.inputType === 'insertText' && e.data && !applying && !composing && !e.isComposing && e.cancelable) {
-    const result = executeCommand(doc, { type: 'insertText', text: e.data }, selection());
-    if (result.status === 'deferredToHost') return;
+    const result = executeCommand(OurusView.of(doc), { type: 'insertText', text: e.data }, selection());
+    if (result instanceof OurusDeferred) return;
     e.preventDefault();
-    say(`insertText: ${result.status === 'rejected' ? `rejected — ${result.reason}` : result.status}`);
-    if (result.status === 'applied') {
-      apply(result.changes, result.doc);
+    say(`insertText: ${result instanceof OurusRejected ? `rejected — ${result.reason}` : result instanceof OurusSuccess ? 'success' : 'deferred'}`);
+    if (result instanceof OurusSuccess) {
+      apply(result.changes, result.view.doc);
       select(result.selection.anchor, result.selection.head);
     }
     return;
   }
   const type = INPUTS[e.inputType];
   if (!type || keyed || composing || e.isComposing || !e.cancelable) return;
-  if (run({ type } as OurusCommand).status !== 'deferredToHost') e.preventDefault();
+  if (!(run({ type } as OurusCommand) instanceof OurusDeferred)) e.preventDefault();
 });
 
 /**
@@ -204,9 +204,9 @@ for (const type of ['copy', 'cut'] as const) {
   area.addEventListener(type, (e) => {
     if (composing || !e.clipboardData) return;
     const result = run({ type });
-    if (result.status === 'deferredToHost') return;
+    if (result instanceof OurusDeferred) return;
     e.preventDefault();
-    if (result.status === 'applied') for (const [format, text] of Object.entries(result.clipboard ?? {})) e.clipboardData.setData(format, text);
+    if (result instanceof OurusSuccess) for (const [format, text] of Object.entries(result.clipboard ?? {})) e.clipboardData.setData(format, text);
   });
 }
 
@@ -220,7 +220,7 @@ area.addEventListener('paste', (e) => {
   const text = data?.getData('text/plain');
   if (!data || !text) return;
   const clipboard = Object.fromEntries(['text/plain', 'text/markdown', 'text/html', 'vscode-editor-data'].flatMap((t) => (data.types.includes(t) ? [[t, data.getData(t)]] : [])));
-  if (run(type === 'paste' ? { type, clipboard } : { type, text }).status !== 'deferredToHost') e.preventDefault();
+  if (!(run(type === 'paste' ? { type, clipboard } : { type, text }) instanceof OurusDeferred)) e.preventDefault();
 });
 
 // typing, undo and the like: the one span that changed, read back with the caret
@@ -248,8 +248,8 @@ area.addEventListener('compositionend', () => {
 document.addEventListener('selectionchange', () => {
   if (document.activeElement !== area || composing) return;
   const { anchor, head } = selection();
-  const r = settlePlaceholders(doc, head);
+  const r = settlePlaceholders(OurusView.of(doc), head);
   if (!r) return;
-  apply(r.changes, r.doc);
+  apply(r.changes, r.view.doc);
   select(mapPos(r.changes, anchor), mapPos(r.changes, head));
 });

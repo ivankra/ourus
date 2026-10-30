@@ -2,9 +2,11 @@
 // go and where the caret lands; `done()` and the writer do the rest (blank lines, lists, escapes).
 
 import type { OurusNode } from '../doc/index.ts';
-import { CommandContext, reject, type CommandOutcome } from './context.ts';
+import { CommandContext } from './context.ts';
 import { copyOrCutCommand } from './copy.ts';
 import { goneWithTextlessParents, operandsOf, operandsRefused, selectionInText, textEnd, textStart } from './util.ts';
+import type { OurusResult } from './types.ts';
+import { OurusSuccess, OurusRejected } from './types.ts';
 
 /**
  * The selected nodes go, with their subtrees (spec/delete-subtree.md), at whatever depths, and a
@@ -13,26 +15,27 @@ import { goneWithTextlessParents, operandsOf, operandsRefused, selectionInText, 
  * With `expectMarkdown`, refused (`content-changed`) unless a copy of the nodes gives that text: the
  * source's half of a drag out, whose payload it was, which mustn't delete what wasn't carried.
  */
-export function deleteSubtreeCommand(ctx: CommandContext, expectMarkdown?: string): CommandOutcome {
+export function deleteSubtreeCommand(ctx: CommandContext, expectMarkdown?: string): OurusResult | null {
   const doc = ctx.doc;
+  const view = ctx.view;
   const given = operandsOf(ctx);
   if (!Array.isArray(given)) return operandsRefused(given);
   // (a node given with an ancestor goes with it)
   const nodes = given.filter((n) => !given.some((a) => a !== n && isAbove(a, n)));
   if (expectMarkdown !== undefined) {
-    const copied = copyOrCutCommand(new CommandContext(doc, ctx.selection, nodes.map((n) => n.id)), 'copy');
-    if (copied?.status !== 'applied' || copied.clipboard?.['text/plain'] !== expectMarkdown) return reject('content-changed', 'the nodes are no longer the Markdown dragged out');
+    const copied = copyOrCutCommand(new CommandContext(view, ctx.selection, nodes.map((n) => n.id)), 'copy');
+    if (!(copied instanceof OurusSuccess) || copied.clipboard?.['text/plain'] !== expectMarkdown) return new OurusRejected('content-changed', 'the nodes are no longer the Markdown dragged out');
   }
   const gone = goneWithTextlessParents(doc, nodes);
   const draft = ctx.draft().remove(gone);
   // (what went, on purpose: their block ids with them)
-  const removed = (outcome: CommandOutcome): CommandOutcome => (outcome?.status === 'applied' ? { ...outcome, removedNodes: gone.map((n) => n.id) } : outcome);
+  const removed = (outcome: OurusResult | null): OurusResult | null => (outcome instanceof OurusSuccess ? new OurusSuccess({ ...outcome, removedNodes: gone.map((n) => n.id) }) : outcome);
   if (ctx.nodes) {
     const from = doc.rangeOf(gone[0]!).from;
     const to = doc.rangeOf(gone[gone.length - 1]!).to;
     // (their blank lines theirs: a caret there is in what goes)
     const theirs = (pos: number): boolean => {
-      const at = doc.locate(pos);
+      const at = view.locate(pos);
       return at.zone === 'gap' && gone.some((g) => g === at.owner || isAbove(g, at.owner));
     };
     const out = (pos: number): boolean => (pos < from || pos > to) && !theirs(pos);
@@ -59,6 +62,5 @@ export function deleteSubtreeCommand(ctx: CommandContext, expectMarkdown?: strin
 
 /** Whether `a` is an ancestor of `b`. */
 function isAbove(a: OurusNode, b: OurusNode): boolean {
-  for (let up = b.parent; up; up = up.parent) if (up === a) return true;
-  return false;
+  return a !== b && b.isWithin(a);
 }

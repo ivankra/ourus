@@ -5,7 +5,7 @@ version: "2.12.0-50-gb2726cd8-2026-10-13T06-53-29Z"
 url: "https://demo.silverbullet.md/personal/"
 model: "text"
 command: "node sxs/run.ts silverbullet"
-elapsed_s: 636
+elapsed_s: 379
 workers: 4
 ---
 
@@ -15,7 +15,7 @@ Summary:
 
 | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- |
-| **346 (24%)** | **[67](#caret-67) (4.6%)** | **[47](#whitespace-47) (3.3%)** | **[650](#disagree-650) (45%)** | **0 (0%)** | **[331](#skipped-331) (23%)** | **1441** |
+| **348 (24%)** | **[67](#caret-67) (4.6%)** | **[47](#whitespace-47) (3.2%)** | **[654](#disagree-654) (45%)** | **0 (0%)** | **[331](#skipped-331) (23%)** | **1447** |
 
 Per-file:
 
@@ -32,12 +32,12 @@ Per-file:
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 12 | **12** |
 | [enter.md](../spec/enter.md) | 13 | 2 | 5 | 65 |  | 13 | **98** |
 | [fences.md](../spec/fences.md) | 12 | 4 | 4 | 46 |  | 4 | **70** |
-| [fold.md](../spec/fold.md) | 5 | 1 |  | 8 |  | 5 | **19** |
+| [fold.md](../spec/fold.md) | 5 | 1 |  | 11 |  | 5 | **22** |
 | [gaps.md](../spec/gaps.md) | 11 | 1 |  | 7 |  |  | **19** |
 | [indent.md](../spec/indent.md) | 20 | 2 | 4 | 18 |  | 11 | **55** |
 | [lists.md](../spec/lists.md) |  |  |  | 4 |  | 12 | **16** |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 16 | 7 |  | 21 |  |  | **44** |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 14 | 6 |  | 24 |  | 2 | **46** |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 17 | 7 |  | 21 |  |  | **45** |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 15 | 6 |  | 24 |  | 2 | **47** |
 | [move-subtree.md](../spec/move-subtree.md) |  |  |  |  |  | 24 | **24** |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 21 |  | 6 | 33 |  | 7 | **67** |
 | [outdent.md](../spec/outdent.md) | 8 | 1 |  | 22 |  | 11 | **42** |
@@ -51,7 +51,7 @@ Per-file:
 | [placeholders.md](../spec/placeholders.md) | 7 |  |  | 13 |  |  | **20** |
 | [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |
 | [quotes.md](../spec/quotes.md) | 54 | 2 | 7 | 54 |  | 26 | **143** |
-| [regressions.md](../spec/regressions.md) | 42 | 2 | 4 | 96 |  | 54 | **198** |
+| [regressions.md](../spec/regressions.md) | 42 | 2 | 4 | 97 |  | 54 | **199** |
 | [scenarios.md](../spec/scenarios.md) | 7 |  |  | 17 |  | 5 | **29** |
 | [select.md](../spec/select.md) |  | 17 |  | 1 |  | 5 | **23** |
 | [shift-enter.md](../spec/shift-enter.md) | 6 |  | 8 | 19 |  | 3 | **36** |
@@ -60,9 +60,9 @@ Per-file:
 | [typing.md](../spec/typing.md) | 3 |  |  |  |  |  | **3** |
 | [undo.md](../spec/undo.md) | 4 |  |  | 1 |  |  | **5** |
 | [zoom.md](../spec/zoom.md) |  |  |  |  |  | 14 | **14** |
-| **total** | **346 (24%)** | **67 (4.6%)** | **47 (3.3%)** | **650 (45%)** | **0 (0%)** | **331 (23%)** | **1441** |
+| **total** | **348 (24%)** | **67 (4.6%)** | **47 (3.2%)** | **654 (45%)** | **0 (0%)** | **331 (23%)** | **1447** |
 
-## Disagree (650)
+## Disagree (654)
 
 ### [Backspace1](../spec/backspace.md#backspace1)
 
@@ -10301,6 +10301,131 @@ body
   - d
 
 ⟦folded none; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold18](../spec/fold.md#fold18)
+
+> moveSubtreeDown
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - x
+- a
+  - x
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - x
+- a┃
+  - x
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - x
+- a┃
+  - x
+
+⟦folded 3; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold19](../spec/fold.md#fold19)
+
+> moveSubtreeUp
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - x
+- a┃
+  - x
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a┃
+  - x
+- a
+  - x
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a┃
+  - x
+- a
+  - x
+
+⟦folded 3; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold20](../spec/fold.md#fold20)
+
+> cursorLineBoundaryForward
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+
+┃# h
+> - 
+> ^x
+
+⟦folded 2; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+
+# h
+> - 
+> ^x┃
+
+⟦folded 2; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+# h┃
+> - 
+> ^x
+
+⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -26775,6 +26900,66 @@ x
 </td></tr>
 </table>
 
+### [Regression199](../spec/regressions.md#regression199)
+
+> deleteSoftLineBackward
+
+Adapted: under quotes: atom
+
+<table>
+<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+
+# h
+> - 
+> ^x┃
+```
+
+</td><td>
+
+```buffer
+
+# h
+> - 
+┃
+```
+
+</td><td>
+
+```buffer
+# h
+> - 
+
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+◌
+# h
+> - ◌
+> ^x┃
+```
+
+</td><td>
+
+```buffer
+# h
+> - 
+┃
+```
+
+</td></tr>
+</table>
+
 ### [Scenario3](../spec/scenarios.md#scenario3)
 
 > enter indent deleteContentBackward
@@ -28247,8 +28432,15 @@ revise
 > undo undo undo
 
 <table>
-<tr><th>buffer</th></tr>
+<tr><th>silverbullet</th><th>ourus</th></tr>
 <tr valign="top"><td>
+
+```buffer
+# Plan
+revi┃2. draft
+```
+
+</td><td>
 
 ```buffer
 # Plan┃2. draft

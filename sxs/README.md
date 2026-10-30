@@ -1,7 +1,7 @@
 ---
 type: "SxS"
 command: "node sxs/run.ts all"
-elapsed_s: 835
+elapsed_s: 695
 ---
 
 # SxS: the spec side by side
@@ -29,30 +29,30 @@ Running it, adding an app, and how it works: [`run.md`](run.md).
 
 |  | id | model | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [Logseq (DB)](logseq-db.md) | LD | block | 676 (81%) | 25 | 31 | 97 (12%) | 1 | 611 | **1441** |
-| [Roam](roam.md) | RR | block | 651 (81%) | 35 | 41 | 79 (10%) |  | 635 | **1441** |
-| [Logseq (OG)](logseq.md) | LO | block | 673 (79%) | 27 | 35 | 113 (13%) |  | 593 | **1441** |
-| [Dynalist](dynalist.md) | DL | block | 661 (76%) | 22 | 29 | 154 (18%) |  | 575 | **1441** |
-| [Tine](tine.md) | TI | block | 636 (76%) | 40 | 39 | 119 (14%) | 1 | 606 | **1441** |
-| [Athens](athens.md) | AR | block | 549 (74%) | 46 | 37 | 108 (15%) | 2 | 699 | **1441** |
-| [Tana](tana.md) | TA | block | 443 (71%) | 34 | 11 | 134 (22%) |  | 819 | **1441** |
-| [WorkFlowy](workflowy.md) | WF | block | 497 (70%) | 32 | 21 | 162 (23%) |  | 729 | **1441** |
-| [RemNote (bl)](remnote-bl.md) | RB | block | 432 (67%) | 41 | 19 | 157 (24%) |  | 792 | **1441** |
-| [RemNote (nbl)](remnote.md) | RN | block | 449 (63%) | 33 | 33 | 194 (27%) | 1 | 731 | **1441** |
-| [BlockNote](blocknote.md) | BN | block | 481 (61%) | 27 | 54 | 226 (29%) |  | 653 | **1441** |
-| [SiYuan](siyuan.md) | SY | block | 472 (60%) | 42 | 52 | 220 (28%) | 1 | 654 | **1441** |
-| [Obsidian (Outliner)](obsidian-outliner.md) | OO | text | 441 (39%) | 58 | 30 | 589 (53%) |  | 323 | **1441** |
-| [Obsidian (true-outliner)](obsidian-true-outliner.md) | TO | text | 421 (38%) | 82 | 32 | 559 (51%) |  | 347 | **1441** |
-| [SilverBullet](silverbullet.md) | SB | text | 346 (31%) | 67 | 47 | 650 (59%) |  | 331 | **1441** |
-| [Obsidian](obsidian.md) | OB | text | 336 (30%) | 50 | 35 | 685 (62%) |  | 335 | **1441** |
-| [Obsidian (Live Preview)](obsidian-lp.md) | LP | text | 329 (30%) | 50 | 34 | 674 (62%) |  | 354 | **1441** |
-| [Emacs (markdown-mode)](emacs-markdown.md) | EM | text | 254 (24%) | 53 | 31 | 729 (68%) |  | 374 | **1441** |
+| [Logseq (DB)](logseq-db.md) | LD | block | 680 (81%) | 25 | 31 | 98 (12%) | 1 | 612 | **1447** |
+| [Roam](roam.md) | RR | block | 648 (80%) | 36 | 44 | 83 (10%) |  | 636 | **1447** |
+| [Logseq (OG)](logseq.md) | LO | block | 675 (79%) | 29 | 35 | 114 (13%) |  | 594 | **1447** |
+| [Dynalist](dynalist.md) | DL | block | 665 (76%) | 22 | 29 | 155 (18%) |  | 576 | **1447** |
+| [Tine](tine.md) | TI | block | 640 (76%) | 40 | 39 | 120 (14%) | 1 | 607 | **1447** |
+| [Athens](athens.md) | AR | block | 550 (74%) | 45 | 37 | 109 (15%) | 2 | 704 | **1447** |
+| [Tana](tana.md) | TA | block | 447 (71%) | 34 | 11 | 134 (21%) |  | 821 | **1447** |
+| [WorkFlowy](workflowy.md) | WF | block | 501 (70%) | 32 | 21 | 162 (23%) |  | 731 | **1447** |
+| [RemNote (bl)](remnote-bl.md) | RB | block | 436 (67%) | 41 | 19 | 157 (24%) |  | 794 | **1447** |
+| [RemNote (nbl)](remnote.md) | RN | block | 453 (63%) | 33 | 33 | 194 (27%) | 1 | 733 | **1447** |
+| [BlockNote](blocknote.md) | BN | block | 483 (61%) | 27 | 54 | 226 (29%) |  | 657 | **1447** |
+| [SiYuan](siyuan.md) | SY | block | 476 (60%) | 42 | 52 | 220 (28%) | 1 | 656 | **1447** |
+| [Obsidian (Outliner)](obsidian-outliner.md) | OO | text | 443 (39%) | 58 | 30 | 593 (53%) |  | 323 | **1447** |
+| [Obsidian (true-outliner)](obsidian-true-outliner.md) | TO | text | 421 (38%) | 84 | 32 | 563 (51%) |  | 347 | **1447** |
+| [SilverBullet](silverbullet.md) | SB | text | 348 (31%) | 67 | 47 | 654 (59%) |  | 331 | **1447** |
+| [Obsidian](obsidian.md) | OB | text | 338 (30%) | 50 | 35 | 689 (62%) |  | 335 | **1447** |
+| [Obsidian (Live Preview)](obsidian-lp.md) | LP | text | 331 (30%) | 50 | 34 | 678 (62%) |  | 354 | **1447** |
+| [Emacs (markdown-mode)](emacs-markdown.md) | EM | text | 256 (24%) | 53 | 31 | 730 (68%) |  | 377 | **1447** |
 
 By spec file:
 
 | spec file | cases | disagree | block apps | [LD](logseq-db.md "Logseq (DB)") | [RR](roam.md "Roam") | [LO](logseq.md "Logseq (OG)") | [DL](dynalist.md "Dynalist") | [TI](tine.md "Tine") | [AR](athens.md "Athens") | [TA](tana.md "Tana") | [WF](workflowy.md "WorkFlowy") | [RB](remnote-bl.md "RemNote (bl)") | [RN](remnote.md "RemNote (nbl)") | [BN](blocknote.md "BlockNote") | [SY](siyuan.md "SiYuan") | [OO](obsidian-outliner.md "Obsidian (Outliner)") | [TO](obsidian-true-outliner.md "Obsidian (true-outliner)") | [SB](silverbullet.md "SilverBullet") | [OB](obsidian.md "Obsidian") | [LP](obsidian-lp.md "Obsidian (Live Preview)") | [EM](emacs-markdown.md "Emacs (markdown-mode)") |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| [regressions.md](#regressions.md) | 198 | 962/1941 (50%) | 383/1091 (35%) | 29 | 25 | 40 | 43 | 38 | 37 | 25 | 28 | 28 | 25 | 34 | 31 | 92 | 92 | 96 | 99 | 97 | 103 |
+| [regressions.md](#regressions.md) | 199 | 974/1953 (50%) | 389/1097 (35%) | 30 | 26 | 41 | 44 | 39 | 38 | 25 | 28 | 28 | 25 | 34 | 31 | 93 | 93 | 97 | 100 | 98 | 104 |
 | [backspace.md](#backspace.md) | 86 | 407/1028 (40%) | 70/590 (12%) | 1 | 3 | 2 | 4 | 4 | 2 | 11 | 12 | 3 | 5 | 11 | 12 | 50 | 37 | 59 | 63 | 63 | 65 |
 | [enter.md](#enter.md) | 98 | 374/1167 (32%) | 60/723 (8%) | 0 | 4 | 0 | 5 | 3 | 6 | 7 | 8 | 2 | 5 | 11 | 9 | 48 | 39 | 65 | 50 | 46 | 66 |
 | [quotes.md](#quotes.md) | 143 | 364/1359 (27%) | 89/655 (14%) | 9 | 9 | 10 | 16 | 9 | 9 |  | 10 |  |  | 7 | 10 | 33 | 37 | 54 | 48 | 48 | 55 |
@@ -60,9 +60,9 @@ By spec file:
 | [obsidian-true-outliner.md](#obsidian-true-outliner.md) | 67 | 269/939 (29%) | 62/572 (11%) | 5 | 2 | 4 | 5 | 4 | 4 | 4 | 4 | 5 | 7 | 11 | 7 | 25 | 28 | 33 | 40 | 40 | 41 |
 | [paste-list.md](#paste-list.md) | 29 | 230/399 (58%) | 122/272 (45%) | 2 | 4 | 3 | 10 | 6 | 9 | 10 | 16 | 18 | 20 | 14 | 10 | 18 | 14 | 20 | 18 | 18 | 20 |
 | [paste-html.md](#paste-html.md) | 19 | 220/330 (67%) | 144/216 (67%) | 15 | 7 | 14 | 17 | 14 | 15 | 12 | 9 | 12 | 16 | 6 | 7 | 11 | 12 | 14 | 11 | 11 | 17 |
-| [move-subtree-down.md](#move-subtree-down.md) | 44 | 216/596 (36%) | 37/334 (11%) | 0 | 0 | 0 | 1 | 1 |  | 0 | 2 | 7 | 8 | 11 | 7 | 32 | 23 | 21 | 36 | 36 | 31 |
+| [move-subtree-down.md](#move-subtree-down.md) | 45 | 216/613 (35%) | 37/345 (11%) | 0 | 0 | 0 | 1 | 1 |  | 0 | 2 | 7 | 8 | 11 | 7 | 32 | 23 | 21 | 36 | 36 | 31 |
 | [delete.md](#delete.md) | 56 | 213/574 (37%) | 55/336 (16%) | 0 | 0 | 0 | 2 | 4 | 0 | 8 | 9 | 3 | 4 | 9 | 16 | 18 | 19 | 30 | 30 | 30 | 31 |
-| [move-subtree-up.md](#move-subtree-up.md) | 46 | 205/590 (35%) | 43/334 (13%) | 0 | 0 | 0 | 2 | 2 |  | 0 | 1 | 9 | 10 | 11 | 8 | 27 | 20 | 24 | 30 | 30 | 31 |
+| [move-subtree-up.md](#move-subtree-up.md) | 47 | 205/607 (34%) | 43/345 (12%) | 0 | 0 | 0 | 2 | 2 |  | 0 | 1 | 9 | 10 | 11 | 8 | 27 | 20 | 24 | 30 | 30 | 31 |
 | [paste.md](#paste.md) | 36 | 205/403 (51%) | 101/273 (37%) | 7 | 5 | 7 | 14 | 5 | 4 | 5 | 10 | 15 | 17 | 7 | 5 | 17 | 19 | 17 | 17 | 17 | 17 |
 | [indent.md](#indent.md) | 55 | 180/652 (28%) | 50/394 (13%) | 1 | 2 | 2 | 2 | 1 | 1 | 2 | 1 | 2 | 6 | 19 | 11 | 20 | 16 | 18 | 27 | 26 | 23 |
 | [outdent.md](#outdent.md) | 42 | 174/427 (41%) | 38/237 (16%) | 1 | 2 | 1 | 0 | 0 | 0 | 2 | 2 | 1 | 8 | 16 | 5 | 27 | 18 | 22 | 22 | 22 | 25 |
@@ -70,11 +70,11 @@ By spec file:
 | [scenarios.md](#scenarios.md) | 29 | 154/410 (38%) | 53/261 (20%) | 1 | 1 | 1 | 3 | 2 | 2 | 4 | 3 | 7 | 8 | 11 | 10 | 12 | 12 | 17 | 19 | 19 | 22 |
 | [subtree-selection.md](#subtree-selection.md) | 17 | 129/254 (51%) | 57/158 (36%) | 5 | 3 | 5 | 4 | 6 | 4 | 7 | 5 | 4 | 4 | 4 | 6 | 11 | 14 | 11 | 11 | 11 | 14 |
 | [shift-enter.md](#shift-enter.md) | 36 | 123/478 (26%) | 10/287 (3%) | 0 | 0 | 0 | 0 | 0 | 0 |  |  | 0 | 3 | 3 | 4 | 15 | 21 | 19 | 19 | 18 | 21 |
-| [paste-plain.md](#paste-plain.md) | 36 | 118/479 (25%) | 106/305 (35%) | 1 | 0 | 0 | 7 | 0 | 2 | 4 | 15 | 22 | 22 | 15 | 18 | 0 | 8 | 0 | 0 | 0 | 4 |
+| [paste-plain.md](#paste-plain.md) | 36 | 119/479 (25%) | 107/305 (35%) | 1 | 1 | 0 | 7 | 0 | 2 | 4 | 15 | 22 | 22 | 15 | 18 | 0 | 8 | 0 | 0 | 0 | 4 |
 | [backtick.md](#backtick.md) | 33 | 104/186 (56%) | 13/41 (32%) | 1 | 0 | 1 | 0 | 0 | 0 | 2 | 6 | 0 | 0 | 0 | 3 | 15 | 19 | 13 | 18 | 15 | 11 |
-| [placeholders.md](#placeholders.md) | 20 | 83/307 (27%) | 6/191 (3%) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 1 | 2 | 2 | 12 | 13 | 13 | 12 | 12 | 15 |
+| [fold.md](#fold.md) | 22 | 86/255 (34%) | 21/167 (13%) | 2 | 2 | 2 | 1 | 1 | 0 | 1 | 2 | 2 | 1 |  | 7 | 12 | 12 | 11 | 15 | 15 |  |
+| [placeholders.md](#placeholders.md) | 20 | 85/307 (28%) | 8/191 (4%) | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 1 | 2 | 2 | 12 | 13 | 13 | 12 | 12 | 15 |
 | [gaps.md](#gaps.md) | 19 | 78/270 (29%) | 9/159 (6%) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 3 | 3 | 2 | 15 | 6 | 7 | 15 | 15 | 11 |
-| [fold.md](#fold.md) | 19 | 71/220 (32%) | 21/147 (14%) | 2 | 2 | 2 | 1 | 1 | 0 | 1 | 2 | 2 | 1 |  | 7 | 9 | 9 | 8 | 12 | 12 |  |
 | [tasks.md](#tasks.md) | 30 | 70/196 (36%) | 28/87 (32%) | 0 | 0 | 0 | 4 | 0 | 0 | 7 | 7 | 0 | 0 | 3 | 7 | 4 | 8 | 11 | 4 | 4 | 11 |
 | [paste-list-form.md](#paste-list-form.md) | 6 | 55/94 (59%) | 28/63 (44%) | 2 | 2 | 3 | 1 | 2 | 2 | 1 | 2 | 4 | 6 | 3 | 0 | 5 | 2 | 5 | 5 | 5 | 5 |
 | [move-subtree.md](#move-subtree.md) | 24 | 47/180 (26%) | 35/155 (23%) | 3 | 0 | 6 | 1 | 5 | 4 | 2 | 1 | 3 | 1 | 3 | 6 | 4 | 8 |  |  |  |  |
@@ -91,16 +91,16 @@ By spec file:
 | [cursor.md](#cursor.md) | 36 | 0/551 (0%) | 0/347 (0%) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | [drag.md](#drag.md) | 8 |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
 | [paste-at.md](#paste-at.md) | 5 |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| **total** | **1441** | **5649/15777 (36%)** | **1763/9195 (19%)** | **97** | **79** | **113** | **154** | **119** | **108** | **134** | **162** | **157** | **194** | **226** | **220** | **589** | **559** | **650** | **685** | **674** | **729** |
+| **total** | **1447** | **5679/15858 (36%)** | **1772/9243 (19%)** | **98** | **83** | **114** | **155** | **120** | **109** | **134** | **162** | **157** | **194** | **226** | **220** | **593** | **563** | **654** | **689** | **678** | **730** |
 
 By tag:
 
 | tag | cases | disagree | block apps | [LD](logseq-db.md "Logseq (DB)") | [RR](roam.md "Roam") | [LO](logseq.md "Logseq (OG)") | [DL](dynalist.md "Dynalist") | [TI](tine.md "Tine") | [AR](athens.md "Athens") | [TA](tana.md "Tana") | [WF](workflowy.md "WorkFlowy") | [RB](remnote-bl.md "RemNote (bl)") | [RN](remnote.md "RemNote (nbl)") | [BN](blocknote.md "BlockNote") | [SY](siyuan.md "SiYuan") | [OO](obsidian-outliner.md "Obsidian (Outliner)") | [TO](obsidian-true-outliner.md "Obsidian (true-outliner)") | [SB](silverbullet.md "SilverBullet") | [OB](obsidian.md "Obsidian") | [LP](obsidian-lp.md "Obsidian (Live Preview)") | [EM](emacs-markdown.md "Emacs (markdown-mode)") |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `core` | 69 | 238/1071 (22%) | 57/699 (8%) | 0 | 0 | 0 | 2 | 2 | 0 | 4 | 4 | 6 | 9 | 16 | 14 | 19 | 14 | 28 | 38 | 38 | 44 |
-| `common` | 307 | 1215/4162 (29%) | 412/2640 (16%) | 23 | 14 | 25 | 33 | 24 | 25 | 40 | 41 | 42 | 52 | 42 | 51 | 121 | 117 | 135 | 136 | 134 | 160 |
+| `core` | 69 | 239/1071 (22%) | 58/699 (8%) | 0 | 1 | 0 | 2 | 2 | 0 | 4 | 4 | 6 | 9 | 16 | 14 | 19 | 14 | 28 | 38 | 38 | 44 |
+| `common` | 307 | 1216/4162 (29%) | 413/2640 (16%) | 23 | 15 | 25 | 33 | 24 | 25 | 40 | 41 | 42 | 52 | 42 | 51 | 121 | 117 | 135 | 136 | 134 | 160 |
 | `edge` | 571 | 2217/5999 (37%) | 715/3461 (21%) | 41 | 37 | 45 | 68 | 52 | 41 | 51 | 63 | 60 | 77 | 98 | 82 | 225 | 212 | 252 | 269 | 263 | 281 |
-| `rare` | 494 | 1979/4545 (44%) | 579/2395 (24%) | 33 | 28 | 43 | 51 | 41 | 42 | 39 | 54 | 49 | 56 | 70 | 73 | 224 | 216 | 235 | 242 | 239 | 244 |
+| `rare` | 500 | 2007/4626 (43%) | 586/2443 (24%) | 34 | 30 | 44 | 52 | 42 | 43 | 39 | 54 | 49 | 56 | 70 | 73 | 228 | 220 | 239 | 246 | 243 | 245 |
 | `free-form` | 116 | 432/703 (61%) | 84/181 (46%) |  |  |  |  |  |  |  |  |  | 23 | 37 | 24 | 59 | 49 | 55 | 63 | 60 | 62 |
 | `markup-fence` | 98 | 373/552 (68%) | 18/49 (37%) |  |  |  |  |  |  | 6 | 8 |  |  |  | 4 | 54 | 59 | 58 | 65 | 63 | 56 |
 | `markup-heading` | 43 | 184/289 (64%) | 29/85 (34%) |  |  |  | 8 |  |  | 1 | 7 |  |  | 9 | 4 | 26 | 30 | 26 | 23 | 23 | 27 |
@@ -274,7 +274,7 @@ By spec file and by tag, under the summary: each one's cases; the apps' runs of 
 <tr><td><a href="../spec/block-ids.md#blockids8">BlockIds8</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✓<td>✗<td>✗<td>✗<td>✗<td align="right">5<td>edge</tr>
 <tr><td><a href="../spec/block-ids.md#blockids9">BlockIds9</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✓<td>✗<td>✗<td>✗<td>✗<td align="right">5<td>edge</tr>
 <tr><td><a href="../spec/block-ids.md#blockids10">BlockIds10</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>(✗)<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">7<td>edge</tr>
-<tr><td><a href="../spec/block-ids.md#blockids11">BlockIds11</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>C<td>✓<td>✓<td>✓<td>✓<td>✓<td>(✗)<td>✓<td>✓<td>✗<td>✗<td>✗<td>✗<td align="right">5<td>common</tr>
+<tr><td><a href="../spec/block-ids.md#blockids11">BlockIds11</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>(✗)<td>✓<td>✓<td>✗<td>✗<td>✗<td>✗<td align="right">5<td>common</tr>
 <tr><td><a href="../spec/block-ids.md#blockids12">BlockIds12</a><td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✓<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">17<td>common</tr>
 <tr><td><a href="../spec/block-ids.md#blockids13">BlockIds13</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✓<td>✗<td>✗<td>✗<td>✗<td align="right">5<td>edge</tr>
 <tr><td><a href="../spec/block-ids.md#blockids14">BlockIds14</a><td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✓<td>(✗)<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">17<td>common</tr>
@@ -645,7 +645,11 @@ By spec file and by tag, under the summary: each one's cases; the apps' runs of 
 <tr><td><a href="../spec/fold.md#fold15b">Fold15b</a><td><td><td><td><td>✗<td><td><td><td>✗<td>✗<td><td>(✗)<td>✓<td>✗<td>✗<td>✗<td>✗<td><td align="right">8<td>rare</tr>
 <tr><td><a href="../spec/fold.md#fold16">Fold16</a><td>✓<td>✓<td>✓<td>✓<td>✓<td><td>C<td>✓<td>C<td>C<td><td>✓<td>✗<td>C<td>✓<td>✗<td>✗<td><td align="right">3<td>common</tr>
 <tr><td><a href="../spec/fold.md#fold17">Fold17</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>C<td>C<td>✓<td>C<td>C<td><td>✓<td>✗<td>✓<td>✓<td>✗<td>✗<td><td align="right">3<td>common</tr>
-<tr><td><b>total</b><td><b>2</b><td><b>2</b><td><b>2</b><td><b>1</b><td><b>1</b><td><b>0</b><td><b>1</b><td><b>2</b><td><b>2</b><td><b>1</b><td><td><b>7</b><td><b>9</b><td><b>9</b><td><b>8</b><td><b>12</b><td><b>12</b><td><td align="right"><b>71</b><td></tr>
+<tr><td><a href="../spec/fold.md#fold18">Fold18</a><td>✓<td>✓<td>✓<td>✓<td>✓<td><td>✓<td>✓<td>✓<td>✓<td><td>✓<td>✗<td>✗<td>✗<td>✗<td>✗<td><td align="right">5<td>rare</tr>
+<tr><td><a href="../spec/fold.md#fold19">Fold19</a><td>✓<td>✓<td>✓<td>✓<td>✓<td><td>✓<td>✓<td>✓<td>✓<td><td>✓<td>✗<td>✗<td>✗<td>✗<td>✗<td><td align="right">5<td>rare</tr>
+<tr><td><a href="../spec/fold.md#fold20">Fold20</a><td><td><td><td><td><td><td><td><td><td><td><td><td>✗<td>✗<td>✗<td>✗<td>✗<td><td align="right">5<td>rare</tr>
+<tr><td><b>total</b><td><b>2</b><td><b>2</b><td><b>2</b><td><b>1</b><td><b>1</b><td><b>0</b><td><b>1</b><td><b>2</b><td><b>2</b><td><b>1</b><td><td><b>7</b><td><b>12</b><td><b>12</b><td><b>11</b><td><b>15</b><td><b>15</b><td><td align="right"><b>86</b><td></tr>
+<tr><td colspan="21"></tr>
 <tr><td colspan="21"></tr>
 <tr><td><b><a name="gaps.md"></a>gaps.md</b><td><b><a href="logseq-db.md" title="logseq-db">LD</a></b><td><b><a href="roam.md" title="roam">RR</a></b><td><b><a href="logseq.md" title="logseq">LO</a></b><td><b><a href="dynalist.md" title="dynalist">DL</a></b><td><b><a href="tine.md" title="tine">TI</a></b><td><b><a href="athens.md" title="athens">AR</a></b><td><b><a href="tana.md" title="tana">TA</a></b><td><b><a href="workflowy.md" title="workflowy">WF</a></b><td><b><a href="remnote-bl.md" title="remnote-bl">RB</a></b><td><b><a href="remnote.md" title="remnote">RN</a></b><td><b><a href="blocknote.md" title="blocknote">BN</a></b><td><b><a href="siyuan.md" title="siyuan">SY</a></b><td><b><a href="obsidian-outliner.md" title="obsidian-outliner">OO</a></b><td><b><a href="obsidian-true-outliner.md" title="obsidian-true-outliner">TO</a></b><td><b><a href="silverbullet.md" title="silverbullet">SB</a></b><td><b><a href="obsidian.md" title="obsidian">OB</a></b><td><b><a href="obsidian-lp.md" title="obsidian-lp">LP</a></b><td><b><a href="emacs-markdown.md" title="emacs-markdown">EM</a></b><td><b>disagree</b><td><b>rank</b></tr>
 <tr><td><a href="../spec/gaps.md#gap1">Gap1</a><td>✓<td>✓<td>✓<td>✓<td>✓<td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>C<td>✓<td>✗<td>✗<td>✗<td align="right">4<td>core</tr>
@@ -792,8 +796,8 @@ By spec file and by tag, under the summary: each one's cases; the apps' runs of 
 <tr><td><a href="../spec/move-subtree-down.md#movedown42">MoveDown42</a><td>✓<td>✓<td>✓<td>✓<td>✓<td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✗<td>C<td>✓<td>✓<td>C<td align="right">2<td>edge</tr>
 <tr><td><a href="../spec/move-subtree-down.md#movedown43">MoveDown43</a><td><td><td><td><td><td><td><td><td><td><td><td><td>✗<td>✓<td>C<td>✓<td>✓<td>✗<td align="right">2<td>edge</tr>
 <tr><td><a href="../spec/move-subtree-down.md#movedown44">MoveDown44</a><td><td><td><td><td><td><td><td><td><td><td><td><td>✗<td>C<td>C<td>✗<td>✗<td>C<td align="right">3<td>edge</tr>
+<tr><td><a href="../spec/move-subtree-down.md#movedown45">MoveDown45</a><td>✓<td>✓<td>✓<td>✓<td>✓<td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>C<td>✓<td>✓<td>✓<td>✓<td align="right">0<td>rare</tr>
 <tr><td><b>total</b><td><b>0</b><td><b>0</b><td><b>0</b><td><b>1</b><td><b>1</b><td><td><b>0</b><td><b>2</b><td><b>7</b><td><b>8</b><td><b>11</b><td><b>7</b><td><b>32</b><td><b>23</b><td><b>21</b><td><b>36</b><td><b>36</b><td><b>31</b><td align="right"><b>216</b><td></tr>
-<tr><td colspan="21"></tr>
 <tr><td colspan="21"></tr>
 <tr><td><b><a name="move-subtree-up.md"></a>move-subtree-up.md</b><td><b><a href="logseq-db.md" title="logseq-db">LD</a></b><td><b><a href="roam.md" title="roam">RR</a></b><td><b><a href="logseq.md" title="logseq">LO</a></b><td><b><a href="dynalist.md" title="dynalist">DL</a></b><td><b><a href="tine.md" title="tine">TI</a></b><td><b><a href="athens.md" title="athens">AR</a></b><td><b><a href="tana.md" title="tana">TA</a></b><td><b><a href="workflowy.md" title="workflowy">WF</a></b><td><b><a href="remnote-bl.md" title="remnote-bl">RB</a></b><td><b><a href="remnote.md" title="remnote">RN</a></b><td><b><a href="blocknote.md" title="blocknote">BN</a></b><td><b><a href="siyuan.md" title="siyuan">SY</a></b><td><b><a href="obsidian-outliner.md" title="obsidian-outliner">OO</a></b><td><b><a href="obsidian-true-outliner.md" title="obsidian-true-outliner">TO</a></b><td><b><a href="silverbullet.md" title="silverbullet">SB</a></b><td><b><a href="obsidian.md" title="obsidian">OB</a></b><td><b><a href="obsidian-lp.md" title="obsidian-lp">LP</a></b><td><b><a href="emacs-markdown.md" title="emacs-markdown">EM</a></b><td><b>disagree</b><td><b>rank</b></tr>
 <tr><td><a href="../spec/move-subtree-up.md#moveup1">MoveUp1</a><td>✓<td>✓<td>✓<td>✓<td>✓<td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>C<td>✓<td>✗<td>✗<td>✓<td align="right">2<td>core</tr>
@@ -842,8 +846,8 @@ By spec file and by tag, under the summary: each one's cases; the apps' runs of 
 <tr><td><a href="../spec/move-subtree-up.md#moveup44">MoveUp44</a><td>✓<td>✓<td>✓<td>✓<td>✓<td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✗<td>C<td>✓<td>✓<td>✗<td align="right">3<td>common</tr>
 <tr><td><a href="../spec/move-subtree-up.md#moveup45">MoveUp45</a><td>✓<td>✓<td>✓<td>✓<td>✓<td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✓<td>C<td>✗<td>✗<td>✗<td align="right">4<td>edge</tr>
 <tr><td><a href="../spec/move-subtree-up.md#moveup46">MoveUp46</a><td>✓<td>✓<td>✓<td>✓<td>✗<td><td>✓<td>✓<td>✗<td>✗<td><td>✓<td>✗<td>✗<td>✗<td>✓<td>✓<td>✗<td align="right">7<td>edge</tr>
+<tr><td><a href="../spec/move-subtree-up.md#moveup47">MoveUp47</a><td>✓<td>✓<td>✓<td>✓<td>✓<td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>C<td>✓<td>✓<td>✓<td>✓<td align="right">0<td>rare</tr>
 <tr><td><b>total</b><td><b>0</b><td><b>0</b><td><b>0</b><td><b>2</b><td><b>2</b><td><td><b>0</b><td><b>1</b><td><b>9</b><td><b>10</b><td><b>11</b><td><b>8</b><td><b>27</b><td><b>20</b><td><b>24</b><td><b>30</b><td><b>30</b><td><b>31</b><td align="right"><b>205</b><td></tr>
-<tr><td colspan="21"></tr>
 <tr><td colspan="21"></tr>
 <tr><td><b><a name="move-subtree.md"></a>move-subtree.md</b><td><b><a href="logseq-db.md" title="logseq-db">LD</a></b><td><b><a href="roam.md" title="roam">RR</a></b><td><b><a href="logseq.md" title="logseq">LO</a></b><td><b><a href="dynalist.md" title="dynalist">DL</a></b><td><b><a href="tine.md" title="tine">TI</a></b><td><b><a href="athens.md" title="athens">AR</a></b><td><b><a href="tana.md" title="tana">TA</a></b><td><b><a href="workflowy.md" title="workflowy">WF</a></b><td><b><a href="remnote-bl.md" title="remnote-bl">RB</a></b><td><b><a href="remnote.md" title="remnote">RN</a></b><td><b><a href="blocknote.md" title="blocknote">BN</a></b><td><b><a href="siyuan.md" title="siyuan">SY</a></b><td><b><a href="obsidian-outliner.md" title="obsidian-outliner">OO</a></b><td><b><a href="obsidian-true-outliner.md" title="obsidian-true-outliner">TO</a></b><td><b><a href="silverbullet.md" title="silverbullet">SB</a></b><td><b><a href="obsidian.md" title="obsidian">OB</a></b><td><b><a href="obsidian-lp.md" title="obsidian-lp">LP</a></b><td><b><a href="emacs-markdown.md" title="emacs-markdown">EM</a></b><td><b>disagree</b><td><b>rank</b></tr>
 <tr><td><a href="../spec/move-subtree.md#movesubtree1">MoveSubtree1</a><td>✓<td>✓<td>✓<td>C<td>✓<td>✓<td>✓<td>✓<td>C<td>C<td>✓<td>C<td>✓<td>C<td><td><td><td><td align="right">0<td>core</tr>
@@ -951,9 +955,9 @@ By spec file and by tag, under the summary: each one's cases; the apps' runs of 
 <tr><td><a href="../spec/outdent.md#outdent5">Outdent5</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>C<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td align="right">1<td>edge</tr>
 <tr><td><a href="../spec/outdent.md#outdent6">Outdent6</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>(✗)<td>✓<td>✓<td>✓<td>✓<td>✓<td align="right">1<td>edge</tr>
 <tr><td><a href="../spec/outdent.md#outdent7">Outdent7</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>(✗)<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">6<td>rare</tr>
-<tr><td><a href="../spec/outdent.md#outdent8">Outdent8</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✗<td>C<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">8<td>edge</tr>
+<tr><td><a href="../spec/outdent.md#outdent8">Outdent8</a><td>✓<td>✓<td>(C)<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✗<td>C<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">8<td>edge</tr>
 <tr><td><a href="../spec/outdent.md#outdent9">Outdent9</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✓<td>✓<td>✗<td align="right">2<td>common</tr>
-<tr><td><a href="../spec/outdent.md#outdent10">Outdent10</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✓<td>✓<td>✗<td>✗<td>✓<td>✓<td>✗<td align="right">4<td>common</tr>
+<tr><td><a href="../spec/outdent.md#outdent10">Outdent10</a><td>✓<td>✓<td>C<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✓<td>✓<td>✗<td>✗<td>✓<td>✓<td>✗<td align="right">4<td>common</tr>
 <tr><td><a href="../spec/outdent.md#outdent11">Outdent11</a><td><td><td><td><td><td><td><td><td><td>✗<td>✗<td>✗<td>✗<td>✗<td>✓<td>✗<td>✗<td>✗<td align="right">8<td>common</tr>
 <tr><td><a href="../spec/outdent.md#outdent12">Outdent12</a><td><td><td><td><td><td><td><td><td><td>✓<td>✗<td>C<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">7<td>edge</tr>
 <tr><td><a href="../spec/outdent.md#outdent13">Outdent13</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>(✗)<td>(✗)<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✗<td>✓<td align="right">4<td>edge</tr>
@@ -1087,7 +1091,7 @@ By spec file and by tag, under the summary: each one's cases; the apps' runs of 
 <tr><td><a href="../spec/paste-plain.md#pasteplain13">PastePlain13</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td align="right">4<td>rare</tr>
 <tr><td><a href="../spec/paste-plain.md#pasteplain14">PastePlain14</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>(✗)<td>(✗)<td>✗<td>✓<td>✗<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td align="right">5<td>rare</tr>
 <tr><td><a href="../spec/paste-plain.md#pasteplain15">PastePlain15</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>(✗)<td>✗<td>✗<td>✗<td>✓<td>✗<td>✓<td>✓<td>✓<td>✗<td align="right">6<td>rare</tr>
-<tr><td><a href="../spec/paste-plain.md#pasteplain16">PastePlain16</a><td>✓<td>✓<td>✓<td>(✗)<td>✓<td>✓<td>(S)<td>(✗)<td>✗<td>✗<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td align="right">4<td>rare</tr>
+<tr><td><a href="../spec/paste-plain.md#pasteplain16">PastePlain16</a><td>✓<td>✗<td>✓<td>(✗)<td>✓<td>✓<td>(S)<td>(✗)<td>✗<td>✗<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td align="right">5<td>rare</tr>
 <tr><td><a href="../spec/paste-plain.md#pasteplain17">PastePlain17</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>(✗)<td><td><td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>✓<td>✓<td>✓<td>✓<td>✓<td>(✗)<td align="right">6<td>rare</tr>
 <tr><td><a href="../spec/paste-plain.md#pasteplain18">PastePlain18</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>(✗)<td><td><td><td><td>(✗)<td>(✗)<td>✓<td>✓<td>✓<td>✓<td>✓<td>(✗)<td align="right">4<td>rare</tr>
 <tr><td><a href="../spec/paste-plain.md#pasteplain19">PastePlain19</a><td>S<td>S<td>S<td>✓<td>S<td>S<td>✓<td>(✗)<td>✗<td>✗<td>✗<td>✗<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td align="right">5<td>rare</tr>
@@ -1108,7 +1112,7 @@ By spec file and by tag, under the summary: each one's cases; the apps' runs of 
 <tr><td><a href="../spec/paste-plain.md#pasteplain33b">PastePlain33b</a><td><td><td><td><td><td><td>✓<td>(✗)<td><td><td><td><td><td><td><td><td><td><td align="right">1<td>edge</tr>
 <tr><td><a href="../spec/paste-plain.md#pasteplain33c">PastePlain33c</a><td><td><td><td><td><td><td>✓<td><td><td><td><td><td><td><td><td><td><td><td align="right">0<td>edge</tr>
 <tr><td><a href="../spec/paste-plain.md#pasteplain34">PastePlain34</a><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td><td align="right">0<td>edge</tr>
-<tr><td><b>total</b><td><b>1</b><td><b>0</b><td><b>0</b><td><b>7</b><td><b>0</b><td><b>2</b><td><b>4</b><td><b>15</b><td><b>22</b><td><b>22</b><td><b>15</b><td><b>18</b><td><b>0</b><td><b>8</b><td><b>0</b><td><b>0</b><td><b>0</b><td><b>4</b><td align="right"><b>118</b><td></tr>
+<tr><td><b>total</b><td><b>1</b><td><b>1</b><td><b>0</b><td><b>7</b><td><b>0</b><td><b>2</b><td><b>4</b><td><b>15</b><td><b>22</b><td><b>22</b><td><b>15</b><td><b>18</b><td><b>0</b><td><b>8</b><td><b>0</b><td><b>0</b><td><b>0</b><td><b>4</b><td align="right"><b>119</b><td></tr>
 <tr><td colspan="21"></tr>
 <tr><td colspan="21"></tr>
 <tr><td><b><a name="paste.md"></a>paste.md</b><td><b><a href="logseq-db.md" title="logseq-db">LD</a></b><td><b><a href="roam.md" title="roam">RR</a></b><td><b><a href="logseq.md" title="logseq">LO</a></b><td><b><a href="dynalist.md" title="dynalist">DL</a></b><td><b><a href="tine.md" title="tine">TI</a></b><td><b><a href="athens.md" title="athens">AR</a></b><td><b><a href="tana.md" title="tana">TA</a></b><td><b><a href="workflowy.md" title="workflowy">WF</a></b><td><b><a href="remnote-bl.md" title="remnote-bl">RB</a></b><td><b><a href="remnote.md" title="remnote">RN</a></b><td><b><a href="blocknote.md" title="blocknote">BN</a></b><td><b><a href="siyuan.md" title="siyuan">SY</a></b><td><b><a href="obsidian-outliner.md" title="obsidian-outliner">OO</a></b><td><b><a href="obsidian-true-outliner.md" title="obsidian-true-outliner">TO</a></b><td><b><a href="silverbullet.md" title="silverbullet">SB</a></b><td><b><a href="obsidian.md" title="obsidian">OB</a></b><td><b><a href="obsidian-lp.md" title="obsidian-lp">LP</a></b><td><b><a href="emacs-markdown.md" title="emacs-markdown">EM</a></b><td><b>disagree</b><td><b>rank</b></tr>
@@ -1152,11 +1156,11 @@ By spec file and by tag, under the summary: each one's cases; the apps' runs of 
 <tr><td colspan="21"></tr>
 <tr><td colspan="21"></tr>
 <tr><td><b><a name="placeholders.md"></a>placeholders.md</b><td><b><a href="logseq-db.md" title="logseq-db">LD</a></b><td><b><a href="roam.md" title="roam">RR</a></b><td><b><a href="logseq.md" title="logseq">LO</a></b><td><b><a href="dynalist.md" title="dynalist">DL</a></b><td><b><a href="tine.md" title="tine">TI</a></b><td><b><a href="athens.md" title="athens">AR</a></b><td><b><a href="tana.md" title="tana">TA</a></b><td><b><a href="workflowy.md" title="workflowy">WF</a></b><td><b><a href="remnote-bl.md" title="remnote-bl">RB</a></b><td><b><a href="remnote.md" title="remnote">RN</a></b><td><b><a href="blocknote.md" title="blocknote">BN</a></b><td><b><a href="siyuan.md" title="siyuan">SY</a></b><td><b><a href="obsidian-outliner.md" title="obsidian-outliner">OO</a></b><td><b><a href="obsidian-true-outliner.md" title="obsidian-true-outliner">TO</a></b><td><b><a href="silverbullet.md" title="silverbullet">SB</a></b><td><b><a href="obsidian.md" title="obsidian">OB</a></b><td><b><a href="obsidian-lp.md" title="obsidian-lp">LP</a></b><td><b><a href="emacs-markdown.md" title="emacs-markdown">EM</a></b><td><b>disagree</b><td><b>rank</b></tr>
-<tr><td><a href="../spec/placeholders.md#placeholder1">Placeholder1</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">6<td>core</tr>
+<tr><td><a href="../spec/placeholders.md#placeholder1">Placeholder1</a><td>✓<td>(✗)<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">7<td>core</tr>
 <tr><td><a href="../spec/placeholders.md#placeholder2">Placeholder2</a><td><td><td><td><td><td><td><td><td><td>S<td>S<td>S<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">6<td>common</tr>
 <tr><td><a href="../spec/placeholders.md#placeholder3">Placeholder3</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>S<td>S<td>S<td>✗<td>✓<td>✗<td>✗<td>✗<td>✗<td align="right">5<td>core</tr>
 <tr><td><a href="../spec/placeholders.md#placeholder4">Placeholder4</a><td>✓<td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td><td><td>(S)<td>S<td>S<td>✓<td>✓<td>✗<td>✓<td>✓<td>✓<td>✓<td align="right">1<td>common</tr>
-<tr><td><a href="../spec/placeholders.md#placeholder5">Placeholder5</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">6<td>common</tr>
+<tr><td><a href="../spec/placeholders.md#placeholder5">Placeholder5</a><td>✓<td>(✗)<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">7<td>common</tr>
 <tr><td><a href="../spec/placeholders.md#placeholder6">Placeholder6</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td align="right">1<td>common</tr>
 <tr><td><a href="../spec/placeholders.md#placeholder7">Placeholder7</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">6<td>common</tr>
 <tr><td><a href="../spec/placeholders.md#placeholder8">Placeholder8</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td align="right">0<td>edge</tr>
@@ -1172,7 +1176,7 @@ By spec file and by tag, under the summary: each one's cases; the apps' runs of 
 <tr><td><a href="../spec/placeholders.md#placeholder18">Placeholder18</a><td>✓<td>(S)<td>✓<td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td>✓<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">9<td>rare</tr>
 <tr><td><a href="../spec/placeholders.md#placeholder19">Placeholder19</a><td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">6<td>rare</tr>
 <tr><td><a href="../spec/placeholders.md#placeholder20">Placeholder20</a><td><td>✓<td><td>✓<td>✓<td>✓<td>✓<td>✓<td><td><td>✓<td>✓<td>C<td><td>✓<td><td><td><td align="right">0<td>rare</tr>
-<tr><td><b>total</b><td><b>0</b><td><b>0</b><td><b>0</b><td><b>0</b><td><b>0</b><td><b>0</b><td><b>0</b><td><b>1</b><td><b>0</b><td><b>1</b><td><b>2</b><td><b>2</b><td><b>12</b><td><b>13</b><td><b>13</b><td><b>12</b><td><b>12</b><td><b>15</b><td align="right"><b>83</b><td></tr>
+<tr><td><b>total</b><td><b>0</b><td><b>2</b><td><b>0</b><td><b>0</b><td><b>0</b><td><b>0</b><td><b>0</b><td><b>1</b><td><b>0</b><td><b>1</b><td><b>2</b><td><b>2</b><td><b>12</b><td><b>13</b><td><b>13</b><td><b>12</b><td><b>12</b><td><b>15</b><td align="right"><b>85</b><td></tr>
 <tr><td colspan="21"></tr>
 <tr><td colspan="21"></tr>
 <tr><td><b><a name="quirks.md"></a>quirks.md</b><td><b><a href="logseq-db.md" title="logseq-db">LD</a></b><td><b><a href="roam.md" title="roam">RR</a></b><td><b><a href="logseq.md" title="logseq">LO</a></b><td><b><a href="dynalist.md" title="dynalist">DL</a></b><td><b><a href="tine.md" title="tine">TI</a></b><td><b><a href="athens.md" title="athens">AR</a></b><td><b><a href="tana.md" title="tana">TA</a></b><td><b><a href="workflowy.md" title="workflowy">WF</a></b><td><b><a href="remnote-bl.md" title="remnote-bl">RB</a></b><td><b><a href="remnote.md" title="remnote">RN</a></b><td><b><a href="blocknote.md" title="blocknote">BN</a></b><td><b><a href="siyuan.md" title="siyuan">SY</a></b><td><b><a href="obsidian-outliner.md" title="obsidian-outliner">OO</a></b><td><b><a href="obsidian-true-outliner.md" title="obsidian-true-outliner">TO</a></b><td><b><a href="silverbullet.md" title="silverbullet">SB</a></b><td><b><a href="obsidian.md" title="obsidian">OB</a></b><td><b><a href="obsidian-lp.md" title="obsidian-lp">LP</a></b><td><b><a href="emacs-markdown.md" title="emacs-markdown">EM</a></b><td><b>disagree</b><td><b>rank</b></tr>
@@ -1530,8 +1534,8 @@ By spec file and by tag, under the summary: each one's cases; the apps' runs of 
 <tr><td><a href="../spec/regressions.md#regression196">Regression196</a><td>✓<td>(C)<td>✓<td>(C)<td>(C)<td>✓<td><td><td><td><td><td><td><td><td><td><td><td>(✗)<td align="right">1<td>rare</tr>
 <tr><td><a href="../spec/regressions.md#regression197">Regression197</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td align="right">1<td>rare</tr>
 <tr><td><a href="../spec/regressions.md#regression198">Regression198</a><td>✓<td>✓<td>✓<td>(✗)<td>✓<td>✓<td><td><td><td><td><td><td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td align="right">7<td>rare</tr>
-<tr><td><b>total</b><td><b>29</b><td><b>25</b><td><b>40</b><td><b>43</b><td><b>38</b><td><b>37</b><td><b>25</b><td><b>28</b><td><b>28</b><td><b>25</b><td><b>34</b><td><b>31</b><td><b>92</b><td><b>92</b><td><b>96</b><td><b>99</b><td><b>97</b><td><b>103</b><td align="right"><b>962</b><td></tr>
-<tr><td colspan="21"></tr>
+<tr><td><a href="../spec/regressions.md#regression199">Regression199</a><td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td><td><td><td><td><td><td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td>(✗)<td align="right">12<td>rare</tr>
+<tr><td><b>total</b><td><b>30</b><td><b>26</b><td><b>41</b><td><b>44</b><td><b>39</b><td><b>38</b><td><b>25</b><td><b>28</b><td><b>28</b><td><b>25</b><td><b>34</b><td><b>31</b><td><b>93</b><td><b>93</b><td><b>97</b><td><b>100</b><td><b>98</b><td><b>104</b><td align="right"><b>974</b><td></tr>
 <tr><td colspan="21"></tr>
 <tr><td><b><a name="scenarios.md"></a>scenarios.md</b><td><b><a href="logseq-db.md" title="logseq-db">LD</a></b><td><b><a href="roam.md" title="roam">RR</a></b><td><b><a href="logseq.md" title="logseq">LO</a></b><td><b><a href="dynalist.md" title="dynalist">DL</a></b><td><b><a href="tine.md" title="tine">TI</a></b><td><b><a href="athens.md" title="athens">AR</a></b><td><b><a href="tana.md" title="tana">TA</a></b><td><b><a href="workflowy.md" title="workflowy">WF</a></b><td><b><a href="remnote-bl.md" title="remnote-bl">RB</a></b><td><b><a href="remnote.md" title="remnote">RN</a></b><td><b><a href="blocknote.md" title="blocknote">BN</a></b><td><b><a href="siyuan.md" title="siyuan">SY</a></b><td><b><a href="obsidian-outliner.md" title="obsidian-outliner">OO</a></b><td><b><a href="obsidian-true-outliner.md" title="obsidian-true-outliner">TO</a></b><td><b><a href="silverbullet.md" title="silverbullet">SB</a></b><td><b><a href="obsidian.md" title="obsidian">OB</a></b><td><b><a href="obsidian-lp.md" title="obsidian-lp">LP</a></b><td><b><a href="emacs-markdown.md" title="emacs-markdown">EM</a></b><td><b>disagree</b><td><b>rank</b></tr>
 <tr><td><a href="../spec/scenarios.md#scenario1">Scenario1</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✗<td align="right">1<td>core</tr>
@@ -1602,9 +1606,9 @@ By spec file and by tag, under the summary: each one's cases; the apps' runs of 
 <tr><td><a href="../spec/shift-enter.md#shiftenter8">ShiftEnter8</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td><td><td>✓<td>✓<td>✓<td>(S)<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">6<td>edge</tr>
 <tr><td><a href="../spec/shift-enter.md#shiftenter9">ShiftEnter9</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td><td><td>✓<td>✓<td>✓<td>(S)<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">6<td>rare</tr>
 <tr><td><a href="../spec/shift-enter.md#shiftenter10">ShiftEnter10</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td><td><td>✓<td>✓<td>✓<td>✓<td>S<td>✗<td>✗<td>S<td>S<td>S<td align="right">2<td>edge</tr>
-<tr><td><a href="../spec/shift-enter.md#shiftenter11">ShiftEnter11</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td><td><td>✓<td>✓<td>✓<td>✓<td>S<td>✗<td>S<td>✗<td>✗<td>S<td align="right">3<td>common</tr>
-<tr><td><a href="../spec/shift-enter.md#shiftenter12">ShiftEnter12</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td><td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td align="right">0<td>common</tr>
-<tr><td><a href="../spec/shift-enter.md#shiftenter13">ShiftEnter13</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td><td><td>✓<td>✓<td>✓<td>✗<td>S<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">6<td>edge</tr>
+<tr><td><a href="../spec/shift-enter.md#shiftenter11">ShiftEnter11</a><td>✓<td>S<td>✓<td>✓<td>✓<td>✓<td><td><td>✓<td>✓<td>✓<td>✓<td>S<td>✗<td>S<td>✗<td>✗<td>S<td align="right">3<td>common</tr>
+<tr><td><a href="../spec/shift-enter.md#shiftenter12">ShiftEnter12</a><td>✓<td>(S)<td>✓<td>✓<td>✓<td>✓<td><td><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td align="right">0<td>common</tr>
+<tr><td><a href="../spec/shift-enter.md#shiftenter13">ShiftEnter13</a><td>✓<td>S<td>✓<td>✓<td>✓<td>✓<td><td><td>✓<td>✓<td>✓<td>✗<td>S<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">6<td>edge</tr>
 <tr><td><a href="../spec/shift-enter.md#shiftenter13b">ShiftEnter13b</a><td>✓<td>✓<td>✓<td>✓<td>✓<td>✓<td><td><td>✓<td>✓<td>✓<td>(S)<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">6<td>rare</tr>
 <tr><td><a href="../spec/shift-enter.md#shiftenter30">ShiftEnter30</a><td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td>(S)<td><td><td>(S)<td>(S)<td>(S)<td>(S)<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">6<td>rare</tr>
 <tr><td><a href="../spec/shift-enter.md#shiftenter14">ShiftEnter14</a><td><td><td><td><td><td><td><td><td><td>✗<td>(✗)<td>✓<td>✓<td>✗<td>✓<td>S<td>S<td>✓<td align="right">3<td>common</tr>
@@ -1654,7 +1658,7 @@ By spec file and by tag, under the summary: each one's cases; the apps' runs of 
 <tr><td><b><a name="tasks.md"></a>tasks.md</b><td><b><a href="logseq-db.md" title="logseq-db">LD</a></b><td><b><a href="roam.md" title="roam">RR</a></b><td><b><a href="logseq.md" title="logseq">LO</a></b><td><b><a href="dynalist.md" title="dynalist">DL</a></b><td><b><a href="tine.md" title="tine">TI</a></b><td><b><a href="athens.md" title="athens">AR</a></b><td><b><a href="tana.md" title="tana">TA</a></b><td><b><a href="workflowy.md" title="workflowy">WF</a></b><td><b><a href="remnote-bl.md" title="remnote-bl">RB</a></b><td><b><a href="remnote.md" title="remnote">RN</a></b><td><b><a href="blocknote.md" title="blocknote">BN</a></b><td><b><a href="siyuan.md" title="siyuan">SY</a></b><td><b><a href="obsidian-outliner.md" title="obsidian-outliner">OO</a></b><td><b><a href="obsidian-true-outliner.md" title="obsidian-true-outliner">TO</a></b><td><b><a href="silverbullet.md" title="silverbullet">SB</a></b><td><b><a href="obsidian.md" title="obsidian">OB</a></b><td><b><a href="obsidian-lp.md" title="obsidian-lp">LP</a></b><td><b><a href="emacs-markdown.md" title="emacs-markdown">EM</a></b><td><b>disagree</b><td><b>rank</b></tr>
 <tr><td><a href="../spec/tasks.md#taskenter1">TaskEnter1</a><td><td><td><td><td><td><td><td><td><td><td>✓<td>✓<td>✗<td>✗<td>✗<td>✗<td>✗<td>✗<td align="right">6<td>common</tr>
 <tr><td><a href="../spec/tasks.md#taskenter2">TaskEnter2</a><td><td><td><td>✓<td><td><td>(✗)<td>✓<td><td><td>(✗)<td>(✗)<td>✓<td>✓<td>✗<td>✓<td>✓<td>✗<td align="right">5<td>common</tr>
-<tr><td><a href="../spec/tasks.md#taskenter3">TaskEnter3</a><td>(C)<td>✓<td>✓<td>✓<td>✓<td>✓<td>(✗)<td>✓<td>✓<td>✓<td>✓<td>(S)<td>✓<td>✓<td>(S)<td>✓<td>✓<td>(✗)<td align="right">2<td>edge</tr>
+<tr><td><a href="../spec/tasks.md#taskenter3">TaskEnter3</a><td>(C)<td>(C)<td>✓<td>✓<td>✓<td>✓<td>(✗)<td>✓<td>✓<td>✓<td>✓<td>(S)<td>✓<td>✓<td>(S)<td>✓<td>✓<td>(✗)<td align="right">2<td>edge</tr>
 <tr><td><a href="../spec/tasks.md#taskenter4">TaskEnter4</a><td><td><td><td>✓<td><td><td>(✗)<td>✓<td><td><td>✓<td>✓<td>✓<td>✓<td>(S)<td>✓<td>✓<td>✗<td align="right">2<td>common</tr>
 <tr><td><a href="../spec/tasks.md#taskenter5">TaskEnter5</a><td><td><td><td>✓<td><td><td>(✗)<td>✓<td><td><td>✓<td>(✗)<td>✓<td>✗<td>✗<td>✓<td>✓<td>✗<td align="right">5<td>edge</tr>
 <tr><td><a href="../spec/tasks.md#taskenter6">TaskEnter6</a><td><td><td><td>✓<td><td><td>(✗)<td>✓<td><td><td>(S)<td>(✗)<td>✓<td>✗<td>✗<td>✓<td>✓<td>✗<td align="right">5<td>edge</tr>

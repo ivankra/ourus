@@ -4,6 +4,7 @@
 
 import type { OurusConfig } from '../../src/config.ts';
 import { OurusDoc } from '../../src/doc/index.ts';
+import { OurusView } from '../../src/view/index.ts';
 import { drawState, drawText, drawnSelection, nodesOf, plainText, readDrawing } from '../../test/drawing.ts';
 import type { Verdict } from './block.ts';
 import { drawView, sameView, splitView, type RowView } from './view.ts';
@@ -20,7 +21,7 @@ export interface TextDoc {
 export function readTextDoc(drawing: string): TextDoc {
   const { drawn, view } = splitView(drawing);
   const read = readDrawing(drawn);
-  const selection = read.subtrees ? drawnSelection(OurusDoc.parse(read.text, { marks: [] }), read) : read.selection;
+  const selection = read.subtrees ? drawnSelection(OurusView.of(OurusDoc.parse(read.text, { marks: [] })), read) : read.selection;
   return { text: read.text, sel: /┃|«/.test(drawn) ? selection : null, ...(view && { view }) };
 }
 
@@ -59,9 +60,10 @@ export function compareTexts(want: TextDoc, got: TextDoc, flavor: OurusConfig['f
  */
 function sameSubtrees(text: string, a: TextDoc['sel'], b: TextDoc['sel'], flavor: OurusConfig['flavor']): boolean {
   if (!a || !b) return false;
-  const doc = OurusDoc.parse(text, { config: { flavor } });
-  const roots = doc.selectedSubtrees(a);
-  return !!roots && roots.join() === doc.selectedSubtrees(b)?.join();
+  const view = OurusView.of(OurusDoc.parse(text, { config: { flavor } }));
+  const ids = (sel: NonNullable<TextDoc['sel']>): string | undefined => view.selectedSubtrees(sel)?.map((n) => n.id).join();
+  const roots = ids(a);
+  return roots !== undefined && roots === ids(b);
 }
 
 export const sameText = (a: TextDoc, b: TextDoc): boolean => a.text === b.text && JSON.stringify(a.sel) === JSON.stringify(b.sel) && sameView(a.view, b.view);

@@ -161,7 +161,7 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
   if (test.view.folded !== undefined || test.view.zoom !== undefined || test.steps.some((s) => s.expect.folded !== undefined || s.expect.zoom !== undefined)) {
     const values = (replayed ? Object.fromEntries(theirs) : {}) as Partial<OurusConfig>;
     try {
-      views = { start: rowView(startOf(test, flavor, values).doc), steps: drawnSteps(test, flavor, values) };
+      views = { start: rowView(startOf(test, flavor, values).view), steps: drawnSteps(test, flavor, values) };
     } catch {
       return skip('its view, not replayable');
     }

@@ -5,7 +5,7 @@ version: "build b8f87af5"
 url: "https://demo.logseq.com/"
 model: "block"
 command: "node sxs/run.ts logseq"
-elapsed_s: 144
+elapsed_s: 263
 workers: 4
 ---
 
@@ -15,9 +15,9 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 241 | [7](#caret-7) | [10](#whitespace-10) | [24](#disagree-24) |  |  | **282** |
-| adapted | 432 | [20](#adapted-caret-20) | [25](#adapted-whitespace-25) | [89](#adapted-disagree-89) |  |  | **566** |
-| **total** | **673 (47%)** | **27 (1.9%)** | **35 (2.4%)** | **113 (7.8%)** | **0 (0%)** | **[590](#skipped-590) (41%)** | **1441** |
+| original | 244 | [8](#caret-8) | [10](#whitespace-10) | [24](#disagree-24) |  |  | **286** |
+| adapted | 431 | [21](#adapted-caret-21) | [25](#adapted-whitespace-25) | [90](#adapted-disagree-90) |  |  | **567** |
+| **total** | **675 (47%)** | **29 (2%)** | **35 (2.4%)** | **114 (7.9%)** | **0 (0%)** | **[591](#skipped-591) (41%)** | **1447** |
 
 Per-file:
 
@@ -34,15 +34,15 @@ Per-file:
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 12 | **12** |  |  |
 | [enter.md](../spec/enter.md) | 50 |  | 1 |  |  | 47 | **98** | 19 | 32 |
 | [fences.md](../spec/fences.md) | 10 |  | 1 | 3 |  | 56 | **70** |  | 14 |
-| [fold.md](../spec/fold.md) | 12 |  |  | 2 |  | 5 | **19** | 12 | 2 |
+| [fold.md](../spec/fold.md) | 14 |  |  | 2 |  | 6 | **22** | 14 | 2 |
 | [gaps.md](../spec/gaps.md) | 15 |  |  |  |  | 4 | **19** | 1 | 14 |
 | [indent.md](../spec/indent.md) | 32 |  |  | 2 |  | 21 | **55** | 19 | 15 |
 | [lists.md](../spec/lists.md) | 5 |  |  |  |  | 11 | **16** |  | 5 |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 29 |  |  |  |  | 15 | **44** | 13 | 16 |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 29 | 1 |  |  |  | 16 | **46** | 15 | 15 |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 30 |  |  |  |  | 15 | **45** | 14 | 16 |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 30 | 1 |  |  |  | 16 | **47** | 16 | 15 |
 | [move-subtree.md](../spec/move-subtree.md) | 9 |  |  | 6 |  | 9 | **24** | 8 | 7 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 43 |  | 1 | 4 |  | 19 | **67** | 20 | 28 |
-| [outdent.md](../spec/outdent.md) | 16 | 3 |  | 1 |  | 22 | **42** | 9 | 11 |
+| [outdent.md](../spec/outdent.md) | 14 | 5 |  | 1 |  | 22 | **42** | 9 | 11 |
 | [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |  |  |
 | [paste-conv.md](../spec/paste-conv.md) | 5 |  |  | 1 |  |  | **6** | 5 | 1 |
 | [paste-html.md](../spec/paste-html.md) | 4 |  | 1 | 14 |  |  | **19** |  | 19 |
@@ -53,7 +53,7 @@ Per-file:
 | [placeholders.md](../spec/placeholders.md) | 13 |  | 2 |  |  | 5 | **20** | 4 | 11 |
 | [quirks.md](../spec/quirks.md) | 1 |  |  |  |  | 6 | **7** | 1 |  |
 | [quotes.md](../spec/quotes.md) | 89 |  | 3 | 10 |  | 41 | **143** |  | 102 |
-| [regressions.md](../spec/regressions.md) | 54 | 7 | 10 | 40 |  | 87 | **198** | 18 | 93 |
+| [regressions.md](../spec/regressions.md) | 54 | 7 | 10 | 41 |  | 87 | **199** | 18 | 94 |
 | [scenarios.md](../spec/scenarios.md) | 19 | 1 |  | 1 |  | 8 | **29** | 12 | 9 |
 | [select.md](../spec/select.md) | 14 | 4 |  |  |  | 5 | **23** | 11 | 7 |
 | [shift-enter.md](../spec/shift-enter.md) | 25 |  | 3 |  |  | 8 | **36** | 12 | 16 |
@@ -62,7 +62,7 @@ Per-file:
 | [typing.md](../spec/typing.md) |  |  |  |  |  | 3 | **3** |  |  |
 | [undo.md](../spec/undo.md) | 4 |  |  |  |  | 1 | **5** | 3 | 1 |
 | [zoom.md](../spec/zoom.md) | 6 |  |  | 2 |  | 6 | **14** | 8 |  |
-| **total** | **673 (47%)** | **27 (1.9%)** | **35 (2.4%)** | **113 (7.8%)** | **0 (0%)** | **593 (41%)** | **1441** | **282 (20%)** | **566 (39%)** |
+| **total** | **675 (47%)** | **29 (2%)** | **35 (2.4%)** | **114 (7.9%)** | **0 (0%)** | **594 (41%)** | **1447** | **286 (20%)** | **567 (39%)** |
 
 ## Disagree (24)
 
@@ -1395,7 +1395,7 @@ y
 </td></tr>
 </table>
 
-## Caret (7)
+## Caret (8)
 
 ### [Backspace17](../spec/backspace.md#backspace17)
 
@@ -1456,6 +1456,42 @@ y
 - a
   - ┃b
 - c
+```
+
+</td></tr>
+</table>
+
+### [Outdent10](../spec/outdent.md#outdent10)
+
+> outdent
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - ««b
+  - c»»
+- d
+```
+
+</td><td>
+
+```buffer
+- a
+- ««b»»
+- c
+- d
+```
+
+</td><td>
+
+```buffer
+- a
+- ««b
+- c»»
+- d
 ```
 
 </td></tr>
@@ -1787,7 +1823,7 @@ y
 </td></tr>
 </table>
 
-## Adapted: disagree (89)
+## Adapted: disagree (90)
 
 ### [Backspace29](../spec/backspace.md#backspace29)
 
@@ -7645,6 +7681,65 @@ Original:
 </td></tr>
 </table>
 
+### [Regression199](../spec/regressions.md#regression199)
+
+> deleteSoftLineBackward
+
+Adapted: blank lines, heading, paragraph, quote, under quotes: atom
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- 
+- # h
+  - > - 
+    > ^x┃
+```
+
+</td><td>
+
+```buffer
+- 
+- # h
+  - > - 
+    ┃
+```
+
+</td><td>
+
+```buffer
+- # h
+  - > - 
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+◌
+# h
+> - ◌
+> ^x┃
+```
+
+</td><td>
+
+```buffer
+# h
+> - 
+┃
+```
+
+</td></tr>
+</table>
+
 ### [Scenario18](../spec/scenarios.md#scenario18)
 
 <table>
@@ -9375,7 +9470,7 @@ Original:
 </td></tr>
 </table>
 
-## Adapted: caret (20)
+## Adapted: caret (21)
 
 ### [Backspace43](../spec/backspace.md#backspace43)
 
@@ -9760,6 +9855,68 @@ Original:
 ┃para
 
 # B
+```
+
+</td></tr>
+</table>
+
+### [Outdent8](../spec/outdent.md#outdent8)
+
+> outdent
+
+Adapted: as blocks, paragraph
+
+<table>
+<tr><th>buffer</th><th>logseq</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- para
+  - ««a
+    - b
+  - c»»
+```
+
+</td><td>
+
+```buffer
+- para
+- ««a»»
+  - b
+- c
+```
+
+</td><td>
+
+```buffer
+- para
+- ««a
+  - b
+- c»»
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+para
+- ««a
+  - b
+- c»»
+```
+
+</td><td>
+
+```buffer
+- para
+- ««a
+  - b
+- c»»
 ```
 
 </td></tr>
@@ -10623,7 +10780,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (593)
+## Skipped (594)
 
 | example | why |
 | --- | --- |
@@ -10881,6 +11038,7 @@ Original:
 | [Fold10](../spec/fold.md#fold10) | action fold ① |
 | [Fold13](../spec/fold.md#fold13) | its view, on an adapted start |
 | [Fold15b](../spec/fold.md#fold15b) | changes only what blocks can't show |
+| [Fold20](../spec/fold.md#fold20) | its view, on an adapted start |
 | **gaps.md** | |
 | [Gap15](../spec/gaps.md#gap15) | caret on a blank line |
 | [Gap16](../spec/gaps.md#gap16) | caret on a blank line |

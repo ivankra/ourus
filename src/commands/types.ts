@@ -1,7 +1,7 @@
 // The commands' API types: a command, the selection it acts on, and what it does.
 
 import type { OurusClipboard } from './clipboard.ts';
-import type { OurusDoc } from '../doc/index.ts';
+import type { OurusView } from '../view/index.ts';
 import type { ChangeSpec, OurusSelection } from '../text/index.ts';
 
 export type { OurusSelection };
@@ -25,8 +25,8 @@ export type OurusCommand =
   /**
    * A pickup (spec/drag.md): the nodes a drag takes, the places it can drop them, and their clipboard;
    * the document unchanged. `pressed`: the node whose mark was pressed, for the cover rule; else
-   * `nodes`, else the selection's. The view's folds and zoom are the document's (`OurusDoc.zoomFolded`,
-   * `OurusDoc.zoom`).
+   * `nodes`, else the selection's. The folds and zoom are the view's (`OurusView.zoomFolded`,
+   * `OurusView.zoom`).
    */
   | ({ readonly type: 'drag'; readonly pressed?: number } & Nodes)
   /** A drag from outside, carrying `clipboard`: the places it can be dropped, the document as it is. */
@@ -144,36 +144,71 @@ export type RejectReason =
   /** The writer failed: a layout it has no rule for, or a text written that doesn't read as the draft. A bug, never an outcome. */
   | 'write-failed';
 
-/** What `executeCommand` returns. */
-export type OurusCommandResult =
+/** What `executeCommand` gives: the command done, refused, or left to the host. Tell them apart with `instanceof`. */
+export type OurusResult = OurusSuccess | OurusRejected | OurusDeferred;
+
+/** The command done: the view after it, and what the host commits. */
+export class OurusSuccess {
+  /** The view after: the document after, the folds and zoom carried onto it. */
+  readonly view: OurusView;
+  /** The text's changes, in the input document's offsets: what the host applies to its editor. */
+  readonly changes: readonly ChangeSpec[];
+  /** The selection after, in the new text's offsets. */
+  readonly selection: OurusSelection;
+  /** Copy and cut: what the host writes to the clipboard, every format. */
+  readonly clipboard?: OurusClipboard;
+  /** A drop (`moveSubtree`, `pasteAt`): the topmost nodes it put in place, in document order, for a host that selects them. */
+  readonly placed?: readonly number[];
+  /** A pickup (`drag`): what it takes, and where it can drop it. */
+  readonly dropMap?: DropMap;
   /**
-   * `clipboard`: what the host writes to the clipboard, every format (copy and cut). `placed`: for a
-   * drop, the topmost nodes it put in place, in document order, for a host that selects them.
-   * `dropMap`: for a pickup (`drag`), what it takes and where it can drop it. `movedBlockIds`: the
-   * block ids it wrote on another node on purpose (a merge's node that stays taking the other's), by
-   * name, to the node's id; `mergedBlockIds`: those it dropped for the other's (`joinBlockIds:
-   * merge`), for a host that redirects the links to them. `removedNodes`: the nodes it removed on
-   * purpose, each with its subtree, by id (delete subtree, a cut of nodes): their block ids went with
-   * them. What else it did to block ids a host reads by comparing `blockIds()` before and after.
+   * The block ids it wrote on another node on purpose (a merge's node that stays taking the other's),
+   * by name, to the node's id. What else it did to block ids a host reads by comparing `blockIds()`
+   * before and after.
    */
-  | {
-      readonly status: 'applied';
-      readonly doc: OurusDoc;
-      readonly changes: readonly ChangeSpec[];
-      readonly selection: OurusSelection;
-      readonly clipboard?: OurusClipboard;
-      readonly placed?: readonly number[];
-      readonly dropMap?: DropMap;
-      readonly movedBlockIds?: readonly { readonly name: string; readonly to: number }[];
-      readonly mergedBlockIds?: readonly { readonly from: string; readonly into: string }[];
-      readonly removedNodes?: readonly number[];
-    }
-  | { readonly status: 'rejected'; readonly reason: RejectReason; readonly detail?: string }
-  /**
-   * Deferred to the host: ourus doesn't act on the key here, and the host runs its default behavior.
-   * `detail` says why, where ourus stepped aside from an edit in markup it would refuse (`markup: text`).
-   */
-  | { readonly status: 'deferredToHost'; readonly detail?: string };
+  readonly movedBlockIds?: readonly { readonly name: string; readonly to: number }[];
+  /** The block ids it dropped for the other's (`joinBlockIds: merge`), for a host that redirects links to them. */
+  readonly mergedBlockIds?: readonly { readonly from: string; readonly into: string }[];
+  /** The nodes it removed on purpose, each with its subtree, by id (`deleteSubtree`, a cut of nodes): their block ids went with them. */
+  readonly removedNodes?: readonly number[];
+
+  /** Its fields (another success spread to keep its own: `{ ...result, selection }`). */
+  constructor(fields: OurusSuccess) {
+    this.view = fields.view;
+    this.changes = fields.changes;
+    this.selection = fields.selection;
+    this.clipboard = fields.clipboard;
+    this.placed = fields.placed;
+    this.dropMap = fields.dropMap;
+    this.movedBlockIds = fields.movedBlockIds;
+    this.mergedBlockIds = fields.mergedBlockIds;
+    this.removedNodes = fields.removedNodes;
+  }
+}
+
+/** Refused: nothing changed. `reason` says why; `detail`, where there is one, how. */
+export class OurusRejected {
+  readonly reason: RejectReason;
+  readonly detail?: string;
+
+  constructor(reason: RejectReason, detail?: string) {
+    this.reason = reason;
+    this.detail = detail;
+  }
+}
+
+/**
+ * Left to the host: ourus doesn't act on the key here, and the host runs its own default. `detail`
+ * says why, where ourus stepped aside from an edit it would refuse (`markup: text`), or that ourus
+ * doesn't cover the case yet.
+ */
+export class OurusDeferred {
+  readonly detail?: string;
+
+  constructor(detail?: string) {
+    this.detail = detail;
+  }
+}
 
 export type { OurusClipboard };
 

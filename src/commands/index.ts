@@ -4,6 +4,7 @@
 // types.
 
 import { OurusProse, blockIdsOf, checkBlockIds, textEnd, type OurusDoc, type OurusText } from '../doc/index.ts';
+import type { OurusView } from '../view/index.ts';
 import { composeChanges, trimMd } from '../text/index.ts';
 import { CommandContext, blockIdsDeclaredBy } from './context.ts';
 import { addBlockIdCommand, pasteKeepingNewBlockIds, removeBlockIdCommand } from './block-ids.ts';
@@ -24,14 +25,17 @@ import { expandSelectionCommand, selectNodeByCommand, selectNodeCommand } from '
 import { mixedDepthsRun, reshaped, shapeOf } from './shape.ts';
 import { editSubtrees } from './subtrees.ts';
 import { shiftEnterCommand } from './shift-enter.ts';
-import type { OurusCommand, OurusCommandResult, OurusSelection } from './types.ts';
+import type { OurusCommand, OurusResult, OurusSelection } from './types.ts';
 import { insertTextCommand } from './typing.ts';
 import { clearZoomCommand, foldCommand, toggleFoldCommand, unfoldCommand, zoomInCommand, zoomOutCommand } from './view.ts';
 import { zoomed } from './zoom.ts';
+import { OurusDeferred, OurusRejected, OurusSuccess } from './types.ts';
 
-export type { OurusClipboard, OurusCommand, OurusCommandResult, DropMap, DropPoint, DropSeam, InsertionPoint, RejectReason, OurusSelection } from './types.ts';
+export { OurusSuccess, OurusRejected, OurusDeferred } from './types.ts';
+export type { OurusClipboard, OurusCommand, OurusResult, DropMap, DropPoint, DropSeam, InsertionPoint, RejectReason, OurusSelection } from './types.ts';
 export { nearestDropPoint } from './drag.ts';
 export { leavesZoom } from './zoom.ts';
+export { settlePlaceholders } from './settle.ts';
 
 /** The commands a host has a default for (an editor's key, its clipboard): where ourus doesn't do them, the host does. */
 const HOST_HAS: ReadonlySet<OurusCommand['type']> = new Set(['enter', 'shiftEnter', 'deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward', 'copy', 'cut', 'paste', 'pastePlain', 'insertText', 'deleteByDrag']);
@@ -41,12 +45,13 @@ const HOST_HAS: ReadonlySet<OurusCommand['type']> = new Set(['enter', 'shiftEnte
  * the commands don't cover), a key with a host's default is the host's; a structural command is
  * refused as `unsupported`.
  */
-export function executeCommand(doc: OurusDoc, command: OurusCommand, selection: OurusSelection): OurusCommandResult {
+export function executeCommand(view: OurusView, command: OurusCommand, selection: OurusSelection): OurusResult {
+  const doc = view.doc;
   const validPosition = (pos: number): boolean => Number.isInteger(pos) && pos >= 0 && pos <= doc.text.length;
-  if (!validPosition(selection.anchor) || !validPosition(selection.head)) return { status: 'rejected', reason: 'invalid-selection' };
+  if (!validPosition(selection.anchor) || !validPosition(selection.head)) return new OurusRejected('invalid-selection');
   // (a caret on a block-id line a text carries: its editing keys the host's under `markup: text`, else
   // at the end of the text)
-  const at = selection.anchor === selection.head && !BLOCK_ID_COMMANDS.has(command.type) ? doc.locate(selection.head) : null;
+  const at = selection.anchor === selection.head && !BLOCK_ID_COMMANDS.has(command.type) ? view.locate(selection.head) : null;
   // (or in a block id's name ending a text, or a paragraph of a quote read as an atom, or right after
   // it: before it, but its name the host's to edit under `markup: text`)
   // (a text that is only a block id has no end before it: `- ^x┃` is its end, Enter splitting after it)
@@ -59,8 +64,8 @@ export function executeCommand(doc: OurusDoc, command: OurusCommand, selection: 
   if (joined && at && 'node' in at) {
     const changes = [{ from: doc.posOf(at.node, joined.partFrom, 1), to: doc.posOf(at.node, joined.from, 1), insert: ' ' }];
     const caret = changes[0]!.from;
-    const applied: OurusCommandResult = { status: 'applied', doc: doc.update({ changes, caret }), changes, selection: { anchor: caret, head: caret } };
-    return keepsBlockIds(doc, command, selection, zoomed(doc, command, selection, () => applied));
+    const applied: OurusResult = new OurusSuccess({ view: view.update({ changes, caret }), changes, selection: { anchor: caret, head: caret } });
+    return keepsBlockIds(view, command, selection, zoomed(view, command, selection, () => applied));
   }
   // (under `markup: decorated`, past the blank before it too, which is the block id's to show)
   const past = (b: (typeof ids)[number]): number => (doc.config.markup === 'decorated' && !/\n/.test(named!.text.slice(b.partFrom, b.from)) ? b.partFrom : b.from);
@@ -74,33 +79,33 @@ export function executeCommand(doc: OurusDoc, command: OurusCommand, selection: 
   const line = at?.zone === 'blockIdLine' && !textLine ? at : inName && at && 'node' in at && 'text' in at ? { node: at.node, text: at.text, blank: true } : null;
   const end = !line ? -1 : name && inName ? doc.posOf(line.node, name.partFrom, -1) : doc.posOf(line.node, textEnd(line.text), -1);
   const acted = line ? { anchor: end, head: end } : selection;
-  const run = (): OurusCommandResult => {
+  const run = (): OurusResult => {
     // (but a key that would delete the line break at its start or end, joining it to another line: at
     // the end of the text, as any other key)
     const { from: lineFrom, to: lineTo } = doc.lineAt(selection.head);
     const joins = (command.type === 'deleteContentForward' && selection.head === lineTo) || ((command.type === 'deleteContentBackward' || command.type === 'deleteSoftLineBackward') && selection.head === lineFrom);
-    if (line && doc.config.markup === 'text' && EDITS_TEXT.has(command.type) && !line.blank && !joins) return { status: 'deferredToHost', detail: 'the caret is in a block-id line, markup the host edits as text' };
-    const result = execute(doc, command, acted) ?? (HOST_HAS.has(command.type) ? { status: 'deferredToHost', detail: "ourus doesn't do it here yet" } : { status: 'rejected', reason: 'unsupported' });
+    if (line && doc.config.markup === 'text' && EDITS_TEXT.has(command.type) && !line.blank && !joins) return new OurusDeferred('the caret is in a block-id line, markup the host edits as text');
+    const result = execute(view, command, acted) ?? (HOST_HAS.has(command.type) ? new OurusDeferred("ourus doesn't do it here yet") : new OurusRejected('unsupported'));
     // (acting at the text's end, a key the host's there: the host's caret is on the block-id line
     // still, so what it would insert is inserted here, at the text's end; any other key refused)
-    if (!line || result.status !== 'deferredToHost') return result;
+    if (!line || !(result instanceof OurusDeferred)) return result;
     const inserted = command.type === 'insertText' || command.type === 'pastePlain' ? command.text : command.type === 'paste' ? command.clipboard['text/plain'] : undefined;
     // (Backspace in or after a block id ending a text, the character before it: a code point, not
     // half of one; not on a block-id line, which the text's end is lines above)
     const before = inName && command.type === 'deleteContentBackward' && end > 0 && doc.text[end - 1] !== '\n' ? [...doc.text.slice(Math.max(0, end - 2), end)].pop()!.length : 0;
-    if (inserted === undefined && !before) return { status: 'rejected', reason: 'not-expressible', detail: "the caret is on a block-id line, and the key's default would edit it: it acts at the end of the text" };
+    if (inserted === undefined && !before) return new OurusRejected('not-expressible', "the caret is on a block-id line, and the key's default would edit it: it acts at the end of the text");
     // (and the blank before a block id ending the text, where none of the text is left: `- ┃^x`)
     const id = name && before > 0 && trimMd(head(line.text, name.partFrom - before)) === '' ? name.from : null;
     const changes = [{ from: end - before, to: id !== null ? doc.posOf(line.node, id, 1) : end, insert: inserted ?? '' }];
     const caret = end - before + (inserted ?? '').length;
-    return { status: 'applied', doc: doc.update({ changes, caret }), changes, selection: { anchor: caret, head: caret } };
+    return new OurusSuccess({ view: view.update({ changes, caret }), changes, selection: { anchor: caret, head: caret } });
   };
   // within the snapshot's view: confined to its zoom, its selection out of what it hides (a deferral
   // where ourus doesn't do it yet included: at the zoom root's edges it would reach outside; one on a
   // block-id line too, judged by the selection as given)
-  const result = zoomed(doc, command, selection, run);
-  if (result.status === 'deferredToHost') return hostKeepsBlockIds(doc, command, selection, result);
-  return keepsBlockIds(doc, command, acted, result);
+  const result = zoomed(view, command, selection, run);
+  if (result instanceof OurusDeferred) return hostKeepsBlockIds(view, command, selection, result);
+  return keepsBlockIds(view, command, acted, result);
 }
 
 /**
@@ -109,7 +114,8 @@ export function executeCommand(doc: OurusDoc, command: OurusCommand, selection: 
  * another or nothing, glued to the text, or shadowed. But under `markup: text`, of an edit inside a
  * block id's own markup, that block id: it is text the user edits there.
  */
-function hostKeepsBlockIds(doc: OurusDoc, command: OurusCommand, selection: OurusSelection, result: OurusCommandResult): OurusCommandResult {
+function hostKeepsBlockIds(view: OurusView, command: OurusCommand, selection: OurusSelection, result: OurusResult): OurusResult {
+  const doc = view.doc;
   if (!doc.config.flavor || !doc.mdTree.flavor.has('blockIds')) return result;
   const edit = hostEdit(doc.text, command, selection);
   // (a note without block ids pays nothing, but for an edit that brings some in)
@@ -122,37 +128,37 @@ function hostKeepsBlockIds(doc: OurusDoc, command: OurusCommand, selection: Ouru
   const after = doc.update({ changes: [edit] });
   const from = Math.min(selection.anchor, selection.head);
   const to = Math.max(selection.anchor, selection.head);
-  const taken = takenBy(doc, from, to);
+  const taken = takenBy(view, from, to);
   const loss = checkBlockIds(doc, after, [edit], { taken, edited: edited && { from: edited.partFrom, to: edited.partTo } });
   if (!loss) return result;
   // (a paste whose block ids the host would write twice: the host's paste done here, those it
   // brings kept only where new, as a paste keeps them)
   if (command.type === 'paste' || command.type === 'pastePlain') {
-    const own = pasteKeepingNewBlockIds(new CommandContext(doc, selection), command, (marked) => {
+    const own = pasteKeepingNewBlockIds(new CommandContext(view, selection), command, (marked) => {
       const typed = hostEdit(doc.text, marked, selection)!;
       const caret = typed.from + typed.insert.length;
-      return { status: 'applied', doc: doc.update({ changes: [typed] }), changes: [typed], selection: { anchor: caret, head: caret } };
+      return new OurusSuccess({ view: view.update({ changes: [typed] }), changes: [typed], selection: { anchor: caret, head: caret } });
     });
     // (ourus's own result: every block id kept, the one in whose markup it is too)
-    if (own?.status === 'applied' && !checkBlockIds(doc, own.doc, own.changes, { taken })) return own;
+    if (own instanceof OurusSuccess && !checkBlockIds(doc, own.view.doc, own.changes, { taken })) return own;
   }
   // (typing over a selection across nodes, whose first keeps its block id: ourus's deletion, which
   // keeps it, and what is typed at the caret it leaves)
   if (command.type === 'insertText' && taken && taken.from > from) {
-    const deleted = deleteSelected(new CommandContext(doc, selection));
-    if (deleted?.status === 'applied') {
+    const deleted = deleteSelected(new CommandContext(view, selection));
+    if (deleted instanceof OurusSuccess) {
       const at = deleted.selection.head;
-      const key = insertTextCommand(new CommandContext(deleted.doc, deleted.selection), command.text);
+      const key = insertTextCommand(new CommandContext(deleted.view, deleted.selection), command.text);
       // (where ourus leaves the key to the host there, typed as the host types it)
       const raw = [{ from: at, to: at, insert: command.text }];
-      const typed = key?.status === 'applied' ? key : key?.status === 'deferredToHost' ? { doc: deleted.doc.update({ changes: raw }), changes: raw, selection: { anchor: at + command.text.length, head: at + command.text.length } } : null;
+      const typed = key instanceof OurusSuccess ? key : key instanceof OurusDeferred ? { view: deleted.view.update({ changes: raw }), changes: raw, selection: { anchor: at + command.text.length, head: at + command.text.length } } : null;
       if (typed) {
-        const own: OurusCommandResult = { status: 'applied', ...blockIdsDeclaredBy([deleted, ...(key?.status === 'applied' ? [key] : [])]), doc: typed.doc, changes: composeChanges(doc.text, deleted.changes, typed.changes), selection: typed.selection };
-        if (!checkBlockIds(doc, own.doc, own.changes, { taken, declared: { moved: own.movedBlockIds ?? [], merged: own.mergedBlockIds ?? [] } })) return own;
+        const own: OurusResult = new OurusSuccess({ ...blockIdsDeclaredBy([deleted, ...(key instanceof OurusSuccess ? [key] : [])]), view: typed.view, changes: composeChanges(doc.text, deleted.changes, typed.changes), selection: typed.selection });
+        if (!checkBlockIds(doc, own.view.doc, own.changes, { taken, declared: { moved: own.movedBlockIds ?? [], merged: own.mergedBlockIds ?? [] } })) return own;
       }
     }
   }
-  return { status: 'rejected', reason: 'block-id', detail: `the host's edit here: ${loss}` };
+  return new OurusRejected('block-id', `the host's edit here: ${loss}`);
 }
 
 /**
@@ -161,10 +167,11 @@ function hostKeepsBlockIds(doc: OurusDoc, command: OurusCommand, selection: Ouru
  * selection covers it; a subtree selection, and the whole document replaced as text
  * (`editSubtrees`), all of it; null for a caret.
  */
-function takenBy(doc: OurusDoc, from: number, to: number): { from: number; to: number } | null {
+function takenBy(view: OurusView, from: number, to: number): { from: number; to: number } | null {
+  const doc = view.doc;
   if (from >= to) return null;
   // (a subtree selection, whose nodes go whole, and the whole document, replaced as text: all of it)
-  if ((from === 0 && to === doc.text.length) || doc.selectedNodes({ anchor: from, head: to })) return { from, to };
+  if ((from === 0 && to === doc.text.length) || view.selectedSubtrees({ anchor: from, head: to })) return { from, to };
   const first = doc.nodeAtLine(doc.lineAt(from).index);
   if (!first || first === doc.nodeAtLine(doc.lineAt(to).index)) return { from, to };
   return { from: Math.max(from, Math.min(to, doc.mdTree.line(first.ownLastLine).to)), to };
@@ -206,21 +213,22 @@ const BLOCK_ID_COMMANDS: ReadonlySet<OurusCommand['type']> = new Set(['addBlockI
  * (`movedBlockIds`, `mergedBlockIds`), one inside the text it took, and one gone with a node it
  * removed (`removedNodes`).
  */
-function keepsBlockIds(doc: OurusDoc, command: OurusCommand, selection: OurusSelection, result: OurusCommandResult): OurusCommandResult {
-  if (result.status !== 'applied' || BLOCK_ID_COMMANDS.has(command.type)) return result;
+function keepsBlockIds(view: OurusView, command: OurusCommand, selection: OurusSelection, result: OurusResult): OurusResult {
+  const doc = view.doc;
+  if (!(result instanceof OurusSuccess) || BLOCK_ID_COMMANDS.has(command.type)) return result;
   // (a note without block ids, before and after, pays nothing)
-  if (!doc.text.includes('^') && !result.doc.text.includes('^')) return result;
+  if (!doc.text.includes('^') && !result.view.doc.text.includes('^')) return result;
   const from = Math.min(selection.anchor, selection.head);
   const to = Math.max(selection.anchor, selection.head);
-  const taken = TAKES_SELECTION.has(command.type) ? takenBy(doc, from, to) : null;
+  const taken = TAKES_SELECTION.has(command.type) ? takenBy(view, from, to) : null;
   const declared = { moved: result.movedBlockIds ?? [], merged: result.mergedBlockIds ?? [] };
-  const loss = checkBlockIds(doc, result.doc, result.changes, { declared, taken, removed: result.removedNodes ?? [] });
-  return loss ? { status: 'rejected', reason: 'block-id', detail: loss } : result;
+  const loss = checkBlockIds(doc, result.view.doc, result.changes, { declared, taken, removed: result.removedNodes ?? [] });
+  return loss ? new OurusRejected('block-id', loss) : result;
 }
 
 /** The command, or null where ourus doesn't do it yet. */
-function execute(doc: OurusDoc, command: OurusCommand, selection: OurusSelection): OurusCommandResult | null {
-  const ctx = new CommandContext(doc, selection, 'nodes' in command ? command.nodes : undefined);
+function execute(view: OurusView, command: OurusCommand, selection: OurusSelection): OurusResult | null {
+  const ctx = new CommandContext(view, selection, 'nodes' in command ? command.nodes : undefined);
   // the keys that edit text, over a subtree selection: over its nodes
   // (a paste over them too: the block ids it brings kept where new, read where they landed)
   const routed = command.type === 'paste' || command.type === 'pastePlain' ? pasteKeepingNewBlockIds(ctx, command, (marked) => editSubtrees(ctx, marked)) : editSubtrees(ctx, command);
@@ -232,22 +240,22 @@ function execute(doc: OurusDoc, command: OurusCommand, selection: OurusSelection
       return duplicateSubtreeCommand(ctx);
     // (the selection after them follows the nodes, in the shape it was given)
     case 'indent':
-      return reshaped(mixedDepthsRun(ctx, indentCommand) ?? indentCommand(ctx), shapeOf(doc, selection));
+      return reshaped(mixedDepthsRun(ctx, indentCommand) ?? indentCommand(ctx), shapeOf(view, selection));
     case 'outdent':
-      return reshaped(mixedDepthsRun(ctx, outdentCommand) ?? outdentCommand(ctx), shapeOf(doc, selection));
+      return reshaped(mixedDepthsRun(ctx, outdentCommand) ?? outdentCommand(ctx), shapeOf(view, selection));
     case 'moveSubtreeUp':
-      return reshaped(moveSubtreeUpCommand(ctx), shapeOf(doc, selection));
+      return reshaped(moveSubtreeUpCommand(ctx), shapeOf(view, selection));
     case 'moveSubtreeDown':
-      return reshaped(moveSubtreeDownCommand(ctx), shapeOf(doc, selection));
+      return reshaped(moveSubtreeDownCommand(ctx), shapeOf(view, selection));
     case 'drag':
       return dragCommand(ctx, command);
     case 'moveSubtree':
-      return reshaped(moveSubtreeCommand(ctx, command.to), shapeOf(doc, selection));
+      return reshaped(moveSubtreeCommand(ctx, command.to), shapeOf(view, selection));
     case 'pasteAt':
       return pasteAtCommand(ctx, command.clipboard, command.at);
     // (a drag of no text deletes none)
     case 'deleteByDrag':
-      return ctx.collapsed ? { status: 'applied', doc, changes: [], selection } : deleteSelected(ctx);
+      return ctx.collapsed ? new OurusSuccess({ view, changes: [], selection }) : deleteSelected(ctx);
     case 'shiftEnter':
       return shiftEnterCommand(ctx);
     case 'enter':

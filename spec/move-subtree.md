@@ -200,7 +200,7 @@ tags: edge
 > moveSubtree ②
 
 ```yaml
-result: applied
+result: success
 ```
 
 ```buffer
@@ -227,7 +227,7 @@ tags: core
 > moveSubtree ②
 
 ```yaml
-result: applied
+result: success
 ```
 
 ```buffer

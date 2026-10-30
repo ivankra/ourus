@@ -436,7 +436,7 @@ dropPoints: |
 > moveSubtree ②
 
 ```yaml
-result: applied
+result: success
 ```
 
 ```buffer
@@ -800,7 +800,7 @@ tags: common
 ```
 
 ```yaml
-result: applied
+result: success
 ```
 
 > undo

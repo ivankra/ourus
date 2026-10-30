@@ -1,8 +1,8 @@
 // A minimal CodeMirror 6 outliner on top of ourus.
 //
-// The ourus snapshot lives in a StateField. Structural keys run ourus commands and dispatch
-// the changes they return, with the planned snapshot attached so it isn't parsed again.
-// Every other edit (typing, paste, undo) goes through OurusDoc.update, with the caret, so an edit that
+// The ourus view (its document, folds and zoom) lives in a StateField. Structural keys run ourus
+// commands and dispatch the changes they return, with the planned view attached so it isn't parsed
+// again. Every other edit (typing, paste, undo) goes through OurusView.update, with the caret, so an edit that
 // empties a node keeps it as a placeholder. The history keeps each step's placeholders, and the
 // snapshot it left, so undo and redo bring them back, and its nodes: an undone move keeps its fold.
 //
@@ -41,17 +41,17 @@ import './hljs.css';
 import 'katex/dist/katex.min.css';
 import { Mirror } from './mirror.ts';
 import { outlineView } from './view.ts';
-import { OurusProse, OurusDoc, createPlaceholder, executeCommand, mapPos, settlePlaceholders, type OurusConfig, type ChangeSpec, type OurusCommand, type OurusNode, type OurusCommandResult } from '../../src/index.ts';
+import { OurusProse, OurusDoc, OurusView, createPlaceholder, executeCommand, mapPos, settlePlaceholders, type OurusConfig, type ChangeSpec, type OurusCommand, type OurusNode, type OurusResult, OurusDeferred, OurusRejected, OurusSuccess } from '../../src/index.ts';
 
 type Flavor = OurusConfig['flavor'];
 
 /** The flavor a new editor reads its text in; the header's select changes it. */
 let initialFlavor: Flavor = 'obsidian';
 
-/** The snapshot an ourus command planned, attached to the transaction that applies it. */
-const planned = Annotation.define<OurusDoc>();
-/** Replaces the snapshot outright (settling placeholders can change no text at all). */
-const setDoc = StateEffect.define<OurusDoc>();
+/** The view an ourus command planned, attached to the transaction that applies it. */
+const planned = Annotation.define<OurusView>();
+/** Replaces the view outright (settling placeholders can change no text at all). */
+const setView = StateEffect.define<OurusView>();
 /** The placeholders a step of history returns to (positions in the text after the step), mapped along later edits. */
 const setPlaceholders = StateEffect.define<readonly number[]>({ map: (value, mapping) => value.map((pos) => mapping.mapPos(pos, 1)) });
 /** The snapshot a step of history returns to, whose nodes (ids and all) it takes back where its text is the one returned to. */
@@ -67,46 +67,49 @@ function lastOf<T>(tr: Transaction, type: StateEffectType<T>): T | undefined {
   return value;
 }
 
-const ourusDoc = StateField.define<OurusDoc>({
-  create: (state) => OurusDoc.parse(state.doc.toString(), { config: { flavor: initialFlavor } }),
-  update(doc, tr) {
-    for (const e of tr.effects) if (e.is(setDoc)) return e.value;
+/** The ourus view of the editor's text: its document, folds and zoom. */
+const ourus = StateField.define<OurusView>({
+  create: (state) => OurusView.of(OurusDoc.parse(state.doc.toString(), { config: { flavor: initialFlavor } })),
+  update(view, tr) {
+    for (const e of tr.effects) if (e.is(setView)) return e.value;
+    const doc = view.doc;
     // (a step of history that grouped several edits has each one's effects, the latest edit's first:
     // the state it returns to is the earliest's, the last)
     const restored = lastOf(tr, setPlaceholders);
-    if (!tr.docChanged) return restored ? doc.update(marksAt(doc.text, restored)) : doc;
-    const next = tr.annotation(planned);
+    // the view an ourus command planned, its text the one committed: taken whether or not the text
+    // changed (a move past an item written the same changes no character, its nodes' order alone);
     // another extension may have added changes to the transaction: then parse what committed
-    if (!restored && next && next.text.length === tr.newDoc.length && next.text === tr.newDoc.toString()) return next;
+    const next = tr.annotation(planned);
+    if (!restored && next && next.doc.text.length === tr.newDoc.length && next.doc.text === tr.newDoc.toString()) return next;
+    if (!tr.docChanged) return restored ? view.update(marksAt(doc.text, restored)) : view;
     const changes: ChangeSpec[] = [];
     tr.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => changes.push({ from: fromA, to: toA, insert: inserted.toString() }));
     // undo and redo restore the placeholders of the state they return to, and its nodes: an undone
-    // move's node is the one it was, its fold kept (`withViewOf`)
+    // move's node is the one it was, its fold kept (`withDoc`)
     const like = lastOf(tr, returnTo);
-    if (restored && like && like.text === tr.newDoc.toString() && like.isSameLineage(doc)) return like.withConfig(doc.config).withViewOf(doc);
-    if (restored) return doc.update({ changes, ...marksAt(tr.newDoc.toString(), restored) });
+    if (restored && like && like.text === tr.newDoc.toString() && like.isSameLineage(doc)) return view.withDoc(like.withConfig(doc.config));
+    if (restored) return view.update({ changes, ...marksAt(tr.newDoc.toString(), restored) });
     const caret = tr.newSelection.main;
-    return doc.update({ changes, caret: caret.empty ? caret.head : undefined });
+    return view.update({ changes, caret: caret.empty ? caret.head : undefined });
   },
 });
 
 /** Each step of history keeps the placeholders it replaced, and the snapshot it left, so undoing it brings them back. */
-const placeholderHistory = invertedEffects.of((tr) => (tr.docChanged ? [setPlaceholders.of(tr.startState.field(ourusDoc).marks.points()), returnTo.of(tr.startState.field(ourusDoc))] : []));
+const placeholderHistory = invertedEffects.of((tr) => (tr.docChanged ? [setPlaceholders.of(tr.startState.field(ourus).doc.marks.points()), returnTo.of(tr.startState.field(ourus).doc)] : []));
 
-let onResult: (type: OurusCommand['type'], result: OurusCommandResult) => void = () => {};
+let onResult: (type: OurusCommand['type'], result: OurusResult) => void = () => {};
 
 function command(type: OurusCommand['type']) {
   return (view: EditorView): boolean => {
-    const doc = view.state.field(ourusDoc);
     const { anchor, head } = view.state.selection.main;
-    const result = executeCommand(doc, { type } as OurusCommand, { anchor, head });
+    const result = executeCommand(view.state.field(ourus), { type } as OurusCommand, { anchor, head });
     onResult(type, result);
-    if (result.status === 'deferredToHost') return false; // let CodeMirror do its default
-    if (result.status === 'rejected') return true; // swallow the key; the status bar says why
+    if (result instanceof OurusDeferred) return false; // let CodeMirror do its default
+    if (result instanceof OurusRejected) return true; // swallow the key; the status bar says why
     view.dispatch({
       changes: [...result.changes],
       selection: result.selection,
-      annotations: [planned.of(result.doc), Transaction.userEvent.of(`ourus.${type}`)],
+      annotations: [planned.of(result.view), Transaction.userEvent.of(`ourus.${type}`)],
       scrollIntoView: true,
     });
     return true;
@@ -122,14 +125,14 @@ const typingHandler = EditorView.inputHandler.of((view, from, to, text) => {
   // input that replaces another range than the selection (a text replacement) is CodeMirror's
   const { anchor, head } = view.state.selection.main;
   if (from !== Math.min(anchor, head) || to !== Math.max(anchor, head)) return false;
-  const result = executeCommand(view.state.field(ourusDoc), { type: 'insertText', text }, { anchor, head });
-  if (result.status === 'deferredToHost') return false;
+  const result = executeCommand(view.state.field(ourus), { type: 'insertText', text }, { anchor, head });
+  if (result instanceof OurusDeferred) return false;
   onResult('insertText', result);
-  if (result.status === 'applied') {
+  if (result instanceof OurusSuccess) {
     view.dispatch({
       changes: [...result.changes],
       selection: result.selection,
-      annotations: [planned.of(result.doc), Transaction.userEvent.of('ourus.insertText')],
+      annotations: [planned.of(result.view), Transaction.userEvent.of('ourus.insertText')],
       scrollIntoView: true,
     });
   }
@@ -147,17 +150,17 @@ function copyOrCut(type: 'copy' | 'cut', event: ClipboardEvent, view: EditorView
   const data = event.clipboardData;
   if (!data) return false;
   const { anchor, head } = view.state.selection.main;
-  const result = executeCommand(view.state.field(ourusDoc), { type }, { anchor, head });
+  const result = executeCommand(view.state.field(ourus), { type }, { anchor, head });
   onResult(type, result);
-  if (result.status === 'deferredToHost') return false;
+  if (result instanceof OurusDeferred) return false;
   event.preventDefault();
-  if (result.status !== 'applied') return true;
+  if (!(result instanceof OurusSuccess)) return true;
   for (const [format, text] of Object.entries(result.clipboard ?? {})) data.setData(format, text);
   if (type === 'cut') {
     view.dispatch({
       changes: [...result.changes],
       selection: result.selection,
-      annotations: [planned.of(result.doc), Transaction.userEvent.of('ourus.cut')],
+      annotations: [planned.of(result.view), Transaction.userEvent.of('ourus.cut')],
       scrollIntoView: true,
     });
   }
@@ -185,15 +188,15 @@ const pasteHandler = EditorView.domEventHandlers({
     if (!data || (!text && !(type === 'paste' && (data.types.includes('text/html') || data.types.includes('text/markdown'))))) return false;
     const clipboard = Object.fromEntries(['text/plain', 'text/markdown', 'text/html', 'vscode-editor-data'].flatMap((t) => (data.types.includes(t) ? [[t, data.getData(t)]] : [])));
     const { anchor, head } = view.state.selection.main;
-    const result = executeCommand(view.state.field(ourusDoc), type === 'paste' ? { type, clipboard } : { type, text }, { anchor, head });
+    const result = executeCommand(view.state.field(ourus), type === 'paste' ? { type, clipboard } : { type, text }, { anchor, head });
     onResult(type, result);
-    if (result.status === 'deferredToHost') return false;
+    if (result instanceof OurusDeferred) return false;
     event.preventDefault();
-    if (result.status === 'applied') {
+    if (result instanceof OurusSuccess) {
       view.dispatch({
         changes: [...result.changes],
         selection: result.selection,
-        annotations: [planned.of(result.doc), Transaction.userEvent.of(`ourus.${type}`)],
+        annotations: [planned.of(result.view), Transaction.userEvent.of(`ourus.${type}`)],
         scrollIntoView: true,
       });
     }
@@ -206,7 +209,7 @@ function home(extend: boolean) {
   return (view: EditorView): boolean => {
     const range = view.state.selection.main;
     const line = view.state.doc.lineAt(range.head);
-    const doc = view.state.field(ourusDoc);
+    const doc = view.state.field(ourus).doc;
     // (past a final line ending, the empty last line, which ourus's lines end before)
     const own = doc.lineAt(range.head);
     const start = range.head > own.to ? line.from : doc.textStart(own.index);
@@ -230,7 +233,7 @@ function vertical(motion: (view: EditorView) => boolean) {
   return (view: EditorView): boolean => {
     if (!motion(view)) return false;
     const { state } = view;
-    const doc = state.field(ourusDoc);
+    const doc = state.field(ourus).doc;
     const ranges = state.selection.ranges.map((range) => {
       const own = doc.lineAt(range.head);
       const start = range.head > own.to ? range.head : doc.textStart(own.index);
@@ -254,7 +257,7 @@ function selectByNode(dir: 1 | -1) {
   const run = command(dir > 0 ? 'selectNodeDown' : 'selectNodeUp');
   return (view: EditorView): boolean => {
     const range = view.state.selection.main;
-    if (!view.state.field(ourusDoc).selectedSubtrees(range)) {
+    if (!view.state.field(ourus).selectedSubtrees(range)) {
       const line = view.state.doc.lineAt(range.head);
       const rowEdge = view.moveToLineBoundary(range, dir > 0, true).head;
       if (dir > 0 ? rowEdge < line.to : rowEdge > line.from) return native(view);
@@ -287,15 +290,15 @@ const outlinerKeymap = Prec.highest(
  * (`rangeOf`) drawn as blocks, the native highlight hidden (`ourus-blocks` on the editor).
  */
 const blockSelection = [
-  EditorView.decorations.compute([ourusDoc, 'selection'], (state) => {
-    const doc = state.field(ourusDoc);
-    const roots = doc.selectedNodes(state.selection.main);
+  EditorView.decorations.compute([ourus, 'selection'], (state) => {
+    const doc = state.field(ourus).doc;
+    const roots = state.field(ourus).selectedSubtrees(state.selection.main);
     if (!roots) return Decoration.none;
     const builder = new RangeSetBuilder<Decoration>();
     for (const root of roots) for (let l = root.startLine; l <= root.endLine; l++) builder.add(doc.mdTree.starts[l]!, doc.mdTree.starts[l]!, Decoration.line({ class: 'ourus-block' }));
     return builder.finish();
   }),
-  EditorView.editorAttributes.compute([ourusDoc, 'selection'], (state): Record<string, string> => (state.field(ourusDoc).selectedNodes(state.selection.main) ? { class: 'ourus-blocks' } : {})),
+  EditorView.editorAttributes.compute([ourus, 'selection'], (state): Record<string, string> => (state.field(ourus).selectedSubtrees(state.selection.main) ? { class: 'ourus-blocks' } : {})),
 ];
 
 /**
@@ -308,16 +311,17 @@ const escalateDrags = EditorState.transactionFilter.of((tr) => {
   if (!tr.isUserEvent('select.pointer') || tr.docChanged) return tr;
   const sel = tr.newSelection.main;
   if (sel.empty) return tr;
-  const doc = tr.startState.field(ourusDoc);
+  const ourusView = tr.startState.field(ourus);
+  const doc = ourusView.doc;
   const where = (pos: number): unknown => {
     const line = doc.lineAt(pos);
-    const at = doc.locate(pos === line.from && pos > 0 && pos === sel.to ? pos - 1 : pos);
+    const at = ourusView.locate(pos === line.from && pos > 0 && pos === sel.to ? pos - 1 : pos);
     return at.zone === 'gap' ? 'gap' : 'node' in at ? at.node.persistentNode : at.zone;
   };
   const [a, b] = [where(sel.from), where(sel.to)];
   if (a === b && a !== 'gap') return tr;
   try {
-    const cover = doc.selectionOf(doc.touchedSubtrees(sel));
+    const cover = ourusView.selectionOf(ourusView.touchedSubtrees(sel));
     const [from, to] = [Math.min(sel.from, cover.anchor), Math.max(sel.to, cover.head)];
     return [tr, { selection: sel.head < sel.anchor ? EditorSelection.single(to, from) : EditorSelection.single(from, to), sequential: true }];
   } catch {
@@ -333,10 +337,10 @@ const currentNode = ViewPlugin.fromClass(
       this.decorations = this.build(view);
     }
     update(u: ViewUpdate) {
-      if (u.docChanged || u.selectionSet || u.startState.field(ourusDoc) !== u.state.field(ourusDoc)) this.decorations = this.build(u.view);
+      if (u.docChanged || u.selectionSet || u.startState.field(ourus) !== u.state.field(ourus)) this.decorations = this.build(u.view);
     }
     build(view: EditorView): DecorationSet {
-      const doc = view.state.field(ourusDoc);
+      const doc = view.state.field(ourus).doc;
       const node = nodeAt(doc, view.state.selection.main.head);
       const builder = new RangeSetBuilder<Decoration>();
       if (!node) return builder.finish();
@@ -616,13 +620,13 @@ function main(): void {
   // CodeMirror (most typing), which hides the last one
   let hideStatus = 0;
   onResult = (type, result) => {
-    status.className = result.status;
+    status.className = result instanceof OurusSuccess ? 'success' : result instanceof OurusRejected ? 'rejected' : 'deferred';
     status.textContent =
-      result.status === 'rejected'
+      result instanceof OurusRejected
         ? `${type}: rejected — ${result.reason}${result.detail && result.reason !== 'write-failed' ? ` (${result.detail.replace(/\.$/, '')})` : ''}`
-        : `${type}: ${result.status === 'applied' ? 'applied' : 'not applicable (editor default)'}`;
+        : `${type}: ${result instanceof OurusSuccess ? 'success' : 'not applicable (editor default)'}`;
     clearTimeout(hideStatus);
-    if (result.status === 'deferredToHost') return;
+    if (result instanceof OurusDeferred) return;
     status.classList.add('shown');
     hideStatus = window.setTimeout(() => status.classList.remove('shown'), 3000);
   };
@@ -633,8 +637,8 @@ function main(): void {
   const refresh = (view: EditorView) => {
     cancelAnimationFrame(frame);
     frame = requestAnimationFrame(() => {
-      const doc = view.state.field(ourusDoc);
-      renderOutline(panel, doc, nodeAt(doc, view.state.selection.main.head), doc.selectedNodes(view.state.selection.main));
+      const doc = view.state.field(ourus).doc;
+      renderOutline(panel, doc, nodeAt(doc, view.state.selection.main.head), view.state.field(ourus).selectedSubtrees(view.state.selection.main));
       stats.textContent = `${doc.lineCount} lines · ${countNodes(doc.rootNode)} nodes · ${FLAVOR_NAMES[doc.config.flavor]}`;
       // the renderer 'none': the pane hidden, nothing rendered
       previewPane.hidden = rendererSelect.value === 'none';
@@ -668,8 +672,8 @@ function main(): void {
         pasteHandler,
         basicSetup,
         markdown({ base: markdownLanguage }),
-        ourusDoc,
-        outlineView({ field: ourusDoc, setDoc, planned }),
+        ourus,
+        outlineView({ field: ourus, setView, planned }),
         placeholderHistory,
         currentNode,
         blockSelection,
@@ -686,7 +690,7 @@ function main(): void {
             const left = u.startState.selection.main;
             queueMicrotask(() => {
               if (u.view.state !== state) return;
-              const r = settlePlaceholders(state.field(ourusDoc), state.selection.main.head);
+              const r = settlePlaceholders(state.field(ourus), state.selection.main.head);
               if (!r) return;
               const to = state.selection.main;
               // the spec joins this edit to the step before it (undo.md's Undo3); CodeMirror's history
@@ -698,7 +702,7 @@ function main(): void {
               u.view.dispatch({
                 changes: r.changes,
                 selection: EditorSelection.range(mapPos(r.changes, to.anchor), mapPos(r.changes, to.head)),
-                effects: setDoc.of(r.doc),
+                effects: setView.of(r.view),
                 annotations: Transaction.userEvent.of('ourus.settle'),
               });
             });
@@ -718,8 +722,8 @@ function main(): void {
   // the flavor: the text read again, keeping its placeholders, and its folds and zoom by line (node ids start over)
   flavorSelect.addEventListener('change', () => {
     initialFlavor = flavorSelect.value as Flavor;
-    const next = view.state.field(ourusDoc).withConfig({ flavor: initialFlavor });
-    view.dispatch({ effects: setDoc.of(next) });
+    const next = view.state.field(ourus).withConfig({ flavor: initialFlavor });
+    view.dispatch({ effects: setView.of(next) });
     refresh(view);
     view.focus();
   });
@@ -777,9 +781,10 @@ function main(): void {
     // a new document: no folds, no zoom, as a reload has
     setText: (text: string, caret = 0) => {
       view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text }, selection: { anchor: caret } });
-      view.dispatch({ effects: setDoc.of(view.state.field(ourusDoc).withFolded([]).withZoom(null)) });
+      view.dispatch({ effects: setView.of(OurusView.of(view.state.field(ourus).doc)) });
     },
-    doc: () => view.state.field(ourusDoc),
+    doc: () => view.state.field(ourus).doc,
+    ourus: () => view.state.field(ourus),
   };
   view.focus();
 }

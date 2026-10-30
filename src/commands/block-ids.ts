@@ -5,16 +5,18 @@
 // node); its menu of corrections is its own. And the block ids a paste keeps: only the new ones.
 
 import { OurusDoc, OurusProse, blockIdTargetOf, blockIdsOf, checkBlockIds, closingFrameStart, isBlockIdName, withoutBlockIds, type BlockId, type OurusNode } from '../doc/index.ts';
+import type { OurusView } from '../view/index.ts';
 import { MD_BLOCK_ID_NAME } from '../parser/index.ts';
 import { composeChanges, mapPos, trimMd, type ChangeSpec } from '../text/index.ts';
 import { OurusDraft } from '../writer/index.ts';
 import { clipboardMarkdown } from './clipboard.ts';
-import { reject, type CommandContext, type CommandOutcome } from './context.ts';
-import type { OurusCommand } from './types.ts';
+import { type CommandContext } from './context.ts';
+import type { OurusCommand, OurusResult } from './types.ts';
+import { OurusRejected, OurusSuccess } from './types.ts';
 
 /** The node at `pos`: its text's, its block-id line's, a gap's owner. */
-function nodeAt(doc: OurusDoc, pos: number): OurusNode | null {
-  const at = doc.locate(pos);
+function nodeAt(view: OurusView, pos: number): OurusNode | null {
+  const at = view.locate(pos);
   if (at.zone === 'gap') return at.owner;
   return 'node' in at ? at.node : null;
 }
@@ -41,33 +43,34 @@ function madeUpName(doc: OurusDoc): string {
  * names it (a second would shadow one of them: a link to it would find nothing), or the note has
  * `name`.
  */
-export function addBlockIdCommand(ctx: CommandContext, name: string | undefined, id: number | undefined): CommandOutcome {
+export function addBlockIdCommand(ctx: CommandContext, name: string | undefined, id: number | undefined): OurusResult | null {
   const doc = ctx.doc;
-  if (!doc.mdTree.flavor.has('blockIds')) return reject('not-expressible', 'the flavor has no block ids');
-  const node = id !== undefined ? (doc.node(id) ?? null) : nodeAt(doc, ctx.selection.head);
-  if (id !== undefined && !node) return reject('no-such-node', `no node ${id}`);
+  const view = ctx.view;
+  if (!doc.mdTree.flavor.has('blockIds')) return new OurusRejected('not-expressible', 'the flavor has no block ids');
+  const node = id !== undefined ? (doc.node(id) ?? null) : nodeAt(view, ctx.selection.head);
+  if (id !== undefined && !node) return new OurusRejected('no-such-node', `no node ${id}`);
   const target = node && blockIdTargetOf(node);
-  if (!target) return reject('block-id', 'no node at the selection a block id can name');
+  if (!target) return new OurusRejected('block-id', 'no node at the selection a block id can name');
   const existing = blockIdNaming(doc, target);
-  if (existing) return reject('block-id', `^${existing.name} already names it`);
+  if (existing) return new OurusRejected('block-id', `^${existing.name} already names it`);
   // (a paragraph that is only a block id is one: another on it would make it text)
-  if (doc.blockIds().some((b) => b.owner === target && b.stray)) return reject('block-id', 'it is a block id itself');
-  if (name !== undefined && !isBlockIdName(name)) return reject('block-id', `"${name}" is no block id's name: letters, digits and dashes`);
-  if (name !== undefined && doc.blockIds().some((b) => b.name === name)) return reject('block-id', `the note already has ^${name}`);
+  if (doc.blockIds().some((b) => b.owner === target && b.stray)) return new OurusRejected('block-id', 'it is a block id itself');
+  if (name !== undefined && !isBlockIdName(name)) return new OurusRejected('block-id', `"${name}" is no block id's name: letters, digits and dashes`);
+  if (name !== undefined && doc.blockIds().some((b) => b.name === name)) return new OurusRejected('block-id', `the note already has ^${name}`);
   const named = name ?? madeUpName(doc);
   const draft = ctx.draft();
   const on = writeBlockId(doc, draft, target, named);
-  if (!on) return reject('not-expressible', `the ${target.kind} has no text a block id can end`);
+  if (!on) return new OurusRejected('not-expressible', `the ${target.kind} has no text a block id can end`);
   // (with `node`, after it; else where the caret was, in the text it ended)
   keepCaret(ctx, draft, on, id !== undefined ? 'after' : 'kept');
   const result = ctx.apply(draft);
   // (a block with no form a block id is written in here, a footnote's: not written)
-  if (result?.status === 'rejected' && result.reason === 'write-failed') return reject('not-expressible', `a block id can't be written on the ${target.kind} here`);
-  if (result?.status !== 'applied') return result;
-  const written = result.doc.blockIds().find((b) => b.name === named);
-  if (!written || written.shadowed || !written.target || !('id' in written.target) || written.target.id !== target.id) return reject('write-failed', `^${named}, written, doesn't name node ${target.id}`);
-  const loss = checkBlockIds(doc, result.doc, result.changes);
-  return loss ? reject('write-failed', `^${named}, written: ${loss}`) : result;
+  if (result instanceof OurusRejected && result.reason === 'write-failed') return new OurusRejected('not-expressible', `a block id can't be written on the ${target.kind} here`);
+  if (!(result instanceof OurusSuccess)) return result;
+  const written = result.view.doc.blockIds().find((b) => b.name === named);
+  if (!written || written.shadowed || !written.target || !('id' in written.target) || written.target.id !== target.id) return new OurusRejected('write-failed', `^${named}, written, doesn't name node ${target.id}`);
+  const loss = checkBlockIds(doc, result.view.doc, result.changes);
+  return loss ? new OurusRejected('write-failed', `^${named}, written: ${loss}`) : result;
 }
 
 /**
@@ -98,7 +101,7 @@ function writeBlockId(doc: OurusDoc, draft: OurusDraft, target: OurusNode, name:
 function keepCaret(ctx: CommandContext, draft: OurusDraft, node: OurusNode, where: 'after' | 'kept', removed?: { readonly from: number; readonly to: number }): void {
   const text = draft.touched(node.id).text!;
   const end = text.text.length;
-  const at = ctx.doc.locate(ctx.selection.head);
+  const at = ctx.view.locate(ctx.selection.head);
   // (past what was removed from the string, moved back by it; in it, where it was)
   const mapped = (offset: number): number => (!removed || offset <= removed.from ? offset : offset >= removed.to ? offset - (removed.to - removed.from) : removed.from);
   if (where === 'after') draft.setCaret(node, end, -1);
@@ -116,18 +119,19 @@ function keepCaret(ctx: CommandContext, draft: OurusDraft, node: OurusNode, wher
  * a block inside an item, the item's). Only the block id goes: ` ^id` off its text, its line with the
  * blank lines it would leave doubled, a stray one's paragraph.
  */
-export function removeBlockIdCommand(ctx: CommandContext, name: string | undefined, node: number | undefined): CommandOutcome {
+export function removeBlockIdCommand(ctx: CommandContext, name: string | undefined, node: number | undefined): OurusResult | null {
   const doc = ctx.doc;
+  const view = ctx.view;
   let b: BlockId | null;
   if (name !== undefined) {
     const named = doc.blockIds().filter((x) => x.name === name && (node === undefined || x.owner.id === node));
-    if (named.length > 1) return reject('block-id', `the note has ^${name} ${named.length} times: say which by its node`);
+    if (named.length > 1) return new OurusRejected('block-id', `the note has ^${name} ${named.length} times: say which by its node`);
     b = named[0] ?? null;
   } else {
-    const at = nodeAt(doc, ctx.selection.head);
+    const at = nodeAt(view, ctx.selection.head);
     b = at ? blockIdNaming(doc, at) : null;
   }
-  if (!b) return reject('block-id', name !== undefined ? `no block id ^${name}${node !== undefined ? ` on node ${node}` : ''}` : 'no block id names the node at the selection');
+  if (!b) return new OurusRejected('block-id', name !== undefined ? `no block id ^${name}${node !== undefined ? ` on node ${node}` : ''}` : 'no block id names the node at the selection');
   const removed = b;
   const draft = ctx.draft();
   const owner = removeBlockIds(doc, draft, [removed]);
@@ -136,12 +140,12 @@ export function removeBlockIdCommand(ctx: CommandContext, name: string | undefin
   if (owner) keepCaret(ctx, draft, owner, 'kept', part && !part.carried ? { from: part.partFrom, to: part.partTo } : undefined);
   else draft.setCaretAt(ctx.selection.head);
   const result = ctx.apply(draft);
-  if (result?.status !== 'applied') return result;
+  if (!(result instanceof OurusSuccess)) return result;
   // (its text holding the name again before it, which then ends it: refused, not half done)
-  if (result.doc.blockIds().some((x) => x.name === removed.name && x.owner.id === removed.owner.id)) return reject('block-id', `the text has ^${removed.name} again, which would end it then`);
+  if (result.view.doc.blockIds().some((x) => x.name === removed.name && x.owner.id === removed.owner.id)) return new OurusRejected('block-id', `the text has ^${removed.name} again, which would end it then`);
   // (the one removed taken, as a selection takes what it covers: nothing else lost)
-  const loss = checkBlockIds(doc, result.doc, result.changes, { taken: { from: removed.from, to: removed.to } });
-  return loss ? reject('write-failed', `^${removed.name}, removed: ${loss}`) : result;
+  const loss = checkBlockIds(doc, result.view.doc, result.changes, { taken: { from: removed.from, to: removed.to } });
+  return loss ? new OurusRejected('write-failed', `^${removed.name}, removed: ${loss}`) : result;
 }
 
 /**
@@ -203,7 +207,7 @@ type Pasting = Extract<OurusCommand, { type: 'paste' | 'pastePlain' }>;
  * seam left open, `pasteSeams: open`), again with the clipboard's colliding ones dropped first,
  * read alone (`pastedBlockIds`), as they would be once pasted.
  */
-export function pasteKeepingNewBlockIds<C extends Pasting>(ctx: CommandContext, given: C, run: (marked: C) => CommandOutcome | undefined): CommandOutcome | undefined {
+export function pasteKeepingNewBlockIds<C extends Pasting>(ctx: CommandContext, given: C, run: (marked: C) => OurusResult | null | undefined): OurusResult | null | undefined {
   // (HTML's character references for what a block id is written with decoded, the same page: so a
   // block id written `&#94;x` is seen and marked as `^x` is)
   const command = (given.type === 'paste' && given.clipboard['text/html'] !== undefined ? { ...given, clipboard: { ...given.clipboard, 'text/html': withBlockIdCharacters(given.clipboard['text/html']) } } : given) as C;
@@ -211,7 +215,7 @@ export function pasteKeepingNewBlockIds<C extends Pasting>(ctx: CommandContext, 
   const texts = command.type === 'paste' ? [command.clipboard['text/plain'], command.clipboard['text/markdown'], command.clipboard['text/html']] : [command.text];
   if (!doc.mdTree.flavor.has('blockIds') || !texts.some((t) => t?.includes('^'))) return run(command);
   const outcome = markedPaste(ctx, command, run);
-  if (outcome?.status !== 'rejected' || outcome.reason !== 'block-id') return outcome;
+  if (!(outcome instanceof OurusRejected) || outcome.reason !== 'block-id') return outcome;
   const from = Math.min(ctx.selection.anchor, ctx.selection.head);
   const to = Math.max(ctx.selection.anchor, ctx.selection.head);
   const without = (markdown: string): string => pastedBlockIds(doc, markdown, { from, to });
@@ -225,7 +229,7 @@ export function pasteKeepingNewBlockIds<C extends Pasting>(ctx: CommandContext, 
     if (markdown !== null && markdown !== read!.markdown) filtered = { ...command, clipboard: plain ? { ...command.clipboard, 'text/plain': markdown } : { 'text/markdown': markdown } } as C;
   }
   const again = filtered && markedPaste(ctx, filtered, run);
-  return again && again.status !== 'rejected' ? again : outcome;
+  return again && !(again instanceof OurusRejected) ? again : outcome;
 }
 
 /**
@@ -249,7 +253,7 @@ function withBlockIdCharacters(html: string): string {
  * marks come out. A `^x` that ends no text where it landed is text, and stays as it was. A paste the
  * writer can't write without them is as it is, the check refusing a name twice.
  */
-function markedPaste<C extends Pasting>(ctx: CommandContext, command: C, run: (marked: C) => CommandOutcome | undefined): CommandOutcome | undefined {
+function markedPaste<C extends Pasting>(ctx: CommandContext, command: C, run: (marked: C) => OurusResult | null | undefined): OurusResult | null | undefined {
   const doc = ctx.doc;
   const all = command.type === 'paste' ? Object.values(command.clipboard) : [command.text];
   let base = '-pasted';
@@ -261,12 +265,12 @@ function markedPaste<C extends Pasting>(ctx: CommandContext, command: C, run: (m
   };
   const unmark = (text: string): string => text.replaceAll(one, '');
   const outcome = run(marking(one));
-  if (outcome?.status === 'rejected') return outcome.detail === undefined ? outcome : { ...outcome, detail: unmark(outcome.detail) };
-  if (outcome?.status !== 'applied') return outcome;
+  if (outcome instanceof OurusRejected) return outcome.detail === undefined ? outcome : new OurusRejected(outcome.reason, unmark(outcome.detail));
+  if (!(outcome instanceof OurusSuccess)) return outcome;
   const other = run(marking(two));
-  const a = outcome.doc.text;
-  const b = other?.status === 'applied' ? other.doc.text : '';
-  if (a.length !== b.length) return reject('write-failed', 'the paste, written with its block ids marked two ways, differs by more than the marks');
+  const a = outcome.view.doc.text;
+  const b = other instanceof OurusSuccess ? other.view.doc.text : '';
+  if (a.length !== b.length) return new OurusRejected('write-failed', 'the paste, written with its block ids marked two ways, differs by more than the marks');
   // (the marks: where the two differ, the one suffix in one and the other in the other)
   const marks: number[] = [];
   for (let at = a.indexOf(one); at >= 0; at = a.indexOf(one, at + 1)) if (b.startsWith(two, at)) marks.push(at);
@@ -281,25 +285,26 @@ function markedPaste<C extends Pasting>(ctx: CommandContext, command: C, run: (m
   // (one the paste merged into another came first, at the seam above: its name is the paste's then)
   for (const m of outcome.mergedBlockIds ?? []) if (m.from.endsWith(one) && !duplicate(m.from)) held.add(unmark(m.from));
   const dropped: BlockId[] = [];
-  for (const x of outcome.doc.blockIds()) {
+  for (const x of outcome.view.doc.blockIds()) {
     if (!marks.includes(x.to - one.length)) continue;
     const name = x.name.slice(0, -one.length);
     if (held.has(name)) dropped.push(x);
     held.add(name);
   }
-  let { doc: after, changes, selection } = outcome;
+  // (each step the result's, the view carried through it)
+  let { view: after, changes, selection } = outcome;
   let at = marks;
   if (dropped.length) {
-    const draft = new OurusDraft(after);
-    removeBlockIds(after, draft, dropped);
+    const draft = new OurusDraft(after.doc);
+    removeBlockIds(after.doc, draft, dropped);
     const kept = draft.done();
     if (!('reason' in kept)) {
       // (the selection where it was, before what went where it was in it; the marks left where they are now)
       const map = (pos: number): number => mapPos(kept.changes, pos, -1);
       selection = { anchor: map(selection.anchor), head: map(selection.head) };
       changes = composeChanges(doc.text, changes, kept.changes);
-      after = kept.doc;
-      at = marks.map((m) => mapPos(kept.changes, m, 1)).filter((m) => after.text.startsWith(one, m));
+      after = after.withDoc(kept.doc, kept.changes);
+      at = marks.map((m) => mapPos(kept.changes, m, 1)).filter((m) => after.doc.text.startsWith(one, m));
     }
   }
   // the marks out
@@ -311,5 +316,5 @@ function markedPaste<C extends Pasting>(ctx: CommandContext, command: C, run: (m
     after = after.update({ changes: out });
   }
   const { movedBlockIds: _moved, mergedBlockIds: _merged, ...rest } = outcome;
-  return { ...rest, doc: after, changes, selection, ...(moved?.length && { movedBlockIds: moved }), ...(merged?.length && { mergedBlockIds: merged }) };
+  return new OurusSuccess({ ...rest, view: after, changes, selection, ...(moved?.length && { movedBlockIds: moved }), ...(merged?.length && { mergedBlockIds: merged }) });
 }

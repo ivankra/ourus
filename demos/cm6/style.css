@@ -135,7 +135,7 @@ aside h2, #preview-pane > h2 { font-size: 12px; text-transform: uppercase; lette
 #outline .placeholders .text::after { content: ' ◌ placeholders'; font-size: 11px; }
 footer { height: 36px; padding: 8px 20px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; font-size: 13px; }
 #status { color: var(--muted); }
-#status.applied { color: var(--good); }
+#status.success { color: var(--good); }
 #status.rejected { color: var(--bad); }
 #stats { color: var(--muted); }
 /* narrow: no outline; the panes one above the other, the rendered one first, half each, filling
@@ -151,7 +151,7 @@ footer { height: 36px; padding: 8px 20px; border-top: 1px solid var(--line); dis
   /* no footer: the stats go, the status is a notification at the top */
   footer { display: contents; }
   #stats { display: none; }
-  #status, #status.applied, #status.rejected { position: fixed; top: 8px; left: 50%; z-index: 2; transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px); padding: 6px 12px; border-radius: 8px; background: var(--toast); color: var(--toast-fg); font-size: 13px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.2); pointer-events: none; opacity: 0; transition: opacity 0.3s; }
+  #status, #status.success, #status.rejected { position: fixed; top: 8px; left: 50%; z-index: 2; transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px); padding: 6px 12px; border-radius: 8px; background: var(--toast); color: var(--toast-fg); font-size: 13px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.2); pointer-events: none; opacity: 0; transition: opacity 0.3s; }
   #status.rejected { background: var(--bad); color: #fff; }
   #status.shown { opacity: 1; }
 }

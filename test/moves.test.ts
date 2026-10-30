@@ -7,7 +7,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { OurusConfig } from '../src/config.ts';
-import { executeCommand } from '../src/commands/index.ts';
+import { executeCommand, OurusRejected } from '../src/commands/index.ts';
+import { OurusView } from '../src/view/index.ts';
 import type { OurusNode } from '../src/doc/index.ts';
 import { docOf, nodesOf, readDrawing } from './drawing.ts';
 import { readSpecFile, specConfig, specFiles } from './specfile.ts';
@@ -29,6 +30,7 @@ function moveGaps(): Map<string, string[]> {
         seen.add(key);
         const doc = docOf(text, [], config);
         const nodes = nodesOf(doc);
+        const view = OurusView.of(doc);
         const parents: (OurusNode | 'root')[] = ['root', ...nodes];
         for (const node of nodes) {
           // (the caret in it, to go with it)
@@ -39,8 +41,8 @@ function moveGaps(): Map<string, string[]> {
               const to = { parent: parent === 'root' ? ('root' as const) : parent.id, after: after === null ? null : after.id };
               let failure: string | null = null;
               try {
-                const r = executeCommand(doc, { type: 'moveSubtree', nodes: [node.id], to }, { anchor: end, head: end });
-                if (r.status === 'rejected' && r.reason === 'write-failed') failure = r.detail ?? 'write-failed';
+                const r = executeCommand(view, { type: 'moveSubtree', nodes: [node.id], to }, { anchor: end, head: end });
+                if (r instanceof OurusRejected && r.reason === 'write-failed') failure = r.detail ?? 'write-failed';
               } catch (e) {
                 failure = `throws: ${(e as Error).message}`;
               }

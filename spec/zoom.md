@@ -180,7 +180,7 @@ tags: common
 ```
 
 ```yaml
-result: applied
+result: success
 zoom: ②
 ```
 
@@ -263,7 +263,7 @@ zoom: ②
 > deleteSubtree
 
 ```yaml
-result: applied
+result: success
 zoom: ①
 ```
 

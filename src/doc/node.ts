@@ -231,6 +231,34 @@ export class OurusNode {
     return null;
   }
 
+  /** Its ancestors, its parent outward, the root last. */
+  *ancestors(): Iterable<OurusNode> {
+    for (let at = this.parent; at; at = at.parent) yield at;
+  }
+
+  /** Whether it is `ancestor` (a node, or its id) or a descendant of it. */
+  isWithin(ancestor: OurusNode | number): boolean {
+    const id = typeof ancestor === 'number' ? ancestor : ancestor.id;
+    for (let at: OurusNode | null = this; at; at = at.parent) if (at.id === id) return true;
+    return false;
+  }
+
+  /** The ids of its subtree, its own included. */
+  subtreeIds(): Set<number> {
+    const ids = new Set<number>();
+    const visit = (n: OurusNode): void => {
+      ids.add(n.id);
+      n.children.forEach(visit);
+    };
+    visit(this);
+    return ids;
+  }
+
+  /** Whether it can fold: it has children on lines after its own (`OurusDoc.foldRange` is its range). */
+  get foldable(): boolean {
+    return this.kind !== 'root' && this.persistentNode.children.length > 0 && this.endLine > this.ownLastLine;
+  }
+
   /** Whether a node among its children can own the list right after it: in the document's own sections (the root's, a heading's), not in an item or a quote (which kinds do, `OurusDoc.adoptsLists`). */
   get ownsLists(): boolean {
     let holder: OurusNode | null = this;

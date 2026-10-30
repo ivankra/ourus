@@ -9,7 +9,7 @@ import { test } from 'node:test';
 const src = resolve(import.meta.dirname, '../src');
 
 /** Components, lowest first. A component is a directory or a single file of `src/`. */
-const LAYERS: Record<string, number> = { text: 0, parser: 1, config: 1, doc: 2, writer: 3, commands: 4, index: 5 };
+const LAYERS: Record<string, number> = { text: 0, parser: 1, config: 1, doc: 2, writer: 3, view: 3, commands: 4, index: 5 };
 
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

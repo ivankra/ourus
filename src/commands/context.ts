@@ -1,35 +1,42 @@
 // What a command is given and gives back: the document and the selection, located; a draft applied:
 // fixed by `done()`, spelled by `write()`, read back by the document, and checked against what the
 // draft meant.
+//
+// A command function gives an `OurusResult`, or null where no rule of its covers the case: the next
+// is tried (`a ?? b`), and `executeCommand` makes a final null the host's for a key it has a default
+// for (`deferredToHost`), else a refusal (`unsupported`). A host never sees null.
 
 import type { OurusConfig } from '../config.ts';
-import type { Located, OurusDoc } from '../doc/index.ts';
+import type { Located, OurusDoc, OurusDocUpdate } from '../doc/index.ts';
+import type { OurusView } from '../view/index.ts';
 import { OurusDraft } from '../writer/index.ts';
-import type { OurusCommandResult, RejectReason, OurusSelection } from './types.ts';
+import type { OurusResult, RejectReason, OurusSelection } from './types.ts';
+import { OurusDeferred, OurusRejected, OurusSuccess } from './types.ts';
 
-/**
- * A command's outcome; null where ourus doesn't do it yet (a case of a command): `executeCommand`
- * leaves a key with a host's default to the host there, and refuses a structural command (`unsupported`).
- */
-export type CommandOutcome = OurusCommandResult | null;
 
 export class CommandContext {
-  readonly doc: OurusDoc;
+  /** The view the command acts in: its document, and the folds and zoom the command keeps to. */
+  readonly view: OurusView;
   readonly selection: OurusSelection;
   /** The nodes the command acts on, by id, where it was given them (`OurusCommand.nodes`): else the selection's. */
   readonly nodes: readonly number[] | undefined;
   #from: Located | undefined;
   #to: Located | undefined;
 
-  constructor(doc: OurusDoc, selection: OurusSelection, nodes?: readonly number[]) {
-    this.doc = doc;
+  constructor(view: OurusView, selection: OurusSelection, nodes?: readonly number[]) {
+    this.view = view;
     this.selection = selection;
     this.nodes = nodes;
   }
 
-  /** The same document with a caret at `pos`: a command acting from there. */
+  /** The view's document. */
+  get doc(): OurusDoc {
+    return this.view.doc;
+  }
+
+  /** The same view with a caret at `pos`: a command acting from there. */
   at(pos: number): CommandContext {
-    return new CommandContext(this.doc, { anchor: pos, head: pos });
+    return new CommandContext(this.view, { anchor: pos, head: pos });
   }
 
   get config(): OurusConfig {
@@ -48,22 +55,29 @@ export class CommandContext {
 
   /** Where the selection starts and ends. */
   get from(): Located {
-    return (this.#from ??= this.doc.locate(Math.min(this.selection.anchor, this.selection.head)));
+    return (this.#from ??= this.view.locate(Math.min(this.selection.anchor, this.selection.head)));
   }
 
   get to(): Located {
-    return (this.#to ??= this.collapsed ? this.from : this.doc.locate(Math.max(this.selection.anchor, this.selection.head)));
+    return (this.#to ??= this.collapsed ? this.from : this.view.locate(Math.max(this.selection.anchor, this.selection.head)));
   }
 
   /**
    * `draft` of the document applied: the next document, its changes and selection; a refusal where
    * Markdown can't say it, or `write-failed` where the writer failed (a bug).
    */
-  apply(draft: OurusDraft): CommandOutcome {
+  apply(draft: OurusDraft): OurusResult | null {
+    if (draft.from !== this.doc) throw new Error("a draft of another document than the context's: make a context on its view");
     const applied = draft.done();
-    if ('reason' in applied) return reject(applied.reason, applied.detail);
+    if ('reason' in applied) return new OurusRejected(applied.reason, applied.detail);
     const { moved, merged } = applied.blockIds;
-    return { status: 'applied', doc: applied.doc, changes: applied.changes, selection: applied.selection, ...(moved.length && { movedBlockIds: moved }), ...(merged.length && { mergedBlockIds: merged }) };
+    const view = this.view.withDoc(applied.doc, applied.changes);
+    return new OurusSuccess({ view, changes: applied.changes, selection: applied.selection, ...(moved.length && { movedBlockIds: moved }), ...(merged.length && { mergedBlockIds: merged }) });
+  }
+
+  /** The view after a host's kind of edit of the document (`OurusView.update`), the view carried. */
+  update(params: OurusDocUpdate): OurusView {
+    return this.view.update(params);
   }
 }
 
@@ -72,14 +86,11 @@ export class CommandContext {
  * about block ids, together: every step's moves and merges, in order, and the nodes they removed on
  * purpose, as the applied result has them.
  */
-export function blockIdsDeclaredBy(steps: readonly OurusCommandResult[]): Pick<Extract<OurusCommandResult, { status: 'applied' }>, 'movedBlockIds' | 'mergedBlockIds' | 'removedNodes'> {
-  const moved = steps.flatMap((r) => (r.status === 'applied' ? (r.movedBlockIds ?? []) : []));
-  const merged = steps.flatMap((r) => (r.status === 'applied' ? (r.mergedBlockIds ?? []) : []));
-  const removed = steps.flatMap((r) => (r.status === 'applied' ? (r.removedNodes ?? []) : []));
+export function blockIdsDeclaredBy(steps: readonly OurusResult[]): Pick<OurusSuccess, 'movedBlockIds' | 'mergedBlockIds' | 'removedNodes'> {
+  const moved = steps.flatMap((r) => (r instanceof OurusSuccess ? (r.movedBlockIds ?? []) : []));
+  const merged = steps.flatMap((r) => (r instanceof OurusSuccess ? (r.mergedBlockIds ?? []) : []));
+  const removed = steps.flatMap((r) => (r instanceof OurusSuccess ? (r.removedNodes ?? []) : []));
   return { ...(moved.length && { movedBlockIds: moved }), ...(merged.length && { mergedBlockIds: merged }), ...(removed.length && { removedNodes: removed }) };
 }
 
-export const reject = (reason: RejectReason, detail?: string): OurusCommandResult =>
-  detail === undefined ? { status: 'rejected', reason } : { status: 'rejected', reason, detail };
 
-export const deferToHost = (detail?: string): OurusCommandResult => (detail === undefined ? { status: 'deferredToHost' } : { status: 'deferredToHost', detail });

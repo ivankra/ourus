@@ -115,12 +115,12 @@ test('the nodes on a block-id line and its blank lines are its owner; locate say
   assert.equal(doc.nodeAtLine(5), table);
   assert.equal(doc.nodeAtLine(6), null);
   const at = text.indexOf('^t1') + 2;
-  assert.deepEqual(pick(doc.locate(at)), { zone: 'blockIdLine', node: table.id, line: 0, blank: false, offset: 2 });
-  assert.deepEqual(pick(doc.locate(text.indexOf('^t1') - 1)), { zone: 'blockIdLine', node: table.id, line: 0, blank: true, offset: 0 });
-  assert.deepEqual(pick(doc.locate(text.indexOf('Outro.') - 1)), { zone: 'gap', node: table.id });
+  assert.deepEqual(pick(doc.locateRaw(at)), { zone: 'blockIdLine', node: table.id, line: 0, blank: false, offset: 2 });
+  assert.deepEqual(pick(doc.locateRaw(text.indexOf('^t1') - 1)), { zone: 'blockIdLine', node: table.id, line: 0, blank: true, offset: 0 });
+  assert.deepEqual(pick(doc.locateRaw(text.indexOf('Outro.') - 1)), { zone: 'gap', node: table.id });
 });
 
-function pick(at: ReturnType<OurusDoc['locate']>): Record<string, unknown> {
+function pick(at: ReturnType<OurusDoc['locateRaw']>): Record<string, unknown> {
   if (at.zone === 'blockIdLine') return { zone: at.zone, node: at.node.id, line: at.line, blank: at.blank, offset: at.offset };
   if (at.zone === 'gap') return { zone: at.zone, node: at.owner.id };
   return { zone: at.zone };
@@ -128,8 +128,8 @@ function pick(at: ReturnType<OurusDoc['locate']>): Record<string, unknown> {
 
 test('a caret at the start of a block id ending a text is in the text, as at a setext underline\'s', () => {
   const doc = parse('- b\n  ^id\n');
-  assert.equal(doc.locate(3).zone, 'text');
-  assert.equal(doc.locate(6).zone, 'frame');
+  assert.equal(doc.locateRaw(3).zone, 'text');
+  assert.equal(doc.locateRaw(6).zone, 'frame');
 });
 
 test('the same text, read again by an update that makes its block-id line attach or come loose', () => {

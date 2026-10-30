@@ -6,9 +6,11 @@ import { OurusProse, isClosingPart, OurusAtom, type OurusNode } from '../doc/ind
 import { deleteSelectionAcross, joinUp } from './backspace.ts';
 import { codeAt, joinCodeItemUp, joinInCode } from './code.ts';
 import { lineOf } from '../text/index.ts';
-import { deferToHost, reject, type CommandContext, type CommandOutcome } from './context.ts';
+import { type CommandContext } from './context.ts';
 import { joinIntoQuote, joinLineInQuote, joinQuoteUp, quoteAtomAt } from './quote.ts';
 import { deleteHeldSpace, hiddenSpacesAt, inMarkup, textEnd, textStart, unquote } from './util.ts';
+import type { OurusResult } from './types.ts';
+import { OurusDeferred, OurusRejected } from './types.ts';
 
 /**
  * Delete (spec/delete.md). In the middle of a text it is the host's; at the end of a line inside the
@@ -20,7 +22,7 @@ import { deleteHeldSpace, hiddenSpacesAt, inMarkup, textEnd, textStart, unquote 
  * decorated); a held space after the caret goes. Null, unsupported, for other markup where the host
  * decorates it.
  */
-export function deleteContentForwardCommand(ctx: CommandContext): CommandOutcome {
+export function deleteContentForwardCommand(ctx: CommandContext): OurusResult | null {
   const config = ctx.config;
   if (!ctx.collapsed) return deleteSelectionAcross(ctx);
   const code = codeAt(ctx);
@@ -28,9 +30,9 @@ export function deleteContentForwardCommand(ctx: CommandContext): CommandOutcome
   const at = ctx.from;
   // in the spaces Markdown hides before a text: the user's whitespace, a space a press, the host's (Enter65d)
   const hidden = hiddenSpacesAt(ctx, ctx.selection.head);
-  if (hidden && ctx.selection.head < hidden.to) return deferToHost();
+  if (hidden && ctx.selection.head < hidden.to) return new OurusDeferred();
   if (inMarkup(ctx.doc, at, ctx.selection.head)) {
-    if (config.markup === 'text') return deferToHost('the caret is in markup');
+    if (config.markup === 'text') return new OurusDeferred('the caret is in markup');
     // right before a task's checkbox, it goes, the mirror of Backspace after it (Delete19)
     if (at.zone === 'frame' && at.part === 'task' && at.text instanceof OurusProse && config.taskEditing === 'checkbox') {
       const task = at.text.frame.find((p) => p.part === 'task')!;
@@ -40,7 +42,7 @@ export function deleteContentForwardCommand(ctx: CommandContext): CommandOutcome
     return null;
   }
   // before a marker, Delete would take it (Delete23)
-  if (at.zone === 'marker' && at.part !== 'padding') return config.markup === 'text' ? deferToHost("a list marker isn't text") : reject('not-expressible', "a list marker isn't text");
+  if (at.zone === 'marker' && at.part !== 'padding') return config.markup === 'text' ? new OurusDeferred("a list marker isn't text") : new OurusRejected('not-expressible', "a list marker isn't text");
   // (at a line's end inside a quote read as an atom: the next line joins as it is written)
   const inQuote = quoteAtomAt(ctx);
   const lineJoin = inQuote && joinLineInQuote(ctx, inQuote, true);
@@ -63,7 +65,7 @@ export function deleteContentForwardCommand(ctx: CommandContext): CommandOutcome
   if (lineEnd >= 0 && lineEnd < end) {
     // before a line's end inside the text, the host's; at it, the next line joins it (a quote's, its `> `
     // going with the break)
-    if (offset < lineEnd) return deferToHost();
+    if (offset < lineEnd) return new OurusDeferred();
     const joined = text.splice(lineEnd, text.textStart(lineOf(s, lineEnd + 1)));
     // a quote's first paragraph that would read as its callout's title: not done yet
     if (node.becomesTitle(joined)) return null;
@@ -71,12 +73,12 @@ export function deleteContentForwardCommand(ctx: CommandContext): CommandOutcome
     return ctx.apply(draft);
   }
   // in the text, the host's; past its end, in a closing frame (a setext underline): not done yet
-  if (offset < end && !text.empty) return deferToHost();
+  if (offset < end && !text.empty) return new OurusDeferred();
   if (offset !== end) return null;
   const below = node.children[0] ?? node.afterSubtree;
   if (!below) return null;
   // a folded node's first child is hidden: it doesn't join, nothing hidden changing (Fold7)
-  if (below === node.children[0] && ctx.doc.zoomFolded.has(node.id)) return reject('folded', 'the node below is hidden in its fold');
+  if (below === node.children[0] && ctx.view.zoomFolded.has(node.id)) return new OurusRejected('folded', 'the node below is hidden in its fold');
   const lower = ctx.doc.textOf(below);
   // on an empty item, the node below moves up into it, as Backspace at its start takes it (Delete5, 6)
   if (text.empty) {
@@ -84,7 +86,7 @@ export function deleteContentForwardCommand(ctx: CommandContext): CommandOutcome
     if (node.kind === 'paragraph' && !node.children.length && lower) return ctx.apply(draft.remove([node]).setCaret(below, textStart(lower), 1));
     if (node.kind !== 'item' || !(lower instanceof OurusProse) || lower.empty || below.preceding?.persistentNode !== node.persistentNode) return null;
     // (refused, with spaces after the caret: they are the host's to delete, as an outliner deletes them)
-    const refused = (): CommandOutcome => (ctx.selection.head < ctx.doc.lineAt(ctx.selection.head).to ? deferToHost() : reject('has-children'));
+    const refused = (): OurusResult | null => (ctx.selection.head < ctx.doc.lineAt(ctx.selection.head).to ? new OurusDeferred() : new OurusRejected('has-children'));
     if (node.children.length && config.emptyItemWithChildren === 'refuse') return refused();
     // (its first child coming up with children of its own: `joinWithChildren`'s too, either refusing)
     if (below.parent?.persistentNode === node.persistentNode && below.children.length && config.joinWithChildren === 'refuse') return refused();
@@ -100,7 +102,7 @@ export function deleteContentForwardCommand(ctx: CommandContext): CommandOutcome
     return ctx.apply(draft);
   }
   // a quote or code below can't join a text (an item whose text is a quote's, the same)
-  if (!(lower instanceof OurusProse)) return reject('not-expressible', `can't take in the ${below.kind === 'item' ? 'block' : below.kind} below`);
+  if (!(lower instanceof OurusProse)) return new OurusRejected('not-expressible', `can't take in the ${below.kind === 'item' ? 'block' : below.kind} below`);
   // before a heading (an item's too), its marks first, the title a paragraph where it is; with
   // `block`, the title joins this text
   if (lower.type === 'heading') {
@@ -136,14 +138,14 @@ export function deleteContentForwardCommand(ctx: CommandContext): CommandOutcome
  * item or a quote refused, the text would run into what is above (Delete16b). Null with more spaces
  * than one, a task's, and an item whose text is no paragraph, which ourus doesn't do yet (unsupported).
  */
-function markerSpace(ctx: CommandContext, node: OurusNode): CommandOutcome {
+function markerSpace(ctx: CommandContext, node: OurusNode): OurusResult | null {
   const doc = ctx.doc;
   const text = doc.textOf(node);
   const head = ctx.selection.head;
   if (node.kind !== 'item' || !(text instanceof OurusProse) || text.type !== 'paragraph' || text.task || text.empty) return null;
   if (head !== doc.posOf(node, 0) - 1 || doc.lineAt(head).index !== node.startLine) return null;
   const parent = node.parent!;
-  if (parent.kind === 'item' || parent.kind === 'quote') return reject('not-expressible', 'without its marker the item would run into the text above');
+  if (parent.kind === 'item' || parent.kind === 'quote') return new OurusRejected('not-expressible', 'without its marker the item would run into the text above');
   const marker = doc.markerOf(node);
   const draft = ctx.draft().convert(node, 'paragraph').setText(node, text.retyped('paragraph', false).splice(0, 0, marker));
   return ctx.apply(draft.setCaret(node, marker.length, -1));

@@ -15,15 +15,17 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { OurusDoc, OurusNode } from '../src/doc/index.ts';
 import type { OurusConfig } from '../src/config.ts';
+import { OurusView } from '../src/view/index.ts';
 import { asTabs, retabs } from '../sxs/lib/tabs.ts';
 import type { TextDoc } from '../sxs/lib/text.ts';
 import { docOf, drawDoc, drawnSelection, drawOutline, drawsCaret, readDrawing } from './drawing.ts';
 import { play, type Played } from './player.ts';
 import { flavorsOf, Labels, normalize, outcome, readClipboard, viewOf } from './spec-run.ts';
 import { readSpecFile, specConfig, specFiles, type SpecTest } from './specfile.ts';
+import { OurusDeferred, OurusRejected } from '../src/commands/index.ts';
 
 /** A drawn buffer's document, and its start loaded as tabs (placeholders carried as carets are). */
-function tabbedStart(t: SpecTest, config: Partial<OurusConfig>): { spaces: OurusDoc; tabs: Played } {
+function tabbedStart(t: SpecTest, config: Partial<OurusConfig>): { spaces: OurusView; tabs: Played } {
   const start = readDrawing(t.initial.buffer);
   const at = (p: number): number => asTabs({ text: start.text, sel: { anchor: p, head: p } }).sel!.anchor;
   // (the start's labels, and its drop line: a line, which the tabs keep)
@@ -36,16 +38,17 @@ function tabbedStart(t: SpecTest, config: Partial<OurusConfig>): { spaces: Ourus
   return {
     spaces,
     // (tabs change no line: a label names the same line's node)
-    tabs: { doc: viewOf(t, docOf(d.text, start.placeholders.map(at), config), labels.ids), selection: d.sel!, clipboard: readClipboard(t.initial.clipboard), labels: labels.ids, drop: start.drop },
+    tabs: { view: viewOf(t, docOf(d.text, start.placeholders.map(at), config), labels.ids), selection: d.sel!, clipboard: readClipboard(t.initial.clipboard), labels: labels.ids, drop: start.drop },
   };
 }
 
 /** Where `pos` is, by what the document reads as: in a node's text (the node in document order, the offset), else its zone. */
-function place(doc: OurusDoc, pos: number): string {
+function place(view: OurusView, pos: number): string {
+  const doc = view.doc;
   const order: OurusNode[] = [];
   const visit = (n: OurusNode): void => (order.push(n), n.children.forEach(visit));
   doc.rootNode.children.forEach(visit);
-  const at = doc.locate(pos);
+  const at = view.locate(pos);
   if (at.zone === 'text' || at.zone === 'frame') {
     // (a line's leading whitespace isn't what it reads as: a later line's column is its own, by tabs or spaces)
     const lines = at.text.text.slice(0, at.offset).split('\n');
@@ -62,8 +65,8 @@ function place(doc: OurusDoc, pos: number): string {
 }
 
 /** A document and selection as the check compares them: its outline, and the selection's ends in it. */
-const reading = (doc: OurusDoc, sel: { anchor: number; head: number }, caret: boolean): string =>
-  `${drawOutline(doc)}\n${caret ? `anchor: ${place(doc, sel.anchor)}, head: ${place(doc, sel.head)}` : ''}`;
+const reading = (view: OurusView, sel: { anchor: number; head: number }, caret: boolean): string =>
+  `${drawOutline(view.doc)}\n${caret ? `anchor: ${place(view, sel.anchor)}, head: ${place(view, sel.head)}` : ''}`;
 
 const columnMotion = (action: string): boolean => /^(?:cursor|select)(?:Line|Page)(?:Up|Down)$/.test(action);
 
@@ -71,27 +74,27 @@ const columnMotion = (action: string): boolean => /^(?:cursor|select)(?:Line|Pag
 function runTabbed(t: SpecTest, flavor: OurusConfig['flavor']): void {
   const config = { flavor, ...specConfig(t.options) };
   let { tabs: state } = tabbedStart(t, config);
-  const from = drawDoc(state.doc, state.selection);
+  const from = drawDoc(state.view, state.selection);
   for (const step of t.steps) {
     const at = `${t.file}:${step.line} (${flavor}, tabs)`;
     for (const action of step.actions) {
       state = play(state, [action]);
-      assert.ok(state.last?.status !== 'rejected' || state.last.reason !== 'write-failed', `${at}: ${action} failed to write${state.last?.status === 'rejected' && state.last.detail ? `: ${state.last.detail}` : ''}`);
+      assert.ok(!(state.last instanceof OurusRejected) || state.last.reason !== 'write-failed', `${at}: ${action} failed to write${state.last instanceof OurusRejected && state.last.detail ? `: ${state.last.detail}` : ''}`);
     }
     const { buffer, result } = step.expect;
     if (result !== undefined) assert.equal(outcome(state), result, `${at}: result`);
     // (the host's own edit is the player's emulation of it, and a placeholder the spaces need, a tab's
     // wider column may not: a child past a padding widened by a deleted first character)
-    if (buffer === undefined || state.last?.status === 'deferredToHost' || buffer.includes('◌')) continue;
+    if (buffer === undefined || state.last instanceof OurusDeferred || buffer.includes('◌')) continue;
     const drawn = readDrawing(normalize(buffer));
     // (with the view the state has, by line, which tabs keep: a subtree selection ends at a zoom's end)
-    const byLine = (id: number | null): number | null => (id === null ? null : (state.doc.node(id)?.startLine ?? null));
+    const byLine = (id: number | null): number | null => (id === null ? null : (state.view.doc.node(id)?.startLine ?? null));
     const plain = docOf(drawn.text, drawn.placeholders, config);
-    const zoomLine = byLine(state.doc.zoom);
-    const expectedDoc = plain.withFolded([...state.doc.folded].flatMap((id) => plain.rowOwner(byLine(id) ?? -1)?.id ?? [])).withZoom(zoomLine === null ? null : (plain.rowOwner(zoomLine)?.id ?? null));
-    const expected = reading(expectedDoc, drawnSelection(expectedDoc, drawn), drawsCaret(buffer));
-    const got = reading(state.doc, state.selection, drawsCaret(buffer));
-    assert.equal(got, expected, `${at}: reads otherwise, as tabs ${JSON.stringify(from)} → ${JSON.stringify(drawDoc(state.doc, state.selection))}`);
+    const zoomLine = byLine(state.view.zoom);
+    const expectedView = OurusView.of(plain).withFolded([...state.view.folded].flatMap((id) => plain.rowOwner(byLine(id) ?? -1)?.id ?? [])).withZoom(zoomLine === null ? null : (plain.rowOwner(zoomLine)?.id ?? null));
+    const expected = reading(expectedView, drawnSelection(expectedView, drawn), drawsCaret(buffer));
+    const got = reading(state.view, state.selection, drawsCaret(buffer));
+    assert.equal(got, expected, `${at}: reads otherwise, as tabs ${JSON.stringify(from)} → ${JSON.stringify(drawDoc(state.view, state.selection))}`);
   }
 }
 
@@ -103,7 +106,7 @@ for (const file of specFiles()) {
     if (!/^[ ]+\S/m.test(start.text) || !retabs({ text: start.text, sel: start.selection })) continue;
     const flavors = flavorsOf(t).filter((flavor) => {
       const { spaces, tabs } = tabbedStart(t, { flavor, ...specConfig(t.options) });
-      return drawOutline(spaces) === drawOutline(tabs.doc);
+      return drawOutline(spaces.doc) === drawOutline(tabs.view.doc);
     });
     if (!flavors.length) continue;
     test(`${t.name} (tabs)`, () => {

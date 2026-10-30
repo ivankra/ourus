@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { executeCommand } from '../src/commands/index.ts';
+import { executeCommand, settlePlaceholders, OurusSuccess } from '../src/commands/index.ts';
 import { OurusDoc } from '../src/doc/index.ts';
-import { settlePlaceholders } from '../src/writer/index.ts';
+import { OurusView } from '../src/view/index.ts';
 import { docOf, nodesOf, plainText } from './drawing.ts';
 
 const shape = (d: OurusDoc) => nodesOf(d).map((n) => `${'  '.repeat(n.depth - 1)}${n.kind}:${plainText(d, n).replace(/\n/g, '|')}`).join('\n');
@@ -10,9 +10,9 @@ const placeholders = (d: OurusDoc) => d.marks.points();
 
 function indentNewItem(): OurusDoc {
   const doc = OurusDoc.parse('- a\n- ');
-  const r = executeCommand(doc, { type: 'indent' }, { anchor: 6, head: 6 });
-  assert.equal(r.status, 'applied');
-  return (r as Extract<typeof r, { status: 'applied' }>).doc;
+  const r = executeCommand(OurusView.of(doc), { type: 'indent' }, { anchor: 6, head: 6 });
+  assert.ok(r instanceof OurusSuccess);
+  return (r as OurusSuccess).view.doc;
 }
 
 test('an indented empty item is a placeholder under its parent', () => {
@@ -36,25 +36,25 @@ test('typing into a place fills it; typing a space keeps it open', () => {
 
 test('leaving an empty child keeps it, set off by a blank line', () => {
   const doc = indentNewItem();
-  assert.equal(settlePlaceholders(doc, 8), null, 'the caret is still there');
-  const r = settlePlaceholders(doc, 1)!;
-  assert.equal(r.doc.text, '- a\n\n  - ');
-  assert.deepEqual(placeholders(r.doc), []);
-  assert.equal(shape(r.doc), shape(doc));
+  assert.equal(settlePlaceholders(OurusView.of(doc), 8), null, 'the caret is still there');
+  const r = settlePlaceholders(OurusView.of(doc), 1)!;
+  assert.equal(r.view.doc.text, '- a\n\n  - ');
+  assert.deepEqual(placeholders(r.view.doc), []);
+  assert.equal(shape(r.view.doc), shape(doc));
 });
 
 test('leaving a place the text can hold just drops it', () => {
   const item = docOf('- a\n- ', [6]);
-  const r1 = settlePlaceholders(item, 0)!;
+  const r1 = settlePlaceholders(OurusView.of(item), 0)!;
   assert.deepEqual(r1.changes, []);
-  assert.equal(r1.doc.text, '- a\n- ');
-  assert.deepEqual(placeholders(r1.doc), []);
+  assert.equal(r1.view.doc.text, '- a\n- ');
+  assert.deepEqual(placeholders(r1.view.doc), []);
   const para = docOf('- a\n\n', [5]);
   assert.equal(shape(para), 'item:a\nparagraph:');
-  const r2 = settlePlaceholders(para, 0)!;
+  const r2 = settlePlaceholders(OurusView.of(para), 0)!;
   // (the empty paragraph goes, and the document's end with it: the item's)
-  assert.equal(r2.doc.text, '- a\n');
-  assert.equal(shape(r2.doc), 'item:a');
+  assert.equal(r2.view.doc.text, '- a\n');
+  assert.equal(shape(r2.view.doc), 'item:a');
 });
 
 test('a place left at the top is removed, the list it owned in its place', () => {
@@ -62,19 +62,19 @@ test('a place left at the top is removed, the list it owned in its place', () =>
   const doc = docOf('\n\n- a\n', [0, 1]);
   // the empty paragraph owns the list right after it
   assert.equal(shape(doc), 'paragraph:\n  item:a');
-  const r = settlePlaceholders(doc, 4)!;
-  assert.equal(r.doc.text, '- a\n');
-  assert.equal(shape(r.doc), 'item:a');
+  const r = settlePlaceholders(OurusView.of(doc), 4)!;
+  assert.equal(r.view.doc.text, '- a\n');
+  assert.equal(shape(r.view.doc), 'item:a');
 });
 
 test('Enter twice leaves a list, and typing makes the paragraph', () => {
   let doc = OurusDoc.parse('- a');
   let sel = { anchor: 3, head: 3 };
   for (const _ of [1, 2]) {
-    const r = executeCommand(doc, { type: 'enter' }, sel);
-    assert.equal(r.status, 'applied');
-    if (r.status !== 'applied') return;
-    doc = r.doc;
+    const r = executeCommand(OurusView.of(doc), { type: 'enter' }, sel);
+    assert.ok(r instanceof OurusSuccess);
+    if (!(r instanceof OurusSuccess)) return;
+    doc = r.view.doc;
     sel = { anchor: r.selection.head, head: r.selection.head };
   }
   assert.equal(doc.text, '- a\n\n');

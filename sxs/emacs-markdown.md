@@ -5,7 +5,7 @@ version: "30.2, markdown-mode 2.8"
 url: "emacs -Q -nw, on a terminal"
 model: "text"
 command: "node sxs/run.ts emacs-markdown"
-elapsed_s: 43
+elapsed_s: 66
 ---
 
 # Emacs (markdown-mode) vs ourus
@@ -14,7 +14,7 @@ Summary:
 
 | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- |
-| **254 (18%)** | **[53](#caret-53) (3.7%)** | **[31](#whitespace-31) (2.2%)** | **[729](#disagree-729) (51%)** | **0 (0%)** | **[374](#skipped-374) (26%)** | **1441** |
+| **256 (18%)** | **[53](#caret-53) (3.7%)** | **[31](#whitespace-31) (2.1%)** | **[730](#disagree-730) (50%)** | **0 (0%)** | **[377](#skipped-377) (26%)** | **1447** |
 
 Per-file:
 
@@ -31,12 +31,12 @@ Per-file:
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 12 | **12** |
 | [enter.md](../spec/enter.md) | 1 |  |  | 66 |  | 31 | **98** |
 | [fences.md](../spec/fences.md) | 16 | 2 | 1 | 46 |  | 5 | **70** |
-| [fold.md](../spec/fold.md) |  |  |  |  |  | 19 | **19** |
+| [fold.md](../spec/fold.md) |  |  |  |  |  | 22 | **22** |
 | [gaps.md](../spec/gaps.md) | 6 | 2 |  | 11 |  |  | **19** |
 | [indent.md](../spec/indent.md) | 14 | 1 | 6 | 23 |  | 11 | **55** |
 | [lists.md](../spec/lists.md) |  | 2 |  | 3 |  | 11 | **16** |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 6 | 7 |  | 31 |  |  | **44** |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 7 | 6 |  | 31 |  | 2 | **46** |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 7 | 7 |  | 31 |  |  | **45** |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 8 | 6 |  | 31 |  | 2 | **47** |
 | [move-subtree.md](../spec/move-subtree.md) |  |  |  |  |  | 24 | **24** |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 12 |  | 7 | 41 |  | 7 | **67** |
 | [outdent.md](../spec/outdent.md) | 5 | 1 |  | 25 |  | 11 | **42** |
@@ -50,7 +50,7 @@ Per-file:
 | [placeholders.md](../spec/placeholders.md) | 4 |  |  | 15 |  | 1 | **20** |
 | [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |
 | [quotes.md](../spec/quotes.md) | 49 | 8 | 6 | 55 |  | 25 | **143** |
-| [regressions.md](../spec/regressions.md) | 35 | 1 | 1 | 103 |  | 58 | **198** |
+| [regressions.md](../spec/regressions.md) | 35 | 1 | 1 | 104 |  | 58 | **199** |
 | [scenarios.md](../spec/scenarios.md) | 3 |  |  | 22 |  | 4 | **29** |
 | [select.md](../spec/select.md) |  |  |  |  |  | 23 | **23** |
 | [shift-enter.md](../spec/shift-enter.md) | 4 |  | 8 | 21 |  | 3 | **36** |
@@ -59,9 +59,9 @@ Per-file:
 | [typing.md](../spec/typing.md) | 3 |  |  |  |  |  | **3** |
 | [undo.md](../spec/undo.md) | 1 | 1 |  | 3 |  |  | **5** |
 | [zoom.md](../spec/zoom.md) |  |  |  |  |  | 14 | **14** |
-| **total** | **254 (18%)** | **53 (3.7%)** | **31 (2.2%)** | **729 (51%)** | **0 (0%)** | **374 (26%)** | **1441** |
+| **total** | **256 (18%)** | **53 (3.7%)** | **31 (2.1%)** | **730 (50%)** | **0 (0%)** | **377 (26%)** | **1447** |
 
-## Disagree (729)
+## Disagree (730)
 
 ### [Backspace1](../spec/backspace.md#backspace1)
 
@@ -28543,6 +28543,66 @@ x
 </td></tr>
 </table>
 
+### [Regression199](../spec/regressions.md#regression199)
+
+> deleteSoftLineBackward
+
+Adapted: under quotes: atom
+
+<table>
+<tr><th>buffer</th><th>emacs-markdown</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+
+# h
+> - 
+> ^x┃
+```
+
+</td><td>
+
+```buffer
+
+# h
+> - 
+┃
+```
+
+</td><td>
+
+```buffer
+# h
+> - 
+
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+◌
+# h
+> - ◌
+> ^x┃
+```
+
+</td><td>
+
+```buffer
+# h
+> - 
+┃
+```
+
+</td></tr>
+</table>
+
 ### [Scenario1](../spec/scenarios.md#scenario1)
 
 > enter indent "x"
@@ -35525,7 +35585,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (374)
+## Skipped (377)
 
 | example | why |
 | --- | --- |
@@ -35667,6 +35727,9 @@ Original:
 | [Fold15b](../spec/fold.md#fold15b) | no folds |
 | [Fold16](../spec/fold.md#fold16) | no folds |
 | [Fold17](../spec/fold.md#fold17) | no folds |
+| [Fold18](../spec/fold.md#fold18) | no folds |
+| [Fold19](../spec/fold.md#fold19) | no folds |
+| [Fold20](../spec/fold.md#fold20) | no folds |
 | **indent.md** | |
 | [Indent17](../spec/indent.md#indent17) | CR line endings |
 | [Indent18](../spec/indent.md#indent18) | option bullet: + |

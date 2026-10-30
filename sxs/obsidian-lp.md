@@ -5,7 +5,7 @@ version: "1.14.5"
 url: "app://obsidian.md/"
 model: "text"
 command: "node sxs/run.ts obsidian-lp"
-elapsed_s: 603
+elapsed_s: 640
 workers: 2
 ---
 
@@ -15,7 +15,7 @@ Summary:
 
 | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- |
-| **329 (23%)** | **[50](#caret-50) (3.5%)** | **[34](#whitespace-34) (2.4%)** | **[674](#disagree-674) (47%)** | **0 (0%)** | **[354](#skipped-354) (25%)** | **1441** |
+| **331 (23%)** | **[50](#caret-50) (3.5%)** | **[34](#whitespace-34) (2.3%)** | **[678](#disagree-678) (47%)** | **0 (0%)** | **[354](#skipped-354) (24%)** | **1447** |
 
 Per-file:
 
@@ -32,12 +32,12 @@ Per-file:
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 12 | **12** |
 | [enter.md](../spec/enter.md) | 21 | 2 | 1 | 46 |  | 28 | **98** |
 | [fences.md](../spec/fences.md) | 18 | 2 |  | 46 |  | 4 | **70** |
-| [fold.md](../spec/fold.md) | 2 |  |  | 12 |  | 5 | **19** |
+| [fold.md](../spec/fold.md) | 2 |  |  | 15 |  | 5 | **22** |
 | [gaps.md](../spec/gaps.md) | 2 |  | 1 | 15 |  | 1 | **19** |
 | [indent.md](../spec/indent.md) | 7 | 4 | 6 | 26 |  | 12 | **55** |
 | [lists.md](../spec/lists.md) |  |  |  | 4 |  | 12 | **16** |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 7 | 1 |  | 36 |  |  | **44** |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 11 | 2 |  | 30 |  | 3 | **46** |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 8 | 1 |  | 36 |  |  | **45** |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 12 | 2 |  | 30 |  | 3 | **47** |
 | [move-subtree.md](../spec/move-subtree.md) |  |  |  |  |  | 24 | **24** |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 19 |  | 3 | 40 |  | 5 | **67** |
 | [outdent.md](../spec/outdent.md) | 7 | 1 | 1 | 22 |  | 11 | **42** |
@@ -51,7 +51,7 @@ Per-file:
 | [placeholders.md](../spec/placeholders.md) | 6 |  | 1 | 12 |  | 1 | **20** |
 | [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |
 | [quotes.md](../spec/quotes.md) | 65 | 1 | 3 | 48 |  | 26 | **143** |
-| [regressions.md](../spec/regressions.md) | 36 | 2 | 7 | 97 |  | 56 | **198** |
+| [regressions.md](../spec/regressions.md) | 36 | 2 | 7 | 98 |  | 56 | **199** |
 | [scenarios.md](../spec/scenarios.md) | 5 |  |  | 19 |  | 5 | **29** |
 | [select.md](../spec/select.md) |  | 18 |  |  |  | 5 | **23** |
 | [shift-enter.md](../spec/shift-enter.md) | 9 |  | 4 | 18 |  | 5 | **36** |
@@ -60,9 +60,9 @@ Per-file:
 | [typing.md](../spec/typing.md) | 3 |  |  |  |  |  | **3** |
 | [undo.md](../spec/undo.md) | 2 |  |  | 3 |  |  | **5** |
 | [zoom.md](../spec/zoom.md) |  |  |  |  |  | 14 | **14** |
-| **total** | **329 (23%)** | **50 (3.5%)** | **34 (2.4%)** | **674 (47%)** | **0 (0%)** | **354 (25%)** | **1441** |
+| **total** | **331 (23%)** | **50 (3.5%)** | **34 (2.3%)** | **678 (47%)** | **0 (0%)** | **354 (24%)** | **1447** |
 
-## Disagree (674)
+## Disagree (678)
 
 ### [Backspace1](../spec/backspace.md#backspace1)
 
@@ -9597,6 +9597,131 @@ body
   - b
 
 ⟦folded 2; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold18](../spec/fold.md#fold18)
+
+> moveSubtreeDown
+
+<table>
+<tr><th>buffer</th><th>obsidian-lp</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+  - x
+- a
+  - x
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+  - x
+- a┃
+- a
+  - x
+
+⟦folded none; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+  - x
+- a┃
+  - x
+
+⟦folded 3; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold19](../spec/fold.md#fold19)
+
+> moveSubtreeUp
+
+<table>
+<tr><th>buffer</th><th>obsidian-lp</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - x
+- a┃
+  - x
+
+⟦folded 1; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a
+- a┃
+  - x
+  - x
+
+⟦folded none; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+- a┃
+  - x
+- a
+  - x
+
+⟦folded 3; zoom none⟧
+```
+
+</td></tr>
+</table>
+
+### [Fold20](../spec/fold.md#fold20)
+
+> cursorLineBoundaryForward
+
+<table>
+<tr><th>buffer</th><th>obsidian-lp</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+
+┃# h
+> - 
+> ^x
+
+⟦folded 2; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+
+# h
+> - 
+> ^x
+┃
+⟦folded 2; zoom none⟧
+```
+
+</td><td>
+
+```buffer
+# h┃
+> - 
+> ^x
+
+⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -27085,6 +27210,66 @@ b
 x
 
 # h┃
+```
+
+</td></tr>
+</table>
+
+### [Regression199](../spec/regressions.md#regression199)
+
+> deleteSoftLineBackward
+
+Adapted: under quotes: atom
+
+<table>
+<tr><th>buffer</th><th>obsidian-lp</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+
+# h
+> - 
+> ^x┃
+```
+
+</td><td>
+
+```buffer
+
+# h
+> - 
+> ┃
+```
+
+</td><td>
+
+```buffer
+# h
+> - 
+
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+◌
+# h
+> - ◌
+> ^x┃
+```
+
+</td><td>
+
+```buffer
+# h
+> - 
+┃
 ```
 
 </td></tr>

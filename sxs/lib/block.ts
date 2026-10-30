@@ -14,6 +14,7 @@
 import type { OurusConfig } from '../../src/config.ts';
 import { OurusProse, OurusDoc, type OurusNode } from '../../src/doc/index.ts';
 import { textEnd, textStart } from '../../src/doc/index.ts';
+import { OurusView } from '../../src/view/index.ts';
 import { docOf, nodesOf, readDrawing } from '../../test/drawing.ts';
 import { micromark } from 'micromark';
 import { gfm, gfmHtml } from 'micromark-extension-gfm';
@@ -149,6 +150,7 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
   // the projection's, `quoted`)
   // and a list after a block under it or beside it as the app's blocks have it (`listParent`)
   const doc = docOf(text, drawing.placeholders.map(at), { ...options.config, flavor, quotes: 'container', ...(options.listParent && { listParent: options.listParent }) });
+  const view = OurusView.of(doc);
   if (doc.mdTree.root.children.some((b) => b.type === 'frontmatter')) throw new Unsupported('frontmatter');
 
   const nodes = nodesOf(doc);
@@ -236,7 +238,7 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
   let held: { block: number; offset: number; lines: Set<number> } | null = null;
   if (/┃/.test(drawn) && anchor === head) {
     const p = at(head);
-    const where = doc.locate(p);
+    const where = view.locate(p);
     const i = where.zone === 'gap' && !where.owner.children.length && doc.atTextColumn(p, where.owner) ? blockOf.get(where.owner.id) : undefined;
     const line = doc.lineAt(p).index;
     // (but the gap's last line where a paragraph is on either side of it: the blank line setting them apart)
@@ -283,7 +285,7 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
   // a subtree selection (`««…»»`): the nodes its span touches selected whole (a selection drawn
   // `«…»`, whole lines or not, is the text drawn)
   if (options.blockSelection && drawing.subtrees) {
-    const roots = doc.touchedNodes({ anchor: at(anchor), head: at(head) });
+    const roots = view.touchedSubtrees({ anchor: at(anchor), head: at(head) });
     const selected = [...new Set(roots.flatMap((n) => (blockOf.has(n.id) ? [blockOf.get(n.id)!] : [])))].sort((x, y) => x - y);
     return { outline: { blocks, sel: null, selected }, notes, sections, rows };
   }
@@ -296,12 +298,12 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
     // (as ourus reads the nodes: from a node's text start, a number or a checkbox before it, to another's end)
     const [from, to] = [Math.min(at(anchor), at(head)), Math.max(at(anchor), at(head))];
     const edge = (p: number, end: boolean): boolean => {
-      const where = doc.locate(p);
+      const where = view.locate(p);
       if (where.zone !== 'text' && where.zone !== 'frame') return false;
       return p === doc.posOf(where.node, end ? textEnd(where.text) : textStart(where.text), end ? -1 : 1);
     };
     if (!options.blockSelection || !edge(from, false) || !edge(to, true)) return { outline: { blocks, sel: null }, notes, caretLost: 'selection across blocks', sections, rows };
-    const selected = [...new Set(doc.touchedNodes({ anchor: at(anchor), head: at(head) }).flatMap((n) => (blockOf.has(n.id) ? [blockOf.get(n.id)!] : [])))].sort((x, y) => x - y);
+    const selected = [...new Set(view.touchedSubtrees({ anchor: at(anchor), head: at(head) }).flatMap((n) => (blockOf.has(n.id) ? [blockOf.get(n.id)!] : [])))].sort((x, y) => x - y);
     return { outline: { blocks, sel: null, selected }, notes, sections, rows };
   }
   return { outline: { blocks, sel: { block: h.block, anchor: a.offset, head: h.offset } }, notes, sections, rows };

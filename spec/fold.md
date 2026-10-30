@@ -308,14 +308,14 @@ tags: common
 ```
 
 ```yaml
-result: applied
+result: success
 folded: ①
 ```
 
 > fold ②
 
 ```yaml
-result: applied
+result: success
 folded: ①
 ```
 
@@ -600,4 +600,100 @@ folded: ①
 
 ```yaml
 folded: ①
+```
+
+## Fold18
+
+A folded item moved past a sibling written the same: the move changes no character, but the two
+nodes trade places, and the fold goes with its node, to the second item. The document after is
+another one, its nodes in another order, though its text is the same (dev/25-view.md §5.1).
+
+```yaml
+tags: rare
+folded: ①
+```
+
+```buffer
+- a┃①
+  - x
+- a②
+  - x
+```
+
+> moveSubtreeDown
+
+```buffer
+- a②
+  - x
+- a┃①
+  - x
+```
+
+```yaml
+result: success
+folded: ①
+```
+
+## Fold19
+
+The same, moving the item that isn't folded: it goes up past the folded one, which stays folded,
+now second.
+
+```yaml
+tags: rare
+folded: ①
+```
+
+```buffer
+- a①
+  - x
+- a┃②
+  - x
+```
+
+> moveSubtreeUp
+
+```buffer
+- a┃②
+  - x
+- a①
+  - x
+```
+
+```yaml
+result: success
+folded: ①
+```
+
+## Fold20
+
+Placeholders the caret has left are settled, a node written again or gone, without opening a
+fold: in two steps where not all of them can be settled at once (those that can't dropped, the
+rest written), the fold carried through each (dev/25-view.md §6). Here the empty item in the
+folded section, a block id below it, can't be settled with the other, nor written alone: its
+placeholder is dropped and the text read without it; the empty paragraph above the heading goes.
+
+```yaml
+tags: rare
+flavor: obsidian
+folded: ②
+```
+
+```buffer
+◌①
+┃# h②
+> - ◌
+> ^x
+```
+
+> cursorLineBoundaryForward
+
+```buffer
+# h┃②
+> -␠
+> ^x
+```
+
+```yaml
+folded: ②
 ```

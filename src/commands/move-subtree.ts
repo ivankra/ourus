@@ -4,12 +4,13 @@
 
 import { OurusAtom, OurusProse, type OurusDoc, type OurusNode, type OurusText } from '../doc/index.ts';
 import { trimMd } from '../text/index.ts';
-import type { OurusCommandResult } from './types.ts';
-import { reject, type CommandContext, type CommandOutcome } from './context.ts';
+import type { OurusResult } from './types.ts';
+import { type CommandContext } from './context.ts';
 import { dragRun } from './drag.ts';
 import { itemTextsRefused } from './indent.ts';
 import type { InsertionPoint } from './types.ts';
 import { headingLevel, selectionInText, shiftHeadingLevels } from './util.ts';
+import { OurusSuccess, OurusRejected } from './types.ts';
 
 
 /**
@@ -19,7 +20,7 @@ import { headingLevel, selectionInText, shiftHeadingLevels } from './util.ts';
  * item, an item right after a block that adopts lists becoming a paragraph, a heading re-levelled to
  * its new siblings. The caret goes with the text it is in.
  */
-export function moveSubtreeCommand(ctx: CommandContext, to: InsertionPoint): CommandOutcome {
+export function moveSubtreeCommand(ctx: CommandContext, to: InsertionPoint): OurusResult | null {
   const doc = ctx.doc;
   const run = dragRun(ctx);
   if (!Array.isArray(run)) return run;
@@ -27,24 +28,24 @@ export function moveSubtreeCommand(ctx: CommandContext, to: InsertionPoint): Com
   const last = run[run.length - 1]!;
   const ids = new Set(run.map((n) => n.id));
   const place = placeOf(doc, to);
-  if ('status' in place) return place;
+  if (place instanceof OurusRejected) return place;
   const { parent, after } = place;
-  if (after && ids.has(after.id)) return reject('invalid-insertion-point', 'the place is anchored on a node moved');
-  for (let p: OurusNode | null = parent; p; p = p.parent) if (ids.has(p.id)) return reject('into-itself');
+  if (after && ids.has(after.id)) return new OurusRejected('invalid-insertion-point', 'the place is anchored on a node moved');
+  for (let p: OurusNode | null = parent; p; p = p.parent) if (ids.has(p.id)) return new OurusRejected('into-itself');
   const placed = run.map((n) => n.id);
-  if (parent.id === first.parent!.id && (after?.id ?? null) === (first.prev?.id ?? null)) return { status: 'applied', doc, changes: [], selection: ctx.selection, placed };
+  if (parent.id === first.parent!.id && (after?.id ?? null) === (first.prev?.id ?? null)) return new OurusSuccess({ view: ctx.view, changes: [], selection: ctx.selection, placed });
 
   // a quote the run leaves holding one paragraph is that paragraph (`quotes: text`); an item's first
   // block, on its marker's line, it would be the item's text, which a move doesn't make yet
   const left = first.parent!;
-  if (left.kind === 'quote' && dissolves(doc, left, ids) && left.parent?.kind === 'item' && left.index === 0 && !doc.textOf(left.parent)) return reject('not-expressible', "the quote it leaves would be its item's text");
+  if (left.kind === 'quote' && dissolves(doc, left, ids) && left.parent?.kind === 'item' && left.index === 0 && !doc.textOf(left.parent)) return new OurusRejected('not-expressible', "the quote it leaves would be its item's text");
 
   // what the run becomes there
   const siblings = parent.children.filter((c) => !ids.has(c.id));
   const next = siblings[after ? siblings.findIndex((c) => c.id === after.id) + 1 : 0] ?? null;
   const kind = first.kind;
   const refused = moveRefused(ctx, run, parent, after);
-  if (refused) return reject(refused.reason, refused.why);
+  if (refused) return new OurusRejected(refused.reason, refused.why);
   const block = parent.kind === 'paragraph' || parent.kind === 'atom';
   const becomes = becomesAt(doc, kind, parent, after, ids);
   const draft = ctx.draft();
@@ -73,13 +74,13 @@ export function moveSubtreeCommand(ctx: CommandContext, to: InsertionPoint): Com
   if (after) draft.place('after', after, run);
   else draft.append(parent, 'first', run);
   const shifts = shiftHeadingLevels(ctx, draft, run, delta);
-  if (!shifts || 'status' in shifts) return shifts;
+  if (!shifts || shifts instanceof OurusRejected) return shifts;
   selectionInText(ctx, draft, false, shifts);
   const applied = ctx.apply(draft);
-  if (applied?.status !== 'applied') return applied;
-  const wrong = resultCheck(doc, applied.doc, placed, ids, to);
-  if (wrong) return reject(wrong.reason, `result check: ${wrong.why}`);
-  return { ...applied, placed };
+  if (!(applied instanceof OurusSuccess)) return applied;
+  const wrong = resultCheck(doc, applied.view.doc, placed, ids, to);
+  if (wrong) return new OurusRejected(wrong.reason, `result check: ${wrong.why}`);
+  return new OurusSuccess({ ...applied, placed });
 }
 
 /**
@@ -132,12 +133,12 @@ export function moveRefused(ctx: CommandContext, run: readonly OurusNode[], pare
 }
 
 /** The place `to` names in `doc`: its parent and the node it goes after; else why not. */
-export function placeOf(doc: OurusDoc, to: InsertionPoint): { readonly parent: OurusNode; readonly after: OurusNode | null } | OurusCommandResult {
+export function placeOf(doc: OurusDoc, to: InsertionPoint): { readonly parent: OurusNode; readonly after: OurusNode | null } | OurusRejected {
   const parent = to.parent === 'root' ? doc.rootNode : doc.node(to.parent);
-  if (!parent || (to.parent !== 'root' && parent.kind === 'root')) return reject('no-such-node', `no node ${to.parent}`);
+  if (!parent || (to.parent !== 'root' && parent.kind === 'root')) return new OurusRejected('no-such-node', `no node ${to.parent}`);
   const after = to.after === null ? null : (doc.node(to.after) ?? null);
-  if (to.after !== null && (!after || after.kind === 'root')) return reject('no-such-node', `no node ${to.after}`);
-  if (after && after.parent?.id !== parent.id) return reject('invalid-insertion-point', `node ${after.id} isn't a child of ${to.parent === 'root' ? 'the root' : `node ${parent.id}`}`);
+  if (to.after !== null && (!after || after.kind === 'root')) return new OurusRejected('no-such-node', `no node ${to.after}`);
+  if (after && after.parent?.id !== parent.id) return new OurusRejected('invalid-insertion-point', `node ${after.id} isn't a child of ${to.parent === 'root' ? 'the root' : `node ${parent.id}`}`);
   return { parent, after };
 }
 

@@ -3,7 +3,7 @@
 //
 //   const draft = new OurusDraft(doc).split(node, offset, { children: 'follow' });   // an edit, as the outline it wants
 //   draft.done();                     // normal form, written, read back and checked: { doc, changes, selection }, or a refusal
-//   const settled = settlePlaceholders(doc, caret);   // the placeholders the caret left: { doc, changes } or null
+//   settleSteps(doc, caret);          // the placeholders the caret left settled: each step's { doc, changes }
 
 export { OurusDraft, type Anchor, type Applied, type AnchorSpec, type DraftResult, type ListPlace, type NodeRef, type Refusal } from './draft.ts';
-export { settlePlaceholders } from './settle.ts';
+export { settleSteps, type Settled } from './settle.ts';

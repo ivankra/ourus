@@ -5,7 +5,7 @@ version: "1.28.62"
 url: "https://www.remnote.com/notes"
 model: "block"
 command: "node sxs/run.ts remnote-bl"
-elapsed_s: 835
+elapsed_s: 695
 workers: 2
 ---
 
@@ -15,9 +15,9 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 177 | [21](#caret-21) | [6](#whitespace-6) | [43](#disagree-43) |  |  | **247** |
+| original | 181 | [21](#caret-21) | [6](#whitespace-6) | [43](#disagree-43) |  |  | **251** |
 | adapted | 255 | [20](#adapted-caret-20) | [13](#adapted-whitespace-13) | [114](#adapted-disagree-114) |  |  | **402** |
-| **total** | **432 (30%)** | **41 (2.8%)** | **19 (1.3%)** | **157 (11%)** | **0 (0%)** | **[790](#skipped-790) (55%)** | **1441** |
+| **total** | **436 (30%)** | **41 (2.8%)** | **19 (1.3%)** | **157 (11%)** | **0 (0%)** | **[792](#skipped-792) (55%)** | **1447** |
 
 Per-file:
 
@@ -34,12 +34,12 @@ Per-file:
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 12 | **12** |  |  |
 | [enter.md](../spec/enter.md) | 47 |  | 2 | 2 |  | 47 | **98** | 16 | 35 |
 | [fences.md](../spec/fences.md) | 5 |  | 3 | 1 |  | 61 | **70** |  | 9 |
-| [fold.md](../spec/fold.md) | 10 | 2 |  | 2 |  | 5 | **19** | 11 | 3 |
+| [fold.md](../spec/fold.md) | 12 | 2 |  | 2 |  | 6 | **22** | 13 | 3 |
 | [gaps.md](../spec/gaps.md) | 14 |  |  | 1 |  | 4 | **19** | 1 | 14 |
 | [indent.md](../spec/indent.md) | 30 |  |  | 2 |  | 23 | **55** | 18 | 14 |
 | [lists.md](../spec/lists.md) | 4 |  |  |  |  | 12 | **16** |  | 4 |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 22 |  |  | 7 |  | 15 | **44** | 13 | 16 |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 20 |  |  | 9 |  | 17 | **46** | 15 | 14 |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 23 |  |  | 7 |  | 15 | **45** | 14 | 16 |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 21 |  |  | 9 |  | 17 | **47** | 16 | 14 |
 | [move-subtree.md](../spec/move-subtree.md) | 1 | 10 |  | 3 |  | 10 | **24** | 7 | 7 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 36 |  | 3 | 5 |  | 23 | **67** | 23 | 21 |
 | [outdent.md](../spec/outdent.md) | 15 |  |  | 1 |  | 26 | **42** | 5 | 11 |
@@ -53,7 +53,7 @@ Per-file:
 | [placeholders.md](../spec/placeholders.md) | 13 |  | 2 |  |  | 5 | **20** | 4 | 11 |
 | [quirks.md](../spec/quirks.md) |  | 1 |  |  |  | 6 | **7** |  | 1 |
 | [quotes.md](../spec/quotes.md) |  |  |  |  |  | 143 | **143** |  |  |
-| [regressions.md](../spec/regressions.md) | 35 | 3 | 6 | 28 |  | 126 | **198** | 13 | 59 |
+| [regressions.md](../spec/regressions.md) | 35 | 3 | 6 | 28 |  | 127 | **199** | 13 | 59 |
 | [scenarios.md](../spec/scenarios.md) | 13 | 3 |  | 7 |  | 6 | **29** | 12 | 11 |
 | [select.md](../spec/select.md) | 11 | 5 |  |  |  | 7 | **23** | 12 | 4 |
 | [shift-enter.md](../spec/shift-enter.md) | 25 |  | 3 |  |  | 8 | **36** | 12 | 16 |
@@ -62,7 +62,7 @@ Per-file:
 | [typing.md](../spec/typing.md) |  |  |  |  |  | 3 | **3** |  |  |
 | [undo.md](../spec/undo.md) | 2 | 2 |  |  |  | 1 | **5** | 3 | 1 |
 | [zoom.md](../spec/zoom.md) | 1 |  |  |  |  | 13 | **14** | 1 |  |
-| **total** | **432 (30%)** | **41 (2.8%)** | **19 (1.3%)** | **157 (11%)** | **0 (0%)** | **792 (55%)** | **1441** | **247 (17%)** | **402 (28%)** |
+| **total** | **436 (30%)** | **41 (2.8%)** | **19 (1.3%)** | **157 (11%)** | **0 (0%)** | **794 (55%)** | **1447** | **251 (17%)** | **402 (28%)** |
 
 ## Disagree (43)
 
@@ -13523,7 +13523,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (792)
+## Skipped (794)
 
 | example | why |
 | --- | --- |
@@ -13808,6 +13808,7 @@ Original:
 | [Fold10](../spec/fold.md#fold10) | action fold ① |
 | [Fold11](../spec/fold.md#fold11) | action toggleFold |
 | [Fold13](../spec/fold.md#fold13) | its view, on an adapted start |
+| [Fold20](../spec/fold.md#fold20) | quote |
 | **gaps.md** | |
 | [Gap15](../spec/gaps.md#gap15) | caret on a blank line |
 | [Gap16](../spec/gaps.md#gap16) | caret on a blank line |
@@ -14275,6 +14276,7 @@ Original:
 | [Regression195](../spec/regressions.md#regression195) | action duplicateSubtree |
 | [Regression196](../spec/regressions.md#regression196) | quote |
 | [Regression198](../spec/regressions.md#regression198) | quote |
+| [Regression199](../spec/regressions.md#regression199) | quote |
 | **scenarios.md** | |
 | [Scenario6](../spec/scenarios.md#scenario6) | tag free-form |
 | [Scenario8d](../spec/scenarios.md#scenario8d) | action drag ② |

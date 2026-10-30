@@ -506,7 +506,7 @@ tags: edge
 ```
 
 ```yaml
-result: applied
+result: success
 ```
 
 > outdent

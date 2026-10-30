@@ -5,8 +5,8 @@ version: "f6ae813f25"
 url: "https://app.tana.inc/tests"
 model: "block"
 command: "node sxs/run.ts tana"
-elapsed_s: 264
-workers: 3
+elapsed_s: 504
+workers: 4
 ---
 
 # Tana vs ourus
@@ -15,9 +15,9 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 174 | [19](#caret-19) | [4](#whitespace-4) | [45](#disagree-45) |  |  | **242** |
+| original | 178 | [19](#caret-19) | [4](#whitespace-4) | [45](#disagree-45) |  |  | **246** |
 | adapted | 269 | [15](#adapted-caret-15) | [7](#adapted-whitespace-7) | [89](#adapted-disagree-89) |  |  | **380** |
-| **total** | **443 (31%)** | **34 (2.4%)** | **11 (0.76%)** | **134 (9.3%)** | **0 (0%)** | **[814](#skipped-814) (56%)** | **1441** |
+| **total** | **447 (31%)** | **34 (2.3%)** | **11 (0.76%)** | **134 (9.3%)** | **0 (0%)** | **[816](#skipped-816) (56%)** | **1447** |
 
 Per-file:
 
@@ -34,12 +34,12 @@ Per-file:
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) | 3 | 2 |  |  |  | 7 | **12** | 5 |  |
 | [enter.md](../spec/enter.md) | 49 |  |  | 7 |  | 42 | **98** | 20 | 36 |
 | [fences.md](../spec/fences.md) | 7 |  | 1 | 5 |  | 57 | **70** |  | 13 |
-| [fold.md](../spec/fold.md) | 11 | 2 |  | 1 |  | 5 | **19** | 12 | 2 |
+| [fold.md](../spec/fold.md) | 13 | 2 |  | 1 |  | 6 | **22** | 14 | 2 |
 | [gaps.md](../spec/gaps.md) | 11 |  |  |  |  | 8 | **19** |  | 11 |
 | [indent.md](../spec/indent.md) | 27 |  |  | 2 |  | 26 | **55** | 19 | 10 |
 | [lists.md](../spec/lists.md) | 4 |  |  |  |  | 12 | **16** |  | 4 |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 26 |  |  |  |  | 18 | **44** | 13 | 13 |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 23 |  |  |  |  | 23 | **46** | 15 | 8 |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 27 |  |  |  |  | 18 | **45** | 14 | 13 |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 24 |  |  |  |  | 23 | **47** | 16 | 8 |
 | [move-subtree.md](../spec/move-subtree.md) | 7 |  |  | 2 |  | 15 | **24** | 6 | 3 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 27 |  |  | 4 |  | 36 | **67** | 13 | 18 |
 | [outdent.md](../spec/outdent.md) | 16 |  |  | 2 |  | 24 | **42** | 4 | 14 |
@@ -53,7 +53,7 @@ Per-file:
 | [placeholders.md](../spec/placeholders.md) | 10 | 1 | 4 |  |  | 5 | **20** | 5 | 10 |
 | [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |  |  |
 | [quotes.md](../spec/quotes.md) |  |  |  |  |  | 143 | **143** |  |  |
-| [regressions.md](../spec/regressions.md) | 30 | 5 | 5 | 25 |  | 133 | **198** | 15 | 50 |
+| [regressions.md](../spec/regressions.md) | 30 | 5 | 5 | 25 |  | 134 | **199** | 15 | 50 |
 | [scenarios.md](../spec/scenarios.md) | 13 | 2 |  | 4 |  | 10 | **29** | 9 | 10 |
 | [select.md](../spec/select.md) | 13 | 5 |  |  |  | 5 | **23** | 10 | 8 |
 | [shift-enter.md](../spec/shift-enter.md) |  |  |  |  |  | 36 | **36** |  |  |
@@ -62,7 +62,7 @@ Per-file:
 | [typing.md](../spec/typing.md) |  |  |  |  |  | 3 | **3** |  |  |
 | [undo.md](../spec/undo.md) |  | 4 |  |  |  | 1 | **5** | 3 | 1 |
 | [zoom.md](../spec/zoom.md) | 4 | 1 |  | 3 |  | 6 | **14** | 8 |  |
-| **total** | **443 (31%)** | **34 (2.4%)** | **11 (0.76%)** | **134 (9.3%)** | **0 (0%)** | **819 (57%)** | **1441** | **242 (17%)** | **380 (26%)** |
+| **total** | **447 (31%)** | **34 (2.3%)** | **11 (0.76%)** | **134 (9.3%)** | **0 (0%)** | **821 (57%)** | **1447** | **246 (17%)** | **380 (26%)** |
 
 ## Disagree (45)
 
@@ -10562,7 +10562,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (819)
+## Skipped (821)
 
 | example | why |
 | --- | --- |
@@ -10821,6 +10821,7 @@ Original:
 | [Fold11](../spec/fold.md#fold11) | action toggleFold |
 | [Fold13](../spec/fold.md#fold13) | its view, on an adapted start |
 | [Fold15b](../spec/fold.md#fold15b) | changes only what blocks can't show |
+| [Fold20](../spec/fold.md#fold20) | quote |
 | **gaps.md** | |
 | [Gap6](../spec/gaps.md#gap6) | heading other than H1: Tana's (a section) has one level |
 | [Gap12](../spec/gaps.md#gap12) | heading other than H1: Tana's (a section) has one level |
@@ -11334,6 +11335,7 @@ Original:
 | [Regression195](../spec/regressions.md#regression195) | quote |
 | [Regression196](../spec/regressions.md#regression196) | quote |
 | [Regression198](../spec/regressions.md#regression198) | quote |
+| [Regression199](../spec/regressions.md#regression199) | quote |
 | **scenarios.md** | |
 | [Scenario6](../spec/scenarios.md#scenario6) | tag free-form |
 | [Scenario8b](../spec/scenarios.md#scenario8b) | no text focus after moveSubtree ③ |

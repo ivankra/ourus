@@ -14,12 +14,12 @@ the edit:
 Basic usage:
 
 ```ts
-import { OurusDraft, settlePlaceholders } from '../writer/index.ts';   // inside ourus; a host has `settlePlaceholders` from 'ourus'
+import { OurusDraft, settleSteps } from '../writer/index.ts';   // inside ourus; a host has `settlePlaceholders(view, caret)` from 'ourus'
 
 const draft = new OurusDraft(doc).split(node, offset, { children: 'follow' });   // the outline it wants (a command's `ctx.draft()`)
 draft.setCaret(made, 0);
 const result = draft.done();    // { doc, changes, selection }, or a refusal
-const settled = settlePlaceholders(doc, caret);   // the placeholders the caret left: { doc, changes } or null
+const steps = settleSteps(doc, caret);   // the placeholders the caret left settled: each step's { doc, changes }
 ```
 
 ## API
@@ -146,19 +146,22 @@ const settled = settlePlaceholders(doc, caret);   // the placeholders the caret 
     - `originOf(node)`: where a node of `root` is in the original document;
     - `textOf(node, origin)`: a node's text in the draft.
 
-- **`settlePlaceholders(doc: OurusDoc, caret: number): { doc, changes } | null`**<br>
+- **`settleSteps(doc: OurusDoc, caret: number): readonly { doc, changes }[]`**<br>
   Settles the placeholders the caret has left, as one draft: a node with a held space is written
   again without it (escaped where it would otherwise read as markup); an empty item is written
   again so that it holds without a placeholder (right under its parent's text, that takes a blank
-  line above it); any other empty node is removed, its children taking its place. Null when no
-  placeholder is off the caret's line. A host calls it whenever the caret moves.
+  line above it); any other empty node is removed, its children taking its place. In steps, each
+  on the one before's document: one, or, where not all settle at once, those that can't dropped,
+  then the rest written. None when no placeholder is off the caret's line. A host calls
+  `settlePlaceholders(view, caret)` (`commands/`), which carries its view through each step,
+  whenever the caret moves.
 
 Files:
 
 - `index.ts` (the API); `draft.ts` (`OurusDraft`: its operations and `done()`); `write.ts`
   (the writer); `check.ts` (whether a document reads as the draft meant, node by node, each text's
   block ids by name too; nodes the two share are equal without comparing); `settle.ts`
-  (`settlePlaceholders`).
+  (`settleSteps`).
 
 Tests: `test/writer/draft.test.ts` (the operations, how node references resolve through them, what
 `done()` fixes, the check), and the spec, through every command.
