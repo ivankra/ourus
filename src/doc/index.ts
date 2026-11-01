@@ -11,6 +11,6 @@ export { OurusNode, PersistentNode } from './node.ts';
 export type { Located } from './locate.ts';
 export { startingAt } from './extent.ts';
 export { checkBlockIds, blockIdTargetOf, type BlockId, type BlockIdTarget, type BlockIdStray, type BlockIdDeclarations, type BlockIdAllowances } from './block-ids.ts';
-export { escapeParagraph } from './escapes.ts';
+export { escapeParagraph, keepsEscape } from './escapes.ts';
 export { OurusProse, OurusAtom, textEnd, textStart, isClosingPart, closingFrameStart, blockIdsOf, withoutBlockIds, isBlockIdName, reBlockIdLine, type OurusText, type OurusProseType, type FramePart, type AtomFramePart, type BlockIdSyntax, type BlockIdLine, type TextBlockId } from './text.ts';
 export { outlineChildren, type OurusNodeKind, type FlatChild, type OutlineChild } from './rules.ts';

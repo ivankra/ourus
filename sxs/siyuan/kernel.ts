@@ -92,7 +92,7 @@ export async function api<T = unknown>(origin: string, path: string, body: unkno
 }
 
 /** The version of the kernel answering at `origin`, if one does. */
-async function running(origin: string): Promise<string | null> {
+export async function running(origin: string): Promise<string | null> {
   try {
     return await api<string>(origin, 'system/version');
   } catch {

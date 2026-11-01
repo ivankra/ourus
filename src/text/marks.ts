@@ -1,234 +1,236 @@
-// Marks: typed points and ranges on a text, carried through changes and through the string operations
-// of the texts that hold them (`slice`, `shift`, `splice`).
+// Marks: offsets on a text, carried through its changes and through the string operations of the texts
+// that hold them. A mark is an offset; what it is is the list that holds it:
 //
-// The kinds are a closed set, defined here with how each moves (the end of this file); the layers
-// above read what they mean and decide where one is valid after a move (the outline: where a
-// placeholder can be). `defineMarkKind` is this layer's own: the entry doesn't export it. A mark is
-// a point where `from === to`, else a range.
+// - `placeholders`: points between characters (the text's length too), each read as if a character had
+//   been typed there. Its role is where it is: at a line's end it holds an empty node, elsewhere a held
+//   space.
+// - `auto`: characters ourus put in for the user (a line break, an escape, a closer typed with its
+//   opener: a fence's run, a backtick, a bracket), which it may take out again; what kind is the
+//   character itself. Losing one only keeps the character.
 //
-//   const set = MarkSet.of([createPlaceholder(2)]).map(changes);                     // through an edit
-//   set.slice(1, 4).splice(0, 1, 'x')                                                // with a text's string operations
+// A `MarkSet` holds the lists with the text they are on, so they can't be read against another one:
+//
+//   const marks = MarkSet.of('- \n', { placeholders: [2] }).map(changes);   // through an edit
+//   marks.slice(1, 4).splice(0, 1, 'x');                                    // a text's string operations
 
-import { ChangeSet, mapSorted, normalizeChanges, type ChangeSpec } from './changes.ts';
+import { ChangeIndex, ChangeSet, applyChanges, type ChangeSpec } from './changes.ts';
 
-/** A point or range on a text, carried through its changes. */
-export interface Mark {
-  readonly kind: string;
-  readonly from: number;
-  /** Equal to `from` for a point. */
-  readonly to: number;
+/** Offsets for a `MarkSet`'s lists, in any order (a `MarkSet` is one too). */
+export interface MarkLists {
+  readonly placeholders?: readonly number[];
+  readonly auto?: readonly number[];
 }
 
-/**
- * How a kind of mark moves when the text around it changes, in CodeMirror 6's terms where it has them
- * (`mapPos`'s `assoc`, `MapMode`).
- */
-export interface MarkPolicy {
-  /** A point (or a range's end) at an insertion point: stays before the inserted text (-1) or moves past it (1). */
-  readonly assoc: -1 | 1;
-  /**
-   * A point with text deleted across it, or a range deleted whole: it goes (`trackDel`, as CM6's
-   * `MapMode.TrackDel`), or stays, at where the deletion ends (`simple`).
-   */
-  readonly mapMode: 'simple' | 'trackDel';
-  /**
-   * A range with text inserted strictly inside it: it covers the insertion (`extend`, as a CM6 mark
-   * decoration does), or goes (`drop`: the text there is someone else's now). Text inserted at a
-   * range's ends is outside it (CM6's `inclusive: false`).
-   */
-  readonly onInsertInside?: 'extend' | 'drop';
-}
+const NONE: readonly number[] = [];
 
-const policies = new Map<string, MarkPolicy>();
-
-/** Defines a kind of mark and how it moves, once: the kinds below, and tests' own. */
-export function defineMarkKind<K extends string>(kind: K, policy: MarkPolicy): K {
-  if (policies.has(kind)) throw new Error(`mark kind ${kind} is defined twice`);
-  policies.set(kind, policy);
-  return kind;
-}
-
-function policyOf(kind: string): MarkPolicy {
-  const policy = policies.get(kind);
-  if (!policy) throw new Error(`unknown mark kind ${kind}`);
-  return policy;
-}
-
-const order = (a: Mark, b: Mark): number => a.from - b.from || a.to - b.to || (a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0);
-const same = (a: Mark, b: Mark): boolean => a.kind === b.kind && a.from === b.from && a.to === b.to;
-
-/** Marks sorted, without duplicates. */
-function normalized(marks: readonly Mark[]): Mark[] {
-  const out = [...marks].sort(order);
-  return out.filter((m, i) => i === 0 || !same(m, out[i - 1]!));
-}
-
-/**
- * Where one mark goes through `changes` (sorted, in the old text's coordinates), or null where it
- * goes. A point moves as `mapPos` moves it, by its kind's `assoc`; a range's ends move outward-exclusive
- * (text inserted at an end isn't in it), text inserted inside it is.
- */
-function mapMark(mark: Mark, changes: readonly ChangeSpec[]): Mark | null {
-  const policy = policyOf(mark.kind);
-  if (mark.from === mark.to) {
-    const p = mark.from;
-    const inside = changes.find((c) => c.from < p && p < c.to);
-    if (inside && policy.mapMode === 'trackDel') return null;
-    const at = inside ? mapSorted(changes, inside.to, -1) : mapSorted(changes, p, policy.assoc);
-    return { ...mark, from: at, to: at };
-  }
-  const covered = changes.find((c) => c.from < c.to && c.from <= mark.from && c.to >= mark.to);
-  if (covered) {
-    if (policy.mapMode === 'trackDel') return null;
-    const at = mapSorted(changes, covered.to, 1);
-    return { ...mark, from: at, to: at };
-  }
-  // text inserted strictly inside, or put in place of some of it
-  if (policy.onInsertInside === 'drop' && changes.some((c) => c.insert !== '' && mark.from < c.to && c.from < mark.to && (c.from > mark.from || c.to < mark.to))) return null;
-  const from = mapSorted(changes, mark.from, 1);
-  const to = Math.max(from, mapSorted(changes, mark.to, -1));
-  return { ...mark, from, to };
-}
-
-/** An immutable set of marks on a text. */
+/** An immutable text with its marks: each list sorted, without duplicates, on the text. */
 export class MarkSet {
-  static readonly empty = new MarkSet([]);
-  readonly marks: readonly Mark[];
+  readonly text: string;
+  /** Points, `0` through `text.length`: read as typed text (an empty node at a line's end, else a held space). */
+  readonly placeholders: readonly number[];
+  /** Characters, `0` through `text.length - 1`: put in by ourus, not the user. */
+  readonly auto: readonly number[];
 
-  private constructor(marks: readonly Mark[]) {
-    this.marks = marks;
+  private constructor(text: string, placeholders: readonly number[], auto: readonly number[]) {
+    check(text, placeholders, auto);
+    this.text = text;
+    this.placeholders = placeholders;
+    this.auto = auto;
   }
 
-  static of(marks: readonly Mark[]): MarkSet {
-    return marks.length ? new MarkSet(normalized(marks)) : MarkSet.empty;
+  /** `text` with `lists`, sorted and without duplicates; throws on an offset off the text. */
+  static of(text: string, lists: MarkLists = {}): MarkSet {
+    const placeholders = canonical(lists.placeholders ?? NONE, text.length + 1);
+    const auto = canonical(lists.auto ?? NONE, text.length);
+    return new MarkSet(text, placeholders, auto);
   }
 
-  get size(): number {
-    return this.marks.length;
+  /** The same text with the lists `lists` gives in place of this one's; this one where they are the same. */
+  with(lists: MarkLists): MarkSet {
+    const placeholders = lists.placeholders ? canonical(lists.placeholders, this.text.length + 1) : this.placeholders;
+    const auto = lists.auto ? canonical(lists.auto, this.text.length) : this.auto;
+    if (same(placeholders, this.placeholders) && same(auto, this.auto)) return this;
+    return new MarkSet(this.text, placeholders, auto);
   }
 
-  /** The set after `changes` (each in the old text's coordinates), each mark moved by its kind's policy. */
-  map(changes: ChangeSet | readonly ChangeSpec[]): MarkSet {
-    const sorted = changes instanceof ChangeSet ? changes.changes : normalizeChanges(changes);
-    if (!sorted.length || !this.marks.length) return this;
-    return MarkSet.of(this.marks.flatMap((m) => mapMark(m, sorted) ?? []));
+  /** Whether it has no marks at all, whatever its text. */
+  isEmpty(): boolean {
+    return !this.placeholders.length && !this.auto.length;
   }
 
-  /** The set with the marks `filter` keeps, then `add`'s (CM6's `RangeSet.update`). */
-  update({ add = [], filter }: { readonly add?: readonly Mark[]; readonly filter?: (mark: Mark) => boolean }): MarkSet {
-    const kept = filter ? this.marks.filter(filter) : this.marks;
-    if (!add.length && kept.length === this.marks.length) return this;
-    return MarkSet.of([...kept, ...add]);
+  // ------------------------------------------------------------ reading
+
+  /** Whether a placeholder is at `pos`. */
+  hasPlaceholderAt(pos: number): boolean {
+    return MarkSet.has(this.placeholders, pos);
   }
+
+  /** Whether a placeholder holds an empty node at `pos`: at a line's end (the text's end too). */
+  hasEmptyNodeAt(pos: number): boolean {
+    return atLineEnd(this.text, pos) && this.hasPlaceholderAt(pos);
+  }
+
+  /** Whether a placeholder holds a space at `pos`: anywhere else, before its line's text. */
+  hasHeldSpaceAt(pos: number): boolean {
+    return !atLineEnd(this.text, pos) && this.hasPlaceholderAt(pos);
+  }
+
+  /** Whether the character at `pos` is ourus's. */
+  hasAutoAt(pos: number): boolean {
+    return MarkSet.has(this.auto, pos);
+  }
+
+  /** Whether sorted `offsets` hold `pos`: a binary search. */
+  static has(offsets: readonly number[], pos: number): boolean {
+    const k = lowerBound(offsets, pos);
+    return offsets[k] === pos;
+  }
+
+  /** The offsets of sorted `offsets` in `[from, to)`: a binary search. */
+  static within(offsets: readonly number[], from: number, to: number): readonly number[] {
+    const first = lowerBound(offsets, from);
+    const end = lowerBound(offsets, to);
+    if (first === 0 && end === offsets.length) return offsets;
+    return offsets.slice(first, end);
+  }
+
+  // ------------------------------------------------------------ changing
 
   /**
-   * Calls `f` for each mark touching `[from, to]`: a point in it, a range overlapping it or ending at
-   * its edges, in order; `f` returning false stops it (CM6's `RangeSet.between`).
+   * The text after `changes` (in this text's offsets), its marks moved. A mark moves past text inserted
+   * at it; a placeholder goes where text on both sides of it goes, or where it lands in a line's text
+   * (the space it held taken out: no place any more), an auto mark where its character does. `text`:
+   * the text after them, where the caller has it already.
    */
-  between(from: number, to: number, f: (mark: Mark) => void | false): void {
-    for (const m of this.marks) {
-      if (m.from > to) return;
-      if (m.to >= from && f(m) === false) return;
-    }
+  map(changes: ChangeSet | readonly ChangeSpec[], text?: string): MarkSet {
+    const specs = changes instanceof ChangeSet ? changes.changes : changes;
+    if (!specs.length) return this;
+    const next = text ?? (changes instanceof ChangeSet ? changes.apply(this.text) : applyChanges(this.text, specs));
+    if (this.isEmpty()) return new MarkSet(next, NONE, NONE);
+    const index = new ChangeIndex(specs);
+    const move = (offsets: readonly number[], width: number): number[] => {
+      const out: number[] = [];
+      for (const pos of offsets) {
+        if (!index.removes(pos, pos + width)) out.push(index.mapPos(pos, 1));
+      }
+      return out;
+    };
+    const placeholders = move(this.placeholders, 0).filter((pos) => placeholderFits(next, pos));
+    const auto = move(this.auto, 1);
+    return new MarkSet(next, distinct(placeholders), distinct(auto));
   }
 
   /**
-   * The marks in `[from, to)`, in its offsets (`from` at 0), a range cut to it. A point at `from` comes
-   * along, one at `to` only with `endPoints` (else it is the next slice's): slices that tile a text
-   * keep every point once when the last one takes its end's; a part cut at a separator ends where
-   * the separator was.
+   * `[from, to)` with its marks, in its offsets (`from` at 0). A placeholder at `to` comes along only
+   * with `endPoints`, else it is the next slice's: slices that tile a text keep each once when the last
+   * one takes its end's.
    */
   slice(from: number, to: number, endPoints = false): MarkSet {
-    return MarkSet.of(this.marks.flatMap((m) => {
-      if (m.from === m.to) return m.from >= from && (m.from < to || (m.from === to && endPoints)) ? [{ ...m, from: m.from - from, to: m.to - from }] : [];
-      const a = Math.max(m.from, from);
-      const b = Math.min(m.to, to);
-      return a < b ? [{ ...m, from: a - from, to: b - from }] : [];
-    }));
+    if (from === 0 && to === this.text.length && (endPoints || !this.hasPlaceholderAt(to))) return this;
+    const cut = (offsets: readonly number[], end: number): number[] => {
+      return MarkSet.within(offsets, from, end).map((pos) => pos - from);
+    };
+    const placeholders = cut(this.placeholders, endPoints ? to + 1 : to);
+    const auto = cut(this.auto, to);
+    return new MarkSet(this.text.slice(from, to), placeholders, auto);
   }
 
-  /** Every mark `by` on: the marks of a text put after another's. */
-  shift(by: number): MarkSet {
-    return by && this.marks.length ? new MarkSet(this.marks.map((m) => ({ ...m, from: m.from + by, to: m.to + by }))) : this;
+  /** `[from, to)` replaced by `insert`, with its marks if it has any: the marks around move as `map` moves them. */
+  splice(from: number, to: number, insert: MarkSet | string = ''): MarkSet {
+    const inserted = typeof insert === 'string' ? MarkSet.of(insert) : insert;
+    const text = this.text.slice(0, from) + inserted.text + this.text.slice(to);
+    const moved = this.map([{ from, to, insert: inserted.text }], text);
+    if (inserted.isEmpty()) return moved;
+    const add = (offsets: readonly number[], own: readonly number[]): readonly number[] => {
+      if (!own.length) return offsets;
+      return merge(offsets, own.map((pos) => pos + from));
+    };
+    const placeholders = add(moved.placeholders, inserted.placeholders);
+    const auto = add(moved.auto, inserted.auto);
+    return new MarkSet(text, placeholders, auto);
   }
 
-  /** The marks of a text whose `[from, to)` is replaced by `insert`: the marks around move by their policies, `inserted`'s (the insertion's own) come with it. */
-  splice(from: number, to: number, insert: string, inserted: MarkSet = MarkSet.empty): MarkSet {
-    const moved = this.map([{ from, to, insert }]);
-    return inserted.size ? moved.update({ add: inserted.shift(from).marks }) : moved;
-  }
-
-  /** Whether a mark (of `kind`) is at `pos`: a point there, or a range covering the character there. */
-  has(pos: number, kind?: string): boolean {
-    return this.find(pos, kind) !== undefined;
-  }
-
-  /** The first mark (of `kind`) at `pos`: a point there, or a range covering the character there. */
-  find(pos: number, kind?: string): Mark | undefined {
-    return this.marks.find((m) => (kind === undefined || m.kind === kind) && (m.from === m.to ? m.from === pos : m.from <= pos && pos < m.to));
-  }
-
-  /** The points of every mark, sorted: what a reader of offsets (the parser's sentinels) takes. */
-  points(kind?: string): number[] {
-    return (kind === undefined ? this.marks : this.marks.filter((m) => m.kind === kind)).map((m) => m.from);
+  /** The texts after this one, with their marks. */
+  concat(...others: readonly (MarkSet | string)[]): MarkSet {
+    let out: MarkSet = this;
+    for (const other of others) out = out.splice(out.text.length, out.text.length, other);
+    return out;
   }
 }
 
-// ---------------------------------------------------------------- the kinds
-
-/**
- * A placeholder: a point read as if text had been typed there, so what Markdown can't hold exists while
- * the caret is there. Two roles, by where it is (`isEmptyNodePlaceholder`, `isHeldSpacePlaceholder`):
- * at a line's end, an empty node the user is about to fill (`- ◌`); before a line's text, a held
- * space, a deleted first character's place (`- ◌ x`), which keeps the text from moving or reading as a
- * block. It follows typing at it, and goes with text replaced around it.
- */
-export const PLACEHOLDER_MARK = defineMarkKind('placeholder', { assoc: 1, mapMode: 'trackDel' });
-
-/** A placeholder at `pos`. */
-export function createPlaceholder(pos: number): Mark {
-  return { kind: PLACEHOLDER_MARK, from: pos, to: pos };
+/** A mark on a character it can't be on: a list corrupted by whatever made it. */
+export class MarkError extends Error {
+  constructor(what: string, text: string) {
+    const shown = text.length > 200 ? `${text.slice(0, 200)}…` : text;
+    super(`${what} in ${JSON.stringify(shown)}`);
+    this.name = 'MarkError';
+  }
 }
 
-/** Whether `mark` is a placeholder. */
-export const isPlaceholder = (mark: Mark): boolean => mark.kind === PLACEHOLDER_MARK;
-
-/**
- * Whether `mark`, in `text`'s offsets (a document's, or a node's text's), is a placeholder holding an
- * empty node: at a line's end.
- */
-export function isEmptyNodePlaceholder(mark: Mark, text: string): boolean {
-  const c = text[mark.from];
-  return isPlaceholder(mark) && (c === undefined || c === '\n' || c === '\r');
+/** Throws `MarkError` on a mark of `text` on a character it can't be on. */
+function check(text: string, placeholders: readonly number[], auto: readonly number[]): void {
+  for (const pos of placeholders) {
+    if (!placeholderFits(text, pos)) {
+      throw new MarkError(`placeholder at ${pos} on ${JSON.stringify(text[pos])}`, text);
+    }
+  }
+  for (const pos of auto) {
+    // a backslash (an escape), a line break (a raised blank line), a closer typed with its opener
+    // (a backtick, a tilde, a bracket, `$$`, `%%`, `-->`)
+    const char = text[pos];
+    if (char === undefined || !'\\\n\r`~)]}$%->'.includes(char)) {
+      throw new MarkError(`auto mark at ${pos} on ${JSON.stringify(char)}`, text);
+    }
+  }
 }
 
-/**
- * Whether `mark`, in `text`'s offsets, is a placeholder for a held space: before its line's text (in
- * a document, on the space; in a node's text, which leaves the space out, where the text starts).
- */
-export function isHeldSpacePlaceholder(mark: Mark, text: string): boolean {
-  return isPlaceholder(mark) && !isEmptyNodePlaceholder(mark, text);
+/** Whether a placeholder can be at `pos` of `text`: at a line's end (an empty node's) or on a blank (a held space's). */
+function placeholderFits(text: string, pos: number): boolean {
+  const char = text[pos];
+  return char === undefined || char === ' ' || char === '\t' || char === '\n' || char === '\r';
 }
 
-/** Whether `marks` (in `text`'s offsets) hold a placeholder for an empty node at `pos`. */
-export const emptyNodeAt = (marks: MarkSet, text: string, pos: number): boolean => marks.marks.some((m) => m.from === pos && isEmptyNodePlaceholder(m, text));
+/** Whether `pos` is at a line's end in `text` (its end too). */
+function atLineEnd(text: string, pos: number): boolean {
+  const char = text[pos];
+  return char === undefined || char === '\n' || char === '\r';
+}
 
-/** Whether `marks` (in `text`'s offsets) hold a placeholder for a held space at `pos`. */
-export const heldSpaceAt = (marks: MarkSet, text: string, pos: number): boolean => marks.marks.some((m) => m.from === pos && isHeldSpacePlaceholder(m, text));
+/** The first index of sorted `offsets` at `pos` or past it. */
+function lowerBound(offsets: readonly number[], pos: number): number {
+  let [lo, hi] = [0, offsets.length];
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (offsets[mid]! < pos) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
 
-/**
- * Whitespace ourus added only because Markdown needed it, not the user (a blank line setting off a
- * bare `-` under text, or a paragraph that would run on): a range over it. An edit there may take it
- * out once it is no longer needed; whitespace without one is the user's, and stays. Advisory: losing
- * it (a reload, an edit from elsewhere) only keeps the whitespace. Typing in it makes it the user's:
- * it goes.
- */
-export const AUTO_WHITESPACE_MARK = defineMarkKind('auto-whitespace', { assoc: 1, mapMode: 'trackDel', onInsertInside: 'drop' });
+/** `offsets` sorted and distinct, each an integer below `end`: the same array where it is already. */
+function canonical(offsets: readonly number[], end: number): readonly number[] {
+  for (const pos of offsets) {
+    if (!Number.isInteger(pos) || pos < 0 || pos >= end) {
+      throw new RangeError(`mark ${pos} off a text of ${end} positions`);
+    }
+  }
+  return distinct(offsets);
+}
 
-/**
- * A closing delimiter ourus typed for the user (a backtick, a code fence's closing line): a range over
- * it. Backspace in the empty pair takes both halves only where the closing one has this mark, not a
- * pair the user typed. Advisory: losing it only keeps the closing half. Typing inside it makes it the
- * user's: it goes.
- */
-export const AUTO_CLOSED_MARK = defineMarkKind('auto-closed', { assoc: 1, mapMode: 'trackDel', onInsertInside: 'drop' });
+/** Sorted `offsets` without duplicates: the same array where it is already. */
+function distinct(offsets: readonly number[]): readonly number[] {
+  let sorted = true;
+  for (let k = 1; k < offsets.length && sorted; k++) sorted = offsets[k - 1]! < offsets[k]!;
+  if (sorted) return offsets.length ? offsets : NONE;
+  return [...new Set(offsets)].sort((a, b) => a - b);
+}
+
+/** Two sorted, distinct lists as one. */
+function merge(offsets: readonly number[], more: readonly number[]): readonly number[] {
+  return distinct([...offsets, ...more]);
+}
+
+/** Whether two sorted, distinct lists hold the same offsets. */
+function same(offsets: readonly number[], other: readonly number[]): boolean {
+  return offsets.length === other.length && offsets.every((pos, k) => pos === other[k]);
+}

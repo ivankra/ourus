@@ -11,7 +11,7 @@
 // - callouts: a quote whose first line is `[!type]`, optionally `+`/`-`, then the title: the
 //   quote carries `callout`, and the title line is a `callout_title` leaf;
 // - `$$` math and `%%` comment blocks: fenced like code, from a line starting with the fence to a
-//   line ending with it (the same line when it ends with it again).
+//   line ending with it, not the same one: `$$x$$` and `%%x%%` alone on a line are inline, as in Obsidian.
 // Inlines: wikilinks and embeds (`[[target|alias]]`, `![[target]]`), tags (`#tag`), highlights
 // (`==x==`), inline math (`$x$`, `$$x$$`), comments (`%%x%%`), block ids (` ^id` ending a block),
 // inline footnotes (`^[note]`).
@@ -226,20 +226,13 @@ function fencedBlock(type: string, fence: string, name: string): { spec: MdBlock
       start(m) {
         if (m.indented || !m.line.startsWith(fence, m.nextNonspace)) return 0;
         const rest = trimBlanksEnd(m.line.slice(m.nextNonspace + fence.length));
-        // closed on the line with text after it: inline syntax in a paragraph
-        const close = rest.indexOf(fence);
-        if (close >= 0 && close + fence.length < rest.length) return 0;
+        // closed on the line, alone on it or with text after it: inline syntax in a paragraph, as
+        // Obsidian reads `$$x$$` and `%%x%%` (display math, a comment, in the paragraph's text)
+        if (rest.includes(fence)) return 0;
         m.closeUnmatchedBlocks();
-        if (close >= 0) {
-          // opened and closed on one line
-          m.addSingleLine({ type, first: true, closed: true });
-          m.takeLine();
-          m.advanceOffset(m.line.length - m.offset, false);
-        } else {
-          m.addChild(frame);
-          m.setLeaf({ type, first: true });
-          m.advanceNextNonspace();
-        }
+        m.addChild(frame);
+        m.setLeaf({ type, first: true });
+        m.advanceNextNonspace();
         return 2;
       },
     },

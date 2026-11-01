@@ -134,7 +134,7 @@ test('an undo that takes back the snapshot before the move (`withDoc`) keeps its
   const added = undone.update({ changes: [{ from: undone.doc.text.length, to: undone.doc.text.length, insert: '- d\n' }] });
   assert.ok(find(added.doc, 'd').id >= r.view.doc.nextId, 'no id given again');
   // the text given whole instead, the lines written again are new nodes, and the fold is lost
-  assert.notEqual(find(r.view.doc.update({ text: before.text, setMarks: before.marks.marks }), 'b').id, b);
+  assert.notEqual(find(r.view.doc.update({ text: before.text, marks: before.marks }), 'b').id, b);
   // a snapshot of another document is no undo's
   const other = OurusDoc.parse(before.text);
   assert.equal(other.isSameLineage(before), false);
@@ -392,8 +392,7 @@ test('a selection command keeps the view and changes the selection alone', () =>
 
 test('placeholders settled in two steps carry the view through each: the fold kept (Fold20)', async () => {
   const { settlePlaceholders } = await import('../../src/commands/index.ts');
-  const { createPlaceholder } = await import('../../src/text/index.ts');
-  const doc = OurusDoc.parse('\n# h\n> - \n> ^x\n', { config: { flavor: 'obsidian' }, marks: [createPlaceholder(0), createPlaceholder(9)] });
+  const doc = OurusDoc.parse('\n# h\n> - \n> ^x\n', { config: { flavor: 'obsidian' }, marks: { placeholders: [0, 9] } });
   const heading = find(doc, '# h');
   const view = OurusView.of(doc, { folded: [heading.id] });
   const settled = settlePlaceholders(view, 1);

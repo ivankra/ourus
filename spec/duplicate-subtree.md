@@ -245,7 +245,7 @@ Refused.
 
 ```yaml
 tags: rare markup-fence
-closeBackticks: none
+autoClose: []
 ```
 
 ````buffer
@@ -338,4 +338,28 @@ tags: edge
 «- b
   - c»
 - d
+```
+
+## DuplicateSubtree13
+
+A paragraph duplicated above an empty last paragraph: the copy goes between them, and the empty
+paragraph's place stays at the text's end, where it is still last (settled once the caret is
+elsewhere, as any).
+
+```yaml
+tags: rare
+```
+
+```buffer
+a┃
+
+◌
+```
+
+> duplicateSubtree
+
+```buffer
+a
+
+a┃
 ```

@@ -6,7 +6,7 @@ import { executeCommand, type DropMap, type OurusSelection, OurusRejected, Ourus
 import { OurusConfig } from '../src/config.ts';
 import type { OurusDoc, OurusNode } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
-import { docOf, drawDoc, drawnSelection, drawOutline, drawsCaret, drawText, labelGlyph, labelNumber, nodesOf, readDrawing, readLabels, readText, withoutCaret } from './drawing.ts';
+import { docOf, drawDoc, drawnSelection, drawOutline, drawsCaret, drawText, labelGlyph, labelNumber, nodesOf, readDrawing, readLabels, readText, withoutAuto, withoutCaret } from './drawing.ts';
 import { isAction, play, type Played } from './player.ts';
 import { CLIPBOARD_TYPES, specConfig, type Clipboard, type ClipboardType, type SpecTest } from './specfile.ts';
 import { statusOf } from './drawing.ts';
@@ -89,7 +89,7 @@ export class Labels {
 /** Where example `t` starts, in `flavor`, with `config` over the example's options. */
 export function startOf(t: SpecTest, flavor: OurusConfig['flavor'], config: Partial<OurusConfig> = {}): Played {
   const start = readDrawing(t.initial.buffer);
-  const doc = docOf(start.text, start.placeholders, { flavor, ...specConfig(t.options), ...config });
+  const doc = docOf(start.text, start.placeholders, { flavor, ...specConfig(t.options), ...config }, start.auto);
   // (the start's labels, for a drop that names one)
   const labels = new Labels();
   labels.check(doc, start.labels, null);
@@ -219,7 +219,8 @@ export function drawnSteps(t: SpecTest, flavor: OurusConfig['flavor'], config: P
   return t.steps.map((step) => {
     state = play(state, step.actions);
     const text = state.clipboard['text/plain'];
-    return { buffer: normalize(drawDoc(state.view, state.selection)), ...(text !== undefined && { clipboard: text }), view: rowView(state.view) };
+    // (an app shows no auto marks: the SxS's)
+    return { buffer: withoutAuto(normalize(drawDoc(state.view, state.selection))), ...(text !== undefined && { clipboard: text }), view: rowView(state.view) };
   });
 }
 

@@ -22,7 +22,7 @@ import type { Page } from 'playwright-core';
 import { perPage, type Driver, type Drop } from '../lib/driver.ts';
 import { gesture } from '../lib/drag.ts';
 import { lazyQuotes, liftOwned, listOwner, ownBlocks, Unsupported, type Block, type Outline } from '../lib/block.ts';
-import { api, holdKernel, kernelOf, kernelOfPage, leaseKernel, serve, type Kernel } from './kernel.ts';
+import { api, holdKernel, kernelOf, kernelOfPage, leaseKernel, running, serve, type Kernel } from './kernel.ts';
 
 /** SiYuan's keys for the spec's motions (Linux); the `select…` motions add Shift. */
 const MOTIONS: Record<string, string> = {
@@ -398,6 +398,20 @@ const viewed = perPage(() => ({ on: false }));
 /** The kernels whose earlier runs' documents are gone (by origin): removed by the run's first test on each. */
 const swept = new Set<string>();
 
+/** SiYuan's UI from kernel `k`, loaded in `page` and ready, the requests it owes counted (the busy signal). */
+async function loadUI(page: Page, k: Kernel): Promise<void> {
+  await page.goto(`${k.origin}/stage/build/desktop/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.waitForFunction(() => (window as any).siyuan?.isReady && (window as any).__ourusSxs, null, { timeout: 60000 });
+  await page.evaluate(() => {
+    const w = window as any;
+    if (w.__sxsFetching) return;
+    const f = window.fetch.bind(window);
+    let n = 0;
+    window.fetch = (...a: Parameters<typeof fetch>) => (n++, f(...a).finally(() => n--));
+    w.__sxsFetching = () => n;
+  });
+}
+
 /**
  * The kernel of a worker's page, held for the worker: the one `open` leased, or, for a window an
  * earlier run left, the one it is on (by its port), which throws if another worker holds it: the
@@ -574,7 +588,7 @@ export const driver: Driver = {
     enterOnEmptyItem: 'unwrap',
     // Backspace right after a task's checkbox: a paragraph where it is (TaskBackspace2, TaskBackspace3)
     taskEditing: 'unwrap',
-    closeBackticks: 'none',
+    autoClose: [],
     pasteAtTextStart: 'before',
     pasteOnParent: 'after',
     pasteParagraphList: 'children',
@@ -628,17 +642,7 @@ export const driver: Driver = {
     const k = await leaseKernel();
     await serve(k, (line) => console.log(line));
     pageState(page).kernel = k;
-    await page.goto(`${k.origin}/stage/build/desktop/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await page.waitForFunction(() => (window as any).siyuan?.isReady && (window as any).__ourusSxs, null, { timeout: 60000 });
-    // the requests the page owes, counted (the busy signal)
-    await page.evaluate(() => {
-      const w = window as any;
-      if (w.__sxsFetching) return;
-      const f = window.fetch.bind(window);
-      let n = 0;
-      window.fetch = (...a: Parameters<typeof fetch>) => (n++, f(...a).finally(() => n--));
-      w.__sxsFetching = () => n;
-    });
+    await loadUI(page, k);
     const idle = () => page.evaluate((busy) => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 10000, busy }), this.idle!.busy!);
     await idle();
     // ready once a key does what it should: Tab indents
@@ -652,7 +656,25 @@ export const driver: Driver = {
 
   async load(page: Page, doc) {
     const o = doc as Outline;
-    const { origin } = await kernelFor(page);
+    const kernel = await kernelFor(page);
+    const { origin } = kernel;
+    // a kernel that exited (SiYuan's UI asks it to when told to quit, as keys an earlier test left for a
+    // dialog of its can): started again, and its UI with it, rather than every later test failing
+    if (!(await running(origin))) {
+      console.log(`SiYuan's kernel ${kernel.n} exited: starting it again`);
+      await serve(kernel, (line) => console.log(line));
+      await loadUI(page, kernel);
+      pageState(page).current = '';
+    }
+    // a dialog an earlier test left open (its keys opened one), closed: it would take this test's keys
+    // (its close button an `<svg>`, which has no `click()`: a click dispatched)
+    const dialogs = await page.evaluate(() => {
+      const open = [...document.querySelectorAll('.b3-dialog--open')];
+      for (const d of open) (d.querySelector('.b3-dialog__close') ?? d).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      for (const d of document.querySelectorAll('.b3-dialog--open')) d.remove();
+      return open.map((d) => (d.textContent ?? '').trim().slice(0, 60));
+    });
+    if (dialogs.length) console.log(`closed a dialog an earlier test left open: ${dialogs.map((t) => JSON.stringify(t)).join(', ')}`);
     const nb = await notebookId(origin);
     const id = await api<string>(origin, 'filetree/createDocWithMd', { notebook: nb, path: `/ourus-sxs-${run}-${String(++docs).padStart(5, '0')}`, markdown: markdownOf(o.blocks) });
     await page.evaluate((id) => (window as any).__ourusSxs.open(id), id);

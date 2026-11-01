@@ -598,7 +598,7 @@ export function obsidianDriver(profile: Profile): Driver {
       enterOnEmptyItem: 'outdent',
       enterAtTextStart: 'stay',
       taskEditing: 'text',
-      closeBackticks: 'all',
+      autoClose: ['```', '~~~', '`', '(', '[', '{'],
       copyAtCaret: 'host',
       pastePlainLines: 'host',
       ...profile.behaves,

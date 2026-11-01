@@ -1128,7 +1128,7 @@ flavor: obsidian
 
 ```buffer
 > [!tip] Title
-> ┃\- x
+> ┃\̬- x
 > - y
 ```
 
@@ -1151,7 +1151,7 @@ tags: edge
 ```buffer
 > para
 >
-> ┃\- x
+> ┃\̬- x
 > - a
 ```
 

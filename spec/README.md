@@ -46,6 +46,9 @@ Read every difference first; a case whose actions should change is redrawn by ha
   of lines (math, comments, indented code).
 - [Backtick](backtick.md): a typed backtick (`insertText`), which opens, closes and changes code
   fences, and Backspace and Delete in a fence's run.
+- [Auto characters](auto.md): the characters ourus puts in (an escape, a closer typed with its
+  opener: a fence, `$$`, `%%`, `-->`, a backtick, a bracket), drawn with a caron below, what it takes
+  out again because they are ours, and where no escape works (code, math, comments).
 - [`scenarios.md`](scenarios.md): longer sequences, as a user would type them.
 - [`cursor.md`](cursor.md): caret motions, for moving the caret between actions in tests.
 - [`undo.md`](undo.md): undo and redo, placeholders included.
@@ -195,7 +198,9 @@ The item becomes the last child of the item above.
   hides, `zoom: ①` the one it is zoomed into; a folded label on a node with nothing to fold is an
   error),
   then one `buffer`, and nothing else.
-- **A quote lists actions**, applied in order to the current state.
+- **A quote lists actions**, applied in order to the current state. A backtick in them is escaped,
+  `` \` `` (`` > "\`\`\`" `` types three), so the quote renders as it reads, no code span; one bare is
+  an error.
 - **The blocks after a quote are what must hold then**, and they become the current state: the
   `buffer`, and a `yaml` block with any of
   - `result`: what ourus made of the last action, which must be one of its commands or typed text
@@ -236,12 +241,18 @@ The item becomes the last child of the item above.
 | `««…»»` | a subtree selection: the nodes the span touches, each with its subtree, selected as whole lines, from the first's line's column 0 to the start of the line after the last's subtree (`OurusDoc.selectionOf`); downward, or upward with `┃` before it (`┃««`). Drawn from the first root's text start to the last root's own text end (`- ««two»»` takes `two`'s children without drawing them); a whole-line selection of another shape is drawn `«…»` at its offsets. The SxS draws an app's blocks selected whole so, a span to each run of them with nothing unselected between |
 | (neither) | in a step's buffer, the caret isn't checked: only what the text becomes is (a start always draws its caret, which the reader requires) |
 | `◌` | a placeholder: the end of an empty line the document reads as if text had been typed there; right before a space that follows a list marker, that space, read as text (a deleted character's place) |
+| `\̬` | a combining caron below a character (U+032C): one ourus put in, an auto mark (`2\̬. draft`: an escape of ours, which ourus may take out again, an author's backslash drawn bare; `` `̬`̬`̬ ``, a closing fence ourus typed; [auto.md](auto.md)) |
 | `→` | a tab |
 | `␍` | a carriage return |
 | `⍽` | a no-break space (U+00A0), which Markdown reads as text, not as a space |
 | `␠` | a line's trailing space, which would be hard to see (as `sxs/probe.ts` draws them); nowhere else, which the reader refuses |
 | `①` … `㊿` | a node's label, last on its first line: no part of the text (below) |
 | `▸` | alone on a line of a start, a drop line: where a drop lands, at twice the depth (no part of the text; [move-subtree.md](move-subtree.md)) |
+
+Every buffer draws every auto mark on a character (an escape of ours), and a step's buffer checks
+them as it checks placeholders, both ways; a start's are the document's. A blank line ourus raised,
+its line break an auto mark too, isn't drawn yet, nor checked. The SxS takes the marks out: an app
+has none.
 
 A clipboard uses `→`, `␍`, `⍽` and `␠` too. A buffer's last line always ends with a line ending. A buffer
 that contains a code fence needs a longer fence of its own (`` ````buffer ``).
@@ -475,7 +486,7 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
     default, or `refuse`), `backspaceAtItemStart` (`join`, the default, `body`, `unwrap` or `logseq`), `emptyItemWithChildren` (`lift`, the default, or `refuse`),
     `joinWithChildren` (`join`, the default, or `refuse`), `enterTask` (`continue`, the default, or
     `plain`), `enterSplitSpace` (`trim`, the default, `drop` or `start`),
-    `handleFenceContents` (`true`, the default, or `false`), `closeBackticks` (`fences`, the default, `all` or `none`), `headingEditing` (`text`, the default, or `block`), `taskEditing` (`checkbox`, the default,
+    `handleFenceContents` (`true`, the default, or `false`), `autoClose` (a YAML list of ```` ``` ````, `~~~`, `$$`, `%%`, `<!--`, `` ` ``, `(`, `[`, `{`, `[[`, `((`, `$`: `autoClose: ['```', '~~~', '(']`; the first five the default; `[]` for none), `headingEditing` (`text`, the default, or `block`), `taskEditing` (`checkbox`, the default,
     `text`, `block` or `unwrap`), `copyAtCaret` (`node`, the default, or `host`), `copySelection` (`text`, the
     default, or `nodes`), `pasteSeams` (`closed`, the default, or `open`), `pasteOverSelection` (`replace`, the default, or
     `ignore`: a paste of nodes only), `pasteLines` (`text`, the

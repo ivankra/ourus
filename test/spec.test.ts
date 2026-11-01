@@ -150,7 +150,7 @@ for (const markup of ['text', 'decorated'] as const) {
               if (!(isCommand(action) || isDrop(action) || action.startsWith('"')) || !(state.last instanceof OurusSuccess) || anchor !== head) continue;
               const doc = state.view.doc;
               // a space a placeholder holds as text (`- ┃◌ x`) starts the text
-              const held = doc.marks.points().includes(head) && /[ \t]/.test(doc.text[head] ?? '');
+              const held = doc.marks.placeholders.includes(head) && /[ \t]/.test(doc.text[head] ?? '');
               const line = doc.lineAt(head);
               const inNode = head <= line.to && !!doc.nodeAtLine(line.index);
               const markupAt = inNode && head < doc.textStart(line.index) && !held;

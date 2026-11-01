@@ -41,7 +41,7 @@ import './hljs.css';
 import 'katex/dist/katex.min.css';
 import { Mirror } from './mirror.ts';
 import { outlineView } from './view.ts';
-import { OurusProse, OurusDoc, OurusView, createPlaceholder, executeCommand, mapPos, settlePlaceholders, type OurusConfig, type ChangeSpec, type OurusCommand, type OurusNode, type OurusResult, OurusDeferred, OurusRejected, OurusSuccess } from '../../src/index.ts';
+import { OurusProse, OurusDoc, OurusView, executeCommand, mapPos, settlePlaceholders, type OurusConfig, type ChangeSpec, type OurusCommand, type OurusNode, type OurusResult, OurusDeferred, OurusRejected, OurusSuccess } from '../../src/index.ts';
 
 type Flavor = OurusConfig['flavor'];
 
@@ -57,8 +57,8 @@ const setPlaceholders = StateEffect.define<readonly number[]>({ map: (value, map
 /** The snapshot a step of history returns to, whose nodes (ids and all) it takes back where its text is the one returned to. */
 const returnTo = StateEffect.define<OurusDoc>();
 
-/** The placeholders at `points` of `text`. */
-const marksAt = (text: string, points: readonly number[]) => ({ setMarks: points.map((p) => createPlaceholder(p)) });
+/** The placeholders at `points`, as an update sets them. */
+const marksAt = (points: readonly number[]) => ({ marks: { placeholders: points } });
 
 /** The value of a transaction's last effect of `type`. */
 function lastOf<T>(tr: Transaction, type: StateEffectType<T>): T | undefined {
@@ -81,21 +81,21 @@ const ourus = StateField.define<OurusView>({
     // another extension may have added changes to the transaction: then parse what committed
     const next = tr.annotation(planned);
     if (!restored && next && next.doc.text.length === tr.newDoc.length && next.doc.text === tr.newDoc.toString()) return next;
-    if (!tr.docChanged) return restored ? view.update(marksAt(doc.text, restored)) : view;
+    if (!tr.docChanged) return restored ? view.update(marksAt(restored)) : view;
     const changes: ChangeSpec[] = [];
     tr.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => changes.push({ from: fromA, to: toA, insert: inserted.toString() }));
     // undo and redo restore the placeholders of the state they return to, and its nodes: an undone
     // move's node is the one it was, its fold kept (`withDoc`)
     const like = lastOf(tr, returnTo);
     if (restored && like && like.text === tr.newDoc.toString() && like.isSameLineage(doc)) return view.withDoc(like.withConfig(doc.config));
-    if (restored) return view.update({ changes, ...marksAt(tr.newDoc.toString(), restored) });
+    if (restored) return view.update({ changes, ...marksAt(restored) });
     const caret = tr.newSelection.main;
     return view.update({ changes, caret: caret.empty ? caret.head : undefined });
   },
 });
 
 /** Each step of history keeps the placeholders it replaced, and the snapshot it left, so undoing it brings them back. */
-const placeholderHistory = invertedEffects.of((tr) => (tr.docChanged ? [setPlaceholders.of(tr.startState.field(ourus).doc.marks.points()), returnTo.of(tr.startState.field(ourus).doc)] : []));
+const placeholderHistory = invertedEffects.of((tr) => (tr.docChanged ? [setPlaceholders.of(tr.startState.field(ourus).doc.marks.placeholders), returnTo.of(tr.startState.field(ourus).doc)] : []));
 
 let onResult: (type: OurusCommand['type'], result: OurusResult) => void = () => {};
 
@@ -418,7 +418,7 @@ function label(n: OurusNode): string {
  * subtree selection, its roots and everything under them `selected`, as the editor draws them.
  */
 function renderOutline(panel: HTMLElement, doc: OurusDoc, current: OurusNode | null, selected: readonly OurusNode[] | null): void {
-  const points = doc.marks.points();
+  const points = doc.marks.placeholders;
   const inSelection = new Set<number>();
   const add = (n: OurusNode): void => {
     inSelection.add(n.id);
@@ -435,7 +435,7 @@ function renderOutline(panel: HTMLElement, doc: OurusDoc, current: OurusNode | n
             // an atom shows its first line of content: past a fence
             const text = n.kind === 'atom' ? (lines.find((l) => l !== '' && !/^(`{3,}|~{3,})|^(\$\$|%%)$/.test(l)) ?? '') : lines.join(' ');
             const pos = own instanceof OurusProse ? doc.posOf(n, own.textStart(0)) : own ? doc.posOf(n, 0) : doc.mdTree.line(n.startLine).to;
-            const placeholders = points.some((p) => p >= doc.mdTree.line(n.startLine).from && p <= doc.mdTree.line(n.textLastLine).to);
+            const placeholders = points.some((pos) => pos >= doc.mdTree.line(n.startLine).from && pos <= doc.mdTree.line(n.textLastLine).to);
             return `<li><div class="node${n.persistentNode === current?.persistentNode && !selected ? ' current' : ''}${inSelection.has(n.id) ? ' selected' : ''}${placeholders ? ' placeholders' : ''}" data-pos="${pos}"><span class="kind kind-${n.kind}">${escapeHtml(label(n))}</span><span class="text">${escapeHtml(text) || '<i>empty</i>'}</span><span class="id">#${n.id}</span></div>${list(n.children)}</li>`;
           })
           .join('')}</ul>`;

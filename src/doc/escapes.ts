@@ -1,6 +1,7 @@
-// A text's escapes where it is, asked of the parser in its own terms: which of its
-// backslashes are markup (reading), and how its lines are spelled there (writing). What the parser
-// can't know is the text's: its type and frame, the lines a placeholder holds, a setext underline.
+// A text's escapes where it is, asked of the parser in its own terms: how its lines are spelled
+// where they are written, which of the backslashes it may lose are markup there, and which it needs.
+// What the parser can't know is the text's: its type and frame, the lines a placeholder holds, a
+// setext underline.
 
 import type { MdEscapeAt, MdEscapedParagraph, MdFlavor, MdParagraphPlace } from '../parser/index.ts';
 import { advanceColumns, trimMd } from '../text/index.ts';
@@ -10,24 +11,28 @@ import { OurusProse, type OurusProseType } from './text.ts';
 export const SENTINEL = '￼';
 
 /**
- * The backslashes of a text's lines (past a `below` frame; `held`: the lines a placeholder holds;
- * `columns`: the column each line starts at, by default 0), read where they are, that are markup
- * escapes: out of its string. In the lines' own offsets.
+ * Whether a backslash of ours before `char` (`next` after it) stays wherever its text goes: before a
+ * character the flavor's inline syntax starts at (`<`, a backtick, `*`, `[`, Obsidian's `=`, ...),
+ * without it the text could read otherwise (`\<div>` joined after a line is no HTML block, but would
+ * be inline HTML). Not `:` and `w`, GFM's autolinks, which are whole where they stand; not `#` before
+ * a blank or the line's end, where no tag starts. Before any other character it is markup or nothing.
  */
-export function markupEscapes(flavor: MdFlavor, type: OurusProseType, item: boolean, lines: readonly string[], held: readonly boolean[], columns?: readonly number[]): MdEscapeAt[] {
-  const a = asked(type, item, lines, held, columns);
-  return flavor.markupEscapes(a.lines, a.place).map(a.back);
+export function keepsEscape(flavor: MdFlavor, char: string | undefined, next?: string): boolean {
+  if (char === undefined || char === ':' || char === 'w' || char === '\n') return false;
+  if (char === '#' && (next === undefined || /\s/.test(next))) return false;
+  const code = char.charCodeAt(0);
+  return code < 128 ? flavor.inline.stops[code] === 1 : flavor.inline.otherRules.has(code);
 }
 
 /**
  * A text's lines (past a `below` frame; `held`: the lines a placeholder holds; `columns`: the column
  * each line starts at, by default 0) spelled where they are written: the backslashes that are markup
- * there absorbed, and the escapes that keep each line the text's, markup ones or backslashes it gains
- * (`MdFlavor.escapeParagraph`); null where none does.
+ * there absorbed (none without `absorb`), and the escapes that keep each line the text's, markup
+ * ones or backslashes it gains (`MdFlavor.escapeParagraph`); null where none does.
  */
-export function escapeParagraph(flavor: MdFlavor, type: OurusProseType, item: boolean, lines: readonly string[], held: readonly boolean[], columns?: readonly number[]): MdEscapedParagraph | null {
+export function escapeParagraph(flavor: MdFlavor, type: OurusProseType, item: boolean, lines: readonly string[], held: readonly boolean[], columns?: readonly number[], absorb = true): MdEscapedParagraph | null {
   const a = asked(type, item, lines, held, columns);
-  const spelled = flavor.escapeParagraph(a.lines, a.place);
+  const spelled = flavor.escapeParagraph(a.lines, a.place, absorb);
   if (!spelled) return null;
   const out = [...lines];
   spelled.lines.forEach((l, k) => {
@@ -36,7 +41,7 @@ export function escapeParagraph(flavor: MdFlavor, type: OurusProseType, item: bo
     const line = lines[k + a.from]!.slice(0, cut) + (own ? lines[k + a.from]!.slice(cut, cut + own.was) + l.slice(own.now) : l);
     out[k + a.from] = held[k + a.from] && line.endsWith(SENTINEL) ? line.slice(0, -SENTINEL.length) : line;
   });
-  return { absorbed: spelled.absorbed.map(a.back), lines: out, markup: spelled.markup.map(a.back), gained: spelled.gained.map(a.back) };
+  return { absorbed: spelled.absorbed.map(a.back), lines: out, markup: spelled.markup.map(a.back), gained: spelled.gained.map(a.back), escapes: spelled.escapes.map(a.back) };
 }
 
 /**

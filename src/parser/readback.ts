@@ -109,6 +109,8 @@ export interface MdEscapedParagraph {
   readonly markup: readonly MdEscapeAt[];
   /** The backslashes the text gains, in `lines` as they are without them, in order. */
   readonly gained: readonly MdEscapeAt[];
+  /** Every backslash put in, markup or gained, in `lines` with the markup ones written in too, in order. */
+  readonly escapes: readonly MdEscapeAt[];
 }
 
 /**
@@ -141,13 +143,15 @@ export function markupEscapes(flavor: MdFlavor, lines: readonly string[], place:
 
 /**
  * `lines` (a text's, wherever they come from) spelled as a paragraph's at `place`: the backslashes
- * reading would take as markup there absorbed, then the escapes that keep each line the paragraph's.
+ * reading would take as markup there absorbed (`markupEscapes`; with `absorb` false none: each
+ * stays, a character of the text), then the escapes that keep each line the paragraph's. A backslash
+ * left in that escapes already is one.
  * An escape at one of the flavor's markup-escape positions is preferred, on the line that changes or
  * the one after it (a table's delimiter row makes the line above it a header); else a backslash
  * before the line's first character, which the text gains. Null where no escape does.
  */
-export function escapeParagraph(flavor: MdFlavor, lines: readonly string[], place: MdParagraphPlace = {}): MdEscapedParagraph | null {
-  const absorbed = markupEscapes(flavor, lines, place);
+export function escapeParagraph(flavor: MdFlavor, lines: readonly string[], place: MdParagraphPlace = {}, absorb = true): MdEscapedParagraph | null {
+  const absorbed = absorb ? markupEscapes(flavor, lines, place) : [];
   const text = lines.map((l, k) => {
     let out = l;
     for (const e of absorbed.filter((a) => a.line === k).reverse()) out = out.slice(0, e.at) + out.slice(e.at + 1);
@@ -170,7 +174,8 @@ export function escapeParagraph(flavor: MdFlavor, lines: readonly string[], plac
     for (const g of gained.filter((e) => e.line === k).reverse()) out = out.slice(0, g.at) + '\\' + out.slice(g.at);
     return out;
   });
-  return { absorbed, lines: spelled, markup: markup.sort((a, b) => a.line - b.line || a.at - b.at), gained };
+  const escapes = all.map((e) => ({ line: e.line, at: e.at })).sort((a, b) => a.line - b.line || a.at - b.at);
+  return { absorbed, lines: spelled, markup: markup.sort((a, b) => a.line - b.line || a.at - b.at), gained, escapes };
 }
 
 /** An escape `paragraphEscapes` gives: `markup` where it is a markup escape, else a backslash the text gains. */
@@ -186,15 +191,16 @@ function paragraphEscapes(flavor: MdFlavor, lines: readonly string[], place: MdP
   for (let guard = 0; guard <= lines.length; guard++) {
     const i = firstChanged(flavor, current, place);
     if (i < 0) {
-      // markup only where, with every escape in, the backslash reads as an inline escape (a code span
-      // the later escapes let close makes an earlier one literal: text the line gains)
+      // each a markup escape where, with every escape in, the backslash reads as one: in a code span,
+      // math or a comment it would be a character of their verbatim text, no escape, which no
+      // spelling keeps as it was (Auto23, Auto24)
       const placed: FoundEscape[] = [];
       for (const e of escapes) {
         for (const [k, p] of placed.entries()) if (p.line === e.line && p.at >= e.at) placed[k] = { ...p, at: p.at + 1 };
         placed.push(e);
       }
       const tree = escapes.some((e) => e.markup) ? parsed(flavor, current, place) : null;
-      return escapes.map((e, k) => (e.markup && !inlineEscape(tree!, current, place, placed[k]!) ? { ...e, markup: false } : e));
+      return escapes.some((e, k) => e.markup && !inlineEscape(tree!, current, place, placed[k]!)) ? null : escapes;
     }
     const escape = keeping(flavor, current, place, i);
     if (!escape) return null;
@@ -223,7 +229,6 @@ function keeping(flavor: MdFlavor, lines: readonly string[], place: MdParagraphP
       const escaped = line.slice(0, at) + '\\' + line.slice(at);
       if (!markupEscapeAt(flavor, escaped, at)) continue;
       const escape = { line: k, at, markup: true };
-      // (where the backslash is no inline escape, in a code span or math across lines, it is text the line gains)
       if (fixes(escape)) return escape;
     }
   }

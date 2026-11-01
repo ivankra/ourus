@@ -190,6 +190,6 @@ clipboard: |-
 
 ```buffer
 - a- x
-- \- y┃
+- \̬- y┃
 - b
 ```

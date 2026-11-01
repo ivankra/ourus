@@ -1223,7 +1223,7 @@ tags: rare
 > deleteContentForward
 
 ```buffer
-- [a]\:┃b
+- [a]\̬:┃b
 ```
 
 ## Delete28
@@ -1388,7 +1388,7 @@ tags: rare
 > deleteContentForward
 
 ```buffer
-- ┃\# b
+- ┃\̬# b
 ```
 
 ## Delete33

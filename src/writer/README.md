@@ -95,6 +95,17 @@ const steps = settleSteps(doc, caret);   // the placeholders the caret left sett
     some where Markdown needs them to keep nodes apart); the number of blank lines before the
     document's first node (only where nothing but blank lines is there).
 
+  - `OurusDraft.inheritGap(to: NodeRef, from: OurusNode)`<br>
+    `to` takes the blank lines after `from`'s text, as they were written: for a command that removes
+    `from` (Backspace taking an empty node out). The lines ourus raised stay ours, and the author's own
+    lines of `to` are a floor where `from` set something apart from it.
+
+  Blank lines `done()` raises from none because Markdown needs them (a paragraph a list would
+  continue, an empty item under text) are ours: the writer marks each one's line break (`auto`), and
+  a later `done()` takes one out again where the nodes stay apart without it and the command didn't
+  state the gap. Which lines a gap is, is tracked through a split, a join, a scope end that moves it
+  and `inheritGap`, so a node that took another's blank lines judges them by that node's marks.
+
   - `OurusDraft.setCaret(ref: NodeRef, offset: number, assoc?)`, `OurusDraft.setCaretAt(old: number, assoc?)`, `OurusDraft.select(anchor: AnchorSpec, head: AnchorSpec)`<br>
     The selection after the edit. `setCaret` puts the caret at an offset in a node's text.
     `setCaretAt` puts it at a position of the original document, in markup outside any text, on a
@@ -134,10 +145,13 @@ const steps = settleSteps(doc, caret);   // the placeholders the caret left sett
     - `get root`: the outline in normal form;
     - `get caret`, `get anchor`: the selection's ends (`Anchor`);
     - `get lists`: each item's place in its list (`ListPlace`);
-    - `get escapes`, `get paddings`: the markup escapes and the padding to write, by node (escapes
-      for every text it spelled, none where none is needed);
+    - `get escaped`, `get paddings`: the nodes whose text it escaped where it is (each escape it
+      put in is in the text, with an `auto` mark: one of ours goes again where nothing needs it, the
+      author's never does), and the padding to write, by node;
     - `get columns`: the column a text's later lines start at, where one starts with a tab (the
       escapes are for that column, and the writer writes it there);
+    - `get autoGaps`: the nodes whose gap it raised from none for Markdown's sake (the writer marks
+      the line);
     - `get preamble`: the blank lines before the first node, where `done()` set them;
     - `get gapLines`: where a gap that `done()` moved was in the original;
     - `get placedIds`: the nodes the draft placed (moved or made);

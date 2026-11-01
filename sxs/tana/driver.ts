@@ -175,7 +175,7 @@ export const driver: Driver = {
     enterMidItem: 'child',
     joinWithChildren: 'refuse',
     headingEditing: 'block',
-    closeBackticks: 'none',
+    autoClose: [],
     copySelection: 'nodes',
     // pasted blocks leave a selection's text as it is (Paste17, probed 2026-10-25)
     pasteOverSelection: 'ignore',

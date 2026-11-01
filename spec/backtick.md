@@ -5,10 +5,11 @@ character, but three at a line's start open a code fence, and an open fence take
 after it, to the end of its container: whatever the user typed next, and every node below, becomes
 code. A fence's two runs must also stay matched, since a closing fence shorter than the opening one
 closes nothing. So ourus handles the backtick wherever it opens, closes or changes a fence, and
-leaves it to the host elsewhere. `closeBackticks` says what a typed backtick closes: `fences` (the
-default) closes code fences only; `all` pairs inline code too, as bare Obsidian does out of the box
-(in Source mode, Live Preview and with Outliner); `none` closes nothing, as a text editor (Emacs's
-markdown-mode, SilverBullet), Dynalist, Tana and SiYuan do. Bare Obsidian closes a fence as it is typed, but edits any other fence a character
+leaves it to the host elsewhere. `autoClose` says what a typed backtick closes (with the brackets,
+[auto.md](auto.md)): with ```` ``` ```` and `~~~` (the default) code fences only; with `` ` `` too,
+inline code, as bare Obsidian does out of the box (in Source mode, Live Preview and with Outliner);
+with none (`autoClose: none`) nothing, as a text editor (Emacs's markdown-mode, SilverBullet),
+Dynalist, Tana and SiYuan do. What it closes is ours, an auto mark on it. Bare Obsidian closes a fence as it is typed, but edits any other fence a character
 at a time, which mostly breaks the block: lengthening the opening fence (Backtick6), a backtick in
 an info string (Backtick7), a fence typed in a block (Backtick9, Backtick10), Backspace and Delete
 in a run (Backtick13, Backtick14, Backtick15, Backtick16, Backtick17, Backtick23, Backtick24). The
@@ -16,8 +17,7 @@ rules, in order:
 
 1. **In a backtick fence's run, or at either end of it**, the run grows, and the block's other fence
    grows with it, so the two match: an opening fence longer than its closing fence would leave the
-   block unclosed (Backtick4, Backtick5, Backtick6). This holds under every value of
-   `closeBackticks`. An unclosed block's fence is the host's.
+   block unclosed (Backtick4, Backtick5, Backtick6). This holds whatever `autoClose` lists. An unclosed block's fence is the host's.
 2. **Elsewhere on a fence line**, a backtick that would break the fence is refused where markup is
    decorated: a backtick fence's info string can't hold a backtick, and a closing fence can't have
    text after it (Backtick7). Where markup is text (`markup: text`, the default), the host types it,
@@ -44,11 +44,11 @@ rules, in order:
    Backtick16): its code can't go with one press, and without the fence it would be text. Where
    markup is text, the host deletes the backtick, as it deletes a character of any markup there
    (Backtick28).
-6. **Inline backticks** are the host's by default (Backtick18). With `closeBackticks: all`, a
+6. **Inline backticks** are the host's by default (Backtick18). With `` ` `` in `autoClose`, a
    backtick at a word boundary outside code is typed as a pair, the caret between; typed right
    before the closing backtick of an empty pair or of the code span the caret is in, it steps over
-   it, anywhere in its closing run (Backtick19, Backtick32); Backspace in an empty pair takes both
-   (Backtick20); over a selection on one
+   it, anywhere in its closing run (Backtick19, Backtick32), and the backtick stepped over is the
+   author's; Backspace in an empty pair takes both, where the closing one is ours (Backtick20); over a selection on one
    line, it makes the selection code (Backtick21). Three backticks at a line's start still open a
    closed fence (Backtick22).
 7. **A tilde on a tilde fence** does what a backtick does on a backtick fence (Backtick29,
@@ -82,13 +82,13 @@ intro
 ┃
 ```
 
-> "```"
+> "\`\`\`"
 
 ````buffer
 intro
 
 ```┃
-```
+`̬`̬`̬
 ````
 
 
@@ -99,7 +99,7 @@ intro
 
 ```js
 x┃
-```
+`̬`̬`̬
 ````
 
 ## Backtick2
@@ -116,22 +116,22 @@ tags: common markup-fence
 - ┃
 ```
 
-> "```"
+> "\`\`\`"
 
 ````buffer
 - a
 - ```┃
-  ```
+  `̬`̬`̬
 ````
 
 ## Backtick2b
 
-With `closeBackticks: all`, the first backtick types a pair and the second steps over its closing
+With `` ` `` in `autoClose`, the first backtick types a pair and the second steps over its closing
 one; the third opens the fence, closed, as without pairs ([Backtick2](#backtick2)).
 
 ```yaml
 tags: edge markup-fence
-closeBackticks: all
+autoClose: ['```', '~~~', '`']
 ```
 
 ```buffer
@@ -139,12 +139,12 @@ closeBackticks: all
 - ┃
 ```
 
-> "```"
+> "\`\`\`"
 
 ````buffer
 - a
 - ```┃
-  ```
+  `̬`̬`̬
 ````
 
 ## Backtick3
@@ -161,13 +161,13 @@ tags: edge markup-fence
 > ┃
 ```
 
-> "```"
+> "\`\`\`"
 
 ````buffer
 > quote
 >
 > ```┃
-> ```
+> `̬`̬`̬
 ````
 
 ## Backtick4
@@ -184,11 +184,11 @@ tags: common markup-fence
 ┃
 ```
 
-> "````"
+> "\`\`\`\`"
 
 `````buffer
 ````┃
-````
+`̬`̬`̬`̬
 `````
 
 ## Backtick5
@@ -207,10 +207,10 @@ code
 ```┃
 ````
 
-> "`"
+> "\`"
 
 `````buffer
-````js
+````̬js
 code
 ````┃
 `````
@@ -232,13 +232,13 @@ tags: edge markup-fence
 - b
 ````
 
-> "`"
+> "\`"
 
 `````buffer
 - a
   ````┃js
   code
-  ````
+  ````̬
 - b
 `````
 
@@ -261,7 +261,7 @@ code
 after
 ````
 
-> "`"
+> "\`"
 
 ````buffer
 ```js┃
@@ -277,13 +277,13 @@ result: rejected not-expressible
 
 ## Backtick8
 
-With `closeBackticks: none` the backtick is the host's, as a text editor types it: the fence opens
+With `autoClose: none` the backtick is the host's, as a text editor types it: the fence opens
 and reads to the end of the document, taking in the paragraph after it, until a closing fence is
 typed.
 
 ```yaml
 tags: edge free-form markup-fence
-closeBackticks: none
+autoClose: []
 ```
 
 ```buffer
@@ -294,7 +294,7 @@ intro
 after
 ```
 
-> "```"
+> "\`\`\`"
 
 ````buffer
 intro
@@ -326,7 +326,7 @@ code
 ```
 ````
 
-> "```"
+> "\`\`\`"
 
 ````buffer
 ```
@@ -350,7 +350,7 @@ text
 ```
 ````
 
-> "```"
+> "\`\`\`"
 
 `````buffer
 ````md
@@ -361,12 +361,12 @@ text
 
 ## Backtick11
 
-An unclosed fence, typed with `closeBackticks: none` or there before, is closed by typing its
+An unclosed fence, typed with `autoClose: none` or there before, is closed by typing its
 closing fence: the host's.
 
 ```yaml
 tags: rare markup-fence
-closeBackticks: none
+autoClose: []
 ```
 
 ````buffer
@@ -375,7 +375,7 @@ code
 ┃
 ````
 
-> "```"
+> "\`\`\`"
 
 ````buffer
 ```
@@ -400,11 +400,11 @@ tags: edge markup-fence
 ``┃print(1)
 ```
 
-> "`"
+> "\`"
 
 ````buffer
 ```┃print(1)
-```
+`̬`̬`̬
 ````
 
 > enter
@@ -412,7 +412,7 @@ tags: edge markup-fence
 ````buffer
 ```
 ┃print(1)
-```
+`̬`̬`̬
 ````
 
 ## Backtick13
@@ -489,13 +489,13 @@ intro
 ``┃
 ```
 
-> "`"
+> "\`"
 
 ````buffer
 intro
 
 ```┃
-```
+`̬`̬`̬
 ````
 
 > deleteContentBackward
@@ -554,12 +554,12 @@ para
 more
 ```
 
-> "`"
+> "\`"
 
 ````buffer
 para
 ```┃
-```
+`̬`̬`̬
 more
 ````
 
@@ -574,7 +574,7 @@ more
 ## Backtick18
 
 By default, a backtick in text is the host's: inline code is typed as it is, as text editors type
-it. Bare Obsidian, Logseq and Tine pair it, as `closeBackticks: all` does
+it. Bare Obsidian, Logseq and Tine pair it, as `` ` `` in `autoClose` does
 ([Backtick19](#backtick19)); unclosed inline code breaks no structure, so the default leaves it alone.
 
 ```yaml
@@ -585,7 +585,7 @@ tags: common
 use ┃ here
 ```
 
-> "`"
+> "\`"
 
 ```buffer
 use `┃ here
@@ -597,25 +597,25 @@ result: deferredToHost
 
 ## Backtick19
 
-With `closeBackticks: all`, a backtick at a word boundary is typed as a pair, the caret between;
+With `` ` `` in `autoClose`, a backtick at a word boundary is typed as a pair, the caret between;
 typed again before the closing one, it steps over it.
 
 ```yaml
 tags: edge
-closeBackticks: all
+autoClose: ['```', '~~~', '`']
 ```
 
 ```buffer
 use ┃ here
 ```
 
-> "`"
+> "\`"
 
 ```buffer
-use `┃` here
+use `┃`̬ here
 ```
 
-> "x`"
+> "x\`"
 
 ```buffer
 use `x`┃ here
@@ -623,18 +623,18 @@ use `x`┃ here
 
 ## Backtick20
 
-With `closeBackticks: all`, Backspace in an empty pair takes both backticks, as they came.
+With `` ` `` in `autoClose`, Backspace in an empty pair takes both backticks, as they came.
 
 ```yaml
 tags: edge
-closeBackticks: all
+autoClose: ['```', '~~~', '`']
 ```
 
 ```buffer
 use ┃ here
 ```
 
-> "`" deleteContentBackward
+> "\`" deleteContentBackward
 
 ```buffer
 use ┃ here
@@ -642,19 +642,19 @@ use ┃ here
 
 ## Backtick21
 
-With `closeBackticks: all`, a backtick over a selection on one line makes it code, and it stays
+With `` ` `` in `autoClose`, a backtick over a selection on one line makes it code, and it stays
 selected.
 
 ```yaml
 tags: edge
-closeBackticks: all
+autoClose: ['```', '~~~', '`']
 ```
 
 ```buffer
 use «this» here
 ```
 
-> "`"
+> "\`"
 
 ```buffer
 use `«this»┃` here
@@ -662,12 +662,12 @@ use `«this»┃` here
 
 ## Backtick22
 
-With `closeBackticks: all`, three backticks on an empty line still make a closed fence: the first two
+With `` ` `` in `autoClose`, three backticks on an empty line still make a closed fence: the first two
 a pair and a step over it, the third the fence.
 
 ```yaml
 tags: edge markup-fence
-closeBackticks: all
+autoClose: ['```', '~~~', '`']
 ```
 
 ```buffer
@@ -676,13 +676,13 @@ intro
 ┃
 ```
 
-> "```"
+> "\`\`\`"
 
 ````buffer
 intro
 
 ```┃
-```
+`̬`̬`̬
 ````
 
 ## Backtick23
@@ -853,7 +853,7 @@ code
 > "~"
 
 ````buffer
-~~~~js
+~~~~̬js
 code
 ~~~~┃
 ````
@@ -879,7 +879,7 @@ intro
 intro
 
 ~~~┃
-~~~
+~̬~̬~̬
 ````
 
 ## Backtick31
@@ -917,20 +917,20 @@ after
 
 ## Backtick32
 
-With `closeBackticks: all`, a code span closed by a run of backticks: typed before any of the run,
+With `` ` `` in `autoClose`, a code span closed by a run of backticks: typed before any of the run,
 the backtick steps over it, so typing the closing run out leaves the span as it was
 ([Backtick19](#backtick19)).
 
 ```yaml
 tags: rare
-closeBackticks: all
+autoClose: ['```', '~~~', '`']
 ```
 
 ```buffer
 a ``x┃`` b
 ```
 
-> "``"
+> "\`\`"
 
 ```buffer
 a ``x``┃ b

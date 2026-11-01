@@ -153,7 +153,9 @@ test('the markup and text of a line', () => {
   assert.equal(at('obsidian', '> [!tip]- Title\n> body\n', 0), 'open:"[!tip]-" "Title"');
   assert.equal(at('obsidian', '$$\nx\n$$\n', 0), 'open:"$$" ""');
   assert.equal(at('obsidian', '$$\nx\nx$$\n', 2), 'close:"$$" "x"');
-  assert.equal(at('obsidian', '%%a%%\n', 0), 'open:"%%" close:"%%" "a"');
+  // (alone on a line, a comment is inline, a paragraph's text: no delimiter line)
+  assert.equal(at('obsidian', '%%a%%\n', 0), '"%%a%%"');
+  assert.equal(at('obsidian', '%%a\nb%%\n', 0), 'open:"%%" "a"');
 });
 
 test('blocks opened and closed by delimiter lines', () => {

@@ -6,7 +6,7 @@ import { OurusView } from '../src/view/index.ts';
 import { docOf, nodesOf, plainText } from './drawing.ts';
 
 const shape = (d: OurusDoc) => nodesOf(d).map((n) => `${'  '.repeat(n.depth - 1)}${n.kind}:${plainText(d, n).replace(/\n/g, '|')}`).join('\n');
-const placeholders = (d: OurusDoc) => d.marks.points();
+const placeholders = (d: OurusDoc) => d.marks.placeholders;
 
 function indentNewItem(): OurusDoc {
   const doc = OurusDoc.parse('- a\n- ');

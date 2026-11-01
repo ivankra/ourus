@@ -4,7 +4,7 @@
 // sets the paragraphs apart.
 
 import { OurusProse, OurusAtom, blockIdsOf, closingFrameStart, type OurusDoc, type OurusNode, type OurusText } from '../doc/index.ts';
-import { composeChanges, heldSpaceAt, isSpaceOrTab, trimMd, type ChangeSpec } from '../text/index.ts';
+import { composeChanges, isSpaceOrTab, trimMd, type ChangeSpec } from '../text/index.ts';
 import { clipboardFragment } from './clipboard.ts';
 import { CommandContext, blockIdsDeclaredBy } from './context.ts';
 import { linesInQuote, quoteAtomAt } from './quote.ts';
@@ -186,18 +186,19 @@ export function plainLines(ctx: CommandContext, clipboard: string): OurusResult 
   // starting the text loses its leading spaces, which would make it code
   const s0 = text.text;
   if (/^[ \t]*$/.test(s0.slice(text.textStart(0), from))) lines[0] = lines[0]!.replace(/^[ \t]+/, '');
-  // before a held space, the space is text after what is pasted (PastePlain16)
-  const held = heldSpaceAt(text.marks, text.text, from) && ctx.selection.head === ctx.doc.posOf(node, from, -1) && ctx.collapsed;
+  // before a held space, what is pasted fills the place: the space after it text (PastePlain16)
+  const held = text.marks.hasHeldSpaceAt(from) && ctx.collapsed;
   // (in a quote's text a line of it `> ` too, but a blank line, which breaks it into two quotes; the
   // last one with the text's rest after it is none)
   const restOfLine = text.text.slice(to, text.text.indexOf('\n', to) < 0 ? text.text.length : text.text.indexOf('\n', to));
   const blank = (l: string, k: number): boolean => trimMd(l) === '' && (k < lines.length - 1 || trimMd(restOfLine) === '');
   const quoted = text.type === 'quote' ? lines.map((l, k) => (k === 0 || blank(l, k) ? l : `> ${l}`)) : lines;
-  const pasted = quoted.join('\n') + (held ? ' ' : '');
-  let current = text.splice(from, to, pasted);
+  const pasted = quoted.join('\n');
+  const filled = held ? text.withMarks({ placeholders: text.marks.placeholders.filter((pos) => pos !== from) }) : text;
+  let current = filled.splice(from, to, pasted);
   // (a setext title, which a blank line in it would end: an ATX one holds one line, above)
   if (text.type === 'heading' && /\n[ \t]*\n/.test(current.body)) return new OurusRejected('not-expressible', 'a heading has no blank line in its title');
-  let caret = from + pasted.length - (held ? 1 : 0);
+  let caret = from + pasted.length;
   // (a block id ending the text whose `^` is in what was pasted is the pasted text's: it goes with the
   // last of it, not with the node the caret was in)
   const ending = blockIdsOf(current).find((b) => !b.carried);

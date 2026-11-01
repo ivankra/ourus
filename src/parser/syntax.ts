@@ -449,6 +449,29 @@ export class MdTree {
     return { closer: text.sourceAt(closer), to: text.sourceAt(span.to) };
   }
 
+  /**
+   * Whether `pos` is inside an inline span whose text is verbatim, past its opening delimiter and
+   * before its end: a code span, math (`$x$`, `$$x$$`), a comment (`%%x%%`). A backslash there is
+   * a character, no escape, and what is typed there is the span's text.
+   */
+  verbatimSpanAt(pos: number): boolean {
+    if (this.lineCount === 0) return false;
+    const leaf = this.#inlineLeafAt(pos);
+    const text = leaf && this.inlineText(leaf);
+    if (!text) return false;
+    const at = text.textAt(pos);
+    if (at < 0) return false;
+    const find = (inlines: readonly MdInline[]): boolean => {
+      for (const node of inlines) {
+        if (node.from >= at || node.to <= at) continue;
+        if (node.type === 'code' || node.type === 'math' || node.type === 'comment') return true;
+        if (node.children && find(node.children)) return true;
+      }
+      return false;
+    };
+    return find(this.inlines(leaf));
+  }
+
   /** A leaf's inlines, parsed when first asked for; none for blocks without inline text. */
   inlines(leaf: MdBlockAt): readonly MdInline[] {
     let result = this.leafInlines.get(leaf.block);

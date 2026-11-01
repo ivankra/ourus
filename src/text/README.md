@@ -46,26 +46,26 @@ other layers import it through `index.ts`.
     overlaps text these wrote, or inserts inside it or at its ends, merges with it into one change.
     Changes that only touch stay separate.
 
-- **`Mark`** is a tagged pair of offsets `{ kind, from, to }`.
-  It can be either a point (`from === to`) or a range `[from, to)`.
+- **Marks** are offsets on a text that move with its changes. A mark is just an offset: what kind it
+  is, is the list that holds it. **`MarkSet`** holds the lists and the text they are on (`marks.ts`):
+  immutable, each list sorted and without duplicates, every offset on the text.
 
-- **Mark kinds** are a closed set, all defined in `marks.ts`. Each kind has a `MarkPolicy` saying how
-  its marks move when the text changes (`assoc`, `mapMode`, `onInsertInside`, as in CM6). What a
-  kind means, and where a mark of it is valid, is up to the layer that reads it.
+  | List | A mark is | Moves | What it says |
+  | --- | --- | --- | --- |
+  | `placeholders` | a point, `0..text.length` | past text inserted at it; goes where text on both sides of it goes | the parser reads it as a typed character |
+  | `auto` | a character, `0..text.length-1` | past text inserted at it; goes with its character | ourus put the character in, not the user |
 
-  | Kind | Marks | Used for |
-  | --- | --- | --- |
-  | `PLACEHOLDER_MARK` | a point read as if a character were typed there | placeholders |
-  | `AUTO_WHITESPACE_MARK` | whitespace ourus added only because Markdown needed it | not used yet |
-  | `AUTO_CLOSED_MARK` | a closing delimiter ourus typed for the user | not used yet |
+  The finer kind is the text's to say, not a list's: a placeholder at a line's end holds an **empty
+  node**, anywhere else a **held space**; an auto mark's kind is its character (a backslash: an
+  escape ourus wrote; a line break: a blank line it raised). Losing an auto mark only keeps its
+  character: no mark means the author's.
 
 - **Placeholders** keep the outline the user sees while the caret is somewhere Markdown alone would
   read differently. Some edits leave a text that, read as Markdown, has another structure than the
   one the user just made: a node that is empty for a moment, or a line whose first character was just
   deleted. A placeholder holds the structure until the user types on or moves away. The parser never
-  sees the marks themselves: the document passes their positions (`MarkSet.points()`) as the
-  parser's sentinels, and the parser reads each one as if a character had been typed there. There is
-  one kind of mark; its role depends on where it is (`◌` draws one):
+  sees the marks themselves: the document passes `placeholders` as the parser's sentinels, and the
+  parser reads each one as if a character had been typed there (`◌` draws one):
 
   - At the end of a line, it holds an **empty node** the user is about to fill. Enter at the end of
     a paragraph that owns a list makes an empty item right under it:
@@ -103,57 +103,49 @@ other layers import it through `index.ts`.
   node written again without it (`- b`, its child still under it; `- \# b`, escaped), an empty item
   set apart by a blank line, an empty paragraph gone.
 
-  Functions:
+- **`MarkSet`**:
 
-  - `createPlaceholder(pos: number): Mark`<br>
-    A placeholder at position `pos` (a point mark).
+  - `static MarkSet.of(text: string, lists?: MarkLists): MarkSet`<br>
+    `text` with `lists` (`{ placeholders?, auto? }`, any order): sorted, duplicates dropped. Throws a
+    `RangeError` on an offset off the text, and a `MarkError` on a mark on a character it can't be on,
+    by every way a set is made: a placeholder anywhere but on a blank or at a line's end; an auto
+    mark anywhere but on a backslash or a line break. A `MarkSet` is a `MarkLists` too.
 
-  - `isPlaceholder(mark: Mark): boolean`
+  - `MarkSet.text`, `MarkSet.placeholders`, `MarkSet.auto`
 
-  - `isEmptyNodePlaceholder(mark: Mark, text: string): boolean`,
-    `isHeldSpacePlaceholder(mark: Mark, text: string): boolean`<br>
-    Whether `mark` holds an empty node, or is a held space. `text` is the text the mark's offsets are
-    in: a document's, or a node's text.
+  - `MarkSet.isEmpty(): boolean`<br>
+    Whether it has no marks at all, whatever its text.
 
-  - `emptyNodeAt(marks: MarkSet, text: string, pos: number): boolean`,
-    `heldSpaceAt(marks: MarkSet, text: string, pos: number): boolean`<br>
-    Whether `marks` has a placeholder of that role at `pos`.
+  - `MarkSet.with(lists: MarkLists): MarkSet`<br>
+    The same text, the lists `lists` gives replaced; this set where they are the same.
 
-- **`MarkSet`** holds marks: immutable, sorted, without duplicates.
+  - `MarkSet.hasPlaceholderAt(pos)`, `MarkSet.hasEmptyNodeAt(pos)`, `MarkSet.hasHeldSpaceAt(pos)`,
+    `MarkSet.hasAutoAt(pos): boolean`<br>
+    Whether there is one at `pos` (a binary search): an empty node's placeholder at a line's end
+    (the text's end too), a held space's anywhere else.
 
-  - `static MarkSet.of(marks: Mark[]): MarkSet`, `static MarkSet.empty: MarkSet`
+  - `static MarkSet.has(offsets: number[], pos: number): boolean`,
+    `static MarkSet.within(offsets: number[], from: number, to: number): number[]`<br>
+    A binary search on any sorted list: whether it holds `pos`; its offsets in `[from, to)`.
 
-  - `MarkSet.marks: Mark[]`, `get MarkSet.size: number`
+  The string operations of the texts that hold marks (the document, a node's text) are `MarkSet`'s,
+  each giving the text after it with its marks:
 
-  - `MarkSet.map(changes: ChangeSet | ChangeSpec[]): MarkSet`<br>
-    The marks after `changes`, each moved by its kind's policy (and dropped where the policy says).
-
-  - `MarkSet.update({ add?: Mark[], filter?: (mark) => boolean }): MarkSet`<br>
-    The marks `filter` keeps, plus `add` (as CM6's `RangeSet.update`).
-
-  - `MarkSet.between(from: number, to: number, f: (mark) => void | false): void`<br>
-    Calls `f` for each mark touching `[from, to]`, in order; returning `false` stops (as CM6's
-    `RangeSet.between`).
-
-  - `MarkSet.has(pos: number, kind?: string): boolean`, `MarkSet.find(pos: number, kind?: string): Mark | undefined`<br>
-    A mark (of `kind`, if given) at `pos`: a point there, or a range covering the character there.
-
-  - `MarkSet.points(kind?: string): number[]`<br>
-    Every mark's position, sorted. This is what the parser takes as sentinels.
-
-  The texts that keep a string and its marks side by side (the document, a node's text) use these
-  to do the marks' half of a string operation:
+  - `MarkSet.map(changes: ChangeSet | ChangeSpec[], text?: string): MarkSet`<br>
+    The text after `changes` (`text`, where the caller has it), each mark moved as its list moves
+    (above); a placeholder the changes leave inside a line's text (the space it held taken out) goes.
+    A binary search per mark (`ChangeIndex`).
 
   - `MarkSet.slice(from: number, to: number, endPoints = false): MarkSet`<br>
-    The marks in `[from, to)`, with offsets counted from `from`; a range is cut to fit. A point at
-    `to` is kept only with `endPoints`.
+    `[from, to)` with its marks, counted from `from`. A placeholder at `to` comes along only with
+    `endPoints`: slices that tile a text keep each once when the last one takes its end's.
 
-  - `MarkSet.shift(by: number): MarkSet`<br>
-    Every mark moved by `by` (for a text appended after another).
+  - `MarkSet.splice(from: number, to: number, insert: MarkSet | string = ''): MarkSet`<br>
+    `[from, to)` replaced by `insert`, with its marks if it is a `MarkSet`: the marks around move as
+    `map` moves them.
 
-  - `MarkSet.splice(from: number, to: number, insert: string, inserted?: MarkSet): MarkSet`<br>
-    The marks after `[from, to)` is replaced by `insert`: the marks around it move by their
-    policies, and `inserted` (the marks of `insert`) come in with it.
+  - `MarkSet.concat(...others: (MarkSet | string)[]): MarkSet`<br>
+    The texts after this one, with their marks.
 
 Functions:
 

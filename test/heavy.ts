@@ -7,6 +7,7 @@
 //
 //   node test/heavy.ts            # every suite
 //   node test/heavy.ts view diff  # some: view, inverse, diff
+//   HEAVY_BASE=<ref> node test/heavy.ts  # against another commit than the last
 
 import { execFileSync, spawn } from 'node:child_process';
 import { cpSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
@@ -17,6 +18,7 @@ const here = resolve(import.meta.dirname, '..');
 const asked = process.argv.slice(2);
 const suites = asked.length ? asked : ['view', 'inverse', 'diff'];
 const run = mkdtempSync(join(tmpdir(), 'ourus-heavy-'));
+const base = process.env.HEAVY_BASE ?? 'HEAD';
 
 /**
  * A copy of the tree at `to`: the working tree's files (but `.git` and every `node_modules`); where
@@ -27,7 +29,7 @@ function copy(to: string, head: boolean): string {
   cpSync(here, to, { recursive: true, filter: (from) => !/^\.git(?:\/|$)|(?:^|\/)node_modules(?:\/|$)/.test(relative(here, from)) });
   if (head) {
     for (const dir of ['src', 'test', 'sxs']) execFileSync('rm', ['-rf', join(to, dir)]);
-    execFileSync('tar', ['-x', '-C', to], { input: execFileSync('git', ['archive', 'HEAD', 'src', 'test', 'sxs'], { cwd: here, maxBuffer: 1 << 28 }) });
+    execFileSync('tar', ['-x', '-C', to], { input: execFileSync('git', ['archive', base, 'src', 'test', 'sxs'], { cwd: here, maxBuffer: 1 << 28 }) });
   }
   symlinkSync(join(here, 'node_modules'), join(to, 'node_modules'));
   return to;

@@ -1,11 +1,13 @@
 // Drawn editor states: `┃` caret, `«…»` selection (head where `┃` touches), `««…»»` subtree
 // selection (the subtrees of the nodes it touches, as whole lines: `drawnSelection`), `◌` placeholders
 // place, `→` tab, `␍` carriage return, `⍽` no-break space (U+00A0, which Markdown reads as text).
+// Auto marks, the characters ourus put in: a combining caron below (U+032C) after one (`2\̬. b`, an
+// escape of ours); a line break of ours (a blank line ourus raised) isn't drawn yet.
 
 import { OurusRejected, OurusSuccess, type OurusResult, type OurusSelection } from '../src/commands/index.ts';
 import type { OurusConfig } from '../src/config.ts';
 import { OurusProse, OurusDoc, textEnd, textStart, type OurusNode } from '../src/doc/index.ts';
-import { createPlaceholder, trimMd } from '../src/text/index.ts';
+import { trimMd } from '../src/text/index.ts';
 import { OurusView } from '../src/view/index.ts';
 
 /**
@@ -17,6 +19,12 @@ export const drawsCaret = (drawn: string): boolean => /[┃«»]/.test(drawn);
 
 /** A drawing without its caret and selection, to set beside one that draws none. */
 export const withoutCaret = (drawn: string): string => drawn.replace(/[┃«»]/g, '');
+
+/** An auto mark on the character before it: a combining caron below (U+032C). */
+const AUTO_CHAR = '\u032c';
+
+/** A drawing without its auto marks: what an app shows, which has none (the SxS). */
+export const withoutAuto = (drawn: string): string => drawn.replaceAll(AUTO_CHAR, '');
 
 /** A node label's glyph: `①` to `⑳`, `㉑` to `㉟`, `㊱` to `㊿` (spec/README.md). */
 const LABEL = /[\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]/u;
@@ -95,12 +103,14 @@ export function readDropLine(drawn: string): { drawn: string; drop: DropLine | n
 
 /**
  * Reads a drawn state: text plus caret (`┃`) or selection (`«…»`, or `««…»»` for a subtree selection,
- * `subtrees`, its direction, its offsets those drawn: `drawnSelection` makes it), placeholders (`◌`), tabs drawn as
- * `→`; node labels (`①`) are taken out, and given by line; so is a drop line (`▸`).
+ * `subtrees`, its direction, its offsets those drawn: `drawnSelection` makes it), placeholders (`◌`),
+ * auto marks (a caron below a character), tabs drawn as `→`; node labels (`①`) are taken
+ * out, and given by line; so is a drop line (`▸`).
  */
-export function readDrawing(drawn: string): { text: string; selection: OurusSelection; subtrees: 'down' | 'up' | null; placeholders: number[]; labels: Map<number, number[]>; drop: DropLine | null } {
+export function readDrawing(drawn: string): { text: string; selection: OurusSelection; subtrees: 'down' | 'up' | null; placeholders: number[]; auto: number[]; labels: Map<number, number[]>; drop: DropLine | null } {
   let text = '';
   const placeholders: number[] = [];
+  const auto: number[] = [];
   let caret = -1;
   let open = -1;
   let close = -1;
@@ -116,7 +126,10 @@ export function readDrawing(drawn: string): { text: string; selection: OurusSele
       caret = text.length;
       if (s[i + 1] === '«') headAtStart = true;
     } else if (c === '◌') placeholders.push(text.length);
-    else if (c === '«') {
+    else if (c === AUTO_CHAR) {
+      if (!text.length) throw new Error(`a caron below (an auto mark) with no character before it: ${JSON.stringify(drawn)}`);
+      auto.push(text.length - 1);
+    } else if (c === '«') {
       if (s[i + 1] === '«') [i, subtrees] = [i + 1, 'down'];
       open = text.length;
     } else if (c === '»') {
@@ -125,10 +138,10 @@ export function readDrawing(drawn: string): { text: string; selection: OurusSele
     } else text += c;
   }
   if (open >= 0 && close >= 0) {
-    return { text, selection: headAtStart ? { anchor: close, head: open } : { anchor: open, head: close }, subtrees: subtrees && headAtStart ? 'up' : subtrees, placeholders, labels, drop };
+    return { text, selection: headAtStart ? { anchor: close, head: open } : { anchor: open, head: close }, subtrees: subtrees && headAtStart ? 'up' : subtrees, placeholders, auto, labels, drop };
   }
   const pos = caret >= 0 ? caret : 0;
-  return { text, selection: { anchor: pos, head: pos }, subtrees: null, placeholders, labels, drop };
+  return { text, selection: { anchor: pos, head: pos }, subtrees: null, placeholders, auto, labels, drop };
 }
 
 /**
@@ -179,8 +192,11 @@ export function subtreeSpan(view: OurusView, sel: OurusSelection): { from: numbe
   return null;
 }
 
-/** A text and a selection in it drawn; `span`, where the selection is a subtree selection, where it draws it (`subtreeSpan`). */
-export function drawState(text: string, sel: OurusSelection, placeholders: readonly number[] = [], span: { from: number; to: number } | null = null): string {
+/**
+ * A text and a selection in it drawn, its placeholders and auto marks (but on line breaks, not drawn
+ * yet); `span`, where the selection is a subtree selection, where it draws it (`subtreeSpan`).
+ */
+export function drawState(text: string, sel: OurusSelection, placeholders: readonly number[] = [], span: { from: number; to: number } | null = null, auto: readonly number[] = []): string {
   const from = Math.min(sel.anchor, sel.head);
   const to = Math.max(sel.anchor, sel.head);
   const marks = new Map<number, string>();
@@ -195,8 +211,10 @@ export function drawState(text: string, sel: OurusSelection, placeholders: reado
     add(to, '»');
   }
   for (const p of placeholders) add(p, '◌');
+  // an auto character, a caron below it (an auto line break, a blank line's, isn't drawn yet)
+  const marked = new Set(auto.filter((pos) => text[pos] !== '\n' && text[pos] !== '\r'));
   let out = '';
-  for (let i = 0; i <= text.length; i++) out += (marks.get(i) ?? '') + (text[i] ?? '');
+  for (let i = 0; i <= text.length; i++) out += (marks.get(i) ?? '') + (text[i] ?? '') + (marked.has(i) ? AUTO_CHAR : '');
   return drawText(out);
 }
 
@@ -227,13 +245,17 @@ export function drawOutline(doc: OurusDoc): string {
   return out.join('\n');
 }
 
-/** A node's text without its frame (a checkbox, `#`s, a callout's `[!type]`), each line trimmed; code's as it is. */
+/**
+ * A node's text without its frame (a checkbox, `#`s, a callout's `[!type]`), each line trimmed, and without
+ * the backslashes that are markup there (`2\. x`: Markdown's escape, not what the text says); code's as it is.
+ */
 export function plainText(doc: OurusDoc, node: OurusNode): string {
   const text = doc.textOf(node);
   if (!(text instanceof OurusProse)) return text?.text ?? '';
-  return text.body
-    .split('\n')
-    .map((line) => trimMd(line))
+  const lines = text.body.split('\n');
+  const escapes = doc.mdTree.flavor.markupEscapes(lines);
+  return lines
+    .map((line, k) => trimMd(escapes.filter((e) => e.line === k).reduceRight((out, e) => out.slice(0, e.at) + out.slice(e.at + 1), line)))
     .join('\n');
 }
 
@@ -248,12 +270,12 @@ export function nodesOf(doc: OurusDoc): OurusNode[] {
   return out;
 }
 
-/** The document a drawn state reads as: its text and placeholders, read with `config`. */
-export const docOf = (text: string, placeholders: readonly number[] = [], config: Partial<OurusConfig> = {}): OurusDoc =>
-  OurusDoc.parse(text, { config, marks: placeholders.map((p) => createPlaceholder(p)) });
+/** The document a drawn state reads as: its text, placeholders and auto marks, read with `config`. */
+export const docOf = (text: string, placeholders: readonly number[] = [], config: Partial<OurusConfig> = {}, auto: readonly number[] = []): OurusDoc =>
+  OurusDoc.parse(text, { config, marks: { placeholders, auto } });
 
 /** `text` read with `config`, in a view of nothing folded and no zoom. */
 export const parseView = (text: string, config: Partial<OurusConfig> = {}): OurusView => OurusView.of(OurusDoc.parse(text, { config }));
 
 /** A view's document and a selection in it, drawn (a subtree selection as the view reads it). */
-export const drawDoc = (view: OurusView, sel: OurusSelection): string => drawState(view.doc.text, sel, view.doc.marks.points(), subtreeSpan(view, sel));
+export const drawDoc = (view: OurusView, sel: OurusSelection): string => drawState(view.doc.text, sel, view.doc.marks.placeholders, subtreeSpan(view, sel), view.doc.marks.auto);

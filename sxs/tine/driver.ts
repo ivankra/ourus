@@ -159,8 +159,8 @@ export const driver: Driver = {
     enterInQuote: 'split',
     // Backspace at a numbered block's start takes its number first, as Logseq (Backspace29, TO5)
     backspaceAtItemStart: 'logseq',
-    // a backtick in text is typed as a pair, the caret between, as Logseq (Backtick18)
-    closeBackticks: 'all',
+    // a backtick in text is typed as a pair, the caret between, as Logseq (Backtick18), brackets too
+    autoClose: ['```', '~~~', '`', '(', '[', '{'],
     outdent: 'direct',
     enterSplitSpace: 'start',
     enterOnEmptyItem: 'sibling',

@@ -14,6 +14,15 @@
 // A value named after an app in another option is one too (`backspaceAtItemStart: logseq`).
 
 /** How a document is read and how the commands edit it. */
+/** An opener `autoClose` can close: a fence's run, or an inline opener. */
+export type AutoCloseOpener = '```' | '~~~' | '$$' | '%%' | '<!--' | '`' | '(' | '[' | '{' | '[[' | '((' | '$';
+
+/** Each opener's closer, in the order a list of them is written. */
+export const AUTO_CLOSERS: Readonly<Record<AutoCloseOpener, string>> = { '```': '```', '~~~': '~~~', '$$': '$$', '%%': '%%', '<!--': '-->', '`': '`', '(': ')', '[': ']', '{': '}', '[[': ']]', '((': '))', '$': '$' };
+
+/** The options whose value is a list (`autoClose`). */
+type ListOption = 'autoClose';
+
 export interface OurusConfig {
   /**
    * The Markdown dialect the document is read as (see src/parser/):
@@ -333,22 +342,37 @@ export interface OurusConfig {
   readonly handleFenceContents: boolean;
 
   /**
-   * A typed backtick that opens something a backtick closes (a tilde, for a tilde fence, the same):
-   * - `fences` (the default): a code fence typed at a line's text start gets its closing fence, as
-   *   long, on the line below, so the block takes in nothing that follows it; inline backticks are
-   *   the host's.
-   * - `all` (as bare Obsidian, its "Auto pair Markdown syntax" on by default): inline code too: a
-   *   backtick at a word boundary is typed as a pair, the caret between; typed before the closing
-   *   backtick of an empty pair or a code span it steps over it; around a selection on one line it
-   *   makes it code; Backspace in an empty pair takes both.
-   * - `none` (as a text editor, Emacs's markdown-mode): nothing is closed: an unclosed fence reads
-   *   to the end of its container, as Markdown reads it.
+   * The openers whose closer ourus types with them (spec/auto.md, backtick.md), each closer it types
+   * ours (an auto mark), which ourus may take out again; a closer stepped over is the author's:
+   * - ```` ``` ```` and `~~~` (the default, with the next three): a code fence typed at a line's text
+   *   start gets its closing fence, as long, on the line below, so the block takes in nothing that
+   *   follows it.
+   * - `$$`, `%%` (Obsidian's math and comments, in the flavor that reads them) and `<!--` (the default
+   *   too): typed before a blank or the line's end, outside code, with the closer on its line
+   *   (`$$┃$$`, `<!--┃-->`), inline there; Enter in the empty pair spreads it over lines, a block.
+   *   Unclosed, each would take in all that follows it.
+   * - `` ` `` (as bare Obsidian, its "Auto pair Markdown syntax"; Logseq, Tine): a backtick at a word
+   *   boundary, outside code, is typed as a pair, the caret between; typed before the closing backtick
+   *   of an empty pair or a code span it steps over it; around a selection on one line it makes it
+   *   code.
+   * - `(`, `[`, `{` (as Obsidian, Logseq, Roam, Athens, Tine, SilverBullet): an opener typed where the
+   *   next character is a blank, the line's end or a closing bracket (in code, math and after a
+   *   backslash too, as those apps have it) is typed with its closer, the caret between (two make the
+   *   double, `[[┃]]`); a closer typed before one of ours steps over it; an opener typed over a
+   *   selection on one line wraps it.
+   * - `[[`, `((` (as WorkFlowy, which pairs no single bracket): the double alone, the second of two.
+   * - `$` (as Logseq and Roam): inline math's, as a bracket is (`$┃$`), a second in the empty pair its
+   *   double (`$$┃$$`), Backspace there taking a level (`$┃$`); typed before a closing `$` of ours in
+   *   a pair with text in it, it steps over it.
    *
-   * A fence's two runs keep one length whatever the value: a backtick typed on either fence, or
-   * Backspace and Delete in one, change both, since an opening longer than its closing fence would
-   * leave the block unclosed.
+   * Backspace in an empty pair of an opener listed takes both, whoever typed it (`[[┃]]` a level).
+   * None (`[]`, `none` in settings: as a text editor, Emacs's markdown-mode): an unclosed fence reads to the end of its
+   * container, as Markdown reads it. Settings write a list space-separated, in this order. A fence's
+   * two runs keep one length whatever the value: a backtick typed on either fence, or Backspace and
+   * Delete in one, change both, since an opening longer than its closing fence would leave the block
+   * unclosed.
    */
-  readonly closeBackticks: 'fences' | 'all' | 'none';
+  readonly autoClose: readonly AutoCloseOpener[];
 
   /**
    * Copy and cut (Ctrl-C, Ctrl-X: `copy`, `cut`) with no selection, a caret alone (spec/copy.md):
@@ -546,7 +570,7 @@ export interface OurusConfig {
 }
 
 /** The values each option takes, its default first, for readers of string settings (spec files, frontmatter). */
-const CONFIG_VALUES: { readonly [K in keyof OurusConfig]: readonly [OurusConfig[K], ...OurusConfig[K][]] } = {
+const CONFIG_VALUES: { readonly [K in Exclude<keyof OurusConfig, ListOption>]: readonly [OurusConfig[K], ...OurusConfig[K][]] } = {
   // How the text reads, and how the host shows its markup: every command
   flavor: ['gfm', 'commonmark', 'obsidian'],
   markup: ['text', 'decorated'],
@@ -574,7 +598,6 @@ const CONFIG_VALUES: { readonly [K in keyof OurusConfig]: readonly [OurusConfig[
   headingEditing: ['text', 'block'],
   taskEditing: ['checkbox', 'text', 'block', 'unwrap'],
   handleFenceContents: [true, false],
-  closeBackticks: ['fences', 'all', 'none'],
   // Clipboard
   copyAtCaret: ['node', 'host'],
   copySelection: ['text', 'nodes'],
@@ -596,15 +619,47 @@ const CONFIG_VALUES: { readonly [K in keyof OurusConfig]: readonly [OurusConfig[
   quirkPasteText: ['default', 'dynalist'],
 };
 
-/** Every option's default: the first of its values. */
-const CONFIG_DEFAULTS = Object.fromEntries(Object.entries(CONFIG_VALUES).map(([key, values]) => [key, values[0]])) as unknown as OurusConfig;
+/** A list option's elements, in the order its value lists them, and its default. */
+const LIST_OPTIONS: { readonly [K in ListOption]: { readonly elements: OurusConfig[K]; readonly defaults: OurusConfig[K] } } = {
+  autoClose: { elements: Object.keys(AUTO_CLOSERS) as AutoCloseOpener[], defaults: ['```', '~~~', '$$', '%%', '<!--'] },
+};
+
+/** Every option's default: the first of its values, a list option's its own. */
+const CONFIG_DEFAULTS = {
+  ...Object.fromEntries(Object.entries(CONFIG_VALUES).map(([key, values]) => [key, values[0]])),
+  ...Object.fromEntries(Object.entries(LIST_OPTIONS).map(([key, list]) => [key, list.defaults])),
+} as unknown as OurusConfig;
+
+/** A list option's value checked: its elements, each once, in their order; or what is wrong with it. */
+function listValue(key: ListOption, value: unknown): readonly string[] | string {
+  const { elements } = LIST_OPTIONS[key];
+  if (!Array.isArray(value)) return `option "${key}" takes a list of ${elements.join(' ')}, not ${JSON.stringify(value)}`;
+  const wrong = value.find((v) => !(elements as readonly unknown[]).includes(v));
+  if (wrong !== undefined) return `option "${key}" takes a list of ${elements.join(' ')}, not ${JSON.stringify(wrong)} in it`;
+  return elements.filter((e) => value.includes(e));
+}
+
+const isList = (key: string): key is ListOption => Object.hasOwn(LIST_OPTIONS, key);
 
 /** The options' defaults and values, and a config made, compared and read from settings. */
 export const OurusConfig = {
   /** Every option's default: the value the spec argues for. */
   defaults: CONFIG_DEFAULTS,
-  /** The values each option takes, its default first. */
+  /** The values each option takes, its default first (but a list option's: `lists`). */
   values: CONFIG_VALUES,
+  /** A list option's elements, any of which its value lists, and its default. */
+  lists: LIST_OPTIONS,
+
+  /** Whether `key` names an option. */
+  has(key: string): key is keyof OurusConfig {
+    return Object.hasOwn(CONFIG_VALUES, key) || isList(key);
+  },
+
+  /** An option's value as settings write it: a list space-separated, `none` empty. */
+  format(key: keyof OurusConfig, value: unknown): string {
+    if (!isList(key)) return String(value);
+    return Array.isArray(value) && value.length ? value.join(' ') : 'none';
+  },
 
   /**
    * `partial` over the defaults, an option given as `undefined` absent. Throws for an unknown
@@ -616,6 +671,12 @@ export const OurusConfig = {
     const config: Record<string, unknown> = { ...CONFIG_DEFAULTS };
     for (const [key, value] of Object.entries(partial)) {
       if (value === undefined) continue;
+      if (isList(key)) {
+        const list = listValue(key, value);
+        if (typeof list === 'string') throw new TypeError(list);
+        config[key] = list;
+        continue;
+      }
       const allowed = Object.hasOwn(CONFIG_VALUES, key) ? (CONFIG_VALUES as Record<string, readonly unknown[]>)[key] : undefined;
       if (!allowed) throw new TypeError(`unknown option "${key}"`);
       if (!allowed.includes(value)) throw new TypeError(`option "${key}" takes ${allowed.join(', ')}, not ${JSON.stringify(value)}`);
@@ -626,7 +687,9 @@ export const OurusConfig = {
 
   /** Whether two configs give every option the same value. */
   same(a: OurusConfig, b: OurusConfig): boolean {
-    return a === b || Object.keys(CONFIG_VALUES).every((key) => a[key as keyof OurusConfig] === b[key as keyof OurusConfig]);
+    if (a === b) return true;
+    const lists = Object.keys(LIST_OPTIONS) as ListOption[];
+    return Object.keys(CONFIG_VALUES).every((key) => a[key as keyof OurusConfig] === b[key as keyof OurusConfig]) && lists.every((key) => a[key].join(' ') === b[key].join(' '));
   },
 
   /**
@@ -636,6 +699,13 @@ export const OurusConfig = {
   read(settings: Readonly<Record<string, string>>): Partial<OurusConfig> | string {
     const config: Record<string, unknown> = {};
     for (const [key, text] of Object.entries(settings)) {
+      // (a list space-separated, `none` empty)
+      if (isList(key)) {
+        const list = listValue(key, text.trim() === 'none' ? [] : text.trim().split(/\s+/));
+        if (typeof list === 'string') return list;
+        config[key] = list;
+        continue;
+      }
       // (an option of its own, not a property every object has: `constructor`, `toString`)
       const allowed = Object.hasOwn(CONFIG_VALUES, key) ? (CONFIG_VALUES as Record<string, readonly unknown[]>)[key] : undefined;
       if (!allowed) return `unknown option "${key}"`;

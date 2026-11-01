@@ -143,7 +143,7 @@ tags: common
 
 ```buffer
 - abc 
-  ┃\- def
+  ┃\̬- def
 ```
 
 ## ShiftEnter6
@@ -162,7 +162,7 @@ tags: edge
 
 ```buffer
 - abc 
-  ┃1\. def
+  ┃1\̬. def
 ```
 
 ## ShiftEnter7
@@ -182,7 +182,7 @@ Title ┃===
 
 ```buffer
 Title 
-┃\===
+┃\̬===
 ```
 
 ## ShiftEnter8
@@ -201,7 +201,7 @@ Title ┃--
 
 ```buffer
 Title 
-┃\--
+┃\̬--
 ```
 
 ## ShiftEnter9
@@ -220,7 +220,7 @@ tags: rare
 
 ```buffer
 - one 
-  ┃\<div>
+  ┃\̬<div>
 ```
 
 ## ShiftEnter10
@@ -391,7 +391,7 @@ tags: rare
 
 ```buffer
 -
-  ┃\``` x
+  ┃\̬``` x
 ```
 
 ## ShiftEnter14
@@ -520,7 +520,7 @@ a | b ┃|---|---|
 
 ```buffer
 a | b 
-┃|\---|---|
+┃|\̬---|---|
 ```
 
 ## ShiftEnter20
@@ -540,7 +540,7 @@ tags: rare
 
 ```buffer
 - abc
-  ┃\- def
+  ┃\̬- def
 ```
 
 > deleteContentBackward
@@ -640,7 +640,7 @@ tags: rare
 > shiftEnter
 
 ```buffer
-[Note]\: this 
+[Note]\̬: this 
 ┃matters a lot
 ```
 
@@ -690,7 +690,7 @@ p
 ```buffer
 p
 
-┃[r]\: /u
+┃[r]\̬: /u
 ```
 
 ## ShiftEnter26
@@ -780,7 +780,7 @@ tags: rare
 
 ```buffer
 - p
-  \-
+  \̬-
   ┃a
 ```
 
@@ -879,7 +879,7 @@ tags: rare
 
 ```buffer
 -
-  ┃\# b
+  ┃\̬# b
 ```
 
 ## ShiftEnter33

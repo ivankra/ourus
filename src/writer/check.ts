@@ -5,7 +5,6 @@
 
 import { OurusProse, OurusAtom, blockIdsOf, type OurusNode, type OurusText, type PersistentNode, type OurusDoc } from '../doc/index.ts';
 import type { ListPlace, OurusDraft } from './draft.ts';
-import { isEmptyNodePlaceholder, isPlaceholder } from '../text/index.ts';
 
 /** Where `doc` doesn't read as `draft` (done) meant, or null where it does. */
 export function differenceFrom(doc: OurusDoc, draft: OurusDraft): string | null {
@@ -66,10 +65,7 @@ function texts(want: OurusText | null, got: OurusText | null): string | null {
 function placeholders(text: OurusText): string {
   const frame = text instanceof OurusProse ? text.frame : [];
   const offset = (at: number): number => at - frame.filter((p) => p.to <= at).reduce((n, p) => n + p.to - p.from, 0);
-  return text.marks.marks
-    .filter(isPlaceholder)
-    .map((m) => `${isEmptyNodePlaceholder(m, text.text) ? 'empty-node' : 'held-space'}@${offset(m.from)}`)
-    .join(',');
+  return text.marks.placeholders.map((pos) => `${text.marks.hasEmptyNodeAt(pos) ? 'empty-node' : 'held-space'}@${offset(pos)}`).join(',');
 }
 
 /** Where item `item` of `doc` is in its list, as the parser reads it. */

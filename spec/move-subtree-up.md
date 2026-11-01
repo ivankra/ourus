@@ -1007,7 +1007,6 @@ para
 ```buffer
 para
 - a
-
 > q┃
 ```
 
@@ -1015,8 +1014,8 @@ para
 
 The first item of a paragraph's list moved up out of it, above the paragraph: the next list, ordered
 from 2, comes right under the paragraph, which it can't interrupt and would continue; a blank line
-keeps it a list. Back down, the outline comes back, the blank line the paragraph needed above it
-staying, as a paragraph's list may have one.
+keeps it a list. Back down, the outline comes back: the blank lines ourus raised (`auto` marks),
+the one under the paragraph and the one between the lists, go where the nodes stay apart without them.
 
 ```yaml
 tags: edge free-form
@@ -1042,9 +1041,7 @@ para
 
 ```buffer
 para
-
 - ┃i
-
 2. m
 ```
 
@@ -1154,7 +1151,7 @@ paragraph in as code. Refused.
 
 ```yaml
 tags: rare markup-fence
-closeBackticks: none
+autoClose: []
 ```
 
 ````buffer

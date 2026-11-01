@@ -9,7 +9,19 @@ const source = readFileSync(new URL('../src/config.ts', import.meta.url), 'utf8'
 
 test('the options are declared in the order of their values', () => {
   const declared = [...source.slice(source.indexOf('export interface OurusConfig {')).matchAll(/^ {2}readonly (\w+)\??:/gm)].map((m) => m[1]!);
-  assert.deepEqual(declared.slice(0, Object.keys(OurusConfig.values).length), Object.keys(OurusConfig.values));
+  // (a list option, `OurusConfig.lists`, where it reads best: its elements are no values to order)
+  const ordered = declared.filter((key) => !(key in OurusConfig.lists));
+  assert.deepEqual(ordered.slice(0, Object.keys(OurusConfig.values).length), Object.keys(OurusConfig.values));
+});
+
+test("a list option's doc names each element and its default", () => {
+  const docs = new Map([...source.matchAll(/\/\*\*([\s\S]*?)\*\/\s*readonly (\w+)\??:/g)].map((m) => [m[2]!, m[1]!]));
+  for (const key of Object.keys(OurusConfig.lists)) {
+    const doc = docs.get(key);
+    assert.ok(doc, `${key} has a doc`);
+    for (const element of OurusConfig.lists[key as keyof typeof OurusConfig.lists].elements) assert.ok(doc.includes(element), `${key}: its doc names ${element}`);
+    assert.ok(doc.includes('the default'), `${key}: its doc says its default`);
+  }
 });
 
 test("each option's doc lists its values, the default first", () => {

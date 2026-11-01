@@ -223,7 +223,7 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
     if (title.empty) return null;
     const id = draft.create('paragraph', title);
     // (the blank lines after the title, the paragraph's now)
-    return ctx.apply(draft.setText(node, null).append(node, 'first', [id]).gap(id, node.gap).gap(node, 0).setCaret(id, 0, -1));
+    return ctx.apply(draft.setText(node, null).append(node, 'first', [id]).inheritGap(id, node).gap(node, 0).setCaret(id, 0, -1));
   }
   // with `enterAtTextStart: stay`, the blank lines Enter opens above a paragraph go one a press while
   // more than one is there (a join across them would merge the two: Backspace12e), and at the
@@ -385,7 +385,7 @@ export function joinUp(ctx: CommandContext, node: OurusNode, text: OurusProse, c
     // (an empty item at the code's text end, where typing goes on: Backspace28; an empty paragraph past
     // it, where markup is text)
     const atEnd = upper instanceof OurusProse || node.kind === 'item' || ctx.config.markup === 'decorated';
-    draft.dissolve(node).gap(above, node.gap).setCaret(above, atEnd ? textEnd(upper) : upper.text.length, -1);
+    draft.dissolve(node).inheritGap(above, node).setCaret(above, atEnd ? textEnd(upper) : upper.text.length, -1);
     return ctx.apply(draft);
   }
   if (!(upper instanceof OurusProse)) return new OurusRejected('not-expressible', `can't join into ${above.kind === 'atom' ? above.block.type : 'that'}`);

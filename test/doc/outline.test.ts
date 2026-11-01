@@ -9,7 +9,6 @@ import { OurusDoc, Lineage, type OurusNode, type PersistentNode } from '../../sr
 import { executeCommand, OurusRejected, OurusSuccess } from '../../src/commands/index.ts';
 import { OurusView } from '../../src/view/index.ts';
 import type { MdBlock } from '../../src/parser/index.ts';
-import { createPlaceholder } from '../../src/text/index.ts';
 import { BLOCKS, INLINES, arbDoc, arbEdit, changeOf, changesOf, sentinelSpots } from '../parser/generators.ts';
 
 const RUNS = Number(process.env.OURUS_FUZZ_RUNS ?? 300);
@@ -28,7 +27,7 @@ function snapshot(doc: OurusDoc): string {
     assert.ok(node.kind === 'root' ? block === doc.mdTree.root : holds(block, node.startLine), `the ${node.kind} at ${node.startLine} holds a block of another snapshot`);
     assert.ok(!head || holds(head, node.textFirstLine), `the ${node.kind} at ${node.startLine} holds a head of another snapshot`);
     const text = doc.textOf(node);
-    const read = text && JSON.stringify([text.type, text.item, text.text, text.marks.marks.map((m) => `${m.kind}@${m.from}`), text.frame.map((p) => `${p.part}@${p.from}-${p.to}`), text.blockIdLines]);
+    const read = text && JSON.stringify([text.type, text.item, text.text, [text.marks.placeholders, text.marks.auto], text.frame.map((p) => `${p.part}@${p.from}-${p.to}`), text.blockIdLines]);
     out.push(`${'  '.repeat(node.depth)}${node.kind} ${node.startLine}-${node.textLastLine}-${node.ownLastLine}-${node.endLine} gap ${node.gap} ${block.type}${head ? ` head ${head.type}@${node.textFirstLine}` : ''} lines ${node.persistentNode.lines} text ${read}`);
     node.children.forEach(visit);
   };
@@ -37,8 +36,8 @@ function snapshot(doc: OurusDoc): string {
 }
 
 function assertSameOutline(next: OurusDoc, context: string): void {
-  const fresh = OurusDoc.parse(next.text, { config: next.config, marks: next.marks.marks });
-  assert.deepEqual(next.marks.marks, fresh.marks.marks, `${context}: placeholders`);
+  const fresh = OurusDoc.parse(next.text, { config: next.config, marks: next.marks });
+  assert.deepEqual(next.marks.placeholders, fresh.marks.placeholders, `${context}: placeholders`);
   const got = snapshot(next);
   const want = snapshot(fresh);
   if (got !== want) assert.fail(`${context}: the outline differs\n  got\n${got}\n  want\n${want}`);
@@ -55,7 +54,7 @@ function assertSameOutline(next: OurusDoc, context: string): void {
 /** Placeholders at `fractions` of the places one can be read at in `text`. */
 function pick(text: string, fractions: readonly number[]) {
   const spots = sentinelSpots(text);
-  return fractions.flatMap((f) => (spots.length ? [createPlaceholder(spots[Math.floor(f * spots.length)]!)] : []));
+  return fractions.flatMap((f) => (spots.length ? [spots[Math.min(spots.length - 1, Math.floor(f * spots.length))]!] : []));
 }
 
 const fractions = fc.array(fc.double({ min: 0, max: 1, noNaN: true }), { maxLength: 3 });
@@ -90,10 +89,10 @@ for (const flavor of FLAVORS) {
   test(`${flavor}: an update's outline equals a fresh parse's, placeholders moving`, () => {
     fc.assert(
       fc.property(arbDoc(BLOCKS), fractions, fractions, fc.option(arbEdit), (text, before, after, edit) => {
-        const doc = OurusDoc.parse(text, { config: { flavor }, marks: pick(text, before) });
+        const doc = OurusDoc.parse(text, { config: { flavor }, marks: { placeholders: pick(text, before) } });
         const changes = edit ? [changeOf(text, edit)] : [];
         const newText = changes.length ? text.slice(0, changes[0]!.from) + changes[0]!.insert + text.slice(changes[0]!.to) : text;
-        const next = doc.update({ changes, setMarks: pick(newText, after) });
+        const next = doc.update({ changes, marks: { placeholders: pick(newText, after) } });
         assertSameOutline(next, `${JSON.stringify(text)} + ${JSON.stringify(changes)} placeholders ${JSON.stringify(pick(newText, after))}`);
       }),
       { numRuns: RUNS },

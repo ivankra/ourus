@@ -3,7 +3,7 @@
 // numbers the list, keeps the copies apart from what is around them, or refuses where it can't.
 
 import { OurusAtom, OurusProse, withoutBlockIds, type OurusNode, type PersistentNode } from '../doc/index.ts';
-import { trimMd } from '../text/index.ts';
+import { MarkSet, trimMd } from '../text/index.ts';
 import type { AnchorSpec } from '../writer/index.ts';
 import { type CommandContext } from './context.ts';
 import { reshaped, shapeOf } from './shape.ts';
@@ -33,7 +33,7 @@ export function duplicateSubtreeCommand(ctx: CommandContext): OurusResult | null
   // a placeholder in what is copied: not done yet (a copy's are written anew where it lands: a held
   // space, an empty node with children, an empty paragraph, which holds only with one), but in the
   // item Enter just made, empty and alone, its copy as empty, an empty item without a placeholder
-  const held = nodes.some((n) => ctx.doc.marks.marks.some((m) => m.from >= ctx.doc.rangeOf(n).from && m.from <= ctx.doc.rangeOf(n).to));
+  const held = nodes.some((n) => MarkSet.within(ctx.doc.marks.placeholders, ctx.doc.rangeOf(n).from, ctx.doc.rangeOf(n).to + 1).length > 0);
   const fresh = nodes.length === 1 && nodes[0]!.kind === 'item' && !nodes[0]!.children.length && (ctx.doc.textOf(nodes[0]!) as OurusProse | null)?.empty === true;
   if (held && !fresh) return null;
   const draft = ctx.draft();

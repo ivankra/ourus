@@ -436,7 +436,6 @@ b┃
 
 ```buffer
 para
-
 - b┃
 ```
 
@@ -932,7 +931,7 @@ flavor: gfm
 ```buffer
 t1┃
 | a | b |
-|\---|---|
+|\̬---|---|
 ```
 
 ## Outdent20b
@@ -952,7 +951,7 @@ tags: rare free-form
 
 ```buffer
 t1┃
-\===
+\̬===
 ```
 
 ## Outdent21

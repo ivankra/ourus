@@ -68,7 +68,7 @@ import { isDrop } from '../test/player.ts';
 import { compareJudgments } from './lib/compare.ts';
 import { appDirs, appNames, resolveApps } from './lib/apps.ts';
 import { canonicalClipboard, passes } from '../test/spec-run.ts';
-import { RANKS, readSpec, specConfig, TAGS, type Clipboard } from '../test/specfile.ts';
+import { actionsLine, RANKS, readSpec, specConfig, TAGS, type Clipboard } from '../test/specfile.ts';
 import { sameView, shownInBlocks, shownInText, type RowView } from './lib/view.ts';
 import { cacheDir, cacheMode } from './proxy.ts';
 
@@ -1249,7 +1249,7 @@ function readDoc(drawn: string): Doc | null {
 }
 
 /** The app's settings (`Driver.settings`) as strings, each as `get` has it. */
-const settingsOf = (get: (k: keyof OurusConfig) => unknown): string[] => Object.keys(driver.settings ?? {}).map((k) => String(get(k as keyof OurusConfig)));
+const settingsOf = (get: (k: keyof OurusConfig) => unknown): string[] => Object.keys(driver.settings ?? {}).map((k) => OurusConfig.format(k as keyof OurusConfig, get(k as keyof OurusConfig)));
 
 /** A plan's outcome in the last run's example, if that played it as it is now; else why not. */
 function replay(plan: Plan, e: RunExample): Outcome | string {
@@ -1744,7 +1744,7 @@ function report(): string {
         const [only] = plan.steps;
         const once = outcome.got[0];
         if (plan.steps.length === 1 && outcome.verdict !== 'error' && only!.want && once) {
-          out.push(...clipboard, `> ${only!.actions.join(' ')}`, '');
+          out.push(...clipboard, actionsLine(only!.actions), '');
           if (notesLine) out.push(notesLine, '');
           out.push(...sideBySide([{ head: 'buffer', body: drawDoc(plan.initial) }, { head: driver.longId, body: drawDoc(once) }, { head: 'ourus', body: drawDoc(only!.want) }]), '');
         } else {
@@ -1754,7 +1754,7 @@ function report(): string {
           if (notesLine) out.push(notesLine, '');
           out.push(...sideBySide([{ head: 'buffer', body: drawDoc(plan.initial) }]), '');
           plan.steps.forEach((step, i) => {
-            out.push(`> ${step.actions.join(' ')}`, '');
+            out.push(actionsLine(step.actions), '');
             if (outcome.verdict === 'error' && i >= outcome.step) {
               if (i === outcome.step) out.push(`Error: ${outcome.error}`, '');
               return;

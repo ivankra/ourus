@@ -148,8 +148,9 @@ Repo: https://github.com/logseq/og
   `obsidian-true-outliner.md › TO5`); declared for both, `backspaceAtItemStart: logseq` (since
   2026-10-25). ourus keeps the later items' numbers, so Backspace29 still differs in them.
 - **A backtick in text is typed as a pair**, the caret between (`backtick.md › Backtick18`, `19`,
-  `21`), in both: declared, `closeBackticks: all` (since 2026-10-25). Typed again before a closing
-  run of two, it types another pair rather than step over it (Backtick32).
+  `21`), in both, and so are brackets (`(`, `[`, `{`): declared, `autoClose` with them (since
+  2026-10-25, the brackets since 2026-11-01). Typed again before a closing run of two, it types
+  another pair rather than step over it (Backtick32).
 - **The caret moves by pixels**, in a proportional font: after Up or Down it lands at another column
   than the spec's monospace one.
 - The demo doesn't say its version (`get_app_info` answers `1.0.0`, the plugin API's); its bundle's

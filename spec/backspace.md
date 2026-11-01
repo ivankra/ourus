@@ -1470,7 +1470,7 @@ tags: rare
 > deleteContentBackward
 
 ```buffer
-[a]\:┃b
+[a]\̬:┃b
 ```
 
 ## Backspace39
@@ -1612,7 +1612,7 @@ abc ┃[a]: tail
 > deleteSoftLineBackward
 
 ```buffer
-┃[a]\: tail
+┃[a]\̬: tail
 ```
 
 ### SoftBackspace3
@@ -1632,7 +1632,7 @@ abc ┃- x tail
 > deleteSoftLineBackward
 
 ```buffer
-┃\- x tail
+┃\̬- x tail
 ===
 ```
 
@@ -1672,7 +1672,7 @@ abc ┃- x
 
 ```buffer
 first
-┃\- x
+┃\̬- x
 ===
 ```
 
@@ -1825,7 +1825,7 @@ tags: rare free-form
 > deleteSoftLineBackward
 
 ```buffer
-┃\# b
+┃\̬# b
 ```
 
 ## Backspace42
@@ -2150,7 +2150,7 @@ tags: rare free-form
 > deleteContentBackward
 
 ```buffer
-┃\# b
+┃\̬# b
 ```
 
 ## Backspace48
@@ -2177,7 +2177,7 @@ tags: rare
 > cursorCharRight deleteContentBackward
 
 ```buffer
-- ┃\# b
+- ┃\̬# b
 ```
 
 ## Backspace49
@@ -2203,7 +2203,7 @@ para
 ```buffer
 para┃i
 | a |
-|\---|
+|\̬---|
 ```
 
 ## Backspace50

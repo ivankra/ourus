@@ -702,7 +702,7 @@ clipboard: "1. Introduction"
 > paste
 
 ```buffer
-- 1\. Introduction┃here
+- 1\̬. Introduction┃here
 ```
 
 ## PasteList26

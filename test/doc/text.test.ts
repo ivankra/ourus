@@ -4,12 +4,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { OurusDoc, type OurusNode, type OurusText, type OurusAtom } from '../../src/doc/index.ts';
-import { createPlaceholder } from '../../src/text/index.ts';
 
 type Flavor = 'commonmark' | 'gfm' | 'obsidian';
 
 function parse(text: string, flavor: Flavor = 'gfm', placeholders: number[] = []): OurusDoc {
-  return OurusDoc.parse(text, { config: { flavor }, marks: placeholders.map((p) => createPlaceholder(p)) });
+  return OurusDoc.parse(text, { config: { flavor }, marks: { placeholders } });
 }
 
 /** A text in the notation: its frame parts bracketed, its placeholders as `◌`, line breaks as `⏎`. */
@@ -23,7 +22,7 @@ function notation(text: OurusText | null): string | null {
     closes.set(part.to, (closes.get(part.to) ?? 0) + 1);
   }
   const points = new Map<number, number>();
-  for (const m of text.marks.marks) points.set(m.from, (points.get(m.from) ?? 0) + 1);
+  for (const pos of text.marks.placeholders) points.set(pos, (points.get(pos) ?? 0) + 1);
   let out = '';
   for (let i = 0; i <= s.length; i++) {
     out += '⟧'.repeat(closes.get(i) ?? 0);
@@ -86,7 +85,7 @@ test('6. ATX closing; hard breaks', () => {
 });
 
 test('7. escapes by place, character and inline role', () => {
-  assert.deepEqual(texts(parse('\\- not a list\n2\\. x\n\\<div> y')), ['paragraph - not a list⏎2\\. x⏎\\<div> y']);
+  assert.deepEqual(texts(parse('\\- not a list\n2\\. x\n\\<div> y')), ['paragraph \\- not a list⏎2\\. x⏎\\<div> y'], 'every backslash the text\'s, markup or not');
   assert.deepEqual(texts(parse('`a\n\\- b`')), ['paragraph `a⏎\\- b`'], 'a code span holds its backslash');
   assert.deepEqual(texts(parse('a \\- b')), ['paragraph a \\- b'], 'mid-line, text');
   assert.deepEqual(texts(parse('\\- x', 'gfm')).length, 1);
@@ -95,7 +94,7 @@ test('7. escapes by place, character and inline role', () => {
 
 test('8. placeholders: an empty line, a held space', () => {
   assert.deepEqual(texts(parse('- a\n- ', 'gfm', [6])), ['item a', 'item ◌']);
-  assert.deepEqual(texts(parse('-  x', 'gfm', [2])), ['item ◌x']);
+  assert.deepEqual(texts(parse('-  x', 'gfm', [2])), ['item ◌ x'], 'the held space a character of the text, the placeholder on it');
 });
 
 test('9. callouts by flavor', () => {
@@ -118,17 +117,18 @@ test('11. a gap in a quote', () => {
   assert.deepEqual(quote.children.map((n) => [doc.textOf(n)!.body, n.gap]), [['a', 1], ['b', 0]]);
 });
 
-test('positions: a text\'s offsets in the document, both sides of a character left out', () => {
+test('positions: a text\'s offsets in the document, a held space and a markup escape characters of the text', () => {
   const held = parse('-  x', 'gfm', [2]);
   const item = held.rootNode.children[0]!;
-  assert.equal(held.posOf(item, 0, -1), 2, 'before the held space');
-  assert.equal(held.posOf(item, 0, 1), 3, 'after it');
-  assert.equal(held.posOf(item, 1), 4);
+  assert.equal(held.posOf(item, 0, -1), 2, 'the held space');
+  assert.equal(held.posOf(item, 0, 1), 2);
+  assert.equal(held.posOf(item, 1), 3);
   const escaped = parse('\\- x\ny');
   const para = escaped.rootNode.children[0]!;
-  assert.equal(escaped.posOf(para, 0, -1), 0);
-  assert.equal(escaped.posOf(para, 0, 1), 1);
-  assert.equal(escaped.posOf(para, 4), 5, 'the next line');
+  assert.equal(escaped.posOf(para, 0, -1), 0, 'a markup escape is a character of the text');
+  assert.equal(escaped.posOf(para, 0, 1), 0);
+  assert.equal(escaped.posOf(para, 1), 1);
+  assert.equal(escaped.posOf(para, 5), 5, 'the next line');
   const nested = parse('> - a\n>   bc');
   const inner = nested.rootNode.children[0]!.children[0]!;
   assert.equal(nested.posOf(inner, 0), 4);
@@ -235,29 +235,30 @@ test('a text read as an item\'s or not; a join slices past the lower text\'s fra
 });
 
 test('placeholders ride along a splice: an empty line\'s mark, filled', () => {
-  const empty = new Text('paragraph', true, '', MarkSet.of([createPlaceholder(0)]));
+  const empty = new Text('paragraph', true, MarkSet.of('', { placeholders: [0] }));
   assert.equal(notation(empty), '◌');
   assert.equal(notation(empty.splice(0, 0, 'x')), 'x◌', 'the mark moves past what is typed; the document drops it where its line has text');
 });
 
 test('slices that tile a text concat back to it, its placeholders each once', () => {
-  const text = new Text('paragraph', true, 'a\n b\n', MarkSet.of([createPlaceholder(2), createPlaceholder(5)]));
+  const text = new Text('paragraph', true, MarkSet.of('a\n b\n', { placeholders: [2, 5] }));
   for (let k = 0; k <= text.text.length; k++) {
     const back = text.slice(0, k).concat(text.slice(k));
     assert.equal(back.text, text.text);
-    assert.deepEqual(back.marks.marks, text.marks.marks);
+    assert.deepEqual(back.marks.placeholders, text.marks.placeholders);
   }
-  assert.deepEqual(text.splice(0, 1, text.slice(2, 3)).marks.points(), [0, 2, 5], 'the insertion\'s mark at its place, the others where they were');
+  assert.deepEqual(text.splice(0, 1, text.slice(2, 3)).marks.placeholders, [0, 2, 5], 'the insertion\'s mark at its place, the others where they were');
 });
 
-test('math and comments: closed on their opening\'s line too, past an item\'s marker line, their payload beside the delimiters, a no-break space no blank', () => {
+test('math and comments: closed on a later line, past an item\'s marker line, their payload beside the delimiters, a no-break space no blank; alone on one line, inline', () => {
   const read = (s: string, line = 0): OurusAtom => {
     const doc = OurusDoc.parse(s, { config: { flavor: 'obsidian' } });
     return doc.textOf(doc.nodeAtLine(line)!) as OurusAtom;
   };
   for (const d of ['$$', '%%']) {
-    const one = read(`${d}x${d}`);
-    assert.deepEqual([one.closed, one.body, one.delimiters?.close], [true, 'x', { from: 3, to: 5 }]);
+    // (opened and closed on its line, a paragraph's text: Obsidian's inline display math, its comment)
+    const one = OurusDoc.parse(`${d}x${d}`, { config: { flavor: 'obsidian' } });
+    assert.equal(one.rootNode.children[0]!.kind, 'paragraph');
     assert.equal(read(`${d}abc\ndef${d}`).body, 'abc\ndef');
     assert.equal(read(`${d}abc\ndef\n${d}`).body, 'abc\ndef');
     const below = read(`-\n  ${d}X\n  Y${d}`, 1);

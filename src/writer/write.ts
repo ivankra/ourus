@@ -12,7 +12,7 @@
 import type { MdLine, MdTree } from '../parser/index.ts';
 import { OurusProse, OurusAtom, type OurusNode, type OurusText, type PersistentNode, type OurusDoc } from '../doc/index.ts';
 import type { Anchor, ListPlace, OurusDraft, Refusal } from './draft.ts';
-import { advanceColumns, applyChanges, diffLines, mapPos, emptyNodeAt, heldSpaceAt, isHeldSpacePlaceholder, isPlaceholder, createPlaceholder, dominantEnding, trimMd, type ChangeSpec, type Mark } from '../text/index.ts';
+import { advanceColumns, applyChanges, diffLines, mapPos, dominantEnding, trimMd, type ChangeSpec, type MarkLists } from '../text/index.ts';
 
 /** The draft written: the changes to its document, and what the document after them is told. */
 export interface WriterOutput {
@@ -20,8 +20,8 @@ export interface WriterOutput {
   readonly changes: readonly ChangeSpec[];
   /** The id of each node it wrote, by where it starts in the new text. */
   readonly identity: ReadonlyMap<number, number>;
-  /** The new text's placeholders, every one. */
-  readonly marks: readonly Mark[];
+  /** The new text's marks, every one. */
+  readonly marks: MarkLists;
   readonly selection: { readonly anchor: number; readonly head: number };
 }
 
@@ -74,8 +74,6 @@ interface Spelled {
   readonly starts: readonly number[];
   /** Each line's offset in the text's string. */
   readonly offsets: readonly number[];
-  /** Each line's markup escapes, by offset in the string. */
-  readonly escapes: readonly (readonly number[])[];
 }
 
 class Writer {
@@ -93,7 +91,9 @@ class Writer {
   readonly identity = new Identity();
   /** The texts spelled after a `>` and the space it took of a tab, written as a space (`spell`): their heads one further. */
   readonly spacedTab = new Set<PersistentNode>();
-  readonly marks: Mark[] = [];
+  /** The new text's marks, in its offsets, in no order. */
+  readonly placeholders: number[] = [];
+  readonly auto: number[] = [];
   readonly spelled = new Map<PersistentNode, Spelled>();
   /** Where each blank line of a node's gap the writer wrote anew starts, for anchors on them (`{ blank }`). */
   readonly blankStarts = new Map<PersistentNode, number[]>();
@@ -509,7 +509,7 @@ class Writer {
   startsBlocks(at: OurusNode): boolean {
     for (let i = at.startLine; i < at.startLine + at.persistentNode.lines; i++) {
       const line = this.tree.line(i);
-      if (this.draft.escapes.has(this.from.nodeAtLine(i)?.id ?? -1) || line.leaf?.block.type !== 'paragraph' || line.index <= line.leaf.line) continue;
+      if (this.draft.escaped.has(this.from.nodeAtLine(i)?.id ?? -1) || line.leaf?.block.type !== 'paragraph' || line.index <= line.leaf.line) continue;
       if (line.lazy ? /^[ \t]/.test(this.old.slice(line.from, line.to)) : /^[ \t]*[-+*>#=|0-9]/.test(this.old.slice(line.contentFrom, line.to))) return true;
     }
     return false;
@@ -975,6 +975,8 @@ class Writer {
       this.line(prefix);
     }
     this.blankStarts.set(node, starts);
+    // the blank line `done()` raised, Markdown's need: ours, its line break marked
+    if (node.gap > 0 && this.draft.autoGaps.has(node.id) && starts[node.gap - 1]! < this.length) this.auto.push(starts[node.gap - 1]!);
     if (node.gap > 0) this.blankEnd = this.length;
   }
 
@@ -1003,8 +1005,7 @@ class Writer {
 
   /**
    * A text the draft set, spelled whole where its node is: its first line after the prefix it had (a
-   * held space there settled), every other line after its containers' continuation prefix, with
-   * the markup escapes `done()` gave.
+   * held space there settled), every other line after its containers' continuation prefix.
    */
   spell(node: PersistentNode, origin: OurusNode, inside?: string): void {
     const text = node.text;
@@ -1013,7 +1014,7 @@ class Writer {
     const line = this.tree.line(firstLine);
     const s = text.text;
     const lines = s.split('\n');
-    // the first line's prefix: up to where its text started, its padding kept but a held space (settled) and the old markup escapes
+    // the first line's prefix: up to where its text started, its padding kept but a held space (settled)
     let lead: string;
     // (an empty item's spaces past its marker's one that the lead leaves out, a held space: its later
     // lines start that much less far in than its old content column)
@@ -1026,7 +1027,7 @@ class Writer {
     const codeBelow = text instanceof OurusAtom && node.kind === 'item' && origin.textFirstLine > origin.startLine && text.text.startsWith('\n');
     if (lines[0] === '' && node.kind === 'item') {
       // an empty item: its marker and the space after it (`- `), as a new one is written
-      lead = this.old.slice(line.from, markerEnd()) + (lines.length === 1 || emptyNodeAt(text.marks, text.text, 0) ? ' ' : '');
+      lead = this.old.slice(line.from, markerEnd()) + (lines.length === 1 || text.marks.hasEmptyNodeAt(0) ? ' ' : '');
       // (its text below its marker now, its content column one past the marker: its later lines from
       // there, not past the padding it had, `-   a` Shift-Entered before `a`)
       const { contentColumn } = origin.persistentNode.block!.attrs;
@@ -1050,7 +1051,7 @@ class Writer {
       if (narrower) this.emptiedPadding.set(origin.persistentNode, narrower);
     } else {
       const [p0, p1] = [this.from.posOf(origin, 0, -1), this.from.posOf(origin, 0, 1)];
-      const held = (at: number): boolean => heldSpaceAt(this.from.marks, this.old, at);
+      const held = (at: number): boolean => this.from.marks.hasHeldSpaceAt(at);
       let padding = '';
       for (let at = p0; at < p1; at++) if ((this.old[at] === ' ' || this.old[at] === '\t') && !held(at)) padding += this.old[at];
       // four columns of it would make the text code (past its containers' content column: a tab they
@@ -1112,21 +1113,19 @@ class Writer {
   }
 
   /**
-   * `text`'s lines, the first after `lead`, the others after `continuation`, with the markup escapes
-   * `done()` gave `node`; where they are, for anchors and placeholders. `origin`: the node's old place,
+   * `text`'s lines, the first after `lead`, the others after `continuation`; where they are, for
+   * anchors and marks. `origin`: the node's old place,
    * whose lines' endings it keeps; `tail`: the old node whose text's end it holds (itself, or the node
    * a split cut it from), whose lazy lines it keeps lazy.
    */
   spellLines(node: PersistentNode, text: OurusText, lead: string, continuation: string, origin: OurusNode | null, tail: OurusNode | null = text instanceof OurusAtom ? null : origin, split = false): void {
     this.continuations.set(node, continuation + quotedLine(text));
     const lines = text.text.split('\n');
-    const escapes = this.draft.escapes.get(node.id) ?? [];
     // each line ends as the old line it is did, a new one as the line before it
     const old = origin ? (origin.kind === 'item' ? origin.startLine : origin.textFirstLine) : -1;
     const endingOf = (k: number): string | null => (origin && old + k <= origin.textLastLine ? this.tree.line(old + k).ending || null : null);
     const starts: number[] = [];
     const offsets: number[] = [];
-    const perLine: number[][] = [];
     const belowPart = text instanceof OurusProse ? text.frame.find((p) => p.part === 'below') : undefined;
     const belowLines = belowPart ? belowPart.to - belowPart.from : -1;
     // an empty line that was in the old text: matched by the lines before it, and by those after it,
@@ -1146,10 +1145,7 @@ class Writer {
       return matches.length > 0 && matches.every(spacedAt);
     };
     let offset = 0;
-    lines.forEach((l, k) => {
-      const own = escapes.filter((e) => e >= offset && e <= offset + l.length).map((e) => e - offset);
-      let written = l;
-      for (const e of [...own].reverse()) written = written.slice(0, e) + '\\' + written.slice(e);
+    lines.forEach((written, k) => {
       // a lazy line whose text is as it was stays lazy, its prefix as written: the old line there, or
       // as far from the text's end (lines put in or taken out above it)
       const first = tail ? (tail.kind === 'item' ? tail.startLine : tail.textFirstLine) : -1;
@@ -1194,9 +1190,8 @@ class Writer {
       this.ensureLineStart();
       starts.push(this.length + out.length - merged);
       offsets.push(offset);
-      perLine.push(own.map((e) => e + offset));
       this.line(out + written.slice(merged), endingOf(k) ?? this.ending);
-      offset += l.length + 1;
+      offset += written.length + 1;
     });
     // the block-id lines it carries, at its later lines' column, their blank lines bare, but the one an
     // anchor is on, before the first (an empty last line made one): there as a line of the text starts
@@ -1212,13 +1207,11 @@ class Writer {
       k++;
     }
     if (before.length) this.carriedBlankStarts.set(node, before);
-    const spelled = { starts, offsets, escapes: perLine };
+    const spelled = { starts, offsets };
     this.spelled.set(node, spelled);
-    for (const m of text.marks.marks) {
-      if (isHeldSpacePlaceholder(m, text.text)) continue;
-      const at = position(spelled, m.from, 1);
-      this.marks.push({ kind: m.kind, from: at, to: at });
-    }
+    // (a held space is settled by writing it)
+    for (const pos of text.marks.placeholders) if (text.marks.hasEmptyNodeAt(pos)) this.placeholders.push(position(spelled, pos));
+    for (const pos of text.marks.auto) this.auto.push(position(spelled, pos));
   }
 
   /** The children of `parent` (by index) that aren't in the order of their places in `from`. */
@@ -1441,7 +1434,7 @@ class Writer {
     // wherever it goes; a copy beside its original, at its column, is written as it is; an atom's,
     // a footnote definition's paragraph, moves with the block that holds it, its lines as written)
     const owner = this.from.nodeAtLine(i);
-    if (shift && !(shift.copy && shift.delta === 0) && !line.lazy && !this.draft.escapes.has(owner?.id ?? -1) && !(owner && this.from.textOf(owner) instanceof OurusAtom) && line.leaf?.block.type === 'paragraph' && line.index > line.leaf.line && /^[ \t]*[-+*>#=|0-9]/.test(this.old.slice(line.contentFrom, line.to))) {
+    if (shift && !(shift.copy && shift.delta === 0) && !line.lazy && !this.draft.escaped.has(owner?.id ?? -1) && !(owner && this.from.textOf(owner) instanceof OurusAtom) && line.leaf?.block.type === 'paragraph' && line.index > line.leaf.line && /^[ \t]*[-+*>#=|0-9]/.test(this.old.slice(line.contentFrom, line.to))) {
       throw new WriteFailure("a moved paragraph's line that could start a block");
     }
     // a lazy line with the prefix of the container its node leaves (a quote's `>`): past it, after the new one's
@@ -1484,14 +1477,14 @@ class Writer {
         this.blankStarts.set(held.node, starts);
         this.text(held.prefix);
         this.copyRange(line.to, end);
-      } else if ((line.blank || (!line.leaf && !shift.origin.persistentNode.children.length && trimMd(this.old.slice(line.contentFrom, line.to)) === '')) && !emptyNodeAt(this.from.marks, this.old, line.to) && i >= shift.trailingFrom) {
+      } else if ((line.blank || (!line.leaf && !shift.origin.persistentNode.children.length && trimMd(this.old.slice(line.contentFrom, line.to)) === '')) && !this.from.marks.hasEmptyNodeAt(line.to) && i >= shift.trailingFrom) {
         // a blank line after the subtree (a quote's `>` too, after a node with no children; but one a
         // placeholder holds: a line of a text), where what follows it is (the old text's last line, with
         // no line ending, as it was where that would be nothing: else no line)
         this.text(shift.trailing || (end === this.old.length && !line.ending ? this.old.slice(line.from, line.to) : ''));
         this.blankAt.set(i, this.length);
         this.copyRange(line.to, end);
-      } else if (line.blank && !emptyNodeAt(this.from.marks, this.old, line.to)) {
+      } else if (line.blank && !this.from.marks.hasEmptyNodeAt(line.to)) {
         const written = this.old.slice(line.from, line.to);
         // in code, never wider (any number of spaces keeps it in its item: Indent13), narrower where
         // its container is (its spaces past the column are the code's: Fence48), and short of the
@@ -1680,9 +1673,9 @@ class Writer {
     const last = this.pieces[this.pieces.length - 1];
     // an empty last line a placeholder holds past the final line ending is a line of text, not the
     // line ending's: the text ends without one where the new text ends with such a line too
-    const bare = /[\r\n]$/.test(this.old) && emptyNodeAt(this.from.marks, this.old, this.old.length);
+    const bare = /[\r\n]$/.test(this.old) && this.from.marks.hasEmptyNodeAt(this.old.length);
     // (a placeholder at the text's end is an empty node's: at its last line's end)
-    const stillBare = this.marks.some((m) => isPlaceholder(m) && m.from === this.length);
+    const stillBare = this.placeholders.includes(this.length);
     // (an empty document has no last line to end as it did: a written one ends with a line ending)
     const oldEnds = this.old === '' || (/(?:\r\n|\n|\r)$/.test(this.old) && !(bare && stillBare));
     if (!last) {
@@ -1804,7 +1797,7 @@ class Writer {
     }
     if (!spelled) throw new WriteFailure(`an anchor in node ${a.node.id}, which the writer didn't spell`);
     // (in the padding before its text)
-    return this.back(position(spelled, a.offset, a.assoc), a.before);
+    return this.back(position(spelled, a.offset), a.before);
   }
 
   result(changes: readonly ChangeSpec[]): WriterOutput {
@@ -1823,18 +1816,91 @@ class Writer {
       const carried = mapPos(changes, this.from.rangeOf(copy.origin).from, 1) === copy.from;
       if (!carried || inserted.some(([a, b]) => a < copy.to && b > copy.from)) this.nameDescendants(copy.origin);
     }
-    // the old placeholders in what was copied, where they were
+    // the old marks in what was copied, where they were
+    const old = this.from.marks;
     if (root !== this.from.root) {
       // (an empty last line past the final line ending is the last node's, no copied line's: kept only
-      // while that node is still last, which a removal or a move changes though it spans nothing)
-      const last = /[\r\n]$/.test(this.old) && this.from.marks.marks.some((m) => m.from === this.old.length) ? this.from.rootNode.lastDescendant : null;
-      const lastGone = !!last && lastId(root) !== last.id;
-      for (const m of this.from.marks.marks) {
-        if (lastGone && m.from === this.old.length) continue;
-        const at = this.mapOld(m.from, 1);
-        if (at !== null && this.inCopy(m.from)) this.marks.push({ kind: m.kind, from: at, to: at });
+      // while that node is still last, which a removal or a move changes though it spans nothing, and
+      // not written anew, its text then holding its own: `◌` indented into `- `)
+      const last = /[\r\n]$/.test(this.old) && old.hasPlaceholderAt(this.old.length) ? this.from.rootNode.lastDescendant : null;
+      const lastNow = lastOf(root);
+      const lastGone = !!last && (lastNow.id !== last.id || this.spelled.has(lastNow));
+      // (a mark clear of every change stays in its place, moved by the changes before it: no need to ask
+      // the pieces, which a long document's many marks would make a scan each)
+      const delta = changes.reduce<number[]>((all, c) => (all.push((all.at(-1) ?? 0) + c.insert.length - (c.to - c.from)), all), []);
+      const clear = (pos: number): number | null => {
+        let lo = 0;
+        let hi = changes.length;
+        while (lo < hi) {
+          const mid = (lo + hi) >> 1;
+          if (changes[mid]!.to < pos - 1) lo = mid + 1;
+          else hi = mid;
+        }
+        return lo < changes.length && changes[lo]!.from <= pos + 2 ? null : lo === 0 ? 0 : delta[lo - 1]!;
+      };
+      // (the old text the writer copied, as sorted intervals, so each mark asks by binary search: a text it
+      // wrote again, its marks the text's own, carries none of the old ones, though no change is near them)
+      // (a copy's old text is there twice: the original's marks where the pieces outside the copies put
+      // them, and each copy's where its own do, `- 2\. a` duplicated keeping its escape ours in both;
+      // not by the changes, which may take the copy for the original)
+      const copies = [...this.copyPieces].sort((x, y) => x[0] - y[0]);
+      const outside: [number, number][] = [];
+      let next = 0;
+      for (const [from, to] of copies) {
+        if (from > next) outside.push([next, from]);
+        next = Math.max(next, to);
       }
-    } else this.marks.push(...this.from.marks.marks);
+      if (next < this.pieces.length) outside.push([next, this.pieces.length]);
+      const originals = copies.length ? outside : undefined;
+      const copied: [number, number][] = [];
+      for (const piece of (originals ? originals.flatMap(([a, b]) => this.pieces.slice(a, b)) : this.pieces).flatMap((q) => ('old' in q ? [q.old] : [])).sort((x, y) => x[0] - y[0])) {
+        const last = copied.at(-1);
+        if (last && piece[0] <= last[1]) last[1] = Math.max(last[1], piece[1]);
+        else copied.push([piece[0], piece[1]]);
+      }
+      const copiedAt = (pos: number): boolean => {
+        let lo = 0;
+        let hi = copied.length;
+        while (lo < hi) {
+          const mid = (lo + hi) >> 1;
+          if (copied[mid]![0] <= pos) lo = mid + 1;
+          else hi = mid;
+        }
+        const piece = copied[lo - 1];
+        return !!piece && (pos < piece[1] || (pos === piece[1] && piece[1] === this.old.length));
+      };
+      const carry = (offsets: readonly number[], into: number[]): void => {
+        for (const pos of offsets) {
+          // (the empty last line's, at the text's end, copied there, where the last node still is: no
+          // copy's, nor where the pieces put the end of what was copied before it, `a⏎⏎◌` duplicated;
+          // written anew, it holds by its own, `a⏎⏎◌` with `a` deleted)
+          if (last && pos === this.old.length) {
+            if (!lastGone && this.inCopy(pos)) into.push(this.old.length + (delta.at(-1) ?? 0));
+            continue;
+          }
+          let twice = false;
+          for (const copy of copies) {
+            const at = this.mapOld(pos, 1, [copy]);
+            if (at === null || !this.inCopy(pos, [copy])) continue;
+            into.push(at);
+            twice = true;
+          }
+          const by = twice ? null : clear(pos);
+          if (by !== null) {
+            if (copiedAt(pos)) into.push(pos + by);
+            continue;
+          }
+          // (near a change: where the copies put it, by the pieces)
+          const at = this.mapOld(pos, 1, originals);
+          if (at !== null && this.inCopy(pos, originals)) into.push(at);
+        }
+      };
+      carry(old.placeholders, this.placeholders);
+      carry(old.auto, this.auto);
+    } else {
+      this.placeholders.push(...old.placeholders);
+      this.auto.push(...old.auto);
+    }
     const head = this.anchor(this.draft.caret);
     const anchor = this.draft.anchor === this.draft.caret ? head : this.anchor(this.draft.anchor);
     // (the text written empty, or a line ending alone, the draft keeping one empty paragraph, the
@@ -1843,13 +1909,14 @@ class Writer {
     const only = root.children.length === 1 ? root.children[0]! : null;
     // (the text after the changes: a draft that changes nothing writes no pieces)
     const bare = this.old.length + delta <= 2 && /^(?:\r\n|\n|\r)?$/.test(applyChanges(this.old, changes));
-    if (bare && only?.kind === 'paragraph' && !only.children.length && (only.text instanceof OurusProse ? only.text.empty : !only.text) && !this.marks.some((m) => isPlaceholder(m))) this.marks.push(createPlaceholder(0));
-    return { changes, identity: this.identity, marks: this.marks, selection: { anchor, head } };
+    if (bare && only?.kind === 'paragraph' && !only.children.length && (only.text instanceof OurusProse ? only.text.empty : !only.text) && !this.placeholders.length) this.placeholders.push(0);
+    return { changes, identity: this.identity, marks: { placeholders: this.placeholders, auto: this.auto }, selection: { anchor, head } };
   }
 
-  /** Whether old position `pos` is in a line the writer copied whole. */
-  inCopy(pos: number): boolean {
-    return this.pieces.some((p) => 'old' in p && pos >= p.old[0] && (pos < p.old[1] || (pos === p.old[1] && p.old[1] === this.old.length)));
+  /** Whether old position `pos` is in a line the writer copied whole (`within`: in these pieces). */
+  inCopy(pos: number, within?: readonly (readonly [number, number])[]): boolean {
+    const pieces = within ? within.flatMap(([a, b]) => this.pieces.slice(a, b)) : this.pieces;
+    return pieces.some((p) => 'old' in p && pos >= p.old[0] && (pos < p.old[1] || (pos === p.old[1] && p.old[1] === this.old.length)));
   }
 }
 
@@ -1969,13 +2036,11 @@ function whitespace(from: number, to: number, tabs: boolean): string {
   return out + ' '.repeat(Math.max(0, to - column));
 }
 
-/** The position in the new text of offset `offset` of a spelled text; at a markup escape there, `assoc` picks the side. */
-function position(spelled: Spelled, offset: number, assoc: -1 | 1): number {
+/** The position in the new text of offset `offset` of a spelled text. */
+function position(spelled: Spelled, offset: number): number {
   let k = spelled.offsets.length - 1;
   while (k > 0 && spelled.offsets[k]! > offset) k--;
-  const col = offset - spelled.offsets[k]!;
-  const before = spelled.escapes[k]!.filter((e) => e < offset || (e === offset && assoc > 0)).length;
-  return spelled.starts[k]! + col + before;
+  return spelled.starts[k]! + offset - spelled.offsets[k]!;
 }
 
 /**
@@ -2218,10 +2283,10 @@ function onContainersLine(node: OurusNode): boolean {
   return !!container.parent && container.startLine === node.startLine;
 }
 
-/** The id of the last node in document order under `node`. */
-function lastId(node: PersistentNode): number {
+/** The last node in document order under `node` (itself where it has none). */
+function lastOf(node: PersistentNode): PersistentNode {
   while (node.children.length) node = node.children[node.children.length - 1]!;
-  return node.id;
+  return node;
 }
 
 /**

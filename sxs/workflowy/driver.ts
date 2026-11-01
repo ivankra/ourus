@@ -184,6 +184,8 @@ export const driver: Driver = {
   // paste opens the seam (the first pasted text joins), though not on an item with children
   // (on the paste files, 14 cases better under `open`, 3 worse)
   behaves: {
+    // `[[` and `((` typed as pairs, not their singles (the autoClose probes)
+    autoClose: ['```', '~~~', '[[', '(('],
     // indent and outdent over roots at two depths: each run as alone
     mixedDepths: 'each',
     // Shift-Up takes the sibling above with its subtree

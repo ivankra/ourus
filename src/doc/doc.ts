@@ -3,10 +3,10 @@
 
 import { OurusConfig } from '../config.ts';
 import { MdBlockAt, MdFlavor, MdTree, type MdLine } from '../parser/index.ts';
-import { ChangeSet, MarkSet, advanceColumns, createPlaceholder, diffLines, heldSpaceAt, isSpaceOrTab, lineIndexAt, trimMd, type ChangeSpec, type Mark } from '../text/index.ts';
+import { ChangeSet, MarkSet, advanceColumns, diffLines, isSpaceOrTab, lineIndexAt, trimMd, type ChangeSpec, type MarkLists } from '../text/index.ts';
 import { OurusNode, type PersistentNode } from './node.ts';
 import { Touched, readOutline } from './outline.ts';
-import { validPlaceholder } from './placeholders.ts';
+import { validAuto, validPlaceholder } from './placeholders.ts';
 import { locate, type Located } from './locate.ts';
 import { documentOffset, readText, stringOffset, type ReadText } from './read.ts';
 import { escapeParagraph } from './escapes.ts';
@@ -28,12 +28,11 @@ export interface OurusDocUpdate {
    * that differ.
    */
   readonly text?: string;
-  /** A host's edit: placeholders to drop, in this snapshot's offsets. */
-  readonly dropMarks?: readonly Mark[];
-  /** A host's edit: placeholders to add, in the new text's offsets. */
-  readonly addMarks?: readonly Mark[];
-  /** A writer's edit, an undo: every placeholder, in the new text's offsets, instead of this snapshot's mapped. */
-  readonly setMarks?: readonly Mark[];
+  /**
+   * A writer's edit, an undo: every mark, in the new text's offsets (a `MarkSet` of it is one), instead
+   * of this snapshot's mapped through the changes.
+   */
+  readonly marks?: MarkLists;
   /**
    * Where the caret is after a host's edit: where a deletion would change the outline there (emptying
    * a node, widening an item's padding), a placeholder at the caret keeps it.
@@ -77,9 +76,9 @@ export class Lineage {
  * document share a `Lineage`, the one mutable part, which gives each new id once.
  */
 export class OurusDoc {
-  /** The text; an update applies its changes to it and to `marks`. */
+  /** The text (`marks.text`); an update applies its changes to it and to `marks`. */
   readonly text: string;
-  /** The placeholders, in `text`'s offsets. */
+  /** The marks on `text`. */
   readonly marks: MarkSet;
   /** The parse, with the placeholders read as sentinels. */
   readonly mdTree: MdTree;
@@ -95,8 +94,8 @@ export class OurusDoc {
   #byId: Map<number, OurusNode> | null = null;
   #blockIds: readonly BlockId[] | null = null;
 
-  private constructor(text: string, marks: MarkSet, mdTree: MdTree, config: OurusConfig, root: PersistentNode, lineage: Lineage, nextId: number) {
-    this.text = text;
+  private constructor(marks: MarkSet, mdTree: MdTree, config: OurusConfig, root: PersistentNode, lineage: Lineage, nextId: number) {
+    this.text = marks.text;
     this.marks = marks;
     this.mdTree = mdTree;
     this.config = config;
@@ -105,16 +104,16 @@ export class OurusDoc {
     this.nextId = nextId;
   }
 
-  /** Parses `text`. Options missing from `config` take defaults; `marks` are its placeholders. */
-  static parse(text: string, options: { readonly config?: Partial<OurusConfig>; readonly marks?: readonly Mark[] } = {}): OurusDoc {
-    return OurusDoc.#readWhole(text, OurusConfig.of(options.config), options.marks ?? [], new Lineage());
+  /** Parses `text`. Options missing from `config` take defaults; `marks` are on `text`. */
+  static parse(text: string, options: { readonly config?: Partial<OurusConfig>; readonly marks?: MarkLists } = {}): OurusDoc {
+    return OurusDoc.#readWhole(MarkSet.of(text, options.marks), OurusConfig.of(options.config), new Lineage());
   }
 
   /** `text` read whole, its new ids `lineage`'s. */
-  static #readWhole(text: string, config: OurusConfig, marks: readonly Mark[], lineage: Lineage): OurusDoc {
-    const [held, tree] = read(MarkSet.of(marks), (sentinels) => MdTree.parse(text, MdFlavor.named(config.flavor), { sentinels }));
+  static #readWhole(marks: MarkSet, config: OurusConfig, lineage: Lineage): OurusDoc {
+    const [held, tree] = read(marks, (sentinels) => MdTree.parse(marks.text, MdFlavor.named(config.flavor), { sentinels }));
     const root = readOutline(tree, lineage, null, Touched.none, undefined, config);
-    return new OurusDoc(text, held, tree, config, root, lineage, lineage.next);
+    return new OurusDoc(held, tree, config, root, lineage, lineage.next);
   }
 
   /** Whether `other` is a snapshot of this document: the same `parse`'s, through any updates. */
@@ -131,24 +130,16 @@ export class OurusDoc {
   update(params: OurusDocUpdate = {}): OurusDoc {
     if (params.text !== undefined && params.changes) throw new Error('text gives the changes: no changes with it');
     const set = ChangeSet.of(params.text !== undefined ? diffLines(this.text, params.text) : (params.changes ?? []), this.text.length);
-    if (!set.changes.length && !params.setMarks && !params.addMarks?.length && !params.dropMarks?.length && !params.identity?.size) return this;
+    if (!set.changes.length && !params.marks && !params.identity?.size) return this;
     const text = set.apply(this.text);
-    let candidates: MarkSet;
-    if (params.setMarks) {
-      if (params.addMarks || params.dropMarks) throw new Error('setMarks gives every placeholder: no addMarks or dropMarks with it');
-      candidates = MarkSet.of(params.setMarks);
-    } else {
-      const drop = params.dropMarks ?? [];
-      const kept = drop.length ? this.marks.update({ filter: (m) => !drop.some((d) => d.kind === m.kind && d.from === m.from && d.to === m.to) }) : this.marks;
-      const add = [...(params.addMarks ?? [])];
-      if (params.caret !== undefined && this.keptAt(set, text, params.caret)) add.push(createPlaceholder(params.caret));
-      candidates = kept.map(set).update({ add });
-    }
+    const mapped = this.marks.map(set, text);
+    let candidates = params.marks ? MarkSet.of(text, params.marks) : mapped;
+    if (!params.marks && params.caret !== undefined && this.keptAt(set, text, params.caret)) candidates = candidates.with({ placeholders: [...candidates.placeholders, params.caret] });
     const old = this.mdTree;
     const [marks, tree] = read(candidates, (sentinels) => old.update(set.changes, { sentinels }));
-    const touched = touchedLines(tree, set, this.marks.map(set), marks);
+    const touched = touchedLines(tree, set, mapped, marks);
     const root = readOutline(tree, this.lineage, { tree: old, root: this.root, changes: set.changes, startOf: (id) => this.node(id)?.startLine }, touched, params.identity, this.config);
-    return new OurusDoc(text, marks, tree, this.config, root, this.lineage, this.lineage.next);
+    return new OurusDoc(marks, tree, this.config, root, this.lineage, this.lineage.next);
   }
 
   /**
@@ -163,13 +154,11 @@ export class OurusDoc {
     // (no option changed: this snapshot, so an undo takes one from before it back as it is)
     if (OurusConfig.same(next, this.config)) return this;
     if (next.flavor !== this.config.flavor) {
-      const marks: Mark[] = [];
-      this.marks.between(0, this.text.length, (m) => void marks.push(m));
       // read anew, the ids anew (the lineage's still)
-      return OurusDoc.#readWhole(this.text, next, marks, this.lineage);
+      return OurusDoc.#readWhole(this.marks, next, this.lineage);
     }
     if (next.quotes === this.config.quotes && next.listParent === this.config.listParent) {
-      const doc = new OurusDoc(this.text, this.marks, this.mdTree, next, this.root, this.lineage, this.nextId);
+      const doc = new OurusDoc(this.marks, this.mdTree, next, this.root, this.lineage, this.nextId);
       // (the same outline: its indexes shared)
       doc.#rootNode = this.#rootNode;
       doc.#byId = this.#byId;
@@ -178,7 +167,7 @@ export class OurusDoc {
     }
     const previous = { tree: this.mdTree, root: this.root, changes: [], startOf: (id: number) => this.node(id)?.startLine, regroup: true };
     const root = readOutline(this.mdTree, this.lineage, previous, Touched.of([[0, this.mdTree.lineCount]]), undefined, next);
-    return new OurusDoc(this.text, this.marks, this.mdTree, next, root, this.lineage, this.lineage.next);
+    return new OurusDoc(this.marks, this.mdTree, next, root, this.lineage, this.lineage.next);
   }
 
   /** What folding `node` would hide, in offsets: from the end of its text to the end of its subtree's last line; null where it doesn't fold. */
@@ -307,6 +296,11 @@ export class OurusDoc {
     return this.mdTree.codeSpanAt(pos);
   }
 
+  /** Whether `pos` is inside an inline span whose text is verbatim: code, math, a comment (`MdTree.verbatimSpanAt`). */
+  verbatimSpanAt(pos: number): boolean {
+    return this.mdTree.verbatimSpanAt(pos);
+  }
+
   /**
    * The spaces Markdown hides before `node`'s text on its first line: an item's padding past the space
    * after its marker (or a checkbox's blanks past one), a paragraph's indentation. `[from, to)` in the
@@ -326,10 +320,10 @@ export class OurusDoc {
     else if (task) from = this.posOf(node, task.from + 4, 1);
     else if (node.kind === 'item') from = this.mdTree.line(node.startLine).from + node.block.attrs.markerEnd! + 1;
     else from = this.mdTree.line(node.textFirstLine).contentFrom;
-    // (up to the text, or a markup escape it starts with)
+    // (up to the text, or a backslash it starts with)
     const end = this.posOf(node, text.textStart(0), 1);
     let to = from;
-    while (to < end && this.text[to] === ' ' && !heldSpaceAt(this.marks, this.text, to)) to++;
+    while (to < end && this.text[to] === ' ' && !this.marks.hasHeldSpaceAt(to)) to++;
     // (three columns at most: four are no padding, as after a definition a paragraph's lazy line)
     return to > from && to - from <= 3 && (to === end || this.text[to] === '\\') ? { from, to } : null;
   }
@@ -516,10 +510,10 @@ export class OurusDoc {
     // `#`s: a deletion in a line of text, most of them, reads nothing again)
     const lineStart = Math.max(text.lastIndexOf('\n', caret - 1), text.lastIndexOf('\r', caret - 1)) + 1;
     if (!/^[ \t>*+\-0-9.)[\]xX#]*(?:\[[^\r\n]\][ \t]*)?$/.test(text.slice(lineStart, caret))) return false;
-    const held = this.update({ changes: changes.changes, setMarks: [createPlaceholder(caret)] });
-    if (held.marks.size === 0) return false;
+    const held = this.update({ changes: changes.changes, marks: { placeholders: [caret] } });
+    if (held.marks.placeholders.length === 0) return false;
     const before = shape(this.root);
-    return shape(this.update({ changes: changes.changes, setMarks: [] }).root) !== before && shape(held.root) === before;
+    return shape(this.update({ changes: changes.changes, marks: {} }).root) !== before && shape(held.root) === before;
   }
 }
 
@@ -527,22 +521,25 @@ export class OurusDoc {
 const texts = new WeakMap<PersistentNode, OurusText | null>();
 
 /**
- * The text read with `marks` as sentinels, keeping the marks that hold: one that doesn't is dropped,
- * and the lines read again without it, until every one holds.
+ * The text read with `marks`' placeholders as sentinels, keeping the marks that hold: a placeholder
+ * that doesn't is dropped, and the lines read again without it, until every one holds; an auto mark
+ * that doesn't is dropped (`validAuto`), which changes no reading.
  */
 function read(marks: MarkSet, parse: (sentinels: readonly number[]) => MdTree): [MarkSet, MdTree] {
-  let tree = parse(marks.points());
+  let tree = parse(marks.placeholders);
   for (;;) {
-    const valid = marks.update({ filter: (m) => validPlaceholder(tree, m) });
-    if (valid === marks) return [marks, tree];
-    marks = valid;
-    tree = tree.update([], { sentinels: valid.points() });
+    const valid = marks.placeholders.filter((pos) => validPlaceholder(tree, pos));
+    if (valid.length === marks.placeholders.length) break;
+    marks = marks.with({ placeholders: valid });
+    tree = tree.update([], { sentinels: valid });
   }
+  return [marks.with({ auto: marks.auto.filter((pos) => validAuto(marks.text, pos)) }), tree];
 }
 
 /**
  * The lines of the new text no old node is taken whole on: the lines the changes wrote; the lines of
- * placeholders that came or went (`-  x` and `- ◌ x` can share their records, not their reading).
+ * marks that came or went (`-  x` and `- ◌ x` can share their records, not their reading; a node's
+ * text carries its marks).
  * (`readOutline` adds the lines where `identity` moves an id.)
  */
 function touchedLines(tree: MdTree, changes: ChangeSet, mapped: MarkSet, marks: MarkSet): Touched {
@@ -555,11 +552,13 @@ function touchedLines(tree: MdTree, changes: ChangeSet, mapped: MarkSet, marks: 
     ranges.push([line(from), line(from + c.insert.length)]);
     delta += c.insert.length - (c.to - c.from);
   }
-  const key = (m: Mark): string => `${m.kind}@${m.from}`;
-  const before = new Set(mapped.marks.map(key));
-  const after = new Set(marks.marks.map(key));
-  for (const m of mapped.marks) if (!after.has(key(m))) ranges.push([line(m.from), line(m.from)]);
-  for (const m of marks.marks) if (!before.has(key(m))) ranges.push([line(m.from), line(m.from)]);
+  const differ = (offsets: readonly number[], other: readonly number[]): void => {
+    for (const pos of offsets) if (!MarkSet.has(other, pos)) ranges.push([line(pos), line(pos)]);
+  };
+  differ(mapped.placeholders, marks.placeholders);
+  differ(marks.placeholders, mapped.placeholders);
+  differ(mapped.auto, marks.auto);
+  differ(marks.auto, mapped.auto);
   return Touched.of(ranges);
 }
 

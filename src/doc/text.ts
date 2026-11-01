@@ -1,8 +1,8 @@
-// A node's text: its own lines past their containers' prefixes, one string with its placeholders as
-// marks, a type, and a frame computed from its characters, which `body` leaves out. Two kinds: a
+// A node's text: its own lines past their containers' prefixes, one string with its marks (a
+// `MarkSet`), a type, and a frame computed from its characters, which `body` leaves out. Two kinds: a
 // `OurusProse` is a paragraph's, a heading's, a quote's (`OurusConfig.quotes: text`) or a callout
 // title's, text ourus edits as text (its frame a checkbox, a heading's `#`s, a quote's `>`s, a
-// callout's type, an underline, a block id ending it; its markup escapes left out); an `OurusAtom` is
+// callout's type, an underline, a block id ending it; its backslashes, markup ones too, its own); an `OurusAtom` is
 // an atom's lines as written (code, math, a comment, HTML, a table, ...), its frame a fence's runs and
 // info, indented code's columns, a footnote's label. Either can carry block-id lines after its string
 // (`blockIdLines`): blocks of their own in the document, which its flavor names the text's node by.
@@ -11,7 +11,7 @@
 export type OurusText = OurusProse | OurusAtom;
 
 import { MD_BLOCK_ID_NAME, MdFlavor, MdTree, mdBlockIdEnd, mdCalloutAt } from '../parser/index.ts';
-import { emptyNodeAt, lineOf, MarkSet, trimMd } from '../text/index.ts';
+import { lineOf, MarkSet, trimMd, type MarkLists } from '../text/index.ts';
 
 /**
  * What a text is: a paragraph's (an item's too), a heading's, a quote's of one paragraph (each line's
@@ -65,17 +65,18 @@ const reUnderline = /^[ \t]*(?:=+|-+)[ \t]*$/;
  * ourus edits as text. `body` is what the user edits; `frame` is the markup around it (a
  * checkbox, a heading's `#`s, a quote's `>`s, a callout's `[!type]`, a setext underline).
  *
- * Internally, `text` is the node's lines past their containers' prefixes, without markup escapes,
- * with its placeholders as `marks`; the frame is computed lazily from its characters.
+ * Internally, `text` is the node's lines past their containers' prefixes, as written (an escape
+ * ourus wrote has an `auto` mark), with its marks as `marks`; the frame is computed lazily from its
+ * characters.
  */
 export class OurusProse {
   /** What the text is of (`OurusProseType`). */
   readonly type: OurusProseType;
   /** An item's text, which can start with a checkbox, or on the line after its marker. */
   readonly item: boolean;
-  /** The lines past their prefixes, without markup escapes, `\n` between them: the frame and the body. */
+  /** The lines past their prefixes, `\n` between them: the frame and the body (`marks.text`). */
   readonly text: string;
-  /** The placeholders, in `text`'s offsets. */
+  /** The marks on `text`. */
   readonly marks: MarkSet;
   /** How its flavor writes a block id in it; null: a flavor without them, or a text a command made from nothing. */
   readonly blockIds: BlockIdSyntax | null;
@@ -89,12 +90,12 @@ export class OurusProse {
   readonly fragment: boolean;
   #frame: readonly FramePart[] | undefined;
 
-  /** `text` includes the frame; `marks` are in its offsets. */
-  constructor(type: OurusProseType, item: boolean, text: string, marks: MarkSet = MarkSet.empty, blockIds: BlockIdSyntax | null = null, blockIdLines: readonly BlockIdLine[] = NO_LINES, fragment = false) {
+  /** `text` includes the frame; a string has no marks. */
+  constructor(type: OurusProseType, item: boolean, text: MarkSet | string, blockIds: BlockIdSyntax | null = null, blockIdLines: readonly BlockIdLine[] = NO_LINES, fragment = false) {
     this.type = type;
     this.item = item;
-    this.text = text;
-    this.marks = marks;
+    this.marks = typeof text === 'string' ? MarkSet.of(text) : text;
+    this.text = this.marks.text;
     this.blockIds = blockIds;
     this.blockIdLines = blockIdLines;
     this.fragment = fragment;
@@ -102,7 +103,7 @@ export class OurusProse {
 
   /** The frame, computed from the characters, the type, `item` and `blockIds`. */
   get frame(): readonly FramePart[] {
-    return (this.#frame ??= frameOf(this.type, this.item, this.text, (at) => emptyNodeAt(this.marks, this.text, at), this.blockIds));
+    return (this.#frame ??= frameOf(this.type, this.item, this.text, (at) => this.marks.hasEmptyNodeAt(at), this.blockIds));
   }
 
   /** The same text read in a flavor that writes block ids so, or has none. */
@@ -111,7 +112,7 @@ export class OurusProse {
   }
 
   /**
-   * The same string as a text of another type (and an item's or not: `item`), its placeholders, its
+   * The same string as a text of another type (and an item's or not: `item`), its marks, its
    * flavor's syntax and the block-id lines it carries kept: a quote's lines unquoted a paragraph's, a
    * setext title an ATX one's. Read as that type, but no transition (`normalize`).
    */
@@ -119,9 +120,19 @@ export class OurusProse {
     return type === this.type && item === this.item ? this : this.#with({ type, item });
   }
 
-  /** The same text with other placeholders, in its offsets. */
-  withMarks(marks: MarkSet): OurusProse {
+  /** The same string with the lists `lists` gives in place of its marks' (`MarkSet.with`); this one where they are the same. */
+  withMarks(lists: MarkLists): OurusProse {
+    const marks = this.marks.with(lists);
     return marks === this.marks ? this : this.#with({ marks });
+  }
+
+  /** The text without its held spaces, each one's space and placeholder out, as settling writes it; this one where it has none. */
+  withoutHeldSpaces(): OurusProse {
+    const held = this.marks.placeholders.filter((pos) => this.marks.hasHeldSpaceAt(pos));
+    if (!held.length) return this;
+    let text = this.withMarks({ placeholders: this.marks.placeholders.filter((pos) => !held.includes(pos)) });
+    for (const pos of [...held].reverse()) text = text.splice(pos, pos + 1);
+    return text;
   }
 
   /** The same text carrying other block-id lines (none: `[]`); a whole text, a fragment's lines said. */
@@ -130,9 +141,9 @@ export class OurusProse {
   }
 
   /** A text like this one, but for what `changes` says, its block ids' syntax and lines carried, a fragment or not. */
-  #with(changes: { type?: OurusProseType; item?: boolean; text?: string; marks?: MarkSet; blockIds?: BlockIdSyntax | null; blockIdLines?: readonly BlockIdLine[]; fragment?: boolean }): OurusProse {
-    const { type = this.type, item = this.item, text = this.text, marks = this.marks, blockIds = this.blockIds, blockIdLines = this.blockIdLines, fragment = this.fragment } = changes;
-    return new OurusProse(type, item, text, marks, blockIds, blockIdLines, fragment);
+  #with(changes: { type?: OurusProseType; item?: boolean; marks?: MarkSet; blockIds?: BlockIdSyntax | null; blockIdLines?: readonly BlockIdLine[]; fragment?: boolean }): OurusProse {
+    const { type = this.type, item = this.item, marks = this.marks, blockIds = this.blockIds, blockIdLines = this.blockIdLines, fragment = this.fragment } = changes;
+    return new OurusProse(type, item, marks, blockIds, blockIdLines, fragment);
   }
 
   /** The string without its frame: what the user edits, and the check compares. */
@@ -193,10 +204,9 @@ export class OurusProse {
     return item === this.item ? this : this.#with({ item });
   }
 
-  /** `[from, to)` replaced by `insert`: the marks around move by their policies, the insertion's come with it. */
+  /** `[from, to)` replaced by `insert` (`MarkSet.splice`): the marks around move, the insertion's come with it. */
   splice(from: number, to: number, insert: OurusProse | string = ''): OurusProse {
-    const [text, marks] = typeof insert === 'string' ? [insert, MarkSet.empty] : [insert.text, insert.marks];
-    return this.#with({ text: this.text.slice(0, from) + text + this.text.slice(to), marks: this.marks.splice(from, to, text, marks) });
+    return this.#with({ marks: this.marks.splice(from, to, typeof insert === 'string' ? insert : insert.marks) });
   }
 
   /**
@@ -205,21 +215,12 @@ export class OurusProse {
    * (`withBlockIdLines`).
    */
   slice(from = 0, to = this.text.length): OurusProse {
-    return this.#with({ text: this.text.slice(from, to), marks: this.marks.slice(from, to, to === this.text.length), blockIdLines: NO_LINES, fragment: true });
+    return this.#with({ marks: this.marks.slice(from, to, to === this.text.length), blockIdLines: NO_LINES, fragment: true });
   }
 
   /** The texts after this one, their marks with them; this one's block-id lines, a fragment where it is one. */
   concat(...others: readonly (OurusProse | string)[]): OurusProse {
-    let text = this.text;
-    let marks = this.marks;
-    for (const o of others) {
-      if (typeof o === 'string') text += o;
-      else {
-        marks = marks.update({ add: o.marks.shift(text.length).marks });
-        text += o.text;
-      }
-    }
-    return this.#with({ text, marks });
+    return this.#with({ marks: this.marks.concat(...others.map((other) => (typeof other === 'string' ? other : other.marks))) });
   }
 
   /**
@@ -235,7 +236,7 @@ export class OurusProse {
     else if (this.type === 'quote' && !this.frame.some((p) => p.part === 'quote' && p.from === 0)) text = this.#with({ type: 'paragraph' });
     // (a block-id line right under a paragraph is its text's last line, which Markdown reads it as)
     const [first, ...rest] = text.blockIdLines;
-    if ((text.type === 'paragraph' || text.type === 'quote') && first?.blankLines === 0) text = text.#with({ text: `${text.text}\n${first.line}`, blockIdLines: rest });
+    if ((text.type === 'paragraph' || text.type === 'quote') && first?.blankLines === 0) text = text.#with({ marks: text.marks.concat(`\n${first.line}`), blockIdLines: rest });
     return text;
   }
 }
@@ -342,7 +343,7 @@ export interface AtomFramePart {
  * info, indented code's columns, a footnote's label).
  *
  * Internally, `text` is its lines as written past their containers' prefixes (a partly taken tab
- * as its spaces), with its placeholders as `marks`; the frame is computed lazily from its
+ * as its spaces), with its marks as `marks`; the frame is computed lazily from its
  * characters, by `type`.
  */
 export class OurusAtom {
@@ -350,26 +351,32 @@ export class OurusAtom {
   readonly type: string;
   /** An item's text. */
   readonly item: boolean;
-  /** The lines past their prefixes, `\n` between them: the frame and the body. */
+  /** The lines past their prefixes, `\n` between them: the frame and the body (`marks.text`). */
   readonly text: string;
-  /** The placeholders, in `text`'s offsets. */
+  /** The marks on `text`. */
   readonly marks: MarkSet;
   /** The block-id lines it carries after its string (a table's, a fence's `^id`). */
   readonly blockIdLines: readonly BlockIdLine[];
   #frame: readonly AtomFramePart[] | undefined;
 
-  /** `text` includes the frame; `marks` are in its offsets. */
-  constructor(type: string, item: boolean, text: string, marks: MarkSet = MarkSet.empty, blockIdLines: readonly BlockIdLine[] = NO_LINES) {
+  /** `text` includes the frame; a string has no marks. */
+  constructor(type: string, item: boolean, text: MarkSet | string, blockIdLines: readonly BlockIdLine[] = NO_LINES) {
     this.type = type;
     this.item = item;
-    this.text = text;
-    this.marks = marks;
+    this.marks = typeof text === 'string' ? MarkSet.of(text) : text;
+    this.text = this.marks.text;
     this.blockIdLines = blockIdLines;
+  }
+
+  /** The same string with the lists `lists` gives in place of its marks' (`MarkSet.with`); this one where they are the same. */
+  withMarks(lists: MarkLists): OurusAtom {
+    const marks = this.marks.with(lists);
+    return marks === this.marks ? this : new OurusAtom(this.type, this.item, marks, this.blockIdLines);
   }
 
   /** The same text carrying other block-id lines. */
   withBlockIdLines(lines: readonly BlockIdLine[]): OurusAtom {
-    return lines === this.blockIdLines || (!lines.length && !this.blockIdLines.length) ? this : new OurusAtom(this.type, this.item, this.text, this.marks, lines);
+    return lines === this.blockIdLines || (!lines.length && !this.blockIdLines.length) ? this : new OurusAtom(this.type, this.item, this.marks, lines);
   }
 
   /**
@@ -379,14 +386,14 @@ export class OurusAtom {
   normalize(): OurusAtom {
     const [first, ...rest] = this.blockIdLines;
     if (this.type !== 'blockquote' || first?.blankLines !== 0) return this;
-    const text = `${this.text}\n${first.line}`;
-    const last = MdTree.parse(text, MdFlavor.named('obsidian')).line(text.split('\n').length - 1);
-    return last.containers.some((c) => c.block.type === 'blockquote') ? new OurusAtom(this.type, this.item, text, this.marks, rest) : this;
+    const text = this.marks.concat(`\n${first.line}`);
+    const last = MdTree.parse(text.text, MdFlavor.named('obsidian')).line(text.text.split('\n').length - 1);
+    return last.containers.some((c) => c.block.type === 'blockquote') ? new OurusAtom(this.type, this.item, text, rest) : this;
   }
 
   /** The same lines read as an item's text, or not. */
   asItem(item: boolean): OurusAtom {
-    return item === this.item ? this : new OurusAtom(this.type, item, this.text, this.marks, this.blockIdLines);
+    return item === this.item ? this : new OurusAtom(this.type, item, this.marks, this.blockIdLines);
   }
 
   /** The delimiters, computed from the characters by `type`. */
@@ -463,9 +470,9 @@ export class OurusAtom {
     return (!!open && k === lineOf(this.text, open.from)) || (!!close && k === lineOf(this.text, close.from));
   }
 
-  /** `[from, to)` replaced by `insert`, the marks around moving by their policies. */
+  /** `[from, to)` replaced by `insert`, the marks around moving (`MarkSet.splice`). */
   splice(from: number, to: number, insert = ''): OurusAtom {
-    return new OurusAtom(this.type, this.item, this.text.slice(0, from) + insert + this.text.slice(to), this.marks.splice(from, to, insert), this.blockIdLines);
+    return new OurusAtom(this.type, this.item, this.marks.splice(from, to, insert), this.blockIdLines);
   }
 }
 

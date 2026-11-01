@@ -7,7 +7,6 @@ import { test } from 'node:test';
 import { OurusProse, OurusAtom, OurusDoc, type OurusNode, type PersistentNode } from '../../src/doc/index.ts';
 import { OurusDraft, type Refusal } from '../../src/writer/index.ts';
 import { differenceFrom } from '../../src/writer/check.ts';
-import { createPlaceholder } from '../../src/text/index.ts';
 
 const parse = (text: string, flavor: 'gfm' | 'commonmark' | 'obsidian' = 'gfm'): OurusDoc => OurusDoc.parse(text, { config: { flavor } });
 
@@ -141,12 +140,15 @@ test('done: a changed ordered list is numbered from its start', () => {
   assert.deepEqual([...draft.lists.values()].map((l) => [l.start, l.number]), [[true, 1], [false, 2]]);
 });
 
-test('done: escapes, markup kept apart, others gained by the text, the caret mapped (examples 18, 20)', () => {
+test('done: escapes put in the text, each one of ours, the caret mapped (examples 18, 20)', () => {
   const doc = parse('one\n');
   const p = find(doc, 'one');
   const draft = new OurusDraft(doc).setText(p, new OurusProse('paragraph', false, 'one\n- two')).setCaret(p, 4, -1);
   applied(draft);
-  assert.deepEqual(draft.escapes.get(p.id), [4]);
+  const markup = draft.root.children[0]!.text as OurusProse;
+  assert.equal(markup.text, 'one\n\\- two');
+  assert.deepEqual(markup.marks.auto, [4]);
+  assert.deepEqual(draft.caret, { node: draft.root.children[0], offset: 4, assoc: -1 }, 'before the escape');
   const gained = new OurusDraft(doc).setText(p, new OurusProse('paragraph', false, '<div>')).setCaret(p, 3);
   applied(gained);
   const node = gained.root.children[0]!;
@@ -171,7 +173,7 @@ test('done: an empty item at the caret right under text is held by a placeholder
   draft.append(find(doc, 'para'), 'first', [id]).setCaret(id, 0);
   applied(draft);
   const text = draft.root.children[0]!.children[0]!.text as OurusProse;
-  assert.deepEqual(text.marks.marks, [createPlaceholder(0)]);
+  assert.deepEqual(text.marks.placeholders, [0]);
 });
 
 test('done: refuses a block an item with no text of its own would read as its text', () => {

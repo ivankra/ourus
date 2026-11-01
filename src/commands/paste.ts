@@ -485,8 +485,9 @@ function place(ctx: CommandContext, draft: OurusDraft, slot: Slot, fitted: Fitte
     const task = text instanceof OurusProse ? text.frame.find((p) => p.part === 'task') : undefined;
     const first = nodes[0] !== undefined ? draft.touched(nodes[0]) : null;
     if (task && first?.kind === 'item' && first.text instanceof OurusProse && !first.text.task) {
-      // (the pasted text's, its block-id lines too, the checkbox before it)
-      draft.setText(nodes[0]!, first.text.retyped('paragraph', true).splice(0, 0, (text as OurusProse).slice(task.from, task.to)));
+      // (the pasted text's, its block-id lines too, the checkbox's characters before it: not the empty
+      // node's placeholder after them, which would fall on the pasted text)
+      draft.setText(nodes[0]!, first.text.retyped('paragraph', true).splice(0, 0, (text as OurusProse).text.slice(task.from, task.to)));
     }
     if (nodes.length) {
       draft.place('before', node, nodes);

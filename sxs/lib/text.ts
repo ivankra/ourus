@@ -21,7 +21,7 @@ export interface TextDoc {
 export function readTextDoc(drawing: string): TextDoc {
   const { drawn, view } = splitView(drawing);
   const read = readDrawing(drawn);
-  const selection = read.subtrees ? drawnSelection(OurusView.of(OurusDoc.parse(read.text, { marks: [] })), read) : read.selection;
+  const selection = read.subtrees ? drawnSelection(OurusView.of(OurusDoc.parse(read.text)), read) : read.selection;
   return { text: read.text, sel: /┃|«/.test(drawn) ? selection : null, ...(view && { view }) };
 }
 

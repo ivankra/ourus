@@ -964,7 +964,7 @@ tags: edge
 ## MoveDown34
 
 Code moved below a paragraph of its item: the paragraph comes right under the item's text, which it
-would continue, so a blank line sets it apart. Back up, the blank line stays: it is the item's gap.
+would continue, so a blank line sets it apart. Back up, the blank line goes (ourus raised it, an `auto` mark on its line break): the text comes back as it was.
 The caret goes into the code, where typing can't break its fence.
 
 ```yaml
@@ -994,7 +994,6 @@ tags: rare markup-fence
 
 ````buffer
 - a
-
   ```
   ┃code
   ```

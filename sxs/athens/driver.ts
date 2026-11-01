@@ -110,6 +110,8 @@ export const driver: Driver = {
   // split, lines as blocks, numbers as text, a paragraph's list under it (each measured, playing its
   // examples with `run.ts --ignore-options`)
   behaves: {
+    // brackets typed as pairs, anywhere; no fence or backtick closed (the autoClose probes)
+    autoClose: ['(', '[', '{'],
     // indent and outdent over roots at two depths
     mixedDepths: 'refuse',
     // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25)

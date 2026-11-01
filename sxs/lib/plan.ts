@@ -6,7 +6,7 @@
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { OurusConfig } from '../../src/config.ts';
-import { drawsCaret, readText, withoutCaret } from '../../test/drawing.ts';
+import { drawsCaret, readText, withoutAuto, withoutCaret } from '../../test/drawing.ts';
 import { isDrop } from '../../test/player.ts';
 import { drawnSteps, readClipboard, rowView, startOf, type RowView } from '../../test/spec-run.ts';
 import { readSpec, slug, specConfig, type Clipboard, type SpecTest } from '../../test/specfile.ts';
@@ -63,7 +63,7 @@ const isMotion = (a: string): boolean => /^(?:cursor|select)(?:CharLeft|CharRigh
 
 /** Whether the app can play an action. */
 export function playable(driver: Driver, action: string): boolean {
-  if (/^"[^"]*"$/.test(action)) return true;
+  if (/^"[^"]*"$/.test(action)) return !driver.capturesTyped?.test(action.slice(1, -1));
   // a key pressed as is (`key:Control+a`), for a probe
   if (action.startsWith('key:')) return true;
   // a drop: a gesture the driver plays (`Driver.drop`), by its action (`moveSubtree ②` is a `moveSubtree`)
@@ -83,7 +83,9 @@ export interface AdaptOptions {
   readonly plainClipboard?: boolean;
 }
 
-export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): Adapted {
+export function adapt(driver: Driver, drawn: SpecTest, opts: AdaptOptions = {}): Adapted {
+  // (the case's drawings as an app shows them: no auto marks, which ourus's replays start without too)
+  const test = withoutAutoMarks(drawn);
   const name = test.name;
   const skip = (why: string): Adapted => ({ skip: why });
   // a `free-form` case, projected onto blocks, tests something else or nothing: no block app runs it
@@ -100,17 +102,25 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
     // the marker ourus writes for an item, which a block has none of
     if (key === 'bullet' && driver.model === 'block') continue;
     const k = key as keyof OurusConfig;
-    const settable = driver.settings?.[k]?.some((v) => String(v) === value);
-    if (!settable && value !== String(OurusConfig.defaults[k]) && String(driver.behaves?.[k]) !== value) return skip(`option ${key}: ${value}`);
+    // (each value as settings write it: a list in its order, `( [` and `[ (` the same)
+    const read = OurusConfig.read({ [key]: value });
+    const text = typeof read === 'string' ? value : OurusConfig.format(k, read[k]);
+    const shown = (v: unknown): string | undefined => (v === undefined ? undefined : OurusConfig.format(k, v));
+    const settable = driver.settings?.[k]?.some((v) => shown(v) === text);
+    // (a list the app declares its own of, `autoClose`: the case replayed under the app's, below, as
+    // what it lists beside what the case uses changes nothing there, or is judged under it)
+    const replayed = key in OurusConfig.lists && driver.behaves?.[k] !== undefined;
+    if (!settable && !replayed && text !== shown(OurusConfig.defaults[k]) && shown(driver.behaves?.[k]) !== text) return skip(`option ${key}: ${value}`);
   }
   const options = specConfig(test.options);
   const settings = Object.fromEntries(Object.keys(driver.settings ?? {}).map((k) => [k, options[k as keyof OurusConfig] ?? OurusConfig.defaults[k as keyof OurusConfig]])) as Partial<OurusConfig>;
-  for (const s of test.steps) for (const a of s.actions) if (!playable(driver, a)) return skip(`action ${isMotion(a) || /^[a-z]/i.test(a) ? a : 'unknown'}`);
+  for (const s of test.steps) for (const a of s.actions) if (!playable(driver, a)) return skip(/^"/.test(a) ? `typed ${a}, the app's command` : `action ${isMotion(a) || /^[a-z]/i.test(a) ? a : 'unknown'}`);
   // options the app has other values of, and can't be set to the example's: where they change what
   // ourus does in the example, the app is judged against ourus with them, the example replayed so
   // (`under <option>: <value>` among what was adapted), rather than the example's drawings
   const flavor = (test.options.flavor ?? OurusConfig.defaults.flavor) as OurusConfig['flavor'];
-  let theirs = opts.ignoreOptions ? [] : Object.entries(driver.behaves ?? {}).filter(([k, v]) => v !== undefined && !(k in (driver.settings ?? {})) && String(v) !== String(options[k as keyof OurusConfig] ?? OurusConfig.defaults[k as keyof OurusConfig]));
+  const format = (k: string, v: unknown): string => OurusConfig.format(k as keyof OurusConfig, v);
+  let theirs = opts.ignoreOptions ? [] : Object.entries(driver.behaves ?? {}).filter(([k, v]) => v !== undefined && !(k in (driver.settings ?? {})) && format(k, v) !== format(k, options[k as keyof OurusConfig] ?? OurusConfig.defaults[k as keyof OurusConfig]));
   // a copy or cut at a caret (a step's first action), which ourus takes as the node's and an app that
   // copies nothing there (`copyAtCaret: host`) can take as it takes a selected block, its subtree:
   // played on the node selected the app's way (`selectSubtree`), and judged against ourus's copy
@@ -137,7 +147,7 @@ export function adapt(driver: Driver, test: SpecTest, opts: AdaptOptions = {}): 
     }
     if (outcome(values) !== ours) {
       const alone = theirs.filter(([k, v]) => outcome({ [k]: v }) !== ours);
-      for (const [k, v] of alone.length ? alone : theirs) under.push(`under ${k}: ${v}`);
+      for (const [k, v] of alone.length ? alone : theirs) under.push(`under ${k}: ${format(k, v)}`);
       replayed = test.steps.map((step, i) => (step.expect.buffer === undefined ? undefined : theirsPlayed[i]!.buffer));
       // a clipboard ourus doesn't write under them (the host's copy, at a caret) has nothing to compare
       replayedClipboards = test.steps.map((step, i) => (step.expect.clipboard === undefined ? undefined : theirsPlayed[i]!.clipboard));
@@ -321,6 +331,12 @@ export function allTests(): SpecTest[] {
     .filter((f) => f.endsWith('.md') && f !== 'README.md')
     .sort()
     .flatMap((f) => readSpec(f, readFileSync(new URL(f, specDir), 'utf8')));
+}
+
+/** A case with its buffers drawn without auto marks (`withoutAuto`). */
+function withoutAutoMarks(test: SpecTest): SpecTest {
+  const shown = <T extends { readonly buffer?: string }>(state: T): T => (state.buffer === undefined ? state : { ...state, buffer: withoutAuto(state.buffer) });
+  return { ...test, initial: shown(test.initial), steps: test.steps.map((step) => ({ ...step, expect: shown(step.expect) })) };
 }
 
 /** The spec file a case's ID is in (IDs are unique across the spec), or `?` for one it no longer has (an old run's). */

@@ -40,7 +40,8 @@ export const driver: Driver = {
     quotes: 'atom',
     enterSplitSpace: 'start',
     enterAtTextStart: 'stay',
-    closeBackticks: 'none',
+    // brackets typed as pairs before a blank or a closer, no fence or backtick closed (the autoClose probes)
+    autoClose: ['(', '[', '{'],
     copyAtCaret: 'host',
     pastePlainLines: 'host',
   },

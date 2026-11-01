@@ -98,6 +98,11 @@ export interface Driver {
    */
   readonly refuses?: readonly string[];
   /**
+   * Typed text the app takes as a command of its own, its characters gone (RemNote's `$$`, its math
+   * editor): a test typing it is skipped, nothing to compare.
+   */
+  readonly capturesTyped?: RegExp;
+  /**
    * The app has numbered blocks, which the driver loads and reads as such: an ordered item is a block
    * whose canonical text starts with its number (`1. x`), a number that is text keeps its escape
    * (`1\. x`), and an ordered list is no adaptation (`ProjectOptions.ordered` in block.ts).

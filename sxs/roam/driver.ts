@@ -140,6 +140,9 @@ export const driver: Driver = {
   // Shift+Tab leaves later siblings with the parent (logical outdenting); Enter on an empty nested
   // block outdents it; Backspace on a page's first block does nothing: as ourus's config says of Roam
   behaves: {
+    // brackets typed as pairs, anywhere (the autoClose probes), and `$` and `$$`, Backspace in `$$┃$$` a
+    // level (Auto28, Auto30); no single `$` (Auto36), the nearest still `$`'s
+    autoClose: ['```', '~~~', '$$', '(', '[', '{', '$'],
     // indent and outdent over roots at two depths: each run as alone
     mixedDepths: 'each',
     // Ctrl-A goes from the text straight to everything

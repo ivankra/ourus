@@ -113,19 +113,21 @@ preview.innerHTML = tree.renderHtml();
   - `MdFlavor.markupEscapeAt(line: string, at: number): boolean`<br>
     Whether a backslash at `at` is in a position where it can only matter to block syntax: a
     line's first `-`, `+`, `#`, `>` or `=`; the `.` or `)` after a number; a label's `:`; a table
-    delimiter row's first `-`. Such a backslash is a **markup escape**: markup, not part of the text.
+    delimiter row's first `-`. Such a backslash is a **markup escape**: markup to the parser (a node's text keeps it all the same).
 
   - `MdFlavor.markupEscapes(lines: string[], place?: MdParagraphPlace): MdEscapeAt[]`<br>
     For reading: the backslashes in `lines`, as written at `place`, that are markup escapes. A
     backslash is one if it is in such a position, is an inline escape, and is needed there (without
-    it, the line would read as markup). A reader leaves them out of the text.
+    it, the line would read as markup). A writer may take them out (`escapeParagraph`).
 
-  - `MdFlavor.escapeParagraph(lines: string[], place?: MdParagraphPlace): MdEscapedParagraph | null`<br>
+  - `MdFlavor.escapeParagraph(lines: string[], place?: MdParagraphPlace, absorb = true): MdEscapedParagraph | null`<br>
     For writing: how to write a text's lines at `place` so they read back as that text. First, the
-    backslashes in `lines` that would be markup escapes there are taken as markup (`absorbed`).
-    Then each line that would read as markup gets an escape: a markup escape where one works,
-    otherwise a backslash added to the text (`gained`). Null where no escape keeps the lines a
-    paragraph.
+    backslashes in `lines` that would be markup escapes there are taken as markup (`absorbed`); with
+    `absorb` false none is (ourus's writer: a backslash it keeps is a character, and an escape
+    already where it is markup). Then each line that would read as
+    markup gets an escape: a markup escape where one works, otherwise a backslash added to the text
+    (`gained`); `escapes` lists both, in the lines with them in. Null where no escape keeps the lines
+    a paragraph.
 
 - **`MdBlock`** is a node of the block tree, as stored:
 

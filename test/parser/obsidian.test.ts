@@ -37,7 +37,9 @@ const cases: [string, string, string][] = [
   ['not a callout after the first line', '> text\n> [!note] x\n', '<blockquote>\n<p>text\n[!note] x</p>\n</blockquote>\n'],
   // math and comment blocks
   ['a math block', '$$\na^2 + b^2\n$$\n', '<div class="math math-block">a^2 + b^2</div>\n'],
-  ['a math block on one line', '$$x$$\n', '<div class="math math-block">x</div>\n'],
+  ['display math alone on a line is inline, as Obsidian reads it', '$$x$$\n', '<p><span class="math math-display">x</span></p>\n'],
+  ['so is a comment', 'a\n%%x%%\nb\n', '<p>a\n\nb</p>\n'],
+  ['a math block from a line opening it to a line closing it', '$$x\ny$$\nafter\n', '<div class="math math-block">x\ny</div>\n<p>after</p>\n'],
   ['display math followed by text is inline', '$$x$$ y\n', '<p><span class="math math-display">x</span> y</p>\n'],
   ['a comment block is hidden', 'a\n\n%%\nhidden\n\nstill\n%%\nb\n', '<p>a</p>\n<p>b</p>\n'],
   ['an unclosed math block runs to its container\'s end', '> $$\n> x\n\ny\n', '<blockquote>\n<div class="math math-block">x</div>\n</blockquote>\n<p>y</p>\n'],

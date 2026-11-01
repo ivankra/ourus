@@ -306,6 +306,19 @@ export class ChangeIndex {
     return pos + shift;
   }
 
+  /**
+   * Whether a change takes out text overlapping `[from, to)`: for a point (`from === to`), text on both
+   * sides of it; for a span, any of its characters.
+   */
+  removes(from: number, to: number): boolean {
+    for (let j = this.#before(to, true) - 1; j >= 0; j--) {
+      const c = this.#changes[j]!;
+      if (c.from < c.to) return c.to > from && (from < to || c.from < from);
+      if (c.to <= from) return false;
+    }
+    return false;
+  }
+
   /** The first change that replaces a range holding `from` to `to` whole, if one does (an empty range at a seam: two). */
   covering(from: number, to: number): ChangeSpec | undefined {
     let found: ChangeSpec | undefined;

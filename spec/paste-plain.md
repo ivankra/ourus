@@ -190,7 +190,7 @@ clipboard: |
 
 ```buffer
 - ax
-  \- y
+  \̬- y
   ┃b
 ```
 
@@ -240,7 +240,7 @@ clipboard: |
 ```buffer
 - a$$
   x^2
-  \$$
+  \̬$$
   ┃b
 ```
 
@@ -263,8 +263,8 @@ clipboard: |-
 > pastePlain
 
 ```buffer
-\- a
-\- b┃words
+\̬- a
+\̬- b┃words
 ```
 
 ## PastePlain9
@@ -286,7 +286,7 @@ clipboard: |
 > pastePlain
 
 ```buffer
-1\. a
+1\̬. a
 b
 ┃
 ```
@@ -310,9 +310,9 @@ clipboard: |
 > pastePlain
 
 ```buffer
-- 21\. a
+- 21\̬. a
   2. b
-  ┃. y
+  ┃\. y
 ```
 
 ## PastePlain11
@@ -334,7 +334,7 @@ clipboard: |
 > pastePlain
 
 ```buffer
-[a]\: x
+[a]\̬: x
 ┃b c
 ```
 
@@ -360,7 +360,7 @@ p┃
 ```buffer
 px
 
-[a]\: /u┃
+[a]\̬: /u┃
 ```
 
 ## PastePlain13
@@ -384,7 +384,7 @@ p┃ ---
 
 ```buffer
 px
-┃ \---
+┃ \̬---
 ```
 
 ## PastePlain14
@@ -490,7 +490,7 @@ clipboard: |-
 
 ```buffer
 - ax
-  \- y┃f
+  \̬- y┃f
 ```
 
 ## PastePlain18
@@ -513,7 +513,7 @@ clipboard: |-
 
 ```buffer
 > ax
-> \# y┃f
+> \̬# y┃f
 ```
 
 ## PastePlain19

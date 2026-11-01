@@ -153,7 +153,7 @@ export const driver: Driver = {
     enterSplitSpace: 'start',
     joinWithChildren: 'refuse',
     emptyItemWithChildren: 'refuse',
-    closeBackticks: 'none',
+    autoClose: [],
     copyAtCaret: 'host',
     copySelection: 'nodes',
     pasteLines: 'items',

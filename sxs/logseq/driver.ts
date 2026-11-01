@@ -236,8 +236,10 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
       enterInQuote: 'split',
       // Backspace at a numbered block's start takes its number first (Backspace29, TO5)
       backspaceAtItemStart: 'logseq',
-      // a backtick in text is typed as a pair, the caret between (Backtick18, both setups)
-      closeBackticks: 'all',
+      // a backtick in text is typed as a pair, the caret between (Backtick18, both setups), brackets too,
+      // and `$` and `$$`, Backspace in `$$┃$$` a level (Auto28, Auto30); the file-based version pairs no
+      // single `$` (Auto36), the nearest still `$`'s
+      autoClose: ['```', '~~~', '$$', '`', '(', '[', '{', '$'],
       outdent: 'direct',
       enterOnEmptyItem: 'sibling',
       enterMidItem: 'child',

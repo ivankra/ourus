@@ -2,7 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { readSpec, specConfig, SpecError } from './specfile.ts';
+import { actionsLine, readSpec, specConfig, SpecError } from './specfile.ts';
 
 const F = '```';
 
@@ -165,4 +165,19 @@ test("a test's tags after its rank are words from the closed list, in its config
   bad(['tags: rare free-form sideways'], /x\.md:4: no tag "sideways"/);
   bad(['tags: rare free-form free-form'], /x\.md:4: tag "free-form" given twice/);
   bad(['tags: [free-form]'], /x\.md:4: option "tags" takes one value/);
+});
+
+test('a backtick in the actions is escaped, as Markdown shows the quote; one bare is an error', () => {
+  const read = (actions: string) => readSpec('x.md', ['## A', '', `${F}yaml`, 'tags: edge', F, '', `${F}buffer`, '┃', F, '', actions].join('\n'))[0]!;
+  assert.deepEqual(read('> "\\`\\`\\`" "x\\`"').steps[0]!.actions, ['"```"', '"x`"']);
+  assert.throws(() => read('> "```"'), (e) => e instanceof SpecError && /x\.md:11: a backtick in the actions is escaped/.test(e.message));
+  assert.equal(actionsLine(['"```"', 'enter']), '> "\\`\\`\\`" enter');
+});
+
+test('a list option is a YAML sequence, read into the order settings write it', () => {
+  const read = (option: string) => readSpec('x.md', ['## A', '', `${F}yaml`, 'tags: edge', option, F, '', `${F}buffer`, '┃', F, '', '> indent'].join('\n'))[0]!;
+  assert.equal(read("autoClose: ['(', '```']").options.autoClose, '``` (');
+  assert.equal(read('autoClose: []').options.autoClose, 'none');
+  assert.throws(() => read("autoClose: '``` ('"), (e) => e instanceof SpecError && /option "autoClose" takes a list/.test(e.message));
+  assert.throws(() => read("autoClose: ['*']"), (e) => e instanceof SpecError && /autoClose/.test(e.message));
 });

@@ -248,7 +248,7 @@ enterTask: plain
 
 ```buffer
 - [x] abc
-- ┃\# x
+- ┃\̬# x
 ```
 
 ## TaskEnter9c
@@ -690,7 +690,7 @@ tags: rare markup-task
 > deleteContentBackward
 
 ```buffer
-- ┃\# x
+- ┃\̬# x
 ```
 
 ## TaskBackspace11
@@ -713,7 +713,7 @@ taskEditing: block
 > deleteContentBackward
 
 ```buffer
-┃\# x
+┃\̬# x
 - b
 ```
 

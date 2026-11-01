@@ -87,8 +87,16 @@ async function load(root: string): Promise<Core> {
     const status = api.OurusSuccess ? (result instanceof api.OurusSuccess ? 'success' : result instanceof api.OurusRejected ? 'rejected' : 'deferredToHost') : result.status === 'applied' ? 'success' : result.status;
     return status === 'success' ? { ...result, status, doc: snap(docOf(result)) } : { ...result, status };
   };
+  // (a tree before `autoClose`: `closeBackticks`, `none`, `fences` or `all`, what the list says of a backtick)
+  const { OurusConfig: config } = await import(join(root, 'src/config.ts'));
+  const configFor = (given: Record<string, unknown>): Record<string, unknown> => {
+    if (!Array.isArray(given.autoClose) || config.has?.('autoClose')) return given;
+    const { autoClose, ...rest } = given as { autoClose: string[] };
+    return { ...rest, closeBackticks: !autoClose.length ? 'none' : autoClose.includes('`') ? 'all' : 'fences' };
+  };
+  // (a tree before `MarkSet` held offsets: tagged marks, `createPlaceholder`, `points()`, `setMarks`)
   const { createPlaceholder } = await import(join(root, 'src/text/index.ts'));
-  const marks = (placeholders: readonly number[]): unknown[] => placeholders.map((p) => createPlaceholder(p));
+  const marks = (placeholders: readonly number[]): unknown => (createPlaceholder ? placeholders.map((pos) => createPlaceholder(pos)) : { placeholders });
   const snap = (doc: any): Snapshot => {
     const nodes: Snapshot['nodes'][number][] = [];
     const visit = (node: any): void => {
@@ -96,15 +104,15 @@ async function load(root: string): Promise<Core> {
       node.children.forEach(visit);
     };
     visit(doc.rootNode);
-    return { text: doc.text, placeholders: doc.marks.points(), nodes, lines: doc.mdTree.lines, doc };
+    return { text: doc.text, placeholders: [...(doc.marks.points?.() ?? doc.marks.placeholders)], nodes, lines: doc.mdTree.lines, doc };
   };
   return {
-    parse: (text, config, placeholders = []) => snap(api.OurusDoc.parse(text, { config, marks: marks(placeholders) })),
+    parse: (text, config, placeholders = []) => snap(api.OurusDoc.parse(text, { config: configFor(config), marks: marks(placeholders) })),
     execute: run,
     // (a tree before `OurusDocUpdate` takes the changes apart: `update(changes, params)`)
     edit: (s, changes, caret) => snap(s.doc.update.length ? s.doc.update(changes, { caret }) : s.doc.update({ changes, caret })),
     // (a tree before `update`'s `text`: `replace(text, marks)`)
-    replace: (s, text, placeholders) => snap(s.doc.replace ? s.doc.replace(text, marks(placeholders)) : s.doc.update({ text, setMarks: marks(placeholders) })),
+    replace: (s, text, placeholders) => snap(s.doc.replace ? s.doc.replace(text, marks(placeholders)) : s.doc.update(createPlaceholder ? { text, setMarks: marks(placeholders) } : { text, marks: marks(placeholders) })),
     settle: (s, caret) => {
       const settled = api.settlePlaceholders(viewOf(s.doc), caret);
       return settled && { changes: settled.changes, doc: snap(docOf(settled)) };
@@ -140,7 +148,7 @@ const configs: Record<string, unknown>[] = [
   { backspaceAtTopItem: 'refuse' }, { backspaceAtItemStart: 'body' }, { backspaceAtItemStart: 'unwrap' }, { backspaceAtItemStart: 'logseq' }, { quirkEnterMidHeading: 'workflowy' }, { quirkPasteCaret: 'roam' }, { quirkPasteCaret: 'athens' }, { quirkPasteText: 'dynalist' }, { emptyItemWithChildren: 'refuse' }, { joinWithChildren: 'refuse' }, { handleFenceContents: false },
   { headingEditing: 'block' }, { taskEditing: 'text' }, { taskEditing: 'block' }, { taskEditing: 'unwrap' }, { enterTask: 'plain' }, { enterSplitSpace: 'drop' }, { enterSplitSpace: 'start' }, { pasteLines: 'items' }, { pastePlainLines: 'items' }, { pastePlainLines: 'enter' }, { pasteOnParent: 'after' },
   { pasteSeams: 'open' }, { pasteOverSelection: 'ignore' }, { pasteAtTextStart: 'before' }, { pasteParagraphList: 'children' }, { pasteListForm: 'own' }, { copyAtCaret: 'host' }, { copySelection: 'nodes' },
-  { markup: 'decorated' }, { closeBackticks: 'all' }, { closeBackticks: 'none' },
+  { markup: 'decorated' }, { autoClose: ['```', '~~~', '`'] }, { autoClose: [] }, { autoClose: ['```', '~~~', '`', '(', '[', '{'] }, { autoClose: ['```', '~~~', '[[', '(('] },
 ];
 const documents = Number(process.env.DIFF_DOCS ?? 1500);
 const examples = Number(process.env.DIFF_EXAMPLES ?? 3);

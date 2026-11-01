@@ -28,7 +28,7 @@ export function quoteAtomAt(ctx: CommandContext): QuoteAt | null {
 
 /** A quote atom's text as a paragraph's, its `>`s characters of it: what a join puts into the text above. */
 export function quoteAsProse(text: OurusAtom): OurusProse {
-  return new OurusProse('paragraph', text.item, text.text, text.marks, null, text.blockIdLines);
+  return new OurusProse('paragraph', text.item, text.marks, null, text.blockIdLines);
 }
 
 /**

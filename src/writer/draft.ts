@@ -10,8 +10,8 @@
 // source.
 
 import { mdCalloutAt, MdFlavor, MdTree, type MdBlockAt, type MdLine } from '../parser/index.ts';
-import { advanceColumns, createPlaceholder, emptyNodeAt, heldSpaceAt, isHeldSpacePlaceholder, isPlaceholder, MarkSet, trimMd, type ChangeSpec, type Mark } from '../text/index.ts';
-import { PersistentNode, Lineage, OurusProse, escapeParagraph, outlineChildren, OurusAtom, blockIdsOf, blockIdTargetOf, closingFrameStart, isClosingPart, reBlockIdLine, textEnd, type BlockIdDeclarations, type OurusNode, type OurusText, type OurusNodeKind, type OurusDoc, type OutlineChild } from '../doc/index.ts';
+import { advanceColumns, MarkSet, trimMd, type ChangeSpec } from '../text/index.ts';
+import { PersistentNode, Lineage, OurusProse, escapeParagraph, keepsEscape, outlineChildren, OurusAtom, blockIdsOf, blockIdTargetOf, closingFrameStart, isClosingPart, reBlockIdLine, textEnd, type BlockIdDeclarations, type OurusNode, type OurusText, type OurusNodeKind, type OurusDoc, type OutlineChild } from '../doc/index.ts';
 import { differenceFrom } from './check.ts';
 import { blockIdLinesOf, continuationAsWas, indentUnitOf, markerOf, write } from './write.ts';
 
@@ -84,6 +84,14 @@ const SENTINEL = '￼';
 
 type Child = Working | PersistentNode;
 
+/** How many of the blank lines after `node`, in `doc`, ourus raised: those whose line break has an `auto` mark. */
+function autoLinesOf(doc: OurusDoc, node: OurusNode): number {
+  if (!doc.marks.auto.length || node.gap === 0) return 0;
+  let n = 0;
+  for (let i = node.ownLastLine + 1; i <= node.ownLastLine + node.gap; i++) if (doc.marks.hasAutoAt(doc.mdTree.line(i).to)) n++;
+  return n;
+}
+
 /** A node the draft touched, while it is built: a copy of a read node (`source`), or one it made. */
 class Working {
   readonly id: number;
@@ -122,12 +130,14 @@ interface Fixed {
   readonly caret: Anchor | null;
   readonly anchor: Anchor | null;
   readonly lists: ReadonlyMap<number, ListPlace>;
-  readonly escapes: ReadonlyMap<number, readonly number[]>;
+  readonly escaped: ReadonlySet<number>;
   /** The column a text's later lines start at, by node id, where one starts with a tab: the escapes are for that column. */
   readonly columns: ReadonlyMap<number, number>;
   /** Where each drafted node's source is in `from`, and each read node right under a drafted one. */
   readonly origins: ReadonlyMap<PersistentNode, OurusNode>;
   readonly gapLines: ReadonlyMap<number, readonly [number, number] | null>;
+  /** The nodes whose gap `done()` raised from none because Markdown needed a blank line there, by id: the line is whitespace ourus added. */
+  readonly autoGaps: ReadonlySet<number>;
   /** The blank lines before the first node, where `done()` set them (null: as they are). */
   readonly preamble: number | null;
   /** The spaces before a text on its first line, past the one after an item's marker (a paragraph's indentation), by node id, where `done()` set them. */
@@ -153,6 +163,13 @@ export class OurusDraft {
   #ownForms = new Set<number>();
   /** The nodes whose gap the command stated (`gap`), by id. */
   #statedGaps = new Set<number>();
+  /**
+   * Nodes whose gap a split, a join or a move took from another node, by that node's id (-1: none's):
+   * that node's lines in `from`, not the ones under their own id, say which are ours.
+   */
+  #carriedGaps = new Map<number, number>();
+  /** The blank lines of a gap taken in that stay whatever the marks say: the author's lines of the node that took it (`inheritGap`). */
+  #gapFloors = new Map<number, number>();
   /** The blank lines before the first node, as the command stated them (`leadingBlankLines`; null: as they are). */
   #leading: number | null = null;
   /** Gaps written from other lines of `from` than their node's own (null: as new blank lines), by node id: a split's. */
@@ -323,6 +340,7 @@ export class OurusDraft {
     // the blank lines after the text go with its end, as they were written
     b.gap = w.gap;
     w.gap = 0;
+    this.#carriedGaps.set(b.id, w.id).set(w.id, -1);
     const lines = w.origin && w.source ? ownGapLines(w.origin) : null;
     if (lines && lines[1] - lines[0] === b.gap) this.#gapLines.set(id, lines);
     if (w.origin) this.#gapLines.set(w.id, null);
@@ -391,6 +409,7 @@ export class OurusDraft {
     else if (taken && !/^\s/.test(taken)) taken = ` ${taken}`;
     u.text = head.concat(taken, glued ? ' ' : '', close).withBlockIdLines(carried).normalize();
     u.gap = l.gap;
+    this.#carriedGaps.set(u.id, l.id);
     if (options.children === 'place' && parent) {
       parent.children.splice(at, 0, ...children);
       // (placed where they now are: lined up with the list they join, Backspace45)
@@ -466,6 +485,23 @@ export class OurusDraft {
   }
 
   /**
+   * `to` takes the blank lines after `from`'s text, as they were written: a join's way, for a command that
+   * removes `from` (an empty node going). The ones ourus raised stay ours (an `auto` mark).
+   */
+  inheritGap(to: NodeRef, from: OurusNode): this {
+    const id = this.#node(to).id;
+    const own = this.from.node(id);
+    // (the lines it had of its own, the author's, and its gap is no fewer; only where `from` has a sibling
+    // after it or children to take its place, which they set apart from `to`: when it is the last of its
+    // list, what follows is its parent's, and the blank lines were never between them)
+    const floor = own && (from.next || from.children.length) ? own.gap - autoLinesOf(this.from, own) : 0;
+    this.gap(to, Math.max(from.gap, floor));
+    this.#carriedGaps.set(id, from.id);
+    if (own) this.#gapFloors.set(id, own.gap - autoLinesOf(this.from, own));
+    return this;
+  }
+
+  /**
    * The blank lines before the document's first node: `n` of them. Only where the lines above it are
    * blank (no frontmatter): the writer writes them as blank lines.
    */
@@ -514,7 +550,7 @@ export class OurusDraft {
       if (refused) return refused;
       const written = write(this);
       if ('reason' in written) return written;
-      const doc = this.from.update({ changes: written.changes, setMarks: written.marks, identity: written.identity });
+      const doc = this.from.update({ changes: written.changes, marks: written.marks, identity: written.identity });
       const wrong = differenceFrom(doc, this);
       if (wrong) return { reason: 'write-failed', detail: `the text written doesn't read as the draft: ${wrong}` };
       return { doc, changes: written.changes, selection: written.selection, blockIds: { moved: this.#movedBlockIds, merged: this.#mergedBlockIds } };
@@ -545,9 +581,9 @@ export class OurusDraft {
     return this.#normalized().lists;
   }
 
-  /** The markup escapes to write, by node id and offset in its text (before the character there): for every text `done()` spelled where it is, none where it needs none. */
-  get escapes(): ReadonlyMap<number, readonly number[]> {
-    return this.#normalized().escapes;
+  /** The nodes whose text `done()` escaped where it is (every one it set): their escapes are in their text, ours marked `auto`. */
+  get escaped(): ReadonlySet<number> {
+    return this.#normalized().escaped;
   }
 
   /** The column a text's later lines start at, by node id, where one starts with a tab: the escapes are for that column. */
@@ -558,6 +594,11 @@ export class OurusDraft {
   /** The spaces before a text on its first line, past the one after an item's marker (a paragraph's indentation), by node id: a text's leading spaces, which Markdown holds only so. */
   get paddings(): ReadonlyMap<number, number> {
     return this.#normalized().paddings;
+  }
+
+  /** The nodes whose gap `done()` raised from none, where Markdown needed a blank line: the writer marks its line break (`auto`). */
+  get autoGaps(): ReadonlySet<number> {
+    return this.#normalized().autoGaps;
   }
 
   /** The blank lines before the first node, where `done()` set them (null: as in `from`). */
@@ -606,6 +647,7 @@ export class OurusDraft {
     // (both stated, as `gap` states them: the writer writes them as set)
     const gap = w.gap;
     this.gap(b.id, gap).gap(w.id, 0);
+    this.#carriedGaps.set(b.id, w.id).set(w.id, -1);
     const lines = w.origin && w.source ? ownGapLines(w.origin) : null;
     if (lines && lines[1] - lines[0] === gap) this.#gapLines.set(b.id, lines);
     if (w.origin) this.#gapLines.set(w.id, null);
@@ -763,6 +805,8 @@ export class OurusDraft {
       listForms: draft.#listForms,
       ownForms: draft.#ownForms,
       statedGaps: draft.#statedGaps,
+      carriedGaps: draft.#carriedGaps,
+      gapFloors: draft.#gapFloors,
       paddingsAsked: draft.#paddingsAsked,
       leading: draft.#leading,
       caret: draft.#caret,
@@ -795,7 +839,7 @@ class Done {
   readonly from: OurusDoc;
   readonly io: ReturnType<typeof OurusDraft.internals>;
   readonly lists = new Map<number, ListPlace>();
-  readonly escapes = new Map<number, number[]>();
+  readonly escaped = new Set<number>();
   readonly gained = new Map<Working, number[]>();
   /** Characters a text lost, by where they were in it as set (ascending), for the anchors past them. */
   readonly lost = new Map<Working, { readonly at: number; readonly n: number }[]>();
@@ -811,6 +855,8 @@ class Done {
   readonly carriedTails = new Map<Working, number>();
   /** Gaps moved to a new scope end: the lines of `from` they were, by node id (the writer copies them). */
   readonly gapLines: Map<number, readonly [number, number] | null>;
+  /** Gaps raised from none because Markdown needed a blank line (`autoGaps`). */
+  readonly autoGaps = new Set<number>();
   /** The working copies in the final outline. */
   readonly attached = new Set<Working>();
 
@@ -828,6 +874,8 @@ class Done {
       const root = this.io.root;
       if (root) {
         this.#collect(root);
+        // (the held spaces of the texts set out first: writing a text settles them, its own spaces no more)
+        for (const w of this.attached) this.#settleHeldSpaces(w);
         this.#transitions();
         this.#normalForm();
         this.#frontmatter();
@@ -838,6 +886,12 @@ class Done {
         // then the escapes, which a text's own lines decide, and which seams read
         this.#movedEmpty();
         this.#movedLines();
+        // (our escapes out first: a text that was only them is empty, which a placeholder holds; and the
+        // held spaces of the texts set since)
+        for (const w of this.attached) {
+          this.#settleHeldSpaces(w);
+          this.#dropOurEscapes(w);
+        }
         this.#placeholders();
         this.#escapes();
         this.#atomTexts();
@@ -854,7 +908,7 @@ class Done {
         if (a && 'blank' in a) return { ...a, blank: this.#frozen.get(a.blank as unknown as Working)! };
         return a?.otherwise ? { ...a, otherwise: map(a.otherwise)! } : a;
       };
-      return { root: frozen, caret: map(caret), anchor: map(anchor), lists: this.lists, escapes: this.escapes, columns: this.columns, origins, gapLines: this.gapLines, preamble: this.preamble, paddings: this.paddings };
+      return { root: frozen, caret: map(caret), anchor: map(anchor), lists: this.lists, escaped: this.escaped, columns: this.columns, origins, gapLines: this.gapLines, autoGaps: this.autoGaps, preamble: this.preamble, paddings: this.paddings };
     } catch (e) {
       if (e instanceof Refused) return e.refusal;
       throw e;
@@ -1477,6 +1531,7 @@ class Done {
       const open = unclosed(now.text !== undefined ? now.text : now.origin ? this.from.textOf(now.origin) : null);
       if (!this.io.statedGaps.has(now.id) && !(open && was.gap > now.gap)) {
         now.gap = was.gap;
+        this.io.carriedGaps.set(now.id, was.id);
         this.gapLines.set(now.id, null);
         given.add(now);
       }
@@ -1485,6 +1540,7 @@ class Done {
       if (before && closes && !this.io.statedGaps.has(before.id) && !given.has(before)) {
         keep(before);
         before.gap = own;
+        this.io.carriedGaps.set(before.id, now.id);
         this.gapLines.set(before.id, null);
         given.add(before);
       }
@@ -1552,7 +1608,23 @@ class Done {
     return at.gap;
   }
 
-  #setTrailingGap(parent: Working, k: number, gap: number): void {
+  /**
+   * How many of the blank lines after `node`, as it was in `from`, are whitespace ourus added: the lines
+   * whose line break has an `auto` mark; none where the command stated the node's gap, or where the gap
+   * isn't the one it had there.
+   */
+  #autoBlankLines(node: Child): number {
+    if (!this.from.marks.auto.length) return 0;
+    // (the lines are those of the node the gap came from, where a split, a join or a command carried it)
+    const source = this.io.carriedGaps.get(node.id) ?? node.id;
+    const was = source < 0 ? undefined : this.from.node(source);
+    if (!was || node.gap !== was.gap || was.gap === 0 || (source === node.id && this.io.statedGaps.has(node.id))) return 0;
+    // (never below the author's lines of the node that took them in: its own gap, which this one replaced)
+    return Math.max(0, Math.min(autoLinesOf(this.from, was), node.gap - (this.io.gapFloors.get(node.id) ?? 0)));
+  }
+
+  /** The gap after child `k` of `parent` (its last descendant's) set to `gap`; `auto`: raised from none for Markdown's sake, ours. */
+  #setTrailingGap(parent: Working, k: number, gap: number, auto = false): void {
     let w = this.io.openChild(parent, k);
     this.attached.add(w);
     while (w.children.length) {
@@ -1562,6 +1634,7 @@ class Done {
     }
     // (but none after a block of lines nothing closes: they would be its lines)
     if (gap > 0 && unclosed(this.io.textOf(w))) return;
+    if (auto && w.gap === 0 && gap > 0) this.autoGaps.add(w.id);
     w.gap = gap;
   }
 
@@ -1594,9 +1667,17 @@ class Done {
         const obsidianTitle = parent.source?.head?.type === 'callout_title' || (own instanceof OurusProse && own.type === 'title' && this.from.config.flavor === 'obsidian');
         // (after a block of lines no delimiter closes, any line is the block's: a blank line too)
         if (parent.kind !== 'root' && unclosed(own)) throw new Refused(`the ${parent.children[0]!.kind} would be a line of the ${(own as OurusAtom).type.replace('_', ' ')} above it, which nothing closes`);
-        if (parent.kind === 'root' || parent.gap !== 0 || own === null || obsidianTitle) continue;
-        if (this.#endsWithBlockIdLines(parent, null)) {
+        // (a blank line of ours under it, which stays unless they are apart without it)
+        const auto = parent.kind !== 'root' && parent.gap > 0 && own !== null ? this.#autoBlankLines(parent) : 0;
+        // (under a title Obsidian reads as a block of one line nothing needs one: it goes)
+        if (obsidianTitle && auto) {
+          parent.gap -= auto;
+          this.gapLines.set(parent.id, null);
+        }
+        if (parent.kind === 'root' || (parent.gap !== 0 && !auto) || own === null || obsidianTitle) continue;
+        if (!auto && this.#endsWithBlockIdLines(parent, null)) {
           parent.gap = 1;
+          this.autoGaps.add(parent.id);
           continue;
         }
         const first = parent.children[0]!;
@@ -1606,8 +1687,9 @@ class Done {
         // an item's with none, a checkbox but in CommonMark, where it is text: a blank line after it would
         // end the item)
         const textless = empty && (!(own instanceof OurusProse) || own.task === null || this.from.config.flavor !== 'commonmark');
-        if (!textless && made(first) && first.kind === 'paragraph' && first.text instanceof OurusProse && first.text.empty && !this.gapLines.has(first.id)) {
+        if (!auto && !textless && made(first) && first.kind === 'paragraph' && first.text instanceof OurusProse && first.text.empty && !this.gapLines.has(first.id)) {
           parent.gap = 1;
+          this.autoGaps.add(parent.id);
           continue;
         }
         const upper = this.#afterDefinition(parent, parent.parent, this.#ownLines(parent, parent.origin, true));
@@ -1617,9 +1699,18 @@ class Done {
         // follows would continue or not)
         const lazy = parent.text === undefined && !!parent.origin && lazyLines(this.from, parent.origin) && !onePara(upper, this.from.mdTree.flavor);
         const held = lazy ? upper.slice(0, 1) : upper;
+        if (auto) {
+          const left = parent.gap - auto;
+          if (!this.#endsWithBlockIdLines(parent, null) && this.#apart(held, [...Array<string>(left).fill(''), ...lower], empty)) {
+            parent.gap = left;
+            this.gapLines.set(parent.id, null);
+          }
+          continue;
+        }
         if (this.#apart(held, lower, empty)) continue;
         if (!this.#apart(held, ['', ...lower], empty)) throw new Refused(`the ${parent.children[0]!.kind} would be read as part of the ${parent.kind}'s text above it`);
         parent.gap = 1;
+        this.autoGaps.add(parent.id);
         continue;
       }
       if (k === 0) {
@@ -1662,7 +1753,7 @@ class Done {
         // a loose list stays loose: the item at the caret, new or not, set off from the item above by a blank line
         // (not a new item put in before another, which goes in tight)
         // (only where the draft put a new item in it)
-        if (b === this.#caretNode() && this.io.joins.get(b.id) !== 'next' && parent.children.some(made) && this.#loose(parent, a, b) && this.#trailingGapOf(parent, k - 1) === 0) this.#setTrailingGap(parent, k - 1, 1);
+        if (b === this.#caretNode() && this.io.joins.get(b.id) !== 'next' && parent.children.some(made) && this.#loose(parent, a, b) && this.#trailingGapOf(parent, k - 1) === 0) this.#setTrailingGap(parent, k - 1, 1, true);
         continue;
       }
       // the lower side reading as its kind first (a paragraph's padding that would make it code goes)
@@ -1684,11 +1775,19 @@ class Done {
       // it would continue it (not a closed fence: Fence59)
       const last = this.#lastDescendant(a);
       const emptyNew = made(last) && last.kind === 'paragraph' && last.text instanceof OurusProse && last.text.empty;
-      if (this.#trailingGapOf(parent, k - 1) === 0 && emptyNew && !this.gapLines.has(last.id)) this.#setTrailingGap(parent, k - 1, 1);
+      if (this.#trailingGapOf(parent, k - 1) === 0 && emptyNew && !this.gapLines.has(last.id)) this.#setTrailingGap(parent, k - 1, 1, true);
       // (block-id lines, outside an item, a blank line after them whatever follows: right under them,
       // a block would leave them naming only their own line)
-      if (this.#trailingGapOf(parent, k - 1) === 0 && this.#endsWithBlockIdLines(parent, a)) this.#setTrailingGap(parent, k - 1, 1);
+      if (this.#trailingGapOf(parent, k - 1) === 0 && this.#endsWithBlockIdLines(parent, a)) this.#setTrailingGap(parent, k - 1, 1, true);
       const blanks = this.#trailingGapOf(parent, k - 1);
+      // blank lines ourus added where Markdown needed them (`auto`) and the command didn't ask for: gone
+      // where the nodes stay apart without them (a join taking an empty node out)
+      const own = this.#autoBlankLines(last);
+      if (blanks > 0 && own > 0 && blanks <= last.gap + own && this.#apart(upper, [...Array<string>(blanks - own).fill(''), ...lower], false, column, first)) {
+        this.#setTrailingGap(parent, k - 1, blanks - own);
+        this.gapLines.set(last.id, null);
+        continue;
+      }
       if (blanks > 0) {
         // apart already, unless even blank lines don't keep it (indented code after an item)
         if (!this.#apart(upper, [...Array<string>(blanks).fill(''), ...lower], false, column, first)) throw new Refused(`the ${b.kind} would join the ${a.kind} above it, even with a blank line between`);
@@ -1696,7 +1795,7 @@ class Done {
       }
       if (!this.#apart(upper, lower, false, column, first)) {
         if (!this.#apart(upper, ['', ...lower], false, column, first)) throw new Refused(`the ${b.kind} would join the ${a.kind} above it, even with a blank line between`);
-        this.#setTrailingGap(parent, k - 1, 1);
+        this.#setTrailingGap(parent, k - 1, 1, true);
       }
     }
   }
@@ -2021,8 +2120,12 @@ class Done {
     // up to where its text starts, in the line as the container holds it (a partly taken tab as its columns)
     const held = this.#lineIn(first, container);
     const widened = held.length - (first.to - cut);
-    // (an item that had no text, its first block on its line: after its marker and a space)
-    const textless = !this.from.textOf(origin);
+    // (an item that had no text, its first block on its line: after its marker and a space; so one whose
+    // text was below its marker and now starts on its line: `-⏎  x` joined is `- x`)
+    const was = this.from.textOf(origin);
+    const wasBelow = was instanceof OurusProse && was.frame.some((p) => p.part === 'below');
+    const nowBelow = node.text instanceof OurusProse && node.text.frame.some((p) => p.part === 'below');
+    const textless = !was || (node.kind === 'item' && !own && wasBelow && !nowBelow);
     const at = textless ? first.from + origin.persistentNode.block!.attrs.markerEnd! : this.from.posOf(origin, 0, -1);
     // (and the padding the writer keeps, under four columns: a paragraph's `  x`)
     // (a padding the draft set: as set)
@@ -2068,7 +2171,7 @@ class Done {
   #padding(origin: OurusNode): string {
     const [p0, p1] = [this.from.posOf(origin, 0, -1), this.from.posOf(origin, 0, 1)];
     let padding = '';
-    for (let at = p0; at < p1; at++) if ((this.from.text[at] === ' ' || this.from.text[at] === '\t') && !heldSpaceAt(this.from.marks, this.from.text, at)) padding += this.from.text[at];
+    for (let at = p0; at < p1; at++) if ((this.from.text[at] === ' ' || this.from.text[at] === '\t') && !this.from.marks.hasHeldSpaceAt(at)) padding += this.from.text[at];
     return padding.replace(/\t/g, '    ').length >= 4 ? '' : padding;
   }
 
@@ -2123,13 +2226,14 @@ class Done {
     const out: string[] = [];
     for (let i = a; i <= b; i++) {
       const line = tree.line(i);
-      const held = emptyNodeAt(this.from.marks, this.from.text, line.to);
+      const held = this.from.marks.hasEmptyNodeAt(line.to);
       // a held space reads as typed on, as the parse reads it
       const cut = this.#cut(line, container);
-      const space = this.from.marks.marks.find((m) => m.from >= cut && m.from < line.to && isHeldSpacePlaceholder(m, this.from.text));
+      // (one before the line's end: a held space's)
+      const space = MarkSet.within(this.from.marks.placeholders, cut, line.to)[0];
       let content = this.#lineIn(line, container);
-      if (space) {
-        const at = space.from - cut + (content.length - (line.to - cut));
+      if (space !== undefined) {
+        const at = space - cut + (content.length - (line.to - cut));
         content = content.slice(0, at) + SENTINEL + content.slice(at + 1);
       }
       out.push(content + (held ? SENTINEL : ''));
@@ -2159,19 +2263,15 @@ class Done {
     return piece ? piece.toColumn : line.contentColumn;
   }
 
-  /** A text the draft set, its lines as they will be written: its markup escapes in, an empty line a placeholder holds read as typed on. */
+  /** A text the draft set, its lines as they will be written: an empty line a placeholder holds read as typed on. */
   #written(w: Working): string[] {
     const text = w.text;
     if (!text) return [''];
-    const s = text.text;
-    const escapes = this.escapes.get(w.id) ?? [];
     const out: string[] = [];
     let at = 0;
-    for (const l of s.split('\n')) {
-      let line = l;
-      for (const e of [...escapes].reverse()) if (e >= at && e <= at + l.length) line = line.slice(0, e - at) + '\\' + line.slice(e - at);
-      out.push(emptyNodeAt(text.marks, s, at + l.length) ? line + SENTINEL : line);
-      at += l.length + 1;
+    for (const line of text.text.split('\n')) {
+      out.push(text.marks.hasEmptyNodeAt(at + line.length) ? line + SENTINEL : line);
+      at += line.length + 1;
     }
     return out;
   }
@@ -2318,17 +2418,42 @@ class Done {
     for (const w of this.attached) this.#escape(w);
   }
 
-  /**
-   * `w`'s escapes, where the draft set its text: the backslashes that are markup where it now is
-   * absorbed (`revise 2\\. draft` split before `2\\.`: the text loses it), then the escapes that keep
-   * its lines its text, markup ones kept apart, others the text gains.
-   * To revisit: an author's backslash is absorbed as a generated one is, so a join back drops it
-   * (`revise 2\\. draft`, Enter before `2`, then Backspace: `revise2. draft`); with a mark on the
-   * escapes ourus writes, only those would go.
-   */
-  #escape(w: Working): void {
+  /** `w`'s text without its held spaces, which writing it settles: each one's space out (`OurusProse.withoutHeldSpaces`). */
+  #settleHeldSpaces(w: Working): void {
     if (!(w.text instanceof OurusProse)) return;
     const text = w.text;
+    const held = text.marks.placeholders.filter((pos) => text.marks.hasHeldSpaceAt(pos));
+    if (!held.length) return;
+    // (an anchor past one moves back with the text)
+    this.lost.set(w, [...(this.lost.get(w) ?? []), ...held.map((pos) => ({ at: pos, n: 1 }))]);
+    w.text = text.withoutHeldSpaces();
+  }
+
+  /** `w`'s text without the backslashes of ours (`auto`) it doesn't need wherever it is (`#escape`). */
+  #dropOurEscapes(w: Working): void {
+    if (!(w.text instanceof OurusProse)) return;
+    const flavor = this.from.mdTree.flavor;
+    let text = w.text;
+    const ours = text.marks.auto.filter((pos) => text.text[pos] === '\\' && !keepsEscape(flavor, text.text[pos + 1], text.text[pos + 2]));
+    if (!ours.length) return;
+    // (an anchor past one moves back with the text)
+    for (const pos of [...ours].reverse()) text = text.splice(pos, pos + 1);
+    this.lost.set(w, [...(this.lost.get(w) ?? []), ...ours.map((pos) => ({ at: pos, n: 1 }))]);
+    w.text = text;
+  }
+
+  /**
+   * `w`'s escapes, where the draft set its text: the backslashes of ours (`auto`) taken out, but
+   * those the text needs wherever it is (`keepsEscape`: `\\<div>`), then the escapes that keep its
+   * lines its text put in, each one of ours (`2\\. draft` joined after `revise `: the text loses its
+   * escape; split there again, gains it). A backslash that isn't ours is the author's: a character of
+   * the text, never taken out, and an escape where it is markup.
+   */
+  #escape(w: Working): void {
+    this.#dropOurEscapes(w);
+    if (!(w.text instanceof OurusProse)) return;
+    const flavor = this.from.mdTree.flavor;
+    let text = w.text;
     // a paragraph that is a quote's lines, its first starting `[!type]`: a callout's title, which no
     // escape keeps text in every flavor (Obsidian's `\[!note]` none in GFM)
     if (text.type === 'quote' && w.kind === 'paragraph' && mdCalloutAt(text.text.split('\n')[0]!.replace(/^ {0,3}>[ \t]?/, ''))) {
@@ -2341,45 +2466,31 @@ class Done {
     const base = below && !this.#goesOnBelowBox(text) ? below.to : 0;
     const lines = text.text.slice(base).split('\n');
     // where each line starts in the text
-    const starts = (ls: readonly string[]): number[] => {
-      const out: number[] = [];
-      let from = base;
-      for (const l of ls) {
-        out.push(from);
-        from += l.length + 1;
-      }
-      return out;
-    };
-    const at = starts(lines);
+    const at: number[] = [];
+    for (let from = base, k = 0; k < lines.length; from += lines[k]!.length + 1, k++) at.push(from);
     // a line a placeholder holds reads as typed on at its end (a checkbox's too)
-    const held = lines.map((l, k) => emptyNodeAt(text.marks, text.text, at[k]! + l.length));
+    const held = lines.map((l, k) => text.marks.hasEmptyNodeAt(at[k]! + l.length));
     // (a line starting with a tab, past a quote's `>`: it spans as far as from the column the line is written at)
     const column = lines.some((l) => /^ *\t/.test(text.type === 'quote' ? l.replace(/^ {0,3}>[ \t]?/, '') : l)) ? this.#textColumn(w) : null;
     if (column !== null) this.columns.set(w.id, column);
-    const spelled = escapeParagraph(this.from.mdTree.flavor, text.type, text.item, lines, held, column === null ? undefined : lines.map(() => column));
+    // (every backslash left in a character of the text: none absorbed)
+    const spelled = escapeParagraph(flavor, text.type, text.item, lines, held, column === null ? undefined : lines.map(() => column), false);
     if (!spelled) throw new Refused(`no escape keeps the text of node ${w.id} where it is`);
     let out = text;
-    for (const e of [...spelled.absorbed].reverse()) out = out.splice(at[e.line]! + e.at, at[e.line]! + e.at + 1);
-    // (an anchor past an absorbed backslash moves back with the text: a paste's caret after `\` and `- a`)
-    if (spelled.absorbed.length) this.lost.set(w, [...(this.lost.get(w) ?? []), ...spelled.absorbed.map((e) => ({ at: at[e.line]! + e.at, n: 1 }))]);
-    if (spelled.gained.length) {
-      // the backslashes the text gains, in the text before them, last first
-      const plain = starts(out.text.slice(base).split('\n'));
-      const gained = spelled.gained.map((g) => plain[g.line]! + g.at);
-      for (let i = gained.length - 1; i >= 0; i--) out = out.splice(gained[i]!, gained[i]!, '\\');
-      this.gained.set(w, gained);
+    // every escape put in, where it is in the lines with all of them in
+    const written: number[] = [];
+    for (let from = base, k = 0; k < spelled.lines.length; k++) {
+      written.push(from);
+      from += spelled.lines[k]!.length + spelled.markup.filter((m) => m.line === k).length + 1;
     }
+    for (const e of spelled.escapes) out = this.#putEscape(w, out, written[e.line]! + e.at);
     // a read node's ATX title ending in `#`s after a blank it didn't end in (a join's, a paste's): its
     // text, the first escaped, no closing sequence (a node made, pasted, has the one it was given)
     const close = w.origin && out.heading?.form === 'atx' && !spelled.gained.length ? out.frame.find((p) => p.part === 'close') : undefined;
     if (close) {
       const was = this.from.textOf(w.origin!);
       const wasClose = was instanceof OurusProse && was.heading?.form === 'atx' ? was.frame.find((p) => p.part === 'close') : undefined;
-      if (!wasClose || was!.text.slice(wasClose.from) !== out.text.slice(close.from)) {
-        const hash = close.from + out.text.slice(close.from).indexOf('#');
-        out = out.splice(hash, hash, '\\');
-        this.gained.set(w, [hash]);
-      }
+      if (!wasClose || was!.text.slice(wasClose.from) !== out.text.slice(close.from)) out = this.#putEscape(w, out, close.from + out.text.slice(close.from).indexOf('#'));
     }
     // an item's text a run of its bullet's character, two of them and blanks (`--`): with the bullet,
     // a rule; its first escaped, text
@@ -2388,14 +2499,19 @@ class Done {
     const place = w.kind === 'item' && out.type === 'paragraph' && !out.frame.length && !spelled.gained.length && !escaped ? this.lists.get(w.id) : undefined;
     // (an item whose list the draft left as it was: its own marker)
     const bullet = place ? (place.type === 'bullet' ? place.marker : null) : w.kind === 'item' && !escaped && !spelled.gained.length && w.origin?.kind === 'item' ? this.from.markerOf(w.origin) : null;
-    if (bullet && /^[-*+]$/.test(bullet) && out.type === 'paragraph' && !out.frame.length && new RegExp(`^\\${bullet}(?:[ \\t]*\\${bullet})+[ \\t]*(?:\\n|$)`).test(out.text)) {
-      out = out.splice(0, 0, '\\');
-      this.gained.set(w, [0]);
-    }
+    if (bullet && /^[-*+]$/.test(bullet) && out.type === 'paragraph' && !out.frame.length && new RegExp(`^\\${bullet}(?:[ \\t]*\\${bullet})+[ \\t]*(?:\\n|$)`).test(out.text)) out = this.#putEscape(w, out, 0);
     w.text = out;
-    // (none, too: the text is spelled where it is)
-    const written = starts(spelled.lines);
-    this.escapes.set(w.id, spelled.markup.map((m) => written[m.line]! + m.at));
+    this.escaped.add(w.id);
+  }
+
+  /**
+   * `text` (`w`'s) with a backslash of ours put in at `pos`, an anchor at the character there staying
+   * with it, past the backslash (`gained`, in the text with the ones before it in).
+   */
+  #putEscape(w: Working, text: OurusProse, pos: number): OurusProse {
+    const gained = (this.gained.get(w) ?? []).map((g) => (g >= pos ? g + 1 : g));
+    this.gained.set(w, [...gained, pos].sort((a, b) => a - b));
+    return text.splice(pos, pos, new OurusProse(text.type, text.item, MarkSet.of('\\', { auto: [0] })));
   }
 
   /**
@@ -2701,22 +2817,21 @@ class Done {
       if (s.slice(base).split('\n').some((l, _, all) => (all.length > 1 || !!below) && blank(l))) throw new Refused('an empty line inside a text');
       const task = text.frame.find((p) => p.part === 'task');
       const boxOnly = !!task && task.from === 0 && task.to === lines[0]!.length;
-      const marks: Mark[] = text.marks.marks.filter((m) => !isPlaceholder(m));
       // an empty item alone reads as one, but right under its parent's text, which `-` would underline:
       // there a placeholder holds it at the caret, and away from it a blank line above
       const parentText = w.parent && w.parent.kind !== 'root' ? this.io.textOf(w.parent) : null;
       const underText = parentText instanceof OurusProse && parentText.type === 'paragraph' && !parentText.empty && w.parent!.children[0] === w && w.parent!.gap === 0;
       const atCaret = w === this.#caretNode();
-      if (w.kind === 'item' && s === '' && underText && !atCaret) w.parent!.gap = 1;
+      if (w.kind === 'item' && s === '' && underText && !atCaret) {
+        w.parent!.gap = 1;
+        this.autoGaps.add(w.parent!.id);
+      }
       // and an empty item, or a checkbox alone, whose children follow a blank line: `-` and one blank line end an item
       const apartChildren = w.kind === 'item' && w.children.length > 0 && w.gap > 0 && (s === '' || (lines.length === 1 && boxOnly));
       // (a quote emptied, `> `, is an empty quote to Markdown, no paragraph: held as an empty paragraph is)
       const emptyQuote = quoted && lines.length === 1 && blank(s);
-      if ((s === '' && (w.kind !== 'item' || (underText && atCaret))) || emptyQuote || apartChildren) marks.push(createPlaceholder(s.length));
-      const next = MarkSet.of(marks);
-      if (next.size !== text.marks.size || next.marks.some((m, i) => m.kind !== text.marks.marks[i]!.kind || m.from !== text.marks.marks[i]!.from)) {
-        w.text = text.withMarks(next);
-      }
+      const held = (s === '' && (w.kind !== 'item' || (underText && atCaret))) || emptyQuote || apartChildren;
+      w.text = text.withMarks({ placeholders: held ? [s.length] : [] });
     }
   }
 

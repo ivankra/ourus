@@ -56,6 +56,6 @@ export function textPosition(doc: OurusDoc, head: number): number {
   // a space a placeholder holds as text (`- ◌ x`) starts the text
   const start = doc.textStart(line.index);
   const s = doc.text;
-  const held = doc.marks.points().find((p) => p >= line.from && p < start && isSpaceOrTab(s.charCodeAt(p)) && trimMd(s.slice(p, start)) === '');
+  const held = doc.marks.placeholders.find((pos) => pos >= line.from && pos < start && isSpaceOrTab(s.charCodeAt(pos)) && trimMd(s.slice(pos, start)) === '');
   return head < (held ?? start) ? (held ?? start) : head;
 }

@@ -25,7 +25,7 @@ import { OurusView } from '../src/view/index.ts';
 import { isAction, play, type Played } from '../test/player.ts';
 import { drawDropPoints, Labels, normalize, outcome, readClipboard, rowView } from '../test/spec-run.ts';
 import { drawView } from './lib/view.ts';
-import { readSpec, specConfig, TAGS, tokenize, type Clipboard, type SpecTest } from '../test/specfile.ts';
+import { actionsLine, readSpec, specConfig, TAGS, tokenize, type Clipboard, type SpecTest } from '../test/specfile.ts';
 import { appNames, drivers, resolveApps } from './lib/apps.ts';
 import { ensureProxy } from './lib/browser.ts';
 import type { Driver } from './lib/driver.ts';
@@ -138,8 +138,8 @@ function parseArgs(argv: readonly string[]): Args {
     else if (key === 'case') o.caseName = value;
     // the SxS's own (`--cache=offline`, `--plain-clipboard`, `--pace=`, `--headed`, ...), for each app's run
     else if (['cache', 'pace', 'slow', 'plain-clipboard', 'headed', 'fresh', 'timing'].includes(key)) o.pass.push(arg);
-    else if (key in OurusConfig.values) o.config[key] = value;
-    else fail(`unknown option --${key}; the config's are ${Object.keys(OurusConfig.values).join(', ')} (node sxs/probe.ts --help)`);
+    else if (OurusConfig.has(key)) o.config[key] = value;
+    else fail(`unknown option --${key}; the config's are ${[...Object.keys(OurusConfig.values), ...Object.keys(OurusConfig.lists)].join(', ')} (node sxs/probe.ts --help)`);
   }
   for (const tag of o.tags) if (!(TAGS as readonly string[]).includes(tag)) fail(`unknown tag ${tag}: the tags are ${TAGS.join(', ')}`);
   // `|` for the caret, in the buffer's argument alone (the first, or the one after the apps)
@@ -345,7 +345,7 @@ function combinations(base: Record<string, string>, each: readonly string[]): Re
   let runs = [base];
   for (const key of each) {
     const values = (OurusConfig.values as Record<string, readonly unknown[]>)[key];
-    if (!values) fail(`--each=${key}: no such option`);
+    if (!values) fail(`--each=${key}: ${OurusConfig.has(key) ? 'a list option, not one of a few values' : 'no such option'}`);
     runs = runs.flatMap((r) => values.map((v) => ({ ...r, [key]: String(v) })));
   }
   return runs;
@@ -404,7 +404,7 @@ function caseOf(p: Probe, ours: OurStep[]): string {
   // (`--case`) checks its buffer only where the case draws one, as the SxS does (what isn't drawn isn't checked)
   const steps = ours.map((s, k) => {
     const buffer = p.drawn && p.drawn[k] === undefined ? [] : [block('buffer', s.buffer)];
-    return [`> ${s.actions.join(' ')}`, ...(s.clipboard !== undefined ? [block('yaml', clipboardYaml({ 'text/plain': s.clipboard }).join('\n'))] : []), ...buffer].join('\n\n');
+    return [actionsLine(s.actions), ...(s.clipboard !== undefined ? [block('yaml', clipboardYaml({ 'text/plain': s.clipboard }).join('\n'))] : []), ...buffer].join('\n\n');
   });
   return [`## ${p.name}`, block('yaml', yaml), block('buffer', p.start), ...steps].join('\n\n');
 }

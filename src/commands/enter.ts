@@ -11,6 +11,7 @@ import { deleteSelectionAcross } from './backspace.ts';
 import { outdentCommand } from './outdent.ts';
 import { shiftEnterCommand } from './shift-enter.ts';
 import { enterInQuote, quoteAtomAt } from './quote.ts';
+import { enterInPair } from './typing.ts';
 import { leaveList, pastPrefix, textActedOnAt } from './util.ts';
 import { withFolds } from './view.ts';
 import type { OurusResult } from './types.ts';
@@ -41,6 +42,9 @@ export function enterCommand(ctx: CommandContext, key = true, typed = key): Ouru
   const doc = ctx.doc;
   const view = ctx.view;
   const config = doc.config;
+  // in an empty pair of a delimiter ours, alone on its line (`$$┃$$`, `<!--┃-->`): a block, spread over lines
+  const spread = enterInPair(ctx);
+  if (spread) return spread;
   const code = codeAt(ctx);
   if (code) return newlineInCode(ctx, code, false);
   const quote = quoteAtomAt(ctx);
@@ -91,9 +95,11 @@ export function enterCommand(ctx: CommandContext, key = true, typed = key): Ouru
   const s = text.text;
   const line = lineOf(s, offset);
   const lineStart = text.textStart(line);
-  // at the text's start (below its marker too, `-⏎  ┃b`): rule 6
+  // at the text's start (below its marker too, `-⏎  ┃b`; past an escape of ours, `\┃-`): rule 6
   // (over a selection from there, it goes first: Enter59)
-  if (trimMd(s.slice(text.textStart(0), offset)) === '' && !title) {
+  const start = text.textStart(0);
+  const before = [...s.slice(start, offset)].filter((char, k) => char !== '\\' || !text.marks.hasAutoAt(start + k)).join('');
+  if (trimMd(before) === '' && !title) {
     const stay = config.enterAtTextStart === 'stay';
     // `stay`: an item gets an empty item above, the caret staying; a paragraph, a blank line above it;
     // an ATX heading splits there, as anywhere in its title (a setext one has no empty form). Over a

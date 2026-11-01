@@ -180,7 +180,6 @@ Groceries
 
 ```buffer
 Groceries
-
 - milk
 - eggs
   - brown┃
@@ -190,7 +189,6 @@ Groceries
 
 ```buffer
 Groceries
-
 - milk
 - eggs
   - brown
@@ -201,7 +199,6 @@ Groceries
 
 ```buffer
 Groceries
-
 - milk
 - eggs
   - brown
@@ -1098,7 +1095,8 @@ tags: core
 ### Scenario23
 
 Typed text in a section stays text: Enter splits a heading, its rest a paragraph with `2.`
-escaped ([Enter41](enter.md#enter41)); Shift-Enter breaks the line, and undo takes each step back
+escaped ([Enter41](enter.md#enter41)); Shift-Enter breaks the line, where the escape ourus wrote is no
+longer needed (`2.` can't interrupt the paragraph) and goes; undo takes each step back
 ([Undo1](undo.md#undo1)).
 
 ```yaml
@@ -1113,7 +1111,7 @@ tags: common
 
 ```buffer
 # Plan
-revise ┃2\. draft
+revise ┃2\̬. draft
 ```
 
 > shiftEnter
@@ -1121,7 +1119,7 @@ revise ┃2\. draft
 ```buffer
 # Plan
 revise 
-┃2\. draft
+┃2. draft
 ```
 
 > undo undo undo

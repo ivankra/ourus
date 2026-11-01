@@ -385,7 +385,7 @@ tags: common
 
 ```buffer
 - abc
-- ┃\- def
+- ┃\̬- def
 ```
 
 ## Enter9
@@ -404,7 +404,7 @@ tags: edge
 
 ```buffer
 - abc
-- ┃\# def
+- ┃\̬# def
 ```
 
 ## Enter10
@@ -425,7 +425,7 @@ tags: rare
 
 ```buffer
 - abc
-- ┃\<div>
+- ┃\̬<div>
 ```
 
 ## Enter11
@@ -445,7 +445,7 @@ see ┃[a]: /url
 ```buffer
 see
 
-┃[a]\: /url
+┃[a]\̬: /url
 ```
 
 ## Enter12
@@ -685,7 +685,7 @@ para ┃- x
 ```buffer
 para
 
-┃\- x
+┃\̬- x
 - a
 ```
 
@@ -1130,7 +1130,7 @@ tags: rare
 
 ```buffer
 1. abc
-2. ┃2\. def
+2. ┃2\̬. def
 ```
 
 ## Enter36
@@ -1322,7 +1322,7 @@ tags: edge free-form
 
 ```buffer
 # Title
-┃\- x
+┃\̬- x
 - y
 ```
 
@@ -1344,7 +1344,7 @@ title ┃- x
 ```buffer
 title
 ===
-┃\- x
+┃\̬- x
 ```
 
 ## Enter43
@@ -1364,7 +1364,7 @@ tags: rare
 
 ```buffer
 - abc
-- ┃\- def
+- ┃\̬- def
 ```
 
 > deleteContentBackward
@@ -1828,7 +1828,7 @@ enterSplitSpace: start
 
 ```buffer
 # one two
-┃ \- x
+┃ \̬- x
 ```
 
 > deleteContentBackward
@@ -1900,7 +1900,7 @@ tags: rare
 > enter
 
 ```buffer
-[Note]\: this
+[Note]\̬: this
 
 ┃matters a lot
 ```
@@ -1927,14 +1927,14 @@ tags: rare
 > enter
 
 ```buffer
-- [a]\: b
+- [a]\̬: b
 - ┃c
 ```
 
 > deleteContentBackward
 
 ```buffer
-- [a]\: b┃c
+- [a]\̬: b┃c
 ```
 
 ## Enter49
@@ -2108,7 +2108,7 @@ tags: edge
 > enter
 
 ```buffer
-\-
+\̬-
 
 ┃a
 ```
@@ -2299,7 +2299,7 @@ p
 
 ```buffer
 p
-\#
+\̬#
 
 ┃a
 ```
@@ -2369,7 +2369,7 @@ title┃ - x
 ```buffer
 title
 ===
-┃\- x
+┃\̬- x
 ```
 
 > deleteContentBackward
@@ -2442,7 +2442,7 @@ tags: rare
 
 ```buffer
 - Plan
-- revise ┃2\. draft
+- revise ┃2\̬. draft
 ```
 
 ## Enter63

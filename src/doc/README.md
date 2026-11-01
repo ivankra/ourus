@@ -24,20 +24,19 @@ const at = doc.locateRaw(pos);              // in a text, a frame, a marker, a p
 - **`OurusDoc`** is one immutable snapshot: the text, its placeholders, its parse, its outline, and
   the config.
 
-  - `static OurusDoc.parse(text: string, { config?: Partial<OurusConfig>, marks?: Mark[] }): OurusDoc`<br>
-    Reads a text, with its placeholders (`PLACEHOLDER_MARK`s from `text/`). Reading uses only the
-    config's `flavor`; the rest of the config is for the commands.
+  - `static OurusDoc.parse(text: string, { config?: Partial<OurusConfig>, marks?: MarkLists }): OurusDoc`<br>
+    Reads a text, with its marks (`{ placeholders, auto }`: `MarkSet` in `text/`). Reading uses only
+    the config's `flavor`; the rest of the config is for the commands.
 
   - `OurusDoc.update(params?: OurusDocUpdate): OurusDoc`<br>
     The snapshot after `params.changes` (in this document's offsets), or with `params.text` in place
     of this one's (the file changed elsewhere: its changes the lines that differ), sharing every node
-    the changes didn't reach. Its placeholders are this one's, mapped through the changes, without
-    `params.dropMarks` (in this document's offsets) and with `params.addMarks` (in the new text's),
-    for a host's edit; or exactly `params.setMarks`, for the writer's or an undo. `params.caret`: on
-    a host's edit, a placeholder is kept at the caret where the deletion would otherwise change the
-    outline there. `params.identity`: the ids the writer assigned, keyed by where each node it wrote
-    starts. This snapshot where it is given nothing to do (no change, no placeholders to set, add or
-    drop, no `identity`): another snapshot is another document, its text, placeholders, config or
+    the changes didn't reach. Its marks are this one's, mapped through the changes, for a host's
+    edit; or exactly `params.marks` (in the new text's offsets; a `MarkSet` is one), for the writer's
+    or an undo; either way only the marks that hold are kept. `params.caret`: on a host's edit, a placeholder is kept at the caret where the
+    deletion would otherwise change the outline there. `params.identity`: the ids the writer
+    assigned, keyed by where each node it wrote starts. This snapshot where it is given nothing to do
+    (no change, no marks, no `identity`): another snapshot is another document, its text, marks, config or
     outline maybe changed, its ids too (a move of `- a⏎- a⏎`'s first item changes no character and
     swaps the two ids).
 
@@ -61,7 +60,7 @@ const at = doc.locateRaw(pos);              // in a text, a frame, a marker, a p
     is a view's.
 
   - `OurusDoc.text: string`, `OurusDoc.marks: MarkSet`, `OurusDoc.mdTree: MdTree`, `OurusDoc.config: OurusConfig`, `OurusDoc.nextId: number`<br>
-    The text; its placeholders (only those that still hold something); its parse; the config; the
+    The text; its marks (`marks.text` is `text`; only the placeholders that still hold something); its parse; the config; the
     lineage's next id when this outline was read (a node with an id past it was made since).
 
   - `OurusDoc.root: PersistentNode`, `get OurusDoc.rootNode: OurusNode`<br>
@@ -103,7 +102,7 @@ const at = doc.locateRaw(pos);              // in a text, a frame, a marker, a p
 
   - `OurusDoc.posOf(node: OurusNode, offset: number, assoc = 1): number`, `OurusDoc.offsetOf(node: OurusNode, pos: number): number`<br>
     Converts an offset in a node's text to a position in the document, and back. Where the document
-    has characters the text leaves out (a prefix, an escape), `assoc` picks which side of them.
+    has characters the text leaves out (a prefix, the first line's padding), `assoc` picks which side of them.
 
   - `get OurusDoc.lineCount: number`, `OurusDoc.lineAt(pos: number): { index, from, to }`<br>
     The number of lines; the line `pos` is on.
@@ -215,17 +214,18 @@ const at = doc.locateRaw(pos);              // in a text, a frame, a marker, a p
   `blockIdsOf`).
 
 - **`OurusProse`** is the text of a paragraph, a heading, or a quote's callout title (an item's too,
-  where its first block is one of those): its lines without their containers' prefixes and without
-  markup escapes, joined by `\n`, with its placeholders. Immutable.
+  where its first block is one of those): its lines without their containers' prefixes, as written
+  (every backslash in: one ourus wrote has an `auto` mark), joined by `\n`, with its marks. Immutable.
 
-  - `new OurusProse(type: OurusProseType, item: boolean, text: string, marks?: MarkSet, blockIds?: 'caret' | null, blockIdLines?)`<br>
+  - `new OurusProse(type: OurusProseType, item: boolean, text: MarkSet | string, blockIds?: 'caret' | null, blockIdLines?)`<br>
+    `text`: the string with its marks; a string has none.
     `blockIds`: how its flavor writes a block id in it (Obsidian's ` ^id`), which its frame reads; a
     text a command makes from nothing has none, and is read in the document's (`withBlockIds`).
 
   - `OurusProse.type`, `OurusProse.item`, `OurusProse.text: string`, `OurusProse.marks: MarkSet`<br>
     The type: `paragraph`, `heading`, or `title` (a quote's callout title). Whether it is an item's
     text, which can start with a checkbox or below the marker. The whole string, frame and body.
-    Its placeholders, in the text's offsets.
+    Its marks, on the string (`marks.text` is `text`).
 
   - `get OurusProse.frame: FramePart[]`<br>
     The markup in the string around the body, computed from its characters: `task` (a checkbox),
@@ -246,7 +246,7 @@ const at = doc.locateRaw(pos);              // in a text, a frame, a marker, a p
     The first offset on a line past the frame.
 
   - `OurusProse.splice(from, to, insert?)`, `OurusProse.slice(from?, to?)`, `OurusProse.concat(...others)`<br>
-    New texts, with the placeholders carried along, and the block-id lines but by `slice`, whose
+    New texts, with the marks carried along (`MarkSet`'s), and the block-id lines but by `slice`, whose
     result is a `fragment`: it says nothing of them, and the draft refuses it as the text of a node
     that carries some until `withBlockIdLines` says what they are (a split or a join gives them to
     one node explicitly).
@@ -263,13 +263,13 @@ const at = doc.locateRaw(pos);              // in a text, a frame, a marker, a p
 
 - **`OurusAtom`** is the text of an atom: code, math, a comment, HTML, a table, a definition, a
   thematic break, an extension's block (and code that is an item's text): its lines as written,
-  without their containers' prefixes, with its placeholders. Immutable.
+  without their containers' prefixes, with its marks. Immutable.
 
-  - `new OurusAtom(type: string, item: boolean, text: string, marks?: MarkSet)`
+  - `new OurusAtom(type: string, item: boolean, text: MarkSet | string, blockIdLines?)`
 
   - `OurusAtom.type`, `OurusAtom.item`, `OurusAtom.text`, `OurusAtom.marks`<br>
     The parser's block type (for code, `fenced_code` or `indented_code`); whether it is an item's;
-    the string; its placeholders.
+    the string; its marks.
 
   - `get OurusAtom.frame: AtomFramePart[]`<br>
     Computed from the characters: `open`, `info` and `close` (a fence's, `$$`, `%%`), `indent`
@@ -303,11 +303,11 @@ Files:
   `textStart` and `textEnd`, and a text's block ids); `block-ids.ts` (`OurusDoc.blockIds`, and
   `checkBlockIds`, the rule every command keeps: no block id loses what it names, read where the
   command's changes reached, down to where the outline is the nodes it was).
-- `read.ts` (a node's text read from its lines, with its markup escapes left out, and the map
+- `read.ts` (a node's text read from its lines, every backslash in, and the map
   between the text's offsets and the document's); `escapes.ts` (`markupEscapes` for reading,
   `escapeParagraph` for writing); `locate.ts` (what is at a position); `rules.ts` (which
-  node kinds hold which, `outlineChildren`); `placeholders.ts` (which placeholders still hold
-  something); `copy.ts` (a range's Markdown without its containers' prefixes).
+  node kinds hold which, `outlineChildren`); `placeholders.ts` (which marks still hold:
+  a placeholder something, an auto mark its character: a blank line's break while it is blank); `copy.ts` (a range's Markdown without its containers' prefixes).
 
 Tests, in `test/doc/`: `doc.test.ts` (placeholders, updates), `outline.test.ts` (an update's outline
 equals a fresh parse's), `text.test.ts`, `locate.test.ts`, `escapes.test.ts`, `block-ids.test.ts`

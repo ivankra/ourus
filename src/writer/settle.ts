@@ -2,7 +2,7 @@
 // placeholder holds what Markdown can't while the caret is there: an empty node, a deleted
 // character's place; away from it, the node is written again (`done()` says how), or goes.
 
-import { isHeldSpacePlaceholder, isPlaceholder, type ChangeSpec, type Mark } from '../text/index.ts';
+import { type ChangeSpec } from '../text/index.ts';
 import { OurusProse, checkBlockIds, type OurusNode, type OurusDoc } from '../doc/index.ts';
 import { OurusDraft } from './draft.ts';
 
@@ -20,36 +20,38 @@ export type Settled = { readonly doc: OurusDoc; readonly changes: readonly Chang
  */
 export function settleSteps(doc: OurusDoc, caret: number): readonly Settled[] {
   const line = doc.lineAt(caret);
-  const abandoned = doc.marks.marks.filter((m) => isPlaceholder(m) && (m.from < line.from || m.from > line.to));
+  const abandoned = doc.marks.placeholders.filter((pos) => pos < line.from || pos > line.to);
   if (!abandoned.length) return [];
   const all = settled(doc, caret, abandoned);
   if (all) return [all];
   // (each alone, those that can't be written dropped, the rest settled: two steps, each the one before's)
-  const writable = abandoned.filter((m) => settled(doc, caret, [m]));
-  const without = doc.update({ setMarks: doc.marks.marks.filter((m) => !abandoned.includes(m) || writable.includes(m)) });
-  const rest = writable.length ? settled(without, caret, without.marks.marks.filter((m) => writable.some((w) => w.from === m.from && w.kind === m.kind))) : null;
+  const writable = abandoned.filter((pos) => settled(doc, caret, [pos]));
+  const without = doc.update({ marks: doc.marks.with({ placeholders: doc.marks.placeholders.filter((pos) => !abandoned.includes(pos) || writable.includes(pos)) }) });
+  const rest = writable.length ? settled(without, caret, without.marks.placeholders.filter((pos) => writable.includes(pos))) : null;
   return [{ doc: without, changes: [] }, ...(rest ? [rest] : [])];
 }
 
-/** `marks` settled, or null where the outline can't be written so (a mark on no prose text's line too), or a block id would be lost. */
-function settled(doc: OurusDoc, caret: number, marks: readonly Mark[]): Settled | null {
+/** The placeholders at `placeholders` settled, or null where the outline can't be written so (one on no prose text's line too), or a block id would be lost. */
+function settled(doc: OurusDoc, caret: number, placeholders: readonly number[]): Settled | null {
   const draft = new OurusDraft(doc);
   const gone = new Set<number>();
-  for (const mark of marks) {
-    const node = doc.nodeAtLine(doc.lineAt(Math.min(mark.from, doc.text.length)).index);
+  for (const pos of placeholders) {
+    const node = doc.nodeAtLine(doc.lineAt(Math.min(pos, doc.text.length)).index);
     const text = node ? doc.textOf(node) : null;
     if (!node || !(text instanceof OurusProse)) return null;
     if (gone.has(node.id)) continue;
-    if (isHeldSpacePlaceholder(mark, doc.text) || node.kind === 'item') {
+    if (doc.marks.hasHeldSpaceAt(pos) || node.kind === 'item') {
       // written again: without the held space, which writing settles; an empty item as `done()` holds it
-      const kept = text.marks.update({ filter: (m) => !isHeldSpacePlaceholder(m, text.text) });
-      draft.setText(node, text.withMarks(kept));
+      draft.setText(node, text.withoutHeldSpaces());
     } else if (text.empty) {
       // (with the blank lines that set it off between two items: their list as tight as it was, TO18)
       // (the list after it its own, in a section: Enter7b)
       const [above, below] = [node.preceding, node.children[0] ?? node.next];
       const apart = (n: OurusNode | null): boolean => n?.kind === 'item' && !!n.next && n.next.kind === 'item' && n.lastDescendant.gap > 0;
       if (above?.kind === 'item' && below?.kind === 'item' && !apart(above.prev) && !apart(below)) draft.gap(above.lastDescendant, 0);
+      // (else the node above takes its blank lines, as Backspace taking it out would: the author's stay;
+      // but a parent with no text, a quote's, has no blank lines after it to take them)
+      else if (above && above.kind !== 'root' && (above !== node.parent || doc.textOf(above))) draft.inheritGap(above, node);
       draft.dissolve(node);
       gone.add(node.id);
     }

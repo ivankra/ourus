@@ -7,7 +7,7 @@ import type { OurusView } from '../view/index.ts';
 import type { AnchorSpec, OurusDraft } from '../writer/index.ts';
 import { type CommandContext } from './context.ts';
 import type { OurusSelection, OurusResult } from './types.ts';
-import { heldSpaceAt, isHeldSpacePlaceholder, lineOf } from '../text/index.ts';
+import { lineOf } from '../text/index.ts';
 import { OurusRejected } from './types.ts';
 
 export { textEnd, textStart } from '../doc/index.ts';
@@ -23,7 +23,7 @@ export function inMarkup(doc: OurusDoc, at: Located, pos: number): boolean {
   if (at.zone === 'marker' || at.zone === 'prefix') return pos > at.line.from;
   // in the padding before a text's first line (` ┃   code`), but a held space, which is the text's start
   if (at.zone === 'text' && at.offset === 0 && pos < doc.posOf(at.node, 0, -1)) {
-    return pos > doc.lineAt(pos).from && !heldSpaceAt(doc.marks, doc.text, pos);
+    return pos > doc.lineAt(pos).from && !doc.marks.hasHeldSpaceAt(pos);
   }
   if (at.zone !== 'frame' || !(at.text instanceof OurusProse)) return false;
   if (pos === doc.lineAt(pos).from) return false;
@@ -330,13 +330,11 @@ export function shiftHeadingLevels(ctx: CommandContext, draft: OurusDraft, nodes
  * no held space is on that side of the caret.
  */
 export function deleteHeldSpace(ctx: CommandContext, node: OurusNode, text: OurusProse, offset: number, dir: -1 | 1): OurusResult | null {
-  if (!heldSpaceAt(text.marks, text.text, offset)) return null;
-  const head = ctx.selection.head;
-  const [before, after] = [ctx.doc.posOf(node, offset, -1), ctx.doc.posOf(node, offset, 1)];
-  if (before === after || head !== (dir < 0 ? after : before)) return null;
-  const marks = text.marks.update({ filter: (m) => m.from !== offset || !isHeldSpacePlaceholder(m, text.text) });
-  const settled = text.withMarks(marks);
-  return ctx.apply(ctx.draft().setText(node, settled).setCaret(node, offset, -1));
+  // (the space before the caret, or after it)
+  const at = dir < 0 ? offset - 1 : offset;
+  if (!text.marks.hasHeldSpaceAt(at)) return null;
+  const settled = text.withMarks({ placeholders: text.marks.placeholders.filter((pos) => pos !== at) }).splice(at, at + 1);
+  return ctx.apply(ctx.draft().setText(node, settled).setCaret(node, at, -1));
 }
 
 /** What a command says where `operandsOf` or `oneRun` found none it can act on. */

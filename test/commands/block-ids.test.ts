@@ -7,7 +7,6 @@ import { test } from 'node:test';
 import { OurusDoc, OurusProse, checkBlockIds } from '../../src/doc/index.ts';
 import { executeCommand, settlePlaceholders, type OurusCommand, type OurusResult, OurusDeferred, OurusRejected, OurusSuccess } from '../../src/commands/index.ts';
 import { OurusView } from '../../src/view/index.ts';
-import { createPlaceholder } from '../../src/text/index.ts';
 import { MdFlavor, MdTree } from '../../src/parser/index.ts';
 import fc from 'fast-check';
 import type { OurusConfig } from '../../src/config.ts';
@@ -327,7 +326,7 @@ test('a caret on a block-id line outside the zoom: refused as outside it, not le
 });
 
 test('settling a placeholder keeps the block-id lines of the text it is in', () => {
-  const doc = OurusDoc.parse('-  a\n\n  ^x\n- b\n', { config: { flavor: 'obsidian' }, marks: [createPlaceholder(2)] });
+  const doc = OurusDoc.parse('-  a\n\n  ^x\n- b\n', { config: { flavor: 'obsidian' }, marks: { placeholders: [2] } });
   assert.equal(settlePlaceholders(OurusView.of(doc), doc.text.indexOf('- b') + 2)?.view.doc.text, '- a\n\n  ^x\n- b\n');
 });
 

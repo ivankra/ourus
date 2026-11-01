@@ -357,6 +357,8 @@ export const driver: Driver = {
   // measured: Enter at an item's text start leaves the caret with the text
   // ProseMirror's paste opens both seams, and a list keeps its form
   behaves: {
+    // nothing closed, a fence neither (the autoClose probes)
+    autoClose: [],
     // a quote is a style on one block: a quote of one paragraph is that block, its `>` the style
     quotes: 'text',
     // Enter in a quote splits it, the rest a block of its own (probed 2026-10-25)

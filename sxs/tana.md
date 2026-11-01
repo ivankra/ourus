@@ -5,7 +5,7 @@ version: "f6ae813f25"
 url: "https://app.tana.inc/tests"
 model: "block"
 command: "node sxs/run.ts tana"
-elapsed_s: 504
+elapsed_s: 288
 workers: 4
 ---
 
@@ -15,23 +15,24 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 178 | [19](#caret-19) | [4](#whitespace-4) | [45](#disagree-45) |  |  | **246** |
-| adapted | 269 | [15](#adapted-caret-15) | [7](#adapted-whitespace-7) | [89](#adapted-disagree-89) |  |  | **380** |
-| **total** | **447 (31%)** | **34 (2.3%)** | **11 (0.76%)** | **134 (9.3%)** | **0 (0%)** | **[816](#skipped-816) (56%)** | **1447** |
+| original | 179 | [19](#caret-19) | [4](#whitespace-4) | [45](#disagree-45) |  |  | **247** |
+| adapted | 303 | [15](#adapted-caret-15) | [10](#adapted-whitespace-10) | [93](#adapted-disagree-93) |  |  | **421** |
+| **total** | **482 (32%)** | **34 (2.3%)** | **14 (0.94%)** | **138 (9.3%)** | **0 (0%)** | **[817](#skipped-817) (55%)** | **1490** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total | original | adapted |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [auto.md](../spec/auto.md) | 29 |  |  | 2 |  | 8 | **39** |  | 31 |
 | [backspace.md](../spec/backspace.md) | 37 |  |  | 11 |  | 38 | **86** | 15 | 33 |
-| [backtick.md](../spec/backtick.md) | 5 |  |  | 2 |  | 26 | **33** |  | 7 |
+| [backtick.md](../spec/backtick.md) | 6 |  |  | 5 |  | 22 | **33** |  | 11 |
 | [block-ids.md](../spec/block-ids.md) | 8 |  |  | 6 |  | 7 | **21** | 8 | 6 |
 | [copy.md](../spec/copy.md) | 2 |  |  | 3 |  | 8 | **13** | 4 | 1 |
 | [cursor.md](../spec/cursor.md) | 23 | 2 |  |  |  | 11 | **36** | 12 | 13 |
 | [delete-subtree.md](../spec/delete-subtree.md) | 4 | 2 |  |  |  | 8 | **14** | 3 | 3 |
-| [delete.md](../spec/delete.md) | 22 |  |  | 8 |  | 26 | **56** | 10 | 20 |
+| [delete.md](../spec/delete.md) | 22 |  |  | 8 |  | 26 | **56** | 11 | 19 |
 | [drag.md](../spec/drag.md) |  |  |  |  |  | 8 | **8** |  |  |
-| [duplicate-subtree.md](../spec/duplicate-subtree.md) | 3 | 2 |  |  |  | 7 | **12** | 5 |  |
+| [duplicate-subtree.md](../spec/duplicate-subtree.md) | 4 | 2 |  |  |  | 7 | **13** | 5 | 1 |
 | [enter.md](../spec/enter.md) | 49 |  |  | 7 |  | 42 | **98** | 20 | 36 |
 | [fences.md](../spec/fences.md) | 7 |  | 1 | 5 |  | 57 | **70** |  | 13 |
 | [fold.md](../spec/fold.md) | 13 | 2 |  | 1 |  | 6 | **22** | 14 | 2 |
@@ -45,7 +46,7 @@ Per-file:
 | [outdent.md](../spec/outdent.md) | 16 |  |  | 2 |  | 24 | **42** | 4 | 14 |
 | [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |  |  |
 | [paste-conv.md](../spec/paste-conv.md) | 3 |  |  | 3 |  |  | **6** | 5 | 1 |
-| [paste-html.md](../spec/paste-html.md) | 4 | 1 |  | 12 |  | 2 | **19** |  | 17 |
+| [paste-html.md](../spec/paste-html.md) | 4 | 1 | 1 | 11 |  | 2 | **19** |  | 17 |
 | [paste-list-form.md](../spec/paste-list-form.md) | 4 |  |  | 1 |  | 1 | **6** | 4 | 1 |
 | [paste-list.md](../spec/paste-list.md) | 11 |  |  | 10 |  | 8 | **29** | 9 | 12 |
 | [paste-plain.md](../spec/paste-plain.md) | 22 |  | 1 | 4 |  | 9 | **36** | 1 | 26 |
@@ -53,7 +54,7 @@ Per-file:
 | [placeholders.md](../spec/placeholders.md) | 10 | 1 | 4 |  |  | 5 | **20** | 5 | 10 |
 | [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |  |  |
 | [quotes.md](../spec/quotes.md) |  |  |  |  |  | 143 | **143** |  |  |
-| [regressions.md](../spec/regressions.md) | 30 | 5 | 5 | 25 |  | 134 | **199** | 15 | 50 |
+| [regressions.md](../spec/regressions.md) | 34 | 5 | 7 | 25 |  | 131 | **202** | 15 | 56 |
 | [scenarios.md](../spec/scenarios.md) | 13 | 2 |  | 4 |  | 10 | **29** | 9 | 10 |
 | [select.md](../spec/select.md) | 13 | 5 |  |  |  | 5 | **23** | 10 | 8 |
 | [shift-enter.md](../spec/shift-enter.md) |  |  |  |  |  | 36 | **36** |  |  |
@@ -62,7 +63,7 @@ Per-file:
 | [typing.md](../spec/typing.md) |  |  |  |  |  | 3 | **3** |  |  |
 | [undo.md](../spec/undo.md) |  | 4 |  |  |  | 1 | **5** | 3 | 1 |
 | [zoom.md](../spec/zoom.md) | 4 | 1 |  | 3 |  | 6 | **14** | 8 |  |
-| **total** | **447 (31%)** | **34 (2.3%)** | **11 (0.76%)** | **134 (9.3%)** | **0 (0%)** | **821 (57%)** | **1447** | **246 (17%)** | **380 (26%)** |
+| **total** | **482 (32%)** | **34 (2.3%)** | **14 (0.94%)** | **138 (9.3%)** | **0 (0%)** | **822 (55%)** | **1490** | **247 (17%)** | **421 (28%)** |
 
 ## Disagree (45)
 
@@ -2845,7 +2846,273 @@ y
 </td></tr>
 </table>
 
-## Adapted: disagree (89)
+## Adapted: disagree (93)
+
+### [Auto3](../spec/auto.md#auto3)
+
+Adapted: code block, empty document, under autoClose: none
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td></tr>
+</table>
+
+> "\`\`\`"
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ```┃
+````
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ```
+- ┃
+````
+
+</td><td>
+
+````buffer
+- ```
+  ┃
+````
+
+</td></tr>
+</table>
+
+> "test"
+
+<table>
+<tr><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ```
+- test┃
+````
+
+</td><td>
+
+````buffer
+- ```
+  test┃
+````
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ```
+- test
+- ┃
+````
+
+</td><td>
+
+````buffer
+- ```
+  test
+  ┃
+````
+
+</td></tr>
+</table>
+
+> "\`\`"
+
+<table>
+<tr><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ```
+- test
+- ``┃
+````
+
+</td><td>
+
+````buffer
+- ```
+  test
+  ``┃
+````
+
+</td></tr>
+</table>
+
+> "\`"
+
+<table>
+<tr><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ```
+- test
+- ```┃
+````
+
+</td><td>
+
+````buffer
+- ```
+  test
+  ```┃
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>"```"</th><th>enter</th><th>"test"</th><th>enter</th><th>"``"</th><th>"`"</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+````buffer
+```┃
+````
+
+</td><td>
+
+````buffer
+```
+┃
+````
+
+</td><td>
+
+````buffer
+```
+test┃
+````
+
+</td><td>
+
+````buffer
+```
+test
+┃
+````
+
+</td><td>
+
+````buffer
+```
+test
+``┃
+````
+
+</td><td>
+
+````buffer
+```
+test
+```┃
+````
+
+</td></tr>
+</table>
+
+### [Auto8](../spec/auto.md#auto8)
+
+Adapted: as blocks, paragraph, under autoClose: none
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- use ┃ here
+```
+
+</td></tr>
+</table>
+
+> "\`"
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- use `┃ here
+```
+
+</td></tr>
+</table>
+
+> "x\`"
+
+<table>
+<tr><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- use `x` ┃ here
+```
+
+</td><td>
+
+```buffer
+- use `x`┃ here
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>"`"</th><th>"x`"</th></tr>
+<tr valign="top"><td>
+
+```buffer
+use ┃ here
+```
+
+</td><td>
+
+```buffer
+- use `┃ here
+```
+
+</td><td>
+
+```buffer
+- use `x`┃ here
+```
+
+</td></tr>
+</table>
 
 ### [Backspace12d](../spec/backspace.md#backspace12d)
 
@@ -3175,7 +3442,7 @@ Original:
 
 ### [Backtick9](../spec/backtick.md#backtick9)
 
-> "```"
+> "\`\`\`"
 
 Adapted: as blocks, code block
 
@@ -3235,7 +3502,7 @@ code
 
 ### [Backtick12](../spec/backtick.md#backtick12)
 
-Adapted: as blocks, code block, paragraph, under closeBackticks: none
+Adapted: as blocks, code block, paragraph, under autoClose: none
 
 <table>
 <tr><th>buffer</th></tr>
@@ -3248,7 +3515,7 @@ Adapted: as blocks, code block, paragraph, under closeBackticks: none
 </td></tr>
 </table>
 
-> "`"
+> "\`"
 
 <table>
 <tr><th>buffer</th></tr>
@@ -3303,6 +3570,100 @@ Original:
 - ```
   ┃print(1)
 ````
+
+</td></tr>
+</table>
+
+### [Backtick21](../spec/backtick.md#backtick21)
+
+> "\`"
+
+Adapted: as blocks, paragraph, under autoClose: none
+
+<table>
+<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- use «this» here
+```
+
+</td><td>
+
+```buffer
+- use `«this`» here
+```
+
+</td><td>
+
+```buffer
+- use `┃ here
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+use «this» here
+```
+
+</td><td>
+
+```buffer
+- use `┃ here
+```
+
+</td></tr>
+</table>
+
+### [Backtick32](../spec/backtick.md#backtick32)
+
+> "\`\`"
+
+Adapted: as blocks, paragraph, under autoClose: none
+
+<table>
+<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a ``x┃`` b
+```
+
+</td><td>
+
+```buffer
+- a ``x` `┃`` b
+```
+
+</td><td>
+
+```buffer
+- a ``x``┃`` b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+a ``x┃`` b
+```
+
+</td><td>
+
+```buffer
+- a ``x``┃`` b
+```
 
 </td></tr>
 </table>
@@ -5226,75 +5587,6 @@ Original:
 </td></tr>
 </table>
 
-### [PasteHtml15](../spec/paste-html.md#pastehtml15)
-
-<table>
-<tr><th colspan=2>clipboard</tr>
-<tr><td>text/plain<td>text/html</tr>
-<tr valign="top"><td>
-
-```clipboard
-1. not a list, *x* and [y]
-# not a heading
-```
-
-</td><td>
-
-```clipboard
-<ul><li>1. not a list, *x* and [y]</li><li># not a heading</li></ul>
-```
-
-</td></tr>
-</table>
-
-> paste
-
-Adapted: empty document, escape
-
-<table>
-<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- ┃
-```
-
-</td><td>
-
-```buffer
-- 1\. not a list, *x* and [y]
-- # not a heading┃
-```
-
-</td><td>
-
-```buffer
-- 1\. not a list, \*x\* and \[y\]
-- # not a heading┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-┃
-```
-
-</td><td>
-
-```buffer
-- 1\. not a list, \*x\* and \[y\]
-- \# not a heading┃
-```
-
-</td></tr>
-</table>
-
 ### [PasteHtml16](../spec/paste-html.md#pastehtml16)
 
 <table>
@@ -6861,7 +7153,7 @@ Adapted: escape
 </td><td>
 
 ```buffer
-- para┃→- a
+- para┃→\- a
 ```
 
 </td></tr>
@@ -6880,7 +7172,7 @@ Original:
 </td><td>
 
 ```buffer
-- para┃→- a
+- para┃→\- a
 ```
 
 </td></tr>
@@ -7369,48 +7661,30 @@ Original:
 </td></tr>
 </table>
 
-### [Regression89](../spec/regressions.md#regression89)
+### [Regression90](../spec/regressions.md#regression90)
 
-<table>
-<tr><th colspan=2>clipboard</tr>
-<tr><td>text/plain<td>text/html</tr>
-<tr valign="top"><td>
+> "\`"
 
-```clipboard
-Keep ~~draft~~ and %%this%% literal
-```
-
-</td><td>
-
-```clipboard
-<ul><li>Keep ~~draft~~ and %%this%% literal</li></ul>
-```
-
-</td></tr>
-</table>
-
-> paste
-
-Adapted: empty document
+Adapted: as blocks, paragraph, under autoClose: none
 
 <table>
 <tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- ┃
+- a« b »c
 ```
 
 </td><td>
 
 ```buffer
-- Keep ~~draft~~ and %%this%% literal┃
+- a`« b `»c
 ```
 
 </td><td>
 
 ```buffer
-- Keep \~\~draft\~\~ and %\%this%\% literal┃
+- a`┃c
 ```
 
 </td></tr>
@@ -7422,13 +7696,13 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-┃
+a« b »c
 ```
 
 </td><td>
 
 ```buffer
-- Keep \~\~draft\~\~ and %\%this%\% literal┃
+- a`┃c
 ```
 
 </td></tr>
@@ -8757,7 +9031,7 @@ Original:
 </td></tr>
 </table>
 
-## Adapted: whitespace (7)
+## Adapted: whitespace (10)
 
 ### [Fence30](../spec/fences.md#fence30)
 
@@ -8820,6 +9094,75 @@ Original:
     code┃
     ```
 ````
+
+</td></tr>
+</table>
+
+### [PasteHtml15](../spec/paste-html.md#pastehtml15)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+1. not a list, *x* and [y]
+# not a heading
+```
+
+</td><td>
+
+```clipboard
+<ul><li>1. not a list, *x* and [y]</li><li># not a heading</li></ul>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, escape
+
+<table>
+<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- 1\. not a list, *x* and [y]
+- # not a heading┃
+```
+
+</td><td>
+
+```buffer
+- 1\. not a list, \*x\* and \[y\]
+- # not a heading┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+- 1\. not a list, \*x\* and \[y\]
+- \# not a heading┃
+```
 
 </td></tr>
 </table>
@@ -9165,6 +9508,71 @@ after
 </td></tr>
 </table>
 
+### [Regression89](../spec/regressions.md#regression89)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+Keep ~~draft~~ and %%this%% literal
+```
+
+</td><td>
+
+```clipboard
+<ul><li>Keep ~~draft~~ and %%this%% literal</li></ul>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document
+
+<table>
+<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- Keep ~~draft~~ and %%this%% literal┃
+```
+
+</td><td>
+
+```buffer
+- Keep \~\~draft\~\~ and %\%this%\% literal┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+- Keep \~\~draft\~\~ and %\%this%\% literal┃
+```
+
+</td></tr>
+</table>
+
 ### [Regression136](../spec/regressions.md#regression136)
 
 > deleteSoftLineBackward
@@ -9213,6 +9621,53 @@ tle┃
 Ti┃
 ===
 ```
+
+</td></tr>
+</table>
+
+### [Regression178](../spec/regressions.md#regression178)
+
+> "\`\`\`"
+
+Adapted: as blocks, code block, paragraph, under autoClose: none
+
+<table>
+<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  ┃`
+```
+
+</td><td>
+
+````buffer
+-  ```┃`
+````
+
+</td><td>
+
+````buffer
+- ```┃`
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+ ┃`
+```
+
+</td><td>
+
+````buffer
+-  ```┃`
+````
 
 </td></tr>
 </table>
@@ -9630,6 +10085,106 @@ p0
 </td></tr>
 </table>
 
+### [Regression24d](../spec/regressions.md#regression24d)
+
+Adapted: under enterSplitSpace: start
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x ┃2. a
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x 
+- ┃2\. a
+```
+
+</td></tr>
+</table>
+
+> duplicateSubtree
+
+<table>
+<tr><th>tana</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x 
+- 2\. a
+- 2\. a┃
+```
+
+</td><td>
+
+```buffer
+- x 
+- 2\. a
+- ┃2\. a
+```
+
+</td></tr>
+</table>
+
+> cursorLineUp cursorLineBoundaryForward deleteContentForward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x 
+- 2\. a┃2. a
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter</th><th>duplicateSubtree</th><th>cursorLineUp cursorLineBoundaryForward deleteContentForward</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x ┃2. a
+```
+
+</td><td>
+
+```buffer
+- x 
+- ┃2\. a
+```
+
+</td><td>
+
+```buffer
+- x 
+- 2\. a
+- ┃2\. a
+```
+
+</td><td>
+
+```buffer
+- x 
+- 2\. a┃2. a
+```
+
+</td></tr>
+</table>
+
 ### [Regression71](../spec/regressions.md#regression71)
 
 > duplicateSubtree
@@ -9697,64 +10252,6 @@ Original:
   - ««a
   - b»»
 - y
-```
-
-</td></tr>
-</table>
-
-### [Regression139](../spec/regressions.md#regression139)
-
-<table>
-<tr><th>clipboard (text/plain)</tr>
-<tr valign="top"><td>
-
-```clipboard
-b #
-```
-
-</td></tr>
-</table>
-
-> paste
-
-Adapted: heading
-
-<table>
-<tr><th>buffer</th><th>tana</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- # a┃
-```
-
-</td><td>
-
-```buffer
-- # ab #┃
-```
-
-</td><td>
-
-```buffer
-- # ab \#┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-# a┃
-```
-
-</td><td>
-
-```buffer
-# ab \#┃
 ```
 
 </td></tr>
@@ -10562,10 +11059,19 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (821)
+## Skipped (822)
 
 | example | why |
 | --- | --- |
+| **auto.md** | |
+| [Auto6](../spec/auto.md#auto6) | caret in a number, a task's checkbox, a heading's # or a code block's fences |
+| [Auto23](../spec/auto.md#auto23) | action shiftEnter |
+| [Auto24](../spec/auto.md#auto24) | action shiftEnter |
+| [Auto25](../spec/auto.md#auto25) | action shiftEnter |
+| [Auto27](../spec/auto.md#auto27) | math |
+| [Auto29](../spec/auto.md#auto29) | math (expected) |
+| [Auto32](../spec/auto.md#auto32) | comment (expected) |
+| [Auto33](../spec/auto.md#auto33) | html (expected) |
 | **backspace.md** | |
 | [Backspace2](../spec/backspace.md#backspace2) | caret in a marker |
 | [Backspace4](../spec/backspace.md#backspace4) | heading's closing #s |
@@ -10607,7 +11113,6 @@ Original:
 | [Backspace50b](../spec/backspace.md#backspace50b) | option backspaceAtItemStart: unwrap |
 | **backtick.md** | |
 | [Backtick1](../spec/backtick.md#backtick1) | block's text ending in a line break: an empty description is none |
-| [Backtick2b](../spec/backtick.md#backtick2b) | option closeBackticks: all |
 | [Backtick3](../spec/backtick.md#backtick3) | quote |
 | [Backtick5](../spec/backtick.md#backtick5) | caret in a number, a task's checkbox, a heading's # or a code block's fences |
 | [Backtick6](../spec/backtick.md#backtick6) | caret in a number, a task's checkbox, a heading's # or a code block's fences |
@@ -10618,10 +11123,8 @@ Original:
 | [Backtick14](../spec/backtick.md#backtick14) | code block's fences other than the shortest backticks that hold its code, which Tana's code block reads back with (it keeps no fences), or spaces around its language |
 | [Backtick16](../spec/backtick.md#backtick16) | option markup: decorated |
 | [Backtick17](../spec/backtick.md#backtick17) | tag free-form |
-| [Backtick19](../spec/backtick.md#backtick19) | option closeBackticks: all |
-| [Backtick20](../spec/backtick.md#backtick20) | option closeBackticks: all |
-| [Backtick21](../spec/backtick.md#backtick21) | option closeBackticks: all |
-| [Backtick22](../spec/backtick.md#backtick22) | option closeBackticks: all |
+| [Backtick20](../spec/backtick.md#backtick20) | changes only what blocks can't show |
+| [Backtick22](../spec/backtick.md#backtick22) | block's text ending in a line break: an empty description is none |
 | [Backtick23](../spec/backtick.md#backtick23) | code block's fences other than the shortest backticks that hold its code, which Tana's code block reads back with (it keeps no fences), or spaces around its language |
 | [Backtick24](../spec/backtick.md#backtick24) | code block's fences that don't match |
 | [Backtick25](../spec/backtick.md#backtick25) | caret in a number, a task's checkbox, a heading's # or a code block's fences |
@@ -10631,7 +11134,6 @@ Original:
 | [Backtick29](../spec/backtick.md#backtick29) | code block's fences other than the shortest backticks that hold its code, which Tana's code block reads back with (it keeps no fences), or spaces around its language |
 | [Backtick30](../spec/backtick.md#backtick30) | block's text ending in a line break: an empty description is none |
 | [Backtick31](../spec/backtick.md#backtick31) | option markup: decorated |
-| [Backtick32](../spec/backtick.md#backtick32) | option closeBackticks: all |
 | **block-ids.md** | |
 | [BlockIds1](../spec/block-ids.md#blockids1) | table |
 | [BlockIds4](../spec/block-ids.md#blockids4) | heading other than H1: Tana's (a section) has one level |
@@ -11214,6 +11716,7 @@ Original:
 | [Regression12](../spec/regressions.md#regression12) | action shiftEnter |
 | [Regression15](../spec/regressions.md#regression15) | heading other than H1: Tana's (a section) has one level |
 | [Regression21](../spec/regressions.md#regression21) | option pasteLines: items |
+| [Regression24c](../spec/regressions.md#regression24c) | action shiftEnter |
 | [Regression26](../spec/regressions.md#regression26) | action shiftEnter |
 | [Regression28](../spec/regressions.md#regression28) | callout |
 | [Regression29](../spec/regressions.md#regression29) | option quotes: container |
@@ -11258,7 +11761,6 @@ Original:
 | [Regression80](../spec/regressions.md#regression80) | action pasteAt |
 | [Regression81](../spec/regressions.md#regression81) | action shiftEnter |
 | [Regression84](../spec/regressions.md#regression84) | quote |
-| [Regression90](../spec/regressions.md#regression90) | option closeBackticks: all |
 | [Regression91](../spec/regressions.md#regression91) | option pastePlainLines: enter |
 | [Regression92](../spec/regressions.md#regression92) | caret in a marker |
 | [Regression100](../spec/regressions.md#regression100) | caret on a blank line |
@@ -11289,8 +11791,6 @@ Original:
 | [Regression130](../spec/regressions.md#regression130) | selection across blocks |
 | [Regression131](../spec/regressions.md#regression131) | quote |
 | [Regression132](../spec/regressions.md#regression132) | action deleteByDrag |
-| [Regression133](../spec/regressions.md#regression133) | option closeBackticks: all |
-| [Regression134](../spec/regressions.md#regression134) | option closeBackticks: all |
 | [Regression135](../spec/regressions.md#regression135) | heading other than H1: Tana's (a section) has one level |
 | [Regression137](../spec/regressions.md#regression137) | heading's closing #s |
 | [Regression142](../spec/regressions.md#regression142) | list numbered in part, or not from 1 |
@@ -11319,7 +11819,6 @@ Original:
 | [Regression172](../spec/regressions.md#regression172) | action shiftEnter |
 | [Regression173](../spec/regressions.md#regression173) | action shiftEnter |
 | [Regression176](../spec/regressions.md#regression176) | action shiftEnter |
-| [Regression178](../spec/regressions.md#regression178) | option closeBackticks: all |
 | [Regression179](../spec/regressions.md#regression179) | thematic break |
 | [Regression180](../spec/regressions.md#regression180) | list numbered in part, or not from 1 |
 | [Regression182](../spec/regressions.md#regression182) | link reference definition |

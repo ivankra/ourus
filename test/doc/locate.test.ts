@@ -5,11 +5,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import fc from 'fast-check';
 import { OurusDoc, type Located } from '../../src/doc/index.ts';
-import { createPlaceholder } from '../../src/text/index.ts';
 import { BLOCKS, arbDoc } from '../parser/generators.ts';
 
 type Flavor = 'commonmark' | 'gfm' | 'obsidian';
-const parse = (text: string, flavor: Flavor = 'gfm', placeholders: number[] = []) => OurusDoc.parse(text, { config: { flavor }, marks: placeholders.map((p) => createPlaceholder(p)) });
+const parse = (text: string, flavor: Flavor = 'gfm', placeholders: number[] = []) => OurusDoc.parse(text, { config: { flavor }, marks: { placeholders } });
 
 /** A position's zone, briefly: `text 4`, `frame task 0`, `marker 1`, `gap paragraph@0`, ... */
 function where(doc: OurusDoc, pos: number): string {
@@ -54,9 +53,9 @@ test('blank lines are the gap of the node above; the preamble and past the end a
   assert.equal(where(parse('a\n'), 2), 'none');
 });
 
-test('a character left out of the text: a held space, a markup escape', () => {
+test('a character left out of the text: a held space; a markup escape is the text\'s', () => {
   assert.equal(where(parse('-  x', 'gfm', [2]), 2), 'text item 0');
-  assert.deepEqual([0, 1, 2].map((p) => where(parse('\\- x'), p)), ['text paragraph 0', 'text paragraph 0', 'text paragraph 1']);
+  assert.deepEqual([0, 1, 2].map((pos) => where(parse('\\- x'), pos)), ['text paragraph 0', 'text paragraph 1', 'text paragraph 2']);
 });
 
 for (const flavor of ['commonmark', 'gfm', 'obsidian'] as const) {

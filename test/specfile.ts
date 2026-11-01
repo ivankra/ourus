@@ -5,7 +5,7 @@
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { isMap, isScalar, parseDocument, Scalar } from 'yaml';
+import { isMap, isScalar, isSeq, parseDocument, Scalar, type YAMLSeq } from 'yaml';
 import { OurusConfig } from '../src/config.ts';
 import { MdTree } from '../src/parser/syntax.ts';
 
@@ -155,7 +155,11 @@ export function readSpec(file: string, source: string): SpecTest[] {
     }
     if (block.type === 'blockquote') {
       if (!test) fail(start, 'actions before any buffer');
-      const actions = tokenize(quoteText(tree, at));
+      // a backtick escaped, `\``, so Markdown shows the quote as it reads: in the actions, a backtick;
+      // one bare would start a code span there, refused
+      const quoted = quoteText(tree, at);
+      if (/(?<!\\)`/.test(quoted)) fail(start, 'a backtick in the actions is escaped (`\\``), or Markdown reads a code span there');
+      const actions = tokenize(quoted.replace(/\\`/g, '`'));
       if (actions.length === 0) fail(start, 'a quote with no actions');
       const step: Step = { line: start + 1, actions, expect: {} };
       test!.steps.push(step);
@@ -250,6 +254,9 @@ export const slug = (text: string): string =>
     .replace(/\s/g, '-');
 
 /** Actions are words, or quoted text (`"some text"`) that is typed; a word may name a node by its label (`moveSubtree ②`). */
+/** A step's actions as its quote line: each backtick escaped, so the quote renders as it reads (no code span). */
+export const actionsLine = (actions: readonly string[]): string => `> ${actions.join(' ').replace(/`/g, '\\`')}`;
+
 export const tokenize = (s: string): string[] => s.match(/"[^"]*"|\S+(?:\s+[\u2460-\u2473\u3251-\u325f\u32b1-\u32bf](?!\S))?/gu) ?? [];
 
 /** What a state's `yaml` block says: options, tags and the rank (the config block's), the clipboard and the outline, the result (a step's). */
@@ -270,7 +277,8 @@ type Where = 'start' | 'step';
  * YAML would otherwise take for the block's indentation. One line without a line break, which paste
  * puts inline, is a quoted string instead (`"x"`, `'<p class="a">x</p>'`), and only it: the two
  * read differently at a glance, and a bare one would lose what follows a ` #` to a comment.
- * A config block's `tags` are words from `TAGS`, separated by spaces, each at most once.
+ * A config block's `tags` are words from `TAGS`, separated by spaces, each at most once. A list
+ * option's value is a YAML sequence (`autoClose: ['\`\`\`', '~~~', '(']`, `[]` for none).
  * `first` is the 0-based line of the text's first line.
  */
 function readConfig(text: string, first: number, fail: (line: number, message: string) => never, where: Where): Read {
@@ -329,6 +337,16 @@ function readConfig(text: string, first: number, fail: (line: number, message: s
     if (key === 'dropPoints') {
       if (where !== 'step') fail(at, "dropPoints are a pickup's: they go in the `yaml` block after a `drag`");
       read.dropPoints = textOf(v, 'dropPoints drawing', keyColumn, at);
+      continue;
+    }
+    // a list option, a YAML sequence (`autoClose: ['```', '(']`, `[]` for none), kept as settings write it
+    if (key in OurusConfig.lists) {
+      if (where === 'step') fail(at, `"${key}" in a state after a step, which holds its result, clipboard and outline: options go in the test's config block`);
+      if (!isSeq(v) || !v.items.every((item) => isScalar(item) && typeof item.value === 'string')) fail(at, `option "${key}" takes a list: ${key}: ['\`\`\`', '(']; none, []`);
+      const items = (v as YAMLSeq<Scalar<string>>).items.map((item) => item.value);
+      const set = OurusConfig.read({ [key]: items.length ? items.join(' ') : 'none' });
+      if (typeof set === 'string') fail(at, set);
+      read.options[key] = OurusConfig.format(key as keyof OurusConfig, set[key as keyof OurusConfig]);
       continue;
     }
     if (!isScalar(v) || typeof v.value !== 'string') fail(at, `option "${key}" takes one value`);

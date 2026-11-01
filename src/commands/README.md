@@ -246,7 +246,7 @@ if (settled) { view.dispatch({ changes: settled.changes }); ourus = settled.view
 - **`OurusConfig`** chooses how commands behave where outliners differ. It is set when the document is
   made (`OurusDoc.parse(text, { config })`): `outdent`, `bullet`, `enterOnEmptyItem`, `enterMidItem`,
   `enterAtTextStart`, `enterSplitSpace`, `enterTask`, `backspaceAtTopItem`, `backspaceAtItemStart`,
-  `emptyItemWithChildren`, `joinWithChildren`, `joinBlockIds`, `handleFenceContents`, `closeBackticks`,
+  `emptyItemWithChildren`, `joinWithChildren`, `joinBlockIds`, `handleFenceContents`, `autoClose`,
   `headingEditing`, `taskEditing`, `copyAtCaret`, `copySelection`, `pasteSeams`, `pasteOverSelection`, `pasteLines`,
   `pastePlainLines`, `pasteAtTextStart`, `pasteOnParent`, `pasteParagraphList`, `pasteListForm`,
   `markup`, the quirks (`quirkEnterMidHeading`, `quirkPasteCaret`, `quirkPasteText`: one app's mechanics),
@@ -263,8 +263,8 @@ The host's contract:
 3. When the caret moves, call `settlePlaceholders(view, caret)`, and commit its changes as a
    separate edit.
 4. Keep placeholders in the undo history: undo and redo must restore the placeholders of the state
-   they return to. Save `view.doc.marks.points()` with each state, and restore with
-   `view.update({ changes, setMarks: positions.map((pos) => createPlaceholder(pos)) })`; where the
+   they return to. Save `view.doc.marks.placeholders` with each state, and restore with
+   `view.update({ changes, marks: { placeholders } })`; where the
    state's document is kept too, its nodes come back with it, `view.withDoc(like.withConfig(view.doc.config))`
    (an undone move keeps its fold). In CM6, `invertedEffects` can carry them; the demo does this.
 5. Home goes to `doc.textStart(line)`, the start of the line's text, and pressed again, to the

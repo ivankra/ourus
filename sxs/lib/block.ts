@@ -448,7 +448,7 @@ function blockText(doc: OurusDoc, node: OurusNode, notes: Set<string>, ordered: 
     // space a placeholder holds as text (`- ◌ x`), what a split kept (`enterSplitSpace: start`: an
     // item's padding, a paragraph's leading spaces, where ourus's text start is before them)
     if (l === headStart) {
-      const held = doc.marks.points().find((p) => p >= line.from && p < from && (source[p] === ' ' || source[p] === '\t'));
+      const held = doc.marks.placeholders.find((pos) => pos >= line.from && pos < from && (source[pos] === ' ' || source[pos] === '\t'));
       from = Math.min(held ?? from, node.kind === 'item' || node.kind === 'paragraph' ? doc.textStart(l) : from);
     }
     add(l, from, line.to, l === headStart ? number + below : '', trim);
@@ -720,6 +720,7 @@ const loose = (b: Block): string =>
   `${b.depth}${b.free ? '¶' : ''}:${b.text
     .replace(/[ \t]*\n[ \t]*/g, '\n')
     .replace(/^((?:\d{1,9}\. )?(?:\[[ xX]\] )?(?:#{1,6} |> )?)[ \t]+/, '$1')
+    .replace(/\\([!-/:-@[-`{-~])/g, '$1')
     .trim()}`;
 
 /**
@@ -805,7 +806,15 @@ export function compareOutlines(want: Outline, got: Outline, sections: readonly 
     const close = JSON.stringify(shown(want)) === JSON.stringify(shown(got));
     return close ? 'whitespace' : 'disagree';
   }
-  if (want.sel && (JSON.stringify(want.sel) !== JSON.stringify(got.sel) || got.selected?.length)) return 'caret';
+  // (the caret as a place in the text read unescaped, as `sameText` reads it: `\:┃b` and `:┃b` are the same place)
+  const plainSel = (outline: Outline): Outline['sel'] => {
+    const sel = outline.sel;
+    const text = sel ? outline.blocks[sel.block]?.text : undefined;
+    if (!sel || text === undefined) return sel;
+    const escapesBefore = (offset: number): number => [...text.matchAll(/\\[!-/:-@[-`{-~]/g)].filter((m) => m.index! < offset).length;
+    return { ...sel, anchor: sel.anchor - escapesBefore(sel.anchor), head: sel.head - escapesBefore(sel.head) };
+  };
+  if (want.sel && (JSON.stringify(plainSel(want)) !== JSON.stringify(plainSel(got)) || got.selected?.length)) return 'caret';
   // blocks selected whole, as a caret: other blocks, or a caret instead
   if (want.selected?.length && (JSON.stringify(want.selected) !== JSON.stringify(got.selected ?? []) || got.sel)) return 'caret';
   return 'agree';

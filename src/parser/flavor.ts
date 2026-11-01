@@ -109,14 +109,14 @@ export interface MdFlavor {
    * (`readback.ts`).
    */
   markupEscapeAt(line: string, at: number): boolean;
-  /** The backslashes of `lines`, as written at `place`, that are markup escapes there: out of their text (`readback.ts`). */
+  /** The backslashes of `lines`, as written at `place`, that are markup escapes there (`readback.ts`). */
   markupEscapes(lines: readonly string[], place?: MdParagraphPlace): MdEscapeAt[];
   /**
    * `lines` (a text's) spelled as a paragraph's at `place`: the backslashes that would be markup
-   * there absorbed, the escapes that keep each line the paragraph's placed; null where none does
-   * (`readback.ts`).
+   * there absorbed (none without `absorb`), the escapes that keep each line the paragraph's placed;
+   * null where none does (`readback.ts`).
    */
-  escapeParagraph(lines: readonly string[], place?: MdParagraphPlace): MdEscapedParagraph | null;
+  escapeParagraph(lines: readonly string[], place?: MdParagraphPlace, absorb?: boolean): MdEscapedParagraph | null;
 }
 
 /** CommonMark 0.31.2. */
@@ -212,7 +212,7 @@ export function defineFlavor(name: string, extensions: readonly MdExtension[]): 
     firstNonParagraph: (lines, context, above, lazy) => firstNonParagraph(flavor, lines, context, above, lazy),
     markupEscapeAt: (line, at) => markupEscapeAt(flavor, line, at),
     markupEscapes: (lines, place) => markupEscapes(flavor, lines, place),
-    escapeParagraph: (lines, place) => escapeParagraph(flavor, lines, place),
+    escapeParagraph: (lines, place, absorb) => escapeParagraph(flavor, lines, place, absorb),
   };
   return flavor;
 }

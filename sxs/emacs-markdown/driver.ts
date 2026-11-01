@@ -60,13 +60,13 @@ export const driver: Driver = {
   url: 'emacs -Q -nw, on a terminal',
   model: 'text',
   // Backspace right after a checkbox deletes a character (`taskEditing: text`); a typed backtick is
-  // only a character (`closeBackticks: none`)
+  // only a character (`autoClose: none`)
   behaves: {
     // a quote is text, its `>`s characters edited on its lines: of `quotes`' values the one its runs agree with most (166 quote cases a setup)
     quotes: 'atom',
     enterSplitSpace: 'drop',
     taskEditing: 'text',
-    closeBackticks: 'none',
+    autoClose: [],
     copyAtCaret: 'host',
     pastePlainLines: 'host',
   },

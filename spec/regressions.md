@@ -47,7 +47,7 @@ tags: rare
 
 ```buffer
 - a
-  1\. ┃b
+  1\̬. ┃b
 ```
 
 ## Regression3
@@ -239,13 +239,13 @@ tags: rare
 
 ```buffer
 - one
-  ┃\<div>
+  ┃\̬<div>
 ```
 
 > deleteContentBackward
 
 ```buffer
-- one┃\<div>
+- one┃\̬<div>
 ```
 
 ## Regression11
@@ -265,13 +265,13 @@ para┃``` x
 
 ```buffer
 para
-┃\``` x
+┃\̬``` x
 ```
 
 > deleteContentBackward
 
 ```buffer
-para┃\``` x
+para┃\̬``` x
 ```
 
 ## Regression12
@@ -580,12 +580,8 @@ intro
 
 Enter before a backslash that is text mid-line (`2\.` after other text escapes nothing) but markup at
 a line's start, where `2.` would start a list: the new paragraph keeps it, as the escape its line
-needs, and its text is `2. draft`. Backspace joins the line back, where it isn't needed: it goes, as a
-split's own escape would (decision 7: escapes carry no provenance).
-
-To revisit (the user): the author's backslash shouldn't be stripped, only one ourus generated. With a
-mark on the escapes ourus writes (as `AUTO_WHITESPACE_MARK` marks its whitespace), the join would keep
-this one: `revise 2\. draft`.
+needs. Backspace joins the line back, where it isn't needed: the author's backslash stays, a character of
+the text like any other; only an escape ourus wrote goes ([Regression24b](#regression24b)).
 
 ```yaml
 tags: rare
@@ -606,7 +602,98 @@ revise
 > deleteContentBackward
 
 ```buffer
+revise┃2\. draft
+```
+
+## Regression24b
+
+The same where ourus wrote the backslash: `2.` at the start of a line is escaped (an escape of ours,
+an `auto` mark on it), and joined back mid-line the escape is no longer needed, so it goes. The
+join is the split's inverse.
+
+```yaml
+tags: rare
+```
+
+```buffer
+revise ┃2. draft
+```
+
+> enter
+
+```buffer
+revise
+
+┃2\̬. draft
+```
+
+> deleteContentBackward
+
+```buffer
 revise┃2. draft
+```
+
+## Regression24c
+
+Enter right after an escape ourus wrote is Enter at the text's start: the backslash isn't text, so
+nothing of the text is before the caret, and the empty paragraph opens above as at `┃-`.
+
+```yaml
+tags: rare
+```
+
+```buffer
+-┃-
+```
+
+> shiftEnter
+
+```buffer
+\̬-
+┃\̬-
+```
+
+> cursorLineUp cursorCharRight enter
+
+```buffer
+┃◌
+
+\̬-
+\̬-
+```
+
+## Regression24d
+
+A duplicate's escapes are ours as the original's are: joined, each copy's goes.
+
+```yaml
+tags: rare
+```
+
+```buffer
+- x ┃2. a
+```
+
+> enter
+
+```buffer
+- x
+- ┃2\̬. a
+```
+
+> duplicateSubtree
+
+```buffer
+- x
+- 2\̬. a
+- ┃2\̬. a
+```
+
+> cursorLineUp cursorLineBoundaryForward deleteContentForward
+
+```buffer
+- x
+- 2\̬. a┃2. a
 ```
 
 ## Regression25
@@ -631,13 +718,13 @@ tags: rare
 > deleteContentBackward
 
 ```buffer
-- revise┃2. draft
+- revise┃2\. draft
 ```
 
 ## Regression26
 
 Shift-Enter before `\-`: on its own line `- b` would interrupt the paragraph as a list, so the
-backslash is the line's escape there, and goes when Backspace joins the line back.
+backslash is the line's escape there, and stays when Backspace joins the line back: it is the author's.
 
 ```yaml
 tags: rare
@@ -657,7 +744,7 @@ a
 > deleteContentBackward
 
 ```buffer
-a ┃- b
+a ┃\- b
 ```
 
 ## Regression27
@@ -746,14 +833,14 @@ tags: rare
 
 ```buffer
 - ┃para
-  →\- a
+  →\̬- a
 ```
 
 ## Regression31
 
 A backslash after a tab past an item's indentation, where the tab spans two columns (`- a` would
 start a list there), is markup, not text. Out of the item, at the line's start, the tab spans four:
-`- a` starts nothing, and the backslash goes.
+`- a` starts nothing, and the author's backslash stays.
 
 ```yaml
 tags: rare free-form
@@ -768,13 +855,13 @@ tags: rare free-form
 
 ```buffer
 ┃para
-→- a
+→\- a
 ```
 
 ## Regression32
 
 The same line joined onto the item's first: past `para`, `- a` starts nothing, and the backslash
-goes.
+stays (the author's).
 
 ```yaml
 tags: rare
@@ -788,7 +875,7 @@ tags: rare
 > deleteContentForward
 
 ```buffer
-- para┃→- a
+- para┃→\- a
 ```
 
 ## Regression33
@@ -810,7 +897,7 @@ p ┃2) x
 
 ```buffer
 > q1
-┃2\) x
+┃2\̬) x
 ```
 
 ## Regression34
@@ -898,9 +985,9 @@ clipboard: |-
 ```buffer
 > a- x
 
-> \```
+> \̬```
 >   c
->   \```┃b
+>   \̬```┃b
 > c
 ```
 
@@ -1254,7 +1341,7 @@ quotes: container
 ```buffer
 ┃q
 | a |
-|\---|
+|\̬---|
 ```
 
 
@@ -1395,7 +1482,7 @@ clipboard: |-
 1. x
     - [x] 
         contx
-      \# y┃
+      \̬# y┃
 ```
 
 
@@ -1905,7 +1992,7 @@ clipboard: |-
 
 ```buffer
 \- a
-\- b┃
+\̬- b┃
 ```
 
 ## Regression75
@@ -2295,14 +2382,14 @@ side, which the code span strips, keeping the selection's own.
 
 ```yaml
 tags: rare
-closeBackticks: all
+autoClose: ['```', '~~~', '`']
 ```
 
 ```buffer
 a« b »c
 ```
 
-> "`"
+> "\`"
 
 ```buffer
 a` « b » `c
@@ -3304,7 +3391,7 @@ tags: rare
 ```buffer
 - «x
 - >b»
-  →\~~~
+  →\̬~~~
 ```
 
 ## Regression131
@@ -3355,12 +3442,12 @@ tags: rare
 
 ## Regression133
 
-`closeBackticks: all`, Backspace between two backticks of a code span's code: one goes, as any
+With `` ` `` in `autoClose`, Backspace between two backticks of a code span's code: one goes, as any
 character of code; they are no empty pair.
 
 ```yaml
 tags: rare
-closeBackticks: all
+autoClose: ['```', '~~~', '`']
 ```
 
 ````buffer
@@ -3375,12 +3462,12 @@ a ```x ┃` y``` b
 
 ## Regression134
 
-`closeBackticks: all`, between an escaped backtick and another: no empty pair, so Backspace deletes
+With `` ` `` in `autoClose`, between an escaped backtick and another: no empty pair, so Backspace deletes
 one and a backtick typed is typed, not stepped over.
 
 ```yaml
 tags: rare
-closeBackticks: all
+autoClose: ['```', '~~~', '`']
 ```
 
 ```buffer
@@ -3393,7 +3480,7 @@ a \`┃` b
 a \┃` b
 ```
 
-> "``"
+> "\`\`"
 
 ```buffer
 a \``┃` b
@@ -3484,7 +3571,7 @@ tags: rare
 > deleteContentBackward
 
 ```buffer
-# h┃x \#
+# h┃x \̬#
 ```
 
 ## Regression139
@@ -3503,7 +3590,7 @@ clipboard: "b #"
 > paste
 
 ```buffer
-# ab \#┃
+# ab \̬#┃
 ```
 
 ## Regression140
@@ -3814,7 +3901,7 @@ tags: rare
 > indent
 
 ```buffer
-- \-┃-
+- \̬-┃-
 ```
 
 ## Regression154
@@ -4121,7 +4208,7 @@ quotes: container
 =
 >
 >┃a
->\=
+>\̬=
 ```
 
 ## Regression167
@@ -4386,23 +4473,23 @@ clipboard: "x"
 
 ## Regression178
 
-`closeBackticks: all`, three backticks typed at once between a space and a backtick: a fence, as
+With `` ` `` in `autoClose`, three backticks typed at once between a space and a backtick: a fence, as
 they make typed one by one.
 
 ```yaml
 tags: rare
-closeBackticks: all
+autoClose: ['```', '~~~', '`']
 ```
 
 ```buffer
  ┃`
 ```
 
-> "```"
+> "\`\`\`"
 
 ````buffer
 ```┃
-```
+`̬`̬`̬
 ````
 
 ## Regression179

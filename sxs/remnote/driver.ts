@@ -241,7 +241,12 @@ export function remnoteDriver(setup: Setup): Driver {
     // two measured, and their examples played with `run.ts --ignore-options`, 2026-10-18); paste opens
     // the seam, the first pasted text joining (the caret after it), and a pasted list keeps its form
     // (`open` measured 8 cases better with bullets, none worse)
+    // `$$` opens its math editor, `[[` and `((` its reference and portal pickers, the characters gone:
+    // nothing to compare (Auto15, Auto17, Auto21, Auto28 to Auto34)
+    capturesTyped: /\$\$|\[\[|\(\(/,
     behaves: {
+      // fences closed, as a code block of its own; `%%` text, `<!--` a dash (`<!‒`): neither paired
+      autoClose: ['```', '~~~'],
       // Shift-Up takes the sibling above with its subtree
       selectNodeUp: 'sibling',
       // after a paste of rems, the caret at the end of the first, as Roam's (9 caret verdicts, none worse)
