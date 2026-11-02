@@ -41,8 +41,9 @@ function settled(doc: OurusDoc, caret: number, placeholders: readonly number[]):
     if (!node || !(text instanceof OurusProse)) return null;
     if (gone.has(node.id)) continue;
     if (doc.marks.hasHeldSpaceAt(pos) || node.kind === 'item') {
-      // written again: without the held space, which writing settles; an empty item as `done()` holds it
-      draft.setText(node, text.withoutHeldSpaces());
+      // written again, which settles the held space as `heldSpace` says (the draft's: kept, the text's
+      // padding, its children moved with it; or out); an empty item as `done()` holds it
+      draft.setText(node, text);
     } else if (text.empty) {
       // (with the blank lines that set it off between two items: their list as tight as it was, TO18)
       // (the list after it its own, in a section: Enter7b)
@@ -61,3 +62,4 @@ function settled(doc: OurusDoc, caret: number, placeholders: readonly number[]):
   if (!('doc' in applied) || checkBlockIds(doc, applied.doc, applied.changes)) return null;
   return { doc: applied.doc, changes: applied.changes };
 }
+

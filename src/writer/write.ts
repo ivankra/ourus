@@ -1036,6 +1036,9 @@ class Writer {
       // the spaces its text started with, as its padding (`done()`'s)
       const padding = ' '.repeat(this.draft.paddings.get(node.id)!);
       lead = node.kind === 'item' ? `${this.old.slice(line.from, markerEnd())} ${padding}` : this.old.slice(line.from, this.from.posOf(origin, 0, -1)) + padding;
+      // (an item's content column moved right by it, a held space kept, `heldSpace: repair`: its
+      // children with it, as a lifted block is moved, the other way)
+      if (node.kind === 'item' && padding) for (const c of node.children) this.lifted.set(c, (this.lifted.get(c) ?? 0) - padding.length);
     } else if (node.kind === 'item' && origin.textFirstLine > origin.startLine) {
       // a text that started below its marker, on its line now: after the marker and a space
       lead = this.old.slice(line.from, markerEnd()) + ' ';

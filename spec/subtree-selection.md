@@ -16,12 +16,12 @@ characters, markers and all:
 3. **Typing does nothing**: the key taken, the nodes still selected, as the outliners ignore it
    (SubtreeEdit7 to SubtreeEdit10, SubtreeEdit15). A plain paste makes one node in their place,
    under the first root's prefix (its marker, a task's checkbox, a heading's `#`s), the other roots
-   gone (SubtreeEdit11).
+   gone (SubtreeEdit11); with `pasteOverNodes: nothing`, it does nothing, as typing (SubtreeEdit19).
 4. **Enter and Shift-Enter put the caret at the end of the last root's own text**, deleting nothing:
    a parent's text, not its last descendant's (SubtreeEdit12, SubtreeEdit13).
 5. **A paste puts the clipboard's nodes in place of the roots**, the caret at the end of what was
-   pasted (SubtreeEdit14); with `pasteOverSelection: ignore`, right after them, the roots kept
-   (SubtreeEdit17).
+   pasted (SubtreeEdit14); with `pasteOverNodes: after`, right after them, the roots kept
+   (SubtreeEdit17); with `pasteOverNodes: nothing`, nothing, the roots still selected (SubtreeEdit18).
 6. **The structural commands keep it** on their nodes, in the shape it was given
    ([MoveDown41](move-subtree-down.md#movedown41), [Indent46](indent.md#indent46)).
 
@@ -428,12 +428,12 @@ x┃
 
 ## SubtreeEdit17
 
-`pasteOverSelection: ignore`: the nodes selected stay, and the clipboard's go right after them, where
+`pasteOverNodes: after`: the nodes selected stay, and the clipboard's go right after them, where
 a paste at the selection's end puts them, as Tana pastes over a block selection.
 
 ```yaml
 tags: edge
-pasteOverSelection: ignore
+pasteOverNodes: after
 clipboard: |
   - p
   - q
@@ -454,5 +454,60 @@ clipboard: |
   - b1
 - p
 - q┃
+- c
+```
+
+## SubtreeEdit18
+
+`pasteOverNodes: nothing`: a paste over nodes selected whole does nothing, the nodes still selected,
+as typing over them is, as Logseq, Tine, Athens, RemNote and WorkFlowy have it.
+
+```yaml
+tags: edge
+pasteOverNodes: nothing
+clipboard: |
+  - p
+  - q
+```
+
+```buffer
+- a
+- ««b»»
+  - b1
+- c
+```
+
+> paste
+
+```buffer
+- a
+- ««b»»
+  - b1
+- c
+```
+
+## SubtreeEdit19
+
+`pasteOverNodes: nothing`: a plain paste over them likewise.
+
+```yaml
+tags: edge
+pasteOverNodes: nothing
+clipboard: 'z'
+```
+
+```buffer
+- a
+- ««b»»
+  - b1
+- c
+```
+
+> pastePlain
+
+```buffer
+- a
+- ««b»»
+  - b1
 - c
 ```

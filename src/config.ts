@@ -158,6 +158,22 @@ export interface OurusConfig {
   readonly enterSplitSpace: 'trim' | 'drop' | 'start';
 
   /**
+   * A space a deleted first character leaves at a text's start (`- a┃ b`, Backspace: `- ┃ b`), held
+   * as text while the caret is there (spec/placeholders.md), as the caret leaves it:
+   * - `repair` (the default, as Tine, Roam, Athens, Tana, Dynalist, WorkFlowy, Mubu, Moo.do, SiYuan,
+   *   BlockNote, Lexical and AFFiNE keep it as a block's text, and bare Obsidian, its Live Preview, its
+   *   Outliner and true-outliner keep it, re-indenting the children): it stays, the user's whitespace,
+   *   written as the text's padding (`-  b`), its children and later lines moved right with it, a
+   *   marker after it escaped (`-  \``` x`), past three columns the rest gone (four would make code).
+   * - `trim` (as Logseq, Logseq DB and RemNote, which trim a block's edges as they store it): it goes,
+   *   the text escaped where it would start a block (`- \``` x`).
+   * On a later line of the text it goes either way. Backspace after it and Delete before it take it,
+   * as any character. Not `enterSplitSpace`'s, which says what a split does with the spaces at the
+   * caret: the Obsidians drop those, and keep this one.
+   */
+  readonly heldSpace: 'repair' | 'trim';
+
+  /**
    * Enter on an empty item that isn't the last of its list:
    * - `sibling` (the default, as in Logseq, Tine, WorkFlowy, Dynalist, Tana and RemNote with bullets):
    *   a new empty item, at any depth.
@@ -420,11 +436,22 @@ export interface OurusConfig {
    *   selection's end) puts them.
    * What is pasted as text (one line put in at the caret, plain lines going into the text, code into
    * code) replaces the selection either way, as typing does; so does anything over a partial
-   * selection across nodes. Over nodes selected whole (a subtree selection): `replace` puts the
-   * clipboard's nodes in their place; `ignore` keeps them and puts the clipboard's nodes right after
-   * the last, as Tana does (the other block apps measured paste nothing there).
+   * selection across nodes. Over nodes selected whole, `pasteOverNodes` says.
    */
   readonly pasteOverSelection: 'replace' | 'ignore';
+
+  /**
+   * Paste and plain paste over nodes selected whole (a subtree selection, spec/subtree-selection.md):
+   * - `replace` (the default, as BlockNote and Roam, and Dynalist, which pastes list markers as text):
+   *   the clipboard's nodes in their place, the caret at the end of what was pasted; a plain paste one
+   *   node in their place, under the first's prefix. (SiYuan pastes at the document's start; AFFiNE,
+   *   Lexical, Mubu and Moo.do select a block's text, not blocks.)
+   * - `after` (as Tana): the nodes kept, the clipboard's right after the last, where a paste at the
+   *   selection's end puts them; a plain paste as `replace`.
+   * - `nothing` (as Logseq, Logseq DB, Tine, Athens, RemNote and WorkFlowy): neither pastes anything,
+   *   the key taken and the nodes still selected, as typing over them is.
+   */
+  readonly pasteOverNodes: 'replace' | 'after' | 'nothing';
 
   /**
    * Paste (Ctrl-V, `paste`) of plain lines, a clipboard of paragraphs only (spec/paste.md):
@@ -583,6 +610,7 @@ const CONFIG_VALUES: { readonly [K in Exclude<keyof OurusConfig, ListOption>]: r
   listMoves: ['list', 'item'],
   // Enter, the key pressed most
   enterSplitSpace: ['trim', 'drop', 'start'],
+  heldSpace: ['repair', 'trim'],
   enterOnEmptyItem: ['sibling', 'outdent', 'exit', 'unwrap'],
   enterMidItem: ['sibling', 'child'],
   enterAtTextStart: ['into', 'stay'],
@@ -603,6 +631,7 @@ const CONFIG_VALUES: { readonly [K in Exclude<keyof OurusConfig, ListOption>]: r
   copySelection: ['text', 'nodes'],
   pasteSeams: ['closed', 'open'],
   pasteOverSelection: ['replace', 'ignore'],
+  pasteOverNodes: ['replace', 'after', 'nothing'],
   pasteLines: ['text', 'items'],
   pastePlainLines: ['text', 'items', 'enter', 'host'],
   pasteAtTextStart: ['after', 'before'],

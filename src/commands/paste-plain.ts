@@ -63,7 +63,16 @@ function itemLines(ctx: CommandContext, clipboard: string): OurusResult | null {
  * the text splitting at each break, the last line the text after the caret's (PastePlain31).
  */
 function enteredLines(ctx: CommandContext, clipboard: string): OurusResult | null {
-  if (!ctx.collapsed) return afterDeleting(ctx, (next) => enteredLines(next, clipboard));
+  if (!ctx.collapsed) {
+    // (a selection in a quote read as an atom goes as its lines' edit does, the quote its text: then typed into)
+    const quote = quoteAtomAt(ctx);
+    if (!quote) return afterDeleting(ctx, (next) => enteredLines(next, clipboard));
+    const cleared = linesInQuote(ctx, quote, ['']);
+    if (!cleared || !(cleared instanceof OurusSuccess)) return cleared;
+    const typed = enteredLines(new CommandContext(cleared.view, cleared.selection), clipboard);
+    if (!typed || !(typed instanceof OurusSuccess)) return typed;
+    return new OurusSuccess({ ...typed, ...blockIdsDeclaredBy([cleared, typed]), changes: composeChanges(ctx.doc.text, cleared.changes, typed.changes) });
+  }
   const lines = clipboard.split(/\r\n|\r|\n/);
   let next: CommandContext = ctx;
   let changes: readonly ChangeSpec[] = [];
@@ -71,35 +80,46 @@ function enteredLines(ctx: CommandContext, clipboard: string): OurusResult | nul
   // (each step's result, for what they declared about block ids together)
   const steps: OurusResult[] = [];
   for (const [k, line] of lines.entries()) {
-    const at = line ? textActedOnAt(next, next.selection.head) : null;
-    if (line && !at && (k === 0 || next.view.locate(next.selection.head).zone !== 'gap')) return k === 0 ? new OurusDeferred('the caret is outside a text') : null;
-    if (line && !at) {
-      // (on the blank line an Enter left, a quote's `> ` under `enterInQuote: line`: typed as the host types it)
-      const head = next.selection.head;
-      const typed = [{ from: head, to: head, insert: line }];
-      const caret = head + line.length;
-      result = new OurusSuccess({ view: next.update({ changes: typed, caret }), changes: typed, selection: { anchor: caret, head: caret } });
-      changes = composeChanges(ctx.doc.text, changes, typed);
-      next = new CommandContext(result.view, result.selection);
-    }
-    // (at the text's start, without the spaces it starts with, which would be padding there)
-    const typed = at && trimMd(at.text.text.slice(at.text.textStart(0), at.offset)) === '' ? line.replace(/^[ \t]+/, '') : line;
-    if (at && typed) {
-      // (before the spaces a text starts with, its padding (an Enter's second half under
-      // `enterSplitSpace: start`), where the caret is: what is typed goes before them, as a host types
-      // it, and they are text after it)
-      const hidden = at.offset === 0 && ctx.collapsed ? next.doc.hiddenSpaces(at.node) : null;
-      const hiddenBefore = hidden && next.selection.head === hidden.from && hidden.to > hidden.from ? next.doc.text.slice(hidden.from, hidden.to) : '';
-      // (right before a block id with no blank before it, `- ┃^x` after a selection went: a blank
-      // between, as typing puts one, so that it ends the text still, the caret before it)
-      const glued = at.text instanceof OurusProse && at.text.text[at.offset] === '^' && at.text.frame.some((p) => p.part === 'blockId' && p.from === at.offset);
-      const before = hiddenBefore || (glued ? ' ' : '');
-      const draft = next.draft().setText(at.node, at.text.splice(at.offset, at.offset, typed + before)).setCaret(at.node, at.offset + typed.length, -1);
-      result = next.apply(hiddenBefore ? draft.padding(at.node.id, 0) : draft);
+    // (in a quote read as an atom, the line typed into it, as plain paste puts a quote's lines
+    // (`linesInQuote`), the Enter after it the key's in a quote (`enterInQuote`): PastePlain18)
+    const quote = line ? quoteAtomAt(next) : null;
+    if (quote) {
+      result = linesInQuote(next, quote, [line]);
       if (!result || !(result instanceof OurusSuccess)) return result;
       steps.push(result);
       changes = composeChanges(ctx.doc.text, changes, result.changes);
       next = new CommandContext(result.view, result.selection);
+    } else {
+      const at = line ? textActedOnAt(next, next.selection.head) : null;
+      if (line && !at && (k === 0 || next.view.locate(next.selection.head).zone !== 'gap')) return k === 0 ? new OurusDeferred('the caret is outside a text') : null;
+      if (line && !at) {
+        // (on the blank line an Enter left, a quote's `> ` under `enterInQuote: line`: typed as the host types it)
+        const head = next.selection.head;
+        const typed = [{ from: head, to: head, insert: line }];
+        const caret = head + line.length;
+        result = new OurusSuccess({ view: next.update({ changes: typed, caret }), changes: typed, selection: { anchor: caret, head: caret } });
+        changes = composeChanges(ctx.doc.text, changes, typed);
+        next = new CommandContext(result.view, result.selection);
+      }
+      // (at the text's start, without the spaces it starts with, which would be padding there)
+      const typed = at && trimMd(at.text.text.slice(at.text.textStart(0), at.offset)) === '' ? line.replace(/^[ \t]+/, '') : line;
+      if (at && typed) {
+        // (before the spaces a text starts with, its padding (an Enter's second half under
+        // `enterSplitSpace: start`), where the caret is: what is typed goes before them, as a host types
+        // it, and they are text after it)
+        const hidden = at.offset === 0 && ctx.collapsed ? next.doc.hiddenSpaces(at.node) : null;
+        const hiddenBefore = hidden && next.selection.head === hidden.from && hidden.to > hidden.from ? next.doc.text.slice(hidden.from, hidden.to) : '';
+        // (right before a block id with no blank before it, `- ┃^x` after a selection went: a blank
+        // between, as typing puts one, so that it ends the text still, the caret before it)
+        const glued = at.text instanceof OurusProse && at.text.text[at.offset] === '^' && at.text.frame.some((p) => p.part === 'blockId' && p.from === at.offset);
+        const before = hiddenBefore || (glued ? ' ' : '');
+        const draft = next.draft().setText(at.node, at.text.splice(at.offset, at.offset, typed + before)).setCaret(at.node, at.offset + typed.length, -1);
+        result = next.apply(hiddenBefore ? draft.padding(at.node.id, 0) : draft);
+        if (!result || !(result instanceof OurusSuccess)) return result;
+        steps.push(result);
+        changes = composeChanges(ctx.doc.text, changes, result.changes);
+        next = new CommandContext(result.view, result.selection);
+      }
     }
     if (k === lines.length - 1) break;
     // (an Enter as typed, in a quote too, but not the key's quirks: the text typed, each line break an Enter)

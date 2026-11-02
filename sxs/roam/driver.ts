@@ -40,6 +40,8 @@ function toRoam(depth: number, text: string): RoamBlock & { from: number; to: nu
     const rest = toRoam(depth, text.slice(n[0].length));
     return { ...rest, from: rest.from + n[0].length, numbered: true, ...(rest.cut !== undefined && { cut: rest.cut + n[0].length }) };
   }
+  // a `#` that is text, likewise (a heading is an attribute, its string plain text: Enter9)
+  if (/^\\#/.test(text)) return { depth, string: text.slice(1), heading: 0, from: 0, to: 0, numbered: false, cut: 0 };
   // a number that is text: escaped in the canonical text, not in Roam's, which has no Markdown to
   // escape in (`cut`, where the escape was)
   const literal = /^(\d{1,9})\\(?=[.)])/.exec(text);
@@ -64,8 +66,11 @@ function fromRoam(b: RoamBlock, number: number | null): { text: string; from: nu
   // a number that is text, escaped also after a numbered block's own number (`2. 2\. x`)
   const pre = number !== null ? `${number}. ` : '';
   const literal = /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(t.text);
-  const text = literal ? t.text.slice(0, literal[0].length) + '\\' + t.text.slice(literal[0].length) : t.text;
-  return { text: pre + text, from: t.from, to: t.to + pre.length, ...(literal && { cut: t.to + pre.length + literal[0].length }) };
+  // and a `#` that is text, which the canonical text would read as a heading's (`\# x`)
+  const hash = !b.heading && /^#{1,6}(?=[ \t]|$)/.test(t.text);
+  const text = literal ? t.text.slice(0, literal[0].length) + '\\' + t.text.slice(literal[0].length) : hash ? '\\' + t.text : t.text;
+  const cut = literal ? t.to + pre.length + literal[0].length : hash ? t.to + pre.length : undefined;
+  return { text: pre + text, from: t.from, to: t.to + pre.length, ...(cut !== undefined && { cut }) };
 }
 
 function fromRoamText(b: RoamBlock): { text: string; from: number; to: number } {
@@ -98,6 +103,11 @@ export const driver: Driver = {
   // after deleting the page's every block no block is edited (DeleteSubtree6); with a block above, its end.
   // A drop leaves the focus on the pressed bullet, a block's caret lost but for the dragged block's (MoveSubtree2)
   noCaretAfter: ['deleteSubtree', 'moveSubtree'],
+  // Roam saves a block's text 700 ms after the last input, and a key that lands as the save runs is
+  // lost (a Backspace after Shift+Enter: ShiftEnter11, 12, 13, 28, measured with the page's CPU slowed
+  // 6×, the Backspace sent 675 to 700 ms after; one in a hundred plays under a run of every app): the
+  // save done before each action
+  drainBefore: 1000,
   // a selection of whole blocks: loaded with Escape and Shift+Down, read from their highlight
   selectsBlocks: true,
   // a block closed (`open: false`; read on screen, a shown block's children not drawn: a key's fold
@@ -123,8 +133,9 @@ export const driver: Driver = {
     expandSelection: 'Control+a',
     selectNodeDown: 'Shift+ArrowDown',
     selectNodeUp: 'Shift+ArrowUp',
-    // the first Escape does nothing, the second selects the block
-    selectNode: ['Escape', 'Escape'],
+    // Escape selects the block being edited, with its children (highlighted); a second Escape clears
+    // the selection (`load` clears one an earlier test left: Select1)
+    selectNode: 'Escape',
     deleteSoftLineBackward: ['Shift+Home', 'Backspace'],
     copy: 'Control+c',
     cut: 'Control+x',
@@ -176,9 +187,13 @@ export const driver: Driver = {
   // (measured), so Enter in math splits the block (`enter-in-fence`)
   refuses: ['code block', 'markup-heading', 'markup-task', 'markup-fence', 'enter-in-fence'],
   ordered: true,
+  // a heading is the block's attribute, and a string starting `# ` text (`fromRoam` escapes it)
+  headings: true,
   holds(doc) {
     const o = doc as Outline;
     if (o.blocks.some((b) => /^#{4,6} /.test(b.text.replace(/^\d{1,9}\. /, '')))) return 'heading deeper than H3';
+    // a heading with no text, `#` alone: no heading here has no text, and the text `#` reads as `\#` (Regression168)
+    if (o.blocks.some((b) => /^#{1,6}$/.test(b.text))) return 'heading with no text (# alone), which Roam holds as the text #';
     // numbering is a parent's: all its children numbered, from 1, or none
     const kids = new Map<number, number[]>();
     const path: number[] = [];
@@ -227,6 +242,17 @@ export const driver: Driver = {
     // (blocks selected whole: the first opened at its start, to select from with the keys below)
     const selected = o.selected?.length ? o.selected : null;
     const sel = o.sel ? { block: o.sel.block, anchor: at(o.sel.anchor, blocks[o.sel.block]!), head: at(o.sel.head, blocks[o.sel.block]!) } : selected && { block: selected[0]!, anchor: 0, head: 0 };
+    // a block selection outlives its page (Roam's): the last test's, left on a page since deleted, would
+    // take this test's first Escape, which clears it rather than selecting (two Escapes were `selectNode`
+    // till 2026-11-03, the first clearing what a test before left, the second selecting: on a clean start
+    // they selected and cleared). So the start has none: Escape, nothing edited, clears it
+    const leftover = () => page.evaluate(() => (((window as any).roamAlphaAPI.ui.multiselect.getSelected() as unknown[] | undefined) ?? []).length > 0);
+    for (let i = 0; i < 3 && (await leftover()); i++) {
+      await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+      await page.keyboard.press('Escape');
+      await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 50, timeout: 3000 }));
+    }
+    if (await leftover()) throw new Error("a block selection the last test left doesn't clear (Escape)");
     pageState(page).current = await page.evaluate(
       async ({ blocks, sel, previous, view }) => {
         const api = (window as any).roamAlphaAPI;

@@ -150,6 +150,16 @@ where the next is drawn), then presses the handle and drops at the place's block
   editor blurred, a collapsed selection: `caret`). There is no selection of blocks apart from text: the
   driver selects from the first block's content start to the end of the last one's subtree, and
   `read` reports a selection from a block's start to another's end, or a node selection, as blocks.
+- **A side menu frozen for good** (a BlockNote bug, found 2026-11-03): a press on the drag handle
+  that starts no drag is a click, which opens the handle's own menu, and that freezes the side menu
+  (`menuFrozen`, so the menu stays put while its dropdown is open). Only the dropdown's closing
+  unfreezes it; a key in the editor hides the side menu, the dropdown with it, unclosed, and from then
+  on the side menu ignores the mouse: no menu comes on any block, and no drag starts in that window
+  again (reproduced: a click on the handle, the editor focused, one key, then hovering anything; a
+  user can meet it too). Under a full run's load a press could fail to start its drag, and the next
+  drags failed so: MoveSubtree5 and MoveSubtree6, both or neither, in about half the full runs ("the
+  side menu didn't come at the pressed block: menu none"). The driver unfreezes it
+  (`getExtension('sideMenu').unfreezeMenu()`) as each test loads and before and after each drag.
 - **Tab on text selected across blocks goes to the formatting toolbar**, which a selection of text
   shows, nesting nothing, and Shift+Tab back out of the editor, unnesting nothing (Indent9, Indent27,
   Outdent8, Outdent10, Outdent12 disagree; its `nestBlock` would nest them).
@@ -204,3 +214,9 @@ Each played in a probe and, where it decides, read in BlockNote's source (v0.55.
   leaves the editor (`outdent.md › DirectOutdent2`, `3`).
 - **Pasted lines go into the block**, as line breaks, with either key (`paste-old.md › PasteOld3`, `PasteOld7`).
 - **Moves carry the block's children** (`move-subtree-up.md › MoveUp1` agrees).
+
+## Options measured by rejudging (2026-11-02)
+
+Each value of ourus's options judged against the stored run (the app's states as they are, ourus
+replayed under the value: `OURUS_SXS_BEHAVES` with `--rejudge`): `selectionLadder: top`, Ctrl+A's
+ladder the text then every block (Select2 to Select4, Select6, Select8, Select9; no case worse).

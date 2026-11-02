@@ -54,16 +54,19 @@ export function editSubtrees(ctx: CommandContext, command: OurusCommand): OurusR
     case 'insertText':
       return new OurusSuccess({ view: ctx.view, changes: [], selection: ctx.selection });
     case 'pastePlain':
+      // (`pasteOverNodes: nothing`: as typing is, the key taken, nothing pasted, the nodes still selected)
+      if (ctx.config.pasteOverNodes === 'nothing') return new OurusSuccess({ view: ctx.view, changes: [], selection: ctx.selection });
       return inPlace(ctx, roots, (next) => pastePlainCommand(next, command.text), command.text);
     case 'paste': {
+      if (ctx.config.pasteOverNodes === 'nothing') return new OurusSuccess({ view: ctx.view, changes: [], selection: ctx.selection });
       const parentOf = (n: OurusNode) => (n.parent!.kind === 'root' ? ('root' as const) : n.parent!.id);
-      // `pasteOverSelection: ignore`: the roots kept, the clipboard's nodes right after the last
-      // (where a caret at the selection's end pastes them, Tana's); else the roots out, the nodes
-      // where the first was
+      // `pasteOverNodes: after`: the roots kept, the clipboard's nodes right after the last (where a
+      // caret at the selection's end pastes them, Tana's); else the roots out, the nodes where the
+      // first was
       const first = roots[0]!;
       const last = roots[roots.length - 1]!;
       const pasted =
-        ctx.config.pasteOverSelection === 'ignore'
+        ctx.config.pasteOverNodes === 'after'
           ? pasteAtCommand(ctx, command.clipboard, { parent: parentOf(last), after: last.id })
           : composed(ctx, deleteSubtreeCommand(ctx), (next) => pasteAtCommand(next, command.clipboard, { parent: parentOf(first), after: first.prev?.id ?? null }));
       if (!(pasted instanceof OurusSuccess)) return pasted;

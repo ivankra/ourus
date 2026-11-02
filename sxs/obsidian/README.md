@@ -69,10 +69,11 @@ the app's objects the driver uses: [`stack.md`](stack.md).
 
 ## Running it
 
-Obsidian has no web app, so it doesn't run in the shared browser: the driver starts it (its
-`launch`), and the runner drives its window over the DevTools protocol. Obsidians of the driver's own
-are shared instead, as the pool's browsers are: one Obsidian opens any number of vaults, each in a
-window of its own (its own `app`, settings and plugins), so every setup's runs share a pool of them.
+Obsidian has no web app, so it doesn't run in the pool's browsers: the pool ([`../pool.ts`](../pool.ts))
+runs Obsidians instead ([`instance.ts`](instance.ts)), and the driver leases a window of one (its
+`launch`), which the runner drives over the DevTools protocol. One Obsidian opens any number of
+vaults, each in a window of its own (its own `app`, settings and plugins), so every setup's runs share
+the instances.
 
 - **The app.** [obsidian-launcher](https://www.npmjs.com/package/obsidian-launcher) (a dev
   dependency) downloads Obsidian into `.sxs/obsidian/files/` (shared by the setups, which take turns by
@@ -80,23 +81,23 @@ window of its own (its own `app`, settings and plugins), so every setup's runs s
   JavaScript, an `.asar`) and the installer (Electron, an AppImage, unpacked: no FUSE needed).
   `OBSIDIAN_VERSION` picks the app's version (`latest` by default); the installer is the latest one
   that runs it.
-- **The pool.** Instance n is `<state>/obsidian/<n>/`: its configuration directory (`config/`, Electron's
-  `--user-data-dir`: auto-update off, no vault, the app's `.asar` linked in), its log
-  (`obsidian.log`), debugging port (`port`, a free one), versions (`version`) and pid (`server.pid`), so
-  it never touches an Obsidian installed on the machine. Started with no vault, it opens its starter
-  window (the vault chooser), which keeps it running with no vault open between one setup's window and
-  the next; it is started detached, and stopped as the last window a run has in it closes (at a
-  worker's release, `pool.lock` held: a worker taking it then starts another), or by `run.ts --stop`.
-  A worker takes an instance of the versions to run with no window of its setup in use (`<setup>.lock`,
-  held for the run), else starts one at the first number none runs at while fewer than the pool's
-  size run, else waits for room (`pool.lock` around each look). Starting takes
+- **The instances.** Instance n is `<state>/obsidian/<n>/`: its configuration directory (`config/`,
+  Electron's `--user-data-dir`, written anew at each start: auto-update off, no vault, the app's `.asar`
+  linked in) and its log (`obsidian.log`), so it never touches an Obsidian installed on the machine.
+  Started with no vault, it opens its starter window (the vault chooser), which keeps it running with
+  no vault open between one setup's window and the next; the pool starts it as its child, and stops it
+  once it has had no window for ten minutes, or with `run.ts --stop`. A worker gets the setup's window
+  a run released cleanly where the setup is as it was (its versions, configuration, plugins and keys:
+  the lease's `key`), else an instance with no window of its setup (one started while fewer than three
+  run, `OURUS_SXS_OBSIDIANS`), else waits for room. Starting takes
   about 2.5 s once downloaded; a vault's window opens in about 0.35 s. An instance is some 95 tasks, and
   a window some 25 more (the old way, an Obsidian per worker: some 105 each).
-- **The vault**, `<state>/obsidian/<n>/<setup>/`, is written anew for each run: its `.obsidian/app.json`
+- **The vault**, `<state>/obsidian/<n>/<setup>/`, is written anew for each new window: its `.obsidian/app.json`
   (`useTab`, `livePreview` for the setup's editing mode), `hotkeys.json`, and each plugin's
   `data.json` (a setup's `pluginData`). It is opened from the starter window (Obsidian's `vault-open`
-  message, as the chooser does), and its window is closed when the run releases it (a window a run left
-  some other way is closed before the vault is written anew). Each test makes a note there
+  message, as the chooser does). Released cleanly, its window stays open for the next run of the
+  setup; released otherwise, or its run gone, the pool closes it and removes the vault (a window it
+  couldn't close is closed before the vault is written anew). Each test makes a note there
   (`ourus-<n>.md`, `app.vault.create`) and opens it in the editor, so that it starts with no history to
   undo (a file switch gives the editor a new state); the last test's note is deleted once the new one is
   open. The caret is placed with a CodeMirror transaction, and reading is the editor's state.
@@ -111,7 +112,7 @@ window of its own (its own `app`, settings and plugins), so every setup's runs s
   asks the main process for the window's vault). `open` stops the run unless every plugin the vault
   enables has loaded, and the version line names each with its version.
 - **Shared within an instance**: its clipboard, which a worker holds for an example that uses it
-  (`clipboard.lock`), and its local storage (Obsidian keys its own by the vault's id; neither plugin
+  (the pool's turn, `Lease.clipboard`), and its local storage (Obsidian keys its own by the vault's id; neither plugin
   uses it). The focus is each window's (Playwright emulates it per page), so windows take keys at once.
 - **A display.** On Linux without `DISPLAY` (or without `--headed`) an instance gets an Xvfb of its
   own, which picks a free display itself (`-displayfd`) and exits with its last client (`-terminate`),
@@ -119,8 +120,8 @@ window of its own (its own `app`, settings and plugins), so every setup's runs s
   (`.sxs/obsidian/headed/`), stopped at the run's end.
 - **Offline.** Its proxy is a port nothing listens on, so nothing it would fetch (an update, the
   plugin list) changes what is tested.
-- **Stopping** (`run.ts --stop`) kills an instance's process group; its configuration directory is
-  written anew at its next start.
+- **Stopping** (`run.ts --stop`, the pool's idle stop, or the pool gone: its children die with it)
+  kills an instance's process group; its configuration directory is written anew at its next start.
 
 **A load that never ends.** Twice in about 2,400 loads, loading a note failed 11 ms in with
 "Resulting promise was garbage collected": one of Obsidian's calls (`vault.create`, or `openFile`) gave
@@ -136,13 +137,11 @@ content has the page's focus; another element's focus (the note's title, after U
 is still no caret. Each read that only this kept is recorded in the instance's `focus.log` ("window
 unfocused, visible"): one in two full runs of the four setups, which then came out alike.
 
-**Concurrent runs.** Each setup is one run's at a time: the runner takes `.sxs/<name>/<name>.lock`
-(the run's pid, linked into place whole, so taken atomically), and a second run of the same setup
-stops with "another run has …"; a lock whose run is gone is taken over. The pool has at most four
-instances (full, some 800 tasks), or as many as `OURUS_SXS_OBSIDIANS` says: `run.ts` says 2 for a run
-of several apps with Chromium's among them, the pool's four browsers some 950 tasks full beside them under
-the container's cap (2048); one past the size is stopped once no run has a window in it. So a run has
-up to four workers, or two (`parallel`,
+**Concurrent runs.** Each setup is one run's at a time (a lock in the pool, held while the run's
+process lives), and a second run of the same setup stops with "another run has …". The pool has at
+most three instances (full, some 600 tasks), or as many as `OURUS_SXS_OBSIDIANS` says, and starts none
+that would bring the container near its cap on tasks (2048 here) with the browsers' windows beside
+them. So a run has up to three workers (`parallel`,
 `--workers`), each a window in an instance of its own: a run's workers in different instances, runs of
 different setups side by side in the same ones (a window of each setup in an instance at most); with
 the pool full, a worker waits for room. What they share is an instance's process, clipboard (held by the example

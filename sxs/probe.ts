@@ -23,7 +23,7 @@ import { docOf, drawDoc, drawLabels, drawnSelection, drawOutline, drawsCaret, dr
 import type { OurusDoc } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
 import { isAction, play, type Played } from '../test/player.ts';
-import { drawDropPoints, Labels, normalize, outcome, readClipboard, rowView } from '../test/spec-run.ts';
+import { drawDropPoints, Labels, normalize, outcome, readClipboard, rowView, viewOf } from '../test/spec-run.ts';
 import { drawView } from './lib/view.ts';
 import { actionsLine, readSpec, specConfig, TAGS, tokenize, type Clipboard, type SpecTest } from '../test/specfile.ts';
 import { appNames, drivers, resolveApps } from './lib/apps.ts';
@@ -80,6 +80,8 @@ interface Probe {
   tags: string[];
   /** A spec case's drawings of its steps (`--case`), to set beside ourus's. */
   drawn?: (string | undefined)[];
+  /** A spec case's own (a file's too): its view, `folded:` and `zoom:`, by the start's labels; and the case, to apply it. */
+  test?: SpecTest;
   /** Given on the command line: its name is made up (`P1`), and not shown. */
   unnamed?: true;
 }
@@ -226,6 +228,7 @@ const fromCase = (t: SpecTest, o: Args): Probe => ({
   clipboard: t.initial.clipboard ? readClipboard(t.initial.clipboard) : clipboardOf(o),
   tags: [...new Set([...t.tags, ...o.tags])],
   drawn: t.steps.map((s) => s.expect.buffer),
+  test: t,
 });
 
 function probesOf(o: Args): Probe[] {
@@ -261,7 +264,7 @@ interface OurStep {
   clipboard?: string;
   /** After a pickup (`drag`): the places it offers, drawn as `dropPoints:` draws them. */
   dropPoints?: string;
-  /** The folds in effect and the zoom after the step, where there are any (`⟦folded 2; zoom 1⟧`, rows from 1). */
+  /** The buffer with the folds in effect and the zoom after the step on its rows (`⟦folded⟧`, `⟦zoomed⟧`), where there are any. */
   view?: string;
 }
 
@@ -306,7 +309,8 @@ function playOurus(p: Probe, config: Record<string, string>, labels = false): Ou
   // (the start's labels, for a drop that names one)
   const named = new Labels();
   named.check(doc, start.labels, null);
-  const view = OurusView.of(doc);
+  // (a case's view, its `folded:` and `zoom:`, as the spec runs it)
+  const view = p.test && (p.test.view.folded !== undefined || p.test.view.zoom !== undefined) ? viewOf(p.test, doc, named.ids) : OurusView.of(doc);
   let state: Played = { view, selection: drawnSelection(view, start), clipboard: p.clipboard, drop: start.drop, labels: named.ids };
   const labelling = labels ? new Labelling(state.view.doc, start.labels) : null;
   const out: OurStep[] = [];
@@ -324,16 +328,18 @@ function playOurus(p: Probe, config: Record<string, string>, labels = false): Ou
       broken = `throws: ${e instanceof Error ? e.message : String(e)}`;
     }
     const text = state.view.doc.text;
+    const buffer = normalize(labelling ? labelling.draw(drawDoc(state.view, state.selection), state.view.doc) : drawDoc(state.view, state.selection));
     out.push({
       actions,
-      buffer: normalize(labelling ? labelling.draw(drawDoc(state.view, state.selection), state.view.doc) : drawDoc(state.view, state.selection)),
+      buffer,
       drawable: text === '' || /[\r\n]$/.test(text),
       result: outcome(state),
       outline: drawOutline(state.view.doc),
       ...(broken ? { broken } : {}),
       ...(actions.some((a) => a === 'copy' || a === 'cut') && state.clipboard['text/plain'] !== undefined ? { clipboard: state.clipboard['text/plain'] } : {}),
       ...(state.last instanceof OurusSuccess && state.last.dropMap ? { dropPoints: drawDropPoints(state.view, state.last.dropMap, state.selection) } : {}),
-      ...(state.view.zoomFolded.size || state.view.zoom !== null ? { view: drawView(rowView(state.view)).trim() } : {}),
+      // (the buffer with its view on its rows, `⟦folded⟧`, `⟦zoomed⟧`, printed in its place)
+      ...(state.view.zoomFolded.size || state.view.zoom !== null ? { view: drawView(buffer, rowView(state.view)) } : {}),
     });
     if (broken) break;
   }
@@ -428,16 +434,14 @@ interface AppResult {
 
 async function runApps(apps: readonly string[], all: Map<string, Driver>, specFile: string, dir: string, pass: readonly string[], say: (line: string) => void, done: (r: AppResult) => void = () => {}): Promise<AppResult[]> {
   await ensureProxy(cacheMode([...pass]), say);
-  // Obsidian's instances fewer with the pool's browsers beside them, as a run of several apps has it
-  if (apps.some((a) => !all.get(a)!.launch)) process.env.OURUS_SXS_OBSIDIANS ??= '2';
   const runner = fileURLToPath(new URL('./run.ts', import.meta.url));
   return Promise.all(
     apps.map(async (app) => {
       const t0 = Date.now();
       const json = join(dir, `${app}.json`);
       const log = openSync(join(dir, `${app}.log`), 'w');
-      // the app's window kept loaded for the next probe, which then takes it over rather than loading it
-      const child = spawn(process.execPath, [...process.execArgv, runner, app, `--probe=${specFile}`, `--json=${json}`, '--no-report', '--keep-windows', ...pass], { stdio: ['ignore', log, log] });
+      // the app's window released cleanly is kept loaded by the pool: the next probe takes it over rather than loading it
+      const child = spawn(process.execPath, [...process.execArgv, runner, app, `--probe=${specFile}`, `--json=${json}`, '--no-report', ...pass], { stdio: ['ignore', log, log] });
       const code = await new Promise<number>((done) => child.on('exit', (c) => done(c ?? 1)));
       closeSync(log);
       const seconds = (Date.now() - t0) / 1000;
@@ -515,8 +519,7 @@ async function main(): Promise<void> {
         for (const [k, s] of run.steps.entries()) {
           // ourus's result where it didn't apply (a refusal, the host's), on the actions' line
           out(cyan(`> ${s.actions.join(' ')}${s.result === 'success' ? '' : `  (ourus: ${s.result})`}${s.broken ? `  !! ${s.broken}` : ''}`));
-          verbatim(s.buffer);
-          if (s.view !== undefined) out(s.view);
+          verbatim(s.view ?? s.buffer);
           if (s.clipboard !== undefined) out(`clipboard: ${JSON.stringify(s.clipboard)}`);
           if (s.dropPoints !== undefined) {
             out('dropPoints:');

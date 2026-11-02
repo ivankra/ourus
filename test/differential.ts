@@ -147,7 +147,7 @@ const configs: Record<string, unknown>[] = [
   { outdent: 'logical' }, { bullet: '*' }, { enterOnEmptyItem: 'outdent' }, { enterOnEmptyItem: 'exit' }, { enterOnEmptyItem: 'unwrap' }, { enterMidItem: 'child' }, { enterAtTextStart: 'stay' },
   { backspaceAtTopItem: 'refuse' }, { backspaceAtItemStart: 'body' }, { backspaceAtItemStart: 'unwrap' }, { backspaceAtItemStart: 'logseq' }, { quirkEnterMidHeading: 'workflowy' }, { quirkPasteCaret: 'roam' }, { quirkPasteCaret: 'athens' }, { quirkPasteText: 'dynalist' }, { emptyItemWithChildren: 'refuse' }, { joinWithChildren: 'refuse' }, { handleFenceContents: false },
   { headingEditing: 'block' }, { taskEditing: 'text' }, { taskEditing: 'block' }, { taskEditing: 'unwrap' }, { enterTask: 'plain' }, { enterSplitSpace: 'drop' }, { enterSplitSpace: 'start' }, { pasteLines: 'items' }, { pastePlainLines: 'items' }, { pastePlainLines: 'enter' }, { pasteOnParent: 'after' },
-  { pasteSeams: 'open' }, { pasteOverSelection: 'ignore' }, { pasteAtTextStart: 'before' }, { pasteParagraphList: 'children' }, { pasteListForm: 'own' }, { copyAtCaret: 'host' }, { copySelection: 'nodes' },
+  { pasteSeams: 'open' }, { pasteOverSelection: 'ignore' }, { pasteOverNodes: 'after' }, { pasteOverNodes: 'nothing' }, { heldSpace: 'trim' }, { pasteAtTextStart: 'before' }, { pasteParagraphList: 'children' }, { pasteListForm: 'own' }, { copyAtCaret: 'host' }, { copySelection: 'nodes' },
   { markup: 'decorated' }, { autoClose: ['```', '~~~', '`'] }, { autoClose: [] }, { autoClose: ['```', '~~~', '`', '(', '[', '{'] }, { autoClose: ['```', '~~~', '[[', '(('] },
 ];
 const documents = Number(process.env.DIFF_DOCS ?? 1500);

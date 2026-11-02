@@ -1,10 +1,10 @@
 // Obsidian, the desktop app (see obsidian/README.md), as a driver to be made for each setup of it: bare,
 // or with plugins (`obsidianDriver`). It is an Electron app, not a web page, so the driver starts it
-// itself (`Driver.launch`): obsidian-launcher downloads the version asked for into
-// `.sxs/obsidian/files/`, and a worker opens a vault written for the run (its plugins installed) as a
-// window of an Obsidian of the driver's pool, which every setup shares as apps share the pool's
-// browsers (`obsidian/<n>/` in `stateDir`, `leaseInstance`); the runner drives the window over the DevTools
-// protocol. Under Linux without a display an instance gets an Xvfb of its own; it runs offline.
+// itself (`Driver.launch`): a worker leases a window of one of the pool's Obsidian instances
+// (`../pool.ts`, `instance.ts`; `obsidian/<n>/` in `stateDir`) and opens a vault written for it (its
+// plugins installed) there; released cleanly, the window stays open for the next run of the setup as it
+// is (`key`), else the pool closes it. The runner drives the window over the DevTools protocol. Under
+// Linux without a display an instance gets an Xvfb of its own; it runs offline.
 //
 // A Markdown editor (CodeMirror 6): the `text` model. Each test gets a note of its
 // own, opened in the editor so that it starts with no history to undo; the caret is placed through
@@ -17,19 +17,21 @@
 // whose starting buffer is already indented with tabs, or that tabs wouldn't give back as written
 // (`retabs`), is taken as written.
 
-import { spawn } from 'node:child_process';
-import { appendFileSync, closeSync, copyFileSync, linkSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
-import ObsidianLauncher, { type PluginEntry } from 'obsidian-launcher';
+import { createHash } from 'node:crypto';
+import { appendFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import type { PluginEntry } from 'obsidian-launcher';
 import { chromium, type BrowserContext, type Page } from 'playwright-core';
-import { recordServer, serverPid, stopServer } from '../lib/browser.ts';
-import { alive, freePort, sleep, startXvfb, takeLock } from '../lib/desktop.ts';
-import { record, recordDir } from '../lib/records.ts';
+import { pageOf, setLease, targetOf } from '../lib/browser.ts';
+import { sleep, takeLock } from '../lib/desktop.ts';
+import { Lease } from '../lib/pool-client.ts';
+import { record } from '../lib/records.ts';
+import { files, launcher, startInstance, versions } from './instance.ts';
 import { perPage, type Driver, type Drop } from '../lib/driver.ts';
 import { gesture } from '../lib/drag.ts';
 import { Unsupported } from '../lib/block.ts';
 import { ensureAptInstalled, type Need } from '../lib/system.ts';
-import { cacheDir, stateDir } from '../proxy.ts';
+import { stateDir } from '../proxy.ts';
 import { asSpaces, asTabs, retabs, tabbed } from '../lib/tabs.ts';
 import type { TextDoc } from '../lib/text.ts';
 
@@ -232,235 +234,20 @@ export const keepsCaretOnText =
 
 // ------------------------------------------------------------------ the app
 
-/** What obsidian-launcher downloads (the app, the installer, plugins), shared by every setup: `.sxs/obsidian/files/`, its lock beside it. */
-const files = join(cacheDir, 'obsidian', 'files');
-const launcher = new ObsidianLauncher({ cacheDir: files });
-
-/**
- * The versions to run (the app, the installer) and their downloads, resolved once a run. The downloads
- * are fetched by the launcher, not through the proxy: runs starting at once take turns, so a cold cache
- * downloads each once.
- */
-let resolved: Promise<{ app: string; installer: string; appPath: string; installerPath: string }> | undefined;
-const versions = (): NonNullable<typeof resolved> =>
-  (resolved ??= (async () => {
-    mkdirSync(files, { recursive: true });
-    const unlock = await takeLock(record(`${files}.lock`), true, "Obsidian's downloads");
-    try {
-      const [app, installer] = await launcher.resolveVersion(process.env.OBSIDIAN_VERSION?.trim() || 'latest', 'latest');
-      return { app, installer, appPath: await launcher.downloadApp(app), installerPath: await launcher.downloadInstaller(installer) };
-    } finally {
-      unlock();
-    }
-  })());
-
-/**
- * Obsidian's instances, shared by every setup's runs as the pool's browsers are by apps': instance n in
- * `obsidian/<n>/` in `stateDir` (this container's; its downloads, `files/`, stay in `.sxs/`). One Obsidian opens any number of vaults, each in a window of its own (its own
- * `app`, settings and plugins); an instance has at most one window of each setup (its vault
- * `<n>/<setup>/`, written anew for each run), a run's at a time (`<setup>.lock`), and one clipboard its
- * windows share (`clipboard.lock`). Beside them its configuration directory (`config/`, Electron's
- * `--user-data-dir`), log, debugging port, versions, and pid (`server.pid`, so that `run.ts --stop`
- * stops it). Started detached on an Xvfb of its own (gone with it), and stopped once no run has a window
- * in it (`release`: an idle instance is some 95 tasks); its starter window (the vault chooser, which it
- * opens with no vault) keeps it up between one setup's window and the next.
- */
-const pool = join(stateDir, 'obsidian');
-const instanceDir = (n: number | string): string => join(pool, String(n));
-/**
- * At most this many instances, each with a window of each setup at most: a setup's run has as many
- * workers at once (`parallel`). 4 (the pool, full, some 800 tasks: an instance some 95, a window 25), or
- * as `OURUS_SXS_OBSIDIANS` says: 2 in a run of several apps with apps of the pool's browsers among
- * them (`run.ts`), the two pools, full, under the container's cap on tasks (2048).
- */
-const obsidians = (): number => Number(process.env.OURUS_SXS_OBSIDIANS) || 4;
-const serverOf = (n: number): string => `obsidian/${n}`;
-
-/** Electron's flags. */
-const FLAGS = [
-  '--no-sandbox',
-  // /dev/shm is small in a container (64 MB), and several of them at once crash a renderer there
-  '--disable-dev-shm-usage',
-  // offline: nothing it fetches (an update, a plugin list) changes what is tested
-  '--proxy-server=127.0.0.1:9',
-  '--disable-renderer-backgrounding',
-  '--disable-background-timer-throttling',
-  '--disable-backgrounding-occluded-windows',
-];
-
-/** An instance a worker uses: its number (or `headed`), directory and debugging port, and its release. */
-interface Instance {
-  n: number | 'headed';
-  dir: string;
-  port: number;
-  release(): Promise<void>;
-}
-
-/** Whether a run has a window in instance n (a setup's lock in its directory, its holder running). */
-function held(n: number): boolean {
-  const locks = recordDir(instanceDir(n));
-  return readdirSync(locks)
-    .filter((f) => f.endsWith('.lock') && f !== 'clipboard.lock')
-    .some((f) => {
-      try {
-        return alive(Number(readFileSync(join(locks, f), 'utf8')));
-      } catch {
-        return false;
-      }
-    });
-}
-
-/** Instance n's debugging port, if it runs and answers there. */
-async function portOf(n: number): Promise<number | null> {
-  if (!serverPid(serverOf(n))) return null;
-  try {
-    const port = Number(readFileSync(record(join(instanceDir(n), 'port')), 'utf8'));
-    return (await fetch(`http://127.0.0.1:${port}/json/version`, { signal: AbortSignal.timeout(5000) }).then((r) => r.ok)) ? port : null;
-  } catch {
-    return null;
-  }
-}
-
-/** Starts an instance in `dir`, detached, on `display` (else an Xvfb of its own), once its debugging port answers. */
-async function startInstance(dir: string, display: string | undefined, say: (line: string) => void): Promise<{ pid: number; port: number }> {
-  const v = await versions();
-  const config = join(dir, 'config');
-  rmSync(config, { recursive: true, force: true });
-  mkdirSync(config, { recursive: true });
-  // no updates; no vault, so that it opens its starter window
-  writeFileSync(join(config, 'obsidian.json'), JSON.stringify({ updateDisabled: true }));
-  // the app's bundle, which the installer loads from its configuration directory
-  try {
-    linkSync(v.appPath, join(config, basename(v.appPath)));
-  } catch {
-    copyFileSync(v.appPath, join(config, basename(v.appPath)));
-  }
-  const xvfb = display ? null : await startXvfb(say, { detached: true });
-  const port = await freePort();
-  const log = join(dir, 'obsidian.log');
-  const out = openSync(log, 'w');
-  const proc = spawn(v.installerPath, [`--user-data-dir=${config}`, `--remote-debugging-port=${port}`, ...FLAGS], {
-    detached: true,
-    stdio: ['ignore', out, out],
-    env: { ...process.env, DISPLAY: display ?? xvfb!.display },
-  });
-  closeSync(out);
-  proc.unref();
-  const tail = (): string => readFileSync(log, 'utf8').split('\n').slice(-20).join('\n');
-  try {
-    for (const t0 = Date.now(); ; await sleep(100)) {
-      if (proc.exitCode !== null) throw new Error(`Obsidian exited (${proc.exitCode}):\n${tail()}`);
-      if (await fetch(`http://127.0.0.1:${port}/json/version`).then((r) => r.ok, () => false)) break;
-      if (Date.now() - t0 > 60000) throw new Error(`Obsidian's debugging port didn't answer in 60s:\n${tail()}`);
-    }
-  } catch (e) {
-    try {
-      process.kill(-proc.pid!);
-    } catch {}
-    xvfb?.proc.kill();
-    throw e;
-  }
-  writeFileSync(record(join(dir, 'port')), String(port));
-  writeFileSync(record(join(dir, 'version')), `${v.app} ${v.installer}`);
-  const name = `${v.app}${v.installer === v.app ? '' : ` (installer ${v.installer})`}`;
-  say(`started Obsidian ${name} in ${dir}${xvfb ? ` on Xvfb ${xvfb.display}` : ''} (pid ${proc.pid}, log ${log})`);
-  return { pid: proc.pid!, port };
-}
-
-/**
- * An instance for a worker of `setup`'s run, held for it (`<setup>.lock`) until released: a running
- * instance of the versions to run with no window of the setup's in use, else one started at the first
- * number none runs at while fewer than `obsidians()` run (one running that doesn't answer is left alone:
- * `--stop` stops it), else, the pool full, the first that has room, waited for until `gone` says the
- * worker is no longer wanted (null). Taken under the pool's lock, one worker at a time.
- */
-async function leaseInstance(setup: string, say: (line: string) => void, gone?: () => boolean): Promise<Instance | null> {
-  for (const t0 = Date.now(); ; await sleep(1000)) {
-    const got = await tryInstance(setup, say);
-    if (got) return got;
-    if (gone?.()) return null;
-    if (Date.now() - t0 < 1000) say(`Obsidian's ${obsidians()} instances have no room for ${setup}: waiting for a run to end`);
-  }
-}
-
-/** One look at the pool for `leaseInstance`: an instance, or null if the pool is full. */
-async function tryInstance(setup: string, say: (line: string) => void): Promise<Instance | null> {
-  mkdirSync(pool, { recursive: true });
-  const { app, installer } = await versions();
-  const unlockPool = await takeLock(record(join(pool, 'pool.lock')), true, "Obsidian's pool");
-  const hold = async (n: number): Promise<(() => void) | null> =>
-    takeLock(record(join(instanceDir(n), `${setup}.lock`)), false, `${setup}'s window in Obsidian ${n}`).catch((e: Error) => {
-      if (/^another run has/.test(e.message)) return null;
-      throw e;
-    });
-  const instance = (n: number, port: number, unlock: () => void): Instance => {
-    process.once('exit', unlock);
-    const release = async (): Promise<void> => {
-      process.off('exit', unlock);
-      unlock();
-      // the instance stopped with the last window a run had in it, under the pool's lock (a worker
-      // taking it then starts another)
-      const unlockPool = await takeLock(record(join(pool, 'pool.lock')), true, "Obsidian's pool");
-      try {
-        if (!held(n)) await stopServer(serverOf(n), say);
-      } finally {
-        unlockPool();
-      }
-    };
-    return { n, dir: instanceDir(n), port, release };
-  };
-  try {
-    // the instances with a directory or a record (one may run with its directory cleaned away)
-    const numbers = [...new Set([...readdirSync(pool), ...readdirSync(recordDir(pool))].filter((d) => /^\d+$/.test(d)).map(Number))].sort((a, b) => a - b);
-    for (const n of numbers) {
-      const port = await portOf(n);
-      let version = '';
-      try {
-        version = readFileSync(record(join(instanceDir(n), 'version')), 'utf8');
-      } catch {}
-      if (!port || version !== `${app} ${installer}`) continue;
-      // one past the pool's size (a run with a larger one left it): stopped once no run holds it
-      if (n >= obsidians()) {
-        if (!held(n)) await stopServer(serverOf(n), say);
-        continue;
-      }
-      const unlock = await hold(n);
-      if (unlock) return instance(n, port, unlock);
-    }
-    if (numbers.filter((n) => serverPid(serverOf(n))).length >= obsidians()) return null;
-    for (let n = 0; ; n++) {
-      if (serverPid(serverOf(n))) continue;
-      mkdirSync(instanceDir(n), { recursive: true });
-      const unlock = await hold(n);
-      if (!unlock) continue;
-      try {
-        const { pid, port } = await startInstance(instanceDir(n), undefined, say);
-        recordServer(serverOf(n), pid);
-        return instance(n, port, unlock);
-      } catch (e) {
-        unlock();
-        throw e;
-      }
-    }
-  } finally {
-    unlockPool();
-  }
-}
-
-/** An instance of the run's own on the display it has (`--headed`), stopped at its release. */
-async function ownInstance(say: (line: string) => void): Promise<Instance> {
-  const dir = instanceDir('headed');
+/** A `--headed` run's Obsidian, of its own, on its display, stopped at its release. */
+async function headedInstance(say: (line: string) => void): Promise<{ dir: string; port: number; stop(): void }> {
+  const dir = join(stateDir, 'obsidian', 'headed');
   mkdirSync(dir, { recursive: true });
   const unlock = await takeLock(record(join(dir, 'launch.lock')), false, 'the headed Obsidian');
-  const { pid, port } = await startInstance(dir, process.env.DISPLAY, say);
+  const s = await startInstance(dir, say, { display: process.env.DISPLAY });
   const stop = (): void => {
     try {
-      process.kill(-pid);
+      process.kill(-s.proc.pid!);
     } catch {}
     unlock();
   };
   process.once('exit', stop);
-  return { n: 'headed', dir, port, release: async () => (process.off('exit', stop), stop()) };
+  return { dir, port: s.port, stop: () => (process.off('exit', stop), stop()) };
 }
 
 /** The vault a window of an instance has open, if it has one (the starter window has none). */
@@ -552,10 +339,8 @@ export function obsidianDriver(profile: Profile): Driver {
     longId: profile.longId,
     displayName: profile.displayName,
     url: 'app://obsidian.md/',
-    // a window of its own for each worker, in an instance of the pool (`leaseInstance`), one a setup each
-    get parallel() {
-      return obsidians();
-    },
+    // a window of its own for each worker, in an Obsidian instance of the pool's, one of a setup each
+    parallel: Number(process.env.OURUS_SXS_OBSIDIANS) || 3,
     model: 'text',
     // CodeMirror's folds, Obsidian's own (by indentation and headings, or a plugin's), loaded and read
     // through its edit view (`getFoldInfo`), by line
@@ -610,19 +395,56 @@ export function obsidianDriver(profile: Profile): Driver {
       return splitsIndent(d) ?? (profile.mode === 'live-preview' ? (inFrontmatter(d) ?? inTable(d) ?? atInlineCode(d)) : undefined) ?? profile.holds?.(d);
     },
 
-    async launch({ headed, say, gone }) {
+    async launch({ headed, fresh, say, gone }) {
       ensureAptInstalled('Obsidian', ELECTRON_LIBRARIES, say);
-      // one run of the setup at a time is the runner's (its lock); each of its workers a window in an
-      // instance of the pool of its own, or the run's own on its display
-      const inst = headed && process.env.DISPLAY ? await ownInstance(say) : await leaseInstance(profile.longId, say, gone);
-      if (!inst) return null;
+      const v = await versions();
+      // a window the pool keeps warm is taken over by a run of the same setup as it is now: its versions,
+      // its configuration, plugins and keys (another is loaded anew)
+      const key = createHash('sha1')
+        .update(JSON.stringify([v.app, v.installer, profile, hotkeys]))
+        .digest('hex')
+        .slice(0, 12);
+      // one run of the setup at a time is the runner's (its lock); each of its workers a window of the
+      // pool's instances, or the run's own instance on its display
+      let lease: Lease | null = null;
+      let inst: { n: number | string; dir: string; port: number; warm?: boolean; targetId?: string; meta?: Record<string, unknown> };
+      let stopHeaded: (() => void) | undefined;
+      if (headed && process.env.DISPLAY) {
+        const h = await headedInstance(say);
+        inst = { n: 'headed', dir: h.dir, port: h.port };
+        stopHeaded = h.stop;
+      } else {
+        // (an instance of these versions: the pool may run instances of others, an older release's)
+        const got = await Lease.obsidian({ setup: profile.longId, key, fresh, appVersion: v.app, installerVersion: v.installer }, `run.ts ${profile.longId}`, say, gone);
+        if (!got) return null;
+        lease = got.lease;
+        inst = got.grant;
+      }
+      const end = async (clean: boolean, meta?: Record<string, unknown>): Promise<void> => {
+        if (lease) await lease.release(clean, meta).catch(() => {});
+        else stopHeaded?.();
+      };
       try {
         const browser = await chromium.connectOverCDP(`http://127.0.0.1:${inst.port}`);
         const context = browser.contexts()[0]!;
         const vault = join(inst.dir, profile.longId);
-        // the setup's window an earlier run left open (one that stopped some other way), closed first
+        // the instance's, which its other setups' windows share
+        const clipboard = lease ? () => lease!.clipboard() : undefined;
+        // released cleanly, the window stays open for the next run of the setup; else the pool closes it
+        const release = async (clean: boolean, meta?: Record<string, unknown>): Promise<void> => {
+          await browser.close().catch(() => {});
+          await end(clean, meta);
+        };
+        if (inst.warm && inst.targetId && lease) {
+          const page = await pageOf(browser, inst.targetId);
+          pageState(page).log = join(inst.dir, 'obsidian.log');
+          setLease(page, lease);
+          say(`took over ${vault}'s window in Obsidian ${inst.n}, loaded`);
+          return { page, reused: true, meta: inst.meta, clipboard, release };
+        }
+        // the setup's window an earlier run left open (one the pool couldn't close), closed first
         for (const p of context.pages()) if ((await vaultOf(p)) === vault) await p.evaluate(() => window.close()).catch(() => {});
-        // the vault, written anew for each run
+        // the vault, written anew for each window
         rmSync(vault, { recursive: true, force: true });
         mkdirSync(join(vault, '.obsidian'), { recursive: true });
         writeFileSync(join(vault, '.obsidian', 'app.json'), JSON.stringify({ useTab: true, livePreview: profile.mode === 'live-preview', ...profile.appConfig }, null, 2));
@@ -633,22 +455,19 @@ export function obsidianDriver(profile: Profile): Driver {
         }
         const downloaded = await takeLock(record(`${files}.lock`), true, "Obsidian's downloads");
         await launcher.installPlugins(vault, [...(profile.plugins ?? [])]).finally(downloaded);
-        const page = await openVault(context, vault, (await versions()).app);
+        const page = await openVault(context, vault, v.app);
+        if (lease) {
+          await lease.bind(await targetOf(page));
+          setLease(page, lease);
+        }
         pageState(page).log = join(inst.dir, 'obsidian.log');
         say(`opened ${vault} in Obsidian ${inst.n}`);
-        return {
-          page,
-          reused: false,
-          // the instance's, which its other setups' windows share
-          clipboard: () => takeLock(record(join(inst.dir, 'clipboard.lock')), true, `Obsidian ${inst.n}'s clipboard`),
-          release: async () => {
-            await page.evaluate(() => window.close()).catch(() => {});
-            await browser.close().catch(() => {});
-            await inst.release();
-          },
-        };
+        if (!lease) {
+          return { page, reused: false, release: async () => (await page.evaluate(() => window.close()).catch(() => {}), await release(false)) };
+        }
+        return { page, reused: false, clipboard, release };
       } catch (e) {
-        await inst.release();
+        await end(false);
         throw e;
       }
     },

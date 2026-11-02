@@ -17,7 +17,7 @@ export interface TextDoc {
   view?: RowView;
 }
 
-/** A drawn buffer as a text document (its view, `view.ts`, read off its last line); a subtree selection (`««…»»`) as the whole lines it is. */
+/** A drawn buffer as a text document (its view, `view.ts`, read off its lines' marks); a subtree selection (`««…»»`) as the whole lines it is. */
 export function readTextDoc(drawing: string): TextDoc {
   const { drawn, view } = splitView(drawing);
   const read = readDrawing(drawn);
@@ -25,8 +25,11 @@ export function readTextDoc(drawing: string): TextDoc {
   return { text: read.text, sel: /┃|«/.test(drawn) ? selection : null, ...(view && { view }) };
 }
 
-/** A text document drawn as a spec buffer, its view a last line: its selection at its offsets, as a text editor has it (`«…»`, whole lines or not; the stored runs are keyed so). */
-export const drawTextDoc = (d: TextDoc): string => (d.sel ? drawState(d.text, d.sel) : drawText(d.text)) + (d.view ? drawView(d.view) : '');
+/** A text document drawn as a spec buffer, its view on its lines (`⟦folded⟧`, `⟦zoomed⟧`): its selection at its offsets, as a text editor has it (`«…»`, whole lines or not; the stored runs are keyed so). */
+export const drawTextDoc = (d: TextDoc): string => {
+  const drawn = d.sel ? drawState(d.text, d.sel) : drawText(d.text);
+  return d.view ? drawView(drawn, d.view) : drawn;
+};
 
 /** Text compared without the spaces and tabs that end lines, where editors differ in trimming. */
 const loose = (text: string): string => text.replace(/[ \t]+$/gm, '');

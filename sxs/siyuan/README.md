@@ -83,16 +83,13 @@ Repo: https://github.com/siyuan-note/siyuan
   `.sxs/siyuan/files/siyuan-<version>-linux-<arch>/`, and the archive deleted (kernels starting at
   once take turns, `files.lock`). `SIYUAN_VERSION` picks the release, 3.8.6 by default: pinned, so a
   report changes when the app does, not when SiYuan releases.
-- **A kernel for each worker**, as the pool's browsers are numbered: kernel n is
+- **A kernel for each window**, the pool's ([`../pool.ts`](../pool.ts)): kernel n is
   `resources/kernel/SiYuan-Kernel serve --workspace=<state>/siyuan/<n>/workspace --port=<6816+n>
-  --wd=<resources> --lang=en`, its log `<state>/siyuan/<n>/kernel.log` and pid `<state>/siyuan/<n>/server.pid`.
-  A worker leases the first kernel no other worker holds (`<state>/siyuan/<n>/kernel.lock`, held until
-  the run ends), starting it if it isn't running; a window an earlier run left is on its kernel's port,
-  and the worker reusing it holds that kernel (or, held already, opens a new window on another). Each
-  is started detached and left running for the next run, as the browsers are, while its workspace has
-  the driver's plugin (a workspace deleted under it, it is started anew); `run.ts --stop` stops them
-  all. A workspace is its kernel's data directory: its settings, the test notebook, the driver's
-  plugin; deleting it (with the kernel stopped) gives a fresh one. Kernel 0's port is
+  --wd=<resources> --lang=en`, its log `<state>/siyuan/<n>/kernel.log`. The driver asks for its
+  window's kernel as it opens (`Lease.kernel`): the pool starts one on a new workspace for a new
+  window, keeps it with a window its run released cleanly (the next run takes both over), and stops it
+  with the window; one that exited under its window is started again on its workspace. A workspace is
+  its kernel's data directory: its settings, the test notebook, the driver's plugin. Kernel 0's port is
   `OURUS_SIYUAN_PORT`, 6816 by default, not SiYuan's 6806, so a SiYuan of the user's is never touched.
   A kernel boots in under a second (`system/bootProgress` at 100). Kernels share nothing but the
   release: their documents, undo and notebooks are their own, so workers never meet.

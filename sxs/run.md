@@ -50,20 +50,24 @@ node sxs/run.ts logseq indent.md#indent3  # one case (or a file, or any part of 
 node sxs/run.ts logseq --list             # what would run and what is skipped, and why; no browser
 node sxs/run.ts all                       # every app (about 15 minutes); writes README.md
 node sxs/run.ts --rejudge                 # replay ourus, judge the stored runs again; no app, seconds
-node sxs/run.ts --stop                    # stop the proxy, browsers and servers a run left running
+node sxs/run.ts --stop                    # stop the pool: its browsers, kernels, Obsidians and the proxy
+node sxs/pool.ts status                   # what the pool runs, who holds what, what waits
 ```
 
-The first run starts a caching proxy and a pool of headless browsers and leaves them running, so the
-next run of a case takes under a second. They are the container's own (its state directory, below),
-so containers on one checkout run side by side, and `--stop` stops this container's alone. The stored
+The first run starts the pool ([`pool.ts`](pool.ts), [`dev/27-sxs.md`](../dev/27-sxs.md)): one process that
+runs the caching proxy, the headless browsers, SiYuan's kernels and Obsidian's instances, hands a
+window to each worker, and keeps a window its run released cleanly loaded for the next run of the app,
+so the next run of a case takes under a second. It stops what has been idle for ten minutes, and
+itself once it has nothing. It is the container's own (its state directory, below), so containers on
+one checkout run side by side, and `--stop` stops this container's alone. The stored
 runs, `.sxs/results/<app>/<file>.json`, have each step's buffers, ourus's and the app's, as data.
 
 ## Probing
 
 To see what the apps do on a shape no case draws, without writing a case or a result,
 [`probe.ts`](probe.ts) (`npm run probe`) plays a buffer and actions on ourus and on the apps named
-first, as `run.ts` names them, in parallel (each a `run.ts --probe` of its own, `--keep-windows`, so a
-probe after another loads no app). It prints ourus's states first, then each app as its run ends: its
+first, as `run.ts` names them, in parallel (each a `run.ts --probe` of its own; the pool keeps each
+app's window loaded, so a probe after another loads no app). It prints ourus's states first, then each app as its run ends: its
 verdict, its long id and seconds, then, aligned, the state it is compared with where that isn't
 ourus's own result (`= ourus as blocks`, `against ourus, under …` for its declared values), or why it
 was skipped; then its state as it is. A state is
@@ -105,10 +109,9 @@ pick the examples matching any of them; none picks every example. Options:
 | `--headed` | show the browser (one of the run's own, not the shared one) |
 | `--slow=MS` | pause after every action, on top of settling: to watch, or to rule timing out |
 | `--pace=MS` | keys at least MS apart (100 by default, a typist's pace; 0, as fast as the app settles): to see what an app's timing does |
-| `--workers=N` | N workers side by side, each in a browser of the pool of its own (or a window in an Obsidian of the driver's pool); by default one per 30 examples, at most 6 (the pool's browsers) and the driver's `parallel` (1 by default for one that starts its app) |
+| `--workers=N` | N workers side by side, each in a window of the pool's of its own (a browser context; for Obsidian, a window of one of its instances); by default one per 30 examples, at most 4 and the driver's `parallel` (1 by default for one that starts its app) |
 | `--cache=MODE` | how the proxy uses its cache: `use` (the default) serves what it has and fetches and keeps the rest; `offline` serves only what it has and reaches no network, a miss and anything that would go live (other methods, a rule's live requests, WebSockets) failing (504), and writes nothing to the cache, which may then be read-only (`OURUS_SXS_HTTP`), after a run online made it and the proxy's certificate; `refresh` fetches everything anew, once per proxy run, and keeps it |
-| `--fresh` | load the app anew, rather than take over the page a run that died left loaded |
-| `--keep-windows` | leave the app's window loaded when the run ends, for the next run to take over ([`probe.ts`](probe.ts) passes it: a probe after another loads nothing); by default the window closes. A browser's windows are its runs' records (`<app>.window`), so a run takes the browser holding its app's window without asking any browser |
+| `--fresh` | load the app anew in a new window (a new browser context), rather than take over the window the last run of the app released cleanly, loaded; the app's warm windows are destroyed |
 | `--no-report` | don't copy the report into `<app>.md` (nor the table into `README.md`) |
 | `--timing` | print how long the app took to settle after each action, and what it waited on last |
 | `--plain-clipboard` | give the app the clipboard's Markdown as plain text only, without its HTML rendering |
@@ -183,10 +186,11 @@ and by tag (the ranks in their order, then the other tags, the most first; a cas
 of its tags): each one's examples, the apps' runs of them, the disagreements among those runs (and
 their share), the block apps' disagreements among them, and each app's.
 
-The first run of an app starts the proxy and a headless Chromium of a pool, and leaves them running
-for the next runs, with the app loaded in a window (`.sxs/proxy.log` and `chromium/<n>/chromium.log` in
-the state directory say what they did).
-Later runs reuse them, so a run of one example takes under a second. Stop them all with `--stop`.
+The first run of an app starts the pool, which starts the proxy and a headless Chromium, and keeps
+them running for the next runs, with the app loaded in a window (`.sxs/proxy.log`, and `pool/pool.log`
+and `pool/chromium-<n>/chromium.log` in the state directory say what they did).
+Later runs take the window over, so a run of one example takes under a second. Stop them all with
+`--stop`.
 
 ## What happens in a run
 
@@ -212,51 +216,58 @@ Later runs reuse them, so a run of one example takes under a second. Stop them a
    server sent). Every request is logged in `.sxs/proxy.log`, blocked
    ones too; a run ends with what it fetched, passed through live, and blocked, per
    host, and with `-v`, every URL.
-3. **The browser and the app** ([`lib/browser.ts`](lib/browser.ts)). The proxy, and a pool of headless
-   Chromiums (`chromium/<n>/` in the state directory: its profile, its log, its locks), are shared between runs: started
-   by the first run that needs them, left running, and restarted when their code or flags change. Each
-   app's page is a window of its own in one of them, one in a browser, closed at the run's end (a
-   window is some 25 tasks; the browser stays up). One a run that died left loaded, the next run of that
-   app takes over instead of loading the app again, if it was loaded from the driver's URL with the
-   current `idle.ts` (an older one stays in a page until it reloads) and still loads and reads a
-   document. The pool is fixed (`BROWSERS`, `WINDOWS` in `lib/browser.ts`): four browsers, each with at
-   most five app windows (a run's, or an idle one a dead run left, the longest idle closing for a run
-   that needs its place), so that the pool, full, holds under the container's cap on tasks. Runs spread
-   over the browsers (an idle one first, a new one while fewer than four run), and with every browser
-   full a worker waits for room. A driver may keep its workers to the even-numbered browsers or the odd
-   ones (`Driver.browsers`: RemNote's two setups, so that each one's knowledge base, in a profile's
-   storage, is its own). What a browser has one of is held in turn: its clipboard (a headless browser's own, not
-   the desktop's), which an example that uses it holds (`clipboard.lock`), granting the permissions to
-   read it again as it takes it: a DevTools connection's end resets the permissions it granted for
-   every page of its browser, so another run's end would take them (a plain paste then reads nothing),
-   and a run disconnects only holding its browser's clipboard; each window's page is in
-   front of its own (a tab behind another gets no animation frames, and its Clipboard API drops a write
-   and reads nothing, without an error), and has the focus, emulated. A window is made at the
-   viewport's size (1280×900: `Target.createTarget` takes it), and a reused one has the viewport set
-   again: an emulated viewport ends with the DevTools connection that set it, and every reused window
-   had run at headless Chromium's 780 pixels, Dynalist laying itself out for a phone there. **Each
-   container its own pool**: two containers on one checkout share `.sxs/` but not their process
-   tables or hostnames, so the profiles, Obsidian's instances, SiYuan's workspaces and the records of
-   what runs are in a state directory of each container's (below), never in `.sxs/`. Shared there,
-   one's Chromium took the other's profile lock for a stale one and started on a profile in use, and
-   the browser's storage hung (IndexedDB, Web Locks, service workers); a SiYuan kernel of the other's
-   held its workspace's lock, and every kernel here exited 24. Where containers share a network as
-   well, give each its own proxy port (`OURUS_PROXY_PORT`). One run of an app at a time in a container
-   (`<app>/<app>.lock` among its records): another run of it while one goes fails. A run's workers (`--workers`)
-   are each in a browser of their own (`<app>.lock` among the browser's records), an app's storage
-   (localStorage, IndexedDB) being its origin's in a profile. A pool, not a browser per app as
-   at first: a browser is some 110 tasks (processes and threads) before any page, an app's window some
-   25, and a container's cap on tasks (`pids.max`, 2048 here) didn't hold 16 browsers. `run.ts all`
-   starts every app at once; each worker of a run joins it as it gets a place in a pool (the first waits
-   as long as it takes, the others only while examples are left), so the pools stay full: four
-   Chromiums with five windows each (some 950 tasks; six with three each hit the cap, the browsers'
-   threads failing to start: 2026-10-25), and two Obsidians beside them (some 400), four
-   in a run of Obsidian's setups only (`OURUS_SXS_OBSIDIANS`, which `run.ts` sets for a run of several
-   apps; `obsidian/README.md`). An Obsidian stops with the last window a run has in it. A run
-   watches the cap while its apps play (`watchTasks` in `lib/system.ts`: `pids.max`, `pids.current`,
-   `pids.events` once a second): it warns as the cap refuses tasks, a browser's thread then failing
-   to start and windows, browsers and runs crashing or hanging, and says at the end how often it did
-   and how many tasks ran at most (a run of several apps in the terminal, each app's run in its log).
+3. **The pool, the browser and the app** ([`pool.ts`](pool.ts), [`lib/pool-client.ts`](lib/pool-client.ts),
+   [`lib/browser.ts`](lib/browser.ts); the design and why: [`dev/27-sxs.md`](../dev/27-sxs.md)). One process
+   per container, the pool, owns what runs share: the proxy, the headless Chromiums (two, each with
+   at most ten windows), SiYuan's kernels and Obsidian's instances. The first client to find none
+   starts it; it is reached over a unix socket in the state directory (`pool/pool.sock`), and a
+   connection is a lease: what it holds is held while it is open. Its children are started under
+   `setpriv --pdeathsig`, so that the pool gone, killed even, they go too; nothing is recorded in
+   files to be read back as stale. `node sxs/pool.ts status` says what runs, which client (and pid)
+   holds each window, and what waits; its log is `pool/pool.log`. A pool running other code than a
+   client's is drained (no new leases; it exits once its leases end) and replaced.
+
+   **A window is a browser context of its own** (`Target.createBrowserContext`): its storage,
+   cookies, service workers, Web Locks and channels its own, so that each window starts with nothing
+   an earlier one left, and two setups of one app on one origin run side by side in one browser
+   (RemNote's two, whose tabs sharing storage break each other). Each worker of a run leases one.
+   **Released cleanly** (the worker's examples had no error), it stays loaded, warm, and the next run
+   of the app takes it over (`key`: the driver's URL and the idle script's version; `--fresh` asks for
+   a new one), if it still loads and reads a document back. **Released otherwise, or not at all** (the
+   run crashed, was killed, its connection dropped, its pid is gone), the pool destroys it, disposing
+   of its context. A warm window no run took for ten minutes is destroyed too (`OURUS_SXS_IDLE_MIN`),
+   a browser or an instance with no window stops after as long, and the pool exits once it has had
+   nothing and no client for two minutes.
+
+   Runs spread over the browsers (a new window goes to a browser with no lease, else a new browser
+   while fewer than two run, else the one with the fewest leases); with no room, the longest-idle warm
+   window (of any app) is destroyed for it, and with none to destroy the worker waits. The pool checks
+   the container's cap on tasks (`pids.max`: a browser is some 130 tasks, a window 35, an Obsidian 100)
+   before it starts anything, destroying warm windows or waiting when it would come near the cap.
+   `OURUS_SXS_BROWSERS`, `OURUS_SXS_WINDOWS` and `OURUS_SXS_OBSIDIANS` change the sizes. What a browser
+   has one of is held in turn: its clipboard (a headless browser's own, shared by its contexts:
+   measured), which an example that uses it holds (`Lease.clipboard`), the pool granting the window's
+   context the permission to read it as it takes it (per context, through its own connection: no
+   client's disconnecting resets it). Each window's page is in front of its own (a tab behind another
+   gets no animation frames, and its Clipboard API drops a write and reads nothing, without an error),
+   and is made at the viewport's size (1280×900), set again by each run: an emulated viewport ends with
+   the DevTools connection that set it. A client finds its page among a Playwright connection's by its
+   target: Playwright files the pages of contexts it didn't make under its default context, so a
+   pool window's `page.context()` is no context of its own (`pages()` lists every window's; cookies
+   and permissions set through it go elsewhere), while the page's own calls go to its target.
+
+   SiYuan's window has a kernel bound to it (`Lease.kernel`), started on a new workspace with a new
+   window, kept with a warm one, stopped with the window. An Obsidian setup's window is in one of the
+   pool's instances (at most four, one window of a setup each), kept open warm the same way, closed
+   when it is released otherwise, its vault removed. **Each container its own pool**: two containers
+   on one checkout share `.sxs/` but not their process tables or hostnames, so the pool, its browsers'
+   profiles, Obsidian's instances and SiYuan's workspaces are in a state directory of each container's
+   (below), never in `.sxs/`. Where containers share a network as well, give each its own proxy port
+   (`OURUS_PROXY_PORT`) and SiYuan port (`OURUS_SIYUAN_PORT`). One run of an app at a time in a
+   container (a lock in the pool, `app:<app>`): another run of it while one goes fails (a probe
+   waits). A run watches the cap on tasks while its apps play (`watchTasks` in `lib/system.ts`:
+   `pids.max`, `pids.current`, `pids.events` once a second): it warns as the cap refuses tasks, and
+   says at the end how often it did and how many tasks ran at most.
 4. **Playing** ([`run.ts`](run.ts)). For each example the driver loads the starting state into a
    fresh document (through whatever the app offers: a plugin API, its stores), and the runner checks
    that the app holds it as given, since an app that rewrites its input (trimming, normalizing)
@@ -289,8 +300,10 @@ Later runs reuse them, so a run of one example takes under a second. Stop them a
    first line); a step that draws no buffer but checks a view is compared on ourus's buffer without its
    caret. What is compared is what the reader sees: the folds in effect (a fold of the zoom root or an
    ancestor's hides nothing, nor does one on a block without children) and the zoom root; another is a
-   `disagree`. A state's drawing carries its view as a last line, `⟦folded 2 4; zoom 1⟧`, rows from 1,
-   which reports show and a rejudge reads back.
+   `disagree`. A state's drawing carries its view on the rows it names, `⟦folded⟧` after a folded row's
+   line and `⟦zoomed⟧` after the zoom root's (a block's first line, a text's line), which reports show
+   and a rejudge reads back; a drawing with neither has nothing folded and no zoom. (Runs stored before
+   drew it as a last line, `⟦folded 2 4; zoom 1⟧`, rows from 1, still read.)
     A block app's state is an outline: blocks with a
    depth and a text, the caret's block and offsets. The spec's buffers are projected onto the same
    form with ourus's own parser (every outline node a block holding its own text, in canonical
@@ -314,9 +327,10 @@ Later runs reuse them, so a run of one example takes under a second. Stop them a
    lines and frontmatter run too.
 
    A step's clipboard is its `text/plain`, read back after the step (a test that uses the clipboard
-   and gives none starts with an empty one, so a copy of nothing reads as nothing): `whitespace` where
-   it is written otherwise but reads as the same outline (an app's tabs for indentation, no final line
-   break), the same items in lists of the same kind; else `disagree`. A copy or cut at a caret, which
+   and gives none starts with an empty one, so a copy of nothing reads as nothing): the same copy, so
+   agreeing, where it is written otherwise but is the same Markdown (an app's tabs for indentation, no
+   final line break, a line's trailing spaces), the same items in lists of the same kind, the same text;
+   else `disagree`. A copy or cut at a caret, which
    ourus takes as the node's (`copyAtCaret: node`), is played on an app that copies nothing there
    (`copyAtCaret: host`) on the node selected its way first, as it selects a block (`selectSubtree`:
    Escape in Logseq, Tine and Roam, Shift+Up in Athens), and judged against ourus's copy.
@@ -336,6 +350,20 @@ Later runs reuse them, so a run of one example takes under a second. Stop them a
    beside a block app's; the spec's own drawing as `written` where it differs); then every skip,
    with its reason.
 
+An example still playing 300 s after it began (after it took its browser's clipboard, where it uses it;
+`OURUS_SXS_STUCK_S` changes it) is taken for stuck, a call of the app's that never returns: it is an
+error, its worker's window is destroyed (which gives the clipboard back to the other runs waiting for
+it), and the worker is retired while the others go on.
+A run that finishes no example for 8 minutes, once its first worker is ready (waiting in line for room
+or a window before isn't counted; `OURUS_SXS_STALL_MIN` changes it), is taken for hung: it says what
+each worker is on and exits, writing nothing, and the pool destroys its windows. A run slow under load
+(every app at once) still ends; one that hangs, whatever hangs, ends within minutes.
+
+Each run asks the pool, first, for room under the container's cap on tasks (`pids.max`, as the pool
+reads it) for its own process and any app its driver starts outside the pool (`Driver.tasks`: Emacs
+and its terminal), and holds it to its end; a run of `all`'s, its apps all started at once, waits in
+the pool's line for it, as for a window.
+
 An example that errors keeps its error's first line in the report; `OURUS_SXS_DEBUG=1` prints its
 whole stack in the app's log (a probe's log is in `.sxs/probe/<time>/`), which tells a load or a read
 of the driver's (`load` in its stack) from an action that failed in the app.
@@ -347,13 +375,20 @@ means exactly what it says. The others are *adapted*: a paragraph or a heading s
 blank lines were dropped, a numbered item became a plain one (where the app has no numbered blocks:
 a driver that loads and reads them declares `ordered`, and an ordered item is then a block whose
 canonical text starts with its number, `1. x`, a number that is text kept escaped, `1\. x`; SiYuan,
-BlockNote, both Logseqs, Roam, WorkFlowy, Dynalist, RemNote and Tana number blocks so). Their notes say how. ourus gives these
+BlockNote, both Logseqs, Roam, WorkFlowy, Dynalist, RemNote and Tana number blocks so). Likewise a
+heading: where a block starting `# ` is a heading in the app (a driver declaring `headings`), a `#`
+that is text starting a block is kept escaped, `\# x`, the driver reading an app's text `#` so, and a
+heading and that text differ (Enter9: Enter before `# def` makes a heading in both Logseqs). Their
+notes say how. ourus gives these
 Markdown structures meaning that blocks don't have (a paragraph owns the list after it, a heading
 its section, a blank line is a gap), so an adapted difference is often the two models disagreeing
 rather than a choice either app made. They are counted apart, and `--strict` runs the original ones only.
 
 A projection can lose an example's point: one whose expected buffer differs from the one before only
-in what blocks can't show (blank lines, markers) is skipped. And where ourus's caret has no place in
+in what blocks can't show (blank lines, markers) is skipped, and so are the steps it ends with that do
+so.
+
+And where ourus's caret has no place in
 a block (in a marker, on a blank line, past the last line ending), the expected caret isn't
 compared, and a starting caret there skips the example.
 
@@ -389,11 +424,11 @@ interface): its `shortId`, two capitals no other app has, its column's heading i
 the command line; its `longId`, its directory's name; its `displayName`, in reports (`LO`, `logseq`,
 `Logseq (OG)`); its URL; its `model` (`block` for a block app, `text` for a Markdown editor), which
 says what `load` is given and `read` returns; `launch`, for an app that isn't a web page (it starts the app and hands
-over its window, instead of a tab in the shared browser: Obsidian's), or for an app that isn't a page
+over its window, instead of one of the pool's browsers': Obsidian's, leased from the pool too), or for an app that isn't a page
 at all, a `session` the runner plays its keys, typing and clipboard through (Emacs's: a call returns
 once the app is done, so there is nothing to settle); `open` (load it, wait until it takes keys, return its version; for an app served from this machine,
-its server started first, left running for the next run and recorded, `recordServer`, so that `--stop`
-stops it: SiYuan's kernels, one for each worker, in `siyuan/<n>/` in the state directory); `load` (a fresh
+its server asked of the pool first: SiYuan's kernel, one for each window, in `siyuan/<n>/` in the state
+directory, `Lease.kernel`); `load` (a fresh
 document with the starting state, the caret placed); `read` (the state back, in canonical form);
 the keys for each action (`select…` motions are the same keys with Shift), and `act` for those
 emulated with keys (Logseq has no key for the document's start: Up until the caret stops, then
@@ -494,14 +529,12 @@ the app needs fetched (`files/`: SiYuan's release, Obsidian's app and plugins, m
 What is a container's own is in its state directory (`<state>/` in the apps' READMEs; `stateDir` in [`proxy.ts`](proxy.ts):
 `/var/tmp/ourus-sxs-<uid>/<id>/`, `<id>` a hash of `.sxs/`'s path and the hostname; the system's
 temporary directory's where `/var/tmp` can't be written; or `OURUS_SXS_STATE`), laid out as `.sxs/`
-is: SiYuan's kernels (`siyuan/<n>/`: a worker's workspace and log); Obsidian's pool (`obsidian/<n>/`:
-an Obsidian every setup shares, its configuration, log, and a vault for each setup it has a window
-of); the pool of browsers (`chromium/<n>/`: each one's profile and log); Emacs's server sockets.
-
-What runs is recorded there too ([`lib/records.ts`](lib/records.ts)), beside what it is of: a
-browser's pid, port and flags and the locks of the runs in it
-(`chromium/<n>/`: `<app>.lock`, `clipboard.lock`; `chromium/pool.lock`), an Obsidian's (`obsidian/<n>/`:
-`server.pid`, `port`, `version`, `<setup>.lock`, `clipboard.lock`), a SiYuan kernel's (`siyuan/<n>/`:
-`server.pid`, `kernel.lock`), the lock of an app's run (`<app>/<app>.lock`) and when a run last took its
-window (`<app>/last-run`). `run.ts --stop` finds what to stop there; a browser whose profile was
-deleted under it is still reached by its recorded port, and stopped.
+is: the pool (`pool/`: its socket, its log `pool.log`, and each browser's directory `chromium-<n>/`,
+its profile, which holds nothing of a window's, and its log, made anew at each start); SiYuan's
+kernels (`siyuan/<n>/`: a window's workspace and log); Obsidian's instances (`obsidian/<n>/`: an
+Obsidian every setup shares, its configuration, log, and a vault for each setup it has a window of);
+Emacs's server sockets. What runs, and who holds what, the pool keeps in memory alone
+(`node sxs/pool.ts status`); the only locks in files are the downloads' (`files.lock`, in
+[`lib/records.ts`](lib/records.ts)'s layout) and the pool's own (`pool/daemon.lock`). A pool starting
+stops what the design before it left running (its browsers and servers, recorded then in
+`chromium/<n>/`, `server.pid`) and removes their profiles.

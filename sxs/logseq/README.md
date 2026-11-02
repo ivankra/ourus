@@ -75,7 +75,10 @@ Repo: https://github.com/logseq/og
   takes Logseq to its home page; a run's first test deletes the `spec-*` pages earlier runs left.
 - **Text Logseq would trim** (a trailing line break, spaces at a block's edge) is held only by the
   block being edited: its textarea gets the text as if typed (the value set, `input` dispatched).
-  Other blocks can't start with such text, and those tests are skipped.
+  Other blocks can't start with such text, and those tests are skipped. Logseq trims it as soon as
+  it saves the block, which indent and outdent do: a Shift-Enter's empty line, or a space at the
+  text's start, is gone after Tab, the caret where its offset now falls (`obsidian-true-outliner.md ›
+  TO10`, `TO11`; `regressions.md › Regression76`; the DB version too).
 - **A numbered block's editor shows its text alone.** The number is a property stored in the
   block's content (`a\nlogseq.order-list-type:: number`), one of Logseq's hidden ones
   (`hidden-built-in-properties`), which an editor never shows: the driver's editor holds `a`, as
@@ -83,7 +86,10 @@ Repo: https://github.com/logseq/og
   empty numbered block wasn't empty to its paste, PasteOld16.)
 - **Reading**: `get_page_blocks_tree`, except for the block being edited, which is read from its
   textarea (its number from the database): Logseq stores what is typed about half a second after
-  typing stops. Selected blocks come from `get_selected_blocks`.
+  typing stops. Selected blocks come from `get_selected_blocks`. A block is numbered if its content
+  has the property's line or its properties have the property, by any spelling of its name: the API
+  names it `logseq.orderListType`, and a paste leaves a block numbered by its properties alone (bug 7
+  below).
 - **Tasks** are Logseq's markers: `[ ]` is `TODO`, `[x]` is `DONE` (and `LATER`, `NOW`, `DOING`,
   ... read as tasks).
 - **Undo** is Logseq's "page only" history (a setting of its right sidebar), so it stays within the
@@ -151,6 +157,10 @@ Repo: https://github.com/logseq/og
   `21`), in both, and so are brackets (`(`, `[`, `{`): declared, `autoClose` with them (since
   2026-10-25, the brackets since 2026-11-01). Typed again before a closing run of two, it types
   another pair rather than step over it (Backtick32).
+- **A block starting `# ` is a heading** (OG: in its text; DB: its property, which Enter before
+  `# def` sets): a `#` that is text starting a block is escaped in the canonical text, `\# x`, OG's
+  content holding the escape, DB's read escaping a text `#` (`headings`). So Enter before `# def`,
+  Backspace48 and Delete32 differ in OG: ourus keeps the `#` text, Logseq makes the block a heading.
 - **The caret moves by pixels**, in a proportional font: after Up or Down it lands at another column
   than the spec's monospace one.
 - The demo doesn't say its version (`get_app_info` answers `1.0.0`, the plugin API's); its bundle's
@@ -213,6 +223,10 @@ content.
   block, which stays where it is (`a`, `b` selected, `c` pressed and dropped at the top: nothing
   moves; ourus moves `c` alone: MoveSubtree5, MoveSubtree6 disagree). The driver selects blocks as a user does,
   Escape then Shift+Down until the last is in (`selectsBlocks`).
+- **The press ends the editing**, and a code block being edited renders again, shorter: the blocks
+  below it move up under the pointer. The place is found once the drag has started, where the eye
+  finds it then (`gesture`'s `to` as a function): aimed before the press, a drop of the code block
+  itself after `b` went past `b` and moved nothing (MoveSubtree22, until 2026-11-03).
 
 ## Logseq bugs met on the way
 
@@ -239,12 +253,15 @@ Seen in the demo's build b8f87af5; source references are to Logseq's source
    loses its indentation (`insert_block` and `update_block` keep it).
 6. The demo requests `/js/eventemitter3.umd.min.js`, which the site doesn't have: a 404 page, which
    the browser refuses to run as a script.
-7. **A paste into a numbered block takes its number away** (`paste-old.md › PasteOld2`, `PasteOld18`: `1. a┃`
-   and a list pasted, `a` unnumbered after, the list numbered from 1). `paste-blocks` takes the
-   editor's text (`a`) for unsaved edits when it differs from the stored content, which a numbered
-   block's always does (`a\nlogseq.order-list-type:: number`: the editor shows no hidden property),
-   and saves it over the block, its number with it; the pasted blocks take the number the block had.
-   The same with the list typed (`1. ` makes a numbered block), with text alone, and after a pause.
+7. **A paste into a numbered block takes its number's line out of its content** (`1. a┃` and a list
+   pasted: `paste-list-form.md › PasteListForm2`, `regressions.md › Regression63`). `paste-blocks`
+   takes the editor's text (`a`) for unsaved edits when it differs from the stored content, which a
+   numbered block's always does (`a\nlogseq.order-list-type:: number`: the editor shows no hidden
+   property), and saves it over the block. Its properties keep the number, and the page shows it
+   numbered, `1.` to `4.`; a file written from the content would lose it (not seen: the demo writes
+   none). Until 2026-11-03 the driver read the number from the content and from two other spellings
+   of the property's name, not the API's (`logseq.orderListType`), and so took the block for
+   unnumbered: what was written here as the number taken away.
 
 Suspected and not seen: a key that lands while the focus is between editors goes to the page, where
 Logseq's single-letter shortcuts (`t t` toggles the theme, `g a` opens All pages) would take it.
@@ -261,3 +278,12 @@ Logseq's plugin API, as the driver uses it (`window.logseq.api`): `create_page(n
 `set_state_from_store` for the app's state (`editor/op`; `history/page-only-mode?`;
 `['config', '@<repo>', 'editor/logical-outdenting?']`, the repo from `git/current-repo`). The block
 being edited is the focused `TEXTAREA`.
+
+## Options measured by rejudging (2026-11-03)
+
+`pasteOverNodes: nothing`: a paste or plain paste over blocks selected whole pastes nothing, the blocks
+still selected (SubtreeEdit11, SubtreeEdit14, SubtreeEdit18; no case worse), judged against the stored
+run (the app's states as they are, ourus replayed under the value: `OURUS_SXS_BEHAVES` with `--rejudge`).
+`heldSpace: trim`: a space a deleted first character leaves at a block's start goes as the block is
+stored, as every edge space does (Placeholder9, Placeholder17 agree; under ourus's default, `repair`,
+they were whitespace). Placeholder18b still differs: trimmed, ` # b` is `# b`, a heading in OG's text.

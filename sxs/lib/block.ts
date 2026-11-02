@@ -59,6 +59,11 @@ export interface ProjectOptions {
    */
   readonly ordered?: boolean;
   /**
+   * A block starting `# ` is a heading in the app (`Driver.headings`): a `#` that is text, starting a
+   * block, keeps its escape (`\# x`), as a number does where blocks are numbered.
+   */
+  readonly headings?: boolean;
+  /**
    * The app tells a block outside every list from an item (`Driver.freeForm`): a paragraph, a heading
    * or an atom is a free block (`Block.free`), no adaptation, and so is a blank line next to one (the
    * boundary free form has); else every node is a block alike.
@@ -183,7 +188,7 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
     const bare = (n: OurusNode): boolean => !n.children.length || (atom ? n.kind === 'quote' : !!quoted(doc, n));
     const into = options.paragraphsInBlock && (node.kind === 'paragraph' || !!quote) && parent?.kind === 'item' && blockOf.has(parent.id) && (!prev || (merged.has(prev.id) && bare(prev)));
     const own = new Set<string>();
-    let { text, lines } = quote && atom ? asWritten(doc, node) : blockText(doc, quote ?? node, own, options.ordered ?? false, options.freeForm ?? false);
+    let { text, lines } = quote && atom ? asWritten(doc, node) : blockText(doc, quote ?? node, own, options.ordered ?? false, options.freeForm ?? false, options.headings ?? false);
     // (an item whose first block is a quote the app holds as its text, `- > a⏎  > - b`: no list there)
     const first = node.children[0];
     if (atom && node.kind === 'item' && first?.kind === 'quote' && first.startLine === node.startLine) own.delete("list as an item's first block");
@@ -346,7 +351,7 @@ function quoted(doc: OurusDoc, node: OurusNode): OurusNode | null {
 }
 
 /** A node's own text as a block holds it, and where each of its lines came from. */
-function blockText(doc: OurusDoc, node: OurusNode, notes: Set<string>, ordered: boolean, freeForm: boolean): { text: string; lines: LineMap[] } {
+function blockText(doc: OurusDoc, node: OurusNode, notes: Set<string>, ordered: boolean, freeForm: boolean, headings: boolean): { text: string; lines: LineMap[] } {
   const source = doc.text;
   const lineOf = (l: number) => doc.mdTree.line(l);
   if (node.kind === 'quote') throw new Unsupported(/^\s*>\s*\[!/.test(source.slice(lineOf(node.startLine).from, lineOf(node.startLine).to)) ? 'callout' : 'quote');
@@ -358,9 +363,10 @@ function blockText(doc: OurusDoc, node: OurusNode, notes: Set<string>, ordered: 
     // a Markdown escape at a line's start (`\#`, `\-`, `1\.`) only keeps the line from reading as
     // markup in the file; a block's text needs none, but where blocks are numbered, `1\.` starting a
     // block is text a numbered block's `1. ` isn't, and stays; so does `\#` starting a paragraph where
-    // blocks are free-form, whose headings are free blocks starting with `# ` (Placeholder18)
+    // blocks are free-form, whose headings are free blocks starting with `# ` (Placeholder18), and
+    // starting any block where a block starting `# ` is a heading (`headings`: Enter9)
     // (after spaces a split kept before the text, `enterSplitSpace: start`, as at its start)
-    const heading = freeForm && node.kind === 'paragraph' && !parts.length && /^[ \t]*\\#/.test(s);
+    const heading = ((freeForm && node.kind === 'paragraph') || headings) && !parts.length && /^[ \t]*\\#/.test(s);
     const m = !unescape || heading ? null : ordered && !parts.length ? /^[ \t]*\\(?=[!-/:-@[-`{-~])/.exec(s) : /^[ \t]*\\(?=[!-/:-@[-`{-~])|^[ \t]*\d{1,9}\\(?=[.)])/.exec(s);
     const cuts: number[] = [];
     if (m) {
@@ -407,6 +413,9 @@ function blockText(doc: OurusDoc, node: OurusNode, notes: Set<string>, ordered: 
   const headEnd = head ? headStart + head.lines - 1 : headStart;
   // markup no block has a form for: a block would hold it as text, and edit it so
   const text = doc.textOf(node);
+  // a block id (`^x`, a flavor's that has them): to a block app without them it is the block's text,
+  // which ourus keeps with its block through a split or a join, as no such app does (`Driver.blockIds`)
+  if (text instanceof OurusProse && (text.frame.some((p) => p.part === 'blockId') || text.blockIdLines.length)) notes.add('block id');
   if (head?.type === 'heading' && text instanceof OurusProse && text.frame.some((p) => p.part === 'close')) throw new Unsupported("heading's closing #s");
   if (head?.type === 'code_block' && !head.attrs.fenced) throw new Unsupported('indented code');
   if (!head && node.kind === 'item' && node.block.children.length && node.block.offsets[0] === 0) {
@@ -438,7 +447,12 @@ function blockText(doc: OurusDoc, node: OurusNode, notes: Set<string>, ordered: 
   const trim = head.type === 'paragraph' || head.type === 'heading';
   // an item's text below its marker (`-⏎  text`, a Shift-Enter at its start): its block's text starts
   // with an empty line, as an app's block after that Shift-Enter does (ShiftEnter13)
-  const below = node.kind === 'item' && text instanceof OurusProse && text.frame.some((p) => p.part === 'below') ? '\n' : '';
+  // (below the marker itself, or below a checkbox the flavor reads as a task: past a checkbox it reads as
+  // text, `[a]` in GFM, `[x]` in CommonMark, the line is the text's first, as the item started from a
+  // paragraph has it: Regression181, Regression44)
+  const belowPart = text instanceof OurusProse ? text.frame.find((p) => p.part === 'below') : undefined;
+  const taskEnd = text instanceof OurusProse ? (text.frame.find((p) => p.part === 'task')?.to ?? 0) : 0;
+  const below = node.kind === 'item' && belowPart && (belowPart.from === 0 || (!!node.block.attrs.task && belowPart.from === taskEnd)) ? '\n' : '';
   for (let l = headStart; l <= headEnd; l++) {
     const line = lineOf(l);
     // (a later line's spaces past its content column are its text, as ourus's and the apps' are:
@@ -479,6 +493,8 @@ export function draw(o: Outline, options: Pick<ProjectOptions, 'ordered'> & { re
   /** Where the text of the last block at each depth starts: its children's indentation. */
   const cols: number[] = [];
   const spans = options.bars ? { open: new Set<number>(), close: new Set<number>() } : selectedSpans(o);
+  /** The line each block starts on, for its view's marks. */
+  const firstLine: number[] = [];
   o.blocks.forEach((b, i) => {
     let sel = o.sel?.block === i ? { ...o.sel } : null;
     let t = '';
@@ -507,9 +523,12 @@ export function draw(o: Outline, options: Pick<ProjectOptions, 'ordered'> & { re
     const at = b.depth ? (cols[b.depth - 1] ?? 2 * b.depth) : 0;
     cols.length = b.depth;
     cols[b.depth] = at + marker.length + 1;
+    firstLine.push(out.length);
     t.split('\n').forEach((line, k) => out.push(k === 0 ? `${' '.repeat(at)}${marker} ${mark}${line}` : `${' '.repeat(cols[b.depth]!)}${line}`));
   });
-  return out.join('\n').replace(/\t/g, '→') + '\n' + (o.view ? drawView(o.view) : '');
+  // (its view on its blocks' first lines: `⟦folded⟧`, `⟦zoomed⟧`)
+  const drawn = out.join('\n').replace(/\t/g, '→');
+  return (o.view ? drawView(drawn, o.view, (row) => firstLine[row] ?? -1) : drawn) + '\n';
 }
 
 /** The end of block `i`'s subtree: the index of its last descendant, itself where it has none. */
@@ -566,7 +585,8 @@ export function ownBlocks(blocks: readonly Block[], ownsList: (b: Block, i: numb
     const sc = (scope[b.depth] ??= { headings: [], paragraph: false });
     let shift: number;
     if (b.free) {
-      const level = /^(#{1,6}) /.exec(b.text)?.[1]!.length ?? 0;
+      // (a heading with no text, `#` alone, is one, as in ourus's outline: it owns its section)
+      const level = /^(#{1,6})(?=[ \t]|$)/.exec(b.text)?.[1]!.length ?? 0;
       if (level) while (sc.headings.length && sc.headings.at(-1)! >= level) sc.headings.pop();
       shift = sc.headings.length;
       if (level) sc.headings.push(level);
@@ -586,7 +606,7 @@ export function ownBlocks(blocks: readonly Block[], ownsList: (b: Block, i: numb
 export function listOwner(listParent: OurusConfig['listParent'] = 'paragraph'): (b: Block) => boolean {
   if (listParent === 'container') return () => false;
   const paragraph = listParent === 'paragraph';
-  return (b) => !!b.free && !/^#{1,6} /.test(b.text) && !b.text.startsWith('> ') && (!paragraph || (!/^(`{3,}|~{3,})/.test(b.text) && !/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(b.text) && !/^\|/.test(b.text)));
+  return (b) => !!b.free && !/^#{1,6}(?=[ \t]|$)/.test(b.text) && !b.text.startsWith('> ') && (!paragraph || (!/^(`{3,}|~{3,})/.test(b.text) && !/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(b.text) && !/^\|/.test(b.text)));
 }
 
 /**
@@ -633,8 +653,10 @@ export function unescapeLaterLines(o: Outline): Outline {
  * elsewhere a line starting with a number is no block's.
  */
 export function readOutline(drawing: string, options: Pick<ProjectOptions, 'ordered'> = {}): Outline | null {
-  const { drawn, view } = splitView(drawing);
+  const { drawn, view: marked, byLine } = splitView(drawing);
   const blocks: Block[] = [];
+  /** The block each line of the drawing starts, by line (a view's marks, `byLine`). */
+  const blockAt = new Map<number, number>();
   const raw: string[][] = [];
   /** The length of the number drawn in each block's bullet's place (`1. `), before a span's `««`. */
   const numbers: number[] = [];
@@ -642,7 +664,7 @@ export function readOutline(drawing: string, options: Pick<ProjectOptions, 'orde
   /** Where the text of the last block at each depth starts, as `draw` indents. */
   const cols: number[] = [];
   // no blocks at all draw as one empty line
-  for (const line of drawn === '\n' ? [] : drawn.replace(/\n$/, '').replace(/→/g, '\t').replace(/␠/g, ' ').split('\n')) {
+  for (const [lineNo, line] of (drawn === '\n' ? [] : drawn.replace(/\n$/, '').replace(/→/g, '\t').replace(/␠/g, ' ').split('\n')).entries()) {
     const item = /^( *)(?:([-¶])|(\d{1,9}\.)) (▮ )?(.*)$/.exec(line);
     const spaces = item?.[1]!.length ?? 0;
     // a block's depth: where blocks are numbered, it starts where its parent's text does; else two
@@ -652,6 +674,7 @@ export function readOutline(drawing: string, options: Pick<ProjectOptions, 'orde
     // its text's `    - g`, as `draw` indents it)
     if (item && depth >= 0 && depth <= (blocks.at(-1)?.depth ?? -1) + 1) {
       if (item[4]) selected.push(blocks.length);
+      blockAt.set(lineNo, blocks.length);
       blocks.push({ depth, text: '', ...(item[2] === '¶' && { free: true as const }) });
       raw.push([item[3] ? `${item[3]} ${item[5]!}` : item[5]!]);
       numbers.push(item[3] ? item[3].length + 1 : 0);
@@ -706,8 +729,14 @@ export function readOutline(drawing: string, options: Pick<ProjectOptions, 'orde
       if (root < 0 || blocks[k]!.depth <= blocks[root]!.depth) selected.push((root = k));
     }
   }
+  // (a view marked by line, on blocks' first lines: those blocks; one on no block's first line reads as none)
+  const toBlock = (line: number): number => blockAt.get(line) ?? -1;
+  const view = marked && byLine ? { folded: marked.folded.map(toBlock).filter((b) => b >= 0), zoom: marked.zoom === null ? null : toBlock(marked.zoom) } : marked;
+  if (view && view.zoom !== null && view.zoom < 0) return null;
   const o: Outline = { blocks, sel, ...(selected.length && { selected }), ...(view && { view }) };
-  return draw(o, { bars }) === drawing || (options.ordered && draw(o, { ...options, bars }) === drawing) ? o : null;
+  // (read back as drawn: a stored run's view, its last line, checked apart, the rest as drawn without it)
+  const [want, as] = view && !byLine ? [drawn, { ...o, view: undefined }] : [drawing, o];
+  return draw(as, { bars }) === want || (options.ordered && draw(as, { ...options, bars }) === want) ? o : null;
 }
 
 export type Verdict = 'agree' | 'whitespace' | 'caret' | 'disagree';
@@ -719,8 +748,13 @@ export type Verdict = 'agree' | 'whitespace' | 'caret' | 'disagree';
 const loose = (b: Block): string =>
   `${b.depth}${b.free ? '¶' : ''}:${b.text
     .replace(/[ \t]*\n[ \t]*/g, '\n')
+    // (the text's start, its blanks gone: blanks before a `#` keep it text, as its escape does, ` # b`
+    // being `\# b` written otherwise; escapes go below, but that one, which says it is no heading, as
+    // `sameText` reads it)
+    .replace(/^\s+(?=#)/, '\\')
+    .replace(/^\s+(?=\\#)/, '')
     .replace(/^((?:\d{1,9}\. )?(?:\[[ xX]\] )?(?:#{1,6} |> )?)[ \t]+/, '$1')
-    .replace(/\\([!-/:-@[-`{-~])/g, '$1')
+    .replace(/\\([!-/:-@[-`{-~])/g, (m, c: string, i: number) => (i === 0 && c === '#' ? m : c))
     .trim()}`;
 
 /**
@@ -934,6 +968,9 @@ export function italicsAsMarkdown(o: Outline): Outline {
  */
 export function sameText(a: string, b: string): boolean {
   if (a === b) return true;
+  // (a heading starting a block is the block's, not inline: `# x` against `\# x`, text, differs)
+  const heading = (text: string): string | undefined => /^#{1,6}(?=[ \t]|$)/.exec(text)?.[0];
+  if (heading(a) !== heading(b)) return false;
   const unescaped = (text: string): string => text.replace(/\\([!-/:-@[-`{-~])/g, '$1');
   const spelled = (text: string): string => text.replace(/(?<![\w_])_(?=[^\s_])([^_\n]*?[^\s_])_(?![\w_])/g, '*$1*').replace(/(?<!~)~(?=[^\s~])([^~\n]*?[^\s~])~(?!~)/g, '~~$1~~');
   if (unescaped(spelled(a)) !== unescaped(spelled(b))) return false;

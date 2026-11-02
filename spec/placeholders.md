@@ -26,8 +26,10 @@ Only the editor makes a placeholder, and the document keeps it (each editor view
   first character keeps its column and its text. Typing never makes one: what is typed is text.
 - **It lasts** while the text doesn't hold its node anyway: typing there ends it.
 - **Leaving it**, the node stays when the text can hold it some other way: an empty item gets a
-  blank line above it (`- a` / blank / `  - `), and a deleted character's place gives up its surplus
-  space (`- b`), the text escaped where it would start a block there (`- \``` x`). A node no text
+  blank line above it (`- a` / blank / `  - `), and a deleted character's place keeps its space, the
+  user's: the text's padding (`-  b`), its children and later lines moved right with it, where text
+  follows it on its line (`heldSpace: repair`, the default), or gives it up (`- b`, `heldSpace: trim`);
+  either way the text escaped where it would start a block there (`-  \``` x`, `- \``` x`). A node no text
   can hold, an empty paragraph, goes. Either way it is one
   edit, verified, part of the undo step before it, which made the empty node: one undo takes both
   back ([Undo3](undo.md#undo3)).
@@ -50,7 +52,7 @@ child under text.
 | typing | none made; on its line, it ends: the node has text | |
 | the caret leaves an empty item | ends | the item stays, a blank line above it |
 | the caret leaves an empty paragraph, or an empty line in a node's text | ends | the node or line goes |
-| the caret leaves a deleted character's place | ends | the surplus space goes, the text escaped where it would start a block |
+| the caret leaves a deleted character's place | ends | the space stays, the text's padding, its children moved with it (`heldSpace: repair`), or goes (`trim`); the text escaped where it would start a block |
 | Delete before the held space, or Backspace after it | ends | the same, the caret staying ([Delete32](delete.md#delete32), [Backspace48](backspace.md#backspace48)); other keys there act at the text's start |
 | the caret leaves an empty node the text can hold | none was made | nothing changes |
 | undo or redo | comes back with the document | |
@@ -324,7 +326,7 @@ Delete at the text start keeps the item's column. Deleting a text's first charac
 space after it right after the marker (`-  b`): the wider padding moves the item's content column,
 and its child would stop being one. The space at the caret, in the deleted character's place,
 becomes the placeholder: read as text, it keeps the item's column. Typing fills the place; leaving,
-the surplus space goes.
+the space stays as the item's padding, its child moving with it ([Placeholder9](#placeholder9)).
 
 ```yaml
 tags: edge
@@ -351,12 +353,44 @@ tags: edge
 
 ## Placeholder9
 
-The same with Backspace after the first character. SilverBullet leaves `-  b`, whose wider padding
-makes `c` a sibling instead of a child; bare Obsidian and its Outliner re-indent `c` to keep it a
-child, rewriting a line the edit isn't about.
+The same with Backspace after the first character. Leaving, the space stays, the user's: the item's
+padding (`heldSpace: repair`), and `c` moves right with it, still a child, as bare Obsidian and its
+Outliner re-indent it; the block apps keep the space as their block's text. SilverBullet leaves
+`-  b` with `c` where it was, a sibling now.
 
 ```yaml
 tags: edge
+```
+
+```buffer
+- a┃ b
+  - c
+```
+
+> deleteContentBackward
+
+```buffer
+- ┃◌ b
+  - c
+```
+
+> cursorDocEnd
+
+Leaving, the space is the item's padding, and `c` moves with it.
+
+```buffer
+-  b
+   - c
+```
+
+## Placeholder9b
+
+With `heldSpace: trim` (Logseq, RemNote, which trim a block's edges as they store it), the space
+goes as the caret leaves, and `c` stays where it was.
+
+```yaml
+tags: edge
+heldSpace: trim
 ```
 
 ```buffer
@@ -384,10 +418,38 @@ Leaving, the surplus space goes, and `c` is still a child.
 
 Backspace after the first character, before text that right after the marker would start a block:
 bare editors leave `-  ``` x`, an item whose text is now a code fence. The space is held as text, and
-leaving, it goes and the fence is escaped, so the item's text is still its text.
+leaving, it stays, the item's padding, and the fence is escaped, so the item's text is still its text.
 
 ```yaml
 tags: rare
+```
+
+```buffer
+- a┃ ``` x
+- b
+```
+
+> deleteContentBackward
+
+```buffer
+- ┃◌ ``` x
+- b
+```
+
+> cursorDocEnd
+
+```buffer
+-  \̬``` x
+- b
+```
+
+## Placeholder17b
+
+With `heldSpace: trim`, leaving, the space goes and the fence is escaped.
+
+```yaml
+tags: rare
+heldSpace: trim
 ```
 
 ```buffer
@@ -635,10 +697,43 @@ tags: rare
 
 The same at a paragraph's start: deleting its first character before text that at the line's start
 would start a block leaves ` # b`, a heading to bare editors. The space is held as text, as after an
-item's marker ([Placeholder17](#placeholder17)), and leaving, it goes and the text is escaped.
+item's marker ([Placeholder17](#placeholder17)), and leaving, it stays, the paragraph's indentation,
+and the text is escaped.
 
 ```yaml
 tags: rare
+```
+
+```buffer
+a┃ # b
+
+after
+```
+
+> deleteContentBackward
+
+```buffer
+┃◌ # b
+
+after
+```
+
+> cursorDocEnd
+
+```buffer
+ \̬# b
+
+after
+```
+
+## Placeholder18b
+
+The same at a paragraph's start: deleting its first character before text that at the line's start
+would start a block leaves ` # b`, a heading to bare editors. With `heldSpace: trim`, leaving, the space goes and the text is escaped.
+
+```yaml
+tags: rare
+heldSpace: trim
 ```
 
 ```buffer

@@ -185,3 +185,9 @@ examples skipped for a value declared disagree when played, those of the value a
 - **The browser's cache can hold the bundle unpatched** (GitHub Pages sends `max-age=600`): `open`
   clears it and loads again when the names aren't there.
 - **The driver's `HEAD` for the bundle's date** is cached apart from the bundle (a key per method).
+
+## Options measured by rejudging (2026-11-03)
+
+`pasteOverNodes: nothing`: a paste or plain paste over blocks selected whole pastes nothing, the blocks
+still selected (SubtreeEdit11, SubtreeEdit14, SubtreeEdit18; no case worse), judged against the stored
+run (the app's states as they are, ourus replayed under the value: `OURUS_SXS_BEHAVES` with `--rejudge`).

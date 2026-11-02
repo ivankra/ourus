@@ -67,15 +67,23 @@ function toItem(depth: number, text: string): Item & { prefix: number; cut?: num
   // a number that is text (after a numbered item's own number too)
   const literal = prefix === (numbered?.[0].length ?? 0) ? /^(\d{1,9})\\(?=[.)])/.exec(content) : null;
   if (literal) content = literal[1] + content.slice(literal[0].length);
-  return { depth, content, note: '', checkbox: !!task, checked: !!task && task[1] !== ' ', heading: heading?.[1]!.length ?? 0, numbered: !!numbered, prefix, ...(literal && { cut: prefix + literal[1]!.length }) };
+  // and a `#` that is text (a heading is the item's attribute, its content plain: Enter9)
+  const hash = !literal && prefix === (numbered?.[0].length ?? 0) && /^\\#/.test(content);
+  if (hash) content = content.slice(1);
+  const cut = literal ? prefix + literal[1]!.length : hash ? prefix : undefined;
+  return { depth, content, note: '', checkbox: !!task, checked: !!task && task[1] !== ' ', heading: heading?.[1]!.length ?? 0, numbered: !!numbered, prefix, ...(cut !== undefined && { cut }) };
 }
 
 /** An item's canonical text, and the length of the prefix its attributes stand for: its number `number` where it is numbered. */
 function fromItem(it: Item, number: number | null): { text: string; prefix: number; cut?: number } {
   const prefix = (number !== null ? `${number}. ` : '') + (it.checkbox || it.checked ? (it.checked ? '[x] ' : '[ ] ') : '') + (it.heading ? '#'.repeat(it.heading) + ' ' : '');
-  const literal = !prefix || prefix === `${number}. ` ? /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(it.content) : null;
-  const content = literal ? it.content.slice(0, literal[0].length) + '\\' + it.content.slice(literal[0].length) : it.content;
-  return { text: prefix + content + (it.note ? '\n' + it.note : ''), prefix: prefix.length, ...(literal && { cut: literal[0].length }) };
+  const plain = !prefix || prefix === `${number}. `;
+  const literal = plain ? /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(it.content) : null;
+  // and a `#` that is text, which the canonical text would read as a heading's (`\# x`)
+  const hash = plain && !literal && /^#{1,6}(?=[ \t]|$)/.test(it.content);
+  const content = literal ? it.content.slice(0, literal[0].length) + '\\' + it.content.slice(literal[0].length) : hash ? '\\' + it.content : it.content;
+  const cut = literal ? literal[0].length : hash ? 0 : undefined;
+  return { text: prefix + content + (it.note ? '\n' + it.note : ''), prefix: prefix.length, ...(cut !== undefined && { cut }) };
 }
 
 /** A worker's: whether its test was loaded with a view (folds, a zoom), which is read back then alone. */
@@ -131,6 +139,8 @@ export const driver: Driver = {
   // item's text, with no editor of their own: Enter in them splits the item (`enter-in-fence`)
   refuses: ['markup-fence', 'enter-in-fence'],
   ordered: true,
+  // a heading is the item's attribute (H1 to H3), content starting `# ` text (`fromItem` escapes it)
+  headings: true,
   // a drop leaves the dropped item selected as an item, the caret gone (README.md, "Drag and drop")
   noCaretAfter: ['moveSubtree'],
   // its `load` selects items as items, as `read` reports them
@@ -160,12 +170,17 @@ export const driver: Driver = {
     pastePlainLines: 'enter',
     pasteOnParent: 'after',
     pasteParagraphList: 'children',
+    // a to-do's checkbox is the item's, not text (TaskBackspace2, Scenario15; measured by rejudging,
+    // 2026-11-02)
+    taskEditing: 'block',
   },
   // "Unindent in place" (Settings › Editor): Shift+Tab takes the item's later siblings along as children
   settings: { outdent: ['logical', 'direct'] },
   holds(doc) {
     const o = doc as Outline;
     if (o.blocks.some((b) => /^(\[[ xX]\] )?#{4,6} /.test(b.text))) return 'heading deeper than H3';
+    // a heading with no text, `#` alone: no heading here has no text, and the text `#` reads as `\#` (Regression168)
+    if (o.blocks.some((b) => /^#{1,6}$/.test(b.text))) return 'heading with no text (# alone), which Dynalist holds as the text #';
     // (blocks are selected by Shift-Down from the first, which takes the parent in past a deeper one)
     if (o.selected && new Set(o.selected.map((i) => o.blocks[i]!.depth)).size > 1) return 'blocks selected at two depths: Shift-Down takes their parent in';
     // a checkbox and a heading level are the item's attributes, not text: no caret goes there

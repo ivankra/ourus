@@ -6,9 +6,9 @@
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { OurusConfig } from '../../src/config.ts';
-import { drawsCaret, readText, withoutAuto, withoutCaret } from '../../test/drawing.ts';
-import { isDrop } from '../../test/player.ts';
-import { drawnSteps, readClipboard, rowView, startOf, type RowView } from '../../test/spec-run.ts';
+import { drawDoc, drawsCaret, readText, withoutAuto, withoutCaret } from '../../test/drawing.ts';
+import { isDrop, play, type Played } from '../../test/player.ts';
+import { drawnSteps, normalize, readClipboard, rowView, startOf, type RowView } from '../../test/spec-run.ts';
 import { readSpec, slug, specConfig, type Clipboard, type SpecTest } from '../../test/specfile.ts';
 import type { Doc, Driver, Drop } from './driver.ts';
 import { inBlocks, resolveDrop } from './drag.ts';
@@ -36,6 +36,12 @@ export interface PlanStep {
   readonly sections?: readonly number[];
   /** The expected clipboard's text: the harness reads an app's `text/plain` only. */
   readonly clipboard?: string;
+  /**
+   * The step changes only what blocks can't show (Enter leaving a list: an empty paragraph, which an
+   * app's empty block already is), with steps after it: where the app changed something there, it
+   * answers nothing, and what follows plays from another state (`judge` in run.ts).
+   */
+  readonly lost?: true;
 }
 
 export interface Plan {
@@ -185,13 +191,17 @@ export function adapt(driver: Driver, drawn: SpecTest, opts: AdaptOptions = {}):
     if (/^(?:cursor|select)DocEnd$/.test(actions[i]!) && i + 1 < actions.length && actions[i + 1] !== 'cursorDocStart') return skip(`${actions[i + 1]} after ${actions[i]}`);
   }
   const notes = new Set<string>(under);
-  const refused = (n: Set<string>): string | undefined => driver.refuses?.find((r) => n.has(r));
+  // (a block id, to a block app without them, is its block's text: the case tests what it doesn't have)
+  const refused = (n: Set<string>): string | undefined =>
+    driver.refuses?.find((r) => n.has(r)) ?? (driver.model === 'block' && !driver.blockIds && n.has('block id') ? 'block id (`^x`), which the app has none of: its text' : undefined);
   try {
     const config = specConfig(test.options);
     // what the app's blocks hold, as the projection reads it
-    const shape = { ordered: driver.ordered, freeForm: driver.freeForm, paragraphsInBlock: driver.paragraphsInBlock, quotes: driver.behaves?.quotes, listParent: driver.behaves?.listParent, blockSelection: driver.selectsBlocks };
+    const shape = { ordered: driver.ordered, headings: driver.headings, freeForm: driver.freeForm, paragraphsInBlock: driver.paragraphsInBlock, quotes: driver.behaves?.quotes, listParent: driver.behaves?.listParent, blockSelection: driver.selectsBlocks };
     const start = project(test.initial.buffer, flavor, { ...shape, config });
     if (start.caretLost) return skip(start.caretLost);
+    const over = escapeMotion(test, flavor, config, (buffer) => project(buffer, flavor, { ...shape, config }).outline.sel);
+    if (over) return skip(over);
     // (its view first, which the app may not hold either)
     if (views) {
       const view = inBlockRows(views.start, start.rows ?? new Map());
@@ -238,6 +248,7 @@ export function adapt(driver: Driver, drawn: SpecTest, opts: AdaptOptions = {}):
     const steps: PlanStep[] = [];
     let prev: { outline: Outline; drawn: string } | null = { outline: start.outline, drawn: test.initial.buffer };
     let meaningful = false;
+    const lostSteps = new Set<number>();
     for (const [i, s] of test.steps.entries()) {
       const clipboard = clipboardAfter(i);
       // the step's buffer as drawn, or as ourus replays it under the app's values; with a view and none
@@ -262,10 +273,16 @@ export function adapt(driver: Driver, drawn: SpecTest, opts: AdaptOptions = {}):
       const lost = prev && prev.drawn !== buffer && sameOutline(prev.outline, p.outline) && !p.caretLost;
       if (!lost || clipboard !== undefined) meaningful = true;
       steps.push({ line: s.line, actions: played[i]!, want: p.outline, drawn: buffer, ...(p.caretLost && { caretLost: p.caretLost }), ...(p.sections.length && { sections: p.sections }), ...(clipboard !== undefined && { clipboard }) });
+      if (lost && clipboard === undefined) lostSteps.add(steps.length - 1);
       prev = { outline: p.outline, drawn: buffer };
     }
     if (!steps.some((s) => s.want || s.clipboard !== undefined)) return skip('nothing to compare');
     if (!meaningful) return skip('changes only what blocks can\'t show');
+    // and the steps it ends with that do so go: what the app does there is no answer to them (Enter on
+    // the last empty item leaves the list, an empty paragraph, which a block app's empty block already
+    // is: QuoteAtom12)
+    while (lostSteps.has(steps.length - 1)) steps.pop();
+    for (const k of lostSteps) if (k < steps.length) steps[k] = { ...steps[k]!, lost: true };
     // the same for the blocks the app is given: an adapted start can be where the app's option acts
     // though the Markdown isn't (a paragraph's list its children, so Enter mid-paragraph splits a
     // block with children: E9 and `enterMidItem`), so ourus plays the start as drawn, items, both ways
@@ -294,6 +311,42 @@ export function adapt(driver: Driver, drawn: SpecTest, opts: AdaptOptions = {}):
  * A step's buffer (as drawn, or as ourus replays it) with the caret where the step's drawing has
  * one: a drawing without one doesn't check it, and neither does the app's judgment.
  */
+/**
+ * A character motion that moves the caret by no character of the blocks' text: ourus's caret steps
+ * over an escape it wrote (`\┃-` after `cursorCharRight` from `┃\-`), which a block's text hasn't, so
+ * the app's motion moves past a character ourus's doesn't, and what follows is played elsewhere in the
+ * text (Regression24c): the step tests ourus's source, not the app. Ourus is played action by action
+ * for it, each motion's states on either side projected.
+ */
+function escapeMotion(test: SpecTest, flavor: OurusConfig['flavor'], config: Partial<OurusConfig>, at: (buffer: string) => Outline['sel']): string | undefined {
+  let state: Played;
+  try {
+    state = startOf(test, flavor, config);
+  } catch {
+    return undefined;
+  }
+  const drawn = (): string => withoutAuto(normalize(drawDoc(state.view, state.selection)));
+  for (const step of test.steps)
+    for (const action of step.actions) {
+      const before = drawn();
+      try {
+        state = play(state, [action]);
+      } catch {
+        return undefined;
+      }
+      if (!/^(?:cursor|select)Char(?:Left|Right)$/.test(action)) continue;
+      const after = drawn();
+      if (after === before) continue;
+      try {
+        const [a, b] = [at(before), at(after)];
+        if (a && b && JSON.stringify(a) === JSON.stringify(b)) return `${action} over an escape ourus wrote, which a block's text hasn't`;
+      } catch {
+        // (a state with no blocks' form: the steps' own projection says so)
+      }
+    }
+  return undefined;
+}
+
 const caretAsDrawn = (buffer: string, drawn: string | undefined): string => (drawn !== undefined && !drawsCaret(drawn) ? withoutCaret(buffer) : buffer);
 
 /** A text app's plan: every buffer as written, the caret where drawn. */

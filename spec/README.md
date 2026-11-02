@@ -485,11 +485,11 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
     `enterAtTextStart` (`into`, the default, or `stay`), `backspaceAtTopItem` (`unwrap`, the
     default, or `refuse`), `backspaceAtItemStart` (`join`, the default, `body`, `unwrap` or `logseq`), `emptyItemWithChildren` (`lift`, the default, or `refuse`),
     `joinWithChildren` (`join`, the default, or `refuse`), `enterTask` (`continue`, the default, or
-    `plain`), `enterSplitSpace` (`trim`, the default, `drop` or `start`),
+    `plain`), `enterSplitSpace` (`trim`, the default, `drop` or `start`), `heldSpace` (`repair`, the default, or `trim`),
     `handleFenceContents` (`true`, the default, or `false`), `autoClose` (a YAML list of ```` ``` ````, `~~~`, `$$`, `%%`, `<!--`, `` ` ``, `(`, `[`, `{`, `[[`, `((`, `$`: `autoClose: ['```', '~~~', '(']`; the first five the default; `[]` for none), `headingEditing` (`text`, the default, or `block`), `taskEditing` (`checkbox`, the default,
     `text`, `block` or `unwrap`), `copyAtCaret` (`node`, the default, or `host`), `copySelection` (`text`, the
     default, or `nodes`), `pasteSeams` (`closed`, the default, or `open`), `pasteOverSelection` (`replace`, the default, or
-    `ignore`: a paste of nodes only), `pasteLines` (`text`, the
+    `ignore`: a paste of nodes only), `pasteOverNodes` (`replace`, the default, `after` or `nothing`), `pasteLines` (`text`, the
     default, or `items`), `pastePlainLines` (`text`, the default, `items`, `enter` or `host`), `pasteAtTextStart` (`after`, the default, or `before`), `pasteOnParent`
     (`children`, the default, or `after`), `pasteParagraphList` (`siblings`, the default, or
     `children`), `pasteListForm` (`destination`, the default, or `own`), `markup`

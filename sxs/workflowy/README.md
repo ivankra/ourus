@@ -271,3 +271,11 @@ return nothing; `layoutMode` among `bullets todo h1 h2 h3 p numbered code-block 
 dashboard check`) and `getItem()` (`layoutMode`, `applyLocalComplete`). The editors are the
 contenteditable `.name > .content` and `.notes > .content` of an item's element (`item.getElement()`),
 each with an `editor` object. The keymap is the table `l2[...]` in `wf-base.<hash>.js`.
+
+## Options measured by rejudging (2026-11-02)
+
+Each value of ourus's options judged against the stored run (the app's states as they are, ourus
+replayed under the value: `OURUS_SXS_BEHAVES` with `--rejudge`): `taskEditing: block`, a to-do's
+checkbox the item's, not text (TaskBackspace2, TaskBackspace10, SoftBackspace1, Scenario15; no case
+worse). Then (2026-11-03) `pasteOverNodes: nothing`, a paste or plain paste over items selected whole
+pasting nothing (SubtreeEdit11, SubtreeEdit14, SubtreeEdit18; no case worse).

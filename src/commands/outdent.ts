@@ -31,16 +31,10 @@ export function outdentCommand(ctx: CommandContext): OurusResult | null {
   const direct = ctx.config.outdent === 'direct';
   if (parent.kind === 'paragraph' || parent.kind === 'root' || parent.kind === 'heading') return unwrapItems(ctx, nodes, parent, later);
   if (parent.kind !== 'item') return null;
-  // (every child of an item with no text of its own leaving it, `- - b`: it would hold nothing, and
-  // goes, they in its place)
-  if (!ctx.doc.textOf(parent) && first.index === 0 && (direct || !later.length)) {
-    const draft = ctx.draft();
-    if (later.length) draft.remove(later).append(last, 'last', later);
-    draft.dissolve(parent);
-    selectionInText(ctx, draft, true);
-    return ctx.apply(draft);
-  }
   const draft = ctx.draft().remove(nodes);
+  // (every child of an item with no text of its own leaving it, `- - b`: the item stays, an empty item
+  // on its marker's line, as an outliner's empty block does; every app measured keeps it, Outdent21)
+  if (!ctx.doc.textOf(parent) && first.index === 0 && (direct || !later.length) && parent.children.length === nodes.length + (direct ? later.length : 0)) draft.setText(parent, new OurusProse('paragraph', true, ''));
   if (direct && later.length) draft.remove(later).place('after', parent, nodes).append(last, 'last', later);
   else draft.place('after', parent, nodes);
   selectionInText(ctx, draft, true);

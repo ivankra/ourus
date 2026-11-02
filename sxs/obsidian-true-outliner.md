@@ -1,12 +1,12 @@
 ---
 type: "SxS"
 app: "obsidian-true-outliner"
-version: "1.14.5, true-outliner 0.14.4"
+version: "1.15.0, true-outliner 0.14.4"
 url: "app://obsidian.md/"
 model: "text"
 command: "node sxs/run.ts obsidian-true-outliner"
-elapsed_s: 669
-workers: 2
+elapsed_s: 568
+workers: 3
 ---
 
 # Obsidian (true-outliner) vs ourus
@@ -15,14 +15,14 @@ Summary:
 
 | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- |
-| **448 (30%)** | **[83](#caret-83) (5.6%)** | **[32](#whitespace-32) (2.1%)** | **[580](#disagree-580) (39%)** | **[1](#error-1) (0.067%)** | **[341](#skipped-341) (23%)** | **1490** |
+| **451 (30%)** | **[85](#caret-85) (5.7%)** | **[31](#whitespace-31) (2.1%)** | **[577](#disagree-577) (38%)** | **0 (0%)** | **[350](#skipped-350) (23%)** | **1499** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| [auto.md](../spec/auto.md) | 26 |  |  | 12 | 1 |  | **39** |
-| [backspace.md](../spec/backspace.md) | 30 | 1 | 1 | 37 |  | 17 | **86** |
+| [auto.md](../spec/auto.md) | 27 |  |  | 12 |  |  | **39** |
+| [backspace.md](../spec/backspace.md) | 30 | 1 | 1 | 37 |  | 19 | **88** |
 | [backtick.md](../spec/backtick.md) | 5 |  |  | 21 |  | 7 | **33** |
 | [block-ids.md](../spec/block-ids.md) | 9 | 3 |  | 8 |  | 1 | **21** |
 | [copy.md](../spec/copy.md) | 3 |  |  | 3 |  | 7 | **13** |
@@ -39,7 +39,7 @@ Per-file:
 | [lists.md](../spec/lists.md) |  | 1 |  | 3 |  | 12 | **16** |
 | [move-subtree-down.md](../spec/move-subtree-down.md) | 7 | 12 | 1 | 24 |  | 1 | **45** |
 | [move-subtree-up.md](../spec/move-subtree-up.md) | 6 | 15 | 1 | 21 |  | 4 | **47** |
-| [move-subtree.md](../spec/move-subtree.md) |  | 5 |  | 8 |  | 11 | **24** |
+| [move-subtree.md](../spec/move-subtree.md) |  | 7 |  | 6 |  | 11 | **24** |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 25 | 4 | 4 | 28 |  | 6 | **67** |
 | [outdent.md](../spec/outdent.md) | 11 |  |  | 19 |  | 12 | **42** |
 | [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |
@@ -49,21 +49,21 @@ Per-file:
 | [paste-list.md](../spec/paste-list.md) | 8 |  |  | 14 |  | 7 | **29** |
 | [paste-plain.md](../spec/paste-plain.md) | 21 |  |  | 8 |  | 7 | **36** |
 | [paste.md](../spec/paste.md) | 1 |  | 1 | 19 |  | 15 | **36** |
-| [placeholders.md](../spec/placeholders.md) | 5 |  | 1 | 13 |  | 1 | **20** |
+| [placeholders.md](../spec/placeholders.md) | 6 |  |  | 13 |  | 4 | **23** |
 | [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |
-| [quotes.md](../spec/quotes.md) | 75 | 1 | 2 | 38 |  | 27 | **143** |
+| [quotes.md](../spec/quotes.md) | 76 | 1 | 2 | 37 |  | 27 | **143** |
 | [regressions.md](../spec/regressions.md) | 41 | 5 | 6 | 92 |  | 58 | **202** |
 | [scenarios.md](../spec/scenarios.md) | 9 | 5 |  | 12 |  | 3 | **29** |
 | [select.md](../spec/select.md) | 16 | 3 |  |  |  | 4 | **23** |
-| [shift-enter.md](../spec/shift-enter.md) | 5 |  | 5 | 21 |  | 5 | **36** |
-| [subtree-selection.md](../spec/subtree-selection.md) | 1 | 1 |  | 14 |  | 1 | **17** |
+| [shift-enter.md](../spec/shift-enter.md) | 5 |  | 5 | 21 |  | 7 | **38** |
+| [subtree-selection.md](../spec/subtree-selection.md) | 1 | 1 |  | 14 |  | 3 | **19** |
 | [tasks.md](../spec/tasks.md) | 13 |  |  | 8 |  | 9 | **30** |
 | [typing.md](../spec/typing.md) | 3 |  |  |  |  |  | **3** |
 | [undo.md](../spec/undo.md) | 2 |  |  | 3 |  |  | **5** |
 | [zoom.md](../spec/zoom.md) | 7 |  |  | 3 |  | 4 | **14** |
-| **total** | **448 (30%)** | **83 (5.6%)** | **32 (2.1%)** | **580 (39%)** | **1 (0.067%)** | **346 (23%)** | **1490** |
+| **total** | **451 (30%)** | **85 (5.7%)** | **31 (2.1%)** | **577 (38%)** | **0 (0%)** | **355 (24%)** | **1499** |
 
-## Disagree (580)
+## Disagree (577)
 
 ### [Auto1](../spec/auto.md#auto1)
 
@@ -1864,7 +1864,7 @@ code
 </td><td>
 
 ```buffer
-┃\# b
+┃ \# b
 ```
 
 </td></tr>
@@ -2014,7 +2014,7 @@ para
 </td><td>
 
 ```buffer
-┃\# b
+┃ \# b
 ```
 
 </td></tr>
@@ -7995,10 +7995,8 @@ Adapted: under enterMidItem: child
 <tr valign="top"><td>
 
 ```buffer
-- a┃b
+- a┃b⟦folded⟧
   - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
@@ -8007,18 +8005,14 @@ Adapted: under enterMidItem: child
 - a
   - ┃b
   - c
-
-⟦folded none; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - c
 - ┃b
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -8054,32 +8048,26 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-- ┃
+- ┃⟦folded⟧
   - b
 - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- ┃
+- ┃⟦folded⟧
   - b
 - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- 
+- ⟦folded⟧
   - b
 - ┃
 - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -8094,11 +8082,17 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - b
 - c┃
+```
 
-⟦folded 1; zoom none⟧
+</td><td>
+
+```buffer
+- a⟦folded⟧
+  - b
+  - c┃
 ```
 
 </td><td>
@@ -8107,18 +8101,6 @@ Original:
 - a
   - b
   - c┃
-
-⟦folded 1; zoom none⟧
-```
-
-</td><td>
-
-```buffer
-- a
-  - b
-  - c┃
-
-⟦folded none; zoom none⟧
 ```
 
 </td></tr>
@@ -8133,28 +8115,23 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-- a┃
+- a┃⟦folded⟧
   - b
   - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
 ┃
-⟦folded none; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- a┃
+- a┃⟦folded⟧
   - b
   - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -8169,11 +8146,9 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-# H┃
+# H┃⟦folded⟧
 
 p
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
@@ -8184,8 +8159,6 @@ p
 ┃
 
 p
-
-⟦folded none; zoom none⟧
 ```
 
 </td><td>
@@ -8195,8 +8168,6 @@ p
 ┃
 
 p
-
-⟦folded none; zoom none⟧
 ```
 
 </td></tr>
@@ -8222,33 +8193,27 @@ p
 <tr valign="top"><td>
 
 ```buffer
-- a┃
+- a┃⟦folded⟧
   - b
 - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
 - a- x
-┃
+┃⟦folded⟧
   - b
 - c
-
-⟦folded 2; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - b
 - x┃
 - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -8263,11 +8228,9 @@ p
 <tr valign="top"><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - b
 - ┃c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
@@ -8275,17 +8238,13 @@ p
 ```buffer
 - a
   - b┃c
-
-⟦folded none; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- a┃c
+- a┃c⟦folded⟧
   - b
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -8300,12 +8259,10 @@ p
 <tr valign="top"><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - b
 - ┃c
   - d
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
@@ -8314,8 +8271,6 @@ p
 - a
   - b┃c
     - d
-
-⟦folded none; zoom none⟧
 ```
 
 </td><td>
@@ -8324,8 +8279,6 @@ p
 - a┃c
   - b
   - d
-
-⟦folded none; zoom none⟧
 ```
 
 </td></tr>
@@ -8340,23 +8293,19 @@ p
 <tr valign="top"><td>
 
 ```buffer
-- a┃
+- a┃⟦folded⟧
   - x
 - a
   - x
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - x
 - ┃a
   - x
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
@@ -8364,10 +8313,8 @@ p
 ```buffer
 - a
   - x
-- a┃
+- a┃⟦folded⟧
   - x
-
-⟦folded 3; zoom none⟧
 ```
 
 </td></tr>
@@ -8382,23 +8329,19 @@ p
 <tr valign="top"><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - x
 - a┃
   - x
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- ┃a
+- ┃a⟦folded⟧
   - x
 - a
   - x
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
@@ -8406,10 +8349,8 @@ p
 ```buffer
 - a┃
   - x
-- a
+- a⟦folded⟧
   - x
-
-⟦folded 3; zoom none⟧
 ```
 
 </td></tr>
@@ -8425,32 +8366,26 @@ p
 
 ```buffer
 
-┃# h
+┃# h⟦folded⟧
 > - 
 > ^x
-
-⟦folded 2; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
 
-# h┃
+# h┃⟦folded⟧
 > - 
 > ^x
-
-⟦folded 2; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-# h┃
+# h┃⟦folded⟧
 > - 
 > ^x
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -11581,39 +11516,6 @@ para┃
 </td></tr>
 </table>
 
-### [MoveSubtree12](../spec/move-subtree.md#movesubtree12)
-
-> moveSubtree ②
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x┃
-
-p
-```
-
-</td><td>
-
-```buffer
-«- x
-»
-p
-```
-
-</td><td>
-
-```buffer
-p
-
-x┃
-```
-
-</td></tr>
-</table>
-
 ### [MoveSubtree14](../spec/move-subtree.md#movesubtree14)
 
 > moveSubtree ②
@@ -11714,9 +11616,9 @@ x
 </td><td>
 
 ```buffer
-«1. a»
+1. a
 
-- x
+«- x»
 2. b
 ```
 
@@ -11801,45 +11703,6 @@ x┃
 - a
 - b
   - a1┃
-```
-
-</td></tr>
-</table>
-
-### [MoveSubtree24](../spec/move-subtree.md#movesubtree24)
-
-> moveSubtree ①
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃
-
-- b
-
-- c
-```
-
-</td><td>
-
-```buffer
-«- a
-»
-- b
-
-- c
-```
-
-</td><td>
-
-```buffer
-- b
-
-- c
-
-- a┃
 ```
 
 </td></tr>
@@ -13516,6 +13379,7 @@ t1┃
 
 ```buffer
 - a
+- 
 - ┃b
 ```
 
@@ -17074,7 +16938,7 @@ para
 </td><td>
 
 ````buffer
-- \``` x
+-  \``` x
 - b
 ````
 
@@ -17407,7 +17271,7 @@ after┃
 </td><td>
 
 ```buffer
-\# b
+ \# b
 
 after
 ```
@@ -17956,63 +17820,6 @@ Original:
 ```buffer
 > - a
 >   - b┃
-```
-
-</td></tr>
-</table>
-
-### [Quote15](../spec/quotes.md#quote15)
-
-> outdent
-
-Adapted: under quotes: atom
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x
-  > - a
-  > - b┃
-```
-
-</td><td>
-
-```buffer
-- x
-  > - a
-> - b┃
-```
-
-</td><td>
-
-```buffer
-- x
-  > - a
-  > - b┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x
-  > - a
-  > - b┃
-```
-
-</td><td>
-
-```buffer
-- x
-  > - a
-  > - b┃
 ```
 
 </td></tr>
@@ -20833,12 +20640,10 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - b
 ┃
 - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
@@ -20848,19 +20653,15 @@ Original:
 ┃«  - b
 »
 - c
-
-⟦folded none; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-┃«- a
+┃«- a⟦folded⟧
   - b
 »
 - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -21515,31 +21316,25 @@ b_┃
 <tr valign="top"><td>
 
 ```buffer
-«- top
+«- top⟦zoomed⟧
   - one
   - two
 »- other
-
-⟦folded none; zoom 1⟧
 ```
 
 </td><td>
 
 ```buffer
-«- top
+«- top⟦zoomed⟧
   - one
   - two
 »- other
-
-⟦folded none; zoom 1⟧
 ```
 
 </td><td>
 
 ```buffer
 - ┃other
-
-⟦folded none; zoom none⟧
 ```
 
 </td></tr>
@@ -22007,11 +21802,9 @@ Adapted: under copyAtCaret: host
 <tr valign="top"><td>
 
 ```buffer
-- - ┃a
+- - ┃a⟦folded⟧
   - SECRET
 - KEEP
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
@@ -22019,18 +21812,14 @@ Adapted: under copyAtCaret: host
 ```buffer
 ┃  - SECRET
 - KEEP
-
-⟦folded none; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- - ┃a
+- - ┃a⟦folded⟧
   - SECRET
 - KEEP
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -23879,12 +23668,11 @@ Done.┃
 <tr valign="top"><td>
 
 ```buffer
-- Home
-  - plants
-- Inbox«
+«- Home
+  - plants»
+- Inbox
 - Work
   - email
-»
 ```
 
 </td><td>
@@ -23907,9 +23695,10 @@ Done.┃
 <tr valign="top"><td>
 
 ```buffer
-- Home
-  - plants
 - s┃
+- Inbox
+- Work
+  - email
 ```
 
 </td><td>
@@ -25036,7 +24825,7 @@ x┃  bc
 
 ````buffer
 -
-  ┃\``` x
+  ┃ \``` x
 ````
 
 </td></tr>
@@ -25478,7 +25267,7 @@ Title┃more
 
 ```buffer
 -
-  ┃\# b
+  ┃ \# b
 ```
 
 </td></tr>
@@ -26559,31 +26348,25 @@ Original:
 
 ```buffer
 - a
-- b┃
+- b┃⟦zoomed⟧
 - c
-
-⟦folded none; zoom 2⟧
 ```
 
 </td><td>
 
 ```buffer
 - a
-- b┃
+- b┃⟦zoomed⟧
 - c
-
-⟦folded none; zoom 2⟧
 ```
 
 </td><td>
 
 ```buffer
 - a
-- b
+- b⟦zoomed⟧
   - ┃
 - c
-
-⟦folded none; zoom 2⟧
 ```
 
 </td></tr>
@@ -26598,29 +26381,23 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-- a┃b
+- a┃b⟦zoomed⟧
 - c
-
-⟦folded none; zoom 1⟧
 ```
 
 </td><td>
 
 ```buffer
-- a┃b
+- a┃b⟦zoomed⟧
 - c
-
-⟦folded none; zoom 1⟧
 ```
 
 </td><td>
 
 ```buffer
-- a
+- a⟦zoomed⟧
   - ┃b
 - c
-
-⟦folded none; zoom 1⟧
 ```
 
 </td></tr>
@@ -26635,39 +26412,33 @@ Original:
 <tr valign="top"><td>
 
 ```buffer
-- a
+- a⟦zoomed⟧
   - b
 ┃
 - c
-
-⟦folded none; zoom 1⟧
 ```
 
 </td><td>
 
 ```buffer
-- a
+- a⟦zoomed⟧
   - b
 ┃- c
-
-⟦folded none; zoom 1⟧
 ```
 
 </td><td>
 
 ```buffer
-- a
+- a⟦zoomed⟧
   - b
 
 - c
-
-⟦folded none; zoom 1⟧
 ```
 
 </td></tr>
 </table>
 
-## Whitespace (32)
+## Whitespace (31)
 
 ### [Backspace17d](../spec/backspace.md#backspace17d)
 
@@ -27399,55 +27170,6 @@ y
 </td></tr>
 </table>
 
-### [Placeholder9](../spec/placeholders.md#placeholder9)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃ b
-  - c
-```
-
-</td></tr>
-</table>
-
-> deleteContentBackward
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- ┃ b
-  - c
-```
-
-</td></tr>
-</table>
-
-> cursorDocEnd
-
-<table>
-<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
--  b
-   - c┃
-```
-
-</td><td>
-
-```buffer
-- b
-  - c
-```
-
-</td></tr>
-</table>
-
 ### [Quote33](../spec/quotes.md#quote33)
 
 Adapted: under quotes: atom
@@ -28018,7 +27740,7 @@ Original:
 </td></tr>
 </table>
 
-## Caret (83)
+## Caret (85)
 
 ### [SoftBackspace8](../spec/backspace.md#softbackspace8)
 
@@ -28596,29 +28318,23 @@ abcde┃fg
 <tr valign="top"><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - b
 - ┃
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - b┃
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- a┃
+- a┃⟦folded⟧
   - b
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -28634,30 +28350,24 @@ abcde┃fg
 
 ```buffer
 - a
-- b┃
+- b┃⟦folded⟧
   - c
-
-⟦folded 2; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- ┃b
+- ┃b⟦folded⟧
   - c
 - a
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- b┃
+- b┃⟦folded⟧
   - c
 - a
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -28670,11 +28380,9 @@ abcde┃fg
 <tr valign="top"><td>
 
 ```buffer
-- a┃
+- a┃⟦folded⟧
   - b
 - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -28688,20 +28396,16 @@ abcde┃fg
 
 ```buffer
 - c
-- ┃a
+- ┃a⟦folded⟧
   - b
-
-⟦folded 2; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
 - c
-- a┃
+- a┃⟦folded⟧
   - b
-
-⟦folded 2; zoom none⟧
 ```
 
 </td></tr>
@@ -28714,11 +28418,9 @@ abcde┃fg
 <tr valign="top"><td>
 
 ```buffer
-- a┃
+- a┃⟦folded⟧
   - b
 - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -28732,20 +28434,16 @@ abcde┃fg
 
 ```buffer
 - c
-- ┃a
+- ┃a⟦folded⟧
   - b
-
-⟦folded 2; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
 - c
-- a┃
+- a┃⟦folded⟧
   - b
-
-⟦folded 2; zoom none⟧
 ```
 
 </td></tr>
@@ -30323,8 +30021,8 @@ para┃
 </td><td>
 
 ```buffer
-- ┃two
-  - one
+- two
+«  - one»
 - three
 ```
 
@@ -30400,6 +30098,80 @@ para┃
 - a
 - b┃
 - c
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree12](../spec/move-subtree.md#movesubtree12)
+
+> moveSubtree ②
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃
+
+p
+```
+
+</td><td>
+
+```buffer
+p
+
+«x
+»
+```
+
+</td><td>
+
+```buffer
+p
+
+x┃
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree24](../spec/move-subtree.md#movesubtree24)
+
+> moveSubtree ①
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+
+- b
+
+- c
+```
+
+</td><td>
+
+```buffer
+- b
+
+- c
+
+«- a
+»
+```
+
+</td><td>
+
+```buffer
+- b
+
+- c
+
+- a┃
 ```
 
 </td></tr>
@@ -31422,30 +31194,7 @@ Original:
 </td></tr>
 </table>
 
-## Error (1)
-
-### [Auto10](../spec/auto.md#auto10)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-use `┃` here
-```
-
-</td></tr>
-</table>
-
-> deleteContentBackward
-
-Error: Obsidian (true-outliner) holds the starting state differently:
-  meant:
-    use `┃` here
-  holds:
-    use ┃`` here
-
-## Skipped (346)
+## Skipped (355)
 
 | example | why |
 | --- | --- |
@@ -31460,11 +31209,13 @@ Error: Obsidian (true-outliner) holds the starting state differently:
 | [Backspace34](../spec/backspace.md#backspace34) | option backspaceAtTopItem: refuse |
 | [SoftBackspace7](../spec/backspace.md#softbackspace7) | option quotes: container |
 | [SoftBackspace10](../spec/backspace.md#softbackspace10) | option taskEditing: text |
+| [SoftBackspace11b](../spec/backspace.md#softbackspace11b) | option heldSpace: trim |
 | [Backspace42](../spec/backspace.md#backspace42) | caret before an item's text (true-outliner keeps it on the text) |
 | [Backspace42b](../spec/backspace.md#backspace42b) | option markup: decorated |
 | [Backspace43c](../spec/backspace.md#backspace43c) | option enterAtTextStart: stay |
 | [Backspace45b](../spec/backspace.md#backspace45b) | option joinWithChildren: refuse |
 | [Backspace45c](../spec/backspace.md#backspace45c) | option joinWithChildren: refuse |
+| [Backspace47b](../spec/backspace.md#backspace47b) | option heldSpace: trim |
 | [Backspace50](../spec/backspace.md#backspace50) | option backspaceAtItemStart: body |
 | [Backspace50b](../spec/backspace.md#backspace50b) | option backspaceAtItemStart: unwrap |
 | **backtick.md** | |
@@ -31701,6 +31452,9 @@ Error: Obsidian (true-outliner) holds the starting state differently:
 | [Paste24b](../spec/paste.md#paste24b) | option pasteSeams: open |
 | [Paste26b](../spec/paste.md#paste26b) | option pasteSeams: open |
 | **placeholders.md** | |
+| [Placeholder9b](../spec/placeholders.md#placeholder9b) | option heldSpace: trim |
+| [Placeholder17b](../spec/placeholders.md#placeholder17b) | option heldSpace: trim |
+| [Placeholder18b](../spec/placeholders.md#placeholder18b) | option heldSpace: trim |
 | [Placeholder20](../spec/placeholders.md#placeholder20) | option enterSplitSpace: start |
 | **quirks.md** | |
 | [Quirk1](../spec/quirks.md#quirk1) | option quirkEnterMidHeading: workflowy |
@@ -31807,13 +31561,17 @@ Error: Obsidian (true-outliner) holds the starting state differently:
 | [Select22](../spec/select.md#select22) | option selectionLadder: top |
 | [Select23](../spec/select.md#select23) | option selectNodeUp: sibling |
 | **shift-enter.md** | |
+| [ShiftEnter30b](../spec/shift-enter.md#shiftenter30b) | option heldSpace: trim |
 | [ShiftEnter16](../spec/shift-enter.md#shiftenter16) | CR line endings |
 | [ShiftEnter22](../spec/shift-enter.md#shiftenter22) | caret before an item's text (true-outliner keeps it on the text) |
 | [ShiftEnter22b](../spec/shift-enter.md#shiftenter22b) | option markup: decorated |
 | [ShiftEnter24](../spec/shift-enter.md#shiftenter24) | caret in a table (Live Preview edits it in a table of its own) |
 | [ShiftEnter26b](../spec/shift-enter.md#shiftenter26b) | option markup: decorated |
+| [ShiftEnter32b](../spec/shift-enter.md#shiftenter32b) | option heldSpace: trim |
 | **subtree-selection.md** | |
-| [SubtreeEdit17](../spec/subtree-selection.md#subtreeedit17) | option pasteOverSelection: ignore |
+| [SubtreeEdit17](../spec/subtree-selection.md#subtreeedit17) | option pasteOverNodes: after |
+| [SubtreeEdit18](../spec/subtree-selection.md#subtreeedit18) | option pasteOverNodes: nothing |
+| [SubtreeEdit19](../spec/subtree-selection.md#subtreeedit19) | option pasteOverNodes: nothing |
 | **tasks.md** | |
 | [TaskEnter9](../spec/tasks.md#taskenter9) | option enterTask: plain |
 | [TaskEnter9b](../spec/tasks.md#taskenter9b) | option enterTask: plain |

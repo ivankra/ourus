@@ -79,7 +79,11 @@ function toItem(depth: number, text: string, free = false): Item & { prefix: num
   // a number that is text (after a numbered item's own number too)
   const literal = prefix === (numbered?.[0].length ?? 0) ? /^(\d{1,9})\\(?=[.)])/.exec(content) : null;
   if (literal) content = literal[1] + content.slice(literal[0].length);
-  return { depth, content, todo: !!task, done: !!task && task[1] !== ' ', heading: heading?.[1]!.length ?? 0, numbered: !!numbered, code: false, free, prefix, ...(literal && { cut: prefix + literal[1]!.length }) };
+  // and a `#` that is text (a heading is the rem's font size, its content plain: Enter9)
+  const hash = !literal && prefix === (numbered?.[0].length ?? 0) && /^\\#/.test(content);
+  if (hash) content = content.slice(1);
+  const cut = literal ? prefix + literal[1]!.length : hash ? prefix : undefined;
+  return { depth, content, todo: !!task, done: !!task && task[1] !== ' ', heading: heading?.[1]!.length ?? 0, numbered: !!numbered, code: false, free, prefix, ...(cut !== undefined && { cut }) };
 }
 
 /** A rem's canonical text, and the length of the prefix its attributes stand for: its number `number` where it is numbered. */
@@ -89,9 +93,13 @@ function fromItem(it: Item, number: number | null): { text: string; prefix: numb
     return { text: `${fence}\n${it.content}\n${fence}`, prefix: fence.length + 1 };
   }
   const prefix = (number !== null ? `${number}. ` : '') + (it.todo ? (it.done ? '[x] ' : '[ ] ') : '') + (it.heading ? '#'.repeat(it.heading) + ' ' : '');
-  const literal = !prefix || prefix === `${number}. ` ? /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(it.content) : null;
-  const content = literal ? it.content.slice(0, literal[0].length) + '\\' + it.content.slice(literal[0].length) : it.content;
-  return { text: prefix + content, prefix: prefix.length, ...(literal && { cut: literal[0].length }) };
+  const plain = !prefix || prefix === `${number}. `;
+  const literal = plain ? /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(it.content) : null;
+  // and a `#` that is text, which the canonical text would read as a heading's (`\# x`)
+  const hash = plain && !literal && /^#{1,6}(?=[ \t]|$)/.test(it.content);
+  const content = literal ? it.content.slice(0, literal[0].length) + '\\' + it.content.slice(literal[0].length) : hash ? '\\' + it.content : it.content;
+  const cut = literal ? literal[0].length : hash ? 0 : undefined;
+  return { text: prefix + content, prefix: prefix.length, ...(cut !== undefined && { cut }) };
 }
 
 /** A setup of RemNote: its name, title and id, and whether its documents hide their bullets. */
@@ -163,6 +171,9 @@ export function own(o: Outline, listParent: OurusConfig['listParent'] = 'paragra
  * atom with no children (`canDisplayAsNoBullet` in RemNote's bundle); elsewhere RemNote shows a bullet.
  */
 export function bulletless(outline: Outline): string | undefined {
+  // a heading with no text, `#` alone, is a rem whose text is `#` (a font size needs a heading's text):
+  // it owns no section, and what its section holds is the document's (Regression168)
+  if (outline.blocks.some((b) => b.free && /^#{1,6}$/.test(b.text))) return 'heading with no text (# alone), a rem of that text, owning no section';
   const o = lift(outline);
   for (const [i, b] of o.blocks.entries()) {
     if (b.free && b.depth > 0) return 'paragraph inside an item (a rem there shows a bullet)';
@@ -182,11 +193,9 @@ export function remnoteDriver(setup: Setup): Driver {
     // its guest mode; a test's document is `/w/null/<id>` (`null`, the guest's knowledge base)
     url: 'https://www.remnote.com/notes',
     scope: 'https://www.remnote.com/',
-    // a browser's RemNote window, whichever setup's: two RemNote tabs in one browser break each other
-    pool: 'remnote',
-    // the setups' browsers apart (no bullets the even ones, bullets the odd), three of the pool's six each
-    browsers: setup.bulletless ? 'even' : 'odd',
-    parallel: 3,
+    // each worker's window a browser context of its own (the pool's): two RemNote tabs sharing one break
+    // each other, and the two setups side by side keep their knowledge bases apart so
+    parallel: 4,
     model: 'block',
     // a rem's text holds a blank line, its paragraphs apart
     paragraphsInBlock: true,
@@ -232,6 +241,8 @@ export function remnoteDriver(setup: Setup): Driver {
     // no text either; a quote (`> q`) not mapped to RemNote's quote yet
     refuses: ['markup-heading', 'markup-task', 'markup-fence', 'quote'],
     ordered: true,
+    // a heading is the rem's font size, content starting `# ` text (`fromItem` escapes it)
+    headings: true,
     // Shift+Tab leaves the later siblings with the parent (and a Tab right after puts the rem back where it
     // was, `outdentInOriginalLocation`); Enter mid-text in a rem with children makes its first child
     // (without bullets, Enter on an empty top-level item makes it a paragraph, its Enter handler's
@@ -245,6 +256,11 @@ export function remnoteDriver(setup: Setup): Driver {
     // nothing to compare (Auto15, Auto17, Auto21, Auto28 to Auto34)
     capturesTyped: /\$\$|\[\[|\(\(/,
     behaves: {
+      // a space a deleted first character leaves at a rem's start goes as it is stored (Placeholder9,
+      // Placeholder17, Placeholder18; measured 2026-11-03)
+      heldSpace: 'trim',
+      // a paste or plain paste over blocks selected whole pastes nothing (Regression72, SubtreeEdit14, measured 2026-11-03)
+      pasteOverNodes: 'nothing',
       // fences closed, as a code block of its own; `%%` text, `<!--` a dash (`<!‒`): neither paired
       autoClose: ['```', '~~~'],
       // Shift-Up takes the sibling above with its subtree
@@ -260,6 +276,9 @@ export function remnoteDriver(setup: Setup): Driver {
       copySelection: 'nodes',
       pasteSeams: 'open',
       pasteListForm: 'own',
+      // pasted plain lines: a rem each, in both setups (PastePlain9, PastePlain11, PastePlain13 to
+      // PastePlain15, PastePlain20, PastePlain24, Regression74, Regression75; measured by rejudging, 2026-11-02)
+      pastePlainLines: 'items',
       // without bullets a document is a flat run of rems, a paragraph one, each item one: a list after a
       // paragraph is no rem's, a move passes one rem (Lists1, Lists5, Lists9)
       ...(setup.bulletless ? { enterOnEmptyItem: 'exit' as const, listParent: 'container' as const, listMoves: 'item' as const } : {}),
@@ -274,6 +293,8 @@ export function remnoteDriver(setup: Setup): Driver {
         const no = bulletless(o);
         if (no) return no;
       }
+      // a heading with no text, `#` alone: no heading here has no text, and the text `#` reads as `\#` (Regression168)
+      if (o.blocks.some((b) => /^#{1,6}$/.test(b.text))) return 'heading with no text (# alone), which RemNote holds as the text #';
       // zoomed, the root is the page's title, which the editor tree doesn't focus as a rem of its own;
       // and a rem without a bullet doesn't keep a collapse
       if (o.view && o.view.zoom !== null && o.sel?.block === o.view.zoom) return 'the caret in the zoom root, the page\'s title';
@@ -312,7 +333,6 @@ export function remnoteDriver(setup: Setup): Driver {
         localStorage.setItem('isPlaywright', 'true');
         localStorage.setItem('isPlaywrightServerless', 'true');
       });
-      for (const other of page.context().pages()) if (other !== page && other.url().includes('remnote.com')) await other.close();
       await page.goto(this.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
       await page.waitForFunction(() => typeof (window as any).waitForPlaywrightToLoad === 'function' && typeof (window as any).writeGuarantee === 'function', null, { timeout: 120000 });
       const env = await page.evaluate(async () => {
@@ -325,7 +345,7 @@ export function remnoteDriver(setup: Setup): Driver {
       });
       if (!env) throw new Error("RemNote's test mode didn't come up in a minute (waitForPlaywrightToLoad)");
       if (!env.playwright || !env.serverless) throw new Error("RemNote didn't start in its serverless test mode");
-      if (env.kb !== 'null') throw new Error(`RemNote is signed in to a knowledge base (${env.kb}), not a guest: its profile, .sxs/remnote/chromium/, is the driver's alone`);
+      if (env.kb !== 'null') throw new Error(`RemNote is signed in to a knowledge base (${env.kb}), not a guest: its window's browser context is the pool's, made for it`);
       // ready once a key does what it should: Tab indents
       const idle = () => page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
       let ready = false;

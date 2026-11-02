@@ -1,11 +1,11 @@
 ---
 type: "SxS"
 app: "silverbullet"
-version: "2.12.0-50-gb2726cd8-2026-10-13T06-53-29Z"
+version: "2.12.0-146-g8b917345-2026-10-27T12-50-46Z"
 url: "https://demo.silverbullet.md/personal/"
 model: "text"
 command: "node sxs/run.ts silverbullet"
-elapsed_s: 325
+elapsed_s: 547
 workers: 4
 ---
 
@@ -15,17 +15,17 @@ Summary:
 
 | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- |
-| **389 (26%)** | **[67](#caret-67) (4.5%)** | **[48](#whitespace-48) (3.2%)** | **[663](#disagree-663) (44%)** | **0 (0%)** | **[323](#skipped-323) (22%)** | **1490** |
+| **391 (26%)** | **[67](#caret-67) (4.5%)** | **[46](#whitespace-46) (3.1%)** | **[663](#disagree-663) (44%)** | **0 (0%)** | **[332](#skipped-332) (22%)** | **1499** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | [auto.md](../spec/auto.md) | 30 |  |  | 9 |  |  | **39** |
-| [backspace.md](../spec/backspace.md) | 13 |  | 1 | 59 |  | 13 | **86** |
+| [backspace.md](../spec/backspace.md) | 13 |  | 1 | 59 |  | 15 | **88** |
 | [backtick.md](../spec/backtick.md) | 16 |  |  | 13 |  | 4 | **33** |
 | [block-ids.md](../spec/block-ids.md) | 4 |  |  | 16 |  | 1 | **21** |
-| [copy.md](../spec/copy.md) | 3 |  | 2 | 1 |  | 7 | **13** |
+| [copy.md](../spec/copy.md) | 5 |  |  | 1 |  | 7 | **13** |
 | [cursor.md](../spec/cursor.md) | 19 | 16 |  |  |  | 1 | **36** |
 | [delete-subtree.md](../spec/delete-subtree.md) |  |  |  |  |  | 14 | **14** |
 | [delete.md](../spec/delete.md) | 11 |  |  | 30 |  | 15 | **56** |
@@ -49,19 +49,19 @@ Per-file:
 | [paste-list.md](../spec/paste-list.md) | 1 |  |  | 20 |  | 8 | **29** |
 | [paste-plain.md](../spec/paste-plain.md) | 29 |  |  |  |  | 7 | **36** |
 | [paste.md](../spec/paste.md) | 4 |  | 1 | 17 |  | 14 | **36** |
-| [placeholders.md](../spec/placeholders.md) | 7 |  |  | 13 |  |  | **20** |
+| [placeholders.md](../spec/placeholders.md) | 7 |  |  | 13 |  | 3 | **23** |
 | [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |
 | [quotes.md](../spec/quotes.md) | 54 | 2 | 8 | 53 |  | 26 | **143** |
 | [regressions.md](../spec/regressions.md) | 47 | 2 | 4 | 98 |  | 51 | **202** |
 | [scenarios.md](../spec/scenarios.md) | 7 |  |  | 17 |  | 5 | **29** |
 | [select.md](../spec/select.md) |  | 17 |  | 1 |  | 5 | **23** |
-| [shift-enter.md](../spec/shift-enter.md) | 6 |  | 8 | 19 |  | 3 | **36** |
-| [subtree-selection.md](../spec/subtree-selection.md) |  | 5 |  | 11 |  | 1 | **17** |
+| [shift-enter.md](../spec/shift-enter.md) | 6 |  | 8 | 19 |  | 5 | **38** |
+| [subtree-selection.md](../spec/subtree-selection.md) |  | 5 |  | 11 |  | 3 | **19** |
 | [tasks.md](../spec/tasks.md) | 6 |  | 2 | 11 |  | 11 | **30** |
 | [typing.md](../spec/typing.md) | 3 |  |  |  |  |  | **3** |
 | [undo.md](../spec/undo.md) | 4 |  |  | 1 |  |  | **5** |
 | [zoom.md](../spec/zoom.md) |  |  |  |  |  | 14 | **14** |
-| **total** | **389 (26%)** | **67 (4.5%)** | **48 (3.2%)** | **663 (44%)** | **0 (0%)** | **323 (22%)** | **1490** |
+| **total** | **391 (26%)** | **67 (4.5%)** | **46 (3.1%)** | **663 (44%)** | **0 (0%)** | **332 (22%)** | **1499** |
 
 ## Disagree (663)
 
@@ -2552,7 +2552,7 @@ code
 </td><td>
 
 ```buffer
-┃\# b
+┃ \# b
 ```
 
 </td></tr>
@@ -2737,7 +2737,7 @@ code
 </td><td>
 
 ```buffer
-┃\# b
+┃ \# b
 ```
 
 </td></tr>
@@ -10541,33 +10541,27 @@ body
 <tr valign="top"><td>
 
 ```buffer
-- a┃
+- a┃⟦folded⟧
   - b
 - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
 - a
-- ┃
+- ┃⟦folded⟧
   - b
 - c
-
-⟦folded 2; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - b
 - ┃
 - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -10582,30 +10576,24 @@ body
 <tr valign="top"><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - b
 - ┃
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - b
   ┃
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- a┃
+- a┃⟦folded⟧
   - b
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -10620,32 +10608,26 @@ body
 <tr valign="top"><td>
 
 ```buffer
-- ┃
+- ┃⟦folded⟧
   - b
 - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-┃
+┃⟦folded⟧
   - b
 - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- 
+- ⟦folded⟧
   - b
 - ┃
 - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -10660,11 +10642,17 @@ body
 <tr valign="top"><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - b
 - c┃
+```
 
-⟦folded 1; zoom none⟧
+</td><td>
+
+```buffer
+- a⟦folded⟧
+  - b
+  - c┃
 ```
 
 </td><td>
@@ -10673,18 +10661,6 @@ body
 - a
   - b
   - c┃
-
-⟦folded 1; zoom none⟧
-```
-
-</td><td>
-
-```buffer
-- a
-  - b
-  - c┃
-
-⟦folded none; zoom none⟧
 ```
 
 </td></tr>
@@ -10699,11 +10675,9 @@ body
 <tr valign="top"><td>
 
 ```buffer
-- a┃
+- a┃⟦folded⟧
   - b
   - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
@@ -10711,18 +10685,14 @@ body
 ```buffer
 - a┃  - b
   - c
-
-⟦folded none; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- a┃
+- a┃⟦folded⟧
   - b
   - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -10748,33 +10718,27 @@ body
 <tr valign="top"><td>
 
 ```buffer
-- a┃
+- a┃⟦folded⟧
   - b
 - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
 - a- x
-┃
+┃⟦folded⟧
   - b
 - c
-
-⟦folded 2; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - b
 - x┃
 - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -10789,30 +10753,24 @@ body
 <tr valign="top"><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - b
 - ┃c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - b
   ┃c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- a┃c
+- a┃c⟦folded⟧
   - b
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -10827,23 +10785,19 @@ body
 <tr valign="top"><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - b
 - ┃c
   - d
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - b
   ┃c
   - d
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
@@ -10852,8 +10806,6 @@ body
 - a┃c
   - b
   - d
-
-⟦folded none; zoom none⟧
 ```
 
 </td></tr>
@@ -10868,12 +10820,19 @@ body
 <tr valign="top"><td>
 
 ```buffer
-- a┃
+- a┃⟦folded⟧
   - x
 - a
   - x
+```
 
-⟦folded 1; zoom none⟧
+</td><td>
+
+```buffer
+- a⟦folded⟧
+  - x
+- a┃
+  - x
 ```
 
 </td><td>
@@ -10881,21 +10840,8 @@ body
 ```buffer
 - a
   - x
-- a┃
+- a┃⟦folded⟧
   - x
-
-⟦folded 1; zoom none⟧
-```
-
-</td><td>
-
-```buffer
-- a
-  - x
-- a┃
-  - x
-
-⟦folded 3; zoom none⟧
 ```
 
 </td></tr>
@@ -10910,12 +10856,19 @@ body
 <tr valign="top"><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - x
 - a┃
   - x
+```
 
-⟦folded 1; zoom none⟧
+</td><td>
+
+```buffer
+- a┃⟦folded⟧
+  - x
+- a
+  - x
 ```
 
 </td><td>
@@ -10923,21 +10876,8 @@ body
 ```buffer
 - a┃
   - x
-- a
+- a⟦folded⟧
   - x
-
-⟦folded 1; zoom none⟧
-```
-
-</td><td>
-
-```buffer
-- a┃
-  - x
-- a
-  - x
-
-⟦folded 3; zoom none⟧
 ```
 
 </td></tr>
@@ -10953,32 +10893,26 @@ body
 
 ```buffer
 
-┃# h
+┃# h⟦folded⟧
 > - 
 > ^x
-
-⟦folded 2; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
 
-# h
+# h⟦folded⟧
 > - 
 > ^x┃
-
-⟦folded 2; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-# h┃
+# h┃⟦folded⟧
 > - 
 > ^x
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -16324,6 +16258,7 @@ t1┃
 
 ```buffer
 - a
+- 
 - ┃b
 ```
 
@@ -19842,8 +19777,8 @@ para
 </td><td>
 
 ```buffer
-- b
-  - c
+-  b
+   - c
 ```
 
 </td></tr>
@@ -19892,7 +19827,7 @@ para
 </td><td>
 
 ````buffer
-- \``` x
+-  \``` x
 - b
 ````
 
@@ -20221,7 +20156,7 @@ after
 </td><td>
 
 ```buffer
-\# b
+ \# b
 
 after
 ```
@@ -24729,12 +24664,10 @@ a
 <tr valign="top"><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - b
 ┃
 - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
@@ -24744,19 +24677,15 @@ a
 ┃«  - b
 »
 - c
-
-⟦folded none; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-┃«- a
+┃«- a⟦folded⟧
   - b
 »
 - c
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -24771,10 +24700,8 @@ a
 <tr valign="top"><td>
 
 ```buffer
-- - ┃a
+- - ┃a⟦folded⟧
   - b
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
@@ -24782,17 +24709,14 @@ a
 ```buffer
 - - «a
   - »b
-
-⟦folded none; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-«- - a
+«- - a⟦folded⟧
   - b
 »
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -25945,11 +25869,9 @@ Adapted: under copyAtCaret: host
 <tr valign="top"><td>
 
 ```buffer
-- - ┃a
+- - ┃a⟦folded⟧
   - SECRET
 - KEEP
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
@@ -25957,18 +25879,14 @@ Adapted: under copyAtCaret: host
 ```buffer
 ┃  - SECRET
 - KEEP
-
-⟦folded none; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- - ┃a
+- - ┃a⟦folded⟧
   - SECRET
 - KEEP
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -28901,11 +28819,9 @@ Shop closes at six.┃
 
 ```buffer
 - a┃
-- b
+- b⟦folded⟧
   - c
 - d
-
-⟦folded 2; zoom none⟧
 ```
 
 </td></tr>
@@ -28919,22 +28835,18 @@ Shop closes at six.┃
 
 ```buffer
 - a«
-- b»
+- b»⟦folded⟧
   - c
 - d
-
-⟦folded 2; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
 «- a
-»- b
+»- b⟦folded⟧
   - c
 - d
-
-⟦folded 2; zoom none⟧
 ```
 
 </td></tr>
@@ -28951,19 +28863,15 @@ Shop closes at six.┃
 - b
   -» c
 - d
-
-⟦folded none; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
 «- a
-- b
+- b⟦folded⟧
   - c
 »- d
-
-⟦folded 2; zoom none⟧
 ```
 
 </td></tr>
@@ -28980,19 +28888,16 @@ Shop closes at six.┃
 - b
   - c
 - d»
-
-⟦folded none; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
 «- a
-- b
+- b⟦folded⟧
   - c
 - d
 »
-⟦folded 2; zoom none⟧
 ```
 
 </td></tr>
@@ -29324,7 +29229,7 @@ x┃bc
 
 ````buffer
 -
-  ┃\``` x
+  ┃ \``` x
 ````
 
 </td></tr>
@@ -29653,7 +29558,7 @@ p
 
 ```buffer
 -
-  ┃\# b
+  ┃ \# b
 ```
 
 </td></tr>
@@ -30539,7 +30444,7 @@ x┃
 </td></tr>
 </table>
 
-## Whitespace (48)
+## Whitespace (46)
 
 ### [Backspace39](../spec/backspace.md#backspace39)
 
@@ -30569,54 +30474,6 @@ p
 - a┃
 
 p
-```
-
-</td></tr>
-</table>
-
-### [Copy2](../spec/copy.md#copy2)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one «two
-  - ki»d
-- three
-```
-
-</td></tr>
-</table>
-
-> copy
-
-### [Cut2](../spec/copy.md#cut2)
-
-> cut
-
-<table>
-<tr><th>buffer</th><th>silverbullet</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one «two
-  - ki»d
-- three
-```
-
-</td><td>
-
-```buffer
-- one ┃d
-- three
-```
-
-</td><td>
-
-```buffer
-- one ┃d
-- three
 ```
 
 </td></tr>
@@ -33341,8 +33198,6 @@ p
 ```buffer
 - a
   - b┃
-
-⟦folded none; zoom none⟧
 ```
 
 </td></tr>
@@ -33355,19 +33210,15 @@ p
 <tr valign="top"><td>
 
 ```buffer
-- a
+- a⟦folded⟧
   - b┃
-
-⟦folded 1; zoom none⟧
 ```
 
 </td><td>
 
 ```buffer
-- a┃
+- a┃⟦folded⟧
   - b
-
-⟦folded 1; zoom none⟧
 ```
 
 </td></tr>
@@ -33382,8 +33233,6 @@ p
 ```buffer
 - a
   - b┃
-
-⟦folded none; zoom none⟧
 ```
 
 </td></tr>
@@ -35946,7 +35795,7 @@ beta
 </td></tr>
 </table>
 
-## Skipped (323)
+## Skipped (332)
 
 | example | why |
 | --- | --- |
@@ -35959,9 +35808,11 @@ beta
 | [Backspace34](../spec/backspace.md#backspace34) | option backspaceAtTopItem: refuse |
 | [SoftBackspace7](../spec/backspace.md#softbackspace7) | option quotes: container |
 | [SoftBackspace10](../spec/backspace.md#softbackspace10) | option taskEditing: text |
+| [SoftBackspace11b](../spec/backspace.md#softbackspace11b) | option heldSpace: trim |
 | [Backspace42b](../spec/backspace.md#backspace42b) | option markup: decorated |
 | [Backspace45b](../spec/backspace.md#backspace45b) | option joinWithChildren: refuse |
 | [Backspace45c](../spec/backspace.md#backspace45c) | option joinWithChildren: refuse |
+| [Backspace47b](../spec/backspace.md#backspace47b) | option heldSpace: trim |
 | [Backspace50](../spec/backspace.md#backspace50) | option backspaceAtItemStart: body |
 | [Backspace50b](../spec/backspace.md#backspace50b) | option backspaceAtItemStart: unwrap |
 | **backtick.md** | |
@@ -36173,6 +36024,10 @@ beta
 | [Paste21](../spec/paste.md#paste21) | option pasteSeams: open |
 | [Paste24b](../spec/paste.md#paste24b) | option pasteSeams: open |
 | [Paste26b](../spec/paste.md#paste26b) | option pasteSeams: open |
+| **placeholders.md** | |
+| [Placeholder9b](../spec/placeholders.md#placeholder9b) | option heldSpace: trim |
+| [Placeholder17b](../spec/placeholders.md#placeholder17b) | option heldSpace: trim |
+| [Placeholder18b](../spec/placeholders.md#placeholder18b) | option heldSpace: trim |
 | **quirks.md** | |
 | [Quirk1](../spec/quirks.md#quirk1) | option quirkEnterMidHeading: workflowy |
 | [Quirk1b](../spec/quirks.md#quirk1b) | option quirkEnterMidHeading: workflowy |
@@ -36273,11 +36128,15 @@ beta
 | [Select22](../spec/select.md#select22) | option selectionLadder: top |
 | [Select23](../spec/select.md#select23) | option selectNodeUp: sibling |
 | **shift-enter.md** | |
+| [ShiftEnter30b](../spec/shift-enter.md#shiftenter30b) | option heldSpace: trim |
 | [ShiftEnter16](../spec/shift-enter.md#shiftenter16) | CR line endings |
 | [ShiftEnter22b](../spec/shift-enter.md#shiftenter22b) | option markup: decorated |
 | [ShiftEnter26b](../spec/shift-enter.md#shiftenter26b) | option markup: decorated |
+| [ShiftEnter32b](../spec/shift-enter.md#shiftenter32b) | option heldSpace: trim |
 | **subtree-selection.md** | |
-| [SubtreeEdit17](../spec/subtree-selection.md#subtreeedit17) | option pasteOverSelection: ignore |
+| [SubtreeEdit17](../spec/subtree-selection.md#subtreeedit17) | option pasteOverNodes: after |
+| [SubtreeEdit18](../spec/subtree-selection.md#subtreeedit18) | option pasteOverNodes: nothing |
+| [SubtreeEdit19](../spec/subtree-selection.md#subtreeedit19) | option pasteOverNodes: nothing |
 | **tasks.md** | |
 | [TaskEnter9](../spec/tasks.md#taskenter9) | option enterTask: plain |
 | [TaskEnter9b](../spec/tasks.md#taskenter9b) | option enterTask: plain |

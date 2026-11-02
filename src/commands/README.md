@@ -245,7 +245,7 @@ if (settled) { view.dispatch({ changes: settled.changes }); ourus = settled.view
 
 - **`OurusConfig`** chooses how commands behave where outliners differ. It is set when the document is
   made (`OurusDoc.parse(text, { config })`): `outdent`, `bullet`, `enterOnEmptyItem`, `enterMidItem`,
-  `enterAtTextStart`, `enterSplitSpace`, `enterTask`, `backspaceAtTopItem`, `backspaceAtItemStart`,
+  `enterAtTextStart`, `enterSplitSpace`, `heldSpace`, `enterTask`, `backspaceAtTopItem`, `backspaceAtItemStart`,
   `emptyItemWithChildren`, `joinWithChildren`, `joinBlockIds`, `handleFenceContents`, `autoClose`,
   `headingEditing`, `taskEditing`, `copyAtCaret`, `copySelection`, `pasteSeams`, `pasteOverSelection`, `pasteLines`,
   `pastePlainLines`, `pasteAtTextStart`, `pasteOnParent`, `pasteParagraphList`, `pasteListForm`,

@@ -149,8 +149,11 @@ export const OG: LogseqFlavor = {
     const text = literal ? task.text.slice(0, literal[0].length) + '\\' + task.text.slice(literal[0].length) : task.text;
     return { text: pre + text, from: task.from, to: task.to + pre.length, ...(literal && { cut: task.to + pre.length + literal[0].length }) };
   },
+  // (the property as the API names it: `logseq.orderListType`, which a paste leaves on a block whose
+  // content it took the property's line from, the block still numbered on screen: PasteListForm2)
   numbered: (raw) =>
-    /(?:^|\n)logseq\.order-list-type:: number[ \t]*(?:\n|$)/.test(raw.stored ?? raw.content) || raw.properties?.['logseqOrderListType'] === 'number' || raw.properties?.['logseq.order-list-type'] === 'number',
+    /(?:^|\n)logseq\.order-list-type:: number[ \t]*(?:\n|$)/.test(raw.stored ?? raw.content) ||
+    Object.entries(raw.properties ?? {}).some(([k, v]) => k.replace(/[^a-z]/gi, '').toLowerCase() === 'logseqorderlisttype' && v === 'number'),
   holds(doc) {
     // Logseq trims a stored block's text; only the block being edited (its textarea) keeps it as is
     const trimmed = doc.blocks.findIndex((b, i) => i !== doc.sel?.block && /^\s|\s$/.test(swapPrefix(b.text.replace(/^\d{1,9}\. /, ''), TO_OG).text));
@@ -222,9 +225,16 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
     // the DB version's properties of a block
     refuses: ['markup-heading', 'markup-task', 'markup-fence'],
     ordered: true,
+    // a block starting `# ` is a heading (OG: its text; DB: its property, a text `#` escaped by `fromLogseq`)
+    headings: true,
     // Backspace at the first block's start does nothing in both (measured with `--ignore-options`:
     // `backspace.md › Backspace34` agrees; its `unwrap` case needs a paragraph, which no block app runs)
     behaves: {
+      // a space a deleted first character leaves at a block's start goes as the block is stored, as
+      // every edge space does (Placeholder9, Placeholder17; measured 2026-11-03)
+      heldSpace: 'trim',
+      // a paste or plain paste over blocks selected whole pastes nothing (SubtreeEdit11, SubtreeEdit14, measured 2026-11-03)
+      pasteOverNodes: 'nothing',
       // OG's Ctrl-A climbs from a block to its parent, its siblings skipped; the DB version's stops at
       // the block, neither value (Select5)
       ...(!flavor.db && { selectionLadder: 'parents' as const }),
@@ -634,32 +644,37 @@ async function logseqDrop(page: Page, drop: Drop, settle: () => Promise<void>): 
   // (a drop of the selection: a press on its first block's bullet)
   const pressed = drop.press ?? drop.rows[0];
   if (pressed === undefined) throw new Unsupported('a drop of nothing pressed or selected');
-  const at = await page.evaluate(
-    async ({ name, press, to }) => {
-      const api = (window as any).logseq.api;
-      const uuids: string[] = [];
-      const walk = (bs: any[]) => bs.forEach((x) => (uuids.push(x.uuid), walk(x.children ?? [])));
-      walk(await api.get_page_blocks_tree(name));
-      const block = (i: number) => document.querySelector(`#main-content-container .ls-block[blockid="${uuids[i]}"]`)!;
-      const bullet = block(press).querySelector(':scope > .block-main-container .bullet-container')?.getBoundingClientRect();
-      if (!bullet) return null;
-      const from = { x: bullet.left + bullet.width / 2, y: bullet.top + bullet.height / 2 };
-      // (the page's first block's top: a few pixels in, the block's own padding above its row not taking the drag)
-      if (to.parent === 'root' && to.after === null) {
-        const b = block(0).getBoundingClientRect();
-        return { from, to: { x: b.left + 20, y: b.top + 8 } };
-      }
-      const target = to.after ?? (to.parent as number);
-      const b = block(target).getBoundingClientRect();
-      const r = block(target).querySelector(':scope > .block-main-container')!.getBoundingClientRect();
-      // (on the block's own row, past its top's 16 pixels)
-      const y = Math.min(Math.max((r.top + r.bottom) / 2, b.top + 19), r.bottom - 2);
-      return { from, to: { x: b.left + (to.after === null ? 70 : 20), y } };
-    },
-    { name: pageState(page).current, press: pressed, to: drop.to },
-  );
-  if (!at) throw new Unsupported('the pressed block has no bullet');
-  await gesture(page, at.from, at.to, settle);
+  // (the place found once the drag has started: pressing a bullet ends the editing, and a code block
+  // being edited renders again shorter, the blocks below it moving up: MoveSubtree22)
+  const where = (which: 'from' | 'to') =>
+    page.evaluate(
+      async ({ name, press, to, which }) => {
+        const api = (window as any).logseq.api;
+        const uuids: string[] = [];
+        const walk = (bs: any[]) => bs.forEach((x) => (uuids.push(x.uuid), walk(x.children ?? [])));
+        walk(await api.get_page_blocks_tree(name));
+        const block = (i: number) => document.querySelector(`#main-content-container .ls-block[blockid="${uuids[i]}"]`)!;
+        if (which === 'from') {
+          const bullet = block(press).querySelector(':scope > .block-main-container .bullet-container')?.getBoundingClientRect();
+          return bullet ? { x: bullet.left + bullet.width / 2, y: bullet.top + bullet.height / 2 } : null;
+        }
+        // (the page's first block's top: a few pixels in, the block's own padding above its row not taking the drag)
+        if (to.parent === 'root' && to.after === null) {
+          const b = block(0).getBoundingClientRect();
+          return { x: b.left + 20, y: b.top + 8 };
+        }
+        const target = to.after ?? (to.parent as number);
+        const b = block(target).getBoundingClientRect();
+        const r = block(target).querySelector(':scope > .block-main-container')!.getBoundingClientRect();
+        // (on the block's own row, past its top's 16 pixels)
+        const y = Math.min(Math.max((r.top + r.bottom) / 2, b.top + 19), r.bottom - 2);
+        return { x: b.left + (to.after === null ? 70 : 20), y };
+      },
+      { name: pageState(page).current, press: pressed, to: drop.to, which },
+    );
+  const from = await where('from');
+  if (!from) throw new Unsupported('the pressed block has no bullet');
+  await gesture(page, from, async () => (await where('to'))!, settle);
 }
 
 export const driver: Driver = logseqDriver(OG);

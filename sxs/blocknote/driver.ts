@@ -64,6 +64,8 @@ function toBlockNote(text: string, free = false): { block: Omit<BnBlock, 'childr
   // a number that is text (after a numbered block's own number too): the escape's backslash off
   const literal = /^(\d{1,9})\\(?=[.)])/.exec(text.slice(prefix));
   if (literal) return { block: { type, content: literal[1] + text.slice(prefix + literal[0].length) }, prefix, cut: prefix + literal[1]!.length };
+  // and a `#` that is text (a heading is a block of its own type, a paragraph's text plain: Enter9)
+  if (/^\\#/.test(text.slice(prefix))) return { block: { type, content: text.slice(prefix + 1) }, prefix, cut: prefix };
   return { block: { type, content: text.slice(prefix) }, prefix };
 }
 
@@ -147,6 +149,21 @@ function find(): boolean {
   return !!(w.__sxsBn && w.__sxsView);
 }
 
+/**
+ * In the page: BlockNote's side menu unfrozen, where it is frozen (`menuFrozen`), and whether it was.
+ * The drag handle's menu freezes it as it opens (a press on the handle that no drag starts from is a
+ * click, which opens it), and only that menu's closing unfreezes it; a key hides the side menu, its
+ * handle's menu with it, unclosed, and then the side menu is frozen for good: it ignores the mouse, and
+ * no drag in that window starts again (MoveSubtree5 and 6 errored so, both, in half the full runs). A
+ * BlockNote bug a user can meet too; each test starts with it undone.
+ */
+function unfreeze(): boolean {
+  const menu = (window as any).__sxsBn?.getExtension?.('sideMenu');
+  if (!menu?.menuFrozen) return false;
+  menu.unfreezeMenu();
+  return true;
+}
+
 /** A block as the page reads it: its canonical text but for its content, which is `runs` (formatted) or `plain`. */
 interface PageBlock {
   depth: number;
@@ -186,6 +203,8 @@ function readPage(): { blocks: PageBlock[]; sel: Sel | null; selected: number[] 
       }
       // a number that is text, escaped in the canonical text
       if ((b.type === 'numberedListItem' || b.type === 'bulletListItem' || b.type === 'paragraph') && /^\d{1,9}[.)]/.test(t)) cut = /^\d+/.exec(t)![0].length;
+      // (and a `#` that is text, which the canonical text would read as a heading's: `\# x`)
+      else if ((b.type === 'numberedListItem' || b.type === 'bulletListItem' || b.type === 'paragraph') && /^#{1,6}(?=[ \t]|$)/.test(t)) cut = 0;
       if (b.type === 'checkListItem') prefix = b.props.checked ? '[x] ' : '[ ] ';
       else if (b.type === 'heading') prefix = `${'#'.repeat(b.props.level)} `;
       else if (b.type === 'codeBlock') {
@@ -325,6 +344,7 @@ function dropAt({ press, rows, below, parent }: { press: number; rows: readonly 
  */
 async function blockNoteDrop(page: Page, drop: Drop, settle: () => Promise<void>): Promise<void> {
   const press = drop.press ?? drop.rows[0]!;
+  await page.evaluate(unfreeze);
   const at = await page.evaluate(dropAt, { press, rows: drop.rows, below: drop.seam.below, parent: drop.to.parent });
   if (typeof at === 'string') throw new Unsupported(at);
   await page.mouse.move(at.hover.x, at.hover.y, { steps: 3 });
@@ -337,10 +357,51 @@ async function blockNoteDrop(page: Page, drop: Drop, settle: () => Promise<void>
     const y = h.top + h.height / 2;
     return y >= b.top && y <= b.bottom ? { x: h.left + h.width / 2, y } : null;
   };
-  const from = await (await page.waitForFunction(shown, press, { timeout: 5000 })).jsonValue();
-  await page.mouse.move(1, 1);
-  await page.waitForFunction(() => !document.querySelector('.bn-side-menu'), null, { timeout: 5000 });
-  await gesture(page, from!, at.to, settle);
+  // (a menu that doesn't come, or doesn't go, under a machine busy with other runs: the pointer away and
+  // back, as a user's hand would, a few times, before it is the example's error; MoveSubtree5 and 6
+  // failed so in full runs alone)
+  let from: Point | null = null;
+  for (let attempt = 0; !from; attempt++) {
+    from = await page
+      .waitForFunction(shown, press, { timeout: 5000 })
+      .then((h) => h.jsonValue())
+      .catch(async (e: Error) => {
+        if (attempt < 2) return null;
+        // (what the page shows instead, for the next time it fails: only under a run of every app)
+        const seen = await page
+          .evaluate((press) => {
+            const menu = document.querySelector('.bn-side-menu');
+            const handle = menu?.querySelector('[draggable=true]');
+            const blocks = [...document.querySelectorAll('.bn-block-outer')];
+            const at = menu ? blocks.findIndex((b) => { const r = b.querySelector('.bn-block-content')!.getBoundingClientRect(); const m = menu.getBoundingClientRect(); return m.top + m.height / 2 >= r.top && m.top + m.height / 2 <= r.bottom; }) : -1;
+            const sel = getSelection();
+            return `menu ${menu ? `at block ${at}, handle ${handle ? (Object.keys(handle).some((k) => k.startsWith('__reactProps$')) ? 'live' : 'not React\'s') : 'none'}` : 'none'}; pressed block ${press} of ${blocks.length}; selection ${sel?.isCollapsed ? 'collapsed' : 'over text'}, focus ${document.activeElement?.className ?? document.activeElement?.tagName}; visibility ${document.visibilityState}, focused ${document.hasFocus()}`;
+          }, press)
+          .catch(() => '?');
+        throw new Error(`${e.message.split('\n')[0]}: the side menu didn't come at the pressed block (${seen}; hover at ${Math.round(at.hover.x)},${Math.round(at.hover.y)})`);
+      });
+    if (!from) {
+      await page.mouse.move(1, 1);
+      await settle();
+      await page.mouse.move(at.hover.x, at.hover.y, { steps: 3 });
+    }
+  }
+  for (let attempt = 0; ; attempt++) {
+    await page.mouse.move(1, 1);
+    const gone = await page
+      .waitForFunction(() => !document.querySelector('.bn-side-menu'), null, { timeout: 5000 })
+      .then(() => true)
+      .catch((e: Error) => {
+        if (attempt >= 2) throw e;
+        return false;
+      });
+    if (gone) break;
+    await page.mouse.move(2, 40, { steps: 2 });
+  }
+  await gesture(page, from, at.to, settle);
+  // (a press no drag started from opened the handle's menu, freezing the side menu: undone, as its
+  // closing would, no key pressed: the test's state is the drop's)
+  await page.evaluate(unfreeze);
 }
 
 export const driver: Driver = {
@@ -354,6 +415,8 @@ export const driver: Driver = {
   // paragraphs, headings and code are blocks outside every list, as the spec's buffers have them; list
   // items the rest
   freeForm: true,
+  // a heading is a block of its own type, a text starting `# ` plain (`read` escapes it)
+  headings: true,
   // measured: Enter at an item's text start leaves the caret with the text
   // ProseMirror's paste opens both seams, and a list keeps its form
   behaves: {
@@ -380,6 +443,9 @@ export const driver: Driver = {
     copyAtCaret: 'host',
     pasteSeams: 'open',
     pasteListForm: 'own',
+    // Ctrl+A's ladder: the text, then every block (Select2 to Select4, Select6, Select8, Select9;
+    // measured by rejudging, 2026-11-02)
+    selectionLadder: 'top',
   },
   keys: {
     enter: 'Enter',
@@ -437,6 +503,8 @@ export const driver: Driver = {
   async load(page: Page, doc) {
     const o = doc as Outline;
     if (!(await page.evaluate(find))) throw new Error("BlockNote's editor isn't on the page");
+    // (a side menu an earlier test's drag left frozen: `unfreeze`)
+    await page.evaluate(unfreeze);
     const at = o.sel && toBlockNote(o.blocks[o.sel.block]!.text, !!o.blocks[o.sel.block]!.free);
     // a selection of blocks (`selectsBlocks`): text from the first's start to the end of the last's
     // subtree, which the drag takes as those blocks

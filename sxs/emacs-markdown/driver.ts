@@ -59,6 +59,8 @@ export const driver: Driver = {
   displayName: 'Emacs (markdown-mode)',
   url: 'emacs -Q -nw, on a terminal',
   model: 'text',
+  // Emacs, its tmux server, and an emacsclient a call
+  tasks: 15,
   // Backspace right after a checkbox deletes a character (`taskEditing: text`); a typed backtick is
   // only a character (`autoClose: none`)
   behaves: {

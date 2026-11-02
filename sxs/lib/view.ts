@@ -3,8 +3,12 @@
 // back after each step, and compared with ourus's as a reader sees it: the folds in effect, and the
 // zoom root.
 //
-// A state's drawing carries its view as a last line of its own, `⟦folded 2 4; zoom 1⟧` (rows from 1,
-// as a reader counts them), so a report shows it and a rejudge reads it back with the state.
+// A state's drawing carries its view on the rows it names: `⟦folded⟧` right after a folded row's line,
+// `⟦zoomed⟧` after the zoom root's (a block's first line, a text's line; no space before it, so a
+// line's own trailing space shows as its own), so a report shows it where it is and a
+// rejudge reads it back with the state. A drawing with neither is a view with nothing folded and no
+// zoom, where the case has a view. (Runs stored before drew it as a last line, `⟦folded 2 4; zoom 1⟧`,
+// rows from 1: still read.)
 
 import type { OurusConfig } from '../../src/config.ts';
 import { OurusDoc, type OurusNode } from '../../src/doc/index.ts';
@@ -12,20 +16,52 @@ import type { RowView } from '../../test/spec-run.ts';
 
 export type { RowView };
 
-/** `v` drawn as a drawing's last line, after a line break of its own. */
-export function drawView(v: RowView): string {
-  const rows = (r: readonly number[]): string => (r.length ? r.map((n) => n + 1).join(' ') : 'none');
-  return `\n⟦folded ${rows(v.folded)}; zoom ${v.zoom === null ? 'none' : v.zoom + 1}⟧`;
+const FOLDED = '⟦folded⟧';
+const ZOOM = '⟦zoomed⟧';
+
+/**
+ * `drawn` with `v` on its rows: `⟦folded⟧` after each folded row's line, `⟦zoomed⟧` after the zoom root's;
+ * `lineOf` says which line of the drawing a row starts on (a block's first; a text's line is its row).
+ */
+export function drawView(drawn: string, v: RowView, lineOf: (row: number) => number = (row) => row): string {
+  const lines = drawn.split('\n');
+  for (const r of v.folded) {
+    const k = lineOf(r);
+    if (k >= 0 && k < lines.length) lines[k] += FOLDED;
+  }
+  if (v.zoom !== null) {
+    const k = lineOf(v.zoom);
+    if (k >= 0 && k < lines.length) lines[k] += ZOOM;
+  }
+  return lines.join('\n');
 }
 
-const VIEW = /\n⟦folded (none|\d+(?: \d+)*); zoom (none|\d+)⟧$/;
+/** The last line a stored run drew a view as (`⟦folded 2 4; zoom 1⟧`, rows from 1). */
+const FOOTER = /\n⟦folded (none|\d+(?: \d+)*); zoom (none|\d+)⟧$/;
 
-/** A drawing without its view (`drawView`), and the view, where it has one. */
-export function splitView(drawn: string): { drawn: string; view?: RowView } {
-  const m = VIEW.exec(drawn);
-  if (!m) return { drawn };
-  const folded = m[1] === 'none' ? [] : m[1]!.split(' ').map((n) => Number(n) - 1);
-  return { drawn: drawn.slice(0, m.index), view: { folded, zoom: m[2] === 'none' ? null : Number(m[2]) - 1 } };
+/**
+ * A drawing without its view, and the view, where it draws one: by the lines it marks, which `rowOf`
+ * makes rows (a text's line is its row; `byLine`: a block drawing maps them once it has read its
+ * blocks), or a stored run's last line, rows already.
+ */
+export function splitView(drawn: string, rowOf: (line: number) => number = (line) => line): { drawn: string; view?: RowView; byLine?: true } {
+  const m = FOOTER.exec(drawn);
+  if (m) {
+    const folded = m[1] === 'none' ? [] : m[1]!.split(' ').map((n) => Number(n) - 1);
+    return { drawn: drawn.slice(0, m.index), view: { folded, zoom: m[2] === 'none' ? null : Number(m[2]) - 1 } };
+  }
+  const folded: number[] = [];
+  let zoom: number | null = null;
+  const lines = drawn.split('\n').map((line, k) => {
+    for (let changed = true; changed; ) {
+      changed = false;
+      if (line.endsWith(ZOOM)) [line, zoom, changed] = [line.slice(0, -ZOOM.length), k, true];
+      if (line.endsWith(FOLDED)) [line, changed] = [line.slice(0, -FOLDED.length), (folded.push(k), true)];
+    }
+    return line;
+  });
+  if (!folded.length && zoom === null) return { drawn };
+  return { drawn: lines.join('\n'), view: { folded: folded.map(rowOf).sort((a, b) => a - b), zoom: zoom === null ? null : rowOf(zoom) }, byLine: true };
 }
 
 export const sameView = (a: RowView | undefined, b: RowView | undefined): boolean => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);

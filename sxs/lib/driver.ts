@@ -98,6 +98,12 @@ export interface Driver {
    */
   readonly refuses?: readonly string[];
   /**
+   * A block app that has block ids as a flavor writes them (`^x` at a block's end, kept with it through
+   * a split or a join): without, a case whose start or result has one is skipped (`block id`), as the
+   * app holds it as text.
+   */
+  readonly blockIds?: boolean;
+  /**
    * Typed text the app takes as a command of its own, its characters gone (RemNote's `$$`, its math
    * editor): a test typing it is skipped, nothing to compare.
    */
@@ -108,6 +114,13 @@ export interface Driver {
    * (`1\. x`), and an ordered list is no adaptation (`ProjectOptions.ordered` in block.ts).
    */
   readonly ordered?: boolean;
+  /**
+   * A block starting `# ` (to `###### `) is a heading in the app, and the driver tells such a block
+   * from one whose text starts with a `#` that is text: it reads the one as `# x`, the other as `\# x`,
+   * and loads each so (`ProjectOptions.headings` in block.ts). Without it, a text `#` starting a block
+   * is read as the heading's, which the app can't tell from it.
+   */
+  readonly headings?: boolean;
   /**
    * The app tells a block outside every list (a paragraph, a heading) from an item, which the driver
    * loads and reads as such (`Block.free`): a block app with a form for free-form Markdown, which runs
@@ -161,33 +174,33 @@ export interface Driver {
   /** Overrides for settling after each key. */
   readonly idle?: Partial<IdleOptions>;
   /**
-   * At most this many workers of a run at once (`run.ts --workers`), each in a browser of the pool of its
-   * own, the app's storage its browser's profile's. 1 by default for an app that isn't a page of the
-   * pool (`launch`); any number for the rest, so a driver whose app keeps state outside the browser
-   * keeps it apart for each worker and says how many (SiYuan: a kernel each). A driver keeps what it
+   * Before each action, the timers the app has pending of up to this many ms are waited for, and the
+   * page settled: what the app put off (a debounced save) done before the next key, which a key
+   * landing as it runs is lost to (Roam's save, 700 ms after the last input: a Backspace then gone,
+   * ShiftEnter11, under load). Costs time only where such a timer is pending.
+   */
+  readonly drainBefore?: number;
+  /**
+   * At most this many workers of a run at once (`run.ts --workers`), each in a window of the pool's of
+   * its own, the app's storage its window's browser context's. 1 by default for an app that isn't a
+   * page of the pool's browsers (`launch`); any number for the rest, so a driver whose app keeps state
+   * outside the browser keeps it apart for each worker and says how many (SiYuan: a kernel each). A driver keeps what it
    * knows of a test per page (`perPage`).
    */
   readonly parallel?: number;
   /**
-   * The name its page holds a browser's window by (the pool's locks, `appPage`), where it isn't the
-   * driver's: setups of one app that mustn't share a browser and may take over each other's window
-   * (RemNote's, two of whose tabs break each other).
+   * The tasks (processes and threads) a worker's app takes where the driver starts it outside the pool
+   * (Emacs and its terminal), for the room a run asks the pool for (`poolRoom`).
    */
-  readonly pool?: string;
-  /**
-   * The pool's browsers its workers take, where not any: the even-numbered or the odd ones (RemNote's
-   * two setups, one each, so that neither's knowledge base, in a profile's storage, meets the other's).
-   */
-  readonly browsers?: 'even' | 'odd';
-
+  readonly tasks?: number;
   /**
    * Starts the app itself, for one that isn't a web page (a desktop app): its window, driven in place
-   * of a tab in the shared browser, and `release` ends the worker's use of it; or, for one that isn't a
-   * page at all (a process), a `session` the runner plays it through. `headed` asks for it to be shown.
-   * Where it waits for room (a pool of the driver's, full), null once `gone` says the worker is no
-   * longer wanted.
+   * of one of the pool's browsers' (`AppPage.reused` where a run released it cleanly, loaded, unless
+   * `fresh`), and `release` ends the worker's use of it; or, for one that isn't a page at all (a
+   * process), a `session` the runner plays it through. `headed` asks for it to be shown. Where it waits
+   * for room (the pool, full), null once `gone` says the worker is no longer wanted.
    */
-  launch?(opts: { headed: boolean; say: (line: string) => void; gone?: () => boolean }): Promise<AppPage | null>;
+  launch?(opts: { headed: boolean; fresh: boolean; say: (line: string) => void; gone?: () => boolean }): Promise<AppPage | null>;
   /**
    * Loads the app in `page` (already pointed at nothing, or a window `launch` started, to be reloaded
    * so that the runner's init script runs) and makes it ready; returns its version, if known.

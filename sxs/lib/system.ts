@@ -81,7 +81,7 @@ export function ensureAptInstalled(who: string, needs: readonly Need[], say: (li
  * The container's tasks (processes and threads, cgroup v2): how many run, its cap (`pids.max`), and how
  * often the cap has refused one (`pids.events`' `max`). Null where there is no cap.
  */
-function tasks(): { current: number; max: number; hits: number } | null {
+export function tasks(): { current: number; max: number; hits: number } | null {
   const read = (f: string): string => readFileSync(`/sys/fs/cgroup/${f}`, 'utf8');
   try {
     const max = Number(read('pids.max'));

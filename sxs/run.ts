@@ -22,13 +22,12 @@
 //   --cache=MODE    how the proxy uses its cache: use (the default: serve what it has, fetch and keep the
 //                   rest), offline (serve only what it has, reach no network, write nothing: a miss fails),
 //                   refresh (fetch anew, once per proxy run, and keep)
-//   --fresh         load the app anew, rather than take over the page a run that died left loaded
-//   --keep-windows  leave the app's window loaded when the run ends, for the next run to take over
-//                   (probe.ts's); by default it closes
+//   --fresh         load the app anew in a new window (a new browser context), rather than take over
+//                   the window the last run of the app released cleanly, loaded
 //   --no-report     don't copy the report into <app>.md (a run of every test does by default)
 //   --json=FILE     write the run as data to FILE too, as .sxs/results/<app>/sxs.json has it
 //   --pace=MS       keys at least MS apart (100, a typist's pace; 0: as fast as the app settles)
-//   --workers=N     N workers side by side (by default one per 30 examples, at most one per browser of the pool, and the driver's `parallel`)
+//   --workers=N     N workers side by side (by default one per 30 examples, at most 4, and the driver's `parallel`)
 //   --rejudge       run no app: replay ourus on every case, judge what the app did in its last run
 //                   against the spec as it is now, and write the report (and with several apps, the
 //                   table) again ("regenerating", below); what wants a run of the app is "Not run"
@@ -40,10 +39,13 @@
 //                   at REF in .sxs (HEAD by default), case by case (lib/compare.ts); -v lists what got better
 //   -h, --help      print this and stop; an option not listed here is an error, never a run
 //
-//   node sxs/run.ts --stop    stops the shared proxy and browsers, and the servers drivers started
+//   node sxs/run.ts --stop    stops the pool (its browsers, kernels, Obsidians) and the proxy
 //
-// The proxy, a pool of headless Chromiums and the app's loaded page (a window of one of them) are
-// shared between runs (lib/browser.ts): started by the first run that needs them and left running. Each test starts from a fresh document
+// The proxy and the pool (pool.ts: headless Chromiums, SiYuan's kernels, Obsidian's instances) are
+// shared between runs: started by the first run that needs them, left running, the pool stopping what
+// it runs once idle. Each worker leases a window of the pool's, a browser context of its own; given back
+// cleanly (no example errored), it stays loaded for the next run of the app; else, or where the run
+// dies, it is destroyed, context and all (lib/browser.ts, lib/pool-client.ts). Each test starts from a fresh document
 // in the loaded app. After every key the runner waits for the app to settle (lib/idle.ts) rather than
 // for a fixed time.
 
@@ -55,7 +57,7 @@ import type { Browser, Page } from 'playwright-core';
 import { OurusConfig } from '../src/config.ts';
 import { OurusDoc } from '../src/doc/index.ts';
 import { drawOutline, nodesOf } from '../test/drawing.ts';
-import { appPage, BROWSERS, ensureProxy, launch, lockApp, proxyStats, stopShared, type AppPage } from './lib/browser.ts';
+import { appWindow, ensureProxy, headedWindow, lockApp, proxyStats, runRoom, stopShared, type AppPage } from './lib/browser.ts';
 import { watchTasks } from './lib/system.ts';
 import { clipboardHtml } from './lib/clipboard.ts';
 import type { Doc, Driver, Session } from './lib/driver.ts';
@@ -69,7 +71,7 @@ import { compareJudgments } from './lib/compare.ts';
 import { appDirs, appNames, resolveApps } from './lib/apps.ts';
 import { canonicalClipboard, passes } from '../test/spec-run.ts';
 import { actionsLine, RANKS, readSpec, specConfig, TAGS, type Clipboard } from '../test/specfile.ts';
-import { sameView, shownInBlocks, shownInText, type RowView } from './lib/view.ts';
+import { sameView, shownInBlocks, shownInText, splitView, type RowView } from './lib/view.ts';
 import { cacheDir, cacheMode } from './proxy.ts';
 
 const started = Date.now();
@@ -84,7 +86,22 @@ if (flag('--help') || flag('-h')) {
   console.log(usage.map((line) => line.replace(/^\/\/ ?/, '')).join('\n'));
   process.exit(0);
 }
-const FLAGS = ['-v', '--verbose', '--strict', '--ignore-options', '--list', '--headed', '--fresh', '--keep-windows', '--no-report', '--rejudge', '--timing', '--plain-clipboard', '--compare', '--stop'];
+/** Workers an app's run has at most (`--workers`, `Driver.parallel`): each a window of the pool's. */
+const WORKERS = 4;
+/** How long an example may play (from when it has the clipboard, where it uses it) before its worker is taken for stuck: `OURUS_SXS_STUCK_S`, 300 s by default. */
+const STUCK_MS = (Number(process.env.OURUS_SXS_STUCK_S) || 300) * 1000;
+/**
+ * How long a run may go without an example finished, once its first worker is ready (waiting in line
+ * for room, a window, a lock, isn't counted before): `OURUS_SXS_STALL_MIN`, 8 by default, above the
+ * watchdog of an example (`STUCK_MS`), which a run waiting for a clipboard behind another run's stuck
+ * example may wait out. A run that stalls says what its workers are on and exits, writing nothing, its
+ * windows destroyed by the pool as its connections close: a hang ends, and is seen, within minutes,
+ * and a run slow under load (all the apps at once) still ends.
+ */
+const STALL_MS = (Number(process.env.OURUS_SXS_STALL_MIN) || 8) * 60000;
+/** The tasks a run's own process takes (Node's threads, the Playwright connection's), for the room it asks the pool for. */
+const RUN_TASKS = 12;
+const FLAGS = ['-v', '--verbose', '--strict', '--ignore-options', '--list', '--headed', '--fresh', '--no-report', '--rejudge', '--timing', '--plain-clipboard', '--compare', '--stop'];
 const OPTIONS = ['--repeat', '--slow', '--cache', '--json', '--pace', '--workers', '--probe', '--compare'];
 const unknown = args.filter((a) => a.startsWith('-') && !FLAGS.includes(a) && !OPTIONS.some((o) => a.startsWith(`${o}=`)));
 if (unknown.length) {
@@ -270,7 +287,7 @@ const anchor = (name: string): string =>
 
 /**
  * How many workers each app's run gets (`--workers`), and its examples: as many as it can use, as a run
- * of the app alone takes (one per 30 examples, at most one per browser of the pool, `BROWSERS`, never more than its driver allows,
+ * of the app alone takes (one per 30 examples, at most `WORKERS`, never more than its driver allows,
  * `Driver.parallel`); `--workers` given, every app's (within its driver's limit).
  */
 async function workersOf(apps: string[], selectors: string[], pass: string[]): Promise<Map<string, { workers: number; examples: number }>> {
@@ -286,7 +303,7 @@ async function workersOf(apps: string[], selectors: string[], pass: string[]): P
             .map((t) => adapt(d, t, { ignoreOptions: pass.includes('--ignore-options'), plainClipboard: pass.includes('--plain-clipboard') }))
             .flatMap((a) => ('plan' in a && !(pass.includes('--strict') && a.plan.notes.length) ? [a.plan.key] : [])),
         ).size;
-        const most = Math.min(d.parallel ?? (d.launch ? 1 : BROWSERS), BROWSERS, Math.max(1, examples));
+        const most = Math.min(d.parallel ?? (d.launch ? 1 : WORKERS), WORKERS, Math.max(1, examples));
         const workers = asked !== undefined ? Math.max(1, Math.min(most, Number(asked) || 1)) : Math.max(1, Math.min(most, Math.ceil(examples / 30)));
         return [app, { workers, examples }] as const;
       }),
@@ -314,10 +331,8 @@ async function runMany(spec: string, selectors: string[], flags: string[]): Prom
   // the proxy, up before the runs that share it, so they don't race to start it (each app has a browser of its own)
   if (!pass.includes('--list') && !regenerating) await ensureProxy(cacheMode(pass), say);
 
-  // Obsidian's instances fewer with apps of the pool's browsers beside them, the two pools, full, under
-  // the container's cap on tasks (`obsidian/obsidian.ts`); the apps' runs have it from here
+  // (the pool sizes what it starts by the container's cap on tasks, every app's windows together: `pool.ts`)
   const drivers = new Map(await Promise.all(apps.map(async (a) => [a, ((await import(`./${a}/driver.ts`)) as { driver: Driver }).driver] as const)));
-  if ([...drivers.values()].some((d) => !d.launch)) process.env.OURUS_SXS_OBSIDIANS ??= '2';
   const plan = await workersOf(apps, selectors, pass);
   say(`${apps.length} apps at once: ${apps.map((a) => `${a}${plan.get(a)!.workers > 1 ? ` ×${plan.get(a)!.workers}` : ''}`).join(', ')}`);
   const one = async (app: string): Promise<void> => {
@@ -751,7 +766,13 @@ if (!app || !existsSync(new URL(`./${app}/driver.ts`, import.meta.url))) {
   console.error(`usage: node sxs/run.ts <app> [selector...] [options]; an app is a directory of sxs/ with a driver.ts`);
   process.exit(2);
 }
-const driver = ((await import(`./${app}/driver.ts`)) as { driver: Driver }).driver;
+const loaded = ((await import(`./${app}/driver.ts`)) as { driver: Driver }).driver;
+// `OURUS_SXS_BEHAVES='{"option":"value"}'`: values of ourus's options merged into the driver's own
+// (`Driver.behaves`), to measure a value's fit without editing the driver (with `--rejudge`: in seconds,
+// what the app did judged again under it). Said in the run's log.
+const behavesOverride = process.env.OURUS_SXS_BEHAVES ? (JSON.parse(process.env.OURUS_SXS_BEHAVES) as Record<string, unknown>) : null;
+const driver: Driver = behavesOverride ? { ...loaded, behaves: { ...loaded.behaves, ...behavesOverride } as Driver['behaves'] } : loaded;
+if (behavesOverride) console.error(`(${app}'s options as measured, with OURUS_SXS_BEHAVES: ${JSON.stringify(behavesOverride)})`);
 const say = (line: string): void => console.log(line);
 
 /**
@@ -933,12 +954,14 @@ function stepVerdict(step: PlanStep, got: Doc | null, clipboard: string | null |
   // after an action that leaves the app no text focus (`Driver.noCaretAfter`), an app with neither a
   // caret nor selected blocks has none to compare: the outline alone
   const outline = got && driver.model === 'block' ? (got as Outline) : null;
-  const unfocused = !!outline && !outline.sel && !outline.selected?.length && leavesNoCaret(step.actions[step.actions.length - 1]!);
+  const unfocused = !!outline && !outline.sel && !outline.selected?.length && leavesNoCaret(noCaretName(plan, plan.steps.indexOf(step), step.actions.length - 1));
   if (step.want && got) v = compareDocs(step.caretLost || unfocused ? { ...step.want, sel: null } : step.want, got, step.sections, flavor);
   // the folds in effect and the zoom, as the reader sees them: another view is another state
-  if (step.want?.view && got && !sameView(shownView(got, plan), step.want.view)) v = 'disagree';
-  // a clipboard written otherwise but reading as the same outline (an app's tabs, no final line break) is whitespace
-  if (step.clipboard !== undefined && clipboard !== step.clipboard) v = clipboard && sameMarkdown(clipboard, step.clipboard, flavor) ? (rank[v] > rank.whitespace ? v : 'whitespace') : 'disagree';
+  // (a drawing with no view's marks is one with nothing folded and no zoom: `view.ts`)
+  if (step.want?.view && got && !sameView(shownView(got, plan) ?? { folded: [], zoom: null }, step.want.view)) v = 'disagree';
+  // a clipboard written otherwise but the same Markdown (an app's tabs for indentation, no final line
+  // break, a line's trailing spaces) is the same copy: a paste anywhere reads it the same
+  if (step.clipboard !== undefined && clipboard !== step.clipboard && !(clipboard && sameMarkdown(clipboard, step.clipboard, flavor))) v = 'disagree';
   return v;
 }
 
@@ -999,9 +1022,24 @@ interface Outcome {
 const NO_FOCUS = 'no text focus after';
 /** An action as `Driver.noCaretAfter` names it: a drop by its action alone (`moveSubtree ②` is `moveSubtree`). */
 const leavesNoCaret = (action: string): boolean => !!driver.noCaretAfter?.includes(/^moveSubtree .$/u.test(action) ? 'moveSubtree' : action);
+/**
+ * Action `j` of step `i` as `noCaretAfter` names it: a Backspace, Delete or cut of blocks selected whole
+ * (by the step's `selectSubtree` just before, or in the state the step starts from) is a
+ * `deleteSubtree`, which is how a driver plays one (Logseq: Regression97, Cut4).
+ */
+function noCaretName(plan: Plan, i: number, j: number): string {
+  const step = plan.steps[i];
+  if (!step) return '';
+  const action = step.actions[j]!;
+  if (!/^(?:deleteContentBackward|deleteContentForward|cut)$/.test(action)) return action;
+  const before = j > 0 ? step.actions[j - 1] === 'selectSubtree' : !!(i === 0 ? (plan.initial as Outline) : (plan.steps[i - 1]!.want as Outline | null))?.selected?.length;
+  return before ? 'deleteSubtree' : action;
+}
 /** A drop whose place the app's gesture can't reach (its driver's `Unsupported`): skipped as it played, as `NO_FOCUS`. */
 const UNREACHED = 'drop:';
-const skippedAsPlayed = (why: string): boolean => why.startsWith(NO_FOCUS) || why.startsWith(UNREACHED);
+/** A step that changes only what blocks can't show, where the app changed something, before any step compared (`judge`). */
+const LOST = 'the app changing what ourus\'s blocks show no change in, at';
+const skippedAsPlayed = (why: string): boolean => why.startsWith(NO_FOCUS) || why.startsWith(UNREACHED) || why.startsWith(LOST);
 const needsFocus = (action: string): boolean => !/^(?:undo|redo)$/.test(action);
 
 /**
@@ -1063,6 +1101,13 @@ interface Worker {
   holdClipboard?: () => Promise<() => void>;
   /** The settings the app was last set to in its page (`Driver.configure`); unknown at first, in a page an earlier run may have left set. */
   configured: string | null;
+  /** Why its window isn't to be kept for the next run (an example errored), if it isn't. */
+  dirty?: string;
+  /** Gives its window back as not to be kept, for good (`retired`): a worker stuck in an example. */
+  retire?: () => Promise<void>;
+  retired?: boolean;
+  /** Since when it plays the example it is on (its clipboard held, where it uses it): the watchdog's (`STUCK_MS`). */
+  playing?: number;
 }
 
 /**
@@ -1085,6 +1130,10 @@ const PACE = Number(option('--pace') ?? 100);
  * `UNDO_DRAIN`: its saves) and settles.
  */
 const UNDO_GAP = 750;
+/** How long after a state that doesn't agree it is read again (`runPlan`). */
+const SECOND_LOOK = 300;
+/** `OURUS_SXS_KEYTRACE=1` (every app) or a list of apps (`roam,logseq`): a step that still doesn't agree after its second look gets the page's trace of its keys in the play's `unsettled`. */
+const keyTrace = ((v) => v === '1' || (!!v && v.split(',').includes(driver.longId)))(process.env.OURUS_SXS_KEYTRACE);
 const UNDO_DRAIN = 2000;
 const isUndo = (action: string): boolean => action === 'undo' || action === 'redo';
 
@@ -1137,6 +1186,18 @@ const indent = (s: string, by = '    '): string => s.replace(/\n$/, '').replace(
 
 const rank: Record<Verdict | 'error', number> = { agree: 0, caret: 1, whitespace: 2, disagree: 3, error: 4 };
 
+/**
+ * The last step of an example that copies, cuts or pastes, or checks the clipboard: -1 where none does
+ * (a starting clipboard no step pastes is no matter), and the example holds no clipboard.
+ */
+function lastClipboardStep(plan: Plan): number {
+  let last = -1;
+  plan.steps.forEach((s, i) => {
+    if (s.clipboard !== undefined || s.actions.some((a) => /^(paste|copy|cut)/.test(a))) last = i;
+  });
+  return last;
+}
+
 async function runPlan(w: Worker, plan: Plan): Promise<Outcome> {
   const { page } = w;
   const t0 = Date.now();
@@ -1150,10 +1211,16 @@ async function runPlan(w: Worker, plan: Plan): Promise<Outcome> {
     if (page) await page.evaluate((upTo) => (window as unknown as { __ourusIdle: { drain(o: { upTo: number; timeout: number }): Promise<unknown> } }).__ourusIdle.drain({ upTo, timeout: 3 * upTo }), UNDO_DRAIN);
     await settleAfter('a pause');
   };
-  // an example that pastes or checks the clipboard
-  const usesClipboard = plan.clipboard !== null || plan.steps.some((s) => s.clipboard !== undefined || s.actions.some((a) => /^(paste|copy|cut)/.test(a)));
-  // the browser's clipboard, its other windows' too: held for the whole example
-  const unhold = usesClipboard ? await w.holdClipboard?.() : undefined;
+  // the browser's clipboard, its other windows' too: held from the clipboard's write, once the app
+  // holds the starting state, to the last step that copies, cuts, pastes or checks it (`lastClipboardStep`),
+  // so that the other windows waiting for it don't wait out this one's load and its steps after
+  const lastClip = lastClipboardStep(plan);
+  let unhold: (() => void) | undefined;
+  const release = (): void => {
+    unhold?.();
+    unhold = undefined;
+  };
+  w.playing = Date.now();
   try {
     const settings = JSON.stringify(plan.settings);
     if (driver.configure && settings !== w.configured) {
@@ -1161,13 +1228,7 @@ async function runPlan(w: Worker, plan: Plan): Promise<Outcome> {
       await driver.configure(page, plan.settings);
       w.configured = settings;
     }
-    // an example that uses the clipboard has its tab in front (behind another, a Clipboard API write
-    // is dropped and a read comes back empty, without an error)
-    if (usesClipboard) await w.actor.front();
     await driver.load(page, plan.initial);
-    // a test that starts with none starts with an empty one: a copy that copies nothing reads back as
-    // nothing, not as whatever an earlier test (another app's, in the browser) left there
-    if (plan.clipboard !== null || usesClipboard) await w.actor.clipboard.write(plan.clipboard ?? { 'text/plain': '' });
     await settleAfter('loading');
     // the app holds what the test starts from, or the test means nothing: an app may rewrite what it
     // is given (trimming, normalizing), and that is no behavior of a key
@@ -1182,24 +1243,63 @@ async function runPlan(w: Worker, plan: Plan): Promise<Outcome> {
       loaded = await driver.read(page);
     }
     if (!holds(loaded)) throw new Error(`${driver.displayName} holds the starting state differently:\n  meant:\n${indent(drawDoc(plan.initial))}\n  holds:\n${indent(drawDoc(loaded))}`);
+    if (lastClip >= 0 && w.holdClipboard) {
+      // (the wait for it, other windows' examples, is no time of this one's: the watchdog's starts after)
+      w.playing = undefined;
+      unhold = await w.holdClipboard();
+      w.playing = Date.now();
+    }
+    if (lastClip >= 0) {
+      // its tab in front (behind another, a Clipboard API write is dropped and a read comes back empty,
+      // without an error)
+      await w.actor.front();
+      // a test that starts with none starts with an empty one: a copy that copies nothing reads back as
+      // nothing, not as whatever an earlier test (another app's, in the browser) left there
+      await w.actor.clipboard.write(plan.clipboard ?? { 'text/plain': '' });
+    }
     const undoes = plan.steps.some((s) => s.actions.some(isUndo));
+    const playStart = keyTrace && page ? await page.evaluate(() => (window as unknown as { __ourusIdle: { trace(s: number): { now: number } } }).__ourusIdle.trace(1e12).now).catch(() => 0) : 0;
     for (const [i, step] of plan.steps.entries()) {
       if (undoes && i > 0) await pause();
       for (const [j, action] of step.actions.entries()) {
         if (undoes && j > 0 && isUndo(action) && !isUndo(step.actions[j - 1]!)) await pause();
+        // (what the app put off, its save, done first: `Driver.drainBefore`)
+        if (driver.drainBefore && page) {
+          const drained = await page.evaluate((upTo) => (window as unknown as { __ourusIdle: { drain(o: { upTo: number; timeout: number }): Promise<{ ms: number }> } }).__ourusIdle.drain({ upTo, timeout: 3 * upTo }), driver.drainBefore);
+          if (drained.ms > 0) await settleAfter(`its put-off timers, before ${action}`);
+        }
         // a drop: the gesture, at the place the plan resolved from ourus's state (lib/drag.ts)
         if (plan.drop && isDrop(action)) await driver.drop!(page, plan.drop, () => settleAfter(action));
         else await play(w, action, settleAfter);
         // (an action that may leave the app no focus, with more that needs one after it: where it did,
         // the rest is unplayable, and the example skipped; where the app kept a caret, it plays on)
         const rest = [...step.actions.slice(j + 1), ...plan.steps.slice(i + 1).flatMap((s) => s.actions)];
-        if (driver.model === 'block' && leavesNoCaret(action) && rest.some(needsFocus)) {
+        if (driver.model === 'block' && leavesNoCaret(noCaretName(plan, i, j)) && rest.some(needsFocus)) {
           const now = (await driver.read(page)) as Outline;
           if (!now.sel && !now.selected?.length) return { verdict: 'agree', step: got.length, got, clipboards, unsettled, ms: Date.now() - t0, skip: `${NO_FOCUS} ${action}` };
         }
       }
-      got.push(step.want ? await driver.read(page) : null);
+      let doc = step.want ? await driver.read(page) : null;
+      // a state that doesn't agree, read again a moment later: where the app was still changing it
+      // (a late render, a selection set again after a move), the later is its state, and the play says
+      // so; where it is the same, it is what the app does (a flake in full runs alone, Logseq's
+      // Outdent8 and Outdent10, told so from a race of the app's own)
+      if (doc && page && stepVerdict(step, doc, step.clipboard, plan) !== 'agree') {
+        await new Promise((r) => setTimeout(r, SECOND_LOOK));
+        await settleAfter('a second look');
+        const again = await driver.read(page);
+        if (JSON.stringify(again) !== JSON.stringify(doc)) {
+          unsettled.push(`step ${i + 1}: changed after settling, ${SECOND_LOOK} ms on (${drawDoc(doc).replace(/\n/g, '⏎')} → ${drawDoc(again).replace(/\n/g, '⏎')})`);
+          doc = again;
+        } else if (keyTrace) {
+          // (`OURUS_SXS_KEYTRACE`: the step's keys as the page saw them, where it still doesn't agree)
+          const t = await page.evaluate((since) => (window as unknown as { __ourusIdle: { trace(s: number): { lines: string[] } } }).__ourusIdle.trace(since), playStart).catch(() => null);
+          if (t) unsettled.push(`step ${i + 1}: its keys, as the page saw them: ${t.lines.join(' | ')}`);
+        }
+      }
+      got.push(doc);
       clipboards.push(step.clipboard !== undefined ? await w.actor.clipboard.read() : null);
+      if (i === lastClip) release();
     }
   } catch (e) {
     // a drop the app's gesture can't reach: skipped, as it played
@@ -1212,23 +1312,33 @@ async function runPlan(w: Worker, plan: Plan): Promise<Outcome> {
     const error = message.startsWith(`${driver.displayName} holds`) ? message : message.split('\n')[0]!.slice(0, 300);
     return { verdict: 'error', step: got.length, got, clipboards, error, unsettled, ms: Date.now() - t0 };
   } finally {
-    unhold?.();
+    w.playing = undefined;
+    release();
     await driver.unload?.(page).catch(() => {});
   }
   return { ...judge(plan, got, clipboards), got, clipboards, unsettled, ms: Date.now() - t0 };
 }
 
 /** How an example came out from what the app did in each step: as its worst step, the first that came out so. */
-function judge(plan: Plan, got: readonly (Doc | null)[], clipboards: readonly (string | null)[]): { verdict: Verdict; step: number } {
+function judge(plan: Plan, got: readonly (Doc | null)[], clipboards: readonly (string | null)[]): { verdict: Verdict; step: number; skip?: string } {
   let verdict: Verdict = 'agree';
   let at = -1;
-  plan.steps.forEach((step, i) => {
+  let judged = false;
+  for (const [i, step] of plan.steps.entries()) {
     const v = stepVerdict(step, got[i] ?? null, clipboards[i], plan);
+    // a step that changes only what blocks can't show, where the app changed something: what it did
+    // there answers nothing, and the steps after play from another state; judged on the steps before
+    // (QuoteText8: Enter leaving the list, an empty block already, makes another in the app)
+    if (step.lost && v !== 'agree' && v !== 'caret') {
+      if (!judged) return { verdict: 'agree', step: i, skip: `${LOST} ${step.actions.join(' ')}` };
+      break;
+    }
+    if (step.want || step.clipboard !== undefined) judged = true;
     if (rank[v] > rank[verdict]) {
       verdict = v;
       at = i;
     }
-  });
+  }
   return { verdict, step: Math.max(at, 0) };
 }
 
@@ -1245,7 +1355,9 @@ function judge(plan: Plan, got: readonly (Doc | null)[], clipboards: readonly (s
 function readDoc(drawn: string): Doc | null {
   if (!isText) return readOutline(drawn, { ordered: driver.ordered });
   const d = readTextDoc(drawn);
-  return drawTextDoc(d) === drawn ? d : null;
+  // (read back as drawn: a stored run's view, its last line, checked apart, the rest as drawn without it)
+  const { drawn: plain, byLine } = splitView(drawn);
+  return (d.view && !byLine ? drawTextDoc({ ...d, view: undefined }) === plain : drawTextDoc(d) === drawn) ? d : null;
 }
 
 /** The app's settings (`Driver.settings`) as strings, each as `get` has it. */
@@ -1323,13 +1435,28 @@ const results: Result[] = [];
 /** Errors the app's page threw. */
 const errors: string[] = [];
 // the container's cap on tasks, watched while the app plays: a crash or a hang may be that
+/** What each worker plays now (the stall check, `STALL_MS`, says it). */
+const playingNow = new Map<number, string>();
+/** When an example last finished (or the first worker was ready). */
+let progressed = 0;
+const progress = (): void => void (progressed = Date.now());
+/** Starts the stall check (`STALL_MS`): as the run's first worker is ready. */
+const startLimit = (): void => {
+  progress();
+  setInterval(() => {
+    if (Date.now() - progressed < STALL_MS) return;
+    const on = [...playingNow].sort((a, b) => a[0] - b[0]).map(([k, name]) => `worker ${k}: ${name}`);
+    console.error(`${driver.displayName}'s run finished no example for ${STALL_MS / 60000} minutes (\`OURUS_SXS_STALL_MIN\`): stopped, with no report and no run data written${on.length ? `; ${on.join(', ')}` : '; no worker playing'}`);
+    process.exit(1);
+  }, 5000).unref();
+};
 const unwatchTasks = regenerating ? null : watchTasks(say);
 const version = regenerating ? regenerate() : await playAll();
 unwatchTasks?.();
 
 /**
- * How many workers the run has (`--workers`, each in a browser of the pool of its own, or with an app it
- * starts of its own): as asked, else as many as its examples warrant (one per 30, at most `BROWSERS`); never
+ * How many workers the run has (`--workers`, each in a window of the pool's of its own): as asked, else
+ * as many as its examples warrant (one per 30, at most `WORKERS`); never
  * more than the driver allows
  * (`Driver.parallel`: 1 by default for one that starts its app), nor more than one for a
  * browser of the run's own (`--headed`).
@@ -1339,7 +1466,7 @@ function workerCount(): number {
   const most = driver.parallel ?? (driver.launch ? 1 : Infinity);
   const asked = option('--workers');
   if (asked !== undefined) return Math.max(1, Math.min(most, unique.size, Math.floor(Number(asked)) || 1));
-  return Math.max(1, Math.min(most, BROWSERS, Math.ceil(unique.size / 30)));
+  return Math.max(1, Math.min(most, WORKERS, Math.ceil(unique.size / 30)));
 }
 
 /** Plays every example in the app, into `results`, its workers side by side; the app's version. */
@@ -1351,60 +1478,79 @@ async function playAll(): Promise<string | undefined> {
   // a desktop app, of its own)
   // a probe waits for another run of the app to end: two probes side by side play in turn
   const unlockApp = !flag('--headed')
-    ? await lockApp(driver.longId, !!probing).catch((e: Error) => {
+    ? await lockApp(driver.longId, !!probing, say).catch((e: Error) => {
         console.error(e.message);
         return process.exit(1);
       })
     : () => {};
+  // room for the run's own processes, and an app its driver starts outside the pool, under the
+  // container's cap: a run among many started at once (`all`) waits in the pool's line for it
+  const unroom = !flag('--headed') ? await runRoom(`run.ts ${driver.longId}${probing ? ' (probe)' : ''}`, RUN_TASKS + (driver.tasks ?? 0) * count, say) : () => {};
   const opened = Date.now();
-  type Marked = { __ourusApp?: string; __ourusVersion?: string };
-  // the name a browser's window of the app is held by: the driver's, or its app's for setups that share one (`Driver.pool`)
-  const pooled = driver.pool ?? driver.longId;
+  // a window the pool keeps warm is taken over by a run of the app as loaded from where its driver says,
+  // with this idle script (an older one stays in a page until it reloads)
+  const key = `${driver.scope ?? driver.url} ${idleVersion()}`;
+  const who = (k: number): string => `run.ts ${driver.longId}${probing ? ' (probe)' : ''}, worker ${k + 1}`;
 
-  type Ready = { app: AppPage; version: string | undefined; how: string; browser?: Browser };
+  type Ready = { app: AppPage; version: string | undefined; how: string };
+
+  /** A window of the app (the pool's, the driver's own app's, or with `--headed` the worker's own): null if `gone` says the worker is no longer wanted while it waits for room. */
+  async function windowFor(k: number, fresh: boolean, gone?: () => boolean): Promise<AppPage | null> {
+    if (driver.launch) return driver.launch({ headed: flag('--headed'), fresh, say, gone });
+    if (flag('--headed')) return headedWindow(say);
+    return appWindow(driver.longId, key, { fresh, who: who(k), gone }, say);
+  }
 
   /**
-   * The app's page in `browser`, loaded: an earlier run's, if it still holds a document and reads it
-   * back, else a new one; or the window of an app the driver starts itself (no browser), null if `gone`
+   * The app's page, loaded: a window a run of it released cleanly, if it still holds a document and
+   * reads it back, else a new one (a new browser context) with the app opened in it; null if `gone`
    * says the worker is no longer wanted while it waits for room.
    */
-  async function ready(browser: Browser | null, gone?: () => boolean): Promise<Ready | null> {
-    if (!browser) {
-      const app = await driver.launch!({ headed: flag('--headed'), say, gone }).catch((e: Error) => {
-        console.error(`can't start ${driver.displayName}: ${e.message}`);
-        return process.exit(1);
-      });
-      if (!app) return null;
-      // a page's settling is the idle script's; a session's calls return once the app is done
-      if (!app.session) await app.page.addInitScript(installIdle, idleVersion());
-      return { app, version: await driver.open(app.page), how: 'started' };
-    }
-    let app = await appPage(browser, pooled, driver.scope ?? driver.url, { shared: !flag('--headed'), fresh: flag('--fresh'), keep: flag('--keep-windows') });
-    // the window's page in front: its Clipboard API works only there, and a tab behind another can crawl
-    await app.page.bringToFront();
-    if (app.reused) {
+  async function ready(k: number, gone?: () => boolean): Promise<Ready | null> {
+    let app = await windowFor(k, flag('--fresh'), gone);
+    if (!app) return null;
+    // a page's settling is the idle script's (added for every page: a reused one may reload, and its
+    // earlier run's init scripts went with that run's connection); a session's calls return once the app is done
+    if (!app.session) await app.page.addInitScript(installIdle, idleVersion());
+    if (app.reused && !app.session) {
+      await app.page.bringToFront();
       const probe: Doc = isText ? { text: '- a\n- b\n', sel: { anchor: 7, head: 7 } } : { blocks: [{ depth: 0, text: 'a' }, { depth: 0, text: 'b' }], sel: { block: 1, anchor: 1, head: 1 } };
       let why = '';
       // read once the app settles, as a test's state is (Dynalist puts the caret in after the load returns)
       const works = await driver
         .load(app.page, probe)
-        .then(() => app.page.evaluate(() => (window as { __ourusIdle?: { wait(o: object): Promise<unknown> } }).__ourusIdle?.wait({ shortTimer: 300, quiet: 100, timeout: 5000 })))
-        .then(() => driver.read(app.page))
+        .then(() => app!.page.evaluate(() => (window as { __ourusIdle?: { wait(o: object): Promise<unknown> } }).__ourusIdle?.wait({ shortTimer: 300, quiet: 100, timeout: 5000 })))
+        .then(() => driver.read(app!.page))
         .then((o) => sameDoc(o, probe) || ((why = `it holds ${JSON.stringify(o)}`), false))
         .catch((e: Error) => ((why = e.message.split('\n')[0]!), false));
-      if (works) return { app, version: await app.page.evaluate(() => (window as Marked).__ourusVersion), how: 'reused from an earlier run' };
+      if (works) return { app: await throttled(app), version: app.meta?.version as string | undefined, how: 'taken over, loaded, from an earlier run' };
       say(`the window an earlier run left doesn't take a document (${why}): loading the app anew`);
-      await app.page.close();
-      app = await appPage(browser, pooled, driver.scope ?? driver.url, { shared: !flag('--headed'), fresh: true, keep: flag('--keep-windows') });
+      await app.release(false);
+      app = await windowFor(k, true);
+      if (!app) return null;
+      if (!app.session) await app.page.addInitScript(installIdle, idleVersion());
     }
-    await app.page.addInitScript(installIdle, idleVersion());
-    // a window its app didn't open in closes, not left blank in the shared browser
+    // the window's page in front (each window is a page of its own, in front of its window)
+    if (!app.session) await app.page.bringToFront();
+    // a window its app didn't open in is destroyed, not left half-loaded for the next run
+    const opening = app;
     const version = await driver.open(app.page).catch(async (e: unknown) => {
-      await app.release().catch(() => {});
+      await opening.release(false).catch(() => {});
       throw e;
     });
-    await app.page.evaluate(([name, v]) => Object.assign(window as Marked, { __ourusApp: name, __ourusVersion: v }), [pooled, version] as const);
-    return { app, version, how: 'loaded' };
+    return { app: await throttled(app), version, how: driver.launch ? 'started' : 'loaded' };
+  }
+  /**
+   * `OURUS_SXS_THROTTLE=N`: the page's main thread N times slower (Chrome's CPU throttling), as a page
+   * is under a run of every app at once: to replay a flake that load alone shows (debugging only).
+   */
+  async function throttled<T extends { session?: unknown; page: Page }>(app: T): Promise<T> {
+    const rate = Number(process.env.OURUS_SXS_THROTTLE);
+    if (rate > 1 && !app.session) {
+      const cdp = await app.page.context().newCDPSession(app.page);
+      await cdp.send('Emulation.setCPUThrottlingRate', { rate });
+    }
+    return app;
   }
   function detail(plan: Plan, o: Outcome): string {
     if (o.verdict === 'error') return `  error at step ${o.step + 1}: ${o.error}`;
@@ -1422,6 +1568,17 @@ async function playAll(): Promise<string | undefined> {
   // order too, each as soon as those before it are done
   const queue = [...unique.values()];
   const done: (Result | undefined)[] = [];
+  // the order the workers take them in: the examples that hold the clipboard spread evenly among the
+  // others, so that a run's workers don't reach a spec file of pastes together and wait for the
+  // clipboard by turns (what comes out is said in the spec's order still)
+  const order: number[] = [];
+  {
+    const clip = queue.flatMap((q, i) => (lastClipboardStep(q.plan) >= 0 ? [i] : []));
+    const other = queue.flatMap((q, i) => (lastClipboardStep(q.plan) >= 0 ? [] : [i]));
+    for (let c = 0, o = 0; c < clip.length || o < other.length; )
+      if (o >= other.length || (c < clip.length && c * other.length <= o * clip.length)) order.push(clip[c++]!);
+      else order.push(other[o++]!);
+  }
   let next = 0;
   let shown = 0;
   const show = (): void => {
@@ -1440,10 +1597,47 @@ async function playAll(): Promise<string | undefined> {
       for (const u of outcome.unsettled) say(`  unsettled after ${u}`);
     }
   };
+  /**
+   * An example played, or, where it is still playing `STUCK_MS` after it started (a call of the app's
+   * that never returns: no timeout of Playwright's bounds an evaluation), null: the worker is then
+   * retired, its window destroyed (which ends the calls left waiting, and gives back its browser's
+   * clipboard, which other runs' windows wait for).
+   */
+  const played = (w: Worker, plan: Plan): Promise<Outcome | null> =>
+    new Promise((resolve) => {
+      const timer = setInterval(() => {
+        if (w.playing === undefined || Date.now() - w.playing < STUCK_MS) return;
+        clearInterval(timer);
+        resolve(null);
+      }, 1000);
+      // (what fails before it plays, its clipboard refused as its window went, is an error of the example's)
+      void runPlan(w, plan).then(
+        (o) => (clearInterval(timer), resolve(o)),
+        (e: unknown) => (clearInterval(timer), resolve({ verdict: 'error', step: 0, got: [], clipboards: [], error: String(e instanceof Error ? e.message : e), unsettled: [], ms: 0 })),
+      );
+    });
   const work = async (w: Worker): Promise<void> => {
-    for (let i = next++; i < queue.length; i = next++) {
+    for (let n = next++; n < queue.length; n = next++) {
+      const i = order[n]!;
       const { plan, names } = queue[i]!;
-      let outcome = await runPlan(w, plan);
+      const nth = readied.findIndex((x) => x.w === w) + 1;
+      playingNow.set(nth, names.join(' = '));
+      // `OURUS_SXS_TRACE=1`: each example as a worker takes it, in the order played (the log says them in
+      // the spec's): what a worker played before an example went wrong, to find a state one left behind
+      if (process.env.OURUS_SXS_TRACE) console.error(`TRACE ${new Date().toISOString().slice(11, 23)} worker ${nth} ${names.join(' = ')}`);
+      const first = await played(w, plan);
+      if (!first) {
+        const error = `stuck: still playing after ${STUCK_MS / 1000}s; the worker's window destroyed, the worker retired`;
+        say(`${driver.displayName}'s worker ${readied.findIndex((x) => x.w === w) + 1} is stuck at ${names.join(' = ')}: its window is destroyed, and the other workers go on`);
+        w.dirty = error;
+        await w.retire?.();
+        done[i] = { plan, names, outcome: { verdict: 'error', step: 0, got: [], clipboards: [], error, unsettled: [], ms: STUCK_MS } };
+        show();
+        return;
+      }
+      let outcome = first;
+      // an error leaves the app in a state no one knows: its window isn't kept for the next run
+      if (outcome.verdict === 'error') w.dirty ??= outcome.error ?? 'an error';
       // a promise of the app's that never settles is collected instead of waited on (V8's inspector holds
       // an evaluation's promise weakly): rare, and nothing of the example's, so it runs once more
       if (outcome.verdict === 'error' && /Resulting promise was garbage collected/.test(outcome.error ?? '')) {
@@ -1453,7 +1647,7 @@ async function playAll(): Promise<string | undefined> {
       // the app's page is gone (it crashed; the machine ran out of processes): every example after would
       // be an error of no app's doing, and the report one to copy over the last; the run stops, writing
       // nothing
-      if (outcome.verdict === 'error' && /Target crashed|Target page, context or browser has been closed|Browser has been closed/.test(outcome.error ?? '')) {
+      if (outcome.verdict === 'error' && /Target crashed|Target page, context or browser has been closed|Browser has been closed|no clipboard: its window is gone|^Emacs is gone/.test(outcome.error ?? '')) {
         console.error(`${driver.displayName}'s page is gone at ${names.join(' = ')} (${outcome.error}): stopped, with no report and no run data written`);
         process.exit(1);
       }
@@ -1463,27 +1657,20 @@ async function playAll(): Promise<string | undefined> {
         if (signature(again) !== signature(outcome)) flaky = `run ${k + 1}: ${again.verdict}${again.verdict !== 'agree' ? `\n${detail(plan, again)}` : ''}`;
       }
       done[i] = { plan, names, outcome, ...(flaky && { flaky }) };
+      progress();
       show();
     }
+    playingNow.delete(readied.findIndex((x) => x.w === w) + 1);
   };
-  // each worker: a place in a pool as one has room (a browser's window, or the driver's own app's: an
-  // Obsidian's), its page readied, then examples from the queue as they come; the first waits as long as
-  // it takes, the others only while examples are left
-  const readied: Ready[] = [];
-  const browsers: Browser[] = [];
+  // each worker: a window of the pool's as one has room, its page readied, then examples from the
+  // queue as they come; the first waits as long as it takes, the others only while examples are left
+  const readied: { r: Ready; w: Worker }[] = [];
   let version: string | undefined;
   const join = async (k: number): Promise<void> => {
     const gone = k === 0 ? undefined : (): boolean => next >= queue.length;
     let r: Ready | null;
-    let b: Browser | null = null;
     try {
-      if (driver.launch) r = await ready(null, gone);
-      else {
-        b = await launch(flag('--headed'), say, pooled, gone, driver.browsers);
-        if (!b) return;
-        browsers.push(b);
-        r = await ready(b);
-      }
+      r = await ready(k, gone);
     } catch (e) {
       // a worker that can't open the app leaves the examples to the others; the first's failure is the run's
       if (k === 0 || e instanceof LoginRequired) throw e;
@@ -1491,13 +1678,18 @@ async function playAll(): Promise<string | undefined> {
       return;
     }
     if (!r) return;
-    if (b) r.browser = b;
+    const app = r.app;
+    const w: Worker = { page: app.page, actor: app.session ? sessionActor(app.session) : pageActor(app.page), typesAtOnce: !!app.session, holdClipboard: app.clipboard, configured: null };
+    w.retire = async () => {
+      w.retired = true;
+      await app.release(false).catch(() => {});
+    };
     // which worker is ready first, decided here: workers ready together all pushed before any check after an await
-    const nth = readied.push(r);
-    const w: Worker = { page: r.app.page, actor: r.app.session ? sessionActor(r.app.session) : pageActor(r.app.page), typesAtOnce: !!r.app.session, holdClipboard: r.app.clipboard, configured: null };
+    const nth = readied.push({ r, w });
     await w.actor.front();
     if (!r.app.session) w.page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
     if (nth === 1) {
+      startLimit();
       version = r.version;
       say(`${driver.displayName}${version ? ` ${version}` : ''} at ${driver.url}, ${r.how} in ${((Date.now() - opened) / 1000).toFixed(1)}s; ${unique.size} examples to run (${plans.length} tests), ${tests.length - plans.length} skipped${count > 1 ? `; up to ${count} workers` : ''}`);
     } else say(`worker ${nth} joined (${r.how})`);
@@ -1510,23 +1702,26 @@ async function playAll(): Promise<string | undefined> {
     return process.exit(LOGIN_EXIT);
   });
   workersUsed = readied.length;
+  // every worker retired (stuck) or gone before the queue was done: a report of part of it, read as
+  // the whole, is no report; the run fails, writing nothing
+  const unplayed = queue.length - done.filter(Boolean).length;
+  if (unplayed) {
+    console.error(`${driver.displayName}: ${unplayed} of ${queue.length} examples weren't played (its workers ${readied.length ? 'were retired, stuck' : "didn't open the app"}): stopped, with no report and no run data written`);
+    process.exit(1);
+  }
   // examples skipped as they played go with those skipped before
   for (const d of done as Result[]) {
     if (d.outcome.skip) skipped.set(d.outcome.skip, [...(skipped.get(d.outcome.skip) ?? []), ...d.names]);
     else results.push(d);
   }
-  // each worker's window closes, the shared browsers staying up for the next run (an instance of
-  // Obsidian's stops with its last window, `obsidian/obsidian.ts`)
-  // each worker disconnects holding its browser's clipboard: a connection's end resets the permissions
-  // it granted, the clipboard's, for every page of the browser, so another run's example reading the
-  // clipboard then would read nothing (the next to hold it grants them again)
-  for (const r of readied) {
-    const unhold = await r.app.clipboard?.();
-    await r.app.release().catch((e) => say(`couldn't release ${driver.displayName}: ${String(e).slice(0, 200)}`));
-    await r.browser?.close();
-    unhold?.();
+  // each worker's window given back: kept loaded for the next run where none of its examples errored,
+  // else destroyed (the pool disposes of its browser context)
+  for (const { r, w } of readied) {
+    if (w.retired) continue;
+    if (w.dirty) say(`${driver.displayName}'s window of worker ${readied.findIndex((x) => x.w === w) + 1} isn't kept for the next run: ${w.dirty.split('\n')[0]!.slice(0, 160)}`);
+    await r.app.release(!w.dirty, { version: r.version }).catch((e) => say(`couldn't release ${driver.displayName}: ${String(e).slice(0, 200)}`));
   }
-  for (const b of browsers) if (!readied.some((r) => r.browser === b)) await b.close();
+  unroom();
   unlockApp();
   return version;
 }

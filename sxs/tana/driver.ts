@@ -84,7 +84,11 @@ function toItem(depth: number, block: string): Item & { prefix: number; cut?: nu
   // a number that is text (after a numbered node's own number too)
   const literal = prefix === (numbered?.[0].length ?? 0) ? /^(\d{1,9})\\(?=[.)])/.exec(content) : null;
   if (literal) content = literal[1] + content.slice(literal[0].length);
-  return { depth, content, todo: !!task, done: !!task && task[1] !== ' ', section: !!heading, numbered: !!numbered, code: false, prefix, ...(literal && { cut: prefix + literal[1]!.length }), ...(description !== undefined && { description }) };
+  // and a `#` that is text (a heading is the node's section flag, its name plain: Enter9)
+  const hash = !literal && prefix === (numbered?.[0].length ?? 0) && /^\\#/.test(content);
+  if (hash) content = content.slice(1);
+  const cut = literal ? prefix + literal[1]!.length : hash ? prefix : undefined;
+  return { depth, content, todo: !!task, done: !!task && task[1] !== ' ', section: !!heading, numbered: !!numbered, code: false, prefix, ...(cut !== undefined && { cut }), ...(description !== undefined && { description }) };
 }
 
 /** A node's canonical text, and the length of the prefix its number (`number`, where numbered), checkbox and section stand for. */
@@ -95,9 +99,13 @@ function fromItem(it: Item, number: number | null): { text: string; prefix: numb
     return { text: `${fence}${info}\n${it.content}\n${fence}`, prefix: fence.length + info.length + 1 };
   }
   const prefix = (number !== null ? `${number}. ` : '') + (it.todo ? (it.done ? '[x] ' : '[ ] ') : '') + (it.section ? '# ' : '');
-  const literal = !prefix || prefix === `${number}. ` ? /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(it.content) : null;
-  const content = literal ? it.content.slice(0, literal[0].length) + '\\' + it.content.slice(literal[0].length) : it.content;
-  return { text: prefix + content + (it.description !== undefined ? `\n${it.description}` : ''), prefix: prefix.length, ...(literal && { cut: literal[0].length }) };
+  const plain = !prefix || prefix === `${number}. `;
+  const literal = plain ? /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(it.content) : null;
+  // and a `#` that is text, which the canonical text would read as a heading's (`\# x`)
+  const hash = plain && !literal && /^#{1,6}(?=[ \t]|$)/.test(it.content);
+  const content = literal ? it.content.slice(0, literal[0].length) + '\\' + it.content.slice(literal[0].length) : hash ? '\\' + it.content : it.content;
+  const cut = literal ? literal[0].length : hash ? 0 : undefined;
+  return { text: prefix + content + (it.description !== undefined ? `\n${it.description}` : ''), prefix: prefix.length, ...(cut !== undefined && { cut }) };
 }
 
 const HOME = 'SXS_HOME';
@@ -156,6 +164,8 @@ export const driver: Driver = {
   // its `load` selects nodes whole, as `read` reports them
   selectsBlocks: true,
   ordered: true,
+  // a heading is the node's section flag, a name starting `# ` text (`fromItem` escapes it)
+  headings: true,
   // a name is one line of rich text, with nothing of Markdown's blocks but code (a code block, its
   // name the code). A checkbox and a section are a node's attributes, and a code block's fences no
   // text: a caret in them has no place (`holds`), and a join or split at them is Tana's to show. No
@@ -166,6 +176,8 @@ export const driver: Driver = {
   // gone; a list pasted into a node with children goes after them (played with `--ignore-options`);
   // a typed fence is left open (Backtick2, Backtick12, Backtick15)
   behaves: {
+    // a paste over blocks selected whole keeps them and pastes after the last (SubtreeEdit14, SubtreeEdit17)
+    pasteOverNodes: 'after',
     // indent and outdent over roots at two depths: each run as alone
     mixedDepths: 'each',
     // Ctrl-A goes from the text straight to everything
@@ -181,9 +193,18 @@ export const driver: Driver = {
     pasteOverSelection: 'ignore',
     pastePlainLines: 'items',
     pasteOnParent: 'after',
+    // Enter in a to-do: a plain node after it (TaskEnter3, TaskEnter4, TaskEnter7, TaskEnter10, TO-E32;
+    // measured by rejudging, 2026-11-02, as the two below: 13 cases better, 2 worse, TO-E32b, TaskEnter8)
+    enterTask: 'plain',
+    // Backspace at an empty node's start with children: refused (Backspace17b, Backspace17c)
+    emptyItemWithChildren: 'refuse',
+    // pasted lines: a node each (Paste1, Paste2, PasteHtml11, Regression157)
+    pasteLines: 'items',
   },
   holds(doc) {
     const o = doc as Outline;
+    // a heading with no text, `#` alone: no heading here has no text, and the text `#` reads as `\#` (Regression168)
+    if (o.blocks.some((b) => /^#{1,6}$/.test(b.text))) return 'heading with no text (# alone), which Tana holds as the text #';
     // a no-break space: held as a space
     if (o.blocks.some((b) => b.text.includes('\u00a0'))) return 'no-break space, which Tana holds as a space';
     // a character outside the Basic Multilingual Plane (an emoji): its two UTF-16 units put the caret past

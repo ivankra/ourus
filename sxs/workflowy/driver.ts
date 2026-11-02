@@ -66,6 +66,8 @@ function toItem(depth: number, text: string): Item & { prefix: number; cut?: num
   const layout = numbered ? 'numbered' : 'bullets';
   const number = numbered ? { number: Number(numbered[0].slice(0, -2)) } : {};
   if (literal) return { depth, name: literal[1] + name.slice(literal[0].length), note, layout, completed: false, prefix, cut: prefix + literal[1]!.length, ...number };
+  // and a `#` that is text (a heading is the item's layout, its name plain: Enter9)
+  if (/^\\#/.test(name)) return { depth, name: name.slice(1), note, layout, completed: false, prefix, cut: prefix, ...number };
   return { depth, name, note, layout, completed: false, prefix, ...number };
 }
 
@@ -80,9 +82,13 @@ function fromItem(it: Item, number: number | null): { text: string; prefix: numb
   }
   if (it.layout === 'quote-block') return { text: '> ' + it.name + (it.note !== null ? '\n' + it.note : ''), prefix: 2 };
   const prefix = it.layout === 'todo' ? (it.completed ? '[x] ' : '[ ] ') : /^h[123]$/.test(it.layout) ? '#'.repeat(Number(it.layout[1])) + ' ' : it.layout === 'numbered' && number !== null ? `${number}. ` : it.completed ? '[x] ' : '';
-  const literal = !prefix || it.layout === 'numbered' ? /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(it.name) : null;
-  const name = literal ? it.name.slice(0, literal[0].length) + '\\' + it.name.slice(literal[0].length) : it.name;
-  return { text: prefix + name + (it.note !== null ? '\n' + it.note : ''), prefix: prefix.length, ...(literal && { cut: literal[0].length }) };
+  const plain = !prefix || it.layout === 'numbered';
+  const literal = plain ? /^\d{1,9}(?=[.)](?:[ \t\n]|$))/.exec(it.name) : null;
+  // and a `#` that is text, which the canonical text would read as a heading's (`\# x`)
+  const hash = plain && !literal && /^#{1,6}(?=[ \t]|$)/.test(it.name);
+  const name = literal ? it.name.slice(0, literal[0].length) + '\\' + it.name.slice(literal[0].length) : hash ? '\\' + it.name : it.name;
+  const cut = literal ? literal[0].length : hash ? 0 : undefined;
+  return { text: prefix + name + (it.note !== null ? '\n' + it.note : ''), prefix: prefix.length, ...(cut !== undefined && { cut }) };
 }
 
 /** The test's item, made once per page. */
@@ -180,10 +186,14 @@ export const driver: Driver = {
   // start (a caret inside the `#`s or the checkbox `holds` declines), and those cases play as any
   refuses: ['html', 'table', 'math', 'thematic break', 'link reference definition', 'comment', 'footnote'],
   ordered: true,
+  // a heading is the item's layout (H1 to H3), a name starting `# ` text (`fromItem` escapes it)
+  headings: true,
   // Shift+Tab moves an item past its parent, leaving its later siblings there: logical outdenting;
   // paste opens the seam (the first pasted text joins), though not on an item with children
   // (on the paste files, 14 cases better under `open`, 3 worse)
   behaves: {
+    // a paste or plain paste over blocks selected whole pastes nothing (SubtreeEdit11, SubtreeEdit14, measured 2026-11-03)
+    pasteOverNodes: 'nothing',
     // `[[` and `((` typed as pairs, not their singles (the autoClose probes)
     autoClose: ['```', '~~~', '[[', '(('],
     // indent and outdent over roots at two depths: each run as alone
@@ -209,11 +219,16 @@ export const driver: Driver = {
     pastePlainLines: 'items',
     pasteAtTextStart: 'before',
     pasteOnParent: 'after',
+    // a to-do's checkbox is the item's, not text: Backspace after it joins as for any item (TaskBackspace2,
+    // TaskBackspace10, SoftBackspace1, Scenario15; measured by rejudging, 2026-11-02)
+    taskEditing: 'block',
   },
   // WorkFlowy counts its animations (an item sliding into place, a zoom) while they run
   idle: { busy: `window.WF?.GuiAnimate?.animationsAreInProgress?.()` },
   holds(doc: Outline) {
     if (doc.blocks.some((b) => /^#{4,6} /.test(b.text))) return 'heading deeper than H3';
+    // a heading with no text, `#` alone: no heading here has no text, and the text `#` reads as `\#` (Regression168)
+    if (doc.blocks.some((b) => /^#{1,6}$/.test(b.text))) return 'heading with no text (# alone), which WorkFlowy holds as the text #';
     // a code block is an item of its own, its fence three or more backticks, no more than its code needs,
     // and no language (WorkFlowy keeps none); the caret in its code
     for (const b of doc.blocks) {

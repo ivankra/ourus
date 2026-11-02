@@ -58,6 +58,8 @@ export const driver: Driver = {
   displayName: 'Athens',
   url: 'https://athensresearch.github.io/athens/',
   model: 'block',
+  // a block starting `# ` is a heading, its string Markdown (a text `#` escaped in it, `\# x`)
+  headings: true,
   // a block's text holds a blank line, its paragraphs apart
   paragraphsInBlock: true,
   // after deleting a selected block no block is edited (checked by hand, keys only)
@@ -110,6 +112,8 @@ export const driver: Driver = {
   // split, lines as blocks, numbers as text, a paragraph's list under it (each measured, playing its
   // examples with `run.ts --ignore-options`)
   behaves: {
+    // a paste or plain paste over blocks selected whole pastes nothing (SubtreeEdit11, SubtreeEdit14, measured 2026-11-03)
+    pasteOverNodes: 'nothing',
     // brackets typed as pairs, anywhere; no fence or backtick closed (the autoClose probes)
     autoClose: ['(', '[', '{'],
     // indent and outdent over roots at two depths
@@ -201,7 +205,9 @@ export const driver: Driver = {
           const b = blocks[i]!;
           const kids: number[] = [];
           for (let k = i + 1; k < blocks.length && blocks[k]!.depth > b.depth; k++) if (blocks[k]!.depth === b.depth + 1) kids.push(k);
-          return ['^ ', '~:block/uid', uids[i], '~:block/string', b.string, '~:block/open', true, '~:create/time', now, '~:edit/time', now, '~:block/order', siblingOrder(i), ...(kids.length ? ['~:block/children', kids.map(node)] : [])];
+          // (a string transit would read as its own: `^x` a cache reference, `~x` a tag; escaped with a `~`,
+          // as transit writes them: BlockIds15, a block's text a block id)
+          return ['^ ', '~:block/uid', uids[i], '~:block/string', /^[~^`]/.test(b.string) ? `~${b.string}` : b.string, '~:block/open', true, '~:create/time', now, '~:edit/time', now, '~:block/order', siblingOrder(i), ...(kids.length ? ['~:block/children', kids.map(node)] : [])];
         };
         const siblingOrder = (i: number): number => {
           let n = 0;

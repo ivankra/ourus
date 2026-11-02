@@ -370,11 +370,38 @@ tags: rare
 ## ShiftEnter30
 
 At the text start of an item whose first character was just deleted, the space after it held as
-text ([Placeholder17](placeholders.md#placeholder17)): on its own line at the item's column the text
-would be a code fence, so it is escaped.
+text ([Placeholder17](placeholders.md#placeholder17)): on its own line the text would be a code
+fence, so it is escaped; the space stays with it, its line's indentation.
 
 ```yaml
 tags: rare
+```
+
+```buffer
+- ┃a ``` x
+```
+
+> deleteContentForward cursorCharRight
+
+```buffer
+- ◌ ┃``` x
+```
+
+> shiftEnter
+
+```buffer
+-
+  ┃ \̬``` x
+```
+
+## ShiftEnter30b
+
+At the text start of an item whose first character was just deleted, the space after it held as
+text ([Placeholder17](placeholders.md#placeholder17)): With `heldSpace: trim`, the space goes.
+
+```yaml
+tags: rare
+heldSpace: trim
 ```
 
 ```buffer
@@ -857,12 +884,40 @@ b
 ## ShiftEnter32
 
 At a space a placeholder holds as text, before it ([ShiftEnter30](#shiftenter30) is after it), the
-caret is at the text's start too: the line breaks after the marker, the space goes, and the text, on
-its own line at the item's column, is escaped. Bare Obsidian, its Outliner, Logseq, Roam and
+caret is at the text's start too: the line breaks after the marker, the space staying with the text, its line's indentation, and
+the text, on its own line, is escaped. Bare Obsidian, its Outliner, Logseq, Roam and
 Dynalist break there too, the space kept and nothing escaped (`-␠` / `  ┃ # b`).
 
 ```yaml
 tags: rare
+```
+
+```buffer
+- a┃ # b
+```
+
+> deleteContentBackward
+
+```buffer
+- ┃◌ # b
+```
+
+> shiftEnter
+
+```buffer
+-
+  ┃ \̬# b
+```
+
+## ShiftEnter32b
+
+At a space a placeholder holds as text, before it ([ShiftEnter30](#shiftenter30) is after it), the
+caret is at the text's start too: With `heldSpace: trim`, the space goes. Bare Obsidian, its Outliner, Logseq, Roam and
+Dynalist break there too, the space kept and nothing escaped (`-␠` / `  ┃ # b`).
+
+```yaml
+tags: rare
+heldSpace: trim
 ```
 
 ```buffer

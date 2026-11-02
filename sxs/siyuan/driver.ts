@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 // SiYuan (https://b3log.org/siyuan/, see README.md): a block editor over Markdown, open source
-// (AGPL-3.0), run here from its release: a kernel for each of a run's workers (kernel.ts) serves the
+// (AGPL-3.0), run here from its release: a kernel for each of the pool's SiYuan windows (kernel.ts) serves the
 // web UI and the API on 127.0.0.1, the page's port telling its kernel. Each test's outline is a document of its own, made from Markdown through the API
 // (`filetree/createDocWithMd`, in free form: a paragraph, a heading or code a block of its own, a list
 // item an item, what a free block owns beside it as Markdown has it) and opened in the editor through
@@ -22,7 +22,8 @@ import type { Page } from 'playwright-core';
 import { perPage, type Driver, type Drop } from '../lib/driver.ts';
 import { gesture } from '../lib/drag.ts';
 import { lazyQuotes, liftOwned, listOwner, ownBlocks, Unsupported, type Block, type Outline } from '../lib/block.ts';
-import { api, holdKernel, kernelOf, kernelOfPage, leaseKernel, running, serve, type Kernel } from './kernel.ts';
+import { leaseOf } from '../lib/browser.ts';
+import { api, kernelOf, running, type Kernel } from './kernel.ts';
 
 /** SiYuan's keys for the spec's motions (Linux); the `select…` motions add Shift. */
 const MOTIONS: Record<string, string> = {
@@ -148,6 +149,16 @@ function holds(o: Outline): string | undefined {
     if (rows.length && rows.some((r) => r.split('|').slice(1, -1).some((c) => (/^\s*:?-+:?\s*$/.test(c) ? c !== ' --- ' : c.trim().length > 2 || c !== ` ${c.trim()} `)))) return 'table SiYuan writes otherwise (its columns padded to their widest cell)';
     // `# first` / `abc`: a heading is one line, the next a paragraph after it
     if (/^#{1,6}(?:[ \t]|$)/.test(first) && b.text.includes('\n')) return 'heading with more lines';
+    // a task's marker other than a space or an x: SiYuan holds `[?]`, `[-]` as done (Regression125)
+    if (/^\[[^ xX\]]\] /.test(first)) return 'task marker other than [ ] and [x], which SiYuan holds as done';
+    // a code span of more backticks than its code needs: SiYuan writes it with the fewest that hold it
+    // (`` ``x`` `` as `` `x` ``: Backtick32; ```` ```x `y` z``` ```` as ``` `` x `y` z `` ```: Regression133)
+    for (const m of b.text.matchAll(/(?<!`)(`+)(?!`)([^]*?[^`])\1(?!`)/g)) {
+      const runs = new Set([...m[2]!.matchAll(/`+/g)].map((r) => r[0].length));
+      let fewest = 1;
+      while (runs.has(fewest)) fewest++;
+      if (m[1]!.length > fewest) return 'code span of more backticks than its code needs, which SiYuan writes with fewer';
+    }
     // an unclosed fence: SiYuan closes it (DuplicateSubtree9)
     const fence = /^ {0,3}(`{3,}|~{3,})/.exec(first)?.[1];
     if (fence && !b.text.split('\n').slice(1).some((l) => new RegExp(`^ {0,3}${fence[0]}{${fence.length},}[ \\t]*$`).test(l))) return 'unclosed fence, which SiYuan closes';
@@ -175,6 +186,11 @@ function holds(o: Outline): string | undefined {
   const math = /(?:^|\n)\$\$[^\n]*(?:\n[^]*?(?:\n\$\$[ \t]*(?=\n|$)|$)|$)/.exec(text);
   const inMath = (p: number): boolean => !!math && p >= math.index && p <= math.index + math[0].length;
   if (inMath(from) || inMath(to)) return 'caret in a math block';
+  // inline math is drawn too (KaTeX), the caret going past it whole (Auto23, Auto26: `a $x┃ y$ b`)
+  for (const m of text.matchAll(/(?<![$\\])\$(?![$\s])([^$\n]*?[^$\s\\])\$(?!\$)/g)) {
+    const inside = (p: number): boolean => p > m.index && p < m.index + m[0].length;
+    if (inside(from) || inside(to)) return 'caret in inline math';
+  }
   // a table's cells are its text: a caret on a pipe, its padding or the delimiter row has no place
   const outsideCell = (p: number): boolean => {
     const start = text.lastIndexOf('\n', p - 1) + 1;
@@ -413,16 +429,15 @@ async function loadUI(page: Page, k: Kernel): Promise<void> {
 }
 
 /**
- * The kernel of a worker's page, held for the worker: the one `open` leased, or, for a window an
- * earlier run left, the one it is on (by its port), which throws if another worker holds it: the
- * runner then opens a window anew, on a kernel of its own.
+ * The kernel of a worker's page: the one the pool bound to its window (`Lease.kernel`), started on a new
+ * workspace with a new window, kept with a warm one; `restart`, started again where it exited under it.
  */
-async function kernelFor(page: Page): Promise<Kernel> {
+async function kernelFor(page: Page, restart = false): Promise<Kernel> {
   const state = pageState(page);
-  if (!state.kernel) {
-    const k = kernelOfPage(page.url());
-    await holdKernel(k);
-    state.kernel = k;
+  if (!state.kernel || restart) {
+    const lease = leaseOf(page);
+    if (!lease) throw new Error("SiYuan's window isn't the pool's: its kernel is");
+    state.kernel = kernelOf((await lease.kernel(restart)).n);
   }
   return state.kernel;
 }
@@ -631,6 +646,8 @@ export const driver: Driver = {
   // (`holds`); a join into code, or of code lines that make a fence, is SiYuan's to show
   refuses: [],
   ordered: true,
+  // a heading is a block of its own, read and written as Markdown (Lute escapes a text `#`: `\# x`)
+  headings: true,
   holds: (doc) => holds(doc as Outline),
   idle: {
     // edits go to the kernel (a transaction), undo and redo come back from it: a request owed is work
@@ -638,10 +655,8 @@ export const driver: Driver = {
   },
 
   async open(page: Page) {
-    // a kernel of the worker's own, running, its UI loaded
-    const k = await leaseKernel();
-    await serve(k, (line) => console.log(line));
-    pageState(page).kernel = k;
+    // the window's kernel, running, its UI loaded
+    const k = await kernelFor(page);
     await loadUI(page, k);
     const idle = () => page.evaluate((busy) => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 10000, busy }), this.idle!.busy!);
     await idle();
@@ -656,16 +671,32 @@ export const driver: Driver = {
 
   async load(page: Page, doc) {
     const o = doc as Outline;
-    const kernel = await kernelFor(page);
-    const { origin } = kernel;
+    let kernel = await kernelFor(page);
     // a kernel that exited (SiYuan's UI asks it to when told to quit, as keys an earlier test left for a
     // dialog of its can): started again, and its UI with it, rather than every later test failing
-    if (!(await running(origin))) {
+    if (!(await running(kernel.origin))) {
       console.log(`SiYuan's kernel ${kernel.n} exited: starting it again`);
-      await serve(kernel, (line) => console.log(line));
+      kernel = await kernelFor(page, true);
       await loadUI(page, kernel);
       pageState(page).current = '';
     }
+    // a popup an earlier test left open (a math block's TeX editor: `$$` then Enter, Auto29), closed with
+    // its own Escape while its block is still there: removed under it, its edit's transaction fails,
+    // and SiYuan's "Abnormal state" dialog takes every Tab after (a quarter of the Tab steps of a full
+    // run, one worker's, were lost so)
+    if (await page.evaluate(() => [...document.querySelectorAll('.protyle-util')].some((e) => !e.classList.contains('fn__none') && (e as HTMLElement).getBoundingClientRect().height > 0))) {
+      await page.keyboard.press('Escape');
+      await page.evaluate((busy) => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 60, timeout: 5000, busy }), this.idle!.busy!);
+    }
+    // SiYuan's "Abnormal state" (a transaction that failed): the UI isn't to be trusted after it, so
+    // loaded anew, rather than every later test in the window playing against it
+    const abnormal = (): Promise<boolean> => page.evaluate(() => [...document.querySelectorAll('.b3-dialog--open')].some((d) => /Transaction failed|Abnormal state/.test(d.textContent ?? '')));
+    if (await abnormal()) {
+      console.log(`SiYuan's UI was in an abnormal state (a transaction failed): loading it anew`);
+      await loadUI(page, kernel);
+      pageState(page).current = '';
+    }
+    const { origin } = kernel;
     // a dialog an earlier test left open (its keys opened one), closed: it would take this test's keys
     // (its close button an `<svg>`, which has no `click()`: a click dispatched)
     const dialogs = await page.evaluate(() => {
@@ -695,6 +726,8 @@ export const driver: Driver = {
     state.current = id;
     const idle = () => page.evaluate((busy) => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 60, timeout: 5000, busy }), this.idle!.busy!);
     await idle();
+    // (the old document's removal may raise it too: then the test isn't this window's to play)
+    if (await abnormal()) throw new Error("SiYuan's UI went into an abnormal state as the last test's document went (a transaction failed)");
     // its folds, each by SiYuan's own Ctrl+Up at the block's end (the last first: a fold inside another
     // before it)
     for (const i of [...(o.view?.folded ?? [])].sort((a, b) => b - a)) {

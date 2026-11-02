@@ -81,12 +81,15 @@ function fromTine(raw: string, number: number | null): { text: string; from: num
 /**
  * A fenced code block's code, where its text has one: Tine edits a code block in an editor of the code
  * alone (a textarea `.code-edit`), so a caret there is an offset in the code, `start` characters into
- * the block's text.
+ * the block's text. A fence in a quote too (since its build of 2026-09-29): its editor has the code's
+ * lines with their `> ` (`> one⏎> two`), its fences' lines not.
  */
 function codeOf(text: string): { start: number; end: number } | null {
-  const open = /^(`{3,}|~{3,})[^\n]*\n/.exec(text);
+  // (a quote's `>`s, then up to three spaces, as Markdown indents a fence)
+  const open = /^((?:> ?)*) {0,3}(`{3,}|~{3,})[^\n]*\n/.exec(text);
   if (!open) return null;
-  const close = new RegExp(`\n${open[1]![0]}{${open[1]!.length},}\\s*$`).exec(text);
+  const quote = open[1]!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const close = new RegExp(`\n${quote} {0,3}${open[2]![0]}{${open[2]!.length},}\\s*$`).exec(text);
   return { start: open[0].length, end: close ? close.index : text.length };
 }
 
@@ -150,7 +153,11 @@ export const driver: Driver = {
   // character at a time
   refuses: ['markup-heading', 'markup-task', 'markup-fence'],
   ordered: true,
+  // a block starting `# ` is a heading, its text Markdown source (a text `#` escaped in it, `\# x`)
+  headings: true,
   behaves: {
+    // a paste or plain paste over blocks selected whole pastes nothing (SubtreeEdit11, SubtreeEdit14, measured 2026-11-03)
+    pasteOverNodes: 'nothing',
     // Ctrl-A climbs from a block to its parent, its siblings skipped
     selectionLadder: 'parents',
     // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25)
@@ -277,21 +284,26 @@ export const driver: Driver = {
     await idle();
     // the caret where the test has it, until it stays: a block opened for editing may set its own a
     // moment later (a code block puts it at the start)
-    const place = ({ id, anchor, head }: { id: string; anchor: number; head: number }): string => {
+    // (the offsets in the editor that has the block: a code block's, of its code, once it is that; the
+    // block's text's before, as a code block opens in the block's editor first and turns to its own)
+    const place = ({ id, anchor, head, shift }: { id: string; anchor: number; head: number; shift: number }): string => {
       const ta = document.activeElement as HTMLTextAreaElement | null;
       if (ta?.tagName !== 'TEXTAREA' || ta.closest('.ls-block')?.getAttribute('data-block-id') !== id) return 'not editing';
-      const [start, end, dir] = [Math.min(anchor, head), Math.max(anchor, head), head < anchor ? 'backward' : 'forward'];
+      const by = ta.classList.contains('code-edit') ? shift : 0;
+      const [start, end, dir] = [Math.min(anchor, head) - by, Math.max(anchor, head) - by, head < anchor ? 'backward' : 'forward'];
       if (ta.selectionStart === start && ta.selectionEnd === end && (start === end || ta.selectionDirection === dir)) return 'placed';
       ta.setSelectionRange(start, end, dir as 'forward' | 'backward');
       return 'set';
     };
     const code = codeOf(blocks[sel.block]!.text);
-    const at = { id: `${current}-${sel.block}`, anchor: sel.anchor - (code?.start ?? 0), head: sel.head - (code?.start ?? 0) };
-    let state = '';
-    for (let attempt = 0; attempt < 5 && state !== 'placed'; attempt++) {
-      state = await page.evaluate(place, at);
+    const at = { id: `${current}-${sel.block}`, anchor: sel.anchor, head: sel.head, shift: code?.start ?? 0 };
+    // placed, and still placed on a second look (an editor turning to a code block's may move it)
+    let placed = 0;
+    for (let attempt = 0; attempt < 8 && placed < 2; attempt++) {
+      const state = await page.evaluate(place, at);
       if (state === 'not editing') throw new Error(`the block didn't open for editing (${at.id})`);
-      if (state === 'set') await idle();
+      placed = state === 'placed' ? placed + 1 : 0;
+      await idle();
     }
     // blocks selected whole, as a user selects them: Escape selects the block being edited, each
     // Shift+Down the next on screen, till the last is (`read` reports the topmost)

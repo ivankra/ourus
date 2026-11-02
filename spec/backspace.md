@@ -1805,11 +1805,36 @@ taskEditing: text
 ### SoftBackspace11
 
 At a space a placeholder holds as text, the caret is at the text's start, so Cmd-Backspace is
-Backspace there: in the first item, the item a paragraph, the text escaped
+Backspace there: in the first item, the item a paragraph, the space its indentation, the text escaped
 ([Backspace47](#backspace47)).
 
 ```yaml
 tags: rare free-form
+```
+
+```buffer
+- a┃ # b
+```
+
+> deleteContentBackward
+
+```buffer
+- ┃◌ # b
+```
+
+> deleteSoftLineBackward
+
+```buffer
+┃ \̬# b
+```
+
+### SoftBackspace11b
+
+With `heldSpace: trim`, the held space goes with the marker.
+
+```yaml
+tags: rare free-form
+heldSpace: trim
 ```
 
 ```buffer
@@ -2127,14 +2152,44 @@ tags: rare
 
 At a space a placeholder holds as text in the document's first item
 ([Placeholder17](placeholders.md#placeholder17)), the caret is at the text's start, with nothing
-above: the marker goes (rule 6), the held space with it, as leaving the place takes it, and the
-text, at the paragraph's start now, is escaped: bare, ` # b` would be a heading. SiYuan and
+above: the marker goes (rule 6), the held space staying, the paragraph's indentation now
+(`heldSpace: repair`), and the text, at the paragraph's start now, is escaped: bare, ` # b` would be a heading. SiYuan and
 BlockNote make the item a paragraph too; Logseq, Roam and WorkFlowy do nothing there, as
 `backspaceAtTopItem: refuse` does; bare Obsidian deletes the marker's space, which leaves `- # b`, a
 heading in the item.
 
 ```yaml
 tags: rare free-form
+```
+
+```buffer
+- a┃ # b
+```
+
+> deleteContentBackward
+
+```buffer
+- ┃◌ # b
+```
+
+> deleteContentBackward
+
+```buffer
+┃ \̬# b
+```
+
+## Backspace47b
+
+At a space a placeholder holds as text in the document's first item
+([Placeholder17](placeholders.md#placeholder17)), the caret is at the text's start, with nothing
+above: With `heldSpace: trim`, the held space goes with the marker, as leaving the place takes it. bare, ` # b` would be a heading. SiYuan and
+BlockNote make the item a paragraph too; Logseq, Roam and WorkFlowy do nothing there, as
+`backspaceAtTopItem: refuse` does; bare Obsidian deletes the marker's space, which leaves `- # b`, a
+heading in the item.
+
+```yaml
+tags: rare free-form
+heldSpace: trim
 ```
 
 ```buffer
@@ -2158,7 +2213,8 @@ tags: rare free-form
 Right after a space a placeholder holds as text, the text's first character, Backspace takes the
 space, as Delete before it does ([Delete32](delete.md#delete32)): the text, right after the marker
 now, is escaped. Bare Obsidian, its Outliner, SilverBullet and Emacs delete the space and leave
-`- # b`, a heading in the item; the block apps that run it agree with ourus.
+`- # b`, a heading in the item, and so do Logseq, Athens, Tine, Moo.do and SiYuan, their block a
+heading; the block apps whose heading is apart from the text agree with ourus.
 
 ```yaml
 tags: rare

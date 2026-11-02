@@ -210,3 +210,9 @@ under Tauri, the published one for an export, else the mock (`src/mock.ts`). The
 `.ls-block[data-block-id]`, their text `.block-main .block-content`, the editor
 `textarea.block-editor` (`.code-edit` for a code block's code); keys are in `src/keybindings.ts` and
 `src/components/Block.tsx`.
+
+## Options measured by rejudging (2026-11-03)
+
+`pasteOverNodes: nothing`: a paste or plain paste over blocks selected whole pastes nothing, the blocks
+still selected (SubtreeEdit11, SubtreeEdit14, SubtreeEdit18; no case worse), judged against the stored
+run (the app's states as they are, ourus replayed under the value: `OURUS_SXS_BEHAVES` with `--rejudge`).

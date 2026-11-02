@@ -956,8 +956,8 @@ t1┃
 
 ## Outdent21
 
-Every child of an item with no text of its own (`- - b`) outdented: the item would hold
-nothing, so it goes, its children in its place.
+Every child of an item with no text of its own (`- - b`) outdented: the item stays, empty, on its
+marker's line, as an outliner's empty block does (every app measured keeps it), its children after it.
 
 ```yaml
 tags: edge
@@ -972,6 +972,7 @@ tags: edge
 
 ```buffer
 - a
+- 
 - ┃b
 ```
 

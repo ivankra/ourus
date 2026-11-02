@@ -385,3 +385,14 @@ it).
 - `window.appState.layoutManager.currentPanelUIState.firstPanel`: the main panel: `rootNode`,
   `rootPath`, `setRootNode(id)`, `expand(path)`, `expandAll(path)`, `selectedNodes`,
   `clearAllSelected()`.
+
+## Options measured by rejudging (2026-11-02)
+
+Each value of ourus's options judged against the stored run (the app's states as they are, ourus
+replayed under the value: `OURUS_SXS_BEHAVES` with `--rejudge`), declared where it fits more cases than
+it loses: `enterTask: plain`, a plain node after a to-do (TaskEnter3, TaskEnter4, TaskEnter7,
+TaskEnter10, TO-E32); `emptyItemWithChildren: refuse` (Backspace17b, Backspace17c); `pasteLines: items`,
+a node each (Paste1, Paste2, PasteHtml11, Regression157). Together 13 cases better, 2 worse (TO-E32b,
+TaskEnter8). Then (2026-11-03) `pasteOverNodes: after`, a paste over nodes selected whole keeping them
+and pasting after the last (SubtreeEdit14, SubtreeEdit17), what `pasteOverSelection: ignore` said of
+it before the option was split from it.

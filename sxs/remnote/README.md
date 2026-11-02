@@ -205,10 +205,10 @@ A document's rems show as bullets by default. A document can hide them (its "no 
 item again (`bulletedListInNoBulletDocument`): rems that read as paragraphs, and lists among them. That
 is Markdown's free form, mixed paragraphs and lists, in a block app: this setup (`remnoteDriver`'s
 `bulletless`), which runs the spec's `free-form` cases; with bullets, [`../remnote-bl/`](../remnote-bl/).
-Both setups hold a browser's RemNote window by one name (`Driver.pool`): two RemNote tabs in one
-browser break each other. And they run in browsers apart (`Driver.browsers`: this one the pool's
-even-numbered, with bullets the odd), three each, so that a profile's guest knowledge base is only
-ever one setup's.
+Two RemNote tabs sharing a browser's storage break each other (one reloads the other within
+seconds: measured, `dev/27-sxs.md`). Each worker's window is a browser context of its own (the pool's,
+[`../pool.ts`](../pool.ts)), its storage its own, so the two setups run side by side in one browser,
+each window's guest knowledge base only ever its own.
 
 RemNote also keeps headings as containers ("maintain header hierarchy", `maintainHeaderHierarchy` in
 its bundle: a rem with a larger heading takes the rems after it as children, indenting and outdenting
@@ -332,13 +332,25 @@ A code rem is otherwise: its text keeps a trailing space after a line break, in 
 
 - **One RemNote tab per browser.** RemNote locks its database across tabs; with two open, each write
   makes the other set a database error ("Need to refresh tabs broadcast"), go to `/database_error` and
-  reload, every couple of seconds, for good. `open` closes any other RemNote tab in its browser.
-- The guest's knowledge base outlives the page, in the profile of the pool's browser its window is
-  in (`<state>/chromium/<n>/profile/`): a test's document is deleted by the next one; one left by a run
-  that died stays until the profile goes.
+  reload, every couple of seconds, for good. A window of its own context shares nothing with
+  another's.
+- The guest's knowledge base lives in the window's browser context, in memory: kept with a window a
+  run released cleanly (the next run takes it over), gone with a window destroyed (a run that died
+  or errored), so a run that died leaves nothing behind for the next.
 - **A broken knowledge base**: a browser killed while RemNote wrote (the harness restarted) left the
   profile's guest database broken, every window booting into `/database_error` ("Something went
   wrong"), the open taking minutes (183.7 s) and a run ten minutes and more. With the pool's profiles
   deleted (`run.ts --stop`, then `<state>/chromium/`), RemNote opened in 4.4 s and a full run of this setup
   took 192 s. `open` could clear RemNote's site data itself at a database error
   (`Storage.clearDataForOrigin`: the guest's knowledge base holds nothing to keep); not done.
+
+## Options measured by rejudging (2026-11-02)
+
+Each value of ourus's options judged against the stored run of each setup (the app's states as they
+are, ourus replayed under the value: `OURUS_SXS_BEHAVES` with `--rejudge`): `pastePlainLines: items`, a
+rem each, in both setups (PastePlain9, PastePlain11, PastePlain13 to PastePlain15, PastePlain20,
+PastePlain24, Regression74, Regression75; no case worse). Then (2026-11-03) `pasteOverNodes: nothing`,
+a paste or plain paste over rems selected whole pasting nothing, in both setups (Regression72,
+SubtreeEdit14, SubtreeEdit18; no case worse). And `heldSpace: trim`: a space a deleted first character
+leaves at a rem's start goes as the rem is stored (Placeholder9, Placeholder17, Placeholder18,
+SoftBackspace11b, Backspace47b agree; no case worse).

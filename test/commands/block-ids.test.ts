@@ -326,8 +326,13 @@ test('a caret on a block-id line outside the zoom: refused as outside it, not le
 });
 
 test('settling a placeholder keeps the block-id lines of the text it is in', () => {
-  const doc = OurusDoc.parse('-  a\n\n  ^x\n- b\n', { config: { flavor: 'obsidian' }, marks: { placeholders: [2] } });
-  assert.equal(settlePlaceholders(OurusView.of(doc), doc.text.indexOf('- b') + 2)?.view.doc.text, '- a\n\n  ^x\n- b\n');
+  // (the held space kept, the item's padding, its block-id line moved with it; or gone, `heldSpace: trim`)
+  for (const [heldSpace, want] of [['repair', '-  a\n\n   ^x\n- b\n'], ['trim', '- a\n\n  ^x\n- b\n']] as const) {
+    const doc = OurusDoc.parse('-  a\n\n  ^x\n- b\n', { config: { flavor: 'obsidian', heldSpace }, marks: { placeholders: [2] } });
+    const settled = settlePlaceholders(OurusView.of(doc), doc.text.indexOf('- b') + 2)?.view.doc;
+    assert.equal(settled?.text, want, heldSpace);
+    assert.deepEqual(settled?.blockIds().map((b) => [b.name, b.owner.id]), [['x', settled!.rootNode.children[0]!.id]], heldSpace);
+  }
 });
 
 test('Shift-Enter at the end of a text carrying block-id lines: a line of the text before them, typed on as one', () => {

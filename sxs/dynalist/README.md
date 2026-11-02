@@ -253,3 +253,9 @@ children are a collection (`get(i)`, `length()`, `each`, `array()`); its attribu
 `get_list_style` (`is_numbered_list`: its children numbered), and their setters. `app.scope` (the
 stack of scopes keys go to: `scopes`, `get_name()`; `fix_scope_to_editor`). `app.preferences` (`get_boolean`, `set_boolean`), `app.shortcuts.get_shortcuts(id)`. The
 editors are the contenteditable `.Node-content` and `.Node-note`.
+
+## Options measured by rejudging (2026-11-02)
+
+Each value of ourus's options judged against the stored run (the app's states as they are, ourus
+replayed under the value: `OURUS_SXS_BEHAVES` with `--rejudge`): `taskEditing: block`, a to-do's
+checkbox the item's, not text (TaskBackspace2, Scenario15; no case worse).

@@ -23,6 +23,11 @@ export interface IdleOptions {
   stuck?: number;
   /** A JavaScript expression that is true while the app says it is busy (a driver's own signal). */
   busy?: string;
+  /**
+   * Whether a pending animation frame is work (true by default): false for an app whose animation
+   * library keeps a frame loop running whatever happens (Moo.do's), where settling is timers and quiet.
+   */
+  frames?: boolean;
 }
 
 export interface IdleResult {
@@ -102,6 +107,45 @@ export function installIdle(version: string): void {
     frames.delete(id);
     nativeCancelRaf(id);
   };
+  // a message over a MessageChannel: a task the page scheduled, as a timer is (React's scheduler runs
+  // its render work so, a task after the key's: under load it can come later than a quiet window,
+  // and the next key reached a block not rendered yet). Pending from its post till the other port
+  // has it, but not longer than a second (a port its page never started holds its messages)
+  /** The messages in flight: when each was posted, by a number of its own. */
+  const messages = new Map<number, number>();
+  let posted = 0;
+  const NativeChannel = window.MessageChannel;
+  if (typeof NativeChannel === 'function') {
+    const link = (from: MessagePort, to: MessagePort): void => {
+      const post = from.postMessage.bind(from) as (...a: unknown[]) => void;
+      const sent: number[] = [];
+      from.postMessage = ((...a: unknown[]): void => {
+        const id = ++posted;
+        sent.push(id);
+        messages.set(id, performance.now());
+        post(...a);
+      }) as MessagePort['postMessage'];
+      to.addEventListener('message', () => {
+        const id = sent.shift();
+        if (id !== undefined) messages.delete(id);
+        changed('a message');
+      });
+    };
+    w.MessageChannel = class extends NativeChannel {
+      constructor() {
+        super();
+        link(this.port1, this.port2);
+        link(this.port2, this.port1);
+      }
+    } as typeof MessageChannel;
+  }
+  const messagePending = (now: number): number => {
+    let n = 0;
+    for (const [id, at] of messages)
+      if (now - at > 1000) messages.delete(id);
+      else n++;
+    return n;
+  };
   // the clipboard: a read or write is a promise the browser answers, with nothing on the page to show
   // the wait (an app's paste reads it so: Logseq's), and a blob read from it a FileReader's events.
   // Each is pending until it settles.
@@ -145,9 +189,31 @@ export function installIdle(version: string): void {
   if (document.documentElement) observe();
   else document.addEventListener('DOMContentLoaded', observe);
   for (const type of ['focusin', 'focusout', 'selectionchange', 'input']) document.addEventListener(type, () => changed(type), true);
+  // a trace of the keys and what they did, the last 40: each key, input and focus change, with the
+  // focused editor's text then, for a step that comes out otherwise than ourus to say where its key went
+  // (`trace`, run.ts's second look)
+  const trace: string[] = [];
+  const t0 = performance.now();
+  const note = (what: string): void => {
+    const a = document.activeElement as HTMLTextAreaElement | HTMLElement | null;
+    const value = a && 'value' in a && typeof a.value === 'string' ? JSON.stringify(a.value.slice(0, 40)) : a?.isContentEditable ? JSON.stringify((a.textContent ?? '').slice(0, 40)) : '';
+    // (and what was pending then: messages, short timers, frames; the oldest message's age)
+    const now = performance.now();
+    const oldest = Math.max(0, ...[...messages.values()].map((at) => now - at));
+    trace.push(`${Math.round(now - t0)} ${what} @${a?.tagName?.toLowerCase() ?? '-'} ${value} [m${messages.size}${messages.size ? `/${Math.round(oldest)}ms` : ''} t${timers.size} f${frames.size}]`);
+    if (trace.length > 40) trace.shift();
+  };
+  document.addEventListener('keydown', (e) => note(`keydown ${e.key}`), true);
+  document.addEventListener('input', () => queueMicrotask(() => note('input')), true);
+  document.addEventListener('focusin', () => note('focusin'), true);
+  document.addEventListener('focusout', () => note('focusout'), true);
 
   w.__ourusIdle = {
     version,
+    /** The trace since `since` ms (the page's clock, as the trace counts), and that clock now. */
+    trace(since = 0): { now: number; lines: string[] } {
+      return { now: Math.round(performance.now() - t0), lines: trace.filter((l) => Number(l.split(' ')[0]) >= since) };
+    },
     /**
      * Resolves once each timer pending now, of up to `upTo` ms, has fired or been cleared (or after
      * `timeout`): what the app put off till a user's pause, done. Timers made after don't count.
@@ -180,16 +246,17 @@ export function installIdle(version: string): void {
           } catch {
             appBusy = false;
           }
-          const quiet = timers.size === 0 && frames.size === 0 && reading === 0;
+          const pendingMessages = messagePending(now);
+          const quiet = timers.size === 0 && (o.frames === false || frames.size === 0) && reading === 0 && pendingMessages === 0;
           if (quiet && !appBusy && now - lastChange >= o.quiet) return resolve({ ms: Math.round(now - start), timedOut: false, busiest: last });
-          if (!quiet) last = `timers ${[...timers.values()].join(',') || '-'}, frames ${frames.size}${reading ? `, clipboard reads ${reading}` : ''}`;
+          if (!quiet) last = `timers ${[...timers.values()].join(',') || '-'}, frames ${frames.size}${reading ? `, clipboard reads ${reading}` : ''}${pendingMessages ? `, messages ${pendingMessages}` : ''}`;
           else if (appBusy) last = 'app busy';
           else last = `changes, the last: ${lastKind}`;
           if (quiet && appBusy && now - Math.max(lastChange, start) >= (o.stuck ?? 1000)) {
             return resolve({ ms: Math.round(now - start), timedOut: true, pending: `app busy, and nothing else for ${Math.round(now - Math.max(lastChange, start))}ms: stuck` });
           }
           if (now - start > o.timeout) {
-            const pending = [`timers ${[...timers.values()].join(',') || '-'}`, `frames ${frames.size}`, reading ? `clipboard reads ${reading}` : '', appBusy ? 'app busy' : '', `last change ${Math.round(now - lastChange)}ms ago`].filter(Boolean).join('; ');
+            const pending = [`timers ${[...timers.values()].join(',') || '-'}`, `frames ${frames.size}`, reading ? `clipboard reads ${reading}` : '', pendingMessages ? `messages ${pendingMessages}` : '', appBusy ? 'app busy' : '', `last change ${Math.round(now - lastChange)}ms ago`].filter(Boolean).join('; ');
             return resolve({ ms: Math.round(now - start), timedOut: true, pending });
           }
           nativeSetTimeout(poll, 4);

@@ -94,9 +94,11 @@ export interface Point {
  * A drag as its user makes it, with the real mouse: pressed at `from`, moved a few pixels (past the
  * app's threshold, which starts the drag), then along to `to` in steps, each a move the app sees, and
  * released there. The pointer comes to `from` from off the page, or with `here`, is there already (a
- * handle shown only while the pointer is over its block, which the driver brought it to).
+ * handle shown only while the pointer is over its block, which the driver brought it to). `to` may be
+ * found once the drag has started, as the eye finds it then: a press that ends an edit can move the
+ * page under the pointer (Logseq's code block, rendered again shorter: MoveSubtree22).
  */
-export async function gesture(page: Page, from: Point, to: Point, settle: () => Promise<void>, options: { readonly threshold?: number; readonly here?: boolean } = {}): Promise<void> {
+export async function gesture(page: Page, from: Point, to: Point | (() => Promise<Point>), settle: () => Promise<void>, options: { readonly threshold?: number; readonly here?: boolean } = {}): Promise<void> {
   const threshold = options.threshold ?? 8;
   // (from off the page, as a hand comes to a mark: not from where the last drop left the pointer, over
   // the next case's document)
@@ -106,10 +108,11 @@ export async function gesture(page: Page, from: Point, to: Point, settle: () => 
   }
   await page.mouse.down();
   await page.mouse.move(from.x + threshold / 2, from.y + threshold, { steps: 3 });
-  await page.mouse.move(to.x, to.y, { steps: 12 });
+  const at = typeof to === 'function' ? (await settle(), await to()) : to;
+  await page.mouse.move(at.x, at.y, { steps: 12 });
   // (a last move at the place, then two frames: an app resolves a pointer after the event, a frame or
   // a microtask on, and its idle timers don't say it has)
-  await page.mouse.move(to.x, to.y + 0.5);
+  await page.mouse.move(at.x, at.y + 0.5);
   await settle();
   await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null)))));
   await page.mouse.up();

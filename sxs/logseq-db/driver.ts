@@ -52,6 +52,8 @@ export const DB: LogseqFlavor = {
     if (s.number) props['logseq.property/order-list-type'] = 'number';
     if (s.task) props['logseq.property/status'] = s.task;
     if (s.heading) props['logseq.property/heading'] = s.heading;
+    // a `#` that is text, escaped in the canonical text, its content plain (a heading being a property)
+    if (!s.task && !s.heading && /^\\#/.test(s.rest)) return { content: s.rest.slice(1), props, edit: s.rest.slice(1), from: s.from + 1, to: 0, numbered: s.number };
     return { content: s.rest, props, edit: s.rest, from: s.from, to: 0, numbered: s.number };
   },
   fromLogseq(raw: BlockAsRead, number) {
@@ -69,8 +71,11 @@ export const DB: LogseqFlavor = {
       (raw.heading ? '#'.repeat(raw.heading) + ' ' : '');
     // a number that is text, escaped, where it would read as a marker (also after a block's own number)
     const literal = !raw.status && !raw.heading ? LITERAL_NUMBER.exec(raw.content) : null;
-    const text = literal ? raw.content.slice(0, literal[0].length) + '\\' + raw.content.slice(literal[0].length) : raw.content;
-    return { text: pre + text, from: 0, to: pre.length, ...(literal && { cut: pre.length + literal[0].length }) };
+    // and a `#` that is text, content without the heading's property (`\# x`)
+    const hash = !literal && !raw.status && !raw.heading && /^#{1,6}(?=[ \t]|$)/.test(raw.content);
+    const text = literal ? raw.content.slice(0, literal[0].length) + '\\' + raw.content.slice(literal[0].length) : hash ? '\\' + raw.content : raw.content;
+    const cut = literal ? pre.length + literal[0].length : hash ? pre.length : undefined;
+    return { text: pre + text, from: 0, to: pre.length, ...(cut !== undefined && { cut }) };
   },
   numbered: (raw) => !!raw.ordered,
   // What settling waits for. The DB version does its work in a database worker, whose messages no
@@ -127,6 +132,10 @@ export const DB: LogseqFlavor = {
         continue;
       }
       if (/^[ \t]*(?:`{3,}|~{3,})/m.test(b.text)) return 'code fence other than a block of ``` alone';
+      // `$$…$$` on one line: Logseq DB makes it a math block of its own lines (Auto35: `$$┃$$`)
+      if (/^\$\$.*\$\$$/.test(split(b.text).rest)) return 'display math on one line, which Logseq DB makes a math block';
+      // a heading with no text, `#` alone: held as `# #` (Regression168)
+      if (/^#{1,6}$/.test(b.text)) return 'heading with no text, which Logseq DB holds as # #';
       // a number, a checkbox and a heading's `#`s are the block's properties, no text: no caret goes
       // before or inside them (Outdent17: `┃# H` loads as `# ┃H`)
       if (doc.sel?.block === i && Math.min(doc.sel.anchor, doc.sel.head) < split(b.text).from) return "caret in a number, a checkbox or a heading's #s (the block's properties)";

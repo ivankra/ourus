@@ -5,7 +5,7 @@ version: "30.2, markdown-mode 2.8"
 url: "emacs -Q -nw, on a terminal"
 model: "text"
 command: "node sxs/run.ts emacs-markdown"
-elapsed_s: 52
+elapsed_s: 75
 ---
 
 # Emacs (markdown-mode) vs ourus
@@ -14,14 +14,14 @@ Summary:
 
 | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- |
-| **297 (20%)** | **[53](#caret-53) (3.6%)** | **[32](#whitespace-32) (2.1%)** | **[739](#disagree-739) (50%)** | **0 (0%)** | **[369](#skipped-369) (25%)** | **1490** |
+| **297 (20%)** | **[53](#caret-53) (3.5%)** | **[32](#whitespace-32) (2.1%)** | **[739](#disagree-739) (49%)** | **0 (0%)** | **[378](#skipped-378) (25%)** | **1499** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | [auto.md](../spec/auto.md) | 32 |  |  | 7 |  |  | **39** |
-| [backspace.md](../spec/backspace.md) | 6 |  |  | 65 |  | 15 | **86** |
+| [backspace.md](../spec/backspace.md) | 6 |  |  | 65 |  | 17 | **88** |
 | [backtick.md](../spec/backtick.md) | 17 |  |  | 12 |  | 4 | **33** |
 | [block-ids.md](../spec/block-ids.md) | 2 |  |  | 18 |  | 1 | **21** |
 | [copy.md](../spec/copy.md) | 2 | 1 |  | 3 |  | 7 | **13** |
@@ -48,19 +48,19 @@ Per-file:
 | [paste-list.md](../spec/paste-list.md) | 1 |  |  | 20 |  | 8 | **29** |
 | [paste-plain.md](../spec/paste-plain.md) | 25 |  |  | 4 |  | 7 | **36** |
 | [paste.md](../spec/paste.md) | 4 |  | 1 | 17 |  | 14 | **36** |
-| [placeholders.md](../spec/placeholders.md) | 4 |  |  | 15 |  | 1 | **20** |
+| [placeholders.md](../spec/placeholders.md) | 4 |  |  | 15 |  | 4 | **23** |
 | [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |
 | [quotes.md](../spec/quotes.md) | 49 | 8 | 7 | 54 |  | 25 | **143** |
 | [regressions.md](../spec/regressions.md) | 39 | 1 | 1 | 106 |  | 55 | **202** |
 | [scenarios.md](../spec/scenarios.md) | 3 |  |  | 22 |  | 4 | **29** |
 | [select.md](../spec/select.md) |  |  |  |  |  | 23 | **23** |
-| [shift-enter.md](../spec/shift-enter.md) | 4 |  | 8 | 21 |  | 3 | **36** |
-| [subtree-selection.md](../spec/subtree-selection.md) |  | 2 |  | 14 |  | 1 | **17** |
+| [shift-enter.md](../spec/shift-enter.md) | 4 |  | 8 | 21 |  | 5 | **38** |
+| [subtree-selection.md](../spec/subtree-selection.md) |  | 2 |  | 14 |  | 3 | **19** |
 | [tasks.md](../spec/tasks.md) | 8 |  |  | 11 |  | 11 | **30** |
 | [typing.md](../spec/typing.md) | 3 |  |  |  |  |  | **3** |
 | [undo.md](../spec/undo.md) | 1 | 1 |  | 3 |  |  | **5** |
 | [zoom.md](../spec/zoom.md) |  |  |  |  |  | 14 | **14** |
-| **total** | **297 (20%)** | **53 (3.6%)** | **32 (2.1%)** | **739 (50%)** | **0 (0%)** | **369 (25%)** | **1490** |
+| **total** | **297 (20%)** | **53 (3.5%)** | **32 (2.1%)** | **739 (49%)** | **0 (0%)** | **378 (25%)** | **1499** |
 
 ## Disagree (739)
 
@@ -2430,7 +2430,7 @@ code
 </td><td>
 
 ```buffer
-┃\# b
+┃ \# b
 ```
 
 </td></tr>
@@ -2654,7 +2654,7 @@ para
 </td><td>
 
 ```buffer
-┃\# b
+┃ \# b
 ```
 
 </td></tr>
@@ -17171,6 +17171,7 @@ t1┃
 
 ```buffer
 - a
+- 
 - ┃b
 ```
 
@@ -21205,8 +21206,8 @@ x
 </td><td>
 
 ```buffer
-- b
-  - c
+-  b
+   - c
 ```
 
 </td></tr>
@@ -21255,7 +21256,7 @@ x
 </td><td>
 
 ````buffer
-- \``` x
+-  \``` x
 - b
 ````
 
@@ -21624,7 +21625,7 @@ after
 </td><td>
 
 ```buffer
-\# b
+ \# b
 
 after
 ```
@@ -30940,7 +30941,7 @@ Title
 
 ````buffer
 -
-  ┃\``` x
+  ┃ \``` x
 ````
 
 </td></tr>
@@ -31389,7 +31390,7 @@ p
 
 ```buffer
 -
-  ┃\# b
+  ┃ \# b
 ```
 
 </td></tr>
@@ -35905,7 +35906,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (369)
+## Skipped (378)
 
 | example | why |
 | --- | --- |
@@ -35918,11 +35919,13 @@ Original:
 | [Backspace18f](../spec/backspace.md#backspace18f) | option headingEditing: block |
 | [Backspace34](../spec/backspace.md#backspace34) | option backspaceAtTopItem: refuse |
 | [SoftBackspace7](../spec/backspace.md#softbackspace7) | option quotes: container |
+| [SoftBackspace11b](../spec/backspace.md#softbackspace11b) | option heldSpace: trim |
 | [Backspace42b](../spec/backspace.md#backspace42b) | option markup: decorated |
 | [Backspace43c](../spec/backspace.md#backspace43c) | option enterAtTextStart: stay |
 | [Backspace45b](../spec/backspace.md#backspace45b) | option joinWithChildren: refuse |
 | [Backspace45c](../spec/backspace.md#backspace45c) | option joinWithChildren: refuse |
 | [Backspace46](../spec/backspace.md#backspace46) | character outside the Basic Multilingual Plane, which the terminal types as its code |
+| [Backspace47b](../spec/backspace.md#backspace47b) | option heldSpace: trim |
 | [Backspace50](../spec/backspace.md#backspace50) | option backspaceAtItemStart: body |
 | [Backspace50b](../spec/backspace.md#backspace50b) | option backspaceAtItemStart: unwrap |
 | **backtick.md** | |
@@ -36158,6 +36161,9 @@ Original:
 | [Paste24b](../spec/paste.md#paste24b) | option pasteSeams: open |
 | [Paste26b](../spec/paste.md#paste26b) | option pasteSeams: open |
 | **placeholders.md** | |
+| [Placeholder9b](../spec/placeholders.md#placeholder9b) | option heldSpace: trim |
+| [Placeholder17b](../spec/placeholders.md#placeholder17b) | option heldSpace: trim |
+| [Placeholder18b](../spec/placeholders.md#placeholder18b) | option heldSpace: trim |
 | [Placeholder20](../spec/placeholders.md#placeholder20) | option enterSplitSpace: start |
 | **quirks.md** | |
 | [Quirk1](../spec/quirks.md#quirk1) | option quirkEnterMidHeading: workflowy |
@@ -36279,11 +36285,15 @@ Original:
 | [Select22](../spec/select.md#select22) | option selectionLadder: top |
 | [Select23](../spec/select.md#select23) | option selectNodeUp: sibling |
 | **shift-enter.md** | |
+| [ShiftEnter30b](../spec/shift-enter.md#shiftenter30b) | option heldSpace: trim |
 | [ShiftEnter16](../spec/shift-enter.md#shiftenter16) | CR line endings |
 | [ShiftEnter22b](../spec/shift-enter.md#shiftenter22b) | option markup: decorated |
 | [ShiftEnter26b](../spec/shift-enter.md#shiftenter26b) | option markup: decorated |
+| [ShiftEnter32b](../spec/shift-enter.md#shiftenter32b) | option heldSpace: trim |
 | **subtree-selection.md** | |
-| [SubtreeEdit17](../spec/subtree-selection.md#subtreeedit17) | option pasteOverSelection: ignore |
+| [SubtreeEdit17](../spec/subtree-selection.md#subtreeedit17) | option pasteOverNodes: after |
+| [SubtreeEdit18](../spec/subtree-selection.md#subtreeedit18) | option pasteOverNodes: nothing |
+| [SubtreeEdit19](../spec/subtree-selection.md#subtreeedit19) | option pasteOverNodes: nothing |
 | **tasks.md** | |
 | [TaskEnter9](../spec/tasks.md#taskenter9) | option enterTask: plain |
 | [TaskEnter9b](../spec/tasks.md#taskenter9b) | option enterTask: plain |

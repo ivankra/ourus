@@ -2418,15 +2418,33 @@ class Done {
     for (const w of this.attached) this.#escape(w);
   }
 
-  /** `w`'s text without its held spaces, which writing it settles: each one's space out (`OurusProse.withoutHeldSpaces`). */
+  /**
+   * `w`'s text with its held spaces settled, which writing it does: each one's space out, or with
+   * `heldSpace: repair` those at the text's start kept, its padding to be (`#leadingSpaces` makes them
+   * so), the others out.
+   */
   #settleHeldSpaces(w: Working): void {
     if (!(w.text instanceof OurusProse)) return;
     const text = w.text;
     const held = text.marks.placeholders.filter((pos) => text.marks.hasHeldSpaceAt(pos));
     if (!held.length) return;
-    // (an anchor past one moves back with the text)
-    this.lost.set(w, [...(this.lost.get(w) ?? []), ...held.map((pos) => ({ at: pos, n: 1 }))]);
-    w.text = text.withoutHeldSpaces();
+    // (`repair`: those in the run of spaces at the text's start, on its first line, kept, where text
+    // follows them there: before a line break or the text's end they start nothing, and go, as a
+    // split's do under `enterSplitSpace: start`)
+    let kept: number[] = [];
+    if (this.from.config.heldSpace !== 'trim') {
+      const start = text.textStart(0);
+      let end = start;
+      while (text.text[end] === ' ') end++;
+      if (end < text.text.length && text.text[end] !== '\n') kept = held.filter((pos) => pos >= start && pos < end);
+    }
+    const gone = held.filter((pos) => !kept.includes(pos));
+    // (an anchor past one that goes moves back with the text)
+    if (gone.length) this.lost.set(w, [...(this.lost.get(w) ?? []), ...gone.map((pos) => ({ at: pos, n: 1 }))]);
+    // (their placeholders out; the spaces of those that go out, those kept the text's padding to be)
+    let next = text.withMarks({ placeholders: text.marks.placeholders.filter((pos) => !held.includes(pos)) });
+    for (const pos of [...gone].reverse()) next = next.splice(pos, pos + 1);
+    w.text = next;
   }
 
   /** `w`'s text without the backslashes of ours (`auto`) it doesn't need wherever it is (`#escape`). */
@@ -2537,8 +2555,20 @@ class Done {
       const lead = marker + this.draft.separatorAt(w.id, column + marker.length)!;
       return advanceColumns(lead, 0, lead.length, column);
     }
-    const width = origin?.kind === 'item' && w.kind === origin.kind ? origin.block.attrs.contentColumn! - origin.block.attrs.markerColumn! : marker.length + 1 + (this.paddings.get(w.id) ?? 0);
+    // (a read item's own width, and past it the padding a text's leading spaces became: a held space a
+    // deletion left, kept, `heldSpace: repair`, which moves its children with it)
+    const width = (origin?.kind === 'item' && w.kind === origin.kind ? origin.block.attrs.contentColumn! - origin.block.attrs.markerColumn! : marker.length + 1) + (this.paddings.get(w.id) ?? 0);
     return column + width;
+  }
+
+  /**
+   * How far right of where it was read item `w`'s content is written: the padding its text's leading
+   * spaces became (`#leadingSpaces`: a held space kept, `heldSpace: repair`), and its parent's, an item
+   * read and not moved; 0 for anything else.
+   */
+  #contentShift(w: Working | null): number {
+    if (!w || w.kind !== 'item' || w.origin?.kind !== 'item' || this.draft.placedIds.has(w.id)) return 0;
+    return (w.origin.parent?.id === w.parent?.id ? this.#contentShift(w.parent) : 0) + (this.paddings.get(w.id) ?? 0);
   }
 
   /**
@@ -2548,7 +2578,8 @@ class Done {
    */
   #markerColumn(w: Working): number {
     const origin = w.origin;
-    if (origin?.kind === 'item' && !this.draft.placedIds.has(w.id) && origin.parent?.id === w.parent?.id) return origin.block.attrs.markerColumn!;
+    // (where it was, moved right as far as its parent's text moved: a held space kept as its padding)
+    if (origin?.kind === 'item' && !this.draft.placedIds.has(w.id) && origin.parent?.id === w.parent?.id) return origin.block.attrs.markerColumn! + this.#contentShift(w.parent);
     const up = this.draft.lineUps.get(w.id);
     if (up) return up.block.attrs.markerColumn!;
     const parent = w.parent;

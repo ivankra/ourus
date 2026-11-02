@@ -96,12 +96,34 @@ export async function startEmacs(init: string, say: (line: string) => void): Pro
       return unprint(stdout.replace(/\n$/, ''));
     } catch (e) {
       const err = e as { stderr?: string; message: string };
-      throw new Error(`Emacs: ${(err.stderr ?? err.message).trim().split('\n').pop()}`);
+      const why = (err.stderr ?? err.message).trim().split('\n').pop();
+      // an Emacs that died (a fork the container's cap refused) fails every example after, in no way of
+      // its own: said as such, which stops the run (as a page gone does) rather than fill its report with errors
+      const answers = await run('emacsclient', ['-s', socket, '--eval', 't'], { encoding: 'utf8' }).then(
+        () => true,
+        () => false,
+      );
+      if (!answers) throw new Error(`Emacs is gone: its server doesn't answer${why ? ` (${why})` : ''}`);
+      throw new Error(`Emacs: ${why}`);
     }
   };
   // a key, as the command loop would take it; an error is the command's beep
   const key = (keys: string): Promise<string> =>
     evaluate(`(with-current-buffer ${lisp(BUFFER)} ${REDISPLAY} (condition-case e (progn (execute-kbd-macro (kbd ${lisp(keys)})) "") (error (error-message-string e))))`);
+  // (its socket made, the server may not answer yet on a busy machine: until it does, for 10 s)
+  for (let t0 = Date.now(); ; ) {
+    const answers = await run('emacsclient', ['-s', socket, '--eval', 't'], { encoding: 'utf8' }).then(
+      () => true,
+      () => false,
+    );
+    if (answers) break;
+    if (Date.now() - t0 > 10000) {
+      const screen = await run('tmux', [...tmux, 'capture-pane', '-p']).then((r) => r.stdout.trim(), () => '');
+      await run('tmux', [...tmux, 'kill-server']).catch(() => {});
+      throw new Error(`Emacs's server made its socket but doesn't answer on it: ${screen.split('\n').filter(Boolean).pop() ?? 'no screen'}`);
+    }
+    await new Promise((r) => setTimeout(r, 200));
+  }
   await evaluate(PRELUDE);
   await evaluate(init);
   const stop = async (): Promise<void> => {
