@@ -14,7 +14,7 @@ the edit:
 Basic usage:
 
 ```ts
-import { OurusDraft, settleSteps } from '../writer/index.ts';   // inside ourus; a host has `settlePlaceholders(view, caret)` from 'ourus'
+import { OurusDraft, settleSteps } from '../writer/index.ts';   // inside ourus; a host has `settlePlaceholders(view, selection)` from 'ourus'
 
 const draft = new OurusDraft(doc).split(node, offset, { children: 'follow' });   // the outline it wants (a command's `ctx.draft()`)
 draft.setCaret(made, 0);
@@ -167,7 +167,7 @@ const steps = settleSteps(doc, caret);   // the placeholders the caret left sett
   line above it); any other empty node is removed, its children taking its place. In steps, each
   on the one before's document: one, or, where not all settle at once, those that can't dropped,
   then the rest written. None when no placeholder is off the caret's line. A host calls
-  `settlePlaceholders(view, caret)` (`commands/`), which carries its view through each step,
+  `settlePlaceholders(view, selection)` (`commands/`), which carries its view through each step,
   whenever the caret moves.
 
 Files:

@@ -81,3 +81,87 @@ test("an extension's `remove` takes the rules of the extensions before it, not a
   assert.ok(called > 0);
   assert.equal(MdTree.parse('# a', defineFlavor('without', [{ name: 'remove-old', remove: ['atxHeading'] }])).root.children[0]!.type, 'paragraph');
 });
+
+test('a byte-order mark opening a document is before line 0, in every flavor: no character of the Markdown, kept in the text; a fragment\'s is text', async () => {
+  const { FLAVORS } = await import('./flavors.ts');
+  for (const [name, flavor] of Object.entries(FLAVORS)) {
+    const kinds = (text: string): string[] => MdTree.parse(text, flavor, { document: true }).root.children.map((b) => b.type);
+    assert.deepEqual(kinds('\ufeff# Title\n'), ['heading'], name);
+    assert.deepEqual(kinds('\ufeff- a\n'), ['list'], name);
+    assert.deepEqual(kinds('\ufeff    code\n'), ['code_block'], name);
+    const tree = MdTree.parse('\ufeff# T\n\nx\n', flavor, { document: true });
+    assert.equal(tree.documentStart, 1);
+    assert.deepEqual([tree.line(0).from, tree.line(0).to], [1, 4]);
+    assert.match(tree.renderHtml(), /^<h1>T<\/h1>/);
+    // (alone on its line, that line is blank; anywhere else, it is text)
+    assert.ok(MdTree.parse('\ufeff\n# T\n', flavor, { document: true }).line(0).blank);
+    assert.deepEqual(kinds('x\n\n\ufeff# T\n'), ['paragraph', 'paragraph'], name);
+    assert.equal(MdTree.parse('# T\n', flavor, { document: true }).documentStart, 0);
+    // (an update keeps it a document's)
+    assert.equal(MdTree.parse('# T\n', flavor, { document: true }).update([{ from: 0, to: 0, insert: '\ufeff' }]).documentStart, 1);
+    // (a fragment, a block's text or a clipboard's: the mark is text)
+    const fragment = MdTree.parse('\ufeff# T\n', flavor);
+    assert.deepEqual([fragment.documentStart, fragment.root.children[0]!.type], [0, 'paragraph']);
+  }
+  const obsidian = FLAVORS.obsidian!;
+  assert.deepEqual(MdTree.parse('\ufeff---\na: 1\n---\n\nx', obsidian, { document: true }).root.children.map((b) => b.type), ['frontmatter', 'paragraph']);
+});
+
+test('ourus/extend exports the inline node a rule gives the parser, as MdInlineNode', async () => {
+  const extend = await import('../../src/parser/extend.ts');
+  const node = new extend.MdInlineNode('text', 0, 1);
+  assert.deepEqual([node.type, node.from, node.to], ['text', 0, 1]);
+});
+
+test('an extension\'s inline named like an object\'s property renders as its text; a rule for one emoji runs at it only', async () => {
+  const { defineFlavor, MdInlineNode } = await import('../../src/parser/extend.ts');
+  const names = defineFlavor('names', [{
+    name: 'names',
+    inlines: [{ name: 'names', triggers: '@', parse(parser) {
+      const from = parser.pos++;
+      parser.add(new MdInlineNode('toString', from, parser.pos));
+      return true;
+    } }],
+  }]);
+  assert.equal(MdTree.parse('@', names).renderHtml(), '<p>@</p>\n');
+  const seen: string[] = [];
+  const emoji = defineFlavor('emoji', [{
+    name: 'emoji',
+    inlines: [{ name: 'smile', triggers: '😀', parse(p) {
+      seen.push(p.text.slice(p.pos, p.pos + 2));
+      return false;
+    } }],
+  }]);
+  // (😁 shares 😀's high surrogate)
+  assert.equal(MdTree.parse('😀 😁', emoji).renderHtml(), '<p>😀 😁</p>\n');
+  assert.deepEqual(seen, ['😀']);
+});
+
+test('extensions\' render hooks compose, in order: one\'s start doesn\'t replace GFM\'s footnotes\'', async () => {
+  const { defineFlavor, gfmExtensions } = await import('../../src/parser/extend.ts');
+  const order: string[] = [];
+  const flavor = defineFlavor('custom', [...gfmExtensions, { name: 'custom', render: { start(r) { r.state.set('custom', true); order.push('start'); }, end() { order.push('end'); } } }]);
+  const html = MdTree.parse('x[^a]\n\n[^a]: n', flavor).renderHtml();
+  assert.match(html, /<sup class="footnote-ref"><a href="#fn-a"/);
+  assert.match(html, /<section class="footnotes" data-footnotes>/);
+  assert.deepEqual(order, ['start', 'end']);
+  // (filtered tags joined, not replaced)
+  const tags = defineFlavor('tags', [...gfmExtensions, { name: 'tags', render: { filteredTags: ['marquee'] } }]);
+  assert.equal(MdTree.parse('<marquee>a</marquee> <iframe>', tags).renderHtml(), '<p>&lt;marquee>a&lt;/marquee> &lt;iframe></p>\n');
+});
+
+test('spaces or tabs separate a link\'s parts: before its destination, its title, a reference\'s destination', () => {
+  assert.equal(MdTree.parse('[x](\t/u)').renderHtml(), '<p><a href="/u">x</a></p>\n');
+  assert.equal(MdTree.parse('[x](/u\t"t")').renderHtml(), '<p><a href="/u" title="t">x</a></p>\n');
+  const ref = MdTree.parse('[a]:\t/u\n\n[a]');
+  assert.equal(ref.references.size, 1);
+  assert.equal(ref.renderHtml(), '<p><a href="/u">a</a></p>\n');
+});
+
+test('each text rule runs over the text the rules before it left: one after GFM\'s email sees what follows each email', async () => {
+  const { defineFlavor, gfmExtensions } = await import('../../src/parser/extend.ts');
+  const seen: string[] = [];
+  const flavor = defineFlavor('tail', [...gfmExtensions, { name: 'tail', textRules: [{ name: 'tail', process(p, node) { seen.push(p.text.slice(node.from, node.to)); } }] }]);
+  assert.equal(MdTree.parse('a@b.co TAIL and x@y.io end', flavor).renderHtml(), '<p><a href="mailto:a@b.co">a@b.co</a> TAIL and <a href="mailto:x@y.io">x@y.io</a> end</p>\n');
+  assert.deepEqual(seen, [' TAIL and ', ' end']);
+});

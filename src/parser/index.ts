@@ -9,7 +9,7 @@
 //   tree.renderHtml()                              // HTML, as commonmark.js and cmark-gfm write it
 //   MdHtmlParser.parse(html).markdown             // HTML (a clipboard's) as the Markdown that says it
 
-export { MdTree, type MdParseOptions, type MdReread } from './syntax.ts';
+export { MdTree, mdDocumentStart, type MdParseOptions, type MdReread } from './syntax.ts';
 export { MdFlavor } from './flavors.ts';
 export { MD_BLOCK_ID_NAME, mdBlockIdEnd, mdCalloutAt } from './obsidian.ts';
 export type { MdHtmlOptions } from './html.ts';

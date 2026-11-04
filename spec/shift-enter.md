@@ -51,13 +51,13 @@ it, as Backspace finds it ([ShiftEnter21](#shiftenter21)).
 tags: core
 ```
 
-```buffer
+```markdown
 - one two┃ three
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - one two
   ┃ three
 ```
@@ -70,14 +70,14 @@ Nested item under ordered parent.
 tags: common
 ```
 
-```buffer
+```markdown
 1. a
    - b┃ c
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 1. a
    - b
      ┃ c
@@ -88,17 +88,17 @@ tags: common
 Tab-nested item breaks with tab.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - x
 →- a┃ b
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - x
 →- a
 →  ┃ b
@@ -113,16 +113,16 @@ placeholder holds it until something is typed.
 tags: core
 ```
 
-```buffer
+```markdown
 - one┃
 - two
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - one
-  ┃
+  ┃◌
 - two
 ```
 
@@ -135,13 +135,13 @@ into a heading, is escaped.
 tags: common
 ```
 
-```buffer
+```markdown
 - abc ┃- def
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - abc 
   ┃\̬- def
 ```
@@ -151,16 +151,16 @@ tags: common
 Ordered marker escaped.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - abc ┃1. def
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - abc 
   ┃1\̬. def
 ```
@@ -171,16 +171,16 @@ Setext equals underline escaped. Bare Obsidian leaves `===` under `Title `, whic
 paragraph a heading.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 Title ┃===
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 Title 
 ┃\̬===
 ```
@@ -190,16 +190,16 @@ Title
 Setext dash underline escaped.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 Title ┃--
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 Title 
 ┃\̬--
 ```
@@ -212,13 +212,13 @@ HTML tag escaped on new line.
 tags: rare
 ```
 
-```buffer
+```markdown
 - one ┃<div>
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - one 
   ┃\̬<div>
 ```
@@ -230,17 +230,17 @@ the text: the line and the rest become the item's next paragraph, as in Logseq. 
 blank line back, the line break staying ([Backspace19](backspace.md#backspace19)).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
   ┃bc
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - a
 
   ┃bc
@@ -248,7 +248,7 @@ tags: edge
 
 > "x"
 
-```buffer
+```markdown
 - a
 
   x┃bc
@@ -266,25 +266,25 @@ from Enter, and Backspace takes that back: [ShiftEnter12](#shiftenter12).)
 tags: common
 ```
 
-```buffer
+```markdown
 - one┃
 - two
 ```
 
 > shiftEnter shiftEnter
 
-```buffer
+```markdown
 - one
 
-  ┃
+  ┃◌
 - two
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one
-  ┃
+  ┃◌
 - two
 ```
 
@@ -298,13 +298,13 @@ takes the breaks back one at a time, to the end of the paragraph.
 tags: common
 ```
 
-```buffer
+```markdown
 para┃
 ```
 
 > shiftEnter shiftEnter
 
-```buffer
+```markdown
 para
 
 ┃
@@ -312,7 +312,7 @@ para
 
 > deleteContentBackward deleteContentBackward
 
-```buffer
+```markdown
 para┃
 ```
 
@@ -324,23 +324,23 @@ line), as Dynalist, BlockNote, true-outliner and the text editors break the line
 takes the break back, rather than unwrapping or joining the item as at a text start.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - ┃one
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 -
   ┃one
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - ┃one
 ```
 
@@ -350,17 +350,17 @@ A first child right under its parent's text: the bare `-` would underline that t
 so a blank line sets it off, as above an empty item there.
 
 ```yaml
-tags: rare
+tags: common
 ```
 
-```buffer
+```markdown
 - a
   - ┃b
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - a
 
   -
@@ -377,19 +377,19 @@ fence, so it is escaped; the space stays with it, its line's indentation.
 tags: rare
 ```
 
-```buffer
+```markdown
 - ┃a ``` x
 ```
 
 > deleteContentForward cursorCharRight
 
-```buffer
+```markdown
 - ◌ ┃``` x
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 -
   ┃ \̬``` x
 ```
@@ -404,19 +404,19 @@ tags: rare
 heldSpace: trim
 ```
 
-```buffer
+```markdown
 - ┃a ``` x
 ```
 
 > deleteContentForward cursorCharRight
 
-```buffer
+```markdown
 - ◌ ┃``` x
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 -
   ┃\̬``` x
 ```
@@ -432,13 +432,13 @@ that make paragraphs split it so. (A setext title takes a second line:
 tags: common free-form
 ```
 
-```buffer
+```markdown
 # Title┃ more
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 # Title
 ┃more
 ```
@@ -451,13 +451,13 @@ Shift-Enter twice at an item's end, then typing: the text is the item's second p
 tags: common
 ```
 
-```buffer
+```markdown
 - one┃
 ```
 
 > shiftEnter shiftEnter "p"
 
-```buffer
+```markdown
 - one
 
   p┃
@@ -471,13 +471,13 @@ Paragraph break in a CRLF item: new lines take the ending of the line they split
 tags: rare
 ```
 
-```buffer
+```markdown
 - a┃␍
 ```
 
 > shiftEnter shiftEnter "p"
 
-```buffer
+```markdown
 - a␍
 ␍
   p┃␍
@@ -491,20 +491,20 @@ Shift-Enter, then Backspace: the line break goes, and the text is as it was.
 tags: common
 ```
 
-```buffer
+```markdown
 - one┃two
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - one
   ┃two
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one┃two
 ```
 
@@ -518,13 +518,13 @@ reader, reads a nested item; ourus reads as CommonMark does.)
 tags: rare
 ```
 
-```buffer
+```markdown
 1. abc ┃2. x
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 1. abc 
    ┃2. x
 ```
@@ -539,13 +539,13 @@ tags: rare
 flavor: gfm
 ```
 
-```buffer
+```markdown
 a | b ┃|---|---|
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 a | b 
 ┃|\̬---|---|
 ```
@@ -559,20 +559,20 @@ mid-line serves nothing ([Enter43](enter.md#enter43)'s mirror).
 tags: rare
 ```
 
-```buffer
+```markdown
 - abc┃- def
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - abc
   ┃\̬- def
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - abc┃- def
 ```
 
@@ -585,23 +585,23 @@ true-outliner and Emacs: Markdown renders a continuation line without its leadin
 keeps them in the text, and the join, which concatenates, gives them back.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - one two┃ three
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - one two
   ┃ three
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one two┃ three
 ```
 
@@ -615,7 +615,7 @@ paragraph.
 tags: rare free-form
 ```
 
-```buffer
+```markdown
 -┃ a
 ```
 
@@ -625,7 +625,7 @@ tags: rare free-form
 result: deferredToHost
 ```
 
-```buffer
+```markdown
 -
 ┃ a
 ```
@@ -640,13 +640,13 @@ tags: rare free-form
 markup: decorated
 ```
 
-```buffer
+```markdown
 -┃ a
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 -
   ┃a
 ```
@@ -660,13 +660,13 @@ its own would be one, and the rest a paragraph after it, so it is escaped.
 tags: rare
 ```
 
-```buffer
+```markdown
 [Note]: this ┃matters a lot
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 [Note]\̬: this 
 ┃matters a lot
 ```
@@ -680,7 +680,7 @@ tags: rare free-form
 flavor: gfm
 ```
 
-```buffer
+```markdown
 | a | b |
 | --- | --- |
 | on┃e | 2 |
@@ -692,7 +692,7 @@ flavor: gfm
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 | a | b |
 | --- | --- |
 | on┃e | 2 |
@@ -707,14 +707,14 @@ own: the new paragraph's start is escaped, so it stays text.
 tags: rare
 ```
 
-```buffer
+```markdown
 p
 ┃[r]: /u
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 p
 
 ┃[r]\̬: /u
@@ -730,7 +730,7 @@ line break is the host's, and the text reads as it then does, the checkbox broke
 tags: rare free-form markup-task
 ```
 
-```buffer
+```markdown
 - [ ┃] task
 ```
 
@@ -740,7 +740,7 @@ tags: rare free-form markup-task
 result: deferredToHost
 ```
 
-```buffer
+```markdown
 - [ 
 ┃] task
 ```
@@ -755,13 +755,13 @@ tags: rare markup-task
 markup: decorated
 ```
 
-```buffer
+```markdown
 - [ ┃] task
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - [ ]
   ┃task
 ```
@@ -775,14 +775,14 @@ at the caret that leaves, as Enter does over one ([Enter56](enter.md#enter56)).
 tags: rare
 ```
 
-```buffer
+```markdown
 - a«bc
 - de»f
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - a
   ┃f
 ```
@@ -798,14 +798,14 @@ with it, which nothing then needs.
 tags: rare
 ```
 
-```buffer
+```markdown
 - p
   -┃a
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - p
   \̬-
   ┃a
@@ -813,7 +813,7 @@ tags: rare
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - p
   -┃a
 ```
@@ -828,14 +828,14 @@ breaks it, the heading staying one. Only an ATX title is a single line
 tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 Title┃more
 ---
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 Title
 ┃more
 ---
@@ -843,7 +843,7 @@ Title
 
 > deleteContentBackward
 
-```buffer
+```markdown
 Title┃more
 ---
 ```
@@ -858,7 +858,7 @@ there is the text's next line, and may make it a definition: the host's typing.)
 tags: rare
 ```
 
-```buffer
+```markdown
 [a]:┃
 
 b
@@ -866,7 +866,7 @@ b
 
 > shiftEnter
 
-```buffer
+```markdown
 [a]:
 ┃
 
@@ -875,7 +875,7 @@ b
 
 > deleteContentBackward
 
-```buffer
+```markdown
 [a]:┃
 
 b
@@ -892,19 +892,19 @@ Dynalist break there too, the space kept and nothing escaped (`-␠` / `  ┃ # 
 tags: rare
 ```
 
-```buffer
+```markdown
 - a┃ # b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - ┃◌ # b
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 -
   ┃ \̬# b
 ```
@@ -920,19 +920,19 @@ tags: rare
 heldSpace: trim
 ```
 
-```buffer
+```markdown
 - a┃ # b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - ┃◌ # b
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 -
   ┃\̬# b
 ```
@@ -948,7 +948,7 @@ text too, which are the text's.
 tags: rare
 ```
 
-```buffer
+```markdown
 -
   ┃ three
 ```
@@ -959,7 +959,7 @@ tags: rare
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 -
   ┃ three
 ```

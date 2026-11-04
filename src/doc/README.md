@@ -107,6 +107,10 @@ const at = doc.locateRaw(pos);              // in a text, a frame, a marker, a p
   - `get OurusDoc.lineCount: number`, `OurusDoc.lineAt(pos: number): { index, from, to }`<br>
     The number of lines; the line `pos` is on.
 
+  - `OurusDoc.wholeText(from: number, to: number): boolean`<br>
+    Whether `[from, to]` is the whole text, as a select all is: from its start, or past a byte-order
+    mark opening it, to its end.
+
   - `OurusDoc.textStart(i: number): number`<br>
     Where the text starts on line `i` (where Home goes): past its containers' prefixes, an item's
     marker, the node's frame, and the blanks after them. Hidden spaces (see `hiddenSpaces`) are

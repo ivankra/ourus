@@ -3,14 +3,12 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { drawLabels, labelGlyph, labelNumber, readDrawing, readLabels } from './drawing.ts';
-import { run } from './spec-run.ts';
-import { readSpec } from './specfile.ts';
+import { drawLabels, labelGlyph, labelNumber, readDrawing, readLabels, runSpecTest, readSpec } from './lib/index.ts';
 
 /** A case of one step, its start and its step's buffer drawn as given. */
 const one = (start: string, actions: string, then: string): void => {
-  const [t] = readSpec('x.md', ['## X1', '', '```yaml', 'tags: rare', '```', '', '```buffer', start, '```', '', `> ${actions}`, '', '```buffer', then, '```', ''].join('\n'));
-  run(t!, 'gfm');
+  const [t] = readSpec('x.md', ['## X1', '', '```yaml', 'tags: rare', '```', '', '```markdown', start, '```', '', `> ${actions}`, '', '```markdown', then, '```', ''].join('\n'));
+  runSpecTest(t!, 'gfm');
 };
 
 test('a label is no part of the text, last on its line, numbered 1 to 50', () => {
@@ -33,14 +31,14 @@ test('a step checks the labels it draws: the same node, or a new one it made', (
 });
 
 test('one label names the innermost node starting on its line, a second the one outside it', () => {
-  one('> - a┃①②', 'shiftEnter', '> - a①②\n>   ┃');
-  assert.throws(() => one('> - a┃①', 'shiftEnter', '> - a②\n>   ┃'), /labels/);
+  one('> - a┃①②', 'shiftEnter', '> - a①②\n>   ┃◌');
+  assert.throws(() => one('> - a┃①', 'shiftEnter', '> - a②\n>   ┃◌'), /labels/);
 });
 
 test("an undo is the host's: the text back, its nodes' ids as an update carries them, so a line it writes over from its start is the same node", () => {
-  const steps = (undone: string): string[] => ['## X1', '', '```yaml', 'tags: rare', '```', '', '```buffer', '- a┃b①', '```', '', '> enter', '', '```buffer', '- a①', '- ┃b②', '```', '', '> undo', '', '```buffer', undone, '```', ''];
+  const steps = (undone: string): string[] => ['## X1', '', '```yaml', 'tags: rare', '```', '', '```markdown', '- a┃b①', '```', '', '> enter', '', '```markdown', '- a①', '- ┃b②', '```', '', '> undo', '', '```markdown', undone, '```', ''];
   const [t] = readSpec('x.md', steps('- a┃b①').join('\n'));
-  run(t!, 'gfm');
+  runSpecTest(t!, 'gfm');
   const [made] = readSpec('x.md', steps('- a┃b③').join('\n'));
-  assert.throws(() => run(made!, 'gfm'), /labels/, "the split's undo writes `- a` over with `- ab`: still node ①, not a new one");
+  assert.throws(() => runSpecTest(made!, 'gfm'), /labels/, "the split's undo writes `- a` over with `- ab`: still node ①, not a new one");
 });

@@ -10,8 +10,7 @@ import type { OurusConfig } from '../src/config.ts';
 import { executeCommand, OurusRejected } from '../src/commands/index.ts';
 import { OurusView } from '../src/view/index.ts';
 import type { OurusNode } from '../src/doc/index.ts';
-import { docOf, nodesOf, readDrawing } from './drawing.ts';
-import { readSpecFile, specConfig, specFiles } from './specfile.ts';
+import { parseWithMarks, allNodes, readDrawing, readSpecFile, specConfig, specFiles } from './lib/index.ts';
 
 /** The starts where some move fails to write, and why. */
 const KNOWN: Readonly<Record<string, string>> = {};
@@ -28,8 +27,8 @@ function moveGaps(): Map<string, string[]> {
         const key = `${JSON.stringify(config)} ${text}`;
         if (seen.has(key)) continue;
         seen.add(key);
-        const doc = docOf(text, [], config);
-        const nodes = nodesOf(doc);
+        const doc = parseWithMarks(text, [], config);
+        const nodes = allNodes(doc);
         const view = OurusView.of(doc);
         const parents: (OurusNode | 'root')[] = ['root', ...nodes];
         for (const node of nodes) {

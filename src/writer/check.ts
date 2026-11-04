@@ -3,7 +3,7 @@
 // contract, exactly: kinds and nesting, ids, each text's type, its frame's meaning and its text, its
 // block ids, its placeholders, gaps, and the lists `done()` fixed.
 
-import { OurusProse, OurusAtom, blockIdsOf, type OurusNode, type OurusText, type PersistentNode, type OurusDoc } from '../doc/index.ts';
+import { OurusProse, OurusAtom, blockIdsOf, verbatimLinesOf, type OurusNode, type OurusText, type PersistentNode, type OurusDoc } from '../doc/index.ts';
 import type { ListPlace, OurusDraft } from './draft.ts';
 
 /** Where `doc` doesn't read as `draft` (done) meant, or null where it does. */
@@ -16,8 +16,22 @@ function node(doc: OurusDoc, draft: OurusDraft, expected: PersistentNode, origin
   if (expected.kind !== actual.kind) return `${at}: a ${expected.kind}, read as a ${actual.kind}`;
   if (expected.id !== actual.id) return `${at}: id ${expected.id}, read as ${actual.id}`;
   if (expected.gap !== actual.gap) return `${at}: ${expected.gap} blank lines after its text, read as ${actual.gap}`;
-  const text = texts(draft.textOf(expected, origin), doc.textOf(actual));
+  const want = draft.textOf(expected, origin);
+  const text = texts(want, doc.textOf(actual));
   if (text) return `${at}: ${text}`;
+  // (a verbatim block whose lines the draft kept, its body and its count of lines, moved, re-indented or
+  // its fence respelled: its lines as read where it was, against as read where it is; the same spelling
+  // at another column, or under a fence indented otherwise, can be other code, a tab-led line under a
+  // fence indented one space: B294. A line added or taken, Enter in it, is an edit, checked as text)
+  const had = origin && draft.from.textOf(origin);
+  const lines = (t: OurusText): number => t.text.split('\n').length;
+  if (origin && had && want && want.type === had.type && want.body === had.body && lines(want) === lines(had)) {
+    const was = verbatimLinesOf(draft.from, origin);
+    if (was) {
+      const now = verbatimLinesOf(doc, actual);
+      if (JSON.stringify(now) !== JSON.stringify(was)) return `${at}: code ${JSON.stringify(was)}, read as ${JSON.stringify(now)}`;
+    }
+  }
   const list = draft.lists.get(expected.id);
   if (list && expected.kind === 'item') {
     const read = listPlace(doc, actual);

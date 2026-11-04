@@ -76,7 +76,7 @@ stays in the code, in the item.
 tags: common enter-in-fence
 ```
 
-````buffer
+````markdown
 - a
   ```
   code┃
@@ -85,7 +85,7 @@ tags: common enter-in-fence
 
 > enter
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -99,7 +99,7 @@ result: success
 
 > "x"
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -115,7 +115,7 @@ Enter in the middle of a code line splits it.
 tags: common enter-in-fence
 ```
 
-````buffer
+````markdown
 ```
 co┃de
 ```
@@ -123,7 +123,7 @@ co┃de
 
 > enter
 
-````buffer
+````markdown
 ```
 co
 ┃de
@@ -138,7 +138,7 @@ The code line's own indentation carries over, as in code editors.
 tags: common enter-in-fence
 ```
 
-````buffer
+````markdown
 - a
   ```
     nested┃
@@ -147,7 +147,7 @@ tags: common enter-in-fence
 
 > enter
 
-````buffer
+````markdown
 - a
   ```
     nested
@@ -160,10 +160,10 @@ tags: common enter-in-fence
 In a quote, the new line keeps the `>`.
 
 ```yaml
-tags: edge enter-in-fence
+tags: rare enter-in-fence
 ```
 
-````buffer
+````markdown
 > ```
 > code┃
 > ```
@@ -171,7 +171,7 @@ tags: edge enter-in-fence
 
 > enter
 
-````buffer
+````markdown
 > ```
 > code
 > ┃
@@ -183,10 +183,10 @@ tags: edge enter-in-fence
 When the fence is the item's text, the new line takes the item's continuation indentation.
 
 ```yaml
-tags: edge enter-in-fence
+tags: common enter-in-fence
 ```
 
-````buffer
+````markdown
 - ```
   code┃
   ```
@@ -194,7 +194,7 @@ tags: edge enter-in-fence
 
 > enter
 
-````buffer
+````markdown
 - ```
   code
   ┃
@@ -206,10 +206,10 @@ tags: edge enter-in-fence
 After the opening fence's info string, the new line is the block's first line.
 
 ```yaml
-tags: edge markup-fence
+tags: common markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```js┃
   code
@@ -218,7 +218,7 @@ tags: edge markup-fence
 
 > enter
 
-````buffer
+````markdown
 - a
   ```js
   ┃
@@ -236,7 +236,7 @@ Shift-Enter's here ([Fence7b](#fence7b)).
 tags: common markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -245,7 +245,7 @@ tags: common markup-fence
 
 > enter "b"
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -262,7 +262,7 @@ next paragraph.
 tags: common markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -271,7 +271,7 @@ tags: common markup-fence
 
 > shiftEnter "x"
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -285,10 +285,10 @@ With child items after the fence, Enter after it makes the first child, as at th
 an item with children.
 
 ```yaml
-tags: edge markup-fence
+tags: common markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -298,7 +298,7 @@ tags: edge markup-fence
 
 > enter
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -314,10 +314,10 @@ item, held by a placeholder, as after a fence elsewhere ([Fence59](#fence59)): a
 would come before the paragraph.
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -328,7 +328,7 @@ tags: edge markup-fence
 
 > enter
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -346,7 +346,7 @@ Shift-Enter in a fenced block makes a new line, as Enter does.
 tags: common
 ```
 
-````buffer
+````markdown
 - a
   ```
   code┃
@@ -355,7 +355,7 @@ tags: common
 
 > shiftEnter
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -371,7 +371,7 @@ Inside a fence's run of backticks, Enter is refused: a new line there would brea
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 `┃``
 code
 ```
@@ -383,7 +383,7 @@ code
 result: rejected not-expressible
 ```
 
-````buffer
+````markdown
 `┃``
 code
 ```
@@ -398,7 +398,7 @@ tags: rare enter-in-fence
 handleFenceContents: false
 ```
 
-````buffer
+````markdown
 - a
   ```
   code┃
@@ -420,7 +420,7 @@ tags: rare markup-fence
 handleFenceContents: false
 ```
 
-````buffer
+````markdown
 - a
   ```js┃
   code
@@ -429,7 +429,7 @@ handleFenceContents: false
 
 > enter
 
-````buffer
+````markdown
 - a
   ```js
   ┃
@@ -449,10 +449,10 @@ where typing goes into the code. A line opened above the fence would leave the c
 typing unmakes the block.
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ┃```
   code
@@ -461,7 +461,7 @@ tags: edge markup-fence
 
 > enter
 
-````buffer
+````markdown
 - a
 - ```
   ┃code
@@ -474,10 +474,10 @@ At the start of the closing fence, Enter adds an empty last code line, the caret
 the closing fence, typing there would unmake it.
 
 ```yaml
-tags: edge markup-fence
+tags: common markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -486,7 +486,7 @@ tags: edge markup-fence
 
 > enter
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -502,7 +502,7 @@ Inside the closing fence's run of backticks, Enter is refused too.
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 ```
 code
 ``┃`
@@ -514,7 +514,7 @@ code
 result: rejected not-expressible
 ```
 
-````buffer
+````markdown
 ```
 code
 ``┃`
@@ -527,10 +527,10 @@ above, the caret going into it, under `enterAtTextStart: stay` too, as staying w
 on the fence, which is markup.
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - ┃```
   code
   ```
@@ -538,7 +538,7 @@ tags: edge markup-fence
 
 > enter
 
-````buffer
+````markdown
 - ┃
 - ```
   code
@@ -557,7 +557,7 @@ the block; its Outliner joins the lines as ourus does.
 tags: common
 ```
 
-````buffer
+````markdown
 - a
   ```
   one
@@ -567,7 +567,7 @@ tags: common
 
 > deleteContentBackward
 
-````buffer
+````markdown
 - a
   ```
   one┃two
@@ -580,10 +580,10 @@ Backspace at the start of the first code line is refused: the code would join th
 its info string. An empty first line just goes ([Fence27](#fence27)).
 
 ```yaml
-tags: edge markup-fence
+tags: common markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```
   ┃one
@@ -596,7 +596,7 @@ tags: edge markup-fence
 result: rejected not-expressible
 ```
 
-````buffer
+````markdown
 - a
   ```
   ┃one
@@ -613,7 +613,7 @@ spaces of code the line never had.
 tags: common
 ```
 
-````buffer
+````markdown
 - a
   ```
   one┃
@@ -623,7 +623,7 @@ tags: common
 
 > deleteContentForward
 
-````buffer
+````markdown
 - a
   ```
   one┃two
@@ -636,10 +636,10 @@ Delete at the end of the last code line is refused: the closing fence would join
 last line just goes ([Fence30](#fence30)).
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```
   one┃
@@ -652,7 +652,7 @@ tags: edge markup-fence
 result: rejected not-expressible
 ```
 
-````buffer
+````markdown
 - a
   ```
   one┃
@@ -665,10 +665,10 @@ In a quote, a joined code line's `>` goes with its line break. The host's Backsp
 space after the `>` instead, and then the `>`, ending the quote and the block.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-````buffer
+````markdown
 > ```
 > one
 > ┃two
@@ -677,7 +677,7 @@ tags: edge
 
 > deleteContentBackward
 
-````buffer
+````markdown
 > ```
 > one┃two
 > ```
@@ -691,7 +691,7 @@ Tab and Shift-Tab on a code line are the host's: they indent the code, as in Log
 tags: common
 ```
 
-````buffer
+````markdown
 - a
 - b
   ```
@@ -720,7 +720,7 @@ the item's next sibling ([Enter37](enter.md#enter37)).
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
   - b
     ```
@@ -730,7 +730,7 @@ tags: rare markup-fence
 
 > shiftEnter enter
 
-````buffer
+````markdown
 - a
   - b
     ```
@@ -745,10 +745,10 @@ Backspace at the start of the closing fence is refused: the fence would join the
 and the block would run on to the end of the document (Fence19's mirror).
 
 ```yaml
-tags: edge markup-fence
+tags: common markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```
   one
@@ -761,7 +761,7 @@ tags: edge markup-fence
 result: rejected not-expressible
 ```
 
-````buffer
+````markdown
 - a
   ```
   one
@@ -777,7 +777,7 @@ string (Fence17's mirror).
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```js┃
   one
@@ -790,7 +790,7 @@ tags: rare markup-fence
 result: rejected not-expressible
 ```
 
-````buffer
+````markdown
 - a
   ```js┃
   one
@@ -804,10 +804,10 @@ can't join code ([Backspace16](backspace.md#backspace16)). The host's Backspace 
 of the item's indentation and take the block out of the item.
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ┃```
   one
@@ -820,7 +820,7 @@ tags: edge markup-fence
 result: rejected not-expressible
 ```
 
-````buffer
+````markdown
 - a
   ┃```
   one
@@ -834,10 +834,10 @@ marker goes, and the code becomes a block of that item, the caret at the end of 
 join. The host's Backspace would delete the space after the marker, leaving no item.
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
 - ┃```
   one
@@ -846,7 +846,7 @@ tags: edge markup-fence
 
 > deleteContentBackward
 
-````buffer
+````markdown
 - a┃
   ```
   one
@@ -859,10 +859,10 @@ Backspace on the empty first code line Enter made after the info string takes it
 ([Fence6](#fence6)).
 
 ```yaml
-tags: edge markup-fence
+tags: common markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```js┃
   code
@@ -871,7 +871,7 @@ tags: edge markup-fence
 
 > enter
 
-````buffer
+````markdown
 - a
   ```js
   ┃
@@ -881,7 +881,7 @@ tags: edge markup-fence
 
 > deleteContentBackward
 
-````buffer
+````markdown
 - a
   ```js┃
   code
@@ -897,7 +897,7 @@ Delete at the end of the opening fence's line, before an empty first code line: 
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```js┃
 
@@ -907,7 +907,7 @@ tags: rare markup-fence
 
 > deleteContentForward
 
-````buffer
+````markdown
 - a
   ```js┃
   code
@@ -920,10 +920,10 @@ Enter at the start of the closing fence, then Backspace on the empty line it mad
 ([Fence13](#fence13)), and the text is as it was.
 
 ```yaml
-tags: edge markup-fence
+tags: common markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -932,7 +932,7 @@ tags: edge markup-fence
 
 > enter
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -942,7 +942,7 @@ tags: edge markup-fence
 
 > deleteContentBackward
 
-````buffer
+````markdown
 - a
   ```
   code┃
@@ -960,7 +960,7 @@ Obsidian deletes only the line break, so the fence takes in the item's indentati
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -970,7 +970,7 @@ tags: rare markup-fence
 
 > deleteContentForward
 
-````buffer
+````markdown
 - a
   ```
   code┃
@@ -986,10 +986,10 @@ can't join the fence, so there is nothing else for the key to do. Bare Obsidian'
 the item's indentation, taking the code out of the item.
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ┃```
   code
@@ -998,7 +998,7 @@ tags: edge markup-fence
 
 > enter
 
-````buffer
+````markdown
 - a
 - ```
   ┃code
@@ -1007,7 +1007,7 @@ tags: edge markup-fence
 
 > deleteContentBackward
 
-````buffer
+````markdown
 - a
   ```
   ┃code
@@ -1023,7 +1023,7 @@ between them with it.
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
 
   para
@@ -1035,7 +1035,7 @@ tags: rare markup-fence
 
 > enter
 
-````buffer
+````markdown
 - a
 
   para
@@ -1047,7 +1047,7 @@ tags: rare markup-fence
 
 > deleteContentBackward
 
-````buffer
+````markdown
 - a
 
   para
@@ -1064,10 +1064,10 @@ Backspace on the empty line Shift-Enter made after a closing fence takes it back
 indentation, so what is typed next would leave the list.
 
 ```yaml
-tags: edge markup-fence
+tags: common markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -1076,7 +1076,7 @@ tags: edge markup-fence
 
 > shiftEnter
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -1086,7 +1086,7 @@ tags: edge markup-fence
 
 > deleteContentBackward
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -1103,7 +1103,7 @@ tags: rare markup-fence
 markup: decorated
 ```
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -1112,7 +1112,7 @@ markup: decorated
 
 > shiftEnter
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -1122,7 +1122,7 @@ markup: decorated
 
 > deleteContentBackward
 
-````buffer
+````markdown
 - a
   ```
   code┃
@@ -1136,10 +1136,10 @@ At the top level too, Backspace at the start of a fence right after a paragraph 
 would then open a block running to the end of the document.
 
 ```yaml
-tags: edge markup-fence
+tags: common markup-fence
 ```
 
-````buffer
+````markdown
 para
 ┃```
 x
@@ -1152,7 +1152,7 @@ x
 result: rejected not-expressible
 ```
 
-````buffer
+````markdown
 para
 ┃```
 x
@@ -1170,7 +1170,7 @@ Outliner join the fence into the text: either way the block is gone. WorkFlowy d
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a┃
 - ```
   one
@@ -1179,7 +1179,7 @@ tags: rare markup-fence
 
 > deleteContentForward
 
-````buffer
+````markdown
 - a┃
   ```
   one
@@ -1195,7 +1195,7 @@ fence, which would then close nothing.
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```
   one
@@ -1209,7 +1209,7 @@ tags: rare markup-fence
 result: rejected not-expressible
 ```
 
-````buffer
+````markdown
 - a
   ```
   one
@@ -1227,7 +1227,7 @@ Obsidian joins them and the block ends there.
 tags: rare markup-fence
 ```
 
-`````buffer
+`````markdown
 ```
 ``
 ┃`
@@ -1237,7 +1237,7 @@ body
 
 > deleteContentBackward
 
-`````buffer
+`````markdown
 ````
 ``┃`
 body
@@ -1252,7 +1252,7 @@ Delete, the same from the other side (Fence36's mirror).
 tags: rare markup-fence
 ```
 
-`````buffer
+`````markdown
 ```
 ``┃
 `
@@ -1262,7 +1262,7 @@ body
 
 > deleteContentForward
 
-`````buffer
+`````markdown
 ````
 ``┃`
 body
@@ -1278,7 +1278,7 @@ grow; Backspace joins the line back, and they stay longer.
 tags: rare markup-fence
 ```
 
-`````buffer
+`````markdown
 ```
 x┃```
 body
@@ -1287,7 +1287,7 @@ body
 
 > shiftEnter
 
-`````buffer
+`````markdown
 ````
 x
 ┃```
@@ -1297,7 +1297,7 @@ body
 
 > deleteContentBackward
 
-`````buffer
+`````markdown
 ````
 x┃```
 body
@@ -1312,7 +1312,7 @@ Enter that would leave a closing fence as the first half of a code line: the fen
 tags: rare markup-fence enter-in-fence
 ```
 
-`````buffer
+`````markdown
 ```
 ```┃x
 body
@@ -1321,7 +1321,7 @@ body
 
 > enter
 
-`````buffer
+`````markdown
 ````
 ```
 ┃x
@@ -1337,7 +1337,7 @@ The same protection in a quote, and with tilde fences.
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 > ~~~
 > ~~┃
 > ~
@@ -1347,7 +1347,7 @@ tags: rare markup-fence
 
 > deleteContentForward
 
-````buffer
+````markdown
 > ~~~~
 > ~~┃~
 > body
@@ -1363,7 +1363,7 @@ last code line, the caret on it.
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -1372,7 +1372,7 @@ tags: rare markup-fence
 
 > shiftEnter
 
-````buffer
+````markdown
 - a
   ```
   code
@@ -1387,10 +1387,10 @@ indentation the item gives up, as they do. Indent gives the outline back, the bl
 item's column, as a blank line in code may be.
 
 ```yaml
-tags: rare
+tags: common
 ```
 
-````buffer
+````markdown
 - p
   - ┃a
     ```
@@ -1402,7 +1402,7 @@ tags: rare
 
 > outdent
 
-````buffer
+````markdown
 - p
 - ┃a
   ```
@@ -1414,7 +1414,7 @@ tags: rare
 
 > indent
 
-````buffer
+````markdown
 - p
   - ┃a
     ```
@@ -1433,7 +1433,7 @@ indentation, past the item's, stays the code's ([Fence26](#fence26)).
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
 - ┃```
     x
@@ -1442,7 +1442,7 @@ tags: rare markup-fence
 
 > deleteContentBackward
 
-````buffer
+````markdown
 - a┃
   ```
     x
@@ -1458,7 +1458,7 @@ written ([Fence12](#fence12)), the caret at the code's first character.
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ┃```
     x
@@ -1467,7 +1467,7 @@ tags: rare markup-fence
 
 > enter
 
-````buffer
+````markdown
 - a
 - ```
     ┃x
@@ -1484,7 +1484,7 @@ block of the empty item, the code would be its text.
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - 
 - ┃```
   code
@@ -1493,7 +1493,7 @@ tags: rare markup-fence
 
 > deleteContentBackward
 
-````buffer
+````markdown
 - ```
   ┃code
   ```
@@ -1508,7 +1508,7 @@ refused, as after any code ([Fence17](#fence17)), where an empty code line would
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```
   ⍽
@@ -1521,7 +1521,7 @@ tags: rare markup-fence
 result: rejected not-expressible
 ```
 
-````buffer
+````markdown
 - a
   ```
   ⍽
@@ -1535,10 +1535,10 @@ placeholder; left empty, it goes when the caret leaves, as any empty paragraph
 ([placeholders.md](placeholders.md)), rather than leaving a blank line behind.
 
 ```yaml
-tags: rare markup-fence
+tags: common markup-fence
 ```
 
-````buffer
+````markdown
 ```
 code
 ```┃
@@ -1546,7 +1546,7 @@ code
 
 > enter
 
-````buffer
+````markdown
 ```
 code
 ```
@@ -1555,7 +1555,7 @@ code
 
 > cursorDocStart
 
-````buffer
+````markdown
 ┃```
 code
 ```
@@ -1570,7 +1570,7 @@ Text right below would continue the new paragraph: a blank line keeps it apart, 
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 ```
 code
 ```┃
@@ -1579,7 +1579,7 @@ q
 
 > enter "x"
 
-````buffer
+````markdown
 ```
 code
 ```
@@ -1597,7 +1597,7 @@ takes the paragraph back, and the list is the document's again.
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 ```
 code
 ```┃
@@ -1606,7 +1606,7 @@ code
 
 > enter
 
-````buffer
+````markdown
 ```
 code
 ```
@@ -1616,7 +1616,7 @@ code
 
 > deleteContentBackward
 
-````buffer
+````markdown
 ```
 code
 ```┃
@@ -1632,11 +1632,11 @@ takes back. Bare Obsidian keeps the column too, but its Backspace then deletes t
 indentation, ending the item and the block; its Outliner makes a new item there instead.
 
 ```yaml
-tags: edge enter-in-fence
+tags: rare enter-in-fence
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - Euler:
   $$
   e^{i\pi}+1=0┃
@@ -1645,7 +1645,7 @@ flavor: obsidian
 
 > enter
 
-```buffer
+```markdown
 - Euler:
   $$
   e^{i\pi}+1=0
@@ -1655,7 +1655,7 @@ flavor: obsidian
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - Euler:
   $$
   e^{i\pi}+1=0┃
@@ -1664,7 +1664,7 @@ flavor: obsidian
 
 > enter "x"
 
-```buffer
+```markdown
 - Euler:
   $$
   e^{i\pi}+1=0
@@ -1682,7 +1682,7 @@ tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - task:
   > %%
   > hidden┃
@@ -1691,7 +1691,7 @@ flavor: obsidian
 
 > shiftEnter "more"
 
-```buffer
+```markdown
 - task:
   > %%
   > hidden
@@ -1701,7 +1701,7 @@ flavor: obsidian
 
 > cursorLineBoundaryBackward deleteContentBackward
 
-```buffer
+```markdown
 - task:
   > %%
   > hidden┃more
@@ -1716,7 +1716,7 @@ Enter in indented code in an item: the code's own indentation carries over, as i
 tags: rare
 ```
 
-```buffer
+```markdown
 - a
 
       x = 1┃
@@ -1725,7 +1725,7 @@ tags: rare
 
 > enter "z"
 
-```buffer
+```markdown
 - a
 
       x = 1
@@ -1743,7 +1743,7 @@ tags: rare markup-fence
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 $┃$
 x
 $$
@@ -1755,7 +1755,7 @@ $$
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 $┃$
 x
 $$
@@ -1771,7 +1771,7 @@ tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 > %%
 > a┃
 > b
@@ -1780,7 +1780,7 @@ flavor: obsidian
 
 > deleteContentForward
 
-```buffer
+```markdown
 > %%
 > a┃b
 > %%
@@ -1796,7 +1796,7 @@ tags: rare markup-fence
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - a
   $$
   ┃x
@@ -1809,7 +1809,7 @@ flavor: obsidian
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 - a
   $$
   ┃x
@@ -1822,7 +1822,7 @@ result: rejected not-expressible
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 - a
   $$
   x┃
@@ -1840,7 +1840,7 @@ longer code.
 tags: rare
 ```
 
-```buffer
+```markdown
 para
 
     a
@@ -1849,7 +1849,7 @@ para
 
 > deleteContentBackward
 
-```buffer
+```markdown
 para
 
     a┃code
@@ -1864,7 +1864,7 @@ break, as Backspace does from the other side ([Fence52](#fence52)).
 tags: rare
 ```
 
-```buffer
+```markdown
 para
 
     a┃
@@ -1873,7 +1873,7 @@ para
 
 > deleteContentForward
 
-```buffer
+```markdown
 para
 
     a┃code
@@ -1888,7 +1888,7 @@ join the text, and without the blank line between them it would be more lines of
 tags: rare
 ```
 
-```buffer
+```markdown
 para
 
     ┃a
@@ -1900,7 +1900,7 @@ para
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 para
 
     ┃a
@@ -1918,7 +1918,7 @@ tags: rare markup-fence
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - Euler:
   ┃$$
   x
@@ -1927,7 +1927,7 @@ flavor: obsidian
 
 > enter
 
-```buffer
+```markdown
 - Euler:
 - $$
   ┃x
@@ -1936,7 +1936,7 @@ flavor: obsidian
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - Euler:
   $$
   ┃x
@@ -1953,7 +1953,7 @@ tags: rare markup-fence
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - Euler:
 - ┃$$
   x
@@ -1962,7 +1962,7 @@ flavor: obsidian
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - Euler:┃
   $$
   x
@@ -1980,7 +1980,7 @@ tags: rare markup-fence
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 > a
 > ┃%%
 > x
@@ -1989,7 +1989,7 @@ flavor: obsidian
 
 > enter
 
-```buffer
+```markdown
 > a
 >
 > ┃%%
@@ -1999,7 +1999,7 @@ flavor: obsidian
 
 > deleteContentBackward
 
-```buffer
+```markdown
 > a
 > ┃%%
 > x
@@ -2017,7 +2017,7 @@ tags: rare markup-fence
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 ┃- $$
 - a
 ```
@@ -2028,7 +2028,7 @@ flavor: obsidian
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 ┃- $$
 - a
 ```
@@ -2040,10 +2040,10 @@ past it, as anywhere else a fence would be assembled from code. Elsewhere in cod
 host's.
 
 ````yaml
-tags: edge
+tags: rare
 ````
 
-````buffer
+````markdown
 ```
 x┃```
 body
@@ -2052,7 +2052,7 @@ body
 
 > deleteContentBackward
 
-`````buffer
+`````markdown
 ````
 ┃```
 body
@@ -2069,7 +2069,7 @@ line (on the marker's line it would be the item's padding). The code reads as it
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - item text
     ┃```
     code
@@ -2078,7 +2078,7 @@ tags: rare markup-fence
 
 > enter
 
-````buffer
+````markdown
 - item text
 - ```
   ┃code
@@ -2094,7 +2094,7 @@ the new line too.
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - item text
 →```
 →co┃de
@@ -2103,7 +2103,7 @@ tags: rare markup-fence
 
 > shiftEnter
 
-````buffer
+````markdown
 - item text
 →```
 →co

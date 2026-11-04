@@ -1,16 +1,69 @@
 // What commands ask of a position (whether it is in markup, the text a key there acts in), of a text
-// (where typing extends it) and of the selection (the nodes it acts on); and what Tab and Shift-Tab
-// share: a heading's level, one up or down.
+// (where typing extends it) and of the selection (the nodes it acts on); what a plain text editor's
+// default for a key does, which the guards check where a key is the host's; and what Tab and
+// Shift-Tab share: a heading's level, one up or down.
 
 import { OurusProse, OurusAtom, closingFrameStart, textEnd, textStart, type OurusNode, type OurusText, type Located, type OurusDoc } from '../doc/index.ts';
 import type { OurusView } from '../view/index.ts';
 import type { AnchorSpec, OurusDraft } from '../writer/index.ts';
 import { type CommandContext } from './context.ts';
-import type { OurusSelection, OurusResult } from './types.ts';
-import { lineOf } from '../text/index.ts';
+import type { OurusCommand, OurusSelection, OurusResult } from './types.ts';
+import { charAfter, charBefore, dominantEnding, lineOf, lineSpan, type ChangeSpec } from '../text/index.ts';
 import { OurusRejected } from './types.ts';
 
 export { textEnd, textStart } from '../doc/index.ts';
+
+/**
+ * What a text editor's default for `command` at `selection` does to `text`: the change and the caret
+ * after; null where it changes nothing, or for a key that isn't one of these. A character typed or
+ * deleted is a grapheme, a line ending one too (`charBefore`); a line break is the note's own
+ * (`dominantEnding`). `everyHost`: whether every host's default is this edit, as typing's and the
+ * deletion keys' are; Enter's and a paste's differ by host (a marker continued, HTML converted), and
+ * this is the least of them, a line break, the clipboard's plain text.
+ */
+export function plainTextEdit(text: string, command: OurusCommand, selection: OurusSelection): { change: ChangeSpec & { insert: string }; caret: number; everyHost: boolean } | null {
+  const from = Math.min(selection.anchor, selection.head);
+  const to = Math.max(selection.anchor, selection.head);
+  const edit = (from: number, to: number, insert: string, everyHost = true) => ({ change: { from, to, insert }, caret: from + insert.length, everyHost });
+  switch (command.type) {
+    case 'insertText':
+      return edit(from, to, command.text);
+    case 'pastePlain':
+      return edit(from, to, command.text, false);
+    case 'paste': {
+      const plain = command.clipboard['text/plain'];
+      return plain === undefined ? null : edit(from, to, plain, false);
+    }
+    case 'enter':
+    case 'shiftEnter':
+      return edit(from, to, dominantEnding(text), false);
+    // (a drag's deletion: the selection deleted, in every host; nothing at a caret)
+    case 'deleteByDrag':
+      return from < to ? edit(from, to, '') : null;
+    case 'deleteContentForward':
+      return from < to ? edit(from, to, '') : to < text.length ? edit(to, charAfter(text, to), '') : null;
+    case 'deleteContentBackward':
+      return from < to ? edit(from, to, '') : from > 0 ? edit(charBefore(text, from), from, '') : null;
+    case 'deleteSoftLineBackward': {
+      // (to the line's start, a lone CR ending a line too; at it, the line ending before)
+      const start = lineSpan(text, from)[0];
+      return from < to ? edit(from, to, '') : start < from ? edit(start, from, '') : from > 0 ? edit(charBefore(text, from), from, '') : null;
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * The node above `node` as the view shows it: its `preceding`, but where that is hidden in a fold the
+ * caret's node isn't in, the folded node, outermost, whose row is what the user sees above (Fold15).
+ */
+export function visiblePreceding(view: OurusView, node: OurusNode): OurusNode | null {
+  let above = node.preceding;
+  const outside = (fold: OurusNode): boolean => !node.parent?.isWithin(fold);
+  for (const up of above ? above.ancestors() : []) if (up.kind !== 'root' && view.zoomFolded.has(up.id) && outside(up)) above = up;
+  return above;
+}
 
 /**
  * Whether a caret at `pos` (located `at`) is in markup before a text: past its line's start, in an
@@ -198,10 +251,13 @@ export function selectionInText(ctx: CommandContext, draft: OurusDraft, keepOnFe
       return;
     }
   }
-  // each end in its text where it is in one (a text written again keeps its offsets), else where it was
+  // each end in its text where it is in one (a text written again keeps its offsets: an atom's too, a
+  // table's cell text made an item's), else where it was
   const end = (pos: number): AnchorSpec => {
     const at = ctx.view.locate(pos);
-    return at.zone === 'text' && at.text instanceof OurusProse ? { ref: at.node, offset: headingOffset(shifts, at.node, at.offset) } : { old: pos };
+    if (at.zone === 'text' && at.text instanceof OurusProse) return { ref: at.node, offset: headingOffset(shifts, at.node, at.offset) };
+    // (its fences too, which are its text's)
+    return (at.zone === 'text' || at.zone === 'frame') && at.text instanceof OurusAtom ? { ref: at.node, offset: at.offset } : { old: pos };
   };
   draft.select(end(anchor), end(head));
 }
@@ -371,4 +427,35 @@ export function leaveList(ctx: CommandContext, node: OurusNode): OurusResult | n
   if (above && above.kind !== 'root' && above.gap === 0 && ctx.doc.textOf(above)) draft.gap(above, 1);
   if (node.afterSubtree && node.gap === 0) draft.gap(node, 1);
   return ctx.apply(draft.setCaret(node, 0, -1));
+}
+
+/**
+ * `backspaceAtItemStart: logseq`, a quirk (Logseq's and Tine's mechanics, numbering a block's
+ * property there; Quirk3): a numbered item's number goes first, the item a bulleted one where it is
+ * (made anew, a list form being a new item's), its children with it, its list split there. Null for
+ * a bulleted item, which joins. An item whose text is a block (a quote, code) too, the caret where it
+ * was (`caret`), as its text's start where it is prose.
+ */
+export function unnumberItem(ctx: CommandContext, node: OurusNode, text: OurusText, caret = textStart(text)): OurusResult | null {
+  if (ctx.doc.listOf(node)?.block.attrs.list?.type !== 'ordered') return null;
+  const draft = ctx.draft();
+  const id = draft.create('item', text);
+  // (a bullet, a list of its own however the list around it is numbered: one no item beside it has,
+  // or it would run into that one's list)
+  const beside = [-1, 1].map((d) => node.parent?.children[node.index + d]).filter((n) => n?.kind === 'item').map((n) => ctx.doc.markerOf(n!));
+  draft.listForm(id, ['-', '*', '+'].find((b) => !beside.includes(b)) ?? '-', true);
+  const children = [...node.children];
+  if (children.length) draft.remove(children).append(id, 'last', children);
+  draft.place('before', node, [id]).remove([node]);
+  return ctx.apply(draft.setCaret(id, caret, -1));
+}
+
+/**
+ * `joinWithChildren: refuse`'s check for a join of `node` into `above`, its children going after
+ * `above`'s (`adopt`: an item that isn't `node`'s parent) or into `node`'s place: refused where they'd
+ * be lifted, or go among children `above` has, or down a level (as the prose join checks: Backspace45c).
+ */
+export function childrenRefused(ctx: CommandContext, above: OurusNode, node: OurusNode, adopt: boolean): OurusRejected | null {
+  if (!node.children.length || ctx.config.joinWithChildren !== 'refuse') return null;
+  return !adopt || above.children.length || above.depth !== node.depth ? new OurusRejected('has-children') : null;
 }

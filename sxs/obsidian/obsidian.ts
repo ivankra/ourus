@@ -33,7 +33,7 @@ import { Unsupported } from '../lib/block.ts';
 import { ensureAptInstalled, type Need } from '../lib/system.ts';
 import { stateDir } from '../proxy.ts';
 import { asSpaces, asTabs, retabs, tabbed } from '../lib/tabs.ts';
-import type { TextDoc } from '../lib/text.ts';
+import { foldOnAtomItem, type TextDoc } from '../lib/text.ts';
 
 /** Electron's libraries (they bring the rest), by their names from Debian 13 on (`t64`: 64-bit time) and before. */
 const ELECTRON_LIBRARIES: Need[] = [
@@ -392,7 +392,7 @@ export function obsidianDriver(profile: Profile): Driver {
       const d = doc as TextDoc;
       // CodeMirror keeps line breaks as LF
       if (d.text.includes('\r')) return 'CR line endings';
-      return splitsIndent(d) ?? (profile.mode === 'live-preview' ? (inFrontmatter(d) ?? inTable(d) ?? atInlineCode(d)) : undefined) ?? profile.holds?.(d);
+      return splitsIndent(d) ?? foldOnAtomItem(d) ?? (profile.mode === 'live-preview' ? (inFrontmatter(d) ?? inTable(d) ?? atInlineCode(d)) : undefined) ?? profile.holds?.(d);
     },
 
     async launch({ headed, fresh, say, gone }) {

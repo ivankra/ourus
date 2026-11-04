@@ -83,14 +83,14 @@ Bare Obsidian deletes the space after the marker instead: `-two` is a lazy line 
 tags: core
 ```
 
-```buffer
+```markdown
 - one①
 - ┃two②
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one┃two①
 ```
 
@@ -103,17 +103,17 @@ before a marker would turn the marker into text of the item above, as bare Obsid
 (`- one┃- two`).
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - one
 ┃- two
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one┃two
 ```
 
@@ -127,14 +127,14 @@ The node above can be the parent.
 tags: core
 ```
 
-```buffer
+```markdown
 - a
   - ┃b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃b
 ```
 
@@ -148,14 +148,14 @@ A heading's closing `#`s stay at the end of its line.
 tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 # Title #
 - ┃more
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 # Title┃more #
 ```
 
@@ -169,14 +169,14 @@ Into an empty item above, the text moves up, and the empty item takes it.
 tags: common
 ```
 
-```buffer
+```markdown
 - 
 - ┃b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - ┃b
 ```
 
@@ -190,7 +190,7 @@ The caret goes to the end of the text above. Bare Obsidian leaves `-`, an empty 
 tags: core
 ```
 
-```buffer
+```markdown
 - a
   - b
 - ┃
@@ -198,7 +198,7 @@ tags: core
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
   - b┃
 ```
@@ -214,7 +214,7 @@ that node is its parent ([Backspace17c](#backspace17c)), else after that node's 
 tags: common
 ```
 
-```buffer
+```markdown
 - a
 - ┃b
   - c
@@ -222,7 +222,7 @@ tags: common
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃b
   - c
 ```
@@ -238,14 +238,14 @@ Shift-Enter.
 tags: common
 ```
 
-```buffer
+```markdown
 - one
   ┃two
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one┃two
 ```
 
@@ -260,7 +260,7 @@ node above.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
 
 ┃◌
@@ -268,7 +268,7 @@ tags: common
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃
 ```
 
@@ -284,7 +284,7 @@ The paragraph Enter made by leaving the list goes back into the item, as the emp
 tags: common
 ```
 
-```buffer
+```markdown
 - a
 
 ┃b
@@ -292,7 +292,7 @@ tags: common
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃b
 ```
 
@@ -309,7 +309,7 @@ between nodes is a boundary, not the host's.
 tags: common
 ```
 
-```buffer
+```markdown
 a
 
 ┃b
@@ -321,7 +321,7 @@ a
 result: success
 ```
 
-```buffer
+```markdown
 a┃b
 ```
 
@@ -333,13 +333,13 @@ Enter in a paragraph, then Backspace: the text is as it was, Enter's inverse in 
 tags: common
 ```
 
-```buffer
+```markdown
 a┃b
 ```
 
 > enter
 
-```buffer
+```markdown
 a
 
 ┃b
@@ -347,7 +347,7 @@ a
 
 > deleteContentBackward
 
-```buffer
+```markdown
 a┃b
 ```
 
@@ -357,10 +357,10 @@ With several blank lines between two paragraphs, all of them go: deleting only o
 paragraphs apart, the key seeming to do nothing.
 
 ```yaml
-tags: rare
+tags: common
 ```
 
-```buffer
+```markdown
 a
 
 
@@ -369,7 +369,7 @@ a
 
 > deleteContentBackward
 
-```buffer
+```markdown
 a┃b
 ```
 
@@ -381,7 +381,7 @@ The list the joined paragraph owned comes along: it is the list of the paragraph
 tags: rare
 ```
 
-```buffer
+```markdown
 a
 
 ┃b
@@ -390,7 +390,7 @@ a
 
 > deleteContentBackward
 
-```buffer
+```markdown
 a┃b
 - x
 ```
@@ -407,7 +407,7 @@ tags: rare free-form
 enterAtTextStart: stay
 ```
 
-```buffer
+```markdown
 a
 
 ┃b
@@ -415,7 +415,7 @@ a
 
 > enter
 
-```buffer
+```markdown
 a
 
 
@@ -424,7 +424,7 @@ a
 
 > deleteContentBackward
 
-```buffer
+```markdown
 a
 
 ┃b
@@ -432,7 +432,7 @@ a
 
 > deleteContentBackward
 
-```buffer
+```markdown
 a┃b
 ```
 
@@ -446,13 +446,13 @@ In the middle of a node's text, Backspace is the host's.
 tags: core
 ```
 
-```buffer
+```markdown
 - ab┃c
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃c
 ```
 
@@ -462,10 +462,10 @@ Backspace that deletes a paragraph's only character leaves an empty line, held a
 Delete does ([Delete9](delete.md#delete9)). When the caret leaves, the empty line goes.
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 ```
 
-```buffer
+```markdown
 # H1
 
 a┃
@@ -475,7 +475,7 @@ a┃
 
 > deleteContentBackward
 
-```buffer
+```markdown
 # H1
 
 ┃◌
@@ -485,7 +485,7 @@ a┃
 
 > cursorDocStart
 
-```buffer
+```markdown
 ┃# H1
 
 ## H2
@@ -502,7 +502,7 @@ marker's space, leaving `-a` as text.
 tags: common
 ```
 
-```buffer
+```markdown
 para
 
 - ┃a
@@ -510,7 +510,7 @@ para
 
 > deleteContentBackward
 
-```buffer
+```markdown
 para┃a
 ```
 
@@ -524,7 +524,7 @@ The item's text can't become code: refused.
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 ```
 x
 ```
@@ -537,7 +537,7 @@ x
 result: rejected not-expressible
 ```
 
-````buffer
+````markdown
 ```
 x
 ```
@@ -556,7 +556,7 @@ bare Obsidian and its Outliner delete the marker's space.
 tags: common
 ```
 
-```buffer
+```markdown
 - ┃
 - b
 - c
@@ -564,7 +564,7 @@ tags: common
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - ┃b
 - c
 ```
@@ -579,10 +579,10 @@ By default ourus lets the empty item go as anywhere else (a user decision), rath
 key dead.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - ┃
   - a
     - b
@@ -590,7 +590,7 @@ tags: edge
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - ┃a
   - b
 ```
@@ -605,10 +605,10 @@ the same item instead pulls its first child up into it, the others staying its c
 ([Delete5b](delete.md#delete5b)): each key joins as it does anywhere, from its own side.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
   - x┃
     - b
@@ -620,7 +620,7 @@ tags: edge
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
   - ┃◌
     - b
@@ -632,7 +632,7 @@ tags: edge
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃
   - b
     - c
@@ -647,10 +647,10 @@ Backspace on an empty item with children after a sibling: the item goes, its chi
 that sibling, and the caret goes to the end of its text.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - x
 - ┃
   - a
@@ -659,7 +659,7 @@ tags: edge
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - x┃
   - a
     - b
@@ -672,16 +672,16 @@ Backspace on the only item, empty: its marker goes, leaving an empty line to typ
 Nothing is above to join into or below to move to, so it is the marker itself that goes.
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 ```
 
-```buffer
+```markdown
 - ┃
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 ┃
 ```
 
@@ -695,7 +695,7 @@ tags: rare
 emptyItemWithChildren: refuse
 ```
 
-```buffer
+```markdown
 - ┃
   - a
     - b
@@ -707,7 +707,7 @@ emptyItemWithChildren: refuse
 result: rejected has-children
 ```
 
-```buffer
+```markdown
 - ┃
   - a
     - b
@@ -723,7 +723,7 @@ tags: rare
 emptyItemWithChildren: refuse
 ```
 
-```buffer
+```markdown
 - a
   - ┃◌
     - b
@@ -735,7 +735,7 @@ emptyItemWithChildren: refuse
 result: rejected has-children
 ```
 
-```buffer
+```markdown
 - a
   - ┃◌
     - b
@@ -751,7 +751,7 @@ tags: rare
 emptyItemWithChildren: refuse
 ```
 
-```buffer
+```markdown
 - x
 - ┃
   - a
@@ -759,7 +759,7 @@ emptyItemWithChildren: refuse
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - x┃
   - a
 ```
@@ -776,7 +776,7 @@ the title joins the node above instead ([Backspace18b](#backspace18b)).
 tags: common free-form markup-heading
 ```
 
-```buffer
+```markdown
 para
 
 # ┃Hello
@@ -786,7 +786,7 @@ body
 
 > deleteContentBackward
 
-```buffer
+```markdown
 para
 
 ┃Hello
@@ -806,7 +806,7 @@ tags: rare free-form markup-heading
 headingEditing: block
 ```
 
-```buffer
+```markdown
 para
 
 # ┃Hello
@@ -816,7 +816,7 @@ body
 
 > deleteContentBackward
 
-```buffer
+```markdown
 para┃Hello
 
 body
@@ -830,7 +830,7 @@ On a setext heading, the underline goes.
 tags: rare free-form markup-heading
 ```
 
-```buffer
+```markdown
 ┃Title
 ===
 
@@ -839,7 +839,7 @@ text
 
 > deleteContentBackward
 
-```buffer
+```markdown
 ┃Title
 
 text
@@ -854,7 +854,7 @@ paragraph of its own.
 tags: rare free-form markup-heading
 ```
 
-```buffer
+```markdown
 a
 # ┃H1
 text
@@ -862,7 +862,7 @@ text
 
 > deleteContentBackward
 
-```buffer
+```markdown
 a
 
 ┃H1
@@ -879,14 +879,14 @@ nearest the caret goes first.
 tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 - a
 - # ┃H
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 - ┃H
 ```
@@ -901,7 +901,7 @@ tags: rare markup-heading
 headingEditing: block
 ```
 
-```buffer
+```markdown
 para
 
 ┃Title
@@ -910,7 +910,7 @@ para
 
 > deleteContentBackward
 
-```buffer
+```markdown
 para┃Title
 ```
 
@@ -923,7 +923,7 @@ the title, now paragraph text, it would continue it.
 tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 - a
 - # ┃H
   text
@@ -931,7 +931,7 @@ tags: rare markup-heading
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 - ┃H
 
@@ -950,10 +950,10 @@ Logseq, Tine, Roam, Athens, Dynalist, RemNote, BlockNote, Obsidian's Outliner an
 back the line break Shift-Enter made; SiYuan joins glued.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 
   ┃bc
@@ -961,14 +961,14 @@ tags: edge
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
   ┃bc
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃bc
 ```
 
@@ -978,10 +978,10 @@ After a body paragraph, Enter in the paragraph makes the paragraph break, so Bac
 Enter's, glued, as at the top level ([Backspace12](#backspace12)).
 
 ```yaml
-tags: edge free-form
+tags: rare free-form
 ```
 
-```buffer
+```markdown
 - a
 
   b┃c
@@ -989,7 +989,7 @@ tags: edge free-form
 
 > enter
 
-```buffer
+```markdown
 - a
 
   b
@@ -999,7 +999,7 @@ tags: edge free-form
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 
   b┃c
@@ -1014,10 +1014,10 @@ paragraph owned stay.
 The empty paragraph owns the list after it; removing it keeps that list, which joins the list above.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 
 ┃◌
@@ -1027,7 +1027,7 @@ tags: edge
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃
 
 - b
@@ -1043,7 +1043,7 @@ editor does.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
 
 - ┃b
@@ -1051,7 +1051,7 @@ tags: common
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃b
 ```
 
@@ -1064,7 +1064,7 @@ Bare Obsidian deletes the blank line instead.
 tags: common
 ```
 
-```buffer
+```markdown
 # Title
 
 ┃more
@@ -1072,7 +1072,7 @@ tags: common
 
 > deleteContentBackward
 
-```buffer
+```markdown
 # Title┃more
 ```
 
@@ -1084,7 +1084,7 @@ A paragraph of more than one line doesn't join a heading's title: a title is one
 tags: rare free-form
 ```
 
-```buffer
+```markdown
 # Title
 
 ┃more
@@ -1097,7 +1097,7 @@ lines
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 # Title
 
 ┃more
@@ -1110,10 +1110,10 @@ A paragraph after a code block doesn't join it: text can't become code. The host
 put the text on the fence's line, unmaking the block.
 
 ```yaml
-tags: edge markup-fence
+tags: common markup-fence
 ```
 
-````buffer
+````markdown
 ```
 x
 ```
@@ -1127,7 +1127,7 @@ x
 result: rejected not-expressible
 ```
 
-````buffer
+````markdown
 ```
 x
 ```
@@ -1140,10 +1140,10 @@ x
 An empty item above takes a paragraph's text, as it takes an item's ([Backspace5](#backspace5)).
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 - 
 
@@ -1152,7 +1152,7 @@ tags: edge
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 - ┃para
 ```
@@ -1165,7 +1165,7 @@ At the start of the document's first paragraph, there is nothing to join into.
 tags: common
 ```
 
-```buffer
+```markdown
 ┃para
 ```
 
@@ -1175,7 +1175,7 @@ tags: common
 result: rejected nothing-above
 ```
 
-```buffer
+```markdown
 ┃para
 ```
 
@@ -1185,10 +1185,10 @@ A paragraph after a quote joins the quote's last paragraph, as between paragraph
 ([Backspace12](#backspace12)), its text after the quoted text. The host's Backspace leaves `b` a lazy line.
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 ```
 
-```buffer
+```markdown
 > q
 
 ┃b
@@ -1196,7 +1196,7 @@ tags: edge free-form
 
 > deleteContentBackward
 
-```buffer
+```markdown
 > q┃b
 ```
 
@@ -1206,10 +1206,10 @@ An empty item after a fenced code block goes, the caret going to the end of the 
 after the closing fence, anything typed would stop it closing the block.
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 ```
 x
 ```
@@ -1218,7 +1218,7 @@ x
 
 > deleteContentBackward
 
-````buffer
+````markdown
 ```
 x┃
 ```
@@ -1232,7 +1232,7 @@ An empty ordered item goes, and the items after it are renumbered.
 tags: common
 ```
 
-```buffer
+```markdown
 1. a
 2. ┃
 3. c
@@ -1240,7 +1240,7 @@ tags: common
 
 > deleteContentBackward
 
-```buffer
+```markdown
 1. a┃
 2. c
 ```
@@ -1254,14 +1254,14 @@ its parent's text.
 tags: core
 ```
 
-```buffer
+```markdown
 - a
   - ┃◌
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃
 ```
 
@@ -1274,7 +1274,7 @@ The host's result here is the same text, but the edit crosses a marker, so it is
 tags: common
 ```
 
-```buffer
+```markdown
 - a«bc
 - de»f
 - g
@@ -1282,7 +1282,7 @@ tags: common
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃f
 - g
 ```
@@ -1299,14 +1299,14 @@ A selection within one item's text is the host's: Backspace31's control.
 tags: common
 ```
 
-```buffer
+```markdown
 - a«bcde»f
 - g
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃f
 - g
 ```
@@ -1326,14 +1326,14 @@ Obsidian gets there in two presses, through `-a`.
 tags: common free-form
 ```
 
-```buffer
+```markdown
 - ┃a
 - b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 ┃a
 - b
 ```
@@ -1344,11 +1344,11 @@ With `backspaceAtTopItem: refuse`, the document's first item stays as it is, as 
 WorkFlowy, which do nothing at the first block.
 
 ```yaml
-tags: edge
+tags: rare
 backspaceAtTopItem: refuse
 ```
 
-```buffer
+```markdown
 - ┃a
 - b
 ```
@@ -1359,7 +1359,7 @@ backspaceAtTopItem: refuse
 result: rejected nothing-above
 ```
 
-```buffer
+```markdown
 - ┃a
 - b
 ```
@@ -1372,10 +1372,10 @@ Releasing the section is what removing a heading means, so it is a command's own
 parent, as guarantee 4 allows. The text editors end up the same way.
 
 ```yaml
-tags: edge free-form markup-heading
+tags: common free-form markup-heading
 ```
 
-```buffer
+```markdown
 # A
 
 intro
@@ -1391,7 +1391,7 @@ para
 
 > deleteContentBackward
 
-```buffer
+```markdown
 # A
 
 intro
@@ -1412,10 +1412,10 @@ ATX heading does ([Backspace22](#backspace22)). true-outliner joins it; bare Obs
 deletes the line break, putting the text on the underline.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 Title
 =====
 ┃text
@@ -1423,7 +1423,7 @@ Title
 
 > deleteContentBackward
 
-```buffer
+```markdown
 Title┃text
 =====
 ```
@@ -1437,7 +1437,7 @@ and an ATX one doesn't ([Backspace23](#backspace23)).
 tags: rare
 ```
 
-```buffer
+```markdown
 Title
 =====
 ┃more
@@ -1446,7 +1446,7 @@ lines
 
 > deleteContentBackward
 
-```buffer
+```markdown
 Title┃more
 lines
 =====
@@ -1461,7 +1461,7 @@ start is escaped.
 tags: rare
 ```
 
-```buffer
+```markdown
 [a]:
 
 ┃b
@@ -1469,7 +1469,7 @@ tags: rare
 
 > deleteContentBackward
 
-```buffer
+```markdown
 [a]\̬:┃b
 ```
 
@@ -1482,7 +1482,7 @@ continue it, so a blank line keeps it apart.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a
 - ┃
 p
@@ -1490,7 +1490,7 @@ p
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃
 
 p
@@ -1502,10 +1502,10 @@ The first item of a paragraph's list joins the paragraph; an ordered list from 2
 interrupt the joined text, which it would continue, so a blank line sets it apart.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 p
 
 - ┃t
@@ -1514,7 +1514,7 @@ p
 
 > deleteContentBackward
 
-```buffer
+```markdown
 p┃t
 
 2. m
@@ -1528,17 +1528,17 @@ paragraph it would continue. Only where a blank line would loosen an item's list
 instead ([Regression1](regressions.md#regression1)).
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - ┃x
 3. c
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 ┃x
 
 3. c
@@ -1551,17 +1551,17 @@ no text to join, so the inner marker goes, and the text, on the outer marker's l
 item's; the items after it are its children.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - - ┃a
   - b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - ┃a
   - b
 ```
@@ -1580,19 +1580,19 @@ is Backspace, whose checkbox rule takes the checkbox.
 tags: common markup-task
 ```
 
-```buffer
+```markdown
 - [ ] abc ┃def
 ```
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 - [ ] ┃def
 ```
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 - ┃def
 ```
 
@@ -1605,13 +1605,13 @@ from the text as read: it is escaped.
 tags: rare
 ```
 
-```buffer
+```markdown
 abc ┃[a]: tail
 ```
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 ┃[a]\̬: tail
 ```
 
@@ -1624,14 +1624,14 @@ title keeps its underline.
 tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 abc ┃- x tail
 ===
 ```
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 ┃\̬- x tail
 ===
 ```
@@ -1644,13 +1644,13 @@ In an ATX heading, the closing `#`s stay, and nothing needs escaping: the title 
 tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 # abc ┃title #
 ```
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 # ┃title #
 ```
 
@@ -1662,7 +1662,7 @@ On a later line of a setext title, the lines above stay; what is left is escaped
 tags: rare
 ```
 
-```buffer
+```markdown
 first
 abc ┃- x
 ===
@@ -1670,7 +1670,7 @@ abc ┃- x
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 first
 ┃\̬- x
 ===
@@ -1684,7 +1684,7 @@ In a setext underline, Cmd-Backspace is refused: the underline is markup, not te
 tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 title
 =┃==
 ```
@@ -1695,7 +1695,7 @@ title
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 title
 =┃==
 ```
@@ -1711,14 +1711,14 @@ tags: rare free-form
 quotes: container
 ```
 
-```buffer
+```markdown
 - > q┃
   > m
 ```
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 - > ┃m
 ```
 
@@ -1733,21 +1733,21 @@ tags: rare free-form markup-task
 flavor: gfm
 ```
 
-```buffer
+```markdown
 - [ ] t┃
   m
 ```
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 - [ ] ┃
   m
 ```
 
 > cursorLineDown
 
-```buffer
+```markdown
 - [ ] 
   m┃
 ```
@@ -1761,7 +1761,7 @@ block (the host's would leave a fence opening at the block's end). The same on a
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 ```┃
 code
 ```
@@ -1773,7 +1773,7 @@ code
 result: rejected not-expressible
 ```
 
-````buffer
+````markdown
 ```┃
 code
 ```
@@ -1792,13 +1792,13 @@ tags: rare markup-task
 taskEditing: text
 ```
 
-```buffer
+```markdown
 - [ ] ┃def
 ```
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 - ┃def
 ```
 
@@ -1812,19 +1812,19 @@ Backspace there: in the first item, the item a paragraph, the space its indentat
 tags: rare free-form
 ```
 
-```buffer
+```markdown
 - a┃ # b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - ┃◌ # b
 ```
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 ┃ \̬# b
 ```
 
@@ -1837,19 +1837,19 @@ tags: rare free-form
 heldSpace: trim
 ```
 
-```buffer
+```markdown
 - a┃ # b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - ┃◌ # b
 ```
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 ┃\̬# b
 ```
 
@@ -1864,7 +1864,7 @@ means it. At the line's start it is ourus's, a join ([Backspace2](#backspace2)).
 tags: rare free-form
 ```
 
-```buffer
+```markdown
 - a
 -┃ b
 ```
@@ -1875,7 +1875,7 @@ tags: rare free-form
 result: deferredToHost
 ```
 
-```buffer
+```markdown
 - a
 ┃ b
 ```
@@ -1890,14 +1890,14 @@ tags: rare
 markup: decorated
 ```
 
-```buffer
+```markdown
 - a
 -┃ b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃b
 ```
 
@@ -1908,16 +1908,16 @@ blank line with it, the caret at the text below, as Backspace on an empty first 
 ([Backspace17](#backspace17)); Delete there does the same.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 ┃para
 ```
 
 > enter
 
-```buffer
+```markdown
 ┃◌
 
 para
@@ -1925,7 +1925,7 @@ para
 
 > deleteContentBackward
 
-```buffer
+```markdown
 ┃para
 ```
 
@@ -1934,16 +1934,16 @@ para
 The same above the document's first heading.
 
 ```yaml
-tags: rare
+tags: common markup-heading
 ```
 
-```buffer
+```markdown
 # ┃Title
 ```
 
 > enter deleteContentBackward
 
-```buffer
+```markdown
 # ┃Title
 ```
 
@@ -1959,20 +1959,20 @@ tags: rare free-form
 enterAtTextStart: stay
 ```
 
-```buffer
+```markdown
 ┃para
 ```
 
 > enter
 
-```buffer
+```markdown
 
 ┃para
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 ┃para
 ```
 
@@ -1983,10 +1983,10 @@ An empty item removed from a loose list takes its gap with it, as any node's gap
 than two.
 
 ```yaml
-tags: rare
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 
 - ┃
@@ -1996,7 +1996,7 @@ tags: rare
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃
 
 - b
@@ -2009,10 +2009,10 @@ the item above: the gap after it ends the list, and stays. So Backspace takes ba
 made at the list's end ([Enter36](enter.md#enter36)).
 
 ```yaml
-tags: rare
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 
 - b┃
@@ -2020,7 +2020,7 @@ tags: rare
 
 > enter
 
-```buffer
+```markdown
 - a
 
 - b
@@ -2030,7 +2030,7 @@ tags: rare
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 
 - b┃
@@ -2044,10 +2044,10 @@ the parent's, and its children come up a level into its place, before the parent
 Obsidian's Outliner do nothing ([Backspace45b](#backspace45b)).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
   - ┃b
     - c
@@ -2057,7 +2057,7 @@ tags: edge
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃b
   - c
   - d
@@ -2071,11 +2071,11 @@ Obsidian's Outliner: the join would move the children up a level. A first child 
 joins either way ([Backspace3](#backspace3)).
 
 ```yaml
-tags: edge
+tags: rare
 joinWithChildren: refuse
 ```
 
-```buffer
+```markdown
 - a
   - ┃b
     - c
@@ -2089,7 +2089,7 @@ joinWithChildren: refuse
 result: rejected has-children
 ```
 
-```buffer
+```markdown
 - a
   - ┃b
     - c
@@ -2105,11 +2105,11 @@ nothing happens, as in Logseq and Roam. Joining `a` alone, it joins ([Fold15b](f
 a folded one).
 
 ```yaml
-tags: edge
+tags: rare
 joinWithChildren: refuse
 ```
 
-```buffer
+```markdown
 - a
   - b
 - ┃c
@@ -2122,7 +2122,7 @@ joinWithChildren: refuse
 result: rejected has-children
 ```
 
-```buffer
+```markdown
 - a
   - b
 - ┃c
@@ -2135,16 +2135,16 @@ In the middle of the text Backspace is the host's, which deletes one character, 
 Basic Multilingual Plane (an emoji, two UTF-16 units) included.
 
 ```yaml
-tags: rare
+tags: common
 ```
 
-```buffer
+```markdown
 - a😀┃b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃b
 ```
 
@@ -2162,19 +2162,19 @@ heading in the item.
 tags: rare free-form
 ```
 
-```buffer
+```markdown
 - a┃ # b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - ┃◌ # b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 ┃ \̬# b
 ```
 
@@ -2192,19 +2192,19 @@ tags: rare free-form
 heldSpace: trim
 ```
 
-```buffer
+```markdown
 - a┃ # b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - ┃◌ # b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 ┃\̬# b
 ```
 
@@ -2220,19 +2220,19 @@ heading; the block apps whose heading is apart from the text agree with ourus.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a┃ # b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - ┃◌ # b
 ```
 
 > cursorCharRight deleteContentBackward
 
-```buffer
+```markdown
 - ┃\̬# b
 ```
 
@@ -2247,7 +2247,7 @@ tags: rare
 flavor: gfm
 ```
 
-```buffer
+```markdown
 para
 - ┃i
 | a |
@@ -2256,7 +2256,7 @@ para
 
 > deleteContentBackward
 
-```buffer
+```markdown
 para┃i
 | a |
 |\̬---|
@@ -2270,11 +2270,11 @@ items after it stay in the list. A second press joins the paragraph as a line of
 (rule 4).
 
 ```yaml
-tags: edge
+tags: rare
 backspaceAtItemStart: body
 ```
 
-```buffer
+```markdown
 - one
 - ┃two
   - kid
@@ -2283,7 +2283,7 @@ backspaceAtItemStart: body
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one
 
   ┃two
@@ -2293,7 +2293,7 @@ backspaceAtItemStart: body
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one
   ┃two
   - kid
@@ -2307,11 +2307,11 @@ items after it its list, as BlockNote does (and `backspaceAtTopItem: unwrap` wit
 second press joins it into the item above.
 
 ```yaml
-tags: edge
+tags: rare
 backspaceAtItemStart: unwrap
 ```
 
-```buffer
+```markdown
 - one
 - ┃two
 - next
@@ -2319,7 +2319,7 @@ backspaceAtItemStart: unwrap
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one
 
 ┃two
@@ -2328,7 +2328,7 @@ backspaceAtItemStart: unwrap
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one┃two
   - next
 ```

@@ -25,8 +25,8 @@ export function dragCommand(ctx: CommandContext, options: { readonly pressed?: n
   const folded = ctx.view.zoomFolded;
   if (options.clipboard) {
     const clipboard = options.clipboard;
-    const read = clipboardMarkdown(clipboard);
-    const pasted = read ? clipboardFragment(read.markdown, ctx.config)?.doc : undefined;
+    const read = clipboardMarkdown(clipboard, ctx.config);
+    const pasted = read ? clipboardFragment(read.markdown, ctx.config, read.ours)?.doc : undefined;
     const first = pasted?.rootNode.children[0];
     if (!pasted || !first) return new OurusRejected('not-expressible', 'nothing to paste');
     const converts = (parent: OurusNode, after: OurusNode | null): boolean => pastedBecomesAt(ctx.doc, first.kind, parent, after) !== null;

@@ -3,14 +3,14 @@
 // which nodes go; `done()` escapes what then starts a line, sets apart what would run together, and
 // holds a line it empties with a placeholder.
 
-import { OurusProse, OurusAtom, blockIdsOf, type OurusNode } from '../doc/index.ts';
+import { OurusProse, OurusAtom, blockIdsOf, type Located, type OurusNode } from '../doc/index.ts';
 import type { OurusDraft } from '../writer/index.ts';
 import { isSpaceOrTab, lineOf } from '../text/index.ts';
 import { type CommandContext } from './context.ts';
 import { joinIntoQuote, joinLineInQuote, joinQuoteUp, quoteAtomAt } from './quote.ts';
 import { codeAt, editInCode, joinInCode, onDelimiterLine } from './code.ts';
 import { deleteEmptyPair } from './typing.ts';
-import { deleteHeldSpace, hiddenSpacesAt, inMarkup, leaveList, pastPrefix, textActedOnAt, textEnd, textStart, unquote, withTextlessParents } from './util.ts';
+import { childrenRefused, deleteHeldSpace, hiddenSpacesAt, inMarkup, leaveList, pastPrefix, textActedOnAt, textEnd, textStart, unnumberItem, unquote, visiblePreceding, withTextlessParents } from './util.ts';
 import type { OurusResult } from './types.ts';
 import { OurusDeferred, OurusRejected } from './types.ts';
 
@@ -70,7 +70,7 @@ export function deleteSoftLineBackwardCommand(ctx: CommandContext): OurusResult 
     if (line === 0 && node.kind !== 'item') {
       const joined = text.splice(start, rest);
       // (a quote's first paragraph that would read as its callout's title: not done yet)
-      if (node.becomesTitle(joined)) return null;
+      if (node.becomesTitle(joined, ctx.doc.mdTree.flavor.has('callouts'))) return null;
       return ctx.apply(draft.setText(node, joined).setCaret(node, start, -1));
     }
     if (line > 0 && node.kind !== 'heading') {
@@ -87,7 +87,8 @@ export function deleteSoftLineBackwardCommand(ctx: CommandContext): OurusResult 
  * its marker, its list split there; `text`, its text without the checkbox, the caret at its start.
  */
 function unwrapTask(draft: OurusDraft, node: OurusNode, text: OurusProse): OurusDraft {
-  return draft.convert(node, 'paragraph').setText(node, text).setCaret(node, 0, -1);
+  // (a paragraph's text, whatever its lines read as alone: a `- ` line below it no underline, escaped, B81)
+  return draft.convert(node, 'paragraph').setText(node, text.type === 'heading' && text.heading?.form === 'setext' ? text.retyped('paragraph') : text).setCaret(node, 0, -1);
 }
 
 /**
@@ -135,11 +136,18 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
   }
   let at = ctx.from;
   // at the start of a quote read as an atom, before its `>`: it joins the text above as it is written
-  if (ctx.collapsed && at.zone === 'text' && at.text instanceof OurusAtom && at.text.type === 'blockquote' && at.offset === 0) return joinQuoteUp(ctx, at.node, at.text);
+  // (a numbered item's number first, with `backspaceAtItemStart: logseq`, as a paragraph item's)
+  if (ctx.collapsed && at.zone === 'text' && at.text instanceof OurusAtom && at.text.type === 'blockquote' && at.offset === 0) {
+    return (at.node.kind === 'item' && config.backspaceAtItemStart === 'logseq' ? unnumberItem(ctx, at.node, at.text, 0) : null) ?? joinQuoteUp(ctx, at.node, at.text);
+  }
   // (right after a later line's `> `: it joins the line above)
   const inQuote = quoteAtomAt(ctx);
   const lineBack = inQuote && joinLineInQuote(ctx, inQuote, false);
   if (lineBack) return lineBack;
+  // inside a checkbox, right after its character, where markup is decorated: that character goes, the
+  // brackets staying, as the host's Backspace does where markup is text (tasks.md rule 5)
+  const status = statusIn(at, -1);
+  if (status && config.markup === 'decorated') return ctx.apply(ctx.draft().setText(status.node, status.text.splice(status.at, status.at + 1)).setCaret(status.node, status.at, -1));
   // before a checkbox, in the marker: at the item's start, where the item joins (TO1), not past its checkbox
   const beforeBox = at.zone === 'marker' || (at.zone === 'frame' && at.part === 'task' && at.offset === 0);
   const markup = inMarkup(ctx.doc, at, head);
@@ -170,7 +178,7 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
     const begin = s.lastIndexOf('\n', lineStart - 1) + 1;
     const joined = text.splice(begin - 1, lineStart);
     // a quote's first paragraph that would read as its callout's title: not done yet
-    if (node.becomesTitle(joined)) return null;
+    if (node.becomesTitle(joined, ctx.doc.mdTree.flavor.has('callouts'))) return null;
     draft.setText(node, joined).setCaret(node, offset - (lineStart - begin + 1), -1);
     return ctx.apply(draft);
   }
@@ -248,23 +256,16 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
 }
 
 /**
- * `backspaceAtItemStart: logseq`, a quirk (Logseq's and Tine's mechanics, numbering a block's
- * property there; Quirk3): a numbered item's number goes first, the item a bulleted one where it is
- * (made anew, a list form being a new item's), its children with it, its list split there. Null for
- * a bulleted item, which joins.
+ * Where `at` is inside a task's checkbox next to its character, right after it (`dir` -1, Backspace's)
+ * or right before it (1, Delete's): the node, its text and where the character is. Null elsewhere, and
+ * in an emptied checkbox (`[]`), which has none.
  */
-function unnumberItem(ctx: CommandContext, node: OurusNode, text: OurusProse): OurusResult | null {
-  if (ctx.doc.listOf(node)?.block.attrs.list?.type !== 'ordered') return null;
-  const draft = ctx.draft();
-  const id = draft.create('item', text);
-  // (a bullet, a list of its own however the list around it is numbered: one no item beside it has,
-  // or it would run into that one's list)
-  const beside = [-1, 1].map((d) => node.parent?.children[node.index + d]).filter((n) => n?.kind === 'item').map((n) => ctx.doc.markerOf(n!));
-  draft.listForm(id, ['-', '*', '+'].find((b) => !beside.includes(b)) ?? '-', true);
-  const children = [...node.children];
-  if (children.length) draft.remove(children).append(id, 'last', children);
-  draft.place('before', node, [id]).remove([node]);
-  return ctx.apply(draft.setCaret(id, textStart(text), -1));
+export function statusIn(at: Located, dir: -1 | 1): { node: OurusNode; text: OurusProse; at: number } | null {
+  if (at.zone !== 'frame' || at.part !== 'task' || !(at.text instanceof OurusProse)) return null;
+  const task = at.text.frame.find((p) => p.part === 'task');
+  const open = task ? at.text.text.indexOf('[', task.from) : -1;
+  if (!task || open < 0 || at.text.text[open + 1] === ']' || at.text.text[open + 2] !== ']') return null;
+  return at.offset === open + (dir < 0 ? 2 : 1) ? { node: at.node, text: at.text, at: open + 1 } : null;
 }
 
 /**
@@ -332,13 +333,9 @@ function blankLineBack(ctx: CommandContext, owner: OurusNode): OurusResult | nul
  */
 export function joinUp(ctx: CommandContext, node: OurusNode, text: OurusProse, caretAtSeam = true): OurusResult | null {
   const doc = ctx.doc;
-  const view = ctx.view;
   const config = ctx.config;
-  let above = node.preceding;
   // right after a folded node, what is above is its text, not its hidden descendants' (Fold15)
-  // (where the node isn't in that fold itself)
-  const outside = (fold: OurusNode): boolean => !node.parent?.isWithin(fold);
-  for (const up of above ? above.ancestors() : []) if (up.kind !== 'root' && view.zoomFolded.has(up.id) && outside(up)) above = up;
+  const above = visiblePreceding(ctx.view, node);
   // first in its container: the next layer of markup goes (rule 6)
   if (!above || above.kind === 'root' || (above === node.parent && !doc.textOf(above))) return caretAtSeam ? firstInContainer(ctx, node, text) : null;
   const upper = doc.textOf(above);
@@ -346,7 +343,8 @@ export function joinUp(ctx: CommandContext, node: OurusNode, text: OurusProse, c
   // into a quote read as an atom above: as it is written, on its last line (`quotes: atom`)
   if (upper instanceof OurusAtom && upper.type === 'blockquote' && above !== node.parent) return joinIntoQuote(ctx, above, upper, node);
   // into a callout's title, which in Obsidian is a line of its own (Quote60, 62)
-  if (upper instanceof OurusProse && upper.type === 'title' && doc.config.flavor === 'obsidian' && text.body.includes('\n')) return new OurusRejected('not-expressible', "a callout's title is a single line");
+  // (a block id on a line of its own ending it, or carried, a line of it too)
+  if (upper instanceof OurusProse && upper.type === 'title' && doc.config.flavor === 'obsidian' && (text.text.slice(text.textStart(0)).includes('\n') || text.blockIdLines.length > 0)) return new OurusRejected('not-expressible', "a callout's title is a single line");
   const draft = ctx.draft();
   // an empty item with children goes, they going to the node above: its last ones where it is an
   // item that isn't the parent, else into its place, which `emptyItemWithChildren: refuse` refuses
@@ -363,6 +361,9 @@ export function joinUp(ctx: CommandContext, node: OurusNode, text: OurusProse, c
   // going; its children after the item's (into its place, where the item is its parent: TaskBackspace1);
   // the caret after its checkbox
   if (above.kind === 'item' && upper instanceof OurusProse && upper.empty && !text.empty && (node.kind === 'item' || node.kind === 'paragraph')) {
+    // (its children lifted into its place, where the item is its parent: as `joinWithChildren` has it)
+    const refused = childrenRefused(ctx, above, node, above !== node.parent);
+    if (refused) return refused;
     const moved = text.asItem(true);
     if (node.children.length) {
       draft.remove(node.children);
@@ -385,7 +386,9 @@ export function joinUp(ctx: CommandContext, node: OurusNode, text: OurusProse, c
     // (an empty item at the code's text end, where typing goes on: Backspace28; an empty paragraph past
     // it, where markup is text)
     const atEnd = upper instanceof OurusProse || node.kind === 'item' || ctx.config.markup === 'decorated';
-    draft.dissolve(node).inheritGap(above, node).setCaret(above, atEnd ? textEnd(upper) : upper.text.length, -1);
+    // (its blank lines after what is above it in the text: a folded node's last descendant, not its own text's, B71)
+    const before = node.preceding && node.preceding.kind !== 'root' ? node.preceding : above;
+    draft.dissolve(node).inheritGap(before, node).setCaret(above, atEnd ? textEnd(upper) : upper.text.length, -1);
     return ctx.apply(draft);
   }
   if (!(upper instanceof OurusProse)) return new OurusRejected('not-expressible', `can't join into ${above.kind === 'atom' ? above.block.type : 'that'}`);
@@ -442,7 +445,7 @@ function firstInContainer(ctx: CommandContext, node: OurusNode, text: OurusProse
     // the document's only node goes, with the quotes it is all of (Backspace17e, Quote59)
     if (!next && !node.children.length) {
       const gone = withTextlessParents(doc, [node])[0]!;
-      if (gone.parent?.kind === 'root' && gone.parent.children.length === 1) return ctx.apply(draft.remove([gone]).setCaretAt(0));
+      if (gone.parent?.kind === 'root' && gone.parent.children.length === 1) return ctx.apply(draft.remove([gone]).setCaretAt(ctx.doc.mdTree.documentStart));
     }
     if (!next || !nextText) return null;
     // (with the quotes it is all of, which would hold nothing: `> - ┃⏎# h`)
@@ -460,9 +463,6 @@ function firstInContainer(ctx: CommandContext, node: OurusNode, text: OurusProse
       return ctx.apply(draft);
     }
     if (config.backspaceAtTopItem === 'refuse' || text.type !== 'paragraph') return new OurusRejected('nothing-above');
-    // (first in a quote with no title: a paragraph starting `[!type]` would be its callout's title, where
-    // the flavor has no escape for it, as Obsidian's has: `\[!note]`)
-    if (node.becomesTitle(text) && !ctx.doc.mdTree.flavor.has('callouts')) return new OurusRejected('not-expressible', "the text would read as the quote's callout title");
     draft.convert(node, 'paragraph');
     // with `taskEditing: block` its checkbox goes with its marker
     const task = text.frame.find((p) => p.part === 'task');

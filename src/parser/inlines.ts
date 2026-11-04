@@ -71,8 +71,9 @@ export interface InlineConfig {
 export function compileInlines(rules: readonly MdInlineRule[], delimiters: readonly MdDelimiterRule[], brackets: readonly MdBracketRule[], textRules: readonly MdTextRule[]): InlineConfig {
   const byChar = new Map<number, MdInlineRule[]>();
   for (const rule of rules) {
+    // (each trigger a code point, an emoji whole: two sharing a high surrogate are two)
     for (const ch of rule.triggers) {
-      const code = ch.charCodeAt(0);
+      const code = ch.codePointAt(0)!;
       const list = byChar.get(code) ?? [];
       const at = rule.before ? list.findIndex((r) => r.name === rule.before) : -1;
       if (at >= 0) list.splice(at, 0, rule);
@@ -235,16 +236,18 @@ export class MdInlineParser {
     const n = text.length;
     outer: while (this.pos < n) {
       const c = text.charCodeAt(this.pos);
-      const rules = c < 128 ? config.rules[c] : config.otherRules.get(c);
+      const point = c < 128 || !config.otherRules.size ? c : text.codePointAt(this.pos)!;
+      const rules = c < 128 ? config.rules[c] : config.otherRules.get(point);
       if (rules) {
         const start = this.pos;
         for (const rule of rules) {
           if (rule.parse(this)) continue outer;
           this.pos = start;
         }
-        // no rule took it: the character as text
-        this.addText(start, start + 1);
-        this.pos = start + 1;
+        // no rule took it: the character as text, whole
+        const width = point > 0xffff ? 2 : 1;
+        this.addText(start, start + width);
+        this.pos = start + width;
         continue;
       }
       // a run of plain text up to the next trigger
@@ -254,7 +257,7 @@ export class MdInlineParser {
       const other = config.otherRules;
       while (i < n) {
         const d = text.charCodeAt(i);
-        if (d < 128 ? stops[d] : other.size && other.has(d)) break;
+        if (d < 128 ? stops[d] : other.size && other.has(text.codePointAt(i)!)) break;
         i++;
       }
       this.addText(start, i);
@@ -529,7 +532,15 @@ export class MdInlineParser {
           node.next.unlink();
         }
         const after = node.next;
-        for (const rule of this.config.textRules) rule.process(this, node);
+        // (each rule over the text the rules before it left, its pieces between `node` and `after`: one
+        // that splits the node, an email's, leaves text after what it made, which the next rules see too;
+        // what it made, a link, is no text to them)
+        let pieces: Node[] = [node];
+        for (const rule of this.config.textRules) {
+          for (const piece of pieces) rule.process(this, piece);
+          pieces = [];
+          for (let n: Node | null = node; n && n !== after; n = n.next) if (n.type === 'text' && n.from < n.to) pieces.push(n);
+        }
         stack[stack.length - 1] = after;
         continue;
       }

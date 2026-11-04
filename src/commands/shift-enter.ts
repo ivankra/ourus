@@ -9,6 +9,7 @@ import { breakInQuote } from './quote.ts';
 import { deleteSelectionAcross } from './backspace.ts';
 import { codeAt, newlineInCode } from './code.ts';
 import { enterCommand } from './enter.ts';
+import { unfoldedForCaret } from './view.ts';
 import { hiddenSpacesAt, inMarkup, pastPrefix, textActedOnAt, unquote } from './util.ts';
 import type { OurusResult } from './types.ts';
 import { OurusDeferred, OurusRejected } from './types.ts';
@@ -64,7 +65,8 @@ export function shiftEnterCommand(ctx: CommandContext): OurusResult | null {
   const text = from.text;
   // (in a quote read as an atom, a line of it: `> `)
   if (text instanceof OurusAtom && text.type === 'blockquote') {
-    if (from.offset === 0) return new OurusRejected('not-expressible', 'a line break here would leave an empty line inside the text');
+    // (at its start, past the spaces it may be indented by)
+    if (from.offset <= (/^ {0,3}(?=>)/.exec(text.text)?.[0].length ?? 0)) return new OurusRejected('not-expressible', 'a line break here would leave an empty line inside the text');
     return breakInQuote(ctx, { node, text, offset: from.offset, to: to.offset });
   }
   if (text instanceof OurusAtom) return text.type === 'table' ? new OurusRejected('not-expressible', 'a table row is a single line') : null;
@@ -90,6 +92,12 @@ export function shiftEnterCommand(ctx: CommandContext): OurusResult | null {
   if (trimMd(s.slice(lineStart, from.offset)) === '') {
     if (!ctx.collapsed) return null;
     if (lineStart === text.textStart(0)) return lineBreakAtTextStart(ctx, node, text);
+    // (a quote's later line, past its `> `: a quoted blank line above it, the quote two paragraphs, the
+    // caret staying with the line, as the text editors make a line of the quote: B60)
+    if (text.type === 'quote') {
+      const quoted = quoteSplit(ctx, node, text, s.lastIndexOf('\n', lineStart - 1), s.lastIndexOf('\n', lineStart - 1) + 1, true);
+      if (quoted !== undefined) return quoted;
+    }
     return paragraphBreakAtLineStart(ctx, node, text, lineStart);
   }
   let a = from.offset;
@@ -114,7 +122,8 @@ export function shiftEnterCommand(ctx: CommandContext): OurusResult | null {
   // the text breaks at the caret, the spaces on either side staying where they are, the caret at the
   // new line's start, before them (and before a backslash it starts with)
   const draft = ctx.draft().setText(node, text.splice(from.offset, to.offset, brk)).setCaret(node, from.offset + brk.length, -1);
-  return ctx.apply(draft);
+  // (at a folded node's end, the new line is read as a blank line its fold hides: the fold opens)
+  return unfoldedForCaret(ctx.apply(draft), node.id);
 }
 
 /**
@@ -125,22 +134,28 @@ export function shiftEnterCommand(ctx: CommandContext): OurusResult | null {
  * would be its first block on its marker's line, an item with no text of its own, which ourus doesn't
  * write yet.
  */
-function quoteSplit(ctx: CommandContext, node: OurusNode, text: OurusProse, at: number, to: number): OurusResult | null | undefined {
+function quoteSplit(ctx: CommandContext, node: OurusNode, text: OurusProse, at: number, to: number, caretBelow = false): OurusResult | null | undefined {
   // (a rest of lazy lines alone, no `>` of theirs to keep: split as any text, a paragraph after it)
   if (!/(?:^|\n) {0,3}>/.test(text.text.slice(to))) return undefined;
   // (a quote of two paragraphs carries no block-id lines: the one after it would name the quote)
   if (text.blockIdLines.length) return new OurusRejected('block-id', 'a quote of several paragraphs carries no block-id lines: the one after it would name the quote, not its text');
   const draft = ctx.draft();
+  // (each paragraph's lines past their `>`s, the second's blanks before its text Markdown's padding,
+  // none of its text: a split at a line's start, past `>  `, leaves them, B60)
   const lines = (from: number, end: number): OurusProse => {
-    const part = text.slice(from, end);
-    return unquote(part.retyped('quote', false));
+    const part = unquote(text.slice(from, end).retyped('quote', false));
+    const lead = from > 0 ? /^[ \t]*/.exec(part.text)![0].length : 0;
+    return lead ? part.slice(lead) : part;
   };
   if (node.kind === 'item') {
     // (the item's text the quote, its first block, its two paragraphs new)
     const upper = draft.create('paragraph', lines(0, at));
     const quote = draft.create('quote', null);
-    draft.append(quote, 'first', [upper, draft.create('paragraph', lines(to, text.text.length))]);
-    draft.setText(node, null).append(node, 'first', [quote]);
+    const lower = draft.create('paragraph', lines(to, text.text.length));
+    draft.append(quote, 'first', [upper, lower]);
+    // (the blank lines after the item's text are after the quote's last paragraph now)
+    draft.setText(node, null).append(node, 'first', [quote]).inheritGap(lower, node).gap(node, 0);
+    if (caretBelow) return ctx.apply(draft.gap(upper, 1).setCaret(lower, 0, -1));
     return ctx.apply(draft.gap(upper, 1).select({ blank: upper, line: 0 }, { blank: upper, line: 0 }));
   }
   // (the text the first paragraph, the rest the second, its gap with it; the list it adopted after
@@ -150,6 +165,7 @@ function quoteSplit(ctx: CommandContext, node: OurusNode, text: OurusProse, at: 
   draft.setText(node, lines(0, at)).setText(lower, lines(to, text.text.length));
   draft.place('before', node, [quote]).remove([node, lower, ...node.children]).append(quote, 'first', [node, lower]);
   if (node.children.length) draft.place('after', quote, node.children);
+  if (caretBelow) return ctx.apply(draft.gap(node, 1).setCaret(lower, 0, -1));
   return ctx.apply(draft.gap(node, 1).select({ blank: node, line: 0 }, { blank: node, line: 0 }));
 }
 

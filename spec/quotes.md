@@ -35,10 +35,10 @@ add:
    Quote37, Quote42). On an empty item it leaves the list, then the quote, as at the top level
    (Quote32, Quote33, Quote34, Quote35). In a callout's title (Obsidian flavor) the rest is a
    paragraph of its own, as a heading's is (Quote38, Quote39, Quote40, Quote41); in its `[!type]`,
-   Enter is refused (Quote43), and outside the Obsidian flavor too (Quote79); at a lazy line of its
-   title there, the rest is a paragraph of the callout (Quote84).
+   Enter is refused (Quote43). Callouts are Obsidian's: in GFM and CommonMark `> [!type] …` is a
+   quote's text, which Enter splits as any (Quote79, Quote84).
 4. **Backspace peels the markup in front of a quote's first node, nearest first**: a callout's
-   `[!type]` (Quote57, Quote58); then an item's marker, the item becoming a paragraph in the quote
+   `[!type]` (Quote57; in a flavor without callouts it is text, Quote58); then an item's marker, the item becoming a paragraph in the quote
    (`backspaceAtTopItem: unwrap`, the default; with `refuse`, nothing, Quote55); then the quote's
    `>`, the node leaving the quote, the rest of which stays quoted (Quote53, Quote54, Quote56).
    ([Backspace's rules](backspace.md).)
@@ -69,14 +69,14 @@ a paragraph, a heading, a code block or an HTML block can be an item's head.
 tags: rare
 ```
 
-```buffer
+```markdown
 - > - a
   > - b┃
 ```
 
 > indent
 
-```buffer
+```markdown
 - > - a
   >   - b┃
 ```
@@ -91,14 +91,14 @@ Item nests after the quote marker.
 tags: common
 ```
 
-```buffer
+```markdown
 > - a
 > - b┃
 ```
 
 > indent
 
-```buffer
+```markdown
 > - a
 >   - b┃
 ```
@@ -112,14 +112,14 @@ and a space written after `>` belongs to the quote, so the item needs its own.
 tags: rare
 ```
 
-```buffer
+```markdown
 >- a
 >- b┃
 ```
 
 > indent
 
-```buffer
+```markdown
 >- a
 >   - b┃
 ```
@@ -132,14 +132,14 @@ Tab-indented items in a quote: the quote's `>` takes part of the tab.
 tags: rare
 ```
 
-```buffer
+```markdown
 >→- a
 >→- b┃
 ```
 
 > indent
 
-```buffer
+```markdown
 >→- a
 >→→- b┃
 ```
@@ -149,10 +149,10 @@ tags: rare
 Indent in a quote inside an item.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - x
   > - a
   > - b┃
@@ -160,7 +160,7 @@ tags: edge
 
 > indent
 
-```buffer
+```markdown
 - x
   > - a
   >   - b┃
@@ -174,14 +174,14 @@ Indent in nested quotes.
 tags: rare
 ```
 
-```buffer
+```markdown
 > > - a
 > > - b┃
 ```
 
 > indent
 
-```buffer
+```markdown
 > > - a
 > >   - b┃
 ```
@@ -191,10 +191,10 @@ tags: rare
 Indent in a callout.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 > [!note] Title
 > - a
 > - b┃
@@ -202,7 +202,7 @@ tags: edge
 
 > indent
 
-```buffer
+```markdown
 > [!note] Title
 > - a
 >   - b┃
@@ -213,10 +213,10 @@ tags: edge
 A lazy continuation line stays as it is: it still continues the paragraph.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > - a
 > - b┃
 c
@@ -224,7 +224,7 @@ c
 
 > indent
 
-```buffer
+```markdown
 > - a
 >   - b┃
 c
@@ -236,10 +236,10 @@ A quoted paragraph after a paragraph becomes an item, as outside a quote
 ([Indent21](indent.md#indent21)): owning no list, the paragraph keeps it as a next sibling.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > a
 >
 > b┃
@@ -247,7 +247,7 @@ tags: edge
 
 > indent
 
-```buffer
+```markdown
 > a
 >
 > - b┃
@@ -261,14 +261,14 @@ Outdent inside a quote.
 tags: common
 ```
 
-```buffer
+```markdown
 > - a
 >   - b┃
 ```
 
 > outdent
 
-```buffer
+```markdown
 > - a
 > - b┃
 ```
@@ -284,14 +284,14 @@ makes it the item's next sibling. Bare Obsidian does nothing.
 tags: common
 ```
 
-```buffer
+```markdown
 > - a
 > - b┃
 ```
 
 > outdent
 
-```buffer
+```markdown
 > - a
 - b┃
 ```
@@ -303,10 +303,10 @@ later siblings stay quoted after it: the document's order stays, as direct outde
 everywhere. No app outdents out of a quote; the text editors leave the line as it is.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 > - a┃
 >   - c
 > - b
@@ -314,7 +314,7 @@ tags: edge
 
 > outdent
 
-```buffer
+```markdown
 - a┃
   - c
 > - b
@@ -325,11 +325,11 @@ tags: edge
 With `outdent: logical`, it leaves below its siblings, which stay quoted above it.
 
 ```yaml
-tags: edge
+tags: rare
 outdent: logical
 ```
 
-```buffer
+```markdown
 > - a┃
 >   - c
 > - b
@@ -337,7 +337,7 @@ outdent: logical
 
 > outdent
 
-```buffer
+```markdown
 > - b
 - a┃
   - c
@@ -349,17 +349,17 @@ A callout's title is its text, so a callout whose only child leaves stays: only 
 goes when emptied.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 > [!note] T
 > - a┃
 ```
 
 > outdent
 
-```buffer
+```markdown
 > [!note] T
 - a┃
 ```
@@ -369,10 +369,10 @@ tags: edge
 A lazy continuation line goes along unchanged.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > - a
 > - b┃
 c
@@ -380,7 +380,7 @@ c
 
 > outdent
 
-```buffer
+```markdown
 > - a
 - b┃
 c
@@ -396,7 +396,7 @@ the item; its Outliner does nothing.
 tags: rare
 ```
 
-```buffer
+```markdown
 - x
   > - a
   > - b┃
@@ -404,7 +404,7 @@ tags: rare
 
 > outdent
 
-```buffer
+```markdown
 - x
   > - a
   - b┃
@@ -415,10 +415,10 @@ tags: rare
 A quote's blank lines lose their `>` with it.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > - a
 > - b┃
 >
@@ -427,7 +427,7 @@ tags: edge
 
 > outdent
 
-```buffer
+```markdown
 > - a
 - b┃
 
@@ -442,17 +442,17 @@ Indent makes the item the last child of the quote above, written in the quote. B
 indents the line, leaving the item outside the quote.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > - a
 - b┃
 ```
 
 > indent
 
-```buffer
+```markdown
 > - a
 > - b┃
 ```
@@ -463,10 +463,10 @@ Its children and blank lines come along, quoted; the blank line that set it apar
 goes, as in the quote's list it would make the list loose.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > - a
 
 - b┃
@@ -477,7 +477,7 @@ tags: edge
 
 > indent
 
-```buffer
+```markdown
 > - a
 > - b┃
 >   - c
@@ -490,17 +490,17 @@ tags: edge
 Indent into a quote, then outdent: back as it was.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > - a
 - b┃
 ```
 
 > indent
 
-```buffer
+```markdown
 > - a
 > - b┃
 ```
@@ -511,7 +511,7 @@ result: success
 
 > outdent
 
-```buffer
+```markdown
 > - a
 - b┃
 ```
@@ -525,11 +525,11 @@ quote's other children; the item keeps its own blank lines as it goes, none, the
 `x` staying `x`'s, and indent makes it the last of the quote's tight list.
 
 ```yaml
-tags: edge
+tags: rare
 outdent: logical
 ```
 
-```buffer
+```markdown
 > - a┃
 > - x
 
@@ -538,7 +538,7 @@ outdent: logical
 
 > outdent
 
-```buffer
+```markdown
 > - x
 
 - a┃
@@ -547,7 +547,7 @@ outdent: logical
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 > - x
 
 > - b
@@ -556,7 +556,7 @@ outdent: logical
 
 > indent
 
-```buffer
+```markdown
 > - x
 
 > - b
@@ -568,10 +568,10 @@ outdent: logical
 Two quotes moved together get a blank line between them: without one they would be one quote.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > - x
 - a┃
 
@@ -580,7 +580,7 @@ tags: edge
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 > - x
 
 > - b
@@ -594,10 +594,10 @@ At a quote's end an item moves down into the quote's next sibling, as at the end
 children; up from there takes it back into the quote.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > - a
 > - b┃
 
@@ -606,7 +606,7 @@ tags: edge
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 > - a
 - c
 
@@ -615,7 +615,7 @@ tags: edge
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 > - a
 > - b┃
 
@@ -628,10 +628,10 @@ The mirror: at a quote's start an item moves up into the item above, as its last
 from there goes back into the quote.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - c
 > - a┃
 > - b
@@ -639,7 +639,7 @@ tags: edge
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - c
   - a┃
 > - b
@@ -647,7 +647,7 @@ tags: edge
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 - c
 > - a┃
 > - b
@@ -663,14 +663,14 @@ Swapping two quoted items.
 tags: common
 ```
 
-```buffer
+```markdown
 > - a
 > - b┃
 ```
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 > - b┃
 > - a
 ```
@@ -680,10 +680,10 @@ tags: common
 In a loose list, the quoted blank line stays between the items.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > - a
 >
 > - b┃
@@ -691,7 +691,7 @@ tags: edge
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 > - b┃
 >
 > - a
@@ -702,18 +702,18 @@ tags: edge
 A quote moves past an item.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: container
 ```
 
-```buffer
+```markdown
 - a
 > q┃
 ```
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 > q┃
 - a
 ```
@@ -729,10 +729,10 @@ A heading doesn't move above a quote: as past a paragraph or an item, it would t
 its section.
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 ```
 
-```buffer
+```markdown
 > q
 # H┃
 ```
@@ -743,7 +743,7 @@ tags: edge free-form
 result: rejected would-reparent
 ```
 
-```buffer
+```markdown
 > q
 # H┃
 ```
@@ -754,17 +754,17 @@ A quote moved down past a heading joins its section, as any node does
 ([MoveDown20](move-subtree-down.md#movedown20)); the caret ends after the `>`.
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 ```
 
-```buffer
+```markdown
 > ┃q
 ## S
 ```
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 ## S
 > ┃q
 ```
@@ -779,13 +779,13 @@ A new item gets the quote marker.
 tags: common
 ```
 
-```buffer
+```markdown
 > - a┃
 ```
 
 > enter
 
-```buffer
+```markdown
 > - a
 > - ┃
 ```
@@ -798,14 +798,14 @@ A new item in a quote inside an item.
 tags: rare
 ```
 
-```buffer
+```markdown
 - x
   > - a┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - x
   > - a
   > - ┃
@@ -816,17 +816,17 @@ tags: rare
 Enter at the end of a lazy continuation line.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > - a
 b┃
 ```
 
 > enter
 
-```buffer
+```markdown
 > - a
 b
 > - ┃
@@ -842,14 +842,14 @@ does the same without the quoted blank line, so typed text would continue the it
 tags: common free-form
 ```
 
-```buffer
+```markdown
 > Quote:
 > - one┃
 ```
 
 > enter
 
-```buffer
+```markdown
 > Quote:
 > - one
 > - ┃
@@ -857,7 +857,7 @@ tags: common free-form
 
 > enter
 
-```buffer
+```markdown
 > Quote:
 > - one
 >
@@ -866,7 +866,7 @@ tags: common free-form
 
 > enter
 
-```buffer
+```markdown
 > Quote:
 > - one
 
@@ -875,7 +875,7 @@ tags: common free-form
 
 > "Back to text."
 
-```buffer
+```markdown
 > Quote:
 > - one
 
@@ -890,14 +890,14 @@ In a quote inside an item: the empty paragraph that leaves the quote is the item
 tags: rare free-form
 ```
 
-```buffer
+```markdown
 - x
   > - a┃
 ```
 
 > enter enter
 
-```buffer
+```markdown
 - x
   > - a
   >
@@ -906,7 +906,7 @@ tags: rare free-form
 
 > enter
 
-```buffer
+```markdown
 - x
   > - a
 
@@ -918,22 +918,22 @@ tags: rare free-form
 A quote holding only the empty paragraph goes, the paragraph in its place.
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 ```
 
-```buffer
+```markdown
 > - ┃
 ```
 
 > enter
 
-```buffer
+```markdown
 > ┃◌
 ```
 
 > enter
 
-```buffer
+```markdown
 ┃◌
 ```
 
@@ -944,17 +944,17 @@ quote's last node, leaves the quote. Bare Obsidian takes the same steps with lin
 continues the paragraph, which is Shift-Enter's here.
 
 ```yaml
-tags: common
+tags: rare
 quotes: container
 ```
 
-```buffer
+```markdown
 > ab┃
 ```
 
 > enter
 
-```buffer
+```markdown
 > ab
 >
 > ┃◌
@@ -962,7 +962,7 @@ quotes: container
 
 > enter
 
-```buffer
+```markdown
 > ab
 
 ┃◌
@@ -970,7 +970,7 @@ quotes: container
 
 > "c"
 
-```buffer
+```markdown
 > ab
 
 c┃
@@ -982,17 +982,17 @@ Splitting a quoted paragraph: two paragraphs in the quote, the blank line betwee
 Obsidian breaks the line instead, which is Shift-Enter's here.
 
 ```yaml
-tags: common
+tags: rare
 quotes: container
 ```
 
-```buffer
+```markdown
 > ab┃cd
 ```
 
 > enter
 
-```buffer
+```markdown
 > ab
 >
 > ┃cd
@@ -1004,10 +1004,10 @@ Enter at a quoted paragraph's start: an empty paragraph above it in the quote, h
 placeholder, the caret in it, as at any paragraph's start ([Enter33](enter.md#enter33)).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 > a
 >
 > ┃b
@@ -1015,7 +1015,7 @@ tags: edge
 
 > enter
 
-```buffer
+```markdown
 > a
 >
 > ┃◌
@@ -1035,14 +1035,14 @@ tags: common
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 > [!note] Ti┃tle
 > body
 ```
 
 > enter
 
-```buffer
+```markdown
 > [!note] Ti
 > ┃tle
 >
@@ -1058,20 +1058,20 @@ tags: common
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 > [!tip] Title┃
 ```
 
 > enter
 
-```buffer
+```markdown
 > [!tip] Title
 > ┃◌
 ```
 
 > "x"
 
-```buffer
+```markdown
 > [!tip] Title
 > x┃
 ```
@@ -1086,14 +1086,14 @@ tags: common
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 > [!note] Title┃
 > body
 ```
 
 > enter
 
-```buffer
+```markdown
 > [!note] Title
 > ┃◌
 >
@@ -1102,7 +1102,7 @@ flavor: obsidian
 
 > "x"
 
-```buffer
+```markdown
 > [!note] Title
 > x┃
 >
@@ -1115,18 +1115,18 @@ Splitting a callout title before a list marker: the rest is text, its marker esc
 item ([Enter8](enter.md#enter8)).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 > [!tip] Title┃- x
 > - y
 ```
 
 > enter
 
-```buffer
+```markdown
 > [!tip] Title
 > ┃\̬- x
 > - y
@@ -1138,18 +1138,18 @@ Enter before a list marker in a quoted paragraph: the rest is a new paragraph, i
 as outside a quote ([Enter22](enter.md#enter22)).
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > para ┃- x
 > - a
 ```
 
 > enter
 
-```buffer
-> para
+```markdown
+> para␠
 >
 > ┃\̬- x
 > - a
@@ -1166,7 +1166,7 @@ tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 > [!ti┃p] Title
 ```
 
@@ -1176,7 +1176,7 @@ flavor: obsidian
 result: deferredToHost
 ```
 
-```buffer
+```markdown
 > [!ti
 ┃p] Title
 ```
@@ -1191,7 +1191,7 @@ flavor: obsidian
 markup: decorated
 ```
 
-```buffer
+```markdown
 > [!ti┃p] Title
 ```
 
@@ -1201,7 +1201,7 @@ markup: decorated
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 > [!ti┃p] Title
 ```
 
@@ -1215,13 +1215,13 @@ Line break in a quoted paragraph.
 tags: common
 ```
 
-```buffer
+```markdown
 > ab┃cd
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 > ab
 > ┃cd
 ```
@@ -1231,23 +1231,23 @@ tags: common
 At the end: an empty line in the quote, held open until typed into.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 > ab┃
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 > ab
-> ┃
+> ┃◌
 ```
 
 > "c"
 
-```buffer
+```markdown
 > ab
 > c┃
 ```
@@ -1257,16 +1257,16 @@ tags: edge
 Line break in a quoted item.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 > - ab┃cd
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 > - ab
 >   ┃cd
 ```
@@ -1277,11 +1277,11 @@ In the Obsidian flavor a callout's title is a single line, as a heading is: Shif
 refused.
 
 ```yaml
-tags: edge free-form
+tags: rare free-form
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 > [!tip] Ti┃tle
 > body
 ```
@@ -1292,7 +1292,7 @@ flavor: obsidian
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 > [!tip] Ti┃tle
 > body
 ```
@@ -1307,14 +1307,14 @@ Backspace joins two quoted items.
 tags: common
 ```
 
-```buffer
+```markdown
 > - a
 > - ┃b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 > - a┃b
 ```
 
@@ -1323,17 +1323,17 @@ tags: common
 An item joins the paragraph above it in the quote.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 > a
 > - ┃b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 > a┃b
 ```
 
@@ -1342,17 +1342,17 @@ tags: edge
 Delete at the end of a quoted paragraph joins the item below.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 > a┃
 > - b
 ```
 
 > deleteContentForward
 
-```buffer
+```markdown
 > a┃b
 ```
 
@@ -1363,10 +1363,10 @@ and the paragraphs are one, as outside a quote ([Delete18](delete.md#delete18)).
 blank line's `>` would become text: `> a┃>`.
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 ```
 
-```buffer
+```markdown
 > a┃
 >
 > b
@@ -1374,7 +1374,7 @@ tags: edge free-form
 
 > deleteContentForward
 
-```buffer
+```markdown
 > a┃b
 ```
 
@@ -1385,10 +1385,10 @@ tags: edge free-form
 An item below a quote joins the quoted node above; its children enter the quote with it.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > - a
 - ┃b
   - c
@@ -1396,7 +1396,7 @@ tags: edge
 
 > deleteContentBackward
 
-```buffer
+```markdown
 > - a┃b
 >   - c
 ```
@@ -1415,7 +1415,7 @@ then the `>`.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
 
 > ┃q
@@ -1423,7 +1423,7 @@ tags: common
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 
 ┃q
@@ -1439,7 +1439,7 @@ leaving the quote; then `b` joins the node above.
 tags: common free-form
 ```
 
-```buffer
+```markdown
 - a
 > - ┃b
 > - c
@@ -1447,7 +1447,7 @@ tags: common free-form
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 > ┃b
 > - c
@@ -1455,7 +1455,7 @@ tags: common free-form
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 
 ┃b
@@ -1464,7 +1464,7 @@ tags: common free-form
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃b
 > - c
 ```
@@ -1474,11 +1474,11 @@ tags: common free-form
 With `backspaceAtTopItem: refuse`, a quote's first item stays as it is.
 
 ```yaml
-tags: edge
+tags: rare
 backspaceAtTopItem: refuse
 ```
 
-```buffer
+```markdown
 - a
 > - ┃b
 ```
@@ -1489,7 +1489,7 @@ backspaceAtTopItem: refuse
 result: rejected nothing-above
 ```
 
-```buffer
+```markdown
 - a
 > - ┃b
 ```
@@ -1499,10 +1499,10 @@ result: rejected nothing-above
 When a quote's first node leaves it, the rest stays quoted, the node standing before the quote.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 
 > ┃q
@@ -1512,7 +1512,7 @@ tags: edge
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 
 ┃q
@@ -1528,11 +1528,11 @@ in the Obsidian flavor). Bare Obsidian and its Outliner delete the space, leavin
 still a callout.
 
 ```yaml
-tags: edge
+tags: common
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 para
 
 > [!note] ┃Title
@@ -1541,7 +1541,7 @@ para
 
 > deleteContentBackward
 
-```buffer
+```markdown
 para
 
 > ┃Title
@@ -1551,15 +1551,14 @@ para
 
 ### Quote58
 
-Where the flavor reads the title as the start of the quote's first paragraph, the paragraph stays
-one.
+In a flavor without callouts `[!note]` is the quote's text: Backspace in it is the host's, a character.
 
 ```yaml
 tags: rare
 flavor: commonmark
 ```
 
-```buffer
+```markdown
 para
 
 > [!note] ┃Title
@@ -1568,10 +1567,10 @@ para
 
 > deleteContentBackward
 
-```buffer
+```markdown
 para
 
-> ┃Title
+> [!note]┃Title
 > body
 ```
 
@@ -1581,16 +1580,16 @@ Backspace on a quote's only item, empty, with nothing above: it goes, as `- ┃`
 quote it was all of goes with it, leaving an empty line to type on.
 
 ```yaml
-tags: rare free-form
+tags: common free-form
 ```
 
-```buffer
+```markdown
 > - ┃
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 ┃
 ```
 
@@ -1605,13 +1604,13 @@ tags: rare
 quotes: container
 ```
 
-```buffer
+```markdown
 > ┃q
 ```
 
 > enter
 
-```buffer
+```markdown
 > ┃◌
 >
 > q
@@ -1619,7 +1618,7 @@ quotes: container
 
 > deleteContentBackward
 
-```buffer
+```markdown
 > ┃q
 ```
 
@@ -1633,7 +1632,7 @@ placeholder, as after a fence elsewhere ([Fence59](fences.md#fence59)): left emp
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 > ```
 > code
 > ```┃
@@ -1641,7 +1640,7 @@ tags: rare markup-fence
 
 > enter
 
-````buffer
+````markdown
 > ```
 > code
 > ```
@@ -1650,7 +1649,7 @@ tags: rare markup-fence
 
 > cursorDocStart
 
-````buffer
+````markdown
 ┃> ```
 > code
 > ```
@@ -1673,7 +1672,7 @@ tags: common
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 > [!note] Ti
 > ┃tle
 >
@@ -1682,7 +1681,7 @@ flavor: obsidian
 
 > deleteContentBackward
 
-```buffer
+```markdown
 > [!note] Ti┃tle
 >
 > body
@@ -1693,18 +1692,18 @@ flavor: obsidian
 Delete at a callout title's end joins the body's first paragraph.
 
 ```yaml
-tags: edge
+tags: common
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 > [!note] Title┃
 > body
 ```
 
 > deleteContentForward
 
-```buffer
+```markdown
 > [!note] Title┃body
 ```
 
@@ -1713,18 +1712,18 @@ flavor: obsidian
 A callout's first item joins its title, as a first item joins a heading above it.
 
 ```yaml
-tags: edge
+tags: common
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 > [!note] Title
 > - ┃a
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 > [!note] Title┃a
 ```
 
@@ -1740,13 +1739,13 @@ clipboard: |
     - y
 ```
 
-```buffer
+```markdown
 > - a┃
 ```
 
 > paste
 
-```buffer
+```markdown
 > - a
 > - x
 >   - y┃
@@ -1757,10 +1756,10 @@ clipboard: |
 A heading in a quote owns its section there, and the items in it indent as anywhere.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > # H
 > - a
 > - b┃
@@ -1768,7 +1767,7 @@ tags: edge
 
 > indent
 
-```buffer
+```markdown
 > # H
 > - a
 >   - b┃
@@ -1781,11 +1780,11 @@ tags: edge
 A paragraph indented into a quote becomes its last child, as an item holds lines.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: container
 ```
 
-```buffer
+```markdown
 > q
 
 para┃
@@ -1793,7 +1792,7 @@ para┃
 
 > indent
 
-```buffer
+```markdown
 > q
 >
 > para┃
@@ -1805,10 +1804,10 @@ And back out: a blank line goes between the quote and the paragraph, which would
 continue the quote's paragraph lazily.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > q
 >
 > para┃
@@ -1816,7 +1815,7 @@ tags: edge
 
 > outdent
 
-```buffer
+```markdown
 > q
 
 para┃
@@ -1830,14 +1829,14 @@ A paragraph moves inside a quote without becoming its text.
 tags: rare
 ```
 
-```buffer
+```markdown
 > >     code
 > a┃
 ```
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 > a┃
 > >     code
 ```
@@ -1848,10 +1847,10 @@ The caret is on the quote's only paragraph: the quote is what moves. Bare Obsidi
 which joins the quote above.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > - x
 > - y
 
@@ -1860,7 +1859,7 @@ tags: edge
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 > q┃
 
 > - x
@@ -1875,9 +1874,10 @@ is its text, not a child. Moving the whole callout instead would make the child'
 
 ```yaml
 tags: rare
+flavor: obsidian
 ```
 
-```buffer
+```markdown
 > [!note] T
 > - a┃
 
@@ -1886,7 +1886,7 @@ tags: rare
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 > [!note] T
 - b
 
@@ -1902,7 +1902,7 @@ in the first quote, what was below goes on in a second.
 tags: rare
 ```
 
-```buffer
+```markdown
 > - x
 > - a┃
 > - b
@@ -1910,7 +1910,7 @@ tags: rare
 
 > outdent
 
-```buffer
+```markdown
 > - x
 - a┃
 > - b
@@ -1923,17 +1923,17 @@ Enter in a quote makes a node in the quote (rule 3). Backspace takes it back in 
 paragraphs. Bare Obsidian and its Outliner make a new item instead, leaving the quote.
 
 ```yaml
-tags: edge free-form
+tags: rare free-form
 quotes: container
 ```
 
-```buffer
+```markdown
 - > a┃b
 ```
 
 > enter
 
-```buffer
+```markdown
 - > a
   >
   > ┃b
@@ -1941,7 +1941,7 @@ quotes: container
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - > a┃b
 ```
 
@@ -1950,23 +1950,23 @@ quotes: container
 Shift-Enter there: a line of the quote's paragraph, at the item's column; Backspace takes it back.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - > a┃b
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - > a
   > ┃b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - > a┃b
 ```
 
@@ -1976,10 +1976,10 @@ Backspace at the start of such a quote: its `>` goes, and its paragraph is the i
 of the quote stays quoted under it.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 - > ┃q
   >
@@ -1988,7 +1988,7 @@ tags: edge
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 - ┃q
   > r
@@ -2005,13 +2005,13 @@ clipboard: |
   y
 ```
 
-```buffer
+```markdown
 - > a┃b
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - > ax
   > y
   > ┃b
@@ -2027,14 +2027,14 @@ tags: rare
 quotes: container
 ```
 
-```buffer
+```markdown
 - a
   - > ┃q
 ```
 
 > outdent
 
-```buffer
+```markdown
 - a
   - ┃q
 ```
@@ -2049,7 +2049,7 @@ tags: rare
 quotes: container
 ```
 
-```buffer
+```markdown
 > q
 
 ┃p
@@ -2058,7 +2058,7 @@ quotes: container
 
 > indent
 
-```buffer
+```markdown
 > q
 >
 > ┃p
@@ -2067,27 +2067,23 @@ quotes: container
 
 ## Quote79
 
-Enter with a selection in a callout's `[!type]`, where its title is a paragraph (outside the
-Obsidian flavor): the break would split the type, so it is refused, as in the Obsidian flavor
-([Quote43](#quote43)).
+Enter with a selection in a quote's `[!type]` outside the Obsidian flavor, which has no callouts:
+it is the quote's text, and splits there as any (the Obsidian flavor refuses it: [Quote43](#quote43)).
 
 ```yaml
 tags: rare
 flavor: gfm
 ```
 
-```buffer
+```markdown
 > [«!note] q6»
 ```
 
 > enter
 
-```yaml
-result: rejected not-expressible
-```
-
-```buffer
-> [«!note] q6»
+```markdown
+> [
+> ┃◌
 ```
 
 ## Quote80
@@ -2101,13 +2097,13 @@ tags: rare
 quotes: container
 ```
 
-```buffer
+```markdown
 - > ┃q
 ```
 
 > enter
 
-```buffer
+```markdown
 - > ┃◌
   >
   > q
@@ -2115,7 +2111,7 @@ quotes: container
 
 > "x"
 
-```buffer
+```markdown
 - > x┃
   >
   > q
@@ -2130,7 +2126,7 @@ its first line, which the paragraph moving up takes ([Quote80](#quote80)); back,
 tags: rare
 ```
 
-```buffer
+```markdown
 - > ┃p
   >
   > q
@@ -2138,7 +2134,7 @@ tags: rare
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 - > q
   >
   > ┃p
@@ -2146,7 +2142,7 @@ tags: rare
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - > ┃p
   >
   > q
@@ -2161,7 +2157,7 @@ marker's line, its quoted blank line gone with it, as anywhere in a quote.
 tags: rare
 ```
 
-```buffer
+```markdown
 - > ┃p
   >
   > q
@@ -2169,7 +2165,7 @@ tags: rare
 
 > deleteSubtree
 
-```buffer
+```markdown
 - > ┃q
 ```
 
@@ -2182,7 +2178,7 @@ up onto the marker's line, as [Quote82](#quote82) has it.
 tags: rare
 ```
 
-```buffer
+```markdown
 - > ┃◌
   >
   > q
@@ -2190,7 +2186,7 @@ tags: rare
 
 > deleteContentForward
 
-```buffer
+```markdown
 - > ┃q
 ```
 
@@ -2201,41 +2197,41 @@ item's marker line, at the item's content column (`- - g`), and the quote below 
 same in reverse.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: container
 ```
 
-```buffer
+```markdown
 - > q
   - ┃g
 ```
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - - ┃g
   > q
 ```
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 - > q
   - ┃g
 ```
 
 ## Quote84
 
-Outside the Obsidian flavor a callout's title is a paragraph, and lines below it that aren't quoted
-continue it lazily. Enter at the start of one breaks there: the rest is a paragraph of the callout,
-quoted, the lines after it staying as they were.
+Outside the Obsidian flavor `> [!note] Title` is a quote's text, and lines below it that aren't
+quoted continue it lazily. Enter at the start of one breaks there, as in any quote's text: the rest a
+paragraph after the quote.
 
 ```yaml
-tags: edge
+tags: rare
 flavor: gfm
 ```
 
-```buffer
+```markdown
 > [!note] Title
 ┃two
 lines
@@ -2243,10 +2239,10 @@ lines
 
 > enter
 
-```buffer
+```markdown
 > [!note] Title
->
-> ┃two
+
+┃two
 lines
 ```
 
@@ -2256,17 +2252,17 @@ Outdent of a quoted item that shares its line with the item holding the quote (`
 the quote for that item, as its first block, the item's marker staying on the line.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - > - ┃a
   > - b
 ```
 
 > outdent
 
-```buffer
+```markdown
 - - ┃a
   > - b
 ```
@@ -2277,17 +2273,17 @@ A quote written `>` without its space on its first line (`>- a`) still puts its 
 on the lines below: a copy of its item lines up with what is below, its child under it.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 ┃>- a
 >   - b
 ```
 
 > duplicateSubtree
 
-```buffer
+```markdown
 >- a
 >   - b
 > - ┃a
@@ -2301,20 +2297,20 @@ item: four columns in, past the quote, it can start nothing) outdented out of th
 stays as written, but under the item it would start a child item, so it is escaped.
 
 ```yaml
-tags: edge
+tags: rare
 outline: |
   quote
     item: q⏎- g
 ```
 
-```buffer
+```markdown
 > - ┃q
     - g
 ```
 
 > outdent
 
-```buffer
+```markdown
 - ┃q
       - g
 ```
@@ -2329,13 +2325,13 @@ one of the item's two columns as its own space, and the line would be lazy at be
 tags: rare
 ```
 
-```buffer
+```markdown
 >- a┃b
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 >- a
 >   ┃b
 ```
@@ -2349,14 +2345,14 @@ above it, so at two columns the text would be a paragraph of the quote, out of t
 tags: rare
 ```
 
-```buffer
+```markdown
 >- ┃a
 >- b
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 >-
 >   ┃a
 >- b
@@ -2371,7 +2367,7 @@ whole, the blank line's `>` with it, or the quote would end there.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a
 - ┃b
   > q
@@ -2381,7 +2377,7 @@ tags: rare
 
 > indent
 
-```buffer
+```markdown
 - a
   - ┃b
     > q
@@ -2391,7 +2387,7 @@ tags: rare
 
 > outdent
 
-```buffer
+```markdown
 - a
 - ┃b
   > q
@@ -2409,14 +2405,14 @@ would end the quote.
 tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 > a
 > # ┃H
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 > a
 >
 > ┃H
@@ -2436,14 +2432,14 @@ tags: rare
 quotes: container
 ```
 
-```buffer
+```markdown
 > - a
 > > q┃
 ```
 
 > outdent
 
-```buffer
+```markdown
 > - a
 >
 > q┃
@@ -2458,14 +2454,14 @@ tags: rare
 quotes: container
 ```
 
-```buffer
+```markdown
 > > q┃
 > - a
 ```
 
 > outdent
 
-```buffer
+```markdown
 > q┃
 > - a
 ```
@@ -2480,7 +2476,7 @@ marker's line ([Quote75](#quote75)). The checkbox stays; outdent does the same.
 tags: rare markup-task
 ```
 
-```buffer
+```markdown
 - a
 - [ ] 
   > ┃q
@@ -2489,7 +2485,7 @@ tags: rare markup-task
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 - [ ] ┃q
 - b
@@ -2504,14 +2500,14 @@ item above it is written in the quote's way, `>-`.
 tags: rare
 ```
 
-```buffer
+```markdown
 >- a
 >   - ┃b
 ```
 
 > outdent
 
-```buffer
+```markdown
 >- a
 >- ┃b
 ```
@@ -2525,14 +2521,14 @@ is.
 tags: rare
 ```
 
-```buffer
+```markdown
 ┃>→- a
 >→- b
 ```
 
 > duplicateSubtree
 
-```buffer
+```markdown
 >→- a
 >→- ┃a
 >→- b
@@ -2546,14 +2542,14 @@ Tab-indented items in a quote: the first unwrapped into a paragraph of the quote
 tags: rare free-form
 ```
 
-```buffer
+```markdown
 >→- ┃a
 >→- b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 > ┃a
 >→- b
 ```
@@ -2585,25 +2581,25 @@ holding more is a container, and a quote in it a framed paragraph there (QuoteTe
 A quoted item's `> ` goes as a unit on Backspace at its text start, as a heading's `#`s do; a second Backspace joins it.
 
 ```yaml
-tags: common
+tags: rare
 quotes: text
 ```
 
-```buffer
+```markdown
 - a
 - > ┃q
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 - ┃q
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃q
 ```
 
@@ -2612,17 +2608,17 @@ quotes: text
 Home in a quoted item goes to its text's start, past the `> `.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: text
 ```
 
-```buffer
+```markdown
 - > quote┃
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 - > ┃quote
 ```
 
@@ -2631,18 +2627,18 @@ quotes: text
 Shift-Tab on a quoted item outdents the item, as any item (under `container` the paragraph leaves the quote: Quote77).
 
 ```yaml
-tags: edge
+tags: rare
 quotes: text
 ```
 
-```buffer
+```markdown
 - a
   - > ┃q
 ```
 
 > outdent
 
-```buffer
+```markdown
 - a
 - > ┃q
 ```
@@ -2652,18 +2648,18 @@ quotes: text
 A quoted item's first child doesn't move above its parent's text, as under `- q` (Quote83 under `container`).
 
 ```yaml
-tags: edge
+tags: rare
 quotes: text
 ```
 
-```buffer
+```markdown
 - > q
   - ┃g
 ```
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - > q
   - ┃g
 ```
@@ -2673,11 +2669,11 @@ quotes: text
 Deleting a quoted item's subtree deletes the item and its children (DeleteSubtree12 under `container`).
 
 ```yaml
-tags: edge
+tags: rare
 quotes: text
 ```
 
-```buffer
+```markdown
 - a
 - > q┃
   - g
@@ -2686,7 +2682,7 @@ quotes: text
 
 > deleteSubtree
 
-```buffer
+```markdown
 - a┃
 - b
 ```
@@ -2696,18 +2692,18 @@ quotes: text
 Delete before a quote takes its `> ` first, as before a heading; a second Delete joins it.
 
 ```yaml
-tags: edge
+tags: common
 quotes: text
 ```
 
-```buffer
+```markdown
 - a┃
 > q
 ```
 
 > deleteContentForward
 
-```buffer
+```markdown
 - a┃
 
 q
@@ -2715,7 +2711,7 @@ q
 
 > deleteContentForward
 
-```buffer
+```markdown
 - a┃q
 ```
 
@@ -2728,13 +2724,13 @@ tags: common
 quotes: text
 ```
 
-```buffer
+```markdown
 > ab┃cd
 ```
 
 > enter
 
-```buffer
+```markdown
 > ab
 > ┃cd
 ```
@@ -2748,20 +2744,20 @@ tags: common
 quotes: text
 ```
 
-```buffer
+```markdown
 > ab┃
 ```
 
 > enter
 
-```buffer
+```markdown
 > ab
-> ┃
+> ┃◌
 ```
 
 > enter
 
-```buffer
+```markdown
 > ab
 
 ┃◌
@@ -2769,7 +2765,7 @@ quotes: text
 
 > "c"
 
-```buffer
+```markdown
 > ab
 
 c┃
@@ -2780,24 +2776,24 @@ c┃
 In a quoted item the same, the second Enter making a new item.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: text
 ```
 
-```buffer
+```markdown
 - > ab┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - > ab
-  > ┃
+  > ┃◌
 ```
 
 > enter
 
-```buffer
+```markdown
 - > ab
 - ┃
 ```
@@ -2807,17 +2803,17 @@ quotes: text
 At a quote's text start, an empty paragraph goes above it (rule 6).
 
 ```yaml
-tags: edge
+tags: common
 quotes: text
 ```
 
-```buffer
+```markdown
 > ┃ab
 ```
 
 > enter
 
-```buffer
+```markdown
 ┃◌
 
 > ab
@@ -2828,17 +2824,17 @@ quotes: text
 Shift-Enter in a quoted item: its new line at the item's column, quoted.
 
 ```yaml
-tags: common
+tags: rare
 quotes: text
 ```
 
-```buffer
+```markdown
 - > a┃b
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - > a
   > ┃b
 ```
@@ -2848,20 +2844,20 @@ quotes: text
 Plain lines pasted into a quoted item, each a line of the quote.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: text
 clipboard: |
   x
   y
 ```
 
-```buffer
+```markdown
 - > a┃b
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - > ax
   > y
   > ┃b
@@ -2872,7 +2868,7 @@ clipboard: |
 A blank line among them breaks the quote in two.
 
 ```yaml
-tags: edge
+tags: common
 quotes: text
 clipboard: |
   x
@@ -2880,13 +2876,13 @@ clipboard: |
   y
 ```
 
-```buffer
+```markdown
 > See ┃here.
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 > See x
 
 > y
@@ -2898,20 +2894,20 @@ clipboard: |
 A quote pasted on an empty item is the item's text.
 
 ```yaml
-tags: edge
+tags: common
 quotes: text
 clipboard: |
   > q
 ```
 
-```buffer
+```markdown
 - a
 - ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - > q┃
 ```
@@ -2921,11 +2917,11 @@ clipboard: |
 A quote of one paragraph owns the list after it, as a paragraph does, and moves with it.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: text
 ```
 
-```buffer
+```markdown
 para
 > q┃
 - a
@@ -2933,7 +2929,7 @@ para
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 > q┃
 - a
 
@@ -2945,14 +2941,14 @@ para
 Items pasted at a quote's end follow it, its list (Paste9 under `container`).
 
 ```yaml
-tags: edge
+tags: common
 quotes: text
 clipboard: |
   - x
   - y
 ```
 
-```buffer
+```markdown
 > p┃
 
 after
@@ -2960,7 +2956,7 @@ after
 
 > paste
 
-```buffer
+```markdown
 > p
 
 - x
@@ -2974,18 +2970,18 @@ after
 A quote in a quote is a framed paragraph in a container: Shift-Tab takes it out of the outer quote, its own `>` with it (Quote69 under `container`).
 
 ```yaml
-tags: edge
+tags: rare
 quotes: text
 ```
 
-```buffer
+```markdown
 > - a
 > > q┃
 ```
 
 > outdent
 
-```buffer
+```markdown
 > - a
 
 > q┃
@@ -2996,18 +2992,18 @@ quotes: text
 A quote below a list indents into an item in place, as a paragraph does.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: text
 ```
 
-```buffer
+```markdown
 - a
 > ┃b
 ```
 
 > indent
 
-```buffer
+```markdown
 - a
 - > ┃b
 ```
@@ -3017,17 +3013,17 @@ quotes: text
 Enter on an emptied quote takes its `> ` off.
 
 ```yaml
-tags: edge
+tags: common
 quotes: text
 ```
 
-```buffer
+```markdown
 > ┃◌
 ```
 
 > enter
 
-```buffer
+```markdown
 ┃◌
 ```
 
@@ -3036,18 +3032,18 @@ quotes: text
 Backspace at a quote's later line joins it with the line above, its `> ` going with the break.
 
 ```yaml
-tags: edge
+tags: common
 quotes: text
 ```
 
-```buffer
+```markdown
 > ab
 > ┃cd
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 > ab┃cd
 ```
 
@@ -3056,18 +3052,18 @@ quotes: text
 With `enterInQuote: split` (BlockNote's), Enter in a quote makes the rest a paragraph after it, unquoted.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: text
 enterInQuote: split
 ```
 
-```buffer
+```markdown
 > ab┃cd
 ```
 
 > enter
 
-```buffer
+```markdown
 > ab
 
 ┃cd
@@ -3078,18 +3074,18 @@ enterInQuote: split
 In a quoted item, the rest a new item.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: text
 enterInQuote: split
 ```
 
-```buffer
+```markdown
 - > ab┃cd
 ```
 
 > enter
 
-```buffer
+```markdown
 - > ab
 - ┃cd
 ```
@@ -3123,17 +3119,17 @@ QuoteAtom10). A callout too (QuoteAtom16, QuoteAtom17).
 Home goes to the line's start, before the `>`, which is text.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: atom
 ```
 
-```buffer
+```markdown
 - > quote┃
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 - ┃> quote
 ```
 
@@ -3142,32 +3138,32 @@ quotes: atom
 Backspace past the `>` deletes characters, as the host does; before it, the quote joins the item above as it is written.
 
 ```yaml
-tags: common
+tags: rare
 quotes: atom
 ```
 
-```buffer
+```markdown
 - a
 - > ┃q
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 - >┃q
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 - ┃q
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃q
 ```
 
@@ -3176,18 +3172,18 @@ quotes: atom
 Delete before a quoted item joins it as it is written, `>` and all.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: atom
 ```
 
-```buffer
+```markdown
 - a┃
 - > q
 ```
 
 > deleteContentForward
 
-```buffer
+```markdown
 - a┃> q
 ```
 
@@ -3196,18 +3192,18 @@ quotes: atom
 Enter splits the quote, the rest a paragraph after it, unquoted.
 
 ```yaml
-tags: common
+tags: rare
 quotes: atom
 enterInQuote: split
 ```
 
-```buffer
+```markdown
 > ab┃cd
 ```
 
 > enter
 
-```buffer
+```markdown
 > ab
 
 ┃cd
@@ -3218,18 +3214,18 @@ enterInQuote: split
 At a quoted item's end, a new item.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: atom
 enterInQuote: split
 ```
 
-```buffer
+```markdown
 - > ab┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - > ab
 - ┃
 ```
@@ -3239,18 +3235,18 @@ enterInQuote: split
 Before the `>`, an empty paragraph above.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: atom
 enterInQuote: split
 ```
 
-```buffer
+```markdown
 ┃> ab
 ```
 
 > enter
 
-```buffer
+```markdown
 ┃◌
 
 > ab
@@ -3261,24 +3257,24 @@ enterInQuote: split
 Shift-Enter makes a line of the quote, its `>` written: an empty lazy line would end it.
 
 ```yaml
-tags: common
+tags: rare
 quotes: atom
 ```
 
-```buffer
+```markdown
 > ab┃
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 > ab
 > ┃
 ```
 
 > "c"
 
-```buffer
+```markdown
 > ab
 > c┃
 ```
@@ -3288,20 +3284,20 @@ quotes: atom
 Plain lines pasted, each a line of the quote.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: atom
 clipboard: |
   x
   y
 ```
 
-```buffer
+```markdown
 - > a┃b
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - > ax
   > y
   > ┃b
@@ -3312,11 +3308,11 @@ clipboard: |
 A quote holding a list is one node, the item's text: Tab indents the item whole.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: atom
 ```
 
-```buffer
+```markdown
 - x
 - > a
   >
@@ -3325,7 +3321,7 @@ quotes: atom
 
 > indent
 
-```buffer
+```markdown
 - x
   - > a
     >
@@ -3337,18 +3333,18 @@ quotes: atom
 Shift-Tab on an item whose quote holds a list outdents the item.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: atom
 ```
 
-```buffer
+```markdown
 - x
   - > - ┃b
 ```
 
 > outdent
 
-```buffer
+```markdown
 - x
 - > - ┃b
 ```
@@ -3358,17 +3354,17 @@ quotes: atom
 With `enterInQuote: line` (the default, the text editors'), Enter makes a line of the quote, its `> ` written.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: atom
 ```
 
-```buffer
+```markdown
 > ab┃cd
 ```
 
 > enter
 
-```buffer
+```markdown
 > ab
 > ┃cd
 ```
@@ -3378,24 +3374,24 @@ quotes: atom
 On its empty last line, Enter leaves the quote, an empty paragraph after it.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: atom
 ```
 
-```buffer
+```markdown
 > ab┃
 ```
 
 > enter
 
-```buffer
+```markdown
 > ab
 > ┃
 ```
 
 > enter
 
-```buffer
+```markdown
 > ab
 
 ┃◌
@@ -3406,24 +3402,24 @@ quotes: atom
 In a quoted list's item, the line is a new item, its marker written; on an empty one its marker goes.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: atom
 ```
 
-```buffer
+```markdown
 > - a┃
 ```
 
 > enter
 
-```buffer
+```markdown
 > - a
 > - ┃
 ```
 
 > enter
 
-```buffer
+```markdown
 > - a
 > ┃
 ```
@@ -3433,17 +3429,17 @@ quotes: atom
 A numbered item's number counted on.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: atom
 ```
 
-```buffer
+```markdown
 > 1. a┃
 ```
 
 > enter
 
-```buffer
+```markdown
 > 1. a
 > 2. ┃
 ```
@@ -3453,12 +3449,12 @@ quotes: atom
 Before the `>`, with `enterAtTextStart: stay`, a blank line above the quote, the caret staying.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: atom
 enterAtTextStart: stay
 ```
 
-```buffer
+```markdown
 para
 
 ┃> ab
@@ -3466,7 +3462,7 @@ para
 
 > enter
 
-```buffer
+```markdown
 para
 
 
@@ -3478,19 +3474,19 @@ para
 A callout is an atom too: Enter in its title makes a line of it.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: atom
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 > [!note] Title┃
 > body
 ```
 
 > enter
 
-```buffer
+```markdown
 > [!note] Title
 > ┃
 > body
@@ -3501,19 +3497,19 @@ flavor: obsidian
 Its `[!type]` is characters: Backspace deletes one, as the host does.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: atom
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 > [!note] ┃Title
 > body
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 > [!note]┃Title
 > body
 ```
@@ -3523,19 +3519,19 @@ flavor: obsidian
 `split` with lines after the caret's: they are a quote of their own after the rest, a lazy first one given its `>`, which a quote's first line needs.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: atom
 enterInQuote: split
 ```
 
-```buffer
+```markdown
 > a┃b
 cd
 ```
 
 > enter
 
-```buffer
+```markdown
 > a
 
 ┃b
@@ -3547,18 +3543,18 @@ cd
 Shift-Enter after an emptied quoted line: the empty `> ` line ends the quote's paragraph, so the new line can't be lazy; it gets a `> `.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: atom
 ```
 
-```buffer
+```markdown
 > a
 > ┃b
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 > a
 > 
 > ┃b
@@ -3569,17 +3565,17 @@ quotes: atom
 Shift-Enter before what would start a block out of the quote (a fence with an info string, HTML, a thematic break): a `> `, the line kept in the quote, as the parser says.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: atom
 ```
 
-```buffer
+```markdown
 > a┃```js
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 > a
 > ┃```js
 ```
@@ -3590,11 +3586,11 @@ Tab on a quote below a list: the list's next item, the quote its text, as code's
 and as under `text`; outdented, a quote again.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: atom
 ```
 
-```buffer
+```markdown
 - a
 
 > ┃q
@@ -3603,7 +3599,7 @@ quotes: atom
 
 > indent
 
-```buffer
+```markdown
 - a
 - > ┃q
   > r
@@ -3611,7 +3607,7 @@ quotes: atom
 
 > outdent
 
-```buffer
+```markdown
 - a
 > ┃q
 > r

@@ -58,14 +58,14 @@ Item becomes next sibling of its parent.
 tags: core
 ```
 
-```buffer
+```markdown
 - a
   - b┃
 ```
 
 > outdent
 
-```buffer
+```markdown
 - a
 - b┃
 ```
@@ -83,14 +83,14 @@ after a list ([Indent29](indent.md#indent29)), as RemNote gives it back.
 tags: common free-form
 ```
 
-```buffer
+```markdown
 - a
 - b┃
 ```
 
 > outdent
 
-```buffer
+```markdown
 - a
 
 b┃
@@ -98,7 +98,7 @@ b┃
 
 > indent
 
-```buffer
+```markdown
 - a
 - b┃
 ```
@@ -111,14 +111,14 @@ Tab-nested item outdents.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
 →- b┃
 ```
 
 > outdent
 
-```buffer
+```markdown
 - a
 - b┃
 ```
@@ -132,14 +132,14 @@ nothing.
 tags: common free-form
 ```
 
-```buffer
+```markdown
 ## A┃
 ### B
 ```
 
 > outdent
 
-```buffer
+```markdown
 # A┃
 ## B
 ```
@@ -149,10 +149,10 @@ tags: common free-form
 H1 cannot outdent further.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 # A┃
 ```
 
@@ -162,7 +162,7 @@ tags: edge
 result: rejected at-h1-bound
 ```
 
-```buffer
+```markdown
 # A┃
 ```
 
@@ -174,10 +174,10 @@ Outdenting from the middle of a loose list keeps it loose. (With direct outdent,
 `b`'s child.)
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 
   - b┃
@@ -189,7 +189,7 @@ tags: edge
 
 > outdent
 
-```buffer
+```markdown
 - a
 
 - b┃
@@ -209,7 +209,7 @@ the caret leaves such an item. Every app outdents here.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a
   - ┃x
   - 
@@ -217,7 +217,7 @@ tags: rare
 
 > outdent
 
-```buffer
+```markdown
 - a
 - ┃x
 
@@ -232,25 +232,25 @@ Each becomes a paragraph; a child goes with its item, which now owns it, right u
 DirectOutdent4. Blank lines go only where a paragraph needs one. Bare Obsidian does nothing.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 para
-- ««a
+- a⟦selected⟧
   - b
-- c»»
+- c⟦selected⟧
 ```
 
 > outdent
 
-```buffer
+```markdown
 para
 
-««a
+a⟦selected⟧
 - b
 
-c»»
+c⟦selected⟧
 ```
 
 ## Outdent9
@@ -262,7 +262,7 @@ Indent4's inverse.
 tags: common
 ```
 
-```buffer
+```markdown
 1. a
    1. b┃
 2. c
@@ -270,7 +270,7 @@ tags: common
 
 > outdent
 
-```buffer
+```markdown
 1. a
 2. b┃
 3. c
@@ -284,19 +284,19 @@ Selected siblings outdent together: Indent9's inverse.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
-  - ««b
-  - c»»
+  - b⟦selected⟧
+  - c⟦selected⟧
 - d
 ```
 
 > outdent
 
-```buffer
+```markdown
 - a
-- ««b
-- c»»
+- b⟦selected⟧
+- c⟦selected⟧
 - d
 ```
 
@@ -310,7 +310,7 @@ subsection. Indented back, `A` takes `B` down with it, as its subsection: Markdo
 tags: common free-form
 ```
 
-```buffer
+```markdown
 # T
 ## A┃
 ## B
@@ -318,7 +318,7 @@ tags: common free-form
 
 > outdent
 
-```buffer
+```markdown
 # T
 # A┃
 ## B
@@ -326,7 +326,7 @@ tags: common free-form
 
 > indent
 
-```buffer
+```markdown
 # T
 ## A┃
 ### B
@@ -338,20 +338,20 @@ A selection of top-level items from the list's first: each becomes a paragraph. 
 outdent (Outdent2), but goes with the item above it.
 
 ```yaml
-tags: edge free-form
+tags: rare free-form
 ```
 
-```buffer
-- ««a
-- b»»
+```markdown
+- a⟦selected⟧
+- b⟦selected⟧
 ```
 
 > outdent
 
-```buffer
-««a
+```markdown
+a⟦selected⟧
 
-b»»
+b⟦selected⟧
 ```
 
 ## Outdent13
@@ -360,10 +360,10 @@ Outdent, then indent: the item is back, but direct outdent gave it `d`, which in
 The inverse pair's stated exception.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
   - b┃
     - c
@@ -372,7 +372,7 @@ tags: edge
 
 > outdent
 
-```buffer
+```markdown
 - a
 - b┃
   - c
@@ -381,7 +381,7 @@ tags: edge
 
 > indent
 
-```buffer
+```markdown
 - a
   - b┃
     - c
@@ -397,14 +397,14 @@ mirror).
 tags: rare
 ```
 
-```buffer
+```markdown
 - a
   ┃- b
 ```
 
 > outdent
 
-```buffer
+```markdown
 - a
 - ┃b
 ```
@@ -416,17 +416,17 @@ paragraphs need; indented back, it is the paragraph's list again, which needs no
 line goes: the text comes back as it was.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 para
 - b┃
 ```
 
 > outdent
 
-```buffer
+```markdown
 para
 
 b┃
@@ -434,7 +434,7 @@ b┃
 
 > indent
 
-```buffer
+```markdown
 para
 - b┃
 ```
@@ -453,7 +453,7 @@ later siblings under it too.
 tags: core
 ```
 
-```buffer
+```markdown
 - a
   - b┃
     - b1
@@ -463,7 +463,7 @@ tags: core
 
 > outdent
 
-```buffer
+```markdown
 - a
 - b┃
   - b1
@@ -481,14 +481,14 @@ Bare Obsidian does nothing.
 tags: common free-form
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > outdent
 
-```buffer
+```markdown
 a┃
 - b
 ```
@@ -499,10 +499,10 @@ The item's children stay its children, before the items that followed it. The li
 is now level with `b`.
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 ```
 
-```buffer
+```markdown
 - a┃
   - a1
 - b
@@ -510,7 +510,7 @@ tags: edge free-form
 
 > outdent
 
-```buffer
+```markdown
 a┃
 - a1
 - b
@@ -522,10 +522,10 @@ An item of a paragraph's list leaves the paragraph and becomes a paragraph after
 after it come along, and become the new paragraph's list.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 para
 - a┃
 - b
@@ -533,7 +533,7 @@ para
 
 > outdent
 
-```buffer
+```markdown
 para
 
 a┃
@@ -546,10 +546,10 @@ A later top-level item becomes a paragraph in place, the items after it its list
 item's do ([DirectOutdent2](#directoutdent2)).
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 ```
 
-```buffer
+```markdown
 - a
 - b┃
 - c
@@ -557,7 +557,7 @@ tags: edge free-form
 
 > outdent
 
-```buffer
+```markdown
 - a
 
 b┃
@@ -573,7 +573,7 @@ or the paragraph would take it in as text.
 tags: rare free-form
 ```
 
-```buffer
+```markdown
 1. a
 2. b┃
 3. c
@@ -581,7 +581,7 @@ tags: rare free-form
 
 > outdent
 
-```buffer
+```markdown
 1. a
 
 b┃
@@ -599,11 +599,11 @@ with `outdent: logical`, which each case below sets in a config block.
 ### LogicalOutdent1
 
 ```yaml
-tags: common
+tags: rare
 outdent: logical
 ```
 
-```buffer
+```markdown
 - a
   - b┃
     - b1
@@ -613,7 +613,7 @@ outdent: logical
 
 > outdent
 
-```buffer
+```markdown
 - a
   - c
 - b┃
@@ -630,18 +630,18 @@ Moving it past the rest of the list would carry the text far; the outliners, hol
 do nothing, and so does Obsidian's Outliner.
 
 ```yaml
-tags: edge free-form
+tags: rare free-form
 outdent: logical
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > outdent
 
-```buffer
+```markdown
 a┃
 - b
 ```
@@ -652,11 +652,11 @@ The item's children come along, and with the rest of the list they are the parag
 direct outdent has it ([DirectOutdent3](#directoutdent3)).
 
 ```yaml
-tags: edge free-form
+tags: rare free-form
 outdent: logical
 ```
 
-```buffer
+```markdown
 - a┃
   - a1
 - b
@@ -664,7 +664,7 @@ outdent: logical
 
 > outdent
 
-```buffer
+```markdown
 a┃
 - a1
 - b
@@ -677,11 +677,11 @@ after it stay with their paragraph, their parent, so the new paragraph goes past
 outliners move an item out of a parent block; RemNote makes it a paragraph in place.
 
 ```yaml
-tags: edge
+tags: rare
 outdent: logical
 ```
 
-```buffer
+```markdown
 para
 - a┃
 - b
@@ -689,7 +689,7 @@ para
 
 > outdent
 
-```buffer
+```markdown
 para
 - b
 
@@ -702,11 +702,11 @@ A later top-level item becomes a paragraph in place, set off from the items abov
 it its list, as direct outdent has it ([DirectOutdent5](#directoutdent5)), and as RemNote makes it.
 
 ```yaml
-tags: edge free-form
+tags: rare free-form
 outdent: logical
 ```
 
-```buffer
+```markdown
 - a
 - b┃
 - c
@@ -714,7 +714,7 @@ outdent: logical
 
 > outdent
 
-```buffer
+```markdown
 - a
 
 b┃
@@ -727,11 +727,11 @@ A heading outdents in place under logical outdent too: keeping the headings afte
 parent would move whole sections past each other (Outdent11), whose inverse this shares.
 
 ```yaml
-tags: edge free-form
+tags: rare free-form
 outdent: logical
 ```
 
-```buffer
+```markdown
 # T
 ## A┃
 ## B
@@ -739,7 +739,7 @@ outdent: logical
 
 > outdent
 
-```buffer
+```markdown
 # T
 # A┃
 ## B
@@ -747,7 +747,7 @@ outdent: logical
 
 > indent
 
-```buffer
+```markdown
 # T
 ## A┃
 ### B
@@ -762,7 +762,7 @@ off, which right under the paragraph's text would read as a setext underline.
 tags: rare free-form
 ```
 
-```buffer
+```markdown
 ┃1. n
 - 
   - g
@@ -770,7 +770,7 @@ tags: rare free-form
 
 > outdent
 
-```buffer
+```markdown
 ┃n
 
 - 
@@ -785,17 +785,17 @@ as it would be a paragraph's list. Indent doesn't make it an item again: on a he
 level ([Indent12](indent.md#indent12)).
 
 ```yaml
-tags: rare
+tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 - ┃# H
 - b
 ```
 
 > outdent
 
-```buffer
+```markdown
 # ┃H
 - b
 ```
@@ -806,18 +806,18 @@ With `outdent: logical` the same as with direct ([Outdent17](#outdent17)): at th
 no parent to keep the rest of the list, so the heading takes it in as its section.
 
 ```yaml
-tags: rare
+tags: rare markup-heading
 outdent: logical
 ```
 
-```buffer
+```markdown
 - ┃# H
 - b
 ```
 
 > outdent
 
-```buffer
+```markdown
 # ┃H
 - b
 ```
@@ -828,10 +828,10 @@ Where the heading would take in what follows the list, a paragraph or a list of 
 section, outdent is refused; so it is where its level would end the section it is in.
 
 ```yaml
-tags: rare
+tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 - ┃# H
 - b
 
@@ -844,7 +844,7 @@ after
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 - ┃# H
 - b
 
@@ -863,7 +863,7 @@ Indent doesn't make it an item again: with nothing above, a block has nothing to
 tags: rare free-form markup-fence
 ```
 
-````buffer
+````markdown
 - ┃```
   code
   ```
@@ -873,7 +873,7 @@ tags: rare free-form markup-fence
 
 > outdent
 
-````buffer
+````markdown
 ┃```
 code
 ```
@@ -891,7 +891,7 @@ tags: rare free-form markup-fence
 markup: decorated
 ```
 
-````buffer
+````markdown
 - ┃```
   code
   ```
@@ -901,7 +901,7 @@ markup: decorated
 
 > outdent
 
-````buffer
+````markdown
 ```
 ┃code
 ```
@@ -920,7 +920,7 @@ tags: rare free-form
 flavor: gfm
 ```
 
-```buffer
+```markdown
 - t1┃
 | a | b |
 |---|---|
@@ -928,7 +928,7 @@ flavor: gfm
 
 > outdent
 
-```buffer
+```markdown
 t1┃
 | a | b |
 |\̬---|---|
@@ -942,14 +942,14 @@ The same for a line that would underline the paragraph into a setext heading.
 tags: rare free-form
 ```
 
-```buffer
+```markdown
 - t1┃
 ===
 ```
 
 > outdent
 
-```buffer
+```markdown
 t1┃
 \̬===
 ```
@@ -960,17 +960,17 @@ Every child of an item with no text of its own (`- - b`) outdented: the item sta
 marker's line, as an outliner's empty block does (every app measured keeps it), its children after it.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 - - ┃b
 ```
 
 > outdent
 
-```buffer
+```markdown
 - a
 - 
 - ┃b
@@ -982,10 +982,10 @@ A child after a blank line, in a document indented with tabs, goes with its item
 less, as the item's are. Indent45's inverse.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 →- b┃
 
@@ -994,7 +994,7 @@ tags: edge
 
 > outdent
 
-```buffer
+```markdown
 - a
 - b┃
 
@@ -1006,10 +1006,10 @@ tags: edge
 The same with indented code as the child: its spaces past the tabs are the code's.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 →- b┃
 
@@ -1018,7 +1018,7 @@ tags: edge
 
 > outdent
 
-```buffer
+```markdown
 - a
 - b┃
 
@@ -1032,26 +1032,26 @@ Roots at two depths (`outdent: direct`): each run of sibling roots out a level, 
 them.
 
 ```yaml
-tags: edge
+tags: rare
 mixedDepths: each
 ```
 
-```buffer
+```markdown
 - one
   - two
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
 
 > outdent
 
-```buffer
+```markdown
 - one
   - two
-  - ««deep
-- three»»
+  - deep⟦selected⟧
+- three⟦selected⟧
   - five
 - four
 ```
@@ -1062,16 +1062,16 @@ The same under `outdent: logical`: `five` would stay under `one` between `deep` 
 one selection can't hold: refused.
 
 ```yaml
-tags: edge
+tags: rare
 outdent: logical
 mixedDepths: each
 ```
 
-```buffer
+```markdown
 - one
   - two
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
@@ -1089,27 +1089,27 @@ sibling, `e` going deeper to join `d`: one run, which the next press outdents wh
 Tine).
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
   - b
     - c
-      - ««d
-  - e»»
+      - d⟦selected⟧
+  - e⟦selected⟧
   - f
 - g
 ```
 
 > outdent
 
-```buffer
+```markdown
 - a
   - b
     - c
-    - ««d
-    - e»»
+    - d⟦selected⟧
+    - e⟦selected⟧
   - f
 - g
 ```
@@ -1119,15 +1119,15 @@ tags: edge
 `mixedDepths: refuse`: roots at two depths are refused (Athens, SiYuan).
 
 ```yaml
-tags: edge
+tags: rare
 mixedDepths: refuse
 ```
 
-```buffer
+```markdown
 - one
   - two
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```

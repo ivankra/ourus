@@ -97,7 +97,7 @@ export class OurusProse {
     this.marks = typeof text === 'string' ? MarkSet.of(text) : text;
     this.text = this.marks.text;
     this.blockIds = blockIds;
-    this.blockIdLines = blockIdLines;
+    this.blockIdLines = ownLines(blockIdLines);
     this.fragment = fragment;
   }
 
@@ -130,9 +130,10 @@ export class OurusProse {
   withoutHeldSpaces(): OurusProse {
     const held = this.marks.placeholders.filter((pos) => this.marks.hasHeldSpaceAt(pos));
     if (!held.length) return this;
-    let text = this.withMarks({ placeholders: this.marks.placeholders.filter((pos) => !held.includes(pos)) });
-    for (const pos of [...held].reverse()) text = text.splice(pos, pos + 1);
-    return text;
+    // (the spaces taken out at once, the other marks moved once: one at a time it was quadratic)
+    const heldAt = new Set(held);
+    const kept = this.withMarks({ placeholders: this.marks.placeholders.filter((pos) => !heldAt.has(pos)) });
+    return kept.#with({ marks: kept.marks.map(held.map((pos) => ({ from: pos, to: pos + 1, insert: '' }))) });
   }
 
   /** The same text carrying other block-id lines (none: `[]`); a whole text, a fragment's lines said. */
@@ -241,7 +242,14 @@ export class OurusProse {
   }
 }
 
-const NO_LINES: readonly BlockIdLine[] = [];
+const NO_LINES: readonly BlockIdLine[] = Object.freeze([]);
+
+/** `lines` as a text keeps them: frozen, the records too, so no caller changes them after (a frozen list as it is). */
+function ownLines(lines: readonly BlockIdLine[]): readonly BlockIdLine[] {
+  // (a frozen list of frozen records is no one's to change: shared as it is; freezing is shallow)
+  if (Object.isFrozen(lines) && lines.every((l) => Object.isFrozen(l))) return lines;
+  return Object.freeze(lines.map(({ blankLines, line }) => Object.freeze({ blankLines, line })));
+}
 
 /**
  * The frame of `text`, typed `type`, an item's or not; `held`: whether a placeholder holds an empty
@@ -365,7 +373,7 @@ export class OurusAtom {
     this.item = item;
     this.marks = typeof text === 'string' ? MarkSet.of(text) : text;
     this.text = this.marks.text;
-    this.blockIdLines = blockIdLines;
+    this.blockIdLines = ownLines(blockIdLines);
   }
 
   /** The same string with the lists `lists` gives in place of its marks' (`MarkSet.with`); this one where they are the same. */

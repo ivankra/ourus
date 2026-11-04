@@ -4,7 +4,7 @@
 // Stateless: each reads what to do from the selection alone, a subtree selection (whole lines,
 // `OurusView.selectedSubtrees`) or text.
 
-import { textEnd, textStart, type OurusDoc, type OurusNode } from '../doc/index.ts';
+import { OurusAtom, textEnd, textStart, type OurusDoc, type OurusNode, type OurusText } from '../doc/index.ts';
 import type { OurusView } from '../view/index.ts';
 import { type CommandContext } from './context.ts';
 import type { OurusSelection, OurusResult } from './types.ts';
@@ -21,6 +21,24 @@ function rootsOf(view: OurusView, selection: OurusSelection): string | null {
 }
 
 /**
+ * Where editing a text starts: its text's start; but where markup is decorated, a fenced block's first
+ * code line where its code is only blank lines (its text's start then the opening fence's end, markup
+ * there, where typing would go into its info string), out of items and quotes.
+ */
+function editStart(ctx: CommandContext, node: OurusNode, text: OurusText): number {
+  const start = textStart(text);
+  if (ctx.config.markup !== 'decorated' || !(text instanceof OurusAtom)) return start;
+  // (in an item or a quote the blank line is written without its prefix: at its start, typing would
+  // leave them; not done yet)
+  for (let up: OurusNode | null = node; up; up = up.parent) if (up.kind === 'item' || up.kind === 'quote') return start;
+  const open = text.frame.find((p) => p.part === 'open');
+  const close = text.frame.find((p) => p.part === 'close');
+  const lineEnd = text.text.indexOf('\n', open?.to ?? 0);
+  // (a line between the opening's and the closing's, or past an unclosed opening's)
+  return open && start <= lineEnd && lineEnd >= 0 && lineEnd + 1 < (close ? close.from : text.text.length + 1) ? lineEnd + 1 : start;
+}
+
+/**
  * The node at the caret with its subtree, as whole lines; over text across nodes, the roots it
  * touches. Over a subtree selection already, a caret at its first root's text start, to edit it.
  */
@@ -33,7 +51,7 @@ export function selectNodeCommand(ctx: CommandContext): OurusResult | null {
     while (!doc.textOf(first) && first.children.length) first = first.children[0]!;
     const text = doc.textOf(first);
     if (!text) return new OurusDeferred();
-    const at = doc.posOf(first, textStart(text), 1);
+    const at = doc.posOf(first, editStart(ctx, first, text), 1);
     return selected(ctx, { anchor: at, head: at });
   }
   const touched = view.touchedSubtrees(ctx.selection).filter((n) => !view.isHidden(n));
@@ -59,7 +77,14 @@ export function expandSelectionCommand(ctx: CommandContext): OurusResult | null 
   const current = rootsOf(view, sel);
   // what the selection touches: the nodes a subtree rung must hold
   const held = view.selectedSubtrees(sel) ?? view.touchedSubtrees(sel);
-  const holds = (rung: readonly OurusNode[]): boolean => held.every((n) => rung.some((r) => n.isWithin(r)));
+  // (by id, up each held node's ancestors: linear in the run, which may be a whole wide list)
+  const holds = (rung: readonly OurusNode[]): boolean => {
+    const ids = new Set(rung.map((r) => r.id));
+    return held.every((n) => {
+      for (let up: OurusNode | null = n; up; up = up.parent) if (ids.has(up.id)) return true;
+      return false;
+    });
+  };
   // 1. the node's own text, unless the selection is already the node (its text and its lines the same)
   const text = doc.textOf(node);
   if (text && current === null) {
@@ -69,6 +94,8 @@ export function expandSelectionCommand(ctx: CommandContext): OurusResult | null 
   for (const rung of rungsOf(view, node)) {
     if (!holds(rung)) continue;
     const next = view.selectionOf(rung.map((n) => n.id));
+    // (one that holds the characters selected too: a node's range ends before the blank lines after it)
+    if (Math.min(next.anchor, next.head) > from || Math.max(next.anchor, next.head) < to) continue;
     if (rootsOf(view, next) !== current) return selected(ctx, next);
   }
   return view.zoom === null ? new OurusDeferred() : selected(ctx, sel);
@@ -151,7 +178,9 @@ export function selectNodeByCommand(ctx: CommandContext, dir: -1 | 1): OurusResu
     candidate = bySibling && (candidate.startLine < anchor.startLine || (candidate === anchor && dir < 0)) ? siblingStep(view, candidate, dir) : step(view, candidate, dir);
     if (!candidate) return selected(ctx, sel);
     const ids = [anchor.id, candidate.id];
-    const next = view.selectedSubtrees(view.selectionOf(ids))!;
+    const next = view.selectedSubtrees(view.selectionOf(ids));
+    // (a closure no selection of nodes draws: as it is)
+    if (!next) return selected(ctx, sel);
     if (next.map((n) => n.id).join() === current) continue;
     // one root: the way the press went; more: from the anchor's node towards the candidate
     const down = next.length === 1 ? dir > 0 : candidate.startLine > anchor.startLine;

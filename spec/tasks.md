@@ -42,14 +42,14 @@ keeps what is typed next out of the item; bare Obsidian leaves none, so typed te
 tags: common free-form markup-task
 ```
 
-```buffer
+```markdown
 - a
 - [ ] ┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 
 ┃◌
@@ -63,14 +63,14 @@ Enter on an empty nested task outdents it.
 tags: common markup-task
 ```
 
-```buffer
+```markdown
 - a
   - [ ] ┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 - [ ] ┃
 ```
@@ -81,17 +81,17 @@ No escape after a task's checkbox: `# x` doesn't start the item's content (the c
 it can't be read as a heading. The space at the split goes, as at any split.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - [ ] abc ┃# x
 ```
 
 > enter
 
-```buffer
-- [ ] abc
+```markdown
+- [ ] abc␠
 - [ ] ┃# x
 ```
 
@@ -104,13 +104,13 @@ text start ([Enter29](enter.md#enter29)).
 tags: common markup-task
 ```
 
-```buffer
+```markdown
 - [ ] ┃abc
 ```
 
 > enter
 
-```buffer
+```markdown
 - [ ] ┃
 - [ ] abc
 ```
@@ -121,10 +121,10 @@ Enter on an empty task in the middle of a nested list makes another empty task, 
 item there ([Enter27](enter.md#enter27)).
 
 ```yaml
-tags: edge markup-task
+tags: common markup-task
 ```
 
-```buffer
+```markdown
 - a
   - b
   - [ ] ┃
@@ -133,7 +133,7 @@ tags: edge markup-task
 
 > enter
 
-```buffer
+```markdown
 - a
   - b
   - [ ] 
@@ -147,10 +147,10 @@ The same on an empty task that is its parent's first child: the new empty task g
 `  - [ ] ` right under `a`, unlike `  - `, is no setext underline.
 
 ```yaml
-tags: edge markup-task
+tags: common markup-task
 ```
 
-```buffer
+```markdown
 - a
   - [ ] ┃
   - b
@@ -158,7 +158,7 @@ tags: edge markup-task
 
 > enter
 
-```buffer
+```markdown
 - a
   - [ ] 
   - [ ] ┃
@@ -173,17 +173,17 @@ Dynalist give the check to the rest, the first half unchecked; Roam keeps the fi
 makes the rest a plain item (`enterTask: plain`, [TaskEnter9b](#taskenter9b)).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - [x] a┃ b
   - c
 ```
 
 > enter
 
-```buffer
+```markdown
 - [x] a
 - [ ] ┃b
   - c
@@ -198,13 +198,13 @@ every Obsidian setup do (`enterTask: continue`, the default).
 tags: core markup-task
 ```
 
-```buffer
+```markdown
 - [ ] milk┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - [ ] milk
 - [ ] ┃
 ```
@@ -215,17 +215,17 @@ With `enterTask: plain`, the new item is a plain one, as in Logseq and Roam, whi
 marker in a block's text (`TODO`), and Tine and Athens.
 
 ```yaml
-tags: common markup-task
+tags: rare markup-task
 enterTask: plain
 ```
 
-```buffer
+```markdown
 - [ ] milk┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - [ ] milk
 - ┃
 ```
@@ -240,13 +240,13 @@ tags: rare markup-task
 enterTask: plain
 ```
 
-```buffer
+```markdown
 - [x] abc┃ # x
 ```
 
 > enter
 
-```buffer
+```markdown
 - [x] abc
 - ┃\̬# x
 ```
@@ -261,13 +261,13 @@ tags: rare markup-task
 enterTask: plain
 ```
 
-```buffer
+```markdown
 - [ ] ┃abc
 ```
 
 > enter
 
-```buffer
+```markdown
 - ┃
 - [ ] abc
 ```
@@ -283,14 +283,14 @@ tags: rare markup-task
 enterSplitSpace: start
 ```
 
-```buffer
+```markdown
 - [ ] a┃ b
   - c
 ```
 
 > enter
 
-```buffer
+```markdown
 - [ ] a
 - [ ] ┃ b
   - c
@@ -298,7 +298,7 @@ enterSplitSpace: start
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - [ ] a┃ b
   - c
 ```
@@ -313,7 +313,7 @@ tags: rare markup-task
 markup: decorated
 ```
 
-```buffer
+```markdown
 - a
 - 
   - ┃[ ] task
@@ -322,7 +322,7 @@ markup: decorated
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 - [ ] ┃task
   - child
@@ -338,21 +338,21 @@ Backspaces, is back where it started.
 tags: common markup-task
 ```
 
-```buffer
+```markdown
 - a
 - [ ] ┃
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 - ┃
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃
 ```
 
@@ -366,14 +366,14 @@ tags: common markup-task
 taskEditing: checkbox
 ```
 
-```buffer
+```markdown
 - a
 - [x] ┃b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 - ┃b
 ```
@@ -385,18 +385,18 @@ paragraph where it is, its checkbox gone with its marker, as `backspaceAtItemSta
 item.
 
 ```yaml
-tags: edge
+tags: rare markup-task
 taskEditing: unwrap
 ```
 
-```buffer
+```markdown
 - a
 - [x] ┃b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 
 ┃b
@@ -408,11 +408,11 @@ With `taskEditing: unwrap`, an empty task is an empty paragraph, and nested, a p
 parent item, the list split there.
 
 ```yaml
-tags: edge
+tags: rare markup-task
 taskEditing: unwrap
 ```
 
-```buffer
+```markdown
 - a
   - [ ] ┃
   - c
@@ -420,7 +420,7 @@ taskEditing: unwrap
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 
   ┃◌
@@ -438,14 +438,14 @@ tags: rare markup-task
 taskEditing: block
 ```
 
-```buffer
+```markdown
 - a
 - [ ] ┃b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃b
 ```
 
@@ -460,7 +460,7 @@ tags: rare markup-task
 taskEditing: text
 ```
 
-```buffer
+```markdown
 - [ ] ┃
 ```
 
@@ -470,13 +470,13 @@ taskEditing: text
 result: success
 ```
 
-```buffer
+```markdown
 - [ ]┃
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - [ ┃
 ```
 
@@ -491,14 +491,14 @@ tags: rare markup-task
 markup: decorated
 ```
 
-```buffer
+```markdown
 - [ ] 
 - ┃[x] a
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - [x] ┃a
 ```
 
@@ -511,14 +511,14 @@ tags: rare markup-task
 taskEditing: block
 ```
 
-```buffer
+```markdown
 - [ ] 
 - [x] ┃a
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - [x] ┃a
 ```
 
@@ -531,14 +531,14 @@ marker, as Backspace before the checkbox has it.
 tags: common markup-task
 ```
 
-```buffer
+```markdown
 - a┃
 - [ ] b
 ```
 
 > deleteContentForward
 
-```buffer
+```markdown
 - a┃b
 ```
 
@@ -551,14 +551,14 @@ item ([Delete6](delete.md#delete6)); the caret lands after the checkbox.
 tags: rare markup-task
 ```
 
-```buffer
+```markdown
 - ┃
 - [x] a
 ```
 
 > deleteContentForward
 
-```buffer
+```markdown
 - [x] ┃a
 ```
 
@@ -572,14 +572,14 @@ tags: rare markup-task
 flavor: gfm
 ```
 
-```buffer
+```markdown
 - a┃
 - [ ] 
 ```
 
 > deleteContentForward
 
-```buffer
+```markdown
 - a┃
 ```
 
@@ -594,25 +594,25 @@ is shown as text.
 tags: rare markup-task
 ```
 
-```buffer
+```markdown
 - [ ┃] task
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - [┃] task
 ```
 
 > "x"
 
-```buffer
+```markdown
 - [x┃] task
 ```
 
 > deleteContentBackward " "
 
-```buffer
+```markdown
 - [ ┃] task
 ```
 
@@ -628,13 +628,13 @@ outline: |
   item [ ]: task
 ```
 
-```buffer
+```markdown
 - [ ┃] task
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - [┃] task
 ```
 
@@ -645,7 +645,7 @@ outline: |
 
 > "x"
 
-```buffer
+```markdown
 - [x┃] task
 ```
 
@@ -662,14 +662,14 @@ The same below another item: inside the checkbox there is nothing to join.
 tags: rare markup-task
 ```
 
-```buffer
+```markdown
 - a
 - [ ┃] task
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 - [┃] task
 ```
@@ -683,13 +683,13 @@ any text a join or a split leaves at a line's start.
 tags: rare markup-task
 ```
 
-```buffer
+```markdown
 - [ ] ┃# x
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - ┃\̬# x
 ```
 
@@ -705,14 +705,14 @@ tags: rare markup-task
 taskEditing: block
 ```
 
-```buffer
+```markdown
 - [x] ┃# x
 - b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 ┃\̬# x
 - b
 ```
@@ -726,18 +726,18 @@ it ([TaskBackspace8](#taskbackspace8)).
 tags: rare markup-task
 ```
 
-```buffer
+```markdown
 - [┃x] done
 ```
 
 > deleteContentForward
 
-```buffer
+```markdown
 - [┃] done
 ```
 
 > " "
 
-```buffer
+```markdown
 - [ ┃] done
 ```

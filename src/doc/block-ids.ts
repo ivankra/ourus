@@ -6,7 +6,7 @@
 
 import type { OurusDoc } from './doc.ts';
 import type { OurusNode } from './node.ts';
-import { lineIndexAt, type ChangeSpec } from '../text/index.ts';
+import { lineIndexAt, mapPos, type ChangeSpec } from '../text/index.ts';
 import { BLOCK_ID_NAME, OurusProse, blockIdsOf } from './text.ts';
 
 /** What a block id names: a node, a whole list (by its first item), or nothing. */
@@ -275,11 +275,15 @@ export function checkBlockIds(
   const exists = (id: number): boolean => (read ? read.nodes.has(id) : after.node(id) !== undefined);
   const byName = new Map<string, BlockId[]>();
   for (const b of now) (byName.get(b.name) ?? byName.set(b.name, []).get(b.name)!).push(b);
-  // a gain of a name the note holds (outside the region the lines are the same, and so the names)
+  // a gain of a name the note holds (outside the region the lines are the same, and so the names); but
+  // not the edited one's: a name typed in its markup is the user's, a step of it another's too
   const had = new Map<string, number>();
   for (const b of was) had.set(b.name, (had.get(b.name) ?? 0) + 1);
-  for (const [name, list] of byName) {
+  const editedNow = edited && { from: mapPos(changes, edited.from, -1), to: mapPos(changes, edited.to, 1) };
+  const isEdited = (b: BlockId): boolean => !!editedNow && b.partFrom >= editedNow.from && b.partTo <= editedNow.to;
+  for (const [name, all] of byName) {
     const n = had.get(name) ?? 0;
+    const list = editedNow ? all.filter((b) => !isEdited(b)) : all;
     if (list.length > n && (list.length > 1 || (regions && heldOutside(after, name, regions.after)))) return `^${name} would be written twice: a link finds one of them`;
   }
   // each block id paired with one of its name on its owner after (or where it was moved), in order:

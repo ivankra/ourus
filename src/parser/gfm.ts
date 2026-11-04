@@ -503,8 +503,10 @@ const emailRule: MdTextRule = {
     let remaining = node.to - node.from;
     let offset = 0;
     outer: while (offset < remaining) {
-      const atSign = s.indexOf('@', start + offset);
-      if (atSign < 0 || atSign >= start + remaining) break;
+      // (within the node: `indexOf` would search the rest of the whole text, at each node)
+      let atSign = start + offset;
+      while (atSign < start + remaining && s.charCodeAt(atSign) !== 64) atSign++;
+      if (atSign >= start + remaining) break;
       let maxRewind = atSign - (start + offset);
       let autoMailto = true;
       let xmpp = false;
@@ -769,13 +771,16 @@ export const footnotes: MdExtension = {
       // a definition's last paragraph ends with the backreferences
       paragraph(r, b, entering) {
         const parent = r.up()?.block;
-        // (a definition nested in it is no block of it: written as its own)
-        const own = parent?.type === 'footnote_definition' ? parent.children.filter((c) => c.type !== 'footnote_definition') : [];
-        if (!entering && parent?.type === 'footnote_definition' && own[own.length - 1] === b.block && !inTightList(r)) {
+        // (a definition nested in it is no block of it: written as its own; its last own block found
+        // from the end, not by listing them all at each paragraph)
+        const definition = parent?.type === 'footnote_definition' ? parent : null;
+        let last = definition ? definition.children.length - 1 : -1;
+        while (last >= 0 && definition!.children[last]!.type === 'footnote_definition') last--;
+        if (!entering && definition && definition.children[last] === b.block && !inTightList(r)) {
           const state = footnoteState(r);
           if (state.section) {
             r.lit(' ');
-            writeBackref(r, state.defs.get(normalizeLabel('[' + defLabel(parent) + ']'))!);
+            writeBackref(r, state.defs.get(normalizeLabel('[' + defLabel(definition) + ']'))!);
           }
         }
         return coreBlocks.paragraph!(r, b, entering);

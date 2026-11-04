@@ -6,7 +6,7 @@
 // and Backspace as input, not keys, and lack the rest: buttons stand in for those. The Preview box
 // shows the document as ourus renders it, beside the text.
 
-import { OurusDoc, OurusView, executeCommand, mapPos, settlePlaceholders, type ChangeSpec, type OurusCommand, type OurusResult, OurusDeferred, OurusRejected, OurusSuccess } from '../../src/index.ts';
+import { OurusDoc, OurusView, executeCommand, settlePlaceholders, type ChangeSpec, type OurusCommand, type OurusResult, OurusDeferred, OurusRejected, OurusSuccess } from '../../src/index.ts';
 
 const KEYS: Record<string, OurusCommand['type']> = {
   Tab: 'indent',
@@ -248,8 +248,8 @@ area.addEventListener('compositionend', () => {
 document.addEventListener('selectionchange', () => {
   if (document.activeElement !== area || composing) return;
   const { anchor, head } = selection();
-  const r = settlePlaceholders(OurusView.of(doc), head);
+  const r = settlePlaceholders(OurusView.of(doc), { anchor, head });
   if (!r) return;
   apply(r.changes, r.view.doc);
-  select(mapPos(r.changes, anchor), mapPos(r.changes, head));
+  select(r.selection.anchor, r.selection.head);
 });

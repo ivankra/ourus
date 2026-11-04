@@ -10,7 +10,7 @@ import { OurusView } from '../../src/view/index.ts';
 import { MdFlavor, MdTree } from '../../src/parser/index.ts';
 import fc from 'fast-check';
 import type { OurusConfig } from '../../src/config.ts';
-import { statusOf } from '../drawing.ts';
+import { appliedText, assertApplied, executeOnText, resultStatus } from '../lib/index.ts';
 
 type Command = OurusCommand;
 
@@ -33,7 +33,7 @@ function run(view: OurusDoc | OurusView, command: Command | ((doc: OurusDoc) => 
 /** The text after `command`, with the caret drawn `┃`; or `rejected <reason>`. */
 function after(doc: OurusDoc, command: Command | ((doc: OurusDoc) => Command), at = 0): string {
   const r = run(doc, command, at);
-  if (!(r instanceof OurusSuccess)) return `${statusOf(r)} ${r instanceof OurusRejected ? r.reason : ''}`.trim();
+  if (!(r instanceof OurusSuccess)) return `${resultStatus(r)} ${r instanceof OurusRejected ? r.reason : ''}`.trim();
   const { head } = r.selection;
   return r.view.doc.text.slice(0, head) + '┃' + r.view.doc.text.slice(head);
 }
@@ -70,6 +70,8 @@ test('removeBlockId: by name, or the one naming the selection\'s node; blank lin
   // inside an item, the item's
   assert.equal(after(parse('- a\n\n  inner prose ^x8\n'), { type: 'removeBlockId' }, 1), '-┃ a\n\n  inner prose\n');
   assert.equal(after(parse('- a\n- b\n'), { type: 'removeBlockId' }, 1), 'rejected block-id');
+  // (a paragraph lazy after an item's definition, written at the item's column: the paragraph still the one it was)
+  assert.equal(after(parse('* [a]:u\n x ^block'), { type: 'removeBlockId', name: 'block' }, 6), '* [a]:┃u\n  x');
   // a name written twice: by its owner
   const twice = parse('a ^x\n\nb ^x\n');
   assert.equal(after(twice, { type: 'removeBlockId', name: 'x' }), 'rejected block-id');
@@ -197,7 +199,7 @@ test('paste of a block id the note holds: the rest is pasted, the line break too
 
 test('paste: the block ids it wrote are told apart from the note\'s by name, not by where the changes are', () => {
   // (the note's own ^x stays on its node; the pasted one goes)
-  assert.equal(drawn('1. a┃ ^x\n2. b\n', { type: 'paste', clipboard: { 'text/plain': 'a\n\n^x\n' } }), '1. aa┃\n    ^x\n2. b\n');
+  assert.equal(drawn('1. a┃ ^x\n2. b\n', { type: 'paste', clipboard: { 'text/plain': 'a\n\n^x\n' } }), '1. aa┃ ^x\n2. b\n');
   // (over a selection: the note's block id isn't stood in for by the pasted one, which is text there)
   const enter: Partial<OurusConfig> = { flavor: 'obsidian', pastePlainLines: 'enter' };
   assert.equal(drawn('- ┃a┃ ^x\n- b\n', { type: 'pastePlain', text: 'q ^x\nr' }, enter), '- q ^x ^x\n- r┃\n- b\n');
@@ -238,8 +240,8 @@ test('paste with seams open: a pasted block id the note holds goes before the se
   assert.equal(drawn('- a┃b ^x\n', { type: 'paste', clipboard: { 'text/plain': '- b ^x\n- c\n' } }, open), drawn('- a┃b ^x\n', { type: 'paste', clipboard: { 'text/plain': '- b\n- c\n' } }, open));
 });
 
-test('paste of HTML: a block id written with character references is one, kept only where new', () => {
-  for (const html of ['<p>new &#94;x</p>', '<p>new &#x5E;&#120;</p>', '<p>new ^x</p>']) assert.equal(drawn('p ^x\n\nq┃\n', { type: 'paste', clipboard: { 'text/html': html } }), 'p ^x\n\nqnew┃\n', html);
+test('paste of HTML: a `^name` in its text, as a character or a character reference, stays text, escaped: HTML carries no block ids', () => {
+  for (const html of ['<p>new &#94;x</p>', '<p>new &#x5E;&#120;</p>', '<p>new ^x</p>']) assert.equal(drawn('p ^x\n\nq┃\n', { type: 'paste', clipboard: { 'text/html': html } }, { flavor: 'obsidian' }), 'p ^x\n\nqnew \\^x┃\n', html);
 });
 
 test('a quote of one paragraph carrying a block-id line, split into two: refused, as a quote of several carries none', () => {
@@ -628,7 +630,7 @@ function drawn(src: string, command: Command | ((doc: OurusDoc) => Command), con
   if (j >= 0) text = text.slice(0, j) + text.slice(j + 1);
   const doc = parse(text, config);
   const r = executeCommand(OurusView.of(doc), typeof command === 'function' ? command(doc) : command, { anchor: i, head: j >= 0 ? j : i });
-  if (!(r instanceof OurusSuccess)) return `${statusOf(r)} ${r instanceof OurusRejected ? r.reason : ''}`.trim();
+  if (!(r instanceof OurusSuccess)) return `${resultStatus(r)} ${r instanceof OurusRejected ? r.reason : ''}`.trim();
   return r.view.doc.text.slice(0, r.selection.head) + '┃' + r.view.doc.text.slice(r.selection.head);
 }
 
@@ -667,6 +669,9 @@ test('a join keeps a block id where its text\'s closing frame goes: before a hea
 test('what the writer can\'t write with a block id is refused, not written wrong', () => {
   // (a footnote has no form a block id is written in here)
   assert.equal(drawn('[^1]: no┃te\n\nnext\n', { type: 'addBlockId', name: 'n' }), 'rejected not-expressible');
+  // (nor carries one alone after it: the line would be the definition's text)
+  assert.equal(drawn('┃^x\n[^a]:', { type: 'moveSubtreeDown' }, { flavor: 'obsidian' }), 'rejected not-expressible');
+  assert.equal(drawn('[^1]: a footnote\n\n┃Final line ^blk\n', { type: 'deleteSoftLineBackward' }, { flavor: 'obsidian' }), 'rejected not-expressible');
   // (a paragraph that is only a block id: another would make it text)
   assert.equal(drawn('^id\n\npa┃ra\n', (d) => ({ type: 'addBlockId', name: 'new1', node: d.rootNode.children[0]!.id })), 'rejected block-id');
   // (the text holding the name again before it: removed, that one would end it)
@@ -678,6 +683,12 @@ test('what the writer can\'t write with a block id is refused, not written wrong
   assert.ok(quote instanceof OurusSuccess);
   assert.equal(quote.view.doc.text, '> ## \n> h\n^hh\n');
   assert.deepEqual(quote.view.doc.blockIds().map((b) => [b.name, b.carried, b.owner.id]), [['hh', false, quote.view.doc.rootNode.children[0]!.id]]);
+});
+
+test('duplicate: a quote atom ending in `^x` where the flavor has no block ids: its text, the copy\'s caret after it', () => {
+  assert.equal(drawn('> a ^x┃', { type: 'duplicateSubtree' }, { quotes: 'atom', flavor: 'gfm' }), '> a ^x\n\n> a ^x┃');
+  assert.equal(drawn('> a ^┃x', { type: 'duplicateSubtree' }, { quotes: 'atom', flavor: 'gfm' }), '> a ^x\n\n> a ^┃x');
+  assert.equal(drawn('> a ^x┃', { type: 'duplicateSubtree' }, { quotes: 'atom', flavor: 'obsidian' }), '> a ^x\n\n> a┃');
 });
 
 test('duplicate: an anchor in a copy whose first line a marker is written over, a block id alone not copied', () => {
@@ -748,4 +759,92 @@ test('addBlockId and removeBlockId with the caret in a marker: at the text\'s st
 
 test('duplicate: a copy without its block id, last in a quote, writes the blank lines after it outside the quote', () => {
   assert.equal(drawn('- > a ^┃x\n\n  > b ^y\n', { type: 'duplicateSubtree' }, { flavor: 'obsidian', quotes: 'container' }), '- > a ^x\n  >\n  > a┃\n\n  > b ^y\n');
+});
+
+test('addBlockId after a text ending in a no-break space: a blank before it still, which only a space or a tab is', () => {
+  for (const space of [' ', '　']) {
+    assert.equal(drawn(`para${space}┃\n`, { type: 'addBlockId', name: 'abc' }), `para${space}┃ ^abc\n`);
+    assert.equal(drawn(`- a${space}┃\n`, { type: 'addBlockId', name: 'abc' }), `- a${space}┃ ^abc\n`);
+  }
+});
+
+test('a plain paste of several paragraphs into a text a block id ends: the id stays on the first, the caret in the text', () => {
+  const doc = parse('  ```js\n  ```\n  Final ^blk', { flavor: 'obsidian' });
+  for (const at of [20, 21]) {
+    const r = executeCommand(OurusView.of(doc), { type: 'pastePlain', text: '```\n\n| 1 | 2 |\n\nFinal ^zzz' }, { anchor: at, head: at });
+    assert.ok(r instanceof OurusSuccess);
+    assert.ok(r.selection.head <= r.view.doc.text.length, `caret ${r.selection.head} past ${r.view.doc.text.length}`);
+    assert.ok(!r.view.doc.text.includes('| 1 | 2 | ^'), JSON.stringify(r.view.doc.text));
+    assert.ok(r.view.doc.text.includes('``` ^blk'), JSON.stringify(r.view.doc.text));
+    // (the pasted duplicate dropped, the rest of the line not glued to it)
+    assert.ok(!r.view.doc.text.includes('^blkl'), JSON.stringify(r.view.doc.text));
+  }
+});
+
+test('a plain paste ending in a line break, before a block id, keeps the caret in a note with no final line break', () => {
+  const result = assertApplied(executeOnText('Final line ^blk', { type: 'pastePlain', text: 'a\n\nb\n' }, { caret: 10, config: { flavor: 'obsidian' } }));
+  assert.equal(result.view.doc.text, 'Final linea ^blk\n\nb');
+  assert.equal(result.selection.head, result.view.doc.text.length);
+});
+
+test('a plain paste of paragraphs ending in blanks, before a block id, drops them: the id ends the first, the caret after the last', () => {
+  const obsidian = { flavor: 'obsidian' } as const;
+  // (a space, a tab, several, and a line break after them: all as the paste without them)
+  for (const ending of [' ', '\t', '  ', ' \n', '\n  ']) {
+    const result = assertApplied(executeOnText('a ^id', { type: 'pastePlain', text: `a\n\nb${ending}` }, { caret: 1, config: obsidian }));
+    assert.equal(result.view.doc.text, 'aa ^id\n\nb', JSON.stringify(ending));
+    assert.deepEqual(result.selection, { anchor: 9, head: 9 }, JSON.stringify(ending));
+  }
+  // (no paragraph break: the id still ends the text, the caret after what was pasted)
+  const lines = assertApplied(executeOnText('a ^id', { type: 'pastePlain', text: 'x\ny ' }, { caret: 1, config: obsidian }));
+  assert.equal(lines.view.doc.text, 'ax\ny ^id');
+  assert.deepEqual(lines.selection, { anchor: 4, head: 4 });
+  // (pasted after the id, as typing there puts it: before it)
+  const after = assertApplied(executeOnText('a ^id', { type: 'pastePlain', text: 'a\n\nb ' }, { caret: 5, config: obsidian }));
+  assert.equal(after.view.doc.text, 'a a ^id\n\nb');
+  assert.deepEqual(after.selection, { anchor: 10, head: 10 });
+  // (without a block id the blanks are the host's text, kept)
+  assert.equal(appliedText(executeOnText('a', { type: 'pastePlain', text: 'a\n\nb ' }, { caret: 1, config: obsidian })), 'aa\n\nb ');
+});
+
+test('a pasted line of two block ids, the last a name the note holds, keeps the one before it', () => {
+  assert.equal(appliedText(executeOnText('^b', { type: 'paste', clipboard: { 'text/markdown': '- ^a ^b' } }, { config: { flavor: 'obsidian' } })), '^b\n\n- ^a');
+});
+
+test('removeBlockId with a node removes that node\'s id, wherever the selection is', () => {
+  assert.equal(appliedText(executeOnText('a ^x\n\nb ^y', { type: 'removeBlockId', node: 2 }, { config: { flavor: 'obsidian' } })), 'a ^x\n\nb');
+  const result = executeOnText('a ^x\n\nb ^y', { type: 'removeBlockId', node: 9 }, { config: { flavor: 'obsidian' } });
+  assert.ok(result instanceof OurusRejected && result.reason === 'no-such-node');
+});
+
+test('edits made beside a block id use the note\'s line ending: CRLF and lone-CR notes as LF ones', () => {
+  const obsidian = { flavor: 'obsidian' } as const;
+  // typing on the blank line under a block-id paragraph: a paragraph of its own, a blank line between
+  assert.equal(appliedText(executeOnText('^d\r\n\r\n', { type: 'insertText', text: 'x' }, { caret: 4, config: obsidian })), '^d\r\n\r\nx\r\n');
+  assert.equal(appliedText(executeOnText('^d\r\r', { type: 'insertText', text: 'x' }, { caret: 3, config: obsidian })), '^d\r\rx\r');
+  // the host's Enter over a lone CR, a line break of the note's: the id still on its line, the host's
+  assert.ok(executeOnText('^d\r\rb', { type: 'enter' }, { anchor: 3, head: 4, config: obsidian }) instanceof OurusDeferred);
+  // a lone CR typed after a block id is a line break, as an LF: the host's
+  assert.ok(executeOnText('p ^id\n\n\nq', { type: 'insertText', text: '\r' }, { caret: 6, config: obsidian }) instanceof OurusDeferred);
+  // typing on the blank line before a decorated carried id: at the text's end, the line after a CRLF
+  assert.equal(appliedText(executeOnText('```\r\nx\r\n```\r\n\r\n^id', { type: 'insertText', text: 'y' }, { caret: 13, config: { ...obsidian, markup: 'decorated' } })), '```\r\nxy\r\n```\r\n\r\n^id');
+});
+
+test('Backspace beside a decorated block id takes a whole character: an emoji with its joiners, a letter with its accent, a flag', () => {
+  const decorated = { flavor: 'obsidian', markup: 'decorated' } as const;
+  for (const char of ['👩\u200d💻', 'e\u0301', '🇫🇷', '👍🏽']) {
+    const text = `x${char} ^id`;
+    const result = assertApplied(executeOnText(text, { type: 'deleteContentBackward' }, { caret: text.length, config: decorated }));
+    assert.equal(result.view.doc.text, 'x ^id');
+    assert.deepEqual(result.selection, { anchor: 1, head: 1 });
+  }
+});
+
+test('a block id\'s name typed in its markup is the user\'s, through a step that is another id\'s name too', () => {
+  const source = '## table\n- abc ^id\n- def ^i';
+  const typed = executeOnText(source, { type: 'insertText', text: 'd' }, { caret: source.length, config: { flavor: 'obsidian', markup: 'text' } });
+  assert.ok(typed instanceof OurusDeferred, typed.constructor.name);
+  // (a name another id has, typed outside any id's markup: still refused)
+  const outside = executeOnText('a ^id\n\nb', { type: 'insertText', text: ' ^id' }, { caret: 8, config: { flavor: 'obsidian', markup: 'text' } });
+  assert.ok(outside instanceof OurusRejected && outside.reason === 'block-id');
 });

@@ -126,6 +126,7 @@ export class OurusNode {
   /** Its first line. */
   readonly startLine: number;
   #children: (OurusNode | undefined)[] | null = null;
+  #allChildren = false;
   #endLine = -1;
 
   /** Made by its snapshot, not by a host: see the class. */
@@ -197,8 +198,12 @@ export class OurusNode {
 
   /** In document order. */
   get children(): readonly OurusNode[] {
-    const n = this.persistentNode.children.length;
-    for (let i = 0; i < n; i++) this.child(i);
+    // (made once, all of them: asked again, as a wide list's parent is for each of its places, at no cost)
+    if (!this.#allChildren) {
+      const n = this.persistentNode.children.length;
+      for (let i = 0; i < n; i++) this.child(i);
+      this.#allChildren = true;
+    }
     return (this.#children ?? []) as OurusNode[];
   }
 
@@ -267,8 +272,9 @@ export class OurusNode {
   }
 
   /** Whether `text`, set on it, would make it its quote's callout title: a quote's first paragraph whose first line opens a callout. */
-  becomesTitle(text: OurusProse): boolean {
-    return this.parent?.kind === 'quote' && this.index === 0 && mdCalloutAt(text.body.split('\n')[0]!) !== null;
+  becomesTitle(text: OurusProse, callouts = true): boolean {
+    // (`callouts`: whether the flavor has them; elsewhere a `[!type]` line is a quote's text)
+    return callouts && this.parent?.kind === 'quote' && this.index === 0 && mdCalloutAt(text.body.split('\n')[0]!) !== null;
   }
 
   /** The node whose own lines hold line `line` (its text's, its block-id lines'), below this one: the deepest, where nested items share a line; or null. */

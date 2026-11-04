@@ -2,13 +2,13 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { readSpec } from '../../test/specfile.ts';
+import { readSpec } from '../../test/lib/index.ts';
 import { driver } from '../emacs-markdown/driver.ts';
 import { adapt } from './plan.ts';
 
 const F = '```';
 const plan = (clipboard: string[], opts = {}) => {
-  const [t] = readSpec('x.md', ['## A', '', `${F}yaml`, 'tags: edge', ...clipboard, F, '', `${F}buffer`, '- a┃', F, '', '> paste', '', `${F}buffer`, '- ax┃', F].join('\n'));
+  const [t] = readSpec('x.md', ['## A', '', `${F}yaml`, 'tags: rare', ...clipboard, F, '', `${F}markdown`, '- a┃', F, '', '> paste', '', `${F}markdown`, '- ax┃', F].join('\n'));
   const a = adapt(driver, t!, opts);
   assert.ok('plan' in a, 'skip' in a ? a.skip : '');
   return a.plan;

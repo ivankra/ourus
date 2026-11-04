@@ -11,6 +11,7 @@
   },
   "scripts": {
     "bench": "node test/bench.ts",
+    "bugs": "node test/bugs.ts",
     "demo:cm6": "node demos/cm6/build.ts",
     "demo:textarea": "node demos/textarea/build.ts",
     "demo:gtk": "node demos/gtk/build.ts",
@@ -18,8 +19,8 @@
     "proxy": "node sxs/proxy.ts --cache=offline",
     "redraw": "node test/redraw.ts",
     "sxs": "node sxs/run.ts",
-    "test": "node --test test/*.test.ts test/*/*.test.ts sxs/*/*.test.ts",
-    "test:heavy": "node test/heavy.ts",
+    "test": "node test/heavy.ts",
+    "test:fast": "tsc -p . && node --test test/*.test.ts test/*/*.test.ts sxs/*/*.test.ts",
     "test:model": "node test/model/run.ts",
     "typecheck": "tsc -p . && tsc -p demos/cm6 && tsc -p demos/textarea"
   },

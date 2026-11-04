@@ -9,9 +9,16 @@ import { selectionRoots } from './util.ts';
 import type { OurusResult } from './types.ts';
 import { OurusRejected, OurusSuccess } from './types.ts';
 
-/** The nodes a view command means: `nodes` given, else the selection's roots, each as its row's fold (the outermost node starting on its line). */
-function targets(ctx: CommandContext): OurusNode[] {
-  if (ctx.nodes) return ctx.nodes.map((id) => ctx.doc.node(id)).filter((n): n is OurusNode => !!n && n.kind !== 'root');
+/**
+ * The nodes a view command means: `nodes` given, else the selection's roots, each as its row's fold (the
+ * outermost node starting on its line); `no-such-node` where one given isn't a node, as the other node
+ * commands refuse it.
+ */
+function targets(ctx: CommandContext): OurusNode[] | 'no-such-node' {
+  if (ctx.nodes) {
+    const nodes = ctx.nodes.map((id) => ctx.doc.node(id));
+    return nodes.every((n): n is OurusNode => !!n && n.kind !== 'root') ? nodes : 'no-such-node';
+  }
   return selectionRoots(ctx.view, ctx.selection).map((n) => ctx.doc.rowOwner(n.startLine) ?? n);
 }
 
@@ -49,7 +56,9 @@ function setFolds(ctx: CommandContext, fold: boolean | undefined): OurusResult |
   const view = ctx.view;
   const kept = suppressed(view);
   const foldable = (n: OurusNode | null): n is OurusNode => !!n && n.foldable && !kept.has(n.id);
-  let nodes = targets(ctx);
+  const given = targets(ctx);
+  if (given === 'no-such-node') return new OurusRejected(given);
+  let nodes = given;
   if (fold === undefined) nodes = nodes.map((n) => (n.foldable ? n : n.parent!)).filter((n) => n.kind !== 'root');
   nodes = nodes.filter(foldable);
   const on = fold ?? !nodes.some((n) => view.zoomFolded.has(n.id));
@@ -84,6 +93,20 @@ export function clearZoomCommand(ctx: CommandContext): OurusResult | null {
 /** `view`, the new view, applied with no changes, the selection out of what it hides. */
 function viewed(ctx: CommandContext, view: OurusView): OurusResult | null {
   return new OurusSuccess({ view, changes: [], selection: view.visibleSelection(ctx.selection) });
+}
+
+/**
+ * `outcome` with the fold of `id` open where its caret is in what that fold hides: a new line the
+ * command made for it to type on, read as a blank line before the hidden children (Shift-Enter at a
+ * folded item's end), which the caret mustn't be taken off.
+ */
+export function unfoldedForCaret(outcome: OurusResult | null, id: number): OurusResult | null {
+  if (!(outcome instanceof OurusSuccess) || !outcome.view.folded.has(id)) return outcome;
+  const { anchor, head } = outcome.selection;
+  const node = outcome.view.doc.node(id);
+  const range = node && outcome.view.doc.foldRange(node);
+  if (!range || ![anchor, head].some((p) => p > range.from && p <= range.to)) return outcome;
+  return new OurusSuccess({ ...outcome, view: outcome.view.withFolded([...outcome.view.folded].filter((f) => f !== id)) });
 }
 
 /** `outcome` with the nodes `ids` folded too, where it applied (a split's or a copy's fold, the writer's own). */

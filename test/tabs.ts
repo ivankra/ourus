@@ -12,10 +12,7 @@
 
 import { indentUnitOf } from '../src/writer/write.ts';
 import { compareTexts, readTextDoc } from '../sxs/lib/text.ts';
-import { docOf, drawDoc, drawnSelection, drawsCaret, readDrawing, readLabels, withoutCaret } from './drawing.ts';
-import { play, type Played } from './player.ts';
-import { Labels, readClipboard, normalize, outcome, flavorsOf, viewOf } from './spec-run.ts';
-import { readSpecFile, specConfig, specFiles, type SpecTest } from './specfile.ts';
+import { parseWithMarks, drawDoc, drawnSelection, drawsCaret, readDrawing, readLabels, withoutCaret, playActions, type PlayedState, NodeLabels, readClipboard, normalizeDrawing, describeOutcome, specTestFlavors, specTestView, readSpecFile, specConfig, specFiles, type SpecTest } from './lib/index.ts';
 import { OurusRejected } from '../src/commands/index.ts';
 
 /** A drawn buffer with each line's leading spaces (between its quotes' `>`s too) tabs to the stops they reach; a drop line (`▸`) as it is, no part of the text. */
@@ -64,30 +61,30 @@ export function tabPass(t: SpecTest): string | null {
   if (t.options.indentUnit !== undefined || /→/.test(t.initial.buffer)) return null;
   const tabbed = withTabs(t.initial.buffer);
   if (tabbed === t.initial.buffer) return null;
-  const flavor = flavorsOf(t)[0]!;
+  const flavor = specTestFlavors(t)[0]!;
   const config = { flavor, ...specConfig(t.options) };
   const spaces = readDrawing(t.initial.buffer);
   const start = readDrawing(tabbed);
-  const unit = indentUnitOf(docOf(spaces.text, spaces.placeholders, config));
-  const doc = docOf(start.text, start.placeholders, { ...config, indentUnit: unit });
-  const labels = new Labels();
+  const unit = indentUnitOf(parseWithMarks(spaces.text, spaces.placeholders, config));
+  const doc = parseWithMarks(start.text, start.placeholders, { ...config, indentUnit: unit });
+  const labels = new NodeLabels();
   labels.check(doc, start.labels, null);
-  const viewed = viewOf(t, doc, labels.ids);
-  let state: Played = { view: viewed, selection: drawnSelection(viewed, start), clipboard: readClipboard(t.initial.clipboard), drop: start.drop, labels: labels.ids };
+  const viewed = specTestView(t, doc, start.view);
+  let state: PlayedState = { view: viewed, selection: drawnSelection(viewed, start), clipboard: readClipboard(t.initial.clipboard), drop: start.drop, labels: labels.ids };
   for (const step of t.steps) {
     for (const action of step.actions) {
-      state = play(state, [action]);
+      state = playActions(state, [action]);
       if (state.last instanceof OurusRejected && state.last.reason === 'write-failed') return `write-failed at line ${step.line}: ${action}: ${state.last.detail ?? ''}`;
     }
     const { result } = step.expect;
-    if (result !== undefined && outcome(state) !== result) return `result at line ${step.line}: ${outcome(state)}, not ${result}`;
+    if (result !== undefined && describeOutcome(state) !== result) return `result at line ${step.line}: ${describeOutcome(state)}, not ${result}`;
     if (step.expect.buffer === undefined || /→/.test(step.expect.buffer)) continue;
     // (labels are no text: drawn before the caret, they would move it)
     const buffer = readLabels(step.expect.buffer).drawn;
     const drawn = drawDoc(state.view, state.selection);
     const got = withSpaces(drawsCaret(buffer) ? drawn : withoutCaret(drawn));
     // (spelled otherwise but read the same, as a tab after a quote's `>` is: the same document)
-    if (normalize(got) !== normalize(buffer) && compareTexts(readTextDoc(normalize(buffer)), readTextDoc(normalize(got)), flavor) !== 'whitespace') return `buffer at line ${step.line}:\n    want ${JSON.stringify(normalize(buffer))}\n    got  ${JSON.stringify(normalize(got))}\n    tabs ${JSON.stringify(normalize(drawn))}\n    from ${JSON.stringify(tabbed)}`;
+    if (normalizeDrawing(got) !== normalizeDrawing(buffer) && compareTexts(readTextDoc(normalizeDrawing(buffer)), readTextDoc(normalizeDrawing(got)), flavor) !== 'whitespace') return `buffer at line ${step.line}:\n    want ${JSON.stringify(normalizeDrawing(buffer))}\n    got  ${JSON.stringify(normalizeDrawing(got))}\n    tabs ${JSON.stringify(normalizeDrawing(drawn))}\n    from ${JSON.stringify(tabbed)}`;
   }
   return null;
 }

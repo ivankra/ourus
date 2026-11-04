@@ -13,18 +13,18 @@ and the item's children, as Roam, WorkFlowy and Dynalist do, a heading being a b
 there and the new block the one above.
 
 ```yaml
-tags: edge
+tags: rare
 quirkEnterMidHeading: workflowy
 ```
 
-```buffer
+```markdown
 - # Hel┃lo
   - kid
 ```
 
 > enter
 
-```buffer
+```markdown
 - Hel
 - # ┃lo
   - kid
@@ -36,11 +36,11 @@ With `quirkEnterMidHeading: workflowy`, a heading's text before the caret is a p
 heading keeping the rest and its section.
 
 ```yaml
-tags: edge
+tags: rare
 quirkEnterMidHeading: workflowy
 ```
 
-```buffer
+```markdown
 # Hel┃lo
 
 text
@@ -48,7 +48,7 @@ text
 
 > enter
 
-```buffer
+```markdown
 Hel
 # ┃lo
 
@@ -65,7 +65,7 @@ tags: rare
 quirkEnterMidHeading: workflowy
 ```
 
-```buffer
+```markdown
 Hel┃lo
 ---
 
@@ -74,7 +74,7 @@ text
 
 > enter
 
-```buffer
+```markdown
 Hel
 
 ┃lo
@@ -96,14 +96,14 @@ clipboard: |-
   - y
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - x┃
 - y
@@ -123,14 +123,14 @@ clipboard: |-
   - y
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - ┃x
 - y
@@ -148,21 +148,21 @@ tags: rare
 backspaceAtItemStart: logseq
 ```
 
-```buffer
+```markdown
 1. a
 2. ┃b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 1. a
 - ┃b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 1. a┃b
 ```
 
@@ -181,14 +181,14 @@ clipboard: |-
   - y
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > paste
 
-```buffer
+```markdown
 - a- x
 - \̬- y┃
 - b

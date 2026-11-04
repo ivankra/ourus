@@ -1,8 +1,8 @@
 // Where a caret can be typed at without breaking its node: the spec's check that no applied command
 // leaves the caret in markup (spec.test.ts).
 
-import { OurusAtom, type OurusDoc } from '../src/doc/index.ts';
-import { isSpaceOrTab, trimMd } from '../src/text/index.ts';
+import { OurusAtom, type OurusDoc } from '../../src/doc/index.ts';
+import { isSpaceOrTab, trimMd } from '../../src/text/index.ts';
 
 /**
  * Where a caret at `head` can be typed at without breaking its node: in its text, past markers; on a

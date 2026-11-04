@@ -7,11 +7,7 @@ import { test, type TestContext } from 'node:test';
 import { OurusAtom, type OurusNode, type OurusDoc } from '../src/doc/index.ts';
 import { codeAt } from '../src/commands/code.ts';
 import { CommandContext } from '../src/commands/context.ts';
-import { drawDoc, plainText } from './drawing.ts';
-import { isCommand, isDrop, play } from './player.ts';
-import { textPosition } from './caret.ts';
-import { flavorsOf, run, startOf } from './spec-run.ts';
-import { readSpecFile, slug, specConfig, specFiles, SPEC_DIR, type SpecTest } from './specfile.ts';
+import { drawDoc, nodePlainText, isCommandAction, isDropAction, playActions, textPosition, specTestFlavors, runSpecTest, specTestStart, readSpecFile, specSlug, specConfig, specFiles, SPEC_DIR, type SpecTest } from './lib/index.ts';
 import { OurusSuccess } from '../src/commands/index.ts';
 
 for (const file of specFiles()) {
@@ -26,7 +22,7 @@ for (const file of specFiles()) {
   }
   for (const t of tests) {
     const runAll = (): void => {
-      for (const flavor of flavorsOf(t)) run(t, flavor);
+      for (const flavor of specTestFlavors(t)) runSpecTest(t, flavor);
     };
     test(t.name, (ctx: TestContext) => {
       if (!t.pending) return runAll();
@@ -59,7 +55,7 @@ test('every core case appears in scenarios.md', () => {
   const problems: string[] = [];
   for (const file of specFiles()) {
     for (const t of readSpecFile(file)) {
-      if (t.rank === 'core' && file !== 'scenarios.md' && !scenarios.includes(`${file}#${slug(t.name)})`)) problems.push(`${t.name} (${file}): core, but in no scenario`);
+      if (t.rank === 'core' && file !== 'scenarios.md' && !scenarios.includes(`${file}#${specSlug(t.name)})`)) problems.push(`${t.name} (${file}): core, but in no scenario`);
     }
   }
   assert.deepEqual(problems, []);
@@ -79,7 +75,7 @@ function typingKeepsOutline(doc: OurusDoc, head: number): boolean {
     const walk = (n: OurusNode, depth: number): void => {
       for (const c of n.children) {
         // what a node's text is (an empty item's is a paragraph, once typed into), and a heading's level
-        out.push({ node: `${depth}:${c.kind}:${c.kind === 'atom' ? c.block.type : (c.head?.type ?? 'paragraph')}:${c.head?.attrs.level ?? ''}`, text: plainText(d, c) });
+        out.push({ node: `${depth}:${c.kind}:${c.kind === 'atom' ? c.block.type : (c.head?.type ?? 'paragraph')}:${c.head?.attrs.level ?? ''}`, text: nodePlainText(d, c) });
         walk(c, depth + 1);
       }
     };
@@ -115,14 +111,14 @@ test('`enter-in-fence` tags exactly the cases with Enter on a fenced code or mat
   const problems: string[] = [];
   for (const file of specFiles()) {
     for (const t of readSpecFile(file)) {
-      let state = startOf(t, flavorsOf(t)[0]!);
+      let state = specTestStart(t, specTestFlavors(t)[0]!);
       let entered = false;
       for (const action of t.steps.flatMap((s) => s.actions)) {
         if (action === 'enter') {
           const code = codeAt(new CommandContext(state.view, state.selection));
           if (code && (code.text.type === 'fenced_code' || code.text.type === 'math_block') && !onFenceLine(state.view.doc, state.selection.head)) entered = true;
         }
-        state = play(state, [action]);
+        state = playActions(state, [action]);
       }
       if (entered !== t.tags.includes('enter-in-fence')) problems.push(`${t.file}:${t.line} ${t.name}: ${entered ? 'Enter on a fenced block\'s line, untagged' : 'tagged, no Enter on a fenced block\'s line'}`);
     }
@@ -139,15 +135,15 @@ for (const markup of ['text', 'decorated'] as const) {
         // decorated: every case, its own config with the host's kind set over it
         const options = markup === 'decorated' ? { ...specConfig(t.options), markup } : specConfig(t.options);
         if (markup === 'text' && options.markup === 'decorated') continue;
-        for (const flavor of flavorsOf(t)) {
-          let state = startOf(t, flavor, options);
+        for (const flavor of specTestFlavors(t)) {
+          let state = specTestStart(t, flavor, options);
           for (const step of t.steps) {
             for (const action of step.actions) {
               const before = state;
-              state = play(state, [action]);
+              state = playActions(state, [action]);
               const { anchor, head } = state.selection;
               // typed text too, where ourus's `insertText` applied
-              if (!(isCommand(action) || isDrop(action) || action.startsWith('"')) || !(state.last instanceof OurusSuccess) || anchor !== head) continue;
+              if (!(isCommandAction(action) || isDropAction(action) || action.startsWith('"')) || !(state.last instanceof OurusSuccess) || anchor !== head) continue;
               const doc = state.view.doc;
               // a space a placeholder holds as text (`- ┃◌ x`) starts the text
               const held = doc.marks.placeholders.includes(head) && /[ \t]/.test(doc.text[head] ?? '');

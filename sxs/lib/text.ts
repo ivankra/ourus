@@ -3,9 +3,9 @@
 // compared with the spec's as drawn. A placeholder (`◌`) is a place, not text: it is dropped.
 
 import type { OurusConfig } from '../../src/config.ts';
-import { OurusDoc } from '../../src/doc/index.ts';
+import { OurusAtom, OurusDoc } from '../../src/doc/index.ts';
 import { OurusView } from '../../src/view/index.ts';
-import { drawState, drawText, drawnSelection, nodesOf, plainText, readDrawing } from '../../test/drawing.ts';
+import { drawState, drawText, drawnSelection, allNodes, nodePlainText, readDrawing } from '../../test/lib/index.ts';
 import type { Verdict } from './block.ts';
 import { drawView, sameView, splitView, type RowView } from './view.ts';
 
@@ -17,12 +17,27 @@ export interface TextDoc {
   view?: RowView;
 }
 
-/** A drawn buffer as a text document (its view, `view.ts`, read off its lines' marks); a subtree selection (`««…»»`) as the whole lines it is. */
+/** A drawn buffer as a text document (its view, `view.ts`, read off its lines' marks); a subtree selection (`⟦selected⟧`) as the whole lines it is. */
 export function readTextDoc(drawing: string): TextDoc {
   const { drawn, view } = splitView(drawing);
   const read = readDrawing(drawn);
   const selection = read.subtrees ? drawnSelection(OurusView.of(OurusDoc.parse(read.text)), read) : read.selection;
-  return { text: read.text, sel: /┃|«/.test(drawn) ? selection : null, ...(view && { view }) };
+  return { text: read.text, sel: /┃|«|⟦selected⟧/.test(drawn) ? selection : null, ...(view && { view }) };
+}
+
+/**
+ * A fold a text editor doesn't make: on an item whose text is code or a table (`- ```…`, `- | A |`),
+ * where its fold command at the row folds nothing (Obsidian, SilverBullet; measured, Regression203,
+ * Regression204). A `holds` reason, for the drivers that fold so.
+ */
+export function foldOnAtomItem(d: TextDoc, flavor: OurusConfig['flavor'] = 'gfm'): string | undefined {
+  if (!d.view?.folded.length) return undefined;
+  const doc = OurusDoc.parse(d.text, { config: { flavor } });
+  for (const row of d.view.folded) {
+    const node = doc.nodeAtLine(row);
+    if (node?.kind === 'item' && node.startLine === row && doc.textOf(node) instanceof OurusAtom) return 'a fold on an item whose text is code or a table, which its fold command at the row doesn\'t make';
+  }
+  return undefined;
 }
 
 /** A text document drawn as a spec buffer, its view on its lines (`⟦folded⟧`, `⟦zoomed⟧`): its selection at its offsets, as a text editor has it (`«…»`, whole lines or not; the stored runs are keyed so). */
@@ -37,7 +52,7 @@ const loose = (text: string): string => text.replace(/[ \t]+$/gm, '');
 /** A document's nodes as ourus verifies them: kind, depth, what the head is, and the text (an atom's as written, other nodes' lines trimmed). */
 const nodes = (text: string, flavor: OurusConfig['flavor']): string => {
   const doc = OurusDoc.parse(text, { config: { flavor } });
-  return JSON.stringify(nodesOf(doc).map((n) => [n.kind, n.depth, n.head?.type, n.head?.attrs.level, plainText(doc, n)]));
+  return JSON.stringify(allNodes(doc).map((n) => [n.kind, n.depth, n.head?.type, n.head?.attrs.level, nodePlainText(doc, n)]));
 };
 
 /**

@@ -118,6 +118,8 @@ class Writer {
   readonly blankAt = new Map<number, number>();
   /** Old blank lines written under a shift at their node's text column, the caret on them: by old line. */
   readonly heldBlank = new Map<number, { readonly node: PersistentNode; readonly line: number; readonly prefix: string }>();
+  /** The items whose content column a held space kept moved right (`heldSpace: repair`), by how far: their new children are written as far in. */
+  readonly repadded = new Map<PersistentNode, number>();
   /** Where the blank lines last written anew end: at the text's end, they keep their line ending. */
   blankEnd = -1;
   /** Old lines `[from, to)` an item's marker of another width runs over: past `column`, `d` columns more. */
@@ -128,6 +130,10 @@ class Writer {
   readonly markerOver = new Set<PersistentNode>();
   /** The empty items given text, written past their marker and one space: how many columns less far in than their old content column. */
   readonly emptiedPadding = new Map<PersistentNode, number>();
+  /** An item whose content column narrows, its text moved below its marker (`-  a` → `-⏎  a`): by how many columns, for its children's heads. */
+  readonly narrowedItems = new Map<PersistentNode, number>();
+  /** An old line copied with another marker (an item renumbered, `10.` for `9.`): the marker's old range and its text now. */
+  readonly lineMarkers = new Map<number, { readonly from: number; readonly to: number; readonly text: string }>();
   /** Where each old line written under a shift starts in the new text. */
   readonly shiftedStarts = new Map<number, number>();
   /**
@@ -156,6 +162,8 @@ class Writer {
       return this.result([]);
     }
     const source = from.root;
+    // a byte-order mark opening the text, before every line: where it was
+    this.copyRange(0, this.tree.documentStart);
     // the blank lines above the first node (in a document with none, they precede nothing: they go)
     if (this.draft.preamble !== null) for (let k = 0; k < this.draft.preamble; k++) this.line('');
     else if (source.children.length) this.copyLines(0, source.offsets[0]!);
@@ -261,7 +269,9 @@ class Writer {
     // (a copy is written where its original isn't)
     // (on an item's marker line, `- - a`, but no longer its first block: its line is written anew)
     // (or first still, its item with a text of its own now on that line: Quote75)
-    const moved = !holds(container, at) || isCopy(child) || (onItemsLine(at) && (i > 0 || (parent.kind === 'item' && !!parent.text && !this.from.textOf(this.draft.originOf(parent)!))));
+    // (or under an item the draft made, which has no text it had)
+    const origin = this.draft.originOf(parent);
+    const moved = !holds(container, at) || isCopy(child) || (onItemsLine(at) && (i > 0 || (parent.kind === 'item' && !!parent.text && (!origin || !this.from.textOf(origin)))));
     // an item of a list where it was, after an item the draft put before it at another column: lined up with it
     const realign = moved ? 0 : this.realign(parent, i, at, container);
     const lift = moved ? 0 : (this.lifted.get(child) ?? 0);
@@ -549,7 +559,22 @@ class Writer {
     // a copy is its original's lines, its layout kept: written whole, as a read node moved is; one
     // `done()` changed is written as a drafted node is, its children each a copy of their own
     const whole = copy && copiedAsIs(node, at);
-    if (node.read || whole) this.copyNode(node, at, at.startLine + at.persistentNode.lines);
+    const end = at.startLine + at.persistentNode.lines;
+    // (its blank lines taking the old text's last line, with no line ending, a quote's `>` the shift
+    // takes off, no line copied: written anew, where what follows it is, B72)
+    if (node.read && !whole && !node.children.length && node.gap > 0 && end - node.gap > at.startLine && this.lastless(end) && this.blankLinesEnd(end, node.gap) && this.old.slice(this.tree.line(end - 1).from, this.tree.line(end - 1).to).includes('>')) {
+      this.copyNode(node, at, end - node.gap);
+      this.blankLines(node, { outer: at, column: 0, prefix: shift.trailing });
+    } else if (node.read && !whole && lastGap(at) > 0 && end - lastGap(at) > at.startLine && this.blankPrefix(after) !== shift.trailing.replace(/[ \t]+$/, '')) {
+      // (the blank lines after its subtree are where what follows it is, not under the shift: a quote
+      // it went into ends before them, B50)
+      const blanks = lastGap(at);
+      this.copyNode(node, at, end - blanks);
+      this.shifts.pop();
+      for (let k = 0; k < blanks; k++) this.line(this.blankPrefix(after));
+      this.shifts.push(shift);
+      this.blankEnd = this.length;
+    } else if (node.read || whole) this.copyNode(node, at, end);
     else {
       // (its gap, with no children, the blank lines after the subtree: where what follows it is, as
       // the shift says, not under it)
@@ -623,9 +648,11 @@ class Writer {
       const prefix = /^(.*>)\t$/.exec(shift.prefix)?.[1] ?? shift.prefix;
       // (whitespace is written after it to the line's column: a `>`'s space among it)
       const start = contentStart(prefix, ' ');
-      // (a blank line, written without its whitespace, needs none)
-      const to = blank ? Math.max(start, start + end - column + delta) : start + end - column + delta;
-      if (to < start || (end < column && !blank)) throw new WriteFailure("a moved node's lines aren't indented as far as its first");
+      // (a blank line, written without its whitespace, needs none; nor one with nothing past the cut,
+      // its text written apart, B52)
+      const bare = blank || s.length <= k;
+      const to = bare ? Math.max(start, start + end - column + delta) : start + end - column + delta;
+      if (to < start || (end < column && !bare)) throw new WriteFailure("a moved node's lines aren't indented as far as its first");
       // a tab after a quote's `>` spans by where it is: where the shift moves it off its stop, spelled
       // again as the spaces it spanned (`padded`; one after an item's marker, in the text, or in code, stays)
       const rest = (to - end) % 4 === 0 ? s.slice(k + lead.length) : padded(s.slice(k + lead.length), end, this.from.config.quotes === 'atom');
@@ -650,7 +677,8 @@ class Writer {
     else if (delta < 0) {
       let j = 0;
       while (j < rest.length && j < -delta && rest[j] === ' ') j++;
-      if (j < -delta && !blank) throw new WriteFailure("a moved node's lines aren't indented as far as its first");
+      // (nothing past the cut on the line, its text written apart: nothing to indent, B52)
+      if (j < -delta && !blank && rest !== '') throw new WriteFailure("a moved node's lines aren't indented as far as its first");
       rest = rest.slice(j);
     }
     // (after a `>` with no space, a space the rest starts with would be the `>`'s own: written as one; a
@@ -694,7 +722,10 @@ class Writer {
     const head = shift ? this.partialTabHead(line, pos, widened ?? this.old.slice(line.from, pos), shift, origin.startLine) : null;
     if (head !== null) return start + head;
     if (pos >= line.contentFrom) return this.mapOld(pos, 1, within);
-    const prefix = widened ?? this.old.slice(line.from, pos);
+    // (the line copied with another marker, as wide as that: what is past it as far past the new one)
+    const m = this.lineMarkers.get(origin.startLine);
+    const old = m && m.to <= pos ? this.old.slice(line.from, m.from) + m.text + this.old.slice(m.to, pos) : this.old.slice(line.from, pos);
+    const prefix = widened ?? old;
     return start + (shift ? this.shifted(prefix, false, shift, origin.startLine) : prefix).length;
   }
 
@@ -726,6 +757,37 @@ class Writer {
     return out;
   }
 
+  /** For each of `parent`'s children, the nearest sibling past the new items beside it, in its list (`nearItems`). */
+  readonly #nearItems = new Map<PersistentNode, { readonly below: Int32Array; readonly above: Int32Array }>();
+
+  /**
+   * The siblings a new item of `parent` lines up with, past the new items beside it in its list (a
+   * new item at a list's start ends the run below it, the item after one ends it above): `below[k]`
+   * the first at `k` or after, `above[k]` the last before `k` (-1 for none). Once for each parent, not
+   * once for each item: a paste of many items is a run of them.
+   */
+  nearItems(parent: PersistentNode): { readonly below: Int32Array; readonly above: Int32Array } {
+    const known = this.#nearItems.get(parent);
+    if (known) return known;
+    const children = parent.children;
+    const n = children.length;
+    const fresh = (k: number): boolean => children[k]!.kind === 'item' && !this.draft.originOf(children[k]!);
+    const starts = (k: number): boolean => k < n && !!this.draft.lists.get(children[k]!.id)?.start;
+    // (going down, past a new item that starts no list; going up, past one the item after which starts none)
+    const below = new Int32Array(n + 1);
+    below[n] = n;
+    for (let k = n - 1; k >= 0; k--) below[k] = fresh(k) && !starts(k) ? below[k + 1]! : k;
+    const above = new Int32Array(n + 1);
+    let last = -1;
+    for (let k = 0; k <= n; k++) {
+      above[k] = last;
+      if (k < n && !(fresh(k) && !starts(k + 1))) last = k;
+    }
+    const found = { below, above };
+    this.#nearItems.set(parent, found);
+    return found;
+  }
+
   /**
    * A node the draft made, written whole in `container`: an item after a sibling item's indentation
    * and its list's marker, anything else after the container's prefix; its gap in `gapIn`. Returns
@@ -753,8 +815,11 @@ class Writer {
       const line = this.tree.line(origin.startLine);
       markers = this.old.slice(line.from, origin.kind === 'item' ? line.from + origin.persistentNode.block!.attrs.markerStart! : line.contentFrom);
     }
-    // what its first line starts with, up to its marker; and its later lines
+    // what its first line starts with, up to its marker; and its later lines (past its item's content
+    // column as a held space kept moved it)
     let indent = this.inside(container);
+    const repadded = 'persistentNode' in container ? this.repadded.get(container.persistentNode) : undefined;
+    if (repadded) indent += ' '.repeat(repadded);
     let marker = '';
     // (lined up with the read item a command named, its line's prefix as written: a `>` as it is)
     let verbatim = false;
@@ -763,11 +828,8 @@ class Writer {
       // list (an item put in before another lines up with it), else above it unless it starts the list
       const lists = this.draft.lists;
       // (past the new items beside it, in its list: they line up as it does)
-      const near = (step: 1 | -1): number => {
-        let k = i + step;
-        while (parent.children[k]?.kind === 'item' && !this.draft.originOf(parent.children[k]!) && !lists.get((step < 0 ? parent.children[k + 1] : parent.children[k])!.id)?.start) k += step;
-        return k;
-      };
+      const nearby = this.nearItems(parent);
+      const near = (step: 1 | -1): number => (step > 0 ? nearby.below[i + 1]! : nearby.above[i]!);
       // (with none, where the unit isn't the content column, as the unit has it past its parent's marker;
       // but first in an item whose marker is written over its line: at its content column, in spaces)
       const overWritten = 'persistentNode' in container ? this.markerOver.has(container.persistentNode) : !!container.onMarkersLine;
@@ -776,7 +838,7 @@ class Writer {
       const up = this.draft.lineUps.get(node.id);
       if (up) {
         const line = this.tree.line(up.startLine);
-        indent = this.old.slice(line.from, line.from + up.persistentNode.block!.attrs.markerStart!).replace(/[^>\t ]/g, ' ');
+        indent = linedUp(this.old.slice(line.from, line.from + up.persistentNode.block!.attrs.markerStart!));
         verbatim = true;
       }
       for (const k of up ? [] : [near(1), near(-1)]) {
@@ -785,13 +847,18 @@ class Writer {
         const same = k < i ? !lists.get(parent.children[k + 1]!.id)?.start : !lists.get(sibling?.id ?? -1)?.start;
         if (at && same && holds(container, at)) {
           const line = this.tree.line(at.startLine);
-          const lined = this.old.slice(line.from, line.from + at.persistentNode.block!.attrs.markerStart!).replace(/[^>\t ]/g, ' ');
+          // (first in an item whose marker line it is written over: as that line has it)
+          const raw = this.old.slice(line.from, line.from + at.persistentNode.block!.attrs.markerStart!);
+          const lined = i === 0 && overWritten ? raw.replace(/[^>\t ]/g, ' ') : linedUp(raw);
           // (never where the item before it, of another list, would take it in: `- a⏎  1. x`; an empty
           // one a blank line ends takes in nothing)
           const before = parent.children[i - 1];
           const ended = before?.kind === 'item' && !before.children.length && before.gap > 0 && (this.draft.textOf(before, this.draft.originOf(before)) as OurusProse | null)?.empty;
           if (before?.kind === 'item' && !ended && this.takesIn(before, columns(lined) - this.columnIn(line, containerOf(at)), container)) break;
-          indent = lined;
+          // (where that one is written moved, its parent's content column moved by a held space kept:
+          // as far, to stay its sibling)
+          const lift = this.lifted.get(sibling!) ?? 0;
+          indent = lift < 0 ? lined + ' '.repeat(-lift) : lift > 0 && /^ *$/.test(lined.slice(-lift)) ? lined.slice(0, lined.length - lift) : lined;
           // (a list indented with tabs: new items in it with them, the line's whole prefix as written)
           break;
         }
@@ -844,7 +911,7 @@ class Writer {
     const shared = source.children.length > 0 && source.offsets[0] === 0;
     // a quote with no text of its own (its title gone): its `>` is its first child's line's, whichever
     // that is now, as on each of its lines
-    if (node.kind === 'quote' && (shared || node.text === null) && !onItemsLine(origin)) {
+    if (node.kind === "quote" && (shared || node.text === null) && (!onItemsLine(origin) || node.text === null)) {
       this.ensureLineStart();
       this.identity.set(this.headStart(node, origin, this.length), node.id);
       return;
@@ -859,13 +926,18 @@ class Writer {
       const first = node.children[0];
       // (written with that line as it was; but a copy, which is written under a shift from its own
       // container's column, and so without this marker)
-      const kept = !!first && was(first) === source.children[0] && !isCopy(first);
+      // (nor a quote whose title went, its line its first child's now: not as it was)
+      const kept = !!first && was(first) === source.children[0] && !isCopy(first) && !(first.kind === 'quote' && first.text === null && !first.read);
       // (its list's marker now another, `+` for `-`, `1.` for `2.`: written over the old one in that
       // child's line as it is written, as wide, where it isn't moved)
       const place = this.draft.lists.get(node.id);
       const oldMarker = this.from.markerOf(origin);
       const newMarker = place && (place.type === 'bullet' || place.number !== null) ? markerOf(place, oldMarker) : oldMarker;
-      if (kept && newMarker !== oldMarker && newMarker.length !== oldMarker.length) throw new WriteFailure(`node ${node.id}'s marker is on its first child's line, which goes`);
+      // (of another width, `9.` for `10.`: that line and the item's later ones, its descendants', past its
+      // content column as many columns wider, the line copied, as a renumbered item's is; the marker
+      // written over the old one and the spaces it gained, or with the ones it left)
+      const d = kept ? newMarker.length - oldMarker.length : 0;
+      if (d !== 0) this.widened.push({ from: origin.startLine, to: origin.startLine + origin.persistentNode.lines, column: origin.persistentNode.block!.attrs.contentColumn!, d });
       if (!kept) {
         // another block first now: its first line starts with the marker (and the containers on its
         // line), written over the indentation the line is written with
@@ -916,7 +988,7 @@ class Writer {
         const lead = this.shifted(this.old.slice(line.from, piece.to), false, shift, origin.startLine);
         return lead.length - /[ \t]*$/.exec(lead)![0].length - oldMarker.length;
       };
-      if (newMarker !== oldMarker) this.remarked.push({ at: this.length + markerAt(), was: oldMarker, text: newMarker });
+      if (newMarker !== oldMarker) this.remarked.push({ at: this.length + markerAt(), was: oldMarker + ' '.repeat(Math.max(0, d)), text: newMarker + ' '.repeat(Math.max(0, -d)) });
       // and the nodes below it that start on that line, read as they are: rebuilt with it, they keep their ids
       for (let child = node.children[0], at = origin.child(0); child?.read && at.startLine === origin.startLine; child = child.children[0], at = at.children[0]!) {
         this.identity.set(this.headStart(child, at, this.length), child.id);
@@ -948,6 +1020,12 @@ class Writer {
     // (its own old blank lines, as many as it has)
     else if (moved === undefined && node.gap === source.gap && origin.startLine + end - textEnd === node.gap && !this.lastless(origin.startLine + end) && this.blankIn([textEnd, origin.startLine + end], gapIn)) this.copyLines(textEnd, origin.startLine + end);
     else this.blankLines(node, gapIn);
+  }
+
+  /** Whether the `gap` lines before line `end` are blank lines (a gap's, the subtree ending there). */
+  blankLinesEnd(end: number, gap: number): boolean {
+    for (let i = end - gap; i < end; i++) if (!this.tree.line(i).blank && trimMd(this.old.slice(this.tree.line(i).contentFrom, this.tree.line(i).to)) !== '') return false;
+    return true;
   }
 
   /** Whether old blank lines up to line `to` take the old text's last line, with no line ending, which copied under a shift would be no line: written anew. */
@@ -995,6 +1073,7 @@ class Writer {
         // descendants' are written past it as far (Enter25: `9.` renumbered `10.`)
         const d = marker.length - (to - from);
         if (d !== 0) this.widened.push({ from: origin.startLine + 1, to: origin.startLine + origin.persistentNode.lines, column: block.attrs.contentColumn!, d });
+        this.lineMarkers.set(origin.startLine, { from, to, text: marker });
         this.copyLine(origin.startLine, { from, to, text: marker });
         this.copyLines(origin.startLine + 1, end);
         return;
@@ -1031,14 +1110,21 @@ class Writer {
       // (its text below its marker now, its content column one past the marker: its later lines from
       // there, not past the padding it had, `-   a` Shift-Entered before `a`)
       const { contentColumn } = origin.persistentNode.block!.attrs;
-      if (lines.length > 1) dropped = Math.max(0, contentColumn! - advanceColumns(this.old, line.from, markerEnd(), 0) - 1);
+      const narrower = Math.max(0, contentColumn! - advanceColumns(this.old, line.from, markerEnd(), 0) - 1);
+      if (lines.length > 1) dropped = narrower;
+      // (emptied, `- `, too: its children's lines copied as they were start their content sooner)
+      if (narrower) this.narrowedItems.set(origin.persistentNode, narrower);
     } else if (this.draft.paddings.has(node.id)) {
       // the spaces its text started with, as its padding (`done()`'s)
       const padding = ' '.repeat(this.draft.paddings.get(node.id)!);
       lead = node.kind === 'item' ? `${this.old.slice(line.from, markerEnd())} ${padding}` : this.old.slice(line.from, this.from.posOf(origin, 0, -1)) + padding;
       // (an item's content column moved right by it, a held space kept, `heldSpace: repair`: its
       // children with it, as a lifted block is moved, the other way)
-      if (node.kind === 'item' && padding) for (const c of node.children) this.lifted.set(c, (this.lifted.get(c) ?? 0) - padding.length);
+      if (node.kind === 'item' && padding) {
+        for (const c of node.children) this.lifted.set(c, (this.lifted.get(c) ?? 0) - padding.length);
+        // (and a new node in it, as far)
+        this.repadded.set(origin.persistentNode, padding.length);
+      }
     } else if (node.kind === 'item' && origin.textFirstLine > origin.startLine) {
       // a text that started below its marker, on its line now: after the marker and a space
       lead = this.old.slice(line.from, markerEnd()) + ' ';
@@ -1063,9 +1149,10 @@ class Writer {
       const content = Math.max(from, line.prefix[line.prefix.length - 1]?.toColumn ?? 0);
       if (advanceColumns(padding, 0, padding.length, from) - content >= 4) padding = '';
       // (a first line that was lazy, no longer right after what it continued: after the prefix of the
-      // container it is written in, `inside`)
+      // container it is written in, `inside`; the spaces it started with were its own line's, not
+      // past that prefix, where they would put its start past the content's, and its identity: block-ids.test.ts)
       lazyLead = line.lazy && inside !== undefined;
-      lead = (lazyLead ? inside! : this.old.slice(line.from, p0)) + padding;
+      lead = lazyLead ? inside! : this.old.slice(line.from, p0) + padding;
       // (a text starting at a tab its container's `>` took a column of, as its space, `>→> q`: its
       // first spaces that tab's rest, written after the `>` and its space)
       const before = line.prefix.find((p) => p.partialTab && p.to === p0);
@@ -1162,7 +1249,9 @@ class Writer {
         // would be the text's, its spaces the container's; a line with no `>` a quote's prefix has is
         // lazy however far in)
         const indent = advanceColumns(this.old, was.from, was.contentFrom + /^[ \t]*/.exec(written)![0].length, 0);
-        return continuation.includes('>') || indent < columns(continuation) || !/^[ \t]/.test(written) ? was : null;
+        // (lazy for a quote: with fewer `>`s than its prefix now has; one with them all is lazy for an item alone, by its column: B64)
+        const quotes = (prefix: string): number => prefix.match(/>/g)?.length ?? 0;
+        return quotes(continuation) > quotes(this.old.slice(was.from, was.contentFrom)) || indent < columns(continuation) || !/^[ \t]/.test(written) ? was : null;
       };
       // (a text starting below its marker has no first line a lazy one could continue)
       const startsBelow = text instanceof OurusProse && text.frame.some((p) => p.part === 'below');
@@ -1312,6 +1401,10 @@ class Writer {
       const block = origin.persistentNode.block;
       at = line.prefix.find((piece) => piece.container.block === block)?.from ?? line.contentFrom;
     }
+    // (in an item whose content column narrowed, a child's line copied as it was: its content starts
+    // that many columns sooner, the spaces it gives up its text's indentation now)
+    const narrowed = origin.parent && origin.startLine > origin.parent.startLine ? (this.narrowedItems.get(origin.parent.persistentNode) ?? 0) : 0;
+    if (narrowed && node.kind !== 'item' && !this.shiftAt(origin.startLine) && at - narrowed >= line.from && /^ *$/.test(this.old.slice(at - narrowed, at))) at -= narrowed;
     // (the shift of a node moved off this line is no shift of one that stays on it)
     const lineShift = shifted && !line.lazy ? this.shiftAt(origin.startLine) : null;
     const shift = lineShift && within(origin, lineShift.origin) ? lineShift : null;
@@ -1492,13 +1585,17 @@ class Writer {
         // in code, never wider (any number of spaces keeps it in its item: Indent13), narrower where
         // its container is (its spaces past the column are the code's: Fence48), and short of the
         // container's column as it was, but where that is past the new column: there its spaces would
-        // be the code's, and it is cut to the new prefix, an empty line of the code as it was
-        const code = !!line.leaf && line.leaf.block.type !== 'paragraph' && !written.includes('>') && !shift.prefix.includes('>');
+        // be the code's, and it is cut to the new prefix, an empty line of the code as it was; but one
+        // with spaces past its container's content, the code's, is shifted as its other lines are (Regression264)
+        const inCode = !!line.leaf && line.leaf.block.type !== 'paragraph';
+        const code = inCode && !written.includes('>') && !shift.prefix.includes('>');
         const to = columns(shift.prefix) + shift.delta;
         const short = columns(written) < shift.column;
-        if (code && (to >= shift.column || (short && columns(written) <= to))) this.copyRange(line.from, end);
+        if (code && line.to <= line.contentFrom && (to >= shift.column || (short && columns(written) <= to))) this.copyRange(line.from, end);
         else {
-          this.text(this.shifted(written, !code || short, shift, i));
+          // (into or out of a quote, its prefix written anew: a code line's spaces past the container's
+          // column still the code's, not trimmed)
+          this.text(this.shifted(written, !inCode || short, shift, i));
           this.blankAt.set(i, this.length);
           this.copyRange(line.to, end);
         }
@@ -1519,6 +1616,9 @@ class Writer {
         // takes, written, so the blanks stay the line's, indented code's columns)
         this.text(lead.endsWith('>') && (this.old[from] === ' ' || this.old[from] === '\t') ? lead + ' ' : lead);
         this.copyRange(from, end);
+        // (an empty item's line at the old text's end, its marker written anew: a piece of nothing there,
+        // so that end has a place in the new text, the placeholder it holds carried to it)
+        if (from === end && end === this.old.length) this.pieces.push({ old: [end, end], at: this.length });
       }
     }
     this.open = end === this.old.length && line.ending === '';
@@ -1553,10 +1653,15 @@ class Writer {
       if (a <= at) out.push({ text, at });
       if (b > end) out.push(cut(end, b));
     }
-    // (and the block's own line at the item's text, no wider: past it, it would be the item's padding)
+    // (and the block's own line at the item's text, no wider: past it, it would be the item's padding;
+    // past a quote's `>` the marker's line ends with, the quote's content's, as it was, B52)
     const next = this.textAt(end, end + 1);
+    const padding = (next === ' ' || next === '\t') && !/>[ \t]?$/.test(text);
+    // (a tab in what it goes over spanning the columns the marker's spaces do: a quote's `>→`, B52)
+    const before = over.includes('\t') && !text.includes('\t') ? this.lineBefore(at) : null;
+    const spans = before !== null && detabbed(before + over).slice(detabbed(before).length) === text.replace(/[^>\t ]/g, ' ');
     // (or, `was` given, a marker over the one written there, as wide)
-    if (was !== undefined ? over !== was : over !== text.replace(/[^>\t ]/g, ' ') || next === ' ' || next === '\t') throw new WriteFailure(`a marker's line written over "${over}${next}"`);
+    if (was !== undefined ? over !== was : (over !== text.replace(/[^>\t ]/g, ' ') && !spans) || padding) throw new WriteFailure(`a marker's line written over "${over}${next}"`);
     starts.push(out.length);
     for (const range of this.copyPieces) [range[0], range[1]] = [starts[range[0]]!, starts[range[1]]!];
     this.pieces.splice(0, this.pieces.length, ...out);
@@ -1585,7 +1690,8 @@ class Writer {
       if (at >= 0) return s.slice(at + 1) + out;
       out = s + out;
     }
-    return out;
+    // (the first line: past a byte-order mark, which is before it)
+    return out.slice(this.tree.documentStart);
   }
 
   textAt(from: number, to: number): string {
@@ -1666,9 +1772,22 @@ class Writer {
       if (a && sa.endsWith('\r') && sb.startsWith('\n')) {
         if ('text' in a) this.pieces[j] = { text: sa.slice(0, -1) + '\n', at: a.at };
         else if ('text' in b) this.pieces[k] = { text: '\r' + sb.slice(1), at: b.at };
+        else {
+          // (both copied: the first's CR written as an LF)
+          const [from, to] = a.old;
+          this.pieces.splice(j, 1, { old: [from, to - 1], at: a.at }, { text: '\n', at: a.at + to - 1 - from });
+          k++;
+        }
       }
       j = k;
     }
+  }
+
+  /** Whether the line the text ends with, before its line ending `ending`, is blank: spaces and tabs at most (a quote's `> ` is none). */
+  lastLineBlank(ending: string): boolean {
+    const end = this.length - ending.length;
+    const tail = this.textAt(Math.max(this.tree.documentStart, end - 400), end);
+    return !/[^ \t]/.test(tail.slice(Math.max(tail.lastIndexOf('\n'), tail.lastIndexOf('\r')) + 1));
   }
 
   /** The text's end as the old one's (`finish`). */
@@ -1695,7 +1814,7 @@ class Writer {
       else this.pieces.push({ old: [last.old[0], last.old[1] - ending.length], at: last.at });
       this.length -= ending.length;
       this.text(oldEnding);
-    } else if (!oldEnds && ending && this.length !== this.blankEnd && !(s === ending && /(?:^|[\r\n])[ \t]+$/.test(this.old)) && !this.emptyCodeEnd(last, ending)) {
+    } else if (!oldEnds && ending && (this.length !== this.blankEnd || !this.lastLineBlank(ending)) && !(s === ending && /(?:^|[\r\n])[ \t]+$/.test(this.old)) && !this.emptyCodeEnd(last, ending)) {
       // (but after a blank line written anew, or written empty where the old text ended with one of
       // blanks, `⏎ `: without its line ending it would be no line)
       this.pieces.pop();
@@ -1715,7 +1834,7 @@ class Writer {
         pending += p.text;
         continue;
       }
-      if (p.old[0] < cursor) return diffLines(this.old, text);
+      if (p.old[0] < cursor) return diffLines(this.old, text, { span: true });
       if (p.old[0] > cursor || pending) changes.push(...this.refined(cursor, p.old[0], pending));
       pending = '';
       cursor = p.old[1];
@@ -1816,7 +1935,11 @@ class Writer {
     // and so is one the changes don't carry to where it was written (two equal subtrees, the changes
     // made line by line: the lines left alone can be the other one's)
     for (const copy of this.copied) {
-      const carried = mapPos(changes, this.from.rangeOf(copy.origin).from, 1) === copy.from;
+      // (where its start is in text a change replaced, it maps to that change's end: no carry, however
+      // that lands, where an equal subtree written before it can end)
+      const start = this.from.rangeOf(copy.origin).from;
+      const replaced = changes.some((c) => c.from <= start && start < (c.to ?? c.from));
+      const carried = !replaced && mapPos(changes, start, 1) === copy.from;
       if (!carried || inserted.some(([a, b]) => a < copy.to && b > copy.from)) this.nameDescendants(copy.origin);
     }
     // the old marks in what was copied, where they were
@@ -1879,6 +2002,10 @@ class Writer {
           // written anew, it holds by its own, `a⏎⏎◌` with `a` deleted)
           if (last && pos === this.old.length) {
             if (!lastGone && this.inCopy(pos)) into.push(this.old.length + (delta.at(-1) ?? 0));
+            // (and where a change before it reached the text's end, that node last still, not written
+            // anew, the text ending with a line break: at its end, the empty line it holds)
+            // (a text left a line break alone holds its empty node at its start: below)
+            else if (!lastGone && /[\r\n]$/.test(this.written) && !/^(?:\r\n|\n|\r)$/.test(this.written)) into.push(this.written.length);
             continue;
           }
           let twice = false;
@@ -1895,7 +2022,8 @@ class Writer {
           }
           // (near a change: where the copies put it, by the pieces)
           const at = this.mapOld(pos, 1, originals);
-          if (at !== null && this.inCopy(pos, originals)) into.push(at);
+          const holder = into === this.placeholders ? this.from.nodeAtLine(this.from.lineAt(pos).index) : null;
+          if (at !== null && this.inCopy(pos, originals, holder?.id === lastNow.id)) into.push(at);
         }
       };
       carry(old.placeholders, this.placeholders);
@@ -1916,10 +2044,15 @@ class Writer {
     return { changes, identity: this.identity, marks: { placeholders: this.placeholders, auto: this.auto }, selection: { anchor, head } };
   }
 
-  /** Whether old position `pos` is in a line the writer copied whole (`within`: in these pieces). */
-  inCopy(pos: number, within?: readonly (readonly [number, number])[]): boolean {
+  /**
+   * Whether old position `pos` is in a line the writer copied whole (`within`: in these pieces); `atEnd`:
+   * at the end of the new text too, a placeholder's, its node last now (a held last line moved last), where
+   * a position of a character can't be.
+   */
+  inCopy(pos: number, within?: readonly (readonly [number, number])[], atEnd = false): boolean {
     const pieces = within ? within.flatMap(([a, b]) => this.pieces.slice(a, b)) : this.pieces;
-    return pieces.some((p) => 'old' in p && pos >= p.old[0] && (pos < p.old[1] || (pos === p.old[1] && p.old[1] === this.old.length)));
+    const last = atEnd ? this.pieces.at(-1) : undefined;
+    return pieces.some((p) => 'old' in p && pos >= p.old[0] && (pos < p.old[1] || (pos === p.old[1] && (p.old[1] === this.old.length || p === last))));
   }
 }
 
@@ -2333,4 +2466,13 @@ export function blockIdLinesOf(text: OurusText): string[] {
   const out: string[] = [];
   for (const { blankLines, line } of text.blockIdLines) out.push(...Array<string>(blankLines).fill(''), line);
   return out;
+}
+
+/**
+ * The prefix of a line up to an item's marker, for a new line whose marker lines up with it: its
+ * `>`s as written, the rest as spaces; a `>` with no blank after it given one, as its quote takes one
+ * on a line where it has one (`>0. - h`: the `-` at its column in the quote, past `> ` then, B57).
+ */
+function linedUp(raw: string): string {
+  return raw.replace(/>(?=[^ \t>])/g, '> ').replace(/[^>\t ]/g, ' ');
 }

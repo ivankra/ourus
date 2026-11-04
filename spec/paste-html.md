@@ -29,13 +29,13 @@ clipboard:
   text/html: '<ul><li>x<ul><li>y</li></ul></li><li>z</li></ul>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - x
   - y
 - z┃
@@ -64,13 +64,13 @@ clipboard:
     </ul>
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - x
   - y
 - z┃
@@ -83,7 +83,7 @@ under the item before; Chromium's notice about the XSLT the copy was made with, 
 list (a `div` in the XHTML namespace), is no item.
 
 ```yaml
-tags: edge
+tags: rare
 clipboard:
   text/plain: |-
     - x **b**
@@ -99,13 +99,13 @@ clipboard:
     </ul>
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - x **b**
   - y
 - z┃
@@ -116,7 +116,7 @@ clipboard:
 RemNote's copy: its items are `div`s in the list, not `li`s.
 
 ```yaml
-tags: edge
+tags: rare
 clipboard:
   text/plain: |-
     x b
@@ -125,13 +125,13 @@ clipboard:
   text/html: '<ul><div rem="true" showbullet="true">x <b>b</b><ul><div rem="true" showbullet="true">y</div></ul></div><div rem="true" showbullet="true">z</div></ul>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - x **b**
   - y
 - z┃
@@ -143,7 +143,7 @@ An item's text in a paragraph of its own (BlockNote's copy, SiYuan's): one parag
 text, and the list stays tight.
 
 ```yaml
-tags: edge
+tags: rare
 clipboard:
   text/plain: |-
     x
@@ -152,13 +152,13 @@ clipboard:
   text/html: '<ul><li><p class="bn-inline-content">x</p><ul><li data-nesting-level="1"><p class="bn-inline-content">y</p></li></ul></li><li><p class="bn-inline-content">z</p></li></ul>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - x
   - y
 - z┃
@@ -169,7 +169,7 @@ clipboard:
 Tana's copy: the top level as paragraphs, a list between them.
 
 ```yaml
-tags: edge
+tags: rare
 clipboard:
   text/plain: |-
     x
@@ -178,13 +178,13 @@ clipboard:
   text/html: '<html><body><p>x</p><ul><li><p>y</p></li></ul><p>z</p></body></html>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 x
 
 - y
@@ -197,7 +197,7 @@ z┃
 An ordered list keeps the number it starts from.
 
 ```yaml
-tags: edge
+tags: common
 clipboard:
   text/plain: |-
     c
@@ -205,13 +205,13 @@ clipboard:
   text/html: '<ol start="3"><li>c</li><li>d</li></ol>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 3. c
 4. d┃
 ```
@@ -230,13 +230,13 @@ clipboard:
   text/html: '<ul class="contains-task-list"><li class="task-list-item"><input type="checkbox" disabled="" class="task-list-item-checkbox" checked=""> done</li><li class="task-list-item"><input type="checkbox" disabled="" class="task-list-item-checkbox"> todo</li></ul>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - [x] done
 - [ ] todo┃
 ```
@@ -257,13 +257,13 @@ clipboard:
     </code></pre>
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-````buffer
+````markdown
 ```js
 let a = 1;
 let b = 2;┃
@@ -283,13 +283,13 @@ clipboard:
   text/html: '<h2>Title</h2><p>para <b>bold</b> <code>c</code></p>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 ## Title
 
 para **bold** `c`┃
@@ -310,13 +310,13 @@ clipboard:
   text/html: '<p>line one<br>line two</p><p>p2</p>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 line one
 line two
 
@@ -328,7 +328,7 @@ p2┃
 A quote and its paragraphs.
 
 ```yaml
-tags: edge
+tags: common
 clipboard:
   text/plain: |-
     q1
@@ -337,13 +337,13 @@ clipboard:
   text/html: '<blockquote><p>q1</p><p>q2</p></blockquote>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 > q1
 >
 > q2┃
@@ -354,7 +354,7 @@ clipboard:
 A table, with its columns' alignment.
 
 ```yaml
-tags: edge
+tags: common
 clipboard:
   text/plain: |-
     a→b
@@ -362,13 +362,13 @@ clipboard:
   text/html: '<table><thead><tr><th>a</th><th align="right">b</th></tr></thead><tbody><tr><td>1</td><td align="right">2</td></tr></tbody></table>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 | a | b |
 | --- | ---: |
 | 1 | 2 |┃
@@ -387,13 +387,13 @@ clipboard:
   text/html: '<ul><li>a <strong>b</strong> <em>i</em> <code>c</code> <del>s</del> <a href="https://e.x/p">l</a></li><li>z</li></ul>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - a **b** *i* `c` ~~s~~ [l](https://e.x/p)
 - z┃
 ```
@@ -403,7 +403,7 @@ clipboard:
 The HTML's text is text: what would read as Markdown in it is escaped.
 
 ```yaml
-tags: edge
+tags: common
 clipboard:
   text/plain: |-
     1. not a list, *x* and [y]
@@ -411,13 +411,13 @@ clipboard:
   text/html: '<ul><li>1. not a list, *x* and [y]</li><li># not a heading</li></ul>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - 1\. not a list, \*x\* and \[y\]
 - \# not a heading┃
 ```
@@ -428,7 +428,7 @@ GitHub's rendered Markdown: a heading's permalink (a link with no text) is nothi
 block's language is on the block around its `pre`, whose copy button is no text either.
 
 ```yaml
-tags: edge
+tags: common
 clipboard:
   text/plain: |-
     Setup
@@ -436,13 +436,13 @@ clipboard:
   text/html: '<div class="markdown-heading"><h2 class="heading-element">Setup</h2><a class="anchor" aria-label="Permalink: Setup" href="#setup"><svg class="octicon octicon-link" viewBox="0 0 16 16"><path d="m7.775 3.275"></path></svg></a></div><div class="highlight highlight-source-shell"><pre>npm install</pre><div class="zeroclipboard-container"><clipboard-copy aria-label="Copy" class="ClipboardButton btn" value="npm install" role="button"><svg class="octicon octicon-copy"><path d="M0 6.75"></path></svg></clipboard-copy></div></div>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-````buffer
+````markdown
 ## Setup
 
 ```shell
@@ -464,13 +464,13 @@ clipboard:
   text/html: '<meta charset="utf-8"><b style="font-weight:normal;" id="docs-internal-guid-6a1b2c3d"><ul style="margin-top:0;"><li dir="ltr" aria-level="1"><p dir="ltr" role="presentation"><span style="font-weight:700;font-style:normal;">Bold</span><span style="font-weight:400;font-style:normal;"> start</span></p></li><ul style="margin-top:0;"><li dir="ltr" aria-level="2"><p dir="ltr" role="presentation"><span style="font-weight:400;font-style:italic;">nested</span></p></li></ul></ul></b>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - **Bold** start
   - *nested*┃
 ```
@@ -481,7 +481,7 @@ Word: a list is paragraphs, each its level in its style and its bullet as text, 
 item's.
 
 ```yaml
-tags: edge
+tags: common
 clipboard:
   text/plain: |-
     ·       one
@@ -491,13 +491,13 @@ clipboard:
     <p class=MsoListParagraphCxSpLast style='margin-left:1.0in;text-indent:-.25in;mso-list:l0 level2 lfo1'><![if !supportLists]><span style='font-family:"Courier New"'><span style='mso-list:Ignore'>o<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>nested<o:p></o:p></p><!--EndFragment--></body></html>
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - one
   - nested┃
 ```
@@ -517,13 +517,13 @@ clipboard:
   text/html: '<pre class="overflow-visible!"><div class="contain-inline-size"><div class="flex items-center">javascript</div><div class="sticky top-9"><button aria-label="Copy">Copy code</button></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-javascript"><span class="hljs-keyword">let</span> a = <span class="hljs-number">1</span>;</code></div></div></pre>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-````buffer
+````markdown
 ```javascript
 let a = 1;┃
 ```

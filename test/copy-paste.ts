@@ -28,12 +28,8 @@ import { fileURLToPath } from 'node:url';
 import { textEnd } from '../src/commands/util.ts';
 import { OurusProse, OurusDoc, OurusAtom, type OurusNode } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
-import { drawState, nodesOf, plainText, readDrawing } from './drawing.ts';
-import { play, type Played } from './player.ts';
-import { readSpecFile, specConfig, specFiles } from './specfile.ts';
-import { flavorsOf } from './spec-run.ts';
+import { drawState, allNodes, nodePlainText, readDrawing, playActions, type PlayedState, readSpecFile, specConfig, specFiles, specTestFlavors, resultStatus } from './lib/index.ts';
 import { OurusSuccess } from '../src/commands/index.ts';
-import { statusOf } from './drawing.ts';
 
 // --help: the comment at the top of this file; an argument it doesn't list is an error, never a run
 {
@@ -62,7 +58,7 @@ for (const file of specFiles().filter((f) => f !== 'obsidian-true-outliner.md'))
     const start = readDrawing(t.initial.buffer);
     if (start.placeholders.length) continue;
     // (open seams join the paste's ends to the text around it: no duplicate)
-    const config = { ...specConfig(t.options), flavor: flavorsOf(t)[0], copyAtCaret: 'node', pasteSeams: 'closed' };
+    const config = { ...specConfig(t.options), flavor: specTestFlavors(t)[0], copyAtCaret: 'node', pasteSeams: 'closed' };
     const key = JSON.stringify([start.text, config]);
     if (seen.has(key)) continue;
     seen.add(key);
@@ -72,8 +68,8 @@ for (const file of specFiles().filter((f) => f !== 'obsidian-true-outliner.md'))
 const corpus = createHash('sha256').update(JSON.stringify(starts.map((s) => JSON.stringify([s.text, s.config])).sort())).digest('hex').slice(0, 16);
 
 const isBlank = (line: string): boolean => /^[ \t>]*$/.test(line);
-const outline = (doc: OurusDoc): string => JSON.stringify(nodesOf(doc).map((n) => [n.depth, n.kind, n.head?.type ?? null]));
-function classify(duplicated: Played, pasted: Played): string {
+const outline = (doc: OurusDoc): string => JSON.stringify(allNodes(doc).map((n) => [n.depth, n.kind, n.head?.type ?? null]));
+function classify(duplicated: PlayedState, pasted: PlayedState): string {
   const [a, b] = [duplicated.view.doc.text, pasted.view.doc.text];
   if (a === b) return 'same';
   if (outline(duplicated.view.doc) !== outline(pasted.view.doc)) return 'tree';
@@ -95,16 +91,16 @@ const dump: string[] = [];
 let runs = 0;
 for (const start of starts) {
   const doc = OurusDoc.parse(start.text, { config: start.config });
-  for (const node of nodesOf(doc)) {
+  for (const node of allNodes(doc)) {
     if (node.children.length) continue;
     const at = endOf(doc, node);
-    const state: Played = { view: OurusView.of(doc), selection: { anchor: at, head: at }, clipboard: {} };
-    const duplicated = play(state, ['duplicateSubtree']);
-    const copied = play(state, ['copy']);
+    const state: PlayedState = { view: OurusView.of(doc), selection: { anchor: at, head: at }, clipboard: {} };
+    const duplicated = playActions(state, ['duplicateSubtree']);
+    const copied = playActions(state, ['copy']);
     if (!(copied.last instanceof OurusSuccess)) continue;
-    const pasted = play({ ...state, clipboard: copied.clipboard }, ['paste']);
+    const pasted = playActions({ ...state, clipboard: copied.clipboard }, ['paste']);
     runs++;
-    const statuses = [duplicated.last && statusOf(duplicated.last), pasted.last && statusOf(pasted.last)];
+    const statuses = [duplicated.last && resultStatus(duplicated.last), pasted.last && resultStatus(pasted.last)];
     const shape = statuses.every((s) => s === 'success') ? classify(duplicated, pasted) : `duplicate: ${statuses[0]}, paste: ${statuses[1]}`;
     // by design, apart: an empty node (an empty task too) copied fills the one it is pasted on; an
     // unclosed fence copied is closed where the copy ends
@@ -113,7 +109,7 @@ for (const start of starts) {
     // (and lazy lines, which out of their quote may read otherwise: `> - q` / `    - g`)
     let lazy = false;
     for (let i = node.startLine; i <= node.endLine; i++) lazy ||= doc.nodeAtLine(i)?.persistentNode === node.persistentNode && doc.isLazyLine(i);
-    const what = plainText(doc, node) === '' ? 'empty' : unclosed ? 'unclosed' : lazy ? 'lazy' : node.head && node.head.type !== 'paragraph' ? node.head.type : null;
+    const what = nodePlainText(doc, node) === '' ? 'empty' : unclosed ? 'unclosed' : lazy ? 'lazy' : node.head && node.head.type !== 'paragraph' ? node.head.type : null;
     const group = `${node.kind}${what ? ` (${what})` : ''} ${shape}`;
     counts.set(group, (counts.get(group) ?? 0) + 1);
     if (shape === 'same') continue;

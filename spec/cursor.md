@@ -24,14 +24,14 @@ Into the line above.
 tags: common
 ```
 
-```buffer
+```markdown
 a
 ┃b
 ```
 
 > cursorCharLeft
 
-```buffer
+```markdown
 a┃
 b
 ```
@@ -41,17 +41,17 @@ b
 Over a CRLF ending as one character.
 
 ```yaml
-tags: common
+tags: rare
 ```
 
-```buffer
+```markdown
 a␍
 ┃b
 ```
 
 > cursorCharLeft
 
-```buffer
+```markdown
 a┃␍
 b
 ```
@@ -64,13 +64,13 @@ A selection collapses to its start.
 tags: common
 ```
 
-```buffer
+```markdown
 «ab»┃
 ```
 
 > cursorCharLeft
 
-```buffer
+```markdown
 ┃ab
 ```
 
@@ -82,14 +82,14 @@ Into the line below.
 tags: common
 ```
 
-```buffer
+```markdown
 a┃
 b
 ```
 
 > cursorCharRight
 
-```buffer
+```markdown
 a
 ┃b
 ```
@@ -102,13 +102,13 @@ A selection collapses to its end.
 tags: common
 ```
 
-```buffer
+```markdown
 ┃«ab»
 ```
 
 > cursorCharRight
 
-```buffer
+```markdown
 ab┃
 ```
 
@@ -121,13 +121,13 @@ document instead, or leave it where it was.
 tags: common
 ```
 
-```buffer
+```markdown
 ab┃
 ```
 
 > cursorLineUp
 
-```buffer
+```markdown
 ┃ab
 ```
 
@@ -140,14 +140,14 @@ the marks.
 tags: common
 ```
 
-```buffer
+```markdown
 ## Title
 - ┃a
 ```
 
 > cursorLineUp
 
-```buffer
+```markdown
 ## ┃Title
 - a
 ```
@@ -160,7 +160,7 @@ A column in a deeper item's indentation lands at the start of its text.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
     - b
 - c┃
@@ -168,7 +168,7 @@ tags: common
 
 > cursorLineUp
 
-```buffer
+```markdown
 - a
     - ┃b
 - c
@@ -185,7 +185,7 @@ change where it lands after.
 tags: common
 ```
 
-```buffer
+```markdown
 abc┃
 
 abcdef
@@ -193,7 +193,7 @@ abcdef
 
 > cursorLineDown cursorLineDown
 
-```buffer
+```markdown
 abc
 
 abc┃def
@@ -207,14 +207,14 @@ Columns count tabs to stops of 4.
 tags: common
 ```
 
-```buffer
+```markdown
 →x┃
 abcdefg
 ```
 
 > cursorLineDown
 
-```buffer
+```markdown
 →x
 abcde┃fg
 ```
@@ -227,14 +227,14 @@ A column in a line's marker or indentation lands at the start of its text.
 tags: common
 ```
 
-```buffer
+```markdown
 - ┃a
   - b
 ```
 
 > cursorLineDown
 
-```buffer
+```markdown
 - a
   - ┃b
 ```
@@ -245,17 +245,17 @@ A column past the text start keeps its place: only a column in the markup moves 
 The lines start alike, so the column is the same place in any font.
 
 ```yaml
-tags: rare
+tags: common
 ```
 
-```buffer
+```markdown
 - abc┃
 - abcd
 ```
 
 > cursorLineDown
 
-```buffer
+```markdown
 - abc
 - abc┃d
 ```
@@ -268,14 +268,14 @@ A column in a task's checkbox lands at the start of its text, after the checkbox
 tags: common
 ```
 
-```buffer
+```markdown
 - a┃
 - [ ] task
 ```
 
 > cursorLineDown
 
-```buffer
+```markdown
 - a
 - [ ] ┃task
 ```
@@ -292,13 +292,13 @@ start of the line. From the line start it goes to the text start again.
 tags: core
 ```
 
-```buffer
+```markdown
 - one two┃
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 - ┃one two
 ```
 
@@ -310,13 +310,13 @@ Again, to the line start.
 tags: common
 ```
 
-```buffer
+```markdown
 - ┃one two
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 ┃- one two
 ```
 
@@ -325,16 +325,16 @@ tags: common
 From the line start, to the text start.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 ┃- one two
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 - ┃one two
 ```
 
@@ -343,16 +343,16 @@ tags: edge
 From inside the marker, to the text start.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 -┃ one
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 - ┃one
 ```
 
@@ -364,14 +364,14 @@ Past the indentation of a nested item.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
   - b┃
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 - a
   - ┃b
 ```
@@ -384,14 +384,14 @@ Past tab indentation.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
 →- b┃
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 - a
 →- ┃b
 ```
@@ -404,13 +404,13 @@ Past an ordered marker.
 tags: common
 ```
 
-```buffer
+```markdown
 10. ten┃
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 10. ┃ten
 ```
 
@@ -422,13 +422,13 @@ Past a task's checkbox.
 tags: common
 ```
 
-```buffer
+```markdown
 - [ ] task┃
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 - [ ] ┃task
 ```
 
@@ -440,13 +440,13 @@ Past a checked task's checkbox.
 tags: common
 ```
 
-```buffer
+```markdown
 - [x] done┃
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 - [x] ┃done
 ```
 
@@ -457,16 +457,16 @@ Past a heading's marks: they are markup, like a list marker, which Obsidian's Ho
 (CursorHome2).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 ## Title┃
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 ## ┃Title
 ```
 
@@ -475,16 +475,16 @@ tags: edge
 Past a quote's marker.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 > quote┃
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 > ┃quote
 ```
 
@@ -493,17 +493,17 @@ tags: edge
 On a continuation line, past the item's indentation.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - one
   two┃
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 - one
   ┃two
 ```
@@ -513,17 +513,17 @@ tags: edge
 On a continuation line, again to the line start.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - one
   ┃two
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 - one
 ┃  two
 ```
@@ -533,17 +533,17 @@ tags: edge
 On a paragraph's second line, to the line start.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 para
 more┃
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 para
 ┃more
 ```
@@ -554,16 +554,16 @@ Past an empty task's checkbox: its text starts after the checkbox all the same, 
 there, never inside the checkbox, where typing would break the task.
 
 ```yaml
-tags: edge
+tags: rare markup-task
 ```
 
-```buffer
+```markdown
 ┃- [ ] 
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 - [ ] ┃
 ```
 
@@ -573,22 +573,22 @@ Past a quote's marker and the item's: a quoted item's text starts after both. Ho
 line's start.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > - a┃
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 > - ┃a
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 ┃> - a
 ```
 
@@ -598,22 +598,23 @@ Home in a callout's title stops after its `[!type]`, as after a checkbox, then g
 start.
 
 ```yaml
-tags: edge
+tags: common
+flavor: obsidian
 ```
 
-```buffer
+```markdown
 > [!note] Ti┃tle
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 > [!note] ┃Title
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 ┃> [!note] Title
 ```
 
@@ -627,13 +628,13 @@ End: to the end of the line.
 tags: common
 ```
 
-```buffer
+```markdown
 - a┃b
 ```
 
 > cursorLineBoundaryForward
 
-```buffer
+```markdown
 - ab┃
 ```
 
@@ -645,14 +646,14 @@ To the start of the document.
 tags: common
 ```
 
-```buffer
+```markdown
 - a┃b
 - c
 ```
 
 > cursorDocStart
 
-```buffer
+```markdown
 ┃- ab
 - c
 ```
@@ -665,17 +666,17 @@ The document's end is after its last line ending, which a buffer can't draw: one
 the end of the last line.
 
 ```yaml
-tags: rare
+tags: common
 ```
 
-```buffer
+```markdown
 - a┃b
 - c
 ```
 
 > cursorDocEnd cursorCharLeft
 
-```buffer
+```markdown
 - ab
 - c┃
 ```
@@ -688,13 +689,13 @@ selectCharLeft extends it backward.
 tags: common
 ```
 
-```buffer
+```markdown
 ab┃c
 ```
 
 > selectCharLeft
 
-```buffer
+```markdown
 a┃«b»c
 ```
 
@@ -706,13 +707,13 @@ selectCharRight and selectLineBoundaryForward extend the selection.
 tags: common
 ```
 
-```buffer
+```markdown
 a┃bc
 ```
 
 > selectCharRight selectLineBoundaryForward
 
-```buffer
+```markdown
 a«bc»
 ```
 
@@ -726,13 +727,13 @@ Shift-Home: the same stops as Home, extending the selection.
 tags: common
 ```
 
-```buffer
+```markdown
 - one┃
 ```
 
 > selectLineBoundaryBackward
 
-```buffer
+```markdown
 - ┃«one»
 ```
 

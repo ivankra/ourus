@@ -7,6 +7,7 @@ import { type CommandContext } from './context.ts';
 import { changeHeadingLevels, onCodeLine, oneRun, operandsRefused, selectionInText } from './util.ts';
 import type { OurusResult } from './types.ts';
 import { OurusDeferred, OurusRejected } from './types.ts';
+import type { AnchorSpec } from '../writer/index.ts';
 
 /**
  * Items leave their parent item, to follow it, with their subtrees. The siblings after them follow
@@ -29,7 +30,11 @@ export function outdentCommand(ctx: CommandContext): OurusResult | null {
   if (first.kind !== 'item') return new OurusRejected('not-expressible', `a ${first.kind} has no level to leave`);
   const later = parent.children.slice(last.index + 1);
   const direct = ctx.config.outdent === 'direct';
-  if (parent.kind === 'paragraph' || parent.kind === 'root' || parent.kind === 'heading') return unwrapItems(ctx, nodes, parent, later);
+  if (parent.kind === 'paragraph' || parent.kind === 'root' || parent.kind === 'heading') {
+    // (at the top level, nothing to leave: as most apps, where `outdentTopLevel: refuse`)
+    if (ctx.config.outdentTopLevel === 'refuse') return new OurusRejected('not-expressible', 'a top-level item has no level to leave');
+    return unwrapItems(ctx, nodes, parent, later);
+  }
   if (parent.kind !== 'item') return null;
   const draft = ctx.draft().remove(nodes);
   // (every child of an item with no text of its own leaving it, `- - b`: the item stays, an empty item
@@ -100,7 +105,13 @@ function leaveQuote(ctx: CommandContext, nodes: readonly OurusNode[]): OurusResu
     // (past the final line ending, the last node's: Shift-Tab's caret there)
     const end = ctx.selection.head === doc.text.length ? doc.rootNode.lastDescendant : null;
     const inFirst = (at: typeof ctx.from): boolean => ('node' in at ? at.node : at.zone === 'gap' ? at.owner : end) === first;
-    if (inFirst(ctx.from) || inFirst(ctx.to)) draft.setCaret(item, ctx.from.zone === 'text' && ctx.from.node === first ? ctx.from.offset : 0, -1);
+    // (each end of a selection mapped so, its direction kept)
+    const endAt = (pos: number): AnchorSpec => {
+      const at = ctx.view.locate(pos);
+      if (at.zone === 'text' && at.node === first) return { ref: item, offset: at.offset, assoc: -1 };
+      return inFirst(at) ? { ref: item, offset: 0, assoc: -1 } : { old: pos };
+    };
+    if (inFirst(ctx.from) || inFirst(ctx.to)) draft.select(endAt(ctx.selection.anchor), endAt(ctx.selection.head));
     else selectionInText(ctx, draft, true);
     return ctx.apply(draft);
   }

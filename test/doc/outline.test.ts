@@ -204,7 +204,7 @@ test('gaps: the blank lines after a node\'s own text, a subtree\'s after its las
 });
 
 test('a document nested deeper than the call stack goes is read, and a command on it refuses rather than throws', () => {
-  for (const text of ['> '.repeat(5000) + 'a', Array.from({ length: 3000 }, (_, i) => ' '.repeat(2 * i) + '- a').join('\n')]) {
+  for (const text of ['> '.repeat(5000) + 'a', '> '.repeat(20000) + 'a', Array.from({ length: 3000 }, (_, i) => ' '.repeat(2 * i) + '- a').join('\n')]) {
     const doc = OurusDoc.parse(text);
     assert.equal(doc.rootNode.children.length, 1);
     const typed = doc.update({ changes: [{ from: text.length, to: text.length, insert: 'x' }] });

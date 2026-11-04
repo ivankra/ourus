@@ -18,11 +18,11 @@ A table's block-id line, after a blank line, is carried by the table: it moves w
 Obsidian moves the caret's line past the table, leaving `^t1` naming `Outro.`).
 
 ```yaml
-tags: common
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 Intro.
 
 | a | b |
@@ -36,7 +36,7 @@ Out┃ro.
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 Intro.
 
 Out┃ro.
@@ -53,11 +53,11 @@ Out┃ro.
 A fence's, directly under its closing line, too.
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-````buffer
+````markdown
 ┃p
 
 ```
@@ -70,7 +70,7 @@ q
 
 > moveSubtreeDown
 
-````buffer
+````markdown
 ```
 code
 ```
@@ -87,11 +87,11 @@ An item's block-id line, indented under its text after a blank line, is the item
 it, its children after it.
 
 ```yaml
-tags: common
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - ┃a
 
   ^x
@@ -101,7 +101,7 @@ flavor: obsidian
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 - b
 - ┃a
 
@@ -115,11 +115,11 @@ A heading's block-id line is the heading's, not a paragraph of its section: it m
 heading.
 
 ```yaml
-tags: edge
+tags: rare markup-heading
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 ## H
 
 ^h2
@@ -131,7 +131,7 @@ body
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 ## ┃G
 
 ## H
@@ -147,11 +147,11 @@ A block-id line under a paragraph is the paragraph's, so the list after it is th
 children (`listParent: paragraph`), as Obsidian names the paragraph: they move together.
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 Le┃ad.
 
 ^id4
@@ -163,7 +163,7 @@ Next
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 Next
 
 Le┃ad.
@@ -179,11 +179,11 @@ A node with a block-id line that something comes to follow is set off from it by
 under it, the next block would join the block-id line, which then names nothing.
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 ┃q
 
 p
@@ -193,7 +193,7 @@ p
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 p
 
 ^y
@@ -211,14 +211,14 @@ tags: common
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - foo ┃bar ^x
 ```
 
 > enter
 
-```buffer
-- foo ^x
+```markdown
+- foo  ^x
 - ┃bar
 ```
 
@@ -228,11 +228,11 @@ At a heading's end, Enter makes the new paragraph after its block-id line, a bla
 right under `^h2`, typed in, it would join it.
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 ## H┃
 
 ^h2
@@ -242,7 +242,7 @@ body
 
 > enter
 
-```buffer
+```markdown
 ## H
 
 ^h2
@@ -257,11 +257,11 @@ body
 Mid-heading, the rest is the section's first paragraph, after the heading's block-id line.
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 ## H┃I
 
 ^h2
@@ -269,7 +269,7 @@ flavor: obsidian
 
 > enter
 
-```buffer
+```markdown
 ## H
 
 ^h2
@@ -282,18 +282,18 @@ flavor: obsidian
 A block id before a setext underline is its title's end: Enter there keeps both with the title.
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 Title ^x┃
 ===
 ```
 
 > enter
 
-```buffer
+```markdown
 Title ^x
 ===
 ┃◌
@@ -309,14 +309,14 @@ tags: common
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - a
 - ┃b ^y
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃b ^y
 ```
 
@@ -330,7 +330,7 @@ tags: common
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - a ^x
 - ┃b ^y
 ```
@@ -341,7 +341,7 @@ flavor: obsidian
 result: rejected block-id
 ```
 
-```buffer
+```markdown
 - a ^x
 - ┃b ^y
 ```
@@ -351,11 +351,11 @@ result: rejected block-id
 The node that stays keeps its block-id line; the merged text goes before it.
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - a
 
   ^x
@@ -364,7 +364,7 @@ flavor: obsidian
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃b
 
   ^x
@@ -376,11 +376,11 @@ A block-id line the merge takes, alone, comes as ` ^id` at the text's end: carri
 it would set a blank line in the tight list.
 
 ```yaml
-tags: common
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - a
 - ┃b
 
@@ -390,7 +390,7 @@ flavor: obsidian
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃b ^p3
 - c
 ```
@@ -401,18 +401,18 @@ A text that is only a block id is no empty node: Enter makes a node after it, an
 start merges it, its block id with a blank before it.
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - a
 - ┃^x
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃ ^x
 ```
 
@@ -421,18 +421,18 @@ flavor: obsidian
 At the end of a text that is only a block id, Enter makes a new item after it.
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - a
 - ^x┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 - ^x
 - ┃
@@ -448,14 +448,14 @@ tags: common
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - a«b ^x
 - c»d
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃d ^x
 ```
 
@@ -465,17 +465,17 @@ Shift-Enter after a block id ending the text breaks the line before it: the bloc
 end of the text's last line.
 
 ```yaml
-tags: edge
+tags: common
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - foo ^x┃
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - foo
   ┃ ^x
 ```
@@ -485,11 +485,11 @@ flavor: obsidian
 With the caret on a block-id line, Enter acts at the end of the text that carries it.
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 ## H
 
 ^h┃2
@@ -499,7 +499,7 @@ body
 
 > enter
 
-```buffer
+```markdown
 ## H
 
 ^h2
@@ -518,7 +518,7 @@ tags: common
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - ┃a ^x
   - c
 
@@ -528,7 +528,7 @@ flavor: obsidian
 
 > duplicateSubtree
 
-```buffer
+```markdown
 - a ^x
   - c
 
@@ -543,11 +543,11 @@ flavor: obsidian
 A cut takes a block id the selection covers, as typed text: the user chose it.
 
 ```yaml
-tags: edge
+tags: common
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - «a ^x»
 - b
 ```
@@ -558,7 +558,7 @@ flavor: obsidian
 clipboard: "a ^x"
 ```
 
-```buffer
+```markdown
 - ┃
 - b
 ```

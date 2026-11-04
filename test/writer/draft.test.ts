@@ -156,12 +156,14 @@ test('done: escapes put in the text, each one of ours, the caret mapped (example
   assert.deepEqual(gained.caret, { node, offset: 4, assoc: 1 });
 });
 
-test('done: a text\'s empty last line is a blank line after it, the caret on it; another empty line has no Markdown', () => {
+test('done: a text\'s empty last line is a blank line after it, but where the caret is on it a line of the text a placeholder holds; another empty line has no Markdown', () => {
   const doc = parse('- one\n- two\n');
+  const away = new OurusDraft(doc).setText(find(doc, 'one'), new OurusProse('paragraph', true, 'one\n')).setCaret(find(doc, 'two'), 0);
+  applied(away);
+  assert.equal(drawn(doc, away), ['item "one" 1', 'item "two" 0'].join('\n'));
   const draft = new OurusDraft(doc).setText(find(doc, 'one'), new OurusProse('paragraph', true, 'one\n')).setCaret(find(doc, 'one'), 4);
   applied(draft);
-  assert.equal(drawn(doc, draft), ['item "one" 1', 'item "two" 0'].join('\n'));
-  assert.deepEqual(draft.caret, { blank: draft.root.children[0], line: 0 });
+  assert.equal(drawn(doc, draft), ['item "one\\n" 0', 'item "two" 0'].join('\n'));
   const inside = new OurusDraft(doc).setText(find(doc, 'one'), new OurusProse('paragraph', true, 'one\n\ntwo'));
   assert.equal(refused(inside).detail, 'an empty line inside a text');
 });

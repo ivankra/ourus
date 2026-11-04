@@ -179,9 +179,10 @@ test('for an app that numbers blocks, an ordered item is a numbered block and a 
     assert.deepEqual(readOutline(drawn, { ordered: true }), o);
   }
   const nested: Outline = { blocks: [{ depth: 0, text: 'p' }, { depth: 1, text: '1. a\n2. b' }, { depth: 1, text: '2. ' }], sel: { block: 2, anchor: 3, head: 3 }, selected: [1] };
-  assert.equal(draw(nested, { ordered: true }), '- p\n  1. ««a\n     2\\. b»»\n  2. ┃\n');
+  assert.equal(draw(nested, { ordered: true }), '- p\n  1. a⟦selected⟧\n     2\\. b\n  2. ┃\n');
   assert.deepEqual(readOutline(draw(nested, { ordered: true }), { ordered: true }), nested);
-  // as runs stored before `««…»»` drew it
+  // as runs stored before drew it: `««…»»`, and before that `▮`
+  assert.deepEqual(readOutline('- p\n  1. ««a\n     2\\. b»»\n  2. ┃\n', { ordered: true }), nested);
   assert.deepEqual(readOutline('- p\n  1. ▮ a\n     2\\. b\n  2. ┃\n', { ordered: true }), nested);
   // a caret in the number leaves it under a bullet; an app that numbers nothing draws the text so too,
   // and reads no number in a bullet's place
@@ -269,18 +270,20 @@ test("an italic spelled `__x__` reads as Markdown's `*x*`, the caret moved with 
   assert.ok(!sameText('snake_case_x', 'snake*case*x'));
 });
 
-test('blocks selected whole draw as the spec draws a subtree selection, a span to each run with nothing unselected between', () => {
+test('blocks selected whole draw as the spec draws a subtree selection, `⟦selected⟧` on each; a run stored before, its spans', () => {
   const blocks = [{ depth: 0, text: 'one' }, { depth: 1, text: 'two' }, { depth: 2, text: 'deep' }, { depth: 1, text: 'three' }, { depth: 1, text: 'five' }, { depth: 0, text: 'four' }];
-  const cases: [number[], string][] = [
-    [[1], '- one\n  - ««two»»\n    - deep\n  - three\n  - five\n- four\n'],
-    [[2, 3], '- one\n  - two\n    - ««deep\n  - three»»\n  - five\n- four\n'],
-    [[1, 4], '- one\n  - ««two»»\n    - deep\n  - three\n  - ««five»»\n- four\n'],
-    [[1, 3, 5], '- one\n  - ««two\n    - deep\n  - three»»\n  - five\n- ««four»»\n'],
+  const cases: [number[], string, string][] = [
+    [[1], '- one\n  - two⟦selected⟧\n    - deep\n  - three\n  - five\n- four\n', '- one\n  - ««two»»\n    - deep\n  - three\n  - five\n- four\n'],
+    [[2, 3], '- one\n  - two\n    - deep⟦selected⟧\n  - three⟦selected⟧\n  - five\n- four\n', '- one\n  - two\n    - ««deep\n  - three»»\n  - five\n- four\n'],
+    [[1, 4], '- one\n  - two⟦selected⟧\n    - deep\n  - three\n  - five⟦selected⟧\n- four\n', '- one\n  - ««two»»\n    - deep\n  - three\n  - ««five»»\n- four\n'],
+    [[1, 3, 5], '- one\n  - two⟦selected⟧\n    - deep\n  - three⟦selected⟧\n  - five\n- four⟦selected⟧\n', '- one\n  - ««two\n    - deep\n  - three»»\n  - five\n- ««four»»\n'],
   ];
-  for (const [selected, drawn] of cases) {
+  for (const [selected, drawn, spans] of cases) {
     const o: Outline = { blocks, sel: null, selected };
     assert.equal(draw(o), drawn);
     assert.deepEqual(readOutline(drawn), o);
+    assert.equal(draw(o, { spans: true }), spans);
+    assert.deepEqual(readOutline(spans), o);
   }
   // an old run's `▮` reads, and redraws as it was
   const old = '- one\n  - ▮ two\n    - deep\n  - ▮ three\n  - five\n- four\n';

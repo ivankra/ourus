@@ -41,8 +41,7 @@ export function moveSubtreeCommand(ctx: CommandContext, to: InsertionPoint): Our
   if (left.kind === 'quote' && dissolves(doc, left, ids) && left.parent?.kind === 'item' && left.index === 0 && !doc.textOf(left.parent)) return new OurusRejected('not-expressible', "the quote it leaves would be its item's text");
 
   // what the run becomes there
-  const siblings = parent.children.filter((c) => !ids.has(c.id));
-  const next = siblings[after ? siblings.findIndex((c) => c.id === after.id) + 1 : 0] ?? null;
+  const next = nextSibling(parent, after, ids);
   const kind = first.kind;
   const refused = moveRefused(ctx, run, parent, after);
   if (refused) return new OurusRejected(refused.reason, refused.why);
@@ -84,6 +83,16 @@ export function moveSubtreeCommand(ctx: CommandContext, to: InsertionPoint): Our
 }
 
 /**
+ * The child of `parent` that would follow `after` (null: first) with the nodes `ids` taken out, null
+ * where none would. Walked from `after`, not the whole list filtered: a pickup asks it for every place.
+ */
+function nextSibling(parent: OurusNode, after: OurusNode | null, ids: ReadonlySet<number>): OurusNode | null {
+  const count = parent.persistentNode.children.length;
+  for (let k = after && after.parent?.id === parent.id && !ids.has(after.id) ? after.index + 1 : 0; k < count; k++) if (!ids.has(parent.child(k).id)) return parent.child(k);
+  return null;
+}
+
+/**
  * Why moving `run` to the place under `parent`, after `after`, is refused before anything is written,
  * or null: a place Markdown can't hold (`unholdable`); a heading under an item or in a paragraph's
  * list, or a quote in a paragraph's list, which no node there can be; a heading whose section would
@@ -99,8 +108,7 @@ export function moveRefused(ctx: CommandContext, run: readonly OurusNode[], pare
   if (kind === 'heading' && (parent.kind === 'item' || block)) return { reason: 'not-expressible', why: `a heading can't be under ${block ? `a ${parent.kind}` : 'an item'}` };
   if (block && kind === 'quote') return { reason: 'not-expressible', why: `a quote can't be in a ${parent.kind}'s list` };
   const ids = new Set(run.map((n) => n.id));
-  const siblings = parent.children.filter((c) => !ids.has(c.id));
-  const next = siblings[after ? siblings.findIndex((c) => c.id === after.id) + 1 : 0] ?? null;
+  const next = nextSibling(parent, after, ids);
   const last = run[run.length - 1]!;
   // (items there: a rule one, of a list of its character's bullet, reads as one rule with it, `- ---`)
   const becomes = becomesAt(ctx.doc, kind, parent, after, ids);

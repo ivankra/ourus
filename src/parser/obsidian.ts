@@ -312,6 +312,7 @@ export const commentBlocks: MdExtension = {
 
 // --------------------------------------------------------------------------------- wikilinks
 
+
 /** `[[target]]`, `[[target|alias]]`, `![[target]]` on one line; the target not empty. */
 function wikilinkAt(p: MdInlineParser, at: number, embed: boolean): boolean {
   const { text } = p;
@@ -346,6 +347,8 @@ export const wikilinks: MdExtension = {
     inlines: {
       wikilink(r, node, entering) {
         if (!entering) return;
+        // (in a link's text, its text alone: an anchor holds no anchor, B127)
+        if (r.inLink) return r.out(node.alias ?? node.target!);
         const href = escapeHtml(node.target!);
         r.markup(`<a data-href="${href}" href="${href}" class="internal-link">`);
         r.out(node.alias ?? node.target!);
@@ -397,6 +400,7 @@ export const tags: MdExtension = {
     inlines: {
       tag(r, node, entering) {
         if (!entering) return;
+        if (r.inLink) return r.out(`#${node.value!}`);
         r.markup(`<a href="#${escapeHtml(node.value!)}" class="tag">`);
         r.out(`#${node.value!}`);
         r.markup('</a>');
@@ -521,25 +525,30 @@ const reBlockId = new RegExp(`\\^(${MD_BLOCK_ID_NAME})[ \\t]*$`, 'y');
 
 /**
  * The block id ending `text` (a block's text, or its last line), as every reader of block ids takes
- * one: `^name` at the start or after a blank or a line break, nothing but blanks after it. Where its
+ * one: `^name` at the start or after a blank or a line ending (a lone CR too), nothing but blanks after it. Where its
  * `^` is, and its name; or null.
  */
 export function mdBlockIdEnd(text: string): { readonly at: number; readonly name: string } | null {
   // (a name has no `^`, nor do the blanks after it: the last is the one)
   const at = text.lastIndexOf('^');
-  if (at < 0 || (at > 0 && !' \t\n'.includes(text[at - 1]!))) return null;
+  if (at < 0 || (at > 0 && !' \t\n\r'.includes(text[at - 1]!))) return null;
   reBlockId.lastIndex = at;
   const m = reBlockId.exec(text);
   return m ? { at, name: m[1]! } : null;
 }
 
 /** ` ^id` at the very end of a block's text (or the whole text). */
+/** The block id ending the text the inline parser reads (`mdBlockIdEnd`), once a text: not again at each of its `^`s. */
+let endingText: string | null = null;
+let endingFound: ReturnType<typeof mdBlockIdEnd> = null;
+
 const blockIdRule: MdInlineRule = {
   name: 'blockId',
   triggers: '^',
   parse(p) {
     const at = p.pos;
-    const found = mdBlockIdEnd(p.text);
+    if (p.text !== endingText) [endingText, endingFound] = [p.text, mdBlockIdEnd(p.text)];
+    const found = endingFound;
     if (found?.at !== at) return false;
     p.pos = p.text.length;
     p.add(new Node('block_id', at, at + 1 + found.name.length, { value: found.name }));

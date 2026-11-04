@@ -143,6 +143,8 @@ function holds(o: Outline): string | undefined {
     if (/^#{1,6}(?:[ \t].*)?[ \t]#+[ \t]*$/.test(first) || /^#{1,6}[ \t]+#+[ \t]*$/.test(first)) return "heading's closing #s";
     // `- ---` is a thematic break, not an item holding one
     if (!b.free && /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(first)) return 'thematic break as an item';
+    // `--` too: written after the item's `- `, its marker and text read as one (`- --`, Regression251)
+    if (!b.free && !/^\d/.test(first) && /^-(?:[ \t]*-)+[ \t]*$/.test(first)) return "item's text of hyphens, which after its `- ` reads as a thematic break";
     // a table SiYuan writes otherwise: a column with a cell of three characters or more is padded to
     // it, its delimiter longer (measured: `| a | b |` stays, `| a   | b |` above `| one | 2 |`)
     const rows = b.text.split('\n').filter((l) => /^\s*\|.*\|\s*$/.test(l));

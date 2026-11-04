@@ -690,9 +690,9 @@ function main(): void {
             const left = u.startState.selection.main;
             queueMicrotask(() => {
               if (u.view.state !== state) return;
-              const r = settlePlaceholders(state.field(ourus), state.selection.main.head);
-              if (!r) return;
               const to = state.selection.main;
+              const r = settlePlaceholders(state.field(ourus), { anchor: to.anchor, head: to.head });
+              if (!r) return;
               // the spec joins this edit to the step before it (undo.md's Undo3); CodeMirror's history
               // joins nothing to an event once the selection has moved after it, which is what
               // triggers this, so here leaving is an undo step of its own. History keeps the selection
@@ -701,7 +701,7 @@ function main(): void {
               u.view.dispatch({ selection: left, annotations: Transaction.addToHistory.of(false) });
               u.view.dispatch({
                 changes: r.changes,
-                selection: EditorSelection.range(mapPos(r.changes, to.anchor), mapPos(r.changes, to.head)),
+                selection: EditorSelection.range(r.selection.anchor, r.selection.head),
                 effects: setView.of(r.view),
                 annotations: Transaction.userEvent.of('ourus.settle'),
               });

@@ -53,14 +53,14 @@ Item becomes last child of previous sibling.
 tags: core
 ```
 
-```buffer
+```markdown
 - a
 - b┃
 ```
 
 > indent
 
-```buffer
+```markdown
 - a
   - b┃
 ```
@@ -75,7 +75,7 @@ Bare Obsidian indents only the line, so `c` stops being `b`'s child.
 tags: core
 ```
 
-```buffer
+```markdown
 - a
 - b┃
   - c
@@ -84,7 +84,7 @@ tags: core
 
 > indent
 
-```buffer
+```markdown
 - a
   - b┃
     - c
@@ -104,7 +104,7 @@ list.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
     * x
 - b┃
@@ -112,7 +112,7 @@ tags: common
 
 > indent
 
-```buffer
+```markdown
 - a
     * x
     * b┃
@@ -127,7 +127,7 @@ interrupt a paragraph: `   2. b` would read as more of `a`'s text. The list it l
 tags: common
 ```
 
-```buffer
+```markdown
 1. a
 2. b┃
 3. c
@@ -135,7 +135,7 @@ tags: common
 
 > indent
 
-```buffer
+```markdown
 1. a
    1. b┃
 2. c
@@ -149,7 +149,7 @@ Items joining an existing ordered list continue its numbering.
 tags: common
 ```
 
-```buffer
+```markdown
 1. a
    1. x
 2. b┃
@@ -157,7 +157,7 @@ tags: common
 
 > indent
 
-```buffer
+```markdown
 1. a
    1. x
    2. b┃
@@ -171,7 +171,7 @@ Tab-indented list keeps indenting with tabs.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
 →- b
 - c┃
@@ -179,7 +179,7 @@ tags: common
 
 > indent
 
-```buffer
+```markdown
 - a
 →- b
 →- c┃
@@ -190,10 +190,10 @@ tags: common
 Tab nesting elsewhere in the list sets the indent.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 - b┃
 - c
@@ -202,7 +202,7 @@ tags: edge
 
 > indent
 
-```buffer
+```markdown
 - a
 →- b┃
 - c
@@ -220,21 +220,21 @@ it needs to open with a placeholder until something is typed.
 tags: core
 ```
 
-```buffer
+```markdown
 - a
 - ┃
 ```
 
 > indent
 
-```buffer
+```markdown
 - a
   - ┃◌
 ```
 
 > "b"
 
-```buffer
+```markdown
 - a
   - b┃
 ```
@@ -244,22 +244,22 @@ tags: core
 Selected siblings indent together.
 
 ```yaml
-tags: common
+tags: core
 ```
 
-```buffer
+```markdown
 - a
-- ««b
-- c»»
+- b⟦selected⟧
+- c⟦selected⟧
 - d
 ```
 
 > indent
 
-```buffer
+```markdown
 - a
-  - ««b
-  - c»»
+  - b⟦selected⟧
+  - c⟦selected⟧
 - d
 ```
 
@@ -271,7 +271,7 @@ First item cannot indent: there is nothing above to nest under, and no tab is ty
 tags: common
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
@@ -282,7 +282,7 @@ tags: common
 result: rejected no-previous-sibling
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
@@ -293,10 +293,10 @@ First item of a paragraph's list cannot indent: the paragraph owns the list, and
 nest under a paragraph's text.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 Intro
 
 - a┃
@@ -308,7 +308,7 @@ Intro
 result: rejected no-previous-sibling
 ```
 
-```buffer
+```markdown
 Intro
 
 - a┃
@@ -324,7 +324,7 @@ spaces before the `#`s, which leaves the heading as it was.
 tags: common free-form
 ```
 
-```buffer
+```markdown
 # A
 ## B┃
 ### C
@@ -332,7 +332,7 @@ tags: common free-form
 
 > indent
 
-```buffer
+```markdown
 # A
 ### B┃
 #### C
@@ -345,10 +345,10 @@ Fenced code reindents with its item.
 Its own relative indentation and blank lines are payload, kept there and back.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-````buffer
+````markdown
 - a
 - b┃
   ```
@@ -360,7 +360,7 @@ tags: edge
 
 > indent
 
-````buffer
+````markdown
 - a
   - b┃
     ```
@@ -372,7 +372,7 @@ tags: edge
 
 > outdent
 
-````buffer
+````markdown
 - a
 - b┃
   ```
@@ -393,14 +393,14 @@ starts.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a
 -→b┃
 ```
 
 > indent
 
-```buffer
+```markdown
 - a
   -→b┃
 ```
@@ -412,10 +412,10 @@ Untouched list keeps its numbers.
 A list whose items a command leaves alone keeps its numbers, however they run.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 1. a
    - x
    - y┃
@@ -425,7 +425,7 @@ tags: edge
 
 > indent
 
-```buffer
+```markdown
 1. a
    - x
      - y┃
@@ -444,7 +444,7 @@ Obsidian and its Outliner indent the line, which leaves it a level-1 heading.
 tags: rare free-form
 ```
 
-```buffer
+```markdown
 Title┃
 =====
 
@@ -453,7 +453,7 @@ Title┃
 
 > indent
 
-```buffer
+```markdown
 Title┃
 -----
 
@@ -470,21 +470,21 @@ The lines keep their CRLF endings, there and back.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a␍
 - b┃␍
 ```
 
 > indent
 
-```buffer
+```markdown
 - a␍
   - b┃␍
 ```
 
 > outdent
 
-```buffer
+```markdown
 - a␍
 - b┃␍
 ```
@@ -494,11 +494,11 @@ tags: rare
 A paragraph indented under a paragraph becomes its first item, with the `bullet` option's bullet.
 
 ```yaml
-tags: edge
+tags: rare
 bullet: +
 ```
 
-```buffer
+```markdown
 intro
 
 b┃
@@ -506,7 +506,7 @@ b┃
 
 > indent
 
-```buffer
+```markdown
 intro
 
 + b┃
@@ -519,10 +519,10 @@ Hard-break spaces survive an indent.
 A structural command may rewrite prefixes, never a node's own text.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 - b  
   c┃
@@ -530,7 +530,7 @@ tags: edge
 
 > indent
 
-```buffer
+```markdown
 - a
   - b  
     c┃
@@ -538,7 +538,7 @@ tags: edge
 
 > outdent
 
-```buffer
+```markdown
 - a
 - b  
   c┃
@@ -549,10 +549,10 @@ tags: edge
 Code whitespace survives an indent.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-````buffer
+````markdown
 - a
 - b┃
   ```
@@ -562,7 +562,7 @@ tags: edge
 
 > indent
 
-````buffer
+````markdown
 - a
   - b┃
     ```
@@ -582,7 +582,7 @@ Bare Obsidian and its Outliner indent the paragraph by a tab, which makes it ind
 tags: common
 ```
 
-```buffer
+```markdown
 para a
 
 para b┃
@@ -590,7 +590,7 @@ para b┃
 
 > indent
 
-```buffer
+```markdown
 para a
 
 - para b┃
@@ -598,7 +598,7 @@ para a
 
 > outdent
 
-```buffer
+```markdown
 para a
 
 para b┃
@@ -612,22 +612,22 @@ again.
 Bare Obsidian and its Outliner make it indented code, as in [Indent21](#indent21).
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 ```
 
-```buffer
+```markdown
 Para┃
 ```
 
 > indent
 
-```buffer
+```markdown
 - Para┃
 ```
 
 > outdent
 
-```buffer
+```markdown
 Para┃
 ```
 
@@ -640,7 +640,7 @@ subheadings going one level deeper with it.
 tags: common free-form
 ```
 
-```buffer
+```markdown
 # A
 ## B
 ## C┃
@@ -649,7 +649,7 @@ tags: common free-form
 
 > indent
 
-```buffer
+```markdown
 # A
 ## B
 ### C┃
@@ -664,7 +664,7 @@ A level-6 heading can't go deeper (Outdent5's mirror).
 tags: rare
 ```
 
-```buffer
+```markdown
 # A
 ###### B┃
 ```
@@ -675,7 +675,7 @@ tags: rare
 result: rejected at-h6-bound
 ```
 
-```buffer
+```markdown
 # A
 ###### B┃
 ```
@@ -689,7 +689,7 @@ stays ATX: the outline comes back, its text written as `##`.
 tags: rare free-form
 ```
 
-```buffer
+```markdown
 Title┃
 -----
 
@@ -698,7 +698,7 @@ Title┃
 
 > indent
 
-```buffer
+```markdown
 ### Title┃
 
 #### Sub
@@ -706,7 +706,7 @@ Title┃
 
 > outdent
 
-```buffer
+```markdown
 ## Title┃
 
 ### Sub
@@ -720,7 +720,7 @@ Indent, then outdent: the item and its subtree are back as they were.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
 - b┃
   - c
@@ -729,7 +729,7 @@ tags: common
 
 > indent
 
-```buffer
+```markdown
 - a
   - b┃
     - c
@@ -738,7 +738,7 @@ tags: common
 
 > outdent
 
-```buffer
+```markdown
 - a
 - b┃
   - c
@@ -753,19 +753,19 @@ Indent, then outdent, on a selection: back as it was (Indent9's inverse).
 tags: common
 ```
 
-```buffer
+```markdown
 - a
-- ««b
-- c»»
+- b⟦selected⟧
+- c⟦selected⟧
 - d
 ```
 
 > indent
 
-```buffer
+```markdown
 - a
-  - ««b
-  - c»»
+  - b⟦selected⟧
+  - c⟦selected⟧
 - d
 ```
 
@@ -775,10 +775,10 @@ result: success
 
 > outdent
 
-```buffer
+```markdown
 - a
-- ««b
-- c»»
+- b⟦selected⟧
+- c⟦selected⟧
 - d
 ```
 
@@ -791,14 +791,14 @@ break the marker.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a
 ┃- b
 ```
 
 > indent
 
-```buffer
+```markdown
 - a
   - ┃b
 ```
@@ -813,10 +813,10 @@ and its Outliner make it the item's second paragraph, set off by the blank line,
 its child item.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 
 para┃
@@ -824,7 +824,7 @@ para┃
 
 > indent
 
-```buffer
+```markdown
 - a
 - para┃
 ```
@@ -837,7 +837,7 @@ After an ordered list, the paragraph takes its numbering, the next number.
 tags: rare
 ```
 
-```buffer
+```markdown
 1. a
 
 para┃
@@ -845,7 +845,7 @@ para┃
 
 > indent
 
-```buffer
+```markdown
 1. a
 2. para┃
 ```
@@ -859,7 +859,7 @@ its children.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a
   - b
 
@@ -868,7 +868,7 @@ para┃
 
 > indent
 
-```buffer
+```markdown
 - a
   - b
 - para┃
@@ -884,7 +884,7 @@ tight now.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a
 - 
 
@@ -893,7 +893,7 @@ tags: rare
 
 > indent
 
-```buffer
+```markdown
 - a
 - 
   - ┃b
@@ -901,7 +901,7 @@ tags: rare
 
 > outdent
 
-```buffer
+```markdown
 - a
 - 
 - ┃b
@@ -918,7 +918,7 @@ couldn't follow.
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
 - ┃```
   code
@@ -927,7 +927,7 @@ tags: rare markup-fence
 
 > indent
 
-````buffer
+````markdown
 - a
   - ┃```
     code
@@ -936,7 +936,7 @@ tags: rare markup-fence
 
 > outdent
 
-````buffer
+````markdown
 - a
 - ┃```
   code
@@ -953,7 +953,7 @@ tags: rare markup-fence
 markup: decorated
 ```
 
-````buffer
+````markdown
 - a
 - ┃```
   code
@@ -962,7 +962,7 @@ markup: decorated
 
 > indent
 
-````buffer
+````markdown
 - a
   - ```
     ┃code
@@ -978,21 +978,21 @@ and outdented back: the command is about the paragraph's place, not its line end
 tags: rare
 ```
 
-```buffer
+```markdown
 a┃␍
 b
 ```
 
 > indent
 
-```buffer
+```markdown
 - a┃␍
   b
 ```
 
 > outdent
 
-```buffer
+```markdown
 a┃␍
 b
 ```
@@ -1007,7 +1007,7 @@ indentation: it is the text's, kept past the item's column.
 tags: rare
 ```
 
-```buffer
+```markdown
 - x
 - a┃
    b
@@ -1015,7 +1015,7 @@ tags: rare
 
 > indent
 
-```buffer
+```markdown
 - x
   - a┃
      b
@@ -1023,7 +1023,7 @@ tags: rare
 
 > outdent
 
-```buffer
+```markdown
 - x
 - a┃
    b
@@ -1037,10 +1037,10 @@ that show fences nest the block so (Athens, Dynalist, Logseq). Outdented, it is 
 list: a fence needs no blank line to start.
 
 ```yaml
-tags: edge
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
 
 ┃```js
@@ -1050,7 +1050,7 @@ x
 
 > indent
 
-````buffer
+````markdown
 - a
 - ┃```js
   x
@@ -1059,7 +1059,7 @@ x
 
 > outdent
 
-````buffer
+````markdown
 - a
 ┃```js
 x
@@ -1075,11 +1075,11 @@ Athens and Dynalist nest it, RemNote makes an item of it; BlockNote puts it in t
 does a paragraph).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 Intro
 
 $$
@@ -1089,7 +1089,7 @@ $$
 
 > indent
 
-```buffer
+```markdown
 Intro
 
 - $$
@@ -1099,7 +1099,7 @@ Intro
 
 > outdent
 
-```buffer
+```markdown
 Intro
 
 $$
@@ -1114,11 +1114,11 @@ an atom has it as its text, a table as code. Outdented, it is a table again, set
 (right under the item's text its rows would continue it).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: gfm
 ```
 
-```buffer
+```markdown
 - a
 
 | x┃ | y |
@@ -1128,7 +1128,7 @@ flavor: gfm
 
 > indent
 
-```buffer
+```markdown
 - a
 - | x┃ | y |
   | - | - |
@@ -1137,7 +1137,7 @@ flavor: gfm
 
 > outdent
 
-```buffer
+```markdown
 - a
 
 | x┃ | y |
@@ -1153,7 +1153,7 @@ A thematic break can't become an item of a `-` list: `- ---` reads as one rule.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a
 
 ---┃
@@ -1165,7 +1165,7 @@ tags: rare
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 - a
 
 ---┃
@@ -1179,7 +1179,7 @@ Under another bullet it can: `* ---` is an item whose text is the rule.
 tags: rare
 ```
 
-```buffer
+```markdown
 * a
 
 ---┃
@@ -1187,7 +1187,7 @@ tags: rare
 
 > indent
 
-```buffer
+```markdown
 * a
 * ---┃
 ```
@@ -1200,7 +1200,7 @@ Every line of indented code is a code line: Tab is the host's there (rule 1), as
 tags: rare
 ```
 
-```buffer
+```markdown
 para
 
     co┃de
@@ -1212,7 +1212,7 @@ para
 result: deferredToHost
 ```
 
-```buffer
+```markdown
 para
 
     co┃de
@@ -1235,14 +1235,14 @@ tags: common
 indentUnit: tab
 ```
 
-```buffer
+```markdown
 - a
 - b┃
 ```
 
 > indent
 
-```buffer
+```markdown
 - a
 →- b┃
 ```
@@ -1253,18 +1253,18 @@ A unit short of an ordered item's content column is made up to it: `1. a`'s chil
 ordered list at 1 (Indent4).
 
 ```yaml
-tags: edge
+tags: rare
 indentUnit: 2
 ```
 
-```buffer
+```markdown
 1. a
 2. b┃
 ```
 
 > indent
 
-```buffer
+```markdown
 1. a
    1. b┃
 ```
@@ -1274,11 +1274,11 @@ indentUnit: 2
 An item of the list gives the column, whatever the unit: the unit says only where a list starts.
 
 ```yaml
-tags: edge
+tags: rare
 indentUnit: tab
 ```
 
-```buffer
+```markdown
 - a
   - x
 - b┃
@@ -1286,7 +1286,7 @@ indentUnit: tab
 
 > indent
 
-```buffer
+```markdown
 - a
   - x
   - b┃
@@ -1302,14 +1302,14 @@ tags: rare
 indentUnit: tab
 ```
 
-```buffer
+```markdown
 100. a
 101. b┃
 ```
 
 > indent
 
-```buffer
+```markdown
 100. a
 → 1. b┃
 ```
@@ -1322,7 +1322,7 @@ indentUnit: tab
 tags: common
 ```
 
-```buffer
+```markdown
 - a
     - x
 - b
@@ -1331,7 +1331,7 @@ tags: common
 
 > indent
 
-```buffer
+```markdown
 - a
     - x
 - b
@@ -1344,10 +1344,10 @@ A tab in code is code's, not the document's indentation: `detect` reads none, an
 content column.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-````buffer
+````markdown
 ```
 →x
 ```
@@ -1357,7 +1357,7 @@ tags: edge
 
 > indent
 
-````buffer
+````markdown
 ```
 →x
 ```
@@ -1371,10 +1371,10 @@ A child after a blank line, in a document indented with tabs, goes with its item
 more, as the item's are. Outdent22's inverse.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 - b┃
 
@@ -1383,7 +1383,7 @@ tags: edge
 
 > indent
 
-```buffer
+```markdown
 - a
 →- b┃
 
@@ -1395,10 +1395,10 @@ tags: edge
 The same with indented code as the child: its spaces past the tabs are the code's.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 - b┃
 
@@ -1407,7 +1407,7 @@ tags: edge
 
 > indent
 
-```buffer
+```markdown
 - a
 →- b┃
 
@@ -1422,27 +1422,27 @@ A subtree selection stays on the indented nodes, as whole lines.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
   - c
 - d
 ```
 
 > indent
 
-```buffer
+```markdown
 - a
-  - ««b»»
+  - b⟦selected⟧
     - c
 - d
 ```
 
 > outdent
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
   - c
 - d
 ```
@@ -1453,28 +1453,28 @@ Roots at two depths, each with a previous sibling: each run of sibling roots goe
 previous sibling, `deep` under `d0` and `three` under `two`, the selection kept on them.
 
 ```yaml
-tags: edge
+tags: rare
 mixedDepths: each
 ```
 
-```buffer
+```markdown
 - one
   - two
     - d0
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
 
 > indent
 
-```buffer
+```markdown
 - one
   - two
     - d0
-      - ««deep
-    - three»»
+      - deep⟦selected⟧
+    - three⟦selected⟧
   - five
 - four
 ```
@@ -1486,15 +1486,15 @@ Roots at two depths, the first with no previous sibling: all or nothing, refused
 roots that can).
 
 ```yaml
-tags: edge
+tags: rare
 mixedDepths: each
 ```
 
-```buffer
+```markdown
 - one
   - two
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
@@ -1511,27 +1511,27 @@ Roots at two depths (`mixedDepths: level`, the default): lined up after the firs
 then indented as that run, both under `d0` (Logseq DB, Tine).
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - one
   - two
     - d0
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
 
 > indent
 
-```buffer
+```markdown
 - one
   - two
     - d0
-      - ««deep
-      - three»»
+      - deep⟦selected⟧
+      - three⟦selected⟧
   - five
 - four
 ```
@@ -1542,16 +1542,16 @@ tags: edge
 SiYuan).
 
 ```yaml
-tags: edge
+tags: rare
 mixedDepths: refuse
 ```
 
-```buffer
+```markdown
 - one
   - two
     - d0
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```

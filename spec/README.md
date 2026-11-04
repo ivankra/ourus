@@ -41,7 +41,7 @@ Read every difference first; a case whose actions should change is redrawn by ha
 - [Plain paste](paste-plain.md): `pastePlain`.
 - [Selecting nodes](select.md): `selectNode`, `expandSelection`, `selectNodeDown`, `selectNodeUp`.
 - [Editing a subtree selection](subtree-selection.md): the keys that edit text, over nodes selected
-  whole (`««…»»`).
+  whole (`⟦selected⟧`).
 - [Fenced code](fences.md): Enter and Shift-Enter in a fenced code block, and in the other blocks
   of lines (math, comments, indented code).
 - [Backtick](backtick.md): a typed backtick (`insertText`), which opens, closes and changes code
@@ -109,7 +109,8 @@ No command breaks these; a case that seems to need to is wrong, or is a refusal.
 1. **Exactly the intended structure, or a clean refusal**, with a reason Markdown imposes
    (`not-expressible`, `nothing-above`, ...). `write-failed` is a bug, never an outcome.
 2. **Lossless and minimal.** Nothing the user wrote is lost, but the spaces an Enter split trims
-   (`enterSplitSpace: trim`, the default, and `drop`: [Enter44](enter.md#enter44)); text the edit
+   (`enterSplitSpace: drop`, the default, those after the caret; `trim`, both sides:
+   [Enter44](enter.md#enter44)); text the edit
    isn't about stays byte for byte (other lines, the node's own text, hard-break spaces, code, tabs,
    CRLF, the numbers of untouched lists). Prefixes, markers and blank lines change only where the structure requires.
 3. **The host's key only inside text.** At a markup boundary (a marker, a checkbox, `#`s, a fence
@@ -136,8 +137,9 @@ No command breaks these; a case that seems to need to is wrong, or is a refusal.
    join puts the text at the end of the text above, wherever it came from
    ([Enter51](enter.md#enter51)). Shift-Enter keeps the spaces at a break, starting its new line, so
    the join, which concatenates, gives them back ([ShiftEnter21](shift-enter.md#shiftenter21)); Enter
-   trims them from both halves, as Logseq does, and its join can't (`enterSplitSpace: trim`, the
-   default; `start` keeps them: [Enter44](enter.md#enter44)). Paragraphs join
+   keeps those before the caret at the first half's end, so its join gives them back, but drops
+   those after it (`enterSplitSpace: drop`, the default; `trim` takes both, as Logseq; `start`
+   keeps them: [Enter44](enter.md#enter44)). Paragraphs join
    glued, in one press, Enter's inverse ([Backspace12b](backspace.md#backspace12b)), so at the top
    level Shift-Enter at a line's start, whose paragraphs are the same, comes back glued too; right
    after an item's text, where Enter makes no paragraph, Backspace takes back Shift-Enter's
@@ -170,14 +172,14 @@ Current command: `indent`.
 
 The item becomes the last child of the item above.
 
-```buffer
+```markdown
 - a
 - b┃
 ```
 
 > indent "c"
 
-```buffer
+```markdown
 - a
   - bc┃
 ```
@@ -189,20 +191,18 @@ The item becomes the last child of the item above.
   and is an error.
 - **Headings are unique in their file** (compared as anchors: case and punctuation aside), since a
   repeated one would give an ambiguous link and an ambiguous name. A repeat is an error.
-- **A state is two blocks**: a `buffer`, the drawn editor state, and a `yaml` block, everything
+- **A state is two blocks**: a `markdown` block, the buffer (the drawn editor state), and a `yaml` block, everything
   else about it, as keys. Each is there if the case is about it, at most one of each, in either
   order.
 - **The blocks before the first quote are where the test starts**: its config block (the start's
-  `yaml` block, first: its options and tags, the clipboard and outline it starts with, below, and
-  the view the start's snapshot carries, for every action: `folded: ①` the nodes whose children it
-  hides, `zoom: ①` the one it is zoomed into; a folded label on a node with nothing to fold is an
-  error),
-  then one `buffer`, and nothing else.
+  `yaml` block, first: its options and tags, the clipboard and outline it starts with, below),
+  then one `markdown` block, and nothing else. The view the start's snapshot carries is drawn in it
+  (`⟦folded⟧`, `⟦zoomed⟧`, below).
 - **A quote lists actions**, applied in order to the current state. A backtick in them is escaped,
   `` \` `` (`` > "\`\`\`" `` types three), so the quote renders as it reads, no code span; one bare is
   an error.
 - **The blocks after a quote are what must hold then**, and they become the current state: the
-  `buffer`, and a `yaml` block with any of
+  `markdown` block, and a `yaml` block with any of
   - `result`: what ourus made of the last action, which must be one of its commands or typed text
     (its last character's `insertText`): `success`, `deferredToHost` (the host's default ran
     instead) or `rejected <reason>` (`result: rejected not-expressible`). Other editors check
@@ -214,11 +214,10 @@ The item becomes the last child of the item above.
     a level, its kind (`heading 2`, `atom code_block`, `item [x]` for a task), then `: ` and its
     text, line breaks drawn `⏎`;
   - after a pickup (`drag`), `dragNodes`, the labels of the nodes it takes (`dragNodes: ① ②`), and
-    `dropPoints`, every place it offers, drawn ([drag.md](drag.md));
-  - `folded` and `zoom`: the view after the step, by label (`folded: ① ②`, `zoom: ①`; `none` for
-    none), labels a buffer of the case has bound ([fold.md](fold.md), [zoom.md](zoom.md)).
+    `dropPoints`, every place it offers, drawn ([drag.md](drag.md)).
 
-  Every step also checks the view: the selection in no line it hides, every fold on a node with
+  A step's buffer draws the view after it, as a start's does: what it folds and zooms into, and
+  nothing marked where nothing is ([fold.md](fold.md), [zoom.md](zoom.md)). Every step also checks the view: the selection in no line it hides, every fold on a node with
   something to hide, and, zoomed, an applied command keeping the zoom's invariant.
 
   What isn't drawn isn't checked. Options and tags go in the config block alone.
@@ -238,7 +237,9 @@ The item becomes the last child of the item above.
 | --- | --- |
 | `┃` | the caret |
 | `«…»` | a selection; its head is the end `┃` touches, or the end after `»` when no caret is drawn |
-| `««…»»` | a subtree selection: the nodes the span touches, each with its subtree, selected as whole lines, from the first's line's column 0 to the start of the line after the last's subtree (`OurusDoc.selectionOf`); downward, or upward with `┃` before it (`┃««`). Drawn from the first root's text start to the last root's own text end (`- ««two»»` takes `two`'s children without drawing them); a whole-line selection of another shape is drawn `«…»` at its offsets. The SxS draws an app's blocks selected whole so, a span to each run of them with nothing unselected between |
+| `⟦selected⟧` | last on a node's first line: the node a root of a subtree selection, its subtree selected as whole lines; the selection runs from the first root's line's column 0 to the start of the line after the last root's subtree (`OurusView.selectionOf`), each root marked, and only the roots, an error else. Downward; upward with `┃` at the first root's line start, the selection's only caret. On a line nodes share, it names the outermost (inside the zoom); an inner one alone, and a whole-line selection of another shape, is drawn `«…»` at its offsets. The SxS draws an app's blocks selected whole so |
+| `⟦folded⟧` | last on a node's first line: the node folded, its children hidden (the outermost starting there with something to fold; two on a line, the next one in too); one on a line with nothing to fold is an error ([fold.md](fold.md)) |
+| `⟦zoomed⟧` | last on a node's first line: the view zoomed into it (the outermost starting there), at most one ([zoom.md](zoom.md)) |
 | (neither) | in a step's buffer, the caret isn't checked: only what the text becomes is (a start always draws its caret, which the reader requires) |
 | `◌` | a placeholder: the end of an empty line the document reads as if text had been typed there; right before a space that follows a list marker, that space, read as text (a deleted character's place) |
 | `\̬` | a combining caron below a character (U+032C): one ourus put in, an auto mark (`2\̬. draft`: an escape of ours, which ourus may take out again, an author's backslash drawn bare; `` `̬`̬`̬ ``, a closing fence ourus typed; [auto.md](auto.md)) |
@@ -246,7 +247,7 @@ The item becomes the last child of the item above.
 | `␍` | a carriage return |
 | `⍽` | a no-break space (U+00A0), which Markdown reads as text, not as a space |
 | `␠` | a line's trailing space, which would be hard to see (as `sxs/probe.ts` draws them); nowhere else, which the reader refuses |
-| `①` … `㊿` | a node's label, last on its first line: no part of the text (below) |
+| `①` … `㊿` | a node's label, last on its first line but for its marks (`⟦…⟧`, after it): no part of the text (below) |
 | `▸` | alone on a line of a start, a drop line: where a drop lands, at twice the depth (no part of the text; [move-subtree.md](move-subtree.md)) |
 
 Every buffer draws every auto mark on a character (an escape of ours), and a step's buffer checks
@@ -255,7 +256,7 @@ its line break an auto mark too, isn't drawn yet, nor checked. The SxS takes the
 has none.
 
 A clipboard uses `→`, `␍`, `⍽` and `␠` too. A buffer's last line always ends with a line ending. A buffer
-that contains a code fence needs a longer fence of its own (`` ````buffer ``).
+that contains a code fence needs a longer fence of its own (`` ````markdown ``).
 
 A node's **label**, `①` to `⑳`, then `㉑` to `㊿`, names that node, so a case can say which node is
 which, as a command keeps them: Enter's first half keeps the item's node (Enter1), a join the upper
@@ -337,11 +338,11 @@ frontmatter (the reader refuses one):
 ## Indent18
 
 ```yaml
-tags: edge
+tags: rare
 bullet: +
 ```
 
-```buffer
+```markdown
 intro
 
 b┃
@@ -358,13 +359,13 @@ line without a line break, which paste puts inline as text, is a quoted string i
 ## Paste13
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |
   1. x
   2. y
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
@@ -404,13 +405,13 @@ clipboard:
   text/html: '<h2>Setup</h2><ul><li>npm install</li></ul>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 ## Setup
 
 - npm install┃
@@ -425,11 +426,16 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
   - `flavor`: the Markdown flavor the text is read in, `gfm` (the default), `commonmark` or
     `obsidian`. An example that names none runs in each of them, with the same expectations;
   - `tags`: words separated by spaces, in a test's config block only, every test having it. The
-    first is the case's **rank**, how often a user meets it: `core` (every session), `common`,
-    `edge` or `rare`; review metadata, never an editor setting. Every `core` case is walked through
+    first is the case's **rank**, how often a user meets it: `core` (what every outliner provides and its users count on,
+    the most basic case of each such feature, which can't go wrong: splitting, joining, nesting
+    and moving items, a soft line break, folding, zooming, selecting nodes and acting on them,
+    copy, cut and paste, deleting a subtree, dragging, tasks, undo), `common` (an ordinary user on ordinary notes meets it regularly: an
+    everyday edit, its ordinary boundaries, default settings or widely used ones) or `rare` (unusual
+    input or setup: a setting few change, tab-led or padded lines, lazy lines, odd nestings, markup
+    corner cases, shapes a fuzzer found); review metadata, never an editor setting. Every `core` case is walked through
     in a flow of [scenarios.md](scenarios.md) (the spec test checks it). The words after it, if any,
     say what the case depends on, for runners to select cases by, from the list below
-    (`tags: edge free-form markup-task`). Each is a
+    (`tags: rare free-form markup-task`). Each is a
     fact about the case, never an editor's name or a verdict, and a case has every tag that applies
     to it. A refusal of what a tag describes counts as the tag.
     - `free-form`: the case depends on free-form Markdown structure that an outliner of blocks has
@@ -485,7 +491,7 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
     `enterAtTextStart` (`into`, the default, or `stay`), `backspaceAtTopItem` (`unwrap`, the
     default, or `refuse`), `backspaceAtItemStart` (`join`, the default, `body`, `unwrap` or `logseq`), `emptyItemWithChildren` (`lift`, the default, or `refuse`),
     `joinWithChildren` (`join`, the default, or `refuse`), `enterTask` (`continue`, the default, or
-    `plain`), `enterSplitSpace` (`trim`, the default, `drop` or `start`), `heldSpace` (`repair`, the default, or `trim`),
+    `plain`), `enterSplitSpace` (`drop`, the default, `trim` or `start`), `heldSpace` (`repair`, the default, or `trim`),
     `handleFenceContents` (`true`, the default, or `false`), `autoClose` (a YAML list of ```` ``` ````, `~~~`, `$$`, `%%`, `<!--`, `` ` ``, `(`, `[`, `{`, `[[`, `((`, `$`: `autoClose: ['```', '~~~', '(']`; the first five the default; `[]` for none), `headingEditing` (`text`, the default, or `block`), `taskEditing` (`checkbox`, the default,
     `text`, `block` or `unwrap`), `copyAtCaret` (`node`, the default, or `host`), `copySelection` (`text`, the
     default, or `nodes`), `pasteSeams` (`closed`, the default, or `open`), `pasteOverSelection` (`replace`, the default, or

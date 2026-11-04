@@ -8,9 +8,7 @@ import { Lineage, textEnd, textStart, type OurusDoc, type OurusNode } from '../s
 import type { OurusSelection } from '../src/text/index.ts';
 import { executeCommand, OurusDeferred, OurusRejected, OurusSuccess } from '../src/commands/index.ts';
 import { OurusView } from '../src/view/index.ts';
-import { docOf, drawDoc, drawnSelection, nodesOf, readDrawing } from './drawing.ts';
-import { readSpecFile, specConfig, specFiles } from './specfile.ts';
-import { statusOf } from './drawing.ts';
+import { parseWithMarks, drawDoc, drawnSelection, allNodes, readDrawing, readSpecFile, specConfig, specFiles, resultStatus } from './lib/index.ts';
 
 /** Every spec start's document, once per flavor and config. */
 function starts(): OurusDoc[] {
@@ -24,7 +22,7 @@ function starts(): OurusDoc[] {
         const key = `${JSON.stringify(config)} ${text} ${placeholders}`;
         if (seen.has(key)) continue;
         seen.add(key);
-        out.push(docOf(text, placeholders, config));
+        out.push(parseWithMarks(text, placeholders, config));
       }
     }
   }
@@ -41,11 +39,12 @@ const holds = (a: OurusNode, b: OurusNode): boolean => {
 };
 
 /** A node's own text, from its text's start to its end, in offsets; null where it has none or it is empty. */
-function ownText(doc: OurusDoc, node: OurusNode): [number, number] | null {
+/** A node's own text, `[from, to]`, and where the frame closing it ends (a block id, closing `#`s), which a selection of the text may take too on the same line. */
+function ownText(doc: OurusDoc, node: OurusNode): [number, number, number] | null {
   const text = doc.textOf(node);
   if (!text) return null;
   const [from, to] = [doc.posOf(node, textStart(text), 1), doc.posOf(node, textEnd(text), -1)];
-  return to > from ? [from, to] : null;
+  return to > from ? [from, to, doc.posOf(node, text.text.length, -1)] : null;
 }
 
 /** Every spec start, in a view of nothing folded and no zoom. */
@@ -61,7 +60,7 @@ function idsOf(nodes: readonly OurusNode[] | null): number[] | null {
 test('a caret in a node touches that node; with nothing to touch, nothing', () => {
   for (const view of VIEWS) {
     const doc = view.doc;
-    for (const node of nodesOf(doc)) {
+    for (const node of allNodes(doc)) {
       const text = doc.textOf(node);
       if (!text) continue;
       const at = doc.posOf(node, textStart(text), 1);
@@ -69,15 +68,15 @@ test('a caret in a node touches that node; with nothing to touch, nothing', () =
       assert.equal(idsOf(view.selectedSubtrees({ anchor: at, head: at })), null);
     }
   }
-  assert.deepEqual(OurusView.of(docOf('')).touchedSubtrees({ anchor: 0, head: 0 }), []);
-  assert.deepEqual(OurusView.of(docOf('\n\n- a\n')).touchedSubtrees({ anchor: 0, head: 0 }), []);
+  assert.deepEqual(OurusView.of(parseWithMarks('')).touchedSubtrees({ anchor: 0, head: 0 }), []);
+  assert.deepEqual(OurusView.of(parseWithMarks('\n\n- a\n')).touchedSubtrees({ anchor: 0, head: 0 }), []);
 });
 
 test('selectionOf reads back as the closure of its ids, the outermost of nodes sharing its lines, in every whole-line shape', () => {
   let pairs = 0;
   for (const view of VIEWS) {
     const doc = view.doc;
-    const nodes = nodesOf(doc).filter((n) => !view.isHidden(n));
+    const nodes = allNodes(doc).filter((n) => !view.isHidden(n));
     if (nodes.length > 40) continue;
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i; j < nodes.length; j++) {
@@ -97,13 +96,12 @@ test('selectionOf reads back as the closure of its ids, the outermost of nodes s
         // upward, the same
         const up = view.selectionOf(ids, 'up');
         assert.deepEqual(idsOf(view.selectedSubtrees(up)), read.map((n) => n.id), `${where}, upward`);
-        // drawn `««…»»` (`┃««…»»` upward), and read back as it
-        // (but where no span names it: an empty last node, on an empty line, is touched by none)
-        const tail: OurusNode = read[read.length - 1]!.lastDescendant;
-        const empty: boolean = doc.isEmptyLine(tail.startLine);
+        // drawn by its roots' lines (`⟦selected⟧`; upward, `┃` at the first one's line start), and read back as it
         for (const s of [sel, up]) {
           const drawn = drawDoc(view, s);
-          assert.ok(drawn.includes('»»') || empty, `${where}: drawn ${JSON.stringify(drawn)}`);
+          // (but an inner node on a line it shares, which its line's mark would name the outer one of: at its offsets)
+          const named: boolean = read.every((r) => allNodes(doc).filter((n) => n.startLine === r.startLine && !view.isHidden(n)).sort((a, b) => a.depth - b.depth)[0]?.id === r.id);
+          assert.equal(drawn.split('⟦selected⟧').length - 1, named ? read.length : 0, `${where}: drawn ${JSON.stringify(drawn)}`);
           const back = readDrawing(drawn);
           assert.equal(back.text, doc.text);
           assert.deepEqual(drawnSelection(view, back), s, `${where}: drawn ${JSON.stringify(drawn)}`);
@@ -118,7 +116,7 @@ test('selectionOf reads back as the closure of its ids, the outermost of nodes s
           // (an empty last line ends where it starts: ending there doesn't touch it)
           if (to <= from || to === starts[last.endLine]) continue;
           // (one node's own text is text)
-          if (own && own[0] === from && own[1] === to) {
+          if (own && own[0] === from && to >= own[1] && to <= own[2] && !doc.text.slice(own[1], to).includes('\n')) {
             assert.equal(idsOf(view.selectedSubtrees({ anchor: from, head: to })), null, `${where}: its own text, to ${to}`);
             continue;
           }
@@ -133,7 +131,7 @@ test('selectionOf reads back as the closure of its ids, the outermost of nodes s
 test("a node's own text is text, but where it is its subtree's whole lines too (at the document's end)", () => {
   for (const view of VIEWS) {
     const doc = view.doc;
-    for (const node of nodesOf(doc)) {
+    for (const node of allNodes(doc)) {
       const own = ownText(doc, node);
       if (!own || view.isHidden(node)) continue;
       const read = idsOf(view.selectedSubtrees({ anchor: own[0], head: own[1] }));
@@ -142,7 +140,7 @@ test("a node's own text is text, but where it is its subtree's whole lines too (
       else assert.equal(read, null, `${show(doc, { anchor: own[0], head: own[1] })}`);
     }
   }
-  const doc = docOf('alpha\n\nbeta');
+  const doc = parseWithMarks('alpha\n\nbeta');
   const view = OurusView.of(doc);
   assert.equal(idsOf(view.selectedSubtrees({ anchor: 0, head: 5 })), null);
   assert.deepEqual(idsOf(view.selectedSubtrees({ anchor: 0, head: 6 })), [doc.rootNode.children[0]!.id]);
@@ -150,7 +148,7 @@ test("a node's own text is text, but where it is its subtree's whole lines too (
 });
 
 test('a selection that ends in a node, or starts past column 0, touches its nodes but is no subtree selection', () => {
-  const doc = docOf('- one\n  - two\n    - deep\n  - three\n- four\n');
+  const doc = parseWithMarks('- one\n  - two\n    - deep\n  - three\n- four\n');
   const view = OurusView.of(doc);
   const [one] = doc.rootNode.children;
   const [two, three] = one!.children;
@@ -170,7 +168,7 @@ test('a selection that ends in a node, or starts past column 0, touches its node
 });
 
 test('selectionOf: everything between comes along; an ancestor takes its descendants in', () => {
-  const doc = docOf('- p\n  - a\n  - b\n  - c\n- q\n');
+  const doc = parseWithMarks('- p\n  - a\n  - b\n  - c\n- q\n');
   const view = OurusView.of(doc);
   const [p, q] = doc.rootNode.children;
   const [a, , c] = p!.children;
@@ -179,7 +177,7 @@ test('selectionOf: everything between comes along; an ancestor takes its descend
   assert.deepEqual(view.selectionOf([p!.id]), { anchor: 0, head: doc.mdTree.starts[q!.startLine]! });
   assert.deepEqual(view.selectionOf([q!.id], 'up'), { anchor: doc.text.length, head: doc.mdTree.starts[q!.startLine]! });
   // a paragraph between that owns the list the last is in comes with its whole list
-  const owned = OurusView.of(docOf('- a\n\npara\n\n- b\n- c\n', [], { listParent: 'paragraph' }));
+  const owned = OurusView.of(parseWithMarks('- a\n\npara\n\n- b\n- c\n', [], { listParent: 'paragraph' }));
   const [a2, para] = owned.doc.rootNode.children;
   const sel = owned.selectionOf([a2!.id, para!.children[0]!.id]);
   assert.deepEqual(sel, { anchor: 0, head: owned.doc.text.length });
@@ -187,7 +185,7 @@ test('selectionOf: everything between comes along; an ancestor takes its descend
 });
 
 test('nodes sharing a line: touched is the innermost, selected the outermost inside the zoom', () => {
-  const doc = docOf('- x\n- - a\n  - b\n');
+  const doc = parseWithMarks('- x\n- - a\n  - b\n');
   const view = OurusView.of(doc);
   const outer = doc.rootNode.children[1]!;
   const [a, b] = outer.children;
@@ -198,7 +196,7 @@ test('nodes sharing a line: touched is the innermost, selected the outermost ins
   // `a` and `b` are all of it
   assert.deepEqual(idsOf(view.selectedSubtrees(view.selectionOf([a!.id, b!.id]))), [outer.id]);
   // an only child: its lines are its parent's, but not past the zoom
-  const only = OurusView.of(docOf('- - a\n- y\n'));
+  const only = OurusView.of(parseWithMarks('- - a\n- y\n'));
   const parent = only.doc.rootNode.children[0]!;
   const inner = parent.children[0]!;
   assert.deepEqual(idsOf(only.selectedSubtrees(only.selectionOf([inner.id]))), [parent.id]);
@@ -210,7 +208,7 @@ test('nodes sharing a line: touched is the innermost, selected the outermost ins
 });
 
 test('selectionOf throws for no ids, an unknown id, the root, an id outside the zoom, an id a fold hides', () => {
-  const doc = docOf('- p\n  - a\n- q\n');
+  const doc = parseWithMarks('- p\n  - a\n- q\n');
   const view = OurusView.of(doc);
   const [p, q] = doc.rootNode.children;
   const a = p!.children[0]!;
@@ -225,38 +223,43 @@ test('selectionOf throws for no ids, an unknown id, the root, an id outside the 
 });
 
 test('a snapshot keeps its last answer', () => {
-  const doc = docOf('- a\n- b\n');
+  const doc = parseWithMarks('- a\n- b\n');
   const view = OurusView.of(doc);
   const sel = view.selectionOf(doc.rootNode.children.map((n) => n.id));
   assert.equal(view.selectedSubtrees(sel), view.selectedSubtrees({ ...sel }));
   assert.equal(view.touchedSubtrees(sel), view.touchedSubtrees({ ...sel }));
 });
 
-test('the spec draws a subtree selection `««…»»`, the shortest span, and any other selection as it is', () => {
-  const doc = docOf('- one\n  - two\n    - deep\n  - three\n- four\n');
+test('the spec draws a subtree selection by its roots (`⟦selected⟧`), and any other selection as it is', () => {
+  const doc = parseWithMarks('- one\n  - two\n    - deep\n  - three\n- four\n');
   const view = OurusView.of(doc);
   const two = doc.rootNode.children[0]!.children[0]!;
   const three = doc.rootNode.children[0]!.children[1]!;
   const deep = two.children[0]!;
-  assert.equal(drawDoc(view, view.selectionOf([two.id])), '- one\n  - ««two»»\n    - deep\n  - three\n- four\n');
-  assert.equal(drawDoc(view, view.selectionOf([two.id], 'up')), '- one\n  - ┃««two»»\n    - deep\n  - three\n- four\n');
-  assert.equal(drawDoc(view, view.selectionOf([deep.id, three.id])), '- one\n  - two\n    - ««deep\n  - three»»\n- four\n');
+  assert.equal(drawDoc(view, view.selectionOf([two.id])), '- one\n  - two⟦selected⟧\n    - deep\n  - three\n- four\n');
+  assert.equal(drawDoc(view, view.selectionOf([two.id], 'up')), '- one\n┃  - two⟦selected⟧\n    - deep\n  - three\n- four\n');
+  assert.equal(drawDoc(view, view.selectionOf([deep.id, three.id])), '- one\n  - two\n    - deep⟦selected⟧\n  - three⟦selected⟧\n- four\n');
   // the same roots in another whole-line shape (before the last break): drawn as they are
   const sel = view.selectionOf([two.id]);
   assert.equal(drawDoc(view, { anchor: sel.anchor, head: sel.head - 1 }), '- one\n«  - two\n    - deep»\n  - three\n- four\n');
-  // read: the nodes the span touches, as whole lines; a longer span the same
-  for (const drawn of ['- one\n  - ««two»»\n    - deep\n', '- one\n  - ««two\n    - deep»»\n', '- one\n  - t««w»»o\n    - deep\n']) {
+  // read: the roots' lines, as whole lines; upward with `┃` at the first one's line start
+  for (const [drawn, dir] of [['- one\n  - two⟦selected⟧\n    - deep\n', 'down'], ['- one\n┃  - two⟦selected⟧\n    - deep\n', 'up']] as const) {
     const d = readDrawing(drawn);
-    const at = OurusView.of(docOf(d.text));
-    assert.deepEqual(drawnSelection(at, d), at.selectionOf([at.doc.rootNode.children[0]!.children[0]!.id]), drawn);
+    const at = OurusView.of(parseWithMarks(d.text));
+    assert.deepEqual(drawnSelection(at, d), at.selectionOf([at.doc.rootNode.children[0]!.children[0]!.id], dir), drawn);
   }
-  // nodes sharing a line: drawn in the inner text
-  const shared = OurusView.of(docOf('- - a\n- y\n'));
-  assert.equal(drawDoc(shared, shared.selectionOf([shared.doc.rootNode.children[0]!.id])), '- - ««a»»\n- y\n');
+  // marks that aren't the roots (a child of a marked node), or a caret besides them: errors
+  assert.throws(() => drawnSelection(OurusView.of(parseWithMarks('- one\n  - two\n')), readDrawing('- one⟦selected⟧\n  - two⟦selected⟧\n')));
+  assert.throws(() => readDrawing('- o┃ne\n  - two⟦selected⟧\n'));
+  // nodes sharing a line: the outer one by its line; the inner one alone at its offsets
+  const shared = OurusView.of(parseWithMarks('- - a\n  - b\n- y\n'));
+  const outer = shared.doc.rootNode.children[0]!;
+  assert.equal(drawDoc(shared, shared.selectionOf([outer.id])), '- - a⟦selected⟧\n  - b\n- y\n');
+  assert.equal(drawDoc(shared, shared.selectionOf([outer.children[0]!.id])), '«- - a\n»  - b\n- y\n');
 });
 
 test('the commands act on the selection\'s roots: a subtree selection\'s, else what it touches', () => {
-  const doc = docOf('- x\n- - a\n  - b\n');
+  const doc = parseWithMarks('- x\n- - a\n  - b\n');
   const view = OurusView.of(doc);
   const outer = doc.rootNode.children[1]!;
   const a = outer.children[0]!;
@@ -270,18 +273,18 @@ test('the commands act on the selection\'s roots: a subtree selection\'s, else w
   const whole = executeCommand(view, { type: 'indent' }, view.selectionOf([outer.id]));
   assert.equal(whole instanceof OurusSuccess && whole.view.doc.text, '- x\n  - - a\n    - b\n');
   // copy of a drag from a parent's text into its child's (`copySelection: nodes`): the parent, as nodes
-  const tree = docOf('- one\n  - two\n    - deep\n- four\n', [], { copySelection: 'nodes' });
+  const tree = parseWithMarks('- one\n  - two\n    - deep\n- four\n', [], { copySelection: 'nodes' });
   const two = tree.rootNode.children[0]!.children[0]!;
   const copied = executeCommand(OurusView.of(tree), { type: 'copy' }, { anchor: tree.posOf(two, 1), head: tree.posOf(two.children[0]!, 2) });
   assert.equal(copied instanceof OurusSuccess && copied.clipboard?.['text/plain'], '- two\n  - deep\n');
   // copy at a caret on a blank line: the host's
-  const gap = docOf('- a\n\n- b\n');
+  const gap = parseWithMarks('- a\n\n- b\n');
   assert.ok(executeCommand(OurusView.of(gap), { type: 'copy' }, { anchor: 4, head: 4 }) instanceof OurusDeferred);
 });
 
 test('a structural command keeps a subtree selection on its nodes, in the shape it was given', () => {
   // a drop of the selected nodes (moveSubtree, by ids): the same nodes after, as whole lines
-  const doc = docOf('- a\n- b\n  - c\n- d\n');
+  const doc = parseWithMarks('- a\n- b\n  - c\n- d\n');
   const view = OurusView.of(doc);
   const [a, b] = doc.rootNode.children;
   const moved = executeCommand(view, { type: 'moveSubtree', nodes: [b!.id], to: { parent: 'root', after: null } }, view.selectionOf([b!.id]));
@@ -289,7 +292,7 @@ test('a structural command keeps a subtree selection on its nodes, in the shape 
   assert.deepEqual(idsOf(moved.view.selectedSubtrees(moved.selection)), [b!.id]);
   assert.equal(moved.view.doc.text, '- b\n  - c\n- a\n- d\n');
   // true-outliner's cover, to the end of the gap: the same after a move
-  const gapped = docOf('- a\n\n- b\n\n- d\n');
+  const gapped = parseWithMarks('- a\n\n- b\n\n- d\n');
   const bb = gapped.rootNode.children[1]!;
   const cover = { anchor: gapped.mdTree.starts[bb.startLine]!, head: gapped.mdTree.ends[gapped.coverEnd(bb)]! };
   const up = executeCommand(OurusView.of(gapped), { type: 'moveSubtreeUp' }, cover);
@@ -300,7 +303,7 @@ test('a structural command keeps a subtree selection on its nodes, in the shape 
 });
 
 test('a fold that ends the document leaves a subtree selection of its node whole, its end not moved into the fold', () => {
-  const doc = docOf('- a\n- b\n  - c');
+  const doc = parseWithMarks('- a\n- b\n  - c');
   const b = doc.rootNode.children[1]!;
   const folded = OurusView.of(doc).withFolded([b.id]);
   const sel = folded.selectionOf([b.id]);
@@ -315,7 +318,7 @@ test('a fold that ends the document leaves a subtree selection of its node whole
 });
 
 test('a command given nodes acts on them, not on the subtree selection', () => {
-  const doc = docOf('- a\n- b\n- c\n');
+  const doc = parseWithMarks('- a\n- b\n- c\n');
   const view = OurusView.of(doc);
   const [a, , c] = doc.rootNode.children;
   const copied = executeCommand(view, { type: 'copy', nodes: [c!.id] }, view.selectionOf([a!.id]));
@@ -335,7 +338,7 @@ test('selectNodeDown then as many selectNodeUp is the identity; the roots never 
   };
   for (const view of VIEWS.flatMap((v) => [v, v.withConfig({ selectNodeUp: 'sibling' })])) {
     const doc = view.doc;
-    const nodes = nodesOf(doc).filter((n) => !view.isHidden(n));
+    const nodes = allNodes(doc).filter((n) => !view.isHidden(n));
     if (nodes.length > 30) continue;
     for (const node of nodes) {
       const start = view.selectionOf([node.id]);
@@ -369,7 +372,7 @@ test('selectNodeDown then as many selectNodeUp is the identity; the roots never 
 
 test('over a subtree selection the press is a node step wherever the head is, and every whole-line shape climbs alike', () => {
   // a two-line node selected: Shift-Up extends to the node above, not into the node
-  const two = OurusView.of(docOf('- x\n- a\n  more\n- b\n'));
+  const two = OurusView.of(parseWithMarks('- x\n- a\n  more\n- b\n'));
   const [x, a] = two.doc.rootNode.children;
   const up = executeCommand(two, { type: 'selectNodeUp' }, two.selectionOf([a!.id], 'up'));
   assert.ok(up instanceof OurusSuccess);
@@ -377,7 +380,7 @@ test('over a subtree selection the press is a node step wherever the head is, an
   // expandSelection from each whole-line shape, either way: the same next rung
   for (const view of VIEWS.slice(0, 300)) {
     const doc = view.doc;
-    for (const node of nodesOf(doc).filter((n) => !view.isHidden(n)).slice(0, 8)) {
+    for (const node of allNodes(doc).filter((n) => !view.isHidden(n)).slice(0, 8)) {
       const sel = view.selectionOf([node.id]);
       const want = executeCommand(view, { type: 'expandSelection' }, sel);
       const { starts, ends } = doc.mdTree;
@@ -388,7 +391,7 @@ test('over a subtree selection the press is a node step wherever the head is, an
         for (const shape of [{ anchor: sel.anchor, head: to }, { anchor: to, head: sel.anchor }]) {
           if (!view.selectedSubtrees(shape)) continue;
           const got = executeCommand(view, { type: 'expandSelection' }, shape);
-          assert.equal(statusOf(got), statusOf(want), `${show(doc, shape)}`);
+          assert.equal(resultStatus(got), resultStatus(want), `${show(doc, shape)}`);
           if (got instanceof OurusSuccess && want instanceof OurusSuccess) assert.deepEqual(idsOf(view.selectedSubtrees(got.selection)) ?? got.selection, idsOf(view.selectedSubtrees(want.selection)) ?? want.selection, `${show(doc, shape)}`);
         }
       }
@@ -398,7 +401,7 @@ test('over a subtree selection the press is a node step wherever the head is, an
 
 test('typing over the whole document (a select all) is the host\'s: the text replaced, no node kept', () => {
   for (const text of ['- a\n  - a1\n- b\n', '# T\n\nbody\n\n- a\n']) {
-    const view = OurusView.of(docOf(text));
+    const view = OurusView.of(parseWithMarks(text));
     const all = { anchor: 0, head: text.length };
     assert.ok(idsOf(view.selectedSubtrees(all)), 'a subtree selection still');
     assert.ok(executeCommand(view, { type: 'insertText', text: 'x' }, all) instanceof OurusDeferred);

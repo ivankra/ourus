@@ -162,7 +162,7 @@ class Build {
     if (old && old.node.block === block && this.untouched(old.node, start, end)) return this.reuse(old.node);
     let head: MdBlock | null = null;
     if (kind === 'item') head = itemHead(block, this.tree.flavor, this.config.quotes, () => this.contentOf(start));
-    else if (kind === 'quote') head = quoteHead(block, () => this.contentOf(start + block.offsets[0]!));
+    else if (kind === 'quote') head = quoteHead(block, () => this.contentOf(start + block.offsets[0]!), this.tree.flavor.has('callouts'));
     // the same stored block holds the same blocks, grouped the same: only the nodes on touched lines change
     // (but a quote that is of another kind now, read anew)
     // (and not where the old one was grouped under other settings: `listParent`, `quotes`)
@@ -184,7 +184,7 @@ class Build {
         host = null;
         continue;
       }
-      const childKind = nodeKindOf(child, this.config.quotes, () => this.contentOf(at));
+      const childKind = nodeKindOf(child, this.config.quotes, () => this.contentOf(at), this.tree.flavor.has('callouts'));
       const lone = blockIds && childKind === 'paragraph' && this.blockIdParagraph(child, at);
       if (lone && host && this.attaches(block, at, end, host)) {
         // (its lines from the host's text's end: the blank lines before it, and the line)
@@ -273,7 +273,7 @@ class Build {
       const next = i + 1 < n ? start + node.offsets[i + 1]! : end;
       const located = { node: child, start: old.start + node.offsets[i]! };
       if (this.untouched(child, at, next)) children[i] = this.reuse(child);
-      else if (child.block!.type === 'blockquote' && nodeKindOf(child.block!, this.config.quotes, () => this.contentOf(at)) !== child.kind) return null;
+      else if (child.block!.type === 'blockquote' && nodeKindOf(child.block!, this.config.quotes, () => this.contentOf(at), this.tree.flavor.has('callouts')) !== child.kind) return null;
       else if (child.kind === 'item' || child.kind === 'quote') children[i] = (yield this.containerOf(child.kind, child.block!, at, next, located))!;
       else {
         const copied = yield this.copy(located, at, next);
@@ -363,12 +363,8 @@ class Build {
    */
   assignIds(root: PersistentNode, identity: ReadonlyMap<number, number> | undefined, lineage: Lineage): void {
     const made: Located[] = [];
-    const walk = (node: PersistentNode, start: number): void => {
-      if (!this.made.has(node)) return;
-      made.push({ node, start });
-      for (let i = 0; i < node.children.length; i++) walk(node.children[i]!, start + node.offsets[i]!);
-    };
-    walk(root, 0);
+    // (in document order, iteratively: nesting past the call stack)
+    preorder(root, (node) => this.made.has(node), (node, start) => made.push({ node, start }));
     const set = (node: PersistentNode, id: number): void => {
       (node as { id: number }).id = id;
     };
@@ -381,19 +377,15 @@ class Build {
     const claimed = new Set(identity?.values());
     const carried = new Map<string, number>();
     const oldRanks = new Map<string, number>();
-    const visit = (node: PersistentNode, start: number): void => {
-      if (this.reused.has(node)) return;
-      if (node.kind !== 'root') {
-        const line = this.mapLine(start, true);
-        // a node `identity` names keeps its rank among those nested on its line, but carries nothing
-        if (line >= 0) {
-          const key = ranked(oldRanks, `${node.kind}@${line}`);
-          if (!claimed.has(node.id) && !carried.has(key)) carried.set(key, node.id);
-        }
+    preorder(this.previous.root, (node) => !this.reused.has(node), (node, start) => {
+      if (node.kind === 'root') return;
+      const line = this.mapLine(start, true);
+      // a node `identity` names keeps its rank among those nested on its line, but carries nothing
+      if (line >= 0) {
+        const key = ranked(oldRanks, `${node.kind}@${line}`);
+        if (!claimed.has(node.id) && !carried.has(key)) carried.set(key, node.id);
       }
-      for (let i = 0; i < node.children.length; i++) visit(node.children[i]!, start + node.offsets[i]!);
-    };
-    visit(this.previous.root, 0);
+    });
     // an id `identity` gives may be one a node taken whole still has: that node keeps it
     const kept = identity?.size ? this.reusedIds() : null;
     const used = new Set<number>([Lineage.ROOT]);
@@ -415,11 +407,7 @@ class Build {
   /** The ids of every node taken whole. */
   private reusedIds(): Set<number> {
     const ids = new Set<number>();
-    const visit = (node: PersistentNode): void => {
-      ids.add(node.id);
-      node.children.forEach(visit);
-    };
-    this.reused.forEach(visit);
+    for (const node of this.reused) preorder(node, () => true, (n) => ids.add(n.id));
     return ids;
   }
 
@@ -488,4 +476,18 @@ function identityLines(tree: MdTree, previous: OutlinePrevious, identity: Readon
     if (old !== undefined && old >= 0) lines.push([lineIndexAt(tree.starts, old), lineIndexAt(tree.starts, old)]);
   }
   return lines;
+}
+
+/**
+ * `visit` on `root` and its descendants in document order, each with its start (its offsets' sum),
+ * but a node `enter` refuses and what is below it: iteratively, nesting past the call stack.
+ */
+function preorder(root: PersistentNode, enter: (node: PersistentNode) => boolean, visit: (node: PersistentNode, start: number) => void): void {
+  const stack: [PersistentNode, number][] = [[root, 0]];
+  while (stack.length) {
+    const [node, start] = stack.pop()!;
+    if (!enter(node)) continue;
+    visit(node, start);
+    for (let i = node.children.length - 1; i >= 0; i--) stack.push([node.children[i]!, start + node.offsets[i]!]);
+  }
 }

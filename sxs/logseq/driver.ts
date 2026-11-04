@@ -230,6 +230,8 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
     // Backspace at the first block's start does nothing in both (measured with `--ignore-options`:
     // `backspace.md › Backspace34` agrees; its `unwrap` case needs a paragraph, which no block app runs)
     behaves: {
+      // Enter trims the spaces at the split from both halves, as the block is stored (Enter44)
+      enterSplitSpace: 'trim',
       // a space a deleted first character leaves at a block's start goes as the block is stored, as
       // every edge space does (Placeholder9, Placeholder17; measured 2026-11-03)
       heldSpace: 'trim',

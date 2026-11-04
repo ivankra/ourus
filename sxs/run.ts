@@ -56,7 +56,8 @@ import { fileURLToPath } from 'node:url';
 import type { Browser, Page } from 'playwright-core';
 import { OurusConfig } from '../src/config.ts';
 import { OurusDoc } from '../src/doc/index.ts';
-import { drawOutline, nodesOf } from '../test/drawing.ts';
+import { OurusView } from '../src/view/index.ts';
+import { drawnSelection, drawOutline, allNodes, readDrawing, isDropAction, canonicalClipboard, specTestPasses, actionsLine, SPEC_RANKS, readSpec, specConfig, SPEC_TAGS, type Clipboard } from '../test/lib/index.ts';
 import { appWindow, ensureProxy, headedWindow, lockApp, proxyStats, runRoom, stopShared, type AppPage } from './lib/browser.ts';
 import { watchTasks } from './lib/system.ts';
 import { clipboardHtml } from './lib/clipboard.ts';
@@ -66,11 +67,8 @@ import { LOGIN_EXIT, LoginRequired } from './lib/login.ts';
 import { compareOutlines, draw, project, readOutline, sameOutline, Unsupported, type Outline, type Verdict } from './lib/block.ts';
 import { compareTexts, drawTextDoc, readTextDoc, sameText, type TextDoc } from './lib/text.ts';
 import { adapt, allTests, fileOf, selects, type Plan, type PlanStep } from './lib/plan.ts';
-import { isDrop } from '../test/player.ts';
 import { compareJudgments } from './lib/compare.ts';
 import { appDirs, appNames, resolveApps } from './lib/apps.ts';
-import { canonicalClipboard, passes } from '../test/spec-run.ts';
-import { actionsLine, RANKS, readSpec, specConfig, TAGS, type Clipboard } from '../test/specfile.ts';
 import { sameView, shownInBlocks, shownInText, splitView, type RowView } from './lib/view.ts';
 import { cacheDir, cacheMode } from './proxy.ts';
 
@@ -372,7 +370,7 @@ async function runMany(spec: string, selectors: string[], flags: string[]): Prom
   const names = selected.map((t) => t.name);
   // ourus, replayed on every case selected (the table's ourus column): the apps are judged against the
   // spec's drawings, which are what ourus does where it passes them
-  const fails = selected.filter((t) => !t.pending && !passes(t));
+  const fails = selected.filter((t) => !t.pending && !specTestPasses(t));
   const pending = selected.filter((t) => t.pending).length;
   say(`ourus replayed on ${selected.length} cases: ${selected.length - pending - fails.length} pass${pending ? `, ${pending} pending` : ''}${fails.length ? `; ${fails.length} fail, so the apps are judged there against drawings ourus doesn't meet: ${fails.map((t) => t.name).join(', ')}` : ''}`);
   const byApp = new Map<string, AppRun | null>(apps.map((app) => [app, failed.has(app) ? null : read(lastRun(app, 'json', partial))]));
@@ -497,7 +495,7 @@ function matrix(o: {
   const columns = [...VERDICTS, 'skipped', ...(o.rows.some((r) => r.cells.includes('missing')) ? ['missing'] : [])];
   // the heatmap has ourus too, its verdict its own run of the example (a pending one disagrees)
   const tests = new Map(allTests().map((t) => [t.name, t]));
-  const ours = (name: string): string => (tests.has(name) ? (passes(tests.get(name)!) ? 'agree' : 'disagree') : 'missing');
+  const ours = (name: string): string => (tests.has(name) ? (specTestPasses(tests.get(name)!) ? 'agree' : 'disagree') : 'missing');
   const map = heatmap({ apps: [OURUS, ...o.apps], ids: new Map([[OURUS, 'US'], ...o.ids]), ordered: o.ordered, byApp: o.byApp, rows: o.rows.map((r) => ({ name: r.name, cells: [ours(r.name), ...r.cells], adapted: [[], ...r.adapted] })) });
   // per spec file, and per rank and tag, the disagreements: the apps' runs of its examples, the
   // disagreements among them and their share, the block apps' among them, and each app's (blank where
@@ -514,8 +512,8 @@ function matrix(o: {
   // its rank and each of its tags
   const testOf = (r: (typeof o.rows)[number]) => tests.get(r.name);
   const byTag = [
-    ...RANKS.map((rank) => group(rank, o.rows.filter((r) => testOf(r)?.rank === rank))),
-    ...TAGS.map((tag) => group(tag, o.rows.filter((r) => testOf(r)?.tags.includes(tag)))).sort(mostFirst),
+    ...SPEC_RANKS.map((rank) => group(rank, o.rows.filter((r) => testOf(r)?.rank === rank))),
+    ...SPEC_TAGS.map((tag) => group(tag, o.rows.filter((r) => testOf(r)?.tags.includes(tag)))).sort(mostFirst),
   ].filter((g) => g.cases);
   const share = (dis: number, runs: number): string => (runs ? `${Math.round((100 * dis) / runs)}%` : '');
   const sum = { cases: byFile.reduce((n, r) => n + r.cases, 0), runs: byFile.reduce((n, r) => n + r.runs, 0), dis: byFile.reduce((n, r) => n + r.dis, 0), blockDis: byFile.reduce((n, r) => n + r.blockDis, 0), blockRan: byFile.reduce((n, r) => n + r.blockRan, 0) };
@@ -604,7 +602,7 @@ function matrix(o: {
     ...(columns.includes('missing') ? [`| ${CELL.missing![1]} | not run: the app's last run didn't play the example as the spec has it now |`] : []),
     `| (${CELL.disagree![1]}) | in brackets, a difference in an example adapted for the app: its buffers projected onto blocks, so it compares those |`,
     '',
-    'An example\'s **rank** is how often users meet it (`core`, `common`, `edge` or `rare`: [the spec\'s README](../spec/README.md)); a file\'s **disagree** column counts the apps that disagree on the example; its **total** row, the examples each app disagrees on, and all of them. An app is its id in the tables, as the [summary](#summary) has it.',
+    'An example\'s **rank** is how often users meet it (`core`, `common` or `rare`: [the spec\'s README](../spec/README.md)); a file\'s **disagree** column counts the apps that disagree on the example; its **total** row, the examples each app disagrees on, and all of them. An app is its id in the tables, as the [summary](#summary) has it.',
     '',
     'By spec file and by tag, under the summary: each one\'s cases; the apps\' runs of them that disagree, of all the runs (and their share); the block apps\' alike; and each app\'s disagreements (blank: it ran none there). A case counts under its rank and under each of its other tags ([the spec\'s README](../spec/README.md)), so the tags\' rows overlap.',
     '',
@@ -652,10 +650,18 @@ function heatmap(o: { apps: string[]; ids: Map<string, string>; ordered: Readonl
     const d = outline(app, drawn);
     return d ? draw(d, { ordered: o.ordered.has(app) }) : drawn;
   };
+  /** A drawing read as text; a block app's, whose blocks selected whole (`⟦selected⟧`) no text's nodes are, without them. */
+  const asText = (drawn: string): ReturnType<typeof readTextDoc> => {
+    try {
+      return readTextDoc(drawn);
+    } catch {
+      return readTextDoc(drawn.replace(/⟦selected⟧/g, ''));
+    }
+  };
   /** How two apps' outputs compare: as outlines where both read as one, else as text. */
   const compare = (a: string, x: string, b: string, y: string): string => {
     const [ox, oy] = [outline(a, x), outline(b, y)];
-    return ox && oy ? compareOutlines(ox, oy) : compareTexts(readTextDoc(x), readTextDoc(y));
+    return ox && oy ? compareOutlines(ox, oy) : compareTexts(asText(x), asText(y));
   };
   /**
    * How alike two apps did in an example, 0 to 1, or null where it doesn't say (not run by both, run
@@ -975,7 +981,7 @@ function shownView(d: Doc, plan: Plan): RowView | undefined {
 function sameMarkdown(a: string, b: string, flavor: OurusConfig['flavor']): boolean {
   const read = (text: string): string => {
     const doc = OurusDoc.parse(text, { config: { flavor } });
-    return JSON.stringify([drawOutline(doc), nodesOf(doc).map((n) => (n.kind === 'item' ? n.block.attrs.list?.type : null))]);
+    return JSON.stringify([drawOutline(doc), allNodes(doc).map((n) => (n.kind === 'item' ? n.block.attrs.list?.type : null))]);
   };
   return read(a) === read(b);
 }
@@ -1269,7 +1275,7 @@ async function runPlan(w: Worker, plan: Plan): Promise<Outcome> {
           if (drained.ms > 0) await settleAfter(`its put-off timers, before ${action}`);
         }
         // a drop: the gesture, at the place the plan resolved from ourus's state (lib/drag.ts)
-        if (plan.drop && isDrop(action)) await driver.drop!(page, plan.drop, () => settleAfter(action));
+        if (plan.drop && isDropAction(action)) await driver.drop!(page, plan.drop, () => settleAfter(action));
         else await play(w, action, settleAfter);
         // (an action that may leave the app no focus, with more that needs one after it: where it did,
         // the rest is unplayable, and the example skipped; where the app kept a caret, it plays on)
@@ -1363,12 +1369,31 @@ function readDoc(drawn: string): Doc | null {
 /** The app's settings (`Driver.settings`) as strings, each as `get` has it. */
 const settingsOf = (get: (k: keyof OurusConfig) => unknown): string[] => Object.keys(driver.settings ?? {}).map((k) => OurusConfig.format(k as keyof OurusConfig, get(k as keyof OurusConfig)));
 
+/**
+ * Whether two drawings of a drop's start are the same start: the text, its drop line, labels and
+ * placeholders, and the selection they read as (a subtree selection drawn `⟦selected⟧` now, `««…»»`
+ * in a run stored before).
+ */
+function sameDropStart(a: string, b: string): boolean {
+  if (a === b) return true;
+  try {
+    const key = (drawn: string): string => {
+      const d = readDrawing(drawn);
+      const sel = drawnSelection(OurusView.of(OurusDoc.parse(d.text)), d);
+      return JSON.stringify([d.text, d.drop, [...d.labels], d.placeholders, sel]);
+    };
+    return key(a) === key(b);
+  } catch {
+    return false;
+  }
+}
+
 /** A plan's outcome in the last run's example, if that played it as it is now; else why not. */
 function replay(plan: Plan, e: RunExample): Outcome | string {
   if (e.steps.length < plan.steps.length) return 'step added since';
   // (a drop's line is in the drawing alone: two cases from one start with one action, `moveSubtree ③`, drop
   // in different places)
-  if (plan.drop && (e.written ?? e.start) !== plan.test.initial.buffer) return 'its drop changed since';
+  if (plan.drop && !sameDropStart(e.written ?? e.start, plan.test.initial.buffer)) return 'its drop changed since';
   const got: (Doc | null)[] = [];
   const clipboards: (string | null)[] = [];
   for (const [i, step] of plan.steps.entries()) {

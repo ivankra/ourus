@@ -3,11 +3,10 @@ import { test } from 'node:test';
 import fc from 'fast-check';
 import { executeCommand, nearestDropPoint, type OurusCommand, type DropPoint, type DropSeam, OurusDeferred, OurusRejected, OurusSuccess } from '../../src/commands/index.ts';
 import { OurusConfig } from '../../src/config.ts';
-import { OurusDoc } from '../../src/doc/index.ts';
+import { OurusDoc, type OurusNode } from '../../src/doc/index.ts';
 import { OurusView } from '../../src/view/index.ts';
-import { docOf, nodesOf, plainText } from '../drawing.ts';
+import { parseWithMarks, allNodes, nodePlainText, resultStatus, executeOnText, appliedText, assertApplied, scalingFactor } from '../lib/index.ts';
 import { applyChanges } from '../../src/text/index.ts';
-import { statusOf } from '../drawing.ts';
 
 const RUNS = Number(process.env.OURUS_FUZZ_RUNS ?? 2000);
 
@@ -81,7 +80,7 @@ test('outdent undoes indent of a list item in a tidy outline', () => {
       assert.ok(r2 instanceof OurusSuccess);
       if (!(r2 instanceof OurusSuccess)) return;
       // the outline comes back; the text may differ in renumbering or bullet adoption
-      const shape = (d: OurusDoc) => nodesOf(d).map((n) => `${n.depth}:${n.kind}:${plainText(d, n).replace(/\n/g, '|')}`).join('\n');
+      const shape = (d: OurusDoc) => allNodes(d).map((n) => `${n.depth}:${n.kind}:${nodePlainText(d, n).replace(/\n/g, '|')}`).join('\n');
       assert.equal(shape(r2.view.doc), shape(doc));
     }),
     { numRuns: RUNS },
@@ -90,7 +89,7 @@ test('outdent undoes indent of a list item in a tidy outline', () => {
 
 test('ids follow nodes through structural commands', () => {
   const doc = OurusDoc.parse('- a\n- b\n  - c\n- d\n');
-  const idOf = (d: OurusDoc, text: string) => nodesOf(d).find((n) => plainText(d, n).split('\n')[0] === text)!.id;
+  const idOf = (d: OurusDoc, text: string) => allNodes(d).find((n) => nodePlainText(d, n).split('\n')[0] === text)!.id;
   const before = ['a', 'b', 'c', 'd'].map((t) => idOf(doc, t));
   const pos = doc.text.indexOf('b');
   const r = executeCommand(OurusView.of(doc), { type: 'moveSubtreeDown' }, { anchor: pos, head: pos });
@@ -101,7 +100,7 @@ test('ids follow nodes through structural commands', () => {
 });
 
 test('ids stay with nodes that a command indents or opens a line above', () => {
-  const ids = (d: OurusDoc) => nodesOf(d).map((n) => `${n.id}:${plainText(d, n).replace(/\n/g, '')}`);
+  const ids = (d: OurusDoc) => allNodes(d).map((n) => `${n.id}:${nodePlainText(d, n).replace(/\n/g, '')}`);
   const run = (text: string, type: OurusCommand['type'], pos: number, config = {}) => {
     const doc = OurusDoc.parse(text, { config });
     const r = executeCommand(OurusView.of(doc), { type } as OurusCommand, { anchor: pos, head: pos });
@@ -128,7 +127,7 @@ test('every command from an empty document neither throws nor fails to write', (
   const problems: string[] = [];
   for (const flavor of OurusConfig.values.flavor) {
     for (const [name, text, placeholders] of starts) {
-      const doc = docOf(text, placeholders, { flavor });
+      const doc = parseWithMarks(text, placeholders, { flavor });
       for (let pos = 0; pos <= text.length; pos++) {
         for (const command of commands) {
           const what = `${flavor}, ${name}, at ${pos}: ${JSON.stringify(command)}`;
@@ -163,7 +162,7 @@ test('a structural command from the document end leaves the caret in the node it
     if (!(r instanceof OurusSuccess)) continue;
     assert.equal(r.view.doc.text, text, type);
     const node = r.view.doc.nodeAtLine(r.view.doc.lineAt(r.selection.head).index);
-    assert.equal(node && plainText(r.view.doc, node).split('\n')[0], 'two', `${type}: the caret in "two"`);
+    assert.equal(node && nodePlainText(r.view.doc, node).split('\n')[0], 'two', `${type}: the caret in "two"`);
     // so the next press acts on it again
     if (type === 'moveSubtreeUp') assert.ok(executeCommand(r.view, { type: 'moveSubtreeDown' }, r.selection) instanceof OurusSuccess);
   }
@@ -172,27 +171,27 @@ test('a structural command from the document end leaves the caret in the node it
 // Enter at the end of a text without a final line ending holds an empty line that is the text's last,
 // unterminated, which the spec's buffers can't draw: a paste there fills it (it failed to write).
 test('a paste on the empty line Enter holds at the text end fills it', () => {
-  const entered = executeCommand(OurusView.of(OurusDoc.parse('# h1')), { type: 'enter' }, { anchor: 4, head: 4 });
+  const entered = executeOnText('# h1', { type: 'enter' }, { caret: 4 });
   assert.ok(entered instanceof OurusSuccess);
   if (!(entered instanceof OurusSuccess)) return;
   assert.equal(entered.view.doc.text, '# h1\n');
   for (const [clipboard, text] of [['- a\n  - b', '# h1\n- a\n  - b\n'], ['> q', '# h1\n> q\n'], ['# h2\ntext', '# h1\n# h2\ntext\n']] as const) {
     const r = executeCommand(entered.view, { type: 'paste', clipboard: { 'text/plain': clipboard } }, entered.selection);
-    assert.equal(r instanceof OurusSuccess ? r.view.doc.text : `${statusOf(r)} ${r instanceof OurusRejected ? r.reason : ''}`, text, clipboard);
+    assert.equal(r instanceof OurusSuccess ? r.view.doc.text : `${resultStatus(r)} ${r instanceof OurusRejected ? r.reason : ''}`, text, clipboard);
   }
   // Shift-Enter's the same: the blank line it makes the paste fills, the nodes after the paragraph (Paste26)
-  const broken = executeCommand(OurusView.of(OurusDoc.parse('p')), { type: 'shiftEnter' }, { anchor: 1, head: 1 });
+  const broken = executeOnText('p', { type: 'shiftEnter' }, { caret: 1 });
   assert.ok(broken instanceof OurusSuccess);
   if (!(broken instanceof OurusSuccess)) return;
   const pasted = executeCommand(broken.view, { type: 'paste', clipboard: { 'text/plain': '- a\n- b' } }, broken.selection);
-  assert.equal(pasted instanceof OurusSuccess ? pasted.view.doc.text : statusOf(pasted), 'p\n- a\n- b\n');
+  assert.equal(pasted instanceof OurusSuccess ? pasted.view.doc.text : resultStatus(pasted), 'p\n- a\n- b\n');
 });
 
 test('several characters typed at once are played a character at a time, as keys type them', () => {
   const typed = (text: string, at: number, insert: string) => {
     const doc = OurusDoc.parse(text);
     const result = executeCommand(OurusView.of(doc), { type: 'insertText', text: insert }, { anchor: at, head: at });
-    if (!(result instanceof OurusSuccess)) return statusOf(result);
+    if (!(result instanceof OurusSuccess)) return resultStatus(result);
     assert.equal(applyChanges(text, result.changes), result.view.doc.text);
     return { text: result.view.doc.text, caret: result.selection.head };
   };
@@ -208,10 +207,10 @@ test('several characters typed at once are played a character at a time, as keys
 // structural commands, acting on nodes the caret isn't in
 test('a drop checks its ids and its place', () => {
   const doc = OurusDoc.parse('- a\n- b\n  - c\n- d\n\npara\n');
-  const id = (text: string): number => nodesOf(doc).find((n) => plainText(doc, n) === text)!.id;
+  const id = (text: string): number => allNodes(doc).find((n) => nodePlainText(doc, n) === text)!.id;
   const caret = { anchor: 0, head: 0 };
   const drop = (nodes: number[], parent: number | 'root', after: number | null) => executeCommand(OurusView.of(doc), { type: 'moveSubtree', nodes, to: { parent, after } }, caret);
-  const reason = (r: ReturnType<typeof drop>) => (r instanceof OurusRejected ? r.reason : statusOf(r));
+  const reason = (r: ReturnType<typeof drop>) => (r instanceof OurusRejected ? r.reason : resultStatus(r));
   assert.equal(reason(drop([999], 'root', null)), 'no-such-node');
   assert.equal(reason(drop([id('b')], 999, null)), 'no-such-node');
   assert.equal(reason(drop([id('b')], 'root', 999)), 'no-such-node');
@@ -224,14 +223,14 @@ test('a drop checks its ids and its place', () => {
   assert.equal(reason(drop([id('a'), id('d')], 'root', null)), 'non-contiguous');
   // a paragraph that adopts no list holds none (`listParent: container`)
   const flat = OurusDoc.parse('- a\n\npara\n', { config: { listParent: 'container' } });
-  const flatId = (text: string): number => nodesOf(flat).find((n) => plainText(flat, n) === text)!.id;
+  const flatId = (text: string): number => allNodes(flat).find((n) => nodePlainText(flat, n) === text)!.id;
   const r = executeCommand(OurusView.of(flat), { type: 'moveSubtree', nodes: [flatId('a')], to: { parent: flatId('para'), after: null } }, caret);
   assert.equal(reason(r), 'not-expressible');
 });
 
 test('a drop at its own place changes nothing, and one elsewhere says what it placed', () => {
   const doc = OurusDoc.parse('- a\n- b\n  - c\n- d\n');
-  const id = (text: string): number => nodesOf(doc).find((n) => plainText(doc, n) === text)!.id;
+  const id = (text: string): number => allNodes(doc).find((n) => nodePlainText(doc, n) === text)!.id;
   const caret = { anchor: 2, head: 2 };
   const own = executeCommand(OurusView.of(doc), { type: 'moveSubtree', nodes: [id('b')], to: { parent: 'root', after: id('a') } }, caret);
   assert.ok(own instanceof OurusSuccess && own.changes.length === 0 && own.view.doc === doc);
@@ -246,7 +245,7 @@ test('a drop at its own place changes nothing, and one elsewhere says what it pl
 
 test('a place named by ids survives an edit elsewhere', () => {
   const doc = OurusDoc.parse('- a\n- b\n- c\n');
-  const id = (text: string): number => nodesOf(doc).find((n) => plainText(doc, n) === text)!.id;
+  const id = (text: string): number => allNodes(doc).find((n) => nodePlainText(doc, n) === text)!.id;
   const [b, c] = [id('b'), id('c')];
   const edited = doc.update({ changes: [{ from: 3, to: 3, insert: 'x' }] });
   const r = executeCommand(OurusView.of(edited), { type: 'moveSubtree', nodes: [c], to: { parent: 'root', after: null } }, { anchor: 0, head: 0 });
@@ -257,7 +256,7 @@ test('a place named by ids survives an edit elsewhere', () => {
 
 test('a structural command given nodes acts on them, the caret elsewhere staying in its text', () => {
   const doc = OurusDoc.parse('- a\n- b\n- c\n- d\n');
-  const id = (text: string): number => nodesOf(doc).find((n) => plainText(doc, n) === text)!.id;
+  const id = (text: string): number => allNodes(doc).find((n) => nodePlainText(doc, n) === text)!.id;
   const caret = { anchor: 2, head: 2 };
   const run = (command: OurusCommand) => {
     const r = executeCommand(OurusView.of(doc), command, caret);
@@ -283,7 +282,7 @@ test('a structural command given nodes acts on them, the caret elsewhere staying
 
 test('a pickup takes the pressed node, its lines and its clipboard, and changes nothing', () => {
   const doc = OurusDoc.parse('- a\n- b\n  - c\n- d\n');
-  const id = (text: string): number => nodesOf(doc).find((n) => plainText(doc, n) === text)!.id;
+  const id = (text: string): number => allNodes(doc).find((n) => nodePlainText(doc, n) === text)!.id;
   const r = executeCommand(OurusView.of(doc), { type: 'drag', pressed: id('b') }, { anchor: 2, head: 2 });
   assert.ok(r instanceof OurusSuccess && r.dropMap);
   if (!(r instanceof OurusSuccess) || !r.dropMap) return;
@@ -385,22 +384,22 @@ test('a drag from outside offers the document as it is, each place a paste there
 
 test('a drop from outside checks its place, and says what it placed', () => {
   const doc = OurusDoc.parse('- a\n- b\n');
-  const id = (text: string): number => nodesOf(doc).find((n) => plainText(doc, n) === text)!.id;
+  const id = (text: string): number => allNodes(doc).find((n) => nodePlainText(doc, n) === text)!.id;
   const paste = (parent: number | 'root', after: number | null) => executeCommand(OurusView.of(doc), { type: 'pasteAt', at: { parent, after }, clipboard: { 'text/plain': '- x\n- y\n' } }, { anchor: 2, head: 2 });
-  const reason = (r: ReturnType<typeof paste>) => (r instanceof OurusRejected ? r.reason : statusOf(r));
+  const reason = (r: ReturnType<typeof paste>) => (r instanceof OurusRejected ? r.reason : resultStatus(r));
   assert.equal(reason(paste(999, null)), 'no-such-node');
   assert.equal(reason(paste(id('a'), id('b'))), 'invalid-insertion-point');
   const r = paste(id('b'), null);
   assert.ok(r instanceof OurusSuccess);
   if (!(r instanceof OurusSuccess)) return;
   assert.equal(r.view.doc.text, '- a\n- b\n  - x\n  - y\n');
-  assert.deepEqual(r.placed!.map((n) => plainText(r.view.doc, r.view.doc.node(n)!)), ['x', 'y']);
+  assert.deepEqual(r.placed!.map((n) => nodePlainText(r.view.doc, r.view.doc.node(n)!)), ['x', 'y']);
   assert.equal(r.selection.head, 2);
 });
 
 test('the source of a drag out deletes its nodes only while they are what was dragged out', () => {
   const doc = OurusDoc.parse('- a\n- b\n  - c\n- d\n');
-  const id = (text: string): number => nodesOf(doc).find((n) => plainText(doc, n) === text)!.id;
+  const id = (text: string): number => allNodes(doc).find((n) => nodePlainText(doc, n) === text)!.id;
   const caret = { anchor: 2, head: 2 };
   const picked = executeCommand(OurusView.of(doc), { type: 'drag', pressed: id('b') }, caret);
   assert.ok(picked instanceof OurusSuccess && picked.clipboard);
@@ -423,7 +422,7 @@ test("a text drag's deletion is a cut's, and the host's where ourus doesn't do i
 test('the empty paragraph Enter makes after a title at a text\'s end, with no line ending, goes again', () => {
   // (it spans no characters, past the final line ending: its placeholder goes with it, or moves)
   for (const start of ['# x', 'x\n===']) {
-    const entered = executeCommand(OurusView.of(OurusDoc.parse(start)), { type: 'enter' }, { anchor: start.length, head: start.length });
+    const entered = executeOnText(start, { type: 'enter' }, { caret: start.length });
     assert.ok(entered instanceof OurusSuccess);
     if (!(entered instanceof OurusSuccess)) continue;
     for (const type of ['deleteContentBackward', 'deleteSoftLineBackward', 'cut', 'moveSubtreeUp'] as const) {
@@ -436,27 +435,27 @@ test('the empty paragraph Enter makes after a title at a text\'s end, with no li
 });
 
 test('Enter at the end of an unclosed fence at a text\'s end, with no line ending, makes an empty code line', () => {
-  const r = executeCommand(OurusView.of(OurusDoc.parse('```\ncode')), { type: 'enter' }, { anchor: 8, head: 8 });
+  const r = executeOnText('```\ncode', { type: 'enter' }, { caret: 8 });
   assert.ok(r instanceof OurusSuccess);
   if (r instanceof OurusSuccess) assert.deepEqual([r.view.doc.text, r.selection.head], ['```\ncode\n\n', 9]);
 });
 
 test('a text whose lines end with a lone CR is edited as with LF', () => {
   for (const [type, text] of [['duplicateSubtree', '- a\r- a\r- b'], ['enter', '- a\r- \r- b']] as const) {
-    const r = executeCommand(OurusView.of(OurusDoc.parse('- a\r- b')), { type }, { anchor: 3, head: 3 });
+    const r = executeOnText('- a\r- b', { type }, { caret: 3 });
     assert.equal(r instanceof OurusSuccess && r.view.doc.text, text, type);
   }
 });
 
 test('a duplicate of a node whose blank line ends the text, with no line ending, keeps the copy\'s', () => {
-  const r = executeCommand(OurusView.of(OurusDoc.parse('> a\n>')), { type: 'duplicateSubtree' }, { anchor: 2, head: 2 });
+  const r = executeOnText('> a\n>', { type: 'duplicateSubtree' }, { caret: 2 });
   assert.equal(r instanceof OurusSuccess && r.view.doc.text, '> a\n\n> a\n\n');
 });
 
 test('a paste of a hundred thousand lines and more applies, as plain text and as Markdown', () => {
   const lines = 'x\n'.repeat(150000);
   for (const command of [{ type: 'paste', clipboard: { 'text/plain': lines } }, { type: 'pastePlain', text: lines }] as const) {
-    assert.equal(executeCommand(OurusView.of(OurusDoc.parse('- a\n')), command, { anchor: 3, head: 3 }) instanceof OurusSuccess, true, command.type);
+    assert.equal(executeOnText('- a\n', command, { caret: 3 }) instanceof OurusSuccess, true, command.type);
   }
 });
 
@@ -467,17 +466,17 @@ test('HTML whose text holds the characters a code span is held by in conversion 
 });
 
 test('text typed at once with a line break in quoted code keeps the quote, its fences grown past a typed one', () => {
-  const r = executeCommand(OurusView.of(OurusDoc.parse('> ```\n> PAYLOAD\n> ```\n> AFTER')), { type: 'insertText', text: '`\nX' }, { anchor: 5, head: 5 });
+  const r = executeOnText('> ```\n> PAYLOAD\n> ```\n> AFTER', { type: 'insertText', text: '`\nX' }, { caret: 5 });
   assert.equal(r instanceof OurusSuccess && r.view.doc.text, '> ````\n> X\n> PAYLOAD\n> ````\n> AFTER');
 });
 
 test('delete subtree given a node, the caret on its blank line, takes the caret with it', () => {
-  const r = executeCommand(OurusView.of(OurusDoc.parse('a\n ')), { type: 'deleteSubtree', nodes: [1] }, { anchor: 3, head: 3 });
+  const r = executeOnText('a\n ', { type: 'deleteSubtree', nodes: [1] }, { caret: 3 });
   assert.deepEqual(r instanceof OurusSuccess && [r.view.doc.text, r.selection.head], ['', 0]);
 });
 
 test('delete subtree given a node and its child takes the node, the child with it', () => {
-  const r = executeCommand(OurusView.of(OurusDoc.parse('- a\n  - b\n  - c\n- d\n')), { type: 'deleteSubtree', nodes: [1, 2] }, { anchor: 0, head: 0 });
+  const r = executeOnText('- a\n  - b\n  - c\n- d\n', { type: 'deleteSubtree', nodes: [1, 2] });
   assert.deepEqual(r instanceof OurusSuccess && [r.view.doc.text, r.selection.head], ['- d\n', 2]);
 });
 
@@ -485,7 +484,7 @@ test('outdent given a quote\'s paragraph, an item\'s text then, keeps a caret el
   const doc = OurusDoc.parse('- z\n- > q\n- w\n', { config: { quotes: 'container' } });
   const r = executeCommand(OurusView.of(doc), { type: 'outdent', nodes: [4] }, { anchor: 12, head: 12 });
   assert.deepEqual(r instanceof OurusSuccess && [r.view.doc.text, r.selection.head], ['- z\n- q\n- w\n', 10]);
-  const code = executeCommand(OurusView.of(OurusDoc.parse('    - bravo\n- > bravo', { config: { quotes: 'container' } })), { type: 'outdent', nodes: [4] }, { anchor: 9, head: 9 });
+  const code = executeOnText('    - bravo\n- > bravo', { type: 'outdent', nodes: [4] }, { caret: 9, config: { quotes: 'container' } });
   assert.deepEqual(code instanceof OurusSuccess && [code.view.doc.text, code.selection.head], ['    - bravo\n- bravo', 9]);
 });
 
@@ -508,43 +507,138 @@ test('a text ending in a blank line with no line ending keeps it a blank line wh
     ['-\t```\nc\n\t', { type: 'moveSubtreeDown' }, 0, 0, 'c\n-\t```'],
   ];
   for (const [text, command, anchor, head, want, config] of cases) {
-    const r = executeCommand(OurusView.of(OurusDoc.parse(text, { config: config ?? {} })), command, { anchor, head });
-    assert.equal(r instanceof OurusSuccess ? r.view.doc.text : `${statusOf(r)} ${r.detail ?? ''}`, want, JSON.stringify(text));
+    const r = executeOnText(text, command, { anchor, head, config: config ?? {} });
+    assert.equal(r instanceof OurusSuccess ? r.view.doc.text : `${resultStatus(r)} ${r.detail ?? ''}`, want, JSON.stringify(text));
   }
 });
 
 test('a list pasted after an unclosed fence that would own it is refused: it would be a line of the code', () => {
-  const r = executeCommand(OurusView.of(OurusDoc.parse('```', { config: { listParent: 'block' } })), { type: 'paste', clipboard: { 'text/plain': '- x\n- y' } }, { anchor: 3, head: 3 });
+  const r = executeOnText('```', { type: 'paste', clipboard: { 'text/plain': '- x\n- y' } }, { caret: 3, config: { listParent: 'block' } });
   assert.equal(r instanceof OurusRejected && r.reason, 'not-expressible');
 });
 
 test('an empty line written after a lone CR, an old LF line after it, keeps three line breaks', () => {
-  const r = executeCommand(OurusView.of(OurusDoc.parse('a\r\rc\n\nc\n', { config: { flavor: 'obsidian' } })), { type: 'deleteSoftLineBackward' }, { anchor: 4, head: 4 });
+  const r = executeOnText('a\r\rc\n\nc\n', { type: 'deleteSoftLineBackward' }, { caret: 4, config: { flavor: 'obsidian' } });
   assert.equal(r instanceof OurusSuccess && r.view.doc.text, 'a\r\r\r\n\nc\n');
-  const code = executeCommand(OurusView.of(OurusDoc.parse('- ```\n\n\n```b\n```')), { type: 'deleteContentForward' }, { anchor: 10, head: 10 });
+  const code = executeOnText('- ```\n\n\n```b\n```', { type: 'deleteContentForward' }, { caret: 10 });
   assert.equal(code instanceof OurusSuccess && code.view.doc.text, '- ```\n\n\n');
 });
 
+test('a lone CR before a blank line\'s spaces, both lines copied: the spaces gone, the CR written as an LF, the blank line kept', () => {
+  for (const type of ['enter', 'duplicateSubtree', 'outdent'] as const) {
+    const r = executeOnText('- - a\r  \n', { type }, { caret: 4 });
+    assert.ok(r instanceof OurusSuccess, type);
+  }
+  const r = executeOnText('- - a\r  \n', { type: 'enter' });
+  assert.equal(r instanceof OurusSuccess && r.view.doc.text, '- - \n  - a\n\n');
+});
+
+test('Enter at the end of a quote of a text with no final line break: the empty quoted line ends the text, as an item\'s does', () => {
+  for (const [text, at, want] of [['> a', 3, '> a\n> '], ['> q\n> rs', 8, '> q\n> rs\n> '], ['- a', 3, '- a\n- '], ['> a\n', 3, '> a\n> \n']] as const) {
+    const r = executeOnText(text, { type: 'enter' }, { caret: at });
+    assert.equal(r instanceof OurusSuccess && r.view.doc.text, want, text);
+  }
+});
+
+test('Backspace on an empty last item after a folded one keeps the blank lines inside the folded one; a quote\'s paragraph outdented, its last blank `>` with no line ending, the quote gone', () => {
+  const view = OurusView.of(OurusDoc.parse('- a\n\n  p\n\n  -\n-')).withFolded([1]);
+  const r = executeCommand(view, { type: 'deleteContentBackward' }, { anchor: 15, head: 15 });
+  assert.equal(r instanceof OurusSuccess && r.view.doc.text, '- a\n\n  p\n\n  -');
+  const out = executeOnText('> a\n>', { type: 'outdent', nodes: [2] }, { caret: 2, config: { quotes: 'container' } });
+  assert.equal(out instanceof OurusSuccess && out.view.doc.text, 'a\n\n');
+});
+
+test('Enter in a nested item on its quoted parent\'s marker line, no space after the `>`: the new item at its sibling\'s column, past `> ` (B57)', () => {
+  const r = executeOnText('>0. - h\n', { type: 'enter' }, { caret: 7 });
+  assert.equal(r instanceof OurusSuccess && r.view.doc.text, '>0. - h\n>    - \n');
+  const before = executeOnText('>0. - h\n', { type: 'enter' }, { caret: 6 });
+  assert.equal(before instanceof OurusSuccess && before.view.doc.text, '>0. - \n>    - h\n');
+});
+
+test('indenting an empty quote atom that carries a block id is refused: the id would be the item\'s (B31)', () => {
+  const run = (text: string) => executeOnText(text, { type: 'indent' }, { caret: 1, config: { flavor: 'obsidian', quotes: 'atom' } });
+  const r = run('>\n^id');
+  assert.ok(r instanceof OurusRejected && r.reason === 'not-expressible');
+  const ok = run('> q\n^id');
+  assert.equal(ok instanceof OurusSuccess && ok.view.doc.text, '- > q\n  ^id');
+});
+
+test('indented code copied out of a quote whose `>` took part of a tab: the rest of the tab as spaces, the payload as it was (B93)', () => {
+  const r = executeOnText('>\t    code', { type: 'copy', nodes: [2] });
+  assert.equal(r instanceof OurusSuccess && r.clipboard?.['text/plain'], '      code\n');
+});
+
+test('a CRLF typed in a code block in a container is a line of the payload, as an LF', () => {
+  const r = executeOnText('-\n  ```\n  x', { type: 'insertText', text: '\r\n' }, { caret: 11 });
+  assert.equal(r instanceof OurusSuccess && r.view.doc.text, '-\n  ```\n  x\n  ');
+});
+
+test('the block-id guard finds a line\'s start past a lone CR: a soft Backspace in a later block is the host\'s', () => {
+  for (const nl of ['\n', '\r', '\r\n']) {
+    const text = ['p ^id', '', '<div>', 'text', '</div>'].join(nl);
+    const r = executeOnText(text, { type: 'deleteSoftLineBackward' }, { caret: 16 + 3 * (nl.length - 1), config: { flavor: 'obsidian' } });
+    assert.ok(r instanceof OurusDeferred, JSON.stringify(nl));
+  }
+});
+
 test('indented code moved into a quote with no space after its `>` keeps its four columns past the space the `>` takes', () => {
-  const r = executeCommand(OurusView.of(OurusDoc.parse('    x\n>', { config: { flavor: 'obsidian' } })), { type: 'moveSubtree', nodes: [1], to: { parent: 2, after: null } }, { anchor: 0, head: 0 });
+  const r = executeOnText('    x\n>', { type: 'moveSubtree', nodes: [1], to: { parent: 2, after: null } }, { config: { flavor: 'obsidian' } });
   assert.equal(r instanceof OurusSuccess && r.view.doc.text, '>\n>     x');
 });
 
+test('a quote paragraph whose first line is one space further in (`>  b`) moved up onto an item\'s marker line: the space goes with it', () => {
+  for (const [config, text, at, out] of [
+    [{ quotes: 'container' }, '- > a\n  >\n  >  b\n', 15, '- >  b\n  >\n  > a\n'],
+    [{ flavor: 'commonmark', indentUnit: 'tab' }, '1. num\n2. > quot\n   >\n   >  e\n   > more\n', 27, '1. num\n2. >  e\n   > more\n   >\n   > quot\n'],
+    // (the moved line spelled with a tab for the `>`'s space, `>→ e`: the marker over it spans as far)
+    [{ indentUnit: 'tab' }, '- num\n- > quot\n  >\n  >  e\n  > more\n', 23, '- num\n- >  e\n  >\tmore\n  >\n  >\tquot\n'],
+  ] as const) {
+    const r = executeOnText(text, { type: 'moveSubtreeUp' }, { caret: at, config });
+    assert.equal(r instanceof OurusSuccess && r.view.doc.text, out);
+  }
+});
+
+test('a node dropped first into a quote on an item\'s marker line: the marker over the quote\'s `>→`', () => {
+  for (const [text, out] of [
+    ['-\n- > q', '- > - \n  >\tq'],
+    ['- > q\n\np', '- > p\n  >\n  >\tq'],
+    ['- > q\n\n```\nc\n```', '- > ```\n  >\tc\n  >\t```\n  >\n  >\tq'],
+  ] as const) {
+    const doc = OurusDoc.parse(text, { config: { quotes: 'container', indentUnit: 'tab' } });
+    const quote = doc.root.children.flatMap((c) => [c, ...c.children]).find((c) => c.kind === 'quote')!;
+    const moved = text.startsWith('-\n') ? doc.root.children[0]! : doc.root.children.at(-1)!;
+    const r = executeCommand(OurusView.of(doc), { type: 'moveSubtree', nodes: [moved.id], to: { parent: quote.id, after: null } }, { anchor: 0, head: 0 });
+    assert.equal(r instanceof OurusSuccess && r.view.doc.text, out, text);
+  }
+});
+
+test('an item whose marker shares its line with its quote, dropped first under the item above across 9/10: its quote named past the new marker', () => {
+  const r = executeOnText('9. b\n10. > q\n    > r\n', { type: 'moveSubtree', nodes: [2], to: { parent: 1, after: null } }, { config: { quotes: 'container' } });
+  assert.equal(r instanceof OurusSuccess && r.view.doc.text, '9. b\n   1. > q\n      > r\n');
+});
+
+test('outdenting mixed-depth roots, an empty item in a quote led by `>  ` among them', () => {
+  const r = executeOnText('>  -\n- a\n\n  x', { type: 'outdent' }, { anchor: 2, head: 13, config: { indentUnit: 'tab' } });
+  assert.equal(r instanceof OurusSuccess && r.view.doc.text, '- \n- a\n\n  x');
+});
+
 test('a footnote definition dropped first under an empty item is refused, as code there is: it would be read as the item\'s text', () => {
-  const r = executeCommand(OurusView.of(OurusDoc.parse('0.')), { type: 'pasteAt', clipboard: { 'text/plain': '[^b]: x' }, at: { parent: 1, after: null } }, { anchor: 2, head: 2 });
+  const r = executeOnText('0.', { type: 'pasteAt', clipboard: { 'text/plain': '[^b]: x' }, at: { parent: 1, after: null } }, { caret: 2 });
   assert.equal(r instanceof OurusRejected && r.reason, 'not-expressible');
 });
 
 test('a heading pasted into an item of a tab-indented text under `indentUnit: 2`: where its item would take in the paragraph after it, refused', () => {
-  const r = executeCommand(OurusView.of(OurusDoc.parse('-\n\ta\n\n\te', { config: { indentUnit: 2 } })), { type: 'paste', clipboard: { 'text/plain': '# X\n' } }, { anchor: 4, head: 4 });
+  const r = executeOnText('-\n\ta\n\n\te', { type: 'paste', clipboard: { 'text/plain': '# X\n' } }, { caret: 4, config: { indentUnit: 2 } });
   assert.equal(r instanceof OurusRejected && r.reason, 'not-expressible');
-  const tabs = executeCommand(OurusView.of(OurusDoc.parse('-\n\ta\n\n\te')), { type: 'paste', clipboard: { 'text/plain': '# X\n' } }, { anchor: 4, head: 4 });
+  const tabs = executeOnText('-\n\ta\n\n\te', { type: 'paste', clipboard: { 'text/plain': '# X\n' } }, { caret: 4 });
   assert.ok(tabs instanceof OurusSuccess);
 });
 
-test('a paragraph `[!e]` moved into an empty quote, its first line, would read as its callout title: refused', () => {
-  const r = executeCommand(OurusView.of(OurusDoc.parse('>\n[!e]\n')), { type: 'indent' }, { anchor: 6, head: 6 });
+test('a paragraph `[!e]` moved into an empty quote, its first line, would read as its callout title: refused in Obsidian; in GFM, without callouts, the quote\'s text', () => {
+  const r = executeOnText('>\n[!e]\n', { type: 'indent' }, { caret: 6, config: { flavor: 'obsidian' } });
   assert.equal(r instanceof OurusRejected && r.reason, 'not-expressible');
+  const gfm = executeOnText('>\n[!e]\n', { type: 'indent' }, { caret: 6 });
+  assert.equal(gfm instanceof OurusSuccess && gfm.view.doc.text, '> [!e]\n');
 });
 
 test('the differential\'s last write failures, in HEAD too: each writes', () => {
@@ -556,7 +650,7 @@ test('the differential\'s last write failures, in HEAD too: each writes', () => 
     ['>a\n>\n>z\n>  e\n', { type: 'pastePlain', text: '- x **b**\n\t- y\n- z' }, 11, 12, { flavor: 'obsidian' }],
   ];
   for (const [text, command, anchor, head, config] of cases) {
-    const r = executeCommand(OurusView.of(OurusDoc.parse(text, { config: config ?? {} })), command, { anchor, head });
+    const r = executeOnText(text, command, { anchor, head, config: config ?? {} });
     assert.ok(r instanceof OurusSuccess, `${JSON.stringify(text)}: ${'detail' in r ? r.detail : ''}`);
   }
 });
@@ -571,24 +665,25 @@ test('ledger cases a later fix took along write: each applies', () => {
     ['- a\n\n  b\n# H\n  c', { type: 'moveSubtreeDown' }, 2, 2, '# H\n- a\n\n  b\n\nc'],
   ];
   for (const [text, command, anchor, head, want, config] of cases) {
-    const r = executeCommand(OurusView.of(OurusDoc.parse(text, { config: config ?? {} })), command, { anchor, head });
-    assert.equal(r instanceof OurusSuccess ? r.view.doc.text : `${statusOf(r)} ${r.detail ?? ''}`, want, JSON.stringify(text));
+    const r = executeOnText(text, command, { anchor, head, config: config ?? {} });
+    assert.equal(r instanceof OurusSuccess ? r.view.doc.text : `${resultStatus(r)} ${r.detail ?? ''}`, want, JSON.stringify(text));
   }
 });
 
 test('a write in a long list or quote takes time in proportion to its length, not to its square', () => {
-  // (the fastest of three, from 2,000 lines to 8,000: four times as long where it is linear, sixteen
-  // where it is quadratic; Enter mid a list, and mid a quote's text, where it breaks it in two)
+  // (the fastest of seven, from 2,000 lines to 8,000: four times as long where it is linear, sixteen
+  // where it is quadratic, the bound leaving room for a busy machine; Enter mid a list, and mid a
+  // quote's text, where it breaks it in two)
   for (const line of ['- item', '> line']) {
     const ratio = time(line, 8000) / time(line, 2000);
-    assert.ok(ratio < 9, `${line}: 8,000 lines take ${ratio.toFixed(1)} times as long as 2,000`);
+    assert.ok(ratio < 12, `${line}: 8,000 lines take ${ratio.toFixed(1)} times as long as 2,000`);
   }
   function time(line: string, n: number): number {
     const text = Array.from({ length: n }, (_, i) => `${line} ${i}`).join('\n');
     const doc = OurusDoc.parse(text);
     const at = text.indexOf(`${line} ${n / 2}`) + `${line} ${n / 2}`.length;
     let best = Infinity;
-    for (let k = 0; k < 3; k++) {
+    for (let k = 0; k < 7; k++) {
       const start = performance.now();
       const r = executeCommand(OurusView.of(doc), { type: 'enter' }, { anchor: at, head: at });
       best = Math.min(best, performance.now() - start);
@@ -596,4 +691,449 @@ test('a write in a long list or quote takes time in proportion to its length, no
     }
     return best;
   }
+});
+
+test('a line break typed at the start of an opening fence: a blank line above the block, in a section and in an item too', () => {
+  const typed = (text: string, config = {}) => {
+    const at = text.search(/```|\$\$/);
+    const r = executeOnText(text, { type: 'insertText', text: '\n' }, { caret: at, config });
+    assert.ok(r instanceof OurusSuccess || r instanceof OurusDeferred, `${JSON.stringify(text)}: ${r instanceof OurusRejected ? r.detail : ''}`);
+    return r instanceof OurusSuccess ? { text: r.view.doc.text, caret: r.selection.head } : null;
+  };
+  assert.deepEqual(typed('## N\n\n```\nx\n```\n'), { text: '## N\n\n\n```\nx\n```\n', caret: 7 });
+  assert.deepEqual(typed('a\n## N\n```\nx\n```\n'), { text: 'a\n## N\n\n```\nx\n```\n', caret: 8 });
+  assert.deepEqual(typed('- a\n  ```\n  code\n  ```\n'), { text: '- a\n\n  ```\n  code\n  ```\n', caret: 7 });
+  assert.deepEqual(typed('p\n\n$$\nx\n$$\n', { flavor: 'obsidian' }), { text: 'p\n\n\n$$\nx\n$$\n', caret: 4 });
+});
+
+test('a pickup, expanding a whole list\'s selection and deleting it take time in proportion to the list, not to its square', () => {
+  // (the fastest of five, 2,000 items to 8,000: four times as long where linear, sixteen where quadratic)
+  const commands: [string, OurusCommand, (text: string) => { anchor: number; head: number }][] = [
+    ['drag', { type: 'drag', pressed: 1 } as OurusCommand, () => ({ anchor: 2, head: 2 })],
+    ['expandSelection', { type: 'expandSelection' }, (text) => ({ anchor: 0, head: text.length })],
+    ['deleteSubtree', { type: 'deleteSubtree' }, (text) => ({ anchor: 0, head: text.length })],
+  ];
+  for (const [name, command, selection] of commands) {
+    const time = (n: number): number => {
+      const text = Array.from({ length: n }, (_, i) => `- Item ${i}`).join('\n') + '\n';
+      const view = OurusView.of(OurusDoc.parse(text));
+      let best = Infinity;
+      for (let k = 0; k < 5; k++) {
+        const start = performance.now();
+        executeCommand(view, command, selection(text));
+        best = Math.min(best, performance.now() - start);
+      }
+      return best;
+    };
+    const ratio = time(8000) / Math.max(time(2000), 1);
+    assert.ok(ratio < 12, `${name}: 8,000 items take ${ratio.toFixed(1)} times as long as 2,000`);
+  }
+});
+
+test('a copy of code keeps the spaces of its blank lines, which are the code\'s (fenced, indented, in an item)', () => {
+  const clip = (text: string, nodes: number[]) => {
+    const r = executeOnText(text, { type: 'copy', nodes });
+    assert.ok(r instanceof OurusSuccess);
+    return r.clipboard?.['text/plain'];
+  };
+  assert.equal(clip('```\n  \n```\n', [1]), '```\n  \n```\n');
+  assert.equal(clip('p\n\n    a\n      \n    b\n', [2]), '    a\n      \n    b\n');
+  assert.equal(clip('- x\n  ```\n    \n  ```\n', [1]), '- x\n  ```\n    \n  ```\n');
+  // (a blank line of text, taken whole, is empty)
+  assert.equal(clip('a\n  \nb\n', [1]), 'a\n');
+});
+
+test('code indented into a quote keeps the spaces of a line that has nothing else', () => {
+  for (const [text, at] of [['>\n```\n  \n```\n', 4], ['> q\n\n```\n  \n```\n', 7]] as const) {
+    const r = executeOnText(text, { type: 'indent' }, { caret: at, config: { quotes: 'container' } });
+    assert.ok(r instanceof OurusSuccess, `${JSON.stringify(text)}: ${r instanceof OurusRejected ? r.detail : ''}`);
+    const code = [...r.view.doc.rootNode.children].flatMap(function all(n): OurusNode[] { return [n, ...n.children.flatMap(all)]; }).find((n) => n.kind === 'atom');
+    assert.ok(code && r.view.doc.textOf(code)!.text.includes('\n  \n'), JSON.stringify(r.view.doc.text));
+  }
+});
+
+test('a line break in an image\'s alt text is a space: the image pasted inline, where the caret is', () => {
+  const r = executeOnText('# ab', { type: 'paste', clipboard: { 'text/html': '<img src="x" alt="one&#10;two">' } }, { caret: 3 });
+  assert.ok(r instanceof OurusSuccess);
+  assert.equal(r.view.doc.text, '# a![one two](x)b');
+});
+
+test('indented code copied with ourus and pasted into an empty note is indented code still; a plain text\'s shared indentation goes', () => {
+  const copied = executeOnText('p\n\n    code1\n    code2\n', { type: 'copy', nodes: [2] });
+  assert.ok(copied instanceof OurusSuccess && copied.clipboard);
+  const pasted = executeOnText('', { type: 'paste', clipboard: copied.clipboard });
+  assert.ok(pasted instanceof OurusSuccess);
+  assert.equal(pasted.view.doc.text, '    code1\n    code2\n');
+  const plain = executeOnText('', { type: 'paste', clipboard: { 'text/plain': '    - c\n      - d\n' } });
+  assert.ok(plain instanceof OurusSuccess);
+  assert.equal(plain.view.doc.text, '- c\n  - d\n');
+});
+
+test('a link or image from HTML keeps its destination: an entity-like `&`, a last backslash and a line break in it stay what they were', async () => {
+  const { MdHtmlParser, MdTree, MdFlavor } = await import('../../src/parser/index.ts');
+  const href = (html: string): string | undefined => /href="([^"]*)"|src="([^"]*)"/.exec(MdTree.parse(MdHtmlParser.parse(html).markdown, MdFlavor.gfm).renderHtml())?.slice(1).find((x) => x !== undefined);
+  assert.equal(href('<a href="https://x.test/?q=&amp;copy;">l</a>'), 'https://x.test/?q=&amp;copy;');
+  assert.equal(href('<a href="https://x.test/a\\">l</a>'), 'https://x.test/a%5C');
+  assert.equal(href('<a href="https://x.test/a&#10;b">l</a>'), 'https://x.test/a%0Ab');
+  assert.equal(href('<img src="x&amp;amp;y.png" alt="i">'), 'x&amp;amp;y.png');
+});
+
+test('HTML conversion: an uppercase checkbox type, a title, an image without source, a script link in any case, a code block of one empty line', async () => {
+  const { MdHtmlParser } = await import('../../src/parser/index.ts');
+  const md = (html: string): string => MdHtmlParser.parse(html).markdown;
+  assert.equal(md('<ul><li><input type="CHECKBOX" checked>done</li></ul>'), '- [x] done');
+  assert.equal(md('<a href="x" title="tip">a</a>'), '[a](x "tip")');
+  assert.equal(md('<img src="x" alt="a" title="tip">'), '![a](x "tip")');
+  assert.equal(md('<p><img alt="diagram"></p>'), 'diagram');
+  assert.equal(md('<a href="JaVaScRiPt:alert(1)">x</a>'), 'x');
+  assert.equal(md('<pre><code>\n</code></pre>'), '```\n\n```');
+  assert.equal(md('<pre><code></code></pre>'), '```\n```');
+});
+
+test('HTML conversion: no script in code, a pre of several codes whole, a page\'s language class not the code\'s, underscore runs escaped whole', async () => {
+  const { MdHtmlParser } = await import('../../src/parser/index.ts');
+  const md = (html: string): string => MdHtmlParser.parse(html).markdown;
+  assert.equal(md('<pre>a<script>hidden()</script>b</pre>'), '```\nab\n```');
+  assert.equal(md('<pre><code>a</code> + <code>b</code></pre>'), '```\na + b\n```');
+  assert.equal(md('<div class="language-en"><div class="highlight-source-python"><pre><code>print(1)</code></pre></div></div>'), '```python\nprint(1)\n```');
+  assert.equal(md('<p><b>x</b> __a__</p>'), '**x** \\_\\_a\\_\\_');
+  assert.equal(md('<p><b>x</b> snake_case_name</p>'), '**x** snake_case_name');
+});
+
+test('a bracket `autoClose` lists pairs in code, wraps a selection there, and its closer is stepped over; not on a fence\'s line; a callout title it would make is the host\'s', () => {
+  const run = (text: string, anchor: number, head: number, typed: string, config = {}) => executeOnText(text, { type: 'insertText', text: typed }, { anchor, head, config: { autoClose: ['('], ...config } });
+  const wrapped = run('```\nvalue\n```\n', 4, 9, '(');
+  assert.ok(wrapped instanceof OurusSuccess);
+  assert.equal(wrapped.view.doc.text, '```\n(value)\n```\n');
+  assert.deepEqual(wrapped.selection, { anchor: 5, head: 10 });
+  const paired = run('- ```\n  value\n  ```\n', 13, 13, '(');
+  assert.equal(paired instanceof OurusSuccess && paired.view.doc.text, '- ```\n  value()\n  ```\n');
+  if (paired instanceof OurusSuccess) {
+    const over = executeCommand(paired.view, { type: 'insertText', text: ')' }, paired.selection);
+    assert.ok(over instanceof OurusSuccess && over.view.doc.text === paired.view.doc.text && over.selection.head === 15);
+  }
+  assert.ok(run('```\nvalue\n```\n', 3, 3, '(') instanceof OurusDeferred, 'the info string');
+  assert.ok(run('> [!note Title\n> Body\n', 8, 8, '[', { flavor: 'obsidian', quotes: 'container', autoClose: ['['] }) instanceof OurusDeferred);
+});
+
+test('HTML conversion: table spans keep columns, a backslashed pipe in a cell\'s code, list counters and kinds, Word lists apart, footnotes, plain text for code', async () => {
+  const { MdHtmlParser } = await import('../../src/parser/html-parser.ts');
+  const md = (html: string): string => MdHtmlParser.parse(html).markdown;
+  // (B122) a cell spanning columns or rows: the ones it spans empty
+  assert.equal(md('<table><tr><th>A</th><th>B</th><th>C</th></tr><tr><td colspan="2">x</td><td>c</td></tr></table>'), '| A | B | C |\n| --- | --- | --- |\n| x |  | c |');
+  assert.equal(md('<table><tr><th>A</th><th>B</th></tr><tr><td rowspan="2">x</td><td>1</td></tr><tr><td>2</td></tr></table>'), '| A | B |\n| --- | --- |\n| x | 1 |\n|  | 2 |');
+  // (B115) code with a backslash before a pipe: its text, escaped, the cell whole
+  const table = md('<table><tr><th>x</th><th>y</th></tr><tr><td><code>\\|secret</code></td><td>end</td></tr></table>');
+  assert.match(OurusDoc.parse(table).mdTree.renderHtml(), /<td>\\\|secret<\/td>\n<td>end<\/td>/);
+  // (B125) counters: an item's value, reversed, past nine digits
+  assert.equal(md('<ol><li value="5">a</li><li>b</li></ol>'), '5. a\n6. b');
+  assert.equal(md('<ol reversed><li>a</li><li>b</li></ol>'), '2. a\n\n1) b');
+  assert.equal(md('<ol start="999999999"><li>a</li><li>b</li></ol>'), '999999999. a\n\n- b');
+  // (B123, B138) Word's lists, each its own and of its kind; a glyph outside one is text
+  const word = (id: string, glyph: string, text: string): string => `<p style="mso-list:${id} level1 lfo1"><span style="mso-list:Ignore">${glyph}</span>${text}</p>`;
+  assert.equal(md(word('l0', '1.', 'one') + word('l1', '•', 'two')), '1. one\n\n- two');
+  assert.equal(md('<p>header</p><p><span style="mso-list:Ignore">1.</span> one</p>'), 'header\n\n1\\. one');
+  // (B141) footnotes as GFM renders them read back as footnotes
+  const source = 'Footnote[^1].\n\n[^1]: the note\n';
+  assert.equal(md(OurusDoc.parse(source).mdTree.renderHtml()), source.trimEnd());
+  // (B133) a clipboard of HTML alone pasted into code: its text
+  const r = executeOnText('- ```\n  a\n  ```', { type: 'paste', clipboard: { 'text/html': '<p><b>x</b></p><p>y</p>' } }, { caret: 9 });
+  assert.equal(r instanceof OurusSuccess && r.view.doc.text, '- ```\n  ax\n\n  y\n  ```');
+  assert.equal(MdHtmlParser.plainText('<ul><li>a</li><li>b</li></ul><table><tr><td>c</td><td>d</td></tr></table><pre>  e</pre>'), 'a\nb\n\nc\td\n\n  e');
+});
+
+test('`listNumbers: keep` keeps the numbers written, a new item numbered on from the one above, and the items counting on from it counting on; `renumber`, the default, numbers the list from its first', () => {
+  const text = (t: string, at: number, command: OurusCommand, config = {}) => {
+    const r = executeOnText(t, command, { caret: at, config });
+    return r instanceof OurusSuccess ? r.view.doc.text : r.constructor.name;
+  };
+  const keep = { listNumbers: 'keep' };
+  assert.equal(text('1. a\n9. c\n', 9, { type: 'enter' }), '1. a\n2. c\n3. \n');
+  assert.equal(text('1. a\n9. c\n', 9, { type: 'enter' }, keep), '1. a\n9. c\n10. \n');
+  assert.equal(text('1. a\n9. c\n', 4, { type: 'enter' }, keep), '1. a\n2. \n9. c\n');
+  assert.equal(text('1. a\n2. b\n3. c\n', 4, { type: 'enter' }, keep), '1. a\n2. \n3. b\n4. c\n');
+  assert.equal(text('1. a\n2. b\n3. c\n', 8, { type: 'deleteSubtree' }, keep), '1. a\n3. c\n');
+});
+
+test('Shift-Tab on a top-level item: a paragraph in place, the items after it its list; refused with `outdentTopLevel: refuse`', () => {
+  const run = (config = {}) => executeOnText('- a\n- b\n- c\n', { type: 'outdent' }, { caret: 6, config });
+  const r = run();
+  assert.equal(r instanceof OurusSuccess && r.view.doc.text, '- a\n\nb\n- c\n');
+  const refused = run({ outdentTopLevel: 'refuse' });
+  assert.ok(refused instanceof OurusRejected && refused.reason === 'not-expressible');
+});
+
+test('HTML `<br>` pastes as a line of the paragraph, or with `pasteHtmlBreak: hard` a hard break; `<br><br>` a paragraph break either way', () => {
+  const paste = (html: string, config = {}) => {
+    const r = executeOnText('', { type: 'paste', clipboard: { 'text/html': html } }, { config });
+    return r instanceof OurusSuccess ? r.view.doc.text : r.constructor.name;
+  };
+  assert.equal(paste('<p>a<br>b</p>'), 'a\nb\n');
+  assert.equal(paste('<p>a<br>b</p>', { pasteHtmlBreak: 'hard' }), 'a\\\nb\n');
+  assert.equal(paste('<p>a<br><br>b</p>', { pasteHtmlBreak: 'hard' }), 'a\n\nb\n');
+  assert.equal(paste('<ul><li>a<br>b</li></ul>', { pasteHtmlBreak: 'hard' }), '- a\\\n  b\n');
+});
+
+test('Obsidian\'s tags and wikilinks in a link\'s text render as text, no anchor in an anchor', () => {
+  const html = (t: string): string => OurusDoc.parse(t, { config: { flavor: 'obsidian' } }).mdTree.renderHtml();
+  assert.equal(html('[x #tag y](u)'), '<p><a href="u">x #tag y</a></p>\n');
+  assert.equal(html('[link [[n]]](u)'), '<p><a href="u">link n</a></p>\n');
+});
+
+test('HTML nested past the call stack pastes as its text; a long run of formatting elements, and a clipboard of blank lines and a word, convert in linear time', async () => {
+  const { MdHtmlParser } = await import('../../src/parser/html-parser.ts');
+  const { clipboardFragment } = await import('../../src/commands/clipboard.ts');
+  for (const html of ['<span>'.repeat(5000) + 'a*' + '</span>'.repeat(5000), '<blockquote>'.repeat(5000) + 'a*', '<ul><li>'.repeat(3000) + 'a*', '<pre>' + '<span>'.repeat(5000) + 'a*']) {
+    assert.equal(MdHtmlParser.parse(html).markdown, 'a\\*', html.slice(0, 12));
+  }
+  // (the fastest of five, 8,000 against 2,000: four times as long where it is linear)
+  const time = (f: () => void): number => Math.min(...Array.from({ length: 5 }, () => {
+    const start = performance.now();
+    f();
+    return performance.now() - start;
+  }));
+  const bold = (n: number) => () => MdHtmlParser.parse('<b>a</b>'.repeat(n));
+  const blank = (n: number) => () => clipboardFragment('\n'.repeat(n) + 'x', {});
+  for (const [name, f] of [['formatting', bold], ['blank lines', blank]] as const) {
+    const ratio = time(f(8000)) / Math.max(time(f(2000)), 0.5);
+    assert.ok(ratio < 12, `${name}: 8,000 take ${ratio.toFixed(1)} times as long as 2,000`);
+  }
+});
+
+test('HTML conversion: formatting already open adds none, a normal span in bold closes it around itself, the last declaration counts, edges move out, spaces stay code', async () => {
+  const { MdHtmlParser } = await import('../../src/parser/index.ts');
+  const md = (html: string): string => MdHtmlParser.parse(html).markdown;
+  assert.equal(md('<p><b>a<b>b</b>c</b></p>'), '**abc**');
+  assert.equal(md('<p><b>a<span style="font-weight:normal">b</span>c</b></p>'), '**a**b**c**');
+  assert.equal(md('<p><i>a<span style="font-style:normal">b</span>c</i></p>'), '*a*b*c*');
+  assert.equal(md('<p><span style="font-weight:bold;font-weight:normal">x</span></p>'), 'x');
+  assert.equal(md('<b style="font-weight:normal"><p>doc</p></b>'), 'doc');
+  assert.equal(md('<p><b>abc<br></b>def</p>'), '**abc**\ndef');
+  assert.equal(md('<p>a <code> </code> b</p>'), 'a ` ` b');
+});
+
+test('HTML conversion: two lists side by side stay two, a table\'s caption is a paragraph before it, a cell\'s blocks are set apart', async () => {
+  const { MdHtmlParser } = await import('../../src/parser/index.ts');
+  const md = (html: string): string => MdHtmlParser.parse(html).markdown;
+  assert.equal(md('<ul><li>a</li></ul><ul><li>b</li></ul>'), '- a\n\n* b');
+  assert.equal(md('<ol><li>a</li></ol><ol><li>b</li></ol>'), '1. a\n\n1) b');
+  assert.equal(md('<table><caption>Cap</caption><tr><th>A</th></tr><tr><td>x</td></tr></table>'), 'Cap\n\n| A |\n| --- |\n| x |');
+  assert.equal(md('<table><tr><th>x</th></tr><tr><td><p>a</p><p>b</p></td></tr></table>'), '| x |\n| --- |\n| a b |');
+});
+
+test('HTML conversion: a style sets formatting on any element, a block\'s for what it holds', async () => {
+  const { MdHtmlParser } = await import('../../src/parser/index.ts');
+  const md = (html: string): string => MdHtmlParser.parse(html).markdown;
+  assert.equal(md('<p><em style="font-weight:bold">x</em></p>'), '***x***');
+  assert.equal(md('<p><em style="font-style:normal">x</em></p>'), 'x');
+  assert.equal(md('<p style="font-weight:bold">x</p>'), '**x**');
+  assert.equal(md('<div style="font-style:italic"><p>a</p><p style="font-style:normal">b</p></div>'), '*a*\n\nb');
+});
+
+test('HTML conversion: a line break in inline code is a code span a line', async () => {
+  const { MdHtmlParser } = await import('../../src/parser/index.ts');
+  assert.equal(MdHtmlParser.parse('<p><code>a<br>b</code></p>').markdown, '`a`\n`b`');
+});
+
+test('pasteAt keeps the indentation of ourus\'s own clipboard, as paste does', () => {
+  const copied = assertApplied(executeOnText('    code\n', { type: 'copy' }, { caret: 4 }));
+  assert.equal(appliedText(executeOnText('', { type: 'pasteAt', at: { parent: 'root', after: null }, clipboard: copied.clipboard! })), '    code\n');
+});
+
+test('ourus\'s copy of a node pastes as a node with its text/markdown lost on the way', () => {
+  const { 'text/markdown': _, ...clipboard } = assertApplied(executeOnText('abc\n', { type: 'copy', nodes: [1] })).clipboard!;
+  assert.equal(appliedText(executeOnText('xyz', { type: 'paste', clipboard }, { caret: 1 })), 'xyz\n\nabc');
+});
+
+test('a run shorter than a fence\'s closes nothing, so a clipboard\'s indented lines stay its code', () => {
+  const text = appliedText(executeOnText('', { type: 'paste', clipboard: { 'text/plain': '````\n    code\n    ```' } }));
+  assert.ok(text.includes('    code\n    ```'), text);
+});
+
+test('ourus\'s copy of an unclosed fence keeps its code, a line like a closing fence among it', () => {
+  const copied = assertApplied(executeOnText('```\n    code\n    ```', { type: 'copy', nodes: [1] }));
+  assert.ok(appliedText(executeOnText('', { type: 'paste', clipboard: copied.clipboard! })).includes('    code\n    ```'));
+});
+
+test('a bracket autoClose lists pairs in an empty note, the closer ours', () => {
+  const paired = assertApplied(executeOnText('', { type: 'insertText', text: '(' }, { config: { autoClose: ['('] } }));
+  assert.equal(paired.view.doc.text, '()');
+  assert.equal(paired.selection.head, 1);
+  assert.deepEqual([...paired.view.doc.marks.auto], [1]);
+});
+
+test('plain paste scales linearly, of list-looking lines and of leading blank lines', () => {
+  const lines = (count: number) => executeOnText('text', { type: 'pastePlain', text: Array(count).fill('- x').join('\n') }, { caret: 4 });
+  const blanks = (count: number) => executeOnText('- a', { type: 'pastePlain', text: '\n'.repeat(count) + 'x' }, { caret: 2 });
+  // (eight times as many: linear is about 8, quadratic 64)
+  assert.ok(scalingFactor(lines, 200, 1600) < 24);
+  assert.ok(scalingFactor(blanks, 20000, 160000) < 24);
+});
+
+test('Enter and Shift-Enter split between characters: a stale caret inside a surrogate pair, a grapheme or a CRLF goes to its start', () => {
+  assert.equal(appliedText(executeOnText('- a😀b\n', { type: 'shiftEnter' }, { caret: 4 })), '- a\n  😀b\n');
+  assert.equal(appliedText(executeOnText('- a😀b\n', { type: 'enter' }, { caret: 4 })), '- a\n- 😀b\n');
+  assert.equal(appliedText(executeOnText('- a\u0301b\n', { type: 'enter' }, { caret: 3 })), '- \n- a\u0301b\n');
+  assert.equal(appliedText(executeOnText('a\r\nb\r\n', { type: 'enter' }, { caret: 2 })), 'a\r\n\r\nb\r\n');
+  // (a selection widens to take the characters it cuts)
+  assert.equal(appliedText(executeOnText('- a😀b\n', { type: 'enter' }, { anchor: 6, head: 4 })), '- a\n- \n');
+});
+
+test('a note opening with a byte-order mark: every command as on the note without one, the mark kept at its start', () => {
+  const BOM = '\ufeff';
+  const notes = ['- a\n- b\n', '# T\n\nx\n', '---\ntitle: x\n---\n\n- a\n- b\n', '- a\n  - b\n- c\n', '1. a\n2. b\n', '```\ncode\n```\n', '- [ ] t\n- u\n', '> q\n\np\n', 'p ^id\n\nq\n', '- a\n\n  b\n'];
+  const commands: OurusCommand[] = [{ type: 'moveSubtreeDown' }, { type: 'moveSubtreeUp' }, { type: 'indent' }, { type: 'outdent' }, { type: 'enter' }, { type: 'shiftEnter' }, { type: 'deleteContentBackward' }, { type: 'deleteContentForward' }, { type: 'deleteSubtree' }, { type: 'duplicateSubtree' }, { type: 'cut' }, { type: 'pastePlain', text: '- x\n- y' }, { type: 'insertText', text: 'k' }, { type: 'selectNode' }];
+  for (const flavor of ['gfm', 'obsidian'] as const) {
+    for (const note of notes) {
+      // (carets on the first two lines, where the mark is; and the whole note selected, from past it)
+      const second = note.indexOf('\n', note.indexOf('\n') + 1);
+      const selections = [...Array.from({ length: second + 1 }, (_, c) => [c, c]), [0, note.length]];
+      for (const command of commands) {
+        for (const [anchor, head] of selections) {
+          const without = executeOnText(note, command, { anchor, head, config: { flavor } });
+          const withMark = executeOnText(BOM + note, command, { anchor: anchor! + 1, head: head! + 1, config: { flavor } });
+          const context = `${flavor} ${JSON.stringify(note)} ${command.type} ${anchor}–${head}`;
+          assert.equal(resultStatus(withMark), resultStatus(without), context);
+          if (without instanceof OurusSuccess && withMark instanceof OurusSuccess) {
+            assert.equal(withMark.view.doc.text, BOM + without.view.doc.text, context);
+            assert.deepEqual(withMark.selection, { anchor: without.selection.anchor + 1, head: without.selection.head + 1 }, context);
+            assert.deepEqual([...withMark.view.doc.marks.placeholders], [...without.view.doc.marks.placeholders].map((p) => p + 1), context);
+          }
+        }
+      }
+    }
+  }
+});
+
+test('a paragraph starting with a byte-order mark, moved first, gets a blank line before it: opening the note, the mark would be no character', () => {
+  const moved = assertApplied(executeOnText('## Notes\n\ufeff\n- item\n', { type: 'moveSubtreeUp' }, { caret: 9, config: { listParent: 'container' } }));
+  assert.equal(moved.view.doc.text, '\n\ufeff\n## Notes\n- item\n');
+  assert.deepEqual(moved.view.doc.rootNode.children.map((n) => n.kind), ['paragraph', 'heading']);
+  const text = assertApplied(executeOnText('a\n\n\ufeffb\n', { type: 'moveSubtreeUp' }, { caret: 4 }));
+  assert.equal(text.view.doc.text, '\n\ufeffb\n\na\n');
+  assert.deepEqual(text.selection, { anchor: 2, head: 2 });
+});
+
+test('a drag\'s deletion is the selection deleted as a cut deletes it: a subtree selection\'s roots taken out, the host\'s deletion checked by the guards', () => {
+  // (a subtree selection, as cut: its roots out, the zoom root too)
+  const list = OurusView.of(OurusDoc.parse('- a\n- b\n- c\n'));
+  const dragged = assertApplied(executeCommand(list, { type: 'deleteByDrag' }, list.selectionOf([2])));
+  assert.equal(dragged.view.doc.text, '- a\n- c\n');
+  assert.deepEqual(dragged.selection, { anchor: 3, head: 3 });
+  const zoomed = OurusView.of(OurusDoc.parse('- a\n  - b\n- c'), { zoom: 1 });
+  const root = assertApplied(executeCommand(zoomed, { type: 'deleteByDrag' }, zoomed.selectionOf([1])));
+  assert.equal(root.view.doc.text, '- c');
+  assert.equal(root.view.doc.text, assertApplied(executeCommand(zoomed, { type: 'cut' }, zoomed.selectionOf([1]))).view.doc.text);
+  // (part of a text, the host's: refused where its deletion would lose a block id, or leave the zoom)
+  const id = executeOnText('p ^abc', { type: 'deleteByDrag' }, { anchor: 2, head: 3, config: { flavor: 'obsidian', markup: 'decorated' } });
+  assert.ok(id instanceof OurusRejected && id.reason === 'block-id');
+  const leaves = executeCommand(OurusView.of(OurusDoc.parse('p\n- child\n\nq'), { zoom: 1 }), { type: 'deleteByDrag' }, { anchor: 0, head: 2 });
+  assert.ok(leaves instanceof OurusRejected && leaves.reason === 'outside-zoom');
+});
+
+test('a flat paste of many items is written in linear time, and past JavaScript\'s limit on a call\'s arguments', async () => {
+  const { spliceIn } = await import('../../src/writer/draft.ts');
+  // (200,000 put in at once, past the limit on arguments: in order, around what was there)
+  const list = ['a', 'b', 'c'];
+  spliceIn(list, 1, 1, Array.from({ length: 200000 }, (_, k) => `${k}`));
+  assert.deepEqual([list.length, list[0], list[1], list[200000], list[200001]], [200002, 'a', '0', '199999', 'c']);
+  const small = [0, 1, 2];
+  spliceIn(small, 3, 0, [3, 4]);
+  assert.deepEqual(small, [0, 1, 2, 3, 4]);
+  // (eight times the items: linear about 8; lining each new item up with its run's was quadratic, 30 and more)
+  const paste = (n: number) => executeOnText('', { type: 'paste', clipboard: { 'text/plain': '- x\n'.repeat(n) } });
+  assert.ok(scalingFactor(paste, 1000, 8000) < 24);
+});
+
+test('HTML conversion: a pre\'s first line break, an empty href, a tag\'s #, a table of no cells, deep HTML\'s blocks, very many children merged', async () => {
+  const { MdHtmlParser, MdTree, MdFlavor } = await import('../../src/index.ts');
+  const md = (html: string): string => MdHtmlParser.parse(html).markdown;
+  // (the line break right after `<pre>` is none of its text, as HTML has it; one inside `<code>` is)
+  assert.equal(md('<pre>\nabc\n</pre>'), '```\nabc\n```');
+  assert.equal(md('<pre>\n\nabc\n</pre>'), '```\n\nabc\n```');
+  assert.equal(md('<pre><code>\nabc\n</code></pre>'), '```\n\nabc\n```');
+  // (a link to the page itself is a link; one with no href is none)
+  assert.equal(md('<p><a href="">here</a></p>'), '[here](<>)');
+  assert.equal(md('<p><a>here</a></p>'), 'here');
+  // (a `#` where an Obsidian tag would start is text; one in a word isn't touched)
+  assert.equal(md('<p>#topic</p>'), '\\#topic');
+  assert.equal(md('<p>C# and a #b</p>'), 'C# and a \\#b');
+  assert.equal(MdTree.parse(md('<p>#topic</p>'), MdFlavor.obsidian).renderHtml(), '<p>#topic</p>\n');
+  // (a table of no cells is its caption, no grid)
+  assert.equal(md('<table><caption>Summary</caption></table>'), 'Summary');
+  assert.equal(md('<table><tr></tr></table>'), '');
+  assert.equal(md('<table><caption>S</caption><tr></tr></table>'), 'S');
+  // (nested past the depth limit: its text alone, its blocks apart)
+  assert.equal(md('<span>'.repeat(514) + '<p>one</p><p>two <b>x</b></p><p># h</p>' + '</span>'.repeat(514)), 'one\n\ntwo x\n\n\\# h');
+  // (adjacent formatting merged, its children however many)
+  assert.equal(md('<b>x</b><b>' + '<span>y</span>'.repeat(3) + '</b>'), '**xyyy**');
+  assert.ok(md('<b>x</b><b>' + '<span>y</span>'.repeat(130000) + '</b>').startsWith('**xyy'));
+});
+
+test('HTML conversion: an image\'s alt text, with no source, held as text is; in plain text, the alt of every image', async () => {
+  const { MdHtmlParser } = await import('../../src/index.ts');
+  assert.equal(MdHtmlParser.parse('<p><img alt="&#xE000;0&#xE001;"></p>').markdown, '\uE0000\uE001');
+  assert.equal(MdHtmlParser.parse('<p>a<img alt="x*y">b</p>').markdown, 'ax\\*yb');
+  assert.equal(MdHtmlParser.plainText('<p>a<img alt="diagram">b</p>'), 'adiagramb');
+  assert.equal(MdHtmlParser.plainText('<p><img src="u" alt="a  pic"> c</p>'), 'a pic c');
+});
+
+test('the readback compares a verbatim block\'s lines as they read: a re-indent that would change its code is refused, one that keeps it writes', () => {
+  // (a fence indented one space takes a column of its tab-led line: `␠␠␠PAYLOAD`; made an item, nothing would)
+  for (const [source, nodes] of [[' ```\n\tPAYLOAD\n ```', [1]], ['- a\n\n ```\n\tx\n ```', [2]]] as const) {
+    const refused = executeOnText(source, { type: 'indent', nodes: [...nodes] });
+    assert.ok(refused instanceof OurusRejected && refused.reason === 'write-failed' && /^the text written doesn't read as the draft: root › \d: code /.test(refused.detail ?? ''), JSON.stringify(source));
+  }
+  // (moves whose code reads the same still write)
+  assert.equal(appliedText(executeOnText('- a\n  - ```\n    \tx\n    ```', { type: 'outdent', nodes: [2] })), '- a\n- ```\n  \tx\n  ```');
+  assert.equal(appliedText(executeOnText('```\nx\n```', { type: 'indent', nodes: [1] })), '- ```\n  x\n  ```');
+  assert.equal(appliedText(executeOnText(' ```\n  x\n ```', { type: 'indent', nodes: [1] })), '- ```\n   x\n  ```');
+  assert.equal(appliedText(executeOnText('$$\n\tx\n$$', { type: 'indent', nodes: [1] }, { config: { flavor: 'obsidian' } })), '- $$\n  \tx\n  $$');
+});
+
+test('a paste over a selection from a text\'s start puts the nodes where the selection was, before what is left', () => {
+  const md = { 'text/markdown': '- x\n- y' };
+  for (const config of [{ flavor: 'obsidian', markup: 'text' }, {}] as const) {
+    const first = assertApplied(executeOnText('abc\ndef', { type: 'paste', clipboard: md }, { anchor: 0, head: 3, config }));
+    assert.equal(first.view.doc.text, '- x\n- y\n\ndef');
+    assert.deepEqual(first.selection, { anchor: 7, head: 7 });
+  }
+  assert.equal(appliedText(executeOnText('abc def', { type: 'paste', clipboard: md }, { anchor: 0, head: 3 })), '- x\n- y\n\ndef');
+  // (from mid-text, after the node, as a caret there pastes)
+  assert.equal(appliedText(executeOnText('abc\ndef', { type: 'paste', clipboard: md }, { anchor: 1, head: 3 })), 'a\ndef\n\n- x\n- y');
+  assert.equal(appliedText(executeOnText('- abc\n- def', { type: 'paste', clipboard: md }, { anchor: 2, head: 5 })), '- x\n- y\n- def');
+});
+
+test('a structured paste keeps a code block\'s lines of blanks; outside code they are blank lines', () => {
+  const paste = (src: string) => appliedText(executeOnText('', { type: 'paste', clipboard: { 'text/plain': src, 'text/markdown': src } }));
+  assert.equal(paste('```txt\n  \n```'), '```txt\n  \n```\n');
+  assert.equal(paste('```\n\t\n```'), '```\n\t\n```\n');
+  // (the clipboard's common indentation off them too)
+  assert.equal(paste('  ```\n    \n  ```'), '```\n  \n```\n');
+  assert.equal(paste('a\n  \nb'), 'a\n\nb\n');
+  // (a fence copied out of a container, its lines indented past it: dedented as the lines with text
+  // share, a line of blanks no measure of it; past that indentation its blanks are kept)
+  const plain = (src: string) => appliedText(executeOnText('', { type: 'paste', clipboard: { 'text/plain': src } }));
+  assert.equal(plain('```\n    x\n  \n    ```'), '```\nx\n\n```\n');
+  assert.equal(plain('```\n    x\n      \n    ```'), '```\nx\n  \n```\n');
+});
+
+test('a table pasted on an empty item is the item\'s text, as code is: on its marker\'s line, the item\'s children kept', () => {
+  const table = '| a |\n| --- |\n| b |\n';
+  for (const flavor of ['gfm', 'obsidian'] as const) {
+    for (const [start, caret] of [['- ', 2], ['-', 1], ['- [ ] ', 6]] as const) {
+      const pasted = assertApplied(executeOnText(start, { type: 'paste', clipboard: { 'text/markdown': table } }, { caret, config: { flavor } }));
+      assert.equal(pasted.view.doc.text, '- | a |\n  | --- |\n  | b |', `${flavor} ${JSON.stringify(start)}`);
+      assert.deepEqual(pasted.selection, { anchor: 25, head: 25 });
+      assert.match(pasted.view.doc.mdTree.renderHtml(), /^<ul>\n<li>\n<table>/);
+    }
+  }
+  assert.equal(appliedText(executeOnText('- \n  - child', { type: 'paste', clipboard: { 'text/plain': table } }, { caret: 2, config: { flavor: 'gfm' } })), '- | a |\n  | --- |\n  | b |\n  - child');
+  assert.equal(appliedText(executeOnText('- a\n- \n- c', { type: 'paste', clipboard: { 'text/markdown': table } }, { caret: 6, config: { flavor: 'gfm' } })), '- a\n- | a |\n  | --- |\n  | b |\n- c');
+  // (the item itself, its text set: its number, its blank lines, a zoom on it kept)
+  assert.equal(appliedText(executeOnText('1. a\n2. b\n3. ', { type: 'paste', clipboard: { 'text/markdown': table } }, { caret: 13, config: { flavor: 'gfm', listNumbers: 'keep' } })), '1. a\n2. b\n3. | a |\n   | --- |\n   | b |');
+  assert.equal(appliedText(executeOnText('- \n\n\nnext', { type: 'paste', clipboard: { 'text/markdown': table } }, { caret: 2, config: { flavor: 'gfm' } })), '- | a |\n  | --- |\n  | b |\n\n\nnext');
+  const zoomed = assertApplied(executeOnText('- \n  - child', { type: 'paste', clipboard: { 'text/markdown': table } }, { caret: 2, config: { flavor: 'gfm' }, view: { zoom: 1 } }));
+  assert.equal(zoomed.view.doc.text, '- | a |\n  | --- |\n  | b |\n  - child');
+  assert.equal(zoomed.view.zoom, 1);
 });

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import fc from 'fast-check';
-import { applyChanges, ChangeIndex, ChangeSet, composeChanges, diffLines, invertChanges, mapPos, MarkError, MarkSet, normalizeChanges, type ChangeSpec } from '../src/text/index.ts';
+import { applyChanges, ChangeIndex, ChangeSet, charAfter, charBefore, charStart, composeChanges, diffLines, invertChanges, lineEndingBefore, mapPos, MarkError, MarkSet, nextLineStart, normalizeChanges, type ChangeSpec } from '../src/text/index.ts';
 
 const RUNS = Number(process.env.OURUS_FUZZ_RUNS ?? 2000);
 
@@ -255,4 +255,48 @@ test('diffLines changes whole lines of the old text, a CRLF never split', () => 
   assert.deepEqual(diffLines('a\r\nb\r\n', 'a\r\nc\r\n'), [{ from: 3, to: 6, insert: 'c\r\n' }]);
   assert.deepEqual(diffLines('a\nb\n', 'a\nc\n'), [{ from: 2, to: 4, insert: 'c\n' }]);
   assert.deepEqual(diffLines('x\ny', 'x\nz\ny'), [{ from: 2, to: 2, insert: 'z\n' }]);
+});
+
+test('diffLines keeps the lines between two edits: one change each, applied the new text', () => {
+  assert.deepEqual(diffLines('# A\n\n# B\n- x\n\n# C\n', '# AA\n\n# B\n- x\n\n# CC\n'), [
+    { from: 0, to: 4, insert: '# AA\n' },
+    { from: 14, to: 18, insert: '# CC\n' },
+  ]);
+  assert.deepEqual(diffLines('a\nb\n', 'a\nc\n', { span: true }), [{ from: 2, to: 4, insert: 'c\n' }]);
+  const line = fc.constantFrom('a\n', 'b\n', '\n', 'c\r\n', 'd\r', 'e', 'x\n');
+  fc.assert(
+    fc.property(fc.array(line, { maxLength: 8 }), fc.array(line, { maxLength: 8 }), (x, y) => {
+      const [before, after] = [x.join(''), y.join('')];
+      assert.equal(applyChanges(before, diffLines(before, after)), after);
+    }),
+    { numRuns: RUNS },
+  );
+});
+
+test('a change set and a mark set own what they are made of: the caller changing its objects after changes neither', () => {
+  const change = { from: 0, to: 1, insert: 'x' };
+  const set = ChangeSet.of([change], 3);
+  change.to = 3;
+  assert.equal(set.apply('abc'), 'xbc');
+  const auto = [1];
+  const marks = MarkSet.of('\\\\', { auto });
+  auto[0] = 0;
+  assert.deepEqual(marks.auto, [1]);
+});
+
+test('a character is a grapheme or a line ending, a CRLF whole: the one before, the one after, the start of the one a position is in', () => {
+  const text = 'a👩\u200d💻e\u0301\r\n\rb';
+  // a 0, 👩‍💻 1–6, é 6–8, CRLF 8–10, CR 10–11, b 11
+  const starts = [0, 1, 6, 8, 10, 11, 12];
+  assert.deepEqual(starts.slice(1).map((p) => charBefore(text, p)), starts.slice(0, -1));
+  assert.deepEqual(starts.slice(0, -1).map((p) => charAfter(text, p)), starts.slice(1));
+  assert.deepEqual([0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12].map((p) => charStart(text, p)), [0, 1, 1, 1, 1, 6, 6, 8, 8, 10, 11, 12]);
+  assert.equal(charBefore(text, 0), 0);
+  assert.equal(charAfter(text, text.length), text.length);
+});
+
+test('the line ending before a position, and the next line\'s start, a CRLF whole and a lone CR one', () => {
+  assert.deepEqual([1, 3, 4, 5].map((p) => lineEndingBefore('a\r\nb\rc\n', p)), ['', '\r\n', '', '\r']);
+  assert.equal(lineEndingBefore('a\nb', 2), '\n');
+  assert.deepEqual([0, 1, 3, 5, 6].map((p) => nextLineStart('a\r\nb\rc', p)), [3, 3, 5, 6, 6]);
 });

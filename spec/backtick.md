@@ -76,7 +76,7 @@ Obsidian closes it too; a text editor leaves it open ([Backtick8](#backtick8)).
 tags: common markup-fence
 ```
 
-```buffer
+```markdown
 intro
 
 ┃
@@ -84,7 +84,7 @@ intro
 
 > "\`\`\`"
 
-````buffer
+````markdown
 intro
 
 ```┃
@@ -94,7 +94,7 @@ intro
 
 > "js" enter "x"
 
-````buffer
+````markdown
 intro
 
 ```js
@@ -111,14 +111,14 @@ where it stays in the item. WorkFlowy closes it too, the caret on the code's fir
 tags: common markup-fence
 ```
 
-```buffer
+```markdown
 - a
 - ┃
 ```
 
 > "\`\`\`"
 
-````buffer
+````markdown
 - a
 - ```┃
   `̬`̬`̬
@@ -130,18 +130,18 @@ With `` ` `` in `autoClose`, the first backtick types a pair and the second step
 one; the third opens the fence, closed, as without pairs ([Backtick2](#backtick2)).
 
 ```yaml
-tags: edge markup-fence
+tags: common markup-fence
 autoClose: ['```', '~~~', '`']
 ```
 
-```buffer
+```markdown
 - a
 - ┃
 ```
 
 > "\`\`\`"
 
-````buffer
+````markdown
 - a
 - ```┃
   `̬`̬`̬
@@ -152,10 +152,10 @@ autoClose: ['```', '~~~', '`']
 In a quote, the closing fence goes in the quote.
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 ```
 
-```buffer
+```markdown
 > quote
 >
 > ┃
@@ -163,7 +163,7 @@ tags: edge markup-fence
 
 > "\`\`\`"
 
-````buffer
+````markdown
 > quote
 >
 > ```┃
@@ -177,16 +177,16 @@ length gives a closed block of that length. Bare Obsidian leaves the closing fen
 then closes nothing.
 
 ```yaml
-tags: common markup-fence
+tags: rare markup-fence
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > "\`\`\`\`"
 
-`````buffer
+`````markdown
 ````┃
 `̬`̬`̬`̬
 `````
@@ -198,10 +198,10 @@ match. Bare Obsidian lengthens the closing fence alone: the block still closes, 
 matching.
 
 ```yaml
-tags: common markup-fence
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 ```js
 code
 ```┃
@@ -209,7 +209,7 @@ code
 
 > "\`"
 
-`````buffer
+`````markdown
 ````̬js
 code
 ````┃
@@ -221,10 +221,10 @@ The opening fence of a block in an item grows, its info string and code untouche
 fence too: alone, the longer opening fence would leave the block unclosed, taking in `- b`.
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ```┃js
   code
@@ -234,7 +234,7 @@ tags: edge markup-fence
 
 > "\`"
 
-`````buffer
+`````markdown
 - a
   ````┃js
   code
@@ -249,11 +249,11 @@ block would open at its closing fence and run to the end of the document. Where 
 decorated, refused; where it is text, the host types it ([Backtick28](#backtick28)).
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 markup: decorated
 ```
 
-````buffer
+````markdown
 ```js┃
 code
 ```
@@ -263,7 +263,7 @@ after
 
 > "\`"
 
-````buffer
+````markdown
 ```js┃
 code
 ```
@@ -282,11 +282,11 @@ and reads to the end of the document, taking in the paragraph after it, until a 
 typed.
 
 ```yaml
-tags: edge free-form markup-fence
+tags: rare free-form markup-fence
 autoClose: []
 ```
 
-```buffer
+```markdown
 intro
 
 ┃
@@ -296,7 +296,7 @@ after
 
 > "\`\`\`"
 
-````buffer
+````markdown
 intro
 
 ```┃
@@ -319,7 +319,7 @@ keep it as code, the fences growing past it, as between code lines ([Backtick10]
 tags: common markup-fence
 ```
 
-````buffer
+````markdown
 ```
 code
 ┃
@@ -328,7 +328,7 @@ code
 
 > "\`\`\`"
 
-````buffer
+````markdown
 ```
 code
 ```┃
@@ -340,10 +340,10 @@ A run of backticks typed between code lines would close the block early: both fe
 so it stays code, as when a code block quotes a Markdown fence.
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 ```md
 ┃
 text
@@ -352,7 +352,7 @@ text
 
 > "\`\`\`"
 
-`````buffer
+`````markdown
 ````md
 ```┃
 text
@@ -369,7 +369,7 @@ tags: rare markup-fence
 autoClose: []
 ```
 
-````buffer
+````markdown
 ```
 code
 ┃
@@ -377,7 +377,7 @@ code
 
 > "\`\`\`"
 
-````buffer
+````markdown
 ```
 code
 ```┃
@@ -393,23 +393,23 @@ Typed before text, the fence takes the rest of the line as its info string, the 
 Enter there moves it into the code.
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 ```
 
-```buffer
+```markdown
 ``┃print(1)
 ```
 
 > "\`"
 
-````buffer
+````markdown
 ```┃print(1)
 `̬`̬`̬
 ````
 
 > enter
 
-````buffer
+````markdown
 ```
 ┃print(1)
 `̬`̬`̬
@@ -423,11 +423,11 @@ code first leaves an empty block, which goes ([Backtick25](#backtick25)). Where 
 is the host's ([Backtick28](#backtick28)).
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 markup: decorated
 ```
 
-````buffer
+````markdown
 ```
 code
 ```┃
@@ -435,7 +435,7 @@ code
 
 > deleteContentBackward
 
-````buffer
+````markdown
 ```
 code
 ```┃
@@ -451,10 +451,10 @@ Backspace in a fence's run of four shortens both fences: alone, a closing fence 
 opening one wouldn't close the block.
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 ```
 
-`````buffer
+`````markdown
 ````
 code
 ````┃
@@ -464,7 +464,7 @@ after
 
 > deleteContentBackward
 
-````buffer
+````markdown
 ```
 code
 ```┃
@@ -483,7 +483,7 @@ after it.
 tags: common markup-fence
 ```
 
-```buffer
+```markdown
 intro
 
 ``┃
@@ -491,7 +491,7 @@ intro
 
 > "\`"
 
-````buffer
+````markdown
 intro
 
 ```┃
@@ -500,7 +500,7 @@ intro
 
 > deleteContentBackward
 
-```buffer
+```markdown
 intro
 
 ``┃
@@ -513,11 +513,11 @@ the opening fence would be text, and its closing fence would open a block that r
 the document.
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 markup: decorated
 ```
 
-````buffer
+````markdown
 ```┃
 code
 ```
@@ -527,7 +527,7 @@ after
 
 > deleteContentBackward
 
-````buffer
+````markdown
 ```┃
 code
 ```
@@ -545,10 +545,10 @@ A fence typed on a continuation line of a paragraph splits it around the block: 
 the paragraph, the lines below a paragraph after the block. Backspace joins them back.
 
 ```yaml
-tags: edge free-form markup-fence
+tags: rare free-form markup-fence
 ```
 
-```buffer
+```markdown
 para
 ``┃
 more
@@ -556,7 +556,7 @@ more
 
 > "\`"
 
-````buffer
+````markdown
 para
 ```┃
 `̬`̬`̬
@@ -565,7 +565,7 @@ more
 
 > deleteContentBackward
 
-```buffer
+```markdown
 para
 ``┃
 more
@@ -581,13 +581,13 @@ it. Bare Obsidian, Logseq and Tine pair it, as `` ` `` in `autoClose` does
 tags: common
 ```
 
-```buffer
+```markdown
 use ┃ here
 ```
 
 > "\`"
 
-```buffer
+```markdown
 use `┃ here
 ```
 
@@ -601,23 +601,23 @@ With `` ` `` in `autoClose`, a backtick at a word boundary is typed as a pair, t
 typed again before the closing one, it steps over it.
 
 ```yaml
-tags: edge
+tags: common
 autoClose: ['```', '~~~', '`']
 ```
 
-```buffer
+```markdown
 use ┃ here
 ```
 
 > "\`"
 
-```buffer
+```markdown
 use `┃`̬ here
 ```
 
 > "x\`"
 
-```buffer
+```markdown
 use `x`┃ here
 ```
 
@@ -626,17 +626,17 @@ use `x`┃ here
 With `` ` `` in `autoClose`, Backspace in an empty pair takes both backticks, as they came.
 
 ```yaml
-tags: edge
+tags: common
 autoClose: ['```', '~~~', '`']
 ```
 
-```buffer
+```markdown
 use ┃ here
 ```
 
 > "\`" deleteContentBackward
 
-```buffer
+```markdown
 use ┃ here
 ```
 
@@ -646,17 +646,17 @@ With `` ` `` in `autoClose`, a backtick over a selection on one line makes it co
 selected.
 
 ```yaml
-tags: edge
+tags: common
 autoClose: ['```', '~~~', '`']
 ```
 
-```buffer
+```markdown
 use «this» here
 ```
 
 > "\`"
 
-```buffer
+```markdown
 use `«this»┃` here
 ```
 
@@ -666,11 +666,11 @@ With `` ` `` in `autoClose`, three backticks on an empty line still make a close
 a pair and a step over it, the third the fence.
 
 ```yaml
-tags: edge markup-fence
+tags: common markup-fence
 autoClose: ['```', '~~~', '`']
 ```
 
-```buffer
+```markdown
 intro
 
 ┃
@@ -678,7 +678,7 @@ intro
 
 > "\`\`\`"
 
-````buffer
+````markdown
 intro
 
 ```┃
@@ -690,10 +690,10 @@ intro
 Delete in a fence's run shortens both fences, as Backspace does ([Backtick14](#backtick14)).
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 ```
 
-`````buffer
+`````markdown
 ````
 code
 ┃````
@@ -701,7 +701,7 @@ code
 
 > deleteContentForward
 
-````buffer
+````markdown
 ```
 code
 ┃```
@@ -713,17 +713,17 @@ Delete at the start of an empty block's opening fence of three: its fences are t
 Backspace makes them ([Backtick15](#backtick15)).
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 ┃```
 ```
 ````
 
 > deleteContentForward
 
-```buffer
+```markdown
 ┃``
 ```
 
@@ -738,7 +738,7 @@ Bare Obsidian deletes the backtick alone, as a text editor does, and the opening
 tags: common markup-fence
 ```
 
-````buffer
+````markdown
 intro
 
 ```c++
@@ -751,7 +751,7 @@ after
 
 > deleteContentBackward
 
-```buffer
+```markdown
 intro┃
 
 after
@@ -762,10 +762,10 @@ after
 An empty block that is an item's text goes from the item, which stays, empty.
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
 - ```c++
   ```┃
@@ -774,7 +774,7 @@ tags: edge markup-fence
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
 - ┃
 - b
@@ -786,10 +786,10 @@ Delete at the start of an empty block's opening fence takes the block, as Backsp
 ([Backtick25](#backtick25)).
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 intro
 
 ┃```c++
@@ -800,7 +800,7 @@ after
 
 > deleteContentForward
 
-```buffer
+```markdown
 intro
 
 ┃after
@@ -814,10 +814,10 @@ it deletes the backtick, and the block is no longer closed. Bare Obsidian, Live 
 true-outliner, SilverBullet and Emacs do the same.
 
 ```yaml
-tags: edge markup-fence
+tags: common markup-fence
 ```
 
-````buffer
+````markdown
 ```
 code
 ```┃
@@ -825,7 +825,7 @@ code
 
 > deleteContentBackward
 
-````buffer
+````markdown
 ```
 code
 ``┃
@@ -844,7 +844,7 @@ fence it lengthens it, and the opening fence with it ([Backtick5](#backtick5)).
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 ~~~js
 code
 ~~~┃
@@ -852,7 +852,7 @@ code
 
 > "~"
 
-````buffer
+````markdown
 ~~~~̬js
 code
 ~~~~┃
@@ -867,7 +867,7 @@ Three tildes at a line's text start open a tilde fence, closed below it, as thre
 tags: rare markup-fence
 ```
 
-```buffer
+```markdown
 intro
 
 ┃
@@ -875,7 +875,7 @@ intro
 
 > "~~~"
 
-````buffer
+````markdown
 intro
 
 ~~~┃
@@ -893,7 +893,7 @@ tags: rare markup-fence
 markup: decorated
 ```
 
-````buffer
+````markdown
 «```»
 code
 ```
@@ -907,7 +907,7 @@ after
 result: rejected not-expressible
 ```
 
-````buffer
+````markdown
 «```»
 code
 ```
@@ -926,12 +926,12 @@ tags: rare
 autoClose: ['```', '~~~', '`']
 ```
 
-```buffer
+```markdown
 a ``x┃`` b
 ```
 
 > "\`\`"
 
-```buffer
+```markdown
 a ``x``┃ b
 ```

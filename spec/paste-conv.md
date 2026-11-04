@@ -19,7 +19,7 @@ A Markdown app's own copy has the Markdown as `text/markdown`, which is read bef
 the words alone, as the page showed them).
 
 ```yaml
-tags: edge
+tags: common
 clipboard:
   text/plain: |
     x
@@ -29,14 +29,14 @@ clipboard:
     - y
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - x
 - y┃
@@ -57,14 +57,14 @@ clipboard:
   text/html: '<ul><li>x</li><li>y</li></ul>'
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - x
 - y┃
@@ -78,7 +78,7 @@ lines in a `white-space: pre` block, and the editor's mark beside it: the text i
 not the picture.
 
 ```yaml
-tags: edge
+tags: common
 clipboard:
   text/plain: |
     - x
@@ -87,14 +87,14 @@ clipboard:
   vscode-editor-data: '{"version":1,"isFromEmptySelection":false,"mode":"markdown"}'
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - x
 - y┃
@@ -114,13 +114,13 @@ clipboard:
   text/html: '<span>x <b>y</b></span>'
 ```
 
-```buffer
+```markdown
 - a┃b
 ```
 
 > paste
 
-```buffer
+```markdown
 - ax **y**┃b
 ```
 
@@ -129,13 +129,13 @@ clipboard:
 In code a phrase is the code's text: its formatting, as Markdown, would be text there.
 
 ```yaml
-tags: edge
+tags: common
 clipboard:
   text/plain: "x y"
   text/html: '<span>x <b>y</b></span>'
 ```
 
-````buffer
+````markdown
 ```
 a┃
 ```
@@ -143,7 +143,7 @@ a┃
 
 > paste
 
-````buffer
+````markdown
 ```
 ax y┃
 ```
@@ -156,7 +156,7 @@ it only between its own pages): its HTML's mark says the text is the source, rea
 which converted HTML would write `*b*`).
 
 ```yaml
-tags: edge
+tags: rare
 clipboard:
   text/plain: |-
     - x _b_
@@ -168,14 +168,14 @@ clipboard:
     </ul>
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - x _b_
 - y┃

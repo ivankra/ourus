@@ -23,7 +23,7 @@ clipboard: |
   - y
 ```
 
-```buffer
+```markdown
 - a┃
 ▸
 - b
@@ -31,7 +31,7 @@ clipboard: |
 
 > pasteAt
 
-```buffer
+```markdown
 - a┃
 - x
 - y
@@ -44,11 +44,11 @@ A heading dropped in that would take in what follows it: refused, where a paste 
 it in (Paste10). A drop is aimed, and changes nothing it doesn't point at.
 
 ```yaml
-tags: edge
+tags: rare
 clipboard: '# H'
 ```
 
-```buffer
+```markdown
 a┃
 ▸
 
@@ -72,7 +72,7 @@ clipboard: |
   n
 ```
 
-```buffer
+```markdown
 # A
 x
 ## B
@@ -82,7 +82,7 @@ x
 
 > pasteAt
 
-```buffer
+```markdown
 # A
 x
 ## B
@@ -97,14 +97,14 @@ Among items, what is dragged in fits as paste fits it there: a paragraph is an i
 that can't be one stays a block, at the place, in no item.
 
 ````yaml
-tags: edge
+tags: common
 clipboard: |
   ```
   code
   ```
 ````
 
-```buffer
+```markdown
 - a┃
 ▸
 - b
@@ -112,7 +112,7 @@ clipboard: |
 
 > pasteAt
 
-````buffer
+````markdown
 - a┃
 ```
 code
@@ -130,7 +130,7 @@ paragraph stays one, where a raw deletion would leave a blank line splitting it.
 tags: common
 ```
 
-```buffer
+```markdown
 a
 «b»
 c
@@ -138,7 +138,7 @@ c
 
 > deleteByDrag
 
-```buffer
+```markdown
 a
 ┃c
 ```

@@ -27,4 +27,6 @@ export { scanReference, type MdReference } from './refs.ts';
 export { MdInlineTextBuilder, paragraphText } from './inline-text.ts';
 export type { MdBlockSpec, MdBlockStart, MdFrame, MdLeafRole, MdLineRecord, MdMachine, MdPiece, MdState } from './machine.ts';
 export type { MdBracketRule, MdDelimiterRule, MdInlineParser, MdInlineRule, MdTextRule } from './inlines.ts';
+// (the inline node a rule makes and gives the parser, `add` and `closeBracket`: the parser's `Node`)
+export { Node as MdInlineNode } from './inlines.ts';
 export { inlinePreorder } from './walk.ts';

@@ -19,13 +19,10 @@ import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, 
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { OurusConfig } from '../src/config.ts';
-import { docOf, drawDoc, drawLabels, drawnSelection, drawOutline, drawsCaret, drawText, nodesOf, readDrawing, readText, withoutCaret } from '../test/drawing.ts';
+import { parseWithMarks, drawDoc, drawLabels, drawnSelection, drawOutline, drawsCaret, drawText, allNodes, readDrawing, readText, withoutCaret, isAction, playActions, type PlayedState, drawDropPoints, NodeLabels, normalizeDrawing, describeOutcome, readClipboard, rowView, specTestView, actionsLine, readSpec, specConfig, SPEC_TAGS, tokenizeActions, type Clipboard, type SpecTest } from '../test/lib/index.ts';
 import type { OurusDoc } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
-import { isAction, play, type Played } from '../test/player.ts';
-import { drawDropPoints, Labels, normalize, outcome, readClipboard, rowView, viewOf } from '../test/spec-run.ts';
 import { drawView } from './lib/view.ts';
-import { actionsLine, readSpec, specConfig, TAGS, tokenize, type Clipboard, type SpecTest } from '../test/specfile.ts';
 import { appNames, drivers, resolveApps } from './lib/apps.ts';
 import { ensureProxy } from './lib/browser.ts';
 import type { Driver } from './lib/driver.ts';
@@ -143,7 +140,7 @@ function parseArgs(argv: readonly string[]): Args {
     else if (OurusConfig.has(key)) o.config[key] = value;
     else fail(`unknown option --${key}; the config's are ${[...Object.keys(OurusConfig.values), ...Object.keys(OurusConfig.lists)].join(', ')} (node sxs/probe.ts --help)`);
   }
-  for (const tag of o.tags) if (!(TAGS as readonly string[]).includes(tag)) fail(`unknown tag ${tag}: the tags are ${TAGS.join(', ')}`);
+  for (const tag of o.tags) if (!(SPEC_TAGS as readonly string[]).includes(tag)) fail(`unknown tag ${tag}: the tags are ${SPEC_TAGS.join(', ')}`);
   // `|` for the caret, in the buffer's argument alone (the first, or the one after the apps)
   const buffer = o.positional[0]?.includes('|') ? 0 : o.positional[0] !== undefined && !isBuffer(o.positional[0]) && o.positional[1]?.includes('|') ? 1 : -1;
   if (buffer >= 0) o.positional[buffer] = typedCaret(o.positional[buffer]!);
@@ -244,9 +241,9 @@ function probesOf(o: Args): Probe[] {
   if (source === undefined) fail('a buffer to start from (node sxs/probe.ts --help)');
   let start = source === '-' ? readFileSync(0, 'utf8') : breaks(source);
   if (source !== '-' && !o.exact && !start.endsWith('\n')) start += '\n';
-  if (!/[┃«]/.test(start)) fail('the buffer has no caret (┃) or selection («»)');
+  if (!/[┃«]|⟦selected⟧/.test(start)) fail('the buffer has no caret (┃) or selection («»)');
   if (!stepArgs.length) fail('no actions: an argument per step after the buffer');
-  return [{ name: 'P1', start, steps: stepArgs.map((a) => tokenize(a)), options: o.config, clipboard: clipboardOf(o), tags: o.tags, unnamed: true }];
+  return [{ name: 'P1', start, steps: stepArgs.map((a) => tokenizeActions(a)), options: o.config, clipboard: clipboardOf(o), tags: o.tags, unnamed: true }];
 }
 
 // ------------------------------------------------------------------ ourus
@@ -273,7 +270,7 @@ function labelled(start: string, config: Record<string, string>): string {
   const d = readDrawing(start);
   if (d.labels.size) return start;
   const lines = new Map<number, number[]>();
-  nodesOf(docOf(d.text, d.placeholders, specConfig(config))).slice(0, 50).forEach((n, k) => lines.set(n.startLine, [...(lines.get(n.startLine) ?? []), k + 1]));
+  allNodes(parseWithMarks(d.text, d.placeholders, specConfig(config))).slice(0, 50).forEach((n, k) => lines.set(n.startLine, [...(lines.get(n.startLine) ?? []), k + 1]));
   return drawLabels(start, lines);
 }
 
@@ -283,7 +280,7 @@ class Labelling {
   #next = 1;
   constructor(doc: OurusDoc, lines: ReadonlyMap<number, readonly number[]>) {
     for (const [line, own] of lines) {
-      const nodes = nodesOf(doc).filter((n) => n.startLine === line).sort((a, b) => a.depth - b.depth);
+      const nodes = allNodes(doc).filter((n) => n.startLine === line).sort((a, b) => a.depth - b.depth);
       own.forEach((label, k) => {
         const node = nodes[nodes.length - own.length + k];
         if (node) this.#ids.set(node.id, label);
@@ -294,7 +291,7 @@ class Labelling {
   /** `drawn`, `doc`'s drawing, with its nodes' labels, new nodes given the next ones. */
   draw(drawn: string, doc: OurusDoc): string {
     const lines = new Map<number, number[]>();
-    for (const n of nodesOf(doc)) {
+    for (const n of allNodes(doc)) {
       if (!this.#ids.has(n.id) && this.#next <= 50) this.#ids.set(n.id, this.#next++);
       const label = this.#ids.get(n.id);
       if (label !== undefined) lines.set(n.startLine, [...(lines.get(n.startLine) ?? []), label]);
@@ -305,13 +302,13 @@ class Labelling {
 
 function playOurus(p: Probe, config: Record<string, string>, labels = false): OurStep[] {
   const start = readDrawing(p.start);
-  const doc = docOf(start.text, start.placeholders, specConfig(config));
+  const doc = parseWithMarks(start.text, start.placeholders, specConfig(config));
   // (the start's labels, for a drop that names one)
-  const named = new Labels();
+  const named = new NodeLabels();
   named.check(doc, start.labels, null);
-  // (a case's view, its `folded:` and `zoom:`, as the spec runs it)
-  const view = p.test && (p.test.view.folded !== undefined || p.test.view.zoom !== undefined) ? viewOf(p.test, doc, named.ids) : OurusView.of(doc);
-  let state: Played = { view, selection: drawnSelection(view, start), clipboard: p.clipboard, drop: start.drop, labels: named.ids };
+  // (a case's view, its buffer's `⟦folded⟧` and `⟦zoomed⟧`, as the spec runs it)
+  const view = p.test ? specTestView(p.test, doc, start.view) : OurusView.of(doc);
+  let state: PlayedState = { view, selection: drawnSelection(view, start), clipboard: p.clipboard, drop: start.drop, labels: named.ids };
   const labelling = labels ? new Labelling(state.view.doc, start.labels) : null;
   const out: OurStep[] = [];
   for (const actions of p.steps) {
@@ -320,7 +317,7 @@ function playOurus(p: Probe, config: Record<string, string>, labels = false): Ou
     let broken: string | undefined;
     try {
       for (const action of actions) {
-        state = play(state, [action]);
+        state = playActions(state, [action]);
         const last = state.last;
         if (last instanceof OurusRejected && last.reason === 'write-failed') broken ??= `${action} fails to write${last.detail ? `: ${last.detail}` : ''}`;
       }
@@ -328,12 +325,12 @@ function playOurus(p: Probe, config: Record<string, string>, labels = false): Ou
       broken = `throws: ${e instanceof Error ? e.message : String(e)}`;
     }
     const text = state.view.doc.text;
-    const buffer = normalize(labelling ? labelling.draw(drawDoc(state.view, state.selection), state.view.doc) : drawDoc(state.view, state.selection));
+    const buffer = normalizeDrawing(labelling ? labelling.draw(drawDoc(state.view, state.selection), state.view.doc) : drawDoc(state.view, state.selection));
     out.push({
       actions,
       buffer,
       drawable: text === '' || /[\r\n]$/.test(text),
-      result: outcome(state),
+      result: describeOutcome(state),
       outline: drawOutline(state.view.doc),
       ...(broken ? { broken } : {}),
       ...(actions.some((a) => a === 'copy' || a === 'cut') && state.clipboard['text/plain'] !== undefined ? { clipboard: state.clipboard['text/plain'] } : {}),
@@ -405,14 +402,14 @@ function clipboardYaml(clipboard: Clipboard): string[] {
 
 /** A probe as a spec case: its config, its start, and each step with ourus's state drawn. */
 function caseOf(p: Probe, ours: OurStep[]): string {
-  const yaml = [`tags: ${['edge', ...p.tags].join(' ')}`, ...Object.entries(p.options).map(([k, v]) => `${k}: ${v}`), ...clipboardYaml(p.clipboard)].join('\n');
+  const yaml = [`tags: ${['rare', ...p.tags].join(' ')}`, ...Object.entries(p.options).map(([k, v]) => `${k}: ${v}`), ...clipboardYaml(p.clipboard)].join('\n');
   // a step that copies or cuts checks the clipboard too, as the spec's cases do; a spec case's step
   // (`--case`) checks its buffer only where the case draws one, as the SxS does (what isn't drawn isn't checked)
   const steps = ours.map((s, k) => {
-    const buffer = p.drawn && p.drawn[k] === undefined ? [] : [block('buffer', s.buffer)];
+    const buffer = p.drawn && p.drawn[k] === undefined ? [] : [block('markdown', s.buffer)];
     return [actionsLine(s.actions), ...(s.clipboard !== undefined ? [block('yaml', clipboardYaml({ 'text/plain': s.clipboard }).join('\n'))] : []), ...buffer].join('\n\n');
   });
-  return [`## ${p.name}`, block('yaml', yaml), block('buffer', p.start), ...steps].join('\n\n');
+  return [`## ${p.name}`, block('yaml', yaml), block('markdown', p.start), ...steps].join('\n\n');
 }
 
 // ------------------------------------------------------------------ apps
@@ -527,7 +524,7 @@ async function main(): Promise<void> {
           }
           const drawn = p.drawn?.[k];
           // (a drawing without a caret doesn't check it)
-          if (drawn !== undefined && normalize(drawn) !== (drawsCaret(drawn) ? s.buffer : withoutCaret(s.buffer))) {
+          if (drawn !== undefined && normalizeDrawing(drawn) !== (drawsCaret(drawn) ? s.buffer : withoutCaret(s.buffer))) {
             out(marked('✗', '✗ the case draws:'));
             verbatim(drawn);
             broken = true;

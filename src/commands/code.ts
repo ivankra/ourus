@@ -4,9 +4,10 @@
 // grows a fence past code that would close it early, or refuses what would unmake the block.
 
 import { OurusProse, OurusAtom, type OurusNode } from '../doc/index.ts';
-import { advanceColumns, lineOf, trimMd } from '../text/index.ts';
+import { advanceColumns, charAfter, charBefore, lineOf, trimMd } from '../text/index.ts';
+import { MdTree } from '../parser/index.ts';
 import { type CommandContext } from './context.ts';
-import { textEnd, textStart, withTextlessParents } from './util.ts';
+import { childrenRefused, textEnd, textStart, unnumberItem, visiblePreceding, withTextlessParents } from './util.ts';
 import type { OurusResult } from './types.ts';
 import { OurusDeferred, OurusRejected } from './types.ts';
 
@@ -99,6 +100,26 @@ export function newlineInCode(ctx: CommandContext, at: CodeAt, shift: boolean): 
 }
 
 /**
+ * A line break typed at the start of a block's opening delimiter (not an item's text): a blank line
+ * above the block, the caret staying with it, as a text editor's line break (Enter in an item splits
+ * it instead); undefined elsewhere, null where ourus doesn't do it (the host's). Its text can't start
+ * with a blank line: the blank line is the gap above.
+ */
+export function lineBreakAtOpening(ctx: CommandContext, at: CodeAt, typed: string): OurusResult | null | undefined {
+  if (!ctx.collapsed || !/^(?:\r\n|\r|\n)$/.test(typed) || at.node.kind !== 'atom') return undefined;
+  const k = lineOf(at.text.text, at.offset);
+  const delimiter = delimiterOn(at.text, k);
+  const line = linesOf(at.text)[k]!;
+  if (!delimiter || at.text.frame.some((p) => p.part === 'close' && p.from <= delimiter.from)) return undefined;
+  if (at.offset > delimiter.from || trimMd(at.text.text.slice(line.from, at.offset)) !== '') return undefined;
+  // (in an item too, the block staying its block, where Enter splits the item: a text editor's line
+  // break; where markup is decorated, the caret onto the new blank line: not done yet)
+  const above = at.node.preceding;
+  if (!above || above.kind === 'root' || !ctx.doc.textOf(above) || ctx.config.markup === 'decorated') return null;
+  return ctx.apply(ctx.draft().gap(above, above.gap + 1).setCaret(at.node, at.offset, 1));
+}
+
+/**
  * Enter at the start of an opening delimiter (rule 2): of an item's text, an empty item above, the
  * caret in it (under `enterAtTextStart: stay` too: staying would leave it on the fence); of a block
  * of an item after its text, the item splits there, the block a new item's text, as Enter splits an
@@ -144,7 +165,8 @@ function codeStart(text: OurusAtom): number {
  * hold a block.
  */
 export function joinCodeItemUp(ctx: CommandContext, node: OurusNode, caret?: { readonly node: OurusNode; readonly offset: number }): OurusResult | null {
-  const prev = node.preceding;
+  // (after a folded node, its row: Fold15)
+  const prev = visiblePreceding(ctx.view, node);
   if (!prev || prev.kind === 'root') return new OurusRejected('nothing-above');
   const text = ctx.doc.textOf(node);
   const upper = ctx.doc.textOf(prev);
@@ -158,6 +180,9 @@ export function joinCodeItemUp(ctx: CommandContext, node: OurusNode, caret?: { r
   let inside = false;
   for (let up = node.parent?.parent; up && holder; up = up.parent) if (up.persistentNode === holder.persistentNode) inside = true;
   if (!holder || inside) return new OurusRejected('not-expressible', `a ${prev.kind} can't hold the code`);
+  // (its children after it, a level up: as `joinWithChildren` has it)
+  const refused = childrenRefused(ctx, holder, node, holder.persistentNode !== node.parent?.persistentNode);
+  if (refused) return refused;
   const children = node.children;
   draft.convert(node, 'atom');
   if (holder.persistentNode === node.parent?.persistentNode) {
@@ -181,7 +206,11 @@ export function nodeAfterBlock(ctx: CommandContext, node: OurusNode): OurusResul
   const after = item ? item.children.slice(node === item ? 0 : node.index + 1) : [];
   if (item && after.every((c) => c.kind === 'item')) {
     const id = draft.create('item', new OurusProse('paragraph', true, ''));
-    if (after[0]) draft.place('before', after[0], [id]);
+    // folded (within the zoom), after its subtree, not among its hidden children; zoomed into it, a
+    // first child, inside the zoom (as a text's Enter: enter.ts)
+    if (after[0] && ctx.view.zoomFolded.has(item.id)) draft.place('after', item, [id]);
+    else if (after[0]) draft.place('before', after[0], [id]);
+    else if (ctx.view.zoom === item.id) draft.append(item, 'last', [id]);
     else draft.place('after', item, [id]);
     return ctx.apply(draft.setCaret(id, 0, -1));
   }
@@ -296,10 +325,12 @@ function deleteInFenceRun(ctx: CommandContext, at: CodeAt, dir: -1 | 1): OurusRe
   if (text.type !== 'fenced_code' || !runs?.close || !run) return null;
   const { open, close } = runs;
   const draft = ctx.draft();
-  if (run.to - run.from > 3) {
-    const edited = text.splice(close.to - 1, close.to).splice(open.to - 1, open.to);
+  // (a closing run longer than the opening one: it alone shortens, the block as it was, B96)
+  const longer = run === close && close.to - close.from > open.to - open.from;
+  if (longer || run.to - run.from > 3) {
+    const edited = longer ? text.splice(close.to - 1, close.to) : text.splice(close.to - 1, close.to).splice(open.to - 1, open.to);
     // (where markup is decorated, not on the fence: at the code's end below it, its start above)
-    const caret = ctx.config.markup === 'decorated' ? (run === close ? textEnd(edited) : codeStart(edited)) : run === open ? char : char - 1;
+    const caret = ctx.config.markup === 'decorated' ? (run === close ? textEnd(edited) : codeStart(edited)) : run === open || longer ? char : char - 1;
     return ctx.apply(draft.setText(node, edited).setCaret(node, caret, dir < 0 ? -1 : 1));
   }
   const detail = 'the fence would break: the block has code';
@@ -321,7 +352,8 @@ function deleteInFenceRun(ctx: CommandContext, at: CodeAt, dir: -1 | 1): OurusRe
         draft.join(above, node, { separator: '\n' });
       }
     }
-    const below = node.kind === 'item' ? node.children[0] : node.next;
+    // (a block's list after it, `listParent: block`, between it and the next: none below it, B97)
+    const below = node.kind === 'item' ? node.children[0] : node.children.length ? undefined : node.next;
     if (below?.kind === 'paragraph' && node.gap === 0 && ctx.doc.textOf(below) instanceof OurusProse) draft.join(target, below, { separator: '\n' });
     return ctx.apply(draft.setCaret(target, caret, -1));
   }
@@ -337,12 +369,15 @@ function deleteInFenceRun(ctx: CommandContext, at: CodeAt, dir: -1 | 1): OurusRe
 function removeEmptyBlock(ctx: CommandContext, node: OurusNode, dir: -1 | 1): OurusResult | null {
   const draft = ctx.draft();
   if (node.kind === 'item') return ctx.apply(draft.setText(node, new OurusProse('paragraph', true, '')).setCaret(node, 0, -1));
-  const gone = withTextlessParents(ctx.doc, [node])[0]!;
+  // (its children, a list it holds with `listParent: block`, stay, in its place)
+  const kept = node.children.length > 0;
+  const gone = kept ? node : withTextlessParents(ctx.doc, [node])[0]!;
   const above = gone.preceding && gone.preceding.kind !== 'root' ? gone.preceding : null;
-  const below = gone.afterSubtree;
+  const below = kept ? node.children[0]! : gone.afterSubtree;
   const upper = above && ctx.doc.textOf(above);
   const lower = below && ctx.doc.textOf(below);
-  draft.remove([gone]);
+  if (kept) draft.dissolve(node);
+  else draft.remove([gone]);
   const together = above?.kind === 'paragraph' && below?.kind === 'paragraph' && above.next === gone && gone.next === below && above.gap === 0 && gone.gap === 0 && !above.children.length;
   if (together && upper instanceof OurusProse && lower instanceof OurusProse) {
     draft.join(above, below, { separator: '\n' });
@@ -364,11 +399,15 @@ function removeEmptyBlock(ctx: CommandContext, node: OurusNode, dir: -1 | 1): Ou
  */
 function atOpeningStart(ctx: CommandContext, at: CodeAt): OurusResult | null {
   const { node, offset } = at;
-  if (node.kind === 'item') return joinCodeItemUp(ctx, node);
+  // (a numbered item's number first, with `backspaceAtItemStart: logseq`, as a paragraph item's)
+  if (node.kind === 'item') return (ctx.config.backspaceAtItemStart === 'logseq' ? unnumberItem(ctx, node, at.text, offset) : null) ?? joinCodeItemUp(ctx, node);
   const above = node.preceding;
   // first in its container, below no text (`> ┃```): nothing to join, not done yet
   if (!above || above.kind === 'root' || !ctx.doc.textOf(above)) return null;
   if (above.gap === 0) return new OurusRejected('not-expressible', "the code can't join the text above");
+  // (after HTML that a blank line ends, the fence would be a line of it, B87)
+  const upper = ctx.doc.textOf(above);
+  if (above.gap === 1 && upper instanceof OurusAtom && upper.type === 'html_block' && MdTree.parse(`${upper.text}\n${at.text.text.split('\n')[0]}`, ctx.doc.mdTree.flavor).root.children.length < 2) return new OurusRejected('not-expressible', 'the fence would be a line of the HTML above it');
   // the caret where it was; where markup is decorated, not on the delimiter: at the code's start
   return ctx.apply(ctx.draft().gap(above, above.gap - 1).setCaret(node, ctx.config.markup === 'decorated' ? codeStart(at.text) : offset, 1));
 }
@@ -381,7 +420,7 @@ function characterInCode(ctx: CommandContext, at: CodeAt, dir: -1 | 1): OurusRes
   const { text, offset } = at;
   const line = linesOf(text)[lineOf(text.text, offset)]!;
   // (the character the host deletes: a grapheme, as CodeMirror's `findClusterBreak` steps, `😀` whole)
-  const [from, to] = dir < 0 ? [graphemeBefore(text.text, offset, line.from), offset] : [offset, graphemeAfter(text.text, offset, line.to)];
+  const [from, to] = dir < 0 ? [charBefore(text.text, offset), offset] : [offset, charAfter(text.text, offset)];
   if (from < line.from || to > line.to) return null;
   return editInCode(ctx, at, from, to, '', { caret: dir < 0 ? -1 : 1 });
 }
@@ -409,6 +448,8 @@ export function editInCode(ctx: CommandContext, at: CodeAt, from: number, to: nu
   const simple = !/[\r\n]/.test(insert) || (node.kind === 'atom' && node.parent?.kind === 'root');
   // (typing on a code line: what has no delimiter's character in it makes no delimiter of the line)
   if (host && simple && from === to && !delimiter && !/[`~$%]/.test(insert)) return new OurusDeferred('code: the host types it');
+  // (a payload's lines end in LF, as the parser reads them: a CRLF or lone CR typed is one)
+  insert = insert.replace(/\r\n?/g, '\n');
   const edited = text.splice(from, to, insert);
   // (a line starting with a tab spans from the column the block's lines start at: its second line's)
   const second = text.text.indexOf('\n') + 1;
@@ -418,19 +459,4 @@ export function editInCode(ctx: CommandContext, at: CodeAt, from: number, to: nu
   if (kept && host && simple) return new OurusDeferred('code: the host edits it');
   if (!kept && delimiter) return breaksFence(ctx, 'the fence would break');
   return ctx.apply(ctx.draft().setText(node, edited).setCaret(node, from + insert.length, caret));
-}
-
-const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
-
-/** Where the grapheme before `pos` in `s` starts, the line from `lineFrom`. */
-function graphemeBefore(s: string, pos: number, lineFrom: number): number {
-  let start = pos - 1;
-  for (const g of graphemes.segment(s.slice(lineFrom, pos))) start = lineFrom + g.index;
-  return Math.min(start, pos - 1);
-}
-
-/** Where the grapheme at `pos` in `s` ends, the line to `lineTo`. */
-function graphemeAfter(s: string, pos: number, lineTo: number): number {
-  const first = graphemes.segment(s.slice(pos, Math.max(pos + 1, lineTo)))[Symbol.iterator]().next().value;
-  return pos + (first?.segment.length ?? 1);
 }

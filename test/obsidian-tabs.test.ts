@@ -18,27 +18,24 @@ import type { OurusConfig } from '../src/config.ts';
 import { OurusView } from '../src/view/index.ts';
 import { asTabs, retabs } from '../sxs/lib/tabs.ts';
 import type { TextDoc } from '../sxs/lib/text.ts';
-import { docOf, drawDoc, drawnSelection, drawOutline, drawsCaret, readDrawing } from './drawing.ts';
-import { play, type Played } from './player.ts';
-import { flavorsOf, Labels, normalize, outcome, readClipboard, viewOf } from './spec-run.ts';
-import { readSpecFile, specConfig, specFiles, type SpecTest } from './specfile.ts';
+import { parseWithMarks, drawDoc, drawnSelection, drawOutline, drawsCaret, readDrawing, playActions, type PlayedState, specTestFlavors, NodeLabels, normalizeDrawing, describeOutcome, readClipboard, specTestView, readSpecFile, specConfig, specFiles, type SpecTest } from './lib/index.ts';
 import { OurusDeferred, OurusRejected } from '../src/commands/index.ts';
 
 /** A drawn buffer's document, and its start loaded as tabs (placeholders carried as carets are). */
-function tabbedStart(t: SpecTest, config: Partial<OurusConfig>): { spaces: OurusView; tabs: Played } {
+function tabbedStart(t: SpecTest, config: Partial<OurusConfig>): { spaces: OurusView; tabs: PlayedState } {
   const start = readDrawing(t.initial.buffer);
   const at = (p: number): number => asTabs({ text: start.text, sel: { anchor: p, head: p } }).sel!.anchor;
   // (the start's labels, and its drop line: a line, which the tabs keep)
-  const labels = new Labels();
-  labels.check(docOf(start.text, start.placeholders, config), start.labels, null);
-  const spaces = viewOf(t, docOf(start.text, start.placeholders, config), labels.ids);
+  const labels = new NodeLabels();
+  labels.check(parseWithMarks(start.text, start.placeholders, config), start.labels, null);
+  const spaces = specTestView(t, parseWithMarks(start.text, start.placeholders, config), start.view);
   // (a subtree selection as the whole lines it is, in the start's view (zoomed, it ends at the zoom's
   // end), carried to tabs as any selection)
   const d: TextDoc = asTabs({ text: start.text, sel: drawnSelection(spaces, start) });
   return {
     spaces,
     // (tabs change no line: a label names the same line's node)
-    tabs: { view: viewOf(t, docOf(d.text, start.placeholders.map(at), config), labels.ids), selection: d.sel!, clipboard: readClipboard(t.initial.clipboard), labels: labels.ids, drop: start.drop },
+    tabs: { view: specTestView(t, parseWithMarks(d.text, start.placeholders.map(at), config), start.view), selection: d.sel!, clipboard: readClipboard(t.initial.clipboard), labels: labels.ids, drop: start.drop },
   };
 }
 
@@ -78,18 +75,18 @@ function runTabbed(t: SpecTest, flavor: OurusConfig['flavor']): void {
   for (const step of t.steps) {
     const at = `${t.file}:${step.line} (${flavor}, tabs)`;
     for (const action of step.actions) {
-      state = play(state, [action]);
+      state = playActions(state, [action]);
       assert.ok(!(state.last instanceof OurusRejected) || state.last.reason !== 'write-failed', `${at}: ${action} failed to write${state.last instanceof OurusRejected && state.last.detail ? `: ${state.last.detail}` : ''}`);
     }
     const { buffer, result } = step.expect;
-    if (result !== undefined) assert.equal(outcome(state), result, `${at}: result`);
+    if (result !== undefined) assert.equal(describeOutcome(state), result, `${at}: result`);
     // (the host's own edit is the player's emulation of it, and a placeholder the spaces need, a tab's
     // wider column may not: a child past a padding widened by a deleted first character)
     if (buffer === undefined || state.last instanceof OurusDeferred || buffer.includes('◌')) continue;
-    const drawn = readDrawing(normalize(buffer));
+    const drawn = readDrawing(normalizeDrawing(buffer));
     // (with the view the state has, by line, which tabs keep: a subtree selection ends at a zoom's end)
     const byLine = (id: number | null): number | null => (id === null ? null : (state.view.doc.node(id)?.startLine ?? null));
-    const plain = docOf(drawn.text, drawn.placeholders, config);
+    const plain = parseWithMarks(drawn.text, drawn.placeholders, config);
     const zoomLine = byLine(state.view.zoom);
     const expectedView = OurusView.of(plain).withFolded([...state.view.folded].flatMap((id) => plain.rowOwner(byLine(id) ?? -1)?.id ?? [])).withZoom(zoomLine === null ? null : (plain.rowOwner(zoomLine)?.id ?? null));
     const expected = reading(expectedView, drawnSelection(expectedView, drawn), drawsCaret(buffer));
@@ -104,7 +101,7 @@ for (const file of specFiles()) {
     const start = readDrawing(t.initial.buffer);
     // a document with no indentation is the spec's own run
     if (!/^[ ]+\S/m.test(start.text) || !retabs({ text: start.text, sel: start.selection })) continue;
-    const flavors = flavorsOf(t).filter((flavor) => {
+    const flavors = specTestFlavors(t).filter((flavor) => {
       const { spaces, tabs } = tabbedStart(t, { flavor, ...specConfig(t.options) });
       return drawOutline(spaces.doc) === drawOutline(tabs.view.doc);
     });

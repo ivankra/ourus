@@ -40,9 +40,7 @@ import { executeCommand, leavesZoom, type OurusCommand, OurusDeferred, OurusReje
 import type { OurusDoc, OurusNode } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
 import type { ChangeSpec } from '../src/text/index.ts';
-import { docOf, drawDoc, readDrawing } from './drawing.ts';
-import { readSpecFile, specConfig, specFiles } from './specfile.ts';
-import { statusOf } from './drawing.ts';
+import { parseWithMarks, drawDoc, readDrawing, readSpecFile, specConfig, specFiles, resultStatus, allNodes } from './lib/index.ts';
 
 const COMMANDS: readonly OurusCommand[] = [
   { type: 'enter' },
@@ -76,16 +74,6 @@ const fail = (group: string, example: () => string): void => {
 };
 
 /** Every node but the root, in document order. */
-function nodes(doc: OurusDoc): OurusNode[] {
-  const out: OurusNode[] = [];
-  const visit = (n: OurusNode): void => {
-    if (n.kind !== 'root') out.push(n);
-    n.children.forEach(visit);
-  };
-  visit(doc.rootNode);
-  return out;
-}
-
 /** Whether `n` is `root` or inside it. */
 const inside = (n: OurusNode | null, root: OurusNode): boolean => !!n && (n === root || inside(n.parent, root));
 
@@ -194,11 +182,11 @@ function confined(viewed: OurusView, view: string): number {
   const root = viewed.zoomRoot!;
   const caret = doc.textStart(root.startLine);
   const selection = { anchor: caret, head: caret };
-  for (const n of nodes(doc).filter((m) => !inside(m, root))) {
+  for (const n of allNodes(doc).filter((m) => !inside(m, root))) {
     for (const type of WITH_NODES) {
       runs++;
       const result = executeCommand(viewed, { type, nodes: [n.id] }, selection);
-      if (!(result instanceof OurusRejected) || result.reason !== 'outside-zoom') fail('confined', () => `${view}, ${type} of ${n.kind} ${n.id}: ${statusOf(result)}`);
+      if (!(result instanceof OurusRejected) || result.reason !== 'outside-zoom') fail('confined', () => `${view}, ${type} of ${n.kind} ${n.id}: ${resultStatus(result)}`);
     }
     for (const command of [{ type: 'zoomIn', nodes: [n.id] }, ...(doc.foldRange(n) ? [{ type: 'fold', nodes: [n.id] }] : [])] as OurusCommand[]) {
       runs++;
@@ -206,7 +194,7 @@ function confined(viewed: OurusView, view: string): number {
       // (an ancestor of the root: its fold suppressed while zoomed, left alone)
       const folds = inside(root, n) ? viewed.folded.has(n.id) : true;
       const ok = result instanceof OurusSuccess && result.view.doc.text === doc.text && !result.changes.length && (command.type === 'zoomIn' ? result.view.zoom === n.id : result.view.folded.has(n.id) === folds);
-      if (!ok) fail('confined', () => `${view}, ${command.type} at ${n.kind} ${n.id}: ${statusOf(result)}`);
+      if (!ok) fail('confined', () => `${view}, ${command.type} at ${n.kind} ${n.id}: ${resultStatus(result)}`);
     }
   }
   return runs;
@@ -227,9 +215,9 @@ type Played = { readonly runs: number; readonly groups: [string, { runs: number;
 function playStart(start: Start): Played {
   groups = new Map();
   let runs = 0;
-  const doc = docOf(start.text, start.placeholders, start.config);
-  const foldable = nodes(doc).filter((n) => doc.foldRange(n)).map((n) => n.id);
-  for (const n of nodes(doc)) {
+  const doc = parseWithMarks(start.text, start.placeholders, start.config);
+  const foldable = allNodes(doc).filter((n) => doc.foldRange(n)).map((n) => n.id);
+  for (const n of allNodes(doc)) {
     if (doc.foldRange(n)) runs += play(OurusView.of(doc).withFolded([n.id]), `${start.name}, ${n.kind} ${n.id} folded`);
     runs += play(OurusView.of(doc).withZoom(n.id), `${start.name}, zoomed into ${n.kind} ${n.id}`);
     if (foldable.length) runs += play(OurusView.of(doc).withFolded(foldable).withZoom(n.id), `${start.name}, zoomed into ${n.kind} ${n.id}, every node folded`);

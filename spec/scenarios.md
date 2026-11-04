@@ -1,8 +1,8 @@
 # Scenarios
 
 Longer sequences of actions, as a user would perform them, with the states along the way: the daily
-flows, where every `core` case of the command files shows up, each flow naming the cases it walks
-through. A step's states are checked as they come, so one difference fails a whole flow in another
+flows, where every `core` case of the command files shows up (each must-have feature of an outliner,
+its most basic case), each flow naming the cases it walks through. A step's states are checked as they come, so one difference fails a whole flow in another
 app. The format is in [README.md](README.md).
 
 ## Outliner flows
@@ -16,13 +16,13 @@ Typing a new child: Enter at the end of an item, Tab on the new one, then text
 tags: core
 ```
 
-```buffer
+```markdown
 - a┃
 ```
 
 > enter indent "x"
 
-```buffer
+```markdown
 - a
   - x┃
 ```
@@ -35,13 +35,13 @@ Enter on the empty child outdents it ([Enter5](enter.md#enter5)).
 tags: core
 ```
 
-```buffer
+```markdown
 - a┃
 ```
 
 > enter indent enter
 
-```buffer
+```markdown
 - a
 - ┃
 ```
@@ -55,13 +55,13 @@ Backspace removes the empty child ([Backspace30](backspace.md#backspace30),
 tags: core
 ```
 
-```buffer
+```markdown
 - a┃
 ```
 
 > enter indent deleteContentBackward
 
-```buffer
+```markdown
 - a┃
 ```
 
@@ -74,20 +74,20 @@ there is the child's ([Placeholder1](placeholders.md#placeholder1)).
 tags: core
 ```
 
-```buffer
+```markdown
 - a┃
 ```
 
 > enter indent
 
-```buffer
+```markdown
 - a
   - ┃◌
 ```
 
 > cursorDocStart cursorLineBoundaryForward
 
-```buffer
+```markdown
 - a┃
 
   - 
@@ -95,7 +95,7 @@ tags: core
 
 > cursorLineDown cursorLineDown "b"
 
-```buffer
+```markdown
 - a
 
   - b┃
@@ -112,13 +112,13 @@ moves past it with its children, and the move is undone ([Enter2](enter.md#enter
 tags: core
 ```
 
-```buffer
+```markdown
 - a┃
 ```
 
 > enter indent "b" enter "c" enter outdent "d"
 
-```buffer
+```markdown
 - a
   - b
   - c
@@ -127,7 +127,7 @@ tags: core
 
 > cursorDocStart cursorLineBoundaryForward moveSubtreeDown
 
-```buffer
+```markdown
 - d
 - a┃
   - b
@@ -136,7 +136,7 @@ tags: core
 
 > undo
 
-```buffer
+```markdown
 - a┃
   - b
   - c
@@ -154,13 +154,13 @@ Writing a list under a paragraph, nesting in it, and walking out of it with Ente
 tags: core free-form
 ```
 
-```buffer
+```markdown
 Groceries┃
 ```
 
 > enter
 
-```buffer
+```markdown
 Groceries
 
 ┃◌
@@ -168,7 +168,7 @@ Groceries
 
 > "- milk"
 
-```buffer
+```markdown
 Groceries
 
 - milk┃
@@ -178,7 +178,7 @@ Groceries
 
 > enter indent "brown"
 
-```buffer
+```markdown
 Groceries
 - milk
 - eggs
@@ -187,7 +187,7 @@ Groceries
 
 > enter enter
 
-```buffer
+```markdown
 Groceries
 - milk
 - eggs
@@ -197,7 +197,7 @@ Groceries
 
 > enter "Done."
 
-```buffer
+```markdown
 Groceries
 - milk
 - eggs
@@ -221,14 +221,14 @@ next item ([Delete2](delete.md#delete2)).
 tags: core
 ```
 
-```buffer
+```markdown
 - buy milk┃ and eggs
 - call Ann
 ```
 
 > enter
 
-```buffer
+```markdown
 - buy milk
 - ┃and eggs
 - call Ann
@@ -236,21 +236,21 @@ tags: core
 
 > deleteContentBackward " "
 
-```buffer
+```markdown
 - buy milk ┃and eggs
 - call Ann
 ```
 
 > cursorLineBoundaryBackward
 
-```buffer
+```markdown
 - ┃buy milk and eggs
 - call Ann
 ```
 
 > enter "today:"
 
-```buffer
+```markdown
 - today:┃
 - buy milk and eggs
 - call Ann
@@ -258,7 +258,7 @@ tags: core
 
 > cursorLineDown cursorLineDown cursorLineBoundaryForward deleteContentBackward cursorCharLeft deleteContentForward
 
-```buffer
+```markdown
 - today:
 - buy milk and eggs
 - call A┃
@@ -266,7 +266,7 @@ tags: core
 
 > cursorLineUp cursorLineBoundaryForward deleteContentForward
 
-```buffer
+```markdown
 - today:
 - buy milk and eggs┃call A
 ```
@@ -282,7 +282,7 @@ Reorganizing an outline: an item moves with its subtree ([MoveUp1](move-subtree-
 tags: core
 ```
 
-```buffer
+```markdown
 - Inbox
 - Work┃
   - email
@@ -292,7 +292,7 @@ tags: core
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - Work┃
   - email
 - Inbox
@@ -302,7 +302,7 @@ tags: core
 
 > moveSubtreeDown moveSubtreeDown
 
-```buffer
+```markdown
 - Inbox
 - Home
   - plants
@@ -312,7 +312,7 @@ tags: core
 
 > moveSubtreeUp indent
 
-```buffer
+```markdown
 - Inbox
   - Work┃
     - email
@@ -322,7 +322,7 @@ tags: core
 
 > outdent
 
-```buffer
+```markdown
 - Inbox
 - Work┃
   - email
@@ -340,7 +340,7 @@ Reorganizing by dragging: `Home`, pressed by its bullet, goes to the top with it
 tags: core
 ```
 
-```buffer
+```markdown
 ▸
 - Inbox
 - Work
@@ -351,7 +351,7 @@ tags: core
 
 > moveSubtree ③
 
-```buffer
+```markdown
 - Home③
   - plants
 - Inbox
@@ -361,7 +361,7 @@ tags: core
 
 > "s"
 
-```buffer
+```markdown
 - Home
   - plants
 - Inbox
@@ -378,7 +378,7 @@ taken back out with Shift-Tab ([Outdent1](outdent.md#outdent1)).
 tags: core
 ```
 
-```buffer
+```markdown
 - Inbox
   ▸
 - Work┃②
@@ -387,7 +387,7 @@ tags: core
 
 > moveSubtree ②
 
-```buffer
+```markdown
 - Inbox
   - Work┃②
     - email
@@ -395,7 +395,7 @@ tags: core
 
 > outdent
 
-```buffer
+```markdown
 - Inbox
 - Work┃
   - email
@@ -411,7 +411,7 @@ started, it changes nothing ([MoveSubtree8](move-subtree.md#movesubtree8)), and 
 tags: core
 ```
 
-```buffer
+```markdown
 - Inbox
 ▸
 - Work┃②
@@ -436,7 +436,7 @@ dropPoints: |
 result: success
 ```
 
-```buffer
+```markdown
 - Inbox
 - Work┃②
 - Home
@@ -444,7 +444,7 @@ result: success
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 - Inbox
 - Home
 - Work┃
@@ -461,7 +461,7 @@ its child with it ([MoveDown1](move-subtree-down.md#movedown1)).
 tags: core
 ```
 
-```buffer
+```markdown
 - Inbox
   - call Ann
   - buy milk┃
@@ -470,7 +470,7 @@ tags: core
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 - Inbox
   - call Ann
 - Errands
@@ -479,7 +479,7 @@ tags: core
 
 > enter "post a letter" moveSubtreeUp
 
-```buffer
+```markdown
 - Inbox
   - call Ann
 - Errands
@@ -489,7 +489,7 @@ tags: core
 
 > cursorDocStart cursorLineBoundaryForward moveSubtreeDown
 
-```buffer
+```markdown
 - Errands
   - post a letter
   - buy milk
@@ -504,10 +504,10 @@ child ([DirectOutdent1](outdent.md#directoutdent1)), the subtree moves whole
 ([MoveUp1](move-subtree-up.md#moveup1)) and goes whole ([DeleteSubtree1](delete-subtree.md#deletesubtree1)).
 
 ```yaml
-tags: common
+tags: core
 ```
 
-```buffer
+```markdown
 - a
   - b┃
     - b1
@@ -516,7 +516,7 @@ tags: common
 
 > outdent
 
-```buffer
+```markdown
 - a
 - b┃
   - b1
@@ -525,7 +525,7 @@ tags: common
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - b┃
   - b1
   - c
@@ -534,7 +534,7 @@ tags: common
 
 > deleteSubtree
 
-```buffer
+```markdown
 - ┃a
 ```
 
@@ -549,22 +549,22 @@ Lines in an item: Shift-Enter makes one ([ShiftEnter1](shift-enter.md#shiftenter
 tags: core
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - a
-  ┃
+  ┃◌
 - b
 ```
 
 > "more"
 
-```buffer
+```markdown
 - a
   more┃
 - b
@@ -572,27 +572,27 @@ tags: core
 
 > cursorLineBoundaryBackward deleteContentBackward
 
-```buffer
+```markdown
 - a┃more
 - b
 ```
 
 > cursorLineBoundaryForward deleteContentForward
 
-```buffer
+```markdown
 - amore┃b
 ```
 
 > undo
 
-```buffer
+```markdown
 - amore┃
 - b
 ```
 
 > redo
 
-```buffer
+```markdown
 - amore┃b
 ```
 
@@ -607,7 +607,7 @@ child ([Enter4](enter.md#enter4)), Backspace at the child's start joins it into 
 tags: core
 ```
 
-```buffer
+```markdown
 - a┃
   - b
 - c
@@ -616,7 +616,7 @@ tags: core
 
 > enter
 
-```buffer
+```markdown
 - a
   - ┃◌
   - b
@@ -626,7 +626,7 @@ tags: core
 
 > "x"
 
-```buffer
+```markdown
 - a
   - x┃
   - b
@@ -636,7 +636,7 @@ tags: core
 
 > cursorLineBoundaryBackward deleteContentBackward
 
-```buffer
+```markdown
 - a┃x
   - b
 - c
@@ -645,7 +645,7 @@ tags: core
 
 > cursorDocStart cursorLineBoundaryForward deleteContentForward
 
-```buffer
+```markdown
 - ax┃b
 - c
   - d
@@ -660,7 +660,7 @@ Reordering a numbered list: moves renumber it ([MoveUp14](move-subtree-up.md#mov
 tags: core
 ```
 
-```buffer
+```markdown
 1. one
 2. two┃
 3. three
@@ -668,7 +668,7 @@ tags: core
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 1. two┃
 2. one
 3. three
@@ -676,7 +676,7 @@ tags: core
 
 > moveSubtreeDown moveSubtreeDown
 
-```buffer
+```markdown
 1. one
 2. three
 3. two┃
@@ -691,7 +691,7 @@ child, and back ([MoveDown7](move-subtree-down.md#movedown7), [MoveUp6](move-sub
 tags: core
 ```
 
-```buffer
+```markdown
 - a
   - b┃
 - c
@@ -700,7 +700,7 @@ tags: core
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 - a
 - c
   - b┃
@@ -709,7 +709,7 @@ tags: core
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - a
   - b┃
 - c
@@ -727,13 +727,13 @@ Leaving the list from there is [Scenario25](#scenario25).
 tags: core markup-task
 ```
 
-```buffer
+```markdown
 - [ ] milk┃
 ```
 
 > enter "bread" enter
 
-```buffer
+```markdown
 - [ ] milk
 - [ ] bread
 - [ ] ┃
@@ -741,7 +741,7 @@ tags: core markup-task
 
 > deleteContentBackward "two loaves" indent
 
-```buffer
+```markdown
 - [ ] milk
 - [ ] bread
   - two loaves┃
@@ -749,7 +749,7 @@ tags: core markup-task
 
 > enter
 
-```buffer
+```markdown
 - [ ] milk
 - [ ] bread
   - two loaves
@@ -758,7 +758,7 @@ tags: core markup-task
 
 > enter
 
-```buffer
+```markdown
 - [ ] milk
 - [ ] bread
   - two loaves
@@ -773,10 +773,10 @@ undo brings it back ([Undo1](undo.md#undo1)). (No typing in between: apps disagr
 steps typed text is.)
 
 ```yaml
-tags: common
+tags: common markup-task
 ```
 
-```buffer
+```markdown
 # Work
 - email
 
@@ -787,7 +787,7 @@ tags: common
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 # Work
 - email
 - [x] ┃review
@@ -802,7 +802,7 @@ result: success
 
 > undo
 
-```buffer
+```markdown
 # Work
 - email
 
@@ -819,27 +819,27 @@ WorkFlowy and Dynalist): on an empty item, they are items in its place
 the item's text instead ([Paste1](paste.md#paste1)).
 
 ```yaml
-tags: core
+tags: common
 pasteLines: items
 clipboard: |
   bread
   butter
 ```
 
-```buffer
+```markdown
 - milk┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - milk
 - ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - milk
 - bread
 - butter┃
@@ -847,7 +847,7 @@ clipboard: |
 
 > cursorDocStart cursorLineBoundaryForward paste
 
-```buffer
+```markdown
 - milk
 - bread
 - butter┃
@@ -868,20 +868,303 @@ clipboard: |
   ```
 ````
 
-````buffer
+````markdown
 - example┃
 - next
 ````
 
 > paste "!"
 
-````buffer
+````markdown
 - example
   ```
   code!┃
   ```
 - next
 ````
+
+### Scenario26
+
+Folding a project away: Fold folds the item at the caret ([Fold9](fold.md#fold9)); Enter at its end
+makes its next sibling, after the hidden children ([Fold1](fold.md#fold1)); the folded item moved
+keeps its fold ([Fold4](fold.md#fold4)); Unfold opens it ([Fold12](fold.md#fold12)).
+
+```yaml
+tags: core
+```
+
+```markdown
+- Work┃
+  - email
+  - report
+- Home
+```
+
+> fold
+
+```markdown
+- Work┃⟦folded⟧
+  - email
+  - report
+- Home
+```
+
+> enter
+
+```markdown
+- Work⟦folded⟧
+  - email
+  - report
+- ┃
+- Home
+```
+
+> "Errands"
+
+```markdown
+- Work⟦folded⟧
+  - email
+  - report
+- Errands┃
+- Home
+```
+
+> cursorDocStart cursorLineBoundaryForward moveSubtreeDown
+
+```markdown
+- Errands
+- Work┃⟦folded⟧
+  - email
+  - report
+- Home
+```
+
+> unfold
+
+```markdown
+- Errands
+- Work┃
+  - email
+  - report
+- Home
+```
+
+### Scenario27
+
+Working inside one item: Zoom In zooms into the item at the caret ([Zoom6](zoom.md#zoom6)); Enter at
+the zoom root's end makes its first child, inside the zoom ([Zoom1](zoom.md#zoom1)); Zoom Out leaves
+it ([Zoom7](zoom.md#zoom7)).
+
+```yaml
+tags: core
+```
+
+```markdown
+- Work
+- Home┃
+  - plants
+```
+
+> zoomIn
+
+```markdown
+- Work
+- Home┃⟦zoomed⟧
+  - plants
+```
+
+> enter
+
+```markdown
+- Work
+- Home⟦zoomed⟧
+  - ┃◌
+  - plants
+```
+
+> "water"
+
+```markdown
+- Work
+- Home⟦zoomed⟧
+  - water┃
+  - plants
+```
+
+> zoomOut
+
+```markdown
+- Work
+- Home
+  - water┃
+  - plants
+```
+
+### Scenario28
+
+Filing two items at once: Shift-Down selects the item at the caret, then the next
+([Select11](select.md#select11)); Tab indents them together ([Indent9](indent.md#indent9)); Alt-Up
+moves them up together ([MoveUp10](move-subtree-up.md#moveup10)); Backspace deletes them
+([SubtreeEdit1](subtree-selection.md#subtreeedit1)), and Undo brings them back ([Undo1](undo.md#undo1)).
+
+```yaml
+tags: core
+```
+
+```markdown
+- Inbox
+  - post a letter
+- call Ann┃
+- buy milk
+- Home
+```
+
+> selectNodeDown selectNodeDown
+
+```markdown
+- Inbox
+  - post a letter
+- call Ann⟦selected⟧
+- buy milk⟦selected⟧
+- Home
+```
+
+> indent
+
+```markdown
+- Inbox
+  - post a letter
+  - call Ann⟦selected⟧
+  - buy milk⟦selected⟧
+- Home
+```
+
+> moveSubtreeUp
+
+```markdown
+- Inbox
+  - call Ann⟦selected⟧
+  - buy milk⟦selected⟧
+  - post a letter
+- Home
+```
+
+> deleteContentBackward
+
+```markdown
+- Inbox┃
+  - post a letter
+- Home
+```
+
+> undo
+
+```markdown
+- Inbox
+  - call Ann⟦selected⟧
+  - buy milk⟦selected⟧
+  - post a letter
+- Home
+```
+
+### Scenario29
+
+Moving an item with its children by cut and paste: the item selected is cut with them
+([SubtreeEdit6](subtree-selection.md#subtreeedit6)); pasted at the end of an item's text, it goes
+after that item ([PasteList1](paste-list.md#pastelist1)); pasted into an empty item, it takes its
+place ([PasteList5](paste-list.md#pastelist5)).
+
+```yaml
+tags: core
+```
+
+```markdown
+- Today┃
+- Inbox
+  - call Ann
+- Later
+```
+
+> cursorLineDown selectNodeDown
+
+```markdown
+- Today
+- Inbox⟦selected⟧
+  - call Ann
+- Later
+```
+
+> cut
+
+```markdown
+- Today┃
+- Later
+```
+
+> cursorDocStart cursorLineBoundaryForward paste
+
+```markdown
+- Today
+- Inbox
+  - call Ann┃
+- Later
+```
+
+> cursorLineDown cursorLineBoundaryForward enter
+
+```markdown
+- Today
+- Inbox
+  - call Ann
+- Later
+- ┃
+```
+
+> paste
+
+```markdown
+- Today
+- Inbox
+  - call Ann
+- Later
+- Inbox
+  - call Ann┃
+```
+
+### Scenario30
+
+Moving a word: a cut in an item's text takes it out ([Cut1](copy.md#cut1)); pasted at another item's
+end it is text there; a copy of a selection in an item's text is its text ([Copy1](copy.md#copy1)).
+
+```yaml
+tags: core
+```
+
+```markdown
+- call Ann «tomorrow»
+- buy milk
+```
+
+> cut
+
+```markdown
+- call Ann ┃
+- buy milk
+```
+
+> cursorLineDown cursorLineBoundaryForward " " paste
+
+```markdown
+- call Ann␠
+- buy milk tomorrow┃
+```
+
+> selectLineBoundaryBackward copy
+
+```markdown
+- call Ann␠
+- ┃«buy milk tomorrow»
+```
 
 ## Notes and sections
 
@@ -895,20 +1178,20 @@ paragraphs move among themselves ([MoveUp4](move-subtree-up.md#moveup4)).
 tags: core
 ```
 
-```buffer
+```markdown
 # Notes┃
 ```
 
 > enter "first idea"
 
-```buffer
+```markdown
 # Notes
 first idea┃
 ```
 
 > enter "second"
 
-```buffer
+```markdown
 # Notes
 first idea
 
@@ -917,7 +1200,7 @@ second┃
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 # Notes
 second┃
 
@@ -935,13 +1218,13 @@ lines together ([MoveUp4](move-subtree-up.md#moveup4)), and the move is undone.
 tags: core
 ```
 
-```buffer
+```markdown
 # Trip┃
 ```
 
 > enter "Pack light." enter "Book the train."
 
-```buffer
+```markdown
 # Trip
 Pack light.
 
@@ -950,7 +1233,7 @@ Book the train.┃
 
 > shiftEnter "Seat 42."
 
-```buffer
+```markdown
 # Trip
 Pack light.
 
@@ -960,7 +1243,7 @@ Seat 42.┃
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 # Trip
 Book the train.
 Seat 42.┃
@@ -970,7 +1253,7 @@ Pack light.
 
 > undo
 
-```buffer
+```markdown
 # Trip
 Pack light.
 
@@ -989,13 +1272,13 @@ Splitting a paragraph and joining it back, from either side: Enter makes two par
 tags: core
 ```
 
-```buffer
+```markdown
 one┃two
 ```
 
 > enter
 
-```buffer
+```markdown
 one
 
 ┃two
@@ -1003,13 +1286,13 @@ one
 
 > deleteContentBackward
 
-```buffer
+```markdown
 one┃two
 ```
 
 > enter cursorDocStart cursorLineBoundaryForward
 
-```buffer
+```markdown
 one┃
 
 two
@@ -1017,7 +1300,7 @@ two
 
 > deleteContentForward
 
-```buffer
+```markdown
 one┃two
 ```
 
@@ -1030,13 +1313,13 @@ glues the sentences, the default's cost ([Enter44](enter.md#enter44)).
 tags: core
 ```
 
-```buffer
+```markdown
 One.┃ Two.
 ```
 
 > enter
 
-```buffer
+```markdown
 One.
 
 ┃Two.
@@ -1044,7 +1327,7 @@ One.
 
 > deleteContentBackward
 
-```buffer
+```markdown
 One.┃Two.
 ```
 
@@ -1058,7 +1341,7 @@ Reordering sections: a heading moves with its section, past one of its level and
 tags: core
 ```
 
-```buffer
+```markdown
 # Work┃
 
 - email
@@ -1070,7 +1353,7 @@ tags: core
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 # Home
 
 - plants
@@ -1082,7 +1365,7 @@ tags: core
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 # Work┃
 
 - email
@@ -1100,23 +1383,23 @@ longer needed (`2.` can't interrupt the paragraph) and goes; undo takes each ste
 ([Undo1](undo.md#undo1)).
 
 ```yaml
-tags: common
+tags: rare
 ```
 
-```buffer
+```markdown
 # Plan┃2. draft
 ```
 
 > enter "revise "
 
-```buffer
+```markdown
 # Plan
 revise ┃2\̬. draft
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 # Plan
 revise 
 ┃2. draft
@@ -1124,7 +1407,7 @@ revise
 
 > undo undo undo
 
-```buffer
+```markdown
 # Plan┃2. draft
 ```
 
@@ -1138,7 +1421,7 @@ a marker of its own ([Typing3](typing.md#typing3)).
 tags: common free-form
 ```
 
-```buffer
+```markdown
 Shopping:
 ┃milk
 bread
@@ -1146,7 +1429,7 @@ bread
 
 > "- "
 
-```buffer
+```markdown
 Shopping:
 - ┃milk
 bread
@@ -1154,7 +1437,7 @@ bread
 
 > cursorLineDown cursorLineBoundaryBackward "- "
 
-```buffer
+```markdown
 Shopping:
 - milk
 - ┃bread
@@ -1170,7 +1453,7 @@ the item above.
 tags: common free-form
 ```
 
-```buffer
+```markdown
 - [ ] milk
 - [ ] bread
   - two loaves
@@ -1179,7 +1462,7 @@ tags: common free-form
 
 > enter "Shop closes at six."
 
-```buffer
+```markdown
 - [ ] milk
 - [ ] bread
   - two loaves

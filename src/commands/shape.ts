@@ -36,7 +36,9 @@ export function shapeOf(view: OurusView, selection: OurusSelection): SelectionSh
   }
   const line = doc.lineAt(from);
   const at = view.locate(from);
-  const owner = from === line.from && at.zone !== 'text' && at.zone !== 'frame' ? doc.rowOwner(line.index) : null;
+  // (a quote's `>` that is its text's frame too: markup before the text, as a marker)
+  const markup = at.zone === 'frame' ? at.part === 'quote' : at.zone !== 'text';
+  const owner = from === line.from && markup ? doc.rowOwner(line.index) : null;
   return owner ? { kind: 'line', id: owner.id, up } : null;
 }
 
@@ -52,10 +54,12 @@ export function reshaped(outcome: OurusResult | null, shape: SelectionShape | nu
   const doc = view.doc;
   const sel = outcome.selection;
   if (shape.kind === 'line') {
-    const node = doc.node(shape.id);
+    const mapped = map(shape.id);
+    const node = mapped === undefined ? undefined : doc.node(mapped);
     if (!node) return outcome;
     const from = doc.mdTree.starts[node.startLine]!;
-    const to = Math.max(sel.anchor, sel.head);
+    // (the end that followed its text; the other, at the line's start, went through a line written anew)
+    const to = shape.up ? sel.anchor : sel.head;
     if (to <= from) return outcome;
     return new OurusSuccess({ ...outcome, selection: shape.up ? { anchor: to, head: from } : { anchor: from, head: to } });
   }

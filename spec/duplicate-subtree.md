@@ -32,7 +32,7 @@ A copy goes below, the caret in the copy.
 tags: common
 ```
 
-```buffer
+```markdown
 - a┃
   - b
 - c
@@ -40,7 +40,7 @@ tags: common
 
 > duplicateSubtree
 
-```buffer
+```markdown
 - a
   - b
 - a┃
@@ -56,14 +56,14 @@ Ordered items renumber, and deleting the copy gives the list back.
 tags: common
 ```
 
-```buffer
+```markdown
 1. a┃
 2. b
 ```
 
 > duplicateSubtree
 
-```buffer
+```markdown
 1. a
 2. a┃
 3. b
@@ -71,7 +71,7 @@ tags: common
 
 > deleteSubtree
 
-```buffer
+```markdown
 1. a┃
 2. b
 ```
@@ -84,21 +84,21 @@ Selected nodes are copied together, below the last of them, and the selection go
 tags: common
 ```
 
-```buffer
+```markdown
 - a
-- ««b
-- c»»
+- b⟦selected⟧
+- c⟦selected⟧
 - d
 ```
 
 > duplicateSubtree
 
-```buffer
+```markdown
 - a
 - b
 - c
-- ««b
-- c»»
+- b⟦selected⟧
+- c⟦selected⟧
 - d
 ```
 
@@ -111,7 +111,7 @@ one. Refused.
 tags: rare free-form
 ```
 
-```buffer
+```markdown
     ┃code
 
 p
@@ -123,7 +123,7 @@ p
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
     ┃code
 
 p
@@ -141,7 +141,7 @@ flavor: gfm
 quotes: container
 ```
 
-```buffer
+```markdown
 > q┃
 | a |
 |---|
@@ -149,7 +149,7 @@ quotes: container
 
 > duplicateSubtree
 
-```buffer
+```markdown
 > q
 | a |
 |---|
@@ -166,10 +166,10 @@ section, the copied paragraph into that section, under another parent than its o
 `deleteSubtree` couldn't take back copies with two parents. Refused.
 
 ```yaml
-tags: rare free-form
+tags: rare free-form markup-heading
 ```
 
-```buffer
+```markdown
 «p
 #» H
 
@@ -182,7 +182,7 @@ x
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 «p
 #» H
 
@@ -195,17 +195,17 @@ definition was taken from: the copy is written without the indentation, which is
 its own line would make code.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 [a]: /u
 ┃    code
 ```
 
 > duplicateSubtree
 
-```buffer
+```markdown
 [a]: /u
     code
 
@@ -221,7 +221,7 @@ typing can't break its fence.
 tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 ┃```
 x
 ```
@@ -229,7 +229,7 @@ x
 
 > duplicateSubtree
 
-````buffer
+````markdown
 ```
 x
 ```
@@ -248,7 +248,7 @@ tags: rare markup-fence
 autoClose: []
 ```
 
-````buffer
+````markdown
 ```
 code┃
 ````
@@ -259,7 +259,7 @@ code┃
 result: rejected not-expressible
 ```
 
-````buffer
+````markdown
 ```
 code┃
 ````
@@ -270,17 +270,17 @@ An empty item with children duplicated: the copy is written as its original is, 
 and its children.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - ┃
   - a
 ```
 
 > duplicateSubtree
 
-```buffer
+```markdown
 -␠
   - a
 - ┃
@@ -295,20 +295,20 @@ A subtree selection (whole lines, to the start of the next line): the copies sel
 tags: common
 ```
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
   - c
 - d
 ```
 
 > duplicateSubtree
 
-```buffer
+```markdown
 - a
 - b
   - c
-- ««b»»
+- b⟦selected⟧
   - c
 - d
 ```
@@ -319,10 +319,10 @@ Whole lines from column 0 to the last line's end, before its line break: the cop
 shape.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 «- b
   - c»
@@ -331,7 +331,7 @@ tags: edge
 
 > duplicateSubtree
 
-```buffer
+```markdown
 - a
 - b
   - c
@@ -350,7 +350,7 @@ elsewhere, as any).
 tags: rare
 ```
 
-```buffer
+```markdown
 a┃
 
 ◌
@@ -358,7 +358,7 @@ a┃
 
 > duplicateSubtree
 
-```buffer
+```markdown
 a
 
 a┃

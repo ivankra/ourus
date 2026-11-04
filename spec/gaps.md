@@ -39,7 +39,7 @@ Gaps travel with their nodes: `a`'s three blank lines stay below `a`, and `b`'s 
 tags: core
 ```
 
-```buffer
+```markdown
 a
 
 b┃
@@ -49,7 +49,7 @@ c
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 b┃
 
 a
@@ -65,7 +65,7 @@ Moving down carries the gap too.
 tags: core
 ```
 
-```buffer
+```markdown
 a┃
 
 b
@@ -75,7 +75,7 @@ c
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 b
 
 a┃
@@ -91,7 +91,7 @@ A section carries its last line's gap.
 tags: common
 ```
 
-```buffer
+```markdown
 # A
 text
 
@@ -103,7 +103,7 @@ more
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 # B┃
 more
 
@@ -121,7 +121,7 @@ An item carries its gap inside a loose list.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
 
 - b┃
@@ -130,7 +130,7 @@ tags: common
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - b┃
 - a
 
@@ -145,7 +145,7 @@ A subtree's gap is its last descendant's.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
   - a1
 
@@ -155,7 +155,7 @@ tags: common
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - b┃
 - a
   - a1
@@ -169,10 +169,10 @@ Sections written without blank lines stay without: a blank line is added only wh
 one to keep the two apart.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 ## A┃
 a
 ## B
@@ -182,7 +182,7 @@ b
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 ## B
 b
 ## A┃
@@ -196,10 +196,10 @@ A paragraph landing above another one is set off by a blank line: without it, `x
 as one paragraph.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-````buffer
+````markdown
 x┃
 ```
 code
@@ -210,7 +210,7 @@ q
 
 > moveSubtreeDown
 
-````buffer
+````markdown
 ```
 code
 ```
@@ -229,7 +229,7 @@ it would loosen the list, and `para` would continue `a` lazily.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
 - b┃
 
@@ -238,7 +238,7 @@ para
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - b┃
 - a
 
@@ -253,7 +253,7 @@ The gap ending a parent's children stays at their end.
 tags: common
 ```
 
-```buffer
+```markdown
 - p
   - x
 
@@ -264,7 +264,7 @@ tags: common
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - p
   - y┃
 
@@ -278,10 +278,10 @@ tags: common
 The document's trailing blank lines stay at its end.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 a
 
 b┃
@@ -290,7 +290,7 @@ b┃
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 b┃
 
 a
@@ -302,10 +302,10 @@ a
 The preamble stays at the top.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 
 a┃
 
@@ -316,7 +316,7 @@ c
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 
 b
 
@@ -335,7 +335,7 @@ Enter at the end of a heading keeps its gap below the new paragraph.
 tags: core
 ```
 
-```buffer
+```markdown
 ## S┃
 
 p
@@ -343,7 +343,7 @@ p
 
 > enter
 
-```buffer
+```markdown
 ## S
 ┃◌
 
@@ -361,7 +361,7 @@ clipboard: |
   - b
 ```
 
-```buffer
+```markdown
 - t┃
 
 para
@@ -369,7 +369,7 @@ para
 
 > paste
 
-```buffer
+```markdown
 - t
 - a
 - b┃
@@ -388,7 +388,7 @@ and the caret with it.
 tags: common
 ```
 
-```buffer
+```markdown
 a
 
 b
@@ -399,7 +399,7 @@ c
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 b
 ┃
 
@@ -419,7 +419,7 @@ indent the blank line itself.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
 - b
 ┃
@@ -428,7 +428,7 @@ tags: common
 
 > indent
 
-```buffer
+```markdown
 - a
   - b
 ┃
@@ -444,7 +444,7 @@ Shift-Tab on a blank line outdents the node above, for the same reasons
 tags: common
 ```
 
-```buffer
+```markdown
 - a
   - b
 ┃
@@ -453,7 +453,7 @@ tags: common
 
 > outdent
 
-```buffer
+```markdown
 - a
 - b
 ┃
@@ -465,10 +465,10 @@ tags: common
 A blank line between a node's text and its first child is the node's.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 ┃
   b
@@ -477,7 +477,7 @@ tags: edge
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 - c
 - a
 ┃
@@ -491,10 +491,10 @@ on, so ourus refuses them, rather than leave them to the host, whose Tab there w
 code.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 ┃
 
 a
@@ -506,7 +506,7 @@ a
 result: rejected nothing-above
 ```
 
-```buffer
+```markdown
 ┃
 
 a
@@ -518,7 +518,7 @@ a
 result: rejected nothing-above
 ```
 
-```buffer
+```markdown
 ┃
 
 a
@@ -530,11 +530,11 @@ In the Obsidian flavor frontmatter is the preamble, no node, so Enter in it is t
 (CommonMark and GFM have no frontmatter: there `a: b` / `---` is a setext heading.)
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 ---
 a: b┃
 ---
@@ -543,7 +543,7 @@ a: b┃
 
 > enter
 
-```buffer
+```markdown
 ---
 a: b
 ┃

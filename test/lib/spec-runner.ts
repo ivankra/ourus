@@ -2,20 +2,20 @@
 // doesn't do what the example draws: for the spec's tests, and for the SxS, whose heatmap has ourus.
 
 import assert from 'node:assert/strict';
-import { executeCommand, type DropMap, type OurusSelection, OurusRejected, OurusSuccess } from '../src/commands/index.ts';
-import { OurusConfig } from '../src/config.ts';
-import type { OurusDoc, OurusNode } from '../src/doc/index.ts';
-import { OurusView } from '../src/view/index.ts';
-import { docOf, drawDoc, drawnSelection, drawOutline, drawsCaret, drawText, labelGlyph, labelNumber, nodesOf, readDrawing, readLabels, readText, withoutAuto, withoutCaret } from './drawing.ts';
-import { isAction, play, type Played } from './player.ts';
-import { CLIPBOARD_TYPES, specConfig, type Clipboard, type ClipboardType, type SpecTest } from './specfile.ts';
-import { statusOf } from './drawing.ts';
+import { executeCommand, type DropMap, type OurusSelection, OurusRejected, OurusSuccess } from '../../src/commands/index.ts';
+import { OurusConfig } from '../../src/config.ts';
+import type { OurusDoc, OurusNode } from '../../src/doc/index.ts';
+import { OurusView } from '../../src/view/index.ts';
+import { parseWithMarks, drawDoc, drawnSelection, drawnView, drawOutline, drawsCaret, drawText, labelGlyph, labelNumber, allNodes, readDrawing, readLabels, readText, withoutAuto, withoutCaret, type DrawnView } from './drawn-states.ts';
+import { isAction, playActions, type PlayedState } from './action-player.ts';
+import { CLIPBOARD_TYPES, specConfig, type Clipboard, type ClipboardType, type SpecTest } from './spec-reader.ts';
+import { resultStatus } from './drawn-states.ts';
 
 /** A `result` key's form of the last action's outcome. */
-export function outcome(state: Played): string {
+export function describeOutcome(state: PlayedState): string {
   const r = state.last;
   if (!r) return 'none (the last action is not an ourus command)';
-  return r instanceof OurusRejected ? `rejected ${r.reason}` : statusOf(r);
+  return r instanceof OurusRejected ? `rejected ${r.reason}` : resultStatus(r);
 }
 
 /** A clipboard with its formats in one order (`CLIPBOARD_TYPES`'), whatever order a case wrote them in: a key to compare by. */
@@ -31,13 +31,13 @@ const drawnAs = (clipboard: Clipboard, drawn: Clipboard): Record<string, string 
   Object.fromEntries(Object.keys(drawn).map((type) => [type, clipboard[type as ClipboardType] === undefined ? null : drawText(clipboard[type as ClipboardType]!)]));
 
 // a drawn selection without a caret glyph is forward; `␠` is a space, drawn where one would be hard to see
-export const normalize = (drawn: string): string => drawn.replace(/»┃/g, '»').replace(/␠/g, ' ');
+export const normalizeDrawing = (drawn: string): string => drawn.replace(/»┃/g, '»').replace(/␠/g, ' ');
 
 /** The flavors an example runs in: the one it names, or all (most behavior doesn't depend on it). */
-export const flavorsOf = (t: SpecTest): readonly OurusConfig['flavor'][] => (t.options.flavor ? [t.options.flavor as OurusConfig['flavor']] : OurusConfig.values.flavor);
+export const specTestFlavors = (t: SpecTest): readonly OurusConfig['flavor'][] => (t.options.flavor ? [t.options.flavor as OurusConfig['flavor']] : OurusConfig.values.flavor);
 
 /** The nodes that start on line `i` of `doc`, the outermost first. */
-const startingOn = (doc: OurusDoc, i: number): OurusNode[] => nodesOf(doc).filter((n) => n.startLine === i).sort((a, b) => a.depth - b.depth);
+const startingOn = (doc: OurusDoc, i: number): OurusNode[] => allNodes(doc).filter((n) => n.startLine === i).sort((a, b) => a.depth - b.depth);
 
 /**
  * A case's node labels (`①`, spec/README.md), bound to ids as its steps go: a start's label names the
@@ -45,7 +45,7 @@ const startingOn = (doc: OurusDoc, i: number): OurusNode[] => nodesOf(doc).filte
  * least the document's next id before the step), bound then. One label on a line names the innermost
  * node starting there, a second before it the one outside it.
  */
-export class Labels {
+export class NodeLabels {
   readonly #bound = new Map<number, number>();
 
   /** The labels a drawing has (`readLabels`), checked against `doc` and bound; `before`, the next id before the step (null at the start). A problem, or null. */
@@ -87,30 +87,31 @@ export class Labels {
 }
 
 /** Where example `t` starts, in `flavor`, with `config` over the example's options. */
-export function startOf(t: SpecTest, flavor: OurusConfig['flavor'], config: Partial<OurusConfig> = {}): Played {
+export function specTestStart(t: SpecTest, flavor: OurusConfig['flavor'], config: Partial<OurusConfig> = {}): PlayedState {
   const start = readDrawing(t.initial.buffer);
-  const doc = docOf(start.text, start.placeholders, { flavor, ...specConfig(t.options), ...config }, start.auto);
+  const doc = parseWithMarks(start.text, start.placeholders, { flavor, ...specConfig(t.options), ...config }, start.auto);
   // (the start's labels, for a drop that names one)
-  const labels = new Labels();
+  const labels = new NodeLabels();
   labels.check(doc, start.labels, null);
-  const viewed = viewOf(t, doc, labels.ids);
+  const viewed = specTestView(t, doc, start.view);
   return { view: viewed, selection: drawnSelection(viewed, start), clipboard: readClipboard(t.initial.clipboard), drop: start.drop, labels: labels.ids };
 }
 
-/** `doc`, a start of example `t`, with the view its config block gives (`folded:`, `zoom:`), by the start's labels (`labels`: a label's number to its node's id). */
-export function viewOf(t: SpecTest, doc: OurusDoc, labels: ReadonlyMap<number, number>): OurusView {
-  const ids = (drawn: string): number[] =>
-    [...drawn.replace(/[\s,]/g, '')].map((glyph) => {
-      const id = labels.get(labelNumber(glyph));
-      if (id === undefined) throw new Error(`${t.file}:${t.line}: ${glyph}, in the view, labels no node in the start`);
-      return id;
-    });
-  const folded = t.view.folded === undefined ? [] : ids(t.view.folded);
-  const zoom = t.view.zoom === undefined ? null : ids(t.view.zoom)[0]!;
-  const viewed = OurusView.of(doc, { folded }).withZoom(zoom);
-  const unfolding = folded.filter((id) => !viewed.folded.has(id));
-  if (unfolding.length) throw new Error(`${t.file}:${t.line}: folded: a node with nothing to fold (id ${unfolding.join(', ')})`);
-  return viewed;
+/** Which of a view's marks example `t`'s buffers draw (`⟦folded⟧`, `⟦zoomed⟧`): a case with a view. */
+export function specTestViewMarks(t: SpecTest): { folded: boolean; zoom: boolean } {
+  const buffers = [t.initial.buffer, ...t.steps.map((s) => s.expect.buffer ?? '')];
+  return { folded: buffers.some((b) => b.includes('⟦folded⟧')), zoom: buffers.some((b) => b.includes('⟦zoomed⟧')) };
+}
+
+/** `doc`, a start of example `t`, with the view its buffer draws (`drawn`: `⟦folded⟧`, `⟦zoomed⟧`, by line). */
+export function specTestView(t: SpecTest, doc: OurusDoc, drawn: DrawnView): OurusView {
+  let marked: { folded: number[]; zoom: number | null };
+  try {
+    marked = drawnView(doc, drawn);
+  } catch (e) {
+    throw new Error(`${t.file}:${t.line}: ${(e as Error).message}`);
+  }
+  return OurusView.of(doc, { folded: marked.folded }).withZoom(marked.zoom);
 }
 
 /**
@@ -118,7 +119,7 @@ export function viewOf(t: SpecTest, doc: OurusDoc, labels: ReadonlyMap<number, n
  * with something to hide, and, zoomed, an applied command keeping the zoom's invariant (which the
  * command checked itself: this checks the check). An undo and a redo, the host's, aren't checked.
  */
-export function viewHolds(prior: OurusView, state: Played, at: string): void {
+export function assertViewHolds(prior: OurusView, state: PlayedState, at: string): void {
   const { view, selection } = state;
   const doc = view.doc;
   assert.deepEqual(view.visibleSelection(selection), selection, `${at}: the selection is in hidden lines`);
@@ -130,9 +131,9 @@ export function viewHolds(prior: OurusView, state: Played, at: string): void {
 }
 
 /** Plays example `t` in `flavor`, asserting each step's buffer, clipboard and result as drawn. */
-export function run(t: SpecTest, flavor: OurusConfig['flavor']): void {
-  let state = startOf(t, flavor);
-  const labels = new Labels();
+export function runSpecTest(t: SpecTest, flavor: OurusConfig['flavor']): void {
+  let state = specTestStart(t, flavor);
+  const labels = new NodeLabels();
   const named = labels.check(state.view.doc, readDrawing(t.initial.buffer).labels, null);
   assert.equal(named, null, `${t.file}:${t.line} (${flavor}): the start's labels`);
   state = { ...state, labels: labels.ids };
@@ -144,34 +145,27 @@ export function run(t: SpecTest, flavor: OurusConfig['flavor']): void {
     const before = state.view.doc.nextId;
     for (const action of step.actions) {
       const prior = state.view;
-      state = play(state, [action]);
+      state = playActions(state, [action]);
       // write-failed is a bug, never an outcome: a later action can't hide one
       assert.ok(!(state.last instanceof OurusRejected) || state.last.reason !== 'write-failed', `${at}: ${action} failed to write${state.last instanceof OurusRejected && state.last.detail ? `: ${state.last.detail}` : ''}`);
-      viewHolds(prior, state, `${at}: ${action}`);
+      assertViewHolds(prior, state, `${at}: ${action}`);
     }
     const { clipboard, result } = step.expect;
     const why = state.last instanceof OurusRejected && state.last.detail ? ` (${state.last.reason}: ${state.last.detail})` : '';
-    if (result !== undefined) assert.equal(outcome(state), result, `${at}: result${why}`);
+    if (result !== undefined) assert.equal(describeOutcome(state), result, `${at}: result${why}`);
     if (step.expect.buffer !== undefined) {
       const { drawn: buffer, labels: own } = readLabels(step.expect.buffer);
       // (a buffer that draws no caret doesn't check it)
       const got = drawsCaret(buffer) ? drawDoc(state.view, state.selection) : withoutCaret(drawDoc(state.view, state.selection));
-      assert.equal(normalize(got), normalize(buffer), `${at}: buffer${why}`);
+      assert.equal(normalizeDrawing(got), normalizeDrawing(buffer), `${at}: buffer${why}`);
       assert.equal(labels.check(state.view.doc, own, before), null, `${at}: labels`);
     }
     if (clipboard !== undefined) assert.deepEqual(drawnAs(state.clipboard, clipboard), clipboard, `${at}: clipboard`);
     if (step.expect.outline !== undefined) assert.equal(drawOutline(state.view.doc), step.expect.outline, `${at}: outline`);
-    // the view after the step, by label: a label it names is bound by now (the start's, or a buffer's)
-    const glyphs = (ids: Iterable<number>): string => {
-      const named = new Map([...labels.ids].map(([label, id]) => [id, label]));
-      return [...ids].map((id) => (named.has(id) ? labelGlyph(named.get(id)!) : `node ${id}`)).sort().join(' ') || 'none';
-    };
-    if (step.expect.folded !== undefined) assert.equal(glyphs(state.view.folded), step.expect.folded.trim().split(/[\s,]+/).sort().join(' '), `${at}: folded`);
-    if (step.expect.zoom !== undefined) assert.equal(state.view.zoom === null ? 'none' : glyphs([state.view.zoom]), step.expect.zoom.trim(), `${at}: zoom`);
     const { dragNodes, dropPoints } = step.expect;
     if (dragNodes === undefined && dropPoints === undefined) continue;
     const dropMap = state.last instanceof OurusSuccess ? state.last.dropMap : undefined;
-    assert.ok(dropMap, `${at}: dragNodes and dropPoints are a pickup's, and the last action picked up nothing (${outcome(state)})`);
+    assert.ok(dropMap, `${at}: dragNodes and dropPoints are a pickup's, and the last action picked up nothing (${describeOutcome(state)})`);
     if (dragNodes !== undefined) {
       const named = new Map([...labels.ids].map(([label, id]) => [id, label]));
       assert.equal(dropMap.nodes.map((id) => (named.has(id) ? labelGlyph(named.get(id)!) : `node ${id}`)).join(' '), dragNodes.trim().split(/\s+/).join(' '), `${at}: dragNodes`);
@@ -215,12 +209,12 @@ export function drawDropPoints(view: OurusView, dropMap: DropMap, selection: Our
  * (a copy's). For the SxS, to tell whether an app's own option values change the example's outcome.
  */
 export function drawnSteps(t: SpecTest, flavor: OurusConfig['flavor'], config: Partial<OurusConfig> = {}): { buffer: string; clipboard?: string; view: RowView }[] {
-  let state = startOf(t, flavor, config);
+  let state = specTestStart(t, flavor, config);
   return t.steps.map((step) => {
-    state = play(state, step.actions);
+    state = playActions(state, step.actions);
     const text = state.clipboard['text/plain'];
     // (an app shows no auto marks: the SxS's)
-    return { buffer: withoutAuto(normalize(drawDoc(state.view, state.selection))), ...(text !== undefined && { clipboard: text }), view: rowView(state.view) };
+    return { buffer: withoutAuto(normalizeDrawing(drawDoc(state.view, state.selection))), ...(text !== undefined && { clipboard: text }), view: rowView(state.view) };
   });
 }
 
@@ -238,9 +232,9 @@ export function rowView(view: OurusView): RowView {
 }
 
 /** Whether the core does what example `t` draws, in every flavor it runs in. */
-export function passes(t: SpecTest): boolean {
+export function specTestPasses(t: SpecTest): boolean {
   try {
-    for (const flavor of flavorsOf(t)) run(t, flavor);
+    for (const flavor of specTestFlavors(t)) runSpecTest(t, flavor);
     return true;
   } catch {
     return false;

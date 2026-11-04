@@ -45,7 +45,8 @@ export class ChangeSet {
 
   /** `changes` to a text of length `length`, normalized. */
   static of(changes: readonly ChangeSpec[], length: number): ChangeSet {
-    const sorted = normalizeChanges(changes);
+    // (each change copied: the caller's objects are theirs to change)
+    const sorted = normalizeChanges(changes).map(({ from, to, insert }) => ({ from, to, insert }));
     if (sorted.length && sorted[sorted.length - 1]!.to > length) throw new RangeError('change out of range');
     return new ChangeSet(sorted, length);
   }
@@ -365,11 +366,14 @@ export function composeChanges(text: string, a: readonly ChangeSpec[], b: readon
 }
 
 /**
- * The change turning `before` into `after` that replaces whole lines, between the lines they
+ * The changes turning `before` into `after` that replace whole lines, between the lines they
  * start and end with in common: a line added between two others is an insertion at a line
- * start, not one that seems to begin inside the line below it. Empty when the texts are equal.
+ * start, not one that seems to begin inside the line below it. Between those, the lines the two
+ * have in common in order kept too, each change a run of lines between them (a text given whole,
+ * a node untouched between two edits keeps its id); with `span`, the one change over all of it.
+ * Empty when the texts are equal.
  */
-export function diffLines(before: string, after: string): ChangeSpec[] {
+export function diffLines(before: string, after: string, { span = false }: { span?: boolean } = {}): ChangeSpec[] {
   if (before === after) return [];
   // (where a line starts in `s`: after a line break, but not between a CRLF's two halves)
   const lineStart = (s: string, at: number): boolean => {
@@ -385,7 +389,79 @@ export function diffLines(before: string, after: string): ChangeSpec[] {
   let end = 0;
   while (end < shorter - start && before.charCodeAt(before.length - 1 - end) === after.charCodeAt(after.length - 1 - end)) end++;
   while (end > 0 && before.length - end > start && !lineStart(before, before.length - end)) end--;
-  return [{ from: start, to: before.length - end, insert: after.slice(start, after.length - end) }];
+  // between, line by line: the lines both keep unchanged, each change a run of lines between them
+  // (an untouched node between two edits keeps its identity)
+  const a = linesIn(before.slice(start, before.length - end));
+  const b = linesIn(after.slice(start, after.length - end));
+  const kept = span ? null : commonLines(a, b);
+  if (!kept) return [{ from: start, to: before.length - end, insert: after.slice(start, after.length - end) }];
+  const changes: ChangeSpec[] = [];
+  let i = 0;
+  let j = 0;
+  let from = start;
+  let to = start;
+  let insert = '';
+  for (const [ki, kj] of [...kept, [a.length, b.length] as const]) {
+    while (i < ki) to += a[i++]!.length;
+    while (j < kj) insert += b[j++]!;
+    if (from !== to || insert) changes.push({ from, to, insert });
+    if (ki < a.length) to += a[i++]!.length;
+    j++;
+    from = to;
+    insert = '';
+  }
+  return changes;
+}
+
+/** `s`'s lines, each with its line ending (a CRLF one); the last without where `s` doesn't end with one. */
+function linesIn(s: string): string[] {
+  return s.match(/[^\r\n]*(?:\r\n|\n|\r)|[^\r\n]+$/g) ?? [];
+}
+
+/** The most edits `commonLines` looks for: past them, the two are one change. */
+const MAX_LINE_EDITS = 256;
+
+/**
+ * The pairs of indexes of lines `a` and `b` have in common, a longest such run in order (Myers'
+ * diff); null where they have none, or differ in more than `MAX_LINE_EDITS` lines.
+ */
+function commonLines(a: readonly string[], b: readonly string[]): [number, number][] | null {
+  const n = a.length;
+  const m = b.length;
+  if (!n || !m) return null;
+  const max = Math.min(n + m, MAX_LINE_EDITS);
+  const offset = max + 1;
+  const v = new Int32Array(2 * max + 3);
+  const trace: Int32Array[] = [];
+  for (let d = 0; d <= max; d++) {
+    trace.push(v.slice());
+    for (let k = -d; k <= d; k += 2) {
+      let x = k === -d || (k !== d && v[offset + k - 1]! < v[offset + k + 1]!) ? v[offset + k + 1]! : v[offset + k - 1]! + 1;
+      let y = x - k;
+      while (x < n && y < m && a[x] === b[y]) x++, y++;
+      v[offset + k] = x;
+      if (x >= n && y >= m) {
+        // back through the trace: each diagonal step a line kept
+        const pairs: [number, number][] = [];
+        let cx = n;
+        let cy = m;
+        for (let e = d; e > 0; e--) {
+          const pv = trace[e]!;
+          const ck = cx - cy;
+          const pk = ck === -e || (ck !== e && pv[offset + ck - 1]! < pv[offset + ck + 1]!) ? ck + 1 : ck - 1;
+          const px = pv[offset + pk]!;
+          const py = px - pk;
+          while (cx > px && cy > py) pairs.push([--cx, --cy]);
+          cx = px;
+          cy = py;
+        }
+        while (cx > 0 && cy > 0) pairs.push([--cx, --cy]);
+        pairs.reverse();
+        return pairs.length ? pairs : null;
+      }
+    }
+  }
+  return null;
 }
 
 /** The change turning `before` into `after`, trimmed to the span that differs; none when they are equal. */

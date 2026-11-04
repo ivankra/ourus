@@ -14,21 +14,21 @@ Undo and redo of a command bring back the text and the caret.
 tags: core
 ```
 
-```buffer
+```markdown
 - a
 - b┃
 ```
 
 > indent undo
 
-```buffer
+```markdown
 - a
 - b┃
 ```
 
 > redo
 
-```buffer
+```markdown
 - a
   - b┃
 ```
@@ -43,7 +43,7 @@ may be removed.
 tags: common free-form
 ```
 
-```buffer
+```markdown
 a
 ┃
 b
@@ -51,7 +51,7 @@ b
 
 > "x"
 
-```buffer
+```markdown
 a
 x┃
 b
@@ -59,7 +59,7 @@ b
 
 > undo
 
-```buffer
+```markdown
 a
 ┃
 b
@@ -67,7 +67,7 @@ b
 
 > cursorDocEnd
 
-```buffer
+```markdown
 a
 
 b
@@ -83,27 +83,27 @@ its Outliner and SilverBullet do. Left again, the empty item stays, after an ite
 tags: common
 ```
 
-```buffer
+```markdown
 - a┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 - ┃
 ```
 
 > indent
 
-```buffer
+```markdown
 - a
   - ┃◌
 ```
 
 > cursorDocStart cursorLineBoundaryForward
 
-```buffer
+```markdown
 - a┃
 
   - 
@@ -111,14 +111,14 @@ tags: common
 
 > undo
 
-```buffer
+```markdown
 - a
 - ┃
 ```
 
 > cursorDocStart cursorLineBoundaryForward
 
-```buffer
+```markdown
 - a┃
 - 
 ```
@@ -131,34 +131,34 @@ Redo of a command brings its placeholder back too.
 tags: common
 ```
 
-```buffer
+```markdown
 - a┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 - ┃
 ```
 
 > indent
 
-```buffer
+```markdown
 - a
   - ┃◌
 ```
 
 > undo
 
-```buffer
+```markdown
 - a
 - ┃
 ```
 
 > redo
 
-```buffer
+```markdown
 - a
   - ┃◌
 ```
@@ -172,34 +172,34 @@ indent, and redo brings the placeholder back again.
 tags: common
 ```
 
-```buffer
+```markdown
 - a┃
 ```
 
 > enter indent "x"
 
-```buffer
+```markdown
 - a
   - x┃
 ```
 
 > undo
 
-```buffer
+```markdown
 - a
   - ┃◌
 ```
 
 > undo
 
-```buffer
+```markdown
 - a
 - ┃
 ```
 
 > redo
 
-```buffer
+```markdown
 - a
   - ┃◌
 ```

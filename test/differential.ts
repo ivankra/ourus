@@ -33,8 +33,7 @@ import { Worker, isMainThread, parentPort, workerData } from 'node:worker_thread
 import { join, resolve } from 'node:path';
 import { OurusConfig } from '../src/config.ts';
 import { lineSpan, mapPos, type ChangeSpec } from '../src/text/index.ts';
-import { readDrawing, readText } from './drawing.ts';
-import { readSpecFile, specConfig, specFiles } from './specfile.ts';
+import { readDrawing, readText, readSpecFile, specConfig, specFiles } from './lib/index.ts';
 import { OurusRejected, OurusSuccess } from '../src/commands/index.ts';
 
 const here = resolve(import.meta.dirname, '..');

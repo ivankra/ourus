@@ -2,12 +2,12 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { readSpec } from '../../test/specfile.ts';
+import { readSpec } from '../../test/lib/index.ts';
 import { resolveDrop } from './drag.ts';
 
 const F = '```';
 const drop = (buffer: string[], actions: string) => {
-  const [t] = readSpec('x.md', ['## A', '', `${F}yaml`, 'tags: edge', F, '', `${F}buffer`, ...buffer, F, '', `> ${actions}`, '', `${F}buffer`, '- x', F].join('\n'));
+  const [t] = readSpec('x.md', ['## A', '', `${F}yaml`, 'tags: rare', F, '', `${F}markdown`, ...buffer, F, '', `> ${actions}`, '', `${F}markdown`, '- x', F].join('\n'));
   return resolveDrop(t!, 'gfm');
 };
 

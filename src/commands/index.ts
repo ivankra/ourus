@@ -5,7 +5,7 @@
 
 import { OurusProse, blockIdsOf, checkBlockIds, textEnd, type OurusDoc, type OurusText } from '../doc/index.ts';
 import type { OurusView } from '../view/index.ts';
-import { composeChanges, trimMd } from '../text/index.ts';
+import { charAfter, charBefore, charStart, composeChanges, lineEnding, lineEndingBefore, trimMd } from '../text/index.ts';
 import { CommandContext, blockIdsDeclaredBy } from './context.ts';
 import { addBlockIdCommand, pasteKeepingNewBlockIds, removeBlockIdCommand } from './block-ids.ts';
 import { copyOrCutCommand, deleteSelected } from './copy.ts';
@@ -28,6 +28,7 @@ import { shiftEnterCommand } from './shift-enter.ts';
 import type { OurusCommand, OurusResult, OurusSelection } from './types.ts';
 import { insertTextCommand } from './typing.ts';
 import { clearZoomCommand, foldCommand, toggleFoldCommand, unfoldCommand, zoomInCommand, zoomOutCommand } from './view.ts';
+import { plainTextEdit } from './util.ts';
 import { zoomed } from './zoom.ts';
 import { OurusDeferred, OurusRejected, OurusSuccess } from './types.ts';
 
@@ -46,16 +47,30 @@ const HOST_HAS: ReadonlySet<OurusCommand['type']> = new Set(['enter', 'shiftEnte
  * refused as `unsupported`.
  */
 export function executeCommand(view: OurusView, command: OurusCommand, selection: OurusSelection): OurusResult {
+  try {
+    return commandAt(view, command, selection);
+  } catch (e) {
+    // (a document nested past what the commands' walks recurse through, which reading it doesn't:
+    // refused, as the writer refuses one it can't write)
+    if (e instanceof RangeError && /call stack/.test(e.message)) return new OurusRejected('write-failed', 'the document nests deeper than the commands go');
+    throw e;
+  }
+}
+
+/** `executeCommand`'s work. */
+function commandAt(view: OurusView, command: OurusCommand, given: OurusSelection): OurusResult {
   const doc = view.doc;
   const validPosition = (pos: number): boolean => Number.isInteger(pos) && pos >= 0 && pos <= doc.text.length;
-  if (!validPosition(selection.anchor) || !validPosition(selection.head)) return new OurusRejected('invalid-selection');
+  if (!validPosition(given.anchor) || !validPosition(given.head)) return new OurusRejected('invalid-selection');
+  const selection = SPLITS.has(command.type) ? wholeCharacters(doc.text, given) : given;
   // (a caret on a block-id line a text carries: its editing keys the host's under `markup: text`, else
   // at the end of the text)
   const at = selection.anchor === selection.head && !BLOCK_ID_COMMANDS.has(command.type) ? view.locate(selection.head) : null;
   // (or in a block id's name ending a text, or a paragraph of a quote read as an atom, or right after
   // it: before it, but its name the host's to edit under `markup: text`)
   // (a text that is only a block id has no end before it: `- ^x┃` is its end, Enter splitting after it)
-  const named = at && (at.zone === 'text' || at.zone === 'frame') && (at.text instanceof OurusProse || at.text.type === 'blockquote') ? at.text : null;
+  // (a quote atom's only where the flavor has block ids: elsewhere `^x` is its text: block-ids.test.ts)
+  const named = at && (at.zone === 'text' || at.zone === 'frame') && (at.text instanceof OurusProse || (at.text.type === 'blockquote' && doc.mdTree.flavor.has('blockIds'))) ? at.text : null;
   const head = (text: OurusText, from: number): string => (text instanceof OurusProse ? text.text.slice(text.textStart(0), from) : text.text.slice(0, from).replace(/^[ \t>]*/gm, ''));
   const ids = named ? blockIdsOf(named).flatMap((b) => (b.carried ? [] : [b])) : [];
   // (Backspace at the start of a block id on a line of its own, ending a text, or Delete at the end
@@ -74,7 +89,8 @@ export function executeCommand(view: OurusView, command: OurusCommand, selection
   // (but typing or pasting on the blank line right after the text, another blank line after it before
   // its block-id lines: a line of the text, the host's, as Shift-Enter leaves it)
   const caretLine = doc.lineAt(selection.head);
-  const nextBlank = caretLine.to < doc.text.length && doc.lineAt(caretLine.to + 1).to - doc.lineAt(caretLine.to + 1).from === 0;
+  const nextLine = caretLine.to < doc.text.length ? doc.lineAt(caretLine.to + lineEnding(doc.text, caretLine.to).length) : null;
+  const nextBlank = !!nextLine && nextLine.index > caretLine.index && nextLine.to === nextLine.from;
   const textLine = at?.zone === 'blockIdLine' && at.blank && INSERTS.has(command.type) && nextBlank && caretLine.index === doc.lineAt(doc.posOf(at.node, at.text.text.length)).index + 1;
   const line = at?.zone === 'blockIdLine' && !textLine ? at : inName && at && 'node' in at && 'text' in at ? { node: at.node, text: at.text, blank: true } : null;
   const end = !line ? -1 : name && inName ? doc.posOf(line.node, name.partFrom, -1) : doc.posOf(line.node, textEnd(line.text), -1);
@@ -90,9 +106,9 @@ export function executeCommand(view: OurusView, command: OurusCommand, selection
     // still, so what it would insert is inserted here, at the text's end; any other key refused)
     if (!line || !(result instanceof OurusDeferred)) return result;
     const inserted = command.type === 'insertText' || command.type === 'pastePlain' ? command.text : command.type === 'paste' ? command.clipboard['text/plain'] : undefined;
-    // (Backspace in or after a block id ending a text, the character before it: a code point, not
-    // half of one; not on a block-id line, which the text's end is lines above)
-    const before = inName && command.type === 'deleteContentBackward' && end > 0 && doc.text[end - 1] !== '\n' ? [...doc.text.slice(Math.max(0, end - 2), end)].pop()!.length : 0;
+    // (Backspace in or after a block id ending a text, the character before it, a grapheme; not on a
+    // block-id line, which the text's end is lines above)
+    const before = inName && command.type === 'deleteContentBackward' && end > 0 && !lineEndingBefore(doc.text, end) ? end - charBefore(doc.text, end) : 0;
     if (inserted === undefined && !before) return new OurusRejected('not-expressible', "the caret is on a block-id line, and the key's default would edit it: it acts at the end of the text");
     // (and the blank before a block id ending the text, where none of the text is left: `- ┃^x`)
     const id = name && before > 0 && trimMd(head(line.text, name.partFrom - before)) === '' ? name.from : null;
@@ -117,7 +133,7 @@ export function executeCommand(view: OurusView, command: OurusCommand, selection
 function hostKeepsBlockIds(view: OurusView, command: OurusCommand, selection: OurusSelection, result: OurusResult): OurusResult {
   const doc = view.doc;
   if (!doc.config.flavor || !doc.mdTree.flavor.has('blockIds')) return result;
-  const edit = hostEdit(doc.text, command, selection);
+  const edit = plainTextEdit(doc.text, command, selection)?.change;
   // (a note without block ids pays nothing, but for an edit that brings some in)
   if (!edit || (!doc.text.includes('^') && !edit.insert.includes('^'))) return result;
   // (under `markup: text`, an edit inside a block id's markup, as of a heading's `#`s: characters of it
@@ -135,9 +151,8 @@ function hostKeepsBlockIds(view: OurusView, command: OurusCommand, selection: Ou
   // brings kept only where new, as a paste keeps them)
   if (command.type === 'paste' || command.type === 'pastePlain') {
     const own = pasteKeepingNewBlockIds(new CommandContext(view, selection), command, (marked) => {
-      const typed = hostEdit(doc.text, marked, selection)!;
-      const caret = typed.from + typed.insert.length;
-      return new OurusSuccess({ view: view.update({ changes: [typed] }), changes: [typed], selection: { anchor: caret, head: caret } });
+      const { change, caret } = plainTextEdit(doc.text, marked, selection)!;
+      return new OurusSuccess({ view: view.update({ changes: [change] }), changes: [change], selection: { anchor: caret, head: caret } });
     });
     // (ourus's own result: every block id kept, the one in whose markup it is too)
     if (own instanceof OurusSuccess && !checkBlockIds(doc, own.view.doc, own.changes, { taken })) return own;
@@ -171,28 +186,28 @@ function takenBy(view: OurusView, from: number, to: number): { from: number; to:
   const doc = view.doc;
   if (from >= to) return null;
   // (a subtree selection, whose nodes go whole, and the whole document, replaced as text: all of it)
-  if ((from === 0 && to === doc.text.length) || view.selectedSubtrees({ anchor: from, head: to })) return { from, to };
+  if (doc.wholeText(from, to) || view.selectedSubtrees({ anchor: from, head: to })) return { from, to };
   const first = doc.nodeAtLine(doc.lineAt(from).index);
   if (!first || first === doc.nodeAtLine(doc.lineAt(to).index)) return { from, to };
   return { from: Math.max(from, Math.min(to, doc.mdTree.line(first.ownLastLine).to)), to };
 }
 
-/** What a text editor's default for `command` at `selection` changes in `text` (a code point deleted, the selection replaced, a line break for Enter); null where it changes nothing, or isn't one of those keys. */
-function hostEdit(text: string, command: OurusCommand, selection: OurusSelection): { from: number; to: number; insert: string } | null {
-  const from = Math.min(selection.anchor, selection.head);
-  const to = Math.max(selection.anchor, selection.head);
-  const inserted = command.type === 'insertText' || command.type === 'pastePlain' ? command.text : command.type === 'paste' ? command.clipboard['text/plain'] : command.type === 'enter' || command.type === 'shiftEnter' ? '\n' : undefined;
-  if (inserted !== undefined) return { from, to, insert: inserted };
-  if (command.type !== 'deleteContentBackward' && command.type !== 'deleteContentForward' && command.type !== 'deleteSoftLineBackward') return null;
-  if (from < to) return { from, to, insert: '' };
-  if (command.type === 'deleteContentForward') {
-    const next = text.startsWith('\r\n', to) ? 2 : ([...text.slice(to, to + 2)][0]?.length ?? 0);
-    return next ? { from, to: to + next, insert: '' } : null;
-  }
-  const lineStart = Math.max(text.lastIndexOf('\n', from - 1) + 1, 0);
-  if (command.type === 'deleteSoftLineBackward' && from > lineStart) return { from: lineStart, to, insert: '' };
-  const prev = text.slice(Math.max(0, from - 2), from).endsWith('\r\n') ? 2 : ([...text.slice(Math.max(0, from - 2), from)].pop()?.length ?? 0);
-  return prev ? { from: from - prev, to, insert: '' } : null;
+/** The keys that split a line where the caret is. */
+const SPLITS: ReadonlySet<OurusCommand['type']> = new Set(['enter', 'shiftEnter']);
+
+/**
+ * `selection` over whole characters (`charStart`), for a key that splits there: a host's caret is on
+ * a boundary, but a stale offset may be inside a surrogate pair, a grapheme or a CRLF. A caret goes
+ * to the character's start; a selection widens to take the characters it cuts.
+ */
+function wholeCharacters(text: string, selection: OurusSelection): OurusSelection {
+  const forward = selection.anchor <= selection.head;
+  const [from, to] = forward ? [selection.anchor, selection.head] : [selection.head, selection.anchor];
+  const start = charStart(text, from);
+  const toStart = charStart(text, to);
+  const end = from === to ? start : toStart === to ? to : charAfter(text, toStart);
+  if (start === from && end === to) return selection;
+  return forward ? { anchor: start, head: end } : { anchor: end, head: start };
 }
 
 /** The keys that put text in where the caret is. */

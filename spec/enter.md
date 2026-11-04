@@ -39,8 +39,8 @@ The rules, in order; the first that applies wins:
    so too, the heading staying with the first half, the rest a plain item (Enter69); with
    `quirkEnterMidHeading: workflowy`, the first half a plain item, the heading going with the rest
    and its children ([Quirk1](quirks.md#quirk1)); at its end Enter makes an empty item (Enter69d). The spaces at the
-   caret go from both halves (`enterSplitSpace: trim`, the default), only those after it (`drop`),
-   or they start the second half (`start`): an item's padding past the space after its marker, a
+   caret: only those after it go (`enterSplitSpace: drop`, the default), those before it ending
+   the first half; from both halves (`trim`); or they start the second half (`start`): an item's padding past the space after its marker, a
    paragraph's or a title's rest's indentation, which ourus keeps as the user's whitespace and a
    join gives back (Enter44, Enter64, Enter65, Enter65b, Enter65c, Enter65d, Enter65e, Enter65f,
    Enter65g, Enter65h, Enter65i, Enter65j, Enter65k, Enter65l, Enter65m).
@@ -84,14 +84,14 @@ doesn't bring it back ([Enter44](#enter44)). The item keeps its node with the te
 tags: core
 ```
 
-```buffer
+```markdown
 - one two┃ three①
 - next
 ```
 
 > enter
 
-```buffer
+```markdown
 - one two①
 - ┃three②
 - next
@@ -107,13 +107,13 @@ At the end of an item, Enter makes an empty sibling. Ordered items count on.
 tags: core
 ```
 
-```buffer
+```markdown
 1. one┃①
 ```
 
 > enter
 
-```buffer
+```markdown
 1. one①
 2. ┃②
 ```
@@ -129,14 +129,14 @@ child ([Enter3b](#enter3b)).
 tags: common
 ```
 
-```buffer
+```markdown
 - a┃ b
   - c
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 - ┃b
   - c
@@ -148,18 +148,18 @@ With `enterMidItem: child`, the rest becomes the item's first child and the item
 children, as in Logseq and Tine.
 
 ```yaml
-tags: edge
+tags: rare
 enterMidItem: child
 ```
 
-```buffer
+```markdown
 - a┃ b
   - c
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
   - ┃b
   - c
@@ -174,7 +174,7 @@ children move with its content column.
 tags: rare
 ```
 
-```buffer
+```markdown
 9. a┃ b
    - c
 10. d
@@ -182,7 +182,7 @@ tags: rare
 
 > enter
 
-```buffer
+```markdown
 9. a
 10. ┃b
     - c
@@ -198,14 +198,14 @@ children going back to the joined item.
 tags: common
 ```
 
-```buffer
+```markdown
 - a┃b
   - c
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 - ┃b
   - c
@@ -213,7 +213,7 @@ tags: common
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃b
   - c
 ```
@@ -228,14 +228,14 @@ is typed. Bare Obsidian makes a sibling, which takes the children.
 tags: core
 ```
 
-```buffer
+```markdown
 - a┃
   - b
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
   - ┃◌
   - b
@@ -250,7 +250,7 @@ as at the top level ([Enter6](#enter6)).
 tags: core
 ```
 
-```buffer
+```markdown
 - a
   - b
   - ┃
@@ -258,7 +258,7 @@ tags: core
 
 > enter
 
-```buffer
+```markdown
 - a
   - b
 - ┃
@@ -274,14 +274,14 @@ as a lazy line.
 tags: core free-form
 ```
 
-```buffer
+```markdown
 - a
 - ┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 
 ┃◌
@@ -300,7 +300,7 @@ RemNote, [Enter63](#enter63)).
 tags: common
 ```
 
-```buffer
+```markdown
 - a
 - ┃
 - b
@@ -308,7 +308,7 @@ tags: common
 
 > enter
 
-```buffer
+```markdown
 - a
 - 
 - ┃
@@ -321,11 +321,11 @@ With `enterOnEmptyItem: outdent`, Enter on an empty item in the middle of a top-
 the list, splitting it in two.
 
 ```yaml
-tags: edge free-form
+tags: rare free-form
 enterOnEmptyItem: outdent
 ```
 
-```buffer
+```markdown
 - a
 - ┃
 - b
@@ -333,7 +333,7 @@ enterOnEmptyItem: outdent
 
 > enter
 
-```buffer
+```markdown
 - a
 
 ┃◌
@@ -347,11 +347,11 @@ With `enterOnEmptyItem: unwrap` (SiYuan, BlockNote, as a word processor), the em
 empty paragraph where it is, the list split there: the items after it a list after it.
 
 ```yaml
-tags: edge
+tags: rare
 enterOnEmptyItem: unwrap
 ```
 
-```buffer
+```markdown
 - a
 - ┃
 - b
@@ -359,7 +359,7 @@ enterOnEmptyItem: unwrap
 
 > enter
 
-```buffer
+```markdown
 - a
 
 ┃◌
@@ -377,14 +377,14 @@ nested item or a paragraph line.
 tags: common
 ```
 
-```buffer
+```markdown
 - abc ┃- def
 ```
 
 > enter
 
-```buffer
-- abc
+```markdown
+- abc␠
 - ┃\̬- def
 ```
 
@@ -393,17 +393,17 @@ tags: common
 Trailing heading marker escaped.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - abc ┃# def
 ```
 
 > enter
 
-```buffer
-- abc
+```markdown
+- abc␠
 - ┃\̬# def
 ```
 
@@ -417,14 +417,14 @@ That includes an HTML block's opening tag, and a link reference definition.
 tags: rare
 ```
 
-```buffer
+```markdown
 - abc ┃<div>
 ```
 
 > enter
 
-```buffer
-- abc
+```markdown
+- abc␠
 - ┃\̬<div>
 ```
 
@@ -436,14 +436,14 @@ Link reference definition escaped.
 tags: rare
 ```
 
-```buffer
+```markdown
 see ┃[a]: /url
 ```
 
 > enter
 
-```buffer
-see
+```markdown
+see␠
 
 ┃[a]\̬: /url
 ```
@@ -458,13 +458,13 @@ Bare Obsidian breaks the line, which is one paragraph to every reader: that is S
 tags: core
 ```
 
-```buffer
+```markdown
 some┃ text
 ```
 
 > enter
 
-```buffer
+```markdown
 some
 
 ┃text
@@ -479,14 +479,14 @@ paragraph; bare Obsidian leaves it right under `b`, a lazy line of `b`.
 tags: core free-form
 ```
 
-```buffer
+```markdown
 - a
   - b┃
 ```
 
 > enter enter enter "p"
 
-```buffer
+```markdown
 - a
   - b
 
@@ -499,10 +499,10 @@ In a loose list, Enter on an empty item in the middle makes another, set off as 
 ([Enter7](#enter7), [Enter36](#enter36)).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 
 - ┃
@@ -512,7 +512,7 @@ tags: edge
 
 > enter
 
-```buffer
+```markdown
 - a
 
 - 
@@ -532,7 +532,7 @@ tags: rare free-form
 enterOnEmptyItem: outdent
 ```
 
-```buffer
+```markdown
 - a
 
 - ┃
@@ -542,7 +542,7 @@ enterOnEmptyItem: outdent
 
 > enter
 
-```buffer
+```markdown
 - a
 
 ┃◌
@@ -556,17 +556,17 @@ A lazy continuation line is part of the item's text, so it goes with the second 
 break at the split going as spaces do.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a┃
 lazy
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 - ┃lazy
 ```
@@ -581,14 +581,14 @@ New lines take the ending of the line they split.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a┃␍
 - b␍
 ```
 
 > enter
 
-```buffer
+```markdown
 - a␍
 - ┃␍
 - b␍
@@ -604,7 +604,7 @@ New lines take the ending of the line they split.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a
 - b┃␍
 - c
@@ -612,7 +612,7 @@ tags: rare
 
 > enter
 
-```buffer
+```markdown
 - a
 - b␍
 - ┃␍
@@ -630,14 +630,14 @@ makes the item an empty paragraph that owns them.
 tags: common
 ```
 
-```buffer
+```markdown
 - ┃
   - a
 ```
 
 > enter
 
-```buffer
+```markdown
 - 
   - ┃
   - a
@@ -649,18 +649,18 @@ With `enterOnEmptyItem: unwrap`, an empty item with children becomes an empty pa
 children its list.
 
 ```yaml
-tags: edge
+tags: rare
 enterOnEmptyItem: unwrap
 ```
 
-```buffer
+```markdown
 - ┃
   - a
 ```
 
 > enter
 
-```buffer
+```markdown
 ┃◌
 - a
 ```
@@ -672,18 +672,18 @@ as in an item ([Enter8](#enter8)); it takes the paragraph's list, as any second 
 Obsidian makes `- x` the list's first item.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 para ┃- x
 - a
 ```
 
 > enter
 
-```buffer
-para
+```markdown
+para␠
 
 ┃\̬- x
 - a
@@ -699,14 +699,14 @@ The new paragraph needs a blank line before the code, or it takes the code in as
 tags: rare
 ```
 
-```buffer
+```markdown
 ### H┃2
     - a
 ```
 
 > enter
 
-```buffer
+```markdown
 ### H
 ┃2
 
@@ -723,7 +723,7 @@ content column, as bare Obsidian moves it; SilverBullet leaves it at three colum
 tags: rare
 ```
 
-```buffer
+```markdown
 8. z┃
 9. a
    - child
@@ -732,7 +732,7 @@ tags: rare
 
 > enter
 
-```buffer
+```markdown
 8. z
 9. ┃
 10. a
@@ -750,14 +750,14 @@ underline, so a placeholder holds it.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
   - ┃b
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
   - ┃◌
   - b
@@ -770,18 +770,18 @@ from the caret, is set off from the parent's text by a blank line. Bare Obsidian
 under `- a`: a setext underline, `a` a heading.
 
 ```yaml
-tags: edge
+tags: rare
 enterAtTextStart: stay
 ```
 
-```buffer
+```markdown
 - a
   - ┃b
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 
   - 
@@ -799,7 +799,7 @@ parent ([Enter27b](#enter27b)).
 tags: common
 ```
 
-```buffer
+```markdown
 - a
   - b
   - ┃
@@ -808,7 +808,7 @@ tags: common
 
 > enter
 
-```buffer
+```markdown
 - a
   - b
   - 
@@ -822,11 +822,11 @@ With `enterOnEmptyItem: unwrap`, nested: an empty paragraph in the parent item, 
 was, the list split there.
 
 ```yaml
-tags: edge
+tags: rare
 enterOnEmptyItem: unwrap
 ```
 
-```buffer
+```markdown
 - a
   - b
   - ┃
@@ -835,7 +835,7 @@ enterOnEmptyItem: unwrap
 
 > enter
 
-```buffer
+```markdown
 - a
   - b
 
@@ -852,10 +852,10 @@ Logseq, WorkFlowy, Dynalist, Tana and RemNote do; Enter again piles another abov
 is written at once, as leaving it would write it ([Placeholder1](placeholders.md#placeholder1)).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
   - ┃◌
   - c
@@ -863,7 +863,7 @@ tags: edge
 
 > enter
 
-```buffer
+```markdown
 - a
 
   - 
@@ -873,7 +873,7 @@ tags: edge
 
 > enter
 
-```buffer
+```markdown
 - a
 
   - 
@@ -892,7 +892,7 @@ Bare Obsidian, its Outliner and RemNote keep the caret with the text ([Enter29b]
 tags: core
 ```
 
-```buffer
+```markdown
 - a
   - b
   - ┃c
@@ -900,7 +900,7 @@ tags: core
 
 > enter
 
-```buffer
+```markdown
 - a
   - b
   - ┃
@@ -913,11 +913,11 @@ With `enterAtTextStart: stay`, the caret stays with the text, as in bare Obsidia
 RemNote and BlockNote.
 
 ```yaml
-tags: common
+tags: rare
 enterAtTextStart: stay
 ```
 
-```buffer
+```markdown
 - a
   - b
   - ┃c
@@ -925,7 +925,7 @@ enterAtTextStart: stay
 
 > enter
 
-```buffer
+```markdown
 - a
   - b
   - 
@@ -938,12 +938,12 @@ With `enterOnEmptyItem: outdent` and `outdent: logical` (Roam's way), the item o
 would, moving past its later siblings.
 
 ```yaml
-tags: edge
+tags: rare
 enterOnEmptyItem: outdent
 outdent: logical
 ```
 
-```buffer
+```markdown
 - a
   - b
   - ┃
@@ -952,7 +952,7 @@ outdent: logical
 
 > enter
 
-```buffer
+```markdown
 - a
   - b
   - c
@@ -968,14 +968,14 @@ placeholder is needed: an empty item can start a document, or follow an item or 
 tags: common
 ```
 
-```buffer
+```markdown
 - ┃a
   - b
 ```
 
 > enter
 
-```buffer
+```markdown
 - ┃
 - a
   - b
@@ -992,7 +992,7 @@ true-outliner puts an empty heading above instead.
 tags: common markup-heading
 ```
 
-```buffer
+```markdown
 para
 
 # ┃Title
@@ -1002,7 +1002,7 @@ body
 
 > enter
 
-```buffer
+```markdown
 para
 
 ┃◌
@@ -1019,17 +1019,17 @@ heading stays above, the title a paragraph below, under it. Bare Obsidian, the t
 and Tine do this.
 
 ```yaml
-tags: edge markup-heading
+tags: rare markup-heading
 enterAtTextStart: stay
 ```
 
-```buffer
+```markdown
 # ┃H1
 ```
 
 > enter
 
-```buffer
+```markdown
 # 
 ┃H1
 ```
@@ -1044,7 +1044,7 @@ paragraph of its own; left without typing, it is a blank line again.
 tags: common
 ```
 
-```buffer
+```markdown
 intro
 
 ┃hello
@@ -1052,7 +1052,7 @@ intro
 
 > enter
 
-```buffer
+```markdown
 intro
 
 ┃◌
@@ -1062,7 +1062,7 @@ hello
 
 > "x"
 
-```buffer
+```markdown
 intro
 
 x┃
@@ -1077,17 +1077,17 @@ line above, the caret staying with the text. Bare Obsidian and the text editors 
 line shows nothing, and text typed after Up joins `intro` or `hello` (Up lands next to one of them).
 
 ```yaml
-tags: edge
+tags: rare
 enterAtTextStart: stay
 ```
 
-```buffer
+```markdown
 ┃hello
 ```
 
 > enter
 
-```buffer
+```markdown
 
 ┃hello
 ```
@@ -1098,16 +1098,16 @@ Enter with the caret in an item's marker acts at its text start ([Enter29](#ente
 Obsidian splits the marker from the text, unmaking the item.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 -┃ alpha
 ```
 
 > enter
 
-```buffer
+```markdown
 - ┃
 - alpha
 ```
@@ -1122,14 +1122,14 @@ A backslash before a digit escapes nothing, so the escape goes before the `.` (o
 tags: rare
 ```
 
-```buffer
+```markdown
 1. abc ┃2. def
 ```
 
 > enter
 
-```buffer
-1. abc
+```markdown
+1. abc␠
 2. ┃2\̬. def
 ```
 
@@ -1141,7 +1141,7 @@ In a loose list, Enter sets the new item off as the others are. Bare Obsidian ad
 tags: common
 ```
 
-```buffer
+```markdown
 - a
 
 - b┃
@@ -1149,7 +1149,7 @@ tags: common
 
 > enter
 
-```buffer
+```markdown
 - a
 
 - b
@@ -1166,7 +1166,7 @@ would end the quote.
 tags: rare
 ```
 
-```buffer
+```markdown
 > - a
 >
 > - b┃
@@ -1174,7 +1174,7 @@ tags: rare
 
 > enter
 
-```buffer
+```markdown
 > - a
 >
 > - b
@@ -1184,7 +1184,7 @@ tags: rare
 
 > deleteContentBackward
 
-```buffer
+```markdown
 > - a
 >
 > - b┃
@@ -1200,7 +1200,7 @@ more of the item below the line, Enter there is the host's.
 tags: rare
 ```
 
-```buffer
+```markdown
 1. a
    text
    ┃
@@ -1208,7 +1208,7 @@ tags: rare
 
 > enter
 
-```buffer
+```markdown
 1. a
    text
 2. ┃
@@ -1222,14 +1222,14 @@ Enter, then Backspace: the split item is joined back.
 tags: core
 ```
 
-```buffer
+```markdown
 - one┃two
 - next
 ```
 
 > enter
 
-```buffer
+```markdown
 - one
 - ┃two
 - next
@@ -1237,7 +1237,7 @@ tags: core
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one┃two
 - next
 ```
@@ -1250,14 +1250,14 @@ Enter at the end of an item, then Backspace: the empty item goes, and the text i
 tags: common
 ```
 
-```buffer
+```markdown
 - ab┃
 - c
 ```
 
 > enter
 
-```buffer
+```markdown
 - ab
 - ┃
 - c
@@ -1265,7 +1265,7 @@ tags: common
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - ab┃
 - c
 ```
@@ -1276,17 +1276,17 @@ Enter on the empty paragraph that leaving a list made is refused: an empty parag
 under the caret, and blank lines more make no second one.
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 ```
 
-```buffer
+```markdown
 - a
 - ┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 
 ┃◌
@@ -1298,7 +1298,7 @@ tags: edge free-form
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 - a
 
 ┃◌
@@ -1310,18 +1310,18 @@ A list marker after the caret stays text in a heading too: the rest is a paragra
 escaped. The list below needs no blank line: it is the new paragraph's either way.
 
 ```yaml
-tags: edge free-form
+tags: rare free-form
 ```
 
-```buffer
+```markdown
 # Title ┃- x
 - y
 ```
 
 > enter
 
-```buffer
-# Title
+```markdown
+# Title␠
 ┃\̬- x
 - y
 ```
@@ -1334,15 +1334,15 @@ In a setext title the same: the underline stays with the heading, and the rest, 
 tags: rare
 ```
 
-```buffer
+```markdown
 title ┃- x
 ===
 ```
 
 > enter
 
-```buffer
-title
+```markdown
+title␠
 ===
 ┃\̬- x
 ```
@@ -1356,51 +1356,51 @@ which mid-line serves nothing, and the text is as it was.
 tags: rare
 ```
 
-```buffer
+```markdown
 - abc┃- def
 ```
 
 > enter
 
-```buffer
+```markdown
 - abc
 - ┃\̬- def
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - abc┃- def
 ```
 
 ## Enter44
 
-Enter at a space, then Backspace: the space goes from both halves (`enterSplitSpace: trim`, the
-default), as Logseq trims a block's text, and the join glues `twothree`, the one place a command
-loses what the user wrote. Bare Obsidian and RemNote drop only the spaces after the caret (`drop`,
-[Enter64](#enter64)). Roam, WorkFlowy, Dynalist, Tana and Obsidian's Outliner keep the space at the
+Enter before a space, then Backspace: the space after the caret goes (`enterSplitSpace: drop`, the
+default, as bare Obsidian and RemNote, [Enter64](#enter64), keep only the spaces before it), and the
+join glues `twothree`, the one place a command loses what the user wrote; `trim`, as Logseq trims a
+block's text, takes the spaces on both sides. Roam, WorkFlowy, Dynalist, Tana and Obsidian's Outliner keep the space at the
 start of the new block, and their join gives it back (`start`, [Enter65](#enter65)): ourus writes it
 as the new item's padding, which Markdown reads as the item `three`, and reads an item's padding past
 the item above's as text.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - one two┃ three
 ```
 
 > enter
 
-```buffer
+```markdown
 - one two
 - ┃three
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one two┃three
 ```
 
@@ -1410,24 +1410,24 @@ With `enterSplitSpace: drop`, as bare Obsidian and RemNote: the spaces after the
 before it end the first half (where they render as nothing), and the join gives back those alone.
 
 ```yaml
-tags: edge
+tags: rare
 enterSplitSpace: drop
 ```
 
-```buffer
+```markdown
 - one two ┃ three
 ```
 
 > enter
 
-```buffer
+```markdown
 - one two 
 - ┃three
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one two ┃three
 ```
 
@@ -1440,18 +1440,18 @@ Markdown reads as the item `three`; ourus keeps an item's padding past the space
 the user's whitespace, which a join gives back.
 
 ```yaml
-tags: edge
+tags: rare
 enterSplitSpace: start
 ```
 
-```buffer
+```markdown
 - one two┃ three
 - next
 ```
 
 > enter
 
-```buffer
+```markdown
 - one two
 - ┃ three
 - next
@@ -1459,7 +1459,7 @@ enterSplitSpace: start
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one two┃ three
 - next
 ```
@@ -1470,18 +1470,18 @@ The same with the caret leaving the line and coming back before Backspace: the s
 second half's, and the join gives it back.
 
 ```yaml
-tags: edge
+tags: rare
 enterSplitSpace: start
 ```
 
-```buffer
+```markdown
 - one two┃ three
 - next
 ```
 
 > enter
 
-```buffer
+```markdown
 - one two
 - ┃ three
 - next
@@ -1489,7 +1489,7 @@ enterSplitSpace: start
 
 > cursorLineDown cursorLineUp deleteContentBackward
 
-```buffer
+```markdown
 - one two┃ three
 - next
 ```
@@ -1500,24 +1500,24 @@ Typed at the second half's start, before the space it keeps, text goes in front 
 block whose text starts with the space.
 
 ```yaml
-tags: edge
+tags: rare
 enterSplitSpace: start
 ```
 
-```buffer
+```markdown
 - one two┃ three
 ```
 
 > enter
 
-```buffer
+```markdown
 - one two
 - ┃ three
 ```
 
 > "x"
 
-```buffer
+```markdown
 - one two
 - x┃ three
 ```
@@ -1527,17 +1527,17 @@ enterSplitSpace: start
 Delete there takes the space, the host's.
 
 ```yaml
-tags: edge
+tags: rare
 enterSplitSpace: start
 ```
 
-```buffer
+```markdown
 - one two┃ three
 ```
 
 > enter
 
-```buffer
+```markdown
 - one two
 - ┃ three
 ```
@@ -1548,7 +1548,7 @@ enterSplitSpace: start
 result: deferredToHost
 ```
 
-```buffer
+```markdown
 - one two
 - ┃three
 ```
@@ -1560,18 +1560,18 @@ so they stay its children (`-  three` over `   - c`); Backspace gives the text b
 with it.
 
 ```yaml
-tags: edge
+tags: rare
 enterSplitSpace: start
 ```
 
-```buffer
+```markdown
 - one two┃ three
   - c
 ```
 
 > enter
 
-```buffer
+```markdown
 - one two
 - ┃ three
    - c
@@ -1579,7 +1579,7 @@ enterSplitSpace: start
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one two┃ three
   - c
 ```
@@ -1590,18 +1590,18 @@ Leaving the line keeps it there, as the outliners keep it in the block: the item
 children a column further right.
 
 ```yaml
-tags: edge
+tags: rare
 enterSplitSpace: start
 ```
 
-```buffer
+```markdown
 - one two┃ three
   - c
 ```
 
 > enter
 
-```buffer
+```markdown
 - one two
 - ┃ three
    - c
@@ -1609,7 +1609,7 @@ enterSplitSpace: start
 
 > cursorLineDown
 
-```buffer
+```markdown
 - one two
 -  three
    - ┃c
@@ -1620,24 +1620,24 @@ enterSplitSpace: start
 A task's second half keeps the space after its checkbox, and the join gives it back.
 
 ```yaml
-tags: edge markup-task
+tags: rare markup-task
 enterSplitSpace: start
 ```
 
-```buffer
+```markdown
 - [ ] one two┃ three
 ```
 
 > enter
 
-```buffer
+```markdown
 - [ ] one two
 - [ ] ┃ three
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - [ ] one two┃ three
 ```
 
@@ -1647,18 +1647,18 @@ Indent keeps the space, the item's padding past its parent's, and Backspace at t
 joins it back.
 
 ```yaml
-tags: edge
+tags: rare
 enterSplitSpace: start
 ```
 
-```buffer
+```markdown
 - one two┃ three
 - next
 ```
 
 > enter
 
-```buffer
+```markdown
 - one two
 - ┃ three
 - next
@@ -1666,7 +1666,7 @@ enterSplitSpace: start
 
 > indent
 
-```buffer
+```markdown
 - one two
   - ┃ three
 - next
@@ -1674,7 +1674,7 @@ enterSplitSpace: start
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one two┃ three
 - next
 ```
@@ -1685,17 +1685,17 @@ A paragraph's second half keeps the space as its leading space, which Markdown s
 reads as text, so Backspace gives it back, as SiYuan and BlockNote keep it in the new block.
 
 ```yaml
-tags: edge
+tags: rare
 enterSplitSpace: start
 ```
 
-```buffer
+```markdown
 one two┃ three
 ```
 
 > enter
 
-```buffer
+```markdown
 one two
 
 ┃ three
@@ -1703,7 +1703,7 @@ one two
 
 > deleteContentBackward
 
-```buffer
+```markdown
 one two┃ three
 ```
 
@@ -1713,11 +1713,11 @@ Padding written by hand past the space after a marker is the user's whitespace t
 `enterSplitSpace` says: Backspace past it deletes a space, and at its start joins it in.
 
 ```yaml
-tags: edge
+tags: rare
 enterSplitSpace: start
 ```
 
-```buffer
+```markdown
 - a
 -   ┃b
 ```
@@ -1728,21 +1728,21 @@ enterSplitSpace: start
 result: deferredToHost
 ```
 
-```buffer
+```markdown
 - a
 -  ┃b
 ```
 
 > cursorCharLeft
 
-```buffer
+```markdown
 - a
 - ┃ b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃ b
 ```
 
@@ -1753,24 +1753,24 @@ Shift-Enter on the kept space breaks the line after the marker, as at any item's
 Backspace takes the break back, the space with it.
 
 ```yaml
-tags: edge
+tags: rare
 enterSplitSpace: start
 ```
 
-```buffer
+```markdown
 - one two┃ three
 ```
 
 > enter
 
-```buffer
+```markdown
 - one two
 - ┃ three
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - one two
 -
   ┃ three
@@ -1778,7 +1778,7 @@ enterSplitSpace: start
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one two
 - ┃ three
 ```
@@ -1789,24 +1789,24 @@ A heading's title: the rest, the section's first paragraph now, keeps the space 
 space, and Backspace joins it back into the title, as SiYuan, BlockNote, Tana and Dynalist keep it.
 
 ```yaml
-tags: edge markup-heading
+tags: rare markup-heading
 enterSplitSpace: start
 ```
 
-```buffer
+```markdown
 # one two┃ three
 ```
 
 > enter
 
-```buffer
+```markdown
 # one two
 ┃ three
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 # one two┃ three
 ```
 
@@ -1816,24 +1816,24 @@ A list marker after the kept space is escaped there, as at any new paragraph's s
 drops the escape.
 
 ```yaml
-tags: edge markup-heading
+tags: rare markup-heading
 enterSplitSpace: start
 ```
 
-```buffer
+```markdown
 # one two┃ - x
 ```
 
 > enter
 
-```buffer
+```markdown
 # one two
 ┃ \̬- x
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 # one two┃ - x
 ```
 
@@ -1843,17 +1843,17 @@ At the start of a heading's text right under a paragraph, the empty paragraph is
 right under `para` it would be more of `para`'s text.
 
 ```yaml
-tags: edge markup-heading
+tags: common markup-heading
 ```
 
-```buffer
+```markdown
 para
 # ┃Title
 ```
 
 > enter
 
-```buffer
+```markdown
 para
 
 ┃◌
@@ -1867,17 +1867,17 @@ At the start of a quote's first paragraph, the empty paragraph is the quote's fi
 `>` starts.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: container
 ```
 
-```buffer
+```markdown
 > ┃quote
 ```
 
 > enter
 
-```buffer
+```markdown
 > ┃◌
 >
 > quote
@@ -1893,22 +1893,22 @@ the escape with it, as a join drops the escape a split wrote ([Enter43](#enter43
 tags: rare
 ```
 
-```buffer
+```markdown
 [Note]: this ┃matters a lot
 ```
 
 > enter
 
-```buffer
-[Note]\̬: this
+```markdown
+[Note]\̬: this␠
 
 ┃matters a lot
 ```
 
 > deleteContentBackward
 
-```buffer
-[Note]: this┃matters a lot
+```markdown
+[Note]: this ┃matters a lot
 ```
 
 ## Enter48
@@ -1920,21 +1920,21 @@ escape: without the space the split dropped ([Enter44](#enter44)), `[a]: bc` wou
 tags: rare
 ```
 
-```buffer
+```markdown
 - [a]: b ┃c
 ```
 
 > enter
 
-```buffer
-- [a]\̬: b
+```markdown
+- [a]\̬: b␠
 - ┃c
 ```
 
 > deleteContentBackward
 
-```buffer
-- [a]\̬: b┃c
+```markdown
+- [a]: b ┃c
 ```
 
 ## Enter49
@@ -1948,7 +1948,7 @@ tags: common
 flavor: gfm
 ```
 
-```buffer
+```markdown
 | a | b |
 | --- | --- |
 | 1 | 2 |┃
@@ -1956,7 +1956,7 @@ flavor: gfm
 
 > enter
 
-```buffer
+```markdown
 | a | b |
 | --- | --- |
 | 1 | 2 |
@@ -1966,7 +1966,7 @@ flavor: gfm
 
 > deleteContentBackward
 
-```buffer
+```markdown
 | a | b |
 | --- | --- |
 | 1 | 2 |┃
@@ -1974,7 +1974,7 @@ flavor: gfm
 
 > enter "after"
 
-```buffer
+```markdown
 | a | b |
 | --- | --- |
 | 1 | 2 |
@@ -1987,11 +1987,11 @@ after┃
 Enter inside a table's row is refused: a row is a line, and a break in it would make two rows.
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 flavor: gfm
 ```
 
-```buffer
+```markdown
 | a | b |
 | --- | --- |
 | on┃e | 2 |
@@ -2003,7 +2003,7 @@ flavor: gfm
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 | a | b |
 | --- | --- |
 | on┃e | 2 |
@@ -2018,10 +2018,10 @@ title's line ([Backspace36](backspace.md#backspace36)), as any join after a spli
 does (the README's guarantee 5); undo gives the line break back.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 one
 ┃two
 three
@@ -2030,7 +2030,7 @@ three
 
 > enter
 
-```buffer
+```markdown
 one
 ---
 ┃two
@@ -2039,7 +2039,7 @@ three
 
 > deleteContentBackward
 
-```buffer
+```markdown
 one┃two
 three
 ---
@@ -2047,7 +2047,7 @@ three
 
 > undo undo
 
-```buffer
+```markdown
 one
 ┃two
 three
@@ -2056,7 +2056,7 @@ three
 
 > cursorLineBoundaryForward enter
 
-```buffer
+```markdown
 one
 two
 ---
@@ -2069,10 +2069,10 @@ The rest of a setext title, a paragraph below its underline now, is set apart fr
 setext heading right below, which it would join (and so become part of that title).
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 one
 ┃two
 ---
@@ -2082,7 +2082,7 @@ three
 
 > enter
 
-```buffer
+```markdown
 one
 ---
 ┃two
@@ -2098,16 +2098,16 @@ is escaped, as a link reference definition is ([Enter47](#enter47)); joined back
 as it has nothing left to keep ([Enter43](#enter43)).
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 -┃a
 ```
 
 > enter
 
-```buffer
+```markdown
 \̬-
 
 ┃a
@@ -2115,7 +2115,7 @@ tags: edge
 
 > deleteContentBackward
 
-```buffer
+```markdown
 -┃a
 ```
 
@@ -2126,16 +2126,16 @@ Enter with the caret inside a task's checkbox acts at its text start, as in the 
 be text on two lines, and the task none.
 
 ```yaml
-tags: edge markup-task
+tags: rare markup-task
 ```
 
-```buffer
+```markdown
 - [ ┃] task
 ```
 
 > enter
 
-```buffer
+```markdown
 - [ ] ┃
 - [ ] task
 ```
@@ -2148,13 +2148,13 @@ The same in a checked task's checkbox: the new task above is unchecked, as any n
 tags: rare markup-task
 ```
 
-```buffer
+```markdown
 - [x┃] done
 ```
 
 > enter
 
-```buffer
+```markdown
 - [ ] ┃
 - [x] done
 ```
@@ -2166,16 +2166,16 @@ paragraph above, held by a placeholder. A line break there would leave the caret
 Backspace then unwraps the heading.
 
 ```yaml
-tags: edge markup-heading
+tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 #┃ Title
 ```
 
 > enter
 
-```buffer
+```markdown
 ┃◌
 
 # Title
@@ -2187,10 +2187,10 @@ The same before the `#`s, at the line's start, where Home's second press puts th
 paragraph and its blank line, the empty paragraph goes between them, rather than a third blank line.
 
 ```yaml
-tags: edge markup-heading
+tags: common markup-heading
 ```
 
-```buffer
+```markdown
 p
 
 ┃# Title
@@ -2198,7 +2198,7 @@ p
 
 > enter
 
-```buffer
+```markdown
 p
 
 ┃◌
@@ -2221,7 +2221,7 @@ tags: rare free-form markup-heading
 enterAtTextStart: stay
 ```
 
-```buffer
+```markdown
 p
 
 ┃# Title
@@ -2229,7 +2229,7 @@ p
 
 > enter
 
-```buffer
+```markdown
 p
 
 
@@ -2247,14 +2247,14 @@ of `a`'s text.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a«bc
 - de»f
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 - ┃f
 ```
@@ -2268,14 +2268,14 @@ where the host's line break would leave one paragraph of two lines.
 tags: rare
 ```
 
-```buffer
+```markdown
 a«b
 c»d
 ```
 
 > enter
 
-```buffer
+```markdown
 a
 
 ┃d
@@ -2290,14 +2290,14 @@ a lone `#` left at the end of the paragraph would be an empty heading, so it is 
 tags: rare
 ```
 
-```buffer
+```markdown
 p
 #┃a
 ```
 
 > enter
 
-```buffer
+```markdown
 p
 \̬#
 
@@ -2313,14 +2313,14 @@ text, where on an empty last item it would leave the list. To Markdown U+00A0 is
 tags: rare
 ```
 
-```buffer
+```markdown
 - a
 - ⍽┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 - ⍽
 - ┃
@@ -2337,13 +2337,13 @@ can hold.
 tags: rare
 ```
 
-```buffer
+```markdown
 «ab»cd
 ```
 
 > enter
 
-```buffer
+```markdown
 ┃◌
 
 cd
@@ -2359,14 +2359,14 @@ does ([Enter43](#enter43)).
 tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 title┃ - x
 ===
 ```
 
 > enter
 
-```buffer
+```markdown
 title
 ===
 ┃\̬- x
@@ -2374,7 +2374,7 @@ title
 
 > deleteContentBackward
 
-```buffer
+```markdown
 title┃- x
 ===
 ```
@@ -2387,13 +2387,13 @@ The same in an ATX heading.
 tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 # title┃ - x
 ```
 
 > enter deleteContentBackward
 
-```buffer
+```markdown
 # title┃- x
 ```
 
@@ -2407,20 +2407,20 @@ the title becomes the section's paragraph without them. Backspace joins it back 
 tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 # Title┃more #
 ```
 
 > enter
 
-```buffer
+```markdown
 # Title #
 ┃more
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 # Title┃more #
 ```
 
@@ -2434,13 +2434,13 @@ ourus doesn't keep which escapes it wrote. Logseq and bare Obsidian, which write
 tags: rare
 ```
 
-```buffer
+```markdown
 - Plan┃2. draft
 ```
 
 > enter "revise "
 
-```buffer
+```markdown
 - Plan
 - revise ┃2\̬. draft
 ```
@@ -2457,7 +2457,7 @@ tags: rare free-form
 enterOnEmptyItem: exit
 ```
 
-```buffer
+```markdown
 - a
 - ┃
 - b
@@ -2465,7 +2465,7 @@ enterOnEmptyItem: exit
 
 > enter
 
-```buffer
+```markdown
 - a
 
 ┃◌
@@ -2475,7 +2475,7 @@ enterOnEmptyItem: exit
 
 > "x"
 
-```buffer
+```markdown
 - a
 
 x┃
@@ -2494,7 +2494,7 @@ tags: rare
 enterOnEmptyItem: exit
 ```
 
-```buffer
+```markdown
 - a
   - b
   - ┃
@@ -2503,7 +2503,7 @@ enterOnEmptyItem: exit
 
 > enter
 
-```buffer
+```markdown
 - a
   - b
   - 
@@ -2517,17 +2517,17 @@ Enter at the end of a footnote definition: a paragraph after it, set off by a bl
 line right under it would continue its text. Backspace on the empty paragraph takes it back.
 
 ```yaml
-tags: edge
+tags: rare
 flavor: gfm
 ```
 
-```buffer
+```markdown
 [^1]: a note┃
 ```
 
 > enter
 
-```buffer
+```markdown
 [^1]: a note
 
 ┃◌
@@ -2535,7 +2535,7 @@ flavor: gfm
 
 > deleteContentBackward
 
-```buffer
+```markdown
 [^1]: a note┃
 ```
 
@@ -2544,16 +2544,16 @@ flavor: gfm
 Enter at the end of a thematic break: a paragraph after it, as at a table's end.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 ---┃
 ```
 
 > enter
 
-```buffer
+```markdown
 ---
 
 ┃◌
@@ -2570,14 +2570,14 @@ tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 > [!note] ┃q
 p # h
 ```
 
 > enter
 
-```buffer
+```markdown
 > [!note]
 > ┃q
 
@@ -2593,14 +2593,14 @@ first half, the rest is the next item, plain, as Logseq, Tine and Athens do, and
 tags: common
 ```
 
-```buffer
+```markdown
 - # Hel┃lo
 - next
 ```
 
 > enter
 
-```buffer
+```markdown
 - # Hel
 - ┃lo
 - next
@@ -2614,14 +2614,14 @@ At the end of an item's heading, Enter makes an empty item after it, as at any i
 tags: common
 ```
 
-```buffer
+```markdown
 - # Head┃
 - next
 ```
 
 > enter
 
-```buffer
+```markdown
 - # Head
 - ┃
 - next
@@ -2633,11 +2633,11 @@ At the end of a table that is an item's text, a new item, as at the end of any i
 code that is one, [Fence rule 3](fences.md)); in a row's middle, refused as at the top level.
 
 ```yaml
-tags: edge
+tags: rare
 flavor: gfm
 ```
 
-```buffer
+```markdown
 - a
 - | x | y |
   | - | - |
@@ -2647,7 +2647,7 @@ flavor: gfm
 
 > enter
 
-```buffer
+```markdown
 - a
 - | x | y |
   | - | - |

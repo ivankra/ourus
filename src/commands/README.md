@@ -23,8 +23,8 @@ if (result instanceof OurusDeferred) {
   ourus = result.view;                     // its text: result.view.doc
 }
 
-const settled = settlePlaceholders(ourus, caret);   // after the caret moves
-if (settled) { view.dispatch({ changes: settled.changes }); ourus = settled.view; }
+const settled = settlePlaceholders(ourus, selection);   // after the caret moves
+if (settled) { view.dispatch({ changes: settled.changes, selection: settled.selection }); ourus = settled.view; }
 ```
 
 ## API
@@ -237,11 +237,14 @@ if (settled) { view.dispatch({ changes: settled.changes }); ourus = settled.view
   - `write-failed`: the writer failed, on a layout it has no rule for or a text that didn't read back
     as the command meant. This is always a bug in ourus, to fix.
 
-- **`settlePlaceholders(view: OurusView, caret: number): { view, changes } | null`**<br>
+- **`settlePlaceholders(view: OurusView, at: number | OurusSelection): { view, changes, selection } | null`**<br>
   Settles the placeholders the caret has left: a node with a held space is written again without
   it; an empty item is written again so it holds without a placeholder; any other empty node is
   removed. The writer's steps (`settleSteps`, `writer/`'s README), the view carried through each;
-  `changes` composed, for the host. Null when no placeholder is off the caret's line.
+  `changes` composed, for the host; `selection` the one given (a caret, or a selection whose head is
+  the caret) after them, inside the zoom and where the view shows it, for the host to set: mapping
+  the caret through `changes` itself can leave it past the zoom's end. Null when no placeholder is off
+  the caret's line.
 
 - **`OurusConfig`** chooses how commands behave where outliners differ. It is set when the document is
   made (`OurusDoc.parse(text, { config })`): `outdent`, `bullet`, `enterOnEmptyItem`, `enterMidItem`,
@@ -260,8 +263,8 @@ The host's contract:
    with the caret where the edit leaves it.
 2. On a command key, call `executeCommand`. Commit an applied result's changes and selection
    together, and keep its `view` (no need to parse again).
-3. When the caret moves, call `settlePlaceholders(view, caret)`, and commit its changes as a
-   separate edit.
+3. When the caret moves, call `settlePlaceholders(view, selection)`, and commit its changes and its
+   selection as a separate edit.
 4. Keep placeholders in the undo history: undo and redo must restore the placeholders of the state
    they return to. Save `view.doc.marks.placeholders` with each state, and restore with
    `view.update({ changes, marks: { placeholders } })`; where the
@@ -274,7 +277,7 @@ The host's contract:
    none. Links in other notes are the host's to keep: after a merge, redirect those to each
    `mergedBlockIds` pair.
 
-`demos/cm6/main.ts` is a complete CM6 host; `test/player.ts` plays the same contract for the spec.
+`demos/cm6/main.ts` is a complete CM6 host; `test/lib/action-player.ts` plays the same contract for the spec.
 
 Every applied result is checked for block ids too, after the command (`checkBlockIds`, `doc/`):
 each block id of the document before is on the node it was on, names what it named, and counts
@@ -310,8 +313,9 @@ Files:
   `OurusSelection`, `OurusResult` and its classes, `RejectReason`, `InsertionPoint`); `context.ts`
   (`CommandContext`: the view and its document, the selection located, the nodes given, `apply` and
   `update`, which carry the view); `util.ts`
-  (shared helpers: the nodes a command acts on and their runs of siblings, the caret it leaves,
-  markup at the caret, heading levels, deleting a held space, hidden spaces); `shape.ts` (the
+  (shared helpers: what a plain text editor's default for a key does, `plainTextEdit`, which the zoom
+  and block-id guards check; the nodes a command acts on and their runs of siblings, the caret it
+  leaves, markup at the caret, heading levels, deleting a held space, hidden spaces); `shape.ts` (the
   selection a structural command leaves where it follows the nodes: a subtree selection on the same
   roots, in the shape given); `select.ts` (the selection commands); `subtrees.ts` (the keys that
   edit text, over a subtree selection: on its nodes, one routing step before the commands); `view.ts`
@@ -338,8 +342,8 @@ duplicate; and, over generated documents, the check where an edit reached agreei
 of the whole document, and no command losing a block id); `test/placeholders.test.ts` (the
 placeholders' lifecycle); `test/drops.test.ts` (every place a
 pickup lists, dropped: a refusal or a result, at the known starts aside); `test/moves.test.ts` (every
-node moved to every place, those only a tree pane or a dialog names too). The heavy suites, `npm run
-test:heavy` (`test/heavy.ts`), on a frozen copy of the tree: the differential (`test/differential.ts`),
+node moved to every place, those only a tree pane or a dialog names too). The full run, `npm
+test` (`test/heavy.ts`), on a frozen copy of the tree: the differential (`test/differential.ts`),
 which compares every command's outcome with the last commit's; the inverse pairs (`test/inverse.ts`),
 which run every pair of commands that undo each other at every caret position of the spec's
 buffers, beside the last commit's code on the same buffers; and the view pass

@@ -33,13 +33,13 @@ clipboard: |
   y
 ```
 
-```buffer
+```markdown
 - a┃b
 ```
 
 > paste
 
-```buffer
+```markdown
 - ax
   y
   ┃b
@@ -50,13 +50,13 @@ clipboard: |
 A heading's title is one line: lines pasted there are a paragraph, first in its section.
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |-
   x
   y
 ```
 
-```buffer
+```markdown
 # T┃
 
 para
@@ -64,7 +64,7 @@ para
 
 > paste
 
-```buffer
+```markdown
 # T
 
 x
@@ -84,7 +84,7 @@ clipboard: |-
   - y
 ```
 
-```buffer
+```markdown
 Notes┃
 
 more
@@ -92,7 +92,7 @@ more
 
 > paste
 
-```buffer
+```markdown
 Notes
 
 - x
@@ -107,13 +107,13 @@ At the end of a paragraph that owns a list, the items go first in it, the list w
 the paragraph as it was.
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |-
   - x
   - y
 ```
 
-```buffer
+```markdown
 Notes┃
 
 - z
@@ -121,7 +121,7 @@ Notes┃
 
 > paste
 
-```buffer
+```markdown
 Notes
 
 - x
@@ -135,14 +135,14 @@ With `pasteSeams: open`, the first item's text joins the paragraph's; the rest g
 list, beside its items, the list written apart from the paragraph as it was.
 
 ```yaml
-tags: edge
+tags: rare
 pasteSeams: open
 clipboard: |-
   - x
   - y
 ```
 
-```buffer
+```markdown
 Notes┃
 
 - z
@@ -150,7 +150,7 @@ Notes┃
 
 > paste
 
-```buffer
+```markdown
 Notesx
 
 - y┃
@@ -168,13 +168,13 @@ clipboard: |-
   - y
 ```
 
-```buffer
+```markdown
 See ┃here.
 ```
 
 > paste
 
-```buffer
+```markdown
 See here.
 
 - x
@@ -192,7 +192,7 @@ clipboard: |-
   - y
 ```
 
-```buffer
+```markdown
 # T┃
 
 - z
@@ -200,7 +200,7 @@ clipboard: |-
 
 > paste
 
-```buffer
+```markdown
 # T
 
 - x
@@ -213,14 +213,14 @@ clipboard: |-
 A block that isn't a list goes after the paragraph, set apart.
 
 ````yaml
-tags: edge
+tags: common
 clipboard: |-
   ```
   c
   ```
 ````
 
-```buffer
+```markdown
 p┃
 
 q
@@ -228,7 +228,7 @@ q
 
 > paste
 
-````buffer
+````markdown
 p
 
 ```
@@ -241,13 +241,13 @@ q
 ## Paste8
 
 ```yaml
-tags: edge
+tags: rare
 clipboard: |-
   - x
   - y
 ```
 
-```buffer
+```markdown
 - a
 
   p┃
@@ -257,7 +257,7 @@ clipboard: |-
 
 > paste
 
-```buffer
+```markdown
 - a
 
   p
@@ -271,14 +271,14 @@ clipboard: |-
 ## Paste9
 
 ```yaml
-tags: edge
+tags: rare
 clipboard: |-
   - x
   - y
 quotes: container
 ```
 
-```buffer
+```markdown
 > p┃
 
 after
@@ -286,7 +286,7 @@ after
 
 > paste
 
-```buffer
+```markdown
 > p
 >
 > - x
@@ -306,7 +306,7 @@ clipboard: |-
   text
 ```
 
-```buffer
+```markdown
 # A
 
 p┃
@@ -320,7 +320,7 @@ r
 
 > paste
 
-```buffer
+```markdown
 # A
 
 p
@@ -341,13 +341,13 @@ At the end of a heading of its level, the pasted heading closes that section: it
 what was the section's is its own.
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |-
   ## h
   text
 ```
 
-```buffer
+```markdown
 ## A┃
 
 p
@@ -357,7 +357,7 @@ p
 
 > paste
 
-```buffer
+```markdown
 ## A
 
 ## h
@@ -373,13 +373,13 @@ p
 A heading of a deeper level goes first in the section, and takes in what follows it there.
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |-
   ### h
   text
 ```
 
-```buffer
+```markdown
 ## A┃
 
 p
@@ -387,7 +387,7 @@ p
 
 > paste
 
-```buffer
+```markdown
 ## A
 
 ### h
@@ -402,12 +402,12 @@ On a blank line, the paste fills it: the nodes go after the node above, the blan
 caret's after them.
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |
   - x
 ```
 
-```buffer
+```markdown
 a
 ┃
 
@@ -416,7 +416,7 @@ b
 
 > paste
 
-```buffer
+```markdown
 a
 - x┃
 
@@ -434,7 +434,7 @@ clipboard: |
   - y
 ````
 
-````buffer
+````markdown
 ```
 a┃
 ```
@@ -442,7 +442,7 @@ a┃
 
 > paste
 
-````buffer
+````markdown
 ```
 a- x
 - y
@@ -455,13 +455,13 @@ a- x
 At the end of a block that isn't text (after code's closing fence), the paste goes after it.
 
 ````yaml
-tags: edge
+tags: common markup-fence
 clipboard: |-
   - x
   - y
 ````
 
-````buffer
+````markdown
 ```
 a
 ```┃
@@ -471,7 +471,7 @@ after
 
 > paste
 
-````buffer
+````markdown
 ```
 a
 ```
@@ -487,13 +487,13 @@ after
 In markup (before an item's marker, a heading's `#`s), the paste is the host's.
 
 ```yaml
-tags: edge
+tags: rare
 clipboard: |
   - x
   - y
 ```
 
-```buffer
+```markdown
 ┃- one
 ```
 
@@ -503,7 +503,7 @@ clipboard: |
 result: deferredToHost
 ```
 
-```buffer
+```markdown
 - x
 - y
 ┃- one
@@ -521,14 +521,14 @@ clipboard: |-
   - y
 ```
 
-```buffer
+```markdown
 - a«bc»d
 - e
 ```
 
 > paste
 
-```buffer
+```markdown
 - ad
 - x
 - y┃
@@ -541,21 +541,21 @@ With `pasteOverSelection: ignore`, pasted nodes leave the selected text as it is
 paste at a caret puts them, after the item, the caret at the end of the last.
 
 ```yaml
-tags: edge
+tags: rare
 pasteOverSelection: ignore
 clipboard: |-
   - x
   - y
 ```
 
-```buffer
+```markdown
 - a«bc»d
 - e
 ```
 
 > paste
 
-```buffer
+```markdown
 - abcd
 - x
 - y┃
@@ -568,21 +568,21 @@ With `pasteOverSelection: ignore`, the selection decides nothing, over the whole
 in it.
 
 ```yaml
-tags: edge
+tags: rare
 pasteOverSelection: ignore
 clipboard: |-
   - x
   - y
 ```
 
-```buffer
+```markdown
 - «abcd»
 - e
 ```
 
 > paste
 
-```buffer
+```markdown
 - abcd
 - x
 - y┃
@@ -595,14 +595,14 @@ With `pasteOverSelection: ignore`, in an item with children the nodes go where a
 puts them there, first among its children (`pasteOnParent: children`).
 
 ```yaml
-tags: edge
+tags: rare
 pasteOverSelection: ignore
 clipboard: |-
   - x
   - y
 ```
 
-```buffer
+```markdown
 - a«bc»d
   - kid
 - e
@@ -610,7 +610,7 @@ clipboard: |-
 
 > paste
 
-```buffer
+```markdown
 - abcd
   - x
   - y┃
@@ -624,20 +624,20 @@ With `pasteOverSelection: ignore`, one item copied with its line break is a node
 selected text too.
 
 ```yaml
-tags: edge
+tags: rare
 pasteOverSelection: ignore
 clipboard: |
   - x
 ```
 
-```buffer
+```markdown
 - a«bc»d
 - e
 ```
 
 > paste
 
-```buffer
+```markdown
 - abcd
 - x┃
 - e
@@ -649,19 +649,19 @@ With `pasteOverSelection: ignore`, what is pasted as text replaces the selection
 one line, put in at the caret.
 
 ```yaml
-tags: edge
+tags: rare
 pasteOverSelection: ignore
 clipboard: "x"
 ```
 
-```buffer
+```markdown
 - a«bc»d
 - e
 ```
 
 > paste
 
-```buffer
+```markdown
 - ax┃d
 - e
 ```
@@ -672,7 +672,7 @@ With `pasteOverSelection: ignore` and `pasteLines: items` (Tana, Roam and Athens
 nodes, and leave the selected text; with `pasteLines: text` they are text, and replace it.
 
 ```yaml
-tags: edge
+tags: rare
 pasteOverSelection: ignore
 pasteLines: items
 clipboard: |-
@@ -680,14 +680,14 @@ clipboard: |-
   y
 ```
 
-```buffer
+```markdown
 - a«bc»d
 - e
 ```
 
 > paste
 
-```buffer
+```markdown
 - abcd
 - x
 - y┃
@@ -700,21 +700,21 @@ With `pasteLines: items` (Roam, Athens, WorkFlowy, Dynalist), plain lines are a 
 list, an item each.
 
 ```yaml
-tags: edge
+tags: rare
 pasteLines: items
 clipboard: |-
   x
   y
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - x
 - y┃
@@ -726,14 +726,14 @@ clipboard: |-
 With `pasteLines: items`, outside a list, a paragraph each.
 
 ```yaml
-tags: edge
+tags: rare
 pasteLines: items
 clipboard: |-
   x
   y
 ```
 
-```buffer
+```markdown
 p┃
 
 q
@@ -741,7 +741,7 @@ q
 
 > paste
 
-```buffer
+```markdown
 p
 
 x
@@ -757,14 +757,14 @@ With `pasteAtTextStart: before`, a heading pasted at a paragraph's start goes be
 in, as one typed there would.
 
 ```yaml
-tags: edge
+tags: rare
 pasteAtTextStart: before
 clipboard: |-
   ## h
   text
 ```
 
-```buffer
+```markdown
 # A
 
 ┃para
@@ -772,7 +772,7 @@ clipboard: |-
 
 > paste
 
-```buffer
+```markdown
 # A
 
 ## h
@@ -787,20 +787,20 @@ With `pasteSeams: open`, a pasted heading's title joins the text before the care
 would, and the text after it joins the last pasted text.
 
 ```yaml
-tags: edge
+tags: rare
 pasteSeams: open
 clipboard: |-
   # h
   text
 ```
 
-```buffer
+```markdown
 p┃q
 ```
 
 > paste
 
-```buffer
+```markdown
 ph
 
 text┃q
@@ -819,7 +819,7 @@ clipboard: |-
   # h
 ```
 
-```buffer
+```markdown
 ## A
 
 p┃
@@ -831,7 +831,7 @@ q
 
 > paste
 
-```buffer
+```markdown
 ## A
 
 p
@@ -851,14 +851,14 @@ At the end of a callout's title, a pasted heading goes first in the callout's bo
 the callout stays out of its section.
 
 ```yaml
-tags: edge
-flavor: gfm
+tags: rare
+flavor: obsidian
 clipboard: |-
   ## h
   text
 ```
 
-```buffer
+```markdown
 > [!note] q┃
 
 after
@@ -866,7 +866,7 @@ after
 
 > paste
 
-```buffer
+```markdown
 > [!note] q
 > ## h
 > text┃
@@ -887,14 +887,14 @@ clipboard: |-
     - b
 ```
 
-```buffer
+```markdown
 # h1
 ┃◌
 ```
 
 > paste
 
-```buffer
+```markdown
 # h1
 - a
   - b┃
@@ -905,21 +905,21 @@ clipboard: |-
 With `pasteSeams: open`, the same: an empty line has no text for a seam to join, and is filled.
 
 ```yaml
-tags: edge
+tags: rare
 pasteSeams: open
 clipboard: |-
   - a
     - b
 ```
 
-```buffer
+```markdown
 # h1
 ┃◌
 ```
 
 > paste
 
-```buffer
+```markdown
 # h1
 - a
   - b┃
@@ -932,21 +932,21 @@ go first in the callout's body, wherever in the title the caret is (as Paste23 e
 host's paste would break the title into lines that end the callout.
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 clipboard: |-
   x
   y
 ```
 
-```buffer
+```markdown
 > [!note] q┃
 > body
 ```
 
 > paste
 
-```buffer
+```markdown
 > [!note] q
 > x
 > y┃
@@ -961,19 +961,19 @@ the node with no blank line where Markdown needs none, as the text editors paste
 pasted there stays on it.
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |-
   - a
   - b
 ```
 
-```buffer
+```markdown
 p┃
 ```
 
 > shiftEnter paste
 
-```buffer
+```markdown
 p
 - a
 - b┃
@@ -985,20 +985,20 @@ With `pasteSeams: open`, the blank line Shift-Enter leaves is the text's next li
 pasted text joins the text there, after a line break, and the rest follow it, the paragraph's list.
 
 ```yaml
-tags: edge
+tags: rare
 pasteSeams: open
 clipboard: |-
   - a
   - b
 ```
 
-```buffer
+```markdown
 p┃
 ```
 
 > shiftEnter paste
 
-```buffer
+```markdown
 p
 a
 - b┃
@@ -1010,12 +1010,12 @@ A heading inside a pasted quote (or item) splits no section: it is the quote's, 
 paste stays where it is.
 
 ```yaml
-tags: edge
+tags: rare
 clipboard: |
   > # q
 ```
 
-```buffer
+```markdown
 # A
 para┃
 
@@ -1024,7 +1024,7 @@ more
 
 > paste
 
-```buffer
+```markdown
 # A
 para
 

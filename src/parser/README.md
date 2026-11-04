@@ -25,10 +25,13 @@ preview.innerHTML = tree.renderHtml();
 - **`MdTree`** is one immutable parse of one text: a block tree, a line table, and each leaf's
   inlines. The line table and the inlines are built lazily, when first asked for.
 
-  - `static MdTree.parse(text: string, flavor = MdFlavor.commonmark, { sentinels? }): MdTree`<br>
+  - `static MdTree.parse(text: string, flavor = MdFlavor.commonmark, { sentinels?, document? }): MdTree`<br>
     Parses a text. Never fails: every string is a document. **Sentinels** are offsets the parser
     reads as if a character had been typed there. `doc/` passes its placeholders as sentinels, so
-    an empty item the user is about to fill still reads as an item.
+    an empty item the user is about to fill still reads as an item. **`document`**: the text is a
+    whole document, as a file holds it, not a fragment of one (a block's text, a clipboard's), so a
+    byte-order mark opening it is before its Markdown (`mdDocumentStart`); `doc/` parses its
+    documents so. An update keeps it.
 
   - `MdTree.update(changes: ChangeSpec[], { sentinels? }): MdTree`<br>
     The tree of the text after `changes` (given in this text's coordinates). Only the lines the
@@ -45,7 +48,12 @@ preview.innerHTML = tree.renderHtml();
     Each line is built when first asked for; `lines` builds them all.
 
   - `MdTree.starts: number[]`, `MdTree.ends: number[]`<br>
-    Each line's start and end (before its line ending), for fast line lookups.
+    Each line's start and end (before its line ending), for fast line lookups. Line 0 starts past a
+    document's byte-order mark (`documentStart`).
+
+  - `get MdTree.documentStart: number`<br>
+    Where line 0 starts: in a document, 1 past a byte-order mark opening it, else 0
+    (`mdDocumentStart`); 0 in a fragment.
 
   - `MdTree.markup(i: number): MdLineMarkup`<br>
     The markup of line `i` past its containers' prefix, and where its text is. The markup is a list
@@ -180,16 +188,22 @@ preview.innerHTML = tree.renderHtml();
   a quote's first line, past its `>`. This is Obsidian's syntax, which the outline reads in every
   flavor.
 
+- **`mdDocumentStart(text: string): number`**<br>
+  Where a document's Markdown starts: 1 past a byte-order mark (U+FEFF) opening the text, else 0, in
+  every flavor. The mark is no character of the Markdown (`\ufeff# T` is a heading, as cmark-gfm,
+  micromark and Obsidian read it) and stays in the text, before every line.
+
 Invariants a caller relies on:
 
-- **Lossless**: every character of the text belongs to a prefix piece, a leaf, or a blank line;
-  inline nodes map back to their source exactly.
+- **Lossless**: every character of the text but a byte-order mark opening it belongs to a prefix
+  piece, a leaf, or a blank line; inline nodes map back to their source exactly.
 - **Incremental equals full**: `tree.update(changes)` reads exactly as `MdTree.parse(newText)` does.
 - **Immutable**: a tree never changes; `update` returns a new one, sharing every block it can.
 
 For extension authors: `ourus/extend` (`extend.ts`) has `defineFlavor(name, extensions)`, the
 `MdExtension` shape (block starts, leaf builders, inline rules, render rules), the line machine's and
-inline parser's rule types, and every extension ourus ships (`gfmExtensions`, `obsidianExtensions`,
+inline parser's rule types, the inline node an inline rule makes (`MdInlineNode`, for the parser's
+`add` and `closeBracket`), and every extension ourus ships (`gfmExtensions`, `obsidianExtensions`,
 `table`, `callouts`, ...) to build on:
 
 ```ts

@@ -8,6 +8,7 @@ import { commonmark, type MdFlavor } from '../../src/parser/flavor.ts';
 import { gfm } from '../../src/parser/gfm.ts';
 import { obsidian } from '../../src/parser/obsidian.ts';
 import { MdTree } from '../../src/parser/syntax.ts';
+import { scalingFactor } from '../lib/index.ts';
 
 /** Generous: these take tens of milliseconds when linear, and seconds or forever when not. */
 const BUDGET_MS = Number(process.env.OURUS_PATHOLOGICAL_MS ?? 3000);
@@ -85,4 +86,19 @@ test('pathological: frontmatter that never closes, edited', () => {
     for (let k = 0; k < 10; k++) syntax = syntax.update([{ from: text.length - 2, to: text.length - 2, insert: 'x' }]);
   });
   assert.ok(ms < BUDGET_MS, `10 edits: ${ms.toFixed(0)} ms`);
+});
+
+// (eight times the input: linear is about 8; each of these measured 37 to 90 before)
+test('many carets in a paragraph, many entities, a footnote of many paragraphs: read and rendered in linear time', () => {
+  assert.ok(scalingFactor((n) => MdTree.parse('x ' + '^a '.repeat(n) + 'z'.repeat(n), obsidian).renderHtml(), 8000, 64000) < 24, 'block-id carets');
+  assert.ok(scalingFactor((n) => MdTree.parse('a&amp;'.repeat(n) + 'z'.repeat(n), gfm).renderHtml(), 8000, 64000) < 24, 'email autolinks between entities');
+  assert.ok(scalingFactor((n) => MdTree.parse('x[^a]\n\n[^a]: x\n' + '    \n    x\n'.repeat(n), gfm).renderHtml(), 2000, 16000) < 24, 'a footnote\'s paragraphs');
+});
+
+test('inline position queries answer inside images nested 6,000 deep, as parsing and rendering do', () => {
+  const depth = 6000;
+  const tree = MdTree.parse('!['.repeat(depth) + '`x`' + '](u)'.repeat(depth), commonmark);
+  assert.deepEqual(tree.codeSpanAt(depth * 2 + 1), { closer: depth * 2 + 2, to: depth * 2 + 3 });
+  assert.equal(tree.verbatimSpanAt(depth * 2 + 1), true);
+  assert.equal(MdTree.parse('!['.repeat(depth) + '\\*' + '](u)'.repeat(depth), commonmark).inlineEscapeAt(depth * 2), true);
 });

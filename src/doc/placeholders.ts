@@ -23,8 +23,11 @@ export function validPlaceholder(tree: MdTree, pos: number): boolean {
   const line = tree.line(lineIndexAt(tree.starts, pos));
   if (pos === text.length || text[pos] === '\n' || text[pos] === '\r') {
     if (pos !== line.to) return false;
-    // (a line that starts its block, an empty node's: Markdown holds an empty line inside a text in none)
-    if (line.leaf && line.leaf.line !== line.index) return false;
+    // (a line that starts its block, an empty node's: Markdown holds an empty line inside a text in none;
+    // but a paragraph's last, the empty line Shift-Enter leaves at a text's end, until it settles: B23)
+    // (a paragraph with text above the line, an empty one's lines all empty no text)
+    const heldLast = (leaf: NonNullable<typeof line.leaf>): boolean => leaf.block.type === 'paragraph' && leaf.lastLine === line.index && !blank(text.slice(tree.line(leaf.line).contentFrom, tree.line(leaf.line).to));
+    if (line.leaf && line.leaf.line !== line.index && !heldLast(line.leaf)) return false;
     const content = text.slice(line.contentFrom, line.to);
     if (blank(content)) return true;
     return reCheckbox.test(content) && line.container.block.type === 'item' && line.container.line === line.index;
@@ -35,7 +38,7 @@ export function validPlaceholder(tree: MdTree, pos: number): boolean {
 
 /**
  * Whether an auto mark at `pos` of `text` holds: on a line break, while its line is blank (typed on,
- * it is the user's); on a backslash, while something follows it to escape; on a closer (a backtick,
+ * it is the user's); on a backslash, while the punctuation it escapes follows it; on a closer (a backtick,
  * a tilde, a bracket, `$$`, `%%`, `-->`), while it is there. (On no other character: a `MarkSet` refuses one there.)
  */
 export function validAuto(text: string, pos: number): boolean {
@@ -48,6 +51,8 @@ export function validAuto(text: string, pos: number): boolean {
     while (at >= 0 && (text[at] === ' ' || text[at] === '\t' || text[at] === '>')) at--;
     return at < 0 || text[at] === '\n' || text[at] === '\r';
   }
-  if (char === '\\') return pos + 1 < text.length;
+  // (a backslash of ours escapes the punctuation after it; before anything else, a space typed after
+  // it, it escapes nothing, and is the user's text: B295)
+  if (char === '\\') return pos + 1 < text.length && /[!-\/:-@[-`{-~]/.test(text[pos + 1]!);
   return '`~)]}$%->'.includes(char);
 }

@@ -5,7 +5,7 @@ version: "9d8db519bcb92566"
 url: "https://jordanscales.notion.site/Nested-TODOs-d1769a74c4c04d2a8e36f45c1520a150"
 model: "block"
 command: "node sxs/run.ts notion"
-elapsed_s: 616
+elapsed_s: 802
 workers: 4
 ---
 
@@ -13,59 +13,59 @@ workers: 4
 
 Summary:
 
-|  | agree | caret | whitespace | disagree | error | skipped | total |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 200 | [26](#caret-26) | [19](#whitespace-19) | [153](#disagree-153) |  |  | **398** |
-| adapted | 173 | [17](#adapted-caret-17) | [16](#adapted-whitespace-16) | [104](#adapted-disagree-104) |  |  | **310** |
-| **total** | **373 (25%)** | **43 (2.9%)** | **35 (2.3%)** | **257 (17%)** | **0 (0%)** | **[787](#skipped-787) (53%)** | **1499** |
+|  | agree | caret | whitespace | disagree | error | skipped | not run | total |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| original | 207 | [26](#caret-26) | [22](#whitespace-22) | [154](#disagree-154) |  |  |  | **409** |
+| adapted | 170 | [17](#adapted-caret-17) | [17](#adapted-whitespace-17) | [103](#adapted-disagree-103) |  |  |  | **307** |
+| **total** | **377 (24%)** | **43 (2.7%)** | **39 (2.5%)** | **257 (16%)** | **0 (0%)** | **[866](#skipped-866) (54%)** | **[3](#not-run-3) (0.19%)** | **1589** |
 
 Per-file:
 
-|  | agree | caret | whitespace | disagree | error | skipped | total | original | adapted |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [auto.md](../spec/auto.md) | 6 |  |  | 9 |  | 24 | **39** | 8 | 7 |
-| [backspace.md](../spec/backspace.md) | 40 |  | 8 | 10 |  | 30 | **88** | 30 | 28 |
-| [backtick.md](../spec/backtick.md) | 1 |  |  |  |  | 32 | **33** | 1 |  |
-| [block-ids.md](../spec/block-ids.md) | 1 |  |  |  |  | 20 | **21** |  | 1 |
-| [copy.md](../spec/copy.md) | 4 | 1 |  | 1 |  | 7 | **13** | 4 | 2 |
-| [cursor.md](../spec/cursor.md) | 23 | 5 |  |  |  | 8 | **36** | 24 | 4 |
-| [delete-subtree.md](../spec/delete-subtree.md) | 5 |  |  | 1 |  | 8 | **14** | 3 | 3 |
-| [delete.md](../spec/delete.md) | 25 |  |  | 6 |  | 25 | **56** | 22 | 9 |
-| [drag.md](../spec/drag.md) |  |  |  |  |  | 8 | **8** |  |  |
-| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 13 | **13** |  |  |
-| [enter.md](../spec/enter.md) | 57 |  | 7 | 6 |  | 28 | **98** | 20 | 50 |
-| [fences.md](../spec/fences.md) | 3 |  | 2 | 3 |  | 62 | **70** |  | 8 |
-| [fold.md](../spec/fold.md) |  |  |  |  |  | 22 | **22** |  |  |
-| [gaps.md](../spec/gaps.md) | 7 | 1 |  | 6 |  | 5 | **19** | 10 | 4 |
-| [indent.md](../spec/indent.md) | 20 |  |  | 16 |  | 19 | **55** | 27 | 9 |
-| [lists.md](../spec/lists.md) | 3 |  |  | 9 |  | 4 | **16** | 3 | 9 |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 10 |  |  | 27 |  | 8 | **45** | 31 | 6 |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 9 |  |  | 25 |  | 13 | **47** | 29 | 5 |
-| [move-subtree.md](../spec/move-subtree.md) |  |  |  |  |  | 24 | **24** |  |  |
-| [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 35 | 2 | 2 | 8 |  | 20 | **67** | 27 | 20 |
-| [outdent.md](../spec/outdent.md) | 11 |  |  | 14 |  | 17 | **42** | 21 | 4 |
-| [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |  |  |
-| [paste-conv.md](../spec/paste-conv.md) | 2 | 2 |  | 2 |  |  | **6** | 5 | 1 |
-| [paste-html.md](../spec/paste-html.md) |  | 9 | 1 | 7 |  | 2 | **19** |  | 17 |
-| [paste-list-form.md](../spec/paste-list-form.md) |  | 3 |  | 2 |  | 1 | **6** | 4 | 1 |
-| [paste-list.md](../spec/paste-list.md) | 2 | 3 | 2 | 14 |  | 8 | **29** | 10 | 11 |
-| [paste-plain.md](../spec/paste-plain.md) | 4 |  |  | 22 |  | 10 | **36** | 17 | 9 |
-| [paste.md](../spec/paste.md) | 1 | 12 | 1 | 3 |  | 19 | **36** | 13 | 4 |
-| [placeholders.md](../spec/placeholders.md) | 8 |  | 1 |  |  | 14 | **23** | 6 | 3 |
-| [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |  |  |
-| [quotes.md](../spec/quotes.md) | 7 | 1 | 1 | 5 |  | 129 | **143** |  | 14 |
-| [regressions.md](../spec/regressions.md) | 33 |  | 7 | 38 |  | 124 | **202** | 35 | 43 |
-| [scenarios.md](../spec/scenarios.md) | 7 | 2 | 1 | 10 |  | 9 | **29** | 14 | 6 |
-| [select.md](../spec/select.md) |  |  |  |  |  | 23 | **23** |  |  |
-| [shift-enter.md](../spec/shift-enter.md) | 23 |  | 2 | 5 |  | 8 | **38** | 18 | 12 |
-| [subtree-selection.md](../spec/subtree-selection.md) | 9 | 2 |  | 2 |  | 6 | **19** | 12 | 1 |
-| [tasks.md](../spec/tasks.md) | 15 |  |  | 2 |  | 13 | **30** |  | 17 |
-| [typing.md](../spec/typing.md) |  |  |  | 3 |  |  | **3** | 1 | 2 |
-| [undo.md](../spec/undo.md) | 2 |  |  | 1 |  | 2 | **5** | 3 |  |
-| [zoom.md](../spec/zoom.md) |  |  |  |  |  | 14 | **14** |  |  |
-| **total** | **373 (25%)** | **43 (2.9%)** | **35 (2.3%)** | **257 (17%)** | **0 (0%)** | **791 (53%)** | **1499** | **398 (27%)** | **310 (21%)** |
+|  | agree | caret | whitespace | disagree | error | skipped | not run | total | original | adapted |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [auto.md](../spec/auto.md) | 5 |  |  | 6 |  | 28 |  | **39** | 9 | 2 |
+| [backspace.md](../spec/backspace.md) | 40 |  | 8 | 10 |  | 30 |  | **88** | 30 | 28 |
+| [backtick.md](../spec/backtick.md) | 1 |  |  |  |  | 32 |  | **33** | 1 |  |
+| [block-ids.md](../spec/block-ids.md) | 1 |  |  |  |  | 20 |  | **21** |  | 1 |
+| [copy.md](../spec/copy.md) | 4 | 1 |  | 1 |  | 7 |  | **13** | 4 | 2 |
+| [cursor.md](../spec/cursor.md) | 23 | 5 |  |  |  | 8 |  | **36** | 24 | 4 |
+| [delete-subtree.md](../spec/delete-subtree.md) | 5 |  |  | 1 |  | 8 |  | **14** | 3 | 3 |
+| [delete.md](../spec/delete.md) | 25 |  |  | 6 |  | 25 |  | **56** | 22 | 9 |
+| [drag.md](../spec/drag.md) |  |  |  |  |  | 8 |  | **8** |  |  |
+| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 13 |  | **13** |  |  |
+| [enter.md](../spec/enter.md) | 58 |  | 7 | 6 |  | 27 |  | **98** | 24 | 47 |
+| [fences.md](../spec/fences.md) | 3 |  | 2 | 3 |  | 62 |  | **70** |  | 8 |
+| [fold.md](../spec/fold.md) |  |  |  |  |  | 22 |  | **22** |  |  |
+| [gaps.md](../spec/gaps.md) | 7 | 1 |  | 6 |  | 5 |  | **19** | 10 | 4 |
+| [indent.md](../spec/indent.md) | 20 |  |  | 16 |  | 19 |  | **55** | 27 | 9 |
+| [lists.md](../spec/lists.md) | 3 |  |  | 9 |  | 4 |  | **16** | 3 | 9 |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 10 |  |  | 27 |  | 8 |  | **45** | 31 | 6 |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 9 |  |  | 25 |  | 13 |  | **47** | 29 | 5 |
+| [move-subtree.md](../spec/move-subtree.md) |  |  |  |  |  | 24 |  | **24** |  |  |
+| [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 35 | 2 | 2 | 8 |  | 20 |  | **67** | 27 | 20 |
+| [outdent.md](../spec/outdent.md) | 11 |  |  | 14 |  | 17 |  | **42** | 20 | 5 |
+| [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 |  | **5** |  |  |
+| [paste-conv.md](../spec/paste-conv.md) | 2 | 2 |  | 2 |  |  |  | **6** | 5 | 1 |
+| [paste-html.md](../spec/paste-html.md) |  | 9 | 1 | 7 |  | 2 |  | **19** |  | 17 |
+| [paste-list-form.md](../spec/paste-list-form.md) |  | 3 |  | 2 |  | 1 |  | **6** | 4 | 1 |
+| [paste-list.md](../spec/paste-list.md) | 2 | 3 | 2 | 14 |  | 8 |  | **29** | 10 | 11 |
+| [paste-plain.md](../spec/paste-plain.md) | 4 |  |  | 22 |  | 10 |  | **36** | 17 | 9 |
+| [paste.md](../spec/paste.md) | 1 | 12 | 1 | 3 |  | 19 |  | **36** | 13 | 4 |
+| [placeholders.md](../spec/placeholders.md) | 8 |  | 1 |  |  | 18 |  | **27** | 6 | 3 |
+| [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 |  | **7** |  |  |
+| [quotes.md](../spec/quotes.md) | 8 | 1 | 2 | 5 |  | 127 |  | **143** |  | 16 |
+| [regressions.md](../spec/regressions.md) | 36 |  | 9 | 41 |  | 194 | 3 | **283** | 41 | 45 |
+| [scenarios.md](../spec/scenarios.md) | 8 | 2 | 1 | 10 |  | 13 |  | **34** | 15 | 6 |
+| [select.md](../spec/select.md) |  |  |  |  |  | 23 |  | **23** |  |  |
+| [shift-enter.md](../spec/shift-enter.md) | 22 |  | 3 | 5 |  | 8 |  | **38** | 18 | 12 |
+| [subtree-selection.md](../spec/subtree-selection.md) | 9 | 2 |  | 2 |  | 6 |  | **19** | 12 | 1 |
+| [tasks.md](../spec/tasks.md) | 15 |  |  | 2 |  | 13 |  | **30** |  | 17 |
+| [typing.md](../spec/typing.md) |  |  |  | 3 |  |  |  | **3** | 1 | 2 |
+| [undo.md](../spec/undo.md) | 2 |  |  | 1 |  | 2 |  | **5** | 3 |  |
+| [zoom.md](../spec/zoom.md) |  |  |  |  |  | 14 |  | **14** |  |  |
+| **total** | **377 (24%)** | **43 (2.7%)** | **39 (2.5%)** | **257 (16%)** | **0 (0%)** | **870 (55%)** | **3 (0.19%)** | **1589** | **409 (26%)** | **307 (19%)** |
 
-## Disagree (153)
+## Disagree (154)
 
 ### [Auto23](../spec/auto.md#auto23)
 
@@ -508,8 +508,8 @@ Per-file:
 
 ```buffer
 - a
-- ««b
-- c»»
+- b⟦selected⟧
+- c⟦selected⟧
 - d
 ```
 
@@ -1593,9 +1593,9 @@ Per-file:
 
 ```buffer
 - a
-- ««b
+- b⟦selected⟧
   - b1
-- c»»
+- c⟦selected⟧
 - d
 ```
 
@@ -1604,9 +1604,9 @@ Per-file:
 ```buffer
 - a
 - d
-  - ««b
+  - b⟦selected⟧
     - b1
-  - c»»
+  - c⟦selected⟧
 ```
 
 </td><td>
@@ -1614,9 +1614,9 @@ Per-file:
 ```buffer
 - a
 - d
-- ««b
+- b⟦selected⟧
   - b1
-- c»»
+- c⟦selected⟧
 ```
 
 </td></tr>
@@ -1631,9 +1631,9 @@ Per-file:
 ```buffer
 - a
   - b
-  - ««c
+  - c⟦selected⟧
     - c1
-  - d»»
+  - d⟦selected⟧
 - e
   - e1
 ```
@@ -1650,9 +1650,9 @@ Per-file:
 ```buffer
 - a
   - b
-- ««c
+- c⟦selected⟧
   - c1
-- d»»
+- d⟦selected⟧
 - e
   - e1
 ```
@@ -1663,9 +1663,9 @@ Per-file:
 - a
   - b
 - e
-  - ««c
+  - c⟦selected⟧
     - c1
-  - d»»
+  - d⟦selected⟧
   - e1
 ```
 
@@ -1682,9 +1682,9 @@ Per-file:
 - a
   - b
 - e
-  - ««c
+  - c⟦selected⟧
     - c1
-  - d»»
+  - d⟦selected⟧
   - e1
 ```
 
@@ -1695,9 +1695,9 @@ Per-file:
   - b
 - e
   - e1
-  - ««c
+  - c⟦selected⟧
     - c1
-  - d»»
+  - d⟦selected⟧
 ```
 
 </td></tr>
@@ -1712,7 +1712,7 @@ Per-file:
 <tr valign="top"><td>
 
 ```buffer
-- ««a»»
+- a⟦selected⟧
   - b
 - c
 ```
@@ -1721,7 +1721,7 @@ Per-file:
 
 ```buffer
 - c
-  - ««a»»
+  - a⟦selected⟧
     - b
 ```
 
@@ -1729,7 +1729,7 @@ Per-file:
 
 ```buffer
 - c
-- ««a»»
+- a⟦selected⟧
   - b
 ```
 
@@ -2074,7 +2074,7 @@ Per-file:
 
 ```buffer
 - a
-- ««b»»
+- b⟦selected⟧
   - c
 - d
 ```
@@ -2084,7 +2084,7 @@ Per-file:
 ```buffer
 - a
 - d
-  - ««b»»
+  - b⟦selected⟧
     - c
 ```
 
@@ -2093,7 +2093,7 @@ Per-file:
 ```buffer
 - a
 - d
-- ««b»»
+- b⟦selected⟧
   - c
 ```
 
@@ -2431,9 +2431,9 @@ Per-file:
 
 ```buffer
 - a
-- ««b
+- b⟦selected⟧
   - b1
-- c»»
+- c⟦selected⟧
 - d
 ```
 
@@ -2441,18 +2441,18 @@ Per-file:
 
 ```buffer
 - a
-  - ««b
+  - b⟦selected⟧
     - b1
-  - c»»
+  - c⟦selected⟧
 - d
 ```
 
 </td><td>
 
 ```buffer
-- ««b
+- b⟦selected⟧
   - b1
-- c»»
+- c⟦selected⟧
 - a
 - d
 ```
@@ -2472,9 +2472,9 @@ Per-file:
 - a
   - a1
 - b
-  - ««c
+  - c⟦selected⟧
     - c1
-  - d»»
+  - d⟦selected⟧
   - e
 ```
 
@@ -2483,9 +2483,9 @@ Per-file:
 ```buffer
 - a
   - a1
-- ««c
+- c⟦selected⟧
   - c1
-- d»»
+- d⟦selected⟧
 - b
   - e
 ```
@@ -2495,9 +2495,9 @@ Per-file:
 ```buffer
 - a
   - a1
-  - ««c
+  - c⟦selected⟧
     - c1
-  - d»»
+  - d⟦selected⟧
 - b
   - e
 ```
@@ -2718,7 +2718,7 @@ Per-file:
 
 ```buffer
 - c
-- ««a»»
+- a⟦selected⟧
   - b
 ```
 
@@ -2726,14 +2726,14 @@ Per-file:
 
 ```buffer
 - c
-  - ««a»»
+  - a⟦selected⟧
     - b
 ```
 
 </td><td>
 
 ```buffer
-- ««a»»
+- a⟦selected⟧
   - b
 - c
 ```
@@ -2853,7 +2853,7 @@ Per-file:
 
 ```buffer
 - a
-- ««b»»
+- b⟦selected⟧
   - c
 - d
 ```
@@ -2862,7 +2862,7 @@ Per-file:
 
 ```buffer
 - a
-  - ««b»»
+  - b⟦selected⟧
     - c
 - d
 ```
@@ -2870,7 +2870,7 @@ Per-file:
 </td><td>
 
 ```buffer
-- ««b»»
+- b⟦selected⟧
   - c
 - a
 - d
@@ -2890,14 +2890,14 @@ Per-file:
 ```buffer
 - a
 - b
-  - ««c»»
+  - c⟦selected⟧
 ```
 
 </td><td>
 
 ```buffer
 - a
-- ««c»»
+- c⟦selected⟧
 - b
 ```
 
@@ -2905,7 +2905,7 @@ Per-file:
 
 ```buffer
 - a
-  - ««c»»
+  - c⟦selected⟧
 - b
 ```
 
@@ -3208,42 +3208,6 @@ Per-file:
 </td></tr>
 </table>
 
-### [Outdent8](../spec/outdent.md#outdent8)
-
-> outdent
-
-<table>
-<tr><th>buffer</th><th>notion</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ para
-- ««a
-  - b
-- c»»
-```
-
-</td><td>
-
-```buffer
-¶ para
-- ««a
-  - b
-- c»»
-```
-
-</td><td>
-
-```buffer
-¶ para
-¶ ««a
-- b
-¶ c»»
-```
-
-</td></tr>
-</table>
-
 ### [Outdent11](../spec/outdent.md#outdent11)
 
 <table>
@@ -3314,22 +3278,22 @@ Per-file:
 <tr valign="top"><td>
 
 ```buffer
-- ««a
-- b»»
+- a⟦selected⟧
+- b⟦selected⟧
 ```
 
 </td><td>
 
 ```buffer
-- ««a
-- b»»
+- a⟦selected⟧
+- b⟦selected⟧
 ```
 
 </td><td>
 
 ```buffer
-¶ ««a
-¶ b»»
+¶ a⟦selected⟧
+¶ b⟦selected⟧
 ```
 
 </td></tr>
@@ -3673,8 +3637,8 @@ y
 
 ```buffer
 - a
-¶ ««x
-  y»»
+¶ x⟦selected⟧
+  y
 - b
 ```
 
@@ -3732,12 +3696,12 @@ y
 
 ````buffer
 - a
-¶ ««```markdown
+¶ ```markdown⟦selected⟧
   \- x
   \- y
   
   
-  ```»»
+  ```
 - b
 ````
 
@@ -3782,8 +3746,8 @@ y
 
 ```buffer
 - a
-1. ««x
-2. y»»
+1. x⟦selected⟧
+2. y⟦selected⟧
 - b
 ```
 
@@ -3828,8 +3792,8 @@ y
 
 ```buffer
 1. a
-- ««x
-- y»»
+- x⟦selected⟧
+- y⟦selected⟧
 1. b
 ```
 
@@ -3875,8 +3839,8 @@ y
 ```buffer
 - a
   - kid
-- ««x
-- y»»
+- x⟦selected⟧
+- y⟦selected⟧
 ```
 
 </td><td>
@@ -3922,8 +3886,8 @@ y
 ```buffer
 - a
 - 
-- ««x
-- y»»
+- x⟦selected⟧
+- y⟦selected⟧
 - b
 ```
 
@@ -3969,8 +3933,8 @@ y
 ```buffer
 - 
   - kid
-- ««x
-- y»»
+- x⟦selected⟧
+- y⟦selected⟧
 ```
 
 </td><td>
@@ -4058,9 +4022,9 @@ Notes:
 
 ```buffer
 - a
-¶ ««Notes:
-- x
-- y»»
+¶ Notes:⟦selected⟧
+- x⟦selected⟧
+- y⟦selected⟧
 - b
 ```
 
@@ -4107,9 +4071,9 @@ two
 
 ```buffer
 - a
-¶ ««one
+¶ one⟦selected⟧
   two
-- x»»
+- x⟦selected⟧
 ```
 
 </td><td>
@@ -4152,8 +4116,8 @@ y
 
 ```buffer
 - ab
-¶ ««x
-  y»»
+¶ x⟦selected⟧
+  y
 ```
 
 </td><td>
@@ -4195,8 +4159,8 @@ y
 
 ```buffer
 - a
-¶ ««x
-  y»»
+¶ x⟦selected⟧
+  y
 ```
 
 </td><td>
@@ -4240,8 +4204,8 @@ y
 
 ```buffer
 - ab
-¶ ««x
-¶ y»»
+¶ x⟦selected⟧
+¶ y⟦selected⟧
 - c
 ```
 
@@ -4285,8 +4249,8 @@ x
 
 ```buffer
 - a
-¶ ««x
-  2\. y»»
+¶ x⟦selected⟧
+  2\. y
 ```
 
 </td><td>
@@ -4327,8 +4291,8 @@ b
 
 ```buffer
 ¶ 1
-¶ ««. a
-  b»»
+¶ . a⟦selected⟧
+  b
 ```
 
 </td><td>
@@ -4371,7 +4335,7 @@ x
 
 ```buffer
 ¶ p
-¶ ««x»»
+¶ x⟦selected⟧
 ```
 
 </td><td>
@@ -4412,8 +4376,8 @@ x
 
 ```buffer
 ¶ p
-¶ ««x
-   y»»
+¶ x⟦selected⟧
+   y
 ```
 
 </td><td>
@@ -4455,9 +4419,9 @@ y
 
 ```buffer
 ¶ p
-¶ ««x
+¶ x⟦selected⟧
    
-  y»»
+  y
 ```
 
 </td><td>
@@ -4520,8 +4484,8 @@ y
 ```buffer
 -  b
   - c
-¶ ««x
-  y»»
+¶ x⟦selected⟧
+  y
 ```
 
 </td><td>
@@ -4563,10 +4527,10 @@ y
 
 ````buffer
 - a
-¶ ««```
+¶ ```⟦selected⟧
   first
   second
-  ```»»
+  ```
 ````
 
 </td><td>
@@ -4608,8 +4572,8 @@ b
 
 ```buffer
 - 
-¶ ««a
-¶ b»»
+¶ a⟦selected⟧
+¶ b⟦selected⟧
 ```
 
 </td><td>
@@ -4650,8 +4614,8 @@ y
 
 ```buffer
 ¶ # H
-  ¶ ««x
-    y»»
+  ¶ x⟦selected⟧
+    y
 ```
 
 </td><td>
@@ -4693,7 +4657,7 @@ x
 ```buffer
 - a
   b
-¶ ««x»»
+¶ x⟦selected⟧
 ```
 
 </td><td>
@@ -4734,7 +4698,7 @@ x
 
 ```buffer
 ¶ abc
-¶ ««x»»
+¶ x⟦selected⟧
 ```
 
 </td><td>
@@ -4777,7 +4741,7 @@ x
 ```buffer
 ¶ p
 ¶ abc
-¶ ««x»»
+¶ x⟦selected⟧
 ```
 
 </td><td>
@@ -4818,8 +4782,8 @@ y
 
 ```buffer
 - ab
-¶ ««x
-  y»»
+¶ x⟦selected⟧
+  y
 ```
 
 </td><td>
@@ -4907,8 +4871,8 @@ y
 
 ```buffer
 - abcd
-- ««x
-- y»»
+- x⟦selected⟧
+- y⟦selected⟧
 - e
 ```
 
@@ -5018,7 +4982,7 @@ x
 
 ```buffer
 ¶ abc
-¶ ««x»»
+¶ x⟦selected⟧
 ```
 
 </td><td>
@@ -5185,8 +5149,8 @@ Email Alex
 ```buffer
 - Project
   - 
-  ¶ ««Call Sam
-    Email Alex»»
+  ¶ Call Sam⟦selected⟧
+    Email Alex
 - Inbox
 ```
 
@@ -5274,9 +5238,9 @@ Archive notes
 
 ```buffer
 - Inbox
-¶ ««Draft announcement
+¶ Draft announcement⟦selected⟧
   Send update
-  Archive notes»»
+  Archive notes
 ```
 
 </td><td>
@@ -5321,7 +5285,7 @@ Archive notes
 ```buffer
 - [x] 
        - b
-- ««x»»
+- x⟦selected⟧
 ```
 
 </td><td>
@@ -5476,9 +5440,9 @@ p2
 ```buffer
 - Project
   - 
-  ¶ ««line one
+  ¶ line one⟦selected⟧
     line two
-  ¶ p2»»
+  ¶ p2⟦selected⟧
 - Inbox
 ```
 
@@ -5561,13 +5525,13 @@ x
 <tr valign="top"><td>
 
 ```buffer
-¶ «« b»»
+¶  b⟦selected⟧
 ```
 
 </td><td>
 
 ```buffer
-¶ «« b»»
+¶  b⟦selected⟧
 ```
 
 </td><td>
@@ -5604,6 +5568,90 @@ x
 ```buffer
 - [a]
   [a]:s┃
+```
+
+</td></tr>
+</table>
+
+### [Regression220](../spec/regressions.md#regression220)
+
+> moveSubtreeUp
+
+<table>
+<tr><th>buffer</th><th>notion</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ # Old
+  ¶ ## B
+    ¶ x
+  ¶ ## C
+¶ # New┃
+  ¶ ## B
+    ¶ x
+  ¶ ## C
+```
+
+</td><td>
+
+```buffer
+¶ # Old
+  ¶ ## B
+    ¶ x
+¶ # New┃
+  ¶ ## C
+  ¶ ## B
+    ¶ x
+  ¶ ## C
+```
+
+</td><td>
+
+```buffer
+¶ # New┃
+  ¶ ## B
+    ¶ x
+  ¶ ## C
+¶ # Old
+  ¶ ## B
+    ¶ x
+  ¶ ## C
+```
+
+</td></tr>
+</table>
+
+### [Regression257](../spec/regressions.md#regression257)
+
+> moveSubtreeUp
+
+<table>
+<tr><th>buffer</th><th>notion</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x
+1. ┃a
+- a
+  1\.
+```
+
+</td><td>
+
+```buffer
+- x
+  1. ┃a
+- a
+  1\.
+```
+
+</td><td>
+
+```buffer
+1. ┃a
+- x
+- a
+  1\.
 ```
 
 </td></tr>
@@ -6239,8 +6287,8 @@ y
 ```buffer
 - one
   - two
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
@@ -6250,8 +6298,8 @@ y
 ```buffer
 - one
   - two
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
@@ -6291,7 +6339,7 @@ y
 
 ```buffer
 - a
-- ««b»»
+- b⟦selected⟧
   - b1
 - c
 ```
@@ -6300,7 +6348,7 @@ y
 
 ```buffer
 - a
-- ««b»»
+- b
   - b1
 - c
 ```
@@ -6430,7 +6478,7 @@ y
 </td></tr>
 </table>
 
-## Whitespace (19)
+## Whitespace (22)
 
 ### [Backspace7](../spec/backspace.md#backspace7)
 
@@ -6891,8 +6939,8 @@ y
 ```buffer
 ¶ p
   
-- ««a
-- b»»
+- a⟦selected⟧
+- b⟦selected⟧
 ```
 
 </td><td>
@@ -7089,6 +7137,120 @@ y
 </td></tr>
 </table>
 
+### [Regression267](../spec/regressions.md#regression267)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  ┃a
+  ¶   b
+```
+
+</td></tr>
+</table>
+
+> shiftEnter
+
+<table>
+<tr><th>notion</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  
+  ┃a
+  ¶   b
+```
+
+</td><td>
+
+```buffer
+- 
+  ┃a
+  ¶    b
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>notion</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  ┃a
+  ¶   b
+```
+
+</td><td>
+
+```buffer
+- ┃a
+  ¶    b
+```
+
+</td></tr>
+</table>
+
+### [Regression268](../spec/regressions.md#regression268)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  a┃
+  ¶   b
+```
+
+</td></tr>
+</table>
+
+> deleteSoftLineBackward
+
+<table>
+<tr><th>notion</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+  ¶   b
+```
+
+</td><td>
+
+```buffer
+- ┃
+  ¶    b
+```
+
+</td></tr>
+</table>
+
+> "c"
+
+<table>
+<tr><th>notion</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- c┃
+  ¶   b
+```
+
+</td><td>
+
+```buffer
+- c┃
+  ¶    b
+```
+
+</td></tr>
+</table>
+
 ### [Scenario3](../spec/scenarios.md#scenario3)
 
 > enter indent deleteContentBackward
@@ -7112,6 +7274,59 @@ y
 
 ```buffer
 - a┃
+```
+
+</td></tr>
+</table>
+
+### [ShiftEnter11](../spec/shift-enter.md#shiftenter11)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one┃
+- two
+```
+
+</td></tr>
+</table>
+
+> shiftEnter shiftEnter
+
+<table>
+<tr><th>notion</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one
+  
+  ┃
+- two
+```
+
+</td><td>
+
+```buffer
+- one
+  ¶ ┃
+- two
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- one
+  ┃
+- two
 ```
 
 </td></tr>
@@ -7322,8 +7537,8 @@ y
 
 ```buffer
 - t
-- ««a
-- b»»
+- a⟦selected⟧
+- b⟦selected⟧
 ¶ para
 ```
 
@@ -7370,7 +7585,7 @@ y
 ```buffer
 - top
   - sib
-  - ««a»»
+  - a⟦selected⟧
     - b
       - c
 ```
@@ -7419,7 +7634,7 @@ y
 ```buffer
 - top
   - sib
-  - ««a»»
+  - a⟦selected⟧
     - b
       - c
 ```
@@ -7473,8 +7688,8 @@ y
 
 ```buffer
 - a
-- ««x
-- y»»
+- x⟦selected⟧
+- y⟦selected⟧
 - b
 ```
 
@@ -7529,8 +7744,8 @@ y
 
 ```buffer
 - a
-- ««x *b*
-- y»»
+- x *b*⟦selected⟧
+- y⟦selected⟧
 - b
 ```
 
@@ -7575,9 +7790,9 @@ y
 
 ```buffer
 - a
-- ««x
+- x⟦selected⟧
   1. x1
-- y»»
+- y⟦selected⟧
 ```
 
 </td><td>
@@ -7622,8 +7837,8 @@ y
 
 ```buffer
 - a
-- ««x
-- y»»
+- x⟦selected⟧
+- y⟦selected⟧
 - b
 ```
 
@@ -7668,8 +7883,8 @@ y
 
 ```buffer
 - ab
-- ««x
-- y»»
+- x⟦selected⟧
+- y⟦selected⟧
 - c
 ```
 
@@ -7714,8 +7929,8 @@ y
 
 ```buffer
 - ab
-- ««x
-- y»»
+- x⟦selected⟧
+- y⟦selected⟧
 - c
 ```
 
@@ -7760,8 +7975,8 @@ y
 
 ```buffer
 ¶ # T
-  ¶ ««x
-    y»»
+  ¶ x⟦selected⟧
+    y
   ¶ para
 ```
 
@@ -7806,8 +8021,8 @@ y
 
 ```buffer
 ¶ Notes
-- ««x
-- y»»
+- x⟦selected⟧
+- y⟦selected⟧
 ¶ more
 ```
 
@@ -7851,8 +8066,8 @@ y
 
 ```buffer
 ¶ See here.
-- ««x
-- y»»
+- x⟦selected⟧
+- y⟦selected⟧
 ```
 
 </td><td>
@@ -7895,8 +8110,8 @@ y
 
 ```buffer
 ¶ # T
-  - ««x
-  - y»»
+  - x⟦selected⟧
+  - y⟦selected⟧
   - z
 ```
 
@@ -7945,8 +8160,8 @@ text
 ```buffer
 ¶ # A
   ¶ p
-  ¶ ««## h»»
-    ¶ ««text»»
+  ¶ ## h⟦selected⟧
+    ¶ text⟦selected⟧
     ¶ q
   ¶ ## B
     ¶ r
@@ -7997,8 +8212,8 @@ text
 
 ```buffer
 ¶ ## A
-¶ ««## h»»
-  ¶ ««text»»
+¶ ## h⟦selected⟧
+  ¶ text⟦selected⟧
   ¶ p
 ¶ ## B
 ```
@@ -8045,8 +8260,8 @@ text
 
 ```buffer
 ¶ ## A
-  ¶ ««### h»»
-    ¶ ««text»»
+  ¶ ### h⟦selected⟧
+    ¶ text⟦selected⟧
     ¶ p
 ```
 
@@ -8095,8 +8310,8 @@ x
 ```buffer
 ¶ ## A
   ¶ p
-  ¶ ««x
-¶ # h»»
+  ¶ x⟦selected⟧
+¶ # h⟦selected⟧
   ¶ q
   ¶ ## B
 ```
@@ -8144,7 +8359,7 @@ x
 
 ```buffer
 ¶ # h1
-  - ««a»»
+  - a⟦selected⟧
     - b
 ```
 
@@ -8255,8 +8470,8 @@ x
 ```buffer
 - one
   - two
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
@@ -8293,8 +8508,8 @@ x
 ```buffer
 - one
   - two
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
@@ -8304,8 +8519,8 @@ x
 ```buffer
 - one
   - two
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
@@ -8324,233 +8539,7 @@ x
 </td></tr>
 </table>
 
-## Adapted: disagree (104)
-
-### [Auto3](../spec/auto.md#auto3)
-
-Adapted: code block, empty document
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ┃
-```
-
-</td></tr>
-</table>
-
-> "\`\`\`"
-
-<table>
-<tr><th>notion</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````buffer
-¶ ```javascript
-  
-  ```
-````
-
-</td><td>
-
-````buffer
-¶ ```┃
-  ```
-````
-
-</td></tr>
-</table>
-
-> enter
-
-<table>
-<tr><th>notion</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````buffer
-¶ ┃Nested TODOs
-¶ ```javascript
-  
-  ```
-````
-
-</td><td>
-
-````buffer
-¶ ```
-  ┃
-  ```
-````
-
-</td></tr>
-</table>
-
-> "test"
-
-<table>
-<tr><th>notion</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````buffer
-¶ test┃Nested TODOs
-¶ ```javascript
-  
-  ```
-````
-
-</td><td>
-
-````buffer
-¶ ```
-  test┃
-  ```
-````
-
-</td></tr>
-</table>
-
-> enter
-
-<table>
-<tr><th>notion</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````buffer
-¶ test
-¶ ┃Nested TODOs
-¶ ```javascript
-  
-  ```
-````
-
-</td><td>
-
-````buffer
-¶ ```
-  test
-  ┃
-  ```
-````
-
-</td></tr>
-</table>
-
-> "\`\`"
-
-<table>
-<tr><th>notion</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````buffer
-¶ test
-¶ ``┃Nested TODOs
-¶ ```javascript
-  
-  ```
-````
-
-</td><td>
-
-````buffer
-¶ ```
-  test
-  ``┃
-  ```
-````
-
-</td></tr>
-</table>
-
-> "\`"
-
-<table>
-<tr><th>notion</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````buffer
-¶ test
-¶ ```javascript
-  ┃Nested TODOs
-  
-  ```
-¶ ```javascript
-  
-  ```
-````
-
-</td><td>
-
-````buffer
-¶ ```
-  test
-  ```┃
-````
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>"```"</th><th>enter</th><th>"test"</th><th>enter</th><th>"``"</th><th>"`"</th></tr>
-<tr valign="top"><td>
-
-```buffer
-┃
-```
-
-</td><td>
-
-````buffer
-```┃
-```
-````
-
-</td><td>
-
-````buffer
-```
-┃
-```
-````
-
-</td><td>
-
-````buffer
-```
-test┃
-```
-````
-
-</td><td>
-
-````buffer
-```
-test
-┃
-```
-````
-
-</td><td>
-
-````buffer
-```
-test
-``┃
-```
-````
-
-</td><td>
-
-````buffer
-```
-test
-```┃
-````
-
-</td></tr>
-</table>
+## Adapted: disagree (103)
 
 ### [Auto4](../spec/auto.md#auto4)
 
@@ -8599,106 +8588,6 @@ Original:
 - ```┃
   ```
 ````
-
-</td></tr>
-</table>
-
-### [Auto7](../spec/auto.md#auto7)
-
-> "\`\`\`" "\`"
-
-Adapted: code block, empty document
-
-<table>
-<tr><th>buffer</th><th>notion</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ┃
-```
-
-</td><td>
-
-````buffer
-¶ ```javascript
-  
-  ```
-````
-
-</td><td>
-
-`````buffer
-¶ ````┃
-  ````
-`````
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-┃
-```
-
-</td><td>
-
-`````buffer
-````┃
-````
-`````
-
-</td></tr>
-</table>
-
-### [Auto11](../spec/auto.md#auto11)
-
-> "\`\`\`" deleteContentBackward
-
-Adapted: empty document
-
-<table>
-<tr><th>buffer</th><th>notion</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ┃
-```
-
-</td><td>
-
-````buffer
-¶ ```javascript
-  
-  ```
-````
-
-</td><td>
-
-```buffer
-¶ ``┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-┃
-```
-
-</td><td>
-
-```buffer
-``┃
-```
 
 </td></tr>
 </table>
@@ -10767,8 +10656,8 @@ Adapted: list as an item's first block
 
 ```buffer
 - 
-  - ┃b
-    - a
+  - b
+    - ┃a
 ```
 
 </td><td>
@@ -10789,9 +10678,9 @@ Adapted: list as an item's first block
 <tr valign="top"><td>
 
 ```buffer
-- ┃b
-  - a
 - 
+  - a
+  - ┃b
 ```
 
 </td><td>
@@ -11380,11 +11269,11 @@ Adapted: quote
 
 ````buffer
 ¶ ## H
-  ¶ ««```
+  ¶ ```⟦selected⟧
     first
     
     > quote
-    ```»»
+    ```
   ¶ below
 ````
 
@@ -11420,6 +11309,70 @@ first
 > quote┃
 
 below
+```
+
+</td></tr>
+</table>
+
+### [Outdent8](../spec/outdent.md#outdent8)
+
+> outdent
+
+Adapted: under listParent: container
+
+<table>
+<tr><th>buffer</th><th>notion</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ para
+- a⟦selected⟧
+  - b
+- c⟦selected⟧
+```
+
+</td><td>
+
+```buffer
+¶ para
+- a⟦selected⟧
+  - b
+- c⟦selected⟧
+```
+
+</td><td>
+
+```buffer
+¶ para
+¶ a⟦selected⟧
+- b⟦selected⟧
+¶ c⟦selected⟧
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+para
+- a⟦selected⟧
+  - b
+- c⟦selected⟧
+```
+
+</td><td>
+
+```buffer
+para
+
+a⟦selected⟧
+- b⟦selected⟧
+
+c⟦selected⟧
 ```
 
 </td></tr>
@@ -11520,10 +11473,10 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-¶ ««This site uses XSLT; that functionality is being [removed from this browser very soon](https://chromestatus.com/feature/4709671889534976).
-- x **b**
+¶ This site uses XSLT; that functionality is being [removed from this browser very soon](https://chromestatus.com/feature/4709671889534976).⟦selected⟧
+- x **b**⟦selected⟧
   - y
-- z»»
+- z⟦selected⟧
 ```
 
 </td><td>
@@ -11594,9 +11547,9 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-¶ ««**b**
-¶ y
-¶ z»»
+¶ **b**⟦selected⟧
+¶ y⟦selected⟧
+¶ z⟦selected⟧
 ```
 
 </td><td>
@@ -11666,8 +11619,8 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-1. ««c
-2. d»»
+1. c⟦selected⟧
+2. d⟦selected⟧
 ```
 
 </td><td>
@@ -11737,11 +11690,11 @@ Adapted: code block, empty document
 </td><td>
 
 ````buffer
-¶ ««```javascript
+¶ ```javascript⟦selected⟧
   let a = 1;
   let b = 2;
   
-  ```»»
+  ```
 ````
 
 </td><td>
@@ -11813,10 +11766,10 @@ Adapted: code block, empty document
 </td><td>
 
 ````buffer
-¶ ««## Setup»»
-  ¶ ««```
+¶ ## Setup⟦selected⟧
+  ¶ ```⟦selected⟧
     npm install
-    ```»»
+    ```
 ````
 
 </td><td>
@@ -11890,8 +11843,8 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-¶ ««·       one
-  o       nested»»
+¶ ·       one⟦selected⟧
+  o       nested
 ```
 
 </td><td>
@@ -11960,12 +11913,12 @@ Adapted: code block, empty document
 </td><td>
 
 ````buffer
-¶ ««```javascript
+¶ ```javascript⟦selected⟧
   javascript
   Copy code
   let a = 1;
   
-  ```»»
+  ```
 ````
 
 </td><td>
@@ -12029,8 +11982,8 @@ Adapted: task
 
 ```buffer
 - [ ] 
-- ««x
-- y»»
+- x⟦selected⟧
+- y⟦selected⟧
 ```
 
 </td><td>
@@ -12094,9 +12047,9 @@ Adapted: code block
 
 ````buffer
 - a
-¶ ««```
+¶ ```⟦selected⟧
   c
-  ```»»
+  ```
 - b
 ````
 
@@ -12170,10 +12123,10 @@ Adapted: code block
 
 ````buffer
 - a
-- ««x
-¶ ```
+- x⟦selected⟧
+¶ ```⟦selected⟧
   c
-  ```»»
+  ```
 - b
 ````
 
@@ -12248,9 +12201,9 @@ Adapted: code block
 ````buffer
 - a
   - kid
-¶ ««```
+¶ ```⟦selected⟧
   c
-  ```»»
+  ```
 ````
 
 </td><td>
@@ -12321,9 +12274,9 @@ Adapted: code block
 
 ````buffer
 - 
-¶ ««```
+¶ ```⟦selected⟧
   c
-  ```»»
+  ```
 - b
 ````
 
@@ -12392,8 +12345,8 @@ Adapted: heading
 
 ```buffer
 - a
-¶ ««# h»»
-  ¶ ««text»»
+¶ # h⟦selected⟧
+  ¶ text⟦selected⟧
   - b
 ```
 
@@ -12463,7 +12416,7 @@ Adapted: code block
 
 ```buffer
 - a
-- ««`code`»»
+- `code`⟦selected⟧
 - b
 ```
 
@@ -12534,7 +12487,7 @@ Adapted: code block
 
 ```buffer
 - a
-- ««`code`»»
+- `code`⟦selected⟧
 - b
 ```
 
@@ -12604,8 +12557,8 @@ Adapted: escape
 
 ```buffer
 - ab
-¶ ««x
-- y»»
+¶ x⟦selected⟧
+- y⟦selected⟧
 ```
 
 </td><td>
@@ -12671,7 +12624,7 @@ Adapted: escape
 ```buffer
 - ab
 ¶ <equation> x^2
-¶ ««»»
+¶ ⟦selected⟧
 ```
 
 </td><td>
@@ -12737,8 +12690,8 @@ Adapted: escape
 
 ```buffer
 ¶ words
-- ««a
-- b»»
+- a⟦selected⟧
+- b⟦selected⟧
 ```
 
 </td><td>
@@ -12800,8 +12753,8 @@ Adapted: escape
 
 ```buffer
 - 2\. y
-1. ««a
-2. b»»
+1. a⟦selected⟧
+2. b⟦selected⟧
 ```
 
 </td><td>
@@ -12867,8 +12820,8 @@ Adapted: escape
 ```buffer
 - abc
   def
-¶ ««x
-- y»»
+¶ x⟦selected⟧
+- y⟦selected⟧
 ```
 
 </td><td>
@@ -12933,8 +12886,8 @@ Adapted: escape, quote
 ```buffer
 ¶ > abc
   def
-¶ ««x
-¶ # y»»
+¶ x⟦selected⟧
+¶ # y⟦selected⟧
 ```
 
 </td><td>
@@ -12997,8 +12950,8 @@ Adapted: setext heading
 
 ```buffer
 ¶ ## Titlemore
-  ¶ ««x
-    y»»
+  ¶ x⟦selected⟧
+    y
 ```
 
 </td><td>
@@ -13255,8 +13208,8 @@ Adapted: quote
 
 ```buffer
 ¶ > See here.
-¶ ««x
-¶ y»»
+¶ x⟦selected⟧
+¶ y⟦selected⟧
 ```
 
 </td><td>
@@ -13496,7 +13449,7 @@ Adapted: setext heading
 ```buffer
 ¶ ## Title
   more
-  ¶ ««x»»
+  ¶ x⟦selected⟧
 ```
 
 </td><td>
@@ -13618,7 +13571,7 @@ Adapted: escape, quote
 ````buffer
 ¶ > ab
   c
-- ««x»»
+- x⟦selected⟧
   ¶ ```
     c
     ```
@@ -13833,8 +13786,8 @@ Adapted: escape
 1. x
    - [x] 
        cont
-   ¶ ««x
-   ¶ # y»»
+   ¶ x⟦selected⟧
+   ¶ # y⟦selected⟧
 ```
 
 </td><td>
@@ -13896,8 +13849,8 @@ Adapted: list as an item's first block
 ```buffer
 - x
 - 
-  - ««a
-  - b»»
+  - a⟦selected⟧
+  - b⟦selected⟧
 - y
 ```
 
@@ -13906,8 +13859,8 @@ Adapted: list as an item's first block
 ```buffer
 - x
 - 
-  - ««a
-  - b»»
+  - a⟦selected⟧
+  - b⟦selected⟧
 - y
 ```
 
@@ -13930,8 +13883,8 @@ Original:
 
 ```buffer
 - x
-- - ««a
-  - b»»
+- - a⟦selected⟧
+  - b
 - y
 ```
 
@@ -13976,8 +13929,8 @@ Adapted: escape
 
 ```buffer
 ¶ \
-- ««a
-- b»»
+- a⟦selected⟧
+- b⟦selected⟧
 ```
 
 </td><td>
@@ -14372,7 +14325,7 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-¶ ««*ab*»»
+¶ *ab*⟦selected⟧
 ```
 
 </td><td>
@@ -14667,6 +14620,59 @@ Original:
 ```buffer
 1. - ┃b
 2. a
+```
+
+</td></tr>
+</table>
+
+### [Regression242](../spec/regressions.md#regression242)
+
+> indent
+
+Adapted: under listParent: container
+
+<table>
+<tr><th>buffer</th><th>notion</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ [x]┃
+- a
+```
+
+</td><td>
+
+```buffer
+¶ [x]┃
+- a
+```
+
+</td><td>
+
+```buffer
+- [x]┃
+- a
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+[x]┃
+
+- a
+```
+
+</td><td>
+
+```buffer
+- [x]┃
+- a
 ```
 
 </td></tr>
@@ -15070,9 +15076,9 @@ Adapted: code block
 
 ````buffer
 - example
-¶ ««```
+¶ ```⟦selected⟧
   code
-  ```»»
+  ```
 - next
 ````
 
@@ -15449,7 +15455,7 @@ para
 </td></tr>
 </table>
 
-## Adapted: whitespace (16)
+## Adapted: whitespace (17)
 
 ### [Backspace44](../spec/backspace.md#backspace44)
 
@@ -16014,8 +16020,8 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-- ««1\. not a list, *x* and [y]
-- \# not a heading»»
+- 1\. not a list, *x* and [y]⟦selected⟧
+- \# not a heading⟦selected⟧
 ```
 
 </td><td>
@@ -16264,6 +16270,121 @@ para
 
 after
 ````
+
+</td></tr>
+</table>
+
+### [QuoteText8](../spec/quotes.md#quotetext8)
+
+Adapted: quote
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ > ab┃
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>notion</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ > ab
+¶ ┃
+```
+
+</td><td>
+
+```buffer
+¶ > ab
+  ┃
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>notion</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ > ab
+¶ 
+¶ ┃
+```
+
+</td><td>
+
+```buffer
+¶ > ab
+¶ ┃
+```
+
+</td></tr>
+</table>
+
+> "c"
+
+<table>
+<tr><th>notion</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ > ab
+¶ 
+¶ c┃
+```
+
+</td><td>
+
+```buffer
+¶ > ab
+¶ c┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter</th><th>enter</th><th>"c"</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> ab┃
+```
+
+</td><td>
+
+```buffer
+> ab
+> ┃◌
+```
+
+</td><td>
+
+```buffer
+> ab
+
+┃◌
+```
+
+</td><td>
+
+```buffer
+> ab
+
+c┃
+```
 
 </td></tr>
 </table>
@@ -16548,9 +16669,9 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-- ««x
+- x⟦selected⟧
   - y
-- z»»
+- z⟦selected⟧
 ```
 
 </td><td>
@@ -16628,9 +16749,9 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-- ««x
+- x⟦selected⟧
   - y
-- z»»
+- z⟦selected⟧
 ```
 
 </td><td>
@@ -16701,9 +16822,9 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-- ««x
+- x⟦selected⟧
   - y
-- z»»
+- z⟦selected⟧
 ```
 
 </td><td>
@@ -16774,9 +16895,9 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-¶ ««x
-- y
-¶ z»»
+¶ x⟦selected⟧
+- y⟦selected⟧
+¶ z⟦selected⟧
 ```
 
 </td><td>
@@ -16848,8 +16969,8 @@ Adapted: empty document, task
 </td><td>
 
 ```buffer
-- ««[x] done
-- [ ] todo»»
+- [x] done⟦selected⟧
+- [ ] todo⟦selected⟧
 ```
 
 </td><td>
@@ -16917,8 +17038,8 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-¶ ««## Title»»
-  ¶ ««para **bold** `c`»»
+¶ ## Title⟦selected⟧
+  ¶ para **bold** `c`⟦selected⟧
 ```
 
 </td><td>
@@ -16989,9 +17110,9 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-¶ ««line one
+¶ line one⟦selected⟧
   line two
-¶ p2»»
+¶ p2⟦selected⟧
 ```
 
 </td><td>
@@ -17062,8 +17183,8 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-- ««a **b** *i* `c` ~~s~~ [l](https://e.x/p)
-- z»»
+- a **b** *i* `c` ~~s~~ [l](https://e.x/p)⟦selected⟧
+- z⟦selected⟧
 ```
 
 </td><td>
@@ -17131,7 +17252,7 @@ Adapted: empty document
 </td><td>
 
 ```buffer
-- ««**Bold** start»»
+- **Bold** start⟦selected⟧
   - *nested*
 ```
 
@@ -17195,8 +17316,8 @@ Adapted: blank lines
 
 ```buffer
 - a
-- ««x
-- y»»
+- x⟦selected⟧
+- y⟦selected⟧
 - b
 ```
 
@@ -17269,8 +17390,8 @@ Adapted: blank lines, under listParent: container
 
 ```buffer
 ¶ Notes
-- ««x
-- y»»
+- x⟦selected⟧
+- y⟦selected⟧
 - z
 ```
 
@@ -17342,9 +17463,9 @@ Adapted: code block
 
 ````buffer
 ¶ p
-¶ ««```
+¶ ```⟦selected⟧
   c
-  ```»»
+  ```
 ¶ q
 ````
 
@@ -17420,8 +17541,8 @@ Adapted: blank lines
 ```buffer
 - a
   ¶ p
-  - ««x
-  - y»»
+  - x⟦selected⟧
+  - y⟦selected⟧
 - b
 ```
 
@@ -17498,8 +17619,8 @@ Adapted: quote
 
 ```buffer
 ¶ > p
-- ««x
-- y»»
+- x⟦selected⟧
+- y⟦selected⟧
 ¶ after
 ```
 
@@ -17642,16 +17763,19 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (791)
+## Skipped (870)
 
 | example | why |
 | --- | --- |
 | **auto.md** | |
 | [Auto2](../spec/auto.md#auto2) | markup Notion has no runs for (an escape, HTML, a hard break) |
-| [Auto6](../spec/auto.md#auto6) | caret on a code block's fence |
+| [Auto3](../spec/auto.md#auto3) | tag markup-fence |
+| [Auto6](../spec/auto.md#auto6) | tag markup-fence |
+| [Auto7](../spec/auto.md#auto7) | tag markup-fence |
 | [Auto8](../spec/auto.md#auto8) | option autoClose: ``` ~~~ ` |
 | [Auto9](../spec/auto.md#auto9) | option autoClose: ``` ~~~ ` |
 | [Auto10](../spec/auto.md#auto10) | option autoClose: ``` ~~~ ` |
+| [Auto11](../spec/auto.md#auto11) | tag markup-fence |
 | [Auto12](../spec/auto.md#auto12) | option autoClose: ``` ~~~ ( [ { |
 | [Auto13](../spec/auto.md#auto13) | option autoClose: ``` ~~~ ( [ { |
 | [Auto14](../spec/auto.md#auto14) | option autoClose: ``` ~~~ ( [ { |
@@ -17665,9 +17789,10 @@ Original:
 | [Auto21](../spec/auto.md#auto21) | option autoClose: ``` ~~~ [[ (( |
 | [Auto26](../spec/auto.md#auto26) | option autoClose: ``` ~~~ ( [ { |
 | [Auto27](../spec/auto.md#auto27) | action cursorDocStart |
-| [Auto29](../spec/auto.md#auto29) | math (expected) |
-| [Auto32](../spec/auto.md#auto32) | comment (expected) |
-| [Auto33](../spec/auto.md#auto33) | html (expected) |
+| [Auto29](../spec/auto.md#auto29) | tag markup-fence |
+| [Auto32](../spec/auto.md#auto32) | tag markup-fence |
+| [Auto33](../spec/auto.md#auto33) | tag markup-fence |
+| [Auto35](../spec/auto.md#auto35) | tag markup-fence |
 | [Auto36](../spec/auto.md#auto36) | option autoClose: ``` ~~~ $ |
 | [Auto37](../spec/auto.md#auto37) | option autoClose: ``` ~~~ $ |
 | [Auto38](../spec/auto.md#auto38) | option autoClose: ``` ~~~ $ |
@@ -17776,12 +17901,12 @@ Original:
 | **delete-subtree.md** | |
 | [DeleteSubtree6](../spec/delete-subtree.md#deletesubtree6) | no text focus after deleteSubtree |
 | [DeleteSubtree7](../spec/delete-subtree.md#deletesubtree7) | quote |
-| [DeleteSubtree8](../spec/delete-subtree.md#deletesubtree8) | caret on a code block's fence |
+| [DeleteSubtree8](../spec/delete-subtree.md#deletesubtree8) | tag markup-fence |
 | [DeleteSubtree9](../spec/delete-subtree.md#deletesubtree9) | thematic break |
 | [DeleteSubtree10](../spec/delete-subtree.md#deletesubtree10) | thematic break |
 | [DeleteSubtree11](../spec/delete-subtree.md#deletesubtree11) | quote as a list item (a quote is a block of its own) |
 | [DeleteSubtree12](../spec/delete-subtree.md#deletesubtree12) | option quotes: container |
-| [DeleteSubtree14](../spec/delete-subtree.md#deletesubtree14) | caret on a code block's fence |
+| [DeleteSubtree14](../spec/delete-subtree.md#deletesubtree14) | tag markup-fence |
 | **delete.md** | |
 | [Delete4](../spec/delete.md#delete4) | heading's closing #s |
 | [Delete4b](../spec/delete.md#delete4b) | heading's closing #s |
@@ -17841,7 +17966,6 @@ Original:
 | [Enter33b](../spec/enter.md#enter33b) | changes only what blocks can't show |
 | [Enter34](../spec/enter.md#enter34) | caret in a marker |
 | [Enter36b](../spec/enter.md#enter36b) | quote |
-| [Enter64](../spec/enter.md#enter64) | option enterSplitSpace: drop |
 | [Enter46](../spec/enter.md#enter46) | option quotes: container |
 | [Enter49](../spec/enter.md#enter49) | table |
 | [Enter50](../spec/enter.md#enter50) | table |
@@ -17958,7 +18082,7 @@ Original:
 | [Indent30](../spec/indent.md#indent30) | caret in a marker |
 | [Indent31](../spec/indent.md#indent31) | tag markup-fence |
 | [Indent31b](../spec/indent.md#indent31b) | tag markup-fence |
-| [Indent34](../spec/indent.md#indent34) | code block with a language (Notion names its own) |
+| [Indent34](../spec/indent.md#indent34) | tag markup-fence |
 | [Indent35](../spec/indent.md#indent35) | math |
 | [Indent36](../spec/indent.md#indent36) | table |
 | [Indent37](../spec/indent.md#indent37) | thematic break |
@@ -18098,7 +18222,7 @@ Original:
 | **paste.md** | |
 | [Paste4b](../spec/paste.md#paste4b) | option pasteSeams: open |
 | [Paste9](../spec/paste.md#paste9) | option quotes: container |
-| [Paste15](../spec/paste.md#paste15) | caret on a code block's fence |
+| [Paste15](../spec/paste.md#paste15) | tag markup-fence |
 | [Paste16](../spec/paste.md#paste16) | caret in a marker |
 | [Paste17b](../spec/paste.md#paste17b) | option pasteOverSelection: ignore |
 | [Paste17c](../spec/paste.md#paste17c) | option pasteOverSelection: ignore |
@@ -18120,6 +18244,10 @@ Original:
 | [Placeholder2](../spec/placeholders.md#placeholder2) | action cursorDocStart |
 | [Placeholder3](../spec/placeholders.md#placeholder3) | action cursorDocStart |
 | [Placeholder4](../spec/placeholders.md#placeholder4) | action cursorDocStart |
+| [Placeholder4b](../spec/placeholders.md#placeholder4b) | action cursorDocStart |
+| [Placeholder4c](../spec/placeholders.md#placeholder4c) | action cursorDocStart |
+| [Placeholder4d](../spec/placeholders.md#placeholder4d) | action cursorDocStart |
+| [Placeholder4e](../spec/placeholders.md#placeholder4e) | no zoom |
 | [Placeholder5](../spec/placeholders.md#placeholder5) | action cursorDocStart |
 | [Placeholder6](../spec/placeholders.md#placeholder6) | action cursorDocStart |
 | [Placeholder7](../spec/placeholders.md#placeholder7) | action cursorDocStart |
@@ -18182,7 +18310,6 @@ Original:
 | [Quote42](../spec/quotes.md#quote42) | quote |
 | [Quote43](../spec/quotes.md#quote43) | callout |
 | [Quote43b](../spec/quotes.md#quote43b) | option markup: decorated |
-| [Quote45](../spec/quotes.md#quote45) | quote |
 | [Quote46](../spec/quotes.md#quote46) | quote |
 | [Quote47](../spec/quotes.md#quote47) | callout |
 | [Quote48](../spec/quotes.md#quote48) | quote |
@@ -18239,7 +18366,6 @@ Original:
 | [QuoteText3](../spec/quotes.md#quotetext3) | quote as a list item (a quote is a block of its own) |
 | [QuoteText4](../spec/quotes.md#quotetext4) | quote as a list item (a quote is a block of its own) |
 | [QuoteText5](../spec/quotes.md#quotetext5) | quote as a list item (a quote is a block of its own) |
-| [QuoteText8](../spec/quotes.md#quotetext8) | quote |
 | [QuoteText9](../spec/quotes.md#quotetext9) | quote as a list item (a quote is a block of its own) |
 | [QuoteText10](../spec/quotes.md#quotetext10) | changes only what blocks can't show |
 | [QuoteText11](../spec/quotes.md#quotetext11) | quote as a list item (a quote is a block of its own) |
@@ -18333,18 +18459,19 @@ Original:
 | [Regression104](../spec/regressions.md#regression104) | character outside the BMP, which the DOM selection splits |
 | [Regression105](../spec/regressions.md#regression105) | option pasteSeams: open |
 | [Regression106](../spec/regressions.md#regression106) | caret on a blank line |
-| [Regression107](../spec/regressions.md#regression107) | code block as a list item (a code block is a block of its own) |
+| [Regression107](../spec/regressions.md#regression107) | tag markup-fence |
 | [Regression108](../spec/regressions.md#regression108) | quote |
 | [Regression109](../spec/regressions.md#regression109) | action duplicateSubtree |
 | [Regression110](../spec/regressions.md#regression110) | link reference definition |
 | [Regression111](../spec/regressions.md#regression111) | quote |
 | [Regression112](../spec/regressions.md#regression112) | quote |
 | [Regression114](../spec/regressions.md#regression114) | option pastePlainLines: enter |
+| [Regression116](../spec/regressions.md#regression116) | tag markup-fence |
 | [Regression117](../spec/regressions.md#regression117) | quote |
 | [Regression119](../spec/regressions.md#regression119) | quote |
-| [Regression123](../spec/regressions.md#regression123) | option markup: decorated |
+| [Regression123](../spec/regressions.md#regression123) | tag markup-fence |
 | [Regression124](../spec/regressions.md#regression124) | no folds |
-| [Regression126](../spec/regressions.md#regression126) | caret on a code block's fence |
+| [Regression126](../spec/regressions.md#regression126) | tag markup-fence |
 | [Regression127](../spec/regressions.md#regression127) | quote |
 | [Regression128](../spec/regressions.md#regression128) | action pasteAt |
 | [Regression129](../spec/regressions.md#regression129) | action cursorDocStart |
@@ -18355,7 +18482,7 @@ Original:
 | [Regression134](../spec/regressions.md#regression134) | option autoClose: ``` ~~~ ` |
 | [Regression137](../spec/regressions.md#regression137) | heading's closing #s |
 | [Regression142](../spec/regressions.md#regression142) | nothing to compare |
-| [Regression147](../spec/regressions.md#regression147) | code block with no line (Notion's has one) |
+| [Regression147](../spec/regressions.md#regression147) | tag markup-fence |
 | [Regression150](../spec/regressions.md#regression150) | math |
 | [Regression151](../spec/regressions.md#regression151) | code block as a list item (a code block is a block of its own) |
 | [Regression152](../spec/regressions.md#regression152) | option markup: decorated |
@@ -18365,7 +18492,7 @@ Original:
 | [Regression160](../spec/regressions.md#regression160) | option pastePlainLines: enter |
 | [Regression161](../spec/regressions.md#regression161) | callout |
 | [Regression163](../spec/regressions.md#regression163) | action duplicateSubtree |
-| [Regression164](../spec/regressions.md#regression164) | code block with no line (Notion's has one) |
+| [Regression164](../spec/regressions.md#regression164) | tag markup-fence |
 | [Regression165](../spec/regressions.md#regression165) | caret in a marker |
 | [Regression166](../spec/regressions.md#regression166) | option quotes: container |
 | [Regression167](../spec/regressions.md#regression167) | action duplicateSubtree |
@@ -18388,11 +18515,80 @@ Original:
 | [Regression191](../spec/regressions.md#regression191) | quote |
 | [Regression192](../spec/regressions.md#regression192) | action duplicateSubtree |
 | [Regression193](../spec/regressions.md#regression193) | caret on a blank line |
-| [Regression194](../spec/regressions.md#regression194) | action fold |
+| [Regression194](../spec/regressions.md#regression194) | no folds |
 | [Regression195](../spec/regressions.md#regression195) | action duplicateSubtree |
 | [Regression196](../spec/regressions.md#regression196) | quote |
 | [Regression198](../spec/regressions.md#regression198) | quote |
 | [Regression199](../spec/regressions.md#regression199) | quote |
+| [Regression200](../spec/regressions.md#regression200) | no folds |
+| [Regression201](../spec/regressions.md#regression201) | tag markup-fence |
+| [Regression202](../spec/regressions.md#regression202) | no folds |
+| [Regression203](../spec/regressions.md#regression203) | tag markup-fence |
+| [Regression204](../spec/regressions.md#regression204) | no folds |
+| [Regression205](../spec/regressions.md#regression205) | no folds |
+| [Regression206](../spec/regressions.md#regression206) | no folds |
+| [Regression207](../spec/regressions.md#regression207) | no folds |
+| [Regression208](../spec/regressions.md#regression208) | no zoom |
+| [Regression209](../spec/regressions.md#regression209) | no zoom |
+| [Regression210](../spec/regressions.md#regression210) | no folds |
+| [Regression211](../spec/regressions.md#regression211) | tag markup-fence |
+| [Regression213](../spec/regressions.md#regression213) | option quotes: atom |
+| [Regression214](../spec/regressions.md#regression214) | block id (`^x`), which the app has none of: its text |
+| [Regression215](../spec/regressions.md#regression215) | block id (`^x`), which the app has none of: its text |
+| [Regression216](../spec/regressions.md#regression216) | option quotes: container |
+| [Regression217](../spec/regressions.md#regression217) | quote as a list item (a quote is a block of its own) |
+| [Regression218](../spec/regressions.md#regression218) | option quotes: container |
+| [Regression219](../spec/regressions.md#regression219) | option markup: decorated |
+| [Regression221](../spec/regressions.md#regression221) | table |
+| [Regression222](../spec/regressions.md#regression222) | tag markup-fence |
+| [Regression223](../spec/regressions.md#regression223) | table |
+| [Regression224](../spec/regressions.md#regression224) | option quotes: container |
+| [Regression225](../spec/regressions.md#regression225) | tag markup-fence |
+| [Regression226](../spec/regressions.md#regression226) | option quotes: atom |
+| [Regression227](../spec/regressions.md#regression227) | option quotes: atom |
+| [Regression228](../spec/regressions.md#regression228) | option quotes: atom |
+| [Regression229](../spec/regressions.md#regression229) | option quotes: atom |
+| [Regression230](../spec/regressions.md#regression230) | option quotes: atom |
+| [Regression231](../spec/regressions.md#regression231) | option pasteAtTextStart: before |
+| [Regression232](../spec/regressions.md#regression232) | option quotes: atom |
+| [Regression233](../spec/regressions.md#regression233) | option joinWithChildren: refuse |
+| [Regression234](../spec/regressions.md#regression234) | option quotes: atom |
+| [Regression235](../spec/regressions.md#regression235) | option quotes: atom |
+| [Regression236](../spec/regressions.md#regression236) | option quirkPasteCaret: roam |
+| [Regression237](../spec/regressions.md#regression237) | caret in markup, which is formatting in Notion |
+| [Regression239](../spec/regressions.md#regression239) | quote |
+| [Regression240](../spec/regressions.md#regression240) | tag markup-fence |
+| [Regression241](../spec/regressions.md#regression241) | action expandSelection |
+| [Regression243](../spec/regressions.md#regression243) | option quotes: atom |
+| [Regression244](../spec/regressions.md#regression244) | quote |
+| [Regression245](../spec/regressions.md#regression245) | quote |
+| [Regression246](../spec/regressions.md#regression246) | option quotes: atom |
+| [Regression247](../spec/regressions.md#regression247) | option quotes: atom |
+| [Regression248](../spec/regressions.md#regression248) | option quotes: atom |
+| [Regression249](../spec/regressions.md#regression249) | option quirkEnterMidHeading: workflowy |
+| [Regression250](../spec/regressions.md#regression250) | heading as a list item (a heading is a block of its own) |
+| [Regression252](../spec/regressions.md#regression252) | thematic break |
+| [Regression253](../spec/regressions.md#regression253) | tag markup-fence |
+| [Regression254](../spec/regressions.md#regression254) | tag markup-fence |
+| [Regression255](../spec/regressions.md#regression255) | option quotes: atom |
+| [Regression256](../spec/regressions.md#regression256) | option quotes: container |
+| [Regression258](../spec/regressions.md#regression258) | option quotes: container |
+| [Regression259](../spec/regressions.md#regression259) | action selectNode |
+| [Regression260](../spec/regressions.md#regression260) | heading's closing #s |
+| [Regression261](../spec/regressions.md#regression261) | block id (`^x`), which the app has none of: its text (expected) |
+| [Regression262](../spec/regressions.md#regression262) | selection across blocks |
+| [Regression264](../spec/regressions.md#regression264) | tag markup-fence |
+| [Regression265](../spec/regressions.md#regression265) | option quotes: container |
+| [Regression266](../spec/regressions.md#regression266) | link reference definition |
+| [Regression269](../spec/regressions.md#regression269) | no zoom |
+| [Regression270](../spec/regressions.md#regression270) | no folds |
+| [Regression271](../spec/regressions.md#regression271) | no folds |
+| [Regression272](../spec/regressions.md#regression272) | block id (`^x`), which the app has none of: its text |
+| [Regression273](../spec/regressions.md#regression273) | option autoClose: ( |
+| [Regression274](../spec/regressions.md#regression274) | option autoClose: $ |
+| [Regression275](../spec/regressions.md#regression275) | caret in a marker |
+| [Regression276](../spec/regressions.md#regression276) | action duplicateSubtree |
+| [Regression277](../spec/regressions.md#regression277) | table |
 | **scenarios.md** | |
 | [Scenario4](../spec/scenarios.md#scenario4) | action cursorDocStart |
 | [Scenario5](../spec/scenarios.md#scenario5) | action cursorDocStart |
@@ -18402,6 +18598,10 @@ Original:
 | [Scenario9](../spec/scenarios.md#scenario9) | action cursorDocStart |
 | [Scenario12](../spec/scenarios.md#scenario12) | action cursorDocStart |
 | [Scenario17](../spec/scenarios.md#scenario17) | option pasteLines: items |
+| [Scenario26](../spec/scenarios.md#scenario26) | no folds |
+| [Scenario27](../spec/scenarios.md#scenario27) | no zoom |
+| [Scenario28](../spec/scenarios.md#scenario28) | action selectNodeDown |
+| [Scenario29](../spec/scenarios.md#scenario29) | action selectNodeDown |
 | [Scenario21](../spec/scenarios.md#scenario21) | action cursorDocStart |
 | **select.md** | |
 | [Select1](../spec/select.md#select1) | action selectNode |
@@ -18473,5 +18673,14 @@ Original:
 | [Zoom10](../spec/zoom.md#zoom10) | no zoom |
 | [Zoom11](../spec/zoom.md#zoom11) | no zoom |
 | [Zoom12](../spec/zoom.md#zoom12) | no zoom |
-| [Zoom13](../spec/zoom.md#zoom13) | no zoom |
+| [Zoom13](../spec/zoom.md#zoom13) | tag markup-fence |
 | [Zoom14](../spec/zoom.md#zoom14) | no zoom |
+
+## Not run (3)
+
+| example | why |
+| --- | --- |
+| **regressions.md** | |
+| [Regression277b](../spec/regressions.md#regression277b) | new, or its start changed since |
+| [Regression277c](../spec/regressions.md#regression277c) | new, or its start changed since |
+| [Regression278](../spec/regressions.md#regression278) | new, or its start changed since |

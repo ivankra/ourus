@@ -7,7 +7,8 @@ The rules:
 
 1. **A copy is Markdown**: `text/plain` and `text/markdown` the selected Markdown as written, and
    `text/html` its rendering, marked as ourus's (`<!-- ourus -->`), so that a paste of it reads the
-   text, the source (Copy1; [paste-conv.md](paste-conv.md)). Obsidian writes its copy so; Chromium
+   text, the source (Copy1; [paste-conv.md](paste-conv.md)), and, where it is text rather than whole
+   nodes, as text (`<!-- text -->` after it), which a paste puts in the text. Obsidian writes its copy so; Chromium
    keeps a `text/markdown` only between its own pages, the mark everywhere.
 2. **Whole nodes end with a line break**, as a line copied whole does, so that one pastes as a node
    rather than as a phrase in the text (Copy4; [paste-list.md](paste-list.md)'s PasteList8).
@@ -30,10 +31,10 @@ The rules:
 A selection in an item's text: its Markdown, the formatting as written.
 
 ```yaml
-tags: common
+tags: core
 ```
 
-```buffer
+```markdown
 - one «two **b**»
 ```
 
@@ -44,10 +45,10 @@ clipboard:
   text/plain: 'two **b**'
   text/markdown: 'two **b**'
   text/html: |
-    <!-- ourus --><p>two <strong>b</strong></p>
+    <!-- ourus --><!-- text --><p>two <strong>b</strong></p>
 ```
 
-```buffer
+```markdown
 - one «two **b**»
 ```
 
@@ -60,7 +61,7 @@ line loses.
 tags: common
 ```
 
-```buffer
+```markdown
 - one «two
   - ki»d
 - three
@@ -80,10 +81,10 @@ clipboard:
 In a quote, the `>` is the quote's, not the copy's.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 > a «b
 > c» d
 ```
@@ -105,7 +106,7 @@ A caret alone: the node at the caret, with its subtree, out of its parent.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
   - k┃id
     - g
@@ -126,11 +127,11 @@ clipboard:
 With `copySelection: nodes`, the whole nodes the selection touches, with their subtrees.
 
 ```yaml
-tags: edge
+tags: rare
 copySelection: nodes
 ```
 
-```buffer
+```markdown
 - one «two
   - ki»d
 - three
@@ -150,11 +151,11 @@ clipboard:
 With `copyAtCaret: host`, a caret alone: the host's copy.
 
 ```yaml
-tags: edge
+tags: rare
 copyAtCaret: host
 ```
 
-```buffer
+```markdown
 - one ┃two
 ```
 
@@ -170,11 +171,11 @@ With `copySelection: nodes`, a selection from a child to its parent's next sibli
 row, refused, as its cut is.
 
 ```yaml
-tags: edge
+tags: rare
 copySelection: nodes
 ```
 
-```buffer
+```markdown
 - one
   - k«id
 - thr»ee
@@ -192,11 +193,11 @@ A caret alone in an Obsidian callout's title copies the callout, its `>` with it
 quote's own text, so the node at the caret is the quote.
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 > [!note] ┃q
 > body
 ```
@@ -217,10 +218,10 @@ marker is the item's own, not a container's, and the copy starts at the marker, 
 The lines after it lose that indentation too, keeping their columns to the marker (`g` at `b`'s text).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
     - b┃
       - g
@@ -241,10 +242,10 @@ clipboard:
 A cut in an item's text takes the text out.
 
 ```yaml
-tags: common
+tags: core
 ```
 
-```buffer
+```markdown
 - one «two»
 - three
 ```
@@ -256,7 +257,7 @@ clipboard:
   text/plain: 'two'
 ```
 
-```buffer
+```markdown
 - one ┃
 - three
 ```
@@ -269,7 +270,7 @@ A cut across nodes joins what is left, as Backspace over the selection does.
 tags: common
 ```
 
-```buffer
+```markdown
 - one «two
   - ki»d
 - three
@@ -284,7 +285,7 @@ clipboard:
     - ki
 ```
 
-```buffer
+```markdown
 - one ┃d
 - three
 ```
@@ -294,11 +295,11 @@ clipboard:
 With `copySelection: nodes`, the nodes go, with their subtrees.
 
 ```yaml
-tags: edge
+tags: rare
 copySelection: nodes
 ```
 
-```buffer
+```markdown
 - one «two
   - ki»d
 - three
@@ -313,7 +314,7 @@ clipboard:
       - kid
 ```
 
-```buffer
+```markdown
 - ┃three
 ```
 
@@ -325,7 +326,7 @@ A cut at a caret alone: the node goes, with its subtree.
 tags: common
 ```
 
-```buffer
+```markdown
 - one ┃two
   - kid
 - three
@@ -340,6 +341,6 @@ clipboard:
       - kid
 ```
 
-```buffer
+```markdown
 - ┃three
 ```

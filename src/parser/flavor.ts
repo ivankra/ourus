@@ -9,7 +9,7 @@ import { commonMarkBrackets, commonMarkDelimiters, commonMarkInlines } from './i
 import { coreInlineText } from './inline-text.ts';
 import { coreLineMarkup, type MdLineMarkupOf } from './markup.ts';
 import type { MdBlockSpec, MdBlockStart, MdFrame, MdLeafRole } from './machine.ts';
-import type { MdRenderRules } from './html.ts';
+import type { MdHtmlRenderer, MdRenderRules } from './html.ts';
 import { escapeParagraph, firstNonParagraph, markupEscapeAt, markupEscapes, type MdEscapeAt, type MdEscapedParagraph, type MdLineContext, type MdParagraphPlace } from './readback.ts';
 import type { MdBlock, MdBlockAt, MdInlineText } from './types.ts';
 import type { MdTree } from './syntax.ts';
@@ -218,11 +218,20 @@ export function defineFlavor(name: string, extensions: readonly MdExtension[]): 
 }
 
 function mergeRender(a: MdRenderRules, b: MdRenderRules): MdRenderRules {
+  // (the hooks composed, the earlier extension's first: one's `start` replacing another's would leave
+  // that one's `end` without what its `start` set up, GFM's footnotes; the filtered tags joined)
+  const both = <T extends (r: MdHtmlRenderer) => void>(x: T | undefined, y: T | undefined): T | undefined => (x && y ? (((r: MdHtmlRenderer) => (x(r), y(r))) as T) : (x ?? y));
+  const start = both(a.start, b.start);
+  const end = both(a.end, b.end);
+  const filteredTags = a.filteredTags && b.filteredTags ? [...new Set([...a.filteredTags, ...b.filteredTags])] : (a.filteredTags ?? b.filteredTags);
   return {
     ...a,
     ...b,
     blocks: { ...a.blocks, ...b.blocks },
     inlines: { ...a.inlines, ...b.inlines },
+    ...(start ? { start } : {}),
+    ...(end ? { end } : {}),
+    ...(filteredTags ? { filteredTags } : {}),
   };
 }
 

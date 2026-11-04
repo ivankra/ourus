@@ -163,7 +163,7 @@ and under it its cases by their ids (`ok`, `D`, `C`, `S`, `ERROR`, `-` for skipp
 ✓, ✗, C, S, E, –, explained in its legend): every row for a few examples or with `-v`, else the rows where
 the apps don't all agree. The table is written too, as Markdown, to `.sxs/results/README.md` with its
 heatmap, `heatmap.svg` (how alike two apps did in the examples both ran alike, both as written or both adapted the same way:
-the same result 1, the same but for the caret or spaces ½; ourus among them, as its own runs of the examples have it, `test/spec-run.ts`); a run of every app on the whole spec copies both here, into [`README.md`](README.md) below its introduction (unless an app failed, which would lose its column; an app with no verdicts, wanting a session or with no run to regenerate from, is left out of the table),
+the same result 1, the same but for the caret or spaces ½; ourus among them, as its own runs of the examples have it, `test/lib/spec-runner.ts`); a run of every app on the whole spec copies both here, into [`README.md`](README.md) below its introduction (unless an app failed, which would lose its column; an app with no verdicts, wanting a session or with no run to regenerate from, is left out of the table),
 checked in, each app's column linking its report (which its run copies here, as a full run does alone). Apps run side by side compete for the
 machine, so each takes longer, but their verdicts are those of a run alone: compared example by
 example, they were, once each app had its own browser and the idle script waited for clipboard

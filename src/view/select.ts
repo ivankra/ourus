@@ -2,37 +2,53 @@
 // it is when it is exactly them as whole lines (a subtree selection, a host's block selection), the
 // selection that is a set of subtrees, and a selection moved out of what the view hides.
 
-import { textEnd, textStart, type OurusDoc, type OurusNode } from '../doc/index.ts';
+import { OurusAtom, textEnd, textStart, type OurusDoc, type OurusNode } from '../doc/index.ts';
 import type { OurusSelection } from '../text/index.ts';
 import type { OurusView } from './view.ts';
 
 /**
  * `selection` moved out of what the view hides: an end in a fold's hidden lines to the fold's start
  * (the end of the folded node's text), but a non-empty selection's end at the fold's end where that
- * is the document's (a subtree selection of the folded node there, which has no line after it); an
+ * is the view's (a subtree selection of the folded node there, which has no line after it); an
  * end outside the zoom into it, before it to its root's text start, after it to its end.
  */
 export function visibleSelection(view: OurusView, selection: OurusSelection): OurusSelection {
   const doc = view.doc;
   const empty = selection.anchor === selection.head;
+  const end = viewEnd(view);
   const at = (pos: number): number => {
     const zoom = view.zoomRange();
     if (zoom) {
       const root = view.zoomRoot!;
-      if (pos < zoom.from) pos = doc.textStart(root.startLine);
+      if (pos < zoom.from) pos = rootStart(doc, root);
       else if (pos > zoom.to) pos = zoom.to;
     }
     // the outermost fold hiding it, nested folds inside one another
     let start = pos;
     for (const id of view.zoomFolded) {
       const range = doc.foldRange(doc.node(id)!);
-      if (range && pos > range.from && pos <= range.to && range.from < start && (empty || pos !== range.to || pos !== doc.text.length)) start = range.from;
+      if (range && pos > range.from && pos <= range.to && range.from < start && (empty || pos !== range.to || pos !== end)) start = range.from;
     }
     return start;
   };
   const anchor = at(selection.anchor);
   const head = at(selection.head);
   return anchor === selection.anchor && head === selection.head ? selection : { anchor, head };
+}
+
+/** Where what the view shows ends: the zoom's end, before the line break after it; else the document's. */
+function viewEnd(view: OurusView): number {
+  return view.zoomRange()?.to ?? view.doc.text.length;
+}
+
+/**
+ * Where a caret entering the zoom from before it goes: its root's line's text start, but where markup
+ * is decorated and the root is an atom (code, math), its payload's start, not its opening fence.
+ */
+function rootStart(doc: OurusDoc, root: OurusNode): number {
+  const text = doc.textOf(root);
+  if (doc.config.markup === 'decorated' && text instanceof OurusAtom) return doc.posOf(root, textStart(text), 1);
+  return doc.textStart(root.startLine);
 }
 
 /**
@@ -76,7 +92,7 @@ export function touchedNodes(view: OurusView, selection: OurusSelection): OurusN
  * first line to the end of the last's subtree, its last line's end, the next line's start (the
  * canonical shape), or anywhere in the blank lines after it; where nodes share those lines, the
  * outermost inside the zoom. Null for any other selection, for a caret, and for one node's own text,
- * which is text but at the document's end.
+ * which is text but at the view's end.
  */
 export function selectedNodes(view: OurusView, selection: OurusSelection): OurusNode[] | null {
   const doc = view.doc;
@@ -93,7 +109,7 @@ export function selectedNodes(view: OurusView, selection: OurusSelection): Ourus
   if (to < ends[last.endLine]! || to > subtreeEnd(doc, doc.coverEnd(last))) return null;
   // one node's own text, from its text's start to its end, or into the frame closing it on that line
   // (a block id, closing `#`s; not a setext underline): text, unless that is its subtree's end too
-  if (roots.length === 1 && to !== subtreeEnd(doc, last.endLine)) {
+  if (roots.length === 1 && to !== Math.min(subtreeEnd(doc, last.endLine), viewEnd(view))) {
     const text = doc.textOf(first);
     const end = text ? doc.posOf(first, textEnd(text), -1) : -1;
     if (text && from === doc.posOf(first, textStart(text), 1) && to >= end && to <= doc.posOf(first, text.text.length, -1) && !doc.text.slice(end, to).includes('\n')) return null;
@@ -123,8 +139,7 @@ export function subtreesSelection(view: OurusView, nodes: readonly OurusNode[], 
   // (the nodes touched between, each whole, and the nodes whose lines theirs are)
   for (const n of outermost(view, touchedNodes(view, { anchor: from, head: subtreeEnd(doc, end) }))) end = Math.max(end, n.endLine);
   // (zoomed, not past the zoom: the line break after it is out of the view)
-  const zoom = view.zoomRange();
-  const to = Math.min(subtreeEnd(doc, end), zoom ? zoom.to : Infinity);
+  const to = Math.min(subtreeEnd(doc, end), viewEnd(view));
   return direction === 'up' ? { anchor: to, head: from } : { anchor: from, head: to };
 }
 

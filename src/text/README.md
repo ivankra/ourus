@@ -177,6 +177,12 @@ Functions:
 - `lineEnding(text: string, end: number): LineEnding`<br>
   The line ending at a line's end: `\n`, `\r\n`, `\r` or none.
 
+- `lineEndingBefore(text: string, pos: number): LineEnding`<br>
+  The line ending that ends right at `pos`: a CRLF whole, a lone CR, or none.
+
+- `nextLineStart(text: string, pos: number): number`<br>
+  Where the line after the one holding `pos` starts, past its line ending; the text's end if none.
+
 - `lineIndexAt(starts: number[], pos: number): number`<br>
   The index of the line holding `pos`, given the lines' starts.
 
@@ -189,6 +195,17 @@ Functions:
 
 - `dominantEnding(text: string): '\n' | '\r\n' | '\r'`<br>
   The line ending most of the text's lines use, for writing new lines.
+
+- `charBefore(text: string, pos: number): number`<br>
+  Where the character before `pos` starts. A character is a grapheme cluster (an emoji with its
+  joiners, a letter with its accents) or a line ending, a CRLF whole: what a key deletes, and what a
+  split mustn't cut. Segmented only around `pos`, within its line.
+
+- `charAfter(text: string, pos: number): number`<br>
+  Where the character at `pos` ends.
+
+- `charStart(text: string, pos: number): number`<br>
+  `pos`, or the start of the character it is inside: a surrogate pair, a grapheme, a CRLF.
 
 - `advanceColumns(text: string, from: number, to: number, col: number): number`<br>
   The column after `text[from, to)`, starting from column `col`, with tab stops of 4.

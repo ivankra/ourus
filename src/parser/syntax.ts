@@ -9,7 +9,7 @@
 // since the only effects reaching back to earlier lines depend on it. The block tree is built again
 // from the records, taking whole every old block outside the lines read again (`tree.ts`).
 
-import { applyChanges, lineEnding, lineIndexAt, normalizeChanges, splitLines, type ChangeSpec } from '../text/index.ts';
+import { applyChanges, lineEnding, lineIndexAt, normalizeChanges, splitLines, type ChangeSpec, type LineBounds } from '../text/index.ts';
 import { isBlankText, isSpaceOrTab, normalizeLabel } from './chars.ts';
 import { PARAGRAPH, PARAGRAPH_FIRST, PARAGRAPH_NEXT, type ParagraphFrame } from './blocks.ts';
 import { commonmark, type MdFlavor } from './flavor.ts';
@@ -29,6 +29,12 @@ export interface MdParseOptions {
    * text's final line ending stands for an empty last line.
    */
   readonly sentinels?: readonly number[];
+  /**
+   * Whether the text is a document's whole text, as a file holds it, rather than a fragment of one (a
+   * block's text, a clipboard's): its opening byte-order mark is then before its Markdown (`mdDocumentStart`),
+   * no character of it. An update keeps the tree's.
+   */
+  readonly document?: boolean;
 }
 
 /** Which lines an update read again, in the new document's line numbers (`to` inclusive; empty when `to < from`). */
@@ -64,7 +70,8 @@ const NO_INLINES: readonly MdInline[] = Object.freeze([]);
  * - **Inlines** (`inlines(leaf)`, `inlineText(leaf)`): a leaf's text parsed into emphasis, links,
  *   code, ..., when first asked for.
  *
- * Lossless: every character of the text is in a prefix, a leaf's markup or text, or a blank line.
+ * Lossless: every character of the text is in a prefix, a leaf's markup or text, or a blank line,
+ * but a byte-order mark opening a document (`documentStart`), which is before line 0.
  * Immutable: `update(changes)` gives the tree of the edited text, reading again only the lines the
  * edit can affect and sharing every block outside them. Offsets are UTF-16 code units into `text`;
  * lines count from 0, and a final line ending doesn't start a line.
@@ -72,7 +79,9 @@ const NO_INLINES: readonly MdInline[] = Object.freeze([]);
 export class MdTree {
   readonly text: string;
   readonly flavor: MdFlavor;
-  /** Each line's start, and its end before its line ending. */
+  /** Whether the text is a document's whole text (`MdParseOptions.document`): its Markdown past its byte-order mark. */
+  readonly document: boolean;
+  /** Each line's start, and its end before its line ending. Line 0 starts past a document's byte-order mark (`documentStart`). */
   readonly starts: readonly number[];
   readonly ends: readonly number[];
   /** The line machine's record of each line, and its state after it (the incremental tests compare them). */
@@ -115,7 +124,9 @@ export class MdTree {
     blocks: MdBlock | null = null,
     reuse: Reuse | null = null,
     lookaheads?: readonly number[],
+    document = false,
   ) {
+    this.document = document;
     this.blocks = blocks;
     this.reuse = blocks ? null : reuse;
     this.text = text;
@@ -133,7 +144,8 @@ export class MdTree {
 
   /** The tree of `text`. Never fails: every string is a document. */
   static parse(text: string, flavor: MdFlavor = commonmark, options: MdParseOptions = {}): MdTree {
-    const { starts, ends } = splitLines(text);
+    const document = options.document ?? false;
+    const { starts, ends } = linesOf(text, document);
     const s = [...starts];
     const e = [...ends];
     const { sentinels, extraLine } = placeSentinels(text, s, e, options.sentinels);
@@ -143,11 +155,12 @@ export class MdTree {
     const machine = new MdMachine(flavor, { text, starts: s, ends: e, sentinels }, records, states, flavor.initialState);
     for (let i = 0; i < n; i++) machine.read(i);
     machine.finish(n);
-    return new MdTree(text, flavor, s, e, records, states, sentinels, extraLine, { from: 0, to: n - 1, full: true }, null);
+    return new MdTree(text, flavor, s, e, records, states, sentinels, extraLine, { from: 0, to: n - 1, full: true }, null, null, null, undefined, document);
   }
 
   /** The tree of the text after `changes` (in this text's coordinates), read again only where they can make a difference. */
-  update(changes: readonly ChangeSpec[], options: MdParseOptions = {}): MdTree {
+  update(changes: readonly ChangeSpec[], given: MdParseOptions = {}): MdTree {
+    const options = { ...given, document: this.document };
     const list = normalizeChanges(changes);
     const text = list.length ? applyChanges(this.text, list) : this.text;
     const flavor = this.flavor;
@@ -166,9 +179,10 @@ export class MdTree {
       if (firstOld > 0 && list[0]!.from === this.starts[firstOld] && this.text.charCodeAt(list[0]!.from - 1) === 13) firstOld--;
       lastOld = lineIndexAt(this.starts, list[list.length - 1]!.to);
       for (const c of list) delta += c.insert.length - (c.to - c.from);
-      const regionFrom = this.starts[firstOld] ?? this.text.length;
+      // (from the text's start where line 0 changes: the change may be to a byte-order mark before it)
+      const regionFrom = firstOld === 0 ? 0 : (this.starts[firstOld] ?? this.text.length);
       const oldRegionEnd = lastOld + 1 < oldN ? this.starts[lastOld + 1]! : this.text.length;
-      const middle = splitLines(text.slice(regionFrom, oldRegionEnd + delta));
+      const middle = regionFrom === 0 ? linesOf(text.slice(0, oldRegionEnd + delta), this.document) : splitLines(text.slice(regionFrom, oldRegionEnd + delta));
       starts = this.starts.slice(0, firstOld);
       ends = this.ends.slice(0, firstOld);
       for (let i = 0; i < middle.starts.length; i++) {
@@ -270,10 +284,15 @@ export class MdTree {
     }
     for (let l = restart; l <= reread.to; l++) if (records[l]!.ahead > 0) lookaheads.push(l);
     if (converged >= 0) for (const l of this.lookaheads) if (l + lineDelta > reread.to) lookaheads.push(l + lineDelta);
-    return new MdTree(text, flavor, starts, ends, records, states, sentinels, false, reread, this.inlineCache, blocks, reuse, lookaheads);
+    return new MdTree(text, flavor, starts, ends, records, states, sentinels, false, reread, this.inlineCache, blocks, reuse, lookaheads, this.document);
   }
 
   // ----------------------------------------------------------------------------- the blocks
+
+  /** Where line 0 starts: past a document's byte-order mark, which is no line's (`mdDocumentStart`); 0 in a fragment. */
+  get documentStart(): number {
+    return this.document ? mdDocumentStart(this.text) : 0;
+  }
 
   /** The number of lines (an empty text has none; a final line ending doesn't start one). */
   get lineCount(): number {
@@ -415,15 +434,8 @@ export class MdTree {
     if (!text) return false;
     const at = text.textAt(pos);
     if (at < 0) return false;
-    const find = (inlines: readonly MdInline[]): boolean => {
-      for (const node of inlines) {
-        if (node.to <= at || node.from > at) continue;
-        if (node.type === 'escape') return node.from === at;
-        return node.children ? find(node.children) : false;
-      }
-      return false;
-    };
-    return find(this.inlines(leaf));
+    const escape = inlinesCovering(this.inlines(leaf), (node) => node.from <= at && at < node.to).find((node) => node.type === 'escape');
+    return !!escape && escape.from === at;
   }
 
   /** The code span `pos` is inside (past its opening backtick): where its closing run starts and where the span ends; null outside one. */
@@ -434,15 +446,7 @@ export class MdTree {
     if (!text) return null;
     const at = text.textAt(pos);
     if (at < 0) return null;
-    const find = (inlines: readonly MdInline[]): MdInline | null => {
-      for (const node of inlines) {
-        if (node.type === 'code' && node.from < at && at < node.to) return node;
-        const inner = node.children && node.from < at && at < node.to ? find(node.children) : null;
-        if (inner) return inner;
-      }
-      return null;
-    };
-    const span = find(this.inlines(leaf));
+    const span = inlinesCovering(this.inlines(leaf), (node) => node.from < at && at < node.to).find((node) => node.type === 'code');
     if (!span) return null;
     let closer = span.to;
     while (closer > span.from && text.text[closer - 1] === '`') closer--;
@@ -461,15 +465,7 @@ export class MdTree {
     if (!text) return false;
     const at = text.textAt(pos);
     if (at < 0) return false;
-    const find = (inlines: readonly MdInline[]): boolean => {
-      for (const node of inlines) {
-        if (node.from >= at || node.to <= at) continue;
-        if (node.type === 'code' || node.type === 'math' || node.type === 'comment') return true;
-        if (node.children && find(node.children)) return true;
-      }
-      return false;
-    };
-    return find(this.inlines(leaf));
+    return inlinesCovering(this.inlines(leaf), (node) => node.from < at && at < node.to).some((node) => node.type === 'code' || node.type === 'math' || node.type === 'comment');
   }
 
   /** A leaf's inlines, parsed when first asked for; none for blocks without inline text. */
@@ -491,9 +487,8 @@ export class MdTree {
   private cache(): InlineCache {
     if (this.cacheChecked) return this.inlineCache!;
     this.cacheChecked = true;
-    let key = '';
-    for (const [label, ref] of this.references) key += `${label}\u0000${ref.destination}\u0000${ref.title}\u0001`;
-    for (const label of this.footnotes) key += `^${label}\u0001`;
+    // (what the inlines depend on, encoded so that no label, which may hold any character, reads as two)
+    const key = JSON.stringify([[...this.references].map(([label, ref]) => [label, ref.destination, ref.title]), [...this.footnotes]]);
     if (!this.inlineCache || this.inlineCache.key !== key || this.inlineCache.map.size > 4 * this.lineCount + 1024) {
       this.inlineCache = { key, map: new Map() };
     }
@@ -554,6 +549,39 @@ function sameState(): (a: MdState, b: MdState, i: number) => boolean {
 
 /** NUL reads as the replacement character. */
 const clean = (s: string): string => (s.indexOf('\0') < 0 ? s : s.replace(/\0/g, '�'));
+
+/**
+ * The inlines `covers` holds for, outermost first: at each depth the first that does, then down into
+ * its children (siblings don't overlap, so one at most). Walked without recursion: images nest as deep
+ * as the text is long.
+ */
+function inlinesCovering(inlines: readonly MdInline[], covers: (node: MdInline) => boolean): MdInline[] {
+  const path: MdInline[] = [];
+  for (let list: readonly MdInline[] | undefined = inlines; list; ) {
+    const node: MdInline | undefined = list.find(covers);
+    if (!node) break;
+    path.push(node);
+    list = node.children;
+  }
+  return path;
+}
+
+/**
+ * Where a document's Markdown starts: past a byte-order mark opening the text (1), else 0. Some
+ * Windows editors write one, and it is no character of the Markdown, so `\ufeff# T` is a heading, as
+ * cmark-gfm, micromark and Obsidian read it (markdown-it and commonmark.js read a paragraph;
+ * CommonMark doesn't say). It stays in the text, before every line, whatever the flavor.
+ */
+export function mdDocumentStart(text: string): number {
+  return text.charCodeAt(0) === 0xfeff ? 1 : 0;
+}
+
+/** The lines of a text (`splitLines`), but a document's line 0 starting past its byte-order mark (`mdDocumentStart`). */
+function linesOf(text: string, document: boolean): LineBounds {
+  const lines = splitLines(text);
+  if (document && lines.starts.length) (lines.starts as number[])[0] = mdDocumentStart(text);
+  return lines;
+}
 
 function sameOffsets(a: readonly number[] | undefined, b: readonly number[] | undefined): boolean {
   if (a === b) return true;
@@ -648,8 +676,10 @@ function sameRecord(a: MdLineRecord, b: MdLineRecord): boolean {
 function sameData(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
-  if (Array.isArray(a)) {
-    if (!Array.isArray(b) || a.length !== b.length) return false;
+  // (both arrays, or neither: `{ 0: 'x' }` isn't `['x']`)
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
     for (let i = 0; i < a.length; i++) if (!sameData(a[i], b[i])) return false;
     return true;
   }

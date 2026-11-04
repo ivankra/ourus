@@ -295,6 +295,8 @@ export function remnoteDriver(setup: Setup): Driver {
       }
       // a heading with no text, `#` alone: no heading here has no text, and the text `#` reads as `\#` (Regression168)
       if (o.blocks.some((b) => /^#{1,6}$/.test(b.text))) return 'heading with no text (# alone), which RemNote holds as the text #';
+      // a checkbox alone, `[x]` with nothing after it, is no task in Markdown: RemNote holds it as a done to-do, `[x] ` (Regression242)
+      if (o.blocks.some((b) => /^\[[ xX]\]$/.test(b.text))) return 'text of a checkbox alone ([x]), which RemNote holds as an empty to-do';
       // zoomed, the root is the page's title, which the editor tree doesn't focus as a rem of its own;
       // and a rem without a bullet doesn't keep a collapse
       if (o.view && o.view.zoom !== null && o.sel?.block === o.view.zoom) return 'the caret in the zoom root, the page\'s title';

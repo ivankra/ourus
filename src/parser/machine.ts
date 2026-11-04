@@ -121,10 +121,14 @@ const EMPTY_OPENED: readonly Opened[] = Object.freeze([]);
 export function frameEquals(a: MdFrame, b: MdFrame, except?: string): boolean {
   if (a === b) return true;
   if (a.spec !== b.spec) return false;
-  const x = a as unknown as Record<string, unknown>;
-  const y = b as unknown as Record<string, unknown>;
+  const x = a as unknown as Record<string | symbol, unknown>;
+  const y = b as unknown as Record<string | symbol, unknown>;
   for (const key in x) if (key !== except && x[key] !== y[key]) return false;
   for (const key in y) if (!(key in x)) return false;
+  // (an extension's state under a symbol key is state too: `for in` doesn't see it)
+  const symbols = Object.getOwnPropertySymbols(x);
+  if (symbols.length !== Object.getOwnPropertySymbols(y).length) return false;
+  for (const key of symbols) if (!(key in y) || x[key] !== y[key]) return false;
   return true;
 }
 

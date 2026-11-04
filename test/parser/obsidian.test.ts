@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { obsidian } from '../../src/parser/obsidian.ts';
+import { mdBlockIdEnd, obsidian } from '../../src/parser/obsidian.ts';
 import { MdTree } from '../../src/parser/syntax.ts';
 
 import type { MdBlockAt, MdInline } from '../../src/parser/types.ts';
@@ -85,4 +85,9 @@ test('obsidian: wikilink parts', () => {
   assert.equal(link!.type, 'wikilink');
   assert.equal(link!.target, 'Note#Heading^block');
   assert.equal(link!.alias, 'Shown');
+});
+
+test('obsidian: a block id ends a text after a blank or any line ending, a lone CR too', () => {
+  for (const before of [' ', '\t', '\n', '\r', '\r\n']) assert.deepEqual(mdBlockIdEnd(`a${before}^id`), { at: 1 + before.length, name: 'id' });
+  assert.equal(mdBlockIdEnd('a^id'), null);
 });

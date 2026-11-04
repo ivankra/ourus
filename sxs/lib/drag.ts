@@ -7,14 +7,10 @@ import { CommandContext } from '../../src/commands/context.ts';
 import { dragRun, placeAtSeam } from '../../src/commands/drag.ts';
 import type { OurusConfig } from '../../src/config.ts';
 import type { OurusNode } from '../../src/doc/index.ts';
-import { labelNumber } from '../../test/drawing.ts';
-import { isDrop } from '../../test/player.ts';
-import { startOf } from '../../test/spec-run.ts';
-import type { SpecTest } from '../../test/specfile.ts';
+import { labelNumber, isDropAction, specTestStart, type SpecTest, resultStatus } from '../../test/lib/index.ts';
 import type { Outline } from './block.ts';
 import type { Drop } from './driver.ts';
 import { OurusRejected } from '../../src/commands/index.ts';
-import { statusOf } from '../../test/drawing.ts';
 
 /**
  * The drop a case makes, as rows (`Drop`); else why it can't be played: an app plays a drop only from
@@ -23,10 +19,10 @@ import { statusOf } from '../../test/drawing.ts';
  */
 export function resolveDrop(test: SpecTest, flavor: OurusConfig['flavor']): Drop | string {
   const actions = test.steps.flatMap((s) => s.actions);
-  const k = actions.findIndex(isDrop);
+  const k = actions.findIndex(isDropAction);
   if (k < 0) return 'no drop';
   if (k > 0) return 'a drop after other actions';
-  const state = startOf(test, flavor);
+  const state = specTestStart(test, flavor);
   const { view, drop } = state;
   const doc = view.doc;
   if (!drop) return 'no drop line';
@@ -38,7 +34,7 @@ export function resolveDrop(test: SpecTest, flavor: OurusConfig['flavor']): Drop
     const pressed = label === undefined ? undefined : state.labels?.get(labelNumber(label));
     if (label !== undefined && pressed === undefined) return `${label} labels no node`;
     const picked = dragRun(new CommandContext(view, state.selection), pressed);
-    if (!Array.isArray(picked)) return `the pickup is refused (${picked instanceof OurusRejected ? picked.reason : statusOf(picked)})`;
+    if (!Array.isArray(picked)) return `the pickup is refused (${picked instanceof OurusRejected ? picked.reason : resultStatus(picked)})`;
     run = picked;
     press = pressed === undefined ? null : doc.node(pressed)!.startLine;
   }

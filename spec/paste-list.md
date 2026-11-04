@@ -14,20 +14,20 @@ among them. The list's form the pasted items take is [paste-list-form.md](paste-
 At the end of an item's text, the items go after it.
 
 ```yaml
-tags: common
+tags: core
 clipboard: |-
   - x
   - y
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - x
 - y┃
@@ -45,14 +45,14 @@ clipboard: |-
   - y
 ```
 
-```buffer
+```markdown
 - a┃b
 - c
 ```
 
 > paste
 
-```buffer
+```markdown
 - ab
 - x
 - y┃
@@ -64,20 +64,20 @@ clipboard: |-
 And at its text's start (`pasteAtTextStart: after`).
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |-
   - x
   - y
 ```
 
-```buffer
+```markdown
 - ┃ab
 - c
 ```
 
 > paste
 
-```buffer
+```markdown
 - ab
 - x
 - y┃
@@ -95,14 +95,14 @@ clipboard: |-
   - y
 ```
 
-```buffer
+```markdown
 - a┃
   - kid
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
   - x
   - y┃
@@ -114,13 +114,13 @@ clipboard: |-
 An empty item takes the paste in its place.
 
 ```yaml
-tags: common
+tags: core
 clipboard: |-
   - x
   - y
 ```
 
-```buffer
+```markdown
 - a
 - ┃
 - b
@@ -128,7 +128,7 @@ clipboard: |-
 
 > paste
 
-```buffer
+```markdown
 - a
 - x
 - y┃
@@ -142,20 +142,20 @@ on any item with children, and the item stays (Logseq, Logseq DB, Athens; Tine, 
 after its children, Roam before it; SiYuan, BlockNote, true-outliner and RemNote fill it).
 
 ```yaml
-tags: edge
+tags: rare
 clipboard: |-
   - x
   - y
 ```
 
-```buffer
+```markdown
 - ┃
   - kid
 ```
 
 > paste
 
-```buffer
+```markdown
 - 
   - x
   - y┃
@@ -169,19 +169,19 @@ item (SiYuan, true-outliner, RemNote, Dynalist; Tana, BlockNote and WorkFlowy fi
 checkbox).
 
 ```yaml
-tags: edge
+tags: common markup-task
 clipboard: |-
   - x
   - y
 ```
 
-```buffer
+```markdown
 - [ ] ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - [ ] x
 - y┃
 ```
@@ -192,20 +192,20 @@ With `enterTask: plain`, where a task is a marker in its text, an empty task isn
 and the paste goes after it (Logseq, Tine, Athens, Roam).
 
 ```yaml
-tags: edge
+tags: rare markup-task
 enterTask: plain
 clipboard: |-
   - x
   - y
 ```
 
-```buffer
+```markdown
 - [ ] ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - [ ] 
 - x
 - y┃
@@ -221,14 +221,14 @@ clipboard: |
   - x
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - x┃
 - b
@@ -240,17 +240,17 @@ One line without a line break, in the middle of a text, is inline text, put in a
 where it would be an item: a phrase copied from a sentence (`1. Introduction`).
 
 ```yaml
-tags: edge
+tags: common
 clipboard: "1. Introduction"
 ```
 
-```buffer
+```markdown
 - see ┃here
 ```
 
 > paste
 
-```buffer
+```markdown
 - see 1. Introduction┃here
 ```
 
@@ -267,14 +267,14 @@ clipboard: |-
   - y
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - Notes:
 - x
@@ -288,7 +288,7 @@ A pasted paragraph is one item, its lines the item's text, as plain lines are te
 (`pasteLines: text`; Logseq and Logseq DB).
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |-
   one
   two
@@ -296,13 +296,13 @@ clipboard: |-
   - x
 ```
 
-```buffer
+```markdown
 - a┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - one
   two
@@ -322,14 +322,14 @@ clipboard: |-
   ```
 ````
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > paste
 
-````buffer
+````markdown
 - a
   ```
   c┃
@@ -342,7 +342,7 @@ clipboard: |-
 After a pasted item, a pasted block is that item's.
 
 ````yaml
-tags: edge
+tags: rare
 clipboard: |-
   - x
 
@@ -351,14 +351,14 @@ clipboard: |-
   ```
 ````
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > paste
 
-````buffer
+````markdown
 - a
 - x
   ```
@@ -372,21 +372,21 @@ clipboard: |-
 On an item with children, a block goes first among them, as items do.
 
 ````yaml
-tags: edge
+tags: rare
 clipboard: |-
   ```
   c
   ```
 ````
 
-```buffer
+```markdown
 - a┃
   - kid
 ```
 
 > paste
 
-````buffer
+````markdown
 - a
   ```
   c┃
@@ -399,21 +399,21 @@ clipboard: |-
 In an empty item's place, code is the item's text.
 
 ````yaml
-tags: edge
+tags: common
 clipboard: |-
   ```
   c
   ```
 ````
 
-```buffer
+```markdown
 - ┃
 - b
 ```
 
 > paste
 
-````buffer
+````markdown
 - ```
   c┃
   ```
@@ -426,20 +426,20 @@ A heading pasted into a list is an item whose text is the heading, the rest of i
 item's children.
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |-
   # h
   text
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - # h
   text┃
@@ -451,19 +451,19 @@ clipboard: |-
 A quote pasted on an empty item is its first block: the item has no text of its own.
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |
   > q
 ```
 
-```buffer
+```markdown
 - a
 - ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - > q┃
 ```
@@ -474,12 +474,12 @@ On an empty item with children, the quote is its first block too, and the childr
 item's, after it.
 
 ```yaml
-tags: edge
+tags: rare
 clipboard: |
   > q
 ```
 
-```buffer
+```markdown
 - a
 - ┃
   - b1
@@ -487,7 +487,7 @@ clipboard: |
 
 > paste
 
-```buffer
+```markdown
 - a
 - > q┃
   - b1
@@ -499,14 +499,14 @@ With `pasteOnParent: after` (Tine, Tana, SiYuan, WorkFlowy, Dynalist), on an ite
 paste goes after it and its children, as its next siblings.
 
 ```yaml
-tags: edge
+tags: rare
 pasteOnParent: after
 clipboard: |-
   - x
   - y
 ```
 
-```buffer
+```markdown
 - a┃
   - kid
 - b
@@ -514,7 +514,7 @@ clipboard: |-
 
 > paste
 
-```buffer
+```markdown
 - a
   - kid
 - x
@@ -527,21 +527,21 @@ clipboard: |-
 With `pasteOnParent: after`, at the end of a paragraph owning a list, last in that list.
 
 ```yaml
-tags: edge
+tags: rare
 pasteOnParent: after
 clipboard: |-
   - x
   - y
 ```
 
-```buffer
+```markdown
 Notes┃
 - z
 ```
 
 > paste
 
-```buffer
+```markdown
 Notes
 - z
 - x
@@ -554,21 +554,21 @@ With `pasteAtTextStart: before` (Roam, SiYuan, WorkFlowy), at the start of an it
 go before it, numbered from it.
 
 ```yaml
-tags: edge
+tags: rare
 pasteAtTextStart: before
 clipboard: |-
   - x
   - y
 ```
 
-```buffer
+```markdown
 1. ┃ab
 2. c
 ```
 
 > paste
 
-```buffer
+```markdown
 1. x
 2. y┃
 3. ab
@@ -581,7 +581,7 @@ With `pasteParagraphList: children` (Roam, Athens, true-outliner, SiYuan, Dynali
 list is its item's children, as an outliner's copy means it.
 
 ```yaml
-tags: edge
+tags: rare
 pasteParagraphList: children
 clipboard: |-
   Notes:
@@ -589,14 +589,14 @@ clipboard: |-
   - y
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - Notes:
   - x
@@ -611,21 +611,21 @@ way), the first pasted text joins the text before the caret, the text after it j
 the item's children follow the last pasted item.
 
 ```yaml
-tags: edge
+tags: rare
 pasteSeams: open
 clipboard: |-
   - x
   - y
 ```
 
-```buffer
+```markdown
 - a┃b
   - kid
 ```
 
 > paste
 
-```buffer
+```markdown
 - ax
 - y┃b
   - kid
@@ -636,19 +636,19 @@ clipboard: |-
 With `pasteSeams: open`, one item copied with its line break joins the text, as one line does.
 
 ```yaml
-tags: edge
+tags: rare
 pasteSeams: open
 clipboard: |
   - x
 ```
 
-```buffer
+```markdown
 - a┃b
 ```
 
 > paste
 
-```buffer
+```markdown
 - ax┃b
 ```
 
@@ -658,7 +658,7 @@ With `pasteSeams: open`, where the paste ends in a block that isn't text, the te
 is an item of its own after it.
 
 ````yaml
-tags: edge
+tags: rare
 pasteSeams: open
 clipboard: |-
   - x
@@ -668,14 +668,14 @@ clipboard: |-
     ```
 ````
 
-```buffer
+```markdown
 - a┃b
 - d
 ```
 
 > paste
 
-````buffer
+````markdown
 - ax
 
   ```
@@ -691,17 +691,17 @@ At a text's start, the line is escaped where it would read as a block there, as 
 (the host's paste would make `1. Introduction` a list in the item).
 
 ```yaml
-tags: edge
+tags: rare
 clipboard: "1. Introduction"
 ```
 
-```buffer
+```markdown
 - ┃here
 ```
 
 > paste
 
-```buffer
+```markdown
 - 1\̬. Introduction┃here
 ```
 
@@ -718,14 +718,14 @@ clipboard: |
     ```
 ````
 
-````buffer
+````markdown
 - a┃
 - b
 ````
 
 > paste
 
-````buffer
+````markdown
 - a
 - ```
   code┃
@@ -741,20 +741,20 @@ Logseq and Tine leave it), but whatever is put under the item later (a child, an
 it) would read as code: closed, the document stays well-formed.
 
 ````yaml
-tags: edge
+tags: rare
 clipboard: |-
   - ```
     code
 ````
 
-````buffer
+````markdown
 - a┃
 - b
 ````
 
 > paste
 
-````buffer
+````markdown
 - a
 - ```
   code┃

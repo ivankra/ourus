@@ -46,4 +46,11 @@ test('an option given as undefined is absent; an unknown option or value throws'
   assert.throws(() => OurusConfig.of({ flavor: 'Obsidian' as never }), /option "flavor" takes/);
   assert.throws(() => OurusConfig.of({ indentUnit: 3 as never }), /option "indentUnit" takes/);
   assert.throws(() => OurusConfig.of({ nope: 1 } as never), /unknown option "nope"/);
+  // (`withConfig` too: the value set before kept)
+  const plus = OurusDoc.parse('x', { config: { bullet: '+' } });
+  assert.equal(plus.withConfig({ bullet: undefined }).config.bullet, '+');
+  // (a list's element undefined, or a hole, is a wrong one)
+  assert.throws(() => OurusConfig.of({ autoClose: [undefined] as never }), /option "autoClose" takes/);
+  // eslint-disable-next-line no-sparse-arrays
+  assert.throws(() => OurusConfig.of({ autoClose: ['```', , '~~~'] as never }), /option "autoClose" takes/);
 });

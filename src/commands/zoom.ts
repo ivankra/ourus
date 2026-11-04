@@ -7,7 +7,7 @@ import type { OurusDoc } from '../doc/index.ts';
 import type { OurusView } from '../view/index.ts';
 import { CommandContext } from './context.ts';
 import { deleteSubtreeCommand } from './delete-subtree.ts';
-import type { ChangeSpec } from '../text/index.ts';
+import { plainTextEdit } from './util.ts';
 import type { OurusCommand, OurusResult, OurusSelection } from './types.ts';
 import { OurusDeferred, OurusRejected, OurusSuccess } from './types.ts';
 
@@ -17,8 +17,8 @@ const UNCONFINED: ReadonlySet<OurusCommand['type']> = new Set(['fold', 'unfold',
 /** The commands whose removal of the zoom root whole is allowed (clause 0), the zoom going to its nearest ancestor left. */
 const REMOVES: ReadonlySet<OurusCommand['type']> = new Set(['deleteSubtree', 'cut']);
 
-/** The deletion keys a subtree selection routes to `deleteSubtree` (`subtrees.ts`). */
-const ROUTED_REMOVES: ReadonlySet<OurusCommand['type']> = new Set(['deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward']);
+/** The deletions a subtree selection routes to `deleteSubtree` (`subtrees.ts`): the keys', a drag's. */
+const ROUTED_REMOVES: ReadonlySet<OurusCommand['type']> = new Set(['deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward', 'deleteByDrag']);
 
 /** The selection commands: a deferral is the host's own selection (a line, a select all), no edit to keep inside the zoom. */
 const SELECTS: ReadonlySet<OurusCommand['type']> = new Set(['selectNode', 'expandSelection', 'selectNodeDown', 'selectNodeUp']);
@@ -37,7 +37,8 @@ const outside = (detail: string): OurusResult => (new OurusRejected('outside-zoo
 export function zoomed(view: OurusView, command: OurusCommand, selection: OurusSelection, run: () => OurusResult): OurusResult {
   const doc = view.doc;
   if (view.zoom === null && !view.zoomFolded.size) return run();
-  if (UNCONFINED.has(command.type)) return run();
+  // (no operands to confine, no result to check: the selection still out of what the view hides)
+  if (UNCONFINED.has(command.type)) return settled(run());
   const root = view.zoomRoot;
   if (root) {
     const range = view.zoomRange()!;
@@ -46,15 +47,28 @@ export function zoomed(view: OurusView, command: OurusCommand, selection: OurusS
     if (nodes?.some((id) => !insideRoot(view, id))) return outside('a node it was given is outside the zoom');
   }
   const result = run();
-  if (!root) return settled(result);
-  if (result instanceof OurusDeferred) {
-    if (SELECTS.has(command.type)) return result;
-    if ([selection.anchor, selection.head].some((p) => inRootMarkup(view, p, NEWLINE.has(command.type)))) return outside("in the zoom root's markup, where the host's default would reach outside it");
-    const plain = plainDefault(doc, command, selection);
-    if (plain && leavesZoom(view, doc.update({ changes: [plain.change], caret: plain.caret }))) return outside("the host's default would leave the zoom");
+  if (result instanceof OurusDeferred && !SELECTS.has(command.type)) {
+    if (root && [selection.anchor, selection.head].some((p) => inRootMarkup(view, p, NEWLINE.has(command.type)))) return outside("in the zoom root's markup, where the host's default would reach outside it");
+    // (a key whose default is the same edit in every host; Enter's continues the markup in one host
+    // and not another: the host's own guard, `leavesZoom`)
+    const plain = plainTextEdit(doc.text, command, selection);
+    if (!plain?.everyHost) return result;
+    if (root && leavesZoom(view, doc.update({ changes: [plain.change], caret: plain.caret }))) return outside("the host's default would leave the zoom");
+    // (where the default's caret would be hidden, in a fold's lines or past the zoom's end, which the
+    // host can't show: past the zoom refused; in a fold done here, the caret where the reader sees it,
+    // the fold's start: Backspace on the line after a folded node's last)
+    const next = view.update({ changes: [plain.change], caret: plain.caret });
+    const caret = { anchor: plain.caret, head: plain.caret };
+    const zoom = next.zoomRange();
+    if (zoom && (plain.caret < zoom.from || plain.caret > zoom.to)) return outside("the host's default would leave the caret outside the zoom");
+    const visible = next.visibleSelection(caret);
+    if (visible !== caret) return new OurusSuccess({ view: next, changes: [plain.change], selection: visible });
     return result;
   }
-  if (!(result instanceof OurusSuccess) || !result.changes.length) return settled(result);
+  if (!root) return settled(result);
+  if (result instanceof OurusDeferred) return result;
+  // (a result with no changes can still reorder nodes, identical ones swapped: checked as any other)
+  if (!(result instanceof OurusSuccess) || result.view.doc === doc) return settled(result);
   const removed = !result.view.doc.node(root.id);
   // (a deletion key over a subtree selection is `deleteSubtree` of its roots, `editSubtrees`: as cut, it may take the root)
   const routed = ROUTED_REMOVES.has(command.type) && !('nodes' in command && command.nodes) && view.selectedSubtrees(selection) !== null;
@@ -86,30 +100,6 @@ function inRootMarkup(view: OurusView, pos: number, newline: boolean): boolean {
   const root = doc.node(view.zoom!)!;
   const start = doc.textStart(root.startLine);
   return doc.lineAt(pos).index === root.startLine && (pos < start || (newline && pos === start));
-}
-
-/**
- * The default of a key whose default is a plain edit in every host (a character typed, Backspace,
- * Delete, a soft line's Backspace): the change and the caret after; null for the others (Enter's
- * default continues the markup in one host and not another: the host's own guard, `leavesZoom`).
- */
-function plainDefault(doc: OurusDoc, command: OurusCommand, selection: OurusSelection): { change: ChangeSpec; caret: number } | null {
-  const [from, to] = [Math.min(selection.anchor, selection.head), Math.max(selection.anchor, selection.head)];
-  const edit = (from: number, to: number, insert = ''): { change: ChangeSpec; caret: number } => ({ change: { from, to, insert }, caret: from + insert.length });
-  switch (command.type) {
-    case 'insertText':
-      return edit(from, to, command.text);
-    case 'deleteContentBackward':
-      return from < to ? edit(from, to) : from > 0 ? edit(from - 1, from) : null;
-    case 'deleteContentForward':
-      return from < to ? edit(from, to) : to < doc.text.length ? edit(to, to + 1) : null;
-    case 'deleteSoftLineBackward': {
-      const start = doc.lineAt(from).from;
-      return from < to ? edit(from, to) : start < from ? edit(start, from) : from > 0 ? edit(from - 1, from) : null;
-    }
-    default:
-      return null;
-  }
 }
 
 /**

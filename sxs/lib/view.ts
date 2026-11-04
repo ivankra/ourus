@@ -12,12 +12,14 @@
 
 import type { OurusConfig } from '../../src/config.ts';
 import { OurusDoc, type OurusNode } from '../../src/doc/index.ts';
-import type { RowView } from '../../test/spec-run.ts';
+import { type RowView } from '../../test/lib/index.ts';
 
 export type { RowView };
 
 const FOLDED = '⟦folded⟧';
 const ZOOM = '⟦zoomed⟧';
+/** A block selected whole (`test/lib/drawn-states.ts`'s subtree selection): a selection's mark, which `splitView` leaves where it is. */
+const SELECTED = '⟦selected⟧';
 
 /**
  * `drawn` with `v` on its rows: `⟦folded⟧` after each folded row's line, `⟦zoomed⟧` after the zoom root's;
@@ -53,12 +55,14 @@ export function splitView(drawn: string, rowOf: (line: number) => number = (line
   const folded: number[] = [];
   let zoom: number | null = null;
   const lines = drawn.split('\n').map((line, k) => {
+    let selected = '';
     for (let changed = true; changed; ) {
       changed = false;
+      if (line.endsWith(SELECTED)) [line, selected, changed] = [line.slice(0, -SELECTED.length), SELECTED, true];
       if (line.endsWith(ZOOM)) [line, zoom, changed] = [line.slice(0, -ZOOM.length), k, true];
       if (line.endsWith(FOLDED)) [line, changed] = [line.slice(0, -FOLDED.length), (folded.push(k), true)];
     }
-    return line;
+    return line + selected;
   });
   if (!folded.length && zoom === null) return { drawn };
   return { drawn: lines.join('\n'), view: { folded: folded.map(rowOf).sort((a, b) => a - b), zoom: zoom === null ? null : rowOf(zoom) }, byLine: true };

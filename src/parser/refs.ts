@@ -10,8 +10,9 @@ const reTitle = new RegExp(
 );
 const reDestinationBraces = /<(?:[^<>\n\\\x00]|\\.)*>/y;
 const reLabel = /\[(?:[^\\[\]]|\\.){0,1000}\]/ys;
-const reSpnl = / *(?:\n *)?/y;
-const reSpaceAtLineEnd = / *(?:\n|$)/y;
+// (spaces or tabs, up to one line ending, between a link's parts: CommonMark's, as micromark and cmark-gfm read it)
+const reSpnl = /[ \t]*(?:\n[ \t]*)?/y;
+const reSpaceAtLineEnd = /[ \t]*(?:\n|$)/y;
 
 /** Length of the match of sticky `re` at `pos`, or -1. */
 function matchAt(re: RegExp, s: string, pos: number): number {

@@ -33,7 +33,7 @@ tags: common
 listParent: paragraph
 ```
 
-```buffer
+```markdown
 Intro┃
 
 - a
@@ -44,7 +44,7 @@ Next
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 Next
 
 Intro┃
@@ -59,11 +59,11 @@ Under `container` the list is no paragraph's: the paragraph moves past the whole
 its own, as SiYuan's does.
 
 ```yaml
-tags: common
+tags: rare
 listParent: container
 ```
 
-```buffer
+```markdown
 Intro┃
 
 - a
@@ -74,7 +74,7 @@ Next
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 - a
 - b
 
@@ -88,11 +88,11 @@ Next
 Up, too: past the list, to right after the paragraph above it.
 
 ```yaml
-tags: edge
+tags: rare
 listParent: container
 ```
 
-```buffer
+```markdown
 Intro
 
 - a
@@ -104,7 +104,7 @@ Next┃
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 Intro
 
 Next┃
@@ -119,11 +119,11 @@ Next┃
 Under `block` code adopts the list after it, as a paragraph does, and moves with it.
 
 ```yaml
-tags: edge
+tags: rare
 listParent: block
 ```
 
-````buffer
+````markdown
 ```
 x┃
 ```
@@ -134,7 +134,7 @@ Next
 
 > moveSubtreeDown
 
-````buffer
+````markdown
 Next
 
 ```
@@ -149,11 +149,11 @@ Under `paragraph` the list after code is the section's: code moves among blocks,
 items, and the code can't move past the list.
 
 ```yaml
-tags: edge
+tags: common
 listParent: paragraph
 ```
 
-````buffer
+````markdown
 ```
 x┃
 ```
@@ -168,7 +168,7 @@ Next
 result: rejected not-expressible
 ```
 
-````buffer
+````markdown
 ```
 x┃
 ```
@@ -187,7 +187,7 @@ tags: rare
 listParent: container
 ```
 
-```buffer
+```markdown
 pa┃ra
 1. a
 - b
@@ -197,7 +197,7 @@ next
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 1. a
 
 pa┃ra
@@ -215,7 +215,7 @@ tags: common
 listParent: paragraph
 ```
 
-```buffer
+```markdown
 - a
 - b┃
 
@@ -226,7 +226,7 @@ para
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 - a
 
 para
@@ -241,11 +241,11 @@ Under `container` an item moves among the items of its list: at a longer list's 
 SiYuan's does (its list a block, the item in it).
 
 ```yaml
-tags: common
+tags: rare
 listParent: container
 ```
 
-```buffer
+```markdown
 - a
 - b┃
 
@@ -260,7 +260,7 @@ para
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 - a
 - b┃
 
@@ -275,11 +275,11 @@ A whole list's items pass the block, the list a block among blocks, and join the
 side: the text Lists7 writes (MoveDown2, MoveUp12).
 
 ```yaml
-tags: common
+tags: rare
 listParent: container
 ```
 
-```buffer
+```markdown
 - b┃
 
 para
@@ -289,7 +289,7 @@ para
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 para
 
 - b┃
@@ -305,7 +305,7 @@ tags: common
 listParent: paragraph
 ```
 
-```buffer
+```markdown
 Intro┃
 - a
 - b
@@ -315,7 +315,7 @@ Next
 
 > deleteSubtree
 
-```buffer
+```markdown
 ┃Next
 ```
 
@@ -324,11 +324,11 @@ Next
 Under `container` the paragraph goes alone, its list staying, the caret in its first item.
 
 ```yaml
-tags: common
+tags: rare
 listParent: container
 ```
 
-```buffer
+```markdown
 Intro┃
 - a
 - b
@@ -338,7 +338,7 @@ Next
 
 > deleteSubtree
 
-```buffer
+```markdown
 - ┃a
 - b
 
@@ -350,12 +350,12 @@ Next
 Under `quotes: text` a quote of one paragraph is a paragraph, and adopts the list after it too.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: text
 listParent: paragraph
 ```
 
-```buffer
+```markdown
 > q┃
 - a
 
@@ -364,7 +364,7 @@ Next
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 Next
 
 > q┃
@@ -376,12 +376,12 @@ Next
 Under `container` it moves past the list.
 
 ```yaml
-tags: edge
+tags: rare
 quotes: text
 listParent: container
 ```
 
-```buffer
+```markdown
 > q┃
 - a
 
@@ -390,7 +390,7 @@ Next
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 - a
 
 > q┃
@@ -404,12 +404,12 @@ Under `listMoves: item` each item is a block of its own, as BlockNote's are: the
 past one item, splitting the list (Lists2 under `list`).
 
 ```yaml
-tags: common
+tags: rare
 listParent: container
 listMoves: item
 ```
 
-```buffer
+```markdown
 Intro┃
 
 - a
@@ -420,7 +420,7 @@ Next
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 - a
 
 Intro┃
@@ -435,12 +435,12 @@ Next
 Up, too: past the last item, its children with it (Lists3 under `list`).
 
 ```yaml
-tags: edge
+tags: rare
 listParent: container
 listMoves: item
 ```
 
-```buffer
+```markdown
 Intro
 
 - a
@@ -452,7 +452,7 @@ Next┃
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 Intro
 
 - a
@@ -469,12 +469,12 @@ An item at its list's edge passes the block beside it and joins the list on the 
 under `list`).
 
 ```yaml
-tags: common
+tags: rare
 listParent: container
 listMoves: item
 ```
 
-```buffer
+```markdown
 - a
 - b┃
 
@@ -485,7 +485,7 @@ para
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 - a
 
 para

@@ -1,17 +1,17 @@
 // Reads the behavior spec (spec/*.md, format in spec/README.md) with ourus's own parser: a state is
-// a fenced `buffer` block and a `yaml` block (its result, clipboard and outline), quotes the actions
+// a fenced `markdown` block (its buffer) and a `yaml` block (its result, clipboard and outline), quotes the actions
 // between states, and the first state's `yaml` block (its config block, before its buffer) sets the
 // test's options, its tags, and the clipboard it starts with.
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { isMap, isScalar, isSeq, parseDocument, Scalar, type YAMLSeq } from 'yaml';
-import { OurusConfig } from '../src/config.ts';
-import { MdTree } from '../src/parser/syntax.ts';
+import { OurusConfig } from '../../src/config.ts';
+import { MdTree } from '../../src/parser/syntax.ts';
 
-import { MdBlockAt } from '../src/parser/tree.ts';
-import type { MdBlock, MdLine } from '../src/parser/types.ts';
-import { drawsCaret, readDropLine } from './drawing.ts';
+import { MdBlockAt } from '../../src/parser/tree.ts';
+import type { MdBlock, MdLine } from '../../src/parser/types.ts';
+import { drawsCaret, readDropLine } from './drawn-states.ts';
 
 /** A parsed spec file: its text, block tree and line table. */
 type Parsed = { readonly text: string; readonly root: MdBlock; readonly lines: readonly MdLine[] };
@@ -28,7 +28,7 @@ export type ClipboardType = (typeof CLIPBOARD_TYPES)[number];
 export type Clipboard = Readonly<Partial<Record<ClipboardType, string>>>;
 
 /** What a state's blocks say about the editor: drawn buffer, clipboard, the last action's result. */
-export interface State {
+export interface SpecState {
   buffer?: string;
   clipboard?: Clipboard;
   /** `success`, `deferredToHost`, or `rejected <reason>`. */
@@ -38,23 +38,14 @@ export interface State {
   /** After a pickup (`drag`): the labels of the nodes it takes, and every place it offers, drawn (spec/drag.md). */
   dragNodes?: string;
   dropPoints?: string;
-  /** The view after the step, by label: the folded nodes (none: `folded: none`), the node zoomed into (`zoom: none`). */
-  folded?: string;
-  zoom?: string;
 }
 
-/** The view a test starts in (its config block's): the folded nodes and the one zoomed into, by label, as the start's snapshot holds them (`OurusDoc.folded`, `OurusDoc.zoom`). */
-export interface View {
-  readonly folded?: string;
-  readonly zoom?: string;
-}
-
-export interface Step {
+export interface SpecStep {
   /** Line (1-based) of the quote listing the actions. */
   readonly line: number;
   readonly actions: readonly string[];
   /** What must hold after the actions; empty when nothing is checked. */
-  readonly expect: State;
+  readonly expect: SpecState;
 }
 
 export interface SpecTest {
@@ -69,16 +60,15 @@ export interface SpecTest {
   readonly options: Readonly<Record<string, string>>;
   /** What the case depends on, from `TAGS` (its config block's `tags`). */
   /** How often a user meets the case: the first word of its `tags`. */
-  readonly rank: Rank;
-  readonly tags: readonly Tag[];
-  readonly initial: State & { buffer: string };
-  readonly view: View;
-  readonly steps: Step[];
+  readonly rank: SpecRank;
+  readonly tags: readonly SpecTag[];
+  readonly initial: SpecState & { buffer: string };
+  readonly steps: SpecStep[];
 }
 
 /** How often a user meets a case, the first of its tags: review metadata, never an editor setting. */
-export const RANKS = ['core', 'common', 'edge', 'rare'] as const;
-export type Rank = (typeof RANKS)[number];
+export const SPEC_RANKS = ['core', 'common', 'rare'] as const;
+export type SpecRank = (typeof SPEC_RANKS)[number];
 
 /**
  * A case's tags: facts about what it depends on, for runners to select cases by, never names of
@@ -87,9 +77,9 @@ export type Rank = (typeof RANKS)[number];
  * case on block outliners, whose documents have no form for that structure; a driver lists the
  * `markup-` tags its app can't compare in `refuses`, and the case is skipped there.
  */
-export const TAGS = ['free-form', 'markup-heading', 'markup-task', 'markup-fence', 'enter-in-fence', 'pending'] as const;
+export const SPEC_TAGS = ['free-form', 'markup-heading', 'markup-task', 'markup-fence', 'enter-in-fence', 'pending'] as const;
 
-export type Tag = (typeof TAGS)[number];
+export type SpecTag = (typeof SPEC_TAGS)[number];
 
 /** The ourus config a test's options set, as values. */
 export function specConfig(options: Readonly<Record<string, string>>): Partial<OurusConfig> {
@@ -99,7 +89,7 @@ export function specConfig(options: Readonly<Record<string, string>>): Partial<O
 }
 
 /** The spec's directory. */
-export const SPEC_DIR = fileURLToPath(new URL('../spec/', import.meta.url));
+export const SPEC_DIR = fileURLToPath(new URL('../../spec/', import.meta.url));
 
 /** The spec files, by name, sorted (the README is none). */
 export const specFiles = (): string[] => readdirSync(SPEC_DIR).filter((f) => f.endsWith('.md') && f !== 'README.md').sort();
@@ -129,11 +119,11 @@ export function readSpec(file: string, source: string): SpecTest[] {
   const anchors = new Map<string, number>();
   /** Whether the current heading's section already holds a test. */
   let sectionHasTest = false;
-  let test: (SpecTest & { pending: boolean; options: Record<string, string>; tags: Tag[] }) | null = null;
+  let test: (SpecTest & { pending: boolean; options: Record<string, string>; tags: SpecTag[] }) | null = null;
   /** The state blocks after the last action (or before the first) are filled in here. */
-  let group: State | null = null;
+  let group: SpecState | null = null;
   /** The states whose `yaml` block has been read: one each. */
-  const withYaml = new Set<State>();
+  const withYaml = new Set<SpecState>();
 
   for (const at of new MdBlockAt(tree.root, 0).children()) {
     const { block, line: start } = at;
@@ -141,7 +131,7 @@ export function readSpec(file: string, source: string): SpecTest[] {
     // a heading ends a test; each test has one of its own, so it can be linked to
     if (block.type === 'heading') {
       const text = headingText(tree, at);
-      const anchor = slug(text);
+      const anchor = specSlug(text);
       const seen = anchors.get(anchor);
       if (seen !== undefined) fail(start, `duplicate heading "${text}" (as line ${seen + 1}): headings name tests and are their anchors, so each must be unique in its file`);
       anchors.set(anchor, start);
@@ -159,9 +149,9 @@ export function readSpec(file: string, source: string): SpecTest[] {
       // one bare would start a code span there, refused
       const quoted = quoteText(tree, at);
       if (/(?<!\\)`/.test(quoted)) fail(start, 'a backtick in the actions is escaped (`\\``), or Markdown reads a code span there');
-      const actions = tokenize(quoted.replace(/\\`/g, '`'));
+      const actions = tokenizeActions(quoted.replace(/\\`/g, '`'));
       if (actions.length === 0) fail(start, 'a quote with no actions');
-      const step: Step = { line: start + 1, actions, expect: {} };
+      const step: SpecStep = { line: start + 1, actions, expect: {} };
       test!.steps.push(step);
       group = step.expect;
       continue;
@@ -172,7 +162,8 @@ export function readSpec(file: string, source: string): SpecTest[] {
     if (kind === 'result') fail(start, 'a result is a key of the state\'s `yaml` block: "result: deferredToHost", "result: rejected not-expressible"');
     if (kind === 'outline') fail(start, 'an outline is a key of the state\'s `yaml` block: "outline: |", its lines indented under it');
     if (kind === 'clipboard' || kind === 'clipboard-no-newline') fail(start, 'a clipboard is a key of the state\'s `yaml` block: "clipboard: |", its lines indented under it ("|-" ends it without a line break), or its formats under it ("text/plain: |")');
-    if (kind !== 'buffer' && kind !== 'yaml') continue;
+    if (kind === 'buffer') fail(start, 'a state\'s buffer is a `markdown` block');
+    if (kind !== 'markdown' && kind !== 'yaml') continue;
     if (block.attrs.fenceOffset) fail(start, 'an indented fence would change its content');
     if (words.length > 0) fail(start, `"${words.join(' ')}" after "${kind}": options go in a config block before the test's first block`);
     if (kind === 'yaml') {
@@ -191,8 +182,6 @@ export function readSpec(file: string, source: string): SpecTest[] {
       if (read.outline !== undefined) group!.outline = read.outline;
       if (read.dragNodes !== undefined) group!.dragNodes = read.dragNodes;
       if (read.dropPoints !== undefined) group!.dropPoints = read.dropPoints;
-      if (read.view.folded !== undefined) group!.folded = read.view.folded;
-      if (read.view.zoom !== undefined) group!.zoom = read.view.zoom;
       continue;
     }
     if (!test) {
@@ -200,9 +189,9 @@ export function readSpec(file: string, source: string): SpecTest[] {
       const name = headings.slice(1).filter(Boolean).pop() ?? '';
       if (!name) fail(start, "a test needs a heading of its own, below the file's title");
       sectionHasTest = true;
-      if (!config?.rank) return fail(config?.line ?? start, 'a test is ranked: its config block has "tags:", its rank first (core, common, edge or rare)');
-      test = { file, line: config.line + 1, name, pending: !!config.tags?.includes('pending'), options: config.options, rank: config.rank, tags: config.tags ?? [], initial: { buffer: '' }, view: config.view, steps: [] };
-      delete (test.initial as State).buffer;
+      if (!config?.rank) return fail(config?.line ?? start, 'a test is ranked: its config block has "tags:", its rank first (core, common or rare)');
+      test = { file, line: config.line + 1, name, pending: !!config.tags?.includes('pending'), options: config.options, rank: config.rank, tags: config.tags ?? [], initial: { buffer: '' }, steps: [] };
+      delete (test.initial as SpecState).buffer;
       if (config.clipboard !== undefined) test.initial.clipboard = config.clipboard;
       if (config.clipboard && Object.values(config.clipboard).some((c) => strayBlank(c) >= 0)) fail(config.line, STRAY_BLANK);
       if (config.outline !== undefined) test.initial.outline = config.outline;
@@ -210,8 +199,9 @@ export function readSpec(file: string, source: string): SpecTest[] {
       tests.push(test);
       group = test.initial;
     }
-    if (group!.buffer !== undefined) fail(start, 'a second buffer block for one state (each test needs a heading of its own)');
+    if (group!.buffer !== undefined) fail(start, 'a second `markdown` block (a buffer) for one state (each test needs a heading of its own)');
     group!.buffer = fenceContent(tree, at);
+    if (/««|»»/.test(group!.buffer)) fail(start, 'a subtree selection is drawn by its roots: `⟦selected⟧` last on each root\'s first line (upward: `┃` at the first one\'s line start)');
     // (a step's buffer may leave the caret out, where it isn't checked; a start draws it)
     if (group === tests[tests.length - 1]?.initial && !drawsCaret(group!.buffer)) fail(start, "a test's start draws its caret (`┃`, or a selection); only a step's buffer may leave it out");
     const stray = strayBlank(group!.buffer);
@@ -246,7 +236,7 @@ function checkDrop(t: SpecTest, fail: (line: number, message: string) => never):
 }
 
 /** A heading's anchor, as GitHub makes it: lower case, punctuation dropped, spaces as hyphens. */
-export const slug = (text: string): string =>
+export const specSlug = (text: string): string =>
   text
     .toLowerCase()
     .replace(/[^\p{L}\p{N}\s_-]/gu, '')
@@ -257,10 +247,10 @@ export const slug = (text: string): string =>
 /** A step's actions as its quote line: each backtick escaped, so the quote renders as it reads (no code span). */
 export const actionsLine = (actions: readonly string[]): string => `> ${actions.join(' ').replace(/`/g, '\\`')}`;
 
-export const tokenize = (s: string): string[] => s.match(/"[^"]*"|\S+(?:\s+[\u2460-\u2473\u3251-\u325f\u32b1-\u32bf](?!\S))?/gu) ?? [];
+export const tokenizeActions = (s: string): string[] => s.match(/"[^"]*"|\S+(?:\s+[\u2460-\u2473\u3251-\u325f\u32b1-\u32bf](?!\S))?/gu) ?? [];
 
 /** What a state's `yaml` block says: options, tags and the rank (the config block's), the clipboard and the outline, the result (a step's). */
-type Read = { options: Record<string, string>; clipboard?: Clipboard; outline?: string; result?: string; rank?: Rank; tags?: Tag[]; dragNodes?: string; dropPoints?: string; view: { folded?: string; zoom?: string } };
+type Read = { options: Record<string, string>; clipboard?: Clipboard; outline?: string; result?: string; rank?: SpecRank; tags?: SpecTag[]; dragNodes?: string; dropPoints?: string };
 
 /** Where a `yaml` block is: a test's config block (its first state's), or a state after a step. */
 type Where = 'start' | 'step';
@@ -287,7 +277,7 @@ function readConfig(text: string, first: number, fail: (line: number, message: s
   const doc = parseDocument(text, { schema: 'failsafe' });
   const error = doc.errors[0];
   if (error) fail(lineAt(error.pos[0]), `not YAML: ${error.message.split('\n')[0]!.replace(/ at line \d+, column \d+:?$/, '')}`);
-  const read: Read = { options: {}, view: {} };
+  const read: Read = { options: {} };
   if (doc.contents === null) return read;
   if (!isMap(doc.contents)) fail(first, 'options are "key: value" lines');
   /** A text: a literal block of lines under its key, at `keyColumn`, or one quoted line without a line break. */
@@ -356,12 +346,7 @@ function readConfig(text: string, first: number, fail: (line: number, message: s
       read.dragNodes = value;
       continue;
     }
-    if (key === 'folded' || key === 'zoom') {
-      // the view a test starts in (its config block), or the one a step leaves (its state's)
-      if (where === 'start' && value.trim() === 'none') fail(at, `"${key}: none" is a step's: a test with no ${key} leaves the key out`);
-      read.view[key] = value;
-      continue;
-    }
+    if (key === 'folded' || key === 'zoom') fail(at, `"${key}" is drawn in the buffer: \`⟦folded⟧\` last on a folded node's first line, \`⟦zoomed⟧\` on the zoom root's`);
     if (key === 'result') {
       if (where !== 'step') fail(at, "a result is a step's: it goes in the `yaml` block after the step's actions");
       if (!/^(?:success|deferredToHost|rejected [a-z0-9-]+)$/.test(value)) fail(at, `a result is success, deferredToHost or "rejected <reason>", not "${value}"`);
@@ -369,17 +354,17 @@ function readConfig(text: string, first: number, fail: (line: number, message: s
       continue;
     }
     if (where === 'step') fail(at, `"${key}" in a state after a step, which holds its result, clipboard and outline: options go in the test's config block`);
-    if (key === 'rank') fail(at, 'the rank is the first tag: "tags: edge", or "tags: edge free-form"');
+    if (key === 'rank') fail(at, 'the rank is the first tag: "tags: rare", or "tags: rare free-form"');
     if (key === 'tags') {
       // the rank first, then the tags, each a word
       const [rank, ...tags] = value.split(/\s+/).filter(Boolean);
-      if (!(RANKS as readonly (string | undefined)[]).includes(rank)) fail(at, `the first tag is the rank: ${RANKS.join(', ')}, not "${rank ?? ''}"`);
-      read.rank = rank as Rank;
-      const unknown = tags.find((t) => !(TAGS as readonly string[]).includes(t));
-      if (unknown !== undefined) fail(at, `no tag "${unknown}": tags are ${TAGS.join(', ')}`);
+      if (!(SPEC_RANKS as readonly (string | undefined)[]).includes(rank)) fail(at, `the first tag is the rank: ${SPEC_RANKS.join(', ')}, not "${rank ?? ''}"`);
+      read.rank = rank as SpecRank;
+      const unknown = tags.find((t) => !(SPEC_TAGS as readonly string[]).includes(t));
+      if (unknown !== undefined) fail(at, `no tag "${unknown}": tags are ${SPEC_TAGS.join(', ')}`);
       const twice = tags.find((t, i) => tags.indexOf(t) !== i);
       if (twice !== undefined) fail(at, `tag "${twice}" given twice`);
-      read.tags = tags as Tag[];
+      read.tags = tags as SpecTag[];
       continue;
     }
     const set = OurusConfig.read({ [key]: value });

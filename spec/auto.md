@@ -20,22 +20,22 @@ lines back and takes it out: the join is the split's inverse ([Regression24b](re
 tags: rare
 ```
 
-```buffer
+```markdown
 revise ┃2. draft
 ```
 
 > enter
 
-```buffer
-revise
+```markdown
+revise␠
 
 ┃2\̬. draft
 ```
 
 > deleteContentBackward
 
-```buffer
-revise┃2. draft
+```markdown
+revise ┃2. draft
 ```
 
 ## Auto2
@@ -47,22 +47,22 @@ the text ([Regression24](regressions.md#regression24)).
 tags: rare
 ```
 
-```buffer
+```markdown
 revise ┃2\. draft
 ```
 
 > enter
 
-```buffer
-revise
+```markdown
+revise␠
 
 ┃2\. draft
 ```
 
 > deleteContentBackward
 
-```buffer
-revise┃2\. draft
+```markdown
+revise ┃2\. draft
 ```
 
 ## Auto3
@@ -74,23 +74,23 @@ two backticks too; the third makes the line right above it that fence typed agai
 it takes the old one's place ([Backtick9](backtick.md#backtick9)): nothing of ours is left.
 
 ```yaml
-tags: common enter-in-fence
+tags: common markup-fence enter-in-fence
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > "\`\`\`"
 
-````buffer
+````markdown
 ```┃
 `̬`̬`̬
 ````
 
 > enter
 
-````buffer
+````markdown
 ```
 ┃
 `̬`̬`̬
@@ -98,7 +98,7 @@ tags: common enter-in-fence
 
 > "test"
 
-````buffer
+````markdown
 ```
 test┃
 `̬`̬`̬
@@ -106,7 +106,7 @@ test┃
 
 > enter
 
-````buffer
+````markdown
 ```
 test
 ┃
@@ -115,7 +115,7 @@ test
 
 > "\`\`"
 
-````buffer
+````markdown
 ```
 test
 ``┃
@@ -124,7 +124,7 @@ test
 
 > "\`"
 
-````buffer
+````markdown
 ```
 test
 ```┃
@@ -138,13 +138,13 @@ In an item, the closing fence ours at the item's content column.
 tags: common
 ```
 
-```buffer
+```markdown
 - ┃
 ```
 
 > "\`\`\`"
 
-````buffer
+````markdown
 - ```┃
   `̬`̬`̬
 ````
@@ -154,16 +154,16 @@ tags: common
 A tilde fence the same: its closing tildes ours.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > "~~~"
 
-````buffer
+````markdown
 ~~~┃
 ~̬~̬~̬
 ````
@@ -175,10 +175,10 @@ closing fence, by a backtick of ours; the author's three stay theirs
 ([Backtick4](backtick.md#backtick4)).
 
 ```yaml
-tags: edge
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 ```┃
 code
 ```
@@ -186,7 +186,7 @@ code
 
 > "\`"
 
-````buffer
+````markdown
 ````┃
 code
 ````̬
@@ -197,16 +197,16 @@ code
 In a fence ourus closed, the closing fence grows by one more of ours: all of it still ours.
 
 ```yaml
-tags: edge
+tags: rare markup-fence
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > "\`\`\`" "\`"
 
-````buffer
+````markdown
 ````┃
 `̬`̬`̬`̬
 ````
@@ -218,23 +218,23 @@ ours. Typed again before it, the backtick steps over it, and that is the author 
 no mark ([Backtick19](backtick.md#backtick19)).
 
 ```yaml
-tags: edge
+tags: common
 autoClose: ['```', '~~~', '`']
 ```
 
-```buffer
+```markdown
 use ┃ here
 ```
 
 > "\`"
 
-```buffer
+```markdown
 use `┃`̬ here
 ```
 
 > "x\`"
 
-```buffer
+```markdown
 use `x`┃ here
 ```
 
@@ -243,23 +243,23 @@ use `x`┃ here
 Backspace in an empty pair takes both, as they came ([Backtick20](backtick.md#backtick20)).
 
 ```yaml
-tags: edge
+tags: common
 autoClose: ['```', '~~~', '`']
 ```
 
-```buffer
+```markdown
 use ┃ here
 ```
 
 > "\`"
 
-```buffer
+```markdown
 use `┃`̬ here
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 use ┃ here
 ```
 
@@ -269,17 +269,17 @@ An empty pair the author typed takes both too: Backspace in an empty pair is the
 typed it, as every app that pairs backticks has it (an editor's closeBrackets).
 
 ```yaml
-tags: edge
+tags: common
 autoClose: ['```', '~~~', '`']
 ```
 
-```buffer
+```markdown
 use `┃` here
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 use ┃ here
 ```
 
@@ -289,16 +289,16 @@ Backspace right after the fence is typed takes its third backtick, and the closi
 with it: the line is the text it was typed from ([Backtick15](backtick.md#backtick15)).
 
 ```yaml
-tags: common
+tags: common markup-fence
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > "\`\`\`" deleteContentBackward
 
-```buffer
+```markdown
 ``┃
 ```
 
@@ -311,13 +311,13 @@ tags: common
 autoClose: ['```', '~~~', '(', '[', '{']
 ```
 
-```buffer
+```markdown
 a ┃ b
 ```
 
 > "("
 
-```buffer
+```markdown
 a (┃)̬ b
 ```
 
@@ -330,13 +330,13 @@ tags: common
 autoClose: ['```', '~~~', '(', '[', '{']
 ```
 
-```buffer
+```markdown
 a ┃b
 ```
 
 > "("
 
-```buffer
+```markdown
 a (┃b
 ```
 
@@ -345,17 +345,17 @@ a (┃b
 After a letter it pairs, as before a blank: only what follows the caret counts.
 
 ```yaml
-tags: edge
+tags: common
 autoClose: ['```', '~~~', '(', '[', '{']
 ```
 
-```buffer
+```markdown
 a┃ b
 ```
 
 > "["
 
-```buffer
+```markdown
 a[┃]̬ b
 ```
 
@@ -368,13 +368,13 @@ tags: common
 autoClose: ['```', '~~~', '(', '[', '{']
 ```
 
-```buffer
+```markdown
 a ┃ b
 ```
 
 > "[["
 
-```buffer
+```markdown
 a [[┃]̬]̬ b
 ```
 
@@ -387,19 +387,19 @@ tags: common
 autoClose: ['```', '~~~', '(', '[', '{']
 ```
 
-```buffer
+```markdown
 a ┃ b
 ```
 
 > "("
 
-```buffer
+```markdown
 a (┃)̬ b
 ```
 
 > "x)"
 
-```buffer
+```markdown
 a (x)┃ b
 ```
 
@@ -412,25 +412,25 @@ tags: common
 autoClose: ['```', '~~~', '(', '[', '{']
 ```
 
-```buffer
+```markdown
 a ┃ b
 ```
 
 > "[["
 
-```buffer
+```markdown
 a [[┃]̬]̬ b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 a [┃]̬ b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 a ┃ b
 ```
 
@@ -439,17 +439,17 @@ a ┃ b
 An empty pair the author typed: Backspace takes both too, as every app that pairs brackets does.
 
 ```yaml
-tags: edge
+tags: common
 autoClose: ['```', '~~~', '(', '[', '{']
 ```
 
-```buffer
+```markdown
 a (┃) b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 a ┃ b
 ```
 
@@ -458,17 +458,17 @@ a ┃ b
 An opener typed over a selection on one line wraps it, its closer ours, the selection kept.
 
 ```yaml
-tags: edge
+tags: common
 autoClose: ['```', '~~~', '(', '[', '{']
 ```
 
-```buffer
+```markdown
 a «x» b
 ```
 
 > "("
 
-```buffer
+```markdown
 a («x»)̬ b
 ```
 
@@ -481,13 +481,13 @@ tags: rare
 autoClose: ['```', '~~~', '(', '[', '{']
 ```
 
-```buffer
+```markdown
 a \┃ b
 ```
 
 > "["
 
-```buffer
+```markdown
 a \[┃]̬ b
 ```
 
@@ -501,13 +501,13 @@ tags: rare
 autoClose: ['```', '~~~', '(', '[', '{']
 ```
 
-```buffer
+```markdown
 a `x┃ y` b
 ```
 
 > "["
 
-```buffer
+```markdown
 a `x[┃]̬ y` b
 ```
 
@@ -516,23 +516,23 @@ a `x[┃]̬ y` b
 With the double alone listed (`[[`, as WorkFlowy), a single bracket is typed alone, and the second of two makes the pair.
 
 ```yaml
-tags: edge
+tags: rare
 autoClose: ['```', '~~~', '[[', '((']
 ```
 
-```buffer
+```markdown
 a ┃ b
 ```
 
 > "["
 
-```buffer
+```markdown
 a [┃ b
 ```
 
 > "["
 
-```buffer
+```markdown
 a [[┃]̬]̬ b
 ```
 
@@ -544,13 +544,13 @@ By default `autoClose` lists the fences alone: a bracket is the host's.
 tags: common
 ```
 
-```buffer
+```markdown
 a ┃ b
 ```
 
 > "("
 
-```buffer
+```markdown
 a (┃ b
 ```
 
@@ -566,7 +566,7 @@ tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 a $x ┃- y$ b
 ```
 
@@ -576,7 +576,7 @@ a $x ┃- y$ b
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 a $x ┃- y$ b
 ```
 
@@ -588,7 +588,7 @@ The same in a code span, whose text is verbatim too: a backslash in it is a char
 tags: rare
 ```
 
-```buffer
+```markdown
 a `x ┃- y` b
 ```
 
@@ -598,7 +598,7 @@ a `x ┃- y` b
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 a `x ┃- y` b
 ```
 
@@ -610,13 +610,13 @@ A line break inside a code span that needs no escape is written: the span goes o
 tags: rare
 ```
 
-```buffer
+```markdown
 a `x ┃2. y` b
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 a `x 
 ┃2. y` b
 ```
@@ -632,13 +632,13 @@ flavor: obsidian
 autoClose: ['```', '~~~', '(', '[', '{']
 ```
 
-```buffer
+```markdown
 a $x┃ y$ b
 ```
 
 > "("
 
-```buffer
+```markdown
 a $x(┃)̬ y$ b
 ```
 
@@ -655,7 +655,7 @@ outline: |
   atom math_block: $$⏎y⏎$$
 ```
 
-```buffer
+```markdown
 before
 $$x$$
 after┃
@@ -667,7 +667,7 @@ $$
 
 > cursorDocStart
 
-```buffer
+```markdown
 ┃before
 $$x$$
 after
@@ -686,19 +686,19 @@ tags: common
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 a┃
 ```
 
 > " $$"
 
-```buffer
+```markdown
 a $$┃$̬$̬
 ```
 
 > "x"
 
-```buffer
+```markdown
 a $$x┃$̬$̬
 ```
 
@@ -707,23 +707,23 @@ a $$x┃$̬$̬
 Enter in the empty pair spreads it over lines: a math block, the caret on its empty line, the closing `$$` still ours (as an editor spreads a pair of brackets).
 
 ```yaml
-tags: common
+tags: common markup-fence
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > "$$"
 
-```buffer
+```markdown
 $$┃$̬$̬
 ```
 
 > enter
 
-```buffer
+```markdown
 $$
 ┃
 $̬$̬
@@ -731,7 +731,7 @@ $̬$̬
 
 > "x"
 
-```buffer
+```markdown
 $$
 x┃
 $̬$̬
@@ -742,23 +742,23 @@ $̬$̬
 Backspace right after `$$` takes its second `$` and the closer: the keystroke's inverse, as for a fence (Auto11).
 
 ```yaml
-tags: edge
+tags: common
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 a ┃
 ```
 
 > "$$"
 
-```buffer
+```markdown
 a $$┃$̬$̬
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 a $┃
 ```
 
@@ -767,17 +767,17 @@ a $┃
 The closer typed by hand steps over ours, and is the author's then.
 
 ```yaml
-tags: edge
+tags: common
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 a ┃
 ```
 
 > "$$x$$"
 
-```buffer
+```markdown
 a $$x$$┃
 ```
 
@@ -786,23 +786,23 @@ a $$x$$┃
 A comment the same: `%%┃%%`, and Enter in it a comment block.
 
 ```yaml
-tags: edge
+tags: rare markup-fence
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > "%%"
 
-```buffer
+```markdown
 %%┃%̬%̬
 ```
 
 > enter
 
-```buffer
+```markdown
 %%
 ┃
 %̬%̬
@@ -813,23 +813,23 @@ flavor: obsidian
 An HTML comment, in every flavor: `<!--┃-->`, and Enter in it a block of HTML.
 
 ```yaml
-tags: edge
+tags: rare markup-fence
 flavor: gfm
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > "<!--"
 
-```buffer
+```markdown
 <!--┃-̬-̬>̬
 ```
 
 > enter
 
-```buffer
+```markdown
 <!--
 ┃
 -̬-̬>̬
@@ -840,17 +840,17 @@ flavor: gfm
 Where the flavor reads no math, `$$` is text: nothing closes it.
 
 ```yaml
-tags: edge
+tags: rare
 flavor: gfm
 ```
 
-```buffer
+```markdown
 a ┃
 ```
 
 > "$$"
 
-```buffer
+```markdown
 a $$┃
 ```
 
@@ -859,17 +859,17 @@ a $$┃
 An empty pair the author typed: Enter is Enter in a paragraph, the closer theirs.
 
 ```yaml
-tags: rare
+tags: rare markup-fence
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 $$┃$$
 ```
 
 > enter
 
-```buffer
+```markdown
 \̬$$
 
 ┃\̬$$
@@ -880,23 +880,23 @@ $$┃$$
 With `$` in `autoClose` (as Logseq and Roam), inline math's `$` pairs as a bracket does, ours, and the one typed before it with math in the pair steps over it.
 
 ```yaml
-tags: edge
+tags: rare
 autoClose: ['```', '~~~', '$']
 ```
 
-```buffer
+```markdown
 a ┃ b
 ```
 
 > "$"
 
-```buffer
+```markdown
 a $┃$̬ b
 ```
 
 > "x$"
 
-```buffer
+```markdown
 a $x$┃ b
 ```
 
@@ -905,29 +905,29 @@ a $x$┃ b
 A second `$` in the empty pair makes the double, display math; Backspace there takes a level, as in a double bracket.
 
 ```yaml
-tags: edge
+tags: rare
 autoClose: ['```', '~~~', '$']
 ```
 
-```buffer
+```markdown
 a ┃ b
 ```
 
 > "$$"
 
-```buffer
+```markdown
 a $$┃$̬$̬ b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 a $┃$̬ b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 a ┃ b
 ```
 
@@ -936,16 +936,16 @@ a ┃ b
 After a letter a `$` closes math, as the author typed it: it pairs with nothing.
 
 ```yaml
-tags: edge
+tags: rare
 autoClose: ['```', '~~~', '$']
 ```
 
-```buffer
+```markdown
 a $x┃ b
 ```
 
 > "$"
 
-```buffer
+```markdown
 a $x$┃ b
 ```

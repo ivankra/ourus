@@ -8,7 +8,7 @@
 
 import type { Page } from 'playwright-core';
 import { perPage, type Driver } from '../lib/driver.ts';
-import type { TextDoc } from '../lib/text.ts';
+import { foldOnAtomItem, type TextDoc } from '../lib/text.ts';
 
 const MOTIONS: Record<string, string> = {
   CharLeft: 'ArrowLeft',
@@ -76,7 +76,7 @@ export const driver: Driver = {
   },
   holds(doc) {
     // CodeMirror keeps line breaks as LF
-    return (doc as TextDoc).text.includes('\r') ? 'CR line endings' : undefined;
+    return (doc as TextDoc).text.includes('\r') ? 'CR line endings' : foldOnAtomItem(doc as TextDoc);
   },
   idle: {
     // commands run in plug workers: one is under way while a worker owes an answer

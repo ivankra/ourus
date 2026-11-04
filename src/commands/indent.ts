@@ -72,6 +72,12 @@ function blocksIntoItems(ctx: CommandContext, nodes: readonly OurusNode[]): Ouru
   // (a node that adopts the list after it, `listParent`: a paragraph, any block, none)
   const holds = !!above && section && ctx.doc.adoptsLists(above);
   if (!holds && !section && above?.kind !== 'paragraph' && above?.kind !== 'item') return above ? new OurusRejected('not-expressible', 'only a paragraph or an item can hold list items') : new OurusRejected('no-previous-sibling');
+  // (an empty quote read as an atom carrying a block id: as an item's text, `- >`, the id's line below it
+  // would be the item's, no quote's line to carry it, B31)
+  for (const node of nodes) {
+    const text = ctx.doc.textOf(node);
+    if (text instanceof OurusAtom && text.type === 'blockquote' && text.blockIdLines.length && /^[ \t>]*$/.test(text.text)) return new OurusRejected('not-expressible', 'the block id would be the item\'s, with no quote text to carry it');
+  }
   const draft = ctx.draft();
   for (const node of nodes) draft.convert(node, 'item');
   if (holds) draft.remove(nodes).append(above, 'last', nodes);

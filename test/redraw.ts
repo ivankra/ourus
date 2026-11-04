@@ -14,10 +14,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { OurusConfig } from '../src/config.ts';
-import { drawDoc, drawLabels, drawsCaret, readDrawing, readLabels, withoutCaret } from './drawing.ts';
-import { isAction, play } from './player.ts';
-import { flavorsOf, Labels, normalize, outcome, startOf } from './spec-run.ts';
-import { readSpecFile, slug, specFiles, SPEC_DIR, type SpecTest } from './specfile.ts';
+import { drawDoc, drawLabels, drawsCaret, readDrawing, readLabels, withoutCaret, isAction, playActions, specTestFlavors, NodeLabels, normalizeDrawing, describeOutcome, specTestStart, readSpecFile, specSlug, specFiles, SPEC_DIR, type SpecTest } from './lib/index.ts';
 import { OurusRejected } from '../src/commands/index.ts';
 
 const args = process.argv.slice(2);
@@ -32,7 +29,7 @@ for (const a of args) if (a.startsWith('--') && a !== '--apply') {
 const picks = (selector: string, t: SpecTest): boolean => {
   if (selector.includes('#')) {
     const [file, anchor] = selector.split('#');
-    return (!file || t.file === file || t.file === `${file}.md`) && slug(t.name) === anchor!.toLowerCase();
+    return (!file || t.file === file || t.file === `${file}.md`) && specSlug(t.name) === anchor!.toLowerCase();
   }
   return t.file === selector || t.file === `${selector}.md` || t.name === selector;
 };
@@ -51,9 +48,9 @@ interface Redrawn {
 
 /** Each step's buffer and result as ourus has them now, in `flavor`; a string says why it can't be drawn. */
 function played(t: SpecTest, flavor: OurusConfig['flavor']): { buffer: string; result: string }[] | string {
-  let state = startOf(t, flavor);
+  let state = specTestStart(t, flavor);
   // (the labels a step's buffer draws, drawn again where their nodes are: a redrawn buffer keeps them)
-  const labels = new Labels();
+  const labels = new NodeLabels();
   const named = labels.check(state.view.doc, readDrawing(t.initial.buffer).labels, null);
   if (named) return `the start's labels: ${named}`;
   const out: { buffer: string; result: string }[] = [];
@@ -62,14 +59,14 @@ function played(t: SpecTest, flavor: OurusConfig['flavor']): { buffer: string; r
     if (unknown.length) return `step ${k + 1}: unknown actions ${unknown.join(' ')}`;
     const before = state.view.doc.nextId;
     for (const action of step.actions) {
-      state = play(state, [action]);
+      state = playActions(state, [action]);
       if (state.last instanceof OurusRejected && state.last.reason === 'write-failed') return `step ${k + 1}: ${action} fails to write${state.last.detail ? `: ${state.last.detail}` : ''}`;
     }
     if (state.view.doc.text !== '' && !/[\r\n]$/.test(state.view.doc.text)) return `step ${k + 1}: no final line break, which a buffer can't draw`;
     const own = readLabels(step.expect.buffer ?? '').labels;
     labels.check(state.view.doc, own, before);
     const drawn = drawLabels(drawDoc(state.view, state.selection), labels.drawn(state.view.doc, new Set([...own.values()].flat())));
-    out.push({ buffer: normalize(drawn), result: outcome(state) });
+    out.push({ buffer: normalizeDrawing(drawn), result: describeOutcome(state) });
   }
   return out;
 }
@@ -84,12 +81,12 @@ for (const file of files) {
   for (const t of readSpecFile(file)) {
     if (t.pending || (selectors.length && !selectors.some((s) => picks(s, t)))) continue;
     checked++;
-    const runs = flavorsOf(t).map((flavor) => ({ flavor, steps: played(t, flavor) }));
+    const runs = specTestFlavors(t).map((flavor) => ({ flavor, steps: played(t, flavor) }));
     const broken = runs.find((r) => typeof r.steps === 'string');
     const differs = (k: number): boolean => {
       const step = t.steps[k]!;
       const got = (runs[0]!.steps as { buffer: string; result: string }[])[k]!;
-      return (step.expect.buffer !== undefined && normalize(step.expect.buffer) !== as(step.expect.buffer, got.buffer)) || (step.expect.result !== undefined && step.expect.result !== got.result);
+      return (step.expect.buffer !== undefined && normalizeDrawing(step.expect.buffer) !== as(step.expect.buffer, got.buffer)) || (step.expect.result !== undefined && step.expect.result !== got.result);
     };
     if (broken) {
       unredrawable.push(`${t.file}:${t.line} ${t.name} (${broken.flavor}): ${broken.steps as string}`);
@@ -105,7 +102,7 @@ for (const file of files) {
     t.steps.forEach((step, k) => {
       const got = first!.steps[k]!;
       if (step.expect.result !== undefined && step.expect.result !== got.result) redrawn.push({ t, step: k, kind: 'result', drawn: step.expect.result, now: got.result });
-      if (step.expect.buffer !== undefined && normalize(step.expect.buffer) !== as(step.expect.buffer, got.buffer)) redrawn.push({ t, step: k, kind: 'buffer', drawn: step.expect.buffer, now: as(step.expect.buffer, got.buffer) });
+      if (step.expect.buffer !== undefined && normalizeDrawing(step.expect.buffer) !== as(step.expect.buffer, got.buffer)) redrawn.push({ t, step: k, kind: 'buffer', drawn: step.expect.buffer, now: as(step.expect.buffer, got.buffer) });
     });
   }
 }
@@ -126,8 +123,10 @@ if (apply && redrawn.length) {
     // bottom up: a block rewritten changes the lines after it, never those before
     const edits = redrawn.filter((r) => r.t.file === file).sort((a, b) => b.t.steps[b.step]!.line - a.t.steps[a.step]!.line || (a.kind === 'buffer' ? -1 : 1));
     for (const r of edits) {
-      const block = blockAfter(lines, r.t.steps[r.step]!.line, r.kind === 'result' ? 'yaml' : r.kind);
-      if (!block) throw new Error(`${file}:${r.t.steps[r.step]!.line}: no ${r.kind === 'result' ? 'yaml' : r.kind} block after the step`);
+      // (a buffer's block is a `markdown` one)
+      const info = r.kind === 'result' ? 'yaml' : 'markdown';
+      const block = blockAfter(lines, r.t.steps[r.step]!.line, info);
+      if (!block) throw new Error(`${file}:${r.t.steps[r.step]!.line}: no ${info} block after the step`);
       if (r.kind === 'result') {
         // the state's yaml block: its `result:` key
         const at = lines.slice(block.open + 1, block.close).findIndex((line) => line.startsWith('result: '));
@@ -139,7 +138,7 @@ if (apply && redrawn.length) {
       // a fence longer than any backtick run starting a line of the content
       const run = Math.max(0, ...content.map((line) => /^`*/.exec(line)![0].length));
       const fence = '`'.repeat(Math.max(block.fence.length, run >= 3 ? run + 1 : 3));
-      lines.splice(block.open, block.close - block.open + 1, `${fence}${r.kind}`, ...content, fence);
+      lines.splice(block.open, block.close - block.open + 1, `${fence}${info}`, ...content, fence);
     }
     writeFileSync(path, lines.join('\n'));
     console.log(`rewrote ${edits.length} blocks in spec/${file}`);

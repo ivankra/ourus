@@ -64,6 +64,8 @@ export class MdHtmlRenderer {
   private lastOut = '\n';
   /** Inside an image's alt text, tags are left out. */
   disableTags = 0;
+  /** Inside a link's text, which holds no anchor: an extension's link-like inline is its text there. */
+  inLink = 0;
   /** The leaf whose inlines are being written. */
   leaf: MdBlockAt | null = null;
   /** The blocks being written, outermost first: the one written last, and those around it. */
@@ -168,11 +170,11 @@ export class MdHtmlRenderer {
   private visit(f: MdFrame, entering: boolean): void | boolean {
     if (f.block) {
       const type = f.block.block.type;
-      const r = this.rules.blocks?.[type] ?? coreBlocks[type];
+      const r = ownRule(this.rules.blocks, type) ?? ownRule(coreBlocks, type);
       return r ? r(this, f.block, entering) : undefined;
     }
     const node = f.inline!;
-    const r = this.rules.inlines?.[node.type] ?? coreInlines[node.type];
+    const r = ownRule(this.rules.inlines, node.type) ?? ownRule(coreInlines, node.type);
     if (r) return r(this, node, entering, f.text, f.parent);
     // an inline this renderer doesn't know: its children, or its text
     if (entering && !node.children) this.out(f.text.slice(node.from, node.to));
@@ -288,6 +290,11 @@ export const coreBlocks: Readonly<Record<string, MdBlockRenderer>> = {
 };
 
 /** Inline renderers of CommonMark. */
+/** The renderer `table` has for `type`, its own: an extension's type named like an object's property (`toString`) has none. */
+function ownRule<R>(table: Readonly<Record<string, R>> | undefined, type: string): R | undefined {
+  return table && Object.hasOwn(table, type) ? table[type] : undefined;
+}
+
 export const coreInlines: Readonly<Record<string, MdInlineRenderer>> = {
   text(r, node, entering, text) {
     if (entering) r.out(text.slice(node.from, node.to));
@@ -320,8 +327,13 @@ export const coreInlines: Readonly<Record<string, MdInlineRenderer>> = {
     r.tag(entering ? 'strong' : '/strong');
   },
   link(r, node, entering) {
-    if (entering) r.tag('a', r.linkAttrs(node.destination!, node.title));
-    else r.tag('/a');
+    if (entering) {
+      r.tag('a', r.linkAttrs(node.destination!, node.title));
+      r.inLink++;
+    } else {
+      r.inLink--;
+      r.tag('/a');
+    }
   },
   autolink(r, node, entering) {
     if (!entering) return;

@@ -1,9 +1,9 @@
 // The keys that edit text, over a subtree selection (the roots it is, `OurusView.selectedSubtrees`): what
 // they mean over whole nodes, rather than over the lines' characters, markers and all. One routing
-// step, before the commands: Backspace, Delete and cut take the roots out as delete subtree does;
-// copy writes them (`copy.ts`); typing does nothing, as in the outliners; a plain paste makes one node
-// in their place; Enter puts the caret at the end of the last one's own text; a paste puts the
-// clipboard's nodes in their place.
+// step, before the commands: Backspace, Delete, cut and a drag's deletion take the roots out as delete
+// subtree does; copy writes them (`copy.ts`); typing does nothing, as in the outliners; a plain paste
+// makes one node in their place; Enter puts the caret at the end of the last one's own text; a paste
+// puts the clipboard's nodes in their place.
 
 import { OurusAtom, OurusProse, type OurusNode } from '../doc/index.ts';
 import { composeChanges } from '../text/index.ts';
@@ -17,7 +17,7 @@ import { goneWithTextlessParents, textEnd, textStart } from './util.ts';
 import { OurusDeferred, OurusSuccess } from './types.ts';
 
 /** The commands routed over a subtree selection. */
-const ROUTED: ReadonlySet<OurusCommand['type']> = new Set(['deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward', 'cut', 'copy', 'insertText', 'enter', 'shiftEnter', 'paste', 'pastePlain']);
+const ROUTED: ReadonlySet<OurusCommand['type']> = new Set(['deleteContentBackward', 'deleteContentForward', 'deleteSoftLineBackward', 'deleteByDrag', 'cut', 'copy', 'insertText', 'enter', 'shiftEnter', 'paste', 'pastePlain']);
 
 /**
  * `command` over the subtree selection `ctx.selection` is (a command given `nodes` acts on those, not
@@ -29,12 +29,14 @@ export function editSubtrees(ctx: CommandContext, command: OurusCommand): OurusR
   if (!roots) return undefined;
   // typing over the whole document (a select all) replaces it as text, as every text editor does,
   // rather than keeping the first node's prefix (`- x`, `# x`)
-  const all = Math.min(ctx.selection.anchor, ctx.selection.head) === 0 && Math.max(ctx.selection.anchor, ctx.selection.head) === ctx.doc.text.length;
+  const all = ctx.doc.wholeText(Math.min(ctx.selection.anchor, ctx.selection.head), Math.max(ctx.selection.anchor, ctx.selection.head));
   if (all && (command.type === 'insertText' || command.type === 'pastePlain')) return undefined;
   switch (command.type) {
     case 'deleteContentBackward':
     case 'deleteContentForward':
     case 'deleteSoftLineBackward':
+    // (a drag's deletion, the selection deleted as a cut deletes it: `types.ts`)
+    case 'deleteByDrag':
       return deleteSubtreeCommand(ctx);
     case 'cut':
     case 'copy':
@@ -68,14 +70,23 @@ export function editSubtrees(ctx: CommandContext, command: OurusCommand): OurusR
       const pasted =
         ctx.config.pasteOverNodes === 'after'
           ? pasteAtCommand(ctx, command.clipboard, { parent: parentOf(last), after: last.id })
-          : composed(ctx, deleteSubtreeCommand(ctx), (next) => pasteAtCommand(next, command.clipboard, { parent: parentOf(first), after: first.prev?.id ?? null }));
+          : composed(ctx, deleteSubtreeCommand(ctx), (next) => {
+              // (where the first's textless parents went with it, a quote it was all of: in their place)
+              let gone = first;
+              while (gone.parent && gone.parent.kind !== 'root' && !next.doc.node(gone.parent.id)) gone = gone.parent;
+              return pasteAtCommand(next, command.clipboard, { parent: parentOf(gone), after: gone.prev?.id ?? null });
+            });
       if (!(pasted instanceof OurusSuccess)) return pasted;
-      // the caret at the end of what was pasted, as a paste leaves it
-      const placed = pasted.placed?.at(-1);
-      const end = placed === undefined ? undefined : pasted.view.doc.node(placed)?.lastDescendant;
+      // the caret at the end of what was pasted, as a paste leaves it; with `quirkPasteCaret`, at the
+      // first pasted node's end (`roam`) or start (`athens`), a quote's in its first block
+      const quirk = ctx.config.quirkPasteCaret;
+      const placed = quirk === 'default' ? pasted.placed?.at(-1) : pasted.placed?.[0];
+      let end = placed === undefined ? undefined : pasted.view.doc.node(placed);
+      if (quirk === 'default') end = end?.lastDescendant;
+      else while (end && !pasted.view.doc.textOf(end) && end.children.length) end = end.children[0];
       const text = end && pasted.view.doc.textOf(end);
       if (!end || !text) return pasted;
-      const at = pasted.view.doc.posOf(end, textEnd(text), -1);
+      const at = pasted.view.doc.posOf(end, quirk === 'athens' ? textStart(text) : textEnd(text), -1);
       return new OurusSuccess({ ...pasted, selection: { anchor: at, head: at } });
     }
     default:

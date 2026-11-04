@@ -50,7 +50,7 @@ Bare Obsidian moves the line, and `b1` becomes `a`'s child.
 tags: core
 ```
 
-```buffer
+```markdown
 - a①
 - b┃②
   - b1③
@@ -59,7 +59,7 @@ tags: core
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - b┃②
   - b1③
 - a①
@@ -68,7 +68,7 @@ tags: core
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 - a①
 - b┃②
   - b1③
@@ -83,7 +83,7 @@ The first top-level item cannot move up.
 tags: common
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
@@ -94,7 +94,7 @@ tags: common
 result: rejected no-previous-sibling
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
@@ -109,7 +109,7 @@ Bare Obsidian moves only the heading's line, which would leave `text b` under `#
 tags: core
 ```
 
-```buffer
+```markdown
 # A
 
 text a
@@ -121,7 +121,7 @@ text b
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 # B┃
 
 text b
@@ -142,7 +142,7 @@ paragraph.
 tags: core
 ```
 
-```buffer
+```markdown
 one
 
 two┃
@@ -150,7 +150,7 @@ two┃
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 two┃
 
 one
@@ -161,10 +161,10 @@ one
 The first child cannot move up when its parent has no previous sibling to receive it.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
   - b┃
 ```
@@ -175,7 +175,7 @@ tags: edge
 result: rejected no-previous-sibling
 ```
 
-```buffer
+```markdown
 - a
   - b┃
 ```
@@ -189,7 +189,7 @@ up then swaps it with the preceding child there.
 tags: core
 ```
 
-```buffer
+```markdown
 - a
 →- b
 - c
@@ -198,7 +198,7 @@ tags: core
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - a
 →- b
 →- d┃
@@ -207,7 +207,7 @@ tags: core
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - a
 →- d┃
 →- b
@@ -226,7 +226,7 @@ bullets and BlockNote move it; SiYuan keeps it in the paragraph's list.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
 
 para
@@ -237,7 +237,7 @@ para
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - a
 - b┃
 
@@ -257,7 +257,7 @@ Bare Obsidian leaves `c1` behind under `b`.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
 - b
   - c┃
@@ -266,7 +266,7 @@ tags: common
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - a
   - c┃
     - c1
@@ -275,7 +275,7 @@ tags: common
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 - a
 - b
   - c┃
@@ -291,7 +291,7 @@ the destination's existing child and grandchild stay together.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
   - a1
     - a11
@@ -303,7 +303,7 @@ tags: common
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - a
   - a1
     - a11
@@ -319,23 +319,23 @@ Selected siblings swap upward together. A child included in the selection travel
 parent once, and the selection stays on the moved text.
 
 ```yaml
-tags: common
+tags: core
 ```
 
-```buffer
+```markdown
 - a
-- ««b
+- b⟦selected⟧
   - b1
-- c»»
+- c⟦selected⟧
 - d
 ```
 
 > moveSubtreeUp
 
-```buffer
-- ««b
+```markdown
+- b⟦selected⟧
   - b1
-- c»»
+- c⟦selected⟧
 - a
 - d
 ```
@@ -346,27 +346,27 @@ A selected run at the start of a parent's children crosses together, preserving 
 subtrees. Unselected children remain with their parent.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
   - a1
 - b
-  - ««c
+  - c⟦selected⟧
     - c1
-  - d»»
+  - d⟦selected⟧
   - e
 ```
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - a
   - a1
-  - ««c
+  - c⟦selected⟧
     - c1
-  - d»»
+  - d⟦selected⟧
 - b
   - e
 ```
@@ -377,10 +377,10 @@ A paragraph's only list item can move above it without a preceding list to join.
 comes along; the paragraph remains below, with a blank line keeping it outside the item.
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 ```
 
-```buffer
+```markdown
 intro
 
 - b┃
@@ -389,7 +389,7 @@ intro
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - b┃
   - b1
 
@@ -401,10 +401,10 @@ intro
 Fenced code with a blank line moves with its item: the code's blank line is payload, not a gap.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-````buffer
+````markdown
 - a
 - b┃
   ```
@@ -416,7 +416,7 @@ tags: edge
 
 > moveSubtreeUp
 
-````buffer
+````markdown
 - b┃
   ```
   x
@@ -434,14 +434,14 @@ Moving renumbers the items.
 tags: core
 ```
 
-```buffer
+```markdown
 1. a
 2. b┃
 ```
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 1. b┃
 2. a
 ```
@@ -454,7 +454,7 @@ Renumbering past 9 widens the marker, and the children follow the new content co
 tags: rare
 ```
 
-```buffer
+```markdown
 9. a
    - x
 10. b┃
@@ -462,7 +462,7 @@ tags: rare
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 9. b┃
 10. a
     - x
@@ -476,7 +476,7 @@ Heading moves with its subheadings.
 tags: common
 ```
 
-```buffer
+```markdown
 # A
 ## a1
 # B┃
@@ -485,7 +485,7 @@ tags: common
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 # B┃
 ## b1
 # A
@@ -500,7 +500,7 @@ A paragraph moves with its list.
 tags: common
 ```
 
-```buffer
+```markdown
 first
 
 para┃
@@ -509,7 +509,7 @@ para┃
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 para┃
 - a
 
@@ -525,14 +525,14 @@ right below a paragraph, it would be a continuation line.
 tags: rare
 ```
 
-```buffer
+```markdown
 →- a
 ┃para
 ```
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 ┃para
 
 →- a
@@ -544,17 +544,17 @@ A paragraph moved up past a thematic break is set apart from it: right below a p
 would be a setext underline.
 
 ```yaml
-tags: rare
+tags: common
 ```
 
-```buffer
+```markdown
 ---
 para┃
 ```
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 para┃
 
 ---
@@ -569,14 +569,14 @@ paragraph, the definition would be paragraph text.
 tags: rare
 ```
 
-```buffer
+```markdown
 [a]: /u
 para┃
 ```
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 para┃
 
 [a]: /u
@@ -590,10 +590,10 @@ the outline comes back, the blank line staying above the list, as a paragraph's 
 ([MoveUp36](#moveup36)).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 para
 - a┃
 - b
@@ -601,7 +601,7 @@ para
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - a┃
 
 para
@@ -610,7 +610,7 @@ para
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 para
 - a┃
 - b
@@ -625,7 +625,7 @@ child crosses in a list. The section's end gap stays at its end.
 tags: common
 ```
 
-```buffer
+```markdown
 # Work
 - email
 
@@ -636,7 +636,7 @@ tags: common
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 # Work
 - email
 - ┃review
@@ -652,10 +652,10 @@ sub-heading's section, where the text above it ends. Move subtree down takes it 
 ([MoveDown28](move-subtree-down.md#movedown28)).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 # A
 ## sub
 - s1
@@ -666,7 +666,7 @@ tags: edge
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 # A
 ## sub
 - s1
@@ -683,10 +683,10 @@ sub-heading: it keeps its column and joins `one`'s list, rather than nesting und
 list, as RemNote without bullets and BlockNote move it; SiYuan does nothing.
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 ```
 
-```buffer
+```markdown
 # Todo
 - one
 
@@ -697,7 +697,7 @@ tags: edge free-form
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 # Todo
 - one
 - ┃two
@@ -715,7 +715,7 @@ In a loose list, the item moves with its subtree and the blank line stays betwee
 tags: common
 ```
 
-```buffer
+```markdown
 - a
 
 - b┃
@@ -724,7 +724,7 @@ tags: common
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - b┃
   - b1
 
@@ -737,10 +737,10 @@ A sub-heading first in its section crosses up into the section above, as its las
 own section: there it takes nothing in. Move subtree down takes it back.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 # A
 - x
 
@@ -751,7 +751,7 @@ tags: edge
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 # A
 - x
 ## s┃
@@ -762,7 +762,7 @@ tags: edge
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 # A
 - x
 
@@ -778,10 +778,10 @@ Into a section that ends with a paragraph, an item lands under it, as the paragr
 move subtree down takes it back out, into the next section.
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 ```
 
-```buffer
+```markdown
 # Work
 para
 
@@ -791,7 +791,7 @@ para
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 # Work
 para
 - ┃review
@@ -801,7 +801,7 @@ para
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 # Work
 para
 
@@ -816,10 +816,10 @@ A heading doesn't move past a heading of another level: above `## X`, `# A` woul
 section (MoveDown17's mirror).
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 ```
 
-```buffer
+```markdown
 ## X
 # A┃
 - a
@@ -831,7 +831,7 @@ tags: edge free-form
 result: rejected would-reparent
 ```
 
-```buffer
+```markdown
 ## X
 # A┃
 - a
@@ -843,10 +843,10 @@ The first node of the document's first section moves up above its heading, into 
 it, as a first item leaves a sub-heading's section in MoveUp24.
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 ```
 
-```buffer
+```markdown
 # H
 - ┃a
 - b
@@ -854,7 +854,7 @@ tags: edge free-form
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - ┃a
 # H
 - b
@@ -871,14 +871,14 @@ moves the line as it is, indented code above the definition.
 tags: rare
 ```
 
-```buffer
+```markdown
 [a]: /u
     ┃code
 ```
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 ┃code
 
 [a]: /u
@@ -892,7 +892,7 @@ A selection over a parent and its child moves the parent with its subtree (MoveD
 tags: common
 ```
 
-```buffer
+```markdown
 - c
 - «a
   - b»
@@ -900,7 +900,7 @@ tags: common
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - «a
   - b»
 - c
@@ -911,10 +911,10 @@ tags: common
 An empty item the text can hold moves like any other (MoveDown15's mirror).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 - ┃
 - b
@@ -922,7 +922,7 @@ tags: edge
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - ┃
 - a
 - b
@@ -934,10 +934,10 @@ A heading doesn't move up past a node of another kind: above `- a`, `## H` would
 section.
 
 ```yaml
-tags: edge free-form
+tags: common free-form markup-heading
 ```
 
-```buffer
+```markdown
 # H
 - a
 ## ┃H
@@ -949,7 +949,7 @@ tags: edge free-form
 result: rejected would-reparent
 ```
 
-```buffer
+```markdown
 # H
 - a
 ## ┃H
@@ -963,14 +963,14 @@ From before the marker, the item moves and the caret ends in its text.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a
 ┃- b
 ```
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - ┃b
 - a
 ```
@@ -983,11 +983,11 @@ the text reads it: the list renders as before. A paragraph that moves above a li
 list.
 
 ```yaml
-tags: edge free-form
+tags: rare free-form
 quotes: container
 ```
 
-```buffer
+```markdown
 para
 > q┃
 - a
@@ -995,7 +995,7 @@ para
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 > q┃
 
 para
@@ -1004,7 +1004,7 @@ para
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 para
 - a
 > q┃
@@ -1018,10 +1018,10 @@ keeps it a list. Back down, the outline comes back: the blank lines ourus raised
 the one under the paragraph and the one between the lists, go where the nodes stay apart without them.
 
 ```yaml
-tags: edge free-form
+tags: rare free-form
 ```
 
-```buffer
+```markdown
 para
 ┃- i
 2. m
@@ -1029,7 +1029,7 @@ para
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - ┃i
 
 para
@@ -1039,7 +1039,7 @@ para
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 para
 - ┃i
 2. m
@@ -1052,18 +1052,18 @@ it: the caret goes after the `$$`, where typing is the block's, not before it, w
 the text a paragraph.
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - a
 - ┃$$
 ```
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - $$┃
 - a
 ```
@@ -1074,11 +1074,11 @@ A math block closed by text and `$$` on one line (`x$$`), moved with the caret a
 caret goes before it, where typing is more of the formula; after it, the block wouldn't close there.
 
 ```yaml
-tags: edge markup-fence
+tags: rare markup-fence
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - b
 - $$
   x$$┃
@@ -1087,7 +1087,7 @@ flavor: obsidian
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - $$
   x┃$$
   tail
@@ -1105,7 +1105,7 @@ make a second press move that node.
 tags: rare
 ```
 
-```buffer
+```markdown
 - one
 - two
 ┃
@@ -1113,7 +1113,7 @@ tags: rare
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - two┃
 - one
 
@@ -1128,7 +1128,7 @@ indent does ([Indent33](indent.md#indent33)).
 tags: rare
 ```
 
-```buffer
+```markdown
 - x
   - y
   - a┃
@@ -1137,7 +1137,7 @@ tags: rare
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - x
   - a┃
      b
@@ -1154,7 +1154,7 @@ tags: rare markup-fence
 autoClose: []
 ```
 
-````buffer
+````markdown
 intro
 
 ```┃
@@ -1167,7 +1167,7 @@ code
 result: rejected not-expressible
 ```
 
-````buffer
+````markdown
 intro
 
 ```┃
@@ -1180,17 +1180,17 @@ The only block of an item with no text of its own (`- > q`) moves with its item,
 quote with no title moves with the quote.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 - > q┃
 ```
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - > q┃
 - a
 ```
@@ -1200,11 +1200,11 @@ tags: edge
 Crossing into a childless item, the item nests anew there, by the unit (`indentUnit`).
 
 ```yaml
-tags: edge
+tags: common
 indentUnit: tab
 ```
 
-```buffer
+```markdown
 - a
 - b
   - y┃
@@ -1212,7 +1212,7 @@ indentUnit: tab
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - a
 →- y┃
 - b
@@ -1227,17 +1227,17 @@ selection's end, at the start of `d`'s line, would otherwise still be after.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
   - c
 - d
 ```
 
 > moveSubtreeUp
 
-```buffer
-- ««b»»
+```markdown
+- b⟦selected⟧
   - c
 - a
 - d
@@ -1249,13 +1249,13 @@ With blank lines around it, which go with their nodes: the selection's end at th
 blank line after its nodes, still.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 
-- ««b»»
+- b⟦selected⟧
   - c
 
 - d
@@ -1263,8 +1263,8 @@ tags: edge
 
 > moveSubtreeUp
 
-```buffer
-- ««b»»
+```markdown
+- b⟦selected⟧
   - c
 
 - a
@@ -1277,20 +1277,20 @@ tags: edge
 Crossing into the item above: the same node selected, not the one it moved past.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 - b
-  - ««c»»
+  - c⟦selected⟧
 ```
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - a
-  - ««c»»
+  - c⟦selected⟧
 - b
 ```
 
@@ -1301,17 +1301,17 @@ the moved one first, the caret with it. A host that sees no change in the text s
 result: the document is another one, its nodes in another order (dev/25-view.md §5.1).
 
 ```yaml
-tags: rare
+tags: common
 ```
 
-```buffer
+```markdown
 - a①
 - a┃②
 ```
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - a┃②
 - a①
 ```

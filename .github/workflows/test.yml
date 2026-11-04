@@ -1,0 +1,38 @@
+# The full run on every push: the types, then `npm test`. The previous commit is what `test/heavy.ts`
+# compares with, so a push is judged by what it changed.
+
+name: Test
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx tsc -p .
+      - run: npm test
+        env:
+          TEST_BASE_REV: HEAD~1
+      - uses: actions/upload-artifact@v5
+        if: failure()
+        with:
+          name: test-reports
+          path: /tmp/ourus-heavy-*/*.txt

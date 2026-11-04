@@ -8,14 +8,14 @@
 // typed (a character at a time, each through ourus's `insertText` first, as a host hooked to its
 // keys does), and caret motions named as CodeMirror's commands are.
 
-import { executeCommand, leavesZoom, settlePlaceholders, type OurusCommand, type OurusResult, type OurusSelection, OurusDeferred, OurusRejected, OurusSuccess } from '../src/commands/index.ts';
-import { CommandContext } from '../src/commands/context.ts';
-import { dragRun, placeAtSeam } from '../src/commands/drag.ts';
-import type { OurusDoc } from '../src/doc/index.ts';
-import type { OurusView } from '../src/view/index.ts';
-import { advanceColumns, applyChanges, dominantEnding, type ChangeSpec, type MarkSet } from '../src/text/index.ts';
-import { labelNumber, type DropLine } from './drawing.ts';
-import type { Clipboard } from './specfile.ts';
+import { executeCommand, leavesZoom, settlePlaceholders, type OurusCommand, type OurusResult, type OurusSelection, OurusDeferred, OurusRejected, OurusSuccess } from '../../src/commands/index.ts';
+import { CommandContext } from '../../src/commands/context.ts';
+import { dragRun, placeAtSeam } from '../../src/commands/drag.ts';
+import type { OurusDoc } from '../../src/doc/index.ts';
+import type { OurusView } from '../../src/view/index.ts';
+import { advanceColumns, applyChanges, dominantEnding, type ChangeSpec, type MarkSet } from '../../src/text/index.ts';
+import { labelNumber, type DropLine } from './drawn-states.ts';
+import type { Clipboard } from './spec-reader.ts';
 
 const COMMANDS = new Set<string>([
   'indent',
@@ -93,7 +93,7 @@ const isMotion = (action: string): boolean => /^(?:cursor|select)/.test(action) 
 const HOST_ACTIONS = new Set<string>(['undo', 'redo']);
 
 /** Whether an action is an ourus command (the rest are typing, motions and the host's undo). */
-export const isCommand = (token: string): boolean => COMMANDS.has(token);
+export const isCommandAction = (token: string): boolean => COMMANDS.has(token);
 
 /** A key pressed as is in an app (`key:Control+a`, Playwright's notation), for probing a key no action names: ourus does nothing at it. */
 const isRawKey = (token: string): boolean => /^key:\S+$/.test(token);
@@ -101,9 +101,9 @@ const isRawKey = (token: string): boolean => /^key:\S+$/.test(token);
 export const isAction = (token: string): boolean => /^"[^"]*"$/.test(token) || isRawKey(token) || COMMANDS.has(token) || HOST_ACTIONS.has(token) || isMotion(token) || DROP.test(token) || PICKUP.test(token) || VIEW.test(token);
 
 /** Whether an action is a drop, which plays at the start's drop line. */
-export const isDrop = (token: string): boolean => DROP.test(token);
+export const isDropAction = (token: string): boolean => DROP.test(token);
 
-export interface Played {
+export interface PlayedState {
   /** The document and the reader's folds and zoom over it. */
   view: OurusView;
   selection: OurusSelection;
@@ -130,9 +130,9 @@ interface Snapshot {
   readonly doc: OurusDoc;
 }
 
-const snapshot = (state: Played, selection = state.selection): Snapshot => ({ text: state.view.doc.text, marks: state.view.doc.marks, selection, doc: state.view.doc });
+const snapshot = (state: PlayedState, selection = state.selection): Snapshot => ({ text: state.view.doc.text, marks: state.view.doc.marks, selection, doc: state.view.doc });
 
-export function play(state: Played, actions: readonly string[]): Played {
+export function playActions(state: PlayedState, actions: readonly string[]): PlayedState {
   for (const action of actions) {
     if (action === 'undo' || action === 'redo') {
       state = history(state, action);
@@ -141,15 +141,16 @@ export function play(state: Played, actions: readonly string[]): Played {
     const before = snapshot(state);
     state = step({ ...state, last: undefined, ...(/Line(?:Up|Down)$/.test(action) ? {} : { goal: undefined }) }, action);
     if (state.view.doc.text !== before.text) state = { ...state, undone: [...(state.undone ?? []), before], redone: [] };
-    const settled = settlePlaceholders(state.view, state.selection.head);
+    const settled = settlePlaceholders(state.view, state.selection);
     // leaving a placeholder joins the step before it, which made the empty node: one undo takes both back
-    if (settled) state = { ...state, view: settled.view, selection: mapSel(settled.changes, state.selection), redone: [] };
+    // (the selection the settling gives, which it keeps where the view shows it)
+    if (settled) state = { ...state, view: settled.view, selection: settled.selection, redone: [] };
   }
   return state;
 }
 
 /** Undo or redo one step of the host's history: the text and the caret come back, and the nodes of the snapshot it returns to (`view.withDoc`), the view carried onto them. */
-function history(state: Played, action: 'undo' | 'redo'): Played {
+function history(state: PlayedState, action: 'undo' | 'redo'): PlayedState {
   const from = action === 'undo' ? (state.undone ?? []) : (state.redone ?? []);
   const entry = from[from.length - 1];
   if (!entry) return { ...state, last: undefined };
@@ -166,7 +167,7 @@ function history(state: Played, action: 'undo' | 'redo'): Played {
   };
 }
 
-function step(state: Played, action: string): Played {
+function step(state: PlayedState, action: string): PlayedState {
   const { view: viewed, selection } = state;
   const doc = viewed.doc;
   const text = doc.text;
@@ -216,7 +217,7 @@ function step(state: Played, action: string): Played {
  * else the selection's nodes), then `moveSubtree` the place the start's drop line names. A refused
  * pickup is the drop's result.
  */
-function dropCommand(state: Played, label: string | undefined): OurusCommand | OurusResult {
+function dropCommand(state: PlayedState, label: string | undefined): OurusCommand | OurusResult {
   if (!state.drop) throw new Error('a drop with no drop line (`▸`) in the start, or a second drop: a case drops once');
   const pressed = pressedOf(state, label);
   const run = dragRun(new CommandContext(state.view, state.selection), pressed);
@@ -227,7 +228,7 @@ function dropCommand(state: Played, label: string | undefined): OurusCommand | O
 }
 
 /** A drop from outside: the clipboard, at the place the start's drop line names. */
-function pasteAtCommand(state: Played): OurusCommand {
+function pasteAtCommand(state: PlayedState): OurusCommand {
   if (!state.drop) throw new Error('a drop with no drop line (`▸`) in the start, or a second drop: a case drops once');
   const at = placeAtSeam(state.view, null, state.drop.line, state.drop.depth);
   if (typeof at === 'string') throw new Error(`the drop line: ${at}`);
@@ -235,7 +236,7 @@ function pasteAtCommand(state: Played): OurusCommand {
 }
 
 /** The node a label names, as pressed; none without a label. */
-function pressedOf(state: Played, label: string | undefined): number | undefined {
+function pressedOf(state: PlayedState, label: string | undefined): number | undefined {
   if (label === undefined) return undefined;
   const pressed = state.labels?.get(labelNumber(label));
   if (pressed === undefined) throw new Error(`${label} labels no node in the start`);
@@ -246,18 +247,18 @@ function pressedOf(state: Played, label: string | undefined): number | undefined
  * `command` run as the host runs it: applied, refused, or the host's default, which a zoomed host
  * checks before committing (`leavesZoom`), refusing the edit where it would leave the zoom.
  */
-function run(state: Played, command: OurusCommand | OurusResult): Played {
+function run(state: PlayedState, command: OurusCommand | OurusResult): PlayedState {
   return guarded(state, hostRun(state, command));
 }
 
 /** `next`, a step of the host's own: refused where it leaves `state`'s zoom, as a host checks its own edits (`leavesZoom`). */
-function guarded(state: Played, next: Played): Played {
+function guarded(state: PlayedState, next: PlayedState): PlayedState {
   if (!(next.last instanceof OurusDeferred) || state.view.zoom === null || next.view.doc === state.view.doc) return next;
   if (!leavesZoom(state.view, next.view.doc)) return next;
   return { ...state, last: new OurusRejected('outside-zoom', "the host's own edit would leave the zoom") };
 }
 
-function hostRun(state: Played, command: OurusCommand | OurusResult): Played {
+function hostRun(state: PlayedState, command: OurusCommand | OurusResult): PlayedState {
   if (!('type' in command)) return { ...state, last: command };
   const { view, selection } = state;
   const doc = view.doc;
@@ -318,7 +319,7 @@ function hostRun(state: Played, command: OurusCommand | OurusResult): Played {
  * Typed text, a character at a time as keys type it: each goes to ourus's `insertText` first, and
  * where that doesn't apply the host types it. The last character's result is the action's.
  */
-function typeText(state: Played, text: string): Played {
+function typeText(state: PlayedState, text: string): PlayedState {
   for (const ch of text) {
     const { view, selection } = state;
     const doc = view.doc;
@@ -332,7 +333,7 @@ function typeText(state: Played, text: string): Played {
   return state;
 }
 
-function edit(state: Played, change: ChangeSpec): Played {
+function edit(state: PlayedState, change: ChangeSpec): PlayedState {
   const caret = change.from + change.insert.length;
   // the host tells where the caret lands, so an emptied node stays as a placeholder
   const view = state.view.update({ changes: [change], caret });
@@ -370,14 +371,3 @@ function charAfter(text: string, pos: number): number {
 
 const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 
-function mapSel(changes: readonly ChangeSpec[], sel: OurusSelection): OurusSelection {
-  let { anchor, head } = sel;
-  for (const c of [...changes].sort((a, b) => b.from - a.from)) {
-    const shift = c.insert.length - (c.to - c.from);
-    if (anchor >= c.to) anchor += shift;
-    else if (anchor > c.from) anchor = c.from;
-    if (head >= c.to) head += shift;
-    else if (head > c.from) head = c.from;
-  }
-  return { anchor, head };
-}

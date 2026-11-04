@@ -24,10 +24,11 @@ export type OurusNodeKind = 'root' | 'heading' | 'item' | 'paragraph' | 'quote' 
  * prefix, its own `>` too): a paragraph framed by `> ` (`text`, a quote holding one paragraph from its first line,
  * blank lines in it after that the paragraph's gap), an atom (`atom`, a callout too), or a container (a callout but under `atom`).
  */
-export function quoteKind(quote: MdBlock, quotes: OurusConfig['quotes'], firstLine: () => string): 'paragraph' | 'atom' | 'quote' {
+export function quoteKind(quote: MdBlock, quotes: OurusConfig['quotes'], firstLine: () => string, callouts = true): 'paragraph' | 'atom' | 'quote' {
   // (under `atom` a callout is one too: its lines as written)
   if (quotes === 'atom') return 'atom';
-  if (quotes === 'container' || quote.children[0]?.type === 'callout_title' || mdCalloutAt(firstLine())) return 'quote';
+  // (a first line `[!type]` a callout's title only in a flavor that has callouts: elsewhere a quote's text)
+  if (quotes === 'container' || quote.children[0]?.type === 'callout_title' || (callouts && mdCalloutAt(firstLine()))) return 'quote';
   // (the blank lines in it after the paragraph are its gap: `> a⏎>` reads as `> a⏎`)
   const only = quote.children.length === 1 ? quote.children[0]! : null;
   return only?.type === 'paragraph' && quote.offsets[0] === 0 ? 'paragraph' : 'quote';
@@ -37,14 +38,14 @@ export function quoteKind(quote: MdBlock, quotes: OurusConfig['quotes'], firstLi
  * The kind of node a block of a container is read as, or null for one that is no node (a list, whose
  * items are; frontmatter). A quote's as `quoteKind` says.
  */
-export function nodeKindOf(block: MdBlock, quotes: OurusConfig['quotes'], firstLine: () => string): Exclude<OurusNodeKind, 'root'> | null {
+export function nodeKindOf(block: MdBlock, quotes: OurusConfig['quotes'], firstLine: () => string, callouts = true): Exclude<OurusNodeKind, 'root'> | null {
   switch (block.type) {
     case 'heading':
       return 'heading';
     case 'paragraph':
       return 'paragraph';
     case 'blockquote':
-      return quoteKind(block, quotes, firstLine);
+      return quoteKind(block, quotes, firstLine, callouts);
     case 'list':
     case 'frontmatter':
       return null;
@@ -63,11 +64,11 @@ export function itemHead(item: MdBlock, flavor: MdFlavor, quotes: OurusConfig['q
   const first = item.children[0];
   if (!first) return null;
   if (first.type === 'blockquote') {
-    const kind = item.offsets[0] === 0 ? quoteKind(first, quotes, firstLine) : 'quote';
+    const kind = item.offsets[0] === 0 ? quoteKind(first, quotes, firstLine, flavor.has('callouts')) : 'quote';
     return kind === 'atom' ? first : kind === 'paragraph' ? first.children[0]! : null;
   }
   const content = flavor.content(first.type);
-  return content === 'inline' || content === 'verbatim' || nodeKindOf(first, quotes, firstLine) === 'atom' ? first : null;
+  return content === 'inline' || content === 'verbatim' || nodeKindOf(first, quotes, firstLine, flavor.has('callouts')) === 'atom' ? first : null;
 }
 
 /**
@@ -75,11 +76,11 @@ export function itemHead(item: MdBlock, flavor: MdFlavor, quotes: OurusConfig['q
  * first line whose first line (`firstLine`, past its containers' prefix) starts `[!type]`; else none
  * (a callout is the quote's opening line's only: `>⏎>[!e]` is a quote of a paragraph).
  */
-export function quoteHead(quote: MdBlock, firstLine: () => string): MdBlock | null {
+export function quoteHead(quote: MdBlock, firstLine: () => string, callouts = true): MdBlock | null {
   const first = quote.children[0];
   if (first?.type === 'callout_title') return first;
   if (first?.type !== 'paragraph' || quote.offsets[0] !== 0) return null;
-  return mdCalloutAt(firstLine()) ? first : null;
+  return callouts && mdCalloutAt(firstLine()) ? first : null;
 }
 
 /** One of a container's children as Markdown lays them out, flat, as the node it will be: its kind, and a heading's level. */

@@ -302,6 +302,10 @@ export const driver: Driver = {
       if (o.sel.head < o.sel.anchor) return "backward selection (Moo.do's selection has no direction)";
       const at = toMoodo(o.blocks[o.sel.block]!.text);
       if (Math.min(o.sel.anchor, o.sel.head) < at.canon) return "caret in a task's checkbox, a heading's #s or an item's number";
+      // inside a run of emphasis markers (`**bold*┃*`): Moo.do draws them as formatting, and its caret
+      // goes past them (Regression237)
+      const t = o.blocks[o.sel.block]!.text;
+      if ([o.sel.anchor, o.sel.head].some((k) => /[*_]/.test(t[k - 1] ?? '') && t[k - 1] === t[k])) return 'caret inside a run of emphasis markers, which Moo.do draws as formatting';
     }
     return undefined;
   },

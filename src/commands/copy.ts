@@ -60,7 +60,7 @@ export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): Our
       .join('\n');
     if (!markdown.endsWith('\n')) markdown += '\n';
   } else markdown = doc.markdownOf(from, to);
-  const clipboard = clipboardOf(markdown, ctx.config);
+  const clipboard = clipboardOf(markdown, ctx.config, !nodes);
   if (type === 'copy') return new OurusSuccess({ view: ctx.view, changes: [], selection: ctx.selection, clipboard });
   const deleted = nodes ? deleteSubtreeCommand(ctx) : deleteSelected(ctx);
   // the text deleted as the host deletes it, where ourus doesn't: the clipboard is still ourus's

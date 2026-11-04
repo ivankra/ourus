@@ -69,7 +69,7 @@ A command makes one.
 tags: core
 ```
 
-```buffer
+```markdown
 - a┃
 ```
 
@@ -77,7 +77,7 @@ tags: core
 
 The text holds an empty item between items: no placeholder.
 
-```buffer
+```markdown
 - a
 - ┃
 ```
@@ -86,7 +86,7 @@ The text holds an empty item between items: no placeholder.
 
 Under `a`'s text, it would be a setext underline: a placeholder holds it.
 
-```buffer
+```markdown
 - a
   - ┃◌
 ```
@@ -101,7 +101,7 @@ outline: |
 
 Left, it stays, with a blank line above it.
 
-```buffer
+```markdown
 - a┃
 
   - 
@@ -116,20 +116,20 @@ needs (bare Obsidian drops the marker too, but without it what is typed next con
 tags: common free-form
 ```
 
-```buffer
+```markdown
 - a┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 - ┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 
 ┃◌
@@ -139,7 +139,7 @@ tags: common free-form
 
 No text holds an empty paragraph: it goes.
 
-```buffer
+```markdown
 ┃- a
 ```
 
@@ -153,13 +153,13 @@ which is Shift-Enter's ([Enter12](enter.md#enter12)).
 tags: core
 ```
 
-```buffer
+```markdown
 para┃
 ```
 
 > enter
 
-```buffer
+```markdown
 para
 
 ┃◌
@@ -167,7 +167,7 @@ para
 
 > cursorDocStart
 
-```buffer
+```markdown
 ┃para
 ```
 
@@ -179,13 +179,13 @@ Shift-Enter at the end of a paragraph opens an empty line in it.
 tags: common
 ```
 
-```buffer
+```markdown
 para┃
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 para
 ┃
 ```
@@ -194,9 +194,114 @@ para
 
 An empty line inside a paragraph has no Markdown: it goes.
 
-```buffer
+```markdown
 ┃para
 
+```
+
+## Placeholder4b
+
+The same in an item: the empty line is the item's text's, so the list stays tight while the caret is
+on it, and once the line is left empty it goes; the list is as it was. (As a blank line after the
+item, it made the list loose.)
+
+```yaml
+tags: common
+```
+
+```markdown
+- a┃
+- b
+```
+
+> shiftEnter
+
+```markdown
+- a
+  ┃◌
+- b
+```
+
+> cursorDocStart
+
+```markdown
+┃- a
+- b
+```
+
+## Placeholder4c
+
+Typed on, the held line is a line of the item's text, and stays.
+
+```yaml
+tags: common
+```
+
+```markdown
+- a┃
+- b
+```
+
+> shiftEnter "x" cursorDocStart
+
+```markdown
+┃- a
+  x
+- b
+```
+
+## Placeholder4d
+
+A line pasted with its line break (a line copied from a terminal) at an item's end: the caret on the
+new line, held as Shift-Enter's is, which goes when it's left empty, the list tight.
+
+```yaml
+tags: common
+clipboard: |
+  x
+```
+
+```markdown
+- a┃
+- b
+```
+
+> paste
+
+```markdown
+- ax
+  ┃◌
+- b
+```
+
+> cursorDocStart
+
+```markdown
+┃- ax
+- b
+```
+
+## Placeholder4e
+
+Zoomed into an item with a sibling, Shift-Enter at its end: the held line is the item's text, the
+list's tightness unchanged, so nothing outside the zoom changes (it was refused, the new line read as
+a blank line loosening the list around the zoom root).
+
+```yaml
+tags: rare
+```
+
+```markdown
+- a┃①⟦zoomed⟧
+- b
+```
+
+> shiftEnter
+
+```markdown
+- a⟦zoomed⟧
+  ┃◌
+- b
 ```
 
 ## Placeholder5
@@ -208,41 +313,41 @@ ends it as if the last Tab had been the only one.
 tags: common
 ```
 
-```buffer
+```markdown
 - a┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 - ┃
 ```
 
 > indent
 
-```buffer
+```markdown
 - a
   - ┃◌
 ```
 
 > outdent
 
-```buffer
+```markdown
 - a
 - ┃
 ```
 
 > indent
 
-```buffer
+```markdown
 - a
   - ┃◌
 ```
 
 > cursorDocStart cursorLineBoundaryForward
 
-```buffer
+```markdown
 - a┃
 
   - 
@@ -256,34 +361,34 @@ Typing ends it: the node has text, and leaving changes nothing.
 tags: common
 ```
 
-```buffer
+```markdown
 - a┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 - ┃
 ```
 
 > indent
 
-```buffer
+```markdown
 - a
   - ┃◌
 ```
 
 > "x"
 
-```buffer
+```markdown
 - a
   - x┃
 ```
 
 > cursorDocStart cursorLineBoundaryForward
 
-```buffer
+```markdown
 - a┃
   - x
 ```
@@ -300,21 +405,21 @@ at the caret keeps the empty child the user is in.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
   - b┃
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
   - ┃◌
 ```
 
 > cursorDocStart cursorLineBoundaryForward
 
-```buffer
+```markdown
 - a┃
 
   - 
@@ -329,24 +434,24 @@ becomes the placeholder: read as text, it keeps the item's column. Typing fills 
 the space stays as the item's padding, its child moving with it ([Placeholder9](#placeholder9)).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - ┃a b
   - c
 ```
 
 > deleteContentForward
 
-```buffer
+```markdown
 - ┃◌ b
   - c
 ```
 
 > "x"
 
-```buffer
+```markdown
 - x┃ b
   - c
 ```
@@ -359,17 +464,17 @@ Outliner re-indent it; the block apps keep the space as their block's text. Silv
 `-  b` with `c` where it was, a sibling now.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a┃ b
   - c
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - ┃◌ b
   - c
 ```
@@ -378,7 +483,7 @@ tags: edge
 
 Leaving, the space is the item's padding, and `c` moves with it.
 
-```buffer
+```markdown
 -  b
    - c
 ```
@@ -389,18 +494,18 @@ With `heldSpace: trim` (Logseq, RemNote, which trim a block's edges as they stor
 goes as the caret leaves, and `c` stays where it was.
 
 ```yaml
-tags: edge
+tags: rare
 heldSpace: trim
 ```
 
-```buffer
+```markdown
 - a┃ b
   - c
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - ┃◌ b
   - c
 ```
@@ -409,7 +514,7 @@ heldSpace: trim
 
 Leaving, the surplus space goes, and `c` is still a child.
 
-```buffer
+```markdown
 - b
   - c
 ```
@@ -424,21 +529,21 @@ leaving, it stays, the item's padding, and the fence is escaped, so the item's t
 tags: rare
 ```
 
-```buffer
+```markdown
 - a┃ ``` x
 - b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - ┃◌ ``` x
 - b
 ```
 
 > cursorDocEnd
 
-```buffer
+```markdown
 -  \̬``` x
 - b
 ```
@@ -452,21 +557,21 @@ tags: rare
 heldSpace: trim
 ```
 
-```buffer
+```markdown
 - a┃ ``` x
 - b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - ┃◌ ``` x
 - b
 ```
 
 > cursorDocEnd
 
-```buffer
+```markdown
 - \̬``` x
 - b
 ```
@@ -477,10 +582,10 @@ An empty child typed out stays as typed: typing makes text, never a placeholder,
 as it reads.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 ┃
 ```
@@ -489,14 +594,14 @@ tags: edge
 
 No `◌`: the line is text, and `a` reads as a heading with an empty underline.
 
-```buffer
+```markdown
 - a
   - ┃
 ```
 
 > cursorDocStart cursorLineBoundaryForward
 
-```buffer
+```markdown
 - a┃
   - 
 ```
@@ -510,14 +615,14 @@ nothing.
 tags: common
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 - ┃
 - b
@@ -525,7 +630,7 @@ tags: common
 
 > cursorDocEnd
 
-```buffer
+```markdown
 - a
 - 
 - b
@@ -538,17 +643,17 @@ An empty child under text, never edited, is no placeholder.
 A file reads as written.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
   - ┃
 ```
 
 > cursorDocStart cursorLineBoundaryForward
 
-```buffer
+```markdown
 - a┃
   - 
 ```
@@ -562,10 +667,10 @@ the start of its text, after the `##` (never in markup): the heading isn't joine
 paragraph, which would make it a paragraph and drop its `##`.
 
 ```yaml
-tags: edge markup-heading
+tags: common markup-heading
 ```
 
-```buffer
+```markdown
 # H1
 
 ┃a
@@ -575,7 +680,7 @@ tags: edge markup-heading
 
 > deleteContentForward
 
-```buffer
+```markdown
 # H1
 
 ┃◌
@@ -585,7 +690,7 @@ tags: edge markup-heading
 
 > deleteContentForward
 
-```buffer
+```markdown
 # H1
 
 ## ┃H2
@@ -596,10 +701,10 @@ tags: edge markup-heading
 The same before a paragraph: the empty paragraph goes, and the paragraph below stays as it was.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 para
 
 ┃x
@@ -609,7 +714,7 @@ text
 
 > deleteContentForward
 
-```buffer
+```markdown
 para
 
 ┃◌
@@ -619,7 +724,7 @@ text
 
 > deleteContentForward
 
-```buffer
+```markdown
 para
 
 ┃text
@@ -636,14 +741,14 @@ is in it. Leaving, it stays, set off by a blank line.
 tags: common
 ```
 
-```buffer
+```markdown
 para
 - ┃a
 ```
 
 > enter
 
-```buffer
+```markdown
 para
 - ┃◌
 - a
@@ -651,7 +756,7 @@ para
 
 > cursorDocEnd
 
-```buffer
+```markdown
 para
 
 - 
@@ -667,27 +772,27 @@ selection whose head leaves the line ends it, as the caret leaving would.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a┃
 ```
 
 > enter indent selectCharLeft
 
-```buffer
+```markdown
 - a
   -┃« »◌
 ```
 
 > cursorCharRight
 
-```buffer
+```markdown
 - a
   - ┃◌
 ```
 
 > selectDocStart
 
-```buffer
+```markdown
 ┃«- a
 
   - »
@@ -704,7 +809,7 @@ and the text is escaped.
 tags: rare
 ```
 
-```buffer
+```markdown
 a┃ # b
 
 after
@@ -712,7 +817,7 @@ after
 
 > deleteContentBackward
 
-```buffer
+```markdown
 ┃◌ # b
 
 after
@@ -720,7 +825,7 @@ after
 
 > cursorDocEnd
 
-```buffer
+```markdown
  \̬# b
 
 after
@@ -736,7 +841,7 @@ tags: rare
 heldSpace: trim
 ```
 
-```buffer
+```markdown
 a┃ # b
 
 after
@@ -744,7 +849,7 @@ after
 
 > deleteContentBackward
 
-```buffer
+```markdown
 ┃◌ # b
 
 after
@@ -752,7 +857,7 @@ after
 
 > cursorDocEnd
 
-```buffer
+```markdown
 \̬# b
 
 after
@@ -767,7 +872,7 @@ after it: the text is escaped as a continuation line.
 tags: rare
 ```
 
-````buffer
+````markdown
 para
 a┃ ``` x
 
@@ -776,7 +881,7 @@ after
 
 > deleteContentBackward
 
-````buffer
+````markdown
 para
 ┃◌ ``` x
 
@@ -785,7 +890,7 @@ after
 
 > cursorDocEnd
 
-````buffer
+````markdown
 para
 \̬``` x
 
@@ -804,21 +909,21 @@ tags: rare
 enterSplitSpace: start
 ```
 
-```buffer
+```markdown
 - z
 - a┃ x
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - z
 - ┃ x
 ```
 
 > cursorDocStart
 
-```buffer
+```markdown
 ┃- z
 -  x
 ```

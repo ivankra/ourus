@@ -50,7 +50,7 @@ in it (obsidian-outliner's first case).
 tags: core
 ```
 
-```buffer
+```markdown
 ▸
 - one
   - two
@@ -59,7 +59,7 @@ tags: core
 
 > moveSubtree ③
 
-```buffer
+```markdown
 - three┃③
 - one
   - two
@@ -73,7 +73,7 @@ The caret elsewhere stays in its text.
 tags: core
 ```
 
-```buffer
+```markdown
 ▸
 - one
   - two┃
@@ -82,7 +82,7 @@ tags: core
 
 > moveSubtree ③
 
-```buffer
+```markdown
 - three③
 - one
   - two┃
@@ -96,7 +96,7 @@ Into an item, as its child.
 tags: core
 ```
 
-```buffer
+```markdown
 - one┃①
 - two②
   ▸
@@ -105,7 +105,7 @@ tags: core
 
 > moveSubtree ①
 
-```buffer
+```markdown
 - two②
   - one┃①
 - three
@@ -119,19 +119,19 @@ A press on a selected node takes the selection's nodes, and the selection goes w
 tags: common
 ```
 
-```buffer
-- ««a
-- b»»②
+```markdown
+- a⟦selected⟧
+- b②⟦selected⟧
 - c
 ▸
 ```
 
 > moveSubtree ②
 
-```buffer
+```markdown
 - c
-- ««a
-- b»»②
+- a⟦selected⟧
+- b②⟦selected⟧
 ```
 
 ## MoveSubtree5
@@ -142,19 +142,19 @@ A press on another node takes it alone, and the selection stays.
 tags: common
 ```
 
-```buffer
+```markdown
 ▸
-- ««a
-- b»»
+- a⟦selected⟧
+- b⟦selected⟧
 - c③
 ```
 
 > moveSubtree ③
 
-```buffer
+```markdown
 - c③
-- ««a
-- b»»
+- a⟦selected⟧
+- b⟦selected⟧
 ```
 
 ## MoveSubtree6
@@ -163,10 +163,10 @@ Dropped inside the selection, a node pressed outside it lands between the select
 selection, its ends each with its text, covers it then too.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - «a
 ▸
 - b»
@@ -175,7 +175,7 @@ tags: edge
 
 > moveSubtree ③
 
-```buffer
+```markdown
 - «a
 - c③
 - b»
@@ -187,13 +187,13 @@ The selection dropped between its own nodes is at its own place, read with them 
 changes. One column in, the place would be inside `a`, `into-itself`.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
-- ««a
+```markdown
+- a⟦selected⟧
 ▸
-- b»»②
+- b②⟦selected⟧
 - c
 ```
 
@@ -203,9 +203,9 @@ tags: edge
 result: success
 ```
 
-```buffer
-- ««a
-- b»»②
+```markdown
+- a⟦selected⟧
+- b②⟦selected⟧
 - c
 ```
 
@@ -217,7 +217,7 @@ Set down where it was, a node doesn't move.
 tags: core
 ```
 
-```buffer
+```markdown
 - a
 ▸
 - b┃②
@@ -230,7 +230,7 @@ tags: core
 result: success
 ```
 
-```buffer
+```markdown
 - a
 - b┃②
 - c
@@ -245,7 +245,7 @@ line goes before the blank line, which is `a`'s, and stays with it.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
   ▸
 
@@ -254,7 +254,7 @@ para┃②
 
 > moveSubtree ②
 
-```buffer
+```markdown
 - a
 
   - para┃②
@@ -265,10 +265,10 @@ para┃②
 A heading can't be an item.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
   ▸
 
@@ -286,10 +286,10 @@ result: rejected not-expressible
 Under the node dragged: refused.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a②
   - b┃
     ▸
@@ -311,7 +311,7 @@ paragraph, as outdent makes it, keeping its node.
 tags: common
 ```
 
-```buffer
+```markdown
 - x┃②
 
 p
@@ -320,7 +320,7 @@ p
 
 > moveSubtree ②
 
-```buffer
+```markdown
 p
 
 x┃②
@@ -331,10 +331,10 @@ x┃②
 A task there is refused: as a paragraph its checkbox would be text.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - [ ] x┃②
 
 p
@@ -355,7 +355,7 @@ A heading dropped after another takes its level, and its section shifts with it.
 tags: common
 ```
 
-```buffer
+```markdown
 # A
 ## B
   ▸
@@ -366,7 +366,7 @@ tags: common
 
 > moveSubtree ②
 
-```buffer
+```markdown
 # A
 ## B
 ## D┃②
@@ -382,7 +382,7 @@ With no heading beside it, a heading dropped into a section is one level inside 
 tags: common
 ```
 
-```buffer
+```markdown
 # A
 x
   ▸
@@ -393,7 +393,7 @@ x
 
 > moveSubtree ②
 
-```buffer
+```markdown
 # A
 x
 ## D┃②
@@ -409,7 +409,7 @@ Refused where its section would go past `######`.
 tags: rare
 ```
 
-```buffer
+```markdown
 # A
 ## B
 ### C
@@ -432,13 +432,13 @@ A selection across parents, pressed on one of its own nodes, is refused, as a st
 refuses it; pressed on another node, it takes that one alone.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
-  - ««b
-- c»»③
+  - b⟦selected⟧
+- c③⟦selected⟧
 ▸
 ```
 
@@ -453,10 +453,10 @@ result: rejected non-contiguous
 A heading dropped before a paragraph would take it into its section: refused.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 ▸
 para
 
@@ -478,18 +478,18 @@ lists are renumbered.
 tags: common
 ```
 
-```buffer
+```markdown
 ▸
 1. a
-2. ««b
-3. c»»
+2. b⟦selected⟧
+3. c⟦selected⟧
 ```
 
 > moveSubtree
 
-```buffer
-1. ««b
-2. c»»
+```markdown
+1. b⟦selected⟧
+2. c⟦selected⟧
 3. a
 ```
 
@@ -500,10 +500,10 @@ under `quotes: text` is that paragraph, and the item, right after it, becomes a 
 would be in that paragraph's list.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > Quote:
 > - one┃②
 ▸
@@ -511,7 +511,7 @@ tags: edge
 
 > moveSubtree ②
 
-```buffer
+```markdown
 > Quote:
 
 one┃②
@@ -526,7 +526,7 @@ the ordered list after it, set apart by a blank line, keeps its numbers.
 tags: common
 ```
 
-```buffer
+```markdown
 - x┃①
 
 1. a
@@ -536,7 +536,7 @@ tags: common
 
 > moveSubtree ①
 
-```buffer
+```markdown
 1. a
 - x┃①
 
@@ -552,7 +552,7 @@ list on its own, so no blank line comes with it.
 tags: common
 ```
 
-````buffer
+````markdown
 - a
   ```②
   x┃
@@ -563,7 +563,7 @@ tags: common
 
 > moveSubtree ②
 
-````buffer
+````markdown
 - a
 - b
 ```②
@@ -579,7 +579,7 @@ An item's last child into the next item, as its child.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
   - a1┃②
 - b
@@ -588,7 +588,7 @@ tags: common
 
 > moveSubtree ②
 
-```buffer
+```markdown
 - a
 - b
   - a1┃②
@@ -602,7 +602,7 @@ In a loose list, the blank lines stay between the items.
 tags: common
 ```
 
-```buffer
+```markdown
 - a┃①
 
 - b
@@ -613,7 +613,7 @@ tags: common
 
 > moveSubtree ①
 
-```buffer
+```markdown
 - b
 
 - c

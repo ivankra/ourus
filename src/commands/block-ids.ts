@@ -87,7 +87,7 @@ function writeBlockId(doc: OurusDoc, draft: OurusDraft, target: OurusNode, name:
   if (text instanceof OurusProse) {
     const end = closingFrameStart(text);
     const before = text.text.slice(0, end);
-    const written = target.kind === 'quote' ? `\n^${name}` : before === '' || /\s$/.test(before) ? `^${name}` : ` ^${name}`;
+    const written = target.kind === 'quote' ? `\n^${name}` : before === '' || /[ \t]$/.test(before) ? `^${name}` : ` ^${name}`;
     draft.setText(on, text.splice(end, end, written));
   } else if (text.type === 'blockquote') draft.setText(on, text.splice(text.text.length, text.text.length, `\n^${name}`));
   else draft.setText(on, text.withBlockIdLines([...text.blockIdLines, { blankLines: 1, line: `^${name}` }]));
@@ -128,7 +128,8 @@ export function removeBlockIdCommand(ctx: CommandContext, name: string | undefin
     if (named.length > 1) return new OurusRejected('block-id', `the note has ^${name} ${named.length} times: say which by its node`);
     b = named[0] ?? null;
   } else {
-    const at = nodeAt(view, ctx.selection.head);
+    const at = node !== undefined ? (doc.node(node) ?? null) : nodeAt(view, ctx.selection.head);
+    if (node !== undefined && !at) return new OurusRejected('no-such-node', `no node ${node}`);
     b = at ? blockIdNaming(doc, at) : null;
   }
   if (!b) return new OurusRejected('block-id', name !== undefined ? `no block id ^${name}${node !== undefined ? ` on node ${node}` : ''}` : 'no block id names the node at the selection');
@@ -222,7 +223,7 @@ export function pasteKeepingNewBlockIds<C extends Pasting>(ctx: CommandContext, 
   let filtered: C | null = null;
   if (command.type === 'pastePlain') filtered = without(command.text) === command.text ? null : ({ ...command, text: without(command.text) } as C);
   else {
-    const read = clipboardMarkdown(command.clipboard);
+    const read = clipboardMarkdown(command.clipboard, ctx.config);
     const markdown = read && !read.phrase ? without(read.markdown) : null;
     // (as the clipboard gave it: plain text as plain text, else as the Markdown it was read as)
     const plain = command.clipboard['text/markdown'] === undefined && command.clipboard['text/html'] === undefined;
@@ -304,7 +305,8 @@ function markedPaste<C extends Pasting>(ctx: CommandContext, command: C, run: (m
       selection = { anchor: map(selection.anchor), head: map(selection.head) };
       changes = composeChanges(doc.text, changes, kept.changes);
       after = after.withDoc(kept.doc, kept.changes);
-      at = marks.map((m) => mapPos(kept.changes, m, 1)).filter((m) => after.doc.text.startsWith(one, m));
+      // (two marks can map to one place: what a dropped block id left of the name before it)
+      at = [...new Set(marks.map((m) => mapPos(kept.changes, m, 1)))].filter((m) => after.doc.text.startsWith(one, m));
     }
   }
   // the marks out

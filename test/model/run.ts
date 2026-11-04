@@ -11,12 +11,9 @@ import fc from 'fast-check';
 import { OurusDoc } from '../../src/doc/index.ts';
 import { settlePlaceholders, OurusRejected, OurusSuccess } from '../../src/commands/index.ts';
 import { OurusView } from '../../src/view/index.ts';
-import { mapPos } from '../../src/text/index.ts';
-import { drawDoc } from '../drawing.ts';
-import { play } from '../player.ts';
+import { drawDoc, playActions, resultStatus } from '../lib/index.ts';
 import { lift } from './lift.ts';
 import { apply, draw, findParent, fired, pathOf, shape, type Caret, type Cmd, type MNode, type Mode } from './model.ts';
-import { statusOf } from '../drawing.ts';
 
 const RUNS = Number(process.argv[2] ?? 3000);
 const MODE = (process.argv[3] ?? 'md') as Mode;
@@ -99,7 +96,7 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
       pos = l.toPos({ node, offset: off % (node.text.length + 1) });
       const settled = settlePlaceholders(view, pos);
       if (settled) {
-        pos = mapPos(settled.changes, pos, 1);
+        pos = settled.selection.head;
         view = settled.view;
         l = lift(view.doc);
       }
@@ -112,9 +109,9 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
     const firedBefore = [...fired.values()].reduce((a, b) => a + b, 0);
     const before = drawDoc(view, { anchor: pos, head: pos });
     const model = apply(l.root, caret, cmd, MODE);
-    const state = play({ view, selection: { anchor: pos, head: pos }, clipboard: {} }, [cmd]);
+    const state = playActions({ view, selection: { anchor: pos, head: pos }, clipboard: {} }, [cmd]);
     const r = state.last!;
-    const ourusStatus = r instanceof OurusRejected ? `rejected:${r.reason}` : statusOf(r);
+    const ourusStatus = r instanceof OurusRejected ? `rejected:${r.reason}` : resultStatus(r);
     const after = lift(state.view.doc);
     const got = { tree: JSON.stringify(shape(after.root)), caret: caretKey(after.root, after.toCaret(state.selection.head)) };
     const want =
@@ -142,12 +139,12 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
       const inText = (cmd === 'deleteContentBackward' && caret.offset > 0) || (cmd === 'deleteContentForward' && caret.offset < caret.node.text.length);
       const key = `${category(ourusStatus, model.status === 'success' ? 'success' : 'rejected', inText)} | ${cmd} | ourus ${ourusStatus} | model ${model.status === 'success' ? 'success' : 'rejected:' + model.reason} | ${!treeOk ? (caretOk ? 'tree' : 'tree+caret') : 'caret'} | ${where}`;
       const report = [
-        '```buffer',
+        '```markdown',
         before.replace(/\n$/, ''),
         '```',
         `> ${cmd}   (step ${i + 1})`,
         'ourus:',
-        '```buffer',
+        '```markdown',
         drawDoc(state.view, state.selection).replace(/\n$/, ''),
         '```',
         ...(treeOk ? [] : ['ourus outline:', ...draw(after.root).map((x) => '    ' + x), 'model outline:', ...draw(model.status === 'success' ? model.root : l.root).map((x) => '    ' + x)]),

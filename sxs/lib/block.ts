@@ -12,10 +12,11 @@
 // outline example from an adapted one, and a driver can refuse what its app can't hold.
 
 import type { OurusConfig } from '../../src/config.ts';
+import type { OurusSelection } from '../../src/commands/index.ts';
 import { OurusProse, OurusDoc, type OurusNode } from '../../src/doc/index.ts';
 import { textEnd, textStart } from '../../src/doc/index.ts';
 import { OurusView } from '../../src/view/index.ts';
-import { docOf, nodesOf, readDrawing } from '../../test/drawing.ts';
+import { parseWithMarks, drawnSelection, allNodes, readDrawing } from '../../test/lib/index.ts';
 import { micromark } from 'micromark';
 import { gfm, gfmHtml } from 'micromark-extension-gfm';
 import { drawView, splitView, type RowView } from './view.ts';
@@ -136,6 +137,38 @@ const ATOM_NOTES: Readonly<Record<string, string>> = {
  * and callouts (containers to ourus, a block's text to block apps), frontmatter, a heading's closing
  * `#`s and indented code (markup to ourus, text a block app edits as text, or drops).
  */
+/**
+ * Where the spec drew a subtree selection before line marks, `««…»»`, as an app without block
+ * selection (and a run stored then) reads it: where the first root's text starts (its first
+ * descendant's with text, where it has none; its line's start where that text alone reads as the
+ * descendant's) to where the last's own text ends (its last child's, where it has none), the
+ * shortest span that reads back as it (the nodes it touches); upward, its head the start. Null where
+ * none does (an empty last node on an empty line), drawn at its offsets then.
+ */
+function legacySpan(view: OurusView, sel: OurusSelection): OurusSelection | null {
+  const doc = view.doc;
+  const roots = view.selectedSubtrees(sel);
+  if (!roots) return null;
+  const up = sel.head < sel.anchor;
+  let first: OurusNode = roots[0]!;
+  while (!doc.textOf(first) && first.children.length) first = first.children[0]!;
+  let last: OurusNode = roots[roots.length - 1]!;
+  while (!doc.textOf(last) && last.children.length) last = last.children[last.children.length - 1]!;
+  const start = doc.textOf(first);
+  if (!start) return null;
+  const froms = [doc.posOf(first, textStart(start), 1), doc.mdTree.starts[roots[0]!.startLine]!];
+  for (const from of froms) {
+    for (const node of [last, last.lastDescendant]) {
+      const text = doc.textOf(node);
+      if (!text) continue;
+      const to = Math.max(from, doc.posOf(node, textEnd(text), -1));
+      const back = view.selectionOf(view.touchedSubtrees({ anchor: from, head: to }), up ? 'up' : 'down');
+      if (back.anchor === sel.anchor && back.head === sel.head) return up ? { anchor: to, head: from } : { anchor: from, head: to };
+    }
+  }
+  return null;
+}
+
 export function project(drawn: string, flavor: OurusConfig['flavor'], options: ProjectOptions = {}): Projection {
   const notes = new Set<string>();
   const drawing = readDrawing(drawn);
@@ -154,11 +187,11 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
   // (quotes read as containers, whatever ourus's `quotes`: which of them a block holds, and how, is
   // the projection's, `quoted`)
   // and a list after a block under it or beside it as the app's blocks have it (`listParent`)
-  const doc = docOf(text, drawing.placeholders.map(at), { ...options.config, flavor, quotes: 'container', ...(options.listParent && { listParent: options.listParent }) });
+  const doc = parseWithMarks(text, drawing.placeholders.map(at), { ...options.config, flavor, quotes: 'container', ...(options.listParent && { listParent: options.listParent }) });
   const view = OurusView.of(doc);
   if (doc.mdTree.root.children.some((b) => b.type === 'frontmatter')) throw new Unsupported('frontmatter');
 
-  const nodes = nodesOf(doc);
+  const nodes = allNodes(doc);
   // an empty document is an app's empty page: one empty block, the caret in it
   if (!nodes.length && text.trim() === '' && /┃/.test(drawn)) {
     notes.add('empty document');
@@ -239,10 +272,16 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
   }
   // the caret on a blank line at its node's text column, right after its text (where Shift-Enter
   // leaves it at a text's end): in a block, that text's next line, empty, the caret on it
-  const { anchor, head } = drawing.selection;
+  // a subtree selection (`⟦selected⟧`): its roots, and the span a spec drew it as before, from the
+  // first's text start to the last's own text end (`««…»»`), as an app without block selection reads it
+  const subtree = drawing.selected ? drawnSelection(view, drawing) : null;
+  const roots = subtree ? (view.selectedSubtrees(subtree) ?? []) : null;
+  const span = subtree ? (legacySpan(view, subtree) ?? subtree) : null;
+  const anchor = span ? span.anchor : at(drawing.selection.anchor);
+  const head = span ? span.head : at(drawing.selection.head);
   let held: { block: number; offset: number; lines: Set<number> } | null = null;
-  if (/┃/.test(drawn) && anchor === head) {
-    const p = at(head);
+  if (!span && /┃/.test(drawn) && anchor === head) {
+    const p = head;
     const where = view.locate(p);
     const i = where.zone === 'gap' && !where.owner.children.length && doc.atTextColumn(p, where.owner) ? blockOf.get(where.owner.id) : undefined;
     const line = doc.lineAt(p).index;
@@ -283,32 +322,32 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
     }
     return 'caret on a blank line';
   };
-  const hasCaret = /┃|«/.test(drawn);
+  const hasCaret = /┃|«/.test(drawn) || !!roots;
   const rows = new Map<number, number>();
   for (const node of nodes) if (blockOf.has(node.id) && !rows.has(node.startLine)) rows.set(node.startLine, blockOf.get(node.id)!);
   if (!hasCaret) return { outline: { blocks, sel: null }, notes, sections, rows };
-  // a subtree selection (`««…»»`): the nodes its span touches selected whole (a selection drawn
-  // `«…»`, whole lines or not, is the text drawn)
+  // a subtree selection (`⟦selected⟧`, or a run's `««…»»`): its roots, or the nodes its span touches,
+  // selected whole (a selection drawn `«…»`, whole lines or not, is the text drawn)
   if (options.blockSelection && drawing.subtrees) {
-    const roots = view.touchedSubtrees({ anchor: at(anchor), head: at(head) });
-    const selected = [...new Set(roots.flatMap((n) => (blockOf.has(n.id) ? [blockOf.get(n.id)!] : [])))].sort((x, y) => x - y);
+    const whole = view.touchedSubtrees({ anchor, head });
+    const selected = [...new Set(whole.flatMap((n) => (blockOf.has(n.id) ? [blockOf.get(n.id)!] : [])))].sort((x, y) => x - y);
     return { outline: { blocks, sel: null, selected }, notes, sections, rows };
   }
-  const h = locate(at(head));
-  const a = anchor === head ? h : locate(at(anchor));
+  const h = locate(head);
+  const a = anchor === head ? h : locate(anchor);
   if (typeof h === 'string') return { outline: { blocks, sel: null }, notes, caretLost: h, sections, rows };
   if (typeof a === 'string') return { outline: { blocks, sel: null }, notes, caretLost: a, sections, rows };
   if (a.block !== h.block) {
     // over whole blocks, from one's text start to another's end: those blocks selected
     // (as ourus reads the nodes: from a node's text start, a number or a checkbox before it, to another's end)
-    const [from, to] = [Math.min(at(anchor), at(head)), Math.max(at(anchor), at(head))];
+    const [from, to] = [Math.min(anchor, head), Math.max(anchor, head)];
     const edge = (p: number, end: boolean): boolean => {
       const where = view.locate(p);
       if (where.zone !== 'text' && where.zone !== 'frame') return false;
       return p === doc.posOf(where.node, end ? textEnd(where.text) : textStart(where.text), end ? -1 : 1);
     };
     if (!options.blockSelection || !edge(from, false) || !edge(to, true)) return { outline: { blocks, sel: null }, notes, caretLost: 'selection across blocks', sections, rows };
-    const selected = [...new Set(view.touchedSubtrees({ anchor: at(anchor), head: at(head) }).flatMap((n) => (blockOf.has(n.id) ? [blockOf.get(n.id)!] : [])))].sort((x, y) => x - y);
+    const selected = [...new Set(view.touchedSubtrees({ anchor, head }).flatMap((n) => (blockOf.has(n.id) ? [blockOf.get(n.id)!] : [])))].sort((x, y) => x - y);
     return { outline: { blocks, sel: null, selected }, notes, sections, rows };
   }
   return { outline: { blocks, sel: { block: h.block, anchor: a.offset, head: h.offset } }, notes, sections, rows };
@@ -484,15 +523,15 @@ const escapeLine = (s: string): string =>
  * are numbered (`ordered`, `ProjectOptions.ordered`), a numbered block has its number in its bullet's
  * place (`1. a`), as the apps show it. A block's later lines and its children start where its text does:
  * two spaces a level under bullets, the number's width under a number. Blocks selected whole are drawn
- * as the spec draws a subtree selection, `««` before the first's text and `»»` after the last's own,
- * a span to each run of them with nothing unselected between; `bars`, as runs stored before that drew
- * them, `▮` before each one's text.
+ * as the spec draws a subtree selection, `⟦selected⟧` last on each one's first line; `spans` and
+ * `bars`, as runs stored before drew them, `««` before the first's text and `»»` after the last's own
+ * (a span to each run with nothing unselected between), and `▮` before each one's text.
  */
-export function draw(o: Outline, options: Pick<ProjectOptions, 'ordered'> & { readonly bars?: boolean } = {}): string {
+export function draw(o: Outline, options: Pick<ProjectOptions, 'ordered'> & { readonly bars?: boolean; readonly spans?: boolean } = {}): string {
   const out: string[] = [];
   /** Where the text of the last block at each depth starts: its children's indentation. */
   const cols: number[] = [];
-  const spans = options.bars ? { open: new Set<number>(), close: new Set<number>() } : selectedSpans(o);
+  const spans = options.spans ? selectedSpans(o) : { open: new Set<number>(), close: new Set<number>() };
   /** The line each block starts on, for its view's marks. */
   const firstLine: number[] = [];
   o.blocks.forEach((b, i) => {
@@ -526,9 +565,11 @@ export function draw(o: Outline, options: Pick<ProjectOptions, 'ordered'> & { re
     firstLine.push(out.length);
     t.split('\n').forEach((line, k) => out.push(k === 0 ? `${' '.repeat(at)}${marker} ${mark}${line}` : `${' '.repeat(cols[b.depth]!)}${line}`));
   });
-  // (its view on its blocks' first lines: `⟦folded⟧`, `⟦zoomed⟧`)
+  // (its view on its blocks' first lines: `⟦folded⟧`, `⟦zoomed⟧`; then the blocks selected whole, `⟦selected⟧`)
   const drawn = out.join('\n').replace(/\t/g, '→');
-  return (o.view ? drawView(drawn, o.view, (row) => firstLine[row] ?? -1) : drawn) + '\n';
+  const viewed = (o.view ? drawView(drawn, o.view, (row) => firstLine[row] ?? -1) : drawn).split('\n');
+  if (!options.spans && !options.bars) for (const i of o.selected ?? []) if (firstLine[i] !== undefined) viewed[firstLine[i]!] += '⟦selected⟧';
+  return viewed.join('\n') + '\n';
 }
 
 /** The end of block `i`'s subtree: the index of its last descendant, itself where it has none. */
@@ -664,7 +705,11 @@ export function readOutline(drawing: string, options: Pick<ProjectOptions, 'orde
   /** Where the text of the last block at each depth starts, as `draw` indents. */
   const cols: number[] = [];
   // no blocks at all draw as one empty line
-  for (const [lineNo, line] of (drawn === '\n' ? [] : drawn.replace(/\n$/, '').replace(/→/g, '\t').replace(/␠/g, ' ').split('\n')).entries()) {
+  /** The blocks drawn `⟦selected⟧`, by line. */
+  const selectedLines = new Set<number>();
+  for (const [lineNo, read] of (drawn === '\n' ? [] : drawn.replace(/\n$/, '').replace(/→/g, '\t').replace(/␠/g, ' ').split('\n')).entries()) {
+    const line = read.endsWith('⟦selected⟧') ? read.slice(0, -'⟦selected⟧'.length) : read;
+    if (line !== read) selectedLines.add(lineNo);
     const item = /^( *)(?:([-¶])|(\d{1,9}\.)) (▮ )?(.*)$/.exec(line);
     const spaces = item?.[1]!.length ?? 0;
     // a block's depth: where blocks are numbered, it starts where its parent's text does; else two
@@ -688,6 +733,10 @@ export function readOutline(drawing: string, options: Pick<ProjectOptions, 'orde
   }
   let sel: Sel | null = null;
   const bars = selected.length > 0;
+  for (const lineNo of selectedLines) {
+    if (!blockAt.has(lineNo)) return null;
+    selected.push(blockAt.get(lineNo)!);
+  }
   /** The spans of blocks selected whole (`««…»»`), by the blocks they open and close at. */
   const spans: [number, number][] = [];
   raw.forEach((lines, i) => {
@@ -736,7 +785,8 @@ export function readOutline(drawing: string, options: Pick<ProjectOptions, 'orde
   const o: Outline = { blocks, sel, ...(selected.length && { selected }), ...(view && { view }) };
   // (read back as drawn: a stored run's view, its last line, checked apart, the rest as drawn without it)
   const [want, as] = view && !byLine ? [drawn, { ...o, view: undefined }] : [drawing, o];
-  return draw(as, { bars }) === want || (options.ordered && draw(as, { ...options, bars }) === want) ? o : null;
+  const legacy = { bars, spans: spans.length > 0 };
+  return draw(as, legacy) === want || (options.ordered && draw(as, { ...options, ...legacy }) === want) ? o : null;
 }
 
 export type Verdict = 'agree' | 'whitespace' | 'caret' | 'disagree';

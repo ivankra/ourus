@@ -2,7 +2,7 @@
 
 Commands: `selectNode` (Escape in Logseq, Tine, Tana), `expandSelection` (Ctrl-A in outliners,
 Shift-Alt-Right in code editors), `selectNodeDown` and `selectNodeUp` (Shift-Down and Shift-Up in
-outliners). Each changes no text: it selects whole nodes, a subtree selection (`««…»»`,
+outliners). Each changes no text: it selects whole nodes, a subtree selection (`⟦selected⟧`,
 [README.md](README.md)), or text, or is the host's where the key's own behavior is right. They read
 what to do from the selection alone: no mode, no count of presses.
 
@@ -34,7 +34,7 @@ Escape selects the node at the caret with its child; again, the caret at its tex
 tags: common
 ```
 
-```buffer
+```markdown
 - one
   - t┃wo
     - deep
@@ -44,9 +44,9 @@ tags: common
 
 > selectNode
 
-```buffer
+```markdown
 - one
-  - ««two»»
+  - two⟦selected⟧
     - deep
   - three
 - four
@@ -54,7 +54,7 @@ tags: common
 
 > selectNode
 
-```buffer
+```markdown
 - one
   - ┃two
     - deep
@@ -71,7 +71,7 @@ everything, then the host's select all, the whole text.
 tags: common
 ```
 
-```buffer
+```markdown
 - one
   - t┃wo
     - deep
@@ -81,7 +81,7 @@ tags: common
 
 > expandSelection
 
-```buffer
+```markdown
 - one
   - «two»
     - deep
@@ -91,9 +91,9 @@ tags: common
 
 > expandSelection
 
-```buffer
+```markdown
 - one
-  - ««two»»
+  - two⟦selected⟧
     - deep
   - three
 - four
@@ -101,18 +101,18 @@ tags: common
 
 > expandSelection
 
-```buffer
+```markdown
 - one
-  - ««two
+  - two⟦selected⟧
     - deep
-  - three»»
+  - three⟦selected⟧
 - four
 ```
 
 > expandSelection
 
-```buffer
-- ««one»»
+```markdown
+- one⟦selected⟧
   - two
     - deep
   - three
@@ -121,22 +121,22 @@ tags: common
 
 > expandSelection
 
-```buffer
-- ««one
+```markdown
+- one⟦selected⟧
   - two
     - deep
   - three
-- four»»
+- four⟦selected⟧
 ```
 
 > expandSelection
 
-```buffer
-- ««one
+```markdown
+- one⟦selected⟧
   - two
     - deep
   - three
-- four»»
+- four⟦selected⟧
 ```
 
 ## Select3
@@ -144,10 +144,10 @@ tags: common
 From a leaf with siblings: its siblings' run, then its parent.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - one
   - two
     - d1
@@ -158,7 +158,7 @@ tags: edge
 
 > expandSelection
 
-```buffer
+```markdown
 - one
   - two
     - d1
@@ -169,31 +169,31 @@ tags: edge
 
 > expandSelection
 
-```buffer
+```markdown
 - one
   - two
     - d1
-    - ««deep»»
+    - deep⟦selected⟧
     - d3
   - three
 ```
 
 > expandSelection
 
-```buffer
+```markdown
 - one
   - two
-    - ««d1
-    - deep
-    - d3»»
+    - d1⟦selected⟧
+    - deep⟦selected⟧
+    - d3⟦selected⟧
   - three
 ```
 
 > expandSelection
 
-```buffer
+```markdown
 - one
-  - ««two»»
+  - two⟦selected⟧
     - d1
     - deep
     - d3
@@ -205,10 +205,10 @@ tags: edge
 From a top-level leaf: the node, then everything.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 - b┃
 - c
@@ -216,7 +216,7 @@ tags: edge
 
 > expandSelection
 
-```buffer
+```markdown
 - a
 - «b»
 - c
@@ -224,18 +224,18 @@ tags: edge
 
 > expandSelection
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
 - c
 ```
 
 > expandSelection
 
-```buffer
-- ««a
-- b
-- c»»
+```markdown
+- a⟦selected⟧
+- b⟦selected⟧
+- c⟦selected⟧
 ```
 
 ## Select5
@@ -243,11 +243,11 @@ tags: edge
 `selectionLadder: parents`: from the node to its parent, the siblings skipped.
 
 ```yaml
-tags: edge
+tags: rare
 selectionLadder: parents
 ```
 
-```buffer
+```markdown
 - one
   - t┃wo
     - deep
@@ -257,7 +257,7 @@ selectionLadder: parents
 
 > expandSelection
 
-```buffer
+```markdown
 - one
   - «two»
     - deep
@@ -267,9 +267,9 @@ selectionLadder: parents
 
 > expandSelection
 
-```buffer
+```markdown
 - one
-  - ««two»»
+  - two⟦selected⟧
     - deep
   - three
 - four
@@ -277,8 +277,8 @@ selectionLadder: parents
 
 > expandSelection
 
-```buffer
-- ««one»»
+```markdown
+- one⟦selected⟧
   - two
     - deep
   - three
@@ -287,12 +287,12 @@ selectionLadder: parents
 
 > expandSelection
 
-```buffer
-- ««one
+```markdown
+- one⟦selected⟧
   - two
     - deep
   - three
-- four»»
+- four⟦selected⟧
 ```
 
 ## Select6
@@ -301,33 +301,33 @@ From roots at two depths: the smallest rung holding both, the run of `deep`'s pa
 siblings, then its grandparent.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - one
   - two
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
 
 > expandSelection
 
-```buffer
+```markdown
 - one
-  - ««two
+  - two⟦selected⟧
     - deep
-  - three
-  - five»»
+  - three⟦selected⟧
+  - five⟦selected⟧
 - four
 ```
 
 > expandSelection
 
-```buffer
-- ««one»»
+```markdown
+- one⟦selected⟧
   - two
     - deep
   - three
@@ -340,10 +340,10 @@ tags: edge
 From text across two siblings: their run, the smallest rung holding it.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - one
   - t«wo
     - deep
@@ -353,11 +353,11 @@ tags: edge
 
 > expandSelection
 
-```buffer
+```markdown
 - one
-  - ««two
+  - two⟦selected⟧
     - deep
-  - three»»
+  - three⟦selected⟧
 - four
 ```
 
@@ -369,7 +369,7 @@ A paragraph's subtree is it with its list; then its heading's section; then ever
 tags: common
 ```
 
-```buffer
+```markdown
 # H
 
 pa┃ra
@@ -380,7 +380,7 @@ pa┃ra
 
 > expandSelection
 
-```buffer
+```markdown
 # H
 
 «para»
@@ -391,10 +391,10 @@ pa┃ra
 
 > expandSelection
 
-```buffer
+```markdown
 # H
 
-««para»»
+para⟦selected⟧
 - x
 
 # I
@@ -402,8 +402,8 @@ pa┃ra
 
 > expandSelection
 
-```buffer
-# ««H»»
+```markdown
+# H⟦selected⟧
 
 para
 - x
@@ -413,13 +413,13 @@ para
 
 > expandSelection
 
-```buffer
-# ««H
+```markdown
+# H⟦selected⟧
 
 para
 - x
 
-# I»»
+# I⟦selected⟧
 ```
 
 ## Select9
@@ -427,10 +427,10 @@ para
 A task's text starts after its checkbox.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - [ ] ta┃sk
   - sub
 - c
@@ -438,7 +438,7 @@ tags: edge
 
 > expandSelection
 
-```buffer
+```markdown
 - [ ] «task»
   - sub
 - c
@@ -446,8 +446,8 @@ tags: edge
 
 > expandSelection
 
-```buffer
-- [ ] ««task»»
+```markdown
+- [ ] task⟦selected⟧
   - sub
 - c
 ```
@@ -457,12 +457,11 @@ tags: edge
 Zoomed in, the zoom root's subtree is the top: held there, not the host's select all.
 
 ```yaml
-tags: edge
-zoom: ①
+tags: common
 ```
 
-```buffer
-- one①
+```markdown
+- one①⟦zoomed⟧
   - t┃wo
   - three
 - four
@@ -470,67 +469,47 @@ zoom: ①
 
 > expandSelection
 
-```buffer
-- one①
+```markdown
+- one①⟦zoomed⟧
   - «two»
   - three
 - four
 ```
 
-```yaml
-zoom: ①
-```
-
 > expandSelection
 
-```buffer
-- one①
-  - ««two»»
+```markdown
+- one①⟦zoomed⟧
+  - two⟦selected⟧
   - three
 - four
 ```
 
-```yaml
-zoom: ①
-```
-
 > expandSelection
 
-```buffer
-- one①
-  - ««two
-  - three»»
+```markdown
+- one①⟦zoomed⟧
+  - two⟦selected⟧
+  - three⟦selected⟧
 - four
 ```
 
-```yaml
-zoom: ①
-```
-
 > expandSelection
 
-```buffer
-- ««one»»①
+```markdown
+- one①⟦zoomed⟧⟦selected⟧
   - two
   - three
 - four
 ```
 
-```yaml
-zoom: ①
-```
-
 > expandSelection
 
-```buffer
-- ««one»»①
+```markdown
+- one①⟦zoomed⟧⟦selected⟧
   - two
   - three
 - four
-```
-
-```yaml
-zoom: ①
 ```
 
 ## Select11
@@ -539,10 +518,10 @@ Shift-Down from a leaf: it, then the node after at another depth, then the next;
 back, a press at a time.
 
 ```yaml
-tags: common
+tags: core
 ```
 
-```buffer
+```markdown
 - one
   - two
     - de┃ep
@@ -553,10 +532,10 @@ tags: common
 
 > selectNodeDown
 
-```buffer
+```markdown
 - one
   - two
-    - ««deep»»
+    - deep⟦selected⟧
   - three
   - five
 - four
@@ -564,43 +543,43 @@ tags: common
 
 > selectNodeDown
 
-```buffer
+```markdown
 - one
   - two
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
 
 > selectNodeDown
 
-```buffer
+```markdown
 - one
   - two
-    - ««deep
-  - three
-  - five»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
+  - five⟦selected⟧
 - four
 ```
 
 > selectNodeUp
 
-```buffer
+```markdown
 - one
   - two
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
 
 > selectNodeUp
 
-```buffer
+```markdown
 - one
   - two
-    - ┃««deep»»
+┃    - deep⟦selected⟧
   - three
   - five
 - four
@@ -611,10 +590,10 @@ tags: common
 Grown upward, Shift-Down shrinks back: the first root goes alone, its children staying.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - one
   - two
     - deep
@@ -625,55 +604,55 @@ tags: edge
 
 > selectNodeUp
 
-```buffer
+```markdown
 - one
   - two
     - deep
-  - ┃««three»»
+┃  - three⟦selected⟧
   - five
 - four
 ```
 
 > selectNodeUp
 
-```buffer
+```markdown
 - one
   - two
-    - ┃««deep
-  - three»»
+┃    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
 
 > selectNodeUp
 
-```buffer
+```markdown
 - one
-  - ┃««two
+┃  - two⟦selected⟧
     - deep
-  - three»»
+  - three⟦selected⟧
   - five
 - four
 ```
 
 > selectNodeDown
 
-```buffer
+```markdown
 - one
   - two
-    - ┃««deep
-  - three»»
+┃    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
 
 > selectNodeDown
 
-```buffer
+```markdown
 - one
   - two
     - deep
-  - ««three»»
+  - three⟦selected⟧
   - five
 - four
 ```
@@ -686,7 +665,7 @@ Shift-Up from a first child: it, then its parent.
 tags: common
 ```
 
-```buffer
+```markdown
 - one
   - two
     - de┃ep
@@ -697,10 +676,10 @@ tags: common
 
 > selectNodeUp
 
-```buffer
+```markdown
 - one
   - two
-    - ┃««deep»»
+┃    - deep⟦selected⟧
   - three
   - five
 - four
@@ -708,9 +687,9 @@ tags: common
 
 > selectNodeUp
 
-```buffer
+```markdown
 - one
-  - ┃««two»»
+┃  - two⟦selected⟧
     - deep
   - three
   - five
@@ -719,8 +698,8 @@ tags: common
 
 > selectNodeUp
 
-```buffer
-- ┃««one»»
+```markdown
+┃- one⟦selected⟧
   - two
     - deep
   - three
@@ -734,10 +713,10 @@ Past the anchor upward, then down: the parent that took the anchor's node in is 
 selection grows from it.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - one
   - two
     - de┃ep
@@ -748,10 +727,10 @@ tags: edge
 
 > selectNodeUp
 
-```buffer
+```markdown
 - one
   - two
-    - ┃««deep»»
+┃    - deep⟦selected⟧
   - three
   - five
 - four
@@ -759,9 +738,9 @@ tags: edge
 
 > selectNodeUp
 
-```buffer
+```markdown
 - one
-  - ┃««two»»
+┃  - two⟦selected⟧
     - deep
   - three
   - five
@@ -770,11 +749,11 @@ tags: edge
 
 > selectNodeDown
 
-```buffer
+```markdown
 - one
-  - ««two
+  - two⟦selected⟧
     - deep
-  - three»»
+  - three⟦selected⟧
   - five
 - four
 ```
@@ -784,26 +763,26 @@ tags: edge
 At the document's edge, unchanged.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 - b┃
 ```
 
 > selectNodeDown
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
 ```
 
 > selectNodeDown
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
 ```
 
 ## Select16
@@ -814,7 +793,7 @@ In a node of two lines, Shift-Up from its second is the host's line; from its fi
 tags: common
 ```
 
-```buffer
+```markdown
 - a
   mo┃re
 - b
@@ -822,7 +801,7 @@ tags: common
 
 > selectNodeUp
 
-```buffer
+```markdown
 - a┃«
   mo»re
 - b
@@ -830,9 +809,9 @@ tags: common
 
 > selectNodeUp
 
-```buffer
-- ┃««a
-  more»»
+```markdown
+┃- a⟦selected⟧
+  more
 - b
 ```
 
@@ -841,10 +820,10 @@ tags: common
 From a blank line, Shift-Down selects the node below.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 
 ┃
@@ -853,11 +832,11 @@ tags: edge
 
 > selectNodeDown
 
-```buffer
+```markdown
 - a
 
 
-- ««b»»
+- b⟦selected⟧
 ```
 
 ## Select18
@@ -865,10 +844,10 @@ tags: edge
 From text across nodes, its roots as whole lines.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 - «b
 - c»
@@ -877,10 +856,10 @@ tags: edge
 
 > selectNodeDown
 
-```buffer
+```markdown
 - a
-- ««b
-- c»»
+- b⟦selected⟧
+- c⟦selected⟧
 - d
 ```
 
@@ -890,54 +869,41 @@ A folded node is one node: Shift-Down takes it whole, its hidden children with i
 press the node after.
 
 ```yaml
-tags: edge
-folded: ①
+tags: common
 ```
 
-```buffer
+```markdown
 - a┃
-- b①
+- b①⟦folded⟧
   - c
 - d
 ```
 
 > selectNodeDown
 
-```buffer
-- ««a»»
-- b①
+```markdown
+- a⟦selected⟧
+- b①⟦folded⟧
   - c
 - d
 ```
 
-```yaml
-folded: ①
-```
-
 > selectNodeDown
 
-```buffer
-- ««a
-- b»»①
+```markdown
+- a⟦selected⟧
+- b①⟦folded⟧⟦selected⟧
   - c
 - d
 ```
 
-```yaml
-folded: ①
-```
-
 > selectNodeDown
 
-```buffer
-- ««a
-- b①
+```markdown
+- a⟦selected⟧
+- b①⟦folded⟧⟦selected⟧
   - c
-- d»»
-```
-
-```yaml
-folded: ①
+- d⟦selected⟧
 ```
 
 ## Select20
@@ -945,10 +911,10 @@ folded: ①
 Ctrl-A then Shift-Down is Shift-Down: the node's text, then the node.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 - b┃
 - c
@@ -956,7 +922,7 @@ tags: edge
 
 > expandSelection
 
-```buffer
+```markdown
 - a
 - «b»
 - c
@@ -964,9 +930,9 @@ tags: edge
 
 > selectNodeDown
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
 - c
 ```
 
@@ -976,10 +942,10 @@ The same for a paragraph at column 0, whose text runs from its line's start to i
 without its line break, then the node.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 al┃pha
 
 beta
@@ -987,7 +953,7 @@ beta
 
 > expandSelection
 
-```buffer
+```markdown
 «alpha»
 
 beta
@@ -995,8 +961,8 @@ beta
 
 > selectNodeDown
 
-```buffer
-««alpha»»
+```markdown
+alpha⟦selected⟧
 
 beta
 ```
@@ -1007,11 +973,11 @@ beta
 SiYuan climb.
 
 ```yaml
-tags: edge
+tags: rare
 selectionLadder: top
 ```
 
-```buffer
+```markdown
 - one
   - t┃wo
     - deep
@@ -1021,7 +987,7 @@ selectionLadder: top
 
 > expandSelection
 
-```buffer
+```markdown
 - one
   - «two»
     - deep
@@ -1031,12 +997,12 @@ selectionLadder: top
 
 > expandSelection
 
-```buffer
-- ««one
+```markdown
+- one⟦selected⟧
   - two
     - deep
   - three
-- four»»
+- four⟦selected⟧
 ```
 
 ## Select23
@@ -1046,11 +1012,11 @@ subtree, not the node on the line above (Dynalist, both RemNotes, WorkFlowy, SiY
 undoes it.
 
 ```yaml
-tags: edge
+tags: rare
 selectNodeUp: sibling
 ```
 
-```buffer
+```markdown
 - one
   - two
     - deep
@@ -1061,33 +1027,33 @@ selectNodeUp: sibling
 
 > selectNodeUp
 
-```buffer
+```markdown
 - one
   - two
     - deep
-  - ┃««three»»
+┃  - three⟦selected⟧
   - five
 - four
 ```
 
 > selectNodeUp
 
-```buffer
+```markdown
 - one
-  - ┃««two
+┃  - two⟦selected⟧
     - deep
-  - three»»
+  - three⟦selected⟧
   - five
 - four
 ```
 
 > selectNodeDown
 
-```buffer
+```markdown
 - one
   - two
     - deep
-  - ««three»»
+  - three⟦selected⟧
   - five
 - four
 ```

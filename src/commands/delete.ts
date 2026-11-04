@@ -3,12 +3,12 @@
 // do the rest.
 
 import { OurusProse, isClosingPart, OurusAtom, type OurusNode } from '../doc/index.ts';
-import { deleteSelectionAcross, joinUp } from './backspace.ts';
+import { deleteSelectionAcross, joinUp, statusIn } from './backspace.ts';
 import { codeAt, joinCodeItemUp, joinInCode } from './code.ts';
 import { lineOf } from '../text/index.ts';
 import { type CommandContext } from './context.ts';
 import { joinIntoQuote, joinLineInQuote, joinQuoteUp, quoteAtomAt } from './quote.ts';
-import { deleteHeldSpace, hiddenSpacesAt, inMarkup, textEnd, textStart, unquote } from './util.ts';
+import { deleteHeldSpace, hiddenSpacesAt, inMarkup, textEnd, textStart, unquote, withTextlessParents } from './util.ts';
 import type { OurusResult } from './types.ts';
 import { OurusDeferred, OurusRejected } from './types.ts';
 
@@ -39,6 +39,9 @@ export function deleteContentForwardCommand(ctx: CommandContext): OurusResult | 
       if (at.offset === task.from) return ctx.apply(ctx.draft().setText(at.node, at.text.splice(task.from, task.to)).setCaret(at.node, task.from, -1));
     }
     if (at.zone === 'marker' && at.part === 'padding') return markerSpace(ctx, at.node);
+    // inside it, right before its character: that character goes, the brackets staying (tasks.md rule 5)
+    const status = statusIn(at, 1);
+    if (status) return ctx.apply(ctx.draft().setText(status.node, status.text.splice(status.at, status.at + 1)).setCaret(status.node, status.at, -1));
     return null;
   }
   // before a marker, Delete would take it (Delete23)
@@ -50,6 +53,11 @@ export function deleteContentForwardCommand(ctx: CommandContext): OurusResult | 
   // at its end, the node below joins it as it is written (`quotes: atom`)
   if (inQuote && ctx.collapsed && inQuote.offset === inQuote.text.text.length) {
     const below = inQuote.node.children[0] ?? inQuote.node.afterSubtree;
+    // (a folded node's first child is hidden: Fold7)
+    if (below && below === inQuote.node.children[0] && ctx.view.zoomFolded.has(inQuote.node.id)) return new OurusRejected('folded', 'the node below is hidden in its fold');
+    // (before a heading, its marks first, as after any text: `headingEditing: text`, rule 4)
+    const lower = below && ctx.doc.textOf(below);
+    if (below && lower instanceof OurusProse && lower.type === 'heading' && config.headingEditing !== 'block') return headingMarksGo(ctx, below, lower, inQuote.node, inQuote.offset);
     if (below && below.preceding?.persistentNode === inQuote.node.persistentNode) return joinIntoQuote(ctx, inQuote.node, inQuote.text, below);
   }
   if (at.zone !== 'text' || !(at.text instanceof OurusProse)) return null;
@@ -68,7 +76,7 @@ export function deleteContentForwardCommand(ctx: CommandContext): OurusResult | 
     if (offset < lineEnd) return new OurusDeferred();
     const joined = text.splice(lineEnd, text.textStart(lineOf(s, lineEnd + 1)));
     // a quote's first paragraph that would read as its callout's title: not done yet
-    if (node.becomesTitle(joined)) return null;
+    if (node.becomesTitle(joined, ctx.doc.mdTree.flavor.has('callouts'))) return null;
     draft.setText(node, joined).setCaret(node, offset, -1);
     return ctx.apply(draft);
   }
@@ -83,7 +91,8 @@ export function deleteContentForwardCommand(ctx: CommandContext): OurusResult | 
   // on an empty item, the node below moves up into it, as Backspace at its start takes it (Delete5, 6)
   if (text.empty) {
     // an empty paragraph goes, with its blank lines, the caret to the text below (Placeholder13)
-    if (node.kind === 'paragraph' && !node.children.length && lower) return ctx.apply(draft.remove([node]).setCaret(below, textStart(lower), 1));
+    // (with the containers it is all of, which would hold nothing: `- > ┃`, its item too, B75)
+    if (node.kind === 'paragraph' && !node.children.length && lower) return ctx.apply(draft.remove(withTextlessParents(ctx.doc, [node])).setCaret(below, textStart(lower), 1));
     if (node.kind !== 'item' || !(lower instanceof OurusProse) || lower.empty || below.preceding?.persistentNode !== node.persistentNode) return null;
     // (refused, with spaces after the caret: they are the host's to delete, as an outliner deletes them)
     const refused = (): OurusResult | null => (ctx.selection.head < ctx.doc.lineAt(ctx.selection.head).to ? new OurusDeferred() : new OurusRejected('has-children'));
@@ -107,11 +116,7 @@ export function deleteContentForwardCommand(ctx: CommandContext): OurusResult | 
   // `block`, the title joins this text
   if (lower.type === 'heading') {
     if (config.headingEditing === 'block') return joinUp(ctx, below, lower, false);
-    // (an ATX title's closing `#`s too)
-    const close = lower.frame.find((p) => p.part === 'close');
-    const open = lower.frame.find((p) => p.part === 'heading') ?? lower.frame.find((p) => p.part === 'underline')!;
-    draft.setText(below, (close ? lower.splice(close.from, close.to) : lower).splice(open.from, open.to)).setCaret(node, offset, -1);
-    return ctx.apply(draft);
+    return headingMarksGo(ctx, below, lower, node, offset);
   }
   // before a quote (`quotes: text`), its `>`s first, its text a paragraph where it is
   if (lower.type === 'quote') return ctx.apply(draft.setText(below, unquote(lower)).setCaret(node, offset, -1));
@@ -130,6 +135,13 @@ export function deleteContentForwardCommand(ctx: CommandContext): OurusResult | 
     return ctx.apply(draft.gap(owner, owner.gap - 1).setCaret(node, offset, -1));
   }
   return joinUp(ctx, below, lower, false);
+}
+
+/** Delete before a heading (`headingEditing: text`): its marks go, an ATX title's closing `#`s too, the title a paragraph where it is, the caret staying at `node`'s `offset`. */
+function headingMarksGo(ctx: CommandContext, below: OurusNode, lower: OurusProse, node: OurusNode, offset: number): OurusResult | null {
+  const close = lower.frame.find((p) => p.part === 'close');
+  const open = lower.frame.find((p) => p.part === 'heading') ?? lower.frame.find((p) => p.part === 'underline')!;
+  return ctx.apply(ctx.draft().setText(below, (close ? lower.splice(close.from, close.to) : lower).splice(open.from, open.to)).setCaret(node, offset, -1));
 }
 
 /**

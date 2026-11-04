@@ -207,14 +207,15 @@ function lowerBound(offsets: readonly number[], pos: number): number {
   return lo;
 }
 
-/** `offsets` sorted and distinct, each an integer below `end`: the same array where it is already. */
+/** `offsets` sorted and distinct, each an integer below `end`: never the caller's array, theirs to change. */
 function canonical(offsets: readonly number[], end: number): readonly number[] {
   for (const pos of offsets) {
     if (!Number.isInteger(pos) || pos < 0 || pos >= end) {
       throw new RangeError(`mark ${pos} off a text of ${end} positions`);
     }
   }
-  return distinct(offsets);
+  const list = distinct(offsets);
+  return list === offsets ? offsets.slice() : list;
 }
 
 /** Sorted `offsets` without duplicates: the same array where it is already. */

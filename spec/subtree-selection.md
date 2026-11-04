@@ -1,7 +1,7 @@
 # Editing a subtree selection
 
 Commands: `deleteContentBackward`, `deleteContentForward`, `deleteSoftLineBackward`, `cut`, `copy`,
-`insertText`, `enter`, `shiftEnter`, `paste`, `pastePlain`, over a subtree selection (`««…»»`,
+`insertText`, `enter`, `shiftEnter`, `paste`, `pastePlain`, over a subtree selection (`⟦selected⟧`,
 [README.md](README.md)): whole nodes selected as whole lines, from column 0 of the first root's line
 to the start of the line after the last root's subtree, however the selection was made (a
 triple-click, Shift-Down from column 0, a command). The keys act on the nodes, not on the lines'
@@ -35,18 +35,18 @@ node's text, or from a node's text into another's, is text, as before.
 Backspace over a leaf: it goes, the caret at the end of the text above.
 
 ```yaml
-tags: common
+tags: core
 ```
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
 - c
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃
 - c
 ```
@@ -59,16 +59,16 @@ Delete over a parent: it goes with its children.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
   - b1
 - c
 ```
 
 > deleteContentForward
 
-```buffer
+```markdown
 - a┃
 - c
 ```
@@ -79,21 +79,21 @@ Cmd-Backspace over roots at two depths: each goes with its subtree, the caret at
 the text above them.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - one
   - two
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 - one
   - two┃
   - five
@@ -105,20 +105,20 @@ tags: edge
 Backspace with blank lines around: those after the roots go with them.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 
-- ««b»»
+- b⟦selected⟧
 
 - c
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃
 
 - c
@@ -132,11 +132,11 @@ Copy of roots at two depths: siblings, each with its subtree, under `copySelecti
 tags: common
 ```
 
-```buffer
+```markdown
 - one
   - two
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
@@ -155,12 +155,12 @@ clipboard:
 Cut of a parent: its Markdown with its children, and it goes as Backspace takes it.
 
 ```yaml
-tags: common
+tags: core
 ```
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
   - b1
 - c
 ```
@@ -174,7 +174,7 @@ clipboard:
       - b1
 ```
 
-```buffer
+```markdown
 - a┃
 - c
 ```
@@ -187,17 +187,17 @@ Typing over a leaf selected whole: nothing typed, the leaf still selected (Logse
 tags: common
 ```
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
 - c
 ```
 
 > "xy"
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
 - c
 ```
 
@@ -209,18 +209,18 @@ Typing over a parent and its children: nothing typed, both still selected.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
   - b1
 - c
 ```
 
 > "x"
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
   - b1
 - c
 ```
@@ -230,19 +230,19 @@ tags: common
 Typing over a task and its child: nothing typed.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
-- [ ] ««task»»
+```markdown
+- [ ] task⟦selected⟧
   - sub
 - c
 ```
 
 > "x"
 
-```buffer
-- [ ] ««task»»
+```markdown
+- [ ] task⟦selected⟧
   - sub
 - c
 ```
@@ -252,23 +252,23 @@ tags: edge
 Typing over a thematic break: nothing typed.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 para
 
-««***»»
+***⟦selected⟧
 
 next
 ```
 
 > "x"
 
-```buffer
+```markdown
 para
 
-««***»»
+***⟦selected⟧
 
 next
 ```
@@ -278,22 +278,22 @@ next
 A plain paste over roots at two depths: one node, the first root's, its text what is pasted.
 
 ```yaml
-tags: edge
+tags: rare
 clipboard: "y"
 ```
 
-```buffer
+```markdown
 - one
   - two
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - one
   - two
     - y┃
@@ -309,16 +309,16 @@ Enter over a parent: the caret at the end of its own text, nothing deleted.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
   - b1
 - c
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
 - b┃
   - b1
@@ -330,21 +330,21 @@ tags: common
 Shift-Enter over roots at two depths: at the end of the last root's text.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - one
   - two
-    - ««deep
-  - three»»
+    - deep⟦selected⟧
+  - three⟦selected⟧
   - five
 - four
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - one
   - two
     - deep
@@ -364,16 +364,16 @@ clipboard: |
   - q
 ```
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
   - b1
 - c
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - p
 - q┃
@@ -383,13 +383,13 @@ clipboard: |
 ## SubtreeEdit15
 
 A whole-line selection a text editor made (a triple-click on `b`, from its line's start to the
-next line's): the node, as drawn `««…»»`, and typing over it does nothing, as over any.
+next line's): the node, as drawn `⟦selected⟧`, and typing over it does nothing, as over any.
 
 ```yaml
 tags: common
 ```
 
-```buffer
+```markdown
 - a
 «- b
 »- c
@@ -397,9 +397,9 @@ tags: common
 
 > "x"
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
 - c
 ```
 
@@ -411,18 +411,18 @@ it replaces the text, `x` alone, as every text editor does (no buffer draws a te
 test/select.test.ts).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
-- ««a
+```markdown
+- a⟦selected⟧
   - a1
-- b»»
+- b⟦selected⟧
 ```
 
 > deleteContentForward "x"
 
-```buffer
+```markdown
 x┃
 ```
 
@@ -432,23 +432,23 @@ x┃
 a paste at the selection's end puts them, as Tana pastes over a block selection.
 
 ```yaml
-tags: edge
+tags: rare
 pasteOverNodes: after
 clipboard: |
   - p
   - q
 ```
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
   - b1
 - c
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - b
   - b1
@@ -463,25 +463,25 @@ clipboard: |
 as typing over them is, as Logseq, Tine, Athens, RemNote and WorkFlowy have it.
 
 ```yaml
-tags: edge
+tags: rare
 pasteOverNodes: nothing
 clipboard: |
   - p
   - q
 ```
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
   - b1
 - c
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
   - b1
 - c
 ```
@@ -491,23 +491,23 @@ clipboard: |
 `pasteOverNodes: nothing`: a plain paste over them likewise.
 
 ```yaml
-tags: edge
+tags: rare
 pasteOverNodes: nothing
 clipboard: 'z'
 ```
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
   - b1
 - c
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - a
-- ««b»»
+- b⟦selected⟧
   - b1
 - c
 ```

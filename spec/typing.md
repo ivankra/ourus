@@ -23,14 +23,14 @@ Typing an underline under a paragraph makes it a heading, as Markdown authoring.
 tags: rare free-form
 ```
 
-```buffer
+```markdown
 para
 ┃
 ```
 
 > "---"
 
-```buffer
+```markdown
 para
 ---┃
 ```
@@ -48,14 +48,14 @@ Deleting the rest of the line to finish the underline is setext authoring too.
 tags: rare free-form
 ```
 
-```buffer
+```markdown
 para
 ---x┃
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 para
 ---┃
 ```
@@ -69,14 +69,14 @@ when a paragraph's lines are made a list ([Scenario24](scenarios.md#scenario24))
 tags: common free-form
 ```
 
-```buffer
+```markdown
 para
 ┃more
 ```
 
 > "- "
 
-```buffer
+```markdown
 para
 - ┃more
 ```

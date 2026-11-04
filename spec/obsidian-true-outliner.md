@@ -40,10 +40,10 @@ its numbers. TO's e2e case for #228 is marked known-failing: it renumbers on int
 Outliner and bare Obsidian do.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 1. a┃
 1) b
 2) c
@@ -51,7 +51,7 @@ tags: edge
 
 > enter
 
-```buffer
+```markdown
 1. a
 2. ┃
 1) b
@@ -67,17 +67,17 @@ item's text does (Logseq, bare Obsidian and TO agree; Roam, Dynalist, Tine and O
 the space at the new item's start; WorkFlowy breaks the line inside the item instead).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - first
   second┃ line
 ```
 
 > enter
 
-```buffer
+```markdown
 - first
   second
 - ┃line
@@ -95,18 +95,18 @@ default ourus, as WorkFlowy, Roam, Dynalist and Obsidian (bare or with Outliner)
 with the second half instead, the first half going before it ([Enter3](enter.md#enter3)).
 
 ```yaml
-tags: edge
+tags: rare
 enterMidItem: child
 ```
 
-```buffer
+```markdown
 - alpha┃ beta
 →- child
 ```
 
 > enter
 
-```buffer
+```markdown
 - alpha
 →- ┃beta
 →- child
@@ -117,17 +117,17 @@ enterMidItem: child
 *Enter, E7, E8: End of parent opens empty first child*
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - alpha┃
 →- child
 ```
 
 > enter
 
-```buffer
+```markdown
 - alpha
 →- ┃◌
 →- child
@@ -145,17 +145,17 @@ paragraph stays paragraphs. Bare Obsidian and Outliner make a line break in the 
 ([Enter12](enter.md#enter12) is ourus's Enter in a paragraph).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 one┃ two
 - child
 ```
 
 > enter
 
-```buffer
+```markdown
 one
 
 ┃two
@@ -174,10 +174,10 @@ line there, and Obsidian, bare or with Outliner, adds a sibling, which takes the
 own.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - item┃
 
   para
@@ -185,7 +185,7 @@ tags: edge
 
 > enter
 
-```buffer
+```markdown
 - item
   - ┃◌
 
@@ -201,11 +201,11 @@ existing one, so the code block stays where it is (TO, when measured, used its o
 it a grandchild; it now agrees). With TO's split (`enterMidItem: child`), as E7.
 
 ```yaml
-tags: edge
+tags: rare
 enterMidItem: child
 ```
 
-````buffer
+````markdown
 - item┃ text
 →```
 →code
@@ -214,7 +214,7 @@ enterMidItem: child
 
 > enter
 
-````buffer
+````markdown
 - item
 →- ┃text
 →```
@@ -232,17 +232,17 @@ was: a list needs no blank line to start after a paragraph, as a quote needs non
 heading none (Split title above a subheading). Bare Obsidian and Outliner do the same.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 # Head┃line
 - item
 ```
 
 > enter
 
-```buffer
+```markdown
 # Head
 ┃line
 - item
@@ -257,17 +257,17 @@ first half, and the rest of the title becomes the section's first paragraph (TO 
 a blank line). A text editor's line break would make a two-line heading instead.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 Hello┃ world
 ====
 ```
 
 > enter
 
-```buffer
+```markdown
 Hello
 ====
 ┃world
@@ -282,17 +282,17 @@ item's text start ([Enter34](enter.md#enter34)): the underline is markup, not te
 refuses it; a text editor splits the underline.
 
 ```yaml
-tags: edge markup-heading
+tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 Hello world
 ==┃==
 ```
 
 > enter
 
-```buffer
+```markdown
 Hello world
 ====
 ┃◌
@@ -308,16 +308,16 @@ where the next block would otherwise run into it (a paragraph: End of heading ab
 a list needs none, so its seam is left as it was, as bare Obsidian and Outliner leave it.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 # Head┃
 ```
 
 > enter "x"
 
-```buffer
+```markdown
 # Head
 x┃
 ```
@@ -327,17 +327,17 @@ x┃
 *Enter, E19, E21: Empty paragraph before a section list*
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 ```
 
-```buffer
+```markdown
 # Head┃
 - item
 ```
 
 > enter
 
-```buffer
+```markdown
 # Head
 ┃◌
 - item
@@ -351,16 +351,16 @@ Enter on a task: the checkbox carries over to the new item, unchecked, as in Obs
 Outliner or TO).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - [ ] alpha┃ beta
 ```
 
 > enter
 
-```buffer
+```markdown
 - [ ] alpha
 - [ ] ┃beta
 ```
@@ -370,16 +370,16 @@ tags: edge
 *Enter, E32: Checked task gives unchecked new item*
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - [x] done┃
 ```
 
 > enter
 
-```buffer
+```markdown
 - [x] done
 - [ ] ┃
 ```
@@ -392,16 +392,16 @@ Enter replaces a selection inside the text, then splits the item, as typing woul
 when measured, since fixed).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - al«pha be»ta
 ```
 
 > enter
 
-```buffer
+```markdown
 - al
 - ┃ta
 ```
@@ -415,10 +415,10 @@ half and the quote below it; both read the same, and here the quote's seam is le
 Obsidian and Outliner make a line break in the paragraph: see [Enter12](enter.md#enter12).)
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 # H
 para┃ text
 > q
@@ -426,7 +426,7 @@ para┃ text
 
 > enter
 
-```buffer
+```markdown
 # H
 para
 
@@ -442,16 +442,16 @@ In a heading, the rest of the title becomes the section's first paragraph, right
 in bare Obsidian and Outliner (TO now writes a blank line between them).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 # Hello┃ world
 ```
 
 > enter
 
-```buffer
+```markdown
 # Hello
 ┃world
 ```
@@ -461,17 +461,17 @@ tags: edge
 *Enter, E13, E16: Split title above a subheading*
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 # He┃ad
 ## Sub
 ```
 
 > enter
 
-```buffer
+```markdown
 # He
 ┃ad
 ## Sub
@@ -486,17 +486,17 @@ from the new one by a blank line; without it the two would read as one paragraph
 bare Obsidian and Outliner leave.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 # Head┃line
 Body.
 ```
 
 > enter
 
-```buffer
+```markdown
 # Head
 ┃line
 
@@ -508,17 +508,17 @@ Body.
 *Enter, E14, E20: End of heading above a paragraph*
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 # Head┃
 Body.
 ```
 
 > enter
 
-```buffer
+```markdown
 # Head
 ┃◌
 
@@ -534,16 +534,16 @@ starts the new line, the caret before it, where Markdown renders nothing of it, 
 and Outliner keep it (TO drops it).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 one┃ two
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 one
 ┃ two
 ```
@@ -556,10 +556,10 @@ With the caret in a list marker, Shift-Enter is the host's (`markup: text`, the 
 [ShiftEnter22](shift-enter.md#shiftenter22)), which splits the marker, as TO's catalogue has it.
 
 ```yaml
-tags: edge free-form
+tags: rare free-form
 ```
 
-```buffer
+```markdown
 -┃ alpha
 ```
 
@@ -569,7 +569,7 @@ tags: edge free-form
 result: deferredToHost
 ```
 
-```buffer
+```markdown
 -
 ┃ alpha
 ```
@@ -584,17 +584,17 @@ below); only an ATX title is a single line. Its underline is not text: Shift-Ent
 it was (TO cut the underline in two).
 
 ```yaml
-tags: edge markup-heading
+tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 Hello┃ world
 ====
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 Hello
 ┃ world
 ====
@@ -605,10 +605,10 @@ Hello
 *Shift-Enter, S7, S8: Line break in setext underline refused*
 
 ```yaml
-tags: edge markup-heading
+tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 Hello world
 ==┃==
 ```
@@ -619,7 +619,7 @@ Hello world
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 Hello world
 ==┃==
 ```
@@ -632,10 +632,10 @@ The new line keeps an indented paragraph's indentation (TO, when measured, wrote
 where it stayed in the paragraph only by lazy continuation; it now agrees).
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - item
 
   para┃ text
@@ -643,7 +643,7 @@ tags: edge
 
 > shiftEnter
 
-```buffer
+```markdown
 - item
 
   para
@@ -660,17 +660,17 @@ blank line between, at the text's column, and typing on it joins them again. Bar
 Outliner split the paragraph too, as TO's blank line did when measured.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - foo┃
   bar
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - foo
   ┃
   bar
@@ -678,7 +678,7 @@ tags: edge
 
 > "x"
 
-```buffer
+```markdown
 - foo
   x┃
   bar
@@ -691,17 +691,17 @@ tags: edge
 Left, the blank line stays: the text is two paragraphs.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 foo┃
 bar
 ```
 
 > shiftEnter cursorDocStart
 
-```buffer
+```markdown
 ┃foo
 
 bar
@@ -714,16 +714,16 @@ bar
 Shift-Enter over a selection replaces it, then breaks the line, as typing would.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a«lpha» beta
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - a
   ┃ beta
 ```
@@ -738,10 +738,10 @@ Backspace on an emptied item. (An emptied first item, with nothing above, is rem
 Twice on an emptied middle item: the text goes, then the item, and the list renumbers.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 1. p
 2. a┃
 3. q
@@ -749,7 +749,7 @@ tags: edge
 
 > deleteContentBackward deleteContentBackward
 
-```buffer
+```markdown
 1. p┃
 2. q
 ```
@@ -761,10 +761,10 @@ tags: edge
 Right after Shift-Enter, Backspace takes the new line back.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - one
   - kid
 - foo┃
@@ -772,16 +772,16 @@ tags: edge
 
 > shiftEnter
 
-```buffer
+```markdown
 - one
   - kid
 - foo
-  ┃
+  ┃◌
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one
   - kid
 - foo┃
@@ -794,16 +794,16 @@ tags: edge
 Cmd-Backspace on an item deletes back to the start of its text, never into its marker.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - alpha beta┃
 ```
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 - ┃
 ```
 
@@ -817,18 +817,18 @@ Backspace would leave `- [ ]b`, which is no task. (Right after the checkbox, Bac
 by default: [TaskBackspace5](tasks.md#taskbackspace5).)
 
 ```yaml
-tags: edge markup-task
+tags: rare markup-task
 markup: decorated
 ```
 
-```buffer
+```markdown
 - a
 - ┃[ ] b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃b
 ```
 
@@ -849,10 +849,10 @@ parent ([Backspace3](backspace.md#backspace3), [Delete1](delete.md#delete1); onl
 it).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
   - ┃b
     - c
@@ -860,7 +860,7 @@ tags: edge
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃b
   - c
 ```
@@ -870,10 +870,10 @@ tags: edge
 *Backspace, Joining an item with children: Delete forward absorbs child with grandchildren*
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a┃
   - b
     - c
@@ -881,7 +881,7 @@ tags: edge
 
 > deleteContentForward
 
-```buffer
+```markdown
 - a┃b
   - c
 ```
@@ -893,10 +893,10 @@ tags: edge
 A bullet between two runs of an ordered list joins away, and the runs become one list again.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 1. a
 2. b
 - ┃x
@@ -905,7 +905,7 @@ tags: edge
 
 > deleteContentBackward
 
-```buffer
+```markdown
 1. a
 2. b┃x
 3. c
@@ -920,10 +920,10 @@ keeps it a list under the text above (only a list starting at 1 can interrupt a 
 list that started elsewhere keeps its start.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - p
   1. ┃a
   2. b
@@ -931,7 +931,7 @@ tags: edge
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - p┃a
   1. b
 ```
@@ -941,10 +941,10 @@ tags: edge
 *Backspace, Joining away the head of a list: List starting at 3 keeps its start*
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 3. a
 4. ┃b
 5. c
@@ -952,7 +952,7 @@ tags: edge
 
 > deleteContentBackward
 
-```buffer
+```markdown
 3. a┃b
 4. c
 ```
@@ -965,10 +965,10 @@ Outdenting a later child leaves the quote above it alone (TO's e2e case for #255
 known-failing: it sets the quote off with a blank line).
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - item
   > quote
 
@@ -977,7 +977,7 @@ tags: edge
 
 > outdent
 
-```buffer
+```markdown
 - item
   > quote
 
@@ -993,17 +993,17 @@ keeps its own gap. (TO narrows the gap to one space; Obsidian, which indents wit
 compared here: its runs translate tabs to two spaces.)
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 -  parent
 -  kid┃
 ```
 
 > indent
 
-```buffer
+```markdown
 -  parent
    -  kid┃
 ```
@@ -1017,10 +1017,10 @@ lines included (TO, when measured, wrote a tab on the first line and spaces belo
 as Outliner does; bare Obsidian leaves the continuation line behind).
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 →- x
 - b┃
@@ -1029,7 +1029,7 @@ tags: edge
 
 > indent
 
-```buffer
+```markdown
 - a
 →- x
 →- b┃
@@ -1047,10 +1047,10 @@ thematic break and the code, and sets the quote off with a blank line). Bare Obs
 the item's own line.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 - b┃
   > q
@@ -1058,7 +1058,7 @@ tags: edge
 
 > indent
 
-```buffer
+```markdown
 - a
   - b┃
     > q
@@ -1069,10 +1069,10 @@ tags: edge
 *Indentation, seams-across-a-re-indent: Outdented item keeps its quote*
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
   - b┃
     > q
@@ -1080,7 +1080,7 @@ tags: edge
 
 > outdent
 
-```buffer
+```markdown
 - a
 - b┃
   > q
@@ -1091,10 +1091,10 @@ tags: edge
 *Indentation, seams-across-a-re-indent: Indented item keeps its thematic break*
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 - b┃
 
@@ -1103,7 +1103,7 @@ tags: edge
 
 > indent
 
-```buffer
+```markdown
 - a
   - b┃
 
@@ -1115,10 +1115,10 @@ tags: edge
 *Indentation, seams-across-a-re-indent: Outdented item keeps its code block*
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
   - b┃
 
@@ -1127,7 +1127,7 @@ tags: edge
 
 > outdent
 
-```buffer
+```markdown
 - a
 - b┃
 
@@ -1143,10 +1143,10 @@ An item joining a list takes the list's bullet: a different bullet would start a
 and so start a second list under `a`.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 * a
   * x
 - b┃
@@ -1154,7 +1154,7 @@ tags: edge
 
 > indent
 
-```buffer
+```markdown
 * a
   * x
   * b┃
@@ -1168,10 +1168,10 @@ A block id on its own line is the node's last line, and moves with it (bare Obsi
 caret's line, leaving the id behind).
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 - b┃
   ^id
@@ -1179,7 +1179,7 @@ tags: edge
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - b┃
   ^id
 - a
@@ -1190,10 +1190,10 @@ tags: edge
 *Moving, lone-block-id: Block id moves with its paragraph*
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 para one
 ^blk
 
@@ -1202,7 +1202,7 @@ para┃ two
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 para┃ two
 
 para one
@@ -1217,17 +1217,17 @@ A paragraph moved below a quote it was written right above gets a blank line bet
 one, it would continue the quote. A fence needs no blank line on either side.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 para┃
 > q
 ```
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 > q
 
 para┃
@@ -1238,10 +1238,10 @@ para┃
 *Moving, lazy-continuation-at-seams: No blank line needed after a fence*
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-````buffer
+````markdown
 para┃
 ```
 code
@@ -1250,7 +1250,7 @@ code
 
 > moveSubtreeDown
 
-````buffer
+````markdown
 ```
 code
 ```
@@ -1262,10 +1262,10 @@ para┃
 *Moving, lazy-continuation-at-seams: No blank line needed before a fence*
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-````buffer
+````markdown
 ```
 code┃
 ```
@@ -1274,7 +1274,7 @@ para
 
 > moveSubtreeDown
 
-````buffer
+````markdown
 para
 ```
 code┃
@@ -1290,11 +1290,11 @@ so `2. c` becomes `1. c` and stays a list under `a`'s text. (obsidian-true-outli
 logically.)
 
 ```yaml
-tags: edge
+tags: rare
 outdent: logical
 ```
 
-```buffer
+```markdown
 1. a
    1. b┃
    2. c
@@ -1303,7 +1303,7 @@ outdent: logical
 
 > outdent
 
-```buffer
+```markdown
 1. a
    1. c
 2. b┃
@@ -1327,10 +1327,10 @@ node's text; left, it stays as written, and one Backspace on it goes back to whe
 started.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - one
   - kid
 - foo┃
@@ -1338,20 +1338,19 @@ tags: edge
 
 > shiftEnter indent
 
-```buffer
+```markdown
 - one
   - kid
   - foo
-    ┃
+    ┃◌
 ```
 
 > cursorDocStart
 
-```buffer
+```markdown
 ┃- one
   - kid
   - foo
-    
 ```
 
 ## TO9
@@ -1359,10 +1358,10 @@ tags: edge
 *Abandoning an empty place, Shift-Enter, Tab, then leave: Doubly indented blank line kept on leaving*
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - one
   - kid
   - sib
@@ -1371,12 +1370,11 @@ tags: edge
 
 > shiftEnter indent indent cursorDocStart
 
-```buffer
+```markdown
 ┃- one
   - kid
   - sib
     - foo
-      
 ```
 
 ## TO10
@@ -1384,10 +1382,10 @@ tags: edge
 *Abandoning an empty place, Shift-Enter, Tab, then leave: Backspace returns to the start*
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - one
   - kid
 - foo┃
@@ -1395,7 +1393,7 @@ tags: edge
 
 > shiftEnter indent deleteContentBackward
 
-```buffer
+```markdown
 - one
   - kid
   - foo┃
@@ -1406,10 +1404,10 @@ tags: edge
 *Abandoning an empty place, Shift-Enter, Tab, then leave: Shift-Tab then Backspace returns to start*
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
   - b┃
 - c
@@ -1417,7 +1415,7 @@ tags: edge
 
 > shiftEnter outdent deleteContentBackward
 
-```buffer
+```markdown
 - a
 - b┃
 - c
@@ -1431,10 +1429,10 @@ Enter on Shift-Enter's blank line, at the node's text column, is a new item afte
 dropped the place and moved to the next item).
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - one
   - kid
 - foo┃
@@ -1443,7 +1441,7 @@ tags: edge
 
 > shiftEnter indent enter
 
-```buffer
+```markdown
 - one
   - kid
   - foo
@@ -1459,16 +1457,16 @@ Shift-Enter on an empty item is the host's line break, and Backspace takes it ba
 item stays, as in Logseq, WorkFlowy, Roam, Dynalist and Outliner.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - foo┃
 ```
 
 > enter shiftEnter deleteContentBackward
 
-```buffer
+```markdown
 - foo
 - ┃
 ```
@@ -1485,17 +1483,17 @@ leave. A blank line after the list stays too. (The bullet case is
 [Placeholder1](placeholders.md#placeholder1).)
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 1. a┃
 2. b
 ```
 
 > enter indent
 
-```buffer
+```markdown
 1. a
    1. ┃◌
 2. b
@@ -1503,7 +1501,7 @@ tags: edge
 
 > cursorDocStart
 
-```buffer
+```markdown
 ┃1. a
 
    1. 
@@ -1515,10 +1513,10 @@ tags: edge
 *Abandoning an empty place, Enter, Tab, then leave: Blank line after the list stays*
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - foo┃
 
 para
@@ -1526,7 +1524,7 @@ para
 
 > enter
 
-```buffer
+```markdown
 - foo
 - ┃
 
@@ -1535,7 +1533,7 @@ para
 
 > indent
 
-```buffer
+```markdown
 - foo
   - ┃◌
 
@@ -1544,7 +1542,7 @@ para
 
 > cursorDocStart
 
-```buffer
+```markdown
 ┃- foo
 
   - 
@@ -1560,10 +1558,10 @@ An empty item after another item can be written, so it stays, as an empty bullet
 WorkFlowy, Roam and Dynalist.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 1. p
    1. a┃
 2. q
@@ -1571,7 +1569,7 @@ tags: edge
 
 > enter outdent cursorDocStart
 
-```buffer
+```markdown
 ┃1. p
    1. a
 2. 
@@ -1583,17 +1581,17 @@ tags: edge
 *Abandoning an empty place, Enter, Shift-Tab, then leave: Second Enter outdents to a kept item*
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
   - b┃
 ```
 
 > enter enter cursorDocStart
 
-```buffer
+```markdown
 ┃- a
   - b
 - 
@@ -1610,17 +1608,17 @@ second empty item there instead, as the outliners do ([Enter7](enter.md#enter7))
 
 ```yaml
 enterOnEmptyItem: outdent
-tags: edge free-form
+tags: rare free-form
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > enter enter cursorDocStart
 
-```buffer
+```markdown
 ┃- a
 - b
 ```
@@ -1631,10 +1629,10 @@ tags: edge free-form
 
 ```yaml
 enterOnEmptyItem: outdent
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 para
   - a┃
   - b
@@ -1642,7 +1640,7 @@ para
 
 > enter enter cursorDocStart
 
-```buffer
+```markdown
 ┃para
   - a
   - b
@@ -1662,21 +1660,21 @@ item's text at the caret.
 A pasted list takes the destination's indent unit, tabs or spaces, on every level.
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |
   - a
   →- b
   →→- c
 ```
 
-```buffer
+```markdown
 - top
   - sib┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - top
   - sib
   - a
@@ -1689,21 +1687,21 @@ clipboard: |
 *Paste, #216: Pasted list takes tab indent unit*
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |
   - a
     - b
       - c
 ```
 
-```buffer
+```markdown
 - top
 →- sib┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - top
 →- sib
 →- a
@@ -1718,21 +1716,21 @@ clipboard: |
 A pasted quote is set off from the paragraph below it, and the payload's own indentation goes.
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |2
       first
 
       > quote
 ```
 
-```buffer
+```markdown
 ## H┃
 below
 ```
 
 > paste
 
-```buffer
+```markdown
 ## H
 
 first
@@ -1754,7 +1752,7 @@ clipboard's own blank line between them goes. (TO's e2e case, with a table, whic
 would otherwise take in, sets them off with blank lines.)
 
 ```yaml
-tags: edge
+tags: rare
 clipboard: |
   - alpha
 
@@ -1762,14 +1760,14 @@ clipboard: |
 quotes: container
 ```
 
-```buffer
+```markdown
 - top┃
   - see
 ```
 
 > paste
 
-```buffer
+```markdown
 - top
   - alpha
   > note┃

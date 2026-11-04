@@ -14,14 +14,14 @@ clipboard: |-
   2. y
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - x
 - y┃
@@ -39,14 +39,14 @@ clipboard: |-
   - y
 ```
 
-```buffer
+```markdown
 1. a┃
 2. b
 ```
 
 > paste
 
-```buffer
+```markdown
 1. a
 2. x
 3. y┃
@@ -58,20 +58,20 @@ clipboard: |-
 A list in a pasted item is a list of its own, and keeps its form.
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |-
   - x
     1. x1
   - y
 ```
 
-```buffer
+```markdown
 - a┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - x
   1. x1
@@ -83,21 +83,21 @@ clipboard: |-
 A tight list takes the paste tight, whatever its spacing in the clipboard.
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |-
   - x
 
   - y
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 - x
 - y┃
@@ -109,13 +109,13 @@ clipboard: |-
 A loose list sets each pasted item apart, as its own are.
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |-
   - x
   - y
 ```
 
-```buffer
+```markdown
 - a┃
 
 - b
@@ -123,7 +123,7 @@ clipboard: |-
 
 > paste
 
-```buffer
+```markdown
 - a
 
 - x
@@ -139,21 +139,21 @@ With `pasteListForm: own` (BlockNote, RemNote, true-outliner), items of the othe
 form, a list of their own where they land.
 
 ```yaml
-tags: edge
+tags: rare
 pasteListForm: own
 clipboard: |-
   1. x
   2. y
 ```
 
-```buffer
+```markdown
 - a┃
 - b
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
 1. x
 2. y┃

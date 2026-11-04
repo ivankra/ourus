@@ -51,22 +51,63 @@ export function viewByLine(from: OurusDoc, doc: OurusDoc, view: ViewState): View
   return viewIn(doc, { folded, zoom });
 }
 
+/** A node a fold hides, as `hiddenContent` compares it. */
+interface HiddenNode {
+  readonly id: number;
+  readonly parent: number;
+  readonly kind: string;
+  /** Its text, but null for one all on the node's last line of text, which the fold shows. */
+  readonly text: string | null;
+  /** The block-id lines it carries, which the fold hides too. */
+  readonly carried: readonly { readonly blankLines: number; readonly line: string }[];
+}
+
 /**
- * What a fold hides, as nodes: each descendant's id, kind and text, in order, but the text of one
- * all on the node's last line of text, which the fold shows (an item's first child on its marker's
- * line); a change to it opens the fold.
+ * What a fold hides, as nodes, in order: each descendant's id, parent, kind, text and carried block-id
+ * lines, but the text of one all on the node's last line of text, which the fold shows (an item's first
+ * child on its marker's line); a change to it opens the fold. Records, compared field by field
+ * (`sameHidden`), not a string: a text can hold any character a seam would be made of (B218).
  */
-export function hiddenContent(doc: OurusDoc, node: OurusNode): string {
-  const out: string[] = [];
-  const visit = (n: OurusNode): void => {
-    for (const c of n.children) {
-      const shown = c.textLastLine <= node.textLastLine;
-      out.push(`${c.id}\u0000${c.kind}\u0000${shown ? '' : (doc.textOf(c)?.text ?? '')}`);
-      visit(c);
-    }
+export function hiddenContent(doc: OurusDoc, node: OurusNode): HiddenNode[] {
+  const out: HiddenNode[] = [];
+  // (walked without recursion, any depth)
+  const stack: OurusNode[] = [...node.children].reverse();
+  for (let c = stack.pop(); c; c = stack.pop()) {
+    const shown = c.textLastLine <= node.textLastLine;
+    const text = doc.textOf(c);
+    out.push({ id: c.id, parent: c.parent!.id, kind: c.kind, text: shown ? null : (text?.text ?? ''), carried: text?.blockIdLines ?? [] });
+    for (let k = c.children.length - 1; k >= 0; k--) stack.push(c.children[k]!);
+  }
+  return out;
+}
+
+/** Whether two folds hide the same: the same nodes, under the same parents, in order, with the same texts and carried lines. */
+function sameHidden(a: readonly HiddenNode[], b: readonly HiddenNode[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const [x, y] = [a[i]!, b[i]!];
+    if (x.id !== y.id || x.parent !== y.parent || x.kind !== y.kind || x.text !== y.text || x.carried.length !== y.carried.length) return false;
+    for (let k = 0; k < x.carried.length; k++) if (x.carried[k]!.blankLines !== y.carried[k]!.blankLines || x.carried[k]!.line !== y.carried[k]!.line) return false;
+  }
+  return true;
+}
+
+/** Whether a node both of `old`'s and `now`'s subtrees hold (by id) is in another place among them: another parent, or another order. */
+function movedWithin(old: OurusNode, now: OurusNode): boolean {
+  const places = (node: OurusNode): Map<number, number> => {
+    const out = new Map<number, number>();
+    const visit = (n: OurusNode): void => {
+      for (const c of n.children) {
+        out.set(c.id, n.id);
+        visit(c);
+      }
+    };
+    visit(node);
+    return out;
   };
-  visit(node);
-  return out.join('\u0001');
+  const [a, b] = [places(old), places(now)];
+  const order = (m: Map<number, number>, other: Map<number, number>): string => [...m].filter(([id]) => other.has(id)).map(([id, parent]) => `${id}<${parent}`).join();
+  return order(a, b) !== order(b, a);
 }
 
 /** The node `id` and its ancestors, the root aside, nearest first: `from`'s, by id. */
@@ -102,7 +143,10 @@ export function carryView(from: OurusDoc, view: ViewState, doc: OurusDoc, change
     const next = old && below < from.lineCount ? from.nodeAtLine(below) : null;
     const reach = old && from.mdTree.starts[(next ? Math.max(next.textLastLine, below) : below) + 2];
     const reached = !range || changes.some((c) => c.from <= (reach ?? from.text.length) && c.to >= start!);
-    if (!suppressed.has(id) && reached && (!old || hiddenContent(from, old) !== hiddenContent(doc, now))) continue;
+    if (!suppressed.has(id) && reached && (!old || !sameHidden(hiddenContent(from, old), hiddenContent(doc, now)))) continue;
+    // (no text changed there, but the nodes it hides moved: identical children reordered; a node read
+    // anew from the same text, a placeholder dropped, is no move: Fold20)
+    if (!suppressed.has(id) && !reached && old && old.persistentNode !== now.persistentNode && movedWithin(old, now)) continue;
     folded.add(id);
   }
   let zoom: number | null = null;

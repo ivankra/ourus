@@ -14,7 +14,7 @@ a blank line sets it apart instead (Backspace40).
 tags: rare
 ```
 
-```buffer
+```markdown
 * a
   * ┃b
   2) x
@@ -22,7 +22,7 @@ tags: rare
 
 > deleteContentBackward
 
-```buffer
+```markdown
 * a┃b
   1) x
 ```
@@ -37,7 +37,7 @@ escaped. The caret is at the seam, past the backslash.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a
   1.␠
 - ┃b
@@ -45,7 +45,7 @@ tags: rare
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a
   1\̬. ┃b
 ```
@@ -61,13 +61,13 @@ container on the line counts, not only a list marker.
 tags: rare
 ```
 
-```buffer
+```markdown
 - > a┃ # b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - > ┃◌ # b
 ```
 
@@ -81,14 +81,14 @@ The line the split ends keeps its spelling where it read so before: `2. m1` cont
 tags: rare
 ```
 
-```buffer
+```markdown
 p0
 2. m1┃
 ```
 
 > enter
 
-```buffer
+```markdown
 p0
 2. m1
 
@@ -97,7 +97,7 @@ p0
 
 > deleteContentBackward
 
-```buffer
+```markdown
 p0
 2. m1┃
 ```
@@ -112,14 +112,14 @@ when a join takes it back ([Enter47](enter.md#enter47)).
 tags: rare
 ```
 
-```buffer
+```markdown
 \[a]: ┃/url
 ```
 
 > enter
 
-```buffer
-\[a]:
+```markdown
+\[a]:␠
 
 ┃/url
 ```
@@ -129,10 +129,10 @@ tags: rare
 Fence62 with a longer run: the fences grow past it however long it is, to one more than the run.
 
 ````yaml
-tags: edge
+tags: rare
 ````
 
-```````````````buffer
+```````````````markdown
 ```
 x┃````````````
 body
@@ -141,7 +141,7 @@ body
 
 > deleteContentBackward
 
-```````````````buffer
+```````````````markdown
 `````````````
 ┃````````````
 body
@@ -158,7 +158,7 @@ on any code line.
 tags: rare markup-fence
 ````
 
-````buffer
+````markdown
 ```
 code
 ┃    ```
@@ -166,7 +166,7 @@ code
 
 > deleteContentBackward
 
-````buffer
+````markdown
 ```
 code┃    ```
 ````
@@ -182,7 +182,7 @@ loosen the item's list.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a
   - b
   2) ┃x
@@ -190,7 +190,7 @@ tags: rare
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - a
   1) ┃x
   - b
@@ -206,7 +206,7 @@ escaped, and stays the child's text.
 tags: rare
 ```
 
-```buffer
+```markdown
 - ┃a
     1. b
       - c
@@ -214,7 +214,7 @@ tags: rare
 
 > outdent
 
-```buffer
+```markdown
 ┃a
 1. b
        - c
@@ -231,20 +231,20 @@ an escape whose character means nothing mid-line).
 tags: rare
 ```
 
-```buffer
+```markdown
 - one┃<div>
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 - one
   ┃\̬<div>
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - one┃\̬<div>
 ```
 
@@ -257,20 +257,20 @@ the text, so the escape stays.
 tags: rare
 ```
 
-```buffer
+```markdown
 para┃``` x
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 para
 ┃\̬``` x
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 para┃\̬``` x
 ```
 
@@ -284,14 +284,14 @@ line the break makes, or one it ends into a block, is escaped ([ShiftEnter19](sh
 tags: rare
 ```
 
-```buffer
+```markdown
 p0
 2. m1┃
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 p0
 2. m1
 ┃
@@ -299,7 +299,7 @@ p0
 
 > deleteContentBackward
 
-```buffer
+```markdown
 p0
 2. m1┃
 ```
@@ -317,13 +317,13 @@ clipboard: |-
   x
 ```
 
-```buffer
+```markdown
 «ab»c
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 x┃c
 ```
 
@@ -337,7 +337,7 @@ was would nest under the child moved out).
 tags: rare
 ```
 
-```buffer
+```markdown
 para
   - b┃
     - c
@@ -346,7 +346,7 @@ para
 
 > outdent
 
-```buffer
+```markdown
 para
 
 b┃
@@ -367,7 +367,7 @@ clipboard: |-
   x
 ```
 
-```buffer
+```markdown
 Title
 ┃more
 ---
@@ -379,7 +379,7 @@ Title
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 Title
 ┃more
 ---
@@ -396,14 +396,14 @@ tags: rare
 enterMidItem: child
 ```
 
-```buffer
+```markdown
 - one two┃ three
 - next
 ```
 
 > enter
 
-```buffer
+```markdown
 - one two
 - ┃three
 - next
@@ -418,7 +418,7 @@ checkbox, as under any empty item (a checkbox alone is no paragraph the child wo
 tags: rare markup-task
 ```
 
-```buffer
+```markdown
 - a
   - b
   - [ ] ┃
@@ -427,7 +427,7 @@ tags: rare markup-task
 
 > outdent
 
-```buffer
+```markdown
 - a
   - b
 - [ ] ┃
@@ -444,14 +444,14 @@ tags: rare markup-heading
 headingEditing: block
 ```
 
-```buffer
+```markdown
 - a
 - # ┃H
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃H
 ```
 
@@ -465,14 +465,14 @@ tags: rare markup-heading
 headingEditing: block
 ```
 
-```buffer
+```markdown
 - a┃
 - # H
 ```
 
 > deleteContentForward
 
-```buffer
+```markdown
 - a┃H
 ```
 
@@ -486,7 +486,7 @@ tags: rare
 joinWithChildren: refuse
 ```
 
-```buffer
+```markdown
 - ┃
   - a
     - b
@@ -498,7 +498,7 @@ joinWithChildren: refuse
 result: rejected has-children
 ```
 
-```buffer
+```markdown
 - ┃
   - a
     - b
@@ -516,13 +516,13 @@ clipboard: |
   x
 ```
 
-```buffer
+```markdown
 one ┃two
 ```
 
 > paste
 
-```buffer
+```markdown
 one two
 
 x┃
@@ -540,13 +540,13 @@ clipboard: |
   x
 ```
 
-```buffer
+```markdown
 one ┃two
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 one two
 
 x┃
@@ -561,7 +561,7 @@ empty, the caret on it (the fence still unclosed, the code running to the docume
 tags: rare markup-fence
 ```
 
-```buffer
+```markdown
 intro
 
 ```js┃
@@ -569,7 +569,7 @@ intro
 
 > enter
 
-```buffer
+```markdown
 intro
 
 ```js
@@ -587,22 +587,22 @@ the text like any other; only an escape ourus wrote goes ([Regression24b](#regre
 tags: rare
 ```
 
-```buffer
+```markdown
 revise ┃2\. draft
 ```
 
 > enter
 
-```buffer
-revise
+```markdown
+revise␠
 
 ┃2\. draft
 ```
 
 > deleteContentBackward
 
-```buffer
-revise┃2\. draft
+```markdown
+revise ┃2\. draft
 ```
 
 ## Regression24b
@@ -615,22 +615,22 @@ join is the split's inverse.
 tags: rare
 ```
 
-```buffer
+```markdown
 revise ┃2. draft
 ```
 
 > enter
 
-```buffer
-revise
+```markdown
+revise␠
 
 ┃2\̬. draft
 ```
 
 > deleteContentBackward
 
-```buffer
-revise┃2. draft
+```markdown
+revise ┃2. draft
 ```
 
 ## Regression24c
@@ -642,20 +642,20 @@ nothing of the text is before the caret, and the empty paragraph opens above as 
 tags: rare
 ```
 
-```buffer
+```markdown
 -┃-
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 \̬-
 ┃\̬-
 ```
 
 > cursorLineUp cursorCharRight enter
 
-```buffer
+```markdown
 ┃◌
 
 \̬-
@@ -670,29 +670,29 @@ A duplicate's escapes are ours as the original's are: joined, each copy's goes.
 tags: rare
 ```
 
-```buffer
+```markdown
 - x ┃2. a
 ```
 
 > enter
 
-```buffer
-- x
+```markdown
+- x␠
 - ┃2\̬. a
 ```
 
 > duplicateSubtree
 
-```buffer
-- x
+```markdown
+- x␠
 - 2\̬. a
 - ┃2\̬. a
 ```
 
 > cursorLineUp cursorLineBoundaryForward deleteContentForward
 
-```buffer
-- x
+```markdown
+- x␠
 - 2\̬. a┃2. a
 ```
 
@@ -704,21 +704,21 @@ The same in an item.
 tags: rare
 ```
 
-```buffer
+```markdown
 - revise ┃2\. draft
 ```
 
 > enter
 
-```buffer
-- revise
+```markdown
+- revise␠
 - ┃2\. draft
 ```
 
 > deleteContentBackward
 
-```buffer
-- revise┃2\. draft
+```markdown
+- revise ┃2\. draft
 ```
 
 ## Regression26
@@ -730,20 +730,20 @@ backslash is the line's escape there, and stays when Backspace joins the line ba
 tags: rare
 ```
 
-```buffer
+```markdown
 a ┃\- b
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 a 
 ┃\- b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 a ┃\- b
 ```
 
@@ -757,15 +757,15 @@ paragraph, so nothing needs it): each line's escapes are judged against the line
 tags: rare
 ```
 
-```buffer
+```markdown
 revise ┃2\. a
 3\. b
 ```
 
 > enter
 
-```buffer
-revise
+```markdown
+revise␠
 
 ┃2\. a
 3\. b
@@ -781,13 +781,13 @@ tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 > [!tip]x┃
 ```
 
 > enter
 
-```buffer
+```markdown
 > [!tip]x
 > ┃◌
 ```
@@ -802,13 +802,13 @@ tags: rare
 quotes: container
 ```
 
-```buffer
+```markdown
 > [!a b] x┃
 ```
 
 > enter
 
-```buffer
+```markdown
 > [!a b] x
 >
 > ┃◌
@@ -824,14 +824,14 @@ is escaped, and stays the paragraph's text.
 tags: rare
 ```
 
-```buffer
+```markdown
 ┃para
 →- a
 ```
 
 > indent
 
-```buffer
+```markdown
 - ┃para
   →\̬- a
 ```
@@ -846,14 +846,14 @@ start a list there), is markup, not text. Out of the item, at the line's start, 
 tags: rare free-form
 ```
 
-```buffer
+```markdown
 ┃- para
   →\- a
 ```
 
 > outdent
 
-```buffer
+```markdown
 ┃para
 →\- a
 ```
@@ -867,14 +867,14 @@ stays (the author's).
 tags: rare
 ```
 
-```buffer
+```markdown
 - para┃
   →\- a
 ```
 
 > deleteContentForward
 
-```buffer
+```markdown
 - para┃→\- a
 ```
 
@@ -885,17 +885,17 @@ list from 2 starts there (`> q1⏎2) x` is a quote and a list), so the line is e
 quote a list from 2 couldn't interrupt the paragraph (dev/19-quotes.md §3.2.1).
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > q1
 p ┃2) x
 ```
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 > q1
 ┃2\̬) x
 ```
@@ -907,10 +907,10 @@ blank line sets the break apart. The seam check read the paragraph's later line 
 before it, a container's, though it was the text's own frame (dev/19-quotes.md §3.2.2).
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 > ┃q0
 S1
 ---
@@ -918,7 +918,7 @@ S1
 
 > deleteContentBackward
 
-```buffer
+```markdown
 ┃q0
 S1
 
@@ -931,14 +931,14 @@ An empty item can't interrupt a link reference definition (it reads as the parag
 line sets it apart. The seam check took any block starting on its line for it (dev/19-quotes.md §3.2.2).
 
 ```yaml
-tags: edge
+tags: rare
 clipboard: |-
   x
 
   [a]: /u
 ```
 
-```buffer
+```markdown
 - foo┃
 
   - 
@@ -948,7 +948,7 @@ para
 
 > paste
 
-```buffer
+```markdown
 - foo
 
   - x
@@ -966,7 +966,7 @@ A quoted text can't start with spaces after its `> `: the quote's paragraph's pa
 leaves out. Pasted indented lines in a quote lose them on their first line (dev/19-quotes.md §3.2.1).
 
 ```yaml
-tags: edge
+tags: rare
 clipboard: |-
   - x
 
@@ -975,14 +975,14 @@ clipboard: |-
     ```
 ```
 
-```buffer
+```markdown
 > a┃b
 > c
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 > a- x
 
 > \̬```
@@ -997,10 +997,10 @@ Lazy lines that would make a table in the quote make none out of it (CommonMark'
 agrees): no escape on the delimiter row (dev/19-quotes.md §3.2.1).
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 
 > q┃
@@ -1010,7 +1010,7 @@ tags: edge
 
 > indent
 
-```buffer
+```markdown
 - a
 - > q┃
   | a | b |
@@ -1025,11 +1025,11 @@ quote's `>` before it, the paragraph written as itself taking its old container'
 §3.2.2).
 
 ```yaml
-tags: edge
+tags: rare
 quotes: container
 ```
 
-```buffer
+```markdown
 >┃ q
     - a
 1. 
@@ -1037,7 +1037,7 @@ quotes: container
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 ┃q
     - a
 
@@ -1049,11 +1049,11 @@ quotes: container
 An item after the moved one, of its list as it is (`- x` beside `  - b`), isn't lined up with it where that would move its paragraph's line that could start a block (`2) x`): a shift the writer can't write (dev/19-quotes.md §3.2.3).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
   - l┃ong text
   - b
 - x
@@ -1062,7 +1062,7 @@ flavor: obsidian
 
 > moveSubtreeDown
 
-```buffer
+```markdown
   - b
   - l┃ong text
 - x
@@ -1074,11 +1074,11 @@ flavor: obsidian
 A paragraph in a subtree that moves within its container, whose line could start a block once re-indented (`- b` past four columns), is spelled where it lands: the writer lines the subtree up with the list it joins (dev/19-quotes.md §3.2.4).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: commonmark
 ```
 
-```buffer
+```markdown
    - x
 *┃« a
    - b
@@ -1088,7 +1088,7 @@ flavor: commonmark
 
 > moveSubtreeUp
 
-```buffer
+```markdown
    - ┃«a
       - b
             - b
@@ -1101,12 +1101,12 @@ flavor: commonmark
 An item regrouped into a callout behind the paragraph placed there is spelled where it lands, as a placed one is (dev/19-quotes.md §3.2.4).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 quotes: container
 ```
 
-```buffer
+```markdown
 > [!note] T
 ┃«code
  »  - x
@@ -1115,7 +1115,7 @@ quotes: container
 
 > indent
 
-```buffer
+```markdown
 > [!note] T
 > ┃«code
 > - x
@@ -1127,11 +1127,11 @@ quotes: container
 A moved item is never written where the item before it would take it in: `- b` joins `  - x`'s list, but after `* x` at column 0 it goes at column 0, `  - x` lined up with it (dev/19-quotes.md §3.2.3).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: commonmark
 ```
 
-```buffer
+```markdown
   - x
 1. b«
 * x
@@ -1140,7 +1140,7 @@ flavor: commonmark
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 1. b«
 * x
 - b»
@@ -1152,11 +1152,11 @@ flavor: commonmark
 A moved item that would take in the item after it, of another list, goes at that one's column, the item before it not taking it in: lined up with it instead, `- x` would shift, and what follows it with it (dev/19-quotes.md §3.2.3).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: gfm
 ```
 
-```buffer
+```markdown
    - 
 « »     1. x
    - x
@@ -1164,7 +1164,7 @@ flavor: gfm
 
 > outdent
 
-```buffer
+```markdown
    - 
 «   1. »x
    - x
@@ -1175,18 +1175,18 @@ flavor: gfm
 In CommonMark, below a checkbox alone on its line the paragraph the checkbox starts goes on: the next line's spaces are text, not padding, and the line stays as it was (dev/19-quotes.md §3.2.5).
 
 ```yaml
-tags: edge markup-task
+tags: rare markup-task
 flavor: commonmark
 ```
 
-```buffer
+```markdown
 - [x] x┃
        - b
 ```
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 - [x] ┃
        - b
 ```
@@ -1196,11 +1196,11 @@ flavor: commonmark
 A lazy line past spaces, its node moved to another column, is written at its new container's content column: as it was, its spaces would be the item's (dev/19-quotes.md §3.2.4).
 
 ```yaml
-tags: edge markup-task
+tags: rare markup-task
 flavor: commonmark
 ```
 
-```buffer
+```markdown
 1. x«
     - [x]» 
   cont
@@ -1208,7 +1208,7 @@ flavor: commonmark
 
 > outdent
 
-```buffer
+```markdown
 x«
 - [x] 
     cont»
@@ -1219,11 +1219,11 @@ x«
 In CommonMark, which has no tasks, the paragraph a lone checkbox starts goes on below it: `2) x` interrupts nothing and gets no escape (dev/19-quotes.md §3.2.5).
 
 ```yaml
-tags: edge markup-task
+tags: rare markup-task
 flavor: commonmark
 ```
 
-```buffer
+```markdown
 - b c
   - ┃[ ] 
     2) x
@@ -1231,7 +1231,7 @@ flavor: commonmark
 
 > outdent
 
-```buffer
+```markdown
 - b c
 - [ ] 
   ┃2) x
@@ -1242,11 +1242,11 @@ flavor: commonmark
 A setext heading past a checkbox keeps its underline unescaped: the underline is the title's frame (dev/19-quotes.md §3.2.5).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - [x] a
       - lo┃ng text
   - 
@@ -1254,7 +1254,7 @@ flavor: obsidian
 
 > shiftEnter
 
-```buffer
+```markdown
 - [x] a
       - lo
   ┃ng text
@@ -1266,11 +1266,11 @@ flavor: obsidian
 An item isn't lined up further left where the indented block after it (code) would then be its (dev/19-quotes.md §3.2.3).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: commonmark
 ```
 
-```buffer
+```markdown
 1. ┃«x
     - [»x] x
 1. a
@@ -1280,7 +1280,7 @@ flavor: commonmark
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 1. a
 1. ┃«x
     - [»x] x
@@ -1293,11 +1293,11 @@ flavor: commonmark
 The seam check reads an item with no text with its first child's line, which keeps it open past a blank line: the paragraph after it, lazy there, is set off by one (dev/19-quotes.md §3.2.2).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 1. 
     1. x
 
@@ -1309,7 +1309,7 @@ flavor: obsidian
 
 > outdent
 
-```buffer
+```markdown
 1. 
     1. x
 
@@ -1325,12 +1325,12 @@ a
 A paragraph out of its quote into a section: its lazy lines are regular ones there, where `| a |⏎|---|` would make a table, so they are escaped (dev/19-quotes.md §3.2.4).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: gfm
 quotes: container
 ```
 
-```buffer
+```markdown
 ┃> q
 | a |
 |---|
@@ -1338,7 +1338,7 @@ quotes: container
 
 > outdent
 
-```buffer
+```markdown
 ┃q
 | a |
 |\̬---|
@@ -1350,11 +1350,11 @@ quotes: container
 A copy beside its original, at its column, is written as it is, its paragraph's line that could start a block too; and a placed item isn't lined up with the one before it where it needn't be and the shift would carry such a line (dev/19-quotes.md §3.2.3).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
   - b
   - «long text
 - x»
@@ -1363,7 +1363,7 @@ flavor: obsidian
 
 > duplicateSubtree
 
-```buffer
+```markdown
   - b
   - long text
 - x
@@ -1378,11 +1378,11 @@ flavor: obsidian
 A placed item isn't lined up further left where the indented block after it (code) would then be its (dev/19-quotes.md §3.2.3).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: commonmark
 ```
 
-```buffer
+```markdown
 1. x
     - [x] x
 1. a
@@ -1392,7 +1392,7 @@ flavor: commonmark
 
 > duplicateSubtree
 
-```buffer
+```markdown
 1. x
     - [x] x
 1. a
@@ -1407,11 +1407,11 @@ flavor: commonmark
 A setext title can't start with a task's checkbox alone on its line in a flavor with tasks: an empty task there, its next line code. Refused (dev/19-quotes.md §3.2.6).
 
 ```yaml
-tags: edge markup-task
+tags: rare markup-task
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - [x] a┃
       - long text
   - 
@@ -1423,7 +1423,7 @@ flavor: obsidian
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 - [x] a┃
       - long text
   - 
@@ -1434,11 +1434,11 @@ result: rejected not-expressible
 The seam check finds an item a paragraph adopts from beside it where it was: the empty item read as itself, the code after it set off by a blank line (dev/19-quotes.md §3.2.2).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: commonmark
 ```
 
-```buffer
+```markdown
 1. a
 ┃1. x
     - [x] x
@@ -1448,7 +1448,7 @@ flavor: commonmark
 
 > outdent
 
-```buffer
+```markdown
 1. a
 
 ┃x
@@ -1463,14 +1463,14 @@ flavor: commonmark
 In CommonMark the text below a lone checkbox keeps its spaces, as text: the caret after the paste stays in the text (it was past its end, the spaces trimmed as padding) (dev/19-quotes.md §3.2.5).
 
 ```yaml
-tags: edge markup-task
+tags: rare markup-task
 flavor: commonmark
 clipboard: |-
   x
   # y
 ```
 
-```buffer
+```markdown
 1. x
     - [x] 
   cont┃
@@ -1478,7 +1478,7 @@ clipboard: |-
 
 > pastePlain
 
-```buffer
+```markdown
 1. x
     - [x] 
         contx
@@ -1491,11 +1491,11 @@ clipboard: |-
 Enter at a quote's text start under an empty task, in a flavor with tasks: the empty paragraph above it would be the task's first block, but a blank line after an empty task ends it and without one the line is its text. Refused (dev/19-quotes.md §3.2.6).
 
 ```yaml
-tags: edge markup-task
+tags: rare markup-task
 flavor: gfm
 ```
 
-```buffer
+```markdown
 - a
 - [ ] 
   > ┃q
@@ -1508,7 +1508,7 @@ flavor: gfm
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 - a
 - [ ] 
   > ┃q
@@ -1520,11 +1520,11 @@ result: rejected not-expressible
 In CommonMark the checkbox is text, the item not empty: the empty paragraph goes in above the quote, set off from it by a blank line (dev/19-quotes.md §3.2.6).
 
 ```yaml
-tags: edge markup-task
+tags: rare markup-task
 flavor: commonmark
 ```
 
-```buffer
+```markdown
 - a
 - [ ] 
   > ┃q
@@ -1533,7 +1533,7 @@ flavor: commonmark
 
 > enter
 
-```buffer
+```markdown
 - a
 - [ ] 
 
@@ -1549,11 +1549,11 @@ flavor: commonmark
 An item after a moved one isn't lined up with it where it needn't be and the shift would carry its lazy line past spaces (`    1. x` continuing `  1. b`): at column 0 that line would be `b`'s list (dev/19-quotes.md §3.2.3).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: commonmark
 ```
 
-```buffer
+```markdown
 - «a
 2)» a
 1. x
@@ -1563,7 +1563,7 @@ flavor: commonmark
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 ┃«1. x
 - »a
 2. a
@@ -1576,11 +1576,11 @@ flavor: commonmark
 A list of its own after an item, placed in its container, stays where it was, the item before it not taking it in there: nothing after it has to move (dev/19-quotes.md §3.2.3).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: commonmark
 ```
 
-```buffer
+```markdown
    1┃«. x
    1. »b
    - 
@@ -1590,7 +1590,7 @@ flavor: commonmark
 
 > moveSubtreeDown
 
-```buffer
+```markdown
    - 
    1┃«. x
    1. »b
@@ -1603,13 +1603,13 @@ flavor: commonmark
 The indented block after an item, last in a list a block adopts (`listParent: block`), is its section's next node: the item isn't lined up further left, where it would take that block in (dev/19-quotes.md §3.2.3).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: commonmark
 quotes: atom
 listParent: block
 ```
 
-```buffer
+```markdown
     1. a
 1. ┃«x
       - [»x] x
@@ -1620,7 +1620,7 @@ listParent: block
 
 > moveSubtreeDown
 
-```buffer
+```markdown
     1. a
 1. a
 1. ┃«x
@@ -1634,13 +1634,13 @@ listParent: block
 Items moved into a container that would take in the item after them that stays go at that one's column, so it doesn't move (its line `    - x` couldn't) (dev/19-quotes.md §3.2.3).
 
 ```yaml
-tags: edge
+tags: rare
 flavor: gfm
 quotes: atom
 listParent: container
 ```
 
-```buffer
+```markdown
 «   - x
       - x
   »    1. 
@@ -1650,7 +1650,7 @@ listParent: container
 
 > outdent
 
-```buffer
+```markdown
 «x
    - x
    1. »
@@ -1674,7 +1674,7 @@ clipboard: |+
 
 ```
 
-```buffer
+```markdown
 ┃> ab
 ```
 
@@ -1684,7 +1684,7 @@ clipboard: |+
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 ┃> ab
 ```
 
@@ -1701,7 +1701,7 @@ clipboard: |
   - x
 ```
 
-```buffer
+```markdown
 - a
 1. «x»
   1. b
@@ -1709,7 +1709,7 @@ clipboard: |
 
 > paste
 
-```buffer
+```markdown
 - a
 1. x┃
 1. b
@@ -1726,7 +1726,7 @@ tags: rare
 quotes: atom
 ```
 
-```buffer
+```markdown
 - a
 
 > ┃q
@@ -1739,7 +1739,7 @@ quotes: atom
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 - a
 
 > ┃q
@@ -1757,14 +1757,14 @@ clipboard: |
   - →b
 ```
 
-```buffer
+```markdown
 - a┃
   - c
 ```
 
 > paste
 
-```buffer
+```markdown
 - a
   - b┃
   - c
@@ -1783,7 +1783,7 @@ clipboard: |
     x
 ```
 
-```buffer
+```markdown
 100. a
 ┃
   b
@@ -1791,7 +1791,7 @@ clipboard: |
 
 > paste
 
-```buffer
+```markdown
 100. a
 101.
      x┃
@@ -1806,11 +1806,10 @@ on the folded node, never on the last descendant the fold hides.
 
 ```yaml
 tags: rare
-folded: ①
 ```
 
-```buffer
-- a①
+```markdown
+- a①⟦folded⟧
   - b
 ┃
 - c
@@ -1818,7 +1817,7 @@ folded: ①
 
 > deleteSubtree
 
-```buffer
+```markdown
 - ┃c
 ```
 
@@ -1829,11 +1828,10 @@ descendant.
 
 ```yaml
 tags: rare
-folded: ①
 ```
 
-```buffer
-- a①
+```markdown
+- a①⟦folded⟧
   - b
 ┃
 - c
@@ -1841,8 +1839,8 @@ folded: ①
 
 > selectNodeUp
 
-```buffer
-- ┃««a»»
+```markdown
+┃- a⟦folded⟧⟦selected⟧
   - b
 
 - c
@@ -1855,19 +1853,18 @@ one of its hidden children.
 
 ```yaml
 tags: rare
-folded: ①
 ```
 
-```buffer
-- - ┃a①②
+```markdown
+- - ┃a①②⟦folded⟧
   - b
 ```
 
 > selectNodeDown
 
-```buffer
-- - ««a
-  - b»»
+```markdown
+- - a⟦folded⟧⟦selected⟧
+  - b
 ```
 
 ## Regression70
@@ -1879,7 +1876,7 @@ the node above it.
 tags: rare
 ```
 
-```buffer
+```markdown
 - x
 - a
 
@@ -1890,7 +1887,7 @@ tags: rare
 
 > deleteSubtree
 
-```buffer
+```markdown
 - x
 - a┃
 
@@ -1906,21 +1903,21 @@ block is on its marker's line) selects the copy as whole lines.
 tags: rare
 ```
 
-```buffer
+```markdown
 - x
-- - ««a
-  - b»»
+- - a⟦selected⟧
+  - b
 - y
 ```
 
 > duplicateSubtree
 
-```buffer
+```markdown
 - x
 - - a
   - b
-- - ««a
-  - b»»
+- - a⟦selected⟧
+  - b
 - y
 ```
 
@@ -1934,16 +1931,16 @@ tags: rare
 clipboard: 'z'
 ```
 
-```buffer
+```markdown
 - x
-- - ««a
-  - b»»
+- - a⟦selected⟧
+  - b
 - y
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - x
 - - z┃
 - y
@@ -1958,7 +1955,7 @@ line isn't emptied.
 tags: rare
 ```
 
-```buffer
+```markdown
 a
 ⍽«x»⍽
 b
@@ -1966,7 +1963,7 @@ b
 
 > cut
 
-```buffer
+```markdown
 a
 ⍽┃⍽
 b
@@ -1984,13 +1981,13 @@ clipboard: |-
   - b
 ```
 
-```buffer
+```markdown
 \┃
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 \- a
 \̬- b┃
 ```
@@ -2007,7 +2004,7 @@ clipboard: |-
   Email Alex
 ```
 
-```buffer
+```markdown
 - Project
   -  ┃◌
 - Inbox
@@ -2015,7 +2012,7 @@ clipboard: |-
 
 > pastePlain
 
-```buffer
+```markdown
 - Project
   - Call Sam
     Email Alex┃
@@ -2032,7 +2029,7 @@ would reach, so it is lined up with its list, rather than becoming that sibling'
 tags: rare
 ```
 
-```buffer
+```markdown
 - Earlier
 -  ┃Review
   - Detail
@@ -2041,7 +2038,7 @@ tags: rare
 
 > indent
 
-```buffer
+```markdown
 - Earlier
   -  ┃Review
 - Detail
@@ -2056,7 +2053,7 @@ The same item, after the item before it moves up: lined up with the item now bef
 tags: rare
 ```
 
-```buffer
+```markdown
 - Earlier
 -  ┃Review
   - Detail
@@ -2065,7 +2062,7 @@ tags: rare
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 -  ┃Review
 - Earlier
 - Detail
@@ -2082,7 +2079,7 @@ tags: rare
 quotes: atom
 ```
 
-```buffer
+```markdown
 - «>» q
 ```
 
@@ -2102,20 +2099,20 @@ tags: rare
 flavor: obsidian
 ```
 
-```buffer
-««---
-para»»
+```markdown
+---⟦selected⟧
+para⟦selected⟧
 ```
 
 > duplicateSubtree
 
-```buffer
+```markdown
 
 ---
 para
 
-««---
-para»»
+---⟦selected⟧
+para⟦selected⟧
 ```
 
 ## Regression80
@@ -2130,7 +2127,7 @@ clipboard: |
   - →b
 ```
 
-```buffer
+```markdown
 ┃- x
   > - a
     ▸
@@ -2140,7 +2137,7 @@ clipboard: |
 
 > pasteAt
 
-```buffer
+```markdown
 - ┃x
   > - a
   >
@@ -2159,7 +2156,7 @@ item after it, indented two, would reach: lined up with its list, not made its c
 tags: rare
 ```
 
-```buffer
+```markdown
 - Earlier
 -  ┃Review
   - Detail
@@ -2168,7 +2165,7 @@ tags: rare
 
 > shiftEnter
 
-```buffer
+```markdown
 - Earlier
 -
   ┃Review
@@ -2184,7 +2181,7 @@ The same item emptied by Shift-Backspace: its content column narrows too.
 tags: rare
 ```
 
-```buffer
+```markdown
 - Earlier
 -  Review┃
   - Detail
@@ -2193,7 +2190,7 @@ tags: rare
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 - Earlier
 - ┃
 - Detail
@@ -2207,7 +2204,7 @@ those after it. Each goes under the nearest one before it at a shallower level, 
 nothing is left out.
 
 ```yaml
-tags: rare
+tags: common
 clipboard:
   text/plain: |-
     Draft announcement
@@ -2216,13 +2213,13 @@ clipboard:
   text/html: '<p style="mso-list:l0 level2 lfo1"><span style="mso-list:Ignore">o </span>Draft announcement</p><p style="mso-list:l0 level1 lfo1"><span style="mso-list:Ignore">· </span>Send update</p><p style="mso-list:l0 level1 lfo1"><span style="mso-list:Ignore">· </span>Archive notes</p>'
 ```
 
-```buffer
+```markdown
 - Inbox┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - Inbox
 - Draft announcement
 - Send update
@@ -2239,7 +2236,7 @@ spanned.
 tags: rare
 ```
 
-```buffer
+```markdown
 - x┃
   > - a
   >
@@ -2250,7 +2247,7 @@ tags: rare
 
 > outdent
 
-```buffer
+```markdown
 x┃
 > - a
 >
@@ -2273,14 +2270,14 @@ clipboard: |
     x
 ```
 
-```buffer
+```markdown
 - [x]␠
    «    - b»
 ```
 
 > paste
 
-```buffer
+```markdown
 - [x]␠
   x┃
 ```
@@ -2297,13 +2294,13 @@ clipboard:
   text/html: '<p>before<code> a </code>after</p>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 before`  a  `after┃
 ```
 
@@ -2320,13 +2317,13 @@ clipboard:
   text/html: '<p><em>a</em><em>b</em> <em>foo!</em>bar</p>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 *ab* foo!bar┃
 ```
 
@@ -2342,13 +2339,13 @@ clipboard:
   text/html: '<p><a href="/u">x</a> <a href="https://example.com/a&gt;b">y</a></p>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 [x](/u) [y](https://example.com/a>b)┃
 ```
 
@@ -2365,13 +2362,13 @@ clipboard:
   text/html: '<ul><li>Keep ~~draft~~ and %%this%% literal</li></ul>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 - Keep \~\~draft\~\~ and %\%this%\% literal┃
 ```
 
@@ -2385,13 +2382,13 @@ tags: rare
 autoClose: ['```', '~~~', '`']
 ```
 
-```buffer
+```markdown
 a« b »c
 ```
 
 > "\`"
 
-```buffer
+```markdown
 a` « b » `c
 ```
 
@@ -2410,13 +2407,13 @@ clipboard: |-
   y
 ```
 
-```buffer
+```markdown
 - a┃ b
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - ax
 - y┃ b
 ```
@@ -2432,14 +2429,14 @@ those spaces, joining the node to the one above with them, not past them, where 
 tags: rare
 ```
 
-```buffer
+```markdown
 - Parent
 ┃  -  child
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - Parent┃ child
 ```
 
@@ -2453,14 +2450,14 @@ without its placeholder it would continue.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a
   - ┃◌
 ```
 
 > duplicateSubtree
 
-```buffer
+```markdown
 - a
 
   - 
@@ -2474,11 +2471,10 @@ start, the reason the rule's, not the zoom's.
 
 ```yaml
 tags: rare
-zoom: ①
 ```
 
-```buffer
-- top①
+```markdown
+- top①⟦zoomed⟧
   - ┃one
   - two
 - other
@@ -2502,13 +2498,13 @@ clipboard:
   text/html: '<h2>Issue #</h2>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 ## Issue \#┃
 ```
 
@@ -2518,7 +2514,7 @@ Formatting from HTML across a paragraph break: each paragraph's part formatted o
 pair of delimiters across the blank line would be literal.
 
 ```yaml
-tags: rare
+tags: common
 clipboard:
   text/plain: |-
     a
@@ -2527,13 +2523,13 @@ clipboard:
   text/html: '<p><em>a<br><br>b</em></p>'
 ```
 
-```buffer
+```markdown
 ┃
 ```
 
 > paste
 
-```buffer
+```markdown
 *a*
 
 *b*┃
@@ -2546,11 +2542,10 @@ its nearest ancestor left, none at the top level (Logseq, Logseq DB, Tana delete
 
 ```yaml
 tags: rare
-zoom: ①
 ```
 
-```buffer
-- ««top»»①
+```markdown
+- top①⟦zoomed⟧⟦selected⟧
   - one
   - two
 - other
@@ -2558,11 +2553,7 @@ zoom: ①
 
 > deleteContentBackward
 
-```yaml
-zoom: none
-```
-
-```buffer
+```markdown
 - ┃other
 ```
 
@@ -2572,19 +2563,19 @@ A heading alone from HTML, pasted at a text's end: a block, as pasting its Markd
 is, not inline text joined to the text before it (`- here## Title`).
 
 ```yaml
-tags: rare
+tags: common
 clipboard:
   text/plain: 'Title'
   text/html: '<h2>Title</h2>'
 ```
 
-```buffer
+```markdown
 here┃
 ```
 
 > paste
 
-```buffer
+```markdown
 here
 
 ## Title┃
@@ -2599,7 +2590,7 @@ copy takes whole, blank, is empty; part of one is as it is.
 tags: rare
 ```
 
-```buffer
+```markdown
 - a«  »b
 ```
 
@@ -2609,7 +2600,7 @@ tags: rare
 clipboard: "  "
 ```
 
-```buffer
+```markdown
 - a┃b
 ```
 
@@ -2622,7 +2613,7 @@ does: a cut takes it.
 tags: rare
 ```
 
-```buffer
+```markdown
 - al«pha
 »
 ```
@@ -2643,14 +2634,14 @@ holding nothing, the caret to the heading's text.
 tags: rare
 ```
 
-```buffer
+```markdown
 > - ┃◌
 # h
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 # ┃h
 ```
 
@@ -2663,14 +2654,14 @@ item's content column one past it, its later lines with it.
 tags: rare
 ```
 
-```buffer
+```markdown
 -   ┃a
 b
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 -
   ┃a
   b
@@ -2685,7 +2676,7 @@ marker on its line of its own as it was.
 tags: rare enter-in-fence
 ```
 
-````buffer
+````markdown
 -
   ```
   code┃
@@ -2694,7 +2685,7 @@ tags: rare enter-in-fence
 
 > enter
 
-````buffer
+````markdown
 -
   ```
   code
@@ -2712,7 +2703,7 @@ any other character.
 tags: rare
 ```
 
-````buffer
+````markdown
 ```
 😀┃```
 payload
@@ -2721,7 +2712,7 @@ payload
 
 > deleteContentBackward
 
-`````buffer
+`````markdown
 ````
 ┃```
 payload
@@ -2740,13 +2731,13 @@ clipboard: |
   # h
 ```
 
-```buffer
+```markdown
 p┃q
 ```
 
 > paste
 
-```buffer
+```markdown
 ph┃q
 ```
 
@@ -2759,7 +2750,7 @@ marker's line, the line break between them taken.
 tags: rare
 ```
 
-````buffer
+````markdown
 -┃
   ```
   code
@@ -2768,7 +2759,7 @@ tags: rare
 
 > deleteContentForward
 
-````buffer
+````markdown
 - ┃```
   code
   ```
@@ -2780,10 +2771,10 @@ The same item outdented at the top level, from its fence (on a code line Shift-T
 the code a block of its own, the marker's line gone with the marker.
 
 ```yaml
-tags: rare
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 -
   ┃```
   code
@@ -2792,7 +2783,7 @@ tags: rare
 
 > outdent
 
-````buffer
+````markdown
 ┃```
 code
 ```
@@ -2807,7 +2798,7 @@ the host's, as in any markup, not a split of the title it doesn't touch.
 tags: rare
 ```
 
-```buffer
+```markdown
 >┃
 > [!note] Title
 ```
@@ -2828,13 +2819,13 @@ tags: rare
 flavor: gfm
 ```
 
-```buffer
+```markdown
 ┃> [^1]: note
 ```
 
 > duplicateSubtree
 
-```buffer
+```markdown
 > [^1]: note
 > [^1]: ┃note
 ```
@@ -2848,13 +2839,13 @@ padding there, gone.
 tags: rare
 ```
 
-```buffer
+```markdown
 ┃ [a]: /url
 ```
 
 > indent
 
-```buffer
+```markdown
 - ┃[a]: /url
 ```
 
@@ -2870,36 +2861,32 @@ clipboard: |-
   y
 ```
 
-```buffer
+```markdown
 >→-┃
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 >→- x
 >→  y┃
 ```
 
 ## Regression112
 
-Backspace at the text start of an item first in a quote, its text starting `[!type]`: as a paragraph
-first in the quote it would be its callout's title, which GFM's escapes can't keep it from being (Obsidian's write `\[!note]`). Refused.
+Backspace at the text start of an item first in a quote, its text starting `[!type]`, in GFM: the
+item a paragraph of the quote, its text as it was (GFM has no callouts; Obsidian's writes `\[!note]`).
 
 ```yaml
 tags: rare
 flavor: gfm
 ```
 
-```buffer
+```markdown
 > - ┃[!note] title
 ```
 
 > deleteContentBackward
-
-```yaml
-result: rejected not-expressible
-```
 
 ## Regression113
 
@@ -2910,7 +2897,7 @@ the caret is in stays, held, the text otherwise empty.
 tags: rare
 ```
 
-```buffer
+```markdown
 «a
 
 ◌»
@@ -2918,7 +2905,7 @@ tags: rare
 
 > deleteContentBackward
 
-```buffer
+```markdown
 ┃◌
 ```
 
@@ -2936,13 +2923,13 @@ clipboard: |-
   y
 ```
 
-```buffer
+```markdown
 > a┃
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 > ax
 > y┃
 ```
@@ -2956,7 +2943,7 @@ fences grow past it, as a character Backspace deletes there makes them.
 tags: rare
 ```
 
-````buffer
+````markdown
 ```
 «X»```
 PAYLOAD
@@ -2970,7 +2957,7 @@ AFTER
 clipboard: "X"
 ```
 
-`````buffer
+`````markdown
 ````
 ┃```
 PAYLOAD
@@ -2984,10 +2971,10 @@ Backspace of the tab before a code line's backticks, which would make them a fen
 fences grow past it.
 
 ```yaml
-tags: rare
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 ```
 →┃```
 PAYLOAD
@@ -2997,7 +2984,7 @@ AFTER
 
 > deleteContentBackward
 
-`````buffer
+`````markdown
 ````
 ┃```
 PAYLOAD
@@ -3014,7 +3001,7 @@ three columns: the block's fences grow past it.
 tags: rare
 ```
 
-```buffer
+```markdown
 > ```
 >     ┃```
 > PAYLOAD
@@ -3024,7 +3011,7 @@ tags: rare
 
 > deleteContentBackward
 
-````buffer
+````markdown
 > ````
 >    ┃```
 > PAYLOAD
@@ -3040,7 +3027,7 @@ Cmd-Backspace on a code line that would leave a fence: the block's fences grow p
 tags: rare
 ```
 
-````buffer
+````markdown
 ```
 X┃```
 PAYLOAD
@@ -3050,7 +3037,7 @@ AFTER
 
 > deleteSoftLineBackward
 
-`````buffer
+`````markdown
 ````
 ┃```
 PAYLOAD
@@ -3067,7 +3054,7 @@ host's would take, ending the quote and the block.
 tags: rare
 ```
 
-````buffer
+````markdown
 > ```
 > PAYLOAD┃
 > ```
@@ -3076,7 +3063,7 @@ tags: rare
 
 > deleteSoftLineBackward
 
-````buffer
+````markdown
 > ```
 > ┃
 > ```
@@ -3092,7 +3079,7 @@ tags: rare
 clipboard: "```"
 ````
 
-````buffer
+````markdown
 ```
 BEFORE
 ┃
@@ -3103,7 +3090,7 @@ AFTER
 
 > paste
 
-`````buffer
+`````markdown
 ````
 BEFORE
 ```┃
@@ -3123,7 +3110,7 @@ clipboard: |-
   INJECTED
 ````
 
-````buffer
+````markdown
 ```
 BEFORE
 «START
@@ -3135,7 +3122,7 @@ AFTER
 
 > pastePlain
 
-`````buffer
+`````markdown
 ````
 BEFORE
 ```
@@ -3153,7 +3140,7 @@ A space typed over code, which would leave a fence: the block's fences grow past
 tags: rare
 ```
 
-````buffer
+````markdown
 ```
 «X»```
 PAYLOAD
@@ -3163,7 +3150,7 @@ AFTER
 
 > " "
 
-`````buffer
+`````markdown
 ````
  ┃```
 PAYLOAD
@@ -3177,11 +3164,11 @@ A character typed at a closing fence's start, where markup is decorated: it woul
 refused.
 
 ```yaml
-tags: rare
+tags: rare markup-fence
 markup: decorated
 ```
 
-````buffer
+````markdown
 ```
 PAYLOAD
 ┃```
@@ -3201,11 +3188,10 @@ as delete subtree takes them there; the clipboard has them all.
 
 ```yaml
 tags: rare
-folded: ①
 ```
 
-```buffer
-- - ┃a①②
+```markdown
+- - ┃a①②⟦folded⟧
   - SECRET③
 - KEEP④
 ```
@@ -3218,7 +3204,7 @@ clipboard: |
     - SECRET
 ```
 
-```buffer
+```markdown
 - ┃KEEP④
 ```
 
@@ -3232,7 +3218,7 @@ tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 - [?] x┃
 
   - child
@@ -3240,7 +3226,7 @@ flavor: obsidian
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - [?] ┃◌
 
   - child
@@ -3253,10 +3239,10 @@ item's text, its lines two columns in, where the tab spans two columns and makes
 after it a fence: the block's fences grow past them.
 
 ```yaml
-tags: rare
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
 ┃```
 x
@@ -3267,7 +3253,7 @@ y
 
 > indent
 
-`````buffer
+`````markdown
 - a
 - ┃````
   x
@@ -3286,7 +3272,7 @@ the `>` takes; the new paragraph after it, held.
 tags: rare
 ```
 
-```buffer
+```markdown
 >a
 >
 >z
@@ -3295,7 +3281,7 @@ tags: rare
 
 > enter
 
-```buffer
+```markdown
 >a
 >
 >z
@@ -3315,7 +3301,7 @@ clipboard: |
   para
 ```
 
-````buffer
+````markdown
 > ```
 > x
 > ```
@@ -3325,7 +3311,7 @@ clipboard: |
 
 > pasteAt
 
-````buffer
+````markdown
 > ```
 > x
 > ```
@@ -3344,21 +3330,21 @@ the item it is.
 tags: rare
 ```
 
-```buffer
+```markdown
 >- [x] >
  ┃   -
 ```
 
 > deleteContentForward
 
-```buffer
+```markdown
 >- [x] >
  ┃◌  -
 ```
 
 > cursorDocStart
 
-```buffer
+```markdown
 ┃>- [x] >
    -
 ```
@@ -3380,7 +3366,7 @@ now two columns past the item's, escaped where it would open a fence.
 tags: rare
 ```
 
-```buffer
+```markdown
 «x
 >b»
 →~~~
@@ -3388,7 +3374,7 @@ tags: rare
 
 > indent
 
-```buffer
+```markdown
 - «x
 - >b»
   →\̬~~~
@@ -3403,18 +3389,18 @@ blank line: the quote is selected whole, its lines the item's and that blank lin
 tags: rare
 ```
 
-```buffer
-««=
-»»>-
+```markdown
+=⟦selected⟧
+>-
 >
 after
 ```
 
 > selectNodeDown
 
-```buffer
-««=
->-»»
+```markdown
+=⟦selected⟧
+>-⟦selected⟧
 >
 after
 ```
@@ -3428,14 +3414,14 @@ join the item to the one above.
 tags: rare
 ```
 
-```buffer
+```markdown
 - alpha
 - ┃beta
 ```
 
 > deleteByDrag
 
-```buffer
+```markdown
 - alpha
 - ┃beta
 ```
@@ -3450,13 +3436,13 @@ tags: rare
 autoClose: ['```', '~~~', '`']
 ```
 
-````buffer
+````markdown
 a ```x `┃` y``` b
 ````
 
 > deleteContentBackward
 
-````buffer
+````markdown
 a ```x ┃` y``` b
 ````
 
@@ -3470,19 +3456,19 @@ tags: rare
 autoClose: ['```', '~~~', '`']
 ```
 
-```buffer
+```markdown
 a \`┃` b
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 a \┃` b
 ```
 
 > "\`\`"
 
-```buffer
+```markdown
 a \``┃` b
 ```
 
@@ -3496,7 +3482,7 @@ apps keep an emptied heading.
 tags: rare
 ```
 
-```buffer
+```markdown
 Title┃
 ---
 
@@ -3505,7 +3491,7 @@ para
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 ## ┃
 
 para
@@ -3520,7 +3506,7 @@ break, the title the line above it.
 tags: rare
 ```
 
-```buffer
+```markdown
 Ti
 tle┃
 ===
@@ -3528,7 +3514,7 @@ tle┃
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 Ti┃
 ===
 ```
@@ -3539,16 +3525,16 @@ Enter at the end of an ATX title with a closing sequence, the caret before its b
 title's end, an empty paragraph after it, the closing `#`s staying the title's, not the new text.
 
 ```yaml
-tags: rare
+tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 ## title┃ ##
 ```
 
 > enter
 
-```buffer
+```markdown
 ## title ##
 ┃◌
 ```
@@ -3562,7 +3548,7 @@ escaped, not the title's closing sequence.
 tags: rare
 ```
 
-```buffer
+```markdown
 # h
 
 ┃x #
@@ -3570,7 +3556,7 @@ tags: rare
 
 > deleteContentBackward
 
-```buffer
+```markdown
 # h┃x \̬#
 ```
 
@@ -3583,13 +3569,13 @@ tags: rare
 clipboard: "b #"
 ```
 
-```buffer
+```markdown
 # a┃
 ```
 
 > paste
 
-```buffer
+```markdown
 # ab \̬#┃
 ```
 
@@ -3600,18 +3586,18 @@ space goes, as a pasted first line's leading blanks do at a text's start (as pad
 move the item's text past its children's column, which would leave it).
 
 ```yaml
-tags: rare
+tags: common
 clipboard: " x"
 ```
 
-```buffer
+```markdown
 - ┃bravo
   - charlie
 ```
 
 > paste
 
-```buffer
+```markdown
 - x┃bravo
   - charlie
 ```
@@ -3622,18 +3608,18 @@ A plain paste of one line starting with a space at an item's text start: the spa
 several lines.
 
 ```yaml
-tags: rare
+tags: common
 clipboard: " x"
 ```
 
-```buffer
+```markdown
 - ┃bravo
   - charlie
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - x┃bravo
   - charlie
 ```
@@ -3647,7 +3633,7 @@ so the new item would be text: refused.
 tags: rare
 ```
 
-```buffer
+```markdown
 999999999. a┃
 ```
 
@@ -3666,13 +3652,13 @@ the new item numbered after it.
 tags: rare
 ```
 
-```buffer
+```markdown
 007. a┃
 ```
 
 > enter
 
-```buffer
+```markdown
 007. a
 8. ┃
 ```
@@ -3683,10 +3669,10 @@ Tab on a heading after a blank line: it goes into the section above, the blank l
 the two, where the author wrote it, not moving after it.
 
 ```yaml
-tags: rare
+tags: common markup-heading
 ```
 
-```buffer
+```markdown
 ## B
 
 ## ┃C
@@ -3694,7 +3680,7 @@ tags: rare
 
 > indent
 
-```buffer
+```markdown
 ## B
 
 ### ┃C
@@ -3706,10 +3692,10 @@ Shift-Tab on the last heading, after a blank line, the text ending with no line 
 lines move or come at the end.
 
 ```yaml
-tags: rare
+tags: common markup-heading
 ```
 
-```buffer
+```markdown
 # A
 
 ## B
@@ -3719,7 +3705,7 @@ tags: rare
 
 > outdent
 
-```buffer
+```markdown
 # A
 
 ## B
@@ -3733,10 +3719,10 @@ Backspace at a heading's start making it a paragraph, a blank line above it: the
 the text gaining none at its end.
 
 ```yaml
-tags: rare
+tags: common markup-heading
 ```
 
-```buffer
+```markdown
 # h
 
 # ┃n
@@ -3744,7 +3730,7 @@ tags: rare
 
 > deleteContentBackward
 
-```buffer
+```markdown
 # h
 
 ┃n
@@ -3756,10 +3742,10 @@ Backspace in the closing fence of an empty block, the text's last, a blank line 
 goes, the text ending where the paragraph above does, as the block's end did.
 
 ```yaml
-tags: rare
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 alpha
 
 ```
@@ -3768,7 +3754,7 @@ alpha
 
 > deleteContentBackward
 
-```buffer
+```markdown
 alpha┃
 ```
 
@@ -3781,14 +3767,14 @@ on its own line, the blank line above it.
 tags: rare
 ```
 
-```buffer
+```markdown
 
 a┃
 ```
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 
 ┃◌
 ```
@@ -3801,14 +3787,14 @@ Enter on the only item, empty, a blank line above it: a paragraph, held on the i
 tags: rare
 ```
 
-```buffer
+```markdown
 
 - ┃
 ```
 
 > enter
 
-```buffer
+```markdown
 
 ┃◌
 ```
@@ -3823,14 +3809,14 @@ tags: rare enter-in-fence
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 $$
 a┃
 ```
 
 > enter
 
-```buffer
+```markdown
 $$
 a
 ┃
@@ -3845,7 +3831,7 @@ code, as on any code line; the item stays where it is.
 tags: rare
 ```
 
-````buffer
+````markdown
 - a
 -
   ```
@@ -3869,16 +3855,16 @@ tags: rare
 markup: decorated
 ```
 
-````buffer
-««-
+````markdown
+-⟦selected⟧
   ```
   X
-  ```»»
+  ```
 ````
 
 > selectNode
 
-````buffer
+````markdown
 -
   ```
   ┃X
@@ -3894,13 +3880,13 @@ rule (`- --`).
 tags: rare
 ```
 
-```buffer
+```markdown
 -┃-
 ```
 
 > indent
 
-```buffer
+```markdown
 - \̬-┃-
 ```
 
@@ -3915,13 +3901,13 @@ clipboard: |+
 
 ```
 
-```buffer
+```markdown
 →k┃␍    :
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 →k␍┃␍
     :
 ```
@@ -3935,13 +3921,13 @@ paragraph, its ending no LF after the CR.
 tags: rare
 ```
 
-```buffer
+```markdown
 c␍~┃
 ```
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 c
 ┃
 ```
@@ -3955,7 +3941,7 @@ paragraph below: two paragraphs, the blank line between them, the one below as i
 tags: rare
 ```
 
-```buffer
+```markdown
 a␍┃c
 
 c
@@ -3963,7 +3949,7 @@ c
 
 > shiftEnter
 
-```buffer
+```markdown
 a␍␍┃c
 
 c
@@ -3984,7 +3970,7 @@ clipboard: |-
   p2
 ```
 
-```buffer
+```markdown
 - Project
   -  ┃◌
 - Inbox
@@ -3992,7 +3978,7 @@ clipboard: |-
 
 > paste
 
-```buffer
+```markdown
 - Project
   - line one
     line two
@@ -4011,14 +3997,14 @@ text's.
 tags: rare
 ```
 
-```buffer
+```markdown
 >2) a
  ~┃
 ```
 
 > outdent
 
-```buffer
+```markdown
 2) a
     ~┃
 ```
@@ -4032,14 +4018,14 @@ two one item, its later line, lazy, at the item's column now, not the column the
 tags: rare
 ```
 
-```buffer
+```markdown
 ┃1.  - d
 e
 ```
 
 > deleteContentBackward
 
-```buffer
+```markdown
 1. ┃d
    e
 ```
@@ -4057,14 +4043,14 @@ clipboard: |+
 
 ```
 
-```buffer
+```markdown
 -  y┃x
   y
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 -  y
 - ┃x
     y
@@ -4080,7 +4066,7 @@ tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 >[!e]«
 »a
 b
@@ -4101,14 +4087,14 @@ the space before its `>` gone, which as the item's padding would leave its later
 tags: rare
 ```
 
-```buffer
+```markdown
  >┃a
 >b
 ```
 
 > indent
 
-```buffer
+```markdown
 - >┃a
   >b
 ```
@@ -4123,21 +4109,21 @@ be the first's child).
 tags: rare
 ```
 
-```buffer
-««  - a
-  - b
-- c»»
+```markdown
+  - a⟦selected⟧
+  - b⟦selected⟧
+- c⟦selected⟧
 ```
 
 > duplicateSubtree
 
-```buffer
+```markdown
   - a
   - b
 - c
-- ««a
-- b
-- c»»
+- a⟦selected⟧
+- b⟦selected⟧
+- c⟦selected⟧
 ```
 
 ## Regression164
@@ -4146,10 +4132,10 @@ Tab on a fence between an empty item and an item indented two columns: an item, 
 the item below it lined up with it, which, as it was, would be its child.
 
 ```yaml
-tags: rare
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 -
 ┃```
 ```
@@ -4158,7 +4144,7 @@ tags: rare
 
 > indent
 
-````buffer
+````markdown
 -
 - ┃```
   ```
@@ -4175,13 +4161,13 @@ tags: rare
 flavor: gfm
 ```
 
-```buffer
+```markdown
 ┃[^1]:>
 ```
 
 > indent
 
-```buffer
+```markdown
 - [^1]:┃>
 ```
 
@@ -4196,14 +4182,14 @@ tags: rare
 quotes: container
 ```
 
-```buffer
+```markdown
 >┃a
 =
 ```
 
 > duplicateSubtree
 
-```buffer
+```markdown
 >a
 =
 >
@@ -4220,7 +4206,7 @@ line without those spaces, which there would make it the last item's content.
 tags: rare
 ```
 
-```buffer
+```markdown
   ┃e
 - g
   >y
@@ -4228,7 +4214,7 @@ tags: rare
 
 > duplicateSubtree
 
-```buffer
+```markdown
   e
 - g
   >y
@@ -4245,10 +4231,10 @@ the heading's section, the paragraph after it without those spaces, which there 
 item's.
 
 ```yaml
-tags: rare
+tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 - # ┃g
   e
 #
@@ -4257,7 +4243,7 @@ tags: rare
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 #
 - # ┃g
   e
@@ -4277,14 +4263,14 @@ clipboard: |
   x
 ```
 
-```buffer
+```markdown
 - [a]:u┃
 T
 ```
 
 > paste
 
-```buffer
+```markdown
 - [a]:u
   - x┃
 
@@ -4303,7 +4289,7 @@ clipboard: |
   -␠
 ```
 
-```buffer
+```markdown
 1.
 10. c┃
    a
@@ -4311,7 +4297,7 @@ clipboard: |
 
 > paste
 
-```buffer
+```markdown
 1.
 2. c
       a
@@ -4327,14 +4313,14 @@ quote, the paragraph the quote's, its `>` now on its line, which the definition'
 tags: rare
 ```
 
-```buffer
+```markdown
 >[a]:u┃
 b
 ```
 
 > outdent
 
-```buffer
+```markdown
 [a]:u┃
 > b
 ```
@@ -4349,13 +4335,13 @@ the tab past them.
 tags: rare
 ```
 
-```buffer
+```markdown
 >>-→┃]
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 >>-
 >>→ ┃]
 ```
@@ -4370,14 +4356,14 @@ past the marker no longer the item's).
 tags: rare
 ```
 
-```buffer
+```markdown
 ┃ > +→]
 `
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
  > +
  >   ┃]
  >   `
@@ -4392,14 +4378,14 @@ the list's bullet, written over its own on that line.
 tags: rare
 ```
 
-```buffer
+```markdown
 + b
 - - ┃c
 ```
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 + - ┃c
 + b
 ```
@@ -4413,14 +4399,14 @@ over the old one on that line.
 tags: rare
 ```
 
-```buffer
+```markdown
 1. a
 2. - ┃b
 ```
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 1. - ┃b
 2. a
 ```
@@ -4436,14 +4422,14 @@ tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 >
 >[!e]┃a
 ```
 
 > shiftEnter
 
-```buffer
+```markdown
 >
 >[!e]
 >┃a
@@ -4459,14 +4445,14 @@ tags: rare
 clipboard: "x"
 ```
 
-```buffer
- ««b»»
+```markdown
+ b⟦selected⟧
 ␠
 ```
 
 > pastePlain
 
-```buffer
+```markdown
  x┃
 ␠
 ```
@@ -4481,13 +4467,13 @@ tags: rare
 autoClose: ['```', '~~~', '`']
 ```
 
-```buffer
+```markdown
  ┃`
 ```
 
 > "\`\`\`"
 
-````buffer
+````markdown
 ```┃
 `̬`̬`̬
 ````
@@ -4501,7 +4487,7 @@ the rule's character (`- ---` would read as one rule).
 tags: rare
 ```
 
-```buffer
+```markdown
 - a
   ▸
 ---┃①
@@ -4509,7 +4495,7 @@ tags: rare
 
 > moveSubtree ①
 
-```buffer
+```markdown
 - a
   * ---┃①
 ```
@@ -4524,7 +4510,7 @@ its padding, so it stays out of the item.
 tags: rare
 ```
 
-```buffer
+```markdown
 1. a┃
 10. b
 
@@ -4533,7 +4519,7 @@ tags: rare
 
 > cut
 
-```buffer
+```markdown
 1. ┃b
 
 c
@@ -4549,14 +4535,14 @@ of that paragraph, which no definition starts, unescaped.
 tags: rare
 ```
 
-```buffer
+```markdown
 [a]
 [a]:s┃
 ```
 
 > indent
 
-```buffer
+```markdown
 - [a]
   [a]:s┃
 ```
@@ -4571,7 +4557,7 @@ out of it, a paragraph now, would go on; a blank line sets it apart.
 tags: rare
 ```
 
-```buffer
+```markdown
 [a]:u
 -
 - b┃
@@ -4579,7 +4565,7 @@ tags: rare
 
 > outdent
 
-```buffer
+```markdown
 [a]:u
 -
 
@@ -4597,14 +4583,14 @@ tags: rare
 flavor: gfm
 ```
 
-```buffer
+```markdown
 >[^1]: a
 >     #t┃
 ```
 
 > outdent
 
-```buffer
+```markdown
 [^1]: a
     #t┃
 ```
@@ -4616,10 +4602,10 @@ line between them quoted, the caret on it, the lines after it still quoted, as t
 keep them. Typed on, the two are one text again; Backspace on that line joins them back too.
 
 ```yaml
-tags: rare
+tags: common
 ```
 
-```buffer
+```markdown
 > a
 > b┃
 > c
@@ -4627,7 +4613,7 @@ tags: rare
 
 > shiftEnter
 
-```buffer
+```markdown
 > a
 > b
 > ┃
@@ -4636,7 +4622,7 @@ tags: rare
 
 > "x"
 
-```buffer
+```markdown
 > a
 > b
 > x┃
@@ -4645,7 +4631,7 @@ tags: rare
 
 > deleteContentBackward
 
-```buffer
+```markdown
 > a
 > b
 > ┃
@@ -4654,7 +4640,7 @@ tags: rare
 
 > deleteContentBackward
 
-```buffer
+```markdown
 > a
 > b┃
 > c
@@ -4670,7 +4656,7 @@ quoted blank line joins them, the quote the item's text again.
 tags: rare
 ```
 
-```buffer
+```markdown
 - > a
   > b┃
   > c
@@ -4678,7 +4664,7 @@ tags: rare
 
 > shiftEnter
 
-```buffer
+```markdown
 - > a
   > b
   > ┃
@@ -4687,7 +4673,7 @@ tags: rare
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - > a
   > b┃
   > c
@@ -4703,14 +4689,14 @@ would span four columns there.
 tags: rare
 ```
 
-```buffer
+```markdown
 >>┃=
 >→e
 ```
 
 > outdent
 
-```buffer
+```markdown
 >┃=
   e
 ```
@@ -4724,14 +4710,14 @@ leaves the quote with its payload as it was, each tab the spaces it spanned wher
 tags: rare
 ```
 
-```buffer
+```markdown
 >→→%
 ┃
 ```
 
 > outdent
 
-```buffer
+```markdown
       %
 ┃
 ```
@@ -4745,13 +4731,13 @@ the spaces that tab's rest spanned (a tab there would span four columns, the quo
 tags: rare
 ```
 
-```buffer
+```markdown
 >→> ┃q
 ```
 
 > outdent
 
-```buffer
+```markdown
   > ┃q
 ```
 
@@ -4764,13 +4750,13 @@ empty item goes there, the marker's tab kept, and the text's item below it, at t
 tags: rare
 ```
 
-```buffer
+```markdown
 -→- ┃->
 ```
 
 > enter
 
-```buffer
+```markdown
 -→- ┃
     - ->
 ```
@@ -4785,15 +4771,15 @@ flavor: obsidian
 tags: rare
 ```
 
-```buffer
-1. > [!note] ««T»»
+```markdown
+1. > [!note] T⟦selected⟧
 ```
 
 > duplicateSubtree
 
-```buffer
+```markdown
 1. > [!note] T
-2. > [!note] ««T»»
+2. > [!note] T⟦selected⟧
 ```
 
 ## Regression191
@@ -4807,7 +4793,7 @@ quotes: text
 tags: rare
 ```
 
-```buffer
+```markdown
 > ## h
   ---
 ┃
@@ -4816,7 +4802,7 @@ tags: rare
 
 > indent
 
-```buffer
+```markdown
 > ## h
 >
 >   ---
@@ -4834,7 +4820,7 @@ code.
 tags: rare
 ```
 
-````buffer
+````markdown
 - a┃
 
   b
@@ -4843,7 +4829,7 @@ tags: rare
 
 > duplicateSubtree
 
-````buffer
+````markdown
 - a
 
   b
@@ -4863,14 +4849,14 @@ line, after a space, the text's first line (right after the marker, the line wou
 tags: rare
 ```
 
-```buffer
+```markdown
 1.┃
    b
 ```
 
 > "z"
 
-```buffer
+```markdown
 1. z┃
    b
 ```
@@ -4884,7 +4870,7 @@ the subtree, the fence taking no blank line from it, which would be a line of it
 tags: rare
 ```
 
-````buffer
+````markdown
 - a┃
 
   b
@@ -4895,8 +4881,8 @@ tags: rare
 
 > enter
 
-````buffer
-- a
+````markdown
+- a⟦folded⟧
 
   b
   ```
@@ -4912,10 +4898,10 @@ take the next quote in.
 ```yaml
 flavor: obsidian
 quotes: text
-tags: rare
+tags: rare markup-heading
 ```
 
-```buffer
+```markdown
 > ┃## h
 >
 > p
@@ -4925,7 +4911,7 @@ tags: rare
 
 > duplicateSubtree
 
-```buffer
+```markdown
 > ## h
 >
 > p
@@ -4947,14 +4933,14 @@ flavor: obsidian
 tags: rare
 ```
 
-```buffer
+```markdown
 1. > [!note] ┃T
 2. > [!note] U
 ```
 
 > deleteSubtree
 
-```buffer
+```markdown
 1. > [!note] ┃U
 ```
 
@@ -4964,17 +4950,17 @@ A paste of one line over a text's first word: the blank after the word stays, th
 the word's place (deleting the word alone takes the blank, a text starting with none).
 
 ```yaml
-tags: rare
+tags: common
 clipboard: "Q"
 ```
 
-```buffer
+```markdown
 «p» qx
 ```
 
 > paste
 
-```buffer
+```markdown
 Q┃ qx
 ```
 
@@ -4992,14 +4978,14 @@ clipboard: |-
   # h
 ```
 
-```buffer
+```markdown
 >[a]:u┃
 b
 ```
 
 > paste
 
-```buffer
+```markdown
 >[a]:u
 > x
 >
@@ -5020,7 +5006,7 @@ flavor: obsidian
 tags: rare
 ```
 
-```buffer
+```markdown
 ◌
 # h
 > - ◌
@@ -5029,11 +5015,2149 @@ tags: rare
 
 > deleteSoftLineBackward
 
-```buffer
+```markdown
 # h
 > -␠
 > ^x
 ```
+
+```yaml
+result: rejected not-expressible
+```
+
+## Regression200
+
+Backspace at the start of a quote read as an atom, right after a folded item: the quote joins the
+folded item's text, the text the reader sees above it, not its hidden child's (as Fold15); the fold
+stays.
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+- parent①⟦folded⟧
+  - child
+
+┃> quote
+```
+
+> deleteContentBackward
+
+```markdown
+- parent┃> quote①⟦folded⟧
+  - child
+```
+
+## Regression201
+
+Backspace at the opening fence of an item whose text is code, right after a folded item: the code
+goes to the folded item, the one the reader sees above it, after its children, not under its hidden
+child; what the fold hides changed, so it opens (as Fold15b).
+
+```yaml
+tags: rare markup-fence
+```
+
+````markdown
+- parent①⟦folded⟧
+  - child
+- ┃```
+  code
+  ```
+````
+
+> deleteContentBackward
+
+````markdown
+- parent┃
+  - child
+  ```
+  code
+  ```
+````
+
+## Regression202
+
+Delete at the end of a folded item whose text is a quote read as an atom: its first child is hidden,
+so nothing joins (as Fold7).
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+- > quote┃①⟦folded⟧
+  - child
+- next
+```
+
+> deleteContentForward
+
+```yaml
+result: rejected folded
+```
+
+## Regression203
+
+Enter after the closing fence of a folded item whose text is code: a new item after its subtree, not
+a first child among the hidden ones; the fold stays (as Fold1). The same for a table's last row and,
+with `enterInQuote: split`, a quote read as an atom.
+
+```yaml
+tags: rare markup-fence
+```
+
+````markdown
+- ```①⟦folded⟧
+  code
+  ```┃
+  - child
+- next
+````
+
+> enter
+
+````markdown
+- ```①⟦folded⟧
+  code
+  ```
+  - child
+- ┃
+- next
+````
+
+## Regression204
+
+```yaml
+tags: rare
+```
+
+```markdown
+- | A |①⟦folded⟧
+  | - |┃
+  - child
+- next
+```
+
+> enter
+
+```markdown
+- | A |①⟦folded⟧
+  | - |
+  - child
+- ┃
+- next
+```
+
+## Regression205
+
+```yaml
+tags: rare
+quotes: atom
+enterInQuote: split
+```
+
+```markdown
+- > quote┃①⟦folded⟧
+  - child
+- next
+```
+
+> enter
+
+```markdown
+- > quote①⟦folded⟧
+  - child
+- ┃
+- next
+```
+
+## Regression206
+
+Shift-Enter at the end of a folded item: the new line is a line of the item's text, held by a
+placeholder, on the row the fold shows, so the fold stays closed and typing goes on the new line.
+
+```yaml
+tags: common
+```
+
+```markdown
+- parent┃①⟦folded⟧
+  - child
+- next
+```
+
+> shiftEnter "x"
+
+```markdown
+- parent①⟦folded⟧
+  x┃
+  - child
+- next
+```
+
+## Regression207
+
+Enter in a folded paragraph that has a list, with `enterMidItem: child`: the option is an item's, so
+the paragraph splits as it does with any `enterMidItem`, its rest taking the list and the fold.
+
+```yaml
+tags: rare
+enterMidItem: child
+```
+
+```markdown
+hello ┃world①⟦folded⟧
+- child
+```
+
+> enter
+
+```markdown
+hello␠
+
+┃world②⟦folded⟧
+- child
+```
+
+## Regression208
+
+Zoomed into an item, a move that writes no characters, two identical items swapped, would take the
+root out of its place: refused, as any move of the root is.
+
+```yaml
+tags: rare
+```
+
+```markdown
+- a┃①⟦zoomed⟧
+- a
+```
+
+> moveSubtreeDown
+
+```yaml
+result: rejected outside-zoom
+```
+
+## Regression209
+
+Zoomed into code where markup is decorated, the caret entering the zoom goes to the code's first
+character, not onto its opening fence, which is markup.
+
+```yaml
+tags: rare
+markup: decorated
+```
+
+````markdown
+┃p
+
+```②
+x
+```
+````
+
+> zoomIn ②
+
+````markdown
+p
+
+```②⟦zoomed⟧
+┃x
+```
+````
+
+## Regression210
+
+Backspace on the blank line after a folded item's hidden last line: the host's default would delete
+the line break and leave the caret at the end of the hidden line; ourus deletes it and puts the
+caret at the end of the folded row, where the reader sees it, the fold kept.
+
+```yaml
+tags: common
+```
+
+```markdown
+- a①⟦folded⟧
+  - b
+┃
+```
+
+> deleteContentBackward
+
+```markdown
+- a┃①⟦folded⟧
+  - b
+```
+
+## Regression211
+
+A cut of the paragraph above a fenced code block, nothing above it: the caret goes before the
+opening fence, not to the code's first line, where the next paste, the cut put back, would become
+code. Math's `$$` and a comment's `%%` the same.
+
+```yaml
+tags: common markup-fence
+```
+
+````markdown
+«first
+
+»```
+code
+```
+````
+
+> cut
+
+````markdown
+┃```
+code
+```
+````
+
+## Regression212
+
+A caret alone in a one-paragraph quote copies the quote, its `>` with it: the quote is the node's own
+text (`quotes: text`, the default), as a callout's is (Copy8). The paragraph's text alone lost the
+first line's `>` and pasted unquoted.
+
+```yaml
+tags: common
+```
+
+```markdown
+> a ┃quote
+> more
+```
+
+> copy
+
+```yaml
+clipboard:
+  text/plain: |
+    > a quote
+    > more
+```
+
+## Regression213
+
+With `quotes: atom`, the copy kept the `>` of every line but the first, which pasted as a paragraph
+and a quote after it.
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+> a ┃quote
+> over two lines
+```
+
+> copy
+
+```yaml
+clipboard:
+  text/plain: |
+    > a quote
+    > over two lines
+```
+
+## Regression214
+
+A plain paste of several lines right at a block id's `^`: what is pasted goes before the id, a blank
+between, as typing puts it there, the id ending the last line. Left to the host, the last line was
+glued to it (`b^blk`), no block id any more.
+
+```yaml
+tags: rare
+flavor: obsidian
+clipboard: |-
+  a
+  b
+```
+
+```markdown
+Final ┃^blk
+```
+
+> pastePlain
+
+```markdown
+Final a
+b┃ ^blk
+```
+
+## Regression215
+
+A paste of a list with the caret at the end of a paragraph that ends in a block id: the list goes after
+the paragraph, as without the id. Left to the host, it was written after the id on its line, the id
+text and the list no list.
+
+```yaml
+tags: common
+flavor: obsidian
+clipboard: |-
+  - x
+  - y
+```
+
+```markdown
+Final ^blk┃
+```
+
+> paste
+
+```markdown
+Final ^blk
+
+- x
+- y┃
+```
+
+## Regression216
+
+Backspace before the `>` of a callout that is a list item's first block: its `[!type]` goes as a
+unit, as at the top level (Quote57), the title the quote's first paragraph, a quoted blank line
+before the body. The writer couldn't write the quote's line, whose `>` and the item's marker were
+its title's, once the title was a paragraph of it.
+
+```yaml
+tags: rare
+flavor: obsidian
+quotes: container
+```
+
+```markdown
+x
+
+- ┃> [!note] Title
+  > body text
+```
+
+> deleteContentBackward
+
+```markdown
+x
+
+- > ┃Title
+  >
+  > body text
+```
+
+## Regression217
+
+Enter at the end of the first line of a two-line quote that is an item's text, a blank line after the
+item: the quote becomes two paragraphs, the item's text none now, and the blank line after it the
+quote's last paragraph's. Left on the item, which has no text any more, the write failed.
+
+```yaml
+tags: rare
+```
+
+```markdown
+- > quote┃
+  > more
+
+x
+```
+
+> enter
+
+```markdown
+- > quote
+  > ┃
+  > more
+
+x
+```
+
+## Regression218
+
+Shift-Enter on the quoted blank line between a quote's two paragraphs, written `>` as the writer
+writes it, the caret after the `>`: another quoted blank line, the caret on it at the text's column.
+The caret wasn't taken to be at the text's column (the space after `>` missing), so the key was the
+host's, whose plain line break ended the quote.
+
+```yaml
+tags: rare
+quotes: container
+```
+
+```markdown
+> bo
+>┃
+> dy
+```
+
+> shiftEnter
+
+```markdown
+> bo
+>
+> ┃
+> dy
+```
+
+## Regression219
+
+Where markup is decorated, Backspace inside a checkbox, right after its character, deletes that
+character, the brackets staying, as where markup is text (TaskBackspace8); and a character typed
+there makes it a task again. It took the whole checkbox before.
+
+```yaml
+tags: rare markup-task
+markup: decorated
+```
+
+```markdown
+- [x┃] task
+```
+
+> deleteContentBackward
+
+```markdown
+- [┃] task
+```
+
+> "x"
+
+```markdown
+- [x┃] task
+```
+
+## Regression220
+
+A section moved above an earlier one whose subsections are the same (a duplicated section, renamed):
+the write was refused, the earlier section's paragraph read back as the moved one's. The change
+replacing the lines from the start put the earlier subsection's old start inside the text it
+replaced, which maps to the change's end, where that subsection was written now by chance: taken as
+carried there, its descendants weren't named, and the line-by-line read gave them the other's ids.
+
+```yaml
+tags: common
+```
+
+```markdown
+# Old①
+## B
+x
+## C
+# New┃②
+## B
+x
+## C
+```
+
+> moveSubtreeUp
+
+```markdown
+# New┃②
+## B
+x
+## C
+# Old①
+## B
+x
+## C
+```
+
+## Regression221
+
+Deleting the last item of a loose list, a table after the list: the blank line that set the list off
+from the table stays, now the item above's. It went with the item, the table's first line then a
+lazy line of the item's text, and the write failed (a heading or code after it lost the blank line).
+
+```yaml
+tags: common
+flavor: gfm
+```
+
+```markdown
+- b
+
+  c
+- d┃
+
+| a |
+| - |
+```
+
+> deleteSubtree
+
+```markdown
+- b
+
+  c┃
+
+| a |
+| - |
+```
+
+## Regression222
+
+Backspace at the end of an empty code block's closing fence, the block holding the list after it
+(`listParent: block`): the block goes, its list staying in its place. The list went with it.
+
+```yaml
+tags: rare markup-fence
+listParent: block
+```
+
+````markdown
+```js
+```┃
+- keep
+
+q
+````
+
+> deleteContentBackward
+
+````markdown
+- ┃keep
+
+q
+````
+
+## Regression223
+
+Tab on a table with text of a cell selected: the table is an item's text, and the selection stays on
+that text. It went to the paragraph after the table: the ends of a selection in a block of lines were
+mapped by where they were, which the table, written again, no longer is.
+
+```yaml
+tags: rare
+flavor: gfm
+```
+
+```markdown
+| «Al»pha | Bravo |
+| --- | --- |
+
+After words
+```
+
+> indent
+
+```markdown
+- | «Al»pha | Bravo |
+  | --- | --- |
+
+After words
+```
+
+## Regression224
+
+Shift-Tab on the paragraph of a quote that is an item's first block, text of it selected: the
+paragraph is the item's text, and the selection stays on it. It was a caret at its start.
+
+```yaml
+tags: rare
+quotes: container
+```
+
+```markdown
+- > a«bc»d
+```
+
+> outdent
+
+```markdown
+- a«bc»d
+```
+
+## Regression225
+
+Where markup is decorated, Escape over an empty code block whose code is a blank line puts the caret
+on that line, where typing is code. It went to the opening fence's end, markup, where typing went
+into its info string.
+
+```yaml
+tags: rare markup-fence
+markup: decorated
+```
+
+````markdown
+«```
+
+```»
+````
+
+> selectNode
+
+````markdown
+```
+┃
+```
+````
+
+## Regression226
+
+Enter at the end of a task in a quote read as an atom: the new quoted item is a task too, unchecked,
+as a task's new item is (`enterTask: continue`); on an empty task, the line leaves the list. The
+checkbox wasn't read as part of the marker. Obsidian and SilverBullet do the same.
+
+```yaml
+tags: rare markup-task
+quotes: atom
+```
+
+```markdown
+> - [x] task┃
+```
+
+> enter
+
+```markdown
+> - [x] task
+> - [ ] ┃
+```
+
+> enter
+
+```markdown
+> - [x] task
+> ┃
+```
+
+## Regression227
+
+Enter on an empty nested item of a quoted list (`quotes: atom`): it becomes its parent's sibling, as
+in Obsidian and SilverBullet; it left the list.
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+> - parent
+>   - ┃
+```
+
+> enter
+
+```markdown
+> - parent
+> - ┃
+```
+
+## Regression228
+
+Backspace at the start of a two-line quote read as an atom, below an ATX heading: refused, an ATX
+title holds one line, as for a two-line paragraph there. The heading was escaped into a paragraph
+with the quote's lines.
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+# Heading
+
+┃> first
+> second
+```
+
+> deleteContentBackward
+
+```yaml
+result: rejected not-expressible
+```
+
+## Regression229
+
+Delete at the end of a quote read as an atom, a heading below it: the heading's marks go first, as
+after any text (`headingEditing: text`). The heading joined the quote, its `#` text.
+
+```yaml
+tags: rare
+quotes: atom
+markup: decorated
+```
+
+```markdown
+> quote┃
+
+# Heading
+```
+
+> deleteContentForward
+
+```markdown
+> quote┃
+
+Heading
+```
+
+## Regression230
+
+Delete at the end of a quote read as an atom, a task below it: the task's text joins, its checkbox
+going with its marker (tasks.md rule 4), and an empty task just goes. The checkbox was joined as text.
+
+```yaml
+tags: rare
+quotes: atom
+markup: decorated
+```
+
+```markdown
+> quote┃
+
+- [ ] task
+```
+
+> deleteContentForward
+
+```markdown
+> quote┃task
+```
+
+## Regression231
+
+A paste at the start of a table: the nodes go as at a text's start, after it (`pasteAtTextStart:
+after`, the default), or before it, which puts a cut back where it was. It was refused, a table's
+row holding one line; at a rule, HTML or a footnote's text, the host's, whose text before a rule
+made it a setext underline.
+
+```yaml
+tags: rare
+flavor: gfm
+pasteAtTextStart: before
+clipboard: |
+  first
+```
+
+```markdown
+┃| a | b |
+|---|---|
+```
+
+> paste
+
+```markdown
+first┃
+
+| a | b |
+|---|---|
+```
+
+## Regression232
+
+`joinWithChildren: refuse` holds for an item whose text is a quote read as an atom: Backspace at
+its start would lift its child to its own level, as a paragraph item's join would, which refuses.
+It was joined, the child lifted.
+
+```yaml
+tags: rare
+quotes: atom
+joinWithChildren: refuse
+```
+
+```markdown
+- parent
+  - ┃> quote
+    - child
+```
+
+> deleteContentBackward
+
+```markdown
+- parent
+  - ┃> quote
+    - child
+```
+
+## Regression233
+
+`joinWithChildren: refuse` holds where the text joins an empty task above, its parent: its own
+child would be lifted. It was joined, the grandchild lifted.
+
+```yaml
+tags: rare
+joinWithChildren: refuse
+```
+
+```markdown
+- [ ] 
+  - ┃child
+    - grandchild
+```
+
+> deleteContentBackward
+
+```markdown
+- [ ] 
+  - ┃child
+    - grandchild
+```
+
+## Regression234
+
+`backspaceAtItemStart: logseq`: the number goes first for an item whose text is a quote, as for a
+paragraph item. It was joined into the parent.
+
+```yaml
+tags: rare
+quotes: atom
+backspaceAtItemStart: logseq
+```
+
+```markdown
+- parent
+  1. ┃> quote
+```
+
+> deleteContentBackward
+
+```markdown
+- parent
+  - ┃> quote
+```
+
+## Regression235
+
+`emptyItemWithChildren: refuse` holds where an empty task goes into a quote above: its child would
+take its place. It was removed, the child lifted.
+
+```yaml
+tags: rare markup-task
+quotes: atom
+emptyItemWithChildren: refuse
+taskEditing: block
+```
+
+```markdown
+> quote
+
+- [ ] ┃
+  - child
+```
+
+> deleteContentBackward
+
+```markdown
+> quote
+
+- [ ] ┃
+  - child
+```
+
+## Regression236
+
+A paste over selected whole nodes puts the caret as `quirkPasteCaret` says: at the first pasted
+node's end with `roam`. It was always at the last one's end.
+
+```yaml
+tags: rare
+quirkPasteCaret: roam
+clipboard: |
+  - x
+  - y
+```
+
+```markdown
+- «a
+- b»
+- c
+```
+
+> paste
+
+```markdown
+- x┃
+- y
+- c
+```
+
+## Regression237
+
+Enter between bold's closing stars, then Backspace, gives the bold back: the backslash the split
+gave the new item's `*` (which alone would read as a marker) is ours, and goes where the two texts
+join again. It stayed, the bold broken for good. Roam, WorkFlowy, Dynalist and Tine join so.
+
+```yaml
+tags: rare
+```
+
+```markdown
+- **bold*┃*
+```
+
+> enter deleteContentBackward
+
+```markdown
+- **bold*┃*
+```
+
+## Regression238
+
+Backspace inside `$$┃$$` in GFM is one character: the flavor reads no math, so the four are text,
+which typing pairs none of. It took three, as an empty pair of ours.
+
+```yaml
+tags: rare
+flavor: gfm
+```
+
+```markdown
+p $$┃$$
+```
+
+> deleteContentBackward
+
+```markdown
+p $┃$$
+```
+
+## Regression239
+
+The third backtick in a one-line quote opens a closed block, as everywhere else: the quote holds it.
+It was the host's, unclosed, the quote's lines below it code.
+
+```yaml
+tags: rare
+```
+
+````markdown
+> ``┃
+````
+
+> "\`"
+
+````markdown
+> ```┃
+> `̬`̬`̬
+````
+
+## Regression240
+
+`<!--` typed alone on a line is a comment, closed, the closer ours; typing `-->` steps over it.
+It was typed after it, `<!---->-->`.
+
+```yaml
+tags: rare markup-fence
+```
+
+```markdown
+┃
+```
+
+> "<" "!" "-" "-" "-" "-" ">"
+
+```markdown
+<!---->┃
+```
+
+## Regression241
+
+Expand selection never shrinks what is selected: the blank line selected after `p` is past `p`'s
+own range, so the next rung, both paragraphs, is taken. It selected `p` and one line break.
+
+```yaml
+tags: rare
+```
+
+```markdown
+p«
+
+»q
+```
+
+> expandSelection
+
+```markdown
+p⟦selected⟧
+
+q⟦selected⟧
+```
+
+## Regression242
+
+Indent of a paragraph that is a checkbox alone, a list after it apart: an item, the checkbox its
+text, the list its children. It was refused, the writer asked for a placeholder `- [x]` needs no
+more than `- [x] a` does: with no blank after the box, the line is the item's text.
+
+```yaml
+tags: rare
+```
+
+```markdown
+[x]┃
+
+- a
+```
+
+> indent
+
+```markdown
+- [x]┃
+
+  - a
+```
+
+## Regression243
+
+Enter in a quoted numbered list counts the items after it on, as Obsidian and SilverBullet do. Their
+numbers stayed, two items numbered 2.
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+> 1. First┃
+> 2. Second
+> 3. Third
+```
+
+> enter
+
+```markdown
+> 1. First
+> 2. ┃
+> 3. Second
+> 4. Third
+```
+
+## Regression244
+
+Enter at the start of a quote's later line, past its `> `: a quoted blank line above it, the line
+staying quoted with the caret. It left the quote, two blank lines before it, a quoted line after
+it turned to text.
+
+```yaml
+tags: common
+```
+
+```markdown
+> q
+> ┃r
+> s
+```
+
+> enter
+
+```markdown
+> q
+>
+> ┃r
+> s
+```
+
+## Regression245
+
+Enter in a quoted item whose text continues on a line short of its column: the continuation goes
+with the second half, written at its column there. It failed to write, the line copied as it was
+(in the new item's column, its spaces the item's).
+
+```yaml
+tags: rare
+```
+
+```markdown
+> -  lis┃t
+>   last
+```
+
+> enter
+
+```markdown
+> -  lis
+> - ┃t
+>     last
+```
+
+## Regression246
+
+Enter before an indented quote read as an atom, past its indentation: an empty paragraph above it,
+as before any quote. It wrote a line of the quote there, refused.
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+> More details
+
+ ┃> > A nested quote
+```
+
+> enter
+
+```markdown
+> More details
+
+┃◌
+
+ > > A nested quote
+```
+
+## Regression247
+
+Enter splitting a quoted list's heading item, a paragraph after the quote: the blank line that keeps
+the paragraph out of the quote's new last item, as at any indentation. It was refused, the atom's
+later line written with its own prefix twice.
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+>   * # ┃a
+next
+```
+
+> enter
+
+```markdown
+>   * # 
+>   * ┃a
+
+next
+```
+
+## Regression248
+
+Shift-Enter in a quote read as an atom, in a nested quote or a list in it: the new line's prefix is
+the caret's line's, its markers as spaces, so it is in what that line is in (Obsidian's). It was
+`> ` alone, the line out of the nested quote.
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+> > a┃
+```
+
+> shiftEnter
+
+```markdown
+> > a
+> > ┃
+```
+
+## Regression249
+
+`quirkEnterMidHeading: workflowy` before the rest of a title that starts with a literal `#`: the
+text before it a paragraph above, its `#` escaped there. It failed to write, the paragraph read as a
+heading.
+
+```yaml
+tags: rare
+quirkEnterMidHeading: workflowy
+```
+
+```markdown
+# \# ┃Plan
+```
+
+> enter
+
+```markdown
+\#␠
+# ┃Plan
+```
+
+## Regression250
+
+Unwrapping a task whose text goes on in a `- ` line: the paragraph keeps the line, escaped, no
+setext underline. It failed to write, the paragraph read as a heading.
+
+```yaml
+tags: rare markup-task
+taskEditing: unwrap
+```
+
+```markdown
+- [ ] ┃task
+  - 
+```
+
+> deleteContentBackward
+
+```markdown
+┃task
+\̬- 
+```
+
+## Regression251
+
+An item moved into a list of another bullet, its text a run of that bullet's character: escaped, so
+it stays an item (`- \--`), across a heading too. Across one it failed to write (`- --` a rule); in
+the same section it was refused.
+
+```yaml
+tags: rare
+```
+
+```markdown
+- a
+# H
++ ┃--
+```
+
+> moveSubtreeUp
+
+```markdown
+- a
+- \̬┃--
+# H
+```
+
+## Regression252
+
+Indenting a setext heading under a note's first `---` in Obsidian: its new `---` underline would
+close front matter, so a blank line goes before the first one. It failed to write, the note read as
+front matter.
+
+```yaml
+tags: rare
+flavor: obsidian
+```
+
+```markdown
+---
+p
+H┃
+===
+```
+
+> indent
+
+```markdown
+
+---
+p
+H┃
+---
+```
+
+## Regression253
+
+Backspace in a closing fence longer than its opening one: that run alone shortens, the block as it
+was. Both shortened, the opening one to two backticks, refused.
+
+```yaml
+tags: rare markup-fence
+```
+
+````markdown
+```
+x
+````┃
+````
+
+> deleteContentBackward
+
+````markdown
+```
+x
+```┃
+````
+
+## Regression254
+
+Unmaking an empty block's opening fence, its list after it (`listParent: block`): the paragraph past
+the list stays there. It was pulled ahead of the list into the block's line.
+
+```yaml
+tags: rare markup-fence
+listParent: block
+```
+
+````markdown
+`┃``
+```
+- keep
+
+q
+````
+
+> deleteContentBackward
+
+````markdown
+┃``
+- keep
+
+q
+````
+
+## Regression255
+
+Backspace joining a paragraph into a quote read as an atom ending in `^x`, in GFM: no block id
+there, `^x` is text, and the paragraph joins at its end. It went in before `^x`.
+
+```yaml
+tags: rare
+flavor: gfm
+quotes: atom
+```
+
+```markdown
+> a ^x
+
+┃p
+```
+
+> deleteContentBackward
+
+```markdown
+> a ^x┃p
+```
+
+## Regression256
+
+Indent of a paragraph with a loose list of its own into the quote above it: the blank line after
+the list is where what follows is, out of the quote, so the next quote stays its own. It was
+quoted, the two quotes one, refused.
+
+```yaml
+tags: rare
+quotes: container
+```
+
+```markdown
+> q
+
+┃p
+
+- a
+
+  b
+
+> r
+```
+
+> indent
+
+```markdown
+> q
+>
+> ┃p
+>
+> - a
+>
+>   b
+
+> r
+```
+
+## Regression257
+
+Moving an item up past one whose list it would join, at its column, its own text going on in a
+line that could start a block (`1.`): its text spelled where it lands, the line its text's. It
+was refused, the writer shifting no such line.
+
+```yaml
+tags: rare
+```
+
+```markdown
+- x
+1. ┃a
+  - a
+    1.
+```
+
+> moveSubtreeUp
+
+```markdown
+1. ┃a
+- x
+- a
+  1.
+```
+
+## Regression258
+
+Delete on an empty quote that is an item's text, the host's deletion having left it so: the empty
+paragraph goes with the quote and the item it is all of, the caret to the text below. It failed to
+write, the item's marker line gone with the quote.
+
+```yaml
+tags: rare
+quotes: container
+```
+
+```markdown
+- > qu┃ote
+
+- task
+```
+
+> expandSelection deleteSoftLineBackward deleteContentForward
+
+```markdown
+- ┃task
+```
+
+## Regression259
+
+A one-line paragraph cut as a node, then pasted back where the cut leaves the caret: the clipboard
+is whole nodes ourus copied, so it pastes as a node, the paragraph back in its place. It was pasted
+as text into the paragraph above (`beforefirst`).
+
+```yaml
+tags: common
+```
+
+```markdown
+before
+
+fi┃rst
+
+after
+```
+
+> selectNode cut paste
+
+```markdown
+before
+
+first┃
+
+after
+```
+
+## Regression260
+
+Enter after a blank in an ATX heading with closing `#`s: the title keeps its closing sequence, the
+blank before the caret with the blanks before the `#`s. It was escaped, `\#`, a `#` in the title.
+
+```yaml
+tags: rare markup-heading
+```
+
+```markdown
+# abc ┃title #
+```
+
+> enter
+
+```markdown
+# abc  #
+┃title
+```
+
+## Regression261
+
+A plain paste of paragraphs inside a word, the last ending in a block id: the rest of the word goes
+before the id, which ends the last paragraph still. It was glued after it, `y ^zzzl`, no block id.
+
+```yaml
+tags: rare
+flavor: obsidian
+clipboard: |-
+  x
+
+  y ^zzz
+```
+
+```markdown
+Fina┃l
+```
+
+> pastePlain
+
+```markdown
+Finax
+
+y┃l ^zzz
+```
+
+## Regression262
+
+Text cut from inside one paragraph into the next, then pasted back where the cut leaves the caret:
+ourus copied text, not whole nodes, so it pastes into the text, and the two paragraphs come back.
+Read as whole nodes for ending with a line break (Regression259's rule), it was pasted as a
+paragraph after `fisecond`.
+
+```yaml
+tags: common
+```
+
+```markdown
+fi«rst
+
+»second
+```
+
+> cut paste
+
+```markdown
+first
+
+┃second
+```
+
+## Regression263
+
+Enter right after an item's leading `[x]` that is no checkbox (no blank after it): the part left
+would read as an empty task, so its `[` is escaped, as the split `[a]:` of
+[Enter48](enter.md#enter48) is. It was a checkbox, and Backspace back, into an empty task, dropped
+it. The escape stays after Backspace, as one before `[` does.
+
+```yaml
+tags: rare markup-task
+```
+
+```markdown
+- [x]┃y z
+```
+
+> enter
+
+```markdown
+- \̬[x]
+- ┃y z
+```
+
+> deleteContentBackward
+
+```markdown
+- \̬[x]┃y z
+```
+
+## Regression264
+
+A code item indented whose blank line holds a space of its code (past the item's two columns): the
+line is shifted with the code's other lines, the space still the code's. Copied as it was, under the
+deeper prefix, the space was the indentation's, and the code lost it.
+
+```yaml
+tags: rare markup-fence
+```
+
+````markdown
+- a
+- ```j┃s
+␠␠␠
+  ```
+````
+
+> indent
+
+````markdown
+- a
+  - ```j┃s
+␠␠␠␠␠
+    ```
+````
+
+> outdent
+
+````markdown
+- a
+- ```j┃s
+␠␠␠
+  ```
+````
+
+## Regression265
+
+An item whose marker shares its line with its quote (`9. > q`), moved across 9/10: its marker
+renumbered wider, that line and its later ones are as many columns wider, the line copied with the
+new marker over the old one, as a renumbered item's is where nothing moves. Back up, narrower
+again. Refused before (the marker's line, which goes).
+
+```yaml
+tags: rare
+quotes: container
+```
+
+```markdown
+9. > ┃q
+   > r
+10. b
+```
+
+> moveSubtreeDown
+
+```markdown
+9. b
+10. > ┃q
+    > r
+```
+
+> moveSubtreeUp
+
+```markdown
+9. > ┃q
+   > r
+10. b
+```
+
+## Regression266
+
+A paragraph lazy after an item's reference definition (`[a]:u`, its line not indented), its text
+rewritten: written at the item's content column, without the space the lazy line started with, so
+it starts where its content does and stays the node it was. Kept, past the prefix, the space put
+its start one column further in than the paragraph read back, a new node: Enter, Shift-Enter, a
+paste, removing its block id were refused.
+
+```yaml
+tags: rare
+```
+
+```markdown
+- [a]:u
+ x┃ y
+```
+
+> enter
+
+```markdown
+- [a]:u
+  x
+
+  ┃y
+```
+
+> deleteContentBackward
+
+```markdown
+- [a]:u
+  x┃y
+```
+
+## Regression267
+
+Shift-Enter at the start of a padded item's text (`-  a`) with a loose paragraph under it: the text
+goes below the marker, at one column past it, so the item's content column narrows by the padding.
+The paragraph's line, copied as it was, now starts its content that much sooner; it is named there,
+and stays the node it was (refused before, the paragraph read back as a new one).
+
+```yaml
+tags: rare
+```
+
+```markdown
+-  ┃a
+
+     b
+```
+
+> shiftEnter
+
+```markdown
+-
+  ┃a
+
+     b
+```
+
+> deleteContentBackward
+
+```markdown
+- ┃a
+
+     b
+```
+
+## Regression268
+
+A padded item's text deleted to its marker (`-  a`, deleteSoftLineBackward), a loose paragraph under
+it: the item is written `- `, its content column one past the marker, narrower by the padding. The
+paragraph's line, copied as it was, is named where its content starts now, and stays the node it
+was (refused before, as [Regression267](#regression267)'s Shift-Enter was).
+
+```yaml
+tags: rare
+```
+
+```markdown
+-  a┃
+
+     b
+```
+
+> deleteSoftLineBackward
+
+```markdown
+- ┃◌
+
+     b
+```
+
+> "c"
+
+```markdown
+- c┃
+
+     b
+```
+
+## Regression269
+
+Shift-Down shrinking an upward selection in a zoom, to the last node there: it reads as that node, whose
+end is the zoom's, before the line break after it. It threw.
+
+```yaml
+tags: rare
+```
+
+```markdown
+# h①⟦zoomed⟧
+
+┃a⟦selected⟧
+
+b⟦selected⟧
+```
+
+> selectNodeDown
+
+```markdown
+# h①⟦zoomed⟧
+
+a
+
+b⟦selected⟧
+```
+
+## Regression270
+
+Selecting a folded last child in a zoom takes its hidden lines to the zoom's end, as a fold ending the
+document does: they were left out, which is no selection of the node.
+
+```yaml
+tags: rare
+```
+
+```markdown
+- p①⟦zoomed⟧
+  - a┃⟦folded⟧
+    - c
+- q
+```
+
+> selectNode
+
+```markdown
+- p①⟦zoomed⟧
+  - a⟦folded⟧⟦selected⟧
+    - c
+- q
+```
+
+## Regression271
+
+Paste on the blank line after a folded item holding a quote: after its subtree, the fold kept, as after
+any folded item. Its quote is its text, so it isn't an empty item to fill: that threw.
+
+```yaml
+tags: rare
+quotes: container
+clipboard:
+  text/plain: |
+    x
+  text/markdown: |
+    x
+  text/html: '<!-- ourus --><p>x</p>'
+```
+
+```markdown
+- > a⟦folded⟧
+  > b
+┃
+c
+```
+
+> paste
+
+```markdown
+- > a⟦folded⟧
+  > b
+- x┃
+
+c
+```
+
+## Regression272
+
+A plain paste of paragraphs ending in a line break, at the end of a text a block id ends: that line goes,
+as where no block id ends it, and the id stays on the first paragraph's line. It was left on a line of
+its own, the caret past the text's end where no line break ended the note.
+
+```yaml
+tags: rare
+flavor: obsidian
+clipboard: |
+  a
+
+  b
+```
+
+```markdown
+Final line┃ ^blk
+```
+
+> pastePlain
+
+```markdown
+Final linea ^blk
+
+b┃
+```
+
+## Regression273
+
+A bracket `autoClose` lists, typed on a blank line, where no text is yet: with its closer, as in a text.
+
+```yaml
+tags: rare
+autoClose: ['(']
+```
+
+```markdown
+a
+
+┃
+
+b
+```
+
+> "("
+
+```markdown
+a
+
+(┃)̬
+
+b
+```
+
+## Regression274
+
+`$` paired at an item's start: `$$` alone would open a math block, so a backslash of ours keeps it text.
+With something in it the pair is inline math, and the backslash goes. It stayed, so the math never was.
+
+```yaml
+tags: rare
+flavor: obsidian
+autoClose: ['$']
+```
+
+```markdown
+- ┃
+```
+
+> "$"
+
+```markdown
+- \̬$┃$̬
+```
+
+> "x"
+
+```markdown
+- $x┃$̬
+```
+
+> "$"
+
+```markdown
+- $x$┃
+```
+
+## Regression275
+
+Tab over part of a quote from its line's start: the selection stays on the quote, its start at the
+line's start. That end, on the `>`, went through the rewritten line and landed on the paragraph below.
+
+```yaml
+tags: rare
+```
+
+```markdown
+«> on»e
+
+q
+```
+
+> indent
+
+```markdown
+«- > on»e
+
+q
+```
+
+## Regression276
+
+Duplicate over part of an item from its line's start: the copy selected the same way, its marker too.
+
+```yaml
+tags: rare
+```
+
+```markdown
+«- on»e
+- two
+```
+
+> duplicateSubtree
+
+```markdown
+- one
+«- on»e
+- two
+```
+
+## Regression277
+
+Enter after a heading right above a table, the caret then gone: the blank line stays, a separator the
+author made, where nothing set the two apart. It went with the empty paragraph as it settled.
+
+```yaml
+tags: common
+flavor: gfm
+```
+
+```markdown
+## h┃
+| a |
+| --- |
+```
+
+> enter cursorDocEnd
+
+```markdown
+## h
+
+| a |
+| --- |
+```
+
+## Regression277b
+
+The same with Shift-Enter, above a paragraph.
+
+```yaml
+tags: common
+```
+
+```markdown
+# h┃
+p
+```
+
+> shiftEnter cursorDocEnd
+
+```markdown
+# h
+
+p
+```
+
+## Regression277c
+
+At a section's end, the next heading of the same level after it: the blank line stays there too. The
+empty paragraph had no sibling after it, which made it seem the last thing in the document.
+
+```yaml
+tags: common
+```
+
+```markdown
+# a┃
+# b
+```
+
+> enter cursorDocEnd
+
+```markdown
+# a
+
+# b
+```
+
+## Regression278
+
+Where a blank line sets the two apart already, an empty paragraph left there adds none: blank lines
+don't pile up.
+
+```yaml
+tags: common
+```
+
+```markdown
+# h┃
+
+p
+```
+
+> enter cursorDocEnd
+
+```markdown
+# h
+
+p
+```
+
+## Regression291
+
+A table pasted into an empty item that a blank line ends, its next item indented two columns: under
+an item with text those columns make that item its child, so the paste is refused, as plain paste
+is. The table, an atom, didn't count as giving the item text: the draft kept the next item's line as
+written, and the text written read otherwise (write-failed; found by the differential run).
+
+```yaml
+tags: rare
+clipboard: |
+  | a |
+  | - |
+  | 1 |
+```
+
+```markdown
+- ┃
+
+  - c
+```
+
+> paste
+
+```markdown
+-␠
+
+  - c
+```
+
+```yaml
+result: rejected not-expressible
+```
+
+## Regression292
+
+Enter zoomed into an empty item that a blank line ends, its next item indented two columns: the
+new first child gives the item a content column, which takes that item in, so Enter is refused. The
+seam check asked only whether an empty item gained text, not a child, and the text written read
+otherwise (write-failed; found by the view's exhaustive pass on Regression291's start).
+
+```yaml
+tags: rare
+```
+
+```markdown
+- ┃⟦zoomed⟧
+
+  - c
+```
+
+> enter
 
 ```yaml
 result: rejected not-expressible

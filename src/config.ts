@@ -79,17 +79,34 @@ export interface OurusConfig {
    * - `logical` (as in Roam, WorkFlowy and RemNote): they stay with their parent, and the item and its
    *   subtree move past them. Out of a quote, the item goes below the quote's other children.
    *
-   * At the top level, where there is no parent, an item becomes a paragraph in place with either, the
-   * items after it its list (as RemNote does). Enter on an empty nested item outdents by it too (see
-   * `enterOnEmptyItem`).
+   * At the top level, where there is no parent, `outdentTopLevel` says. Enter on an empty nested item
+   * outdents by it too (see `enterOnEmptyItem`).
    */
   readonly outdent: 'direct' | 'logical';
+
+  /**
+   * Shift-Tab on an item at the top level, where there is no parent to leave:
+   * - `unwrap` (the default, as RemNote): the item becomes a paragraph in place, the items after it
+   *   its list (a list right after a paragraph is its children, `listParent: paragraph`).
+   * - `refuse` (as sixteen of the app setups measured do nothing there): `not-expressible`.
+   */
+  readonly outdentTopLevel: 'unwrap' | 'refuse';
 
   /**
    * The bullet of a new item with no list to take one from (a converted paragraph, a pasted line):
    * `-` (the default), `*` or `+`.
    */
   readonly bullet: '-' | '*' | '+';
+
+  /**
+   * The numbers of an ordered list a command changes (an item put in, moved, deleted):
+   * - `renumber` (the default, as the block apps, which hold no numbers in their text: Logseq,
+   *   Logseq DB, WorkFlowy, Tana, Tine, RemNote, Dynalist, Athens): its items numbered on from its
+   *   first, one up each.
+   * - `keep` (as the text editors: Obsidian in all four setups, SilverBullet, Emacs): the numbers
+   *   written stay; an item a command makes is numbered on from the item above it.
+   */
+  readonly listNumbers: 'renumber' | 'keep';
 
   /**
    * What a quote is in the outline:
@@ -138,10 +155,11 @@ export interface OurusConfig {
 
   /**
    * The spaces at the caret when Enter splits a node's text (`- one two┃ three`):
-   * - `trim` (the default, as Logseq): both halves lose them, `- one two` and `- three`; joined back,
-   *   the text is `one twothree`, the one place a command loses what the user wrote.
-   * - `drop` (as bare Obsidian, its Live Preview, true-outliner, RemNote and Emacs): the spaces after
-   *   the caret go, those before it end the first half (`- one two ┃three` keeps `two␠`).
+   * - `drop` (the default, as bare Obsidian, its Live Preview, true-outliner, RemNote and Emacs): the
+   *   spaces after the caret go, those before it end the first half (`- one two ┃three` keeps `two␠`),
+   *   so Backspace joining the halves back gives them back.
+   * - `trim` (as Logseq): both halves lose them, `- one two` and `- three`; joined back, the text is
+   *   `one twothree`, the one place a command loses what the user wrote.
    * - `start` (as Tine, Roam, Athens, Tana, Dynalist, WorkFlowy, SiYuan, BlockNote, SilverBullet and
    *   Obsidian's Outliner): the spaces after the caret start the second half, the caret before
    *   them, where Markdown keeps them unseen: an item's padding past the space after its marker
@@ -155,7 +173,7 @@ export interface OurusConfig {
    * Shift-Enter isn't this option's: its line keeps the spaces at its start, as every app but
    * true-outliner does.
    */
-  readonly enterSplitSpace: 'trim' | 'drop' | 'start';
+  readonly enterSplitSpace: 'drop' | 'trim' | 'start';
 
   /**
    * A space a deleted first character leaves at a text's start (`- a┃ b`, Backspace: `- ┃ b`), held
@@ -521,6 +539,16 @@ export interface OurusConfig {
   readonly pasteListForm: 'destination' | 'own';
 
   /**
+   * A line break of pasted HTML (`<br>`: an address, a poem, chat lines):
+   * - `line` (the default, as Logseq, Dynalist, Tana, WorkFlowy and the other block outliners write
+   *   a plain line, or a block per line): a line of the paragraph's text, as Shift-Enter writes one;
+   *   Markdown shows it as a space.
+   * - `hard` (as Obsidian, bare, in Live Preview and with its outliner plugins, writes it): a hard
+   *   break, `\` at the line's end, shown as written. `<br><br>` is a paragraph break either way.
+   */
+  readonly pasteHtmlBreak: 'line' | 'hard';
+
+  /**
    * The selection ladder (`expandSelection`, Ctrl-A in outliners), past a node's subtree:
    * - `siblings` (the default, as true-outliner and Dynalist climb): its siblings' run, then its
    *   parent's subtree, and so on outward.
@@ -604,12 +632,14 @@ const CONFIG_VALUES: { readonly [K in Exclude<keyof OurusConfig, ListOption>]: r
   // The outline: what Shift-Tab does, a new item's bullet, what a quote is, what a list is under
   indentUnit: ['detect', 'tab', 2, 4],
   outdent: ['direct', 'logical'],
+  outdentTopLevel: ['unwrap', 'refuse'],
   bullet: ['-', '*', '+'],
+  listNumbers: ['renumber', 'keep'],
   quotes: ['text', 'atom', 'container'],
   listParent: ['paragraph', 'block', 'container'],
   listMoves: ['list', 'item'],
   // Enter, the key pressed most
-  enterSplitSpace: ['trim', 'drop', 'start'],
+  enterSplitSpace: ['drop', 'trim', 'start'],
   heldSpace: ['repair', 'trim'],
   enterOnEmptyItem: ['sibling', 'outdent', 'exit', 'unwrap'],
   enterMidItem: ['sibling', 'child'],
@@ -638,6 +668,7 @@ const CONFIG_VALUES: { readonly [K in Exclude<keyof OurusConfig, ListOption>]: r
   pasteOnParent: ['children', 'after'],
   pasteParagraphList: ['siblings', 'children'],
   pasteListForm: ['destination', 'own'],
+  pasteHtmlBreak: ['line', 'hard'],
   // Selection
   selectionLadder: ['siblings', 'parents', 'top'],
   selectNodeUp: ['line', 'sibling'],
@@ -663,8 +694,10 @@ const CONFIG_DEFAULTS = {
 function listValue(key: ListOption, value: unknown): readonly string[] | string {
   const { elements } = LIST_OPTIONS[key];
   if (!Array.isArray(value)) return `option "${key}" takes a list of ${elements.join(' ')}, not ${JSON.stringify(value)}`;
-  const wrong = value.find((v) => !(elements as readonly unknown[]).includes(v));
-  if (wrong !== undefined) return `option "${key}" takes a list of ${elements.join(' ')}, not ${JSON.stringify(wrong)} in it`;
+  // (by index: an undefined element, or a hole, is wrong too)
+  const at = Array.from(value as unknown[]).findIndex((v) => !(elements as readonly unknown[]).includes(v));
+  const wrong = at < 0 ? undefined : (value as unknown[])[at];
+  if (at >= 0) return `option "${key}" takes a list of ${elements.join(' ')}, not ${JSON.stringify(wrong)} in it`;
   return elements.filter((e) => value.includes(e));
 }
 

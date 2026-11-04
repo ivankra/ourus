@@ -34,7 +34,7 @@ at its top, the nearest would move it under `a`).
 tags: core
 ```
 
-```buffer
+```markdown
 - a①
 - b┃②
 - c③
@@ -63,7 +63,7 @@ keyboard's and the API's there.
 tags: rare
 ```
 
-```buffer
+```markdown
 - c
 > - a┃②
 > - b
@@ -89,7 +89,7 @@ A node below a deep subtree: its top offers each depth, from where it is to insi
 tags: common
 ```
 
-```buffer
+```markdown
 - a①
   - b②
     - c③
@@ -116,10 +116,10 @@ What a pickup takes: an item that is all of its quote takes the quote with it, a
 command does.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - x
 > - a┃①②
 ```
@@ -141,10 +141,10 @@ The places a drop would refuse aren't offered: a heading among items has only it
 or under an item it can't be, and before them it would take them into its section.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 - a
 - b
 
@@ -173,7 +173,7 @@ A heading's places, each at the level it would take there: beside `B`, in `A`'s 
 tags: common
 ```
 
-```buffer
+```markdown
 # A
 x
 ## B
@@ -204,11 +204,10 @@ hidden children, and one inside it is its last.
 
 ```yaml
 tags: common
-folded: ①
 ```
 
-```buffer
-- a①
+```markdown
+- a①⟦folded⟧
   - b
 - c┃③
 ```
@@ -230,11 +229,10 @@ Zoomed into a node, the pickup offers places inside it alone.
 
 ```yaml
 tags: common
-zoom: ①
 ```
 
-```buffer
-- a①
+```markdown
+- a①⟦zoomed⟧
   - b
   - c┃③
 - d

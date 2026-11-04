@@ -23,10 +23,10 @@ The rules:
 A node goes with its children.
 
 ```yaml
-tags: common
+tags: core
 ```
 
-```buffer
+```markdown
 - a
 - b┃
   - c
@@ -35,7 +35,7 @@ tags: common
 
 > deleteSubtree
 
-```buffer
+```markdown
 - a┃
 - d
 ```
@@ -48,7 +48,7 @@ Ordered lists renumber.
 tags: common
 ```
 
-```buffer
+```markdown
 1. a
 2. b┃
 3. c
@@ -56,7 +56,7 @@ tags: common
 
 > deleteSubtree
 
-```buffer
+```markdown
 1. a┃
 2. c
 ```
@@ -68,10 +68,10 @@ The first node: the caret goes to what follows.
 A paragraph's list is its children: it goes too.
 
 ```yaml
-tags: edge
+tags: common
 ```
 
-```buffer
+```markdown
 para┃
 
 - x
@@ -81,7 +81,7 @@ para┃
 
 > deleteSubtree
 
-```buffer
+```markdown
 # ┃H
 ```
 
@@ -94,7 +94,7 @@ The first item: the caret goes to the next item's text, after its marker, where 
 tags: common
 ```
 
-```buffer
+```markdown
 - a┃
   - a1
 - [ ] b
@@ -102,7 +102,7 @@ tags: common
 
 > deleteSubtree
 
-```buffer
+```markdown
 - [ ] ┃b
 ```
 
@@ -114,16 +114,16 @@ Selected nodes go together; the caret goes to the end of the text before them.
 tags: common
 ```
 
-```buffer
+```markdown
 - a
-- ««b
-- c»»
+- b⟦selected⟧
+- c⟦selected⟧
 - d
 ```
 
 > deleteSubtree
 
-```buffer
+```markdown
 - a┃
 - d
 ```
@@ -134,17 +134,17 @@ The document's only node goes, and the document is empty; typed text is then its
 (an empty buffer has no drawing).
 
 ```yaml
-tags: rare
+tags: common
 ```
 
-```buffer
+```markdown
 - a┃
   - b
 ```
 
 > deleteSubtree "x"
 
-```buffer
+```markdown
 x┃
 ```
 
@@ -154,17 +154,17 @@ Deleting a quote's only node deletes the quote: its `>` alone is no node, and a 
 holding nothing can't be written.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 > - ┃q
 ```
 
 > deleteSubtree
 
-```buffer
+```markdown
 - a┃
 ```
 
@@ -175,10 +175,10 @@ text, would continue it, and a blank line keeps it a paragraph of its own. Movin
 does the same ([MoveDown34](move-subtree-down.md#movedown34)).
 
 ```yaml
-tags: rare
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 - a
   ┃```
   code
@@ -188,7 +188,7 @@ tags: rare
 
 > deleteSubtree
 
-```buffer
+```markdown
 - a┃
 
   x
@@ -201,11 +201,11 @@ where, with a `---` below to close it, it would open the note's frontmatter: a b
 keeps it a thematic break. The caret goes to the text after it.
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 ┃Intro
 
 ---
@@ -215,7 +215,7 @@ title: x
 
 > deleteSubtree
 
-```buffer
+```markdown
 
 ---
 ┃title: x
@@ -228,11 +228,11 @@ A thematic break written `***`, first in an Obsidian note: only `---` opens fron
 line goes above it.
 
 ```yaml
-tags: edge
+tags: rare
 flavor: obsidian
 ```
 
-```buffer
+```markdown
 ┃a
 
 ***
@@ -242,7 +242,7 @@ title
 
 > deleteSubtree
 
-```buffer
+```markdown
 ***
 ┃title
 ---
@@ -254,17 +254,17 @@ An item with no text of its own (`- > q`), its only block deleted: the item goes
 quote with no title does; it would hold nothing.
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 - > q┃
 ```
 
 > deleteSubtree
 
-```buffer
+```markdown
 - a┃
 ```
 
@@ -279,7 +279,7 @@ tags: rare
 quotes: container
 ```
 
-```buffer
+```markdown
 - a
 - > q┃
     - g
@@ -288,7 +288,7 @@ quotes: container
 
 > deleteSubtree
 
-```buffer
+```markdown
 - a┃
 - - g
 - b
@@ -301,10 +301,10 @@ between them, and the later one's items line up with the earlier's (at its colum
 be `a`'s child).
 
 ```yaml
-tags: edge
+tags: rare
 ```
 
-```buffer
+```markdown
 - a
 1. n┃
 
@@ -313,7 +313,7 @@ tags: edge
 
 > deleteSubtree
 
-```buffer
+```markdown
 - a┃
 - c
 ```
@@ -325,10 +325,10 @@ default, as a paragraph does: the list is its sibling, and deleting the block le
 `listParent: block` it would be the block's children and go with it.
 
 ```yaml
-tags: rare
+tags: rare markup-fence
 ```
 
-````buffer
+````markdown
 ┃```
 code
 ```
@@ -337,6 +337,6 @@ code
 
 > deleteSubtree
 
-```buffer
+```markdown
 - ┃c
 ```

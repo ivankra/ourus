@@ -5,13 +5,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { tabPass } from './tabs.ts';
-import { readSpecFile, specFiles } from './specfile.ts';
+import { readSpecFile, specFiles } from './lib/index.ts';
 
 /** The examples that don't play back with tabs yet, and why: the writer's tab paths not written. */
 const KNOWN: Readonly<Record<string, string>> = {
-  // a marker written over a line's whitespace that a tab spelled (`writeOver`)
-  Quote81: "a marker's line written over a tab",
-  Quote85: "a marker's line written over a tab",
   // a lazy line's own tab, kept by the text speller where the line moves off its stop: what follows it
   // escaped (`\- g`), the same document spelled otherwise
   Quote87: "a lazy line's tab, kept where its text is spelled again",

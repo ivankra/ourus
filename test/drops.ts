@@ -10,9 +10,7 @@
 import { executeCommand, type OurusResult, type DropMap, OurusRejected, OurusSuccess } from '../src/commands/index.ts';
 import type { OurusDoc } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
-import { docOf, nodesOf, readDrawing } from './drawing.ts';
-import { flavorsOf } from './spec-run.ts';
-import { readSpecFile, specConfig, specFiles, type SpecTest } from './specfile.ts';
+import { parseWithMarks, allNodes, readDrawing, specTestFlavors, readSpecFile, specConfig, specFiles, type SpecTest } from './lib/index.ts';
 
 /**
  * The starts whose drops have gaps yet, and why, each a writer's or a rule's to close: the drop pass
@@ -32,12 +30,12 @@ const CLIPBOARDS: readonly (readonly [string, string])[] = [
 /** What is wrong with the drops at example `t`'s start: one line each. */
 export function dropGaps(t: SpecTest): string[] {
   const start = readDrawing(t.initial.buffer);
-  const flavor = flavorsOf(t)[0]!;
-  const doc = docOf(start.text, start.placeholders, { flavor, ...specConfig(t.options) });
+  const flavor = specTestFlavors(t)[0]!;
+  const doc = parseWithMarks(start.text, start.placeholders, { flavor, ...specConfig(t.options) });
   const view = OurusView.of(doc);
   const gaps: string[] = [];
   const pickups: { what: string; dropMap: DropMap; kind: (r: OurusDoc) => string | undefined; was: string }[] = [];
-  for (const node of nodesOf(doc)) {
+  for (const node of allNodes(doc)) {
     const picked = executeCommand(view, { type: 'drag', pressed: node.id }, start.selection);
     if (!(picked instanceof OurusSuccess) || !picked.dropMap) continue;
     const first = doc.node(picked.dropMap.nodes[0]!)!;
@@ -85,7 +83,7 @@ export function allDropGaps(): Map<string, string[]> {
   const seen = new Set<string>();
   for (const file of specFiles()) {
     for (const t of readSpecFile(file)) {
-      const key = `${flavorsOf(t)[0]} ${JSON.stringify(t.options)} ${readDrawing(t.initial.buffer).text}`;
+      const key = `${specTestFlavors(t)[0]} ${JSON.stringify(t.options)} ${readDrawing(t.initial.buffer).text}`;
       if (seen.has(key)) continue;
       seen.add(key);
       const gaps = dropGaps(t);

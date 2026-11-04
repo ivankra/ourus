@@ -8,8 +8,8 @@ Commands:
 - every command where a node is folded
 
 A fold is the view's, not the text's: the snapshot's `folded` (dev/21-zoom.md). The buffer draws
-the whole text, hidden lines too; the config block's `folded: ①` says what is folded at the start,
-a step's `folded:` what is after it (`folded: none`). The rules:
+the whole text, hidden lines too, and `⟦folded⟧` last on each folded node's first line: at the start
+what is folded, after a step what is then (none drawn, nothing folded). The rules:
 
 1. **A node folds where it has something to hide**: its children, from the end of its text to the
    end of its subtree's last line, the blank lines after it shown. A childless node doesn't
@@ -44,27 +44,22 @@ a step's `folded:` what is after it (`folded: none`). The rules:
 Enter at the end of a folded item makes its next sibling, after its hidden children.
 
 ```yaml
-tags: common
-folded: ①
+tags: core
 ```
 
-```buffer
-- a┃①
+```markdown
+- a┃①⟦folded⟧
   - b
 - c
 ```
 
 > enter
 
-```buffer
-- a①
+```markdown
+- a①⟦folded⟧
   - b
 - ┃②
 - c
-```
-
-```yaml
-folded: ①
 ```
 
 ## Fold2
@@ -73,24 +68,19 @@ Split mid-text, the children go with the second half, and the fold with them.
 
 ```yaml
 tags: common
-folded: ①
 ```
 
-```buffer
-- a┃b①
+```markdown
+- a┃b①⟦folded⟧
   - c
 ```
 
 > enter
 
-```buffer
+```markdown
 - a①
-- ┃b②
+- ┃b②⟦folded⟧
   - c
-```
-
-```yaml
-folded: ②
 ```
 
 ## Fold2b
@@ -99,26 +89,21 @@ Under `enterMidItem: child`, split mid-text in a folded item: the rest goes afte
 among its hidden children, and the item stays folded, as at its end (Fold1).
 
 ```yaml
-tags: common
+tags: rare
 enterMidItem: child
-folded: ①
 ```
 
-```buffer
-- a┃b①
+```markdown
+- a┃b①⟦folded⟧
   - c
 ```
 
 > enter
 
-```buffer
-- a①
+```markdown
+- a①⟦folded⟧
   - c
 - ┃b②
-```
-
-```yaml
-folded: ①
 ```
 
 ## Fold3
@@ -128,24 +113,19 @@ text, not to its hidden child's.
 
 ```yaml
 tags: common
-folded: ①
 ```
 
-```buffer
-- a①
+```markdown
+- a①⟦folded⟧
   - b
 - ┃
 ```
 
 > deleteContentBackward
 
-```buffer
-- a┃①
+```markdown
+- a┃①⟦folded⟧
   - b
-```
-
-```yaml
-folded: ①
 ```
 
 ## Fold4
@@ -153,26 +133,21 @@ folded: ①
 A folded node moved keeps its fold, though the move writes its lines again.
 
 ```yaml
-tags: common
-folded: ②
+tags: core
 ```
 
-```buffer
+```markdown
 - a①
-- b┃②
+- b┃②⟦folded⟧
   - c
 ```
 
 > moveSubtreeUp
 
-```buffer
-- b┃②
+```markdown
+- b┃②⟦folded⟧
   - c
 - a①
-```
-
-```yaml
-folded: ②
 ```
 
 ## Fold5
@@ -182,26 +157,21 @@ among them.
 
 ```yaml
 tags: rare
-folded: ①
 ```
 
-```buffer
-- ┃①
+```markdown
+- ┃①⟦folded⟧
   - b
 - c
 ```
 
 > enter
 
-```buffer
-- ①
+```markdown
+- ①⟦folded⟧
   - b
 - ┃②
 - c
-```
-
-```yaml
-folded: ①
 ```
 
 ## Fold6
@@ -210,25 +180,20 @@ Indented under a folded sibling, the node would be hidden among its children: th
 
 ```yaml
 tags: common
-folded: ①
 ```
 
-```buffer
-- a①
+```markdown
+- a①⟦folded⟧
   - b
 - c┃
 ```
 
 > indent
 
-```buffer
+```markdown
 - a①
   - b
   - c┃
-```
-
-```yaml
-folded: none
 ```
 
 ## Fold7
@@ -238,11 +203,10 @@ nothing hidden changing, the item still folded.
 
 ```yaml
 tags: rare
-folded: ①
 ```
 
-```buffer
-- a┃①
+```markdown
+- a┃①⟦folded⟧
   - b
   - c
 ```
@@ -251,11 +215,10 @@ folded: ①
 
 ```yaml
 result: rejected folded
-folded: ①
 ```
 
-```buffer
-- a┃①
+```markdown
+- a┃①⟦folded⟧
   - b
   - c
 ```
@@ -265,26 +228,21 @@ folded: ①
 A folded node's copy is folded too.
 
 ```yaml
-tags: rare
-folded: ①
+tags: common
 ```
 
-```buffer
-- a┃①
+```markdown
+- a┃①⟦folded⟧
   - b
 ```
 
 > duplicateSubtree
 
-```buffer
-- a①
+```markdown
+- a①⟦folded⟧
   - b
-- a┃②
+- a┃②⟦folded⟧
   - b
-```
-
-```yaml
-folded: ① ②
 ```
 
 ## Fold9
@@ -292,31 +250,34 @@ folded: ① ②
 `fold` folds the node at the caret, and changes no text; on a node with nothing to hide, nothing.
 
 ```yaml
-tags: common
+tags: core
 ```
 
-```buffer
+```markdown
 - a┃①
   - b②
 ```
 
 > fold
 
-```buffer
-- a┃①
+```markdown
+- a┃①⟦folded⟧
   - b②
 ```
 
 ```yaml
 result: success
-folded: ①
 ```
 
 > fold ②
 
 ```yaml
 result: success
-folded: ①
+```
+
+```markdown
+- a⟦folded⟧
+  - b
 ```
 
 ## Fold10
@@ -327,20 +288,16 @@ A fold closed over the caret moves it to the fold's start, the end of the folded
 tags: common
 ```
 
-```buffer
+```markdown
 - a①
   - b┃
 ```
 
 > fold ①
 
-```buffer
-- a┃①
+```markdown
+- a┃①⟦folded⟧
   - b
-```
-
-```yaml
-folded: ①
 ```
 
 ## Fold11
@@ -351,26 +308,23 @@ A toggle at a node that doesn't fold toggles its parent's fold: folded, then ope
 tags: common
 ```
 
-```buffer
+```markdown
 - a①
   - b┃
 ```
 
 > toggleFold
 
-```buffer
-- a┃①
+```markdown
+- a┃①⟦folded⟧
   - b
-```
-
-```yaml
-folded: ①
 ```
 
 > toggleFold
 
-```yaml
-folded: none
+```markdown
+- a
+  - b
 ```
 
 ## Fold12
@@ -378,19 +332,19 @@ folded: none
 `unfold` opens the fold at the caret.
 
 ```yaml
-tags: common
-folded: ①
+tags: core
 ```
 
-```buffer
-- a┃①
+```markdown
+- a┃①⟦folded⟧
   - b
 ```
 
 > unfold
 
-```yaml
-folded: none
+```markdown
+- a
+  - b
 ```
 
 ## Fold13
@@ -399,27 +353,22 @@ Enter at the end of a folded heading's title makes the section's first paragraph
 opens.
 
 ```yaml
-tags: rare
-folded: ①
+tags: common
 ```
 
-```buffer
-# H┃①
+```markdown
+# H┃①⟦folded⟧
 
 p
 ```
 
 > enter
 
-```buffer
+```markdown
 # H①
 ┃◌
 
 p
-```
-
-```yaml
-folded: none
 ```
 
 ## Fold14
@@ -430,28 +379,23 @@ item still folded.
 
 ```yaml
 tags: common
-folded: ①
 clipboard: |
   - x
 ```
 
-```buffer
-- a┃①
+```markdown
+- a┃①⟦folded⟧
   - b
 - c
 ```
 
 > paste
 
-```buffer
-- a①
+```markdown
+- a①⟦folded⟧
   - b
 - x┃
 - c
-```
-
-```yaml
-folded: ①
 ```
 
 ## Fold15
@@ -461,24 +405,19 @@ the text the reader sees above it, not into its last hidden descendant's; the it
 
 ```yaml
 tags: common
-folded: ①
 ```
 
-```buffer
-- a①
+```markdown
+- a①⟦folded⟧
   - b
 - ┃c
 ```
 
 > deleteContentBackward
 
-```buffer
-- a┃c①
+```markdown
+- a┃c①⟦folded⟧
   - b
-```
-
-```yaml
-folded: ①
 ```
 
 ## Fold15b
@@ -490,11 +429,10 @@ WorkFlowy and Outliner ([Backspace45c](backspace.md#backspace45c)).
 
 ```yaml
 tags: rare
-folded: ①
 ```
 
-```buffer
-- a①
+```markdown
+- a①⟦folded⟧
   - b
 - ┃c
   - d
@@ -502,14 +440,10 @@ folded: ①
 
 > deleteContentBackward
 
-```buffer
+```markdown
 - a┃c①
   - b
   - d
-```
-
-```yaml
-folded: none
 ```
 
 ## Fold16
@@ -518,49 +452,36 @@ A folded item moved down, then the move undone and done again: folded throughout
 
 ```yaml
 tags: common
-folded: ①
 ```
 
-```buffer
-- a┃①
+```markdown
+- a┃①⟦folded⟧
   - b
 - c
 ```
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 - c
-- a┃①
+- a┃①⟦folded⟧
   - b
-```
-
-```yaml
-folded: ①
 ```
 
 > undo
 
-```buffer
-- a┃①
+```markdown
+- a┃①⟦folded⟧
   - b
 - c
-```
-
-```yaml
-folded: ①
 ```
 
 > redo
 
-```buffer
+```markdown
 - c
-- a┃①
+- a┃①⟦folded⟧
   - b
-```
-
-```yaml
-folded: ①
 ```
 
 ## Fold17
@@ -569,37 +490,28 @@ A folded item indented, then the indent undone.
 
 ```yaml
 tags: common
-folded: ①
 ```
 
-```buffer
+```markdown
 - x
-- a┃①
+- a┃①⟦folded⟧
   - b
 ```
 
 > indent
 
-```buffer
+```markdown
 - x
-  - a┃①
+  - a┃①⟦folded⟧
     - b
-```
-
-```yaml
-folded: ①
 ```
 
 > undo
 
-```buffer
+```markdown
 - x
-- a┃①
+- a┃①⟦folded⟧
   - b
-```
-
-```yaml
-folded: ①
 ```
 
 ## Fold18
@@ -610,11 +522,10 @@ another one, its nodes in another order, though its text is the same (dev/25-vie
 
 ```yaml
 tags: rare
-folded: ①
 ```
 
-```buffer
-- a┃①
+```markdown
+- a┃①⟦folded⟧
   - x
 - a②
   - x
@@ -622,16 +533,15 @@ folded: ①
 
 > moveSubtreeDown
 
-```buffer
+```markdown
 - a②
   - x
-- a┃①
+- a┃①⟦folded⟧
   - x
 ```
 
 ```yaml
 result: success
-folded: ①
 ```
 
 ## Fold19
@@ -641,11 +551,10 @@ now second.
 
 ```yaml
 tags: rare
-folded: ①
 ```
 
-```buffer
-- a①
+```markdown
+- a①⟦folded⟧
   - x
 - a┃②
   - x
@@ -653,16 +562,15 @@ folded: ①
 
 > moveSubtreeUp
 
-```buffer
+```markdown
 - a┃②
   - x
-- a①
+- a①⟦folded⟧
   - x
 ```
 
 ```yaml
 result: success
-folded: ①
 ```
 
 ## Fold20
@@ -674,26 +582,21 @@ folded section, a block id below it, can't be settled with the other, nor writte
 placeholder is dropped and the text read without it; the empty paragraph above the heading goes.
 
 ```yaml
-tags: rare
+tags: rare markup-heading
 flavor: obsidian
-folded: ②
 ```
 
-```buffer
+```markdown
 ◌①
-┃# h②
+┃# h②⟦folded⟧
 > - ◌
 > ^x
 ```
 
 > cursorLineBoundaryForward
 
-```buffer
-# h┃②
+```markdown
+# h┃②⟦folded⟧
 > -␠
 > ^x
-```
-
-```yaml
-folded: ②
 ```

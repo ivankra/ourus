@@ -152,30 +152,43 @@ export function markupEscapes(flavor: MdFlavor, lines: readonly string[], place:
  */
 export function escapeParagraph(flavor: MdFlavor, lines: readonly string[], place: MdParagraphPlace = {}, absorb = true): MdEscapedParagraph | null {
   const absorbed = absorb ? markupEscapes(flavor, lines, place) : [];
+  const absorbedOn = byLine(absorbed);
   const text = lines.map((l, k) => {
     let out = l;
-    for (const e of absorbed.filter((a) => a.line === k).reverse()) out = out.slice(0, e.at) + out.slice(e.at + 1);
+    for (const e of [...(absorbedOn.get(k) ?? [])].reverse()) out = out.slice(0, e.at) + out.slice(e.at + 1);
     return out;
   });
   const found = paragraphEscapes(flavor, text, place);
   if (!found) return null;
   // each escape is in the lines with those before it in: every one moved into the lines with all of them in
   const all: { line: number; at: number; markup: boolean }[] = [];
+  const allOn = new Map<number, { line: number; at: number; markup: boolean }[]>();
   for (const e of found) {
-    for (const m of all) if (m.line === e.line && m.at >= e.at) m.at++;
-    all.push({ ...e });
+    const others = allOn.get(e.line) ?? [];
+    for (const m of others) if (m.at >= e.at) m.at++;
+    const placed = { ...e };
+    all.push(placed);
+    allOn.set(e.line, [...others, placed]);
   }
   // then out of them: a markup escape's in the text with the gained ones in, a gained one's in the text before them
-  const before = (e: MdEscapeAt, gainedToo: boolean): number => all.filter((m) => m.line === e.line && m.at < e.at && (gainedToo || m.markup)).length;
+  const before = (e: MdEscapeAt, gainedToo: boolean): number => (allOn.get(e.line) ?? []).filter((m) => m.at < e.at && (gainedToo || m.markup)).length;
   const markup = all.filter((e) => e.markup).map((e) => ({ line: e.line, at: e.at - before(e, false) }));
   const gained = all.filter((e) => !e.markup).map((e) => ({ line: e.line, at: e.at - before(e, true) })).sort((a, b) => a.line - b.line || a.at - b.at);
+  const gainedOn = byLine(gained);
   const spelled = text.map((l, k) => {
     let out = l;
-    for (const g of gained.filter((e) => e.line === k).reverse()) out = out.slice(0, g.at) + '\\' + out.slice(g.at);
+    for (const g of [...(gainedOn.get(k) ?? [])].reverse()) out = out.slice(0, g.at) + '\\' + out.slice(g.at);
     return out;
   });
   const escapes = all.map((e) => ({ line: e.line, at: e.at })).sort((a, b) => a.line - b.line || a.at - b.at);
   return { absorbed, lines: spelled, markup: markup.sort((a, b) => a.line - b.line || a.at - b.at), gained, escapes };
+}
+
+/** `escapes` by their line, in order: a paste of many lines has one a line. */
+function byLine<T extends MdEscapeAt>(escapes: readonly T[]): Map<number, T[]> {
+  const out = new Map<number, T[]>();
+  for (const e of escapes) out.set(e.line, [...(out.get(e.line) ?? []), e]);
+  return out;
 }
 
 /** An escape `paragraphEscapes` gives: `markup` where it is a markup escape, else a backslash the text gains. */
@@ -186,8 +199,8 @@ type FoundEscape = MdEscapeAt & { readonly markup: boolean };
  * before it in: none where they are already; null where no escape does.
  */
 function paragraphEscapes(flavor: MdFlavor, lines: readonly string[], place: MdParagraphPlace): FoundEscape[] | null {
-  const escapes: FoundEscape[] = [];
-  let current = [...lines];
+  const escapes = windowEscapes(flavor, lines, place);
+  let current = withEscapes(lines, escapes);
   for (let guard = 0; guard <= lines.length; guard++) {
     const i = firstChanged(flavor, current, place);
     if (i < 0) {
@@ -195,8 +208,11 @@ function paragraphEscapes(flavor: MdFlavor, lines: readonly string[], place: MdP
       // math or a comment it would be a character of their verbatim text, no escape, which no
       // spelling keeps as it was (Auto23, Auto24)
       const placed: FoundEscape[] = [];
+      const placedOn = new Map<number, number[]>();
       for (const e of escapes) {
-        for (const [k, p] of placed.entries()) if (p.line === e.line && p.at >= e.at) placed[k] = { ...p, at: p.at + 1 };
+        const others = placedOn.get(e.line) ?? [];
+        for (const k of others) if (placed[k]!.at >= e.at) placed[k] = { ...placed[k]!, at: placed[k]!.at + 1 };
+        placedOn.set(e.line, [...others, placed.length]);
         placed.push(e);
       }
       const tree = escapes.some((e) => e.markup) ? parsed(flavor, current, place) : null;
@@ -208,6 +224,39 @@ function paragraphEscapes(flavor: MdFlavor, lines: readonly string[], place: MdP
     current = withEscape(current, escape);
   }
   return null;
+}
+
+/** How many lines `windowEscapes` reads at a time. */
+const ESCAPE_WINDOW = 64;
+
+/**
+ * The escapes of many lines, found in windows: whether a line stays a paragraph's depends on the lines
+ * around it, so each escape costs a window's reading, not all the lines' (a list pasted as text has one
+ * a line). In order, as `paragraphEscapes` gives them, which then reads the whole, its answer the one that
+ * counts: this finds what it would, where it can, and stops where it can't. None for a few lines.
+ */
+function windowEscapes(flavor: MdFlavor, lines: readonly string[], place: MdParagraphPlace): FoundEscape[] {
+  const escapes: FoundEscape[] = [];
+  const current = [...lines];
+  let from = 0;
+  while (current.length - from > ESCAPE_WINDOW) {
+    const window = current.slice(from, from + ESCAPE_WINDOW);
+    const at: MdParagraphPlace = from === 0 ? { context: place.context, above: place.above, lazy: place.lazy?.slice(0, ESCAPE_WINDOW) } : { context: 'continuation', above: current[from - 1]! };
+    const changed = firstChanged(flavor, window, at);
+    // (the window's last line is read without the line after it, which can change how it reads)
+    if (changed < 0 || changed === window.length - 1) {
+      from += window.length - 1;
+      continue;
+    }
+    const escape = keeping(flavor, window, at, changed);
+    if (!escape) break;
+    const found = { ...escape, line: escape.line + from };
+    escapes.push(found);
+    const line = current[found.line]!;
+    current[found.line] = line.slice(0, found.at) + '\\' + line.slice(found.at);
+    from += changed;
+  }
+  return escapes;
 }
 
 /** The first of `lines` that doesn't stay the paragraph's at `place`, or -1; a line of `below` counts as their last. */
@@ -251,6 +300,13 @@ function inlineEscape(tree: MdTree, lines: readonly string[], place: MdParagraph
   const line = tree.line(escape.line + lead);
   // (a line that starts no inline text, alone, reads it as one)
   return tree.inlineEscapeAt(pos) || !line.leaf || tree.inlineText(line.leaf) === null;
+}
+
+/** `lines` with `escapes` in, each in the lines with those before it in. */
+function withEscapes(lines: readonly string[], escapes: readonly MdEscapeAt[]): string[] {
+  const out = [...lines];
+  for (const { line, at } of escapes) out[line] = out[line]!.slice(0, at) + '\\' + out[line]!.slice(at);
+  return out;
 }
 
 function withEscape(lines: readonly string[], escape: MdEscapeAt): string[] {

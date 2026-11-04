@@ -7,7 +7,8 @@ import { test } from 'node:test';
 import fc from 'fast-check';
 import { commonmark, type MdFlavor } from '../../src/parser/flavor.ts';
 import { gfm } from '../../src/parser/gfm.ts';
-import type { MdBlockSpec, MdState } from '../../src/parser/machine.ts';
+import type { MdBlockSpec, MdFrame, MdState } from '../../src/parser/machine.ts';
+import { defineFlavor } from '../../src/parser/extend.ts';
 import { MdTree } from '../../src/parser/syntax.ts';
 
 import type { MdBlock, MdBlockAt } from '../../src/parser/types.ts';
@@ -148,6 +149,30 @@ test('line endings that join or split across a change', () => {
   }
 });
 
+test('a byte-order mark opening the text, put in, taken out, typed after or before: an update equals a full parse, of a document and of a fragment', () => {
+  const cases: [string, number, number, string][] = [
+    ['# T\n- a\n', 0, 0, '\ufeff'],
+    ['\ufeff# T\n- a\n', 0, 1, ''],
+    ['\ufeff# T\n- a\n', 1, 1, 'x'],
+    ['\ufeff# T\n- a\n', 0, 0, 'x'],
+    ['\ufeff# T\n- a\n', 0, 4, ''],
+    ['\ufeff\n- a\n', 1, 1, '- '],
+    ['\ufeff---\na: 1\n---\n', 1, 1, '\n'],
+    ['x\n\ufeff# T\n', 0, 2, ''],
+  ];
+  for (const [text, from, to, insert] of cases) {
+    for (const flavor of Object.values(FLAVORS)) {
+      // (a document's text, whose mark is before its Markdown, and a fragment's, whose mark is text)
+      for (const document of [true, false]) {
+        const old = MdTree.parse(text, flavor, { document });
+        void old.root;
+        const next = old.update([{ from, to, insert }]);
+        assertSameParse(next, MdTree.parse(next.text, flavor, { document }), `${JSON.stringify(text)} [${from}, ${to}) ${JSON.stringify(insert)}, document: ${document}`);
+      }
+    }
+  }
+});
+
 test('an update leaves the snapshot it starts from as it was', () => {
   // a placeholder after the final line ending adds a line, which an update without changes once
   // appended to the old snapshot's own lines (a structural command from the text end then threw)
@@ -199,4 +224,65 @@ test('an update shares every block away from the lines it read again', () => {
     // again); the rest is the old tree's
     assert.ok(fresh < 20, `${fresh} of ${now.length} blocks made anew`);
   }
+});
+
+test('an update compares a block\'s attributes by shape: an object for an array is another value', () => {
+    const flavor = defineFlavor('shape', [{
+      name: 'shape', blockStartChars: 'AO',
+      blockStarts: [{
+        name: 'shape', before: 'blockquote',
+        start(m) {
+          if (m.line[0] !== 'A' && m.line[0] !== 'O') return 0;
+          m.addSingleLine({ type: 'shape', first: true, value: m.line[0] === 'A' ? ['x'] : { 0: 'x' } });
+          m.takeLine();
+          return 2;
+        },
+      }],
+    }]);
+    const before = MdTree.parse('A', flavor);
+    void before.root;
+    const after = before.update([{ from: 0, to: 1, insert: 'O' }]);
+    assert.deepEqual(after.root.children[0]!.attrs, MdTree.parse('O', flavor).root.children[0]!.attrs);
+});
+
+test('an update compares a frame\'s state under symbol keys too: an extension\'s count edited reads as a fresh parse', () => {
+    const remaining = Symbol('remaining');
+    type CountedFrame = MdFrame & { readonly [remaining]: number };
+    const spec: MdBlockSpec<CountedFrame> = {
+      type: 'counted', container: false, acceptsLines: true,
+      continue(m, frame, index) {
+        if (frame[remaining] <= 0) return 1;
+        m.replace(index, { spec, [remaining]: frame[remaining] - 1 } as CountedFrame);
+        return 0;
+      },
+      addLine(m) {
+        m.setLeaf({ type: 'counted', first: false });
+        m.takeLine();
+      },
+    };
+    const flavor = defineFlavor('counted', [{
+      name: 'counted', blockStartChars: '@',
+      blockStarts: [{
+        name: 'counted',
+        start(m) {
+          if (!/^@[0-9]$/.test(m.line)) return 0;
+          m.addChild({ spec, [remaining]: Number(m.line[1]) } as CountedFrame);
+          m.setLeaf({ type: 'counted', first: true, count: Number(m.line[1]) });
+          m.takeLine();
+          return 2;
+        },
+      }],
+    }]);
+    const before = MdTree.parse('@3\na\nb\nc\nd\ne', flavor);
+    void before.root;
+    const after = before.update([{ from: 1, to: 2, insert: '4' }]);
+    assert.equal(after.root.children[0]!.lines, MdTree.parse(after.text, flavor).root.children[0]!.lines);
+});
+
+test('the inline cache is keyed by every label whole: one holding U+0001 isn\'t two others', () => {
+    const source = '[^a] [^b]\n\n[^a]: one\n\n[^b]: two';
+    const tree = MdTree.parse(source, gfm);
+    tree.inlines(tree.rootAt.child(0));
+    const updated = tree.update([{ from: source.indexOf('[^a]:'), to: source.length, insert: '[^a\x01^b]: one' }]);
+    assert.equal(updated.renderHtml(), MdTree.parse(updated.text, gfm).renderHtml());
 });

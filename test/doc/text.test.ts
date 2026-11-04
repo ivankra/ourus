@@ -99,7 +99,8 @@ test('8. placeholders: an empty line, a held space', () => {
 
 test('9. callouts by flavor', () => {
   assert.deepEqual(texts(parse('> [!tip]- Title\n> body', 'obsidian')), ['quote ⟦callout:[!tip]- ⟧Title', 'paragraph body']);
-  assert.deepEqual(texts(parse('> [!tip]- Title\n> body', 'gfm')), ['quote ⟦callout:[!tip]- ⟧Title⏎body']);
+  // (a flavor without callouts: the quote's text, as any)
+  assert.deepEqual(texts(parse('> [!tip]- Title\n> body', 'gfm')), ['paragraph ⟦quote:> ⟧[!tip]- Title⏎⟦quote:> ⟧body']);
 });
 
 test('10. code', () => {
@@ -266,4 +267,31 @@ test('math and comments: closed on a later line, past an item\'s marker line, th
     assert.equal(read(`${d}\nx${d} `).closed, true);
     assert.equal(read(`${d}\nx${d}\u00a0`).closed, false);
   }
+});
+
+test('a text owns its block-id lines: the caller changing its list or records after changes neither prose nor atom', async () => {
+  const { OurusAtom } = await import('../../src/doc/index.ts');
+  const lines = [{ blankLines: 1, line: '^id' }];
+  const prose = new Text('paragraph', false, 'x', null, lines);
+  const atom = new OurusAtom('fenced_code', false, '```\nx\n```', lines);
+  lines[0]!.line = '^changed';
+  lines.push({ blankLines: 0, line: '^more' });
+  assert.deepEqual(prose.blockIdLines, [{ blankLines: 1, line: '^id' }]);
+  assert.deepEqual(atom.blockIdLines, [{ blankLines: 1, line: '^id' }]);
+});
+
+test('a frozen list of block-id lines is copied unless its records are frozen too: a caller\'s record changing changes no text', () => {
+    const line = { blankLines: 1, line: '^a' };
+    const text = new Text('paragraph', false, 'p', null, Object.freeze([line]));
+    line.line = '^b';
+    assert.equal(text.blockIdLines[0]!.line, '^a');
+});
+
+test('held spaces come out of a text in one pass: linear in their number', async () => {
+  const { scalingFactor } = await import('../lib/index.ts');
+  const settle = (n: number) => new Text('paragraph', false, 'a '.repeat(n)).withMarks({ placeholders: Array.from({ length: n }, (_, i) => 2 * i + 1) }).withoutHeldSpaces();
+  assert.equal(settle(3).text, 'aaa');
+  assert.deepEqual([...settle(3).marks.placeholders], []);
+  // (eight times the spaces: linear about 8; one splice each was about 40)
+  assert.ok(scalingFactor(settle, 1000, 8000) < 24);
 });

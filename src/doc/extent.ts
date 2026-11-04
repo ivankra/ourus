@@ -26,6 +26,8 @@ export function coverEnd(doc: OurusDoc, node: OurusNode): number {
 
 /** What zooming into `node` would show, in offsets: its lines, its descendants' and its trailing gap (`coverEnd`). */
 export function coverRange(doc: OurusDoc, node: OurusNode): { from: number; to: number } {
+  // (an empty text has no lines: its root covers nothing, at 0)
+  if (!doc.mdTree.lineCount) return { from: 0, to: 0 };
   return { from: doc.mdTree.starts[node.startLine]!, to: doc.mdTree.ends[coverEnd(doc, node)]! };
 }
 

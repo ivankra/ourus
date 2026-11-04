@@ -28,7 +28,7 @@ test("every spec buffer the setup holds goes there and back as it was", () => {
   const spec = new URL('../../spec/', import.meta.url);
   let held = 0;
   for (const f of readdirSync(spec).filter((f) => f.endsWith('.md'))) {
-    for (const m of readFileSync(new URL(f, spec), 'utf8').matchAll(/```buffer\n([\s\S]*?)```/g)) {
+    for (const m of readFileSync(new URL(f, spec), 'utf8').matchAll(/```markdown\n([\s\S]*?)```/g)) {
       let p: Projection;
       try {
         p = project(m[1]!, 'gfm', { freeForm: true, ordered: true });

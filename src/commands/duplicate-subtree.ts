@@ -33,7 +33,24 @@ export function duplicateSubtreeCommand(ctx: CommandContext): OurusResult | null
   // a placeholder in what is copied: not done yet (a copy's are written anew where it lands: a held
   // space, an empty node with children, an empty paragraph, which holds only with one), but in the
   // item Enter just made, empty and alone, its copy as empty, an empty item without a placeholder
-  const held = nodes.some((n) => MarkSet.within(ctx.doc.marks.placeholders, ctx.doc.rangeOf(n).from, ctx.doc.rangeOf(n).to + 1).length > 0);
+  // (or the empty last line Shift-Enter left in a text, held: it goes from the original and the copy,
+  // as settling would take it out)
+  const heldTail = (n: OurusNode): OurusProse | null => {
+    const text = ctx.doc.textOf(n);
+    if (!(text instanceof OurusProse) || !text.marks.placeholders.includes(text.text.length)) return null;
+    const last = text.text.lastIndexOf('\n');
+    return last >= 0 && trimMd(text.text.slice(last + 1).replace(/^ {0,3}>[ \t]?/, '')) === '' ? text.slice(0, last).withBlockIdLines(text.blockIdLines) : null;
+  };
+  const tails = new Map<OurusNode, OurusProse>();
+  // (one ending the document, no line ending after it: not done yet)
+  const atEnd = (n: OurusNode): boolean => ctx.doc.posOf(n, ctx.doc.textOf(n)!.text.length, -1) === ctx.doc.text.length;
+  const findTails = (n: OurusNode): void => {
+    const t = heldTail(n);
+    if (t && !atEnd(n)) tails.set(n, t);
+    n.children.forEach(findTails);
+  };
+  nodes.forEach(findTails);
+  const held = nodes.some((n) => MarkSet.within(ctx.doc.marks.placeholders, ctx.doc.rangeOf(n).from, ctx.doc.rangeOf(n).to + 1).some((pos) => ![...tails.keys()].some((t) => ctx.doc.posOf(t, ctx.doc.textOf(t)!.text.length, -1) === pos)));
   const fresh = nodes.length === 1 && nodes[0]!.kind === 'item' && !nodes[0]!.children.length && (ctx.doc.textOf(nodes[0]!) as OurusProse | null)?.empty === true;
   if (held && !fresh) return null;
   const draft = ctx.draft();
@@ -70,6 +87,11 @@ export function duplicateSubtreeCommand(ctx: CommandContext): OurusResult | null
     draft.setText(copy, bare && text.heading?.form === 'setext' ? new OurusProse('heading', text.item, `${'#'.repeat(text.heading.level)} `) : text);
   };
   nodes.forEach(unname);
+  for (const [n, text] of tails) {
+    draft.setText(n, text);
+    const copy = ids.get(n.persistentNode);
+    if (copy !== undefined && !uncopied.has(n.persistentNode)) draft.setText(copy, text);
+  }
   // each item copy lined up with its original, as its line is written (a quote's `>` as it is)
   nodes.forEach((n, k) => n.kind === 'item' && draft.lineUp(copies[k]!, n));
   // in a loose list, spaced as its items are, as paste places them: the original apart from its copy,
@@ -98,7 +120,10 @@ export function duplicateSubtreeCommand(ctx: CommandContext): OurusResult | null
     });
   }
   // each end in the copy of the node it is in (in its original where it has none, a block id alone;
-  // at most at the end of a copy without its block ids)
+  // at most at the end of a copy without its block ids, where the flavor has them: elsewhere `^x` is
+  // text, copied: block-ids.test.ts)
+  const ided = ctx.doc.mdTree.flavor.has('blockIds');
+  const unnamed = <T extends Parameters<typeof withoutBlockIds>[0]>(text: T): T => (ided ? (withoutBlockIds(text) as T) : text);
   const end = (pos: number): AnchorSpec | null => {
     const at = ctx.view.locate(pos);
     const node = at.zone === 'gap' ? at.owner : 'node' in at ? at.node : null;
@@ -107,13 +132,14 @@ export function duplicateSubtreeCommand(ctx: CommandContext): OurusResult | null
       const owner = at.zone === 'gap' ? at.owner : at.node;
       const id = ids.get(owner.persistentNode);
       const text = ctx.doc.textOf(owner);
-      return id !== undefined && text ? { ref: id, offset: textEnd(withoutBlockIds(text)), assoc: -1 } : null;
+      return id !== undefined && text ? { ref: id, offset: textEnd(unnamed(text)), assoc: -1 } : null;
     }
     if (at.zone !== 'text' && at.zone !== 'frame' && at.zone !== 'marker' && at.zone !== 'prefix') return null;
     const id = ids.get(at.node.persistentNode);
     const text = at.zone === 'text' || at.zone === 'frame' ? at.text : ctx.doc.textOf(at.node);
     if (id === undefined || !text) return null;
-    return { ref: id, offset: Math.min(caretOffset(at, text), withoutBlockIds(text).text.length), assoc: 1 };
+    // (at most at the end of the copy's text, a held empty last line gone from it)
+    return { ref: id, offset: Math.min(caretOffset(at, text), unnamed(tails.get(at.node) ?? text).text.length), assoc: 1 };
   };
   // a subtree selection: the copies, in its shape (`reshaped`, from a caret in the first copy with
   // text: a first root with none of its own, `- - a` or a quote without a title, has its child's)
@@ -140,5 +166,5 @@ export function duplicateSubtreeCommand(ctx: CommandContext): OurusResult | null
   };
   nodes.forEach(visit);
   const applied = withFolds(ctx.apply(draft.select(anchor, head)), folds);
-  return copied ? reshaped(applied, shape, (id) => ids.get(ctx.doc.node(id)!.persistentNode)) : applied;
+  return copied || shape?.kind === 'line' ? reshaped(applied, shape, (id) => ids.get(ctx.doc.node(id)!.persistentNode)) : applied;
 }

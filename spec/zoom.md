@@ -8,8 +8,8 @@ Commands:
 - every command while zoomed
 
 A zoom is the view's, not the text's: the snapshot's `zoom` (dev/21-zoom.md). The buffer draws the
-whole text, hidden lines too; the config block's `zoom: ①` says what the view is zoomed into at the
-start, a step's `zoom:` what it is after it (`zoom: none`). The rules:
+whole text, hidden lines too, and `⟦zoomed⟧` last on the zoom root's first line: at the start what
+the view is zoomed into, after a step what it is then (none drawn, no zoom). The rules:
 
 1. **A zoom shows its root's lines, its descendants' and its trailing gap**; any node can be its
    root. `zoomIn` zooms into the node at the caret, or the first the selection touches, or the node
@@ -37,27 +37,22 @@ start, a step's `zoom:` what it is after it (`zoom: none`). The rules:
 Enter at the end of the zoom root's text makes its first child, which stays inside.
 
 ```yaml
-tags: common
-zoom: ①
+tags: core
 ```
 
-```buffer
+```markdown
 - a
-- b┃①
+- b┃①⟦zoomed⟧
 - c
 ```
 
 > enter
 
-```buffer
+```markdown
 - a
-- b①
+- b①⟦zoomed⟧
   - ┃◌②
 - c
-```
-
-```yaml
-zoom: ①
 ```
 
 ## Zoom2
@@ -66,12 +61,11 @@ Backspace at the zoom root's text start would join it to a node the view hides: 
 
 ```yaml
 tags: common
-zoom: ②
 ```
 
-```buffer
+```markdown
 - a①
-- ┃b②
+- ┃b②⟦zoomed⟧
 ```
 
 > deleteContentBackward
@@ -87,11 +81,10 @@ taking what follows out of the zoom: refused, though no line outside changes.
 
 ```yaml
 tags: rare
-zoom: ①
 ```
 
-```buffer
-## A①
+```markdown
+## A①⟦zoomed⟧
 
 ### B┃
 
@@ -112,12 +105,11 @@ so ourus refuses instead of deferring.
 
 ```yaml
 tags: rare
-zoom: ②
 ```
 
-```buffer
+```markdown
 - a①
--┃ b②
+-┃ b②⟦zoomed⟧
 ```
 
 > deleteContentBackward
@@ -133,28 +125,21 @@ child, as on a node not folded, and the fold stays stored, for when the zoom is 
 
 ```yaml
 tags: rare
-folded: ①
-zoom: ①
 ```
 
-```buffer
+```markdown
 - x
-- a┃①
+- a┃①⟦folded⟧⟦zoomed⟧
   - b
 ```
 
 > enter
 
-```buffer
+```markdown
 - x
-- a①
+- a①⟦folded⟧⟦zoomed⟧
   - ┃◌②
   - b
-```
-
-```yaml
-folded: ①
-zoom: ①
 ```
 
 ## Zoom6
@@ -162,10 +147,10 @@ zoom: ①
 `zoomIn` zooms into the node at the caret; the text and the caret stay.
 
 ```yaml
-tags: common
+tags: core
 ```
 
-```buffer
+```markdown
 - a
 - b┃②
   - c
@@ -173,15 +158,14 @@ tags: common
 
 > zoomIn
 
-```buffer
+```markdown
 - a
-- b┃②
+- b┃②⟦zoomed⟧
   - c
 ```
 
 ```yaml
 result: success
-zoom: ②
 ```
 
 ## Zoom7
@@ -189,26 +173,29 @@ zoom: ②
 `zoomOut` goes up a level, to the root's parent, and from a top-level root out of the zoom.
 
 ```yaml
-tags: common
-zoom: ③
+tags: core
 ```
 
-```buffer
+```markdown
 - a①
   - b②
-    - c┃③
+    - c┃③⟦zoomed⟧
 ```
 
 > zoomOut
 
-```yaml
-zoom: ②
+```markdown
+- a
+  - b⟦zoomed⟧
+    - c
 ```
 
 > zoomOut zoomOut
 
-```yaml
-zoom: none
+```markdown
+- a
+  - b
+    - c
 ```
 
 ## Zoom8
@@ -218,31 +205,28 @@ into it from where the zoom hides it.
 
 ```yaml
 tags: common
-zoom: ③
 ```
 
-```buffer
+```markdown
 - a┃①
   - b②
-    - c③
+    - c③⟦zoomed⟧
 ```
 
 > clearZoom
 
-```yaml
-zoom: none
+```markdown
+- a
+  - b
+    - c
 ```
 
 > zoomIn ③
 
-```buffer
+```markdown
 - a①
   - b②
-    - ┃c③
-```
-
-```yaml
-zoom: ③
+    - ┃c③⟦zoomed⟧
 ```
 
 ## Zoom9
@@ -251,12 +235,11 @@ The zoom root deleted, the view zooms out to its nearest ancestor left.
 
 ```yaml
 tags: rare
-zoom: ②
 ```
 
-```buffer
+```markdown
 - a①
-  - b┃②
+  - b┃②⟦zoomed⟧
   - c
 ```
 
@@ -264,7 +247,11 @@ zoom: ②
 
 ```yaml
 result: success
-zoom: ①
+```
+
+```markdown
+- a⟦zoomed⟧
+  - c
 ```
 
 ## Zoom10
@@ -272,25 +259,20 @@ zoom: ①
 Split mid-text, the zoom root's rest is its first child, inside the zoom.
 
 ```yaml
-tags: rare
-zoom: ①
+tags: common
 ```
 
-```buffer
-- a┃b①
+```markdown
+- a┃b①⟦zoomed⟧
 - c
 ```
 
 > enter
 
-```buffer
-- a①
+```markdown
+- a①⟦zoomed⟧
   - ┃b②
 - c
-```
-
-```yaml
-zoom: ①
 ```
 
 ## Zoom11
@@ -299,11 +281,10 @@ A child of the zoom root outdented would be its sibling, outside the zoom: refus
 
 ```yaml
 tags: common
-zoom: ①
 ```
 
-```buffer
-- a①
+```markdown
+- a①⟦zoomed⟧
   - b┃
 ```
 
@@ -320,11 +301,10 @@ next item, outside, making that list tight: refused rather than left to the host
 
 ```yaml
 tags: rare
-zoom: ①
 ```
 
-```buffer
-- a①
+```markdown
+- a①⟦zoomed⟧
   - b
 ┃
 - c
@@ -342,12 +322,11 @@ The zoom root, a code block, indented would be an item that joins the list after
 hides: refused.
 
 ```yaml
-tags: rare
-zoom: ①
+tags: rare markup-fence
 ```
 
-````buffer
-```┃①
+````markdown
+```┃①⟦zoomed⟧
 x
 ```
 - a
@@ -367,24 +346,19 @@ would take the root out of its list.
 ```yaml
 tags: rare
 enterOnEmptyItem: unwrap
-zoom: ②
 ```
 
-```buffer
+```markdown
 - x①
-- ┃②
+- ┃②⟦zoomed⟧
   - b
 ```
 
 > enter
 
-```buffer
+```markdown
 - x①
-- ②
+- ②⟦zoomed⟧
   - ┃
   - b
-```
-
-```yaml
-zoom: ②
 ```

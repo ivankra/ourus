@@ -80,13 +80,13 @@ clipboard: |
   y
 ```
 
-```buffer
+```markdown
 - a┃b
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - ax
   y
   ┃b
@@ -104,16 +104,16 @@ clipboard: |
   y
 ```
 
-```buffer
+```markdown
 - a┃
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - ax
   y
-  ┃
+  ┃◌
 ```
 
 ## PastePlain3
@@ -123,21 +123,21 @@ make one, `y` and the rest of the text the item's second paragraph. Logseq, Logs
 Athens keep the blank line in the block.
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |
   x
 
   y
 ```
 
-```buffer
+```markdown
 - a┃b
 - c
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - ax
 
   y
@@ -158,13 +158,13 @@ clipboard: |
 quotes: container
 ```
 
-```buffer
+```markdown
 > See ┃here.
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 > See x
 >
 > y
@@ -176,19 +176,19 @@ quotes: container
 Plain paste: a pasted line that would start a block is escaped, so it stays text.
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |
   x
   - y
 ```
 
-```buffer
+```markdown
 - a┃b
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - ax
   \̬- y
   ┃b
@@ -200,19 +200,19 @@ Plain paste breaks lines as Shift-Enter does ([ShiftEnter18](shift-enter.md#shif
 ordered marker other than 1 on a continuation line can't start a list there, and stays as it is.
 
 ```yaml
-tags: rare
+tags: common
 clipboard: |-
   x
   2. y
 ```
 
-```buffer
+```markdown
 - a┃
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - ax
   2. y┃
 ```
@@ -231,13 +231,13 @@ clipboard: |
   $$
 ```
 
-```buffer
+```markdown
 - a┃b
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - a$$
   x^2
   \̬$$
@@ -250,19 +250,19 @@ Plain paste at the start of a paragraph's text: the first pasted line starts the
 it would start a block there.
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |-
   - a
   - b
 ```
 
-```buffer
+```markdown
 ┃words
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 \̬- a
 \̬- b┃words
 ```
@@ -279,13 +279,13 @@ clipboard: |
   b
 ```
 
-```buffer
+```markdown
 1┃
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 1\̬. a
 b
 ┃
@@ -303,13 +303,13 @@ clipboard: |
   2. b
 ```
 
-```buffer
+```markdown
 - 2┃\. y
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - 21\̬. a
   2. b
   ┃\. y
@@ -327,13 +327,13 @@ clipboard: |
   x
 ```
 
-```buffer
+```markdown
 [a]: ┃b c
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 [a]\̬: x
 ┃b c
 ```
@@ -351,13 +351,13 @@ clipboard: |-
   [a]: /u
 ```
 
-```buffer
+```markdown
 p┃
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 px
 
 [a]\̬: /u┃
@@ -376,13 +376,13 @@ clipboard: |
   x
 ```
 
-```buffer
+```markdown
 p┃ ---
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 px
 ┃ \̬---
 ```
@@ -399,13 +399,13 @@ clipboard: |-
   ⍽y
 ```
 
-```buffer
+```markdown
 p┃
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 px
 ⍽y┃
 ```
@@ -423,13 +423,13 @@ clipboard: |-
   y
 ```
 
-```buffer
+```markdown
 p┃
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 px
 ⍽
 y┃
@@ -448,21 +448,21 @@ clipboard: |-
   y
 ```
 
-```buffer
+```markdown
 - ┃a b
   - c
 ```
 
 > deleteContentForward
 
-```buffer
+```markdown
 - ┃◌ b
   - c
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - x
   y┃ b
   - c
@@ -481,14 +481,14 @@ clipboard: |-
   - y
 ```
 
-```buffer
+```markdown
 - a«bc
   de»f
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - ax
   \̬- y┃f
 ```
@@ -504,14 +504,14 @@ clipboard: |-
   # y
 ```
 
-```buffer
+```markdown
 > a«bc
 > de»f
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 > ax
 > \̬# y┃f
 ```
@@ -529,13 +529,13 @@ clipboard: |2
       second
 ```
 
-```buffer
+```markdown
 - ┃a
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - first
       second
   ┃a
@@ -553,13 +553,13 @@ clipboard: |-
   b
 ```
 
-```buffer
+```markdown
 - ┃
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - a  
   b┃
 ```
@@ -569,13 +569,13 @@ clipboard: |-
 Plain paste of several lines into a heading is refused: a heading is a single line.
 
 ```yaml
-tags: edge free-form
+tags: common free-form
 clipboard: |
   x
   y
 ```
 
-```buffer
+```markdown
 # H┃
 ```
 
@@ -585,7 +585,7 @@ clipboard: |
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 # H┃
 ```
 
@@ -602,7 +602,7 @@ clipboard: |
   y
 ```
 
-```buffer
+```markdown
 > [!note] Ti┃tle
 > body
 ```
@@ -613,7 +613,7 @@ clipboard: |
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 > [!note] Ti┃tle
 > body
 ```
@@ -630,14 +630,14 @@ clipboard: |-
   y
 ```
 
-```buffer
+```markdown
 Title┃more
 ---
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 Titlex
 y┃more
 ---
@@ -656,14 +656,14 @@ clipboard: |-
   x
 ```
 
-```buffer
+```markdown
 - a
   ┃b
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - a
 
   x┃b
@@ -683,13 +683,13 @@ clipboard: |-
   x
 ```
 
-```buffer
+```markdown
 ┃abc
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 x┃abc
 ```
 
@@ -705,7 +705,7 @@ clipboard: |-
   x
 ```
 
-```buffer
+```markdown
 p
 
 ┃abc
@@ -713,7 +713,7 @@ p
 
 > pastePlain
 
-```buffer
+```markdown
 p
 
 x┃abc
@@ -730,7 +730,7 @@ clipboard: |+
 
 ```
 
-```buffer
+```markdown
 p
 
 ┃◌
@@ -742,7 +742,7 @@ p
 result: rejected not-expressible
 ```
 
-```buffer
+```markdown
 p
 
 ┃◌
@@ -754,13 +754,13 @@ Plain paste on a code line: the lines are code as they are, each taking the cont
 in (here the item's indentation).
 
 ```yaml
-tags: edge
+tags: common
 clipboard: |-
   a = 1
     b = 2
 ```
 
-````buffer
+````markdown
 - code
   ```
   ┃
@@ -769,7 +769,7 @@ clipboard: |-
 
 > pastePlain
 
-````buffer
+````markdown
 - code
   ```
   a = 1
@@ -790,7 +790,7 @@ clipboard: |-
   y
 `````
 
-`````buffer
+`````markdown
 ```
 co┃de
 ```
@@ -798,7 +798,7 @@ co┃de
 
 > pastePlain
 
-`````buffer
+`````markdown
 ````
 cox
 ```
@@ -817,7 +817,7 @@ clipboard: |-
     b
 `````
 
-`````buffer
+`````markdown
   ```
   ┃
   ```
@@ -825,7 +825,7 @@ clipboard: |-
 
 > pastePlain
 
-`````buffer
+`````markdown
   ```
   a
     b┃
@@ -838,20 +838,20 @@ With `pastePlainLines: enter`, the text is typed with Enter at each line break: 
 splits, the next line a new item, which the text after the caret ends, as Dynalist pastes.
 
 ```yaml
-tags: edge
+tags: rare
 pastePlainLines: enter
 clipboard: |-
   x
   y
 ```
 
-```buffer
+```markdown
 - a┃b
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - ax
 - y┃b
 ```
@@ -862,20 +862,20 @@ With `pastePlainLines: items`, each line is a node, placed as paste places nodes
 whose text stays whole), its Markdown text: a lone `- y` among other lines is escaped.
 
 ```yaml
-tags: edge
+tags: rare
 pastePlainLines: items
 clipboard: |-
   x
   - y
 ```
 
-```buffer
+```markdown
 - a┃b
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - ab
 - x
 - \- y┃
@@ -887,20 +887,20 @@ With `pastePlainLines: items`, where every line has a list marker the markers ar
 items, as Tana pastes them.
 
 ```yaml
-tags: edge
+tags: rare
 pastePlainLines: items
 clipboard: |-
   - x
   - y
 ```
 
-```buffer
+```markdown
 - a┃b
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - ab
 - x
 - y┃
@@ -912,21 +912,21 @@ With `pastePlainLines: items` the lines are nodes, so over a selection they go a
 (`pasteOverSelection`): by default the selection goes first.
 
 ```yaml
-tags: edge
+tags: rare
 pastePlainLines: items
 clipboard: |-
   x
   y
 ```
 
-```buffer
+```markdown
 - a«bc»d
 - e
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - ad
 - x
 - y┃
@@ -939,7 +939,7 @@ With `pastePlainLines: items` and `pasteOverSelection: ignore` (Tana), the lines
 text as it is.
 
 ```yaml
-tags: edge
+tags: rare
 pastePlainLines: items
 pasteOverSelection: ignore
 clipboard: |-
@@ -947,14 +947,14 @@ clipboard: |-
   y
 ```
 
-```buffer
+```markdown
 - a«bc»d
 - e
 ```
 
 > pastePlain
 
-```buffer
+```markdown
 - abcd
 - x
 - y┃
@@ -967,14 +967,14 @@ With `pastePlainLines: host`, plain paste is the host's: it inserts the text as 
 editor does.
 
 ```yaml
-tags: edge
+tags: rare
 pastePlainLines: host
 clipboard: |-
   x
   y
 ```
 
-```buffer
+```markdown
 - a┃b
 ```
 

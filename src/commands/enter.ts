@@ -76,8 +76,8 @@ export function enterCommand(ctx: CommandContext, key = true, typed = key): Ouru
   // deletes it (Enter56)
   const end = ctx.collapsed ? offset : ctx.to.zone === 'text' && ctx.to.node.persistentNode === node.persistentNode ? ctx.to.offset : -1;
   if (end < 0) return splitAcross(ctx);
-  // a callout's title splits as a heading's does, from its text's start too; in its `[!type]`, refused
-  // (elsewhere than Obsidian the title is a paragraph's first line: its rest set apart by a blank line)
+  // a callout's title (Obsidian's) splits as a heading's does, from its text's start too; in its
+  // `[!type]`, refused
   const title = node.kind === 'quote' && text.type === 'title';
   if (title && text.frame.some((p) => p.part === 'callout' && offset > p.from && offset < p.to)) return new OurusRejected('not-expressible', "a callout's type is one word");
   // a quote's text: an empty one leaves the quote, the `> ` going; with `enterInQuote: line` a line
@@ -85,6 +85,16 @@ export function enterCommand(ctx: CommandContext, key = true, typed = key): Ouru
   // paragraph does, the rest unquoted
   if (text.type === 'quote' && typed) {
     if (text.empty && ctx.collapsed) return ctx.apply(ctx.draft().setText(node, text.slice(text.textStart(0)).withBlockIdLines(text.blockIdLines)).setCaret(node, 0, -1));
+    // on its empty last line (the one the Enter before made, held): it leaves the quote, the line
+    // going, an empty paragraph after it (an item after an item)
+    const last = text.text.lastIndexOf('\n');
+    if (ctx.collapsed && last >= 0 && offset === text.text.length && trimMd(text.text.slice(last + 1).replace(/^ {0,3}>[ \t]?/, '')) === '') {
+      const draft = ctx.draft();
+      const id = draft.create(node.kind === 'item' ? 'item' : 'paragraph', new OurusProse('paragraph', node.kind === 'item', ''));
+      draft.setText(node, text.slice(0, last).withBlockIdLines(text.blockIdLines)).place('after', node, [id]);
+      if (node.kind !== 'item') draft.gap(id, node.gap).gap(node, Math.max(1, node.gap));
+      return ctx.apply(draft.setCaret(id, 0, -1));
+    }
     if (config.enterInQuote === 'line' && trimMd(text.text.slice(text.textStart(0), offset)) !== '') return shiftEnterCommand(ctx);
   }
   // (an item's text a paragraph, or an ATX heading's, `- # a`: it splits as an item)
@@ -137,7 +147,7 @@ export function enterCommand(ctx: CommandContext, key = true, typed = key): Ouru
   // children, and so does the rest split mid-text where it would be the first child
   // (`enterMidItem: child`), the fold kept; zoomed into it, the rest is its first child, inside the zoom
   const folded = view.zoomFolded.has(node.id);
-  const after = folded && (atEnd || config.enterMidItem === 'child');
+  const after = folded && (atEnd || (node.kind === 'item' && config.enterMidItem === 'child'));
   const zoomRoot = view.zoom === node.id && node.kind === 'item';
   // (`enterMidItem` is of an item with children: one without has its rest as its sibling either way)
   const child = zoomRoot || (node.kind === 'item' && node.children.length > 0 && !folded && (atEnd || config.enterMidItem === 'child'));
@@ -154,14 +164,23 @@ export function enterCommand(ctx: CommandContext, key = true, typed = key): Ouru
     draft.convert(made, node.kind).setText(made, text.slice(0, from).concat(text.slice(rest)).withBlockIdLines(text.blockIdLines));
     draft.movedBlockIds(blockIdsOf(text).map((b) => b.name), made);
     // (its block-id lines the heading's, `made`'s now)
-    draft.setText(node, text.slice(from, a).withBlockIdLines([]).asItem(headingItem));
+    // (a paragraph's text, no heading's: a `#` it starts with literal, escaped as the writer escapes one, B80)
+    draft.setText(node, text.slice(from, a).withBlockIdLines([]).retyped('paragraph', headingItem));
     if (!headingItem) draft.convert(node, 'paragraph');
     return ctx.apply(draft.setCaret(made, from, -1));
   }
   // a heading's rest is its section's first paragraph, a callout title's the callout's
   const into = child || node.kind === 'heading' || title ? 'child' : 'sibling';
   const stay = node.kind === 'heading' || title || after;
-  const [, made] = draft.split(node, a, { to: b, children: stay ? 'stay' : 'follow', into, ...(title ? { kind: 'paragraph' as const } : {}) });
+  // (an item's text starting `[x]`, no checkbox, no blank after it, split right after it: the part
+  // left would read as one, so its `[` is escaped, as ours, Regression263)
+  let shift = 0;
+  if (node.kind === 'item' && !text.task && text.slice(0, a).asItem(true).task) {
+    const escaped = text.splice(start, start, '\\');
+    draft.setText(node, escaped.withMarks({ auto: [...escaped.marks.auto, start] }));
+    shift = 1;
+  }
+  const [, made] = draft.split(node, a + shift, { to: b + shift, children: stay ? 'stay' : 'follow', into, ...(title ? { kind: 'paragraph' as const } : {}) });
   // a task's new item is a task too
   let rest = text.slice(b, close ?? s.length).asItem(node.kind === 'item');
   if (node.kind === 'item' && text.task && config.enterTask === 'continue') {

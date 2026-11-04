@@ -1,0 +1,11 @@
+{
+  "corpus": "e1aa49c915361ff5",
+  "groups": {
+    "copy→paste: paragraph comes back as other blocks": 1,
+    "cut→paste: atom doesn't come back as the same blocks": 49,
+    "cut→paste: heading doesn't come back as the same blocks": 16,
+    "cut→paste: item doesn't come back as the same blocks": 192,
+    "cut→paste: paragraph doesn't come back as the same blocks": 94,
+    "cut→paste: quote doesn't come back as the same blocks": 12
+  }
+}

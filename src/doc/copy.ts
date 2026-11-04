@@ -12,11 +12,34 @@ import type { OurusNode } from './node.ts';
  */
 export function markdownStart(doc: OurusDoc, node: OurusNode): number {
   const tree = doc.mdTree;
+  // (an empty text has no lines: its root starts at 0)
+  if (!tree.lineCount) return 0;
   const line = tree.line(node.startLine);
   if (node.kind === 'item') return tree.markerFrom(new MdBlockAt(node.block, node.startLine));
-  // a quote's `>` and a footnote definition's `[^1]:` are its own prefix piece
-  const piece = node.kind === 'quote' || node.block.type === 'footnote_definition' ? line.prefix.find((p) => p.container.block === node.block) : undefined;
+  // a quote's `>` and a footnote definition's `[^1]:` are its own prefix piece, and so is the `>` of a
+  // quote that is the node's text (`quotes: text`, `atom`)
+  const own = node.kind === 'quote' || node.block.type === 'footnote_definition' ? node.block : node.persistentNode.textQuote;
+  const piece = own ? line.prefix.find((p) => p.container.block === own) : undefined;
   return piece ? skipSpaces(doc.text, piece.from, piece.to, 1) : line.contentFrom;
+}
+
+/** The parser's blocks whose lines are kept as they are, blank ones' spaces too: code, math, a comment, HTML. */
+/** The leaf blocks whose text is verbatim: code, math, a comment, HTML. */
+export const VERBATIM: ReadonlySet<string> = new Set(['code_block', 'math_block', 'comment_block', 'html_block']);
+
+/**
+ * The lines of the verbatim block (code, math, a comment, HTML) that is `node`'s text, as they read
+ * where it is written: past its containers' prefixes and its own indentation, a tab partly taken its
+ * rest as spaces (`MdTree.leafLines`). What the code is, which its spelling is only in its context: the
+ * same lines written at another column can read as other code. Null for a node with no such block.
+ */
+export function verbatimLinesOf(doc: OurusDoc, node: OurusNode): readonly string[] | null {
+  const tree = doc.mdTree;
+  for (let i = node.startLine; i <= node.ownLastLine && i < tree.lineCount; i++) {
+    const leaf = tree.line(i).leaf;
+    if (leaf) return VERBATIM.has(leaf.block.type) ? tree.leafLines(leaf) : null;
+  }
+  return null;
 }
 
 /**
@@ -28,8 +51,8 @@ export function markdownStart(doc: OurusDoc, node: OurusNode): number {
 export function markdownOf(doc: OurusDoc, from: number, to: number): string {
   const tree = doc.mdTree;
   const text = doc.text;
-  // (an empty text has no lines to copy out of)
-  if (!tree.lineCount) return '';
+  // (an empty text has no lines to copy out of, an empty range nothing: not the line ending at the text's end)
+  if (!tree.lineCount || from === to) return '';
   const lo = lineIndexAt(tree.starts, from);
   const end = tree.line(lineIndexAt(tree.starts, to));
   // a copy ending at a line's start ends with the line break before it
@@ -60,9 +83,14 @@ export function markdownOf(doc: OurusDoc, from: number, to: number): string {
       while (start < line.to && col < base + lead && (text[start] === ' ' || text[start] === '\t')) col = advanceColumns(text, start, ++start, col);
       piece = ' '.repeat(Math.max(0, col - base - lead)) + text.slice(start, i === end.index ? Math.min(to, line.to) : line.to);
     }
-    // (a line the copy takes whole, blank there, is empty; part of one, spaces between words, is as it is)
+    // (a tab a container's prefix took part of, `>→`: the rest of its width, in spaces, which the tab
+    // at column 0 would span differently, B93)
+    const partial = line.prefix.find((p) => holding.has(p.container.block) && p.to === start && p.partialTab);
+    if (partial && text[start] === '\t' && piece.startsWith('\t') && (i !== lo || from <= start)) piece = ' '.repeat(advanceColumns(text, line.from, start + 1, 0) - partial.toColumn) + piece.slice(1);
+    // (a line the copy takes whole, blank there, is empty; part of one, spaces between words, is as it
+    // is; and a code block's line, its spaces the payload's)
     const whole = (i !== lo || from <= held(line)) && (i !== end.index || to >= line.to);
-    out.push(whole && trimMd(piece) === '' ? '' : piece);
+    out.push(whole && trimMd(piece) === '' && !(line.leaf && VERBATIM.has(line.leaf.block.type)) ? '' : piece);
   }
   // (ending at a line's start, or past its last line's end, in its line ending: the final one too)
   return out.join('\n') + ((end.index > lo && end.from === to) || to > end.to ? '\n' : '');

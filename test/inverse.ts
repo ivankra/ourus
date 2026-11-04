@@ -38,12 +38,8 @@ import { executeCommand, type InsertionPoint, OurusRejected, OurusSuccess } from
 import { OurusDoc } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
 import { textStart } from '../src/commands/util.ts';
-import { drawDoc, nodesOf, readDrawing } from './drawing.ts';
-import { play, type Played } from './player.ts';
-import { readSpecFile, specConfig, specFiles } from './specfile.ts';
-import { flavorsOf } from './spec-run.ts';
+import { drawDoc, allNodes, readDrawing, playActions, type PlayedState, readSpecFile, specConfig, specFiles, specTestFlavors, generatedStarts, resultStatus, readBaseline, writeBaseline } from './lib/index.ts';
 import { KNOWN } from './drops.ts';
-import { statusOf } from './drawing.ts';
 
 const here = resolve(import.meta.dirname, '..');
 const PAIRS: readonly [string, string][] = [
@@ -66,19 +62,23 @@ for (const file of isMainThread ? specFiles().filter((f) => f !== 'obsidian-true
   for (const t of readSpecFile(file)) {
     const start = readDrawing(t.initial.buffer);
     if (start.placeholders.length) continue;
-    const config = { ...specConfig(t.options), flavor: flavorsOf(t)[0] };
+    const config = { ...specConfig(t.options), flavor: specTestFlavors(t)[0] };
     const key = JSON.stringify([start.text, config]);
     if (seen.has(key)) continue;
     seen.add(key);
     starts.push({ text: start.text, config, name: t.name });
   }
 }
+// then the generated notes (`lib/generated-notes.ts`): shapes in combination, which the spec doesn't draw. A write
+// failure there is held to the baseline as a group of its own, so the known ones don't fail the run
+// but a new one (or more of one) does
+if (isMainThread) for (const g of generatedStarts(Number(process.env.INVERSE_GENERATED ?? 150))) starts.push(g);
 // the corpus's identity, whatever order its files are read in (a renamed file changes nothing)
 const corpus = createHash('sha256').update(JSON.stringify(starts.map((s) => JSON.stringify([s.text, s.config])).sort())).digest('hex').slice(0, 16);
 
 const isBlank = (line: string): boolean => /^[ \t>]*$/.test(line);
-const outline = (doc: OurusDoc): string => JSON.stringify(nodesOf(doc).map((n) => [n.depth, n.kind, n.head?.type ?? null]));
-function classify(start: OurusDoc, end: Played, from: number): string {
+const outline = (doc: OurusDoc): string => JSON.stringify(allNodes(doc).map((n) => [n.depth, n.kind, n.head?.type ?? null]));
+function classify(start: OurusDoc, end: PlayedState, from: number): string {
   const [a, b] = [start.text, end.view.doc.text];
   if (a === b) return end.selection.head === from && end.selection.anchor === from ? 'same' : 'caret';
   if (outline(start) !== outline(end.view.doc)) return 'tree';
@@ -105,14 +105,26 @@ interface Found {
   dumped: string[];
 }
 const dumping = !!process.env.INVERSE_DUMP;
-const draw = (p: Played): string => JSON.stringify(drawDoc(p.view, p.selection));
+const draw = (p: PlayedState): string => JSON.stringify(drawDoc(p.view, p.selection));
 
 /** Plays every pair at every caret position of the start buffers `share` names. */
 function playShare(share: readonly number[]): Found {
   const found: Found = { runs: 0, groups: new Map(), failures: [], known: [], dumped: [] };
   const known = found.known;
   const groups = new Map<string, { runs: number; buffers: Set<string>; examples: Noted[] }>();
-  const fail = (index: number, text: string): void => void found.failures.push({ at: index, buffer: '', text });
+  const generated = new Map<string, { runs: number; buffers: Set<string>; examples: Noted[] }>();
+  const fail = (index: number, text: string): void => {
+    if (starts[index]!.name.startsWith('generated') && text.includes(' failed to write')) {
+      const key = `${text.slice(0, text.indexOf(':'))} (generated)`;
+      const group = generated.get(key) ?? { runs: 0, buffers: new Set<string>(), examples: [] };
+      group.runs++;
+      if (!group.buffers.has(starts[index]!.text) && group.examples.length < examples) group.examples.push({ at: index, buffer: starts[index]!.text, text: JSON.stringify(starts[index]!.text) + '\n         ' + text.slice(text.indexOf(':') + 2) });
+      group.buffers.add(starts[index]!.text);
+      generated.set(key, group);
+      return;
+    }
+    found.failures.push({ at: index, buffer: '', text });
+  };
   for (const index of share) {
     const s = starts[index]!;
     const doc = OurusDoc.parse(s.text, { config: s.config });
@@ -120,18 +132,18 @@ function playShare(share: readonly number[]): Found {
     for (const [first, second] of PAIRS) {
       for (let pos = 0; pos <= s.text.length; pos++) {
         if (s.text[pos - 1] === '\r' && s.text[pos] === '\n') continue;
-        const at: Played = { view, selection: { anchor: pos, head: pos }, clipboard: {} };
+        const at: PlayedState = { view, selection: { anchor: pos, head: pos }, clipboard: {} };
         found.runs++;
-        let mid: Played;
-        let end: Played;
+        let mid: PlayedState;
+        let end: PlayedState;
         try {
-          mid = play(at, [first]);
+          mid = playActions(at, [first]);
           if (mid.last instanceof OurusRejected && mid.last.reason === 'write-failed') {
             fail(index, `${first} failed to write: ${s.name} ${draw(at)}`);
             continue;
           }
           if (!(mid.last instanceof OurusSuccess)) continue;
-          end = play(mid, [second]);
+          end = playActions(mid, [second]);
         } catch (e) {
           fail(index, `${first}, ${second} threw: ${s.name} ${draw(at)}: ${(e as Error).message.split('\n')[0]}`);
           continue;
@@ -141,7 +153,7 @@ function playShare(share: readonly number[]): Found {
           fail(index, `${second} after ${first} failed to write: ${s.name} ${draw(at)} → ${draw(mid)}`);
           continue;
         }
-        const shape = last instanceof OurusSuccess ? classify(doc, end, pos) : last instanceof OurusRejected ? `rejected ${last.reason}` : (last ? statusOf(last) : '-');
+        const shape = last instanceof OurusSuccess ? classify(doc, end, pos) : last instanceof OurusRejected ? `rejected ${last.reason}` : (last ? resultStatus(last) : '-');
         if (shape === 'same') continue;
         const key = `${first}, ${second}: ${shape}`;
         if (dumping) found.dumped.push(`${key}\t${s.name}\t${draw(at)}\t${draw(mid)}\t${draw(end)}`);
@@ -153,7 +165,7 @@ function playShare(share: readonly number[]): Found {
       }
     }
     // drops: each node pressed, every place offered dropped at, then back where it was
-    for (const node of nodesOf(doc)) {
+    for (const node of allNodes(doc)) {
       // (the caret in the first text in the node: a quote's is its first child's)
       let held = node;
       while (!doc.textOf(held) && held.children.length) held = held.children[0]!;
@@ -168,10 +180,10 @@ function playShare(share: readonly number[]): Found {
       for (const point of picked.dropMap.seams.flatMap((seam) => seam.points)) {
         if (point.current) continue;
         found.runs++;
-        const at: Played = { view, selection: caret, clipboard: {} };
+        const at: PlayedState = { view, selection: caret, clipboard: {} };
         const where = `${s.name} ${draw(at)} → depth ${point.depth} under ${point.parent === 'root' ? 'the root' : `line ${doc.node(point.parent)!.startLine + 1}`}`;
-        let mid: Played;
-        let end: Played;
+        let mid: PlayedState;
+        let end: PlayedState;
         try {
           const dropped = executeCommand(view, point.drop, caret);
           if (dropped instanceof OurusRejected && dropped.reason === 'write-failed') {
@@ -193,7 +205,7 @@ function playShare(share: readonly number[]): Found {
           fail(index, `moveSubtree back failed to write: ${where} → ${draw(mid)}`);
           continue;
         }
-        const shape = last instanceof OurusSuccess ? classify(doc, end, pos) : last instanceof OurusRejected ? `rejected ${last.reason}` : statusOf(last);
+        const shape = last instanceof OurusSuccess ? classify(doc, end, pos) : last instanceof OurusRejected ? `rejected ${last.reason}` : resultStatus(last);
         if (shape === 'same') continue;
         const key = `moveSubtree, back: ${shape}`;
         if (dumping) found.dumped.push(`${key}\t${where}\t${draw(mid)}\t${draw(end)}`);
@@ -205,6 +217,7 @@ function playShare(share: readonly number[]): Found {
       }
     }
   }
+  for (const [key, g] of generated) groups.set(key, g);
   for (const [key, g] of groups) found.groups.set(key, { runs: g.runs, buffers: [...g.buffers], examples: g.examples });
   return found;
 }
@@ -249,13 +262,7 @@ for (const [key] of new Map(parts.flatMap((p) => [...p.groups]))) {
 
 console.log(`${runs} runs on ${starts.length} buffers`);
 const baselineFile = join(here, 'test/inverse.baseline.json');
-const baseline: { corpus: string; groups: Record<string, number> } | null = (() => {
-  try {
-    return JSON.parse(readFileSync(baselineFile, 'utf8'));
-  } catch {
-    return null;
-  }
-})();
+const baseline = readBaseline(baselineFile);
 const sameCorpus = baseline?.corpus === corpus;
 const rose: string[] = [];
 for (const [key, group] of [...groups].sort((x, y) => y[1].buffers.size - x[1].buffers.size || (x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0))) {
@@ -270,7 +277,7 @@ if (dumping) writeFileSync(process.env.INVERSE_DUMP!, parts.flatMap((p) => p.dum
 if (rose.length) console.log(`\nmore round trips than the baseline don't come back: ${rose.join('; ')}`);
 if (baseline && !sameCorpus) console.log('\nthe corpus changed since the baseline (the spec): its counts are not held to it; INVERSE_UPDATE=1 records them');
 if (process.env.INVERSE_UPDATE === '1') {
-  writeFileSync(baselineFile, JSON.stringify({ corpus, groups: Object.fromEntries([...groups].map(([key, g]) => [key, g.runs]).sort()) }, null, 2) + '\n');
+  writeBaseline(baselineFile, corpus, groups);
   console.log(`baseline updated: ${baselineFile}`);
 }
 process.exitCode = failures.length === 0 && rose.length === 0 ? 0 : 1;
