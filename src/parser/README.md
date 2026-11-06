@@ -63,6 +63,36 @@ preview.innerHTML = tree.renderHtml();
   - `MdTree.markerFrom(item: MdBlockAt): number`, `MdTree.markerTo(item: MdBlockAt): number`<br>
     Where a list item's marker (`-`, `1.`) starts and ends in the text.
 
+  - `MdTree.quoteMarker(piece: MdPrefixPiece): { from, to, end }`<br>
+    A quote's `>` in its prefix piece on a line: `from` past the spaces before it, `to` past it,
+    `end` past the blank after it (a tab whole, where the blank is part of one).
+
+  - `MdTree.continuationPrefix(i: number, containers: MdBlockAt[], upTo?: number): string`<br>
+    What line `i`'s prefix pieces of some of its containers spell for a line after it in them: a
+    quote's `>` as written, what opens a container (an item's marker, a footnote's label) as spaces
+    (its tabs kept), so the line continues the container and starts none; through the piece ending
+    at or before `upTo`. Each character is copied from the column it was at, so the result keeps
+    line `i`'s columns, tabs included.
+
+  - `MdTree.continuedLine(i: number, to: number): string`<br>
+    Line `i` up to `to` again, on a line after it in its containers: their prefix as
+    `continuationPrefix` spells it, then the line's own text as written (a tab the prefix split
+    stays the tab). A fence's opening repeated as its closing.
+
+  - `MdTree.unreferencedFootnotes(): MdBlockAt[]`<br>
+    The footnote definitions no reference in the document points to, which GFM renders none of.
+
+  - `MdTree.takesIn(block: string, line: string, flavor: MdFlavor): boolean`<br>
+    Whether `line`, right under `block` (a block's lines from its container's content start), is
+    read as a line of it: an HTML block that a blank line ends takes in a fence.
+
+  - `MdTree.itemLead(item: MdBlockAt, containers: MdBlockAt[]): string`<br>
+    What a new item after `item` in its list has before its marker: its first line's prefix of the
+    containers outside it, as `continuationPrefix` spells it, then its marker's indentation.
+
+  - `MAX_ITEM_NUMBER`<br>
+    The largest number an ordered item's marker can have, 999999999: nine digits.
+
   - `MdTree.inlines(leaf: MdBlockAt): MdInline[]`<br>
     A leaf's inline nodes (a paragraph's, a heading's, a table cell's, ...); empty for a block
     without inline content.
@@ -106,6 +136,10 @@ preview.innerHTML = tree.renderHtml();
   - `MdFlavor.delimited(block: MdBlock): boolean`<br>
     Whether the block opens and closes with delimiter lines: fenced code, and in Obsidian `$$` math
     and `%%` comments.
+
+  - `MdFlavor.delimiterChar(c: string): boolean`<br>
+    Whether `c` is a character such delimiters are made of: `` ` `` and `~`; `$` and `%` in
+    Obsidian. Each extension declares its own (`delimiterChars`).
 
   The next four tell where a paragraph's lines would stop reading as plain text, and which
   backslashes keep them text. They ask the parser itself, so they are exact in every flavor. A

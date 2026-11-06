@@ -16,7 +16,7 @@ const shape = (doc: OurusDoc) => allNodes(doc).map((n) => `${n.kind}:${nodePlain
 /** A document's auto marks, each with the character it is on: `\` an escape, `⏎` a line break. */
 const autoOf = (doc: OurusDoc): string[] => doc.marks.auto.map((pos) => `${/[\r\n]/.test(doc.text[pos]!) ? '⏎' : doc.text[pos]}@${pos}`);
 const keys = (view: OurusView, steps: readonly (readonly [OurusCommand, number])[]): OurusView => {
-  for (const [command, at] of steps) view = assertApplied(executeCommand(view, command, { anchor: at, head: at })).view;
+  for (const [command, at] of steps) view = assertApplied(executeCommand(view.withSelection(at), command)).view;
   return view;
 };
 const enter = { type: 'enter' } as const;
@@ -97,8 +97,8 @@ test('a caret at the start of a line that gets an escape stays before it, so Bac
   const split = assertApplied(executeOnText('--\n', { type: 'shiftEnter' }, { caret: 1 }));
   assert.equal(split.view.doc.text, '\\-\n\\-\n');
   assert.deepEqual(autoOf(split.view.doc), ['\\@0', '\\@3']);
-  assert.deepEqual(split.selection, { anchor: 3, head: 3 }, 'before the backslash of the second line');
-  assert.equal(assertApplied(executeCommand(split.view, back, split.selection)).view.doc.text, '--\n');
+  assert.deepEqual(split.view.selection, { anchor: 3, head: 3 }, 'before the backslash of the second line');
+  assert.equal(assertApplied(executeCommand(split.view, back)).view.doc.text, '--\n');
 });
 
 test('a draft that sets a text with a mark dropped keeps it dropped, though its characters are the same', () => {
@@ -115,14 +115,14 @@ test('a draft that sets a text with a mark dropped keeps it dropped, though its 
 test('a backslash that starts a text is a character of it: a caret has a place on each side, Backspace after it is the host\'s, and a join keeps it', () => {
   const view = OurusView.of(OurusDoc.parse('\\# a\n'));
   // after the backslash: Backspace deletes that character (the host does), Enter splits there
-  assert.ok(executeCommand(view, back, { anchor: 1, head: 1 }) instanceof OurusDeferred);
-  assert.equal(assertApplied(executeCommand(view, enter, { anchor: 1, head: 1 })).view.doc.text, '\\\n\n\\# a\n');
+  assert.ok(executeCommand(view.withSelection(1), back) instanceof OurusDeferred);
+  assert.equal(assertApplied(executeCommand(view.withSelection(1), enter)).view.doc.text, '\\\n\n\\# a\n');
   // before it: the text's start, where Indent keeps the caret before the backslash, and Backspace joins up
-  assert.deepEqual(assertApplied(executeCommand(view, { type: 'indent' }, { anchor: 0, head: 0 })).selection, { anchor: 2, head: 2 });
+  assert.deepEqual(assertApplied(executeCommand(view.withSelection(0), { type: 'indent' })).view.selection, { anchor: 2, head: 2 });
   assert.equal(assertApplied(executeOnText('p\n\\- a\n', back, { caret: 2 })).view.doc.text, 'p\\- a\n');
   // (where deleting the backslash would make the paragraph a heading, Cmd-Backspace keeps it and goes to the line's start)
-  const soft = assertApplied(executeCommand(view, { type: 'deleteSoftLineBackward' }, { anchor: 1, head: 1 }));
-  assert.deepEqual([soft.view.doc.text, soft.selection.head], ['\\# a\n', 0]);
+  const soft = assertApplied(executeCommand(view.withSelection(1), { type: 'deleteSoftLineBackward' }));
+  assert.deepEqual([soft.view.doc.text, soft.view.selection.head], ['\\# a\n', 0]);
 });
 
 test('blank lines ourus raised go where the nodes stay apart without them; the author\'s stay', () => {
@@ -131,7 +131,7 @@ test('blank lines ourus raised go where the nodes stay apart without them; the a
   const made = assertApplied(executeOnText(author, enter, { caret: 7 }));
   assert.ok(made.view.doc.marks.auto.length);
   // the empty paragraph taken out again, its blank lines, ourus's both, with it: the text as it was
-  assert.equal(assertApplied(executeCommand(made.view, back, made.selection)).view.doc.text, author);
+  assert.equal(assertApplied(executeCommand(made.view, back)).view.doc.text, author);
   // the blank lines the author had, no mark: kept
   const kept = keys(OurusView.of(OurusDoc.parse('para\n\n# Hello\n\nbody\n')), [[enter, 2], [back, 4]]);
   assert.equal(kept.doc.text, 'para\n\n# Hello\n\nbody\n');
@@ -141,35 +141,35 @@ test('an empty node taken out gives the node above its blank lines but the autho
   for (const text of ['a\n# H1\ntext\n', '# H1\n\ntext\n', 'para\n\n# Hello\n\nbody\n']) {
     const at = text.lastIndexOf('\n', text.length - 2) + 1;
     const made = assertApplied(executeOnText(text, enter, { caret: at }));
-    assert.equal(assertApplied(executeCommand(made.view, back, made.selection)).view.doc.text, text, JSON.stringify(text));
+    assert.equal(assertApplied(executeCommand(made.view, back)).view.doc.text, text, JSON.stringify(text));
   }
 });
 
 test('an empty item set apart by a blank line when the caret leaves, given text, loses the blank line at the next edit there; the same in CRLF', () => {
-  const settled = settlePlaceholders(OurusView.of(OurusDoc.parse('Notes\n- ', { marks: { placeholders: [8] } })), 0)!;
+  const settled = settlePlaceholders(OurusView.of(OurusDoc.parse('Notes\n- ', { marks: { placeholders: [8] } }), { selection: 0 }))!;
   assert.equal(settled.view.doc.text, 'Notes\n\n- ');
   assert.deepEqual(autoOf(settled.view.doc), ['⏎@6']);
   // typed into by the host: the blank line stays, nothing has asked whether it is needed
   const typed = settled.view.update({ changes: [{ from: 9, to: 9, insert: 'x' }] });
   assert.equal(typed.doc.text, 'Notes\n\n- x');
   // the next command at the seam reads it as ours, and the nodes stay apart without it
-  assert.equal(assertApplied(executeCommand(typed, enter, { anchor: 10, head: 10 })).view.doc.text, 'Notes\n- x\n- ');
+  assert.equal(assertApplied(executeCommand(typed.withSelection(10), enter)).view.doc.text, 'Notes\n- x\n- ');
   // (a line ending of two characters is marked on its first)
   const crlf = assertApplied(executeOnText('revise 2. draft\r\nnext\r\n', enter, { caret: 7, config: { enterSplitSpace: 'trim' } })).view;
   assert.deepEqual(autoOf(crlf.doc), ['⏎@8', '\\@11']);
   assert.deepEqual([crlf.doc.text[8], crlf.doc.text[11]], ['\r', '\\']);
-  assert.equal(assertApplied(executeCommand(crlf, back, { anchor: 10, head: 10 })).view.doc.text, 'revise2. draft\r\nnext\r\n');
+  assert.equal(assertApplied(executeCommand(crlf.withSelection(10), back)).view.doc.text, 'revise2. draft\r\nnext\r\n');
 });
 
 test('Shift-Enter at the start of an item under a paragraph raises a blank line of ours, and Backspace takes it out again', () => {
   const view = OurusView.of(OurusDoc.parse('a\n\nb\n- x\n'));
   const at = view.doc.text.indexOf('x');
-  const split = assertApplied(executeCommand(view, { type: 'shiftEnter' }, { anchor: at, head: at }));
+  const split = assertApplied(executeCommand(view.withSelection(at), { type: 'shiftEnter' }));
   // (an item with nothing on its line would underline `b`: set apart, the line marked)
   assert.equal(split.view.doc.text, 'a\n\nb\n\n-\n  x\n');
   assert.deepEqual(autoOf(split.view.doc), ['⏎@5']);
   // (joined, `- x` interrupts the paragraph: the line is unneeded, and goes)
-  const joined = assertApplied(executeCommand(split.view, back, split.selection));
+  const joined = assertApplied(executeCommand(split.view, back));
   assert.equal(joined.view.doc.text, 'a\n\nb\n- x\n');
   assert.deepEqual(autoOf(joined.view.doc), []);
 });
@@ -177,21 +177,21 @@ test('Shift-Enter at the start of an item under a paragraph raises a blank line 
 test('Enter on a list item after a paragraph and Backspace give the blank line between them back: it is the author\'s', () => {
   const view = OurusView.of(OurusDoc.parse('para\n\n- a\n'));
   const at = view.doc.text.indexOf('- a') + 2;
-  const split = assertApplied(executeCommand(view, enter, { anchor: at, head: at }));
+  const split = assertApplied(executeCommand(view.withSelection(at), enter));
   assert.equal(split.view.doc.text, 'para\n\n- \n- a\n');
-  assert.equal(assertApplied(executeCommand(split.view, back, split.selection)).view.doc.text.startsWith('para\n\n- a'), true);
+  assert.equal(assertApplied(executeCommand(split.view, back)).view.doc.text.startsWith('para\n\n- a'), true);
   // (a blank line Enter raised in a loose list is ours: it goes with the empty item)
   const loose = OurusView.of(OurusDoc.parse('- a\n- b\n\n- c\n'));
   const end = loose.doc.text.indexOf('a') + 1;
-  const made = assertApplied(executeCommand(loose, enter, { anchor: end, head: end }));
-  assert.equal(assertApplied(executeCommand(made.view, back, made.selection)).view.doc.text, '- a\n- b\n\n- c\n');
+  const made = assertApplied(executeCommand(loose.withSelection(end), enter));
+  assert.equal(assertApplied(executeCommand(made.view, back)).view.doc.text, '- a\n- b\n\n- c\n');
 });
 
 test('Backspace in the last empty item of a nested list leaves no blank line the author never put between the nodes', () => {
   // (the blank line before it was between `a` and the item; what follows is `c`, which the item never touched)
   const view = OurusView.of(OurusDoc.parse('- a\n\n  - \n- c\n'));
   const at = view.doc.text.indexOf('- \n') + 2;
-  assert.equal(assertApplied(executeCommand(view, back, { anchor: at, head: at })).view.doc.text, '- a\n- c\n');
+  assert.equal(assertApplied(executeCommand(view.withSelection(at), back)).view.doc.text, '- a\n- c\n');
 });
 
 test('a write in a document with an auto mark on every blank line takes time in proportion to its length, not to its square', () => {
@@ -213,7 +213,7 @@ test('a write in a document with an auto mark on every blank line takes time in 
     let best = Infinity;
     for (let k = 0; k < 9; k++) {
       const start = performance.now();
-      assertApplied(executeCommand(OurusView.of(doc), enter, { anchor: caret, head: caret }));
+      assertApplied(executeCommand(OurusView.of(doc, { selection: caret }), enter));
       best = Math.min(best, performance.now() - start);
     }
     return best;
@@ -225,30 +225,30 @@ test('a write in a document with an auto mark on every blank line takes time in 
 test('an empty paragraph Enter made, settled when the caret leaves, gives the node above its blank lines: the author\'s come back', () => {
   for (const [text, at] of [['p 2) x\n\n\n> [!note] q1\n', 6], ['a\n\nb\n', 1], ['# H\n\n\npara\n', 3]] as const) {
     const made = assertApplied(executeOnText(text, enter, { caret: at }));
-    assert.equal(settlePlaceholders(made.view, 0)?.view.doc.text, text, JSON.stringify(text));
+    assert.equal(settlePlaceholders(made.view.withSelection(0))?.view.doc.text, text, JSON.stringify(text));
   }
   // (under an Obsidian callout's title, a block of one line, a blank line of ours is never needed)
   const title = assertApplied(executeOnText('> [!note] q\n> body\n', enter, { caret: 11, config: { flavor: 'obsidian' } }));
-  assert.equal(settlePlaceholders(title.view, 0)?.view.doc.text, '> [!note] q\n> body\n');
+  assert.equal(settlePlaceholders(title.view.withSelection(0))?.view.doc.text, '> [!note] q\n> body\n');
   // (first in a quote with no text of its own: nothing above it takes its lines, and it goes as before)
   const first = assertApplied(executeOnText('# A\npara\n\n> # q\n\nmore\n', { type: 'shiftEnter' }, { caret: 10 }));
-  assert.equal(settlePlaceholders(first.view, 0)?.view.doc.text, '# A\npara\n\n> # q\n\nmore\n');
+  assert.equal(settlePlaceholders(first.view.withSelection(0))?.view.doc.text, '# A\npara\n\n> # q\n\nmore\n');
 });
 
 test('a copy written before an empty last line takes no mark of it: the line\'s placeholder stays at the text\'s end', () => {
   const doc = OurusDoc.parse('a\n\n', { marks: { placeholders: [3] } });
-  const copied = assertApplied(executeCommand(OurusView.of(doc), { type: 'duplicateSubtree' }, { anchor: 1, head: 1 })).view.doc;
+  const copied = assertApplied(executeCommand(OurusView.of(doc, { selection: 1 }), { type: 'duplicateSubtree' })).view.doc;
   assert.equal(copied.text, 'a\n\na\n\n');
   assert.deepEqual(copied.marks.placeholders, [6]);
   // (the paragraph deleted instead: the empty one written anew, alone, held on its own line)
-  const deleted = assertApplied(executeCommand(OurusView.of(doc), { type: 'deleteSubtree' }, { anchor: 1, head: 1 })).view.doc;
+  const deleted = assertApplied(executeCommand(OurusView.of(doc, { selection: 1 }), { type: 'deleteSubtree' })).view.doc;
   assert.equal(deleted.text, '\n');
   assert.deepEqual(deleted.marks.placeholders, [0]);
 });
 
 test('an empty task\'s checkbox taken onto the first pasted item leaves its placeholder behind', () => {
   const doc = OurusDoc.parse('- [?] \n\n  - child\n', { config: { flavor: 'obsidian' }, marks: { placeholders: [6] } });
-  const pasted = assertApplied(executeCommand(OurusView.of(doc), { type: 'paste', clipboard: { 'text/plain': '- x\n\n```\nc\n```' } }, { anchor: 7, head: 7 })).view.doc;
+  const pasted = assertApplied(executeCommand(OurusView.of(doc, { selection: 7 }), { type: 'paste', clipboard: { 'text/plain': '- x\n\n```\nc\n```' } })).view.doc;
   assert.equal(pasted.text, '- [?] x\n\n  ```\n  c\n  ```\n  - child\n');
   assert.deepEqual(pasted.marks.placeholders, []);
 });
@@ -258,9 +258,9 @@ test('a note ending in an empty node a placeholder holds, no final line break be
     let view = OurusView.of(OurusDoc.parse(text));
     let selection = { anchor: text.length, head: text.length };
     for (const type of commands) {
-      const result = assertApplied(executeCommand(view, { type } as OurusCommand, selection));
+      const result = assertApplied(executeCommand(view.withSelection(selection), { type } as OurusCommand));
       view = result.view;
-      selection = result.selection;
+      selection = result.view.selection;
     }
   };
   play('# H\n\np', ['enter', 'expandSelection', 'deleteContentForward']);
@@ -278,9 +278,9 @@ test('an escape of ours a space comes after escapes nothing: its mark goes, the 
   assert.deepEqual([...tabbed.view.doc.marks.auto], [2]);
   const typed = tabbed.view.update({ changes: [{ from: 3, to: 3, insert: ' ' }], caret: 4 });
   assert.deepEqual([...typed.doc.marks.auto], []);
-  const outdented = assertApplied(executeCommand(typed, { type: 'outdent' }, { anchor: 4, head: 4 }));
+  const outdented = assertApplied(executeCommand(typed.withSelection(4), { type: 'outdent' }));
   assert.equal(outdented.view.doc.text, '\\ --\n');
   // (untouched, Shift-Tab takes its own escape back: the rule again)
-  assert.equal(assertApplied(executeCommand(tabbed.view, { type: 'outdent' }, { anchor: 4, head: 4 })).view.doc.text, '--\n');
+  assert.equal(assertApplied(executeCommand(tabbed.view.withSelection(4), { type: 'outdent' })).view.doc.text, '--\n');
   assert.equal(OurusView.of(typed.doc).doc.text, '- \\ --\n');
 });

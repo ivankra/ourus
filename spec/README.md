@@ -107,7 +107,7 @@ from breaking the node through it. Guarantees 3 and 6 say what each kind gets.
 No command breaks these; a case that seems to need to is wrong, or is a refusal.
 
 1. **Exactly the intended structure, or a clean refusal**, with a reason Markdown imposes
-   (`not-expressible`, `nothing-above`, ...). `write-failed` is a bug, never an outcome.
+   (`not-expressible`, `nothing-above`, ...). A write failure (`OurusFailed`) is a bug, never an outcome.
 2. **Lossless and minimal.** Nothing the user wrote is lost, but the spaces an Enter split trims
    (`enterSplitSpace: drop`, the default, those after the caret; `trim`, both sides:
    [Enter44](enter.md#enter44)); text the edit
@@ -256,7 +256,10 @@ its line break an auto mark too, isn't drawn yet, nor checked. The SxS takes the
 has none.
 
 A clipboard uses `→`, `␍`, `⍽` and `␠` too. A buffer's last line always ends with a line ending. A buffer
-that contains a code fence needs a longer fence of its own (`` ````markdown ``).
+that contains a code fence needs a longer fence of its own (`` ````markdown ``). `␄` ends the text with
+no line break after it, the one the buffer ends with not the text's: `q⏎┃␄` is `q⏎`, the caret past its
+last line break, and `┃q␄` a text with no final one. A marker alone on the last line (`q⏎┃`) is still on
+a line of its own, an empty one: the text `q⏎⏎`.
 
 A node's **label**, `①` to `⑳`, then `㉑` to `㊿`, names that node, so a case can say which node is
 which, as a command keeps them: Enter's first half keeps the item's node (Enter1), a join the upper

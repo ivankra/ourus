@@ -57,7 +57,7 @@ import type { Browser, Page } from 'playwright-core';
 import { OurusConfig } from '../src/config.ts';
 import { OurusDoc } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
-import { drawnSelection, drawOutline, allNodes, readDrawing, isDropAction, canonicalClipboard, specTestPasses, actionsLine, SPEC_RANKS, readSpec, specConfig, SPEC_TAGS, type Clipboard } from '../test/lib/index.ts';
+import { drawnSelection, drawOutline, endingText, allNodes, readDrawing, isDropAction, canonicalClipboard, specTestPasses, actionsLine, SPEC_RANKS, readSpec, specConfig, SPEC_TAGS, type Clipboard } from '../test/lib/index.ts';
 import { appWindow, ensureProxy, headedWindow, lockApp, proxyStats, runRoom, stopShared, type AppPage } from './lib/browser.ts';
 import { watchTasks } from './lib/system.ts';
 import { clipboardHtml } from './lib/clipboard.ts';
@@ -1363,7 +1363,8 @@ function readDoc(drawn: string): Doc | null {
   const d = readTextDoc(drawn);
   // (read back as drawn: a stored run's view, its last line, checked apart, the rest as drawn without it)
   const { drawn: plain, byLine } = splitView(drawn);
-  return (d.view && !byLine ? drawTextDoc({ ...d, view: undefined }) === plain : drawTextDoc(d) === drawn) ? d : null;
+  // (a run stored before `␄`: a drawing that ends without a line break, the same with `␄` after it)
+  return (d.view && !byLine ? drawTextDoc({ ...d, view: undefined }) === endingText(plain) : drawTextDoc(d) === endingText(drawn)) ? d : null;
 }
 
 /** The app's settings (`Driver.settings`) as strings, each as `get` has it. */

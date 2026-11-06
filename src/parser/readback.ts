@@ -2,6 +2,7 @@
 // backslashes keep them so? Asked of the parser itself, in the flavor, so the answer is exact: what
 // reading text and writing it (escaping) share.
 
+import { trimMd } from '../text/index.ts';
 import type { MdFlavor } from './flavor.ts';
 import { MdTree } from './syntax.ts';
 
@@ -21,7 +22,7 @@ export type MdLineContext = 'start' | 'continuation' | 'quoteStart';
  * there (`> q⏎2) x`, a list from 2).
  */
 export function firstNonParagraph(flavor: MdFlavor, lines: readonly string[], context: MdLineContext = 'start', above = 'x', lazy?: readonly boolean[]): number {
-  if (lines.length === 0 || lines.every((l) => l.trim() === '')) return -1;
+  if (lines.length === 0 || lines.every((l) => trimMd(l) === '')) return -1;
   const lead = context === 'continuation' ? 1 : 0;
   const written = context === 'quoteStart' ? lines.map((l, k) => (lazy?.[k] ? l : '> ' + l)) : context === 'continuation' ? [above, ...lines] : lines;
   const tree = MdTree.parse(written.join('\n'), flavor);

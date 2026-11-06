@@ -5,7 +5,7 @@ version: "2.0.2 build 2b5c310c"
 url: "https://test.logseq.com/"
 model: "block"
 command: "node sxs/run.ts logseq-db"
-elapsed_s: 896
+elapsed_s: 1067
 workers: 4
 ---
 
@@ -13,104 +13,59 @@ workers: 4
 
 Summary:
 
-|  | agree | caret | whitespace | disagree | error | skipped | not run | total |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 258 | [12](#caret-12) | [12](#whitespace-12) | [15](#disagree-15) |  |  |  | **297** |
-| adapted | 474 | [4](#adapted-caret-4) | [22](#adapted-whitespace-22) | [86](#adapted-disagree-86) |  |  |  | **586** |
-| **total** | **732 (46%)** | **16 (1%)** | **34 (2.1%)** | **101 (6.4%)** | **0 (0%)** | **[696](#skipped-696) (44%)** | **[7](#not-run-7) (0.44%)** | **1589** |
+|  | agree | caret | whitespace | disagree | error | skipped | total |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| original | 260 | [13](#caret-13) | [12](#whitespace-12) | [14](#disagree-14) |  |  | **299** |
+| adapted | 483 | [4](#adapted-caret-4) | [30](#adapted-whitespace-30) | [91](#adapted-disagree-91) |  |  | **608** |
+| **total** | **743 (46%)** | **17 (1.1%)** | **42 (2.6%)** | **105 (6.5%)** | **0 (0%)** | **[702](#skipped-702) (44%)** | **1612** |
 
 Per-file:
 
-|  | agree | caret | whitespace | disagree | error | skipped | not run | total | original | adapted |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [auto.md](../spec/auto.md) | 22 |  | 1 | 6 |  | 10 |  | **39** |  | 29 |
-| [backspace.md](../spec/backspace.md) | 41 | 2 |  | 2 |  | 43 |  | **88** | 18 | 27 |
-| [backtick.md](../spec/backtick.md) | 3 |  |  | 1 |  | 29 |  | **33** |  | 4 |
-| [block-ids.md](../spec/block-ids.md) | 2 |  |  |  |  | 19 |  | **21** |  | 2 |
-| [copy.md](../spec/copy.md) | 6 |  |  | 1 |  | 6 |  | **13** | 1 | 6 |
-| [cursor.md](../spec/cursor.md) | 28 | 2 |  |  |  | 6 |  | **36** | 12 | 18 |
-| [delete-subtree.md](../spec/delete-subtree.md) | 10 |  |  |  |  | 4 |  | **14** | 3 | 7 |
-| [delete.md](../spec/delete.md) | 28 |  |  |  |  | 28 |  | **56** | 13 | 15 |
-| [drag.md](../spec/drag.md) |  |  |  |  |  | 8 |  | **8** |  |  |
-| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 13 |  | **13** |  |  |
-| [enter.md](../spec/enter.md) | 51 |  |  | 1 |  | 46 |  | **98** | 18 | 34 |
-| [fences.md](../spec/fences.md) | 10 |  | 1 | 2 |  | 57 |  | **70** |  | 13 |
-| [fold.md](../spec/fold.md) | 14 |  |  | 2 |  | 6 |  | **22** | 14 | 2 |
-| [gaps.md](../spec/gaps.md) | 15 |  |  |  |  | 4 |  | **19** | 1 | 14 |
-| [indent.md](../spec/indent.md) | 30 |  |  | 1 |  | 24 |  | **55** | 19 | 12 |
-| [lists.md](../spec/lists.md) | 4 |  |  | 1 |  | 11 |  | **16** |  | 5 |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 30 |  |  |  |  | 15 |  | **45** | 14 | 16 |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 31 |  |  |  |  | 16 |  | **47** | 16 | 15 |
-| [move-subtree.md](../spec/move-subtree.md) | 10 | 2 |  | 3 |  | 9 |  | **24** | 8 | 7 |
-| [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 41 |  | 2 | 5 |  | 19 |  | **67** | 22 | 26 |
-| [outdent.md](../spec/outdent.md) | 14 |  |  | 1 |  | 27 |  | **42** | 8 | 7 |
-| [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 |  | **5** |  |  |
-| [paste-conv.md](../spec/paste-conv.md) | 5 |  |  | 1 |  |  |  | **6** | 5 | 1 |
-| [paste-html.md](../spec/paste-html.md) | 4 |  |  | 15 |  |  |  | **19** |  | 19 |
-| [paste-list-form.md](../spec/paste-list-form.md) | 3 |  |  | 2 |  | 1 |  | **6** | 4 | 1 |
-| [paste-list.md](../spec/paste-list.md) | 16 |  | 2 | 2 |  | 9 |  | **29** | 10 | 10 |
-| [paste-plain.md](../spec/paste-plain.md) | 20 |  | 3 | 1 |  | 12 |  | **36** | 8 | 16 |
-| [paste.md](../spec/paste.md) | 16 |  | 2 | 7 |  | 11 |  | **36** | 5 | 20 |
-| [placeholders.md](../spec/placeholders.md) | 19 |  | 1 | 2 |  | 5 |  | **27** | 7 | 15 |
-| [quirks.md](../spec/quirks.md) |  |  |  | 1 |  | 6 |  | **7** | 1 |  |
-| [quotes.md](../spec/quotes.md) | 92 |  | 3 | 5 |  | 43 |  | **143** |  | 100 |
-| [regressions.md](../spec/regressions.md) | 84 | 1 | 15 | 33 |  | 143 | 7 | **283** | 24 | 109 |
-| [scenarios.md](../spec/scenarios.md) | 23 | 1 | 1 | 1 |  | 8 |  | **34** | 18 | 8 |
-| [select.md](../spec/select.md) | 10 | 7 |  |  |  | 6 |  | **23** | 14 | 3 |
-| [shift-enter.md](../spec/shift-enter.md) | 25 |  | 3 | 2 |  | 8 |  | **38** | 12 | 18 |
-| [subtree-selection.md](../spec/subtree-selection.md) | 13 | 1 |  | 1 |  | 4 |  | **19** | 11 | 4 |
-| [tasks.md](../spec/tasks.md) | 1 |  |  | 1 |  | 28 |  | **30** |  | 2 |
-| [typing.md](../spec/typing.md) |  |  |  |  |  | 3 |  | **3** |  |  |
-| [undo.md](../spec/undo.md) | 4 |  |  |  |  | 1 |  | **5** | 3 | 1 |
-| [zoom.md](../spec/zoom.md) | 7 |  |  | 1 |  | 6 |  | **14** | 8 |  |
-| **total** | **732 (46%)** | **16 (1%)** | **34 (2.1%)** | **101 (6.4%)** | **0 (0%)** | **699 (44%)** | **7 (0.44%)** | **1589** | **297 (19%)** | **586 (37%)** |
+|  | agree | caret | whitespace | disagree | error | skipped | total | original | adapted |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [auto.md](../spec/auto.md) | 22 |  | 1 | 6 |  | 10 | **39** |  | 29 |
+| [backspace.md](../spec/backspace.md) | 42 | 2 |  | 1 |  | 43 | **88** | 18 | 27 |
+| [backtick.md](../spec/backtick.md) | 3 |  |  | 1 |  | 29 | **33** |  | 4 |
+| [block-ids.md](../spec/block-ids.md) | 2 |  |  |  |  | 19 | **21** |  | 2 |
+| [copy.md](../spec/copy.md) | 6 |  |  | 1 |  | 6 | **13** | 1 | 6 |
+| [cursor.md](../spec/cursor.md) | 28 | 2 |  |  |  | 6 | **36** | 12 | 18 |
+| [delete-subtree.md](../spec/delete-subtree.md) | 10 |  |  |  |  | 4 | **14** | 3 | 7 |
+| [delete.md](../spec/delete.md) | 28 |  |  |  |  | 28 | **56** | 13 | 15 |
+| [drag.md](../spec/drag.md) |  |  |  |  |  | 8 | **8** |  |  |
+| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 13 | **13** |  |  |
+| [enter.md](../spec/enter.md) | 51 |  |  | 1 |  | 46 | **98** | 18 | 34 |
+| [fences.md](../spec/fences.md) | 10 |  | 1 | 2 |  | 57 | **70** |  | 13 |
+| [fold.md](../spec/fold.md) | 14 |  |  | 2 |  | 6 | **22** | 14 | 2 |
+| [gaps.md](../spec/gaps.md) | 15 |  |  |  |  | 4 | **19** | 1 | 14 |
+| [indent.md](../spec/indent.md) | 30 |  |  | 1 |  | 24 | **55** | 19 | 12 |
+| [lists.md](../spec/lists.md) | 4 |  |  | 1 |  | 11 | **16** |  | 5 |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 30 |  |  |  |  | 15 | **45** | 14 | 16 |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 31 |  |  |  |  | 16 | **47** | 16 | 15 |
+| [move-subtree.md](../spec/move-subtree.md) | 10 | 2 |  | 3 |  | 9 | **24** | 8 | 7 |
+| [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 41 |  | 2 | 5 |  | 19 | **67** | 22 | 26 |
+| [outdent.md](../spec/outdent.md) | 14 |  |  | 1 |  | 27 | **42** | 8 | 7 |
+| [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |  |  |
+| [paste-conv.md](../spec/paste-conv.md) | 5 |  |  | 1 |  |  | **6** | 5 | 1 |
+| [paste-html.md](../spec/paste-html.md) | 4 |  |  | 15 |  |  | **19** |  | 19 |
+| [paste-list-form.md](../spec/paste-list-form.md) | 3 |  |  | 2 |  | 1 | **6** | 4 | 1 |
+| [paste-list.md](../spec/paste-list.md) | 16 |  | 2 | 2 |  | 9 | **29** | 10 | 10 |
+| [paste-plain.md](../spec/paste-plain.md) | 20 |  | 3 | 1 |  | 12 | **36** | 8 | 16 |
+| [paste.md](../spec/paste.md) | 16 |  | 2 | 7 |  | 11 | **36** | 5 | 20 |
+| [placeholders.md](../spec/placeholders.md) | 20 | 1 | 2 | 2 |  | 5 | **30** | 8 | 17 |
+| [quirks.md](../spec/quirks.md) |  |  |  | 1 |  | 6 | **7** | 1 |  |
+| [quotes.md](../spec/quotes.md) | 92 |  | 3 | 5 |  | 43 | **143** |  | 100 |
+| [regressions.md](../spec/regressions.md) | 93 | 1 | 22 | 38 |  | 149 | **303** | 25 | 129 |
+| [scenarios.md](../spec/scenarios.md) | 23 | 1 | 1 | 1 |  | 8 | **34** | 18 | 8 |
+| [select.md](../spec/select.md) | 10 | 7 |  |  |  | 6 | **23** | 14 | 3 |
+| [shift-enter.md](../spec/shift-enter.md) | 25 |  | 3 | 2 |  | 8 | **38** | 12 | 18 |
+| [subtree-selection.md](../spec/subtree-selection.md) | 13 | 1 |  | 1 |  | 4 | **19** | 11 | 4 |
+| [tasks.md](../spec/tasks.md) | 1 |  |  | 1 |  | 28 | **30** |  | 2 |
+| [typing.md](../spec/typing.md) |  |  |  |  |  | 3 | **3** |  |  |
+| [undo.md](../spec/undo.md) | 4 |  |  |  |  | 1 | **5** | 3 | 1 |
+| [zoom.md](../spec/zoom.md) | 7 |  |  | 1 |  | 6 | **14** | 8 |  |
+| **total** | **743 (46%)** | **17 (1.1%)** | **42 (2.6%)** | **105 (6.5%)** | **0 (0%)** | **705 (44%)** | **1612** | **299 (19%)** | **608 (38%)** |
 
-## Disagree (15)
-
-### [Backspace48](../spec/backspace.md#backspace48)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃ # b
-```
-
-</td></tr>
-</table>
-
-> deleteContentBackward
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- ┃ # b
-```
-
-</td></tr>
-</table>
-
-> cursorCharRight deleteContentBackward
-
-<table>
-<tr><th>logseq-db</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- # ┃# b
-```
-
-</td><td>
-
-```buffer
-- ┃\# b
-```
-
-</td></tr>
-</table>
+## Disagree (14)
 
 ### [Fold11](../spec/fold.md#fold11)
 
@@ -1257,7 +1212,7 @@ p2
 </td></tr>
 </table>
 
-## Caret (12)
+## Caret (13)
 
 ### [Backspace17](../spec/backspace.md#backspace17)
 
@@ -1384,6 +1339,54 @@ p2
 - a⟦selected⟧
 - c⟦selected⟧
 - b⟦selected⟧
+```
+
+</td></tr>
+</table>
+
+### [Placeholder23](../spec/placeholders.md#placeholder23)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+```
+
+</td></tr>
+</table>
+
+> enter indent selectDocStart
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a⟦selected⟧
+  - 
+```
+
+</td></tr>
+</table>
+
+> cursorCharRight
+
+<table>
+<tr><th>logseq-db</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a⟦selected⟧
+  - 
+```
+
+</td><td>
+
+```buffer
+- a
+  - ┃
 ```
 
 </td></tr>
@@ -2150,7 +2153,7 @@ p2
 </td></tr>
 </table>
 
-## Adapted: disagree (86)
+## Adapted: disagree (91)
 
 ### [Auto5](../spec/auto.md#auto5)
 
@@ -5296,7 +5299,7 @@ after
 ```buffer
 - \# b
 - after
-┃
+┃␄
 ```
 
 </td></tr>
@@ -6768,7 +6771,7 @@ Original:
 </td><td>
 
 ```buffer
-x┃
+x┃␄
 ```
 
 </td></tr>
@@ -7537,6 +7540,323 @@ Original:
 </td></tr>
 </table>
 
+### [Regression274](../spec/regressions.md#regression274)
+
+Adapted: escape
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td></tr>
+</table>
+
+> "$"
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- $┃$
+```
+
+</td></tr>
+</table>
+
+> "x"
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- $x┃$
+```
+
+</td></tr>
+</table>
+
+> "$"
+
+<table>
+<tr><th>logseq-db</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- $x$┃$$
+```
+
+</td><td>
+
+```buffer
+- $x$┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>"$"</th><th>"x"</th><th>"$"</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- \$┃$
+```
+
+</td><td>
+
+```buffer
+- $x┃$
+```
+
+</td><td>
+
+```buffer
+- $x$┃
+```
+
+</td></tr>
+</table>
+
+### [Regression277](../spec/regressions.md#regression277)
+
+> enter cursorDocEnd
+
+Adapted: blank lines, heading, table
+
+<table>
+<tr><th>buffer</th><th>logseq-db</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## h┃
+  - | a |
+    | --- |
+```
+
+</td><td>
+
+```buffer
+- ## h
+  - 
+  - | a |
+    | --- |┃
+```
+
+</td><td>
+
+```buffer
+- ## h
+  - | a |
+    | --- |
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+## h┃
+| a |
+| --- |
+```
+
+</td><td>
+
+```buffer
+## h
+
+| a |
+| --- |
+```
+
+</td></tr>
+</table>
+
+### [Regression277c](../spec/regressions.md#regression277c)
+
+> enter cursorDocEnd
+
+Adapted: blank lines, heading
+
+<table>
+<tr><th>buffer</th><th>logseq-db</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # a┃
+- # b
+```
+
+</td><td>
+
+```buffer
+- # a
+- 
+- # b┃
+```
+
+</td><td>
+
+```buffer
+- # a
+- # b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# a┃
+# b
+```
+
+</td><td>
+
+```buffer
+# a
+
+# b
+```
+
+</td></tr>
+</table>
+
+### [Regression278](../spec/regressions.md#regression278)
+
+> enter cursorDocEnd
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>buffer</th><th>logseq-db</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # h┃
+  - p
+```
+
+</td><td>
+
+```buffer
+- # h
+  - 
+  - p┃
+```
+
+</td><td>
+
+```buffer
+- # h
+  - p
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# h┃
+
+p
+```
+
+</td><td>
+
+```buffer
+# h
+
+p
+```
+
+</td></tr>
+</table>
+
+### [Regression286b](../spec/regressions.md#regression286b)
+
+> enter
+
+Adapted: as blocks, quote, under enterInQuote: split
+
+<table>
+<tr><th>buffer</th><th>logseq-db</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > 1. a
+  > 10. b┃
+  >     c
+```
+
+</td><td>
+
+```buffer
+- > 1. a
+  > 10. b
+- ┃>     c
+```
+
+</td><td>
+
+```buffer
+- > 1. a
+  > 10. b
+- ┃
+  >     c
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> 1. a
+> 10. b┃
+>     c
+```
+
+</td><td>
+
+```buffer
+- > 1. a
+  > 10. b
+- ┃
+  >     c
+```
+
+</td></tr>
+</table>
+
 ### [Scenario18](../spec/scenarios.md#scenario18)
 
 <table>
@@ -7735,7 +8055,7 @@ Original:
 </td></tr>
 </table>
 
-## Adapted: whitespace (22)
+## Adapted: whitespace (30)
 
 ### [Auto4](../spec/auto.md#auto4)
 
@@ -8326,7 +8646,113 @@ after
 - para
   \``` x
 - after
-┃
+┃␄
+````
+
+</td></tr>
+</table>
+
+### [Placeholder22](../spec/placeholders.md#placeholder22)
+
+Adapted: escape, under heldSpace: trim
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a┃ ``` x
+- b
+````
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ┃ ``` x
+- b
+````
+
+</td></tr>
+</table>
+
+> selectLineDown
+
+<table>
+<tr><th>logseq-db</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ``` x⟦selected⟧
+- b
+````
+
+</td><td>
+
+````buffer
+-  ``` x
+- b
+````
+
+</td></tr>
+</table>
+
+> cursorLineBoundaryForward
+
+<table>
+<tr><th>logseq-db</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ``` x⟦selected⟧
+- b
+````
+
+</td><td>
+
+````buffer
+- ``` x
+- b┃
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>deleteContentBackward</th><th>selectLineDown</th><th>cursorLineBoundaryForward</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a┃ ``` x
+- b
+````
+
+</td><td>
+
+````buffer
+- ┃◌ ``` x
+- b
+````
+
+</td><td>
+
+````buffer
+- «◌ ``` x
+- »b
+````
+
+</td><td>
+
+````buffer
+- \``` x
+- b┃
 ````
 
 </td></tr>
@@ -8630,6 +9056,68 @@ Original:
 </td></tr>
 </table>
 
+### [Regression111](../spec/regressions.md#regression111)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+y
+```
+
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: as blocks, quote, under quotes: atom
+
+<table>
+<tr><th>buffer</th><th>logseq-db</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- >→-┃
+```
+
+</td><td>
+
+```buffer
+- >→-x
+  y┃
+```
+
+</td><td>
+
+```buffer
+- >→-x
+  >→ y┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+>→-┃
+```
+
+</td><td>
+
+```buffer
+- >→-x
+  >→ y┃
+```
+
+</td></tr>
+</table>
+
 ### [Regression136](../spec/regressions.md#regression136)
 
 > deleteSoftLineBackward
@@ -8807,6 +9295,7 @@ Adapted: as blocks, quote, under enterInQuote: split
 
 ```buffer
 - > - parent
+  >   - child
   >   - ┃
 ```
 
@@ -8814,6 +9303,7 @@ Adapted: as blocks, quote, under enterInQuote: split
 
 ```buffer
 - > - parent
+  >   - child
   >   - 
 - ┃
 ```
@@ -8822,6 +9312,7 @@ Adapted: as blocks, quote, under enterInQuote: split
 
 ```buffer
 - > - parent
+  >   - child
   >   -
 - ┃
 ```
@@ -8836,6 +9327,7 @@ Original:
 
 ```buffer
 > - parent
+>   - child
 >   - ┃
 ```
 
@@ -8843,6 +9335,7 @@ Original:
 
 ```buffer
 - > - parent
+  >   - child
   >   -
 - ┃
 ```
@@ -8904,6 +9397,394 @@ Original:
 - ┃
   > 2. Second
   > 3. Third
+```
+
+</td></tr>
+</table>
+
+### [Regression280](../spec/regressions.md#regression280)
+
+> enter
+
+Adapted: as blocks, quote, under enterInQuote: split
+
+<table>
+<tr><th>buffer</th><th>logseq-db</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- > ```
+  > - a┃
+  > ```
+````
+
+</td><td>
+
+````buffer
+- > ```
+  > - a
+- ┃> ```
+````
+
+</td><td>
+
+````buffer
+- > ```
+  > - a
+- ┃
+  > ```
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+> ```
+> - a┃
+> ```
+````
+
+</td><td>
+
+````buffer
+- > ```
+  > - a
+- ┃
+  > ```
+````
+
+</td></tr>
+</table>
+
+### [Regression285](../spec/regressions.md#regression285)
+
+> enter
+
+Adapted: as blocks, quote, under enterInQuote: split
+
+<table>
+<tr><th>buffer</th><th>logseq-db</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > 1. a┃
+  > 2. b
+  >
+  > q
+  >
+  > 3. c
+```
+
+</td><td>
+
+```buffer
+- > 1. a
+- ┃> 2. b
+  >
+  > q
+  >
+  > 3. c
+```
+
+</td><td>
+
+```buffer
+- > 1. a
+- ┃
+  > 2. b
+  >
+  > q
+  >
+  > 3. c
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> 1. a┃
+> 2. b
+>
+> q
+>
+> 3. c
+```
+
+</td><td>
+
+```buffer
+- > 1. a
+- ┃
+  > 2. b
+  >
+  > q
+  >
+  > 3. c
+```
+
+</td></tr>
+</table>
+
+### [Regression286](../spec/regressions.md#regression286)
+
+> enter
+
+Adapted: as blocks, quote, under enterInQuote: split
+
+<table>
+<tr><th>buffer</th><th>logseq-db</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > 8. a┃
+  > 9. parent
+  >    - child
+```
+
+</td><td>
+
+```buffer
+- > 8. a
+- ┃> 9. parent
+  >    - child
+```
+
+</td><td>
+
+```buffer
+- > 8. a
+- ┃
+  > 9. parent
+  >    - child
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> 8. a┃
+> 9. parent
+>    - child
+```
+
+</td><td>
+
+```buffer
+- > 8. a
+- ┃
+  > 9. parent
+  >    - child
+```
+
+</td></tr>
+</table>
+
+### [Regression287](../spec/regressions.md#regression287)
+
+> enter
+
+Adapted: as blocks, quote, under enterInQuote: split
+
+<table>
+<tr><th>buffer</th><th>logseq-db</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- > 1. p
+  >    - a
+  >    - ┃
+  > 2. q
+```
+
+</td><td>
+
+```buffer
+- > 1. p
+  >    - a
+  >    -
+- ┃> 2. q
+```
+
+</td><td>
+
+```buffer
+- > 1. p
+  >    - a
+  >    -
+- ┃
+  > 2. q
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> 1. p
+>    - a
+>    - ┃
+> 2. q
+```
+
+</td><td>
+
+```buffer
+- > 1. p
+  >    - a
+  >    -
+- ┃
+  > 2. q
+```
+
+</td></tr>
+</table>
+
+### [Regression290](../spec/regressions.md#regression290)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+
+```
+
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: quote
+
+<table>
+<tr><th>buffer</th><th>logseq-db</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  ┃ > a
+```
+
+</td><td>
+
+```buffer
+-  
+  ┃ > a
+```
+
+</td><td>
+
+```buffer
+-  ┃ > a
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+ ┃ > a
+```
+
+</td><td>
+
+```buffer
+ ┃ > a
+```
+
+</td></tr>
+</table>
+
+### [Regression291](../spec/regressions.md#regression291)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+| a |
+| - |
+| 1 |
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: as blocks, blank lines, table
+
+<table>
+<tr><th>buffer</th><th>logseq-db</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+- c
+```
+
+</td><td>
+
+```buffer
+- | a |
+  | - |
+  | 1 |
+  ┃
+- c
+```
+
+</td><td>
+
+```buffer
+- | a |
+  | - |
+  | 1 |
+- c
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+
+  - c
+```
+
+</td><td>
+
+```buffer
+- | a |
+  | - |
+  | 1 |┃
+- c
 ```
 
 </td></tr>
@@ -9323,7 +10204,7 @@ para
 </td></tr>
 </table>
 
-## Skipped (699)
+## Skipped (705)
 
 | example | why |
 | --- | --- |
@@ -9992,6 +10873,12 @@ para
 | [Regression272](../spec/regressions.md#regression272) | block id (`^x`), which the app has none of: its text |
 | [Regression275](../spec/regressions.md#regression275) | changes only what blocks can't show |
 | [Regression276](../spec/regressions.md#regression276) | action duplicateSubtree |
+| [Regression282](../spec/regressions.md#regression282) | tag markup-task |
+| [Regression284](../spec/regressions.md#regression284) | option orderedLists: shift |
+| [Regression289c](../spec/regressions.md#regression289c) | option enterSplitSpace: start |
+| [Regression292](../spec/regressions.md#regression292) | its view, on an adapted start |
+| [Regression293](../spec/regressions.md#regression293) | caret on a code block's delimiter line |
+| [Regression293b](../spec/regressions.md#regression293b) | caret on a code block's delimiter line |
 | **scenarios.md** | |
 | [Scenario6](../spec/scenarios.md#scenario6) | tag free-form |
 | [Scenario8b](../spec/scenarios.md#scenario8b) | no text focus after moveSubtree ③ |
@@ -10064,16 +10951,3 @@ para
 | [Zoom12](../spec/zoom.md#zoom12) | caret on a blank line |
 | [Zoom13](../spec/zoom.md#zoom13) | tag markup-fence |
 | [Zoom14](../spec/zoom.md#zoom14) | option enterOnEmptyItem: unwrap |
-
-## Not run (7)
-
-| example | why |
-| --- | --- |
-| **regressions.md** | |
-| [Regression270](../spec/regressions.md#regression270) | new, or its start changed since |
-| [Regression273](../spec/regressions.md#regression273) | new, or its start changed since |
-| [Regression274](../spec/regressions.md#regression274) | step added since |
-| [Regression277](../spec/regressions.md#regression277) | new, or its start changed since |
-| [Regression277b](../spec/regressions.md#regression277b) | new, or its start changed since |
-| [Regression277c](../spec/regressions.md#regression277c) | new, or its start changed since |
-| [Regression278](../spec/regressions.md#regression278) | new, or its start changed since |

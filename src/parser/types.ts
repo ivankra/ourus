@@ -1,7 +1,7 @@
 // The syntax layer's public types: a lossless line table, a block tree over it, and inline nodes over
 // each leaf's text. Positions are UTF-16 offsets into the document's text; lines are 0-based.
 
-import type { LineEnding } from '../text/index.ts';
+import type { ColumnIndex, DocPos, LineEnding, LineIndex, LineOffset } from '../text/index.ts';
 
 /** A list item's marker, as written: on an item, and on its list (its first item's). */
 export interface MdList {
@@ -90,11 +90,11 @@ export interface MdAttrs {
   /** list: tight, as CommonMark defines it. */
   readonly tight?: boolean;
   /** item: the marker itself (`-`, `1.`), in offsets from its first line's start. */
-  readonly markerStart?: number;
-  readonly markerEnd?: number;
+  readonly markerStart?: LineOffset;
+  readonly markerEnd?: LineOffset;
   /** item: columns of the marker and of the item's content on its first line. */
-  readonly markerColumn?: number;
-  readonly contentColumn?: number;
+  readonly markerColumn?: ColumnIndex;
+  readonly contentColumn?: ColumnIndex;
   /** item (GFM): its task checkbox. */
   readonly task?: MdTask;
   /** refdef, footnote_definition: the label as written, brackets included (`[a]`, `[^a]`). */
@@ -104,9 +104,9 @@ export interface MdAttrs {
   /** table_row: `header`, `delimiter` (the alignment row) or `body`. */
   readonly row?: 'header' | 'delimiter' | 'body';
   /** table_cell: the cell's text, without the pipes around it or its padding, in offsets from its line's start. */
-  readonly start?: number;
-  readonly end?: number;
-  /** table_cell: its column, from 0. */
+  readonly start?: LineOffset;
+  readonly end?: LineOffset;
+  /** table_cell: its column of the table, from 0 (not a `ColumnIndex`). */
   readonly column?: number;
   /** blockquote (Obsidian): a callout. */
   readonly callout?: MdCallout;
@@ -125,26 +125,26 @@ export interface MdPrefixPiece {
   readonly container: MdBlockAt;
   /** `quote`, `marker`, `indent`, or an extension's (`footnote`, for a footnote definition's label). */
   readonly kind: string;
-  readonly from: number;
-  readonly to: number;
-  readonly fromColumn: number;
-  readonly toColumn: number;
+  readonly from: DocPos;
+  readonly to: DocPos;
+  readonly fromColumn: ColumnIndex;
+  readonly toColumn: ColumnIndex;
   /** The piece ends inside a tab: the container consumed part of the tab at `to`, up to `toColumn`. */
   readonly partialTab: boolean;
 }
 
 /** One line of a tree: its offsets and ending, the containers' prefix on it, and the blocks it is in. */
 export interface MdLine {
-  readonly index: number;
-  readonly from: number;
+  readonly index: LineIndex;
+  readonly from: DocPos;
   /** End of the line's text, before its line ending. */
-  readonly to: number;
+  readonly to: DocPos;
   readonly ending: LineEnding;
   /** Container pieces, outermost first. */
   readonly prefix: readonly MdPrefixPiece[];
   /** Where the line's content starts after the prefix pieces. */
-  readonly contentFrom: number;
-  readonly contentColumn: number;
+  readonly contentFrom: DocPos;
+  readonly contentColumn: ColumnIndex;
   /** The containers the line is in, outermost first (the document excluded). */
   readonly containers: readonly MdBlockAt[];
   /** The innermost container (the document when none). */

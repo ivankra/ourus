@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { OurusConfig } from '../src/config.ts';
-import { executeCommand, OurusRejected } from '../src/commands/index.ts';
+import { executeCommand, OurusFailed, OurusRejected } from '../src/commands/index.ts';
 import { OurusView } from '../src/view/index.ts';
 import type { OurusNode } from '../src/doc/index.ts';
 import { parseWithMarks, allNodes, readDrawing, readSpecFile, specConfig, specFiles } from './lib/index.ts';
@@ -40,8 +40,8 @@ function moveGaps(): Map<string, string[]> {
               const to = { parent: parent === 'root' ? ('root' as const) : parent.id, after: after === null ? null : after.id };
               let failure: string | null = null;
               try {
-                const r = executeCommand(view, { type: 'moveSubtree', nodes: [node.id], to }, { anchor: end, head: end });
-                if (r instanceof OurusRejected && r.reason === 'write-failed') failure = r.detail ?? 'write-failed';
+                const r = executeCommand(view.withSelection(end), { type: 'moveSubtree', nodes: [node.id], to });
+                if (r instanceof OurusFailed) failure = r.detail ?? 'write-failed';
               } catch (e) {
                 failure = `throws: ${(e as Error).message}`;
               }

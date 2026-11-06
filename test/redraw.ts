@@ -15,7 +15,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { OurusConfig } from '../src/config.ts';
 import { drawDoc, drawLabels, drawsCaret, readDrawing, readLabels, withoutCaret, isAction, playActions, specTestFlavors, NodeLabels, normalizeDrawing, describeOutcome, specTestStart, readSpecFile, specSlug, specFiles, SPEC_DIR, type SpecTest } from './lib/index.ts';
-import { OurusRejected } from '../src/commands/index.ts';
+import { OurusFailed, OurusRejected } from '../src/commands/index.ts';
 
 const args = process.argv.slice(2);
 const apply = args.includes('--apply');
@@ -60,12 +60,12 @@ function played(t: SpecTest, flavor: OurusConfig['flavor']): { buffer: string; r
     const before = state.view.doc.nextId;
     for (const action of step.actions) {
       state = playActions(state, [action]);
-      if (state.last instanceof OurusRejected && state.last.reason === 'write-failed') return `step ${k + 1}: ${action} fails to write${state.last.detail ? `: ${state.last.detail}` : ''}`;
+      if (state.last instanceof OurusFailed) return `step ${k + 1}: ${action} fails to write${state.last.detail ? `: ${state.last.detail}` : ''}`;
     }
     if (state.view.doc.text !== '' && !/[\r\n]$/.test(state.view.doc.text)) return `step ${k + 1}: no final line break, which a buffer can't draw`;
     const own = readLabels(step.expect.buffer ?? '').labels;
     labels.check(state.view.doc, own, before);
-    const drawn = drawLabels(drawDoc(state.view, state.selection), labels.drawn(state.view.doc, new Set([...own.values()].flat())));
+    const drawn = drawLabels(drawDoc(state.view, state.view.selection), labels.drawn(state.view.doc, new Set([...own.values()].flat())));
     out.push({ buffer: normalizeDrawing(drawn), result: describeOutcome(state) });
   }
   return out;

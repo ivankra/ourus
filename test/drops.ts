@@ -7,7 +7,7 @@
 //
 //   node test/drops.ts          # the report: each case's gaps
 
-import { executeCommand, type OurusResult, type DropMap, OurusRejected, OurusSuccess } from '../src/commands/index.ts';
+import { executeCommand, type OurusResult, type DropMap, OurusFailed, OurusRejected, OurusSuccess } from '../src/commands/index.ts';
 import type { OurusDoc } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
 import { parseWithMarks, allNodes, readDrawing, specTestFlavors, readSpecFile, specConfig, specFiles, type SpecTest } from './lib/index.ts';
@@ -36,13 +36,13 @@ export function dropGaps(t: SpecTest): string[] {
   const gaps: string[] = [];
   const pickups: { what: string; dropMap: DropMap; kind: (r: OurusDoc) => string | undefined; was: string }[] = [];
   for (const node of allNodes(doc)) {
-    const picked = executeCommand(view, { type: 'drag', pressed: node.id }, start.selection);
+    const picked = executeCommand(view.withSelection(start.selection), { type: 'drag', pressed: node.id });
     if (!(picked instanceof OurusSuccess) || !picked.dropMap) continue;
     const first = doc.node(picked.dropMap.nodes[0]!)!;
     pickups.push({ what: `${first.kind} at line ${first.startLine + 1}`, dropMap: picked.dropMap, kind: (r) => r.node(first.id)?.kind, was: first.kind });
   }
   for (const [text, was] of CLIPBOARDS) {
-    const picked = executeCommand(view, { type: 'drag', clipboard: { 'text/plain': text } }, start.selection);
+    const picked = executeCommand(view.withSelection(start.selection), { type: 'drag', clipboard: { 'text/plain': text } });
     if (!(picked instanceof OurusSuccess) || !picked.dropMap) continue;
     // (the first node a drop placed, by its place: the node after `after`, or its parent's first)
     const kind = (r: OurusDoc, at: { parent: number | 'root'; after: number | null }): string | undefined => {
@@ -58,13 +58,17 @@ export function dropGaps(t: SpecTest): string[] {
         const where = `${what} to ${point.parent === 'root' ? 'the root' : `${doc.node(point.parent)!.kind} at line ${doc.node(point.parent)!.startLine + 1}`}, depth ${point.depth}`;
         let r: OurusResult;
         try {
-          r = executeCommand(view, point.drop, start.selection);
+          r = executeCommand(view.withSelection(start.selection), point.drop);
         } catch (e) {
           gaps.push(`${where}: throws ${(e as Error).message}`);
           continue;
         }
+        if (r instanceof OurusFailed) {
+          gaps.push(`${where}: write-failed (${r.detail})`);
+          continue;
+        }
         if (r instanceof OurusRejected) {
-          if (r.reason === 'write-failed' || r.reason === 'unsupported' || r.detail?.startsWith('result check')) gaps.push(`${where}: ${r.reason}${r.detail ? ` (${r.detail})` : ''}`);
+          if (r.reason === 'unsupported' || r.detail?.startsWith('result check')) gaps.push(`${where}: ${r.reason}${r.detail ? ` (${r.detail})` : ''}`);
           continue;
         }
         if (!(r instanceof OurusSuccess)) continue;

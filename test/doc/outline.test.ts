@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import fc from 'fast-check';
 import { OurusDoc, Lineage, type OurusNode, type PersistentNode } from '../../src/doc/index.ts';
-import { executeCommand, OurusRejected, OurusSuccess } from '../../src/commands/index.ts';
+import { executeCommand, OurusFailed, OurusRejected, OurusSuccess } from '../../src/commands/index.ts';
 import { OurusView } from '../../src/view/index.ts';
 import type { MdBlock } from '../../src/parser/index.ts';
 import { BLOCKS, INLINES, arbDoc, arbEdit, changeOf, changesOf, sentinelSpots } from '../parser/generators.ts';
@@ -203,13 +203,13 @@ test('gaps: the blank lines after a node\'s own text, a subtree\'s after its las
   assert.deepEqual(lines(doc.rootNode).slice(1), ['item:1', 'heading:1', 'item:2', 'paragraph:0']);
 });
 
-test('a document nested deeper than the call stack goes is read, and a command on it refuses rather than throws', () => {
+test('a document nested deeper than the call stack goes is read, and a command on it doesn\'t throw: done, refused, or failed as too deep', () => {
   for (const text of ['> '.repeat(5000) + 'a', '> '.repeat(20000) + 'a', Array.from({ length: 3000 }, (_, i) => ' '.repeat(2 * i) + '- a').join('\n')]) {
     const doc = OurusDoc.parse(text);
     assert.equal(doc.rootNode.children.length, 1);
     const typed = doc.update({ changes: [{ from: text.length, to: text.length, insert: 'x' }] });
     assert.equal(typed.text, text + 'x');
-    const r = executeCommand(OurusView.of(doc), { type: 'enter' }, { anchor: text.length, head: text.length });
-    assert.ok(r instanceof OurusSuccess || r instanceof OurusRejected);
+    const r = executeCommand(OurusView.of(doc, { selection: text.length }), { type: 'enter' });
+    assert.ok(r instanceof OurusSuccess || r instanceof OurusRejected || (r instanceof OurusFailed && r.code === 'too-deep'));
   }
 });

@@ -1,7 +1,16 @@
 {
   "corpus": "4f9a02d186e5ec57",
   "groups": {
-    "indent: write-failed": 1,
-    "outdent: write-failed": 1
+    "cut: auto mark lost on a line it didn't change": 1,
+    "deleteContentBackward: auto mark lost on a line it didn't change": 8,
+    "deleteSubtree: auto mark lost on a line it didn't change": 1,
+    "enter: auto mark lost on a line it didn't change": 7,
+    "indent: auto mark lost on a line it didn't change": 12,
+    "indent: write-failed (readback children)": 1,
+    "moveSubtreeDown: auto mark lost on a line it didn't change": 1,
+    "moveSubtreeUp: auto mark lost on a line it didn't change": 5,
+    "outdent: auto mark lost on a line it didn't change": 7,
+    "pastePlain: auto mark lost on a line it didn't change": 1,
+    "shiftEnter: auto mark lost on a line it didn't change": 6
   }
 }

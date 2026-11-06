@@ -28,7 +28,7 @@ export function deleteSubtreeCommand(ctx: CommandContext, expectMarkdown?: strin
     return true;
   });
   if (expectMarkdown !== undefined) {
-    const copied = copyOrCutCommand(new CommandContext(view, ctx.selection, nodes.map((n) => n.id)), 'copy');
+    const copied = copyOrCutCommand(new CommandContext(view.withSelection(ctx.selection), nodes.map((n) => n.id)), 'copy');
     if (!(copied instanceof OurusSuccess) || copied.clipboard?.['text/plain'] !== expectMarkdown) return new OurusRejected('content-changed', 'the nodes are no longer the Markdown dragged out');
   }
   const gone = goneWithTextlessParents(doc, nodes);

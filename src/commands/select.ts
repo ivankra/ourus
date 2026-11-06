@@ -4,38 +4,21 @@
 // Stateless: each reads what to do from the selection alone, a subtree selection (whole lines,
 // `OurusView.selectedSubtrees`) or text.
 
-import { OurusAtom, textEnd, textStart, type OurusDoc, type OurusNode, type OurusText } from '../doc/index.ts';
-import type { OurusView } from '../view/index.ts';
+import { textEnd, textStart, type OurusNode } from '../doc/index.ts';
+import { editableStart, type OurusView } from '../view/index.ts';
+import { unfoldedForCaret } from './view.ts';
 import { type CommandContext } from './context.ts';
 import type { OurusSelection, OurusResult } from './types.ts';
 import { OurusSuccess, OurusDeferred } from './types.ts';
 
 /** `selection`, applied with no change to the text. */
 function selected(ctx: CommandContext, selection: OurusSelection): OurusResult | null {
-  return new OurusSuccess({ view: ctx.view, changes: [], selection });
+  return new OurusSuccess({ view: ctx.view.withSelection(selection), changes: [] });
 }
 
 /** The ids of a selection's roots as `selectedSubtrees` reads them, to compare two selections as nodes; null for text. */
 function rootsOf(view: OurusView, selection: OurusSelection): string | null {
   return view.selectedSubtrees(selection)?.map((n) => n.id).join() ?? null;
-}
-
-/**
- * Where editing a text starts: its text's start; but where markup is decorated, a fenced block's first
- * code line where its code is only blank lines (its text's start then the opening fence's end, markup
- * there, where typing would go into its info string), out of items and quotes.
- */
-function editStart(ctx: CommandContext, node: OurusNode, text: OurusText): number {
-  const start = textStart(text);
-  if (ctx.config.markup !== 'decorated' || !(text instanceof OurusAtom)) return start;
-  // (in an item or a quote the blank line is written without its prefix: at its start, typing would
-  // leave them; not done yet)
-  for (let up: OurusNode | null = node; up; up = up.parent) if (up.kind === 'item' || up.kind === 'quote') return start;
-  const open = text.frame.find((p) => p.part === 'open');
-  const close = text.frame.find((p) => p.part === 'close');
-  const lineEnd = text.text.indexOf('\n', open?.to ?? 0);
-  // (a line between the opening's and the closing's, or past an unclosed opening's)
-  return open && start <= lineEnd && lineEnd >= 0 && lineEnd + 1 < (close ? close.from : text.text.length + 1) ? lineEnd + 1 : start;
 }
 
 /**
@@ -49,13 +32,15 @@ export function selectNodeCommand(ctx: CommandContext): OurusResult | null {
   if (roots) {
     let first: OurusNode = roots[0]!;
     while (!doc.textOf(first) && first.children.length) first = first.children[0]!;
-    const text = doc.textOf(first);
-    if (!text) return new OurusDeferred();
-    const at = doc.posOf(first, editStart(ctx, first, text), 1);
-    return selected(ctx, { anchor: at, head: at });
+    if (!doc.textOf(first)) return new OurusDeferred('host-default');
+    const at = editableStart(doc, first);
+    // (inside a fold, the fold opened: the caret where it edits, shown, not on the folded row's markup)
+    let out: OurusResult | null = selected(ctx, { anchor: at, head: at });
+    for (let n: OurusNode | null = first; n; n = n.parent) out = unfoldedForCaret(out, n.id);
+    return out;
   }
   const touched = view.touchedSubtrees(ctx.selection).filter((n) => !view.isHidden(n));
-  if (!touched.length) return new OurusDeferred();
+  if (!touched.length) return new OurusDeferred('host-default');
   return selected(ctx, view.selectionOf(touched.map((n) => n.id)));
 }
 
@@ -71,7 +56,7 @@ export function expandSelectionCommand(ctx: CommandContext): OurusResult | null 
   const view = ctx.view;
   const sel = ctx.selection;
   const node = anchorNode(view, sel);
-  if (!node) return view.zoom === null ? new OurusDeferred() : selected(ctx, sel);
+  if (!node) return view.zoom === null ? new OurusDeferred('host-default') : selected(ctx, sel);
   const from = Math.min(sel.anchor, sel.head);
   const to = Math.max(sel.anchor, sel.head);
   const current = rootsOf(view, sel);
@@ -98,7 +83,7 @@ export function expandSelectionCommand(ctx: CommandContext): OurusResult | null 
     if (Math.min(next.anchor, next.head) > from || Math.max(next.anchor, next.head) < to) continue;
     if (rootsOf(view, next) !== current) return selected(ctx, next);
   }
-  return view.zoom === null ? new OurusDeferred() : selected(ctx, sel);
+  return view.zoom === null ? new OurusDeferred('host-default') : selected(ctx, sel);
 }
 
 /**
@@ -159,13 +144,13 @@ export function selectNodeByCommand(ctx: CommandContext, dir: -1 | 1): OurusResu
     if (blank) {
       // the node below going down, the one above (whose gap it is) going up
       const node = dir > 0 ? visibleAfterLine(view, line) : (touched[0] ?? null);
-      return node ? selected(ctx, view.selectionOf([node.id], dir > 0 ? 'down' : 'up')) : new OurusDeferred();
+      return node ? selected(ctx, view.selectionOf([node.id], dir > 0 ? 'down' : 'up')) : new OurusDeferred('host-default');
     }
-    if (!touched.length) return new OurusDeferred();
+    if (!touched.length) return new OurusDeferred('host-default');
     const node = touched[0]!;
     const own = (pos: number): boolean => doc.lineAt(pos).index >= node.textFirstLine && doc.lineAt(pos).index <= node.textLastLine;
     // in one node's text: a line at a time (the host's), but from its edge
-    if (touched.length === 1 && own(sel.anchor) && own(sel.head) && line !== (dir > 0 ? node.textLastLine : node.textFirstLine)) return new OurusDeferred();
+    if (touched.length === 1 && own(sel.anchor) && own(sel.head) && line !== (dir > 0 ? node.textLastLine : node.textFirstLine)) return new OurusDeferred('host-default');
     return selected(ctx, view.selectionOf(touched.map((n) => n.id), dir > 0 ? 'down' : 'up'));
   }
   const up = sel.head < sel.anchor;

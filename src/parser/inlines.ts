@@ -20,11 +20,17 @@ export interface MdInlineRule {
   parse(p: MdInlineParser): boolean;
 }
 
-/** A kind of emphasis-like delimiter run (`*`, `_`, GFM's `~`, Obsidian's `=`). */
+/** A kind of emphasis-like delimiter run (`*`, `_`, GFM's `~`, Obsidian's `=`): one character, an astral one too. */
 export interface MdDelimiterRule {
   readonly char: string;
   /** `_`'s stricter flanking rules: no opening or closing inside a word. */
   readonly strict?: boolean;
+  /**
+   * CommonMark emphasis's rule of three: a run that can both open and close matches none whose length
+   * with it is a multiple of three, unless both are. Emphasis's, and the shipped flavors' `~` and `=`,
+   * which have always been read so; an extension's own delimiter isn't held to it unless it asks.
+   */
+  readonly ruleOfThree?: boolean;
   /** Whether a run of `length` can open or close at all (else it is plain text). */
   accepts?(length: number): boolean;
   /**
@@ -94,7 +100,7 @@ export function compileInlines(rules: readonly MdInlineRule[], delimiters: reado
   return {
     rules: ascii,
     otherRules: other,
-    delimiters: new Map(delimiters.map((d) => [d.char.charCodeAt(0), d])),
+    delimiters: new Map(delimiters.map((d) => [d.char.codePointAt(0)!, d])),
     brackets,
     textRules,
     stops,
@@ -172,8 +178,12 @@ export class Node {
 }
 
 interface Delimiter {
+  /** The delimiter's character, a code point. */
   readonly char: number;
+  /** Its width in UTF-16 units: two for an astral character. */
+  readonly width: number;
   readonly rule: MdDelimiterRule;
+  /** Delimiters left in the run, and the run's length as written: characters, not UTF-16 units. */
   count: number;
   readonly length: number;
   /** The run's text node. */
@@ -315,11 +325,13 @@ export class MdInlineParser {
    */
   handleDelimiters(rule: MdDelimiterRule): boolean {
     const { text } = this;
-    const char = text.charCodeAt(this.pos);
+    // (a character, an astral one by its code point and two units: its surrogates kept together, B255)
+    const char = text.codePointAt(this.pos)!;
+    const width = char > 0xffff ? 2 : 1;
     const start = this.pos;
     let end = start;
-    while (end < text.length && text.charCodeAt(end) === char) end++;
-    const length = end - start;
+    while (end < text.length && text.codePointAt(end) === char) end += width;
+    const length = (end - start) / width;
     const before = codePointBefore(text, start);
     const after = codePointAt(text, end);
     const afterWhite = after === -1 || isUnicodeWhitespace(after);
@@ -340,7 +352,7 @@ export class MdInlineParser {
     this.pos = end;
     const node = this.addText(start, end);
     if ((canOpen || canClose) && (!rule.accepts || rule.accepts(length))) {
-      const d: Delimiter = { char, rule, count: length, length, node, canOpen, canClose, prev: this.delimiters, next: null };
+      const d: Delimiter = { char, width, rule, count: length, length, node, canOpen, canClose, prev: this.delimiters, next: null };
       if (d.prev) d.prev.next = d;
       this.delimiters = d;
     }
@@ -369,7 +381,7 @@ export class MdInlineParser {
       let opener = closer.prev;
       let found = false;
       while (opener && opener !== bottom && opener !== limit) {
-        const oddMatch = (closer.canOpen || opener.canClose) && closer.length % 3 !== 0 && (opener.length + closer.length) % 3 === 0;
+        const oddMatch = !!closer.rule.ruleOfThree && (closer.canOpen || opener.canClose) && closer.length % 3 !== 0 && (opener.length + closer.length) % 3 === 0;
         if (opener.char === closer.char && opener.canOpen && !oddMatch) {
           found = true;
           break;
@@ -385,8 +397,8 @@ export class MdInlineParser {
           const closerNode = closer.node;
           opener.count -= use;
           closer.count -= use;
-          openerNode.to -= use;
-          closerNode.from += use;
+          openerNode.to -= use * opener.width;
+          closerNode.from += use * closer.width;
           const node = new Node(m.type, openerNode.to, closerNode.from);
           node.container = true;
           for (let tmp = openerNode.next; tmp && tmp !== closerNode; ) {

@@ -18,6 +18,15 @@ export interface FailureGroup {
 }
 
 /** A short hash saying which notes a report played. */
+/**
+ * A `write-failed` refusal's group name: by its failure's phase and code where it has one
+ * (`write-failed (readback children)`, `write-failed (writer moved-indent)`), sharper than its
+ * sentence and still a bucket, not a cause.
+ */
+export function writeFailedKind(failure: { readonly phase: string; readonly code: string } | undefined): string {
+  return failure ? `write-failed (${failure.phase} ${failure.code})` : 'write-failed';
+}
+
 export function corpusHash(starts: readonly GeneratedStart[]): string {
   return createHash('sha256').update(JSON.stringify(starts.map((start) => [start.text, start.config]))).digest('hex').slice(0, 16);
 }

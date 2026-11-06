@@ -79,16 +79,27 @@ async function load(root: string): Promise<Core> {
   // (a tree with `OurusView`: commands take a view and give one; before it, a document)
   const viewOf = (doc: any): any => (api.OurusView ? api.OurusView.of(doc) : doc);
   const docOf = (result: any): any => (api.OurusView ? result.view.doc : result.doc);
+  // (a tree whose view holds the selection: commands and settling act at the view's, and a result's is its view's)
+  const selecting = !!api.OurusView?.prototype.withSelection;
   const run = (doc: Snapshot, command: Given, selection: { anchor: number; head: number }): any => {
-    const result = api.executeCommand(viewOf(doc.doc), command, selection);
+    const result = selecting ? api.executeCommand(viewOf(doc.doc).withSelection(selection), command) : api.executeCommand(viewOf(doc.doc), command, selection);
     // (the status as a plain field, whatever the tree's API: classes, or a `status` of its own, whose
     // 'applied' is 'success' now)
+    // (a tree with `OurusFailed`: a write failure, a refusal of `write-failed` in the trees before it)
+    if (api.OurusFailed && result instanceof api.OurusFailed) return { status: 'rejected', reason: 'write-failed', detail: result.detail };
     const status = api.OurusSuccess ? (result instanceof api.OurusSuccess ? 'success' : result instanceof api.OurusRejected ? 'rejected' : 'deferredToHost') : result.status === 'applied' ? 'success' : result.status;
-    return status === 'success' ? { ...result, status, doc: snap(docOf(result)) } : { ...result, status };
+    // (a deferral's `reason`, which trees before `DeferReason` don't give, not compared)
+    if (status === 'deferredToHost') return { ...result, status, reason: undefined };
+    return status === 'success' ? { ...result, status, doc: snap(docOf(result)), ...(selecting && { selection: result.view.selection }) } : { ...result, status };
   };
   // (a tree before `autoClose`: `closeBackticks`, `none`, `fences` or `all`, what the list says of a backtick)
   const { OurusConfig: config } = await import(join(root, 'src/config.ts'));
+  // (a tree before `orderedLists`: `listNumbers`, `keep` what `shift` is)
   const configFor = (given: Record<string, unknown>): Record<string, unknown> => {
+    if ('orderedLists' in given && !config.has?.('orderedLists')) {
+      const { orderedLists, ...rest } = given;
+      given = { ...rest, listNumbers: orderedLists === 'shift' ? 'keep' : orderedLists };
+    }
     if (!Array.isArray(given.autoClose) || config.has?.('autoClose')) return given;
     const { autoClose, ...rest } = given as { autoClose: string[] };
     return { ...rest, closeBackticks: !autoClose.length ? 'none' : autoClose.includes('`') ? 'all' : 'fences' };
@@ -113,7 +124,7 @@ async function load(root: string): Promise<Core> {
     // (a tree before `update`'s `text`: `replace(text, marks)`)
     replace: (s, text, placeholders) => snap(s.doc.replace ? s.doc.replace(text, marks(placeholders)) : s.doc.update(createPlaceholder ? { text, setMarks: marks(placeholders) } : { text, marks: marks(placeholders) })),
     settle: (s, caret) => {
-      const settled = api.settlePlaceholders(viewOf(s.doc), caret);
+      const settled = selecting ? api.settlePlaceholders(viewOf(s.doc).withSelection(caret)) : api.settlePlaceholders(viewOf(s.doc), caret);
       return settled && { changes: settled.changes, doc: snap(docOf(settled)) };
     },
   };

@@ -3,7 +3,7 @@
 // selection that is a set of subtrees, and a selection moved out of what the view hides.
 
 import { OurusAtom, textEnd, textStart, type OurusDoc, type OurusNode } from '../doc/index.ts';
-import type { OurusSelection } from '../text/index.ts';
+import { pushAll, type OurusSelection } from '../text/index.ts';
 import type { OurusView } from './view.ts';
 
 /**
@@ -20,7 +20,7 @@ export function visibleSelection(view: OurusView, selection: OurusSelection): Ou
     const zoom = view.zoomRange();
     if (zoom) {
       const root = view.zoomRoot!;
-      if (pos < zoom.from) pos = rootStart(doc, root);
+      if (pos < zoom.from) pos = editableStart(doc, root);
       else if (pos > zoom.to) pos = zoom.to;
     }
     // the outermost fold hiding it, nested folds inside one another
@@ -42,13 +42,26 @@ function viewEnd(view: OurusView): number {
 }
 
 /**
- * Where a caret entering the zoom from before it goes: its root's line's text start, but where markup
- * is decorated and the root is an atom (code, math), its payload's start, not its opening fence.
+ * Where editing `node` starts, a caret entering it (the zoom from before it, a subtree selection left):
+ * past a quote or an item with no text of its own, its first child's (`- > q`); its text's start; but
+ * where markup is decorated, an atom's payload, not its opening fence: a fenced block's first code line
+ * where its code is only blank lines (its text's start the opening fence's end then, where typing would
+ * go into its info string), out of items and quotes (there the blank line is written without its
+ * prefix: at its start, typing would leave them; not done yet).
  */
-function rootStart(doc: OurusDoc, root: OurusNode): number {
-  const text = doc.textOf(root);
-  if (doc.config.markup === 'decorated' && text instanceof OurusAtom) return doc.posOf(root, textStart(text), 1);
-  return doc.textStart(root.startLine);
+export function editableStart(doc: OurusDoc, node: OurusNode): number {
+  let n = node;
+  while (!doc.textOf(n) && n.children.length) n = n.children[0]!;
+  const text = doc.textOf(n);
+  if (!text) return doc.textStart(n.startLine);
+  const start = textStart(text);
+  if (doc.config.markup !== 'decorated' || !(text instanceof OurusAtom)) return doc.posOf(n, start, 1);
+  for (let up: OurusNode | null = n; up; up = up.parent) if (up.kind === 'item' || up.kind === 'quote') return doc.posOf(n, start, 1);
+  const open = text.frame.find((p) => p.part === 'open');
+  const close = text.frame.find((p) => p.part === 'close');
+  const lineEnd = text.text.indexOf('\n', open?.to ?? 0);
+  // (a line between the opening's and the closing's, or past an unclosed opening's)
+  return doc.posOf(n, open && start <= lineEnd && lineEnd >= 0 && lineEnd + 1 < (close ? close.from : text.text.length + 1) ? lineEnd + 1 : start, 1);
 }
 
 /**
@@ -155,7 +168,6 @@ function subtreeEnd(doc: OurusDoc, line: number): number {
  * outward, but not past the zoom's root.
  */
 function outermost(view: OurusView, roots: readonly OurusNode[]): OurusNode[] {
-  const doc = view.doc;
   let out = [...roots];
   for (let lifted = true; lifted; ) {
     lifted = false;
@@ -172,7 +184,7 @@ function outermost(view: OurusView, roots: readonly OurusNode[]): OurusNode[] {
       if (whole && !outsideZoom(view, parent)) {
         next.push(parent);
         lifted = true;
-      } else next.push(...run);
+      } else pushAll(next, run);
       i = j;
     }
     out = next;

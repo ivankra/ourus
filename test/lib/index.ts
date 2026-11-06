@@ -6,6 +6,8 @@ export * from './command-execution.ts';
 export * from './drawn-states.ts';
 export * from './generated-notes.ts';
 export * from './report-baselines.ts';
+export * from './report-checks.ts';
 export * from './spec-reader.ts';
 export * from './spec-runner.ts';
 export * from './text-position.ts';
+export * from './untriaged.ts';

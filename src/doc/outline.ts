@@ -10,7 +10,7 @@ import type { MdBlock, MdTree } from '../parser/index.ts';
 import { ChangeIndex, lineIndexAt, trimMd, type ChangeSpec } from '../text/index.ts';
 import { itemHead, nodeKindOf, outlineChildren, quoteHead, type OurusNodeKind, type OutlineChild } from './rules.ts';
 import { reBlockIdLine } from './text.ts';
-import { Lineage } from './doc.ts';
+import { Lineage } from './lineage.ts';
 import { PersistentNode } from './node.ts';
 
 /** Lines of the new text an update touched (closed intervals), where no old node is taken whole. */

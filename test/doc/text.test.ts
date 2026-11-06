@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { OurusDoc, type OurusNode, type OurusText, type OurusAtom } from '../../src/doc/index.ts';
+import { OurusDoc, type OurusNode, type OurusText, type OurusAtom, type OurusProse } from '../../src/doc/index.ts';
 
 type Flavor = 'commonmark' | 'gfm' | 'obsidian';
 
@@ -294,4 +294,19 @@ test('held spaces come out of a text in one pass: linear in their number', async
   assert.deepEqual([...settle(3).marks.placeholders], []);
   // (eight times the spaces: linear about 8; one splice each was about 40)
   assert.ok(scalingFactor(settle, 1000, 8000) < 24);
+});
+
+test('a quote\'s text unquoted: every line\'s `>` and one blank after it off, a block id\'s own line\'s too, a lazy line as it is; a paragraph\'s', () => {
+  const unquoted = (markdown: string): string => {
+    const doc = OurusDoc.parse(markdown, { config: { flavor: 'obsidian', quotes: 'text' } });
+    const text = doc.textOf(doc.rootNode.children[0]!) as OurusProse;
+    const out = text.unquoted();
+    return `${out.type}:${out.text}`;
+  };
+  assert.equal(unquoted('> q\n> r\n'), 'paragraph:q\nr');
+  assert.equal(unquoted('> q\n> ^x\n'), 'paragraph:q\n^x');
+  assert.equal(unquoted('   > q\n> ^x\n'), 'paragraph:q\n^x');
+  assert.equal(unquoted('> q ^x\n'), 'paragraph:q ^x');
+  assert.equal(unquoted('> q\nlazy\n> r\n'), 'paragraph:q\nlazy\nr');
+  assert.equal(unquoted('>q\n>  r\n'), 'paragraph:q\n r');
 });

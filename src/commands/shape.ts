@@ -52,7 +52,7 @@ export function reshaped(outcome: OurusResult | null, shape: SelectionShape | nu
   if (!shape || !(outcome instanceof OurusSuccess)) return outcome;
   const view = outcome.view;
   const doc = view.doc;
-  const sel = outcome.selection;
+  const sel = view.selection;
   if (shape.kind === 'line') {
     const mapped = map(shape.id);
     const node = mapped === undefined ? undefined : doc.node(mapped);
@@ -61,7 +61,7 @@ export function reshaped(outcome: OurusResult | null, shape: SelectionShape | nu
     // (the end that followed its text; the other, at the line's start, went through a line written anew)
     const to = shape.up ? sel.anchor : sel.head;
     if (to <= from) return outcome;
-    return new OurusSuccess({ ...outcome, selection: shape.up ? { anchor: to, head: from } : { anchor: from, head: to } });
+    return new OurusSuccess({ ...outcome, view: view.withSelection(shape.up ? { anchor: to, head: from } : { anchor: from, head: to }) });
   }
   const nodes: OurusNode[] = [];
   for (const id of shape.ids) {
@@ -78,7 +78,7 @@ export function reshaped(outcome: OurusResult | null, shape: SelectionShape | nu
   const to = shape.end === 'eol' ? doc.mdTree.ends[last.endLine]! : shape.end === 'gapEnd' ? doc.mdTree.ends[doc.coverEnd(last)]! : shape.end === 'afterGap' ? lineAfter(doc, doc.coverEnd(last)) : canonical.head;
   // (a shape the change can't keep, an empty last line's end at its start: the canonical one)
   const kept = to > from && view.selectedSubtrees({ anchor: from, head: to }) ? to : canonical.head;
-  return new OurusSuccess({ ...outcome, selection: shape.up ? { anchor: kept, head: from } : { anchor: from, head: kept } });
+  return new OurusSuccess({ ...outcome, view: view.withSelection(shape.up ? { anchor: kept, head: from } : { anchor: from, head: kept }) });
 }
 
 /** The start of the line after line `line`, or the document's end. */
@@ -107,12 +107,11 @@ export function mixedDepthsRun(ctx: CommandContext, act: (ctx: CommandContext) =
   const ids = roots.map((n) => n.id);
   // (each step on the last's view, the view carried through each)
   let view = ctx.view;
-  let selection = ctx.selection;
   let changes: readonly ChangeSpec[] = [];
   const then = (outcome: OurusResult | null): OurusResult | null | true => {
     if (!(outcome instanceof OurusSuccess)) return outcome;
     changes = composeChanges(ctx.doc.text, changes, outcome.changes);
-    [view, selection] = [outcome.view, outcome.selection];
+    view = outcome.view;
     return true;
   };
   if (mode === 'level') {
@@ -124,11 +123,11 @@ export function mixedDepthsRun(ctx: CommandContext, act: (ctx: CommandContext) =
     if (rest.some((n) => goneWithTextlessParents(ctx.doc, [n])[0] !== n)) return new OurusRejected('not-expressible', "a root is all of a container with no text, which can't be left empty");
     const levelled = then(ctx.apply(ctx.draft().remove(rest).place('after', first!, rest)));
     if (levelled !== true) return levelled;
-    const acted = then(act(new CommandContext(view, selection, ids)));
+    const acted = then(act(new CommandContext(view, ids)));
     if (acted !== true) return acted;
   } else {
     for (const run of runs) {
-      const acted = then(act(new CommandContext(view, selection, run.map((n) => n.id))));
+      const acted = then(act(new CommandContext(view, run.map((n) => n.id))));
       if (acted !== true) return acted;
     }
   }
@@ -137,5 +136,5 @@ export function mixedDepthsRun(ctx: CommandContext, act: (ctx: CommandContext) =
   if (ids.some((id) => !doc.node(id))) return new OurusRejected('non-contiguous', 'a root went');
   const after = view.selectedSubtrees(view.selectionOf(ids))?.map((n) => n.id) ?? [];
   if (after.join() !== [...ids].sort((a, b) => doc.node(a)!.startLine - doc.node(b)!.startLine).join()) return new OurusRejected('non-contiguous', 'the nodes are no longer one range');
-  return new OurusSuccess({ view, changes, selection });
+  return new OurusSuccess({ view, changes });
 }

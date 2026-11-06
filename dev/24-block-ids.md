@@ -1,5 +1,18 @@
 # Block ids (2026-10-29)
 
+> **Changed since (2026-11-06):** ourus keeps no block id unique, and refuses no shadowing. Paste,
+> plain paste, a drop, duplicate and `addBlockId` write the names they are given, those the note holds
+> too, as Obsidian does; `addBlockId` on a block one names already writes a second; an edit that leaves
+> one id shadowing another is no loss. A host that wants either checks `OurusDoc.blockIds()` (each one's
+> target, and `shadowed`). What §5.1's `pasteAt`, §5.4 and §5.6 say of dropping or refusing a name the
+> note has, and the shadowing rule of §4.2 and §5, no longer hold (`dev/29-refactor.md`).
+>
+> **And since:** the loss check is gone (`checkBlockIds`, §4.2 and §5): nothing refuses a command or a
+> key left to the host for what it does to a block id, and a host that wants them kept compares
+> `OurusDoc.blockIds()` before and after. `joinBlockIds` is gone too (§4.7, §5.3): a join of two nodes
+> that both have one always merges, as `merge` did (`mergedBlockIds`). Shift-Enter splitting a quote
+> that carries a block-id line gives the line to the second paragraph, the quote's last block.
+
 A **block id** is a name written into a note's text that names one block, so that something else can
 link to that block, embed it, or cross-reference it. Three formats ourus will read have them:
 

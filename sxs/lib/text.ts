@@ -5,7 +5,7 @@
 import type { OurusConfig } from '../../src/config.ts';
 import { OurusAtom, OurusDoc } from '../../src/doc/index.ts';
 import { OurusView } from '../../src/view/index.ts';
-import { drawState, drawText, drawnSelection, allNodes, nodePlainText, readDrawing } from '../../test/lib/index.ts';
+import { drawState, drawText, drawnSelection, endingText, allNodes, nodePlainText, readDrawing } from '../../test/lib/index.ts';
 import type { Verdict } from './block.ts';
 import { drawView, sameView, splitView, type RowView } from './view.ts';
 
@@ -42,7 +42,7 @@ export function foldOnAtomItem(d: TextDoc, flavor: OurusConfig['flavor'] = 'gfm'
 
 /** A text document drawn as a spec buffer, its view on its lines (`⟦folded⟧`, `⟦zoomed⟧`): its selection at its offsets, as a text editor has it (`«…»`, whole lines or not; the stored runs are keyed so). */
 export const drawTextDoc = (d: TextDoc): string => {
-  const drawn = d.sel ? drawState(d.text, d.sel) : drawText(d.text);
+  const drawn = d.sel ? drawState(d.text, d.sel) : endingText(drawText(d.text));
   return d.view ? drawView(drawn, d.view) : drawn;
 };
 

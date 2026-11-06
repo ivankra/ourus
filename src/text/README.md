@@ -6,6 +6,13 @@ other layers import it through `index.ts`.
 
 - Text is represented as a JS string with offsets in UTF-16 code units.
 
+- **Coordinates** (`coords.ts`) are numbers branded by what they count: `DocPos` (an offset into a
+  document's text), `LocalOffset` (into a node's text), `LineOffset` (from a line's start),
+  `LineIndex`, `ColumnIndex` (visual, tabs to stops of 4), `NodeId`. A branded number reads as a
+  number; a plain one becomes branded only through its function (`docPos(n)`, `columnIndex(n)`, ...),
+  where arithmetic made it. `atLine(line, k)` is a line offset in the document. Widths, counts and
+  indices into any other string stay plain.
+
 - **`ChangeSpec`** is CodeMirror 6's `{ from, to, insert }`,
   describing a single replacement of the string's slice `[from, to)` by
   a new string `insert`.

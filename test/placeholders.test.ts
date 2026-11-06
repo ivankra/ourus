@@ -10,7 +10,7 @@ const placeholders = (d: OurusDoc) => d.marks.placeholders;
 
 function indentNewItem(): OurusDoc {
   const doc = OurusDoc.parse('- a\n- ');
-  const r = executeCommand(OurusView.of(doc), { type: 'indent' }, { anchor: 6, head: 6 });
+  const r = executeCommand(OurusView.of(doc, { selection: 6 }), { type: 'indent' });
   assert.ok(r instanceof OurusSuccess);
   return (r as OurusSuccess).view.doc;
 }
@@ -36,8 +36,8 @@ test('typing into a place fills it; typing a space keeps it open', () => {
 
 test('leaving an empty child keeps it, set off by a blank line', () => {
   const doc = indentNewItem();
-  assert.equal(settlePlaceholders(OurusView.of(doc), 8), null, 'the caret is still there');
-  const r = settlePlaceholders(OurusView.of(doc), 1)!;
+  assert.equal(settlePlaceholders(OurusView.of(doc, { selection: 8 })), null, 'the caret is still there');
+  const r = settlePlaceholders(OurusView.of(doc, { selection: 1 }))!;
   assert.equal(r.view.doc.text, '- a\n\n  - ');
   assert.deepEqual(placeholders(r.view.doc), []);
   assert.equal(shape(r.view.doc), shape(doc));
@@ -45,13 +45,13 @@ test('leaving an empty child keeps it, set off by a blank line', () => {
 
 test('leaving a place the text can hold just drops it', () => {
   const item = parseWithMarks('- a\n- ', [6]);
-  const r1 = settlePlaceholders(OurusView.of(item), 0)!;
+  const r1 = settlePlaceholders(OurusView.of(item, { selection: 0 }))!;
   assert.deepEqual(r1.changes, []);
   assert.equal(r1.view.doc.text, '- a\n- ');
   assert.deepEqual(placeholders(r1.view.doc), []);
   const para = parseWithMarks('- a\n\n', [5]);
   assert.equal(shape(para), 'item:a\nparagraph:');
-  const r2 = settlePlaceholders(OurusView.of(para), 0)!;
+  const r2 = settlePlaceholders(OurusView.of(para, { selection: 0 }))!;
   // (the empty paragraph goes, and the document's end with it: the item's)
   assert.equal(r2.view.doc.text, '- a\n');
   assert.equal(shape(r2.view.doc), 'item:a');
@@ -62,7 +62,7 @@ test('a place left at the top is removed, the list it owned in its place', () =>
   const doc = parseWithMarks('\n\n- a\n', [0, 1]);
   // the empty paragraph owns the list right after it
   assert.equal(shape(doc), 'paragraph:\n  item:a');
-  const r = settlePlaceholders(OurusView.of(doc), 4)!;
+  const r = settlePlaceholders(OurusView.of(doc, { selection: 4 }))!;
   assert.equal(r.view.doc.text, '- a\n');
   assert.equal(shape(r.view.doc), 'item:a');
 });
@@ -71,11 +71,11 @@ test('Enter twice leaves a list, and typing makes the paragraph', () => {
   let doc = OurusDoc.parse('- a');
   let sel = { anchor: 3, head: 3 };
   for (const _ of [1, 2]) {
-    const r = executeCommand(OurusView.of(doc), { type: 'enter' }, sel);
+    const r = executeCommand(OurusView.of(doc, { selection: sel }), { type: 'enter' });
     assert.ok(r instanceof OurusSuccess);
     if (!(r instanceof OurusSuccess)) return;
     doc = r.view.doc;
-    sel = { anchor: r.selection.head, head: r.selection.head };
+    sel = { anchor: r.view.selection.head, head: r.view.selection.head };
   }
   assert.equal(doc.text, '- a\n\n');
   assert.equal(shape(doc), 'item:a\nparagraph:');
@@ -86,11 +86,11 @@ test('Enter twice leaves a list, and typing makes the paragraph', () => {
 
 test('an item\'s first word deleted, its space held, then Enter at its end: the new item lines up with its children, moved as the held space moves them', async () => {
   const { playActions: play } = await import('./lib/index.ts');
-  let played: Parameters<typeof play>[0] = { view: OurusView.of(OurusDoc.parse('- x b\n  - c\n')), selection: { anchor: 3, head: 3 }, clipboard: {} };
+  let played: Parameters<typeof play>[0] = { view: OurusView.of(OurusDoc.parse('- x b\n  - c\n'), { selection: 3 }), clipboard: {} };
   for (const action of ['deleteContentBackward', 'cursorLineBoundaryForward', 'enter']) played = play(played, [action]);
   assert.equal(played.view.doc.text, '-  b\n   - \n   - c\n');
   const doc = OurusDoc.parse('- x b\n  - c\n').update({ changes: [{ from: 2, to: 3, insert: '' }], caret: 2 });
-  const pasted = executeCommand(OurusView.of(doc), { type: 'pastePlain', text: 'x\n\ny' }, { anchor: 4, head: 4 });
+  const pasted = executeCommand(OurusView.of(doc, { selection: 4 }), { type: 'pastePlain', text: 'x\n\ny' });
   assert.ok(pasted instanceof OurusSuccess, pasted instanceof OurusRejected ? (pasted.detail ?? '') : '');
 });
 
@@ -111,29 +111,31 @@ test('a held empty paragraph stays when the node after it goes, ending the note'
 test('an empty zoom root stays while the zoom holds it, and settles when the zoom leaves', () => {
   const zoomed = executeAfter(executeOnText('# a\n\n# b', { type: 'enter' }, { caret: 3 }), { type: 'zoomIn' });
   const selected = assertApplied(executeAfter(zoomed, { type: 'selectNode' }));
-  assert.equal(settlePlaceholders(selected.view, selected.selection.head), null);
+  assert.equal(settlePlaceholders(selected.view.withSelection(selected.view.selection.head)), null);
   const left = assertApplied(executeAfter(selected, { type: 'zoomOut' }));
-  assert.equal(settlePlaceholders(left.view, 0)?.view.doc.text, '# a\n\n# b');
+  assert.equal(settlePlaceholders(left.view.withSelection(0))?.view.doc.text, '# a\n\n# b');
 });
 
 test('settling gives the selection after it, mapped, where the view shows it: in the zoom when the last empty node in it goes', () => {
-  // (Enter at `para`'s end zoomed into `# h`, the empty paragraph selected, then settled: the host's
-  // own mapping put the caret at 11, past the zoom's end, 10)
+  // (Enter at `para`'s end zoomed into `# h`, the empty paragraph selected: kept while the selection
+  // is on its line; the caret then on the blank line after it, settled: the host's own mapping put the
+  // caret at 11, past the zoom's end, 10)
   const view = OurusView.of(OurusDoc.parse('# h\n\npara\n\n# z\n'), { zoom: 1 });
-  const selected = assertApplied(executeAfter(executeCommand(view, { type: 'enter' }, { anchor: 9, head: 9 }), { type: 'selectNode' }));
-  const settled = settlePlaceholders(selected.view, selected.selection)!;
+  const selected = assertApplied(executeAfter(executeCommand(view.withSelection(9), { type: 'enter' }), { type: 'selectNode' }));
+  assert.equal(settlePlaceholders(selected.view), null);
+  const settled = settlePlaceholders(selected.view.withSelection(12))!;
   assert.equal(settled.view.doc.text, '# h\n\npara\n\n# z\n');
-  assert.deepEqual(settled.selection, { anchor: 10, head: 10 });
+  assert.deepEqual(settled.view.selection, { anchor: 10, head: 10 });
   assert.deepEqual(settled.view.zoomRange(), { from: 0, to: 10 });
   // (a caret given alone: the selection a caret)
   const doc = indentNewItem();
-  assert.deepEqual(settlePlaceholders(OurusView.of(doc), 1)!.selection, { anchor: 1, head: 1 });
+  assert.deepEqual(settlePlaceholders(OurusView.of(doc, { selection: 1 }))!.view.selection, { anchor: 1, head: 1 });
 });
 
 test('an empty paragraph left between blocks nothing set apart is a blank line, the author\'s separator; elsewhere it goes', () => {
   const settle = (text: string, caret: number, type: 'enter' | 'shiftEnter' = 'enter'): string => {
     const r = assertApplied(executeOnText(text, { type }, { caret, config: { flavor: 'gfm' } }));
-    return (settlePlaceholders(r.view, 0)?.view ?? r.view).doc.text;
+    return (settlePlaceholders(r.view.withSelection(0))?.view ?? r.view).doc.text;
   };
   // (a heading then a table or a paragraph, touching: one blank line kept, Enter's or Shift-Enter's)
   assert.equal(settle('## h\n| a |\n| --- |', 4), '## h\n\n| a |\n| --- |');

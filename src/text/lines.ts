@@ -2,6 +2,8 @@
 // and Markdown's whitespace (spaces and tabs, not JavaScript's). Positions are UTF-16 code-unit
 // offsets into a JS string.
 
+import type { ColumnIndex } from './coords.ts';
+
 export type LineEnding = '' | '\n' | '\r\n' | '\r';
 
 /** Line boundaries of a text: CommonMark line endings are LF, CR and CRLF. */
@@ -147,9 +149,9 @@ export function charStart(text: string, pos: number): number {
 // ---------------------------------------------------------------- columns
 
 /** The column reached after `text[from, to)` starting at column `col`, with tab stops of 4. */
-export function advanceColumns(text: string, from: number, to: number, col: number): number {
+export function advanceColumns(text: string, from: number, to: number, col: number): ColumnIndex {
   for (let i = from; i < to; i++) col = text.charCodeAt(i) === 9 ? col + 4 - (col % 4) : col + 1;
-  return col;
+  return col as ColumnIndex;
 }
 
 /** `line` without its first `cols` columns of indentation (a tab partly removed leaves spaces). */

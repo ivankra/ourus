@@ -192,7 +192,7 @@ function contentOf(tree: MdTree, line: MdLine, node: OurusNode, first: boolean, 
   if (line.prefix[line.prefix.length - 1]?.partialTab && text[from] === '\t') {
     // (and the tabs of the blanks after it, which span from the columns they are at: read from the
     // line's content start, they would span otherwise)
-    let column = line.contentColumn;
+    let column: number = line.contentColumn;
     let k = from;
     let lead = '';
     for (; k < line.to && (text[k] === ' ' || text[k] === '\t'); k++) {

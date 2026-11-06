@@ -94,9 +94,9 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
       if (l.editable.length === 0) return null;
       const node = l.editable[ni % l.editable.length]!;
       pos = l.toPos({ node, offset: off % (node.text.length + 1) });
-      const settled = settlePlaceholders(view, pos);
+      const settled = settlePlaceholders(view.withSelection(pos));
       if (settled) {
-        pos = settled.selection.head;
+        pos = settled.view.selection.head;
         view = settled.view;
         l = lift(view.doc);
       }
@@ -109,11 +109,11 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
     const firedBefore = [...fired.values()].reduce((a, b) => a + b, 0);
     const before = drawDoc(view, { anchor: pos, head: pos });
     const model = apply(l.root, caret, cmd, MODE);
-    const state = playActions({ view, selection: { anchor: pos, head: pos }, clipboard: {} }, [cmd]);
+    const state = playActions({ view: view.withSelection(pos), clipboard: {} }, [cmd]);
     const r = state.last!;
     const ourusStatus = r instanceof OurusRejected ? `rejected:${r.reason}` : resultStatus(r);
     const after = lift(state.view.doc);
-    const got = { tree: JSON.stringify(shape(after.root)), caret: caretKey(after.root, after.toCaret(state.selection.head)) };
+    const got = { tree: JSON.stringify(shape(after.root)), caret: caretKey(after.root, after.toCaret(state.view.selection.head)) };
     const want =
       model.status === 'success'
         ? { tree: JSON.stringify(shape(model.root)), caret: caretKey(model.root, model.caret) }
@@ -145,7 +145,7 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
         `> ${cmd}   (step ${i + 1})`,
         'ourus:',
         '```markdown',
-        drawDoc(state.view, state.selection).replace(/\n$/, ''),
+        drawDoc(state.view, state.view.selection).replace(/\n$/, ''),
         '```',
         ...(treeOk ? [] : ['ourus outline:', ...draw(after.root).map((x) => '    ' + x), 'model outline:', ...draw(model.status === 'success' ? model.root : l.root).map((x) => '    ' + x)]),
         ...(caretOk ? [] : [`caret: ourus ${got.caret}, model ${want.caret}`]),
@@ -153,7 +153,7 @@ function runCase(text: string, steps: [Cmd, [number, number] | null][], stats?: 
       return { key, report };
     }
     view = state.view;
-    pos = state.selection.head;
+    pos = state.view.selection.head;
   }
   return null;
 }

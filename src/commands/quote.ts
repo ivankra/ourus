@@ -2,13 +2,16 @@
 // block's text): its lines as written, `>` included, edited as characters. What the keys do with it
 // where they don't do what they do in any atom: Enter splits it, the rest a node of its own after it;
 // Shift-Enter and plain paste put in lines of the quote; Backspace at its start and Delete before it
-// join it to the text above as it is written.
+// join it to the text above as it is written. What its lines are, its `>`s, the lists and code in it,
+// is the document's reading of them (`ctx.doc.mdTree`), as for any other text: nothing here reads
+// Markdown.
 
-import { OurusAtom, OurusProse, blockIdsOf, closingFrameStart, withoutBlockIds, type OurusNode } from '../doc/index.ts';
-import { MdTree } from '../parser/index.ts';
-import { advanceColumns, isSpaceOrTab, trimMd } from '../text/index.ts';
+import { OurusAtom, OurusProse, VERBATIM, blockIdsOf, checkboxLength, closingFrameStart, withoutBlockIds, type OurusDoc, type OurusNode } from '../doc/index.ts';
+import { MAX_ITEM_NUMBER, type MdBlockAt, type MdLine, type MdPrefixPiece } from '../parser/index.ts';
+import { trimMd } from '../text/index.ts';
+import { listNumbering } from '../writer/index.ts';
 import { type CommandContext } from './context.ts';
-import { childrenRefused, visiblePreceding } from './util.ts';
+import { childrenRefused, splitSpaces, visiblePreceding } from './util.ts';
 import type { OurusResult } from './types.ts';
 import { OurusDeferred, OurusRejected } from './types.ts';
 import { withFolds } from './view.ts';
@@ -34,37 +37,141 @@ export function quoteAsProse(text: OurusAtom): OurusProse {
 }
 
 /**
+ * A line of a quote atom as the document reads it: the line (`MdLine`); the containers it is in from
+ * the quote in, outermost first (none past the quote: an item it is the text of); the quote's own
+ * piece of its prefix on it, null where the line is lazy; and where the line starts and ends in the
+ * atom's text.
+ */
+interface QuoteLine {
+  readonly line: MdLine;
+  readonly containers: readonly MdBlockAt[];
+  readonly quote: MdPrefixPiece | null;
+  readonly start: number;
+  readonly end: number;
+}
+
+/** The line of `at`'s quote that its text's offset `offset` is on. */
+function quoteLine(ctx: CommandContext, at: QuoteAt, offset: number): QuoteLine {
+  const doc = ctx.doc;
+  const block = at.node.persistentNode.textQuote;
+  const line = doc.mdTree.line(doc.lineAt(doc.posOf(at.node, offset)).index);
+  const k = line.containers.findIndex((c) => c.block === block);
+  const s = at.text.text;
+  const start = s.lastIndexOf('\n', offset - 1) + 1;
+  return {
+    line,
+    containers: k < 0 ? [] : line.containers.slice(k),
+    quote: line.prefix.find((p) => p.container.block === block) ?? null,
+    start,
+    end: s.indexOf('\n', start) < 0 ? s.length : s.indexOf('\n', start),
+  };
+}
+
+/**
+ * Quote atom `text`'s (node `node`'s) text before `to`, each line past its `>`s (a nested quote's too)
+ * as the document reads them, a lazy line whole: what it has before a block id there.
+ */
+export function quoteTextBefore(doc: OurusDoc, node: OurusNode, text: OurusAtom, to: number): string {
+  const block = node.persistentNode.textQuote;
+  const lines: string[] = [];
+  for (let start = 0; ; start = text.text.indexOf('\n', start) + 1) {
+    const line = doc.mdTree.line(doc.lineAt(doc.posOf(node, start)).index);
+    const k = line.prefix.findIndex((p) => p.container.block === block);
+    const quotes = k < 0 ? [] : line.prefix.slice(k).filter((p) => p.kind === 'quote');
+    const from = quotes.length ? Math.max(start, doc.offsetOf(node, doc.mdTree.quoteMarker(quotes[quotes.length - 1]!).end)) : start;
+    const end = text.text.indexOf('\n', start);
+    lines.push(text.text.slice(Math.min(from, to), end < 0 || end > to ? to : end));
+    if (end < 0 || end >= to) return lines.join('\n');
+  }
+}
+
+/** Where quote atom `text`'s first `>` is (node `node`'s), past the spaces it may be indented by: its start, for the keys (B65, B201). */
+export function quoteLead(ctx: CommandContext, node: OurusNode, text: OurusAtom): number {
+  const { quote } = quoteLine(ctx, { node, text, offset: 0, to: 0 }, 0);
+  return quote ? ctx.doc.offsetOf(node, ctx.doc.mdTree.quoteMarker(quote).from) : 0;
+}
+
+/** Whether the caret, or the selection, is at a quote atom's start (`quoteLead`). */
+export function atQuoteStart(ctx: CommandContext, at: QuoteAt): boolean {
+  const lead = quoteLead(ctx, at.node, at.text);
+  return at.offset <= lead && at.to <= lead;
+}
+
+/** The offsets in quote atom `text` (node `node`'s) where its lines start, each with the line as the document reads it. */
+function quoteLines(ctx: CommandContext, node: OurusNode, text: OurusAtom): QuoteLine[] {
+  const lines: QuoteLine[] = [];
+  for (let start = 0; ; start = text.text.indexOf('\n', start) + 1) {
+    lines.push(quoteLine(ctx, { node, text, offset: start, to: start }, start));
+    if (text.text.indexOf('\n', start) < 0) return lines;
+  }
+}
+
+/**
+ * Whether quote atom `text` (node `node`'s) has a lazy line, no `>` of its own, led by a tab past any
+ * spaces: as an item's text, its columns would be others past a marker (the writer re-indents
+ * spaces, not tabs).
+ */
+export function tabLedLazyLine(ctx: CommandContext, node: OurusNode, text: OurusAtom): boolean {
+  return quoteLines(ctx, node, text).some((l) => {
+    if (l.quote || l.start === 0) return false;
+    let k = l.start;
+    while (text.text[k] === ' ') k++;
+    return text.text[k] === '\t';
+  });
+}
+
+/** Whether quote atom `text` (node `node`'s) holds nothing: each line's `>`s and blanks alone. */
+export function emptyQuote(ctx: CommandContext, node: OurusNode, text: OurusAtom): boolean {
+  return quoteLines(ctx, node, text).every((l) => l.line.empty);
+}
+
+/**
+ * Where the text of quote atom `text`'s (node `node`'s) line at `offset` starts, as the line's markup
+ * reads it: past its `>`s, an item's marker, a heading's `#`s, a checkbox (`> - [ ] ┃t`).
+ */
+export function quoteLineTextFrom(ctx: CommandContext, node: OurusNode, text: OurusAtom, offset: number): number {
+  const { line } = quoteLine(ctx, { node, text, offset, to: offset }, offset);
+  return ctx.doc.offsetOf(node, ctx.doc.mdTree.markup(line.index).textFrom);
+}
+
+/** Where on the line of `at`'s quote its `>` ends (`end`: past the blank after it), in the atom's text; the line's start where the line is lazy. */
+function pastQuoteMarker(ctx: CommandContext, at: QuoteAt, here: QuoteLine, end: boolean): number {
+  if (!here.quote) return here.start;
+  const marker = ctx.doc.mdTree.quoteMarker(here.quote);
+  return ctx.doc.offsetOf(at.node, end ? marker.end : marker.to);
+}
+
+/**
  * Enter in a quote read as an atom, as `enterInQuote` says: `line`, a line of it (`lineInQuote`);
  * `split`, it splits (`splitQuote`).
  */
 export function enterInQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
   // a selection from inside a line's `>`, part of the quote's markup: the host's where markup is text
   // the user edits, else refused, as over any selection taking part of markup
-  if (!ctx.collapsed) {
-    const s = at.text.text;
-    const lineStart = s.lastIndexOf('\n', at.offset - 1) + 1;
-    const mark = /^ {0,3}>/.exec(s.slice(lineStart))?.[0].length ?? 0;
-    if (at.offset < lineStart + mark) return ctx.config.markup === 'text' ? new OurusDeferred('the selection takes part of markup') : new OurusRejected('not-expressible', 'the selection takes part of markup');
+  if (!ctx.collapsed && at.offset < pastQuoteMarker(ctx, at, quoteLine(ctx, at, at.offset), false)) {
+    return ctx.config.markup === 'text' ? new OurusDeferred('in-markup', 'the selection takes part of markup') : new OurusRejected('not-expressible', 'the selection takes part of markup');
   }
   return ctx.config.enterInQuote === 'line' ? lineInQuote(ctx, at) : splitQuote(ctx, at);
 }
 
 /**
- * `enterInQuote: line` (the text editors'): a line of the quote at the caret, its `> ` written, and a
- * quoted list's item's marker after it (a number counted on: `> - `, `> 2. `); on an empty item, its
- * marker goes; on an empty last line, it leaves the quote, the line going, an empty paragraph after
- * it (an item after an item); on a quote of one empty line, the quote goes, its node an empty
- * paragraph (an empty item). Before its `>`, with `enterAtTextStart: stay`, a blank line above it, the
- * caret staying; else an empty node above (rule 6).
+ * `enterInQuote: line` (the text editors'): a line of the quote at the caret, in what the caret's line
+ * is in, as the document reads it: its `>`s, nested ones too, and in a list, the next item of the
+ * caret's item (a continuation line's too), its marker the list's next (a number as `orderedLists`
+ * says, the items after it numbered so), a task's unchecked box after it (as `enterTask` says); in
+ * code, no marker. The spaces at the caret go as `enterSplitSpace` says, but in code. On an empty
+ * item, nested, it is its parent's next item, else its marker goes; on an empty last line, it leaves
+ * the quote, the line going, an empty paragraph after it (an item after an item); on a quote of one
+ * empty line, the quote goes, its node an empty paragraph (an empty item). Before its `>`, with
+ * `enterAtTextStart: stay`, a blank line above it, the caret staying; else an empty node above
+ * (rule 6).
  */
 function lineInQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
   const { node, text, offset, to } = at;
   const s = text.text;
-  const item = node.kind === 'item';
+  const isItem = node.kind === 'item';
   const draft = ctx.draft();
-  // (before its first `>`, past the spaces it may be indented by: its start, B65)
-  const lead = /^ {0,3}(?=>)/.exec(s)?.[0].length ?? 0;
-  if (offset <= lead && to <= lead) {
+  if (atQuoteStart(ctx, at)) {
     const above = node.preceding;
     if (ctx.config.enterAtTextStart === 'stay' && above) {
       if (above.kind === 'root') draft.leadingBlankLines((ctx.doc.leadingBlankLines ?? 0) + 1);
@@ -73,101 +180,156 @@ function lineInQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
     }
     return splitQuote(ctx, at);
   }
-  const lineStart = s.lastIndexOf('\n', offset - 1) + 1;
-  const lineEnd = s.indexOf('\n', to) < 0 ? s.length : s.indexOf('\n', to);
-  const line = s.slice(lineStart, lineEnd);
-  const mark = /^ {0,3}>[ \t]?/.exec(line)?.[0] ?? '';
-  const list = mark ? QUOTED_ITEM.exec(line.slice(mark.length)) : null;
-  const prefix = mark.length + (list ? list[0].length : 0);
-  if (ctx.collapsed && offset >= lineStart + prefix && trimMd(line.slice(prefix)) === '') {
-    // an empty item, a task's checkbox alone too: nested, it is its parent's sibling (Obsidian's and
-    // SilverBullet's); else its marker goes
-    const parent = list ? parentItemLine(s, lineStart, advanceColumns(line, 0, mark.length + list[1]!.length, 0)) : null;
-    if (parent) {
-      const outer = parent.prefix + (parent.item[2] ?? `${Number(parent.item[3]) + 1}${parent.item[4]}`) + ' ';
-      return ctx.apply(draft.setText(node, text.splice(lineStart, lineEnd, outer)).setCaret(node, lineStart + outer.length, -1));
+  const tree = ctx.doc.mdTree;
+  const here = quoteLine(ctx, at, offset);
+  const { line, containers, start: lineStart, end: lineEnd } = here;
+  const code = !!line.leaf && VERBATIM.has(line.leaf.block.type);
+  // (the items the line is in: not in code, nor on a line with nothing past its prefix but an item's
+  // own marker line, which Enter leaves as a quote's line)
+  const inItems = code ? [] : containers.filter((c) => c.block.type === 'item');
+  const items = line.empty && !inItems.some((c) => c.line === line.index) ? [] : inItems;
+  const item = items[items.length - 1] ?? null;
+  // (the item whose marker is on the line, and where its text starts: past its marker and the blanks
+  // after it, a task's checkbox, as the outline reads one in every flavor; on another line of an item,
+  // past its prefix; else past the quote's `>` and the blank after it)
+  const own = item && item.line === line.index ? item : null;
+  const box = own ? checkboxOf(ctx, own) : 0;
+  const textFrom = own ? ctx.doc.offsetOf(node, itemTextFrom(ctx, own) + box) : item ? ctx.doc.offsetOf(node, line.contentFrom) : pastQuoteMarker(ctx, at, here, true);
+  // (a caret, or a selection's end, in the line's markup, its `>` or its item's marker, acts as at its
+  // text's start)
+  const [from, until] = [Math.max(offset, textFrom), Math.max(to, textFrom)];
+  // (an empty item's: past its marker, a blank after it or not, its checkbox)
+  const emptyFrom = own && !box ? ctx.doc.offsetOf(node, tree.markerTo(own)) : textFrom;
+  // an empty item, a task's checkbox alone too, as `enterOnEmptyItem` says; the last of its list
+  // (without children) outdents with every value. Outdented, nested, it is its parent's next item
+  // (Obsidian's and SilverBullet's), the list numbered so; unwrapped, or outdented at the top level,
+  // its marker goes, the `>`s and its parents' columns staying; `sibling`, and `exit` nested, a new
+  // item after it, as on a line with text
+  const parent = own ? (items[items.length - 2] ?? null) : null;
+  const list = own ? containers[containers.indexOf(own) - 1] : undefined;
+  // (children: blocks after its text, which a list first is too)
+  const last = !!list && list.block.children[list.block.children.length - 1] === own!.block && !own!.block.children.some((c, k) => k > 0 || c.type === 'list');
+  const policy = last ? 'outdent' : ctx.config.enterOnEmptyItem;
+  const anew = !!own && (policy === 'sibling' || (policy === 'exit' && !!parent));
+  if (ctx.collapsed && !anew && trimMd(s.slice(emptyFrom, lineEnd)) === '') {
+    if (own && parent && policy !== 'unwrap') {
+      const after = itemAfter(ctx, at, parent, containers.slice(0, containers.indexOf(parent)));
+      if (after instanceof OurusRejected) return after;
+      // (the line replaced whole: the parent's renumbering, a wider marker moving its lines, leaves it)
+      const edited = editedQuote(text, [...after.edits.filter((e) => e.to < lineStart || e.from > lineEnd), { from: lineStart, to: lineEnd, insert: after.prefix }], lineEnd);
+      return ctx.apply(draft.setText(node, edited.text).setCaret(node, edited.pos, -1));
     }
-    if (list) return ctx.apply(draft.setText(node, text.splice(lineStart + mark.length, lineEnd)).setCaret(node, lineStart + mark.length, -1));
-    // a quote of one empty line: the quote goes
-    if (lineStart === 0 && lineEnd === s.length) {
-      if (!item) draft.convert(node, 'paragraph');
-      return ctx.apply(draft.setText(node, new OurusProse('paragraph', item, '')).setCaret(node, 0, -1));
+    if (own) {
+      const quotes = containers.slice(0, containers.indexOf(own));
+      const quoted = tree.continuationPrefix(line.index, quotes);
+      const last = line.prefix.filter((p) => p.kind === 'quote' && quotes.some((c) => c.block === p.container.block)).pop();
+      const bare = quoted + (last && tree.quoteMarker(last).end === tree.quoteMarker(last).to ? ' ' : '');
+      return ctx.apply(draft.setText(node, text.splice(lineStart, lineEnd, bare)).setCaret(node, lineStart + bare.length, -1));
     }
-    // its empty last line: it leaves the quote
-    if (lineEnd === s.length) {
-      const id = draft.create(item ? 'item' : 'paragraph', new OurusProse('paragraph', item, ''));
-      draft.setText(node, text.splice(lineStart - 1, s.length)).place('after', node, [id]);
-      if (!item) draft.gap(id, node.gap).gap(node, Math.max(1, node.gap));
-      return ctx.apply(draft.setCaret(id, 0, -1));
-    }
-  }
-  // (a quoted item's marker after the `> `, a number counted on; a task's, an unchecked box after it,
-  // as a task's new item is, `enterTask`)
-  const box = list?.[6] && ctx.config.enterTask === 'continue' ? '[ ] ' : '';
-  const marker = !list ? '' : list[1]! + (list[2] ?? `${Number(list[3]) + 1}${list[4]}`) + ' ' + box;
-  const inserted = `\n${mark || '> '}${marker}`;
-  // (the numbers after it in its list counted on, one up each, as Obsidian and SilverBullet do: B66)
-  const renumbered = list?.[3] ? renumberedAfter(text, lineEnd, list[1]!, Number(list[3]), list[4]!) : text;
-  return ctx.apply(draft.setText(node, renumbered.splice(offset, to, inserted)).setCaret(node, offset + inserted.length, -1));
-}
-
-/**
- * Quote text `text` with the numbered items after `from` in the list of the item numbered `number`
- * (its indentation `indent`, its delimiter `delimiter`), while they count on from it, each one up: an
- * item inserted after it. Lines nested deeper, or continuing an item, are passed over; another
- * list's item, or a line out of the quote, ends it.
- */
-function renumberedAfter<T extends { readonly text: string; splice(from: number, to: number, insert: string): T }>(text: T, from: number, indent: string, number: number, delimiter: string): T {
-  const s = text.text;
-  const edits: [number, number, string][] = [];
-  let last = number;
-  for (let start = from + 1; from < s.length && start <= s.length; ) {
-    const end = s.indexOf('\n', start) < 0 ? s.length : s.indexOf('\n', start);
-    const line = s.slice(start, end);
-    const mark = /^ {0,3}>[ \t]?/.exec(line)?.[0];
-    if (mark === undefined) break;
-    const item = QUOTED_ITEM.exec(line.slice(mark.length));
-    if (item) {
-      if (item[1]!.length < indent.length) break;
-      if (item[1] === indent) {
-        if (!item[3] || item[4] !== delimiter || Number(item[3]) !== last + 1) break;
-        last = Number(item[3]);
-        const at = start + mark.length + indent.length;
-        edits.push([at, at + item[3].length, String(last + 1)]);
+    if (!item) {
+      // a quote of one empty line: the quote goes
+      if (lineStart === 0 && lineEnd === s.length) {
+        if (!isItem) draft.convert(node, 'paragraph');
+        return ctx.apply(draft.setText(node, new OurusProse('paragraph', isItem, '')).setCaret(node, 0, -1));
+      }
+      // its empty last line: it leaves the quote
+      if (lineEnd === s.length) {
+        const id = draft.create(isItem ? 'item' : 'paragraph', new OurusProse('paragraph', isItem, ''));
+        draft.setText(node, text.splice(lineStart - 1, s.length)).place('after', node, [id]);
+        if (!isItem) draft.gap(id, node.gap).gap(node, Math.max(1, node.gap));
+        return ctx.apply(draft.setCaret(id, 0, -1));
       }
     }
-    start = end + 1;
   }
-  return edits.reduceRight((t, [a, b, n]) => t.splice(a, b, n), text);
+  // the new line's prefix: in an item, its next item's; else the line's containers', as for a line
+  // continuing them (a lazy line, the quote's `> ` alone)
+  let prefix = '> ';
+  let edits: readonly QuoteEdit[] = [];
+  if (item) {
+    const next = itemAfter(ctx, at, item, containers.slice(0, containers.indexOf(item)));
+    if (next instanceof OurusRejected) return next;
+    prefix = next.prefix + (checkboxOf(ctx, item) && ctx.config.enterTask === 'continue' ? '[ ] ' : '');
+    edits = next.edits;
+  } else if (!line.lazy && here.quote) prefix = tree.continuationPrefix(line.index, containers);
+  // (the spaces at the caret as a text's Enter takes them, not code's)
+  const split = code ? { from, to: until, kept: 0 } : splitSpaces(s, from, until, textFrom, lineEnd, ctx.config.enterSplitSpace);
+  const edited = editedQuote(text, [...edits, { from: split.from, to: split.to, insert: `\n${prefix}` }], split.to);
+  return ctx.apply(draft.setText(node, edited.text).setCaret(node, edited.pos, -1));
 }
 
-/** A quoted line's list marker, past its `>`: its indentation, bullet or number and delimiter, the spaces after it, and a task's checkbox with those after it. */
-const QUOTED_ITEM = /^([ \t]*)(?:([-*+])|(\d{1,9})([.)]))([ \t]+|$)(\[[ xX]\](?:[ \t]+|$))?/;
+/** A change to a quote atom's text: offsets in it. */
+type QuoteEdit = { readonly from: number; readonly to: number; readonly insert: string };
+
+/** `text` with `edits` (none overlapping) made, and where its offset `pos` is after them: past an edit ending there. */
+function editedQuote(text: OurusAtom, edits: readonly QuoteEdit[], pos: number): { readonly text: OurusAtom; readonly pos: number } {
+  let shift = 0;
+  for (const e of edits) if (e.to <= pos) shift += e.insert.length - (e.to - e.from);
+  return { text: [...edits].sort((x, y) => y.from - x.from).reduce((t, e) => t.splice(e.from, e.to, e.insert), text), pos: pos + shift };
+}
+
+/** Where item `item`'s text starts on its first line in the document: past its marker and the blanks after it. */
+function itemTextFrom(ctx: CommandContext, item: MdBlockAt): number {
+  return ctx.doc.mdTree.line(item.line).prefix.find((p) => p.container.block === item.block)!.to;
+}
+
+/** The length of item `item`'s checkbox with the blanks after it, as the outline reads a task's in every flavor (`checkboxLength`); 0 for an item that is no task. */
+function checkboxOf(ctx: CommandContext, item: MdBlockAt): number {
+  const from = itemTextFrom(ctx, item);
+  return checkboxLength(ctx.doc.text.slice(from, ctx.doc.mdTree.line(item.line).to));
+}
 
 /**
- * The nearest line above `lineStart` in quote text `s` whose list marker is at a column short of
- * `column` (its line's, tabs spanning to their stops): that marker's parts, as `QUOTED_ITEM` reads
- * them, and what is before it on its line (its `>`, its indentation).
+ * A new item after `item` in its list, in `at`'s quote (`outer`: the containers outside it on its
+ * line, from the quote): what its line has before its text (`itemLead`, then the list's next marker,
+ * numbered as `orderedLists` says), and the edits numbering the list's other items so (`9.` becoming
+ * `10.` moves its item's other lines as far: its content column with it). Refused where a number would
+ * pass nine digits, or a narrower marker's item has a line that can't move left as far.
  */
-function parentItemLine(s: string, lineStart: number, column: number): { readonly item: RegExpExecArray; readonly prefix: string } | null {
-  for (let end = lineStart - 1; end > 0; ) {
-    const start = s.lastIndexOf('\n', end - 1) + 1;
-    const line = s.slice(start, end);
-    const mark = /^ {0,3}>[ \t]?/.exec(line)?.[0] ?? '';
-    const item = mark ? QUOTED_ITEM.exec(line.slice(mark.length)) : null;
-    if (item && advanceColumns(line, 0, mark.length + item[1]!.length, 0) < column) return { item, prefix: line.slice(0, mark.length + item[1]!.length) };
-    end = start - 1;
+function itemAfter(ctx: CommandContext, at: QuoteAt, item: MdBlockAt, outer: readonly MdBlockAt[]): { readonly prefix: string; readonly edits: readonly QuoteEdit[] } | OurusRejected {
+  const doc = ctx.doc;
+  const tree = doc.mdTree;
+  const lead = tree.itemLead(item, outer);
+  const attrs = item.block.attrs.list!;
+  if (attrs.type === 'bullet') return { prefix: `${lead}${attrs.bulletChar} `, edits: [] };
+  const siblings = outer[outer.length - 1]!.children();
+  const k = siblings.findIndex((c) => c.block === item.block);
+  const was = siblings.map((c) => c.block.attrs.list!.start!);
+  const numbers = listNumbering([...was.slice(0, k + 1), null, ...was.slice(k + 1)], was, was[0]!, ctx.config.orderedLists);
+  if (numbers.some((n) => n > MAX_ITEM_NUMBER)) return new OurusRejected('not-expressible', `an item numbered past ${MAX_ITEM_NUMBER} is no list item`);
+  // (each other item renumbered: its number as written, the delimiter after it staying, and its later
+  // lines' indentation for it, as far as its marker is wider or narrower)
+  const edits: QuoteEdit[] = [];
+  const edit = (from: number, to: number, insert: string): void => {
+    edits.push({ from: doc.offsetOf(at.node, from), to: doc.offsetOf(at.node, to), insert });
+  };
+  for (let j = 0; j < siblings.length; j++) {
+    const sibling = siblings[j]!;
+    const n = numbers[j > k ? j + 1 : j]!;
+    if (n === was[j]) continue;
+    const number = String(n);
+    const [from, to] = [tree.markerFrom(sibling), tree.markerTo(sibling) - attrs.delimiter!.length];
+    edit(from, to, number);
+    const wider = number.length - (to - from);
+    // (a line lazy for it, or empty, as it is)
+    for (let l = sibling.line + 1; wider !== 0 && l <= sibling.lastLine; l++) {
+      const piece = tree.line(l).empty ? undefined : tree.line(l).prefix.find((p) => p.container.block === sibling.block);
+      if (!piece) continue;
+      if (wider > 0) edit(piece.to, piece.to, ' '.repeat(wider));
+      else if (piece.to + wider < piece.from || piece.partialTab || [...doc.text.slice(piece.to + wider, piece.to)].some((c) => c !== ' ')) return new OurusRejected('not-expressible', 'a renumbered item\'s lines can\'t move left with its marker');
+      else edit(piece.to + wider, piece.to, '');
+    }
   }
-  return null;
+  return { prefix: `${lead}${numbers[k + 1]}${attrs.delimiter} `, edits };
 }
 
 /**
  * `enterInQuote: split` (the outliners'): at its start, before its `>`, an empty node above it (rule 6);
- * else it splits at the caret, the spaces there going, the rest of its line a paragraph after it (an
- * item after an item: its first child where it has children and `enterMidItem: child` says so, or at
- * its end; else its next sibling, taking them), an empty one at its end; its lines after the caret's
- * a quote of their own after the rest, as written (the new item's first child), as an outliner's new
- * block holds them after its first line.
+ * else it splits at the caret, the spaces there as `enterSplitSpace` says (B200; right after a line's
+ * `>`, those before the caret are its markup, and go, the `>` staying), the rest of its line a
+ * paragraph after it (an item after an item: its first child where it has children and
+ * `enterMidItem: child` says so, or at its end; else its next sibling, taking them), an empty one at
+ * its end; its lines after the caret's a quote of their own after the rest, as written (the new
+ * item's first child), as an outliner's new block holds them after its first line.
  */
 function splitQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
   const { node, text, offset, to } = at;
@@ -175,26 +337,27 @@ function splitQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
   const item = node.kind === 'item';
   const kind = item ? 'item' : 'paragraph';
   const draft = ctx.draft();
-  const lead = /^ {0,3}(?=>)/.exec(s)?.[0].length ?? 0;
-  if (offset <= lead && to <= lead) {
+  if (atQuoteStart(ctx, at)) {
     const id = draft.create(kind, new OurusProse('paragraph', item, ''));
     return ctx.apply(draft.place('before', node, [id]).setCaret(id, 0, -1));
   }
-  const lineEnd = s.indexOf('\n', to) < 0 ? s.length : s.indexOf('\n', to);
-  let a = offset;
-  while (a > 0 && isSpaceOrTab(s.charCodeAt(a - 1))) a--;
-  // (at a line's start, the line break before it goes too: no empty last line)
-  if (a > 0 && s[a - 1] === '\n') a--;
-  let b = to;
-  while (b < lineEnd && isSpaceOrTab(s.charCodeAt(b))) b++;
+  const here = quoteLine(ctx, at, offset);
+  const lineEnd = quoteLine(ctx, at, to).end;
+  const mark = pastQuoteMarker(ctx, at, here, false);
+  const split = splitSpaces(s, offset, to, mark, lineEnd, ctx.config.enterSplitSpace);
+  let a = split.from;
+  // (right after the line's `>`, the spaces before the caret are its markup: they go, the `>` staying;
+  // at a lazy line's start, the line break before it goes too: no empty last line)
+  if (trimMd(s.slice(mark, a)) === '') a = mark;
+  if (a === here.start && a > 0) a--;
   draft.setText(node, text.splice(a, s.length));
-  const id = draft.create(kind, new OurusProse('paragraph', item, s.slice(b, lineEnd)));
+  const id = draft.create(kind, new OurusProse('paragraph', item, s.slice(split.to, lineEnd)));
   const children = [...node.children];
   // folded (within the zoom), the new item goes after its subtree, its hidden children staying, where
   // it would be the first child; split with them following, the fold goes with them; zoomed into it,
   // a first child, inside the zoom (as a text's Enter: enter.ts)
   const folded = item && children.length > 0 && ctx.view.zoomFolded.has(node.id);
-  const first = ctx.config.enterMidItem === 'child' || b === s.length;
+  const first = ctx.config.enterMidItem === 'child' || split.to === s.length;
   let refold = false;
   if (item && ctx.view.zoom === node.id) draft.append(node, 'first', [id]);
   else if (item && children.length && first && !folded) draft.append(node, 'first', [id]);
@@ -210,7 +373,7 @@ function splitQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
   if (lineEnd < s.length) {
     // (a lazy line first: its `> `, which a quote's first line needs)
     const lines = s.slice(lineEnd + 1);
-    const rest = draft.create('atom', new OurusAtom('blockquote', false, /^ {0,3}>/.test(lines) ? lines : `> ${lines}`));
+    const rest = draft.create('atom', new OurusAtom('blockquote', false, quoteLine(ctx, at, lineEnd + 1).quote ? lines : `> ${lines}`));
     if (item) draft.append(id, 'first', [rest]);
     else draft.place('after', id, [rest]);
   }
@@ -231,56 +394,56 @@ export function joinLineInQuote(ctx: CommandContext, at: QuoteAt, forward: boole
     if (s[offset] !== '\n') return null;
     return ctx.apply(ctx.draft().setText(node, text.splice(offset, offset + 1)).setCaret(node, offset, -1));
   }
-  const start = s.lastIndexOf('\n', offset - 1) + 1;
-  const end = s.indexOf('\n', offset) < 0 ? s.length : s.indexOf('\n', offset);
+  const here = quoteLine(ctx, at, offset);
+  const { start, end } = here;
   if (start === 0) return null;
   // at a line's start it joins the line above, its `> ` going with the break (as the apps' blocks hold
   // the line, lazy: Fence43); on an empty line right after its `> `, the line goes
-  const mark = /^ {0,3}>[ \t]?/.exec(s.slice(start, end))?.[0].length ?? 0;
-  if (offset === start) return ctx.apply(ctx.draft().setText(node, text.splice(start - 1, start + mark)).setCaret(node, start - 1, -1));
-  if (offset !== start + mark || !mark || trimMd(s.slice(offset, end)) !== '') return null;
+  const mark = pastQuoteMarker(ctx, at, here, true);
+  if (offset === start) return ctx.apply(ctx.draft().setText(node, text.splice(start - 1, mark)).setCaret(node, start - 1, -1));
+  if (offset !== mark || !here.quote || trimMd(s.slice(offset, end)) !== '') return null;
   return ctx.apply(ctx.draft().setText(node, text.splice(start - 1, offset)).setCaret(node, start - 1, -1));
 }
 
 /**
  * Shift-Enter in a quote read as an atom: a line break, its new line lazy where it can be, as the
- * apps' blocks hold it (`> a⏎b`), else after a `> `: where the parser reads the quote with the line
- * lazy as one quote still, over every line; not an empty one, nor after an emptied quoted line
- * (`> ⏎b`: the quote's paragraph ended), nor one that would start a block out of the quote (a list's
- * marker, a heading, a fence, HTML, a thematic break).
+ * apps' blocks hold it (`> a⏎b`), else as `linesInQuote` puts one: lazy where the document reads the
+ * quote with the line so as the same quote, which the readback says (a line that would start a block
+ * out of the quote, a list's marker, a heading, a fence, HTML, a rule, or one after an emptied quoted
+ * line, `> ⏎b`, isn't); not an empty one.
  */
 export function breakInQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
-  const { text, offset, to } = at;
+  const { text, to } = at;
   const s = text.text;
   const rest = s.slice(to, s.indexOf('\n', to) < 0 ? s.length : s.indexOf('\n', to));
-  const lazy = trimMd(rest) !== '' && oneQuote(ctx, text.splice(offset, to, '\n').text);
-  return linesInQuote(ctx, at, ['', ''], lazy);
+  const lazy = trimMd(rest) !== '' ? linesInQuote(ctx, at, ['', ''], true) : null;
+  return lazy && !(lazy instanceof OurusRejected) ? lazy : linesInQuote(ctx, at, ['', '']);
 }
 
-/** Whether `quote`'s lines read as one quote, every line in it: a lazy line in it continues it. */
-function oneQuote(ctx: CommandContext, quote: string): boolean {
-  const root = MdTree.parse(quote, ctx.doc.mdTree.flavor).root;
-  const block = root.children[0];
-  return root.children.length === 1 && block?.type === 'blockquote' && root.offsets[0] === 0 && block.lines === quote.split('\n').length;
-}
-
-/** Lines put into a quote read as an atom at the caret (Shift-Enter's empty one, plain paste's), each after a `>`, as the quote's. */
+/**
+ * Lines put into a quote read as an atom at the caret (Shift-Enter's empty one, plain paste's), each
+ * after a `>`, as the quote's; `lazy`, as they are. A line in what the caret's line is in, as far as
+ * the caret: its nested quotes' `>`s and its items' markers as spaces (B58, as Obsidian has it); the
+ * quote's `> ` alone where the caret's line is lazy, or has the quote's `>` alone, or a `>` with no
+ * blank after it before an item's marker or text (`>- a`), whose columns a new line wouldn't keep:
+ * its `>` would take a blank the line before has none of; or where the line so doesn't write.
+ */
 export function linesInQuote(ctx: CommandContext, at: QuoteAt, lines: readonly string[], lazy = false): OurusResult | null {
   const { node, text, offset, to } = at;
   const put = (prefix: string): OurusResult | null => {
     const inserted = lines.map((l, k) => (k === 0 || lazy ? l : `${prefix}${l}`)).join('\n');
     return ctx.apply(ctx.draft().setText(node, text.splice(offset, to, inserted)).setCaret(node, offset + inserted.length, -1));
   };
-  // (the caret's line's prefix in the quote, its nested quotes' `>`s and its items' markers as spaces,
-  // so the new line is in what the caret's is in: B58; where that doesn't write, the quote's `> `)
-  const s = text.text;
-  const line = s.slice(s.lastIndexOf('\n', offset - 1) + 1, offset);
-  const raw = /^(?: {0,3}>[ \t]?|[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+)*/.exec(line)![0];
-  const nested = raw.replace(/[-*+]|\d{1,9}[.)]/g, (m) => ' '.repeat(m.length));
-  // (a lazy line, no `>` of its own, or the quote's `> ` alone: `> `; so too a prefix with a tab but a
-  // `>`'s own, or a `>` with no blank after it, whose columns a new line wouldn't keep as written)
-  if (lazy || !/^ {0,3}>/.test(nested) || /^ {0,3}>[ \t]?$/.test(nested) || /(?<!>)\t|>(?=[^ \t>])/.test(raw)) return put('> ');
-  const deep = put(nested.endsWith('>') ? `${nested} ` : nested);
+  if (lazy) return put('');
+  const tree = ctx.doc.mdTree;
+  const here = quoteLine(ctx, at, offset);
+  const caret = ctx.doc.posOf(node, offset);
+  const pieces = here.line.prefix.filter((p) => p.to <= caret && here.containers.some((c) => c.block === p.container.block));
+  const last = pieces[pieces.length - 1];
+  const bare = (p: MdPrefixPiece | undefined): boolean => p?.kind === 'quote' && tree.quoteMarker(p).end === tree.quoteMarker(p).to;
+  if (here.line.lazy || !here.quote || pieces.length < 2 || pieces.some((p, k) => bare(p) && k < pieces.length - 1 && pieces[k + 1]!.kind !== 'quote')) return put('> ');
+  const nested = tree.continuationPrefix(here.line.index, here.containers, caret);
+  const deep = put(bare(last) ? `${nested} ` : nested);
   return deep instanceof OurusRejected ? put('> ') : deep;
 }
 

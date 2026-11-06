@@ -145,9 +145,9 @@ export function outlineView({ field, setView, planned }: Wiring) {
   /** A view command: its result's view and selection, no text changed. */
   const viewCommand = (command: OurusCommand) => (editor: EditorView): boolean => {
     const { anchor, head } = editor.state.selection.main;
-    const result = executeCommand(editor.state.field(field), command, { anchor, head });
+    const result = executeCommand(editor.state.field(field).withSelection({ anchor, head }), command);
     if (!(result instanceof OurusSuccess)) return true;
-    editor.dispatch({ effects: [setView.of(result.view), EditorView.scrollIntoView(result.selection.head, { y: 'start' })], selection: result.selection });
+    editor.dispatch({ effects: [setView.of(result.view), EditorView.scrollIntoView(result.view.selection.head, { y: 'start' })], selection: result.view.selection });
     return true;
   };
   const keys = Prec.high(

@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { test } from 'node:test';
 import fc from 'fast-check';
 import { applyChanges, ChangeIndex, ChangeSet, charAfter, charBefore, charStart, composeChanges, diffLines, invertChanges, lineEndingBefore, mapPos, MarkError, MarkSet, nextLineStart, normalizeChanges, type ChangeSpec } from '../src/text/index.ts';
@@ -299,4 +301,45 @@ test('the line ending before a position, and the next line\'s start, a CRLF whol
   assert.deepEqual([1, 3, 4, 5].map((p) => lineEndingBefore('a\r\nb\rc\n', p)), ['', '\r\n', '', '\r']);
   assert.equal(lineEndingBefore('a\nb', 2), '\n');
   assert.deepEqual([0, 1, 3, 5, 6].map((p) => nextLineStart('a\r\nb\rc', p)), [3, 3, 5, 6, 6]);
+});
+
+test('no JavaScript whitespace on document text: `trim()` and `\\s` take a no-break space and other Unicode spaces, which Markdown reads as text; `trimMd` and the blank test instead (B250)', () => {
+  // (each line that stays, by a piece of it, and why)
+  const allowed: [string, string, string][] = [
+    ['src/config.ts', 'text.trim()', 'an option written as text, not a document'],
+    ['src/parser/obsidian.ts', 'reCallout', "Obsidian's callout type, as Obsidian reads it"],
+    ['src/parser/obsidian.ts', 'text.trimStart().slice(2)', "a math block's TeX, as Obsidian reads it"],
+    ['src/parser/obsidian.ts', 'return s.trim()', "a math block's TeX, as Obsidian reads it"],
+    ['src/parser/obsidian.ts', 'inner.slice(0, bar)).trim()', "a wikilink's target, as Obsidian reads it"],
+    ['src/parser/obsidian.ts', 'inner.slice(bar + 1).trim()', "a wikilink's alias, as Obsidian reads it"],
+    ['src/parser/obsidian.ts', 'text.slice(at + 2, close).trim()', "inline display math, as Obsidian reads it"],
+    ['src/parser/blocks.ts', 'ATTRIBUTE', "HTML's whitespace in an HTML block's start, as commonmark.js reads it"],
+    ['src/parser/blocks.ts', 'OPENTAG', "HTML's whitespace"],
+    ['src/parser/blocks.ts', 'CLOSETAG', "HTML's whitespace"],
+    ['src/parser/blocks.ts', 'script|pre|textarea|style', "HTML's whitespace"],
+    ['src/parser/blocks.ts', 'address|article|aside', "HTML's whitespace"],
+    ['src/commands/clipboard.ts', 'SOURCE_MARK', 'a mark in HTML'],
+    ['src/commands/paste-plain.ts', 'line.trim()', 'plain lines pasted as blocks lose their Unicode spaces too, as the block apps paste them (PastePlain14, 15)'],
+  ];
+  const skip = (path: string): boolean => /src\/parser\/(?:html|html-parser|tools\/)/.test(path) || path.endsWith('.d.ts');
+  const files: string[] = [];
+  const walk = (dir: string): void => {
+    for (const name of readdirSync(dir)) {
+      const path = join(dir, name);
+      if (statSync(path).isDirectory()) walk(path);
+      else if (path.endsWith('.ts') && !skip(path)) files.push(path);
+    }
+  };
+  walk('src');
+  assert.ok(files.length > 50, `${files.length} files read`);
+  const found: string[] = [];
+  for (const file of files) {
+    readFileSync(file, 'utf8').split('\n').forEach((line, k) => {
+      const code = line.replace(/\/\/.*$/, '').replace(/^\s*\*.*$/, '');
+      if (!/\.trim(?:Start|End)?\(|\\s/.test(code)) return;
+      if (allowed.some(([f, piece]) => file === f && line.includes(piece))) return;
+      found.push(`${file}:${k + 1}: ${line.trim()}`);
+    });
+  }
+  assert.deepEqual(found, []);
 });

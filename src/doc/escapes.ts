@@ -4,7 +4,7 @@
 // setext underline.
 
 import type { MdEscapeAt, MdEscapedParagraph, MdFlavor, MdParagraphPlace } from '../parser/index.ts';
-import { advanceColumns, trimMd } from '../text/index.ts';
+import { advanceColumns, largest, trimMd } from '../text/index.ts';
 import { OurusProse, type OurusProseType } from './text.ts';
 
 /** The character the parser reads a placeholder as. */
@@ -19,7 +19,7 @@ export const SENTINEL = '￼';
  */
 export function keepsEscape(flavor: MdFlavor, char: string | undefined, next?: string): boolean {
   if (char === undefined || char === ':' || char === 'w' || char === '\n') return false;
-  if (char === '#' && (next === undefined || /\s/.test(next))) return false;
+  if (char === '#' && (next === undefined || trimMd(next) === '')) return false;
   const code = char.charCodeAt(0);
   return code < 128 ? flavor.inline.stops[code] === 1 : flavor.inline.otherRules.has(code);
 }
@@ -98,5 +98,5 @@ function asked(type: OurusProseType, item: boolean, lines: readonly string[], he
 function frameEnd(type: OurusProseType, item: boolean, lines: readonly string[]): number {
   const first = (lines[0] ?? '').length;
   const parts = new OurusProse(type, item, lines.join('\n')).frame.filter((p) => (p.part === 'task' || p.part === 'heading' || p.part === 'callout') && p.from <= first);
-  return parts.length ? Math.min(first, Math.max(...parts.map((p) => p.to))) : -1;
+  return parts.length ? Math.min(first, largest(parts.map((p) => p.to))) : -1;
 }

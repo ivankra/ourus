@@ -64,6 +64,8 @@ export interface MdExtension {
   readonly blockContent?: Readonly<Record<string, MdBlockContent>>;
   /** Whether a block of these types is opened and closed by delimiter lines (`Flavor.delimited`). */
   readonly delimited?: Readonly<Record<string, (block: MdBlock) => boolean>>;
+  /** The characters those delimiter lines are made of (`Flavor.delimiterChar`). */
+  readonly delimiterChars?: string;
   readonly inlines?: readonly MdInlineRule[];
   readonly delimiters?: readonly MdDelimiterRule[];
   readonly brackets?: readonly MdBracketRule[];
@@ -97,6 +99,8 @@ export interface MdFlavor {
   content(type: string): MdBlockContent;
   /** Whether `block` is opened and closed by delimiter lines: fenced code, `$$` and `%%` in Obsidian. */
   delimited(block: MdBlock): boolean;
+  /** Whether `c` is a character such a delimiter is made of: a fence's backtick or tilde; `$` and `%` in Obsidian. */
+  delimiterChar(c: string): boolean;
   /**
    * The first of `lines`, written in `context`, that doesn't stay paragraph text, or -1 when every one
    * does (`readback.ts`); `above`, in `continuation`, the paragraph's line they follow; `lazy`, in
@@ -138,6 +142,7 @@ export const commonMarkExtension: MdExtension = {
     refdef: 'none',
   },
   delimited: { code_block: (b) => !!b.attrs.fenced },
+  delimiterChars: '`~',
   inlines: commonMarkInlines,
   delimiters: commonMarkDelimiters,
   brackets: commonMarkBrackets,
@@ -154,6 +159,7 @@ export function defineFlavor(name: string, extensions: readonly MdExtension[]): 
   const lineMarkup = new Map<string, MdLineMarkupOf>();
   const content = new Map<string, MdBlockContent>();
   const delimited = new Map<string, (block: MdBlock) => boolean>();
+  const delimiterChars = new Set<string>();
   const inlines: MdInlineRule[] = [];
   const delimiters: MdDelimiterRule[] = [];
   const brackets: MdBracketRule[] = [];
@@ -183,6 +189,7 @@ export function defineFlavor(name: string, extensions: readonly MdExtension[]): 
     for (const [type, m] of Object.entries(ext.lineMarkup ?? {})) lineMarkup.set(type, m);
     for (const [type, c] of Object.entries(ext.blockContent ?? {})) content.set(type, c);
     for (const [type, d] of Object.entries(ext.delimited ?? {})) delimited.set(type, d);
+    for (const c of ext.delimiterChars ?? '') delimiterChars.add(c);
     for (const r of ext.inlines ?? []) inlines.push(r);
     for (const d of ext.delimiters ?? []) delimiters.push(d);
     for (const b of ext.brackets ?? []) brackets.push(b);
@@ -209,6 +216,7 @@ export function defineFlavor(name: string, extensions: readonly MdExtension[]): 
     has: (extension) => names.has(extension),
     content: (type) => content.get(type) ?? 'none',
     delimited: (block) => delimited.get(block.type)?.(block) ?? false,
+    delimiterChar: (c) => delimiterChars.has(c),
     firstNonParagraph: (lines, context, above, lazy) => firstNonParagraph(flavor, lines, context, above, lazy),
     markupEscapeAt: (line, at) => markupEscapeAt(flavor, line, at),
     markupEscapes: (lines, place) => markupEscapes(flavor, lines, place),

@@ -14,12 +14,12 @@ the edit:
 Basic usage:
 
 ```ts
-import { OurusDraft, settleSteps } from '../writer/index.ts';   // inside ourus; a host has `settlePlaceholders(view, selection)` from 'ourus'
+import { OurusDraft, settleSteps } from '../writer/index.ts';   // inside ourus; a host has `settlePlaceholders(view)` from 'ourus'
 
 const draft = new OurusDraft(doc).split(node, offset, { children: 'follow' });   // the outline it wants (a command's `ctx.draft()`)
 draft.setCaret(made, 0);
 const result = draft.done();    // { doc, changes, selection }, or a refusal
-const steps = settleSteps(doc, caret);   // the placeholders the caret left settled: each step's { doc, changes }
+const steps = settleSteps(doc, selection);   // the placeholders the selection left settled: each step's { doc, changes }
 ```
 
 ## API
@@ -77,8 +77,8 @@ const steps = settleSteps(doc, caret);   // the placeholders the caret left sett
     it the text's next line), before `upper`'s closing frame, and removes `lower`. `upper` takes
     `lower`'s gap. `lower`'s children go after `upper`'s (`adopt`), or into `lower`'s place (`place`).
     `lower`'s block ids: where `upper` has none, it takes them (a carried line alone as ` ^id` at
-    its text's end), as moved; where both have one, `joinBlockIds` says: the draft refused
-    (`block-id`), or `upper`'s kept and `lower`'s merged into it. Returns `upper`'s id.
+    its text's end), as moved; where both have one, `upper`'s kept and `lower`'s merged into it.
+    Returns `upper`'s id.
 
   - `OurusDraft.movedBlockIds(names: readonly string[], to: NodeRef)`<br>
     Says the block ids `names` go to node `to` on purpose (workflowy's split giving it the heading's),
@@ -135,47 +135,60 @@ const steps = settleSteps(doc, caret);   // the placeholders the caret left sett
     line, decided once the blank lines are fixed; an item whose text the draft emptied can't carry
     block-id lines, and is refused.
 
-    A join of two nodes that both have a block id, under `joinBlockIds: refuse`, returns `{ reason:
-    'block-id', detail }`. Where the writer fails, on a layout it has no rule for or a text that
-    doesn't read back as the draft, `done()` returns `{ reason: 'write-failed', detail }`. That is a bug in ourus, never an
-    outcome: a host reports it, as any refusal, and it is fixed.
+    Where the writer fails, on a layout it has no rule for or a text that
+    doesn't read back as the draft, `done()` returns a `WriteFailed`: `{ reason: 'write-failed', detail,
+    phase, code, path?, expected?, actual? }`, the failure as data, `detail` its sentence. That is a
+    bug in ourus, never an outcome: a command gives it as `OurusFailed`, a host reports it, and it is
+    fixed.
 
-  - After `done()`, for the writer and the check:
+  - `OurusDraft.normalized(): NormalizedDraft`<br>
+    After `done()` (a refused draft throws): the draft in normal form, immutable, the writer's and
+    the check's one input (`normalized.ts`). What `done()` fixed, and what the command asked of the
+    writer, copied as it stood:
 
-    - `get root`: the outline in normal form;
-    - `get caret`, `get anchor`: the selection's ends (`Anchor`);
-    - `get lists`: each item's place in its list (`ListPlace`);
-    - `get escaped`, `get paddings`: the nodes whose text it escaped where it is (each escape it
-      put in is in the text, with an `auto` mark: one of ours goes again where nothing needs it, the
-      author's never does), and the padding to write, by node;
-    - `get columns`: the column a text's later lines start at, where one starts with a tab (the
-      escapes are for that column, and the writer writes it there);
-    - `get autoGaps`: the nodes whose gap it raised from none for Markdown's sake (the writer marks
-      the line);
-    - `get preamble`: the blank lines before the first node, where `done()` set them;
-    - `get gapLines`: where a gap that `done()` moved was in the original;
-    - `get placedIds`: the nodes the draft placed (moved or made);
-    - `get splitFrom`: the original node each split's new node comes from;
-    - `get hints`: the marker asked for each new item;
+    - `root`: the outline in normal form;
+    - `caret`, `anchor`: the selection's ends (`Anchor`);
+    - `lists`: each item's place in its list (`ListPlace`);
+    - `escaped`, `paddings`: the nodes whose text it escaped where it is (each escape it put in is in
+      the text, with an `auto` mark: one of ours goes again where nothing needs it, the author's never
+      does), and the padding to write, by node;
+    - `columns`: the column a text's later lines start at, where one starts with a tab (the escapes
+      are for that column, and the writer writes it there);
+    - `gaps`: where each gap came from, by node, where it isn't the node's own (`GapOrigin`: stated by
+      the command, taken from another node and which, the old lines to copy for it, the author's lines
+      it keeps at least, raised from none for Markdown's sake, whose line the writer marks `auto`);
+    - `preamble`: the blank lines before the first node, where `done()` set them;
+    - `placedIds`, `splitFrom`, `hints`, `separators`, `lineUps`: the nodes the draft placed (moved
+      or made), the original node each split's new node comes from, and the marker, separator and
+      line-up asked for each new item (`separatorAt(id, column)`, the separator at its column);
     - `originOf(node)`: where a node of `root` is in the original document;
     - `textOf(node, origin)`: a node's text in the draft.
 
-- **`settleSteps(doc: OurusDoc, caret: number): readonly { doc, changes }[]`**<br>
-  Settles the placeholders the caret has left, as one draft: a node with a held space is written
+- **`settleSteps(doc: OurusDoc, selection: OurusSelection, kept?): readonly { doc, changes }[]`**<br>
+  Settles the placeholders off the lines `selection` touches (its anchor's to its head's), as one draft: a node with a held space is written
   again without it (escaped where it would otherwise read as markup); an empty item is written
   again so that it holds without a placeholder (right under its parent's text, that takes a blank
   line above it); any other empty node is removed, its children taking its place. In steps, each
   on the one before's document: one, or, where not all settle at once, those that can't dropped,
-  then the rest written. None when no placeholder is off the caret's line. A host calls
-  `settlePlaceholders(view, selection)` (`commands/`), which carries its view through each step,
-  whenever the caret moves.
+  then the rest written. A placeholder dropped so writes nothing: the step's changes are none, its
+  document the same text read without the mark, as the saved file will read (another outline, maybe:
+  an empty paragraph's node gone, an empty child under text a setext underline). It never refuses
+  or throws. None when no placeholder is off those lines. A host calls
+  `settlePlaceholders(view)` (`commands/`), which carries its view through each step,
+  whenever the selection moves.
 
 Files:
 
-- `index.ts` (the API); `draft.ts` (`OurusDraft`: its operations and `done()`); `write.ts`
-  (the writer); `check.ts` (whether a document reads as the draft meant, node by node, each text's
-  block ids by name too; nodes the two share are equal without comparing); `settle.ts`
-  (`settleSteps`).
+- `index.ts` (the API); `draft.ts` (`OurusDraft`: its operations and `done()`); `normalized.ts`
+  (`NormalizedDraft`, `done()`'s result: what the writer and the check read, and the types of the
+  normal form, `Anchor`, `ListPlace`, `GapOrigin`); `write.ts` (the writer, and `WriteFailed`);
+  `lines.ts` (how a line is spelled, where the draft predicts what the writer writes: markers, the
+  indentation unit, a line's prefix as written, blank columns); `check.ts` (whether a document reads
+  as the draft meant, node by node, each text's block ids by name too; nodes the two share are equal
+  without comparing); `settle.ts` (`settleSteps`).
+
+  The writer and the check import nothing of `draft.ts`: what they read of a draft is the
+  normalized one (`test/boundaries.test.ts` keeps the files' imports in that order).
 
 Tests: `test/writer/draft.test.ts` (the operations, how node references resolve through them, what
 `done()` fixes, the check), and the spec, through every command.

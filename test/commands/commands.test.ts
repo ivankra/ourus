@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import fc from 'fast-check';
-import { executeCommand, nearestDropPoint, type OurusCommand, type DropPoint, type DropSeam, OurusDeferred, OurusRejected, OurusSuccess } from '../../src/commands/index.ts';
+import { executeCommand, nearestDropPoint, type OurusCommand, type DropPoint, type DropSeam, OurusDeferred, OurusFailed, OurusRejected, OurusSuccess } from '../../src/commands/index.ts';
 import { OurusConfig } from '../../src/config.ts';
 import { OurusDoc, type OurusNode } from '../../src/doc/index.ts';
 import { OurusView } from '../../src/view/index.ts';
-import { parseWithMarks, allNodes, nodePlainText, resultStatus, executeOnText, appliedText, assertApplied, scalingFactor } from '../lib/index.ts';
+import { MdFlavor, MdTree } from '../../src/parser/index.ts';
+import { parseWithMarks, allNodes, nodePlainText, resultStatus, executeOnText, executeAfter, appliedText, assertApplied, scalingFactor } from '../lib/index.ts';
 import { applyChanges } from '../../src/text/index.ts';
 
 const RUNS = Number(process.env.OURUS_FUZZ_RUNS ?? 2000);
@@ -57,11 +58,11 @@ test('commands keep text, changes and selection consistent', () => {
       const doc = OurusDoc.parse(text, { config: { flavor } });
       const anchor = a % (text.length + 1);
       const head = CARET_COMMANDS.has(type) ? anchor : b % (text.length + 1);
-      const r = executeCommand(OurusView.of(doc), { type } as OurusCommand, { anchor, head });
-      if (r instanceof OurusRejected && r.reason === 'write-failed') failing.push(JSON.stringify([type, flavor, text, anchor, head]));
+      const r = executeCommand(OurusView.of(doc, { selection: { anchor, head } }), { type } as OurusCommand);
+      if (r instanceof OurusFailed) failing.push(JSON.stringify([type, flavor, text, anchor, head]));
       if (!(r instanceof OurusSuccess)) return;
       assert.equal(applyChanges(text, r.changes), r.view.doc.text);
-      for (const p of [r.selection.anchor, r.selection.head]) assert.ok(p >= 0 && p <= r.view.doc.text.length);
+      for (const p of [r.view.selection.anchor, r.view.selection.head]) assert.ok(p >= 0 && p <= r.view.doc.text.length);
     }),
     { numRuns: RUNS, seed: SEED },
   );
@@ -74,9 +75,9 @@ test('outdent undoes indent of a list item in a tidy outline', () => {
     fc.property(arbTidyOutline, arbFlavor, fc.nat(), (text, flavor, a) => {
       const doc = OurusDoc.parse(text, { config: { flavor } });
       const pos = a % (text.length + 1);
-      const r1 = executeCommand(OurusView.of(doc), { type: 'indent' }, { anchor: pos, head: pos });
+      const r1 = executeCommand(OurusView.of(doc, { selection: pos }), { type: 'indent' });
       if (!(r1 instanceof OurusSuccess)) return;
-      const r2 = executeCommand(r1.view, { type: 'outdent' }, r1.selection);
+      const r2 = executeCommand(r1.view, { type: 'outdent' });
       assert.ok(r2 instanceof OurusSuccess);
       if (!(r2 instanceof OurusSuccess)) return;
       // the outline comes back; the text may differ in renumbering or bullet adoption
@@ -92,7 +93,7 @@ test('ids follow nodes through structural commands', () => {
   const idOf = (d: OurusDoc, text: string) => allNodes(d).find((n) => nodePlainText(d, n).split('\n')[0] === text)!.id;
   const before = ['a', 'b', 'c', 'd'].map((t) => idOf(doc, t));
   const pos = doc.text.indexOf('b');
-  const r = executeCommand(OurusView.of(doc), { type: 'moveSubtreeDown' }, { anchor: pos, head: pos });
+  const r = executeCommand(OurusView.of(doc, { selection: pos }), { type: 'moveSubtreeDown' });
   assert.ok(r instanceof OurusSuccess);
   if (!(r instanceof OurusSuccess)) return;
   assert.equal(r.view.doc.text, '- a\n- d\n- b\n  - c\n');
@@ -103,7 +104,7 @@ test('ids stay with nodes that a command indents or opens a line above', () => {
   const ids = (d: OurusDoc) => allNodes(d).map((n) => `${n.id}:${nodePlainText(d, n).replace(/\n/g, '')}`);
   const run = (text: string, type: OurusCommand['type'], pos: number, config = {}) => {
     const doc = OurusDoc.parse(text, { config });
-    const r = executeCommand(OurusView.of(doc), { type } as OurusCommand, { anchor: pos, head: pos });
+    const r = executeCommand(OurusView.of(doc, { selection: pos }), { type } as OurusCommand);
     assert.ok(r instanceof OurusSuccess);
     return r instanceof OurusSuccess ? [ids(doc), ids(r.view.doc)] : [];
   };
@@ -132,8 +133,8 @@ test('every command from an empty document neither throws nor fails to write', (
         for (const command of commands) {
           const what = `${flavor}, ${name}, at ${pos}: ${JSON.stringify(command)}`;
           try {
-            const r = executeCommand(OurusView.of(doc), command, { anchor: pos, head: pos });
-            if (r instanceof OurusRejected && r.reason === 'write-failed') problems.push(`${what}: ${r.detail}`);
+            const r = executeCommand(OurusView.of(doc, { selection: pos }), command);
+            if (r instanceof OurusFailed) problems.push(`${what}: ${r.detail}`);
             if (r instanceof OurusSuccess) assert.equal(applyChanges(text, r.changes), r.view.doc.text, what);
           } catch (e) {
             problems.push(`${what}: throws ${(e as Error).message}`);
@@ -145,9 +146,9 @@ test('every command from an empty document neither throws nor fails to write', (
   assert.deepEqual(problems, []);
   // with no line to act on, a structural command is refused; a paste is the document
   const empty = OurusDoc.parse('');
-  assert.ok(executeCommand(OurusView.of(empty), { type: 'indent' }, { anchor: 0, head: 0 }) instanceof OurusRejected);
-  const pasted = executeCommand(OurusView.of(empty), { type: 'paste', clipboard: { 'text/plain': '- x\n' } }, { anchor: 0, head: 0 });
-  assert.deepEqual(pasted instanceof OurusSuccess && [pasted.view.doc.text, pasted.selection.head], ['- x\n', 3]);
+  assert.ok(executeCommand(OurusView.of(empty, { selection: 0 }), { type: 'indent' }) instanceof OurusRejected);
+  const pasted = executeCommand(OurusView.of(empty, { selection: 0 }), { type: 'paste', clipboard: { 'text/plain': '- x\n' } });
+  assert.deepEqual(pasted instanceof OurusSuccess && [pasted.view.doc.text, pasted.view.selection.head], ['- x\n', 3]);
 });
 
 // The document's true end, after its last line ending, is on no line, which the spec's buffers can't
@@ -157,14 +158,14 @@ test('a structural command from the document end leaves the caret in the node it
   const doc = OurusDoc.parse('- one\n- two\n');
   const end = doc.text.length;
   for (const [type, text] of [['moveSubtreeUp', '- two\n- one\n'], ['indent', '- one\n  - two\n']] as const) {
-    const r = executeCommand(OurusView.of(doc), { type }, { anchor: end, head: end });
+    const r = executeCommand(OurusView.of(doc, { selection: end }), { type });
     assert.ok(r instanceof OurusSuccess, type);
     if (!(r instanceof OurusSuccess)) continue;
     assert.equal(r.view.doc.text, text, type);
-    const node = r.view.doc.nodeAtLine(r.view.doc.lineAt(r.selection.head).index);
+    const node = r.view.doc.nodeAtLine(r.view.doc.lineAt(r.view.selection.head).index);
     assert.equal(node && nodePlainText(r.view.doc, node).split('\n')[0], 'two', `${type}: the caret in "two"`);
     // so the next press acts on it again
-    if (type === 'moveSubtreeUp') assert.ok(executeCommand(r.view, { type: 'moveSubtreeDown' }, r.selection) instanceof OurusSuccess);
+    if (type === 'moveSubtreeUp') assert.ok(executeCommand(r.view, { type: 'moveSubtreeDown' }) instanceof OurusSuccess);
   }
 });
 
@@ -176,24 +177,24 @@ test('a paste on the empty line Enter holds at the text end fills it', () => {
   if (!(entered instanceof OurusSuccess)) return;
   assert.equal(entered.view.doc.text, '# h1\n');
   for (const [clipboard, text] of [['- a\n  - b', '# h1\n- a\n  - b\n'], ['> q', '# h1\n> q\n'], ['# h2\ntext', '# h1\n# h2\ntext\n']] as const) {
-    const r = executeCommand(entered.view, { type: 'paste', clipboard: { 'text/plain': clipboard } }, entered.selection);
+    const r = executeCommand(entered.view, { type: 'paste', clipboard: { 'text/plain': clipboard } });
     assert.equal(r instanceof OurusSuccess ? r.view.doc.text : `${resultStatus(r)} ${r instanceof OurusRejected ? r.reason : ''}`, text, clipboard);
   }
   // Shift-Enter's the same: the blank line it makes the paste fills, the nodes after the paragraph (Paste26)
   const broken = executeOnText('p', { type: 'shiftEnter' }, { caret: 1 });
   assert.ok(broken instanceof OurusSuccess);
   if (!(broken instanceof OurusSuccess)) return;
-  const pasted = executeCommand(broken.view, { type: 'paste', clipboard: { 'text/plain': '- a\n- b' } }, broken.selection);
+  const pasted = executeCommand(broken.view, { type: 'paste', clipboard: { 'text/plain': '- a\n- b' } });
   assert.equal(pasted instanceof OurusSuccess ? pasted.view.doc.text : resultStatus(pasted), 'p\n- a\n- b\n');
 });
 
 test('several characters typed at once are played a character at a time, as keys type them', () => {
   const typed = (text: string, at: number, insert: string) => {
     const doc = OurusDoc.parse(text);
-    const result = executeCommand(OurusView.of(doc), { type: 'insertText', text: insert }, { anchor: at, head: at });
+    const result = executeCommand(OurusView.of(doc, { selection: at }), { type: 'insertText', text: insert });
     if (!(result instanceof OurusSuccess)) return resultStatus(result);
     assert.equal(applyChanges(text, result.changes), result.view.doc.text);
-    return { text: result.view.doc.text, caret: result.selection.head };
+    return { text: result.view.doc.text, caret: result.view.selection.head };
   };
   // a fence typed whole (a text replacement's) is closed, as typed key by key; its info string after it
   assert.deepEqual(typed('intro\n\n\n', 7, '```'), { text: 'intro\n\n```\n```\n', caret: 10 });
@@ -209,7 +210,7 @@ test('a drop checks its ids and its place', () => {
   const doc = OurusDoc.parse('- a\n- b\n  - c\n- d\n\npara\n');
   const id = (text: string): number => allNodes(doc).find((n) => nodePlainText(doc, n) === text)!.id;
   const caret = { anchor: 0, head: 0 };
-  const drop = (nodes: number[], parent: number | 'root', after: number | null) => executeCommand(OurusView.of(doc), { type: 'moveSubtree', nodes, to: { parent, after } }, caret);
+  const drop = (nodes: number[], parent: number | 'root', after: number | null) => executeCommand(OurusView.of(doc, { selection: caret }), { type: 'moveSubtree', nodes, to: { parent, after } });
   const reason = (r: ReturnType<typeof drop>) => (r instanceof OurusRejected ? r.reason : resultStatus(r));
   assert.equal(reason(drop([999], 'root', null)), 'no-such-node');
   assert.equal(reason(drop([id('b')], 999, null)), 'no-such-node');
@@ -224,7 +225,7 @@ test('a drop checks its ids and its place', () => {
   // a paragraph that adopts no list holds none (`listParent: container`)
   const flat = OurusDoc.parse('- a\n\npara\n', { config: { listParent: 'container' } });
   const flatId = (text: string): number => allNodes(flat).find((n) => nodePlainText(flat, n) === text)!.id;
-  const r = executeCommand(OurusView.of(flat), { type: 'moveSubtree', nodes: [flatId('a')], to: { parent: flatId('para'), after: null } }, caret);
+  const r = executeCommand(OurusView.of(flat, { selection: caret }), { type: 'moveSubtree', nodes: [flatId('a')], to: { parent: flatId('para'), after: null } });
   assert.equal(reason(r), 'not-expressible');
 });
 
@@ -232,15 +233,15 @@ test('a drop at its own place changes nothing, and one elsewhere says what it pl
   const doc = OurusDoc.parse('- a\n- b\n  - c\n- d\n');
   const id = (text: string): number => allNodes(doc).find((n) => nodePlainText(doc, n) === text)!.id;
   const caret = { anchor: 2, head: 2 };
-  const own = executeCommand(OurusView.of(doc), { type: 'moveSubtree', nodes: [id('b')], to: { parent: 'root', after: id('a') } }, caret);
+  const own = executeCommand(OurusView.of(doc, { selection: caret }), { type: 'moveSubtree', nodes: [id('b')], to: { parent: 'root', after: id('a') } });
   assert.ok(own instanceof OurusSuccess && own.changes.length === 0 && own.view.doc === doc);
-  const r = executeCommand(OurusView.of(doc), { type: 'moveSubtree', nodes: [id('b')], to: { parent: id('d'), after: null } }, caret);
+  const r = executeCommand(OurusView.of(doc, { selection: caret }), { type: 'moveSubtree', nodes: [id('b')], to: { parent: id('d'), after: null } });
   assert.ok(r instanceof OurusSuccess);
   if (!(r instanceof OurusSuccess)) return;
   assert.equal(r.view.doc.text, '- a\n- d\n  - b\n    - c\n');
   assert.deepEqual(r.placed, [id('b')]);
   // the caret in `a`, which didn't move, stays there
-  assert.equal(r.selection.head, 2);
+  assert.equal(r.view.selection.head, 2);
 });
 
 test('a place named by ids survives an edit elsewhere', () => {
@@ -248,7 +249,7 @@ test('a place named by ids survives an edit elsewhere', () => {
   const id = (text: string): number => allNodes(doc).find((n) => nodePlainText(doc, n) === text)!.id;
   const [b, c] = [id('b'), id('c')];
   const edited = doc.update({ changes: [{ from: 3, to: 3, insert: 'x' }] });
-  const r = executeCommand(OurusView.of(edited), { type: 'moveSubtree', nodes: [c], to: { parent: 'root', after: null } }, { anchor: 0, head: 0 });
+  const r = executeCommand(OurusView.of(edited, { selection: 0 }), { type: 'moveSubtree', nodes: [c], to: { parent: 'root', after: null } });
   assert.ok(r instanceof OurusSuccess);
   assert.equal(r instanceof OurusSuccess && r.view.doc.text, '- c\n- ax\n- b\n');
   assert.equal(r instanceof OurusSuccess && r.view.doc.node(b)?.prev?.id, id('a'));
@@ -259,31 +260,31 @@ test('a structural command given nodes acts on them, the caret elsewhere staying
   const id = (text: string): number => allNodes(doc).find((n) => nodePlainText(doc, n) === text)!.id;
   const caret = { anchor: 2, head: 2 };
   const run = (command: OurusCommand) => {
-    const r = executeCommand(OurusView.of(doc), command, caret);
+    const r = executeCommand(OurusView.of(doc, { selection: caret }), command);
     assert.ok(r instanceof OurusSuccess, command.type);
     return r instanceof OurusSuccess ? r : null!;
   };
   const indented = run({ type: 'indent', nodes: [id('c')] });
   assert.equal(indented.view.doc.text, '- a\n- b\n  - c\n- d\n');
-  assert.equal(indented.selection.head, 2);
+  assert.equal(indented.view.selection.head, 2);
   const deleted = run({ type: 'deleteSubtree', nodes: [id('c'), id('d')] });
   assert.equal(deleted.view.doc.text, '- a\n- b\n');
-  assert.equal(deleted.selection.head, 2);
+  assert.equal(deleted.view.selection.head, 2);
   const duplicated = run({ type: 'duplicateSubtree', nodes: [id('d')] });
   assert.equal(duplicated.view.doc.text, '- a\n- b\n- c\n- d\n- d\n');
-  assert.equal(duplicated.selection.head, 2);
+  assert.equal(duplicated.view.selection.head, 2);
   const moved = run({ type: 'moveSubtreeUp', nodes: [id('d')] });
   assert.equal(moved.view.doc.text, '- a\n- b\n- d\n- c\n');
   const copied = run({ type: 'copy', nodes: [id('b'), id('c')] });
   assert.equal(copied.clipboard?.['text/plain'], '- b\n- c\n');
-  const refused = executeCommand(OurusView.of(doc), { type: 'indent', nodes: [id('b'), id('d')] }, caret);
+  const refused = executeCommand(OurusView.of(doc, { selection: caret }), { type: 'indent', nodes: [id('b'), id('d')] });
   assert.equal(refused instanceof OurusRejected && refused.reason, 'non-contiguous');
 });
 
 test('a pickup takes the pressed node, its lines and its clipboard, and changes nothing', () => {
   const doc = OurusDoc.parse('- a\n- b\n  - c\n- d\n');
   const id = (text: string): number => allNodes(doc).find((n) => nodePlainText(doc, n) === text)!.id;
-  const r = executeCommand(OurusView.of(doc), { type: 'drag', pressed: id('b') }, { anchor: 2, head: 2 });
+  const r = executeCommand(OurusView.of(doc, { selection: 2 }), { type: 'drag', pressed: id('b') });
   assert.ok(r instanceof OurusSuccess && r.dropMap);
   if (!(r instanceof OurusSuccess) || !r.dropMap) return;
   assert.equal(r.changes.length, 0);
@@ -292,7 +293,7 @@ test('a pickup takes the pressed node, its lines and its clipboard, and changes 
   assert.equal(r.clipboard?.['text/plain'], '- b\n  - c\n');
   // every point's drop is ready to run, and names the run
   for (const seam of r.dropMap.seams) for (const point of seam.points) assert.deepEqual(point.drop, { type: 'moveSubtree', nodes: [id('b')], to: { parent: point.parent, after: point.after } });
-  const stale = executeCommand(OurusView.of(doc), { type: 'drag', pressed: 999 }, { anchor: 2, head: 2 });
+  const stale = executeCommand(OurusView.of(doc, { selection: 2 }), { type: 'drag', pressed: 999 });
   assert.equal(stale instanceof OurusRejected && stale.reason, 'no-such-node');
 });
 
@@ -324,19 +325,19 @@ test('a pickup leaves out the places its drop refuses before writing', () => {
   ];
   for (const { text, command, flavor } of pickups) {
     const doc = OurusDoc.parse(text, { config: { flavor } });
-    const r = executeCommand(OurusView.of(doc), command, { anchor: 0, head: 0 });
+    const r = executeCommand(OurusView.of(doc, { selection: 0 }), command);
     assert.ok(r instanceof OurusSuccess && r.dropMap, text);
     if (!(r instanceof OurusSuccess) || !r.dropMap) continue;
     for (const seam of r.dropMap.seams) {
       for (const point of seam.points) {
-        const dropped = executeCommand(OurusView.of(doc), point.drop, { anchor: 0, head: 0 });
+        const dropped = executeCommand(OurusView.of(doc, { selection: 0 }), point.drop);
         assert.ok(dropped instanceof OurusSuccess, `${JSON.stringify(text)} at ${point.parent}, ${point.after}: ${dropped instanceof OurusRejected ? dropped.detail : ''}`);
       }
     }
   }
   // and a drop there still refuses
   const doc = OurusDoc.parse('## b\n## c\n- d');
-  const r = executeCommand(OurusView.of(doc), { type: 'moveSubtree', nodes: [1], to: { parent: 3, after: null } }, { anchor: 0, head: 0 });
+  const r = executeCommand(OurusView.of(doc, { selection: 0 }), { type: 'moveSubtree', nodes: [1], to: { parent: 3, after: null } });
   assert.equal(r instanceof OurusRejected && r.reason, 'not-expressible');
 });
 
@@ -363,7 +364,7 @@ test('the nearest drop point: by column, then the own place, one that keeps the 
 test('a drag from outside offers the document as it is, each place a paste there', () => {
   const doc = OurusDoc.parse('- a\n- b\n');
   const clipboard = { 'text/plain': 'para\n' };
-  const r = executeCommand(OurusView.of(doc), { type: 'drag', clipboard }, { anchor: 2, head: 2 });
+  const r = executeCommand(OurusView.of(doc, { selection: 2 }), { type: 'drag', clipboard });
   assert.ok(r instanceof OurusSuccess && r.dropMap);
   if (!(r instanceof OurusSuccess) || !r.dropMap) return;
   assert.deepEqual(r.dropMap.nodes, []);
@@ -378,14 +379,14 @@ test('a drag from outside offers the document as it is, each place a paste there
       assert.equal(point.converts, true);
     }
   }
-  const empty = executeCommand(OurusView.of(doc), { type: 'drag', clipboard: { 'text/plain': '' } }, { anchor: 2, head: 2 });
+  const empty = executeCommand(OurusView.of(doc, { selection: 2 }), { type: 'drag', clipboard: { 'text/plain': '' } });
   assert.equal(empty instanceof OurusRejected && empty.reason, 'not-expressible');
 });
 
 test('a drop from outside checks its place, and says what it placed', () => {
   const doc = OurusDoc.parse('- a\n- b\n');
   const id = (text: string): number => allNodes(doc).find((n) => nodePlainText(doc, n) === text)!.id;
-  const paste = (parent: number | 'root', after: number | null) => executeCommand(OurusView.of(doc), { type: 'pasteAt', at: { parent, after }, clipboard: { 'text/plain': '- x\n- y\n' } }, { anchor: 2, head: 2 });
+  const paste = (parent: number | 'root', after: number | null) => executeCommand(OurusView.of(doc, { selection: 2 }), { type: 'pasteAt', at: { parent, after }, clipboard: { 'text/plain': '- x\n- y\n' } });
   const reason = (r: ReturnType<typeof paste>) => (r instanceof OurusRejected ? r.reason : resultStatus(r));
   assert.equal(reason(paste(999, null)), 'no-such-node');
   assert.equal(reason(paste(id('a'), id('b'))), 'invalid-insertion-point');
@@ -394,28 +395,28 @@ test('a drop from outside checks its place, and says what it placed', () => {
   if (!(r instanceof OurusSuccess)) return;
   assert.equal(r.view.doc.text, '- a\n- b\n  - x\n  - y\n');
   assert.deepEqual(r.placed!.map((n) => nodePlainText(r.view.doc, r.view.doc.node(n)!)), ['x', 'y']);
-  assert.equal(r.selection.head, 2);
+  assert.equal(r.view.selection.head, 2);
 });
 
 test('the source of a drag out deletes its nodes only while they are what was dragged out', () => {
   const doc = OurusDoc.parse('- a\n- b\n  - c\n- d\n');
   const id = (text: string): number => allNodes(doc).find((n) => nodePlainText(doc, n) === text)!.id;
   const caret = { anchor: 2, head: 2 };
-  const picked = executeCommand(OurusView.of(doc), { type: 'drag', pressed: id('b') }, caret);
+  const picked = executeCommand(OurusView.of(doc, { selection: caret }), { type: 'drag', pressed: id('b') });
   assert.ok(picked instanceof OurusSuccess && picked.clipboard);
   if (!(picked instanceof OurusSuccess)) return;
   const expectMarkdown = picked.clipboard!['text/plain']!;
-  const removed = executeCommand(OurusView.of(doc), { type: 'deleteSubtree', nodes: [id('b')], expectMarkdown }, caret);
+  const removed = executeCommand(OurusView.of(doc, { selection: caret }), { type: 'deleteSubtree', nodes: [id('b')], expectMarkdown });
   assert.equal(removed instanceof OurusSuccess && removed.view.doc.text, '- a\n- d\n');
   // a child added to the run during the drag: it wasn't carried, so the run stays
   const edited = doc.update({ changes: [{ from: doc.text.indexOf('- d'), to: doc.text.indexOf('- d'), insert: '  - new\n' }] });
-  const refused = executeCommand(OurusView.of(edited), { type: 'deleteSubtree', nodes: [id('b')], expectMarkdown }, caret);
+  const refused = executeCommand(OurusView.of(edited, { selection: caret }), { type: 'deleteSubtree', nodes: [id('b')], expectMarkdown });
   assert.equal(refused instanceof OurusRejected && refused.reason, 'content-changed');
 });
 
 test("a text drag's deletion is a cut's, and the host's where ourus doesn't do it", () => {
   const doc = OurusDoc.parse('```\nx\n```\n');
-  const r = executeCommand(OurusView.of(doc), { type: 'deleteByDrag' }, { anchor: 4, head: 5 });
+  const r = executeCommand(OurusView.of(doc, { selection: { anchor: 4, head: 5 } }), { type: 'deleteByDrag' });
   assert.ok(r instanceof OurusDeferred);
 });
 
@@ -426,10 +427,10 @@ test('the empty paragraph Enter makes after a title at a text\'s end, with no li
     assert.ok(entered instanceof OurusSuccess);
     if (!(entered instanceof OurusSuccess)) continue;
     for (const type of ['deleteContentBackward', 'deleteSoftLineBackward', 'cut', 'moveSubtreeUp'] as const) {
-      const r = executeCommand(entered.view, { type }, entered.selection);
+      const r = executeCommand(entered.view, { type });
       assert.ok(r instanceof OurusSuccess, `${type} after Enter in ${JSON.stringify(start)}: ${r instanceof OurusRejected ? r.detail : ''}`);
     }
-    const back = executeCommand(entered.view, { type: 'deleteContentBackward' }, entered.selection);
+    const back = executeCommand(entered.view, { type: 'deleteContentBackward' });
     if (back instanceof OurusSuccess) assert.equal(back.view.doc.rootNode.child(0).children.length, 0);
   }
 });
@@ -437,7 +438,7 @@ test('the empty paragraph Enter makes after a title at a text\'s end, with no li
 test('Enter at the end of an unclosed fence at a text\'s end, with no line ending, makes an empty code line', () => {
   const r = executeOnText('```\ncode', { type: 'enter' }, { caret: 8 });
   assert.ok(r instanceof OurusSuccess);
-  if (r instanceof OurusSuccess) assert.deepEqual([r.view.doc.text, r.selection.head], ['```\ncode\n\n', 9]);
+  if (r instanceof OurusSuccess) assert.deepEqual([r.view.doc.text, r.view.selection.head], ['```\ncode\n\n', 9]);
 });
 
 test('a text whose lines end with a lone CR is edited as with LF', () => {
@@ -472,27 +473,27 @@ test('text typed at once with a line break in quoted code keeps the quote, its f
 
 test('delete subtree given a node, the caret on its blank line, takes the caret with it', () => {
   const r = executeOnText('a\n ', { type: 'deleteSubtree', nodes: [1] }, { caret: 3 });
-  assert.deepEqual(r instanceof OurusSuccess && [r.view.doc.text, r.selection.head], ['', 0]);
+  assert.deepEqual(r instanceof OurusSuccess && [r.view.doc.text, r.view.selection.head], ['', 0]);
 });
 
 test('delete subtree given a node and its child takes the node, the child with it', () => {
   const r = executeOnText('- a\n  - b\n  - c\n- d\n', { type: 'deleteSubtree', nodes: [1, 2] });
-  assert.deepEqual(r instanceof OurusSuccess && [r.view.doc.text, r.selection.head], ['- d\n', 2]);
+  assert.deepEqual(r instanceof OurusSuccess && [r.view.doc.text, r.view.selection.head], ['- d\n', 2]);
 });
 
 test('outdent given a quote\'s paragraph, an item\'s text then, keeps a caret elsewhere where it is', () => {
   const doc = OurusDoc.parse('- z\n- > q\n- w\n', { config: { quotes: 'container' } });
-  const r = executeCommand(OurusView.of(doc), { type: 'outdent', nodes: [4] }, { anchor: 12, head: 12 });
-  assert.deepEqual(r instanceof OurusSuccess && [r.view.doc.text, r.selection.head], ['- z\n- q\n- w\n', 10]);
+  const r = executeCommand(OurusView.of(doc, { selection: 12 }), { type: 'outdent', nodes: [4] });
+  assert.deepEqual(r instanceof OurusSuccess && [r.view.doc.text, r.view.selection.head], ['- z\n- q\n- w\n', 10]);
   const code = executeOnText('    - bravo\n- > bravo', { type: 'outdent', nodes: [4] }, { caret: 9, config: { quotes: 'container' } });
-  assert.deepEqual(code instanceof OurusSuccess && [code.view.doc.text, code.selection.head], ['    - bravo\n- bravo', 9]);
+  assert.deepEqual(code instanceof OurusSuccess && [code.view.doc.text, code.view.selection.head], ['    - bravo\n- bravo', 9]);
 });
 
 test('a selection whose ends aren\'t positions in the text is refused, whatever the command', () => {
   const doc = OurusDoc.parse('- a\n  - b\n');
   for (const selection of [{ anchor: -1, head: -1 }, { anchor: 11, head: 11 }, { anchor: 0, head: NaN }, { anchor: 1.5, head: 2 }, { anchor: Infinity, head: Infinity }]) {
     for (const type of ['indent', 'cut', 'copy', 'fold', 'enter'] as const) {
-      const r = executeCommand(OurusView.of(doc), { type }, selection);
+      const r = executeCommand(OurusView.of(doc, { selection: selection }), { type });
       assert.equal(r instanceof OurusRejected && r.reason, 'invalid-selection', `${type} at ${JSON.stringify(selection)}`);
     }
   }
@@ -542,7 +543,7 @@ test('Enter at the end of a quote of a text with no final line break: the empty 
 
 test('Backspace on an empty last item after a folded one keeps the blank lines inside the folded one; a quote\'s paragraph outdented, its last blank `>` with no line ending, the quote gone', () => {
   const view = OurusView.of(OurusDoc.parse('- a\n\n  p\n\n  -\n-')).withFolded([1]);
-  const r = executeCommand(view, { type: 'deleteContentBackward' }, { anchor: 15, head: 15 });
+  const r = executeCommand(view.withSelection(15), { type: 'deleteContentBackward' });
   assert.equal(r instanceof OurusSuccess && r.view.doc.text, '- a\n\n  p\n\n  -');
   const out = executeOnText('> a\n>', { type: 'outdent', nodes: [2] }, { caret: 2, config: { quotes: 'container' } });
   assert.equal(out instanceof OurusSuccess && out.view.doc.text, 'a\n\n');
@@ -553,6 +554,98 @@ test('Enter in a nested item on its quoted parent\'s marker line, no space after
   assert.equal(r instanceof OurusSuccess && r.view.doc.text, '>0. - h\n>    - \n');
   const before = executeOnText('>0. - h\n', { type: 'enter' }, { caret: 6 });
   assert.equal(before instanceof OurusSuccess && before.view.doc.text, '>0. - \n>    - h\n');
+});
+
+test('a quote atom\'s Enter, Shift-Enter and plain paste read its lines as the document does: tabs kept where they were, CRLF, an item\'s quote, the caret in markup (B198–B201)', () => {
+  // [drawn start, command, config, drawn result or `rejected <reason>`]; ┃ the caret, ┊ a selection's head
+  const enter: OurusCommand = { type: 'enter' };
+  const shiftEnter: OurusCommand = { type: 'shiftEnter' };
+  const rows: [string, OurusCommand, Partial<OurusConfig>, string][] = [
+    // tabs: each character of the prefix at the column it was at, a marker as spaces but its tab
+    ['>\t- a┃', enter, {}, '>\t- a\n>\t- ┃'],
+    ['>\t- a┃', shiftEnter, {}, '>\t- a\n>\t  ┃'],
+    ['> -\ta┃', shiftEnter, {}, '> -\ta\n>  \t┃'],
+    ['>\t>\ta┃', enter, {}, '>\t>\ta\n>\t> ┃'],
+    ['> 1.\t- a┃', enter, {}, '> 1.\t- a\n>   \t- ┃'],
+    ['> 1.\t- a┃', shiftEnter, {}, '> 1.\t- a\n>   \t  ┃'],
+    ['  >\t- a┃', enter, {}, '  >\t- a\n  >\t- ┃'],
+    // (a tab and spaces to one column are one list)
+    ['> \t1. a┃\n>   2. b', enter, {}, '> \t1. a\n> \t2. ┃\n>   3. b'],
+    // CRLF: the note's line ending, a widened marker's lines moved
+    ['> 8. a┃\r\n> 9. b\r\n>    c', enter, {}, '> 8. a\r\n> 9. ┃\r\n> 10. b\r\n>     c'],
+    // a quote that is an item's text: its lines past the item's indentation
+    ['- > 1. a┃\n  > 2. b', enter, {}, '- > 1. a\n  > 2. ┃\n  > 3. b'],
+    ['1. > 8. a┃\n   > 9. b\n   >    c', enter, {}, '1. > 8. a\n   > 9. ┃\n   > 10. b\n   >     c'],
+    ['- > - a┃', shiftEnter, {}, '- > - a\n  >   ┃'],
+    // the list's bullet and delimiter; numbers as written where unchanged, the list renumbered from its first
+    ['> * a┃', enter, {}, '> * a\n> * ┃'],
+    ['> 1) a┃', enter, {}, '> 1) a\n> 2) ┃'],
+    // (a list numbered alike too, as every text editor numbers it)
+    ['> 1. a┃\n> 1. b', enter, {}, '> 1. a\n> 2. ┃\n> 3. b'],
+    ['> 1. a┃\n> 2. b\n> 5. c', enter, {}, '> 1. a\n> 2. ┃\n> 3. b\n> 4. c'],
+    ['> 1. a┃\n> 2. b\n> 5. c', enter, { orderedLists: 'shift' }, '> 1. a\n> 2. ┃\n> 3. b\n> 5. c'],
+    ['> 007. a┃\n> 008. b', enter, {}, '> 007. a\n> 8. ┃\n> 9. b'],
+    ['> 999999998. a┃', enter, {}, '> 999999998. a\n> 999999999. ┃'],
+    // a task's checkbox is the outline's, every flavor; `enterTask`
+    ['> - [ ] a┃', enter, { flavor: 'commonmark' }, '> - [ ] a\n> - [ ] ┃'],
+    ['> - [x] a┃', enter, { enterTask: 'plain' }, '> - [x] a\n> - ┃'],
+    ['> 1. [x] a┃\n> 2. b', enter, {}, '> 1. [x] a\n> 2. [ ] ┃\n> 3. b'],
+    ['> - [ ]┃', enter, {}, '> ┃'],
+    // the spaces at the caret, as `enterSplitSpace` says; not in code
+    ['> - a┃ b', enter, {}, '> - a\n> - ┃b'],
+    ['> - a ┃b', enter, {}, '> - a \n> - ┃b'],
+    ['> - a ┃b', enter, { enterSplitSpace: 'trim' }, '> - a\n> - ┃b'],
+    ['> - a┃ b', enter, { enterSplitSpace: 'start' }, '> - a\n> - ┃ b'],
+    ['> ```\n> a┃ b\n> ```', enter, {}, '> ```\n> a\n> ┃ b\n> ```'],
+    // a caret in the line's markup, its `>` or its item's marker or checkbox, as at its text's start
+    ['> 1┃0. a', enter, {}, '> 10. \n> 11. ┃a'],
+    ['> - ┃[x] task', enter, {}, '> - [x] \n> - [ ] ┃task'],
+    ['> 1. First\n┃> 2. Second\n> 3. Third', enter, {}, '> 1. First\n> 2. \n> 3. ┃Second\n> 4. Third'],
+    ['> 1. a\n┃> 2. ', enter, {}, '> 1. a\n> ┃'],
+    ['> - parent\n>   - child\n┃>   - ', enter, {}, '> - parent\n>   - child\n> - ┃'],
+    // a line with nothing past its prefix, no marker of its own, is the quote's: its empty last line leaves it
+    ['> - a\n> ┃', enter, {}, '> - a\n\n┃'],
+    ['> - a\n┃> ', enter, {}, '> - a\n\n┃'],
+    // `>- a`: the next line's `>` takes a blank this one has none of, so `>  - b` is a sibling
+    ['>- a\n>  - b\n>  - ┃', enter, {}, '>- a\n>  - b\n> ┃'],
+    ['>- a┃', shiftEnter, {}, '>- a\n> ┃'],
+    // nested quotes, and the quote's own `>` alone
+    ['> > 1. a┃\n> > 2. b\n> c', enter, {}, '> > 1. a\n> > 2. ┃\n> > 3. b\n> c'],
+    ['> > - ┃', enter, {}, '> > ┃'],
+    ['> a\nlazy┃', enter, {}, '> a\nlazy\n> ┃'],
+    // (an underline of the paragraph above, no item: the quote's line, no list's)
+    ['> - p\n>\n> q\n>   -┃', enter, {}, '> - p\n>\n> q\n>   -\n> ┃'],
+    // Shift-Enter: lazy where the document reads the quote so as one, by the readback; refused at the
+    // quote's start, its indentation too
+    ['> a┃b', shiftEnter, {}, '> a\n┃b'],
+    ['  ┃> a', shiftEnter, {}, 'rejected not-expressible'],
+    [' ┃ > a', shiftEnter, {}, 'rejected not-expressible'],
+    ['> a┃- b', shiftEnter, {}, '> a\n> ┃- b'],
+    ['> ┃b', shiftEnter, {}, '> \n> ┃b'],
+    // a selection in one quote, across its lines
+    ['> - a┃b\n> - c┊d', enter, {}, '> - a\n> - ┃d'],
+    // plain paste in the spaces the quote is indented by: at its start (PastePlain27)
+    ['  ┃> a', { type: 'pastePlain', text: '\n' }, {}, 'rejected not-expressible'],
+    ['> - a┃', { type: 'pastePlain', text: 'x\ny' }, {}, '> - ax\n>   y┃'],
+    // an empty item not last in its list: as `enterOnEmptyItem` says; the last outdents with every value
+    ['> - a\n> - ┃\n> - b', enter, { enterOnEmptyItem: 'sibling' }, '> - a\n> - \n> - ┃\n> - b'],
+    ['> 1. a\n> 2. ┃\n> 3. b', enter, { enterOnEmptyItem: 'sibling' }, '> 1. a\n> 2. \n> 3. ┃\n> 4. b'],
+    ['> - a\n> - ┃\n> - b', enter, { enterOnEmptyItem: 'outdent' }, '> - a\n> ┃\n> - b'],
+    ['> - a\n>   - x\n>   - ┃\n>   - b', enter, { enterOnEmptyItem: 'outdent' }, '> - a\n>   - x\n> - ┃\n>   - b'],
+    ['> - a\n> - ┃\n> - b', enter, { enterOnEmptyItem: 'exit' }, '> - a\n> ┃\n> - b'],
+    ['> - a\n>   - x\n>   - ┃\n>   - b', enter, { enterOnEmptyItem: 'exit' }, '> - a\n>   - x\n>   - \n>   - ┃\n>   - b'],
+    ['> - a\n>   - x\n>   - ┃\n>   - b', enter, { enterOnEmptyItem: 'unwrap' }, '> - a\n>   - x\n>   ┃\n>   - b'],
+    ['> - a\n>   - x\n>   - ┃', enter, { enterOnEmptyItem: 'sibling' }, '> - a\n>   - x\n> - ┃'],
+    ['> - a\n> - ┃', enter, { enterOnEmptyItem: 'sibling' }, '> - a\n> ┃'],
+  ];
+  for (const [drawn, command, config, want] of rows) {
+    const anchor = drawn.indexOf('┃');
+    const plain = drawn.replace('┃', '');
+    const head = plain.indexOf('┊') < 0 ? anchor : plain.indexOf('┊');
+    const r = executeOnText(plain.replace('┊', ''), command, { anchor, head, config: { quotes: 'atom', ...config } });
+    const got = r instanceof OurusSuccess ? r.view.doc.text.slice(0, r.view.selection.head) + '┃' + r.view.doc.text.slice(r.view.selection.head) : r instanceof OurusRejected ? `rejected ${r.reason}` : r.constructor.name;
+    assert.equal(got, want, `${JSON.stringify(drawn)} ${command.type} ${JSON.stringify(config)}`);
+  }
 });
 
 test('indenting an empty quote atom that carries a block id is refused: the id would be the item\'s (B31)', () => {
@@ -607,7 +700,7 @@ test('a node dropped first into a quote on an item\'s marker line: the marker ov
     const doc = OurusDoc.parse(text, { config: { quotes: 'container', indentUnit: 'tab' } });
     const quote = doc.root.children.flatMap((c) => [c, ...c.children]).find((c) => c.kind === 'quote')!;
     const moved = text.startsWith('-\n') ? doc.root.children[0]! : doc.root.children.at(-1)!;
-    const r = executeCommand(OurusView.of(doc), { type: 'moveSubtree', nodes: [moved.id], to: { parent: quote.id, after: null } }, { anchor: 0, head: 0 });
+    const r = executeCommand(OurusView.of(doc, { selection: 0 }), { type: 'moveSubtree', nodes: [moved.id], to: { parent: quote.id, after: null } });
     assert.equal(r instanceof OurusSuccess && r.view.doc.text, out, text);
   }
 });
@@ -620,6 +713,12 @@ test('an item whose marker shares its line with its quote, dropped first under t
 test('outdenting mixed-depth roots, an empty item in a quote led by `>  ` among them', () => {
   const r = executeOnText('>  -\n- a\n\n  x', { type: 'outdent' }, { anchor: 2, head: 13, config: { indentUnit: 'tab' } });
   assert.equal(r instanceof OurusSuccess && r.view.doc.text, '- \n- a\n\n  x');
+});
+
+test('a duplicate or a paste writes a footnote or reference definition as it is, a label the note defines too: labels needn\'t be unique, the host\'s to keep so, as block ids (B228)', () => {
+  assert.equal(appliedText(executeOnText('[^1]: foo\nx', { type: 'duplicateSubtree' }, { caret: 9 })), '[^1]: foo\nx\n[^1]: foo\nx');
+  assert.equal(appliedText(executeOnText('[a]: http://x', { type: 'duplicateSubtree' }, { caret: 13 })), '[a]: http://x\n[a]: http://x');
+  assert.equal(appliedText(executeOnText('- a[^1]\n\n[^1]: n1', { type: 'paste', clipboard: { 'text/plain': '[^1]: other\n' } }, { caret: 17 })), '- a[^1]\n\n[^1]: n1\n\n[^1]: other');
 });
 
 test('a footnote definition dropped first under an empty item is refused, as code there is: it would be read as the item\'s text', () => {
@@ -685,7 +784,7 @@ test('a write in a long list or quote takes time in proportion to its length, no
     let best = Infinity;
     for (let k = 0; k < 7; k++) {
       const start = performance.now();
-      const r = executeCommand(OurusView.of(doc), { type: 'enter' }, { anchor: at, head: at });
+      const r = executeCommand(OurusView.of(doc, { selection: at }), { type: 'enter' });
       best = Math.min(best, performance.now() - start);
       assert.ok(r instanceof OurusSuccess);
     }
@@ -698,7 +797,7 @@ test('a line break typed at the start of an opening fence: a blank line above th
     const at = text.search(/```|\$\$/);
     const r = executeOnText(text, { type: 'insertText', text: '\n' }, { caret: at, config });
     assert.ok(r instanceof OurusSuccess || r instanceof OurusDeferred, `${JSON.stringify(text)}: ${r instanceof OurusRejected ? r.detail : ''}`);
-    return r instanceof OurusSuccess ? { text: r.view.doc.text, caret: r.selection.head } : null;
+    return r instanceof OurusSuccess ? { text: r.view.doc.text, caret: r.view.selection.head } : null;
   };
   assert.deepEqual(typed('## N\n\n```\nx\n```\n'), { text: '## N\n\n\n```\nx\n```\n', caret: 7 });
   assert.deepEqual(typed('a\n## N\n```\nx\n```\n'), { text: 'a\n## N\n\n```\nx\n```\n', caret: 8 });
@@ -720,7 +819,7 @@ test('a pickup, expanding a whole list\'s selection and deleting it take time in
       let best = Infinity;
       for (let k = 0; k < 5; k++) {
         const start = performance.now();
-        executeCommand(view, command, selection(text));
+        executeCommand(view.withSelection(selection(text)), command);
         best = Math.min(best, performance.now() - start);
       }
       return best;
@@ -805,12 +904,12 @@ test('a bracket `autoClose` lists pairs in code, wraps a selection there, and it
   const wrapped = run('```\nvalue\n```\n', 4, 9, '(');
   assert.ok(wrapped instanceof OurusSuccess);
   assert.equal(wrapped.view.doc.text, '```\n(value)\n```\n');
-  assert.deepEqual(wrapped.selection, { anchor: 5, head: 10 });
+  assert.deepEqual(wrapped.view.selection, { anchor: 5, head: 10 });
   const paired = run('- ```\n  value\n  ```\n', 13, 13, '(');
   assert.equal(paired instanceof OurusSuccess && paired.view.doc.text, '- ```\n  value()\n  ```\n');
   if (paired instanceof OurusSuccess) {
-    const over = executeCommand(paired.view, { type: 'insertText', text: ')' }, paired.selection);
-    assert.ok(over instanceof OurusSuccess && over.view.doc.text === paired.view.doc.text && over.selection.head === 15);
+    const over = executeCommand(paired.view, { type: 'insertText', text: ')' });
+    assert.ok(over instanceof OurusSuccess && over.view.doc.text === paired.view.doc.text && over.view.selection.head === 15);
   }
   assert.ok(run('```\nvalue\n```\n', 3, 3, '(') instanceof OurusDeferred, 'the info string');
   assert.ok(run('> [!note Title\n> Body\n', 8, 8, '[', { flavor: 'obsidian', quotes: 'container', autoClose: ['['] }) instanceof OurusDeferred);
@@ -842,17 +941,17 @@ test('HTML conversion: table spans keep columns, a backslashed pipe in a cell\'s
   assert.equal(MdHtmlParser.plainText('<ul><li>a</li><li>b</li></ul><table><tr><td>c</td><td>d</td></tr></table><pre>  e</pre>'), 'a\nb\n\nc\td\n\n  e');
 });
 
-test('`listNumbers: keep` keeps the numbers written, a new item numbered on from the one above, and the items counting on from it counting on; `renumber`, the default, numbers the list from its first', () => {
+test('`orderedLists: shift` keeps the numbers written, a new item numbered on from the one above, and the run counting on from it shifting with it; `renumber`, the default, numbers the list from its first', () => {
   const text = (t: string, at: number, command: OurusCommand, config = {}) => {
     const r = executeOnText(t, command, { caret: at, config });
     return r instanceof OurusSuccess ? r.view.doc.text : r.constructor.name;
   };
-  const keep = { listNumbers: 'keep' };
+  const shift = { orderedLists: 'shift' };
   assert.equal(text('1. a\n9. c\n', 9, { type: 'enter' }), '1. a\n2. c\n3. \n');
-  assert.equal(text('1. a\n9. c\n', 9, { type: 'enter' }, keep), '1. a\n9. c\n10. \n');
-  assert.equal(text('1. a\n9. c\n', 4, { type: 'enter' }, keep), '1. a\n2. \n9. c\n');
-  assert.equal(text('1. a\n2. b\n3. c\n', 4, { type: 'enter' }, keep), '1. a\n2. \n3. b\n4. c\n');
-  assert.equal(text('1. a\n2. b\n3. c\n', 8, { type: 'deleteSubtree' }, keep), '1. a\n3. c\n');
+  assert.equal(text('1. a\n9. c\n', 9, { type: 'enter' }, shift), '1. a\n9. c\n10. \n');
+  assert.equal(text('1. a\n9. c\n', 4, { type: 'enter' }, shift), '1. a\n2. \n9. c\n');
+  assert.equal(text('1. a\n2. b\n3. c\n', 4, { type: 'enter' }, shift), '1. a\n2. \n3. b\n4. c\n');
+  assert.equal(text('1. a\n2. b\n3. c\n', 8, { type: 'deleteSubtree' }, shift), '1. a\n3. c\n');
 });
 
 test('Shift-Tab on a top-level item: a paragraph in place, the items after it its list; refused with `outdentTopLevel: refuse`', () => {
@@ -882,7 +981,7 @@ test('Obsidian\'s tags and wikilinks in a link\'s text render as text, no anchor
 
 test('HTML nested past the call stack pastes as its text; a long run of formatting elements, and a clipboard of blank lines and a word, convert in linear time', async () => {
   const { MdHtmlParser } = await import('../../src/parser/html-parser.ts');
-  const { clipboardFragment } = await import('../../src/commands/clipboard.ts');
+  const { clipboardFragment } = await import('../../src/doc/index.ts');
   for (const html of ['<span>'.repeat(5000) + 'a*' + '</span>'.repeat(5000), '<blockquote>'.repeat(5000) + 'a*', '<ul><li>'.repeat(3000) + 'a*', '<pre>' + '<span>'.repeat(5000) + 'a*']) {
     assert.equal(MdHtmlParser.parse(html).markdown, 'a\\*', html.slice(0, 12));
   }
@@ -910,6 +1009,15 @@ test('HTML conversion: formatting already open adds none, a normal span in bold 
   assert.equal(md('<b style="font-weight:normal"><p>doc</p></b>'), 'doc');
   assert.equal(md('<p><b>abc<br></b>def</p>'), '**abc**\ndef');
   assert.equal(md('<p>a <code> </code> b</p>'), 'a ` ` b');
+});
+
+test('HTML conversion: a style parsed as CSS reads it, once: spaces, any case, `!important`, a property by its whole name (B265)', async () => {
+  const { MdHtmlParser } = await import('../../src/parser/index.ts');
+  const md = (html: string): string => MdHtmlParser.parse(html).markdown;
+  assert.equal(md('<p><span style="font-weight : bold">x</span></p>'), '**x**');
+  assert.equal(md('<p><span style="FONT-WEIGHT: BOLD">x</span></p>'), '**x**');
+  assert.equal(md('<p><span style="font-weight:bold!important;font-weight:normal">x</span></p>'), '**x**');
+  assert.equal(md('<p><span style="not-font-weight:bold">x</span></p>'), 'x');
 });
 
 test('HTML conversion: two lists side by side stay two, a table\'s caption is a paragraph before it, a cell\'s blocks are set apart', async () => {
@@ -958,7 +1066,7 @@ test('ourus\'s copy of an unclosed fence keeps its code, a line like a closing f
 test('a bracket autoClose lists pairs in an empty note, the closer ours', () => {
   const paired = assertApplied(executeOnText('', { type: 'insertText', text: '(' }, { config: { autoClose: ['('] } }));
   assert.equal(paired.view.doc.text, '()');
-  assert.equal(paired.selection.head, 1);
+  assert.equal(paired.view.selection.head, 1);
   assert.deepEqual([...paired.view.doc.marks.auto], [1]);
 });
 
@@ -996,7 +1104,7 @@ test('a note opening with a byte-order mark: every command as on the note withou
           assert.equal(resultStatus(withMark), resultStatus(without), context);
           if (without instanceof OurusSuccess && withMark instanceof OurusSuccess) {
             assert.equal(withMark.view.doc.text, BOM + without.view.doc.text, context);
-            assert.deepEqual(withMark.selection, { anchor: without.selection.anchor + 1, head: without.selection.head + 1 }, context);
+            assert.deepEqual(withMark.view.selection, { anchor: without.view.selection.anchor + 1, head: without.view.selection.head + 1 }, context);
             assert.deepEqual([...withMark.view.doc.marks.placeholders], [...without.view.doc.marks.placeholders].map((p) => p + 1), context);
           }
         }
@@ -1011,28 +1119,28 @@ test('a paragraph starting with a byte-order mark, moved first, gets a blank lin
   assert.deepEqual(moved.view.doc.rootNode.children.map((n) => n.kind), ['paragraph', 'heading']);
   const text = assertApplied(executeOnText('a\n\n\ufeffb\n', { type: 'moveSubtreeUp' }, { caret: 4 }));
   assert.equal(text.view.doc.text, '\n\ufeffb\n\na\n');
-  assert.deepEqual(text.selection, { anchor: 2, head: 2 });
+  assert.deepEqual(text.view.selection, { anchor: 2, head: 2 });
 });
 
-test('a drag\'s deletion is the selection deleted as a cut deletes it: a subtree selection\'s roots taken out, the host\'s deletion checked by the guards', () => {
+test('a drag\'s deletion is the selection deleted as a cut deletes it: a subtree selection\'s roots taken out, the host\'s deletion checked by the zoom guard', () => {
   // (a subtree selection, as cut: its roots out, the zoom root too)
   const list = OurusView.of(OurusDoc.parse('- a\n- b\n- c\n'));
-  const dragged = assertApplied(executeCommand(list, { type: 'deleteByDrag' }, list.selectionOf([2])));
+  const dragged = assertApplied(executeCommand(list.withSelection(list.selectionOf([2])), { type: 'deleteByDrag' }));
   assert.equal(dragged.view.doc.text, '- a\n- c\n');
-  assert.deepEqual(dragged.selection, { anchor: 3, head: 3 });
+  assert.deepEqual(dragged.view.selection, { anchor: 3, head: 3 });
   const zoomed = OurusView.of(OurusDoc.parse('- a\n  - b\n- c'), { zoom: 1 });
-  const root = assertApplied(executeCommand(zoomed, { type: 'deleteByDrag' }, zoomed.selectionOf([1])));
+  const root = assertApplied(executeCommand(zoomed.withSelection(zoomed.selectionOf([1])), { type: 'deleteByDrag' }));
   assert.equal(root.view.doc.text, '- c');
-  assert.equal(root.view.doc.text, assertApplied(executeCommand(zoomed, { type: 'cut' }, zoomed.selectionOf([1]))).view.doc.text);
-  // (part of a text, the host's: refused where its deletion would lose a block id, or leave the zoom)
+  assert.equal(root.view.doc.text, assertApplied(executeCommand(zoomed.withSelection(zoomed.selectionOf([1])), { type: 'cut' })).view.doc.text);
+  // (part of a text, the host's, a block id's markup too; refused where it would leave the zoom)
   const id = executeOnText('p ^abc', { type: 'deleteByDrag' }, { anchor: 2, head: 3, config: { flavor: 'obsidian', markup: 'decorated' } });
-  assert.ok(id instanceof OurusRejected && id.reason === 'block-id');
-  const leaves = executeCommand(OurusView.of(OurusDoc.parse('p\n- child\n\nq'), { zoom: 1 }), { type: 'deleteByDrag' }, { anchor: 0, head: 2 });
+  assert.ok(id instanceof OurusDeferred);
+  const leaves = executeCommand(OurusView.of(OurusDoc.parse('p\n- child\n\nq'), { zoom: 1, selection: { anchor: 0, head: 2 } }), { type: 'deleteByDrag' });
   assert.ok(leaves instanceof OurusRejected && leaves.reason === 'outside-zoom');
 });
 
 test('a flat paste of many items is written in linear time, and past JavaScript\'s limit on a call\'s arguments', async () => {
-  const { spliceIn } = await import('../../src/writer/draft.ts');
+  const { spliceIn } = await import('../../src/text/index.ts');
   // (200,000 put in at once, past the limit on arguments: in order, around what was there)
   const list = ['a', 'b', 'c'];
   spliceIn(list, 1, 1, Array.from({ length: 200000 }, (_, k) => `${k}`));
@@ -1082,7 +1190,7 @@ test('the readback compares a verbatim block\'s lines as they read: a re-indent 
   // (a fence indented one space takes a column of its tab-led line: `␠␠␠PAYLOAD`; made an item, nothing would)
   for (const [source, nodes] of [[' ```\n\tPAYLOAD\n ```', [1]], ['- a\n\n ```\n\tx\n ```', [2]]] as const) {
     const refused = executeOnText(source, { type: 'indent', nodes: [...nodes] });
-    assert.ok(refused instanceof OurusRejected && refused.reason === 'write-failed' && /^the text written doesn't read as the draft: root › \d: code /.test(refused.detail ?? ''), JSON.stringify(source));
+    assert.ok(refused instanceof OurusFailed && /^the text written doesn't read as the draft: root › \d: code /.test(refused.detail ?? ''), JSON.stringify(source));
   }
   // (moves whose code reads the same still write)
   assert.equal(appliedText(executeOnText('- a\n  - ```\n    \tx\n    ```', { type: 'outdent', nodes: [2] })), '- a\n- ```\n  \tx\n  ```');
@@ -1096,7 +1204,7 @@ test('a paste over a selection from a text\'s start puts the nodes where the sel
   for (const config of [{ flavor: 'obsidian', markup: 'text' }, {}] as const) {
     const first = assertApplied(executeOnText('abc\ndef', { type: 'paste', clipboard: md }, { anchor: 0, head: 3, config }));
     assert.equal(first.view.doc.text, '- x\n- y\n\ndef');
-    assert.deepEqual(first.selection, { anchor: 7, head: 7 });
+    assert.deepEqual(first.view.selection, { anchor: 7, head: 7 });
   }
   assert.equal(appliedText(executeOnText('abc def', { type: 'paste', clipboard: md }, { anchor: 0, head: 3 })), '- x\n- y\n\ndef');
   // (from mid-text, after the node, as a caret there pastes)
@@ -1124,16 +1232,132 @@ test('a table pasted on an empty item is the item\'s text, as code is: on its ma
     for (const [start, caret] of [['- ', 2], ['-', 1], ['- [ ] ', 6]] as const) {
       const pasted = assertApplied(executeOnText(start, { type: 'paste', clipboard: { 'text/markdown': table } }, { caret, config: { flavor } }));
       assert.equal(pasted.view.doc.text, '- | a |\n  | --- |\n  | b |', `${flavor} ${JSON.stringify(start)}`);
-      assert.deepEqual(pasted.selection, { anchor: 25, head: 25 });
+      assert.deepEqual(pasted.view.selection, { anchor: 25, head: 25 });
       assert.match(pasted.view.doc.mdTree.renderHtml(), /^<ul>\n<li>\n<table>/);
     }
   }
   assert.equal(appliedText(executeOnText('- \n  - child', { type: 'paste', clipboard: { 'text/plain': table } }, { caret: 2, config: { flavor: 'gfm' } })), '- | a |\n  | --- |\n  | b |\n  - child');
   assert.equal(appliedText(executeOnText('- a\n- \n- c', { type: 'paste', clipboard: { 'text/markdown': table } }, { caret: 6, config: { flavor: 'gfm' } })), '- a\n- | a |\n  | --- |\n  | b |\n- c');
   // (the item itself, its text set: its number, its blank lines, a zoom on it kept)
-  assert.equal(appliedText(executeOnText('1. a\n2. b\n3. ', { type: 'paste', clipboard: { 'text/markdown': table } }, { caret: 13, config: { flavor: 'gfm', listNumbers: 'keep' } })), '1. a\n2. b\n3. | a |\n   | --- |\n   | b |');
+  assert.equal(appliedText(executeOnText('1. a\n2. b\n3. ', { type: 'paste', clipboard: { 'text/markdown': table } }, { caret: 13, config: { flavor: 'gfm', orderedLists: 'shift' } })), '1. a\n2. b\n3. | a |\n   | --- |\n   | b |');
   assert.equal(appliedText(executeOnText('- \n\n\nnext', { type: 'paste', clipboard: { 'text/markdown': table } }, { caret: 2, config: { flavor: 'gfm' } })), '- | a |\n  | --- |\n  | b |\n\n\nnext');
   const zoomed = assertApplied(executeOnText('- \n  - child', { type: 'paste', clipboard: { 'text/markdown': table } }, { caret: 2, config: { flavor: 'gfm' }, view: { zoom: 1 } }));
   assert.equal(zoomed.view.doc.text, '- | a |\n  | --- |\n  | b |\n  - child');
   assert.equal(zoomed.view.zoom, 1);
+});
+
+test('the clipboard\'s HTML is the copy as it read in its note: its definitions, its place, a text\'s inline text; a block id leaves no blank (B260)', () => {
+  const html = (text: string, command: OurusCommand, start: Parameters<typeof executeOnText>[2] = {}): string => assertApplied(executeOnText(text, command, start)).clipboard!['text/html']!;
+  // (a footnote copied without its reference: its content)
+  assert.notEqual(html('[^1]: note\n  more\n', { type: 'copy' }, { caret: 4 }).replace(/<!--.*?-->/g, '').trim(), '');
+  // (no blank where a block id was)
+  assert.doesNotMatch(html('- a ^id\n  - b ^id2\n', { type: 'copy' }, { caret: 3, config: { flavor: 'obsidian' } }), /[ab] (\n|<)/);
+  // (a reference link, with the note's definition)
+  assert.match(html('[x][a]\n\n[a]: /url "title"', { type: 'copy', nodes: [1] }), /<a href="\/url" title="title">x<\/a>/);
+  // (rules from mid-note, no front matter)
+  assert.match(html('Intro\n\n---\n\nDetails\n\n---\n\nEnd', { type: 'copy', nodes: [2, 3, 4] }, { config: { flavor: 'obsidian' } }), /Details/);
+  // (text from inside a paragraph: text, no block)
+  for (const [text, from, to, block] of [['before # Heading after', 7, 16, /<h1>/], ['before - item after', 7, 13, /<ul>/], ['before > quote after', 7, 14, /<blockquote>/]] as const) {
+    const copied = html(text, { type: 'copy' }, { anchor: from, head: to });
+    assert.doesNotMatch(copied, block);
+    assert.ok(copied.includes(text.slice(from, to).replace('>', '&gt;')), copied);
+  }
+});
+
+test('a command at the note\'s end where its last line is blank but not empty, with no line break after it, keeps the blank line it ends with (B305)', () => {
+  // (Backspace joining an empty last item above a last line of spaces or a tab)
+  for (const last of [' ', '\t']) {
+    const r = assertApplied(executeOnText(`- a\n\n-\n${last}`, { type: 'deleteContentBackward' }, { caret: 6 }));
+    assert.equal(r.view.doc.text, '- a\n\n', JSON.stringify(last));
+    assert.deepEqual(r.view.selection, { anchor: 3, head: 3 });
+  }
+});
+
+test('a decorated caret entering a node starts where it edits, not on an opening fence: blank code\'s code line, a textless quote\'s code, a folded quote opened (B214)', () => {
+  const decorated = { markup: 'decorated' } as const;
+  assert.equal(assertApplied(executeOnText('p\n\n```\n\n```', { type: 'zoomIn', nodes: [2] }, { config: decorated })).view.selection.head, 7);
+  assert.equal(assertApplied(executeOnText('p\n\n> ```\n> x\n> ```', { type: 'zoomIn', nodes: [2] }, { config: { ...decorated, quotes: 'container' } })).view.selection.head, 11);
+  const view = OurusView.of(OurusDoc.parse('> ```\n> x\n> ```', { config: { ...decorated, quotes: 'container' } }), { folded: [1] });
+  const left = assertApplied(executeCommand(view.withSelection(view.selectionOf([1])), { type: 'selectNode' }));
+  assert.equal(left.view.selection.head, 8);
+  assert.deepEqual([...left.view.folded], []);
+});
+
+test('one line placed at a bare marker whose text starts below it: a no-break space typed, and a plain paste under `pastePlainLines: enter`, stay the item\'s (B196)', () => {
+  assert.equal(appliedText(executeOnText('-\n  a', { type: 'insertText', text: '\u00a0' }, { caret: 1 })), '- \u00a0\n  a');
+  assert.equal(appliedText(executeOnText('-\n  a', { type: 'pastePlain', text: 'x' }, { caret: 1, config: { pastePlainLines: 'enter' } })), '- x\n  a');
+});
+
+test('Markdown\'s blank, not JavaScript\'s: a label\'s no-break space, a line of them, a fence\'s info, a form feed\'s line are text (B250)', () => {
+  assert.equal(MdTree.parse('[a] [\u00a0a]\n\n[a]: /plain\n[\u00a0a]: /nbsp').references.size, 2);
+  assert.notEqual(MdFlavor.gfm.firstNonParagraph(['\u00a0', '', '\u00a0']), -1);
+  assert.equal(MdTree.parse('```\u00a0js\u00a0\nx\n```').root.children[0]!.attrs.info, '\u00a0js\u00a0');
+  assert.equal(OurusDoc.parse('a\n\n\f\n\nb').isEmptyLine(2), false);
+});
+
+test('brackets pair, wrap and come back alike in prose, a quote atom and code; not in markup, a quote line\'s `>`s, its marker, a heading\'s `#`s, a checkbox, a fence (B242, B244)', () => {
+  const atom: Partial<OurusConfig> = { autoClose: ['('], quotes: 'atom' };
+  // (a quote atom: at a caret, over a selection)
+  assert.equal(appliedText(executeOnText('> a ', { type: 'insertText', text: '(' }, { caret: 4, config: atom })), '> a ()');
+  assert.equal(appliedText(executeOnText('> abc', { type: 'insertText', text: '(' }, { anchor: 2, head: 5, config: atom })), '> (abc)');
+  // (its markup: the host's)
+  for (const [text, anchor, head] of [['> - a b', 3, 3], ['> - a b', 2, 4], ['> # h', 3, 3], ['> - [ ] t', 6, 6]] as const) {
+    assert.ok(executeOnText(text, { type: 'insertText', text: '(' }, { anchor, head, config: atom }) instanceof OurusDeferred, `${text} ${anchor}`);
+  }
+  // (code: Backspace takes back a pair of ours; a double listed alone closes)
+  const paired = executeOnText('```\n\n```', { type: 'insertText', text: '(' }, { caret: 4, config: { autoClose: ['('] } });
+  assert.equal(appliedText(executeAfter(paired, { type: 'deleteContentBackward' })), '```\n\n```');
+  assert.equal(appliedText(executeOnText('```\n[\n```', { type: 'insertText', text: '[' }, { caret: 5, config: { autoClose: ['[['] } })), '```\n[[]]\n```');
+  // (and in a quote atom, a pair of ours comes back too)
+  assert.equal(appliedText(executeAfter(executeOnText('> a ', { type: 'insertText', text: '(' }, { caret: 4, config: atom }), { type: 'deleteContentBackward' })), '> a ');
+});
+
+test('addBlockId on an empty paragraph a placeholder holds is refused: the id alone would be no paragraph; an empty item takes one (B236)', () => {
+  const entered = executeOnText('a\n\nb', { type: 'enter' }, { caret: 1, config: { flavor: 'obsidian' } });
+  const r = executeAfter(entered, { type: 'addBlockId', name: 'x' });
+  assert.ok(r instanceof OurusRejected && r.reason === 'not-expressible', r.constructor.name);
+  assert.equal(appliedText(executeAfter(executeOnText('- a', { type: 'enter' }, { caret: 3, config: { flavor: 'obsidian' } }), { type: 'addBlockId', name: 'x' })), '- a\n- ^x');
+});
+
+test('a placeholder on a text\'s empty first line settles, the line going, as an empty last line\'s does (B239)', async () => {
+  const { settlePlaceholders } = await import('../../src/commands/index.ts');
+  for (const [text, at, want] of [['\ntext', 0, 'text'], ['a\n\n\ntext', 3, 'a\n\ntext'], ['- a\n- \n  text', 6, '- a\n- text']] as const) {
+    const doc = OurusDoc.parse(text, { marks: { placeholders: [at] } });
+    const settled = settlePlaceholders(OurusView.of(doc, { selection: doc.text.length }))!;
+    assert.equal(settled.view.doc.text, want, JSON.stringify(text));
+    assert.deepEqual([...settled.view.doc.marks.placeholders], []);
+  }
+});
+
+test('a held space in a text the draft carries as it was, moved or under another prefix, settles as in a text it sets (B237\'s shape reached from keys)', () => {
+  // (`- a⏎  ┃```…`, Delete: the host's edit, one space held; then Alt-Down)
+  assertApplied(executeOnText('- a\n ```\n  x\n  ```\n- b\n', { type: 'moveSubtreeDown' }, { caret: 4, placeholders: [4] }));
+  assertApplied(executeOnText('a\n- b\n  - c\n', { type: 'moveSubtreeUp', nodes: [2] }, { config: { flavor: 'obsidian' }, placeholders: [6] }));
+});
+
+test('a blank line of ours between two quotes goes only where they stay apart without it: Tab on the first one\'s last paragraph, made an item, keeps it (B296)', () => {
+  const source = '> first\n>\n> second\n\n>';
+  for (const quotes of ['container', 'atom'] as const) {
+    const doc = OurusDoc.parse(source, { config: { quotes }, marks: { auto: [source.lastIndexOf('\n')] } });
+    const r = assertApplied(executeCommand(OurusView.of(doc, { selection: source.indexOf('second') }), { type: 'indent' }));
+    assert.equal(r.view.doc.rootNode.children.length, 2, quotes);
+  }
+  const plain = OurusDoc.parse(source, { marks: { auto: [source.lastIndexOf('\n')] } });
+  assert.equal(assertApplied(executeCommand(OurusView.of(plain, { selection: source.indexOf('second') }), { type: 'indent' })).view.doc.text, '> first\n>\n> - second\n\n>');
+});
+
+test('a child further in than its sibling, moved out after its parent, is read at its new depth: the paragraph after it kept apart (B303)', () => {
+  const moved = executeCommand(OurusView.of(OurusDoc.parse('a\n- b\n\n- p\n    - c\n  - d\n\nz\n')), { type: 'moveSubtree', nodes: [4], to: { parent: 1, after: 3 } });
+  assert.equal(appliedText(moved), 'a\n- b\n\n- p\n  - d\n\n- c\n\nz\n');
+});
+
+test('outdenting an item over a quoted list at an in-between indent is refused, not failed: its child read at its new depth (B190)', () => {
+  const r = executeOnText('%% comment %%\n1. first\n   - nested bul\nx- sibling\n  > - list in quote', { type: 'outdent' }, { caret: 40, config: { flavor: 'gfm' } });
+  assert.ok(r instanceof OurusRejected && r.reason === 'not-expressible');
+});
+
+test('a refusal names a node in words, not by the parser\'s names: a rule, code (B259)', () => {
+  const detail = (r: ReturnType<typeof executeOnText>): string | undefined => (r instanceof OurusRejected ? r.detail : undefined);
+  assert.equal(detail(executeOnText('p\n\n---', { type: 'outdent' }, { caret: 3 })), 'a rule has no level to leave');
+  assert.equal(detail(executeOnText('x\n\n```\ncode\n```\n\ny', { type: 'deleteContentBackward' }, { caret: 17 })), "can't join into code");
 });

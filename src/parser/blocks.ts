@@ -2,6 +2,7 @@
 // block starts in the spec's order of precedence. Ported from commonmark.js 0.31.2 (lib/blocks.js,
 // BSD-2-Clause, see NOTICE).
 
+import { trimMd } from '../text/index.ts';
 import { isBlankText, isSpaceOrTab } from './chars.ts';
 import type { MdBlockSpec, MdBlockStart, MdFrame, MdLeafRole, MdMachine } from './machine.ts';
 import { scanReference } from './refs.ts';
@@ -91,6 +92,9 @@ export const reCodeFence = /^`{3,}(?!.*`)|^~{3,}/;
 const reClosingCodeFence = /^(?:`{3,}|~{3,})(?=[ \t]*$)/;
 export const reSetextUnderline = /^(?:=+|-+)[ \t]*$/;
 const reOrderedMarker = /^(\d{1,9})([.)])/;
+
+/** The largest number an ordered list item's marker can have: nine digits. */
+export const MAX_ITEM_NUMBER = 999999999;
 
 /** Characters a CommonMark block start can begin with. */
 export const isCommonMarkStartChar = (c: number): boolean =>
@@ -298,7 +302,7 @@ export const atxHeadingStart: MdBlockStart = {
     m.advanceNextNonspace();
     m.advanceOffset(match[0].length, false);
     m.closeUnmatchedBlocks();
-    m.addSingleLine(atxRoles[match[0].trim().length - 1]!);
+    m.addSingleLine(atxRoles[trimMd(match[0]).length - 1]!);
     m.advanceOffset(m.line.length - m.offset, false);
     return 2;
   },
@@ -318,7 +322,7 @@ export const fencedCodeStart: MdBlockStart = {
     m.addChild({ spec: FENCE, char, length, offset } as FenceFrame);
     m.advanceNextNonspace();
     m.advanceOffset(length, false);
-    m.setLeaf({ type: 'code_block', first: true, fenced: true, fenceChar: char, fenceLength: length, fenceOffset: offset, info: m.line.slice(m.offset, m.realLength).trim() });
+    m.setLeaf({ type: 'code_block', first: true, fenced: true, fenceChar: char, fenceLength: length, fenceOffset: offset, info: trimMd(m.line.slice(m.offset, m.realLength)) });
     return 2;
   },
 };

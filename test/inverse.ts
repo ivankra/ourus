@@ -34,7 +34,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
-import { executeCommand, type InsertionPoint, OurusRejected, OurusSuccess } from '../src/commands/index.ts';
+import { executeCommand, type InsertionPoint, OurusFailed, OurusRejected, OurusSuccess } from '../src/commands/index.ts';
 import { OurusDoc } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
 import { textStart } from '../src/commands/util.ts';
@@ -80,7 +80,7 @@ const isBlank = (line: string): boolean => /^[ \t>]*$/.test(line);
 const outline = (doc: OurusDoc): string => JSON.stringify(allNodes(doc).map((n) => [n.depth, n.kind, n.head?.type ?? null]));
 function classify(start: OurusDoc, end: PlayedState, from: number): string {
   const [a, b] = [start.text, end.view.doc.text];
-  if (a === b) return end.selection.head === from && end.selection.anchor === from ? 'same' : 'caret';
+  if (a === b) return end.view.selection.head === from && end.view.selection.anchor === from ? 'same' : 'caret';
   if (outline(start) !== outline(end.view.doc)) return 'tree';
   const solid = (s: string): string => s.split('\n').filter((l) => !isBlank(l)).join('\n');
   if (solid(a) === solid(b)) return a.split('\n').filter(isBlank).length < b.split('\n').filter(isBlank).length ? 'blank+' : 'blank-';
@@ -105,7 +105,7 @@ interface Found {
   dumped: string[];
 }
 const dumping = !!process.env.INVERSE_DUMP;
-const draw = (p: PlayedState): string => JSON.stringify(drawDoc(p.view, p.selection));
+const draw = (p: PlayedState): string => JSON.stringify(drawDoc(p.view, p.view.selection));
 
 /** Plays every pair at every caret position of the start buffers `share` names. */
 function playShare(share: readonly number[]): Found {
@@ -132,13 +132,13 @@ function playShare(share: readonly number[]): Found {
     for (const [first, second] of PAIRS) {
       for (let pos = 0; pos <= s.text.length; pos++) {
         if (s.text[pos - 1] === '\r' && s.text[pos] === '\n') continue;
-        const at: PlayedState = { view, selection: { anchor: pos, head: pos }, clipboard: {} };
+        const at: PlayedState = { view: view.withSelection(pos), clipboard: {} };
         found.runs++;
         let mid: PlayedState;
         let end: PlayedState;
         try {
           mid = playActions(at, [first]);
-          if (mid.last instanceof OurusRejected && mid.last.reason === 'write-failed') {
+          if (mid.last instanceof OurusFailed) {
             fail(index, `${first} failed to write: ${s.name} ${draw(at)}`);
             continue;
           }
@@ -149,7 +149,7 @@ function playShare(share: readonly number[]): Found {
           continue;
         }
         const last = end.last;
-        if (last instanceof OurusRejected && last.reason === 'write-failed') {
+        if (last instanceof OurusFailed) {
           fail(index, `${second} after ${first} failed to write: ${s.name} ${draw(at)} → ${draw(mid)}`);
           continue;
         }
@@ -172,7 +172,7 @@ function playShare(share: readonly number[]): Found {
       const text = doc.textOf(held);
       const pos = text ? doc.posOf(held, textStart(text), 1) : doc.rangeOf(node).from;
       const caret = { anchor: pos, head: pos };
-      const picked = executeCommand(view, { type: 'drag', pressed: node.id }, caret);
+      const picked = executeCommand(view.withSelection(caret), { type: 'drag', pressed: node.id });
       if (!(picked instanceof OurusSuccess) || !picked.dropMap) continue;
       const nodes = picked.dropMap.nodes;
       const root = doc.node(nodes[0]!)!;
@@ -180,28 +180,28 @@ function playShare(share: readonly number[]): Found {
       for (const point of picked.dropMap.seams.flatMap((seam) => seam.points)) {
         if (point.current) continue;
         found.runs++;
-        const at: PlayedState = { view, selection: caret, clipboard: {} };
+        const at: PlayedState = { view: view.withSelection(caret), clipboard: {} };
         const where = `${s.name} ${draw(at)} → depth ${point.depth} under ${point.parent === 'root' ? 'the root' : `line ${doc.node(point.parent)!.startLine + 1}`}`;
         let mid: PlayedState;
         let end: PlayedState;
         try {
-          const dropped = executeCommand(view, point.drop, caret);
-          if (dropped instanceof OurusRejected && dropped.reason === 'write-failed') {
+          const dropped = executeCommand(view.withSelection(caret), point.drop);
+          if (dropped instanceof OurusFailed) {
             // (at a start the drop pass knows, reported, not failed: its list says why)
             if (s.name in KNOWN) known.push(`moveSubtree failed to write, known (drops.ts): ${where}`);
             else fail(index, `moveSubtree failed to write: ${where}`);
             continue;
           }
           if (!(dropped instanceof OurusSuccess) || !dropped.changes.length) continue;
-          mid = { view: dropped.view, selection: dropped.selection, clipboard: {}, last: dropped };
-          const returned = executeCommand(mid.view, { type: 'moveSubtree', nodes, to: back }, mid.selection);
-          end = { view: returned instanceof OurusSuccess ? returned.view : mid.view, selection: returned instanceof OurusSuccess ? returned.selection : mid.selection, clipboard: {}, last: returned };
+          mid = { view: dropped.view, clipboard: {}, last: dropped };
+          const returned = executeCommand(mid.view, { type: 'moveSubtree', nodes, to: back });
+          end = { view: returned instanceof OurusSuccess ? returned.view : mid.view, clipboard: {}, last: returned };
         } catch (e) {
           fail(index, `moveSubtree threw: ${where}: ${(e as Error).message.split('\n')[0]}`);
           continue;
         }
         const last = end.last!;
-        if (last instanceof OurusRejected && last.reason === 'write-failed') {
+        if (last instanceof OurusFailed) {
           fail(index, `moveSubtree back failed to write: ${where} → ${draw(mid)}`);
           continue;
         }

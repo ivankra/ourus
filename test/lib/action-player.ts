@@ -104,9 +104,8 @@ export const isAction = (token: string): boolean => /^"[^"]*"$/.test(token) || i
 export const isDropAction = (token: string): boolean => DROP.test(token);
 
 export interface PlayedState {
-  /** The document and the reader's folds and zoom over it. */
+  /** The document and the reader's selection, folds and zoom over it. */
   view: OurusView;
-  selection: OurusSelection;
   /** The host's clipboard, each format's text. */
   clipboard: Clipboard;
   /** The column vertical motion aims for, kept while the caret moves up and down. */
@@ -130,7 +129,7 @@ interface Snapshot {
   readonly doc: OurusDoc;
 }
 
-const snapshot = (state: PlayedState, selection = state.selection): Snapshot => ({ text: state.view.doc.text, marks: state.view.doc.marks, selection, doc: state.view.doc });
+const snapshot = (state: PlayedState, selection = state.view.selection): Snapshot => ({ text: state.view.doc.text, marks: state.view.doc.marks, selection, doc: state.view.doc });
 
 export function playActions(state: PlayedState, actions: readonly string[]): PlayedState {
   for (const action of actions) {
@@ -141,10 +140,10 @@ export function playActions(state: PlayedState, actions: readonly string[]): Pla
     const before = snapshot(state);
     state = step({ ...state, last: undefined, ...(/Line(?:Up|Down)$/.test(action) ? {} : { goal: undefined }) }, action);
     if (state.view.doc.text !== before.text) state = { ...state, undone: [...(state.undone ?? []), before], redone: [] };
-    const settled = settlePlaceholders(state.view, state.selection);
+    const settled = settlePlaceholders(state.view);
     // leaving a placeholder joins the step before it, which made the empty node: one undo takes both back
     // (the selection the settling gives, which it keeps where the view shows it)
-    if (settled) state = { ...state, view: settled.view, selection: settled.selection, redone: [] };
+    if (settled) state = { ...state, view: settled.view, redone: [] };
   }
   return state;
 }
@@ -161,14 +160,14 @@ function history(state: PlayedState, action: 'undo' | 'redo'): PlayedState {
     ...state,
     last: undefined,
     goal: undefined,
-    view: state.view.withDoc(entry.doc.withConfig(state.view.doc.config)),
-    selection: entry.selection,
+    view: state.view.withDoc(entry.doc.withConfig(state.view.doc.config)).withSelection(entry.selection),
     ...(action === 'undo' ? { undone: rest, redone: other } : { redone: rest, undone: other }),
   };
 }
 
 function step(state: PlayedState, action: string): PlayedState {
-  const { view: viewed, selection } = state;
+  const { view: viewed } = state;
+  const selection = viewed.selection;
   const doc = viewed.doc;
   const text = doc.text;
   if (action.startsWith('"')) return typeText(state, action.slice(1, -1));
@@ -191,7 +190,7 @@ function step(state: PlayedState, action: string): PlayedState {
     // `LimitSelectionWhenZoomedIn`)
     const zoom = viewed.zoomRange();
     if (zoom) head = Math.min(Math.max(head, zoom.from), zoom.to);
-    return { ...state, goal, selection: { anchor: extend ? selection.anchor : head, head } };
+    return { ...state, goal, view: viewed.withSelection({ anchor: extend ? selection.anchor : head, head }) };
   }
   const dropped = DROP.exec(action);
   if (dropped) return { ...run(state, action === 'pasteAt' ? pasteAtCommand(state) : dropCommand(state, dropped[1])), drop: null };
@@ -220,7 +219,7 @@ function step(state: PlayedState, action: string): PlayedState {
 function dropCommand(state: PlayedState, label: string | undefined): OurusCommand | OurusResult {
   if (!state.drop) throw new Error('a drop with no drop line (`▸`) in the start, or a second drop: a case drops once');
   const pressed = pressedOf(state, label);
-  const run = dragRun(new CommandContext(state.view, state.selection), pressed);
+  const run = dragRun(new CommandContext(state.view), pressed);
   if (!Array.isArray(run)) return run;
   const to = placeAtSeam(state.view, run, state.drop.line, state.drop.depth);
   if (typeof to === 'string') throw new Error(`the drop line: ${to}`);
@@ -260,16 +259,17 @@ function guarded(state: PlayedState, next: PlayedState): PlayedState {
 
 function hostRun(state: PlayedState, command: OurusCommand | OurusResult): PlayedState {
   if (!('type' in command)) return { ...state, last: command };
-  const { view, selection } = state;
+  const { view } = state;
+  const selection = view.selection;
   const doc = view.doc;
   const text = doc.text;
   const from = Math.min(selection.anchor, selection.head);
   const to = Math.max(selection.anchor, selection.head);
   const type = command.type;
-  const last = executeCommand(view, command, selection);
+  const last = executeCommand(view.withSelection(selection), command);
   if (last instanceof OurusSuccess) {
     if (applyChanges(text, last.changes) !== last.view.doc.text) throw new Error(`${type}: its changes don't produce its document`);
-    return { ...state, view: last.view, selection: last.selection, last, ...(last.clipboard && { clipboard: last.clipboard }) };
+    return { ...state, view: last.view, last, ...(last.clipboard && { clipboard: last.clipboard }) };
   }
   if (last instanceof OurusRejected) return { ...state, last };
   // not ours: the host's default
@@ -306,7 +306,7 @@ function hostRun(state: PlayedState, command: OurusCommand | OurusResult): Playe
     }
     // the selection commands: a select all, a line's selection (CodeMirror's `selectLineDown`)
     case 'expandSelection':
-      return { ...state, selection: { anchor: 0, head: text.length }, last };
+      return { ...state, view: view.withSelection({ anchor: 0, head: text.length }), last };
     case 'selectNodeDown':
     case 'selectNodeUp':
       return { ...step(state, type === 'selectNodeDown' ? 'selectLineDown' : 'selectLineUp'), last };
@@ -321,12 +321,13 @@ function hostRun(state: PlayedState, command: OurusCommand | OurusResult): Playe
  */
 function typeText(state: PlayedState, text: string): PlayedState {
   for (const ch of text) {
-    const { view, selection } = state;
+    const { view } = state;
+    const selection = view.selection;
     const doc = view.doc;
-    const last = executeCommand(view, { type: 'insertText', text: ch }, selection);
+    const last = executeCommand(view.withSelection(selection), { type: 'insertText', text: ch });
     if (last instanceof OurusSuccess) {
       if (applyChanges(doc.text, last.changes) !== last.view.doc.text) throw new Error(`insertText: its changes don't produce its document`);
-      state = { ...state, view: last.view, selection: last.selection, last };
+      state = { ...state, view: last.view, last };
     } else if (last instanceof OurusRejected) state = { ...state, last };
     else state = guarded(state, { ...edit(state, { from: Math.min(selection.anchor, selection.head), to: Math.max(selection.anchor, selection.head), insert: ch }), last });
   }
@@ -337,7 +338,7 @@ function edit(state: PlayedState, change: ChangeSpec): PlayedState {
   const caret = change.from + change.insert.length;
   // the host tells where the caret lands, so an emptied node stays as a placeholder
   const view = state.view.update({ changes: [change], caret });
-  return { ...state, view, selection: { anchor: caret, head: caret } };
+  return { ...state, view };
 }
 
 /** The display column of `pos` on a line starting at `from`. */

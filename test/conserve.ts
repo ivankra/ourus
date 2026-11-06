@@ -10,112 +10,59 @@
 //
 // A report of what fails, grouped by kind (and for paste, by clipboard); each group's count is held to
 // a baseline (`conserve.baseline.json`) on the same corpus, so a new kind of loss, or more of one,
-// fails the run. An exception always fails it.
+// fails the run. An exception always fails it. The checks are `lib/report-checks.ts`'s; an update
+// keeps a few cases of each group untriaged (`bugs-untriaged.json`), which `bugs.ts` replays.
 //
 //   node test/conserve.ts                      # the report, against the baseline
 //   CONSERVE_UPDATE=1 node test/conserve.ts    # the same, then its counts as the new baseline, once read
 //   CONSERVE_EXAMPLES=8 node test/conserve.ts  # examples per group (default 2)
 //   CONSERVE_GENERATED=300 node test/conserve.ts  # notes in the corpus (default 80)
 
-import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { MdFlavor, MdHtmlParser, MdTree } from '../src/index.ts';
-import { executeCommand, OurusRejected, OurusSuccess } from '../src/commands/index.ts';
 import { OurusDoc } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
-import { generatedStarts, type Clipboard, readBaseline, writeBaseline, corpusHash, noteFailure } from './lib/index.ts';
+import { CASES_PER_GROUP, CLIPS, corpusHash, generatedStarts, htmlFailures, noteFailure, pasteFailures, readBaseline, recordUntriaged, writeBaseline, type Found, type UntriagedCase } from './lib/index.ts';
 
 const here = resolve(import.meta.dirname, '..');
 const examples = Number(process.env.CONSERVE_EXAMPLES ?? 2);
 const starts = generatedStarts(Number(process.env.CONSERVE_GENERATED ?? 80), 7);
 const corpus = corpusHash(starts);
 
-const CLIPS: Readonly<Record<string, Clipboard>> = {
-  word: { 'text/plain': 'word' },
-  twolines: { 'text/plain': 'line one\nline two' },
-  paragraphs: { 'text/plain': 'first para\n\nsecond para' },
-  trailing: { 'text/plain': 'solo\n' },
-  list: { 'text/plain': '- list one\n- list two' },
-  nested: { 'text/plain': '- nest one\n  - nest two\n    - nest three\n- nest four' },
-  ordered: { 'text/plain': '1. ord one\n2. ord two' },
-  task: { 'text/plain': '- [ ] task one\n- [x] task two' },
-  heading: { 'text/plain': '# head one\ntext under' },
-  code: { 'text/plain': '```js\nlet code;\n```' },
-  table: { 'text/plain': '| aa | bb |\n|---|---|\n| cc | dd |' },
-  quote: { 'text/plain': '> quote one\n> quote two' },
-  callout: { 'text/plain': '> [!note] call\n> body' },
-  indented: { 'text/plain': '    indent one\n    indent two' },
-  htmlList: { 'text/html': '<ul><li>hl one</li><li>hl two<ul><li>hl three</li></ul></li></ul>', 'text/plain': 'hl one\nhl two\nhl three' },
-  htmlPara: { 'text/html': '<p>hp one</p><p>hp two</p>', 'text/plain': 'hp one\n\nhp two' },
-  markdown: { 'text/markdown': '- md one\n  - md two', 'text/plain': '- md one\n  - md two' },
-};
-
-/** Failures by kind: how many, and the first few as examples. */
 const groups = new Map<string, { runs: number; examples: string[] }>();
 const fails: string[] = [];
-const note = (key: string, example: string): void => noteFailure(groups, key, example, examples);
-const letters = (s: string): string => [...s.replace(/[^\p{L}]/gu, '')].sort().join('');
-/** The HTML with the differences that don't matter taken out; the text of a `<pre>` is kept as it is, to the space. */
-const norm = (h: string): string =>
-  h
-    .split(/(<pre[\s\S]*?<\/pre>)/)
-    .map((part, k) =>
-      k % 2
-        ? part
-        : part
-            .replace(/<!-- ourus -->/, '')
-            .replace(/ title="[^"]*"/g, '')
-            .replace(/<br \/>/g, ' ')
-            .replace(/<\/?p>/g, '')
-            .replace(/<section class="footnotes".*$/s, '')
-            .replace(/<sup class="footnote-ref">.*?<\/sup>/g, '')
-            .replace(/\s+/g, ' ')
-            .replace(/> </g, '><'),
-    )
-    .join('')
-    .trim();
-const mdFlavor = (flavor: unknown): MdFlavor => (flavor === 'obsidian' ? MdFlavor.obsidian : flavor === 'commonmark' ? MdFlavor.commonmark : MdFlavor.gfm);
+const updating = process.env.CONSERVE_UPDATE === '1';
+const cases: UntriagedCase[] = [];
+/** The failures `found` of a case, each in its group, an example kept with what it adds; the case kept untriaged on an update. */
+const note = (found: readonly Found[], where: string, kept: (group: string) => UntriagedCase): void => {
+  for (const f of found) {
+    noteFailure(groups, f.kind, f.detail ? `${where}\n         ${f.detail}` : where, examples);
+    if (updating && groups.get(f.kind)!.runs <= CASES_PER_GROUP) cases.push(kept(f.kind));
+  }
+};
 
 let runs = 0;
 for (const s of starts) {
   // ---- html
-  const flavor = mdFlavor(s.config.flavor);
   runs++;
   try {
-    const first = MdTree.parse(s.text, flavor).renderHtml();
-    const back = MdHtmlParser.parse(first).markdown;
-    if (norm(MdTree.parse(back, flavor).renderHtml()) !== norm(first)) note('html: renders differently after a round trip', `${JSON.stringify(s.text)}\n         → ${JSON.stringify(back)}`);
+    note(htmlFailures(s.text, s.config), JSON.stringify(s.text), (group) => ({ check: 'html', group, text: s.text, config: s.config }));
   } catch (e) {
     fails.push(`html threw: ${JSON.stringify(s.text)}: ${(e as Error).message.split('\n')[0]}`);
   }
   // ---- paste
-  const doc = OurusDoc.parse(s.text, { config: s.config });
-  const view = OurusView.of(doc);
+  const view = OurusView.of(OurusDoc.parse(s.text, { config: s.config }));
   const carets = new Set<number>([0, s.text.length]);
   for (let i = 0; i < s.text.length; i++) if (s.text[i] === '\n' || s.text[i - 1] === '\n' || i % 7 === 0) carets.add(i);
-  for (const [name, clip] of Object.entries(CLIPS)) {
-    const text = clip['text/plain'] ?? '';
-    for (const pos of carets) {
+  for (const clip of Object.keys(CLIPS)) {
+    for (const from of carets) {
       for (const over of [0, 5]) {
-        const to = Math.min(s.text.length, pos + over);
-        // (a selection over text drops that text: the letters it holds don't count)
-        const kept = s.text.slice(0, pos) + s.text.slice(to);
+        const to = Math.min(s.text.length, from + over);
         runs++;
-        const where = `${JSON.stringify(s.text)} ${JSON.stringify(s.config)} @${pos}${over ? `-${to}` : ''}`;
+        const where = `${JSON.stringify(s.text)} ${JSON.stringify(s.config)} @${from}${over ? `-${to}` : ''}`;
         try {
-          const result = executeCommand(view, { type: 'paste', clipboard: clip }, { anchor: pos, head: to });
-          if (result instanceof OurusRejected) {
-            if (result.reason === 'write-failed') note(`paste ${name}: write-failed`, where);
-            continue;
-          }
-          if (!(result instanceof OurusSuccess)) continue;
-          const after = result.view.doc.text;
-          const { anchor, head } = result.selection;
-          if (anchor < 0 || head < 0 || anchor > after.length || head > after.length) note(`paste ${name}: selection off the text`, where);
-          else if (letters(after) !== letters(kept + text)) note(`paste ${name}: letters lost or doubled`, `${where}\n         → ${JSON.stringify(after)}`);
+          note(pasteFailures(view, clip, from, to), where, (group) => ({ check: 'paste', group, text: s.text, config: s.config, clip, from, to }));
         } catch (e) {
-          fails.push(`paste ${name} threw: ${where}: ${(e as Error).message.split('\n')[0]}`);
+          fails.push(`paste ${clip} threw: ${where}: ${(e as Error).message.split('\n')[0]}`);
         }
       }
     }
@@ -136,8 +83,8 @@ for (const [key, group] of [...groups].sort((x, y) => y[1].runs - x[1].runs || (
 for (const failure of fails) console.log(`FAIL ${failure}`);
 if (rose.length) console.log(`\nmore failures than the baseline: ${rose.join('; ')}`);
 if (baseline && !sameCorpus) console.log('\nthe corpus changed since the baseline: its counts are not held to it; CONSERVE_UPDATE=1 records them');
-if (process.env.CONSERVE_UPDATE === '1') {
+if (updating) {
   writeBaseline(baselineFile, corpus, groups);
-  console.log(`baseline updated: ${baselineFile}`);
+  console.log(`baseline updated: ${baselineFile}; ${recordUntriaged('conserve', cases)} cases kept untriaged (test/bugs-untriaged.json)`);
 }
 process.exitCode = fails.length === 0 && rose.length === 0 ? 0 : 1;

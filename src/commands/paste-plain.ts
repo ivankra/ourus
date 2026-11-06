@@ -3,11 +3,11 @@
 // the text becomes; `done()` escapes each line where it would read as a block, holds an empty line, and
 // sets the paragraphs apart.
 
-import { OurusProse, OurusAtom, blockIdsOf, closingFrameStart, type Located, type OurusDoc, type OurusNode, type OurusText } from '../doc/index.ts';
-import { composeChanges, isSpaceOrTab, trimMd, type ChangeSpec } from '../text/index.ts';
-import { clipboardFragment } from './clipboard.ts';
+import { OurusProse, OurusAtom, blockIdsOf, clipboardFragment, closingFrameStart, type Located, type OurusNode, type OurusText } from '../doc/index.ts';
+import { mdBlockIdEnd } from '../parser/index.ts';
+import { composeChanges, isSpaceOrTab, skipSpaces, trimMd, type ChangeSpec, type NodeId } from '../text/index.ts';
 import { CommandContext, blockIdsDeclaredBy } from './context.ts';
-import { linesInQuote, quoteAtomAt } from './quote.ts';
+import { atQuoteStart, linesInQuote, quoteAtomAt } from './quote.ts';
 import { enterCommand } from './enter.ts';
 import { pasteMarkdown } from './paste.ts';
 import { textActedOnAt } from './util.ts';
@@ -27,7 +27,7 @@ import { OurusSuccess, OurusDeferred, OurusRejected } from './types.ts';
  * held spaces.
  */
 export function pastePlainCommand(ctx: CommandContext, clipboard: string): OurusResult | null {
-  if (ctx.config.pastePlainLines === 'host') return new OurusDeferred('plain paste is the host\'s');
+  if (ctx.config.pastePlainLines === 'host') return new OurusDeferred('host-default', 'plain paste is the host\'s');
   if (ctx.config.pastePlainLines === 'items') return itemLines(ctx, clipboard);
   // (in code, lines are code, whatever pastes them)
   if (ctx.config.pastePlainLines === 'enter' && !codeAt(ctx)) return enteredLines(ctx, clipboard);
@@ -69,7 +69,7 @@ function enteredLines(ctx: CommandContext, clipboard: string): OurusResult | nul
     if (!quote) return afterDeleting(ctx, (next) => enteredLines(next, clipboard));
     const cleared = linesInQuote(ctx, quote, ['']);
     if (!cleared || !(cleared instanceof OurusSuccess)) return cleared;
-    const typed = enteredLines(new CommandContext(cleared.view, cleared.selection), clipboard);
+    const typed = enteredLines(new CommandContext(cleared.view), clipboard);
     if (!typed || !(typed instanceof OurusSuccess)) return typed;
     return new OurusSuccess({ ...typed, ...blockIdsDeclaredBy([cleared, typed]), changes: composeChanges(ctx.doc.text, cleared.changes, typed.changes) });
   }
@@ -88,18 +88,28 @@ function enteredLines(ctx: CommandContext, clipboard: string): OurusResult | nul
       if (!result || !(result instanceof OurusSuccess)) return result;
       steps.push(result);
       changes = composeChanges(ctx.doc.text, changes, result.changes);
-      next = new CommandContext(result.view, result.selection);
+      next = new CommandContext(result.view);
     } else {
       const at = line ? textActedOnAt(next, next.selection.head) : null;
-      if (line && !at && (k === 0 || next.view.locate(next.selection.head).zone !== 'gap')) return k === 0 ? new OurusDeferred('the caret is outside a text') : null;
-      if (line && !at) {
+      // (at a bare marker whose text starts below it, `-┃⏎  a`: placed as typing places it, after a space)
+      const placed = line && !at ? placedText(next, line) : null;
+      if (placed) {
+        if (!(placed instanceof OurusSuccess)) return placed;
+        result = placed;
+        steps.push(result);
+        changes = composeChanges(ctx.doc.text, changes, result.changes);
+        next = new CommandContext(result.view);
+        if (k === lines.length - 1) break;
+      }
+      if (line && !at && !placed && (k === 0 || next.view.locate(next.selection.head).zone !== 'gap')) return k === 0 ? new OurusDeferred('host-default', 'the caret is outside a text') : null;
+      if (line && !at && !placed) {
         // (on the blank line an Enter left, a quote's `> ` under `enterInQuote: line`: typed as the host types it)
         const head = next.selection.head;
         const typed = [{ from: head, to: head, insert: line }];
         const caret = head + line.length;
-        result = new OurusSuccess({ view: next.update({ changes: typed, caret }), changes: typed, selection: { anchor: caret, head: caret } });
+        result = new OurusSuccess({ view: next.update({ changes: typed, caret }), changes: typed });
         changes = composeChanges(ctx.doc.text, changes, typed);
-        next = new CommandContext(result.view, result.selection);
+        next = new CommandContext(result.view);
       }
       // (at the text's start, without the spaces it starts with, which would be padding there)
       const typed = at && trimMd(at.text.text.slice(at.text.textStart(0), at.offset)) === '' ? line.replace(/^[ \t]+/, '') : line;
@@ -118,7 +128,7 @@ function enteredLines(ctx: CommandContext, clipboard: string): OurusResult | nul
         if (!result || !(result instanceof OurusSuccess)) return result;
         steps.push(result);
         changes = composeChanges(ctx.doc.text, changes, result.changes);
-        next = new CommandContext(result.view, result.selection);
+        next = new CommandContext(result.view);
       }
     }
     if (k === lines.length - 1) break;
@@ -127,7 +137,7 @@ function enteredLines(ctx: CommandContext, clipboard: string): OurusResult | nul
     if (!result || !(result instanceof OurusSuccess)) return result;
     steps.push(result);
     changes = composeChanges(ctx.doc.text, changes, result.changes);
-    next = new CommandContext(result.view, result.selection);
+    next = new CommandContext(result.view);
   }
   return result && result instanceof OurusSuccess ? new OurusSuccess({ ...result, ...blockIdsDeclaredBy(steps), changes }) : result;
 }
@@ -156,9 +166,9 @@ export function plainLines(ctx: CommandContext, clipboard: string): OurusResult 
   const quote = quoteAtomAt(ctx);
   if (quote) {
     const lines = clipboard.split(/\r\n|\r|\n/);
-    // before its `>`, the line breaks the clipboard starts with go, as at any text's start (PastePlain25);
-    // with nothing else, refused (PastePlain27)
-    if (quote.offset === 0 && lines[0] === '') {
+    // before its `>` (in the spaces before it too, B201), the line breaks the clipboard starts with go,
+    // as at any text's start (PastePlain25); with nothing else, refused (PastePlain27)
+    if (atQuoteStart(ctx, quote) && lines[0] === '') {
       lines.splice(0, leadingEmptyLines(lines));
       if (lines.every((l) => trimMd(l) === '')) return new OurusRejected('not-expressible', 'nothing but line breaks at the text\'s start');
     }
@@ -176,13 +186,13 @@ export function plainLines(ctx: CommandContext, clipboard: string): OurusResult 
     const placed = placedText(ctx, clipboard);
     if (placed) return placed;
   }
-  if (lines.length < 2 && !/^[ \t]/.test(clipboard)) return new OurusDeferred('one line: the host pastes it');
+  if (lines.length < 2 && !/^[ \t]/.test(clipboard)) return new OurusDeferred('host-default', 'one line: the host pastes it');
   // (a line break first, before the block's text: the host's, as a new line above it)
-  if (code && lines[0] === '' && code.offset === 0) return new OurusDeferred('a line break before the block: the host pastes');
+  if (code && lines[0] === '' && code.offset === 0) return new OurusDeferred('host-default', 'a line break before the block: the host pastes');
   // on a delimiter's line (an opening's info, a closing fence), no code line: as they are
   if (code && onDelimiterLine(code.text, code.offset)) return editInCode(ctx, code, code.offset, code.to, lines.join('\n'));
   // in indented code's four columns, the host's
-  if (code && code.text.frame.some((p) => p.part === 'indent' && p.from <= code.offset && code.offset < p.to)) return ctx.collapsed ? new OurusDeferred('in the code\'s indentation') : breaksFence(ctx, 'the selection takes part of the code\'s indentation');
+  if (code && code.text.frame.some((p) => p.part === 'indent' && p.from <= code.offset && code.offset < p.to)) return ctx.collapsed ? new OurusDeferred('host-default', 'in the code\'s indentation') : breaksFence(ctx, 'the selection takes part of the code\'s indentation');
   if (code) {
     // in its block's text at its fence's indentation (its first line's)
     const indent = /^[ \t]*/.exec(code.text.text)![0];
@@ -201,8 +211,8 @@ export function plainLines(ctx: CommandContext, clipboard: string): OurusResult 
   // underline, refused as Shift-Enter is there
   if (a.zone === 'frame' && a.text instanceof OurusProse && !a.text.empty) {
     const inside = ctx.selection.head > ctx.doc.lineAt(ctx.selection.head).from;
-    if (!inside && a.part !== 'underline') return new OurusDeferred('the caret is before the text');
-    if (inside && ctx.collapsed && ctx.config.markup === 'text') return new OurusDeferred('the caret is in markup');
+    if (!inside && a.part !== 'underline') return new OurusDeferred('in-markup', 'the caret is before the text');
+    if (inside && ctx.collapsed && ctx.config.markup === 'text') return new OurusDeferred('in-markup', 'the caret is in markup');
     return new OurusRejected('not-expressible', a.text.heading ? 'the title holds one line' : 'the selection takes part of markup');
   }
   const at =
@@ -210,7 +220,7 @@ export function plainLines(ctx: CommandContext, clipboard: string): OurusResult 
     : a.zone === 'text' ? { node: a.node, text: a.text, offset: a.offset } : null;
   if (!at || !(at.text instanceof OurusProse)) {
     // a table's row holds one line; another block's lines are the host's
-    return a.zone === 'text' && at?.text instanceof OurusAtom && at.text.type === 'table' ? new OurusRejected('not-expressible', 'a row holds one line') : new OurusDeferred('the caret is outside a text');
+    return a.zone === 'text' && at?.text instanceof OurusAtom && at.text.type === 'table' ? new OurusRejected('not-expressible', 'a row holds one line') : new OurusDeferred('host-default', 'the caret is outside a text');
   }
   const { node, text } = at;
   const from = at.offset;
@@ -251,11 +261,15 @@ export function plainLines(ctx: CommandContext, clipboard: string): OurusResult 
   // text's own closing frame: that text goes before the id, which ends the line still, Regression261)
   const lineEnd = text.text.indexOf('\n', to) < 0 ? text.text.length : text.text.indexOf('\n', to);
   const restEnd = Math.max(to, Math.min(lineEnd, closingFrameStart(text)));
-  const lastId = lines.length > 1 && ctx.doc.mdTree.flavor.has('blockIds') && trimMd(text.text.slice(to, restEnd)) !== '' ? /[ \t]+\^[A-Za-z0-9-]+[ \t]*$/.exec(quoted[quoted.length - 1]!) : null;
-  if (lastId) quoted[quoted.length - 1] = quoted[quoted.length - 1]!.slice(0, lastId.index);
+  // (the id as block ids are read, a blank before it: its blanks and itself, without those after it)
+  const lastLine = quoted[quoted.length - 1]!;
+  const found = lines.length > 1 && ctx.doc.mdTree.flavor.has('blockIds') && trimMd(text.text.slice(to, restEnd)) !== '' ? mdBlockIdEnd(lastLine) : null;
+  const idFrom = found ? skipSpaces(lastLine, found.at, 0, -1) : -1;
+  const lastId = found && idFrom < found.at ? lastLine.slice(idFrom, found.at + 1 + found.name.length) : null;
+  if (lastId) quoted[quoted.length - 1] = lastLine.slice(0, idFrom);
   const pasted = quoted.join('\n') + (glued && !/[ \t]$/.test(quoted[quoted.length - 1]!) ? ' ' : '');
   const filled = held ? text.withMarks({ placeholders: text.marks.placeholders.filter((pos) => pos !== from) }) : text;
-  let current = lastId ? filled.splice(from, restEnd, pasted + text.text.slice(to, restEnd).replace(/[ \t]+$/, '') + lastId[0].replace(/[ \t]+$/, '')) : filled.splice(from, to, pasted);
+  let current = lastId ? filled.splice(from, restEnd, pasted + text.text.slice(to, skipSpaces(text.text, restEnd, to, -1)) + lastId) : filled.splice(from, to, pasted);
   // (a setext title, which a blank line in it would end: an ATX one holds one line, above)
   if (text.type === 'heading' && /\n[ \t]*\n/.test(current.body)) return new OurusRejected('not-expressible', 'a heading has no blank line in its title');
   let caret = from + quoted.join('\n').length;
@@ -265,7 +279,7 @@ export function plainLines(ctx: CommandContext, clipboard: string): OurusResult 
   // (one moved past the rest of the line, Regression261, is too, where the text has no closing frame of its own)
   let closing: 'lower' | 'upper' = (ending && !ending.carried && ending.from >= from && ending.from < from + pasted.length) || (lastId && closingFrameStart(text) === text.text.length) ? 'lower' : 'upper';
   const draft = ctx.draft();
-  let target: OurusNode | number = node;
+  let target: OurusNode | NodeId = node;
   const container = node.kind === 'item' || node.kind === 'quote';
   for (;;) {
     const s = current.text;

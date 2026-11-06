@@ -2,14 +2,14 @@
 // clipboard formats; a cut takes it out as Backspace or delete subtree would.
 
 import { clipboardOf } from './clipboard.ts';
-import { OurusProse, checkBlockIds, type OurusNode } from '../doc/index.ts';
+import { OurusProse, blockIdsOf, textEnd, textStart, type OurusNode } from '../doc/index.ts';
 import { deleteContentBackwardCommand } from './backspace.ts';
 import { CommandContext, blockIdsDeclaredBy } from './context.ts';
 import { composeChanges, lineOf, mapPos, trimMd } from '../text/index.ts';
 import { deleteSubtreeCommand } from './delete-subtree.ts';
 import { oneRun, operandsRefused, runsOf, selectionRoots } from './util.ts';
 import type { OurusResult } from './types.ts';
-import { OurusDeferred, OurusRejected, OurusSuccess } from './types.ts';
+import { OurusDeferred, OurusSuccess } from './types.ts';
 
 /**
  * Copy, or cut: what the selection takes, as Markdown out of its containers. A subtree selection's
@@ -35,11 +35,11 @@ export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): Our
     if (!Array.isArray(found)) return operandsRefused(found);
     nodes = found;
   } else if (from === to) {
-    if (config.copyAtCaret === 'host') return new OurusDeferred();
+    if (config.copyAtCaret === 'host') return new OurusDeferred('host-default');
     // (the nodes delete subtree takes there: a folded row's owner, with what it hides)
     const line = doc.lineAt(from);
     const at = from <= line.to && doc.nodeAtLine(line.index) ? selectionRoots(view, ctx.selection) : [];
-    if (!at.length) return new OurusDeferred();
+    if (!at.length) return new OurusDeferred('host-default');
     nodes = at;
   } else if (config.copySelection !== 'text' && nodesOnLines(ctx, from, to) > 1) {
     const found = oneRun(ctx);
@@ -60,13 +60,13 @@ export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): Our
       .join('\n');
     if (!markdown.endsWith('\n')) markdown += '\n';
   } else markdown = doc.markdownOf(from, to);
-  const clipboard = clipboardOf(markdown, ctx.config, !nodes);
-  if (type === 'copy') return new OurusSuccess({ view: ctx.view, changes: [], selection: ctx.selection, clipboard });
+  const clipboard = clipboardOf(markdown, ctx.doc, !nodes);
+  if (type === 'copy') return new OurusSuccess({ view: ctx.view, changes: [], clipboard });
   const deleted = nodes ? deleteSubtreeCommand(ctx) : deleteSelected(ctx);
   // the text deleted as the host deletes it, where ourus doesn't: the clipboard is still ourus's
   if (!nodes && (!deleted || deleted instanceof OurusDeferred)) {
     const changes = [{ from, to, insert: '' }];
-    return new OurusSuccess({ view: ctx.update({ changes }), changes, selection: { anchor: from, head: from }, clipboard });
+    return new OurusSuccess({ view: ctx.update({ changes }).withSelection(from), changes, clipboard });
   }
   if (!deleted) return null;
   return deleted instanceof OurusSuccess ? new OurusSuccess({ ...deleted, clipboard }) : deleted;
@@ -117,41 +117,40 @@ export function afterDeleting(ctx: CommandContext, then: (ctx: CommandContext) =
   const to = Math.max(ctx.selection.anchor, ctx.selection.head);
   // within one text, what `then` puts in one line of it: the other way round, `then` at the
   // selection's end and the selection deleted after (the deletion alone would take the blank after a
-  // selection from the text's start, `[p] q`, or empty a text a block id ends: `p` of `p ^x`)
-  const oneText = ctx.from.zone === 'text' && ctx.to.zone === 'text' && ctx.from.node === ctx.to.node;
-  if (oneText) {
-    const reversed = thenDeleting(ctx, from, to, then, true);
+  // selection from the text's start, `[p] q`, or empty a text a block id ends: `p` of `p ^x`); so too
+  // over all of a text a block id ends, whatever `then` puts in, which deleted first would leave the
+  // id a paragraph of its own, `^x`, for what follows to end in (B342)
+  if (ctx.from.zone === 'text' && ctx.to.zone === 'text' && ctx.from.node === ctx.to.node) {
+    const reversed = thenDeleting(ctx, from, to, then, !takesTextWithBlockIds(ctx));
     if (reversed) return reversed;
   }
   const deleted = deleteSelected(ctx);
-  const forward = ((): OurusResult | null => {
-    if (!deleted || !(deleted instanceof OurusSuccess)) return deleted;
-    const next = then(new CommandContext(deleted.view, deleted.selection));
-    if (!next || !(next instanceof OurusSuccess)) return next;
-    return new OurusSuccess({ ...next, ...blockIdsDeclaredBy([deleted, next]), changes: composeChanges(ctx.doc.text, deleted.changes, next.changes) });
-  })();
-  // (and so where, the other way, a block id the selection doesn't take is lost: its text emptied
-  // between the two, or the text then glued to it)
-  if (!oneText || !ctx.doc.text.includes('^')) return forward;
-  const loses = (r: OurusResult | null): boolean => r instanceof OurusRejected || (r instanceof OurusSuccess && !!checkBlockIds(ctx.doc, r.view.doc, r.changes, { declared: { moved: r.movedBlockIds ?? [], merged: r.mergedBlockIds ?? [] }, taken: { from, to } }));
-  if (!loses(forward)) return forward;
-  const reversed = thenDeleting(ctx, from, to, then, false);
-  return reversed && (reversed instanceof OurusDeferred || !loses(reversed)) ? reversed : forward;
+  if (!deleted || !(deleted instanceof OurusSuccess)) return deleted;
+  const next = then(new CommandContext(deleted.view));
+  if (!next || !(next instanceof OurusSuccess)) return next;
+  return new OurusSuccess({ ...next, ...blockIdsDeclaredBy([deleted, next]), changes: composeChanges(ctx.doc.text, deleted.changes, next.changes) });
+}
+
+/** Whether the selection is all of one text that a block id ends (`a b⏎^x`, `a b ^x`, `a b` selected). */
+export function takesTextWithBlockIds(ctx: CommandContext): boolean {
+  const { from, to } = ctx;
+  if (from.zone !== 'text' || to.zone !== 'text' || from.node !== to.node || !(from.text instanceof OurusProse)) return false;
+  return blockIdsOf(from.text).length > 0 && from.offset <= textStart(from.text) && to.offset >= textEnd(from.text);
 }
 
 /**
- * `then` at `to`, then `[from, to)` deleted (`afterDeleting`'s other order); `inline`: only where
- * `then` puts text in the line `to` is on. Null where `then` changes the text before `to`, or the
- * deletion isn't applied.
+ * `then` at `to`, then `[from, to)` deleted (`afterDeleting`'s other order); `inline`, only where
+ * `then` puts text in the line `to` is on. Null where `then` changes the text before `to` (or another
+ * line, `inline`), or the deletion isn't applied.
  */
 function thenDeleting(ctx: CommandContext, from: number, to: number, then: (ctx: CommandContext) => OurusResult | null, inline: boolean): OurusResult | null {
   const first = then(ctx.at(to));
-  if (!first || !(first instanceof OurusSuccess)) return !inline && first instanceof OurusDeferred ? first : null;
+  if (!first || !(first instanceof OurusSuccess)) return null;
   if (first.changes.some((c) => c.from < to)) return null;
   if (inline && first.changes.some((c) => /[\r\n]/.test(c.insert ?? '') || /[\r\n]/.test(ctx.doc.text.slice(c.from, c.to ?? c.from)))) return null;
-  const deleted = deleteSelected(new CommandContext(first.view, { anchor: from, head: to }));
+  const deleted = deleteSelected(new CommandContext(first.view.withSelection({ anchor: from, head: to })));
   if (!deleted || !(deleted instanceof OurusSuccess)) return null;
   const map = (pos: number): number => mapPos(deleted.changes, pos, 1);
-  const selection = { anchor: map(first.selection.anchor), head: map(first.selection.head) };
-  return new OurusSuccess({ ...deleted, ...blockIdsDeclaredBy([first, deleted]), selection, changes: composeChanges(ctx.doc.text, first.changes, deleted.changes) });
+  const view = deleted.view.withSelection({ anchor: map(first.view.selection.anchor), head: map(first.view.selection.head) });
+  return new OurusSuccess({ ...deleted, ...blockIdsDeclaredBy([first, deleted]), view, changes: composeChanges(ctx.doc.text, first.changes, deleted.changes) });
 }
