@@ -12,7 +12,7 @@ import { outdentCommand } from './outdent.ts';
 import { shiftEnterCommand } from './shift-enter.ts';
 import { enterInQuote, quoteAtomAt } from './quote.ts';
 import { enterInPair } from './typing.ts';
-import { leaveList, pastPrefix, textActedOnAt } from './util.ts';
+import { leaveList, pastPrefix, splitSpaces, textActedOnAt } from './util.ts';
 import { withFolds } from './view.ts';
 import type { OurusResult } from './types.ts';
 import { OurusDeferred, OurusRejected } from './types.ts';
@@ -88,7 +88,7 @@ export function enterCommand(ctx: CommandContext, key = true, typed = key): Ouru
     // on its empty last line (the one the Enter before made, held): it leaves the quote, the line
     // going, an empty paragraph after it (an item after an item)
     const last = text.text.lastIndexOf('\n');
-    if (ctx.collapsed && last >= 0 && offset === text.text.length && trimMd(text.text.slice(last + 1).replace(/^ {0,3}>[ \t]?/, '')) === '') {
+    if (ctx.collapsed && offset === text.text.length && text.emptyLastLine) {
       const draft = ctx.draft();
       const id = draft.create(node.kind === 'item' ? 'item' : 'paragraph', new OurusProse('paragraph', node.kind === 'item', ''));
       draft.setText(node, text.slice(0, last).withBlockIdLines(text.blockIdLines)).place('after', node, [id]);
@@ -121,18 +121,12 @@ export function enterCommand(ctx: CommandContext, key = true, typed = key): Ouru
   // (a closing frame stays with the first half: a block id, an ATX title's `#`s, a setext underline,
   // the run of them ending the text; null where there is none)
   const close = closingFrameStart(text) < s.length ? closingFrameStart(text) : null;
-  // the spaces at the caret: from both halves, or only the second's; a line break, from neither
-  let a = offset;
-  let b = end;
-  if (config.enterSplitSpace === 'trim') while (a > lineStart && isSpaceOrTab(s.charCodeAt(a - 1))) a--;
-  // (`start`: the spaces after the caret start the second half, written as its padding by `done()`;
-  // before a line break or the text's end they start nothing, and go)
-  let kept = 0;
-  if (config.enterSplitSpace === 'start') while (s[b + kept] === ' ') kept++;
-  if (b + kept === s.length || s[b + kept] === '\n') kept = 0;
-  // (not into the closing frame, whose blanks are its own: an ATX title's `#`s, a block id's)
-  const stop = close !== null ? Math.max(b, close) : s.length;
-  if (!kept) while (b < stop && isSpaceOrTab(s.charCodeAt(b))) b++;
+  // the spaces at the caret, as `enterSplitSpace` says (`- start` written as the second half's padding
+  // by `done()`); not into the closing frame, whose blanks are its own: an ATX title's `#`s, a block id's
+  const split = splitSpaces(s, offset, end, lineStart, close !== null ? Math.max(end, close) : s.length, config.enterSplitSpace);
+  let a = split.from;
+  let b = split.to;
+  const kept = split.kept;
   // (a title left with its `[!type]` alone, the space after it goes)
   if (title && a === lineStart) while (a > 0 && isSpaceOrTab(s.charCodeAt(a - 1))) a--;
   if (a > 0 && s[a - 1] === '\n' && a === lineStart) a--;
@@ -187,8 +181,9 @@ export function enterCommand(ctx: CommandContext, key = true, typed = key): Ouru
     rest = rest.splice(0, 0, '[ ] ');
     draft.setText(made, rest);
   }
-  // the caret at the new text's start, before a backslash it starts with, and the spaces it keeps
-  draft.setCaret(made, Math.max(0, rest.textStart(0) - kept), -1);
+  // the caret at the new text's start, before a backslash it starts with, and the spaces it keeps; a
+  // block id naming the quote at the text's end at the quote's end still, the lower half's (B223)
+  draft.setCaret(made, Math.max(0, rest.textStart(0) - kept), -1).keepQuoteIds();
   // split mid-text, a folded item's children go with its second half, and its fold with them
   return withFolds(ctx.apply(draft), folded && !stay && into === 'sibling' ? [made] : []);
 }

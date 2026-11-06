@@ -3,11 +3,11 @@
 // the text becomes; `done()` escapes each line where it would read as a block, holds an empty line, and
 // sets the paragraphs apart.
 
-import { OurusProse, OurusAtom, blockIdsOf, closingFrameStart, type Located, type OurusDoc, type OurusNode, type OurusText } from '../doc/index.ts';
-import { composeChanges, isSpaceOrTab, trimMd, type ChangeSpec } from '../text/index.ts';
-import { clipboardFragment } from './clipboard.ts';
+import { OurusProse, OurusAtom, blockIdsOf, clipboardFragment, closingFrameStart, type Located, type OurusNode, type OurusText } from '../doc/index.ts';
+import { mdBlockIdEnd } from '../parser/index.ts';
+import { composeChanges, isSpaceOrTab, skipSpaces, trimMd, type ChangeSpec } from '../text/index.ts';
 import { CommandContext, blockIdsDeclaredBy } from './context.ts';
-import { linesInQuote, quoteAtomAt } from './quote.ts';
+import { atQuoteStart, linesInQuote, quoteAtomAt } from './quote.ts';
 import { enterCommand } from './enter.ts';
 import { pasteMarkdown } from './paste.ts';
 import { textActedOnAt } from './util.ts';
@@ -69,7 +69,7 @@ function enteredLines(ctx: CommandContext, clipboard: string): OurusResult | nul
     if (!quote) return afterDeleting(ctx, (next) => enteredLines(next, clipboard));
     const cleared = linesInQuote(ctx, quote, ['']);
     if (!cleared || !(cleared instanceof OurusSuccess)) return cleared;
-    const typed = enteredLines(new CommandContext(cleared.view, cleared.selection), clipboard);
+    const typed = enteredLines(new CommandContext(cleared.view), clipboard);
     if (!typed || !(typed instanceof OurusSuccess)) return typed;
     return new OurusSuccess({ ...typed, ...blockIdsDeclaredBy([cleared, typed]), changes: composeChanges(ctx.doc.text, cleared.changes, typed.changes) });
   }
@@ -88,18 +88,28 @@ function enteredLines(ctx: CommandContext, clipboard: string): OurusResult | nul
       if (!result || !(result instanceof OurusSuccess)) return result;
       steps.push(result);
       changes = composeChanges(ctx.doc.text, changes, result.changes);
-      next = new CommandContext(result.view, result.selection);
+      next = new CommandContext(result.view);
     } else {
       const at = line ? textActedOnAt(next, next.selection.head) : null;
-      if (line && !at && (k === 0 || next.view.locate(next.selection.head).zone !== 'gap')) return k === 0 ? new OurusDeferred('the caret is outside a text') : null;
-      if (line && !at) {
+      // (at a bare marker whose text starts below it, `-┃⏎  a`: placed as typing places it, after a space)
+      const placed = line && !at ? placedText(next, line) : null;
+      if (placed) {
+        if (!(placed instanceof OurusSuccess)) return placed;
+        result = placed;
+        steps.push(result);
+        changes = composeChanges(ctx.doc.text, changes, result.changes);
+        next = new CommandContext(result.view);
+        if (k === lines.length - 1) break;
+      }
+      if (line && !at && !placed && (k === 0 || next.view.locate(next.selection.head).zone !== 'gap')) return k === 0 ? new OurusDeferred('the caret is outside a text') : null;
+      if (line && !at && !placed) {
         // (on the blank line an Enter left, a quote's `> ` under `enterInQuote: line`: typed as the host types it)
         const head = next.selection.head;
         const typed = [{ from: head, to: head, insert: line }];
         const caret = head + line.length;
-        result = new OurusSuccess({ view: next.update({ changes: typed, caret }), changes: typed, selection: { anchor: caret, head: caret } });
+        result = new OurusSuccess({ view: next.update({ changes: typed, caret }), changes: typed });
         changes = composeChanges(ctx.doc.text, changes, typed);
-        next = new CommandContext(result.view, result.selection);
+        next = new CommandContext(result.view);
       }
       // (at the text's start, without the spaces it starts with, which would be padding there)
       const typed = at && trimMd(at.text.text.slice(at.text.textStart(0), at.offset)) === '' ? line.replace(/^[ \t]+/, '') : line;
@@ -118,7 +128,7 @@ function enteredLines(ctx: CommandContext, clipboard: string): OurusResult | nul
         if (!result || !(result instanceof OurusSuccess)) return result;
         steps.push(result);
         changes = composeChanges(ctx.doc.text, changes, result.changes);
-        next = new CommandContext(result.view, result.selection);
+        next = new CommandContext(result.view);
       }
     }
     if (k === lines.length - 1) break;
@@ -127,7 +137,7 @@ function enteredLines(ctx: CommandContext, clipboard: string): OurusResult | nul
     if (!result || !(result instanceof OurusSuccess)) return result;
     steps.push(result);
     changes = composeChanges(ctx.doc.text, changes, result.changes);
-    next = new CommandContext(result.view, result.selection);
+    next = new CommandContext(result.view);
   }
   return result && result instanceof OurusSuccess ? new OurusSuccess({ ...result, ...blockIdsDeclaredBy(steps), changes }) : result;
 }
@@ -156,9 +166,9 @@ export function plainLines(ctx: CommandContext, clipboard: string): OurusResult 
   const quote = quoteAtomAt(ctx);
   if (quote) {
     const lines = clipboard.split(/\r\n|\r|\n/);
-    // before its `>`, the line breaks the clipboard starts with go, as at any text's start (PastePlain25);
-    // with nothing else, refused (PastePlain27)
-    if (quote.offset === 0 && lines[0] === '') {
+    // before its `>` (in the spaces before it too, B201), the line breaks the clipboard starts with go,
+    // as at any text's start (PastePlain25); with nothing else, refused (PastePlain27)
+    if (atQuoteStart(ctx, quote) && lines[0] === '') {
       lines.splice(0, leadingEmptyLines(lines));
       if (lines.every((l) => trimMd(l) === '')) return new OurusRejected('not-expressible', 'nothing but line breaks at the text\'s start');
     }
@@ -251,11 +261,15 @@ export function plainLines(ctx: CommandContext, clipboard: string): OurusResult 
   // text's own closing frame: that text goes before the id, which ends the line still, Regression261)
   const lineEnd = text.text.indexOf('\n', to) < 0 ? text.text.length : text.text.indexOf('\n', to);
   const restEnd = Math.max(to, Math.min(lineEnd, closingFrameStart(text)));
-  const lastId = lines.length > 1 && ctx.doc.mdTree.flavor.has('blockIds') && trimMd(text.text.slice(to, restEnd)) !== '' ? /[ \t]+\^[A-Za-z0-9-]+[ \t]*$/.exec(quoted[quoted.length - 1]!) : null;
-  if (lastId) quoted[quoted.length - 1] = quoted[quoted.length - 1]!.slice(0, lastId.index);
+  // (the id as block ids are read, a blank before it: its blanks and itself, without those after it)
+  const lastLine = quoted[quoted.length - 1]!;
+  const found = lines.length > 1 && ctx.doc.mdTree.flavor.has('blockIds') && trimMd(text.text.slice(to, restEnd)) !== '' ? mdBlockIdEnd(lastLine) : null;
+  const idFrom = found ? skipSpaces(lastLine, found.at, 0, -1) : -1;
+  const lastId = found && idFrom < found.at ? lastLine.slice(idFrom, found.at + 1 + found.name.length) : null;
+  if (lastId) quoted[quoted.length - 1] = lastLine.slice(0, idFrom);
   const pasted = quoted.join('\n') + (glued && !/[ \t]$/.test(quoted[quoted.length - 1]!) ? ' ' : '');
   const filled = held ? text.withMarks({ placeholders: text.marks.placeholders.filter((pos) => pos !== from) }) : text;
-  let current = lastId ? filled.splice(from, restEnd, pasted + text.text.slice(to, restEnd).replace(/[ \t]+$/, '') + lastId[0].replace(/[ \t]+$/, '')) : filled.splice(from, to, pasted);
+  let current = lastId ? filled.splice(from, restEnd, pasted + text.text.slice(to, skipSpaces(text.text, restEnd, to, -1)) + lastId) : filled.splice(from, to, pasted);
   // (a setext title, which a blank line in it would end: an ATX one holds one line, above)
   if (text.type === 'heading' && /\n[ \t]*\n/.test(current.body)) return new OurusRejected('not-expressible', 'a heading has no blank line in its title');
   let caret = from + quoted.join('\n').length;

@@ -70,7 +70,7 @@ export function tabPass(t: SpecTest): string | null {
   const labels = new NodeLabels();
   labels.check(doc, start.labels, null);
   const viewed = specTestView(t, doc, start.view);
-  let state: PlayedState = { view: viewed, selection: drawnSelection(viewed, start), clipboard: readClipboard(t.initial.clipboard), drop: start.drop, labels: labels.ids };
+  let state: PlayedState = { view: viewed.withSelection(drawnSelection(viewed, start)), clipboard: readClipboard(t.initial.clipboard), drop: start.drop, labels: labels.ids };
   for (const step of t.steps) {
     for (const action of step.actions) {
       state = playActions(state, [action]);
@@ -81,7 +81,7 @@ export function tabPass(t: SpecTest): string | null {
     if (step.expect.buffer === undefined || /→/.test(step.expect.buffer)) continue;
     // (labels are no text: drawn before the caret, they would move it)
     const buffer = readLabels(step.expect.buffer).drawn;
-    const drawn = drawDoc(state.view, state.selection);
+    const drawn = drawDoc(state.view, state.view.selection);
     const got = withSpaces(drawsCaret(buffer) ? drawn : withoutCaret(drawn));
     // (spelled otherwise but read the same, as a tab after a quote's `>` is: the same document)
     if (normalizeDrawing(got) !== normalizeDrawing(buffer) && compareTexts(readTextDoc(normalizeDrawing(buffer)), readTextDoc(normalizeDrawing(got)), flavor) !== 'whitespace') return `buffer at line ${step.line}:\n    want ${JSON.stringify(normalizeDrawing(buffer))}\n    got  ${JSON.stringify(normalizeDrawing(got))}\n    tabs ${JSON.stringify(normalizeDrawing(drawn))}\n    from ${JSON.stringify(tabbed)}`;

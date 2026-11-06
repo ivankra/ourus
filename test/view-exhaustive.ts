@@ -150,7 +150,7 @@ function play(viewed: OurusView, view: string): number {
       const where = (): string => `${view}, ${command.type} at ${JSON.stringify(drawDoc(viewed, selection))}`;
       let result;
       try {
-        result = executeCommand(viewed, command, selection);
+        result = executeCommand(viewed.withSelection(selection), command);
       } catch (e) {
         fail('exception', () => `${where()}: ${(e as Error).message}`);
         continue;
@@ -163,11 +163,11 @@ function play(viewed: OurusView, view: string): number {
       if (!(result instanceof OurusSuccess)) continue;
       const nextView = result.view;
       const next = nextView.doc;
-      if (nextView.visibleSelection(result.selection) !== result.selection) fail('hidden', () => `${where()} → ${JSON.stringify(drawDoc(nextView, result.selection))}`);
+      if (nextView.visibleSelection(result.view.selection) !== result.view.selection) fail('hidden', () => `${where()} → ${JSON.stringify(drawDoc(nextView, result.view.selection))}`);
       if ([...nextView.folded].some((id) => !next.node(id) || !next.foldRange(next.node(id)!))) fail('folded', where);
       if (viewed.zoom !== null && result.changes.length && next.node(viewed.zoom)) {
         const changed = outsideChange(viewed, next);
-        if (changed) fail('escape', () => `${where()} → ${JSON.stringify(drawDoc(nextView, result.selection))}: ${changed}`);
+        if (changed) fail('escape', () => `${where()} → ${JSON.stringify(drawDoc(nextView, result.view.selection))}: ${changed}`);
       }
     }
   }
@@ -185,12 +185,12 @@ function confined(viewed: OurusView, view: string): number {
   for (const n of allNodes(doc).filter((m) => !inside(m, root))) {
     for (const type of WITH_NODES) {
       runs++;
-      const result = executeCommand(viewed, { type, nodes: [n.id] }, selection);
+      const result = executeCommand(viewed.withSelection(selection), { type, nodes: [n.id] });
       if (!(result instanceof OurusRejected) || result.reason !== 'outside-zoom') fail('confined', () => `${view}, ${type} of ${n.kind} ${n.id}: ${resultStatus(result)}`);
     }
     for (const command of [{ type: 'zoomIn', nodes: [n.id] }, ...(doc.foldRange(n) ? [{ type: 'fold', nodes: [n.id] }] : [])] as OurusCommand[]) {
       runs++;
-      const result = executeCommand(viewed, command, selection);
+      const result = executeCommand(viewed.withSelection(selection), command);
       // (an ancestor of the root: its fold suppressed while zoomed, left alone)
       const folds = inside(root, n) ? viewed.folded.has(n.id) : true;
       const ok = result instanceof OurusSuccess && result.view.doc.text === doc.text && !result.changes.length && (command.type === 'zoomIn' ? result.view.zoom === n.id : result.view.folded.has(n.id) === folds);

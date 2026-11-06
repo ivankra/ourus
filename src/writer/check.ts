@@ -1,7 +1,8 @@
 // The check: whether a document reads as a draft meant, node by node. A node the
 // document shares with the draft is equal by construction and skipped with its subtree; elsewhere the
-// contract, exactly: kinds and nesting, ids, each text's type, its frame's meaning and its text, its
-// block ids, its placeholders, gaps, and the lists `done()` fixed.
+// contract, exactly: kinds and nesting, ids, each text's type, its frame's meaning and its text, a
+// verbatim block's code as it reads (kept, or edited, against the old context's reading), its block
+// ids, its placeholders, gaps, and the lists `done()` fixed.
 
 import { OurusProse, OurusAtom, blockIdsOf, verbatimLinesOf, type OurusNode, type OurusText, type PersistentNode, type OurusDoc } from '../doc/index.ts';
 import type { ListPlace, OurusDraft } from './draft.ts';
@@ -31,6 +32,15 @@ function node(doc: OurusDoc, draft: OurusDraft, expected: PersistentNode, origin
       const now = verbatimLinesOf(doc, actual);
       if (JSON.stringify(now) !== JSON.stringify(was)) return `${at}: code ${JSON.stringify(was)}, read as ${JSON.stringify(now)}`;
     }
+  } else if (origin && had instanceof OurusAtom && want instanceof OurusAtom && verbatimLinesOf(draft.from, origin)) {
+    // (code the draft edited: its text as the edit leaves it, read where the block was, at its old
+    // column, against as read where it is: the edit is stated in the old context, which a move or a
+    // re-indentation with it may change, a tab-led line under it then other code; read both in the new
+    // context, it would compare the new reading with itself. Code made anew means what it spells)
+    const pieces = draft.from.mdTree.line(origin.startLine).prefix;
+    const meant = draft.from.verbatimLinesAt(want, pieces.length ? pieces[pieces.length - 1]!.toColumn : 0);
+    const now = verbatimLinesOf(doc, actual);
+    if (meant && now && JSON.stringify(now) !== JSON.stringify(meant)) return `${at}: code ${JSON.stringify(meant)}, read as ${JSON.stringify(now)}`;
   }
   const list = draft.lists.get(expected.id);
   if (list && expected.kind === 'item') {

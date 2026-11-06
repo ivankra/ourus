@@ -209,7 +209,7 @@ test('a document nested deeper than the call stack goes is read, and a command o
     assert.equal(doc.rootNode.children.length, 1);
     const typed = doc.update({ changes: [{ from: text.length, to: text.length, insert: 'x' }] });
     assert.equal(typed.text, text + 'x');
-    const r = executeCommand(OurusView.of(doc), { type: 'enter' }, { anchor: text.length, head: text.length });
+    const r = executeCommand(OurusView.of(doc, { selection: text.length }), { type: 'enter' });
     assert.ok(r instanceof OurusSuccess || r instanceof OurusRejected);
   }
 });

@@ -3,20 +3,19 @@
 // are there (an item in a list, a block in an item); `done()` regroups sections and owned lists,
 // numbers the list they join, keeps them apart from what is around them, and escapes their texts.
 
-import { clipboardFragment, clipboardMarkdown, type OurusClipboard } from './clipboard.ts';
-import { OurusProse, OurusDoc, OurusAtom, Lineage, type OurusNode } from '../doc/index.ts';
+import { clipboardMarkdown, type OurusClipboard } from './clipboard.ts';
+import { OurusProse, OurusDoc, OurusAtom, Lineage, clipboardFragment, type OurusNode } from '../doc/index.ts';
 import { OurusView } from '../view/index.ts';
 import { lineOf, trimMd } from '../text/index.ts';
 import { MdHtmlParser } from '../parser/index.ts';
 import type { OurusDraft } from '../writer/index.ts';
 import { CommandContext } from './context.ts';
 import { placedText } from './typing.ts';
-import { afterDeleting } from './copy.ts';
+import { afterDeleting, takesTextWithBlockIds } from './copy.ts';
 import { codeAt, onDelimiterLine } from './code.ts';
 import { endingBlockIdAt, pastePlainCommand, plainLines } from './paste-plain.ts';
 import { becomesAt, headingTarget, joinsAround, placeOf, resultCheck, takesIn, unholdable } from './move-subtree.ts';
 import type { InsertionPoint, OurusResult } from './types.ts';
-import { pastedBlockIds } from './block-ids.ts';
 import { changeHeadingLevels, headingLevel, inMarkup, selectionInText, textEnd, textStart } from './util.ts';
 import { OurusSuccess, OurusRejected, OurusDeferred } from './types.ts';
 
@@ -74,8 +73,9 @@ export function pasteMarkdown(ctx: CommandContext, read: Read, eachLine: boolean
   if (codeAt(ctx)) return plainLines(ctx, read.plain ?? read.markdown);
   const { from, to } = ctx;
   // (a selection from a text's start replaced: nodes go where it was, before what is left of the text,
-  // whatever `pasteAtTextStart` says of a caret there: `«abc»⏎def` pasting a list, the list then `def`)
-  const inPlace = from.zone === 'text' && from.text instanceof OurusProse && from.offset <= textStart(from.text);
+  // whatever `pasteAtTextStart` says of a caret there: `«abc»⏎def` pasting a list, the list then `def`;
+  // but all of a text a block id ends, which the paste joins, the id staying with it, B342)
+  const inPlace = from.zone === 'text' && from.text instanceof OurusProse && from.offset <= textStart(from.text) && !takesTextWithBlockIds(ctx);
   if (ctx.config.pasteOverSelection === 'ignore' && from.zone === 'text' && to.zone === 'text' && from.node === to.node) {
     const kept = pasteAt(ctx.at(Math.max(ctx.selection.anchor, ctx.selection.head)), read, eachLine, true);
     if (kept !== 'text') return kept;
@@ -93,7 +93,6 @@ const asOutcome = (outcome: OurusResult | null | 'text'): OurusResult | null => 
 function pasteAt(ctx: CommandContext, read: Read, eachLine: boolean, nodesOnly: boolean, before = false): OurusResult | null | 'text' {
   const config = ctx.config;
   const asText = (paste: () => OurusResult | null): OurusResult | null | 'text' => (nodesOnly ? 'text' : paste());
-  // (its block ids kept only where new: `pasteKeepingNewBlockIds`, around the command)
   let fragment = clipboardFragment(read.markdown, ctx.config, read.ours);
   if (!fragment) return new OurusDeferred();
   // plain lines (paragraphs only, but a quote's: `quotes: text`), with `pasteLines: items`: each line a node (Paste18, 19)
@@ -291,7 +290,7 @@ function slotAt(ctx: CommandContext, items: boolean, before = false): Slot | 'pl
   // line after it is (Paste26)
   if (at.zone === 'text' && text instanceof OurusProse && ctx.collapsed && at.offset === text.text.length && ctx.doc.marks.hasEmptyNodeAt(ctx.selection.head)) {
     const last = text.text.lastIndexOf('\n');
-    if (last >= 0 && trimMd(text.text.slice(last + 1).replace(/^ {0,3}>[ \t]?/, '')) === '') return { ...endSlot(ctx, node, items), atEnd: true, onHeldLine: { owner: node, text: text.slice(0, last).withBlockIdLines(text.blockIdLines) } };
+    if (text.emptyLastLine) return { ...endSlot(ctx, node, items), atEnd: true, onHeldLine: { owner: node, text: text.slice(0, last).withBlockIdLines(text.blockIdLines) } };
   }
   // before an item's marker (in its indentation, at its line's start): the host's
   if (at.zone === 'marker' && at.part !== 'padding') return 'host';
@@ -662,7 +661,7 @@ function pasteCaret(ctx: CommandContext, draft: OurusDraft, nodes: readonly numb
 export function pasteAtCommand(ctx: CommandContext, clipboard: OurusClipboard, to: InsertionPoint): OurusResult | null {
   const doc = ctx.doc;
   const read = clipboardMarkdown(clipboard, ctx.config);
-  const fragment = read ? clipboardFragment(pastedBlockIds(doc, read.markdown, { from: 0, to: 0 }), ctx.config, read.ours) : null;
+  const fragment = read ? clipboardFragment(read.markdown, ctx.config, read.ours) : null;
   if (!fragment?.doc.rootNode.children.length) return new OurusRejected('not-expressible', 'nothing to paste');
   let pasted = fragment.doc;
   const place = placeOf(doc, to);
@@ -675,10 +674,10 @@ export function pasteAtCommand(ctx: CommandContext, clipboard: OurusClipboard, t
   const inList = inListAt(parent, after);
   if (first.kind === 'heading' && !inList) {
     // re-levelled to its new siblings, and with it its section and the headings after it
-    const own = headingLevel(new CommandContext(OurusView.of(pasted), { anchor: 0, head: 0 }), first);
+    const own = headingLevel(new CommandContext(OurusView.of(pasted)), first);
     const delta = headingTarget(ctx, parent, after, next, own) - own;
     if (delta) {
-      const shifted = changeHeadingLevels(new CommandContext(OurusView.of(pasted), { anchor: 0, head: 0 }), pasted.rootNode.children, delta);
+      const shifted = changeHeadingLevels(new CommandContext(OurusView.of(pasted)), pasted.rootNode.children, delta);
       if (!(shifted instanceof OurusSuccess)) return shifted;
       pasted = shifted.view.doc;
     }
@@ -716,8 +715,9 @@ export function pasteAtCommand(ctx: CommandContext, clipboard: OurusClipboard, t
  * written, or null: a place Markdown can't hold for its first node (`unholdable`); in a paragraph's
  * list, a node that can't be an item there (a block, but a block of lines, which is an item's text);
  * outside a list, a heading last whose section, re-levelled as the first is to its new siblings,
- * would take in what follows, or a task that would be a paragraph right after a block that adopts
- * lists. What a drag from outside leaves out of its places too.
+ * would take in what follows, a task that would be a paragraph right after a block that adopts
+ * lists, or a block id alone right after a block, which would be its block-id line. What a drag from
+ * outside leaves out of its places too.
  */
 export function pasteRefused(ctx: CommandContext, pasted: OurusDoc, parent: OurusNode, after: OurusNode | null): { reason: 'not-expressible' | 'would-reparent'; why: string } | null {
   const roots = pasted.rootNode.children;
@@ -734,8 +734,10 @@ export function pasteRefused(ctx: CommandContext, pasted: OurusDoc, parent: Ouru
   const joins = joinsAround(ctx.doc, roots.map((r) => pasted.textOf(r)), lastItem, parent, after, next);
   if (joins) return { reason: 'not-expressible', why: joins };
   if (inListAt(parent, after)) return null;
+  // (a paragraph that is only a block id, right after a block: that block's block-id line, no node)
+  if (after && first.kind === 'paragraph' && pasted.blockIds().some((b) => b.owner.id === first.id && b.stray)) return { reason: 'not-expressible', why: 'a block id alone right after a block is its block-id line' };
   if (last.kind === 'heading') {
-    const level = (n: OurusNode): number => headingLevel(new CommandContext(OurusView.of(pasted), { anchor: 0, head: 0 }), n);
+    const level = (n: OurusNode): number => headingLevel(new CommandContext(OurusView.of(pasted)), n);
     const delta = first.kind === 'heading' ? headingTarget(ctx, parent, after, next, level(first)) - level(first) : 0;
     if (takesIn(ctx, next, level(last) + delta)) return { reason: 'would-reparent', why: 'the heading would take in what follows it' };
   }

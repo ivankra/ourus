@@ -102,13 +102,13 @@ let onResult: (type: OurusCommand['type'], result: OurusResult) => void = () => 
 function command(type: OurusCommand['type']) {
   return (view: EditorView): boolean => {
     const { anchor, head } = view.state.selection.main;
-    const result = executeCommand(view.state.field(ourus), { type } as OurusCommand, { anchor, head });
+    const result = executeCommand(view.state.field(ourus).withSelection({ anchor, head }), { type } as OurusCommand);
     onResult(type, result);
     if (result instanceof OurusDeferred) return false; // let CodeMirror do its default
     if (result instanceof OurusRejected) return true; // swallow the key; the status bar says why
     view.dispatch({
       changes: [...result.changes],
-      selection: result.selection,
+      selection: result.view.selection,
       annotations: [planned.of(result.view), Transaction.userEvent.of(`ourus.${type}`)],
       scrollIntoView: true,
     });
@@ -125,13 +125,13 @@ const typingHandler = EditorView.inputHandler.of((view, from, to, text) => {
   // input that replaces another range than the selection (a text replacement) is CodeMirror's
   const { anchor, head } = view.state.selection.main;
   if (from !== Math.min(anchor, head) || to !== Math.max(anchor, head)) return false;
-  const result = executeCommand(view.state.field(ourus), { type: 'insertText', text }, { anchor, head });
+  const result = executeCommand(view.state.field(ourus).withSelection({ anchor, head }), { type: 'insertText', text });
   if (result instanceof OurusDeferred) return false;
   onResult('insertText', result);
   if (result instanceof OurusSuccess) {
     view.dispatch({
       changes: [...result.changes],
-      selection: result.selection,
+      selection: result.view.selection,
       annotations: [planned.of(result.view), Transaction.userEvent.of('ourus.insertText')],
       scrollIntoView: true,
     });
@@ -150,7 +150,7 @@ function copyOrCut(type: 'copy' | 'cut', event: ClipboardEvent, view: EditorView
   const data = event.clipboardData;
   if (!data) return false;
   const { anchor, head } = view.state.selection.main;
-  const result = executeCommand(view.state.field(ourus), { type }, { anchor, head });
+  const result = executeCommand(view.state.field(ourus).withSelection({ anchor, head }), { type });
   onResult(type, result);
   if (result instanceof OurusDeferred) return false;
   event.preventDefault();
@@ -159,7 +159,7 @@ function copyOrCut(type: 'copy' | 'cut', event: ClipboardEvent, view: EditorView
   if (type === 'cut') {
     view.dispatch({
       changes: [...result.changes],
-      selection: result.selection,
+      selection: result.view.selection,
       annotations: [planned.of(result.view), Transaction.userEvent.of('ourus.cut')],
       scrollIntoView: true,
     });
@@ -188,14 +188,14 @@ const pasteHandler = EditorView.domEventHandlers({
     if (!data || (!text && !(type === 'paste' && (data.types.includes('text/html') || data.types.includes('text/markdown'))))) return false;
     const clipboard = Object.fromEntries(['text/plain', 'text/markdown', 'text/html', 'vscode-editor-data'].flatMap((t) => (data.types.includes(t) ? [[t, data.getData(t)]] : [])));
     const { anchor, head } = view.state.selection.main;
-    const result = executeCommand(view.state.field(ourus), type === 'paste' ? { type, clipboard } : { type, text }, { anchor, head });
+    const result = executeCommand(view.state.field(ourus).withSelection({ anchor, head }), type === 'paste' ? { type, clipboard } : { type, text });
     onResult(type, result);
     if (result instanceof OurusDeferred) return false;
     event.preventDefault();
     if (result instanceof OurusSuccess) {
       view.dispatch({
         changes: [...result.changes],
-        selection: result.selection,
+        selection: result.view.selection,
         annotations: [planned.of(result.view), Transaction.userEvent.of(`ourus.${type}`)],
         scrollIntoView: true,
       });
@@ -691,7 +691,7 @@ function main(): void {
             queueMicrotask(() => {
               if (u.view.state !== state) return;
               const to = state.selection.main;
-              const r = settlePlaceholders(state.field(ourus), { anchor: to.anchor, head: to.head });
+              const r = settlePlaceholders(state.field(ourus).withSelection({ anchor: to.anchor, head: to.head }));
               if (!r) return;
               // the spec joins this edit to the step before it (undo.md's Undo3); CodeMirror's history
               // joins nothing to an event once the selection has moved after it, which is what
@@ -701,7 +701,7 @@ function main(): void {
               u.view.dispatch({ selection: left, annotations: Transaction.addToHistory.of(false) });
               u.view.dispatch({
                 changes: r.changes,
-                selection: EditorSelection.range(r.selection.anchor, r.selection.head),
+                selection: EditorSelection.range(r.view.selection.anchor, r.view.selection.head),
                 effects: setView.of(r.view),
                 annotations: Transaction.userEvent.of('ourus.settle'),
               });

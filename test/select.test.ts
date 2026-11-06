@@ -265,21 +265,21 @@ test('the commands act on the selection\'s roots: a subtree selection\'s, else w
   const a = outer.children[0]!;
   const caret = doc.posOf(a, 1);
   // a caret in `a`: indent acts on the inner item, which has no sibling above; fold folds the row's outer item
-  const indented = executeCommand(view, { type: 'indent' }, { anchor: caret, head: caret });
+  const indented = executeCommand(view.withSelection(caret), { type: 'indent' });
   assert.equal(indented instanceof OurusRejected && indented.reason, 'no-previous-sibling');
-  const folded = executeCommand(view, { type: 'fold' }, { anchor: caret, head: caret });
+  const folded = executeCommand(view.withSelection(caret), { type: 'fold' });
   assert.ok(folded instanceof OurusSuccess && folded.view.folded.has(outer.id));
   // the outer item selected whole: indented under `x`
-  const whole = executeCommand(view, { type: 'indent' }, view.selectionOf([outer.id]));
+  const whole = executeCommand(view.withSelection(view.selectionOf([outer.id])), { type: 'indent' });
   assert.equal(whole instanceof OurusSuccess && whole.view.doc.text, '- x\n  - - a\n    - b\n');
   // copy of a drag from a parent's text into its child's (`copySelection: nodes`): the parent, as nodes
   const tree = parseWithMarks('- one\n  - two\n    - deep\n- four\n', [], { copySelection: 'nodes' });
   const two = tree.rootNode.children[0]!.children[0]!;
-  const copied = executeCommand(OurusView.of(tree), { type: 'copy' }, { anchor: tree.posOf(two, 1), head: tree.posOf(two.children[0]!, 2) });
+  const copied = executeCommand(OurusView.of(tree, { selection: { anchor: tree.posOf(two, 1), head: tree.posOf(two.children[0]!, 2) } }), { type: 'copy' });
   assert.equal(copied instanceof OurusSuccess && copied.clipboard?.['text/plain'], '- two\n  - deep\n');
   // copy at a caret on a blank line: the host's
   const gap = parseWithMarks('- a\n\n- b\n');
-  assert.ok(executeCommand(OurusView.of(gap), { type: 'copy' }, { anchor: 4, head: 4 }) instanceof OurusDeferred);
+  assert.ok(executeCommand(OurusView.of(gap, { selection: 4 }), { type: 'copy' }) instanceof OurusDeferred);
 });
 
 test('a structural command keeps a subtree selection on its nodes, in the shape it was given', () => {
@@ -287,18 +287,18 @@ test('a structural command keeps a subtree selection on its nodes, in the shape 
   const doc = parseWithMarks('- a\n- b\n  - c\n- d\n');
   const view = OurusView.of(doc);
   const [a, b] = doc.rootNode.children;
-  const moved = executeCommand(view, { type: 'moveSubtree', nodes: [b!.id], to: { parent: 'root', after: null } }, view.selectionOf([b!.id]));
+  const moved = executeCommand(view.withSelection(view.selectionOf([b!.id])), { type: 'moveSubtree', nodes: [b!.id], to: { parent: 'root', after: null } });
   assert.ok(moved instanceof OurusSuccess);
-  assert.deepEqual(idsOf(moved.view.selectedSubtrees(moved.selection)), [b!.id]);
+  assert.deepEqual(idsOf(moved.view.selectedSubtrees(moved.view.selection)), [b!.id]);
   assert.equal(moved.view.doc.text, '- b\n  - c\n- a\n- d\n');
   // true-outliner's cover, to the end of the gap: the same after a move
   const gapped = parseWithMarks('- a\n\n- b\n\n- d\n');
   const bb = gapped.rootNode.children[1]!;
   const cover = { anchor: gapped.mdTree.starts[bb.startLine]!, head: gapped.mdTree.ends[gapped.coverEnd(bb)]! };
-  const up = executeCommand(OurusView.of(gapped), { type: 'moveSubtreeUp' }, cover);
+  const up = executeCommand(OurusView.of(gapped, { selection: cover }), { type: 'moveSubtreeUp' });
   assert.ok(up instanceof OurusSuccess);
   const nb = up.view.doc.node(bb.id)!;
-  assert.deepEqual(up.selection, { anchor: up.view.doc.mdTree.starts[nb.startLine]!, head: up.view.doc.mdTree.ends[up.view.doc.coverEnd(nb)]! });
+  assert.deepEqual(up.view.selection, { anchor: up.view.doc.mdTree.starts[nb.startLine]!, head: up.view.doc.mdTree.ends[up.view.doc.coverEnd(nb)]! });
   void a;
 });
 
@@ -309,21 +309,21 @@ test('a fold that ends the document leaves a subtree selection of its node whole
   const sel = folded.selectionOf([b.id]);
   assert.equal(sel.head, folded.doc.text.length);
   // (a command that changes no text: its selection only through the view's rule)
-  const r = executeCommand(folded, { type: 'fold' }, sel);
+  const r = executeCommand(folded.withSelection(sel), { type: 'fold' });
   assert.ok(r instanceof OurusSuccess);
-  assert.deepEqual(r.selection, sel);
+  assert.deepEqual(r.view.selection, sel);
   // a caret in the fold still goes to its start
-  const caret = executeCommand(folded, { type: 'fold' }, { anchor: folded.doc.text.length, head: folded.doc.text.length });
-  assert.ok(caret instanceof OurusSuccess && caret.selection.head === folded.doc.foldRange(b)!.from);
+  const caret = executeCommand(folded.withSelection(folded.doc.text.length), { type: 'fold' });
+  assert.ok(caret instanceof OurusSuccess && caret.view.selection.head === folded.doc.foldRange(b)!.from);
 });
 
 test('a command given nodes acts on them, not on the subtree selection', () => {
   const doc = parseWithMarks('- a\n- b\n- c\n');
   const view = OurusView.of(doc);
   const [a, , c] = doc.rootNode.children;
-  const copied = executeCommand(view, { type: 'copy', nodes: [c!.id] }, view.selectionOf([a!.id]));
+  const copied = executeCommand(view.withSelection(view.selectionOf([a!.id])), { type: 'copy', nodes: [c!.id] });
   assert.equal(copied instanceof OurusSuccess && copied.clipboard?.['text/plain'], '- c\n');
-  const deleted = executeCommand(view, { type: 'deleteSubtree', nodes: [c!.id] }, view.selectionOf([a!.id]));
+  const deleted = executeCommand(view.withSelection(view.selectionOf([a!.id])), { type: 'deleteSubtree', nodes: [c!.id] });
   assert.equal(deleted instanceof OurusSuccess && deleted.view.doc.text, '- a\n- b\n');
 });
 
@@ -348,19 +348,19 @@ test('selectNodeDown then as many selectNodeUp is the identity; the roots never 
       // whose anchor's node is then that node; the range can't say it was `a`)
       let reseated = false;
       for (let k = 0; k < 4; k++) {
-        const r = executeCommand(view, { type: 'selectNodeDown' }, sel);
+        const r = executeCommand(view.withSelection(sel), { type: 'selectNodeDown' });
         assert.ok(r instanceof OurusSuccess);
-        if (!(r instanceof OurusSuccess) || idsOf(view.selectedSubtrees(r.selection))?.join() === idsOf(view.selectedSubtrees(sel))?.join()) break;
-        sel = r.selection;
+        if (!(r instanceof OurusSuccess) || idsOf(view.selectedSubtrees(r.view.selection))?.join() === idsOf(view.selectedSubtrees(sel))?.join()) break;
+        sel = r.view.selection;
         grown++;
         shallowing(view, sel, `${node.id} down ${grown}`);
         if (view.selectedSubtrees(sel)!.some((n) => !view.touchedSubtrees(sel).includes(n))) reseated = true;
       }
       if (reseated) continue;
       for (let k = 0; k < grown; k++) {
-        const r = executeCommand(view, { type: 'selectNodeUp' }, sel);
+        const r = executeCommand(view.withSelection(sel), { type: 'selectNodeUp' });
         assert.ok(r instanceof OurusSuccess);
-        sel = r.selection;
+        sel = r.view.selection;
         shallowing(view, sel, `${node.id} up`);
       }
       assert.deepEqual(idsOf(view.selectedSubtrees(sel)), idsOf(view.selectedSubtrees(start)), `${JSON.stringify(doc.text)}: from node ${node.id}, ${grown} down and up`);
@@ -374,15 +374,15 @@ test('over a subtree selection the press is a node step wherever the head is, an
   // a two-line node selected: Shift-Up extends to the node above, not into the node
   const two = OurusView.of(parseWithMarks('- x\n- a\n  more\n- b\n'));
   const [x, a] = two.doc.rootNode.children;
-  const up = executeCommand(two, { type: 'selectNodeUp' }, two.selectionOf([a!.id], 'up'));
+  const up = executeCommand(two.withSelection(two.selectionOf([a!.id], 'up')), { type: 'selectNodeUp' });
   assert.ok(up instanceof OurusSuccess);
-  assert.deepEqual(idsOf(two.selectedSubtrees(up.selection)), [x!.id, a!.id]);
+  assert.deepEqual(idsOf(two.selectedSubtrees(up.view.selection)), [x!.id, a!.id]);
   // expandSelection from each whole-line shape, either way: the same next rung
   for (const view of VIEWS.slice(0, 300)) {
     const doc = view.doc;
     for (const node of allNodes(doc).filter((n) => !view.isHidden(n)).slice(0, 8)) {
       const sel = view.selectionOf([node.id]);
-      const want = executeCommand(view, { type: 'expandSelection' }, sel);
+      const want = executeCommand(view.withSelection(sel), { type: 'expandSelection' });
       const { starts, ends } = doc.mdTree;
       const last = view.selectedSubtrees(sel)!.at(-1)!;
       const gapEnd = ends[doc.coverEnd(last)]!;
@@ -390,9 +390,9 @@ test('over a subtree selection the press is a node step wherever the head is, an
         if (to <= sel.anchor || to === starts[last.endLine]) continue;
         for (const shape of [{ anchor: sel.anchor, head: to }, { anchor: to, head: sel.anchor }]) {
           if (!view.selectedSubtrees(shape)) continue;
-          const got = executeCommand(view, { type: 'expandSelection' }, shape);
+          const got = executeCommand(view.withSelection(shape), { type: 'expandSelection' });
           assert.equal(resultStatus(got), resultStatus(want), `${show(doc, shape)}`);
-          if (got instanceof OurusSuccess && want instanceof OurusSuccess) assert.deepEqual(idsOf(view.selectedSubtrees(got.selection)) ?? got.selection, idsOf(view.selectedSubtrees(want.selection)) ?? want.selection, `${show(doc, shape)}`);
+          if (got instanceof OurusSuccess && want instanceof OurusSuccess) assert.deepEqual(idsOf(view.selectedSubtrees(got.view.selection)) ?? got.view.selection, idsOf(view.selectedSubtrees(want.view.selection)) ?? want.view.selection, `${show(doc, shape)}`);
         }
       }
     }
@@ -404,10 +404,10 @@ test('typing over the whole document (a select all) is the host\'s: the text rep
     const view = OurusView.of(parseWithMarks(text));
     const all = { anchor: 0, head: text.length };
     assert.ok(idsOf(view.selectedSubtrees(all)), 'a subtree selection still');
-    assert.ok(executeCommand(view, { type: 'insertText', text: 'x' }, all) instanceof OurusDeferred);
-    assert.ok(executeCommand(view, { type: 'pastePlain', text: 'x' }, all) instanceof OurusDeferred);
+    assert.ok(executeCommand(view.withSelection(all), { type: 'insertText', text: 'x' }) instanceof OurusDeferred);
+    assert.ok(executeCommand(view.withSelection(all), { type: 'pastePlain', text: 'x' }) instanceof OurusDeferred);
     // the keys that act on nodes still do
-    const deleted = executeCommand(view, { type: 'deleteContentForward' }, all);
+    const deleted = executeCommand(view.withSelection(all), { type: 'deleteContentForward' });
     assert.ok(deleted instanceof OurusSuccess && deleted.view.doc.blank);
   }
 });

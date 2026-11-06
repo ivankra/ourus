@@ -65,7 +65,7 @@ function played(t: SpecTest, flavor: OurusConfig['flavor']): { buffer: string; r
     if (state.view.doc.text !== '' && !/[\r\n]$/.test(state.view.doc.text)) return `step ${k + 1}: no final line break, which a buffer can't draw`;
     const own = readLabels(step.expect.buffer ?? '').labels;
     labels.check(state.view.doc, own, before);
-    const drawn = drawLabels(drawDoc(state.view, state.selection), labels.drawn(state.view.doc, new Set([...own.values()].flat())));
+    const drawn = drawLabels(drawDoc(state.view, state.view.selection), labels.drawn(state.view.doc, new Set([...own.values()].flat())));
     out.push({ buffer: normalizeDrawing(drawn), result: describeOutcome(state) });
   }
   return out;

@@ -256,7 +256,10 @@ its line break an auto mark too, isn't drawn yet, nor checked. The SxS takes the
 has none.
 
 A clipboard uses `→`, `␍`, `⍽` and `␠` too. A buffer's last line always ends with a line ending. A buffer
-that contains a code fence needs a longer fence of its own (`` ````markdown ``).
+that contains a code fence needs a longer fence of its own (`` ````markdown ``). `␄` ends the text with
+no line break after it, the one the buffer ends with not the text's: `q⏎┃␄` is `q⏎`, the caret past its
+last line break, and `┃q␄` a text with no final one. A marker alone on the last line (`q⏎┃`) is still on
+a line of its own, an empty one: the text `q⏎⏎`.
 
 A node's **label**, `①` to `⑳`, then `㉑` to `㊿`, names that node, so a case can say which node is
 which, as a command keeps them: Enter's first half keeps the item's node (Enter1), a join the upper

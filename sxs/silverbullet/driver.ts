@@ -40,6 +40,9 @@ export const driver: Driver = {
     quotes: 'atom',
     enterSplitSpace: 'start',
     enterAtTextStart: 'stay',
+    // a new item numbered on from the one above, the run after it that counted on shifting with it, a
+    // number breaking the run left (probed: `3. a┃⏎4. b⏎4. c⏎9. d`, Enter, `3. 4. 5. 4. 9.`)
+    orderedLists: 'shift',
     // brackets typed as pairs before a blank or a closer, no fence or backtick closed (the autoClose probes)
     autoClose: ['(', '[', '{'],
     copyAtCaret: 'host',

@@ -1,27 +1,30 @@
-// Settling the placeholders the caret left: a host settles as the caret moves. A
-// placeholder holds what Markdown can't while the caret is there: an empty node, a deleted
+// Settling the placeholders the selection left: a host settles as the selection moves. A
+// placeholder holds what Markdown can't while the selection is on its line: an empty node, a deleted
 // character's place; away from it, the node is written again (`done()` says how), or goes.
 
-import { trimMd, type ChangeSpec } from '../text/index.ts';
-import { OurusProse, checkBlockIds, type OurusNode, type OurusDoc } from '../doc/index.ts';
+import type { ChangeSpec, OurusSelection } from '../text/index.ts';
+import { OurusProse, type OurusNode, type OurusDoc } from '../doc/index.ts';
 import { OurusDraft, autoLinesOf } from './draft.ts';
 
 /** A step of settling: the document after it, and its changes from the step before's. */
 export type Settled = { readonly doc: OurusDoc; readonly changes: readonly ChangeSpec[] };
 
 /**
- * The placeholders off the caret's line settled: a held space's node written again without it (the
+ * The placeholders off the lines `selection` touches settled (a caret's, its line; from the anchor's
+ * line to the head's, those between too, a selection's: one that starts on a held line keeps it): a held space's node written again without it (the
  * text escaped where it would read as markup); an empty item written again, which an empty item
  * alone needs no placeholder for, but right under its parent's text a blank line above it; any other
  * empty node gone, its children in its place. One that can't be written so goes as it is, the text
  * read without it, as it is saved: in steps, each on the one before's document (one, or, where not
  * all settle at once, those that can't dropped and then the rest), so that a view is carried through
- * each (`settlePlaceholders` in `commands/`). None where none is off the caret's line. `kept`: the
- * placeholders that stay, off it or not.
+ * each (`settlePlaceholders` in `commands/`). None where none is off those lines. `kept`: the
+ * placeholders that stay, off them or not.
  */
-export function settleSteps(doc: OurusDoc, caret: number, kept?: (pos: number) => boolean): readonly Settled[] {
-  const line = doc.lineAt(caret);
-  const abandoned = doc.marks.placeholders.filter((pos) => (pos < line.from || pos > line.to) && !kept?.(pos));
+export function settleSteps(doc: OurusDoc, selection: OurusSelection, kept?: (pos: number) => boolean): readonly Settled[] {
+  const from = doc.lineAt(Math.min(selection.anchor, selection.head)).from;
+  const to = doc.lineAt(Math.max(selection.anchor, selection.head)).to;
+  const caret = selection.head;
+  const abandoned = doc.marks.placeholders.filter((pos) => (pos < from || pos > to) && !kept?.(pos));
   if (!abandoned.length) return [];
   const all = settled(doc, caret, abandoned);
   if (all) return [all];
@@ -44,8 +47,13 @@ function settled(doc: OurusDoc, caret: number, placeholders: readonly number[]):
     // an empty last line it holds (Shift-Enter's at the text's end, left so): the line goes, no blank
     // line left in its place (B23)
     const last = text.text.lastIndexOf('\n');
-    if (last >= 0 && !text.empty && text.marks.placeholders.includes(text.text.length) && trimMd(text.text.slice(last + 1).replace(/^ {0,3}>[ \t]?/, '')) === '') {
+    if (!text.empty && text.marks.placeholders.includes(text.text.length) && text.emptyLastLine) {
       draft.setText(node, text.slice(0, last).withBlockIdLines(text.blockIdLines));
+      continue;
+    }
+    // an empty first line it holds, above the text (`◌⏎text`): the line goes, as the last one does (B239)
+    if (!text.empty && text.text[0] === '\n' && text.marks.placeholders.includes(0) && text.frame[0]?.part !== 'below') {
+      draft.setText(node, text.slice(1).withBlockIdLines(text.blockIdLines));
       continue;
     }
     if (doc.marks.hasHeldSpaceAt(pos) || node.kind === 'item') {
@@ -70,8 +78,7 @@ function settled(doc: OurusDoc, caret: number, placeholders: readonly number[]):
     }
   }
   const applied = draft.select({ old: caret }, { old: caret }).done();
-  // (and none that would lose a block id, as no command may: settled so, it isn't)
-  if (!('doc' in applied) || checkBlockIds(doc, applied.doc, applied.changes)) return null;
+  if (!('doc' in applied)) return null;
   return { doc: applied.doc, changes: applied.changes };
 }
 

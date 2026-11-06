@@ -142,3 +142,15 @@ test('the same text, read again by an update that makes its block-id line attach
   const moved = parse('q\n\np\n\n^y\n').update({ changes: [{ from: 0, to: 9, insert: 'p\n\n^y\n\nq\n' }] });
   assert.deepEqual(read(moved), read(doc));
 });
+
+test('a quote atom reads the block id ending each paragraph and each heading in it: ATX, its closing run after it, and setext', () => {
+  const names = (text: string): string[] => OurusDoc.parse(text, { config: { flavor: 'obsidian', quotes: 'atom' } }).blockIds().map((b) => b.name);
+  assert.deepEqual(names('> # h ^x\n'), ['x']);
+  assert.deepEqual(names('> ## h ^x ##\n'), ['x']);
+  assert.deepEqual(names('> h ^x\n> ===\n'), ['x']);
+  assert.deepEqual(names('>\t# h ^x\n'), ['x']);
+  assert.deepEqual(names('> a\n> ^x\n'), ['x']);
+  // (and a copy without it keeps the heading's closing run)
+  const doc = OurusDoc.parse('> ## h ^x ##\n', { config: { flavor: 'obsidian', quotes: 'atom' } });
+  assert.equal(withoutBlockIds(doc.textOf(doc.rootNode.children[0]!)!).text, '> ## h ##');
+});

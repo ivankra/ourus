@@ -62,7 +62,7 @@ export function zoomed(view: OurusView, command: OurusCommand, selection: OurusS
     const zoom = next.zoomRange();
     if (zoom && (plain.caret < zoom.from || plain.caret > zoom.to)) return outside("the host's default would leave the caret outside the zoom");
     const visible = next.visibleSelection(caret);
-    if (visible !== caret) return new OurusSuccess({ view: next, changes: [plain.change], selection: visible });
+    if (visible !== caret) return new OurusSuccess({ view: next.withSelection(visible), changes: [plain.change] });
     return result;
   }
   if (!root) return settled(result);
@@ -80,8 +80,8 @@ export function zoomed(view: OurusView, command: OurusCommand, selection: OurusS
 /** An applied result, its selection out of what its view hides. */
 function settled(result: OurusResult): OurusResult {
   if (!(result instanceof OurusSuccess)) return result;
-  const selection = result.view.visibleSelection(result.selection);
-  return selection === result.selection ? result : new OurusSuccess({ ...result, selection });
+  const selection = result.view.visibleSelection();
+  return selection === result.view.selection ? result : new OurusSuccess({ ...result, view: result.view.withSelection(selection) });
 }
 
 /** Whether node `id` is the zoom root or inside it. */
@@ -112,6 +112,6 @@ function inRootMarkup(view: OurusView, pos: number, newline: boolean): boolean {
 export function leavesZoom(view: OurusView, next: OurusDoc): boolean {
   if (view.zoom === null) return false;
   if (next.node(view.zoom)) return view.escape(next) !== null;
-  const removal = deleteSubtreeCommand(new CommandContext(view, { anchor: 0, head: 0 }, [view.zoom]));
+  const removal = deleteSubtreeCommand(new CommandContext(view.withSelection({ anchor: 0, head: 0 }), [view.zoom]));
   return !(removal instanceof OurusSuccess) || removal.view.doc.text !== next.text;
 }

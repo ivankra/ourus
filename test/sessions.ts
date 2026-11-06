@@ -58,11 +58,11 @@ function run(startIndex: number, caret: number, actions: readonly string[]): { k
   const s = starts[startIndex]!;
   const found: { kind: string; at: number }[] = [];
   const doc = OurusDoc.parse(s.text, { config: s.config });
-  let played: PlayedState = { view: OurusView.of(doc), selection: { anchor: caret, head: caret }, clipboard: {} };
+  let played: PlayedState = { view: OurusView.of(doc, { selection: caret }), clipboard: {} };
   for (let k = 0; k < actions.length; k++) {
     const action = actions[k]!;
     const prior = played.view;
-    const hidden = JSON.stringify(prior.visibleSelection(played.selection)) !== JSON.stringify(played.selection);
+    const hidden = JSON.stringify(prior.visibleSelection(played.view.selection)) !== JSON.stringify(played.view.selection);
     try {
       played = playActions(played, [action]);
     } catch (e) {
@@ -75,7 +75,7 @@ function run(startIndex: number, caret: number, actions: readonly string[]): { k
       continue;
     }
     const text = played.view.doc.text;
-    const { anchor, head } = played.selection;
+    const { anchor, head } = played.view.selection;
     if (anchor < 0 || head < 0 || anchor > text.length || head > text.length) found.push({ kind: `${action}: selection off the text`, at: k });
     // (what only the host does, a motion and a history step, can leave the caret in a hidden line: not checked, nor a command that starts from one)
     if (!hidden && last instanceof OurusSuccess && !motion(action) && action !== 'undo' && action !== 'redo') {

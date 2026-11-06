@@ -299,3 +299,24 @@ test('copy: an item lined up with the item of its list that stays, at its own co
   assert.ok(!('reason' in result), 'reason' in result ? result.detail : '');
   assert.equal(result.doc.text, '1. x\n- a\n2. a\n  3. b\n    1. x\n  4. a\n  5. b\n    1. x\n');
 });
+
+test('the readback compares edited code as the edit means it, read where the block was: moved under an item with it, a tab-led line under a fence indented one space reads as other code, refused', () => {
+  const edited = (src: string): string => {
+    const doc = OurusDoc.parse(src);
+    const [item, code] = doc.rootNode.children;
+    const text = doc.textOf(code!) as OurusAtom;
+    const at = text.text.indexOf('PAYLOAD') + 7;
+    const result = new OurusDraft(doc).remove([code!]).append(item!, 'last', [code!]).setText(code!, text.splice(at, at, 'y')).done();
+    return 'reason' in result ? `${result.reason}: ${result.detail}` : result.doc.text;
+  };
+  // (the fence one space in took a column of the tab: `   PAYLOAD`; under the item nothing does)
+  assert.match(edited('- a\n\n ```\n\tPAYLOAD\n ```\n'), /^write-failed: .*code \["","   PAYLOADy",""\], read as \[""," PAYLOADy",""\]/);
+  // (a tab at a stop is a tab in code wherever it is; spaces move with the block)
+  assert.equal(edited('- a\n\n```\n\tPAYLOAD\n```\n'), '- a\n\n  ```\n  \tPAYLOADy\n  ```\n');
+  assert.equal(edited('- a\n\n```\n  PAYLOAD\n```\n'), '- a\n\n  ```\n    PAYLOADy\n  ```\n');
+  // (what the doc layer reads a text as, at a column)
+  const doc = OurusDoc.parse('x\n');
+  const fence = OurusDoc.parse(' ```\n\tP\n ```\n').textOf(OurusDoc.parse(' ```\n\tP\n ```\n').rootNode.children[0]!) as OurusAtom;
+  assert.deepEqual(doc.verbatimLinesAt(fence, 0), ['', '   P', '']);
+  assert.deepEqual(doc.verbatimLinesAt(fence, 2), ['', ' P', '']);
+});

@@ -2,13 +2,14 @@
 // spec defines: backslash escapes, entity and numeric character references, URL normalization.
 
 import { ENTITY_DATA } from './entities-data.ts';
+import { trimMd } from '../text/index.ts';
 
 export { isSpaceOrTab } from '../text/index.ts';
 
 /** Space, tab, line feed, line tabulation, form feed or carriage return: what the spec calls a blank. */
-export const isBlankChar = (c: number): boolean => c === 32 || c === 9 || c === 10 || c === 11 || c === 12 || c === 13;
+export const isBlankChar = (c: number): boolean => c === 32 || c === 9 || c === 10 || c === 13;
 
-/** Nothing but spaces, tabs, line endings, vertical tabs and form feeds. */
+/** Nothing but spaces, tabs and line endings: Markdown's blank, not a vertical tab's or a form feed's, which are text. */
 export function isBlankText(s: string, from = 0, to = s.length): boolean {
   for (let i = from; i < to; i++) if (!isBlankChar(s.charCodeAt(i))) return false;
   return true;
@@ -142,7 +143,7 @@ const isHex = (c: number): boolean => isAsciiDigit(c) || (c >= 65 && c <= 70) ||
  * folded (as commonmark.js does: lower then upper case, with dotless i kept apart).
  */
 export function normalizeLabel(label: string): string {
-  const trimmed = label.slice(1, -1).trim().replace(/[ \t\r\n]+/g, ' ');
+  const trimmed = trimMd(label.slice(1, -1)).replace(/[ \t\r\n]+/g, ' ');
   if (trimmed.indexOf('ı') < 0) return trimmed.toLowerCase().toUpperCase();
   return trimmed.replace(/[^ı]+/g, (part) => part.toLowerCase().toUpperCase());
 }

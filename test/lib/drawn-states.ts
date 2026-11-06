@@ -19,8 +19,8 @@ import { OurusView } from '../../src/view/index.ts';
  */
 export const drawsCaret = (drawn: string): boolean => /[┃«»]|⟦selected⟧/.test(drawn);
 
-/** A drawing without its caret and selection, to set beside one that draws none. */
-export const withoutCaret = (drawn: string): string => drawn.replace(/[┃«»]|⟦selected⟧/g, '');
+/** A drawing without its caret and selection, to set beside one that draws none (a `␄` there for a caret past the text's last line break alone gone with it). */
+export const withoutCaret = (drawn: string): string => drawn.replace(/[┃«»]|⟦selected⟧/g, '').replace(/\n␄\n$/, '\n');
 
 /** A node's marks, last on its first line (spec/README.md): folded, the zoom root, a subtree selection's root. */
 export type LineMark = 'folded' | 'zoomed' | 'selected';
@@ -163,13 +163,15 @@ export function readDrawing(drawn: string): { text: string; selection: OurusSele
   const { drawn: unviewed, marks } = readLineMarks(unmarked);
   const read = readLabels(unviewed);
   const labels = read.labels;
+  // (`␄` ends the text, no line break after it: the buffer's own, the line its block ends, isn't the text's)
+  if (read.drawn.includes('␄') && !/␄\n?$/.test(read.drawn)) throw new Error('`␄` ends the text: nothing after it on its line, nor a line below');
   const lineOf = (mark: LineMark): number[] => [...marks].flatMap(([line, own]) => own.filter((m) => m === mark).map(() => line)).sort((a, b) => a - b);
   const zoomed = lineOf('zoomed');
   if (zoomed.length > 1) throw new Error(`a second \`⟦zoomed⟧\` (line ${zoomed[1]! + 1}): one node is zoomed into`);
   const viewLines = { folded: lineOf('folded'), zoom: zoomed[0] ?? null };
   const marked = lineOf('selected');
   if (new Set(marked).size < marked.length) throw new Error('a line marked `⟦selected⟧` twice: a line has one root of a subtree selection');
-  const s = readText(read.drawn);
+  const s = readText(read.drawn.replace(/␄\n?$/, ''));
   /** Where each line of the drawing starts in the text. */
   const lineStarts = [0];
   for (let i = 0; i < s.length; i++) {
@@ -310,8 +312,15 @@ export function drawState(text: string, sel: OurusSelection, placeholders: reado
   const marked = new Set(auto.filter((pos) => text[pos] !== '\n' && text[pos] !== '\r'));
   let out = '';
   for (let i = 0; i <= text.length; i++) out += (marks.get(i) ?? '') + (text[i] ?? '') + (marked.has(i) ? AUTO_CHAR : '');
-  return drawText(out);
+  return endingText(drawText(out));
 }
+
+/**
+ * A drawing that doesn't end with a line break (a text without a final one, or a mark past it) ended
+ * with `␄`, then the line break every buffer ends with, which isn't the text's: `q⏎┃␄⏎` is `q⏎`, the
+ * caret at its end.
+ */
+export const endingText = (drawn: string): string => (drawn.endsWith('\n') ? drawn : `${drawn}␄\n`);
 
 /**
  * Plain text drawn with the buffer glyphs for invisible characters (a clipboard's): `→` tab, `␍` CR, `⍽`

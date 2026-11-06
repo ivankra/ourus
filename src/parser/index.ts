@@ -15,5 +15,6 @@ export { MD_BLOCK_ID_NAME, mdBlockIdEnd, mdCalloutAt } from './obsidian.ts';
 export type { MdHtmlOptions } from './html.ts';
 export { MdHtmlParser, type MdHtmlParsed } from './html-parser.ts';
 export { MdBlockAt } from './tree.ts';
+export { MAX_ITEM_NUMBER } from './blocks.ts';
 export type { MdEscapeAt, MdEscapedParagraph, MdLineContext, MdParagraphPlace } from './readback.ts';
 export type { MdAttrs, MdBlock, MdCallout, MdInline, MdInlineText, MdMark, MdLine, MdLineMarkup, MdList, MdPrefixPiece, MdTableAlign, MdTask } from './types.ts';

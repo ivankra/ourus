@@ -33,20 +33,34 @@ const notationChanged = (): boolean => {
   }
 };
 
+/** Whether the harness in `root` reads the corpus there: not where a case sets an option its `src/` doesn't have (one renamed since). */
+const readable = (root: string): boolean => {
+  try {
+    execFileSync('node', ['--input-type=module', '-e', "import { readSpecFile, specFiles } from './test/lib/index.ts'; for (const f of specFiles()) readSpecFile(f);"], { cwd: root, stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 /**
  * A copy of the tree at `to`: the working tree's files (but `.git` and every `node_modules`); where
  * `head`, `src/` the last commit's, with the harness written for it (`test/`, `sxs/`), so a change of
  * the API between them plays each with its own: the corpus (`spec/`) the working tree's, but where
- * its notation changed since, the base's own (the cases as its reader reads them).
+ * its notation changed since, or the base's harness can't read it, the base's own (the cases as its
+ * reader reads them).
  */
 function copy(to: string, head: boolean): string {
   cpSync(here, to, { recursive: true, filter: (from) => !/^\.git(?:\/|$)|(?:^|\/)node_modules(?:\/|$)/.test(relative(here, from)) });
-  if (head) {
-    const dirs = ['src', 'test', 'sxs', ...(notationChanged() ? ['spec'] : [])];
-    for (const dir of dirs) execFileSync('rm', ['-rf', join(to, dir)]);
-    execFileSync('tar', ['-x', '-C', to], { input: execFileSync('git', ['archive', base, ...dirs], { cwd: here, maxBuffer: 1 << 28 }) });
-  }
   symlinkSync(join(here, 'node_modules'), join(to, 'node_modules'));
+  if (head) {
+    const extract = (dirs: string[]): void => {
+      for (const dir of dirs) execFileSync('rm', ['-rf', join(to, dir)]);
+      execFileSync('tar', ['-x', '-C', to], { input: execFileSync('git', ['archive', base, ...dirs], { cwd: here, maxBuffer: 1 << 28 }) });
+    };
+    extract(['src', 'test', 'sxs']);
+    if (notationChanged() || !readable(to)) extract(['spec']);
+  }
   return to;
 }
 

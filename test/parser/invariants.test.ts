@@ -166,6 +166,43 @@ test('blocks opened and closed by delimiter lines', () => {
   assert.deepEqual(delimited('commonmark', '```\nx\n```\n\n    code\n\n<div>\n'), [true, false, false]);
   assert.deepEqual(delimited('obsidian', '$$\nx\n$$\n%%\nc\n%%\n~~~\n'), [true, true, true]);
   assert.deepEqual(delimited('commonmark', '$$\nx\n$$\n'), [false]);
+  // (and the characters their delimiters are made of)
+  const chars = (flavor: keyof typeof FLAVORS): string => [...'`~$%#>-*'].filter((c) => FLAVORS[flavor]!.delimiterChar(c)).join('');
+  assert.equal(chars('commonmark'), '`~');
+  assert.equal(chars('gfm'), '`~');
+  assert.equal(chars('obsidian'), '`~$%');
+});
+
+test('a line\'s prefix for a line after it: a quote\'s `>` kept, a marker and a footnote\'s label as spaces, tabs kept; the line itself repeated, a tab the prefix split kept', () => {
+  const after = (flavor: keyof typeof FLAVORS, text: string): [string, string] => {
+    const tree = MdTree.parse(text, FLAVORS[flavor]);
+    const open = tree.markup(0).marks.find((m) => m.kind === 'open');
+    return [tree.continuationPrefix(0, tree.line(0).containers), tree.continuedLine(0, open ? open.to : tree.line(0).to)];
+  };
+  assert.deepEqual(after('gfm', '> ```js\n'), ['> ', '> ```']);
+  assert.deepEqual(after('gfm', '>\t```\n'), ['> ', '>\t```']);
+  assert.deepEqual(after('gfm', '- ```\n'), ['  ', '  ```']);
+  assert.deepEqual(after('gfm', '10)  ~~~~\n'), ['     ', '     ~~~~']);
+  assert.deepEqual(after('gfm', '> 1. ```\n'), ['>    ', '>    ```']);
+  assert.deepEqual(after('gfm', '- > ```\n'), ['  > ', '  > ```']);
+  assert.deepEqual(after('gfm', '>\t-\t```\n'), ['>\t \t', '>\t \t```']);
+  // (a footnote's label opens it, as a marker does: repeated, it would start another)
+  assert.deepEqual(after('gfm', '[^1]: ```js\n'), ['      ', '      ```']);
+  assert.deepEqual(after('obsidian', '> - $$\n'), ['>   ', '>   $$']);
+});
+
+test('a line right under a block, read as a line of it or not', () => {
+  const takesIn = (block: string, line: string): boolean => MdTree.takesIn(block, line, FLAVORS.gfm!);
+  // an HTML block a blank line ends takes in a fence; one its end condition closed doesn't
+  assert.equal(takesIn('<div>', '```'), true);
+  assert.equal(takesIn('<del>', '```'), true);
+  assert.equal(takesIn('<!-- c\n-->', '```'), false);
+  assert.equal(takesIn('<script>\nx\n</script>', '```'), false);
+  // a fence interrupts a paragraph; a line of text continues it; an open fence's closing is its own
+  assert.equal(takesIn('a', '```'), false);
+  assert.equal(takesIn('a', 'b'), true);
+  assert.equal(takesIn('# h', 'b'), false);
+  assert.equal(takesIn('```\nx', '```'), true);
 });
 
 test('an empty text, or an empty last line of one, maps to where it is', () => {

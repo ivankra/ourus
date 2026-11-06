@@ -35,7 +35,7 @@ function tabbedStart(t: SpecTest, config: Partial<OurusConfig>): { spaces: Ourus
   return {
     spaces,
     // (tabs change no line: a label names the same line's node)
-    tabs: { view: specTestView(t, parseWithMarks(d.text, start.placeholders.map(at), config), start.view), selection: d.sel!, clipboard: readClipboard(t.initial.clipboard), labels: labels.ids, drop: start.drop },
+    tabs: { view: specTestView(t, parseWithMarks(d.text, start.placeholders.map(at), config), start.view).withSelection(d.sel!), clipboard: readClipboard(t.initial.clipboard), labels: labels.ids, drop: start.drop },
   };
 }
 
@@ -71,7 +71,7 @@ const columnMotion = (action: string): boolean => /^(?:cursor|select)(?:Line|Pag
 function runTabbed(t: SpecTest, flavor: OurusConfig['flavor']): void {
   const config = { flavor, ...specConfig(t.options) };
   let { tabs: state } = tabbedStart(t, config);
-  const from = drawDoc(state.view, state.selection);
+  const from = drawDoc(state.view, state.view.selection);
   for (const step of t.steps) {
     const at = `${t.file}:${step.line} (${flavor}, tabs)`;
     for (const action of step.actions) {
@@ -90,8 +90,8 @@ function runTabbed(t: SpecTest, flavor: OurusConfig['flavor']): void {
     const zoomLine = byLine(state.view.zoom);
     const expectedView = OurusView.of(plain).withFolded([...state.view.folded].flatMap((id) => plain.rowOwner(byLine(id) ?? -1)?.id ?? [])).withZoom(zoomLine === null ? null : (plain.rowOwner(zoomLine)?.id ?? null));
     const expected = reading(expectedView, drawnSelection(expectedView, drawn), drawsCaret(buffer));
-    const got = reading(state.view, state.selection, drawsCaret(buffer));
-    assert.equal(got, expected, `${at}: reads otherwise, as tabs ${JSON.stringify(from)} → ${JSON.stringify(drawDoc(state.view, state.selection))}`);
+    const got = reading(state.view, state.view.selection, drawsCaret(buffer));
+    assert.equal(got, expected, `${at}: reads otherwise, as tabs ${JSON.stringify(from)} → ${JSON.stringify(drawDoc(state.view, state.view.selection))}`);
   }
 }
 

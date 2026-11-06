@@ -8,7 +8,7 @@ import { codeAt, joinCodeItemUp, joinInCode } from './code.ts';
 import { lineOf } from '../text/index.ts';
 import { type CommandContext } from './context.ts';
 import { joinIntoQuote, joinLineInQuote, joinQuoteUp, quoteAtomAt } from './quote.ts';
-import { deleteHeldSpace, hiddenSpacesAt, inMarkup, textEnd, textStart, unquote, withTextlessParents } from './util.ts';
+import { deleteHeldSpace, hiddenSpacesAt, inMarkup, textEnd, textStart, withTextlessParents } from './util.ts';
 import type { OurusResult } from './types.ts';
 import { OurusDeferred, OurusRejected } from './types.ts';
 
@@ -119,7 +119,7 @@ export function deleteContentForwardCommand(ctx: CommandContext): OurusResult | 
     return headingMarksGo(ctx, below, lower, node, offset);
   }
   // before a quote (`quotes: text`), its `>`s first, its text a paragraph where it is
-  if (lower.type === 'quote') return ctx.apply(draft.setText(below, unquote(lower)).setCaret(node, offset, -1));
+  if (lower.type === 'quote') return ctx.apply(draft.setText(below, lower.unquoted()).setCaret(node, offset, -1));
   // an empty item below goes, this node taking its gap as a join does; with children, as Backspace at
   // its start takes it (Delete33b)
   if (below.kind === 'item' && lower.empty) {

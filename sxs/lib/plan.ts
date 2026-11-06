@@ -323,7 +323,7 @@ function escapeMotion(test: SpecTest, flavor: OurusConfig['flavor'], config: Par
   } catch {
     return undefined;
   }
-  const drawn = (): string => withoutAuto(normalizeDrawing(drawDoc(state.view, state.selection)));
+  const drawn = (): string => withoutAuto(normalizeDrawing(drawDoc(state.view, state.view.selection)));
   for (const step of test.steps)
     for (const action of step.actions) {
       const before = drawn();

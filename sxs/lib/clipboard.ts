@@ -4,7 +4,7 @@
 // back as what its app was given (`startClipboard` in run.ts).
 
 import type { OurusConfig } from '../../src/config.ts';
-import { clipboardSource } from '../../src/commands/clipboard.ts';
+import { clipboardSource } from '../../src/doc/index.ts';
 import { MdFlavor, MdTree, type MdBlock } from '../../src/parser/index.ts';
 
 /**

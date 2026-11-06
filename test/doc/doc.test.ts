@@ -116,7 +116,7 @@ test('settings applied again unchanged keep the snapshot, so an undo given the o
   const view = OurusView.of(OurusDoc.parse('- a\n  - a1\n- b\n'), { folded: [1] });
   const doc = view.doc;
   assert.equal(doc.withConfig({}), doc);
-  const moved = executeCommand(view, { type: 'moveSubtreeDown' }, { anchor: 2, head: 2 });
+  const moved = executeCommand(view.withSelection(2), { type: 'moveSubtreeDown' });
   assert.ok(moved instanceof OurusSuccess);
   if (!(moved instanceof OurusSuccess)) return;
   const current = moved.view.withConfig({ markup: 'text' });
@@ -195,4 +195,36 @@ test('a deletion that would change the outline keeps its padding held beside an 
   assert.equal(edited.text, '-  b\n  - c\n\n\n\n\nq');
   assert.deepEqual([...edited.marks.placeholders], [2, 12]);
   assert.deepEqual(edited.rootNode.children.map((n) => [n.kind, n.children.length]), doc.rootNode.children.map((n) => [n.kind, n.children.length]));
+});
+
+test('a clipboard\'s Markdown read as a document of its own: the indentation all its lines share off, a fence copied from a list or a quote given its code\'s back where its closing fence would close it so, a block left open closed under what holds it, frontmatter read as other lines', async () => {
+  const { clipboardFragment } = await import('../../src/doc/index.ts');
+  const read = (markdown: string, flavor: 'gfm' | 'obsidian' = 'gfm', ours = false): string | null => {
+    const fragment = clipboardFragment(markdown, { flavor }, ours);
+    return fragment && fragment.doc.text + (fragment.inline ? ' (inline)' : '');
+  };
+  assert.equal(read('  - a\n    - b'), '- a\n  - b');
+  assert.equal(read('\n\n  x  \n\n'), 'x  ');
+  assert.equal(read('x'), 'x (inline)');
+  assert.equal(read('x\n'), 'x');
+  assert.equal(read('   \n\t\n'), null);
+  // a fence copied from four columns in, its own line's indentation lost: the rest's goes too, where
+  // its last line then closes it; a line closing it before that closes it there, as it did
+  assert.equal(read('```\n    code\n    ```'), '```\ncode\n```');
+  assert.equal(read('```\n    code\n    ```\n    x\n    ```'), '```\ncode\n```\nx\n```\n```');
+  // (not where the last line doesn't close it: indented code in a fence copied without its closing)
+  assert.equal(read('```\n    code\n    more'), '```\n    code\n    more\n```');
+  // (nor ourus's own copy, written out of its containers: what indentation it has is the code's)
+  assert.equal(read('```\n    code\n    ```', 'gfm', true), '```\n    code\n    ```\n```');
+  assert.equal(read('```\n  code\n```'), '```\n  code\n```');
+  // (a line of blanks in the code kept, its share of the common indentation off)
+  assert.equal(read('    ```\n    a\n\n      \n    ```'), '```\na\n\n  \n```');
+  // (`$$` is no fence where the flavor reads no math: lines of a paragraph, as written)
+  assert.equal(read('$$\n  x\n  $$'), '$$\n  x\n  $$');
+  // a block left open closed by its opening again, under its containers: a footnote's label and a
+  // marker as spaces, a tab after `>` as written
+  assert.equal(read('[^1]: ```js\n      code'), '[^1]: ```js\n      code\n      ```');
+  assert.equal(read('>\t```\n>\tcode'), '>\t```\n>\tcode\n>\t```');
+  assert.equal(read('> - ```\n>   code'), '> - ```\n>   code\n>   ```');
+  assert.equal(read('---\na: b\n---\nbody', 'obsidian'), '\n---\na: b\n---\nbody');
 });

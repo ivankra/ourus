@@ -33,7 +33,7 @@ export function resolveDrop(test: SpecTest, flavor: OurusConfig['flavor']): Drop
     const label = /^moveSubtree (.)$/u.exec(action)?.[1];
     const pressed = label === undefined ? undefined : state.labels?.get(labelNumber(label));
     if (label !== undefined && pressed === undefined) return `${label} labels no node`;
-    const picked = dragRun(new CommandContext(view, state.selection), pressed);
+    const picked = dragRun(new CommandContext(view), pressed);
     if (!Array.isArray(picked)) return `the pickup is refused (${picked instanceof OurusRejected ? picked.reason : resultStatus(picked)})`;
     run = picked;
     press = pressed === undefined ? null : doc.node(pressed)!.startLine;

@@ -19,7 +19,7 @@ export const SENTINEL = '￼';
  */
 export function keepsEscape(flavor: MdFlavor, char: string | undefined, next?: string): boolean {
   if (char === undefined || char === ':' || char === 'w' || char === '\n') return false;
-  if (char === '#' && (next === undefined || /\s/.test(next))) return false;
+  if (char === '#' && (next === undefined || trimMd(next) === '')) return false;
   const code = char.charCodeAt(0);
   return code < 128 ? flavor.inline.stops[code] === 1 : flavor.inline.otherRules.has(code);
 }

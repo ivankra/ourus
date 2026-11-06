@@ -11,7 +11,7 @@
 
 import type { MdLine, MdTree } from '../parser/index.ts';
 import { OurusProse, OurusAtom, type OurusNode, type OurusText, type PersistentNode, type OurusDoc } from '../doc/index.ts';
-import type { Anchor, ListPlace, OurusDraft, Refusal } from './draft.ts';
+import { placeMarker, type Anchor, type ListPlace, type OurusDraft, type Refusal } from './draft.ts';
 import { advanceColumns, applyChanges, diffLines, mapPos, dominantEnding, trimMd, type ChangeSpec, type MarkLists } from '../text/index.ts';
 
 /** The draft written: the changes to its document, and what the document after them is told. */
@@ -505,7 +505,7 @@ class Writer {
   markerWidth(item: PersistentNode): number {
     const was = this.draft.originOf(item);
     const place = this.draft.lists.get(item.id);
-    const marker = place ? (place.type === 'bullet' ? place.marker : `${place.number ?? 1}${place.marker}`) : null;
+    const marker = place ? placeMarker(place) : null;
     if (was?.kind !== 'item') return (marker?.length ?? 1) + 1;
     const { markerStart, markerEnd, contentColumn, markerColumn } = was.block.attrs;
     return contentColumn! - markerColumn! + (marker ? marker.length - (markerEnd! - markerStart!) : 0);
@@ -864,7 +864,7 @@ class Writer {
         }
       }
       const place = this.draft.lists.get(node.id);
-      marker = this.draft.hints.get(node.id) ?? (place?.type === 'ordered' ? `${place.number ?? 1}${place.marker}` : (place?.marker ?? '-'));
+      marker = this.draft.hints.get(node.id) ?? placeMarker(place);
     }
     // a quote's `>` takes a space after it where there is one: written with it, a new line's columns hold
     // (an item lined up with one in an unspaced quote, `>- a`: its marker's line as that one's, and its
@@ -1814,9 +1814,9 @@ class Writer {
       else this.pieces.push({ old: [last.old[0], last.old[1] - ending.length], at: last.at });
       this.length -= ending.length;
       this.text(oldEnding);
-    } else if (!oldEnds && ending && (this.length !== this.blankEnd || !this.lastLineBlank(ending)) && !(s === ending && /(?:^|[\r\n])[ \t]+$/.test(this.old)) && !this.emptyCodeEnd(last, ending)) {
-      // (but after a blank line written anew, or written empty where the old text ended with one of
-      // blanks, `⏎ `: without its line ending it would be no line)
+    } else if (!oldEnds && ending && (this.length !== this.blankEnd || !this.lastLineBlank(ending)) && !((s === ending || this.lastLineBlank(ending)) && /(?:^|[\r\n])[ \t]+$/.test(this.old)) && !this.emptyCodeEnd(last, ending)) {
+      // (but after a blank line written anew, or written empty, alone or copied with what is before it,
+      // where the old text ended with one of blanks, `⏎ `: without its line ending it would be no line)
       this.pieces.pop();
       if ('text' in last) this.pieces.push({ text: last.text.slice(0, -ending.length), at: last.at });
       else this.pieces.push({ old: [last.old[0], last.old[1] - ending.length], at: last.at });

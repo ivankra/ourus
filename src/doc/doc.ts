@@ -2,7 +2,7 @@
 // config. Immutable; `update` makes the next snapshot, reading again only what the changes reach.
 
 import { OurusConfig } from '../config.ts';
-import { MdBlockAt, MdFlavor, MdTree, mdDocumentStart, type MdLine } from '../parser/index.ts';
+import { MdBlockAt, MdFlavor, MdTree, mdDocumentStart, type MdBlock, type MdLine } from '../parser/index.ts';
 import { ChangeSet, MarkSet, advanceColumns, diffLines, isSpaceOrTab, lineIndexAt, trimMd, type ChangeSpec, type MarkLists } from '../text/index.ts';
 import { OurusNode, type PersistentNode } from './node.ts';
 import { Touched, readOutline } from './outline.ts';
@@ -10,7 +10,7 @@ import { validAuto, validPlaceholder } from './placeholders.ts';
 import { locate, type Located } from './locate.ts';
 import { documentOffset, readText, stringOffset, type ReadText } from './read.ts';
 import { escapeParagraph } from './escapes.ts';
-import { markdownOf, markdownStart } from './copy.ts';
+import { VERBATIM, markdownOf, markdownStart } from './copy.ts';
 import { OurusProse, textEnd, type OurusAtom, type OurusText } from './text.ts';
 import { readBlockIds, type BlockId } from './block-ids.ts';
 import { listAdopters } from './rules.ts';
@@ -486,6 +486,27 @@ export class OurusDoc {
    * starts with spans to the next stop from there.
    */
   readsAs(text: OurusAtom, column = 0): boolean {
+    const read = this.#readAt(text, column);
+    if (!read) return false;
+    const { root, block, first } = read;
+    const type = block.type === 'code_block' ? (block.attrs.fenced ? 'fenced_code' : 'indented_code') : block.type;
+    // (indented code can't start with a blank line: it would be the gap above it)
+    return type === text.type && (type !== 'fenced_code' || !!block.attrs.closed === text.closed) && (type !== 'indented_code' || root.offsets[0] === first);
+  }
+
+  /**
+   * The code an atom text's lines mean written at `column` (its container's content column): its
+   * verbatim block's lines as `verbatimLinesOf` reads a document's, past its own indentation, a tab
+   * partly taken its rest as spaces. Null where they read as no one such block there.
+   */
+  verbatimLinesAt(text: OurusAtom, column = 0): readonly string[] | null {
+    const read = this.#readAt(text, column);
+    const leaf = read?.tree.line(read.first).leaf;
+    return leaf && VERBATIM.has(leaf.block.type) ? read!.tree.leafLines(leaf) : null;
+  }
+
+  /** An atom text's lines read alone at `column`: the tree, the block they make, and its first line in it; null where they make more than one block, or none. */
+  #readAt(text: OurusAtom, column: number): { tree: MdTree; root: MdBlock; block: MdBlock; first: number } | null {
     const lines = text.text.split('\n');
     // (off a tab stop, the lines read in an item that starts below its marker, whose lines start
     // there: `-` for 2, `1.` for 3, `100.` for 5)
@@ -494,18 +515,17 @@ export class OurusDoc {
     const first = wrapped ? 1 : 0;
     // (an empty last line, a code line, read as one: a final line ending starts none)
     const source = wrapped ? `${['', '', '-', '1.', '', '100.'][at]}\n` + lines.map((l) => ' '.repeat(at) + l).join('\n') : lines.join('\n');
-    let root = MdTree.parse(source, this.mdTree.flavor, lines[lines.length - 1] === '' && lines.length > 1 ? { sentinels: [source.length] } : {}).root;
+    const tree = MdTree.parse(source, this.mdTree.flavor, lines[lines.length - 1] === '' && lines.length > 1 ? { sentinels: [source.length] } : {});
+    let root = tree.root;
     if (wrapped) {
       const list = root.children[0];
-      if (!list || root.children.length > 1 || list.children.length > 1) return false;
+      if (!list || root.children.length > 1 || list.children.length > 1) return null;
       root = list.children[0]!;
     }
     const n = root.children.length;
     const block = root.children[n - 1];
-    if (!block || n > 1 || root.offsets[0]! - first + block.lines < lines.length) return false;
-    const type = block.type === 'code_block' ? (block.attrs.fenced ? 'fenced_code' : 'indented_code') : block.type;
-    // (indented code can't start with a blank line: it would be the gap above it)
-    return type === text.type && (type !== 'fenced_code' || !!block.attrs.closed === text.closed) && (type !== 'indented_code' || root.offsets[0] === first);
+    if (!block || n > 1 || root.offsets[0]! - first + block.lines < lines.length) return null;
+    return { tree, root, block, first };
   }
 
   /** The node whose own text holds line `line`: the deepest, where nested items share a line; null on blank lines and the preamble. */

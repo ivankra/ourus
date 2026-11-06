@@ -7,26 +7,29 @@
 // for (`deferredToHost`), else a refusal (`unsupported`). A host never sees null.
 
 import type { OurusConfig } from '../config.ts';
-import type { Located, OurusDoc, OurusDocUpdate } from '../doc/index.ts';
-import type { OurusView } from '../view/index.ts';
+import type { Located, OurusDoc } from '../doc/index.ts';
+import type { OurusView, OurusViewUpdate } from '../view/index.ts';
 import { OurusDraft } from '../writer/index.ts';
-import type { OurusResult, RejectReason, OurusSelection } from './types.ts';
-import { OurusDeferred, OurusRejected, OurusSuccess } from './types.ts';
+import type { OurusResult, OurusSelection } from './types.ts';
+import { OurusRejected, OurusSuccess } from './types.ts';
 
 
 export class CommandContext {
-  /** The view the command acts in: its document, and the folds and zoom the command keeps to. */
+  /** The view the command acts in: its document, the selection it acts at, and the folds and zoom it keeps to. */
   readonly view: OurusView;
-  readonly selection: OurusSelection;
   /** The nodes the command acts on, by id, where it was given them (`OurusCommand.nodes`): else the selection's. */
   readonly nodes: readonly number[] | undefined;
   #from: Located | undefined;
   #to: Located | undefined;
 
-  constructor(view: OurusView, selection: OurusSelection, nodes?: readonly number[]) {
+  constructor(view: OurusView, nodes?: readonly number[]) {
     this.view = view;
-    this.selection = selection;
     this.nodes = nodes;
+  }
+
+  /** The view's selection. */
+  get selection(): OurusSelection {
+    return this.view.selection;
   }
 
   /** The view's document. */
@@ -36,7 +39,7 @@ export class CommandContext {
 
   /** The same view with a caret at `pos`: a command acting from there. */
   at(pos: number): CommandContext {
-    return new CommandContext(this.view, { anchor: pos, head: pos });
+    return new CommandContext(this.view.withSelection({ anchor: pos, head: pos }));
   }
 
   get config(): OurusConfig {
@@ -71,12 +74,12 @@ export class CommandContext {
     const applied = draft.done();
     if ('reason' in applied) return new OurusRejected(applied.reason, applied.detail);
     const { moved, merged } = applied.blockIds;
-    const view = this.view.withDoc(applied.doc, applied.changes);
-    return new OurusSuccess({ view, changes: applied.changes, selection: applied.selection, ...(moved.length && { movedBlockIds: moved }), ...(merged.length && { mergedBlockIds: merged }) });
+    const view = this.view.withDoc(applied.doc, applied.changes).withSelection(applied.selection);
+    return new OurusSuccess({ view, changes: applied.changes, ...(moved.length && { movedBlockIds: moved }), ...(merged.length && { mergedBlockIds: merged }) });
   }
 
   /** The view after a host's kind of edit of the document (`OurusView.update`), the view carried. */
-  update(params: OurusDocUpdate): OurusView {
+  update(params: OurusViewUpdate): OurusView {
     return this.view.update(params);
   }
 }

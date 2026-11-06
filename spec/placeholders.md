@@ -50,6 +50,7 @@ child under text.
 | an edit deletes a node's last text on the caret's line | made at the line's end | |
 | an edit deletes a line's first character, the space after it widening an item's padding or starting a block | made on the space at the caret | |
 | typing | none made; on its line, it ends: the node has text | |
+| a selection touches its line, from its anchor's line to its head's | kept | ([Placeholder16](#placeholder16)) |
 | the caret leaves an empty item | ends | the item stays, a blank line above it |
 | the caret leaves an empty paragraph, or an empty line in a node's text | ends | the node or line goes |
 | the caret leaves a deleted character's place | ends | the space stays, the text's padding, its children moved with it (`heldSpace: repair`), or goes (`trim`); the text escaped where it would start a block |
@@ -765,8 +766,10 @@ para
 
 ## Placeholder16
 
-A selection's head counts as the caret: selecting within the line keeps the placeholder, and a
-selection whose head leaves the line ends it, as the caret leaving would.
+A selection keeps the placeholders on every line it touches, its anchor's to its head's: selecting
+within the line keeps it, and so does a selection from it to another line, which leaving would
+otherwise take from under its anchor. Once the selection is off its line, it ends, as the caret
+leaving would.
 
 ```yaml
 tags: rare
@@ -794,8 +797,15 @@ tags: rare
 
 ```markdown
 ┃«- a
+  - »◌
+```
 
-  - »
+> cursorDocStart
+
+```markdown
+┃- a
+
+  - 
 ```
 
 ## Placeholder18
@@ -926,4 +936,110 @@ enterSplitSpace: start
 ```markdown
 ┃- z
 -  x
+```
+
+## Placeholder21
+
+An empty paragraph Enter made, selected from its line down to the next paragraph: the selection touches
+its line, so it stays ([Placeholder16](#placeholder16)); the caret then at the start, off its line, it
+goes.
+
+```yaml
+tags: common
+```
+
+```markdown
+p┃
+
+qr
+```
+
+> enter
+
+```markdown
+p
+
+┃◌
+
+qr
+```
+
+> selectLineDown selectLineDown
+
+```markdown
+p
+
+«◌
+
+»qr
+```
+
+> cursorDocStart
+
+```markdown
+┃p
+
+qr
+```
+
+## Placeholder22
+
+A held space stays while a selection from it reaches the next item, and is settled as leaving
+settles it ([Placeholder17](#placeholder17)) once the caret is off its line.
+
+```yaml
+tags: rare
+```
+
+```markdown
+- a┃ ``` x
+- b
+```
+
+> deleteContentBackward
+
+```markdown
+- ┃◌ ``` x
+- b
+```
+
+> selectLineDown
+
+```markdown
+- «◌ ``` x
+- »b
+```
+
+> cursorLineBoundaryForward
+
+```markdown
+-  \̬``` x
+- b┃
+```
+
+## Placeholder23
+
+A selection that comes back to the held line, collapsed there, keeps it: it was never off the
+selection's lines.
+
+```yaml
+tags: rare
+```
+
+```markdown
+- a┃
+```
+
+> enter indent selectDocStart
+
+```markdown
+┃«- a
+  - »◌
+```
+
+> cursorCharRight
+
+```markdown
+- a
+  - ┃◌
 ```

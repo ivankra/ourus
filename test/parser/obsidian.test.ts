@@ -52,7 +52,7 @@ const cases: [string, string, string][] = [
   ['strikethrough needs two tildes', '~~yes~~ ~no~\n', '<p><del>yes</del> ~no~</p>\n'],
   ['inline math', '$x^2$ $ no$ $5 and $6\n', '<p><span class="math math-inline">x^2</span> $ no$ $5 and $6</p>\n'],
   ['inline comments are hidden', 'a %%hidden%% b\n', '<p>a  b</p>\n'],
-  ['a block id is hidden', 'Some text ^abc-1\n', '<p>Some text </p>\n'],
+  ['a block id is hidden', 'Some text ^abc-1\n', '<p>Some text</p>\n'],
   ['a block id only at the end', 'a ^id b\n', '<p>a ^id b</p>\n'],
   ['inline footnotes', 'x^[note *here*] y\n', '<p>x<sup class="footnote-inline">note <em>here</em></sup> y</p>\n'],
   ['footnotes', 'a[^1]\n\n[^1]: Note.\n', '<p>a<sup class="footnote-ref"><a href="#fn-1" id="fnref-1" data-footnote-ref>1</a></sup></p>\n<section class="footnotes" data-footnotes>\n<ol>\n<li id="fn-1">\n<p>Note. <a href="#fnref-1" class="footnote-backref" data-footnote-backref data-footnote-backref-idx="1" aria-label="Back to reference 1">↩</a></p>\n</li>\n</ol>\n</section>\n'],
@@ -74,7 +74,7 @@ test('obsidian: the tree of a note', () => {
   const item = quote.children[1]!.children[0]!;
   const lineStart = md.lastIndexOf('\n', md.indexOf('[?]')) + 1;
   assert.deepEqual(item.attrs.task, { checked: true, status: '?', start: md.indexOf('[?]') - lineStart, end: md.indexOf('[?]') + 3 - lineStart });
-  assert.equal(inlines('- [?] x ^b1\n'), '"x " block_id');
+  assert.equal(inlines('- [?] x ^b1\n'), '"x" block_id');
   assert.equal(syntax.lines[0]!.leaf!.block.type, 'frontmatter');
   assert.equal(syntax.lines[2]!.leaf!.block.type, 'frontmatter');
 });

@@ -94,7 +94,7 @@ export function specTestStart(t: SpecTest, flavor: OurusConfig['flavor'], config
   const labels = new NodeLabels();
   labels.check(doc, start.labels, null);
   const viewed = specTestView(t, doc, start.view);
-  return { view: viewed, selection: drawnSelection(viewed, start), clipboard: readClipboard(t.initial.clipboard), drop: start.drop, labels: labels.ids };
+  return { view: viewed.withSelection(drawnSelection(viewed, start)), clipboard: readClipboard(t.initial.clipboard), drop: start.drop, labels: labels.ids };
 }
 
 /** Which of a view's marks example `t`'s buffers draw (`⟦folded⟧`, `⟦zoomed⟧`): a case with a view. */
@@ -120,7 +120,8 @@ export function specTestView(t: SpecTest, doc: OurusDoc, drawn: DrawnView): Ouru
  * command checked itself: this checks the check). An undo and a redo, the host's, aren't checked.
  */
 export function assertViewHolds(prior: OurusView, state: PlayedState, at: string): void {
-  const { view, selection } = state;
+  const { view } = state;
+  const selection = view.selection;
   const doc = view.doc;
   assert.deepEqual(view.visibleSelection(selection), selection, `${at}: the selection is in hidden lines`);
   for (const id of view.folded) assert.ok(doc.node(id) && doc.foldRange(doc.node(id)!), `${at}: node ${id} is folded with nothing to hide`);
@@ -156,7 +157,7 @@ export function runSpecTest(t: SpecTest, flavor: OurusConfig['flavor']): void {
     if (step.expect.buffer !== undefined) {
       const { drawn: buffer, labels: own } = readLabels(step.expect.buffer);
       // (a buffer that draws no caret doesn't check it)
-      const got = drawsCaret(buffer) ? drawDoc(state.view, state.selection) : withoutCaret(drawDoc(state.view, state.selection));
+      const got = drawsCaret(buffer) ? drawDoc(state.view, state.view.selection) : withoutCaret(drawDoc(state.view, state.view.selection));
       assert.equal(normalizeDrawing(got), normalizeDrawing(buffer), `${at}: buffer${why}`);
       assert.equal(labels.check(state.view.doc, own, before), null, `${at}: labels`);
     }
@@ -170,7 +171,7 @@ export function runSpecTest(t: SpecTest, flavor: OurusConfig['flavor']): void {
       const named = new Map([...labels.ids].map(([label, id]) => [id, label]));
       assert.equal(dropMap.nodes.map((id) => (named.has(id) ? labelGlyph(named.get(id)!) : `node ${id}`)).join(' '), dragNodes.trim().split(/\s+/).join(' '), `${at}: dragNodes`);
     }
-    if (dropPoints !== undefined) assert.equal(drawDropPoints(state.view, dropMap, state.selection), readLabels(dropPoints).drawn.replace(/ +$/gm, ''), `${at}: dropPoints`);
+    if (dropPoints !== undefined) assert.equal(drawDropPoints(state.view, dropMap, state.view.selection), readLabels(dropPoints).drawn.replace(/ +$/gm, ''), `${at}: dropPoints`);
   }
 }
 
@@ -185,7 +186,7 @@ export function drawDropPoints(view: OurusView, dropMap: DropMap, selection: Our
   if (lines[lines.length - 1] === '') lines.pop();
   const markers = new Map<number, string>();
   for (const seam of dropMap.seams) {
-    const accepted = seam.points.filter((point) => point.current || executeCommand(view, point.drop, selection) instanceof OurusSuccess);
+    const accepted = seam.points.filter((point) => point.current || executeCommand(view.withSelection(selection), point.drop) instanceof OurusSuccess);
     if (!accepted.length) continue;
     const row: string[] = [];
     for (const point of [...accepted].sort((a, b) => +a.current - +b.current)) {
@@ -214,7 +215,7 @@ export function drawnSteps(t: SpecTest, flavor: OurusConfig['flavor'], config: P
     state = playActions(state, step.actions);
     const text = state.clipboard['text/plain'];
     // (an app shows no auto marks: the SxS's)
-    return { buffer: withoutAuto(normalizeDrawing(drawDoc(state.view, state.selection))), ...(text !== undefined && { clipboard: text }), view: rowView(state.view) };
+    return { buffer: withoutAuto(normalizeDrawing(drawDoc(state.view, state.view.selection))), ...(text !== undefined && { clipboard: text }), view: rowView(state.view) };
   });
 }
 

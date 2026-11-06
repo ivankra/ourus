@@ -36,13 +36,13 @@ export function dropGaps(t: SpecTest): string[] {
   const gaps: string[] = [];
   const pickups: { what: string; dropMap: DropMap; kind: (r: OurusDoc) => string | undefined; was: string }[] = [];
   for (const node of allNodes(doc)) {
-    const picked = executeCommand(view, { type: 'drag', pressed: node.id }, start.selection);
+    const picked = executeCommand(view.withSelection(start.selection), { type: 'drag', pressed: node.id });
     if (!(picked instanceof OurusSuccess) || !picked.dropMap) continue;
     const first = doc.node(picked.dropMap.nodes[0]!)!;
     pickups.push({ what: `${first.kind} at line ${first.startLine + 1}`, dropMap: picked.dropMap, kind: (r) => r.node(first.id)?.kind, was: first.kind });
   }
   for (const [text, was] of CLIPBOARDS) {
-    const picked = executeCommand(view, { type: 'drag', clipboard: { 'text/plain': text } }, start.selection);
+    const picked = executeCommand(view.withSelection(start.selection), { type: 'drag', clipboard: { 'text/plain': text } });
     if (!(picked instanceof OurusSuccess) || !picked.dropMap) continue;
     // (the first node a drop placed, by its place: the node after `after`, or its parent's first)
     const kind = (r: OurusDoc, at: { parent: number | 'root'; after: number | null }): string | undefined => {
@@ -58,7 +58,7 @@ export function dropGaps(t: SpecTest): string[] {
         const where = `${what} to ${point.parent === 'root' ? 'the root' : `${doc.node(point.parent)!.kind} at line ${doc.node(point.parent)!.startLine + 1}`}, depth ${point.depth}`;
         let r: OurusResult;
         try {
-          r = executeCommand(view, point.drop, start.selection);
+          r = executeCommand(view.withSelection(start.selection), point.drop);
         } catch (e) {
           gaps.push(`${where}: throws ${(e as Error).message}`);
           continue;

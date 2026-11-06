@@ -114,7 +114,7 @@ test('an edit to a folded node\'s own markup that changes what it holds opens th
 test('a folded node moved keeps its fold, the move writing its lines again (Fold4)', () => {
   const doc = OurusDoc.parse('- a\n- b\n  - c\n');
   const b = find(doc, 'b').id;
-  const r = executeCommand(OurusView.of(doc).withFolded([b]), { type: 'moveSubtreeUp' }, { anchor: 7, head: 7 });
+  const r = executeCommand((OurusView.of(doc).withFolded([b])).withSelection(7), { type: 'moveSubtreeUp' });
   assert.ok(r instanceof OurusSuccess);
   if (!(r instanceof OurusSuccess)) return;
   assert.equal(r.view.doc.text, '- b\n  - c\n- a\n');
@@ -124,7 +124,7 @@ test('a folded node moved keeps its fold, the move writing its lines again (Fold
 test('an undo that takes back the snapshot before the move (`withDoc`) keeps its nodes, and the moved node\'s fold (Fold16)', () => {
   const before = OurusDoc.parse('- a\n- b\n  - c\n');
   const b = find(before, 'b').id;
-  const r = executeCommand(OurusView.of(before).withFolded([b]), { type: 'moveSubtreeUp' }, { anchor: 7, head: 7 });
+  const r = executeCommand((OurusView.of(before).withFolded([b])).withSelection(7), { type: 'moveSubtreeUp' });
   assert.ok(r instanceof OurusSuccess);
   if (!(r instanceof OurusSuccess)) return;
   const undone = r.view.withDoc(before);
@@ -248,7 +248,7 @@ test('a second view takes a command\'s snapshot with its own folds, by the write
   const doc = OurusDoc.parse('- a\n- b\n  - c\n- d\n  - e\n');
   const [b, d] = [find(doc, 'b').id, find(doc, 'd').id];
   // view 1 moves `b` down; view 2 has `b` and `d` folded
-  const moved = executeCommand(OurusView.of(doc), { type: 'moveSubtreeDown' }, { anchor: 6, head: 6 });
+  const moved = executeCommand(OurusView.of(doc, { selection: 6 }), { type: 'moveSubtreeDown' });
   assert.ok(moved instanceof OurusSuccess);
   if (!(moved instanceof OurusSuccess)) return;
   const other = OurusView.of(doc).withFolded([b, d]);
@@ -343,9 +343,9 @@ test('a view toggled shares its document; a view command\'s result too, a text c
   assert.notEqual(folded, view);
   assert.equal(folded.withFolded([a.id]), folded, 'the same folds: the same view');
   assert.equal(view.withZoom(null), view);
-  const fold = executeCommand(view, { type: 'fold' }, { anchor: 2, head: 2 });
+  const fold = executeCommand(view.withSelection(2), { type: 'fold' });
   assert.equal(fold instanceof OurusSuccess && fold.view.doc, view.doc);
-  const indented = executeCommand(view, { type: 'indent' }, { anchor: 12, head: 12 });
+  const indented = executeCommand(view.withSelection(12), { type: 'indent' });
   assert.ok(indented instanceof OurusSuccess && indented.view.doc !== view.doc);
 });
 
@@ -362,7 +362,7 @@ test('an update given nothing to do is the same document, and the same view', ()
 test('a move that changes no character is another document, its ids swapped, a fold with its node', () => {
   const same = OurusView.of(OurusDoc.parse('- a\n- a\n'));
   const before = same.doc.rootNode.children.map((n) => n.id);
-  const moved = executeCommand(same, { type: 'moveSubtreeDown' }, { anchor: 2, head: 2 });
+  const moved = executeCommand(same.withSelection(2), { type: 'moveSubtreeDown' });
   assert.ok(moved instanceof OurusSuccess);
   assert.deepEqual(moved.changes, []);
   assert.notEqual(moved.view.doc, same.doc);
@@ -370,36 +370,47 @@ test('a move that changes no character is another document, its ids swapped, a f
   assert.deepEqual(moved.view.doc.rootNode.children.map((n) => n.id), [...before].reverse());
   const doc = OurusDoc.parse('- a\n  - x\n- a\n  - x\n');
   const first = doc.rootNode.children[0]!.id;
-  const r = executeCommand(OurusView.of(doc, { folded: [first] }), { type: 'moveSubtreeDown' }, { anchor: 2, head: 2 });
+  const r = executeCommand(OurusView.of(doc, { folded: [first], selection: 2 }), { type: 'moveSubtreeDown' });
   assert.ok(r instanceof OurusSuccess);
   assert.deepEqual(r.changes, []);
   assert.equal(r.view.doc.rootNode.children[1]!.id, first);
   assert.deepEqual([...r.view.folded], [first]);
 });
 
-test('a selection command keeps the view and changes the selection alone', () => {
-  const view = OurusView.of(OurusDoc.parse('- a\n'));
-  const r = executeCommand(view, { type: 'selectNode' }, { anchor: 2, head: 2 });
+test('a selection command keeps the document, folds and zoom, and changes the selection alone', () => {
+  const view = OurusView.of(OurusDoc.parse('- a\n'), { selection: 2 });
+  const r = executeCommand(view, { type: 'selectNode' });
   assert.ok(r instanceof OurusSuccess);
-  assert.equal(r.view, view);
-  assert.deepEqual(r.selection, { anchor: 0, head: 4 });
+  assert.equal(r.view.doc, view.doc);
+  assert.equal(r.view.folded, view.folded);
+  assert.equal(r.view.zoom, view.zoom);
+  assert.deepEqual(r.view.selection, { anchor: 0, head: 4 });
 });
 
-test('placeholders settled in two steps carry the view through each: the fold kept (Fold20)', async () => {
+test('placeholders settled in two steps carry the view through each: the fold kept', async () => {
+  const { settlePlaceholders } = await import('../../src/commands/index.ts');
+  // (a held space in code can't be written again: dropped, a step, then the empty paragraph above the heading)
+  const doc = OurusDoc.parse('\n# h\n```\n  x\n```\n', { config: { flavor: 'obsidian' }, marks: { placeholders: [0, 9] } });
+  const heading = find(doc, '# h');
+  const view = OurusView.of(doc, { folded: [heading.id] });
+  const settled = settlePlaceholders(view.withSelection(1));
+  assert.ok(settled);
+  assert.deepEqual([...settled.view.folded], [heading.id]);
+  assert.equal(settled.view.doc.text, '# h\n```\n  x\n```\n');
+});
+
+test('settling keeps a fold whose hidden node it writes again: no edit of the user\'s opens it (Fold20)', async () => {
   const { settlePlaceholders } = await import('../../src/commands/index.ts');
   const doc = OurusDoc.parse('\n# h\n> - \n> ^x\n', { config: { flavor: 'obsidian' }, marks: { placeholders: [0, 9] } });
   const heading = find(doc, '# h');
-  const view = OurusView.of(doc, { folded: [heading.id] });
-  const settled = settlePlaceholders(view, 1);
-  assert.ok(settled);
+  const settled = settlePlaceholders(OurusView.of(doc, { folded: [heading.id], selection: 1 }))!;
+  assert.equal(settled.view.doc.text, '# h\n> - ^x\n');
   assert.deepEqual([...settled.view.folded], [heading.id]);
-  // (one carry over both steps, from the start to the end, would open it)
-  assert.deepEqual([...view.withDoc(settled.view.doc, settled.changes).folded], []);
 });
 
 test('a fold whose hidden children are reordered with no character changed opens (two identical items swapped)', () => {
   const view = OurusView.of(OurusDoc.parse('- p\n  - a\n  - a\n'), { folded: [1] });
-  const result = executeCommand(view, { type: 'moveSubtreeDown', nodes: [2] }, { anchor: 2, head: 2 });
+  const result = executeCommand(view.withSelection(2), { type: 'moveSubtreeDown', nodes: [2] });
   assert.ok(result instanceof OurusSuccess);
   assert.deepEqual(result.changes, []);
   assert.deepEqual([...result.view.folded], []);
@@ -417,7 +428,7 @@ test('deleteSubtree of the last node, given by id, with the caret past the final
   const result = executeOnText('a\n# H\n', { type: 'deleteSubtree', nodes: [2] }, { caret: 6 });
   assert.ok(result instanceof OurusSuccess);
   assert.equal(result.view.doc.text, 'a\n');
-  assert.ok(result.selection.head <= result.view.doc.text.length);
+  assert.ok(result.view.selection.head <= result.view.doc.text.length);
   const only = executeOnText('# H\n', { type: 'deleteSubtree', nodes: [1] }, { caret: 4 });
   assert.ok(only instanceof OurusSuccess);
 });
@@ -426,7 +437,7 @@ test('deleteSubtree of disjoint nodes by id keeps a caret in a node between them
   const result = executeOnText('- a\n- b\n- c', { type: 'deleteSubtree', nodes: [1, 3] }, { caret: 6 });
   assert.ok(result instanceof OurusSuccess);
   assert.equal(result.view.doc.text, '- b');
-  assert.deepEqual(result.selection, { anchor: 2, head: 2 });
+  assert.deepEqual(result.view.selection, { anchor: 2, head: 2 });
 });
 
 test('a subtree selection ending at the zoom\'s end reads as its node', () => {
@@ -441,7 +452,7 @@ test('the zoom and fold guard takes a CRLF whole, as the host deletes it: refuse
     const fold = executeOnText(`# h${eol}b${eol}`, { type: 'deleteContentBackward' }, { caret: 4 + 2 * eol.length, view: { folded: [1] } });
     assert.ok(fold instanceof OurusSuccess);
     assert.equal(fold.view.doc.text, `# h${eol}b`);
-    assert.deepEqual(fold.selection, { anchor: 3, head: 3 });
+    assert.deepEqual(fold.view.selection, { anchor: 3, head: 3 });
   }
 });
 
@@ -450,7 +461,7 @@ test('copy and drag at a caret a fold hides give it back where the view shows it
     const type = command.type;
     const result = executeOnText('- a\n  - b\n', command, { caret: 8, view: { folded: [1] } });
     assert.ok(result instanceof OurusSuccess, type);
-    assert.deepEqual(result.selection, { anchor: 3, head: 3 }, type);
+    assert.deepEqual(result.view.selection, { anchor: 3, head: 3 }, type);
   }
 });
 
@@ -478,4 +489,32 @@ test('a fold opens where what it hides changes in structure or text: a hidden no
   assert.deepEqual([...carried.folded], []);
   // (a change that leaves what it hides as it was keeps it: a word typed in the fold's own text)
   assert.deepEqual([...view.update({ changes: [{ from: 3, to: 3, insert: 'x' }] }).folded], [1]);
+});
+
+test('a view holds a selection: given, or a caret at the start; carried through an edit, set by a host\'s', () => {
+  const doc = OurusDoc.parse('- a\n- b\n');
+  assert.deepEqual(OurusView.of(doc).selection, { anchor: 0, head: 0 });
+  const view = OurusView.of(doc, { selection: { anchor: 6, head: 7 } });
+  assert.equal(view.withSelection({ anchor: 6, head: 7 }), view);
+  assert.deepEqual(view.withSelection(3).selection, { anchor: 3, head: 3 });
+  // (mapped through a change before it; a host's edit gives its own, or a caret)
+  assert.deepEqual(view.update({ changes: [{ from: 0, to: 0, insert: 'xx' }] }).selection, { anchor: 8, head: 9 });
+  assert.deepEqual(view.update({ changes: [{ from: 3, to: 3, insert: 'z' }], caret: 4 }).selection, { anchor: 4, head: 4 });
+  assert.deepEqual(view.update({ changes: [{ from: 3, to: 3, insert: 'z' }], selection: { anchor: 0, head: 4 } }).selection, { anchor: 0, head: 4 });
+  // (the folds and zoom kept)
+  const folded = OurusView.of(OurusDoc.parse('- a\n  - b\n'), { folded: [1] });
+  assert.equal(folded.withSelection(2).folded, folded.folded);
+});
+
+test('a host\'s edit gives the same view for `caret: n`, `selection: n` and a selection whose ends are n: the document keeps the outline at its head', () => {
+  // (the paragraph's only character deleted: a placeholder at the caret keeps it)
+  const view = OurusView.of(OurusDoc.parse('p\n\na\n'), { selection: 4 });
+  const changes = [{ from: 3, to: 4, insert: '' }];
+  const byCaret = view.update({ changes, caret: 3 });
+  assert.deepEqual([...byCaret.doc.marks.placeholders], [3]);
+  for (const selection of [3, { anchor: 3, head: 3 }]) {
+    const other = view.update({ changes, selection });
+    assert.deepEqual([...other.doc.marks.placeholders], [...byCaret.doc.marks.placeholders]);
+    assert.deepEqual(other.selection, byCaret.selection);
+  }
 });

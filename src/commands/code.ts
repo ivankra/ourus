@@ -21,7 +21,7 @@ export interface CodeAt {
 }
 
 /** The blocks whose lines are code. */
-const CODE = new Set(['fenced_code', 'indented_code', 'math_block', 'comment_block']);
+export const CODE = new Set(['fenced_code', 'indented_code', 'math_block', 'comment_block']);
 
 /** The selection in one block of code's text, or null where it isn't. */
 export function codeAt(ctx: CommandContext): CodeAt | null {
@@ -407,7 +407,7 @@ function atOpeningStart(ctx: CommandContext, at: CodeAt): OurusResult | null {
   if (above.gap === 0) return new OurusRejected('not-expressible', "the code can't join the text above");
   // (after HTML that a blank line ends, the fence would be a line of it, B87)
   const upper = ctx.doc.textOf(above);
-  if (above.gap === 1 && upper instanceof OurusAtom && upper.type === 'html_block' && MdTree.parse(`${upper.text}\n${at.text.text.split('\n')[0]}`, ctx.doc.mdTree.flavor).root.children.length < 2) return new OurusRejected('not-expressible', 'the fence would be a line of the HTML above it');
+  if (above.gap === 1 && upper instanceof OurusAtom && upper.type === 'html_block' && MdTree.takesIn(upper.text, at.text.text.split('\n')[0]!, ctx.doc.mdTree.flavor)) return new OurusRejected('not-expressible', 'the fence would be a line of the HTML above it');
   // the caret where it was; where markup is decorated, not on the delimiter: at the code's start
   return ctx.apply(ctx.draft().gap(above, above.gap - 1).setCaret(node, ctx.config.markup === 'decorated' ? codeStart(at.text) : offset, 1));
 }
@@ -446,8 +446,8 @@ export function editInCode(ctx: CommandContext, at: CodeAt, from: number, to: nu
   for (let i = k; i <= n && !delimiter; i++) delimiter = delimiterOn(text, i) !== null;
   // (a line break the host writes as ours where the block is in no container)
   const simple = !/[\r\n]/.test(insert) || (node.kind === 'atom' && node.parent?.kind === 'root');
-  // (typing on a code line: what has no delimiter's character in it makes no delimiter of the line)
-  if (host && simple && from === to && !delimiter && !/[`~$%]/.test(insert)) return new OurusDeferred('code: the host types it');
+  // (typing on a code line: what has no delimiter's character in it, as the flavor makes them, makes no delimiter of the line)
+  if (host && simple && from === to && !delimiter && ![...insert].some((c) => ctx.doc.mdTree.flavor.delimiterChar(c))) return new OurusDeferred('code: the host types it');
   // (a payload's lines end in LF, as the parser reads them: a CRLF or lone CR typed is one)
   insert = insert.replace(/\r\n?/g, '\n');
   const edited = text.splice(from, to, insert);

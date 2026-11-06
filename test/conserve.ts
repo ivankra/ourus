@@ -104,14 +104,14 @@ for (const s of starts) {
         runs++;
         const where = `${JSON.stringify(s.text)} ${JSON.stringify(s.config)} @${pos}${over ? `-${to}` : ''}`;
         try {
-          const result = executeCommand(view, { type: 'paste', clipboard: clip }, { anchor: pos, head: to });
+          const result = executeCommand(view.withSelection({ anchor: pos, head: to }), { type: 'paste', clipboard: clip });
           if (result instanceof OurusRejected) {
             if (result.reason === 'write-failed') note(`paste ${name}: write-failed`, where);
             continue;
           }
           if (!(result instanceof OurusSuccess)) continue;
           const after = result.view.doc.text;
-          const { anchor, head } = result.selection;
+          const { anchor, head } = result.view.selection;
           if (anchor < 0 || head < 0 || anchor > after.length || head > after.length) note(`paste ${name}: selection off the text`, where);
           else if (letters(after) !== letters(kept + text)) note(`paste ${name}: letters lost or doubled`, `${where}\n         → ${JSON.stringify(after)}`);
         } catch (e) {

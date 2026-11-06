@@ -95,14 +95,14 @@ for (const s of starts) {
       runs++;
       const where = `${s.name}: ${JSON.stringify(s.text)} ${JSON.stringify(s.config)} @${pos}`;
       try {
-        const result = executeCommand(view, command, { anchor: pos, head: pos });
+        const result = executeCommand(view.withSelection(pos), command);
         if (result instanceof OurusRejected) {
           if (result.reason === 'write-failed') note(`${label}: write-failed`, where);
           continue;
         }
         if (!(result instanceof OurusSuccess)) continue;
         const after = result.view.doc.text;
-        const { anchor, head } = result.selection;
+        const { anchor, head } = result.view.selection;
         if (anchor < 0 || head < 0 || anchor > after.length || head > after.length) note(`${label}: selection off the text`, where);
         if (command.type !== 'cut' && applyChanges(s.text, result.changes) !== after) note(`${label}: changes don't give the text`, where);
         if (before && endings(after) !== before && after.length) note(`${label}: line endings changed`, `${where}\n         → ${JSON.stringify(after)}`);
@@ -123,11 +123,11 @@ for (const s of starts) {
     const where = `${s.name}: ${JSON.stringify(s.text)} ${JSON.stringify(s.config)} copy @${pos} (${node.kind})`;
     try {
       // (the node by its id: a caret in its text may be in a child, whose copy is not the node's)
-      const copied = executeCommand(view, { type: 'copy', nodes: [node.id] }, { anchor: pos, head: pos });
+      const copied = executeCommand(view.withSelection(pos), { type: 'copy', nodes: [node.id] });
       if (copied instanceof OurusRejected && copied.reason === 'write-failed') note(`copy: ${node.kind}: write-failed`, where);
       if (!(copied instanceof OurusSuccess) || !copied.clipboard) throw new Skip();
       const empty = OurusView.of(OurusDoc.parse('', { config: s.config }));
-      const pasted = executeCommand(empty, { type: 'paste', clipboard: copied.clipboard }, { anchor: 0, head: 0 });
+      const pasted = executeCommand(empty.withSelection(0), { type: 'paste', clipboard: copied.clipboard });
       if (pasted instanceof OurusRejected && pasted.reason === 'write-failed') note(`copy→paste: ${node.kind}: paste write-failed`, `${where}\n         ${JSON.stringify(copied.clipboard['text/plain'])}`);
       if (!(pasted instanceof OurusSuccess)) throw new Skip();
       const got = allNodes(pasted.view.doc).filter((n) => n.depth === 1).flatMap(kinds).join();
@@ -139,13 +139,13 @@ for (const s of starts) {
     // ---- cut → paste at the caret the cut leaves: the note comes back exactly
     runs++;
     try {
-      const cut = executeCommand(view, { type: 'cut', nodes: [node.id] }, { anchor: pos, head: pos });
+      const cut = executeCommand(view.withSelection(pos), { type: 'cut', nodes: [node.id] });
       if (cut instanceof OurusRejected && cut.reason === 'write-failed') note(`cut: ${node.kind}: write-failed`, where.replace('copy', 'cut'));
       if (!(cut instanceof OurusSuccess) || !cut.clipboard) throw new Skip();
-      const back = executeCommand(cut.view, { type: 'paste', clipboard: cut.clipboard }, cut.selection);
-      if (back instanceof OurusRejected && back.reason === 'write-failed') note(`cut→paste: ${node.kind}: paste write-failed`, `${where.replace('copy', 'cut')}\n         → cut ${JSON.stringify(cut.view.doc.text)} @${cut.selection.head}`);
+      const back = executeCommand(cut.view, { type: 'paste', clipboard: cut.clipboard });
+      if (back instanceof OurusRejected && back.reason === 'write-failed') note(`cut→paste: ${node.kind}: paste write-failed`, `${where.replace('copy', 'cut')}\n         → cut ${JSON.stringify(cut.view.doc.text)} @${cut.view.selection.head}`);
       if (!(back instanceof OurusSuccess)) throw new Skip();
-      if (outline(back.view.doc) !== outline(doc)) note(`cut→paste: ${node.kind} doesn't come back as the same blocks`, `${where.replace('copy', 'cut')}\n         → cut ${JSON.stringify(cut.view.doc.text)} @${cut.selection.head} → ${JSON.stringify(back.view.doc.text)}`);
+      if (outline(back.view.doc) !== outline(doc)) note(`cut→paste: ${node.kind} doesn't come back as the same blocks`, `${where.replace('copy', 'cut')}\n         → cut ${JSON.stringify(cut.view.doc.text)} @${cut.view.selection.head} → ${JSON.stringify(back.view.doc.text)}`);
     } catch (e) {
       if (!(e instanceof Skip)) fails.push(`cut→paste threw: ${where.replace('copy', 'cut')}: ${(e as Error).message.split('\n')[0]}`);
     }

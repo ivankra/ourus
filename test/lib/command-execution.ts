@@ -22,13 +22,13 @@ export interface CommandStart {
 export function executeOnText(text: string, command: OurusCommand, start: CommandStart = {}): OurusResult {
   const { caret = 0, anchor = caret, head = anchor, config = {}, view, placeholders = [] } = start;
   const doc = OurusDoc.parse(text, { config, marks: { placeholders } });
-  return executeCommand(OurusView.of(doc, view), command, { anchor, head });
+  return executeCommand(OurusView.of(doc, view).withSelection({ anchor, head }), command);
 }
 
 /** `command` played on the view and selection `result` left. */
 export function executeAfter(result: OurusResult, command: OurusCommand): OurusResult {
   const applied = assertApplied(result);
-  return executeCommand(applied.view, command, applied.selection);
+  return executeCommand(applied.view, command);
 }
 
 /** What a result was, for an assertion's message. */

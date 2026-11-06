@@ -9,8 +9,8 @@ import { isSpaceOrTab, lineOf } from '../text/index.ts';
 import { type CommandContext } from './context.ts';
 import { joinIntoQuote, joinLineInQuote, joinQuoteUp, quoteAtomAt } from './quote.ts';
 import { codeAt, editInCode, joinInCode, onDelimiterLine } from './code.ts';
-import { deleteEmptyPair } from './typing.ts';
-import { childrenRefused, deleteHeldSpace, hiddenSpacesAt, inMarkup, leaveList, pastPrefix, textActedOnAt, textEnd, textStart, unnumberItem, unquote, visiblePreceding, withTextlessParents } from './util.ts';
+import { deleteEmptyPair, pairPlace } from './typing.ts';
+import { childrenRefused, deleteHeldSpace, hiddenSpacesAt, inMarkup, leaveList, pastPrefix, textActedOnAt, textEnd, textStart, unnumberItem, visiblePreceding, withTextlessParents } from './util.ts';
 import type { OurusResult } from './types.ts';
 import { OurusDeferred, OurusRejected } from './types.ts';
 
@@ -116,6 +116,10 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
   if (!ctx.collapsed) return deleteSelectionAcross(ctx);
   if (ctx.from.zone === 'gap') return blankLineBack(ctx, ctx.from.owner);
   const code = codeAt(ctx);
+  // in an empty pair of ours in code or a quote atom: both go (prose's below, its `$` and backticks too)
+  const place = pairPlace(ctx, ctx.from);
+  const pair = place && !place.prose && ctx.from.zone === 'text' ? deleteEmptyPair(ctx, place, ctx.from.offset) : null;
+  if (pair) return pair;
   if (code) return joinInCode(ctx, code, -1);
   const head = ctx.selection.head;
   // in the spaces Markdown hides before a text (a split's that kept them, padding written so): the
@@ -169,7 +173,7 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
   while (first < s.length && isSpaceOrTab(s.charCodeAt(first))) first++;
   // past the line's leading spaces, in the text: the host's (its edit keeps a placeholder where it
   // would empty a node or widen an item's padding), but in an empty pair of backticks
-  if (offset > first) return deleteEmptyPair(ctx, node, text, offset) ?? new OurusDeferred();
+  if (offset > first) return deleteEmptyPair(ctx, pairPlace(ctx, at)!, offset) ?? new OurusDeferred();
   const draft = ctx.draft();
   if (lineStart !== text.textStart(0)) {
     // at a later line's start: it joins the line above, its spaces with it, the caret staying before
@@ -219,9 +223,9 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
     const parentText = parent ? ctx.doc.textOf(parent) : null;
     if (parent && node.kind === 'paragraph' && !node.children.length && parentText instanceof OurusProse && parentText.empty) {
       // (its checkbox kept: the text the task's)
-      return ctx.apply(draft.setText(parent, parentText.concat(unquote(text))).remove([node]).setCaret(parent, parentText.text.length, -1));
+      return ctx.apply(draft.setText(parent, parentText.concat(text.unquoted())).remove([node]).setCaret(parent, parentText.text.length, -1));
     }
-    return ctx.apply(draft.setText(node, unquote(text)).setCaret(node, 0, -1));
+    return ctx.apply(draft.setText(node, text.unquoted()).setCaret(node, 0, -1));
   }
   // a callout's `[!type]` goes as a unit: a plain quote, its title its first paragraph (Quote57, 58)
   if (text.type === 'title') {

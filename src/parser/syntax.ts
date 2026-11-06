@@ -9,7 +9,7 @@
 // since the only effects reaching back to earlier lines depend on it. The block tree is built again
 // from the records, taking whole every old block outside the lines read again (`tree.ts`).
 
-import { applyChanges, lineEnding, lineIndexAt, normalizeChanges, splitLines, type ChangeSpec, type LineBounds } from '../text/index.ts';
+import { advanceColumns, applyChanges, lineEnding, lineIndexAt, normalizeChanges, splitLines, type ChangeSpec, type LineBounds } from '../text/index.ts';
 import { isBlankText, isSpaceOrTab, normalizeLabel } from './chars.ts';
 import { PARAGRAPH, PARAGRAPH_FIRST, PARAGRAPH_NEXT, type ParagraphFrame } from './blocks.ts';
 import { commonmark, type MdFlavor } from './flavor.ts';
@@ -18,6 +18,7 @@ import { frameEquals, MdMachine, type MdLineRecord, type LineSource, type MdStat
 import { scanReference, type MdReference } from './refs.ts';
 import { allLineBlocks, buildTree, lineBlocks, MdBlockAt, type Reuse } from './tree.ts';
 import { plainMarkup } from './markup.ts';
+import { inlinePreorder } from './walk.ts';
 import { renderHtml, type MdHtmlOptions } from './html.ts';
 import type { MdBlock, MdInline, MdInlineText, MdLine, MdLineMarkup, MdPrefixPiece } from './types.ts';
 
@@ -140,6 +141,15 @@ export class MdTree {
     this.reread = reread;
     this.inlineCache = inlineCache;
     this.lookaheads = lookaheads ?? records.flatMap((r, i) => (r.ahead > 0 ? [i] : []));
+  }
+
+  /**
+   * Whether `line`, written right under `block` (a block's lines as written, from its container's
+   * content start), is read as a line of it: an HTML block that a blank line ends (`<div>`) takes in
+   * whatever follows it, a fence too.
+   */
+  static takesIn(block: string, line: string, flavor: MdFlavor): boolean {
+    return MdTree.parse(`${block}\n${line}`, flavor).root.children.length < 2;
   }
 
   /** The tree of `text`. Never fails: every string is a document. */
@@ -365,6 +375,66 @@ export class MdTree {
     return this.starts[item.line]! + item.block.attrs.markerEnd!;
   }
 
+  /**
+   * A quote's `>` in its prefix piece on a line (`piece`, of kind `quote`): `from` past the spaces
+   * before it, `to` past it, `end` past the blank after it, if any (a tab whole, part of which is the
+   * blank). Whether it has one: `end > to`.
+   */
+  quoteMarker(piece: MdPrefixPiece): { readonly from: number; readonly to: number; readonly end: number } {
+    const from = this.text.indexOf('>', piece.from);
+    return { from, to: from + 1, end: piece.partialTab ? piece.to + 1 : piece.to };
+  }
+
+  /**
+   * What line `i`'s prefix pieces of `containers` (some of the line's, outermost first) spell, for a
+   * line after it in them: a quote's `>` as written, and what opens a container (an item's marker, a
+   * footnote definition's label, and the blanks after them) as spaces, a tab in it kept, so that the
+   * line continues the container and starts none; through the piece ending at or before `upTo`, where
+   * given. It reaches the columns the pieces do on line `i`, put where their first one starts there:
+   * each character copied from the column it was at, and a tab the last piece took part of, which no
+   * piece after it copies, as spaces as far.
+   */
+  continuationPrefix(i: number, containers: readonly MdBlockAt[], upTo = Infinity): string {
+    return this.#spelled(i, containers, upTo, null);
+  }
+
+  /**
+   * Line `i` up to `to` again, on a line after it in its containers: their prefix as
+   * `continuationPrefix` spells it, then the line's own text, from where that prefix ends, as written
+   * (a tab the last piece took part of the tab still: the text goes on with it). A fence's opening
+   * repeated as its closing, in a quote or an item.
+   */
+  continuedLine(i: number, to: number): string {
+    const line = this.line(i);
+    const last = line.prefix[line.prefix.length - 1];
+    return this.#spelled(i, line.containers, Infinity, null, false) + this.text.slice(last ? last.to : line.from, to);
+  }
+
+  /**
+   * What a new item after item `item` in its list has before its marker: its first line's prefix of
+   * `containers` (those outside it there, outermost first) as `continuationPrefix` spells it, then the
+   * indentation before its marker, as written.
+   */
+  itemLead(item: MdBlockAt, containers: readonly MdBlockAt[]): string {
+    return this.#spelled(item.line, containers, Infinity, item);
+  }
+
+  #spelled(i: number, containers: readonly MdBlockAt[], upTo: number, item: MdBlockAt | null, tabAsSpaces = true): string {
+    let out = '';
+    let last: MdPrefixPiece | null = null;
+    // (the columns of the tab the last piece took part of, as spaces: what it ends with where nothing copies the tab)
+    const rest = (): string => (tabAsSpaces && last?.partialTab ? ' '.repeat(last.toColumn - advanceColumns(this.text, last.from, last.to, last.fromColumn)) : '');
+    for (const piece of this.line(i).prefix) {
+      if (piece.to > upTo) break;
+      if (item && piece.container.block === item.block) return out + (this.text.slice(piece.from, this.markerFrom(item)) || rest());
+      if (!containers.some((c) => c.block === piece.container.block)) continue;
+      const written = this.text.slice(piece.from, piece.to);
+      out += piece.kind === 'quote' ? written : written.replace(/[^\t]/g, ' ');
+      last = piece;
+    }
+    return out + rest();
+  }
+
   private build(): MdBlock {
     if (!this.blocks) {
       this.blocks = buildTree(this.records, this.flavor, this.reuse);
@@ -383,6 +453,13 @@ export class MdTree {
       if (ref && !refs.has(ref.normalized)) refs.set(ref.normalized, ref.reference);
     }
     return (this.refs = refs);
+  }
+
+  /** The footnote definitions no reference in the document points to, which GFM renders none of. */
+  unreferencedFootnotes(): MdBlockAt[] {
+    const used = new Set<string>();
+    for (const b of this.rootAt.preorder()) if (this.inlineText(b)) for (const n of inlinePreorder(this.inlines(b))) if (n.type === 'footnote_ref') used.add(n.label!);
+    return [...this.rootAt.preorder()].filter((b) => b.block.type === 'footnote_definition' && !used.has(normalizeLabel('[' + b.block.attrs.label!.slice(2, -1) + ']')));
   }
 
   /** Normalized labels of footnote definitions (GFM). */

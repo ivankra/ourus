@@ -9,9 +9,10 @@
 // into drafted `PersistentNode`s, and a working copy that changed nothing back into its
 // source.
 
-import { mdCalloutAt, MdFlavor, MdTree, type MdBlockAt, type MdLine } from '../parser/index.ts';
+import { MAX_ITEM_NUMBER, mdCalloutAt, MdFlavor, MdTree, type MdBlockAt, type MdLine } from '../parser/index.ts';
 import { advanceColumns, MarkSet, trimMd, type ChangeSpec } from '../text/index.ts';
-import { PersistentNode, Lineage, OurusProse, escapeParagraph, keepsEscape, outlineChildren, OurusAtom, blockIdsOf, blockIdTargetOf, closingFrameStart, isClosingPart, reBlockIdLine, textEnd, type BlockIdDeclarations, type OurusNode, type OurusText, type OurusNodeKind, type OurusDoc, type OutlineChild } from '../doc/index.ts';
+import { PersistentNode, Lineage, OurusProse, escapeParagraph, keepsEscape, outlineChildren, OurusAtom, blockIdsOf, withoutBlockIds, blockIdTargetOf, closingFrameStart, isClosingPart, reBlockIdLine, textEnd, type BlockIdDeclarations, type OurusNode, type OurusText, type OurusNodeKind, type OurusDoc, type OutlineChild } from '../doc/index.ts';
+import type { OurusConfig } from '../config.ts';
 import { differenceFrom } from './check.ts';
 import { blockIdLinesOf, continuationAsWas, indentUnitOf, markerOf, write } from './write.ts';
 
@@ -66,13 +67,12 @@ export interface Applied {
 
 /** What Markdown can't say. */
 /**
- * A draft refused: `not-expressible`, Markdown can't say what it asks; `block-id`, it would lose a
- * block id (a join of two nodes that both have one, `joinBlockIds: refuse`); `write-failed`, the
+ * A draft refused: `not-expressible`, Markdown can't say what it asks; `write-failed`, the
  * writer failed to write it (a layout it has no rule for, or a text that doesn't read back as the
  * draft): a bug to fix, never an outcome.
  */
 export interface Refusal {
-  readonly reason: 'not-expressible' | 'block-id' | 'write-failed';
+  readonly reason: 'not-expressible' | 'write-failed';
   readonly detail: string;
 }
 
@@ -90,6 +90,30 @@ export function autoLinesOf(doc: OurusDoc, node: OurusNode): number {
   let n = 0;
   for (let i = node.ownLastLine + 1; i <= node.ownLastLine + node.gap; i++) if (doc.marks.hasAutoAt(doc.mdTree.line(i).to)) n++;
   return n;
+}
+
+/**
+ * An ordered list's numbers after an edit, as `orderedLists` says: `own`, its items' numbers as written,
+ * null for one the edit makes; `was`, the list's as it was; `start`, its first one's. Under
+ * `renumber`, on from `start`, one up each, a list numbered all alike (`1.`, `1.`) too, as every text
+ * editor numbers it; under `shift`, as the text editors: each as written, a new one's on from the item above it,
+ * and one that counted on from the one above it counting on still. Both the draft's lists and a quote
+ * atom's (`commands/quote.ts`) are numbered so.
+ */
+/** The marker an item at `place` is written with, anew: its bullet, or its number (1 where none is given) and delimiter. */
+export function placeMarker(place: ListPlace | undefined): string {
+  return place?.type === 'ordered' ? `${place.number ?? 1}${place.marker}` : (place?.marker ?? '-');
+}
+
+export function listNumbering(own: readonly (number | null)[], was: readonly number[], start: number, policy: OurusConfig['orderedLists']): number[] {
+  if (policy === 'renumber') return own.map((_, i) => start + i);
+  let last = start - 1;
+  let lastOwn: number | null = null;
+  return own.map((n) => {
+    const kept = n === null ? last + 1 : lastOwn !== null && n === lastOwn + 1 ? last + 1 : n;
+    if (n !== null) lastOwn = n;
+    return (last = kept);
+  });
 }
 
 /** A node the draft touched, while it is built: a copy of a read node (`source`), or one it made. */
@@ -366,8 +390,7 @@ export class OurusDraft {
    *
    * `lower`'s block ids: where `upper` has none, it takes them, moved
    * (a carried line alone as ` ^id` at the end of its text, which carried under an item would loosen a
-   * tight list); where both have one, `joinBlockIds` says: refused, or `upper`'s kept and `lower`'s
-   * merged into it.
+   * tight list); where both have one, `upper`'s kept and `lower`'s merged into it.
    */
   join(upper: NodeRef, lower: NodeRef, options: { readonly children?: 'adopt' | 'place'; readonly separator?: string } = {}): number {
     this.#building();
@@ -407,9 +430,9 @@ export class OurusDraft {
     const glued = head.text.slice(ut.textStart(0)) !== '' && ut.frame.some((p) => p.part === 'blockId' && p.from === end) && ut.text[end] === '^' && !/[ \t]$/.test(head.text);
     // (a block id taken after text: a blank before it, `- a` and `- ^x` giving `- a ^x`; on a line of
     // its own but in a heading, whose text is one line; none after no text, `- ┃^x`)
-    if (taken && ut.type === 'heading') taken = taken.replace(/^\s*/, ' ');
-    if (taken && (head.text.slice(head.textStart(0)) === '' || /[ \t]$/.test(head.text))) taken = taken.replace(/^\s+/, '');
-    else if (taken && !/^\s/.test(taken)) taken = ` ${taken}`;
+    if (taken && ut.type === 'heading') taken = taken.replace(/^[ \t\r\n]*/, ' ');
+    if (taken && (head.text.slice(head.textStart(0)) === '' || /[ \t]$/.test(head.text))) taken = taken.replace(/^[ \t\r\n]+/, '');
+    else if (taken && !/^[ \t\r\n]/.test(taken)) taken = ` ${taken}`;
     u.text = head.concat(taken, glued ? ' ' : '', close).withBlockIdLines(carried).normalize();
     u.gap = l.gap;
     this.#carriedGaps.set(u.id, l.id);
@@ -433,15 +456,14 @@ export class OurusDraft {
    * A command's own join of `lower`'s text into `upper`'s (a quote read as an atom joining the text
    * above it, or a text joining it), as `join` takes block ids: true where `lower`'s go with what is
    * joined, `upper`'s text having none (moved to it); false where both have one, `lower`'s to be left
-   * out (merged into the one a link to `upper` uses, `joinBlockIds: merge`; under `refuse`, `done()`
-   * refuses). The command writes the texts.
+   * out (merged into the one a link to `upper` uses). The command writes the texts.
    */
   joinBlockIds(upper: NodeRef, upperText: OurusText, lower: NodeRef, lowerText: OurusText): boolean {
     this.#building();
     return this.#joinedBlockIds(this.#node(upper), upperText, this.#node(lower), lowerText);
   }
 
-  /** `joinBlockIds`'s: `lower`'s block ids moved to `upper`, where it has none, or merged into its, or the join refused. */
+  /** `joinBlockIds`'s: `lower`'s block ids moved to `upper`, where it has none, or merged into its. */
   #joinedBlockIds(u: Working, ut: OurusText, l: Working, lt: OurusText): boolean {
     const own = blockIdsOf(ut);
     const lowers = blockIdsOf(lt);
@@ -449,7 +471,6 @@ export class OurusDraft {
       for (const b of lowers) this.#movedBlockIds.push({ name: b.name, to: u.id });
       return true;
     }
-    if (this.from.config.joinBlockIds === 'refuse') this.#refusal ??= { reason: 'block-id', detail: `node ${u.id} and node ${l.id} both have a block id, and a node keeps one: links to the other would find nothing` };
     // (into the one a link to `upper` uses, which may be another's: an item's, for a block inside it;
     // else, its text's, inside an item the first, else the last)
     const target = u.origin ? blockIdTargetOf(u.origin) : null;
@@ -469,6 +490,43 @@ export class OurusDraft {
     this.#listForms.set(id, marker);
     if (own) this.#ownForms.add(id);
     else this.#ownForms.delete(id);
+    return this;
+  }
+
+  /**
+   * Enter's (B223): a block id naming a quote, at its last block's end, stays at the quote's end, as a
+   * text editor's Enter leaves it at the line's end. Where the split leaves a block after its own in the
+   * quote, it goes to the end of the quote's new last block's text, declared moved. Not where the new
+   * last block holds no prose, or none yet (Enter's at the end: the id alone there would read as the
+   * block above's block-id line).
+   */
+  keepQuoteIds(): this {
+    this.#building();
+    for (const b of this.from.blockIds()) {
+      const target = b.target;
+      if (!target || !('id' in target) || target.kind !== 'quote' || target.id === b.owner.id) continue;
+      const quote = this.#byId.get(target.id);
+      if (!quote) continue;
+      const kids = quote.children;
+      const last = kids[kids.length - 1];
+      if (!last || last.id === b.owner.id || !kids.some((c) => c.id === b.owner.id)) continue;
+      const owner = this.#node(b.owner);
+      const own = this.#textOf(owner);
+      const k = own ? blockIdsOf(own).findIndex((x) => !x.carried && x.name === b.name) : -1;
+      if (!own || k < 0) continue;
+      const lower = last instanceof Working ? last : this.#open(this.from.node(last.id)!);
+      const text = this.#textOf(lower);
+      // (not an empty one, Enter's new paragraph at the end: the id alone there would be the block above's
+      // block-id line, no paragraph)
+      if ((lower.kind !== 'paragraph' && lower.kind !== 'heading') || !(text instanceof OurusProse) || text.empty) continue;
+      if (!blockIdsOf(text).some((x) => !x.carried && x.name === b.name)) {
+        const end = closingFrameStart(text);
+        const before = text.text.slice(0, end);
+        this.setText(lower.id, text.splice(end, end, /[ \t]$/.test(before) ? `^${b.name}` : ` ^${b.name}`));
+      }
+      this.movedBlockIds([b.name], lower.id);
+      this.setText(owner.id, withoutBlockIds(own, new Set([k])));
+    }
     return this;
   }
 
@@ -1325,7 +1383,7 @@ class Done {
    * Each item's list, for the items under a node the draft touched: an item starts a new list where
    * the node before it isn't an item of the list it came from; an ordered list the draft changed is
    * numbered from the start of the list its first item came from, one keeping its
-   * items keeps its numbers, and one numbered all alike stays so.
+   * items keeps its numbers.
    */
   #lists(): void {
     // the parents whose children changed, and of each node of another kind (a paragraph made an item)
@@ -1428,25 +1486,13 @@ class Done {
       const own = run.map((r) => (r.origin ? numberOf(r.origin) : null));
       const listItems = list ? list.children() : [];
       const sameItems = list !== null && listItems.length === run.length && run.every((r, i) => r.origin && r.origin.startLine === listItems[i]!.line);
-      const was = listItems.map((item) => parseInt(this.from.text.slice(this.from.mdTree.markerFrom(item), this.from.mdTree.markerTo(item)), 10));
-      const alike = was.length > 1 && was.every((n) => n === was[0]);
-      if (sameItems || alike) numbers = own.map((n) => n ?? (alike ? was[0]! : null));
+      const was = listItems.map((item) => item.block.attrs.list!.start!);
+      if (sameItems) numbers = own;
       else {
         // the lower part of a list split in two keeps its numbers; else from the start of the list its first item came from
         const head = list && listItems[0]!.line !== run[0]!.origin?.startLine && this.#before(parent, run[0]!.item, listItems[0]!.line);
         const start = head ? (own[0] ?? 1) : (was[0] ?? own.find((n) => n !== null) ?? (ordered ? Number(ordered[1]) : 1));
-        numbers = run.map((_, i) => start + i);
-        // (`listNumbers: keep`, as the text editors: an item's number as written, a new one's on from
-        // the item above it, and an item that counted on from the one above it, counting on still)
-        if (this.from.config.listNumbers === 'keep') {
-          let last = start - 1;
-          let lastOwn: number | null = null;
-          numbers = own.map((n) => {
-            const kept = n === null ? last + 1 : lastOwn !== null && n === lastOwn + 1 ? last + 1 : n;
-            if (n !== null) lastOwn = n;
-            return (last = kept);
-          });
-        }
+        numbers = listNumbering(own, was, start, this.from.config.orderedLists);
       }
       // moved right under a paragraph's text, which a list from another number can't interrupt: from 1
       // (a split list's lower part, TO6); but a list of its own, whole, outside every item keeps its
@@ -1465,7 +1511,7 @@ class Done {
       for (let n: Working | null = parent; n && !inItem; n = n.parent) inItem = n.kind === 'item';
       if ((inItem || !sameItems) && (this.draft.placedIds.has(first.id) || cameUnder) && numbers[0] !== 1 && aboveText instanceof OurusProse && aboveText.type === 'paragraph' && !aboveText.empty) numbers = run.map((_, i) => 1 + i);
       // (a list marker's number has nine digits at most)
-      if (numbers.some((n) => n !== null && n > 999999999)) throw new Refused('an item numbered past 999999999 is no list item');
+      if (numbers.some((n) => n !== null && n > MAX_ITEM_NUMBER)) throw new Refused('an item numbered past 999999999 is no list item');
     }
     run.forEach((r, i) => this.lists.set(r.item.id, { start: i === 0, type, marker, number: numbers[i] ?? null }));
   }
@@ -2211,7 +2257,7 @@ class Done {
    */
   #madeItem(node: Working, container: OurusNode | null): { indent: string; marker: string; separator: string; width: number } {
     const place = this.lists.get(node.id);
-    const marker = place?.type === 'ordered' ? `${place.number ?? 1}${place.marker}` : (place?.marker ?? '-');
+    const marker = placeMarker(place);
     const up = this.draft.lineUps.get(node.id);
     const indent = ' '.repeat(up ? Math.max(0, up.block.attrs.markerColumn! - this.#containerColumn(node.parent)) : this.#tabChild(node, container));
     const start = this.#containerColumn(node.parent) + indent.length;
@@ -2479,8 +2525,14 @@ class Done {
    * so), the others out.
    */
   #settleHeldSpaces(w: Working): void {
-    if (!(w.text instanceof OurusProse)) return;
-    const text = w.text;
+    // (a text not set, as it was, in a subtree the draft moved: its held spaces settled as a set one's,
+    // the writer laying it out anew where the mark wouldn't hold, B237; a node it only carries, a
+    // parent given a child, keeps its lines and their marks as they are)
+    let moved = false;
+    for (let n: Working | null = w; n && !moved; n = n.parent) moved = this.draft.placedIds.has(n.id);
+    const own = w.text === undefined && w.origin && moved ? this.from.textOf(w.origin) : w.text;
+    if (!(own instanceof OurusProse)) return;
+    const text = own;
     const held = text.marks.placeholders.filter((pos) => text.marks.hasHeldSpaceAt(pos));
     if (!held.length) return;
     // (`repair`: those in the run of spaces at the text's start, on its first line, kept, where text
@@ -2564,7 +2616,7 @@ class Done {
     if (close) {
       const was = this.from.textOf(w.origin!);
       const wasClose = was instanceof OurusProse && was.heading?.form === 'atx' ? was.frame.find((p) => p.part === 'close') : undefined;
-      if (!wasClose || was!.text.slice(wasClose.from).trimStart() !== out.text.slice(close.from).trimStart()) out = this.#putEscape(w, out, close.from + out.text.slice(close.from).indexOf('#'));
+      if (!wasClose || trimMd(was!.text.slice(wasClose.from)) !== trimMd(out.text.slice(close.from))) out = this.#putEscape(w, out, close.from + out.text.slice(close.from).indexOf('#'));
     }
     // an item's text a run of its bullet's character, two of them and blanks (`--`): with the bullet,
     // a rule; its first escaped, text

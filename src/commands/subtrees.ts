@@ -49,18 +49,18 @@ export function editSubtrees(ctx: CommandContext, command: OurusCommand): OurusR
       const text = ctx.doc.textOf(last);
       if (!text) return null;
       const at = ctx.doc.posOf(last, textEnd(text), -1);
-      return new OurusSuccess({ view: ctx.view, changes: [], selection: { anchor: at, head: at } });
+      return new OurusSuccess({ view: ctx.view.withSelection({ anchor: at, head: at }), changes: [] });
     }
     // the key taken, nothing typed, the nodes still selected: Logseq, Logseq DB, Tine, Roam, Athens,
     // Dynalist, RemNote and WorkFlowy ignore typing over a block selection
     case 'insertText':
-      return new OurusSuccess({ view: ctx.view, changes: [], selection: ctx.selection });
+      return new OurusSuccess({ view: ctx.view, changes: [] });
     case 'pastePlain':
       // (`pasteOverNodes: nothing`: as typing is, the key taken, nothing pasted, the nodes still selected)
-      if (ctx.config.pasteOverNodes === 'nothing') return new OurusSuccess({ view: ctx.view, changes: [], selection: ctx.selection });
+      if (ctx.config.pasteOverNodes === 'nothing') return new OurusSuccess({ view: ctx.view, changes: [] });
       return inPlace(ctx, roots, (next) => pastePlainCommand(next, command.text), command.text);
     case 'paste': {
-      if (ctx.config.pasteOverNodes === 'nothing') return new OurusSuccess({ view: ctx.view, changes: [], selection: ctx.selection });
+      if (ctx.config.pasteOverNodes === 'nothing') return new OurusSuccess({ view: ctx.view, changes: [] });
       const parentOf = (n: OurusNode) => (n.parent!.kind === 'root' ? ('root' as const) : n.parent!.id);
       // `pasteOverNodes: after`: the roots kept, the clipboard's nodes right after the last (where a
       // caret at the selection's end pastes them, Tana's); else the roots out, the nodes where the
@@ -87,7 +87,7 @@ export function editSubtrees(ctx: CommandContext, command: OurusCommand): OurusR
       const text = end && pasted.view.doc.textOf(end);
       if (!end || !text) return pasted;
       const at = pasted.view.doc.posOf(end, quirk === 'athens' ? textStart(text) : textEnd(text), -1);
-      return new OurusSuccess({ ...pasted, selection: { anchor: at, head: at } });
+      return new OurusSuccess({ ...pasted, view: pasted.view.withSelection({ anchor: at, head: at }) });
     }
     default:
       return undefined;
@@ -127,13 +127,13 @@ function inPlace(ctx: CommandContext, roots: readonly OurusNode[], then: (ctx: C
  */
 function composed(ctx: CommandContext, first: OurusResult | null, then: (ctx: CommandContext) => OurusResult | null, typed?: string): OurusResult | null {
   if (!first || !(first instanceof OurusSuccess)) return first;
-  let next = then(new CommandContext(first.view, first.selection));
+  let next = then(new CommandContext(first.view));
   if (next instanceof OurusDeferred && typed !== undefined) {
-    const from = Math.min(first.selection.anchor, first.selection.head);
-    const to = Math.max(first.selection.anchor, first.selection.head);
+    const { anchor, head } = first.view.selection;
+    const [from, to] = [Math.min(anchor, head), Math.max(anchor, head)];
     const changes = [{ from, to, insert: typed }];
     const caret = from + typed.length;
-    next = new OurusSuccess({ view: first.view.update({ changes, caret }), changes, selection: { anchor: caret, head: caret } });
+    next = new OurusSuccess({ view: first.view.update({ changes, caret }), changes });
   }
   if (!next || !(next instanceof OurusSuccess)) return next instanceof OurusDeferred ? null : next;
   return new OurusSuccess({ ...next, ...blockIdsDeclaredBy([first, next]), changes: composeChanges(ctx.doc.text, first.changes, next.changes) });

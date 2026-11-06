@@ -4,9 +4,10 @@ A block id names one block, so that a link can find it (`dev/24-block-ids.md`). 
 ` ^id` ending a block's text, or `^id` on a line of its own after a block, which Obsidian reads as
 naming the block above it in the shapes the doc's §2.1 measured. ourus reads such a line as carried
 by the node it names: it moves with the node, a split keeps it with the node the caret was in, and a
-merge keeps it with the node that stays or takes the other's. A command that would lose a block id
-refuses (`block-id`): one written off its node, naming another node or nothing, or shadowed by
-another (§4.2, §5).
+merge keeps it with the node that stays or takes the other's, the other's dropped where both have
+one (`mergedBlockIds`). Whether ids are unique, and which of two on a block counts (one shadowing the
+other), is the host's to decide; so is what a key left to it does to one: ourus writes what it is
+given, and refuses none of these.
 
 The first cases are the design's trial (§4.3): a table, a fence, an item, a heading, a paragraph
 owning a list; then a block id at a text's end and before a setext underline, Enter, merges,
@@ -322,8 +323,8 @@ flavor: obsidian
 
 ## BlockIds12
 
-Where both have one, the merge is refused: it would keep one name, and links to the other would find
-nothing.
+Where both have one, the node that stays keeps its own and the other's goes; the result says which
+went into which (`mergedBlockIds`), for a host that redirects the links to it.
 
 ```yaml
 tags: common
@@ -337,13 +338,8 @@ flavor: obsidian
 
 > deleteContentBackward
 
-```yaml
-result: rejected block-id
-```
-
 ```markdown
-- a ^x
-- ┃b ^y
+- a┃b ^x
 ```
 
 ## BlockIds13
@@ -511,7 +507,8 @@ body
 
 ## BlockIds20
 
-Duplicate drops the block ids from the copy: a block id names one block.
+Duplicate copies the block ids with the nodes, as written: block ids needn't be unique, and ourus
+keeps none so (a link finds the first, the original). It dropped them, a host's choice.
 
 ```yaml
 tags: common
@@ -533,8 +530,10 @@ flavor: obsidian
   - c
 
     ^y
-- ┃a
+- ┃a ^x
   - c
+
+    ^y
 - b
 ```
 

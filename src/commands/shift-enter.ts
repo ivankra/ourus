@@ -5,12 +5,12 @@
 import { OurusProse, OurusAtom, type OurusNode } from '../doc/index.ts';
 import { isSpaceOrTab, lineOf, trimMd } from '../text/index.ts';
 import { type CommandContext } from './context.ts';
-import { breakInQuote } from './quote.ts';
+import { breakInQuote, quoteLead } from './quote.ts';
 import { deleteSelectionAcross } from './backspace.ts';
 import { codeAt, newlineInCode } from './code.ts';
 import { enterCommand } from './enter.ts';
 import { unfoldedForCaret } from './view.ts';
-import { hiddenSpacesAt, inMarkup, pastPrefix, textActedOnAt, unquote } from './util.ts';
+import { hiddenSpacesAt, inMarkup, pastPrefix, textActedOnAt } from './util.ts';
 import type { OurusResult } from './types.ts';
 import { OurusDeferred, OurusRejected } from './types.ts';
 
@@ -66,7 +66,7 @@ export function shiftEnterCommand(ctx: CommandContext): OurusResult | null {
   // (in a quote read as an atom, a line of it: `> `)
   if (text instanceof OurusAtom && text.type === 'blockquote') {
     // (at its start, past the spaces it may be indented by)
-    if (from.offset <= (/^ {0,3}(?=>)/.exec(text.text)?.[0].length ?? 0)) return new OurusRejected('not-expressible', 'a line break here would leave an empty line inside the text');
+    if (from.offset <= quoteLead(ctx, node, text)) return new OurusRejected('not-expressible', 'a line break here would leave an empty line inside the text');
     return breakInQuote(ctx, { node, text, offset: from.offset, to: to.offset });
   }
   if (text instanceof OurusAtom) return text.type === 'table' ? new OurusRejected('not-expressible', 'a table row is a single line') : null;
@@ -136,14 +136,13 @@ export function shiftEnterCommand(ctx: CommandContext): OurusResult | null {
  */
 function quoteSplit(ctx: CommandContext, node: OurusNode, text: OurusProse, at: number, to: number, caretBelow = false): OurusResult | null | undefined {
   // (a rest of lazy lines alone, no `>` of theirs to keep: split as any text, a paragraph after it)
-  if (!/(?:^|\n) {0,3}>/.test(text.text.slice(to))) return undefined;
-  // (a quote of two paragraphs carries no block-id lines: the one after it would name the quote)
-  if (text.blockIdLines.length) return new OurusRejected('block-id', 'a quote of several paragraphs carries no block-id lines: the one after it would name the quote, not its text');
+  const rest = text.slice(to).retyped('quote', false);
+  if (rest.unquoted().text === rest.text) return undefined;
   const draft = ctx.draft();
   // (each paragraph's lines past their `>`s, the second's blanks before its text Markdown's padding,
   // none of its text: a split at a line's start, past `>  `, leaves them, B60)
   const lines = (from: number, end: number): OurusProse => {
-    const part = unquote(text.slice(from, end).retyped('quote', false));
+    const part = text.slice(from, end).retyped('quote', false).unquoted();
     const lead = from > 0 ? /^[ \t]*/.exec(part.text)![0].length : 0;
     return lead ? part.slice(lead) : part;
   };
@@ -151,7 +150,7 @@ function quoteSplit(ctx: CommandContext, node: OurusNode, text: OurusProse, at: 
     // (the item's text the quote, its first block, its two paragraphs new)
     const upper = draft.create('paragraph', lines(0, at));
     const quote = draft.create('quote', null);
-    const lower = draft.create('paragraph', lines(to, text.text.length));
+    const lower = draft.create('paragraph', lines(to, text.text.length).withBlockIdLines(text.blockIdLines));
     draft.append(quote, 'first', [upper, lower]);
     // (the blank lines after the item's text are after the quote's last paragraph now)
     draft.setText(node, null).append(node, 'first', [quote]).inheritGap(lower, node).gap(node, 0);
@@ -162,7 +161,7 @@ function quoteSplit(ctx: CommandContext, node: OurusNode, text: OurusProse, at: 
   // the quote, which adopts none)
   const quote = draft.create('quote', null);
   const [, lower] = draft.split(node, at, { to, children: 'stay', into: 'sibling', kind: 'paragraph' });
-  draft.setText(node, lines(0, at)).setText(lower, lines(to, text.text.length));
+  draft.setText(node, lines(0, at).withBlockIdLines([])).setText(lower, lines(to, text.text.length).withBlockIdLines(text.blockIdLines));
   draft.place('before', node, [quote]).remove([node, lower, ...node.children]).append(quote, 'first', [node, lower]);
   if (node.children.length) draft.place('after', quote, node.children);
   if (caretBelow) return ctx.apply(draft.gap(node, 1).setCaret(lower, 0, -1));
