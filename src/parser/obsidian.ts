@@ -255,7 +255,7 @@ function fencedMarkup(tree: MdTree, leaf: MdBlockAt, line: number): MdLineMarkup
   const marks: MdMark[] = [];
   let textFrom = tree.textStart(line);
   if (textFrom < 0) textFrom = info.contentFrom;
-  let textTo = info.to;
+  let textTo: number = info.to;
   if (first) {
     let from = info.contentFrom;
     while (from < info.to && (text.charCodeAt(from) === 32 || text.charCodeAt(from) === 9)) from++;
@@ -286,6 +286,7 @@ export const mathBlocks: MdExtension = {
   lineMarkup: { math_block: fencedMarkup },
   blockContent: { math_block: 'verbatim' },
   delimited: { math_block: () => true },
+  delimiterChars: '$',
   render: {
     blocks: {
       math_block(r, b, entering) {
@@ -307,6 +308,7 @@ export const commentBlocks: MdExtension = {
   lineMarkup: { comment_block: fencedMarkup },
   blockContent: { comment_block: 'verbatim' },
   delimited: { comment_block: () => true },
+  delimiterChars: '%',
   render: { blocks: { comment_block: () => false } },
 };
 
@@ -413,6 +415,7 @@ export const tags: MdExtension = {
 
 const equals: MdDelimiterRule = {
   char: '=',
+  ruleOfThree: true,
   accepts: (length) => length === 2,
   match: (opener, closer) => (opener.length === closer.length ? { use: 2, type: 'highlight' } : null),
 };
@@ -538,20 +541,21 @@ export function mdBlockIdEnd(text: string): { readonly at: number; readonly name
 }
 
 /** ` ^id` at the very end of a block's text (or the whole text). */
-/** The block id ending the text the inline parser reads (`mdBlockIdEnd`), once a text: not again at each of its `^`s. */
-let endingText: string | null = null;
-let endingFound: ReturnType<typeof mdBlockIdEnd> = null;
-
 const blockIdRule: MdInlineRule = {
   name: 'blockId',
   triggers: '^',
   parse(p) {
     const at = p.pos;
-    if (p.text !== endingText) [endingText, endingFound] = [p.text, mdBlockIdEnd(p.text)];
-    const found = endingFound;
+    // (the block id ending the text, found once a text, in the parser's memo: not again at each `^`)
+    if (!p.memo.has('blockIdEnd')) p.memo.set('blockIdEnd', mdBlockIdEnd(p.text));
+    const found = p.memo.get('blockIdEnd') as ReturnType<typeof mdBlockIdEnd>;
     if (found?.at !== at) return false;
+    // (the blanks before it its own, not the text's: rendered, the text ends where it does, no blank)
+    let from = at;
+    while (from > 0 && (p.text[from - 1] === ' ' || p.text[from - 1] === '\t')) from--;
+    if (from < at && !p.unputText(at - from)) from = at;
     p.pos = p.text.length;
-    p.add(new Node('block_id', at, at + 1 + found.name.length, { value: found.name }));
+    p.add(new Node('block_id', from, at + 1 + found.name.length, { value: found.name }));
     return true;
   },
 };

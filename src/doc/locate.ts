@@ -79,7 +79,7 @@ export function locate(doc: OurusDoc, pos: number): Located {
 
 /** Where `pos`, on `line` past `node`'s text, is among the block-id lines the text carries. */
 function blockIdLineAt(node: OurusNode, text: OurusText, line: MdLine, pos: number): Located {
-  let at = node.textLastLine;
+  let at: number = node.textLastLine;
   for (const [k, carried] of text.blockIdLines.entries()) {
     at += carried.blankLines + 1;
     if (line.index < at) return { zone: 'blockIdLine', node, text, line: k, blank: true, offset: 0 };

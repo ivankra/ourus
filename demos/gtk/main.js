@@ -8,7 +8,7 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Gdk from 'gi://Gdk?version=4.0';
 import Gtk from 'gi://Gtk?version=4.0';
-import { OurusDoc, executeCommand, mapPos, settlePlaceholders } from '../../src/index.ts';
+import { OurusDoc, OurusDeferred, OurusFailed, OurusRejected, OurusSuccess, OurusView, executeCommand, settlePlaceholders } from '../../src/index.ts';
 
 const KEYS = {
   Tab: 'indent',
@@ -162,14 +162,31 @@ function outliner(view, status) {
     doc = next;
   }
 
+  /** The document with the buffer's selection: what a command acts at, and settling reads. */
+  function viewOf() {
+    return OurusView.of(doc, { selection: selection() });
+  }
+
+  /** What a result was, for the status. */
+  function outcome(result) {
+    if (result instanceof OurusRejected) return `rejected — ${result.reason}`;
+    if (result instanceof OurusFailed) return `failed to write, a bug in ourus (${result.phase} ${result.code})`;
+    return result instanceof OurusSuccess ? 'success' : 'deferred';
+  }
+
+  /** `result` applied to the buffer where it is a success: its changes, then its selection. */
+  function applied(result) {
+    if (!(result instanceof OurusSuccess)) return;
+    apply(result.changes, result.view.doc);
+    select(result.view.selection.anchor, result.view.selection.head);
+  }
+
+  /** `command` run at the buffer's selection, the status saying how; the result. */
   function run(command) {
-    const result = executeCommand(doc, command, selection());
-    status.set_text(`${command.type}: ${result.status === 'rejected' ? `rejected — ${result.reason}` : result.status}`);
-    if (result.status === 'applied') {
-      apply(result.changes, result.doc);
-      select(result.selection.anchor, result.selection.head);
-    }
-    return result.status;
+    const result = executeCommand(viewOf(), command);
+    status.set_text(`${command.type}: ${outcome(result)}`);
+    applied(result);
+    return result;
   }
 
   // Ctrl-V places Markdown as nodes, every format the clipboard has (a page's HTML, a Markdown app's
@@ -177,7 +194,7 @@ function outliner(view, status) {
   function paste(type) {
     readClipboard(view.get_clipboard(), (formats) => {
       const text = formats['text/plain'];
-      if (!text || run(type === 'paste' ? { type, clipboard: formats } : { type, text }) !== 'deferredToHost') return;
+      if (!text || !(run(type === 'paste' ? { type, clipboard: formats } : { type, text }) instanceof OurusDeferred)) return;
       // not ours: GTK's paste, read back like typing
       buffer.begin_user_action();
       buffer.delete_selection(true, true);
@@ -204,15 +221,12 @@ function outliner(view, status) {
     // alone); a cut takes it out. Where ourus steps aside, GTK's
     if (ctrl && !alt && !shift && (key.toLowerCase() === 'c' || key.toLowerCase() === 'x')) {
       const type = key.toLowerCase() === 'c' ? 'copy' : 'cut';
-      const result = executeCommand(doc, { type }, selection());
-      if (result.status === 'deferredToHost') return false;
-      status.set_text(`${type}: ${result.status === 'rejected' ? `rejected — ${result.reason}` : result.status}`);
-      if (result.status !== 'applied') return true;
+      const result = executeCommand(viewOf(), { type });
+      if (result instanceof OurusDeferred) return false;
+      status.set_text(`${type}: ${outcome(result)}`);
+      if (!(result instanceof OurusSuccess)) return true;
       writeClipboard(view.get_clipboard(), result.clipboard ?? {});
-      if (type === 'cut') {
-        apply(result.changes, result.doc);
-        select(result.selection.anchor, result.selection.head);
-      }
+      if (type === 'cut') applied(result);
       return true;
     }
     const name = `${ctrl ? 'Mod-' : ''}${alt ? 'Alt-' : ''}${shift ? 'Shift-' : ''}${key}`;
@@ -227,18 +241,15 @@ function outliner(view, status) {
     }
     const type = KEYS[name];
     // not applicable: GTK's default (in code, Tab is a tab)
-    if (type) return run({ type }) !== 'deferredToHost';
+    if (type) return !(run({ type }) instanceof OurusDeferred);
     // typing: ourus's where Markdown reads the character as structure (a backtick), else GTK's
     // a dead key (` on US-International) is the input method's, to compose with the next key
     const char = Gdk.keyval_to_unicode(keyval);
     if (ctrl || alt || !char || gdkName.startsWith('dead_')) return false;
-    const result = executeCommand(doc, { type: 'insertText', text: String.fromCodePoint(char) }, selection());
-    if (result.status === 'deferredToHost') return false;
-    status.set_text(`insertText: ${result.status === 'rejected' ? `rejected — ${result.reason}` : result.status}`);
-    if (result.status === 'applied') {
-      apply(result.changes, result.doc);
-      select(result.selection.anchor, result.selection.head);
-    }
+    const result = executeCommand(viewOf(), { type: 'insertText', text: String.fromCodePoint(char) });
+    if (result instanceof OurusDeferred) return false;
+    status.set_text(`insertText: ${outcome(result)}`);
+    applied(result);
     return true;
   });
   view.add_controller(keys);
@@ -254,21 +265,21 @@ function outliner(view, status) {
     let end = 0;
     while (end < old.length - from && end < text.length - from && old[old.length - 1 - end] === text[text.length - 1 - end]) end++;
     const { anchor, head } = selection(text);
-    doc = doc.update([{ from, to: old.length - end, insert: text.slice(from, text.length - end) }], head === anchor ? { caret: head } : {});
+    doc = doc.update({ changes: [{ from, to: old.length - end, insert: text.slice(from, text.length - end) }], ...(head === anchor ? { caret: head } : {}) });
   }
   buffer.connect('changed', () => applying || readBack());
 
-  // an empty node the caret has left is settled: kept, or its line removed. Once GTK is done
-  // moving it: the buffer isn't edited from inside its own signals.
+  // an empty node the selection has left (no longer on any line it touches) is settled: kept, or its
+  // line removed; where it can't be written again, its placeholder dropped, the text as it is. Once
+  // GTK is done moving the caret: the buffer isn't edited from inside its own signals.
   let settling = 0;
   function settle() {
     settling = 0;
     readBack();
-    const { anchor, head } = selection();
-    const r = settlePlaceholders(doc, head);
+    const r = settlePlaceholders(viewOf());
     if (r) {
-      apply(r.changes, r.doc);
-      select(mapPos(r.changes, anchor), mapPos(r.changes, head));
+      apply(r.changes, r.view.doc);
+      select(r.view.selection.anchor, r.view.selection.head);
     }
     return GLib.SOURCE_REMOVE;
   }

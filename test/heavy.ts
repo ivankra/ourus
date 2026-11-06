@@ -1,15 +1,16 @@
 // The full run, `npm test`, against a frozen copy of the working tree, so editing can go on while it
-// runs: the typecheck (`tsc -p .`) and the fast suite (`npm run test:fast`) first and alone, as its
+// runs: the typecheck (`npm run typecheck`: the sources, the tests and the demos) and the fast suite (`npm run test:fast`) first and alone, as its
 // timing tests fail on a busy machine;
 // then the others at once: the view pass, the inverse pairs (and the same corpus played by the last commit's code,
 // so a change's round trips are told from the corpus's), the differential run against the last
-// commit, the generated-notes checks (conserve, sweep, sessions) and the open bugs (bugs). The suites run side by side
+// commit, the generated-notes checks (conserve, sweep, sessions), the public API at a note's extremes
+// (extremes) and the open bugs (bugs). The suites run side by side
 // (each its own process; the view pass and the differential run spread their work over the cores
 // themselves). Each report goes to a file in the run's directory; a
 // summary is printed.
 //
 //   node test/heavy.ts            # every suite
-//   node test/heavy.ts view diff  # some: types, fast, view, inverse, diff, conserve, sweep, sessions, bugs
+//   node test/heavy.ts view diff  # some: types, fast, view, inverse, diff, conserve, sweep, sessions, extremes, bugs
 //   TEST_BASE_REV=<ref> node test/heavy.ts  # against another commit than the last
 
 import { execFileSync, spawn } from 'node:child_process';
@@ -19,7 +20,7 @@ import { join, relative, resolve } from 'node:path';
 
 const here = resolve(import.meta.dirname, '..');
 const asked = process.argv.slice(2);
-const suites = asked.length ? asked : ['types', 'fast', 'view', 'inverse', 'diff', 'conserve', 'sweep', 'sessions', 'bugs'];
+const suites = asked.length ? asked : ['types', 'fast', 'view', 'inverse', 'diff', 'conserve', 'sweep', 'sessions', 'extremes', 'bugs'];
 const run = mkdtempSync(join(tmpdir(), 'ourus-heavy-'));
 const base = process.env.TEST_BASE_REV ?? 'HEAD';
 
@@ -33,20 +34,34 @@ const notationChanged = (): boolean => {
   }
 };
 
+/** Whether the harness in `root` reads the corpus there: not where a case sets an option its `src/` doesn't have (one renamed since). */
+const readable = (root: string): boolean => {
+  try {
+    execFileSync('node', ['--input-type=module', '-e', "import { readSpecFile, specFiles } from './test/lib/index.ts'; for (const f of specFiles()) readSpecFile(f);"], { cwd: root, stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 /**
  * A copy of the tree at `to`: the working tree's files (but `.git` and every `node_modules`); where
  * `head`, `src/` the last commit's, with the harness written for it (`test/`, `sxs/`), so a change of
  * the API between them plays each with its own: the corpus (`spec/`) the working tree's, but where
- * its notation changed since, the base's own (the cases as its reader reads them).
+ * its notation changed since, or the base's harness can't read it, the base's own (the cases as its
+ * reader reads them).
  */
 function copy(to: string, head: boolean): string {
   cpSync(here, to, { recursive: true, filter: (from) => !/^\.git(?:\/|$)|(?:^|\/)node_modules(?:\/|$)/.test(relative(here, from)) });
-  if (head) {
-    const dirs = ['src', 'test', 'sxs', ...(notationChanged() ? ['spec'] : [])];
-    for (const dir of dirs) execFileSync('rm', ['-rf', join(to, dir)]);
-    execFileSync('tar', ['-x', '-C', to], { input: execFileSync('git', ['archive', base, ...dirs], { cwd: here, maxBuffer: 1 << 28 }) });
-  }
   symlinkSync(join(here, 'node_modules'), join(to, 'node_modules'));
+  if (head) {
+    const extract = (dirs: string[]): void => {
+      for (const dir of dirs) execFileSync('rm', ['-rf', join(to, dir)]);
+      execFileSync('tar', ['-x', '-C', to], { input: execFileSync('git', ['archive', base, ...dirs], { cwd: here, maxBuffer: 1 << 28 }) });
+    };
+    extract(['src', 'test', 'sxs']);
+    if (notationChanged() || !readable(to)) extract(['spec']);
+  }
   return to;
 }
 
@@ -76,8 +91,9 @@ const added = (a: string, b: string): string[] => {
 console.log(`heavy suites in ${run}`);
 /** Each suite, run: the line it reports. */
 const suite = async (name: string): Promise<string> => {
-  // (the typecheck, in the copy, its `node_modules` the working tree's)
-  if (name === 'types') return `types: ${(await play(now, 'tsc', ['-p', '.'], 'types.txt', {}, 'npx')) ? 'pass' : 'FAIL'} (types.txt)`;
+  // (the typecheck, in the copy, its `node_modules` the working tree's: the sources and tests, and every
+  // demo, which hosts the API as a host would, `npm run typecheck`)
+  if (name === 'types') return `types: ${(await play(now, 'run', ['typecheck'], 'types.txt', {}, 'npm')) ? 'pass' : 'FAIL'} (types.txt)`;
   if (name === 'fast') return `fast: ${(await play(now, '--test', ['test/*.test.ts', 'test/*/*.test.ts', 'sxs/*/*.test.ts'], 'fast.txt')) ? 'pass' : 'FAIL'} (fast.txt)`;
   if (name === 'view') return `view: ${(await play(now, 'test/view-exhaustive.ts', [], 'view.txt')) ? 'pass' : 'FAIL'} (view.txt)`;
   if (name === 'inverse') {
@@ -105,7 +121,7 @@ const suite = async (name: string): Promise<string> => {
     return `diff: ${regressions === '0' ? 'pass' : 'FAIL'}, ${regressions} regressions, ${fails} runs fail to write; ${same ? 'no outcome moved' : 'outcomes moved, each to judge'} (diff.txt)`;
   }
   // (the generated-notes checks: each held to its baseline on its own corpus)
-  if (name === 'conserve' || name === 'sweep' || name === 'sessions' || name === 'bugs') return `${name}: ${(await play(now, `test/${name}.ts`, [], `${name}.txt`)) ? 'pass' : 'FAIL'} (${name}.txt)`;
+  if (name === 'conserve' || name === 'sweep' || name === 'sessions' || name === 'extremes' || name === 'bugs') return `${name}: ${(await play(now, `test/${name}.ts`, [], `${name}.txt`)) ? 'pass' : 'FAIL'} (${name}.txt)`;
   return `no suite "${name}": types, fast, view, inverse, diff, conserve, sweep, sessions, bugs`;
 };
 const lines: string[] = [];

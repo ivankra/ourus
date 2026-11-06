@@ -28,7 +28,7 @@ import { ensureProxy } from './lib/browser.ts';
 import type { Driver } from './lib/driver.ts';
 import { LOGIN_EXIT } from './lib/login.ts';
 import { cacheDir, cacheMode } from './proxy.ts';
-import { OurusRejected, OurusSuccess } from '../src/commands/index.ts';
+import { OurusFailed, OurusRejected, OurusSuccess } from '../src/commands/index.ts';
 
 const HELP = `usage: node sxs/probe.ts [<apps>] [options] [<buffer> <step>...|<file.md>|<case>]
 
@@ -308,7 +308,7 @@ function playOurus(p: Probe, config: Record<string, string>, labels = false): Ou
   named.check(doc, start.labels, null);
   // (a case's view, its buffer's `⟦folded⟧` and `⟦zoomed⟧`, as the spec runs it)
   const view = p.test ? specTestView(p.test, doc, start.view) : OurusView.of(doc);
-  let state: PlayedState = { view, selection: drawnSelection(view, start), clipboard: p.clipboard, drop: start.drop, labels: named.ids };
+  let state: PlayedState = { view: view.withSelection(drawnSelection(view, start)), clipboard: p.clipboard, drop: start.drop, labels: named.ids };
   const labelling = labels ? new Labelling(state.view.doc, start.labels) : null;
   const out: OurStep[] = [];
   for (const actions of p.steps) {
@@ -319,13 +319,13 @@ function playOurus(p: Probe, config: Record<string, string>, labels = false): Ou
       for (const action of actions) {
         state = playActions(state, [action]);
         const last = state.last;
-        if (last instanceof OurusRejected && last.reason === 'write-failed') broken ??= `${action} fails to write${last.detail ? `: ${last.detail}` : ''}`;
+        if (last instanceof OurusFailed) broken ??= `${action} fails to write${last.detail ? `: ${last.detail}` : ''}`;
       }
     } catch (e) {
       broken = `throws: ${e instanceof Error ? e.message : String(e)}`;
     }
     const text = state.view.doc.text;
-    const buffer = normalizeDrawing(labelling ? labelling.draw(drawDoc(state.view, state.selection), state.view.doc) : drawDoc(state.view, state.selection));
+    const buffer = normalizeDrawing(labelling ? labelling.draw(drawDoc(state.view, state.view.selection), state.view.doc) : drawDoc(state.view, state.view.selection));
     out.push({
       actions,
       buffer,
@@ -334,7 +334,7 @@ function playOurus(p: Probe, config: Record<string, string>, labels = false): Ou
       outline: drawOutline(state.view.doc),
       ...(broken ? { broken } : {}),
       ...(actions.some((a) => a === 'copy' || a === 'cut') && state.clipboard['text/plain'] !== undefined ? { clipboard: state.clipboard['text/plain'] } : {}),
-      ...(state.last instanceof OurusSuccess && state.last.dropMap ? { dropPoints: drawDropPoints(state.view, state.last.dropMap, state.selection) } : {}),
+      ...(state.last instanceof OurusSuccess && state.last.dropMap ? { dropPoints: drawDropPoints(state.view, state.last.dropMap, state.view.selection) } : {}),
       // (the buffer with its view on its rows, `⟦folded⟧`, `⟦zoomed⟧`, printed in its place)
       ...(state.view.zoomFolded.size || state.view.zoom !== null ? { view: drawView(buffer, rowView(state.view)) } : {}),
     });

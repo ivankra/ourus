@@ -141,9 +141,11 @@ const at = doc.locateRaw(pos);              // in a text, a frame, a marker, a p
   - `OurusDoc.codeSpanAt(pos: number): { closer, to } | null`<br>
     The code span `pos` is inside: where its closing backtick run starts, and where the span ends.
 
-  - `OurusDoc.readsAs(text: OurusAtom): boolean`<br>
-    Whether an atom text's lines, parsed alone, read as one block of its type, closed or not as
-    the text is.
+  - `OurusDoc.readsAs(text: OurusAtom, column?: number): boolean`, `OurusDoc.verbatimLinesAt(text: OurusAtom, column?: number): string[] | null`<br>
+    Whether an atom text's lines, parsed alone at `column` (their container's content column), read
+    as one block of its type, closed or not as the text is; and the code they mean there, its lines as
+    `verbatimLinesOf` reads a document's. The readback compares edited code by the second, read where
+    the block was.
 
   - `OurusDoc.escapeParagraph(lines: string[]): string[] | null`<br>
     The lines of a paragraph's text, with the backslashes they need to read as a paragraph when
@@ -153,6 +155,18 @@ const at = doc.locateRaw(pos);              // in a text, a frame, a marker, a p
     A range's Markdown as written, without the prefixes of the containers that hold all of it (what
     copy puts on the clipboard); where a node's own Markdown starts (an item at its marker, a quote
     at its `>`); the range of a node's lines, its descendants' included.
+
+  - `clipboardFragment(markdown: string, config, ours?: boolean): { doc, inline } | null`, `clipboardSource(lines, config, ours?)`, `renderedHtml(markdown, from: OurusDoc, text?: boolean)`<br>
+    A clipboard's Markdown read back as a document of its own, as paste reads it: its blank lines at
+    either end and the indentation all its lines share off, a fence copied from a list or a quote
+    given its code's indentation back where its closing would close it so, a block left open closed
+    under what holds it, frontmatter read as other lines; whether it is inline text. Its lines alone
+    (`clipboardSource`); and Markdown copied from `from` rendered as it read there, as copy puts it
+    beside its text: a text's the paragraph text it was, blocks after a blank line, with the note's
+    definitions, a footnote definition copied without a reference its content.
+
+  - `OurusProse.unquoted(): OurusProse`<br>
+    A quote's text without each line's `>` (a block id's own line's too), a paragraph's.
 
 - **`PersistentNode`** is a node of the outline as stored. Snapshots and drafts share it
   for as long as it stays the same. It has:
@@ -305,13 +319,12 @@ Files:
   from the parse, sharing nodes between snapshots, a block-id paragraph that names the block before
   it carried by that block); `text.ts` (`OurusProse`, `OurusAtom`, where a text starts and ends,
   `textStart` and `textEnd`, and a text's block ids); `block-ids.ts` (`OurusDoc.blockIds`, and
-  `checkBlockIds`, the rule every command keeps: no block id loses what it names, read where the
-  command's changes reached, down to where the outline is the nodes it was).
+  what a command declares about them, `BlockIdDeclarations`).
 - `read.ts` (a node's text read from its lines, every backslash in, and the map
   between the text's offsets and the document's); `escapes.ts` (`markupEscapes` for reading,
   `escapeParagraph` for writing); `locate.ts` (what is at a position); `rules.ts` (which
   node kinds hold which, `outlineChildren`); `placeholders.ts` (which marks still hold:
-  a placeholder something, an auto mark its character: a blank line's break while it is blank); `copy.ts` (a range's Markdown without its containers' prefixes).
+  a placeholder something, an auto mark its character: a blank line's break while it is blank); `copy.ts` (a range's Markdown without its containers' prefixes, and a clipboard's read back).
 
 Tests, in `test/doc/`: `doc.test.ts` (placeholders, updates), `outline.test.ts` (an update's outline
 equals a fresh parse's), `text.test.ts`, `locate.test.ts`, `escapes.test.ts`, `block-ids.test.ts`

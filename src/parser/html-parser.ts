@@ -7,6 +7,7 @@
 
 import { parseDocument } from 'htmlparser2';
 import { isPunctuation } from './chars.ts';
+import { pushAll } from '../text/index.ts';
 
 /** A node of htmlparser2's document, as far as it is read here. */
 interface DomNode {
@@ -42,14 +43,38 @@ const isElement = (node: DomNode): boolean => node.type === 'tag' || node.type =
 /** A block element, or an inline one around blocks (Google Docs' wrapper around everything), which then holds them as blocks do. */
 const isBlock = (node: DomNode): boolean => isElement(node) && (BLOCKS.has(node.name!) || (!SKIPPED.has(node.name!) && (node.children ?? []).some(isBlock)));
 
-/** Word's list paragraph: its level, from its `mso-list` style (`mso-list:l0 level2 lfo1`). */
-/** A Word list paragraph's list (`l0`): null for another paragraph. */
-const wordList = (node: DomNode): string | null => (isElement(node) && node.name === 'p' ? (/mso-list:\s*(l\d+)\s+level\d+/.exec(node.attribs?.style ?? '')?.[1] ?? null) : null);
+/**
+ * An element's `style` as CSS reads it, parsed once: each property's value by its name, both in lower
+ * case, spaces around them gone; a property declared twice its later declaration's, but where the
+ * earlier is `!important` and the later isn't (B265). Every reading of a style goes through it.
+ */
+function cssOf(node: DomNode): ReadonlyMap<string, string> {
+  const out = new Map<string, string>();
+  const important = new Set<string>();
+  for (const declaration of (node.attribs?.style ?? '').split(';')) {
+    const colon = declaration.indexOf(':');
+    if (colon < 0) continue;
+    const name = declaration.slice(0, colon).trim().toLowerCase();
+    const raw = declaration.slice(colon + 1).trim().toLowerCase();
+    const isImportant = /!\s*important$/.test(raw);
+    if (!name || (important.has(name) && !isImportant)) continue;
+    out.set(name, isImportant ? raw.replace(/!\s*important$/, '').trim() : raw);
+    if (isImportant) important.add(name);
+  }
+  return out;
+}
 
+/** A Word list paragraph's list (`l0`, from `mso-list:l0 level2 lfo1`): null for another paragraph. */
+const wordList = (node: DomNode): string | null => (isElement(node) && node.name === 'p' ? (/^(l\d+)\s+level\d+/.exec(cssOf(node).get('mso-list') ?? '')?.[1] ?? null) : null);
+
+/** A Word list paragraph's level (`2`, from `mso-list:l0 level2 lfo1`): null for another paragraph. */
 const wordLevel = (node: DomNode): number | null => {
-  const m = isElement(node) && node.name === 'p' ? /mso-list:\s*l\d+\s+level(\d+)/.exec(node.attribs?.style ?? '') : null;
+  const m = isElement(node) && node.name === 'p' ? /^l\d+\s+level(\d+)/.exec(cssOf(node).get('mso-list') ?? '') : null;
   return m ? Number(m[1]) : null;
 };
+
+/** Whether an element is Word's bullet or number in a list paragraph (`mso-list:Ignore`). */
+const wordIgnored = (node: DomNode): boolean => isElement(node) && /^ignore\b/.test(cssOf(node).get('mso-list') ?? '');
 
 /** HTML converted to Markdown (`MdHtmlParser.parse`). */
 export interface MdHtmlParsed {
@@ -148,16 +173,10 @@ export class MdHtmlParser {
 
   /** `html` as Markdown; `hardBreaks`: a `<br>` in a paragraph a hard break (`\\` at its line's end), else a line of the paragraph's text. */
   static parse(html: string, { hardBreaks = false }: { hardBreaks?: boolean } = {}): MdHtmlParsed {
-    const was = writeHardBreaks;
-    writeHardBreaks = hardBreaks;
-    try {
-      return new MdHtmlParser().#parse(html);
-    } finally {
-      writeHardBreaks = was;
-    }
+    return new MdHtmlParser().#parse(html, hardBreaks);
   }
 
-  #parse(html: string): MdHtmlParsed {
+  #parse(html: string, hardBreaks: boolean): MdHtmlParsed {
     const nodes = parseDocument(html).children as readonly DomNode[];
     // (nested past what the walks below can recurse through: its text alone, its blocks' paragraphs and
     // lines, as a page that deep still shows it)
@@ -169,7 +188,7 @@ export class MdHtmlParser {
     }
     const blocks = this.#blocksOf(nodes);
     const structured = blocks.some((b) => b.kind !== 'paragraph') || blocks.length > 1 || blocks.some((b) => b.kind === 'paragraph' && b.text.includes('\n'));
-    return { markdown: writeAll(blocks), structured, formatted: this.#formatted };
+    return { markdown: writeAll(blocks, hardBreaks), structured, formatted: this.#formatted };
   }
 
   /**
@@ -199,10 +218,10 @@ export class MdHtmlParser {
         const id = wordList(node);
         for (; k < nodes.length && (wordList(nodes[k]!) === id || (nodes[k]!.type === 'text' && collapse(nodes[k]!.data!).trim() === '')); k++) if (nodes[k]!.type !== 'text') run.push(nodes[k]!);
         k--;
-        out.push(...this.#wordList(run));
+        pushAll(out, this.#wordList(run));
         continue;
       }
-      out.push(...this.#blockOf(node));
+      pushAll(out, this.#blockOf(node));
     }
     flush();
     return out;
@@ -217,7 +236,7 @@ export class MdHtmlParser {
       let found = '';
       const walk = (n: DomNode): void => {
         if (found) return;
-        if (isElement(n) && /mso-list:\s*Ignore/i.test(n.attribs?.style ?? '')) found = collapse(textContent(n)).trim();
+        if (wordIgnored(n)) found = collapse(textContent(n)).trim();
         else (n.children ?? []).forEach(walk);
       };
       walk(p);
@@ -313,7 +332,7 @@ export class MdHtmlParser {
       if (isElement(child) && child.name === 'div' && child.attribs?.xmlns) continue;
       if (isElement(child) && (child.name === 'ul' || child.name === 'ol')) {
         const nested = this.#list(child);
-        if (items.length) items[items.length - 1]!.push(...nested);
+        if (items.length) pushAll(items[items.length - 1]!, nested);
         else item(nested, null);
         continue;
       }
@@ -364,7 +383,7 @@ export class MdHtmlParser {
     const span = (c: DomNode, name: string): number => Math.min(Math.max(Number.parseInt(c.attribs?.[name] ?? '1', 10) || 1, 1), 1000);
     // (a head cell spanning columns: each of them its alignment)
     const align = cellsOf(rows[0]!).flatMap((c) => {
-      const a = (c.attribs?.align ?? /text-align:\s*(left|right|center)/.exec(c.attribs?.style ?? '')?.[1] ?? '').toLowerCase();
+      const a = (c.attribs?.align ?? cssOf(c).get('text-align') ?? '').toLowerCase();
       return Array<'left' | 'right' | 'center' | null>(span(c, 'colspan')).fill(a === 'left' || a === 'right' || a === 'center' ? a : null);
     });
     // (a block in a cell, a paragraph, a list's item, set off from the next by a space: B116)
@@ -464,15 +483,13 @@ export class MdHtmlParser {
 
     // Word's bullet or number, written as text in its list paragraphs
     // (in a list it made of Word's paragraphs: elsewhere it is text the page shows, B138)
-    if (this.#inWordList && /mso-list:\s*Ignore/i.test(node.attribs?.style ?? '')) return '';
+    if (this.#inWordList && wordIgnored(node)) return '';
     const inner = (): string => this.#joined(node.children ?? []);
     // formatting as styles (Google Docs' spans; its wrapper `<b style="font-weight:normal">`, no bold)
-    const style = node.attribs?.style ?? '';
-    // (a property declared twice is its last declaration's, as CSS has it)
-    const last = (re: RegExp): string | undefined => [...style.matchAll(re)].at(-1)?.[1];
-    const weight = last(/font-weight:\s*(\w+)/g);
-    const fontStyle = last(/font-style:\s*(\w+)/g);
-    const decoration = last(/text-decoration(?:-line)?:\s*([^;]*)/g);
+    const css = cssOf(node);
+    const weight = css.get('font-weight');
+    const fontStyle = css.get('font-style');
+    const decoration = css.get('text-decoration-line') ?? css.get('text-decoration');
     const bold = weight === undefined ? undefined : weight === 'bold' || weight === 'bolder' || Number(weight) >= 600;
     const italic = fontStyle === undefined ? undefined : fontStyle === 'italic' || fontStyle === 'oblique';
     const struck = decoration === undefined ? undefined : /line-through/.test(decoration);
@@ -616,7 +633,8 @@ function destination(url: string): string {
 }
 
 /** The style declarations the conversion reads as formatting: bold, italic, struck through. */
-const FORMAT_STYLE = /(?:font-weight|font-style|text-decoration(?:-line)?)\s*:[^;]*/g;
+/** The properties of formatting a block's style sets its children's (`styledDown`). */
+const FORMAT_PROPERTIES = ['font-weight', 'font-style', 'text-decoration', 'text-decoration-line'];
 
 /**
  * A block element's children with the formatting its style sets theirs (B120): a block child's style
@@ -625,7 +643,8 @@ const FORMAT_STYLE = /(?:font-weight|font-style|text-decoration(?:-line)?)\s*:[^
  */
 function styledDown(node: DomNode): DomNode[] {
   const children = node.children ?? [];
-  const style = (node.attribs?.style ?? '').match(FORMAT_STYLE)?.join(';');
+  const css = cssOf(node);
+  const style = FORMAT_PROPERTIES.flatMap((name) => (css.has(name) ? [`${name}:${css.get(name)}`] : [])).join(';');
   if (!style) return [...children];
   const out: DomNode[] = [];
   let run: DomNode[] = [];
@@ -710,24 +729,22 @@ function escapeStart(line: string): string {
  * Blocks one after another, a blank line between: a list right after a list of its kind written with
  * the other bullet or delimiter (`*`, `)`), or the two would be one list (B139).
  */
-/** Whether `write` writes a paragraph's line breaks as hard breaks (`MdHtmlParser.parse`'s `hardBreaks`). */
-let writeHardBreaks = false;
-
-function writeAll(blocks: readonly HtmlBlock[]): string {
+/** `hardBreaks`, here and in `write`: a paragraph's line breaks written as hard breaks (`MdHtmlParser.parse`'s). */
+function writeAll(blocks: readonly HtmlBlock[], hardBreaks: boolean): string {
   const out: HtmlBlock[] = [];
   for (const b of blocks) {
     const before = out[out.length - 1];
     out.push(b.kind === 'list' && before?.kind === 'list' && before.ordered === b.ordered && !before.other ? { ...b, other: true } : b);
   }
-  return out.map(write).join('\n\n');
+  return out.map((b) => write(b, hardBreaks)).join('\n\n');
 }
 
-function write(block: HtmlBlock): string {
+function write(block: HtmlBlock, hardBreaks: boolean): string {
   switch (block.kind) {
     case 'paragraph':
       // (a `<br>`'s line break a hard break, where asked: `pasteHtmlBreak: hard`)
       // (`<br><br>` a paragraph break either way)
-      if (writeHardBreaks) return block.text.split(/\n{2,}/).map((part) => part.split('\n').map(escapeStart).join('\\\n')).join('\n\n');
+      if (hardBreaks) return block.text.split(/\n{2,}/).map((part) => part.split('\n').map(escapeStart).join('\\\n')).join('\n\n');
       return block.text.split('\n').map(escapeStart).join('\n');
     case 'heading':
       // (a run of `#`s ending the text, after a space or all of it, would be the heading's closing sequence)
@@ -740,7 +757,7 @@ function write(block: HtmlBlock): string {
       return `${fence}${block.info}\n${block.text}${block.text === '' && !block.blankLine ? '' : '\n'}${fence}`;
     }
     case 'quote':
-      return writeAll(block.blocks)
+      return writeAll(block.blocks, hardBreaks)
         .split('\n')
         .map((line) => (line === '' ? '>' : `> ${line}`))
         .join('\n');
@@ -752,7 +769,7 @@ function write(block: HtmlBlock): string {
           const marker = block.ordered ? `${block.start + k}${block.other ? ')' : '.'}` : block.other ? '*' : '-';
           const pad = ' '.repeat(marker.length + 1);
           if (!item.length) return marker;
-          const body = item.map((b, j) => (j > 0 && b.kind === 'list' && item[j - 1]!.kind !== 'list' && !loose ? `\n${write(b)}` : `${j > 0 ? '\n\n' : ''}${write(b)}`)).join('');
+          const body = item.map((b, j) => (j > 0 && b.kind === 'list' && item[j - 1]!.kind !== 'list' && !loose ? `\n${write(b, hardBreaks)}` : `${j > 0 ? '\n\n' : ''}${write(b, hardBreaks)}`)).join('');
           return body
             .split('\n')
             .map((line, j) => (j === 0 ? `${marker} ${line}` : line === '' ? '' : pad + line))
@@ -771,7 +788,7 @@ function write(block: HtmlBlock): string {
     }
     case 'footnote':
       // (its blocks after the first indented four columns: the definition's)
-      return writeAll(block.blocks)
+      return writeAll(block.blocks, hardBreaks)
         .split('\n')
         .map((line, j) => (j === 0 ? `[^${block.label}]: ${line}` : line === '' ? '' : `    ${line}`))
         .join('\n');

@@ -2,10 +2,10 @@
   "corpus": "e1aa49c915361ff5",
   "groups": {
     "copy→paste: paragraph comes back as other blocks": 1,
-    "cut→paste: atom doesn't come back as the same blocks": 49,
-    "cut→paste: heading doesn't come back as the same blocks": 16,
-    "cut→paste: item doesn't come back as the same blocks": 192,
-    "cut→paste: paragraph doesn't come back as the same blocks": 94,
-    "cut→paste: quote doesn't come back as the same blocks": 12
+    "cut→paste: atom: a code, math or table block's text changed": 9,
+    "cut→paste: heading: a code, math or table block's text changed": 3,
+    "cut→paste: item: a code, math or table block's text changed": 30,
+    "cut→paste: paragraph: a code, math or table block's text changed": 6,
+    "cut→paste: quote: a code, math or table block's text changed": 1
   }
 }

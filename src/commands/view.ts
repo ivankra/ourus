@@ -92,7 +92,7 @@ export function clearZoomCommand(ctx: CommandContext): OurusResult | null {
 
 /** `view`, the new view, applied with no changes, the selection out of what it hides. */
 function viewed(ctx: CommandContext, view: OurusView): OurusResult | null {
-  return new OurusSuccess({ view, changes: [], selection: view.visibleSelection(ctx.selection) });
+  return new OurusSuccess({ view: view.withSelection(view.visibleSelection(ctx.selection)), changes: [] });
 }
 
 /**
@@ -102,7 +102,7 @@ function viewed(ctx: CommandContext, view: OurusView): OurusResult | null {
  */
 export function unfoldedForCaret(outcome: OurusResult | null, id: number): OurusResult | null {
   if (!(outcome instanceof OurusSuccess) || !outcome.view.folded.has(id)) return outcome;
-  const { anchor, head } = outcome.selection;
+  const { anchor, head } = outcome.view.selection;
   const node = outcome.view.doc.node(id);
   const range = node && outcome.view.doc.foldRange(node);
   if (!range || ![anchor, head].some((p) => p > range.from && p <= range.to)) return outcome;

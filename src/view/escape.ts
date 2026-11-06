@@ -5,8 +5,8 @@ import type { OurusDoc, OurusNode } from '../doc/index.ts';
 
 /**
  * Where `next` leaves the zoom into `zoom` of `doc`, or null where it keeps it: the root keeps its id, its parent
- * and its place; every node outside its subtree keeps its id, parent, kind and text, none is made
- * outside it, none inside leaves it; the text before the root's own Markdown and after its cover's end
+ * and its place; every node outside its subtree keeps its id, parent, kind, text and its order among
+ * its siblings outside, none is made outside it (an id `doc` doesn't have), none inside leaves it; the text before the root's own Markdown and after its cover's end
  * is the same; the lists the root and its ancestors are items of (a node that is no item a list of its
  * own) keep their items, and those with an item off its path their tightness. `removed`: the root went
  * with its subtree, a removal of it whole: its textless ancestors may go too, and the text isn't asked.
@@ -45,12 +45,26 @@ export function zoomEscape(doc: OurusDoc, zoom: number, next: OurusDoc, removed 
       else if (m.kind !== n.kind || next.textOf(m)?.text !== doc.textOf(n)?.text) escape = `node ${n.id}, outside the zoom, changed`;
     } else if (inside.has(n.id) && m && !insideNow.has(n.id)) escape = `node ${n.id} left the zoom`;
     const [from, to] = middle(n, m);
+    // (the children outside, in the changed middle, in the order they were: none swapped, B219)
+    if (m && m.id === n.id && !escape) {
+      const kept = (x: OurusNode, k: number, l: number): number[] => {
+        const ids: number[] = [];
+        for (let i = k; i < l; i++) {
+          const id = x.persistentNode.children[i]!.id;
+          if (!inside.has(id) && !insideNow.has(id) && !textless.has(id) && doc.node(id) && next.node(id)) ids.push(id);
+        }
+        return ids;
+      };
+      const tail = n.persistentNode.children.length - to;
+      if (kept(n, from, to).join() !== kept(m, from, m.persistentNode.children.length - tail).join()) escape = `the nodes under node ${n.id}, outside the zoom, changed order`;
+    }
     for (let k = from; k < to && !escape; k++) visit(n.child(k), counterpart(next, m, k, n.persistentNode.children[k]!.id));
   };
   visit(doc.rootNode, next.rootNode);
   if (escape) return escape;
   const made = (m: OurusNode, n: OurusNode | undefined): string | null => {
-    if (m.kind !== 'root' && m.id >= doc.nextId && !insideNow.has(m.id)) return `node ${m.id} was made outside the zoom`;
+    // (by membership: an id a branch of `doc`'s made before it can be under its `nextId`, B219)
+    if (m.kind !== 'root' && !doc.node(m.id) && !insideNow.has(m.id)) return `node ${m.id} was made outside the zoom`;
     const [from, to] = middle(m, n);
     for (let k = from; k < to; k++) {
       const found = made(m.child(k), counterpart(doc, n, k, m.persistentNode.children[k]!.id));

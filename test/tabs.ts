@@ -10,10 +10,10 @@
 //
 // Left out: an example that draws tabs itself, and one that sets `indentUnit`, whose unit is its point.
 
-import { indentUnitOf } from '../src/writer/write.ts';
+import { indentUnitOf } from '../src/writer/lines.ts';
 import { compareTexts, readTextDoc } from '../sxs/lib/text.ts';
 import { parseWithMarks, drawDoc, drawnSelection, drawsCaret, readDrawing, readLabels, withoutCaret, playActions, type PlayedState, NodeLabels, readClipboard, normalizeDrawing, describeOutcome, specTestFlavors, specTestView, readSpecFile, specConfig, specFiles, type SpecTest } from './lib/index.ts';
-import { OurusRejected } from '../src/commands/index.ts';
+import { OurusFailed, OurusRejected } from '../src/commands/index.ts';
 
 /** A drawn buffer with each line's leading spaces (between its quotes' `>`s too) tabs to the stops they reach; a drop line (`▸`) as it is, no part of the text. */
 export function withTabs(drawn: string): string {
@@ -70,18 +70,18 @@ export function tabPass(t: SpecTest): string | null {
   const labels = new NodeLabels();
   labels.check(doc, start.labels, null);
   const viewed = specTestView(t, doc, start.view);
-  let state: PlayedState = { view: viewed, selection: drawnSelection(viewed, start), clipboard: readClipboard(t.initial.clipboard), drop: start.drop, labels: labels.ids };
+  let state: PlayedState = { view: viewed.withSelection(drawnSelection(viewed, start)), clipboard: readClipboard(t.initial.clipboard), drop: start.drop, labels: labels.ids };
   for (const step of t.steps) {
     for (const action of step.actions) {
       state = playActions(state, [action]);
-      if (state.last instanceof OurusRejected && state.last.reason === 'write-failed') return `write-failed at line ${step.line}: ${action}: ${state.last.detail ?? ''}`;
+      if (state.last instanceof OurusFailed) return `write-failed at line ${step.line}: ${action}: ${state.last.detail ?? ''}`;
     }
     const { result } = step.expect;
     if (result !== undefined && describeOutcome(state) !== result) return `result at line ${step.line}: ${describeOutcome(state)}, not ${result}`;
     if (step.expect.buffer === undefined || /→/.test(step.expect.buffer)) continue;
     // (labels are no text: drawn before the caret, they would move it)
     const buffer = readLabels(step.expect.buffer).drawn;
-    const drawn = drawDoc(state.view, state.selection);
+    const drawn = drawDoc(state.view, state.view.selection);
     const got = withSpaces(drawsCaret(buffer) ? drawn : withoutCaret(drawn));
     // (spelled otherwise but read the same, as a tab after a quote's `>` is: the same document)
     if (normalizeDrawing(got) !== normalizeDrawing(buffer) && compareTexts(readTextDoc(normalizeDrawing(buffer)), readTextDoc(normalizeDrawing(got)), flavor) !== 'whitespace') return `buffer at line ${step.line}:\n    want ${JSON.stringify(normalizeDrawing(buffer))}\n    got  ${JSON.stringify(normalizeDrawing(got))}\n    tabs ${JSON.stringify(normalizeDrawing(drawn))}\n    from ${JSON.stringify(tabbed)}`;

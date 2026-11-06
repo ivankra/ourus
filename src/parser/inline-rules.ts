@@ -87,8 +87,8 @@ export const codeSpanRule: MdInlineRule = {
 };
 
 /** `*` and `_` emphasis. */
-export const asterisk: MdDelimiterRule = { char: '*', match: emphasis };
-export const underscore: MdDelimiterRule = { char: '_', strict: true, match: emphasis };
+export const asterisk: MdDelimiterRule = { char: '*', ruleOfThree: true, match: emphasis };
+export const underscore: MdDelimiterRule = { char: '_', strict: true, ruleOfThree: true, match: emphasis };
 
 function emphasis(opener: { count: number }, closer: { count: number }): { use: number; type: string } {
   const use = closer.count >= 2 && opener.count >= 2 ? 2 : 1;
@@ -98,7 +98,7 @@ function emphasis(opener: { count: number }, closer: { count: number }): { use: 
 export const emphasisRule: MdInlineRule = {
   name: 'emphasis',
   triggers: '*_',
-  parse: (p) => p.handleDelimiters(p.config.delimiters.get(p.text.charCodeAt(p.pos))!),
+  parse: (p) => p.handleDelimiters(p.config.delimiters.get(p.text.codePointAt(p.pos)!)!),
 };
 
 export const openBracketRule: MdInlineRule = {

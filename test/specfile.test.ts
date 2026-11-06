@@ -2,7 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { actionsLine, readSpec, specConfig, SpecError } from './lib/index.ts';
+import { actionsLine, drawState, readDrawing, readSpec, runSpecTest, specConfig, SpecError, withoutCaret } from './lib/index.ts';
 
 const F = '```';
 
@@ -181,4 +181,21 @@ test('a list option is a YAML sequence, read into the order settings write it', 
   assert.equal(read('autoClose: []').options.autoClose, 'none');
   assert.throws(() => read("autoClose: '``` ('"), (e) => e instanceof SpecError && /option "autoClose" takes a list/.test(e.message));
   assert.throws(() => read("autoClose: ['*']"), (e) => e instanceof SpecError && /autoClose/.test(e.message));
+});
+
+test('`␄` ends a buffer\'s text with no line break after it: a caret past the last one, or a text without one', () => {
+  // (the line break after `␄` is the buffer's, every buffer ending with one)
+  assert.deepEqual([readDrawing('q\n┃␄\n').text, readDrawing('q\n┃␄\n').selection], ['q\n', { anchor: 2, head: 2 }]);
+  assert.equal(readDrawing('┃q␄\n').text, 'q');
+  // (a marker alone on the last line is still a line of the text's: an empty one)
+  assert.equal(readDrawing('q\n┃\n').text, 'q\n\n');
+  assert.throws(() => readDrawing('q␄\nr\n'), /nothing after it/);
+  // (drawn so where the drawing would end without a line break; a caret's alone goes with the caret)
+  assert.equal(drawState('q\n', { anchor: 2, head: 2 }), 'q\n┃␄\n');
+  assert.equal(drawState('q', { anchor: 0, head: 0 }), '┃q␄\n');
+  assert.equal(drawState('q\n', { anchor: 0, head: 0 }), '┃q\n');
+  assert.equal(withoutCaret(drawState('q\n', { anchor: 2, head: 2 })), 'q\n');
+  // (a step's buffer: the caret at the note's very end)
+  const [t] = readSpec('x.md', ['## X1', '', '```yaml', 'tags: rare', '```', '', '```markdown', 'p┃', '```', '', '> cursorDocEnd', '', '```markdown', 'p', '┃␄', '```', ''].join('\n'));
+  runSpecTest(t!, 'gfm');
 });

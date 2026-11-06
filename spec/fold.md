@@ -576,10 +576,10 @@ result: success
 ## Fold20
 
 Placeholders the caret has left are settled, a node written again or gone, without opening a
-fold: in two steps where not all of them can be settled at once (those that can't dropped, the
-rest written), the fold carried through each (dev/25-view.md §6). Here the empty item in the
-folded section, a block id below it, can't be settled with the other, nor written alone: its
-placeholder is dropped and the text read without it; the empty paragraph above the heading goes.
+fold, though what it hides is written again (dev/25-view.md §6). Here the empty item in the folded
+section, its text an empty line a placeholder holds above a block id, settles as an empty last line
+does: the line goes, the block id on the marker's line, naming the item still (it was dropped, the
+block id then naming the whole list: B240's loss); the empty paragraph above the heading goes.
 
 ```yaml
 tags: rare markup-heading
@@ -597,6 +597,5 @@ flavor: obsidian
 
 ```markdown
 # h┃②⟦folded⟧
-> -␠
-> ^x
+> - ^x
 ```

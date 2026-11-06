@@ -1,9 +1,10 @@
-// The view: a document and one reader's folds and zoom over it. What a fold hides and a zoom shows,
-// what a selection or a position is in what the reader sees, and the view carried through an edit.
+// The view: a document and one reader's selection, folds and zoom over it. What a fold hides and a
+// zoom shows, what a selection or a position is in what the reader sees, and the view carried through
+// an edit.
 
 import type { OurusConfig } from '../config.ts';
 import type { Located, OurusDoc, OurusDocUpdate, OurusNode } from '../doc/index.ts';
-import { diffLines, normalizeChanges, type ChangeSpec, type OurusSelection } from '../text/index.ts';
+import { diffLines, mapPos, normalizeChanges, type ChangeSpec, type OurusSelection } from '../text/index.ts';
 import { carryView, viewByLine, viewIn, type ViewState } from './carry.ts';
 import { zoomEscape } from './escape.ts';
 import { selectedNodes, subtreesSelection, touchedNodes, visibleSelection } from './select.ts';
@@ -14,16 +15,32 @@ export interface OurusViewState {
   readonly folded?: Iterable<number>;
   /** The node the view is zoomed into; null: the whole document. */
   readonly zoom?: number | null;
+  /** The selection, in the document's offsets (a number: a caret there); a caret at its start by default. */
+  readonly selection?: OurusSelection | number;
 }
 
 /**
- * A document and one reader's view of it: the nodes whose children it hides and the node it is
- * zoomed into. Make one with `of`; it is immutable, and `update`, `withDoc` and the `with…`s return
- * the next, or this one where nothing changes. Commands take one and give one (`executeCommand`).
+ * A view's update: the document's (`OurusDoc.update`), and the selection after it. `caret` is a
+ * selection whose ends are one position: `caret: n` is `selection: n`, `selection: { anchor: n, head: n }`.
+ */
+export interface OurusViewUpdate extends OurusDocUpdate {
+  /**
+   * The selection after the edit (a number: a caret there), its head the caret the document's update
+   * reads (`OurusDoc.update`'s `caret`). By default this view's, mapped through the changes (before
+   * what is inserted at it). A host's own edit gives the one its editor has.
+   */
+  readonly selection?: OurusSelection | number;
+}
+
+/**
+ * A document and one reader's view of it: the selection, the nodes whose children it hides and the
+ * node it is zoomed into. Make one with `of`; it is immutable, and `update`, `withDoc` and the
+ * `with…`s return the next, or this one where nothing changes. Commands take one, acting at its
+ * selection, and give one (`executeCommand`).
  *
  * Internally, every view of a document shares its nodes: a fold toggled makes no node. The view is
  * carried through an edit by node (`carry.ts`): a fold goes with its node and opens where what it
- * hides changed; the zoom goes with its root.
+ * hides changed; the zoom goes with its root; the selection is mapped through the changes.
  */
 export class OurusView {
   /** The document. */
@@ -32,13 +49,16 @@ export class OurusView {
   readonly folded: ReadonlySet<number>;
   /** The node the view is zoomed into; null: the whole document. */
   readonly zoom: number | null;
+  /** The selection, in the document's offsets: what a command acts at. */
+  readonly selection: OurusSelection;
   #zoomFolded: ReadonlySet<number> | null = null;
   #lastRead: SelectionRead | null = null;
 
-  private constructor(doc: OurusDoc, state: ViewState) {
+  private constructor(doc: OurusDoc, state: ViewState, selection: OurusSelection) {
     this.doc = doc;
     this.folded = state.folded;
     this.zoom = state.zoom;
+    this.selection = selection;
   }
 
   /**
@@ -46,14 +66,19 @@ export class OurusView {
    * a zoom on no node are dropped: the state comes from outside, a saved view or an editor's folds.
    */
   static of(doc: OurusDoc, state: OurusViewState = {}): OurusView {
-    return new OurusView(doc, viewIn(doc, { folded: new Set(state.folded ?? []), zoom: state.zoom ?? null }));
+    return new OurusView(doc, viewIn(doc, { folded: new Set(state.folded ?? []), zoom: state.zoom ?? null }), asSelection(state.selection ?? 0));
   }
 
-  /** This view's document with `state`: this view where it is the same. */
-  #with(doc: OurusDoc, state: ViewState): OurusView {
-    if (doc === this.doc && sameState(state, this)) return this;
+  /** This view's document with `state` and `selection`: this view where they are the same. */
+  #with(doc: OurusDoc, state: ViewState, selection: OurusSelection = this.selection): OurusView {
+    if (doc === this.doc && sameState(state, this) && sameSelection(selection, this.selection)) return this;
     // (a carry that kept every fold keeps this view's set)
-    return new OurusView(doc, sameFolds(state.folded, this.folded) ? { folded: this.folded, zoom: state.zoom } : state);
+    return new OurusView(doc, sameFolds(state.folded, this.folded) ? { folded: this.folded, zoom: state.zoom } : state, selection);
+  }
+
+  /** Another selection (a number: a caret there), the document and the folds and zoom the same. */
+  withSelection(selection: OurusSelection | number): OurusView {
+    return this.#with(this.doc, this, asSelection(selection));
   }
 
   /** The zoom root, or null. */
@@ -109,21 +134,29 @@ export class OurusView {
     return this.#with(this.doc, { folded: this.folded, zoom: id });
   }
 
-  /** A host's edit: `doc.update(params)`, this view carried onto it through the update's changes. */
-  update(params: OurusDocUpdate = {}): OurusView {
-    const next = this.doc.update(params);
-    return this.withDoc(next, params.text !== undefined ? undefined : (params.changes ?? []));
+  /**
+   * A host's edit: `doc.update(params)`, this view carried onto it through the update's changes, its
+   * selection `params.selection` or `params.caret`, the same (`OurusViewUpdate`).
+   */
+  update(params: OurusViewUpdate = {}): OurusView {
+    const given = params.selection ?? params.caret;
+    const selection = given === undefined ? null : asSelection(given);
+    const next = this.doc.update(selection ? { ...params, caret: selection.head } : params);
+    const carried = this.withDoc(next, params.text !== undefined ? undefined : (params.changes ?? []));
+    return selection ? carried.withSelection(selection) : carried;
   }
 
   /**
    * `next`, another snapshot of this document's lineage (a command's, an undo's, another pane's),
    * with this view carried onto it through `changes`, this document's text to `next`'s (by default,
-   * the lines that differ). Throws for another lineage.
+   * the lines that differ), the selection mapped through them. Throws for another lineage.
    */
   withDoc(next: OurusDoc, changes: readonly ChangeSpec[] = diffLines(this.doc.text, next.text)): OurusView {
     if (next === this.doc) return this;
     if (!next.isSameLineage(this.doc)) throw new Error('withDoc: a snapshot of another lineage');
-    return this.#with(next, viewIn(next, carryView(this.doc, this, next, normalizeChanges(changes))));
+    const normal = normalizeChanges(changes);
+    const selection = { anchor: Math.min(mapPos(normal, this.selection.anchor), next.text.length), head: Math.min(mapPos(normal, this.selection.head), next.text.length) };
+    return this.#with(next, viewIn(next, carryView(this.doc, this, next, normal)), selection);
   }
 
   /** `doc.withConfig(config)`, the view carried by id, or by line where the flavor changed (the ids anew). */
@@ -151,7 +184,7 @@ export class OurusView {
    * a key acts on. None only where there is no node to touch (the blank lines before the first, an
    * empty document).
    */
-  touchedSubtrees(selection: OurusSelection): readonly OurusNode[] {
+  touchedSubtrees(selection: OurusSelection = this.selection): readonly OurusNode[] {
     const read = this.#readOf(selection);
     return (read.touched ??= touchedNodes(this, selection));
   }
@@ -164,7 +197,7 @@ export class OurusView {
    * caret, text, one node's own text (but at the document's end, where it is the node too). What a
    * host draws as blocks.
    */
-  selectedSubtrees(selection: OurusSelection): readonly OurusNode[] | null {
+  selectedSubtrees(selection: OurusSelection = this.selection): readonly OurusNode[] | null {
     const read = this.#readOf(selection);
     if (read.selected === undefined) read.selected = selectedNodes(this, selection);
     return read.selected;
@@ -187,8 +220,8 @@ export class OurusView {
     return subtreesSelection(this, nodes, direction);
   }
 
-  /** `selection` moved out of what the view hides. */
-  visibleSelection(selection: OurusSelection): OurusSelection {
+  /** `selection` (the view's by default) moved out of what the view hides. */
+  visibleSelection(selection: OurusSelection = this.selection): OurusSelection {
     return visibleSelection(this, selection);
   }
 
@@ -206,6 +239,16 @@ interface SelectionRead {
   readonly head: number;
   touched?: readonly OurusNode[];
   selected?: readonly OurusNode[] | null;
+}
+
+/** `selection` as a plain object, a number a caret there. */
+function asSelection(selection: OurusSelection | number): OurusSelection {
+  return typeof selection === 'number' ? { anchor: selection, head: selection } : { anchor: selection.anchor, head: selection.head };
+}
+
+/** Whether two selections are the same. */
+function sameSelection(a: OurusSelection, b: OurusSelection): boolean {
+  return a.anchor === b.anchor && a.head === b.head;
 }
 
 /** Whether two sets of folds hold the same ids. */

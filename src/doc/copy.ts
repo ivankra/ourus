@@ -1,7 +1,8 @@
 // A range of a document as Markdown out of the containers holding it (what copy writes), and where a
-// node's own Markdown starts (what a copy of whole nodes takes).
+// node's own Markdown starts (what a copy of whole nodes takes). A clipboard's Markdown read back and
+// rendered is `clipboard.ts`'s: it parses, so it is above the document.
 
-import { MdBlockAt, type MdLine, type MdPrefixPiece } from '../parser/index.ts';
+import { MdBlockAt, type MdLine, type MdPrefixPiece, type MdTree } from '../parser/index.ts';
 import { advanceColumns, lineIndexAt, skipSpaces, trimMd } from '../text/index.ts';
 import type { OurusDoc } from './doc.ts';
 import type { OurusNode } from './node.ts';
@@ -65,7 +66,7 @@ export function markdownOf(doc: OurusDoc, from: number, to: number): string {
   // (but a quote that is a node's lines as written, `quotes: atom`: its `>`s are that text's)
   const own = doc.config.quotes === 'atom' ? doc.nodeAtLine(lo)?.persistentNode.textQuote : null;
   const holding = new Set(first.prefix.filter((p) => (p.container.line < lo || opens(p) < from) && p.container.lastLine >= hi && p.container.block !== own).map((p) => p.container.block));
-  const held = (line: MdLine): number => line.prefix.reduce((start, piece) => (holding.has(piece.container.block) ? Math.max(start, piece.to) : start), line.from);
+  const held = (line: MdLine): number => line.prefix.reduce<number>((start, piece) => (holding.has(piece.container.block) ? Math.max(start, piece.to) : start), line.from);
   // indentation the first line loses past what holds the copy (an item indented past its parent's
   // text, copied from its marker), the lines after it lose too: they keep their columns to it
   const column = (line: MdLine, at: number): number => advanceColumns(text, line.from, at, 0);

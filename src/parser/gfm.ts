@@ -346,6 +346,7 @@ export const tasklist: MdExtension = tasklistExtension();
 export function strikethroughExtension(options: { readonly doubleOnly?: boolean } = {}): MdExtension {
   const tilde: MdDelimiterRule = {
     char: '~',
+    ruleOfThree: true,
     accepts: options.doubleOnly ? (length) => length === 2 : (length) => length === 1 || length === 2,
     match: (opener, closer) => (opener.length === closer.length ? { use: opener.length, type: 'strikethrough' } : null),
   };

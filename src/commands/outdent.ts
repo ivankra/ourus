@@ -2,7 +2,7 @@
 // out of a section's list into a paragraph. The command says where the nodes go and what kind they
 // are; `done()` and the writer do the rest.
 
-import { OurusProse, OurusAtom, type OurusNode } from '../doc/index.ts';
+import { OurusProse, OurusAtom, type OurusNode, nameOf, withArticle } from '../doc/index.ts';
 import { type CommandContext } from './context.ts';
 import { changeHeadingLevels, onCodeLine, oneRun, operandsRefused, selectionInText } from './util.ts';
 import type { OurusResult } from './types.ts';
@@ -17,7 +17,7 @@ import type { AnchorSpec } from '../writer/index.ts';
  * line Shift-Tab is the host's. Null for other nodes, which ourus doesn't do yet (unsupported).
  */
 export function outdentCommand(ctx: CommandContext): OurusResult | null {
-  if (!ctx.nodes && onCodeLine(ctx, ctx.selection.anchor) && onCodeLine(ctx, ctx.selection.head)) return new OurusDeferred();
+  if (!ctx.nodes && onCodeLine(ctx, ctx.selection.anchor) && onCodeLine(ctx, ctx.selection.head)) return new OurusDeferred('host-default');
   const nodes = oneRun(ctx, true);
   if (!Array.isArray(nodes)) return operandsRefused(nodes);
   const first = nodes[0]!;
@@ -27,7 +27,7 @@ export function outdentCommand(ctx: CommandContext): OurusResult | null {
   if (parent.kind === 'quote') return leaveQuote(ctx, nodes);
   if (first.kind === 'heading') return changeHeadingLevels(ctx, nodes, -1);
   // (a paragraph or a block of a section: it has no level to leave)
-  if (first.kind !== 'item') return new OurusRejected('not-expressible', `a ${first.kind} has no level to leave`);
+  if (first.kind !== 'item') return new OurusRejected('not-expressible', `${withArticle(nameOf(first))} has no level to leave`);
   const later = parent.children.slice(last.index + 1);
   const direct = ctx.config.outdent === 'direct';
   if (parent.kind === 'paragraph' || parent.kind === 'root' || parent.kind === 'heading') {

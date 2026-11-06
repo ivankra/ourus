@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { OurusProse, OurusAtom, OurusDoc, type OurusNode, type PersistentNode } from '../../src/doc/index.ts';
 import { OurusDraft, type Refusal } from '../../src/writer/index.ts';
-import { differenceFrom } from '../../src/writer/check.ts';
+import type { NodeId } from '../../src/text/index.ts';
+import { describeDifference, differenceFrom } from '../../src/writer/check.ts';
 
 const parse = (text: string, flavor: 'gfm' | 'commonmark' | 'obsidian' = 'gfm'): OurusDoc => OurusDoc.parse(text, { config: { flavor } });
 
@@ -40,7 +41,7 @@ function outline(root: PersistentNode, origin: OurusNode | null, draft: { textOf
   return out.join('\n');
 }
 
-const drawn = (doc: OurusDoc, draft: OurusDraft): string => outline(draft.root, doc.rootNode, draft);
+const drawn = (doc: OurusDoc, draft: OurusDraft): string => outline(draft.normalized().root, doc.rootNode, draft.normalized());
 
 /** The draft applied, which must succeed: after it, its normal form can be read. */
 function applied(draft: OurusDraft): void {
@@ -59,7 +60,7 @@ test('a draft nothing changed is its document', () => {
   const doc = parse('- a\n- b\n');
   const draft = new OurusDraft(doc);
   applied(draft);
-  assert.equal(draft.root, doc.root);
+  assert.equal(draft.normalized().root, doc.root);
 });
 
 test('references resolve through what the draft touched: a descendant of a moved subtree', () => {
@@ -137,7 +138,7 @@ test('done: a changed ordered list is numbered from its start', () => {
   const doc = parse('1. a\n2. b\n3. c\n');
   const draft = new OurusDraft(doc).remove([find(doc, 'a')]);
   applied(draft);
-  assert.deepEqual([...draft.lists.values()].map((l) => [l.start, l.number]), [[true, 1], [false, 2]]);
+  assert.deepEqual([...draft.normalized().lists.values()].map((l) => [l.start, l.number]), [[true, 1], [false, 2]]);
 });
 
 test('done: escapes put in the text, each one of ours, the caret mapped (examples 18, 20)', () => {
@@ -145,15 +146,15 @@ test('done: escapes put in the text, each one of ours, the caret mapped (example
   const p = find(doc, 'one');
   const draft = new OurusDraft(doc).setText(p, new OurusProse('paragraph', false, 'one\n- two')).setCaret(p, 4, -1);
   applied(draft);
-  const markup = draft.root.children[0]!.text as OurusProse;
+  const markup = draft.normalized().root.children[0]!.text as OurusProse;
   assert.equal(markup.text, 'one\n\\- two');
   assert.deepEqual(markup.marks.auto, [4]);
-  assert.deepEqual(draft.caret, { node: draft.root.children[0], offset: 4, assoc: -1 }, 'before the escape');
+  assert.deepEqual(draft.normalized().caret, { node: draft.normalized().root.children[0], offset: 4, assoc: -1 }, 'before the escape');
   const gained = new OurusDraft(doc).setText(p, new OurusProse('paragraph', false, '<div>')).setCaret(p, 3);
   applied(gained);
-  const node = gained.root.children[0]!;
+  const node = gained.normalized().root.children[0]!;
   assert.equal((node.text as OurusProse).text, '\\<div>');
-  assert.deepEqual(gained.caret, { node, offset: 4, assoc: 1 });
+  assert.deepEqual(gained.normalized().caret, { node, offset: 4, assoc: 1 });
 });
 
 test('done: a text\'s empty last line is a blank line after it, but where the caret is on it a line of the text a placeholder holds; another empty line has no Markdown', () => {
@@ -174,7 +175,7 @@ test('done: an empty item at the caret right under text is held by a placeholder
   const id = draft.create('item', new OurusProse('paragraph', true, ''));
   draft.append(find(doc, 'para'), 'first', [id]).setCaret(id, 0);
   applied(draft);
-  const text = draft.root.children[0]!.children[0]!.text as OurusProse;
+  const text = draft.normalized().root.children[0]!.children[0]!.text as OurusProse;
   assert.deepEqual(text.marks.placeholders, [0]);
 });
 
@@ -189,8 +190,9 @@ test('reads: a document says where it differs from the draft', () => {
   const doc = parse('- a\n- b\n');
   const draft = new OurusDraft(doc).remove([find(doc, 'b')]);
   applied(draft);
-  assert.equal(differenceFrom(doc.update({ changes: [{ from: 3, to: 7, insert: '' }] }), draft), null);
-  assert.match(differenceFrom(doc, draft) ?? '', /1 children, read as 2/);
+  assert.equal(differenceFrom(doc.update({ changes: [{ from: 3, to: 7, insert: '' }] }), draft.normalized()), null);
+  assert.deepEqual(differenceFrom(doc, draft.normalized()), { path: 'root', code: 'children', expected: '1', actual: '2' });
+  assert.equal(describeDifference(differenceFrom(doc, draft.normalized())!), 'root: 1 children, read as 2');
 });
 
 test('done: two lists of one kind and marker side by side are one; a join places the lower\'s children', () => {
@@ -199,9 +201,9 @@ test('done: two lists of one kind and marker side by side are one; a join places
   draft.join(find(doc, 'a'), find(doc, 'b'), { children: 'place' });
   applied(draft);
   assert.equal(drawn(doc, draft), ['item "ab" 0', '  item "c" 0', '  item "e" 0'].join('\n'));
-  const [c, e] = draft.root.children[0]!.children;
-  assert.deepEqual([draft.lists.get(c!.id)?.start, draft.lists.get(e!.id)?.start], [true, false]);
-  assert.ok(draft.placedIds.has(c!.id));
+  const [c, e] = draft.normalized().root.children[0]!.children;
+  assert.deepEqual([draft.normalized().lists.get(c!.id)?.start, draft.normalized().lists.get(e!.id)?.start], [true, false]);
+  assert.ok(draft.normalized().placedIds.has(c!.id));
 });
 
 test('setText: a quote\'s title goes (null); no other node loses its text', () => {
@@ -218,7 +220,7 @@ test('setText: a quote\'s title goes (null); no other node loses its text', () =
 test('copy: an item whose first child is on its line, the child\'s text set, keeps its marker there', () => {
   const doc = parse('- - x\n');
   const draft = new OurusDraft(doc);
-  const ids = new Map<PersistentNode, number>();
+  const ids = new Map<PersistentNode, NodeId>();
   const outer = doc.rootNode.children[0]!;
   draft.place('after', outer, [draft.copy(outer, ids)]);
   draft.setText(ids.get(outer.children[0]!.persistentNode)!, new OurusProse('paragraph', true, 'y'));
@@ -230,7 +232,7 @@ test('copy: an item whose first child is on its line, the child\'s text set, kee
 test('copy: an item whose first child is on its line, with another child dropped from the copy, keeps its marker there', () => {
   const doc = parse('- - x\n  - y\n');
   const draft = new OurusDraft(doc);
-  const ids = new Map<PersistentNode, number>();
+  const ids = new Map<PersistentNode, NodeId>();
   const outer = doc.rootNode.children[0]!;
   draft.place('after', outer, [draft.copy(outer, ids)]);
   draft.remove([ids.get(outer.children[1]!.persistentNode)!]);
@@ -270,7 +272,7 @@ test('copy: a table whose header is a lazy line, first in a quote now, is writte
   const doc = parse('> a\nb\n> |---|\n');
   const quote = doc.rootNode.children[0]!;
   const draft = new OurusDraft(doc);
-  const ids = new Map<PersistentNode, number>();
+  const ids = new Map<PersistentNode, NodeId>();
   draft.place('after', quote, [draft.copy(quote, ids)]);
   draft.remove([ids.get(quote.children[0]!.persistentNode)!]);
   const result = draft.done();
@@ -298,4 +300,25 @@ test('copy: an item lined up with the item of its list that stays, at its own co
   const result = draft.done();
   assert.ok(!('reason' in result), 'reason' in result ? result.detail : '');
   assert.equal(result.doc.text, '1. x\n- a\n2. a\n  3. b\n    1. x\n  4. a\n  5. b\n    1. x\n');
+});
+
+test('the readback compares edited code as the edit means it, read where the block was: moved under an item with it, a tab-led line under a fence indented one space reads as other code, refused', () => {
+  const edited = (src: string): string => {
+    const doc = OurusDoc.parse(src);
+    const [item, code] = doc.rootNode.children;
+    const text = doc.textOf(code!) as OurusAtom;
+    const at = text.text.indexOf('PAYLOAD') + 7;
+    const result = new OurusDraft(doc).remove([code!]).append(item!, 'last', [code!]).setText(code!, text.splice(at, at, 'y')).done();
+    return 'reason' in result ? `${result.reason}: ${result.detail}` : result.doc.text;
+  };
+  // (the fence one space in took a column of the tab: `   PAYLOAD`; under the item nothing does)
+  assert.match(edited('- a\n\n ```\n\tPAYLOAD\n ```\n'), /^write-failed: .*code \["","   PAYLOADy",""\], read as \[""," PAYLOADy",""\]/);
+  // (a tab at a stop is a tab in code wherever it is; spaces move with the block)
+  assert.equal(edited('- a\n\n```\n\tPAYLOAD\n```\n'), '- a\n\n  ```\n  \tPAYLOADy\n  ```\n');
+  assert.equal(edited('- a\n\n```\n  PAYLOAD\n```\n'), '- a\n\n  ```\n    PAYLOADy\n  ```\n');
+  // (what the doc layer reads a text as, at a column)
+  const doc = OurusDoc.parse('x\n');
+  const fence = OurusDoc.parse(' ```\n\tP\n ```\n').textOf(OurusDoc.parse(' ```\n\tP\n ```\n').rootNode.children[0]!) as OurusAtom;
+  assert.deepEqual(doc.verbatimLinesAt(fence, 0), ['', '   P', '']);
+  assert.deepEqual(doc.verbatimLinesAt(fence, 2), ['', ' P', '']);
 });

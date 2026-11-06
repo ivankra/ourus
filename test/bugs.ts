@@ -11,8 +11,14 @@
 // (or as a spec case, with its exact result), and take the bug out when its last case has gone.
 // `assertNoWriteFailure` says only that nothing went wrong: a moved case should assert the exact result.
 //
+// After the bugs, the cases the reports over generated notes found and nobody has filed yet
+// (`bugs-untriaged.json`, each replayed through its report's check). Triage moves one here, under the
+// bug it is: a new one, or one it joins.
+//
 // The report says what changed, and any of these fails the run:
 //
+//   untriaged an untriaged case passes, fails in another group, or is filed: BUGS_UPDATE=1 drops or
+//             regroups it
 //   fixed     a case passes
 //   changed   a case fails another way than `bugs.baseline.json` recorded: read why, then record it
 //   summary   the counts atop `bugs.baseline.json` aren't this file's: record them
@@ -24,7 +30,9 @@
 // the answers, the one its comment leans to: a decision can delete it. Priorities (P1, P2, P3), the
 // mechanisms the bugs share, and what isn't a bug yet are in dev/next.md.
 //
-// A new bug takes `NEXT_BUG_ID`, at the end of this file, and raises it.
+// A new bug takes `NEXT_BUG_ID`, at the end of this file, and raises it. A kept case triaged is filed
+// by its id (`bugs-untriaged.json`'s), in a comment in the body of the bug's case that stands for it,
+// `// kept: <id> <id> …`: the reports keep it no more, the counts held to their baselines still.
 //
 // Offsets are UTF-16; node ids are a fresh parse's; ⏎ a line break, ┃ the caret, ┃◌ a held empty line,
 // ␠ a space, ⍽ a no-break space, → a tab.
@@ -32,10 +40,10 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { executeCommand, leavesZoom, mapPos, MdFlavor, MdHtmlParser, MdTree, OurusDoc, OurusProse, OurusRejected, OurusSuccess, OurusView, settlePlaceholders } from '../src/index.ts';
+import { executeCommand, leavesZoom, mapPos, MdFlavor, MdHtmlParser, MdTree, OurusDoc, OurusProse, OurusFailed, OurusRejected, OurusSuccess, OurusView, settlePlaceholders } from '../src/index.ts';
 import * as extend from '../src/parser/extend.ts';
 import { defineFlavor, gfmExtensions } from '../src/parser/extend.ts';
-import { appliedText, assertApplied, assertNoWriteFailure, convertPastedHtml, executeAfter, executeOnText, firstBlockInlines, scalingFactor } from './lib/index.ts';
+import { appliedText, assertApplied, assertNoWriteFailure, convertPastedHtml, executeAfter, executeOnText, firstBlockInlines, caseId, filedCases, htmlFailures, readUntriaged, REPORT_OF, scalingFactor, untriagedFailures, writeUntriaged, type UntriagedCase } from './lib/index.ts';
 
 // -------------------------------------------------------------------------------------------------
 // The runner
@@ -134,6 +142,48 @@ function idProblems(nextId: number): string[] {
 }
 
 /** Plays the bugs, or those `process.argv` names, prints the report, and sets the exit code. */
+/**
+ * The cases kept untriaged (`bugs-untriaged.json`, the reports' over generated notes) replayed through
+ * their reports' checks: each still fails in its group, else it is `untriaged` in `attention`, passing
+ * now or failing otherwise; an update drops the ones that pass and puts the others in the group they
+ * fail in first; a case filed (its id in a `// kept:` comment of a bug's case, `filedCases`) goes too.
+ */
+function reportUntriaged(attention: string[], update: boolean): void {
+  const filed = filedCases();
+  const cases = readUntriaged();
+  const now: UntriagedCase[] = [];
+  const groups = new Map<string, { cases: number; changed: number }>();
+  for (const c of cases) {
+    let kinds: string[];
+    try {
+      kinds = untriagedFailures(c);
+    } catch (e) {
+      kinds = [`${c.check} threw: ${(e as Error).message.split('\n')[0]!.slice(0, 80)}`];
+    }
+    const name = `${REPORT_OF[c.check]}: ${c.group}`;
+    const group = groups.get(name) ?? { cases: 0, changed: 0 };
+    group.cases++;
+    groups.set(name, group);
+    const id = caseId(c);
+    const shown = `${id} ${JSON.stringify(c.text).slice(0, 70)} ${c.check}${'actions' in c ? ` ${c.actions.join(' ')}` : ''}`;
+    const owner = filed.get(id);
+    if (owner) {
+      group.changed++;
+      attention.push(`untriaged  ${name}: filed in ${owner}: BUGS_UPDATE=1 drops it\n           ${shown}`);
+    } else if (kinds.includes(c.group)) now.push(c);
+    else {
+      group.changed++;
+      if (kinds.length) now.push({ ...c, group: kinds[0]! });
+      attention.push(kinds.length ? `untriaged  ${name}: fails otherwise now, ${kinds[0]}\n           ${shown}` : `untriaged  ${name}: passes now\n           ${shown}`);
+    }
+  }
+  console.log(`untriaged: ${cases.length} cases in ${groups.size} groups (test/bugs-untriaged.json)`);
+  for (const [name, group] of [...groups].sort((a, b) => b[1].cases - a[1].cases || (a[0] < b[0] ? -1 : 1))) {
+    console.log(`${String(group.cases).padStart(5)}  ${name}${group.changed ? ` (${group.changed} changed)` : ''}`);
+  }
+  if (update) writeUntriaged(now);
+}
+
 function reportBugs(nextId: number): void {
   const baselineFile = join(import.meta.dirname, 'bugs.baseline.json');
   const recorded: BugBaseline = existsSync(baselineFile) ? JSON.parse(readFileSync(baselineFile, 'utf8')) : { summary: null, failures: {} };
@@ -177,9 +227,13 @@ function reportBugs(nextId: number): void {
     console.log(`P1: ${stillOpen.filter((bug) => bug.rank.startsWith('P1')).map((bug) => bug.id).join(' ')}`);
     console.log(`next id: B${nextId}`);
   }
+  // the cases the reports found that nobody filed: with every bug played, not some
+  if (!asked.length) reportUntriaged(attention, process.env.BUGS_UPDATE === '1');
   if (process.env.BUGS_UPDATE === '1') {
-    // (only the bugs played: the others keep what they had; sorted by id, so a diff shows what moved)
-    const kept = Object.entries(baseline).filter(([key]) => !played.some((bug) => key.startsWith(`${bug.id}: `)));
+    // (only the bugs played: the others keep what they had, but a bug taken out keeps nothing; sorted
+    // by id, so a diff shows what moved)
+    const owner = (key: string): OpenBug | undefined => bugs.find((bug) => key.startsWith(`${bug.id}: `));
+    const kept = Object.entries(baseline).filter(([key]) => owner(key) && !played.includes(owner(key)!));
     const sorted = [...kept, ...Object.entries(failures)].sort(([a], [b]) => a.localeCompare(b, 'en', { numeric: true }));
     writeFileSync(baselineFile, `${JSON.stringify({ summary, failures: Object.fromEntries(sorted) }, null, 2)}\n`);
     console.log('baseline recorded');
@@ -191,6 +245,16 @@ function reportBugs(nextId: number): void {
   }
 }
 
+
+// =================================================================================================
+// Kept cases that are no bug
+//
+// A kept case read and found no bug of ourus, its id here (`filedCases` reads these too), with why.
+//
+// The marks check maps a mark through a command's changes, which for identical lines are one diff of
+// several: duplicating an empty item beside another moves the held one's placeholder with it, to the
+// copy's place by the diff.
+// not a bug: 7a010ff810ea
 
 // =================================================================================================
 // Copy, cut and paste (Markdown and plain text)
@@ -345,70 +409,6 @@ openBug('B193', 'P3', 'A bare `-` gaining text takes in the indented block after
   },
 });
 
-// B196 [P3]. One line placed at a bare marker: NBSP and `pastePlainLines: enter` fall through to the host
-//
-// Location: `src/commands/typing.ts:204` (`placedText`); `src/commands/paste-plain.ts`,
-// `enteredLines`.
-//
-// A text whose first line is below its marker needs `placedText` to put what is typed after a
-// space. `/^\s/` skips it for NBSP, U+3000 and other characters Markdown treats as text (see B250).
-// `enteredLines` rejects the `below` frame before reaching it.
-openBug('B196', 'P3', 'One line placed at a bare marker: NBSP and `pastePlainLines: enter` fall through to the host', {
-  'NBSP typed at a bare marker stays an item': () => {
-    const typed = executeOnText('-\n  a', { type: 'insertText', text: '\u00a0' }, { caret: 1 });
-    // Deferred: -⍽⏎  a, no longer an item
-    assert.equal(appliedText(typed), '- \u00a0\n  a');
-  },
-  'a one-line paste at a bare marker under pastePlainLines: enter stays an item': () => {
-    // Deferred "the caret is outside a text": -x⏎  a; with `text` or `items`: - x⏎  a
-    assert.equal(appliedText(executeOnText('-\n  a', { type: 'pastePlain', text: 'x' }, { caret: 1, config: { pastePlainLines: 'enter' } })), '- x\n  a');
-  },
-});
-
-// B260 [P2]. The clipboard's HTML is the copied Markdown rendered alone
-//
-// Location: `src/commands/clipboard.ts:82` (`clipboardOf`: `OurusDoc.parse(markdown).renderHtml()`).
-//
-// What a copy puts in `text/html` for a rich-text editor is its Markdown read as a document of its
-// own, out of the note it came from, so what the note gave it is lost:
-// - its definitions: a reference link renders as text (`[x][a]` with `[a]: /url "title"` in the
-//   note: `<p>[x][a]</p>`), and a definition with no reference in the copy renders nothing, so a
-//   copied footnote's HTML is empty;
-// - its place: Obsidian copying `---⏎⏎Details⏎⏎---` from mid-note reads it as front matter at the
-//   copy's start, and the HTML is only ourus's mark (the Markdown and the plain text are right);
-// - its context, for a copy of text from inside a paragraph (`<!-- text -->`): `# Heading` selected
-//   from `before # Heading after` renders `<h1>Heading</h1>`, the `#` gone; `- item` a list, `>
-//   quote` a quote.
-// Render with the note's definitions, and text as the inline text it was. The trailing space a
-// copied id leaves is cosmetic.
-openBug('B260', 'P2', 'The clipboard\'s HTML is the copied Markdown rendered alone', {
-  'a copied footnote has HTML': () => {
-    const copiedHtml = assertApplied(executeOnText('[^1]: note\n  more\n', { type: 'copy' }, { caret: 4 })).clipboard!['text/html']!;
-    assert.notEqual(copiedHtml.replace(/<!--.*?-->/g, '').trim(), '');
-  },
-  'a copied block id leaves no blank in the HTML': () => {
-    const copiedHtml = assertApplied(executeOnText('- a ^id\n  - b ^id2\n', { type: 'copy' }, { caret: 3, config: { flavor: 'obsidian' } })).clipboard!['text/html']!;
-    assert.doesNotMatch(copiedHtml, /[ab] (\n|<)/);
-  },
-  'a copied reference link is a link in the HTML': () => {
-    const copiedHtml = assertApplied(executeOnText('[x][a]\n\n[a]: /url "title"', { type: 'copy', nodes: [1] })).clipboard!['text/html']!;
-    // <!-- ourus --><p>[x][a]</p>
-    assert.match(copiedHtml, /<a href="\/url" title="title">x<\/a>/);
-  },
-  'rules copied from mid-note keep what is between them in the HTML': () => {
-    const copiedHtml = assertApplied(executeOnText('Intro\n\n---\n\nDetails\n\n---\n\nEnd', { type: 'copy', nodes: [2, 3, 4] }, { config: { flavor: 'obsidian' } })).clipboard!['text/html']!;
-    // <!-- ourus -->
-    assert.match(copiedHtml, /Details/);
-  },
-  'text copied from inside a paragraph stays text in the HTML': () => {
-    for (const [text, from, to, block] of [['before # Heading after', 7, 16, /<h1>/], ['before - item after', 7, 13, /<ul>/], ['before > quote after', 7, 14, /<blockquote>/]] as const) {
-      const copiedHtml = assertApplied(executeOnText(text, { type: 'copy' }, { anchor: from, head: to })).clipboard!['text/html']!;
-      assert.doesNotMatch(copiedHtml, block);
-      assert.ok(copiedHtml.includes(text.slice(from, to).replace('>', '&gt;')), copiedHtml);
-    }
-  },
-});
-
 // B301 [P3]. Pasting an item whose text is a heading over a paragraph after a paragraph fails to write
 //
 // Location: `src/commands/paste.ts` (fitting a pasted item as a paragraph).
@@ -425,24 +425,6 @@ openBug('B301', 'P3', 'Pasting an item whose text is a heading over a paragraph 
   },
 });
 
-// B312 [P3]. A clipboard's numeric references are decoded inside HTML comments too
-//
-// Location: `src/commands/block-ids.ts` (`withBlockIdCharacters`, from `pasteKeepingNewBlockIds`).
-//
-// Before the HTML is read, references to letters, digits, `-` and `^` are decoded across the whole
-// string, in every flavor, whether a `^` is there or not. In a comment they are its text: `&#45;&#45;>`
-// becomes a closer, and the comment's content is pasted. `<p>before</p><!-- &#45;&#45;><p>hidden</p>
-// --><p>after</p>` pastes `before⏎⏎hidden⏎⏎-->⏎⏎after`, where converting the HTML alone gives
-// `before⏎⏎after`. Decode where HTML does, in text and attributes, after reading it. P3: a reference
-// spelling a comment's closer is rare.
-openBug('B312', 'P3', 'A clipboard\'s numeric references are decoded inside HTML comments too', {
-  'a comment in pasted HTML stays a comment': () => {
-    const html = '<p>before</p><!-- &#45;&#45;><p>hidden</p> --><p>after</p>';
-    // before⏎⏎hidden⏎⏎-->⏎⏎after
-    assert.equal(appliedText(executeOnText('', { type: 'paste', clipboard: { 'text/html': html } }, { config: { flavor: 'commonmark' } })), 'before\n\nafter\n');
-  },
-});
-
 // B327 [P3]. A paste over a paragraph's first line, before a padded line and an item, fails to write
 //
 // Location: the writer, the padded line the paste leaves (`src/commands/paste.ts`, `src/commands/copy.ts`).
@@ -455,6 +437,37 @@ openBug('B327', 'P3', 'A paste over a paragraph\'s first line, before a padded l
   'a paste over a first line before a padded line and an item writes': () => {
     // root › 0: text "  def", read as "def"
     assertNoWriteFailure(executeOnText('abc\n  def\n-\n  def', { type: 'paste', clipboard: { 'text/markdown': '- x\n- y' } }, { anchor: 0, head: 3, config: { flavor: 'obsidian', markup: 'text' } }));
+  },
+});
+
+// B347 [P3]. Copying an indented paragraph strips its indentation from the list it owns
+//
+// Status (2026-11-09): found by the sweep's copy→paste check (copied into an empty note, a paragraph
+// came back as other blocks). A paragraph indented by spaces (`  > body`, a quote's) owning the list
+// after it (`listParent: paragraph`): the copy takes the paragraph's columns off every line it copies,
+// the list's too, which have an indentation of their own: an item's later line (`  b`) leaves the item
+// (`b`). Location: `doc/copy.ts`, `markdownOf`, the node's first line's indentation taken as a prefix of
+// all its lines.
+openBug('B347', 'P3', 'Copying an indented paragraph strips its indentation from the list it owns', {
+  'a quoted item\'s later line keeps the item\'s indentation': () => {
+    // kept: 0f73d6f922bc
+    const result = assertApplied(executeOnText('  > body\n\n- > a\n  > b\n', { type: 'copy', nodes: [1] }, { caret: 4 }));
+    assert.equal(result.clipboard?.['text/plain'], '> body\n\n- > a\n  > b\n');
+  },
+  'an item\'s later line keeps it': () => {
+    const result = assertApplied(executeOnText('  > body\n\n- > a\n  b\n', { type: 'copy', nodes: [1] }, { caret: 4 }));
+    assert.equal(result.clipboard?.['text/plain'], '> body\n\n- > a\n  b\n');
+  },
+});
+
+// B361 [P3]. A quote pasted right before a quote merges with it
+//
+// Status (2026-11-09): found by the sessions. A callout pasted at `x┃> body text⏎> more`: written `x> body text⏎⏎>
+// [!note] Title⏎> more`, its quote and the one after it one quote: three roots read as two.
+openBug('B361', 'P3', 'A quote pasted right before a quote merges with it', {
+  'pasting a callout before a quote': () => {
+    // kept: 2b4c5fa0e94f
+    assertNoWriteFailure(executeOnText("x> body text\n> more\n", { type: "paste", clipboard: { "text/plain":"> [!note] Title\n", "text/markdown":"> [!note] Title\n", "text/html":"<!-- ourus --><div class=\"callout\" data-callout=\"note\">\n<div class=\"callout-title\">Title</div>\n</div>\n" } }, { caret: 1, config: { flavor: "obsidian" } }));
   },
 });
 
@@ -678,7 +691,7 @@ openBug('B179', 'P3', 'Shift-Tab on an empty quote nested in a quote leaves the 
   'Shift-Tab on a nested empty quote leaves the caret at its text': () => {
     const result = assertApplied(executeOnText('> >', { type: 'outdent' }));
     // text ">", caret 1, after the `>`: in markup
-    assert.notEqual(result.view.locate(result.selection.head).zone, 'prefix');
+    assert.notEqual(result.view.locate(result.view.selection.head).zone, 'prefix');
     assert.equal(result.view.doc.text, '> ');
   },
 });
@@ -729,7 +742,7 @@ openBug('B183', 'P2', 'A section\'s last node moved down into the next section a
   },
 });
 
-// B190 [P3]. Indenting or outdenting an item takes in a fence or quoted list at an in-between indent after it
+// B190 [P3]. Indenting an item takes in a fence at an in-between indent after it
 //
 // Status (2026-11-05): found by `node test/sessions.ts` (its two `write-failed` groups, held in the
 // baseline).
@@ -739,14 +752,13 @@ openBug('B183', 'P2', 'A section\'s last node moved down into the next section a
 // writes it at its new one (`  - item`, `- nested bul`). At the new one, the item's content column
 // is 2 and takes in the next line (the fence, the quote); at the old one the check sees them apart.
 // A plain paragraph there is refused as it should be (`not-expressible`); a bare `  > q` too.
-// `#lastLines` lines up only a node moved in itself (`#movedIn`), not a descendant re-indented with
-// it, nor a paragraph the command made an item. A refusal either way: only its reason is wrong.
-openBug('B190', 'P3', 'Indenting or outdenting an item takes in a fence or quoted list at an in-between indent after it', {
+// `#lastLines` lines up a node moved in itself (`#movedIn`), and one moved up from deeper in what it
+// reads (B303's fix, 2026-11-07, which settled the outdent case: refused now, a test in
+// `commands.test.ts`), not a descendant re-indented with it, nor a paragraph the command made an item.
+// A refusal either way: only its reason is wrong.
+openBug('B190', 'P3', 'Indenting an item takes in a fence at an in-between indent after it', {
   'indenting an item over a fence at an in-between indent is refused, not failed': () => {
     assertNoWriteFailure(executeOnText('x\n\n\\- \n - item\n  ```', { type: 'indent' }, { caret: 3, config: { flavor: 'commonmark' } }));
-  },
-  'outdenting an item over a quoted list at an in-between indent is refused, not failed': () => {
-    assertNoWriteFailure(executeOnText('%% comment %%\n1. first\n   - nested bul\nx- sibling\n  > - list in quote', { type: 'outdent' }, { caret: 40, config: { flavor: 'gfm' } }));
   },
 });
 
@@ -792,21 +804,6 @@ openBug('B297', 'P3', 'Indenting the paragraph that owns a list strips a quote a
   },
 });
 
-// B303 [P3]. Moving an unevenly indented child out after its parent puts its blank line before it
-//
-// Location: `src/writer/draft.ts` (gaps), `src/writer/write.ts` (a moved item's layout).
-//
-// `a⏎- b⏎⏎- p⏎    - c⏎  - d⏎⏎z⏎`, `c` dropped after `p` (a place `drag` offers): written
-// `a⏎- b⏎⏎- p⏎  - d⏎⏎- c⏎z⏎`, the blank line before `c`, none after, so `z` is its lazy line:
-// `root: 2 children, read as 1`. `c` at two spaces moves (`…⏎- c⏎⏎z⏎`); Shift-Tab on `c` writes.
-// Found by the inverse oracle (generated note 163). Not B54 nor B183; B190's seam probing is
-// near. P3: a child further in than its sibling.
-openBug('B303', 'P3', 'Moving an unevenly indented child out after its parent puts its blank line before it', {
-  'an unevenly indented child dropped after its parent keeps the paragraph after it': () => {
-    assertNoWriteFailure(executeOnText('a\n- b\n\n- p\n    - c\n  - d\n\nz\n', { type: 'moveSubtree', nodes: [4], to: { parent: 1, after: 3 } }));
-  },
-});
-
 // B309 [P3]. Indenting a footnote whose body starts below a blank line into a quote fails to write
 //
 // Location: `src/writer/write.ts` (a footnote's continuation lines and blank lines under a new `>`),
@@ -822,14 +819,86 @@ openBug('B309', 'P3', 'Indenting a footnote whose body starts below a blank line
   },
 });
 
+// B349 [P3]. A quote line with no space after its `>` can't be moved
+//
+// Status (2026-11-09): found by the sessions, the `writer moved-indent` groups and some of the
+// `writer marker-line-overwritten` ones (B348's). A quote's paragraph line `  >x` (or `  >#`) in an
+// item, moved onto the item's marker line: the writer can't write the marker over a prefix with no space
+// after the `>`. A quote's items with none (`>- b⏎>- c`), one moved up: the moved lines' indentation
+// is read past a `> ` that isn't there (`moved-indent`), at the root too.
+openBug('B349', 'P3', "A quote line with no space after its `>` can't be moved", {
+  'moving a quoted paragraph whose line has no space after the `>` up under an item': () => {
+    // kept: 189a7a84f61f 1cf284386d10 2d9aafa63a6a 4cba21eaee16 c2de35be0d59
+    assertNoWriteFailure(executeOnText('- > a\n  >\n  >x t\n', { type: 'moveSubtreeUp' }, { caret: 14 }));
+  },
+  'moving a quoted item with no space after the `>` up': () => {
+    // kept: 0906fccce3e3 3231c0059cb1
+    assertNoWriteFailure(executeOnText('> a\n>- b\n>- c\n', { type: 'moveSubtreeUp' }, { caret: 12 }));
+  },
+});
+
+// B354 [P3]. Moving a node held at the note's end up writes a blank line too many
+//
+// Status (2026-11-09): found by the sessions. A comment block (`%% comment %%`) moved up from the note's end, past a
+// quote, the caret on the held empty line after it: written with two blank lines before it
+// (`readback gap`).
+openBug('B354', 'P3', 'Moving a node held at the note\'s end up writes a blank line too many', {
+  'Alt-Up on a comment at the note\'s end': () => {
+    // kept: 79b1ee321528 4782c77a01ba
+    assertNoWriteFailure(executeOnText("%% comment %%\n> over two lines\n", { type: "moveSubtreeUp" }, { caret: 31, config: { flavor: "commonmark", indentUnit: "tab" }, placeholders: [31] }));
+  },
+});
+
+// B359 [P3]. Indenting a selection of a quote's paragraphs drops their `>`
+//
+// Status (2026-11-09): found by the sessions. `> a quote⏎>⏎> over two lines⏎>⏎> ┃` (held), a selection over its
+// paragraphs, Tab (`listParent: container`): written `- over two lines⏎- `, out of the quote.
+openBug('B359', 'P3', 'Indenting a selection of a quote\'s paragraphs drops their `>`', {
+  'Tab on a selection in a quote': () => {
+    // kept: 9e9cab4a3aff
+    assertNoWriteFailure(executeOnText("> a quote\n>\n> over two lines\n>\n> \n", { type: "indent" }, { anchor: 33, head: 12, config: { flavor: "commonmark", listParent: "container" }, placeholders: [33] }));
+  },
+});
+
+// B360 [P3]. Moving a callout's paragraph down past a heading writes the heading above its title
+//
+// Status (2026-11-09): found by the sessions. `1. > [!note] Title⏎   > bo┃⏎   > # dy text`, Alt-Down on `bo`: written
+// `1. > # dy text⏎1. > [!note] Title⏎   > bo`, the heading first, a second item.
+openBug('B360', 'P3', 'Moving a callout\'s paragraph down past a heading writes the heading above its title', {
+  'Alt-Down past the heading': () => {
+    // kept: e0d1ea35bb7b
+    assertNoWriteFailure(executeOnText("1. > [!note] Title\n   > bo\n   > # dy text\n", { type: "moveSubtreeDown" }, { caret: 26, config: { flavor: "commonmark", listParent: "container" } }));
+  },
+});
+
+// B368 [P3]. Indenting a paragraph that starts `-- ` fails to write
+//
+// Status (2026-11-09): found by the sessions. `┃-- ⏎Final line ^blk` (Obsidian), Tab: written `- -- ⏎  Final line ^blk`,
+// read as two roots.
+openBug('B368', 'P3', 'Indenting a paragraph that starts `-- ` fails to write', {
+  'Tab on it': () => {
+    // kept: 65946fbfe1bb
+    assertNoWriteFailure(executeOnText("-- \nFinal line ^blk\n", { type: "indent" }, { caret: 0, config: { flavor: "obsidian" } }));
+  },
+});
+
+// B370 [P3]. Moving a nested quoted item with a bracketed text down fails to write
+//
+// Status (2026-11-09): found by the sessions. `- > [⏎  - > [⏎    > - !note] Title⏎    > body text` (Obsidian, `quotes:
+// atom`), Alt-Down on the inner item: its quote's lines written at the root (`> body text`).
+openBug('B370', 'P3', 'Moving a nested quoted item with a bracketed text down fails to write', {
+  'Alt-Down on the inner item': () => {
+    // kept: 55da921b2cea
+    assertNoWriteFailure(executeOnText("- > [\n  - > [\n    > - !note] Title\n    > body text\n\nFinal line ^blk\n", { type: "moveSubtreeDown" }, { caret: 22, config: { flavor: "obsidian", quotes: "atom" } }));
+  },
+});
+
 // =================================================================================================
 // Enter and Shift-Enter in quotes, callouts and quoted lists
 //
 // Enter and Shift-Enter inside a quote or callout, or in a quoted list or task, either refuse
 // (`write-failed`; B61 is the most ordinary: the end of the first line of a two-line quote in an
 // item followed by a blank line) or put the caret and the following lines in the wrong place (B60).
-// They duplicate numbers and eat task markers in quoted lists. Under `quotes: atom` all of it is
-// line regexes over the quote's text (B198, B199).
 bugCluster('Enter and Shift-Enter in quotes, callouts and quoted lists');
 
 // B55 [P2]. Shift-Enter across a callout title boundary truncates the expected title text
@@ -865,101 +934,69 @@ openBug('B56', 'P2', 'Enter before a quoted task nests the original task instead
   },
 });
 
-// B198 [P3]. Enter in a quote atom reads one physical line, not the block it is in
+// B355 [P3]. Enter on an empty padded item before a quote its parent holds moves the quote into it
 //
-// Status (2026-11-05): verified on the current tree: reproduces. `quotes: atom`, so ranked P3.
-//
-// Location: `src/commands/quote.ts`, `lineInQuote`, `QUOTED_ITEM`, `parentItemLine`.
-//
-// One regex over the caret's line, with a backward scan, stands in for the block structure. Parsing
-// the atom's text (it already has an `MdTree` for its block ids) gives nesting, code, the enclosing
-// item and list bounds at once, and B199's list membership. The last case needs the writer's
-// nine-digit refusal.
-openBug('B198', 'P3', 'Enter in a quote atom reads one physical line, not the block it is in', {
-  'Enter continues a nested quote\'s item': () => {
-    // > > - a⏎> : the inner quote and item lost
-    assert.equal(appliedText(executeOnText('> > - a', { type: 'enter' }, { caret: 7, config: { quotes: 'atom' } })), '> > - a\n> > - ');
+// Status (2026-11-09): found by the sessions. `- sibling⏎  -  ┃⏎  > - list in quote`: Enter on the empty child, which
+// leaves its list, writes the new item before the quote and the quote three columns in (`   > - list`),
+// the new item's now (`readback id`). In a quote's item (`- >-  ┃`) the same.
+openBug('B355', 'P3', 'Enter on an empty padded item before a quote its parent holds moves the quote into it', {
+  'Enter on the empty padded child': () => {
+    // kept: 681a74d8a9b4 b636d21b9c11
+    assertNoWriteFailure(executeOnText("- sibling\n  -  \n  > - list in quote\n", { type: "enter" }, { caret: 15, config: { flavor: "gfm" }, placeholders: [15] }));
   },
-  'Enter continues a nested quote': () => {
-    assert.equal(appliedText(executeOnText('>> a', { type: 'enter' }, { caret: 4, config: { quotes: 'atom' } })), '>> a\n>> ');
-  },
-  'Enter in quoted code invents no marker': () => {
-    // > - ⏎ invented inside the code
-    assert.equal(appliedText(executeOnText('> ```\n> - a\n> ```', { type: 'enter' }, { caret: 11, config: { quotes: 'atom' } })), '> ```\n> - a\n> \n> ```');
-  },
-  'Enter on a quoted item\'s continuation line makes the next item': () => {
-    // > ⏎, no `2.`: only the caret's line is asked
-    assert.equal(appliedText(executeOnText('> 1. a\n>    continuation', { type: 'enter' }, { caret: 24, config: { quotes: 'atom' } })), '> 1. a\n>    continuation\n> 2. ');
-  },
-  'an empty item\'s parent isn\'t found across a paragraph': () => {
-    // > - ⏎: parent found across paragraph q
-    assert.notEqual(appliedText(executeOnText('> - p\n>\n> q\n>   -', { type: 'enter' }, { caret: 17, config: { quotes: 'atom' } })), '> - p\n>\n> q\n> - ');
-  },
-  'Enter continues a custom task status with a checkbox': () => {
-    // no checkbox: QUOTED_ITEM knows space, x, X
-    assert.equal(appliedText(executeOnText('> - [-] a', { type: 'enter' }, { caret: 9, config: { quotes: 'atom', flavor: 'obsidian' } })), '> - [-] a\n> - [ ] ');
-  },
-  'Enter writes no ten-digit marker': () => {
-    // > 1000000000. : ten digits, no marker
-    assert.doesNotMatch(appliedText(executeOnText('> 999999999. a', { type: 'enter' }, { caret: 14, config: { quotes: 'atom' } })), /1000000000/);
+  'Enter on an empty padded item in a quote': () => {
+    // kept: 25208bd32689
+    assertNoWriteFailure(executeOnText("- >-  \n", { type: "enter" }, { caret: 5, config: { flavor: "commonmark", quotes: "container" }, placeholders: [6] }));
   },
 });
 
-// B199 [P3]. Renumbering a quote atom's list is a text scan that gets lists wrong
+// B357 [P3]. Shift-Enter right after a padded marker writes the text below it a column off
 //
-// Status (2026-11-05): verified on the current tree: reproduces. `quotes: atom`, so ranked P3; the
-// first two silently rewrite numbers.
-//
-// Location: `src/commands/quote.ts`, `renumberedAfter`, and the `parent` branch of `lineInQuote`.
-//
-// The tab case fails with the whitespace the other way round too. Five faces of one scan: no policy
-// check, no list boundary, indentation compared as strings, no re-indent when a marker widens, and
-// one path that skips it. The checked quote atom holds any text, so the readback catches none of
-// them. Same fix as B198.
-openBug('B199', 'P3', 'Renumbering a quote atom\'s list is a text scan that gets lists wrong', {
-  'listNumbers: keep holds in a quote atom': () => {
-    // > 3. b: `keep` ignored
-    assert.equal(appliedText(executeOnText('> 1. a\n> 2. b', { type: 'enter' }, { caret: 6, config: { quotes: 'atom', listNumbers: 'keep' } })), '> 1. a\n> 2. \n> 2. b');
+// Status (2026-11-09): found by the sessions. `>-┃  a quote⏎> over two lines`, Shift-Enter after the marker: the text
+// goes below it, its next line one column further than the text (`>  over two lines`). The same on a
+// padded numbered item (`1.┃  \\> quote`, `quotes: atom`).
+openBug('B357', 'P3', 'Shift-Enter right after a padded marker writes the text below it a column off', {
+  'Shift-Enter after a quoted padded marker': () => {
+    // kept: 20b6724dbbd5
+    assertNoWriteFailure(executeOnText(">-  a quote\n> over two lines\n", { type: "shiftEnter" }, { caret: 3, config: { flavor: "gfm", quotes: "container" } }));
   },
-  'a list past a paragraph isn\'t renumbered': () => {
-    // > 4. c: a list past paragraph q renumbered
-    assert.ok(appliedText(executeOnText('> 1. a\n> 2. b\n>\n> q\n>\n> 3. c', { type: 'enter' }, { caret: 6, config: { quotes: 'atom' } })).endsWith('> 3. c'));
-  },
-  'equivalent indentation renumbers': () => {
-    // >   2. b stays: "\t" and "  " compared as strings
-    assert.ok(appliedText(executeOnText('> \t1. a\n>   2. b', { type: 'enter' }, { caret: 7, config: { quotes: 'atom' } })).endsWith('3. b'));
-  },
-  'a marker widened keeps its child': () => {
-    // 10. parent: `- child` silently out of it, a code block there too
-    assert.ok(appliedText(executeOnText('> 8. a\n> 9. parent\n>    - child', { type: 'enter' }, { caret: 6, config: { quotes: 'atom' } })).endsWith('>     - child'));
-  },
-  'an empty quoted item outdented renumbers what follows': () => {
-    // two `2.`: the parent branch doesn't renumber
-    assert.equal(appliedText(executeOnText('> 1. p\n>    -\n> 2. q', { type: 'enter' }, { caret: 13, config: { quotes: 'atom' } })), '> 1. p\n> 2. \n> 3. q');
+  'Shift-Enter after a padded numbered marker': () => {
+    // kept: e8ca114ceb78
+    assertNoWriteFailure(executeOnText("   1.  \\> quote\n       > more\n", { type: "shiftEnter" }, { caret: 8, config: { flavor: "obsidian", quotes: "atom" }, auto: [7] }));
   },
 });
 
-// B200 [P3]. Splitting a quote atom ignores `enterSplitSpace`
+// B365 [P3]. Enter before a heading after a quoted item writes two blank lines
 //
-// Status (2026-11-05): verified on the current tree: reproduces. See also D24 in dev/next.md.
-//
-// `splitQuote` trims both sides unconditionally. Its doc comment says "the spaces there going", the
-// option's doc makes no such exception, and Enter then Backspace doesn't restore the text.
-openBug('B200', 'P3', 'Splitting a quote atom ignores `enterSplitSpace`', {
-  'a quote atom\'s split keeps the space before the caret under enterSplitSpace: drop': () => {
-    // > a⏎⏎b: the space before the caret goes; `drop` keeps those (Enter44), `start` is ignored too
-    assert.equal(appliedText(executeOnText('> a b', { type: 'enter' }, { caret: 4, config: { quotes: 'atom', enterInQuote: 'split', enterSplitSpace: 'drop' } })), '> a \n\nb');
+// Status (2026-11-09): found by the sessions. `  - > [!⏎    >⏎    > x⏎┃#     > note] Title` (Obsidian, `listParent:
+// container`), Enter at the heading's start: written with two blank lines before it, three roots read
+// as two.
+openBug('B365', 'P3', 'Enter before a heading after a quoted item writes two blank lines', {
+  'Enter at the heading\'s start': () => {
+    // kept: c4aa352e2377
+    assertNoWriteFailure(executeOnText("  - > [!\n    >\n    > x\n#     > note] Title\n", { type: "enter" }, { caret: 25, config: { flavor: "obsidian", listParent: "container" } }));
   },
 });
 
-// B201 [P3]. A line break pasted in an indented quote atom's indentation fails to write
+// B366 [P3]. Enter over a selection from a padded item into the next fails to write
 //
-// `lineInQuote` treats a caret in the indentation as the quote's start (`lead`, Regression246);
-// `linesInQuote` has no such case, so it splits inside the indentation and writes a second `>`.
-openBug('B201', 'P3', 'A line break pasted in an indented quote atom\'s indentation fails to write', {
-  'a line break pasted in an indented quote atom\'s indentation writes': () => {
-    // writes ␠⏎>  > a⏎
-    assertNoWriteFailure(executeOnText('  > a\n', { type: 'pastePlain', text: '\n' }, { caret: 1, config: { quotes: 'atom' } }));
+// Status (2026-11-09): found by the sessions. A selection from inside `-  next- [x] outline` (padded) over the next
+// lines, Enter: written `- ⏎- ⏎`, four roots read as five.
+openBug('B366', 'P3', 'Enter over a selection from a padded item into the next fails to write', {
+  'Enter over the selection': () => {
+    // kept: 5cd02ae81972
+    assertNoWriteFailure(executeOnText("  ```js\n  ```\n-  next- [x] outline\n  \n  [ ] write spec\n- [ ] draft\n- [ ] review\n", { type: "enter" }, { anchor: 17, head: 34, config: { flavor: "gfm", indentUnit: "tab" } }));
+  },
+});
+
+// B367 [P3]. Enter on the blank line under an empty item before an indented fence fails to write
+//
+// Status (2026-11-09): found by the sessions. `-⏎┃  ⏎  ```⏎`, Enter on the blank line: written `-⏎⏎  ⏎  ```⏎`, one root
+// read as two.
+openBug('B367', 'P3', 'Enter on the blank line under an empty item before an indented fence fails to write', {
+  'Enter on the blank line': () => {
+    // kept: 86cc4bada909
+    assertNoWriteFailure(executeOnText("-\n  \n  ```\n", { type: "enter" }, { caret: 4, config: { flavor: "commonmark" } }));
   },
 });
 
@@ -1069,26 +1106,22 @@ openBug('B204', 'P3', 'Backspace right after a space typed at a later line\'s st
 openBug('B279', 'P3', 'A soft-line deletion that makes a callout title, a nested quote below, fails to write', {
   'a soft-line deletion making a callout title is refused, a nested quote below too': () => {
     const result = executeOnText('>([!e]\n>>', { type: 'deleteSoftLineBackward' }, { caret: 2, config: { flavor: 'obsidian' } });
-    // rejected write-failed
-    assert.ok(result instanceof OurusRejected && result.reason === 'not-expressible', String(result instanceof OurusRejected ? result.reason : result.constructor.name));
+    // fails to write
+    assert.ok(result instanceof OurusRejected && result.reason === 'not-expressible', String(result instanceof OurusRejected ? result.reason : result instanceof OurusFailed ? `failed (${result.phase} ${result.code})` : result.constructor.name));
   },
 });
 
-// B305 [P2]. A command at the note's end fails to write where its last line is blank but not empty
+// B341 [P3]. Duplicating a quoted item above the quote's last bare `>` fails to write
 //
-// Location: `src/writer/write.ts` (the last line, a blank one with no line ending, written anew).
+// Location: `src/writer/write.ts` (a copy's trailing blank lines, `shift.trailing`).
 //
-// Backspace joining an empty last item into the one above, `- a⏎⏎-┃⏎␠` (a space on the last line, no line
-// break after it): `root › 0: 1 blank lines after its text, read as 0`. With the line break, `- a⏎⏎-⏎␠⏎`,
-// or no space, it writes. Duplicating the item of `>- x⏎>⏎>` (`quotes: container`), the last line a bare
-// `>`, no line break after it: `root: 1 children, read as 2`; with one it writes. One shape, likely one
-// mechanism, the writer's at the text's end: not traced. P2: a space left on a note's last line is
-// common, and the first needs no option.
-openBug('B305', 'P2', 'A command at the note\'s end fails to write where its last line is blank but not empty', {
-  'Backspace joins an empty last item above a last line of spaces': () => {
-    // root › 0: 1 blank lines after its text, read as 0
-    assertNoWriteFailure(executeOnText('- a\n\n-\n ', { type: 'deleteContentBackward' }, { caret: 5 }));
-  },
+// `>- x⏎>⏎>` (`quotes: container`), the last line a bare `>` with no line break after it, duplicating
+// the item: `root: 1 children, read as 2`. The copy's blank lines are the quote's (`>`), but the
+// writer takes them as the container's after the copy, the root's: the first is copied as its line
+// ending alone, `⏎`, and the last, the old text's last line with no line ending, written as it was,
+// `>`, now after a blank line: a second quote. With a line break after the last `>` it writes. Split
+// from B305, whose other case (a last line of spaces) is fixed.
+openBug('B341', 'P3', 'Duplicating a quoted item above the quote\'s last bare `>` fails to write', {
   'a quoted item duplicates above a last bare `>`': () => {
     // root: 1 children, read as 2
     assertNoWriteFailure(executeOnText('>- x\n>\n>', { type: 'duplicateSubtree', nodes: [2] }, { config: { flavor: 'gfm', quotes: 'container' } }));
@@ -1124,6 +1157,82 @@ openBug('B328', 'P3', 'Joining a paragraph into an empty item above indented cod
   'a paragraph joins an empty item, the code after it its own': () => {
     // root: 2 children, read as 1
     assertNoWriteFailure(executeOnText('-\nx\n\n    c', { type: 'deleteContentBackward' }, { caret: 2, config: { flavor: 'obsidian' } }));
+  },
+});
+
+
+// B350 [P3]. A block outside a list item reads into an item after an edit
+//
+// Status (2026-11-09, widened): 16 more kept cases, one mechanism. A quote, a fence or an item
+// indented short of the list item above it stands outside it (a `>` or a fence can't continue an item
+// lazily). An edit that puts another item, or the same item wider, before it (a cut, Backspace, a
+// move, an indent, a paste) writes its lines as they were, where they read as that item's.
+//
+// Status (2026-11-09): found by the sessions (`readback children`, cut and delete). `- a⏎ > x⏎  > - b`:
+// the quote, one column in, isn't the item's (a `>` can't continue it lazily), and starts at the root.
+// Deleting or cutting `x`, its paragraph, writes the quote's other lines as they are (`  > - b`), two
+// columns in, now the item's: `root: 2 children, read as 1`. Writes with the quote in the item
+// (`  > x`), or nothing after `x`.
+openBug('B350', 'P3', 'A block outside a list item reads into an item after an edit', {
+  'deleting it': () => {
+    // kept: 433a7a300a67 6227f098e5c0
+    // kept: 9159fd68cf8a 7bbb8d00a4b7 661b0f8d3297 662e08876cc1 9057233f169b 53455eb2e2d5 9d7864faf85d
+    // kept: e487e3f3196a 6327627bde4a 9f7ecbb59f52 7beb3a0b9e6d c01815f3d2a9 cf713c3ca5f4 8d29a1299042
+    // kept: 23105f9ba13b 8423db133b78
+    assertNoWriteFailure(executeOnText('- a\n > x\n  > - b\n', { type: 'deleteSubtree' }, { caret: 6 }));
+  },
+  'cutting it': () => {
+    // kept: 041532c487f8 0ac8a5570a21
+    assertNoWriteFailure(executeOnText('- a\n > x\n  > - b\n', { type: 'cut' }, { caret: 6 }));
+  },
+});
+
+// B352 [P3]. Joining a line into an empty item takes the lines after it into the item
+//
+// Status (2026-11-09): found by the sessions. Backspace at a line's start under an empty item (`-`), or Delete at
+// the item's end, joins the line into it: the lines after it, at the item's content column now (`   >
+// more` under `2. `, `  > body` under `- `), a quote's or a table's, which the empty item didn't hold,
+// read as its own: `root: 2 children, read as 1`.
+openBug('B352', 'P3', 'Joining a line into an empty item takes the lines after it into the item', {
+  'Backspace joins a line under an empty numbered item': () => {
+    // kept: 2754b62898b4
+    assertNoWriteFailure(executeOnText("2.\nx > quote\n   > more\n", { type: "deleteContentBackward" }, { caret: 3, config: { flavor: "gfm", quotes: "atom" } }));
+  },
+  'Backspace joins an escaped line under an empty item': () => {
+    // kept: 6666435c9031
+    assertNoWriteFailure(executeOnText("```js\n```\n-\n\\> [!note] Title\n  > body text\n", { type: "deleteContentBackward" }, { caret: 12, config: { flavor: "commonmark", indentUnit: "tab" }, auto: [12] }));
+  },
+  'Delete at an empty item\'s end': () => {
+    // kept: 6cd93b67c7c1
+    assertNoWriteFailure(executeOnText("-\nx > [!note] Title\n  > body text\n", { type: "deleteContentForward" }, { caret: 1, config: { flavor: "obsidian" } }));
+  },
+  'Backspace joins a line before a table': () => {
+    // kept: 1b33ca5888e8
+    assertNoWriteFailure(executeOnText("-\n--\n| a | b |\n|---|---|\n", { type: "deleteContentBackward" }, { caret: 2, config: { flavor: "gfm", listParent: "container" } }));
+  },
+});
+
+// B362 [P3]. Backspace turning a quoted heading into a paragraph sets the line after it apart
+//
+// Status (2026-11-09): found by the sessions. `- >#┃  [!note] Title⏎  > more`, Backspace: the heading's `#` goes, its
+// text a paragraph, and the writer puts a blank `>` line before `more`, which the draft keeps in the
+// paragraph (`readback id`).
+openBug('B362', 'P3', 'Backspace turning a quoted heading into a paragraph sets the line after it apart', {
+  'Backspace on a quoted heading\'s `#`': () => {
+    // kept: fe39e4e6f71d
+    assertNoWriteFailure(executeOnText("- >#  [!note] Title\n  > more\n", { type: "deleteContentBackward" }, { caret: 6, config: { flavor: "commonmark" } }));
+  },
+});
+
+// B363 [P3]. Joining an empty item that holds a quote sets the quote apart
+//
+// Status (2026-11-09): found by the sessions. `2. > quote⏎- ┃⏎   > more`, Backspace on the empty item: its quote, now the
+// numbered item's, is written after a blank line, a tab in (`⏎→> more`), not as the draft has it
+// (`readback id`).
+openBug('B363', 'P3', 'Joining an empty item that holds a quote sets the quote apart', {
+  'Backspace on the empty item': () => {
+    // kept: e03c602b9def
+    assertNoWriteFailure(executeOnText("2. > quote\n- \n   > more\n", { type: "deleteContentBackward" }, { caret: 13, config: { flavor: "commonmark", indentUnit: "tab" } }));
   },
 });
 
@@ -1205,6 +1314,9 @@ openBug('B95', 'P3', 'Moving code-bearing items across columns changes their cod
 
 // B205 [P3]. Enter at a fence after an item's unclosed fence can't get its blank line
 //
+// Status (2026-11-09): the sessions reach it, 11 kept cases (Enter's `readback gap` group, all this
+// shape): an item's fence left open by a closer short of its content column, math as code.
+//
 // The blank line above the root fence is the item's open code's, a payload line, so it reads as no
 // gap. Refuse (`not-expressible`), as the other open-block seams do.
 openBug('B205', 'P3', 'Enter at a fence after an item\'s unclosed fence can\'t get its blank line', {
@@ -1212,12 +1324,24 @@ openBug('B205', 'P3', 'Enter at a fence after an item\'s unclosed fence can\'t g
     // writes - ```⏎⏎```
     assertNoWriteFailure(executeOnText('- ```\n```', { type: 'enter' }, { caret: 6 }));
   },
+  // (the sessions reach it: an item's fence left open by a closer a column short of its content)
+  'Enter at a closer a column short of an item\'s content': () => {
+    // kept: 219e51dc783b 63ac895b68d1 64cef3ee385f 7bc25c71dbc8 c18b0d20f632 cdb0865ab08b e84ed9c1578c
+    // kept: ee18c86a5334
+    // kept: df426903cd2d
+    assertNoWriteFailure(executeOnText('- item\n  ```js\n ```\n', { type: 'enter' }, { caret: 15 }));
+  },
+  'Enter at a math block\'s closer after an item\'s unclosed math': () => {
+    // kept: 58490dfce913 f2f1281bfc82
+    assertNoWriteFailure(executeOnText('- $$\n$$\n', { type: 'enter' }, { caret: 5, config: { flavor: 'obsidian' } }));
+  },
 });
 
 // B206 [P3]. A line break pasted in an indented fence's indentation fails to write
 //
 // The caret is inside the opener's indentation. `lineBreakAtOpening` (`src/commands/code.ts:108`)
-// acts at the opening's start only, so the indentation splits. The same family as B201.
+// acts at the opening's start only, so the indentation splits. The same family as B201, fixed for
+// quote atoms by taking the spaces before the first `>` as the quote's start (`atQuoteStart`).
 openBug('B206', 'P3', 'A line break pasted in an indented fence\'s indentation fails to write', {
   'a line break in an indented fence\'s indentation writes': () => {
     // writes # a⏎⏎␠⏎␠```⏎
@@ -1304,6 +1428,38 @@ openBug('B326', 'P3', 'Two line breaks inserted before an opening delimiter fail
   },
 });
 
+// B346 [P2]. Cut then paste puts a block into the code above it
+//
+// Status (2026-11-09): found by the sweep's cut→paste check, 9 of its 50 kept cases (the other 41 the
+// spec's placement: the check compares letters and code blocks' texts since). Cutting the block below a fenced code block
+// puts the caret at the end of the text above (DeleteSubtree's rule 2), which is the end of the code's
+// last line; paste there is paste into code, as text: the block lands in the code, joined to its last
+// line (`code# h`). The same under an item ending in code. Cut then paste is how a block is moved by
+// keyboard. Which side fixes it is a decision: cut's caret past the closing fence, or paste of blocks
+// at a code block's end going after it.
+openBug('B346', 'P2', 'Cut then paste puts a block into the code above it', {
+  'a heading cut under code and pasted back comes back after the code': () => {
+    // kept: 327514fffe05 37617ede7b1c 43f5bc131920 4f8165943933 6e69a1eef1e5 77d0f163ed18 819cdde17b8c
+    // kept: acf8ccf2f2f4 d4ea358139d2
+    // kept: 037265597342 13dd8d9ab06a 20efe1badbd8 32d225e4bc7e 34da81cfcdfb 3d8f091095c3 40f3a467e301
+    // kept: 41a2a3bde381 4c3a658a1da2 82bede3c0572 88e61be03ddd 89059c10cfde 8f612e501131 93f61ae51276
+    // kept: abea7ed186da c7a92049034b ca0beca2b6f4 e4095444b69a e611fdfafe97 ecfde022046e
+    const cut = assertApplied(executeOnText('```\ncode\n```\n\n# h\n', { type: 'cut' }, { caret: 16 }));
+    const back = assertApplied(executeAfter(cut, { type: 'paste', clipboard: cut.clipboard! }));
+    assert.equal(back.view.doc.text, '```\ncode\n```\n\n# h\n');
+  },
+  'a paragraph cut under code and pasted back': () => {
+    const cut = assertApplied(executeOnText('```\ncode\n```\n\npara\n', { type: 'cut' }, { caret: 16 }));
+    const back = assertApplied(executeAfter(cut, { type: 'paste', clipboard: cut.clipboard! }));
+    assert.equal(back.view.doc.text, '```\ncode\n```\n\npara\n');
+  },
+  'an item cut under an item ending in code and pasted back': () => {
+    const cut = assertApplied(executeOnText('- item\n  ```\n  x\n  ```\n- next\n', { type: 'cut' }, { caret: 26 }));
+    const back = assertApplied(executeAfter(cut, { type: 'paste', clipboard: cut.clipboard! }));
+    assert.equal(back.view.doc.text, '- item\n  ```\n  x\n  ```\n- next\n');
+  },
+});
+
 // =================================================================================================
 // Tab-led, padded and lazy-continuation lines
 //
@@ -1311,6 +1467,32 @@ openBug('B326', 'P3', 'Two line breaks inserted before an opening delimiter fail
 // imported files rather than typing, so all P3. The writer cannot place the continuation at the
 // column the move or duplicate needs, so the edit is refused or the text changes.
 bugCluster('Tab-led, padded and lazy-continuation lines');
+
+// B343 [P3]. A line break pasted before a tab-led fence after a quote loses the tab
+//
+// Status (2026-11-06): verified on the current tree; found by the diff suite, in both copies.
+//
+// `x⏎>b⏎┃→~~~` (GFM), plain paste of a line break: `root › 2: text "→\~~~", read as "\~~~"`. The
+// paragraph's text keeps the tab before its escaped fence, the written line doesn't.
+openBug('B343', 'P3', 'A line break pasted before a tab-led fence after a quote loses the tab', {
+  'a line break pasted before a tab-led fence writes': () => {
+    assertNoWriteFailure(executeOnText('x\n>b\n\t~~~\n', { type: 'pastePlain', text: '\n' }, { caret: 5, config: { flavor: 'gfm' } }));
+  },
+});
+
+// B344 [P3]. Tab-led lines pasted after a held padding fail to write
+//
+// Status (2026-11-06): verified on the current tree, a hand-built mark; found by the diff suite, in
+// both copies.
+//
+// `-  ┃``` x` with the padding's space held (Placeholder17's state), plain paste of `- a⏎→- b⏎→→- c`:
+// `the writer can't write a line of node 1's text starting with a tab, at another column than done()
+// gave it`, B155's message.
+openBug('B344', 'P3', 'Tab-led lines pasted after a held padding fail to write', {
+  'tab-led lines pasted after a held padding write': () => {
+    assertNoWriteFailure(executeOnText('-  ``` x\n', { type: 'pastePlain', text: '- a\n\t- b\n\t\t- c\n' }, { caret: 3, placeholders: [2], config: { flavor: 'commonmark' } }));
+  },
+});
 
 // B155 [P3]. Moving a subtree down cannot preserve a tab-led lazy continuation
 //
@@ -1519,12 +1701,18 @@ openBug('B192', 'P3', 'A plain paste with a tab-led line into an item whose padd
 
 // B208 [P3]. A padded item's text rewritten narrower takes in the item after it
 //
+// Status (2026-11-09): 8 kept cases of the sessions, by duplicate, Enter, outdent, cut, Delete and
+// Tab: a padded marker written with one space (`-  #` as `- #`), or an item indented past its list
+// (`    - grandchild`) written at its list's column, its content column narrower, what follows taken in.
+//
 // The pair isn't the cause: it only gets the text written by ourus rather than the host. The item's
 // padding goes (`-  #` to `- #`), so its content column falls from 3 to 2 and `  - other`, a
 // sibling at the old column, becomes its child. `repadded` (`write.ts`) handles the held-space
 // case.
 openBug('B208', 'P3', 'A padded item\'s text rewritten narrower takes in the item after it', {
   'a padded item\'s text rewritten keeps the item after it a sibling': () => {
+    // kept: 6833e0669a54 59e6f4b52e60 83a8301de4c0 f5442177fc59 8cb3e2b07dad 3a15223a8549 94079aa6d0b8
+    // kept: 3b1e50fa9ff5
     // writes - # $$⏎  - other⏎
     assertNoWriteFailure(executeOnText('-  # \n  - other\n', { type: 'insertText', text: '$' }, { caret: 5, config: { autoClose: ['$'] } }));
   },
@@ -1577,6 +1765,7 @@ openBug('B290', 'P3', 'A footnote label\'s own indentation is lost across a quot
 // B290. P3: a footnote definition in an item.
 openBug('B298', 'P3', 'Backspace on a footnote item\'s trailing blank doubles its lazy line\'s indentation', {
   'Backspace on a footnote item\'s trailing blank keeps its continuation': () => {
+    // kept: 882d29898905 b5c56cfa2429
     const source = '- [^a]: first\n  second\n  ';
     assertNoWriteFailure(executeOnText(source, { type: 'deleteContentBackward' }, { caret: source.length, config: { flavor: 'obsidian' } }));
   },
@@ -1608,6 +1797,69 @@ openBug('B331', 'P3', 'Moving tab-led indented code into an empty quote fails to
   'tab-led code moves into an empty quote': () => {
     // root › 0 › 0: id 1, read as 3
     assertNoWriteFailure(executeOnText('\tdef\n>', { type: 'moveSubtree', nodes: [1], to: { parent: 2, after: null } }, { config: { flavor: 'obsidian', quotes: 'container', indentUnit: 2 } }));
+  },
+});
+
+// B364 [P3]. Joining a line into the item above loses a column of the tab-led line after it
+//
+// Status (2026-11-09): found by the sessions. `- next⏎ ┃- quoted in item⏎→  > over two lines`, Backspace: the joined text
+// is the item's, and the quote's tab-led line after it is written a column short (`→ >`): `readback
+// id`.
+openBug('B364', 'P3', 'Joining a line into the item above loses a column of the tab-led line after it', {
+  'Backspace at a lazy item before a tab-led quote line': () => {
+    // kept: baa726de8e58
+    assertNoWriteFailure(executeOnText("  ```js\n  ```\n- next\n - quoted in item\n\t  > over two lines\n", { type: "deleteContentBackward" }, { caret: 24, config: { flavor: "obsidian", indentUnit: "tab" } }));
+  },
+});
+
+// B376 [P3]. Outdenting an item whose padding runs into its nested item escapes the nested item
+//
+// Status (2026-11-09): found by the sessions. `- p⏎  -    - item ^id1⏎  - other` (`quotes: atom`), the
+// caret held after `^id1`, Shift-Tab: written `-   \\- item ^id1⏎   - other`, the nested item text now,
+// escaped, `other` its child: two roots read as three.
+openBug('B376', 'P3', 'Outdenting an item whose padding runs into its nested item escapes the nested item', {
+  'Shift-Tab on the nested item': () => {
+    // kept: 565b62d0cf77
+    assertNoWriteFailure(executeOnText('- Intro paragraph with a [[link]] and `code`.\n  -    - item ^id1\n  - other\n', { type: 'outdent' }, { caret: 51, config: { flavor: 'gfm', quotes: 'atom' }, placeholders: [51] }));
+  },
+});
+
+// B356 [P3]. Outdenting under `indentUnit: tab` writes a quote's extra spaces after its `>` wrong
+//
+// Status (2026-11-09): found by the sessions. A quote in an item whose later line has spaces after its `>` (`  >    >
+// over two lines`, `  >   ` held, `  >   >`), Shift-Tab with `indentUnit: tab`: those lines written
+// with a tab and a column short or a `\\>` (`readback id`).
+openBug('B356', 'P3', 'Outdenting under `indentUnit: tab` writes a quote\'s extra spaces after its `>` wrong', {
+  'Shift-Tab on a quote with spaces after a `>`': () => {
+    // kept: 7b6d8f4523f2 d4b29121e388
+    assertNoWriteFailure(executeOnText("- > quoted in item\n  >    > over two lines\n", { type: "outdent" }, { caret: 24, config: { flavor: "obsidian", indentUnit: "tab" } }));
+  },
+  'Shift-Tab on a callout with a nested `>`': () => {
+    // kept: fe3a4007598a
+    assertNoWriteFailure(executeOnText("- > [!note] Title\n  >   >\n", { type: "outdent" }, { caret: 22, config: { flavor: "obsidian", indentUnit: "tab" }, placeholders: [22], auto: [25] }));
+  },
+});
+
+// B369 [P3]. Indenting an empty tab-led item above a loose paragraph fails to write
+//
+// Status (2026-11-09): found by the sessions. `- item⏎⏎→- ⏎→-┃⏎⏎→  done` (a raised blank line), Tab on the second
+// empty item: written `→→- `, `done` no longer its parent's.
+openBug('B369', 'P3', 'Indenting an empty tab-led item above a loose paragraph fails to write', {
+  'Tab on the empty item': () => {
+    // kept: c00252025863
+    assertNoWriteFailure(executeOnText("- item\n\n\t- \n\t-\n\n\t  done\n", { type: "indent" }, { caret: 15, config: { flavor: "gfm", indentUnit: "tab" }, auto: [7] }));
+  },
+});
+
+// B371 [P3]. Outdenting a tab-led item with an escaped quote and a lazy line fails to write
+//
+// Status (2026-11-09): found by the sessions. `- > quoted in item⏎→- sibling⏎→→- →  > quoted in item⏎Final line
+// ^blk` (held), Shift-Tab: written `→-   \\> quoted in item⏎→  Final line`, the lazy line taken in as
+// text (`readback text`).
+openBug('B371', 'P3', 'Outdenting a tab-led item with an escaped quote and a lazy line fails to write', {
+  'Shift-Tab on the empty item': () => {
+    // kept: 2ba62abcb0e6
+    assertNoWriteFailure(executeOnText("- > quoted in item\n\t- sibling\n\t\t- \t  > quoted in item\nFinal line ^blk\n", { type: "outdent" }, { caret: 34, config: { flavor: "gfm", indentUnit: "tab" }, placeholders: [34] }));
   },
 });
 
@@ -1671,6 +1923,8 @@ openBug('B191', 'P3 partly fixed', 'Dropping a node first under a quoted numbere
 // over `a` reaches it too. HTML's own form of it is B267.
 openBug('B209', 'P3', 'Emptying the third shared marker writes a thematic break', {
   'Enter before a third shared marker writes': () => {
+    // kept: 09e4ba29e74e 653847d06453 6b0f3fcb9f16 7960b6090ab2 87d0d35cf66f 8e4a566d121e
+    // kept: b3deb1576629
     // writes - - - ⏎    - a⏎: root: 1 children, read as 2
     assertNoWriteFailure(executeOnText('- - - a\n', { type: 'enter' }, { caret: 4 }));
   },
@@ -1711,7 +1965,7 @@ openBug('B210', 'P3', 'Indenting across 9/10 fails when the surviving parent\'s 
 //
 // An item indented to the end of a numbered child list should count on from its last item. It works
 // when that list counts from 1, so the number looks derived from the item's position, not the
-// list's start. Rendering ignores it, but `listNumbers: renumber` promises a sequence. Not traced
+// list's start. Rendering ignores it, but `orderedLists: renumber` promises a sequence. Not traced
 // further.
 openBug('B211', 'P3', 'Indenting into a numbered child list restarts or takes the parent\'s number', {
   'an item indented into a numbered child list counts on': () => {
@@ -1744,6 +1998,40 @@ openBug('B278', 'P3', 'A marker widened across 9/10 makes its tab padding code',
   },
 });
 
+
+// B348 [P3]. A tab-led child under an indented shared marker line can't be written once that line changes
+//
+// Status (2026-11-09): found by the sessions, most of the `writer marker-line-overwritten` groups
+// (Backspace, delete, cut, moves). `  - - ⏎→- x`: the inner item of an indented shared marker line,
+// its child led by a tab; taking the inner item out (Backspace on it, delete, cut) or moving it, the
+// marker line is written over the child's line, which the writer can't spell over a tab. Writes with
+// the outer item at column 0, or the child indented by spaces. Those groups hold B349 too (`  >x`).
+openBug('B348', 'P3', "A tab-led child under an indented shared marker line can't be written once that line changes", {
+  'Backspace on the inner item': () => {
+    // kept: 20d45c8aa211 7316acba330e 9ce2124fe9b7 e9e36128815c
+    assertNoWriteFailure(executeOnText('  - - \n\t- x\n', { type: 'deleteContentBackward' }, { caret: 6, config: { indentUnit: 'tab' } }));
+  },
+  'deleting the inner item': () => {
+    // kept: 0f6a04b8b8ce 220acc52b548 2fde73f3c616 3499c50a6d7a 4160a03f995c 442950fc5c19 63707e3301f0
+    // kept: 9630bc1d0e6f a2f9915f46a1 d8fdc581866e d94012630a15 dedeb33a5db0
+    assertNoWriteFailure(executeOnText('  - - \n\t- x\n', { type: 'deleteSubtree' }, { caret: 6 }));
+  },
+  'deleting an inner item with text': () => {
+    assertNoWriteFailure(executeOnText('  - - a\n\t- x\n', { type: 'deleteSubtree' }, { caret: 7 }));
+  },
+});
+
+// B358 [P3]. Enter in a numbered item before an empty quoted one loses its text
+//
+// Status (2026-11-09): found by the sessions. `1. n┃um⏎2. > ` (the quote held), Enter in `num`: the items renumbered,
+// the held quote's item written without its text (`readback text-missing`).
+openBug('B358', 'P3', 'Enter in a numbered item before an empty quoted one loses its text', {
+  'Enter in `num`': () => {
+    // kept: 95ce7e1da3cc
+    assertNoWriteFailure(executeOnText("1. num\n2. > ", { type: "enter" }, { caret: 5, config: { flavor: "gfm" }, placeholders: [12] }));
+  },
+});
+
 // =================================================================================================
 // Selections and carets in the view
 //
@@ -1751,31 +2039,6 @@ openBug('B278', 'P3', 'A marker widened across 9/10 makes its tab padding code',
 // isn't the document's end, and several checks still compare with the document's (B212). Includes
 // the only reachable uncaught throw from ordinary keys.
 bugCluster('Selections and carets in the view');
-
-// B214 [P3]. A decorated caret lands on an opening fence, where typing goes into the info string
-//
-// Status (2026-11-05): verified on the current tree: reproduces. `markup: decorated`, so ranked P3.
-//
-// Location: `src/view/select.ts:42` (`rootStart`); `src/commands/select.ts:209` (`editStart`).
-//
-// `editStart` knows the blank-payload case and `rootStart` doesn't; `rootStart` also has no descent
-// through a textless quote, which `selectNodeCommand` does. One "first editable position of a node"
-// serves both. The third case then needs its fold opened (or the caret kept on the row).
-openBug('B214', 'P3', 'A decorated caret lands on an opening fence, where typing goes into the info string', {
-  'zooming into blank code puts a decorated caret on its code line': () => {
-    // caret 6, the fence's end; the blank code line is 7
-    assert.equal(assertApplied(executeOnText('p\n\n```\n\n```', { type: 'zoomIn', nodes: [2] }, { config: { markup: 'decorated' } })).selection.head, 7);
-  },
-  'zooming into a textless quote puts a decorated caret in its code': () => {
-    // caret 5, on the fence
-    assert.equal(assertApplied(executeOnText('p\n\n> ```\n> x\n> ```', { type: 'zoomIn', nodes: [2] }, { config: { markup: 'decorated', quotes: 'container' } })).selection.head, 11);
-  },
-  'leaving a folded quote\'s selection doesn\'t land on its fence': () => {
-    const view = OurusView.of(OurusDoc.parse('> ```\n> x\n> ```', { config: { markup: 'decorated', quotes: 'container' } }), { folded: [1] });
-    // caret 5, fold kept
-    assert.notEqual(assertApplied(executeCommand(view, { type: 'selectNode' }, view.selectionOf([1]))).selection.head, 5);
-  },
-});
 
 // B216 [P3]. Expand selection from inside a block id selects text that excludes the caret
 //
@@ -1790,11 +2053,11 @@ openBug('B214', 'P3', 'A decorated caret lands on an opening fence, where typing
 // text's.
 openBug('B216', 'P3', 'Expand selection from inside a block id selects text that excludes the caret', {
   'expanding from inside a block id holds the caret': () => {
-    const { anchor, head } = assertApplied(executeOnText('- item ^id1\n', { type: 'expandSelection' }, { caret: 9, config: { flavor: 'obsidian' } })).selection;
+    const { anchor, head } = assertApplied(executeOnText('- item ^id1\n', { type: 'expandSelection' }, { caret: 9, config: { flavor: 'obsidian' } })).view.selection;
     assert.ok(anchor <= 9 && 9 <= head, `${anchor}–${head}`);
   },
   'expanding from right after a block id holds the caret': () => {
-    const { anchor, head } = assertApplied(executeOnText('- item ^id1\n', { type: 'expandSelection' }, { caret: 11, config: { flavor: 'obsidian' } })).selection;
+    const { anchor, head } = assertApplied(executeOnText('- item ^id1\n', { type: 'expandSelection' }, { caret: 11, config: { flavor: 'obsidian' } })).view.selection;
     assert.ok(anchor <= 11 && 11 <= head, `${anchor}–${head}`);
   },
 });
@@ -1831,193 +2094,12 @@ openBug('B217', 'P3', 'Commands disagree on what a caret on the last blank line 
 // here is reached by ourus's own commands; they need a host's edit or another snapshot.
 bugCluster('Fold and zoom guards');
 
-// B219 [P3]. The zoom guard accepts outside changes it can't see
-//
-// Location: `src/view/escape.ts`, `zoomEscape`; `src/commands/zoom.ts`, `leavesZoom`.
-//
-// Three gaps, each needing a snapshot a host brings:
-//
-// - **Order**: outside nodes are compared by parent, kind and text, not relative order.
-// - **Newly made nodes**: `m.id >= doc.nextId` misses an id a branch allocated before this
-//   snapshot; test membership.
-// - **Root removed**: `leavesZoom` compares text alone, so a removal with the same text that adds a
-//   held empty paragraph outside passes.
-openBug('B219', 'P3', 'The zoom guard accepts outside changes it can\'t see', {
-  'outside nodes swapped leave the zoom': () => {
-    const doc = OurusDoc.parse('x\n\nx\n\nq', { config: { listParent: 'container' } });
-    const moved = assertApplied(executeCommand(OurusView.of(doc), { type: 'moveSubtreeDown', nodes: [1] }, { anchor: 0, head: 0 }));
-    assert.equal(leavesZoom(OurusView.of(doc, { zoom: 3 }), moved.view.doc), true);
-  },
-  'a branch\'s older id outside leaves the zoom': () => {
-    const text = '- a\n  \n  \n  \nb';
-    const base = OurusDoc.parse(text);
-    const add = { changes: [{ from: text.length, to: text.length, insert: 'b' }] };
-    const branched = base.update({ marks: { placeholders: [9] } });
-    const from = base.update(add);
-    const next = branched.update(add);
-    // next has a held empty paragraph outside the zoom, id 3, under from.nextId 4
-    assert.equal(leavesZoom(OurusView.of(from, { zoom: 2 }), next), true);
-  },
-  'a root\'s removal that adds a node outside leaves the zoom': () => {
-    const doc = OurusDoc.parse('a\n\n\n\n\n- x\n\n\n\n\nb', { config: { listParent: 'container' } });
-    const view = OurusView.of(doc, { zoom: 2 });
-    const removal = assertApplied(executeCommand(view, { type: 'deleteSubtree', nodes: [2] }, { anchor: 7, head: 7 }));
-    // the canonical removal's text, a node more outside (three root children, not two)
-    assert.equal(leavesZoom(view, removal.view.doc.update({ marks: { placeholders: [3] } })), true);
-  },
-});
-
 // =================================================================================================
 // Block ids
 //
 // Two refusals that block ordinary editing of a named quote, one silent removal of the wrong id,
 // and the paste guard's probing. In B223 the check is right; the commands are what strand the id.
 bugCluster('Block ids');
-
-// B223 [P2]. A block id on a quote's last block is stranded by whatever follows it in the quote
-//
-// Status (2026-11-05): verified on the current tree: reproduces. See also D25 in dev/next.md.
-//
-// In a quote of several blocks the id's owner is the last block and its target the quote, and that
-// reading depends on position: the id names the quote only at the quote's end. Run without the
-// guard, each command leaves something below the owner, so the id really would name nothing: `>
-// [!note] t⏎> bo ^id⏎>⏎> dy` (Enter keeps the frame with the upper half), `> # h ^id⏎> # h` (the
-// copy goes inside the quote). **The check is right**: the id isn't left at the new last paragraph,
-// and the check doesn't misread a stripped copy. The fix is in the commands: where the owner stops
-// being last and the target is the quote, move the id to the new last block and declare it
-// (`movedBlockIds`). A Tab or paste below the owner likely meets this too (not tried).
-//
-// The rule it refuses under (dev/24-block-ids.md §4.3) was written for a one-paragraph quote. For
-// an Obsidian user this makes Enter dead in the body of any callout with an id, hence P2.
-openBug('B223', 'P2', 'A block id on a quote\'s last block is stranded by whatever follows it in the quote', {
-  'Enter in a callout\'s body keeps its id': () => {
-    assertApplied(executeOnText('> [!note] t\n> body ^id', { type: 'enter' }, { caret: 16, config: { flavor: 'obsidian' } }));
-  },
-  'Enter at a quote\'s last paragraph keeps its id': () => {
-    assertApplied(executeOnText('> a\n>\n> b ^id', { type: 'enter' }, { caret: 9, config: { flavor: 'obsidian' } }));
-  },
-  'Enter in a callout with an id line under it': () => {
-    assertApplied(executeOnText('> [!note] t\n> body\n^id', { type: 'enter' }, { caret: 16, config: { flavor: 'obsidian' } }));
-  },
-  'duplicating a quoted heading that ends the quote': () => {
-    assertApplied(executeOnText('> # h ^id', { type: 'duplicateSubtree' }, { caret: 9, config: { flavor: 'obsidian' } }));
-  },
-  'duplicating a quote\'s last paragraph': () => {
-    assertApplied(executeOnText('> a\n>\n> x ^id', { type: 'duplicateSubtree' }, { caret: 13, config: { flavor: 'obsidian' } }));
-  },
-  'duplicating a one-paragraph container quote\'s paragraph': () => {
-    assertApplied(executeOnText('p\n\n> x ^id\n\nq', { type: 'duplicateSubtree' }, { caret: 9, config: { flavor: 'obsidian', quotes: 'container' } }));
-  },
-  'duplicating a callout\'s body': () => {
-    assertApplied(executeOnText('> [!note] t\n> x ^id', { type: 'duplicateSubtree' }, { caret: 19, config: { flavor: 'obsidian', quotes: 'container' } }));
-  },
-});
-
-// B224 [P3]. The block-id paste probe fails on a selection ending in its suffix's letter
-//
-// `markedPaste` runs the paste with suffixes `-pasteda` and `-pastedb`. With the selected `b` at
-// the text's end, the writer's common-text trimming makes the second run take another route.
-// Selecting `c`, `abc`, or a `b` with text after it works. P3, not P2: a rare coincidence. The
-// probes shouldn't be able to share letters with the document.
-openBug('B224', 'P3', 'The block-id paste probe fails on a selection ending in its suffix\'s letter', {
-  'a pasted block id replaces a selected b at a text\'s end': () => {
-    assert.equal(appliedText(executeOnText('- a\n- b\n', { type: 'paste', clipboard: { 'text/plain': 'a ^foo' } }, { anchor: 6, head: 7, config: { flavor: 'obsidian' } })), '- a\n- a ^foo\n');
-  },
-});
-
-// B225 [P3]. A quote atom doesn't read a heading's block id, so a duplicate writes it twice
-//
-// Status (2026-11-05): verified on the current tree: reproduces. `quotes: atom`, so ranked P3.
-//
-// Location: `src/doc/text.ts`, `stringBlockIds`.
-//
-// `stringBlockIds` looks at paragraph leaves only. Under `quotes: container` the id is read.
-openBug('B225', 'P3', 'A quote atom doesn\'t read a heading\'s block id, so a duplicate writes it twice', {
-  'a quote atom reads its heading\'s block id': () => {
-    const doc = OurusDoc.parse('> # h ^x', { config: { flavor: 'obsidian', quotes: 'atom' } });
-    assert.deepEqual(doc.blockIds().map((blockId) => blockId.name), ['x']);
-  },
-  'duplicating a quote atom\'s heading doesn\'t write its id twice': () => {
-    // > # h ^x⏎⏎> # h ^x
-    assert.equal(appliedText(executeOnText('> # h ^x', { type: 'duplicateSubtree', nodes: [1] }, { config: { flavor: 'obsidian', quotes: 'atom' } })), '> # h ^x\n\n> # h');
-  },
-});
-
-// B226 [P3]. Duplicating a quote atom doesn't map the caret past an id it removes
-//
-// `end()` in `duplicate-subtree.ts` clamps the old offset to the shorter text rather than mapping
-// it through the removal.
-openBug('B226', 'P3', 'Duplicating a quote atom doesn\'t map the caret past an id it removes', {
-  'duplicating a quote atom maps the caret past an id it removes': () => {
-    // the copy's caret at its end, 33, after f
-    assert.equal(assertApplied(executeOnText('> a ^one\n>\n> bcdef', { type: 'duplicateSubtree' }, { caret: 14, config: { flavor: 'obsidian', quotes: 'atom' } })).selection.head, 29);
-  },
-});
-
-// B227 [P3 policy]. `addBlockId` treats block ids as case sensitive
-//
-// Status (2026-11-05): verified on the current tree: reproduces. Whether it is a bug depends on
-// Obsidian, unverified.
-//
-// If Obsidian resolves `[[#^x]]` and `[[#^X]]` to one block, the note now has two blocks a link
-// can't tell apart, and uniqueness should compare lowercased. An SxS probe of Obsidian settles it.
-openBug('B227', 'P3 policy', '`addBlockId` treats block ids as case sensitive', {
-  'addBlockId refuses a name differing only in case': () => {
-    // - b ^X. One answer of two (see above): Obsidian's reading decides.
-    const result = executeOnText('- a ^x\n- b\n', { type: 'addBlockId', name: 'X' }, { caret: 10, config: { flavor: 'obsidian' } });
-    assert.ok(result instanceof OurusRejected);
-  },
-});
-
-// B228 [P3 policy]. Footnote and reference labels aren't keys: duplicates and pastes write a second definition
-//
-// A copy loses its block id, but keeps a label, where renderers take the first definition and drop
-// the rest. To decide: refuse, rename (`[^1-2]`), or leave it, as a text editor does.
-openBug('B228', 'P3 policy', 'Footnote and reference labels aren\'t keys: duplicates and pastes write a second definition', {
-  'duplicating a footnote writes no second definition': () => {
-    const result = executeOnText('[^1]: foo\nx', { type: 'duplicateSubtree' }, { caret: 9 });
-    assert.ok(result instanceof OurusRejected || appliedText(result).match(/^\[\^1\]:/gm)?.length === 1);
-  },
-  'duplicating a reference writes no second definition': () => {
-    const result = executeOnText('[a]: http://x', { type: 'duplicateSubtree' }, { caret: 13 });
-    assert.ok(result instanceof OurusRejected || appliedText(result).match(/^\[a\]:/gm)?.length === 1);
-  },
-  'pasting a footnote the note defines writes no second definition': () => {
-    const result = executeOnText('- a[^1]\n\n[^1]: n1', { type: 'paste', clipboard: { 'text/plain': '[^1]: other\n' } }, { caret: 17 });
-    assert.ok(result instanceof OurusRejected || appliedText(result).match(/^\[\^1\]:/gm)?.length === 1);
-  },
-});
-
-// B313 [P3 policy]. Duplicating a text that ends in `^a ^b` drops the visible `^a` from the copy
-//
-// Location: `src/doc/text.ts` (`withoutBlockIds`: an id taken off, the one it uncovers taken too),
-// `src/commands/duplicate-subtree.ts`.
-//
-// In `p ^a ^b` only `^b` is an id; `^a` is text, rendered. The copy takes `^b` off, then `^a`, which ends
-// the text then: `p ^a ^b⏎⏎p`, the copy's `^a` gone. `block-ids.test.ts` asserts that taking off (`^a ^b`
-// to nothing), so it is behavior to decide, though silent loss of text the user sees. The case leans to
-// keeping the text, its `^` escaped, say: `p \^a`.
-openBug('B313', 'P3 policy', 'Duplicating a text that ends in `^a ^b` drops the visible `^a` from the copy', {
-  'a copy keeps text that is no id': () => {
-    // p ^a ^b⏎⏎p: one ^a rendered
-    const duplicated = assertApplied(executeOnText('p ^a ^b', { type: 'duplicateSubtree' }, { config: { flavor: 'obsidian' } }));
-    assert.equal(duplicated.view.doc.mdTree.renderHtml().match(/\^a/g)?.length, 2);
-  },
-});
-
-// B329 [P3]. Duplicating a heading over an empty quote and a block id on its own line fails to write
-//
-// Location: `src/commands/duplicate-subtree.ts` (the copy's block id taken off), the gap of the copied
-// empty quote.
-//
-// `┃# h⏎>⏎⏎^id` (Obsidian), duplicate: `root › 1 › 0: 1 blank lines after its text, read as 0`. Without the
-// id, `# h⏎>⏎⏎`, it duplicates. Not B305 (no last line blank but not empty).
-openBug('B329', 'P3', 'Duplicating a heading over an empty quote and a block id on its own line fails to write', {
-  'the heading duplicates, its id kept on the original': () => {
-    // root › 1 › 0: 1 blank lines after its text, read as 0
-    assertNoWriteFailure(executeOnText('# h\n>\n\n^id', { type: 'duplicateSubtree' }, { caret: 0, config: { flavor: 'obsidian' } }));
-  },
-});
 
 // B330 [P3]. Indenting `[^a]:` over a block id line fails to write
 //
@@ -2042,61 +2124,24 @@ openBug('B330', 'P3', 'Indenting `[^a]:` over a block id line fails to write', {
 // others P3. That rests on D22 in dev/next.md.
 bugCluster('Held marks (placeholders)');
 
-// B240 [P2]. Settling's fallback shadows a block id without checking
+// B237 [P3]. A rewrite loses a held space, or the node with it
 //
-// Status (2026-11-05): verified on the current tree: reproduces with hand-built marks. P2, not P1,
-// as not reached from keys.
+// Status (2026-11-09): reached from keys after all, by the sessions, 11 kept cases (the `readback
+// placeholders` groups, all but one `quotes: atom`): a held space at a quoted item's later line
+// (`2. > quote⏎┃␠ > more`), Backspace or Shift-Tab on it, the quote an atom. Still P3: the held space
+// comes of a Backspace at that line's start, and it is a quote atom's.
 //
-// Location: `src/writer/settle.ts:29` (`without = doc.update(...)` in `settleSteps`).
-//
-// `settled` refuses the loss, then the fallback drops the mark unchecked, which is the same loss. A
-// link to `^x` stops resolving, silently. Keeping the mark held was tried (2026-11-06) and reverted: the
-// text is the same either way, so the next reading of the file has the loss anyway, the model and the
-// file disagreeing until then; and Fold20 and Regression199 settle `> - ◌⏎> ^x` by that same drop,
-// `^x` going from the item to name the whole list. To decide: settling writes a text that keeps the id
-// where it can't write the node (an escape, a blank paragraph kept), or the drop and its loss are
-// accepted, the spec cases saying so.
-openBug('B240', 'P2', 'Settling\'s fallback shadows a block id without checking', {
-  'settling\'s fallback doesn\'t shadow a block id': () => {
-    const doc = OurusDoc.parse('a ^x\n\n^y\n\n\n\n', { config: { flavor: 'obsidian' }, marks: { placeholders: [9, 11] } });
-    const settled = settlePlaceholders(OurusView.of(doc), 0)!;
-    // a ^x⏎⏎^y⏎: ^x shadowed (before: not), ^y names node 1 (before: not an id)
-    assert.equal(settled.view.doc.blockIds().find((blockId) => blockId.name === 'x')?.shadowed, false);
-  },
-});
-
-// B236 [P3]. `addBlockId` on a held empty node fails with an internal error
-//
-// Status (2026-11-05): verified on the current tree: reproduces, reachable.
-//
-// Also from `- a`, Enter, Enter. The node is empty, so `^foo` becomes a stray paragraph. Refuse it
-// (`not-expressible`) before writing, as `writeBlockId` does for no text.
-openBug('B236', 'P3', '`addBlockId` on a held empty node fails with an internal error', {
-  'addBlockId on a held empty paragraph is refused, not failed': () => {
-    const entered = executeOnText('a\n\nb', { type: 'enter' }, { caret: 1, config: { flavor: 'obsidian' } });
-    assertNoWriteFailure(executeAfter(entered, { type: 'addBlockId', name: 'x' }));
-  },
-});
-
-// B237 [P2]. A rewrite loses a held space, or the node with it
-//
-// Status (2026-11-05): verified on the current tree: reproduces; reached from keys, in two.
-//
-// From keys, default options, `- a⏎  ┃```⏎  x⏎  ```⏎- b`: Delete takes one indentation space, held
-// (the host's edit), then Alt-Down gives `write-failed`, `placeholders held-space@…, read as`.
-// 100,000 sessions meet this family about 20 times, with Backspace, Enter, moves and outdent. The
-// other cases below use hand-built marks.
+// Status (2026-11-06): the shape reached from keys fixed (`- a⏎  ┃```⏎  x⏎  ```⏎- b`, Delete, then
+// Alt-Down): the draft settles the held spaces of a text it carries as it was, moved or under another
+// prefix, as of one it sets (`#settleHeldSpaces`); a held continuation moved out of a paragraph's list
+// too. P3 now: the cases left use hand-built marks, which no key sequence tried reaches.
 //
 // Seven shapes, one rule missing: when text is rewritten, either its mark stays valid in the
 // written layout, or it goes in the draft, not at the readback. The natural sequences tried for
 // these particular shapes (Backspace over a first letter in a setext title, a quote, code, a
 // continuation) left no mark, and the last has the mark off the caret's line. Joining back across a
 // blank code line with a held space fails as the third does.
-openBug('B237', 'P2', 'A rewrite loses a held space, or the node with it', {
-  'moving an item whose fence\'s indentation Delete shortened writes': () => {
-    // `- a⏎  ┃```…`, Delete: the host's edit, one space held
-    assertNoWriteFailure(executeOnText('- a\n ```\n  x\n  ```\n- b\n', { type: 'moveSubtreeDown' }, { caret: 4, placeholders: [4] }));
-  },
+openBug('B237', 'P3', 'A rewrite loses a held space, or the node with it', {
   'indenting a setext title with a held space': () => {
     assertNoWriteFailure(executeOnText(' p\n=', { type: 'indent' }, { caret: 1, placeholders: [0] }));
   },
@@ -2115,47 +2160,122 @@ openBug('B237', 'P2', 'A rewrite loses a held space, or the node with it', {
   'indenting a footnote with a held label separator': () => {
     assertNoWriteFailure(executeOnText('[^f]: f', { type: 'indent' }, { caret: 3, placeholders: [5] }));
   },
-  'moving an item out of a paragraph\'s list keeps a held continuation': () => {
-    assertNoWriteFailure(executeOnText('a\n- b\n  - c\n', { type: 'moveSubtreeUp', nodes: [2] }, { config: { flavor: 'obsidian' }, placeholders: [6] }));
-  },
   'indenting a footnote keeps a held continuation': () => {
     assertNoWriteFailure(executeOnText('[^a]: note\n    more\n', { type: 'indent', nodes: [1] }, { placeholders: [11] }));
   },
   'Shift-Enter on a lazy line of a held padding': () => {
     assertNoWriteFailure(executeOnText('1.   a\na', { type: 'shiftEnter' }, { caret: 7, placeholders: [4] }));
   },
-});
-
-// B239 [P3]. A placeholder on a paragraph's first blank line never settles
-//
-// Status (2026-11-05): verified on the current tree: reproduces with a hand-built mark; Enter at a
-// paragraph's start writes another shape.
-//
-// `settled` (`src/writer/settle.ts`) has a case for a held last line and none for a first. Each
-// call reports the same no-op.
-openBug('B239', 'P3', 'A placeholder on a paragraph\'s first blank line never settles', {
-  'a placeholder on a paragraph\'s first blank line settles': () => {
-    const doc = OurusDoc.parse('\ntext', { marks: { placeholders: [0] } });
-    assert.deepEqual([...settlePlaceholders(OurusView.of(doc), doc.text.length)!.view.doc.marks.placeholders], []);
+  'Backspace at a held space on a quote atom\'s later line in an item': () => {
+    // kept: 0023ccbb5c2c 28585d677c9c 2f3789b2a096 34dc937966f9 5e7a1622f595 c1f6c9673bc8
+    assertNoWriteFailure(executeOnText('2. > quote\n  > more\n', { type: 'deleteContentBackward' }, { caret: 11, placeholders: [11], config: { quotes: 'atom' } }));
+  },
+  'Shift-Tab at a held space on a quote atom\'s later line in an item': () => {
+    // kept: 3299b6696884 b4d87690e456 f42e97416f33 fb1afbd4a706
+    assertNoWriteFailure(executeOnText('2. > quote\n  > more\n', { type: 'outdent' }, { caret: 12, placeholders: [12], config: { quotes: 'atom' } }));
   },
 });
 
-// B296 [P3]. Dropping a blank line of ours between two quotes merges them on Tab
+// B345 [P3]. A blank line ourus raised loses its mark when its gap is written anew
 //
-// Location: `src/writer/draft.ts` (an auto gap dropped where the blocks stay apart).
+// Status (2026-11-09): found by the sessions' marks check (a mark lost on a line the command didn't
+// change), 119 kept cases of one shape: the blank line stays, blank, next to the line a command changed
+// (100 below it, the gap of a node rewritten or taken out; 18 above), its line break no longer `auto`.
+// Location: `write.ts`, `blankLines`, writing a gap anew, marks only a gap `done()` raised in this edit
+// (`GapOrigin.auto`); one raised before, its node changed or its gap passed to another node (a cut, a
+// delete, a move, Shift-Enter above it), goes unmarked. The line is the user's from then on: ourus
+// won't lower it where it is no longer needed. Fix: carry the old line's mark where a gap written anew
+// takes an old blank line (its `GapOrigin.lines`, or the node's own).
+openBug('B345', 'P3', 'A blank line ourus raised loses its mark when its gap is written anew', {
+  'cutting the last item keeps the raised blank line after it ours': () => {
+    // kept: 01a5a0e437a8 024f80b4a189 03f3834b4c59 0643e24cdc2d 07ad908c126b 0d57c72e779a 0e7dbdfbd482
+    // kept: 0ecaa880aca2 0fe89b373bc8 103f90665064 11d521e01920 1485ff1c00b2 15f5d3b1ddff 177044477376
+    // kept: 17a948aacca6 17c4921b0ba8 1b0143b7afd9 1feee3cdbbb8 21ec3a007913 22f8a37050c9 23911aae529f
+    // kept: 2599f04ef4ed 2a7c5e50f605 366d836d9eb0 368ce2ba9697 395a80cc74c1 396c25d40316 3de368f1899f
+    // kept: 3ec22cfdd0dc 42c606864f37 435373bee71c 4602dd2c81d8 48c130720de4 4be29d936c81 4c1ae8ac6f21
+    // kept: 4c66ff8de151 4dbc5f9bec4d 4f479399d9a3 514493c0b3c9 51762c81bc4b 59b8a768c222 5c108d7894cb
+    // kept: 65ba0d51a6ea 65bc08b15960 699c52f1d917 6c7b49b61c6b 6d7e6a82e246 6da986d2d4ae 6fe856e6adc3
+    // kept: 70352743d4a6 7047f02ca30f 717e77f3be1e 727dfea8c9db 72a8748dad33 73f93c2006ec 751a7be1e53c
+    // kept: 763b4145a2ae 77412f93bf5e 7ce579b834c3 7ff427041680 873a10d02f5e 87566d498aa1 8b99ebb335c8
+    // kept: 8c930ed61c2b 8e8d9383587a 9081f1a89c67 91fcb3dd0366 938a2e0241a0 94762801579e 9668a132349f
+    // kept: 974aebfbfc18 97cddda787ad 987957e36bcb 998f45e9dd2a 99cd4f287371 9b61f87a084e 9bb6557aa3d2
+    // kept: 9c54a4de3739 9e2946aa84d1 a218bb359190 a2760afbca5a a5e9c422e91a a6bd3d1b6de2 a74f79467eb0
+    // kept: aa8a18599e49 ac6a74ec4229 b0a31c41b531 b2d8ae784041 b61291c9f823 b802e07e117e bc57221e34bc
+    // kept: c3e6ad077dd6 c46cbf369da3 c613e18781f0 c7260af81992 c7711bfddade caf27e2c546c d1457a03fa64
+    // kept: d3476986211c d72ad7de80f0 d7d6bdc71450 d8781e48d520 d97f9d0b542b dbfdd69269d2 e451f302acc0
+    // kept: e52e09336826 e611ba30da90 e6f8c9839959 e8f18643dc1f eb716889f7bc eeb5b19933b2 f1b3da81063f
+    // kept: f260e6506839 f5844435c622 f6424656b9b8 f7deae5494c7 f8ae6c4a9808 f979480483e9 fa035b921479
+    // kept: fdde8a874411 ff191d7b455a ffce04b8dc4a
+    // kept: 32d799463ed5 3c8478b3d0b8 4705f2caeeda 7da2a13b88c6 8a09c0233dbb
+    const result = assertApplied(executeOnText('- a\n- b\n\nc\n', { type: 'cut' }, { caret: 6, auto: [8] }));
+    assert.equal(result.view.doc.text, '- a\n\nc\n');
+    assert.deepEqual(result.view.doc.marks.auto, [4]);
+  },
+  'deleting the last item keeps it ours': () => {
+    const result = assertApplied(executeOnText('- a\n- b\n\nc\n', { type: 'deleteSubtree' }, { caret: 6, auto: [8] }));
+    assert.deepEqual(result.view.doc.marks.auto, [4]);
+  },
+  'cutting a quote\'s last item keeps it ours': () => {
+    const result = assertApplied(executeOnText('- a\n  > q\n  > - b\n\nc\n', { type: 'cut' }, { caret: 16, auto: [18] }));
+    assert.equal(result.view.doc.text, '- a\n  > q\n\nc\n');
+    assert.deepEqual(result.view.doc.marks.auto, [10]);
+  },
+  'Shift-Enter at a quoted paragraph\'s end keeps the raised blank line under it ours': () => {
+    const result = assertApplied(executeOnText('> x\n>\n> y\n', { type: 'shiftEnter' }, { caret: 3, auto: [5] }));
+    assert.equal(result.view.doc.text, '> x\n> \n>\n> y\n');
+    assert.deepEqual(result.view.doc.marks.auto, [8]);
+  },
+  'moving a copy above its original, the text the same, keeps it ours': () => {
+    const result = assertApplied(executeOnText('- > [!note] Title\n  > body text\n  >\n  > body text\n', { type: 'moveSubtreeUp' }, { caret: 40, auto: [35], config: { flavor: 'obsidian', quotes: 'container' } }));
+    assert.deepEqual(result.view.doc.marks.auto, [35]);
+  },
+});
+
+// B351 [P3]. Moving an empty held quoted paragraph down past a heading fails to write
 //
-// A blank line ourus put in (an auto mark on it) may go only while the blocks either side stay
-// apart. `> first⏎>⏎> second⏎⏎>` with that mark, Tab on `second`: written `> first⏎>⏎> -
-// second⏎>`, the gap gone, the empty quote now the first's: `root: 2 children, read as 1`. Without
-// the mark it writes. Default options and `quotes: container`. Sessions reach such marks: 46852
-// (`> over two lines⏎⏎> body text⏎> more⏎`, caret 18, GFM, `quotes: container`: indent, enter,
-// down, `x`, down, up, indent, indent); 9 or 10 per 100,000 sessions. Not B237 nor B69. P3: the mark
-// from a session with non-default options.
-openBug('B296', 'P3', 'Dropping a blank line of ours between two quotes merges them on Tab', {
-  'Tab beside an auto blank line between quotes keeps them apart': () => {
-    const source = '> first\n>\n> second\n\n>';
-    const doc = OurusDoc.parse(source, { marks: { auto: [source.lastIndexOf('\n')] } });
-    assertNoWriteFailure(executeCommand(OurusView.of(doc), { type: 'indent' }, { anchor: source.indexOf('second'), head: source.indexOf('second') }));
+// Status (2026-11-09): found by the sessions (`readback children`, Alt-Down). `- > ┃⏎  > # x`, the quote's
+// first paragraph empty, held by a placeholder: moved down, past the heading, `root: 1 children, read as
+// 2`. Unheld, or with a paragraph for the heading, the move is refused.
+openBug('B351', 'P3', 'Moving an empty held quoted paragraph down past a heading fails to write', {
+  'Alt-Down on it': () => {
+    // kept: 75ce48d2e860 9fb2e3572416 cea761216e66
+    // kept: 0cf2ccf4a7e0
+    assertNoWriteFailure(executeOnText('- > \n  > # x\n', { type: 'moveSubtreeDown' }, { caret: 4, placeholders: [4] }));
+  },
+});
+
+// B353 [P3]. A blank line ourus raised goes where Markdown still needs it
+//
+// Status (2026-11-09): found by the sessions (`auto` marks given). The opposite of B345: an edit next to a blank line
+// ourus raised (its line break `auto`) lowers it, where it still sets two blocks apart, and what
+// follows reads as lazy text of what is above (`Final line` of an item, a table of a paragraph):
+// Enter in a quote's list, outdenting a tab-led item, `root: N children, read as M`.
+openBug('B353', 'P3', 'A blank line ourus raised goes where Markdown still needs it', {
+  'Enter in a quoted list above a raised blank line': () => {
+    // kept: 411b17b783fe
+    // kept: 999e44328569
+    assertNoWriteFailure(executeOnText("  > quoted in item\n  >\n  > - \n  > - \n  >\t\t- list in quote\n\n%% comment %%\n- item ^id1\n- other\n", { type: "enter" }, { caret: 44, config: { flavor: "gfm", indentUnit: "tab" }, auto: [22, 58] }));
+  },
+  'outdenting a tab-led item above a raised blank line': () => {
+    // kept: 1558ea209e41 68fa1145613e
+    assertNoWriteFailure(executeOnText("second line\n- other\n\t- item ^id1\n\nFinal line ^blk\n", { type: "outdent" }, { caret: 28, config: { flavor: "commonmark", indentUnit: "tab" }, auto: [33] }));
+  },
+  'outdenting an empty quoted item above one': () => {
+    // kept: 994b8af00159
+    assertNoWriteFailure(executeOnText("  > - list in quote\n  >\t- \n  >\t-- \n  >\n  > \n", { type: "outdent" }, { caret: 43, config: { flavor: "obsidian", indentUnit: "tab" }, placeholders: [43], auto: [38] }));
+  },
+});
+
+// B372 [P3]. Outdenting the item above an empty held item drops its placeholder
+//
+// Status (2026-11-09): found by the sessions' marks check. `p⏎- [x] do┃ne⏎- ┃` (the empty item held),
+// Shift-Tab on `done` at the root: it becomes a paragraph, a blank line raised before the empty item,
+// whose placeholder (valid there) is dropped.
+openBug('B372', 'P3', 'Outdenting the item above an empty held item drops its placeholder', {
+  'Shift-Tab on a task item above an empty held item at the note\'s end': () => {
+    // kept: 2f7dc2eb6f19
+    const result = assertApplied(executeOnText('Intro paragraph with a [[link]] and `code`.\n- [x] done\n- \n', { type: 'outdent' }, { caret: 50, placeholders: [57], config: { flavor: 'gfm', quotes: 'container' } }));
+    assert.equal(result.view.doc.marks.placeholders.length, 1);
   },
 });
 
@@ -2218,22 +2338,6 @@ openBug('B293', 'P3', 'A drag\'s seams count an unclosed fence\'s blank code lin
   },
 });
 
-// B311 [P3]. An external drag offers places for a clipboard the drop then finds empty
-//
-// Location: `src/commands/drag.ts` (an external clipboard's pickup), `src/commands/paste.ts`
-// (`pasteAtCommand`, which drops the block ids the note has first).
-//
-// `p ^id⏎⏎q`, a drag of `^id⏎` (text/markdown) from outside: five places on three seams, and each drop
-// `not-expressible: nothing to paste`, the paragraph being only an id the note holds. The pickup should
-// see the clipboard the drop will: offer no place, or refuse. Not B241.
-openBug('B311', 'P3', 'An external drag offers places for a clipboard the drop then finds empty', {
-  'a drag of nothing the drop would paste offers no place': () => {
-    // five places, each drop: nothing to paste
-    const drag = executeOnText('p ^id\n\nq', { type: 'drag', clipboard: { 'text/markdown': '^id\n' } }, { config: { flavor: 'obsidian' } });
-    assert.ok(!(drag instanceof OurusSuccess) || !drag.dropMap!.seams.some((seam) => seam.points.length > 0));
-  },
-});
-
 // =================================================================================================
 // Typing and bracket pairing
 //
@@ -2241,41 +2345,6 @@ openBug('B311', 'P3', 'An external drag offers places for a clipboard the drop t
 // spec ranks bracket pairing `common`. The pair logic is prose-only, so it stops where a node
 // doesn't exist yet or isn't prose.
 bugCluster('Typing and bracket pairing');
-
-// B242 [P2 partly fixed]. Bracket pairing doesn't work in a quote atom
-//
-// Location: `src/commands/typing.ts`, `bracketTyped`, `inlinePair`, `wrapInBrackets`.
-//
-// All need `at.text instanceof OurusProse`. A blank line pairs now (`bracketOnBlankLine`, Regression273);
-// a quote atom doesn't, at a caret or over a selection, where the same quote read as text does. The
-// backtick's pair isn't typed on a blank line either: `$`'s can't be, `$$` alone opening a block.
-openBug('B242', 'P2 partly fixed', 'Bracket pairing doesn\'t work in a quote atom', {
-  'a bracket pairs in a quote atom': () => {
-    assert.equal(appliedText(executeOnText('> a ', { type: 'insertText', text: '(' }, { caret: 4, config: { autoClose: ['('], quotes: 'atom' } })), '> a ()');
-  },
-  'a bracket wraps a selection in a quote atom': () => {
-    // Deferred: replaces abc with (
-    assert.equal(appliedText(executeOnText('> abc', { type: 'insertText', text: '(' }, { anchor: 2, head: 5, config: { autoClose: ['('], quotes: 'atom' } })), '> (abc)');
-  },
-});
-
-// B244 [P3]. In code, a pair can't be taken back, and double-only settings do nothing
-//
-// Location: `src/commands/typing.ts`, `bracketInCode`; `src/commands/code.ts`, `joinInCode`.
-//
-// Both came with `bracketInCode` (dev/28-bugs.md): `deleteEmptyPair` takes prose only, and the
-// double-only branch of `bracketTyped` wasn't brought over.
-openBug('B244', 'P3', 'In code, a pair can\'t be taken back, and double-only settings do nothing', {
-  'Backspace takes back a pair made in code': () => {
-    const paired = executeOnText('```\n\n```', { type: 'insertText', text: '(' }, { caret: 4, config: { autoClose: ['('] } });
-    // Deferred: `)` stays
-    assert.equal(appliedText(executeAfter(paired, { type: 'deleteContentBackward' })), '```\n\n```');
-  },
-  'a double listed alone closes in code': () => {
-    // [[, no closers
-    assert.equal(appliedText(executeOnText('```\n[\n```', { type: 'insertText', text: '[' }, { caret: 5, config: { autoClose: ['[['] } })), '```\n[[]]\n```');
-  },
-});
 
 // B245 [P3]. Typing before a glued block id, then Backspace, leaves two spaces
 //
@@ -2349,36 +2418,6 @@ openBug('B247', 'P3 policy', 'Angle autolinks decode entities, as cmark-gfm does
   },
 });
 
-// B250 [P3]. JavaScript's whitespace isn't Markdown's
-//
-// Five sites use `trim()` or a broad blank class where only space, tab and line endings are
-// whitespace:
-//
-// | Site | Effect |
-// |---|---|
-// | `src/parser/chars.ts:145` (`normalizeLabel`) | `[a] [⍽a]⏎⏎[a]: /plain⏎[⍽a]: /nbsp`: both go to `/plain` (micromark, cmark-gfm: `/nbsp`); a label of NBSP alone is lost |
-// | `src/parser/readback.ts:24` (`firstNonParagraph`) | `['⍽', '', '⍽']` called one paragraph: `-1`, no escapes, the parse has 2 |
-// | `src/parser/blocks.ts:321` (`fencedCodeStart`) | info `⍽js⍽` read as `js` (micromark, cmark-gfm keep it) |
-// | `src/parser/chars.ts` (`isBlankChar`), `syntax.ts` (`lineInfo`) | a `\f` paragraph's line reads as blank: `a⏎⏎\f⏎⏎b`, the seam before `b` has `gapLines: 3`, crossing a paragraph; `isEmptyLine(2)` true |
-// | `src/commands/typing.ts:204` | B196 |
-//
-// `trimMd` exists; use it. P3: NBSP and form feed are rare input.
-openBug('B250', 'P3', 'JavaScript\'s whitespace isn\'t Markdown\'s', {
-  'a label\'s NBSP is significant': () => {
-    // both go to /plain
-    assert.equal(MdTree.parse('[a] [\u00a0a]\n\n[a]: /plain\n[\u00a0a]: /nbsp').references.size, 2);
-  },
-  'NBSP lines aren\'t blank to the read-back': () => {
-    assert.notEqual(MdFlavor.gfm.firstNonParagraph(['\u00a0', '', '\u00a0']), -1);
-  },
-  'a fence\'s info keeps NBSP': () => {
-    assert.equal(MdTree.parse('```\u00a0js\u00a0\nx\n```').root.children[0]!.attrs.info, '\u00a0js\u00a0');
-  },
-  'a form feed paragraph\'s line isn\'t blank': () => {
-    assert.equal(OurusDoc.parse('a\n\n\f\n\nb').isEmptyLine(2), false);
-  },
-});
-
 // B251 [P3]. Escapes and entities split GFM email autolinks
 //
 // Status (2026-11-05): verified on the current tree: reproduces; cmark-gfm links every row whole.
@@ -2413,68 +2452,11 @@ openBug('B251', 'P3', 'Escapes and entities split GFM email autolinks', {
   },
 });
 
-// B252 [P3]. A sentinel can make unclosed front matter
-//
-// `frontmatterStart` looks ahead on the raw line, which the sentinel doesn't change, then real
-// processing never closes it. Only a closed fence is meant to make front matter
-// (`src/parser/obsidian.ts:59`).
-openBug('B252', 'P3', 'A sentinel can make unclosed front matter', {
-  'a sentinel on the closing fence makes no front matter': () => {
-    const tree = MdTree.parse('---\na\n---', MdFlavor.obsidian, { sentinels: [9] });
-    assert.notEqual(tree.root.children[0]!.type, 'frontmatter');
-  },
-});
-
 // =================================================================================================
 // Extension and public API
 //
 // Boundaries a host or an extension author meets, outside the editing commands.
 bugCluster('Extension and public API');
-
-// B255 [P3]. Custom delimiters: surrogate pairs and emphasis's rule of three
-//
-// Location: `src/parser/inlines.ts` (`handleDelimiters`, `processEmphasis:369`).
-//
-// An astral delimiter counts UTF-16 units: `💥x💥` gives spark `[0,4)`, a child starting on a low
-// surrogate, and a stray low surrogate after. And `oddMatch`, a rule of CommonMark's emphasis,
-// applies to every delimiter: with `+` matching one character, `a+x+b` is a node and `a+x++b` all
-// text.
-//
-// P3: no shipped flavor has either.
-openBug('B255', 'P3', 'Custom delimiters: surrogate pairs and emphasis\'s rule of three', {
-  'an astral delimiter keeps its surrogates together': () => {
-    const delimiter = { char: '💥', match: () => ({ use: 1, type: 'spark' }) };
-    const flavor = defineFlavor('spark', [{ name: 'spark', delimiters: [delimiter], inlines: [{ name: 'spark', triggers: '💥', parse: (parser) => parser.handleDelimiters(delimiter) }] }]);
-    // spark [0,4), its child text [1,3), then text [4,5)
-    assert.deepEqual(firstBlockInlines('💥x💥', flavor).map((node) => [node.type, node.from, node.to]), [['spark', 0, 5]]);
-  },
-  'a custom delimiter isn\'t held to emphasis\'s rule of three': () => {
-    const delimiter = { char: '+', match: () => ({ use: 1, type: 'plus' }) };
-    const flavor = defineFlavor('plus', [{ name: 'plus', delimiters: [delimiter], inlines: [{ name: 'plus', triggers: '+', parse: (parser) => parser.handleDelimiters(delimiter) }] }]);
-    // a+x+b has a node; a+x++b is all text, `match` never asked
-    assert.ok(firstBlockInlines('a+x++b', flavor).some((node) => node.type === 'plus'));
-  },
-});
-
-// B259 [P3]. Refusal details show internal names and bad grammar
-//
-//   p⏎⏎┃---, outdent                → a atom has no level to leave  (a table too)
-//   x⏎⏎```⏎code⏎```⏎⏎┃y, Backspace  → can't join into code_block
-//
-// Hosts show `detail`. `outdent.ts:30`, `backspace.ts:394`, `indent.ts:26`, `code.ts:182`. One
-// helper naming kinds in words.
-openBug('B259', 'P3', 'Refusal details show internal names and bad grammar', {
-  'a refusal names a rule in words': () => {
-    const result = executeOnText('p\n\n---', { type: 'outdent' }, { caret: 3 });
-    assert.ok(result instanceof OurusRejected);
-    assert.doesNotMatch(result.detail ?? '', /a atom/);
-  },
-  'a refusal names code in words': () => {
-    const result = executeOnText('x\n\n```\ncode\n```\n\ny', { type: 'deleteContentBackward' }, { caret: 17 });
-    assert.ok(result instanceof OurusRejected);
-    assert.doesNotMatch(result.detail ?? '', /code_block/);
-  },
-});
 
 // =================================================================================================
 // Performance
@@ -2581,33 +2563,18 @@ openBug('B264', 'P3', 'Delimiters at formatting edges come out literal', {
   },
 });
 
-// B265 [P3]. CSS declarations are matched by regexes
+// B265 [P3]. A style's `inherit` and an inherited decoration aren't resolved
 //
-// Location: `#inline`, `FORMAT_STYLE`.
+// Location: `#inline`, `styledDown`; the style itself parsed once since (`cssOf`, 2026-11-07: spaces,
+// case, `!important` and a property's whole name, a test in `commands.test.ts`).
 //
 // | Style | Result | Should be |
 // |---|---|---|
-// | `<p><span style="font-weight : bold">x</span></p>`, `<p><span style="FONT-WEIGHT: BOLD">x</span></p>` | plain | bold |
-// | `<p><span style="font-weight:bold!important;font-weight:normal">x</span></p>` | plain | bold |
-// | `<p><span style="not-font-weight:bold">x</span></p>` | bold | plain |
 // | `<div style="font-style:italic"><p><span style="font-style:inherit">x</span></p></div>` | `**x**` | italic |
 // | `<p><span style="text-decoration:line-through">a<span style="text-decoration:none">b</span>c</span></p>` | `~~a~~b~~c~~` | struck throughout: decoration isn't inherited off |
 //
-// Parse declarations once (name, value, priority), resolve `inherit`, and treat decoration apart
-// from font properties.
-openBug('B265', 'P3', 'CSS declarations are matched by regexes', {
-  'a blank before a property\'s colon': () => {
-    assert.equal(convertPastedHtml('<p><span style="font-weight : bold">x</span></p>').markdown, '**x**');
-  },
-  'property names and values in any case': () => {
-    assert.equal(convertPastedHtml('<p><span style="FONT-WEIGHT: BOLD">x</span></p>').markdown, '**x**');
-  },
-  '!important beats a later declaration': () => {
-    assert.equal(convertPastedHtml('<p><span style="font-weight:bold!important;font-weight:normal">x</span></p>').markdown, '**x**');
-  },
-  'an unknown property isn\'t its suffix': () => {
-    assert.equal(convertPastedHtml('<p><span style="not-font-weight:bold">x</span></p>').markdown, 'x');
-  },
+// Resolve `inherit`, and treat decoration apart from font properties.
+openBug('B265', 'P3', 'A style\'s `inherit` and an inherited decoration aren\'t resolved', {
   'inherit keeps what is inherited': () => {
     assert.equal(convertPastedHtml('<div style="font-style:italic"><p><span style="font-style:inherit">x</span></p></div>').markdown, '*x*');
   },
@@ -2655,6 +2622,8 @@ openBug('B267', 'P3', 'Lists: a nested restart, loose tasks, a rule in an item',
     assert.equal(convertPastedHtml('<ul><li>x<ol><li>a</li></ol><ol><li>b</li></ol></li></ul>').rendered.match(/<ol/g)?.length, 2);
   },
   'a loose task keeps its text with its checkbox': () => {
+    // kept: d583112b562f f00bed9a9f55 (a loose list's task rendered and read back, `- other⏎⏎- [x] done`)
+    // kept: eafaca402cff
     assert.equal(convertPastedHtml('<ul><li><input type="checkbox"><p>task</p></li></ul>').markdown, '- [ ] task');
   },
   'a rule in an item keeps the item': () => {
@@ -2857,8 +2826,46 @@ openBug('B340', 'P3', 'Word\'s list levels nest past the stack, flat HTML though
   },
 });
 
+// B375 [P3]. An unclosed math block after code doesn't come back from its HTML
+//
+// Status (2026-11-09): found by conserve's round trip. ```` ```js⏎```⏎$$ ```` (Obsidian): an empty code
+// block, then `$$` that nothing closes, rendered and read back, renders otherwise; `$$` alone comes
+// back.
+openBug('B375', 'P3', "An unclosed math block after code doesn't come back from its HTML", {
+  'an empty code block and an unclosed `$$` rendered and read back': () => {
+    // kept: a9224dd753de cbe2f9a23c80
+    assert.deepEqual(htmlFailures('```js\n```\n$$', { flavor: 'obsidian' }), []);
+  },
+});
+
+// B373 [P3]. A callout doesn't come back from its HTML
+//
+// Status (2026-11-09): found by conserve's round trip. A callout renders as `<div class="callout"
+// data-callout="note">` with its title in `<div class="callout-title">`; reading that back gives
+// plain paragraphs (`Title⏎⏎body text`), no callout, no quote.
+openBug('B373', 'P3', 'A callout doesn\'t come back from its HTML', {
+  'a callout rendered and read back is a callout': () => {
+    // kept: 9832cc5a533d f8c10ed024a2
+    // kept: 7dda30a5048d
+    assert.deepEqual(htmlFailures('> [!note] Title\n> body text\n', { flavor: 'obsidian' }), []);
+  },
+});
+
+// B374 [P3]. A wiki link doesn't come back from its HTML
+//
+// Status (2026-11-09): found by conserve's round trip. `[[link]]` renders as `<a data-href="link"
+// href="link" class="internal-link">`; reading that back gives `[link](link)`, a link of another
+// kind.
+openBug('B374', 'P3', 'A wiki link doesn\'t come back from its HTML', {
+  'a wiki link rendered and read back is a wiki link': () => {
+    // kept: 0dd460e1bfcc
+    // kept: 2d408cefab42
+    assert.deepEqual(htmlFailures('a [[link]] b\n', { flavor: 'obsidian' }), []);
+  },
+});
+
 // The id the next bug takes: raise it with each new bug. Ids aren't reused, a fixed bug's included, so
 // this stays where it is when bugs go. The run fails on a bug at or past it, or on an id taken twice.
-const NEXT_BUG_ID = 341;
+const NEXT_BUG_ID = 377;
 
 reportBugs(NEXT_BUG_ID);

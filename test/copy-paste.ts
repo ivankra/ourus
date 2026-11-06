@@ -94,7 +94,7 @@ for (const start of starts) {
   for (const node of allNodes(doc)) {
     if (node.children.length) continue;
     const at = endOf(doc, node);
-    const state: PlayedState = { view: OurusView.of(doc), selection: { anchor: at, head: at }, clipboard: {} };
+    const state: PlayedState = { view: OurusView.of(doc, { selection: at }), clipboard: {} };
     const duplicated = playActions(state, ['duplicateSubtree']);
     const copied = playActions(state, ['copy']);
     if (!(copied.last instanceof OurusSuccess)) continue;
@@ -113,10 +113,10 @@ for (const start of starts) {
     const group = `${node.kind}${what ? ` (${what})` : ''} ${shape}`;
     counts.set(group, (counts.get(group) ?? 0) + 1);
     if (shape === 'same') continue;
-    const line = `${group}: ${JSON.stringify(drawState(doc.text, state.selection))} → duplicate ${JSON.stringify(duplicated.view.doc.text)}, paste ${JSON.stringify(pasted.view.doc.text)}`;
+    const line = `${group}: ${JSON.stringify(drawState(doc.text, state.view.selection))} → duplicate ${JSON.stringify(duplicated.view.doc.text)}, paste ${JSON.stringify(pasted.view.doc.text)}`;
     dump.push(line);
     const list = noted.get(group) ?? [];
-    if (list.length < examples) noted.set(group, [...list, `    ${drawState(doc.text, state.selection).replace(/\n/g, '⏎')}\n      duplicate ${duplicated.view.doc.text.replace(/\n/g, '⏎')}\n      paste     ${pasted.view.doc.text.replace(/\n/g, '⏎')}`]);
+    if (list.length < examples) noted.set(group, [...list, `    ${drawState(doc.text, state.view.selection).replace(/\n/g, '⏎')}\n      duplicate ${duplicated.view.doc.text.replace(/\n/g, '⏎')}\n      paste     ${pasted.view.doc.text.replace(/\n/g, '⏎')}`]);
   }
 }
 

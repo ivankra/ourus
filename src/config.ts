@@ -101,12 +101,15 @@ export interface OurusConfig {
   /**
    * The numbers of an ordered list a command changes (an item put in, moved, deleted):
    * - `renumber` (the default, as the block apps, which hold no numbers in their text: Logseq,
-   *   Logseq DB, WorkFlowy, Tana, Tine, RemNote, Dynalist, Athens): its items numbered on from its
-   *   first, one up each.
-   * - `keep` (as the text editors: Obsidian in all four setups, SilverBullet, Emacs): the numbers
-   *   written stay; an item a command makes is numbered on from the item above it.
+   *   Logseq DB, WorkFlowy, Tana, Tine, RemNote, Dynalist, Athens; and Obsidian, bare, in Live Preview
+   *   and with the true-outliner plugin): its items numbered on from its first, one up each.
+   * - `shift` (as SilverBullet's Enter): each number as written; an item a command makes is numbered
+   *   on from the item above it, and the run after it that counted on, one up each, shifts with it
+   *   (`2. a┃⏎3. b⏎3. c`, Enter: `2. 3. 4. 3.`). SilverBullet's moves renumber the list from 1.
+   *
+   * A list numbered all alike (`1.`, `1.`) is numbered so too, as every text editor numbers it.
    */
-  readonly listNumbers: 'renumber' | 'keep';
+  readonly orderedLists: 'renumber' | 'shift';
 
   /**
    * What a quote is in the outline:
@@ -257,10 +260,14 @@ export interface OurusConfig {
    * Enter in a quote's text (`quotes: text`, a quote of one paragraph) or in a quote read as an atom
    * (`quotes: atom`):
    * - `line` (the default, as Obsidian, bare and with its Outliner, SilverBullet and WorkFlowy): a line
-   *   of the quote, its `> ` written, and in a quoted list's item (`atom`) its marker too (`> - `); on
-   *   an empty line it leaves the quote (an empty item's marker going first), a paragraph after it.
+   *   of the quote, its `> ` written, and in a quoted list's item (`atom`) the list's next marker too
+   *   (`> - `, `> 2. `, numbered as `orderedLists` says); on an empty item as `enterOnEmptyItem`
+   *   says (outdented, its marker goes, or nested, it is its parent's next item); on an empty line it
+   *   leaves the quote, a paragraph after it.
    * - `split` (as Logseq, Tine, Roam, Athens and Dynalist split a block, and BlockNote its quote): the
    *   rest of the text a paragraph after the quote, unquoted (an item after an item).
+   *
+   * Either way the spaces at the caret go as `enterSplitSpace` says.
    */
   readonly enterInQuote: 'line' | 'split';
 
@@ -277,18 +284,6 @@ export interface OurusConfig {
    * both options apply (Delete on an empty item whose first child has children), either refuses.
    */
   readonly joinWithChildren: 'join' | 'refuse';
-
-  /**
-   * A merge (Backspace at a text's start, Delete at its end, a selection across nodes typed over or
-   * deleted) of two nodes that both have a block id (spec/block-ids.md). Where only the
-   * lower one has one, the node that stays takes it, whatever this says.
-   * - `refuse` (the default): refused as `block-id`. A node keeps one block id: links to the other
-   *   would find nothing.
-   * - `merge`: the node that stays keeps its own, the other's goes, and the result says which went
-   *   into which (`mergedBlockIds`), for a host that redirects the links to it (Obsidian's metadata
-   *   cache finds them in every note). Logseq OG keeps one and redirects references to the other.
-   */
-  readonly joinBlockIds: 'refuse' | 'merge';
 
   /**
    * Backspace at the start of an item with nothing above it in its container (the document's first
@@ -634,7 +629,7 @@ const CONFIG_VALUES: { readonly [K in Exclude<keyof OurusConfig, ListOption>]: r
   outdent: ['direct', 'logical'],
   outdentTopLevel: ['unwrap', 'refuse'],
   bullet: ['-', '*', '+'],
-  listNumbers: ['renumber', 'keep'],
+  orderedLists: ['renumber', 'shift'],
   quotes: ['text', 'atom', 'container'],
   listParent: ['paragraph', 'block', 'container'],
   listMoves: ['list', 'item'],
@@ -648,7 +643,6 @@ const CONFIG_VALUES: { readonly [K in Exclude<keyof OurusConfig, ListOption>]: r
   enterInQuote: ['line', 'split'],
   // Backspace and Delete at a node's edge
   joinWithChildren: ['join', 'refuse'],
-  joinBlockIds: ['refuse', 'merge'],
   backspaceAtTopItem: ['unwrap', 'refuse'],
   backspaceAtItemStart: ['join', 'body', 'unwrap', 'logseq'],
   emptyItemWithChildren: ['lift', 'refuse'],

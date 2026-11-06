@@ -22,7 +22,8 @@
     "test": "node test/heavy.ts",
     "test:fast": "tsc -p . && node --test test/*.test.ts test/*/*.test.ts sxs/*/*.test.ts",
     "test:model": "node test/model/run.ts",
-    "typecheck": "tsc -p . && tsc -p demos/cm6 && tsc -p demos/textarea"
+    "test:volume": "node test/volume.ts",
+    "typecheck": "tsc -p . && tsc -p demos/cm6 && tsc -p demos/textarea && tsc -p demos/gtk"
   },
   "devDependencies": {
     "@codemirror/commands": "^6.11.1",

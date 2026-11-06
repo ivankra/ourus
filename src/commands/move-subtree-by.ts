@@ -3,6 +3,7 @@
 // rest (blank lines, lists, escapes, the caret's place in the text).
 
 import type { OurusNode } from '../doc/index.ts';
+import { nameOf, withArticle } from '../doc/index.ts';
 import { type CommandContext } from './context.ts';
 import { headingLevel, oneRun, operandsRefused, selectionInText, withTextlessParents } from './util.ts';
 import type { OurusResult } from './types.ts';
@@ -63,7 +64,7 @@ function moveSubtreeBy(ctx: CommandContext, dir: -1 | 1): OurusResult | null {
     const quote = (first.kind === 'quote' || other.kind === 'quote') && first.kind !== 'heading' && other.kind !== 'heading';
     const across = flat && ((whole && group(other) === 'leaf') || (group(first) === 'leaf' && other.kind === 'item'));
     if (first.kind === 'heading' && (other.kind !== 'heading' || headingLevel(ctx, first) !== headingLevel(ctx, other))) return new OurusRejected('would-reparent', 'a heading moves among headings of its level');
-    if (!quote && !across && group(other) !== group(first)) return new OurusRejected('not-expressible', `can't reorder ${first.kind} past ${other.kind}`);
+    if (!quote && !across && group(other) !== group(first)) return new OurusRejected('not-expressible', `can't reorder ${withArticle(nameOf(first))} past ${withArticle(nameOf(other))}`);
     let past = other;
     if (flat && byList && first.kind !== 'item') while (list(past) && list(dir < 0 ? past.prev : past.next) === list(past)) past = (dir < 0 ? past.prev : past.next)!;
     draft.place(dir < 0 ? 'before' : 'after', past, nodes);

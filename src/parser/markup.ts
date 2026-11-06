@@ -47,7 +47,7 @@ function headingMarkup(tree: MdTree, leaf: MdBlockAt, line: number): MdLineMarku
   while (hashes < info.to && text.charCodeAt(hashes) === 35) hashes++;
   const marks: MdMark[] = [{ kind: 'open', from, to: hashes }];
   const textFrom = skip(text, hashes, info.to);
-  let textTo = info.to;
+  let textTo: number = info.to;
   const end = skip(text, info.to, textFrom);
   let close = end;
   while (close > textFrom && text.charCodeAt(close - 1) === 35) close--;

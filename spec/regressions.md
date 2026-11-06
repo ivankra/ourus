@@ -1282,9 +1282,9 @@ flavor: commonmark
 
 ```markdown
 1. a
-1. ┃«x
+2. ┃«x
     - [»x] x
-  1. 
+  3. 
     - 
 ```
 
@@ -1567,7 +1567,7 @@ flavor: commonmark
 ┃«1. x
 - »a
 2. a
-  1. b
+  3. b
     1. x
 ```
 
@@ -1623,9 +1623,9 @@ listParent: block
 ```markdown
     1. a
 1. a
-1. ┃«x
+2. ┃«x
       - [»x] x
-  1. 
+  3. 
     - 
 ```
 
@@ -1712,7 +1712,7 @@ clipboard: |
 ```markdown
 - a
 1. x┃
-1. b
+2. b
 ```
 
 ## Regression64
@@ -5017,8 +5017,7 @@ tags: rare
 
 ```markdown
 # h
-> -␠
-> ^x
+> - ^x
 ```
 
 ```yaml
@@ -5729,7 +5728,8 @@ quotes: atom
 ## Regression227
 
 Enter on an empty nested item of a quoted list (`quotes: atom`): it becomes its parent's sibling, as
-in Obsidian and SilverBullet; it left the list.
+in Obsidian and SilverBullet; it left the list. (After a sibling: right under `parent`, `>   -` is
+the setext underline making `parent` a heading, as the document reads it, no item.)
 
 ```yaml
 tags: rare
@@ -5738,6 +5738,7 @@ quotes: atom
 
 ```markdown
 > - parent
+>   - child
 >   - ┃
 ```
 
@@ -5745,6 +5746,7 @@ quotes: atom
 
 ```markdown
 > - parent
+>   - child
 > - ┃
 ```
 
@@ -7107,6 +7109,398 @@ p
 p
 ```
 
+## Regression279
+
+Enter in a quote read as an atom (`quotes: atom`) continues what the caret's line is in as the
+document reads it, not as one regex over the line guessed it: in a nested quote's item, the next
+item of that quote's list, both `>`s kept; it was a line of the outer quote (B198).
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+> > - a┃
+```
+
+> enter
+
+```markdown
+> > - a
+> > - ┃
+```
+
+## Regression279b
+
+A nested quote written with no blank between its `>`s (`>>`) continues as it is written (B198).
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+>> a┃
+```
+
+> enter
+
+```markdown
+>> a
+>> ┃
+```
+
+## Regression280
+
+Enter on a line of code in a quote atom is a line of the code: no list marker, though the line reads
+like an item (B198).
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+````markdown
+> ```
+> - a┃
+> ```
+````
+
+> enter
+
+````markdown
+> ```
+> - a
+> ┃
+> ```
+````
+
+## Regression281
+
+Enter on a quoted item's continuation line makes the item's next sibling: the line is the item's
+(B198); it was a plain quoted line.
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+> 1. a
+>    more┃
+```
+
+> enter
+
+```markdown
+> 1. a
+>    more
+> 2. ┃
+```
+
+## Regression282
+
+A quoted task with Obsidian's status (`[-]`) continues as a task, its new checkbox unchecked (B198):
+the outline reads any one character between the brackets as a task's status, in a quote atom as in
+any item.
+
+```yaml
+tags: rare markup-task
+quotes: atom
+flavor: obsidian
+```
+
+```markdown
+> - [-] a┃
+```
+
+> enter
+
+```markdown
+> - [-] a
+> - [ ] ┃
+```
+
+## Regression283
+
+A quoted list's next number past nine digits is refused, as for any list: such a marker is no list
+item (B198); it wrote `1000000000.`.
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+> 999999999. a┃
+```
+
+> enter
+
+```markdown
+> 999999999. a┃
+```
+
+```yaml
+result: rejected not-expressible
+```
+
+## Regression284
+
+`orderedLists: shift` holds in a quote atom as in any list: the new item numbered on from the one above
+it, an item that counted on from that one counting on still (B199; it renumbered whatever followed,
+not by the option).
+
+```yaml
+tags: rare
+quotes: atom
+orderedLists: shift
+```
+
+```markdown
+> 2. a┃
+> 3. b
+> 3. c
+```
+
+> enter
+
+```markdown
+> 2. a
+> 3. ┃
+> 4. b
+> 3. c
+```
+
+## Regression285
+
+The list renumbered is the caret's: a list after a paragraph in the quote is another list, its
+numbers as they were (B199).
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+> 1. a┃
+> 2. b
+>
+> q
+>
+> 3. c
+```
+
+> enter
+
+```markdown
+> 1. a
+> 2. ┃
+> 3. b
+>
+> q
+>
+> 3. c
+```
+
+## Regression286
+
+A quoted number that widens (`9.` to `10.`) moves its item's other lines right as far, so a child
+stays its child (B199; it left the list, a line of code under the new marker's column).
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+> 8. a┃
+> 9. parent
+>    - child
+```
+
+> enter
+
+```markdown
+> 8. a
+> 9. ┃
+> 10. parent
+>     - child
+```
+
+## Regression286b
+
+Renumbered from the list's first, as any list under `orderedLists: renumber`: a number written out of
+order before the caret's item is renumbered too, its marker narrower and its other lines moved left
+as far.
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+> 1. a
+> 10. b┃
+>     c
+```
+
+> enter
+
+```markdown
+> 1. a
+> 2. b
+> 3. ┃
+>    c
+```
+
+## Regression287
+
+An empty nested item in a quote atom becomes its parent's next item, and the items after the parent
+in its list are numbered on (B199; two items `2.`).
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+> 1. p
+>    - a
+>    - ┃
+> 2. q
+```
+
+> enter
+
+```markdown
+> 1. p
+>    - a
+> 2. ┃
+> 3. q
+```
+
+## Regression288
+
+A marker right under an item's text is its setext underline, as the document reads it, no empty
+item: Enter there is on the item's last line, its next sibling after it, the heading as written.
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+> - parent
+>   -┃
+```
+
+> enter
+
+```markdown
+> - parent
+>   -
+> - ┃
+```
+
+## Regression289
+
+Splitting a quote atom (`enterInQuote: split`) takes the spaces at the caret as `enterSplitSpace`
+says, as a text's Enter does: under `drop`, the default, those before the caret end the first half,
+so Backspace joining the halves gives them back (B200; they went).
+
+```yaml
+tags: rare
+quotes: atom
+enterInQuote: split
+```
+
+```markdown
+> a ┃b
+```
+
+> enter
+
+```markdown
+> a␠
+
+┃b
+```
+
+## Regression289b
+
+Under `enterSplitSpace: trim` the spaces before the caret go too (B200).
+
+```yaml
+tags: rare
+quotes: atom
+enterInQuote: split
+enterSplitSpace: trim
+```
+
+```markdown
+> a ┃b
+```
+
+> enter
+
+```markdown
+> a
+
+┃b
+```
+
+## Regression289c
+
+Under `enterSplitSpace: start` the spaces after the caret start the second half, its padding, the
+caret before them (B200).
+
+```yaml
+tags: rare
+quotes: atom
+enterInQuote: split
+enterSplitSpace: start
+```
+
+```markdown
+> a┃ b
+```
+
+> enter
+
+```markdown
+> a
+
+┃ b
+```
+
+## Regression290
+
+A line break pasted in the spaces an atom quote is indented by is at the quote's start, refused as
+there (PastePlain27): before its `>`; it split the indentation, a second `>` written (B201).
+
+```yaml
+tags: rare
+quotes: atom
+clipboard: |+
+
+```
+
+```markdown
+ ┃ > a
+```
+
+> pastePlain
+
+```markdown
+ ┃ > a
+```
+
+```yaml
+result: rejected not-expressible
+```
+
 ## Regression291
 
 A table pasted into an empty item that a blank line ends, its next item indented two columns: under
@@ -7162,3 +7556,53 @@ tags: rare
 ```yaml
 result: rejected not-expressible
 ```
+
+## Regression293
+
+Backspace at a fence's start after HTML that a blank line ends: taking the blank line out, the
+fence would be a line of the HTML (an HTML block of `<div>`'s kind runs on to a blank line), so it is
+refused. Asked of the parser (`MdTree.takesIn`), where the command read its own text before; an HTML
+block its end condition closed (a comment) takes in nothing, and the fence joins it.
+
+```yaml
+tags: rare
+```
+
+````markdown
+<div>
+
+┃```
+code
+```
+````
+
+> deleteContentBackward
+
+```yaml
+result: rejected not-expressible
+```
+
+## Regression293b
+
+```yaml
+tags: rare
+```
+
+````markdown
+<!-- c
+-->
+
+┃```
+code
+```
+````
+
+> deleteContentBackward
+
+````markdown
+<!-- c
+-->
+┃```
+code
+```
+````

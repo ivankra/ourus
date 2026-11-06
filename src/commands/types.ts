@@ -3,6 +3,7 @@
 import type { OurusClipboard } from './clipboard.ts';
 import type { OurusView } from '../view/index.ts';
 import type { ChangeSpec, OurusSelection } from '../text/index.ts';
+import type { WriteFailed } from '../writer/index.ts';
 
 export type { OurusSelection };
 
@@ -95,8 +96,9 @@ export type OurusCommand =
   /**
    * A block id for node `node` (by id; else the selection's node), `name` or one made up, in the form
    * the node's kind takes (spec/block-ids.md); for a block inside a list item, on the item,
-   * which is what Obsidian names by it. Refused (`block-id`) where one already names the node, or the
-   * note has `name`. With `node`, the caret goes after it.
+   * which is what Obsidian names by it. Refused (`block-id`) where one already names the node. A name
+   * the note has already is written too: ourus keeps no block id unique (a host that wants them so
+   * checks `OurusDoc.blockIds()`). With `node`, the caret goes after it.
    */
   | { readonly type: 'addBlockId'; readonly name?: string; readonly node?: number }
   /**
@@ -133,28 +135,23 @@ export type RejectReason =
   | 'folded'
   /** Zoomed: the result would change, make or move a node outside the zoom root's subtree, or its operands are outside it. */
   | 'outside-zoom'
-  /**
-   * The result would lose a block id: written off its node, naming another or nothing, shadowed, or
-   * a name written twice; a merge of two nodes that both have one
-   * (`joinBlockIds: refuse`); an `addBlockId` or `removeBlockId` that has nothing to do.
-   */
+  /** An `addBlockId` or `removeBlockId` that has nothing to do, or a name that is no block id's. */
   | 'block-id'
   /** A structural command ourus doesn't do here yet: a case it doesn't cover. (A key with a host's default is the host's there.) */
-  | 'unsupported'
-  /** The writer failed: a layout it has no rule for, or a text written that doesn't read as the draft. A bug, never an outcome. */
-  | 'write-failed';
+  | 'unsupported';
 
-/** What `executeCommand` gives: the command done, refused, or left to the host. Tell them apart with `instanceof`. */
-export type OurusResult = OurusSuccess | OurusRejected | OurusDeferred;
+/**
+ * What `executeCommand` gives: the command done, refused, left to the host, or failed (a bug in ourus).
+ * Tell them apart with `instanceof`.
+ */
+export type OurusResult = OurusSuccess | OurusRejected | OurusDeferred | OurusFailed;
 
 /** The command done: the view after it, and what the host commits. */
 export class OurusSuccess {
-  /** The view after: the document after, the folds and zoom carried onto it. */
+  /** The view after: the document after, the folds and zoom carried onto it, the selection after (`view.selection`). */
   readonly view: OurusView;
   /** The text's changes, in the input document's offsets: what the host applies to its editor. */
   readonly changes: readonly ChangeSpec[];
-  /** The selection after, in the new text's offsets. */
-  readonly selection: OurusSelection;
   /** Copy and cut: what the host writes to the clipboard, every format. */
   readonly clipboard?: OurusClipboard;
   /** A drop (`moveSubtree`, `pasteAt`): the topmost nodes it put in place, in document order, for a host that selects them. */
@@ -167,16 +164,15 @@ export class OurusSuccess {
    * before and after.
    */
   readonly movedBlockIds?: readonly { readonly name: string; readonly to: number }[];
-  /** The block ids it dropped for the other's (`joinBlockIds: merge`), for a host that redirects links to them. */
+  /** The block ids it dropped for the other's (a merge of two nodes that both have one), for a host that redirects links to them. */
   readonly mergedBlockIds?: readonly { readonly from: string; readonly into: string }[];
   /** The nodes it removed on purpose, each with its subtree, by id (`deleteSubtree`, a cut of nodes): their block ids went with them. */
   readonly removedNodes?: readonly number[];
 
-  /** Its fields (another success spread to keep its own: `{ ...result, selection }`). */
+  /** Its fields (another success spread to keep its own: `{ ...result, view }`). */
   constructor(fields: OurusSuccess) {
     this.view = fields.view;
     this.changes = fields.changes;
-    this.selection = fields.selection;
     this.clipboard = fields.clipboard;
     this.placed = fields.placed;
     this.dropMap = fields.dropMap;
@@ -198,14 +194,46 @@ export class OurusRejected {
 }
 
 /**
- * Left to the host: ourus doesn't act on the key here, and the host runs its own default. `detail`
- * says why, where ourus stepped aside from an edit it would refuse (`markup: text`), or that ourus
- * doesn't cover the case yet.
+ * The writer failed (a layout it has no rule for, or a text written that doesn't read as the draft):
+ * a bug in ourus, never an outcome. Nothing changed; a host reports it. As data: the `phase` it came
+ * from, what failed (`code`), for the readback the node's `path` and what it meant and read; `detail`
+ * the sentence of them.
  */
+export class OurusFailed {
+  readonly phase: WriteFailed['phase'];
+  readonly code: string;
+  readonly path?: string;
+  readonly expected?: string;
+  readonly actual?: string;
+  readonly detail: string;
+
+  constructor(failure: Omit<WriteFailed, 'reason'>) {
+    this.phase = failure.phase;
+    this.code = failure.code;
+    this.path = failure.path;
+    this.expected = failure.expected;
+    this.actual = failure.actual;
+    this.detail = failure.detail;
+  }
+}
+
+/**
+ * Why a key is left to the host:
+ * - `host-default`: the key's plain default is right here (a character typed in a line of text, a
+ *   deletion inside one, code edited, a line selected), and ourus means it so;
+ * - `in-markup`: the caret or selection is in markup the host edits as text (`markup: text`, a
+ *   marker, a fence, the preamble), where ourus would otherwise refuse;
+ * - `not-done`: ourus doesn't cover the case yet, a gap to close: these can be counted.
+ */
+export type DeferReason = 'host-default' | 'in-markup' | 'not-done';
+
+/** Left to the host: ourus doesn't act on the key here, and the host runs its own default; `reason` says why (`DeferReason`), `detail` how, where given. */
 export class OurusDeferred {
+  readonly reason: DeferReason;
   readonly detail?: string;
 
-  constructor(detail?: string) {
+  constructor(reason: DeferReason, detail?: string) {
+    this.reason = reason;
     this.detail = detail;
   }
 }

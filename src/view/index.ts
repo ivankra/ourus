@@ -4,4 +4,5 @@
 //   const next = view.update({ changes, caret });     // a host's edit, the view carried
 //   view.isHidden(node), view.zoomRange(), view.touchedSubtrees(selection), view.locate(pos)
 
-export { OurusView, type OurusViewState } from './view.ts';
+export { OurusView, type OurusViewState, type OurusViewUpdate } from './view.ts';
+export { editableStart } from './select.ts';

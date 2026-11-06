@@ -8,6 +8,7 @@
 import { mdCalloutAt, type MdBlock } from '../parser/index.ts';
 import type { OurusNodeKind } from './rules.ts';
 import type { OurusProse, OurusText } from './text.ts';
+import { lineIndex, NO_NODE, type LineIndex, type NodeId } from '../text/index.ts';
 
 /**
  * A node as stored, shared by every snapshot and draft it holds for. A **read** node was read from a
@@ -18,7 +19,7 @@ import type { OurusProse, OurusText } from './text.ts';
  */
 export class PersistentNode {
   /** Given once the build has made the outline (`assignIds`), or by the draft; fixed from then on. */
-  readonly id: number = -1;
+  readonly id: NodeId = NO_NODE;
   readonly kind: OurusNodeKind;
   /** The parser's block the node is (the document, for the root); null for a drafted node. */
   readonly block: MdBlock | null;
@@ -58,7 +59,7 @@ export class PersistentNode {
 
   /** A drafted node: `id`, `kind`, its text (undefined: `source`'s), gap and children. */
   static drafted(
-    id: number,
+    id: NodeId,
     kind: OurusNodeKind,
     source: PersistentNode | null,
     text: OurusText | null | undefined,
@@ -124,7 +125,7 @@ export class OurusNode {
   /** The root's is 0. */
   readonly depth: number;
   /** Its first line. */
-  readonly startLine: number;
+  readonly startLine: LineIndex;
   #children: (OurusNode | undefined)[] | null = null;
   #allChildren = false;
   #endLine = -1;
@@ -132,14 +133,14 @@ export class OurusNode {
   /** Made by its snapshot, not by a host: see the class. */
   constructor(node: PersistentNode, startLine: number, parent: OurusNode | null, index: number) {
     this.persistentNode = node;
-    this.startLine = startLine;
+    this.startLine = lineIndex(startLine);
     this.parent = parent;
     this.index = index;
     this.depth = parent ? parent.depth + 1 : 0;
   }
 
   /** The same from snapshot to snapshot. */
-  get id(): number {
+  get id(): NodeId {
     return this.persistentNode.id;
   }
 
@@ -159,29 +160,29 @@ export class OurusNode {
   }
 
   /** Where its own text starts (an item's below its marker, `-⏎  one`): its first line where it has none. */
-  get textFirstLine(): number {
-    return this.startLine + this.persistentNode.textLines().first;
+  get textFirstLine(): LineIndex {
+    return lineIndex(this.startLine + this.persistentNode.textLines().first);
   }
 
   /** The last line of its own text: its first where it has none. */
-  get textLastLine(): number {
-    return this.startLine + this.persistentNode.textLines().last;
+  get textLastLine(): LineIndex {
+    return lineIndex(this.startLine + this.persistentNode.textLines().last);
   }
 
   /** The last of its own lines: its text's, or the last block-id line its text carries after them. */
-  get ownLastLine(): number {
-    return this.startLine + this.persistentNode.ownLines().last;
+  get ownLastLine(): LineIndex {
+    return lineIndex(this.startLine + this.persistentNode.ownLines().last);
   }
 
   /** Its last line with its descendants', blank lines after them not included. */
-  get endLine(): number {
+  get endLine(): LineIndex {
     if (this.#endLine < 0) {
       const node = this.persistentNode;
       const own = node.kind === 'item' || node.kind === 'quote' ? this.startLine + node.block!.lines - 1 : this.ownLastLine;
       const n = node.children.length;
       this.#endLine = n ? Math.max(own, this.child(n - 1).endLine) : own;
     }
-    return this.#endLine;
+    return lineIndex(this.#endLine);
   }
 
   /** Blank lines after its own lines, before its first child or what follows it. */

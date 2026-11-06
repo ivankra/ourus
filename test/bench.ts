@@ -53,7 +53,7 @@ const end = textEnd(item);
 const at = (pos: number) => ({ anchor: pos, head: pos });
 const command = (name: string, type: OurusCommand, pos: number): void =>
   measure(name, () => {
-    const result = executeCommand(view, type, at(pos));
+    const result = executeCommand(view.withSelection(at(pos)), type);
     if (!(result instanceof OurusSuccess)) throw new Error(`${name}: ${resultStatus(result)} ${result instanceof OurusRejected ? result.reason : ''}`);
   });
 

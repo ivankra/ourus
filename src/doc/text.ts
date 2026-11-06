@@ -51,6 +51,11 @@ export const reBlockIdLine = new RegExp(`^\\^(${BLOCK_ID_NAME})$`);
  * (`[?]`, `[a]`).
  */
 const reCheckbox = /^\[[^\n]\](?:[ \t]+|$)/;
+
+/** The checkbox at the start of an item's text line `line`, with the blanks after it, as the outline reads a task's (`reCheckbox`): its length; 0 where there is none. */
+export function checkboxLength(line: string): number {
+  return reCheckbox.exec(line)?.[0].length ?? 0;
+}
 /** An ATX heading's opening `#`s and the blanks after them. */
 const reAtxOpen = /^#{1,6}(?:[ \t]+|$)/;
 /** An ATX heading's closing sequence, with the blanks around it. */
@@ -118,6 +123,20 @@ export class OurusProse {
    */
   retyped(type: OurusProseType, item = this.item): OurusProse {
     return type === this.type && item === this.item ? this : this.#with({ type, item });
+  }
+
+  /** A quote's text (`quotes: text`) without its `>`s, every line's (a block id's own line's too, which its part holds: `> q⏎> ^x`), a paragraph's. */
+  unquoted(): OurusProse {
+    let out: OurusProse = this;
+    for (const p of [...this.frame].reverse()) {
+      if (p.part === 'quote') out = out.splice(p.from, p.to);
+      if (p.part !== 'blockId') continue;
+      for (let k = this.text.lastIndexOf('\n', p.to - 1); k >= p.from; k = this.text.lastIndexOf('\n', k - 1)) {
+        const quote = reQuote.exec(this.text.slice(k + 1, p.to));
+        if (quote) out = out.splice(k + 1, k + 1 + quote[0].length);
+      }
+    }
+    return out.retyped('paragraph');
   }
 
   /** The same string with the lists `lists` gives in place of its marks' (`MarkSet.with`); this one where they are the same. */
@@ -188,6 +207,17 @@ export class OurusProse {
     return trimMd(this.body) === '' && !this.frame.some((p) => p.part === 'blockId');
   }
 
+  /**
+   * Whether its last line, a later one, holds nothing past its frame: blanks after a quote's `>` (a
+   * quote's text's), or none. The empty last line Shift-Enter leaves, a placeholder holding it.
+   */
+  get emptyLastLine(): boolean {
+    const last = this.text.lastIndexOf('\n');
+    if (last < 0) return false;
+    const quote = this.frame.find((p) => p.part === 'quote' && p.from === last + 1);
+    return trimMd(this.text.slice(quote ? quote.to : last + 1)) === '';
+  }
+
   /** The first offset of line `line` past its frame. */
   textStart(line: number): number {
     let at = 0;
@@ -221,6 +251,7 @@ export class OurusProse {
 
   /** The texts after this one, their marks with them; this one's block-id lines, a fragment where it is one. */
   concat(...others: readonly (OurusProse | string)[]): OurusProse {
+    // (bounded: the texts a caller names)
     return this.#with({ marks: this.marks.concat(...others.map((other) => (typeof other === 'string' ? other : other.marks))) });
   }
 
@@ -620,14 +651,18 @@ function stringBlockIds(text: OurusText): { name: string; at: number; from: numb
   let lineFrom = 0;
   s.split('\n').forEach((line, i) => {
     const leaf = tree.line(i).leaf;
-    // (a paragraph's last line)
-    const last = leaf?.block.type === 'paragraph' && leaf.line + leaf.block.lines - 1 === i;
-    const found = last ? mdBlockIdEnd(line.replace(/^[ \t>]*/, (m) => ' '.repeat(m.length))) : null;
+    const type = leaf?.block.type;
+    // (the last line of a paragraph's text or a heading's title, ATX or setext, its text as the line's
+    // markup has it: past the quote's `>`s, before a closing `#` run)
+    const end = leaf ? leaf.line + leaf.block.lines - 1 : -1;
+    const last = (type === 'paragraph' || type === 'heading') && i === end - (tree.markup(end).marks.some((m) => m.kind === 'underline') ? 1 : 0);
+    const { textFrom, textTo } = tree.markup(i);
+    const found = last ? mdBlockIdEnd(s.slice(textFrom, textTo)) : null;
     if (found) {
-      const at = lineFrom + found.at;
+      const at = textFrom + found.at;
       // (a line that is only the block id goes whole, with the line break before it)
-      const alone = lineFrom > 0 && trimMd(s.slice(lineFrom, at).replace(/>/g, '')) === '';
-      out.push({ name: found.name, at, from: alone ? lineFrom - 1 : at - (found.at > 0 ? 1 : 0), to: lineFrom + line.length });
+      const alone = lineFrom > 0 && found.at === 0;
+      out.push({ name: found.name, at, from: alone ? lineFrom - 1 : at - (found.at > 0 ? 1 : 0), to: type === 'heading' ? textTo : lineFrom + line.length });
     }
     lineFrom += line.length + 1;
   });

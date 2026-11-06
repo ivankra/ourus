@@ -115,8 +115,8 @@ test('`enter-in-fence` tags exactly the cases with Enter on a fenced code or mat
       let entered = false;
       for (const action of t.steps.flatMap((s) => s.actions)) {
         if (action === 'enter') {
-          const code = codeAt(new CommandContext(state.view, state.selection));
-          if (code && (code.text.type === 'fenced_code' || code.text.type === 'math_block') && !onFenceLine(state.view.doc, state.selection.head)) entered = true;
+          const code = codeAt(new CommandContext(state.view));
+          if (code && (code.text.type === 'fenced_code' || code.text.type === 'math_block') && !onFenceLine(state.view.doc, state.view.selection.head)) entered = true;
         }
         state = playActions(state, [action]);
       }
@@ -141,7 +141,7 @@ for (const markup of ['text', 'decorated'] as const) {
             for (const action of step.actions) {
               const before = state;
               state = playActions(state, [action]);
-              const { anchor, head } = state.selection;
+              const { anchor, head } = state.view.selection;
               // typed text too, where ourus's `insertText` applied
               if (!(isCommandAction(action) || isDropAction(action) || action.startsWith('"')) || !(state.last instanceof OurusSuccess) || anchor !== head) continue;
               const doc = state.view.doc;
@@ -151,12 +151,12 @@ for (const markup of ['text', 'decorated'] as const) {
               const inNode = head <= line.to && !!doc.nodeAtLine(line.index);
               const markupAt = inNode && head < doc.textStart(line.index) && !held;
               // where markup is text, indent and outdent from a fence line may keep the caret on one
-              const keptOnFence = markup === 'text' && (action === 'indent' || action === 'outdent') && onFenceLine(before.view.doc, before.selection.head);
+              const keptOnFence = markup === 'text' && (action === 'indent' || action === 'outdent') && onFenceLine(before.view.doc, before.view.selection.head);
               const checked = markup === 'decorated' || (STRUCTURAL.includes(action) && !keptOnFence);
-              if (markupAt || (checked && textPosition(doc, head) !== head)) problems.push(`${file}:${step.line} (${flavor}) ${action}: ${drawDoc(state.view, state.selection)}`);
+              if (markupAt || (checked && textPosition(doc, head) !== head)) problems.push(`${file}:${step.line} (${flavor}) ${action}: ${drawDoc(state.view, state.view.selection)}`);
               // and, apart from that helper, typing there after a structural command, in a node, keeps the
               // outline: the same nodes, only one of them with other text
-              else if (STRUCTURAL.includes(action) && !keptOnFence && inNode && !typingKeepsOutline(doc, head)) problems.push(`${file}:${step.line} (${flavor}) ${action}, then typing: ${drawDoc(state.view, state.selection)}`);
+              else if (STRUCTURAL.includes(action) && !keptOnFence && inNode && !typingKeepsOutline(doc, head)) problems.push(`${file}:${step.line} (${flavor}) ${action}, then typing: ${drawDoc(state.view, state.view.selection)}`);
             }
           }
         }

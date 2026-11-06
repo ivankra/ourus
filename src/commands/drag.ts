@@ -2,10 +2,10 @@
 // seams and depths; the place one drop line names; and the host's helper that resolves a pointer to
 // one of them. The drop is `moveSubtree` (move-subtree.ts).
 
-import type { OurusDoc, OurusNode } from '../doc/index.ts';
+import { clipboardFragment, type OurusDoc, type OurusNode } from '../doc/index.ts';
 import type { OurusView } from '../view/index.ts';
 import { CommandContext } from './context.ts';
-import { clipboardFragment, clipboardMarkdown, type OurusClipboard } from './clipboard.ts';
+import { clipboardMarkdown, type OurusClipboard } from './clipboard.ts';
 import { copyOrCutCommand } from './copy.ts';
 import { becomesAt, moveRefused, unholdable } from './move-subtree.ts';
 import { pasteRefused, pastedBecomesAt } from './paste.ts';
@@ -32,15 +32,15 @@ export function dragCommand(ctx: CommandContext, options: { readonly pressed?: n
     const converts = (parent: OurusNode, after: OurusNode | null): boolean => pastedBecomesAt(ctx.doc, first.kind, parent, after) !== null;
     const refused = (parent: OurusNode, after: OurusNode | null): boolean => !!pasteRefused(ctx, pasted, parent, after);
     const seams = seamsOf(ctx.doc, [], first.kind, folded, zoom ?? null, (at) => ({ type: 'pasteAt', at, clipboard }), converts, refused);
-    return new OurusSuccess({ view: ctx.view, changes: [], selection: ctx.selection, dropMap: { nodes: [], lines: [], seams } });
+    return new OurusSuccess({ view: ctx.view, changes: [], dropMap: { nodes: [], lines: [], seams } });
   }
   const run = dragRun(ctx, options.pressed);
   if (!Array.isArray(run)) return run;
   const nodes = run.map((n) => n.id);
   const dropMap: DropMap = { nodes, lines: run.map((n) => [n.startLine, n.endLine + 1] as const), seams: seamsOf(ctx.doc, run, run[0]!.kind, folded, zoom ?? null, (to) => ({ type: 'moveSubtree', nodes, to }), undefined, (parent, after) => !!moveRefused(ctx, run, parent, after)) };
-  const copied = copyOrCutCommand(new CommandContext(ctx.view, ctx.selection, nodes), 'copy');
+  const copied = copyOrCutCommand(new CommandContext(ctx.view, nodes), 'copy');
   const clipboard = copied instanceof OurusSuccess ? copied.clipboard : undefined;
-  return new OurusSuccess({ view: ctx.view, changes: [], selection: ctx.selection, ...(clipboard && { clipboard }), dropMap });
+  return new OurusSuccess({ view: ctx.view, changes: [], ...(clipboard && { clipboard }), dropMap });
 }
 
 /**

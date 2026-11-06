@@ -8,10 +8,28 @@ import type { OurusView } from '../view/index.ts';
 import type { AnchorSpec, OurusDraft } from '../writer/index.ts';
 import { type CommandContext } from './context.ts';
 import type { OurusCommand, OurusSelection, OurusResult } from './types.ts';
-import { charAfter, charBefore, dominantEnding, lineOf, lineSpan, type ChangeSpec } from '../text/index.ts';
+import { charAfter, charBefore, dominantEnding, isSpaceOrTab, lineOf, lineSpan, type ChangeSpec } from '../text/index.ts';
 import { OurusRejected } from './types.ts';
 
 export { textEnd, textStart } from '../doc/index.ts';
+
+/**
+ * The spaces at a split of text `s` over [`from`, `to`), as `enterSplitSpace` says, for a text's Enter
+ * and a quote atom's: under `trim` those before it go too, back to `lineStart`; after it, under
+ * `start`, they start the second half (`kept` of them, before it: where the split leaves them), but
+ * before a line break or the text's end, where they start nothing; else they go, up to `stop`. The
+ * range the split takes out, so Enter then Backspace gives the text back under `drop` and `start`.
+ */
+export function splitSpaces(s: string, from: number, to: number, lineStart: number, stop: number, policy: 'drop' | 'trim' | 'start'): { readonly from: number; readonly to: number; readonly kept: number } {
+  let a = from;
+  let b = to;
+  if (policy === 'trim') while (a > lineStart && isSpaceOrTab(s.charCodeAt(a - 1))) a--;
+  let kept = 0;
+  if (policy === 'start') while (s[b + kept] === ' ') kept++;
+  if (b + kept === s.length || s[b + kept] === '\n') kept = 0;
+  if (!kept) while (b < stop && isSpaceOrTab(s.charCodeAt(b))) b++;
+  return { from: a, to: b, kept };
+}
 
 /**
  * What a text editor's default for `command` at `selection` does to `text`: the change and the caret
@@ -81,19 +99,6 @@ export function inMarkup(doc: OurusDoc, at: Located, pos: number): boolean {
   if (at.zone !== 'frame' || !(at.text instanceof OurusProse)) return false;
   if (pos === doc.lineAt(pos).from) return false;
   return (at.part === 'task' && !at.text.empty) || at.part === 'heading' || at.part === 'callout';
-}
-
-/** A quote's text (`quotes: text`) without its `>`s, every line's: a paragraph's, where it is. */
-export function unquote(text: OurusProse): OurusProse {
-  let out = text;
-  for (const p of [...text.frame].reverse()) {
-    if (p.part === 'quote') out = out.splice(p.from, p.to);
-    // (a block id on a line of its own takes that line's `>` with it: `> q⏎> ^x`)
-    if (p.part !== 'blockId') continue;
-    const prefixes = [...text.text.slice(p.from, p.to).matchAll(/\n([ \t]*>[ \t]?)/g)].reverse();
-    for (const m of prefixes) out = out.splice(p.from + m.index + 1, p.from + m.index + m[0].length);
-  }
-  return out.retyped('paragraph');
 }
 
 /**

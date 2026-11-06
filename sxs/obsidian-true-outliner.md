@@ -5,7 +5,7 @@ version: "1.15.0, true-outliner 0.14.4"
 url: "app://obsidian.md/"
 model: "text"
 command: "node sxs/run.ts obsidian-true-outliner"
-elapsed_s: 538
+elapsed_s: 541
 workers: 3
 ---
 
@@ -13,57 +13,57 @@ workers: 3
 
 Summary:
 
-| agree | caret | whitespace | disagree | error | skipped | not run | total |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| **471 (30%)** | **[91](#caret-91) (5.7%)** | **[33](#whitespace-33) (2.1%)** | **[596](#disagree-596) (38%)** | **0 (0%)** | **[384](#skipped-384) (24%)** | **[9](#not-run-9) (0.57%)** | **1589** |
+| agree | caret | whitespace | disagree | error | skipped | total |
+| --- | --- | --- | --- | --- | --- | --- |
+| **481 (30%)** | **[90](#caret-90) (5.6%)** | **[34](#whitespace-34) (2.1%)** | **[612](#disagree-612) (38%)** | **0 (0%)** | **[390](#skipped-390) (24%)** | **1612** |
 
 Per-file:
 
-|  | agree | caret | whitespace | disagree | error | skipped | not run | total |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [auto.md](../spec/auto.md) | 27 |  |  | 12 |  |  |  | **39** |
-| [backspace.md](../spec/backspace.md) | 30 | 1 | 1 | 37 |  | 19 |  | **88** |
-| [backtick.md](../spec/backtick.md) | 5 |  |  | 21 |  | 7 |  | **33** |
-| [block-ids.md](../spec/block-ids.md) | 9 | 3 |  | 8 |  | 1 |  | **21** |
-| [copy.md](../spec/copy.md) | 3 |  |  | 3 |  | 7 |  | **13** |
-| [cursor.md](../spec/cursor.md) | 23 | 9 |  |  |  | 4 |  | **36** |
-| [delete-subtree.md](../spec/delete-subtree.md) |  |  |  |  |  | 14 |  | **14** |
-| [delete.md](../spec/delete.md) | 15 |  | 1 | 19 |  | 21 |  | **56** |
-| [drag.md](../spec/drag.md) |  |  |  |  |  | 8 |  | **8** |
-| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 13 |  | **13** |
-| [enter.md](../spec/enter.md) | 25 |  | 1 | 39 |  | 33 |  | **98** |
-| [fences.md](../spec/fences.md) | 18 | 3 | 1 | 43 |  | 5 |  | **70** |
-| [fold.md](../spec/fold.md) | 4 | 3 |  | 12 |  | 3 |  | **22** |
-| [gaps.md](../spec/gaps.md) |  | 11 | 1 | 6 |  | 1 |  | **19** |
-| [indent.md](../spec/indent.md) | 23 |  | 3 | 16 |  | 13 |  | **55** |
-| [lists.md](../spec/lists.md) |  | 1 |  | 3 |  | 12 |  | **16** |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 7 | 12 | 1 | 24 |  | 1 |  | **45** |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 6 | 15 | 1 | 21 |  | 4 |  | **47** |
-| [move-subtree.md](../spec/move-subtree.md) |  | 7 |  | 6 |  | 11 |  | **24** |
-| [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 25 | 6 | 4 | 26 |  | 6 |  | **67** |
-| [outdent.md](../spec/outdent.md) | 11 |  |  | 19 |  | 12 |  | **42** |
-| [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 |  | **5** |
-| [paste-conv.md](../spec/paste-conv.md) | 4 |  |  | 2 |  |  |  | **6** |
-| [paste-html.md](../spec/paste-html.md) | 3 | 1 | 3 | 12 |  |  |  | **19** |
-| [paste-list-form.md](../spec/paste-list-form.md) | 4 |  |  | 2 |  |  |  | **6** |
-| [paste-list.md](../spec/paste-list.md) | 8 |  |  | 14 |  | 7 |  | **29** |
-| [paste-plain.md](../spec/paste-plain.md) | 21 |  |  | 8 |  | 7 |  | **36** |
-| [paste.md](../spec/paste.md) | 1 |  | 1 | 19 |  | 15 |  | **36** |
-| [placeholders.md](../spec/placeholders.md) | 7 | 2 |  | 14 |  | 4 |  | **27** |
-| [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 |  | **7** |
-| [quotes.md](../spec/quotes.md) | 76 | 1 | 2 | 37 |  | 27 |  | **143** |
-| [regressions.md](../spec/regressions.md) | 56 | 6 | 8 | 112 |  | 92 | 9 | **283** |
-| [scenarios.md](../spec/scenarios.md) | 13 | 6 |  | 12 |  | 3 |  | **34** |
-| [select.md](../spec/select.md) | 16 | 3 |  |  |  | 4 |  | **23** |
-| [shift-enter.md](../spec/shift-enter.md) | 5 |  | 5 | 21 |  | 7 |  | **38** |
-| [subtree-selection.md](../spec/subtree-selection.md) | 1 | 1 |  | 14 |  | 3 |  | **19** |
-| [tasks.md](../spec/tasks.md) | 13 |  |  | 8 |  | 9 |  | **30** |
-| [typing.md](../spec/typing.md) | 3 |  |  |  |  |  |  | **3** |
-| [undo.md](../spec/undo.md) | 2 |  |  | 3 |  |  |  | **5** |
-| [zoom.md](../spec/zoom.md) | 7 |  |  | 3 |  | 4 |  | **14** |
-| **total** | **471 (30%)** | **91 (5.7%)** | **33 (2.1%)** | **596 (38%)** | **0 (0%)** | **389 (24%)** | **9 (0.57%)** | **1589** |
+|  | agree | caret | whitespace | disagree | error | skipped | total |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| [auto.md](../spec/auto.md) | 27 |  |  | 12 |  |  | **39** |
+| [backspace.md](../spec/backspace.md) | 30 | 1 | 1 | 37 |  | 19 | **88** |
+| [backtick.md](../spec/backtick.md) | 5 |  |  | 21 |  | 7 | **33** |
+| [block-ids.md](../spec/block-ids.md) | 9 | 3 |  | 8 |  | 1 | **21** |
+| [copy.md](../spec/copy.md) | 3 |  |  | 3 |  | 7 | **13** |
+| [cursor.md](../spec/cursor.md) | 23 | 9 |  |  |  | 4 | **36** |
+| [delete-subtree.md](../spec/delete-subtree.md) |  |  |  |  |  | 14 | **14** |
+| [delete.md](../spec/delete.md) | 15 |  | 1 | 19 |  | 21 | **56** |
+| [drag.md](../spec/drag.md) |  |  |  |  |  | 8 | **8** |
+| [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 13 | **13** |
+| [enter.md](../spec/enter.md) | 25 |  | 1 | 39 |  | 33 | **98** |
+| [fences.md](../spec/fences.md) | 18 | 3 | 1 | 43 |  | 5 | **70** |
+| [fold.md](../spec/fold.md) | 4 | 3 |  | 12 |  | 3 | **22** |
+| [gaps.md](../spec/gaps.md) |  | 11 | 1 | 6 |  | 1 | **19** |
+| [indent.md](../spec/indent.md) | 23 |  | 3 | 16 |  | 13 | **55** |
+| [lists.md](../spec/lists.md) |  | 1 |  | 3 |  | 12 | **16** |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 7 | 12 | 1 | 24 |  | 1 | **45** |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 6 | 15 | 1 | 21 |  | 4 | **47** |
+| [move-subtree.md](../spec/move-subtree.md) |  | 5 |  | 8 |  | 11 | **24** |
+| [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 25 | 6 | 4 | 26 |  | 6 | **67** |
+| [outdent.md](../spec/outdent.md) | 11 |  |  | 19 |  | 12 | **42** |
+| [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |
+| [paste-conv.md](../spec/paste-conv.md) | 4 |  |  | 2 |  |  | **6** |
+| [paste-html.md](../spec/paste-html.md) | 3 | 1 | 3 | 12 |  |  | **19** |
+| [paste-list-form.md](../spec/paste-list-form.md) | 4 |  |  | 2 |  |  | **6** |
+| [paste-list.md](../spec/paste-list.md) | 8 |  |  | 14 |  | 7 | **29** |
+| [paste-plain.md](../spec/paste-plain.md) | 21 |  |  | 8 |  | 7 | **36** |
+| [paste.md](../spec/paste.md) | 1 |  | 1 | 19 |  | 15 | **36** |
+| [placeholders.md](../spec/placeholders.md) | 7 | 2 |  | 17 |  | 4 | **30** |
+| [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |
+| [quotes.md](../spec/quotes.md) | 76 | 1 | 2 | 37 |  | 27 | **143** |
+| [regressions.md](../spec/regressions.md) | 66 | 7 | 9 | 123 |  | 98 | **303** |
+| [scenarios.md](../spec/scenarios.md) | 13 | 6 |  | 12 |  | 3 | **34** |
+| [select.md](../spec/select.md) | 16 | 3 |  |  |  | 4 | **23** |
+| [shift-enter.md](../spec/shift-enter.md) | 5 |  | 5 | 21 |  | 7 | **38** |
+| [subtree-selection.md](../spec/subtree-selection.md) | 1 | 1 |  | 14 |  | 3 | **19** |
+| [tasks.md](../spec/tasks.md) | 13 |  |  | 8 |  | 9 | **30** |
+| [typing.md](../spec/typing.md) | 3 |  |  |  |  |  | **3** |
+| [undo.md](../spec/undo.md) | 2 |  |  | 3 |  |  | **5** |
+| [zoom.md](../spec/zoom.md) | 7 |  |  | 3 |  | 4 | **14** |
+| **total** | **481 (30%)** | **90 (5.6%)** | **34 (2.1%)** | **612 (38%)** | **0 (0%)** | **395 (25%)** | **1612** |
 
-## Disagree (596)
+## Disagree (612)
 
 ### [Auto1](../spec/auto.md#auto1)
 
@@ -145,7 +145,7 @@ revise ┃2. draft
 `
 
 ```
-┃
+┃␄
 ````
 
 </td><td>
@@ -171,7 +171,7 @@ revise ┃2. draft
 
 ```
 
-┃
+┃␄
 ````
 
 </td><td>
@@ -198,7 +198,7 @@ revise ┃2. draft
 
 ```
 
-test┃
+test┃␄
 ````
 
 </td><td>
@@ -226,7 +226,7 @@ test┃
 ```
 
 test
-┃
+┃␄
 ````
 
 </td><td>
@@ -255,7 +255,7 @@ test
 ```
 
 test
-``┃
+``┃␄
 ````
 
 </td><td>
@@ -288,7 +288,7 @@ test
 
 `
 
-```┃
+```┃␄
 ````
 
 </td><td>
@@ -321,7 +321,7 @@ test
 - `
 
 ```
-┃
+┃␄
 ````
 
 </td><td>
@@ -415,7 +415,7 @@ code
 `
 
 ```
-`┃`
+`┃`␄
 ````
 
 </td><td>
@@ -447,7 +447,7 @@ code
 
 `
 
-```┃
+```┃␄
 ````
 
 </td><td>
@@ -2101,7 +2101,7 @@ intro
 `
 
 ```
-┃
+┃␄
 ````
 
 </td><td>
@@ -2131,7 +2131,7 @@ intro
 
 ```
 js
-x┃
+x┃␄
 ````
 
 </td><td>
@@ -2168,7 +2168,7 @@ x┃
 - `
 
 ```
-┃
+┃␄
 ````
 
 </td><td>
@@ -2263,7 +2263,7 @@ Original:
 `
 
 ```
-`┃`
+`┃`␄
 ````
 
 </td><td>
@@ -2378,7 +2378,7 @@ intro
 ```
 
 after
-┃
+┃␄
 ````
 
 </td><td>
@@ -2448,7 +2448,7 @@ code
 `
 
 ```
-┃
+┃␄
 ````
 
 </td><td>
@@ -2488,7 +2488,7 @@ text
 `
 
 ```
-┃
+┃␄
 ````
 
 </td><td>
@@ -2527,7 +2527,7 @@ code
 
 `
 
-```┃
+```┃␄
 ````
 
 </td><td>
@@ -2566,7 +2566,7 @@ code
 `
 
 ```
-┃
+┃␄
 ````
 
 </td><td>
@@ -2592,7 +2592,7 @@ code
 
 ```
 
-┃
+┃␄
 ````
 
 </td><td>
@@ -2669,7 +2669,7 @@ intro
 `
 
 ```
-┃
+┃␄
 ````
 
 </td><td>
@@ -3014,8 +3014,7 @@ Title ^x
 </td><td>
 
 ```buffer
-- a ^x
-- ┃b ^y
+- a┃b ^x
 ```
 
 </td></tr>
@@ -3100,7 +3099,7 @@ Title ^x
 </td><td>
 
 ```buffer
-┃
+┃␄
 ```
 
 </td><td>
@@ -7843,7 +7842,7 @@ Original:
 </td><td>
 
 ```buffer
-┃
+┃␄
 ```
 
 </td><td>
@@ -8080,6 +8079,8 @@ p
 
 > cursorLineBoundaryForward
 
+Adapted: under quotes: atom
+
 <table>
 <tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
@@ -8097,6 +8098,29 @@ p
 
 # h┃⟦folded⟧
 > - 
+> ^x
+```
+
+</td><td>
+
+```buffer
+# h┃⟦folded⟧
+> - 
+> ^x
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+◌①
+┃# h②⟦folded⟧
+> - ◌
 > ^x
 ```
 
@@ -9411,7 +9435,7 @@ para
 «- b
   - b1
 - c
-»
+»␄
 ```
 
 </td></tr>
@@ -9493,7 +9517,7 @@ para
 «  - c
     - c1
   - d
-»
+»␄
 ```
 
 </td></tr>
@@ -10183,7 +10207,7 @@ para
 1) c
 «2) 
 3) b
-»
+»␄
 ```
 
 </td></tr>
@@ -10220,7 +10244,7 @@ para
 - d
 «- b
   - c
-»
+»␄
 ```
 
 </td></tr>
@@ -10257,7 +10281,7 @@ para
 - d
 ┃«- b
   - c
-»
+»␄
 ```
 
 </td></tr>
@@ -11117,7 +11141,7 @@ code
 code
 
 
-intro
+intro␄
 ````
 
 </td><td>
@@ -11180,7 +11204,7 @@ code
 - a
 - b
 «  - c
-»
+»␄
 ```
 
 </td><td>
@@ -11189,7 +11213,7 @@ code
 - a
 - b
 «  - c
-»
+»␄
 ```
 
 </td><td>
@@ -11222,7 +11246,7 @@ para┃
 ```buffer
 - a
 «  - para
-»
+»␄
 ```
 
 </td><td>
@@ -11231,6 +11255,39 @@ para┃
 - a
 
   - para┃
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree12](../spec/move-subtree.md#movesubtree12)
+
+> moveSubtree ②
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃
+
+p
+```
+
+</td><td>
+
+```buffer
+«- x
+»
+p
+```
+
+</td><td>
+
+```buffer
+p
+
+x┃
 ```
 
 </td></tr>
@@ -11336,7 +11393,7 @@ x
 </td><td>
 
 ```buffer
-«1. a»
+1. ┃a
 
 - x
 2. b
@@ -11379,7 +11436,7 @@ x
 «```
 x
 ```
-»
+»␄
 ````
 
 </td><td>
@@ -11423,6 +11480,45 @@ x┃
 - a
 - b
   - a1┃
+```
+
+</td></tr>
+</table>
+
+### [MoveSubtree24](../spec/move-subtree.md#movesubtree24)
+
+> moveSubtree ①
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+
+- b
+
+- c
+```
+
+</td><td>
+
+```buffer
+«- a
+»
+- b
+
+- c
+```
+
+</td><td>
+
+```buffer
+- b
+
+- c
+
+- a┃
 ```
 
 </td></tr>
@@ -12467,7 +12563,7 @@ para
 «- a
   - b
 - c
-»
+»␄
 ```
 
 </td><td>
@@ -12480,7 +12576,7 @@ para
   - b
 
 c
-»
+»␄
 ```
 
 </td><td>
@@ -12492,7 +12588,7 @@ para
 - b
 
 c
-»
+»␄
 ```
 
 </td></tr>
@@ -12610,7 +12706,7 @@ c
 ```buffer
 «- a
 - b
-»
+»␄
 ```
 
 </td><td>
@@ -12618,7 +12714,7 @@ c
 ```buffer
 «- a
 - b
-»
+»␄
 ```
 
 </td><td>
@@ -12627,7 +12723,7 @@ c
 «a
 
 b
-»
+»␄
 ```
 
 </td></tr>
@@ -14587,7 +14683,7 @@ text
   ```
 
 - b
-┃
+┃␄
 ````
 
 </td><td>
@@ -15135,7 +15231,7 @@ x
 
 ```
 y
-┃
+┃␄
 ````
 
 </td><td>
@@ -16917,8 +17013,28 @@ para
 
 ```buffer
 ┃«- a
-
   - »
+```
+
+</td></tr>
+</table>
+
+> cursorDocStart
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃a
+```
+
+</td><td>
+
+```buffer
+┃- a
+
+  - 
 ```
 
 </td></tr>
@@ -17020,7 +17136,7 @@ para
  ``` x
 
 after
-┃
+┃␄
 ````
 
 </td><td>
@@ -17031,6 +17147,202 @@ para
 
 after
 ````
+
+</td></tr>
+</table>
+
+### [Placeholder21](../spec/placeholders.md#placeholder21)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+p┃
+
+qr
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+p
+
+┃
+
+qr
+```
+
+</td></tr>
+</table>
+
+> selectLineDown selectLineDown
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+p
+
+«qr
+»␄
+```
+
+</td><td>
+
+```buffer
+p
+
+«
+
+»qr
+```
+
+</td></tr>
+</table>
+
+> cursorDocStart
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃p
+
+qr
+```
+
+</td></tr>
+</table>
+
+### [Placeholder22](../spec/placeholders.md#placeholder22)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a┃ ``` x
+- b
+````
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- ┃ ``` x
+- b
+````
+
+</td></tr>
+</table>
+
+> selectLineDown
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+«-  ``` x»
+- b
+````
+
+</td><td>
+
+````buffer
+- « ``` x
+- »b
+````
+
+</td></tr>
+</table>
+
+> cursorLineBoundaryForward
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+-  ``` x┃
+- b
+````
+
+</td><td>
+
+````buffer
+-  \``` x
+- b┃
+````
+
+</td></tr>
+</table>
+
+### [Placeholder23](../spec/placeholders.md#placeholder23)
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+```
+
+</td></tr>
+</table>
+
+> enter indent selectDocStart
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃- a
+```
+
+</td><td>
+
+```buffer
+┃«- a
+  - »
+```
+
+</td></tr>
+</table>
+
+> cursorCharRight
+
+<table>
+<tr><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃a
+```
+
+</td><td>
+
+```buffer
+- a
+  - ┃
+```
 
 </td></tr>
 </table>
@@ -17896,8 +18208,6 @@ Original:
 
 > enter
 
-Adapted: under quotes: atom
-
 <table>
 <tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
 <tr valign="top"><td>
@@ -17921,28 +18231,7 @@ b
 ```buffer
 > - a
 b
-> ┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-> - a
-b┃
-```
-
-</td><td>
-
-```buffer
-> - a
-b
-> ┃
+> - ┃
 ```
 
 </td></tr>
@@ -19987,45 +20276,6 @@ x«
 - [x]» 
 
   cont
-```
-
-</td></tr>
-</table>
-
-### [Regression48](../spec/regressions.md#regression48)
-
-> moveSubtreeDown
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-1. ┃«x
-    - [»x] x
-1. a
-  1. 
-    - 
-```
-
-</td><td>
-
-```buffer
-1. a
-2. ┃x
-    - [x] x
-  3. 
-    - 
-```
-
-</td><td>
-
-```buffer
-1. a
-1. ┃«x
-    - [»x] x
-  1. 
-    - 
 ```
 
 </td></tr>
@@ -23033,7 +23283,7 @@ Original:
   b
   ```
 
-- ┃
+- ┃␄
 ````
 
 </td><td>
@@ -24029,6 +24279,499 @@ y ^zzz┃l
 </td></tr>
 </table>
 
+### [Regression272](../spec/regressions.md#regression272)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+a
+
+b
+```
+
+</td></tr>
+</table>
+
+> pastePlain
+
+Adapted: under pastePlainLines: host
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+Final line┃ ^blk
+```
+
+</td><td>
+
+```buffer
+Final line ^blk
+
+a
+
+b┃
+```
+
+</td><td>
+
+```buffer
+Final linea
+
+b
+┃ ^blk
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+Final line┃ ^blk
+```
+
+</td><td>
+
+```buffer
+Final linea
+
+b
+┃ ^blk
+```
+
+</td></tr>
+</table>
+
+### [Regression275](../spec/regressions.md#regression275)
+
+> indent
+
+Adapted: under quotes: atom
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+«> on»e
+
+q
+```
+
+</td><td>
+
+```buffer
+«> on»e
+
+q
+```
+
+</td><td>
+
+```buffer
+- «> on»e
+
+q
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+«> on»e
+
+q
+```
+
+</td><td>
+
+```buffer
+- «> on»e
+
+q
+```
+
+</td></tr>
+</table>
+
+### [Regression277](../spec/regressions.md#regression277)
+
+> enter cursorDocEnd
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+## h┃
+| a |
+| --- |
+```
+
+</td><td>
+
+```buffer
+## h
+
+| ┃a   |
+| --- |
+```
+
+</td><td>
+
+```buffer
+## h
+
+| a |
+| --- |
+```
+
+</td></tr>
+</table>
+
+### [Regression277b](../spec/regressions.md#regression277b)
+
+> shiftEnter cursorDocEnd
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# h┃
+p
+```
+
+</td><td>
+
+```buffer
+# h
+p
+# ┃
+```
+
+</td><td>
+
+```buffer
+# h
+
+p
+```
+
+</td></tr>
+</table>
+
+### [Regression277c](../spec/regressions.md#regression277c)
+
+> enter cursorDocEnd
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# a┃
+# b
+```
+
+</td><td>
+
+```buffer
+# a
+# b┃
+```
+
+</td><td>
+
+```buffer
+# a
+
+# b
+```
+
+</td></tr>
+</table>
+
+### [Regression280](../spec/regressions.md#regression280)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+> ```
+> - a┃
+> ```
+````
+
+</td><td>
+
+````buffer
+> ```
+> - a
+> - ┃
+> ```
+````
+
+</td><td>
+
+````buffer
+> ```
+> - a
+> ┃
+> ```
+````
+
+</td></tr>
+</table>
+
+### [Regression283](../spec/regressions.md#regression283)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> 999999999. a┃
+```
+
+</td><td>
+
+```buffer
+> 999999999. a
+> 1000000000. ┃
+```
+
+</td><td>
+
+```buffer
+> 999999999. a┃
+```
+
+</td></tr>
+</table>
+
+### [Regression285](../spec/regressions.md#regression285)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> 1. a┃
+> 2. b
+>
+> q
+>
+> 3. c
+```
+
+</td><td>
+
+```buffer
+> 1. a
+> 2. ┃
+> 3. b
+>
+> q
+>
+> 4. c
+```
+
+</td><td>
+
+```buffer
+> 1. a
+> 2. ┃
+> 3. b
+>
+> q
+>
+> 3. c
+```
+
+</td></tr>
+</table>
+
+### [Regression286](../spec/regressions.md#regression286)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> 8. a┃
+> 9. parent
+>    - child
+```
+
+</td><td>
+
+```buffer
+> 8. a
+> 9. ┃
+> 10. parent
+>    - child
+```
+
+</td><td>
+
+```buffer
+> 8. a
+> 9. ┃
+> 10. parent
+>     - child
+```
+
+</td></tr>
+</table>
+
+### [Regression287](../spec/regressions.md#regression287)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> 1. p
+>    - a
+>    - ┃
+> 2. q
+```
+
+</td><td>
+
+```buffer
+> 1. p
+>    - a
+>- ┃
+> 1. q
+```
+
+</td><td>
+
+```buffer
+> 1. p
+>    - a
+> 2. ┃
+> 3. q
+```
+
+</td></tr>
+</table>
+
+### [Regression291](../spec/regressions.md#regression291)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+| a |
+| - |
+| 1 |
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+
+  - c
+```
+
+</td><td>
+
+```buffer
+- | a |
+| - |
+| 1 |
+┃
+
+  - c
+```
+
+</td><td>
+
+```buffer
+- 
+
+  - c
+```
+
+</td></tr>
+</table>
+
+### [Regression293b](../spec/regressions.md#regression293b)
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+<!-- c
+-->
+
+┃```
+code
+```
+````
+
+</td><td>
+
+````buffer
+<!-- c
+-->
+
+┃```
+code
+```
+````
+
+</td><td>
+
+````buffer
+<!-- c
+-->
+┃```
+code
+```
+````
+
+</td></tr>
+</table>
+
 ### [Scenario4](../spec/scenarios.md#scenario4)
 
 <table>
@@ -24250,11 +24993,12 @@ Done.┃
 <tr valign="top"><td>
 
 ```buffer
-«- Home
-  - plants»
-- Inbox
+- Home
+  - plants
+- Inbox«
 - Work
   - email
+»␄
 ```
 
 </td><td>
@@ -24277,10 +25021,9 @@ Done.┃
 <tr valign="top"><td>
 
 ```buffer
+- Home
+  - plants
 - s┃
-- Inbox
-- Work
-  - email
 ```
 
 </td><td>
@@ -26358,13 +27101,13 @@ x┃- c
 «- a
   - a1
 - b
-»
+»␄
 ```
 
 </td><td>
 
 ```buffer
-x┃
+x┃␄
 ```
 
 </td><td>
@@ -27020,7 +27763,7 @@ Original:
 </td></tr>
 </table>
 
-## Whitespace (33)
+## Whitespace (34)
 
 ### [Backspace17d](../spec/backspace.md#backspace17d)
 
@@ -28179,6 +28922,7 @@ Original:
 
 ```buffer
 > - parent
+>   - child
 >   - ┃
 ```
 
@@ -28186,6 +28930,7 @@ Original:
 
 ```buffer
 > - parent
+>   - child
 >- ┃
 ```
 
@@ -28193,6 +28938,7 @@ Original:
 
 ```buffer
 > - parent
+>   - child
 > - ┃
 ```
 
@@ -28252,6 +28998,41 @@ Original:
    
   ```
 ````
+
+</td></tr>
+</table>
+
+### [Regression286b](../spec/regressions.md#regression286b)
+
+> enter
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+> 1. a
+> 10. b┃
+>     c
+```
+
+</td><td>
+
+```buffer
+> 1. a
+> 2. b
+> 3. ┃
+>     c
+```
+
+</td><td>
+
+```buffer
+> 1. a
+> 2. b
+> 3. ┃
+>    c
+```
 
 </td></tr>
 </table>
@@ -28409,7 +29190,7 @@ Original:
 </td></tr>
 </table>
 
-## Caret (91)
+## Caret (90)
 
 ### [SoftBackspace8](../spec/backspace.md#softbackspace8)
 
@@ -30772,80 +31553,6 @@ para┃
 </td></tr>
 </table>
 
-### [MoveSubtree12](../spec/move-subtree.md#movesubtree12)
-
-> moveSubtree ②
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x┃
-
-p
-```
-
-</td><td>
-
-```buffer
-p
-
-«x
-»
-```
-
-</td><td>
-
-```buffer
-p
-
-x┃
-```
-
-</td></tr>
-</table>
-
-### [MoveSubtree24](../spec/move-subtree.md#movesubtree24)
-
-> moveSubtree ①
-
-<table>
-<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃
-
-- b
-
-- c
-```
-
-</td><td>
-
-```buffer
-- b
-
-- c
-
-«- a
-»
-```
-
-</td><td>
-
-```buffer
-- b
-
-- c
-
-- a┃
-```
-
-</td></tr>
-</table>
-
 ### [TO-E14-E20b](../spec/obsidian-true-outliner.md#to-e14-e20b)
 
 > enter
@@ -31336,6 +32043,45 @@ Original:
 </td></tr>
 </table>
 
+### [Regression48](../spec/regressions.md#regression48)
+
+> moveSubtreeDown
+
+<table>
+<tr><th>buffer</th><th>obsidian-true-outliner</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+1. ┃«x
+    - [»x] x
+1. a
+  1. 
+    - 
+```
+
+</td><td>
+
+```buffer
+1. a
+2. ┃x
+    - [x] x
+  3. 
+    - 
+```
+
+</td><td>
+
+```buffer
+1. a
+2. ┃«x
+    - [»x] x
+  3. 
+    - 
+```
+
+</td></tr>
+</table>
+
 ### [Regression131](../spec/regressions.md#regression131)
 
 > selectNodeDown
@@ -31704,7 +32450,8 @@ Original:
 ```buffer
 - Inbox
 «  - Work
-    - emai»l
+    - email
+»␄
 ```
 
 </td><td>
@@ -31726,8 +32473,9 @@ Original:
 
 ```buffer
 - Inbox
-- Work
-  - emai┃l
+«- Work
+  - email
+»␄
 ```
 
 </td><td>
@@ -32087,7 +32835,7 @@ Original:
 
 
 «- b
-»
+»␄
 ```
 
 </td></tr>
@@ -32160,7 +32908,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (389)
+## Skipped (395)
 
 | example | why |
 | --- | --- |
@@ -32551,6 +33299,12 @@ Original:
 | [Regression270](../spec/regressions.md#regression270) | action selectNode |
 | [Regression271](../spec/regressions.md#regression271) | option quotes: container |
 | [Regression276](../spec/regressions.md#regression276) | action duplicateSubtree |
+| [Regression284](../spec/regressions.md#regression284) | option orderedLists: shift |
+| [Regression289](../spec/regressions.md#regression289) | option enterInQuote: split |
+| [Regression289b](../spec/regressions.md#regression289b) | option enterInQuote: split |
+| [Regression289c](../spec/regressions.md#regression289c) | option enterInQuote: split |
+| [Regression290](../spec/regressions.md#regression290) | caret inside the spaces of a tab of indentation |
+| [Regression293](../spec/regressions.md#regression293) | nothing to compare |
 | **scenarios.md** | |
 | [Scenario8d](../spec/scenarios.md#scenario8d) | action drag ② |
 | [Scenario10](../spec/scenarios.md#scenario10) | action deleteSubtree |
@@ -32587,18 +33341,3 @@ Original:
 | [Zoom8](../spec/zoom.md#zoom8) | action zoomIn ③ |
 | [Zoom9](../spec/zoom.md#zoom9) | action deleteSubtree |
 | [Zoom14](../spec/zoom.md#zoom14) | option enterOnEmptyItem: unwrap |
-
-## Not run (9)
-
-| example | why |
-| --- | --- |
-| **regressions.md** | |
-| [Regression269](../spec/regressions.md#regression269) | new, or its start changed since |
-| [Regression272](../spec/regressions.md#regression272) | new, or its start changed since |
-| [Regression273](../spec/regressions.md#regression273) | new, or its start changed since |
-| [Regression274](../spec/regressions.md#regression274) | step added since |
-| [Regression275](../spec/regressions.md#regression275) | new, or its start changed since |
-| [Regression277](../spec/regressions.md#regression277) | new, or its start changed since |
-| [Regression277b](../spec/regressions.md#regression277b) | new, or its start changed since |
-| [Regression277c](../spec/regressions.md#regression277c) | new, or its start changed since |
-| [Regression278](../spec/regressions.md#regression278) | new, or its start changed since |

@@ -198,17 +198,25 @@ export class MdMachine {
     this.stack = [...state];
   }
 
-  /** Reads line `index`. */
-  read(index: number): void {
+  /** Line `index` as read: NUL replaced, its sentinels in; and its real text's length. */
+  private asRead(index: number): { readonly line: string; readonly realLength: number } {
     const source = this.source;
-    const start = source.starts[index]!;
-    let ln = source.text.slice(start, source.ends[index]!);
+    let ln = source.text.slice(source.starts[index]!, source.ends[index]!);
     if (ln.indexOf('\0') !== -1) ln = ln.replace(/\0/g, '�');
-    this.realLength = ln.length;
+    const realLength = ln.length;
     const sentinels = source.sentinels?.get(index);
     if (sentinels) {
       for (const at of sentinels) ln = at >= ln.length ? ln + SENTINEL : ln.slice(0, at) + SENTINEL + ln.slice(at + 1);
     }
+    return { line: ln, realLength };
+  }
+
+  /** Reads line `index`. */
+  read(index: number): void {
+    const source = this.source;
+    const start = source.starts[index]!;
+    const { line: ln, realLength } = this.asRead(index);
+    this.realLength = realLength;
     this.line = ln;
     this.lineIndex = index;
     this.nonspaceLine = -1;
@@ -409,8 +417,9 @@ export class MdMachine {
   }
 
   /**
-   * The text of line `index`, for a rule that has to look ahead (as read: NUL replaced, no
-   * sentinels), or null past the end. The line's record notes how far it looked.
+   * The text of line `index`, for a rule that has to look ahead, as `read` will have it (NUL
+   * replaced, its sentinels in: what decides the line then, B252), or null past the end. The line's
+   * record notes how far it looked.
    */
   lookAhead(index: number): string | null {
     const source = this.source;
@@ -419,7 +428,7 @@ export class MdMachine {
       return null;
     }
     this.ahead = Math.max(this.ahead, index - this.lineIndex);
-    return source.text.slice(source.starts[index]!, source.ends[index]!).replace(/\0/g, '�');
+    return this.asRead(index).line;
   }
 
   // --------------------------------------------------------------------------- stack helpers

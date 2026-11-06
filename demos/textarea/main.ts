@@ -6,7 +6,7 @@
 // and Backspace as input, not keys, and lack the rest: buttons stand in for those. The Preview box
 // shows the document as ourus renders it, beside the text.
 
-import { OurusDoc, OurusView, executeCommand, settlePlaceholders, type ChangeSpec, type OurusCommand, type OurusResult, OurusDeferred, OurusRejected, OurusSuccess } from '../../src/index.ts';
+import { OurusDoc, OurusView, executeCommand, settlePlaceholders, type ChangeSpec, type OurusCommand, type OurusResult, OurusDeferred, OurusFailed, OurusRejected, OurusSuccess } from '../../src/index.ts';
 
 const KEYS: Record<string, OurusCommand['type']> = {
   Tab: 'indent',
@@ -57,6 +57,18 @@ function select(anchor: number, head: number) {
   area.setSelectionRange(Math.min(anchor, head), Math.max(anchor, head), head < anchor ? 'backward' : 'forward');
 }
 
+/** The document with the textarea's selection: what a command acts at, and settling reads. */
+function view(): OurusView {
+  return OurusView.of(doc, { selection: selection() });
+}
+
+/** What a result was, for the status. */
+function outcome(result: OurusResult): string {
+  if (result instanceof OurusRejected) return `rejected — ${result.reason}`;
+  if (result instanceof OurusFailed) return `failed to write, a bug in ourus (${result.phase} ${result.code})`;
+  return result instanceof OurusSuccess ? 'success' : 'deferred';
+}
+
 /** ourus's own edit is being made: its input events aren't typing. */
 let applying = false;
 
@@ -92,11 +104,11 @@ function say(text: string) {
 }
 
 function run(command: OurusCommand): OurusResult {
-  const result = executeCommand(OurusView.of(doc), command, selection());
-  say(`${command.type}: ${result instanceof OurusRejected ? `rejected — ${result.reason}` : result instanceof OurusSuccess ? 'success' : 'deferred'}`);
+  const result = executeCommand(view(), command);
+  say(`${command.type}: ${outcome(result)}`);
   if (result instanceof OurusSuccess) {
     apply(result.changes, result.view.doc);
-    select(result.selection.anchor, result.selection.head);
+    select(result.view.selection.anchor, result.view.selection.head);
   }
   return result;
 }
@@ -156,13 +168,13 @@ const INPUTS: Record<string, OurusCommand['type']> = {
 area.addEventListener('beforeinput', (e) => {
   // typing: ourus's where Markdown reads the character as structure (a backtick), else the browser's
   if (e.inputType === 'insertText' && e.data && !applying && !composing && !e.isComposing && e.cancelable) {
-    const result = executeCommand(OurusView.of(doc), { type: 'insertText', text: e.data }, selection());
+    const result = executeCommand(view(), { type: 'insertText', text: e.data });
     if (result instanceof OurusDeferred) return;
     e.preventDefault();
-    say(`insertText: ${result instanceof OurusRejected ? `rejected — ${result.reason}` : result instanceof OurusSuccess ? 'success' : 'deferred'}`);
+    say(`insertText: ${outcome(result)}`);
     if (result instanceof OurusSuccess) {
       apply(result.changes, result.view.doc);
-      select(result.selection.anchor, result.selection.head);
+      select(result.view.selection.anchor, result.view.selection.head);
     }
     return;
   }
@@ -244,12 +256,13 @@ area.addEventListener('compositionend', () => {
   readBack();
 });
 
-// an empty node the caret (the selection's head) has left is settled: kept, or its line removed
+// an empty node the selection has left (no longer on any line it touches) is settled: kept, or its
+// line removed; where it can't be written again, its placeholder dropped, the text as it is (no
+// changes, a new document all the same)
 document.addEventListener('selectionchange', () => {
   if (document.activeElement !== area || composing) return;
-  const { anchor, head } = selection();
-  const r = settlePlaceholders(OurusView.of(doc), { anchor, head });
+  const r = settlePlaceholders(view());
   if (!r) return;
   apply(r.changes, r.view.doc);
-  select(r.selection.anchor, r.selection.head);
+  select(r.view.selection.anchor, r.view.selection.head);
 });

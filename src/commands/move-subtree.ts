@@ -25,7 +25,6 @@ export function moveSubtreeCommand(ctx: CommandContext, to: InsertionPoint): Our
   const run = dragRun(ctx);
   if (!Array.isArray(run)) return run;
   const first = run[0]!;
-  const last = run[run.length - 1]!;
   const ids = new Set(run.map((n) => n.id));
   const place = placeOf(doc, to);
   if (place instanceof OurusRejected) return place;
@@ -33,7 +32,7 @@ export function moveSubtreeCommand(ctx: CommandContext, to: InsertionPoint): Our
   if (after && ids.has(after.id)) return new OurusRejected('invalid-insertion-point', 'the place is anchored on a node moved');
   for (let p: OurusNode | null = parent; p; p = p.parent) if (ids.has(p.id)) return new OurusRejected('into-itself');
   const placed = run.map((n) => n.id);
-  if (parent.id === first.parent!.id && (after?.id ?? null) === (first.prev?.id ?? null)) return new OurusSuccess({ view: ctx.view, changes: [], selection: ctx.selection, placed });
+  if (parent.id === first.parent!.id && (after?.id ?? null) === (first.prev?.id ?? null)) return new OurusSuccess({ view: ctx.view, changes: [], placed });
 
   // a quote the run leaves holding one paragraph is that paragraph (`quotes: text`); an item's first
   // block, on its marker's line, it would be the item's text, which a move doesn't make yet

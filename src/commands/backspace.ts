@@ -3,14 +3,14 @@
 // which nodes go; `done()` escapes what then starts a line, sets apart what would run together, and
 // holds a line it empties with a placeholder.
 
-import { OurusProse, OurusAtom, blockIdsOf, type Located, type OurusNode } from '../doc/index.ts';
+import { OurusProse, OurusAtom, blockIdsOf, type Located, type OurusNode, nameOf } from '../doc/index.ts';
 import type { OurusDraft } from '../writer/index.ts';
 import { isSpaceOrTab, lineOf } from '../text/index.ts';
 import { type CommandContext } from './context.ts';
 import { joinIntoQuote, joinLineInQuote, joinQuoteUp, quoteAtomAt } from './quote.ts';
 import { codeAt, editInCode, joinInCode, onDelimiterLine } from './code.ts';
-import { deleteEmptyPair } from './typing.ts';
-import { childrenRefused, deleteHeldSpace, hiddenSpacesAt, inMarkup, leaveList, pastPrefix, textActedOnAt, textEnd, textStart, unnumberItem, unquote, visiblePreceding, withTextlessParents } from './util.ts';
+import { deleteEmptyPair, pairPlace } from './typing.ts';
+import { childrenRefused, deleteHeldSpace, hiddenSpacesAt, inMarkup, leaveList, pastPrefix, textActedOnAt, textEnd, textStart, unnumberItem, visiblePreceding, withTextlessParents } from './util.ts';
 import type { OurusResult } from './types.ts';
 import { OurusDeferred, OurusRejected } from './types.ts';
 
@@ -116,13 +116,17 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
   if (!ctx.collapsed) return deleteSelectionAcross(ctx);
   if (ctx.from.zone === 'gap') return blankLineBack(ctx, ctx.from.owner);
   const code = codeAt(ctx);
+  // in an empty pair of ours in code or a quote atom: both go (prose's below, its `$` and backticks too)
+  const place = pairPlace(ctx, ctx.from);
+  const pair = place && !place.prose && ctx.from.zone === 'text' ? deleteEmptyPair(ctx, place, ctx.from.offset) : null;
+  if (pair) return pair;
   if (code) return joinInCode(ctx, code, -1);
   const head = ctx.selection.head;
   // in the spaces Markdown hides before a text (a split's that kept them, padding written so): the
   // user's whitespace, not markup: past their start the host's, a space a press (Enter65j); at it,
   // the node joins the one above, the spaces with it (Enter65)
   const hidden = hiddenSpacesAt(ctx, head);
-  if (hidden && head > hidden.from) return new OurusDeferred();
+  if (hidden && head > hidden.from) return new OurusDeferred('host-default');
   // (on the line after its marker, the line break goes, the spaces staying before the text: ShiftEnter13)
   const breakBelow = hidden?.text.frame.find((p) => p.part === 'below');
   if (hidden && breakBelow && hidden.node.kind === 'item') {
@@ -151,7 +155,7 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
   // before a checkbox, in the marker: at the item's start, where the item joins (TO1), not past its checkbox
   const beforeBox = at.zone === 'marker' || (at.zone === 'frame' && at.part === 'task' && at.offset === 0);
   const markup = inMarkup(ctx.doc, at, head);
-  if (markup && config.markup === 'text') return new OurusDeferred('the caret is in markup');
+  if (markup && config.markup === 'text') return new OurusDeferred('in-markup', 'the caret is in markup');
   // (at its line's start, before a marker or a heading's `#`s: at the text start, Backspace2)
   if (markup || at.zone === 'marker' || (at.zone === 'frame' && at.part === 'heading')) {
     const text = textActedOnAt(ctx, head);
@@ -169,7 +173,7 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
   while (first < s.length && isSpaceOrTab(s.charCodeAt(first))) first++;
   // past the line's leading spaces, in the text: the host's (its edit keeps a placeholder where it
   // would empty a node or widen an item's padding), but in an empty pair of backticks
-  if (offset > first) return deleteEmptyPair(ctx, node, text, offset) ?? new OurusDeferred();
+  if (offset > first) return deleteEmptyPair(ctx, pairPlace(ctx, at)!, offset) ?? new OurusDeferred('host-default');
   const draft = ctx.draft();
   if (lineStart !== text.textStart(0)) {
     // at a later line's start: it joins the line above, its spaces with it, the caret staying before
@@ -219,9 +223,9 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
     const parentText = parent ? ctx.doc.textOf(parent) : null;
     if (parent && node.kind === 'paragraph' && !node.children.length && parentText instanceof OurusProse && parentText.empty) {
       // (its checkbox kept: the text the task's)
-      return ctx.apply(draft.setText(parent, parentText.concat(unquote(text))).remove([node]).setCaret(parent, parentText.text.length, -1));
+      return ctx.apply(draft.setText(parent, parentText.concat(text.unquoted())).remove([node]).setCaret(parent, parentText.text.length, -1));
     }
-    return ctx.apply(draft.setText(node, unquote(text)).setCaret(node, 0, -1));
+    return ctx.apply(draft.setText(node, text.unquoted()).setCaret(node, 0, -1));
   }
   // a callout's `[!type]` goes as a unit: a plain quote, its title its first paragraph (Quote57, 58)
   if (text.type === 'title') {
@@ -309,7 +313,7 @@ function blankLineBack(ctx: CommandContext, owner: OurusNode): OurusResult | nul
   const text = ctx.doc.textOf(owner);
   const k = ctx.doc.lineAt(head).index - owner.ownLastLine - 1;
   // (at a line's start, the host's deletes the line break just as well)
-  if (!text || owner.children.length || k < 0 || k >= owner.gap || head === ctx.doc.lineAt(head).from || !ctx.doc.atTextColumn(head, owner)) return new OurusDeferred();
+  if (!text || owner.children.length || k < 0 || k >= owner.gap || head === ctx.doc.lineAt(head).from || !ctx.doc.atTextColumn(head, owner)) return new OurusDeferred('host-default');
   // the one quoted blank line between two paragraphs of a quote, `quotes: text` (Shift-Enter's at a
   // line's end in a quote's text): they join, the next its text's next line, as the host's Backspace
   // joins them out of a quote; one paragraph left, the quote is its text again
@@ -391,7 +395,7 @@ export function joinUp(ctx: CommandContext, node: OurusNode, text: OurusProse, c
     draft.dissolve(node).inheritGap(before, node).setCaret(above, atEnd ? textEnd(upper) : upper.text.length, -1);
     return ctx.apply(draft);
   }
-  if (!(upper instanceof OurusProse)) return new OurusRejected('not-expressible', `can't join into ${above.kind === 'atom' ? above.block.type : 'that'}`);
+  if (!(upper instanceof OurusProse)) return new OurusRejected('not-expressible', `can't join into ${above.kind === 'atom' ? nameOf(above) : 'that'}`);
   if (node.kind !== 'item' && node.kind !== 'paragraph' && node.kind !== 'heading') return null;
   const lines = text.body.split('\n').length;
   if (lines > 1 && upper.heading?.form === 'atx') return new OurusRejected('not-expressible', 'an ATX title is a single line');
@@ -506,7 +510,7 @@ export function deleteSelectionAcross(ctx: CommandContext, then?: (draft: OurusD
   const to = ctx.to;
   if (from.zone !== 'text' || to.zone !== 'text' || !(from.text instanceof OurusProse) || !(to.text instanceof OurusProse)) return null;
   // within one text, the host's (a cut deletes it so too: `deleteSelected`)
-  if (from.node === to.node) return new OurusDeferred();
+  if (from.node === to.node) return new OurusDeferred('host-default');
   const upper = from.node;
   const lower = to.node;
   if (lower.kind !== 'item' && lower.kind !== 'paragraph') return null;
