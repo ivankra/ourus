@@ -38,7 +38,7 @@ import { executeCommand, type InsertionPoint, OurusFailed, OurusRejected, OurusS
 import { OurusDoc } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
 import { textStart } from '../src/commands/util.ts';
-import { drawDoc, allNodes, readDrawing, playActions, type PlayedState, readSpecFile, specConfig, specFiles, specTestFlavors, generatedStarts, resultStatus, readBaseline, writeBaseline } from './lib/index.ts';
+import { drawDoc, allNodes, readDrawing, playActions, type PlayedState, readSpecFile, specConfig, specFiles, specTestFlavors, generatedStarts, resultStatus, readBaseline, staleBaseline, writeBaseline } from './lib/index.ts';
 import { KNOWN } from './drops.ts';
 
 const here = resolve(import.meta.dirname, '..');
@@ -261,6 +261,8 @@ for (const [key] of new Map(parts.flatMap((p) => [...p.groups]))) {
 }
 
 console.log(`${runs} runs on ${starts.length} buffers`);
+// (the run the baseline was counted on: no knob changing its corpus)
+const counted = process.env.INVERSE_GENERATED === undefined;
 const baselineFile = join(here, 'test/inverse.baseline.json');
 const baseline = readBaseline(baselineFile);
 const sameCorpus = baseline?.corpus === corpus;
@@ -275,9 +277,11 @@ for (const failure of failures) console.log(`FAIL ${failure}`);
 for (const line of parts.flatMap((p) => p.known)) console.log(`known ${line}`);
 if (dumping) writeFileSync(process.env.INVERSE_DUMP!, parts.flatMap((p) => p.dumped).sort().join('\n') + '\n');
 if (rose.length) console.log(`\nmore round trips than the baseline don't come back: ${rose.join('; ')}`);
-if (baseline && !sameCorpus) console.log('\nthe corpus changed since the baseline (the spec): its counts are not held to it; INVERSE_UPDATE=1 records them');
+if (baseline && !sameCorpus && !counted) console.log('\nthe corpus changed since the baseline (the spec): its counts are not held to it; INVERSE_UPDATE=1 records them');
+const stale = process.env.INVERSE_UPDATE === '1' ? [] : staleBaseline(baseline, corpus, groups, counted, 'INVERSE_UPDATE');
+for (const line of stale) console.log(`\n${line}`);
 if (process.env.INVERSE_UPDATE === '1') {
   writeBaseline(baselineFile, corpus, groups);
   console.log(`baseline updated: ${baselineFile}`);
 }
-process.exitCode = failures.length === 0 && rose.length === 0 ? 0 : 1;
+process.exitCode = failures.length === 0 && rose.length === 0 && stale.length === 0 ? 0 : 1;

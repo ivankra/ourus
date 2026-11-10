@@ -8,13 +8,18 @@
 //   same       the same text
 //   blank+, blank-   the same lines but for more, or fewer, blank lines after paste
 //   tree       another outline
+//   spacing    the same outline and texts, the lines but for their spaces and tabs (a marker's
+//              padding, an item's indentation, an empty item's `- `)
 //   text       the same outline, other text
 //   <status>   one of them didn't apply (`duplicate: rejected`, `paste: deferredToHost`)
 //
 // Each group's count is held to a baseline (`copy-paste.baseline.json`) on the same corpus, so a
-// change that moves a run from one group to another fails the run until it is read; items must stay
-// `same` whatever the baseline says (but an empty one, which fills the empty item it is pasted on,
-// an unclosed fence, which paste closes, and lazy lines, which may read otherwise out of a quote).
+// change that moves a run from one group to another fails the run until it is read, and so does a
+// baseline left behind (another corpus, or a group other than `same` with fewer runs); items must
+// stay `same`, `spacing` or `blank±`, or be refused by both, whatever the baseline says (decided
+// 2026-11-14: paste keeps the copy's spelling, duplicate writes it in normal form), but an empty
+// one, which fills the empty item it is pasted on, an unclosed fence, which paste closes, and lazy
+// lines, which may read otherwise out of a quote, may differ otherwise.
 //
 //   node test/copy-paste.ts                       # the report, against the baseline
 //   COPYPASTE_UPDATE=1 node test/copy-paste.ts    # the same, then its counts as the new baseline, once read
@@ -75,6 +80,11 @@ function classify(duplicated: PlayedState, pasted: PlayedState): string {
   if (outline(duplicated.view.doc) !== outline(pasted.view.doc)) return 'tree';
   const solid = (s: string): string => s.split('\n').filter((l) => !isBlank(l)).join('\n');
   if (solid(a) === solid(b)) return a.split('\n').filter(isBlank).length < b.split('\n').filter(isBlank).length ? 'blank+' : 'blank-';
+  // (the same texts, each node's, and the same lines but for their spaces and tabs: a marker's padding,
+  // an item's indentation, an empty item's `- `)
+  const texts = (doc: OurusDoc): string => JSON.stringify(allNodes(doc).map((n) => { const t = doc.textOf(n); return t instanceof OurusAtom ? t.body : (t?.text ?? null); }));
+  const spaced = (s: string): string => s.split('\n').map((l) => l.replace(/[ \t]+/g, ' ').replace(/^ | $/g, '')).join('\n');
+  if (texts(duplicated.view.doc) === texts(pasted.view.doc) && spaced(a) === spaced(b)) return 'spacing';
   return 'text';
 }
 
@@ -128,11 +138,16 @@ for (const group of [...new Set([...counts.keys(), ...Object.keys(comparable ? b
   const n = counts.get(group) ?? 0;
   const was = comparable ? (baseline!.counts[group] ?? 0) : n;
   // an item must paste as it duplicates
-  const wrong = (group.startsWith('item') && !/^item \((?:empty|unclosed|lazy)\)/.test(group) && !group.endsWith(' same') && n > 0) || n > was;
+  // (but where they differ only in spaces, or in blank lines, both reading alike, or both are refused)
+  const alike = / (?:same|spacing|blank[+-]|duplicate: rejected, paste: rejected)$/.test(group);
+  const wrong = (group.startsWith('item') && !/^item \((?:empty|unclosed|lazy)\)/.test(group) && !alike && n > 0) || n > was;
   if (wrong) failed = true;
   console.log(`${wrong ? '✗' : ' '} ${String(n).padStart(6)}${n !== was ? ` (was ${was})` : ''}  ${group}`);
   if (!group.endsWith(' same')) for (const e of noted.get(group) ?? []) console.log(e);
 }
 if (process.env.COPYPASTE_DUMP) writeFileSync(process.env.COPYPASTE_DUMP, dump.sort().join('\n') + '\n');
 if (process.env.COPYPASTE_UPDATE) writeFileSync(baselineFile, JSON.stringify({ corpus, counts: Object.fromEntries([...counts].sort()) }, null, 2) + '\n');
-process.exitCode = failed && !process.env.COPYPASTE_UPDATE ? 1 : 0;
+// (a baseline left behind: another corpus, or fewer runs of a group but `same`, which would let them come back unseen)
+const stale = !baseline ? [] : !comparable ? ['the corpus changed since the baseline'] : Object.entries(baseline.counts).filter(([group, n]) => !group.endsWith(' same') && (counts.get(group) ?? 0) < n).map(([group, n]) => `${group} ${n} → ${counts.get(group) ?? 0}`);
+if (stale.length && !process.env.COPYPASTE_UPDATE) console.log(`\na baseline left behind: ${stale.join('; ')}; COPYPASTE_UPDATE=1 records it`);
+process.exitCode = (failed || stale.length) && !process.env.COPYPASTE_UPDATE ? 1 : 0;

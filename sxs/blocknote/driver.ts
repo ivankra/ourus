@@ -359,14 +359,14 @@ async function blockNoteDrop(page: Page, drop: Drop, settle: () => Promise<void>
   };
   // (a menu that doesn't come, or doesn't go, under a machine busy with other runs: the pointer away and
   // back, as a user's hand would, a few times, before it is the example's error; MoveSubtree5 and 6
-  // failed so in full runs alone)
+  // failed so in full runs alone, MoveSubtree6 after three tries too, 2026-11-15: five now)
   let from: Point | null = null;
   for (let attempt = 0; !from; attempt++) {
     from = await page
       .waitForFunction(shown, press, { timeout: 5000 })
       .then((h) => h.jsonValue())
       .catch(async (e: Error) => {
-        if (attempt < 2) return null;
+        if (attempt < 4) return null;
         // (what the page shows instead, for the next time it fails: only under a run of every app)
         const seen = await page
           .evaluate((press) => {
@@ -375,13 +375,16 @@ async function blockNoteDrop(page: Page, drop: Drop, settle: () => Promise<void>
             const blocks = [...document.querySelectorAll('.bn-block-outer')];
             const at = menu ? blocks.findIndex((b) => { const r = b.querySelector('.bn-block-content')!.getBoundingClientRect(); const m = menu.getBoundingClientRect(); return m.top + m.height / 2 >= r.top && m.top + m.height / 2 <= r.bottom; }) : -1;
             const sel = getSelection();
-            return `menu ${menu ? `at block ${at}, handle ${handle ? (Object.keys(handle).some((k) => k.startsWith('__reactProps$')) ? 'live' : 'not React\'s') : 'none'}` : 'none'}; pressed block ${press} of ${blocks.length}; selection ${sel?.isCollapsed ? 'collapsed' : 'over text'}, focus ${document.activeElement?.className ?? document.activeElement?.tagName}; visibility ${document.visibilityState}, focused ${document.hasFocus()}`;
+            return `focused ${document.hasFocus()}, visibility ${document.visibilityState}; menu ${menu ? `at block ${at}, handle ${handle ? (Object.keys(handle).some((k) => k.startsWith('__reactProps$')) ? 'live' : 'not React\'s') : 'none'}` : 'none'}; pressed block ${press} of ${blocks.length}; selection ${sel?.isCollapsed ? 'collapsed' : 'over text'}, focus ${document.activeElement?.className ?? document.activeElement?.tagName}`;
           }, press)
           .catch(() => '?');
         throw new Error(`${e.message.split('\n')[0]}: the side menu didn't come at the pressed block (${seen}; hover at ${Math.round(at.hover.x)},${Math.round(at.hover.y)})`);
       });
     if (!from) {
       await page.mouse.move(1, 1);
+      // (a window behind another worker's, under a run of several, gets no hover of its own: its tab in
+      // front for the next try, MoveSubtree5 and 6 failing so only in full runs)
+      if (attempt >= 1) await page.bringToFront();
       await settle();
       await page.mouse.move(at.hover.x, at.hover.y, { steps: 3 });
     }

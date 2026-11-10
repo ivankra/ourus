@@ -597,7 +597,7 @@ function matrix(o: {
     `| ${CELL.disagree![1]} | disagrees: other text, or (a block app) other blocks, nesting or count |`,
     `| ${CELL.caret![1]} | caret: the same result, the caret elsewhere |`,
     `| ${CELL.whitespace![1]} | spaces: the same but for spaces next to line breaks, or (a text app) spaces that leave the document as ourus reads it the same |`,
-    `| ${CELL.error![1]} | error: the run failed, or the app didn't hold the starting state |`,
+    `| ${CELL.error![1]} | error: the run failed (an app that didn't hold the starting state skips the example) |`,
     `| blank | skipped: the app can't run the example as written (its report says why) |`,
     ...(columns.includes('missing') ? [`| ${CELL.missing![1]} | not run: the app's last run didn't play the example as the spec has it now |`] : []),
     `| (${CELL.disagree![1]}) | in brackets, a difference in an example adapted for the app: its buffers projected onto blocks, so it compares those |`,
@@ -1045,7 +1045,9 @@ function noCaretName(plan: Plan, i: number, j: number): string {
 const UNREACHED = 'drop:';
 /** A step that changes only what blocks can't show, where the app changed something, before any step compared (`judge`). */
 const LOST = 'the app changing what ourus\'s blocks show no change in, at';
-const skippedAsPlayed = (why: string): boolean => why.startsWith(NO_FOCUS) || why.startsWith(UNREACHED) || why.startsWith(LOST);
+/** A start the app holds otherwise than it was given (it rewrote what it was given): skipped as it played, as `NO_FOCUS`. */
+const UNHELD = 'the app holding its start otherwise';
+const skippedAsPlayed = (why: string): boolean => why.startsWith(NO_FOCUS) || why.startsWith(UNREACHED) || why.startsWith(LOST) || why.startsWith(UNHELD);
 const needsFocus = (action: string): boolean => !/^(?:undo|redo)$/.test(action);
 
 /**
@@ -1083,7 +1085,16 @@ const pageActor = (page: Page): Actor => ({
       }, clipboard as Record<string, string>);
       if (!copied) throw new Error('the clipboard could not be written: the page refused a copy');
     },
-    read: () => page.evaluate(() => navigator.clipboard.readText()),
+    // (`SXS_CLIPBOARD_HTML=1`: its text/html too, as JSON, `{ "text/plain", "text/html" }`, to see what
+    // an app writes beside its text; the clipboard then compares as nothing else does)
+    read: () =>
+      process.env.SXS_CLIPBOARD_HTML
+        ? page.evaluate(async () => {
+            const out: Record<string, string> = {};
+            for (const item of await navigator.clipboard.read()) for (const type of item.types) if (type === 'text/plain' || type === 'text/html') out[type] = await (await item.getType(type)).text();
+            return JSON.stringify(out);
+          })
+        : page.evaluate(() => navigator.clipboard.readText()),
   },
   settle: (o) => page.evaluate((o) => (window as unknown as { __ourusIdle: { wait(o: IdleOptions): Promise<IdleResult> } }).__ourusIdle.wait(o), o),
   front: () => page.bringToFront(),
@@ -1248,7 +1259,9 @@ async function runPlan(w: Worker, plan: Plan): Promise<Outcome> {
       await settleAfter('loading again');
       loaded = await driver.read(page);
     }
-    if (!holds(loaded)) throw new Error(`${driver.displayName} holds the starting state differently:\n  meant:\n${indent(drawDoc(plan.initial))}\n  holds:\n${indent(drawDoc(loaded))}`);
+    // (an app that holds it otherwise, rewriting what it is given, a marker's padding or a caret in an
+    // indentation moved: no key of the example's to judge there, skipped as it played, as `NO_FOCUS`)
+    if (!holds(loaded)) return { verdict: 'agree', step: 0, got, clipboards, unsettled, ms: Date.now() - t0, skip: UNHELD };
     if (lastClip >= 0 && w.holdClipboard) {
       // (the wait for it, other windows' examples, is no time of this one's: the watchdog's starts after)
       w.playing = undefined;
@@ -1642,8 +1655,11 @@ async function playAll(): Promise<string | undefined> {
         (e: unknown) => (clearInterval(timer), resolve({ verdict: 'error', step: 0, got: [], clipboards: [], error: String(e instanceof Error ? e.message : e), unsettled: [], ms: 0 })),
       );
     });
+  // (an example a worker got stuck at is played once more, by a worker in a fresh window: under a machine
+  // busy with other apps' runs an app's page can stall at any example, which alone it plays)
+  const again = new Set<number>();
   const work = async (w: Worker): Promise<void> => {
-    for (let n = next++; n < queue.length; n = next++) {
+    for (let n = next++; n < order.length; n = next++) {
       const i = order[n]!;
       const { plan, names } = queue[i]!;
       const nth = readied.findIndex((x) => x.w === w) + 1;
@@ -1657,6 +1673,11 @@ async function playAll(): Promise<string | undefined> {
         say(`${driver.displayName}'s worker ${readied.findIndex((x) => x.w === w) + 1} is stuck at ${names.join(' = ')}: its window is destroyed, and the other workers go on`);
         w.dirty = error;
         await w.retire?.();
+        if (!again.has(i)) {
+          again.add(i);
+          order.push(i);
+          return;
+        }
         done[i] = { plan, names, outcome: { verdict: 'error', step: 0, got: [], clipboards: [], error, unsettled: [], ms: STUCK_MS } };
         show();
         return;
@@ -1665,8 +1686,9 @@ async function playAll(): Promise<string | undefined> {
       // an error leaves the app in a state no one knows: its window isn't kept for the next run
       if (outcome.verdict === 'error') w.dirty ??= outcome.error ?? 'an error';
       // a promise of the app's that never settles is collected instead of waited on (V8's inspector holds
-      // an evaluation's promise weakly): rare, and nothing of the example's, so it runs once more
-      if (outcome.verdict === 'error' && /Resulting promise was garbage collected/.test(outcome.error ?? '')) {
+      // an evaluation's promise weakly), or the app reloaded its page under the example (RemNote, after a
+      // write it takes for a database error): rare, and nothing of the example's, so it runs once more
+      if (outcome.verdict === 'error' && /Resulting promise was garbage collected|Execution context was destroyed/.test(outcome.error ?? '')) {
         say(`again      ${names.join(' = ')}: ${outcome.error}`);
         outcome = await runPlan(w, plan);
       }
@@ -1693,7 +1715,7 @@ async function playAll(): Promise<string | undefined> {
   const readied: { r: Ready; w: Worker }[] = [];
   let version: string | undefined;
   const join = async (k: number): Promise<void> => {
-    const gone = k === 0 ? undefined : (): boolean => next >= queue.length;
+    const gone = k === 0 ? undefined : (): boolean => next >= order.length;
     let r: Ready | null;
     try {
       r = await ready(k, gone);
@@ -1720,7 +1742,15 @@ async function playAll(): Promise<string | undefined> {
       say(`${driver.displayName}${version ? ` ${version}` : ''} at ${driver.url}, ${r.how} in ${((Date.now() - opened) / 1000).toFixed(1)}s; ${unique.size} examples to run (${plans.length} tests), ${tests.length - plans.length} skipped${count > 1 ? `; up to ${count} workers` : ''}`);
     } else say(`worker ${nth} joined (${r.how})`);
     await work(w);
+    // (a worker retired, stuck, with examples left: one in a fresh window in its place, as many times
+    // as the run has workers)
+    if (w.retired && next < order.length && replaced < count) {
+      replaced++;
+      say(`a fresh window for ${driver.displayName} in place of the stuck worker's`);
+      await join(count + replaced);
+    }
   };
+  let replaced = 0;
   await Promise.all(Array.from({ length: count }, (_, k) => join(k))).catch((e: unknown) => {
     // an app behind a login without a session: what to give it, not a stack
     if (!(e instanceof LoginRequired)) throw e;

@@ -1,7 +1,7 @@
-# What to do next (2026-11-09)
+# What to do next (2026-11-14)
 
 A proposal for improving ourus: what to change, in what order, and what not to do. The open bugs are in
-`test/bugs.ts` (B-ids: `npm run bugs` says what is open, `node test/bugs.ts B237` shows one); what can't
+`test/bugs.ts` (B-ids: `npm run bugs` says what is open, `node test/bugs.ts B413` shows one); what can't
 be a failing case is here. Sizes are rough judgments (S a day or less, M a few days, L a week or more), not
 measurements.
 
@@ -12,17 +12,19 @@ measurements.
   - [Numbers](#numbers)
   - [How bugs are ranked](#how-bugs-are-ranked)
   - [What causes them](#what-causes-them)
+  - [Recommendations](#recommendations)
   - [What the reviews covered](#what-the-reviews-covered)
 - [Principles](#principles)
 - [The plan](#the-plan)
   - [Step 1: see the failures](#step-1-see-the-failures)
   - [Step 5: marks through a rewrite](#step-5-marks-through-a-rewrite)
   - [Step 6: decide the behavior](#step-6-decide-the-behavior)
-  - [Step 8: the writer's prefixes (prototyped and dropped)](#step-8-the-writers-prefixes-prototyped-and-dropped-2026-11-10)
+  - [Column-shaped bugs](#column-shaped-bugs)
   - [Any time: smaller batches](#any-time-smaller-batches)
 - [Not proposed](#not-proposed)
 - [Risks](#risks)
 - [How to tell it worked](#how-to-tell-it-worked)
+- [Upstream bugs to report](#upstream-bugs-to-report)
 - [Decisions](#decisions)
   - [Needed now](#needed-now)
   - [Decisions to confirm](#decisions-to-confirm)
@@ -32,27 +34,26 @@ measurements.
 The architecture is sound: parser, outline, draft, writer, then a readback that refuses rather than
 corrupts. It needs no rewrite. Two things are wrong around it:
 
-1. **The tests saw far less than they appeared to.** Green means "no worse than the baseline". The
-   failing cases are kept now and were triaged to none (`test/bugs-untriaged.json`, 288 filed by id),
-   but a volume run with a fresh seed brings about 250 new ones, two thirds of shapes already filed.
-2. **Behavior was never reviewed as a whole.** The spec is 1,609 agent-written cases that agree with the
+1. **The tests saw far less than they appeared to.** Every failure is kept now and triaged by id
+   (`test/bugs-untriaged.json` empty), and a baseline left behind fails its run (2026-11-14). The
+   volume runs' yield has fallen to about 17 failing sessions in 100,000 a seed (seeds 851 to 1001),
+   nearly all P4 shapes, half of them lost marks that are no bug; volume runs are paused (the user's,
+   2026-11-14).
+2. **Behavior was never reviewed as a whole.** The spec is 1,752 agent-written cases that agree with the
    code, which isn't the same as being right. There is no compact statement of intent to review.
 
-So: first make failures visible, then review the intended behavior in a table instead of prose, and
-take the duplicated models out of the code. The round of 2026-11-06 to 09 was refactoring and step 1's
-first part, the triage with it (`dev/29-refactor.md`); bug fixes wait for a round of their own.
+So: make failures visible (done but for the oracles below), review the intended behavior in a table
+instead of prose, and take the duplicated models out of the code.
 
 | Step | What | Size | Takes out |
 |---|---|---|---|
-| 1 | Tests: a triage helper, the corpus, more actions, grouping by cause, oracles | M | What a volume run adds, unread |
-| 5 | Marks through a rewrite, once a key sequence reaches one | M | B237's hand-built shapes |
-| 6 | Boundary table and the decisions review | M, mostly the user's time | D1–D33, B202, B217 |
-| 8 | Prefix model: prototyped, dropped (2026-11-10) | — | Column-shaped families only, fixed as bugs |
+| 1 | Tests: the corpus, more actions, oracles | M | What a volume run adds, unread |
+| 5 | Marks through a rewrite, once a key sequence reaches one | M | B413's hand-built shapes |
+| 6 | Boundary table and the decisions review | M, mostly the user's time | D1–D33, B217 |
 
-Next, in order: a triage helper (step 1), then the bug round: the P2s (B346 first), the large families
-(B345, B350, B348); the HTML converter's delimiter runs and formatting through containers with the HTML
-bugs (they change output).
-Decisions that change that order are in [Needed now](#needed-now).
+Every open bug is P4 (55, 2026-11-14). Next, the user's: the open bugs read through for the easy and
+straightforward ones, each fixed with its test (`dev/30-bugs.md`). Decisions that change that order
+are in [Needed now](#needed-now).
 
 ## Where ourus stands
 
@@ -60,20 +61,19 @@ Decisions that change that order are in [Needed now](#needed-now).
 
 | Measure | Now |
 |---|---|
-| `npm run test:fast` | 2,708 pass, about 6 s |
-| `npm test` | The full run, ten suites, about 2 min 30 s on four cores. CI runs it on every push |
-| Spec cases | 1,612 |
-| Open bugs (`test/bugs.ts`) | 135, 222 cases: 0 P1, 20 P2, 115 P3; 4 policy questions |
-| Bugs that are `write-failed` refusals | 91 of 135 |
-| Kept failing cases (`bugs-untriaged.json`) | 288 filed by id; 249 untriaged, a volume run's from seed 51 |
-| Writer | `write.ts` 2,340 lines, `draft.ts` 3,129, `lines.ts` 188 |
+| `npm run test:fast` | 3,078 pass |
+| `npm test` | The full run, eleven suites (`copy-paste` the eleventh, 2026-11-14), about 3 min on four cores. CI runs it on every push |
+| Spec cases | 1,752 |
+| Open bugs (`test/bugs.ts`) | 55: 0 P1, 0 P2, 0 P3, 55 P4; no policy question (2026-11-14; seeds 301 to 1001 triaged) |
+| Bugs that are `write-failed` refusals | 44 of 55 |
+| Kept failing cases (`bugs-untriaged.json`) | none untriaged; seeds 51 to 1001 filed by id |
+| Writer | `write.ts` 2,756 lines, `draft.ts` 4,066, `lines.ts` 189 |
 | `OurusDeferred` that is `not-done` (ourus doesn't do it here yet) | 2 sites; every deferral gives a reason |
-| Sessions at the committed size (2,000) | 50 failures in 11 groups, all filed |
-| Sessions at 100,000 (`npm run test:volume`, about 2 min) | 2,284 failing sessions in 61 groups (seeds 51 to 100), no throw |
+| Sessions at the committed size (2,000) | none |
+| Sessions at 100,000 (`npm run test:volume`, about 1 min) | 17, 17, 21, 16 failing sessions (seeds 851 to 1001), no throw; paused |
 
-Most of the volume's failures are marks lost on lines a command didn't change (sessions check marks
-since; B345 alone holds most), then `write-failed`, the writer's. Earlier rounds took the
-throws and the carets off the text.
+Most of the volume's failures are marks lost on lines a command didn't change, half of them no bug
+(a mark following its block where the check follows lines), then `write-failed`, the writer's.
 
 ### How bugs are ranked
 
@@ -82,20 +82,64 @@ throws and the carets off the text.
 - **P2**: a wrong result on realistic input, or an ordinary edit refused with `write-failed` (the
   readback check stops anything wrong being written; the user's edit is refused).
 - **P3**: rare input (tab-led lines, padded markers), non-default options, HTML paste details.
+- **P4**: rare input whose fix is large or complex (writer work for a fuzzer-built or hand-built
+  shape, tab-led lines, the 9/10 marker widths): not worth fixing now (decided 2026-11-12). Reach
+  raises one as it does a P3.
 
-A bug reached from keys outranks one from hand-built state. The ranking rests on assumptions D21, D23 and D24.
+A bug reached from keys outranks one from hand-built state. The ranking rests on assumptions D21 and
+D23; `quotes: atom` ranks as the default does (decided 2026-11-12: the true-outliner demo runs on it).
+
+Priority is when to work on a bug, not only how bad it is. How often a bug is reached counts too. A
+P3 the volume run reaches often (7 or more sessions filed under it, `// kept:`) is P2, even when each
+of its shapes is rare (2026-11-11: B208, B237, B353, B377, B378). A P3 to work on with the P2s is P2
+too (2026-11-11: B298, B355, B356, B358, and the volume run's B379 to B391).
 
 ### What causes them
 
-1. **The writer can't spell a draft**: blocks in unusual containers (a quote under an item, nested
-   quotes sharing a line, a quote atom's own prefixes), lazy and tab-led continuation lines, padded
-   first lines, marker widths across 9/10.
-2. **Node identity through a rewrite**: a node written anew where the draft named it (copies,
-   shared container lines) reads back with another id.
-3. **Two models of one thing**: a shortcut beside the real logic, which drifts from it. `moveRefused`
-   against the writer (B241).
-4. **Marks not carried through a rewrite**: a held line or space the writer's layout no longer agrees
-   with (B237).
+What the volume runs keep finding (seeds 301 to 1001, none a throw or a silent wrong text; every
+write failure a refusal the readback made), by how many cases each cause gives:
+
+1. **The writer keeps every spelling it reads.** Tabs, padded markers, `>-` quotes, uneven quote
+   padding, lazy lines, marker widths across 9/10: each is copied as written and its columns adjusted
+   by a rule of its own, and each combination is a code path. The generator makes such shapes on
+   purpose, so each run reaches combinations no earlier one did. Most P4s: the tab-led and
+   shared-marker-line clusters in `test/bugs.ts`.
+2. **Two models of the same lines.** The seam check (`#lastLines`, `#firstLines`, `#ownLines` in
+   `draft.ts`) predicts the lines the writer will write; the writer writes its own. Each drift is a
+   refusal; each found by tracing a failing case's seam (its `upper` and `lower` against what was
+   written) and fixed where it drifts (dev/30-bugs.md: B467, B503, B505, B513, B515, the seed 851
+   ones, B511). Open of this kind: B490, B509, B510, B512, B514, B524 (the writer lines an item up
+   further left, which the check reads where it was).
+3. **Marks carried by hand.** Every place that writes a node anew carries its placeholders and raised
+   lines' marks itself; a place that doesn't loses one (B418, B444 to B446, B477, B478, B520).
+   Cosmetic: a blank line of ours taken for the author's, an empty node no longer held.
+4. **Node identity through a rewrite**: a node written anew where the draft named it (copies, shared
+   container lines, a renumbered marker line) reads back with another id (B450).
+5. **The marks check's noise.** A mark that moves with its block where the check follows lines, and
+   alike blocks a move regroups, are reported as lost: about half of each seed's marks cases.
+
+### Recommendations
+
+In order of payoff:
+
+1. **The easy P4s** (the user's, 2026-11-14): the open bugs read through, each fixed with a test where
+   its mechanism is one place (dev/30-bugs.md records each).
+2. **One model of the lines.** Cause 2, fixed place by place: trace a failing case's seam and fix where
+   the check's lines drift from the writer's. A function both call for a node's lines as written would
+   close it by construction; L, to prototype and measure first.
+3. **The writings a failing command gets.** Left: B331, B369, which a later writing refuses wrongly
+   (indented code into a quote, a tab-led empty item).
+4. **Marks, per transform.** Not one mechanism (a pass carrying every gap's marks made 1 of 40 kept
+   sessions quiet, 2026-11-13): each transform that reshapes a gap carries its marks, B444 and B477 the
+   largest.
+5. **The marks check: marks that follow their nodes.** A mark that moves with its block where the check
+   follows lines, and alike blocks a move regroups, read as no loss.
+6. **Refuse early the shapes that won't be fixed.** A P4 shape's write failure as a stated
+   `not-expressible` refusal in the draft: one line each, a documented limit instead of an open bug.
+7. **Text cuts that don't paste back.** A cut whose end is under a node it takes out
+   (`- o«ne⏎- two⏎  »- kid`) joins now, but pasted back `kid` goes beside `two`, not under it; a cut
+   from a heading into a list (`# H«ead⏎para⏎»- x`) is the host's deletion, a marker left as text
+   (dev/30-bugs.md, The clipboard format, Left).
 
 ### What the reviews covered
 
@@ -112,8 +156,8 @@ So the next round doesn't repeat it. These found nothing:
 - GFM against Obsidian on notes without Obsidian syntax, but for D4.
 - 489,708 sweep runs on 240 generated notes and 278,802 conservation checks added no group.
 
-Not covered: one review skipped HTML, and a later one HTML and the clipboard, so B264 to B271 have had one
-pass. Hand-built marks reach states sessions never do; replaying from keys told the two apart. A probe's
+Not covered: one review skipped HTML, and a later one HTML and the clipboard, so the HTML bugs have had
+one pass. Hand-built marks reach states sessions never do; replaying from keys told the two apart. A probe's
 `marks: { placeholders }` is easy to forget: `> ` then Enter looked like a bug without it.
 
 A design review (2026-11-06) read the session's writeup and `src/`, and replayed seven tracked bugs. It
@@ -151,36 +195,24 @@ full run and CI are in place; what is left:
 which is how B234, B235 and B272 hid. It rotates six option sets, of about 40 options; it should draw from
 all. Add CRLF and lone-CR forms of each note, a BOM sometimes, and a block shape for each new failure family.
 
-**Actions (S).** `test/sessions.ts` never plays `selectNodeDown`, `selectNodeUp`, `moveSubtree`, `pasteAt`,
-`addBlockId`, `removeBlockId`, or commands given `nodes`, where B212, B235 and B274 hid. The drop's places
-come from a `drag` pickup, so drops can be played from what it offers.
+**Actions (S).** `test/sessions.ts` (`SESSION_ACTIONS`) never plays `selectNodeDown`, `selectNodeUp`,
+`moveSubtree`, `pasteAt`, `addBlockId`, `removeBlockId`, or commands given `nodes`, where B212, B235
+and B274 hid. The spec's player knows them all (`action-player.ts`); a drop's places can come from a
+`drag` pickup.
 
-**Group failures by cause (M).** A group's name is still the command and what failed, which mixes
-unrelated bugs and counts one many times (five `selection off the text` groups were all B272, the action
-after it). Group by what failed instead, the writer's message with numbers taken out, and node kinds:
-that made one run 23 groups, not 66. A case is filed by its id (`// kept: <id>` in a bug's case), so a
-group's name matters for reading, not for filing.
-
-**Volume (S).** Left: running `npm run test:volume` on a schedule, rotating its seed, and the other
-reports at volume.
-
-**A triage helper, then triage (M).** A fresh seed (51) brought 249 cases, each a new id; the shapes
-triage found by hand (`dev/29-refactor.md`'s last section) place 168 of them under filed bugs (B345
-131), 81 to read. A helper doing what triage did: reduce a case to one command on a small note, show
-the text the writer wrote where the readback refused it, suggest a bug by its shape, for a person to
-confirm and file (`// kept:`).
+**Volume (S).** Paused (the user's, 2026-11-14). Left: the other reports at volume.
 
 **New oracles (M).** Each of these found bugs by hand, some fixed since, and none is automated:
 
 | Oracle | Would have found |
 |---|---|
 | An edit gives equivalent results on LF, CRLF and CR forms of a note | B230, B231 |
-| Keyboard move and drop agree on the same destination | B241 |
+| Keyboard move and drop agree on the same destination | B419 to B422 |
 | Type a character, Backspace: the note comes back | B204, B245, B246 |
 | Each `expandSelection` holds the last | B216 |
 | `selectedSubtrees(selectionOf(roots))` gives the roots, zoomed and folded too | B212 |
 | `visibleSelection` of its own result changes nothing | B212, B213 |
-| Numbered lists stay sequential under `renumber` | B199, B211 |
+| Numbered lists stay sequential under `renumber` | B199, B442, B443 |
 | Settling twice does what settling once does, and an abandoned placeholder that may settle goes, or is kept or refused by a stated rule (idempotence alone passes a placeholder that never settles) | B239 |
 | A paste keeps the clipboard's and the note's letters in order, not only their count (`conserve.ts` compares them sorted) | B327 |
 | Edit, settle, edit: the whole state checked at each boundary (text, selection, marks, view) | B276 |
@@ -189,7 +221,7 @@ confirm and file (`// kept:`).
 **Parser differential (S).** `test/parser/oracles.ts` compares generated documents with commonmark.js
 and cmark-gfm, deliberate differences counted apart. Left: micromark beside them, and the corpus
 (the spec's buffers, the generated notes), not generated documents alone. One reference misleads: commonmark.js shares the tab and NBSP bugs, and the
-three split on B247. cmark-gfm decides GFM questions, being
+three split on B247 (decided: cmark-gfm's). cmark-gfm decides GFM questions, being
 what GitHub runs (`cmarkgfm` on PyPI needs no build).
 
 **Count refusals and deferrals (S).** A refusal costs a user too. Report the rate per command over a
@@ -200,16 +232,14 @@ successes into refusals, so a rise is allowed where each new refusal is such a c
 
 ### Step 5: marks through a rewrite
 
-The sessions check marks on the lines a command didn't change; it found B345 (a raised blank line's
-mark dropped where its gap is written anew), B353 (one dropped where Markdown needs it) and B372.
+The sessions check marks on the lines a command didn't change; the raised-line bugs it found are
+recommendation 4's.
 
 Left: a mark is one of three things, a held empty node or line, a held space, an escape or closer of
 ours. For each, write down what moving, splitting, joining, converting, filling and abandoning do, then
-make the draft carry that. The rule behind B237: a mark stays valid in the written layout or goes in the
-draft, never at the readback. The sessions reach B237 now (a held space on a quote atom's later line in
-an item), beside its eight hand-built shapes. Each fails for its own reason (a setext title, a quote's `>`,
-code, a footnote's label, a lazy line): settling every touched text's held spaces in the draft fixes
-none of them, while settling them first, as leaving does, fixes all eight. Size M.
+make the draft carry that. The rule behind what was B237: a mark stays valid in the written layout or
+goes in the draft, never at the readback. Left of it: B413 (a quoted paragraph held past `>`,
+hand-built). Size M.
 
 ### Step 6: decide the behavior
 
@@ -219,12 +249,12 @@ The highest-value step that isn't code, and the answer to the spec being unrevie
 an outcome is `join`, `peel`, `move-caret`, `refuse(reason)` or `host`. A test walks every cell, so a
 missing cell fails, and a `Deferred` only comes from a `host` entry. Delete and Backspace tables come from
 one description, symmetric by construction, exceptions listed. A survey found 169 asymmetries nobody has
-classified (D26); this classifies them. It is a few screens a person can read, where the spec is 1,585 cases
-nobody will. The same boundary answering three ways (B202) can't hide in it, nor a caret with no node
-(B217).
+classified (D26); this classifies them. It is a few screens a person can read, where the spec is 1,752 cases
+nobody will. The same boundary answering three ways (B202, decided since) can't hide in it, nor a
+caret with no node (B217).
 
 **Review [D1 to D33](#decisions-to-confirm) (the user's time).** Grouped so an hour goes far: defaults first
-(D1, D2, D13, D14), dead keys (D7, D8, D16), then the rest. Each answer becomes a table entry or an option,
+(D1, D2, D13), dead keys (D7, D8, D16), then the rest. Each answer becomes a table entry or an option,
 and the spec cases follow.
 
 **Fewer options (the user's time).** About 40 options, and each multiplies what the tests must cover. The
@@ -239,18 +269,10 @@ next line).
 case whose only justification is "the code does this" gets flagged. Over time, tag cases with where their
 intent came from: an app's verdict, a decision, or nothing yet.
 
-### Step 8: the writer's prefixes (prototyped and dropped, 2026-11-10)
+### Column-shaped bugs
 
-Tried on main and rolled back: `layout.ts`, an item's marker of another width as a column move, plus a
-"lead" move for a marker written over a line. It closed B169, B191, B210, B278, B358, B348 and B349, and
-15 kept cases passed. 25 moves into a renumbered item lined up with their siblings, and no outcome was
-worse. But it replaced nothing central: `shifted`, `copyLine`'s branches, the overwrite pass and the
-draft's separate prediction all stayed. It cost about 260 lines and removed no net code, which failed
-the exit. Porting `shifted` wouldn't change that: its callers that pass built strings (continuations)
-keep a string version alive.
-
-**Decision:** keep the writer. Fix column-shaped families as bugs, with the design below. Refuse earlier
-the P3 shapes nobody reaches from keys.
+The writer stays (a prefix model was prototyped 2026-11-10 and dropped: it replaced nothing central and
+removed no net code). Column-shaped families are fixed as bugs.
 
 **What held, for whoever fixes a column-shaped bug:**
 
@@ -274,17 +296,8 @@ the P3 shapes nobody reaches from keys.
 
 Independent of the steps, each a small batch:
 
-- **Parser (M):** email autolinks over decoded text (B251): the rule sees text nodes alone. The
-  proposal: run it over each run of text, escape and entity nodes as decoded text, mapped back to the
-  source, the autolink keeping the nodes it covers as its children (so `inlineEscapeAt` still finds an
-  escape in it), its link the decoded text, as cmark-gfm links every case whole.
 - **Performance (S):** scaling checks at the APIs hosts call, not parsing alone.
-- **HTML (M):** 19 bugs (B264 to B271, B323, B332, B335 to B340, B373 to B375), all P3. Each Markdown context's
-  escaping is in one place already (inline text, a block's start, a cell, a heading's end, a link's
-  destination and title): B332 is a gap in the inline one. A style is parsed once (`cssOf`, done). Left:
-  normalize on and off runs before writing delimiters (B264); carry formatting through containers
-  (B266); Word's lists through the list builder `<ol>` uses (B339, B340). A wider inline
-  representation, emitted and escaped once, only with measured coverage.
+- **HTML:** a wider inline representation, emitted and escaped once, only with measured coverage.
 
 ## Not proposed
 
@@ -292,8 +305,8 @@ Ideas considered and left out, with why, so they don't come back unexamined:
 
 - **A validator stage deciding what can be written.** It would have to predict the writer: a second
   model of Markdown, the very thing behind B241. The readback already answers exactly.
-- **A shared move planner for keyboard, drop and drag.** B241 is one P3 bug that four narrow fixes
-  close. The 17 bugs of the moves cluster are writer spelling, which planning wouldn't touch. The
+- **A shared move planner for keyboard, drop and drag.** B419 to B422 are four narrow checks, each
+  a P3 with a fix of its own. The 17 bugs of the moves cluster are writer spelling, which planning wouldn't touch. The
   keyboard-against-drop oracle gets the benefit without the refactor. Revisit if it keeps finding
   differences.
 - **Stripping a BOM and normalizing line endings at parse.** `changes` and selections are offsets into the
@@ -307,7 +320,9 @@ Ideas considered and left out, with why, so they don't come back unexamined:
   structure, lists before escapes); running them to a fixpoint would hide an ordering mistake and cost
   time. Keep the phases and give them postconditions (step 5).
 - **Rewriting or splitting the writer.** Prototyped: it fixed column-shaped families but replaced nothing
-  central and removed no net code (step 8). Splitting `write.ts` and `draft.ts` helps reading, not bugs.
+  central and removed no net code ([Column-shaped bugs](#column-shaped-bugs)). Splitting `write.ts` and
+  `draft.ts` helps reading, not bugs.
+- **Readback-guided repair.** Never (the user's, 2026-11-13; dev/30-bugs.md).
 
 ## Risks
 
@@ -317,7 +332,7 @@ Ideas considered and left out, with why, so they don't come back unexamined:
   P3s stay refusals, on purpose.
 - **Fixing to the spec entrenches it.** While step 6 is pending, a spec case that looks wrong gets a
   question, not a matching fix.
-- **Agent-written fixes add cases to the writer.** Each past round did, which is how it reached 5,600
+- **Agent-written fixes add cases to the writer.** Each past round did, which is how it reached 6,800
   lines. A fix that adds a special case for one shape should say why the general rule can't take it.
 - **Fewer refusals can mean wrong text.** A writer change that lowers `write-failed` may be writing what
   reads otherwise where the readback compares spelling alone; it reads verbatim code's meaning now, and a
@@ -330,13 +345,35 @@ Ideas considered and left out, with why, so they don't come back unexamined:
 
 | Measure | Now | Target |
 |---|---|---|
-| Failures per 100,000 sessions, full action set | 2,284 failing sessions (seeds 51 to 100) | 0 untriaged, falling |
+| Failures per 100,000 sessions, full action set | about 17 failing sessions a seed (851 to 1001; 599 at seed 51) | 0 untriaged, falling |
 | Open P1 | 0 | 0 |
-| Kept cases no bug has confirmed (filed by id, not by group) | 249 (seed 51's) | 0 |
+| Kept cases no bug has confirmed (filed by id, not by group) | 0 | 0 |
 | `Deferred` that is `not-done` | 2 sites | 0 |
 | Boundary cells unstated | unknown | 0 |
-| Decisions unconfirmed | 27 | 0 |
-| `write-failed` bugs | 91 | falling, family by family |
+| Decisions unconfirmed | 26 | 0 |
+| `write-failed` bugs | 44 of 55 | falling, family by family |
+
+## Upstream bugs to report
+
+Reminders, for the user to file: where a reference parser reads Markdown against its spec, found
+while checking ourus. Each re-run 2026-11-13 (commonmark.js 0.31.2, micromark 4.0.3 with
+micromark-extension-gfm 3.0.0, markdown-it 15.0.2, marked 18.0.14; cmark-gfm 0.29.0.gfm.13 by the
+`cmarkgfm` Python package: `python3 -m venv v && v/bin/pip install cmarkgfm`), the inputs and
+outputs in the pointer.
+
+| Where | What | Pointer |
+|---|---|---|
+| CommonMark spec (an example asked for) | `<https://example.com/?a=1&amp;b=2>`: cmark decodes the entity in an autolink's address, commonmark.js, micromark, markdown-it and marked keep it; no example says | dev/30-bugs.md, Decisions, B247 |
+| micromark-extension-gfm-autolink-literal | `a\+b@example.com` links nothing, `a&#43;b@example.com` (the same `+`) links `b@example.com`, the wrong mailbox; cmark-gfm links `a+b@example.com` both ways | dev/30-bugs.md, B251, "For a micromark issue" |
+| cmark, micromark | `- a⏎<x>`: an HTML block of type 7 started on a lazy line, the list ended; the spec says type 7 can't interrupt a paragraph (commonmark.js, markdown-it, marked keep `<x>` in the item). micromark joined cmark since the first check | dev/08-parser.md §9.1 |
+| cmark | `- a⏎  ***⏎⏎- b`: the list read tight, the blank line after a thematic break not recorded (`S_set_last_line_blank`) | dev/08-parser.md §9.2 |
+| cmark, marked; markdown-it | `10. [a]: /u⏎  b`: `<li>  b</li>`, the lazy line's indentation kept as text; markdown-it ends the item | dev/08-parser.md §9.3 |
+| cmark; commonmark.js | `[a]: /u⏎---`: cmark `<p>---</p>`, commonmark.js `<p></p>` before the `<hr />` (micromark, markdown-it, marked: `<hr />`) | dev/08-parser.md §9.4 |
+| micromark, markdown-it; commonmark.js (a release) | `- ⏎→⏎  a`: an empty item, `a` a paragraph after the list, where cmark-gfm reads `a` in the item; commonmark.js fixed it on master after 0.31.2 (the item rule's indentation checked first) | dev/08-parser.md §9.5; dev/28-bugs.md (a review of d1a0964) |
+| cmark, commonmark.js, micromark | A link label's 999-character limit: 999 `é` (1,998 bytes) is no label in cmark, 999 `😀` (1,998 UTF-16 units) none in cmark, commonmark.js or micromark; the spec counts characters (markdown-it and marked link both) | dev/28-bugs.md (a review of d1a0964) |
+| cmark-gfm (GFM spec) | `> - [ ] q`, `- - [ ] n`: no task, cmark-gfm wanting the checkbox at a line's start; the GFM spec says the item's first paragraph's start (marked: a task) | dev/08-parser.md §9.6 |
+| micromark (performance) | 1.5 s on a 10k-line nested outline where the other JS parsers take 10 to 30 ms; superlinear in nesting | dev/08-parser.md §9.7 |
+| To check before filing | A byte-order mark: `‹BOM›# Title` is a paragraph in commonmark.js, markdown-it, marked, a heading in cmark-gfm and micromark (the spec is silent on encodings; Obsidian strips it). And the tab and NBSP bugs commonmark.js shares with ourus's old ones (dev/28-bugs.md's "what found nothing"), and B249's control characters (test/bugs.ts, the Parser cluster), neither written up with inputs | dev/28-bugs.md, B229 |
 
 ## Decisions
 
@@ -346,10 +383,9 @@ What blocks or redirects work, most urgent first:
 
 | Question | Blocks |
 |---|---|
-| Is `quotes: atom`, the true-outliner setup, a main target? (D24) | How far the quote atom's text-editor behavior goes, and the rank of its bugs |
-| B346: fix cut's caret (past a code block's closing fence) or paste at a code block's end (after it)? | B346, P2 |
-| Are autolink entities decoded, by flavor? (B247) And B251's approach, above? | Parser batch |
 | How much of D1 to D33 gets reviewed, and in what form? | Step 6 |
+| Six refusals that apply now (a padded block after a list lifted out of it, B190, B416, B452, B483, B484's tests): keep? | nothing; kept unless overturned |
+| The sweep's cut→paste check reads code by its payload, an item's too (its 12 baseline cases gone): keep? | nothing; kept unless overturned |
 
 ### Decisions to confirm
 
@@ -382,7 +418,6 @@ user). Each behavior shown was replayed on the current tree.
 | <a id="d9"></a>D9 | A paste ending in a line break leaves a held empty last line: `- a┃` + `x⏎y⏎` → `- ax⏎  y⏎  ┃◌`; `- a┃⏎- b` + `x⏎` → `- ax⏎  ┃◌⏎- b`; `p┃` + `x⏎` → `px⏎┃`. | decided (Shift-Enter's held line), Paste26 | The commonest clipboard shape, a copied line, and Backspace there eats a line break. The decision was about Shift-Enter; its reach to paste may deserve its own look. |
 | <a id="d10"></a>D10 | Fold commands on the zoom root succeed and change nothing, and a stored fold stays: `toggleFold` twice, `folded` unchanged. `# H┃` folded then zoomed: `folded` stays `[1]`, nothing shown. | comment (src/commands/README.md, "left alone") | A host's chevron gets no signal. A refusal or a distinct result would let it draw the state. |
 | <a id="d11"></a>D11 | Backspace at a later line's start joins "its spaces with it, the caret staying before or past them". | comment (`backspace.ts`) | ShiftEnter21 only needs "before". See B204: likely a bug, listed because the comment claims it. |
-| <a id="d12"></a>D12 | A plain-text clipboard's common indentation goes, so indented code becomes prose: `    code` → `code`. | comment (B26's status, "by design, for nested lists") | Whether a one-block fragment can be told from a nested list. B26 stays open. |
 
 #### "Design that looks like a bug" (dev/28-bugs.md's list)
 
@@ -392,7 +427,6 @@ since.
 | Id | Behavior (observed) | Basis | To check |
 |---|---|---|---|
 | <a id="d13"></a>D13 | A paragraph owns the list after it: cutting `p` from `p⏎- a` takes `- a`, leaving an empty note. | spec (`listParent: paragraph`) | Very surprising the first time, and it is the default. |
-| <a id="d14"></a>D14 | Paste goes after the node at the caret: cut `- a` from `- a⏎- b`, paste → `- b⏎- a`. A cut doesn't paste back. | spec (`pasteAtTextStart: after`) | `before` puts a cut back. Which is the better default? B21 comes from this. |
 | <a id="d15"></a>D15 | Ordered lists renumber on paste and insert: `1. a┃⏎2. b` + `1. x` → `1. a⏎2. x⏎3. b`. | spec, `orderedLists` (decided) | Confirm for pasted numbers the user chose. |
 | <a id="d16"></a>D16 | Shift-Enter at a paragraph's start is refused: `┃a⏎b`, `a line break here would leave an empty line inside the text`. | spec | The key is dead where every text editor makes a line. |
 | <a id="d17"></a>D17 | Option defaults called "documented choices": `joinWithChildren`, `outdent: direct`, the trailing space after a bare marker (`- a┃`, Enter → `- ┃`). | comment | Each default was chosen by an agent from the SxS; never reviewed as a set. |
@@ -414,5 +448,4 @@ since.
 |---|---|---|
 | <a id="d21"></a>D21 | A throw outside `executeCommand` (a parse, a render, an extension) isn't P1, though the priority table says "an uncaught exception". None is open now; the four that were are fixed. | The next such throw ranks P1. |
 | <a id="d23"></a>D23 | A caret on the blank line after the last node means that node, for structural commands (`touchedNodes`). B217 assumes this and asks only for consistency. | The rule flips, and Tab there does nothing. |
-| <a id="d24"></a>D24 | `quotes: atom` is non-default, so its bugs are P3. | The true-outliner setup relies on it: if that is a main target, its bugs are P2. |
 | <a id="d26"></a>D26 | A survey pairing every block kind, Delete at A's end against Backspace at B's start, found 169 asymmetries, some deliberate, many not. Nothing classifies them, and its script isn't in the repo. This round looked only at those above. | Unknown: a table of intended outcomes, by node pair and command, would turn this into a list. |

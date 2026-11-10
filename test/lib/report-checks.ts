@@ -6,12 +6,13 @@
 
 import { executeCommand, OurusFailed, OurusRejected, OurusSuccess, type OurusCommand } from '../../src/commands/index.ts';
 import { textStart } from '../../src/commands/util.ts';
-import { OurusDoc, type OurusNode } from '../../src/doc/index.ts';
+import { OurusAtom, OurusDoc, VERBATIM, type OurusNode } from '../../src/doc/index.ts';
 import { MdFlavor, MdHtmlParser, MdTree } from '../../src/index.ts';
 import { applyChanges, mapPos } from '../../src/text/index.ts';
 import { OurusView } from '../../src/view/index.ts';
 import { playActions, type PlayedState } from './action-player.ts';
 import { allNodes } from './drawn-states.ts';
+import { executeOnText, type CommandStart } from './command-execution.ts';
 import { writeFailedKind } from './report-baselines.ts';
 import type { Clipboard } from './spec-reader.ts';
 import { assertViewHolds } from './spec-runner.ts';
@@ -97,6 +98,14 @@ export function sessionFailures(text: string, config: Record<string, unknown>, c
   return found;
 }
 
+/** The marks `command` played on `text` from `start` loses on lines it didn't change (`lostMarks`); a result not applied, its summary. */
+export function lostMarksOnText(text: string, command: OurusCommand, start: CommandStart = {}): string[] {
+  const { caret = 0, anchor = caret, head = anchor, config = {}, placeholders = [], auto = [] } = start;
+  const view = OurusView.of(OurusDoc.parse(text, { config, marks: { placeholders, auto } })).withSelection({ anchor, head });
+  const result = executeOnText(text, command, start);
+  return result instanceof OurusSuccess ? lostMarks(view, result) : [`not applied: ${result.constructor.name}`];
+}
+
 /**
  * The marks of `view`'s document a command's result lost on lines it didn't change: a placeholder or
  * an auto mark on a line no change touches and the selection wasn't on, each where the changes carry it
@@ -106,7 +115,7 @@ export function sessionFailures(text: string, config: Record<string, unknown>, c
  * history are steps of their own: a command's result is the command's alone. Where its changes aren't
  * from `view`'s document, a step the host took first, nothing is compared.)
  */
-function lostMarks(view: OurusView, result: OurusSuccess): string[] {
+export function lostMarks(view: OurusView, result: OurusSuccess): string[] {
   const before = view.doc;
   const changes = result.changes;
   const after = result.view.doc.marks;
@@ -118,10 +127,192 @@ function lostMarks(view: OurusView, result: OurusSuccess): string[] {
   const reached = (pos: number): boolean => touched.some(([a, b]) => line(pos) >= a && line(pos) <= b);
   const placeholders = new Set(after.placeholders);
   for (const pos of before.marks.placeholders) if (!reached(pos) && !placeholders.has(mapPos(changes, pos))) lost.add('placeholder lost on a line it didn\'t change');
-  const auto = new Set(after.auto);
-  for (const pos of before.marks.auto) if (!reached(pos) && !auto.has(mapPos(changes, pos, 1))) lost.add('auto mark lost on a line it didn\'t change');
+  // (a line of code, math or a comment nothing closes, in the result: a raised line there is that
+  // block's text by B205's rule, no mark of a gap to keep)
+  const tree = result.view.doc.mdTree;
+  const opaque = (k: number): boolean => {
+    if (k >= tree.lineCount) return false;
+    const leaf = tree.line(k).leaf;
+    return !!leaf && VERBATIM.has(leaf.block.type);
+  };
+  if (autoLost(before.text, before.marks.auto, before.marks.auto.filter((pos) => !reached(pos)), result.view.doc.text, after.auto, after.placeholders, changes, [anchor, head], opaque)) lost.add('auto mark lost on a line it didn\'t change');
   return [...lost];
 }
+
+/**
+ * Whether a raised line's auto mark became the author's: by count, in each run of like lines in
+ * `after` that an unchanged mark of `before` maps into. Which line of the run carries the mark is no
+ * matter: the diff of identical lines is one of several, and ourus may keep its mark on another of
+ * them, or take its own line out first, the author's kept. Lost where the run holds more of the
+ * author's lines than the runs it came from did, and the lines the change made there. `marks`: the
+ * marks of `beforeAuto` on lines no change touched.
+ */
+function autoLost(beforeText: string, beforeAuto: readonly number[], marks: readonly number[], afterText: string, afterAuto: readonly number[], afterHeld: readonly number[], changes: Parameters<typeof mapPos>[0], selection: readonly number[], opaque: (line: number) => boolean = () => false): boolean {
+  // (lines as alike past their trailing blanks: a blank line `` and `  `, a quote's `>` and `> `)
+  const linesOf = (text: string): { starts: number[]; lines: string[] } => {
+    const raw = text.split('\n');
+    const starts: number[] = [];
+    let at = 0;
+    for (const l of raw) {
+      starts.push(at);
+      at += l.length + 1;
+    }
+    // (past a final line break, the empty piece `split` gives is no line: like no other, in no run)
+    return { starts, lines: raw.map((l, k) => (k > 0 && k === raw.length - 1 && l === '' ? '\u0000end' : l.replace(/[ \t]+$/, ''))) };
+  };
+  const index = (starts: readonly number[], pos: number): number => {
+    let k = 0;
+    while (k + 1 < starts.length && starts[k + 1]! <= pos) k++;
+    return k;
+  };
+  // the maximal run of lines equal to line `k`: [first, last]
+  const run = (lines: readonly string[], k: number): [number, number] => {
+    let a = k;
+    let b = k;
+    while (a > 0 && lines[a - 1] === lines[k]) a--;
+    while (b + 1 < lines.length && lines[b + 1] === lines[k]) b++;
+    return [a, b];
+  };
+  const was = linesOf(beforeText);
+  const now = linesOf(afterText);
+  // (a line a placeholder holds is an empty block's, the author's, none of a run of blank lines: a
+  // raised line that became one, the line of the block Enter made there, is no mark lost)
+  const held = new Set(afterHeld.map((pos) => index(now.starts, pos)));
+  for (const k of held) now.lines[k] = `\u0000held ${k}`;
+  const marked = (starts: readonly number[], auto: readonly number[], [a, b]: [number, number]): number => auto.filter((pos) => index(starts, pos) >= a && index(starts, pos) <= b).length;
+  // (a line of `before` a change put text on, its first line's, a paste on the author's blank line,
+  // is that text now: none of the run's; not one it joins to the next, which the diff of like lines
+  // puts either way)
+  // (the line the selection was on: text put in at the start of the next one, an item Enter makes
+  // after a line, is a line of its own, the diff's of like lines either way)
+  const selected = new Set(selection.map((pos) => index(was.starts, pos)));
+  const filled = new Set(
+    changes
+      .filter((c) => /[^\s>]/.test((c.insert ?? '').split('\n')[0]!) && !beforeText.slice(c.from, c.to ?? c.from).includes('\n'))
+      .map((c) => index(was.starts, c.from))
+      .filter((k) => selected.has(k)),
+  );
+  // the runs of `before` the marks were in and the runs of `after` they map into, joined where a
+  // mark links them: a run split in two by what a change put in it is still one
+  const group = new Map<string, string>();
+  const find = (key: string): string => {
+    let k = key;
+    while (group.get(k) !== undefined && group.get(k) !== k) k = group.get(k)!;
+    return k;
+  };
+  const join = (x: string, y: string): void => {
+    if (!group.has(x)) group.set(x, x);
+    if (!group.has(y)) group.set(y, y);
+    group.set(find(x), find(y));
+  };
+  for (const pos of marks) {
+    const k = index(now.starts, mapPos(changes, pos, 1));
+    if (held.has(k)) continue;
+    // (a line the mark's no more like: the mark's line changed, which the run can't hold)
+    if (now.lines[k] !== was.lines[index(was.starts, pos)]) return true;
+    join(`b${run(was.lines, index(was.starts, pos)).join(':')}`, `a${run(now.lines, k).join(':')}`);
+  }
+  // (and every run of `before`'s blank lines whose first line lands in a run of those: the author's
+  // lines a move or a join brings beside ours, which a run grown fewer drops ours before)
+  const blankLine = (l: string): boolean => /^[ \t>]*$/.test(l);
+  for (let k = 0; k < was.lines.length; k++) {
+    if (!blankLine(was.lines[k]!) || (k > 0 && was.lines[k - 1] === was.lines[k])) continue;
+    const span = run(was.lines, k);
+    const key = `b${span.join(':')}`;
+    if (group.has(key)) continue;
+    // (where a change took its first line, the lines it put there may be on either side of it)
+    // (and where its text ends a line, the line after it)
+    const ahead = mapPos(changes, was.starts[k]!, 1);
+    let at = index(now.starts, ahead);
+    if (now.lines[at] !== was.lines[k]) at = index(now.starts, mapPos(changes, was.starts[k]!, -1));
+    if (now.lines[at] !== was.lines[k] && /^\r?\n/.test(afterText.slice(ahead))) at = index(now.starts, afterText.indexOf('\n', ahead) + 1);
+    if (now.lines[at] !== was.lines[k]) continue;
+    const into = `a${run(now.lines, at).join(':')}`;
+    if (group.has(into)) join(key, into);
+  }
+  const groups = new Map<string, string[]>();
+  for (const key of group.keys()) groups.set(find(key), [...(groups.get(find(key)) ?? []), key]);
+  for (const keys of groups.values()) {
+    let lines = 0;
+    let authors = 0;
+    let size = 0;
+    let ours = 0;
+    for (const key of keys) {
+      const [x, y] = key.slice(1).split(':').map(Number) as [number, number];
+      if (key[0] === 'a') {
+        size += y - x + 1;
+        ours += marked(now.starts, afterAuto, [x, y]);
+        continue;
+      }
+      for (let k = x; k <= y; k++) {
+        if (filled.has(k)) continue;
+        lines++;
+        if (!marked(was.starts, beforeAuto, [k, k])) authors++;
+      }
+    }
+    const made = Math.max(0, size - lines);
+    // (what the check can't judge, reported as nothing: a run inside code nothing closes, its lines
+    // the code's; a run beside an identical block that another run of the result is beside too,
+    // which the diff of like lines puts either way)
+    const runs = keys.filter((key) => key[0] === 'a').map((key) => key.slice(1).split(':').map(Number) as [number, number]);
+    if (runs.some(([x, y]) => opaque(x) || opaque(y))) continue;
+    if (runs.some(([x, y]) => twinned(now.lines, x, y))) continue;
+    // (or a run of blank lines between two blocks alike, on either side of the change: a move past
+    // its like, a duplicate, items renumbered alike, which the diff of like lines puts either way)
+    if (runs.some(([x, y]) => between(now.lines, x, y) !== null)) continue;
+    // (in `before`, where the result still has both: a change to one of them is what the run's beside)
+    const bareNow = now.lines.map(bare);
+    const twice = (block: string): boolean => {
+      const want = block.split('\n');
+      return bareNow.filter((_, k) => want.every((l, j) => bareNow[k + j] === l)).length > 1;
+    };
+    if (keys.some((key) => {
+      if (key[0] !== 'b') return false;
+      const block = between(was.lines, ...(key.slice(1).split(':').map(Number) as [number, number]));
+      return block !== null && twice(block);
+    })) continue;
+    if (size - ours > authors + made) return true;
+  }
+  return false;
+}
+
+/**
+ * Whether the run of blank lines `[x, y]` of `lines` has another run of blank lines beside the same
+ * text as it: the line above it, or below it, the same as another run's (identical blocks side by
+ * side, a duplicate's, a move's), where a diff of like lines can put a run's lines in either.
+ */
+function twinned(lines: readonly string[], x: number, y: number): boolean {
+  const blank = (l: string | undefined): boolean => l !== undefined && /^[ \t>]*$/.test(l);
+  const above = lines[x - 1];
+  const below = lines[y + 1];
+  for (let k = 0; k < lines.length; k++) {
+    if (!blank(lines[k]) || (k > 0 && blank(lines[k - 1]))) continue;
+    let end = k;
+    while (end + 1 < lines.length && blank(lines[end + 1])) end++;
+    if (k === x) continue;
+    if ((above !== undefined && !blank(above) && lines[k - 1] === above) || (below !== undefined && !blank(below) && lines[end + 1] === below)) return true;
+  }
+  return false;
+}
+
+/**
+ * Whether the run of blank lines `[x, y]` of `lines` is between two blocks alike: the lines above it
+ * and below it, to the next blank line or the end, the same past their prefixes (indentation, `>`, a
+ * list marker, its number).
+ */
+function between(lines: readonly string[], x: number, y: number): string | null {
+  const above: string[] = [];
+  for (let k = x - 1; k >= 0 && !blankLine(lines[k]); k--) above.unshift(bare(lines[k]!));
+  const below: string[] = [];
+  for (let k = y + 1; k < lines.length && !blankLine(lines[k]); k++) below.push(bare(lines[k]!));
+  return above.length > 0 && above.join('\n') === below.join('\n') ? above.join('\n') : null;
+}
+
+/** A line of no text (`linesOf`'s end, a held line), or of blanks and `>`s. */
+const blankLine = (l: string | undefined): boolean => l === undefined || l === '\u0000end' || l.startsWith('\u0000held') || /^[ \t>]*$/.test(l);
+
+/** A line past its prefix: its indentation, `>`s, a list marker and its number. */
+const bare = (l: string): string => l.replace(/^[ \t>]*(?:(?:[-*+]|\d+[.)])(?=[ \t]|$)[ \t]*)?/, '');
 
 /** The fewest of `actions` (dropping one at a time) that still fail in `kind`. */
 export function shrinkSession(text: string, config: Record<string, unknown>, caret: number, actions: readonly string[], kind: string): string[] {
@@ -177,7 +368,16 @@ export function nodeCaret(doc: OurusDoc, node: OurusNode): number {
 
 const kindsOf = (n: OurusNode): string[] => [n.kind, ...n.children.flatMap(kindsOf)];
 /** The texts of a document's code, math and table blocks (its atoms), in no order. */
-const atomTexts = (d: OurusDoc): string => JSON.stringify(allNodes(d).filter((n) => n.kind === 'atom').map((n) => d.textOf(n)?.text ?? '').sort());
+// (every block held as lines, an item's text too, `- ```js`; by its kind, its opening line and its
+// payload: a closing delimiter the paste writes for a block left open, so it doesn't run on, is no change)
+const atomTexts = (d: OurusDoc): string =>
+  JSON.stringify(
+    allNodes(d)
+      .map((n) => d.textOf(n))
+      .filter((t): t is OurusAtom => t instanceof OurusAtom)
+      .map((t) => JSON.stringify([t.type, t.frame.some((p) => p.part === 'open') ? t.text.split('\n')[0] : '', t.body]))
+      .sort(),
+  );
 
 /** Node `node` of `view` copied (by its id) and pasted into an empty note: it comes back as the same blocks. */
 export function copyPasteFailures(view: OurusView, node: OurusNode): Found[] {
@@ -250,7 +450,7 @@ const norm = (h: string): string =>
       k % 2
         ? part
         : part
-            .replace(/<!-- ourus -->/, '')
+            .replace(/<!-- ourus(?: \[?text\]?)? -->(?:<!-- text -->)?/, '')
             .replace(/ title="[^"]*"/g, '')
             .replace(/<br \/>/g, ' ')
             .replace(/<\/?p>/g, '')
@@ -269,7 +469,8 @@ const mdFlavor = (flavor: unknown): MdFlavor => (flavor === 'obsidian' ? MdFlavo
 export function htmlFailures(text: string, config: Record<string, unknown>): Found[] {
   const flavor = mdFlavor(config.flavor);
   const first = MdTree.parse(text, flavor).renderHtml();
-  const back = MdHtmlParser.parse(first).markdown;
+  // (read back in the note's flavor, as a paste into it reads HTML)
+  const back = MdHtmlParser.parse(first, { flavor }).markdown;
   return norm(MdTree.parse(back, flavor).renderHtml()) !== norm(first) ? [{ kind: 'html: renders differently after a round trip', detail: `→ ${JSON.stringify(back)}` }] : [];
 }
 

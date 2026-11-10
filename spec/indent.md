@@ -386,8 +386,8 @@ tags: common
 
 Tab after the marker.
 
-A tab after the marker: shifting the line changes how far the tab reaches, not where the text
-starts.
+A tab after the marker: odd spacing on the node the command moves, written in normal form, one
+space (recommendation 1, decided 2026-11-13; before, the tab kept, its reach changed by the shift).
 
 ```yaml
 tags: rare
@@ -402,7 +402,7 @@ tags: rare
 
 ```markdown
 - a
-  -→b┃
+  - b┃
 ```
 
 ## Indent15
@@ -1560,4 +1560,49 @@ mixedDepths: refuse
 
 ```yaml
 result: rejected non-contiguous
+```
+
+## Indent51
+
+A marker padded past its list's (`-   b`, the item before it `- a`): odd spacing on the node the
+command moves, written in normal form, one space after its marker, its lines at its content column
+(recommendation 1, decided 2026-11-13). The rest of the note is as it was.
+
+```yaml
+tags: common
+```
+
+```markdown
+- a
+-   b┃
+    more
+```
+
+> indent
+
+```markdown
+- a
+  - b┃
+    more
+```
+
+## Indent52
+
+Padding every item of a list shares (`1.  one⏎2.  two`, the text lined up past wider numbers) is the
+note's style, not odd spacing: kept.
+
+```yaml
+tags: common
+```
+
+```markdown
+1.  one
+2.  t┃wo
+```
+
+> indent
+
+```markdown
+1.  one
+    1.  t┃wo
 ```

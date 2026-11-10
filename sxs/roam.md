@@ -5,7 +5,7 @@ version: "0.13.14 (97965d72; API 1.1.5)"
 url: "https://roamresearch.com/#/app/help"
 model: "block"
 command: "node sxs/run.ts roam"
-elapsed_s: 1097
+elapsed_s: 965
 workers: 4
 ---
 
@@ -15,9 +15,9 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 238 | [16](#caret-16) | [14](#whitespace-14) | [11](#disagree-11) |  |  | **279** |
-| adapted | 490 | [14](#adapted-caret-14) | [24](#adapted-whitespace-24) | [74](#adapted-disagree-74) |  |  | **602** |
-| **total** | **728 (45%)** | **30 (1.9%)** | **38 (2.4%)** | **85 (5.3%)** | **0 (0%)** | **[728](#skipped-728) (45%)** | **1612** |
+| original | 232 | [16](#caret-16) | [15](#whitespace-15) | [13](#disagree-13) |  |  | **276** |
+| adapted | 527 | [14](#adapted-caret-14) | [29](#adapted-whitespace-29) | [109](#adapted-disagree-109) |  |  | **679** |
+| **total** | **759 (43%)** | **30 (1.7%)** | **44 (2.5%)** | **122 (6.9%)** | **0 (0%)** | **[803](#skipped-803) (46%)** | **1760** |
 
 Per-file:
 
@@ -27,45 +27,45 @@ Per-file:
 | [backspace.md](../spec/backspace.md) | 43 |  |  | 2 |  | 43 | **88** | 19 | 26 |
 | [backtick.md](../spec/backtick.md) | 3 |  |  | 1 |  | 29 | **33** |  | 4 |
 | [block-ids.md](../spec/block-ids.md) | 1 |  |  |  |  | 20 | **21** |  | 1 |
-| [copy.md](../spec/copy.md) | 6 |  |  | 1 |  | 6 | **13** | 1 | 6 |
+| [copy.md](../spec/copy.md) | 6 |  |  | 2 |  | 11 | **19** |  | 8 |
 | [cursor.md](../spec/cursor.md) | 25 | 5 |  |  |  | 6 | **36** | 12 | 18 |
-| [delete-subtree.md](../spec/delete-subtree.md) | 6 | 3 |  |  |  | 5 | **14** | 3 | 6 |
+| [delete-subtree.md](../spec/delete-subtree.md) | 7 | 3 |  |  |  | 7 | **17** | 3 | 7 |
 | [delete.md](../spec/delete.md) | 28 |  |  |  |  | 28 | **56** | 13 | 15 |
 | [drag.md](../spec/drag.md) |  |  |  |  |  | 8 | **8** |  |  |
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 13 | **13** |  |  |
 | [enter.md](../spec/enter.md) | 55 | 1 | 3 | 3 |  | 36 | **98** | 26 | 36 |
 | [fences.md](../spec/fences.md) | 3 |  |  |  |  | 67 | **70** |  | 3 |
 | [fold.md](../spec/fold.md) | 13 |  |  | 2 |  | 7 | **22** | 15 |  |
-| [gaps.md](../spec/gaps.md) | 14 |  |  |  |  | 5 | **19** | 1 | 13 |
-| [indent.md](../spec/indent.md) | 27 |  |  | 2 |  | 26 | **55** | 20 | 9 |
+| [gaps.md](../spec/gaps.md) | 14 |  |  | 1 |  | 6 | **21** | 1 | 14 |
+| [indent.md](../spec/indent.md) | 27 |  | 1 | 3 |  | 26 | **57** | 22 | 9 |
 | [lists.md](../spec/lists.md) | 4 |  |  |  |  | 12 | **16** |  | 4 |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 28 |  |  |  |  | 17 | **45** | 14 | 14 |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 30 |  |  |  |  | 17 | **47** | 16 | 14 |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 26 |  |  |  |  | 19 | **45** | 12 | 14 |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 28 |  |  |  |  | 19 | **47** | 14 | 14 |
 | [move-subtree.md](../spec/move-subtree.md) | 7 | 4 |  |  |  | 13 | **24** | 8 | 3 |
 | [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 45 |  | 4 | 2 |  | 16 | **67** | 21 | 30 |
-| [outdent.md](../spec/outdent.md) | 16 |  |  | 2 |  | 24 | **42** | 5 | 13 |
+| [outdent.md](../spec/outdent.md) | 15 |  |  | 2 |  | 25 | **42** | 5 | 12 |
 | [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |  |  |
 | [paste-conv.md](../spec/paste-conv.md) | 4 |  |  | 1 |  | 1 | **6** | 1 | 4 |
-| [paste-html.md](../spec/paste-html.md) | 9 |  | 1 | 6 |  | 3 | **19** |  | 16 |
+| [paste-html.md](../spec/paste-html.md) | 11 |  | 1 | 27 |  | 3 | **42** |  | 39 |
 | [paste-list-form.md](../spec/paste-list-form.md) | 3 |  |  | 2 |  | 1 | **6** |  | 5 |
-| [paste-list.md](../spec/paste-list.md) | 10 |  | 2 | 4 |  | 13 | **29** | 3 | 13 |
+| [paste-list.md](../spec/paste-list.md) | 10 |  | 2 | 4 |  | 14 | **30** | 3 | 13 |
 | [paste-plain.md](../spec/paste-plain.md) | 20 |  | 3 |  |  | 13 | **36** | 8 | 15 |
-| [paste.md](../spec/paste.md) | 21 |  | 1 | 5 |  | 9 | **36** | 2 | 25 |
+| [paste.md](../spec/paste.md) | 22 |  | 1 | 6 |  | 15 | **44** | 2 | 27 |
 | [placeholders.md](../spec/placeholders.md) | 18 | 1 | 3 | 1 |  | 7 | **30** | 9 | 14 |
 | [quirks.md](../spec/quirks.md) | 4 |  |  |  |  | 3 | **7** |  | 4 |
 | [quotes.md](../spec/quotes.md) | 94 |  | 3 | 5 |  | 41 | **143** |  | 102 |
-| [regressions.md](../spec/regressions.md) | 86 | 4 | 16 | 39 |  | 158 | **303** | 22 | 123 |
-| [scenarios.md](../spec/scenarios.md) | 24 |  |  | 2 |  | 8 | **34** | 15 | 11 |
-| [select.md](../spec/select.md) | 10 | 8 |  |  |  | 5 | **23** | 10 | 8 |
+| [regressions.md](../spec/regressions.md) | 118 | 5 | 21 | 50 |  | 212 | **406** | 24 | 170 |
+| [scenarios.md](../spec/scenarios.md) | 23 |  |  | 3 |  | 8 | **34** | 15 | 11 |
+| [select.md](../spec/select.md) | 11 | 7 |  |  |  | 5 | **23** | 10 | 8 |
 | [shift-enter.md](../spec/shift-enter.md) | 26 |  | 2 |  |  | 10 | **38** | 13 | 15 |
-| [subtree-selection.md](../spec/subtree-selection.md) | 10 | 3 |  |  |  | 6 | **19** | 11 | 2 |
+| [subtree-selection.md](../spec/subtree-selection.md) | 10 | 3 |  |  |  | 6 | **19** | 9 | 4 |
 | [tasks.md](../spec/tasks.md) | 2 |  |  |  |  | 28 | **30** |  | 2 |
 | [typing.md](../spec/typing.md) |  |  |  |  |  | 3 | **3** |  |  |
 | [undo.md](../spec/undo.md) | 4 |  |  |  |  | 1 | **5** | 3 | 1 |
 | [zoom.md](../spec/zoom.md) | 6 | 1 |  | 1 |  | 6 | **14** | 8 |  |
-| **total** | **728 (45%)** | **30 (1.9%)** | **38 (2.4%)** | **85 (5.3%)** | **0 (0%)** | **731 (45%)** | **1612** | **279 (17%)** | **602 (37%)** |
+| **total** | **759 (43%)** | **30 (1.7%)** | **44 (2.5%)** | **122 (6.9%)** | **0 (0%)** | **805 (46%)** | **1760** | **276 (16%)** | **679 (39%)** |
 
-## Disagree (11)
+## Disagree (13)
 
 ### [Backspace17](../spec/backspace.md#backspace17)
 
@@ -222,6 +222,36 @@ Per-file:
 1. a
    1. b┃
 2. c
+```
+
+</td></tr>
+</table>
+
+### [Indent52](../spec/indent.md#indent52)
+
+> indent
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+1.  one
+2.  t┃wo
+```
+
+</td><td>
+
+```buffer
+1.  one
+   -  t┃wo
+```
+
+</td><td>
+
+```buffer
+1.  one
+   1.  t┃wo
 ```
 
 </td></tr>
@@ -432,6 +462,49 @@ Per-file:
 </td></tr>
 </table>
 
+### [Regression337](../spec/regressions.md#regression337)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+-  [ ]
+   task
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- item┃
+```
+
+</td><td>
+
+```buffer
+- item-  [ ]
+     task
+  ┃
+```
+
+</td><td>
+
+```buffer
+- item
+- [ ]
+  task┃
+```
+
+</td></tr>
+</table>
+
 ### [Scenario27](../spec/scenarios.md#scenario27)
 
 <table>
@@ -576,7 +649,7 @@ Per-file:
 </td></tr>
 </table>
 
-## Whitespace (14)
+## Whitespace (15)
 
 ### [Enter16](../spec/enter.md#enter16)
 
@@ -638,6 +711,39 @@ Per-file:
 1. a
    text
 2. ┃
+```
+
+</td></tr>
+</table>
+
+### [Indent51](../spec/indent.md#indent51)
+
+> indent
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+-   b┃
+  more
+```
+
+</td><td>
+
+```buffer
+- a
+  -   b┃
+    more
+```
+
+</td><td>
+
+```buffer
+- a
+  - b┃
+    more
 ```
 
 </td></tr>
@@ -1675,24 +1781,13 @@ Per-file:
 > selectNodeUp
 
 <table>
-<tr><th>roam</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
 - one
   - two
     - deep⟦selected⟧
-  - three⟦selected⟧
-  - five
-- four
-```
-
-</td><td>
-
-```buffer
-- one
-  - two⟦selected⟧
-    - deep
   - three⟦selected⟧
   - five
 - four
@@ -1943,24 +2038,13 @@ Per-file:
 > selectNodeDown
 
 <table>
-<tr><th>roam</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
 - one
   - two
     - deep⟦selected⟧
-  - three⟦selected⟧
-  - five
-- four
-```
-
-</td><td>
-
-```buffer
-- one
-  - two⟦selected⟧
-    - deep
   - three⟦selected⟧
   - five
 - four
@@ -2184,7 +2268,7 @@ y
 </td></tr>
 </table>
 
-## Adapted: disagree (74)
+## Adapted: disagree (109)
 
 ### [Auto10](../spec/auto.md#auto10)
 
@@ -2521,7 +2605,7 @@ use «this» here
 
 ### [Copy8](../spec/copy.md#copy8)
 
-Adapted: as blocks, quote, the node at the caret selected (selectSubtree)
+Adapted: as blocks, clipboard's text/markdown, text/html not compared, quote, the node at the caret selected (selectSubtree)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -2545,6 +2629,65 @@ Original:
 ```buffer
 > [!note] ┃q
 > body
+```
+
+</td></tr>
+</table>
+
+### [Copy40](../spec/copy.md#copy40)
+
+> copy
+
+Adapted: blank lines, clipboard's text/markdown, text/html not compared, quote, under quotes: atom
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-   > body
+- > a
+  b
+```
+
+</td><td>
+
+```buffer
+-   > body
+- > a
+  b
+```
+
+</td><td>
+
+```buffer
+-   > body
+- > a
+  b
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+  > body⟦selected⟧
+
+- > a
+  b
+```
+
+</td><td>
+
+```buffer
+  > body⟦selected⟧
+
+- > a
+  b
 ```
 
 </td></tr>
@@ -2762,6 +2905,113 @@ two
 
 ┃three
 ---
+```
+
+</td></tr>
+</table>
+
+### [Gap20](../spec/gaps.md#gap20)
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## No┃
+  - x
+```
+
+</td></tr>
+</table>
+
+> enter
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## No
+  - ┃
+  - x
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## No┃
+  - x
+```
+
+</td></tr>
+</table>
+
+> shiftEnter
+
+<table>
+<tr><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## No
+  ┃
+  - x
+```
+
+</td><td>
+
+```buffer
+- ## No
+  - ┃
+  - x
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter</th><th>deleteContentBackward</th><th>shiftEnter</th></tr>
+<tr valign="top"><td>
+
+```buffer
+## No┃
+x
+```
+
+</td><td>
+
+```buffer
+## No
+
+┃◌
+
+x
+```
+
+</td><td>
+
+```buffer
+## No┃
+x
+```
+
+</td><td>
+
+```buffer
+## No
+┃◌
+
+x
 ```
 
 </td></tr>
@@ -3638,6 +3888,1410 @@ Original:
 </td></tr>
 </table>
 
+### [PasteHtml20](../spec/paste-html.md#pastehtml20)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+other
+done
+```
+
+</td><td>
+
+```clipboard
+<ul><li><p>other</p></li><li><input type="checkbox" checked="" disabled="" /> <p>done</p></li></ul>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, task, under quirkPasteCaret: roam
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- other┃
+- 
+- done
+```
+
+</td><td>
+
+```buffer
+- other┃
+- [x] done
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+- other┃
+- [x] done
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml21](../spec/paste-html.md#pastehtml21)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```clipboard
+<ul><li><hr></li><li>next</li></ul>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, thematic break, under quirkPasteCaret: roam
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- next┃
+```
+
+</td><td>
+
+```buffer
+- ***┃
+- next
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+- ***┃
+- next
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml22](../spec/paste-html.md#pastehtml22)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```clipboard
+<p><a href="u" title="&amp;copy;">x</a></p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, paragraph
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- [x](u)┃
+```
+
+</td><td>
+
+```buffer
+- [x](u "\&copy;")┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+[x](u "\&copy;")┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml23](../spec/paste-html.md#pastehtml23)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```clipboard
+<p><a href="x&#32;&#32;y">x</a></p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, paragraph
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- [x](x  y)┃
+```
+
+</td><td>
+
+```buffer
+- [x](<x  y>)┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+[x](<x  y>)┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml24](../spec/paste-html.md#pastehtml24)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```clipboard
+<p><a href="a(((((((((((((((((((((((((((((((((b)))))))))))))))))))))))))))))))))">link</a></p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, paragraph
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- [link](a%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28%28b%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29%29)┃
+```
+
+</td><td>
+
+```buffer
+- [link](<a(((((((((((((((((((((((((((((((((b)))))))))))))))))))))))))))))))))>)┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+[link](<a(((((((((((((((((((((((((((((((((b)))))))))))))))))))))))))))))))))>)┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml25](../spec/paste-html.md#pastehtml25)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```clipboard
+<table><tr><td>a<table><tr><td>b</td><td>c</td></tr></table>d</td></tr></table>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, table
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- {{[[table]]}}┃
+  - a
+    - {{[[table]]}}bc
+      - d
+```
+
+</td><td>
+
+```buffer
+- | a b c d |
+  | --- |┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+| a b c d |
+| --- |┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml26](../spec/paste-html.md#pastehtml26)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```clipboard
+<table><tr><td rowspan="0">a</td><td>b</td></tr><tr><td>c</td></tr></table>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, table
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- {{[[table]]}}┃
+  - a
+    - b
+  - c
+```
+
+</td><td>
+
+```buffer
+- | a | b |
+  | --- | --- |
+  |  | c |┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+| a | b |
+| --- | --- |
+|  | c |┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml27](../spec/paste-html.md#pastehtml27)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```clipboard
+<table><thead><tr><th rowspan="2">A</th><th>B</th></tr></thead><tbody><tr><td>C</td><td>D</td></tr></tbody></table>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, table
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- {{[[table]]}}┃
+  - A
+    - B
+  - C
+    - D
+```
+
+</td><td>
+
+```buffer
+- | A | B |
+  | --- | --- |
+  | C | D |┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+| A | B |
+| --- | --- |
+| C | D |┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml28](../spec/paste-html.md#pastehtml28)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```clipboard
+<div style="font-style:italic"><p><span style="font-style:inherit">x</span></p></div>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, paragraph
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- x┃
+```
+
+</td><td>
+
+```buffer
+- *x*┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+*x*┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml30](../spec/paste-html.md#pastehtml30)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```clipboard
+<table><tr><td style="font-weight:bold">bold</td></tr></table>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, table
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- {{[[table]]}}┃
+  - bold
+```
+
+</td><td>
+
+```buffer
+- | **bold** |
+  | --- |┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+| **bold** |
+| --- |┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml31](../spec/paste-html.md#pastehtml31)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```clipboard
+<ul style="font-weight:bold"><li>x</li></ul>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- x┃
+```
+
+</td><td>
+
+```buffer
+- **x**┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+- **x**┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml32](../spec/paste-html.md#pastehtml32)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```clipboard
+<p><a style="font-weight:bold" href="u">x</a></p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, paragraph
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- [x](u)┃
+```
+
+</td><td>
+
+```buffer
+- **[x](u)**┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+**[x](u)**┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml33](../spec/paste-html.md#pastehtml33)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```clipboard
+<b><p>a</p><p>b</p></b>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: blank lines, empty document, paragraph, under quirkPasteCaret: roam
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- **ab**┃
+```
+
+</td><td>
+
+```buffer
+- **a**┃
+- **b**
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+**a**┃
+
+**b**
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml34](../spec/paste-html.md#pastehtml34)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```clipboard
+<a href="u"><p>a</p><p>b</p></a>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: blank lines, empty document, paragraph, under quirkPasteCaret: roam
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- [ab](u)┃
+```
+
+</td><td>
+
+```buffer
+- [a](u)┃
+- [b](u)
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+[a](u)┃
+
+[b](u)
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml35](../spec/paste-html.md#pastehtml35)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+Title
+```
+
+</td><td>
+
+```clipboard
+<div class="callout" data-callout="note"><div class="callout-title">Title</div><div class="callout-content"><p>body text</p></div></div>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, quote
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- Title┃
+- body text
+```
+
+</td><td>
+
+```buffer
+- > [!note] Title
+  > body text┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+> [!note] Title
+> body text┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml36](../spec/paste-html.md#pastehtml36)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+a link b x
+```
+
+</td><td>
+
+```clipboard
+<p>a <a data-href="link" href="link" class="internal-link">link</a> b <span class="math math-inline">x</span></p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, paragraph
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- a link b x┃
+```
+
+</td><td>
+
+```buffer
+- a [[link]] b $x$┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+a [[link]] b $x$┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml37](../spec/paste-html.md#pastehtml37)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```clipboard
+<p><b>a</b><span></span><span style="font-weight:bold">b</span></p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, paragraph
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- **a****b**┃
+```
+
+</td><td>
+
+```buffer
+- **ab**┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+**ab**┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml38](../spec/paste-html.md#pastehtml38)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```clipboard
+<p><code>a</code><span><code>b</code></span></p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, paragraph
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- `a``b`┃
+```
+
+</td><td>
+
+```buffer
+- `ab`┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+`ab`┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml39](../spec/paste-html.md#pastehtml39)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```clipboard
+<p><b>a<span style="font-weight:normal"> b </span>c</b></p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, paragraph
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- **a b c**┃
+```
+
+</td><td>
+
+```buffer
+- **a** b **c**┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+**a** b **c**┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml40](../spec/paste-html.md#pastehtml40)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```clipboard
+<p><b><span style="font-weight:normal">a</span>b</b></p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, paragraph
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- **ab**┃
+```
+
+</td><td>
+
+```buffer
+- a**b**┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+a**b**┃
+```
+
+</td></tr>
+</table>
+
+### [PasteHtml41](../spec/paste-html.md#pastehtml41)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+x
+```
+
+</td><td>
+
+```clipboard
+<p><b> x </b></p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, paragraph
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- ** x **┃
+```
+
+</td><td>
+
+```buffer
+-  **x** ┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+ **x** ┃
+```
+
+</td></tr>
+</table>
+
 ### [PasteListForm1](../spec/paste-list-form.md#pastelistform1)
 
 <table>
@@ -4284,6 +5938,74 @@ more
 </td></tr>
 </table>
 
+### [Paste29c](../spec/paste.md#paste29c)
+
+<table>
+<tr><th colspan=2>clipboard</tr>
+<tr><td>text/plain<td>text/html</tr>
+<tr valign="top"><td>
+
+```clipboard
+e
+- tw
+```
+
+</td><td>
+
+```clipboard
+<!-- ourus text --><p>e</p>
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: under pasteParagraphList: children
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃yz
+```
+
+</td><td>
+
+```buffer
+- xe┃yz
+```
+
+</td><td>
+
+```buffer
+- xe
+  - tw┃yz
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- x┃yz
+```
+
+</td><td>
+
+```buffer
+- xe
+  - tw┃yz
+```
+
+</td></tr>
+</table>
+
 ### [Placeholder4d](../spec/placeholders.md#placeholder4d)
 
 <table>
@@ -4476,7 +6198,7 @@ Original:
 
 > enter
 
-Adapted: as blocks, quote, under autoClose: ``` ~~~ $$ ( [ { $, under backspaceAtTopItem: refuse, under copyAtCaret: host, under emptyItemWithChildren: refuse, under enterInQuote: split, under enterOnEmptyItem: outdent, under enterSplitSpace: start, under enterTask: plain, under joinWithChildren: refuse, under mixedDepths: each, under outdent: logical, under pasteAtTextStart: before, under pasteLines: items, under pasteOverSelection: ignore, under pasteParagraphList: children, under quirkEnterMidHeading: workflowy, under quirkPasteCaret: roam, under quotes: atom, under selectionLadder: top
+Adapted: as blocks, quote, under autoClose: ``` ~~~ $$ ( [ { $, under backspaceAtTopItem: refuse, under copyAtCaret: host, under emptyItemWithChildren: refuse, under enterInQuote: split, under enterOnEmptyItem: outdent, under enterSplitSpace: start, under enterTask: plain, under joinWithChildren: refuse, under mixedDepths: each, under outdent: logical, under pasteLines: items, under pasteOverSelection: ignore, under pasteParagraphList: children, under quirkEnterMidHeading: workflowy, under quirkPasteCaret: roam, under quotes: atom, under selectionLadder: top
 
 <table>
 <tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
@@ -6282,7 +8004,7 @@ Original:
 
 ### [Regression212](../spec/regressions.md#regression212)
 
-Adapted: as blocks, quote, the node at the caret selected (selectSubtree)
+Adapted: as blocks, clipboard's text/markdown, text/html not compared, quote, the node at the caret selected (selectSubtree)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -6313,7 +8035,7 @@ Original:
 
 ### [Regression213](../spec/regressions.md#regression213)
 
-Adapted: as blocks, quote, the node at the caret selected (selectSubtree)
+Adapted: as blocks, clipboard's text/markdown, text/html not compared, quote, the node at the caret selected (selectSubtree)
 
 <table>
 <tr><th>buffer</th></tr>
@@ -7012,7 +8734,7 @@ Adapted: as blocks, blank lines, table
 ```buffer
 - | a |
   | - |
-  | 1 |
+  | 1 |┃
 - c
 ```
 
@@ -7037,6 +8759,816 @@ Original:
   | - |
   | 1 |┃
 - c
+```
+
+</td></tr>
+</table>
+
+### [Regression306](../spec/regressions.md#regression306)
+
+> enter "x"
+
+Adapted: blank lines, paragraph, under enterOnEmptyItem: outdent
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+- item
+```
+
+</td><td>
+
+```buffer
+- 
+- x┃
+- item
+```
+
+</td><td>
+
+```buffer
+- x┃
+  - item
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  ◌┃
+  - item
+```
+
+</td><td>
+
+```buffer
+x┃
+
+  - item
+```
+
+</td></tr>
+</table>
+
+### [Regression318](../spec/regressions.md#regression318)
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## B
+  - para
+    - ┃item
+- ## C
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeDown
+
+<table>
+<tr><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## B
+  - para
+    - ┃item
+- ## C
+```
+
+</td><td>
+
+```buffer
+- ## B
+  - para
+- ## C
+  - ┃item
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeUp
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## B
+  - para
+    - ┃item
+- ## C
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>moveSubtreeDown</th><th>moveSubtreeUp</th></tr>
+<tr valign="top"><td>
+
+```buffer
+## B
+
+para
+
+- ┃item
+
+## C
+```
+
+</td><td>
+
+```buffer
+## B
+
+para
+
+## C
+
+- ┃item
+```
+
+</td><td>
+
+```buffer
+## B
+
+para
+
+- ┃item
+
+## C
+```
+
+</td></tr>
+</table>
+
+### [Regression321](../spec/regressions.md#regression321)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- > a
+  > 
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: empty document, quote, under quotes: atom
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃
+```
+
+</td><td>
+
+```buffer
+- - > a
+    > 
+  ┃
+```
+
+</td><td>
+
+```buffer
+- > a
+  > ┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+┃
+```
+
+</td><td>
+
+```buffer
+- > a
+  > ┃
+```
+
+</td></tr>
+</table>
+
+### [Regression328](../spec/regressions.md#regression328)
+
+> deleteSubtree
+
+Adapted: list as an item's first block, task
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [ ] write spec
+- 
+  - ┃
+-  itle
+      body text
+```
+
+</td><td>
+
+```buffer
+- [ ] write spec
+- ┃
+-  itle
+      body text
+```
+
+</td><td>
+
+```buffer
+- [ ] write spec┃
+-  itle
+      body text
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- [ ] write spec
+-  - ┃
+  -  itle
+    body text
+```
+
+</td><td>
+
+```buffer
+- [ ] write spec┃
+-  itle
+       body text
+```
+
+</td></tr>
+</table>
+
+### [Regression336](../spec/regressions.md#regression336)
+
+> "$"
+
+Adapted: as blocks, heading
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # ┃
+- other
+```
+
+</td><td>
+
+```buffer
+- # $┃
+- other
+```
+
+</td><td>
+
+```buffer
+- # $┃$
+- other
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  # ┃
+  - other
+```
+
+</td><td>
+
+```buffer
+- # $┃$
+- other
+```
+
+</td></tr>
+</table>
+
+### [Regression348](../spec/regressions.md#regression348)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- # title
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: as blocks, blank lines, heading, paragraph, under pasteOverSelection: ignore
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- m
+- «x»
+```
+
+</td><td>
+
+```buffer
+- m
+- - # title
+  ┃
+```
+
+</td><td>
+
+```buffer
+- m
+- x
+- # title┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+m
+
+«x»
+```
+
+</td><td>
+
+```buffer
+- m
+- x
+- # title┃
+```
+
+</td></tr>
+</table>
+
+### [Regression351](../spec/regressions.md#regression351)
+
+> indent
+
+Adapted: footnote, quote
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- >
+- 
+  
+  ┃c
+```
+
+</td><td>
+
+```buffer
+- >
+  - 
+    
+    ┃c
+```
+
+</td><td>
+
+```buffer
+- >
+- 
+  
+  ┃c
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+>
+[^n]:
+
+    ┃c
+```
+
+</td><td>
+
+```buffer
+>
+[^n]:
+
+    ┃c
+```
+
+</td></tr>
+</table>
+
+### [Regression361](../spec/regressions.md#regression361)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: as blocks, quote, under quirkPasteCaret: roam
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- > ┃q
+```
+
+</td><td>
+
+```buffer
+- a
+- > q
+- x┃
+- y
+```
+
+</td><td>
+
+```buffer
+- a
+- x┃
+- y
+- > q
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+- > ┃q
+```
+
+</td><td>
+
+```buffer
+- a
+- x┃
+- y
+- > q
+```
+
+</td></tr>
+</table>
+
+### [Regression363](../spec/regressions.md#regression363)
+
+> deleteContentBackward
+
+Adapted: blank lines, paragraph, thematic break
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- p
+- ┃---
+```
+
+</td><td>
+
+```buffer
+- p┃---
+```
+
+</td><td>
+
+```buffer
+- p
+- ┃---
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+p
+
+┃---
+```
+
+</td><td>
+
+```buffer
+p
+
+┃---
+```
+
+</td></tr>
+</table>
+
+### [Regression389](../spec/regressions.md#regression389)
+
+> deleteSoftLineBackward
+
+Adapted: heading
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # ┃h
+  x
+  -|
+```
+
+</td><td>
+
+```buffer
+- ┃h
+  x
+  -|
+```
+
+</td><td>
+
+```buffer
+- ┃h
+  
+  x
+  -|
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # ┃h
+  x
+-|
+```
+
+</td><td>
+
+```buffer
+- ┃h
+
+  x
+-|
+```
+
+</td></tr>
+</table>
+
+### [Scenario20](../spec/scenarios.md#scenario20)
+
+Adapted: blank lines, heading, paragraph
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Trip┃
+```
+
+</td></tr>
+</table>
+
+> enter "Pack light." enter "Book the train."
+
+<table>
+<tr><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Trip
+- Pack light.
+- Book the tran.┃
+```
+
+</td><td>
+
+```buffer
+- # Trip
+  - Pack light.
+  - Book the train.┃
+```
+
+</td></tr>
+</table>
+
+> shiftEnter "Seat 42."
+
+<table>
+<tr><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Trip
+- Pack light.
+- Book the tran.
+  Seat 42.┃
+```
+
+</td><td>
+
+```buffer
+- # Trip
+  - Pack light.
+  - Book the train.
+    Seat 42.┃
+```
+
+</td></tr>
+</table>
+
+> moveSubtreeUp
+
+<table>
+<tr><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Trip
+- Book the tran.
+  Seat 42.┃
+- Pack light.
+```
+
+</td><td>
+
+```buffer
+- # Trip
+  - Book the train.
+    Seat 42.┃
+  - Pack light.
+```
+
+</td></tr>
+</table>
+
+> undo
+
+<table>
+<tr><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- # Trip
+- Pack light.
+- Book the tran.
+  Seat 42.┃
+```
+
+</td><td>
+
+```buffer
+- # Trip
+  - Pack light.
+  - Book the train.
+    Seat 42.┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>enter "Pack light." enter "Book the train."</th><th>shiftEnter "Seat 42."</th><th>moveSubtreeUp</th><th>undo</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# Trip┃
+```
+
+</td><td>
+
+```buffer
+# Trip
+
+Pack light.
+
+Book the train.┃
+```
+
+</td><td>
+
+```buffer
+# Trip
+
+Pack light.
+
+Book the train.
+Seat 42.┃
+```
+
+</td><td>
+
+```buffer
+# Trip
+
+Book the train.
+Seat 42.┃
+
+Pack light.
+```
+
+</td><td>
+
+```buffer
+# Trip
+
+Pack light.
+
+Book the train.
+Seat 42.┃
 ```
 
 </td></tr>
@@ -7097,8 +9629,14 @@ Adapted: heading, paragraph, under quirkEnterMidHeading: workflowy
 > undo undo undo
 
 <table>
-<tr><th>buffer</th></tr>
+<tr><th>roam</th><th>ourus</th></tr>
 <tr valign="top"><td>
+
+```buffer
+- # Plan2. d┃raft
+```
+
+</td><td>
 
 ```buffer
 - # Plan┃2. draft
@@ -7140,7 +9678,7 @@ Plan
 </td></tr>
 </table>
 
-## Adapted: whitespace (24)
+## Adapted: whitespace (29)
 
 ### [Enter52](../spec/enter.md#enter52)
 
@@ -7869,7 +10407,7 @@ Original:
 
 > enter
 
-Adapted: as blocks, quote, under autoClose: ``` ~~~ $$ ( [ { $, under backspaceAtTopItem: refuse, under copyAtCaret: host, under emptyItemWithChildren: refuse, under enterInQuote: split, under enterOnEmptyItem: outdent, under enterSplitSpace: start, under enterTask: plain, under joinWithChildren: refuse, under mixedDepths: each, under outdent: logical, under pasteAtTextStart: before, under pasteLines: items, under pasteOverSelection: ignore, under pasteParagraphList: children, under quirkEnterMidHeading: workflowy, under quirkPasteCaret: roam, under quotes: atom, under selectionLadder: top
+Adapted: as blocks, quote, under autoClose: ``` ~~~ $$ ( [ { $, under backspaceAtTopItem: refuse, under copyAtCaret: host, under emptyItemWithChildren: refuse, under enterInQuote: split, under enterOnEmptyItem: outdent, under enterSplitSpace: start, under enterTask: plain, under joinWithChildren: refuse, under mixedDepths: each, under outdent: logical, under pasteLines: items, under pasteOverSelection: ignore, under pasteParagraphList: children, under quirkEnterMidHeading: workflowy, under quirkPasteCaret: roam, under quotes: atom, under selectionLadder: top
 
 <table>
 <tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
@@ -8472,6 +11010,322 @@ Original:
 
 ```buffer
  ┃ > a
+```
+
+</td></tr>
+</table>
+
+### [Regression295](../spec/regressions.md#regression295)
+
+> deleteSubtree
+
+Adapted: paragraph, quote, under quotes: atom
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  > q
+  >
+  > -
+- x┃
+-   > l
+```
+
+</td><td>
+
+```buffer
+- a
+  > q
+  >
+  > -┃
+-   > l
+```
+
+</td><td>
+
+```buffer
+- a
+  > q
+  >
+  > -┃
+- > l
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  > q
+  >
+  > -
+x┃
+  > l
+```
+
+</td><td>
+
+```buffer
+- a
+  > q
+  >
+  > -┃
+> l
+```
+
+</td></tr>
+</table>
+
+### [Regression326](../spec/regressions.md#regression326)
+
+> indent
+
+Adapted: blank lines, quote
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  
+- ┃
+-   > quoted in item
+```
+
+</td><td>
+
+```buffer
+-  
+  - ┃
+-   > quoted in item
+```
+
+</td><td>
+
+```buffer
+-  
+  - ┃
+- > quoted in item
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  
+
+- ┃
+
+  > quoted in item
+```
+
+</td><td>
+
+```buffer
+-  
+  - ┃
+
+> quoted in item
+```
+
+</td></tr>
+</table>
+
+### [Regression374](../spec/regressions.md#regression374)
+
+> outdent
+
+Adapted: table
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃ a | b |
+  |---|---|
+```
+
+</td><td>
+
+```buffer
+- ┃ a | b |
+  |---|---|
+```
+
+</td><td>
+
+```buffer
+- ┃a | b |
+  |---|---|
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ┃◌ a | b |
+  |---|---|
+```
+
+</td><td>
+
+```buffer
+┃a | b |
+|---|---|
+```
+
+</td></tr>
+</table>
+
+### [Regression376](../spec/regressions.md#regression376)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: blank lines, heading, paragraph, setext heading, under pasteOverSelection: ignore, under quirkPasteCaret: roam
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## «abc»
+  def
+  -   def
+```
+
+</td><td>
+
+```buffer
+- ## abc
+  def
+  - x┃
+  - y
+  -   def
+```
+
+</td><td>
+
+```buffer
+- ## abc
+  def
+  - x┃
+  - y
+  - def
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+«abc»
+  def
+-
+  def
+```
+
+</td><td>
+
+```buffer
+abc
+  def
+-
+
+- x┃
+- y
+
+def
+```
+
+</td></tr>
+</table>
+
+### [Regression391](../spec/regressions.md#regression391)
+
+> enter
+
+Adapted: as blocks, blank lines, paragraph
+
+<table>
+<tr><th>buffer</th><th>roam</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  «next»
+-   para
+```
+
+</td><td>
+
+```buffer
+-  
+- ┃
+-   para
+```
+
+</td><td>
+
+```buffer
+- ┃
+- 
+-   para
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+-  «next»
+  
+  para
+```
+
+</td><td>
+
+```buffer
+- ┃
+- 
+-   para
 ```
 
 </td></tr>
@@ -9255,79 +12109,55 @@ after
 </td></tr>
 </table>
 
-### [Select6](../spec/select.md#select6)
+### [Regression364](../spec/regressions.md#regression364)
 
-Adapted: under selectionLadder: top
+Adapted: blank lines, heading, paragraph, the node at the caret selected (selectSubtree)
 
 <table>
 <tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- one
-  - two
-    - deep⟦selected⟧
-  - three⟦selected⟧
-  - five
-- four
+- ## B
+  - b t┃ext
+- ## C
 ```
 
 </td></tr>
 </table>
 
-> expandSelection
+> selectSubtree cut
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- ## B┃
+- ## C
+```
+
+</td></tr>
+</table>
+
+> paste
 
 <table>
 <tr><th>roam</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- one
-  - two
-    - deep⟦selected⟧
-  - three⟦selected⟧
-  - five
-- four
+- ## B
+- b t┃ext
+- ## C
 ```
 
 </td><td>
 
 ```buffer
-- one⟦selected⟧
-  - two
-    - deep
-  - three
-  - five
-- four⟦selected⟧
-```
-
-</td></tr>
-</table>
-
-> expandSelection
-
-<table>
-<tr><th>roam</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- one
-  - two
-    - deep⟦selected⟧
-  - three⟦selected⟧
-  - five
-- four
-```
-
-</td><td>
-
-```buffer
-- one⟦selected⟧
-  - two
-    - deep
-  - three
-  - five
-- four⟦selected⟧
+- ## B
+  - b text┃
+- ## C
 ```
 
 </td></tr>
@@ -9335,38 +12165,33 @@ Adapted: under selectionLadder: top
 
 Original:
 <table>
-<tr><th>buffer</th><th>expandSelection</th><th>expandSelection</th></tr>
+<tr><th>buffer</th><th>selectSubtree cut</th><th>paste</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- one
-  - two
-    - deep⟦selected⟧
-  - three⟦selected⟧
-  - five
-- four
+## B
+
+b t┃ext
+
+## C
 ```
 
 </td><td>
 
 ```buffer
-- one⟦selected⟧
-  - two
-    - deep
-  - three
-  - five
-- four⟦selected⟧
+## B┃
+
+## C
 ```
 
 </td><td>
 
 ```buffer
-- one⟦selected⟧
-  - two
-    - deep
-  - three
-  - five
-- four⟦selected⟧
+## B
+
+b text┃
+
+## C
 ```
 
 </td></tr>
@@ -9457,7 +12282,7 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (731)
+## Skipped (805)
 
 | example | why |
 | --- | --- |
@@ -9576,6 +12401,11 @@ Original:
 | [Copy7](../spec/copy.md#copy7) | option copySelection: nodes |
 | [Cut2](../spec/copy.md#cut2) | selection across blocks |
 | [Cut3](../spec/copy.md#cut3) | option copySelection: nodes |
+| [Cut5](../spec/copy.md#cut5) | tag markup-fence |
+| [Copy41](../spec/copy.md#copy41) | selection across blocks |
+| [Copy41b](../spec/copy.md#copy41b) | selection across blocks |
+| [Copy42](../spec/copy.md#copy42) | caret in a marker |
+| [Cut6](../spec/copy.md#cut6) | caret in a marker |
 | **cursor.md** | |
 | [CursorDown2](../spec/cursor.md#cursordown2) | indented code |
 | [CursorHome3](../spec/cursor.md#cursorhome3) | caret in a marker |
@@ -9589,6 +12419,8 @@ Original:
 | [DeleteSubtree12](../spec/delete-subtree.md#deletesubtree12) | option quotes: container |
 | [DeleteSubtree13](../spec/delete-subtree.md#deletesubtree13) | list numbered in part, or not from 1 |
 | [DeleteSubtree14](../spec/delete-subtree.md#deletesubtree14) | tag markup-fence |
+| [DeleteSubtree15](../spec/delete-subtree.md#deletesubtree15) | tag markup-fence |
+| [DeleteSubtree16](../spec/delete-subtree.md#deletesubtree16) | tag markup-fence |
 | **delete.md** | |
 | [Delete4](../spec/delete.md#delete4) | tag markup-heading |
 | [Delete4b](../spec/delete.md#delete4b) | tag markup-heading |
@@ -9760,6 +12592,7 @@ Original:
 | [Gap16](../spec/gaps.md#gap16) | caret on a blank line |
 | [Gap18](../spec/gaps.md#gap18) | caret on a blank line |
 | [Gap19](../spec/gaps.md#gap19) | frontmatter |
+| [Gap21](../spec/gaps.md#gap21) | cursorCharLeft after cursorDocEnd |
 | **indent.md** | |
 | [Indent11](../spec/indent.md#indent11) | changes only what blocks can't show |
 | [Indent12](../spec/indent.md#indent12) | tag free-form |
@@ -9802,6 +12635,8 @@ Original:
 | [Lists15](../spec/lists.md#lists15) | option listParent: container |
 | **move-subtree-down.md** | |
 | [MoveDown2](../spec/move-subtree-down.md#movedown2) | tag free-form |
+| [MoveDown11](../spec/move-subtree-down.md#movedown11) | a selection of blocks with one unselected between |
+| [MoveDown12](../spec/move-subtree-down.md#movedown12) | a selection of blocks with one unselected between |
 | [MoveDown17](../spec/move-subtree-down.md#movedown17) | tag free-form |
 | [MoveDown19](../spec/move-subtree-down.md#movedown19) | tag free-form |
 | [MoveDown20](../spec/move-subtree-down.md#movedown20) | tag free-form |
@@ -9819,6 +12654,8 @@ Original:
 | [MoveDown43](../spec/move-subtree-down.md#movedown43) | caret in a marker |
 | [MoveDown44](../spec/move-subtree-down.md#movedown44) | caret in a marker |
 | **move-subtree-up.md** | |
+| [MoveUp10](../spec/move-subtree-up.md#moveup10) | a selection of blocks with one unselected between |
+| [MoveUp11](../spec/move-subtree-up.md#moveup11) | a selection of blocks with one unselected between |
 | [MoveUp12](../spec/move-subtree-up.md#moveup12) | tag free-form |
 | [MoveUp13](../spec/move-subtree-up.md#moveup13) | code block |
 | [MoveUp15](../spec/move-subtree-up.md#moveup15) | list numbered in part, or not from 1 |
@@ -9870,6 +12707,7 @@ Original:
 | **outdent.md** | |
 | [Outdent2](../spec/outdent.md#outdent2) | tag free-form |
 | [Outdent4](../spec/outdent.md#outdent4) | tag free-form |
+| [Outdent8](../spec/outdent.md#outdent8) | a selection of blocks with one unselected between |
 | [Outdent11](../spec/outdent.md#outdent11) | tag free-form |
 | [Outdent12](../spec/outdent.md#outdent12) | tag free-form |
 | [Outdent14](../spec/outdent.md#outdent14) | caret in a marker |
@@ -9920,6 +12758,7 @@ Original:
 | [PasteList24](../spec/paste-list.md#pastelist24) | option pasteSeams: open |
 | [PasteList26](../spec/paste-list.md#pastelist26) | code block (expected) |
 | [PasteList27](../spec/paste-list.md#pastelist27) | code block (expected) |
+| [PasteList28](../spec/paste-list.md#pastelist28) | option pasteAtTextStart: after |
 | **paste-plain.md** | |
 | [PastePlain4](../spec/paste-plain.md#pasteplain4) | tag free-form |
 | [PastePlain21](../spec/paste-plain.md#pasteplain21) | tag free-form |
@@ -9944,6 +12783,12 @@ Original:
 | [Paste21](../spec/paste.md#paste21) | option pasteSeams: open |
 | [Paste24b](../spec/paste.md#paste24b) | option pasteSeams: open |
 | [Paste26b](../spec/paste.md#paste26b) | option pasteSeams: open |
+| [Paste28](../spec/paste.md#paste28) | indented code |
+| [Paste28b](../spec/paste.md#paste28b) | option pasteIndentedCode: dedent |
+| [Paste29](../spec/paste.md#paste29) | selection across blocks |
+| [Paste29b](../spec/paste.md#paste29b) | selection across blocks |
+| [Paste29d](../spec/paste.md#paste29d) | caret in a marker |
+| [Paste29e](../spec/paste.md#paste29e) | selection across blocks |
 | **placeholders.md** | |
 | [Placeholder2](../spec/placeholders.md#placeholder2) | tag free-form |
 | [Placeholder9b](../spec/placeholders.md#placeholder9b) | option heldSpace: trim |
@@ -10157,6 +13002,60 @@ Original:
 | [Regression292](../spec/regressions.md#regression292) | its view, on an adapted start |
 | [Regression293](../spec/regressions.md#regression293) | code block |
 | [Regression293b](../spec/regressions.md#regression293b) | code block |
+| [Regression294](../spec/regressions.md#regression294) | caret in a heading's #s |
+| [Regression297](../spec/regressions.md#regression297) | tag markup-fence |
+| [Regression298](../spec/regressions.md#regression298) | list numbered in part, or not from 1 |
+| [Regression299](../spec/regressions.md#regression299) | option listParent: container |
+| [Regression300](../spec/regressions.md#regression300) | tag markup-fence |
+| [Regression305](../spec/regressions.md#regression305) | option pasteAtTextStart: after |
+| [Regression308](../spec/regressions.md#regression308) | list numbered in part, or not from 1 |
+| [Regression309](../spec/regressions.md#regression309) | changes only what blocks can't show |
+| [Regression310](../spec/regressions.md#regression310) | changes only what blocks can't show |
+| [Regression313](../spec/regressions.md#regression313) | option quotes: container |
+| [Regression314](../spec/regressions.md#regression314) | option listParent: container |
+| [Regression319](../spec/regressions.md#regression319) | caret in a marker |
+| [Regression323](../spec/regressions.md#regression323) | caret in a marker |
+| [Regression325](../spec/regressions.md#regression325) | list numbered in part, or not from 1 |
+| [Regression329](../spec/regressions.md#regression329) | action duplicateSubtree |
+| [Regression331](../spec/regressions.md#regression331) | option listParent: container |
+| [Regression334](../spec/regressions.md#regression334) | option quotes: container |
+| [Regression339](../spec/regressions.md#regression339) | option indentUnit: tab |
+| [Regression340](../spec/regressions.md#regression340) | option indentUnit: tab |
+| [Regression341](../spec/regressions.md#regression341) | option quotes: container |
+| [Regression342](../spec/regressions.md#regression342) | selection across blocks |
+| [Regression344](../spec/regressions.md#regression344) | caret on a blank line |
+| [Regression345](../spec/regressions.md#regression345) | a selection of blocks with one unselected between |
+| [Regression346](../spec/regressions.md#regression346) | indented code |
+| [Regression347](../spec/regressions.md#regression347) | code block |
+| [Regression349](../spec/regressions.md#regression349) | block id (`^x`), which the app has none of: its text |
+| [Regression352](../spec/regressions.md#regression352) | code block |
+| [Regression353](../spec/regressions.md#regression353) | option pasteAtTextStart: after |
+| [Regression354](../spec/regressions.md#regression354) | option indentUnit: tab |
+| [Regression355](../spec/regressions.md#regression355) | changes only what blocks can't show |
+| [Regression358](../spec/regressions.md#regression358) | tag markup-fence |
+| [Regression359](../spec/regressions.md#regression359) | code block |
+| [Regression365](../spec/regressions.md#regression365) | list numbered in part, or not from 1 |
+| [Regression366](../spec/regressions.md#regression366) | code block |
+| [Regression367](../spec/regressions.md#regression367) | option indentUnit: tab |
+| [Regression369](../spec/regressions.md#regression369) | changes only what blocks can't show |
+| [Regression370](../spec/regressions.md#regression370) | list numbered in part, or not from 1 |
+| [Regression371](../spec/regressions.md#regression371) | list numbered in part, or not from 1 |
+| [Regression372](../spec/regressions.md#regression372) | option quotes: container |
+| [Regression377](../spec/regressions.md#regression377) | list numbered in part, or not from 1 |
+| [Regression378](../spec/regressions.md#regression378) | block id (`^x`), which the app has none of: its text |
+| [Regression379](../spec/regressions.md#regression379) | action duplicateSubtree |
+| [Regression380](../spec/regressions.md#regression380) | code block |
+| [Regression381](../spec/regressions.md#regression381) | option listParent: container |
+| [Regression382](../spec/regressions.md#regression382) | option listParent: container |
+| [Regression383](../spec/regressions.md#regression383) | option listParent: container |
+| [Regression384](../spec/regressions.md#regression384) | block id (`^x`), which the app has none of: its text |
+| [Regression385](../spec/regressions.md#regression385) | option quotes: container |
+| [Regression387](../spec/regressions.md#regression387) | option indentUnit: tab |
+| [Regression388](../spec/regressions.md#regression388) | caret in a marker |
+| [Regression390](../spec/regressions.md#regression390) | changes only what blocks can't show |
+| [Regression392](../spec/regressions.md#regression392) | list numbered in part, or not from 1 |
+| [Regression394](../spec/regressions.md#regression394) | action duplicateSubtree |
+| [Regression396](../spec/regressions.md#regression396) | option indentUnit: tab |
 | **scenarios.md** | |
 | [Scenario6](../spec/scenarios.md#scenario6) | tag free-form |
 | [Scenario8b](../spec/scenarios.md#scenario8b) | no text focus after moveSubtree ③ |
@@ -10186,7 +13085,7 @@ Original:
 | **subtree-selection.md** | |
 | [SubtreeEdit10](../spec/subtree-selection.md#subtreeedit10) | changes only what blocks can't show |
 | [SubtreeEdit15](../spec/subtree-selection.md#subtreeedit15) | caret in a marker |
-| [SubtreeEdit16](../spec/subtree-selection.md#subtreeedit16) | no text focus after deleteContentForward |
+| [SubtreeEdit16](../spec/subtree-selection.md#subtreeedit16) | a selection of blocks with one unselected between |
 | [SubtreeEdit17](../spec/subtree-selection.md#subtreeedit17) | option pasteOverNodes: after |
 | [SubtreeEdit18](../spec/subtree-selection.md#subtreeedit18) | option pasteOverNodes: nothing |
 | [SubtreeEdit19](../spec/subtree-selection.md#subtreeedit19) | option pasteOverNodes: nothing |

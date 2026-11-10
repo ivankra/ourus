@@ -20,7 +20,8 @@
     "redraw": "node test/redraw.ts",
     "sxs": "node sxs/run.ts",
     "test": "node test/heavy.ts",
-    "test:fast": "tsc -p . && node --test test/*.test.ts test/*/*.test.ts sxs/*/*.test.ts",
+    "test:fast": "tsc -p . && node --import ./test/lib/fc-seed.ts --test test/*.test.ts test/*/*.test.ts sxs/*/*.test.ts",
+    "test:fuzz": "FC_SEED=random node --import ./test/lib/fc-seed.ts --test test/*.test.ts test/*/*.test.ts sxs/*/*.test.ts",
     "test:model": "node test/model/run.ts",
     "test:volume": "node test/volume.ts",
     "typecheck": "tsc -p . && tsc -p demos/cm6 && tsc -p demos/textarea && tsc -p demos/gtk"

@@ -32,7 +32,7 @@ export function settlePlaceholders(view: OurusView): { readonly view: OurusView;
   // whose node went, or has nothing to hide now, goes)
   after = after.withFolded([...after.folded, ...view.folded]);
   // (mapped, then where the view shows it, as a command's: inside the zoom, where a settled node at its
-  // end left the caret past it, B276, and out of a fold)
+  // end left the caret past it, and out of a fold)
   const mapped = { anchor: mapPos(changes, given.anchor), head: mapPos(changes, given.head) };
   return { view: after.withSelection(after.visibleSelection(mapped)), changes };
 }

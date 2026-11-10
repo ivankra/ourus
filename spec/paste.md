@@ -18,6 +18,12 @@ copied with it, plain lines, the host's paste.
   or the quote, and a pasted paragraph's list follows it.
 - Headings: a pasted heading splits the section it lands in, as one typed there would: what follows it, up to a
   heading of its level or above, is its section.
+- Text ourus copied across nodes (its mark `<!-- ourus text -->`, [copy.md](copy.md)): its first
+  line joins the text before the caret and the text after the caret joins its last, whatever
+  `pasteSeams` says, as the text editors (Obsidian, SilverBullet, Emacs) put text in; so a cut pastes
+  back where it was (Paste29, Paste29b). Where the mark says an end is a boundary between blocks (`[`,
+  `]`), the text on that side stays a node of its own (Regression262, Paste29d). Pasted elsewhere,
+  the same (Paste29c). Plain lines with neither, a copy within one text, go into the text.
 - Over a selection: it goes first, as a cut takes it, and the paste goes where that leaves the caret
   (`pasteOverSelection: replace`). With `ignore` (as Logseq, Logseq DB, Tine, Tana, Roam and Athens
   paste blocks), a paste of nodes (blocks between nodes, not text put into a text) over a selection
@@ -753,12 +759,11 @@ q
 
 ## Paste20
 
-With `pasteAtTextStart: before`, a heading pasted at a paragraph's start goes before it, and takes it
-in, as one typed there would.
+A heading pasted at a paragraph's start goes before it (`pasteAtTextStart: before`, the default),
+and takes it in, as one typed there would.
 
 ```yaml
 tags: rare
-pasteAtTextStart: before
 clipboard: |-
   ## h
   text
@@ -1032,3 +1037,189 @@ para
 
 more
 ```
+
+## Paste28
+
+Plain text indented as code (every line four columns in, or a tab), pasted into an empty note, keeps
+its indentation: indented code, as a text editor pastes it, and as a paste on a blank line of a note
+that isn't empty keeps it (B26). `pasteIndentedCode: dedent` takes it off, as anywhere else.
+
+```yaml
+tags: common
+clipboard: |2
+      def f():
+          return 1
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+    def f():
+        return 1┃
+```
+
+## Paste28b
+
+With `pasteIndentedCode: dedent` (WorkFlowy, Tana, Roam, BlockNote), the indentation the lines share
+goes: a paragraph, the code's lines its text.
+
+```yaml
+tags: rare
+pasteIndentedCode: dedent
+clipboard: |2
+      code1
+      code2
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+code1
+code2┃
+```
+
+## Paste28c
+
+Lines that read as a list without their indentation, copied from deeper in a list, are the list
+either way: their indentation goes.
+
+```yaml
+tags: common
+clipboard: |2
+      - child
+        - grandchild
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+- child
+  - grandchild┃
+```
+
+## Paste29
+
+Text cut from inside one item into another, pasted back where the cut leaves the caret: the items
+come back (B188). It was read as nodes, `e` and `tw` items of their own after `ono`.
+
+```yaml
+tags: common
+```
+
+```markdown
+- on«e
+- tw»o
+- three
+```
+
+> cut paste
+
+```markdown
+- one
+- tw┃o
+- three
+```
+
+## Paste29b
+
+The same from a paragraph into a list: the paragraph's end and the item come back (B188).
+
+```yaml
+tags: common
+```
+
+```markdown
+pa«ra
+- one»
+- two
+```
+
+> cut paste
+
+```markdown
+para
+- one┃
+- two
+```
+
+## Paste29c
+
+Text ourus copied across nodes, pasted inside another text: its first line joins the text before
+the caret, the text after it joins its last line, as the text editors put it.
+
+```yaml
+tags: common
+clipboard:
+  text/plain: |-
+    e
+    - tw
+  text/html: '<!-- ourus text --><p>e</p>'
+```
+
+```markdown
+- x┃yz
+```
+
+> paste
+
+```markdown
+- xe
+- tw┃yz
+```
+
+## Paste29d
+
+A cut ending before an item's marker, its line break taken: the texts join, `two`'s, not its
+marker read as text; pasted back, the copy's `]` keeps `two` an item of its own (B188).
+
+```yaml
+tags: common
+```
+
+```markdown
+- on«e
+»- two
+```
+
+> cut paste
+
+```markdown
+- one
+- ┃two
+```
+
+## Paste29e
+
+A cut from inside an item's text into its child, pasted back: the child comes back under the item,
+the copy's child line indented under its first (Copy2, Cut2).
+
+```yaml
+tags: common
+```
+
+```markdown
+- one «two
+  - ki»d
+- three
+```
+
+> cut paste
+
+```markdown
+- one two
+  - ki┃d
+- three
+```
+

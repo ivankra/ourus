@@ -232,8 +232,9 @@ export function adapt(driver: Driver, drawn: SpecTest, opts: AdaptOptions = {}):
       // (a view's labels name the drawn start's nodes, not the items')
       if (views) return skip('its view, on an adapted start');
       const items = draw(start.outline, { ordered: driver.ordered });
-      const back = project(items, flavor, { ...shape, config });
-      if (sameOutline(back.outline, start.outline) && String(back.sections) === String(start.sections)) {
+      // (a subtree selection the items can't draw, its roots not theirs: the drawings, projected)
+      const back = projectable(() => project(items, flavor, { ...shape, config }));
+      if (back && sameOutline(back.outline, start.outline) && String(back.sections) === String(start.sections)) {
         try {
           const onItems = drawnSteps({ ...test, initial: { ...test.initial, buffer: items } }, flavor, Object.fromEntries(theirs) as Partial<OurusConfig>);
           replayed = test.steps.map((step, i) => (step.expect.buffer === undefined ? undefined : onItems[i]!.buffer));
@@ -409,4 +410,13 @@ export function selects(selector: string, t: SpecTest): boolean {
     return (file === '' || t.file === file || t.file === `${file}.md`) && anchor === selector.slice(hash + 1).toLowerCase();
   }
   return t.file === selector || t.file === `${selector}.md` || t.name.includes(selector);
+}
+
+/** `f()`, or null where it throws (a drawing the items can't spell). */
+function projectable<T>(f: () => T): T | null {
+  try {
+    return f();
+  } catch {
+    return null;
+  }
 }

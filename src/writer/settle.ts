@@ -45,13 +45,13 @@ function settled(doc: OurusDoc, caret: number, placeholders: readonly number[]):
     if (!node || !(text instanceof OurusProse)) return null;
     if (gone.has(node.id)) continue;
     // an empty last line it holds (Shift-Enter's at the text's end, left so): the line goes, no blank
-    // line left in its place (B23)
+    // line left in its place
     const last = text.text.lastIndexOf('\n');
     if (!text.empty && text.marks.placeholders.includes(text.text.length) && text.emptyLastLine) {
       draft.setText(node, text.slice(0, last).withBlockIdLines(text.blockIdLines));
       continue;
     }
-    // an empty first line it holds, above the text (`◌⏎text`): the line goes, as the last one does (B239)
+    // an empty first line it holds, above the text (`◌⏎text`): the line goes, as the last one does
     if (!text.empty && text.text[0] === '\n' && text.marks.placeholders.includes(0) && text.frame[0]?.part !== 'below') {
       draft.setText(node, text.slice(1).withBlockIdLines(text.blockIdLines));
       continue;
@@ -59,7 +59,8 @@ function settled(doc: OurusDoc, caret: number, placeholders: readonly number[]):
     if (doc.marks.hasHeldSpaceAt(pos) || node.kind === 'item') {
       // written again, which settles the held space as `heldSpace` says (the draft's: kept, the text's
       // padding, its children moved with it; or out); an empty item as `done()` holds it
-      draft.setText(node, text);
+      // (its placeholder out: settled, the draft holds it only where Markdown needs it)
+      draft.setText(node, node.kind === 'item' ? text.withMarks({ placeholders: text.marks.placeholders.filter((p) => !text.marks.hasEmptyNodeAt(p)) }) : text);
     } else if (text.empty) {
       // (with the blank lines that set it off between two items: their list as tight as it was, TO18)
       // (the list after it its own, in a section: Enter7b)
@@ -68,7 +69,7 @@ function settled(doc: OurusDoc, caret: number, placeholders: readonly number[]):
       if (above?.kind === 'item' && below?.kind === 'item' && !apart(above.prev) && !apart(below)) draft.gap(above.lastDescendant, 0);
       // (a separator: where nothing set the blocks around it apart, no blank line before it nor after it,
       // its line is one now, the node above's gap; not in a list or a quote, where a blank line is
-      // structure, a list loosened, a quote split: B306)
+      // structure, a list loosened, a quote split)
       else if (above && above.kind !== 'root' && (above !== node.parent || doc.textOf(above)) && separates(doc, node, above)) draft.gap(above, 1);
       // (else the node above takes its blank lines, as Backspace taking it out would: the author's stay;
       // but a parent with no text, a quote's, has no blank lines after it to take them)

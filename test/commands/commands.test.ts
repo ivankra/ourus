@@ -3,10 +3,10 @@ import { test } from 'node:test';
 import fc from 'fast-check';
 import { executeCommand, nearestDropPoint, type OurusCommand, type DropPoint, type DropSeam, OurusDeferred, OurusFailed, OurusRejected, OurusSuccess } from '../../src/commands/index.ts';
 import { OurusConfig } from '../../src/config.ts';
-import { OurusDoc, type OurusNode } from '../../src/doc/index.ts';
+import { OurusAtom, OurusDoc, type OurusNode } from '../../src/doc/index.ts';
 import { OurusView } from '../../src/view/index.ts';
 import { MdFlavor, MdTree } from '../../src/parser/index.ts';
-import { parseWithMarks, allNodes, nodePlainText, resultStatus, executeOnText, executeAfter, appliedText, assertApplied, scalingFactor } from '../lib/index.ts';
+import { parseWithMarks, allNodes, nodePlainText, resultStatus, executeOnText, executeAfter, appliedText, assertApplied, scalingFactor, convertPastedHtml, assertNoWriteFailure, htmlFailures, lostMarksOnText } from '../lib/index.ts';
 import { applyChanges } from '../../src/text/index.ts';
 
 const RUNS = Number(process.env.OURUS_FUZZ_RUNS ?? 2000);
@@ -175,8 +175,9 @@ test('a paste on the empty line Enter holds at the text end fills it', () => {
   const entered = executeOnText('# h1', { type: 'enter' }, { caret: 4 });
   assert.ok(entered instanceof OurusSuccess);
   if (!(entered instanceof OurusSuccess)) return;
-  assert.equal(entered.view.doc.text, '# h1\n');
-  for (const [clipboard, text] of [['- a\n  - b', '# h1\n- a\n  - b\n'], ['> q', '# h1\n> q\n'], ['# h2\ntext', '# h1\n# h2\ntext\n']] as const) {
+  // (set off from the heading by a blank line, which the paste leaves: a heading keeps one, Gap20)
+  assert.equal(entered.view.doc.text, '# h1\n\n');
+  for (const [clipboard, text] of [['- a\n  - b', '# h1\n\n- a\n  - b\n'], ['> q', '# h1\n\n> q\n'], ['# h2\ntext', '# h1\n\n# h2\ntext\n']] as const) {
     const r = executeCommand(entered.view, { type: 'paste', clipboard: { 'text/plain': clipboard } });
     assert.equal(r instanceof OurusSuccess ? r.view.doc.text : `${resultStatus(r)} ${r instanceof OurusRejected ? r.reason : ''}`, text, clipboard);
   }
@@ -505,7 +506,7 @@ test('a text ending in a blank line with no line ending keeps it a blank line wh
     ['+\n ', { type: 'duplicateSubtree' }, 3, 3, '+\n+ \n\n'],
     ['x\n- y\n ', { type: 'indent' }, 0, 2, '- x\n  - y\n '],
     ['> a\n>', { type: 'duplicateSubtree' }, 2, 2, '> a\n>\n> a\n>', { quotes: 'container' }],
-    ['-\t```\nc\n\t', { type: 'moveSubtreeDown' }, 0, 0, 'c\n-\t```'],
+    ['-\t```\nc\n\t', { type: 'moveSubtreeDown' }, 0, 0, 'c\n- ```'],
   ];
   for (const [text, command, anchor, head, want, config] of cases) {
     const r = executeOnText(text, command, { anchor, head, config: config ?? {} });
@@ -549,11 +550,11 @@ test('Backspace on an empty last item after a folded one keeps the blank lines i
   assert.equal(out instanceof OurusSuccess && out.view.doc.text, 'a\n\n');
 });
 
-test('Enter in a nested item on its quoted parent\'s marker line, no space after the `>`: the new item at its sibling\'s column, past `> ` (B57)', () => {
+test('Enter in a nested item on its quoted parent\'s marker line, no space after the `>`: the new item at its sibling\'s column, the quote written in normal form, `> ` (B57; normalized, decided 2026-11-11)', () => {
   const r = executeOnText('>0. - h\n', { type: 'enter' }, { caret: 7 });
-  assert.equal(r instanceof OurusSuccess && r.view.doc.text, '>0. - h\n>    - \n');
+  assert.equal(r instanceof OurusSuccess && r.view.doc.text, '> 0. - h\n>    - \n');
   const before = executeOnText('>0. - h\n', { type: 'enter' }, { caret: 6 });
-  assert.equal(before instanceof OurusSuccess && before.view.doc.text, '>0. - \n>    - h\n');
+  assert.equal(before instanceof OurusSuccess && before.view.doc.text, '> 0. - \n>    - h\n');
 });
 
 test('a quote atom\'s Enter, Shift-Enter and plain paste read its lines as the document does: tabs kept where they were, CRLF, an item\'s quote, the caret in markup (B198–B201)', () => {
@@ -1135,8 +1136,11 @@ test('a drag\'s deletion is the selection deleted as a cut deletes it: a subtree
   // (part of a text, the host's, a block id's markup too; refused where it would leave the zoom)
   const id = executeOnText('p ^abc', { type: 'deleteByDrag' }, { anchor: 2, head: 3, config: { flavor: 'obsidian', markup: 'decorated' } });
   assert.ok(id instanceof OurusDeferred);
-  const leaves = executeCommand(OurusView.of(OurusDoc.parse('p\n- child\n\nq'), { zoom: 1, selection: { anchor: 0, head: 2 } }), { type: 'deleteByDrag' });
+  const leaves = executeCommand(OurusView.of(OurusDoc.parse('p\n- child\n\nq'), { zoom: 1, selection: { anchor: 4, head: 11 } }), { type: 'deleteByDrag' });
   assert.ok(leaves instanceof OurusRejected && leaves.reason === 'outside-zoom');
+  // (a selection ending before a marker, `«p⏎»- child`: the texts join, the zoom root's text the child's, B188)
+  const joined = executeCommand(OurusView.of(OurusDoc.parse('p\n- child\n\nq'), { zoom: 1, selection: { anchor: 0, head: 2 } }), { type: 'deleteByDrag' });
+  assert.equal(assertApplied(joined).view.doc.text, 'child\n\nq');
 });
 
 test('a flat paste of many items is written in linear time, and past JavaScript\'s limit on a call\'s arguments', async () => {
@@ -1351,13 +1355,1000 @@ test('a child further in than its sibling, moved out after its parent, is read a
   assert.equal(appliedText(moved), 'a\n- b\n\n- p\n  - d\n\n- c\n\nz\n');
 });
 
-test('outdenting an item over a quoted list at an in-between indent is refused, not failed: its child read at its new depth (B190)', () => {
-  const r = executeOnText('%% comment %%\n1. first\n   - nested bul\nx- sibling\n  > - list in quote', { type: 'outdent' }, { caret: 40, config: { flavor: 'gfm' } });
-  assert.ok(r instanceof OurusRejected && r.reason === 'not-expressible');
+test('outdenting an item over a quoted list at an in-between indent: the quote after it, padded at the root, its padding dropped so it stays out of the item (B190; refused until 2026-11-14)', () => {
+  assert.equal(appliedText(executeOnText('%% comment %%\n1. first\n   - nested bul\nx- sibling\n  > - list in quote', { type: 'outdent' }, { caret: 40, config: { flavor: 'gfm' } })), '%% comment %%\n1. first\n- nested bul\nx- sibling\n> - list in quote');
 });
 
 test('a refusal names a node in words, not by the parser\'s names: a rule, code (B259)', () => {
   const detail = (r: ReturnType<typeof executeOnText>): string | undefined => (r instanceof OurusRejected ? r.detail : undefined);
   assert.equal(detail(executeOnText('p\n\n---', { type: 'outdent' }, { caret: 3 })), 'a rule has no level to leave');
   assert.equal(detail(executeOnText('x\n\n```\ncode\n```\n\ny', { type: 'deleteContentBackward' }, { caret: 17 })), "can't join into code");
+});
+
+test('a paragraph cut under code and pasted back (B346)', () => {
+  const cut = assertApplied(executeOnText('```\ncode\n```\n\npara\n', { type: 'cut' }, { caret: 16 }));
+  const back = assertApplied(executeAfter(cut, { type: 'paste', clipboard: cut.clipboard! }));
+  assert.equal(back.view.doc.text, '```\ncode\n```\n\npara\n');
+});
+
+test('an item cut under an item ending in code and pasted back (B346)', () => {
+  const cut = assertApplied(executeOnText('- item\n  ```\n  x\n  ```\n- next\n', { type: 'cut' }, { caret: 26 }));
+  const back = assertApplied(executeAfter(cut, { type: 'paste', clipboard: cut.clipboard! }));
+  assert.equal(back.view.doc.text, '- item\n  ```\n  x\n  ```\n- next\n');
+});
+
+test('cutting a quote\'s first paragraph after an item writes the quote outside the item, its uneven padding normalized (B350, B449)', () => {
+  const cut = assertApplied(executeOnText('- a\n > x\n  > - b\n', { type: 'cut' }, { caret: 6 }));
+  assert.equal(cut.view.doc.text, '- a\n> - b\n');
+  assert.equal(cut.view.doc.rootNode.children.length, 2);
+});
+
+test('Enter at a heading\'s start after a quoted item: an empty paragraph held between them, set off from both (B365)', () => {
+  const r = assertApplied(executeOnText('  - > [!\n    >\n    > x\n#     > note] Title\n', { type: 'enter' }, { caret: 25, config: { flavor: 'obsidian', listParent: 'container' } }));
+  assert.equal(r.view.doc.text, '  - > [!\n    >\n    > x\n\n\n\n#     > note] Title\n');
+  assert.deepEqual([...r.view.doc.marks.placeholders], [24]);
+});
+
+test('a two-paragraph plain paste on a bare marker leaves the paragraph after it apart: what follows kept apart, out of the item, as the outliners keep it (B193)', () => {
+  assert.equal(appliedText(executeOnText('-\n\n  a\n', { type: 'pastePlain', text: 'a\n\nb' }, { caret: 1 })), "- a\n\n  b\n\na\n");
+});
+
+test('two lines plain-pasted on a bare marker leave the fence after it apart: what follows kept apart, out of the item, as the outliners keep it (B193)', () => {
+  assert.equal(appliedText(executeOnText('-\n\n  ```\n', { type: 'pastePlain', text: 'x\ny' }, { caret: 1 })), "- x\n  y\n\n```\n");
+});
+
+test('a paste of paragraphs on a bare marker leaves the list after it apart: what follows kept apart, out of the item, as the outliners keep it (B193)', () => {
+  assert.equal(appliedText(executeOnText('-\n\n  - b\n', { type: 'paste', clipboard: { 'text/plain': 'p\n\nq' } }, { caret: 1 })), "- p\n\n  q\n\n- b\n");
+});
+
+test('Delete joining text to a bare marker leaves the paragraph after it apart: what follows kept apart, out of the item, as the outliners keep it (B193)', () => {
+  assert.equal(appliedText(executeOnText('-\n\n===\n\n  a\n', { type: 'deleteContentForward' }, { caret: 1 })), "- ===\n\na\n");
+});
+
+test('a paragraph joins an empty item, the code after it its own: the code after it fenced, a block of its own (B328)', () => {
+  // root: 2 children, read as 1
+  assert.equal(appliedText(executeOnText('-\nx\n\n    c', { type: 'deleteContentBackward' }, { caret: 2, config: { flavor: 'obsidian' } })), "- x\n```\nc\n```");
+});
+
+test('Backspace joins a line under an empty numbered item: what follows kept apart, out of the item, as the outliners keep it (B352)', () => {
+  assert.equal(appliedText(executeOnText("2.\nx > quote\n   > more\n", { type: "deleteContentBackward" }, { caret: 3, config: { flavor: "gfm", quotes: "atom" } })), "2. x > quote\n> more\n");
+});
+
+test('Backspace joins an escaped line under an empty item: what follows kept apart, out of the item, as the outliners keep it (B352)', () => {
+  assert.equal(appliedText(executeOnText("```js\n```\n-\n\\> [!note] Title\n  > body text\n", { type: "deleteContentBackward" }, { caret: 12, config: { flavor: "commonmark", indentUnit: "tab" }, auto: [12] })), "```js\n```\n- \\> [!note] Title\n> body text\n");
+});
+
+test('Delete at an empty item\'s end: what follows kept apart, out of the item, as the outliners keep it (B352)', () => {
+  assert.equal(appliedText(executeOnText("-\nx > [!note] Title\n  > body text\n", { type: "deleteContentForward" }, { caret: 1, config: { flavor: "obsidian" } })), "- x > [!note] Title\n> body text\n");
+});
+
+test('Backspace joins a line before a table: the table set apart, the joined text escaped (B352)', () => {
+  assert.equal(appliedText(executeOnText("-\n--\n| a | b |\n|---|---|\n", { type: "deleteContentBackward" }, { caret: 2, config: { flavor: "gfm", listParent: "container" } })), '- \\--\n\n| a | b |\n|---|---|\n');
+});
+
+test('Enter at a fence after an item\'s unclosed fence: the new line the open code\'s, an empty line of it, as a text editor writes it (B205)', () => {
+  assert.equal(appliedText(executeOnText('- ```\n```', { type: 'enter' }, { caret: 6 })), '- ```\n\n```');
+  assert.equal(appliedText(executeOnText('- item\n  ```js\n ```\n', { type: 'enter' }, { caret: 15 })), '- item\n  ```js\n\n ```\n');
+  assert.equal(appliedText(executeOnText('- $$\n$$\n', { type: 'enter' }, { caret: 5, config: { flavor: 'obsidian' } })), '- $$\n\n$$\n');
+});
+
+test('Backspace on an empty item after an item\'s unclosed fence: the blank line after it the open code\'s (B205)', () => {
+  assert.equal(appliedText(executeOnText('- item\n  ```js\n- \n\n', { type: 'deleteContentBackward' }, { caret: 17 })), '- item\n  ```js\n\n');
+});
+
+test('the third shared marker emptied: the nested empty items each on a line of their own, as the outliners show them, not `- - - `, a rule (B209)', () => {
+  assert.equal(appliedText(executeOnText('- - - a\n', { type: 'enter' }, { caret: 4 })), '- \n  - \n    - \n    - a\n');
+  assert.equal(appliedText(executeOnText('- - - a', { type: 'deleteSoftLineBackward' }, { caret: 7 })), '- \n  - \n    - ');
+  assert.equal(appliedText(executeOnText('* * * a', { type: 'deleteSoftLineBackward' }, { caret: 7 })), '* \n  * \n    * ');
+});
+
+test('the inner item of an indented shared marker line taken out, its child led by a tab: the block, its items mixing tabs and spaces, written anew in normal form (B348)', () => {
+  assert.equal(appliedText(executeOnText('  - - \n\t- x\n', { type: 'deleteContentBackward' }, { caret: 6, config: { indentUnit: 'tab' } })), '- - x\n');
+  assert.equal(appliedText(executeOnText('  - - \n\t- x\n', { type: 'deleteSubtree' }, { caret: 6 })), '- - x\n');
+  assert.equal(appliedText(executeOnText('  - - a\n\t- x\n', { type: 'deleteSubtree' }, { caret: 7 })), '- - x\n');
+  // (moved down and back: in normal form both ways)
+  assert.equal(appliedText(executeOnText('  - - \n\t- x\n', { type: 'moveSubtreeDown' }, { caret: 6 })), '- - x\n  - \n');
+  assert.equal(appliedText(executeOnText('  - - x\n\t- \n', { type: 'moveSubtreeUp' }, { caret: 11 })), '- - \n  - x\n');
+});
+
+test('a quoted paragraph with no space after its `>` moved up onto an item\'s marker line: written with one (B349)', () => {
+  assert.equal(appliedText(executeOnText('- > a\n  >\n  >x t\n', { type: 'moveSubtreeUp' }, { caret: 14 })), '- > x t\n  >\n  > a\n');
+});
+
+test('in Obsidian, a paste ending in `---` after a `---` at the note\'s start: a blank line before the first, which would open front matter with it (`pasteAtTextStart: after`; B387)', () => {
+  const text = appliedText(executeOnText("---\n", {"type": "paste", "clipboard": {"text/plain": "## Notes\n\n- parent\n  - child one\n    - grandchild\n  - child two\n\n    second paragraph of child two\n  - child three\n\n- item\n  ```js\n  let x;\n  ```\n- next\n\n---\n", "text/markdown": "## Notes\n\n- parent\n  - child one\n    - grandchild\n  - child two\n\n    second paragraph of child two\n  - child three\n\n- item\n  ```js\n  let x;\n  ```\n- next\n\n---\n", "text/html": "<!-- ourus --><h2>Notes</h2>\n<ul>\n<li>\n<p>parent</p>\n<ul>\n<li>\n<p>child one</p>\n<ul>\n<li>grandchild</li>\n</ul>\n</li>\n<li>\n<p>child two</p>\n<p>second paragraph of child two</p>\n</li>\n<li>\n<p>child three</p>\n</li>\n</ul>\n</li>\n<li>\n<p>item</p>\n<pre><code class=\"language-js\">let x;\n</code></pre>\n</li>\n<li>\n<p>next</p>\n</li>\n</ul>\n<hr />\n"}}, {"caret": 0, "config": {"flavor": "obsidian", "pasteAtTextStart": "after"}}));
+  assert.ok(text.startsWith('\n---\n'), JSON.stringify(text));
+});
+
+test('Enter on a padded empty item, an item after it two columns in: the empty item written `- `, narrower, the item after it lined up, a sibling still (B378)', () => {
+  assert.equal(appliedText(executeOnText('-  \n  - item\n', { type: 'enter' }, { caret: 3, placeholders: [3] })), '- \n- \n- item\n');
+  assert.equal(appliedText(executeOnText('  - child one\n\t-  \n\t  - grandchild\n', { type: 'enter' }, { caret: 18, placeholders: [18] })), '  - child one\n\n\t- \n\t- \n\t- grandchild\n');
+});
+
+test('a quote\'s first block on an item\'s marker line moved down past a quoted heading: into its section, the heading on the marker line, not a second item (B360, B351)', () => {
+  assert.equal(appliedText(executeOnText('- > a\n  > # b\n', { type: 'moveSubtreeDown' }, { caret: 5 })), '- > # b\n  > a\n');
+  assert.equal(appliedText(executeOnText('1. > [!note] Title\n   > bo\n   > # dy text\n', { type: 'moveSubtreeDown' }, { caret: 26, config: { flavor: 'commonmark', listParent: 'container' } })), '1. > # dy text\n   > [!note] Title\n   > bo\n');
+  assert.equal(appliedText(executeOnText('- > \n  > # x\n', { type: 'moveSubtreeDown' }, { caret: 4, placeholders: [4] })), '- > # x\n  > \n');
+  // (past an empty item that is a setext underline, `b` a heading: seed 51's)
+  assert.equal(appliedText(executeOnText('- > - a\n  >\n  > b\n  > - \n', { type: 'moveSubtreeDown' }, { caret: 6 })), '- > b\n  > - \n  >\n  > - a\n');
+});
+
+test('a line joined into a padded empty numbered item, a quote after it: the item\'s padding goes, as the writer writes it, so the quote is kept a block of its own (B390)', () => {
+  assert.equal(appliedText(executeOnText('2.  \n x\n   > more\n', { type: 'deleteContentBackward' }, { caret: 5 })), '2. x\n> more\n');
+  assert.equal(appliedText(executeOnText('1.  \nquote\n   > more\n', { type: 'deleteContentForward' }, { caret: 4 })), '1. quote\n> more\n');
+});
+
+test('Shift-Tab on the last item after a quote and a tab-led empty item\'s paragraph: a blank line raised, the paragraph out of the one above (B386)', () => {
+  assert.equal(appliedText(executeOnText('- a\n  > q\n\t-\n\t  b\n- c\n', { type: 'outdent' }, { caret: 21 })), '- a\n  > q\n\t-\n\t  b\n\nc\n');
+});
+
+test('a quote written `>-`, no space after its `>`, its items edited: the quote written in normal form, `> -` (B56, B289, B349, B341; decided 2026-11-11)', () => {
+  assert.equal(appliedText(executeOnText('>\n >- [x] x', { type: 'enter' }, { caret: 9 })), '> - [ ] \n> - [x] x');
+  assert.equal(appliedText(executeOnText('> - a\n>- b', { type: 'moveSubtreeUp' }, { caret: 6 })), '> - b\n> - a');
+  assert.equal(appliedText(executeOnText('> a\n>- b\n>- c\n', { type: 'moveSubtreeUp' }, { caret: 12 })), '> a\n> - c\n> - b\n');
+  assert.equal(appliedText(executeOnText('>- x\n>\n>', { type: 'duplicateSubtree', nodes: [2] }, { config: { flavor: 'gfm', quotes: 'container' } })), '> - x\n> - x\n\n\n');
+});
+
+test('Enter on an empty padded child before a quote its parent holds: the child out of its list, the quote its (B355), at the column `- ` gives, not past the padding it had (B237; read as a quote atom too)', () => {
+  assert.equal(appliedText(executeOnText("- sibling\n  -  \n  > - list in quote\n", { type: "enter" }, { caret: 15, config: { flavor: "gfm" }, placeholders: [15] })), "- sibling\n- \n  > - list in quote\n");
+  assert.equal(appliedText(executeOnText("- sibling\n  -  \n  > quoted in item\n", { type: "enter" }, { caret: 15, config: { flavor: "gfm", quotes: "atom" }, placeholders: [15] })), "- sibling\n- \n  > quoted in item\n");
+});
+
+test('Shift-Tab under `indentUnit: tab` on a nested quote with spaces after the outer `>`: written in the item, a tab and a space (B356)', () => {
+  assert.equal(appliedText(executeOnText("- > quoted in item\n  >    > over two lines\n", { type: "outdent" }, { caret: 24, config: { flavor: "obsidian", indentUnit: "tab" } })), "- > quoted in item\n\n\t > over two lines\n");
+});
+
+test('Backspace joining a lazy item into the item above: the tab-led quote after it at the narrower item\'s column (B364)', () => {
+  assert.equal(appliedText(executeOnText("  ```js\n  ```\n- next\n - quoted in item\n\t  > over two lines\n", { type: "deleteContentBackward" }, { caret: 24, config: { flavor: "obsidian", indentUnit: "tab" } })), "  ```js\n  ```\n- nextquoted in item\n\t > over two lines\n");
+});
+
+test('a tab-led child moved down onto an item whose first block is a callout: on its marker line, its id kept (B392)', () => {
+  assert.equal(appliedText(executeOnText("- item\n\t- [x] done\n- > [!note] Title\n", { type: "moveSubtreeDown" }, { caret: 14, config: { flavor: "obsidian" } })), "- item\n- - [x] done\n  > [!note] Title\n");
+});
+
+test('Backspace at the start of an item\'s quote whose next line is `>#`: the quote\'s new first line spelled with its space (B393)', () => {
+  assert.equal(appliedText(executeOnText("- > a\n  >#\n", { type: "deleteContentBackward" }, { caret: 4 })), "- a\n  > #\n");
+});
+
+test('Alt-Down in an item\'s quote padded further on a later line than its next: the quote written anew in normal form (B396)', () => {
+  assert.equal(appliedText(executeOnText("- > x\n\n   >\n  > ted in item\n", { type: "moveSubtreeDown" }, { caret: 6, config: { quotes: "container" } })), "- > ted in item\n\n  > x\n");
+});
+
+test('outdenting a lazy paragraph out of a quote, past a tab after its `>`, after an empty item: the tab\'s rest the quote\'s, no padding the item would take in (B70)', () => {
+  const r = assertApplied(executeOnText('-\n>\tq\n d', { type: 'outdent', nodes: [3] }, { caret: 1, config: { quotes: 'container' } }));
+  assert.equal(r.view.doc.text, '-\nq\n d');
+});
+
+test('moving an empty quote into the item after it, that item\'s text going on lazily: the item on its parent\'s marker line now, its lazy line past its content column, its text as it was (B39)', () => {
+  const r = assertApplied(executeOnText('- >\n   - d\n    a', { type: 'moveSubtree', to: { parent: 3, after: null } }, { caret: 2, config: { quotes: 'container' } }));
+  assert.equal(r.view.doc.text, '- - d\n      a\n    >');
+});
+
+test('under `indentUnit: tab`, items dropped first under an item whose quote shares its marker line: the first on that line, the next lined up with it in spaces, no tab past it (B15)', () => {
+  const r = assertApplied(executeOnText('- >', { type: 'pasteAt', at: { parent: 1, after: null }, clipboard: { 'text/plain': '- a\n- b' } }, { config: { flavor: 'obsidian', quotes: 'container', indentUnit: 'tab' } }));
+  assert.equal(r.view.doc.text, '- - a\n  - b\n  >');
+});
+
+test('an item whose text is a heading pasted over a paragraph after another, the note ending there: a heading, not a paragraph its `#` would make one (B301)', () => {
+  const r = assertApplied(executeOnText('m\n\nx', { type: 'paste', clipboard: { 'text/plain': '- # title\n', 'text/markdown': '- # title\n' } }, { anchor: 3, head: 4 }));
+  assert.equal(r.view.doc.text, 'm\n# title');
+});
+
+test('Enter on the blank line between an empty item\'s marker and its fence below it: the new blank line at the item\'s column, which keeps the item open, the fence its text still (B367)', () => {
+  const r = assertApplied(executeOnText('-\n  \n  ```\n', { type: 'enter' }, { caret: 4, config: { flavor: 'commonmark' } }));
+  assert.equal(r.view.doc.text, '-\n  \n  \n  ```\n');
+});
+
+test('cut the item above an item whose text is a fence, then Paste: back before it, at the fence\'s start (`pasteAtTextStart: before`), after it with `after` (B21)', () => {
+  for (const [config, want] of [[{}, '- first\n- ```\n  code\n  ```\n'], [{ pasteAtTextStart: 'after' }, '- ```\n  code\n  ```\n- first\n']] as const) {
+    const cut = assertApplied(executeOnText('- first\n- ```\n  code\n  ```\n', { type: 'cut' }, { caret: 3, config }));
+    assert.equal(cut.view.doc.text, '- ```\n  code\n  ```\n');
+    assert.equal(appliedText(executeAfter(cut, { type: 'paste', clipboard: cut.clipboard! })), want);
+  }
+});
+
+test('an empty nested quote, its spaces before its `>` in the callout, moved onto its item\'s marker line: written without them, which would be the item\'s padding there', () => {
+  const doc = parseWithMarks('- > [!note] Title\n  >   >\n', [], { flavor: 'obsidian' });
+  const r = executeCommand(OurusView.of(doc, { selection: 25 }), { type: 'moveSubtree', nodes: [3], to: { parent: 1, after: null } });
+  assert.ok(r instanceof OurusSuccess, JSON.stringify(r));
+  assert.equal(r.view.doc.text, '- >\n\n  > [!note] Title\n');
+});
+
+test('a callout pasted on an empty item whose first child is a quote: a blank line between them, the two read apart (B361)', () => {
+  const r = assertApplied(executeOnText('- \n  > [!note] U\n', { type: 'paste', clipboard: { 'text/plain': '> [!note] T\n', 'text/markdown': '> [!note] T\n' } }, { caret: 2, config: { flavor: 'obsidian' } }));
+  assert.equal(r.view.doc.text, '- > [!note] T\n\n  > [!note] U\n');
+});
+
+test('cut a numbered item whose text is a callout, then Paste at the next one\'s title start: written, the callout back in that item (`pasteAtTextStart: before`)', () => {
+  const cut = assertApplied(executeOnText('1. > [!note] T\n2. > [!note] U\n', { type: 'cut' }, { caret: 13, config: { flavor: 'obsidian' } }));
+  assert.equal(appliedText(executeAfter(cut, { type: 'paste', clipboard: cut.clipboard! })), '1. > [!note] T\n\n   > [!note] U\n');
+});
+
+test('Backspace on an empty item holding a quote after a numbered item\'s quote, under `indentUnit: tab`: the quote, the numbered item\'s now, named at its `>` past the tab (B363)', () => {
+  assert.equal(appliedText(executeOnText('2. > quote\n- \n   > more\n', { type: 'deleteContentBackward' }, { caret: 13, config: { flavor: 'commonmark', indentUnit: 'tab' } })), '2. > quote\n\n\t> more\n');
+});
+
+test('converted HTML: text that reads as a delimiter row stays text (B323), a `<` before an email\'s address stays (B332), a footnote reference counts as formatting (B338)', async () => {
+  const { MdHtmlParser } = await import('../../src/index.ts');
+  const { convertPastedHtml } = await import('../lib/command-execution.ts');
+  const row = convertPastedHtml('<p>a | b<br>--- | ---</p>');
+  assert.doesNotMatch(row.rendered, /<table>/);
+  assert.match(row.shown, /--- \| ---/);
+  // (its brackets shown; the address GFM's literal autolink, as any address in the text)
+  assert.match(convertPastedHtml('<p>&lt;3@example.com&gt;</p>').rendered, /^<p>&lt;.*&gt;<\/p>/);
+  const note = MdHtmlParser.parse('<p><a data-footnote-ref href="#fn-a">1</a></p>');
+  assert.equal(note.markdown, '[^a]');
+  assert.equal(note.formatted, true);
+});
+
+test('HTML\'s plain text keeps a `pre` of spaces and the tabs of empty edge cells (B335), as a browser shows it (B270)', async () => {
+  const { MdHtmlParser } = await import('../../src/index.ts');
+  assert.equal(MdHtmlParser.plainText('<pre>   </pre>'), '   ');
+  assert.equal(MdHtmlParser.plainText('<table><tr><td></td><td>b</td></tr></table>'), '\tb');
+  assert.equal(MdHtmlParser.plainText('<table><tr><td>a</td><td></td></tr></table>'), 'a\t');
+  assert.equal(MdHtmlParser.plainText('<table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>'), 'a\tb\nc\td');
+  // (B270: blanks collapsed across inline elements, a code block's leading blank line kept, cells
+  // holding paragraphs on one line)
+  assert.equal(MdHtmlParser.plainText('<p>a <span> b</span> c</p>'), 'a b c');
+  assert.equal(MdHtmlParser.plainText('<pre><code>\nabc\n\n</code></pre>'), '\nabc\n');
+  assert.equal(MdHtmlParser.plainText('<pre>\nabc</pre>'), 'abc');
+  assert.equal(MdHtmlParser.plainText('<table><tr><td><p>a</p></td><td><p>b</p></td></tr></table>'), 'a\tb');
+});
+
+test('code styled `white-space: pre` keeps its spaces in the code span (B336)', async () => {
+  const { convertPastedHtml } = await import('../lib/command-execution.ts');
+  assert.equal(convertPastedHtml('<p><code style="white-space:pre">a  b</code></p>').rendered, '<p><code>a  b</code></p>\n');
+  assert.equal(convertPastedHtml('<p><code>a  b</code></p>').rendered, '<p><code>a b</code></p>\n');
+});
+
+test('converted HTML: hidden content isn\'t pasted, a link of blanks keeps the words apart (B271)', async () => {
+  const { convertPastedHtml } = await import('../lib/command-execution.ts');
+  assert.equal(convertPastedHtml('<p>a<span hidden>secret</span>b</p><p>c</p>').markdown, 'ab\n\nc');
+  assert.equal(convertPastedHtml('<p>a<span style="color: red; display: none">secret</span>b</p>').markdown, 'ab');
+  assert.equal(convertPastedHtml('<p>a<a href="u"> </a>b</p>').markdown, 'a b');
+});
+
+test('Word\'s paragraph lists: a jump in the numbers starts another list (B339); levels past Word\'s nine are the ninth\'s, no stack overflow (B340)', async () => {
+  const { MdHtmlParser } = await import('../../src/index.ts');
+  const { convertPastedHtml } = await import('../lib/command-execution.ts');
+  const p = (n: number) => `<p style="mso-list:l0 level1 lfo1"><span style="mso-list:Ignore">${n}.</span>x</p>`;
+  assert.match(convertPastedHtml(p(1) + p(5)).rendered, /<ol start="5">/);
+  assert.doesNotMatch(convertPastedHtml(p(1) + p(2)).rendered, /<ol start/);
+  const html = Array.from({ length: 3000 }, (_, i) => `<p style="mso-list:l0 level${i + 1} lfo1"><span style="mso-list:Ignore">•</span>x</p>`).join('');
+  assert.doesNotThrow(() => MdHtmlParser.parse(html));
+});
+
+test('expand selection from inside a block id, or right after it: a selection that holds the caret (B216)', () => {
+  for (const caret of [9, 11]) {
+    const { anchor, head } = assertApplied(executeOnText('- item ^id1\n', { type: 'expandSelection' }, { caret, config: { flavor: 'obsidian' } })).view.selection;
+    assert.ok(anchor <= caret && caret <= head, `${anchor}–${head}`);
+  }
+});
+
+test('Backspace after a backtick typed on a text\'s last line, `autoClose` listing it: the host\'s, no pair at the text\'s end (B246)', () => {
+  for (const [text, caret] of [['- a\n`', 5], ['a\n`', 3]] as const) assert.ok(executeOnText(text, { type: 'deleteContentBackward' }, { caret, config: { autoClose: ['`'] } }) instanceof OurusDeferred);
+});
+
+test('a soft-line deletion that would make a quote\'s first paragraph a callout\'s title, a nested quote below it: refused, as on one line (B279)', () => {
+  const r = executeOnText('>([!e]\n>>', { type: 'deleteSoftLineBackward' }, { caret: 2, config: { flavor: 'obsidian' } });
+  assert.ok(r instanceof OurusRejected && r.reason === 'not-expressible', JSON.stringify(r));
+});
+
+test('Shift-Tab on the first item of a padded quote: out before the quote, each named where it is written (B408)', () => {
+  assert.equal(appliedText(executeOnText('  > - sibling\n  > - list in quote\n', { type: 'outdent' }, { caret: 13, config: { flavor: 'commonmark' } })), '- sibling\n> - list in quote\n');
+});
+
+test('a paragraph with a list-like lazy line, after a leading blank line, dropped into a quote: written (B182)', () => {
+  const r = executeOnText('\nalpha\n    - bravo\n> - charlie', { type: 'moveSubtree', nodes: [1], to: { parent: 2, after: 3 } }, { config: { flavor: 'obsidian' } });
+  assert.ok(r instanceof OurusSuccess, JSON.stringify(r));
+});
+
+test('Tab on a numbered item after its item\'s bullet child list: a list of its own, from 1 (B443)', () => {
+  assert.equal(appliedText(executeOnText('5. a\n   - x\n6. b', { type: 'indent' }, { caret: 14 })), '5. a\n   - x\n   1. b');
+  assert.equal(appliedText(executeOnText('5. a\n   - x\n\n6. b', { type: 'indent' }, { caret: 15 })), '5. a\n   - x\n\n   1. b');
+});
+
+test('Tab on a numbered item after an item\'s numbered child list counts on; a list from another number than 1 right under the item\'s text is that text\'s lazy line, no list, so the item starts one from 1 (B442, no bug)', () => {
+  assert.equal(appliedText(executeOnText('5. a\n\n   7. x\n6. b', { type: 'indent' }, { caret: 16 })), '5. a\n\n   7. x\n   8. b');
+  assert.equal(appliedText(executeOnText('5. a\n   1. x\n6. b', { type: 'indent' }, { caret: 15 })), '5. a\n   1. x\n   2. b');
+  assert.equal(appliedText(executeOnText('5. a\n   7. x\n6. b', { type: 'indent' }, { caret: 15 })), '5. a\n   7. x\n   1. b');
+});
+
+test('Shift-Tab on an empty quote nested in a quote: the quote out, its line as written (`>`), the caret past it, in no markup: an empty quote has no text (B179, closed)', () => {
+  const result = assertApplied(executeOnText('> >', { type: 'outdent' }));
+  assert.equal(result.view.doc.text, '>');
+  assert.equal(result.view.locate(result.view.selection.head).zone, 'none');
+});
+
+test('typing right before a block id, then Backspace: the blank typing put after the character goes with it (B245)', () => {
+  const obsidian = { flavor: 'obsidian' } as const;
+  for (const [text, caret] of [['- item ^id1\n', 7], ['para ^b\n', 5]] as const) {
+    const typed = executeOnText(text, { type: 'insertText', text: 'x' }, { caret, config: obsidian });
+    const back = assertApplied(executeAfter(typed, { type: 'deleteContentBackward' }));
+    assert.equal(back.view.doc.text, text);
+    assert.equal(back.view.selection.head, caret);
+  }
+  // a word before the id, or the text's last character: the host's
+  assert.ok(executeOnText('- x ^id1\n', { type: 'deleteContentBackward' }, { caret: 3, config: obsidian }) instanceof OurusDeferred);
+  assert.ok(executeOnText('- ab ^id1\n', { type: 'deleteContentBackward' }, { caret: 4, config: obsidian }) instanceof OurusDeferred);
+});
+
+test('a caret on the last blank line or past the final line break: duplicate and `addBlockId` act on the last node, as indent does (B217)', () => {
+  for (const [text, caret] of [['- a\n- b\n\n', 9], ['- a\n- b\n\n', 8], ['- a\n- b\n', 8]] as const) {
+    assert.equal(assertApplied(executeOnText(text, { type: 'duplicateSubtree' }, { caret })).view.doc.text, text.replace('- b\n', '- b\n- b\n'));
+  }
+  assert.equal(appliedText(executeOnText('- a\n- b\n', { type: 'addBlockId', name: 'x' }, { caret: 8, config: { flavor: 'obsidian' } })), '- a\n- b ^x\n');
+});
+
+test('drop preflight: an item\'s unclosed fence ends with the item; code too shallow for a wide marker is no line of it; a `---` in an item or the moved rule\'s own line closes no front matter (B419 to B422)', () => {
+  const moved = (text: string, nodes: number[], to: { parent: 'root'; after: number | null }, config = {}): string => appliedText(executeOnText(text, { type: 'moveSubtree', nodes, to }, { config }));
+  assert.equal(moved('- ```\n- b\n- c', [3], { parent: 'root', after: 1 }), '- ```\n- c\n- b');
+  assert.equal(moved('- ```\n- b\n- c', [1], { parent: 'root', after: 2 }), '- b\n- ```\n- c');
+  assert.equal(moved('100. a\n\n    code\n\n100. b', [3], { parent: 'root', after: 1 }, { listParent: 'container' }), '100. a\n101. b\n\n    code');
+  // a bullet's content column is 2: the code would be its lines, refused still
+  assert.ok(executeOnText('100. a\n\n    code\n\n- b', { type: 'moveSubtree', nodes: [3], to: { parent: 'root', after: 1 } }, { config: { listParent: 'container' } }) instanceof OurusRejected);
+  const obsidian = { flavor: 'obsidian', listParent: 'container' } as const;
+  assert.equal(moved('---\n\n- a\n- ```\n  ---\n  ```', [3], { parent: 'root', after: 1 }, obsidian), '---\n\n- ```\n  ---\n  ```\n- a');
+  assert.equal(moved('# h\n---', [2], { parent: 'root', after: null }, obsidian), '---\n# h');
+});
+
+test('a drag\'s seams count no blank line of a node\'s own as a gap: an unclosed fence\'s blank code line (B293)', () => {
+  const result = assertApplied(executeOnText('```\n\n', { type: 'drag', clipboard: { 'text/plain': '- x' } }));
+  const end = result.dropMap!.seams.at(-1)!;
+  assert.equal(end.beforeLine, 2);
+  assert.equal(end.gapLines, 0);
+  // a blank line after a closed fence is its gap
+  const closed = assertApplied(executeOnText('```\n```\n\n', { type: 'drag', clipboard: { 'text/plain': '- x' } }));
+  assert.equal(closed.dropMap!.seams.at(-1)!.gapLines, 1);
+});
+
+test('Backspace at a fence\'s or math block\'s start after a block id on a line of its own: refused, the block would read with that line; with the id on the text\'s line, the blank line goes (B207)', () => {
+  const obsidian = { flavor: 'obsidian' } as const;
+  for (const text of ['o\n\n^r\n\n$$', 'o\n\n^r\n\n```\nx\n```']) {
+    const r = executeOnText(text, { type: 'deleteContentBackward' }, { caret: 7, config: obsidian });
+    assert.ok(r instanceof OurusRejected && r.reason === 'not-expressible', JSON.stringify(r));
+  }
+  assert.equal(appliedText(executeOnText('o ^r\n\n$$', { type: 'deleteContentBackward' }, { caret: 6, config: obsidian })), 'o ^r\n$$');
+});
+
+test('pasted HTML: a checkbox alone before an item\'s first paragraph, as GFM renders a loose task, is the task\'s box (B424)', async () => {
+  const { MdHtmlParser } = await import('../../src/parser/index.ts');
+  assert.equal(MdHtmlParser.parse('<ul><li><input type="checkbox"><p>task</p></li></ul>').markdown, '- [ ] task');
+  assert.equal(MdHtmlParser.parse('<ul><li><input type="checkbox" checked><p>a</p><p>b</p></li></ul>').markdown, '- [x] a\n\n  b');
+});
+
+test('Obsidian: code holding a `---` line unwrapped from an item under a `---` the note starts with: a blank line before that first `---`, which would open frontmatter the code\'s line closes (as DeleteSubtree9)', () => {
+  const r = executeOnText('---\n\n- a\n- ```\n  ---\n  ```\n', { type: 'outdent' }, { caret: 14, config: { flavor: 'obsidian', listParent: 'container' } });
+  assert.equal(appliedText(r), '\n---\n\n- a\n```\n---\n```\n');
+});
+
+test('Shift-Enter among a padded marker\'s spaces: an unspaced quote\'s item\'s later line past the space its `>` takes there; a quote atom under a narrowed item moved with its column (B357)', () => {
+  assert.equal(appliedText(executeOnText('>-  a quote\n> over two lines\n', { type: 'shiftEnter' }, { caret: 3, config: { flavor: 'gfm', quotes: 'container' } })), '>-\n>    a quote\n>   over two lines\n');
+  assert.equal(appliedText(executeOnText('   1.  \\> quote\n       > more\n', { type: 'shiftEnter' }, { caret: 8, config: { flavor: 'obsidian', quotes: 'atom' }, auto: [7] })), '   1.\n      \\> quote\n      > more\n');
+  // a paragraph under it keeps its line as it was (Regression267)
+  assert.equal(appliedText(executeOnText('-  a\n\n     b\n', { type: 'shiftEnter' }, { caret: 2 })), '-\n   a\n\n     b\n');
+});
+
+test('Shift-Enter among a padded marker\'s spaces in an item\'s unspaced quote: the text below the marker, its later line past the space a later line\'s `>` takes (B399, with B357)', () => {
+  assert.equal(appliedText(executeOnText('- >-  [!note] Title\n  > body text\n', { type: 'shiftEnter' }, { caret: 5 })), '- >-\n  >    [!note] Title\n  >   body text\n');
+});
+
+test('Obsidian: a blank line of ours after block-id lines a text carries stays where a command would trim it, a block right under them leaving them naming their own line (B409)', () => {
+  const r = executeOnText('> \\# \n\n ^blk\n\n> a quote\n', { type: 'enter' }, { caret: 7, config: { flavor: 'obsidian' }, auto: [2, 13] });
+  assert.equal(appliedText(r), '> \\# \n\n\n^blk\n\n> a quote\n');
+});
+
+test('Backspace on the inner empty item of a tab-led shared marker line: written anew in normal form, indented by the note\'s unit, a tab; a sibling of the item on the shared line at its column (B410)', () => {
+  const tab = { flavor: 'commonmark', indentUnit: 'tab' } as const;
+  assert.equal(appliedText(executeOnText('- a\n\t- - \n\t\t- item\n', { type: 'deleteContentBackward' }, { caret: 9, config: tab })), '- a\n\t- - item\n');
+  assert.equal(appliedText(executeOnText('- Intro\n\t- - \n\t\t- item ^id1\n\t\t- other\n', { type: 'deleteContentBackward' }, { caret: 13, config: tab })), '- Intro\n\t- - item ^id1\n\t  - other\n');
+  // a note indented by 2 or 4 spaces keeps its unit
+  assert.equal(appliedText(executeOnText('- a\n  - b\n    - - \n      - item\n', { type: 'deleteContentBackward' }, { caret: 22 })), '- a\n  - b\n    - - item\n');
+  assert.equal(appliedText(executeOnText('- a\n    - b\n        - - \n            - item\n', { type: 'deleteContentBackward' }, { caret: 30 })), '- a\n    - b\n        - - item\n');
+});
+
+test('an empty item\'s first child deleted, a paragraph after a blank line first then: the item held, or it would read what follows as its text (B401)', () => {
+  const r = assertApplied(executeOnText('-\n  \n  - ```js\n  let x;\n', { type: 'deleteContentBackward' }, { anchor: 5, head: 15 }));
+  assert.equal(r.view.doc.text, '- \n  \n  let x;\n');
+  assert.deepEqual(r.view.doc.marks.placeholders, [2]);
+});
+
+test('an item\'s heading marks taken off, its paragraph below with a lazy `-|` line: a blank line between, the lazy line no table row (B308)', () => {
+  for (const flavor of ['gfm', 'obsidian', 'commonmark'] as const) {
+    assert.equal(appliedText(executeOnText('- # h\n  x\n-|', { type: 'deleteSoftLineBackward' }, { caret: 4, config: { flavor } })), '- h\n\n  x\n-|');
+  }
+});
+
+test('Tab on a selection of a quote\'s paragraphs: items in the quote, each line with its `>`; an item made from a paragraph lines up with no other one made so (B359)', () => {
+  assert.equal(appliedText(executeOnText('> a\n>\n> b\n>\n> c\n>\n> d\n', { type: 'indent' }, { anchor: 6, head: 13 })), '> a\n>\n> - b\n> - c\n>\n> d\n');
+  assert.equal(appliedText(executeOnText('> a quote\n>\n> over two lines\n>\n> \n', { type: 'indent' }, { anchor: 33, head: 12, config: { flavor: 'commonmark', listParent: 'container' }, placeholders: [33] })).startsWith('> a quote\n>\n> - over two lines\n'), true);
+});
+
+test('Enter over a padded item\'s whole text, a root paragraph after a blank line of spaces: the empty items\' blank line bare, the paragraph out of them (B366)', () => {
+  assert.equal(appliedText(executeOnText('-  next\n  \n  para\n', { type: 'enter' }, { anchor: 3, head: 7 })), '- \n- \n\n  para\n');
+  assert.equal(appliedText(executeOnText('  ```js\n  ```\n-  next- [x] outline\n  \n  [ ] write spec\n- [ ] draft\n- [ ] review\n', { type: 'enter' }, { anchor: 17, head: 34, config: { flavor: 'gfm', indentUnit: 'tab' } })), '  ```js\n  ```\n- \n- \n\n  [ ] write spec\n- [ ] draft\n- [ ] review\n');
+});
+
+test('written now, with this round\'s writer fixes: loose paragraphs indented in an item headed by an empty heading (B197); a padded item\'s first line cleared, its loose paragraph the root\'s (B166); Tab over a held empty paragraph in an item and the paragraph after it (B417)', () => {
+  assert.equal(appliedText(executeOnText('- #\n  n\n\n  e\n\n  m', { type: 'indent', nodes: [3, 4] }, { anchor: 6, head: 14 })), '- #\n  n\n\n  - e\n  - m');
+  assert.equal(appliedText(executeOnText('-  more\n   \n  After the quote.\n\n- b\n', { type: 'deleteSoftLineBackward' }, { caret: 7 })), '- \n\n  After the quote.\n\n- b\n');
+  const r = assertApplied(executeOnText('- > quoted in item\n\n    second para\n\n    \n\n    graph of child two\n', { type: 'indent' }, { anchor: 37, head: 47, config: { flavor: 'commonmark', quotes: 'container' }, placeholders: [41] }));
+  assert.equal(r.view.doc.text, '- > quoted in item\n\n    second para\n\n  - \n  - graph of child two\n');
+});
+
+test('a block written anew in normal form keeps its lists\' own bullets: the root item\'s `+` too, not the default bullet', () => {
+  for (const config of [{ indentUnit: 'tab', flavor: 'obsidian' }, { flavor: 'commonmark' }] as const) {
+    assert.equal(appliedText(executeOnText('+ a\n\t+ + \n\t\t+ item\n', { type: 'deleteContentBackward' }, { caret: 9, config })), '+ a\n\t+ + item\n');
+  }
+});
+
+// HTML paste, fixed 2026-11-12 (dev/30-bugs.md): each bug's cases as they were in test/bugs.ts
+
+test('adjacent nested lists stay two (B423)', () => {
+    assert.equal(convertPastedHtml('<ul><li>x<ol><li>a</li></ol><ol><li>b</li></ol></li></ul>').rendered.match(/<ol/g)?.length, 2);
+});
+
+test('a rule in an item keeps the item (B425)', () => {
+    assert.equal(convertPastedHtml('<ul><li><hr></li><li>next</li></ul>').rendered.match(/<li/g)?.length, 2);
+});
+
+test('a title\'s entity decodes once (B426)', () => {
+    assert.match(convertPastedHtml('<p><a href="u" title="&amp;copy;">x</a></p>').rendered, /title="&amp;copy;"/);
+});
+
+test('a destination\'s spaces all stay (B427)', () => {
+    assert.match(convertPastedHtml('<p><a href="x&#32;&#32;y">x</a></p>').rendered, /href="x%20%20y"/);
+});
+
+test('deeply nested parentheses stay a link (B428)', () => {
+    assert.match(convertPastedHtml('<p><a href="a' + '('.repeat(33) + 'b' + ')'.repeat(33) + '">link</a></p>').rendered, /<a href/);
+});
+
+test('a nested table\'s cells stay apart (B429)', () => {
+    assert.match(convertPastedHtml('<table><tr><td>a<table><tr><td>b</td><td>c</td></tr></table>d</td></tr></table>').markdown, /b c/);
+});
+
+test('rowspan 0 spans the row group (B430)', () => {
+    assert.match(convertPastedHtml('<table><tr><td rowspan="0">a</td><td>b</td></tr><tr><td>c</td></tr></table>').markdown, /\|  \| c \|/);
+});
+
+test('a rowspan stops at its row group (B431)', () => {
+    assert.equal(convertPastedHtml('<table><thead><tr><th rowspan="2">A</th><th>B</th></tr></thead><tbody><tr><td>C</td><td>D</td></tr></tbody></table>').markdown.split('\n')[0], '| A | B |');
+});
+
+test('inherit keeps what is inherited (B435)', () => {
+    assert.equal(convertPastedHtml('<div style="font-style:italic"><p><span style="font-style:inherit">x</span></p></div>').markdown, '*x*');
+});
+
+test('text-decoration: none doesn\'t lift an ancestor\'s line (B436)', () => {
+    assert.equal(convertPastedHtml('<p><span style="text-decoration:line-through">a<span style="text-decoration:none">b</span>c</span></p>').markdown, '~~abc~~');
+});
+
+test('a table cell\'s bold (B437)', () => {
+    assert.equal(convertPastedHtml('<table><tr><td style="font-weight:bold">bold</td></tr></table>').markdown, '| **bold** |\n| --- |');
+});
+
+test('a list\'s bold (B438)', () => {
+    assert.equal(convertPastedHtml('<ul style="font-weight:bold"><li>x</li></ul>').markdown, '- **x**');
+});
+
+test('a link\'s own bold (B439)', () => {
+    assert.match(convertPastedHtml('<p><a style="font-weight:bold" href="u">x</a></p>').rendered, /<strong>/);
+});
+
+test('duplicate with the caret past the final line break, the last node holding an empty last line: the caret at the copy\'s text end, in the text (seed 301, after B217)', () => {
+  const r = assertApplied(executeOnText('- a\n- b\n', { type: 'duplicateSubtree' }, { caret: 8 }));
+  assert.ok(r.view.selection.head <= r.view.doc.text.length);
+});
+
+test('a callout pasted after another, a blank line of ours between, or over a nested callout\'s body: the seam check reads the new callout\'s title after its `>`, the blank line kept (seed 301, B415)', () => {
+  assert.equal(appliedText(executeOnText('> [!note] Title\n\n> [!note] Title\n', { type: 'paste', clipboard: { 'text/plain': '> [!note] Title\n' } }, { caret: 27, config: { flavor: 'obsidian' }, auto: [16] })), '> [!note] Title\n\n> [!note] Title\n\n> [!note] Title\n');
+  assertNoWriteFailure(executeOnText('> > [!note] Title\n> body text\n', { type: 'paste', clipboard: { 'text/plain': '> [!note] Title\n> body text\n' } }, { anchor: 20, head: 30, config: { flavor: 'obsidian', indentUnit: 'tab' }, placeholders: [30] }));
+});
+
+test('Enter before a numbered item holding an empty quote at the note\'s end, no final line break: the quote, on the renumbered marker\'s line, named at its `>` (B450)', () => {
+  for (const config of [{ flavor: 'obsidian', listParent: 'container' }, { flavor: 'gfm' }] as const) {
+    assert.equal(appliedText(executeOnText('2. x\n3. > ', { type: 'enter' }, { caret: 4, config })), '2. x\n3. \n4. > ');
+  }
+});
+
+test('Enter in an item of a quote padded further on a later line than its first: the quote written in normal form, at one column (B449)', () => {
+  assert.equal(appliedText(executeOnText('3. > quote\n      > - more\n', { type: 'enter' }, { caret: 21, config: { flavor: 'gfm' } })), '3. > quote\n   >\n   > - \n   > - more\n');
+  assert.equal(appliedText(executeOnText('> quote\n   > - more\n', { type: 'enter' }, { caret: 15 })), '> quote\n>\n> - \n> - more\n');
+});
+
+test('a bold tag or a link around blocks: each block\'s text bold, or the link\'s (B440, B441)', () => {
+  assert.equal(convertPastedHtml('<b><p>a</p><p>b</p></b>').markdown, '**a**\n\n**b**');
+  assert.equal(convertPastedHtml('<a href="u"><p>a</p><p>b</p></a>').markdown, '[a](u)\n\n[b](u)');
+  // (a wrapper turning bold off stays off)
+  assert.equal(convertPastedHtml('<b style="font-weight:normal"><p>a</p></b>').markdown, 'a');
+});
+
+test('a quoted item\'s later line keeps the item\'s indentation (B347)', () => {
+    // kept: 0f73d6f922bc
+    const result = assertApplied(executeOnText('  > body\n\n- > a\n  > b\n', { type: 'copy', nodes: [1] }, { caret: 4 }));
+    assert.equal(result.clipboard?.['text/plain'], '> body\n\n- > a\n  > b\n');
+});
+
+test('an item\'s later line keeps it (B347)', () => {
+    const result = assertApplied(executeOnText('  > body\n\n- > a\n  b\n', { type: 'copy', nodes: [1] }, { caret: 4 }));
+    assert.equal(result.clipboard?.['text/plain'], '> body\n\n- > a\n  b\n');
+});
+
+test('ourus\'s HTML of a callout, a wiki link and math, read back in Obsidian: their syntax; in GFM, the text they show (B373, B374, B375)', async () => {
+  const { MdTree, MdFlavor, MdHtmlParser } = await import('../../src/parser/index.ts');
+  const obsidian = MdFlavor.named('obsidian');
+  const back = (t: string, flavor = obsidian): string => MdHtmlParser.parse(MdTree.parse(t, obsidian).renderHtml(), { flavor }).markdown;
+  assert.equal(back('> [!note] Title\n> body text\n'), '> [!note] Title\n> body text');
+  assert.equal(back('a [[link]] b [[p|alias]]\n'), 'a [[link]] b [[p|alias]]');
+  assert.equal(back('$$\nx^2\n$$\n'), '$$\nx^2\n$$');
+  assert.equal(back('a $x$ b\n'), 'a $x$ b');
+  assert.equal(back('> [!note] Title\n> body text\n', MdFlavor.named('gfm')), 'Title\n\nbody text');
+  for (const t of ['```js\n```\n$$', '> [!note] Title\n> body text\n', 'a [[link]] b\n']) assert.deepEqual(htmlFailures(t, { flavor: 'obsidian' }), []);
+});
+
+test('a moved node with odd spacing in its subtree is written in normal form, that subtree only: a padded marker, a tab after one, a paragraph padded past its container (recommendation 1)', () => {
+  const run = (t: string, c: OurusCommand, o: object): string => appliedText(executeOnText(t, c, o));
+  // (B157: a tab after the marker, which a shift would widen into code)
+  assert.equal(run('2.\n-\tfoo\n    - d\n[r]: /u', { type: 'indent', nodes: [2] }, { caret: 8 }), '2.\n   - foo\n     - d\n       [r]: /u');
+  // (B156)
+  assert.equal(run('- a\n\n  b\n- \tf', { type: 'moveSubtree', to: { parent: 1, after: null } }, { caret: 13 }), '- a\n\n  - f\n\n  b');
+  // (B160: a quoted paragraph padded with a tab)
+  assert.equal(run('>```\n-\n> \t:', { type: 'moveSubtree', nodes: [4], to: { parent: 1, after: null } }, { caret: 5 }), '> > :\n>```\n-');
+  // (B47: a duplicate of a padded paragraph and its list, the copy in normal form, the original as it is)
+  assert.equal(run(' p\n\n-\n  \n  -', { type: 'duplicateSubtree' }, { caret: 2 }), ' p\n\n-\n  \n  -\np\n\n- \n\n  - ');
+  // (B468: a heading padded past its quote's `>`, under tabs)
+  assert.equal(run('1. num\n   >  # \n', { type: 'outdent' }, { caret: 15, config: { flavor: 'gfm', indentUnit: 'tab' } }), '1. num\n   # \n');
+  // (B492: its child paragraph padded past its content column; the held space after the marker kept)
+  assert.equal(run('> a quote\n-   two\n\n     second paragraph of child two\n', { type: 'moveSubtreeUp' }, { caret: 13, config: { flavor: 'commonmark', listParent: 'container' }, placeholders: [13] }), '-  two\n\n   second paragraph of child two\n> a quote\n');
+  // (a padded item, its child's lines at its content column)
+  assert.equal(run('- a\n-   b\n    more\n', { type: 'indent' }, { caret: 9 }), '- a\n  - b\n    more\n');
+});
+
+test('a tab after a marker, the item moved or copied: the copy in normal form across 9/10 (B278\'s first case); moved out of an unspaced quote, refused, not written wrong (B95\'s first case) (recommendation 1)', () => {
+  assert.equal(appliedText(executeOnText('9. \tb', { type: 'duplicateSubtree' })), '9. \tb\n10. b');
+  const moved = executeOnText('-\n>a\n>1. \t[', { type: 'moveSubtree', nodes: [4], to: { parent: 'root', after: null } }, { caret: 11 });
+  assert.ok(moved instanceof OurusRejected && moved.reason === 'not-expressible');
+});
+
+test('what the normal form keeps: padding every item of a list shares, the note\'s style; padding the caret is in, the user\'s (recommendation 1)', () => {
+  assert.equal(appliedText(executeOnText('1.  one\n2.  two\n', { type: 'indent' }, { caret: 13 })), '1.  one\n    1.  two\n');
+  // (Enter's space kept, `enterSplitSpace: start`, then Tab with the caret in it: Enter65h)
+  assert.equal(appliedText(executeOnText('- one two\n-  three\n- next\n', { type: 'indent' }, { caret: 12 })), '- one two\n  -  three\n- next\n');
+  assert.equal(appliedText(executeOnText('- Earlier\n-  Review\n  - Detail\n- Later\n', { type: 'indent' }, { caret: 13 })), '- Earlier\n  -  Review\n- Detail\n- Later\n');
+});
+
+test('Enter in a tab-led shared marker line deeper in a spaced block, zoomed in or not: that line\'s items written in normal form, the lines above and beside it as they are (B497)', () => {
+  const t = '- parent\n  - child one\n    - g\n  - child two\n\n\t- - xrandchild\n\n    second paragraph of child two\n  - child three\n';
+  const want = '- parent\n  - child one\n    - g\n  - child two\n\n\t- - x\n\t  - randchild\n\n    second paragraph of child two\n  - child three\n';
+  assert.equal(appliedText(executeOnText(t, { type: 'enter' }, { caret: 52, config: { flavor: 'obsidian', indentUnit: 'tab' }, auto: [62], view: { folded: [], zoom: 5 } })), want);
+  assert.equal(appliedText(executeOnText(t, { type: 'enter' }, { caret: 52, config: { flavor: 'obsidian', indentUnit: 'tab' } })), want);
+});
+
+test('a selection end in a checkbox of a node written anew stays where it was in that node (recommendation 1)', () => {
+  const r = assertApplied(executeOnText('1. a\n1. x\n\t  - [x] x\n', { type: 'moveSubtreeUp' }, { anchor: 8, head: 16 }));
+  const text = r.view.doc.text;
+  assert.equal(text, '1. x\n\t- [x] x\n2. a\n');
+  assert.deepEqual(r.view.selection, { anchor: 3, head: text.indexOf('[x]') + 1 });
+});
+
+test('a text copy\'s mark says how a paste takes its ends: `[` / `]` a boundary between blocks, kept apart; none within one text; an old mark read as no boundary (B188, dev/30-bugs.md\'s clipboard format)', () => {
+  const mark = (text: string, anchor: number, head: number): string => /^<!-- ourus[^>]*-->/.exec(assertApplied(executeOnText(text, { type: 'copy' }, { anchor, head })).clipboard!['text/html']!)![0];
+  assert.equal(mark('- one two', 2, 5), '<!-- ourus text -->', 'within one text, from its start');
+  assert.equal(mark('para\nline', 2, 5), '<!-- ourus text -->', 'within one text, to a line\'s start in it');
+  assert.equal(mark('- one\n- two', 3, 9), '<!-- ourus text -->', 'inside both texts');
+  assert.equal(mark('- one\n- two', 2, 9), '<!-- ourus text -->', 'from a text\'s start: the paste joins it');
+  assert.equal(mark('- one\n- two', 5, 9), '<!-- ourus [text -->', 'past a text\'s end, its line break taken');
+  assert.equal(mark('- one\n- two', 3, 8), '<!-- ourus text] -->', 'to a text\'s start, the line break before it taken');
+  assert.equal(mark('- one\n- two', 3, 6), '<!-- ourus text] -->', 'to a line\'s start, before its marker');
+  // (an old ourus copy, `<!-- ourus --><!-- text -->`, pastes as text with its seams open)
+  const old = { 'text/plain': 'e\n- tw', 'text/markdown': 'e\n- tw', 'text/html': '<!-- ourus --><!-- text --><p>e</p>' };
+  assert.equal(appliedText(executeOnText('- x\n', { type: 'paste', clipboard: old }, { caret: 3 })), '- xe\n- tw\n');
+});
+
+test('a text selection whose two ends are both boundaries between blocks is whole nodes: copied as nodes, the selection kept; cut, Backspace and Delete take them out (dev/30-bugs.md\'s clipboard format)', () => {
+  const text = '- one\n- two\n- three\n';
+  const copied = assertApplied(executeOnText(text, { type: 'copy' }, { anchor: 5, head: 12 }));
+  assert.equal(copied.clipboard!['text/markdown'], '- two\n');
+  assert.ok(copied.clipboard!['text/html']!.startsWith('<!-- ourus --><'));
+  assert.deepEqual(copied.view.selection, { anchor: 5, head: 12 });
+  for (const type of ['cut', 'deleteContentBackward', 'deleteContentForward'] as const) assert.equal(appliedText(executeOnText(text, { type }, { anchor: 5, head: 12 })), '- one\n- three\n', type);
+  // (a child taken too where the selection covers it)
+  assert.equal(assertApplied(executeOnText('- one\n- two\n  - kid\n- three\n', { type: 'copy' }, { anchor: 5, head: 20 })).clipboard!['text/markdown'], '- two\n  - kid\n');
+});
+
+test('a text cut pastes back where it leaves the caret: across items, into a child, to a line\'s start before a marker, from a marker\'s padding (B188, B498)', () => {
+  const back = (text: string, anchor: number, head: number): string => {
+    const cut = executeOnText(text, { type: 'cut' }, { anchor, head });
+    return appliedText(executeAfter(cut, { type: 'paste', clipboard: assertApplied(cut).clipboard! }));
+  };
+  for (const [text, a, h] of [['- one\n- two\n- three', 4, 10], ['- one\n- two', 4, 6], ['para\n- one\n- two', 2, 10], ['- one two\n  - kid\n- three', 6, 17], ['- one\n- two\n  - kid\n', 7, 17], ['- one\n- two\n- three', 3, 12], ['> - one\n> - two\n', 6, 13], ['- one\n  more\n- two', 4, 8], ['pa\nra', 1, 4], ['> quote', 0, 3], ['> one\n> two', 3, 8]] as const) assert.equal(back(text, a, h), text, text);
+});
+
+test('a text copy starting at a boundary, pasted at a text\'s end: the nodes after it, as a paste of nodes puts them, the raised line after it kept (seed 601)', () => {
+  const clipboard = { 'text/plain': '  > body text\n- > q', 'text/markdown': '  > body text\n- > q', 'text/html': '<!-- ourus [text --><p>&gt; body text</p>' };
+  const start = { caret: 17, config: { flavor: 'commonmark' as const }, auto: [18] };
+  assert.equal(appliedText(executeOnText('- > [!note] Title\n\n', { type: 'paste', clipboard }, start)), '- > [!note] Title\n- > body text\n- > q\n\n');
+  assert.deepEqual(lostMarksOnText('- > [!note] Title\n\n', { type: 'paste', clipboard }, start), []);
+});
+
+test('a plain text copy ending at a boundary, pasted on a blank line, goes into the text as plain lines do, the host\'s, the raised line after it kept (seed 651)', () => {
+  const clipboard = { 'text/plain': '`\n', 'text/markdown': '`\n', 'text/html': '<!-- ourus text] --><p>`</p>\n' };
+  assert.ok(executeOnText('- item\n  \n\n', { type: 'paste', clipboard }, { caret: 9, config: { flavor: 'gfm', listParent: 'container' }, auto: [10] }) instanceof OurusDeferred);
+});
+
+test('a quote of one paragraph written anew under `quotes: text` keeps a `>` line before it, so it reads as a quote, not the paragraph it frames (B491, B506)', () => {
+  assert.equal(appliedText(executeOnText('# Project plan\n1. > quote\n  >\n   > more\n', { type: 'moveSubtreeUp' }, { caret: 26, config: { flavor: 'commonmark' } })), '# Project plan\n>\n> more\n1. > quote\n');
+  assert.equal(appliedText(executeOnText('\n- > \n  >  quote\n---\n\n', { type: 'moveSubtreeDown' }, { caret: 0, config: { flavor: 'obsidian' }, placeholders: [0] })), '---\n\n- >\n  > quote\n\n');
+  assert.equal(appliedText(executeOnText('# Project plan\n- > [!note] Title\n > \n  > body text\n', { type: 'outdent' }, { caret: 19, config: { flavor: 'gfm', indentUnit: 'tab' } })), '# Project plan\n> [!note] Title\n\n>\n> body text\n');
+});
+
+test('the seam check reads an item written anew at the writer\'s marker, so a block after it short of its old content column is lifted out of it (B503\'s shared lines)', () => {
+  const run = (t: string, c: OurusCommand, o: object): string => appliedText(executeOnText(t, c, o));
+  assert.equal(run('-  - child two\n\n  second paragraph of child two\n', { type: 'enter' }, { caret: 5, config: { flavor: 'obsidian', indentUnit: 'tab' } }), '- - \n  - child two\n\nsecond paragraph of child two\n');
+  assert.equal(run(' - - item\n  ```js\n', { type: 'enter' }, { caret: 1, config: { flavor: 'gfm', indentUnit: 'tab' } }), '- - \n  - item\n```js\n');
+  assertNoWriteFailure(executeOnText(' - - \n - sibling\n  > quoted in item\n', { type: 'indent' }, { anchor: 5, head: 11, config: { flavor: 'gfm', indentUnit: 'tab' } }));
+  // (an item whose quote's held empty first line goes, Shift-Tab: its marker alone on its line, the quote below, B467, B503)
+  assert.equal(run('2.  > \n    >\n    > quote\n   > more\n', { type: 'outdent' }, { caret: 6, config: { flavor: 'obsidian', quotes: 'container' }, placeholders: [6], auto: [12] }), '2. \n    > quote\n> more\n');
+  assert.equal(run('-  > \n   >\n   > [!note] Title\n  > body text\n', { type: 'outdent' }, { caret: 5, config: { flavor: 'gfm', quotes: 'container' }, placeholders: [5], auto: [10] }), '- \n   > [!note] Title\n> body text\n');
+  // (an item given a text over the quote on its line: the quote on a line of its own below it, as written, `2. quote⏎   > quote`)
+  assert.equal(run('2.  > quote\n    >\n    > quote\n   > more\n', { type: 'deleteContentBackward' }, { caret: 6, config: { flavor: 'commonmark', quotes: 'container' }, auto: [17] }), '2. quote\n   > quote\n> more\n');
+});
+
+test('Alt-Up on a held empty task last in a note with no final line break: the task moved, no placeholder carried for it, as an empty task needs none (seed 751)', () => {
+  const r = assertApplied(executeOnText('- item\n- [ ] ', { type: 'moveSubtreeUp' }, { caret: 13, placeholders: [13], config: { flavor: 'obsidian' } }));
+  assert.equal(r.view.doc.text, '- [ ] \n- item');
+  assert.deepEqual(r.view.doc.marks.placeholders, []);
+  assert.equal(appliedText(executeOnText('  - [x] outline\n  - [ ] ', { type: 'moveSubtreeUp' }, { caret: 24, placeholders: [24], config: { flavor: 'gfm', quotes: 'atom' } })), '  - [ ] \n  - [x] outline');
+});
+
+test('an item lined up further left with its list, last under a block that owns the list: the block after that one lifted with it, not read into it (B505, B513)', () => {
+  assert.equal(appliedText(executeOnText('Final line ^blk\n- [ ] review\n- [ ] \n\n  - [ ] write spec\n  ```js\n', { type: 'indent' }, { caret: 36, config: { flavor: 'gfm', quotes: 'container' } })), 'Final line ^blk\n- [ ] review\n  - [ ] \n\n- [ ] write spec\n```js\n');
+  assert.equal(appliedText(executeOnText('| a | b |\n-  child two\n  - grandchild\n\n  second paragraph of child two\n', { type: 'shiftEnter' }, { caret: 13, config: { flavor: 'commonmark' }, auto: [38] })), '| a | b |\n\n-\n  child two\n- grandchild\n\nsecond paragraph of child two\n');
+});
+
+test('a block regrouped under an item that itself moved is read by the seam check at that item\'s content column, the raised line before a table kept (B493)', () => {
+  const start = { caret: 30, config: { flavor: 'gfm' as const, quotes: 'atom' as const }, auto: [69] };
+  const text = 'Final line ^blk\n- parent\n  -  two\n\n    second paragraph of child two\n\n| a | b |\n|---|---|\n';
+  assert.equal(appliedText(executeOnText(text, { type: 'outdent' }, start)), 'Final line ^blk\n- parent\n-  two\n\n   second paragraph of child two\n\n| a | b |\n|---|---|\n');
+});
+
+test('a text copy pasted with a seam closed beside blanks alone: the blanks joined, no node of blanks made (seed 801)', () => {
+  const clipboard = { 'text/plain': 'child two\n', 'text/markdown': 'child two\n', 'text/html': '<!-- ourus text] --><p>child two</p>\n' };
+  assert.equal(appliedText(executeOnText('  - x# \n', { type: 'paste', clipboard }, { caret: 6, config: { flavor: 'gfm' } })), '  - x#child two \n');
+});
+
+test('a text cut whose end is under a node it takes out joins that end\'s text, the node\'s children after it staying under the upper node; a checkbox after a marker stays', () => {
+  assert.equal(appliedText(executeOnText('- one\n- two\n  - kid\n  - more\n- three', { type: 'cut' }, { anchor: 3, head: 14 })), '- okid\n  - more\n- three');
+  // (an end in a marker before a checkbox: the host's, the checkbox kept, not taken with the marker)
+  assert.ok(executeOnText('- [ ] task\n- [x] done', { type: 'deleteContentBackward' }, { anchor: 7, head: 12 }) instanceof OurusDeferred);
+});
+
+test('Backspace over a selection ending before an item\'s marker joins the texts, the marker not read as text (B188)', () => {
+  assert.equal(appliedText(executeOnText('- one\n- two', { type: 'deleteContentBackward' }, { anchor: 4, head: 6 })), '- ontwo');
+  assert.equal(appliedText(executeOnText('- one\n- two\n- three', { type: 'deleteContentBackward' }, { anchor: 0, head: 9 })), '- wo\n- three');
+});
+
+test('a text copy ends at a line\'s start where it ends in that line\'s indentation, and renders the lines after its first as the blocks they are (B499, B500)', () => {
+  const copy = (text: string, anchor: number, head: number) => assertApplied(executeOnText(text, { type: 'copy' }, { anchor, head, config: { copySelection: 'text' } })).clipboard!;
+  assert.equal(copy('- one\n- two\n  - kid\n', 3, 14)['text/markdown'], 'ne\n- two\n');
+  assert.equal(copy('- one\n- two\n  - kid\n', 3, 19)['text/html'], '<!-- ourus text --><p>ne</p>\n<ul>\n<li>two\n<ul>\n<li>kid</li>\n</ul>\n</li>\n</ul>\n');
+});
+
+test('a join after a trailing backslash is a text join: `foo\\` and `*bar*` make `foo\\*bar*`, as the outliners that keep Markdown do (B203, decided 2026-11-13)', () => {
+  assert.equal(appliedText(executeOnText('- foo\\\n- *bar*\n', { type: 'deleteContentBackward' }, { caret: 9 })), '- foo\\*bar*\n');
+  assert.equal(appliedText(executeOnText('- foo\\\n- *bar*\n', { type: 'deleteContentForward' }, { caret: 6 })), '- foo\\*bar*\n');
+});
+
+test('a command whose lines the writer can\'t carry through the change as they are spelled is written again, what it places anew in normal form (recommendation 1, step 2)', () => {
+  const run = (t: string, c: OurusCommand, o: object = {}): string => appliedText(executeOnText(t, c, o));
+  // (moved out of quotes spelled `>-`, `>q`, `>→-`: B43, B44, B45)
+  assert.equal(run('\n> -\n>   - b\n> a\n>-\n- ]\n>', { type: 'moveSubtree', to: { parent: 'root', after: 5 }, nodes: [3] }, { anchor: 10, head: 9 }), '\n> -\n>-\n- ]\n- b\n  a\n>');
+  assert.equal(run('[r]:u\nH\n=\n>-\n>   - b\n>q\n[r]: /u\n-', { type: 'moveSubtree', to: { parent: 2, after: 3 }, nodes: [5] }, { caret: 17 }), '[r]:u\nH\n=\n>-\n- b\n  q\n  [r]: /u\n-');
+  assert.equal(run('-\n>\t-\n>     + [a]:u\n\t- x', { type: 'moveSubtree', nodes: [4], to: { parent: 'root', after: 1 } }, { caret: 24 }), '-\n- [a]:u\n  \\- x\n>\t-');
+  // (a quote paragraph padded one space, onto an item's marker line: B52)
+  assert.equal(run('- > a\n  >\n  >  b', { type: 'moveSubtree', nodes: [3], to: { parent: 'root', after: null } }, { config: { quotes: 'container' } }), 'a\n\n- > b');
+  // (nested quotes spelled `>>`, before an unclosed fence: B181)
+  assert.equal(run('> >e\n>>```', { type: 'outdent' }), '> e\n> > ```');
+  // (a fence padded with a tab, moved under an item: B95)
+  assert.equal(run(']\n>-\n\n> \t```', { type: 'moveSubtree', nodes: [5], to: { parent: 2, after: null } }), ']\n>> \t```\n>-');
+  // (unclosed math outdented, its blank line kept: B299's second case)
+  assert.equal(run('- - $$\n\n ', { type: 'outdent' }, { caret: 7, config: { flavor: 'obsidian', quotes: 'container' } }), '- \n- $$\n  \n\n');
+  // (a padded footnote indented into an empty quote: B290's first case)
+  assert.equal(run('>\n [^1]:', { type: 'indent' }, { caret: 8 }), '>\n>  [^1]:');
+  // (a numbered run duplicated across 9/10, its quote kept: B169)
+  assert.equal(run('8. A\n9. Parent\n   > q\n10. Parent\n\n    second\n', { type: 'duplicateSubtree', nodes: [1, 2] }, { config: { quotes: 'container' } }), '8. A\n9. Parent\n   > q\n\n10. A\n\n11. Parent\n    > q\n\n12. Parent\n\n    second\n');
+  // (an empty item indented, a paragraph after it at another column: B404)
+  assert.equal(run('  - child two\n- \n    second paragraph of child two\n\npara one\n', { type: 'indent' }, { caret: 16, auto: [51] }), '  - child two\n\n    - \n      second paragraph of child two\n\npara one\n');
+  // (Shift-Tab on held empty tab-led items, B456, B466; on padded shared marker lines, B457, B485, B486)
+  assert.equal(run('> - si\n>\t- \n>\t- bling\n', { type: 'outdent' }, { caret: 11, config: { flavor: 'obsidian', indentUnit: 'tab' }, placeholders: [11] }), '> - si\n> - \n>\t- bling\n');
+  assert.equal(run('-  item\n\t- \n  ```js\n', { type: 'outdent' }, { caret: 11, config: { flavor: 'gfm', indentUnit: 'tab' }, placeholders: [11] }), '-  item\n- \n\n  ```js\n');
+  assert.equal(run('5.  -   second\n   - nested bullet\n', { type: 'outdent' }, { caret: 8, config: { flavor: 'gfm', quotes: 'container' } }), '5. \n- second\n- nested bullet\n');
+  assert.equal(run(' - - \n  - item\n  ```js\n', { type: 'outdent' }, { caret: 1, config: { flavor: 'obsidian' } }), ' - \n- \n- item\n```js\n');
+  assert.equal(run('  >- -  over two lines\n over two lines\n', { type: 'outdent' }, { caret: 23, config: { flavor: 'obsidian' } }), '> - \n> - over two lines\n>    over two lines\n');
+  // (duplicated in a quote padded unevenly with a lazy line, B470; beside an item lined up further left, B487)
+  assert.equal(run('> a\n b\n  > - c\n  >    d\n  > - e\n', { type: 'duplicateSubtree' }, { caret: 23, config: { flavor: 'obsidian', quotes: 'container' } }), '> a\n b\n  > - c\n  >    d\n> - c\n>    d\n> - e\n');
+  assert.equal(run('-\n\n  - sibling\n  > - list in quote\n', { type: 'duplicateSubtree' }, { caret: 2, config: { flavor: 'commonmark', quotes: 'container' } }), '-\n\n- \n\n- sibling\n> - list in quote\n');
+  // (Alt-Up in unspaced quotes, `>- x`: B474)
+  assert.equal(run('  > - list in quote\n  >- x\n  > \\> quoted in item\n', { type: 'moveSubtreeUp' }, { caret: 26, config: { flavor: 'commonmark' }, auto: [31] }), '  > - x\n  >   \\> quoted in item\n  > - list in quote\n');
+  assert.equal(run('$$\n$$\n> [!note] Title\n>-  body text\n> more\n>-  body text\n', { type: 'moveSubtreeUp' }, { caret: 47, config: { flavor: 'obsidian', listParent: 'container' } }), '$$\n$$\n> [!note] Title\n> - body text\n> - body text\n>   more\n');
+  // (Tab on an empty item before a tab-padded blank line: B489)
+  assert.equal(run('  - child one\n  - \n\t\n\t  second paragraph of child two\n', { type: 'indent' }, { caret: 20, config: { flavor: 'obsidian', indentUnit: 'tab' } }), '  - child one\n\n\t- \n\t  \n\t  second paragraph of child two\n');
+});
+
+test('where writing what a command places anew fails too, the root blocks it changes are written anew (recommendation 1, step 2)', () => {
+  const run = (t: string, c: OurusCommand, o: object = {}): string => appliedText(executeOnText(t, c, o));
+  // (a child pasted after a lazy line of nested quotes: the lazy line given its prefixes, B16)
+  assert.equal(run('#\n>>-\t[a]:u\n\t"', { type: 'pasteAt', at: { parent: 4, after: 5 }, clipboard: { 'text/plain': '> a\n>\n> b' } }), '#\n> > - [a]:u\n> >   "\n> >   > a\n> >   >\n> >   > b');
+  // (across 9/10: a drop first under a quoted item, B191; indents widening the parent, B210)
+  assert.equal(run('9. b\n10. > q\n    > r\n', { type: 'moveSubtree', nodes: [1], to: { parent: 2, after: null } }, { config: { quotes: 'container' } }), '9. 9. b\n   > q\n   > r\n');
+  assert.equal(run('9. a\n9. b\n10. c', { type: 'indent', nodes: [3] }), '9. a\n10. b\n    1. c');
+  assert.equal(run('99. a\n99. b\n100. c', { type: 'indent', nodes: [3] }), '99. a\n100. b\n     1. c');
+  assert.equal(run('3. third\n1. num\n2. > quote\n1. first\n2. second\n3. third\n1. first\n2. second\n3. third\n', { type: 'indent' }, { caret: 77, config: { flavor: 'commonmark', quotes: 'container' } }), '3. third\n4. num\n5. > quote\n6. first\n7. second\n8. third\n9. first\n10. second\n    1. third\n');
+  // (Enter in a quote's empty item under a lazy line, B480; in an unspaced quote's shared marker line, B482)
+  assert.equal(run('- sibling\n  > quoted in item\nx  - \n    > - list in quote\n', { type: 'enter' }, { caret: 43, config: { flavor: 'commonmark', quotes: 'container' } }), '- sibling\n  > quoted in item\n  > x  - \n  >\n  > - \n  > - list in quote\n');
+  assert.equal(run('>- > # y text\n', { type: 'enter' }, { caret: 3, config: { flavor: 'obsidian', indentUnit: 'tab' } }), '> - > \n>   >\n>   > # y text\n');
+  // (Enter after a quoted paragraph whose space after `>` is held: the space settled as the paragraph's, B413's Enter)
+  assert.equal(run('> q', { type: 'enter' }, { caret: 3, config: { quotes: 'container' }, placeholders: [1] }), '>  q\n>\n> ');
+});
+
+test('a draft that places nothing is written again too where the first writing fails: Backspace and Enter on a shared marker line under the tab unit, its root block anew (seed 551); B453, B473', () => {
+  const run = (t: string, c: OurusCommand, o: object = {}): string => appliedText(executeOnText(t, c, o));
+  assert.equal(run('- parent\n  - child one\n  - - child two\n', { type: 'deleteContentBackward' }, { caret: 29, config: { flavor: 'obsidian', indentUnit: 'tab' } }), '- parent\n\t- child one\n\t- child two\n');
+  assert.equal(run('- parent\n  - child one\n  - - child two\n', { type: 'enter' }, { caret: 29, config: { flavor: 'gfm', indentUnit: 'tab' } }), '- parent\n\t- child one\n\t- - \n\t  - child two\n');
+  assert.equal(run('- item ^id1\n  - child one\n  - - child three\n', { type: 'paste', clipboard: { 'text/plain': 'second paragraph of child two\n', 'text/markdown': 'second paragraph of child two\n', 'text/html': '<!-- ourus --><p>second paragraph of child two</p>\n' } }, { caret: 32, config: { flavor: 'commonmark', indentUnit: 'tab' } }), '- item ^id1\n\t- child one\n\t- - second paragraph of child two\n\t  - child three\n');
+  assert.equal(run('x- Intro paragraph with a [[link]] and `code`.\n  - > [!note] Title\n  $$\n', { type: 'indent' }, { caret: 1, config: { flavor: 'gfm', quotes: 'atom' } }), '- x- Intro paragraph with a [[link]] and `code`.\n  - > [!note] Title\n      $$\n');
+  assert.equal(run('- item ^id1\n  - child one\n\n  \n\t- grandchild\n', { type: 'indent' }, { caret: 29, config: { flavor: 'commonmark', indentUnit: 'tab' }, placeholders: [29] }), '- item ^id1\n\t- child one\n\t- \n\t- grandchild\n');
+});
+
+test('a command written faithfully keeps its spelling: the second writing only where the first fails (recommendation 1, step 2)', () => {
+  // (a padded marker the list shares, moved: written as it is, not anew)
+  assert.equal(appliedText(executeOnText('1.  one\n2.  two\n', { type: 'moveSubtreeDown' }, { caret: 5 })), '1.  two\n2.  one\n');
+});
+
+test('plain text indented as code, pasted into an empty note, stays code; with `pasteIndentedCode: dedent` it loses its indentation; a list without it pastes as the list (B26)', () => {
+  const paste = (clip: string, config = {}): string => appliedText(executeOnText('', { type: 'paste', clipboard: { 'text/plain': clip } }, { config }));
+  assert.equal(paste('    code1\n    code2\n'), '    code1\n    code2\n');
+  assert.equal(paste('\tcode1\n\tcode2\n'), '\tcode1\n\tcode2\n');
+  assert.equal(paste('    code\n\n    more\n'), '    code\n\n    more\n');
+  assert.equal(paste('    - child\n      - grandchild\n'), '- child\n  - grandchild\n');
+  assert.equal(paste('  two spaces\n  only\n'), 'two spaces\nonly\n');
+  assert.equal(paste('    a\n  b\n'), 'a\nb\n');
+  assert.equal(paste('    code1\n    code2\n', { pasteIndentedCode: 'dedent' }), 'code1\ncode2\n');
+  assert.equal(paste('\tcode1\n\tcode2\n', { pasteIndentedCode: 'dedent' }), 'code1\ncode2\n');
+});
+
+test('an empty heading in pasted HTML is dropped, as the text editors and most outliners do (B337, policy decided)', async () => {
+  const { MdHtmlParser } = await import('../../src/parser/index.ts');
+  assert.equal(MdHtmlParser.parse('<h2></h2><p>x</p>').markdown, 'x');
+});
+
+test('a duplicated paragraph padded one space: the copy written without it, odd spacing normalized on the block the command makes (B47\'s second case, no bug)', () => {
+  assert.equal(appliedText(executeOnText(' p\n- a\n', { type: 'duplicateSubtree' }, { caret: 1 })), ' p\n- a\n\np\n- a\n');
+});
+
+test('adjacent bold of two spellings merges (B432)', () => {
+    assert.equal(convertPastedHtml('<p><b>a</b><span style="font-weight:bold">b</span></p>').markdown, '**ab**');
+});
+
+test('an empty span between two bolds merges them (B432)', () => {
+    assert.equal(convertPastedHtml('<p><b>a</b><span></span><b>b</b></p>').markdown, '**ab**');
+});
+
+test('code spans around a wrapper merge (B432)', () => {
+    assert.equal(convertPastedHtml('<p><code>a</code><span><code>b</code></span></p>').markdown, '`ab`');
+});
+
+test('bold turned off at its start shows no delimiter (B433)', () => {
+    assert.equal(convertPastedHtml('<p><b><span style="font-weight:normal">a</span>b</b></p>').markdown, 'a**b**');
+});
+
+test('bold turned off at its end shows no delimiter (B433)', () => {
+    assert.equal(convertPastedHtml('<p><b>a<span style="font-weight:normal">b</span></b></p>').markdown, '**a**b');
+});
+
+test('bold turned off throughout is plain (B433)', () => {
+    assert.equal(convertPastedHtml('<p><b><span style="font-weight:normal">a</span></b></p>').markdown, 'a');
+});
+
+test('spaces around a normal run stay out of the bold (B433)', () => {
+    assert.equal(convertPastedHtml('<p><b>a<span style="font-weight:normal"> b </span>c</b></p>').markdown, '**a** b **c**');
+});
+
+test('an italic opened after a bold and an italic close is spelled with underscores (B459)', () => {
+    const converted = convertPastedHtml('<p><b>a<i>b</i></b><i>c</i></p>');
+    assert.equal(converted.markdown, '**a*b***_c_');
+    assert.doesNotMatch(converted.shown, /[*_]/);
+    assert.doesNotMatch(convertPastedHtml('<p><i>a<b>b</b></i><b>c</b></p>').shown, /[*_]/);
+});
+
+test('an italic after one close keeps its asterisks (B459)', () => {
+    assert.equal(convertPastedHtml('<p><i>a</i><b>b</b></p>').markdown, '*a***b**');
+});
+
+test('Unicode blanks at a bold\'s edges show no delimiter (B434)', () => {
+    assert.doesNotMatch(convertPastedHtml('<p><b>\u2003x\u2003</b></p>').shown, /\*/);
+});
+
+test('a combining mark after bold punctuation shows no delimiter (B434)', () => {
+    assert.doesNotMatch(convertPastedHtml('<p><b>a!</b>\u0301</p>').shown, /\*/);
+});
+
+test('Alt-Up on a held empty item at the note\'s end, no final line break, the caret on it: written without the placeholder the draft drops there (seed 351, B455)', () => {
+  for (const [text, caret, config] of [
+    ['- # item ^id1\n- other\n  - ', 26, { flavor: 'gfm', listParent: 'container' }],
+    ['- sibling\n  > quoted in item\n- last\n\t- ', 39, { flavor: 'commonmark', indentUnit: 'tab' }],
+    ['1. first\n   - nested bullet\n3. third\n\t1. ', 41, { flavor: 'commonmark', indentUnit: 'tab' }],
+    ['  > quoted in item\n  > - list in quote\n  >   - ', 47, { flavor: 'commonmark', listParent: 'container' }],
+  ] as const) assertApplied(executeOnText(text, { type: 'moveSubtreeUp' }, { caret, config, placeholders: [caret] }));
+});
+
+test('a node whose gap alone a command changes has its seam checked: Backspace on the blank line between an empty item and an indented unclosed fence after it keeps that line, the fence apart (B460)', () => {
+  assert.equal(appliedText(executeOnText('- \n\n  ```\n- next\n', { type: 'deleteContentBackward' }, { caret: 4, config: { flavor: 'gfm', indentUnit: 'tab' } })), '- \n\n  ```\n- next\n');
+});
+
+test('Enter staying at the start of a marker-like paragraph under a reference definition (`enterAtTextStart: stay`): the line written escaped, an item no more (B280, with B460\'s seam check)', () => {
+  for (const marker of ['-', '+', '1.']) assertNoWriteFailure(executeOnText(`[a]:f\n${marker}`, { type: 'enter' }, { caret: 6, config: { flavor: 'commonmark', enterAtTextStart: 'stay' } }));
+});
+
+test('outdenting a tab-led item whose text is a quote, a paragraph after a blank line of ours: the line kept, the paragraph no lazy line of the quote (seed 401)', () => {
+  assert.equal(appliedText(executeOnText('P\n- sibling\n\t- > T\n\nQ\n', { type: 'outdent' }, { caret: 18, config: { flavor: 'gfm', indentUnit: 'tab' }, auto: [19] })), 'P\n- sibling\n- > T\n\nQ\n');
+});
+
+test('a tab-led item joined into an empty item above, a paragraph after it: the blank line between kept (B447)', () => {
+  assert.equal(appliedText(executeOnText('third\n- \n\t- > [!note] Title\n\npara one\n', { type: 'deleteContentBackward' }, { caret: 8, config: { flavor: 'commonmark', indentUnit: 'tab' }, placeholders: [8], auto: [28] })), 'third\n- > [!note] Title\n\npara one\n');
+});
+
+test('an unevenly padded quote unwrapped by Backspace keeps the blank line of ours before the quote below (seed 401)', () => {
+  assert.equal(appliedText(executeOnText(' > a\n  > - b\n\n> c\n', { type: 'deleteContentBackward' }, { caret: 3, config: { flavor: 'gfm' }, auto: [13] })), 'a\n> - b\n\n> c\n');
+});
+
+test('a quote\'s tab-led items under an item deleted, moved or outdented: written (B462)', () => {
+  const text = '- sibling\n  > - \n\t-   >\t- x\n  >\t- list in quote\n';
+  for (const type of ['deleteSubtree', 'moveSubtreeUp'] as const) assertNoWriteFailure(executeOnText(text, { type }, { caret: 20, config: { flavor: 'obsidian', indentUnit: 'tab' } }));
+  assertNoWriteFailure(executeOnText('- item ^id1\n\t-   > - list in quote\n  >\t- \n', { type: 'outdent' }, { anchor: 12, head: 35, config: { flavor: 'commonmark', indentUnit: 'tab' } }));
+});
+
+test('duplicating a quote padded unevenly in an item writes the copy after it, not into it (B469)', () => {
+  assert.equal(appliedText(executeOnText('- sibling\n   > quoted in item\n  > - list in quote\n', { type: 'duplicateSubtree', nodes: [2] }, { config: { flavor: 'gfm' } })), '- sibling\n  > quoted in item\n  > - list in quote\n\n  > quoted in item\n  > - list in quote\n');
+});
+
+test('Enter in a shared marker line `- - - ` of a note indented with tabs: the line split, its items on lines of their own by tabs (seed 401)', () => {
+  assert.equal(appliedText(executeOnText('- - - last\n', { type: 'enter' }, { caret: 6, config: { flavor: 'obsidian', indentUnit: 'tab' } })), '- \n\t- \n\t\t- \n\t\t- last\n');
+});
+
+test('Enter in an unspaced quote\'s padded shared marker line, in a note indented with tabs: written (B451)', () => {
+  assert.equal(appliedText(executeOnText('2. >- -  quote\n   > more\n', { type: 'enter' }, { caret: 8, config: { flavor: 'commonmark', indentUnit: 'tab' } })), '2. > - - \n   >   - quote\n   >     more\n');
+});
+
+test('Alt-Up on an item holding a padded empty line, past a padded empty item: the placeholder moves with its line, not onto the like line that stays (seed 451)', () => {
+  const moved = executeOnText('-  \n- next\n  \n', { type: 'moveSubtreeUp' }, { caret: 13, config: { flavor: 'obsidian' }, placeholders: [13] });
+  assert.equal(appliedText(moved), '- next\n  \n-  \n');
+  assert.deepEqual(assertApplied(moved).view.doc.marks.placeholders, [9]);
+  const twice = executeOnText('- item ^id1\n  \n- x\n  \n```js\n', { type: 'moveSubtreeUp' }, { caret: 21, config: { flavor: 'gfm' }, placeholders: [21] });
+  assert.deepEqual(assertApplied(twice).view.doc.marks.placeholders, [6]);
+  assertNoWriteFailure(executeOnText('   > more   > \n4. > quote\n   > \n', { type: 'moveSubtreeUp' }, { caret: 31, config: { flavor: 'gfm', listParent: 'container' }, placeholders: [31] }));
+});
+
+test('Alt-Up on the second of two identical held empty quote items: the other keeps its placeholder on its own line (B471, the carry by the copy\'s piece)', () => {
+  const moved = executeOnText('- > \n\n- > \n\n- p\n', { type: 'moveSubtreeUp' }, { caret: 9, config: { flavor: 'obsidian' }, placeholders: [4, 9] });
+  assert.equal(appliedText(moved), '- > \n\n- > \n\n- p\n');
+  assert.deepEqual(assertApplied(moved).view.doc.marks.placeholders, [10]);
+});
+
+test('an item lined up further left, past an empty item taken out: the paragraph after it, which its column would put in the item, lifted with it (B414)', () => {
+  assert.equal(appliedText(executeOnText('- p\n  - c\n  - \n\n    - g\n\n    s\n', { type: 'deleteSubtree' }, { caret: 13, config: { flavor: 'commonmark' } })), '- p\n  - c\n  - g\n\n  s\n');
+  assert.equal(appliedText(executeOnText('- p\n  - c\n  - \n\n    - g\n\n    s\n', { type: 'deleteContentBackward' }, { caret: 14, config: { flavor: 'commonmark' } })), '- p\n  - c\n\n  - g\n\n  s\n');
+  assertNoWriteFailure(executeOnText('- parent\n  -  \n    - \n    second paragraph of child two\n', { type: 'enter' }, { caret: 14, config: { flavor: 'gfm', quotes: 'container' }, placeholders: [14] }));
+});
+
+test('a parent outdented to a paragraph, its child further in lined up: the paragraph moved out with it lifted too (B414)', () => {
+  assert.equal(appliedText(executeOnText('- parent\n  - child one\n   - child two\n\n    second paragraph of child two\n', { type: 'outdent' }, { caret: 8, config: { flavor: 'gfm', listParent: 'container' } })), 'parent\n- child one\n- child two\n\nsecond paragraph of child two\n');
+});
+
+test('Tab on an empty item whose children follow a blank line: the paragraph after them at its container\'s column (B465)', () => {
+  assert.equal(appliedText(executeOnText('- parent\n  - child three\n  - \n\n    - grandchild\n\n    second paragraph of child two\n', { type: 'indent' }, { caret: 30, config: { flavor: 'gfm', listParent: 'container' } })), '- parent\n  - child three\n\n    - \n\n  - grandchild\n\n  second paragraph of child two\n');
+});
+
+test('Shift-Tab on a padded item whose next items sit short of its content column: written, its padding normalized, its children at its content column (B475; recommendation 1)', () => {
+  assert.equal(appliedText(executeOnText('- parent\n  -  `\n    - \\- child two\n    - grandchild\n\n    second paragraph of child two\n  - child three\n', { type: 'outdent' }, { caret: 15, config: { flavor: 'commonmark', quotes: 'atom' }, auto: [22] })), '- parent\n- `\n  - \\- child two\n  - grandchild\n\n  second paragraph of child two\n  - child three\n');
+});
+
+test('Shift-Enter before a padded item\'s text, an empty child and a fence after it: the empty item lined up, the fence lifted out of it (seed 451, B414\'s lift)', () => {
+  assert.equal(appliedText(executeOnText('-  em\n  - \n  ```js\n', { type: 'shiftEnter' }, { caret: 3, config: { flavor: 'obsidian', listParent: 'container' } })), '-\n  em\n- \n```js\n');
+});
+
+test('Alt-Up on a bullet after an empty numbered item and a paragraph short of its content column: the bullet above the paragraph (B454)', () => {
+  assert.equal(appliedText(executeOnText('2.\n  x rst\n   - nested bullet\n', { type: 'moveSubtreeUp' }, { caret: 16, config: { flavor: 'gfm', quotes: 'atom' } })), '2.\n\n- nested bullet\n\nx rst\n');
+});
+
+test('Tab on an item or a paragraph over a fence at an in-between indent after it: the fence, padded at the root, its padding dropped so it stays out of the list (B190, seed 501\'s seam check; refused until 2026-11-14)', () => {
+  assert.equal(appliedText(executeOnText('x\n\n\\- \n - item\n  ```', { type: 'indent' }, { caret: 3, config: { flavor: 'commonmark' } })), 'x\n\n- \\- \n  - item\n```');
+  assert.equal(appliedText(executeOnText("item\n\n\\```js\n-   let x;\n  ```\n", {"type": "indent"}, {"caret": 6, "config": {"flavor": "commonmark"}, "auto": [5, 6]})), 'item\n- \\```js\n  -   let x;\n```\n');
+});
+
+test('Tab on a held empty paragraph owning a list, a padded heading after it: the heading\'s padding dropped so it stays out of the list (B416, seed 501\'s seam check; refused until 2026-11-14)', () => {
+  assert.equal(appliedText(executeOnText("Final line ^blk\n\n\n1. num\n  #  > more\n", { type: 'indent' }, { caret: 17, config: { flavor: 'gfm', indentUnit: 'tab' }, placeholders: [17] })), 'Final line ^blk\n\n- \n\t1. num\n#  > more\n');
+});
+
+test('Tab on a paragraph before a padded item whose text runs into a quote: the quote after it, its padding dropped, stays out of the list (B452, seed 501\'s seam check; refused until 2026-11-14)', () => {
+  assert.equal(appliedText(executeOnText("para one\n\nnum\n1.  x> quote\n   > more\n", {"type": "indent"}, {"caret": 11, "config": {"flavor": "obsidian", "quotes": "container"}})), 'para one\n\n- num\n  1.  x> quote\n> more\n');
+});
+
+test('Tab on a padded paragraph owning a `2.` list whose text is a quote: the quote after it, its padding dropped, stays out of the list (B483, seed 501\'s seam check; refused until 2026-11-14)', () => {
+  assert.equal(appliedText(executeOnText('x\n\n num\n2. > quote\n   > more\n', { type: 'indent' }, { caret: 5, config: { flavor: 'gfm' } })), 'x\n\n- num\n  2. > quote\n> more\n');
+});
+
+test('Tab on a paragraph above a padded item, a quote after it short of its content column: the quote\'s padding dropped so it stays out of the list (B484, seed 501\'s seam check; refused until 2026-11-14)', () => {
+  assert.equal(appliedText(executeOnText("x\n\nx\n-  [!note] Title\n  > body text\n", {"type":"indent"}, {"caret":4,"config":{"flavor":"gfm"},"auto":[2]})), 'x\n- x\n  -  [!note] Title\n> body text\n');
+  assert.equal(appliedText(executeOnText("Final line ^blk\n\n[^1]: a footnotenum\n1.  quote\n   > more\n", {"type":"indent"}, {"caret":33,"config":{"flavor":"commonmark","indentUnit":"tab"}})), 'Final line ^blk\n\n- [^1]: a footnotenum\n\t1.  quote\n> more\n');
+});
+
+test('a copy written anew with its marker on its first child\'s line: the seam check sees the marker there, the padded quote after it dropped to the root\'s column, out of the copy (B515)', () => {
+  assert.equal(appliedText(executeOnText("second line\n- sibling\n-   > quoted in item\n  > - list in quote\n", {"type":"duplicateSubtree"}, {"caret":11,"config":{"flavor":"commonmark","quotes":"container"}})), 'second line\n- sibling\n-   > quoted in item\n\nsecond line\n- sibling\n- > quoted in item\n> - list in quote\n');
+});
+
+test('Alt-Down on a shared marker line\'s item under the tab unit, past the parent\'s paragraph (B517)', () => {
+  assert.equal(appliedText(executeOnText("- parent\n\t- - two\n\t  - two\n\n  second paragraph of child two\n", {"type":"moveSubtreeDown"}, {"caret":23,"config":{"flavor":"commonmark","indentUnit":"tab"}})), '- parent\n\t- - two\n\n  second paragraph of child two\n\n\t- two\n');
+});
+
+test('a callout left with its title alone, its body cut or deleted: the seam check reads its title line with its `>`, the blank line before the quote after it kept (seed 851)', () => {
+  assert.equal(appliedText(executeOnText(" > [!note] Title\n  > body text\n\n> a quote\n", {"type":"cut"}, {"caret":21,"config":{"flavor":"obsidian"}})), '> [!note] Title\n\n> a quote\n');
+  assert.equal(appliedText(executeOnText("> [!note] Title\n  > over two lines\n\n> a quote\n", {"type":"deleteSubtree"}, {"caret":35,"config":{"flavor":"obsidian"}})), '> [!note] Title\n\n> a quote\n');
+});
+
+test('an item\'s empty quote written anew: its `>` alone on the marker\'s line, `- >` (seed 851, B501, B472)', () => {
+  assert.equal(appliedText(executeOnText("# Project plan\n- >\n quoted in item\n  > `\n> \nover two lines\n", {"type":"deleteContentBackward"}, {"caret":44,"config":{"flavor":"obsidian","indentUnit":"tab"}})), '# Project plan\n- >\nquoted in item\n  > `over two lines\n');
+  assert.equal(appliedText(executeOnText("# Project plan\n- >\n quoted in item\n  > `\n> over two lines\n", {"type":"enter"}, {"caret":43,"config":{"flavor":"obsidian","indentUnit":"tab"}})), '# Project plan\n- >\nquoted in item\n> `\n>\n> over two lines\n');
+  assert.equal(appliedText(executeOnText("- - item ^id1\n  > \n1. > quote\n\n", {"type":"indent"}, {"caret":30,"config":{"flavor":"gfm","indentUnit":"tab"}})), '- - item ^id1\n  >\n  1. > quote\n\n');
+  assert.equal(appliedText(executeOnText("%% comment %%\n> a quote\n- \t- >\n", {"type":"indent"}, {"caret":16,"config":{"flavor":"obsidian","indentUnit":"tab"}})), '%% comment %%\n- > a quote\n\t- - >\n');
+  assert.equal(appliedText(executeOnText("- > - > \n\t1. num\n\n", {"type": "enter"}, {"caret": 17, "config": {"flavor": "gfm", "indentUnit": "tab"}, "placeholders": [17]})), '- > - >\n  1. num\n  2. \n');
+});
+
+test('an indented fence lifted out of the list above it: its lines lifted with its opening, its code as it was (seed 851)', () => {
+  assert.equal(appliedText(executeOnText("- > [!note] Title\n  - \n\n\n  - \n  ```js\n  let x;\n", {"type":"indent"}, {"caret":23,"config":{"flavor":"commonmark","listParent":"container"},"placeholders":[23],"auto":[24]})), '- > [!note] Title\n  - \n- \n- \n\n```js\nlet x;\n');
+  assert.equal(appliedText(executeOnText("-  em\n  - \n  ```js\n  let x;\n", {"type":"shiftEnter"}, {"caret":3,"config":{"flavor":"gfm"}})), '-\n  em\n- \n```js\nlet x;\n');
+});
+
+test('an indented fence\'s body is its code: its lines past the opening\'s indentation (seed 851)', () => {
+  const doc = OurusDoc.parse('  ```js\n  let x;\n    y\n  ```\n');
+  const text = doc.textOf(doc.rootNode.children[0]!);
+  assert.ok(text instanceof OurusAtom);
+  assert.equal(text.body, 'let x;\n  y');
+});
+
+test('a raised blank line after a quote, the quote\'s own `>` lines before it gone: its mark kept on the bare blank line left (B444, B418)', () => {
+  assert.deepEqual(lostMarksOnText("  > quoted in item\n  > - list in quoteother\n  >\n\n  >   - last\n", {"type": "cut"}, {"caret": 25, "config": {"flavor": "commonmark"}, "auto": [48]}), []);
+  const pasted = assertApplied(executeOnText("- > [!note] Title\n  > \n\n  xFinal line ^blk\n", { type: 'paste', clipboard: { 'text/plain': '# body text\n' } }, { caret: 22, config: { flavor: 'commonmark', indentUnit: 'tab' }, auto: [23] }));
+  assert.equal(pasted.view.doc.marks.auto.length, 1);
+  assert.deepEqual(lostMarksOnText("- > a quote\n  > over tw\n  > \n\n  o lines\n", {"type":"enter"}, {"caret":16,"config":{"flavor":"commonmark","indentUnit":"tab"},"auto":[29]}), []);
+  assert.deepEqual(lostMarksOnText("> Title\n>\n\n> body text\n", {"type":"enter"}, {"caret":7,"config":{"flavor":"obsidian"},"auto":[10]}), []);
+  assert.deepEqual(lostMarksOnText("> body text\n> more\n> \n\n> body text\n", {"type":"enter"}, {"caret":14,"config":{"flavor":"obsidian","indentUnit":"tab"},"auto":[22]}), []);
+  assert.deepEqual(lostMarksOnText("- > [!note] Title\n  > body text\n  > \n\n## Notes\n", {"type":"paste","clipboard":{"text/plain":"para one\nsecond line\n","text/markdown":"para one\nsecond line\n","text/html":"<!-- ourus --><p>para one\nsecond line</p>\n"}}, {"caret":22,"config":{"flavor":"commonmark","quotes":"container"},"auto":[37]}), []);
+});
+
+test('an item renumbered narrower, `101.` as `1.`: the seam after it checked, the indented code after it fenced, not read into it', () => {
+  assert.equal(appliedText(executeOnText("100. a\n101. b\n\n    code\n", { type: 'outdent' }, { caret: 0, config: { flavor: 'obsidian', listParent: 'container' } })), 'a\n1. b\n\n```\ncode\n```\n');
+  assert.equal(appliedText(executeOnText("100. a\n101. b\n\n    code\n", { type: 'deleteContentBackward' }, { caret: 5, config: { flavor: 'obsidian', listParent: 'container' } })), 'a\n1. b\n\n```\ncode\n```\n');
+});
+
+test('Alt-Down on an item past an empty heading: the seam check reads its paragraph at the item\'s content column, the indented code after it fenced, out of the item (B511)', () => {
+  assert.equal(appliedText(executeOnText("- > [!note] Title\n  - child two\n\n     second paragraph of child two\n# \n    - \n", {"type":"moveSubtreeDown"}, {"caret":32,"config":{"flavor":"gfm","quotes":"container"}})), '- > [!note] Title\n# \n- child two\n\n  second paragraph of child two\n```\n- \n```\n');
+});
+
+test('in Obsidian, Alt-Down or Shift-Tab putting a `---` where it would close front matter: a blank line before the first, as DeleteSubtree9 (B525)', () => {
+  assert.equal(appliedText(executeOnText("---\n ---\n- > [!note] Title\n", {"type":"moveSubtreeDown"}, {"caret":5,"config":{"flavor":"obsidian","listParent":"container"}})), '\n---\n- > [!note] Title\n---\n');
+  assert.equal(appliedText(executeOnText("* ---\n```js\nconst x = 1;\n---\n", {"type":"outdent"}, {"caret":2,"config":{"flavor":"obsidian"}})), '\n---\n```js\nconst x = 1;\n---\n');
+});
+
+test('Enter on a callout\'s held last line in an item, a blank line before its body (B516)', () => {
+  assert.equal(appliedText(executeOnText("- > [!note] Ti\n\n   > body text\n  > \n", {"type":"enter"}, {"caret":35,"config":{"flavor":"obsidian","listParent":"container"},"placeholders":[35],"auto":[15]})), '- > [!note] Ti\n\n   > body text\n\n  \n');
+});
+
+test('Delete Subtree in an unspaced callout\'s lazy `2. >` line (B488)', () => {
+  assert.equal(appliedText(executeOnText("- > [!note]2. > quote\n   > more\n\n  > body text\n", {"type":"deleteSubtree"}, {"caret":32,"config":{"flavor":"obsidian","quotes":"container"}})), '- > [!note]2. > quote\n\n  > body text\n');
+});
+
+test('Alt-Up on a padded item past a callout\'s item: the padded quote after it dropped to the root\'s column, out of the callout (B518)', () => {
+  assert.equal(appliedText(executeOnText("- > [!note] Title\n-  quoted in item\n  > over two lines\n", {"type":"moveSubtreeUp"}, {"caret":35,"config":{"flavor":"obsidian"}})), '- quoted in item\n- > [!note] Title\n> over two lines\n');
 });

@@ -117,6 +117,9 @@ export const driver: Driver = {
   shortId: 'TA',
   longId: 'tana',
   displayName: 'Tana',
+  // (two at most: with four, its pages stall one by one in a full run, each stuck past the watchdog, and
+  // the run stops with no report; with two it finishes, 2026-11-15)
+  parallel: 2,
   // its UI-test page: the app with no account, waiting for a test's workspace (opened by hand, it waits
   // for `bootTest`, as `open` calls it)
   url: 'https://app.tana.inc/tests',
@@ -193,6 +196,8 @@ export const driver: Driver = {
     pasteOverSelection: 'ignore',
     pastePlainLines: 'items',
     pasteOnParent: 'after',
+    // blocks pasted at a block's text start go after it (probed 2026-11-11)
+    pasteAtTextStart: 'after',
     // Enter in a to-do: a plain node after it (TaskEnter3, TaskEnter4, TaskEnter7, TaskEnter10, TO-E32;
     // measured by rejudging, 2026-11-02, as the two below: 13 cases better, 2 worse, TO-E32b, TaskEnter8)
     enterTask: 'plain',

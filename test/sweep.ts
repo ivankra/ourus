@@ -30,7 +30,7 @@ import { join, resolve } from 'node:path';
 import type { OurusCommand } from '../src/commands/index.ts';
 import { OurusDoc } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
-import { allNodes, CASES_PER_GROUP, commandFailures, commandLabel, copyPasteFailures, corpusHash, cutPasteFailures, generatedStarts, nodeCaret, noteFailure, readBaseline, recordUntriaged, writeBaseline, type Found, type GeneratedStart, type UntriagedCase } from './lib/index.ts';
+import { allNodes, CASES_PER_GROUP, commandFailures, commandLabel, copyPasteFailures, corpusHash, cutPasteFailures, generatedStarts, nodeCaret, noteFailure, readBaseline, recordUntriaged, staleBaseline, writeBaseline, type Found, type GeneratedStart, type UntriagedCase } from './lib/index.ts';
 
 const here = resolve(import.meta.dirname, '..');
 const examples = Number(process.env.SWEEP_EXAMPLES ?? 2);
@@ -119,6 +119,8 @@ for (const s of starts) {
 }
 
 console.log(`${runs} runs on ${starts.length} notes`);
+// (the run the baseline was counted on: no knob changing its corpus)
+const counted = process.env.SWEEP_GENERATED === undefined;
 const baselineFile = join(here, 'test/sweep.baseline.json');
 const baseline = readBaseline(baselineFile);
 const sameCorpus = baseline?.corpus === hash;
@@ -131,9 +133,11 @@ for (const [key, group] of [...groups].sort((x, y) => y[1].runs - x[1].runs || (
 }
 for (const failure of fails) console.log(`FAIL ${failure}`);
 if (rose.length) console.log(`\nmore failures than the baseline: ${rose.join('; ')}`);
-if (baseline && !sameCorpus) console.log('\nthe corpus changed since the baseline: its counts are not held to it; SWEEP_UPDATE=1 records them');
+if (baseline && !sameCorpus && !counted) console.log('\nthe corpus changed since the baseline: its counts are not held to it; SWEEP_UPDATE=1 records them');
+const stale = updating ? [] : staleBaseline(baseline, hash, groups, counted, 'SWEEP_UPDATE');
+for (const line of stale) console.log(`\n${line}`);
 if (updating) {
   writeBaseline(baselineFile, hash, groups);
   console.log(`baseline updated: ${baselineFile}; ${recordUntriaged('sweep', cases)} cases kept untriaged (test/bugs-untriaged.json)`);
 }
-process.exitCode = fails.length === 0 && rose.length === 0 ? 0 : 1;
+process.exitCode = fails.length === 0 && rose.length === 0 && stale.length === 0 ? 0 : 1;

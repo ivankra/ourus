@@ -8,6 +8,7 @@
 import { parseDocument } from 'htmlparser2';
 import { isPunctuation } from './chars.ts';
 import { pushAll } from '../text/index.ts';
+import type { MdFlavor } from './flavor.ts';
 
 /** A node of htmlparser2's document, as far as it is read here. */
 interface DomNode {
@@ -24,7 +25,8 @@ type HtmlBlock =
   | { readonly kind: 'paragraph'; readonly text: string }
   | { readonly kind: 'heading'; readonly level: number; readonly text: string }
   | { readonly kind: 'code'; readonly info: string; readonly text: string; readonly blankLine?: boolean }
-  | { readonly kind: 'quote'; readonly blocks: readonly HtmlBlock[] }
+  | { readonly kind: 'quote'; readonly blocks: readonly HtmlBlock[]; readonly title?: string }
+  | { readonly kind: 'math'; readonly text: string }
   | { readonly kind: 'rule' }
   | { readonly kind: 'list'; readonly ordered: boolean; readonly start: number; readonly items: readonly HtmlBlock[][]; readonly other?: boolean }
   | { readonly kind: 'table'; readonly align: readonly ('left' | 'right' | 'center' | null)[]; readonly rows: readonly (readonly string[])[] }
@@ -36,17 +38,20 @@ const footnoteLabel = (value: string | undefined, prefix: string): string | null
 /** Elements that aren't content. */
 const SKIPPED = new Set(['head', 'title', 'meta', 'link', 'style', 'script', 'template', 'noscript', 'button', 'svg']);
 
+/** Whether element `node` shows nothing: one of `SKIPPED`, or hidden (`hidden`, `display: none`). */
+const skipped = (node: DomNode): boolean => SKIPPED.has(node.name!) || node.attribs?.hidden !== undefined || /(?:^|;)\s*display\s*:\s*none\b/i.test(node.attribs?.style ?? '');
+
 /** Elements that start blocks; any other element is inline, its children in the text around it. */
 const BLOCKS = new Set(['html', 'body', 'p', 'div', 'section', 'article', 'main', 'header', 'footer', 'nav', 'aside', 'figure', 'figcaption', 'details', 'summary', 'center', 'address', 'dl', 'dt', 'dd', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'pre', 'blockquote', 'hr', 'table']);
 
 const isElement = (node: DomNode): boolean => node.type === 'tag' || node.type === 'script' || node.type === 'style';
 /** A block element, or an inline one around blocks (Google Docs' wrapper around everything), which then holds them as blocks do. */
-const isBlock = (node: DomNode): boolean => isElement(node) && (BLOCKS.has(node.name!) || (!SKIPPED.has(node.name!) && (node.children ?? []).some(isBlock)));
+const isBlock = (node: DomNode): boolean => isElement(node) && (BLOCKS.has(node.name!) || (!skipped(node) && (node.children ?? []).some(isBlock)));
 
 /**
  * An element's `style` as CSS reads it, parsed once: each property's value by its name, both in lower
  * case, spaces around them gone; a property declared twice its later declaration's, but where the
- * earlier is `!important` and the later isn't (B265). Every reading of a style goes through it.
+ * earlier is `!important` and the later isn't. Every reading of a style goes through it.
  */
 function cssOf(node: DomNode): ReadonlyMap<string, string> {
   const out = new Map<string, string>();
@@ -63,6 +68,17 @@ function cssOf(node: DomNode): ReadonlyMap<string, string> {
   }
   return out;
 }
+
+/** The formatting `node`'s style sets (`FORMAT_PROPERTIES`), as a style: what a block hands its children. */
+function cssText(node: DomNode): string {
+  const css = cssOf(node);
+  // (a formatting tag's own, `<b>` around blocks, its style after it winning)
+  const tag = TAG_STYLES[node.name ?? ''];
+  return [...(tag ? [tag] : []), ...FORMAT_PROPERTIES.flatMap((name) => (css.has(name) ? [`${name}:${css.get(name)}`] : []))].join(';');
+}
+
+/** The formatting a tag gives what it holds, as a style. */
+const TAG_STYLES: Readonly<Record<string, string>> = { b: 'font-weight:bold', strong: 'font-weight:bold', i: 'font-style:italic', em: 'font-style:italic', s: 'text-decoration:line-through', del: 'text-decoration:line-through', strike: 'text-decoration:line-through' };
 
 /** A Word list paragraph's list (`l0`, from `mso-list:l0 level2 lfo1`): null for another paragraph. */
 const wordList = (node: DomNode): string | null => (isElement(node) && node.name === 'p' ? (/^(l\d+)\s+level\d+/.exec(cssOf(node).get('mso-list') ?? '')?.[1] ?? null) : null);
@@ -117,64 +133,117 @@ export class MdHtmlParser {
     if (on === open) return inner();
     const was = this.#open.get(mark) ?? 0;
     this.#open.set(mark, on ? was + 1 : 0);
+    // (its delimiters as tokens, which `resolvedMarks` writes once the text is whole: a run closed and
+    // opened again right there one run, a run of nothing none)
+    const k = MARKS.indexOf(mark);
     try {
-      return this.#wrap(mark, inner());
+      return on ? this.#wrap(OPENS[k]!, inner(), CLOSES[k]!) : this.#unwrap(k, inner());
     } finally {
       this.#open.set(mark, was);
     }
+  }
+
+  /** `inner`, in a run of formatting `k`, out of it: closed before it, open again after it, its blanks at either end outside the formatting with it. */
+  #unwrap(k: number, inner: string): string {
+    if (/\n[ \t]*\n/.test(inner)) return inner.split(/(\n[ \t]*\n\s*)/).map((part, j) => (j % 2 ? part : this.#unwrap(k, part))).join('');
+    if (inner.trim() === '') return inner;
+    this.#formatted = true;
+    return `${CLOSES[k]}${inner}${OPENS[k]}`;
   }
 
   /** HTML as Markdown: its blocks, set apart by blank lines; a list tight unless an item has more than one paragraph. */
   /**
    * HTML's text as a browser's copy gives it as plain text: each block's lines (`<br>`, a `pre`'s) its
    * own, blank lines between paragraphs, whitespace elsewhere collapsed, no formatting: what a code
-   * block takes from a clipboard of HTML alone (B133).
+   * block takes from a clipboard of HTML alone.
    */
   static plainText(html: string): string {
     const out: string[] = [];
     let line = '';
     let pre = 0;
+    // (right after a `pre`'s start tag, where its first line break is none of its text, as a browser reads it)
+    let preStart = false;
+    // (the cells seen in each row open: a tab before each but the first, an empty one's too)
+    const cells: number[] = [];
+    // (inside a cell, its blocks are its text's: no line of their own, the cells of a row on one line)
+    let inCell = 0;
+    // (the blanks at a line's edges, but a cell's tab)
+    const trimmed = (l: string): string => l.replace(/^[ \n\r\f]+|[ \n\r\f]+$/g, '');
     const end = (blank: boolean): void => {
-      // (a `pre`'s spaces its code's)
-      if (line.trim() !== '' || !blank) out.push(pre ? line.replace(/^\n|\n$/g, '') : line.trim());
+      // (a `pre`'s spaces its code's, spaces alone too; its last line break none of it)
+      if (line.trim() !== '' || !blank || (pre && line.replace(/\n$/, '') !== '')) out.push(pre ? line.replace(/\n$/, '') : trimmed(line));
       line = '';
       if (blank && out.length && out[out.length - 1] !== '') out.push('');
     };
+    // (collapsed text after a blank, another node's: its leading space none, as one run)
+    const add = (t: string): void => {
+      line += !pre && t.startsWith(' ') && (line === '' || /[ \t]$/.test(line)) ? t.slice(1) : t;
+    };
+    const cell = (name: string | undefined): boolean => name === 'td' || name === 'th';
     // (a paragraph's kind set off by a blank line, as `innerText` has it; an item, a row, a `div` by a line break; cells by a tab)
     const apart = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'ul', 'ol', 'table', 'hr', 'figure']);
     const stack: (DomNode | { end: string })[] = [...(parseDocument(html).children as readonly DomNode[])].reverse();
     while (stack.length) {
       const n = stack.pop()!;
+      const atPreStart = preStart;
+      preStart = false;
       if ('end' in n) {
-        if (n.end !== 'td' && n.end !== 'th') end(apart.has(n.end));
+        if (cell(n.end)) inCell--;
+        else if (inCell > 0 && n.end !== 'tr' && n.end !== 'table') add(' ');
+        else end(apart.has(n.end));
         if (n.end === 'pre') pre = Math.max(0, pre - 1);
+        if (n.end === 'tr') cells.pop();
         continue;
       }
-      if (n.type === 'text') line += pre ? n.data! : collapse(n.data!);
-      else if (n.name === 'br') end(false);
+      if (n.type === 'text') add(pre ? (atPreStart ? n.data!.replace(/^\n/, '') : n.data!) : collapse(n.data!));
+      else if (n.name === 'br') {
+        if (inCell > 0) add(' ');
+        else end(false);
+      }
       // (an image is its alternative text, as a browser's copy gives it)
-      else if (n.name === 'img') line += collapse(n.attribs?.alt ?? '');
-      else if (isElement(n) && !SKIPPED.has(n.name!)) {
-        const block = BLOCKS.has(n.name!) || n.name === 'tr' || n.name === 'td' || n.name === 'th';
-        if ((n.name === 'td' || n.name === 'th') && line !== '') line += '\t';
+      else if (n.name === 'img') add(collapse(n.attribs?.alt ?? ''));
+      else if (isElement(n) && !skipped(n)) {
+        const block = BLOCKS.has(n.name!) || n.name === 'tr' || cell(n.name);
+        if (cell(n.name) && cells.length) {
+          if (cells[cells.length - 1]!++ > 0) line = line.replace(/ $/, '') + '\t';
+        } else if (cell(n.name) && line !== '') line += '\t';
+        else if (block && inCell > 0 && n.name !== 'tr' && n.name !== 'table') add(' ');
         else if (block && line.trim() !== '') end(false);
+        if (n.name === 'tr') cells.push(0);
+        if (cell(n.name)) inCell++;
         if (block) {
-          if (n.name === 'pre') pre++;
+          if (n.name === 'pre') {
+            pre++;
+            preStart = true;
+          }
           stack.push({ end: n.name! });
         }
         for (let i = (n.children ?? []).length - 1; i >= 0; i--) stack.push(n.children![i]!);
       }
     }
-    if (line.trim() !== '') out.push(line.trim());
+    if (line.trim() !== '') out.push(trimmed(line));
     while (out.length && out[out.length - 1] === '') out.pop();
     // (a `pre`'s own lines as they are)
     return out.flatMap((l) => l.split('\n')).join('\n');
   }
 
-  /** `html` as Markdown; `hardBreaks`: a `<br>` in a paragraph a hard break (`\\` at its line's end), else a line of the paragraph's text. */
-  static parse(html: string, { hardBreaks = false }: { hardBreaks?: boolean } = {}): MdHtmlParsed {
-    return new MdHtmlParser().#parse(html, hardBreaks);
+  /**
+   * `html` as Markdown; `hardBreaks`: a `<br>` in a paragraph a hard break (`\\` at its line's end), else a
+   * line of the paragraph's text. `flavor`: what it is written for, its extensions' syntax where the
+   * HTML is theirs as ourus renders it (a callout, a wiki link, math); none given, plain Markdown's.
+   */
+  static parse(html: string, { hardBreaks = false, flavor }: { hardBreaks?: boolean; flavor?: MdFlavor } = {}): MdHtmlParsed {
+    const parser = new MdHtmlParser();
+    parser.#callouts = !!flavor?.has('callouts');
+    parser.#wikilinks = !!flavor?.has('wikilinks');
+    parser.#math = !!flavor?.has('math');
+    return parser.#parse(html, hardBreaks);
   }
+
+  // (the flavor's extensions whose HTML reads back as their syntax)
+  #callouts = false;
+  #wikilinks = false;
+  #math = false;
 
   #parse(html: string, hardBreaks: boolean): MdHtmlParsed {
     const nodes = parseDocument(html).children as readonly DomNode[];
@@ -205,7 +274,7 @@ export class MdHtmlParser {
     };
     for (let k = 0; k < nodes.length; k++) {
       const node = nodes[k]!;
-      if (node.type === 'comment' || node.type === 'directive' || (isElement(node) && SKIPPED.has(node.name!))) continue;
+      if (node.type === 'comment' || node.type === 'directive' || (isElement(node) && skipped(node))) continue;
       if (!isBlock(node)) {
         inline.push(node);
         continue;
@@ -214,7 +283,7 @@ export class MdHtmlParser {
       if (wordLevel(node) !== null) {
         // Word's list: a run of its list paragraphs, whitespace between them aside
         const run: DomNode[] = [];
-        // (of one list: Word names each, `l0`, another one after it another list, B123)
+        // (of one list: Word names each, `l0`, another one after it another list)
         const id = wordList(node);
         for (; k < nodes.length && (wordList(nodes[k]!) === id || (nodes[k]!.type === 'text' && collapse(nodes[k]!.data!).trim() === '')); k++) if (nodes[k]!.type !== 'text') run.push(nodes[k]!);
         k--;
@@ -249,14 +318,15 @@ export class MdHtmlParser {
     const roots: Item[] = [];
     const stack: Item[] = [];
     for (const paragraph of paragraphs) {
-      const item: Item = { level: wordLevel(paragraph)!, paragraph, children: [] };
+      // (Word has nine levels: one past them is the ninth's, the tree no deeper than Word makes it)
+      const item: Item = { level: Math.min(wordLevel(paragraph)!, 9), paragraph, children: [] };
       while (stack.length && stack[stack.length - 1]!.level >= item.level) stack.pop();
       (stack.length ? stack[stack.length - 1]!.children : roots).push(item);
       stack.push(item);
     }
-    // (its glyphs dropped: what Word writes as the item's marker, here no text, B138)
+    // (its glyphs dropped: what Word writes as the item's marker, here no text)
     const lists = (items: readonly Item[]): HtmlBlock[] => {
-      // (a run of one kind a list: a bullet after numbers another, at one level too, B123)
+      // (a run of one kind a list: a bullet after numbers another, at one level too)
       const out: { ordered: boolean; start: number; items: HtmlBlock[][] }[] = [];
       for (const i of items) {
         const number = /^(\d+)[.)]/.exec(glyph(i.paragraph));
@@ -264,7 +334,8 @@ export class MdHtmlParser {
         const blocks = [...this.#blocksOf(i.paragraph.children ?? []), ...lists(i.children)];
         this.#inWordList = false;
         const last = out[out.length - 1];
-        if (last && last.ordered === !!number) last.items.push(blocks);
+        // (a number that jumps, `1.` then `5.`, starts another list, as an `<ol>`'s `value` does)
+        if (last && last.ordered === !!number && (!number || Number(number[1]) === last.start + last.items.length)) last.items.push(blocks);
         else out.push({ ordered: !!number, start: number ? Number(number[1]) : 1, items: [blocks] });
       }
       return out.map((l) => ({ kind: 'list', ...l }));
@@ -274,6 +345,19 @@ export class MdHtmlParser {
 
   #blockOf(node: DomNode): HtmlBlock[] {
     const name = node.name!;
+    // (a link around blocks: each block's text in a link of its own, the link no block)
+    if (name === 'a' && node.attribs?.href !== undefined) return this.#blocksOf(linkedDown(node));
+    const classes = (node.attribs?.class ?? '').split(/\s+/);
+    // (a callout as ourus renders it: a quote whose first line is its type and title)
+    if (this.#callouts && name === 'div' && classes.includes('callout') && /^[\w-]+$/.test(node.attribs?.['data-callout'] ?? '')) {
+      const kids = (node.children ?? []).filter(isElement);
+      const title = kids.find((c) => (c.attribs?.class ?? '').split(/\s+/).includes('callout-title'));
+      const content = kids.find((c) => (c.attribs?.class ?? '').split(/\s+/).includes('callout-content'));
+      const head = `[!${node.attribs!['data-callout']}]${title ? ` ${this.#inlineText(title.children ?? [])}` : ''}`.trimEnd();
+      return [{ kind: 'quote', title: head, blocks: content ? this.#blocksOf(styledDown(content)) : [] }];
+    }
+    // (math as ourus renders it, its text as written)
+    if (this.#math && name === 'div' && classes.includes('math-block')) return [{ kind: 'math', text: textContent(node) }];
     const children = styledDown(node);
     if (/^h[1-6]$/.test(name)) {
       const text = this.#inlineText(children).replace(/\n/g, ' ');
@@ -290,7 +374,7 @@ export class MdHtmlParser {
     if (name === 'hr') return [{ kind: 'rule' }];
     if (name === 'table') return this.#table(node);
     // footnotes as GFM renders them (ourus's, GitHub's): each item a definition, its back-reference
-    // no text (B141)
+    // no text
     if (name === 'section' && (node.attribs?.['data-footnotes'] !== undefined || /(?:^|\s)footnotes(?:\s|$)/.test(node.attribs?.class ?? ''))) {
       const items: DomNode[] = [];
       const walk = (n: DomNode): void => {
@@ -322,13 +406,18 @@ export class MdHtmlParser {
     const step = reversed ? -1 : 1;
     const item = (blocks: HtmlBlock[], value: number | null): void => {
       const n = value ?? next ?? (reversed ? (node.children ?? []).filter((c) => isElement(c) && c.name === 'li').length : 1);
+      // (a checkbox alone before the item's first paragraph, as GFM renders a loose task: the task's
+      // text that paragraph's)
+      const [box, first] = blocks;
+      if (box?.kind === 'paragraph' && /^\[[ x]\]\s*$/.test(box.text) && first?.kind === 'paragraph') blocks = [{ kind: 'paragraph', text: `${box.text.trimEnd()} ${first.text}` }, ...blocks.slice(2)];
       items.push(blocks);
       numbers.push(n);
       next = n + step;
     };
-    for (const child of node.children ?? []) {
+    // (the list's own style down to its items, as a block's to its children)
+    for (const child of styledDown(node)) {
       if (child.type === 'text' && collapse(child.data!).trim() === '') continue;
-      if (child.type === 'comment' || child.type === 'directive' || (isElement(child) && SKIPPED.has(child.name!))) continue;
+      if (child.type === 'comment' || child.type === 'directive' || (isElement(child) && skipped(child))) continue;
       if (isElement(child) && child.name === 'div' && child.attribs?.xmlns) continue;
       if (isElement(child) && (child.name === 'ul' || child.name === 'ol')) {
         const nested = this.#list(child);
@@ -342,7 +431,7 @@ export class MdHtmlParser {
     if (!ordered) return [{ kind: 'list', ordered, start: 1, items }];
     // Markdown numbers a list up by one from its first: a run so numbered a list, a list of its own where
     // a number breaks it (an item's `value`, a reversed list); a number no marker has (past nine
-    // digits, below zero) in a bulleted one, as no number is better than another's (B125)
+    // digits, below zero) in a bulleted one, as no number is better than another's
     const lists: HtmlBlock[] = [];
     type Run = { ordered: boolean; start: number; items: HtmlBlock[][]; last: number };
     let run = null as Run | null;
@@ -365,16 +454,31 @@ export class MdHtmlParser {
   /** A table: its rows' cells as inline text, the first row its head; each column's alignment from its head's cell. */
   #table(node: DomNode): HtmlBlock[] {
     const rows: DomNode[] = [];
-    const walk = (n: DomNode): void => {
+    // (each row's group, a `thead`, `tbody` or `tfoot`, or the rows right in the table: a row span ends
+    // with its group, `rowspan="0"` the group's rest)
+    const groups: number[] = [];
+    let group = 0;
+    const walk = (n: DomNode, inGroup: boolean): void => {
       for (const c of n.children ?? []) {
         if (!isElement(c)) continue;
-        if (c.name === 'tr') rows.push(c);
-        else if (c.name === 'thead' || c.name === 'tbody' || c.name === 'tfoot') walk(c);
+        if (c.name === 'tr') {
+          rows.push(c);
+          groups.push(group);
+        } else if (!inGroup && (c.name === 'thead' || c.name === 'tbody' || c.name === 'tfoot')) {
+          group++;
+          walk(c, true);
+          group++;
+        }
       }
     };
-    walk(node);
+    walk(node, false);
+    const groupEnd = (r: number): number => {
+      let end = r;
+      while (end < rows.length && groups[end] === groups[r]) end++;
+      return end;
+    };
     const cellsOf = (row: DomNode): DomNode[] => (row.children ?? []).filter((c) => isElement(c) && (c.name === 'td' || c.name === 'th'));
-    // (its caption, which the table has no place for: a paragraph before it, B121; a table of no cells
+    // (its caption, which the table has no place for: a paragraph before it; a table of no cells
     // is its caption alone, no grid of no columns)
     const caption = (node.children ?? []).find((c) => isElement(c) && c.name === 'caption');
     const title = caption ? this.#inlineText(caption.children ?? []).replace(/\n/g, ' ') : '';
@@ -386,19 +490,23 @@ export class MdHtmlParser {
       const a = (c.attribs?.align ?? cssOf(c).get('text-align') ?? '').toLowerCase();
       return Array<'left' | 'right' | 'center' | null>(span(c, 'colspan')).fill(a === 'left' || a === 'right' || a === 'center' ? a : null);
     });
-    // (a block in a cell, a paragraph, a list's item, set off from the next by a space: B116)
-    const spaced = (nodes: readonly DomNode[]): DomNode[] => nodes.flatMap((n) => (isElement(n) && isBlock(n) ? [{ type: 'text', data: ' ' } as DomNode, { ...n, children: spaced(n.children ?? []) }, { type: 'text', data: ' ' } as DomNode] : [n]));
+    // (a block in a cell, a paragraph, a list's item, set off from the next by a space)
+    // (a nested table's rows and cells too)
+    const spaced = (nodes: readonly DomNode[]): DomNode[] => nodes.flatMap((n) => (isElement(n) && (isBlock(n) || n.name === 'tr' || n.name === 'td' || n.name === 'th') ? [{ type: 'text', data: ' ' } as DomNode, { ...n, children: spaced(n.children ?? []) }, { type: 'text', data: ' ' } as DomNode] : [n]));
     this.#inCell = true;
     // (a cell spanning columns or rows, which no Markdown table has: its text in its first column and
-    // row, the ones it spans empty, so what follows stays under its own column's head: B122)
+    // row, the ones it spans empty, so what follows stays under its own column's head)
     const cells: string[][] = rows.map(() => []);
     rows.forEach((row, r) => {
       const line = cells[r]!;
       let col = 0;
       for (const c of cellsOf(row)) {
         while (line[col] !== undefined) col++;
-        const text = this.#inlineText(spaced(c.children ?? [])).replace(/\n/g, ' ').replace(/\|/g, '\\|');
-        const [wide, tall] = [span(c, 'colspan'), Math.min(span(c, 'rowspan'), rows.length - r)];
+        // (the cell's own style, its row's and its table's)
+        const text = this.#inlineText(spaced(styledDown({ ...c, attribs: { ...c.attribs, style: `${cssText(node)};${cssText(row)};${c.attribs?.style ?? ''}` } } as DomNode))).replace(/\n/g, ' ').replace(/\|/g, '\\|');
+        const end = groupEnd(r);
+        const tall = /^\s*0\s*$/.test(c.attribs?.rowspan ?? '') ? end - r : Math.min(span(c, 'rowspan'), end - r);
+        const wide = span(c, 'colspan');
         for (let dr = 0; dr < tall; dr++) for (let dc = 0; dc < wide; dc++) cells[r + dr]![col + dc] = dr === 0 && dc === 0 ? text : '';
         col += wide;
       }
@@ -410,7 +518,7 @@ export class MdHtmlParser {
 
   /** Inline content as Markdown: its text escaped, its formatting as Markdown's, a `<br>` a line break; trimmed. */
   #inlineText(nodes: readonly DomNode[]): string {
-    const text = this.#joined(nodes);
+    const text = resolvedMarks(this.#joined(nodes));
     return text
       .replace(/ +/g, ' ')
       .replace(/ ?\n ?/g, '\n')
@@ -427,15 +535,19 @@ export class MdHtmlParser {
    */
   #joined(nodes: readonly DomNode[]): string {
     const pieces = merged(nodes).map((n) => this.#inline(n));
-    const word = (c: string | undefined): boolean => !!c && /[\p{L}\p{N}]/u.test(c);
+    // (by code point, an astral letter whole; as CommonMark's flanking reads them: what is neither a
+    // blank nor punctuation, a combining mark too)
     const punct = (c: string | undefined): boolean => !!c && isPunctuation(c.codePointAt(0)!);
+    const word = (c: string | undefined): boolean => !!c && !/\s/u.test(c) && !punct(c);
+    const first = (s: string | undefined): string | undefined => (s ? String.fromCodePoint(s.codePointAt(0)!) : undefined);
+    const last = (s: string | undefined): string | undefined => (s ? [...s].at(-1) : undefined);
     for (let i = 0; i < pieces.length; i++) {
       const p = pieces[i]!;
       const w = this.#wraps.get(p);
-      if (!w || !/^[*~]/.test(w.open)) continue;
+      if (!w || !(OPENS.includes(w.open) || /^[*~]/.test(w.open))) continue;
       const inner = p.slice(p.indexOf(w.open) + w.open.length, p.lastIndexOf(w.close));
-      const closes = p.endsWith(w.close) && punct(inner.slice(-1)) && word(pieces[i + 1]?.[0]);
-      const opens = p.startsWith(w.open) && punct(inner[0]) && word(pieces[i - 1]?.slice(-1));
+      const closes = p.endsWith(w.close) && punct(last(inner)) && word(first(pieces[i + 1]));
+      const opens = p.startsWith(w.open) && punct(first(inner)) && word(last(pieces[i - 1]));
       if (closes || opens) pieces[i] = w.plain;
     }
     return pieces.join('');
@@ -445,8 +557,9 @@ export class MdHtmlParser {
   #wrap(mark: string, inner: string, close = mark): string {
     // (formatting doesn't span a paragraph break: each paragraph's part wrapped on its own)
     if (/\n[ \t]*\n/.test(inner)) return inner.split(/(\n[ \t]*\n\s*)/).map((part, k) => (k % 2 ? part : this.#wrap(mark, part, close))).join('');
-    // (and its line breaks and no-break spaces there: by a delimiter, they keep it from opening or closing)
-    const m = /^([ \n\u00a0]*)(.*?)([ \n\u00a0]*)$/s.exec(inner)!;
+    // (and its line breaks and every Unicode blank there, a no-break space, an em space: by a delimiter,
+    // they keep it from opening or closing)
+    const m = /^(\s*)(.*?)(\s*)$/su.exec(inner)!;
     if (m[2] === '') return inner;
     this.#formatted = true;
     const out = `${m[1]}${mark}${m[2]}${close}${m[3]}`;
@@ -456,18 +569,24 @@ export class MdHtmlParser {
 
   /** `text` with the placeholders' own characters held as placeholders too, so the text's come back as they are. */
   #held(text: string): string {
-    return text.replace(/[\uE000\uE001]/g, (c) => {
+    return text.replace(/[\uE000-\uE01F]/g, (c) => {
       this.#codes.push(c);
       return `\uE000${this.#codes.length - 1}\uE001`;
     });
   }
 
-  /** `text` as a code span, held out of the whitespace collapsing; nothing for nothing (spaces alone are one, which Markdown keeps as they are: B128). */
+  /** `text` as written, held out of the whitespace collapsing: a link's destination and title, whose spaces are their own. */
+  #kept(text: string): string {
+    this.#codes.push(text);
+    return `\uE000${this.#codes.length - 1}\uE001`;
+  }
+
+  /** `text` as a code span, held out of the whitespace collapsing; nothing for nothing (spaces alone are one, which Markdown keeps as they are). */
   #codeSpan(text: string): string {
     if (text === '') return text;
     // (in a table's cell a pipe is escaped, a code span's too, the backslash taken off before the code
     // is read: one there already before it would make an even run, the cell ended there. No code span
-    // holds that: its text, escaped, B115)
+    // holds that: its text, escaped)
     if (this.#inCell && /\\\|/.test(text)) return this.#held(escapeText(text));
     const run = (text.match(/`+/g) ?? []).reduce((m, r) => Math.max(m, r.length), 0) + 1;
     const fence = '`'.repeat(run);
@@ -479,32 +598,50 @@ export class MdHtmlParser {
 
   #inline(node: DomNode): string {
     if (node.type === 'text') return this.#held(escapeText(collapse(node.data!)));
-    if (!isElement(node) || SKIPPED.has(node.name!)) return '';
+    if (!isElement(node) || skipped(node)) return '';
 
     // Word's bullet or number, written as text in its list paragraphs
-    // (in a list it made of Word's paragraphs: elsewhere it is text the page shows, B138)
+    // (in a list it made of Word's paragraphs: elsewhere it is text the page shows)
     if (this.#inWordList && wordIgnored(node)) return '';
     const inner = (): string => this.#joined(node.children ?? []);
+    // (a wiki link and inline math as ourus renders them, their syntax where the flavor has it)
+    const classes = (node.attribs?.class ?? '').split(/\s+/);
+    if (this.#math && node.name === 'span' && classes.includes('math-inline')) {
+      this.#formatted = true;
+      return this.#kept(`$${textContent(node)}$`);
+    }
+    const target = node.attribs?.['data-href'];
+    if (this.#wikilinks && node.name === 'a' && classes.includes('internal-link') && target && !/[[\]|\n]/.test(target)) {
+      const shown = collapse(textContent(node)).trim();
+      this.#formatted = true;
+      return this.#kept(shown === target || shown === '' ? `[[${target}]]` : `[[${target}|${shown.replace(/[[\]|]/g, '')}]]`);
+    }
     // formatting as styles (Google Docs' spans; its wrapper `<b style="font-weight:normal">`, no bold)
     const css = cssOf(node);
     const weight = css.get('font-weight');
     const fontStyle = css.get('font-style');
     const decoration = css.get('text-decoration-line') ?? css.get('text-decoration');
-    const bold = weight === undefined ? undefined : weight === 'bold' || weight === 'bolder' || Number(weight) >= 600;
-    const italic = fontStyle === undefined ? undefined : fontStyle === 'italic' || fontStyle === 'oblique';
-    const struck = decoration === undefined ? undefined : /line-through/.test(decoration);
+    // (`inherit` and its kind: what the parent has, no formatting of its own)
+    const inherits = (v: string | undefined): boolean => v === undefined || /^(?:inherit|unset|revert|revert-layer)$/i.test(v.trim());
+    const bold = inherits(weight) ? undefined : weight === 'bold' || weight === 'bolder' || Number(weight) >= 600;
+    const italic = inherits(fontStyle) ? undefined : fontStyle === 'italic' || fontStyle === 'oblique';
+    // (a decoration isn't inherited off: an ancestor's line is drawn through its descendants whatever
+    // theirs, so only a line-through of its own says anything)
+    const struck = decoration !== undefined && /line-through/.test(decoration) ? true : undefined;
     // (each formatting the element's own name gives, its style setting it either way: Google Docs'
     // wrapper `<b style="font-weight:normal">`, no bold)
     const name = node.name!;
     const named = (names: readonly string[], set: boolean | undefined): boolean | undefined => set ?? (names.includes(name) ? true : undefined);
     const formats: [string, boolean | undefined][] = [['~~', named(['del', 's', 'strike'], struck)], ['*', named(['em', 'i'], italic)], ['**', named(['strong', 'b'], bold)]];
+    // (a link's own style around the link, `**[x](u)**`: itself written without it)
+    const leaf = name === 'a' ? (): string => this.#inline({ ...node, attribs: { ...node.attribs, style: '' } } as DomNode) : inner;
     const styled = (k: number): string => {
-      if (k === formats.length) return inner();
+      if (k === formats.length) return leaf();
       const [mark, on] = formats[k]!;
       return on === undefined ? styled(k + 1) : this.#format(mark, on, () => styled(k + 1));
     };
     if (['strong', 'b', 'em', 'i', 'del', 's', 'strike'].includes(name) || formats.some(([, on]) => on !== undefined)) {
-      if (!['code', 'kbd', 'samp', 'a', 'img', 'br', 'input'].includes(name)) return styled(0);
+      if (!['code', 'kbd', 'samp', 'img', 'br', 'input'].includes(name)) return styled(0);
     }
     switch (node.name) {
       case 'br':
@@ -512,8 +649,10 @@ export class MdHtmlParser {
       case 'code':
       case 'kbd':
       case 'samp': {
-        // (a `<br>` in it a line break, which no code span holds: a code span a line, B129)
-        const lines = textContent(node).split('\n').map(collapse);
+        // (a `<br>` in it a line break, which no code span holds: a code span a line)
+        // (its spaces kept where its style keeps them, `white-space: pre`: a code span holds them)
+        const keeps = /^(?:pre|pre-wrap|break-spaces)$/i.test(cssOf(node).get('white-space')?.trim() ?? '');
+        const lines = textContent(node).split('\n').map((l) => (keeps ? l : collapse(l)));
         if (lines.length > 1) return lines.map((line) => this.#codeSpan(line)).join('\n');
         return this.#codeSpan(lines[0]!);
       }
@@ -521,15 +660,19 @@ export class MdHtmlParser {
         const href = node.attribs?.href;
         // (a footnote's reference, its number GFM's rendering, the label in its link; the back-reference no text)
         const note = node.attribs?.['data-footnote-ref'] !== undefined ? footnoteLabel(href, '#') : null;
-        if (note !== null) return this.#held(`[^${note}]`);
+        // (formatting: a paste that prefers the plain text would take its number, the reference lost)
+        if (note !== null) {
+          this.#formatted = true;
+          return this.#held(`[^${note}]`);
+        }
         if (node.attribs?.['data-footnote-backref'] !== undefined || /(?:^|\s)footnote-backref(?:\s|$)/.test(node.attribs?.class ?? '')) return '';
         const text = inner();
-        // a link with no text (a heading's permalink) is nothing to read
-        if (text.trim() === '') return '';
+        // a link with no text (a heading's permalink) is nothing to read; one of blanks, a blank
+        if (text.trim() === '') return text === '' ? '' : ' ';
         // (a script's link is none, whatever the case of its scheme, the blanks a browser skips before it)
         // (but `href=""`, the page itself, is a link: no `href` is none)
         if (href === undefined || /^[\x00-\x20]*javascript:/i.test(href)) return text;
-        return this.#wrap('[', text, `](${this.#held(destination(href) + titleOf(node))})`);
+        return this.#wrap('[', text, `](${this.#kept(destination(href) + titleOf(node))})`);
       }
       case 'img': {
         const src = node.attribs?.src;
@@ -539,7 +682,7 @@ export class MdHtmlParser {
         // the converter's own marks in it are its characters)
         if (!src) return this.#held(escapeText(alt.trim()));
         this.#formatted = true;
-        return `![${this.#held(escapeText(alt))}](${this.#held(destination(src) + titleOf(node))})`;
+        return `![${this.#held(escapeText(alt))}](${this.#kept(destination(src) + titleOf(node))})`;
       }
       case 'input':
         // (a checkbox starts a task's text, a space after it; a type's case is no matter)
@@ -564,7 +707,7 @@ function code(node: DomNode): HtmlBlock {
     }
     return undefined;
   };
-  // (one: the code; several, the `pre` is what it shows, all of them with the text between: B131)
+  // (one: the code; several, the `pre` is what it shows, all of them with the text between)
   const count = (n: DomNode): number => (n.children ?? []).reduce((k, c) => k + (isElement(c) ? (c.name === 'code' ? 1 : count(c)) : 0), 0);
   const inner = count(node) === 1 ? find(node) : undefined;
   const own = `${node.attribs?.class ?? ''} ${inner?.attribs?.class ?? ''}`;
@@ -594,7 +737,7 @@ function textContent(node: DomNode): string {
     if (n.type === 'text') out += n.data!;
     else if (n.name === 'br') out += '\n';
     // (a script, a style, what no page shows: no content, here as in its blocks)
-    else if (n.type === 'comment' || (isElement(n) && SKIPPED.has(n.name!))) continue;
+    else if (n.type === 'comment' || (isElement(n) && skipped(n))) continue;
     else for (let i = (n.children ?? []).length - 1; i >= 0; i--) stack.push(n.children![i]!);
   }
   return out;
@@ -626,9 +769,14 @@ function destination(url: string): string {
   url = url.replace(/[\x00-\x1f\x7f]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`);
   const entities = (u: string): string => u.replace(/&(?=#[0-9]{1,7};|#[xX][0-9a-fA-F]{1,6};|[A-Za-z][A-Za-z0-9]{1,31};)/g, '\\&');
   let depth = 0;
-  for (const c of url) if ((depth += c === '(' ? 1 : c === ')' ? -1 : 0) < 0) break;
+  // (parentheses nested deeper than a reader follows, 32: in angle brackets)
+  let deepest = 0;
+  for (const c of url) {
+    if ((depth += c === '(' ? 1 : c === ')' ? -1 : 0) < 0) break;
+    deepest = Math.max(deepest, depth);
+  }
   // (a backslash before punctuation, or last, before the `)` closing it: one of its own)
-  if (url !== '' && depth === 0 && !url.startsWith('<') && !/\s/.test(url)) return entities(url.replace(/\\(?=[!-/:-@[-`{-~]|$)/g, '\\\\'));
+  if (url !== '' && depth === 0 && deepest <= 32 && !url.startsWith('<') && !/\s/.test(url)) return entities(url.replace(/\\(?=[!-/:-@[-`{-~]|$)/g, '\\\\'));
   return `<${entities(url.replace(/[\\<>]/g, '\\$&'))}>`;
 }
 
@@ -637,14 +785,13 @@ function destination(url: string): string {
 const FORMAT_PROPERTIES = ['font-weight', 'font-style', 'text-decoration', 'text-decoration-line'];
 
 /**
- * A block element's children with the formatting its style sets theirs (B120): a block child's style
+ * A block element's children with the formatting its style sets theirs: a block child's style
  * starting with it, its own after it winning; a run of inline ones in a span of it. As they are where
  * it sets none.
  */
 function styledDown(node: DomNode): DomNode[] {
   const children = node.children ?? [];
-  const css = cssOf(node);
-  const style = FORMAT_PROPERTIES.flatMap((name) => (css.has(name) ? [`${name}:${css.get(name)}`] : [])).join(';');
+  const style = cssText(node);
   if (!style) return [...children];
   const out: DomNode[] = [];
   let run: DomNode[] = [];
@@ -662,10 +809,67 @@ function styledDown(node: DomNode): DomNode[] {
   return out;
 }
 
+/** A link's children, each block's own children in a copy of it, a run of inline ones in one: the link as each block's. */
+function linkedDown(link: DomNode): DomNode[] {
+  const wrap = (children: DomNode[]): DomNode => ({ ...link, children } as DomNode);
+  const out: DomNode[] = [];
+  let run: DomNode[] = [];
+  const flush = (): void => {
+    if (run.length) out.push(wrap(run));
+    run = [];
+  };
+  for (const c of link.children ?? []) {
+    if (isElement(c) && isBlock(c)) {
+      flush();
+      // (a block of blocks, `<div><p>`: the link down to the blocks it holds; a leaf block's text in it)
+      out.push({ ...c, children: (c.children ?? []).some(isBlock) ? linkedDown({ ...link, children: c.children } as DomNode) : [wrap([...(c.children ?? [])])] } as DomNode);
+    } else run.push(c);
+  }
+  flush();
+  return out;
+}
+
 /** An element's `title`, as a link's or an image's title is written after its destination (` "…"`); none where it has none. */
 function titleOf(node: DomNode): string {
   const title = node.attribs?.title?.replace(/[ \t\r\n]+/g, ' ').trim();
-  return title ? ` "${title.replace(/[\\"]/g, '\\$&')}"` : '';
+  // (an `&` that would read as an entity's start escaped, as in a destination: the attribute decoded once)
+  return title ? ` "${title.replace(/[\\"]/g, '\\$&').replace(/&(?=#[0-9]{1,7};|#[xX][0-9a-fA-F]{1,6};|[A-Za-z][A-Za-z0-9]{1,31};)/g, '\\&')}"` : '';
+}
+
+/** The formatting delimiters, and the tokens a run's are written as until its text is whole (private-use characters, the text's own held: `#held`). */
+const MARKS = ['**', '*', '~~'];
+const OPENS = ['\uE010', '\uE011', '\uE012'];
+const CLOSES = ['\uE018', '\uE019', '\uE01A'];
+
+/**
+ * `text`'s formatting tokens as delimiters: first a run closed and opened again at once, `**a****b**`,
+ * one run, `**ab**`, and a run of nothing, `****`, none, till none is left.
+ */
+function resolvedMarks(text: string): string {
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (let k = 0; k < MARKS.length; k++) {
+      for (const pair of [CLOSES[k]! + OPENS[k]!, OPENS[k]! + CLOSES[k]!]) {
+        if (!text.includes(pair)) continue;
+        text = text.split(pair).join('');
+        changed = true;
+      }
+    }
+  }
+  // (a run of `*` or `**` opened right after two others' close, `<b>a<i>b</i></b><i>c</i>`: `**a*b***c*`
+  // reads the `***` as closing both and `c*` as text, so the run is spelled with `_` instead,
+  // `**a*b***_c_`, where its close can close, not inside a word)
+  const marks = [...text].map((c) => MARKS[OPENS.includes(c) ? OPENS.indexOf(c) : CLOSES.indexOf(c)] ?? c);
+  const chars = [...text];
+  for (let i = 2; i < chars.length; i++) {
+    const k = OPENS.indexOf(chars[i]!);
+    const closed = (c: string | undefined): boolean => c === CLOSES[0] || c === CLOSES[1];
+    if (k < 0 || k > 1 || !closed(chars[i - 1]) || !closed(chars[i - 2])) continue;
+    const end = chars.indexOf(CLOSES[k]!, i);
+    if (end < 0 || /[\p{L}\p{N}]/u.test(marks[end + 1] ?? '')) continue;
+    marks[i] = marks[end] = k ? '_' : '__';
+  }
+  return marks.join('');
 }
 
 /** The inline elements of one formatting, by name. */
@@ -676,7 +880,11 @@ function merged(nodes: readonly DomNode[]): DomNode[] {
   const out: DomNode[] = [];
   // (a run's children gathered in one list of its own, which each next element adds to: copied once)
   const owned = new Set<DomNode>();
-  for (const n of nodes) {
+  for (const node of nodes) {
+    // (a plain wrapper, a span with nothing of its own, around one element of a formatting: that
+    // element, its neighbours' run, `<code>a</code><span><code>b</code></span>`)
+    const only = isElement(node) && node.name === 'span' && !Object.keys(node.attribs ?? {}).length ? (node.children ?? []).filter((c) => !(c.type === 'text' && c.data === '')) : [];
+    const n = only.length === 1 && isElement(only[0]!) && FORMATS[only[0]!.name!] ? only[0]! : node;
     const prev = out[out.length - 1];
     const format = isElement(n) && !n.attribs?.style ? FORMATS[n.name!] : undefined;
     if (format && prev && isElement(prev) && !prev.attribs?.style && FORMATS[prev.name!] === format) {
@@ -704,7 +912,8 @@ function escapeText(text: string): string {
     .replace(/([=%])(?=\1)/g, '$1\\')
     // (a run of underscores at a word's edge, all of it: one left would still open or close emphasis, `\__a\__`)
     .replace(/_+/g, (run, at: number, all: string) => (/^$|[^\p{L}\p{N}]/u.test(all[at - 1] ?? '') || /^$|[^\p{L}\p{N}]/u.test(all[at + run.length] ?? '') ? run.replace(/_/g, '\\_') : run))
-    .replace(/<(?=[A-Za-z/!?])/g, '\\<')
+    // (and before what can start an email autolink's address, `<3@example.com>`)
+    .replace(/<(?=[A-Za-z0-9/!?.#$%&'*+=^_`{|}~-])/g, '\\<')
     .replace(/&(?=#?\w+;)/g, '\\&')
     // (a `^` before a name: Obsidian's block id, which HTML carries none of, its text as shown)
     .replace(/\^(?=[A-Za-z0-9-])/g, '\\^')
@@ -721,22 +930,29 @@ function escapeStart(line: string): string {
     .replace(/^(\d{1,9})([.)])(?=[ \t]|$)/, '$1\\$2')
     .replace(/^(=+|-+)[ \t]*$/, (m) => `\\${m}`)
     .replace(/^(~~~|```)/, '\\$1')
-    .replace(/^\|/, '\\|');
+    .replace(/^\|/, '\\|')
+    // (a table's delimiter row, `--- | ---`, under a line it would make a table's head: its first pipe)
+    .replace(/^[ \t]*:?-+:?[ \t]*\|(?=(?:[ \t]*:?-+:?[ \t]*\|?)+[ \t]*$)/, (m) => `${m.slice(0, -1)}\\|`);
 }
 
 /** A block's lines as Markdown. */
 /**
  * Blocks one after another, a blank line between: a list right after a list of its kind written with
- * the other bullet or delimiter (`*`, `)`), or the two would be one list (B139).
+ * the other bullet or delimiter (`*`, `)`), or the two would be one list.
  */
 /** `hardBreaks`, here and in `write`: a paragraph's line breaks written as hard breaks (`MdHtmlParser.parse`'s). */
 function writeAll(blocks: readonly HtmlBlock[], hardBreaks: boolean): string {
+  return alternated(blocks).map((b) => write(b, hardBreaks)).join('\n\n');
+}
+
+/** `blocks` with each list right after a list of its kind marked `other`: its other marker keeps them two lists. */
+function alternated(blocks: readonly HtmlBlock[]): HtmlBlock[] {
   const out: HtmlBlock[] = [];
   for (const b of blocks) {
     const before = out[out.length - 1];
     out.push(b.kind === 'list' && before?.kind === 'list' && before.ordered === b.ordered && !before.other ? { ...b, other: true } : b);
   }
-  return out.map((b) => write(b, hardBreaks)).join('\n\n');
+  return out;
 }
 
 function write(block: HtmlBlock, hardBreaks: boolean): string {
@@ -756,11 +972,14 @@ function write(block: HtmlBlock, hardBreaks: boolean): string {
       const fence = '`'.repeat(run + 1);
       return `${fence}${block.info}\n${block.text}${block.text === '' && !block.blankLine ? '' : '\n'}${fence}`;
     }
-    case 'quote':
-      return writeAll(block.blocks, hardBreaks)
-        .split('\n')
-        .map((line) => (line === '' ? '>' : `> ${line}`))
-        .join('\n');
+    case 'quote': {
+      // (a callout's: its type and title the first line, its blocks right under it)
+      const body = writeAll(block.blocks, hardBreaks);
+      const lines = block.title !== undefined ? [block.title, ...(body === '' ? [] : body.split('\n'))] : body.split('\n');
+      return lines.map((line) => (line === '' ? '>' : `> ${line}`)).join('\n');
+    }
+    case 'math':
+      return `$$\n${block.text === '' ? '' : `${block.text}\n`}$$`;
     case 'list': {
       // loose where an item has more than one block that isn't a list
       const loose = block.items.some((item) => item.filter((b) => b.kind !== 'list').length > 1);
@@ -769,7 +988,11 @@ function write(block: HtmlBlock, hardBreaks: boolean): string {
           const marker = block.ordered ? `${block.start + k}${block.other ? ')' : '.'}` : block.other ? '*' : '-';
           const pad = ' '.repeat(marker.length + 1);
           if (!item.length) return marker;
-          const body = item.map((b, j) => (j > 0 && b.kind === 'list' && item[j - 1]!.kind !== 'list' && !loose ? `\n${write(b, hardBreaks)}` : `${j > 0 ? '\n\n' : ''}${write(b, hardBreaks)}`)).join('');
+          // (an item's lists alternated too; a rule first in it of other characters than its
+          // bullet's, or the two read as one rule, `- ---`)
+          const blocks = alternated(item);
+          const written = (b: HtmlBlock, j: number): string => (j === 0 && b.kind === 'rule' && marker === '-' ? '***' : write(b, hardBreaks));
+          const body = blocks.map((b, j) => (j > 0 && b.kind === 'list' && blocks[j - 1]!.kind !== 'list' && !loose ? `\n${written(b, j)}` : `${j > 0 ? '\n\n' : ''}${written(b, j)}`)).join('');
           return body
             .split('\n')
             .map((line, j) => (j === 0 ? `${marker} ${line}` : line === '' ? '' : pad + line))

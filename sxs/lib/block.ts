@@ -331,6 +331,7 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
   if (options.blockSelection && drawing.subtrees) {
     const whole = view.touchedSubtrees({ anchor, head });
     const selected = [...new Set(whole.flatMap((n) => (blockOf.has(n.id) ? [blockOf.get(n.id)!] : [])))].sort((x, y) => x - y);
+    if (gapped(selected)) return { outline: { blocks, sel: null }, notes, caretLost: 'a selection of blocks with one unselected between', sections, rows };
     return { outline: { blocks, sel: null, selected }, notes, sections, rows };
   }
   const h = locate(head);
@@ -348,9 +349,18 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
     };
     if (!options.blockSelection || !edge(from, false) || !edge(to, true)) return { outline: { blocks, sel: null }, notes, caretLost: 'selection across blocks', sections, rows };
     const selected = [...new Set(view.touchedSubtrees({ anchor, head }).flatMap((n) => (blockOf.has(n.id) ? [blockOf.get(n.id)!] : [])))].sort((x, y) => x - y);
+    if (gapped(selected)) return { outline: { blocks, sel: null }, notes, caretLost: 'a selection of blocks with one unselected between', sections, rows };
     return { outline: { blocks, sel: null, selected }, notes, sections, rows };
   }
   return { outline: { blocks, sel: { block: h.block, anchor: a.offset, head: h.offset } }, notes, sections, rows };
+}
+
+/**
+ * Whether blocks `selected` (sorted) leave one out between them: an app selects a run of blocks, every
+ * one between its ends (`- ┃«⏎- -⏎  -»`, the middle item, with no text, no root of ourus's, is in it).
+ */
+function gapped(selected: readonly number[]): boolean {
+  return selected.length > 1 && selected[selected.length - 1]! - selected[0]! + 1 !== selected.length;
 }
 
 /** Every node under `node`, depth first. */

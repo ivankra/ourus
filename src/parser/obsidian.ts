@@ -349,7 +349,7 @@ export const wikilinks: MdExtension = {
     inlines: {
       wikilink(r, node, entering) {
         if (!entering) return;
-        // (in a link's text, its text alone: an anchor holds no anchor, B127)
+        // (in a link's text, its text alone: an anchor holds no anchor)
         if (r.inLink) return r.out(node.alias ?? node.target!);
         const href = escapeHtml(node.target!);
         r.markup(`<a data-href="${href}" href="${href}" class="internal-link">`);

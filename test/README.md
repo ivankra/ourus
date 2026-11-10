@@ -7,6 +7,8 @@ failure. `npm run test:fast` is the quick one for development: the typecheck, th
 (`*.test.ts`) and the spec (`spec/*.md`, played by `spec.test.ts`), plus a few-second slice of the
 generated-notes reports (`generated.test.ts`) and the lint on the sources (`lints.test.ts`: no array
 spread into a call but one said bounded).
+Their property tests (fast-check) run on one fixed seed (`test/lib/fc-seed.ts`, `FC_SEED`), so a
+failure is a change in the code; `npm run test:fuzz` runs them on a random seed, to find new shapes.
 `node test/heavy.ts [types fast view inverse diff conserve sweep sessions extremes bugs]` runs some; a single report can
 also be run on its own, `node test/sweep.ts`. `TEST_BASE_REV` names the commit `diff` and `inverse` compare
 with (`HEAD` by default; CI's is the one before). `diff` fails on regressions: a run that fails to write

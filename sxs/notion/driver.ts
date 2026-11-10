@@ -254,6 +254,8 @@ export const driver: Driver = {
     taskEditing: 'unwrap',
     // a split keeps the space at the new block's start (Enter65c, Enter65d, ...)
     enterSplitSpace: 'start',
+    // blocks pasted at a block's text start go after it (probed 2026-11-11)
+    pasteAtTextStart: 'after',
   },
   keys: {
     enter: 'Enter',

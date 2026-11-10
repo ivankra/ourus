@@ -418,7 +418,7 @@ export class MdMachine {
 
   /**
    * The text of line `index`, for a rule that has to look ahead, as `read` will have it (NUL
-   * replaced, its sentinels in: what decides the line then, B252), or null past the end. The line's
+   * replaced, its sentinels in: what decides the line then), or null past the end. The line's
    * record notes how far it looked.
    */
   lookAhead(index: number): string | null {

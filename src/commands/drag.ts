@@ -101,9 +101,11 @@ function seamsOf(
   const top = first?.startLine ?? -1;
   const lastShown = all.filter((n) => out.has(n.id) && !hidden(n)).pop() ?? null;
   const position = new Map(all.map((n, k) => [n.id, k]));
-  const blanks = (line: number): number => {
+  // (`gap`: only lines no node holds, a gap's; a node's own blank line, an unclosed fence's code, is
+  // none. The places are found from the blank lines' start as they read, either kind.)
+  const blanks = (line: number, gap = false): number => {
     let k = 0;
-    while (line - k - 1 >= 0 && (doc.isEmptyLine(line - k - 1) || doc.isBlankLine(line - k - 1))) k++;
+    while (line - k - 1 >= 0 && (doc.isEmptyLine(line - k - 1) || doc.isBlankLine(line - k - 1)) && !(gap && doc.nodeAtLine(line - k - 1))) k++;
     return k;
   };
   const ownPlace: InsertionPoint | null = first ? { parent: idOf(first.parent!), after: first.prev?.id ?? null } : null;
@@ -125,8 +127,8 @@ function seamsOf(
   }
   const inZoom = (n: OurusNode): boolean => !zoom || n.isWithin(zoom);
   return raw.flatMap((s, k) => {
-    const gapLines = blanks(s.beforeLine);
-    const line = s.beforeLine - gapLines;
+    const gapLines = blanks(s.beforeLine, true);
+    const line = s.beforeLine - blanks(s.beforeLine);
     if (zoom && !(line > zoom.ownLastLine && line <= zoom.endLine + 1)) return [];
     const seam = { beforeLine: s.beforeLine, nodeAbove: s.above?.id ?? null, nodeBelow: s.below?.id ?? null, gapLines };
     if (s.at === 'dead') return [{ ...seam, points: [] }];

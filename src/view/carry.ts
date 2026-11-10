@@ -66,7 +66,7 @@ interface HiddenNode {
  * What a fold hides, as nodes, in order: each descendant's id, parent, kind, text and carried block-id
  * lines, but the text of one all on the node's last line of text, which the fold shows (an item's first
  * child on its marker's line); a change to it opens the fold. Records, compared field by field
- * (`sameHidden`), not a string: a text can hold any character a seam would be made of (B218).
+ * (`sameHidden`), not a string: a text can hold any character a seam would be made of.
  */
 export function hiddenContent(doc: OurusDoc, node: OurusNode): HiddenNode[] {
   const out: HiddenNode[] = [];

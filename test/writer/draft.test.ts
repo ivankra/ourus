@@ -322,3 +322,17 @@ test('the readback compares edited code as the edit means it, read where the blo
   assert.deepEqual(doc.verbatimLinesAt(fence, 0), ['', '   P', '']);
   assert.deepEqual(doc.verbatimLinesAt(fence, 2), ['', ' P', '']);
 });
+
+test('a draft the writer can\'t write as spelled is written again, its placed nodes anew; done() gives that writing each time, normalized() its normal form (recommendation 1, step 2)', () => {
+  // (B52's shape: a quote paragraph padded one space, moved onto the item's marker line's place)
+  const doc = OurusDoc.parse('- > a\n  >\n  >  b', { config: { quotes: 'container' } });
+  const a = find(doc, 'a');
+  const draft = new OurusDraft(doc).remove([a]).place('before', doc.rootNode.children[0]!, [a.id]);
+  const first = draft.done();
+  assert.ok(!('reason' in first), 'reason' in first ? first.detail : '');
+  assert.equal(first.doc.text, 'a\n\n- > b');
+  const again = draft.done();
+  assert.ok(!('reason' in again));
+  assert.equal(again.doc.text, first.doc.text);
+  assert.equal(differenceFrom(first.doc, draft.normalized()), null);
+});

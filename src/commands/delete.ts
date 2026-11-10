@@ -91,7 +91,7 @@ export function deleteContentForwardCommand(ctx: CommandContext): OurusResult | 
   // on an empty item, the node below moves up into it, as Backspace at its start takes it (Delete5, 6)
   if (text.empty) {
     // an empty paragraph goes, with its blank lines, the caret to the text below (Placeholder13)
-    // (with the containers it is all of, which would hold nothing: `- > ┃`, its item too, B75)
+    // (with the containers it is all of, which would hold nothing: `- > ┃`, its item too)
     if (node.kind === 'paragraph' && !node.children.length && lower) return ctx.apply(draft.remove(withTextlessParents(ctx.doc, [node])).setCaret(below, textStart(lower), 1));
     if (node.kind !== 'item' || !(lower instanceof OurusProse) || lower.empty || below.preceding?.persistentNode !== node.persistentNode) return null;
     // (refused, with spaces after the caret: they are the host's to delete, as an outliner deletes them)
@@ -124,7 +124,8 @@ export function deleteContentForwardCommand(ctx: CommandContext): OurusResult | 
   // its start takes it (Delete33b)
   if (below.kind === 'item' && lower.empty) {
     if (below.children.length) return joinUp(ctx, below, lower, false);
-    draft.remove([below]).gap(node, below.gap).setCaret(node, offset, -1);
+    // (its blank lines as they were written, each ours where it was)
+    draft.moveGap(below, node).remove([below]).setCaret(node, offset, -1);
     return ctx.apply(draft);
   }
   if (lower.type !== 'paragraph') return null;

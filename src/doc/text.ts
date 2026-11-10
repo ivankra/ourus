@@ -241,6 +241,17 @@ export class OurusProse {
   }
 
   /**
+   * Backslashes of ours (`auto`) put in at `positions`, ascending, each where it is with all of them
+   * in: as many `splice`s, in one pass.
+   */
+  withEscapes(positions: readonly number[]): OurusProse {
+    if (!positions.length) return this;
+    const moved = this.marks.map(positions.map((p, k) => ({ from: p - k, to: p - k, insert: '\\' })));
+    const auto = [...moved.auto, ...positions].sort((a, b) => a - b).filter((p, k, all) => k === 0 || all[k - 1] !== p);
+    return this.#with({ marks: moved.with({ auto }) });
+  }
+
+  /**
    * `[from, to)` with its marks: a point at `to` only at the text's end (`MarkSet.slice`). A
    * fragment, without the block-id lines: a split or a join gives them to one node explicitly
    * (`withBlockIdLines`).
@@ -457,7 +468,10 @@ export class OurusAtom {
       const first = s.indexOf('\n', open.from);
       if (first < 0) return '';
       const close = frame.find((p) => p.part === 'close');
-      return s.slice(first + 1, close ? Math.max(first + 1, s.lastIndexOf('\n', close.from) ) : s.length);
+      const body = s.slice(first + 1, close ? Math.max(first + 1, s.lastIndexOf('\n', close.from) ) : s.length);
+      // (a fence indented, `  ````: its lines past as many spaces of theirs, which are none of the code's)
+      const indent = /^ *$/.test(s.slice(0, open.from)) ? open.from : 0;
+      return indent ? body.split('\n').map((l) => l.slice(Math.min(indent, /^ */.exec(l)![0].length))).join('\n') : body;
     }
     let out = '';
     let at = 0;
@@ -510,7 +524,7 @@ export class OurusAtom {
   }
 
   /** `[from, to)` replaced by `insert`, the marks around moving (`MarkSet.splice`). */
-  splice(from: number, to: number, insert = ''): OurusAtom {
+  splice(from: number, to: number, insert: MarkSet | string = ''): OurusAtom {
     return new OurusAtom(this.type, this.item, this.marks.splice(from, to, insert), this.blockIdLines);
   }
 }

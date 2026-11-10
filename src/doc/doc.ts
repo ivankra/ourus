@@ -228,13 +228,33 @@ export class OurusDoc {
   posOf(node: OurusNode, offset: number, assoc: -1 | 1 = 1): DocPos {
     const read = this.#read(node);
     if (!read) throw new RangeError(`the ${node.kind} at line ${node.startLine} has no text`);
-    let k = offset;
-    for (const line of read.lines) {
-      if (k <= line.length) return docPos(documentOffset(line, k, assoc));
-      k -= line.length + 1;
+    // (the line by its start in the text, found by halving: a node's every position read in linear
+    // time)
+    let starts = this.#lineStarts.get(read);
+    if (!starts) {
+      starts = [];
+      let at = 0;
+      for (const line of read.lines) {
+        starts.push(at);
+        at += line.length + 1;
+      }
+      this.#lineStarts.set(read, starts);
     }
-    throw new RangeError(`offset ${offset} past the text of the ${node.kind} at line ${node.startLine}`);
+    // the first line whose end is at or past the offset
+    let lo = 0;
+    let hi = starts.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (offset <= starts[mid]! + read.lines[mid]!.length) hi = mid;
+      else lo = mid + 1;
+    }
+    const line = read.lines[lo];
+    if (!line || offset > starts[lo]! + line.length) throw new RangeError(`offset ${offset} past the text of the ${node.kind} at line ${node.startLine}`);
+    return docPos(documentOffset(line, offset - starts[lo]!, assoc));
   }
+
+  /** Where each line of a text read starts in its string (`posOf`). */
+  readonly #lineStarts = new WeakMap<ReadText, number[]>();
 
   /** The offset in `node`'s text of document position `pos` on one of its text's lines. */
   offsetOf(node: OurusNode, pos: number): LocalOffset {
@@ -530,7 +550,7 @@ export class OurusDoc {
     const lineStart = Math.max(text.lastIndexOf('\n', caret - 1) + 1, text.lastIndexOf('\r', caret - 1) + 1, mdDocumentStart(text));
     if (!/^[ \t>*+\-0-9.)[\]xX#]*(?:\[[^\r\n]\][ \t]*)?$/.test(text.slice(lineStart, caret))) return false;
     // (read with the other marks as they are after the changes, in both: without them, an unrelated held
-    // node elsewhere reads otherwise, and the two outlines differ for that, B238)
+    // node elsewhere reads otherwise, and the two outlines differ for that)
     const others = { placeholders: mapped.placeholders.filter((pos) => pos !== caret), auto: mapped.auto };
     const held = this.update({ changes: changes.changes, marks: { ...others, placeholders: [...others.placeholders, caret].sort((a, b) => a - b) } });
     if (!held.marks.placeholders.includes(caret)) return false;

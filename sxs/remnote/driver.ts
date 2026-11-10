@@ -364,6 +364,9 @@ export function remnoteDriver(setup: Setup): Driver {
     },
 
     async load(page: Page, doc) {
+      // (a page RemNote reloaded since, after a write it took for a database error: its globals not up
+      // yet, or the tab not in test mode; brought up again as `open` does, else every load after it fails)
+      if (!(await page.evaluate(() => typeof (window as any).writeGuarantee === 'function').catch(() => false))) await this.open(page);
       // (what the last test left open closed first: a key typed on a selection of rems, after a drop,
       // is a shortcut of the selection's, and a menu it opens takes the caret this load places)
       await page.keyboard.press('Escape');

@@ -85,7 +85,7 @@ export function quoteTextBefore(doc: OurusDoc, node: OurusNode, text: OurusAtom,
   }
 }
 
-/** Where quote atom `text`'s first `>` is (node `node`'s), past the spaces it may be indented by: its start, for the keys (B65, B201). */
+/** Where quote atom `text`'s first `>` is (node `node`'s), past the spaces it may be indented by: its start, for the keys. */
 export function quoteLead(ctx: CommandContext, node: OurusNode, text: OurusAtom): number {
   const { quote } = quoteLine(ctx, { node, text, offset: 0, to: 0 }, 0);
   return quote ? ctx.doc.offsetOf(node, ctx.doc.mdTree.quoteMarker(quote).from) : 0;
@@ -324,7 +324,7 @@ function itemAfter(ctx: CommandContext, at: QuoteAt, item: MdBlockAt, outer: rea
 
 /**
  * `enterInQuote: split` (the outliners'): at its start, before its `>`, an empty node above it (rule 6);
- * else it splits at the caret, the spaces there as `enterSplitSpace` says (B200; right after a line's
+ * else it splits at the caret, the spaces there as `enterSplitSpace` says (right after a line's
  * `>`, those before the caret are its markup, and go, the `>` staying), the rest of its line a
  * paragraph after it (an item after an item: its first child where it has children and
  * `enterMidItem: child` says so, or at its end; else its next sibling, taking them), an empty one at
@@ -400,7 +400,16 @@ export function joinLineInQuote(ctx: CommandContext, at: QuoteAt, forward: boole
   // at a line's start it joins the line above, its `> ` going with the break (as the apps' blocks hold
   // the line, lazy: Fence43); on an empty line right after its `> `, the line goes
   const mark = pastQuoteMarker(ctx, at, here, true);
-  if (offset === start) return ctx.apply(ctx.draft().setText(node, text.splice(start - 1, mark)).setCaret(node, start - 1, -1));
+  if (offset === start) {
+    // (a held space starting the line, mid-line now: a space as any, its mark out; an empty line's
+    // placeholder, the line gone, out with it)
+    const joined = text.splice(start - 1, mark);
+    let lead = start - 1;
+    while (joined.text[lead] === ' ' || joined.text[lead] === '\t') lead++;
+    const held = joined.marks.placeholders.filter((p) => p >= start - 1 && (p < lead || (p === lead && joined.marks.hasEmptyNodeAt(p))));
+    const settled = held.length ? joined.withMarks({ placeholders: joined.marks.placeholders.filter((p) => !held.includes(p)) }) : joined;
+    return ctx.apply(ctx.draft().setText(node, settled).setCaret(node, start - 1, -1));
+  }
   if (offset !== mark || !here.quote || trimMd(s.slice(offset, end)) !== '') return null;
   return ctx.apply(ctx.draft().setText(node, text.splice(start - 1, offset)).setCaret(node, start - 1, -1));
 }
@@ -423,7 +432,7 @@ export function breakInQuote(ctx: CommandContext, at: QuoteAt): OurusResult | nu
 /**
  * Lines put into a quote read as an atom at the caret (Shift-Enter's empty one, plain paste's), each
  * after a `>`, as the quote's; `lazy`, as they are. A line in what the caret's line is in, as far as
- * the caret: its nested quotes' `>`s and its items' markers as spaces (B58, as Obsidian has it); the
+ * the caret: its nested quotes' `>`s and its items' markers as spaces (as Obsidian has it); the
  * quote's `> ` alone where the caret's line is lazy, or has the quote's `>` alone, or a `>` with no
  * blank after it before an item's marker or text (`>- a`), whose columns a new line wouldn't keep:
  * its `>` would take a blank the line before has none of; or where the line so doesn't write.
@@ -497,7 +506,7 @@ export function joinIntoQuote(ctx: CommandContext, above: OurusNode, quote: Ouru
   const read = ctx.doc.textOf(node);
   if (!(read instanceof OurusProse)) return null;
   // (before the block id that ends the quote, which ends it still)
-  // (a quote's `^x` a block id only in a flavor that has them: elsewhere text, B33)
+  // (a quote's `^x` a block id only in a flavor that has them: elsewhere text)
   const end = ctx.doc.mdTree.flavor.has('blockIds') ? blockIdsOf(quote).find((b) => !b.carried && b.partTo === quote.text.length) : undefined;
   const at = end && !end.carried ? end.partFrom : quote.text.length;
   const draft = ctx.draft();
@@ -514,7 +523,7 @@ export function joinIntoQuote(ctx: CommandContext, above: OurusNode, quote: Ouru
   // (its block ids as a join takes them: moved to the quote, or merged into its)
   const moved = draft.joinBlockIds(above, quote, node, lower);
   const rest = moved ? lower : (withoutBlockIds(lower) as OurusProse);
-  draft.setText(above, quote.splice(at, at, rest.text).withBlockIdLines(moved && rest.blockIdLines.length ? rest.blockIdLines : quote.blockIdLines));
+  draft.setText(above, quote.splice(at, at, rest.marks).withBlockIdLines(moved && rest.blockIdLines.length ? rest.blockIdLines : quote.blockIdLines));
   const children = [...node.children];
   if (children.length) {
     draft.remove(children);

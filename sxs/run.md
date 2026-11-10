@@ -88,7 +88,10 @@ node sxs/probe.ts all Enter28                # the same: a case's ID alone (IDs 
 
 Options are the case's (`--flavor=obsidian`, `--clipboard=`, `--tags=free-form`); `--spec` prints the
 probe as a case's blocks, ourus's states drawn, to paste into a spec file; `--json` everything as
-data. Each run's probe file, logs and runs are kept in `.sxs/probe/<time>/`. With the pool warm, all 18
+data. Each run's probe file, logs and runs are kept in `.sxs/probe/<time>/`. With
+`SXS_CLIPBOARD_HTML=1` in the environment, a clipboard read back from an app in a browser is its
+`text/plain` and `text/html` as JSON, to see what an app writes beside its text (the comparison then
+disagrees; read the runs' `.json`). With the pool warm, all 18
 setups take some 25 seconds.
 
 ## The command line
@@ -271,7 +274,9 @@ Later runs take the window over, so a run of one example takes under a second. S
 4. **Playing** ([`run.ts`](run.ts)). For each example the driver loads the starting state into a
    fresh document (through whatever the app offers: a plugin API, its stores), and the runner checks
    that the app holds it as given, since an app that rewrites its input (trimming, normalizing)
-   would make the test meaningless. Then the actions are played as a user plays them, with the app's
+   would make the test meaningless: one that holds it otherwise after a second load skips the example
+   there ("the app holding its start otherwise"), kept skipped by a rejudge, as an app left with no
+   focus is. Then the actions are played as a user plays them, with the app's
    keys; text is typed a character at a time; pastes put the clipboard first: exactly the formats
    the case gives (its `clipboard`, keyed by MIME type: [the spec's README](../spec/README.md)),
    through a copy event (`setData` takes any type, and a real Ctrl-V's paste event has them all), and
@@ -351,9 +356,13 @@ Later runs take the window over, so a run of one example takes under a second. S
    with its reason.
 
 An example still playing 300 s after it began (after it took its browser's clipboard, where it uses it;
-`OURUS_SXS_STUCK_S` changes it) is taken for stuck, a call of the app's that never returns: it is an
-error, its worker's window is destroyed (which gives the clipboard back to the other runs waiting for
-it), and the worker is retired while the others go on.
+`OURUS_SXS_STUCK_S` changes it) is taken for stuck, a call of the app's that never returns: its
+worker's window is destroyed (which gives the clipboard back to the other runs waiting for it), the
+worker retired, and a worker in a fresh window takes its place (as many times as the run has workers);
+the example is played once more, and only stuck again is it an error. Under a machine busy with every
+app's run an app's page can stall at any example that alone plays (Tine, WorkFlowy, AFFiNE, 2026-11-15).
+An example the app reloaded its page under (RemNote, after a write it takes for a database error) is
+played once more too, as one whose promise V8 collected is.
 A run that finishes no example for 8 minutes, once its first worker is ready (waiting in line for room
 or a window before isn't counted; `OURUS_SXS_STALL_MIN` changes it), is taken for hung: it says what
 each worker is on and exits, writing nothing, and the pool destroys its windows. A run slow under load

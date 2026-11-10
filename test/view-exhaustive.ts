@@ -40,7 +40,7 @@ import { executeCommand, leavesZoom, type OurusCommand, OurusDeferred, OurusFail
 import type { OurusDoc, OurusNode } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
 import type { ChangeSpec } from '../src/text/index.ts';
-import { parseWithMarks, drawDoc, readDrawing, readSpecFile, specConfig, specFiles, resultStatus, allNodes } from './lib/index.ts';
+import { parseWithMarks, drawDoc, readDrawing, readSpecFile, specConfig, specFiles, resultStatus, allNodes, staleBaseline } from './lib/index.ts';
 
 const COMMANDS: readonly OurusCommand[] = [
   { type: 'enter' },
@@ -309,4 +309,8 @@ function report(seen: readonly string[], buffers: number, runs: number): void {
     console.log(`\nmore than the baseline: ${rose.join('; ')}`);
     process.exitCode = 1;
   }
+  // (fewer than it, or another corpus, on the run it was counted on: a baseline left behind)
+  const stale = process.env.VIEW_UPDATE ? [] : staleBaseline(baseline, corpus, groups, limit === Infinity, 'VIEW_UPDATE');
+  for (const line of stale) console.log(`\n${line}`);
+  if (stale.length) process.exitCode = 1;
 }

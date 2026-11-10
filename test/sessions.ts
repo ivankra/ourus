@@ -25,7 +25,7 @@
 
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
-import { CASES_PER_GROUP, generatedStarts, readBaseline, recordUntriaged, sessionFailures, sessionWheel, shrinkSession, writeBaseline, type SessionFound, type UntriagedCase } from './lib/index.ts';
+import { CASES_PER_GROUP, generatedStarts, readBaseline, recordUntriaged, staleBaseline, sessionFailures, sessionWheel, shrinkSession, writeBaseline, type SessionFound, type UntriagedCase } from './lib/index.ts';
 
 const here = resolve(import.meta.dirname, '..');
 const examples = Number(process.env.SESSIONS_EXAMPLES ?? 2);
@@ -72,6 +72,8 @@ for (let n = 0; n < total; n++) {
 }
 
 console.log(`${total} sessions of ${length} actions on ${starts.length} notes`);
+// (the run the baseline was counted on: no knob changing its corpus)
+const counted = process.env.SESSIONS === undefined && process.env.SESSIONS_SEED === undefined;
 const baselineFile = join(here, 'test/sessions.baseline.json');
 const baseline = readBaseline(baselineFile);
 const sameCorpus = baseline?.corpus === hash;
@@ -85,9 +87,11 @@ for (const [key, group] of [...groups].sort((x, y) => y[1].runs - x[1].runs || (
 }
 for (const failure of fails) console.log(`FAIL ${failure}`);
 if (rose.length) console.log(`\nmore failures than the baseline: ${rose.join('; ')}`);
-if (baseline && !sameCorpus) console.log('\nthe sessions changed since the baseline: its counts are not held to it; SESSIONS_UPDATE=1 records them');
+if (baseline && !sameCorpus && !counted) console.log('\nthe sessions changed since the baseline: its counts are not held to it; SESSIONS_UPDATE=1 records them');
+const stale = updating ? [] : staleBaseline(baseline, hash, groups, counted, 'SESSIONS_UPDATE');
+for (const line of stale) console.log(`\n${line}`);
 if (updating) {
   writeBaseline(baselineFile, hash, groups);
   console.log(`baseline updated: ${baselineFile}; ${recordUntriaged('sessions', cases)} cases kept untriaged (test/bugs-untriaged.json)`);
 }
-process.exitCode = fails.length === 0 && rose.length === 0 ? 0 : 1;
+process.exitCode = fails.length === 0 && rose.length === 0 && stale.length === 0 ? 0 : 1;

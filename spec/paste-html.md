@@ -528,3 +528,527 @@ clipboard:
 let a = 1;┃
 ```
 ````
+
+## PasteHtml20
+
+A loose task as GFM renders it, its checkbox before the item's paragraph: a task, its text that
+paragraph's (B424).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: |-
+    other
+    done
+  text/html: '<ul><li><p>other</p></li><li><input type="checkbox" checked="" disabled="" /> <p>done</p></li></ul>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+- other
+- [x] done┃
+```
+
+## PasteHtml21
+
+A rule alone in an item: written `***`, which a `-` bullet and it don't read as one rule (B425).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<ul><li><hr></li><li>next</li></ul>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+- ***
+- next┃
+```
+
+## PasteHtml22
+
+A link title holding `&amp;copy;`: the entity decoded once, its `&` escaped (B426).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<p><a href="u" title="&amp;copy;">x</a></p>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+[x](u "\&copy;")┃
+```
+
+## PasteHtml23
+
+A link destination with two spaces: both kept, in angle brackets (B427).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<p><a href="x&#32;&#32;y">x</a></p>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+[x](<x  y>)┃
+```
+
+## PasteHtml24
+
+A link destination with parentheses nested 33 deep, past what a reader follows: in angle brackets (B428).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<p><a href="a(((((((((((((((((((((((((((((((((b)))))))))))))))))))))))))))))))))">link</a></p>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+[link](<a(((((((((((((((((((((((((((((((((b)))))))))))))))))))))))))))))))))>)┃
+```
+
+## PasteHtml25
+
+A table nested in a cell: its cells apart by a space (B429).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<table><tr><td>a<table><tr><td>b</td><td>c</td></tr></table>d</td></tr></table>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+| a b c d |
+| --- |┃
+```
+
+## PasteHtml26
+
+A cell with `rowspan="0"`: it spans its row group's rest (B430).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<table><tr><td rowspan="0">a</td><td>b</td></tr><tr><td>c</td></tr></table>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+| a | b |
+| --- | --- |
+|  | c |┃
+```
+
+## PasteHtml27
+
+A head cell spanning two rows: its span ends with the head (B431).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<table><thead><tr><th rowspan="2">A</th><th>B</th></tr></thead><tbody><tr><td>C</td><td>D</td></tr></tbody></table>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+| A | B |
+| --- | --- |
+| C | D |┃
+```
+
+## PasteHtml28
+
+`font-style: inherit` inside italic: italic still (B435).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<div style="font-style:italic"><p><span style="font-style:inherit">x</span></p></div>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+*x*┃
+```
+
+## PasteHtml29
+
+`text-decoration: none` inside struck text: struck still, a decoration drawn through its descendants (B436).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<p><span style="text-decoration:line-through">a<span style="text-decoration:none">b</span>c</span></p>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+~~abc~~┃
+```
+
+## PasteHtml30
+
+A table cell's bold style (B437).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<table><tr><td style="font-weight:bold">bold</td></tr></table>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+| **bold** |
+| --- |┃
+```
+
+## PasteHtml31
+
+A list's bold style, its items' (B438).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<ul style="font-weight:bold"><li>x</li></ul>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+- **x**┃
+```
+
+## PasteHtml32
+
+A link's own bold style, around the link (B439).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<p><a style="font-weight:bold" href="u">x</a></p>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+**[x](u)**┃
+```
+
+## PasteHtml33
+
+A bold tag around blocks: each block's text bold (B440).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<b><p>a</p><p>b</p></b>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+**a**
+
+**b**┃
+```
+
+## PasteHtml34
+
+A link around blocks: each block's text the link's (B441).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<a href="u"><p>a</p><p>b</p></a>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+[a](u)
+
+[b](u)┃
+```
+
+## PasteHtml35
+
+Obsidian: ourus's own HTML of a callout, pasted without its Markdown: a callout again, its type and
+title its first line (B373).
+
+```yaml
+tags: rare
+flavor: obsidian
+clipboard:
+  text/plain: "Title"
+  text/html: '<div class="callout" data-callout="note"><div class="callout-title">Title</div><div class="callout-content"><p>body text</p></div></div>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+> [!note] Title
+> body text┃
+```
+
+## PasteHtml36
+
+Obsidian: a wiki link and inline math as ourus renders them: their syntax again (B374, B375).
+
+```yaml
+tags: rare
+flavor: obsidian
+clipboard:
+  text/plain: "a link b x"
+  text/html: '<p>a <a data-href="link" href="link" class="internal-link">link</a> b <span class="math math-inline">x</span></p>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+a [[link]] b $x$┃
+```
+
+## PasteHtml37
+
+Bold of two spellings side by side, an empty span between: one run (B432).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<p><b>a</b><span></span><span style="font-weight:bold">b</span></p>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+**ab**┃
+```
+
+## PasteHtml38
+
+Code side by side, one in a plain wrapper: one code span (B432).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<p><code>a</code><span><code>b</code></span></p>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+`ab`┃
+```
+
+## PasteHtml39
+
+Bold turned off inside a bold run, its blanks outside the bold with it (B433).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<p><b>a<span style="font-weight:normal"> b </span>c</b></p>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+**a** b **c**┃
+```
+
+## PasteHtml40
+
+Bold turned off at a run's start: no empty run before it (B433).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<p><b><span style="font-weight:normal">a</span>b</b></p>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+a**b**┃
+```
+
+## PasteHtml41
+
+Bold edged by em spaces: the spaces outside it (B434).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "x"
+  text/html: '<p><b> x </b></p>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+ **x** ┃
+```
+
+## PasteHtml42
+
+Italic inside a bold's end and after it: the second italic spelled with underscores, which a
+`***` closing both can't swallow (B459).
+
+```yaml
+tags: rare
+flavor: gfm
+clipboard:
+  text/plain: "abc"
+  text/html: '<p><b>a<i>b</i></b><i>c</i></p>'
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+**a*b***_c_┃
+```

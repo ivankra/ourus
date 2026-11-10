@@ -121,9 +121,15 @@ export function moveRefused(ctx: CommandContext, run: readonly OurusNode[], pare
     };
     if (bullet && run.some(rule)) return { reason: 'not-expressible', why: "the item's bullet and its rule would read as one rule" };
   }
-  const joins = joinsAround(ctx.doc, run.map((n) => ctx.doc.textOf(n)), items, parent, after, next);
+  // (the texts a `---` of which could be at column 0: not an item's, which stays one, nor a quote's)
+  const atColumn0 = run.filter((n) => n.kind !== 'quote' && !(n.kind === 'item' && becomes !== 'paragraph'));
+  // (the narrowest content column the last item can have, lined up with the item it goes after, or as
+  // wide as its own marker, where it keeps its kind: indented code shallower than it is no line of it)
+  const width = (n: OurusNode): number => n.block!.attrs.contentColumn! - n.block!.attrs.markerColumn!;
+  const itemColumn = last.kind === 'item' && after?.kind === 'item' && parent.kind === 'root' ? after.block!.attrs.markerColumn! + Math.min(width(last), width(after)) : undefined;
+  const joins = joinsAround(ctx.doc, atColumn0.map((n) => ctx.doc.textOf(n)), items, parent, after, next, { itemColumn, moved: run });
   if (joins) return { reason: 'not-expressible', why: joins };
-  if (next && unclosed(ctx.doc, last)) return { reason: 'not-expressible', why: `what follows would be in the moved ${ctx.doc.textOf(last)!.type === 'fenced_code' ? 'code' : 'block'}, which nothing closes` };
+  if (next && unclosed(ctx.doc, last) && last.kind !== 'item') return { reason: 'not-expressible', why: `what follows would be in the moved ${ctx.doc.textOf(last)!.type === 'fenced_code' ? 'code' : 'block'}, which nothing closes` };
   // (an item becoming a paragraph: its text one, or an atom's lines with nothing under them)
   if (!block && parent.kind !== 'item' && becomes === 'paragraph') {
     for (const n of run) {
@@ -176,7 +182,8 @@ export function unholdable(doc: OurusDoc, kind: OurusNode['kind'], parent: Ourus
   if (block && !doc.adoptsLists(parent)) return `a ${parent.kind} holds no nodes`;
   if (after?.kind === 'heading' && kind !== 'heading') return `after a heading, a ${kind} would be in its section`;
   const above = after?.lastDescendant;
-  if (above?.parent === parent && unclosed(doc, above)) return `the ${kind} would be in the ${doc.textOf(above)!.type === 'fenced_code' ? 'code' : 'block'} above it, which nothing closes`;
+  // (an item's own fence ends with the item: what follows it is no line of it)
+  if (above?.parent === parent && above.kind !== 'item' && unclosed(doc, above)) return `the ${kind} would be in the ${doc.textOf(above)!.type === 'fenced_code' ? 'code' : 'block'} above it, which nothing closes`;
   return null;
 }
 
@@ -186,16 +193,30 @@ export function unholdable(doc: OurusDoc, kind: OurusNode['kind'], parent: Ourus
  * lines; at the top level, in a flavor with front matter, a `---` line of theirs closing a `---` the
  * document starts with, or theirs first, the document's later one closing it (`texts`: their texts).
  */
-export function joinsAround(doc: OurusDoc, texts: readonly (OurusText | null)[], lastItem: boolean, parent: OurusNode, after: OurusNode | null, next: OurusNode | null): string | null {
-  if (lastItem && next && (doc.textOf(next) as OurusAtom | null)?.type === 'indented_code') return 'the indented code below would be the item\'s';
+export function joinsAround(doc: OurusDoc, texts: readonly (OurusText | null)[], lastItem: boolean, parent: OurusNode, after: OurusNode | null, next: OurusNode | null, opts: { readonly itemColumn?: number | undefined; readonly moved?: readonly OurusNode[] } = {}): string | null {
+  if (lastItem && next && (doc.textOf(next) as OurusAtom | null)?.type === 'indented_code' && !(opts.itemColumn !== undefined && leadingColumns(doc.text.slice(doc.mdTree.starts[next.startLine]!, doc.mdTree.ends[next.startLine]!)) < opts.itemColumn)) return 'the indented code below would be the item\'s';
   if (parent.kind !== 'root' || !doc.mdTree.flavor.blockStarts.some((b) => b.name === 'frontmatter')) return null;
   const fence = /^---[ \t]*$/;
   const lines = (from: number, to: number): string[] => Array.from({ length: to - from }, (_, k) => doc.text.slice(doc.mdTree.starts[from + k]!, doc.mdTree.ends[from + k]!));
+  // (the document's lines but the moved nodes', which go with them: a rule moved first is no second `---` of its own)
+  const moved = (i: number): boolean => !!opts.moved?.some((n) => n.startLine <= i && i <= n.endLine);
+  const staying = (): string[] => lines(0, doc.lineCount).filter((_, i) => !moved(i));
   const theirs = texts.flatMap((t) => (t ? t.text.split('\n') : []));
   const opened = after !== null && doc.lineCount > 0 && fence.test(lines(0, 1)[0]!);
   const first = after === null && (parent.children[0]?.startLine ?? 0) === 0 && fence.test(theirs[0] ?? '');
-  if ((opened && theirs.some((l) => fence.test(l))) || (first && (theirs.slice(1).some((l) => fence.test(l)) || lines(0, doc.lineCount).some((l) => fence.test(l))))) return 'a `---` line would close front matter the document would start with';
+  if ((opened && theirs.some((l) => fence.test(l))) || (first && (theirs.slice(1).some((l) => fence.test(l)) || staying().some((l) => fence.test(l))))) return 'a `---` line would close front matter the document would start with';
   return null;
+}
+
+/** The columns of `line`'s leading spaces and tabs, a tab to the next multiple of 4. */
+function leadingColumns(line: string): number {
+  let column = 0;
+  for (const c of line) {
+    if (c === ' ') column++;
+    else if (c === '\t') column += 4 - (column % 4);
+    else break;
+  }
+  return column;
 }
 
 /** Whether `node`'s text is a block of lines its delimiter opens and none closes (a fence with no closing one). */

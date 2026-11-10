@@ -92,12 +92,15 @@ export function duplicateSubtreeCommand(ctx: CommandContext): OurusResult | null
   }
   // each end in the copy of the node it is in
   const end = (pos: number): AnchorSpec | null => {
-    const at = ctx.view.locate(pos);
+    const located = ctx.view.locate(pos);
+    // (past the final line break: the last node's gap, as the nodes acted on are found)
+    const at = located.zone === 'none' && pos === ctx.doc.text.length ? ({ zone: 'gap', owner: ctx.doc.rootNode.lastDescendant } as const) : located;
     if (at.zone === 'gap' || at.zone === 'blockIdLine') {
       const owner = at.zone === 'gap' ? at.owner : at.node;
       const id = ids.get(owner.persistentNode);
       const text = ctx.doc.textOf(owner);
-      return id !== undefined && text ? { ref: id, offset: textEnd(text), assoc: -1 } : null;
+      // (at the copy's text's end, a held empty last line gone from it)
+      return id !== undefined && text ? { ref: id, offset: textEnd(tails.get(owner) ?? text), assoc: -1 } : null;
     }
     if (at.zone !== 'text' && at.zone !== 'frame' && at.zone !== 'marker' && at.zone !== 'prefix') return null;
     const id = ids.get(at.node.persistentNode);

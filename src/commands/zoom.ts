@@ -114,6 +114,6 @@ export function leavesZoom(view: OurusView, next: OurusDoc): boolean {
   if (next.node(view.zoom)) return view.escape(next) !== null;
   const removal = deleteSubtreeCommand(new CommandContext(view.withSelection({ anchor: 0, head: 0 }), [view.zoom]));
   // (the removal's text, and nothing else changed or made outside: the same text can hold another
-  // outline, a held empty paragraph, B219)
+  // outline, a held empty paragraph)
   return !(removal instanceof OurusSuccess) || removal.view.doc.text !== next.text || view.escape(next, true) !== null;
 }

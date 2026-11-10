@@ -156,7 +156,7 @@ const at = doc.locateRaw(pos);              // in a text, a frame, a marker, a p
     copy puts on the clipboard); where a node's own Markdown starts (an item at its marker, a quote
     at its `>`); the range of a node's lines, its descendants' included.
 
-  - `clipboardFragment(markdown: string, config, ours?: boolean): { doc, inline } | null`, `clipboardSource(lines, config, ours?)`, `renderedHtml(markdown, from: OurusDoc, text?: boolean)`<br>
+  - `clipboardFragment(markdown: string, config, ours?: boolean): { doc, inline } | null`, `clipboardSource(lines, config, ours?)`, `renderedHtml(markdown, from: OurusDoc, text?: boolean | 'firstLine')`<br>
     A clipboard's Markdown read back as a document of its own, as paste reads it: its blank lines at
     either end and the indentation all its lines share off, a fence copied from a list or a quote
     given its code's indentation back where its closing would close it so, a block left open closed

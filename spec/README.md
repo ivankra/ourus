@@ -499,9 +499,9 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
     `text`, `block` or `unwrap`), `copyAtCaret` (`node`, the default, or `host`), `copySelection` (`text`, the
     default, or `nodes`), `pasteSeams` (`closed`, the default, or `open`), `pasteOverSelection` (`replace`, the default, or
     `ignore`: a paste of nodes only), `pasteOverNodes` (`replace`, the default, `after` or `nothing`), `pasteLines` (`text`, the
-    default, or `items`), `pastePlainLines` (`text`, the default, `items`, `enter` or `host`), `pasteAtTextStart` (`after`, the default, or `before`), `pasteOnParent`
+    default, or `items`), `pastePlainLines` (`text`, the default, `items`, `enter` or `host`), `pasteAtTextStart` (`before`, the default, or `after`), `pasteOnParent`
     (`children`, the default, or `after`), `pasteParagraphList` (`siblings`, the default, or
-    `children`), `pasteListForm` (`destination`, the default, or `own`), `markup`
+    `children`), `pasteListForm` (`destination`, the default, or `own`), `pasteIndentedCode` (`code`, the default, or `dedent`), `markup`
     (`text`, the default, or `decorated`), and the quirks, an app's mechanics rather than a rule,
     named by the apps: `quirkEnterMidHeading` (`default` or `workflowy`), `quirkPasteCaret`
     (`default`, `roam` or `athens`), `quirkPasteText` (`default` or `dynalist`).

@@ -16,6 +16,8 @@ import { OurusFailed, OurusRejected, OurusSuccess } from './types.ts';
 function nodeAt(view: OurusView, pos: number): OurusNode | null {
   const at = view.locate(pos);
   if (at.zone === 'gap') return at.owner;
+  // (past the final line break: the last node, whose gap that is, as the nodes acted on are found)
+  if (at.zone === 'none' && pos === view.doc.text.length && view.doc.rootNode.lastDescendant !== view.doc.rootNode) return view.doc.rootNode.lastDescendant;
   return 'node' in at ? at.node : null;
 }
 

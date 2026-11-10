@@ -290,3 +290,8 @@ test('blocks selected whole draw as the spec draws a subtree selection, `⟦sele
   assert.deepEqual(readOutline(old)?.selected, [1, 3]);
   assert.equal(draw(readOutline(old)!, { bars: true }), old);
 });
+
+test('a selection over blocks that would leave one unselected between them is no block selection: skipped, an app selects a run', () => {
+  assert.equal(project('-┃«\n- -\n  -»\n', 'gfm', { blockSelection: true }).caretLost, 'a selection of blocks with one unselected between');
+  assert.deepEqual(project('- «a\n- b»\n', 'gfm', { blockSelection: true }).outline.selected, [0, 1]);
+});

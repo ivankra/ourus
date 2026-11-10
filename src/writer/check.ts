@@ -51,7 +51,7 @@ function node(doc: OurusDoc, draft: NormalizedDraft, expected: PersistentNode, o
   // (a verbatim block whose lines the draft kept, its body and its count of lines, moved, re-indented or
   // its fence respelled: its lines as read where it was, against as read where it is; the same spelling
   // at another column, or under a fence indented otherwise, can be other code, a tab-led line under a
-  // fence indented one space: B294. A line added or taken, Enter in it, is an edit, checked as text)
+  // fence indented one space. A line added or taken, Enter in it, is an edit, checked as text)
   const had = origin && draft.from.textOf(origin);
   const lines = (t: OurusText): number => t.text.split('\n').length;
   if (origin && had && want && want.type === had.type && want.body === had.body && lines(want) === lines(had)) {

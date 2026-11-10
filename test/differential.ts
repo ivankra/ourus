@@ -100,6 +100,8 @@ async function load(root: string): Promise<Core> {
       const { orderedLists, ...rest } = given;
       given = { ...rest, listNumbers: orderedLists === 'shift' ? 'keep' : orderedLists };
     }
+    // (an option newer than the tree: left out, the tree doing what it did before the option)
+    if (config.has) given = Object.fromEntries(Object.entries(given).filter(([key]) => key === 'orderedLists' || key === 'listNumbers' || key === 'autoClose' || config.has(key)));
     if (!Array.isArray(given.autoClose) || config.has?.('autoClose')) return given;
     const { autoClose, ...rest } = given as { autoClose: string[] };
     return { ...rest, closeBackticks: !autoClose.length ? 'none' : autoClose.includes('`') ? 'all' : 'fences' };

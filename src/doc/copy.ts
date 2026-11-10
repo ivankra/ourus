@@ -65,17 +65,28 @@ export function markdownOf(doc: OurusDoc, from: number, to: number): string {
   const opens = (p: MdPrefixPiece): number => (p.kind === 'marker' ? tree.markerFrom(p.container) : skipSpaces(text, p.from, p.to, 1));
   // (but a quote that is a node's lines as written, `quotes: atom`: its `>`s are that text's)
   const own = doc.config.quotes === 'atom' ? doc.nodeAtLine(lo)?.persistentNode.textQuote : null;
-  const holding = new Set(first.prefix.filter((p) => (p.container.line < lo || opens(p) < from) && p.container.lastLine >= hi && p.container.block !== own).map((p) => p.container.block));
+  // (and not the item whose text the copy starts in where it goes on past that text, into the item's
+  // children: their lines keep their indentation under it, so the copy pasted back where a cut left
+  // the caret puts them back under it)
+  const start = doc.nodeAtLine(lo);
+  const startItem = start?.kind === 'item' && hi > start.textLastLine ? start.persistentNode.block : null;
+  const holding = new Set(first.prefix.filter((p) => (p.container.line < lo || opens(p) < from) && p.container.lastLine >= hi && p.container.block !== own && p.container.block !== startItem).map((p) => p.container.block));
   const held = (line: MdLine): number => line.prefix.reduce<number>((start, piece) => (holding.has(piece.container.block) ? Math.max(start, piece.to) : start), line.from);
   // indentation the first line loses past what holds the copy (an item indented past its parent's
   // text, copied from its marker), the lines after it lose too: they keep their columns to it
   const column = (line: MdLine, at: number): number => advanceColumns(text, line.from, at, 0);
   const lead = /^[ \t]+$/.test(text.slice(held(first), from)) ? column(first, from) - column(first, held(first)) : 0;
   const out: string[] = [];
+  // (until a line starts further left than that indentation, a block of the copy's not inside the
+  // first's, `  > body⏎⏎- > a⏎  b`: from there its lines keep theirs)
+  let losing = lead;
   for (let i = lo; i <= hi; i++) {
     const line = tree.line(i);
     let start = held(line);
     let piece: string;
+    const blanks = skipSpaces(text, start, line.to, 1);
+    if (i > lo && losing > 0 && blanks < line.to && column(line, blanks) - column(line, start) < losing) losing = 0;
+    const lead = losing;
     if (i === lo) piece = text.slice(Math.max(start, from), i === end.index ? Math.min(to, line.to) : line.to);
     else {
       // (a tab partly within the lead leaves spaces for the rest of its width)
@@ -85,7 +96,7 @@ export function markdownOf(doc: OurusDoc, from: number, to: number): string {
       piece = ' '.repeat(Math.max(0, col - base - lead)) + text.slice(start, i === end.index ? Math.min(to, line.to) : line.to);
     }
     // (a tab a container's prefix took part of, `>→`: the rest of its width, in spaces, which the tab
-    // at column 0 would span differently, B93)
+    // at column 0 would span differently)
     const partial = line.prefix.find((p) => holding.has(p.container.block) && p.to === start && p.partialTab);
     if (partial && text[start] === '\t' && piece.startsWith('\t') && (i !== lo || from <= start)) piece = ' '.repeat(advanceColumns(text, line.from, start + 1, 0) - partial.toColumn) + piece.slice(1);
     // (a line the copy takes whole, blank there, is empty; part of one, spaces between words, is as it

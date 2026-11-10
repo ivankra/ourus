@@ -24,7 +24,7 @@ export function validPlaceholder(tree: MdTree, pos: number): boolean {
   if (pos === text.length || text[pos] === '\n' || text[pos] === '\r') {
     if (pos !== line.to) return false;
     // (a line that starts its block, an empty node's: Markdown holds an empty line inside a text in none;
-    // but a paragraph's last, the empty line Shift-Enter leaves at a text's end, until it settles: B23)
+    // but a paragraph's last, the empty line Shift-Enter leaves at a text's end, until it settles)
     // (a paragraph with text above the line, an empty one's lines all empty no text)
     const heldLast = (leaf: NonNullable<typeof line.leaf>): boolean => leaf.block.type === 'paragraph' && leaf.lastLine === line.index && !blank(text.slice(tree.line(leaf.line).contentFrom, tree.line(leaf.line).to));
     if (line.leaf && line.leaf.line !== line.index && !heldLast(line.leaf)) return false;
@@ -52,7 +52,7 @@ export function validAuto(text: string, pos: number): boolean {
     return at < 0 || text[at] === '\n' || text[at] === '\r';
   }
   // (a backslash of ours escapes the punctuation after it; before anything else, a space typed after
-  // it, it escapes nothing, and is the user's text: B295)
+  // it, it escapes nothing, and is the user's text)
   if (char === '\\') return pos + 1 < text.length && /[!-\/:-@[-`{-~]/.test(text[pos + 1]!);
   return '`~)]}$%->'.includes(char);
 }

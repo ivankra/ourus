@@ -10,21 +10,25 @@ import { escapeParagraph } from './escapes.ts';
 
 /**
  * Markdown copied from `from`, rendered as it read there: what copy puts on the clipboard as HTML.
- * `text`: copied from inside one node's text, the paragraph text it was (what would start a block
+ * `text`: copied from inside one node's text, the paragraph text it was (`firstLine`: from inside one
+ * node into another, its first line so, the lines after it as they read) (what would start a block
  * escaped: `# Heading` from `before # Heading after` no heading); else blocks, read after a blank line
  * (`---` from mid-note no front matter). With the note's link and footnote definitions after it, and
  * a footnote definition copied without a reference to it as its content: GFM renders none such.
  */
-export function renderedHtml(markdown: string, from: OurusDoc, text = false): string {
+export function renderedHtml(markdown: string, from: OurusDoc, text: boolean | 'firstLine' = false): string {
   const config = from.config;
   let source = markdown;
   if (text) {
-    const lines = markdown.split(/\r\n|\n|\r/);
+    // (`firstLine`: text copied from inside one node into another, its first line a text's, its lines
+    // after it the blocks they are)
+    const all = markdown.split(/\r\n|\n|\r/);
+    const lines = text === 'firstLine' ? all.slice(0, 1) : all;
     const spelled = escapeParagraph(from.mdTree.flavor, 'paragraph', false, lines, lines.map(() => false), undefined, false);
     const escaped = [...(spelled?.lines ?? lines)];
     // (a backslash at each markup escape it asks for, from a line's last)
     for (const e of [...(spelled?.markup ?? [])].reverse()) escaped[e.line] = escaped[e.line]!.slice(0, e.at) + '\\' + escaped[e.line]!.slice(e.at);
-    source = escaped.join('\n');
+    source = [...escaped, ...all.slice(lines.length)].join('\n');
   }
   // (a footnote definition at the copy's top level that nothing in it refers to: its content, from the last)
   const copy = OurusDoc.parse(source, { config });
@@ -46,7 +50,23 @@ export function renderedHtml(markdown: string, from: OurusDoc, text = false): st
     defs.push(from.markdownOf(start, end));
     reached = end;
   }
-  return OurusDoc.parse(`\n${source}${defs.length ? `\n\n${defs.join('\n\n')}\n` : ''}`, { config }).mdTree.renderHtml();
+  const html = OurusDoc.parse(`\n${source}${defs.length ? `\n\n${defs.join('\n\n')}\n` : ''}`, { config }).mdTree.renderHtml();
+  return text === true ? keptSpaces(markdown, html) : html;
+}
+
+/**
+ * A phrase copied from within one text whose spaces its rendering loses (only spaces, or spaces it
+ * starts or ends with): a span keeping them, `white-space: pre-wrap`, its rendering in it, as Lexical,
+ * Tana and WorkFlowy write their copy; one of a line, rendered as a paragraph, else as it is.
+ */
+function keptSpaces(markdown: string, html: string): string {
+  const lead = /^[ \t]*/.exec(markdown)![0];
+  const trail = lead.length === markdown.length ? '' : /[ \t]*$/.exec(markdown)![0];
+  if (!lead && !trail) return html;
+  if (lead.length === markdown.length) return `<span style="white-space: pre-wrap">${markdown}</span>`;
+  const p = /^<p>([^]*)<\/p>\n?$/.exec(html);
+  if (!p || /[\r\n]/.test(markdown)) return html;
+  return `<span style="white-space: pre-wrap">${lead}${p[1]}${trail}</span>`;
 }
 
 /**

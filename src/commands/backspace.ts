@@ -6,11 +6,12 @@
 import { OurusProse, OurusAtom, blockIdsOf, type Located, type OurusNode, nameOf } from '../doc/index.ts';
 import type { OurusDraft } from '../writer/index.ts';
 import { isSpaceOrTab, lineOf } from '../text/index.ts';
-import { type CommandContext } from './context.ts';
+import { CommandContext } from './context.ts';
+import { deleteSubtreeCommand } from './delete-subtree.ts';
 import { joinIntoQuote, joinLineInQuote, joinQuoteUp, quoteAtomAt } from './quote.ts';
 import { codeAt, editInCode, joinInCode, onDelimiterLine } from './code.ts';
 import { deleteEmptyPair, pairPlace } from './typing.ts';
-import { childrenRefused, deleteHeldSpace, hiddenSpacesAt, inMarkup, leaveList, pastPrefix, textActedOnAt, textEnd, textStart, unnumberItem, visiblePreceding, withTextlessParents } from './util.ts';
+import { childrenRefused, deleteHeldSpace, hiddenSpacesAt, inMarkup, leaveList, pastPrefix, pastPrefixAt, textActedOnAt, wholeBlocksSelection, textEnd, textStart, unnumberItem, visiblePreceding, withTextlessParents } from './util.ts';
 import type { OurusResult } from './types.ts';
 import { OurusDeferred, OurusRejected } from './types.ts';
 
@@ -87,7 +88,7 @@ export function deleteSoftLineBackwardCommand(ctx: CommandContext): OurusResult 
  * its marker, its list split there; `text`, its text without the checkbox, the caret at its start.
  */
 function unwrapTask(draft: OurusDraft, node: OurusNode, text: OurusProse): OurusDraft {
-  // (a paragraph's text, whatever its lines read as alone: a `- ` line below it no underline, escaped, B81)
+  // (a paragraph's text, whatever its lines read as alone: a `- ` line below it no underline, escaped)
   return draft.convert(node, 'paragraph').setText(node, text.type === 'heading' && text.heading?.form === 'setext' ? text.retyped('paragraph') : text).setCaret(node, 0, -1);
 }
 
@@ -144,6 +145,12 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
   if (ctx.collapsed && at.zone === 'text' && at.text instanceof OurusAtom && at.text.type === 'blockquote' && at.offset === 0) {
     return (at.node.kind === 'item' && config.backspaceAtItemStart === 'logseq' ? unnumberItem(ctx, at.node, at.text, 0) : null) ?? joinQuoteUp(ctx, at.node, at.text);
   }
+  // at the start of a rule or a table after a block in its container: refused, as Delete refuses to take
+  // one in (no text joins one; the host's join would make a rule a paragraph's setext underline)
+  if (ctx.collapsed && (at.zone === 'text' || at.zone === 'frame') && at.node.kind === 'atom' && at.text instanceof OurusAtom && (at.text.type === 'thematic_break' || at.text.type === 'table') && head === ctx.doc.posOf(at.node, 0, 1)) {
+    const above = visiblePreceding(ctx.view, at.node);
+    if (above && above.kind !== 'root' && !(above === at.node.parent && !ctx.doc.textOf(above))) return new OurusRejected('not-expressible', `can't join the ${nameOf(at.node)} into the text above`);
+  }
   // (right after a later line's `> `: it joins the line above)
   const inQuote = quoteAtomAt(ctx);
   const lineBack = inQuote && joinLineInQuote(ctx, inQuote, false);
@@ -173,8 +180,11 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
   while (first < s.length && isSpaceOrTab(s.charCodeAt(first))) first++;
   // past the line's leading spaces, in the text: the host's (its edit keeps a placeholder where it
   // would empty a node or widen an item's padding), but in an empty pair of backticks
-  if (offset > first) return deleteEmptyPair(ctx, pairPlace(ctx, at)!, offset) ?? new OurusDeferred('host-default');
+  if (offset > first) return beforeGluedBlockId(ctx, node, text, offset) ?? deleteEmptyPair(ctx, pairPlace(ctx, at)!, offset) ?? new OurusDeferred('host-default');
   const draft = ctx.draft();
+  // among a later line's leading spaces, past the first: the space before the caret goes, a space typed
+  // there taken back; at the line's start, the line joins (ShiftEnter21)
+  if (offset > lineStart && lineStart !== text.textStart(0)) return ctx.apply(draft.setText(node, text.splice(offset - 1, offset)).setCaret(node, offset - 1, -1));
   if (lineStart !== text.textStart(0)) {
     // at a later line's start: it joins the line above, its spaces with it, the caret staying before
     // or past them, where it was (a Shift-Enter's break taken back: ShiftEnter21); a quote's line its
@@ -324,7 +334,8 @@ function blankLineBack(ctx: CommandContext, owner: OurusNode): OurusResult | nul
     return ctx.apply(draft.setCaret(owner, textEnd(text), -1));
   }
   // (its text set again: where what follows would then continue it, `done()` keeps the line)
-  const draft = ctx.draft().gap(owner, owner.gap - 1).setText(owner, text);
+  // (a line before the gap's last: the last, ourus's or not, stays as it was)
+  const draft = ctx.draft().gap(owner, owner.gap - 1, k < owner.gap - 1).setText(owner, text);
   if (k > 0) return ctx.apply(draft.select({ blank: owner, line: k - 1 }, { blank: owner, line: k - 1 }));
   return ctx.apply(draft.setCaret(owner, text instanceof OurusAtom && ctx.config.markup === 'text' ? text.text.length : textEnd(text), -1));
 }
@@ -390,7 +401,7 @@ export function joinUp(ctx: CommandContext, node: OurusNode, text: OurusProse, c
     // (an empty item at the code's text end, where typing goes on: Backspace28; an empty paragraph past
     // it, where markup is text)
     const atEnd = upper instanceof OurusProse || node.kind === 'item' || ctx.config.markup === 'decorated';
-    // (its blank lines after what is above it in the text: a folded node's last descendant, not its own text's, B71)
+    // (its blank lines after what is above it in the text: a folded node's last descendant, not its own text's)
     const before = node.preceding && node.preceding.kind !== 'root' ? node.preceding : above;
     draft.dissolve(node).inheritGap(before, node).setCaret(above, atEnd ? textEnd(upper) : upper.text.length, -1);
     return ctx.apply(draft);
@@ -506,8 +517,13 @@ export function deleteSelectionAcross(ctx: CommandContext, then?: (draft: OurusD
   // within a block of code, the host's, but where what it leaves would make a fence of code
   const code = then ? null : codeAt(ctx);
   if (code) return editInCode(ctx, code, code.offset, code.to, '');
-  const from = ctx.from;
-  const to = ctx.to;
+  // (both ends boundaries between blocks: the whole nodes between, as a whole line selected from its
+  // start, delete subtree's)
+  const whole = then ? null : wholeBlocksSelection(ctx);
+  if (whole) return deleteSubtreeCommand(new CommandContext(ctx.view.withSelection(whole)));
+  // (an end in a marker or a prefix: from that line's text)
+  const from = pastPrefixAt(ctx, Math.min(ctx.selection.anchor, ctx.selection.head));
+  const to = pastPrefixAt(ctx, Math.max(ctx.selection.anchor, ctx.selection.head));
   if (from.zone !== 'text' || to.zone !== 'text' || !(from.text instanceof OurusProse) || !(to.text instanceof OurusProse)) return null;
   // within one text, the host's (a cut deletes it so too: `deleteSelected`)
   if (from.node === to.node) return new OurusDeferred('host-default');
@@ -516,15 +532,29 @@ export function deleteSelectionAcross(ctx: CommandContext, then?: (draft: OurusD
   if (lower.kind !== 'item' && lower.kind !== 'paragraph') return null;
   // an end inside a frame (a checkbox, text below a marker): not done yet
   if (from.offset < from.text.textStart(0) || to.offset < to.text.textStart(0)) return null;
-  // the nodes between, in document order: the topmost of them go; none may hold the second end
+  // the nodes between, in document order: the topmost of them go; one that holds the second end goes
+  // too, its text all selected, the nodes of it after that end's staying, under the upper node
+  // (`- o«ne⏎- two⏎  »- kid⏎  - more`: `- o┃kid⏎  - more`)
   const between: OurusNode[] = [];
+  const holding: OurusNode[] = [];
   for (let n: OurusNode | null = upper.children[0] ?? upper.afterSubtree; n && n !== lower; n = n.children[0] ?? n.afterSubtree) {
-    if (isAbove(n, lower)) return null;
+    if (isAbove(n, lower)) {
+      if (n.kind !== 'item' && n.kind !== 'paragraph') return null;
+      holding.push(n);
+      continue;
+    }
     if (!between.some((b) => isAbove(b, n!))) between.push(n);
   }
-  if (isAbove(upper, lower) && !between.length && lower.parent !== upper) return null;
+  if (isAbove(upper, lower) && !between.length && !holding.length && lower.parent !== upper) return null;
   const draft = ctx.draft();
   if (between.length) draft.remove(between);
+  // (each holding node's children after the one the second end is in, the innermost's first: after
+  // the join, the upper node's, in their order)
+  const after = [...holding].reverse().flatMap((h) => {
+    const k = h.children.findIndex((c) => c === lower || isAbove(c, lower));
+    return h.children.slice(k + 1);
+  });
+  if (after.length) draft.remove(after);
   // where nothing of the upper text is left, what the lower text starts with is the text's start: its
   // blanks would be padding
   let rest = to.text.slice(to.offset);
@@ -550,6 +580,17 @@ export function deleteSelectionAcross(ctx: CommandContext, then?: (draft: OurusD
   draft.setText(upper, kept(from.text, from.offset).withBlockIdLines(from.text.blockIdLines)).setText(lower, rest.withBlockIdLines(to.text.blockIdLines));
   const adopt = upper.kind === 'item' && upper !== lower.parent;
   draft.join(upper, lower, { children: adopt ? 'adopt' : 'place' });
+  if (holding.length) {
+    // (at their own depth where the upper node is at it, after it; else under it)
+    const depth = (n: OurusNode): number => {
+      let d = 0;
+      for (let up = n.parent; up; up = up.parent) d++;
+      return d;
+    };
+    if (after.length && depth(after[0]!) === depth(upper)) draft.place('after', upper, after);
+    else if (after.length) draft.append(upper, 'last', after);
+    draft.remove([holding[0]!]);
+  }
   if (!then) return ctx.apply(draft.setCaret(upper, at, -1));
   const next = then(draft, upper, at);
   return next && ctx.apply(next);
@@ -559,3 +600,22 @@ export function deleteSelectionAcross(ctx: CommandContext, then?: (draft: OurusD
 function isAbove(a: OurusNode, b: OurusNode): boolean {
   return a !== b && b.isWithin(a);
 }
+
+/**
+ * A character alone between a blank after text and the blank before a block id, Backspace past it:
+ * the blank after it goes with it, as typing there put it in (`- item x┃ ^id1` → `- item ┃^id1`),
+ * not two blanks left before the id. The last character before the id is the host's.
+ */
+function beforeGluedBlockId(ctx: CommandContext, node: OurusNode, text: OurusProse, offset: number): OurusResult | null {
+  const s = text.text;
+  const cp = s.codePointAt(offset - 1);
+  const len = offset >= 2 && cp !== undefined && cp >= 0xdc00 && cp <= 0xdfff ? 2 : 1;
+  const start = offset - len;
+  if (isSpaceOrTab(s.charCodeAt(start)) || s[offset] !== ' ') return null;
+  // (after a blank with text before it: the last character before the id the host's, which empties the text)
+  const lineStart = text.textStart(lineOf(s, start));
+  if (start - 1 <= lineStart || !isSpaceOrTab(s.charCodeAt(start - 1)) || isSpaceOrTab(s.charCodeAt(start - 2))) return null;
+  if (!blockIdsOf(text).some((b) => !b.carried && b.from === offset + 1)) return null;
+  return ctx.apply(ctx.draft().setText(node, text.splice(start, offset + 1)).setCaret(node, start, -1));
+}
+

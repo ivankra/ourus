@@ -3,7 +3,7 @@
 // are there (an item in a list, a block in an item); `done()` regroups sections and owned lists,
 // numbers the list they join, keeps them apart from what is around them, and escapes their texts.
 
-import { clipboardMarkdown, type OurusClipboard } from './clipboard.ts';
+import { clipboardMarkdown, type ClipboardTextEnds, type OurusClipboard } from './clipboard.ts';
 import { OurusProse, OurusDoc, OurusAtom, Lineage, clipboardFragment, type OurusNode } from '../doc/index.ts';
 import { OurusView } from '../view/index.ts';
 import { atLine, lineOf, trimMd, type NodeId } from '../text/index.ts';
@@ -52,13 +52,13 @@ export function pasteCommand(ctx: CommandContext, clipboard: OurusClipboard): Ou
   }
   const read = clipboardMarkdown(clipboard, ctx.config);
   if (!read) return new OurusDeferred('host-default');
-  // (its plain text, a clipboard of HTML alone its text: what code takes, no formatting's syntax, B133)
+  // (its plain text, a clipboard of HTML alone its text: what code takes, no formatting's syntax)
   const html = clipboard['text/html'];
   return pasteMarkdown(ctx, { ...read, plain: plain ?? (html !== undefined && clipboard['text/markdown'] === undefined ? MdHtmlParser.plainText(html) : undefined) }, config.pasteLines === 'items');
 }
 
 /** The clipboard's Markdown, a phrase (formatted text from a page) or not, and its plain text. */
-type Read = { readonly markdown: string; readonly phrase: boolean; readonly plain?: string; readonly ours?: boolean; readonly nodes?: boolean };
+type Read = { readonly markdown: string; readonly phrase: boolean; readonly plain?: string; readonly ours?: boolean; readonly nodes?: boolean; readonly ends?: ClipboardTextEnds };
 
 /**
  * `read` pasted at the caret; `eachLine`: plain lines are a node each (`pasteLines: items`, plain
@@ -74,7 +74,7 @@ export function pasteMarkdown(ctx: CommandContext, read: Read, eachLine: boolean
   const { from, to } = ctx;
   // (a selection from a text's start replaced: nodes go where it was, before what is left of the text,
   // whatever `pasteAtTextStart` says of a caret there: `«abc»⏎def` pasting a list, the list then `def`;
-  // but all of a text a block id ends, which the paste joins, the id staying with it, B342)
+  // but all of a text a block id ends, which the paste joins, the id staying with it)
   const inPlace = from.zone === 'text' && from.text instanceof OurusProse && from.offset <= textStart(from.text) && !takesTextWithBlockIds(ctx);
   if (ctx.config.pasteOverSelection === 'ignore' && from.zone === 'text' && to.zone === 'text' && from.node === to.node) {
     const kept = pasteAt(ctx.at(Math.max(ctx.selection.anchor, ctx.selection.head)), read, eachLine, true);
@@ -95,6 +95,12 @@ function pasteAt(ctx: CommandContext, read: Read, eachLine: boolean, nodesOnly: 
   const asText = (paste: () => OurusResult | null): OurusResult | null | 'text' => (nodesOnly ? 'text' : paste());
   let fragment = clipboardFragment(read.markdown, ctx.config, read.ours);
   if (!fragment) return new OurusDeferred('host-default');
+  // plain text indented as code, pasted into an empty note: kept as code (`pasteIndentedCode: code`),
+  // but a list it would be without the indentation pasted as the list
+  if (ctx.doc.blank && !read.ours && config.pasteIndentedCode === 'code' && !fragment.doc.rootNode.children.some((r) => r.kind === 'item')) {
+    const kept = clipboardFragment(read.markdown, ctx.config, true);
+    if (kept?.doc.rootNode.children.every((r) => r.block?.type === 'code_block' && !r.block.attrs.fenced)) fragment = kept;
+  }
   // plain lines (paragraphs only, but a quote's: `quotes: text`), with `pasteLines: items`: each line a node (Paste18, 19)
   const quoted = (doc: OurusDoc, r: OurusNode): boolean => { const t = doc.textOf(r); return t instanceof OurusProse && t.type === 'quote'; };
   const plain = (doc: OurusDoc): boolean => doc.rootNode.children.every((r) => r.kind === 'paragraph' && !r.children.length && !quoted(doc, r));
@@ -116,65 +122,97 @@ function pasteAt(ctx: CommandContext, read: Read, eachLine: boolean, nodesOnly: 
   const items = roots.every((r) => r.kind === 'item');
   // one line that is no item is inline text, put in at the caret (in code, code)
   if (inline && !items && roots[0]!.kind !== 'quote' && !quoted(pasted, roots[0]!)) return asText(() => (codeAt(ctx) ? plainLines(ctx, read.plain ?? read.markdown) : (lineAt(ctx, read.markdown) ?? new OurusDeferred('host-default'))));
+  // ourus's own copy of text across nodes: the seams open, whatever `pasteSeams` says, its first text
+  // joining the text before the caret and the text after the caret its last, as the text editors put
+  // them (the SxS probe of 2026-11-13), so a cut pastes back where it was; but an end the copy
+  // marks a boundary between blocks (`read.ends`, `[text` or `text]`) keeps the text on that side a node of its
+  // own. Plain lines with neither, a copy within one text, or pasted on a blank line, go into the
+  // text (below): their line breaks are the text's
+  // (its first line an item's text with the item's children after it, `two⏎  - kid` or `two⏎→- kid`,
+  // pasted into an item's text: read as that item, so the children join the item at the caret, not
+  // follow it as a paragraph's list would, nor read as the paragraph's lines under a tab)
+  let [seamed, first] = [pasted, roots];
+  if (read.ours && read.ends && !inline && roots[0]!.kind === 'paragraph' && ctx.from.zone === 'text' && ctx.from.node.kind === 'item') {
+    const asItem = clipboardFragment(`- ${read.markdown}`, ctx.config, true);
+    const item = asItem?.doc.rootNode.children[0];
+    if (item?.kind === 'item' && item.children.length) [seamed, first] = [asItem!.doc, asItem!.doc.rootNode.children];
+  }
+  const edged = read.ends && (read.ends.start === 'edge' || read.ends.end === 'edge');
+  if (read.ours && read.ends && !inline && ((edged && ctx.from.zone === 'text') || !plain(seamed)) && !codeAt(ctx)) {
+    const open = openSeams(ctx, seamed, first, { first: read.ends.start === 'edge', last: read.ends.end === 'edge' });
+    if (open !== undefined) return asText(() => open);
+  }
+  // (at a text's start, where the nodes can't go before it, refused or the host's: after it, as
+  // `pasteAtTextStart: after` puts them)
   const at = slotAt(ctx, items, before);
-  if (at === 'host') return new OurusDeferred('host-default');
-  if (at === null) return null;
-  // (in code its plain text, no formatting's syntax: B133)
-  if (at === 'plain') return asText(() => plainLines(ctx, codeAt(ctx) ? (read.plain ?? read.markdown) : read.markdown));
-  let slot = at;
-  const empty = (n: OurusNode): boolean => n.kind === 'item' && emptyText(ctx, n);
-  // an empty item with children is a parent; but a block first there would be its text: it fills the item instead
-  if (slot.where !== 'instead' && empty(slot.node) && slot.node.children.length && !items && !ctx.view.zoomFolded.has(slot.node.id)) slot = { ...slot, where: 'instead', list: slot.node };
-  // plain lines go into the text, as plain paste puts them; a heading or a callout's title holds one line, and takes them as nodes
-  const lines = plain(pasted);
-  const text = ctx.doc.textOf(slot.node);
-  const quoteAtom = text instanceof OurusAtom && text.type === 'blockquote';
-  const takesLines = slot.node.kind !== 'heading' && (slot.node.kind !== 'atom' || quoteAtom) && !(text instanceof OurusProse && text.type === 'title') && !(text instanceof OurusAtom && !quoteAtom);
-  // (from a checkbox, at the text's start)
-  // (but whole nodes ourus copied, a line break ending them: nodes again, so cut then paste moves a
-  // paragraph, B24; text it copied, from inside a node into another, is text)
-  if (lines && takesLines && !byLine && !(read.nodes && !inline)) return asText(() => plainLines(ctx.from.zone === 'frame' && ctx.from.part !== 'blockId' && text instanceof OurusProse ? ctx.at(ctx.doc.posOf(slot.node, text.textStart(0), 1)) : ctx, read.markdown));
-  // one line, not at the text's end: inline text
-  if (inline && !slot.atEnd) return asText(() => lineAt(ctx, read.markdown) ?? new OurusDeferred('host-default'));
-  // what can't be an item before an item (a quote, a table) goes after it
-  if (slot.where === 'before' && slot.node.kind === 'item' && !leads(roots[0]!)) slot = { ...endSlot(ctx, slot.node, items), atEnd: false };
-  // a table pasted on an empty item is the item's text, on its marker's line, as code is an item's text
-  // (`- | a |⏎  | --- |`): a block on that line with no text of the item's own would read as its text,
-  // which the writer refuses (B304); a checkbox the item had goes, a task's text being prose
-  const table = roots.length === 1 && roots[0]!.block.type === 'table' ? pasted.textOf(roots[0]!) : null;
-  // (the item itself, its text set: its id, its marker and number, its children and its blank lines
-  // kept, a zoom on it too)
-  if (slot.where === 'instead' && slot.node.kind === 'item' && table instanceof OurusAtom) {
-    const text = table.asItem(true);
-    return ctx.apply(ctx.draft().setText(slot.node, text).setCaret(slot.node, textEnd(text), -1));
+  const result = landAt(at);
+  if (!before && config.pasteAtTextStart === 'before' && typeof at === 'object' && at !== null && at.where === 'before' && (result === null || result instanceof OurusRejected || result instanceof OurusDeferred)) {
+    const after = slotAt(ctx, items, false, 'after');
+    const r = typeof after === 'object' && after !== null ? landAt(after) : null;
+    if (r instanceof OurusSuccess) return r;
   }
-  // a quote pasted on an empty item is its first block, on its marker's line (PasteList17)
-  if (slot.where === 'instead' && slot.node.kind === 'item' && roots.length === 1 && roots[0]!.kind === 'quote') {
+  return result;
+
+  function landAt(at: ReturnType<typeof slotAt>): OurusResult | null | 'text' {
+    if (at === 'host') return new OurusDeferred('host-default');
+    if (at === null) return null;
+    // (in code its plain text, no formatting's syntax)
+    if (at === 'plain') return asText(() => plainLines(ctx, codeAt(ctx) ? (read.plain ?? read.markdown) : read.markdown));
+    let slot = at;
+    const empty = (n: OurusNode): boolean => n.kind === 'item' && emptyText(ctx, n);
+    // an empty item with children is a parent; but a block first there would be its text: it fills the item instead
+    if (slot.where !== 'instead' && empty(slot.node) && slot.node.children.length && !items && !ctx.view.zoomFolded.has(slot.node.id)) slot = { ...slot, where: 'instead', list: slot.node };
+    // plain lines go into the text, as plain paste puts them; a heading or a callout's title holds one line, and takes them as nodes
+    const lines = plain(pasted);
+    const text = ctx.doc.textOf(slot.node);
+    const quoteAtom = text instanceof OurusAtom && text.type === 'blockquote';
+    const takesLines = slot.node.kind !== 'heading' && (slot.node.kind !== 'atom' || quoteAtom) && !(text instanceof OurusProse && text.type === 'title') && !(text instanceof OurusAtom && !quoteAtom);
+    // (from a checkbox, at the text's start)
+    // (but whole nodes ourus copied, a line break ending them: nodes again, so cut then paste moves a
+    // paragraph; text it copied, from inside a node into another, is text)
+    if (lines && takesLines && !byLine && !(read.nodes && !inline)) return asText(() => plainLines(ctx.from.zone === 'frame' && ctx.from.part !== 'blockId' && text instanceof OurusProse ? ctx.at(ctx.doc.posOf(slot.node, text.textStart(0), 1)) : ctx, read.markdown));
+    // one line, not at the text's end: inline text
+    if (inline && !slot.atEnd) return asText(() => lineAt(ctx, read.markdown) ?? new OurusDeferred('host-default'));
+    // what can't be an item before an item (a quote, a table) goes after it
+    if (slot.where === 'before' && slot.node.kind === 'item' && !leads(roots[0]!)) slot = { ...endSlot(ctx, slot.node, items), atEnd: false };
+    // a table pasted on an empty item is the item's text, on its marker's line, as code is an item's text
+    // (`- | a |⏎  | --- |`): a block on that line with no text of the item's own would read as its text,
+    // which the writer refuses; a checkbox the item had goes, a task's text being prose
+    const table = roots.length === 1 && roots[0]!.block.type === 'table' ? pasted.textOf(roots[0]!) : null;
+    // (the item itself, its text set: its id, its marker and number, its children and its blank lines
+    // kept, a zoom on it too)
+    if (slot.where === 'instead' && slot.node.kind === 'item' && table instanceof OurusAtom) {
+      const text = table.asItem(true);
+      return ctx.apply(ctx.draft().setText(slot.node, text).setCaret(slot.node, textEnd(text), -1));
+    }
+    // a quote pasted on an empty item is its first block, on its marker's line (PasteList17)
+    if (slot.where === 'instead' && slot.node.kind === 'item' && roots.length === 1 && roots[0]!.kind === 'quote') {
+      const draft = ctx.draft();
+      const block = made(draft, pasted, roots[0]!);
+      if (block === null) return null;
+      const id = draft.create('item', null);
+      draft.append(id, 'first', [block]);
+      // (the empty item's children after it, the item's still)
+      const children = [...slot.node.children];
+      if (children.length) draft.remove(children).append(id, 'last', children);
+      draft.place('before', slot.node, [id]).remove([slot.node]);
+      const last = lastMade(draft, block);
+      const text = draft.touched(last).text;
+      if (!text) return null;
+      return ctx.apply(draft.setCaret(last, textEnd(text), -1));
+    }
+    // (`pasteSeams: open`: where both seams close)
+    if (config.pasteSeams === 'open') {
+      const open = openSeams(ctx, pasted, roots);
+      if (open !== undefined) return open;
+    }
     const draft = ctx.draft();
-    const block = made(draft, pasted, roots[0]!);
-    if (block === null) return null;
-    const id = draft.create('item', null);
-    draft.append(id, 'first', [block]);
-    // (the empty item's children after it, the item's still)
-    const children = [...slot.node.children];
-    if (children.length) draft.remove(children).append(id, 'last', children);
-    draft.place('before', slot.node, [id]).remove([slot.node]);
-    const last = lastMade(draft, block);
-    const text = draft.touched(last).text;
-    if (!text) return null;
-    return ctx.apply(draft.setCaret(last, textEnd(text), -1));
+    const fitted = slot.list !== null || slot.node.kind === 'item' ? fitToList(ctx, draft, pasted, roots, slot) : fitToBlocks(draft, pasted, roots);
+    if (fitted === undefined) return null;
+    // what can't be a node where it lands is pasted as text
+    if (fitted === null) return asText(() => plainLines(ctx, codeAt(ctx) ? (read.plain ?? read.markdown) : read.markdown));
+    return place(ctx, draft, slot, fitted);
   }
-  // (`pasteSeams: open`: where both seams close)
-  if (config.pasteSeams === 'open') {
-    const open = openSeams(ctx, pasted, roots);
-    if (open !== undefined) return open;
-  }
-  const draft = ctx.draft();
-  const fitted = slot.list !== null || slot.node.kind === 'item' ? fitToList(ctx, draft, pasted, roots, slot) : fitToBlocks(draft, pasted, roots);
-  if (fitted === undefined) return null;
-  // what can't be a node where it lands is pasted as text
-  if (fitted === null) return asText(() => plainLines(ctx, codeAt(ctx) ? (read.plain ?? read.markdown) : read.markdown));
-  return place(ctx, draft, slot, fitted);
 }
 
 /**
@@ -184,7 +222,7 @@ function pasteAt(ctx: CommandContext, read: Read, eachLine: boolean, nodesOnly: 
  * that isn't text. Undefined where the first seam can't close (the caret in a heading's title, a
  * block that isn't text first, an empty node): the paste is closed.
  */
-function openSeams(ctx: CommandContext, pasted: OurusDoc, roots: readonly OurusNode[]): OurusResult | null | undefined {
+function openSeams(ctx: CommandContext, pasted: OurusDoc, roots: readonly OurusNode[], closed?: { readonly first: boolean; readonly last: boolean }): OurusResult | null | undefined {
   const at = ctx.from;
   // on the blank line Shift-Enter leaves at a text's end, the first after it: that text's next line,
   // the paste's first text joining it there
@@ -210,18 +248,30 @@ function openSeams(ctx: CommandContext, pasted: OurusDoc, roots: readonly OurusN
   const last = lastMade(draft, fitted.nodes[fitted.nodes.length - 1]!);
   const lastText = draft.touched(last).text;
   if (!lastText) return undefined;
-  draft.join(node, first, { children: node.kind === 'item' ? 'adopt' : 'place', ...(owner && { separator: '\n' }) });
-  const seam = last === first ? node.id : last;
+  // (a seam `closed` says, where the caret's text has text on that side: the pasted text and it each a
+  // node of its own)
+  // (blanks alone on a side are no text there: joined, not a node of blanks)
+  const before = here.offset > here.text.textStart(0) && trimMd(here.text.text.slice(here.text.textStart(0), here.offset)) !== '';
+  const after = here.offset < textEnd(here.text) && trimMd(here.text.text.slice(here.offset, textEnd(here.text))) !== '';
+  const joinsFirst = !(closed?.first && before);
+  // (both seams kept apart at the text's end: the nodes after it, as a paste of nodes puts them)
+  if (!joinsFirst && !after) return undefined;
+  if (joinsFirst) draft.join(node, first, { children: node.kind === 'item' ? 'adopt' : 'place', ...(owner && { separator: '\n' }) });
+  const seam = last === first && joinsFirst ? node.id : last;
   const end = textEnd(draft.touched(seam).text!);
   // (a block that isn't text last: the text after the caret stays a node of its own, PasteList24)
   // (a paragraph's children are the list it owns: after a pasted item, its items stay beside it, in it)
   const beside = node.kind !== 'item' && draft.touched(seam).kind === 'item';
   // (into the node the seam is in: one pasted root is joined into the caret's node already, a heading too)
-  if (lastText instanceof OurusProse && draft.touched(seam).kind !== 'heading') draft.join(seam, rest, { children: beside ? 'place' : 'adopt' });
+  const joinsLast = !(closed?.last && after);
+  if (lastText instanceof OurusProse && draft.touched(seam).kind !== 'heading' && joinsLast) draft.join(seam, rest, { children: beside ? 'place' : 'adopt' });
   // (and its list written apart from it as it was: its gap before its children, where it has them)
   if (beside && node.children.length) draft.gap(node, node.gap);
   // (the blank line pasted on is a line of the text now: one fewer after it)
   if (owner) draft.gap(seam, node.gap - 1);
+  // (the caret after what was pasted: where its last seam is closed, at the start of the text after it)
+  const restText = draft.touched(rest).text;
+  if (!joinsLast && restText instanceof OurusProse) return ctx.apply(draft.setCaret(rest, restText.textStart(0), 1));
   return ctx.apply(draft.setCaret(seam, end, -1));
 }
 
@@ -267,12 +317,23 @@ function emptyText(ctx: CommandContext, node: OurusNode): boolean {
  * can be a node) or its start (`pasteAtTextStart: before`). On a blank line, the node above's end.
  * Null (unsupported) where ourus doesn't do it yet.
  */
-function slotAt(ctx: CommandContext, items: boolean, before = false): Slot | 'plain' | 'host' | null {
+function slotAt(ctx: CommandContext, items: boolean, before = false, atTextStart = ctx.config.pasteAtTextStart): Slot | 'plain' | 'host' | null {
   // on a code line, what is pasted is code (on a fence's line, the block is a block: after its closing
   // one, its end; and past any closed block's closing delimiter, math's `$$` too, which pasted code
   // would unclose)
   const code = codeAt(ctx);
   const pastClose = !!code && code.text.closed && ctx.collapsed && code.offset === code.text.text.length;
+  // (at indented code's start, past its first line's indentation, blocks are pasted beside it, not
+  // into it, as at a text's start (`pasteAtTextStart`): a cut paragraph pastes back)
+  if (code && ctx.collapsed && code.text.type === 'indented_code' && code.node.kind === 'atom') {
+    const indent = code.text.frame.find((p) => p.part === 'indent' && p.from === 0);
+    if (indent && code.offset === indent.to) return atTextStart === 'before' ? { where: 'before', node: code.node, list: null, atEnd: false } : { ...endSlot(ctx, code.node, items), atEnd: true };
+  }
+  // (and at a fence's start, before its opening delimiter, the same: there a paste would break it)
+  if (code && ctx.collapsed && code.offset === 0 && code.text.type !== 'indented_code') {
+    if (atTextStart === 'before') return { where: 'before', node: code.node, list: code.node.kind === 'item' ? code.node : null, atEnd: false };
+    if (code.node.kind === 'atom') return { ...endSlot(ctx, code.node, items), atEnd: true };
+  }
   if (code && !onDelimiterLine(code.text, code.offset) && !pastClose) return 'plain';
   const at = ctx.from;
   if (at.zone === 'gap') {
@@ -312,10 +373,13 @@ function slotAt(ctx: CommandContext, items: boolean, before = false): Slot | 'pl
     const head = ctx.selection.head;
     const lineStart = head === ctx.doc.lineAt(head).from && ctx.doc.lineAt(head).index === node.startLine;
     if (node.kind === 'atom' && ctx.collapsed && LINE_BLOCKS.has(text.type) && (lineStart || head === ctx.doc.posOf(node, textStart(text), 1))) {
-      return ctx.config.pasteAtTextStart === 'before' ? { where: 'before', node, list: null, atEnd: true } : { ...endSlot(ctx, node, items), atEnd: true };
+      return atTextStart === 'before' ? { where: 'before', node, list: null, atEnd: true } : { ...endSlot(ctx, node, items), atEnd: true };
     }
     const end = ctx.selection.head === ctx.doc.posOf(node, text.text.length, 1);
-    // (a quote read as an atom, `quotes: atom`, is text: nodes go after it, as after a paragraph)
+    // (a quote read as an atom, `quotes: atom`, is text: at its start, past its first `>`, the nodes go
+    // before it (`pasteAtTextStart: before`), as before a paragraph)
+    if (text.type === 'blockquote' && atTextStart === 'before' && ctx.collapsed && !end && at.offset <= (/^ {0,3}>[ \t]?/.exec(text.text)?.[0].length ?? 0)) return { where: 'before', node, list: node.kind === 'item' ? node : null, atEnd: false };
+    // (a quote read as an atom, `quotes: atom`, is text: elsewhere nodes go after it, as after a paragraph)
     if (node.kind === 'atom') return end || text.type === 'blockquote' ? { ...endSlot(ctx, node, items), atEnd: end } : 'plain';
     return { ...endSlot(ctx, node, items), atEnd: end };
   }
@@ -328,12 +392,22 @@ function slotAt(ctx: CommandContext, items: boolean, before = false): Slot | 'pl
   if (at.offset > textEnd(text) && !atId) return 'host';
   const atEnd = at.offset >= textEnd(text);
   // (or, `before`, a paste in place of a selection from the text's start: before it, wherever the caret)
-  if ((before && !atEnd) || (ctx.config.pasteAtTextStart === 'before' && !atEnd && at.offset <= textStart(text))) {
+  if ((before && !atEnd) || (atTextStart === 'before' && !atEnd && at.offset <= textStart(text))) {
+    // (the first block on the marker line of an item with no text of its own: its start the item's,
+    // items pasted there before the item, `1. > [!note] ┃T`)
+    const item = items ? markerLineItem(ctx, node) : null;
+    if (item) return { where: 'before', node: item, list: item, atEnd };
     // before a heading, the section above's: not done yet
-    if (node.kind === 'heading' || node.kind === 'quote') return null;
     return { where: 'before', node, list: node.kind === 'item' ? node : null, atEnd };
   }
   return { ...endSlot(ctx, node, items), atEnd };
+}
+
+/** The item whose marker line `node` starts, first in it, the item having no text of its own (the outermost, `- - ┃a`); else null. */
+function markerLineItem(ctx: CommandContext, node: OurusNode): OurusNode | null {
+  let item: OurusNode | null = null;
+  for (let n = node; n.parent?.kind === 'item' && n.parent.children[0]?.id === n.id && n.startLine === n.parent.startLine && ctx.doc.textOf(n.parent) === null; n = n.parent) item = n.parent;
+  return item;
 }
 
 /** The atoms that are blocks of lines no paste puts lines in (code's take them as code). */
@@ -426,7 +500,11 @@ function made(draft: OurusDraft, pasted: OurusDoc, node: OurusNode, kind = node.
   const text = pasted.textOf(node);
   // (a quote with no text of its own is its children)
   if ((!text && !(kind === 'quote' && children.length)) || kind === 'root') return null;
-  const id = draft.create(kind, text);
+  // (a quote with no text, or an empty one, its children after blank lines, `> ⏎>⏎> - `, ourus's own
+  // held line copied without its mark: a quote of its children, the blank lines before them no part
+  // of it, which nothing writes without the mark)
+  const bare = kind === 'quote' && children.length > 0 && (!text || (text instanceof OurusProse && text.empty));
+  const id = draft.create(kind, bare ? null : text);
   if (!madeIds.has(draft)) madeIds.set(draft, new Set());
   madeIds.get(draft)!.add(id);
   if (node.kind === 'item') draft.listForm(id, pasted.markerOf(node), pasted.config.pasteListForm === 'own');
@@ -438,7 +516,7 @@ function made(draft: OurusDraft, pasted: OurusDoc, node: OurusNode, kind = node.
   // columns of padding)
   const padding = node.kind === 'item' && kind === 'item' ? belowPadding(pasted, node) : 0;
   if (padding > 0) draft.padding(id, padding);
-  draft.gap(id, node.gap);
+  draft.gap(id, bare ? 0 : node.gap);
   for (const child of children) {
     const c = made(draft, pasted, child);
     if (c === null) return null;
@@ -533,6 +611,8 @@ function place(ctx: CommandContext, draft: OurusDraft, slot: Slot, fitted: Fitte
     if (nodes.length) {
       draft.place('before', node, nodes);
       if (node.children.length) draft.remove(node.children).append(nodes[nodes.length - 1]!, 'last', node.children);
+      // (the paste's end in its place: the blank lines ourus raised after it stay ours)
+      draft.gapOrigin(lastMade(draft, nodes[nodes.length - 1]!), node);
     }
     draft.remove([node]);
   } else if (nodes.length) {
@@ -567,10 +647,14 @@ function place(ctx: CommandContext, draft: OurusDraft, slot: Slot, fitted: Fitte
   if (end && end.gap > 0 && nodes.length && !(list && !tight)) {
     // (they go, as written, where the paste's end takes no more of its own)
     const last = lastMade(draft, nodes[nodes.length - 1]!);
-    const moves = !(list === null && !instead && slot.where === 'after' && apartFrom(ctx, slot));
+    // (not from a node the paste is set apart from: first under a heading with nothing under it, its
+    // blank line stays between them, as one is between it and what it had)
+    const moves = !(list === null && !instead && (slot.where === 'after' || (slot.where === 'first' && node.kind === 'heading')) && apartFrom(ctx, slot));
     if (moves && draft.touched(last).gap <= end.gap) draft.moveGap(end, last);
     else {
-      setSpacing(draft, nodes[nodes.length - 1]!, end.gap, true);
+      // (as many as the end has, ours where its were)
+      const holder = setSpacing(draft, nodes[nodes.length - 1]!, end.gap, true);
+      if (holder !== null) draft.gapOrigin(holder, end);
       if (moves) draft.gap(end, 0);
     }
   } else if (end && end.gap > 0 && nodes.length && list && !tight && !node.next) setSpacing(draft, nodes[nodes.length - 1]!, end.gap, true);
@@ -581,8 +665,10 @@ function place(ctx: CommandContext, draft: OurusDraft, slot: Slot, fitted: Fitte
   // (where the paste lands right after the line's node: else the blank lines stay where they are)
   const right = slot.where === 'first' ? slot.node === blank?.owner && !slot.node.children.length : (slot.where === 'after' || slot.where === 'last') && slot.node.lastDescendant === blank?.owner;
   if (blank && right && blank.line >= 0 && blank.line < blank.owner.gap) {
-    draft.gap(blank.owner, blank.line);
-    setSpacing(draft, all[all.length - 1]!, blank.owner.gap - blank.line - 1);
+    draft.gap(blank.owner, blank.line, 'first');
+    // (the lines below it the owner's last ones, ours where its last was)
+    const below = setSpacing(draft, all[all.length - 1]!, blank.owner.gap - blank.line - 1);
+    if (below !== null && blank.line < blank.owner.gap - 1) draft.gap(below, draft.touched(below).gap, true).gapOrigin(below, blank.owner);
   }
   // (on a held empty last line: the line goes, the paste right after the text, the blank lines after
   // it after the paste)
@@ -590,7 +676,9 @@ function place(ctx: CommandContext, draft: OurusDraft, slot: Slot, fitted: Fitte
   if (held && ((slot.where === 'first' && slot.node === held.owner) || ((slot.where === 'after' || slot.where === 'last') && slot.node.lastDescendant === held.owner))) {
     draft.setText(held.owner, held.text);
     if (!held.owner.children.length) {
-      setSpacing(draft, all[all.length - 1]!, held.owner.gap);
+      const below = setSpacing(draft, all[all.length - 1]!, held.owner.gap);
+      // (the owner's lines, ours where they were)
+      if (below !== null && held.owner.gap > 0) draft.gapOrigin(below, held.owner);
       draft.gap(held.owner, 0);
     }
   }
@@ -610,9 +698,12 @@ function apartFrom(ctx: CommandContext, slot: Slot): boolean {
   return !tightAfter && !(slot.where === 'first' && node.kind !== 'heading' && node.gap === 0);
 }
 
-/** A made node's blank lines after its subtree: `gap` on its last descendant (null: as they are); `atLeast`, raised only. */
-function setSpacing(draft: OurusDraft, id: NodeId, gap: number | null, atLeast = false): void {
-  if (gap === null) return;
+/**
+ * A made node's blank lines after its subtree: `gap` on its last descendant (null: as they are); `atLeast`, raised only.
+ * The node that holds them, null where none is set.
+ */
+function setSpacing(draft: OurusDraft, id: NodeId, gap: number | null, atLeast = false): NodeId | null {
+  if (gap === null) return null;
   const made = madeIds.get(draft);
   let last = id;
   for (let kids = draft.touched(last).children.filter((k) => made?.has(k)); kids.length; kids = draft.touched(last).children.filter((k) => made?.has(k))) {
@@ -622,6 +713,7 @@ function setSpacing(draft: OurusDraft, id: NodeId, gap: number | null, atLeast =
   }
   if (!atLeast && gap === 0) draft.gap(id, 0);
   draft.gap(last, atLeast ? Math.max(gap, draft.touched(last).gap) : gap);
+  return last;
 }
 
 /** Into an empty document, the paste is the document; the caret at the end of its last text. */
@@ -631,6 +723,9 @@ function fillDocument(ctx: CommandContext, pasted: OurusDoc): OurusResult | null
   if (!roots) return null;
   if (ctx.doc.rootNode.children.length) draft.remove(ctx.doc.rootNode.children);
   draft.append(Lineage.ROOT, 'first', roots.nodes);
+  // (the note's end the paste's: the blank lines ourus raised there stay ours)
+  const end = ctx.doc.rootNode.lastDescendant;
+  if (roots.nodes.length && end.kind !== 'root' && end.gap > 0) draft.gapOrigin(lastMade(draft, roots.nodes[roots.nodes.length - 1]!), end);
   if (!pasteCaret(ctx, draft, roots.nodes)) return null;
   return ctx.apply(draft);
 }

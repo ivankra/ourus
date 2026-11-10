@@ -297,6 +297,7 @@ Title ^x┃
 ```markdown
 Title ^x
 ===
+
 ┃◌
 ```
 
@@ -554,7 +555,11 @@ flavor: obsidian
 > cut
 
 ```yaml
-clipboard: "a ^x"
+clipboard:
+  text/plain: 'a ^x'
+  text/markdown: 'a ^x'
+  text/html: |
+    <!-- ourus text --><p>a</p>
 ```
 
 ```markdown

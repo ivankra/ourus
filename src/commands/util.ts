@@ -7,8 +7,9 @@ import { OurusProse, OurusAtom, closingFrameStart, textEnd, textStart, type Ouru
 import type { OurusView } from '../view/index.ts';
 import type { AnchorSpec, OurusDraft } from '../writer/index.ts';
 import { type CommandContext } from './context.ts';
+import type { ClipboardTextEnds } from './clipboard.ts';
 import type { OurusCommand, OurusSelection, OurusResult } from './types.ts';
-import { charAfter, charBefore, dominantEnding, isSpaceOrTab, lineOf, lineSpan, type ChangeSpec } from '../text/index.ts';
+import { charAfter, charBefore, dominantEnding, isSpaceOrTab, lineOf, lineSpan, trimMd, type ChangeSpec } from '../text/index.ts';
 import { OurusRejected } from './types.ts';
 
 export { textEnd, textStart } from '../doc/index.ts';
@@ -414,6 +415,84 @@ export function pastPrefix(ctx: CommandContext): CommandContext {
   if (!ctx.collapsed || at.zone !== 'prefix' || at.line.index !== at.node.startLine || (at.node.kind === 'quote' && at.line.index < at.node.textFirstLine)) return ctx;
   const text = ctx.doc.textOf(at.node);
   return text ? ctx.at(ctx.doc.posOf(at.node, textStart(text), 1)) : ctx;
+}
+
+/**
+ * Where a selection's end at `pos` is, one in a marker or a container's prefix (`«- one`, `one⏎»- two`,
+ * a continuation line's indentation) where that line's text starts, in its node's text, as a caret there acts
+ * (`pastPrefix`); a selection's text runs from there, so deleting it joins the text, not the
+ * marker read as text. Else `at` as it is.
+ */
+export function pastPrefixAt(ctx: CommandContext, pos: number): Located {
+  const at = ctx.view.locate(pos);
+  // (a quote's `>` a paragraph's frame, `quotes: text`: past it, in that text)
+  if (at.zone === 'frame' && at.part === 'quote') {
+    const piece = at.text.frame.find((p) => p.part === 'quote' && p.from <= at.offset && at.offset <= p.to);
+    return piece ? { zone: 'text', node: at.node, text: at.text, offset: piece.to } : at;
+  }
+  // (past the prefixes only, never back: a checkbox or another frame there stays out of it, as an end
+  // in a frame is no end in the text)
+  if ((at.zone !== 'marker' && at.zone !== 'prefix') || at.line.contentFrom < pos) return at;
+  // (the text of the node the marker is, or of one a prefix's container holds, a quote's paragraph)
+  const there = ctx.view.locate(at.line.contentFrom);
+  return there.zone === 'text' && (there.node === at.node || there.node.isWithin(at.node)) ? there : at;
+}
+
+/** Whether `from` to `to` is within one node's text, an end in a marker or a prefix where that line's text starts. */
+export function withinOneText(ctx: CommandContext, from: number, to: number): boolean {
+  const a = pastPrefixAt(ctx, from);
+  const b = pastPrefixAt(ctx, to);
+  return a.zone === 'text' && b.zone === 'text' && a.node === b.node;
+}
+
+/**
+ * How a paste takes each end of a text selection from `from` to `to`: `mid` where the selection
+ * takes part of a text there (it starts in a text, before its end; it ends in one, past its start), so a paste joins that end to the text it lands beside; else
+ * `edge`, a boundary between blocks (a line break between them taken, a marker or a prefix, a blank
+ * line), the paste keeping the text on that side apart. A selection within one node's text is `mid`
+ * at both: its line breaks are the text's own. So pasted back where a cut leaves the caret, each end
+ * joined or kept apart, it restores what was cut.
+ */
+export function selectionEnds(ctx: CommandContext, from: number, to: number): ClipboardTextEnds {
+  if (withinOneText(ctx, from, to)) return { start: 'mid', end: 'mid' };
+  // (by lines: a start at its line's end, or before its line's text, in a prefix or on a blank line;
+  // an end at or before its line's text; not one in a text's markup on its line, a block id's)
+  const doc = ctx.doc;
+  const blank = (line: { readonly from: number; readonly to: number }): boolean => trimMd(doc.text.slice(line.from, line.to)) === '';
+  const first = doc.lineAt(from);
+  const last = doc.lineAt(to);
+  // (inside a text's markup past the line's start, a heading's `#`s, a checkbox: in the text's line)
+  const inMarkup = (pos: number, line: { readonly from: number }): boolean => {
+    const at = ctx.view.locate(pos);
+    return at.zone === 'frame' && at.part !== 'quote' && pos > line.from;
+  };
+  const start = !inMarkup(from, first) && (from === first.to || from < doc.textStart(first.index) || blank(first));
+  const end = !inMarkup(to, last) && (to <= doc.textStart(last.index) || blank(last));
+  return { start: start ? 'edge' : 'mid', end: end ? 'edge' : 'mid' };
+}
+
+/**
+ * A text selection whose two ends are both boundaries between blocks (`selectionEnds`: `- one«⏎- two⏎»-
+ * three`), as the subtree selection of the blocks between: from the line after a text's end it starts
+ * at (else its own line's start) to its end's line's start. Null where it is no such selection, or
+ * those lines are no subtrees' (`OurusView.selectedSubtrees`). Copy, cut, Backspace and Delete take
+ * it as those nodes, as they take a whole line selected from its start.
+ */
+export function wholeBlocksSelection(ctx: CommandContext): OurusSelection | null {
+  if (ctx.collapsed) return null;
+  const from = Math.min(ctx.selection.anchor, ctx.selection.head);
+  const to = Math.max(ctx.selection.anchor, ctx.selection.head);
+  const ends = selectionEnds(ctx, from, to);
+  if (ends.start !== 'edge' || ends.end !== 'edge') return null;
+  const doc = ctx.doc;
+  const first = doc.lineAt(from);
+  let start = ctx.view.locate(from).zone === 'text' && from === first.to ? Math.min(first.to + 1, doc.text.length) : first.from;
+  const end = doc.lineAt(to).from;
+  // (past blank lines the selection starts on: the first block's line)
+  for (let line = doc.lineAt(start); start < end && trimMd(doc.text.slice(line.from, line.to)) === '' && line.to + 1 <= end; line = doc.lineAt(start)) start = line.to + 1;
+  if (end <= start) return null;
+  const selection = { anchor: start, head: end };
+  return ctx.view.selectedSubtrees(selection) ? selection : null;
 }
 
 /**

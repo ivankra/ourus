@@ -148,6 +148,14 @@ clipboard:
   text/plain: |
     - deep
     - three
+  text/markdown: |
+    - deep
+    - three
+  text/html: |
+    <!-- ourus --><ul>
+    <li>deep</li>
+    <li>three</li>
+    </ul>
 ```
 
 ## SubtreeEdit6
@@ -172,6 +180,17 @@ clipboard:
   text/plain: |
     - b
       - b1
+  text/markdown: |
+    - b
+      - b1
+  text/html: |
+    <!-- ourus --><ul>
+    <li>b
+    <ul>
+    <li>b1</li>
+    </ul>
+    </li>
+    </ul>
 ```
 
 ```markdown

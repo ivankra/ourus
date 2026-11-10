@@ -3,14 +3,15 @@
 // timing tests fail on a busy machine;
 // then the others at once: the view pass, the inverse pairs (and the same corpus played by the last commit's code,
 // so a change's round trips are told from the corpus's), the differential run against the last
-// commit, the generated-notes checks (conserve, sweep, sessions), the public API at a note's extremes
+// commit, the generated-notes checks (conserve, sweep, sessions), copy and paste against duplicate
+// (copy-paste), the public API at a note's extremes
 // (extremes) and the open bugs (bugs). The suites run side by side
 // (each its own process; the view pass and the differential run spread their work over the cores
 // themselves). Each report goes to a file in the run's directory; a
 // summary is printed.
 //
 //   node test/heavy.ts            # every suite
-//   node test/heavy.ts view diff  # some: types, fast, view, inverse, diff, conserve, sweep, sessions, extremes, bugs
+//   node test/heavy.ts view diff  # some: types, fast, view, inverse, diff, conserve, sweep, sessions, copy-paste, extremes, bugs
 //   TEST_BASE_REV=<ref> node test/heavy.ts  # against another commit than the last
 
 import { execFileSync, spawn } from 'node:child_process';
@@ -20,7 +21,7 @@ import { join, relative, resolve } from 'node:path';
 
 const here = resolve(import.meta.dirname, '..');
 const asked = process.argv.slice(2);
-const suites = asked.length ? asked : ['types', 'fast', 'view', 'inverse', 'diff', 'conserve', 'sweep', 'sessions', 'extremes', 'bugs'];
+const suites = asked.length ? asked : ['types', 'fast', 'view', 'inverse', 'diff', 'conserve', 'sweep', 'sessions', 'copy-paste', 'extremes', 'bugs'];
 const run = mkdtempSync(join(tmpdir(), 'ourus-heavy-'));
 const base = process.env.TEST_BASE_REV ?? 'HEAD';
 
@@ -94,7 +95,7 @@ const suite = async (name: string): Promise<string> => {
   // (the typecheck, in the copy, its `node_modules` the working tree's: the sources and tests, and every
   // demo, which hosts the API as a host would, `npm run typecheck`)
   if (name === 'types') return `types: ${(await play(now, 'run', ['typecheck'], 'types.txt', {}, 'npm')) ? 'pass' : 'FAIL'} (types.txt)`;
-  if (name === 'fast') return `fast: ${(await play(now, '--test', ['test/*.test.ts', 'test/*/*.test.ts', 'sxs/*/*.test.ts'], 'fast.txt')) ? 'pass' : 'FAIL'} (fast.txt)`;
+  if (name === 'fast') return `fast: ${(await play(now, '--import', ['./test/lib/fc-seed.ts', '--test', 'test/*.test.ts', 'test/*/*.test.ts', 'sxs/*/*.test.ts'], 'fast.txt')) ? 'pass' : 'FAIL'} (fast.txt)`;
   if (name === 'view') return `view: ${(await play(now, 'test/view-exhaustive.ts', [], 'view.txt')) ? 'pass' : 'FAIL'} (view.txt)`;
   if (name === 'inverse') {
     // (both play the same corpus: the generated notes only where the last commit's harness has them too)
@@ -121,8 +122,9 @@ const suite = async (name: string): Promise<string> => {
     return `diff: ${regressions === '0' ? 'pass' : 'FAIL'}, ${regressions} regressions, ${fails} runs fail to write; ${same ? 'no outcome moved' : 'outcomes moved, each to judge'} (diff.txt)`;
   }
   // (the generated-notes checks: each held to its baseline on its own corpus)
-  if (name === 'conserve' || name === 'sweep' || name === 'sessions' || name === 'extremes' || name === 'bugs') return `${name}: ${(await play(now, `test/${name}.ts`, [], `${name}.txt`)) ? 'pass' : 'FAIL'} (${name}.txt)`;
-  return `no suite "${name}": types, fast, view, inverse, diff, conserve, sweep, sessions, bugs`;
+  // (and copy and paste against duplicate over the spec's notes, `copy-paste.ts`)
+  if (name === 'conserve' || name === 'sweep' || name === 'sessions' || name === 'copy-paste' || name === 'extremes' || name === 'bugs') return `${name}: ${(await play(now, `test/${name}.ts`, [], `${name}.txt`)) ? 'pass' : 'FAIL'} (${name}.txt)`;
+  return `no suite "${name}": types, fast, view, inverse, diff, conserve, sweep, sessions, copy-paste, extremes, bugs`;
 };
 const lines: string[] = [];
 const report = (line: string): void => {

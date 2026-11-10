@@ -492,10 +492,11 @@ export interface OurusConfig {
 
   /**
    * Paste (Ctrl-V, `paste`) at the start of a node's text, where the paste goes (spec/paste-list.md):
-   * - `after` (the default, as Logseq, Logseq DB, Tine, Tana and Athens paste): after the node, as
+   * - `before` (the default, as Obsidian, SilverBullet, Roam, SiYuan, Dynalist and WorkFlowy paste):
+   *   before it, where the caret is; pasted items before an item take its list's form, numbered from
+   *   it. A block cut and pasted back at the caret the cut leaves goes back where it was.
+   * - `after` (as Logseq, Logseq DB, Tine, Tana, Athens and Notion paste): after the node, as
    *   anywhere else in its text.
-   * - `before` (as Roam, SiYuan and WorkFlowy paste): before it, where the caret is; pasted items
-   *   before an item take its list's form, numbered from it.
    */
   readonly pasteAtTextStart: 'after' | 'before';
 
@@ -542,6 +543,19 @@ export interface OurusConfig {
    *   break, `\` at the line's end, shown as written. `<br><br>` is a paragraph break either way.
    */
   readonly pasteHtmlBreak: 'line' | 'hard';
+
+  /**
+   * Paste (Ctrl-V, `paste`) of plain text, every line indented as code (four columns or a tab), into
+   * an empty note (spec/paste.md):
+   * - `code` (the default, as Obsidian, SilverBullet and Emacs paste it): it keeps its indentation,
+   *   indented code, as a paste on a blank line of a note that isn't empty keeps it (the host's paste).
+   *   Not a list: lines that read as one without the indentation (`    - child`, copied from deeper in a
+   *   list) lose it and paste as the list.
+   * - `dedent` (as WorkFlowy, Tana, Roam and BlockNote paste it): the indentation the lines share goes, as
+   *   anywhere else a paste reads text, so `    code` pastes as a paragraph `code`.
+   * ourus's own clipboard keeps its indentation either way: it is the copied block's.
+   */
+  readonly pasteIndentedCode: 'code' | 'dedent';
 
   /**
    * The selection ladder (`expandSelection`, Ctrl-A in outliners), past a node's subtree:
@@ -658,11 +672,12 @@ const CONFIG_VALUES: { readonly [K in Exclude<keyof OurusConfig, ListOption>]: r
   pasteOverNodes: ['replace', 'after', 'nothing'],
   pasteLines: ['text', 'items'],
   pastePlainLines: ['text', 'items', 'enter', 'host'],
-  pasteAtTextStart: ['after', 'before'],
+  pasteAtTextStart: ['before', 'after'],
   pasteOnParent: ['children', 'after'],
   pasteParagraphList: ['siblings', 'children'],
   pasteListForm: ['destination', 'own'],
   pasteHtmlBreak: ['line', 'hard'],
+  pasteIndentedCode: ['code', 'dedent'],
   // Selection
   selectionLadder: ['siblings', 'parents', 'top'],
   selectNodeUp: ['line', 'sibling'],

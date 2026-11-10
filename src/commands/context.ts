@@ -48,7 +48,7 @@ export class CommandContext {
 
   /** A draft of the document, for the command's edit. */
   draft(): OurusDraft {
-    return new OurusDraft(this.doc);
+    return new OurusDraft(this.doc, this.selection);
   }
 
   /** Whether the selection is a caret. */

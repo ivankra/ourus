@@ -103,7 +103,8 @@ test('a held empty paragraph stays when the node after it goes, ending the note'
   const entered = executeOnText('a\n- b', { type: 'enter' }, { caret: 1 });
   assert.equal(appliedText(executeAfter(entered, { type: 'deleteSubtree', nodes: [2] })), 'a\n\n');
   const inSection = executeOnText('# h\n\n- a', { type: 'enter' }, { caret: 3 });
-  assert.equal(appliedText(executeAfter(inSection, { type: 'deleteSubtree', nodes: [2] })), '# h\n');
+  // (under a heading, the blank line Enter set it off by stays: a heading keeps one, Gap20)
+  assert.equal(appliedText(executeAfter(inSection, { type: 'deleteSubtree', nodes: [2] })), '# h\n\n');
   assert.equal(appliedText(executeOnText(' \n- a', { type: 'deleteSubtree' }, { caret: 4, placeholders: [1] })), ' ');
   assert.equal(appliedText(executeOnText('\n\n#', { type: 'deleteSubtree' }, { caret: 3, placeholders: [1] })), '\n');
 });
@@ -149,4 +150,26 @@ test('an empty paragraph left between blocks nothing set apart is a blank line, 
   assert.equal(settle('a\n\nb', 1), 'a\n\nb');
   assert.equal(settle('p', 1), 'p\n');
   assert.equal(settle('- a\n- b', 3), '- a\n- \n- b');
+});
+
+test('B237: held spaces and held last lines kept or settled where the writer lays the text out anew', () => {
+  // (a setext title's held space at its start: Markdown's padding, no part of the title, which a
+  // rewrite takes out, as a paragraph's)
+  assert.equal(appliedText(executeOnText(' p\n=', { type: 'indent' }, { caret: 1, placeholders: [0] })), 'p\n-');
+  assertApplied(executeOnText(' p\n-', { type: 'enter' }, { caret: 3, placeholders: [0] }));
+  // (a held empty last line the move takes first: held where it was named, the text's start)
+  const first = assertApplied(executeOnText('para one\n\n', { type: 'moveSubtreeDown' }, { anchor: 0, head: 10, config: { quotes: 'atom' }, placeholders: [10] }));
+  assert.deepEqual([first.view.doc.text, first.view.doc.marks.placeholders], ['\n\npara one\n', [0]]);
+  // (a held line ending a text, no final line break, its item moved up: at its line's end)
+  const up = assertApplied(executeOnText('2. \n3. > ', { type: 'moveSubtreeDown' }, { caret: 3, placeholders: [9] }));
+  assert.deepEqual([up.view.doc.text, up.view.doc.marks.placeholders], ['2. > \n3. ', [5]]);
+  // (a text left a line break alone, a blank line before the note kept: the empty paragraph held on
+  // its own line, past it)
+  assertApplied(executeOnText('\nx\n\n', { type: 'paste', clipboard: { 'text/plain': 'Intro.\n' } }, { anchor: 1, head: 4, placeholders: [4] }));
+  // (an empty held item with a padded marker, `-  ◌`, outdented by Enter, the quote after it its child:
+  // from the column `2. ` gives, as the item is written, its own three columns past it kept)
+  assert.equal(appliedText(executeOnText('1. num\n   1.  \n      > # quote\n', { type: 'enter' }, { caret: 14, config: { flavor: 'obsidian' }, placeholders: [14] })), '1. num\n2. \n      > # quote\n');
+  // (ourus's own held quote line copied without its mark, `> ⏎>⏎> - `, pasted on a held quote line: a
+  // quote of its children, the blank lines before them no part of it)
+  assert.equal(appliedText(executeOnText('  > \n', { type: 'paste', clipboard: { 'text/plain': '> \n>\n> - \n' } }, { caret: 4, config: { quotes: 'container' }, placeholders: [4] })), '  > > - \n');
 });

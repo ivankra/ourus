@@ -48,6 +48,21 @@ export function readBaseline(file: string): ReportBaseline | null {
   }
 }
 
+/**
+ * What a baseline left behind hides, on the run it was counted on (`held`: no knob changing the
+ * corpus): a group with fewer runs than it, a fix it doesn't know of, whose count could climb back
+ * unseen; or a corpus that is another, the spec's notes changed, which holds no count at all. Each a
+ * line saying so, which fails the run until `update`=1 records the counts.
+ */
+export function staleBaseline(baseline: ReportBaseline | null, corpus: string, groups: ReadonlyMap<string, { readonly runs: number }>, held: boolean, update: string): string[] {
+  if (!baseline || !held) return [];
+  if (baseline.corpus !== corpus) return [`the corpus changed since the baseline, which holds no count now: ${update}=1 records them`];
+  const fell = Object.entries(baseline.groups)
+    .filter(([key, runs]) => (groups.get(key)?.runs ?? 0) < runs)
+    .map(([key, runs]) => `${key} ${runs} → ${groups.get(key)?.runs ?? 0}`);
+  return fell.length ? [`fewer failures than the baseline, which would let them come back unseen: ${fell.join('; ')}; ${update}=1 records them`] : [];
+}
+
 /** Records `groups`' counts on `corpus` as the baseline in `file`. */
 export function writeBaseline(file: string, corpus: string, groups: ReadonlyMap<string, { readonly runs: number }>): void {
   const counts = [...groups].map(([key, group]) => [key, group.runs] as const).sort();

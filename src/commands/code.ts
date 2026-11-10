@@ -116,7 +116,19 @@ export function lineBreakAtOpening(ctx: CommandContext, at: CodeAt, typed: strin
   // break; where markup is decorated, the caret onto the new blank line: not done yet)
   const above = at.node.preceding;
   if (!above || above.kind === 'root' || !ctx.doc.textOf(above) || ctx.config.markup === 'decorated') return null;
-  return ctx.apply(ctx.draft().gap(above, above.gap + 1).setCaret(at.node, at.offset, 1));
+  return ctx.apply(lineAbove(ctx, above).setCaret(at.node, at.offset, 1));
+}
+
+/**
+ * The line a line break at a block's opening delimiter makes above it: a blank line, the gap of the
+ * node above; after a block of lines nothing closes (an item's fence left open), a line of that block,
+ * an empty one, as a text editor writes the line break: no blank line can be between them.
+ */
+function lineAbove(ctx: CommandContext, above: OurusNode): ReturnType<CommandContext['draft']> {
+  const draft = ctx.draft();
+  const text = ctx.doc.textOf(above);
+  if (text instanceof OurusAtom && !text.closed && text.frame.some((p) => p.part === 'open') && above.gap === 0) return draft.setText(above, new OurusAtom(text.type, text.item, text.marks.concat('\n'), text.blockIdLines));
+  return draft.gap(above, above.gap + 1);
 }
 
 /**
@@ -139,7 +151,7 @@ function enterAtOpening(ctx: CommandContext, node: OurusNode, text: OurusAtom): 
     const above = node.preceding;
     // (where markup is decorated, the caret goes onto the new blank line: not done yet)
     if (!above || !ctx.doc.textOf(above) || ctx.config.markup === 'decorated') return null;
-    return ctx.apply(draft.gap(above, above.gap + 1).setCaret(node, ctx.from.zone === 'frame' || ctx.from.zone === 'text' ? ctx.from.offset : 0, 1));
+    return ctx.apply(lineAbove(ctx, above).setCaret(node, ctx.from.zone === 'frame' || ctx.from.zone === 'text' ? ctx.from.offset : 0, 1));
   }
   draft.convert(node, 'item');
   if (ctx.config.enterMidItem === 'sibling') {
@@ -325,7 +337,7 @@ function deleteInFenceRun(ctx: CommandContext, at: CodeAt, dir: -1 | 1): OurusRe
   if (text.type !== 'fenced_code' || !runs?.close || !run) return null;
   const { open, close } = runs;
   const draft = ctx.draft();
-  // (a closing run longer than the opening one: it alone shortens, the block as it was, B96)
+  // (a closing run longer than the opening one: it alone shortens, the block as it was)
   const longer = run === close && close.to - close.from > open.to - open.from;
   if (longer || run.to - run.from > 3) {
     const edited = longer ? text.splice(close.to - 1, close.to) : text.splice(close.to - 1, close.to).splice(open.to - 1, open.to);
@@ -352,7 +364,7 @@ function deleteInFenceRun(ctx: CommandContext, at: CodeAt, dir: -1 | 1): OurusRe
         draft.join(above, node, { separator: '\n' });
       }
     }
-    // (a block's list after it, `listParent: block`, between it and the next: none below it, B97)
+    // (a block's list after it, `listParent: block`, between it and the next: none below it)
     const below = node.kind === 'item' ? node.children[0] : node.children.length ? undefined : node.next;
     if (below?.kind === 'paragraph' && node.gap === 0 && ctx.doc.textOf(below) instanceof OurusProse) draft.join(target, below, { separator: '\n' });
     return ctx.apply(draft.setCaret(target, caret, -1));
@@ -405,9 +417,11 @@ function atOpeningStart(ctx: CommandContext, at: CodeAt): OurusResult | null {
   // first in its container, below no text (`> ┃```): nothing to join, not done yet
   if (!above || above.kind === 'root' || !ctx.doc.textOf(above)) return null;
   if (above.gap === 0) return new OurusRejected('not-expressible', "the code can't join the text above");
-  // (after HTML that a blank line ends, the fence would be a line of it, B87)
+  // (after HTML that a blank line ends, the fence would be a line of it)
   const upper = ctx.doc.textOf(above);
   if (above.gap === 1 && upper instanceof OurusAtom && upper.type === 'html_block' && MdTree.takesIn(upper.text, at.text.text.split('\n')[0]!, ctx.doc.mdTree.flavor)) return new OurusRejected('not-expressible', 'the fence would be a line of the HTML above it');
+  // (after a block id on a line of its own, the block right under it would read with that line)
+  if (above.gap === 1 && upper?.blockIdLines.length) return new OurusRejected('not-expressible', "the code can't go right under the block id line above it");
   // the caret where it was; where markup is decorated, not on the delimiter: at the code's start
   return ctx.apply(ctx.draft().gap(above, above.gap - 1).setCaret(node, ctx.config.markup === 'decorated' ? codeStart(at.text) : offset, 1));
 }

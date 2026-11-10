@@ -45,7 +45,7 @@ export function zoomEscape(doc: OurusDoc, zoom: number, next: OurusDoc, removed 
       else if (m.kind !== n.kind || next.textOf(m)?.text !== doc.textOf(n)?.text) escape = `node ${n.id}, outside the zoom, changed`;
     } else if (inside.has(n.id) && m && !insideNow.has(n.id)) escape = `node ${n.id} left the zoom`;
     const [from, to] = middle(n, m);
-    // (the children outside, in the changed middle, in the order they were: none swapped, B219)
+    // (the children outside, in the changed middle, in the order they were: none swapped)
     if (m && m.id === n.id && !escape) {
       const kept = (x: OurusNode, k: number, l: number): number[] => {
         const ids: number[] = [];
@@ -63,7 +63,7 @@ export function zoomEscape(doc: OurusDoc, zoom: number, next: OurusDoc, removed 
   visit(doc.rootNode, next.rootNode);
   if (escape) return escape;
   const made = (m: OurusNode, n: OurusNode | undefined): string | null => {
-    // (by membership: an id a branch of `doc`'s made before it can be under its `nextId`, B219)
+    // (by membership: an id a branch of `doc`'s made before it can be under its `nextId`)
     if (m.kind !== 'root' && !doc.node(m.id) && !insideNow.has(m.id)) return `node ${m.id} was made outside the zoom`;
     const [from, to] = middle(m, n);
     for (let k = from; k < to; k++) {
