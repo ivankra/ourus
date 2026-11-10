@@ -61,7 +61,9 @@ clipboard: |-
 
 ## PasteList3
 
-And at its text's start (`pasteAtTextStart: after`).
+And at its text's start, before it, where the caret is (`pasteAtTextStart: before`, the default, as
+Obsidian, SilverBullet, Roam, SiYuan, Dynalist and WorkFlowy paste): a block cut and pasted back at
+the caret the cut leaves goes back where it was.
 
 ```yaml
 tags: common
@@ -78,9 +80,9 @@ clipboard: |-
 > paste
 
 ```markdown
-- ab
 - x
 - y┃
+- ab
 - c
 ```
 
@@ -550,12 +552,10 @@ Notes
 
 ## PasteList20
 
-With `pasteAtTextStart: before` (Roam, SiYuan, WorkFlowy), at the start of an item's text the items
-go before it, numbered from it.
+At the start of a numbered item's text the items go before it, numbered from it.
 
 ```yaml
 tags: rare
-pasteAtTextStart: before
 clipboard: |-
   - x
   - y
@@ -761,3 +761,30 @@ clipboard: |-
   ```
 - b
 ````
+
+## PasteList28
+
+With `pasteAtTextStart: after` (as Logseq, Logseq DB, Tine, Tana, Athens and Notion paste), at an
+item's text start the items go after it, as anywhere else in its text.
+
+```yaml
+tags: rare
+pasteAtTextStart: after
+clipboard: |-
+  - x
+  - y
+```
+
+```markdown
+- ┃ab
+- c
+```
+
+> paste
+
+```markdown
+- ab
+- x
+- y┃
+- c
+```

@@ -1186,6 +1186,7 @@ tags: core
 
 ```markdown
 # Notes
+
 first idea┃
 ```
 
@@ -1193,6 +1194,7 @@ first idea┃
 
 ```markdown
 # Notes
+
 first idea
 
 second┃
@@ -1202,6 +1204,7 @@ second┃
 
 ```markdown
 # Notes
+
 second┃
 
 first idea
@@ -1226,6 +1229,7 @@ tags: core
 
 ```markdown
 # Trip
+
 Pack light.
 
 Book the train.┃
@@ -1235,6 +1239,7 @@ Book the train.┃
 
 ```markdown
 # Trip
+
 Pack light.
 
 Book the train.
@@ -1245,6 +1250,7 @@ Seat 42.┃
 
 ```markdown
 # Trip
+
 Book the train.
 Seat 42.┃
 
@@ -1255,6 +1261,7 @@ Pack light.
 
 ```markdown
 # Trip
+
 Pack light.
 
 Book the train.
@@ -1394,6 +1401,7 @@ tags: rare
 
 ```markdown
 # Plan
+
 revise ┃2\̬. draft
 ```
 
@@ -1401,6 +1409,7 @@ revise ┃2\̬. draft
 
 ```markdown
 # Plan
+
 revise 
 ┃2. draft
 ```

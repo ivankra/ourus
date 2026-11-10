@@ -753,12 +753,11 @@ q
 
 ## Paste20
 
-With `pasteAtTextStart: before`, a heading pasted at a paragraph's start goes before it, and takes it
-in, as one typed there would.
+A heading pasted at a paragraph's start goes before it (`pasteAtTextStart: before`, the default),
+and takes it in, as one typed there would.
 
 ```yaml
 tags: rare
-pasteAtTextStart: before
 clipboard: |-
   ## h
   text

@@ -358,7 +358,8 @@ export function deleteEmptyPair(ctx: CommandContext, place: PairPlace, offset: n
     return ctx.apply(ctx.draft().setText(node, text.splice(offset - 1, offset + closer.length)).setCaret(node, offset - 1, -1));
   }
   // (a bracket's where its single is listed: with the double alone, WorkFlowy's, Backspace takes one)
-  const listed = s[offset] === '`' ? prose && closes(ctx, '`') && emptyPairAt(ctx, s, offset) : BRACKETS[open] === s[offset] && open !== '$' && closes(ctx, open as AutoCloseOpener);
+  // (a closer after the caret: at the text's end none, `undefined` no bracket's closer, B246)
+  const listed = s[offset] === '`' ? prose && closes(ctx, '`') && emptyPairAt(ctx, s, offset) : offset < s.length && BRACKETS[open] === s[offset] && open !== '$' && closes(ctx, open as AutoCloseOpener);
   // (in what isn't prose, a pair ours alone: there the author's brackets are characters)
   if (!listed || (!prose && !text.marks.hasAutoAt(offset))) return null;
   if (place.markup(offset - 1)) return null;

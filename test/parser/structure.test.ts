@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import fc from 'fast-check';
 import { MdTree } from '../../src/parser/syntax.ts';
+import { MdFlavor } from '../../src/index.ts';
 import { gfm } from '../../src/parser/gfm.ts';
 import { arbDoc, TIDY, WILD } from './arbitraries.ts';
 import { ourusSkeleton, refdefLines, referenceSkeleton } from './oracle.ts';
@@ -161,7 +162,16 @@ test('spaces or tabs separate a link\'s parts: before its destination, its title
 test('each text rule runs over the text the rules before it left: one after GFM\'s email sees what follows each email', async () => {
   const { defineFlavor, gfmExtensions } = await import('../../src/parser/extend.ts');
   const seen: string[] = [];
-  const flavor = defineFlavor('tail', [...gfmExtensions, { name: 'tail', textRules: [{ name: 'tail', process(p, node) { seen.push(p.text.slice(node.from, node.to)); } }] }]);
+  const flavor = defineFlavor('tail', [...gfmExtensions, { name: 'tail', textRules: [{ name: 'tail', matches(text) { seen.push(text); return []; } }] }]);
   assert.equal(MdTree.parse('a@b.co TAIL and x@y.io end', flavor).renderHtml(), '<p><a href="mailto:a@b.co">a@b.co</a> TAIL and <a href="mailto:x@y.io">x@y.io</a> end</p>\n');
   assert.deepEqual(seen, [' TAIL and ', ' end']);
+});
+
+test('GFM email autolinks match over the decoded text, as cmark-gfm does: an escape or an entity in one is part of it (B251)', () => {
+  assert.equal(MdTree.parse('a\\+b@example.com', MdFlavor.gfm).renderHtml(), '<p><a href="mailto:a+b@example.com">a+b@example.com</a></p>\n');
+  assert.equal(MdTree.parse('x a&#43;b@example.com y', MdFlavor.gfm).renderHtml(), '<p>x <a href="mailto:a+b@example.com">a+b@example.com</a> y</p>\n');
+  assert.equal(MdTree.parse('a\\@example.com', MdFlavor.gfm).renderHtml(), '<p><a href="mailto:a@example.com">a@example.com</a></p>\n');
+  // (the escape still read as one, in the link: its backslash markup)
+  const tree = MdTree.parse('a\\+b@example.com', MdFlavor.gfm);
+  assert.ok(tree.inlineEscapeAt(1));
 });

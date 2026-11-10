@@ -3536,6 +3536,7 @@ tags: rare markup-heading
 
 ```markdown
 ## title ##
+
 ┃◌
 ```
 
@@ -5824,15 +5825,14 @@ markup: decorated
 
 ## Regression231
 
-A paste at the start of a table: the nodes go as at a text's start, after it (`pasteAtTextStart:
-after`, the default), or before it, which puts a cut back where it was. It was refused, a table's
+A paste at the start of a table: the nodes go as at a text's start, before it (`pasteAtTextStart:
+before`, the default), which puts a cut back where it was, or after it (`after`). It was refused, a table's
 row holding one line; at a rule, HTML or a footnote's text, the host's, whose text before a rule
 made it a setext underline.
 
 ```yaml
 tags: rare
 flavor: gfm
-pasteAtTextStart: before
 clipboard: |
   first
 ```
@@ -6551,6 +6551,7 @@ tags: rare markup-heading
 
 ```markdown
 # abc  #
+
 ┃title
 ```
 
@@ -7504,12 +7505,14 @@ result: rejected not-expressible
 ## Regression291
 
 A table pasted into an empty item that a blank line ends, its next item indented two columns: under
-an item with text those columns make that item its child, so the paste is refused, as plain paste
-is. The table, an atom, didn't count as giving the item text: the draft kept the next item's line as
-written, and the text written read otherwise (write-failed; found by the differential run).
+an item with text those columns make that item its child, so the next item is lined up with the
+filled one, the next item of the list still, as the outliners keep it (B193). The table, an atom,
+didn't count as giving the item text once: the draft kept the next item's line as written, and the
+text written read otherwise (write-failed; found by the differential run).
 
 ```yaml
 tags: rare
+flavor: gfm
 clipboard: |
   | a |
   | - |
@@ -7525,21 +7528,20 @@ clipboard: |
 > paste
 
 ```markdown
--␠
+- | a |
+  | - |
+  | 1 |┃
 
-  - c
-```
-
-```yaml
-result: rejected not-expressible
+- c
 ```
 
 ## Regression292
 
 Enter zoomed into an empty item that a blank line ends, its next item indented two columns: the
-new first child gives the item a content column, which takes that item in, so Enter is refused. The
-seam check asked only whether an empty item gained text, not a child, and the text written read
-otherwise (write-failed; found by the view's exhaustive pass on Regression291's start).
+new first child gives the item a content column, which takes that item in; lining that item up, as
+Regression291 does, writes a line outside the zoom, so Enter is refused. The seam check asked only
+whether an empty item gained text, not a child, and the text written read otherwise (write-failed;
+found by the view's exhaustive pass on Regression291's start).
 
 ```yaml
 tags: rare
@@ -7554,7 +7556,7 @@ tags: rare
 > enter
 
 ```yaml
-result: rejected not-expressible
+result: rejected outside-zoom
 ```
 
 ## Regression293
@@ -7606,3 +7608,2185 @@ code
 code
 ```
 ````
+
+## Regression294
+
+Enter at a heading's start right after a quote in an indented item: an empty paragraph between
+them, set off from both by blank lines; typed on, a paragraph (B365: the seam check read the
+quote's blank line as a `>` at column 0, which ends the item).
+
+```yaml
+tags: rare
+```
+
+```markdown
+  - > a
+    >
+    > x
+┃# h
+```
+
+> enter "y"
+
+```markdown
+  - > a
+    >
+    > x
+
+y┃
+
+# h
+```
+
+## Regression295
+
+Deleting the paragraph between an item's quote and a quote two columns in at the root, which would
+then be the item's: the quote, which the command doesn't touch, kept a block of its own, written at
+the root's column, as the outliners keep it (B193); the caret at the end of the text above, past the
+empty item's bare `-`, whose end is its markup. The seam check read the blank quoted line in the
+item's quote as a `>` at column 0 (B350), and the edit failed to write.
+
+```yaml
+tags: rare
+```
+
+```markdown
+- a
+  > q
+  >
+  > -
+x┃
+  > l
+```
+
+> deleteSubtree
+
+```markdown
+- a
+  > q┃
+  >
+  > -
+> l
+```
+
+## Regression296
+
+Backspace joining a paragraph into an empty item, an indented paragraph at the root after it: that
+paragraph, which the command doesn't touch, would be the item's, so it is kept a block of its own,
+written at the root's column, a blank line raised before it, as the outliners keep it (B193: the
+seam check read the empty item as its marker with the text right after it, `-x`, no item).
+
+```yaml
+tags: rare
+```
+
+```markdown
+-
+┃x
+
+  a
+```
+
+> deleteContentBackward
+
+```markdown
+- ┃x
+
+a
+```
+
+## Regression297
+
+Backspace joining a paragraph into an empty item, indented code at the root after it: no blank line
+keeps indented code out of an item above it, so it is kept a block of its own as fenced code (B328).
+
+```yaml
+tags: rare markup-fence
+```
+
+```markdown
+-
+┃x
+
+    c
+```
+
+> deleteContentBackward
+
+````markdown
+- ┃x
+```
+c
+```
+````
+
+## Regression298
+
+Backspace joining a paragraph into an empty numbered item, a quote padded to its content column at
+the root after it: the quote, which the command doesn't touch, kept a block of its own at the root's
+column, as the outliners keep it (B352).
+
+```yaml
+tags: rare
+```
+
+```markdown
+2.
+┃x
+   > more
+```
+
+> deleteContentBackward
+
+```markdown
+2. ┃x
+> more
+```
+
+## Regression299
+
+A paragraph moved up above a loose numbered list, an item of its own after it padded to the list's
+content column (`listParent: container`): that item, which the move doesn't touch, would be the
+list's last item's child, so it is written at the root's column, an item of its own still, as the
+outliners keep it (B54, P2: refused before, and before that a write failure).
+
+```yaml
+tags: rare
+listParent: container
+```
+
+```markdown
+1. First
+
+   Another paragraph
+
+┃Second
+
+   - A child
+```
+
+> moveSubtreeUp
+
+```markdown
+┃Second
+
+1. First
+
+   Another paragraph
+
+- A child
+```
+
+## Regression300
+
+Enter at a fence's start, right after an item's fence that nothing closes: no blank line can be
+between them, every line there being the open code's, so the new line is an empty line of that code,
+as a text editor writes the line break (B205: the draft asked for a blank line, and failed to write).
+
+```yaml
+tags: rare markup-fence
+```
+
+````markdown
+- ```
+┃```
+````
+
+> enter
+
+````markdown
+- ```
+
+┃```
+````
+
+## Regression301
+
+The text of the third of three items sharing a marker line cleared: the line would be `- - - `,
+a thematic break, so the nested empty items are written each on a line of its own, as the outliners
+show them (B209: the draft's three items read back as a rule).
+
+```yaml
+tags: rare
+```
+
+```markdown
+- - - a┃
+```
+
+> deleteSoftLineBackward
+
+```markdown
+-␠
+  -␠
+    - ┃
+```
+
+## Regression302
+
+The inner item of an indented shared marker line deleted, its child led by a tab, the block's items
+indented with spaces and with a tab: the block, which the command changes, is written anew in normal
+form, at the root's column, in spaces (B348: the writer couldn't write a marker over a tab, nor carry
+both spellings through a move).
+
+```yaml
+tags: rare
+```
+
+```markdown
+  - - ┃
+→- x
+```
+
+> deleteSubtree
+
+```markdown
+- - ┃x
+```
+
+## Regression303
+
+A quoted paragraph with no space after its `>` moved up, onto the item's marker line its quote
+shares: its line written with a space after the `>`, the edited block re-spelled where the marker
+can't be written over it as it is (B349).
+
+```yaml
+tags: rare
+```
+
+```markdown
+- > a
+  >
+  >x┃ t
+```
+
+> moveSubtreeUp
+
+```markdown
+- > x┃ t
+  >
+  > a
+```
+
+## Regression304
+
+The third shared marker's text cleared under a paragraph that owns the list: the nested empty items,
+each on a line of its own (B209), set off from the paragraph by a blank line, ours: a bare marker's
+line right under it would be its setext underline, the paragraph a heading.
+
+```yaml
+tags: rare
+```
+
+```markdown
+p
+- - - a┃
+```
+
+> deleteSoftLineBackward
+
+```markdown
+p
+
+-␠
+  -␠
+    - ┃
+```
+
+## Regression305
+
+In Obsidian, a paste ending in `---` after the `---` the note opens with (`pasteAtTextStart:
+after`): the two would open front matter, so a blank line goes before the first, as where a rule
+comes first (DeleteSubtree9; B387).
+
+```yaml
+tags: rare
+flavor: obsidian
+pasteAtTextStart: after
+clipboard: |
+  a
+
+  ---
+```
+
+```markdown
+┃---
+```
+
+> paste
+
+```markdown
+
+---
+
+a
+
+---┃
+```
+
+## Regression306
+
+Enter on an empty item padded past its marker, the item after it two columns in, its sibling: the
+empty item is written `- `, its padding gone, narrower, so the item after it is lined up with it, a
+sibling still, not the new item's child (B378).
+
+```yaml
+tags: rare
+```
+
+```markdown
+-  ◌┃
+  - item
+```
+
+> enter "x"
+
+```markdown
+-␠
+- x┃
+- item
+```
+
+## Regression307
+
+A quote's paragraph on an item's marker line moved down past the quote's heading: into the heading's
+section, the heading first in the quote now, on the marker line, the paragraph after it in the quote
+(B53, P2, and B360: the paragraph's line, the marker's, was copied as it was, a second item).
+
+```yaml
+tags: rare
+```
+
+```markdown
+- > a┃
+  > # b
+```
+
+> moveSubtreeDown
+
+```markdown
+- > # b
+  > a┃
+```
+
+## Regression308
+
+A line joined into an empty numbered item padded past its marker, a quote after the line padded to
+that padding's column: the item, given text, is written past its marker and a space, its content
+column narrower, so the quote, which the command doesn't touch, would be the item's: kept a block of
+its own, at the root's column (B390: the seam check read the item with the padding it had).
+
+```yaml
+tags: rare
+```
+
+```markdown
+2.␠␠
+┃ x
+   > more
+```
+
+> deleteContentBackward
+
+```markdown
+2. ┃x
+> more
+```
+
+## Regression309
+
+Shift-Tab on a top-level item after an item whose last child, after a quote, is a tab-led empty item
+with a paragraph: the paragraph it becomes would be that paragraph's lazy line, so a blank line goes
+between them (B386: the seam check read the item's lines without the quote, its empty item's line a
+setext underline under `a`).
+
+```yaml
+tags: rare
+```
+
+```markdown
+- a
+  > q
+→-
+→  b
+- ┃c
+```
+
+> outdent
+
+```markdown
+- a
+  > q
+→-
+→  b
+
+┃c
+```
+
+## Regression310
+
+A quote's items written `>-`, no space after the `>`, one moved up: the quote, which the command
+changes, written in normal form, a space after each `>`, rather than the move's `> ` reconciled with
+the line's `>` (B349, B289; decided 2026-11-11, as Quote3).
+
+```yaml
+tags: rare
+```
+
+```markdown
+> a
+>- b
+>- c┃
+```
+
+> moveSubtreeUp
+
+```markdown
+> a
+> - c┃
+> - b
+```
+
+
+## Regression311
+
+A tab-led child moved down onto the next item, whose first block is a callout: written on the item's
+marker line, the child's marker where it is written (B392).
+
+```yaml
+tags: rare
+flavor: obsidian
+```
+
+```markdown
+- a
+→- b┃
+- > [!note] c
+```
+
+> moveSubtreeDown
+
+```markdown
+- a
+- - b┃
+  > [!note] c
+```
+
+## Regression312
+
+Backspace at the start of an item's quote, the quote's next line `>-` with no space after its `>`:
+the quote's first paragraph unquoted, the quote's new first line spelled with its space (B393, B349's
+shape under a shift).
+
+```yaml
+tags: rare
+```
+
+```markdown
+- > ┃a
+  >- b
+```
+
+> deleteContentBackward
+
+```markdown
+- ┃a
+  > - b
+```
+
+## Regression313
+
+Backspace at the start of a numbered item's quote, the item padded past its marker and a second quote
+below it: the first quote's paragraph the item's text, the second quote kept where it is, its line
+indented a column past the item's narrower content now (B394).
+
+```yaml
+tags: rare
+quotes: container
+```
+
+```markdown
+2.  > ┃q
+
+    > r
+```
+
+> deleteContentBackward
+
+```markdown
+2. ┃q
+    > r
+```
+
+## Regression314
+
+A list pasted at the end of a paragraph, a padded heading after it: the heading kept apart, out of the
+new item, its padding gone, as the outliners keep it (B395, B193).
+
+```yaml
+tags: rare
+listParent: container
+clipboard: |
+  - a
+```
+
+```markdown
+x┃
+  ## N
+```
+
+> paste
+
+```markdown
+x
+- a┃
+## N
+```
+
+## Regression315
+
+Enter in a quote's list, the quote padded three spaces before its first line's `>` and none before
+the next: the quote, which the command changes, written anew in normal form, its `>`s at its column
+(B396; an edited block is normalized, decided 2026-11-10).
+
+```yaml
+tags: rare
+```
+
+```markdown
+   > mor
+> - ┃e
+```
+
+> enter
+
+```markdown
+> mor
+>
+> - ┃
+> - e
+```
+
+> "x"
+
+```markdown
+> mor
+>
+> - x┃
+> - e
+```
+
+## Regression316
+
+Enter before the text of the third of three items sharing a marker line padded past its first
+marker, an item of the list after it: each item written on a line of its own (B209), and the item
+after them, which the first item's content column, now its marker's and a space, would take in,
+written at the list's column (B388).
+
+```yaml
+tags: rare
+```
+
+```markdown
+-   - - ┃outline
+  - [ ] draft
+```
+
+> enter
+
+```markdown
+- 
+    - 
+      - ┃
+      - outline
+- [ ] draft
+```
+
+## Regression317
+
+Alt-Up on an empty item under a textless one, moving them above the item that shared its parent's
+marker line: the three markers, which would read as a rule on one line, each on a line of its own,
+under the task's checkbox with no blank line, which would end its item (B388). In CommonMark, which
+reads no task, `[ ]` is a paragraph a bare `-` under it would underline: a blank line between them.
+
+```yaml
+tags: rare
+flavor: gfm
+```
+
+```markdown
+- [ ] 
+  - - x
+    - - ┃
+    - [ ] review
+```
+
+> moveSubtreeUp
+
+```markdown
+- [ ] 
+  - 
+    - 
+      - ┃
+    - x
+    - [ ] review
+```
+
+## Regression318
+
+A section's last node moved down to the document's end, into the next section, and back: the
+paragraph it comes back after keeps the blank line it had. The node's gap at the document's end is
+none between blocks; the old end takes the one before it there, the heading's (B183).
+
+```yaml
+tags: common
+```
+
+```markdown
+## B
+
+para
+
+- ┃item
+
+## C
+```
+
+> moveSubtreeDown
+
+```markdown
+## B
+
+para
+
+## C
+
+- ┃item
+```
+
+> moveSubtreeUp
+
+```markdown
+## B
+
+para
+
+- ┃item
+
+## C
+```
+
+## Regression319
+
+Enter before the third marker of a padded shared marker line whose last item holds a quote, the
+root's quote after it two spaces in: the quote, which the first item's content column, now its marker's and a space,
+would take in, written at the root's column (B388).
+
+```yaml
+tags: rare
+```
+
+```markdown
+-  - ┃- > quoted in item
+  > over two lines
+```
+
+> enter
+
+```markdown
+- 
+   - 
+     - ┃
+     - > quoted in item
+> over two lines
+```
+
+## Regression320
+
+The same with the split items' last a sibling read as it was, not the split one: what follows the
+first item's subtree is checked too, its content column narrowed (B388).
+
+```yaml
+tags: rare
+```
+
+```markdown
+-   - - ┃outline
+    - outline
+  - [ ] draft
+```
+
+> enter
+
+```markdown
+- 
+    - 
+      - ┃
+      - outline
+    - outline
+- [ ] draft
+```
+
+## Regression321
+
+An item's quote ending in an empty quoted line pasted into an empty note: the note's old end was its
+root, no node before the paste to give the paste's blank lines to (B380). The empty quoted line is
+the item's blank line after it.
+
+```yaml
+tags: rare
+clipboard: |
+  - > a
+    > 
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+- > a┃
+
+```
+
+## Regression322
+
+In Obsidian, a paste into an empty note that starts and ends with a `---` rule: written as it is, the
+two would open and close front matter, the paste in it. A blank line goes before the first, as where
+a rule the draft moves first has another below it (DeleteSubtree9).
+
+```yaml
+tags: rare
+flavor: obsidian
+clipboard: |
+  ---
+
+  text
+
+  ---
+```
+
+```markdown
+┃
+```
+
+> paste
+
+```markdown
+
+---
+
+text
+
+---┃
+```
+
+## Regression323
+
+Shift-Tab on the child sharing a padded item's marker line, the parent's next item two spaces in:
+the child moved out to the root after its parent, which would take the next item in at its content
+column, two now, as the moved one does. The next item lifted to the list's column, the moved one
+lined up with it where it is lifted to (found by the volume run, seed 101).
+
+```yaml
+tags: rare
+```
+
+```markdown
+- ┃  - child two
+  - child three
+```
+
+> outdent
+
+```markdown
+- 
+- ┃child two
+- child three
+```
+
+## Regression324
+
+Backspace at the start of the child sharing a padded item's marker line, the parent's next item two
+spaces in: the child's text joined into the parent, which had none, its content column its marker's
+and a space now. The next item, which it would take in, lifted to the list's column.
+
+```yaml
+tags: rare
+```
+
+```markdown
+-   - ┃child two
+  - child three
+```
+
+> deleteContentBackward
+
+```markdown
+- ┃child two
+- child three
+```
+
+## Regression325
+
+Delete subtree on the first of two numbered items, the second an empty quote's held line at the
+note's end, with no line ending after it: the held line kept where it is written, at the end, the
+item renumbered (found by the volume run, seed 101).
+
+```yaml
+tags: rare
+```
+
+```markdown
+2. ┃
+3. > ◌
+```
+
+> deleteSubtree
+
+```markdown
+2. > ┃◌
+```
+
+## Regression326
+
+Tab on an empty item after a padded empty one, a blank line between them, a quote two spaces in
+after it: the item under the empty one with no blank line between, which would end it, and the
+quote, which the item above, open now, would take in at its content column, lifted to the root's.
+The seam check read the empty item's blank line the writer doesn't write (found by the volume run,
+seed 101).
+
+```yaml
+tags: rare
+```
+
+```markdown
+-  
+
+- ┃
+
+  > quoted in item
+```
+
+> indent
+
+```markdown
+-  
+  - ┃
+
+> quoted in item
+```
+
+## Regression327
+
+Enter in a numbered item before an empty quoted one held at the note's end, with no line ending
+after it: the items renumbered, the held quote's item keeping its held line (B358).
+
+```yaml
+tags: rare
+```
+
+```markdown
+1. n┃um
+2. > ◌
+```
+
+> enter
+
+```markdown
+1. n
+2. ┃um
+3. > ◌
+```
+
+## Regression328
+
+Delete subtree on a padded item sharing its marker line with an empty one: the item after it,
+which would be the first item's child at its column, lined up with it, and its lazy line, indented
+past the column its content starts at now, written past that column, its text as it was (B382).
+
+```yaml
+tags: rare
+```
+
+```markdown
+- [ ] write spec
+-  - ┃
+  -  itle
+    body text
+```
+
+> deleteSubtree
+
+```markdown
+- [ ] write spec┃
+-  itle
+       body text
+```
+
+## Regression329
+
+Duplicating a padded item before two others of its list two spaces in: the list lined up at its
+column, the last item's lazy line, `- grandchild`, written past its content column, its text as it
+was, not a list (B162).
+
+```yaml
+tags: rare
+```
+
+```markdown
+-  ┃parent
+  - chil
+  -  child
+    - grandchild
+```
+
+> duplicateSubtree
+
+```markdown
+-  parent
+-  ┃parent
+- chil
+-  child
+       - grandchild
+```
+
+## Regression330
+
+Cmd-Backspace on a held space at the start of an item led by four spaces past its marker, after an
+empty item: its text joined into the empty item, the spaces not its padding, which would put its content column
+past the child it takes in (B381).
+
+```yaml
+tags: rare
+```
+
+```markdown
+- parent
+  - child one
+  - 
+- ┃◌   second paragraph of child two
+  - child three
+```
+
+> deleteSoftLineBackward
+
+```markdown
+- parent
+  - child one
+  - ┃second paragraph of child two
+    - child three
+```
+
+## Regression331
+
+With `listParent: container`, Tab on a paragraph after an item, a list after it whose item's text
+goes on four columns past its content: the paragraph and the list joined to the list above, the
+continuation line `- grandchild` shifted with its item, four columns in still, no list (B383).
+
+```yaml
+tags: rare
+listParent: container
+```
+
+```markdown
+- parent
+
+x┃
+  - \- hild one
+        - grandchild
+```
+
+> indent
+
+```markdown
+- parent
+- x┃
+- \- hild one
+      - grandchild
+```
+
+## Regression332
+
+Backspace on the blank line after an item's footnote definition, its second line lazy: the item
+written again, the definition's later line four columns past the item's, as a definition reads its
+lines, not past its label (B298).
+
+```yaml
+tags: rare
+flavor: gfm
+```
+
+```markdown
+- [^a]: first
+  second
+  ┃␄
+```
+
+> deleteContentBackward
+
+```markdown
+- [^a]: first
+      second┃␄
+```
+
+## Regression333
+
+Alt-Down on a padded footnote definition with a lazy later line, past a paragraph that owns a quoted
+list: the definition written at the root's column, its later line four columns in, as a definition
+reads them (B164).
+
+```yaml
+tags: rare
+flavor: gfm
+```
+
+```markdown
+ [^1]: a
+ ┃footnote
+
+| a |
+- > q
+```
+
+> moveSubtreeDown
+
+```markdown
+| a |
+- > q
+
+[^1]: a
+    ┃footnote
+```
+
+## Regression334
+
+With `quotes: container`, Enter on an empty item padded past its marker, held, right after a quote's
+`>` with no space (`>-`): the item leaves its list, an empty paragraph in the quote, held. Its line
+is the quote's as written, `- >`, and the paragraph is named there, not past a space it doesn't have
+(B355).
+
+```yaml
+tags: rare
+flavor: commonmark
+quotes: container
+```
+
+```markdown
+- >-  ┃◌
+```
+
+> enter
+
+```markdown
+- >┃◌
+```
+
+## Regression335
+
+Backspace at the start of a quoted heading's title, its title a callout's spelling, the quote's next line its
+paragraph: the heading a paragraph now, which would take that line in as its own, set apart from it by
+a blank quoted line ourus raises (B362).
+
+```yaml
+tags: rare
+flavor: commonmark
+```
+
+```markdown
+- >#  ┃[!note] Title
+  > more
+```
+
+> deleteContentBackward
+
+```markdown
+- >┃[!note] Title
+  >
+  > more
+```
+
+## Regression336
+
+Typing `$` in an empty heading item padded past its marker, `autoClose` on: the item written again,
+its padding gone, `- # $$`, its content column narrower, and the item after it, which it would take in
+at its old column, lined up with it (B208).
+
+```yaml
+tags: rare
+autoClose: ['$']
+```
+
+```markdown
+-  # ┃
+  - other
+```
+
+> "$"
+
+```markdown
+- # $┃$̬
+- other
+```
+
+## Regression337
+
+A task item pasted after an item, padded past its marker, its text below its checkbox: its later
+line at the column the spaces before the box give, three, as it was in the clipboard (B400).
+
+```yaml
+tags: rare
+clipboard: |
+  -  [ ]
+     task
+```
+
+```markdown
+- item┃
+```
+
+> paste
+
+```markdown
+- item
+-  [ ]
+   task┃
+```
+
+## Regression338
+
+With `quotes: atom`, Shift-Tab on a nested numbered item whose text is a quote holding a list, the
+quote's second line lazy for the list's item: the item out to its parent's list, the quote's lines at
+its new content column, the lazy one too, which has the item's own prefix, not at column 0 (B379).
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+1. num
+   1. > - qu┃ote
+      > more
+```
+
+> outdent
+
+```markdown
+1. num
+2. > - qu┃ote
+   > more
+```
+
+## Regression339
+
+Under `indentUnit: tab`, Shift-Tab on a padded item sharing its marker line with a quote's list: the
+list's item out of the quote, under the item still, first on its marker line, which the item's
+marker is written over: its indentation in spaces, not a tab the marker can't go over (B389).
+
+```yaml
+tags: rare
+indentUnit: tab
+```
+
+```markdown
+- ┃  > - list in quote
+```
+
+> outdent
+
+```markdown
+-   - ┃list in quote
+```
+
+## Regression340
+
+Under `indentUnit: tab`, Shift-Tab on a quote nested in an item's quote, spaces after the outer
+`>`: the inner quote out to the item, written at its column with a tab, and named at its `>`, as the
+reader names a quote, not at the space after it (B356, B391).
+
+```yaml
+tags: rare
+indentUnit: tab
+```
+
+```markdown
+- > a quote
+  >   > ┃over two lines
+```
+
+> outdent
+
+```markdown
+- > a quote
+
+→> ┃over two lines
+```
+
+## Regression341
+
+With `quotes: container`, cutting a quote's first paragraph, nested quotes after it on the next line:
+the nested quotes first in the quote now, their line its first, named where they are written, each
+keeping its node (B37).
+
+```yaml
+tags: rare
+quotes: container
+```
+
+```markdown
+>→┃$
+> > > q
+```
+
+> cut
+
+```markdown
+> > > ┃q
+```
+
+## Regression342
+
+In Obsidian, Shift-Enter over a selection from a callout title's end to the start of the lazy line
+after it: refused, as at a caret in the title, a callout's title being a line of its own (B55).
+
+```yaml
+tags: rare
+flavor: obsidian
+```
+
+```markdown
+>[!e]T«
+»a
+```
+
+> shiftEnter
+
+```yaml
+result: rejected not-expressible
+```
+
+```markdown
+>[!e]T«
+»a
+```
+
+## Regression343
+
+Delete subtree on an empty nested quote, the quote's paragraph past a tab after its `>`, an empty item
+above: the quote left holding the paragraph alone, its text now, `> a`, the tab's rest past the `>`
+the quote's, not padding before it, which the empty item would take in (B69).
+
+```yaml
+tags: rare
+```
+
+```markdown
+-
+>→a
+>>┃␄
+```
+
+> deleteSubtree
+
+```markdown
+-
+> a┃␄
+```
+
+## Regression344
+
+Tab over a selection from a paragraph through a quote's two paragraphs, at another depth: levelling
+them after the first would leave the quote, which has no text of its own, holding nothing. Refused,
+as for one root that is all of such a container (B40).
+
+```yaml
+tags: rare
+```
+
+```markdown
+«
+a
+>a
+>>b»
+```
+
+> indent
+
+```yaml
+result: rejected not-expressible
+```
+
+```markdown
+«
+a
+>a
+>>b»
+```
+
+## Regression345
+
+Tab over a selection from an empty item through the two empty items under the next, the first on its
+parent's marker line: levelling them would leave that parent, with no text of its own, holding
+nothing, its marker's line gone with them. Refused (B41).
+
+```yaml
+tags: rare
+```
+
+```markdown
+-┃«
+- -
+  -»
+```
+
+> indent
+
+```yaml
+result: rejected not-expressible
+```
+
+```markdown
+-┃«
+- -
+  -»
+```
+
+## Regression346
+
+Cut the paragraph above indented code, then Paste: the caret left at the code's text start, past its
+indentation, the paragraph pasted beside the code, not into it, before it as at any text's start
+(`pasteAtTextStart: before`), back where it was, as Obsidian and SilverBullet paste a cut line back
+(B21).
+
+```yaml
+tags: rare
+```
+
+```markdown
+fi┃rst
+
+    indented code
+```
+
+> cut
+
+```markdown
+    ┃indented code
+```
+
+> paste
+
+```markdown
+first┃
+
+    indented code
+```
+
+## Regression347
+
+Shift-Tab on a nested item whose held space starts its text, its text a fence's opening then, the
+fence's closing line after it: the item out to the root, its held space its padding, its text
+escaped, no fence, and the closing line, its child now, at the column that padding gives it (B398).
+
+```yaml
+tags: rare
+```
+
+````markdown
+- item
+  - ┃◌ ```js
+  ```
+````
+
+> outdent
+
+````markdown
+- item
+-  \̬┃```js
+   ```
+````
+
+## Regression348
+
+Pasting an item whose text is a heading over a paragraph after another: written, the item kept here
+(the note ending with a line break); where the item is fitted as the paragraph it replaces, a heading,
+its text one, not a paragraph its `#` would make one (B301, `bugs.ts`'s case).
+
+```yaml
+tags: rare
+clipboard: |
+  - # title
+```
+
+```markdown
+m
+
+«x»
+```
+
+> paste
+
+```markdown
+m
+
+- # title┃
+```
+
+## Regression349
+
+In Obsidian, Tab on a paragraph starting `-- `, its last line a block id: an item now, whose bullet
+and the text's dashes would read as one rule, `- -- `: the text's first dash escaped, ours, as where
+the text has no block id (B368).
+
+```yaml
+tags: rare
+flavor: obsidian
+```
+
+```markdown
+┃-- 
+Final line ^blk
+```
+
+> indent
+
+```markdown
+- \̬┃-- 
+  Final line ^blk
+```
+
+## Regression351
+
+In Obsidian, Tab on a footnote whose body starts below a blank line, after an empty quote: in the
+quote, the blank line would be `>`, which ends the definition there, its body the quote's then.
+Refused (B309).
+
+```yaml
+tags: rare
+flavor: obsidian
+```
+
+```markdown
+>
+[^n]:
+
+    ┃c
+```
+
+> indent
+
+```yaml
+result: rejected not-expressible
+```
+
+```markdown
+>
+[^n]:
+
+    ┃c
+```
+
+## Regression352
+
+Cut the paragraph above a fence, then Paste: the caret left at the fence's start, before its opening
+delimiter, where a paste would break it, the paragraph goes before the fence, as at any text's start
+(`pasteAtTextStart: before`), back where it was. It was deferred, the host's (B21).
+
+````yaml
+tags: common
+````
+
+````markdown
+fi┃rst
+
+```
+code
+```
+````
+
+> cut
+
+````markdown
+┃```
+code
+```
+````
+
+> paste
+
+````markdown
+first┃
+
+```
+code
+```
+````
+
+## Regression353
+
+The same with `pasteAtTextStart: after`: the paragraph goes after the fence, as after indented code
+(Regression346's).
+
+````yaml
+tags: rare
+pasteAtTextStart: after
+````
+
+````markdown
+fi┃rst
+
+```
+code
+```
+````
+
+> cut
+
+````markdown
+┃```
+code
+```
+````
+
+> paste
+
+````markdown
+```
+code
+```
+
+first┃
+````
+
+## Regression354
+
+Shift-Tab under `indentUnit: tab` on a callout's held line whose text is a `>` after spaces the
+placeholder holds: out of the callout, a paragraph of the item, `\>` (an escape of ours) past the
+tab that spells its indentation. It was named past its escape, where the reader names it at the
+line's content (B356).
+
+```yaml
+tags: rare
+flavor: obsidian
+indentUnit: tab
+```
+
+```markdown
+- > [!note] Title
+  > ┃◌  >
+```
+
+> outdent
+
+```markdown
+- > [!note] Title
+→\̬┃>
+```
+
+## Regression355
+
+Alt-Up on a quote's paragraph padded past its `>`, the quote on a tab-led item's marker line: the
+paragraph goes onto the marker's line, its padding kept, the marker written over its prefix,
+which spells the same columns with a tab (B385).
+
+```yaml
+tags: rare
+```
+
+```markdown
+- x
+→- > a
+→  >
+→  >  b┃
+```
+
+> moveSubtreeUp
+
+```markdown
+- x
+→- >  b┃
+→  >
+→  >→a
+```
+
+## Regression356
+
+Plain paste into a quote of lines with a blank line, the line after it led by a tab: the quote splits
+into two, the second's first line without its leading blanks, as a paragraph's after a blank line at
+the root (rule 5). The tab was kept in the text, read as padding (B400).
+
+```yaml
+tags: rare
+clipboard: |-
+  x
+
+  →y
+```
+
+```markdown
+> a┃b
+```
+
+> pastePlain
+
+```markdown
+> ax
+
+> y┃b
+```
+
+## Regression357
+
+A paste over the `-` after an escape of ours (`\̬-`): the paste goes in, the escape, no longer
+needed, goes, and the space after the `-` stays, as every app keeps it. Deleted first, the selection
+took the escape and that space with it, and the paste failed (B400).
+
+```yaml
+tags: rare
+clipboard: "y"
+```
+
+```markdown
+\̬«-» x
+```
+
+> paste
+
+```markdown
+y┃ x
+```
+
+## Regression358
+
+As Regression107, a blank line between the marker and the fence, its spaces keeping the item open: the lines below the marker go with
+it, the fence a block of its own at the note's start. They were written as a blank line before it,
+read as no line of the code (B405).
+
+```yaml
+tags: rare markup-fence
+```
+
+````markdown
+-
+␠␠
+  ┃```
+````
+
+> outdent
+
+````markdown
+┃```
+````
+
+## Regression359
+
+Cut a fence right before a list, then Paste: the caret left at the first item's text start, the
+fence goes before that item (`pasteAtTextStart: before`), an item of the list as a paragraph pasted
+there is, not back before the list (decided 2026-11-12: RemNote makes it an item, SiYuan the first
+item's; no app puts it before the list; B21).
+
+````yaml
+tags: rare
+````
+
+````markdown
+```
+co┃de
+```
+
+- a
+- b
+````
+
+> cut
+
+````markdown
+- ┃a
+- b
+````
+
+> paste
+
+````markdown
+- ```
+  code┃
+  ```
+- a
+- b
+````
+
+## Regression360
+
+A paste at a heading's text start: the nodes go before it (`pasteAtTextStart: before`), the last of
+the section above, as typed there; a pasted heading takes the heading after it into its section
+where its level is higher. It was the host's (not done).
+
+```yaml
+tags: common
+clipboard: |
+  x
+
+  y
+```
+
+```markdown
+# A
+
+para
+
+## ┃B
+
+b text
+```
+
+> paste
+
+```markdown
+# A
+
+para
+
+x
+
+y┃
+
+## B
+
+b text
+```
+
+## Regression361
+
+With `quotes: atom`, a paste of items at the start of an item whose text is a quote, past its `>`:
+before it, as at any text's start. They went after it.
+
+```yaml
+tags: rare
+quotes: atom
+clipboard: |-
+  - x
+  - y
+```
+
+```markdown
+- a
+- > ┃q
+```
+
+> paste
+
+```markdown
+- a
+- x
+- y┃
+- > q
+```
+
+## Regression362
+
+Backspace right after a space at a later line's start, past its indentation: the space goes, as a
+space typed there is taken back; the lines join only from the line's start (ShiftEnter21). They
+joined (B204).
+
+```yaml
+tags: common
+```
+
+```markdown
+- a
+   ┃b
+```
+
+> deleteContentBackward
+
+```markdown
+- a
+  ┃b
+```
+
+## Regression363
+
+Backspace at the start of a rule after a paragraph: refused, as Delete refuses to take a rule in. No
+text joins a rule, and the host's join, the blank line gone, would make the rule the paragraph's
+setext underline, a heading. It was the host's (B202). A table the same.
+
+```yaml
+tags: rare
+```
+
+```markdown
+p
+
+┃---
+```
+
+> deleteContentBackward
+
+```yaml
+result: rejected not-expressible
+```
+
+```markdown
+p
+
+┃---
+```
+
+## Regression364
+
+Cut the only paragraph under a heading, then Paste: the caret left at the heading's end, the paragraph
+goes first in its section, the blank line after the heading kept between them, as it was. The heading
+handed its blank line to the paste and kept none (`## B⏎b text`).
+
+```yaml
+tags: common
+```
+
+```markdown
+## B
+
+b t┃ext
+
+## C
+```
+
+> cut
+
+```markdown
+## B┃
+
+## C
+```
+
+> paste
+
+```markdown
+## B
+
+b text┃
+
+## C
+```
+
+## Regression365
+
+Alt-Up on an item's quoted heading past the paragraph after it, a table after the item: the
+paragraph, last in the item now, is set apart from the table by a blank line, which would else read
+as its lazy lines. The seam check read the paragraph at the root's column, past the `>` on the
+item's marker line, and saw them apart (found by the volume run, seed 151).
+
+```yaml
+tags: rare
+flavor: gfm
+```
+
+```markdown
+2. > quote
+
+   x
+   > # mo┃re
+
+| a | b |
+|---|---|
+```
+
+> moveSubtreeUp
+
+```markdown
+2. > quote
+
+   > # mo┃re
+
+   x
+
+| a | b |
+|---|---|
+```
+
+## Regression366
+
+A paragraph right under a fence, its subtree selected and cut, then Paste: as a cut at a caret there
+(DeleteSubtree15), an empty node held where it was, the caret in it, so the paste puts it back after
+the code, not into its last line (found by the sweep's cut→paste; B406).
+
+````yaml
+tags: rare
+````
+
+````markdown
+```
+code
+```
+
+para⟦selected⟧
+````
+
+> cut
+
+````markdown
+```
+code
+```
+
+┃◌
+````
+
+> paste
+
+````markdown
+```
+code
+```
+
+para┃
+````
+
+## Regression367
+
+Alt-Up on a tab-led child under a padded shared marker line, an item of the outer list after it at
+two columns: the block written anew in normal form (B348's rule), its content column two, and the
+items of its list after it with it, which at their old column would read into it (B410; seed 201).
+
+```yaml
+tags: rare
+flavor: obsidian
+indentUnit: tab
+```
+
+```markdown
+ -  - child two
+→- child ┃two
+  - child three
+```
+
+> moveSubtreeUp
+
+```markdown
+- - child ┃two
+  - child two
+- child three
+```
+
+## Regression368
+
+Enter at the end of a note's last item, the note ending with a blank line: the new item goes after
+it, the blank line after the new one, the list still tight. The old item kept the blank line too, so
+the list was loose and the blank lines twice as many (`- item⏎⏎- ⏎⏎`; found reading seed 151's marks
+cases, B411).
+
+```yaml
+tags: common
+```
+
+```markdown
+- item┃
+
+```
+
+> enter
+
+```markdown
+- item
+- ┃
+
+```
+
+## Regression369
+
+Tab on the paragraph that owns a list whose item holds a quote atom with a lazy line: the lazy
+line's front spaces, short of the item's column, are the atom's text, so they move with the item,
+the line still lazy (B297). Shift-Tab back undoes it.
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+in┃tro
+1. > quote
+  continuation
+   > more
+```
+
+> indent
+
+```markdown
+- in┃tro
+  1. > quote
+    continuation
+     > more
+```
+
+## Regression370
+
+Backspace at the start of a quote atom's later line held by a space (`◌`, the space a deleted first
+character left, which keeps the line in the quote): the line joins the one above, its spaces mid-line
+now, no longer held (B237).
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+2. > quote
+┃◌  > more
+```
+
+> deleteContentBackward
+
+```markdown
+2. > quote┃  > more
+```
+
+## Regression371
+
+Shift-Tab on an item whose quote atom has a later line held by a space: the quote at the root, the
+line written as it was, still held, still the quote's (B237).
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+2. > quote
+ ┃◌ > more
+```
+
+> outdent
+
+```markdown
+> quote
+ ┃◌ > more
+```
+
+## Regression372
+
+Alt-Up on a numbered item whose quoted paragraph has a lazy line held by a space: the item renumbered,
+its paragraph written anew, the lazy line quoted now, its held space still where its text starts,
+after the `> `, still held (B237).
+
+```yaml
+tags: rare
+quotes: container
+```
+
+```markdown
+1. num
+2. > quote
+┃◌  > more
+```
+
+> moveSubtreeUp
+
+```markdown
+1. > quote
+   > ┃◌  \̬> more
+2. num
+```
+
+## Regression373
+
+Backspace on a quote atom's held empty last line in an item: the line goes, and its placeholder with
+it (B237).
+
+```yaml
+tags: rare
+quotes: atom
+```
+
+```markdown
+- > quote
+┃◌
+```
+
+> deleteContentBackward
+
+```markdown
+- > quote┃
+```
+
+## Regression374
+
+Shift-Tab on an item whose table starts on its marker line after a held space: the table at the
+root, the held space gone, as a prose text's goes where it holds nothing (B237).
+
+```yaml
+tags: rare
+flavor: gfm
+```
+
+```markdown
+- ┃◌ a | b |
+  |---|---|
+```
+
+> outdent
+
+```markdown
+┃a | b |
+|---|---|
+```
+
+## Regression375
+
+Alt-Up on a paragraph whose held empty last line ends the note (Shift-Enter's, not yet settled): the
+paragraph moves with its empty line, held still, where the paragraph is now (B237).
+
+```yaml
+tags: rare
+```
+
+```markdown
+> a quote
+
+> a quote
+┃◌␄
+```
+
+> moveSubtreeUp
+
+```markdown
+> a quote
+┃◌
+
+> a quote
+```
+
+## Regression376
+
+A paste over a setext title's first line, its second line padded: the rest of the title starts with
+the padding, which Markdown reads as no part of it; written as the title's own (B327, fixed with
+B237's setext held space).
+
+```yaml
+tags: rare
+flavor: obsidian
+markup: text
+clipboard: |-
+  - x
+  - y
+```
+
+```markdown
+«abc»
+  def
+-
+  def
+```
+
+> paste
+
+```markdown
+- x
+- y┃
+
+def
+-
+  def
+```

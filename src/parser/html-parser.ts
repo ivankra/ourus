@@ -36,12 +36,15 @@ const footnoteLabel = (value: string | undefined, prefix: string): string | null
 /** Elements that aren't content. */
 const SKIPPED = new Set(['head', 'title', 'meta', 'link', 'style', 'script', 'template', 'noscript', 'button', 'svg']);
 
+/** Whether element `node` shows nothing: one of `SKIPPED`, or hidden (`hidden`, `display: none`, B271). */
+const skipped = (node: DomNode): boolean => SKIPPED.has(node.name!) || node.attribs?.hidden !== undefined || /(?:^|;)\s*display\s*:\s*none\b/i.test(node.attribs?.style ?? '');
+
 /** Elements that start blocks; any other element is inline, its children in the text around it. */
 const BLOCKS = new Set(['html', 'body', 'p', 'div', 'section', 'article', 'main', 'header', 'footer', 'nav', 'aside', 'figure', 'figcaption', 'details', 'summary', 'center', 'address', 'dl', 'dt', 'dd', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'pre', 'blockquote', 'hr', 'table']);
 
 const isElement = (node: DomNode): boolean => node.type === 'tag' || node.type === 'script' || node.type === 'style';
 /** A block element, or an inline one around blocks (Google Docs' wrapper around everything), which then holds them as blocks do. */
-const isBlock = (node: DomNode): boolean => isElement(node) && (BLOCKS.has(node.name!) || (!SKIPPED.has(node.name!) && (node.children ?? []).some(isBlock)));
+const isBlock = (node: DomNode): boolean => isElement(node) && (BLOCKS.has(node.name!) || (!skipped(node) && (node.children ?? []).some(isBlock)));
 
 /**
  * An element's `style` as CSS reads it, parsed once: each property's value by its name, both in lower
@@ -134,38 +137,67 @@ export class MdHtmlParser {
     const out: string[] = [];
     let line = '';
     let pre = 0;
+    // (right after a `pre`'s start tag, where its first line break is none of its text, as a browser reads it)
+    let preStart = false;
+    // (the cells seen in each row open: a tab before each but the first, an empty one's too, B335)
+    const cells: number[] = [];
+    // (inside a cell, its blocks are its text's: no line of their own, the cells of a row on one line, B270)
+    let inCell = 0;
+    // (the blanks at a line's edges, but a cell's tab)
+    const trimmed = (l: string): string => l.replace(/^[ \n\r\f]+|[ \n\r\f]+$/g, '');
     const end = (blank: boolean): void => {
-      // (a `pre`'s spaces its code's)
-      if (line.trim() !== '' || !blank) out.push(pre ? line.replace(/^\n|\n$/g, '') : line.trim());
+      // (a `pre`'s spaces its code's, spaces alone too, B335; its last line break none of it)
+      if (line.trim() !== '' || !blank || (pre && line.replace(/\n$/, '') !== '')) out.push(pre ? line.replace(/\n$/, '') : trimmed(line));
       line = '';
       if (blank && out.length && out[out.length - 1] !== '') out.push('');
     };
+    // (collapsed text after a blank, another node's: its leading space none, as one run, B270)
+    const add = (t: string): void => {
+      line += !pre && t.startsWith(' ') && (line === '' || /[ \t]$/.test(line)) ? t.slice(1) : t;
+    };
+    const cell = (name: string | undefined): boolean => name === 'td' || name === 'th';
     // (a paragraph's kind set off by a blank line, as `innerText` has it; an item, a row, a `div` by a line break; cells by a tab)
     const apart = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'ul', 'ol', 'table', 'hr', 'figure']);
     const stack: (DomNode | { end: string })[] = [...(parseDocument(html).children as readonly DomNode[])].reverse();
     while (stack.length) {
       const n = stack.pop()!;
+      const atPreStart = preStart;
+      preStart = false;
       if ('end' in n) {
-        if (n.end !== 'td' && n.end !== 'th') end(apart.has(n.end));
+        if (cell(n.end)) inCell--;
+        else if (inCell > 0 && n.end !== 'tr' && n.end !== 'table') add(' ');
+        else end(apart.has(n.end));
         if (n.end === 'pre') pre = Math.max(0, pre - 1);
+        if (n.end === 'tr') cells.pop();
         continue;
       }
-      if (n.type === 'text') line += pre ? n.data! : collapse(n.data!);
-      else if (n.name === 'br') end(false);
+      if (n.type === 'text') add(pre ? (atPreStart ? n.data!.replace(/^\n/, '') : n.data!) : collapse(n.data!));
+      else if (n.name === 'br') {
+        if (inCell > 0) add(' ');
+        else end(false);
+      }
       // (an image is its alternative text, as a browser's copy gives it)
-      else if (n.name === 'img') line += collapse(n.attribs?.alt ?? '');
-      else if (isElement(n) && !SKIPPED.has(n.name!)) {
-        const block = BLOCKS.has(n.name!) || n.name === 'tr' || n.name === 'td' || n.name === 'th';
-        if ((n.name === 'td' || n.name === 'th') && line !== '') line += '\t';
+      else if (n.name === 'img') add(collapse(n.attribs?.alt ?? ''));
+      else if (isElement(n) && !skipped(n)) {
+        const block = BLOCKS.has(n.name!) || n.name === 'tr' || cell(n.name);
+        if (cell(n.name) && cells.length) {
+          if (cells[cells.length - 1]!++ > 0) line = line.replace(/ $/, '') + '\t';
+        } else if (cell(n.name) && line !== '') line += '\t';
+        else if (block && inCell > 0 && n.name !== 'tr' && n.name !== 'table') add(' ');
         else if (block && line.trim() !== '') end(false);
+        if (n.name === 'tr') cells.push(0);
+        if (cell(n.name)) inCell++;
         if (block) {
-          if (n.name === 'pre') pre++;
+          if (n.name === 'pre') {
+            pre++;
+            preStart = true;
+          }
           stack.push({ end: n.name! });
         }
         for (let i = (n.children ?? []).length - 1; i >= 0; i--) stack.push(n.children![i]!);
       }
     }
-    if (line.trim() !== '') out.push(line.trim());
+    if (line.trim() !== '') out.push(trimmed(line));
     while (out.length && out[out.length - 1] === '') out.pop();
     // (a `pre`'s own lines as they are)
     return out.flatMap((l) => l.split('\n')).join('\n');
@@ -205,7 +237,7 @@ export class MdHtmlParser {
     };
     for (let k = 0; k < nodes.length; k++) {
       const node = nodes[k]!;
-      if (node.type === 'comment' || node.type === 'directive' || (isElement(node) && SKIPPED.has(node.name!))) continue;
+      if (node.type === 'comment' || node.type === 'directive' || (isElement(node) && skipped(node))) continue;
       if (!isBlock(node)) {
         inline.push(node);
         continue;
@@ -249,7 +281,8 @@ export class MdHtmlParser {
     const roots: Item[] = [];
     const stack: Item[] = [];
     for (const paragraph of paragraphs) {
-      const item: Item = { level: wordLevel(paragraph)!, paragraph, children: [] };
+      // (Word has nine levels: one past them is the ninth's, the tree no deeper than Word makes it, B340)
+      const item: Item = { level: Math.min(wordLevel(paragraph)!, 9), paragraph, children: [] };
       while (stack.length && stack[stack.length - 1]!.level >= item.level) stack.pop();
       (stack.length ? stack[stack.length - 1]!.children : roots).push(item);
       stack.push(item);
@@ -264,7 +297,8 @@ export class MdHtmlParser {
         const blocks = [...this.#blocksOf(i.paragraph.children ?? []), ...lists(i.children)];
         this.#inWordList = false;
         const last = out[out.length - 1];
-        if (last && last.ordered === !!number) last.items.push(blocks);
+        // (a number that jumps, `1.` then `5.`, starts another list, as an `<ol>`'s `value` does, B339)
+        if (last && last.ordered === !!number && (!number || Number(number[1]) === last.start + last.items.length)) last.items.push(blocks);
         else out.push({ ordered: !!number, start: number ? Number(number[1]) : 1, items: [blocks] });
       }
       return out.map((l) => ({ kind: 'list', ...l }));
@@ -328,7 +362,7 @@ export class MdHtmlParser {
     };
     for (const child of node.children ?? []) {
       if (child.type === 'text' && collapse(child.data!).trim() === '') continue;
-      if (child.type === 'comment' || child.type === 'directive' || (isElement(child) && SKIPPED.has(child.name!))) continue;
+      if (child.type === 'comment' || child.type === 'directive' || (isElement(child) && skipped(child))) continue;
       if (isElement(child) && child.name === 'div' && child.attribs?.xmlns) continue;
       if (isElement(child) && (child.name === 'ul' || child.name === 'ol')) {
         const nested = this.#list(child);
@@ -479,7 +513,7 @@ export class MdHtmlParser {
 
   #inline(node: DomNode): string {
     if (node.type === 'text') return this.#held(escapeText(collapse(node.data!)));
-    if (!isElement(node) || SKIPPED.has(node.name!)) return '';
+    if (!isElement(node) || skipped(node)) return '';
 
     // Word's bullet or number, written as text in its list paragraphs
     // (in a list it made of Word's paragraphs: elsewhere it is text the page shows, B138)
@@ -513,7 +547,9 @@ export class MdHtmlParser {
       case 'kbd':
       case 'samp': {
         // (a `<br>` in it a line break, which no code span holds: a code span a line, B129)
-        const lines = textContent(node).split('\n').map(collapse);
+        // (its spaces kept where its style keeps them, `white-space: pre`: a code span holds them, B336)
+        const keeps = /^(?:pre|pre-wrap|break-spaces)$/i.test(cssOf(node).get('white-space')?.trim() ?? '');
+        const lines = textContent(node).split('\n').map((l) => (keeps ? l : collapse(l)));
         if (lines.length > 1) return lines.map((line) => this.#codeSpan(line)).join('\n');
         return this.#codeSpan(lines[0]!);
       }
@@ -521,11 +557,15 @@ export class MdHtmlParser {
         const href = node.attribs?.href;
         // (a footnote's reference, its number GFM's rendering, the label in its link; the back-reference no text)
         const note = node.attribs?.['data-footnote-ref'] !== undefined ? footnoteLabel(href, '#') : null;
-        if (note !== null) return this.#held(`[^${note}]`);
+        // (formatting: a paste that prefers the plain text would take its number, the reference lost, B338)
+        if (note !== null) {
+          this.#formatted = true;
+          return this.#held(`[^${note}]`);
+        }
         if (node.attribs?.['data-footnote-backref'] !== undefined || /(?:^|\s)footnote-backref(?:\s|$)/.test(node.attribs?.class ?? '')) return '';
         const text = inner();
-        // a link with no text (a heading's permalink) is nothing to read
-        if (text.trim() === '') return '';
+        // a link with no text (a heading's permalink) is nothing to read; one of blanks, a blank (B271)
+        if (text.trim() === '') return text === '' ? '' : ' ';
         // (a script's link is none, whatever the case of its scheme, the blanks a browser skips before it)
         // (but `href=""`, the page itself, is a link: no `href` is none)
         if (href === undefined || /^[\x00-\x20]*javascript:/i.test(href)) return text;
@@ -594,7 +634,7 @@ function textContent(node: DomNode): string {
     if (n.type === 'text') out += n.data!;
     else if (n.name === 'br') out += '\n';
     // (a script, a style, what no page shows: no content, here as in its blocks)
-    else if (n.type === 'comment' || (isElement(n) && SKIPPED.has(n.name!))) continue;
+    else if (n.type === 'comment' || (isElement(n) && skipped(n))) continue;
     else for (let i = (n.children ?? []).length - 1; i >= 0; i--) stack.push(n.children![i]!);
   }
   return out;
@@ -704,7 +744,8 @@ function escapeText(text: string): string {
     .replace(/([=%])(?=\1)/g, '$1\\')
     // (a run of underscores at a word's edge, all of it: one left would still open or close emphasis, `\__a\__`)
     .replace(/_+/g, (run, at: number, all: string) => (/^$|[^\p{L}\p{N}]/u.test(all[at - 1] ?? '') || /^$|[^\p{L}\p{N}]/u.test(all[at + run.length] ?? '') ? run.replace(/_/g, '\\_') : run))
-    .replace(/<(?=[A-Za-z/!?])/g, '\\<')
+    // (and before what can start an email autolink's address, `<3@example.com>`: B332)
+    .replace(/<(?=[A-Za-z0-9/!?.#$%&'*+=^_`{|}~-])/g, '\\<')
     .replace(/&(?=#?\w+;)/g, '\\&')
     // (a `^` before a name: Obsidian's block id, which HTML carries none of, its text as shown)
     .replace(/\^(?=[A-Za-z0-9-])/g, '\\^')
@@ -721,7 +762,9 @@ function escapeStart(line: string): string {
     .replace(/^(\d{1,9})([.)])(?=[ \t]|$)/, '$1\\$2')
     .replace(/^(=+|-+)[ \t]*$/, (m) => `\\${m}`)
     .replace(/^(~~~|```)/, '\\$1')
-    .replace(/^\|/, '\\|');
+    .replace(/^\|/, '\\|')
+    // (a table's delimiter row, `--- | ---`, under a line it would make a table's head: its first pipe, B323)
+    .replace(/^[ \t]*:?-+:?[ \t]*\|(?=(?:[ \t]*:?-+:?[ \t]*\|?)+[ \t]*$)/, (m) => `${m.slice(0, -1)}\\|`);
 }
 
 /** A block's lines as Markdown. */

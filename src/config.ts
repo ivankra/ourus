@@ -492,10 +492,11 @@ export interface OurusConfig {
 
   /**
    * Paste (Ctrl-V, `paste`) at the start of a node's text, where the paste goes (spec/paste-list.md):
-   * - `after` (the default, as Logseq, Logseq DB, Tine, Tana and Athens paste): after the node, as
+   * - `before` (the default, as Obsidian, SilverBullet, Roam, SiYuan, Dynalist and WorkFlowy paste):
+   *   before it, where the caret is; pasted items before an item take its list's form, numbered from
+   *   it. A block cut and pasted back at the caret the cut leaves goes back where it was.
+   * - `after` (as Logseq, Logseq DB, Tine, Tana, Athens and Notion paste): after the node, as
    *   anywhere else in its text.
-   * - `before` (as Roam, SiYuan and WorkFlowy paste): before it, where the caret is; pasted items
-   *   before an item take its list's form, numbered from it.
    */
   readonly pasteAtTextStart: 'after' | 'before';
 
@@ -658,7 +659,7 @@ const CONFIG_VALUES: { readonly [K in Exclude<keyof OurusConfig, ListOption>]: r
   pasteOverNodes: ['replace', 'after', 'nothing'],
   pasteLines: ['text', 'items'],
   pastePlainLines: ['text', 'items', 'enter', 'host'],
-  pasteAtTextStart: ['after', 'before'],
+  pasteAtTextStart: ['before', 'after'],
   pasteOnParent: ['children', 'after'],
   pasteParagraphList: ['siblings', 'children'],
   pasteListForm: ['destination', 'own'],

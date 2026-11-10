@@ -124,7 +124,8 @@ export function deleteContentForwardCommand(ctx: CommandContext): OurusResult | 
   // its start takes it (Delete33b)
   if (below.kind === 'item' && lower.empty) {
     if (below.children.length) return joinUp(ctx, below, lower, false);
-    draft.remove([below]).gap(node, below.gap).setCaret(node, offset, -1);
+    // (its blank lines as they were written, each ours where it was: B377)
+    draft.moveGap(below, node).remove([below]).setCaret(node, offset, -1);
     return ctx.apply(draft);
   }
   if (lower.type !== 'paragraph') return null;

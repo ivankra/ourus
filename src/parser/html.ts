@@ -340,6 +340,8 @@ export const coreInlines: Readonly<Record<string, MdInlineRenderer>> = {
     r.tag('a', r.linkAttrs(node.destination!, ''));
     r.out(node.value!);
     r.tag('/a');
+    // (an email's escapes and entities, its pieces as written: its value says it)
+    return false;
   },
   image(r, node, entering) {
     if (entering) {

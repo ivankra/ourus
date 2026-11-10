@@ -97,7 +97,9 @@ type BlockIdPart = Exclude<ReturnType<typeof blockIdsOf>[number], { readonly car
 /** Where `command`, given `selection`, acts, and why there (`CommandSite`). */
 function commandSite(view: OurusView, command: OurusCommand, selection: OurusSelection): CommandSite {
   const doc = view.doc;
-  const at = selection.anchor === selection.head && !BLOCK_ID_COMMANDS.has(command.type) ? view.locate(selection.head) : null;
+  // (a selection command acts where the caret is: moved to the text's end, the selection it makes
+  // wouldn't hold the caret, B216)
+  const at = selection.anchor === selection.head && !BLOCK_ID_COMMANDS.has(command.type) && command.type !== 'expandSelection' ? view.locate(selection.head) : null;
   // (a text that is only a block id has no end before it: `- ^x┃` is its end, Enter splitting after it)
   // (a quote atom's only where the flavor has block ids: elsewhere `^x` is its text: block-ids.test.ts)
   const named = at && (at.zone === 'text' || at.zone === 'frame') && (at.text instanceof OurusProse || (at.text.type === 'blockquote' && doc.mdTree.flavor.has('blockIds'))) ? at.text : null;

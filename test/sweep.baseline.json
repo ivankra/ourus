@@ -3,9 +3,6 @@
   "groups": {
     "copy→paste: paragraph comes back as other blocks": 1,
     "cut→paste: atom: a code, math or table block's text changed": 9,
-    "cut→paste: heading: a code, math or table block's text changed": 3,
-    "cut→paste: item: a code, math or table block's text changed": 30,
-    "cut→paste: paragraph: a code, math or table block's text changed": 6,
-    "cut→paste: quote: a code, math or table block's text changed": 1
+    "cut→paste: item: a code, math or table block's text changed": 3
   }
 }

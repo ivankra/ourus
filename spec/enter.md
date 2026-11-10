@@ -48,8 +48,9 @@ The rules, in order; the first that applies wins:
    else the next sibling, numbered on, set off by a blank line in a loose list (Enter2, Enter4,
    Enter36, Enter36b).
 9. **In a paragraph**, two paragraphs, a blank line between; the second takes the paragraph's list
-   (Enter12, Enter22). In a heading, the rest of the title becomes the section's first paragraph
-   (Enter23, Enter41, Enter42), its closing `#`s staying on its line (Enter61); with
+   (Enter12, Enter22). In a heading, the rest of the title becomes the section's first paragraph,
+   set off from the heading by a blank line of ours (Shift-Enter writes it compact; Backspace takes
+   both back: [Gap20](gaps.md#gap20)) (Enter23, Enter41, Enter42), its closing `#`s staying on its line (Enter61); with
    `quirkEnterMidHeading: workflowy`, the text before the caret is a paragraph above the heading,
    which keeps the rest and its section ([Quirk1b](quirks.md#quirk1b)); at a line break of a title of several lines, the
    break goes with neither half, as in a paragraph (Enter51), and the rest is set apart from text
@@ -708,6 +709,7 @@ tags: rare
 
 ```markdown
 ### H
+
 ┃2
 
     - a
@@ -1031,6 +1033,7 @@ enterAtTextStart: stay
 
 ```markdown
 # 
+
 ┃H1
 ```
 
@@ -1322,6 +1325,7 @@ tags: rare free-form
 
 ```markdown
 # Title␠
+
 ┃\̬- x
 - y
 ```
@@ -1344,6 +1348,7 @@ title ┃- x
 ```markdown
 title␠
 ===
+
 ┃\̬- x
 ```
 
@@ -1801,6 +1806,7 @@ enterSplitSpace: start
 
 ```markdown
 # one two
+
 ┃ three
 ```
 
@@ -1828,6 +1834,7 @@ enterSplitSpace: start
 
 ```markdown
 # one two
+
 ┃ \̬- x
 ```
 
@@ -2033,6 +2040,7 @@ three
 ```markdown
 one
 ---
+
 ┃two
 three
 ```
@@ -2060,6 +2068,7 @@ three
 one
 two
 ---
+
 ┃three
 ```
 
@@ -2085,6 +2094,7 @@ three
 ```markdown
 one
 ---
+
 ┃two
 
 three
@@ -2369,6 +2379,7 @@ title┃ - x
 ```markdown
 title
 ===
+
 ┃\̬- x
 ```
 
@@ -2415,6 +2426,7 @@ tags: rare markup-heading
 
 ```markdown
 # Title #
+
 ┃more
 ```
 

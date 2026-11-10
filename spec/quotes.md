@@ -105,8 +105,9 @@ tags: common
 
 ### Quote3
 
-No space after the quote marker: columns count from where the quote's content starts on each line,
-and a space written after `>` belongs to the quote, so the item needs its own.
+No space after the quote marker: columns count from where the quote's content starts on each line.
+The quote, which the command changes, is written in normal form, a space after each `>` (decided,
+2026-11-11: an edited block may be normalized; the apps don't keep the spelling either way).
 
 ```yaml
 tags: rare
@@ -120,7 +121,7 @@ tags: rare
 > indent
 
 ```markdown
->- a
+> - a
 >   - b┃
 ```
 
@@ -2269,8 +2270,9 @@ tags: rare
 
 ## Quote86
 
-A quote written `>` without its space on its first line (`>- a`) still puts its content after `> `
-on the lines below: a copy of its item lines up with what is below, its child under it.
+A quote written `>` without its space on its first line (`>- a`), an item of it duplicated: the
+quote, which the command changes, is written in normal form, a space after each `>`, the copy lined
+up with the original, its child under it (decided, 2026-11-11, as Quote3).
 
 ```yaml
 tags: rare
@@ -2284,7 +2286,7 @@ tags: rare
 > duplicateSubtree
 
 ```markdown
->- a
+> - a
 >   - b
 > - ┃a
 >   - b
@@ -2494,7 +2496,8 @@ tags: rare markup-task
 ## Quote95
 
 A quote written `>` without its space on its first line (`>- a`): an item outdented out of the
-item above it is written in the quote's way, `>-`.
+item above it, the quote, which the command changes, written in normal form, a space after each `>`
+(decided, 2026-11-11, as Quote3; Obsidian writes `> - b` too).
 
 ```yaml
 tags: rare
@@ -2508,8 +2511,8 @@ tags: rare
 > outdent
 
 ```markdown
->- a
->- ┃b
+> - a
+> - ┃b
 ```
 
 ## Quote96

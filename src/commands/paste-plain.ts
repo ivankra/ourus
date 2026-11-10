@@ -254,7 +254,8 @@ export function plainLines(ctx: CommandContext, clipboard: string): OurusResult 
   // last one with the text's rest after it is none)
   const restOfLine = text.text.slice(to, text.text.indexOf('\n', to) < 0 ? text.text.length : text.text.indexOf('\n', to));
   const blank = (l: string, k: number): boolean => trimMd(l) === '' && (k < lines.length - 1 || trimMd(restOfLine) === '');
-  const quoted = text.type === 'quote' ? lines.map((l, k) => (k === 0 || blank(l, k) ? l : `> ${l}`)) : lines;
+  // (a line after a blank one starts a quoted paragraph: without its leading blanks, as at the root, B400)
+  const quoted = text.type === 'quote' ? lines.map((l, k) => (k === 0 || blank(l, k) ? l : `> ${blank(lines[k - 1]!, k - 1) ? l.replace(/^[ \t]+/, '') : l}`)) : lines;
   // (right before a block id's `^`: a blank after it, so that the id ends the last line still)
   const glued = ctx.collapsed && trimMd(text.text.slice(text.text.lastIndexOf('\n', to - 1) + 1, to)) !== '' && blockIdsOf(text).some((b) => !b.carried && b.from === to);
   // (the pasted last line ending in a block id, and text after the caret on its line, before the

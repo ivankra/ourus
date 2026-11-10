@@ -395,7 +395,9 @@ class Build {
         set(node, Lineage.ROOT);
         continue;
       }
-      const explicit = identity?.size ? identity.get(this.headStartOffset(node, start)) : undefined;
+      // (a quote whose line is indented past its container's column, `2. q⏎    > r`: its piece takes the
+      // spaces before its `>`, which the writer, copying the line, names it at)
+      const explicit = identity?.size ? (identity.get(this.headStartOffset(node, start)) ?? identity.get(this.headStartOffset(node, start, true))) : undefined;
       const key = ranked(ranks, `${node.kind}@${start}`);
       let id = explicit !== undefined && !kept!.has(explicit) ? explicit : carried.get(key);
       if (id === undefined || used.has(id)) id = lineage.take();
@@ -412,14 +414,23 @@ class Build {
   }
 
   /** Where a node starts in the text, as `identity` names it: an item's marker, a quote's `>` (a block's own prefix), else its first line's content. */
-  private headStartOffset(node: PersistentNode, start: number): number {
+  private headStartOffset(node: PersistentNode, start: number, pastBlanks = false): number {
     const { tree } = this;
     if (start >= tree.lineCount) return 0;
     if (node.kind === 'item') return tree.starts[start]! + node.block!.attrs.markerStart!;
     const line = tree.line(start);
     // a quote at its `>`, any other block with a prefix of its own (a footnote's label) at it
     const block = node.block;
-    return (block && line.prefix.find((piece) => piece.container.block === block)?.from) ?? line.contentFrom;
+    const piece = block && line.prefix.find((piece) => piece.container.block === block);
+    if (!piece) {
+      // (or past the blanks its line's content starts with, a tab its container's column falls in)
+      let at = line.contentFrom;
+      if (pastBlanks) while (at < line.to && (tree.text[at] === ' ' || tree.text[at] === '\t')) at++;
+      return at;
+    }
+    let at = piece.from;
+    if (pastBlanks) while (at < piece.to && (tree.text[at] === ' ' || tree.text[at] === '\t')) at++;
+    return at;
   }
 }
 

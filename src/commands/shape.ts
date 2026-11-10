@@ -120,7 +120,9 @@ export function mixedDepthsRun(ctx: CommandContext, act: (ctx: CommandContext) =
     // which taken out alone would leave it holding nothing
     const [first, ...rest] = roots;
     if (roots.some((n) => n.kind !== first!.kind)) return new OurusRejected('mixed-kinds');
-    if (rest.some((n) => goneWithTextlessParents(ctx.doc, [n])[0] !== n)) return new OurusRejected('not-expressible', "a root is all of a container with no text, which can't be left empty");
+    // (each alone, and together: two roots that are all of one, `>a⏎>>b`'s, B40)
+    const together = goneWithTextlessParents(ctx.doc, rest);
+    if (rest.some((n) => goneWithTextlessParents(ctx.doc, [n])[0] !== n) || together.length !== rest.length || together.some((g, k) => g !== rest[k])) return new OurusRejected('not-expressible', "a root is all of a container with no text, which can't be left empty");
     const levelled = then(ctx.apply(ctx.draft().remove(rest).place('after', first!, rest)));
     if (levelled !== true) return levelled;
     const acted = then(act(new CommandContext(view, ids)));

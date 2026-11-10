@@ -284,3 +284,155 @@ test('an escape of ours a space comes after escapes nothing: its mark goes, the 
   assert.equal(assertApplied(executeCommand(tabbed.view.withSelection(4), { type: 'outdent' })).view.doc.text, '--\n');
   assert.equal(OurusView.of(typed.doc).doc.text, '- \\ --\n');
 });
+
+test('cutting the last item keeps the raised blank line after it ours: a gap written anew keeps its last line ours (B345)', () => {
+  const result = assertApplied(executeOnText('- a\n- b\n\nc\n', { type: 'cut' }, { caret: 6, auto: [8] }));
+  assert.equal(result.view.doc.text, '- a\n\nc\n');
+  assert.deepEqual(result.view.doc.marks.auto, [4]);
+});
+
+test('deleting the last item keeps it ours: a gap written anew keeps its last line ours (B345)', () => {
+  const result = assertApplied(executeOnText('- a\n- b\n\nc\n', { type: 'deleteSubtree' }, { caret: 6, auto: [8] }));
+  assert.deepEqual(result.view.doc.marks.auto, [4]);
+});
+
+test('cutting a quote\'s last item keeps it ours: a gap written anew keeps its last line ours (B345)', () => {
+  const result = assertApplied(executeOnText('- a\n  > q\n  > - b\n\nc\n', { type: 'cut' }, { caret: 16, auto: [18] }));
+  assert.equal(result.view.doc.text, '- a\n  > q\n\nc\n');
+  assert.deepEqual(result.view.doc.marks.auto, [10]);
+});
+
+test('Shift-Enter at a quoted paragraph\'s end keeps the raised blank line under it ours: a gap written anew keeps its last line ours (B345)', () => {
+  const result = assertApplied(executeOnText('> x\n>\n> y\n', { type: 'shiftEnter' }, { caret: 3, auto: [5] }));
+  assert.equal(result.view.doc.text, '> x\n> \n>\n> y\n');
+  assert.deepEqual(result.view.doc.marks.auto, [8]);
+});
+
+test('moving a copy above its original, the text the same, keeps it ours: a gap written anew keeps its last line ours (B345)', () => {
+  const result = assertApplied(executeOnText('- > [!note] Title\n  > body text\n  >\n  > body text\n', { type: 'moveSubtreeUp' }, { caret: 40, auto: [35], config: { flavor: 'obsidian', quotes: 'container' } }));
+  assert.deepEqual(result.view.doc.marks.auto, [35]);
+});
+
+test('a paste over an empty node above a blank line ourus raised: the line stays ours (B377)', () => {
+  const r = assertApplied(executeOnText('- \n\n- last\n', { type: 'paste', clipboard: { 'text/plain': '- x\n' } }, { caret: 2, auto: [3] }));
+  assert.equal(r.view.doc.text, '- x\n\n- last\n');
+  assert.deepEqual(r.view.doc.marks.auto, [4]);
+});
+
+test('Backspace on a blank line above the one ourus raised: that one stays, ours still (B377)', () => {
+  const r = assertApplied(executeOnText('- para one\n  \n\n', { type: 'deleteContentBackward' }, { caret: 13, auto: [14] }));
+  assert.equal(r.view.doc.text, '- para one\n\n');
+  assert.deepEqual(r.view.doc.marks.auto, [11]);
+  const q = assertApplied(executeOnText('2. > quote\n   > \n\n', { type: 'deleteContentBackward' }, { caret: 16, auto: [17] }));
+  assert.equal(q.view.doc.text, '2. > quote\n\n');
+  assert.deepEqual(q.view.doc.marks.auto, [11]);
+});
+
+test('Alt-Up on a tight list\'s last item: the raised blank line after the list ours still, on the item now last (B377)', () => {
+  const r = assertApplied(executeOnText('- a\n- b\n\np\n', { type: 'moveSubtreeUp' }, { caret: 6, auto: [8] }));
+  assert.equal(r.view.doc.text, '- b\n- a\n\np\n');
+  assert.deepEqual(r.view.doc.marks.auto, [8]);
+});
+
+test('Shift-Enter on a blank line above the one ourus raised: that one stays last, ours still (B377)', () => {
+  const r = assertApplied(executeOnText('pa\n\n\nb\n', { type: 'shiftEnter' }, { caret: 3, auto: [4] }));
+  assert.equal(r.view.doc.text, 'pa\n\n\n\nb\n');
+  assert.deepEqual(r.view.doc.marks.auto, [5]);
+});
+
+test('Shift-Tab on a tab-led item before the blank line ourus raised: the line kept, what follows apart (B397)', () => {
+  const r = assertApplied(executeOnText('x\n- a\n\t- b\n\nd\n', { type: 'outdent' }, { caret: 10, auto: [11] }));
+  assert.equal(r.view.doc.text, 'x\n- a\n- b\n\nd\n');
+});
+
+test('Shift-Tab on a tab-led item under `indentUnit: tab`, a raised blank line after it: what follows kept apart (B353)', () => {
+  const r = assertApplied(executeOnText("second line\n- other\n\t- item ^id1\n\nFinal line ^blk\n", { type: "outdent" }, { caret: 28, config: { flavor: "commonmark", indentUnit: "tab" }, auto: [33] }));
+  assert.equal(r.view.doc.text, "second line\n- other\n- item ^id1\n\nFinal line ^blk\n");
+});
+
+test('a paste on the author\'s blank line above the one ourus raised: that one after the paste, ours still (B377)', () => {
+  const r = assertApplied(executeOnText('- a\n  \n\n', { type: 'paste', clipboard: { 'text/plain': '- c\n', 'text/markdown': '- c\n' } }, { caret: 6, auto: [7] }));
+  assert.equal(r.view.doc.text, '- a\n- c\n\n');
+  assert.deepEqual(r.view.doc.marks.auto, [8]);
+});
+
+test('a paragraph indented into an item, a raised blank line before the author\'s after it: both kept, the raised one ours still (B377)', () => {
+  const r = assertApplied(executeOnText('x\n\n\n', { type: 'indent' }, { caret: 4, auto: [2] }));
+  assert.equal(r.view.doc.text, '- x\n\n\n');
+  assert.deepEqual(r.view.doc.marks.auto, [4]);
+});
+
+test('a paragraph after a tight list indented into it: the list\'s blank line goes, the raised one after the paragraph stays ours (B377)', () => {
+  const r = assertApplied(executeOnText('> a quote\n1. first\n\nIntro\n\n---\n', { type: 'indent' }, { caret: 25, auto: [26] }));
+  assert.equal(r.view.doc.text, '> a quote\n1. first\n2. Intro\n\n---\n');
+  assert.deepEqual(r.view.doc.marks.auto, [28]);
+});
+
+test('Enter in a quoted list above a blank line ourus raised before a paragraph: the line kept, the paragraph no lazy line of the list (B353)', () => {
+  const r = assertApplied(executeOnText('  > quoted in item\n  >\n  > - \n  > - \n  >\t\t- list in quote\n\n%% comment %%\n- item ^id1\n- other\n', { type: 'enter' }, { caret: 44, config: { flavor: 'gfm', indentUnit: 'tab' }, auto: [22, 58] }));
+  assert.equal(r.view.doc.text, '  > quoted in item\n  >\n  > - \n  > - \n  >\t\t- \n  >\t\t- list in quote\n\n%% comment %%\n- item ^id1\n- other\n');
+});
+
+test('Shift-Tab on a quote\'s held last line, a blank line ourus raised above it: the line kept, the held paragraph set apart from the quote (B353)', () => {
+  const r = assertApplied(executeOnText('  > - list in quote\n  >\t- \n  >\t-- \n  >\n  > \n', { type: 'outdent' }, { caret: 43, config: { flavor: 'obsidian', indentUnit: 'tab' }, placeholders: [43], auto: [38] }));
+  assert.equal(r.view.doc.text, '  > - list in quote\n  >\t- \n  >\t-- \n\n\n');
+  assert.deepEqual(r.view.doc.marks.placeholders, [36]);
+});
+
+test('a raised blank line keeps its mark through a delete of a quote\'s last paragraph, a paste filling the blank line below it, Enter at a list\'s end (B377, seeds 151, 201)', () => {
+  const clip = (s: string) => ({ 'text/plain': s, 'text/markdown': s });
+  // (the paragraph's gap, as large as the one before it: the node before takes the gone one's lines)
+  assert.deepEqual(autoOf(assertApplied(executeOnText('> a quote\n>\n> over two lines\n\n[^1]: a footnote\n', { type: 'deleteSubtree' }, { caret: 14, config: { flavor: 'commonmark' }, auto: [29] })).view.doc), ['⏎@10']);
+  // (the lines above the one filled kept, ours where they were)
+  assert.deepEqual(autoOf(assertApplied(executeOnText('a\n\n\n\nb\n', { type: 'paste', clipboard: clip('- x\n') }, { caret: 3, auto: [2] })).view.doc), ['⏎@2']);
+  // (Enter at the list's end, the note's end after it: the new item takes the blank line, the list tight, B411)
+  const entered = assertApplied(executeOnText('- item\n\n', enter, { caret: 6, auto: [7] })).view.doc;
+  assert.equal(entered.text, '- item\n- \n\n');
+  assert.deepEqual(autoOf(entered), ['⏎@10']);
+});
+
+test('Enter at a list\'s end, the note ending in blank lines, a raised one first: the new item takes them as they were, each mark where it was (B377)', () => {
+  const r = assertApplied(executeOnText('- item\n\n\n', enter, { caret: 6, auto: [7] }));
+  assert.equal(r.view.doc.text, '- item\n- \n\n\n');
+  assert.deepEqual(r.view.doc.marks.auto, [10]);
+});
+
+test('a quote atom\'s later line held by a space, the line before it emptied by Enter: the mark goes with its space, the line the quote\'s own (B237)', () => {
+  const r = assertApplied(executeOnText('2. > quote\n  > more\n', enter, { caret: 10, placeholders: [11], config: { quotes: 'atom' } }));
+  assert.equal(r.view.doc.text, '2. > quote\n   > \n    > more\n');
+  assert.deepEqual(r.view.doc.marks.placeholders, []);
+});
+
+test('Shift-Enter in code right after a held space: the space, nothing after it on its line, settles; the line below the code\'s (B237)', () => {
+  const r = assertApplied(executeOnText('```\n x', { type: 'shiftEnter' }, { caret: 5, placeholders: [4] }));
+  assert.equal(r.view.doc.text, '```\n\n x');
+  assert.deepEqual(r.view.doc.marks.placeholders, []);
+});
+
+test('a paste over the selected last item of a loose list, the same item pasted: the raised blank line before it, left as it was, ours still (B377)', () => {
+  const clip = { 'text/plain': '- last\n', 'text/markdown': '- last\n' };
+  const r = assertApplied(executeOnText('- parent\n\n- sibling\n\n- last', { type: 'paste', clipboard: clip }, { anchor: 21, head: 27, auto: [20] }));
+  assert.equal(r.view.doc.text, '- parent\n\n- sibling\n\n- last\n\n');
+  assert.deepEqual(r.view.doc.marks.auto, [20]);
+});
+
+test('Backspace joining an item into the quote atom above: the escapes of ours in its text stay ours (seed 251)', () => {
+  const r = assertApplied(executeOnText('2. > quote\n3. num> quote\n   \\> more\n', { type: 'deleteContentBackward' }, { caret: 11, auto: [28], config: { quotes: 'atom' } }));
+  assert.equal(r.view.doc.text, '2. > quotenum> quote\n   \\> more\n');
+  assert.deepEqual(r.view.doc.marks.auto, [24]);
+});
+
+test('a heading keeps one blank line under it, ours too: Shift-Enter in its text leaves it; Enter sets its text off and Backspace takes both back', () => {
+  // (the line ours, left by an empty paragraph Enter made: Shift-Enter at the text's end keeps it)
+  const held = assertApplied(executeOnText('## No\n\nx\n', { type: 'shiftEnter' }, { caret: 8, auto: [6] }));
+  assert.equal(held.view.doc.text.slice(0, 9), '## No\n\nx\n');
+  assert.deepEqual(autoOf(held.view.doc).slice(0, 1), ['⏎@6']);
+  // ours beside the author's under a heading: ours go, one left
+  assert.equal(assertApplied(executeOnText('## No\n\n\nx y\n', { type: 'shiftEnter' }, { caret: 10, auto: [7] })).view.doc.text, '## No\n\nx \ny\n');
+  // Enter at the heading's end: set off by a line of ours; Backspace on the empty paragraph: as it was
+  const entered = assertApplied(executeOnText('## No\nx\n', enter, { caret: 5 }));
+  assert.equal(entered.view.doc.text, '## No\n\n\n\nx\n');
+  assert.equal(assertApplied(executeCommand(entered.view, back)).view.doc.text, '## No\nx\n');
+  // Shift-Enter there: compact
+  assert.equal(assertApplied(executeOnText('## No\nx\n', { type: 'shiftEnter' }, { caret: 5 })).view.doc.text, '## No\n\n\nx\n');
+});

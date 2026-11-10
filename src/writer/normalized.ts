@@ -44,10 +44,18 @@ export interface GapOrigin {
    */
   floor?: number;
   /**
-   * Raised from none by `done()` because Markdown needed a blank line there: the line is whitespace
-   * ourus added, which the writer marks only on a gap of one or more (lowered to none after, it marks nothing).
+   * The gap's last line is whitespace ourus added, its line break the writer marks where it writes the
+   * gap anew (on a gap of one or more: lowered to none after, it marks nothing): raised from none by
+   * `done()` because Markdown needed a blank line there, or the gap the node had, whose last line was ours.
    */
   auto?: boolean;
+  /**
+   * The command took a line out of the gap, or put one in, before its last (Backspace, Shift-Enter on a
+   * blank line): the gap's last line is the one it had, ours where that was (`auto`).
+   */
+  lastKept?: boolean;
+  /** The command kept the gap's first lines, the rest gone below them (a paste or Enter filling a blank line under them): its last line the one it had there. */
+  firstKept?: boolean;
 }
 
 /** What `done()` fixed: the outline, and the maps the writer lays it out by. */
@@ -71,6 +79,10 @@ export interface NormalForm {
   readonly preamble: number | null;
   /** The spaces before a text on its first line, past the one after an item's marker (a paragraph's indentation), by node id: a text's leading spaces, which Markdown holds only so. */
   readonly paddings: ReadonlyMap<NodeId, number>;
+  /** Blocks the command didn't touch written lifted by so many columns, by node id: kept out of the item above them, as the outliners keep them (B193). */
+  readonly lifts: ReadonlyMap<NodeId, number>;
+  /** Nodes written anew, in normal form, their layout as it was not kept (B348). */
+  readonly anew: ReadonlySet<NodeId>;
 }
 
 /** What the command asked of the writer, as it stood when the draft was done. */
@@ -101,6 +113,8 @@ export class NormalizedDraft implements NormalForm, WriterAsks {
   readonly gaps: ReadonlyMap<NodeId, Readonly<GapOrigin>>;
   readonly preamble: number | null;
   readonly paddings: ReadonlyMap<NodeId, number>;
+  readonly lifts: ReadonlyMap<NodeId, number>;
+  readonly anew: ReadonlySet<NodeId>;
   readonly placedIds: ReadonlySet<NodeId>;
   readonly splitFrom: ReadonlyMap<NodeId, OurusNode>;
   readonly hints: ReadonlyMap<NodeId, string>;
@@ -120,6 +134,8 @@ export class NormalizedDraft implements NormalForm, WriterAsks {
     this.gaps = new Map([...form.gaps].map(([id, g]) => [id, Object.freeze({ ...g })]));
     this.preamble = form.preamble;
     this.paddings = new Map(form.paddings);
+    this.lifts = new Map(form.lifts);
+    this.anew = new Set(form.anew);
     this.placedIds = new Set(asks.placedIds);
     this.splitFrom = new Map(asks.splitFrom);
     this.hints = new Map(asks.hints);

@@ -10,7 +10,11 @@ The rules:
 2. **The caret goes to the end of the text above**, or, when the first node goes, to the start of
    the text that follows, after its marker (DeleteSubtree1, DeleteSubtree3, DeleteSubtree4).
    What the deleted node kept apart is set apart by a blank line: a paragraph of an item, now
-   right under its text, which it would continue (DeleteSubtree8).
+   right under its text, which it would continue (DeleteSubtree8). Right under code (code, math, a
+   comment), where the end of the text above is a line of the code, the caret stays where the first
+   node was instead, on an empty node of its kind held there, as a text editor leaves the line a cut
+   took: what is typed or pasted next goes there, not into the code (DeleteSubtree15,
+   DeleteSubtree16, Cut5).
 3. **A list the command touches is renumbered** (DeleteSubtree2).
 4. **Selected nodes go together** (DeleteSubtree5).
 5. **The document's only nodes leave it empty** (DeleteSubtree6).
@@ -339,4 +343,82 @@ code
 
 ```markdown
 - ┃c
+```
+
+## DeleteSubtree15
+
+A heading right under code goes: the caret stays where it was, on an empty line held there, not
+at the end of the code's last line, so what is typed next is a paragraph, not code.
+
+```yaml
+tags: common markup-fence
+```
+
+````markdown
+```
+code
+```
+
+# h┃
+````
+
+> deleteSubtree "x"
+
+````markdown
+```
+code
+```
+
+x┃
+````
+
+## DeleteSubtree16
+
+An item right under an item ending in code goes: an empty item stays in its place, the caret in
+it, where what is typed is the item's text.
+
+```yaml
+tags: common markup-fence
+```
+
+````markdown
+- item
+  ```
+  x
+  ```
+- ne┃xt
+````
+
+> deleteSubtree "y"
+
+````markdown
+- item
+  ```
+  x
+  ```
+- y┃
+````
+
+## DeleteSubtree17
+
+A quote's first paragraph goes, the quote one column in after an item, so outside it: the quote is
+the block edited, its lines written at its own column, as it reads, so the line after the one that
+went doesn't read into the item (`  > - b` would). A block the edit doesn't touch keeps its lines as
+written.
+
+```yaml
+tags: rare
+```
+
+```markdown
+- a
+ > x┃
+  > - b
+```
+
+> deleteSubtree
+
+```markdown
+- a┃
+ > - b
 ```

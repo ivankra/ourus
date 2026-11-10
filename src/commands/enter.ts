@@ -92,7 +92,8 @@ export function enterCommand(ctx: CommandContext, key = true, typed = key): Ouru
       const draft = ctx.draft();
       const id = draft.create(node.kind === 'item' ? 'item' : 'paragraph', new OurusProse('paragraph', node.kind === 'item', ''));
       draft.setText(node, text.slice(0, last).withBlockIdLines(text.blockIdLines)).place('after', node, [id]);
-      if (node.kind !== 'item') draft.gap(id, node.gap).gap(node, Math.max(1, node.gap));
+      // (its blank lines the node's, ours where they were: B377)
+      if (node.kind !== 'item') draft.gap(id, node.gap).gapOrigin(id, node).gap(node, Math.max(1, node.gap));
       return ctx.apply(draft.setCaret(id, 0, -1));
     }
     if (config.enterInQuote === 'line' && trimMd(text.text.slice(text.textStart(0), offset)) !== '') return shiftEnterCommand(ctx);
@@ -175,6 +176,8 @@ export function enterCommand(ctx: CommandContext, key = true, typed = key): Ouru
     shift = 1;
   }
   const [, made] = draft.split(node, a + shift, { to: b + shift, children: stay ? 'stay' : 'follow', into, ...(title ? { kind: 'paragraph' as const } : {}) });
+  // (Enter under a heading sets its text off by a blank line, ours; Shift-Enter writes it compact)
+  if (key && node.kind === 'heading') draft.setOff(node);
   // a task's new item is a task too
   let rest = text.slice(b, close ?? s.length).asItem(node.kind === 'item');
   if (node.kind === 'item' && text.task && config.enterTask === 'continue') {
@@ -204,7 +207,8 @@ function blockAt(ctx: CommandContext): OurusResult | null | undefined {
   if (at.node.kind === 'item') return nodeAfterBlock(ctx, at.node);
   const draft = ctx.draft();
   const made = draft.create('paragraph', new OurusProse('paragraph', false, ''));
-  draft.place('after', at.node, [made]).gap(made, at.node.gap).gap(at.node, 1).setCaret(made, 0, -1);
+  // (its blank lines the block's, ours where they were: B377)
+  draft.place('after', at.node, [made]).gap(made, at.node.gap).gapOrigin(made, at.node).gap(at.node, 1).setCaret(made, 0, -1);
   return ctx.apply(draft);
 }
 
@@ -230,7 +234,8 @@ function leaveQuote(ctx: CommandContext, owner: OurusNode): OurusResult | null |
   const draft = ctx.draft();
   const item = owner.kind === 'item';
   const id = draft.create(item ? 'item' : 'paragraph', new OurusProse('paragraph', item, ''));
-  return ctx.apply(draft.place('after', owner, [id]).gap(id, Math.max(0, owner.gap - 1)).gap(owner, item ? 0 : 1).setCaret(id, 0, -1));
+  // (the blank lines after the caret's, the last ours where it was: B377)
+  return ctx.apply(draft.place('after', owner, [id]).gap(id, Math.max(0, owner.gap - 1), true).gapOrigin(id, owner).gap(owner, item ? 0 : 1).setCaret(id, 0, -1));
 }
 
 /**
@@ -247,7 +252,8 @@ function leaveItem(ctx: CommandContext, owner: OurusNode): OurusResult | null {
   if (!item) return null;
   const draft = ctx.draft();
   const id = draft.create('item', newEmptyTextBeside(ctx, ctx.doc.textOf(item) as OurusProse, 'item'));
-  return ctx.apply(draft.place('after', item, [id]).gap(owner, k).gap(id, owner.gap - k - 1).setCaret(id, 0, -1));
+  // (the lines below, the last ours where it was: B377)
+  return ctx.apply(draft.place('after', item, [id]).gap(owner, k, 'first').gap(id, owner.gap - k - 1, true).gapOrigin(id, owner).setCaret(id, 0, -1));
 }
 
 /**

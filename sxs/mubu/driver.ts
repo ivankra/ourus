@@ -139,6 +139,8 @@ export const driver: Driver = {
     // measured by rejudging, 2026-11-02: 14 cases better, 3 worse, PastePlain25, PastePlain26,
     // Regression13)
     pastePlainLines: 'items',
+    // blocks pasted at a block's text start go after it (probed 2026-11-11)
+    pasteAtTextStart: 'after',
   },
   holds(doc) {
     const o = doc as Outline;

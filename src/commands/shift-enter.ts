@@ -30,7 +30,11 @@ export function shiftEnterCommand(ctx: CommandContext): OurusResult | null {
   if (code) return newlineInCode(ctx, code, true);
   if (ctx.collapsed && ctx.from.zone === 'gap') return breakOnBlankLine(ctx, ctx.from.owner);
   // across nodes, deleted as Backspace deletes it, the line breaking at the caret (ShiftEnter27)
-  if (ctx.doc.lineAt(ctx.selection.anchor).index !== ctx.doc.lineAt(ctx.selection.head).index) return breakAcross(ctx);
+  if (ctx.doc.lineAt(ctx.selection.anchor).index !== ctx.doc.lineAt(ctx.selection.head).index) {
+    // (the line breaking in a callout's title, a line of its own: as at a caret there, B55)
+    if (ctx.from.zone === 'text' && ctx.from.node.head?.type === 'callout_title') return new OurusRejected('not-expressible', 'a callout title is a single line');
+    return breakAcross(ctx);
+  }
   let from = ctx.from;
   let to = ctx.to;
   // in the spaces Markdown hides before an item's text, the user's: at their start the line breaks
@@ -196,7 +200,8 @@ function breakOnBlankLine(ctx: CommandContext, owner: OurusNode): OurusResult | 
   const k = ctx.doc.lineAt(ctx.selection.head).index - owner.ownLastLine - 1;
   // (any other blank line, the host's)
   if (k < 0 || k >= owner.gap || !ctx.doc.atTextColumn(ctx.selection.head, owner)) return null;
-  return ctx.apply(ctx.draft().gap(owner, owner.gap + 1).select({ blank: owner, line: k + 1 }, { blank: owner, line: k + 1 }));
+  // (before the gap's last line: that one, ourus's or not, stays last)
+  return ctx.apply(ctx.draft().gap(owner, owner.gap + 1, k < owner.gap - 1).select({ blank: owner, line: k + 1 }, { blank: owner, line: k + 1 }));
 }
 
 /**

@@ -144,6 +144,12 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
   if (ctx.collapsed && at.zone === 'text' && at.text instanceof OurusAtom && at.text.type === 'blockquote' && at.offset === 0) {
     return (at.node.kind === 'item' && config.backspaceAtItemStart === 'logseq' ? unnumberItem(ctx, at.node, at.text, 0) : null) ?? joinQuoteUp(ctx, at.node, at.text);
   }
+  // at the start of a rule or a table after a block in its container: refused, as Delete refuses to take
+  // one in (no text joins one; the host's join would make a rule a paragraph's setext underline, B202)
+  if (ctx.collapsed && (at.zone === 'text' || at.zone === 'frame') && at.node.kind === 'atom' && at.text instanceof OurusAtom && (at.text.type === 'thematic_break' || at.text.type === 'table') && head === ctx.doc.posOf(at.node, 0, 1)) {
+    const above = visiblePreceding(ctx.view, at.node);
+    if (above && above.kind !== 'root' && !(above === at.node.parent && !ctx.doc.textOf(above))) return new OurusRejected('not-expressible', `can't join the ${nameOf(at.node)} into the text above`);
+  }
   // (right after a later line's `> `: it joins the line above)
   const inQuote = quoteAtomAt(ctx);
   const lineBack = inQuote && joinLineInQuote(ctx, inQuote, false);
@@ -175,6 +181,9 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
   // would empty a node or widen an item's padding), but in an empty pair of backticks
   if (offset > first) return deleteEmptyPair(ctx, pairPlace(ctx, at)!, offset) ?? new OurusDeferred('host-default');
   const draft = ctx.draft();
+  // among a later line's leading spaces, past the first: the space before the caret goes, a space typed
+  // there taken back (B204); at the line's start, the line joins (ShiftEnter21)
+  if (offset > lineStart && lineStart !== text.textStart(0)) return ctx.apply(draft.setText(node, text.splice(offset - 1, offset)).setCaret(node, offset - 1, -1));
   if (lineStart !== text.textStart(0)) {
     // at a later line's start: it joins the line above, its spaces with it, the caret staying before
     // or past them, where it was (a Shift-Enter's break taken back: ShiftEnter21); a quote's line its
@@ -324,7 +333,8 @@ function blankLineBack(ctx: CommandContext, owner: OurusNode): OurusResult | nul
     return ctx.apply(draft.setCaret(owner, textEnd(text), -1));
   }
   // (its text set again: where what follows would then continue it, `done()` keeps the line)
-  const draft = ctx.draft().gap(owner, owner.gap - 1).setText(owner, text);
+  // (a line before the gap's last: the last, ourus's or not, stays as it was)
+  const draft = ctx.draft().gap(owner, owner.gap - 1, k < owner.gap - 1).setText(owner, text);
   if (k > 0) return ctx.apply(draft.select({ blank: owner, line: k - 1 }, { blank: owner, line: k - 1 }));
   return ctx.apply(draft.setCaret(owner, text instanceof OurusAtom && ctx.config.markup === 'text' ? text.text.length : textEnd(text), -1));
 }

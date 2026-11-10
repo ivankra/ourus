@@ -57,10 +57,23 @@ export interface MdBracketRule {
   resolve(p: MdInlineParser, opener: Bracket): boolean;
 }
 
-/** Runs over the text nodes outside links once parsing is done (GFM's email autolinks). */
+/** A node a text rule makes of `[from, to)` of a run's decoded text. */
+export interface MdTextMatch {
+  readonly from: number;
+  readonly to: number;
+  readonly type: string;
+  readonly attrs: Record<string, unknown>;
+}
+
+/**
+ * Runs over the text outside links once parsing is done (GFM's email autolinks): each run of text,
+ * its escapes and entities decoded, as cmark-gfm's postprocess sees it (`a\+b@x.com` is
+ * `a+b@x.com`). Its matches, in order and apart, become nodes over the source they span; one that
+ * starts or ends inside an entity that decodes to more than one character is none.
+ */
 export interface MdTextRule {
   readonly name: string;
-  process(p: MdInlineParser, node: Node): void;
+  matches(text: string): readonly MdTextMatch[];
 }
 
 /** The inline rules of a flavor, compiled. */
@@ -537,26 +550,93 @@ export class MdInlineParser {
         } else if (linkLike) inLink = false;
         continue;
       }
-      if (node.type === 'text' && !inLink) {
-        // consolidate the run of adjacent text nodes, then hand it to the rules
-        while (node.next && node.next.type === 'text' && node.next.from === node.to) {
-          node.to = node.next.to;
-          node.next.unlink();
+      if ((node.type === 'text' || node.type === 'escape' || node.type === 'entity') && !inLink) {
+        // consolidate the run of adjacent text nodes, then hand the run, escapes and entities with it,
+        // to the rules
+        const parent = node.parent!;
+        const before = node.prev;
+        let end: Node | null = node;
+        for (let n: Node | null = node; n && runPiece(n) && (n === node || n.from === n.prev!.to); n = n.next) {
+          while (n.type === 'text' && n.next && n.next.type === 'text' && n.next.from === n.to) {
+            n.to = n.next.to;
+            n.next.unlink();
+          }
+          end = n;
         }
-        const after = node.next;
-        // (each rule over the text the rules before it left, its pieces between `node` and `after`: one
-        // that splits the node, an email's, leaves text after what it made, which the next rules see too;
-        // what it made, a link, is no text to them)
-        let pieces: Node[] = [node];
+        const after = end!.next;
+        // (each rule over what the rules before it left: what it made, a link, is no text to the next)
         for (const rule of this.config.textRules) {
-          for (const piece of pieces) rule.process(this, piece);
-          pieces = [];
-          for (let n: Node | null = node; n && n !== after; n = n.next) if (n.type === 'text' && n.from < n.to) pieces.push(n);
+          for (let n: Node | null = before ? before.next : parent.first; n && n !== after; ) {
+            if (!runPiece(n)) {
+              n = n.next;
+              continue;
+            }
+            const run: Node[] = [];
+            for (let m: Node | null = n; m && m !== after && runPiece(m) && (m === n || m.from === m.prev!.to); m = m.next) run.push(m);
+            n = run[run.length - 1]!.next;
+            this.applyTextRule(rule, run);
+          }
         }
         stack[stack.length - 1] = after;
         continue;
       }
       stack[stack.length - 1] = node.next;
+    }
+  }
+
+  /** `rule`'s matches over `run` (contiguous text, escapes and entities), each made a node over its source. */
+  private applyTextRule(rule: MdTextRule, run: readonly Node[]): void {
+    // the decoded text, and where each node's piece of it starts
+    let decoded = '';
+    const starts: number[] = [];
+    for (const n of run) {
+      starts.push(decoded.length);
+      decoded += n.type === 'text' ? this.text.slice(n.from, n.to) : String(n.attrs!.value ?? '');
+    }
+    const matches = rule.matches(decoded);
+    // (the last first: the nodes before a match keep their places)
+    let nodes = [...run];
+    for (let k = matches.length - 1; k >= 0; k--) {
+      const m = matches[k]!;
+      if (m.from >= m.to) continue;
+      const at = (pos: number): number => {
+        let i = 0;
+        while (i + 1 < nodes.length && starts[i + 1]! <= pos) i++;
+        return i;
+      };
+      const first = at(m.from);
+      const last = at(m.to - 1);
+      const a = nodes[first]!;
+      const b = nodes[last]!;
+      // (inside an escape or an entity: none)
+      if ((a.type !== 'text' && m.from !== starts[first]) || (b.type !== 'text' && m.to !== (starts[last + 1] ?? decoded.length))) continue;
+      const from = a.type === 'text' ? a.from + (m.from - starts[first]!) : a.from;
+      const to = b.type === 'text' ? b.from + (m.to - starts[last]!) : b.to;
+      // the text past the match, a node of its own
+      if (b.type === 'text' && to < b.to) b.insertAfter(new Node('text', to, b.to));
+      if (b.type === 'text') b.to = to;
+      // the text before it, a node of its own
+      let head = a;
+      if (a.type === 'text' && from > a.from) {
+        head = new Node('text', from, a.to);
+        a.insertAfter(head);
+        a.to = from;
+      }
+      const end = a === b ? head : b;
+      const covered: Node[] = [];
+      for (let n: Node | null = head; n; n = n.next) {
+        covered.push(n);
+        if (n === end) break;
+      }
+      const made = new Node(m.type, from, to, m.attrs);
+      head.insertBefore(made);
+      // (escapes or entities in it: its pieces its children, the text as written; else a leaf)
+      if (covered.some((n) => n.type !== 'text')) {
+        made.container = true;
+        for (const n of covered) made.append(n);
+      } else for (const n of covered) n.unlink();
+      // (the nodes before it, for the matches before this one)
+      nodes = nodes.slice(0, first + 1);
     }
   }
 
@@ -567,6 +647,11 @@ export class MdInlineParser {
 }
 
 const EMPTY: readonly MdInline[] = Object.freeze([]);
+
+/** Whether `n` is a piece of a run of text the text rules see: text, an escape or an entity. */
+function runPiece(n: Node): boolean {
+  return n.type === 'text' || n.type === 'escape' || n.type === 'entity';
+}
 
 /** The finished tree: immutable nodes, adjacent text merged. Iterative: nesting can be as deep as the text is long. */
 function freeze(root: Node): MdInline[] {

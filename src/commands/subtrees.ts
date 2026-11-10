@@ -8,7 +8,7 @@
 import { OurusAtom, OurusProse, type OurusNode } from '../doc/index.ts';
 import { composeChanges, pushAll } from '../text/index.ts';
 import { CommandContext, blockIdsDeclaredBy } from './context.ts';
-import { copyOrCutCommand } from './copy.ts';
+import { copyOrCutCommand, withRaisedLines } from './copy.ts';
 import { deleteSubtreeCommand } from './delete-subtree.ts';
 import { pasteAtCommand } from './paste.ts';
 import { pastePlainCommand } from './paste-plain.ts';
@@ -136,5 +136,6 @@ function composed(ctx: CommandContext, first: OurusResult | null, then: (ctx: Co
     next = new OurusSuccess({ view: first.view.update({ changes, caret }), changes });
   }
   if (!next || !(next instanceof OurusSuccess)) return next instanceof OurusDeferred ? null : next;
-  return new OurusSuccess({ ...next, ...blockIdsDeclaredBy([first, next]), changes: composeChanges(ctx.doc.text, first.changes, next.changes) });
+  const changes = composeChanges(ctx.doc.text, first.changes, next.changes);
+  return new OurusSuccess({ ...next, ...blockIdsDeclaredBy([first, next]), view: withRaisedLines(ctx, next.view, changes), changes });
 }

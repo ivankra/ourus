@@ -16,5 +16,6 @@ export { VERBATIM, verbatimLinesOf } from './copy.ts';
 export { clipboardFragment, clipboardSource, renderedHtml } from './clipboard.ts';
 export { blockIdTargetOf, type BlockId, type BlockIdTarget, type BlockIdStray, type BlockIdDeclarations } from './block-ids.ts';
 export { escapeParagraph, keepsEscape } from './escapes.ts';
+export { validAuto } from './placeholders.ts';
 export { OurusProse, OurusAtom, checkboxLength, textEnd, textStart, isClosingPart, closingFrameStart, blockIdsOf, withoutBlockIds, isBlockIdName, reBlockIdLine, type OurusText, type OurusProseType, type FramePart, type AtomFramePart, type BlockIdSyntax, type BlockIdLine, type TextBlockId } from './text.ts';
 export { outlineChildren, type OurusNodeKind, type FlatChild, type OutlineChild } from './rules.ts';

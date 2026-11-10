@@ -400,7 +400,16 @@ export function joinLineInQuote(ctx: CommandContext, at: QuoteAt, forward: boole
   // at a line's start it joins the line above, its `> ` going with the break (as the apps' blocks hold
   // the line, lazy: Fence43); on an empty line right after its `> `, the line goes
   const mark = pastQuoteMarker(ctx, at, here, true);
-  if (offset === start) return ctx.apply(ctx.draft().setText(node, text.splice(start - 1, mark)).setCaret(node, start - 1, -1));
+  if (offset === start) {
+    // (a held space starting the line, mid-line now: a space as any, its mark out; an empty line's
+    // placeholder, the line gone, out with it: B237)
+    const joined = text.splice(start - 1, mark);
+    let lead = start - 1;
+    while (joined.text[lead] === ' ' || joined.text[lead] === '\t') lead++;
+    const held = joined.marks.placeholders.filter((p) => p >= start - 1 && (p < lead || (p === lead && joined.marks.hasEmptyNodeAt(p))));
+    const settled = held.length ? joined.withMarks({ placeholders: joined.marks.placeholders.filter((p) => !held.includes(p)) }) : joined;
+    return ctx.apply(ctx.draft().setText(node, settled).setCaret(node, start - 1, -1));
+  }
   if (offset !== mark || !here.quote || trimMd(s.slice(offset, end)) !== '') return null;
   return ctx.apply(ctx.draft().setText(node, text.splice(start - 1, offset)).setCaret(node, start - 1, -1));
 }
@@ -514,7 +523,7 @@ export function joinIntoQuote(ctx: CommandContext, above: OurusNode, quote: Ouru
   // (its block ids as a join takes them: moved to the quote, or merged into its)
   const moved = draft.joinBlockIds(above, quote, node, lower);
   const rest = moved ? lower : (withoutBlockIds(lower) as OurusProse);
-  draft.setText(above, quote.splice(at, at, rest.text).withBlockIdLines(moved && rest.blockIdLines.length ? rest.blockIdLines : quote.blockIdLines));
+  draft.setText(above, quote.splice(at, at, rest.marks).withBlockIdLines(moved && rest.blockIdLines.length ? rest.blockIdLines : quote.blockIdLines));
   const children = [...node.children];
   if (children.length) {
     draft.remove(children);

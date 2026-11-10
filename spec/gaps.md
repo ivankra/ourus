@@ -18,6 +18,10 @@ Their consequences, drawn below:
   a paragraph, code after an item); none where it would loosen a tight list
   ([Indent29](indent.md#indent29), [Quote18](quotes.md#quote18)), the blank line moving to the end of
   the list where something follows it, or end an empty item (`-` and a blank line).
+- **A heading keeps one blank line under it**, ours too: a command trims ours under a heading to
+  one, never to none, and the author's not at all (Gap21). Enter in a heading sets its text off by
+  one of ours (Shift-Enter writes it compact), and Backspace on the empty paragraph Enter made takes
+  the line back with it (Gap20).
 - **A caret on a blank line is in the gap of the node above.** Structural keys there act on that
   node; the caret stays on the blank line, which goes with the node (Gap14), and where a seam lowered
   it, goes to the end of the node's text, so a second press acts on it again
@@ -329,7 +333,7 @@ c
 
 ### Gap12
 
-Enter at the end of a heading keeps its gap below the new paragraph.
+Enter at the end of a heading sets the new paragraph off by a blank line and keeps its gap below it.
 
 ```yaml
 tags: core
@@ -345,6 +349,7 @@ p
 
 ```markdown
 ## S
+
 ┃◌
 
 p
@@ -549,4 +554,76 @@ a: b
 ┃
 ---
 - x
+```
+
+### Gap20
+
+Enter in a heading sets the new paragraph off by a blank line, ourus's: Backspace on the empty
+paragraph takes the Enter back, the line with it. Shift-Enter writes the paragraph compact, right
+under the heading, a way to type a heading and its text with no blank line.
+
+```yaml
+tags: common
+```
+
+```markdown
+## No┃
+x
+```
+
+> enter
+
+```markdown
+## No
+
+┃◌
+
+x
+```
+
+> deleteContentBackward
+
+```markdown
+## No┃
+x
+```
+
+> shiftEnter
+
+```markdown
+## No
+┃◌
+
+x
+```
+
+### Gap21
+
+The blank line Enter set off under a heading stays once the empty paragraph is left: ourus's, but a
+heading keeps one blank line under it, so a later edit of the text below doesn't take it.
+
+```yaml
+tags: common
+```
+
+```markdown
+## No
+┃x
+```
+
+> enter cursorDocEnd cursorCharLeft
+
+```markdown
+## No
+
+x┃
+```
+
+> shiftEnter
+
+```markdown
+## No
+
+x
+┃
 ```

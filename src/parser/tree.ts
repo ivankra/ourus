@@ -360,27 +360,50 @@ export function lineBlocks(root: MdBlock, line: number): { containers: MdBlockAt
 export function allLineBlocks(root: MdBlock, n: number): { containers: (readonly MdBlockAt[])[]; leaves: (MdBlockAt | null)[] } {
   const containers = new Array<readonly MdBlockAt[]>(n);
   const leaves = new Array<MdBlockAt | null>(n).fill(null);
-  const stack: { node: MdBlock; start: number; end: number; chain: readonly MdBlockAt[]; k: number; at: number }[] = [{ node: root, start: 0, end: n, chain: [], k: 0, at: 0 }];
+  // (a level's chain, its containers from the root, made when a line of its own needs it: a line nested
+  // n deep makes one chain, not one per level, B263)
+  interface Level {
+    readonly node: MdBlock;
+    readonly start: number;
+    readonly end: number;
+    readonly block: MdBlockAt | null;
+    readonly up: Level | null;
+    chain: readonly MdBlockAt[] | null;
+    k: number;
+    at: number;
+  }
+  const chainOf = (level: Level): readonly MdBlockAt[] => {
+    if (level.chain) return level.chain;
+    // (up to the nearest level that has one; only this level's kept, the ones between made by none)
+    const blocks: MdBlockAt[] = [];
+    let l: Level | null = level;
+    while (l && !l.chain) {
+      blocks.push(l.block!);
+      l = l.up;
+    }
+    return (level.chain = [...(l?.chain ?? []), ...blocks.reverse()]);
+  };
+  const stack: Level[] = [{ node: root, start: 0, end: n, block: null, up: null, chain: [], k: 0, at: 0 }];
   while (stack.length) {
     const f = stack[stack.length - 1]!;
     if (f.k === f.node.children.length) {
       // the container's lines after its last child
-      for (let l = f.at; l < f.end; l++) containers[l] = f.chain;
+      for (let l = f.at; l < f.end; l++) containers[l] = chainOf(f);
       stack.pop();
       continue;
     }
     const k = f.k++;
     const child = f.node.children[k]!;
     const start = f.start + f.node.offsets[k]!;
-    for (let l = f.at; l < start; l++) containers[l] = f.chain;
+    for (let l = f.at; l < start; l++) containers[l] = chainOf(f);
     const at = new MdBlockAt(child, start);
     if (child.kind === 'container') {
       f.at = start + child.span;
-      stack.push({ node: child, start, end: f.at, chain: [...f.chain, at], k: 0, at: start });
+      stack.push({ node: child, start, end: f.at, block: at, up: f, chain: null, k: 0, at: start });
     } else {
       f.at = start + child.lines;
       for (let l = start; l < f.at; l++) {
-        containers[l] = f.chain;
+        containers[l] = chainOf(f);
         leaves[l] = at;
       }
     }

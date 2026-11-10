@@ -116,7 +116,19 @@ export function lineBreakAtOpening(ctx: CommandContext, at: CodeAt, typed: strin
   // break; where markup is decorated, the caret onto the new blank line: not done yet)
   const above = at.node.preceding;
   if (!above || above.kind === 'root' || !ctx.doc.textOf(above) || ctx.config.markup === 'decorated') return null;
-  return ctx.apply(ctx.draft().gap(above, above.gap + 1).setCaret(at.node, at.offset, 1));
+  return ctx.apply(lineAbove(ctx, above).setCaret(at.node, at.offset, 1));
+}
+
+/**
+ * The line a line break at a block's opening delimiter makes above it: a blank line, the gap of the
+ * node above; after a block of lines nothing closes (an item's fence left open), a line of that block,
+ * an empty one, as a text editor writes the line break: no blank line can be between them (B205).
+ */
+function lineAbove(ctx: CommandContext, above: OurusNode): ReturnType<CommandContext['draft']> {
+  const draft = ctx.draft();
+  const text = ctx.doc.textOf(above);
+  if (text instanceof OurusAtom && !text.closed && text.frame.some((p) => p.part === 'open') && above.gap === 0) return draft.setText(above, new OurusAtom(text.type, text.item, text.marks.concat('\n'), text.blockIdLines));
+  return draft.gap(above, above.gap + 1);
 }
 
 /**
@@ -139,7 +151,7 @@ function enterAtOpening(ctx: CommandContext, node: OurusNode, text: OurusAtom): 
     const above = node.preceding;
     // (where markup is decorated, the caret goes onto the new blank line: not done yet)
     if (!above || !ctx.doc.textOf(above) || ctx.config.markup === 'decorated') return null;
-    return ctx.apply(draft.gap(above, above.gap + 1).setCaret(node, ctx.from.zone === 'frame' || ctx.from.zone === 'text' ? ctx.from.offset : 0, 1));
+    return ctx.apply(lineAbove(ctx, above).setCaret(node, ctx.from.zone === 'frame' || ctx.from.zone === 'text' ? ctx.from.offset : 0, 1));
   }
   draft.convert(node, 'item');
   if (ctx.config.enterMidItem === 'sibling') {

@@ -136,6 +136,8 @@ export const driver: Driver = {
     // pasted blocks leave a selection's text as it is (Paste17, probed 2026-10-25)
     pasteOverSelection: 'ignore',
     pasteParagraphList: 'children',
+    // blocks pasted at a block's text start go after it (probed 2026-11-11)
+    pasteAtTextStart: 'after',
   },
 
   drops: ['moveSubtree'],

@@ -24,7 +24,8 @@ The rules:
    refused where those aren't siblings in a row, as `deleteSubtree` refuses them, so that a cut copies
    what it takes out (Copy7).
 6. **A cut is the copy, then what it took out**: a text range as Backspace over it deletes it (Cut1,
-   Cut2), whole nodes as `deleteSubtree` (Cut3, Cut4).
+   Cut2), whole nodes as `deleteSubtree` (Cut3, Cut4): a node cut right under code leaves the
+   caret where it was, so a paste puts it back there (Cut5).
 
 ## Copy1
 
@@ -344,3 +345,37 @@ clipboard:
 ```markdown
 - ┃three
 ```
+
+## Cut5
+
+A node cut right under code and pasted back comes back where it was: the cut leaves the caret on
+an empty line held in its place, not at the end of the code's last line, where the paste would be
+code (B346).
+
+```yaml
+tags: common markup-fence
+```
+
+````markdown
+```
+code
+```
+
+# h┃
+````
+
+> cut paste
+
+```yaml
+clipboard:
+  text/plain: |
+    # h
+```
+
+````markdown
+```
+code
+```
+
+# h┃
+````

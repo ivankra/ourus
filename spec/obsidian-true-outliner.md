@@ -244,6 +244,7 @@ tags: common
 
 ```markdown
 # Head
+
 ┃line
 - item
 ```
@@ -270,6 +271,7 @@ Hello┃ world
 ```markdown
 Hello
 ====
+
 ┃world
 ```
 
@@ -295,6 +297,7 @@ Hello world
 ```markdown
 Hello world
 ====
+
 ┃◌
 ```
 
@@ -319,6 +322,7 @@ tags: common
 
 ```markdown
 # Head
+
 x┃
 ```
 
@@ -339,6 +343,7 @@ tags: common free-form
 
 ```markdown
 # Head
+
 ┃◌
 - item
 ```
@@ -453,6 +458,7 @@ tags: common
 
 ```markdown
 # Hello
+
 ┃world
 ```
 
@@ -473,6 +479,7 @@ tags: common
 
 ```markdown
 # He
+
 ┃ad
 ## Sub
 ```
@@ -498,6 +505,7 @@ Body.
 
 ```markdown
 # Head
+
 ┃line
 
 Body.
@@ -520,6 +528,7 @@ Body.
 
 ```markdown
 # Head
+
 ┃◌
 
 Body.

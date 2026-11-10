@@ -11,7 +11,7 @@ import { ITEM, PARAGRAPH, extractRefdefs, type ParagraphFrame } from './blocks.t
 import { defineFlavor, type MdExtension, type MdFlavor, type MdMutableBlock } from './flavor.ts';
 import { coreBlocks, inTightList, type MdHtmlRenderer } from './html.ts';
 import { MdInlineTextBuilder } from './inline-text.ts';
-import { Node, type MdBracketRule, type MdDelimiterRule, type MdInlineParser, type MdInlineRule, type MdTextRule } from './inlines.ts';
+import { Node, type MdBracketRule, type MdDelimiterRule, type MdInlineParser, type MdInlineRule, type MdTextMatch, type MdTextRule } from './inlines.ts';
 import type { MdBlockSpec, MdFrame, MdLeafRole, MdMachine } from './machine.ts';
 import type { MdTree } from './syntax.ts';
 import type { MdBlock, MdBlockAt, MdTableAlign } from './types.ts';
@@ -497,11 +497,10 @@ const urlRule: MdInlineRule = {
  */
 const emailRule: MdTextRule = {
   name: 'emailAutolink',
-  process(p, node) {
-    const s = p.text;
-    let text = node;
-    let start = node.from;
-    let remaining = node.to - node.from;
+  matches(s) {
+    const found: MdTextMatch[] = [];
+    let start = 0;
+    let remaining = s.length;
     let offset = 0;
     outer: while (offset < remaining) {
       // (within the node: `indexOf` would search the rest of the whole text, at each node)
@@ -567,16 +566,12 @@ const emailRule: MdTextRule = {
       const linkFrom = at - rewind;
       const linkTo = at + length;
       const raw = s.slice(linkFrom, linkTo);
-      const link = new Node('autolink', linkFrom, linkTo, { value: raw, destination: normalizeUri((autoMailto ? 'mailto:' : '') + raw), literal: true });
-      const post = new Node('text', linkTo, start + remaining);
-      text.to = linkFrom;
-      text.insertAfter(link);
-      link.insertAfter(post);
-      text = post;
+      found.push({ from: linkFrom, to: linkTo, type: 'autolink', attrs: { value: raw, destination: normalizeUri((autoMailto ? 'mailto:' : '') + raw), literal: true } });
       remaining -= offset + maxRewind + length;
       start += offset + maxRewind + length;
       offset = 0;
     }
+    return found;
   },
 };
 

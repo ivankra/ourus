@@ -62,7 +62,8 @@ export function continuationAsWas(old: string, origin: OurusNode, line: MdLine):
       column = p.toColumn + (spaced && !partial ? 1 : 0);
       return;
     }
-    const width = (own && p.container.block === own ? own.attrs.contentColumn! : p.toColumn) - p.fromColumn;
+    // (a footnote's label: its later lines four columns in, as the definition reads them, B298)
+    const width = p.kind === 'footnote' ? 4 : (own && p.container.block === own ? own.attrs.contentColumn! : p.toColumn) - p.fromColumn;
     column += width;
     run += width;
   });

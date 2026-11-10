@@ -151,7 +151,7 @@ test('Backspace over a selection across nodes keeps the first node\'s block id; 
 });
 
 test('paste and duplicate write block ids as they are, a name the note holds too: block ids needn\'t be unique', () => {
-  const r = executeCommand(OurusView.of(parse('- a ^x\n- b\n'), { selection: 9 }), { type: 'paste', clipboard: { 'text/plain': '- c ^x\n- d ^z' } });
+  const r = executeCommand(OurusView.of(parse('- a ^x\n- b\n'), { selection: 10 }), { type: 'paste', clipboard: { 'text/plain': '- c ^x\n- d ^z' } });
   assert.ok(r instanceof OurusSuccess);
   assert.equal(r.view.doc.text, '- a ^x\n- b\n- c ^x\n- d ^z\n');
   const d = run(parse('- a\n\n  ^x\n  - c ^y\n- b\n'), { type: 'duplicateSubtree' }, 1);
