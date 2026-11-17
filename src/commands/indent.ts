@@ -13,7 +13,7 @@ import { emptyQuote, tabLedLazyLine } from './quote.ts';
 /**
  * Items become the last children of their previous sibling, an item or a quote, with their subtrees
  * (rule 4); paragraphs and atoms become items (rule 3); headings go a level deeper, with the headings in their
- * sections (rule 2); refused with nothing above them at their level (rule 5). On a code line Tab is
+ * sections (rule 2), or are refused where they own none (`headings: block`); refused with nothing above them at their level (rule 5). On a code line Tab is
  * the host's (rule 1).
  */
 export function indentCommand(ctx: CommandContext): OurusResult | null {
@@ -21,7 +21,7 @@ export function indentCommand(ctx: CommandContext): OurusResult | null {
   const nodes = oneRun(ctx, true);
   if (!Array.isArray(nodes)) return operandsRefused(nodes);
   const first = nodes[0]!;
-  if (first.kind === 'heading') return changeHeadingLevels(ctx, nodes, 1);
+  if (first.kind === 'heading') return ctx.config.headings === 'section' ? changeHeadingLevels(ctx, nodes, 1) : new OurusRejected('heading-block', 'a heading that owns nothing stays where it is');
   if (first.kind === 'paragraph' || first.kind === 'atom') return blocksIntoItems(ctx, nodes);
   // (a quote that is a container: only an item goes under another)
   if (first.kind !== 'item') return new OurusRejected('not-expressible', `${withArticle(nameOf(first))} doesn't go under the node above`);

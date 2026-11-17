@@ -183,3 +183,13 @@ test('an angle autolink decodes its entities, as cmark-gfm (GitHub) does, in eve
     assert.match(MdTree.parse('<https://example.com/&copy;>', flavor).renderHtml(), /href="https:\/\/example\.com\/%C2%A9"/);
   }
 });
+
+test('a link label holds at most 999 characters, counted in code points as the spec says (commonmark.js and micromark count UTF-16 units, cmark-gfm UTF-8 bytes)', () => {
+  const linked = (label: string): boolean => MdTree.parse(`[x][${label}]\n\n[${label}]: /u\n`, MdFlavor.gfm).renderHtml().includes('href="/u"');
+  assert.ok(linked('a'.repeat(999)));
+  assert.ok(!linked('a'.repeat(1000)));
+  assert.ok(linked('😀'.repeat(999)));
+  assert.ok(!linked('😀'.repeat(1000)));
+  assert.ok(linked('é'.repeat(999)));
+  assert.ok(linked('\\]'.repeat(499) + 'a'));
+});

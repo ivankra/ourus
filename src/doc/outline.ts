@@ -62,7 +62,7 @@ export interface OutlinePrevious {
   readonly changes: readonly ChangeSpec[];
   /** The first line of the old node with id `id`, in the old text, or undefined (`OurusDoc.node`'s index, made once per snapshot). */
   readonly startOf: (id: number) => number | undefined;
-  /** The old outline was read under other settings for what owns what (`listParent`, `quotes`): no grouping of it is copied. */
+  /** The old outline was read under other settings for what owns what (`listParent`, `quotes`, `headings`): no grouping of it is copied. */
   readonly regroup?: boolean;
 }
 
@@ -85,7 +85,7 @@ export function readOutline(
 }
 
 /** What reading the outline asks of the config. */
-export type ReadConfig = Pick<OurusConfig, 'quotes' | 'listParent'>;
+export type ReadConfig = Pick<OurusConfig, 'quotes' | 'listParent' | 'headings'>;
 
 /** An old node and its first line in the old text. */
 interface Located {
@@ -165,7 +165,7 @@ class Build {
     else if (kind === 'quote') head = quoteHead(block, () => this.contentOf(start + block.offsets[0]!), this.tree.flavor.has('callouts'));
     // the same stored block holds the same blocks, grouped the same: only the nodes on touched lines change
     // (but a quote that is of another kind now, read anew)
-    // (and not where the old one was grouped under other settings: `listParent`, `quotes`)
+    // (and not where the old one was grouped under other settings: `listParent`, `quotes`, `headings`)
     // (nor where a block-id paragraph may attach otherwise now: blocks are stored by their shapes, and
     // what a one-line paragraph says, and the line after it, aren't theirs)
     const copied = old && !this.previous?.regroup && old.node.block === block && old.node.head === head && !this.blockIdsTouched(block, start) ? yield this.copy(old, start, end) : null;

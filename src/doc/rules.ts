@@ -1,8 +1,9 @@
 // What holds what: the outline's reading of the block tree, stated once: reading and the draft's
 // normal form both nest by it (`outlineChildren`).
 //
-// Headings own their section within their container; list items are nodes (lists are not), owning
-// their first block as their text where that holds text and every other block as a child; in the
+// Headings own their section within their container (or nothing, as `OurusConfig.headings` says);
+// list items are nodes (lists are not), owning their first block as their text where that holds text
+// and every other block as a child; in the
 // document's own sections (the root's or a heading's children, not inside an item or a quote), a
 // paragraph owns the lists right after it (with or without a blank line between), whose items are
 // its children, or any block but a heading and a container, or none, as `OurusConfig.listParent`
@@ -112,18 +113,18 @@ const BLOCKS: ReadonlySet<OurusNodeKind> = new Set(['paragraph', 'atom']);
 /**
  * A container's children (the document's, an item's, a quote's) as the outline has them, from the
  * flat run Markdown lays them out in: a heading owns what follows it up to one of its level or higher,
- * its section; in the document's own sections (`root`: the root's), a node of the kinds
+ * its section (under `headings: block`, nothing); in the document's own sections (`root`: the root's), a node of the kinds
  * `config.listParent` says (`listAdopters`) owns the items of the lists right after it, consecutive
  * lists included. Reading and the draft's normal form both nest by it.
  */
-export function outlineChildren<T extends FlatChild>(flat: readonly T[], root: boolean, config: Pick<OurusConfig, 'listParent'>): OutlineChild<T>[] {
+export function outlineChildren<T extends FlatChild>(flat: readonly T[], root: boolean, config: Pick<OurusConfig, 'listParent' | 'headings'>): OutlineChild<T>[] {
   const adopters = root ? listAdopters(config.listParent) : NONE;
   const top: OutlineChild<T>[] = [];
   const sections: OutlineChild<T>[] = [];
   let paragraph: OutlineChild<T> | null = null;
   for (const entry of flat) {
     const node: OutlineChild<T> = { entry, children: [] };
-    if (entry.kind === 'heading') {
+    if (entry.kind === 'heading' && config.headings === 'section') {
       while (sections.length && sections[sections.length - 1]!.entry.level >= entry.level) sections.pop();
       (sections[sections.length - 1]?.children ?? top).push(node);
       sections.push(node);

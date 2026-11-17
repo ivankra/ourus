@@ -19,10 +19,9 @@ import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, 
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { OurusConfig } from '../src/config.ts';
-import { parseWithMarks, drawDoc, drawLabels, drawnSelection, drawOutline, drawsCaret, drawText, allNodes, readDrawing, readText, withoutCaret, isAction, playActions, type PlayedState, drawDropPoints, NodeLabels, normalizeDrawing, describeOutcome, readClipboard, rowView, specTestView, actionsLine, readSpec, specConfig, SPEC_TAGS, tokenizeActions, type Clipboard, type SpecTest } from '../test/lib/index.ts';
+import { parseWithMarks, drawDoc, drawLabels, drawnSelection, drawOutline, drawsCaret, drawText, allNodes, readDrawing, readText, withoutCaret, isAction, playActions, type PlayedState, drawDropPoints, NodeLabels, normalizeDrawing, describeOutcome, readClipboard, specTestView, drawnView, actionsLine, readSpec, specConfig, SPEC_TAGS, tokenizeActions, type Clipboard, type SpecTest } from '../test/lib/index.ts';
 import type { OurusDoc } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
-import { drawView } from './lib/view.ts';
 import { appNames, drivers, resolveApps } from './lib/apps.ts';
 import { ensureProxy } from './lib/browser.ts';
 import type { Driver } from './lib/driver.ts';
@@ -262,7 +261,6 @@ interface OurStep {
   /** After a pickup (`drag`): the places it offers, drawn as `dropPoints:` draws them. */
   dropPoints?: string;
   /** The buffer with the folds in effect and the zoom after the step on its rows (`⟦folded⟧`, `⟦zoomed⟧`), where there are any. */
-  view?: string;
 }
 
 /** `--labels`: the nodes of a drawn start labelled in document order, where it labels none itself. */
@@ -306,8 +304,9 @@ function playOurus(p: Probe, config: Record<string, string>, labels = false): Ou
   // (the start's labels, for a drop that names one)
   const named = new NodeLabels();
   named.check(doc, start.labels, null);
-  // (a case's view, its buffer's `⟦folded⟧` and `⟦zoomed⟧`, as the spec runs it)
-  const view = p.test ? specTestView(p.test, doc, start.view) : OurusView.of(doc);
+  // (the view its buffer draws, `⟦folded⟧` and `⟦zoomed⟧`: a case's as the spec runs it)
+  const drawn = p.test ? null : drawnView(doc, start.view);
+  const view = p.test ? specTestView(p.test, doc, start.view) : OurusView.of(doc, { folded: drawn!.folded }).withZoom(drawn!.zoom);
   let state: PlayedState = { view: view.withSelection(drawnSelection(view, start)), clipboard: p.clipboard, drop: start.drop, labels: named.ids };
   const labelling = labels ? new Labelling(state.view.doc, start.labels) : null;
   const out: OurStep[] = [];
@@ -335,8 +334,6 @@ function playOurus(p: Probe, config: Record<string, string>, labels = false): Ou
       ...(broken ? { broken } : {}),
       ...(actions.some((a) => a === 'copy' || a === 'cut') && state.clipboard['text/plain'] !== undefined ? { clipboard: state.clipboard['text/plain'] } : {}),
       ...(state.last instanceof OurusSuccess && state.last.dropMap ? { dropPoints: drawDropPoints(state.view, state.last.dropMap, state.view.selection) } : {}),
-      // (the buffer with its view on its rows, `⟦folded⟧`, `⟦zoomed⟧`, printed in its place)
-      ...(state.view.zoomFolded.size || state.view.zoom !== null ? { view: drawView(buffer, rowView(state.view)) } : {}),
     });
     if (broken) break;
   }
@@ -516,7 +513,7 @@ async function main(): Promise<void> {
         for (const [k, s] of run.steps.entries()) {
           // ourus's result where it didn't apply (a refusal, the host's), on the actions' line
           out(cyan(`> ${s.actions.join(' ')}${s.result === 'success' ? '' : `  (ourus: ${s.result})`}${s.broken ? `  !! ${s.broken}` : ''}`));
-          verbatim(s.view ?? s.buffer);
+          verbatim(s.buffer);
           if (s.clipboard !== undefined) out(`clipboard: ${JSON.stringify(s.clipboard)}`);
           if (s.dropPoints !== undefined) {
             out('dropPoints:');

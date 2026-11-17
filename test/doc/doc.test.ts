@@ -119,7 +119,7 @@ test('settings applied again unchanged keep the snapshot, so an undo given the o
   const moved = executeCommand(view.withSelection(2), { type: 'moveSubtreeDown' });
   assert.ok(moved instanceof OurusSuccess);
   if (!(moved instanceof OurusSuccess)) return;
-  const current = moved.view.withConfig({ markup: 'text' });
+  const current = moved.view.withConfig({ decorations: [] });
   const undone = current.withDoc(doc.withConfig(current.doc.config));
   assert.equal(undone.doc.node(1)?.kind, 'item');
   assert.ok(undone.folded.has(1));

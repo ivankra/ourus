@@ -74,7 +74,7 @@ export type OurusCommand =
   | ({ readonly type: 'unfold' } & Nodes)
   /**
    * The folds of the nodes at the selection, or `nodes`, toggled, as `fold`: unfolded where any of
-   * them is folded within the zoom, else folded; at a node that doesn't fold, its parent's.
+   * them is folded within the zoom, else folded; a node that doesn't fold left alone.
    */
   | ({ readonly type: 'toggleFold' } & Nodes)
   /**
@@ -121,6 +121,8 @@ export type RejectReason =
   | 'mixed-kinds'
   | 'has-children'
   | 'nothing-above'
+  /** Tab or Shift-Tab on a heading that owns nothing (`headings: block`), which stays where it is, its level too. */
+  | 'heading-block'
   /** An id the document doesn't have (it changed since the id was read). */
   | 'no-such-node'
   /** A selection whose ends aren't positions in the text: integers from 0 to its length (it changed since the selection was read). */

@@ -1,22 +1,22 @@
 {
   "summary": {
-    "open": 55,
+    "open": 53,
     "P1": 0,
     "P2": 0,
     "P3": 0,
-    "P4": 55,
+    "P4": 53,
     "policy": 0,
-    "cases": 60,
+    "cases": 58,
     "clusters": {
       "Copy, cut and paste (Markdown and plain text)": 6,
       "Moves, indent, outdent and duplicate across quotes and loose lists": 5,
       "Enter and Shift-Enter in quotes, callouts and quoted lists": 2,
       "Backspace, Delete and joins around quotes, tasks and headings": 1,
       "Code, math and comment blocks": 8,
-      "Tab-led, padded and lazy-continuation lines": 17,
+      "Tab-led, padded and lazy-continuation lines": 16,
       "Numbered lists and shared marker lines": 5,
       "Block ids": 1,
-      "Held marks (placeholders)": 2,
+      "Held marks (placeholders)": 1,
       "Raised blank lines (auto marks)": 8
     }
   },
@@ -41,10 +41,8 @@
     "B331: tab-led code moves into an empty quote": "failed (readback id): the text written doesn't read as the draft: root › 0 › 0: id 1, read as 3",
     "B343: a line break pasted before a tab-led fence writes": "failed (readback text): the text written doesn't read as the draft: root › 2: text \"\\t\\\\~~~\", read as \"\\\\~~~\"",
     "B344: tab-led lines pasted after a held padding write": "failed (writer tab-column): the writer can't write a line of node 1's text starting with a tab, at another column than done() gave it",
-    "B369: Tab on the empty item": "failed (readback children): the text written doesn't read as the draft: root › 0: 2 children, read as 1",
     "B403: the case reduced": "failed (readback children): the text written doesn't read as the draft: root: 3 children, read as 2",
     "B413: Shift-Enter in a quoted paragraph held past its `>`": "failed (readback id): the text written doesn't read as the draft: root › 0 › 0: id 2, read as 3",
-    "B418: a heading pasted on a callout's held line": "got [\"auto mark lost on a line it didn't change\"]",
     "B444: the case reduced": "got [\"auto mark lost on a line it didn't change\"]",
     "B445: the case reduced": "got [\"auto mark lost on a line it didn't change\"]",
     "B446: the case reduced": "got [\"auto mark lost on a line it didn't change\"]",

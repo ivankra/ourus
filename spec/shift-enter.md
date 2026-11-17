@@ -10,7 +10,9 @@ The rules, in order; the first that applies wins:
    (ShiftEnter14; a setext title holds several, ShiftEnter29, its underline being markup); a
    callout's title in the Obsidian flavor ([quotes.md](quotes.md)) and a table's row (ShiftEnter24)
    refuse it. At an item's text start the line breaks after the marker (ShiftEnter13,
-   ShiftEnter13b), the text escaped where on its own line it would start a block (ShiftEnter30).
+   ShiftEnter13b), the text escaped where on its own line it would start a block (ShiftEnter30). At
+   a paragraph's, a blank line above it, the caret staying, as the text editors break a line there
+   (ShiftEnter35).
    With the caret in the item's marker or a task's checkbox, the line break is the host's (`markup:
    text`, the default; ShiftEnter22, ShiftEnter26); where the host decorates markup (`markup:
    decorated`), Shift-Enter acts at the text start (ShiftEnter22b, ShiftEnter26b).
@@ -608,7 +610,7 @@ tags: common
 ## ShiftEnter22
 
 In the marker, a line break can't be one in the item's text: the host makes it
-(`markup: text`, the default), and the text reads as it then does, an empty item and a
+(not in `decorations`, the default), and the text reads as it then does, an empty item and a
 paragraph.
 
 ```yaml
@@ -632,12 +634,12 @@ result: deferredToHost
 
 ## ShiftEnter22b
 
-Where the host decorates markup (`markup: decorated`), it acts at the text start, where the line
+Where the host decorates markup (in `decorations`), it acts at the text start, where the line
 breaks after the marker ([ShiftEnter13](#shiftenter13)).
 
 ```yaml
 tags: rare free-form
-markup: decorated
+decorations: [bullet]
 ```
 
 ```markdown
@@ -723,11 +725,11 @@ p
 ## ShiftEnter26
 
 Inside a task's checkbox, as in an item's marker ([ShiftEnter22](#shiftenter22)), a line break can't
-be one in the item's text: where the host shows markup as text (`markup: text`, the default), the
+be one in the item's text: where the host shows markup as text (not in `decorations`, the default), the
 line break is the host's, and the text reads as it then does, the checkbox broken.
 
 ```yaml
-tags: rare free-form markup-task
+tags: rare free-form
 ```
 
 ```markdown
@@ -747,12 +749,12 @@ result: deferredToHost
 
 ## ShiftEnter26b
 
-Where the host decorates markup (`markup: decorated`), it acts at the text start, after the
+Where the host decorates markup (in `decorations`), it acts at the text start, after the
 checkbox, where the line breaks, the checkbox staying on the marker's line.
 
 ```yaml
-tags: rare markup-task
-markup: decorated
+tags: rare
+decorations: [checkbox]
 ```
 
 ```markdown
@@ -825,7 +827,7 @@ breaks it, the heading staying one. Only an ATX title is a single line
 ([ShiftEnter14](#shiftenter14)).
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -846,6 +848,33 @@ Title
 ```markdown
 Title┃more
 ---
+```
+
+## ShiftEnter29b
+
+An item's ATX title breaks too: the rest is a paragraph right under the title in the item, a line
+of its text as an outliner's block holds one after its heading (Logseq, Roam, Tine, Dynalist,
+Athens); Backspace glues it back, the title a single line.
+
+```yaml
+tags: rare
+```
+
+```markdown
+- ## Title┃more
+```
+
+> shiftEnter
+
+```markdown
+- ## Title
+  ┃more
+```
+
+> deleteContentBackward
+
+```markdown
+- ## Title┃more
 ```
 
 ## ShiftEnter31
@@ -963,3 +992,53 @@ result: rejected not-expressible
 -
   ┃ three
 ```
+
+## ShiftEnter34
+
+Shift-Enter on an empty heading makes an empty paragraph after it, compact, as at a titled heading's
+end ([ShiftEnter14](#shiftenter14)), the empty heading kept.
+
+```yaml
+tags: rare
+```
+
+```markdown
+text
+
+## ┃
+```
+
+> shiftEnter
+
+```markdown
+text
+
+##␠
+┃◌
+```
+
+## ShiftEnter35
+
+At a paragraph's start a line break would leave an empty first line, which a paragraph can't hold:
+a blank line opens above it, the caret staying with the text, as Obsidian (source, Live Preview,
+Outliner, true-outliner), SilverBullet and Emacs do. The block outliners put an empty first line in
+the block, which an item takes (ShiftEnter13); AFFiNE, BlockNote, Lexical, Notion and RemNote split an
+empty block off above; SiYuan does nothing.
+
+```yaml
+tags: common free-form
+```
+
+```markdown
+┃a
+b
+```
+
+> shiftEnter
+
+```markdown
+
+┃a
+b
+```
+

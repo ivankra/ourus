@@ -242,7 +242,7 @@ export function remnoteDriver(setup: Setup): Driver {
     refuses: ['markup-heading', 'markup-task', 'markup-fence', 'quote'],
     ordered: true,
     // a heading is the rem's font size, content starting `# ` text (`fromItem` escapes it)
-    headings: true,
+    headingBlocks: true,
     // Shift+Tab leaves the later siblings with the parent (and a Tab right after puts the rem back where it
     // was, `outdentInOriginalLocation`); Enter mid-text in a rem with children makes its first child
     // (without bullets, Enter on an empty top-level item makes it a paragraph, its Enter handler's
@@ -256,6 +256,10 @@ export function remnoteDriver(setup: Setup): Driver {
     // nothing to compare (Auto15, Auto17, Auto21, Auto28 to Auto34)
     capturesTyped: /\$\$|\[\[|\(\(/,
     behaves: {
+      // a character typed over a selection: none wraps it, RemNote applying its own formatting (code, bold) or none (probed 2026-11-18)
+      autoWrap: [],
+      // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
+      decorations: ['bullet', 'number', 'checkbox', 'heading', 'setext'],
       // a space a deleted first character leaves at a rem's start goes as it is stored (Placeholder9,
       // Placeholder17, Placeholder18; measured 2026-11-03)
       heldSpace: 'trim',
@@ -281,7 +285,8 @@ export function remnoteDriver(setup: Setup): Driver {
       pastePlainLines: 'items',
       // without bullets a document is a flat run of rems, a paragraph one, each item one: a list after a
       // paragraph is no rem's, a move passes one rem (Lists1, Lists5, Lists9)
-      ...(setup.bulletless ? { enterOnEmptyItem: 'exit' as const, listParent: 'container' as const, listMoves: 'item' as const } : {}),
+      // and a heading is one rem, owning nothing: it moves alone (MoveUp3)
+      ...(setup.bulletless ? { enterOnEmptyItem: 'exit' as const, listParent: 'container' as const, listMoves: 'item' as const, headings: 'block' as const } : {}),
     },
     idle: { busy: `window.getNumOngoingWriteGuarantees?.() > 0` },
     drops: ['moveSubtree'],

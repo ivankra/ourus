@@ -9,7 +9,7 @@ the text it is the host's. The rules, in order; the first that applies wins:
 1. **On a code line**, the next code line joins it; before a fence it is refused
    ([fences.md](fences.md)).
 2. **Before an item's text, in its marker or its checkbox**, Delete is the host's where the host
-   shows markup as text (`markup: text`, the default; Delete29, Delete23, Delete24, Delete25). Where
+   shows markup as text (not in `decorations`, the default; Delete29, Delete23, Delete24, Delete25). Where
    it decorates markup (`decorated`), ourus makes the edit: the checkbox goes, as Backspace right
    after it takes it (Delete19); in the marker, the space goes and the item is a paragraph, keeping
    its children, set off by a blank line where it needs one (Delete16, Delete16d, Delete16e); the
@@ -20,10 +20,9 @@ the text it is the host's. The rules, in order; the first that applies wins:
    below joins it instead, as Backspace at its start would (Delete28); with
    children, its first child moves up into it (Delete5), or nothing happens with
    `emptyItemWithChildren: refuse` (Delete5e). An empty item below goes (Delete20).
-4. **Before a heading, it loses its marks first**, as Backspace at its text start takes them: the
-   title is a paragraph where it is, the caret staying, and a second Delete joins it as any
-   paragraph (`headingEditing: text`, the default; Delete13, Delete13c, Delete13e, Delete13g);
-   with `block`, its title joins (Delete13b, Delete13f).
+4. **Before a heading, its title joins**, its marks going with the join, whatever
+   `headingEditing` says: that option is Backspace's, whose caret is at the marks (Delete13, Delete13c,
+   Delete13e, Delete13g, Delete14, Delete15).
    Before an item whose first block is an item on its marker's line (`- - b`), an empty item with
    children as written apart (`-` / `  - b`), it goes, as one written so does: its children become
    the item's, the caret staying (Delete33).
@@ -38,11 +37,16 @@ the text it is the host's. The rules, in order; the first that applies wins:
    the text, the next line joins it (Delete3). A heading's closing `#`s stay at the end (Delete4,
    Delete4b). A first child with children joins up a level the same (`joinWithChildren: join`, the
    default; Delete31), or nothing happens (`refuse`, Delete31b).
-7. **What can't be written is refused**: a quote or a code block below (Delete10, Delete11), an
-   item whose first block, on its marker's line, is a quote or a table (Delete34).
-8. **A selection across nodes** goes and the ends join, as with Backspace (Delete21); within one
+7. **At a block of markup**, code, a table or a rule (this one ending, or code below), or a
+   footnote's label below: the host's where it shows that markup as text (`decorations` not listing
+   it, the default: a blank line a press, then the lines joined as text, a text editor's), refused
+   where it draws it (Delete11, [Fence35](fences.md#fence35)). After a footnote's text, the paragraph
+   below joins it, the text being prose.
+8. **What can't be written is refused**: a quote atom below (Delete10), an item whose first block,
+   on its marker's line, is a quote or a table (Delete34).
+9. **A selection across nodes** goes and the ends join, as with Backspace (Delete21); within one
    node's text it is the host's (Delete22).
-9. **In the middle of the text**, the host's Delete (Delete8).
+10. **In the middle of the text**, the host's Delete (Delete8).
 
 Bare Obsidian's Delete deletes the line break: the next item's marker becomes text of this one
 (`- one┃- two`), a child's indentation too (`- abc┃  - def`). Obsidian's Outliner plugin joins as
@@ -117,7 +121,7 @@ Joins before closing hashes.
 A heading's title ends before its closing `#`s: the caret there is at the end of its text.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -136,7 +140,7 @@ tags: rare markup-heading
 From after the closing `#`s, Delete joins the same way, the caret going to the end of the title.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -375,6 +379,34 @@ tags: common
   - c
 ```
 
+## Delete7b
+
+With `joinWithChildren: never`, Delete before a sibling with children refuses, as Backspace at its
+start does ([Backspace8b](backspace.md#backspace8b)).
+
+```yaml
+tags: rare
+joinWithChildren: never
+```
+
+```markdown
+- a┃
+- b
+  - c
+```
+
+> deleteContentForward
+
+```yaml
+result: rejected has-children
+```
+
+```markdown
+- a┃
+- b
+  - c
+```
+
 ## Delete8
 
 Mid-text delete.
@@ -458,10 +490,12 @@ result: rejected not-expressible
 
 ## Delete11
 
-Delete at the end of a node before indented code is refused.
+Delete at the end of a node before indented code the host draws as a code block is refused. Where it
+shows it as text (the default), it is the host's, a text editor's join.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
+decorations: [fence]
 ```
 
 ```markdown
@@ -507,43 +541,14 @@ tags: rare
 
 ## Delete13
 
-Delete at the end of a paragraph before a heading takes the heading's `#`s, as Backspace at its text
-start does ([Backspace18](backspace.md#backspace18)): the title is a paragraph where it is, and
-Delete again joins it, as SiYuan does. Bare Obsidian deletes the blank line first, and the line
-break then joins the `#`s as text; WorkFlowy does nothing, Dynalist joins `a` into the heading. With
-`headingEditing: block`, the title joins at once ([Delete13b](#delete13b)).
+Delete at the end of a paragraph before a heading joins the heading's title, its `#`s going with the
+join, as Notion, Lexical, AFFiNE, BlockNote, Tana, Moodo and Mubu do. Backspace at the title's start
+takes the `#`s first ([Backspace18](backspace.md#backspace18)): there the markup is at the caret.
+SiYuan takes the `#`s first with Delete too; bare Obsidian deletes the blank line first, and the line
+break then joins the `#`s as text; WorkFlowy does nothing, Dynalist joins `a` into the heading.
 
 ```yaml
-tags: rare markup-heading
-```
-
-```markdown
-a┃
-
-# H1
-```
-
-> deleteContentForward
-
-```markdown
-a┃
-
-H1
-```
-
-> deleteContentForward
-
-```markdown
-a┃H1
-```
-
-## Delete13b
-
-With `headingEditing: block`, Delete before a heading joins just its title.
-
-```yaml
-tags: rare markup-heading
-headingEditing: block
+tags: rare
 ```
 
 ```markdown
@@ -560,37 +565,11 @@ a┃H1
 
 ## Delete13c
 
-Before a heading with text right under it, the peeled title is set off from that text by a blank
-line: right under it, the text would continue the title's paragraph.
+Before a heading with text right under it, that text is set off from the joined paragraph by a blank
+line: right under it, it would continue the paragraph.
 
 ```yaml
-tags: rare free-form markup-heading
-```
-
-```markdown
-a┃
-
-# H1
-text
-```
-
-> deleteContentForward
-
-```markdown
-a┃
-
-H1
-
-text
-```
-
-## Delete13d
-
-With `headingEditing: block` too, the heading's text right under it is set off by a blank line.
-
-```yaml
-tags: rare free-form markup-heading
-headingEditing: block
+tags: rare free-form
 ```
 
 ```markdown
@@ -610,34 +589,10 @@ text
 
 ## Delete13e
 
-Before a setext heading, the underline goes, as Backspace at the title's start takes it.
+Before a setext heading, its title joins and the underline goes.
 
 ```yaml
-tags: rare free-form markup-heading
-```
-
-```markdown
-a┃
-
-Title
-=====
-```
-
-> deleteContentForward
-
-```markdown
-a┃
-
-Title
-```
-
-## Delete13f
-
-With `headingEditing: block`, before a setext heading, its title joins and the underline goes.
-
-```yaml
-tags: rare markup-heading
-headingEditing: block
+tags: rare free-form
 ```
 
 ```markdown
@@ -655,11 +610,10 @@ a┃Title
 
 ## Delete13g
 
-Before an item whose text is a heading, its `#`s go first, as before any heading: the item's text is
-a paragraph, and Delete again joins the item as any item.
+Before an item whose text is a heading, the item joins as any item, its `#`s going with the join.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -670,38 +624,21 @@ tags: rare markup-heading
 > deleteContentForward
 
 ```markdown
-- a┃
-- H
-```
-
-> deleteContentForward
-
-```markdown
 - a┃H
 ```
 
 ## Delete14
 
-The heading's section stays where it was, after the title's paragraph, and after the join.
+The heading's section stays where it was, after the joined paragraph.
 
 ```yaml
-tags: rare free-form markup-heading
+tags: rare free-form
 ```
 
 ```markdown
 a┃
 
 # H1
-
-body
-```
-
-> deleteContentForward
-
-```markdown
-a┃
-
-H1
 
 body
 ```
@@ -716,11 +653,11 @@ body
 
 ## Delete15
 
-After a heading the same: the heading below loses its marks, closing `#`s too, and its title then
-joins the heading's.
+After a heading the same: the heading below joins its title to the heading's, its marks going with
+the join, closing `#`s too.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -731,19 +668,12 @@ tags: rare markup-heading
 > deleteContentForward
 
 ```markdown
-## A┃
-H1
-```
-
-> deleteContentForward
-
-```markdown
 ## A┃H1
 ```
 
 ## Delete16
 
-Where the host decorates markup (`markup: decorated`), deleting the space after a top-level item's
+Where the host decorates markup (in `decorations`), deleting the space after a top-level item's
 marker makes the item a paragraph, keeping its children.
 
 Without the space, `-` is no list marker: the text becomes a paragraph, `-` included. In a section,
@@ -753,7 +683,7 @@ checks what it reads as; where the host shows markup as text, the edit is the ho
 
 ```yaml
 tags: rare free-form
-markup: decorated
+decorations: [bullet]
 ```
 
 ```markdown
@@ -774,12 +704,12 @@ result: success
 
 ## Delete16b
 
-With `markup: decorated`, deleting the space after a marker inside an item is refused: `-a`
+Where `decorations` lists it, deleting the space after a marker inside an item is refused: `-a`
 would be more of `p`'s text, and `b` would become `p`'s child.
 
 ```yaml
 tags: rare free-form
-markup: decorated
+decorations: [bullet]
 ```
 
 ```markdown
@@ -802,12 +732,12 @@ result: rejected not-expressible
 
 ## Delete16c
 
-With `markup: decorated`, Delete before the marker is refused: it would take the marker itself,
+Where `decorations` lists it, Delete before the marker is refused: it would take the marker itself,
 and ` a` would continue `x`'s text.
 
 ```yaml
 tags: rare free-form
-markup: decorated
+decorations: [bullet]
 ```
 
 ```markdown
@@ -834,7 +764,7 @@ continue that item; its children become its list. Where markup is text, the host
 
 ```yaml
 tags: rare free-form
-markup: decorated
+decorations: [bullet]
 ```
 
 ```markdown
@@ -859,7 +789,7 @@ keeping its text and parent.
 
 ```yaml
 tags: rare free-form
-markup: decorated
+decorations: [bullet]
 ```
 
 ```markdown
@@ -881,7 +811,7 @@ outdent makes them ([DirectOutdent2](outdent.md#directoutdent2)).
 
 ```yaml
 tags: rare free-form
-markup: decorated
+decorations: [bullet]
 ```
 
 ```markdown
@@ -1022,8 +952,8 @@ right after it ([TaskBackspace3](tasks.md#taskbackspace3)). The host's Delete wo
 task`.
 
 ```yaml
-tags: rare markup-task
-markup: decorated
+tags: rare
+decorations: [checkbox]
 ```
 
 ```markdown
@@ -1110,7 +1040,7 @@ result: deferredToHost
 ## Delete23
 
 Before the marker, Delete would take the marker itself, which ourus doesn't do: the edit is the
-host's (`markup: text`, the default), and ` a` continues `x`'s text, as in a text editor. The
+host's (not in `decorations`, the default), and ` a` continues `x`'s text, as in a text editor. The
 result says why ourus stepped aside: the marker isn't text.
 
 ```yaml
@@ -1469,3 +1399,116 @@ quotes: container
 ```yaml
 result: rejected not-expressible
 ```
+
+## Delete35
+
+At the end of a rule the host shows as text (the default), Delete is the host's: a blank line a
+press, then the paragraph below onto the rule's line, as Obsidian, SilverBullet and Emacs do.
+
+```yaml
+tags: rare
+```
+
+```markdown
+***┃
+
+para
+```
+
+> deleteContentForward
+
+```yaml
+result: deferredToHost
+```
+
+```markdown
+***┃
+para
+```
+
+## Delete35b
+
+At the end of a table the host draws (a grid, as Live Preview's), Delete is refused: the text below
+can't join a table.
+
+```yaml
+tags: rare
+flavor: gfm
+decorations: [table]
+```
+
+```markdown
+| a |
+|---|
+| 1 |┃
+
+para
+```
+
+> deleteContentForward
+
+```yaml
+result: rejected not-expressible
+```
+
+```markdown
+| a |
+|---|
+| 1 |┃
+
+para
+```
+
+## Delete36
+
+Before code the host shows as text (the default), Delete is the host's, a text editor's: a blank line
+a press, then the fence's line onto this one. Where it draws the fence, refused
+([Delete11](#delete11)).
+
+```yaml
+tags: rare
+```
+
+````markdown
+para┃
+
+```
+code
+```
+````
+
+> deleteContentForward
+
+```yaml
+result: deferredToHost
+```
+
+````markdown
+para┃
+```
+code
+```
+````
+
+## Delete37
+
+At the end of a footnote's text, the paragraph below joins it: the definition's text is prose, as
+Logseq, Roam, Tine, Dynalist, RemNote and true-outliner join it.
+
+```yaml
+tags: rare
+flavor: gfm
+```
+
+```markdown
+[^1]: note┃
+
+para
+```
+
+> deleteContentForward
+
+```markdown
+[^1]: note┃para
+```
+

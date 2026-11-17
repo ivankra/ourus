@@ -159,8 +159,8 @@ test('a clipboard is its text, or its formats under it; a state after a step hol
 
 test("a test's tags after its rank are words from the closed list, in its config block, none twice", () => {
   const read = (config: string[]) => readSpec('x.md', ['## A', '', `${F}yaml`, ...config, F, '', `${F}markdown`, 'a┃', F, '', '> enter'].join('\n'))[0]!;
-  const t = read(['tags: rare free-form  markup-task']);
-  assert.deepEqual([t.rank, t.tags, t.options], ['rare', ['free-form', 'markup-task'], {}]);
+  const t = read(['tags: rare free-form  enter-in-fence']);
+  assert.deepEqual([t.rank, t.tags, t.options], ['rare', ['free-form', 'enter-in-fence'], {}]);
   assert.deepEqual(read(['tags: rare']).tags, []);
   const bad = (config: string[], message: RegExp) => assert.throws(() => read(config), (e) => e instanceof SpecError && message.test(e.message));
   bad(['tags: rare free-form sideways'], /x\.md:4: no tag "sideways"/);

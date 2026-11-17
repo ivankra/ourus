@@ -1159,7 +1159,7 @@ tags: rare
 ### Quote43
 
 In the Obsidian flavor a callout's title is a line of its own, and a line break in its `[!type]`
-would unmake the callout. The `[!type]` is markup, so the edit is the host's (`markup: text`,
+would unmake the callout. The `[!type]` is markup, so the edit is the host's (not in `decorations`,
 the default), and the callout is a quote of two lines.
 
 ```yaml
@@ -1184,12 +1184,12 @@ result: deferredToHost
 
 ### Quote43b
 
-With `markup: decorated`, it is refused, and the callout stays.
+Where `decorations` lists it, it is refused, and the callout stays.
 
 ```yaml
 tags: rare
 flavor: obsidian
-markup: decorated
+decorations: [callout]
 ```
 
 ```markdown
@@ -1630,7 +1630,7 @@ placeholder, as after a fence elsewhere ([Fence59](fences.md#fence59)): left emp
 `>`, where a bare `> ` line would stay behind.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -2404,7 +2404,7 @@ text, is set apart from the quoted paragraph above by a quoted blank line, not a
 would end the quote.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -2475,7 +2475,7 @@ text takes the `>` away, and the paragraph, right under the checkbox, is the tas
 marker's line ([Quote75](#quote75)). The checkbox stays; outdent does the same.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 ```
 
 ```markdown
@@ -2565,8 +2565,10 @@ With `quotes: text` (the default), a quote of one paragraph is that paragraph, i
 as a paragraph or an item is (QuoteText3, QuoteText4, QuoteText5, QuoteText15, QuoteText18); a quote
 holding more is a container, and a quote in it a framed paragraph there (QuoteText17).
 
-1. **The frame goes as a unit**: Backspace at its text start (QuoteText1) and Delete before it
-   (QuoteText6) take every line's `> ` off, the text a paragraph where it is; a second press joins.
+1. **The frame goes as a unit**: Backspace at its text start (QuoteText1) takes every line's `> `
+   off, the text a paragraph where it is; a second press joins. Delete before it joins its text at
+   once, the frame going with the join, as before a heading (QuoteText6): the frame is at the caret
+   only for Backspace.
    Home goes past it (QuoteText2).
 2. **Enter makes a line of the quote**, as Shift-Enter does (QuoteText7, QuoteText11): on an empty
    last line it leaves the quote, an empty paragraph after it (an item, after an item: QuoteText8,
@@ -2692,7 +2694,8 @@ quotes: text
 
 ### QuoteText6
 
-Delete before a quote takes its `> ` first, as before a heading; a second Delete joins it.
+Delete before a quote joins its text at once, its `> ` going with the join, as before a heading
+(AFFiNE, BlockNote, Lexical and Notion join so; SiYuan takes the `>` first).
 
 ```yaml
 tags: common
@@ -2702,14 +2705,6 @@ quotes: text
 ```markdown
 - a┃
 > q
-```
-
-> deleteContentForward
-
-```markdown
-- a┃
-
-q
 ```
 
 > deleteContentForward
@@ -3539,6 +3534,59 @@ cd
 
 ┃b
 > cd
+```
+
+### QuoteAtom18b
+
+`split` in a quote that is a later block of an item, a line of its block to an outliner: the rest
+is an item of its own after the item, as Logseq, Logseq DB, Tine, Roam, Athens and Dynalist split
+the block (and Obsidian's Outliner, BlockNote, Lexical, AFFiNE in a list); at its end, an empty one.
+
+```yaml
+tags: rare
+quotes: atom
+enterInQuote: split
+```
+
+```markdown
+- x
+  > a┃b
+```
+
+> enter
+
+```markdown
+- x
+  > a
+- ┃b
+```
+
+### QuoteAtom18c
+
+At the start of its text, the quote kept with its `>` alone, the rest an item; after a task, a task
+as `enterTask` says (`continue`, Dynalist's; `plain`, Logseq's, Roam's).
+
+```yaml
+tags: rare
+quotes: atom
+enterInQuote: split
+```
+
+```markdown
+- a
+- [ ] 
+  > ┃q
+- b
+```
+
+> enter
+
+```markdown
+- a
+- [ ] 
+  >
+- [ ] ┃q
+- b
 ```
 
 ### QuoteAtom19

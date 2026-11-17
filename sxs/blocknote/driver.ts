@@ -387,6 +387,9 @@ async function blockNoteDrop(page: Page, drop: Drop, settle: () => Promise<void>
       if (attempt >= 1) await page.bringToFront();
       await settle();
       await page.mouse.move(at.hover.x, at.hover.y, { steps: 3 });
+      // (and from the third try, the move the menu listens for sent in the page too, at the element under
+      // the pointer: a full run of every app, cold or warm, still had MoveSubtree5's menu not come, 2026-11-18)
+      if (attempt >= 2) await page.evaluate(({ x, y }) => (document.elementFromPoint(x, y) ?? document.body).dispatchEvent(new MouseEvent('mousemove', { clientX: x, clientY: y, bubbles: true, cancelable: true, view: window })), at.hover);
     }
   }
   for (let attempt = 0; ; attempt++) {
@@ -419,10 +422,16 @@ export const driver: Driver = {
   // items the rest
   freeForm: true,
   // a heading is a block of its own type, a text starting `# ` plain (`read` escapes it)
-  headings: true,
+  headingBlocks: true,
   // measured: Enter at an item's text start leaves the caret with the text
   // ProseMirror's paste opens both seams, and a list keeps its form
   behaves: {
+    // a character typed over a selection (probed 2026-11-18): none, the character replaces it
+    autoWrap: [],
+    // a heading is a block like any, owning nothing: it moves alone, and Tab and Shift-Tab leave it (MoveUp3, Indent12)
+    headings: 'block',
+    // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
+    decorations: ['bullet', 'number', 'checkbox', 'heading', 'setext', 'quote', 'callout', 'fence', 'footnote'],
     // nothing closed, a fence neither (the autoClose probes)
     autoClose: [],
     // a quote is a style on one block: a quote of one paragraph is that block, its `>` the style
@@ -446,6 +455,8 @@ export const driver: Driver = {
     copyAtCaret: 'host',
     pasteSeams: 'open',
     pasteListForm: 'own',
+    // (a plain paste's last line break drops: `x⏎` at `- a┃` gives `- ax┃`)
+    pasteTrailingBreak: 'drop',
     // Ctrl+A's ladder: the text, then every block (Select2 to Select4, Select6, Select8, Select9;
     // measured by rejudging, 2026-11-02)
     selectionLadder: 'top',

@@ -155,7 +155,7 @@ fence: the block, unclosed, takes it in. Backspace at its start joins it to the 
 on any code line.
 
 ````yaml
-tags: rare markup-fence
+tags: rare
 ````
 
 ````markdown
@@ -361,7 +361,7 @@ the break would leave a blank line in the title, which would end it there; refus
 pasted inside a title is.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 clipboard: |-
 
   x
@@ -415,7 +415,7 @@ An empty task outdented out of its list, a sibling after it: the sibling becomes
 checkbox, as under any empty item (a checkbox alone is no paragraph the child would continue).
 
 ```yaml
-tags: rare markup-task
+tags: rare
 ```
 
 ```markdown
@@ -440,7 +440,7 @@ With `headingEditing: block`, Backspace at the title's start of an item whose te
 the title into the item above, as at any heading's: the option is of headings wherever they are.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 headingEditing: block
 ```
 
@@ -461,7 +461,7 @@ With `headingEditing: block`, Delete before an item whose text is a heading join
 before any heading.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 headingEditing: block
 ```
 
@@ -558,7 +558,7 @@ Enter at the end of an unclosed fence's opening line, the document's last: the c
 empty, the caret on it (the fence still unclosed, the code running to the document's end).
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ```markdown
@@ -1175,7 +1175,7 @@ flavor: gfm
 In CommonMark, below a checkbox alone on its line the paragraph the checkbox starts goes on: the next line's spaces are text, not padding, and the line stays as it was (dev/19-quotes.md §3.2.5).
 
 ```yaml
-tags: rare markup-task
+tags: rare
 flavor: commonmark
 ```
 
@@ -1196,7 +1196,7 @@ flavor: commonmark
 A lazy line past spaces, its node moved to another column, is written at its new container's content column: as it was, its spaces would be the item's (dev/19-quotes.md §3.2.4).
 
 ```yaml
-tags: rare markup-task
+tags: rare
 flavor: commonmark
 ```
 
@@ -1219,7 +1219,7 @@ x«
 In CommonMark, which has no tasks, the paragraph a lone checkbox starts goes on below it: `2) x` interrupts nothing and gets no escape (dev/19-quotes.md §3.2.5).
 
 ```yaml
-tags: rare markup-task
+tags: rare
 flavor: commonmark
 ```
 
@@ -1407,7 +1407,7 @@ flavor: commonmark
 A setext title can't start with a task's checkbox alone on its line in a flavor with tasks: an empty task there, its next line code. Refused (dev/19-quotes.md §3.2.6).
 
 ```yaml
-tags: rare markup-task
+tags: rare
 flavor: obsidian
 ```
 
@@ -1463,7 +1463,7 @@ flavor: commonmark
 In CommonMark the text below a lone checkbox keeps its spaces, as text: the caret after the paste stays in the text (it was past its end, the spaces trimmed as padding) (dev/19-quotes.md §3.2.5).
 
 ```yaml
-tags: rare markup-task
+tags: rare
 flavor: commonmark
 clipboard: |-
   x
@@ -1491,7 +1491,7 @@ clipboard: |-
 Enter at a quote's text start under an empty task, in a flavor with tasks: the empty paragraph above it would be the task's first block, but a blank line after an empty task ends it and without one the line is its text. Refused (dev/19-quotes.md §3.2.6).
 
 ```yaml
-tags: rare markup-task
+tags: rare
 flavor: gfm
 ```
 
@@ -1520,7 +1520,7 @@ result: rejected not-expressible
 In CommonMark the checkbox is text, the item not empty: the empty paragraph goes in above the quote, set off from it by a blank line (dev/19-quotes.md §3.2.6).
 
 ```yaml
-tags: rare markup-task
+tags: rare
 flavor: commonmark
 ```
 
@@ -2379,7 +2379,6 @@ side, which the code span strips, keeping the selection's own.
 
 ```yaml
 tags: rare
-autoClose: ['```', '~~~', '`']
 ```
 
 ```markdown
@@ -2779,7 +2778,7 @@ The same item outdented at the top level, from its fence (on a code line Shift-T
 the code a block of its own, the marker's line gone with the marker.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -2983,7 +2982,7 @@ Backspace of the tab before a code line's backticks, which would make them a fen
 fences grow past it.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -3176,8 +3175,8 @@ A character typed at a closing fence's start, where markup is decorated: it woul
 refused.
 
 ```yaml
-tags: rare markup-fence
-markup: decorated
+tags: rare
+decorations: [fence]
 ```
 
 ````markdown
@@ -3264,7 +3263,7 @@ item's text, its lines two columns in, where the tab spans two columns and makes
 after it a fence: the block's fences grow past them.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -3550,7 +3549,7 @@ Enter at the end of an ATX title with a closing sequence, the caret before its b
 title's end, an empty paragraph after it, the closing `#`s staying the title's, not the new text.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -3695,7 +3694,7 @@ Tab on a heading after a blank line: it goes into the section above, the blank l
 the two, where the author wrote it, not moving after it.
 
 ```yaml
-tags: common markup-heading
+tags: common
 ```
 
 ```markdown
@@ -3718,7 +3717,7 @@ Shift-Tab on the last heading, after a blank line, the text ending with no line 
 lines move or come at the end.
 
 ```yaml
-tags: common markup-heading
+tags: common
 ```
 
 ```markdown
@@ -3745,7 +3744,7 @@ Backspace at a heading's start making it a paragraph, a blank line above it: the
 the text gaining none at its end.
 
 ```yaml
-tags: common markup-heading
+tags: common
 ```
 
 ```markdown
@@ -3768,7 +3767,7 @@ Backspace in the closing fence of an empty block, the text's last, a blank line 
 goes, the text ending where the paragraph above does, as the block's end did.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -3878,7 +3877,7 @@ code's first line, not before its opening fence.
 
 ```yaml
 tags: rare
-markup: decorated
+decorations: [fence]
 ```
 
 ````markdown
@@ -4158,7 +4157,7 @@ Tab on a fence between an empty item and an item indented two columns: an item, 
 the item below it lined up with it, which, as it was, would be its child.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -4257,7 +4256,7 @@ the heading's section, the paragraph after it without those spaces, which there 
 item's.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -4481,6 +4480,28 @@ clipboard: "x"
 ```markdown
  x┃
 ␠
+```
+
+## Regression177b
+
+With `pasteOverNodes: nothing`, a plain paste over nodes selected whole pastes nothing, the whole
+document's too: a selection of every node is no text editor's select all there (Athens, Logseq DB,
+Tine, WorkFlowy and RemNote ignore it).
+
+```yaml
+tags: rare
+pasteOverNodes: nothing
+clipboard: "x"
+```
+
+```markdown
+- b⟦selected⟧
+```
+
+> pastePlain
+
+```markdown
+- b⟦selected⟧
 ```
 
 ## Regression178
@@ -4924,7 +4945,7 @@ take the next quote in.
 ```yaml
 flavor: obsidian
 quotes: text
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -5082,7 +5103,7 @@ goes to the folded item, the one the reader sees above it, after its children, n
 child; what the fold hides changed, so it opens (as Fold15b).
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -5132,7 +5153,7 @@ a first child among the hidden ones; the fold stays (as Fold1). The same for a t
 with `enterInQuote: split`, a quote read as an atom.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -5275,7 +5296,7 @@ character, not onto its opening fence, which is markup.
 
 ```yaml
 tags: rare
-markup: decorated
+decorations: [fence]
 ```
 
 ````markdown
@@ -5326,7 +5347,7 @@ opening fence, not to the code's first line, where the next paste, the cut put b
 code. Math's `$$` and a comment's `%%` the same.
 
 ```yaml
-tags: common markup-fence
+tags: common
 ```
 
 ````markdown
@@ -5552,8 +5573,8 @@ character, the brackets staying, as where markup is text (TaskBackspace8); and a
 there makes it a task again. It took the whole checkbox before.
 
 ```yaml
-tags: rare markup-task
-markup: decorated
+tags: rare
+decorations: [checkbox]
 ```
 
 ```markdown
@@ -5646,7 +5667,7 @@ Backspace at the end of an empty code block's closing fence, the block holding t
 (`listParent: block`): the block goes, its list staying in its place. The list went with it.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 listParent: block
 ```
 
@@ -5720,8 +5741,8 @@ on that line, where typing is code. It went to the opening fence's end, markup, 
 into its info string.
 
 ```yaml
-tags: rare markup-fence
-markup: decorated
+tags: rare
+decorations: [fence]
 ```
 
 ````markdown
@@ -5745,7 +5766,7 @@ as a task's new item is (`enterTask: continue`); on an empty task, the line leav
 checkbox wasn't read as part of the marker. Obsidian and SilverBullet do the same.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 quotes: atom
 ```
 
@@ -5818,13 +5839,14 @@ result: rejected not-expressible
 
 ## Regression229
 
-Delete at the end of a quote read as an atom, a heading below it: the heading's marks go first, as
-after any text (`headingEditing: text`). The heading joined the quote, its `#` text.
+Delete at the end of a quote read as an atom, a heading below it: the heading's title joins the
+quote's text, its marks going with the join, as after any text. The heading joined the quote, its
+`#` text.
 
 ```yaml
 tags: rare
 quotes: atom
-markup: decorated
+decorations: [heading]
 ```
 
 ```markdown
@@ -5836,9 +5858,7 @@ markup: decorated
 > deleteContentForward
 
 ```markdown
-> quote┃
-
-Heading
+> quote┃Heading
 ```
 
 ## Regression230
@@ -5849,7 +5869,7 @@ going with its marker (tasks.md rule 4), and an empty task just goes. The checkb
 ```yaml
 tags: rare
 quotes: atom
-markup: decorated
+decorations: [checkbox]
 ```
 
 ```markdown
@@ -5971,7 +5991,7 @@ backspaceAtItemStart: logseq
 take its place. It was removed, the child lifted.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 quotes: atom
 emptyItemWithChildren: refuse
 taskEditing: block
@@ -6086,7 +6106,7 @@ tags: rare
 It was typed after it, `<!---->-->`.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ```markdown
@@ -6320,7 +6340,7 @@ Unwrapping a task whose text goes on in a `- ` line: the paragraph keeps the lin
 setext underline. It failed to write, the paragraph read as a heading.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 taskEditing: unwrap
 ```
 
@@ -6394,7 +6414,7 @@ Backspace in a closing fence longer than its opening one: that run alone shorten
 was. Both shortened, the opening one to two backticks, refused.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -6417,7 +6437,7 @@ Unmaking an empty block's opening fence, its list after it (`listParent: block`)
 the list stays there. It was pulled ahead of the list into the block's line.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 listParent: block
 ```
 
@@ -6581,7 +6601,7 @@ Enter after a blank in an ATX heading with closing `#`s: the title keeps its clo
 blank before the caret with the blanks before the `#`s. It was escaped, `\#`, a `#` in the title.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -6655,7 +6675,7 @@ would read as an empty task, so its `[` is escaped, as the split `[a]:` of
 it. The escape stays after Backspace, as one before `[` does.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 ```
 
 ```markdown
@@ -6682,7 +6702,7 @@ line is shifted with the code's other lines, the space still the code's. Copied 
 deeper prefix, the space was the indentation's, and the code lost it.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -7248,7 +7268,7 @@ the outline reads any one character between the brackets as a task's status, in 
 any item.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 quotes: atom
 flavor: obsidian
 ```
@@ -7742,7 +7762,7 @@ Backspace joining a paragraph into an empty item, indented code at the root afte
 keeps indented code out of an item above it, so it is kept a block of its own as fenced code (B328).
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ```markdown
@@ -7825,7 +7845,7 @@ between them, every line there being the open code's, so the new line is an empt
 as a text editor writes the line break (B205: the draft asked for a blank line, and failed to write).
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -9309,7 +9329,7 @@ it, the fence a block of its own at the note's start. They were written as a bla
 read as no line of the code (B405).
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -9810,7 +9830,6 @@ B237's setext held space).
 ```yaml
 tags: rare
 flavor: obsidian
-markup: text
 clipboard: |-
   - x
   - y

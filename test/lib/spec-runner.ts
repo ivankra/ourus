@@ -207,15 +207,16 @@ export function drawDropPoints(view: OurusView, dropMap: DropMap, selection: Our
 /**
  * What the core does in example `t`, in `flavor`, with `config` over the example's options: each
  * step's buffer drawn, as the example would draw it (no checks), and the clipboard's text after it
- * (a copy's). For the SxS, to tell whether an app's own option values change the example's outcome.
+ * (a copy's). For the SxS, to tell whether an app's own option values change the example's outcome;
+ * `host.blocks` for a block app's (`PlayedState.blocks`).
  */
-export function drawnSteps(t: SpecTest, flavor: OurusConfig['flavor'], config: Partial<OurusConfig> = {}): { buffer: string; clipboard?: string; view: RowView }[] {
-  let state = specTestStart(t, flavor, config);
+export function drawnSteps(t: SpecTest, flavor: OurusConfig['flavor'], config: Partial<OurusConfig> = {}, host: { blocks?: boolean } = {}): { buffer: string; clipboard?: string; view: RowView; refused?: string }[] {
+  let state: PlayedState = { ...specTestStart(t, flavor, config), ...(host.blocks && { blocks: true }) };
   return t.steps.map((step) => {
     state = playActions(state, step.actions);
     const text = state.clipboard['text/plain'];
-    // (an app shows no auto marks: the SxS's)
-    return { buffer: withoutAuto(normalizeDrawing(drawDoc(state.view, state.view.selection))), ...(text !== undefined && { clipboard: text }), view: rowView(state.view) };
+    // (an app shows no auto marks: the SxS's; the reason its last action was refused for, where it was)
+    return { buffer: withoutAuto(normalizeDrawing(drawDoc(state.view, state.view.selection))), ...(text !== undefined && { clipboard: text }), view: rowView(state.view), ...(state.last instanceof OurusRejected && { refused: state.last.reason }) };
   });
 }
 

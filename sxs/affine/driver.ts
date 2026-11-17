@@ -259,9 +259,17 @@ export const driver: Driver = {
   // them; list items the rest
   freeForm: true,
   // a heading is a paragraph's type, a text starting `# ` plain (`read` escapes it)
-  headings: true,
+  headingBlocks: true,
   // measured with `--ignore-options` (2026-10-26): each value agrees where ourus's default doesn't
   behaves: {
+    // a character typed over a selection (probed 2026-11-18); a backtick makes the selection code by its own formatting
+    autoWrap: ['(', '[', '{', "'"],
+    // a copy at a caret alone: the block's text, without its children (Copy4, Copy9)
+    copyAtCaret: 'text',
+    // a heading is a block like any, owning nothing: it moves alone, and Tab and Shift-Tab leave it (MoveUp3, Indent12)
+    headings: 'block',
+    // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
+    decorations: ['bullet', 'number', 'checkbox', 'heading', 'setext', 'quote', 'callout', 'fence', 'math', 'rule', 'footnote'],
     // its blocks a flat sequence, each item a block of its own: a list after a paragraph is no block's
     // (Lists6, Lists8b, Lists10, Lists12 to Lists15), and a move passes one block, an item included
     // (Lists13 to Lists15)

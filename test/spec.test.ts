@@ -4,11 +4,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test, type TestContext } from 'node:test';
-import { OurusAtom, type OurusNode, type OurusDoc } from '../src/doc/index.ts';
+import { type OurusNode, type OurusDoc } from '../src/doc/index.ts';
 import { codeAt } from '../src/commands/code.ts';
 import { CommandContext } from '../src/commands/context.ts';
-import { drawDoc, nodePlainText, isCommandAction, isDropAction, playActions, textPosition, specTestFlavors, runSpecTest, specTestStart, readSpecFile, specSlug, specConfig, specFiles, SPEC_DIR, type SpecTest } from './lib/index.ts';
+import { drawDoc, nodePlainText, isCommandAction, isDropAction, playActions, textPosition, specTestFlavors, runSpecTest, specTestStart, readSpecFile, specSlug, specConfig, specFiles, SPEC_DIR, onFenceLine, type SpecTest } from './lib/index.ts';
 import { OurusSuccess } from '../src/commands/index.ts';
+import { DECORATIONS } from '../src/config.ts';
 
 for (const file of specFiles()) {
   let tests: SpecTest[];
@@ -92,17 +93,6 @@ function typingKeepsOutline(doc: OurusDoc, head: number): boolean {
   return before.filter((n, i) => n.text !== after[i]!.text).length <= 1;
 }
 
-/** Whether `head`'s line is a fence's: a fenced block's opening or closing one, a `$$` or `%%` line. */
-function onFenceLine(doc: OurusDoc, head: number): boolean {
-  const line = doc.lineAt(head);
-  const node = head <= line.to ? doc.nodeAtLine(line.index) : null;
-  const text = node && doc.textOf(node);
-  const delimiters = text instanceof OurusAtom ? text.delimiters : null;
-  if (!node || !delimiters) return false;
-  const on = (offset: number): boolean => doc.lineAt(doc.posOf(node, offset)).index === line.index;
-  return on(delimiters.open.from) || (!!delimiters.close && on(delimiters.close.from));
-}
-
 // `enter-in-fence` is a fact the spec keeps by hand: a case has it where Enter is pressed on a fenced
 // block's content line, code or math (not a fence's line: `markup-fence`), and only there. A block
 // app whose code and math are a block's text, with no editor of their own, splits the block there
@@ -127,14 +117,15 @@ test('`enter-in-fence` tags exactly the cases with Enter on a fenced code or mat
 });
 
 for (const markup of ['text', 'decorated'] as const) {
-  test(`no applied command leaves the caret in markup (markup: ${markup})`, () => {
+  // (`decorated`: every element of markup drawn, `decorations` all of them; `text`: none)
+  test(`no applied command leaves the caret in markup (markup ${markup})`, () => {
     const problems: string[] = [];
     for (const file of specFiles()) {
       for (const t of readSpecFile(file)) {
         if (t.pending) continue;
-        // decorated: every case, its own config with the host's kind set over it
-        const options = markup === 'decorated' ? { ...specConfig(t.options), markup } : specConfig(t.options);
-        if (markup === 'text' && options.markup === 'decorated') continue;
+        // decorated: every case, its own config with every element drawn set over it
+        const options = markup === 'decorated' ? { ...specConfig(t.options), decorations: DECORATIONS } : specConfig(t.options);
+        if (markup === 'text' && (options.decorations?.length ?? 0) > 0) continue;
         for (const flavor of specTestFlavors(t)) {
           let state = specTestStart(t, flavor, options);
           for (const step of t.steps) {

@@ -724,7 +724,7 @@ there is a note, nested by Tab; Enter on the empty child outdents it ([Enter5](e
 Leaving the list from there is [Scenario25](#scenario25).
 
 ```yaml
-tags: core markup-task
+tags: core
 ```
 
 ```markdown
@@ -773,7 +773,7 @@ undo brings it back ([Undo1](undo.md#undo1)). (No typing in between: apps disagr
 steps typed text is.)
 
 ```yaml
-tags: common markup-task
+tags: common
 ```
 
 ```markdown

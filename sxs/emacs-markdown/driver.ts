@@ -64,6 +64,8 @@ export const driver: Driver = {
   // Backspace right after a checkbox deletes a character (`taskEditing: text`); a typed backtick is
   // only a character (`autoClose: none`)
   behaves: {
+    // a character typed over a selection (probed 2026-11-18): none, the character typed after it
+    autoWrap: [],
     // a quote is text, its `>`s characters edited on its lines: of `quotes`' values the one its runs agree with most (166 quote cases a setup)
     quotes: 'atom',
     enterSplitSpace: 'drop',

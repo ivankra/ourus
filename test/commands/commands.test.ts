@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import fc from 'fast-check';
 import { executeCommand, nearestDropPoint, type OurusCommand, type DropPoint, type DropSeam, OurusDeferred, OurusFailed, OurusRejected, OurusSuccess } from '../../src/commands/index.ts';
-import { OurusConfig } from '../../src/config.ts';
+import { DECORATIONS, OurusConfig } from '../../src/config.ts';
 import { OurusAtom, OurusDoc, type OurusNode } from '../../src/doc/index.ts';
 import { OurusView } from '../../src/view/index.ts';
 import { MdFlavor, MdTree } from '../../src/parser/index.ts';
@@ -960,7 +960,7 @@ test('Shift-Tab on a top-level item: a paragraph in place, the items after it it
   const r = run();
   assert.equal(r instanceof OurusSuccess && r.view.doc.text, '- a\n\nb\n- c\n');
   const refused = run({ outdentTopLevel: 'refuse' });
-  assert.ok(refused instanceof OurusRejected && refused.reason === 'not-expressible');
+  assert.ok(refused instanceof OurusRejected && refused.reason === 'at-top-level');
 });
 
 test('HTML `<br>` pastes as a line of the paragraph, or with `pasteHtmlBreak: hard` a hard break; `<br><br>` a paragraph break either way', () => {
@@ -1134,7 +1134,7 @@ test('a drag\'s deletion is the selection deleted as a cut deletes it: a subtree
   assert.equal(root.view.doc.text, '- c');
   assert.equal(root.view.doc.text, assertApplied(executeCommand(zoomed.withSelection(zoomed.selectionOf([1])), { type: 'cut' })).view.doc.text);
   // (part of a text, the host's, a block id's markup too; refused where it would leave the zoom)
-  const id = executeOnText('p ^abc', { type: 'deleteByDrag' }, { anchor: 2, head: 3, config: { flavor: 'obsidian', markup: 'decorated' } });
+  const id = executeOnText('p ^abc', { type: 'deleteByDrag' }, { anchor: 2, head: 3, config: { flavor: 'obsidian', decorations: DECORATIONS } });
   assert.ok(id instanceof OurusDeferred);
   const leaves = executeCommand(OurusView.of(OurusDoc.parse('p\n- child\n\nq'), { zoom: 1, selection: { anchor: 4, head: 11 } }), { type: 'deleteByDrag' });
   assert.ok(leaves instanceof OurusRejected && leaves.reason === 'outside-zoom');
@@ -1205,7 +1205,7 @@ test('the readback compares a verbatim block\'s lines as they read: a re-indent 
 
 test('a paste over a selection from a text\'s start puts the nodes where the selection was, before what is left', () => {
   const md = { 'text/markdown': '- x\n- y' };
-  for (const config of [{ flavor: 'obsidian', markup: 'text' }, {}] as const) {
+  for (const config of [{ flavor: 'obsidian', decorations: [] }, {}] as const) {
     const first = assertApplied(executeOnText('abc\ndef', { type: 'paste', clipboard: md }, { anchor: 0, head: 3, config }));
     assert.equal(first.view.doc.text, '- x\n- y\n\ndef');
     assert.deepEqual(first.view.selection, { anchor: 7, head: 7 });
@@ -1278,7 +1278,7 @@ test('a command at the note\'s end where its last line is blank but not empty, w
 });
 
 test('a decorated caret entering a node starts where it edits, not on an opening fence: blank code\'s code line, a textless quote\'s code, a folded quote opened (B214)', () => {
-  const decorated = { markup: 'decorated' } as const;
+  const decorated = { decorations: DECORATIONS } as const;
   assert.equal(assertApplied(executeOnText('p\n\n```\n\n```', { type: 'zoomIn', nodes: [2] }, { config: decorated })).view.selection.head, 7);
   assert.equal(assertApplied(executeOnText('p\n\n> ```\n> x\n> ```', { type: 'zoomIn', nodes: [2] }, { config: { ...decorated, quotes: 'container' } })).view.selection.head, 11);
   const view = OurusView.of(OurusDoc.parse('> ```\n> x\n> ```', { config: { ...decorated, quotes: 'container' } }), { folded: [1] });
@@ -1362,7 +1362,7 @@ test('outdenting an item over a quoted list at an in-between indent: the quote a
 test('a refusal names a node in words, not by the parser\'s names: a rule, code (B259)', () => {
   const detail = (r: ReturnType<typeof executeOnText>): string | undefined => (r instanceof OurusRejected ? r.detail : undefined);
   assert.equal(detail(executeOnText('p\n\n---', { type: 'outdent' }, { caret: 3 })), 'a rule has no level to leave');
-  assert.equal(detail(executeOnText('x\n\n```\ncode\n```\n\ny', { type: 'deleteContentBackward' }, { caret: 17 })), "can't join into code");
+  assert.equal(detail(executeOnText('x\n\n```\ncode\n```\n\ny', { type: 'deleteContentBackward' }, { caret: 17, config: { decorations: ['fence'] } })), "can't join into code");
 });
 
 test('a paragraph cut under code and pasted back (B346)', () => {
@@ -2320,7 +2320,10 @@ test('an indented fence\'s body is its code: its lines past the opening\'s inden
 test('a raised blank line after a quote, the quote\'s own `>` lines before it gone: its mark kept on the bare blank line left (B444, B418)', () => {
   assert.deepEqual(lostMarksOnText("  > quoted in item\n  > - list in quoteother\n  >\n\n  >   - last\n", {"type": "cut"}, {"caret": 25, "config": {"flavor": "commonmark"}, "auto": [48]}), []);
   const pasted = assertApplied(executeOnText("- > [!note] Title\n  > \n\n  xFinal line ^blk\n", { type: 'paste', clipboard: { 'text/plain': '# body text\n' } }, { caret: 22, config: { flavor: 'commonmark', indentUnit: 'tab' }, auto: [23] }));
-  assert.equal(pasted.view.doc.marks.auto.length, 1);
+  // (the blank line above the paste, where the held `>` line was, and the one setting it apart from
+  // the paragraph after it, ours where the item's was: B418)
+  assert.equal(pasted.view.doc.text, '- > [!note] Title\n\n\t- # body text\n\n  xFinal line ^blk\n');
+  assert.deepEqual([...pasted.view.doc.marks.auto], [18, 34]);
   assert.deepEqual(lostMarksOnText("- > a quote\n  > over tw\n  > \n\n  o lines\n", {"type":"enter"}, {"caret":16,"config":{"flavor":"commonmark","indentUnit":"tab"},"auto":[29]}), []);
   assert.deepEqual(lostMarksOnText("> Title\n>\n\n> body text\n", {"type":"enter"}, {"caret":7,"config":{"flavor":"obsidian"},"auto":[10]}), []);
   assert.deepEqual(lostMarksOnText("> body text\n> more\n> \n\n> body text\n", {"type":"enter"}, {"caret":14,"config":{"flavor":"obsidian","indentUnit":"tab"},"auto":[22]}), []);
@@ -2352,3 +2355,22 @@ test('Delete Subtree in an unspaced callout\'s lazy `2. >` line (B488)', () => {
 test('Alt-Up on a padded item past a callout\'s item: the padded quote after it dropped to the root\'s column, out of the callout (B518)', () => {
   assert.equal(appliedText(executeOnText("- > [!note] Title\n-  quoted in item\n  > over two lines\n", {"type":"moveSubtreeUp"}, {"caret":35,"config":{"flavor":"obsidian"}})), '- quoted in item\n- > [!note] Title\n> over two lines\n');
 });
+
+test('Shift-Enter, and Enter under `enterAtTextStart: stay`, at a lazy paragraph\'s start opens no line above it: a blank line would end the item it continues', () => {
+  assert.ok(executeOnText('- [a]:u\nT\n', { type: 'shiftEnter' }, { caret: 8 }) instanceof OurusRejected);
+  assert.equal(appliedText(executeOnText('- [a]:u\nT\n', { type: 'enter' }, { caret: 8, config: { enterAtTextStart: 'stay' } })), '- [a]:u\n\n  \n\n  T\n');
+  assert.equal(appliedText(executeOnText('a\nb\n', { type: 'shiftEnter' }, { caret: 0 })), '\na\nb\n');
+});
+
+test('Tab on an empty tab-led item above indented code its parent holds: the code, which would read into the item, fenced (B369)', () => {
+  assert.equal(appliedText(executeOnText('- item\n\n\t- \n\t-\n\n\t  done\n', { type: 'indent' }, { caret: 15, config: { flavor: 'gfm', indentUnit: 'tab' }, auto: [7] })), '- item\n\n\t- \n\t\t- \n\n  ```\n  done\n  ```\n');
+});
+
+test('nodes pasted first under an item set apart from its children by a raised blank line: the line setting the paste apart from them ours (B418)', () => {
+  const clipboard = { 'text/plain': '> [!note] Title\n> body text\n> more\n', 'text/markdown': '> [!note] Title\n> body text\n> more\n', 'text/html': '<!-- ourus --><blockquote>\n<p>[!note] Title\nbody text\nmore</p>\n</blockquote>\n' };
+  assert.deepEqual(lostMarksOnText('- > quoted in item\n  > \n\n  over two lines\n', { type: 'paste', clipboard }, { caret: 23, config: { flavor: 'gfm', listParent: 'container' }, auto: [24] }), []);
+  const plain = assertApplied(executeOnText('- quoted in item\n\n  over two lines\n', { type: 'paste', clipboard }, { caret: 16, config: { flavor: 'gfm', listParent: 'container' }, auto: [17] }));
+  assert.equal(plain.view.doc.text, '- quoted in item\n  - > [!note] Title\n    > body text\n    > more\n\n  over two lines\n');
+  assert.deepEqual([...plain.view.doc.marks.auto], [64]);
+});
+

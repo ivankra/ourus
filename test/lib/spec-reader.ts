@@ -74,10 +74,10 @@ export type SpecRank = (typeof SPEC_RANKS)[number];
  * A case's tags: facts about what it depends on, for runners to select cases by, never names of
  * editors or verdicts, and `pending`, behavior agreed on but not built yet. A case has every tag that
  * applies to it; spec/README.md says what each means. The SxS (`sxs/lib/plan.ts`) skips a `free-form`
- * case on block outliners, whose documents have no form for that structure; a driver lists the
- * `markup-` tags its app can't compare in `refuses`, and the case is skipped there.
+ * case on block outliners, whose documents have no form for that structure. The `markup-` tags are
+ * none of these: computed from what the case does (`markup-tags.ts`), never written.
  */
-export const SPEC_TAGS = ['free-form', 'markup-heading', 'markup-task', 'markup-fence', 'enter-in-fence', 'pending'] as const;
+export const SPEC_TAGS = ['free-form', 'enter-in-fence', 'pending'] as const;
 
 export type SpecTag = (typeof SPEC_TAGS)[number];
 

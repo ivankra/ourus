@@ -131,6 +131,50 @@ text b
 text a
 ```
 
+## MoveUp3b
+
+Under `headings: block` a heading owns nothing: it moves alone, past one block, as AFFiNE, BlockNote,
+Notion, SiYuan and RemNote without bullets move it; a second press takes it past the heading above.
+
+```yaml
+tags: rare
+headings: block
+```
+
+```markdown
+# A
+
+text a
+
+# B┃
+
+text b
+```
+
+> moveSubtreeUp
+
+```markdown
+# A
+
+# B┃
+
+text a
+
+text b
+```
+
+> moveSubtreeUp
+
+```markdown
+# B┃
+
+# A
+
+text a
+
+text b
+```
+
 ## MoveUp4
 
 Paragraphs and other leaf blocks reorder among themselves.
@@ -934,7 +978,7 @@ A heading doesn't move up past a node of another kind: above `- a`, `## H` would
 section.
 
 ```yaml
-tags: common free-form markup-heading
+tags: common free-form
 ```
 
 ```markdown
@@ -1052,7 +1096,7 @@ it: the caret goes after the `$$`, where typing is the block's, not before it, w
 the text a paragraph.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 flavor: obsidian
 ```
 
@@ -1074,7 +1118,7 @@ A math block closed by text and `$$` on one line (`x$$`), moved with the caret a
 caret goes before it, where typing is more of the formula; after it, the block wouldn't close there.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 flavor: obsidian
 ```
 
@@ -1150,7 +1194,7 @@ An unclosed fence reads to the end of its container: moved above the paragraph, 
 paragraph in as code. Refused.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 autoClose: []
 ```
 

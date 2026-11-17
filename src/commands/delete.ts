@@ -8,14 +8,15 @@ import { codeAt, joinCodeItemUp, joinInCode } from './code.ts';
 import { lineOf } from '../text/index.ts';
 import { type CommandContext } from './context.ts';
 import { joinIntoQuote, joinLineInQuote, joinQuoteUp, quoteAtomAt } from './quote.ts';
-import { deleteHeldSpace, hiddenSpacesAt, inMarkup, textEnd, textStart, withTextlessParents } from './util.ts';
+import { blockElement, joinIntoFootnote, deleteHeldSpace, drawnAt, hiddenSpacesAt, inMarkup, textEnd, textStart, withTextlessParents } from './util.ts';
 import type { OurusResult } from './types.ts';
+import { decorates } from '../config.ts';
 import { OurusDeferred, OurusRejected } from './types.ts';
 
 /**
  * Delete (spec/delete.md). In the middle of a text it is the host's; at the end of a line inside the
- * text the next line joins it (rule 6). At the text's end: before a heading, its marks go first
- * (`headingEditing: text`, rule 4); an empty item below goes (rule 3); else the node below joins this
+ * text the next line joins it (rule 6). At the text's end: a heading's title joins, its marks going
+ * with the join (rule 4); an empty item below goes (rule 3); else the node below joins this
  * one, as Backspace at its start would join it (rules 5, 6), the caret staying; a selection across
  * nodes as Backspace's (rule 8). On an empty item the node below moves up into it; an empty paragraph
  * goes. A quote or code below is refused; before a marker, the host's (refused where markup is
@@ -25,14 +26,31 @@ import { OurusDeferred, OurusRejected } from './types.ts';
 export function deleteContentForwardCommand(ctx: CommandContext): OurusResult | null {
   const config = ctx.config;
   if (!ctx.collapsed) return deleteSelectionAcross(ctx);
+  // at the end of code, a table or a rule, before a node: the host's where it shows the block as text,
+  // its Delete a blank line a press, then the line below joined to the block's as text; refused where
+  // it draws it
+  const at = ctx.from;
+  if (at.zone === 'text' && at.text instanceof OurusAtom && ctx.collapsed && at.offset === at.text.text.length && !ctx.view.zoom) {
+    const element = blockElement(at.text);
+    const below = at.node.children[0] ?? at.node.afterSubtree;
+    // (after a footnote's text, the paragraph below joins it, its text being prose)
+    if (at.text.type === 'footnote_definition' && below) {
+      // (another footnote below: its label is in the way, the host's where it shows it as text)
+      const next = ctx.doc.textOf(below);
+      if (next instanceof OurusAtom && next.type === 'footnote_definition') return decorates(config, 'footnote') ? new OurusRejected('not-expressible', "a footnote's label is no text") : new OurusDeferred('in-markup', 'the footnote below has a label the host edits as text');
+      return joinIntoFootnote(ctx, at.node, at.text, below) ?? new OurusRejected('not-expressible', `can't take the ${nameOf(below)} below into the footnote`);
+    }
+    if (element && below) {
+      return decorates(config, element) ? new OurusRejected('not-expressible', `can't take the ${below.kind === 'atom' ? nameOf(below) : 'text'} below into the ${nameOf(at.node)}`) : new OurusDeferred('in-markup', `the ${nameOf(at.node)} is markup the host edits as text`);
+    }
+  }
   const code = codeAt(ctx);
   if (code) return joinInCode(ctx, code, 1);
-  const at = ctx.from;
   // in the spaces Markdown hides before a text: the user's whitespace, a space a press, the host's (Enter65d)
   const hidden = hiddenSpacesAt(ctx, ctx.selection.head);
   if (hidden && ctx.selection.head < hidden.to) return new OurusDeferred('host-default');
   if (inMarkup(ctx.doc, at, ctx.selection.head)) {
-    if (config.markup === 'text') return new OurusDeferred('in-markup', 'the caret is in markup');
+    if (!drawnAt(ctx.doc, at)) return new OurusDeferred('in-markup', 'the caret is in markup');
     // right before a task's checkbox, it goes, the mirror of Backspace after it (Delete19)
     if (at.zone === 'frame' && at.part === 'task' && at.text instanceof OurusProse && config.taskEditing === 'checkbox') {
       const task = at.text.frame.find((p) => p.part === 'task')!;
@@ -45,7 +63,7 @@ export function deleteContentForwardCommand(ctx: CommandContext): OurusResult | 
     return null;
   }
   // before a marker, Delete would take it (Delete23)
-  if (at.zone === 'marker' && at.part !== 'padding') return config.markup === 'text' ? new OurusDeferred('in-markup', "a list marker isn't text") : new OurusRejected('not-expressible', "a list marker isn't text");
+  if (at.zone === 'marker' && at.part !== 'padding') return !drawnAt(ctx.doc, at) ? new OurusDeferred('in-markup', "a list marker isn't text") : new OurusRejected('not-expressible', "a list marker isn't text");
   // (at a line's end inside a quote read as an atom: the next line joins as it is written)
   const inQuote = quoteAtomAt(ctx);
   const lineJoin = inQuote && joinLineInQuote(ctx, inQuote, true);
@@ -55,9 +73,6 @@ export function deleteContentForwardCommand(ctx: CommandContext): OurusResult | 
     const below = inQuote.node.children[0] ?? inQuote.node.afterSubtree;
     // (a folded node's first child is hidden: Fold7)
     if (below && below === inQuote.node.children[0] && ctx.view.zoomFolded.has(inQuote.node.id)) return new OurusRejected('folded', 'the node below is hidden in its fold');
-    // (before a heading, its marks first, as after any text: `headingEditing: text`, rule 4)
-    const lower = below && ctx.doc.textOf(below);
-    if (below && lower instanceof OurusProse && lower.type === 'heading' && config.headingEditing !== 'block') return headingMarksGo(ctx, below, lower, inQuote.node, inQuote.offset);
     if (below && below.preceding?.persistentNode === inQuote.node.persistentNode) return joinIntoQuote(ctx, inQuote.node, inQuote.text, below);
   }
   if (at.zone !== 'text' || !(at.text instanceof OurusProse)) return null;
@@ -98,7 +113,7 @@ export function deleteContentForwardCommand(ctx: CommandContext): OurusResult | 
     const refused = (): OurusResult | null => (ctx.selection.head < ctx.doc.lineAt(ctx.selection.head).to ? new OurusDeferred('host-default') : new OurusRejected('has-children'));
     if (node.children.length && config.emptyItemWithChildren === 'refuse') return refused();
     // (its first child coming up with children of its own: `joinWithChildren`'s too, either refusing)
-    if (below.parent?.persistentNode === node.persistentNode && below.children.length && config.joinWithChildren === 'refuse') return refused();
+    if (below.parent?.persistentNode === node.persistentNode && below.children.length && config.joinWithChildren !== 'join') return refused();
     return joinUp(ctx, below, lower, false);
   }
   // a quote read as an atom joins as it is written, its `>` text (`quotes: atom`)
@@ -110,16 +125,21 @@ export function deleteContentForwardCommand(ctx: CommandContext): OurusResult | 
     draft.remove(below.children).append(node, 'last', below.children).remove([below]).setCaret(node, offset, -1);
     return ctx.apply(draft);
   }
+  // before code: the host's where it shows the fence as text (a blank line a press, then the fence's
+  // line joined to this one as text), refused where it draws it
+  const element = lower instanceof OurusAtom ? blockElement(lower) : null;
+  if ((element === 'fence' || element === 'math' || element === 'comment') && !decorates(config, element) && below.kind !== 'item') return new OurusDeferred('in-markup', `the ${nameOf(below)} below is markup the host edits as text`);
+  // before a footnote: the host's where it shows its label as text, refused where it draws it (the
+  // label would be this text's)
+  if (lower instanceof OurusAtom && lower.type === 'footnote_definition' && !decorates(config, 'footnote')) return new OurusDeferred('in-markup', 'the footnote below has a label the host edits as text');
   // a quote or code below can't join a text (an item whose text is a quote's, the same)
   if (!(lower instanceof OurusProse)) return new OurusRejected('not-expressible', `can't take in the ${below.kind === 'item' ? 'block' : nameOf(below)} below`);
-  // before a heading (an item's too), its marks first, the title a paragraph where it is; with
-  // `block`, the title joins this text
-  if (lower.type === 'heading') {
-    if (config.headingEditing === 'block') return joinUp(ctx, below, lower, false);
-    return headingMarksGo(ctx, below, lower, node, offset);
-  }
-  // before a quote (`quotes: text`), its `>`s first, its text a paragraph where it is
-  if (lower.type === 'quote') return ctx.apply(draft.setText(below, lower.unquoted()).setCaret(node, offset, -1));
+  // before a heading (an item's too), its title joins this text, its marks going with the join (the
+  // marks are the caret's side's only for Backspace: `headingEditing`)
+  if (lower.type === 'heading') return joinUp(ctx, below, lower, false);
+  // before a quote (`quotes: text`), its text joins, its `>`s going with the join, as a heading's marks
+  // (Backspace takes them first: there they are at the caret)
+  if (lower.type === 'quote') return joinUp(ctx, below, lower.unquoted(), false);
   // an empty item below goes, this node taking its gap as a join does; with children, as Backspace at
   // its start takes it (Delete33b)
   if (below.kind === 'item' && lower.empty) {
@@ -136,13 +156,6 @@ export function deleteContentForwardCommand(ctx: CommandContext): OurusResult | 
     return ctx.apply(draft.gap(owner, owner.gap - 1).setCaret(node, offset, -1));
   }
   return joinUp(ctx, below, lower, false);
-}
-
-/** Delete before a heading (`headingEditing: text`): its marks go, an ATX title's closing `#`s too, the title a paragraph where it is, the caret staying at `node`'s `offset`. */
-function headingMarksGo(ctx: CommandContext, below: OurusNode, lower: OurusProse, node: OurusNode, offset: number): OurusResult | null {
-  const close = lower.frame.find((p) => p.part === 'close');
-  const open = lower.frame.find((p) => p.part === 'heading') ?? lower.frame.find((p) => p.part === 'underline')!;
-  return ctx.apply(ctx.draft().setText(below, (close ? lower.splice(close.from, close.to) : lower).splice(open.from, open.to)).setCaret(node, offset, -1));
 }
 
 /**

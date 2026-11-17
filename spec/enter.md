@@ -50,7 +50,8 @@ The rules, in order; the first that applies wins:
 9. **In a paragraph**, two paragraphs, a blank line between; the second takes the paragraph's list
    (Enter12, Enter22). In a heading, the rest of the title becomes the section's first paragraph,
    set off from the heading by a blank line of ours (Shift-Enter writes it compact; Backspace takes
-   both back: [Gap20](gaps.md#gap20)) (Enter23, Enter41, Enter42), its closing `#`s staying on its line (Enter61); with
+   both back: [Gap20](gaps.md#gap20)) (Enter23, Enter41, Enter42), its closing `#`s staying on its line (Enter61); an
+   empty heading the same, an empty paragraph after it, the heading kept (Enter71); with
    `quirkEnterMidHeading: workflowy`, the text before the caret is a paragraph above the heading,
    which keeps the rest and its section ([Quirk1b](quirks.md#quirk1b)); at a line break of a title of several lines, the
    break goes with neither half, as in a paragraph (Enter51), and the rest is set apart from text
@@ -366,6 +367,61 @@ enterOnEmptyItem: unwrap
 ┃◌
 
 - b
+```
+
+## Enter7d
+
+With `enterOnEmptyItem: outdent` where Shift-Tab has no level to leave at the top level
+(`outdentTopLevel: refuse`, [Outdent27](outdent.md#outdent27)), Enter on an empty top-level item in
+the middle of its list makes another empty item, as by default ([Enter7](#enter7)); nested, it
+outdents ([Enter7e](#enter7e)). Roam and Athens, outliners that hold no paragraphs.
+
+```yaml
+tags: rare
+enterOnEmptyItem: outdent
+outdentTopLevel: refuse
+```
+
+```markdown
+- a
+- ┃
+- b
+```
+
+> enter
+
+```markdown
+- a
+- 
+- ┃
+- b
+```
+
+## Enter7e
+
+The same nested: the empty item outdents, after its parent, as Shift-Tab does (Roam's logically).
+
+```yaml
+tags: rare
+enterOnEmptyItem: outdent
+outdentTopLevel: refuse
+outdent: logical
+```
+
+```markdown
+- p
+  - a
+  - ┃
+  - b
+```
+
+> enter
+
+```markdown
+- p
+  - a
+  - b
+- ┃
 ```
 
 ## Enter8
@@ -991,7 +1047,7 @@ do with a heading block. SiYuan puts the empty block above but keeps the caret i
 true-outliner puts an empty heading above instead.
 
 ```yaml
-tags: common markup-heading
+tags: common
 ```
 
 ```markdown
@@ -1021,7 +1077,7 @@ heading stays above, the title a paragraph below, under it. Bare Obsidian, the t
 and Tine do this.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 enterAtTextStart: stay
 ```
 
@@ -1625,7 +1681,7 @@ enterSplitSpace: start
 A task's second half keeps the space after its checkbox, and the join gives it back.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 enterSplitSpace: start
 ```
 
@@ -1794,7 +1850,7 @@ A heading's title: the rest, the section's first paragraph now, keeps the space 
 space, and Backspace joins it back into the title, as SiYuan, BlockNote, Tana and Dynalist keep it.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 enterSplitSpace: start
 ```
 
@@ -1822,7 +1878,7 @@ A list marker after the kept space is escaped there, as at any new paragraph's s
 drops the escape.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 enterSplitSpace: start
 ```
 
@@ -1850,7 +1906,7 @@ At the start of a heading's text right under a paragraph, the empty paragraph is
 right under `para` it would be more of `para`'s text.
 
 ```yaml
-tags: common markup-heading
+tags: common
 ```
 
 ```markdown
@@ -2101,6 +2157,66 @@ three
 ---
 ```
 
+## Enter52b
+
+Enter at the start of a paragraph right under an item's ATX title, a line of its text to an
+outliner: it is an item of its own, as a later line of an item's text splits off (Logseq, Tine);
+Backspace glues it back to the title.
+
+```yaml
+tags: rare
+```
+
+```markdown
+- ## one
+  ┃two
+- ## three
+```
+
+> enter
+
+```markdown
+- ## one
+- ┃two
+- ## three
+```
+
+> deleteContentBackward
+
+```markdown
+- ## one┃two
+- ## three
+```
+
+## Enter52c
+
+Inside it, the rest of its text is the item; Backspace joins it back as the paragraph's line.
+
+```yaml
+tags: rare
+```
+
+```markdown
+- ## one
+  two┃
+  three
+```
+
+> enter
+
+```markdown
+- ## one
+  two
+- ┃three
+```
+
+> deleteContentBackward
+
+```markdown
+- ## one
+  two┃three
+```
+
 ## Enter53
 
 The text before the caret, ended there, would read as a block: a lone `-` is an empty list item. It
@@ -2136,7 +2252,7 @@ Enter with the caret inside a task's checkbox acts at its text start, as in the 
 be text on two lines, and the task none.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 ```
 
 ```markdown
@@ -2155,7 +2271,7 @@ tags: rare markup-task
 The same in a checked task's checkbox: the new task above is unchecked, as any new task.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 ```
 
 ```markdown
@@ -2176,7 +2292,7 @@ paragraph above, held by a placeholder. A line break there would leave the caret
 Backspace then unwraps the heading.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -2197,7 +2313,7 @@ The same before the `#`s, at the line's start, where Home's second press puts th
 paragraph and its blank line, the empty paragraph goes between them, rather than a third blank line.
 
 ```yaml
-tags: common markup-heading
+tags: common
 ```
 
 ```markdown
@@ -2227,7 +2343,7 @@ their caret staying before the `#`s; at the title's text start they split it, as
 ([Enter45](#enter45)).
 
 ```yaml
-tags: rare free-form markup-heading
+tags: rare free-form
 enterAtTextStart: stay
 ```
 
@@ -2366,7 +2482,7 @@ escape the split wrote, which mid-line keeps nothing from reading as a block, as
 does ([Enter43](#enter43)).
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -2395,7 +2511,7 @@ title┃- x
 The same in an ATX heading.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -2415,7 +2531,7 @@ the title becomes the section's paragraph without them. Backspace joins it back 
 [Backspace4](backspace.md#backspace4) joins any line there.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -2666,4 +2782,53 @@ flavor: gfm
   | 1 | 2 |
 - ┃
 - b
+```
+
+## Enter71
+
+Enter on an empty heading makes an empty paragraph after it, as at a titled heading's end, the empty
+heading kept: Obsidian (source, Live Preview, Outliner), SilverBullet, Emacs, Logseq, Logseq DB,
+Athens, Tine, Dynalist, WorkFlowy, Mubu, RemNote, BlockNote, AFFiNE and Lexical make a block after it;
+Notion and Moodo make the heading a paragraph, which Backspace does here; Roam makes a block above.
+
+```yaml
+tags: common
+```
+
+```markdown
+text
+
+## ┃
+```
+
+> enter
+
+```markdown
+text
+
+##␠
+
+┃◌
+```
+
+## Enter71b
+
+An item's empty title as a heading's: the heading kept, an empty item after it (Dynalist, Mubu,
+WorkFlowy).
+
+```yaml
+tags: rare
+```
+
+```markdown
+- text
+- ## ┃
+```
+
+> enter
+
+```markdown
+- text
+- ## 
+- ┃
 ```

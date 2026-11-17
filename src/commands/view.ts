@@ -40,8 +40,8 @@ export function unfoldCommand(ctx: CommandContext): OurusResult | null {
 
 /**
  * Toggle the folds of the nodes at the selection, or `nodes`: unfolded where any of them is folded
- * within the zoom, else folded; at a node that doesn't fold, its parent's (true-outliner's, from a
- * leaf).
+ * within the zoom, else folded; a node that doesn't fold is left alone, as fold leaves it (Obsidian,
+ * Logseq, Roam, Dynalist and WorkFlowy do nothing there; true-outliner folds the parent).
  */
 export function toggleFoldCommand(ctx: CommandContext): OurusResult | null {
   return setFolds(ctx, undefined);
@@ -59,7 +59,6 @@ function setFolds(ctx: CommandContext, fold: boolean | undefined): OurusResult |
   const given = targets(ctx);
   if (given === 'no-such-node') return new OurusRejected(given);
   let nodes = given;
-  if (fold === undefined) nodes = nodes.map((n) => (n.foldable ? n : n.parent!)).filter((n) => n.kind !== 'root');
   nodes = nodes.filter(foldable);
   const on = fold ?? !nodes.some((n) => view.zoomFolded.has(n.id));
   const folded = new Set(view.folded);

@@ -133,7 +133,7 @@ if (settled) { view.dispatch({ changes: settled.changes, selection: settled.view
   - `fold`, `unfold`, `toggleFold`, `{ nodes? }` (a guide's click with `nodes`)<br>
     The view's (spec/fold.md): the nodes at the selection (each the outermost node starting on its
     row), or `nodes`, folded, unfolded, or toggled: unfolded where any is folded within the zoom, else
-    folded; a toggle at a node with nothing to hide toggles its parent.
+    folded; a node with nothing to hide is left alone.
     Zoomed, the root's and its ancestors' folds are left alone. Applied with no changes, the
     selection moved out of what is now hidden.
 
@@ -209,7 +209,7 @@ if (settled) { view.dispatch({ changes: settled.changes, selection: settled.view
   - `OurusDeferred`: `reason: DeferReason`, `detail?` (`new OurusDeferred(reason, detail)`)<br>
     The host runs its default. `reason` says why: `host-default`, the key's plain default is right
     here (Backspace inside a text); `in-markup`, the caret is in markup the host edits as text, an edit
-    ourus would refuse otherwise (`markup: text`, the default; "a list marker isn't text");
+    ourus would refuse otherwise (not in `decorations`, the default; "a list marker isn't text");
     `not-done`, ourus doesn't cover the case yet.
 
   - `OurusFailed`: `phase`, `code`, `path?`, `expected?`, `actual?`, `detail`<br>
@@ -270,7 +270,7 @@ if (settled) { view.dispatch({ changes: settled.changes, selection: settled.view
   `emptyItemWithChildren`, `joinWithChildren`, `handleFenceContents`, `autoClose`,
   `headingEditing`, `taskEditing`, `copyAtCaret`, `copySelection`, `pasteSeams`, `pasteOverSelection`, `pasteLines`,
   `pastePlainLines`, `pasteAtTextStart`, `pasteOnParent`, `pasteParagraphList`, `pasteListForm`,
-  `markup`, the quirks (`quirkEnterMidHeading`, `quirkPasteCaret`, `quirkPasteText`: one app's mechanics),
+  `decorations`, the quirks (`quirkEnterMidHeading`, `quirkPasteCaret`, `quirkPasteText`: one app's mechanics),
   and `flavor` (the only option that affects reading). Each option's choices and default are
   documented in `src/config.ts`.
 
@@ -312,7 +312,7 @@ ourus keeps none so: a paste, a duplicate and `addBlockId` write the names they'
 note holds too (a host that wants them unique checks `OurusDoc.blockIds()`); a pasted `^x` is one only
 where it ends a text. A caret on a
 block-id line acts at the end of the text that carries it, and one in or right after a block id
-ending a text, before it; under `markup: text`, the keys that edit the line or the id itself are
+ending a text, before it; where `decorations` doesn't list it, the keys that edit the line or the id itself are
 the host's.
 
 Inside, a command works in three steps. It looks at what is at the selection (`ctx.from`,

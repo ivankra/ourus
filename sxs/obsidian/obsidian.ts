@@ -159,6 +159,8 @@ function inFrontmatter(d: TextDoc): string | undefined {
  * of its own, a caret goes into a cell's editor (the note's loses the focus), and the table is padded.
  */
 function inTable(d: TextDoc): string | undefined {
+  // (`OURUS_SXS_TABLES=1`: played anyway, to look at what the table widget does, its screenshots read)
+  if (process.env.OURUS_SXS_TABLES) return undefined;
   const lines = d.text.split('\n');
   const delimiter = /^ *\|? *:?-+:? *(\| *:?-+:? *)*\|? *$/;
   for (const { offset } of ends(d)) {
@@ -376,6 +378,8 @@ export function obsidianDriver(profile: Profile): Driver {
     // empty item outdents it or leaves the list wherever it is; a typed fence is closed, and inline
     // backticks are paired ("Auto pair Markdown syntax", on by default)
     behaves: {
+      // a selection typed over with one of these wrapped in it, as Obsidian's "Auto pair Markdown syntax" has it (probed 2026-11-18)
+      autoWrap: ['`', '*', '_', '~', '=', '(', '[', '{', "'", '$'],
       // a quote is text, its `>`s characters edited on its lines: of `quotes`' values the one its runs agree with most (166 quote cases a setup)
       quotes: 'atom',
       flavor: 'obsidian',

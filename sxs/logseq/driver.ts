@@ -162,6 +162,30 @@ export const OG: LogseqFlavor = {
   },
 };
 
+/**
+ * `doc` as Logseq shows it: each run of numbered siblings numbered from 1, whatever it was written
+ * with (a number is a block's property, its place in the run the number shown); `doc` itself where
+ * every run already is.
+ */
+function numberedFromOne(doc: Outline): Outline {
+  const run: number[] = [];
+  let sel = doc.sel;
+  let changed = false;
+  const blocks = doc.blocks.map((b, i) => {
+    run.length = b.depth + 1;
+    const n = /^(\d{1,9})\. /.exec(b.text);
+    run[b.depth] = n ? (run[b.depth] ?? 0) + 1 : 0;
+    if (!n || Number(n[1]) === run[b.depth]) return b;
+    changed = true;
+    const marker = `${run[b.depth]}. `;
+    // (a caret after the number moves with the text, as the number's digits change)
+    const moved = (p: number): number => (p >= n[0].length ? p - n[0].length + marker.length : Math.min(p, marker.length));
+    if (sel?.block === i) sel = { ...sel, anchor: moved(sel.anchor), head: moved(sel.head) };
+    return { ...b, text: marker + b.text.slice(n[0].length) };
+  });
+  return changed ? { ...doc, blocks, sel } : doc;
+}
+
 /** The page the current test runs on, a worker's (`perPage`), to delete once the next test has moved on. */
 /** A worker's: its test's page, and whether it was loaded with a view (folds, a zoom), which is read back then alone. */
 const pageState = perPage(() => ({ current: null as string | null, viewed: false }));
@@ -224,12 +248,19 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
     // checkbox and a code block's fences are OG's text in a block, edited a character at a time, and
     // the DB version's properties of a block
     refuses: ['markup-heading', 'markup-task', 'markup-fence'],
+    // a run of backticks typed: Logseq types its closing run too (```┃```, ``x``┃`` over a closing
+    // `` already there), one backtick as ourus does
+    capturesTyped: /``/,
     ordered: true,
     // a block starting `# ` is a heading (OG: its text; DB: its property, a text `#` escaped by `fromLogseq`)
-    headings: true,
+    headingBlocks: true,
     // Backspace at the first block's start does nothing in both (measured with `--ignore-options`:
     // `backspace.md › Backspace34` agrees; its `unwrap` case needs a paragraph, which no block app runs)
     behaves: {
+      // what a character typed over a selection wraps it in (probed 2026-11-18): `$` too in the DB version
+      autoWrap: flavor.db ? ['`', '*', '_', '~', '=', '^', '(', '[', '{', '$'] : ['`', '*', '_', '~', '=', '^', '(', '[', '{'],
+      // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
+      decorations: flavor.db ? ['bullet', 'number', 'checkbox', 'heading', 'setext', 'fence', 'math'] : ['bullet', 'number'],
       // Enter trims the spaces at the split from both halves, as the block is stored (Enter44)
       enterSplitSpace: 'trim',
       // a space a deleted first character leaves at a block's start goes as the block is stored, as
@@ -270,16 +301,10 @@ export function logseqDriver(flavor: LogseqFlavor): Driver {
     holds(doc: Outline) {
       const own = flavor.holds(doc);
       if (own) return own;
-      // a run of numbered siblings is numbered from 1, whatever it was written with
-      const run: number[] = [];
-      for (const b of doc.blocks) {
-        run.length = b.depth + 1;
-        const n = /^(\d{1,9})\. /.exec(b.text);
-        run[b.depth] = n ? (run[b.depth] ?? 0) + 1 : 0;
-        if (n && Number(n[1]) !== run[b.depth]) return 'numbered list from another number than 1';
-      }
+      if (numberedFromOne(doc) !== doc) return 'numbered list from another number than 1';
       return undefined;
     },
+    shows: numberedFromOne,
     idle: {
       busy: `(() => { const op = window.logseq?.api?.get_state_from_store('editor/op'); return op != null && !${JSON.stringify(['nil', ...(flavor.staleOps ?? [])])}.includes(String(op)); })()${flavor.busy ? ` || (${flavor.busy})` : ''}`,
     },

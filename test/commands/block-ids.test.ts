@@ -9,7 +9,7 @@ import { executeCommand, settlePlaceholders, type OurusCommand, type OurusResult
 import { OurusView } from '../../src/view/index.ts';
 import { MdFlavor, MdTree } from '../../src/parser/index.ts';
 import fc from 'fast-check';
-import type { OurusConfig } from '../../src/config.ts';
+import { DECORATIONS, type OurusConfig } from '../../src/config.ts';
 import { appliedText, assertApplied, executeAfter, executeOnText, resultStatus } from '../lib/index.ts';
 
 type Command = OurusCommand;
@@ -161,7 +161,7 @@ test('paste and duplicate write block ids as they are, a name the note holds too
 
 test('with the caret on a block-id line, a command acts at the end of the text that carries it', () => {
   assert.equal(after(parse('## H\n\n^h2\n\nbody\n'), { type: 'enter' }, 8), '## H\n\n^h2\n\n┃\n\nbody\n');
-  assert.ok(run(parse('## H\n\n^h2\n\nbody\n', { flavor: 'obsidian', markup: 'text' }), { type: 'deleteContentBackward' }, 8) instanceof OurusDeferred);
+  assert.ok(run(parse('## H\n\n^h2\n\nbody\n', { flavor: 'obsidian', decorations: [] }), { type: 'deleteContentBackward' }, 8) instanceof OurusDeferred);
 });
 
 test('a command made of steps (a selection deleted, then a paste) declares what every step did', () => {
@@ -204,8 +204,8 @@ test('paste into code is code, all of it: what looks like a block id the note ho
   assert.equal(drawn('p ^x\n\n```\nco┃de\n```\n', { type: 'paste', clipboard: { 'text/plain': '^x' } }), 'deferredToHost');
 });
 
-test('under markup text, an edit inside a block id\'s markup is the host\'s, as is one reaching past it', () => {
-  const text: Partial<OurusConfig> = { flavor: 'obsidian', markup: 'text' };
+test('where the host shows block ids as text, an edit inside a block id\'s markup is the host\'s, as is one reaching past it', () => {
+  const text: Partial<OurusConfig> = { flavor: 'obsidian', decorations: [] };
   assert.equal(drawn('a ^┃x┃\n\nb ^y\n', { type: 'deleteContentBackward' }, text), 'deferredToHost');
   assert.equal(drawn('a ^┃x\n\nb ┃^y\n', { type: 'deleteContentBackward' }, text), 'deferredToHost');
 });
@@ -262,7 +262,7 @@ test('paste: a name written twice on one node in what is pasted, both stay', () 
 });
 
 test('a caret on a block-id line outside the zoom: refused as outside it, not left to the host', () => {
-  const doc = parse('- a\n\n  ^x\n- b\n  - c\n', { flavor: 'obsidian', markup: 'text' });
+  const doc = parse('- a\n\n  ^x\n- b\n  - c\n', { flavor: 'obsidian', decorations: [] });
   const zoomed = OurusView.of(doc).withZoom(doc.rootNode.children[1]!.id);
   assert.deepEqual(run(zoomed, { type: 'insertText', text: 'q' }, 7), new OurusRejected('outside-zoom', 'the selection is outside the zoom'));
   // (inside it, the host's, as without a zoom)
@@ -361,10 +361,10 @@ test('a quote read as an atom reads no block id in its code: a copy keeps it as 
 
 test('on a block-id line, a key acting at the text\'s end that would be the host\'s is done there, not at the host\'s caret', () => {
   for (const [markup, t] of [['decorated', '- a\n\n  ^x┃\n- b\n'], ['decorated', '- a\n┃\n  ^x\n- b\n'], ['text', '- a\n┃\n  ^x\n- b\n']] as const) {
-    assert.equal(after(parse(t.replace('┃', ''), { flavor: 'obsidian', markup }), { type: 'insertText', text: 'z' }, t.indexOf('┃')), '- az┃\n\n  ^x\n- b\n', `${markup} ${t}`);
+    assert.equal(after(parse(t.replace('┃', ''), { flavor: 'obsidian', decorations: markup === 'decorated' ? DECORATIONS : [] }), { type: 'insertText', text: 'z' }, t.indexOf('┃')), '- az┃\n\n  ^x\n- b\n', `${markup} ${t}`);
   }
-  // (under `markup: text`, on the line itself, the host edits it)
-  assert.ok(run(parse('- a\n\n  ^x\n- b\n', { flavor: 'obsidian', markup: 'text' }), { type: 'insertText', text: 'z' }, 9) instanceof OurusDeferred);
+  // (where the host shows block ids as text, on the line itself, the host edits it)
+  assert.ok(run(parse('- a\n\n  ^x\n- b\n', { flavor: 'obsidian', decorations: [] }), { type: 'insertText', text: 'z' }, 9) instanceof OurusDeferred);
 });
 
 test('a text carrying block-id lines is never emptied: it would be nothing on disk, its lines another\'s', () => {
@@ -396,7 +396,7 @@ test('a quote read as an atom has a block id ending each paragraph in it; one no
 });
 
 test('on a block-id line, a key the host would insert text with inserts it at the text\'s end; one it would delete with refuses', () => {
-  const doc = parse('p\n\n^id\n', { flavor: 'obsidian', markup: 'decorated' });
+  const doc = parse('p\n\n^id\n', { flavor: 'obsidian', decorations: DECORATIONS });
   const pasted = run(doc, { type: 'pastePlain', text: 'new' }, 4);
   assert.ok(pasted instanceof OurusSuccess);
   assert.equal(pasted.view.doc.text, 'pnew\n\n^id\n');
@@ -461,7 +461,7 @@ function drawn(src: string, command: Command | ((doc: OurusDoc) => Command), con
 
 test('a caret a command leaves at a block id is before it, where what is typed next keeps it', () => {
   const ATOM: Partial<OurusConfig> = { flavor: 'obsidian', quotes: 'atom' };
-  const DECORATED: Partial<OurusConfig> = { flavor: 'obsidian', markup: 'decorated' };
+  const DECORATED: Partial<OurusConfig> = { flavor: 'obsidian', decorations: DECORATIONS };
   // (a join into the text above: at the seam, not before the block id it ends with)
   assert.equal(drawn('p ^p1\n\n┃> q\n', { type: 'deleteContentBackward' }, ATOM), 'p┃> q ^p1\n');
   // (a setext title made ATX by Tab: at its text's end, before the block id)
@@ -471,19 +471,19 @@ test('a caret a command leaves at a block id is before it, where what is typed n
   assert.equal(drawn('T ^x┃\n===\n', { type: 'duplicateSubtree' }), 'T ^x\n===\nT┃ ^x\n===\n');
   // (typing right before a block id, in a quote read as an atom)
   assert.equal(drawn('> q\n┃^id\n\nn\n', { type: 'insertText', text: 'z' }, ATOM), '> q\nz┃ ^id\n\nn\n');
-  // (under `markup: decorated`, past the blank before it, which is the block id's to show: at the text's end)
+  // (where the host draws block ids, past the blank before it, which is the block id's to show: at the text's end)
   assert.equal(drawn('p ┃^x\n\nn\n', { type: 'insertText', text: 'z' }, DECORATED), 'pz┃ ^x\n\nn\n');
 });
 
 test('a caret in a block id ending a text, or right after it: the key acts at the text\'s end, a deletion too', () => {
-  const DECORATED: Partial<OurusConfig> = { flavor: 'obsidian', markup: 'decorated' };
+  const DECORATED: Partial<OurusConfig> = { flavor: 'obsidian', decorations: DECORATIONS };
   assert.equal(drawn('p ^x┃\n\nn\n', { type: 'insertText', text: 'k' }, DECORATED), 'pk┃ ^x\n\nn\n');
   assert.equal(drawn('- ab ^x┃\n- b\n', { type: 'deleteContentBackward' }, DECORATED), '- a┃ ^x\n- b\n');
   // (none of the text left: no blank before the block id either)
   assert.equal(drawn('- a ^x┃\n- b\n', { type: 'deleteContentBackward' }, DECORATED), '- ┃^x\n- b\n');
-  // (on a block-id line under `markup: text`, a deletion of the line break after it is no edit of the
+  // (on a block-id line, the host showing block ids as text, a deletion of the line break after it is no edit of the
   // line: Delete at the text's end, the next node joining it)
-  assert.equal(drawn('p\n\n^f┃\n\npara\n', { type: 'deleteContentForward' }, { flavor: 'obsidian', markup: 'text' }), 'p┃para\n\n^f\n');
+  assert.equal(drawn('p\n\n^f┃\n\npara\n', { type: 'deleteContentForward' }, { flavor: 'obsidian', decorations: [] }), 'p┃para\n\n^f\n');
 });
 
 test('a join keeps a block id where its text\'s closing frame goes: before a heading\'s closing `#`s, a quote\'s line of its own unquoted', () => {
@@ -535,13 +535,13 @@ test('typing at a marker\'s line whose text is below it: on that line, the block
 });
 
 test('a key left to the host is the host\'s, whatever its edit does to a block id', () => {
-  const D: Partial<OurusConfig> = { flavor: 'obsidian', markup: 'decorated' };
+  const D: Partial<OurusConfig> = { flavor: 'obsidian', decorations: DECORATIONS };
   // (the last character before it; Delete at the end of the last text; a quote's `>` deleted with its text)
   assert.equal(drawn('p ^x\n\nq┃ ^y\n', { type: 'deleteContentBackward' }, D), 'deferredToHost');
   assert.equal(drawn('## p┃ ^x\n', { type: 'deleteContentForward' }, D), 'deferredToHost');
   assert.equal(drawn('┃> p┃ ^x\n', { type: 'deleteContentBackward' }, { ...D, quotes: 'container' }), 'deferredToHost');
   // (an edit of the block id's name, as text)
-  assert.equal(drawn('p ^x┃\n', { type: 'deleteContentBackward' }, { flavor: 'obsidian', markup: 'text' }), 'deferredToHost');
+  assert.equal(drawn('p ^x┃\n', { type: 'deleteContentBackward' }, { flavor: 'obsidian', decorations: [] }), 'deferredToHost');
 });
 
 test('a block id on a line of its own ending a text: Backspace at it, or Delete before it, joins the lines', () => {
@@ -550,7 +550,7 @@ test('a block id on a line of its own ending a text: Backspace at it, or Delete 
 });
 
 test('what is typed or pasted at a block id is placed as typing places it', () => {
-  const D: Partial<OurusConfig> = { flavor: 'obsidian', markup: 'decorated' };
+  const D: Partial<OurusConfig> = { flavor: 'obsidian', decorations: DECORATIONS };
   const paste = (md: string): Command => ({ type: 'paste', clipboard: { 'text/markdown': md, 'text/plain': md } });
   // (right after one in a quote read as an atom: before it)
   assert.equal(drawn('> p ^x┃\n', { type: 'insertText', text: 'z' }, { ...D, quotes: 'atom' }), '> pz┃ ^x\n');
@@ -567,7 +567,7 @@ test('what is typed or pasted at a block id is placed as typing places it', () =
 });
 
 test('a caret on a block-id line: a deletion acts on no other line; typing on the blank line Shift-Enter makes is a line of the text', () => {
-  const D: Partial<OurusConfig> = { flavor: 'obsidian', markup: 'decorated' };
+  const D: Partial<OurusConfig> = { flavor: 'obsidian', decorations: DECORATIONS };
   assert.equal(drawn('> p\n\n^x┃\n', { type: 'deleteContentBackward' }, { ...D, quotes: 'text' }), 'rejected not-expressible');
   const split = executeCommand(OurusView.of(parse('a\n\n^x\n\n# h\n', D), { selection: 1 }), { type: 'shiftEnter' });
   assert.ok(split instanceof OurusSuccess);
@@ -645,11 +645,11 @@ test('edits made beside a block id use the note\'s line ending: CRLF and lone-CR
   // a lone CR typed after a block id is a line break, as an LF: the host's
   assert.ok(executeOnText('p ^id\n\n\nq', { type: 'insertText', text: '\r' }, { caret: 6, config: obsidian }) instanceof OurusDeferred);
   // typing on the blank line before a decorated carried id: at the text's end, the line after a CRLF
-  assert.equal(appliedText(executeOnText('```\r\nx\r\n```\r\n\r\n^id', { type: 'insertText', text: 'y' }, { caret: 13, config: { ...obsidian, markup: 'decorated' } })), '```\r\nxy\r\n```\r\n\r\n^id');
+  assert.equal(appliedText(executeOnText('```\r\nx\r\n```\r\n\r\n^id', { type: 'insertText', text: 'y' }, { caret: 13, config: { ...obsidian, decorations: DECORATIONS } })), '```\r\nxy\r\n```\r\n\r\n^id');
 });
 
 test('Backspace beside a decorated block id takes a whole character: an emoji with its joiners, a letter with its accent, a flag', () => {
-  const decorated = { flavor: 'obsidian', markup: 'decorated' } as const;
+  const decorated = { flavor: 'obsidian', decorations: DECORATIONS } as const;
   for (const char of ['👩\u200d💻', 'e\u0301', '🇫🇷', '👍🏽']) {
     const text = `x${char} ^id`;
     const result = assertApplied(executeOnText(text, { type: 'deleteContentBackward' }, { caret: text.length, config: decorated }));
@@ -660,9 +660,9 @@ test('Backspace beside a decorated block id takes a whole character: an emoji wi
 
 test('a block id\'s name another id has, typed in its markup or outside any: the host\'s, block ids not being unique', () => {
   const source = '## table\n- abc ^id\n- def ^i';
-  const typed = executeOnText(source, { type: 'insertText', text: 'd' }, { caret: source.length, config: { flavor: 'obsidian', markup: 'text' } });
+  const typed = executeOnText(source, { type: 'insertText', text: 'd' }, { caret: source.length, config: { flavor: 'obsidian', decorations: [] } });
   assert.ok(typed instanceof OurusDeferred, typed.constructor.name);
-  const outside = executeOnText('a ^id\n\nb', { type: 'insertText', text: ' ^id' }, { caret: 8, config: { flavor: 'obsidian', markup: 'text' } });
+  const outside = executeOnText('a ^id\n\nb', { type: 'insertText', text: ' ^id' }, { caret: 8, config: { flavor: 'obsidian', decorations: [] } });
   assert.ok(outside instanceof OurusDeferred, outside.constructor.name);
 });
 

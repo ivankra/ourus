@@ -20,8 +20,23 @@ export type AutoCloseOpener = '```' | '~~~' | '$$' | '%%' | '<!--' | '`' | '(' |
 /** Each opener's closer, in the order a list of them is written. */
 export const AUTO_CLOSERS: Readonly<Record<AutoCloseOpener, string>> = { '```': '```', '~~~': '~~~', '$$': '$$', '%%': '%%', '<!--': '-->', '`': '`', '(': ')', '[': ']', '{': '}', '[[': ']]', '((': '))', '$': '$' };
 
-/** The options whose value is a list (`autoClose`). */
-type ListOption = 'autoClose';
+/** A character that, typed over a selection, wraps it (`autoWrap`). */
+export type AutoWrapper = '`' | '*' | '_' | '~' | '=' | '^' | '(' | '[' | '{' | "'" | '"' | '$';
+
+/** Each wrapper's closer, in the order a list of them is written. */
+export const AUTO_WRAPS: Readonly<Record<AutoWrapper, string>> = { '`': '`', '*': '*', _: '_', '~': '~', '=': '=', '^': '^', '(': ')', '[': ']', '{': '}', "'": "'", '"': '"', $: '$' };
+
+/** An element of markup a host may draw (`decorations`). */
+export type Decoration = 'bullet' | 'number' | 'checkbox' | 'heading' | 'setext' | 'quote' | 'callout' | 'fence' | 'math' | 'comment' | 'table' | 'rule' | 'footnote' | 'blockId';
+
+/** Every element a host may draw, in the order a list of them is written. */
+export const DECORATIONS: readonly Decoration[] = ['bullet', 'number', 'checkbox', 'heading', 'setext', 'quote', 'callout', 'fence', 'math', 'comment', 'table', 'rule', 'footnote', 'blockId'];
+
+/** Whether the host draws `element` (`decorations`). */
+export const decorates = (config: OurusConfig, element: Decoration): boolean => config.decorations.includes(element);
+
+/** The options whose value is a list (`autoClose`, `autoWrap`, `decorations`). */
+type ListOption = 'autoClose' | 'autoWrap' | 'decorations';
 
 export interface OurusConfig {
   /**
@@ -34,24 +49,30 @@ export interface OurusConfig {
   readonly flavor: 'gfm' | 'commonmark' | 'obsidian';
 
   /**
-   * How the host shows markup (list markers, checkboxes, a heading's `#`s, a quote's `>`, fences),
-   * which decides what ourus does with the caret in it, where only the host puts it:
-   * - `text` (the default; raw CodeMirror, a textarea, Obsidian's source mode): markup is text the
-   *   user edits by hand. Shift-Enter, Backspace, Delete and Cmd-Backspace there are the host's
-   *   (`deferredToHost`), and so is an edit at the caret that ourus would refuse there (the refusal's
-   *   reason as its `detail`), whatever the text then reads as; and a command may leave the caret on
-   *   a fence where the user had it: Backspace back to a fence's end, indent and outdent from a fence
-   *   line (where Tab and Shift-Tab in the code are the host's).
-   * - `decorated` (rendered checkboxes and bullets, Obsidian's Live Preview): markup is the host's to
-   *   draw, and the node can't break through ourus: those keys act at the text start, or make the
-   *   edit ourus can check, or are refused (`rejected`); and no command leaves the caret in markup or
-   *   on a fence, where typing would break the node.
+   * The markup the host draws, as UI rather than characters, with the caret on it: each element listed
+   * is `decorated`, each other one is text. A host may draw some elements and show others as text, or
+   * draw one elsewhere but show it as text on the line the caret is on (Obsidian's Live Preview shows a
+   * heading's `#`s there); what counts is what is drawn under the caret, where the keys act:
+   * - `bullet`, `number`: a list item's marker; `checkbox`: a task's `[ ]`;
+   * - `heading`: an ATX heading's `#`s; `setext`: a setext heading's underline;
+   * - `quote`: a quote's `>`s; `callout`: a callout's `[!type]`;
+   * - `fence`, `math`, `comment`: a fenced block's delimiter lines (code, `$$`, `%%`);
+   * - `table`: a table's pipes and delimiter row (a grid the caret moves between cells in);
+   * - `rule`: a thematic break; `footnote`: a definition's label; `blockId`: a block id.
+   *
+   * Markup shown as text is the user's to edit by hand: Shift-Enter, Backspace, Delete and
+   * Cmd-Backspace in it are the host's (`deferredToHost`), and so is an edit at the caret that ourus
+   * would refuse there (the refusal's reason as its `detail`), whatever the text then reads as; and a
+   * command may leave the caret on a fence where the user had it. Markup drawn is the host's: in it
+   * those keys act at the text start, or make the edit ourus can check, or are refused (`rejected`);
+   * and no command leaves the caret in it.
    *
    * Either way, Enter in markup acts at the node's text start, the character inside a task's
    * checkbox is edited as text, and a structural command from before a node's text (in its marker)
-   * leaves the caret in its text.
+   * leaves the caret in its text. `[]`, the default, is a plain text editor's: raw CodeMirror, a
+   * textarea, Obsidian's source mode.
    */
-  readonly markup: 'text' | 'decorated';
+  readonly decorations: readonly Decoration[];
 
   /**
    * How an item is indented where it nests anew and no item of its list beside it gives a column (the
@@ -88,7 +109,8 @@ export interface OurusConfig {
    * Shift-Tab on an item at the top level, where there is no parent to leave:
    * - `unwrap` (the default, as RemNote): the item becomes a paragraph in place, the items after it
    *   its list (a list right after a paragraph is its children, `listParent: paragraph`).
-   * - `refuse` (as sixteen of the app setups measured do nothing there): `not-expressible`.
+   * - `refuse` (as sixteen of the app setups measured do nothing there): `at-top-level`. Enter on
+   *   an empty top-level item, by `enterOnEmptyItem: outdent`, makes a new empty item then.
    */
   readonly outdentTopLevel: 'unwrap' | 'refuse';
 
@@ -110,6 +132,17 @@ export interface OurusConfig {
    * A list numbered all alike (`1.`, `1.`) is numbered so too, as every text editor numbers it.
    */
   readonly orderedLists: 'renumber' | 'shift';
+
+  /**
+   * What a heading is in the outline:
+   * - `section` (the default, as the outliners hold a heading block's children): it owns the blocks
+   *   after it up to the next heading of its level or above, its section; it moves, folds, copies
+   *   and is selected with them, and Tab and Shift-Tab change its level, its section's headings with it.
+   * - `block` (as AFFiNE, BlockNote, Notion, SiYuan, RemNote and Lexical, whose headings are blocks
+   *   like any): it owns nothing; it moves alone, past one node, and Tab and Shift-Tab on it are
+   *   refused (`heading-block`).
+   */
+  readonly headings: 'section' | 'block';
 
   /**
    * What a quote is in the outline:
@@ -199,7 +232,9 @@ export interface OurusConfig {
    * - `sibling` (the default, as in Logseq, Tine, WorkFlowy, Dynalist, Tana and RemNote with bullets):
    *   a new empty item, at any depth.
    * - `outdent` (as in Roam, Athens and Obsidian, bare and with its Outliner): it outdents, as the
-   *   `outdent` option says; at the top level it leaves the list, an empty paragraph.
+   *   `outdent` option says; at the top level it leaves the list, an empty paragraph, but where
+   *   Shift-Tab has no level to leave there (`outdentTopLevel: refuse`), a new empty item, as
+   *   `sibling` (Roam, Athens).
    * - `exit` (as RemNote nbl): at the top level it leaves the list, as `outdent`;
    *   nested, a new empty item, as `sibling`.
    * - `unwrap` (as SiYuan and BlockNote, document editors, and word processors): an empty paragraph
@@ -277,13 +312,15 @@ export interface OurusConfig {
    * - `join` (the default, as Tine, RemNote, true-outliner and, by Delete, BlockNote join it).
    * - `refuse` (as Logseq, Roam, Athens, WorkFlowy, Dynalist, Tana and Obsidian's Outliner do
    *   nothing): `has-children`.
+   * - `never` (as Mubu and Tana): `refuse`, and a sibling with children joining the sibling above
+   *   refused too, an empty one's too (`has-children`): no join takes a node's children anywhere.
    *
-   * A sibling with children joining the sibling above keeps them at their depth, and joins either
-   * way (Tana alone refuses it); under `refuse`, only where that sibling has no children of its own
-   * (a folded one's included) and the join is into it, not into its last descendant. An empty item's own children are `emptyItemWithChildren`'s; where
+   * A sibling with children joining the sibling above keeps them at their depth, and joins with
+   * `join` and `refuse`; under `refuse`, only where that sibling has no children of its own (a folded
+   * one's included) and the join is into it, not into its last descendant. An empty item's own children are `emptyItemWithChildren`'s; where
    * both options apply (Delete on an empty item whose first child has children), either refuses.
    */
-  readonly joinWithChildren: 'join' | 'refuse';
+  readonly joinWithChildren: 'join' | 'refuse' | 'never';
 
   /**
    * Backspace at the start of an item with nothing above it in its container (the document's first
@@ -311,7 +348,8 @@ export interface OurusConfig {
    *   an empty one too; a bulleted item joins.
    *
    * A first child is a paragraph where it is with either, its parent's first after its text. An empty
-   * item goes either way (rule 3).
+   * item goes (rule 3), but with `unwrap`, where it is an empty paragraph, held by a placeholder, as it
+   * leaves its list (as BlockNote, Notion, Lexical and AFFiNE make it).
    */
   readonly backspaceAtItemStart: 'join' | 'body' | 'unwrap' | 'logseq';
 
@@ -332,13 +370,15 @@ export interface OurusConfig {
   readonly emptyItemWithChildren: 'lift' | 'refuse';
 
   /**
-   * Backspace at a heading's text start, and Delete before a heading:
+   * Backspace at a heading's text start:
    * - `text` (the default): the heading's marks go as a unit, the title becoming a paragraph where it
-   *   is, by Backspace at its text start and by Delete before it, the caret staying (as SiYuan does);
-   *   a second press joins it as any paragraph. Bare Obsidian deletes one character, leaving
-   *   `#Hello`, and its Delete joins the `#`s as text.
-   * - `block` (as outliners join any block, Tana's sections among them): both join just the title into
+   *   is, the caret staying (as SiYuan and BlockNote do); a second press joins it as any paragraph.
+   *   Bare Obsidian deletes one character, leaving `#Hello`.
+   * - `block` (as outliners join any block, Tana's sections among them, and Notion): the title joins
    *   the node above.
+   *
+   * Delete before a heading joins its title either way, its marks going with the join: they are at
+   * the caret only for Backspace.
    */
   readonly headingEditing: 'text' | 'block';
 
@@ -382,13 +422,11 @@ export interface OurusConfig {
    *   Unclosed, each would take in all that follows it.
    * - `` ` `` (as bare Obsidian, its "Auto pair Markdown syntax"; Logseq, Tine): a backtick at a word
    *   boundary, outside code, is typed as a pair, the caret between; typed before the closing backtick
-   *   of an empty pair or a code span it steps over it; around a selection on one line it makes it
-   *   code.
+   *   of an empty pair or a code span it steps over it (a selection it wraps: `autoWrap`).
    * - `(`, `[`, `{` (as Obsidian, Logseq, Roam, Athens, Tine, SilverBullet): an opener typed where the
    *   next character is a blank, the line's end or a closing bracket (in code, math and after a
    *   backslash too, as those apps have it) is typed with its closer, the caret between (two make the
-   *   double, `[[┃]]`); a closer typed before one of ours steps over it; an opener typed over a
-   *   selection on one line wraps it.
+   *   double, `[[┃]]`); a closer typed before one of ours steps over it (a selection: `autoWrap`).
    * - `[[`, `((` (as WorkFlowy, which pairs no single bracket): the double alone, the second of two.
    * - `$` (as Logseq and Roam): inline math's, as a bracket is (`$┃$`), a second in the empty pair its
    *   double (`$$┃$$`), Backspace there taking a level (`$┃$`); typed before a closing `$` of ours in
@@ -404,14 +442,36 @@ export interface OurusConfig {
   readonly autoClose: readonly AutoCloseOpener[];
 
   /**
+   * The characters that, typed over a selection on one line of a text, wrap it, the selection kept
+   * between the character and its closer (ours), as an editor's "wrap selection" has it; any other
+   * replaces it, the host's. A pair at a caret is `autoClose`'s; the two lists are apart, as the apps
+   * have them (Roam wraps in backticks it doesn't pair, Logseq pairs `$` it doesn't wrap in):
+   * - `` ` `` (the default lists it, as the next five but `^`): the selection made code, its runs
+   *   longer than any backtick inside (spec/backtick.md).
+   * - `*`, `_`, `~`, `=`, `^` (formatting: emphasis, strikethrough, a highlight's): in prose only.
+   * - `(`, `[`, `{`: in any text that pairs, code too.
+   * - `'`, `"`, `$` (inline math's): in prose only.
+   *
+   * Listed by the default: `` ` * _ ~ = ( [ { ``, what Obsidian (bare, Live Preview, its Outliner and
+   * true-outliner) and Logseq's family (Logseq, Logseq DB, Tine) share: Obsidian adds `'` and `$`,
+   * Logseq and Tine `^`, Logseq DB both; Roam wraps `` ` ( [ { ' ``, AFFiNE `( [ { '`, Athens and
+   * SilverBullet `( [ {`; Dynalist, Mubu, Moo.do, WorkFlowy, BlockNote, Lexical, Notion and SiYuan
+   * none (`[]`, `none` in settings: the typed character replaces the selection).
+   */
+  readonly autoWrap: readonly AutoWrapper[];
+
+  /**
    * Copy and cut (Ctrl-C, Ctrl-X: `copy`, `cut`) with no selection, a caret alone (spec/copy.md):
    * - `node` (the default, as Tana): the node at the caret with its subtree; a cut takes them out.
+   * - `text` (as AFFiNE, Moo.do and SiYuan copy): the node's text, without its markup (a heading's
+   *   `#`s, a marker) or its children, as a selection over it is copied; a cut takes that text, the
+   *   node staying, empty (as SiYuan's; AFFiNE's does nothing, Moo.do's takes the block).
    * - `host`: the host's, CodeMirror's the line, a textarea's nothing; most apps copy nothing there
    *   (Roam, Athens, WorkFlowy, Dynalist, BlockNote) or a block reference, which Markdown has no
    *   form for (Logseq, Logseq DB, Tine, RemNote); Obsidian, true-outliner and SilverBullet copy and
    *   cut the line.
    */
-  readonly copyAtCaret: 'node' | 'host';
+  readonly copyAtCaret: 'node' | 'text' | 'host';
 
   /**
    * Copy and cut (`copy`, `cut`) of a selection across nodes (spec/copy.md):
@@ -489,6 +549,17 @@ export interface OurusConfig {
    * RemNote's, a node per line with only the first line joining the text at the caret, is none of them.
    */
   readonly pastePlainLines: 'text' | 'items' | 'enter' | 'host';
+
+  /**
+   * The line break plain lines end with (a copied line, `x⏎`), put into a node's text (`pastePlainLines:
+   * text`, and paste's plain lines):
+   * - `line` (the default, as Logseq, Logseq DB, Roam, Athens, Tine and Notion): an empty last line of
+   *   the text, held as Shift-Enter's, the caret on it.
+   * - `drop` (as SiYuan and BlockNote): it ends what was copied, no line: the text pasted is the lines
+   *   before it, the caret at their end.
+   * In code it is a code line either way.
+   */
+  readonly pasteTrailingBreak: 'line' | 'drop';
 
   /**
    * Paste (Ctrl-V, `paste`) at the start of a node's text, where the paste goes (spec/paste-list.md):
@@ -635,15 +706,15 @@ export interface OurusConfig {
 
 /** The values each option takes, its default first, for readers of string settings (spec files, frontmatter). */
 const CONFIG_VALUES: { readonly [K in Exclude<keyof OurusConfig, ListOption>]: readonly [OurusConfig[K], ...OurusConfig[K][]] } = {
-  // How the text reads, and how the host shows its markup: every command
+  // How the text reads: every command
   flavor: ['gfm', 'commonmark', 'obsidian'],
-  markup: ['text', 'decorated'],
   // The outline: what Shift-Tab does, a new item's bullet, what a quote is, what a list is under
   indentUnit: ['detect', 'tab', 2, 4],
   outdent: ['direct', 'logical'],
   outdentTopLevel: ['unwrap', 'refuse'],
   bullet: ['-', '*', '+'],
   orderedLists: ['renumber', 'shift'],
+  headings: ['section', 'block'],
   quotes: ['text', 'atom', 'container'],
   listParent: ['paragraph', 'block', 'container'],
   listMoves: ['list', 'item'],
@@ -656,7 +727,7 @@ const CONFIG_VALUES: { readonly [K in Exclude<keyof OurusConfig, ListOption>]: r
   enterTask: ['continue', 'plain'],
   enterInQuote: ['line', 'split'],
   // Backspace and Delete at a node's edge
-  joinWithChildren: ['join', 'refuse'],
+  joinWithChildren: ['join', 'refuse', 'never'],
   backspaceAtTopItem: ['unwrap', 'refuse'],
   backspaceAtItemStart: ['join', 'body', 'unwrap', 'logseq'],
   emptyItemWithChildren: ['lift', 'refuse'],
@@ -665,13 +736,14 @@ const CONFIG_VALUES: { readonly [K in Exclude<keyof OurusConfig, ListOption>]: r
   taskEditing: ['checkbox', 'text', 'block', 'unwrap'],
   handleFenceContents: [true, false],
   // Clipboard
-  copyAtCaret: ['node', 'host'],
+  copyAtCaret: ['node', 'text', 'host'],
   copySelection: ['text', 'nodes'],
   pasteSeams: ['closed', 'open'],
   pasteOverSelection: ['replace', 'ignore'],
   pasteOverNodes: ['replace', 'after', 'nothing'],
   pasteLines: ['text', 'items'],
   pastePlainLines: ['text', 'items', 'enter', 'host'],
+  pasteTrailingBreak: ['line', 'drop'],
   pasteAtTextStart: ['before', 'after'],
   pasteOnParent: ['children', 'after'],
   pasteParagraphList: ['siblings', 'children'],
@@ -691,6 +763,8 @@ const CONFIG_VALUES: { readonly [K in Exclude<keyof OurusConfig, ListOption>]: r
 /** A list option's elements, in the order its value lists them, and its default. */
 const LIST_OPTIONS: { readonly [K in ListOption]: { readonly elements: OurusConfig[K]; readonly defaults: OurusConfig[K] } } = {
   autoClose: { elements: Object.keys(AUTO_CLOSERS) as AutoCloseOpener[], defaults: ['```', '~~~', '$$', '%%', '<!--'] },
+  autoWrap: { elements: Object.keys(AUTO_WRAPS) as AutoWrapper[], defaults: ['`', '*', '_', '~', '=', '(', '[', '{'] },
+  decorations: { elements: DECORATIONS, defaults: [] },
 };
 
 /** Every option's default: the first of its values, a list option's its own. */

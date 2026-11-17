@@ -116,7 +116,7 @@ A heading's block-id line is the heading's, not a paragraph of its section: it m
 heading.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 flavor: obsidian
 ```
 

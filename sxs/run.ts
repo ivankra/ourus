@@ -57,7 +57,7 @@ import type { Browser, Page } from 'playwright-core';
 import { OurusConfig } from '../src/config.ts';
 import { OurusDoc } from '../src/doc/index.ts';
 import { OurusView } from '../src/view/index.ts';
-import { drawnSelection, drawOutline, endingText, allNodes, readDrawing, isDropAction, canonicalClipboard, specTestPasses, actionsLine, SPEC_RANKS, readSpec, specConfig, SPEC_TAGS, type Clipboard } from '../test/lib/index.ts';
+import { drawnSelection, drawOutline, endingText, allNodes, readDrawing, isDropAction, canonicalClipboard, specTestPasses, actionsLine, SPEC_RANKS, readSpec, specConfig, SPEC_TAGS, MARKUP_TAGS, caseTags, type Clipboard } from '../test/lib/index.ts';
 import { appWindow, ensureProxy, headedWindow, lockApp, proxyStats, runRoom, stopShared, type AppPage } from './lib/browser.ts';
 import { watchTasks } from './lib/system.ts';
 import { clipboardHtml } from './lib/clipboard.ts';
@@ -513,7 +513,7 @@ function matrix(o: {
   const testOf = (r: (typeof o.rows)[number]) => tests.get(r.name);
   const byTag = [
     ...SPEC_RANKS.map((rank) => group(rank, o.rows.filter((r) => testOf(r)?.rank === rank))),
-    ...SPEC_TAGS.map((tag) => group(tag, o.rows.filter((r) => testOf(r)?.tags.includes(tag)))).sort(mostFirst),
+    ...[...SPEC_TAGS, ...MARKUP_TAGS].map((tag) => group(tag, o.rows.filter((r) => { const t = testOf(r); return !!t && caseTags(t).includes(tag); }))).sort(mostFirst),
   ].filter((g) => g.cases);
   const share = (dis: number, runs: number): string => (runs ? `${Math.round((100 * dis) / runs)}%` : '');
   const sum = { cases: byFile.reduce((n, r) => n + r.cases, 0), runs: byFile.reduce((n, r) => n + r.runs, 0), dis: byFile.reduce((n, r) => n + r.dis, 0), blockDis: byFile.reduce((n, r) => n + r.blockDis, 0), blockRan: byFile.reduce((n, r) => n + r.blockRan, 0) };
@@ -777,8 +777,13 @@ const loaded = ((await import(`./${app}/driver.ts`)) as { driver: Driver }).driv
 // (`Driver.behaves`), to measure a value's fit without editing the driver (with `--rejudge`: in seconds,
 // what the app did judged again under it). Said in the run's log.
 const behavesOverride = process.env.OURUS_SXS_BEHAVES ? (JSON.parse(process.env.OURUS_SXS_BEHAVES) as Record<string, unknown>) : null;
-const driver: Driver = behavesOverride ? { ...loaded, behaves: { ...loaded.behaves, ...behavesOverride } as Driver['behaves'] } : loaded;
+// `OURUS_SXS_PLAYS='tag,...'`: tags or elements taken out of the driver's `refuses`, to measure how the
+// app does in the cases it skips for them without editing the driver. Said in the run's log.
+const plays = process.env.OURUS_SXS_PLAYS?.split(',').map((s) => s.trim()).filter(Boolean) ?? [];
+const behaved: Driver = behavesOverride ? { ...loaded, behaves: { ...loaded.behaves, ...behavesOverride } as Driver['behaves'] } : loaded;
+const driver: Driver = plays.length ? { ...behaved, refuses: behaved.refuses?.filter((r) => !plays.includes(r)) } : behaved;
 if (behavesOverride) console.error(`(${app}'s options as measured, with OURUS_SXS_BEHAVES: ${JSON.stringify(behavesOverride)})`);
+if (plays.length) console.error(`(${app} plays what it refuses, with OURUS_SXS_PLAYS: ${plays.join(', ')})`);
 const say = (line: string): void => console.log(line);
 
 /**
@@ -964,7 +969,10 @@ function stepVerdict(step: PlanStep, got: Doc | null, clipboard: string | null |
   if (step.want && got) v = compareDocs(step.caretLost || unfocused ? { ...step.want, sel: null } : step.want, got, step.sections, flavor);
   // the folds in effect and the zoom, as the reader sees them: another view is another state
   // (a drawing with no view's marks is one with nothing folded and no zoom: `view.ts`)
-  if (step.want?.view && got && !sameView(shownView(got, plan) ?? { folded: [], zoom: null }, step.want.view)) v = 'disagree';
+  // (and where the step draws none, nothing folded and no zoom: an app with folds that folds there
+  // differs, Fold11's toggle at a leaf folding the parent in SilverBullet)
+  const wantView = step.want?.view ?? (step.want && driver.folds ? { folded: [], zoom: null } : undefined);
+  if (wantView && got && !sameView(shownView(got, plan) ?? { folded: [], zoom: null }, wantView)) v = 'disagree';
   // a clipboard written otherwise but the same Markdown (an app's tabs for indentation, no final line
   // break, a line's trailing spaces) is the same copy: a paste anywhere reads it the same
   if (step.clipboard !== undefined && clipboard !== step.clipboard && !(clipboard && sameMarkdown(clipboard, step.clipboard, flavor))) v = 'disagree';
@@ -1047,7 +1055,9 @@ const UNREACHED = 'drop:';
 const LOST = 'the app changing what ourus\'s blocks show no change in, at';
 /** A start the app holds otherwise than it was given (it rewrote what it was given): skipped as it played, as `NO_FOCUS`. */
 const UNHELD = 'the app holding its start otherwise';
-const skippedAsPlayed = (why: string): boolean => why.startsWith(NO_FOCUS) || why.startsWith(UNREACHED) || why.startsWith(LOST) || why.startsWith(UNHELD);
+/** A step ourus refuses as Markdown can't hold it, where the app changed something (`PlanStep.refused`, `judge`). */
+const REFUSED = 'the app doing what ourus refuses as Markdown can\'t hold it (not-expressible), at';
+const skippedAsPlayed = (why: string): boolean => why.startsWith(NO_FOCUS) || why.startsWith(UNREACHED) || why.startsWith(LOST) || why.startsWith(UNHELD) || why.startsWith(REFUSED);
 const needsFocus = (action: string): boolean => !/^(?:undo|redo)$/.test(action);
 
 /**
@@ -1215,6 +1225,17 @@ function lastClipboardStep(plan: Plan): number {
   return last;
 }
 
+/**
+ * `OURUS_SXS_SHOTS=<dir>`: the app's page as a PNG after loading a plan and after each of its steps
+ * (`<app>-<case>-<k>.png`, 0 the loaded state), to look at what the app draws.
+ */
+async function shot(page: Page | undefined, plan: Plan, k: number): Promise<void> {
+  const dir = process.env.OURUS_SXS_SHOTS;
+  if (!dir || !page) return;
+  mkdirSync(dir, { recursive: true });
+  await page.screenshot({ path: join(dir, `${driver.longId}-${plan.name}-${k}.png`) }).catch(() => {});
+}
+
 async function runPlan(w: Worker, plan: Plan): Promise<Outcome> {
   const { page } = w;
   const t0 = Date.now();
@@ -1276,6 +1297,7 @@ async function runPlan(w: Worker, plan: Plan): Promise<Outcome> {
       // nothing, not as whatever an earlier test (another app's, in the browser) left there
       await w.actor.clipboard.write(plan.clipboard ?? { 'text/plain': '' });
     }
+    await shot(page, plan, 0);
     const undoes = plan.steps.some((s) => s.actions.some(isUndo));
     const playStart = keyTrace && page ? await page.evaluate(() => (window as unknown as { __ourusIdle: { trace(s: number): { now: number } } }).__ourusIdle.trace(1e12).now).catch(() => 0) : 0;
     for (const [i, step] of plan.steps.entries()) {
@@ -1317,6 +1339,7 @@ async function runPlan(w: Worker, plan: Plan): Promise<Outcome> {
         }
       }
       got.push(doc);
+      await shot(page, plan, i + 1);
       clipboards.push(step.clipboard !== undefined ? await w.actor.clipboard.read() : null);
       if (i === lastClip) release();
     }
@@ -1350,6 +1373,12 @@ function judge(plan: Plan, got: readonly (Doc | null)[], clipboards: readonly (s
     // (QuoteText8: Enter leaving the list, an empty block already, makes another in the app)
     if (step.lost && v !== 'agree' && v !== 'caret') {
       if (!judged) return { verdict: 'agree', step: i, skip: `${LOST} ${step.actions.join(' ')}` };
+      break;
+    }
+    // the same for a step ourus refuses as Markdown can't hold it, where the app, whose blocks can,
+    // changed something (Indent37: Tab on `- ---`, which as a child would read as a rule)
+    if (step.refused && v === 'disagree') {
+      if (!judged) return { verdict: 'agree', step: i, skip: `${REFUSED} ${step.actions.join(' ')}` };
       break;
     }
     if (step.want || step.clipboard !== undefined) judged = true;
@@ -1448,7 +1477,10 @@ function regenerate(): string | undefined {
     const found = tries.find((t) => typeof t.outcome !== 'string');
     // (one its last run skipped as it played, `NO_FOCUS`, and has no play of: skipped still)
     const skippedPlaying = !found && previous!.skippedPlaying.find((s) => names.includes(s.name) && skippedAsPlayed(s.reason));
-    if (found) results.push({ plan, names, outcome: found.outcome as Outcome, ...(found.e.flaky && { flaky: found.e.flaky }) });
+    // (judged now as skipped as it played: `LOST`, `REFUSED`, with the reason)
+    const why = found && (found.outcome as Outcome).skip;
+    if (why) skipped.set(why, [...(skipped.get(why) ?? []), ...names]);
+    else if (found) results.push({ plan, names, outcome: found.outcome as Outcome, ...(found.e.flaky && { flaky: found.e.flaky }) });
     else if (skippedPlaying) skipped.set(skippedPlaying.reason, [...(skipped.get(skippedPlaying.reason) ?? []), ...names]);
     else {
       const why = (tries[0]?.outcome as string | undefined) ?? 'new, or its start changed since';
@@ -1687,17 +1719,28 @@ async function playAll(): Promise<string | undefined> {
       if (outcome.verdict === 'error') w.dirty ??= outcome.error ?? 'an error';
       // a promise of the app's that never settles is collected instead of waited on (V8's inspector holds
       // an evaluation's promise weakly), or the app reloaded its page under the example (RemNote, after a
-      // write it takes for a database error): rare, and nothing of the example's, so it runs once more
-      if (outcome.verdict === 'error' && /Resulting promise was garbage collected|Execution context was destroyed/.test(outcome.error ?? '')) {
+      // write it takes for a database error): rare, and nothing of the example's, so it runs once more.
+      // So does any other error but the page gone (below): a test page that didn't render, a menu that
+      // didn't come, each only in full runs (Logseq DB's Regression328, BlockNote's MoveSubtree5, 2026-11-18)
+      const gone = /Target crashed|Target page, context or browser has been closed|Browser has been closed|no clipboard: its window is gone|^Emacs is gone/;
+      if (outcome.verdict === 'error' && !gone.test(outcome.error ?? '')) {
         say(`again      ${names.join(' = ')}: ${outcome.error}`);
         outcome = await runPlan(w, plan);
       }
       // the app's page is gone (it crashed; the machine ran out of processes): every example after would
       // be an error of no app's doing, and the report one to copy over the last; the run stops, writing
       // nothing
-      if (outcome.verdict === 'error' && /Target crashed|Target page, context or browser has been closed|Browser has been closed|no clipboard: its window is gone|^Emacs is gone/.test(outcome.error ?? '')) {
+      if (outcome.verdict === 'error' && gone.test(outcome.error ?? '')) {
         console.error(`${driver.displayName}'s page is gone at ${names.join(' = ')} (${outcome.error}): stopped, with no report and no run data written`);
         process.exit(1);
+      }
+      // an error twice in the same window: once more at the end of the queue, the other workers done or
+      // near it (BlockNote's drag menu doesn't come under four windows' moves, only there: MoveSubtree5)
+      if (outcome.verdict === 'error' && !again.has(i)) {
+        say(`later      ${names.join(' = ')}: ${outcome.error}`);
+        again.add(i);
+        order.push(i);
+        continue;
       }
       let flaky: string | undefined;
       for (let k = 1; k < repeat && !flaky; k++) {
@@ -1991,13 +2034,20 @@ function report(): string {
               '',
             ]
           : [];
+        // after a step whose copy differs: the app's clipboard beside ourus's (the buffers may be the same)
+        const copied = (i: number): string[] => {
+          const step = plan.steps[i]!;
+          const app = outcome.clipboards[i];
+          if (step.clipboard === undefined || app === undefined || (app !== null && (app === step.clipboard || sameMarkdown(app, step.clipboard, flavorOf(plan))))) return [];
+          return [...sideBySide([{ head: `${driver.longId}'s clipboard`, body: app ?? '', kind: 'clipboard' }, { head: "ourus's clipboard", body: step.clipboard, kind: 'clipboard' }]), ''];
+        };
         // one step: the clipboard, its command, then the start, the app's outcome and ourus's side by side
         const [only] = plan.steps;
         const once = outcome.got[0];
         if (plan.steps.length === 1 && outcome.verdict !== 'error' && only!.want && once) {
           out.push(...clipboard, actionsLine(only!.actions), '');
           if (notesLine) out.push(notesLine, '');
-          out.push(...sideBySide([{ head: 'buffer', body: drawDoc(plan.initial) }, { head: driver.longId, body: drawDoc(once) }, { head: 'ourus', body: drawDoc(only!.want) }]), '');
+          out.push(...sideBySide([{ head: 'buffer', body: drawDoc(plan.initial) }, { head: driver.longId, body: drawDoc(once) }, { head: 'ourus', body: drawDoc(only!.want) }]), '', ...copied(0));
         } else {
           // more steps: the clipboard and the start, then each step's command and the app's outcome,
           // beside ourus's where they differ; a buffer the two agree on stands alone
@@ -2013,6 +2063,7 @@ function report(): string {
             const got = outcome.got[i];
             if (step.want && got && compareDocs(step.want, got, step.sections, flavorOf(plan)) !== 'agree') out.push(...sideBySide([{ head: driver.longId, body: drawDoc(got) }, { head: 'ourus', body: drawDoc(step.want) }]), '');
             else if (got) out.push(...sideBySide([{ head: 'buffer', body: drawDoc(got) }]), '');
+            out.push(...copied(i));
           });
         }
         // an adapted example: last, the spec's buffers as written, the start and after each step

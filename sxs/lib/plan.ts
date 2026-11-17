@@ -6,7 +6,8 @@
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { OurusConfig } from '../../src/config.ts';
-import { drawDoc, drawsCaret, readText, withoutAuto, withoutCaret, isDropAction, playActions, type PlayedState, drawnSteps, normalizeDrawing, readClipboard, rowView, specTestStart, specTestViewMarks, type RowView, readSpec, specSlug, specConfig, type Clipboard, type SpecTest } from '../../test/lib/index.ts';
+import { OurusDeferred } from '../../src/commands/index.ts';
+import { drawDoc, drawsCaret, readText, withoutAuto, withoutCaret, isDropAction, playActions, type PlayedState, drawnSteps, normalizeDrawing, readClipboard, rowView, specTestStart, specTestViewMarks, type RowView, readSpec, specSlug, specConfig, caseTags, type Clipboard, type SpecTest } from '../../test/lib/index.ts';
 import type { Doc, Driver, Drop } from './driver.ts';
 import { inBlocks, resolveDrop } from './drag.ts';
 import { draw, project, sameOutline, Unsupported, type Outline } from './block.ts';
@@ -39,6 +40,12 @@ export interface PlanStep {
    * answers nothing, and what follows plays from another state (`judge` in run.ts).
    */
   readonly lost?: true;
+  /**
+   * Ourus refuses the step as Markdown can't hold what it would make (`rejected not-expressible`), on
+   * the Markdown the app's blocks stand for: where the app, whose blocks hold it, changed something,
+   * there is nothing to compare, and the steps after play from another state (`judge` in run.ts).
+   */
+  readonly refused?: true;
 }
 
 export interface Plan {
@@ -90,10 +97,12 @@ export function adapt(driver: Driver, drawn: SpecTest, opts: AdaptOptions = {}):
   // (the case's drawings as an app shows them: no auto marks, which ourus's replays start without too)
   const test = withoutAutoMarks(drawn);
   const name = test.name;
+  // (ourus's replays, with what the host does where ourus leaves a key to it as a block app does it)
+  const host = { blocks: driver.model === 'block' };
   const skip = (why: string): Adapted => ({ skip: why });
   // a `free-form` case, projected onto blocks, tests something else or nothing: no block app runs it
   // but one that tells a free block from an item (`Driver.freeForm`)
-  const tag = test.tags.find((t) => (driver.model === 'block' && !driver.freeForm && t === 'free-form') || driver.refuses?.includes(t));
+  const tag = caseTags(test).find((t) => (driver.model === 'block' && !driver.freeForm && t === 'free-form') || driver.refuses?.includes(t));
   if (tag) return skip(`tag ${tag}`);
   // folds or a zoom, at the start or after a step: only where the app has them
   // and the driver loads and reads them (`Driver.folds`, `Driver.zooms`), never played without them
@@ -131,21 +140,30 @@ export function adapt(driver: Driver, drawn: SpecTest, opts: AdaptOptions = {}):
   let played: (readonly string[])[] = test.steps.map((s) => s.actions);
   const copies = test.steps.some((s) => s.actions[0] === 'copy' || s.actions[0] === 'cut');
   if (copies && theirs.some(([k, v]) => k === 'copyAtCaret' && v === 'host') && playable(driver, 'selectSubtree')) {
-    const before = [test.initial.buffer, ...drawnSteps(test, flavor).map((s) => s.buffer)];
+    const before = [test.initial.buffer, ...drawnSteps(test, flavor, {}, host).map((s) => s.buffer)];
     played = test.steps.map((s, i) => ((s.actions[0] === 'copy' || s.actions[0] === 'cut') && !/«|⟦selected⟧/.test(before[i]!) ? ['selectSubtree', ...s.actions] : s.actions));
     if (played.some((a, i) => a !== test.steps[i]!.actions)) theirs = theirs.filter(([k]) => k !== 'copyAtCaret');
+  }
+  // a key ourus leaves to the host as the caret is in markup the host shows as text: what the runner
+  // plays for it is a text editor's key on the Markdown, which a block app doesn't edit, so whatever
+  // it does there is its own to do, nothing to judge
+  if (driver.model === 'block') {
+    const deferred = inMarkupDeferral(test, flavor, Object.fromEntries(theirs) as Partial<OurusConfig>);
+    if (deferred) return skip(`${deferred}: ourus leaves it to the app, the caret in markup`);
   }
   // each step's buffer, and where the step checks one, its clipboard's text: what an option can change
   let replayed: (string | undefined)[] | null = null;
   let replayedClipboards: (string | undefined)[] | null = null;
+  // (and what each step was refused for, as replayed)
+  let replayedRefusals: (string | undefined)[] | null = null;
   const under: string[] = [];
   if (theirs.length) {
-    const outcome = (config?: Partial<OurusConfig>): string => JSON.stringify(drawnSteps(test, flavor, config).map((s, i) => [s.buffer, test.steps[i]!.expect.clipboard ? (s.clipboard ?? null) : null]));
+    const outcome = (config?: Partial<OurusConfig>): string => JSON.stringify(drawnSteps(test, flavor, config, host).map((s, i) => [s.buffer, test.steps[i]!.expect.clipboard ? (s.clipboard ?? null) : null]));
     const ours = outcome();
     const values = Object.fromEntries(theirs) as Partial<OurusConfig>;
-    let theirsPlayed: { buffer: string; clipboard?: string }[];
+    let theirsPlayed: { buffer: string; clipboard?: string; refused?: string }[];
     try {
-      theirsPlayed = drawnSteps(test, flavor, values);
+      theirsPlayed = drawnSteps(test, flavor, values, host);
     } catch {
       return skip(`option ${theirs[0]![0]}: the app's ${theirs[0]![1]}, not replayable`);
     }
@@ -155,6 +173,7 @@ export function adapt(driver: Driver, drawn: SpecTest, opts: AdaptOptions = {}):
       replayed = test.steps.map((step, i) => (step.expect.buffer === undefined ? undefined : theirsPlayed[i]!.buffer));
       // a clipboard ourus doesn't write under them (the host's copy, at a caret) has nothing to compare
       replayedClipboards = test.steps.map((step, i) => (step.expect.clipboard === undefined ? undefined : theirsPlayed[i]!.clipboard));
+      replayedRefusals = theirsPlayed.map((s) => s.refused);
     }
   }
   /** The clipboard's text a step checks: as drawn, or as ourus replays it under the app's values. */
@@ -172,10 +191,13 @@ export function adapt(driver: Driver, drawn: SpecTest, opts: AdaptOptions = {}):
   // a case with a view: its start's and each step's, as ourus plays it (under the app's values where
   // those change the case), every step's checked, one that draws no buffer on ourus's without its caret
   let views: Views | null = null;
-  if (marked.folded || marked.zoom) {
+  // (and a case whose steps fold or zoom, its start drawing none: loaded with its view, nothing folded,
+  // so the app's is read back after each step, a fold the case doesn't make a difference: Fold11)
+  const viewing = test.steps.some((s) => s.actions.some((a) => /^(?:fold|unfold|toggleFold|zoomIn|zoomOut|clearZoom)$/.test(a)));
+  if (marked.folded || marked.zoom || viewing) {
     const values = (replayed ? Object.fromEntries(theirs) : {}) as Partial<OurusConfig>;
     try {
-      views = { start: rowView(specTestStart(test, flavor, values).view), steps: drawnSteps(test, flavor, values) };
+      views = { start: rowView(specTestStart(test, flavor, values).view), steps: drawnSteps(test, flavor, values, host) };
     } catch {
       return skip('its view, not replayable');
     }
@@ -195,7 +217,7 @@ export function adapt(driver: Driver, drawn: SpecTest, opts: AdaptOptions = {}):
   try {
     const config = specConfig(test.options);
     // what the app's blocks hold, as the projection reads it
-    const shape = { ordered: driver.ordered, headings: driver.headings, freeForm: driver.freeForm, paragraphsInBlock: driver.paragraphsInBlock, quotes: driver.behaves?.quotes, listParent: driver.behaves?.listParent, blockSelection: driver.selectsBlocks };
+    const shape = { ordered: driver.ordered, headingBlocks: driver.headingBlocks, freeForm: driver.freeForm, paragraphsInBlock: driver.paragraphsInBlock, quotes: driver.behaves?.quotes, listParent: driver.behaves?.listParent, blockSelection: driver.selectsBlocks };
     const start = project(test.initial.buffer, flavor, { ...shape, config });
     if (start.caretLost) return skip(start.caretLost);
     const over = escapeMotion(test, flavor, config, (buffer) => project(buffer, flavor, { ...shape, config }).outline.sel);
@@ -222,11 +244,14 @@ export function adapt(driver: Driver, drawn: SpecTest, opts: AdaptOptions = {}):
       drop = blocks;
     }
     start.notes.forEach((n) => notes.add(n));
+    // the start the steps' buffers follow: the case's, or the items ourus is replayed on (`as blocks`)
+    let startDrawn = test.initial.buffer;
     // an adapted start is another document than the example's (`Notes⏎⏎more`, a paragraph each, is
     // `- Notes⏎- more` to the app): where its blocks drawn as items read back as the same blocks, the
-    // same headings owning sections, the app is judged against ourus on those items, under its values
-    // (`as blocks`), not against the example's drawings; not on an empty document, an app's empty page
-    // being one, its empty block no item. Else (a heading's section, a thematic break, a link reference
+    // app is judged against ourus on those items, under its values (`as blocks`), not against the
+    // example's drawings; a heading's section too, its blocks the heading item's children, but where
+    // the app's headings own what follows them (`Driver.sectionHeadings`); not on an empty document, an
+    // app's empty page being one, its empty block no item. Else (a thematic break, a link reference
     // definition, which items don't spell) the drawings, projected
     if (start.notes.size && !driver.freeForm && !start.notes.has('empty document')) {
       // (a view's labels name the drawn start's nodes, not the items')
@@ -234,10 +259,14 @@ export function adapt(driver: Driver, drawn: SpecTest, opts: AdaptOptions = {}):
       const items = draw(start.outline, { ordered: driver.ordered });
       // (a subtree selection the items can't draw, its roots not theirs: the drawings, projected)
       const back = projectable(() => project(items, flavor, { ...shape, config }));
-      if (back && sameOutline(back.outline, start.outline) && String(back.sections) === String(start.sections)) {
+      if (back && sameOutline(back.outline, start.outline) && (!driver.sectionHeadings || String(back.sections) === String(start.sections))) {
         try {
-          const onItems = drawnSteps({ ...test, initial: { ...test.initial, buffer: items } }, flavor, Object.fromEntries(theirs) as Partial<OurusConfig>);
+          const onItems = drawnSteps({ ...test, initial: { ...test.initial, buffer: items } }, flavor, Object.fromEntries(theirs) as Partial<OurusConfig>, host);
           replayed = test.steps.map((step, i) => (step.expect.buffer === undefined ? undefined : onItems[i]!.buffer));
+          // (and the clipboard a step checks, as copied from the items)
+          replayedClipboards = test.steps.map((step, i) => (step.expect.clipboard === undefined ? undefined : onItems[i]!.clipboard));
+          replayedRefusals = onItems.map((s) => s.refused);
+          startDrawn = items;
           notes.add('as blocks');
         } catch {
           // (not replayable on items: the drawings, projected)
@@ -245,7 +274,7 @@ export function adapt(driver: Driver, drawn: SpecTest, opts: AdaptOptions = {}):
       }
     }
     const steps: PlanStep[] = [];
-    let prev: { outline: Outline; drawn: string } | null = { outline: start.outline, drawn: test.initial.buffer };
+    let prev: { outline: Outline; drawn: string } | null = { outline: start.outline, drawn: startDrawn };
     let meaningful = false;
     const lostSteps = new Set<number>();
     for (const [i, s] of test.steps.entries()) {
@@ -268,12 +297,16 @@ export function adapt(driver: Driver, drawn: SpecTest, opts: AdaptOptions = {}):
         p.outline.view = view;
       }
       p.notes.forEach((n) => notes.add(n));
+      // as the app shows it, where it shows it otherwise (`Driver.shows`: Logseq numbers a run from 1)
+      const want = driver.shows?.(p.outline) ?? p.outline;
+      if (want !== p.outline) notes.add('numbered as the app numbers');
       // a step whose buffer changed only in what blocks can't show (blank lines, markers) tests nothing here
-      const lost = prev && prev.drawn !== buffer && sameOutline(prev.outline, p.outline) && !p.caretLost;
+      const lost = prev && prev.drawn !== buffer && sameOutline(prev.outline, want) && !p.caretLost;
       if (!lost || clipboard !== undefined) meaningful = true;
-      steps.push({ line: s.line, actions: played[i]!, want: p.outline, drawn: buffer, ...(p.caretLost && { caretLost: p.caretLost }), ...(p.sections.length && { sections: p.sections }), ...(clipboard !== undefined && { clipboard }) });
+      const refusal = replayedRefusals ? replayedRefusals[i] : /^rejected (\S+)$/.exec(s.expect.result ?? '')?.[1];
+      steps.push({ line: s.line, actions: played[i]!, want, drawn: buffer, ...(p.caretLost && { caretLost: p.caretLost }), ...(p.sections.length && { sections: p.sections }), ...(clipboard !== undefined && { clipboard }), ...(refusal === 'not-expressible' && { refused: true as const }) });
       if (lost && clipboard === undefined) lostSteps.add(steps.length - 1);
-      prev = { outline: p.outline, drawn: buffer };
+      prev = { outline: want, drawn: buffer };
     }
     if (!steps.some((s) => s.want || s.clipboard !== undefined)) return skip('nothing to compare');
     if (!meaningful) return skip('changes only what blocks can\'t show');
@@ -289,7 +322,7 @@ export function adapt(driver: Driver, drawn: SpecTest, opts: AdaptOptions = {}):
       const asBlocks: SpecTest = { ...test, initial: { ...test.initial, buffer: draw(start.outline, { ordered: driver.ordered }) } };
       const played = (config?: Partial<OurusConfig>): string | null => {
         try {
-          return JSON.stringify(drawnSteps(asBlocks, flavor, config));
+          return JSON.stringify(drawnSteps(asBlocks, flavor, config, host));
         } catch {
           return null;
         }
@@ -298,7 +331,7 @@ export function adapt(driver: Driver, drawn: SpecTest, opts: AdaptOptions = {}):
       const by = ours === null ? undefined : theirs.find(([k, v]) => played({ [k]: v }) !== ours);
       if (by) return skip(`option ${by[0]}: the app's ${by[1]}, as blocks`);
     }
-    const key = JSON.stringify([start.outline, clipboard, steps.map((s) => [s.actions, s.want, s.clipboard]), settings, ...(drop ? [drop] : [])]);
+    const key = JSON.stringify([start.outline, clipboard, steps.map((s) => [s.actions, s.want, s.clipboard, s.refused]), settings, ...(drop ? [drop] : [])]);
     return { plan: { test, name, initial: start.outline, clipboard, steps, notes: [...notes].sort(), settings, key, ...(drop && { drop }) } };
   } catch (e) {
     if (e instanceof Unsupported) return skip(e.message);
@@ -419,4 +452,19 @@ function projectable<T>(f: () => T): T | null {
   } catch {
     return null;
   }
+}
+
+/** The first action of `test` that ourus, under `config`, leaves to the host as the caret is in markup (`in-markup`); null where none does. */
+function inMarkupDeferral(test: SpecTest, flavor: OurusConfig['flavor'], config: Partial<OurusConfig>): string | null {
+  let state: PlayedState;
+  try {
+    state = specTestStart(test, flavor, config);
+    for (const action of test.steps.flatMap((s) => s.actions)) {
+      state = playActions(state, [action]);
+      if (state.last instanceof OurusDeferred && state.last.reason === 'in-markup') return action;
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }

@@ -60,10 +60,10 @@ export interface ProjectOptions {
    */
   readonly ordered?: boolean;
   /**
-   * A block starting `# ` is a heading in the app (`Driver.headings`): a `#` that is text, starting a
+   * A block starting `# ` is a heading in the app (`Driver.headingBlocks`): a `#` that is text, starting a
    * block, keeps its escape (`\# x`), as a number does where blocks are numbered.
    */
-  readonly headings?: boolean;
+  readonly headingBlocks?: boolean;
   /**
    * The app tells a block outside every list from an item (`Driver.freeForm`): a paragraph, a heading
    * or an atom is a free block (`Block.free`), no adaptation, and so is a blank line next to one (the
@@ -219,9 +219,11 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
     // (under `atom` a callout is one too, its `[!type]` the block's text, as an outliner holds it)
     const quote = atom ? (node.kind === 'quote' ? node : null) : quoted(doc, node);
     const bare = (n: OurusNode): boolean => !n.children.length || (atom ? n.kind === 'quote' : !!quoted(doc, n));
-    const into = options.paragraphsInBlock && (node.kind === 'paragraph' || !!quote) && parent?.kind === 'item' && blockOf.has(parent.id) && (!prev || (merged.has(prev.id) && bare(prev)));
+    // (after a block in the item's block: merged into it, or its first block on its marker's line, `- > q`)
+    const inItsBlock = (n: OurusNode): boolean => merged.has(n.id) || (blockOf.has(n.id) && blockOf.get(n.id) === blockOf.get(parent!.id));
+    const into = options.paragraphsInBlock && (node.kind === 'paragraph' || !!quote) && parent?.kind === 'item' && blockOf.has(parent.id) && (!prev || (inItsBlock(prev) && bare(prev)));
     const own = new Set<string>();
-    let { text, lines } = quote && atom ? asWritten(doc, node) : blockText(doc, quote ?? node, own, options.ordered ?? false, options.freeForm ?? false, options.headings ?? false);
+    let { text, lines } = quote && atom ? asWritten(doc, node) : blockText(doc, quote ?? node, own, options.ordered ?? false, options.freeForm ?? false, options.headingBlocks ?? false);
     // (an item whose first block is a quote the app holds as its text, `- > a⏎  > - b`: no list there)
     const first = node.children[0];
     if (atom && node.kind === 'item' && first?.kind === 'quote' && first.startLine === node.startLine) own.delete("list as an item's first block");
@@ -330,7 +332,9 @@ export function project(drawn: string, flavor: OurusConfig['flavor'], options: P
   // selected whole (a selection drawn `«…»`, whole lines or not, is the text drawn)
   if (options.blockSelection && drawing.subtrees) {
     const whole = view.touchedSubtrees({ anchor, head });
-    const selected = [...new Set(whole.flatMap((n) => (blockOf.has(n.id) ? [blockOf.get(n.id)!] : [])))].sort((x, y) => x - y);
+    // (a node no block is, read otherwise than the blocks are, `quotes: atom`'s quote holding it: the block it is in)
+    const blockIn = (n: (typeof whole)[number] | null): number[] => (!n ? [] : blockOf.has(n.id) ? [blockOf.get(n.id)!] : blockIn(n.parent));
+    const selected = [...new Set(whole.flatMap(blockIn))].sort((x, y) => x - y);
     if (gapped(selected)) return { outline: { blocks, sel: null }, notes, caretLost: 'a selection of blocks with one unselected between', sections, rows };
     return { outline: { blocks, sel: null, selected }, notes, sections, rows };
   }
@@ -378,7 +382,9 @@ function asWritten(doc: OurusDoc, node: OurusNode): { text: string; lines: LineM
   let at = 0;
   for (let l = node.startLine; l <= node.endLine; l++) {
     const line = doc.mdTree.line(l);
-    const from = line.prefix.find((p) => p.container.block === node.block)?.from ?? line.contentFrom;
+    let from = line.prefix.find((p) => p.container.block === node.block)?.from ?? line.contentFrom;
+    // (from its `>`: the spaces before it are its column, padding no block's text has)
+    while (from < line.to && (doc.text[from] === ' ' || doc.text[from] === '\t')) from++;
     lines.push({ line: l, from, to: line.to, at });
     parts.push(doc.text.slice(from, line.to));
     at += line.to - from + 1;
@@ -882,7 +888,16 @@ export function lazyQuotes(o: Outline): Outline {
 export function compareOutlines(want: Outline, got: Outline, sections: readonly number[] = []): Verdict {
   // a code block's closing fence at a block's end is the block's own end; a quote's later lines lazy
   const ended = (o: Outline): Outline => lazyQuotes({ ...o, blocks: o.blocks.map((b) => ({ ...b, text: endFenceOptional(b.text) })) });
-  [want, got] = [sectioned(ended(want), sections), sectioned(ended(got), sections)];
+  // (a page with no blocks is an empty document, as one empty block with the caret is: the app's
+  // empty page, Quote82)
+  const empty = (o: Outline): Outline => (o.blocks.length ? o : { ...o, blocks: [{ depth: 0, text: '' }], sel: { block: 0, anchor: 0, head: 0 } });
+  [want, got] = [empty(want), empty(got)];
+  // (`sections` are `want`'s blocks: in `got`, its headings in the same order, a block more or fewer
+  // before them, an empty paragraph the app keeps, not shifting which own sections)
+  const headings = (o: Outline): number[] => o.blocks.flatMap((b, i) => (/^#{1,6}(?: |$)/.test(b.text) ? [i] : []));
+  const [wantHeadings, gotHeadings] = [headings(want), headings(got)];
+  const gotSections = wantHeadings.length === gotHeadings.length ? sections.flatMap((i) => (wantHeadings.includes(i) ? [gotHeadings[wantHeadings.indexOf(i)]!] : [])) : sections;
+  [want, got] = [sectioned(ended(want), sections), sectioned(ended(got), gotSections)];
   const same = want.blocks.length === got.blocks.length && want.blocks.every((b, i) => b.depth === got.blocks[i]!.depth && !b.free === !got.blocks[i]!.free && sameText(b.text, got.blocks[i]!.text));
   if (!same) {
     // (an empty free block is an empty paragraph, which Markdown has only as blank lines: Placeholder3;
@@ -909,8 +924,14 @@ export function compareOutlines(want: Outline, got: Outline, sections: readonly 
     return { ...sel, anchor: sel.anchor - escapesBefore(sel.anchor), head: sel.head - escapesBefore(sel.head) };
   };
   if (want.sel && (JSON.stringify(plainSel(want)) !== JSON.stringify(plainSel(got)) || got.selected?.length)) return 'caret';
-  // blocks selected whole, as a caret: other blocks, or a caret instead
-  if (want.selected?.length && (JSON.stringify(want.selected) !== JSON.stringify(got.selected ?? []) || got.sel)) return 'caret';
+  // blocks selected whole, as a caret: other blocks, or a caret instead (a block selected with what it
+  // holds, its subtree's blocks selected or not: the roots of a flat run, `headings: block`, sectioned)
+  const withSubtrees = (o: Outline): string => {
+    const all = new Set<number>();
+    for (const i of o.selected ?? []) for (let j = i; j < o.blocks.length && (j === i || o.blocks[j]!.depth > o.blocks[i]!.depth); j++) all.add(j);
+    return JSON.stringify([...all].sort((x, y) => x - y));
+  };
+  if (want.selected?.length && (withSubtrees(want) !== withSubtrees(got) || got.sel)) return 'caret';
   return 'agree';
 }
 

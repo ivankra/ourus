@@ -179,7 +179,7 @@ text, would continue it, and a blank line keeps it a paragraph of its own. Movin
 does the same ([MoveDown34](move-subtree-down.md#movedown34)).
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -329,7 +329,7 @@ default, as a paragraph does: the list is its sibling, and deleting the block le
 `listParent: block` it would be the block's children and go with it.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -351,7 +351,7 @@ A heading right under code goes: the caret stays where it was, on an empty line 
 at the end of the code's last line, so what is typed next is a paragraph, not code.
 
 ```yaml
-tags: common markup-fence
+tags: common
 ```
 
 ````markdown
@@ -378,7 +378,7 @@ An item right under an item ending in code goes: an empty item stays in its plac
 it, where what is typed is the item's text.
 
 ```yaml
-tags: common markup-fence
+tags: common
 ```
 
 ````markdown

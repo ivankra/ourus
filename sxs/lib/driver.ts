@@ -92,9 +92,9 @@ export interface Driver {
   /** Actions `act` plays, besides those with keys. */
   readonly emulated?: readonly string[];
   /**
-   * What a projection adapted (`block.ts` notes) that the app can't hold, and the spec's `markup-`
-   * tags at markup the app holds as text or as an attribute, where it has no boundary to compare:
-   * tests needing either are skipped.
+   * What a projection adapted (`block.ts` notes) that the app can't hold, and the `markup-` tags
+   * (computed from what a case does: `test/lib/markup-tags.ts`) at markup the app holds as text or as
+   * an attribute, where it has no boundary to compare: tests needing either are skipped.
    */
   readonly refuses?: readonly string[];
   /**
@@ -104,8 +104,9 @@ export interface Driver {
    */
   readonly blockIds?: boolean;
   /**
-   * Typed text the app takes as a command of its own, its characters gone (RemNote's `$$`, its math
-   * editor): a test typing it is skipped, nothing to compare.
+   * Typed text the app takes as a command of its own (RemNote's `$$`, its math editor; Notion's
+   * three backticks, its code block) or completes its own way (Logseq's runs of backticks, paired):
+   * a test typing it is skipped, nothing to compare.
    */
   readonly capturesTyped?: RegExp;
   /**
@@ -117,10 +118,16 @@ export interface Driver {
   /**
    * A block starting `# ` (to `###### `) is a heading in the app, and the driver tells such a block
    * from one whose text starts with a `#` that is text: it reads the one as `# x`, the other as `\# x`,
-   * and loads each so (`ProjectOptions.headings` in block.ts). Without it, a text `#` starting a block
+   * and loads each so (`ProjectOptions.headingBlocks` in block.ts). Without it, a text `#` starting a block
    * is read as the heading's, which the app can't tell from it.
    */
-  readonly headings?: boolean;
+  readonly headingBlocks?: boolean;
+  /**
+   * A heading block takes the blocks after it as its children, as a heading owns its section in
+   * ourus's outline (Tana): a case whose start has a heading's section is judged on its drawings, not
+   * replayed on the items the app is given, where a heading is an item's text.
+   */
+  readonly sectionHeadings?: boolean;
   /**
    * The app tells a block outside every list (a paragraph, a heading) from an item, which the driver
    * loads and reads as such (`Block.free`): a block app with a form for free-form Markdown, which runs
@@ -171,6 +178,12 @@ export interface Driver {
    * skipped. Only starting states need holding; what a key makes is whatever the app makes.
    */
   holds?(doc: Doc): string | undefined;
+  /**
+   * A block app's state as it shows it, where it can't show `doc` as is (Logseq numbers each run of
+   * numbered siblings from 1, whatever it was written with): an expected state is compared as that.
+   * `doc` itself where it shows it as is.
+   */
+  shows?(doc: Outline): Outline;
   /** Overrides for settling after each key. */
   readonly idle?: Partial<IdleOptions>;
   /**

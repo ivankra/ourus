@@ -1,7 +1,7 @@
 // The document: one snapshot of a Markdown text with its placeholders, its parse, its outline and its
 // config. Immutable; `update` makes the next snapshot, reading again only what the changes reach.
 
-import { OurusConfig } from '../config.ts';
+import { OurusConfig, decorates } from '../config.ts';
 import { MdBlockAt, MdFlavor, MdTree, mdDocumentStart, type MdBlock, type MdLine } from '../parser/index.ts';
 import { ChangeSet, MarkSet, advanceColumns, atLine, docPos, localOffset, lineIndex, type DocPos, type LineIndex, type LocalOffset, diffLines, isSpaceOrTab, lineIndexAt, trimMd, type ChangeSpec, type MarkLists } from '../text/index.ts';
 import { OurusNode, type PersistentNode } from './node.ts';
@@ -60,7 +60,7 @@ export class OurusDoc {
   readonly marks: MarkSet;
   /** The parse, with the placeholders read as sentinels. */
   readonly mdTree: MdTree;
-  /** Carried for the commands; reading uses `config.flavor`, `config.quotes` and `config.listParent` only. */
+  /** Carried for the commands; reading uses `config.flavor`, `config.quotes`, `config.listParent` and `config.headings` only. */
   readonly config: OurusConfig;
   /** The outline, stored: shared with every snapshot whose nodes an edit didn't reach. */
   readonly root: PersistentNode;
@@ -123,7 +123,7 @@ export class OurusDoc {
   /**
    * The same document under other options (a host's setting changed): `config` over this one's. An
    * option that says only how commands write (`indentUnit`, `markup`, ...) changes on the same
-   * snapshot, its outline and ids shared; `quotes` and `listParent`, which change how the text reads,
+   * snapshot, its outline and ids shared; `quotes`, `listParent` and `headings`, which change how the text reads,
    * have the outline read again from the same parse, ids carried as an update carries them; `flavor`,
    * which changes the parse, reads the text anew, its ids anew too.
    */
@@ -137,7 +137,7 @@ export class OurusDoc {
       // read anew, the ids anew (the lineage's still)
       return OurusDoc.#readWhole(this.marks, next, this.lineage);
     }
-    if (next.quotes === this.config.quotes && next.listParent === this.config.listParent) {
+    if (next.quotes === this.config.quotes && next.listParent === this.config.listParent && next.headings === this.config.headings) {
       const doc = new OurusDoc(this.marks, this.mdTree, next, this.root, this.lineage, this.nextId);
       // (the same outline: its indexes shared)
       doc.#rootNode = this.#rootNode;
@@ -375,9 +375,9 @@ export class OurusDoc {
     const node = this.nodeAtLine(i);
     const text = node && this.textOf(node);
     if (!node || !text) return line.contentFrom;
-    // (a block-id line its text carries: under `decorated`, where the caret stays out of it, the end
-    // of the text; else past its indentation)
-    if (i > node.textLastLine) return this.config.markup === 'decorated' ? this.posOf(node, textEnd(text), -1) : line.contentFrom + /^[ \t]*/.exec(this.text.slice(line.contentFrom, line.to))![0].length;
+    // (a block-id line its text carries: where the host draws block ids, the caret staying out of it, the
+    // end of the text; else past its indentation)
+    if (i > node.textLastLine) return decorates(this.config, 'blockId') ? this.posOf(node, textEnd(text), -1) : line.contentFrom + /^[ \t]*/.exec(this.text.slice(line.contentFrom, line.to))![0].length;
     const hidden = this.hiddenSpaces(node);
     if (hidden && this.lineAt(hidden.from).index === i) return hidden.from;
     const k = i - this.lineAt(this.posOf(node, 0)).index;

@@ -461,7 +461,7 @@ a- x
 At the end of a block that isn't text (after code's closing fence), the paste goes after it.
 
 ````yaml
-tags: common markup-fence
+tags: common
 clipboard: |-
   - x
   - y

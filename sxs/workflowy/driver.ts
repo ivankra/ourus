@@ -187,11 +187,15 @@ export const driver: Driver = {
   refuses: ['html', 'table', 'math', 'thematic break', 'link reference definition', 'comment', 'footnote'],
   ordered: true,
   // a heading is the item's layout (H1 to H3), a name starting `# ` text (`fromItem` escapes it)
-  headings: true,
+  headingBlocks: true,
   // Shift+Tab moves an item past its parent, leaving its later siblings there: logical outdenting;
   // paste opens the seam (the first pasted text joins), though not on an item with children
   // (on the paste files, 14 cases better under `open`, 3 worse)
   behaves: {
+    // a character typed over a selection (probed 2026-11-18): none, the character replaces it
+    autoWrap: [],
+    // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
+    decorations: ['bullet', 'checkbox', 'heading', 'setext', 'quote'],
     // a paste or plain paste over blocks selected whole pastes nothing (SubtreeEdit11, SubtreeEdit14, measured 2026-11-03)
     pasteOverNodes: 'nothing',
     // `[[` and `((` typed as pairs, not their singles (the autoClose probes)

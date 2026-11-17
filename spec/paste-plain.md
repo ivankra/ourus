@@ -16,9 +16,9 @@ rules, in order; the first that applies wins:
    `%%` can't grow).
 2. **A clipboard starting with a line break** has the break made as Shift-Enter makes it at the caret,
    and the rest pasted where that leaves the caret: at the start of a continuation line, a paragraph
-   break (PastePlain24). Where Shift-Enter is refused, at a paragraph's text start, the leading line
-   breaks go and the rest is pasted at the caret (PastePlain25, PastePlain26); a clipboard of line
-   breaks alone is refused there, and on an empty node (PastePlain27).
+   break (PastePlain24). At a paragraph's text start, where a paragraph can't start with an empty
+   line, the leading line breaks go and the rest is pasted at the caret (PastePlain25, PastePlain26); a
+   clipboard of line breaks alone is refused there, and on an empty node (PastePlain27).
 3. **A node that holds one line refuses several**: an ATX heading, an item's too (PastePlain21), a
    callout's title in the Obsidian flavor (PastePlain22), a table's row. A setext title takes them as a
    paragraph does, but for a blank line (PastePlain23); on its underline, which is markup, they are
@@ -37,7 +37,9 @@ rules, in order; the first that applies wins:
    below it, it would read as a link reference definition (PastePlain11, PastePlain12). Where the
    clipboard ends with a line break, the rest of the line starts a line of its own, keeping the spaces
    at the break as Shift-Enter's new line does (PastePlain13); at the end of the text, that is an empty
-   line to type on, held by a placeholder (PastePlain2).
+   line to type on, held by a placeholder (PastePlain2). With `pasteTrailingBreak: drop` (SiYuan,
+   BlockNote), a last line break after text ends what was copied: the lines before it are pasted, the
+   caret at their end (PastePlain35).
 6. **One line, or the caret outside a node's text**, is the host's paste.
 
 Those are `pastePlainLines: text`'s, the default: each line break is Shift-Enter's. With other values a
@@ -783,7 +785,7 @@ A line pasted into code that would close the block early: the block's fences gro
 join's do ([Fence36](fences.md#fence36)), so every pasted line is code.
 
 `````yaml
-tags: rare markup-fence
+tags: rare
 clipboard: |-
   x
   ```
@@ -983,3 +985,35 @@ clipboard: |-
 ```yaml
 result: deferredToHost
 ```
+
+## PastePlain35
+
+With `pasteTrailingBreak: drop`, as SiYuan and BlockNote paste, the line break a copied line ends with
+(here ourus's own copy of a line) is no line: the text pasted is the line, the caret at its end. Logseq, Logseq DB, Roam, Athens, Tine
+and Notion leave an empty line in the block, as ourus's default does (PastePlain2); the text editors
+an empty line after the item, the list made loose.
+
+```yaml
+tags: rare
+pasteTrailingBreak: drop
+clipboard:
+  text/plain: |
+    x
+  text/markdown: |
+    x
+  text/html: |
+    <!-- ourus --><p>x</p>
+```
+
+```markdown
+- a┃
+- b
+```
+
+> pastePlain
+
+```markdown
+- ax┃
+- b
+```
+

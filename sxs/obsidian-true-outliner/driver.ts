@@ -38,6 +38,8 @@ export const driver = obsidianDriver({
   // task joined into the node above; paste, as measured, makes a
   // paragraph's list its children and keeps a list's form
   behaves: {
+    // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
+    decorations: ['bullet', 'number', 'table'],
     // indent and outdent over roots at two depths: each run as alone, all or nothing
     mixedDepths: 'each',
     enterOnEmptyItem: undefined,

@@ -588,6 +588,14 @@ export const driver: Driver = {
   // structured paste in the middle of a block's text goes after it; a typed fence is left open
   // (Backtick2, Backtick12, Backtick15)
   behaves: {
+    // a character typed over a selection (probed 2026-11-18): none, the character replaces it
+    autoWrap: [],
+    // a copy at a caret alone: the block's text, without its children (Copy4, Copy9)
+    copyAtCaret: 'text',
+    // a heading is a block like any, owning nothing: it moves alone, and Tab and Shift-Tab leave it (MoveUp3, Indent12)
+    headings: 'block',
+    // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
+    decorations: ['bullet', 'number', 'checkbox', 'heading', 'setext', 'quote', 'callout', 'fence', 'math', 'rule', 'footnote'],
     // indent and outdent over roots at two depths
     mixedDepths: 'refuse',
     // Shift-Up takes the sibling above with its subtree
@@ -609,6 +617,8 @@ export const driver: Driver = {
     pasteAtTextStart: 'before',
     pasteOnParent: 'after',
     pasteParagraphList: 'children',
+    // (a plain paste's last line break drops: `x⏎` at `- a┃` gives `- ax┃`)
+    pasteTrailingBreak: 'drop',
   },
   // a block folded (SiYuan's `fold`, set by its own Ctrl+Up and read from the DOM, where a folded
   // block's children stay); no zoom: zoomed, the editor holds only the subtree, which `read` reads
@@ -649,7 +659,7 @@ export const driver: Driver = {
   refuses: [],
   ordered: true,
   // a heading is a block of its own, read and written as Markdown (Lute escapes a text `#`: `\# x`)
-  headings: true,
+  headingBlocks: true,
   holds: (doc) => holds(doc as Outline),
   idle: {
     // edits go to the kernel (a transaction), undo and redo come back from it: a request owed is work

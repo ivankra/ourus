@@ -10,7 +10,7 @@ import { deleteSelectionAcross } from './backspace.ts';
 import { codeAt, newlineInCode } from './code.ts';
 import { enterCommand } from './enter.ts';
 import { unfoldedForCaret } from './view.ts';
-import { hiddenSpacesAt, inMarkup, pastPrefix, textActedOnAt } from './util.ts';
+import { canOpenLineAbove, hiddenSpacesAt, inMarkup, openLineAbove, pastPrefix, textActedOnAt, drawnAt } from './util.ts';
 import type { OurusResult } from './types.ts';
 import { OurusDeferred, OurusRejected } from './types.ts';
 
@@ -46,8 +46,8 @@ export function shiftEnterCommand(ctx: CommandContext): OurusResult | null {
     if (hidden.node.kind === 'item') return lineBreakAtTextStart(ctx, hidden.node, hidden.text, ' '.repeat(hidden.to - hidden.from));
   }
   if (ctx.collapsed && inMarkup(ctx.doc, from, ctx.selection.head)) {
-    // where markup is text the user edits, a line break in it is the host's
-    if (config.markup === 'text') return new OurusDeferred('in-markup', 'the caret is in markup');
+    // where the host shows that markup as text the user edits, a line break in it is the host's
+    if (!drawnAt(ctx.doc, from)) return new OurusDeferred('in-markup', 'the caret is in markup');
     // else in an item's marker or a task's checkbox it acts at the text's start
     const at = (from.zone === 'marker' || (from.zone === 'frame' && from.part === 'task')) && textActedOnAt(ctx, ctx.selection.head);
     if (at) from = to = { zone: 'text', node: at.node, text: at.text, offset: at.offset };
@@ -64,6 +64,11 @@ export function shiftEnterCommand(ctx: CommandContext): OurusResult | null {
   }
   if (from.zone === 'frame' && from.part === 'callout') return new OurusRejected('not-expressible', "a line break would split the callout's type");
   if (from.zone === 'frame' && from.part === 'underline') return new OurusRejected('not-expressible', 'a line break would cut the setext underline');
+  // (in an item's ATX title's closing `#`s: the break before them)
+  if (ctx.collapsed && from.zone === 'frame' && from.part === 'close' && from.node.kind === 'item' && from.text instanceof OurusProse && from.text.heading?.form === 'atx') {
+    const close = from.text.frame.find((p) => p.part === 'close')!;
+    return headingItemBreak(ctx, from.node, from.text, close.from, close.from);
+  }
   if (from.zone !== 'text' || (to.zone !== 'text' && to.zone !== 'frame') || from.node !== to.node) return null;
   const node = from.node;
   const text = from.text;
@@ -75,7 +80,7 @@ export function shiftEnterCommand(ctx: CommandContext): OurusResult | null {
   }
   if (text instanceof OurusAtom) return text.type === 'table' ? new OurusRejected('not-expressible', 'a table row is a single line') : null;
   if (node.head?.type === 'callout_title') return new OurusRejected('not-expressible', 'a callout title is a single line');
-  if (text.heading?.form === 'atx') return enterCommand(ctx, false);
+  if (text.heading?.form === 'atx') return node.kind === 'item' ? headingItemBreak(ctx, node, text, from.offset, to.offset) : enterCommand(ctx, false);
   const underline = text.frame.find((p) => p.part === 'underline');
   if (underline && to.offset > underline.from) return new OurusRejected('not-expressible', 'a line break would cut the setext underline');
   // on an empty item the line break is the host's (TO13); on any other empty node, refused
@@ -128,6 +133,22 @@ export function shiftEnterCommand(ctx: CommandContext): OurusResult | null {
   const draft = ctx.draft().setText(node, text.splice(from.offset, to.offset, brk)).setCaret(node, from.offset + brk.length, -1);
   // (at a folded node's end, the new line is read as a blank line its fold hides: the fold opens)
   return unfoldedForCaret(ctx.apply(draft), node.id);
+}
+
+/**
+ * An ATX title that is an item's text, broken at `from` (to `to`): the rest is a paragraph right under
+ * it in the item, its first block after the title, as an outliner's block holds a line after its
+ * heading's; the caret at its start, held by a placeholder where it is empty (ShiftEnter29b). The
+ * title keeps its closing `#`s, if any.
+ */
+function headingItemBreak(ctx: CommandContext, node: OurusNode, text: OurusProse, from: number, to: number): OurusResult | null {
+  // (a closing sequence stays the title's: the break at most before it)
+  const end = text.frame.find((p) => p.part === 'close')?.from ?? text.text.length;
+  const [a, b] = [Math.min(from, end), Math.min(to, end)];
+  const draft = ctx.draft();
+  const [, made] = draft.split(node, a, { to: b, children: 'stay', into: 'child', kind: 'paragraph' });
+  draft.setText(node, text.splice(a, end)).setText(made, text.slice(b, end).retyped('paragraph', false));
+  return ctx.apply(draft.gap(node, 0).setCaret(made, 0, -1));
 }
 
 /**
@@ -206,10 +227,12 @@ function breakOnBlankLine(ctx: CommandContext, owner: OurusNode): OurusResult | 
 
 /**
  * At the text's start (rule 2): an item's line breaks after its marker (a checkbox staying on it), the
- * text on the next line, which an item may start with; a callout's after its type. Refused for any
- * other text, and where the text already starts there: an item starts with one blank line at most.
+ * text on the next line, which an item may start with; a callout's after its type; a paragraph gets a
+ * blank line above it, the caret staying, as a text editor's line break there. Refused for any other
+ * text, and where the text already starts there: an item starts with one blank line at most.
  */
 function lineBreakAtTextStart(ctx: CommandContext, node: OurusNode, text: OurusProse, kept = ''): OurusResult | null {
+  if (node.kind === 'paragraph' && text.type === 'paragraph' && canOpenLineAbove(ctx, node)) return openLineAbove(ctx, node, text.textStart(0), text, text.textStart(0));
   if (!(text.type === 'title' && text.callout) && (node.kind !== 'item' || text.frame.some((p) => p.part === 'below'))) {
     return new OurusRejected('not-expressible', node.kind === 'item' ? 'an item starts with one blank line at most' : 'a line break here would leave an empty line inside the text');
   }

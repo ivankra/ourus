@@ -8,7 +8,7 @@ reads as Markdown reads it, and these cases pin what it then reads as. The rules
    continuation line makes that line an item (Typing3). Text that ourus moves or splits never does
    (escaped instead: guarantee 7).
 2. **In markup, the host types**, whatever the text then reads as: `x` typed at `-┃ a` gives
-   `-x a`, no item, as every text editor does. Where markup is decorated (`markup: decorated`),
+   `-x a`, no item, as every text editor does. Where the host draws it (in `decorations`),
    keeping the caret out of it is the host's: no ourus command leaves one there (guarantee 6), and
    Obsidian's Outliner keeps the user's out of a marker too ("stick the cursor to the content").
 3. **A backtick is ourus's where it opens, closes or changes a code fence** (`insertText`): a fence

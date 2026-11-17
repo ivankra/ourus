@@ -158,29 +158,33 @@ export function placeOf(doc: OurusDoc, to: InsertionPoint): { readonly parent: O
 /**
  * The level a heading takes at a place under `parent`, after `after`, before `next`: the heading's
  * beside it, after or else before; else one inside a heading parent; in a quote or the document, its
- * own, `level`.
+ * own, `level`; its own wherever it is where a heading owns nothing (`headings: block`).
  */
 export function headingTarget(ctx: CommandContext, parent: OurusNode, after: OurusNode | null, next: OurusNode | null, level: number): number {
+  if (ctx.config.headings === 'block') return level;
   const of = (n: OurusNode): number => headingLevel(ctx, n);
   return after?.kind === 'heading' ? of(after) : next?.kind === 'heading' ? of(next) : parent.kind === 'heading' ? of(parent) + 1 : level;
 }
 
-/** Whether a heading of `level` last at a place would take `next`, what follows it there, into its section. */
+/** Whether a heading of `level` last at a place would take `next`, what follows it there, into its section (none under `headings: block`). */
 export function takesIn(ctx: CommandContext, next: OurusNode | null, level: number): boolean {
-  return !!next && (next.kind !== 'heading' || headingLevel(ctx, next) > level);
+  return ctx.config.headings === 'section' && !!next && (next.kind !== 'heading' || headingLevel(ctx, next) > level);
 }
 
 /**
  * Why Markdown can't hold a run whose first root is a `kind` at the place under `parent`, after
- * `after`, or null: inside a node that holds none, or after a heading, for a node that isn't one (it
- * would be in its section), or right after a block that nothing closes in the same container (a fence
+ * `after`, or null: inside a node that holds none (a heading that owns nothing, `headings: block`,
+ * among them), or after a heading that owns a section, for a node that isn't one (it would be in
+ * its section), or right after a block that nothing closes in the same container (a fence
  * with no closing one: its lines would be the block's). What a pickup leaves out of its places, and a
  * drop there refuses.
  */
 export function unholdable(doc: OurusDoc, kind: OurusNode['kind'], parent: OurusNode, after: OurusNode | null): string | null {
   const block = parent.kind === 'paragraph' || parent.kind === 'atom';
   if (block && !doc.adoptsLists(parent)) return `a ${parent.kind} holds no nodes`;
-  if (after?.kind === 'heading' && kind !== 'heading') return `after a heading, a ${kind} would be in its section`;
+  // (a heading that owns nothing, `headings: block`: no node under it, any after it)
+  if (parent.kind === 'heading' && doc.config.headings === 'block') return 'a heading that owns nothing holds no node';
+  if (after?.kind === 'heading' && kind !== 'heading' && doc.config.headings === 'section') return `after a heading, a ${kind} would be in its section`;
   const above = after?.lastDescendant;
   // (an item's own fence ends with the item: what follows it is no line of it)
   if (above?.parent === parent && above.kind !== 'item' && unclosed(doc, above)) return `the ${kind} would be in the ${doc.textOf(above)!.type === 'fenced_code' ? 'code' : 'block'} above it, which nothing closes`;

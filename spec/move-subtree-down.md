@@ -152,6 +152,50 @@ text a
 text b
 ```
 
+## MoveDown4b
+
+Under `headings: block`, down past the paragraph under it: the heading alone moves
+([MoveUp3b](move-subtree-up.md#moveup3b)); up takes it back.
+
+```yaml
+tags: rare
+headings: block
+```
+
+```markdown
+# A┃
+
+text a
+
+# B
+
+text b
+```
+
+> moveSubtreeDown
+
+```markdown
+text a
+
+# A┃
+
+# B
+
+text b
+```
+
+> moveSubtreeUp
+
+```markdown
+# A┃
+
+text a
+
+# B
+
+text b
+```
+
 ## MoveDown5
 
 Paragraphs reorder among themselves.
@@ -519,7 +563,7 @@ tags: common
 A heading doesn't move past a heading of another level: below `# H`, `## H` would be in its section.
 
 ```yaml
-tags: common free-form markup-heading
+tags: common free-form
 ```
 
 ```markdown
@@ -968,7 +1012,7 @@ would continue, so a blank line sets it apart. Back up, the blank line goes (our
 The caret goes into the code, where typing can't break its fence.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -1068,7 +1112,7 @@ An item whose text is fenced code, its first code line blank, moved with the car
 caret goes to the first code line with text, as on a blank one typing at its start would end the item.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown

@@ -20,7 +20,7 @@ rules, in order:
    block unclosed (Backtick4, Backtick5, Backtick6). This holds whatever `autoClose` lists. An unclosed block's fence is the host's.
 2. **Elsewhere on a fence line**, a backtick that would break the fence is refused where markup is
    decorated: a backtick fence's info string can't hold a backtick, and a closing fence can't have
-   text after it (Backtick7). Where markup is text (`markup: text`, the default), the host types it,
+   text after it (Backtick7). Where the host shows it as text (not in `decorations`, the default), the host types it,
    as any character in markup there, and the block breaks. In a tilde fence's info string it is
    text, the host's.
 3. **On a code line**, a backtick is code, the host's, unless it would close the block there (a run
@@ -48,16 +48,17 @@ rules, in order:
    backtick at a word boundary outside code is typed as a pair, the caret between; typed right
    before the closing backtick of an empty pair or of the code span the caret is in, it steps over
    it, anywhere in its closing run (Backtick19, Backtick32), and the backtick stepped over is the
-   author's; Backspace in an empty pair takes both, where the closing one is ours (Backtick20); over a selection on one
-   line, it makes the selection code (Backtick21). Three backticks at a line's start still open a
-   closed fence (Backtick22).
+   author's; Backspace in an empty pair takes both, where the closing one is ours (Backtick20). Over a
+   selection on one line, a backtick makes the selection code where `` ` `` is in `autoWrap`, as it
+   is by default (Backtick21). Three backticks at a line's start still open a closed fence
+   (Backtick22).
 7. **A tilde on a tilde fence** does what a backtick does on a backtick fence (Backtick29,
    Backtick30); a tilde in text is the host's.
 8. **Typed over a selection that takes part of a fence's run**, any character would break the fence:
    refused where markup is decorated, the host's where it is text (Backtick31). Several characters
    typed at once (an input method's, a text replacement's) are played a character at a time.
 
-A fence's run is where ourus edits under both `markup` values, as a code line is: the rules keep the
+A fence's run is where ourus edits whether `decorations` lists fences or not, as a code line is: the rules keep the
 fences matched, which no hand edit of one fence does; only the edits that would break the block are
 the host's where markup is text (rules 2 and 5). Before a fence line's run, in a marker or a
 container's indentation, typing is the host's under `text`, as anywhere in markup
@@ -73,7 +74,7 @@ string is typed, and Enter there makes the first code line ([Fence rules](fences
 Obsidian closes it too; a text editor leaves it open ([Backtick8](#backtick8)).
 
 ```yaml
-tags: common markup-fence
+tags: common
 ```
 
 ```markdown
@@ -108,7 +109,7 @@ In an item, the block is the item's text, and its closing fence goes at the item
 where it stays in the item. WorkFlowy closes it too, the caret on the code's first line.
 
 ```yaml
-tags: common markup-fence
+tags: common
 ```
 
 ```markdown
@@ -130,7 +131,7 @@ With `` ` `` in `autoClose`, the first backtick types a pair and the second step
 one; the third opens the fence, closed, as without pairs ([Backtick2](#backtick2)).
 
 ```yaml
-tags: common markup-fence
+tags: common
 autoClose: ['```', '~~~', '`']
 ```
 
@@ -152,7 +153,7 @@ autoClose: ['```', '~~~', '`']
 In a quote, the closing fence goes in the quote.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ```markdown
@@ -177,7 +178,7 @@ length gives a closed block of that length. Bare Obsidian leaves the closing fen
 then closes nothing.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ```markdown
@@ -198,7 +199,7 @@ match. Bare Obsidian lengthens the closing fence alone: the block still closes, 
 matching.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -221,7 +222,7 @@ The opening fence of a block in an item grows, its info string and code untouche
 fence too: alone, the longer opening fence would leave the block unclosed, taking in `- b`.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -249,8 +250,8 @@ block would open at its closing fence and run to the end of the document. Where 
 decorated, refused; where it is text, the host types it ([Backtick28](#backtick28)).
 
 ```yaml
-tags: rare markup-fence
-markup: decorated
+tags: rare
+decorations: [fence]
 ```
 
 ````markdown
@@ -282,7 +283,7 @@ and reads to the end of the document, taking in the paragraph after it, until a 
 typed.
 
 ```yaml
-tags: rare free-form markup-fence
+tags: rare free-form
 autoClose: []
 ```
 
@@ -316,7 +317,7 @@ it for a new fence and closes that too, leaving an empty block after the code; T
 keep it as code, the fences growing past it, as between code lines ([Backtick10](#backtick10)).
 
 ```yaml
-tags: common markup-fence
+tags: common
 ```
 
 ````markdown
@@ -340,7 +341,7 @@ A run of backticks typed between code lines would close the block early: both fe
 so it stays code, as when a code block quotes a Markdown fence.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -365,7 +366,7 @@ An unclosed fence, typed with `autoClose: none` or there before, is closed by ty
 closing fence: the host's.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 autoClose: []
 ```
 
@@ -393,7 +394,7 @@ Typed before text, the fence takes the rest of the line as its info string, the 
 Enter there moves it into the code.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ```markdown
@@ -423,8 +424,8 @@ code first leaves an empty block, which goes ([Backtick25](#backtick25)). Where 
 is the host's ([Backtick28](#backtick28)).
 
 ```yaml
-tags: rare markup-fence
-markup: decorated
+tags: rare
+decorations: [fence]
 ```
 
 ````markdown
@@ -451,7 +452,7 @@ Backspace in a fence's run of four shortens both fences: alone, a closing fence 
 opening one wouldn't close the block.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 `````markdown
@@ -480,7 +481,7 @@ deletes the backtick alone, and the closing fence it added opens a block that ta
 after it.
 
 ```yaml
-tags: common markup-fence
+tags: common
 ```
 
 ```markdown
@@ -513,8 +514,8 @@ the opening fence would be text, and its closing fence would open a block that r
 the document.
 
 ```yaml
-tags: rare markup-fence
-markup: decorated
+tags: rare
+decorations: [fence]
 ```
 
 ````markdown
@@ -545,7 +546,7 @@ A fence typed on a continuation line of a paragraph splits it around the block: 
 the paragraph, the lines below a paragraph after the block. Backspace joins them back.
 
 ```yaml
-tags: rare free-form markup-fence
+tags: rare free-form
 ```
 
 ```markdown
@@ -642,12 +643,11 @@ use ┃ here
 
 ## Backtick21
 
-With `` ` `` in `autoClose`, a backtick over a selection on one line makes it code, and it stays
-selected.
+A backtick over a selection on one line makes it code, and it stays selected (`autoWrap`, by
+default).
 
 ```yaml
 tags: common
-autoClose: ['```', '~~~', '`']
 ```
 
 ```markdown
@@ -666,7 +666,7 @@ With `` ` `` in `autoClose`, three backticks on an empty line still make a close
 a pair and a step over it, the third the fence.
 
 ```yaml
-tags: common markup-fence
+tags: common
 autoClose: ['```', '~~~', '`']
 ```
 
@@ -690,7 +690,7 @@ intro
 Delete in a fence's run shortens both fences, as Backspace does ([Backtick14](#backtick14)).
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 `````markdown
@@ -713,7 +713,7 @@ Delete at the start of an empty block's opening fence of three: its fences are t
 Backspace makes them ([Backtick15](#backtick15)).
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -735,7 +735,7 @@ Bare Obsidian deletes the backtick alone, as a text editor does, and the opening
 `after`.
 
 ```yaml
-tags: common markup-fence
+tags: common
 ```
 
 ````markdown
@@ -762,7 +762,7 @@ after
 An empty block that is an item's text goes from the item, which stays, empty.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -786,7 +786,7 @@ Delete at the start of an empty block's opening fence takes the block, as Backsp
 ([Backtick25](#backtick25)).
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -814,7 +814,7 @@ it deletes the backtick, and the block is no longer closed. Bare Obsidian, Live 
 true-outliner, SilverBullet and Emacs do the same.
 
 ```yaml
-tags: common markup-fence
+tags: common
 ```
 
 ````markdown
@@ -841,7 +841,7 @@ A tilde does on a tilde fence what a backtick does on a backtick fence: at the e
 fence it lengthens it, and the opening fence with it ([Backtick5](#backtick5)).
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -864,7 +864,7 @@ Three tildes at a line's text start open a tilde fence, closed below it, as thre
 ([Backtick1](#backtick1)).
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ```markdown
@@ -889,8 +889,8 @@ the block would take in what follows: refused where markup is decorated, the hos
 text, as on the fence itself (rules 2 and 5).
 
 ```yaml
-tags: rare markup-fence
-markup: decorated
+tags: rare
+decorations: [fence]
 ```
 
 ````markdown

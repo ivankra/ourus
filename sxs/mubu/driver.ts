@@ -84,7 +84,7 @@ export const driver: Driver = {
   url: 'https://mubu.com/explore/rHSdgLpbl',
   model: 'block',
   // a heading is the node's level (H1 to H3), a text starting `# ` plain (`fromItem` escapes it)
-  headings: true,
+  headingBlocks: true,
   keys: {
     enter: 'Enter',
     // no `shiftEnter`: Shift+Enter goes to the node's note, another action than a line break in its
@@ -116,6 +116,10 @@ export const driver: Driver = {
   refuses: ['code block', 'html', 'table', 'math', 'thematic break', 'link reference definition', 'comment', 'footnote', 'quote'],
   // measured with `--ignore-options` (2026-10-26): each value agrees where ourus's default doesn't
   behaves: {
+    // a character typed over a selection (probed 2026-11-18): none, the character replaces it
+    autoWrap: [],
+    // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
+    decorations: ['bullet', 'checkbox', 'heading', 'setext'],
     // a copy or cut at a caret copies nothing (measured: Cut4)
     copyAtCaret: 'host',
     // Shift+Tab takes the later siblings along as children (LogicalOutdent1, LogicalOutdent4, TO7)
@@ -124,8 +128,9 @@ export const driver: Driver = {
     enterSplitSpace: 'start',
     // Backspace joins a node only to its previous sibling, never a node with children
     // (`mergeToPrevNode`: Backspace45b, Delete31b, Regression20), nor an empty one with children
-    // (Backspace17f, Backspace17g), nor the first node into the title (Backspace34)
-    joinWithChildren: 'refuse',
+    // (Backspace17f, Backspace17g), nor the first node into the title (Backspace34): nor into a sibling
+    // (Backspace8, Backspace20, Delete7)
+    joinWithChildren: 'never',
     emptyItemWithChildren: 'refuse',
     backspaceAtTopItem: 'refuse',
     // a heading level is the node's: a join takes it along, Backspace at its start doesn't drop it

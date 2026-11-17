@@ -92,13 +92,15 @@ const reDelimiterRow = /^\|?(?:[ \t\v\f]*:?-+:?[ \t\v\f]*)(?:\|[ \t\v\f]*:?-+:?[
 
 interface TableFrame extends MdFrame {
   readonly columns: number;
+  /** Whether the header row starts with a pipe (`pipedRows`: a row continues the table only so too). */
+  readonly leadingPipe: boolean;
   /** Cells filled in for short rows so far (cmark-gfm caps them, against blowing up the output). */
   readonly filled: number;
 }
 
 const MAX_FILLED_CELLS = 0x80000;
 
-function makeTableSpec(requirePipe: boolean): MdBlockSpec<TableFrame> {
+function makeTableSpec(pipedRows: boolean): MdBlockSpec<TableFrame> {
   const spec: MdBlockSpec<TableFrame> = {
     type: 'table',
     container: false,
@@ -107,7 +109,7 @@ function makeTableSpec(requirePipe: boolean): MdBlockSpec<TableFrame> {
     continue(m, table) {
       if (m.blank || table.filled > MAX_FILLED_CELLS) return 1;
       const line = m.line;
-      if (requirePipe && line.indexOf('|', m.nextNonspace) < 0) return 1;
+      if (pipedRows && !pipedRow(line, m.nextNonspace, table.leadingPipe)) return 1;
       return rowCells(line, m.nextNonspace, line.length) ? 0 : 1;
     },
     addLine(m, table, index) {
@@ -125,7 +127,7 @@ function makeTableSpec(requirePipe: boolean): MdBlockSpec<TableFrame> {
   return spec;
 }
 
-function makeTableStart(spec: MdBlockSpec<TableFrame>, requirePipe: boolean) {
+function makeTableStart(spec: MdBlockSpec<TableFrame>, pipedRows: boolean) {
   return {
     name: 'table',
     start(m: MdMachine, container: MdFrame): 0 | 1 | 2 {
@@ -142,7 +144,7 @@ function makeTableStart(spec: MdBlockSpec<TableFrame>, requirePipe: boolean) {
       let lead = 0;
       while (lead < p.last.length && isSpaceOrTab(p.last.charCodeAt(lead))) lead++;
       const header = rowCells(p.last, lead, p.last.length);
-      if (!header || header.length !== delimiters.length || (requirePipe && p.last.indexOf('|') < 0 && rest.indexOf('|') < 0)) {
+      if (!header || header.length !== delimiters.length || (pipedRows && p.last.indexOf('|') < 0 && rest.indexOf('|') < 0)) {
         m.replace(m.stack.length - 1, { ...p, tableVisited: true } as MdFrame);
         return 0;
       }
@@ -166,7 +168,7 @@ function makeTableStart(spec: MdBlockSpec<TableFrame>, requirePipe: boolean) {
         part: { row: 'header', cells: header.map((c) => ({ start: c.from + base, end: c.to + base })) },
       });
       m.popTop();
-      m.addChild({ spec, columns: header.length, filled: 0 } as TableFrame);
+      m.addChild({ spec, columns: header.length, leadingPipe: p.last.charCodeAt(lead) === 124, filled: 0 } as TableFrame);
       m.setLeaf({ type: 'table', first: false, part: { row: 'delimiter', cells: delimiters.map((c) => ({ start: m.real(c.from), end: m.real(c.to) })) } });
       return 2;
     },
@@ -260,13 +262,32 @@ const tableRenderers = {
 
 const cellTag = (header: boolean, align: MdTableAlign): string => `<${header ? 'th' : 'td'}${align ? ` align="${align}"` : ''}>`;
 
-/** Tables. `requirePipe`: a row needs a `|` (Obsidian's reading; GFM continues a table with any line). */
-export function tableExtension(options: { readonly requirePipe?: boolean } = {}): MdExtension {
-  const requirePipe = options.requirePipe ?? false;
-  const spec = makeTableSpec(requirePipe);
+/**
+ * Whether a line from `at` is a row of a table whose header row starts with a pipe, or doesn't, as
+ * Obsidian reads one: it starts with a pipe exactly when the header row does, and has a pipe past that
+ * one (`\|` is no pipe).
+ */
+function pipedRow(line: string, at: number, leadingPipe: boolean): boolean {
+  const leads = line.charCodeAt(at) === 124;
+  if (leads !== leadingPipe) return false;
+  for (let i = leads ? at + 1 : at; i < line.length; i++) {
+    const c = line.charCodeAt(i);
+    if (c === 92) i++;
+    else if (c === 124) return true;
+  }
+  return false;
+}
+
+/**
+ * Tables. `pipedRows`: a row starts with a pipe exactly when the header row does and has a pipe past
+ * it (Obsidian's reading; GFM continues a table with any line).
+ */
+export function tableExtension(options: { readonly pipedRows?: boolean } = {}): MdExtension {
+  const pipedRows = options.pipedRows ?? false;
+  const spec = makeTableSpec(pipedRows);
   return {
     name: 'table',
-    blockStarts: [makeTableStart(spec, requirePipe)],
+    blockStarts: [makeTableStart(spec, pipedRows)],
     blockStartChars: '|:',
     leafBuilders: { table: tableBuilder },
     inlineText: { table_cell: cellInlineText },
@@ -281,8 +302,8 @@ export const table: MdExtension = tableExtension();
 
 /**
  * A list item's checkbox, then whitespace, first thing on the item's first line: `[ ]`, `[x]` or
- * `[X]` (GFM), or any one character in the brackets (`anyStatus`: Obsidian's custom statuses,
- * checked unless a space).
+ * `[X]` (GFM), or any one UTF-16 unit in the brackets (`anyStatus`: Obsidian's custom statuses,
+ * checked unless a space; an emoji, two units, is no status there either).
  */
 function makeTaskStart(anyStatus: boolean, cmark: boolean) {
   return {
@@ -312,7 +333,7 @@ function makeTaskStart(anyStatus: boolean, cmark: boolean) {
 const reCmarkTask = /^[ \t\v\f]*(?:[-+*]|[0-9]+.)[ \t\v\f]+\[[ x]\][ \t\v\f]+/;
 
 /**
- * Task list items. `anyStatus`: any character in the brackets. `cmark`: only where cmark-gfm finds
+ * Task list items. `anyStatus`: any one UTF-16 unit in the brackets, as Obsidian reads a status. `cmark`: only where cmark-gfm finds
  * them (the line's first marker, `[ ]` or `[x]`), for comparing with it.
  */
 export function tasklistExtension(options: { readonly anyStatus?: boolean; readonly cmark?: boolean } = {}): MdExtension {
@@ -441,11 +462,29 @@ function linkEnd(s: string, at: number): number {
   return at;
 }
 
-const wwwRule: MdInlineRule = {
+/**
+ * Whether a `]` after `from` closes a bracket opened before it (`\]` none; a `[` after `from` takes the
+ * next `]`). Obsidian links a URL inside an open bracket where none does; cmark-gfm links none there.
+ */
+function closedAfter(s: string, from: number): boolean {
+  let depth = 0;
+  for (let i = from; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c === 92) i++;
+    else if (c === 91) depth++;
+    else if (c === 93 && depth-- === 0) return true;
+  }
+  return false;
+}
+
+/** Whether a URL at `at` can't be linked for a bracket open before it (`openBrackets`). */
+const inBracket = (p: MdInlineParser, at: number, obsidian: boolean): boolean => !!p.brackets && (!obsidian || closedAfter(p.text, at));
+
+const wwwRule = (obsidian: boolean): MdInlineRule => ({
   name: 'wwwAutolink',
   triggers: 'w',
   parse(p) {
-    if (p.brackets) return false;
+    if (inBracket(p, p.pos, obsidian)) return false;
     const { text } = p;
     const at = p.pos;
     if (at > 0) {
@@ -462,15 +501,15 @@ const wwwRule: MdInlineRule = {
     p.add(new Node('autolink', at, p.pos, { value: raw, destination: normalizeUri('http://' + raw), literal: true }));
     return true;
   },
-};
+});
 
 const reSafeScheme = /^(?:https?|ftp):\/\//i;
 
-const urlRule: MdInlineRule = {
+const urlRule = (obsidian: boolean): MdInlineRule => ({
   name: 'urlAutolink',
   triggers: ':',
   parse(p) {
-    if (p.brackets) return false;
+    if (inBracket(p, p.pos, obsidian)) return false;
     const { text } = p;
     const at = p.pos;
     if (text.length - at < 4 || text.charCodeAt(at + 1) !== 47 || text.charCodeAt(at + 2) !== 47) return false;
@@ -489,7 +528,7 @@ const urlRule: MdInlineRule = {
     p.add(new Node('autolink', start, p.pos, { value: raw, destination: normalizeUri(raw), literal: true }));
     return true;
   },
-};
+});
 
 /**
  * Email addresses in text outside links, `mailto:` and `xmpp:` ones too (cmark-gfm's
@@ -583,11 +622,16 @@ function validProtocol(protocol: string, s: string, at: number, rewind: number, 
   return !isAsciiAlnum(s.charCodeAt(at - rewind - len - 1));
 }
 
-export const autolink: MdExtension = {
-  name: 'autolink',
-  inlines: [wwwRule, urlRule],
-  textRules: [emailRule],
-};
+/**
+ * Autolinks. `openBrackets`: a URL inside a bracket open before it is linked by cmark-gfm's rule (`cmark`,
+ * none is) or Obsidian's (`obsidian`, unless a `]` after it closes that bracket).
+ */
+export function autolinkExtension(options: { readonly openBrackets?: 'cmark' | 'obsidian' } = {}): MdExtension {
+  const obsidian = options.openBrackets === 'obsidian';
+  return { name: 'autolink', inlines: [wwwRule(obsidian), urlRule(obsidian)], textRules: [emailRule] };
+}
+
+export const autolink: MdExtension = autolinkExtension();
 
 // ------------------------------------------------------------------------------- tag filter
 

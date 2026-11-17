@@ -144,6 +144,31 @@ tags: common free-form
 ## B
 ```
 
+## Outdent4b
+
+Under `headings: block` Shift-Tab on a heading is refused too: Indent12b's inverse.
+
+```yaml
+tags: rare free-form
+headings: block
+```
+
+```markdown
+## A┃
+### B
+```
+
+> outdent
+
+```yaml
+result: rejected heading-block
+```
+
+```markdown
+## A┃
+### B
+```
+
 ## Outdent5
 
 H1 cannot outdent further.
@@ -785,7 +810,7 @@ as it would be a paragraph's list. Indent doesn't make it an item again: on a he
 level ([Indent12](indent.md#indent12)).
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -806,7 +831,7 @@ With `outdent: logical` the same as with direct ([Outdent17](#outdent17)): at th
 no parent to keep the rest of the list, so the heading takes it in as its section.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 outdent: logical
 ```
 
@@ -828,7 +853,7 @@ Where the heading would take in what follows the list, a paragraph or a list of 
 section, outdent is refused; so it is where its level would end the section it is in.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -860,7 +885,7 @@ stays on the fence, where the user had it, as after indent where the host shows 
 Indent doesn't make it an item again: with nothing above, a block has nothing to be an item of.
 
 ```yaml
-tags: rare free-form markup-fence
+tags: rare free-form
 ```
 
 ````markdown
@@ -883,12 +908,12 @@ code
 
 ## Outdent19b
 
-The same where the host decorates markup (`markup: decorated`): the caret goes into the code, where
+The same where the host decorates markup (in `decorations`): the caret goes into the code, where
 typing can't break its fence.
 
 ```yaml
-tags: rare free-form markup-fence
-markup: decorated
+tags: rare free-form
+decorations: [fence]
 ```
 
 ````markdown
@@ -1136,4 +1161,33 @@ mixedDepths: refuse
 
 ```yaml
 result: rejected non-contiguous
+```
+
+## Outdent27
+
+`outdentTopLevel: refuse`: a top-level item has no level to leave, and Shift-Tab is refused, as the
+outliners, which hold no paragraphs, do nothing there (Roam, Athens). Enter on an empty top-level
+item under `enterOnEmptyItem: outdent` makes a new empty item then ([Enter7d](enter.md#enter7d)).
+
+```yaml
+tags: rare
+outdentTopLevel: refuse
+```
+
+```markdown
+- a
+- b┃
+- c
+```
+
+> outdent
+
+```yaml
+result: rejected at-top-level
+```
+
+```markdown
+- a
+- b┃
+- c
 ```

@@ -638,7 +638,12 @@ function place(ctx: CommandContext, draft: OurusDraft, slot: Slot, fitted: Fitte
     if (apart && slot.where === 'first' && node.gap === 0) draft.gap(node, 1);
     // (and from what follows, where something does: the document's end keeps its blank lines)
     const followed = slot.where === 'before' || (slot.where === 'first' && node.children.length > 0) || !!node.afterSubtree;
-    if (apart && followed) setSpacing(draft, nodes[nodes.length - 1]!, 1, true);
+    if (apart && followed) {
+      const holder = setSpacing(draft, nodes[nodes.length - 1]!, 1, true);
+      // (first under a node set apart from its children: the blank line between them now sets the
+      // paste apart from them, ours where the node's was)
+      if (holder !== null && slot.where === 'first' && node.gap > 0) draft.gapOrigin(holder, node);
+    }
   }
   // the blank lines after the node at the slot go with the end of the paste, as a split's (Gap13, Paste23)
   const end = slot.where === 'after' ? node.lastDescendant : slot.where === 'first' && !node.children.length ? node : null;

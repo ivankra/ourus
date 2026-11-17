@@ -171,7 +171,7 @@ item (SiYuan, true-outliner, RemNote, Dynalist; Tana, BlockNote and WorkFlowy fi
 checkbox).
 
 ```yaml
-tags: common markup-task
+tags: common
 clipboard: |-
   - x
   - y
@@ -194,7 +194,7 @@ With `enterTask: plain`, where a task is a marker in its text, an empty task isn
 and the paste goes after it (Logseq, Tine, Athens, Roam).
 
 ```yaml
-tags: rare markup-task
+tags: rare
 enterTask: plain
 clipboard: |-
   - x

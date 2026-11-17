@@ -15,6 +15,7 @@ import { childrenRefused, splitSpaces, visiblePreceding } from './util.ts';
 import type { OurusResult } from './types.ts';
 import { OurusDeferred, OurusRejected } from './types.ts';
 import { withFolds } from './view.ts';
+import { decorates } from '../config.ts';
 
 /** Where the caret, or a selection in one text, is in a quote read as an atom; null elsewhere. */
 export interface QuoteAt {
@@ -146,10 +147,10 @@ function pastQuoteMarker(ctx: CommandContext, at: QuoteAt, here: QuoteLine, end:
  * `split`, it splits (`splitQuote`).
  */
 export function enterInQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
-  // a selection from inside a line's `>`, part of the quote's markup: the host's where markup is text
-  // the user edits, else refused, as over any selection taking part of markup
+  // a selection from inside a line's `>`, part of the quote's markup: the host's where it shows `>` as
+  // text the user edits, else refused, as over any selection taking part of markup
   if (!ctx.collapsed && at.offset < pastQuoteMarker(ctx, at, quoteLine(ctx, at, at.offset), false)) {
-    return ctx.config.markup === 'text' ? new OurusDeferred('in-markup', 'the selection takes part of markup') : new OurusRejected('not-expressible', 'the selection takes part of markup');
+    return !decorates(ctx.config, 'quote') ? new OurusDeferred('in-markup', 'the selection takes part of markup') : new OurusRejected('not-expressible', 'the selection takes part of markup');
   }
   return ctx.config.enterInQuote === 'line' ? lineInQuote(ctx, at) : splitQuote(ctx, at);
 }
@@ -329,7 +330,8 @@ function itemAfter(ctx: CommandContext, at: QuoteAt, item: MdBlockAt, outer: rea
  * paragraph after it (an item after an item: its first child where it has children and
  * `enterMidItem: child` says so, or at its end; else its next sibling, taking them), an empty one at
  * its end; its lines after the caret's a quote of their own after the rest, as written (the new
- * item's first child), as an outliner's new block holds them after its first line.
+ * item's first child), as an outliner's new block holds them after its first line. A quote that is a
+ * later block of an item: the rest an item after it, as the outliner's block splits.
  */
 function splitQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
   const { node, text, offset, to } = at;
@@ -351,6 +353,27 @@ function splitQuote(ctx: CommandContext, at: QuoteAt): OurusResult | null {
   if (trimMd(s.slice(mark, a)) === '') a = mark;
   if (a === here.start && a > 0) a--;
   draft.setText(node, text.splice(a, s.length));
+  // a later block of an item's (`- x⏎  > q`), to an outliner a line of its block: the rest an item of
+  // its own, as the block splits there, after the item (its blocks after the quote, children included,
+  // going with it), or its first child under `enterMidItem: child` where it has children after the
+  // quote; a task's next a task as `enterTask` says
+  const owner = !item && node.parent?.kind === 'item' ? node.parent : null;
+  if (owner) {
+    const ownerText = ctx.doc.textOf(owner);
+    const task = ownerText instanceof OurusProse && !!ownerText.task && ctx.config.enterTask === 'continue';
+    const id = draft.create('item', new OurusProse('paragraph', true, (task ? '[ ] ' : '') + s.slice(split.to, lineEnd)));
+    const later = owner.children.slice(node.index + 1);
+    if (ctx.config.enterMidItem === 'child' && later.length) draft.place('after', node, [id]);
+    else {
+      draft.place('after', owner, [id]);
+      if (later.length) draft.remove(later).append(id, 'last', later);
+    }
+    if (lineEnd < s.length) {
+      const lines = s.slice(lineEnd + 1);
+      draft.append(id, 'first', [draft.create('atom', new OurusAtom('blockquote', false, quoteLine(ctx, at, lineEnd + 1).quote ? lines : `> ${lines}`))]);
+    }
+    return ctx.apply(draft.setCaret(id, task ? 4 : 0, -1));
+  }
   const id = draft.create(kind, new OurusProse('paragraph', item, s.slice(split.to, lineEnd)));
   const children = [...node.children];
   // folded (within the zoom), the new item goes after its subtree, its hidden children staying, where

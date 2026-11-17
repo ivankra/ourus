@@ -322,7 +322,7 @@ The zoom root, a code block, indented would be an item that joins the list after
 hides: refused.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown

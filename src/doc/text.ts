@@ -47,8 +47,8 @@ export const reBlockIdLine = new RegExp(`^\\^(${BLOCK_ID_NAME})$`);
 
 /**
  * A checkbox at an item's text start, and the blanks after it; or alone (`- [ ]`). In every flavor,
- * as the outline reads tasks, with Obsidian's statuses: any one character between the brackets
- * (`[?]`, `[a]`).
+ * as the outline reads tasks, with Obsidian's statuses: any one UTF-16 unit between the brackets
+ * (`[?]`, `[a]`, `[中]`; not `[😀]`, as Obsidian reads it).
  */
 const reCheckbox = /^\[[^\n]\](?:[ \t]+|$)/;
 

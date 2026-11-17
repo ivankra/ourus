@@ -672,7 +672,7 @@ the start of its text, after the `##` (never in markup): the heading isn't joine
 paragraph, which would make it a paragraph and drop its `##`.
 
 ```yaml
-tags: common markup-heading
+tags: common
 ```
 
 ```markdown

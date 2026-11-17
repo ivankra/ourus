@@ -117,6 +117,11 @@ export interface PlayedState {
   redone?: Snapshot[];
   /** Where the start's drop line drops, until a drop plays it. */
   drop?: DropLine | null;
+  /**
+   * The host is a block app (the SxS's): a line its keys act on starts at its block's text, after an
+   * item's indentation, which is no text of the block's (a soft line's delete stops there).
+   */
+  blocks?: boolean;
   /** The node labels bound so far (`①`'s number to its node's id), for the actions that name one. */
   labels?: ReadonlyMap<number, number>;
 }
@@ -296,9 +301,9 @@ function hostRun(state: PlayedState, command: OurusCommand | OurusResult): Playe
       const clipboard = { 'text/plain': text.slice(from, to) };
       return type === 'cut' ? { ...edit(state, { from, to, insert: '' }), clipboard, last } : { ...state, clipboard, last };
     }
-    // to the start of the line, as a line that doesn't wrap has it
+    // to the start of the line, as a line that doesn't wrap has it (in a block app, of the block's text)
     case 'deleteSoftLineBackward':
-      return { ...edit(state, from !== to ? { from, to, insert: '' } : { from: doc.lineAt(from).from, to, insert: '' }), last };
+      return { ...edit(state, from !== to ? { from, to, insert: '' } : { from: Math.min(lineStart(doc, from, !!state.blocks), from), to, insert: '' }), last };
     case 'deleteContentForward': {
       if (from !== to) return { ...edit(state, { from, to, insert: '' }), last };
       if (to === text.length) return { ...state, last };
@@ -313,6 +318,14 @@ function hostRun(state: PlayedState, command: OurusCommand | OurusResult): Playe
     default:
       return { ...state, last };
   }
+}
+
+/** Where `pos`'s line starts as a host edits it: its first character, or in a block app, past the indentation of the items it is in. */
+function lineStart(doc: OurusDoc, pos: number, blocks: boolean): number {
+  const line = doc.lineAt(pos);
+  if (!blocks) return line.from;
+  const items = doc.mdTree.line(line.index).prefix.filter((p) => p.container.block.type === 'item');
+  return items.length ? items[items.length - 1]!.to : line.from;
 }
 
 /**

@@ -93,14 +93,15 @@ Some empty nodes have no Markdown of their own. A placeholder (`◌`) holds one 
 edits it; [placeholders.md](placeholders.md) specifies what happens when it is filled or left.
 Applied commands are checked by re-parsing their output against the intended outline. Where a
 command does not apply, the host runs its own default; that is only for edits within one node's
-text, and, where the host shows markup as text (`markup: text`), for edits with the caret in markup
-that ourus would refuse.
+text, and, where the host shows the markup at the caret as text, for edits with the caret in it that
+ourus would refuse.
 
-ourus serves two kinds of host, and the `markup` option says which it is in. One shows markup as
-text the user edits by hand (`text`, the default: raw CodeMirror, a textarea, Obsidian's source
-mode): there ourus mustn't stand in the way of a user fixing markup. The other decorates it
-(`decorated`: rendered checkboxes and bullets, Live Preview's widgets): there ourus keeps the user
-from breaking the node through it. Guarantees 3 and 6 say what each kind gets.
+A host shows each element of markup (a list marker, a checkbox, a heading's `#`s, a quote's `>`, a
+fence, ...) either as text the user edits by hand, or drawn: the `decorations` option lists the
+elements it draws under the caret (`[]`, the default: raw CodeMirror, a textarea, Obsidian's source
+mode; Live Preview draws bullets and checkboxes but shows a heading's `#`s as text on the line being
+edited). Where an element is text, ourus mustn't stand in the way of a user fixing it; where it is
+drawn, ourus keeps the user from breaking the node through it. Guarantees 3 and 6 say what each gets.
 
 ## What every case holds to
 
@@ -118,7 +119,7 @@ No command breaks these; a case that seems to need to is wrong, or is a refusal.
    With the caret in markup itself, where only the host puts it, Enter acts at the node's text start
    ([Enter34](enter.md#enter34)), and a task's checkbox is edited as text
    ([TaskBackspace8](tasks.md#taskbackspace8)); Shift-Enter, Backspace and Delete, and an edit ourus
-   would refuse, are the host's where markup is text (`markup: text`), whatever the text then reads
+   would refuse, are the host's where that markup is text (`decorations` not listing it), whatever the text then reads
    as ([Backspace42](backspace.md#backspace42), [Delete29](delete.md#delete29),
    [ShiftEnter26](shift-enter.md#shiftenter26)), and act at the text start or are refused where it is
    decorated ([Backspace42b](backspace.md#backspace42b), [Delete16c](delete.md#delete16c),
@@ -438,7 +439,7 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
     corner cases, shapes a fuzzer found); review metadata, never an editor setting. Every `core` case is walked through
     in a flow of [scenarios.md](scenarios.md) (the spec test checks it). The words after it, if any,
     say what the case depends on, for runners to select cases by, from the list below
-    (`tags: rare free-form markup-task`). Each is a
+    (`tags: rare free-form enter-in-fence`). Each is a
     fact about the case, never an editor's name or a verdict, and a case has every tag that applies
     to it. A refusal of what a tag describes counts as the tag.
     - `free-form`: the case depends on free-form Markdown structure that an outliner of blocks has
@@ -470,16 +471,18 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
       And only where the projection can't play it either: a case whose outliner run, its paragraphs
       blocks (`sxs/`'s `as blocks`), plays faithfully and mostly agrees isn't tagged, whichever of
       these it meets (checked 2026-10-25 by playing every tagged case in the outliners: 56 untagged).
-    - `markup-heading`, `markup-task`, `markup-fence`: a step at markup that an editor may hold as
-      text or as a block's attribute, where ourus has a boundary (a driver opts out of those it
-      can't compare):
-      - `markup-heading`: at a heading's title start, its closing `#`s or a setext underline, a
-        Cmd-Backspace up to it, a join that takes in a heading below;
-      - `markup-task`: before a task's checkbox or right after it, a Cmd-Backspace up to it, on a
-        task with nothing but its checkbox, a join that takes in a task below;
-      - `markup-fence`: on a code, math or comment fence line (or a structural command from one,
-        which puts the caret in the code), a join of text into code, or a join or split of code
-        lines that would make a fence;
+    - `markup-heading`, `markup-task`, `markup-fence` are never written: computed from what the case
+      does as ourus plays it ([markup-tags.ts](../test/lib/markup-tags.ts)), they mark a step at
+      markup that an editor may hold as text or as a block's attribute, where ourus has a boundary
+      (a driver opts out of those it can't compare). A step has the tag of a heading's `#`s or
+      underline, a task's checkbox, or a fenced block's fences (code, math, comment) where:
+      - the caret or a selection's end is in that markup, at its text's start, or in a text with
+        nothing but it, before the step or after it, or on a fence's line;
+      - a selection takes some of it;
+      - Delete at a line's end brings up a text with it, or a fence's line; Backspace at a line's
+        start joins into code, a fence's line, or right after an empty task's or heading's markup;
+        Cmd-Backspace runs up to it;
+      - typing or Enter makes a fence, or a step changes the fences of the block the caret is in;
     - `enter-in-fence`: Enter on a fenced block's content line, code or math (not on a fence's
       line: `markup-fence`). An editor whose code and math are a block's text, with no editor of
       their own, splits the block there, as on any text (a driver of such an app refuses the tag);
@@ -487,7 +490,7 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
     - `pending`: no fact about the case but its state: behavior agreed on but not built yet. It is
       reported as a todo, and fails once it passes, so the tag goes then;
   - the other options of ourus's config (`src/config.ts`): `outdent` (`direct`, the default, or
-    `logical`), `bullet` (`-`, the default, `*` or `+`), `indentUnit` (`detect`, the
+    `logical`), `outdentTopLevel` (`unwrap`, the default, or `refuse`), `bullet` (`-`, the default, `*` or `+`), `indentUnit` (`detect`, the
     default, `tab`, `2` or `4`: how an item nesting anew is indented), `quotes` (`text`, the default, `atom` or
     `container`: a case whose quote of one paragraph is a node, `container`'s, says so), `enterOnEmptyItem` (`sibling`, the
     default, `outdent`, `exit` or `unwrap`), `enterMidItem` (`sibling`, the default, or `child`),
@@ -499,10 +502,11 @@ An unknown option, or a value an option doesn't take, is an error. Defined:
     `text`, `block` or `unwrap`), `copyAtCaret` (`node`, the default, or `host`), `copySelection` (`text`, the
     default, or `nodes`), `pasteSeams` (`closed`, the default, or `open`), `pasteOverSelection` (`replace`, the default, or
     `ignore`: a paste of nodes only), `pasteOverNodes` (`replace`, the default, `after` or `nothing`), `pasteLines` (`text`, the
-    default, or `items`), `pastePlainLines` (`text`, the default, `items`, `enter` or `host`), `pasteAtTextStart` (`before`, the default, or `after`), `pasteOnParent`
+    default, or `items`), `pastePlainLines` (`text`, the default, `items`, `enter` or `host`), `pasteTrailingBreak` (`line`, the default, or `drop`), `pasteAtTextStart` (`before`, the default, or `after`), `pasteOnParent`
     (`children`, the default, or `after`), `pasteParagraphList` (`siblings`, the default, or
-    `children`), `pasteListForm` (`destination`, the default, or `own`), `pasteIndentedCode` (`code`, the default, or `dedent`), `markup`
-    (`text`, the default, or `decorated`), and the quirks, an app's mechanics rather than a rule,
+    `children`), `pasteListForm` (`destination`, the default, or `own`), `pasteIndentedCode` (`code`, the default, or `dedent`), `decorations`
+    (a list of `bullet`, `number`, `checkbox`, `heading`, `setext`, `quote`, `callout`, `fence`, `math`,
+    `comment`, `rule`, `footnote`, `blockId`: the elements the host draws; `[]` the default), and the quirks, an app's mechanics rather than a rule,
     named by the apps: `quirkEnterMidHeading` (`default` or `workflowy`), `quirkPasteCaret`
     (`default`, `roam` or `athens`), `quirkPasteText` (`default` or `dynalist`).
 

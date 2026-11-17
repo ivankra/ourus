@@ -1,5 +1,6 @@
-// Obsidian's Markdown: GFM (tables needing a pipe in each row, task items with any status
-// character, strikethrough with `~~` only, footnotes, autolinks) plus Obsidian's own syntax.
+// Obsidian's Markdown: GFM (a table's rows piped as its header row is, task items with any status
+// character, a UTF-16 unit; strikethrough with `~~` only, footnotes, autolinks, a URL linked in a
+// bracket nothing closes) plus Obsidian's own syntax.
 //
 // Obsidian has no spec. This is its syntax as its help documents it and as true-outliner measured
 // Obsidian 1.13, read the CommonMark way: Live Preview's
@@ -19,7 +20,7 @@
 import { escapeHtml, isPunctuation, isUnicodeWhitespace } from './chars.ts';
 import { BLOCKQUOTE } from './blocks.ts';
 import { defineFlavor, type MdExtension, type MdFlavor } from './flavor.ts';
-import { autolink, footnotes, gfmCore, strikethroughExtension, tableExtension, tasklistExtension } from './gfm.ts';
+import { autolinkExtension, footnotes, gfmCore, strikethroughExtension, tableExtension, tasklistExtension } from './gfm.ts';
 import { coreBlocks, type MdHtmlRenderer } from './html.ts';
 import { MdInlineTextBuilder } from './inline-text.ts';
 import { plainMarkup } from './markup.ts';
@@ -608,10 +609,10 @@ export const obsidianExtensions: readonly MdExtension[] = [
   callouts,
   mathBlocks,
   commentBlocks,
-  tableExtension({ requirePipe: true }),
+  tableExtension({ pipedRows: true }),
   tasklistExtension({ anyStatus: true }),
   strikethroughExtension({ doubleOnly: true }),
-  autolink,
+  autolinkExtension({ openBrackets: 'obsidian' }),
   footnotes,
   wikilinks,
   tags,

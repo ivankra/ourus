@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { mdBlockIdEnd, obsidian } from '../../src/parser/obsidian.ts';
 import { MdTree } from '../../src/parser/syntax.ts';
+import { gfm } from '../../src/parser/gfm.ts';
 
 import type { MdBlockAt, MdInline } from '../../src/parser/types.ts';
 
@@ -63,6 +64,26 @@ const cases: [string, string, string][] = [
 ];
 
 for (const [name, md, want] of cases) test(`obsidian: ${name}`, () => assert.equal(html(md), want));
+
+test('obsidian: a line continues a table where it is piped as the header row is and has a pipe past that one, as Obsidian 1.14.4 and 1.15.1 read it', () => {
+  // (each line after `| 1 | 2 |`, or `1 | 2` in a table with no outer pipes, then a paragraph `after`)
+  const rows = (table: string, line: string): number => MdTree.parse(`${table}\n${line}\nafter\n`, obsidian).rootAt.child(0).block.children.length;
+  const piped = '| a | b |\n|---|---|\n| 1 | 2 |';
+  const bare = 'a | b\n--|--\n1 | 2';
+  for (const line of ['| x |', '|x|', '| x | y', '| x | y | z |']) assert.equal(rows(piped, line), 4, line);
+  for (const line of ['x', '| x', 'x |', 'x | y', 'x | y |']) assert.equal(rows(piped, line), 3, line);
+  assert.equal(rows(bare, 'x | y'), 4);
+  for (const line of ['| x', 'x']) assert.equal(rows(bare, line), 3, line);
+  // (a header row with outer pipes, a body row without: no row, as the delimiter row alone)
+  assert.equal(MdTree.parse('| a | b |\n|---|---|\n1 | 2\n', obsidian).rootAt.child(0).block.children.length, 2);
+});
+
+test('obsidian: a URL in a bracket open before it is linked unless a `]` after it closes that bracket, as Obsidian 1.15.1 reads it; GFM links none (cmark-gfm)', () => {
+  const linked = (md: string): boolean => html(md).includes('<a href="http://');
+  for (const md of ['[before http://example.com', '[before www.example.com', '[before http://example.com and [x] y', '[x] [before http://example.com', '[a [b http://example.com']) assert.ok(linked(md), md);
+  for (const md of ['[http://example.com]', '[before http://example.com] after', '[before www.example.com] after', '[before http://example.com and ] later', '[before http://example.com\nnext] line']) assert.ok(!linked(md), md);
+  assert.equal(MdTree.parse('[before http://example.com\n', gfm).renderHtml(), '<p>[before http://example.com</p>\n');
+});
 
 test('obsidian: the tree of a note', () => {
   const md = '---\na: 1\n---\n> [!note]+ T\n> - [?] x ^b1\n';

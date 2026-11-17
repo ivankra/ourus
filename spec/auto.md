@@ -74,7 +74,7 @@ two backticks too; the third makes the line right above it that fence typed agai
 it takes the old one's place ([Backtick9](backtick.md#backtick9)): nothing of ours is left.
 
 ```yaml
-tags: common markup-fence enter-in-fence
+tags: common enter-in-fence
 ```
 
 ```markdown
@@ -175,7 +175,7 @@ closing fence, by a backtick of ours; the author's three stay theirs
 ([Backtick4](backtick.md#backtick4)).
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -197,7 +197,7 @@ code
 In a fence ourus closed, the closing fence grows by one more of ours: all of it still ours.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ```markdown
@@ -289,7 +289,7 @@ Backspace right after the fence is typed takes its third backtick, and the closi
 with it: the line is the text it was typed from ([Backtick15](backtick.md#backtick15)).
 
 ```yaml
-tags: common markup-fence
+tags: common
 ```
 
 ```markdown
@@ -455,11 +455,11 @@ a ┃ b
 
 ## Auto19
 
-An opener typed over a selection on one line wraps it, its closer ours, the selection kept.
+A bracket typed over a selection on one line wraps it, its closer ours, the selection kept
+(`autoWrap`, by default).
 
 ```yaml
 tags: common
-autoClose: ['```', '~~~', '(', '[', '{']
 ```
 
 ```markdown
@@ -470,6 +470,71 @@ a «x» b
 
 ```markdown
 a («x»)̬ b
+```
+
+## Auto19b
+
+A formatting character in `autoWrap` wraps a selection too, the closer the author's: `*` (by
+default, as Obsidian and Logseq's family wrap with it); typed again, `**`, bold.
+
+```yaml
+tags: common
+```
+
+```markdown
+a «x» b
+```
+
+> "*"
+
+```markdown
+a *«x»* b
+```
+
+> "*"
+
+```markdown
+a **«x»** b
+```
+
+## Auto19c
+
+Without it in `autoWrap`, the character replaces the selection, the host's, as Dynalist, WorkFlowy,
+Notion and the other editors that wrap with nothing have it.
+
+```yaml
+tags: rare
+autoWrap: []
+```
+
+```markdown
+a «x» b
+```
+
+> "*"
+
+```markdown
+a *┃ b
+```
+
+## Auto19d
+
+`$`, not by default (Logseq pairs it but wraps nothing in it), wraps in prose where listed (Obsidian,
+Logseq DB), its closer ours, as a bracket's.
+
+```yaml
+tags: rare
+autoWrap: ['`', '*', '_', '~', '=', '(', '[', '{', '$']
+```
+
+```markdown
+a «x» b
+```
+
+> "$"
+
+```markdown
+a $«x»$̬ b
 ```
 
 ## Auto20
@@ -707,7 +772,7 @@ a $$x┃$̬$̬
 Enter in the empty pair spreads it over lines: a math block, the caret on its empty line, the closing `$$` still ours (as an editor spreads a pair of brackets).
 
 ```yaml
-tags: common markup-fence
+tags: common
 flavor: obsidian
 ```
 
@@ -786,7 +851,7 @@ a $$x$$┃
 A comment the same: `%%┃%%`, and Enter in it a comment block.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 flavor: obsidian
 ```
 
@@ -813,7 +878,7 @@ flavor: obsidian
 An HTML comment, in every flavor: `<!--┃-->`, and Enter in it a block of HTML.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 flavor: gfm
 ```
 
@@ -859,7 +924,7 @@ a $$┃
 An empty pair the author typed: Enter is Enter in a paragraph, the closer theirs.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 flavor: obsidian
 ```
 

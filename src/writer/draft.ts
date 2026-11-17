@@ -2374,12 +2374,13 @@ class Done {
 
   #setApart(parent: Working, k: number, upper: readonly string[], blanks: number, column: number, first: boolean): boolean {
     const b = parent.children[k]!;
-    // (below an item, beside it: not a block of the item's own; or below a block whose last is in a
-    // list, a paragraph's)
-    if (parent.kind === 'item' || !parent.children[k - 1] || !this.#endsInItem(parent.children[k - 1]!)) return false;
+    // (below an item, beside it: not a block of the item's own, but indented code, fenced below; or
+    // below a block whose last is in a list, a paragraph's)
+    if (!parent.children[k - 1] || !this.#endsInItem(parent.children[k - 1]!)) return false;
+    const itemsOwn = parent.kind === 'item';
     // (a paragraph the draft padded, an item's text outdented to one: its padding dropped, the spaces
     // the item's, not the paragraph's)
-    if (b instanceof Working && b.kind === 'paragraph' && this.paddings.get(b.id)) {
+    if (!itemsOwn && b instanceof Working && b.kind === 'paragraph' && this.paddings.get(b.id)) {
       const lines = this.#firstLines(b, parent).map((l, i) => (i ? l : l.replace(/^ +/, '')));
       if (!this.#apart(upper, [...Array<string>(blanks).fill(''), ...lines], false, column, first)) return false;
       this.paddings.delete(b.id);
@@ -2400,6 +2401,7 @@ class Done {
       w.text = fenced;
       return true;
     }
+    if (itemsOwn) return false;
     const lower = this.#firstLines(b, parent);
     const pad = /^ */.exec(lower[0]!)![0].length;
     if (pad === 0 || pad > 3) return false;
@@ -2928,7 +2930,8 @@ class Done {
     // writes it, `emptiedPadding`)
     // (or an empty one the draft placed, its padding gone as the writer writes it: `2.  ` as `2. `)
     // (empty as the writer counts it, `emptyBefore`: an empty heading's `# ` too)
-    const filled = node.kind === 'item' && was instanceof OurusProse && (was.text === '' || was.empty) && node.text instanceof OurusProse && (node.text.text !== '' || this.asks.placedIds.has(node.id)) && !this.paddings.has(node.id);
+    // (but one still as it was, an empty title kept, `-  # `: its padding as written)
+    const filled = node.kind === 'item' && was instanceof OurusProse && (was.text === '' || was.empty) && node.text instanceof OurusProse && ((node.text.text !== '' && node.text.text !== was.text) || this.asks.placedIds.has(node.id)) && !this.paddings.has(node.id);
     // (and one emptied, its text gone, `-  g` to `- `: past its marker and a space, as the writer
     // narrows it, seed 351)
     const emptied = node.kind === 'item' && was instanceof OurusProse && was.text !== '' && !was.empty && node.text instanceof OurusProse && node.text.text === '' && !this.paddings.has(node.id);

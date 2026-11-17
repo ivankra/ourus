@@ -46,6 +46,8 @@ export const driver = obsidianDriver({
   holds: (doc) => onText(doc) ?? zoomable(doc),
   // its Shift-Tab, and Enter on an empty item, outdent logically
   behaves: {
+    // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
+    decorations: ['bullet', 'number', 'checkbox', 'table'],
     outdent: 'logical',
     enterSplitSpace: 'start',
     joinWithChildren: 'refuse',

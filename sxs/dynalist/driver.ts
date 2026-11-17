@@ -140,13 +140,17 @@ export const driver: Driver = {
   refuses: ['markup-fence', 'enter-in-fence'],
   ordered: true,
   // a heading is the item's attribute (H1 to H3), content starting `# ` text (`fromItem` escapes it)
-  headings: true,
+  headingBlocks: true,
   // a drop leaves the dropped item selected as an item, the caret gone (README.md, "Drag and drop")
   noCaretAfter: ['moveSubtree'],
   // its `load` selects items as items, as `read` reports them
   selectsBlocks: true,
   // a typed fence is left open (Backtick2, Backtick12, Backtick15)
   behaves: {
+    // a character typed over a selection (probed 2026-11-18): none, the character replaces it
+    autoWrap: [],
+    // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
+    decorations: ['bullet', 'number', 'checkbox', 'heading', 'setext'],
     // Shift-Up takes the sibling above with its subtree
     selectNodeUp: 'sibling',
     // a quote is the block's text, its lines as written, `>` and all (probed 2026-10-25)

@@ -161,6 +161,40 @@ clipboard:
     </ul>
 ```
 
+## Copy4b
+
+With `copyAtCaret: text`, a caret alone copies the text of the node at it, without its marker or
+its children, as a selection over that text is copied (AFFiNE, Moo.do, SiYuan).
+
+```yaml
+tags: rare
+copyAtCaret: text
+```
+
+```markdown
+- a
+  - k┃id
+    - g
+- b
+```
+
+> copy
+
+```yaml
+clipboard:
+  text/plain: 'kid'
+  text/markdown: 'kid'
+  text/html: |
+    <!-- ourus text --><p>kid</p>
+```
+
+```markdown
+- a
+  - k┃id
+    - g
+- b
+```
+
 ## Copy5
 
 With `copySelection: nodes`, the whole nodes the selection touches, with their subtrees.
@@ -449,6 +483,38 @@ clipboard:
 - ┃three
 ```
 
+## Cut4b
+
+With `copyAtCaret: text`, a cut at a caret alone takes the node's text, the node staying, empty,
+with its children, as SiYuan cuts it.
+
+```yaml
+tags: rare
+copyAtCaret: text
+```
+
+```markdown
+- one ┃two
+  - kid
+- three
+```
+
+> cut
+
+```yaml
+clipboard:
+  text/plain: 'one two'
+  text/markdown: 'one two'
+  text/html: |
+    <!-- ourus text --><p>one two</p>
+```
+
+```markdown
+- ┃
+  - kid
+- three
+```
+
 ## Cut5
 
 A node cut right under code and pasted back comes back where it was: the cut leaves the caret on
@@ -456,7 +522,7 @@ an empty line held in its place, not at the end of the code's last line, where t
 code (B346).
 
 ```yaml
-tags: common markup-fence
+tags: common
 ```
 
 ````markdown

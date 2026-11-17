@@ -39,7 +39,7 @@ Enter on an empty task at the top level leaves the list: `- [ ] ` is an empty it
 keeps what is typed next out of the item; bare Obsidian leaves none, so typed text continues `a`.
 
 ```yaml
-tags: common free-form markup-task
+tags: common free-form
 ```
 
 ```markdown
@@ -60,7 +60,7 @@ tags: common free-form markup-task
 Enter on an empty nested task outdents it.
 
 ```yaml
-tags: common markup-task
+tags: common
 ```
 
 ```markdown
@@ -101,7 +101,7 @@ Enter at a task's text start makes an empty task above, the caret going into it,
 text start ([Enter29](enter.md#enter29)).
 
 ```yaml
-tags: common markup-task
+tags: common
 ```
 
 ```markdown
@@ -121,7 +121,7 @@ Enter on an empty task in the middle of a nested list makes another empty task, 
 item there ([Enter27](enter.md#enter27)).
 
 ```yaml
-tags: common markup-task
+tags: common
 ```
 
 ```markdown
@@ -147,7 +147,7 @@ The same on an empty task that is its parent's first child: the new empty task g
 `  - [ ] ` right under `a`, unlike `  - `, is no setext underline.
 
 ```yaml
-tags: common markup-task
+tags: common
 ```
 
 ```markdown
@@ -195,7 +195,7 @@ At a task's end, Enter makes the next task, unchecked, as WorkFlowy, Dynalist, R
 every Obsidian setup do (`enterTask: continue`, the default).
 
 ```yaml
-tags: core markup-task
+tags: core
 ```
 
 ```markdown
@@ -215,7 +215,7 @@ With `enterTask: plain`, the new item is a plain one, as in Logseq and Roam, whi
 marker in a block's text (`TODO`), and Tine and Athens.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 enterTask: plain
 ```
 
@@ -236,7 +236,7 @@ With `enterTask: plain`, the rest of a task split mid-text is a plain item, its 
 it would start a block there, as any item's rest is.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 enterTask: plain
 ```
 
@@ -257,7 +257,7 @@ With `enterTask: plain`, at a task's text start the empty item above is a plain 
 down whole, as Tana makes it.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 enterTask: plain
 ```
 
@@ -279,7 +279,7 @@ the item's text starts at the column it did, so the children Enter hands over st
 Backspace joins it back.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 enterSplitSpace: start
 ```
 
@@ -309,8 +309,8 @@ Before the checkbox, Backspace joins the task into the empty item above, which t
 checkbox and children. The caret lands after the checkbox, where typing edits the task's text.
 
 ```yaml
-tags: rare markup-task
-markup: decorated
+tags: rare
+decorations: [checkbox]
 ```
 
 ```markdown
@@ -335,7 +335,7 @@ leaving a broken `- [ ]`, and a second Backspace removes the empty item: Enter o
 Backspaces, is back where it started.
 
 ```yaml
-tags: common markup-task
+tags: common
 ```
 
 ```markdown
@@ -362,7 +362,7 @@ Backspace right after a task's checkbox removes the checkbox, checked or not, th
 put. Bare Obsidian deletes one character, leaving `[x]b`, plain text.
 
 ```yaml
-tags: common markup-task
+tags: common
 taskEditing: checkbox
 ```
 
@@ -385,7 +385,7 @@ paragraph where it is, its checkbox gone with its marker, as `backspaceAtItemSta
 item.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 taskEditing: unwrap
 ```
 
@@ -408,7 +408,7 @@ With `taskEditing: unwrap`, an empty task is an empty paragraph, and nested, a p
 parent item, the list split there.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 taskEditing: unwrap
 ```
 
@@ -434,7 +434,7 @@ With `taskEditing: block`, Backspace right after a checkbox joins the task into 
 outliners join any block; the checkbox goes with the marker.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 taskEditing: block
 ```
 
@@ -456,7 +456,7 @@ bare Obsidian do: the space, then the `]`. ourus makes the edit, the checkbox be
 is no checkbox, Backspace is in the item's text, the host's.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 taskEditing: text
 ```
 
@@ -487,8 +487,8 @@ as into any empty item ([Backspace5](backspace.md#backspace5)); the empty task's
 replace the `[x]`.
 
 ```yaml
-tags: rare markup-task
-markup: decorated
+tags: rare
+decorations: [checkbox]
 ```
 
 ```markdown
@@ -507,7 +507,7 @@ markup: decorated
 With `taskEditing: block`, the same from right after the checkbox.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 taskEditing: block
 ```
 
@@ -528,7 +528,7 @@ Delete at the end of an item's text before a task joins the task's text: its che
 marker, as Backspace before the checkbox has it.
 
 ```yaml
-tags: common markup-task
+tags: common
 ```
 
 ```markdown
@@ -548,7 +548,7 @@ Delete on an empty item above a task pulls the task up into it, checkbox and all
 item ([Delete6](delete.md#delete6)); the caret lands after the checkbox.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 ```
 
 ```markdown
@@ -568,7 +568,7 @@ Delete at the end of an item's text before an empty task: the empty task goes, a
 below does ([Delete20](delete.md#delete20)), the caret staying put.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 flavor: gfm
 ```
 
@@ -591,7 +591,7 @@ checked or not. So a task is checked or unchecked by hand, as in a text editor, 
 is shown as text.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 ```
 
 ```markdown
@@ -622,7 +622,7 @@ The same in GFM, where a task is a task by its checkbox: emptied, `[]` is text, 
 one; a character typed back makes it a task again.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 flavor: gfm
 outline: |
   item [ ]: task
@@ -659,7 +659,7 @@ outline: |
 The same below another item: inside the checkbox there is nothing to join.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 ```
 
 ```markdown
@@ -680,7 +680,7 @@ The checkbox gone, the text starts the item's, where `# x` would be a heading: i
 any text a join or a split leaves at a line's start.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 ```
 
 ```markdown
@@ -701,7 +701,7 @@ first item does ([Backspace33](backspace.md#backspace33)), its checkbox with it,
 start a heading.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 taskEditing: block
 ```
 
@@ -723,7 +723,7 @@ Delete inside the checkbox deletes the character after the caret, as Backspace d
 it ([TaskBackspace8](#taskbackspace8)).
 
 ```yaml
-tags: rare markup-task
+tags: rare
 ```
 
 ```markdown

@@ -168,7 +168,9 @@ export const driver: Driver = {
   selectsBlocks: true,
   ordered: true,
   // a heading is the node's section flag, a name starting `# ` text (`fromItem` escapes it)
-  headings: true,
+  headingBlocks: true,
+  // a heading's next blocks its children, as its section (Enter42, Enter60)
+  sectionHeadings: true,
   // a name is one line of rich text, with nothing of Markdown's blocks but code (a code block, its
   // name the code). A checkbox and a section are a node's attributes, and a code block's fences no
   // text: a caret in them has no place (`holds`), and a join or split at them is Tana's to show. No
@@ -179,6 +181,10 @@ export const driver: Driver = {
   // gone; a list pasted into a node with children goes after them (played with `--ignore-options`);
   // a typed fence is left open (Backtick2, Backtick12, Backtick15)
   behaves: {
+    // a character typed over a selection (probed 2026-11-18): none; a backtick its code formatting
+    autoWrap: [],
+    // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
+    decorations: ['bullet', 'number', 'checkbox', 'heading', 'setext', 'fence'],
     // a paste over blocks selected whole keeps them and pastes after the last (SubtreeEdit14, SubtreeEdit17)
     pasteOverNodes: 'after',
     // indent and outdent over roots at two depths: each run as alone
@@ -188,7 +194,8 @@ export const driver: Driver = {
     outdent: 'logical',
     enterSplitSpace: 'start',
     enterMidItem: 'child',
-    joinWithChildren: 'refuse',
+    // a node with children joins nothing, a sibling neither (Backspace8, Backspace20, Delete7)
+    joinWithChildren: 'never',
     headingEditing: 'block',
     autoClose: [],
     copySelection: 'nodes',

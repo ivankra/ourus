@@ -25,14 +25,14 @@ export function outdentCommand(ctx: CommandContext): OurusResult | null {
   const parent = first.parent!;
   // out of a quote, any node: it follows the quote
   if (parent.kind === 'quote') return leaveQuote(ctx, nodes);
-  if (first.kind === 'heading') return changeHeadingLevels(ctx, nodes, -1);
+  if (first.kind === 'heading') return ctx.config.headings === 'section' ? changeHeadingLevels(ctx, nodes, -1) : new OurusRejected('heading-block', 'a heading that owns nothing stays where it is');
   // (a paragraph or a block of a section: it has no level to leave)
   if (first.kind !== 'item') return new OurusRejected('not-expressible', `${withArticle(nameOf(first))} has no level to leave`);
   const later = parent.children.slice(last.index + 1);
   const direct = ctx.config.outdent === 'direct';
   if (parent.kind === 'paragraph' || parent.kind === 'root' || parent.kind === 'heading') {
     // (at the top level, nothing to leave: as most apps, where `outdentTopLevel: refuse`)
-    if (ctx.config.outdentTopLevel === 'refuse') return new OurusRejected('not-expressible', 'a top-level item has no level to leave');
+    if (ctx.config.outdentTopLevel === 'refuse') return new OurusRejected('at-top-level', 'a top-level item has no level to leave');
     return unwrapItems(ctx, nodes, parent, later);
   }
   if (parent.kind !== 'item') return null;

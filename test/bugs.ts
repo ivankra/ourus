@@ -980,21 +980,6 @@ openBug('B331', 'P4', 'Moving tab-led indented code into an empty quote fails to
   },
 });
 
-// B369 [P4]. Indenting an empty tab-led item above a loose paragraph fails to write
-//
-// Priority (2026-11-12): P4 (the user's rule: tab-led lines, rare). With spaces it writes, `done`
-// lifted to its item's column (`- item⏎⏎  - ⏎    - ⏎⏎  done`); with tabs the paragraph is left at
-// `→  done`, the first empty item's content column now.
-//
-// Status (2026-11-09): found by the sessions. `- item⏎⏎→- ⏎→-┃⏎⏎→  done` (a raised blank line), Tab on the second
-// empty item: written `→→- `, `done` no longer its parent's.
-openBug('B369', 'P4', 'Indenting an empty tab-led item above a loose paragraph fails to write', {
-  'Tab on the empty item': () => {
-    // kept: c00252025863
-    assertNoWriteFailure(executeOnText("- item\n\n\t- \n\t-\n\n\t  done\n", { type: "indent" }, { caret: 15, config: { flavor: "gfm", indentUnit: "tab" }, auto: [7] }));
-  },
-});
-
 // =================================================================================================
 // Numbered lists and shared marker lines
 //
@@ -1164,32 +1149,6 @@ bugCluster('Held marks (placeholders)');
 openBug('B413', 'P4', "A quoted paragraph whose space after `>` is held loses its marks through Enter or Shift-Enter", {
   'Shift-Enter in a quoted paragraph held past its `>`': () => {
     assertNoWriteFailure(executeOnText('> q', { type: 'shiftEnter' }, { caret: 3, config: { quotes: 'container' }, placeholders: [1] }));
-  },
-});
-
-// B418 [P4]. A callout's held `> ` line deleted or pasted on loses the raised line's mark after it
-//
-// Priority (2026-11-12): P4 (the user's rule: rare, hand-built marks, low payoff: a lost mark leaves
-// ourus's blank line the author's). Read further: in CommonMark the `> [!note]` is a plain quote; the
-// heading pasted on its blank `  > ` line becomes a child item, `→- # body text`, and the gap after it
-// is written anew with no origin. The plain shape, `> T⏎> ⏎̬⏎x` (no item), keeps the mark.
-//
-// Status (2026-11-14): its old case writes the mark now, with B444's (a gap left with only its bare
-// blank lines keeps its last ours); a callout pasted on a quote's held line in an item is left.
-//
-// Status (2026-11-12): left from B377. `- > [!note] Title⏎  > ◌⏎⏎̬  xFinal line ^blk`, `# body text` pasted
-// on the held line: the heading written outside the callout, the raised line after it unmarked; a
-// delete of a callout's held line, the same.
-openBug('B418', 'P4', "A callout's held `> ` line deleted or pasted on loses the raised line's mark after it", {
-  'a heading pasted on a callout\'s held line': () => {
-    // kept: f2c898379a01 (seed 951)
-    // kept: 3fdea333a21a 96b9a5c40e60
-    // kept: 7b4a5b466ec7 (seed 351)
-    // kept: c32a9bf800e6 fffaa1d672ce (seed 501: a plain quote's held `> ` line, the callout after it)
-    // kept: 25c035b33cf4 (seed 551)
-    // kept: 7cd54f306785 c18654b6de63 (seed 601)
-    // kept: d768bcb88d22 022723758a85 3112bd0a2998 (seed 301)
-    assert.deepEqual(lostMarksOnText("- > quoted in item\n  > \n\n  over two lines\n", {"type":"paste","clipboard":{"text/plain":"> [!note] Title\n> body text\n> more\n","text/markdown":"> [!note] Title\n> body text\n> more\n","text/html":"<!-- ourus --><blockquote>\n<p>[!note] Title\nbody text\nmore</p>\n</blockquote>\n"}}, {"caret":23,"config":{"flavor":"gfm","listParent":"container"},"auto":[24]}), []);
   },
 });
 

@@ -12,7 +12,9 @@ Their consequences, drawn below:
   unit, its spacing no content.
 - **But the blank lines the user wrote at a boundary stay there**: the end of the document, and the
   end of each heading's section, keep theirs whatever node now ends them (the node that ended it
-  takes the newcomer's gap); a command doesn't change what wasn't edited.
+  takes the newcomer's gap); a command doesn't change what wasn't edited. A node a command makes
+  from the old end's own lines, Enter's at the end, has no gap from elsewhere to hand back: the old
+  end keeps what the command left it ([Regression368](regressions.md#regression368)).
 - **Then only Markdown's separation**, at the seams a command changes: one blank line where two
   texts would run together (a paragraph after an item, `-` under text, an ordered list from 2 under
   a paragraph, code after an item); none where it would loosen a tight list

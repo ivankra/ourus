@@ -100,8 +100,15 @@ async function load(root: string): Promise<Core> {
       const { orderedLists, ...rest } = given;
       given = { ...rest, listNumbers: orderedLists === 'shift' ? 'keep' : orderedLists };
     }
+    // (a tree before `decorations`: `markup`, `decorated` where any element is drawn)
+    if ('decorations' in given && !config.has?.('decorations')) {
+      const { decorations, ...rest } = given as { decorations: string[] };
+      given = { ...rest, markup: decorations.length ? 'decorated' : 'text' };
+    }
     // (an option newer than the tree: left out, the tree doing what it did before the option)
     if (config.has) given = Object.fromEntries(Object.entries(given).filter(([key]) => key === 'orderedLists' || key === 'listNumbers' || key === 'autoClose' || config.has(key)));
+    // (and a value newer than the tree, of an option it has: left out too, `copyAtCaret: text`)
+    if (config.values) given = Object.fromEntries(Object.entries(given).filter(([key, value]) => !Array.isArray(config.values[key]) || config.values[key].includes(value)));
     if (!Array.isArray(given.autoClose) || config.has?.('autoClose')) return given;
     const { autoClose, ...rest } = given as { autoClose: string[] };
     return { ...rest, closeBackticks: !autoClose.length ? 'none' : autoClose.includes('`') ? 'all' : 'fences' };
@@ -160,7 +167,7 @@ const configs: Record<string, unknown>[] = [
   { backspaceAtTopItem: 'refuse' }, { backspaceAtItemStart: 'body' }, { backspaceAtItemStart: 'unwrap' }, { backspaceAtItemStart: 'logseq' }, { quirkEnterMidHeading: 'workflowy' }, { quirkPasteCaret: 'roam' }, { quirkPasteCaret: 'athens' }, { quirkPasteText: 'dynalist' }, { emptyItemWithChildren: 'refuse' }, { joinWithChildren: 'refuse' }, { handleFenceContents: false },
   { headingEditing: 'block' }, { taskEditing: 'text' }, { taskEditing: 'block' }, { taskEditing: 'unwrap' }, { enterTask: 'plain' }, { enterSplitSpace: 'drop' }, { enterSplitSpace: 'start' }, { pasteLines: 'items' }, { pastePlainLines: 'items' }, { pastePlainLines: 'enter' }, { pasteOnParent: 'after' },
   { pasteSeams: 'open' }, { pasteOverSelection: 'ignore' }, { pasteOverNodes: 'after' }, { pasteOverNodes: 'nothing' }, { heldSpace: 'trim' }, { pasteAtTextStart: 'before' }, { pasteParagraphList: 'children' }, { pasteListForm: 'own' }, { copyAtCaret: 'host' }, { copySelection: 'nodes' },
-  { markup: 'decorated' }, { autoClose: ['```', '~~~', '`'] }, { autoClose: [] }, { autoClose: ['```', '~~~', '`', '(', '[', '{'] }, { autoClose: ['```', '~~~', '[[', '(('] },
+  { decorations: ['bullet', 'number', 'checkbox', 'heading', 'setext', 'quote', 'callout', 'fence', 'math', 'comment', 'rule', 'footnote', 'blockId'] }, { autoClose: ['```', '~~~', '`'] }, { autoClose: [] }, { autoClose: ['```', '~~~', '`', '(', '[', '{'] }, { autoClose: ['```', '~~~', '[[', '(('] },
 ];
 const documents = Number(process.env.DIFF_DOCS ?? 1500);
 const examples = Number(process.env.DIFF_EXAMPLES ?? 3);

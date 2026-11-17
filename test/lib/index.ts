@@ -11,3 +11,4 @@ export * from './spec-reader.ts';
 export * from './spec-runner.ts';
 export * from './text-position.ts';
 export * from './untriaged.ts';
+export * from './markup-tags.ts';

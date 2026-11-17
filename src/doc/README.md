@@ -47,7 +47,7 @@ const at = doc.locateRaw(pos);              // in a text, a frame, a marker, a p
 
   - `OurusDoc.withConfig(config: Partial<OurusConfig>): OurusDoc`<br>
     The same document under other options (a host's setting changed). An option that says only how
-    commands write (`indentUnit`, `markup`, ...) changes on the same snapshot, its outline and ids
+    commands write (`indentUnit`, `decorations`, ...) changes on the same snapshot, its outline and ids
     shared; `quotes` and `listParent` have the outline read again from the same parse, ids carried as
     an update carries them; `flavor` parses the text anew, its ids anew.
 
@@ -114,7 +114,7 @@ const at = doc.locateRaw(pos);              // in a text, a frame, a marker, a p
   - `OurusDoc.textStart(i: number): number`<br>
     Where the text starts on line `i` (where Home goes): past its containers' prefixes, an item's
     marker, the node's frame, and the blanks after them. Hidden spaces (see `hiddenSpaces`) are
-    text, so it stops before them. On a block-id line a text carries: under `markup: decorated`,
+    text, so it stops before them. On a block-id line a text carries: where `decorations` lists it,
     the end of that text (the caret stays out of it); else past its indentation.
 
   - `OurusDoc.isBlankLine(i: number)`, `OurusDoc.isEmptyLine(i: number)`, `OurusDoc.isLazyLine(i: number)`<br>

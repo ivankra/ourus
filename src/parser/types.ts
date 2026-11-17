@@ -18,7 +18,7 @@ export interface MdList {
   readonly padding: number;
 }
 
-/** A task list item's checkbox, `[ ]` or `[x]` (Obsidian: any one character, `[?]`). */
+/** A task list item's checkbox, `[ ]` or `[x]` (Obsidian: any one UTF-16 unit, `[?]`). */
 export interface MdTask {
   readonly checked: boolean;
   /** The character in the brackets (a space when unchecked). */

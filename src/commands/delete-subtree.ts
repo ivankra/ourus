@@ -6,7 +6,7 @@ import { CODE } from './code.ts';
 import { atLine } from '../text/index.ts';
 import { CommandContext } from './context.ts';
 import { copyOrCutCommand } from './copy.ts';
-import { goneWithTextlessParents, operandsOf, operandsRefused, selectionInText, textEnd, textStart } from './util.ts';
+import { fenceDrawn, goneWithTextlessParents, operandsOf, operandsRefused, selectionInText, textEnd, textStart } from './util.ts';
 import type { OurusResult } from './types.ts';
 import { OurusSuccess, OurusRejected } from './types.ts';
 
@@ -98,10 +98,10 @@ export function deleteSubtreeCommand(ctx: CommandContext, expectMarkdown?: strin
     while (at && !doc.textOf(at)) at = at.children[0] ?? at.afterSubtree;
     const text = at ? doc.textOf(at) : null;
     if (!at || !text) return null;
-    // (before a fenced block's opening delimiter, where markup is text: at its payload's start the next
-    // paste, a cut's put back, would go into the code; where markup is decorated the fence is no place
+    // (before a fenced block's opening delimiter, where the host shows it as text: at its payload's start
+    // the next paste, a cut's put back, would go into the code; where it draws it the fence is no place
     // for a caret)
-    const open = text instanceof OurusAtom && ctx.config.markup === 'text' ? text.frame.find((p) => p.part === 'open') : undefined;
+    const open = text instanceof OurusAtom && !fenceDrawn(ctx, text) ? text.frame.find((p) => p.part === 'open') : undefined;
     draft.setCaret(at, open ? open.from : textStart(text), 1);
     // (nothing left: at the note's start, past a byte-order mark)
   } else draft.setCaretAt(doc.mdTree.documentStart);

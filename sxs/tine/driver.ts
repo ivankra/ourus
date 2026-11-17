@@ -152,10 +152,16 @@ export const driver: Driver = {
   // a heading's `#`s, a task's `TODO` and a code block's fences are text in a block, edited a
   // character at a time
   refuses: ['markup-heading', 'markup-task', 'markup-fence'],
+  // three backticks typed: Tine adds one of its own (```┃`)
+  capturesTyped: /```/,
   ordered: true,
   // a block starting `# ` is a heading, its text Markdown source (a text `#` escaped in it, `\# x`)
-  headings: true,
+  headingBlocks: true,
   behaves: {
+    // a character typed over a selection (probed 2026-11-18)
+    autoWrap: ['`', '*', '_', '~', '=', '^', '(', '[', '{'],
+    // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
+    decorations: ['bullet', 'number', 'fence'],
     // a paste or plain paste over blocks selected whole pastes nothing (SubtreeEdit11, SubtreeEdit14, measured 2026-11-03)
     pasteOverNodes: 'nothing',
     // Ctrl-A climbs from a block to its parent, its siblings skipped

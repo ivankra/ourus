@@ -59,7 +59,7 @@ export const driver: Driver = {
   url: 'https://athensresearch.github.io/athens/',
   model: 'block',
   // a block starting `# ` is a heading, its string Markdown (a text `#` escaped in it, `\# x`)
-  headings: true,
+  headingBlocks: true,
   // a block's text holds a blank line, its paragraphs apart
   paragraphsInBlock: true,
   // after deleting a selected block no block is edited (checked by hand, keys only)
@@ -112,6 +112,10 @@ export const driver: Driver = {
   // split, lines as blocks, numbers as text, a paragraph's list under it (each measured, playing its
   // examples with `run.ts --ignore-options`)
   behaves: {
+    // a character typed over a selection (probed 2026-11-18)
+    autoWrap: ['(', '[', '{'],
+    // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
+    decorations: ['bullet', 'number'],
     // a paste or plain paste over blocks selected whole pastes nothing (SubtreeEdit11, SubtreeEdit14, measured 2026-11-03)
     pasteOverNodes: 'nothing',
     // brackets typed as pairs, anywhere; no fence or backtick closed (the autoClose probes)
@@ -126,7 +130,10 @@ export const driver: Driver = {
     quirkPasteCaret: 'athens',
     outdent: 'logical',
     enterSplitSpace: 'start',
+    // an empty block outdents when nested, and at the top level, where Shift-Tab does nothing, another
+    // empty block is made (probed 2026-11-17: Enter7, Enter7d, Enter7e)
     enterOnEmptyItem: 'outdent',
+    outdentTopLevel: 'refuse',
     enterTask: 'plain',
     joinWithChildren: 'refuse',
     emptyItemWithChildren: 'refuse',

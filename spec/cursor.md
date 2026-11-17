@@ -554,7 +554,7 @@ Past an empty task's checkbox: its text starts after the checkbox all the same, 
 there, never inside the checkbox, where typing would break the task.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 ```
 
 ```markdown

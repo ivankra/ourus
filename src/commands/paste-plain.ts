@@ -10,7 +10,7 @@ import { CommandContext, blockIdsDeclaredBy } from './context.ts';
 import { atQuoteStart, linesInQuote, quoteAtomAt } from './quote.ts';
 import { enterCommand } from './enter.ts';
 import { pasteMarkdown } from './paste.ts';
-import { textActedOnAt } from './util.ts';
+import { textActedOnAt, drawnAt } from './util.ts';
 import { breaksFence, codeAt, editInCode, onDelimiterLine } from './code.ts';
 import { afterDeleting } from './copy.ts';
 import { placedText } from './typing.ts';
@@ -162,6 +162,10 @@ const leadingEmptyLines = (lines: readonly string[]): number => {
 
 /** The lines into the text at the caret (`pastePlainLines: text`, and paste's plain lines). */
 export function plainLines(ctx: CommandContext, clipboard: string): OurusResult | null {
+  // a last line break after text, as a copied line ends, no line (`pasteTrailingBreak: drop`); in code a
+  // code line
+  const dropped = ctx.config.pasteTrailingBreak === 'drop' && /[^\r\n](?:\r\n|\r|\n)$/.test(clipboard) && !codeAt(ctx);
+  if (dropped) clipboard = clipboard.replace(/(?:\r\n|\r|\n)$/, '');
   // in a quote read as an atom, over a selection in it too: its lines each a line of it (`> `)
   const quote = quoteAtomAt(ctx);
   if (quote) {
@@ -186,7 +190,8 @@ export function plainLines(ctx: CommandContext, clipboard: string): OurusResult 
     const placed = placedText(ctx, clipboard);
     if (placed) return placed;
   }
-  if (lines.length < 2 && !/^[ \t]/.test(clipboard)) return new OurusDeferred('host-default', 'one line: the host pastes it');
+  // (the host would paste the clipboard as it is, its line break too: the line typed here)
+  if (lines.length < 2 && !/^[ \t]/.test(clipboard)) return dropped ? typedLine(ctx, clipboard) : new OurusDeferred('host-default', 'one line: the host pastes it');
   // (a line break first, before the block's text: the host's, as a new line above it)
   if (code && lines[0] === '' && code.offset === 0) return new OurusDeferred('host-default', 'a line break before the block: the host pastes');
   // on a delimiter's line (an opening's info, a closing fence), no code line: as they are
@@ -212,7 +217,7 @@ export function plainLines(ctx: CommandContext, clipboard: string): OurusResult 
   if (a.zone === 'frame' && a.text instanceof OurusProse && !a.text.empty) {
     const inside = ctx.selection.head > ctx.doc.lineAt(ctx.selection.head).from;
     if (!inside && a.part !== 'underline') return new OurusDeferred('in-markup', 'the caret is before the text');
-    if (inside && ctx.collapsed && ctx.config.markup === 'text') return new OurusDeferred('in-markup', 'the caret is in markup');
+    if (inside && ctx.collapsed && !drawnAt(ctx.doc, a)) return new OurusDeferred('in-markup', 'the caret is in markup');
     return new OurusRejected('not-expressible', a.text.heading ? 'the title holds one line' : 'the selection takes part of markup');
   }
   const at =
@@ -327,4 +332,11 @@ function emptyTextAt(ctx: CommandContext, node: OurusNode): { node: OurusNode; t
   const text = ctx.doc.textOf(node);
   if (node.kind !== 'item' || !(text instanceof OurusProse) || !text.empty) return null;
   return { node, text, offset: text.text.length };
+}
+
+/** `text` put in over the selection, as the host's paste puts a line (a clipboard whose last line break went). */
+function typedLine(ctx: CommandContext, text: string): OurusResult {
+  const { anchor, head } = ctx.selection;
+  const changes = [{ from: Math.min(anchor, head), to: Math.max(anchor, head), insert: text }];
+  return new OurusSuccess({ view: ctx.view.update({ changes, caret: Math.min(anchor, head) + text.length }), changes });
 }

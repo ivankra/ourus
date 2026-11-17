@@ -151,6 +151,10 @@ export const driver: Driver = {
   // Shift+Tab leaves later siblings with the parent (logical outdenting); Enter on an empty nested
   // block outdents it; Backspace on a page's first block does nothing: as ourus's config says of Roam
   behaves: {
+    // a character typed over a selection (probed 2026-11-18); `$` wraps as `$$…$$`, which no value draws
+    autoWrap: ['`', '(', '[', '{', "'"],
+    // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
+    decorations: ['bullet', 'number', 'heading', 'setext'],
     // brackets typed as pairs, anywhere (the autoClose probes), and `$` and `$$`, Backspace in `$$┃$$` a
     // level (Auto28, Auto30); no single `$` (Auto36), the nearest still `$`'s
     autoClose: ['```', '~~~', '$$', '(', '[', '{', '$'],
@@ -169,7 +173,10 @@ export const driver: Driver = {
     quirkPasteCaret: 'roam',
     outdent: 'logical',
     enterSplitSpace: 'start',
+    // an empty block outdents when nested, and at the top level, where Shift-Tab does nothing, another
+    // empty block is made (probed 2026-11-17: Enter7, Enter7d, Enter7e)
     enterOnEmptyItem: 'outdent',
+    outdentTopLevel: 'refuse',
     enterTask: 'plain',
     joinWithChildren: 'refuse',
     backspaceAtTopItem: 'refuse',
@@ -188,7 +195,7 @@ export const driver: Driver = {
   refuses: ['code block', 'markup-heading', 'markup-task', 'markup-fence', 'enter-in-fence'],
   ordered: true,
   // a heading is the block's attribute, and a string starting `# ` text (`fromRoam` escapes it)
-  headings: true,
+  headingBlocks: true,
   holds(doc) {
     const o = doc as Outline;
     if (o.blocks.some((b) => /^#{4,6} /.test(b.text.replace(/^\d{1,9}\. /, '')))) return 'heading deeper than H3';

@@ -5,6 +5,7 @@
 import { OurusAtom, textEnd, textStart, type OurusDoc, type OurusNode } from '../doc/index.ts';
 import { pushAll, type OurusSelection } from '../text/index.ts';
 import type { OurusView } from './view.ts';
+import { decorates } from '../config.ts';
 
 /**
  * `selection` moved out of what the view hides: an end in a fold's hidden lines to the fold's start
@@ -55,7 +56,7 @@ export function editableStart(doc: OurusDoc, node: OurusNode): number {
   const text = doc.textOf(n);
   if (!text) return doc.textStart(n.startLine);
   const start = textStart(text);
-  if (doc.config.markup !== 'decorated' || !(text instanceof OurusAtom)) return doc.posOf(n, start, 1);
+  if (!(text instanceof OurusAtom) || !decorates(doc.config, text.type === 'math_block' ? 'math' : text.type === 'comment_block' ? 'comment' : 'fence')) return doc.posOf(n, start, 1);
   for (let up: OurusNode | null = n; up; up = up.parent) if (up.kind === 'item' || up.kind === 'quote') return doc.posOf(n, start, 1);
   const open = text.frame.find((p) => p.part === 'open');
   const close = text.frame.find((p) => p.part === 'close');

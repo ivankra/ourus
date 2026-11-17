@@ -338,6 +338,35 @@ tags: common free-form
 #### C
 ```
 
+## Indent12b
+
+Under `headings: block` Tab on a heading is refused: it owns no section to take a level down with it,
+and the document editors whose headings are blocks leave it (AFFiNE, BlockNote, Notion, Lexical,
+RemNote without bullets; SiYuan types a tab).
+
+```yaml
+tags: rare free-form
+headings: block
+```
+
+```markdown
+# A
+## B┃
+### C
+```
+
+> indent
+
+```yaml
+result: rejected heading-block
+```
+
+```markdown
+# A
+## B┃
+### C
+```
+
 ## Indent13
 
 Fenced code reindents with its item.
@@ -910,12 +939,12 @@ tags: rare
 ## Indent31
 
 From the fence line of an item whose text is fenced code, the caret stays on the fence where the
-host shows markup as text (`markup: text`, the default), where the user had it: in the code, Tab and
+host shows markup as text (not in `decorations`, the default), where the user had it: in the code, Tab and
 Shift-Tab are the host's and indent the code ([Fence21](fences.md#fence21)), so there the outdent
 couldn't follow.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -945,12 +974,12 @@ tags: rare markup-fence
 
 ## Indent31b
 
-Where the host decorates markup (`markup: decorated`), the caret goes into the code, where typing
+Where the host decorates markup (in `decorations`), the caret goes into the code, where typing
 can't break its fence.
 
 ```yaml
-tags: rare markup-fence
-markup: decorated
+tags: rare
+decorations: [fence]
 ```
 
 ````markdown
@@ -1037,7 +1066,7 @@ that show fences nest the block so (Athens, Dynalist, Logseq). Outdented, it is 
 list: a fence needs no blank line to start.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown

@@ -11,9 +11,10 @@ import { deleteSubtreeCommand } from './delete-subtree.ts';
 import { joinIntoQuote, joinLineInQuote, joinQuoteUp, quoteAtomAt } from './quote.ts';
 import { codeAt, editInCode, joinInCode, onDelimiterLine } from './code.ts';
 import { deleteEmptyPair, pairPlace } from './typing.ts';
-import { childrenRefused, deleteHeldSpace, hiddenSpacesAt, inMarkup, leaveList, pastPrefix, pastPrefixAt, textActedOnAt, wholeBlocksSelection, textEnd, textStart, unnumberItem, visiblePreceding, withTextlessParents } from './util.ts';
+import { blockElement, joinIntoFootnote, childrenRefused, deleteHeldSpace, drawnAt, fenceDrawn, hiddenSpacesAt, inMarkup, leaveList, pastPrefix, pastPrefixAt, textActedOnAt, wholeBlocksSelection, textEnd, textStart, unnumberItem, visiblePreceding, withTextlessParents } from './util.ts';
+import { decorates } from '../config.ts';
 import type { OurusResult } from './types.ts';
-import { OurusDeferred, OurusRejected } from './types.ts';
+import { OurusDeferred, OurusRejected, OurusSuccess } from './types.ts';
 
 /**
  * From the caret back to the start of its line's text, past a checkbox or `#`s, the spaces after the
@@ -155,14 +156,19 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
   const inQuote = quoteAtomAt(ctx);
   const lineBack = inQuote && joinLineInQuote(ctx, inQuote, false);
   if (lineBack) return lineBack;
-  // inside a checkbox, right after its character, where markup is decorated: that character goes, the
-  // brackets staying, as the host's Backspace does where markup is text (tasks.md rule 5)
+  // inside a checkbox, right after its character, where the host draws checkboxes: that character goes,
+  // the brackets staying, as the host's Backspace does where it shows them as text (tasks.md rule 5)
+  // at a footnote's text start, right after its label: the host's where it shows the label as text,
+  // refused where it draws it (the text would join the label, or the text above)
+  if (ctx.collapsed && at.zone === 'text' && at.text instanceof OurusAtom && at.text.type === 'footnote_definition' && at.offset === at.text.frame.find((p) => p.part === 'label')?.to) {
+    return decorates(config, 'footnote') ? new OurusRejected('not-expressible', "a footnote's label is no text") : new OurusDeferred('in-markup', "the footnote's label is markup the host edits as text");
+  }
   const status = statusIn(at, -1);
-  if (status && config.markup === 'decorated') return ctx.apply(ctx.draft().setText(status.node, status.text.splice(status.at, status.at + 1)).setCaret(status.node, status.at, -1));
+  if (status && decorates(config, 'checkbox')) return ctx.apply(ctx.draft().setText(status.node, status.text.splice(status.at, status.at + 1)).setCaret(status.node, status.at, -1));
   // before a checkbox, in the marker: at the item's start, where the item joins (TO1), not past its checkbox
   const beforeBox = at.zone === 'marker' || (at.zone === 'frame' && at.part === 'task' && at.offset === 0);
   const markup = inMarkup(ctx.doc, at, head);
-  if (markup && config.markup === 'text') return new OurusDeferred('in-markup', 'the caret is in markup');
+  if (markup && !drawnAt(ctx.doc, at)) return new OurusDeferred('in-markup', 'the caret is in markup');
   // (at its line's start, before a marker or a heading's `#`s: at the text start, Backspace2)
   if (markup || at.zone === 'marker' || (at.zone === 'frame' && at.part === 'heading')) {
     const text = textActedOnAt(ctx, head);
@@ -266,7 +272,23 @@ export function deleteContentBackwardCommand(ctx: CommandContext): OurusResult |
     const unwrapped = unwrapItem(ctx, node, text);
     if (unwrapped) return unwrapped;
   }
+  // (with `unwrap` an empty item too: an empty paragraph where it is, as it leaves its list)
+  if (config.backspaceAtItemStart === 'unwrap' && node.kind === 'item' && text.type === 'paragraph' && text.empty) {
+    const left = leaveList(ctx, node);
+    if (left instanceof OurusSuccess) return left;
+  }
   return joinUp(ctx, node, text);
+}
+
+/**
+ * Whether `above` and `below` are items of two lists of one kind, the one above tight (or of one
+ * item), which become one list where the node between them goes.
+ */
+function rejoins(ctx: CommandContext, above: OurusNode, below: OurusNode | null | undefined): boolean {
+  if (above.kind !== 'item' || below?.kind !== 'item') return false;
+  const [a, b] = [ctx.doc.listOf(above)?.block, ctx.doc.listOf(below)?.block];
+  const kind = (l: typeof a): string => JSON.stringify([l?.attrs.list?.type, l?.attrs.list?.bulletChar, l?.attrs.list?.delimiter]);
+  return !!a && !!b && a !== b && a.attrs.tight === true && kind(a) === kind(b);
 }
 
 /**
@@ -337,7 +359,7 @@ function blankLineBack(ctx: CommandContext, owner: OurusNode): OurusResult | nul
   // (a line before the gap's last: the last, ourus's or not, stays as it was)
   const draft = ctx.draft().gap(owner, owner.gap - 1, k < owner.gap - 1).setText(owner, text);
   if (k > 0) return ctx.apply(draft.select({ blank: owner, line: k - 1 }, { blank: owner, line: k - 1 }));
-  return ctx.apply(draft.setCaret(owner, text instanceof OurusAtom && ctx.config.markup === 'text' ? text.text.length : textEnd(text), -1));
+  return ctx.apply(draft.setCaret(owner, text instanceof OurusAtom && !fenceDrawn(ctx, text) ? text.text.length : textEnd(text), -1));
 }
 
 /**
@@ -366,6 +388,8 @@ export function joinUp(ctx: CommandContext, node: OurusNode, text: OurusProse, c
   if (node.kind === 'item' && text.empty && node.children.length) {
     const adopt = above.kind === 'item' && above !== node.parent && node.parent?.kind !== 'quote';
     if (!adopt && config.emptyItemWithChildren === 'refuse') return new OurusRejected('has-children');
+    // (`joinWithChildren: never`: its children taken into the sibling above neither, Backspace20)
+    if (adopt && config.joinWithChildren === 'never') return new OurusRejected('has-children');
     // (placed, not dissolved: they join the list it was in, lined up with it)
     if (adopt) draft.remove(node.children).append(above, 'last', node.children).remove([node]);
     else draft.remove(node.children).place('before', node, node.children).remove([node]);
@@ -399,20 +423,40 @@ export function joinUp(ctx: CommandContext, node: OurusNode, text: OurusProse, c
   // (Backspace20)
   if (!lineOfAbove && text.empty && (node.kind === 'paragraph' || !node.children.length)) {
     // (an empty item at the code's text end, where typing goes on: Backspace28; an empty paragraph past
-    // it, where markup is text)
-    const atEnd = upper instanceof OurusProse || node.kind === 'item' || ctx.config.markup === 'decorated';
+    // it, where the host shows its fence as text)
+    const atEnd = upper instanceof OurusProse || node.kind === 'item' || fenceDrawn(ctx, upper);
     // (its blank lines after what is above it in the text: a folded node's last descendant, not its own text's)
     const before = node.preceding && node.preceding.kind !== 'root' ? node.preceding : above;
     draft.dissolve(node).inheritGap(before, node).setCaret(above, atEnd ? textEnd(upper) : upper.text.length, -1);
+    // (an empty paragraph between two lists of one kind, which rejoin: the list above's spacing, its
+    // blank lines the paragraph's, as an empty item leaving its list set it off: Backspace50c)
+    if (node.kind === 'paragraph' && node.prev && rejoins(ctx, node.prev, node.children[0] ?? node.next)) draft.gap(before, 0);
     return ctx.apply(draft);
   }
+  // after a footnote's text, this paragraph joins it, its text being prose
+  if (upper instanceof OurusAtom && upper.type === 'footnote_definition' && !ctx.view.zoom) return joinIntoFootnote(ctx, above, upper, node) ?? new OurusRejected('not-expressible', `can't join into ${nameOf(above)}`);
+  // after code, a table or a rule: the host's where it shows the block as text, its Backspace a blank
+  // line a press, then the line joined to the block's as text; refused where it draws it
+  const element = upper instanceof OurusAtom ? blockElement(upper) : null;
+  if (element && !decorates(ctx.config, element) && !ctx.view.zoom) return new OurusDeferred('in-markup', `the ${nameOf(above)} above is markup the host edits as text`);
   if (!(upper instanceof OurusProse)) return new OurusRejected('not-expressible', `can't join into ${above.kind === 'atom' ? nameOf(above) : 'that'}`);
   if (node.kind !== 'item' && node.kind !== 'paragraph' && node.kind !== 'heading') return null;
   const lines = text.body.split('\n').length;
-  if (lines > 1 && upper.heading?.form === 'atx') return new OurusRejected('not-expressible', 'an ATX title is a single line');
+  if (lines > 1 && upper.heading?.form === 'atx') {
+    // an item's title: the first line joins it, the rest a paragraph right under it, as an outliner's
+    // block keeps its later lines (Enter51); where it would land after the item's children, refused
+    const under = lineOfAbove || (above.kind === 'item' && node.kind === 'item' && above !== node.parent && !above.children.length);
+    if (above.kind !== 'item' || !under) return new OurusRejected('not-expressible', 'an ATX title is a single line');
+    const first = text.text.indexOf('\n', text.textStart(0));
+    let next = first + 1;
+    while (next < text.text.length && isSpaceOrTab(text.text.charCodeAt(next))) next++;
+    draft.split(node, first, { to: next, children: 'stay', into: lineOfAbove ? 'sibling' : 'child', kind: 'paragraph' });
+  }
   // (a heading's title alone: its section stays where it is)
   const adopt = above.kind === 'item' && above !== node.parent && node.kind !== 'heading';
-  if (!adopt && node.kind !== 'heading' && node.children.length && config.joinWithChildren === 'refuse') return new OurusRejected('has-children');
+  if (!adopt && node.kind !== 'heading' && node.children.length && config.joinWithChildren !== 'join') return new OurusRejected('has-children');
+  // (`never`: into a sibling too)
+  if (adopt && node.children.length && config.joinWithChildren === 'never') return new OurusRejected('has-children');
   // (and where they'd go into an item that isn't childless at their parent's depth: down a level, into
   // the last descendant above, or among the children it has, a folded one's: Backspace45c, Fold15b)
   if (adopt && node.children.length && config.joinWithChildren === 'refuse' && (above.children.length || above.depth !== node.depth)) return new OurusRejected('has-children');
@@ -421,11 +465,14 @@ export function joinUp(ctx: CommandContext, node: OurusNode, text: OurusProse, c
   if (close) draft.setText(node, text.splice(close.from, close.to));
   // (the spaces Markdown hid before the text, the user's, joined as spaces)
   const hidden = doc.hiddenSpaces(node);
-  const separator = (lineOfAbove ? '\n' : '') + ' '.repeat(hidden ? hidden.to - hidden.from : 0);
+  // (a line of the text above, but under an ATX title, a single line: glued to it, as Shift-Enter's
+  // break taken back, ShiftEnter29b)
+  const asLine = lineOfAbove && upper.heading?.form !== 'atx';
+  const separator = (asLine ? '\n' : '') + ' '.repeat(hidden ? hidden.to - hidden.from : 0);
   const end = textEnd(upper);
   const id = draft.join(above, node, { children: adopt ? 'adopt' : 'place', separator });
   // Backspace's caret at the seam, before those spaces; Delete's where it was, at the upper text's end
-  draft.setCaret(id, caretAtSeam ? end + (lineOfAbove ? 1 : 0) : end, -1);
+  draft.setCaret(id, caretAtSeam ? end + (asLine ? 1 : 0) : end, -1);
   return ctx.apply(draft);
 }
 
@@ -507,7 +554,7 @@ function firstInContainer(ctx: CommandContext, node: OurusNode, text: OurusProse
 }
 
 /**
- * A selection across nodes, deleted (spec/backspace.md rule 8, spec/delete.md rule 8): the selected
+ * A selection across nodes, deleted (spec/backspace.md rule 9, spec/delete.md rule 9): the selected
  * text goes, and the two ends join, as Backspace at the second end's start would join them, the nodes
  * between going with their subtrees; the caret at the first end. Within one node's text it is the
  * host's, and within a block of code, but where it would make a fence (`editInCode`). Null where an end isn't in a node's text, or the second end is under a node between, which

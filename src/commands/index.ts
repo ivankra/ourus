@@ -31,6 +31,7 @@ import { insertTextCommand } from './typing.ts';
 import { clearZoomCommand, foldCommand, toggleFoldCommand, unfoldCommand, zoomInCommand, zoomOutCommand } from './view.ts';
 import { zoomed } from './zoom.ts';
 import { OurusDeferred, OurusFailed, OurusRejected, OurusSuccess } from './types.ts';
+import { decorates } from '../config.ts';
 
 export { OurusSuccess, OurusRejected, OurusDeferred, OurusFailed } from './types.ts';
 export type { OurusClipboard, OurusCommand, OurusResult, DropMap, DropPoint, DropSeam, InsertionPoint, RejectReason, DeferReason, OurusSelection } from './types.ts';
@@ -108,10 +109,10 @@ function commandSite(view: OurusView, command: OurusCommand, selection: OurusSel
   const ids: BlockIdPart[] = named ? blockIdsOf(named).flatMap((b) => (b.carried ? [] : [b])) : [];
   const joined = at && 'offset' in at ? ids.find((b) => /\n/.test(named!.text.slice(b.partFrom, b.from)) && ((command.type === 'deleteContentBackward' && at.offset === b.from) || (command.type === 'deleteContentForward' && at.offset === b.partFrom))) : undefined;
   if (joined && at && 'node' in at) return { reason: 'block-id-join', selection, changes: [{ from: doc.posOf(at.node, joined.partFrom, 1), to: doc.posOf(at.node, joined.from, 1), insert: ' ' }] };
-  // (under `markup: decorated`, past the blank before it too, which is the block id's to show)
-  const past = (b: BlockIdPart): number => (doc.config.markup === 'decorated' && !/\n/.test(named!.text.slice(b.partFrom, b.from)) ? b.partFrom : b.from);
+  // (where the host draws block ids, past the blank before it too, which is the block id's to show)
+  const past = (b: BlockIdPart): number => (decorates(doc.config, 'blockId') && !/\n/.test(named!.text.slice(b.partFrom, b.from)) ? b.partFrom : b.from);
   const name = named && at && 'offset' in at ? ids.find((b) => at.offset > past(b) && at.offset <= b.partTo && trimMd(head(named, b.partFrom)) !== '') : undefined;
-  const inName = !!name && !(doc.config.markup === 'text' && EDITS_TEXT.has(command.type));
+  const inName = !!name && !(!decorates(doc.config, 'blockId') && EDITS_TEXT.has(command.type));
   // (but typing or pasting on the blank line right after the text, another blank line after it before
   // its block-id lines: a line of the text, the host's, as Shift-Enter leaves it)
   const caretLine = doc.lineAt(selection.head);
@@ -134,7 +135,7 @@ function runAt(view: OurusView, command: OurusCommand, site: Exclude<CommandSite
   // the end of the text, as any other key)
   const { from: lineFrom, to: lineTo } = doc.lineAt(selection.head);
   const joins = (command.type === 'deleteContentForward' && selection.head === lineTo) || ((command.type === 'deleteContentBackward' || command.type === 'deleteSoftLineBackward') && selection.head === lineFrom);
-  if (doc.config.markup === 'text' && EDITS_TEXT.has(command.type) && !line.blank && !joins) return new OurusDeferred('in-markup', 'the caret is in a block-id line, markup the host edits as text');
+  if (!decorates(doc.config, 'blockId') && EDITS_TEXT.has(command.type) && !line.blank && !joins) return new OurusDeferred('in-markup', 'the caret is in a block-id line, markup the host edits as text');
   const result = execute(view, command, site.acted) ?? (HOST_HAS.has(command.type) ? new OurusDeferred('not-done', "ourus doesn't do it here yet") : new OurusRejected('unsupported'));
   // (acting at the text's end, a key the host's there: the host's caret is on the block-id line
   // still, so what it would insert is inserted here, at the text's end; any other key refused)

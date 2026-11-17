@@ -11,6 +11,7 @@ import type { ClipboardTextEnds } from './clipboard.ts';
 import type { OurusCommand, OurusSelection, OurusResult } from './types.ts';
 import { charAfter, charBefore, dominantEnding, isSpaceOrTab, lineOf, lineSpan, trimMd, type ChangeSpec } from '../text/index.ts';
 import { OurusRejected } from './types.ts';
+import { decorates, type Decoration } from '../config.ts';
 
 export { textEnd, textStart } from '../doc/index.ts';
 
@@ -101,6 +102,75 @@ export function inMarkup(doc: OurusDoc, at: Located, pos: number): boolean {
   if (pos === doc.lineAt(pos).from) return false;
   return (at.part === 'task' && !at.text.empty) || at.part === 'heading' || at.part === 'callout';
 }
+
+/**
+ * The element of markup `at` is in (`decorations`), or null where it is none (an item's continuation
+ * indentation, a text): an item's marker by its kind, a container's prefix by its container (a quote's
+ * `>`, a footnote's label), a frame part by its text's kind.
+ */
+export function markupElement(doc: OurusDoc, at: Located): Decoration | null {
+  // (an item's marker with the indentation before it and the padding after it, as the host draws them)
+  if (at.zone === 'marker') return /\d/.test(doc.markerOf(at.node)) ? 'number' : 'bullet';
+  if (at.zone === 'prefix') {
+    const kind = at.line.prefix[at.piece]?.kind;
+    return kind === 'quote' ? 'quote' : kind === 'footnote' ? 'footnote' : null;
+  }
+  if (at.zone !== 'frame') return null;
+  if (at.text instanceof OurusAtom) {
+    if (at.part === 'rule' || at.text.type === 'thematic_break') return 'rule';
+    if (at.part === 'label') return 'footnote';
+    if (at.text.type === 'table') return 'table';
+    if (at.part === 'indent') return null;
+    return at.text.type === 'math_block' ? 'math' : at.text.type === 'comment_block' ? 'comment' : 'fence';
+  }
+  const parts: Record<string, Decoration> = { task: 'checkbox', heading: 'heading', close: 'heading', underline: 'setext', quote: 'quote', callout: 'callout', blockId: 'blockId' };
+  return parts[at.part] ?? null;
+}
+
+/**
+ * The element of markup a block of it is (`decorations`), by its kind: code, `$$`, `%%`, a table, a
+ * rule; null for any other atom (HTML, a footnote's text, front matter).
+ */
+export function blockElement(text: OurusAtom): Decoration | null {
+  switch (text.type) {
+    case 'fenced_code': case 'indented_code': return 'fence';
+    case 'math_block': return 'math';
+    case 'comment_block': return 'comment';
+    case 'table': return 'table';
+    case 'thematic_break': return 'rule';
+    default: return null;
+  }
+}
+
+/**
+ * A footnote definition's text joined by the one-line paragraph after it, the caret at the seam (both
+ * keys there: the definition's text is prose); null where that paragraph has more (lines, children, a
+ * block id).
+ */
+export function joinIntoFootnote(ctx: CommandContext, node: OurusNode, text: OurusAtom, below: OurusNode): OurusResult | null {
+  const lower = ctx.doc.textOf(below);
+  // (nor one with a block id, which a footnote has no form for)
+  if (below.kind !== 'paragraph' || below.children.length || !(lower instanceof OurusProse) || lower.text.includes('\n') || lower.type !== 'paragraph' || lower.blockIdLines.length || lower.frame.some((p) => p.part === 'blockId')) return null;
+  const end = text.text.length;
+  const draft = ctx.draft().setText(node, text.splice(end, end, lower.text)).remove([below]).setCaret(node, end, -1);
+  return ctx.apply(draft);
+}
+
+/**
+ * Whether the host draws a fenced block's delimiter lines (`decorations`): `text`'s, by its kind (code,
+ * `$$`, `%%`), else the block's at the caret.
+ */
+export function fenceDrawn(ctx: CommandContext, text?: OurusText | null): boolean {
+  const from = ctx.from;
+  const atom = text instanceof OurusAtom ? text : (from.zone === 'text' || from.zone === 'frame') && from.text instanceof OurusAtom ? from.text : null;
+  return decorates(ctx.config, atom?.type === 'math_block' ? 'math' : atom?.type === 'comment_block' ? 'comment' : 'fence');
+}
+
+/** Whether the host draws the markup `at` is in (`decorations`); markup it shows as text, and no markup, not. */
+export const drawnAt = (doc: OurusDoc, at: Located): boolean => {
+  const element = markupElement(doc, at);
+  return element !== null && decorates(doc.config, element);
+};
 
 /**
  * `nodes` (contiguous siblings) with the nodes they are all of that have no text of their own: a
@@ -222,8 +292,9 @@ export function textActedOnAt(ctx: CommandContext, head: number): { node: OurusN
 export function selectionInText(ctx: CommandContext, draft: OurusDraft, keepOnFence = false, shifts: HeadingShifts = new Map()): void {
   const { anchor, head } = ctx.selection;
   const at = ctx.from;
-  // on a fence's line, where markup is text: Tab and Shift-Tab leave it there, for the next one (Indent31)
-  if (keepOnFence && ctx.config.markup === 'text' && ctx.collapsed && (at.zone === 'frame' || at.zone === 'text') && at.text instanceof OurusAtom && at.text.fence && at.text.delimiterLine(lineOf(at.text.text, at.offset))) {
+  // on a fence's line, where the host shows it as text: Tab and Shift-Tab leave it there, for the next
+  // one (Indent31)
+  if (keepOnFence && !fenceDrawn(ctx) && ctx.collapsed && (at.zone === 'frame' || at.zone === 'text') && at.text instanceof OurusAtom && at.text.fence && at.text.delimiterLine(lineOf(at.text.text, at.offset))) {
     draft.setCaret(at.node, at.offset, 1);
     return;
   }
@@ -535,11 +606,54 @@ export function unnumberItem(ctx: CommandContext, node: OurusNode, text: OurusTe
 }
 
 /**
- * `joinWithChildren: refuse`'s check for a join of `node` into `above`, its children going after
+ * `joinWithChildren: refuse`'s (and `never`'s, a sibling's too) check for a join of `node` into `above`, its children going after
  * `above`'s (`adopt`: an item that isn't `node`'s parent) or into `node`'s place: refused where they'd
  * be lifted, or go among children `above` has, or down a level (as the prose join checks: Backspace45c).
  */
 export function childrenRefused(ctx: CommandContext, above: OurusNode, node: OurusNode, adopt: boolean): OurusRejected | null {
-  if (!node.children.length || ctx.config.joinWithChildren !== 'refuse') return null;
-  return !adopt || above.children.length || above.depth !== node.depth ? new OurusRejected('has-children') : null;
+  if (!node.children.length || ctx.config.joinWithChildren === 'join') return null;
+  return !adopt || ctx.config.joinWithChildren === 'never' || above.children.length || above.depth !== node.depth ? new OurusRejected('has-children') : null;
+}
+
+/**
+ * Whether a blank line can open above `node` (`enterAtTextStart: stay`, Shift-Enter at a paragraph's start): after the node before it, its
+ * own text's (a quote without a title has none), or at the document's start, where only blank lines
+ * are above it (no frontmatter).
+ */
+export function canOpenLineAbove(ctx: CommandContext, node: OurusNode): boolean {
+  // (not above a lazy line: a blank line would end what it continues, the node read out of its container)
+  if (ctx.doc.isLazyLine(node.startLine)) return false;
+  const above = node.preceding;
+  if (!above || above.kind === 'root') return ctx.doc.leadingBlankLines !== null;
+  return above.kind !== 'quote' || ctx.doc.textOf(above) !== null || above !== node.parent;
+}
+
+/**
+ * A blank line above `node`, the caret at `offset` of its text, which keeps its text but a selection
+ * from its start to `to` (`enterAtTextStart: stay`).
+ */
+export function openLineAbove(ctx: CommandContext, node: OurusNode, offset: number, text: OurusProse, to: number): OurusResult | null {
+  const rest = withoutSelection(text, to);
+  if (!rest) return null;
+  // (the caret after the new line: associated forward, or a byte-order mark before it takes it)
+  const draft = ctx.draft();
+  if (rest !== text) draft.setText(node, rest).setCaret(node, text.textStart(0), 1);
+  else draft.setCaret(node, offset, 1);
+  const above = node.preceding;
+  if (!above || above.kind === 'root') draft.leadingBlankLines(ctx.doc.leadingBlankLines! + 1);
+  else draft.gap(above, above.gap + 1);
+  return ctx.apply(draft);
+}
+
+/**
+ * `text` without a selection from its start to `to`, and the blanks after it (they would be padding
+ * there); `text` itself where there is none; null where a line break follows it (not done yet).
+ */
+export function withoutSelection(text: OurusProse, to: number): OurusProse | null {
+  if (to <= text.textStart(0)) return text;
+  const s = text.text;
+  let end = to;
+  while (end < s.length && isSpaceOrTab(s.charCodeAt(end))) end++;
+  if (s[end] === '\n') return null;
+  return text.splice(text.textStart(0), end);
 }

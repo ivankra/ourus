@@ -5,7 +5,7 @@ Command: `deleteContentBackward` (Backspace).
 Backspace at the start of a node's text works on the boundary between that node and the one above;
 in the middle of the text it is the host's. At its line's start, before a marker, the caret counts as
 at the text start (Backspace2). Inside markup (a marker, a checkbox, `#`s, a quote's `>`), Backspace
-is the host's where the host shows markup as text (`markup: text`, the default; Backspace42), and
+is the host's where the host shows markup as text (not in `decorations`, the default; Backspace42), and
 acts at the text start where it decorates it (Backspace42b). The rules, in order; the first that
 applies wins:
 
@@ -54,13 +54,17 @@ applies wins:
    stays quoted ([quotes.md](quotes.md)). So `> - [ ] ┃b` loses its checkbox, then its marker, then
    its `>`, and then joins the node above. First in an item whose marker shares its line (`- - a`),
    which has no text of its own, its marker goes and its text is that item's (Backspace41).
-7. **What can't be written is refused**: text into code (Backspace16, Backspace24) or a table, more
-   than one line into an ATX heading's title (Backspace23); with nothing above, `nothing-above`
-   (Backspace26).
-8. **A selection across nodes** is ourus's too: the selected text goes and the two ends join, as
+7. **After a block of markup**, code, a table or a rule, and at a fence's or a footnote's text start:
+   the host's where it shows that markup as text (`decorations` not listing it, the default: a blank
+   line a press, then the lines joined as text, a text editor's: Backspace24b), refused where it draws
+   it (Backspace16, Backspace24). After a footnote's text, this paragraph joins it, the text being
+   prose.
+8. **What can't be written is refused**: more than one line into an ATX heading's title
+   (Backspace23); with nothing above, `nothing-above` (Backspace26).
+9. **A selection across nodes** is ourus's too: the selected text goes and the two ends join, as
    Backspace at the second end's start would join them (Backspace31). Within one node's text it is
    the host's (Backspace32).
-9. **In the middle of the text**, the host's Backspace (Backspace13), one character, an emoji
+10. **In the middle of the text**, the host's Backspace (Backspace13), one character, an emoji
    included (Backspace46).
 
 Cmd-Backspace (`deleteSoftLineBackward`) deletes back to the start of the text on the caret's line,
@@ -145,7 +149,7 @@ Heading closing hashes stay at end.
 A heading's closing `#`s stay at the end of its line.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -225,6 +229,62 @@ tags: common
 ```markdown
 - a┃b
   - c
+```
+
+## Backspace8b
+
+With `joinWithChildren: never`, an item with children joins no sibling above either: refused, as
+Mubu and Tana do nothing there; an empty one too, its children taken nowhere.
+
+```yaml
+tags: rare
+joinWithChildren: never
+```
+
+```markdown
+- a
+- ┃b
+  - c
+```
+
+> deleteContentBackward
+
+```yaml
+result: rejected has-children
+```
+
+```markdown
+- a
+- ┃b
+  - c
+```
+
+## Backspace8c
+
+An empty item with children, under `joinWithChildren: never`: refused too, its children taken into
+the sibling above neither.
+
+```yaml
+tags: rare
+joinWithChildren: never
+```
+
+```markdown
+- a
+- ┃
+  - b
+```
+
+> deleteContentBackward
+
+```yaml
+result: rejected has-children
+```
+
+```markdown
+- a
+- ┃
+  - b
 ```
 
 ## Backspace9
@@ -516,12 +576,13 @@ para┃a
 
 ## Backspace16
 
-No joining into a code block.
-
-The item's text can't become code: refused.
+No joining into a code block where the host draws it: the item's text can't become code, refused.
+Where it shows the fence as text (the default), Backspace is the host's
+([Backspace24b](#backspace24b)).
 
 ```yaml
-tags: rare markup-fence
+tags: rare
+decorations: [fence]
 ```
 
 ````markdown
@@ -773,7 +834,7 @@ Obsidian deletes the space, leaving `#Hello`, which it reads as a tag. With `hea
 the title joins the node above instead ([Backspace18b](#backspace18b)).
 
 ```yaml
-tags: common free-form markup-heading
+tags: common free-form
 ```
 
 ```markdown
@@ -802,7 +863,7 @@ above.
 As outliners join any block into the one above.
 
 ```yaml
-tags: rare free-form markup-heading
+tags: rare free-form
 headingEditing: block
 ```
 
@@ -827,7 +888,7 @@ body
 On a setext heading, the underline goes.
 
 ```yaml
-tags: rare free-form markup-heading
+tags: rare free-form
 ```
 
 ```markdown
@@ -851,7 +912,7 @@ The unwrapped title stays apart from paragraph text right above or below: a blan
 paragraph of its own.
 
 ```yaml
-tags: rare free-form markup-heading
+tags: rare free-form
 ```
 
 ```markdown
@@ -876,7 +937,7 @@ A heading that is an item's text loses its marks the same way, and the item stay
 nearest the caret goes first.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -897,7 +958,7 @@ With `headingEditing: block`, a setext title joins the node above and its underl
 place, the underline would make the joined paragraph a heading.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 headingEditing: block
 ```
 
@@ -920,7 +981,7 @@ The item's paragraph right under its heading is set apart by a blank line when t
 the title, now paragraph text, it would continue it.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -1011,7 +1072,8 @@ Backspace on the empty paragraph left by Enter in the middle of a list (with `en
 outdent`, [Enter7b](enter.md#enter7b)) goes back to the end of the node above; the items the
 paragraph owned stay.
 
-The empty paragraph owns the list after it; removing it keeps that list, which joins the list above.
+The empty paragraph owns the list after it; removing it keeps that list, which joins the list above,
+tight as that one was: the blank lines were the paragraph's.
 
 ```yaml
 tags: rare
@@ -1029,7 +1091,6 @@ tags: rare
 
 ```markdown
 - a┃
-
 - b
 ```
 
@@ -1106,11 +1167,12 @@ lines
 
 ## Backspace24
 
-A paragraph after a code block doesn't join it: text can't become code. The host's Backspace would
-put the text on the fence's line, unmaking the block.
+A paragraph after a code block the host draws doesn't join it: text can't become code. The host's
+Backspace would put the text on the fence's line, unmaking the block.
 
 ```yaml
-tags: common markup-fence
+tags: common
+decorations: [fence]
 ```
 
 ````markdown
@@ -1132,6 +1194,37 @@ result: rejected not-expressible
 x
 ```
 
+┃para
+````
+
+## Backspace24b
+
+Where the host shows the fence as text (the default), a paragraph's Backspace after code is the
+host's, as after a rule or a table shown as text: a blank line a press, then the text onto the fence's
+line, as Obsidian, SilverBullet and Emacs do.
+
+```yaml
+tags: common
+```
+
+````markdown
+```
+x
+```
+
+┃para
+````
+
+> deleteContentBackward
+
+```yaml
+result: deferredToHost
+```
+
+````markdown
+```
+x
+```
 ┃para
 ````
 
@@ -1206,7 +1299,7 @@ An empty item after a fenced code block goes, the caret going to the end of the 
 after the closing fence, anything typed would stop it closing the block.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -1372,7 +1465,7 @@ Releasing the section is what removing a heading means, so it is a command's own
 parent, as guarantee 4 allows. The text editors end up the same way.
 
 ```yaml
-tags: common free-form markup-heading
+tags: common free-form
 ```
 
 ```markdown
@@ -1577,7 +1670,7 @@ Cmd-Backspace deletes back to the text start, the checkbox and marker staying; a
 is Backspace, whose checkbox rule takes the checkbox.
 
 ```yaml
-tags: common markup-task
+tags: common
 ```
 
 ```markdown
@@ -1621,7 +1714,7 @@ A setext title is paragraph text: `- x tail` at its start would be an item. It i
 title keeps its underline.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -1641,7 +1734,7 @@ abc ┃- x tail
 In an ATX heading, the closing `#`s stay, and nothing needs escaping: the title has its own marker.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -1681,7 +1774,7 @@ first
 In a setext underline, Cmd-Backspace is refused: the underline is markup, not text.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -1729,7 +1822,7 @@ and stays there when the caret leaves (unlike a paragraph's, [SoftBackspace7](#s
 item's text may start below its marker).
 
 ```yaml
-tags: rare free-form markup-task
+tags: rare free-form
 flavor: gfm
 ```
 
@@ -1758,7 +1851,7 @@ On a fence, Cmd-Backspace is refused: the fence is markup, and deleting it would
 block (the host's would leave a fence opening at the block's end). The same on a math block's `$$`.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -1788,7 +1881,7 @@ deletes one character, [TaskBackspace5](tasks.md#taskbackspace5)). The text edit
 marker too, a line edit.
 
 ```yaml
-tags: rare markup-task
+tags: rare
 taskEditing: text
 ```
 
@@ -1856,7 +1949,7 @@ heldSpace: trim
 ## Backspace42
 
 With the caret inside markup, past its line's start and before the text (here between the marker
-and its space), Backspace is the host's where the host shows markup as text (`markup: text`, the
+and its space), Backspace is the host's where the host shows markup as text (not in `decorations`, the
 default): one character goes, whatever the text then reads as, as the user editing markup by hand
 means it. At the line's start it is ourus's, a join ([Backspace2](#backspace2)).
 
@@ -1882,12 +1975,12 @@ result: deferredToHost
 
 ## Backspace42b
 
-Where the host decorates markup (`markup: decorated`), Backspace there acts at the text start: `b`
+Where the host decorates markup (in `decorations`), Backspace there acts at the text start: `b`
 joins `a`, as from `- ┃b`.
 
 ```yaml
 tags: rare
-markup: decorated
+decorations: [bullet]
 ```
 
 ```markdown
@@ -1934,7 +2027,7 @@ para
 The same above the document's first heading.
 
 ```yaml
-tags: common markup-heading
+tags: common
 ```
 
 ```markdown
@@ -2331,4 +2424,142 @@ backspaceAtItemStart: unwrap
 ```markdown
 - one┃two
   - next
+```
+
+## Backspace50c
+
+With `backspaceAtItemStart: unwrap`, an empty item is an empty paragraph where it is, held by a
+placeholder, the list split there, as BlockNote, Notion, Lexical and AFFiNE make it; the
+items after it a list of their own, numbered from 1 again. A second press takes the paragraph, and
+the two lists are one again, tight as it was.
+
+```yaml
+tags: rare
+backspaceAtItemStart: unwrap
+```
+
+```markdown
+1. a
+2. ┃
+3. c
+```
+
+> deleteContentBackward
+
+```markdown
+1. a
+
+┃◌
+
+1. c
+```
+
+> deleteContentBackward
+
+```markdown
+1. a┃
+2. c
+```
+
+## Backspace51
+
+At a paragraph's start after a footnote's text, the paragraph joins it, as Delete at the footnote's
+end does ([Delete37](delete.md#delete37)).
+
+```yaml
+tags: rare
+flavor: gfm
+```
+
+```markdown
+[^1]: note
+
+┃para
+```
+
+> deleteContentBackward
+
+```markdown
+[^1]: note┃para
+```
+
+## Backspace52
+
+At a footnote's text start, right after its label: the host's where it shows the label as text (the
+default), Obsidian's and SilverBullet's deleting the space before the text; refused where it draws it
+([Backspace52b](#backspace52b)).
+
+```yaml
+tags: rare
+flavor: gfm
+```
+
+```markdown
+para
+
+[^1]: ┃note
+```
+
+> deleteContentBackward
+
+```yaml
+result: deferredToHost
+```
+
+```markdown
+para
+
+[^1]:┃note
+```
+
+## Backspace52b
+
+Where the host draws a footnote's label, Backspace at its text start is refused: the text can't join
+the label, nor the text above.
+
+```yaml
+tags: rare
+flavor: gfm
+decorations: [footnote]
+```
+
+```markdown
+para
+
+[^1]: ┃note
+```
+
+> deleteContentBackward
+
+```yaml
+result: rejected not-expressible
+```
+
+```markdown
+para
+
+[^1]: ┃note
+```
+
+## Backspace53
+
+An item of two lines joined to an item's ATX title above: its first line glues to the title, the
+other a paragraph right under it, as an outliner's block keeps its later lines (Logseq, Tine).
+Under a title with children it would land after them: refused there.
+
+```yaml
+tags: rare
+```
+
+```markdown
+- ## one
+- ┃two
+  three
+```
+
+> deleteContentBackward
+
+```markdown
+- ## one┃two
+  three
 ```

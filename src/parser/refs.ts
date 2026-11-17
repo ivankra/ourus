@@ -9,7 +9,7 @@ const reTitle = new RegExp(
   'y',
 );
 const reDestinationBraces = /<(?:[^<>\n\\\x00]|\\.)*>/y;
-const reLabel = /\[(?:[^\\[\]]|\\.){0,1000}\]/ys;
+const reLabel = /\[(?:[^\\[\]]|\\.){0,1000}\]/ysu;
 // (spaces or tabs, up to one line ending, between a link's parts: CommonMark's, as micromark and cmark-gfm read it)
 const reSpnl = /[ \t]*(?:\n[ \t]*)?/y;
 const reSpaceAtLineEnd = /[ \t]*(?:\n|$)/y;
@@ -27,10 +27,20 @@ export function skipSpnl(s: string, pos: number): number {
   return reSpnl.lastIndex;
 }
 
-/** The end of a link label (`[...]`, at most 999 characters inside) starting at `pos`, or -1. */
+/**
+ * The end of a link label (`[...]`, at most 999 characters inside, code points as the spec counts
+ * them: commonmark.js and micromark count UTF-16 units, cmark UTF-8 bytes) starting at `pos`, or -1.
+ */
 export function scanLabel(s: string, pos: number): number {
   const n = matchAt(reLabel, s, pos);
-  return n < 0 || n > 1001 ? -1 : pos + n;
+  if (n < 0) return -1;
+  let chars = 0;
+  for (let i = pos + 1; i < pos + n - 1; i++) {
+    const c = s.charCodeAt(i);
+    if (c >= 0xd800 && c < 0xdc00 && i + 1 < pos + n - 1 && (s.charCodeAt(i + 1) & 0xfc00) === 0xdc00) i++;
+    chars++;
+  }
+  return chars > 999 ? -1 : pos + n;
 }
 
 /** A link destination at `pos`: its end and its value (unescaped and URL-normalized), or null. */

@@ -5,7 +5,7 @@ version: "0.27.4"
 url: "https://app.affine.pro/"
 model: "block"
 command: "node sxs/run.ts affine"
-elapsed_s: 1102
+elapsed_s: 1440
 workers: 4
 ---
 
@@ -15,113 +15,57 @@ Summary:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| original | 252 | [3](#caret-3) | [34](#whitespace-34) | [106](#disagree-106) |  |  | **395** |
-| adapted | 238 | [2](#adapted-caret-2) | [19](#adapted-whitespace-19) | [167](#adapted-disagree-167) |  |  | **426** |
-| **total** | **490 (28%)** | **5 (0.28%)** | **53 (3%)** | **273 (16%)** | **0 (0%)** | **[936](#skipped-936) (53%)** | **1760** |
+| original | 252 | [3](#caret-3) | [28](#whitespace-28) | [76](#disagree-76) |  |  | **359** |
+| adapted | 265 | [3](#adapted-caret-3) | [21](#adapted-whitespace-21) | [169](#adapted-disagree-169) |  |  | **458** |
+| **total** | **517 (29%)** | **6 (0.33%)** | **49 (2.7%)** | **245 (14%)** | **0 (0%)** | **[963](#skipped-963) (54%)** | **1793** |
 
 Per-file:
 
 |  | agree | caret | whitespace | disagree | error | skipped | total | original | adapted |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [auto.md](../spec/auto.md) | 8 |  |  | 4 |  | 27 | **39** | 10 | 2 |
-| [backspace.md](../spec/backspace.md) | 35 |  | 9 | 16 |  | 28 | **88** | 32 | 28 |
-| [backtick.md](../spec/backtick.md) | 1 |  |  |  |  | 32 | **33** | 1 |  |
+| [auto.md](../spec/auto.md) | 10 |  |  | 3 |  | 29 | **42** | 10 | 3 |
+| [backspace.md](../spec/backspace.md) | 43 |  | 3 | 14 |  | 36 | **96** | 24 | 36 |
+| [backtick.md](../spec/backtick.md) | 1 |  |  | 1 |  | 31 | **33** | 1 | 1 |
 | [block-ids.md](../spec/block-ids.md) | 1 |  |  |  |  | 20 | **21** |  | 1 |
-| [copy.md](../spec/copy.md) | 3 |  |  | 3 |  | 13 | **19** |  | 6 |
+| [copy.md](../spec/copy.md) | 6 |  |  | 3 |  | 12 | **21** |  | 9 |
 | [cursor.md](../spec/cursor.md) | 26 | 3 |  |  |  | 7 | **36** | 25 | 4 |
 | [delete-subtree.md](../spec/delete-subtree.md) | 4 |  |  | 1 |  | 12 | **17** | 2 | 3 |
-| [delete.md](../spec/delete.md) | 23 |  | 1 | 8 |  | 24 | **56** | 23 | 9 |
+| [delete.md](../spec/delete.md) | 20 |  | 1 | 8 |  | 29 | **58** | 25 | 4 |
 | [drag.md](../spec/drag.md) |  |  |  |  |  | 8 | **8** |  |  |
 | [duplicate-subtree.md](../spec/duplicate-subtree.md) |  |  |  |  |  | 13 | **13** |  |  |
-| [enter.md](../spec/enter.md) | 43 |  | 5 | 23 |  | 27 | **98** | 24 | 47 |
-| [fences.md](../spec/fences.md) | 7 |  | 1 |  |  | 62 | **70** |  | 8 |
+| [enter.md](../spec/enter.md) | 45 |  | 4 | 23 |  | 32 | **104** | 24 | 48 |
+| [fences.md](../spec/fences.md) | 5 | 1 | 2 |  |  | 62 | **70** |  | 8 |
 | [fold.md](../spec/fold.md) |  |  |  |  |  | 22 | **22** |  |  |
-| [gaps.md](../spec/gaps.md) | 13 |  | 1 | 2 |  | 5 | **21** | 11 | 5 |
-| [indent.md](../spec/indent.md) | 24 |  | 1 | 11 |  | 21 | **57** | 27 | 9 |
+| [gaps.md](../spec/gaps.md) | 15 |  | 1 |  |  | 5 | **21** | 9 | 7 |
+| [indent.md](../spec/indent.md) | 28 |  | 1 | 7 |  | 22 | **58** | 25 | 11 |
 | [lists.md](../spec/lists.md) | 15 |  |  |  |  | 1 | **16** | 6 | 9 |
-| [move-subtree-down.md](../spec/move-subtree-down.md) | 21 | 1 |  | 12 |  | 11 | **45** | 30 | 4 |
-| [move-subtree-up.md](../spec/move-subtree-up.md) | 20 |  |  | 11 |  | 16 | **47** | 28 | 3 |
+| [move-subtree-down.md](../spec/move-subtree-down.md) | 25 | 1 |  | 7 |  | 13 | **46** | 21 | 12 |
+| [move-subtree-up.md](../spec/move-subtree-up.md) | 25 |  |  | 6 |  | 17 | **48** | 21 | 10 |
 | [move-subtree.md](../spec/move-subtree.md) |  |  |  |  |  | 24 | **24** |  |  |
-| [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 37 |  | 4 | 13 |  | 13 | **67** | 30 | 24 |
-| [outdent.md](../spec/outdent.md) | 10 |  |  | 11 |  | 21 | **42** | 17 | 4 |
+| [obsidian-true-outliner.md](../spec/obsidian-true-outliner.md) | 38 |  | 4 | 12 |  | 13 | **67** | 29 | 25 |
+| [outdent.md](../spec/outdent.md) | 12 |  |  | 9 |  | 23 | **44** | 15 | 6 |
 | [paste-at.md](../spec/paste-at.md) |  |  |  |  |  | 5 | **5** |  |  |
 | [paste-conv.md](../spec/paste-conv.md) | 4 |  |  | 2 |  |  | **6** | 1 | 5 |
 | [paste-html.md](../spec/paste-html.md) | 8 |  | 3 | 23 |  | 8 | **42** |  | 34 |
 | [paste-list-form.md](../spec/paste-list-form.md) | 2 |  |  | 3 |  | 1 | **6** |  | 5 |
 | [paste-list.md](../spec/paste-list.md) | 9 |  |  | 16 |  | 5 | **30** | 6 | 19 |
-| [paste-plain.md](../spec/paste-plain.md) | 10 |  | 2 | 18 |  | 6 | **36** | 4 | 26 |
-| [paste.md](../spec/paste.md) | 15 |  |  | 9 |  | 20 | **44** | 9 | 15 |
+| [paste-plain.md](../spec/paste-plain.md) | 10 |  | 2 | 18 |  | 7 | **37** | 4 | 26 |
+| [paste.md](../spec/paste.md) | 15 |  |  | 9 |  | 20 | **44** | 8 | 16 |
 | [placeholders.md](../spec/placeholders.md) | 16 |  | 7 | 1 |  | 6 | **30** | 16 | 8 |
 | [quirks.md](../spec/quirks.md) |  |  |  |  |  | 7 | **7** |  |  |
-| [quotes.md](../spec/quotes.md) | 10 |  |  | 6 |  | 127 | **143** |  | 16 |
-| [regressions.md](../spec/regressions.md) | 70 | 1 | 15 | 50 |  | 270 | **406** | 46 | 90 |
-| [scenarios.md](../spec/scenarios.md) | 15 |  | 1 | 10 |  | 8 | **34** | 18 | 8 |
+| [quotes.md](../spec/quotes.md) | 12 |  |  | 4 |  | 129 | **145** |  | 16 |
+| [regressions.md](../spec/regressions.md) | 66 | 1 | 16 | 46 |  | 278 | **407** | 41 | 88 |
+| [scenarios.md](../spec/scenarios.md) | 16 |  | 1 | 9 |  | 8 | **34** | 16 | 10 |
 | [select.md](../spec/select.md) |  |  |  |  |  | 23 | **23** |  |  |
-| [shift-enter.md](../spec/shift-enter.md) | 25 |  | 2 | 3 |  | 8 | **38** | 18 | 12 |
+| [shift-enter.md](../spec/shift-enter.md) | 25 |  | 3 | 3 |  | 10 | **41** | 19 | 12 |
 | [subtree-selection.md](../spec/subtree-selection.md) |  |  |  | 9 |  | 10 | **19** | 7 | 2 |
 | [tasks.md](../spec/tasks.md) | 11 |  | 1 | 5 |  | 13 | **30** |  | 17 |
 | [typing.md](../spec/typing.md) |  |  |  | 3 |  |  | **3** | 1 | 2 |
 | [undo.md](../spec/undo.md) | 4 |  |  |  |  | 1 | **5** | 3 | 1 |
 | [zoom.md](../spec/zoom.md) |  |  |  |  |  | 14 | **14** |  |  |
-| **total** | **490 (28%)** | **5 (0.28%)** | **53 (3%)** | **273 (16%)** | **0 (0%)** | **939 (53%)** | **1760** | **395 (22%)** | **426 (24%)** |
+| **total** | **517 (29%)** | **6 (0.33%)** | **49 (2.7%)** | **245 (14%)** | **0 (0%)** | **976 (54%)** | **1793** | **359 (20%)** | **458 (26%)** |
 
-## Disagree (106)
-
-### [Auto23](../spec/auto.md#auto23)
-
-> shiftEnter
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ a $x ┃- y$ b
-```
-
-</td><td>
-
-```buffer
-¶ a $x 
-  ┃\- y$ b
-```
-
-</td><td>
-
-```buffer
-¶ a $x ┃- y$ b
-```
-
-</td></tr>
-</table>
-
-### [Auto24](../spec/auto.md#auto24)
-
-> shiftEnter
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ a `x ┃- y` b
-```
-
-</td><td>
-
-```buffer
-¶ a `x 
-  ┃\- y` b
-```
-
-</td><td>
-
-```buffer
-¶ a `x ┃- y` b
-```
-
-</td></tr>
-</table>
+## Disagree (76)
 
 ### [Auto28](../spec/auto.md#auto28)
 
@@ -219,41 +163,6 @@ Per-file:
 </td></tr>
 </table>
 
-### [Backspace17d](../spec/backspace.md#backspace17d)
-
-> deleteContentBackward
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- x
-- ┃
-  - a
-    - b
-```
-
-</td><td>
-
-```buffer
-- x
-¶ ┃
-- a
-  - b
-```
-
-</td><td>
-
-```buffer
-- x┃
-  - a
-    - b
-```
-
-</td></tr>
-</table>
-
 ### [Backspace19b](../spec/backspace.md#backspace19b)
 
 <table>
@@ -319,38 +228,6 @@ Per-file:
 </td></tr>
 </table>
 
-### [Backspace23](../spec/backspace.md#backspace23)
-
-> deleteContentBackward
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # Title
-  ¶ ┃more
-    lines
-```
-
-</td><td>
-
-```buffer
-¶ # Title┃more
-  lines
-```
-
-</td><td>
-
-```buffer
-¶ # Title
-  ¶ ┃more
-    lines
-```
-
-</td></tr>
-</table>
-
 ### [Backspace26](../spec/backspace.md#backspace26)
 
 > deleteContentBackward
@@ -373,38 +250,6 @@ Per-file:
 
 ```buffer
 ¶ ┃para
-```
-
-</td></tr>
-</table>
-
-### [Backspace29](../spec/backspace.md#backspace29)
-
-> deleteContentBackward
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-1. a
-2. ┃
-3. c
-```
-
-</td><td>
-
-```buffer
-1. a
-¶ ┃
-3. c
-```
-
-</td><td>
-
-```buffer
-1. a┃
-2. c
 ```
 
 </td></tr>
@@ -850,117 +695,6 @@ Per-file:
 </td></tr>
 </table>
 
-### [Gap3](../spec/gaps.md#gap3)
-
-> moveSubtreeUp
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # A
-  ¶ text
-¶ # B┃
-  ¶ more
-¶ # C
-```
-
-</td><td>
-
-```buffer
-¶ # A
-¶ # B┃
-  ¶ text
-  ¶ more
-¶ # C
-```
-
-</td><td>
-
-```buffer
-¶ # B┃
-  ¶ more
-¶ # A
-  ¶ text
-¶ # C
-```
-
-</td></tr>
-</table>
-
-### [Gap6](../spec/gaps.md#gap6)
-
-> moveSubtreeDown
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ## A┃
-  ¶ a
-¶ ## B
-  ¶ b
-¶ ## C
-```
-
-</td><td>
-
-```buffer
-¶ a
-¶ ## A┃
-¶ ## B
-  ¶ b
-¶ ## C
-```
-
-</td><td>
-
-```buffer
-¶ ## B
-  ¶ b
-¶ ## A┃
-  ¶ a
-¶ ## C
-```
-
-</td></tr>
-</table>
-
-### [Indent12](../spec/indent.md#indent12)
-
-> indent
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # A
-  ¶ ## B┃
-    ¶ ### C
-```
-
-</td><td>
-
-```buffer
-¶ # A
-  ¶ ## B┃
-    ¶ ### C
-```
-
-</td><td>
-
-```buffer
-¶ # A
-  ¶ ### B┃
-    ¶ #### C
-```
-
-</td></tr>
-</table>
-
 ### [Indent21](../spec/indent.md#indent21)
 
 <table>
@@ -1055,42 +789,6 @@ Per-file:
 </td></tr>
 </table>
 
-### [Indent23](../spec/indent.md#indent23)
-
-> indent
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # A
-  ¶ ## B
-  ¶ ## C┃
-    ¶ ### D
-```
-
-</td><td>
-
-```buffer
-¶ # A
-  ¶ ## B
-  ¶ ## C┃
-    ¶ ### D
-```
-
-</td><td>
-
-```buffer
-¶ # A
-  ¶ ## B
-    ¶ ### C┃
-      ¶ #### D
-```
-
-</td></tr>
-</table>
-
 ### [Indent29](../spec/indent.md#indent29)
 
 > indent
@@ -1179,63 +877,6 @@ Per-file:
 - a
   - b
 - para┃
-```
-
-</td></tr>
-</table>
-
-### [MoveDown4](../spec/move-subtree-down.md#movedown4)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # A┃
-  ¶ text a
-¶ # B
-  ¶ text b
-```
-
-</td></tr>
-</table>
-
-> moveSubtreeDown
-
-<table>
-<tr><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ text a
-¶ # A┃
-¶ # B
-  ¶ text b
-```
-
-</td><td>
-
-```buffer
-¶ # B
-  ¶ text b
-¶ # A┃
-  ¶ text a
-```
-
-</td></tr>
-</table>
-
-> moveSubtreeUp
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # A┃
-  ¶ text a
-¶ # B
-  ¶ text b
 ```
 
 </td></tr>
@@ -1450,111 +1091,6 @@ Per-file:
 </td></tr>
 </table>
 
-### [MoveDown16](../spec/move-subtree-down.md#movedown16)
-
-> moveSubtreeDown
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # A┃
-  - x
-¶ # B
-  - y
-```
-
-</td><td>
-
-```buffer
-- x
-¶ # A┃
-¶ # B
-  - y
-```
-
-</td><td>
-
-```buffer
-¶ # B
-  - y
-¶ # A┃
-  - x
-```
-
-</td></tr>
-</table>
-
-### [MoveDown17](../spec/move-subtree-down.md#movedown17)
-
-> moveSubtreeDown
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ## ┃H
-¶ # H
-  - a
-```
-
-</td><td>
-
-```buffer
-¶ # H
-  ¶ ## ┃H
-    - a
-```
-
-</td><td>
-
-```buffer
-¶ ## ┃H
-¶ # H
-  - a
-```
-
-</td></tr>
-</table>
-
-### [MoveDown19](../spec/move-subtree-down.md#movedown19)
-
-> moveSubtreeDown
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # A
-  ¶ ## s┃
-¶ # B
-  - x
-```
-
-</td><td>
-
-```buffer
-¶ # A
-¶ # B
-  ¶ ## s┃
-    - x
-```
-
-</td><td>
-
-```buffer
-¶ # A
-  ¶ ## s┃
-¶ # B
-  - x
-```
-
-</td></tr>
-</table>
-
 ### [MoveDown22](../spec/move-subtree-down.md#movedown22)
 
 > moveSubtreeDown
@@ -1699,75 +1235,6 @@ Per-file:
 1. a
    1. ┃x
    2. b
-```
-
-</td></tr>
-</table>
-
-### [MoveDown36](../spec/move-subtree-down.md#movedown36)
-
-> moveSubtreeDown
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- item
-  - ┃a
-  ¶ para
-```
-
-</td><td>
-
-```buffer
-- item
-  ¶ para
-  - ┃a
-```
-
-</td><td>
-
-```buffer
-- item
-  - ┃a
-  ¶ para
-```
-
-</td></tr>
-</table>
-
-### [MoveUp3](../spec/move-subtree-up.md#moveup3)
-
-> moveSubtreeUp
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # A
-  ¶ text a
-¶ # B┃
-  ¶ text b
-```
-
-</td><td>
-
-```buffer
-¶ # A
-¶ # B┃
-  ¶ text a
-  ¶ text b
-```
-
-</td><td>
-
-```buffer
-¶ # B┃
-  ¶ text b
-¶ # A
-  ¶ text a
 ```
 
 </td></tr>
@@ -2004,169 +1471,6 @@ Per-file:
 </td></tr>
 </table>
 
-### [MoveUp16](../spec/move-subtree-up.md#moveup16)
-
-> moveSubtreeUp
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # A
-  ¶ ## a1
-¶ # B┃
-  ¶ ## b1
-```
-
-</td><td>
-
-```buffer
-¶ # A
-¶ # B┃
-  ¶ ## a1
-  ¶ ## b1
-```
-
-</td><td>
-
-```buffer
-¶ # B┃
-  ¶ ## b1
-¶ # A
-  ¶ ## a1
-```
-
-</td></tr>
-</table>
-
-### [MoveUp26](../spec/move-subtree-up.md#moveup26)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # A
-  - x
-¶ # B
-  ¶ ## s┃
-    - y
-```
-
-</td></tr>
-</table>
-
-> moveSubtreeUp
-
-<table>
-<tr><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # A
-  - x
-  ¶ ## s┃
-¶ # B
-  - y
-```
-
-</td><td>
-
-```buffer
-¶ # A
-  - x
-  ¶ ## s┃
-    - y
-¶ # B
-```
-
-</td></tr>
-</table>
-
-> moveSubtreeDown
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # A
-  - x
-¶ # B
-  ¶ ## s┃
-    - y
-```
-
-</td></tr>
-</table>
-
-### [MoveUp28](../spec/move-subtree-up.md#moveup28)
-
-> moveSubtreeUp
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ## X
-¶ # A┃
-  - a
-```
-
-</td><td>
-
-```buffer
-¶ # A┃
-  ¶ ## X
-    - a
-```
-
-</td><td>
-
-```buffer
-¶ ## X
-¶ # A┃
-  - a
-```
-
-</td></tr>
-</table>
-
-### [MoveUp33](../spec/move-subtree-up.md#moveup33)
-
-> moveSubtreeUp
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # H
-  - a
-  ¶ ## ┃H
-```
-
-</td><td>
-
-```buffer
-¶ # H
-  ¶ ## ┃H
-    - a
-```
-
-</td><td>
-
-```buffer
-¶ # H
-  - a
-  ¶ ## ┃H
-```
-
-</td></tr>
-</table>
-
 ### [MoveUp46](../spec/move-subtree-up.md#moveup46)
 
 > moveSubtreeUp
@@ -2390,38 +1694,6 @@ Per-file:
 </td></tr>
 </table>
 
-### [TO-Bug269](../spec/obsidian-true-outliner.md#to-bug269)
-
-> deleteContentBackward deleteContentBackward
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-1. p
-2. a┃
-3. q
-```
-
-</td><td>
-
-```buffer
-1. p
-¶ ┃
-3. q
-```
-
-</td><td>
-
-```buffer
-1. p┃
-2. q
-```
-
-</td></tr>
-</table>
-
 ### [Outdent2](../spec/outdent.md#outdent2)
 
 <table>
@@ -2473,97 +1745,6 @@ Per-file:
 ```buffer
 - a
 - b┃
-```
-
-</td></tr>
-</table>
-
-### [Outdent4](../spec/outdent.md#outdent4)
-
-> outdent
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ## A┃
-  ¶ ### B
-```
-
-</td><td>
-
-```buffer
-¶ ## A┃
-  ¶ ### B
-```
-
-</td><td>
-
-```buffer
-¶ # A┃
-  ¶ ## B
-```
-
-</td></tr>
-</table>
-
-### [Outdent11](../spec/outdent.md#outdent11)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # T
-  ¶ ## A┃
-  ¶ ## B
-```
-
-</td></tr>
-</table>
-
-> outdent
-
-<table>
-<tr><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # T
-  ¶ ## A┃
-  ¶ ## B
-```
-
-</td><td>
-
-```buffer
-¶ # T
-¶ # A┃
-  ¶ ## B
-```
-
-</td></tr>
-</table>
-
-> indent
-
-<table>
-<tr><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # T
-  ¶ ## A┃
-  ¶ ## B
-```
-
-</td><td>
-
-```buffer
-¶ # T
-  ¶ ## A┃
-    ¶ ### B
 ```
 
 </td></tr>
@@ -3062,51 +2243,6 @@ y
 </td></tr>
 </table>
 
-### [Paste6](../spec/paste.md#paste6)
-
-<table>
-<tr><th>clipboard (text/plain)</tr>
-<tr valign="top"><td>
-
-```clipboard
-- x
-- y
-```
-
-</td></tr>
-</table>
-
-> paste
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # T┃
-  - z
-```
-
-</td><td>
-
-```buffer
-¶ # Tx
-  - y┃
-  - z
-```
-
-</td><td>
-
-```buffer
-¶ # T
-  - x
-  - y┃
-  - z
-```
-
-</td></tr>
-</table>
-
 ### [Paste11](../spec/paste.md#paste11)
 
 <table>
@@ -3364,69 +2500,6 @@ e
 </td></tr>
 </table>
 
-### [Regression144](../spec/regressions.md#regression144)
-
-> indent
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ## B
-¶ ## ┃C
-```
-
-</td><td>
-
-```buffer
-¶ ## B
-¶ ## ┃C
-```
-
-</td><td>
-
-```buffer
-¶ ## B
-  ¶ ### ┃C
-```
-
-</td></tr>
-</table>
-
-### [Regression145](../spec/regressions.md#regression145)
-
-> outdent
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # A
-  ¶ ## B
-    ¶ ### ┃C
-```
-
-</td><td>
-
-```buffer
-¶ # A
-  ¶ ## B
-    ¶ ### ┃C
-```
-
-</td><td>
-
-```buffer
-¶ # A
-  ¶ ## B
-  ¶ ## ┃C
-```
-
-</td></tr>
-</table>
-
 ### [Regression157](../spec/regressions.md#regression157)
 
 <table>
@@ -3479,38 +2552,6 @@ p2
 </td></tr>
 </table>
 
-### [Regression180](../spec/regressions.md#regression180)
-
-> cut
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-1. a┃
-2. b
-¶    c
-```
-
-</td><td>
-
-```buffer
-1. a┃
-2. b
-¶    c
-```
-
-</td><td>
-
-```buffer
-1. ┃b
-¶ c
-```
-
-</td></tr>
-</table>
-
 ### [Regression181](../spec/regressions.md#regression181)
 
 > indent
@@ -3536,85 +2577,6 @@ p2
 ```buffer
 - [a]
   [a]:s┃
-```
-
-</td></tr>
-</table>
-
-### [Regression220](../spec/regressions.md#regression220)
-
-> moveSubtreeUp
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # Old
-  ¶ ## B
-    ¶ x
-  ¶ ## C
-¶ # New┃
-  ¶ ## B
-    ¶ x
-  ¶ ## C
-```
-
-</td><td>
-
-```buffer
-¶ # Old
-  ¶ ## B
-    ¶ x
-¶ # New┃
-  ¶ ## C
-  ¶ ## B
-    ¶ x
-  ¶ ## C
-```
-
-</td><td>
-
-```buffer
-¶ # New┃
-  ¶ ## B
-    ¶ x
-  ¶ ## C
-¶ # Old
-  ¶ ## B
-    ¶ x
-  ¶ ## C
-```
-
-</td></tr>
-</table>
-
-### [Regression277c](../spec/regressions.md#regression277c)
-
-> enter cursorDocEnd
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # a┃
-¶ # b
-```
-
-</td><td>
-
-```buffer
-¶ # a
-  ¶ 
-¶ # b┃
-```
-
-</td><td>
-
-```buffer
-¶ # a
-¶ # b
 ```
 
 </td></tr>
@@ -3667,66 +2629,6 @@ y
   ¶ y┃
   ¶ ## B
     ¶ b text
-```
-
-</td></tr>
-</table>
-
-### [Regression364](../spec/regressions.md#regression364)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ## B
-  ¶ b t┃ext
-¶ ## C
-```
-
-</td></tr>
-</table>
-
-> cut
-
-<table>
-<tr><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ## B
-  ¶ b t┃ext
-¶ ## C
-```
-
-</td><td>
-
-```buffer
-¶ ## B┃
-¶ ## C
-```
-
-</td></tr>
-</table>
-
-> paste
-
-<table>
-<tr><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ## B
-  ¶ b tb text┃ext
-¶ ## C
-```
-
-</td><td>
-
-```buffer
-¶ ## B
-  ¶ b text┃
-¶ ## C
 ```
 
 </td></tr>
@@ -3940,63 +2842,6 @@ y
   - b┃
 - c
   - d
-```
-
-</td></tr>
-</table>
-
-### [Scenario22](../spec/scenarios.md#scenario22)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # Work┃
-  - email
-¶ # Home
-  - plants
-```
-
-</td></tr>
-</table>
-
-> moveSubtreeDown
-
-<table>
-<tr><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- email
-¶ # Work┃
-¶ # Home
-  - plants
-```
-
-</td><td>
-
-```buffer
-¶ # Home
-  - plants
-¶ # Work┃
-  - email
-```
-
-</td></tr>
-</table>
-
-> moveSubtreeUp
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # Work┃
-  - email
-¶ # Home
-  - plants
 ```
 
 </td></tr>
@@ -4422,39 +3267,7 @@ y
 </td></tr>
 </table>
 
-## Whitespace (34)
-
-### [Backspace7](../spec/backspace.md#backspace7)
-
-> deleteContentBackward
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-  - b
-- ┃
-```
-
-</td><td>
-
-```buffer
-- a
-  - b
-¶ ┃
-```
-
-</td><td>
-
-```buffer
-- a
-  - b┃
-```
-
-</td></tr>
-</table>
+## Whitespace (28)
 
 ### [Backspace14](../spec/backspace.md#backspace14)
 
@@ -4503,199 +3316,6 @@ y
 ```buffer
 ¶ ┃# H1
   ¶ ## H2
-```
-
-</td></tr>
-</table>
-
-### [Backspace17](../spec/backspace.md#backspace17)
-
-> deleteContentBackward
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- ┃
-- b
-- c
-```
-
-</td><td>
-
-```buffer
-¶ ┃
-- b
-- c
-```
-
-</td><td>
-
-```buffer
-- ┃b
-- c
-```
-
-</td></tr>
-</table>
-
-### [Backspace17b](../spec/backspace.md#backspace17b)
-
-> deleteContentBackward
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- ┃
-  - a
-    - b
-```
-
-</td><td>
-
-```buffer
-¶ ┃
-- a
-  - b
-```
-
-</td><td>
-
-```buffer
-- ┃a
-  - b
-```
-
-</td></tr>
-</table>
-
-### [Backspace17c](../spec/backspace.md#backspace17c)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-  - x┃
-    - b
-      - c
-    - d
-  - e
-- f
-```
-
-</td></tr>
-</table>
-
-> deleteContentBackward
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-  - ┃
-    - b
-      - c
-    - d
-  - e
-- f
-```
-
-</td></tr>
-</table>
-
-> deleteContentBackward
-
-<table>
-<tr><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-  ¶ ┃
-  - b
-    - c
-  - d
-  - e
-- f
-```
-
-</td><td>
-
-```buffer
-- a┃
-  - b
-    - c
-  - d
-  - e
-- f
-```
-
-</td></tr>
-</table>
-
-### [Backspace30](../spec/backspace.md#backspace30)
-
-> deleteContentBackward
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-  - ┃
-```
-
-</td><td>
-
-```buffer
-- a
-  ¶ ┃
-```
-
-</td><td>
-
-```buffer
-- a┃
-```
-
-</td></tr>
-</table>
-
-### [Backspace39](../spec/backspace.md#backspace39)
-
-> deleteContentBackward
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-- ┃
-¶ p
-```
-
-</td><td>
-
-```buffer
-- a
-¶ ┃
-¶ p
-```
-
-</td><td>
-
-```buffer
-- a┃
-¶ p
 ```
 
 </td></tr>
@@ -4813,57 +3433,6 @@ y
 1. a
    text
 2. ┃
-```
-
-</td></tr>
-</table>
-
-### [Enter39](../spec/enter.md#enter39)
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- ab┃
-- c
-```
-
-</td></tr>
-</table>
-
-> enter
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- ab
-- ┃
-- c
-```
-
-</td></tr>
-</table>
-
-> deleteContentBackward
-
-<table>
-<tr><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- ab
-¶ ┃
-- c
-```
-
-</td><td>
-
-```buffer
-- ab┃
-- c
 ```
 
 </td></tr>
@@ -5789,6 +4358,37 @@ x
 </td></tr>
 </table>
 
+### [Regression277c](../spec/regressions.md#regression277c)
+
+> enter cursorDocEnd
+
+<table>
+<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ # a┃
+¶ # b
+```
+
+</td><td>
+
+```buffer
+¶ # a
+  ¶ 
+¶ # b┃
+```
+
+</td><td>
+
+```buffer
+¶ # a
+¶ # b
+```
+
+</td></tr>
+</table>
+
 ### [Regression278](../spec/regressions.md#regression278)
 
 > enter cursorDocEnd
@@ -5851,34 +4451,6 @@ x
 </td></tr>
 </table>
 
-### [Scenario3](../spec/scenarios.md#scenario3)
-
-> enter indent deleteContentBackward
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃
-```
-
-</td><td>
-
-```buffer
-- a
-  ¶ ┃
-```
-
-</td><td>
-
-```buffer
-- a┃
-```
-
-</td></tr>
-</table>
-
 ### [ShiftEnter33](../spec/shift-enter.md#shiftenter33)
 
 > shiftEnter
@@ -5905,6 +4477,38 @@ x
 ```buffer
 - 
   ┃ three
+```
+
+</td></tr>
+</table>
+
+### [ShiftEnter34](../spec/shift-enter.md#shiftenter34)
+
+> shiftEnter
+
+<table>
+<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ text
+¶ ## ┃
+```
+
+</td><td>
+
+```buffer
+¶ text
+¶ ## 
+  ┃
+```
+
+</td><td>
+
+```buffer
+¶ text
+¶ ## 
+  ¶ ┃
 ```
 
 </td></tr>
@@ -6008,7 +4612,57 @@ x
 </td></tr>
 </table>
 
-## Adapted: disagree (167)
+## Adapted: disagree (169)
+
+### [Auto35](../spec/auto.md#auto35)
+
+> enter
+
+Adapted: escape
+
+<table>
+<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ $$┃$$
+```
+
+</td><td>
+
+```buffer
+¶  $$
+```
+
+</td><td>
+
+```buffer
+¶ $$
+¶ ┃$$
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+$$┃$$
+```
+
+</td><td>
+
+```buffer
+\$$
+
+┃\$$
+```
+
+</td></tr>
+</table>
 
 ### [Backspace3](../spec/backspace.md#backspace3)
 
@@ -6148,7 +4802,7 @@ Adapted: setext heading, under headingEditing: block
 
 ```buffer
 ¶ # ┃Title
-  ¶ text
+¶ text
 ```
 
 </td></tr>
@@ -6320,10 +4974,10 @@ Adapted: under headingEditing: block
 
 ```buffer
 ¶ # A
-  ¶ intro┃B
-  ¶ para
-  - item
-  ¶ ## C
+¶ intro┃B
+¶ para
+- item
+¶ ## C
 ```
 
 </td></tr>
@@ -6573,71 +5227,132 @@ Original:
 </td></tr>
 </table>
 
-### [Copy4](../spec/copy.md#copy4)
+### [Backspace50c](../spec/backspace.md#backspace50c)
 
-Adapted: clipboard's text/markdown, text/html not compared
+Adapted: under listParent: container
 
 <table>
 <tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- a
-  - k┃id
-    - g
-- b
+1. a
+2. ┃
+3. c
 ```
 
 </td></tr>
 </table>
 
-> copy
+> deleteContentBackward
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+1. a
+¶ ┃
+3. c
+```
+
+</td></tr>
+</table>
+
+> deleteContentBackward
+
+<table>
+<tr><th>affine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+1. a┃
+3. c
+```
+
+</td><td>
+
+```buffer
+1. a┃
+2. c
+```
+
+</td></tr>
+</table>
 
 Original:
 <table>
-<tr><th>buffer</th></tr>
+<tr><th>buffer</th><th>deleteContentBackward</th><th>deleteContentBackward</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- a
-  - k┃id
-    - g
-- b
+1. a
+2. ┃
+3. c
+```
+
+</td><td>
+
+```buffer
+1. a
+
+┃◌
+
+3. c
+```
+
+</td><td>
+
+```buffer
+1. a┃
+2. c
 ```
 
 </td></tr>
 </table>
 
-### [Copy9](../spec/copy.md#copy9)
+### [Backtick21](../spec/backtick.md#backtick21)
 
-Adapted: clipboard's text/markdown, text/html not compared
+> "\`"
+
+Adapted: under autoWrap: ( [ { '
 
 <table>
-<tr><th>buffer</th></tr>
+<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- a
-  - b┃
-    - g
-- c
+¶ use «this» here
+```
+
+</td><td>
+
+```buffer
+¶ use «`this`» here
+```
+
+</td><td>
+
+```buffer
+¶ use `┃ here
 ```
 
 </td></tr>
 </table>
-
-> copy
 
 Original:
 <table>
-<tr><th>buffer</th></tr>
+<tr><th>buffer</th><th>ourus</th></tr>
 <tr valign="top"><td>
 
 ```buffer
-- a
-    - b┃
-      - g
-- c
+use «this» here
+```
+
+</td><td>
+
+```buffer
+use `┃ here
 ```
 
 </td></tr>
@@ -6647,7 +5362,7 @@ Original:
 
 > cut
 
-Adapted: clipboard's text/markdown, text/html not compared
+Adapted: clipboard's text/markdown, text/html not compared, under copyAtCaret: text
 
 <table>
 <tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
@@ -6670,7 +5385,9 @@ Adapted: clipboard's text/markdown, text/html not compared
 </td><td>
 
 ```buffer
-- ┃three
+- ┃
+  - kid
+- three
 ```
 
 </td></tr>
@@ -6690,8 +5407,74 @@ Original:
 </td><td>
 
 ```buffer
-- ┃three
+- ┃
+  - kid
+- three
 ```
+
+</td></tr>
+</table>
+
+### [Cut5](../spec/copy.md#cut5)
+
+> cut paste
+
+Adapted: clipboard's text/markdown, text/html not compared, code block, under copyAtCaret: text
+
+<table>
+<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+¶ ```
+  code
+  ```
+¶ # h┃
+````
+
+</td><td>
+
+````buffer
+¶ ```
+  code
+  ```
+¶ # hh┃
+````
+
+</td><td>
+
+````buffer
+¶ ```
+  code
+  ```
+¶ # h┃
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+```
+code
+```
+
+# h┃
+````
+
+</td><td>
+
+````buffer
+```
+code
+```
+
+# h┃
+````
 
 </td></tr>
 </table>
@@ -7173,8 +5956,8 @@ Adapted: under enterAtTextStart: stay
 ```buffer
 ¶ para
 ¶ # 
-  ¶ ┃Title
-  ¶ body
+¶ ┃Title
+¶ body
 ```
 
 </td></tr>
@@ -7704,7 +6487,7 @@ Adapted: under enterAtTextStart: stay
 ```buffer
 ¶ para
 ¶ # 
-  ¶ ┃Title
+¶ ┃Title
 ```
 
 </td></tr>
@@ -8116,7 +6899,7 @@ Adapted: escape, setext heading, under enterSplitSpace: start
 
 ```buffer
 ¶ # title
-  ¶ ┃ - x
+¶ ┃ - x
 ```
 
 </td></tr>
@@ -8219,62 +7002,6 @@ Original:
 </td></tr>
 </table>
 
-### [Indent16](../spec/indent.md#indent16)
-
-> indent
-
-Adapted: setext heading
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ # Title┃
-  ¶ ## Sub
-```
-
-</td><td>
-
-```buffer
-¶ # Title┃
-  ¶ ## Sub
-```
-
-</td><td>
-
-```buffer
-¶ ## Title┃
-  ¶ ### Sub
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-Title┃
-=====
-
-## Sub
-```
-
-</td><td>
-
-```buffer
-Title┃
------
-
-### Sub
-```
-
-</td></tr>
-</table>
-
 ### [Indent18](../spec/indent.md#indent18)
 
 > indent
@@ -8324,88 +7051,6 @@ b┃
 intro
 
 + b┃
-```
-
-</td></tr>
-</table>
-
-### [Indent25](../spec/indent.md#indent25)
-
-Adapted: setext heading
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ## Title┃
-  ¶ ### Sub
-```
-
-</td></tr>
-</table>
-
-> indent
-
-<table>
-<tr><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ## Title┃
-  ¶ ### Sub
-```
-
-</td><td>
-
-```buffer
-¶ ### Title┃
-  ¶ #### Sub
-```
-
-</td></tr>
-</table>
-
-> outdent
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ ## Title┃
-  ¶ ### Sub
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>indent</th><th>outdent</th></tr>
-<tr valign="top"><td>
-
-```buffer
-Title┃
------
-
-### Sub
-```
-
-</td><td>
-
-```buffer
-### Title┃
-
-#### Sub
-```
-
-</td><td>
-
-```buffer
-## Title┃
-
-### Sub
 ```
 
 </td></tr>
@@ -8514,7 +7159,7 @@ Adapted: setext heading, under enterSplitSpace: start
 
 ```buffer
 ¶ # Hello
-  ¶ ┃ world
+¶ ┃ world
 ```
 
 </td></tr>
@@ -11226,7 +9871,7 @@ text
 
 > paste
 
-Adapted: under pasteSeams: open
+Adapted: under headings: block, under pasteSeams: open
 
 <table>
 <tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
@@ -11249,8 +9894,7 @@ Adapted: under pasteSeams: open
 
 ```buffer
 - ah
-  
-  text┃
+- text┃
 - b
 ```
 
@@ -11271,8 +9915,7 @@ Original:
 
 ```buffer
 - ah
-
-  text┃
+- text┃
 - b
 ```
 
@@ -12537,8 +11180,8 @@ Adapted: under pastePlainLines: items
 
 ```buffer
 ¶ # H
-  ¶ x
-  ¶ y┃
+¶ x
+¶ y┃
 ```
 
 </td></tr>
@@ -12603,8 +11246,8 @@ Adapted: setext heading, under pastePlainLines: items
 
 ```buffer
 ¶ ## Titlemore
-  ¶ x
-  ¶ y┃
+¶ x
+¶ y┃
 ```
 
 </td></tr>
@@ -12836,6 +11479,78 @@ Original:
 </td></tr>
 </table>
 
+### [Paste6](../spec/paste.md#paste6)
+
+<table>
+<tr><th>clipboard (text/plain)</tr>
+<tr valign="top"><td>
+
+```clipboard
+- x
+- y
+```
+
+</td></tr>
+</table>
+
+> paste
+
+Adapted: blank lines, under headings: block
+
+<table>
+<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ # T┃
+  - z
+```
+
+</td><td>
+
+```buffer
+¶ # Tx
+  - y┃
+  - z
+```
+
+</td><td>
+
+```buffer
+¶ # T
+- x
+- y┃
+- z
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+# T┃
+
+- z
+```
+
+</td><td>
+
+```buffer
+# T
+
+- x
+- y┃
+
+- z
+```
+
+</td></tr>
+</table>
+
 ### [Paste7](../spec/paste.md#paste7)
 
 <table>
@@ -13053,58 +11768,6 @@ Original:
 </td></tr>
 </table>
 
-### [Quote27](../spec/quotes.md#quote27)
-
-> moveSubtreeUp
-
-Adapted: quote
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-¶ > q
-¶ # H┃
-```
-
-</td><td>
-
-```buffer
-¶ # H┃
-  ¶ > q
-```
-
-</td><td>
-
-```buffer
-¶ > q
-¶ # H┃
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-> q
-# H┃
-```
-
-</td><td>
-
-```buffer
-> q
-# H┃
-```
-
-</td></tr>
-</table>
-
 ### [Quote94](../spec/quotes.md#quote94)
 
 > deleteContentBackward
@@ -13160,88 +11823,6 @@ Original:
 - a
 - [ ] ┃q
 - b
-```
-
-</td></tr>
-</table>
-
-### [QuoteText6](../spec/quotes.md#quotetext6)
-
-Adapted: quote
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃
-¶ > q
-```
-
-</td></tr>
-</table>
-
-> deleteContentForward
-
-<table>
-<tr><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃q
-```
-
-</td><td>
-
-```buffer
-- a┃
-¶ q
-```
-
-</td></tr>
-</table>
-
-> deleteContentForward
-
-<table>
-<tr><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃
-```
-
-</td><td>
-
-```buffer
-- a┃q
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>deleteContentForward</th><th>deleteContentForward</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a┃
-> q
-```
-
-</td><td>
-
-```buffer
-- a┃
-
-q
-```
-
-</td><td>
-
-```buffer
-- a┃q
 ```
 
 </td></tr>
@@ -13508,7 +12089,7 @@ Adapted: setext heading, under pastePlainLines: items
 ```buffer
 ¶ ## Title
   more
-  ¶ x┃
+¶ x┃
 ```
 
 </td></tr>
@@ -14350,6 +12931,53 @@ Original:
 </td></tr>
 </table>
 
+### [Regression90](../spec/regressions.md#regression90)
+
+> "\`"
+
+Adapted: under autoWrap: ( [ { '
+
+<table>
+<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ a« b »c
+```
+
+</td><td>
+
+```buffer
+¶ a«` b `»c
+```
+
+</td><td>
+
+```buffer
+¶ a`┃c
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+a« b »c
+```
+
+</td><td>
+
+```buffer
+a`┃c
+```
+
+</td></tr>
+</table>
+
 ### [Regression146](../spec/regressions.md#regression146)
 
 > deleteContentBackward
@@ -14729,6 +13357,65 @@ Original:
 ```buffer
 1. - ┃b
 2. a
+```
+
+</td></tr>
+</table>
+
+### [Regression180](../spec/regressions.md#regression180)
+
+> cut
+
+Adapted: under copyAtCaret: text
+
+<table>
+<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+1. a┃
+2. b
+¶    c
+```
+
+</td><td>
+
+```buffer
+1. a┃
+2. b
+¶    c
+```
+
+</td><td>
+
+```buffer
+1. ┃
+2. b
+¶    c
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+1. a┃
+10. b
+
+   c
+```
+
+</td><td>
+
+```buffer
+1. ┃
+10. b
+
+   c
 ```
 
 </td></tr>
@@ -15469,107 +14156,6 @@ title┃
 </td></tr>
 </table>
 
-### [Regression352](../spec/regressions.md#regression352)
-
-Adapted: code block
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-````buffer
-¶ fi┃rst
-¶ ```
-  code
-  ```
-````
-
-</td></tr>
-</table>
-
-> cut
-
-<table>
-<tr><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````buffer
-¶ fi┃rst
-¶ ```
-  code
-  ```
-````
-
-</td><td>
-
-````buffer
-¶ ┃```
-  code
-  ```
-````
-
-</td></tr>
-</table>
-
-> paste
-
-<table>
-<tr><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-````buffer
-¶ fifirst┃rst
-¶ ```
-  code
-  ```
-````
-
-</td><td>
-
-````buffer
-¶ first┃
-¶ ```
-  code
-  ```
-````
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>cut</th><th>paste</th></tr>
-<tr valign="top"><td>
-
-````buffer
-fi┃rst
-
-```
-code
-```
-````
-
-</td><td>
-
-````buffer
-┃```
-code
-```
-````
-
-</td><td>
-
-````buffer
-first┃
-
-```
-code
-```
-````
-
-</td></tr>
-</table>
-
 ### [Regression356](../spec/regressions.md#regression356)
 
 <table>
@@ -15638,7 +14224,7 @@ y┃b
 
 ### [Regression359](../spec/regressions.md#regression359)
 
-Adapted: code block
+Adapted: code block, under copyAtCaret: text
 
 <table>
 <tr><th>buffer</th></tr>
@@ -15658,7 +14244,7 @@ Adapted: code block
 > cut
 
 <table>
-<tr><th>affine</th><th>ourus</th></tr>
+<tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ````buffer
@@ -15668,13 +14254,6 @@ Adapted: code block
 - a
 - b
 ````
-
-</td><td>
-
-```buffer
-- ┃a
-- b
-```
 
 </td></tr>
 </table>
@@ -15696,8 +14275,8 @@ Adapted: code block
 </td><td>
 
 ````buffer
-- ```
-  code┃
+¶ ```
+  co┃de
   ```
 - a
 - b
@@ -15722,20 +14301,124 @@ co┃de
 
 </td><td>
 
-```buffer
-- ┃a
-- b
+````buffer
 ```
+co┃de
+```
+
+- a
+- b
+````
 
 </td><td>
 
 ````buffer
-- ```
-  code┃
-  ```
+```
+co┃de
+```
+
 - a
 - b
 ````
+
+</td></tr>
+</table>
+
+### [Regression364](../spec/regressions.md#regression364)
+
+Adapted: under copyAtCaret: text
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ## B
+  ¶ b t┃ext
+¶ ## C
+```
+
+</td></tr>
+</table>
+
+> cut
+
+<table>
+<tr><th>affine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ## B
+  ¶ b t┃ext
+¶ ## C
+```
+
+</td><td>
+
+```buffer
+¶ ## B
+¶ ┃
+¶ ## C
+```
+
+</td></tr>
+</table>
+
+> paste
+
+<table>
+<tr><th>affine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+¶ ## B
+  ¶ b tb text┃ext
+¶ ## C
+```
+
+</td><td>
+
+```buffer
+¶ ## B
+¶ b text┃
+¶ ## C
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>cut</th><th>paste</th></tr>
+<tr valign="top"><td>
+
+```buffer
+## B
+
+b t┃ext
+
+## C
+```
+
+</td><td>
+
+```buffer
+## B
+
+┃◌
+
+## C
+```
+
+</td><td>
+
+```buffer
+## B
+
+b text┃
+
+## C
+```
 
 </td></tr>
 </table>
@@ -16504,7 +15187,7 @@ Adapted: under enterSplitSpace: start
 
 ```buffer
 ¶ # Title
-  ¶ ┃ more
+¶ ┃ more
 ```
 
 </td></tr>
@@ -16640,6 +15323,24 @@ Adapted: clipboard's text/markdown, text/html not compared
 ```buffer
 - a┃
 - c
+```
+
+</td></tr>
+</table>
+
+<table>
+<tr><th>affine's clipboard</th><th>ourus's clipboard</th></tr>
+<tr valign="top"><td>
+
+```clipboard
+b
+```
+
+</td><td>
+
+```clipboard
+- b
+  - b1
 ```
 
 </td></tr>
@@ -17146,92 +15847,43 @@ para
 </td></tr>
 </table>
 
-## Adapted: whitespace (19)
+## Adapted: whitespace (21)
 
-### [Backspace44](../spec/backspace.md#backspace44)
+### [Backspace17c](../spec/backspace.md#backspace17c)
+
+Adapted: under backspaceAtItemStart: unwrap
+
+<table>
+<tr><th>buffer</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - x┃
+    - b
+      - c
+    - d
+  - e
+- f
+```
+
+</td></tr>
+</table>
 
 > deleteContentBackward
 
-Adapted: blank lines
-
-<table>
-<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-- ┃
-- b
-```
-
-</td><td>
-
-```buffer
-- a
-¶ ┃
-- b
-```
-
-</td><td>
-
-```buffer
-- a┃
-- b
-```
-
-</td></tr>
-</table>
-
-Original:
-<table>
-<tr><th>buffer</th><th>ourus</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-
-- ┃
-
-- b
-```
-
-</td><td>
-
-```buffer
-- a┃
-
-- b
-```
-
-</td></tr>
-</table>
-
-### [Backspace44b](../spec/backspace.md#backspace44b)
-
-Adapted: blank lines
-
 <table>
 <tr><th>buffer</th></tr>
 <tr valign="top"><td>
 
 ```buffer
 - a
-- b┃
-```
-
-</td></tr>
-</table>
-
-> enter
-
-<table>
-<tr><th>buffer</th></tr>
-<tr valign="top"><td>
-
-```buffer
-- a
-- b
-- ┃
+  - ┃
+    - b
+      - c
+    - d
+  - e
+- f
 ```
 
 </td></tr>
@@ -17245,15 +15897,25 @@ Adapted: blank lines
 
 ```buffer
 - a
-- b
-¶ ┃
+  ¶ ┃
+  - b
+    - c
+  - d
+  - e
+- f
 ```
 
 </td><td>
 
 ```buffer
 - a
-- b┃
+  
+  ┃
+  - b
+    - c
+  - d
+  - e
+- f
 ```
 
 </td></tr>
@@ -17261,13 +15923,29 @@ Adapted: blank lines
 
 Original:
 <table>
-<tr><th>buffer</th><th>enter</th><th>deleteContentBackward</th></tr>
+<tr><th>buffer</th><th>deleteContentBackward</th><th>deleteContentBackward</th></tr>
 <tr valign="top"><td>
 
 ```buffer
 - a
+  - x┃
+    - b
+      - c
+    - d
+  - e
+- f
+```
 
-- b┃
+</td><td>
+
+```buffer
+- a
+  - ┃◌
+    - b
+      - c
+    - d
+  - e
+- f
 ```
 
 </td><td>
@@ -17275,9 +15953,59 @@ Original:
 ```buffer
 - a
 
-- b
+  ┃◌
 
-- ┃
+  - b
+    - c
+  - d
+  - e
+- f
+```
+
+</td></tr>
+</table>
+
+### [Backspace30](../spec/backspace.md#backspace30)
+
+> deleteContentBackward
+
+Adapted: under backspaceAtItemStart: unwrap
+
+<table>
+<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - ┃
+```
+
+</td><td>
+
+```buffer
+- a
+  ¶ ┃
+```
+
+</td><td>
+
+```buffer
+- a
+  
+  ┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a
+  - ┃◌
 ```
 
 </td><td>
@@ -17285,7 +16013,7 @@ Original:
 ```buffer
 - a
 
-- b┃
+  ┃◌
 ```
 
 </td></tr>
@@ -17400,6 +16128,71 @@ Original:
     nested
     ┃
   ```
+````
+
+</td></tr>
+</table>
+
+### [Fence64](../spec/fences.md#fence64)
+
+> shiftEnter
+
+Adapted: code block
+
+<table>
+<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- item text
+  ¶ →```
+    →co┃de
+    →```
+````
+
+</td><td>
+
+````buffer
+- item text
+  ¶ →```
+    →co
+    ┃de
+    →```
+````
+
+</td><td>
+
+````buffer
+- item text
+  ¶ →```
+    →co
+    →┃de
+    →```
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- item text
+→```
+→co┃de
+→```
+````
+
+</td><td>
+
+````buffer
+- item text
+→```
+→co
+→┃de
+→```
 ````
 
 </td></tr>
@@ -18264,6 +17057,58 @@ Original:
 </td></tr>
 </table>
 
+### [Scenario3](../spec/scenarios.md#scenario3)
+
+> enter indent deleteContentBackward
+
+Adapted: under backspaceAtItemStart: unwrap
+
+<table>
+<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+```
+
+</td><td>
+
+```buffer
+- a
+  ¶ ┃
+```
+
+</td><td>
+
+```buffer
+- a
+  
+  ┃
+```
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+```buffer
+- a┃
+```
+
+</td><td>
+
+```buffer
+- a
+
+  ┃◌
+```
+
+</td></tr>
+</table>
+
 ### [ShiftEnter30](../spec/shift-enter.md#shiftenter30)
 
 Adapted: escape
@@ -18398,7 +17243,7 @@ Original:
 </td></tr>
 </table>
 
-## Adapted: caret (2)
+## Adapted: caret (3)
 
 ### [CursorDown5](../spec/cursor.md#cursordown5)
 
@@ -18448,6 +17293,68 @@ Original:
 - a
 - [ ] ┃task
 ```
+
+</td></tr>
+</table>
+
+### [Fence17](../spec/fences.md#fence17)
+
+> deleteContentBackward
+
+Adapted: code block
+
+<table>
+<tr><th>buffer</th><th>affine</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a
+  ¶ ```
+    ┃one
+    ```
+````
+
+</td><td>
+
+````buffer
+- a
+  ¶ ```⟦selected⟧
+    one
+    ```
+````
+
+</td><td>
+
+````buffer
+- a
+  ¶ ```
+    ┃one
+    ```
+````
+
+</td></tr>
+</table>
+
+Original:
+<table>
+<tr><th>buffer</th><th>ourus</th></tr>
+<tr valign="top"><td>
+
+````buffer
+- a
+  ```
+  ┃one
+  ```
+````
+
+</td><td>
+
+````buffer
+- a
+  ```
+  ┃one
+  ```
+````
 
 </td></tr>
 </table>
@@ -18509,12 +17416,14 @@ Original:
 </td></tr>
 </table>
 
-## Skipped (939)
+## Skipped (976)
 
 | example | why |
 | --- | --- |
 | **auto.md** | |
 | [Auto3](../spec/auto.md#auto3) | tag markup-fence |
+| [Auto4](../spec/auto.md#auto4) | tag markup-fence |
+| [Auto5](../spec/auto.md#auto5) | tag markup-fence |
 | [Auto6](../spec/auto.md#auto6) | tag markup-fence |
 | [Auto7](../spec/auto.md#auto7) | tag markup-fence |
 | [Auto8](../spec/auto.md#auto8) | option autoClose: ``` ~~~ ` |
@@ -18528,22 +17437,24 @@ Original:
 | [Auto16](../spec/auto.md#auto16) | option autoClose: ``` ~~~ ( [ { |
 | [Auto17](../spec/auto.md#auto17) | option autoClose: ``` ~~~ ( [ { |
 | [Auto18](../spec/auto.md#auto18) | option autoClose: ``` ~~~ ( [ { |
-| [Auto19](../spec/auto.md#auto19) | option autoClose: ``` ~~~ ( [ { |
 | [Auto20](../spec/auto.md#auto20) | option autoClose: ``` ~~~ ( [ { |
 | [Auto20b](../spec/auto.md#auto20b) | option autoClose: ``` ~~~ ( [ { |
 | [Auto21](../spec/auto.md#auto21) | option autoClose: ``` ~~~ [[ (( |
+| [Auto23](../spec/auto.md#auto23) | the app doing what ourus refuses as Markdown can't hold it (not-expressible), at shiftEnter |
+| [Auto24](../spec/auto.md#auto24) | the app doing what ourus refuses as Markdown can't hold it (not-expressible), at shiftEnter |
 | [Auto26](../spec/auto.md#auto26) | option autoClose: ``` ~~~ ( [ { |
 | [Auto27](../spec/auto.md#auto27) | math |
 | [Auto29](../spec/auto.md#auto29) | tag markup-fence |
 | [Auto32](../spec/auto.md#auto32) | tag markup-fence |
-| [Auto33](../spec/auto.md#auto33) | tag markup-fence |
-| [Auto35](../spec/auto.md#auto35) | tag markup-fence |
+| [Auto33](../spec/auto.md#auto33) | html (expected) |
 | [Auto36](../spec/auto.md#auto36) | option autoClose: ``` ~~~ $ |
 | [Auto37](../spec/auto.md#auto37) | option autoClose: ``` ~~~ $ |
 | [Auto38](../spec/auto.md#auto38) | option autoClose: ``` ~~~ $ |
 | **backspace.md** | |
 | [Backspace2](../spec/backspace.md#backspace2) | caret in a marker |
 | [Backspace4](../spec/backspace.md#backspace4) | heading's closing #s |
+| [Backspace8b](../spec/backspace.md#backspace8b) | option joinWithChildren: never |
+| [Backspace8c](../spec/backspace.md#backspace8c) | option joinWithChildren: never |
 | [Backspace12c](../spec/backspace.md#backspace12c) | changes only what blocks can't show |
 | [Backspace12e](../spec/backspace.md#backspace12e) | the app changing what ourus's blocks show no change in, at enter |
 | [Backspace16](../spec/backspace.md#backspace16) | tag markup-fence |
@@ -18552,7 +17463,9 @@ Original:
 | [Backspace17h](../spec/backspace.md#backspace17h) | option emptyItemWithChildren: refuse |
 | [Backspace18e](../spec/backspace.md#backspace18e) | heading as a list item (a heading is a block of its own) |
 | [Backspace18g](../spec/backspace.md#backspace18g) | heading as a list item (a heading is a block of its own) |
+| [Backspace23](../spec/backspace.md#backspace23) | the app doing what ourus refuses as Markdown can't hold it (not-expressible), at deleteContentBackward |
 | [Backspace24](../spec/backspace.md#backspace24) | tag markup-fence |
+| [Backspace24b](../spec/backspace.md#backspace24b) | tag markup-fence |
 | [Backspace28](../spec/backspace.md#backspace28) | tag markup-fence |
 | [Backspace31](../spec/backspace.md#backspace31) | selection across blocks |
 | [Backspace34](../spec/backspace.md#backspace34) | option backspaceAtTopItem: refuse |
@@ -18563,13 +17476,17 @@ Original:
 | [SoftBackspace10](../spec/backspace.md#softbackspace10) | option taskEditing: text |
 | [SoftBackspace11b](../spec/backspace.md#softbackspace11b) | option heldSpace: trim |
 | [Backspace42](../spec/backspace.md#backspace42) | caret in a marker |
-| [Backspace42b](../spec/backspace.md#backspace42b) | option markup: decorated |
+| [Backspace42b](../spec/backspace.md#backspace42b) | caret in a marker |
 | [Backspace43](../spec/backspace.md#backspace43) | changes only what blocks can't show |
 | [Backspace43c](../spec/backspace.md#backspace43c) | changes only what blocks can't show |
 | [Backspace45b](../spec/backspace.md#backspace45b) | option joinWithChildren: refuse |
 | [Backspace45c](../spec/backspace.md#backspace45c) | option joinWithChildren: refuse |
 | [Backspace47b](../spec/backspace.md#backspace47b) | option heldSpace: trim |
 | [Backspace50](../spec/backspace.md#backspace50) | option backspaceAtItemStart: body |
+| [Backspace51](../spec/backspace.md#backspace51) | footnote |
+| [Backspace52](../spec/backspace.md#backspace52) | footnote |
+| [Backspace52b](../spec/backspace.md#backspace52b) | footnote |
+| [Backspace53](../spec/backspace.md#backspace53) | heading as a list item (a heading is a block of its own) |
 | **backtick.md** | |
 | [Backtick1](../spec/backtick.md#backtick1) | tag markup-fence |
 | [Backtick2](../spec/backtick.md#backtick2) | tag markup-fence |
@@ -18591,7 +17508,6 @@ Original:
 | [Backtick17](../spec/backtick.md#backtick17) | tag markup-fence |
 | [Backtick19](../spec/backtick.md#backtick19) | option autoClose: ``` ~~~ ` |
 | [Backtick20](../spec/backtick.md#backtick20) | option autoClose: ``` ~~~ ` |
-| [Backtick21](../spec/backtick.md#backtick21) | option autoClose: ``` ~~~ ` |
 | [Backtick22](../spec/backtick.md#backtick22) | tag markup-fence |
 | [Backtick23](../spec/backtick.md#backtick23) | tag markup-fence |
 | [Backtick24](../spec/backtick.md#backtick24) | tag markup-fence |
@@ -18632,7 +17548,6 @@ Original:
 | [Copy8](../spec/copy.md#copy8) | callout |
 | [Cut2](../spec/copy.md#cut2) | selection across blocks |
 | [Cut3](../spec/copy.md#cut3) | option copySelection: nodes |
-| [Cut5](../spec/copy.md#cut5) | tag markup-fence |
 | [Copy40](../spec/copy.md#copy40) | quote as a list item (a quote is a block of its own) |
 | [Copy41](../spec/copy.md#copy41) | selection across blocks |
 | [Copy41b](../spec/copy.md#copy41b) | selection across blocks |
@@ -18656,27 +17571,28 @@ Original:
 | [DeleteSubtree11](../spec/delete-subtree.md#deletesubtree11) | quote as a list item (a quote is a block of its own) |
 | [DeleteSubtree12](../spec/delete-subtree.md#deletesubtree12) | option quotes: container |
 | [DeleteSubtree14](../spec/delete-subtree.md#deletesubtree14) | tag markup-fence |
-| [DeleteSubtree15](../spec/delete-subtree.md#deletesubtree15) | tag markup-fence |
-| [DeleteSubtree16](../spec/delete-subtree.md#deletesubtree16) | tag markup-fence |
+| [DeleteSubtree15](../spec/delete-subtree.md#deletesubtree15) | no text focus after deleteSubtree |
+| [DeleteSubtree16](../spec/delete-subtree.md#deletesubtree16) | no text focus after deleteSubtree |
 | [DeleteSubtree17](../spec/delete-subtree.md#deletesubtree17) | quote |
 | **delete.md** | |
 | [Delete4](../spec/delete.md#delete4) | heading's closing #s |
 | [Delete4b](../spec/delete.md#delete4b) | heading's closing #s |
 | [Delete5e](../spec/delete.md#delete5e) | option emptyItemWithChildren: refuse |
 | [Delete5f](../spec/delete.md#delete5f) | option emptyItemWithChildren: refuse |
+| [Delete7b](../spec/delete.md#delete7b) | option joinWithChildren: never |
 | [Delete10](../spec/delete.md#delete10) | option quotes: container |
-| [Delete11](../spec/delete.md#delete11) | tag markup-fence |
+| [Delete11](../spec/delete.md#delete11) | indented code |
 | [Delete13g](../spec/delete.md#delete13g) | heading as a list item (a heading is a block of its own) |
 | [Delete15](../spec/delete.md#delete15) | heading's closing #s |
-| [Delete16](../spec/delete.md#delete16) | option markup: decorated |
-| [Delete16b](../spec/delete.md#delete16b) | option markup: decorated |
-| [Delete16c](../spec/delete.md#delete16c) | option markup: decorated |
-| [Delete16d](../spec/delete.md#delete16d) | option markup: decorated |
-| [Delete16e](../spec/delete.md#delete16e) | option markup: decorated |
-| [Delete16f](../spec/delete.md#delete16f) | option markup: decorated |
+| [Delete16](../spec/delete.md#delete16) | caret in a marker |
+| [Delete16b](../spec/delete.md#delete16b) | caret in a marker |
+| [Delete16c](../spec/delete.md#delete16c) | caret in a marker |
+| [Delete16d](../spec/delete.md#delete16d) | caret in a marker |
+| [Delete16e](../spec/delete.md#delete16e) | caret in a marker |
+| [Delete16f](../spec/delete.md#delete16f) | caret in a marker |
 | [Delete18c](../spec/delete.md#delete18c) | changes only what blocks can't show |
 | [Delete18d](../spec/delete.md#delete18d) | changes only what blocks can't show |
-| [Delete19](../spec/delete.md#delete19) | option markup: decorated |
+| [Delete19](../spec/delete.md#delete19) | caret in a task's checkbox |
 | [Delete21](../spec/delete.md#delete21) | selection across blocks |
 | [Delete23](../spec/delete.md#delete23) | caret in a marker |
 | [Delete24](../spec/delete.md#delete24) | caret in a marker |
@@ -18684,6 +17600,10 @@ Original:
 | [Delete29](../spec/delete.md#delete29) | caret in a marker |
 | [Delete31b](../spec/delete.md#delete31b) | option joinWithChildren: refuse |
 | [Delete34](../spec/delete.md#delete34) | option quotes: container |
+| [Delete35](../spec/delete.md#delete35) | thematic break |
+| [Delete35b](../spec/delete.md#delete35b) | deleteContentForward: ourus leaves it to the app, the caret in markup |
+| [Delete36](../spec/delete.md#delete36) | tag markup-fence |
+| [Delete37](../spec/delete.md#delete37) | footnote |
 | **drag.md** | |
 | [Drag1](../spec/drag.md#drag1) | action drag ② |
 | [Drag2](../spec/drag.md#drag2) | action drag ② |
@@ -18702,7 +17622,7 @@ Original:
 | [DuplicateSubtree6](../spec/duplicate-subtree.md#duplicatesubtree6) | action duplicateSubtree |
 | [DuplicateSubtree7](../spec/duplicate-subtree.md#duplicatesubtree7) | action duplicateSubtree |
 | [DuplicateSubtree8](../spec/duplicate-subtree.md#duplicatesubtree8) | tag markup-fence |
-| [DuplicateSubtree9](../spec/duplicate-subtree.md#duplicatesubtree9) | tag markup-fence |
+| [DuplicateSubtree9](../spec/duplicate-subtree.md#duplicatesubtree9) | option autoClose: none |
 | [DuplicateSubtree10](../spec/duplicate-subtree.md#duplicatesubtree10) | action duplicateSubtree |
 | [DuplicateSubtree11](../spec/duplicate-subtree.md#duplicatesubtree11) | action duplicateSubtree |
 | [DuplicateSubtree12](../spec/duplicate-subtree.md#duplicatesubtree12) | action duplicateSubtree |
@@ -18710,6 +17630,8 @@ Original:
 | **enter.md** | |
 | [Enter3b](../spec/enter.md#enter3b) | option enterMidItem: child |
 | [Enter7b](../spec/enter.md#enter7b) | option enterOnEmptyItem: outdent |
+| [Enter7d](../spec/enter.md#enter7d) | option enterOnEmptyItem: outdent |
+| [Enter7e](../spec/enter.md#enter7e) | option enterOnEmptyItem: outdent |
 | [Enter15b](../spec/enter.md#enter15b) | option enterOnEmptyItem: outdent |
 | [Enter23](../spec/enter.md#enter23) | indented code |
 | [Enter30](../spec/enter.md#enter30) | option enterOnEmptyItem: outdent |
@@ -18720,6 +17642,8 @@ Original:
 | [Enter46](../spec/enter.md#enter46) | option quotes: container |
 | [Enter49](../spec/enter.md#enter49) | table |
 | [Enter50](../spec/enter.md#enter50) | table |
+| [Enter52b](../spec/enter.md#enter52b) | heading as a list item (a heading is a block of its own) |
+| [Enter52c](../spec/enter.md#enter52c) | heading as a list item (a heading is a block of its own) |
 | [Enter54](../spec/enter.md#enter54) | caret in a task's checkbox |
 | [Enter54b](../spec/enter.md#enter54b) | caret in a task's checkbox |
 | [Enter55](../spec/enter.md#enter55) | caret in a heading's #s |
@@ -18735,6 +17659,7 @@ Original:
 | [Enter69](../spec/enter.md#enter69) | heading as a list item (a heading is a block of its own) |
 | [Enter69d](../spec/enter.md#enter69d) | heading as a list item (a heading is a block of its own) |
 | [Enter70](../spec/enter.md#enter70) | table |
+| [Enter71b](../spec/enter.md#enter71b) | heading as a list item (a heading is a block of its own) |
 | **fences.md** | |
 | [Fence4](../spec/fences.md#fence4) | quote |
 | [Fence5](../spec/fences.md#fence5) | code block as a list item (a code block is a block of its own) |
@@ -18750,7 +17675,7 @@ Original:
 | [Fence13](../spec/fences.md#fence13) | tag markup-fence |
 | [Fence14](../spec/fences.md#fence14) | tag markup-fence |
 | [Fence15](../spec/fences.md#fence15) | tag markup-fence |
-| [Fence17](../spec/fences.md#fence17) | tag markup-fence |
+| [Fence18](../spec/fences.md#fence18) | tag markup-fence |
 | [Fence19](../spec/fences.md#fence19) | tag markup-fence |
 | [Fence20](../spec/fences.md#fence20) | quote |
 | [Fence21](../spec/fences.md#fence21) | nothing to compare |
@@ -18787,7 +17712,7 @@ Original:
 | [Fence43](../spec/fences.md#fence43) | quote |
 | [Fence44](../spec/fences.md#fence44) | indented code |
 | [Fence45](../spec/fences.md#fence45) | tag markup-fence |
-| [Fence46](../spec/fences.md#fence46) | quote |
+| [Fence46](../spec/fences.md#fence46) | tag markup-fence |
 | [Fence47](../spec/fences.md#fence47) | tag markup-fence |
 | [Fence52](../spec/fences.md#fence52) | indented code |
 | [Fence53](../spec/fences.md#fence53) | indented code |
@@ -18796,8 +17721,8 @@ Original:
 | [Fence56](../spec/fences.md#fence56) | tag markup-fence |
 | [Fence57](../spec/fences.md#fence57) | tag markup-fence |
 | [Fence61](../spec/fences.md#fence61) | tag markup-fence |
+| [Fence62](../spec/fences.md#fence62) | tag markup-fence |
 | [Fence63](../spec/fences.md#fence63) | tag markup-fence |
-| [Fence64](../spec/fences.md#fence64) | tag markup-fence |
 | **fold.md** | |
 | [Fold1](../spec/fold.md#fold1) | no folds |
 | [Fold2](../spec/fold.md#fold2) | no folds |
@@ -18810,7 +17735,7 @@ Original:
 | [Fold8](../spec/fold.md#fold8) | no folds |
 | [Fold9](../spec/fold.md#fold9) | no folds |
 | [Fold10](../spec/fold.md#fold10) | no folds |
-| [Fold11](../spec/fold.md#fold11) | no folds |
+| [Fold11](../spec/fold.md#fold11) | action toggleFold |
 | [Fold12](../spec/fold.md#fold12) | no folds |
 | [Fold13](../spec/fold.md#fold13) | no folds |
 | [Fold14](../spec/fold.md#fold14) | no folds |
@@ -18825,10 +17750,11 @@ Original:
 | [Gap15](../spec/gaps.md#gap15) | caret on a blank line |
 | [Gap16](../spec/gaps.md#gap16) | caret on a blank line |
 | [Gap18](../spec/gaps.md#gap18) | caret on a blank line |
-| [Gap19](../spec/gaps.md#gap19) | frontmatter |
+| [Gap19](../spec/gaps.md#gap19) | enter: ourus leaves it to the app, the caret in markup |
 | [Gap21](../spec/gaps.md#gap21) | cursorCharLeft after cursorDocEnd |
 | **indent.md** | |
 | [Indent9](../spec/indent.md#indent9) | selection across blocks |
+| [Indent12b](../spec/indent.md#indent12b) | the app holding its start otherwise |
 | [Indent27](../spec/indent.md#indent27) | selection across blocks |
 | [Indent28](../spec/indent.md#indent28) | caret in a marker |
 | [Indent30](../spec/indent.md#indent30) | caret in a marker |
@@ -18852,18 +17778,21 @@ Original:
 | **lists.md** | |
 | [Lists4](../spec/lists.md#lists4) | option listParent: block |
 | **move-subtree-down.md** | |
+| [MoveDown4b](../spec/move-subtree-down.md#movedown4b) | the app holding its start otherwise |
 | [MoveDown11](../spec/move-subtree-down.md#movedown11) | selection across blocks |
 | [MoveDown12](../spec/move-subtree-down.md#movedown12) | selection across blocks |
 | [MoveDown14](../spec/move-subtree-down.md#movedown14) | selection across blocks |
 | [MoveDown31](../spec/move-subtree-down.md#movedown31) | thematic break |
 | [MoveDown32](../spec/move-subtree-down.md#movedown32) | caret in a marker |
 | [MoveDown34](../spec/move-subtree-down.md#movedown34) | tag markup-fence |
+| [MoveDown36](../spec/move-subtree-down.md#movedown36) | the app doing what ourus refuses as Markdown can't hold it (not-expressible), at moveSubtreeDown |
 | [MoveDown37](../spec/move-subtree-down.md#movedown37) | tag markup-fence |
 | [MoveDown38](../spec/move-subtree-down.md#movedown38) | caret on a blank line |
 | [MoveDown40](../spec/move-subtree-down.md#movedown40) | selection across blocks |
 | [MoveDown43](../spec/move-subtree-down.md#movedown43) | caret in a marker |
 | [MoveDown44](../spec/move-subtree-down.md#movedown44) | caret in a marker |
 | **move-subtree-up.md** | |
+| [MoveUp3b](../spec/move-subtree-up.md#moveup3b) | the app holding its start otherwise |
 | [MoveUp10](../spec/move-subtree-up.md#moveup10) | selection across blocks |
 | [MoveUp11](../spec/move-subtree-up.md#moveup11) | selection across blocks |
 | [MoveUp18](../spec/move-subtree-up.md#moveup18) | indented code |
@@ -18912,7 +17841,7 @@ Original:
 | [TO-E18](../spec/obsidian-true-outliner.md#to-e18) | caret on a blank line |
 | [TO-S5](../spec/obsidian-true-outliner.md#to-s5) | caret in a marker |
 | [TO-S7-S8b](../spec/obsidian-true-outliner.md#to-s7-s8b) | caret on a blank line |
-| [TO1](../spec/obsidian-true-outliner.md#to1) | option markup: decorated |
+| [TO1](../spec/obsidian-true-outliner.md#to1) | caret in a task's checkbox |
 | [TO-Seamsc](../spec/obsidian-true-outliner.md#to-seamsc) | thematic break |
 | [TO-Seamsd](../spec/obsidian-true-outliner.md#to-seamsd) | indented code |
 | [TO7](../spec/obsidian-true-outliner.md#to7) | option outdent: logical |
@@ -18920,6 +17849,7 @@ Original:
 | [TO19](../spec/obsidian-true-outliner.md#to19) | option enterOnEmptyItem: outdent |
 | [TO-Bug197](../spec/obsidian-true-outliner.md#to-bug197) | option quotes: container |
 | **outdent.md** | |
+| [Outdent4b](../spec/outdent.md#outdent4b) | the app holding its start otherwise |
 | [Outdent8](../spec/outdent.md#outdent8) | selection across blocks |
 | [Outdent10](../spec/outdent.md#outdent10) | selection across blocks |
 | [Outdent12](../spec/outdent.md#outdent12) | selection across blocks |
@@ -18941,6 +17871,7 @@ Original:
 | [Outdent24](../spec/outdent.md#outdent24) | option outdent: logical |
 | [Outdent25](../spec/outdent.md#outdent25) | selection across blocks |
 | [Outdent26](../spec/outdent.md#outdent26) | option mixedDepths: refuse |
+| [Outdent27](../spec/outdent.md#outdent27) | option outdentTopLevel: refuse |
 | **paste-at.md** | |
 | [PasteAt1](../spec/paste-at.md#pasteat1) | action pasteAt |
 | [PasteAt2](../spec/paste-at.md#pasteat2) | action pasteAt |
@@ -18971,6 +17902,7 @@ Original:
 | [PastePlain31](../spec/paste-plain.md#pasteplain31) | option pastePlainLines: enter |
 | [PastePlain33c](../spec/paste-plain.md#pasteplain33c) | option pasteOverSelection: ignore |
 | [PastePlain34](../spec/paste-plain.md#pasteplain34) | option pastePlainLines: host |
+| [PastePlain35](../spec/paste-plain.md#pasteplain35) | option pasteTrailingBreak: drop |
 | **paste.md** | |
 | [Paste9](../spec/paste.md#paste9) | option quotes: container |
 | [Paste15](../spec/paste.md#paste15) | tag markup-fence |
@@ -19050,7 +17982,7 @@ Original:
 | [Quote41](../spec/quotes.md#quote41) | callout |
 | [Quote42](../spec/quotes.md#quote42) | quote |
 | [Quote43](../spec/quotes.md#quote43) | callout |
-| [Quote43b](../spec/quotes.md#quote43b) | option markup: decorated |
+| [Quote43b](../spec/quotes.md#quote43b) | callout |
 | [Quote46](../spec/quotes.md#quote46) | quote |
 | [Quote47](../spec/quotes.md#quote47) | callout |
 | [Quote48](../spec/quotes.md#quote48) | quote |
@@ -19132,11 +18064,14 @@ Original:
 | [QuoteAtom16](../spec/quotes.md#quoteatom16) | option quotes: atom |
 | [QuoteAtom17](../spec/quotes.md#quoteatom17) | option quotes: atom |
 | [QuoteAtom18](../spec/quotes.md#quoteatom18) | option quotes: atom |
+| [QuoteAtom18b](../spec/quotes.md#quoteatom18b) | option quotes: atom |
+| [QuoteAtom18c](../spec/quotes.md#quoteatom18c) | option quotes: atom |
 | [QuoteAtom19](../spec/quotes.md#quoteatom19) | option quotes: atom |
 | [QuoteAtom20](../spec/quotes.md#quoteatom20) | option quotes: atom |
 | [QuoteAtom21](../spec/quotes.md#quoteatom21) | option quotes: atom |
 | **regressions.md** | |
 | [Regression3](../spec/regressions.md#regression3) | quote as a list item (a quote is a block of its own) |
+| [Regression6](../spec/regressions.md#regression6) | tag markup-fence |
 | [Regression7](../spec/regressions.md#regression7) | tag markup-fence |
 | [Regression16](../spec/regressions.md#regression16) | option enterMidItem: child |
 | [Regression18](../spec/regressions.md#regression18) | heading as a list item (a heading is a block of its own) |
@@ -19183,7 +18118,6 @@ Original:
 | [Regression79](../spec/regressions.md#regression79) | action duplicateSubtree |
 | [Regression80](../spec/regressions.md#regression80) | action pasteAt |
 | [Regression84](../spec/regressions.md#regression84) | quote |
-| [Regression90](../spec/regressions.md#regression90) | option autoClose: ``` ~~~ ` |
 | [Regression91](../spec/regressions.md#regression91) | option pastePlainLines: enter |
 | [Regression92](../spec/regressions.md#regression92) | caret in a marker |
 | [Regression93](../spec/regressions.md#regression93) | action duplicateSubtree |
@@ -19192,7 +18126,8 @@ Original:
 | [Regression100](../spec/regressions.md#regression100) | caret on a blank line |
 | [Regression101](../spec/regressions.md#regression101) | quote |
 | [Regression103](../spec/regressions.md#regression103) | code block as a list item (a code block is a block of its own) |
-| [Regression106](../spec/regressions.md#regression106) | caret on a blank line |
+| [Regression104](../spec/regressions.md#regression104) | tag markup-fence |
+| [Regression106](../spec/regressions.md#regression106) | tag markup-fence |
 | [Regression107](../spec/regressions.md#regression107) | tag markup-fence |
 | [Regression108](../spec/regressions.md#regression108) | quote |
 | [Regression109](../spec/regressions.md#regression109) | action duplicateSubtree |
@@ -19201,9 +18136,14 @@ Original:
 | [Regression112](../spec/regressions.md#regression112) | quote |
 | [Regression113](../spec/regressions.md#regression113) | selection across blocks |
 | [Regression114](../spec/regressions.md#regression114) | option pastePlainLines: enter |
+| [Regression115](../spec/regressions.md#regression115) | tag markup-fence |
 | [Regression116](../spec/regressions.md#regression116) | tag markup-fence |
-| [Regression117](../spec/regressions.md#regression117) | quote |
+| [Regression117](../spec/regressions.md#regression117) | tag markup-fence |
+| [Regression118](../spec/regressions.md#regression118) | tag markup-fence |
 | [Regression119](../spec/regressions.md#regression119) | quote |
+| [Regression120](../spec/regressions.md#regression120) | tag markup-fence |
+| [Regression121](../spec/regressions.md#regression121) | tag markup-fence |
+| [Regression122](../spec/regressions.md#regression122) | tag markup-fence |
 | [Regression123](../spec/regressions.md#regression123) | tag markup-fence |
 | [Regression124](../spec/regressions.md#regression124) | no folds |
 | [Regression126](../spec/regressions.md#regression126) | tag markup-fence |
@@ -19220,7 +18160,7 @@ Original:
 | [Regression147](../spec/regressions.md#regression147) | tag markup-fence |
 | [Regression150](../spec/regressions.md#regression150) | math |
 | [Regression151](../spec/regressions.md#regression151) | code block as a list item (a code block is a block of its own) |
-| [Regression152](../spec/regressions.md#regression152) | option markup: decorated |
+| [Regression152](../spec/regressions.md#regression152) | tag markup-fence |
 | [Regression154](../spec/regressions.md#regression154) | indented code |
 | [Regression158](../spec/regressions.md#regression158) | quote |
 | [Regression159](../spec/regressions.md#regression159) | caret in a marker |
@@ -19237,7 +18177,8 @@ Original:
 | [Regression172](../spec/regressions.md#regression172) | quote |
 | [Regression173](../spec/regressions.md#regression173) | quote |
 | [Regression176](../spec/regressions.md#regression176) | quote |
-| [Regression178](../spec/regressions.md#regression178) | option autoClose: ``` ~~~ ` |
+| [Regression177b](../spec/regressions.md#regression177b) | option pasteOverNodes: nothing |
+| [Regression178](../spec/regressions.md#regression178) | tag markup-fence |
 | [Regression179](../spec/regressions.md#regression179) | action moveSubtree ① |
 | [Regression182](../spec/regressions.md#regression182) | link reference definition |
 | [Regression183](../spec/regressions.md#regression183) | quote |
@@ -19273,7 +18214,7 @@ Original:
 | [Regression216](../spec/regressions.md#regression216) | option quotes: container |
 | [Regression217](../spec/regressions.md#regression217) | quote as a list item (a quote is a block of its own) |
 | [Regression218](../spec/regressions.md#regression218) | option quotes: container |
-| [Regression219](../spec/regressions.md#regression219) | option markup: decorated |
+| [Regression219](../spec/regressions.md#regression219) | caret in a task's checkbox |
 | [Regression221](../spec/regressions.md#regression221) | table |
 | [Regression222](../spec/regressions.md#regression222) | tag markup-fence |
 | [Regression223](../spec/regressions.md#regression223) | table |
@@ -19290,8 +18231,8 @@ Original:
 | [Regression234](../spec/regressions.md#regression234) | option quotes: atom |
 | [Regression235](../spec/regressions.md#regression235) | option quotes: atom |
 | [Regression236](../spec/regressions.md#regression236) | option quirkPasteCaret: roam |
-| [Regression239](../spec/regressions.md#regression239) | quote |
-| [Regression240](../spec/regressions.md#regression240) | tag markup-fence |
+| [Regression239](../spec/regressions.md#regression239) | tag markup-fence |
+| [Regression240](../spec/regressions.md#regression240) | html (expected) |
 | [Regression241](../spec/regressions.md#regression241) | action expandSelection |
 | [Regression243](../spec/regressions.md#regression243) | option quotes: atom |
 | [Regression244](../spec/regressions.md#regression244) | quote |
@@ -19341,11 +18282,11 @@ Original:
 | [Regression290](../spec/regressions.md#regression290) | option quotes: atom |
 | [Regression291](../spec/regressions.md#regression291) | table (expected) |
 | [Regression292](../spec/regressions.md#regression292) | no zoom |
-| [Regression293](../spec/regressions.md#regression293) | html |
-| [Regression293b](../spec/regressions.md#regression293b) | html |
+| [Regression293](../spec/regressions.md#regression293) | tag markup-fence |
+| [Regression293b](../spec/regressions.md#regression293b) | tag markup-fence |
 | [Regression294](../spec/regressions.md#regression294) | quote |
 | [Regression295](../spec/regressions.md#regression295) | quote |
-| [Regression297](../spec/regressions.md#regression297) | tag markup-fence |
+| [Regression297](../spec/regressions.md#regression297) | indented code |
 | [Regression300](../spec/regressions.md#regression300) | tag markup-fence |
 | [Regression303](../spec/regressions.md#regression303) | quote |
 | [Regression305](../spec/regressions.md#regression305) | option pasteAtTextStart: after |
@@ -19375,7 +18316,8 @@ Original:
 | [Regression346](../spec/regressions.md#regression346) | indented code |
 | [Regression349](../spec/regressions.md#regression349) | block id (`^x`), which the app has none of: its text |
 | [Regression351](../spec/regressions.md#regression351) | quote |
-| [Regression353](../spec/regressions.md#regression353) | option pasteAtTextStart: after |
+| [Regression352](../spec/regressions.md#regression352) | tag markup-fence |
+| [Regression353](../spec/regressions.md#regression353) | tag markup-fence |
 | [Regression354](../spec/regressions.md#regression354) | option indentUnit: tab |
 | [Regression355](../spec/regressions.md#regression355) | quote |
 | [Regression358](../spec/regressions.md#regression358) | tag markup-fence |
@@ -19395,11 +18337,11 @@ Original:
 | [Regression381](../spec/regressions.md#regression381) | action moveSubtree ③ |
 | [Regression382](../spec/regressions.md#regression382) | action moveSubtree ③ |
 | [Regression383](../spec/regressions.md#regression383) | action moveSubtree ③ |
-| [Regression384](../spec/regressions.md#regression384) | math |
+| [Regression384](../spec/regressions.md#regression384) | tag markup-fence |
 | [Regression385](../spec/regressions.md#regression385) | option quotes: container |
 | [Regression386](../spec/regressions.md#regression386) | option quotes: atom |
 | [Regression387](../spec/regressions.md#regression387) | option indentUnit: tab |
-| [Regression388](../spec/regressions.md#regression388) | caret in a marker |
+| [Regression388](../spec/regressions.md#regression388) | tag markup-fence |
 | [Regression389](../spec/regressions.md#regression389) | heading as a list item (a heading is a block of its own) |
 | [Regression390](../spec/regressions.md#regression390) | quote |
 | [Regression392](../spec/regressions.md#regression392) | quote |
@@ -19442,12 +18384,14 @@ Original:
 | **shift-enter.md** | |
 | [ShiftEnter30b](../spec/shift-enter.md#shiftenter30b) | option heldSpace: trim |
 | [ShiftEnter22](../spec/shift-enter.md#shiftenter22) | caret in a marker |
-| [ShiftEnter22b](../spec/shift-enter.md#shiftenter22b) | option markup: decorated |
+| [ShiftEnter22b](../spec/shift-enter.md#shiftenter22b) | caret in a marker |
 | [ShiftEnter24](../spec/shift-enter.md#shiftenter24) | table |
 | [ShiftEnter26](../spec/shift-enter.md#shiftenter26) | caret in a task's checkbox |
-| [ShiftEnter26b](../spec/shift-enter.md#shiftenter26b) | option markup: decorated |
+| [ShiftEnter26b](../spec/shift-enter.md#shiftenter26b) | caret in a task's checkbox |
 | [ShiftEnter27](../spec/shift-enter.md#shiftenter27) | selection across blocks |
+| [ShiftEnter29b](../spec/shift-enter.md#shiftenter29b) | heading as a list item (a heading is a block of its own) |
 | [ShiftEnter32b](../spec/shift-enter.md#shiftenter32b) | option heldSpace: trim |
+| [ShiftEnter35](../spec/shift-enter.md#shiftenter35) | changes only what blocks can't show |
 | **subtree-selection.md** | |
 | [SubtreeEdit3](../spec/subtree-selection.md#subtreeedit3) | selection across blocks |
 | [SubtreeEdit5](../spec/subtree-selection.md#subtreeedit5) | selection across blocks |
@@ -19463,10 +18407,10 @@ Original:
 | [TaskEnter9](../spec/tasks.md#taskenter9) | option enterTask: plain |
 | [TaskEnter9b](../spec/tasks.md#taskenter9b) | option enterTask: plain |
 | [TaskEnter9c](../spec/tasks.md#taskenter9c) | option enterTask: plain |
-| [TaskBackspace1](../spec/tasks.md#taskbackspace1) | option markup: decorated |
+| [TaskBackspace1](../spec/tasks.md#taskbackspace1) | caret in a task's checkbox |
 | [TaskBackspace4](../spec/tasks.md#taskbackspace4) | option taskEditing: block |
 | [TaskBackspace5](../spec/tasks.md#taskbackspace5) | option taskEditing: text |
-| [TaskBackspace6](../spec/tasks.md#taskbackspace6) | option markup: decorated |
+| [TaskBackspace6](../spec/tasks.md#taskbackspace6) | caret in a task's checkbox |
 | [TaskBackspace7](../spec/tasks.md#taskbackspace7) | option taskEditing: block |
 | [TaskBackspace8](../spec/tasks.md#taskbackspace8) | caret in a task's checkbox |
 | [TaskBackspace8b](../spec/tasks.md#taskbackspace8b) | caret in a task's checkbox |

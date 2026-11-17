@@ -36,6 +36,8 @@ export const driver: Driver = {
   // measured: Enter at an item's text start leaves the caret with the text; a typed fence is left
   // open (Backtick1 to Backtick4)
   behaves: {
+    // a character typed over a selection (probed 2026-11-18); a quote its curly pair
+    autoWrap: ['(', '[', '{'],
     // a quote is text, its `>`s characters edited on its lines: of `quotes`' values the one its runs agree with most (166 quote cases a setup)
     quotes: 'atom',
     enterSplitSpace: 'start',

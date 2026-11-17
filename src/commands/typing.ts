@@ -4,19 +4,19 @@
 
 import { OurusProse, OurusAtom, blockIdsOf, type Located, type OurusNode, type OurusText } from '../doc/index.ts';
 import { composeChanges, dominantEnding, lineOf, MarkSet, trimMd, type ChangeSpec, type NodeId } from '../text/index.ts';
-import type { AutoCloseOpener } from '../config.ts';
+import { AUTO_WRAPS, type AutoCloseOpener, type AutoWrapper } from '../config.ts';
 import type { OurusDraft } from '../writer/index.ts';
 import { CommandContext } from './context.ts';
 import { CODE, breaksFence, codeAt, editInCode, lineBreakAtOpening, onDelimiterLine, type CodeAt } from './code.ts';
 import { quoteLineTextFrom } from './quote.ts';
-import { textEnd, textStart } from './util.ts';
+import { textEnd, textStart, fenceDrawn } from './util.ts';
 import type { OurusResult } from './types.ts';
 import { OurusFailed, OurusRejected, OurusSuccess, OurusDeferred } from './types.ts';
 
 /**
  * Typed text (`insertText`), a key's worth: a backtick or a tilde on a fence, on a code line, or
- * making its line open a fence; an opener `autoClose` lists, in text, pairs, its closer ours, or
- * wraps a selection on one line (a backtick in code); a closer before one of ours steps over it; any
+ * making its line open a fence; an opener `autoClose` lists, in text, pairs, its closer ours; a
+ * character `autoWrap` lists wraps a selection on one line (a bracket in code too); a closer before one of ours steps over it; any
  * other character the host's. Null where ourus doesn't do it yet: several characters with a backtick
  * over a selection, a fence's character in a container's prefix or a marker.
  */
@@ -27,15 +27,15 @@ export function insertTextCommand(ctx: CommandContext, typed: string): OurusResu
     // over part of a closed block's fence run, any character breaks the fence (rule 5)
     if (overFence(ctx)) return breaksFence(ctx, 'the fence would break');
     // over a selection in code, what it leaves may make a fence (`X```` → ```` ``` ````)
-    if (code) return (typed in BRACKETS && closes(ctx, typed as AutoCloseOpener) ? wrapInBrackets(ctx, typed) : null) ?? editInCode(ctx, code, code.offset, code.to, typed);
-    // over a selection in one line of text, the host's but for an opener `autoClose` lists: a backtick
-    // makes it code, a bracket wraps it
+    if (code) return (typed in WRAPS_ANYWHERE && wraps(ctx, typed) ? wrapInPair(ctx, typed) : null) ?? editInCode(ctx, code, code.offset, code.to, typed);
+    // over a selection in one line of text, the host's but for a character `autoWrap` lists: a
+    // backtick makes it code, any other wraps it in itself and its closer
     if (ctx.doc.lineAt(ctx.selection.anchor).index !== ctx.doc.lineAt(ctx.selection.head).index) return new OurusDeferred('host-default');
-    // (a bracket wraps it anywhere, as an editor's closeBrackets does; a backtick in code, math or a
-    // comment, verbatim, is the host's)
-    if (typed in BRACKETS && closes(ctx, typed as AutoCloseOpener)) return wrapInBrackets(ctx, typed) ?? new OurusDeferred('host-default');
+    // (a bracket wraps it anywhere, as an editor's closeBrackets does; the others in prose; a backtick
+    // in code, math or a comment, verbatim, is the host's)
+    if (typed !== '`' && wraps(ctx, typed)) return wrapInPair(ctx, typed) ?? new OurusDeferred('host-default');
     if (ctx.doc.verbatimSpanAt(Math.min(ctx.selection.anchor, ctx.selection.head))) return new OurusDeferred('host-default');
-    if (!closes(ctx, '`') || !typed.includes('`')) return new OurusDeferred('host-default');
+    if (!wraps(ctx, '`') || !typed.includes('`')) return new OurusDeferred('host-default');
     return typed === '`' ? wrapInCode(ctx) : null;
   }
   if ([...typed].length > 1 && fenceChar) return typedOneByOne(ctx, typed);
@@ -96,6 +96,12 @@ export function pairPlace(ctx: CommandContext, at: Located): PairPlace | null {
 
 /** Each bracket opener's closer (`$`, inline math's, its own). */
 const BRACKETS: Readonly<Record<string, string>> = { '(': ')', '[': ']', '{': '}', $: '$' };
+
+/** Whether `autoWrap` lists `typed`, a character. */
+const wraps = (ctx: CommandContext, typed: string): boolean => (ctx.config.autoWrap as readonly string[]).includes(typed);
+
+/** The wrappers that wrap in any text that pairs, code too, as an editor's closeBrackets has them; the others in prose only. */
+const WRAPS_ANYWHERE: Readonly<Record<string, true>> = { '(': true, '[': true, '{': true };
 
 /** Whether `autoClose` lists `opener`. */
 const closes = (ctx: CommandContext, opener: AutoCloseOpener): boolean => ctx.config.autoClose.includes(opener);
@@ -176,21 +182,24 @@ function typedInEscapedPair(ctx: CommandContext, typed: string): OurusResult | n
 }
 
 /**
- * A bracket opener `autoClose` lists, over a selection in a text that pairs (`pairPlace`: prose, a
- * quote atom's, code's, as an editor's closeBrackets has it there too): the selection between it and
- * its closer, ours, and still selected. Null where it can't: across texts, from or to markup, `$` in
- * what isn't prose.
+ * A character `autoWrap` lists, but a backtick, over a selection in a text that pairs (`pairPlace`:
+ * prose, a quote atom's, code's, as an editor's closeBrackets has it there too, for a bracket): the
+ * selection between it and its closer (a bracket's and `$`'s ours), and still selected. Null where it can't: across texts,
+ * from or to markup, any but a bracket in what isn't prose.
  */
-function wrapInBrackets(ctx: CommandContext, opener: string): OurusResult | null {
+function wrapInPair(ctx: CommandContext, opener: string): OurusResult | null {
   const [a, b] = [ctx.from, ctx.to];
   const place = pairPlace(ctx, a);
-  if (!place || a.zone !== 'text' || b.zone !== 'text' || a.node.persistentNode !== b.node.persistentNode || (!place.prose && opener === '$')) return null;
+  if (!place || a.zone !== 'text' || b.zone !== 'text' || a.node.persistentNode !== b.node.persistentNode || (!place.prose && !(opener in WRAPS_ANYWHERE))) return null;
   const from = Math.min(a.offset, b.offset);
   const to = Math.max(a.offset, b.offset);
   if (place.markup(from) || place.markup(to)) return null;
   const text = place.text;
-  const spliced = text.splice(to, to, BRACKETS[opener]!).splice(from, from, opener);
-  const wrapped = spliced.withMarks({ auto: [...spliced.marks.auto, to + 1] });
+  const spliced = text.splice(to, to, AUTO_WRAPS[opener as AutoWrapper]).splice(from, from, opener);
+  // (a bracket's closer, `$`'s, ours, which a closer typed steps over; a formatting character's or a
+  // quote's the author's, as one typed)
+  const ours = opener in BRACKETS;
+  const wrapped = ours ? spliced.withMarks({ auto: [...spliced.marks.auto, to + 1] }) : spliced;
   const forward = ctx.selection.anchor <= ctx.selection.head;
   const [start, end] = [{ ref: a.node, offset: from + 1, assoc: 1 as const }, { ref: a.node, offset: to + 1, assoc: -1 as const }];
   return ctx.apply(ctx.draft().setText(a.node, wrapped).select(forward ? start : end, forward ? end : start));
@@ -368,7 +377,7 @@ export function deleteEmptyPair(ctx: CommandContext, place: PairPlace, offset: n
 
 
 /**
- * A backtick `autoClose` lists, over a selection in one line of a node's text: the selection
+ * A backtick `autoWrap` lists, over a selection in one line of a node's text: the selection
  * becomes code, with a run longer than any inside it on each side (and a space inside where it starts
  * or ends with a backtick), and stays selected.
  */
@@ -434,10 +443,10 @@ function fenceCharInCode(ctx: CommandContext, at: CodeAt, char: string): OurusRe
       // (the other fence's character ours: the closing one's where the opening one was typed in, and back)
       const spliced = text.splice(runs.close.to, runs.close.to, char).splice(runs.open.to, runs.open.to, char);
       const grown = spliced.withMarks({ auto: [...spliced.marks.auto, onOpen ? runs.close.to + 1 : runs.open.to] });
-      // where markup is decorated, not in the fence: from the closing one at the code's end, from inside
+      // where the host draws the fence, not in it: from the closing one at the code's end, from inside
       // the opening one at its start (after it, the info string, is text)
       let caret = offset + (onOpen ? 1 : 2);
-      if (ctx.config.markup === 'decorated' && (onClose || caret <= runs.open.to)) caret = onClose ? textEnd(grown) : textStart(grown);
+      if (fenceDrawn(ctx, grown) && (onClose || caret <= runs.open.to)) caret = onClose ? textEnd(grown) : textStart(grown);
       return ctx.apply(draft.setText(node, grown).setCaret(node, caret, -1));
     }
     // the host's where the fence stays one, closed as it was
@@ -451,8 +460,8 @@ function fenceCharInCode(ctx: CommandContext, at: CodeAt, char: string): OurusRe
   if (s.lastIndexOf('\n') === lineTo) {
     const retyped = typed.splice(lineTo + 1, s.length + 1);
     const close = retyped.delimiters?.close;
-    // the caret after it, but where markup is decorated: at the code's end
-    if (close && ctx.doc.readsAs(retyped)) return ctx.apply(draft.setText(node, retyped).setCaret(node, ctx.config.markup === 'decorated' ? textEnd(retyped) : close.to, -1));
+    // the caret after it, but where the host draws the fence: at the code's end
+    if (close && ctx.doc.readsAs(retyped)) return ctx.apply(draft.setText(node, retyped).setCaret(node, fenceDrawn(ctx, retyped) ? textEnd(retyped) : close.to, -1));
   }
   return ctx.apply(draft.setText(node, typed).setCaret(node, offset + 1, -1));
 }

@@ -30,7 +30,8 @@ export function editSubtrees(ctx: CommandContext, command: OurusCommand): OurusR
   // typing over the whole document (a select all) replaces it as text, as every text editor does,
   // rather than keeping the first node's prefix (`- x`, `# x`)
   const all = ctx.doc.wholeText(Math.min(ctx.selection.anchor, ctx.selection.head), Math.max(ctx.selection.anchor, ctx.selection.head));
-  if (all && (command.type === 'insertText' || command.type === 'pastePlain')) return undefined;
+  // (but a plain paste where nothing is pasted over nodes, `pasteOverNodes: nothing`, the whole document's too: Regression177)
+  if (all && (command.type === 'insertText' || (command.type === 'pastePlain' && ctx.config.pasteOverNodes !== 'nothing'))) return undefined;
   switch (command.type) {
     case 'deleteContentBackward':
     case 'deleteContentForward':

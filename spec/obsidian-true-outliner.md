@@ -284,7 +284,7 @@ item's text start ([Enter34](enter.md#enter34)): the underline is markup, not te
 refuses it; a text editor splits the underline.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -561,7 +561,7 @@ one
 
 *Shift-Enter: S5*
 
-With the caret in a list marker, Shift-Enter is the host's (`markup: text`, the default;
+With the caret in a list marker, Shift-Enter is the host's (not in `decorations`, the default;
 [ShiftEnter22](shift-enter.md#shiftenter22)), which splits the marker, as TO's catalogue has it.
 
 ```yaml
@@ -593,7 +593,7 @@ below); only an ATX title is a single line. Its underline is not text: Shift-Ent
 it was (TO cut the underline in two).
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -614,7 +614,7 @@ Hello
 *Shift-Enter, S7, S8: Line break in setext underline refused*
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 ```
 
 ```markdown
@@ -826,8 +826,8 @@ Backspace would leave `- [ ]b`, which is no task. (Right after the checkbox, Bac
 by default: [TaskBackspace5](tasks.md#taskbackspace5).)
 
 ```yaml
-tags: rare markup-task
-markup: decorated
+tags: rare
+decorations: [checkbox]
 ```
 
 ```markdown

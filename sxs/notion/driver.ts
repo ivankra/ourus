@@ -235,10 +235,16 @@ export const driver: Driver = {
   // bulleted, numbered and to-do blocks the items
   freeForm: true,
   // a heading is a block's type, a text starting `# ` plain (`read` escapes it)
-  headings: true,
+  headingBlocks: true,
   ordered: true,
   // measured with `--ignore-options` (2026-11-03): each value agrees where ourus's default doesn't
   behaves: {
+    // a character typed over a selection (probed 2026-11-18): none, the character replaces it
+    autoWrap: [],
+    // a heading is a block like any, owning nothing: it moves alone, and Tab and Shift-Tab leave it (MoveUp3, Indent12)
+    headings: 'block',
+    // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
+    decorations: ['bullet', 'number', 'checkbox', 'heading', 'setext', 'quote', 'callout', 'fence', 'math', 'rule', 'footnote'],
     // its blocks a flat sequence beside a text, each item a block of its own: a list after a text is no
     // block's (Backspace50b: the item after a text unwrapped by Backspace stays where it was)
     listParent: 'container',
@@ -288,6 +294,9 @@ export const driver: Driver = {
   // Notion's tables, equations, dividers and callouts are blocks with no text to put a caret in (or
   // none of Markdown's), which the driver doesn't make: skipped, with Markdown's other atoms
   refuses: ['markup-fence', 'html', 'table', 'math', 'thematic break', 'link reference definition', 'comment', 'footnote', 'callout'],
+  // three backticks typed, its code block (in JavaScript); an equation typed whole (`$$x$$`), its
+  // inline equation: the characters gone, the caret with them
+  capturesTyped: /```|\$\$.+\$\$/,
 
   holds(doc) {
     const o = doc as Outline;

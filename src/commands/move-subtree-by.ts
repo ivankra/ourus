@@ -38,6 +38,7 @@ function moveSubtreeBy(ctx: CommandContext, dir: -1 | 1): OurusResult | null {
   const parent = first.parent!;
   const other = dir < 0 ? first.prev : last.next;
   const draft = ctx.draft().remove(nodes);
+  const sections = ctx.config.headings === 'section';
   if (!other) {
     // (the zoom root's first or last children: nothing past them in the view, as at the document's edge)
     if (parent.id === view.zoom) return new OurusRejected(dir < 0 ? 'no-previous-sibling' : 'no-next-sibling');
@@ -46,7 +47,7 @@ function moveSubtreeBy(ctx: CommandContext, dir: -1 | 1): OurusResult | null {
     if (crossed === 'reparent') return new OurusRejected('would-reparent', 'the move would give another node a new parent');
     if (crossed.where === 'before') draft.place('before', crossed.at, nodes);
     else draft.append(crossed.at, crossed.where, nodes);
-  } else if (dir > 0 && ((first.kind === 'item' && ctx.doc.adoptsLists(other)) || (other.kind === 'heading' && first.kind !== 'heading'))) {
+  } else if (dir > 0 && ((first.kind === 'item' && ctx.doc.adoptsLists(other)) || (sections && other.kind === 'heading' && first.kind !== 'heading'))) {
     // an item below a node that adopts lists (a section's paragraph) becomes its list's first; any node but a heading, down past
     // a sub-heading, its section's first
     draft.append(other, 'first', nodes);
@@ -60,10 +61,11 @@ function moveSubtreeBy(ctx: CommandContext, dir: -1 | 1): OurusResult | null {
     const byList = ctx.config.listMoves === 'list';
     const list = (n: OurusNode | null): unknown => (n?.kind === 'item' ? doc.listOf(n)?.block : undefined);
     const whole = first.kind === 'item' && (!byList || (list(first.prev) !== list(first) && list(last.next) !== list(last)));
-    const group = (n: OurusNode): string => (n.kind === 'paragraph' || n.kind === 'atom' ? 'leaf' : n.kind);
-    const quote = (first.kind === 'quote' || other.kind === 'quote') && first.kind !== 'heading' && other.kind !== 'heading';
+    // (a heading that owns nothing, `headings: block`, is a block as a paragraph is)
+    const group = (n: OurusNode): string => (n.kind === 'paragraph' || n.kind === 'atom' || (!sections && n.kind === 'heading') ? 'leaf' : n.kind);
+    const quote = (first.kind === 'quote' || other.kind === 'quote') && (!sections || (first.kind !== 'heading' && other.kind !== 'heading'));
     const across = flat && ((whole && group(other) === 'leaf') || (group(first) === 'leaf' && other.kind === 'item'));
-    if (first.kind === 'heading' && (other.kind !== 'heading' || headingLevel(ctx, first) !== headingLevel(ctx, other))) return new OurusRejected('would-reparent', 'a heading moves among headings of its level');
+    if (sections && first.kind === 'heading' && (other.kind !== 'heading' || headingLevel(ctx, first) !== headingLevel(ctx, other))) return new OurusRejected('would-reparent', 'a heading moves among headings of its level');
     if (!quote && !across && group(other) !== group(first)) return new OurusRejected('not-expressible', `can't reorder ${withArticle(nameOf(first))} past ${withArticle(nameOf(other))}`);
     let past = other;
     if (flat && byList && first.kind !== 'item') while (list(past) && list(dir < 0 ? past.prev : past.next) === list(past)) past = (dir < 0 ? past.prev : past.next)!;
@@ -93,7 +95,7 @@ function crossUpOutOfParent(ctx: CommandContext, nodes: readonly OurusNode[]): C
     // else the heading's parent's own nodes, or the text before the first heading: right before it
     return into ? { at: into, where: 'last' } : { at: parent, where: 'before' };
   }
-  if (!above || !canCrossInto(above, first)) return null;
+  if (!above || !canCrossInto(ctx, above, first)) return null;
   return { at: above, where: 'last' };
 }
 
@@ -116,11 +118,11 @@ function crossDownOutOfParent(ctx: CommandContext, nodes: readonly OurusNode[]):
     }
   }
   if (!below) return null;
-  if (below.kind === 'heading' && first.kind === 'heading') {
+  if (below.kind === 'heading' && first.kind === 'heading' && ctx.config.headings === 'section') {
     // a heading at the head of a section takes in what follows it up to a heading of its level
     const head = below.children[0];
     if (headingLevel(ctx, first) <= headingLevel(ctx, below) || (head && !(head.kind === 'heading' && headingLevel(ctx, head) <= headingLevel(ctx, first)))) return 'reparent';
-  } else if (!canCrossInto(below, first)) return null;
+  } else if (!canCrossInto(ctx, below, first)) return null;
   return { at: below, where: 'first' };
 }
 
@@ -136,10 +138,10 @@ function lastSectionHolding(ctx: CommandContext, section: OurusNode, node: Ourus
 /**
  * Whether a moved run starting with `node` can cross into `into` as its children: an item into an
  * item, a paragraph's list or a quote (which it can cross out of), anything but a heading into a
- * heading's section.
+ * heading's section (where a heading has one, `headings: section`).
  */
-function canCrossInto(into: OurusNode, node: OurusNode): boolean {
-  if (into.kind === 'heading') return node.kind !== 'heading';
+function canCrossInto(ctx: CommandContext, into: OurusNode, node: OurusNode): boolean {
+  if (into.kind === 'heading') return ctx.config.headings === 'section' && node.kind !== 'heading';
   if (node.kind === 'item') return into.kind === 'item' || into.kind === 'paragraph' || into.kind === 'quote';
   return false;
 }

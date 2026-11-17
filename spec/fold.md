@@ -15,8 +15,8 @@ what is folded, after a step what is then (none drawn, nothing folded). The rule
    end of its subtree's last line, the blank lines after it shown. A childless node doesn't
    (Fold9, Fold12).
 2. **`fold` folds the nodes at the selection**, or the node a click names; `unfold` unfolds them;
-   `toggleFold` unfolds them where any is folded, else folds them, and at a node that doesn't fold
-   toggles its parent's (Fold9, Fold10, Fold11, Fold12).
+   `toggleFold` unfolds them where any is folded, else folds them; a node that doesn't fold, all
+   three leave alone (Fold9, Fold10, Fold11, Fold12).
 3. **A fold closed over the caret moves it to the fold's start**, the end of the folded node's text
    (Fold10).
 4. **No command leaves the caret, or a node it made or moved, in hidden lines, and none changes
@@ -302,29 +302,24 @@ tags: common
 
 ## Fold11
 
-A toggle at a node that doesn't fold toggles its parent's fold: folded, then open again.
+A toggle at a node that doesn't fold does nothing, as fold there does: Obsidian (bare, Live Preview,
+its Outliner), Logseq, Logseq DB, Roam, Dynalist and WorkFlowy leave it (true-outliner folds the
+parent, SilverBullet too, its caret left in it).
 
 ```yaml
 tags: common
 ```
 
 ```markdown
-- a①
+- a
   - b┃
 ```
 
 > toggleFold
 
 ```markdown
-- a┃①⟦folded⟧
-  - b
-```
-
-> toggleFold
-
-```markdown
 - a
-  - b
+  - b┃
 ```
 
 ## Fold12
@@ -583,7 +578,7 @@ does: the line goes, the block id on the marker's line, naming the item still (i
 block id then naming the whole list: B240's loss); the empty paragraph above the heading goes.
 
 ```yaml
-tags: rare markup-heading
+tags: rare
 flavor: obsidian
 ```
 

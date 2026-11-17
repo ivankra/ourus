@@ -255,9 +255,15 @@ export const driver: Driver = {
   refuses: ['code block', 'html', 'table', 'math', 'thematic break', 'link reference definition', 'comment', 'footnote', 'quote'],
   ordered: true,
   // `# ` starting an item's raw text is its header's prefix (a text `#` escaped in it, `\# x`)
-  headings: true,
+  headingBlocks: true,
   // measured with `--ignore-options` (2026-10-26): each value agrees where ourus's default doesn't
   behaves: {
+    // a character typed over a selection (probed 2026-11-18): none, the character (escaped) replaces it
+    autoWrap: [],
+    // a copy at a caret alone: the block's text, without its children (Copy4, Copy9)
+    copyAtCaret: 'text',
+    // the markup it draws, the caret kept out of it; the rest is text the keys edit (the caret placed inside each element, 2026-11-16)
+    decorations: ['bullet', 'checkbox', 'heading', 'setext'],
     // Shift+Tab takes the later siblings along as children (LogicalOutdent1, LogicalOutdent4, TO7)
     outdent: 'logical',
     // a split keeps the space at the new item's start (Enter65 to Enter65d, Enter65h to Enter65j)

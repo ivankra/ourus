@@ -166,7 +166,7 @@ section, the copied paragraph into that section, under another parent than its o
 `deleteSubtree` couldn't take back copies with two parents. Refused.
 
 ```yaml
-tags: rare free-form markup-heading
+tags: rare free-form
 ```
 
 ```markdown
@@ -218,7 +218,7 @@ A code block duplicated with the caret on its opening fence: the caret goes into
 typing can't break its fence.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 ```
 
 ````markdown
@@ -244,7 +244,7 @@ An unclosed fence reads to the end of its container: a copy below it would be mo
 Refused.
 
 ```yaml
-tags: rare markup-fence
+tags: rare
 autoClose: []
 ```
 

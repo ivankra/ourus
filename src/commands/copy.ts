@@ -18,7 +18,7 @@ import { OurusDeferred, OurusSuccess } from './types.ts';
  * depths are copied as siblings. Within one node's text
  * (or across nodes with `copySelection: text`) the text; across nodes, the whole nodes it touches with
  * their subtrees, ending with a line break (one pastes as a node, not as a phrase); at a caret, the
- * node there with its subtree (`copyAtCaret: node`), else the host's. A cut deletes it as delete
+ * node there with its subtree (`copyAtCaret: node`), or its text (`text`), else the host's. A cut deletes it as delete
  * subtree (whole nodes) or Backspace (text) does, within one node's text the text going. Null where
  * ourus doesn't do it yet: nodes delete subtree wouldn't take. Given nodes by id, those nodes, whole.
  */
@@ -47,6 +47,15 @@ export function copyOrCutCommand(ctx: CommandContext, type: 'copy' | 'cut'): Our
     nodes = found;
   } else if (from === to) {
     if (config.copyAtCaret === 'host') return new OurusDeferred('host-default');
+    // `text`: the text of the node at the caret, as a selection over it (none of its markup, none of
+    // its children), the host's where it has none
+    if (config.copyAtCaret === 'text') {
+      const at = pastPrefixAt(ctx, from);
+      if ((at.zone !== 'text' && at.zone !== 'frame') || !(at.text instanceof OurusProse) || at.text.empty) return new OurusDeferred('host-default');
+      const over = view.withSelection({ anchor: doc.posOf(at.node, textStart(at.text), 1), head: doc.posOf(at.node, textEnd(at.text), -1) });
+      const result = copyOrCutCommand(new CommandContext(over), type);
+      return type === 'copy' && result instanceof OurusSuccess ? new OurusSuccess({ ...result, view }) : result;
+    }
     // (the nodes delete subtree takes there: a folded row's owner, with what it hides)
     const line = doc.lineAt(from);
     const at = from <= line.to && doc.nodeAtLine(line.index) ? selectionRoots(view, ctx.selection) : [];
