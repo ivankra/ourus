@@ -2180,6 +2180,14 @@ tags: rare
 ```
 
 ```markdown
+- > x┃
+  >
+  > q
+```
+
+> deleteContentBackward
+
+```markdown
 - > ┃◌
   >
   > q
@@ -3014,6 +3022,12 @@ Enter on an emptied quote takes its `> ` off.
 tags: common
 quotes: text
 ```
+
+```markdown
+> x┃
+```
+
+> deleteContentBackward
 
 ```markdown
 > ┃◌

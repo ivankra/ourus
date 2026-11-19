@@ -451,7 +451,7 @@ test('placeholders settled in two steps carry the view through each: the fold ke
   assert.equal(settled.view.doc.text, '# h\n```\n  x\n```\n');
 });
 
-test("settling keeps a fold whose hidden node it writes again: no edit of the user's opens it (Fold20)", async () => {
+test("settling keeps a fold whose hidden node it writes again: no edit of the user's opens it", async () => {
   const { settlePlaceholders } = await import('../../src/commands/index.ts');
   const doc = OurusDoc.parse('\n# h\n> - \n> ^x\n', {
     config: { flavor: 'obsidian' },

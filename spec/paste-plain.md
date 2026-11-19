@@ -735,6 +735,14 @@ clipboard: |+
 ```markdown
 p
 
+x┃
+```
+
+> deleteContentBackward
+
+```markdown
+p
+
 ┃◌
 ```
 

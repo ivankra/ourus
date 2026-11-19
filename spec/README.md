@@ -326,6 +326,13 @@ its own layout and GUI dictate (wrapped lines, proportional fonts, bidi text), a
 driving one leaves motion to the editor; a test whose outcome depends on exactly where a motion
 lands belongs to that editor's own tests.
 
+A case starts from a text a user can have: its start holds no mark (`◌`, `\̬`), which are ourus's
+state and can't be given to an editor with a text. It reaches one as a user does, by an action: a
+character typed and deleted (`- x┃`, then `deleteContentBackward`: `- ┃◌`), Enter, Shift-Enter, a
+split that escapes (`a┃- x`, then `enter`: `┃\̬- x`). The reader refuses a start that holds one. A
+state no host produces, a placeholder off the selection's lines (the host settles it when the
+selection leaves), is no case at all.
+
 Cases that only need the caret to leave a placeholder use document and line boundaries instead
 of vertical motion, so they don't prescribe where Up or Down lands relative to node markers; where
 the caret's place after that doesn't matter, the buffer draws none (`cursorDocEnd`, the caret past

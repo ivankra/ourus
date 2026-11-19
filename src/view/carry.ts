@@ -170,7 +170,7 @@ export function carryView(
     if (!suppressed.has(id) && reached && (!old || !sameHidden(hiddenContent(from, old), hiddenContent(doc, now))))
       continue;
     // (no text changed there, but the nodes it hides moved: identical children reordered; a node read
-    // anew from the same text, a placeholder dropped, is no move: Fold20)
+    // anew from the same text, a placeholder dropped, is no move)
     if (!suppressed.has(id) && !reached && old && old.persistentNode !== now.persistentNode && movedWithin(old, now))
       continue;
     folded.add(id);

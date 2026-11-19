@@ -323,6 +323,14 @@ tags: common
 ```markdown
 - a
 
+x┃
+```
+
+> deleteContentBackward
+
+```markdown
+- a
+
 ┃◌
 ```
 
@@ -786,6 +794,14 @@ emptyItemWithChildren: refuse
 
 ```markdown
 - a
+  - x┃
+    - b
+```
+
+> deleteContentBackward
+
+```markdown
+- a
   - ┃◌
     - b
 ```
@@ -1082,6 +1098,16 @@ tags: rare
 ```markdown
 - a
 
+x┃
+
+- b
+```
+
+> deleteContentBackward
+
+```markdown
+- a
+
 ┃◌
 
 - b
@@ -1346,6 +1372,13 @@ its parent's text.
 ```yaml
 tags: core
 ```
+
+```markdown
+- a
+  - x┃
+```
+
+> deleteContentBackward
 
 ```markdown
 - a

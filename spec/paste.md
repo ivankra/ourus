@@ -894,6 +894,13 @@ clipboard: |-
 
 ```markdown
 # h1
+x┃
+```
+
+> deleteContentBackward
+
+```markdown
+# h1
 ┃◌
 ```
 
@@ -916,6 +923,13 @@ clipboard: |-
   - a
     - b
 ```
+
+```markdown
+# h1
+x┃
+```
+
+> deleteContentBackward
 
 ```markdown
 # h1

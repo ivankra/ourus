@@ -106,6 +106,10 @@ export class SpecError extends Error {}
 const strayBlank = (drawn: string): number => drawn.split('\n').findIndex((l) => /␠(?!␠*$)/.test(l));
 const STRAY_BLANK = "`␠` draws a line's trailing spaces only: write a space as a space elsewhere";
 
+/**
+ * A spec file's cases. A case starts from a text a user can have: no marks (`◌`, `̬`), which are
+ * ourus's state, reached by an action.
+ */
 export function readSpec(file: string, source: string): SpecTest[] {
   const syntax = MdTree.parse(source);
   const tree: Parsed = { text: source, root: syntax.root, lines: syntax.lines };
@@ -244,6 +248,13 @@ export function readSpec(file: string, source: string): SpecTest[] {
     // (a step's buffer may leave the caret out, where it isn't checked; a start draws it)
     if (group === tests[tests.length - 1]?.initial && !drawsCaret(group!.buffer))
       fail(start, "a test's start draws its caret (`┃`, or a selection); only a step's buffer may leave it out");
+    // marks are ourus's state, which no editor can be given with a text: a case reaches them as a
+    // user does, by an action from a plain text
+    if (group === tests[tests.length - 1]?.initial && /[◌̬]/.test(group!.buffer))
+      fail(
+        start,
+        "a test's start holds no mark (`◌` placeholder, `̬` auto mark): start from the plain text and reach it through an action",
+      );
     const stray = strayBlank(group!.buffer);
     if (stray >= 0) fail(start + 1 + stray, STRAY_BLANK);
   }

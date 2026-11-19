@@ -1867,33 +1867,6 @@ tags: rare
   - b
 ```
 
-## Regression70
-
-A caret on the blank line after a placeholder's empty paragraph is in that paragraph's gap, not
-the node above it.
-
-```yaml
-tags: rare
-```
-
-```markdown
-- x
-- a
-
-  ◌
-┃
-- b
-```
-
-> deleteSubtree
-
-```markdown
-- x
-- a┃
-
-- b
-```
-
 ## Regression71
 
 A duplicate of a subtree selection whose first root has no text of its own (an item whose first
@@ -2003,6 +1976,14 @@ clipboard: |-
   Call Sam
   Email Alex
 ```
+
+```markdown
+- Project
+  -  x┃
+- Inbox
+```
+
+> deleteContentBackward
 
 ```markdown
 - Project
@@ -2451,6 +2432,13 @@ tags: rare
 
 ```markdown
 - a
+  - x┃
+```
+
+> deleteContentBackward
+
+```markdown
+- a
   - ┃◌
 ```
 
@@ -2642,7 +2630,14 @@ tags: rare
 ```
 
 ```markdown
-> - ┃◌
+> - x┃
+# h
+```
+
+> deleteContentBackward
+
+```markdown
+> - ┃
 # h
 ```
 
@@ -2905,9 +2900,23 @@ tags: rare
 ```
 
 ```markdown
-«a
+a┃
+```
 
-◌»
+> enter
+
+```markdown
+a
+
+┃◌
+```
+
+> selectDocStart
+
+```markdown
+┃«a
+
+»◌
 ```
 
 > deleteContentBackward
@@ -3997,6 +4006,14 @@ clipboard: |-
 
 ```markdown
 - Project
+  -  x┃
+- Inbox
+```
+
+> deleteContentBackward
+
+```markdown
+- Project
   -  ┃◌
 - Inbox
 ```
@@ -5038,37 +5055,6 @@ b
 >
 > # h┃
 >b
-```
-
-## Regression199
-
-Cmd-Backspace at the end of a block-id line under a quote's empty item, the item's text a line
-break and blank lines after it, hung: the writer's walk back over the text's blank last lines,
-`lastIndexOf` from the line break at its start, found it again and again. Now refused, as an empty
-line inside a text is (found by the view's exhaustive pass on Fold20's start); the caret having
-left them, the placeholders settle after it, as in Fold20.
-
-```yaml
-flavor: obsidian
-tags: rare
-```
-
-```markdown
-◌
-# h
-> - ◌
-> ^x┃
-```
-
-> deleteSoftLineBackward
-
-```markdown
-# h
-> - ^x
-```
-
-```yaml
-result: rejected not-expressible
 ```
 
 ## Regression200
@@ -7996,7 +7982,14 @@ tags: rare
 ```
 
 ```markdown
--  ◌┃
+-  x┃
+  - item
+```
+
+> deleteContentBackward
+
+```markdown
+-  ┃◌
   - item
 ```
 
@@ -8490,27 +8483,6 @@ tags: rare
 - child three
 ```
 
-## Regression325
-
-Delete subtree on the first of two numbered items, the second an empty quote's held line at the
-note's end, with no line ending after it: the held line kept where it is written, at the end, the
-item renumbered (found by the volume run, seed 101).
-
-```yaml
-tags: rare
-```
-
-```markdown
-2. ┃
-3. > ◌
-```
-
-> deleteSubtree
-
-```markdown
-2. > ┃◌
-```
-
 ## Regression326
 
 Tab on an empty item after a padded empty one, a blank line between them, a quote two spaces in
@@ -8538,28 +8510,6 @@ tags: rare
   - ┃
 
 > quoted in item
-```
-
-## Regression327
-
-Enter in a numbered item before an empty quoted one held at the note's end, with no line ending
-after it: the items renumbered, the held quote's item keeping its held line (B358).
-
-```yaml
-tags: rare
-```
-
-```markdown
-1. n┃um
-2. > ◌
-```
-
-> enter
-
-```markdown
-1. n
-2. ┃um
-3. > ◌
 ```
 
 ## Regression328
@@ -8623,6 +8573,16 @@ past the child it takes in (B381).
 ```yaml
 tags: rare
 ```
+
+```markdown
+- parent
+  - child one
+  - 
+- x┃   second paragraph of child two
+  - child three
+```
+
+> deleteContentBackward
 
 ```markdown
 - parent
@@ -8736,7 +8696,13 @@ quotes: container
 ```
 
 ```markdown
-- >-  ┃◌
+- >-  x┃
+```
+
+> deleteContentBackward
+
+```markdown
+- >-  ┃
 ```
 
 > enter
@@ -9059,6 +9025,14 @@ tags: rare
 
 ````markdown
 - item
+  - x┃ ```js
+  ```
+````
+
+> deleteContentBackward
+
+````markdown
+- item
   - ┃◌ ```js
   ```
 ````
@@ -9238,6 +9212,13 @@ indentUnit: tab
 
 ```markdown
 - > [!note] Title
+  > x┃  >
+```
+
+> deleteContentBackward
+
+```markdown
+- > [!note] Title
   > ┃◌  >
 ```
 
@@ -9303,9 +9284,9 @@ clipboard: |-
 
 ## Regression357
 
-A paste over the `-` after an escape of ours (`\̬-`): the paste goes in, the escape, no longer
-needed, goes, and the space after the `-` stays, as every app keeps it. Deleted first, the selection
-took the escape and that space with it, and the paste failed (B400).
+A paste over the `-` after an escape of ours (`\̬-`, Enter's, splitting `a- x`): the paste goes in,
+the escape, no longer needed, goes, and the space after the `-` stays, as every app keeps it.
+Deleted first, the selection took the escape and that space with it, and the paste failed (B400).
 
 ```yaml
 tags: rare
@@ -9313,12 +9294,30 @@ clipboard: "y"
 ```
 
 ```markdown
+a┃- x
+```
+
+> enter
+
+```markdown
+a
+
+┃\̬- x
+```
+
+> cursorCharRight selectCharRight
+
+```markdown
+a
+
 \̬«-» x
 ```
 
 > paste
 
 ```markdown
+a
+
 y┃ x
 ```
 
@@ -9697,6 +9696,13 @@ quotes: atom
 
 ```markdown
 2. > quote
+x┃  > more
+```
+
+> deleteContentBackward
+
+```markdown
+2. > quote
 ┃◌  > more
 ```
 
@@ -9715,6 +9721,13 @@ line written as it was, still held, still the quote's (B237).
 tags: rare
 quotes: atom
 ```
+
+```markdown
+2. > quote
+ x┃ > more
+```
+
+> deleteContentBackward
 
 ```markdown
 2. > quote
@@ -9742,6 +9755,14 @@ quotes: container
 ```markdown
 1. num
 2. > quote
+x┃  > more
+```
+
+> deleteContentBackward
+
+```markdown
+1. num
+2. > quote
 ┃◌  > more
 ```
 
@@ -9765,7 +9786,14 @@ quotes: atom
 
 ```markdown
 - > quote
-┃◌
+x┃
+```
+
+> deleteContentBackward
+
+```markdown
+- > quote
+┃
 ```
 
 > deleteContentBackward
@@ -9783,6 +9811,13 @@ root, the held space gone, as a prose text's goes where it holds nothing (B237).
 tags: rare
 flavor: gfm
 ```
+
+```markdown
+- x┃ a | b |
+  |---|---|
+```
+
+> deleteContentBackward
 
 ```markdown
 - ┃◌ a | b |
@@ -9808,17 +9843,25 @@ tags: rare
 ```markdown
 > a quote
 
+> a quote┃␄
+```
+
+> shiftEnter
+
+```markdown
 > a quote
-┃◌␄
+
+> a quote
+> ┃◌␄
 ```
 
 > moveSubtreeUp
 
 ```markdown
 > a quote
-┃◌
+> ┃◌
 
-> a quote
+> a quote␄
 ```
 
 ## Regression376
@@ -10335,7 +10378,14 @@ flavor: obsidian
 ```
 
 ```markdown
--  
+-␠␠
+- next┃
+```
+
+> shiftEnter
+
+```markdown
+-␠␠
 - next
   ┃◌
 ```
@@ -10345,7 +10395,7 @@ flavor: obsidian
 ```markdown
 - next
   ┃◌
--  
+-␠␠
 ```
 
 ## Regression398

@@ -569,29 +569,3 @@ tags: rare
 result: success
 ```
 
-## Fold20
-
-Placeholders the caret has left are settled, a node written again or gone, without opening a
-fold, though what it hides is written again (dev/25-view.md §6). Here the empty item in the folded
-section, its text an empty line a placeholder holds above a block id, settles as an empty last line
-does: the line goes, the block id on the marker's line, naming the item still (it was dropped, the
-block id then naming the whole list: B240's loss); the empty paragraph above the heading goes.
-
-```yaml
-tags: rare
-flavor: obsidian
-```
-
-```markdown
-◌①
-┃# h②⟦folded⟧
-> - ◌
-> ^x
-```
-
-> cursorLineBoundaryForward
-
-```markdown
-# h┃②⟦folded⟧
-> - ^x
-```

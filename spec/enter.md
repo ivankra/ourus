@@ -915,6 +915,14 @@ tags: common
 
 ```markdown
 - a
+  - x┃
+  - c
+```
+
+> deleteContentBackward
+
+```markdown
+- a
   - ┃◌
   - c
 ```
