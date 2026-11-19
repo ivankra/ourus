@@ -1429,8 +1429,16 @@ interface Actor extends Omit<Session, 'clipboard'> {
   /** Brings the app's page to the front, where its Clipboard API works. */
   front(): Promise<void>;
 }
+/**
+ * A key as a keyboard sends it: with Shift, a letter is its capital (`Control+Shift+z` is the key `Z`
+ * with Shift down). Playwright sends the letter as written, which no keyboard does, and an editor that
+ * reads `event.key` (CodeMirror) takes `z` with Shift for Ctrl-z, an undo where the case means a redo.
+ */
+export const asKeyboardSends = (key: string): string =>
+  /(^|\+)Shift\+/.test(key) ? key.replace(/(?<=\+)([a-z])$/, (c) => c.toUpperCase()) : key;
+
 const pageActor = (page: Page): Actor => ({
-  press: (key) => page.keyboard.press(key),
+  press: (key) => page.keyboard.press(asKeyboardSends(key)),
   type: (text) => page.keyboard.type(text),
   clipboard: {
     // through a copy event, whose `setData` takes any format (the Clipboard API's write takes text and

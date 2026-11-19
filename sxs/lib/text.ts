@@ -25,11 +25,17 @@ export interface TextDoc {
   view?: RowView;
 }
 
-/** A drawn buffer as a text document (its view, `view.ts`, read off its lines' marks); a subtree selection (`⟦selected⟧`) as the whole lines it is. */
-export function readTextDoc(drawing: string): TextDoc {
+/**
+ * A drawn buffer as a text document (its view, `view.ts`, read off its lines' marks); a subtree
+ * selection (`⟦selected⟧`) as the whole lines it is, its nodes read under `config` (the values ourus
+ * is replayed under for the app: what a node is depends on them, `quotes: atom`'s quote owning nothing).
+ */
+export function readTextDoc(drawing: string, config: Partial<OurusConfig> = {}): TextDoc {
   const { drawn, view } = splitView(drawing);
   const read = readDrawing(drawn);
-  const selection = read.subtrees ? drawnSelection(OurusView.of(OurusDoc.parse(read.text)), read) : read.selection;
+  const selection = read.subtrees
+    ? drawnSelection(OurusView.of(OurusDoc.parse(read.text, { config })), read)
+    : read.selection;
   return { text: read.text, sel: /┃|«|⟦selected⟧/.test(drawn) ? selection : null, ...(view && { view }) };
 }
 

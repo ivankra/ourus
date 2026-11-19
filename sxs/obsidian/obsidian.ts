@@ -18,7 +18,7 @@
 // (`retabs`), is taken as written.
 
 import { createHash } from 'node:crypto';
-import { appendFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { PluginEntry } from 'obsidian-launcher';
 import { chromium, type BrowserContext, type Page } from 'playwright-core';
@@ -111,6 +111,12 @@ export interface Profile {
    * its API (`ObsidianZoomPlugin.getZoomRange`, the zoomed range's first line).
    */
   readonly zoom?: 'true-outliner' | 'obsidian-zoom';
+  /**
+   * Whether a test indented with spaces is loaded with tabs and read back as spaces (by default it
+   * is: Obsidian indents with a tab). False where the setup's keys indent as ourus does, whatever
+   * the vault's tab setting: the test is loaded as written.
+   */
+  readonly retab?: boolean;
 }
 
 // ------------------------------------------------------------------ indentation
@@ -315,11 +321,15 @@ let notes = 0;
 const pageState = perPage(() => ({ log: '', retabbed: false, viewed: false }));
 
 /**
- * The line true-outliner's zoom root starts on, or null where it isn't zoomed, read in the page: its
- * anchor's state field (`zoomAnchorField`, the root's first line's offset), found among the editor
- * state's fields by its update, the plugin's modules being its own.
+ * The line true-outliner's zoom root starts on, or null where it isn't zoomed, read in the page: on
+ * ourus, the plugin's `zoomRootLine`; before, its anchor's state field (`zoomAnchorField`, the root's
+ * first line's offset), found among the editor state's fields by its update, the plugin's modules
+ * being its own.
  */
 function zoomAnchor(cm: any): number | null {
+  // true-outliner on ourus says it itself
+  const plugin = (window as any).app.plugins.plugins['true-outliner'];
+  if (typeof plugin?.zoomRootLine === 'function') return plugin.zoomRootLine(cm);
   const fields: any[] = [];
   const seen = new Set<unknown>();
   const walk = (e: any): void => {
@@ -336,6 +346,20 @@ function zoomAnchor(cm: any): number | null {
   if (!field) throw new Error("true-outliner's zoom anchor field isn't in the editor's state");
   const anchor = cm.state.field(field, false);
   return anchor === null || anchor === undefined ? null : cm.state.doc.lineAt(anchor).number - 1;
+}
+
+/** The files of the setup's plugins installed by `path`, as they are now: a rebuild is another setup. */
+function builtPlugins(profile: Profile): string {
+  const hash = createHash('sha1');
+  for (const plugin of profile.plugins ?? []) {
+    const path = typeof plugin === 'string' ? plugin : 'path' in plugin ? plugin.path : undefined;
+    if (!path) continue;
+    for (const name of ['manifest.json', 'main.js', 'styles.css']) {
+      const file = join(path, name);
+      if (existsSync(file)) hash.update(readFileSync(file));
+    }
+  }
+  return hash.digest('hex');
 }
 
 export function obsidianDriver(profile: Profile): Driver {
@@ -413,7 +437,7 @@ export function obsidianDriver(profile: Profile): Driver {
       // CodeMirror keeps line breaks as LF
       if (d.text.includes('\r')) return 'CR line endings';
       return (
-        splitsIndent(d) ??
+        (profile.retab === false ? undefined : splitsIndent(d)) ??
         foldOnAtomItem(d) ??
         (profile.mode === 'live-preview' ? (inFrontmatter(d) ?? inTable(d) ?? atInlineCode(d)) : undefined) ??
         profile.holds?.(d)
@@ -424,9 +448,10 @@ export function obsidianDriver(profile: Profile): Driver {
       ensureAptInstalled('Obsidian', ELECTRON_LIBRARIES, say);
       const v = await versions();
       // a window the pool keeps warm is taken over by a run of the same setup as it is now: its versions,
-      // its configuration, plugins and keys (another is loaded anew)
+      // its configuration, plugins and keys, a built plugin's files too (another is loaded anew)
       const key = createHash('sha1')
         .update(JSON.stringify([v.app, v.installer, profile, hotkeys]))
+        .update(builtPlugins(profile))
         .digest('hex')
         .slice(0, 12);
       // one run of the setup at a time is the runner's (its lock); each of its workers a window of the
@@ -542,7 +567,8 @@ export function obsidianDriver(profile: Profile): Driver {
       await page.keyboard.press('Tab');
       await page.evaluate(() => (window as any).__ourusIdle.wait({ shortTimer: 300, quiet: 100, timeout: 5000 }));
       const got = (await this.read(page)) as TextDoc;
-      if (got.text !== '- a\n  - b')
+      // (by two spaces read back from a tab, or, in a note taken as written, by the app's own unit)
+      if (!/^- a\n(  |\t|    )- b$/.test(got.text))
         throw new Error(`Obsidian's keys didn't come up: Tab made ${JSON.stringify(got.text)}`);
       // the editor in the setup's editing mode: Source mode is the editing view's `source`
       const source = await page.evaluate(() => (window as any).app.workspace.activeLeaf?.view?.getState?.()?.source);
@@ -562,7 +588,7 @@ export function obsidianDriver(profile: Profile): Driver {
     async load(page: Page, doc) {
       const d = doc as TextDoc;
       const state = pageState(page);
-      state.retabbed = retabs(d);
+      state.retabbed = profile.retab !== false && retabs(d);
       const { text, sel } = state.retabbed ? asTabs(d) : d;
       await page.evaluate(
         async ({ path, text, sel, view, zoom }) => {
@@ -612,9 +638,13 @@ export function obsidianDriver(profile: Profile): Driver {
           // the folds by their rows, Obsidian's (its edit view's), and the zoom: a case loaded with a view
           const view = viewed
             ? {
-                folded: ((window as any).app.workspace.activeLeaf.view.currentMode.getFoldInfo()?.folds ?? []).map(
-                  (f: { from: number }) => f.from,
-                ) as number[],
+                // the rows folded: true-outliner on ourus says them by node (a node of several lines folds
+                // from its last, which Obsidian's fold info gives), else Obsidian's fold info
+                folded: (typeof (window as any).app.plugins.plugins['true-outliner']?.foldedLines === 'function'
+                  ? (window as any).app.plugins.plugins['true-outliner'].foldedLines(cm)
+                  : ((window as any).app.workspace.activeLeaf.view.currentMode.getFoldInfo()?.folds ?? []).map(
+                      (f: { from: number }) => f.from,
+                    )) as number[],
                 zoom:
                   zoom === 'obsidian-zoom'
                     ? ((window as any).ObsidianZoomPlugin.getZoomRange(

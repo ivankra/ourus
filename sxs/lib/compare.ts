@@ -33,13 +33,13 @@ const caseOf = (name: string): string =>
 const cell = (e: Judged): string =>
   e.adapted?.length && e.verdict !== 'agree' ? `(${SYMBOL[e.verdict] ?? e.verdict})` : (SYMBOL[e.verdict] ?? e.verdict);
 
-/** Setups of one app count once: both Logseqs, both RemNotes, the Obsidians but true-outliner. */
+/** Setups of one app count once: both Logseqs, both RemNotes, the Obsidians but the true-outliners. */
 const family = (app: string): string =>
   app.startsWith('logseq')
     ? 'logseq'
     : app.startsWith('remnote')
       ? 'remnote'
-      : app.startsWith('obsidian') && app !== 'obsidian-true-outliner'
+      : app.startsWith('obsidian') && !app.startsWith('obsidian-true-outliner')
         ? 'obsidian'
         : app;
 

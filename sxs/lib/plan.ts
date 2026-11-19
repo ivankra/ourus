@@ -531,7 +531,9 @@ function adaptText(
   played: readonly (readonly string[])[],
   views: Views | null,
 ): Adapted {
-  const initial = { ...readTextDoc(test.initial.buffer), ...(views && { view: views.start }) };
+  // ⟦selected⟧ names nodes, read as ourus reads them for the app: the case's values over the app's
+  const reading: Partial<OurusConfig> = { ...driver.behaves, ...specConfig(test.options) };
+  const initial = { ...readTextDoc(test.initial.buffer, reading), ...(views && { view: views.start }) };
   const no = driver.holds?.(initial);
   if (no) return { skip: no };
   const steps: PlanStep[] = test.steps.map((s, i) => {
@@ -542,7 +544,7 @@ function adaptText(
       (replayed ? replayed[i] : s.expect.buffer) ?? (views ? withoutCaret(views.steps[i]!.buffer) : undefined);
     const want =
       buffer !== undefined
-        ? { ...readTextDoc(caretAsDrawn(buffer, s.expect.buffer)), ...(views && { view: views.steps[i]!.view }) }
+        ? { ...readTextDoc(caretAsDrawn(buffer, s.expect.buffer), reading), ...(views && { view: views.steps[i]!.view }) }
         : null;
     return {
       line: s.line,
