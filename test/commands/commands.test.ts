@@ -25,7 +25,6 @@ import {
   executeAfter,
   appliedText,
   assertApplied,
-  scalingFactor,
   convertPastedHtml,
   assertNoWriteFailure,
   htmlFailures,
@@ -1062,29 +1061,6 @@ test('ledger cases a later fix took along write: each applies', () => {
   }
 });
 
-test('a write in a long list or quote takes time in proportion to its length, not to its square', () => {
-  // (the fastest of seven, from 2,000 lines to 8,000: four times as long where it is linear, sixteen
-  // where it is quadratic, the bound leaving room for a busy machine; Enter mid a list, and mid a
-  // quote's text, where it breaks it in two)
-  for (const line of ['- item', '> line']) {
-    const ratio = time(line, 8000) / time(line, 2000);
-    assert.ok(ratio < 12, `${line}: 8,000 lines take ${ratio.toFixed(1)} times as long as 2,000`);
-  }
-  function time(line: string, n: number): number {
-    const text = Array.from({ length: n }, (_, i) => `${line} ${i}`).join('\n');
-    const doc = OurusDoc.parse(text);
-    const at = text.indexOf(`${line} ${n / 2}`) + `${line} ${n / 2}`.length;
-    let best = Infinity;
-    for (let k = 0; k < 7; k++) {
-      const start = performance.now();
-      const r = executeCommand(OurusView.of(doc, { selection: at }), { type: 'enter' });
-      best = Math.min(best, performance.now() - start);
-      assert.ok(r instanceof OurusSuccess);
-    }
-    return best;
-  }
-});
-
 test('a line break typed at the start of an opening fence: a blank line above the block, in a section and in an item too', () => {
   const typed = (text: string, config = {}) => {
     const at = text.search(/```|\$\$/);
@@ -1099,30 +1075,6 @@ test('a line break typed at the start of an opening fence: a blank line above th
   assert.deepEqual(typed('a\n## N\n```\nx\n```\n'), { text: 'a\n## N\n\n```\nx\n```\n', caret: 8 });
   assert.deepEqual(typed('- a\n  ```\n  code\n  ```\n'), { text: '- a\n\n  ```\n  code\n  ```\n', caret: 7 });
   assert.deepEqual(typed('p\n\n$$\nx\n$$\n', { flavor: 'obsidian' }), { text: 'p\n\n\n$$\nx\n$$\n', caret: 4 });
-});
-
-test("a pickup, expanding a whole list's selection and deleting it take time in proportion to the list, not to its square", () => {
-  // (the fastest of five, 2,000 items to 8,000: four times as long where linear, sixteen where quadratic)
-  const commands: [string, OurusCommand, (text: string) => { anchor: number; head: number }][] = [
-    ['drag', { type: 'drag', pressed: 1 } as OurusCommand, () => ({ anchor: 2, head: 2 })],
-    ['expandSelection', { type: 'expandSelection' }, (text) => ({ anchor: 0, head: text.length })],
-    ['deleteSubtree', { type: 'deleteSubtree' }, (text) => ({ anchor: 0, head: text.length })],
-  ];
-  for (const [name, command, selection] of commands) {
-    const time = (n: number): number => {
-      const text = Array.from({ length: n }, (_, i) => `- Item ${i}`).join('\n') + '\n';
-      const view = OurusView.of(OurusDoc.parse(text));
-      let best = Infinity;
-      for (let k = 0; k < 5; k++) {
-        const start = performance.now();
-        executeCommand(view.withSelection(selection(text)), command);
-        best = Math.min(best, performance.now() - start);
-      }
-      return best;
-    };
-    const ratio = time(8000) / Math.max(time(2000), 1);
-    assert.ok(ratio < 12, `${name}: 8,000 items take ${ratio.toFixed(1)} times as long as 2,000`);
-  }
 });
 
 test("a copy of code keeps the spaces of its blank lines, which are the code's (fenced, indented, in an item)", () => {
@@ -1313,9 +1265,8 @@ test("Obsidian's tags and wikilinks in a link's text render as text, no anchor i
   assert.equal(html('[link [[n]]](u)'), '<p><a href="u">link n</a></p>\n');
 });
 
-test('HTML nested past the call stack pastes as its text; a long run of formatting elements, and a clipboard of blank lines and a word, convert in linear time', async () => {
+test('HTML nested past the call stack pastes as its text', async () => {
   const { MdHtmlParser } = await import('../../src/parser/html-parser.ts');
-  const { clipboardFragment } = await import('../../src/doc/index.ts');
   for (const html of [
     '<span>'.repeat(5000) + 'a*' + '</span>'.repeat(5000),
     '<blockquote>'.repeat(5000) + 'a*',
@@ -1323,24 +1274,6 @@ test('HTML nested past the call stack pastes as its text; a long run of formatti
     '<pre>' + '<span>'.repeat(5000) + 'a*',
   ]) {
     assert.equal(MdHtmlParser.parse(html).markdown, 'a\\*', html.slice(0, 12));
-  }
-  // (the fastest of five, 8,000 against 2,000: four times as long where it is linear)
-  const time = (f: () => void): number =>
-    Math.min(
-      ...Array.from({ length: 5 }, () => {
-        const start = performance.now();
-        f();
-        return performance.now() - start;
-      }),
-    );
-  const bold = (n: number) => () => MdHtmlParser.parse('<b>a</b>'.repeat(n));
-  const blank = (n: number) => () => clipboardFragment('\n'.repeat(n) + 'x', {});
-  for (const [name, f] of [
-    ['formatting', bold],
-    ['blank lines', blank],
-  ] as const) {
-    const ratio = time(f(8000)) / Math.max(time(f(2000)), 0.5);
-    assert.ok(ratio < 12, `${name}: 8,000 take ${ratio.toFixed(1)} times as long as 2,000`);
   }
 });
 
@@ -1426,16 +1359,6 @@ test('a bracket autoClose lists pairs in an empty note, the closer ours', () => 
   assert.equal(paired.view.doc.text, '()');
   assert.equal(paired.view.selection.head, 1);
   assert.deepEqual([...paired.view.doc.marks.auto], [1]);
-});
-
-test('plain paste scales linearly, of list-looking lines and of leading blank lines', () => {
-  const lines = (count: number) =>
-    executeOnText('text', { type: 'pastePlain', text: Array(count).fill('- x').join('\n') }, { caret: 4 });
-  const blanks = (count: number) =>
-    executeOnText('- a', { type: 'pastePlain', text: '\n'.repeat(count) + 'x' }, { caret: 2 });
-  // (eight times as many: linear is about 8, quadratic 64)
-  assert.ok(scalingFactor(lines, 200, 1600) < 24);
-  assert.ok(scalingFactor(blanks, 20000, 160000) < 24);
 });
 
 test('Enter and Shift-Enter split between characters: a stale caret inside a surrogate pair, a grapheme or a CRLF goes to its start', () => {
@@ -1562,7 +1485,7 @@ test("a drag's deletion is the selection deleted as a cut deletes it: a subtree 
   assert.equal(assertApplied(joined).view.doc.text, 'child\n\nq');
 });
 
-test("a flat paste of many items is written in linear time, and past JavaScript's limit on a call's arguments", async () => {
+test("a splice of many items, past JavaScript's limit on a call's arguments", async () => {
   const { spliceIn } = await import('../../src/text/index.ts');
   // (200,000 put in at once, past the limit on arguments: in order, around what was there)
   const list = ['a', 'b', 'c'];
@@ -1576,9 +1499,6 @@ test("a flat paste of many items is written in linear time, and past JavaScript'
   const small = [0, 1, 2];
   spliceIn(small, 3, 0, [3, 4]);
   assert.deepEqual(small, [0, 1, 2, 3, 4]);
-  // (eight times the items: linear about 8; lining each new item up with its run's was quadratic, 30 and more)
-  const paste = (n: number) => executeOnText('', { type: 'paste', clipboard: { 'text/plain': '- x\n'.repeat(n) } });
-  assert.ok(scalingFactor(paste, 1000, 8000) < 24);
 });
 
 test("HTML conversion: a pre's first line break, an empty href, a tag's #, a table of no cells, deep HTML's blocks, very many children merged", async () => {

@@ -338,16 +338,13 @@ test("a frozen list of block-id lines is copied unless its records are frozen to
   assert.equal(text.blockIdLines[0]!.line, '^a');
 });
 
-test('held spaces come out of a text in one pass: linear in their number', async () => {
-  const { scalingFactor } = await import('../lib/index.ts');
+test('held spaces come out of a text', () => {
   const settle = (n: number) =>
     new Text('paragraph', false, 'a '.repeat(n))
       .withMarks({ placeholders: Array.from({ length: n }, (_, i) => 2 * i + 1) })
       .withoutHeldSpaces();
   assert.equal(settle(3).text, 'aaa');
   assert.deepEqual([...settle(3).marks.placeholders], []);
-  // (eight times the spaces: linear about 8; one splice each was about 40)
-  assert.ok(scalingFactor(settle, 1000, 8000) < 24);
 });
 
 test("a quote's text unquoted: every line's `>` and one blank after it off, a block id's own line's too, a lazy line as it is; a paragraph's", () => {

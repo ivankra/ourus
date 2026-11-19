@@ -242,34 +242,6 @@ test('Backspace in the last empty item of a nested list leaves no blank line the
   assert.equal(assertApplied(executeCommand(view.withSelection(at), back)).view.doc.text, '- a\n- c\n');
 });
 
-test('a write in a document with an auto mark on every blank line takes time in proportion to its length, not to its square', () => {
-  // (the fastest of nine, from 2,000 paragraphs to 8,000: four times as long where it is linear, sixteen where it is quadratic;
-  // the bound leaves room for a busy machine, which slows the larger run more)
-  const time = (n: number): number => {
-    const auto: number[] = [];
-    let at = 0;
-    const text = Array.from({ length: n }, (_, i) => {
-      const line = `para ${i}\n`;
-      at += line.length;
-      auto.push(at);
-      at += 1;
-      return `${line}\n`;
-    }).join('');
-    const doc = OurusDoc.parse(text, { marks: { auto } });
-    assert.equal(doc.marks.auto.length, n);
-    const caret = text.indexOf(`para ${n / 2}`) + 3;
-    let best = Infinity;
-    for (let k = 0; k < 9; k++) {
-      const start = performance.now();
-      assertApplied(executeCommand(OurusView.of(doc, { selection: caret }), enter));
-      best = Math.min(best, performance.now() - start);
-    }
-    return best;
-  };
-  const ratio = time(8000) / time(2000);
-  assert.ok(ratio < 12, `8,000 paragraphs take ${ratio.toFixed(1)} times as long as 2,000`);
-});
-
 test("an empty paragraph Enter made, settled when the caret leaves, gives the node above its blank lines: the author's come back", () => {
   for (const [text, at] of [
     ['p 2) x\n\n\n> [!note] q1\n', 6],

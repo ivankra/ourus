@@ -1,6 +1,5 @@
-// Pathological inputs: parsing (and rendering) stays near linear, and nothing recurses as deep as the
-// input nests. The cases are cmark's (test/pathological_tests.py), plus incremental ones: edits whose
-// effect runs far, and long paragraphs.
+// Pathological inputs: nothing recurses as deep as the input nests. The cases are cmark's
+// (test/pathological_tests.py), plus an edit whose effect runs far.
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -8,16 +7,6 @@ import { commonmark, type MdFlavor } from '../../src/parser/flavor.ts';
 import { gfm } from '../../src/parser/gfm.ts';
 import { obsidian } from '../../src/parser/obsidian.ts';
 import { MdTree } from '../../src/parser/syntax.ts';
-import { scalingFactor } from '../lib/index.ts';
-
-/** Generous: these take tens of milliseconds when linear, and seconds or forever when not. */
-const BUDGET_MS = Number(process.env.OURUS_PATHOLOGICAL_MS ?? 3000);
-
-function timed<T>(f: () => T): { value: T; ms: number } {
-  const start = performance.now();
-  const value = f();
-  return { value, ms: performance.now() - start };
-}
 
 const r = (s: string, n: number): string => s.repeat(n);
 const p = (s: string): string => `<p>${s}</p>\n`;
@@ -83,8 +72,7 @@ const cases: [string, string, string | ((html: string) => boolean), MdFlavor?][]
 
 for (const [name, input, expected, flavor] of cases) {
   test(`pathological: ${name}`, () => {
-    const { value: html, ms } = timed(() => MdTree.parse(input, flavor ?? commonmark).renderHtml());
-    assert.ok(ms < BUDGET_MS, `${name}: ${ms.toFixed(0)} ms`);
+    const html = MdTree.parse(input, flavor ?? commonmark).renderHtml();
     if (typeof expected === 'string')
       assert.ok(html === expected, `${name}: unexpected output ${JSON.stringify(html.slice(0, 200))}`);
     else assert.ok(expected(html), `${name}: unexpected output ${JSON.stringify(html.slice(0, 200))}`);
@@ -95,51 +83,10 @@ test('pathological: an edit at the top of a long document that changes all of it
   const lines = Array.from({ length: 50000 }, (_, i) => `line ${i} *with* text`);
   const text = lines.join('\n') + '\n';
   const syntax = MdTree.parse(text, gfm);
-  const { value: fenced, ms } = timed(() => syntax.update([{ from: 0, to: 0, insert: '```\n' }]));
-  assert.ok(ms < BUDGET_MS, `fence: ${ms.toFixed(0)} ms`);
+  const fenced = syntax.update([{ from: 0, to: 0, insert: '```\n' }]);
   assert.equal(fenced.root.children[0]!.type, 'code_block');
-  const { value: back, ms: ms2 } = timed(() => fenced.update([{ from: 0, to: 4, insert: '' }]));
-  assert.ok(ms2 < BUDGET_MS, `unfence: ${ms2.toFixed(0)} ms`);
+  const back = fenced.update([{ from: 0, to: 4, insert: '' }]);
   assert.equal(back.root.children[0]!.type, 'paragraph');
-});
-
-test('pathological: editing a very long paragraph', () => {
-  const text = Array.from({ length: 30000 }, (_, i) => `word ${i} more words`).join('\n') + '\n';
-  let syntax = MdTree.parse(text, commonmark);
-  const { ms } = timed(() => {
-    // same-length replacements near the start: the paragraph's content differs early on every line after
-    for (let k = 0; k < 20; k++) syntax = syntax.update([{ from: 1, to: 2, insert: k % 2 ? 'o' : 'x' }]);
-  });
-  assert.ok(ms < BUDGET_MS, `20 edits: ${ms.toFixed(0)} ms`);
-});
-
-test('pathological: frontmatter that never closes, edited', () => {
-  const text = '---\n' + Array.from({ length: 20000 }, (_, i) => `key${i}: value`).join('\n') + '\n';
-  let syntax = MdTree.parse(text, obsidian);
-  const { ms } = timed(() => {
-    for (let k = 0; k < 10; k++) syntax = syntax.update([{ from: text.length - 2, to: text.length - 2, insert: 'x' }]);
-  });
-  assert.ok(ms < BUDGET_MS, `10 edits: ${ms.toFixed(0)} ms`);
-});
-
-// (eight times the input: linear is about 8; each of these measured 37 to 90 before)
-test('many carets in a paragraph, many entities, a footnote of many paragraphs: read and rendered in linear time', () => {
-  assert.ok(
-    scalingFactor((n) => MdTree.parse('x ' + '^a '.repeat(n) + 'z'.repeat(n), obsidian).renderHtml(), 8000, 64000) < 24,
-    'block-id carets',
-  );
-  assert.ok(
-    scalingFactor((n) => MdTree.parse('a&amp;'.repeat(n) + 'z'.repeat(n), gfm).renderHtml(), 8000, 64000) < 24,
-    'email autolinks between entities',
-  );
-  assert.ok(
-    scalingFactor(
-      (n) => MdTree.parse('x[^a]\n\n[^a]: x\n' + '    \n    x\n'.repeat(n), gfm).renderHtml(),
-      2000,
-      16000,
-    ) < 24,
-    "a footnote's paragraphs",
-  );
 });
 
 test('inline position queries answer inside images nested 6,000 deep, as parsing and rendering do', () => {

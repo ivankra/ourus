@@ -71,7 +71,6 @@ import {
   lostMarksOnText,
   readUntriaged,
   REPORT_OF,
-  scalingFactor,
   untriagedFailures,
   writeUntriaged,
   type UntriagedCase,

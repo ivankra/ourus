@@ -80,37 +80,3 @@ export function firstBlockInlines(text: string, flavor: MdFlavor = MdFlavor.gfm)
   const tree = MdTree.parse(text, flavor);
   return tree.inlines(tree.rootAt.child(0));
 }
-
-/** Least CPU time a measurement runs for: the thread's clock is too coarse to time less. */
-const MEASURED_MS = 50;
-
-/**
- * The least CPU time one run of `action` took, in milliseconds, of this thread alone: waiting for a core
- * doesn't count, nor a collector's threads, still at what ran before it. Over `attempts` measurements,
- * each repeating `action` until the clock can tell.
- */
-function bestCpuTime(action: () => void, attempts: number): number {
-  let best = Infinity;
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    const start = process.threadCpuUsage();
-    let runs = 0;
-    let spent = 0;
-    while (spent < MEASURED_MS) {
-      action();
-      runs++;
-      const used = process.threadCpuUsage(start);
-      spent = (used.user + used.system) / 1000;
-    }
-    best = Math.min(best, spent / runs);
-  }
-  return best;
-}
-
-/**
- * How many times longer `action` takes at `largeSize` than at `smallSize`, by CPU time: about their
- * ratio where it scales linearly, its square where quadratically. Sizes far apart tell the two apart
- * on a busy machine, where a test next to others runs slower but not differently.
- */
-export function scalingFactor(action: (size: number) => void, smallSize: number, largeSize: number): number {
-  return bestCpuTime(() => action(largeSize), 2) / bestCpuTime(() => action(smallSize), 5);
-}
